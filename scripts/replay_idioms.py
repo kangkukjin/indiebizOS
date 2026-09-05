@@ -379,6 +379,38 @@ def name_idioms(apply: bool, topics_prefix: str = ""):
     return 0
 
 
+def type_idioms(apply: bool):
+    """이름 있는 용례(관용구·다문장)의 반환 모양을 정적 검사기로 산정해 `returns` 열에 적는다(2026-09-05 서명 개정).
+    슬롯은 미상으로 두고 몸을 타입한다 — 실패는 '?'(정직)."""
+    import hippo_tree
+    import ibl_idiom  # noqa: F401 — 검사기에 관용구·워크플로 소스 등록
+    from ibl_usage_db import IBLUsageDB
+    from ibl_typecheck import return_type_of
+    db = IBLUsageDB()
+    with db._get_connection() as conn:
+        rows = [dict(r) for r in conn.execute(
+            "SELECT id, ibl_code, COALESCE(alias,'') AS alias, COALESCE(topic,'') AS topic, COALESCE(returns,'') AS returns "
+            "FROM ibl_examples WHERE COALESCE(alias,'')!='' OR category='phrase' ORDER BY id").fetchall()]
+    if not rows:
+        print("[type] 대상 없음"); return 0
+    changed = 0
+    for r in rows:
+        rt = return_type_of(r["ibl_code"])
+        mark = "" if rt == r["returns"] else " *"
+        print(f"  #{r['id']} [fn:{r['alias'] or '-'}] → {rt}{mark}")
+        if apply and rt != r["returns"]:
+            with db._get_connection() as conn:
+                conn.execute("UPDATE ibl_examples SET returns=? WHERE id=?", (rt, r["id"])); conn.commit()
+            changed += 1
+    if apply:
+        for t in {r["topic"] for r in rows if r["topic"]}:
+            hippo_tree.refresh_topic(t)
+        print(f"[type] 반환 {changed}건 갱신 · 가지 문서 갱신")
+    else:
+        print("[type] dry-run — --apply 로 적용")
+    return 0
+
+
 def apply_report(report: Path, db_path: Path, top: int):
     d = json.loads(report.read_text(encoding="utf-8"))
     chosen = d.get("chosen") or []
@@ -401,6 +433,7 @@ def main():
     ap.add_argument("--rehearse", default=None,
                     help="짓기(상상): 설계한 관용구 JSON [{intent, topic, phrase, slots}] 을 슬롯 값으로 채워 라이브 백엔드(/ibl/execute)에서 한 번 돌리고, 성공한 것만 같은 관문으로 저장(--apply)")
     ap.add_argument("--project", default="", help="리허설 실행의 프로젝트 문맥(project_id) — 검색·논문 등 프로젝트 도구가 요구")
+    ap.add_argument("--type-idioms", action="store_true", help="이름 있는 용례의 반환 모양(returns)을 정적 검사기로 산정(서명 `→ items⟨…⟩`)")
     ap.add_argument("--name-idioms", action="store_true",
                     help="이름 없는 관용구에 반성기가 이름을 붙인다(관용구=이름 붙은 함수, 2026-09-05) — 색인·가지 문서 갱신")
     ap.add_argument("--topics", default="", help="작명 대상 주제 접두(예: 보고서/) — 비우면 전부")
@@ -414,6 +447,8 @@ def main():
         return apply_report(Path(args.report), wp, args.top)
     if args.rehearse:
         return rehearse(Path(args.rehearse), wp, apply=args.apply, project_id=args.project)
+    if args.type_idioms:
+        return type_idioms(apply=args.apply)
     if args.name_idioms:
         return name_idioms(apply=args.apply, topics_prefix=args.topics)
     if args.programs is not None:

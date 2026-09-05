@@ -298,6 +298,36 @@ def unique_fn_name(name: str, db, code: str) -> str:
         name = f"{base}{n}"
 
 
+def _phrase_code_by_alias(name: str):
+    """검사기(ibl_typecheck)에 관용구 몸을 내주는 소스 — `[fn:이름]` 의 반환 모양 추론용(2026-09-05, 의존 역전 등록)."""
+    from ibl_usage_db import IBLUsageDB
+    row = IBLUsageDB().find_phrase_by_alias(name)
+    return (row or {}).get("ibl_code") or None
+
+
+def _workflow_code_by_name(name: str):
+    """저장 워크플로의 몸(원장) — `[fn:이름]` 해소 둘째 길(정의 → 워크플로 → 관용구)."""
+    from workflow_store import get_workflow
+    wf = get_workflow(name)
+    if not isinstance(wf, dict) or wf.get("problem"):
+        return None
+    for k in ("do", "steps", "pipeline"):
+        v = wf.get(k)
+        if isinstance(v, str) and v.strip():
+            return v
+        if isinstance(v, list) and v and all(isinstance(x, str) for x in v):
+            return "\n".join(v)
+    return None
+
+
+try:
+    from ibl_typecheck import register_fn_code_source as _reg_fn_src
+    _reg_fn_src(_workflow_code_by_name)
+    _reg_fn_src(_phrase_code_by_alias)
+except Exception:
+    pass
+
+
 def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
                     tool_calls: list, turn_tokens: int = None) -> bool:
     """반성기의 두 번째 답(phrase·slots)을 관문에 통과시켜 `category='phrase'` 로 저장한다. 낱말 증류와 독립."""
@@ -359,12 +389,17 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     birth_ms = _ibl_elapsed_ms(tool_calls)
     # 관용구 = 이름 붙은 함수(2026-09-05): 반성기의 phrase_name → 정리·유일화. `[fn:이름]{슬롯}` 으로 불린다.
     alias = unique_fn_name(sanitize_fn_name(distilled.get("phrase_name"), intent), db, code)
+    try:
+        from ibl_typecheck import return_type_of
+        _returns = return_type_of(code)                     # 서명의 반환 모양(2026-09-05) — 슬롯은 미상으로 두고 몸을 타입
+    except Exception:
+        _returns = "?"
     example_id = db.add_example(
         intent=intent, ibl_code=code, nodes=nodes, category=hippo_tree.PHRASE_CATEGORY,
         difficulty=2, source="distilled", tags="auto,phrase",
         avg_ms=float(birth_ms) if birth_ms else -1.0,
         avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
-        topic=topic, alias=alias)
+        topic=topic, alias=alias, returns=_returns)
     if not example_id:
         print(f"{tag} 원장이 거부 — 학습 파일에도 적재하지 않음: {code[:60]}")
         return False

@@ -908,9 +908,17 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
 8. **이름으로 부른 함수는 이름으로 남겨라** — 실행된 코드에 `[fn:이름]{{…}}` 호출이 있으면 code 와 phrase 는
    그 호출 문장을 글자 그대로 품는다. 호출을 본문으로 풀어 쓰지 마라(함수는 이름으로 부른다 — 다음 주행도
    그 이름을 부르고, 부른 뒤 더한 문장만 새로 배운다).
-9. 결과는 반드시 JSON으로만 응답:
+9. **되풀이 검토** — 세 번째 질문: 「이 주행은 무엇을 되풀이했나?」 실행된 문장들 가운데
+   (a) 이미 이름 있는 함수/관용구가 있었는데(위 실행기억 지도의 가지에 있는 이름, 또는 이 목록에서
+       같은 문장 묶음이 두 번 이상 타이핑된 것) 그 이름을 부르지 않고 본문을 다시 타이핑한 것 → retyped 에
+       그 이름을(이름이 없으면 짧은 한국어 이름을 지어) 적어라.
+   (b) 결과를 보려고 한 문장씩 따로 실행했지만 데이터가 앞에서 뒤로 흐르거나 서로 독립이라 **한 프로그램으로
+       묶어 한 번에** 돌릴 수 있었던 연속 문장들 → mergeable 에 문장 번호 범위("3-7")로 적어라.
+   호출 수가 곧 비용이다 — 다음 주행이 이 답을 읽고 줄인다. 없으면 빈 목록. 경로·질의어 같은 값은
+   적지 마라(이름과 번호만).
+10. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "code_name": "여러 문장 code 의 이름(한 문장이면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름"}}"""
+{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "code_name": "여러 문장 code 의 이름(한 문장이면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름", "retyped": ["다시 타이핑한 함수 이름"], "mergeable": ["3-7"]}}"""
 
 
 # ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
@@ -1053,13 +1061,27 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         # 주행 기록 (2026-09-04, 사용자 판정): 대표 문장이 있든 없든, 이 주행에서 성공한 문장들을
         # 주제 가지 문서의 `## 주행` 절에 실행 순서대로 남긴다 — 프로그램급 주행이 '재사용 패턴 없음'
         # 으로 학습 0건이 되던 자리. 코퍼스(유사도)와 별개로 지도→가지 회상이 읽는 자리다.
+        # 비용 꼬리(2026-09-05, 사용자 판정 "적합도가 보여야 육종이 된다"): 손에 있는 tool_calls 로
+        # 호출·실패·타이핑을 세어 머리에 붙이고, 반성기의 되풀이 검토 답(retyped·mergeable)은 머리 뒤
+        # `놓침:` 한 줄로 — 다음 주행이 읽는 자리에 남긴다. 줄이는 판단은 모델이 한다.
         if _topic and len(ibl_calls) >= 2:
             try:
                 import hippo_tree
-                _run = hippo_tree.note_run(_topic, intent or user_message[:80], ibl_calls, ok=True)
+                try:
+                    from cognitive_trace import ibl_call_cost
+                    _cost = ibl_call_cost(tool_calls)
+                except Exception:
+                    _cost = {"calls": len(ibl_calls), "failed": 0, "typed_chars": sum(len(c) for c in ibl_calls)}
+                _missed = {"retyped": distilled.get("retyped") or [], "mergeable": distilled.get("mergeable") or []}
+                _run = hippo_tree.note_run(_topic, intent or user_message[:80], ibl_calls, ok=True,
+                                           calls=_cost["calls"], failed=_cost["failed"],
+                                           typed_chars=_cost["typed_chars"], missed=_missed)
                 if _run.get("success"):
                     print(f"[경험증류] 주행 기록 → 가지 '{_topic}' ({_run['sentences']}문장"
-                          + (", 절단" if _run.get("truncated") else "") + ")")
+                          + (", 절단" if _run.get("truncated") else "")
+                          + f", 호출 {_cost['calls']}·실패 {_cost['failed']}·타이핑 {_cost['typed_chars']}자"
+                          + (f", 놓침 재타이핑 {len(_missed['retyped'])}·묶음 {len(_missed['mergeable'])}"
+                             if (_missed["retyped"] or _missed["mergeable"]) else "") + ")")
             except Exception as _e:
                 print(f"[경험증류] 주행 기록 실패: {_e}")
 

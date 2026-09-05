@@ -42,31 +42,41 @@ BASELINE = {}
 
 # ── 두 번째 규칙 집합: 가이드 바이트 예산 (2026-09-02, 사용자 승인) ─────────────────────
 # 가이드는 절차 기억이라 자라기만 했다(79KB 까지) — 1500줄 규칙과 같은 논리로 관문이 집행한다.
-# 예산 값은 data/lifecycle_policy.yaml(guide_budget_bytes) 이 정본이고 여기는 읽기만 한다.
+# 예산 값(guide_budget_bytes)과 대상 glob(guide_budget_globs) 은 data/lifecycle_policy.yaml 이
+# 정본이고 여기는 읽기만 한다. 대상엔 가이드뿐 아니라 매 턴 시스템 프롬프트에 실리는 조각
+# (data/common_prompts/fragments/*.md — 교재)도 든다: 조각은 관문 밖이라 41.7KB 까지 자랐다.
 # 초과분은 삭제가 아니라 압축·분할로 맞춘다(야간 guide_downscale 이 예산 초과분부터 압축).
-GUIDE_PATTERNS = ["data/guides/*.md"]
+GUIDE_PATTERNS = ["data/guides/*.md", "data/common_prompts/fragments/*.md"]   # yaml 부재 시 폴백
 GUIDE_BUDGET_DEFAULT = 36000
 GUIDE_BASELINE = {}   # 부채 래칫(악화 금지). 예산 안으로 내려오면 항목 삭제 — 재진입 봉인.
+_POLICY = os.path.join(ROOT, "data", "lifecycle_policy.yaml")
+
+
+def guide_policy() -> tuple:
+    """(예산 바이트, 대상 glob 목록). yaml 없이도 관문은 선다 — 한 줄 파싱 폴백."""
+    try:
+        import yaml
+        d = yaml.safe_load(open(_POLICY, encoding="utf-8")) or {}
+        budget = int(d.get("guide_budget_bytes") or GUIDE_BUDGET_DEFAULT)
+        globs = [str(g) for g in (d.get("guide_budget_globs") or []) if g] or GUIDE_PATTERNS
+        return budget, globs
+    except Exception:
+        budget = GUIDE_BUDGET_DEFAULT
+        try:
+            for ln in open(_POLICY, encoding="utf-8"):
+                if ln.strip().startswith("guide_budget_bytes"):
+                    budget = int(ln.split(":", 1)[1].split("#")[0].strip())
+        except Exception:
+            pass
+        return budget, GUIDE_PATTERNS
 
 
 def guide_budget() -> int:
-    try:
-        import yaml
-        d = yaml.safe_load(open(os.path.join(ROOT, "data", "lifecycle_policy.yaml"), encoding="utf-8")) or {}
-        return int(d.get("guide_budget_bytes") or GUIDE_BUDGET_DEFAULT)
-    except Exception:
-        # yaml 없이도 관문은 선다 — 한 줄 파싱 폴백
-        try:
-            for ln in open(os.path.join(ROOT, "data", "lifecycle_policy.yaml"), encoding="utf-8"):
-                if ln.strip().startswith("guide_budget_bytes"):
-                    return int(ln.split(":", 1)[1].split("#")[0].strip())
-        except Exception:
-            pass
-        return GUIDE_BUDGET_DEFAULT
+    return guide_policy()[0]
 
 
-def scan_guides(root: str):
-    for pat in GUIDE_PATTERNS:
+def scan_guides(root: str, patterns=None):
+    for pat in (patterns or guide_policy()[1]):
         for f in sorted(glob.glob(os.path.join(root, pat))):
             rel = os.path.relpath(f, root)
             if os.path.isfile(f):
@@ -115,8 +125,8 @@ def main() -> int:
             print(f"ℹ {rel} 이 {n}줄로 내려옴 — BASELINE 에서 제거하세요(재진입 봉인)")
 
     # 가이드 예산 — 두 번째 규칙 집합(파일별 전개 X: 규칙 하나·glob 하나)
-    budget = guide_budget()
-    gsizes = dict(scan_guides(ROOT))
+    budget, globs = guide_policy()
+    gsizes = dict(scan_guides(ROOT, globs))
     if "--list" in sys.argv:
         for rel, n in sorted(gsizes.items(), key=lambda x: -x[1])[:10]:
             mark = "★" if n > budget else " "

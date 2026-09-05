@@ -463,8 +463,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
 
     # --- IBL 코드 파싱 + 실행 ---
     try:
-        from ibl_parser import parse as parse_ibl
-        parsed = parse_ibl(code)
+        from ibl_parser import parse_with_vars as _parse_with_vars
+        parsed, _tc_vars = _parse_with_vars(code)      # 검사기가 변수 이름을 알도록(세 번째 파싱 없이)
 
         if not parsed:
             return json.dumps({"error": f"IBL 파싱 실패: {code}"}, ensure_ascii=False)
@@ -481,6 +481,25 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             for d in sorted(_nodes_in_code):
                 if not check_node_access(d, allowed):
                     return json.dumps(get_denied_message(d, allowed), ensure_ascii=False)
+
+        # 정적 통화 검사 (2026-09-05, ibl_typecheck — docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-4)
+        #   check:true = 실행 없이 문장별 통화·열(types)과 문제(issues)만 돌려준다(모델의 탐침 자리, 0토큰·부작용 0).
+        #   그 외 = 확정 error 가 있으면 **실행 전에** 거절(부수효과 0·앞 단 재실행 0). warning 은 막지 않는다(미상은 초록).
+        from ibl_typecheck import typecheck as _typecheck, format_issues as _fmt_issues
+        _tc = _typecheck(parsed, _tc_vars)
+        if tool_input.get("check"):
+            _tc.update({"mode": "check", "executed": False,
+                        "note": ("실행하지 않았습니다. types = 문장별 마지막 통화(items⟨열⟩·prose·scalar·effect·?=미상), "
+                                 "issues = error(실행하면 반드시 실패)·warning(아마). 초록이면 같은 code 를 check 없이 실행하세요.")})
+            return json.dumps(_tc, ensure_ascii=False, indent=2)
+        if not _tc.get("ok"):
+            from ibl_traceback import build_tb
+            _msg = _fmt_issues(_tc.get("issues") or [])
+            return json.dumps({"success": False, "error_type": "typecheck",
+                               "error": "실행 전 통화 검사 거절 — " + _msg,
+                               "issues": _tc.get("issues"), "types": _tc.get("types"),
+                               "hint": "issues 의 statement·step·hint 를 읽고 그 문장만 고치세요. 확인만 하려면 check: true.",
+                               "traceback": build_tb(_msg, "typecheck")}, ensure_ascii=False, indent=2)
 
         # 실행 분기 결정
         # 1) 병렬(_parallel) 또는 fallback(_fallback_chain) → workflow_engine

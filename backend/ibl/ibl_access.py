@@ -565,13 +565,15 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
         db_path = get_base_path() / "data" / "ibl_usage.db"
         if db_path.exists():
             conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
-            rows = conn.execute(
-                "SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,'') FROM ibl_examples "
-                "WHERE category='phrase' ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
-                (IDIOMS_TOP * 3,)).fetchall()
+            _q = ("SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,''), {ret} FROM ibl_examples "
+                  "WHERE category='phrase' ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?")
+            try:
+                rows = conn.execute(_q.format(ret="COALESCE(returns,'')"), (IDIOMS_TOP * 3,)).fetchall()
+            except sqlite3.OperationalError:            # returns 열 이전 DB(폰 번들 등) — 반환 없이
+                rows = conn.execute(_q.format(ret="''"), (IDIOMS_TOP * 3,)).fetchall()
             conn.close()
             lines = []
-            for intent, code, sc, fc, topic, alias in rows:
+            for intent, code, sc, fc, topic, alias, returns in rows:
                 nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - {"fn"}
                 if allowed is not None and not nodes <= set(allowed):
                     continue
@@ -589,7 +591,8 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                 head = f"- {alias or '(이름 없음)'} — {intent}" + (f" ({topic})" if topic else "") + f" · 문장 {len(sents)}" + used
                 lines.append(head)
                 if alias:
-                    lines.append(f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in slots) + "}")
+                    # 서명 = 호출 한 줄 + 반환 모양(2026-09-05): 부르기 전에 무엇이 나올지 안다 — 뒤에 무엇을 이을지 정하는 자리
+                    lines.append(f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in slots) + "}" + (f" → {returns}" if returns else ""))
                 else:
                     lines.append("  (이름 없음 — recall 로 가지를 열어 expand:\"#id\")")
                 if sum(1 for l in lines if l.startswith("- ")) >= IDIOMS_TOP:

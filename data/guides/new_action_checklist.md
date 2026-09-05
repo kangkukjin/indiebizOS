@@ -219,6 +219,7 @@ python scripts/build_ibl_nodes.py --check    # 실패 시 비0 종료
 - `tool.json` 파일 ↔ 파생 결과 바이트 일치 (손편집·drift 검출 — 빌드로 재생성)
 - (op enum/default 의 src↔tool.json 비교는 파생 구조로 **불필요해짐** — 빌드가 주입하므로 어긋날 수 없다)
 - **fixture 완전성**: `returns: items|scalar` 액션은 `data/ibl_fixtures.json` 에 fixture 또는 exempt 가 있어야 함(다음 2.5단계). 없으면 `--check` 실패.
+- **flow 선언**(2026-09-05): `returns: transform` 액션은 `flow: {accepts, emits[, columns, columns_param, reads_fields]}` 필수 — 정적 통화 검사기(`ibl_typecheck`)는 이 선언만 읽는다(액션 이름을 코드에 넣지 않음). 없으면 `--check` 실패. 반환 열이 읽는 데이터가 정하는 액션(파일·원장·시트)은 `columns_from: data`. 정본 `docs/IBL_STATIC_TYPECHECK_HANDOFF.md` §2-2.
 
 > 이 `--check`는 pre-commit 훅(커밋마다)과 일일 건강 점검(`ibl_health_check.py` §1A, AI 0)에 합류해 있다. 통과해야 커밋이 된다.
 

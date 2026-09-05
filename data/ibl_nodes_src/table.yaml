@@ -6,6 +6,11 @@
       #   층 역전). 2026-08-15 언어 개정 — docs/HIGHER_ORDER_SENTENCE_DESIGN.md
       each:
         returns: transform
+        flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+          accepts: items
+          emits: items
+          columns: open
+          columns_param: keep
         side_effect: true   # do 안에 무엇이든 올 수 있다 — dry-run 이 초록불을 켜면 안 된다
         runs_on: anywhere
         scope: workspace
@@ -29,6 +34,9 @@
         # 넘기는 fold — groupby(고정 집계 5종)·compute(행→행)가 못 하는 "누적". 식 한 줄만(경계선 판정):
         # 상태가 dict 이거나 분기가 섞이면 [self:script]. 식 평가기는 common.safe_expr(compute 와 같은 화이트리스트).
         returns: transform
+        flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+          accepts: items
+          emits: scalar
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(고차) — items 를 순회하며 한 줄 식으로 누적(fold). init 초기값, step 식(acc=누적값·i=행 번호·열 이름·col("열")), as 결과 이름. 합·최대·문자열 이어붙이기 같은 한 줄 누적만 — 그 이상은 [self:script].

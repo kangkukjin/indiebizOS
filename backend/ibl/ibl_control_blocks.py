@@ -229,9 +229,14 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
     missing = [n for n in required if n not in caller]
     if missing:
         example = ", ".join(f'"{n}": "값"' for n in missing)
+        try:
+            from ibl_typecheck import return_type_of_steps
+            _rt = " → " + return_type_of_steps(fdef.get("body") or [], required)     # 서명에 반환 모양(2026-09-05)
+        except Exception:
+            _rt = ""
         return {"success": False, "fn": name, "params_required": required, "params_missing": missing,
                 "error": (f"[fn:{name}] 인자 누락: {', '.join('$' + n for n in missing)}. 시그니처는 "
-                          f"{', '.join('$' + n for n in required)} 입니다 — 예: [fn:{name}]{{{example}}}")}
+                          f"{', '.join('$' + n for n in required)}{_rt} 입니다 — 예: [fn:{name}]{{{example}}}")}
     steps = _c.deepcopy(fdef.get("body") or [])
     if not isinstance(steps, list):
         steps = [steps]

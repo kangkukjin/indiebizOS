@@ -22,6 +22,7 @@ nodes:
           #   `ti.get("id") or ti.get("item_id")` 로 생성/수정을 가르므로,
           #   생성 호출(business_id + title)이 "아이템 #business_id 수정"으로 오독된다.
         returns: items
+        columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:business]{store: "business", op: "list"}'
         description: 사업 원장 조회·관리 (store × op). store=business(사업)/item(상품·서비스)/document(레벨별 공개문서)/guideline(근무지침). op:list 기본.

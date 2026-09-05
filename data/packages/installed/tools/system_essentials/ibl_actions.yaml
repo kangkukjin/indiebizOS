@@ -42,6 +42,7 @@ nodes:
           max_blocks: integer      # docx 전용 — 블록(문단·표) 상한(기본 300, 0=무제한).
           max_rows: integer        # xlsx 전용 — 시트당 행 상한(기본 200).
         returns: scalar
+        columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         # 변이 축이 op 이 아니라 **param** 인 통화 (F20-1 shape_variants 판정의 동형 —
         # "변이 축은 param" 문제를 op 로 바꾸지 않고 선언의 입도를 param 축으로 확장한다).
         # 평범한 read=본문 텍스트(진짜 scalar), 아래 모드에서만 통화가 나온다.
@@ -425,6 +426,7 @@ nodes:
         - body.md
       sheet:
         returns: items
+        columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         # append/update 가 장부 파일을 쓴다 — op 하나라도 쓰기면 true (webapp 선례).
         side_effect: true
         # find(기본 op)는 실존 파일 경로 인자에 의존 — self:read 선례.
@@ -464,6 +466,7 @@ nodes:
         - sheet.md
       script:
         returns: items
+        columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         # register/run/remove 가 원장·세상을 쓴다 — op 하나라도 쓰기면 true (webapp 선례).
         side_effect: true
         fixture: '[self:script]{}'
@@ -508,6 +511,7 @@ nodes:
         - script.md
       ledger:
         returns: items
+        columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         side_effect: true     # append/upsert/set 이 원장을 쓴다 — 통화(returns)와 안전은 다른 축
         fixture: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
         description: JSON 원장 원자 갱신·조회 (op 분기) — 반복 작업의 상태(커버리지·순회 큐·판정)를 스키마 관문과 함께 지키는 {items} 통화의 저장 반쪽. 등록 스크립트에서 승격(2026-09-04 언어 개정).

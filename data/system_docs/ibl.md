@@ -520,6 +520,7 @@ IBL 액션을 연산자로 연결하면 파이프라인이 된다.
 - 가장 흔한 관습은 카드 `{title, meta, summary, url, image?}`(검색·매물·뉴스) — 단 `title`조차 보장 아닌 **열린 항목**.
 - 같은 items가 통계/시세는 **수치 칸을 담은 행 dict**(첫 키=x축)로, 문서는 **문단 항목**(type·text)으로 흐른다 — *받는 쪽(소비자)이 필요한 view로 재구성*한다.
 - 액션은 `returns:` 로 자기 역할을 선언한다: **items**(생성=통화 냄) · **transform**(변환=통화→통화) · **scalar**(단일값·통화 아님) · **effect**(행동·종착).
+- **변환자는 `flow:` 로 흐름 규칙을 선언한다**(2026-09-05, 정본 `docs/IBL_STATIC_TYPECHECK_HANDOFF.md`): `accepts`(items·prose·same-kind·pair…) · `emits`(same·items·prose·scalar·effect) · `columns`(keep·subset·rename·add·reset·open·union) · `columns_param`·`reads_fields`. `returns: transform` 인데 flow 가 없으면 빌드 `--check` 가 막는다. 열이 데이터(파일·원장)가 정하는 액션은 `columns_from: data`. 이 선언과 fixture 실측 열 카탈로그를 읽는 **정적 통화 검사기**(`backend/ibl/ibl_typecheck.py`)가 실행 전에 문장별 통화·열을 계산한다 — 확정된 위반(산문 뒤 items 변환자·확정 열 밖 필드·prose 에 .items)만 error 로 실행 전에 거절하고, 미상(unknown)은 절대 빨강이 아니다(`scripts/check_validate_parity.py --typecheck` 가 '실행되는 문장에 error 0' 을 집행). 창구 셋 = 실행 관문(`execute_ibl`) · `execute_ibl{check: true}`(실행 없이 types·issues — 모델의 탐침 자리) · `/ibl/validate`. 함수·관용구·워크플로의 서명은 반환 모양을 함께 말한다: `[fn:이름]{슬롯} → items⟨title·url⟩`. ★흐름 규칙은 코드가 아니라 사전 데이터다 — 검사기 코드에 액션 이름이 없다(언어의 경계).
 
 **최소 칸 규약 (2026-08-16, 상상훈련 F1 — 병기 원칙)**: 열린 항목이되, 파이프가 실제로 무는 칸은 관습을 지킨다.
 1. **제목 칸 = `title`** — native 이름 칸(`name` 등)을 가진 생산자도 `title`을 병기한다(제거 아님·추가). 계열마다 제목 칸이 다르면 교차 `each`/`join`이 매번 필드명 실측을 요구한다(실측: restaurant `name` vs 상거래 `title`).

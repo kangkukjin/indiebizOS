@@ -64,7 +64,7 @@ LAYERS = {
         "api_engine", "api_pipeline", "api_transforms",
         "capability_card", "channel_engine", "event_engine", "ibl_access", "ibl_control_blocks",
         "ibl_engine", "ibl_envelope", "ibl_executors", "ibl_exec_output", "ibl_exec_goal",
-        "ibl_honesty", "ibl_traceback", "ibl_quality", "ibl_pipe_types",
+        "ibl_honesty", "ibl_traceback", "ibl_quality", "ibl_pipe_types", "ibl_typecheck",
         "ibl_exec_each", "ibl_exec_sense", "ibl_ops", "ibl_param_vocab",
         "ibl_progress",
         "ibl_predicates",

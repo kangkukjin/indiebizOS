@@ -13,5 +13,10 @@ cadence_hours: 24         # 전이 계산 카덴스 (무LLM)
 # guide_downscale(주간 하향 정규화)이 예산 초과분부터 압축한다. 초기값은 2026-09-02 사용자가
 # 만족한 다이어트 결과(21·30·34KB) 위에 잡았다.
 guide_budget_bytes: 36000
-downscale_per_run: 2      # 하향 정규화 회차당 가이드 수 (LLM 비용 절제, guide_audit PER_RUN 과 같은 태도)
+# 예산 대상 glob — 가이드와 상시 주입 프롬프트 조각(매 턴 실리는 교재도 절차 기억이라 같은 예산).
+# `*.md` 만 잡으므로 `*.md.deprecated` 는 밖. 항목 추가는 데이터로만(스크립트에 경로 전개 금지).
+guide_budget_globs:
+  - data/guides/*.md
+  - data/common_prompts/fragments/*.md
+downscale_per_run: 2     # 하향 정규화 회차당 가이드 수 (LLM 비용 절제, guide_audit PER_RUN 과 같은 태도)
 section_unused_min_turns: 3   # 절 단위 '미사용' 판정 최소 관측 턴 — 귀속이 이만큼 돌았을 때만 3부류 압축

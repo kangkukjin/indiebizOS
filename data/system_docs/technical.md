@@ -138,7 +138,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `POST /business/auto-response/stop` - 자동응답 중지
 
 ### IBL 실행·번역 (/ibl) — api_ibl.py
-- `POST /ibl/execute` — 문장 실행. `POST /ibl/translate`(자연어→IBL, 조종실) · `POST /ibl/validate`(dry-run: 부작용 미리보기) · `POST /ibl/distill`(성공 실행을 해마에 증류) · `GET /ibl/actions/catalog` · `POST /ibl/read_guide` · `POST /ibl/embed`(폰-자아 해마 인코더 렌트) · `POST /ibl/recover`(표면 티켓 회수 — 아래)
+- `POST /ibl/execute` — 문장 실행. `POST /ibl/translate`(자연어→IBL, 조종실) · `POST /ibl/validate`(dry-run: 부작용 미리보기 + `typecheck`{ok, issues, types, fn_returns} — 정적 통화 검사, 2026-09-05; `/ibl/execute` 의 `check: true` 도 같은 검사만 돌려준다) · `POST /ibl/distill`(성공 실행을 해마에 증류) · `GET /ibl/actions/catalog` · `POST /ibl/read_guide` · `POST /ibl/embed`(폰-자아 해마 인코더 렌트) · `POST /ibl/recover`(표면 티켓 회수 — 아래)
 - **요청 봉투 = 행위자 3칸 + 표면**(2026-08-21): `agent_id`(발신 신원 — 없으면 `system_ai`, 이 표면은 전부 소유자 게이트 뒤다) · `task_id`(위임 체인 — 아웃오브프로세스 재진입이 부모 태스크를 복원하는 통로) · `origin`(출처. `user`=사람의 직접 명령, 포털 경유는 `portal`. 없으면 무출처로 원장에 남는다) · `surface`(`web`=원격런처/포털/폰 WebView — "소리가 어디서 나야 하는가"의 판정 축. 데스크탑은 보내지 않는다) · `project_id`/`project_path`.
 - **응답 봉투 = 다이어트**(2026-08-22 M1): `results[]` 는 step 요약(shape·count·bytes·columns·preview, 실패 step 은 오류문 원형), `final_result` 만 원형. 옛 모양은 `verbose: true`. 실패 시 `resume:{from_step, prev_ref}` 가 실리고 `execute_ibl(code, resume)` 로 앞 단 재실행 0으로 이어붙인다.
 - **자동 스필**: 이음매 통화가 200K자를 넘으면 `data/spill/` 참조 봉투로 바뀐다(소비자 투명 해소, cache 계급 24h GC). `[self:write]{spill: true}` 는 명시적 싱크.
@@ -319,7 +319,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(26) → `datastore`(40) → `ibl`(41) → `cognition`(48) → `services`(28) → `surface`(61). `.py` 총 300개(test 제외).
+  `base`(26) → `datastore`(40) → `ibl`(42) → `cognition`(48) → `services`(28) → `surface`(61). `.py` 총 301개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(16) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

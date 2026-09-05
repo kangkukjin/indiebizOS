@@ -31,6 +31,11 @@ nodes:
     actions:
       ai:
         returns: transform
+        flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+          accepts: items
+          emits: items
+          columns: open
+          columns_param: fields
         ai_call: true
         runs_on: anywhere
         scope: workspace
@@ -54,6 +59,9 @@ nodes:
         - ai
       brief:
         returns: scalar
+        flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+          accepts: items
+          emits: prose
         ai_call: true
         exempt: 원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)
         runs_on: anywhere

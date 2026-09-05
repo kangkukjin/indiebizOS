@@ -807,6 +807,14 @@ def validate_imagined_draft(code: str) -> tuple:
             return (False, seam[1])
     except Exception:
         pass
+    # ⑤ 정적 통화 검사(ibl_typecheck, 2026-09-05) — 확정 error 만(미상은 통과), 실행 관문과 한 벌
+    try:
+        from ibl_typecheck import typecheck_code, format_issues
+        _tc = typecheck_code(code)
+        if not _tc.get("ok") and _tc.get("issues"):
+            return (False, "통화 검사: " + format_issues(_tc["issues"]))
+    except Exception:
+        pass
     return (True, "")
 
 

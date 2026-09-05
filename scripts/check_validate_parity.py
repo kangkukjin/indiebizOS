@@ -18,7 +18,8 @@
   [B] 교재 코드 블록 (`data/common_prompts/fragments/12_ibl_only.md`, WRONG 예시 블록 제외)
   [C] `--corpus` : 해마 코퍼스 `ibl_examples` 전수 (기본은 보고만, `--strict` 면 차단)
 
-사용: python3 scripts/check_validate_parity.py [--corpus] [--strict] [--verbose]
+사용: python3 scripts/check_validate_parity.py [--corpus] [--strict] [--verbose] [--typecheck]
+      --typecheck: 정적 통화 검사(ibl_typecheck)의 error 도 거짓 빨강으로 센다 — 실행되는 문장에 error 0 (2026-09-05)
       (시스템 python 이면 .venv 로 스스로 재실행한다 — 검수기는 백엔드 모듈이라.)
 실패 시 exit 1.
 """
@@ -127,7 +128,7 @@ def _all_actions_known(steps) -> bool:
     return True
 
 
-def check(items, strict: bool, verbose: bool):
+def check(items, strict: bool, verbose: bool, typecheck: bool = False):
     bad = []
     seen = 0
     for label, code in items:
@@ -143,6 +144,13 @@ def check(items, strict: bool, verbose: bool):
         except Exception as e:
             bad.append((label, code, f"검수기 예외: {e}"))
             continue
+        if typecheck:
+            # --typecheck: 실행되는 문장(fixture·교재·코퍼스)에 정적 통화 검사 error 가 나면 규칙이 틀린 것이다.
+            _tc = v.get("typecheck") or {}
+            _errs = [i for i in (_tc.get("issues") or []) if i.get("severity") == "error"]
+            if _errs and _all_actions_known(v.get("steps")):
+                bad.append((label, code, "typecheck: " + " / ".join(
+                    f"문장{i.get('statement')} step{i.get('step')} [{i.get('at')}] {i.get('message')}" for i in _errs[:3])))
         if v.get("valid"):
             continue
         if v.get("syntax_error"):
@@ -159,6 +167,7 @@ def main() -> int:
     args = set(sys.argv[1:])
     strict = "--strict" in args
     verbose = "--verbose" in args
+    typecheck = "--typecheck" in args
     if "--self-test" in args:
         s, b = check([("self", "$q = [self:time]\n$q >> [table:take]{n: 1}"),
                       ("self2", "$a = [self:time]\n$b = [self:time]\n$a & $b >> [table:union]")],
@@ -171,7 +180,7 @@ def main() -> int:
                                   ("corpus", corpus() if "--corpus" in args else [], strict)):
         if not items:
             continue
-        seen, bad = check(items, strict, verbose)
+        seen, bad = check(items, strict, verbose, typecheck=typecheck)
         print(f"[validate-parity] {name}: {seen} checked, {len(bad)} false-red"
               + ("" if blocking else " (보고만)"))
         for label, code, why in bad:

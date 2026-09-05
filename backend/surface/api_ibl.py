@@ -11,6 +11,7 @@ router = APIRouter(prefix="/ibl", tags=["ibl"])
 class IBLRequest(BaseModel):
     code: str
     verbose: bool = False              # 파이프 봉투 results[] 원형(true) / step 요약(기본) — ibl_envelope (2026-08-22 M1)
+    check: bool = False                # 정적 통화 검사만(실행 없음) — ibl_typecheck (2026-09-05)
     resume: Optional[dict] = None      # 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 그 step 부터 재개.
     files: Optional[List[str]] = None  # 긴 텍스트/코드를 IBL 파서 밖에서 전달 ($file:0 로 참조).
     files_from: Optional[List[str]] = None  # files 의 경로 참조판 — 서버가 읽어 files 뒤에 병합.
@@ -193,6 +194,8 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["files"] = req.files
                     if req.files_from is not None:
                         _ti["files_from"] = req.files_from
+                    if req.check:
+                        _ti["check"] = True
                     return _execute_ibl_unified(_ti, project_path, agent_id=agent_id)
                 finally:
                     set_current_project_id(_prev_pid)
@@ -513,6 +516,14 @@ async def validate_ibl(req: ValidateRequest):
     if not code:
         raise HTTPException(status_code=400, detail="빈 코드입니다.")
     return validate_code(code)
+
+
+def _typecheck_of(code: str) -> dict:
+    try:
+        from ibl_typecheck import typecheck_code
+        return typecheck_code(code)
+    except Exception as e:                       # 검사기가 검수를 죽이면 안 된다
+        return {"ok": True, "issues": [], "types": [], "fn_returns": {}, "abstained": str(e)}
 
 
 def validate_code(code: str) -> dict:
@@ -990,6 +1001,9 @@ def validate_code(code: str) -> dict:
         # AI 낱말(ai_call) 포함 — 실행마다 모델 비용·출력 편차(표시 의무, 차단 아님).
         "has_ai_call": has_ai_call,
         "steps": steps,
+        # 정적 통화 검사(2026-09-05, ibl_typecheck) — 실행 관문과 같은 함수. error 는 실행에서 거절되는 것,
+        # warning 은 아마. 거짓 빨강은 check_validate_parity --typecheck 가 0 을 집행한다.
+        "typecheck": _typecheck_of(code),
     }
 
 

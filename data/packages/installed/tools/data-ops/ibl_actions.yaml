@@ -8,6 +8,11 @@ actions:
       field: string
       value: [string, number, boolean]
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: same
+      columns: keep
+      reads_fields: [where]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
@@ -25,6 +30,11 @@ actions:
     - filter
   sort:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: same
+      columns: keep
+      reads_fields: [by]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
@@ -42,6 +52,10 @@ actions:
     - 순서
   take:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: same
+      columns: keep
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤.
@@ -66,6 +80,10 @@ actions:
       field: string
       text: string
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: prose|items
+      emits: items
+      columns: reset
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — 긴 문자열 하나(크롤 본문·산문) 또는 본문 열이 있는 items(자막 구간 등)를 덩이 items 로 자른다(size 자 상한, by=paragraph|line|chars, overlap; items 는 행 경계). 긴 원문을 파이프 안에서 나눠 [table:each] 로 덩이마다 요약하고 다시 [table:brief] 로 종합하는 자리.
@@ -84,6 +102,12 @@ actions:
     - 긴 자막
   select:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: items
+      columns: subset
+      columns_param: columns
+      reads_fields: [columns]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기.
@@ -101,6 +125,11 @@ actions:
     - 골라
   compute:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: items
+      columns: add
+      columns_param: set
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
@@ -120,6 +149,12 @@ actions:
     - compute
   rename:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: items
+      columns: rename
+      columns_param: map
+      reads_fields: [map]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — 열/필드 이름 바꾸기(관계대수 ρ). 소스가 다른 두 통화의 join 전 키 맞추기.
@@ -140,6 +175,11 @@ actions:
     - 키맞추기
   flatten:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: items
+      columns: reset
+      reads_fields: [field]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다.
@@ -157,6 +197,11 @@ actions:
     - 풀기
   dedup:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: same
+      columns: keep
+      reads_fields: [by]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교).
@@ -174,6 +219,11 @@ actions:
     - 고유
   since:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: same
+      columns: keep
+      reads_fields: [by]
     # 검침 원장(data/table_since.db) 갱신 — 자가점검 순찰·dry-run 이 기준선을 올리면
     # 다음 실사용의 '새 것'이 침묵 소실된다(통화와 안전은 다른 축 — trigger 선례).
     side_effect: true
@@ -197,6 +247,11 @@ actions:
     - 감시
   groupby:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: items
+      emits: items
+      columns: reset
+      reads_fields: [by]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items를 키 필드로 그룹지어 집계. agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
@@ -214,6 +269,11 @@ actions:
     - 통계
   join:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: pair
+      emits: items
+      columns: union
+      reads_fields: [on]
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
@@ -231,6 +291,10 @@ actions:
     - 연결
   union:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: same-kind
+      emits: items
+      columns: union
     runs_on: anywhere
     scope: workspace
     params:
@@ -250,6 +314,11 @@ actions:
     - 세로결합
   merge:
     returns: transform
+    flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
+      accepts: pair
+      emits: items
+      columns: union
+      reads_fields: [by]
     runs_on: anywhere
     scope: workspace
     params:

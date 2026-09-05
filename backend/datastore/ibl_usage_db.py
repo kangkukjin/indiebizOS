@@ -260,6 +260,8 @@ class IBLUsageDB:
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN topic TEXT DEFAULT ''")
         if "alias" not in cols:   # 관용구 이름(2026-09-05, 관용구=이름 붙은 함수) — [fn:이름] 으로 부른다. 낱말은 빈 값
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
+        if "returns" not in cols:  # 함수 서명의 반환 모양(2026-09-05, ibl_typecheck.describe) — `items⟨title·url⟩`/`prose`/`?`
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN returns TEXT DEFAULT ''")
 
         # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
         # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).
@@ -534,7 +536,7 @@ class IBLUsageDB:
                     nodes: str = "", category: str = "single",
                     difficulty: int = 1, source: str = "synthetic",
                     tags: str = "", avg_ms: float = -1.0,
-                    avg_tokens: float = -1.0, topic: str = "", alias: str = "") -> int:
+                    avg_tokens: float = -1.0, topic: str = "", alias: str = "", returns: str = "") -> int:
         """용례 추가 (임베딩 자동 생성). Returns: example ID (구문 불가·남의 어휘로 거부되면 0)
 
         avg_ms/avg_tokens: 출생 실측 — 증류 경로가 원 실행의 소요시간·그 턴의 토큰 소요를
@@ -551,12 +553,12 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (intent, ibl_code, nodes, category, difficulty, source, tags,
                  float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
                  float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
-                 _norm_topic(topic), (alias or "").strip())
+                 _norm_topic(topic), (alias or "").strip(), (returns or "").strip())
             )
             example_id = cursor.lastrowid
             conn.commit()
@@ -573,7 +575,8 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             # 2026-09-05: 카테고리 무관 — 이름이 붙은 용례(관용구·다문장 프로그램)는 무엇이든 부를 수 있다(자동 작명과 한 벌)
             row = conn.execute(
-                "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category "
+                "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category, "
+                "COALESCE(returns,'') AS returns "
                 "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC LIMIT 1",
                 (name.strip(),)).fetchone()
         return dict(row) if row else None

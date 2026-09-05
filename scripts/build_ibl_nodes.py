@@ -330,6 +330,21 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] fixture 완전성 통과 ✓ (모든 items/scalar 액션이 fixture/exempt 보유)")
 
+    # --- flow 선언 완전성 (--check/--validate 전용, 2026-09-05 정적 통화 검사) ---
+    flow_failed = False
+    if data is not None and (check or validate_only):
+        from iblbuild_validators import validate_flow_coverage
+        fissues = validate_flow_coverage(data, root)
+        if fissues:
+            flow_failed = True
+            print(f"[build_ibl_nodes] flow 선언 완전성 실패: {len(fissues)}건 "
+                  f"(returns: transform 액션은 flow: {{accepts, emits}} 필수 — 검사기가 이 선언만 읽는다)",
+                  file=sys.stderr)
+            for issue in fissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] flow 선언 완전성 통과 ✓ (모든 transform 액션이 flow 보유)")
+
     # --- enum-가드: 파라미터 enum ↔ handler 분기 리터럴 정합 (--check/--validate 전용) ---
     # 드리프트 부류: handler 가 지원하는 discriminator 값(예 realty source=naver)이
     # 파생 스키마 enum 에 빠져 desc 산문만 진실을 아는 상태 (2026-07-28 메모 감사에서 발굴).
@@ -540,7 +555,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             print("[build_ibl_nodes] 가이드 부패 경고 없음 \u2713 (죽은 참조·고아 0)")
 
     if validate_only:
-        return 1 if (validation_failed or corpus_failed or fixture_failed
+        return 1 if (validation_failed or corpus_failed or fixture_failed or flow_failed
                      or enum_failed
                      or profile_failed or os_failed or launcher_failed
                      or textbook_failed or appvocab_failed or selfimg_failed
@@ -793,7 +808,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and tool_json_ok and core_manifest_ok and dist_filter_ok
                      and docs_ok
                      and not validation_failed
-                     and not corpus_failed and not fixture_failed
+                     and not corpus_failed and not fixture_failed and not flow_failed
                      and not enum_failed
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed

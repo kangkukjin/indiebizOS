@@ -36,8 +36,14 @@ RUNS_MAX_SENTENCES = 30       # 주행당 문장 수 상한(넘으면 앞부분�
 RUNS_MAX_LEN = 400            # 문장 한 줄 상한(넘으면 꼬리 절단 신고)
 RUNS_NOTE = ("<!-- 이 가지에서 실제로 성공한 주행의 문장 묶음(실행 순서 그대로). 얼린 프로그램이 아니라 용례 — "
              f"다음 주행이 읽고 고쳐 쓴다. 최근 {RUNS_MAX}건·주행당 {RUNS_MAX_SENTENCES}문장, 오래된 것부터 빠진다. "
-             "한 주행 = `### 날짜 · 의도 · 문장 n · ✓` 머리 + 번호 목록. -->")
+             "한 주행 = `### 날짜 · 의도 · 문장 n · ✓ · 호출 k · 실패 m · 타이핑 NK자` 머리(비용은 적합도 — "
+             "호출이 적고 첫 프로그램이 맞은 주행이 좋은 주행) + (있으면) `놓침: ` 줄 + 번호 목록. -->")
 RUN_HEAD_RE = re.compile(r"(?m)^### (\d{4}-\d{2}-\d{2})")
+# 주행 머리 전체 — 비용 꼬리(호출·실패·타이핑)는 2026-09-05 부터, 옛 머리(꼬리 없음)도 읽는다
+RUN_HEAD_FULL_RE = re.compile(
+    r"^### (\d{4}-\d{2}-\d{2}) · (.*?) · 문장 (\d+) · ([✓✗])"
+    r"(?: · 호출 (\d+) · 실패 (\d+) · 타이핑 ([\d.]+)(K?)자)?\s*$")
+RUN_MISSED_PREFIX = "놓침: "
 PHRASES = "## 관용구"
 PHRASE_CATEGORY = "phrase"
 PHRASE_MIN_SENTENCES = 2      # 한 문장은 낱말이다
@@ -162,7 +168,7 @@ def _conn(db_path: Optional[str] = None) -> sqlite3.Connection:
 def ensure_column(db_path: Optional[str] = None) -> None:
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
     try:
-        for col in ("topic", "alias"):
+        for col in ("topic", "alias", "returns"):
             try:
                 conn.execute(f"SELECT {col} FROM ibl_examples LIMIT 1")
             except sqlite3.OperationalError:
@@ -184,7 +190,7 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
         args = (norm_topic(topic),) + ((PHRASE_CATEGORY,) if where else ())
         rows = conn.execute(
             "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, updated_at, "
-            "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
+            "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, COALESCE(returns,'') AS returns FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
         return [dict(r) for r in rows]
     except sqlite3.OperationalError:
@@ -357,13 +363,14 @@ def slot_names(code: str) -> List[str]:
     return out
 
 
-def phrase_call_line(alias: str, code: str) -> str:
-    """관용구를 그대로 쓰는 호출 한 줄 — `[fn:이름]{슬롯: "…", …}` (슬롯은 몸의 `${슬롯}`)."""
+def phrase_call_line(alias: str, code: str, returns: str = "") -> str:
+    """관용구를 그대로 쓰는 호출 한 줄 — `[fn:이름]{슬롯: "…", …} → 반환` (슬롯은 몸의 `${슬롯}`, 반환은 ibl_typecheck 가 계산한
+    `items⟨열⟩`/`prose`/`?` — 2026-09-05: 부르기 전에 무엇이 나올지 알아야 뒤 문장을 쓴다)."""
     if not alias:
         return ""
     slots = slot_names(code or "")
     args = ", ".join(f'{s}: "…"' for s in slots)
-    return f"[fn:{alias}]{{{args}}}"
+    return f"[fn:{alias}]{{{args}}}" + (f" → {returns}" if returns else "")
 
 
 def phrase_def_block(alias: str, code: str) -> str:
@@ -389,7 +396,7 @@ def render_phrase(r: Dict[str, Any]) -> str:
     head += f" ‹{' · '.join(m for m in meta if m)}›"
     lines = [head]
     if alias:
-        lines.append(f"호출: `{phrase_call_line(alias, code)}`")
+        lines.append(f"호출: `{phrase_call_line(alias, code, (r.get('returns') or '').strip())}`")
     for i, sent in enumerate(sents, 1):
         lines.append(f"{i}. `{_one_line(sent).replace('`', chr(39))}`")
     return "\n".join(lines)
@@ -487,8 +494,65 @@ def runs_of(path: str) -> int:
     return len(RUN_HEAD_RE.findall(sec))
 
 
+def _fmt_chars(n: int) -> str:
+    """타이핑 자수 표기 — 1K 미만은 그대로, 그 위는 K 단위(머리 한 줄에 들어가는 폭)."""
+    n = int(n or 0)
+    if n < 1000:
+        return f"{n}자"
+    return f"{n / 1000:.1f}K자" if n < 10000 else f"{round(n / 1000)}K자"
+
+
+def parse_run_heads(sec: str) -> List[Dict[str, Any]]:
+    """`## 주행` 절의 머리들을 최신순 그대로 읽는다 — 비용 꼬리가 없는 옛 머리는 calls=None."""
+    out: List[Dict[str, Any]] = []
+    for line in (sec or "").splitlines():
+        m = RUN_HEAD_FULL_RE.match(line)
+        if not m:
+            continue
+        day, intent, n, mark, calls, failed, typed, k = m.groups()
+        typed_chars = None
+        if typed is not None:
+            typed_chars = int(round(float(typed) * (1000 if k else 1)))
+        out.append({"day": day, "intent": intent, "sentences": int(n), "ok": mark == "✓",
+                    "calls": int(calls) if calls is not None else None,
+                    "failed": int(failed) if failed is not None else None,
+                    "typed_chars": typed_chars})
+    return out
+
+
+def run_cost_line(sec: str) -> str:
+    """이름 먼저 회상의 주행 줄에 붙는 **최근 주행 비용 한 줄** — 예
+    `최근: 호출 23·실패 7·타이핑 18K자 / 최소 호출: 9(2026-08-28)`. 비용 머리가 하나도 없으면 빈 문자열."""
+    heads = [h for h in parse_run_heads(sec) if h["calls"] is not None]
+    if not heads:
+        return ""
+    last = heads[0]
+    best = min(heads, key=lambda h: (h["calls"], h["day"]))
+    return (f"최근: 호출 {last['calls']}·실패 {last['failed']}·타이핑 {_fmt_chars(last['typed_chars'])}"
+            f" / 최소 호출: {best['calls']}({best['day']})")
+
+
+def _clean_missed(missed: Optional[Dict[str, Any]]) -> Dict[str, List[str]]:
+    """증류의 되풀이 검토 답을 머리 뒤 한 줄로 실을 수 있게 거른다 — 이름(한글·영문·숫자·_)과
+    문장 번호 범위(`3-7`·`4`)만. 그 밖(경로·질의어 따위 개인 명사)은 버린다."""
+    out = {"retyped": [], "mergeable": []}
+    if not isinstance(missed, dict):
+        return out
+    for x in (missed.get("retyped") or []):
+        s = str(x).strip()
+        if re.fullmatch(r"[\w가-힣]{1,30}", s) and s not in out["retyped"]:
+            out["retyped"].append(s)
+    for x in (missed.get("mergeable") or []):
+        s = str(x).strip().replace("~", "-").replace("–", "-").replace(" ", "")
+        if re.fullmatch(r"\d{1,3}(-\d{1,3})?", s) and s not in out["mergeable"]:
+            out["mergeable"].append(s)
+    return out
+
+
 def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
-             when: Optional[str] = None, db_path: Optional[str] = None) -> Dict[str, Any]:
+             when: Optional[str] = None, db_path: Optional[str] = None,
+             calls: Optional[int] = None, failed: Optional[int] = None, typed_chars: Optional[int] = None,
+             missed: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """주행 하나(성공한 문장 묶음)를 가지 문서의 `## 주행` 절에 적는다 (2026-09-04, 사용자 판정).
 
     왜: 증류는 에피소드당 대표 문장 하나를 코퍼스에 넣는데, 가장 값진 주행(보고서 40문장·앱 개발
@@ -498,6 +562,11 @@ def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
     얼린 워크플로가 아니라 용례다 — 다음 주행이 읽고 고쳐 쓴다.
     상한은 정직하게: 주행 RUNS_MAX 건(오래된 것부터 삭제)·주행당 RUNS_MAX_SENTENCES 문장·문장
     RUNS_MAX_LEN 자, 넘치면 절단을 표기한다.
+    비용(2026-09-05, 사용자 판정 "적합도가 보여야 육종이 된다"): calls(execute_ibl 호출 수)·failed(실패
+    호출)·typed_chars(타이핑 자수)가 오면 머리 꼬리에 `· 호출 k · 실패 m · 타이핑 NK자` 로 적고,
+    missed({retyped:[이름…], mergeable:["3-7"…]} — 증류의 되풀이 검토)가 비어 있지 않으면 머리 바로 뒤에
+    `놓침: 이름 재타이핑 … · 묶을 수 있던 문장 3-7` 한 줄을 남긴다. 저장 건수가 아니라 다음 주행이
+    읽는 자리에 남기는 것이 목적 — 줄이는 판단은 모델이 한다.
     """
     topic = norm_topic(topic)
     sentences = [s for s in (sentences or []) if isinstance(s, str) and s.strip()]
@@ -510,7 +579,18 @@ def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
     head, sec, tail = _split_runs(text)
     day = (when or datetime.now().strftime("%Y-%m-%d"))[:10]
     shown = sentences[:RUNS_MAX_SENTENCES]
-    lines = [f"### {day} · {_one_line(intent)[:120]} · 문장 {len(sentences)} · {'✓' if ok else '✗'}"]
+    head_line = f"### {day} · {_one_line(intent)[:120].replace(' · ', ' ')} · 문장 {len(sentences)} · {'✓' if ok else '✗'}"
+    if calls is not None:
+        head_line += f" · 호출 {int(calls)} · 실패 {int(failed or 0)} · 타이핑 {_fmt_chars(typed_chars or 0)}"
+    lines = [head_line]
+    m_ = _clean_missed(missed)
+    if m_["retyped"] or m_["mergeable"]:
+        parts = []
+        if m_["retyped"]:
+            parts.append("이름 재타이핑 " + ", ".join(m_["retyped"]))
+        if m_["mergeable"]:
+            parts.append("묶을 수 있던 문장 " + ", ".join(m_["mergeable"]))
+        lines.append(RUN_MISSED_PREFIX + " · ".join(parts))
     for i, s in enumerate(shown, 1):
         one = _one_line(s).replace("`", "'")
         if len(one) > RUNS_MAX_LEN:
@@ -830,7 +910,7 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
             meta.append(f"✓{s}/✗{f}")
         meta.append("마지막 " + (p.get("updated_at") or p.get("created_at") or "")[:10])
         lines.append(f"- {p['alias']} — {_one_line(p.get('intent'))} · {' · '.join(meta)} ‹#{p['id']}›")
-        lines.append(f"  {phrase_call_line(p['alias'], code)}")
+        lines.append(f"  {phrase_call_line(p['alias'], code, (p.get('returns') or '').strip())}")
     if not named:
         lines.append("- (아직 이름 붙은 함수가 없다 — 이 주행이 성공하면 증류가 이름을 붙인다)")
     lines.append("")
@@ -852,7 +932,10 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     if not words and not phrases:
         lines.append("- (아직 없음)")
     lines.append("")
-    lines.append(f"## 주행 {_runs_count(text)}건 — expand:\"주행\" 로 문장을 연다")
+    # 주행은 건수 + 최근 비용 한 줄(호출·실패·타이핑, 최소 호출 주행의 날짜) — 본문은 expand 때만.
+    # 비용이 보여야 다음 주행이 줄인다(2026-09-05); 무엇을 어떻게 줄일지는 모델의 몫.
+    _cost = run_cost_line(_split_runs(text or "")[1])
+    lines.append(f"## 주행 {_runs_count(text)}건" + (f" — {_cost}" if _cost else "") + " — expand:\"주행\" 로 문장을 연다")
     return "\n".join(lines) + "\n"
 
 
@@ -863,7 +946,7 @@ def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
     n = len(split_sentences(code))
     alias = (r.get("alias") or "").strip()
     if alias:
-        out["call"] = phrase_call_line(alias, code)
+        out["call"] = phrase_call_line(alias, code, (r.get('returns') or '').strip() if isinstance(r, dict) else "")
         out["ibl_code"] = f"(문장 {n} — expand:\"{alias}\")"
     elif n > 1:
         out["ibl_code"] = f"(문장 {n}, 이름 없음 — expand:\"#{r.get('id')}\")"

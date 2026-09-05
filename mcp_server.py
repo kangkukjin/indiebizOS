@@ -336,6 +336,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       verbose: bool = False,
                       recover: Optional[str] = None,
                       wait: float = 0,
+                      check: bool = False,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
@@ -372,6 +373,11 @@ async def execute_ibl(code: str, project_path: str = "",
         왕복 1회. 2026-09-01 실측: 한 주행의 도구 호출 45건 중 16건이 기다림이었다).
         `[self:script]{op:"status", wait}` 와 같은 계약이다.
 
+    check: **실행하지 않고** 정적 통화 검사만 — 문장별 마지막 통화·열(types: items⟨열⟩·prose·scalar·
+        effect·?)과 문제(issues: error=실행하면 반드시 실패 / warning=아마)를 돌려준다(0토큰·부작용 0).
+        긴 프로그램은 먼저 check 로 보고 초록이면 같은 code 를 실행한다 — 문법을 시험하려고 탐침
+        문장을 돌리지 않는다. check 없이도 확정 error 는 실행 전에 error_type:"typecheck" 로 거절된다.
+
     ★2026-08-22 B23-1: 이 셋은 도구 스키마(tool_loader)와 엔진에는 있었는데 이 MCP 표면에만
     없어서, 봉투 note 가 안내하는 대로 보낸 resume 이 조용히 사라졌다. 표면은 도구 스키마와
     같은 파라미터 집합을 나른다 — 스키마에 새 파라미터를 넣을 때 여기와 api_ibl.IBLRequest 도
@@ -393,6 +399,8 @@ async def execute_ibl(code: str, project_path: str = "",
         payload["files_from"] = files_from
     if verbose:
         payload["verbose"] = True
+    if check:
+        payload["check"] = True   # 정적 통화 검사만(실행 없음) — 2026-09-05
     if agent_id:
         payload["agent_id"] = agent_id  # 신원이 있을 때만 전달 (없으면 현 동작 그대로)
     if task_id:

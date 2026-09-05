@@ -470,13 +470,63 @@ def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool
 _REFLECTION_MSG_CACHE = {"text": ""}
 
 
+_IBL_HEAD_RE = re.compile(r"\[([a-z_]+):")
+
+
+def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
+    """이번 주행의 IBL 호출 경제 — 손에 있는 tool_calls 만으로 센다(궤적 DB 를 다시 읽지 않는다).
+
+    두 궤적 모양을 다 받는다: 평가/반성용 `{name, input, result, is_error}` 와 증류용
+    `{tool_name, input, success}`. 액션 수는 code 의 대괄호 머리 수(`[node:` 계수)다.
+    반환: calls(execute_ibl 호출 수)·single(액션 1개 호출)·failed·typed_chars(code 자수 합).
+    """
+    calls = single = failed = typed = 0
+    for tc in tool_calls or []:
+        if not isinstance(tc, dict):
+            continue
+        name = tc.get("tool_name") or tc.get("name") or ""
+        if name != "execute_ibl":
+            continue
+        inp = tc.get("input")
+        code = inp.get("code", "") if isinstance(inp, dict) else ""
+        code = code if isinstance(code, str) else str(code or "")
+        calls += 1
+        typed += len(code)
+        if len(_IBL_HEAD_RE.findall(code)) <= 1:
+            single += 1
+        ok = tc.get("success") if "success" in tc else (not tc.get("is_error", False))
+        if ok is False:
+            failed += 1
+    return {"calls": calls, "single": single, "failed": failed, "typed_chars": typed}
+
+
+def _fmt_chars(n: int) -> str:
+    n = int(n or 0)
+    if n < 1000:
+        return f"{n}자"
+    return f"{n / 1000:.1f}K자" if n < 10000 else f"{round(n / 1000)}K자"
+
+
+def run_cost_line(tool_calls: list) -> str:
+    """`이번 주행: execute_ibl k회(액션 1개 호출 j회) · 실패 m · 타이핑 NK자` — 수치만, 질문 없음
+    (반성 출력 계약은 사용자 답만 허용). IBL 호출이 없으면 빈 문자열."""
+    c = ibl_call_cost(tool_calls)
+    if not c["calls"]:
+        return ""
+    return (f"이번 주행: execute_ibl {c['calls']}회(액션 1개 호출 {c['single']}회) · 실패 {c['failed']} · "
+            f"타이핑 {_fmt_chars(c['typed_chars'])}")
+
+
 def build_reflection_message(response: str, tool_calls: list) -> str:
     """실행 에이전트 자기반성 턴에 넣을 메시지를 만든다.
 
-    구성 = [자기점검 지시(파일)] + [지금까지의 궤적(도구 호출·결과 병치)] + [초안 응답].
+    구성 = [자기점검 지시(파일)] + [이번 주행 비용 한 줄] + [지금까지의 궤적(도구 호출·결과 병치)] + [초안 응답].
     같은 세션 resume이라 문맥은 이미 있지만, 궤적을 명시적으로 입력해 회고 자세를 촉발한다.
+    비용 한 줄(2026-09-05): 호출 수·액션 1개 호출·실패·타이핑 자수 — 적합도가 모델의 눈에 있어야
+    다음 프로그램이 줄어든다. 수치만 두고 질문은 덧붙이지 않는다(출력 계약).
     """
     trace = serialize_tool_trace(tool_calls) if tool_calls else ""
+    cost = run_cost_line(tool_calls) if tool_calls else ""
     if not _REFLECTION_MSG_CACHE["text"]:
         p = Path(__file__).parent.parent.parent / "data" / "common_prompts" / "execution_reflection_prompt.md"
         try:
@@ -490,6 +540,8 @@ def build_reflection_message(response: str, tool_calls: list) -> str:
                 "수정할 게 없으면 첫 줄에 정확히 NO_REVISION 이라고만 써라(초안이 그대로 나간다)."
             )
     parts = [_REFLECTION_MSG_CACHE["text"]]
+    if cost:
+        parts.append(cost)
     if trace:
         parts.append(f"## 지금까지의 궤적 (네가 부른 도구와 그 결과)\n{trace}")
     parts.append(f"## 네가 내놓으려던 응답\n{(response or '')[:8000]}")

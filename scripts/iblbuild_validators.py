@@ -1360,3 +1360,44 @@ def compression_warnings(data: dict) -> list[str]:
 from iblbuild_guide_wiring import (  # noqa: E402,F401
     validate_guide_wiring, _GUIDE_ORPHAN_BASELINE, guide_staleness_warnings,
 )
+
+
+# ---------------------------------------------------------------------------
+# flow 선언 완전성 (2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2)
+# ---------------------------------------------------------------------------
+_FLOW_ACCEPTS = {"items", "prose", "any", "same-kind", "pair", "prose|items", "items|prose"}
+_FLOW_EMITS = {"same", "items", "prose", "scalar", "effect"}
+_FLOW_COLUMNS = {"keep", "subset", "rename", "add", "reset", "open", "union"}
+
+
+def validate_flow_coverage(data: dict, root: Path) -> list[str]:
+    """정적 통화 검사의 흐름 규칙은 코드가 아니라 사전 데이터에 산다 — `returns: transform` 인 액션은
+    자기 정의에 `flow: {accepts, emits[, columns, columns_param, reads_fields]}` 를 반드시 가져야 한다.
+    검사기(backend/ibl/ibl_typecheck.py)는 이 선언만 읽고 액션 이름을 코드에 두지 않으므로, 선언이 빠진
+    변환자는 검사기에게 미상(unknown)이 되어 조용히 통과한다 — 그 침묵을 빌드 관문이 막는다.
+    """
+    issues: list[str] = []
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions", {}) or {}).items():
+            if not isinstance(action, dict):
+                continue
+            flow = action.get("flow")
+            if action.get("returns") == "transform" and not isinstance(flow, dict):
+                issues.append(f"{node_name}:{action_name}: returns: transform 인데 flow 선언이 없다 "
+                              f"(flow: {{accepts, emits[, columns]}} — 검사기가 이 변환자를 미상으로 통과시킨다)")
+                continue
+            if not isinstance(flow, dict):
+                continue
+            acc, em, col = flow.get("accepts"), flow.get("emits"), flow.get("columns")
+            if acc not in _FLOW_ACCEPTS:
+                issues.append(f"{node_name}:{action_name}: flow.accepts={acc!r} 는 허용값이 아니다 {sorted(_FLOW_ACCEPTS)}")
+            if em not in _FLOW_EMITS:
+                issues.append(f"{node_name}:{action_name}: flow.emits={em!r} 는 허용값이 아니다 {sorted(_FLOW_EMITS)}")
+            if col is not None and col not in _FLOW_COLUMNS:
+                issues.append(f"{node_name}:{action_name}: flow.columns={col!r} 는 허용값이 아니다 {sorted(_FLOW_COLUMNS)}")
+            if col in ("subset", "rename", "add", "open") and not flow.get("columns_param") and col != "open":
+                issues.append(f"{node_name}:{action_name}: flow.columns={col} 는 columns_param(읽을 param 이름)이 필요하다")
+    return issues

@@ -3197,6 +3197,7 @@ nodes:
           path:
           - source
         returns: items
+        columns_from: data
         side_effect: true
         fixture: '[self:business]{store: "business", op: "list"}'
         description: 사업 원장 조회·관리 (store × op). store=business(사업)/item(상품·서비스)/document(레벨별 공개문서)/guideline(근무지침). op:list 기본.
@@ -4839,6 +4840,7 @@ nodes:
           max_blocks: integer
           max_rows: integer
         returns: scalar
+        columns_from: data
         returns_variants:
           blocks=true: items
           tables=true: items
@@ -5194,6 +5196,7 @@ nodes:
         - body.md
       sheet:
         returns: items
+        columns_from: data
         side_effect: true
         exempt: 실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)
         description: 엑셀 장부 부분 편집 — 기존 xlsx/xlsm 에 행 추가·셀 수정·행 검색. 수식·서식·다른 시트 보존(통째 재작성 아님).
@@ -5231,6 +5234,7 @@ nodes:
         - sheet.md
       script:
         returns: items
+        columns_from: data
         side_effect: true
         fixture: '[self:script]{}'
         description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
@@ -5270,6 +5274,7 @@ nodes:
         - script.md
       ledger:
         returns: items
+        columns_from: data
         side_effect: true
         fixture: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
         description: JSON 원장 원자 갱신·조회 (op 분기) — 반복 작업의 상태(커버리지·순회 큐·판정)를 스키마 관문과 함께 지키는 {items} 통화의 저장 반쪽. 등록 스크립트에서 승격(2026-09-04 언어 개정).
@@ -7611,6 +7616,11 @@ nodes:
     actions:
       each:
         returns: transform
+        flow:
+          accepts: items
+          emits: items
+          columns: open
+          columns_param: keep
         side_effect: true
         runs_on: anywhere
         scope: workspace
@@ -7630,6 +7640,9 @@ nodes:
         - each
       reduce:
         returns: transform
+        flow:
+          accepts: items
+          emits: scalar
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(고차) — items 를 순회하며 한 줄 식으로 누적(fold). init 초기값, step 식(acc=누적값·i=행 번호·열 이름·col("열")), as 결과 이름. 합·최대·문자열 이어붙이기 같은 한 줄 누적만 — 그 이상은 [self:script].
@@ -7648,6 +7661,11 @@ nodes:
         - fold
       ai:
         returns: transform
+        flow:
+          accepts: items
+          emits: items
+          columns: open
+          columns_param: fields
         ai_call: true
         runs_on: anywhere
         scope: workspace
@@ -7671,6 +7689,9 @@ nodes:
         - ai
       brief:
         returns: scalar
+        flow:
+          accepts: items
+          emits: prose
         ai_call: true
         exempt: 원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)
         runs_on: anywhere
@@ -7701,6 +7722,12 @@ nodes:
           - number
           - boolean
         returns: transform
+        flow:
+          accepts: items
+          emits: same
+          columns: keep
+          reads_fields:
+          - where
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
@@ -7718,6 +7745,12 @@ nodes:
         - filter
       sort:
         returns: transform
+        flow:
+          accepts: items
+          emits: same
+          columns: keep
+          reads_fields:
+          - by
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
@@ -7735,6 +7768,10 @@ nodes:
         - 순서
       take:
         returns: transform
+        flow:
+          accepts: items
+          emits: same
+          columns: keep
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤.
@@ -7759,6 +7796,10 @@ nodes:
           field: string
           text: string
         returns: transform
+        flow:
+          accepts: prose|items
+          emits: items
+          columns: reset
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 긴 문자열 하나(크롤 본문·산문) 또는 본문 열이 있는 items(자막 구간 등)를 덩이 items 로 자른다(size 자 상한, by=paragraph|line|chars, overlap; items 는 행 경계). 긴 원문을 파이프 안에서 나눠 [table:each] 로 덩이마다 요약하고 다시 [table:brief] 로 종합하는 자리.
@@ -7777,6 +7818,13 @@ nodes:
         - 긴 자막
       select:
         returns: transform
+        flow:
+          accepts: items
+          emits: items
+          columns: subset
+          columns_param: columns
+          reads_fields:
+          - columns
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기.
@@ -7794,6 +7842,11 @@ nodes:
         - 골라
       compute:
         returns: transform
+        flow:
+          accepts: items
+          emits: items
+          columns: add
+          columns_param: set
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
@@ -7813,6 +7866,13 @@ nodes:
         - compute
       rename:
         returns: transform
+        flow:
+          accepts: items
+          emits: items
+          columns: rename
+          columns_param: map
+          reads_fields:
+          - map
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 열/필드 이름 바꾸기(관계대수 ρ). 소스가 다른 두 통화의 join 전 키 맞추기.
@@ -7833,6 +7893,12 @@ nodes:
         - 키맞추기
       flatten:
         returns: transform
+        flow:
+          accepts: items
+          emits: items
+          columns: reset
+          reads_fields:
+          - field
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다.
@@ -7850,6 +7916,12 @@ nodes:
         - 풀기
       dedup:
         returns: transform
+        flow:
+          accepts: items
+          emits: same
+          columns: keep
+          reads_fields:
+          - by
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교).
@@ -7867,6 +7939,12 @@ nodes:
         - 고유
       since:
         returns: transform
+        flow:
+          accepts: items
+          emits: same
+          columns: keep
+          reads_fields:
+          - by
         side_effect: true
         runs_on: anywhere
         scope: workspace
@@ -7888,6 +7966,12 @@ nodes:
         - 감시
       groupby:
         returns: transform
+        flow:
+          accepts: items
+          emits: items
+          columns: reset
+          reads_fields:
+          - by
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items를 키 필드로 그룹지어 집계. agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
@@ -7905,6 +7989,12 @@ nodes:
         - 통계
       join:
         returns: transform
+        flow:
+          accepts: pair
+          emits: items
+          columns: union
+          reads_fields:
+          - true
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
@@ -7922,6 +8012,10 @@ nodes:
         - 연결
       union:
         returns: transform
+        flow:
+          accepts: same-kind
+          emits: items
+          columns: union
         runs_on: anywhere
         scope: workspace
         params:
@@ -7941,6 +8035,12 @@ nodes:
         - 세로결합
       merge:
         returns: transform
+        flow:
+          accepts: pair
+          emits: items
+          columns: union
+          reads_fields:
+          - by
         runs_on: anywhere
         scope: workspace
         params:

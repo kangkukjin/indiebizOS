@@ -66,5 +66,17 @@ def test_P6_정상_문장은_그대로_통과한다():
     assert _parse_params('{"path": "a.md", "old_string": "X"}')["old_string"] == "X"
 
 
+def test_P7_단어_문자로_시작하지_않는_키도_맨몸으로_받는다():
+    """2026-09-05 언어 개정(시스템 AI 보고): `{set: {㎡당만원: "…"}}` 가 "해석된 키: [없음]" 으로 죽고
+    진단이 값 이스케이프를 가리켰다. 열 이름은 세계의 명사 — 값 자리처럼 키 자리도 받는다."""
+    assert _parse_params('{set: {㎡당만원: "deposit / area"}}') == {"set": {"㎡당만원": "deposit / area"}}
+    assert _parse_params('{㎡: 1, %비율: 2, ₩단가: "x"}') == {"㎡": 1, "%비율": 2, "₩단가": "x"}
+    # 폴백 경로(비표준 이스케이프가 JSON5 를 비켜가게 한다)에서도 따옴표 키·기호 키가 같이 산다
+    assert _parse_params('{"㎡당만원": "\\d+", %비율: "\\w"}') == {"㎡당만원": "\\d+", "%비율": "\\w"}
+    # 식별자 키·중첩·구분자 오류 진단은 종전대로
+    assert _parse_params('{a_1: {b: [1, 2]}}') == {"a_1": {"b": [1, 2]}}
+    assert "구분자" in _reject('{k = 1}')
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))

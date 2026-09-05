@@ -177,6 +177,10 @@ def _diagnose_residue(residue: str) -> str:
             '(키 표기 오류로 보이지는 않습니다 — 위 "남은 조각"이 시작되는 자리를 보세요.)')
 
 
+# 맨몸 키를 끝내는 구조 문자 — 이 밖의 모든 글자(기호·한글·유니코드)는 키의 일부다.
+_KEY_STOP = frozenset(' \t\n\r:,{}[]"\'=')
+
+
 def _parse_relaxed_params(text: str) -> dict:
     """
     느슨한 파라미터 파싱 — 배열 [...], 중첩 객체 {...} 포함 지원
@@ -207,11 +211,18 @@ def _parse_relaxed_params(text: str) -> dict:
         if i >= n:
             break
 
-        # key 추출 (알파벳, 숫자, _)
+        # key 추출 — 따옴표 키는 문자열로, 맨몸 키는 **구조 문자가 아닌 글자의 연속**으로(2026-09-05 언어 개정,
+        # 사용자 판정): 열 이름은 세계의 명사라 `㎡당만원`·`%비율`·`₩` 처럼 단어 문자로 시작하지 않는 것이 흔한데,
+        # 옛 판(알파벳·숫자·_ 만)은 `{set: {㎡당만원: "…"}}` 를 "해석된 키: [없음]" 으로 거절했고 진단은 값
+        # 이스케이프를 가리켰다(시스템 AI 보고 — 열 이름을 바꿔 우회). 값 자리(`columns: ["㎡당만원"]`)는
+        # 원래 받던 이름이 키 자리에서만 막히던 비대칭. JSON5 가 식별자 규칙으로 거절해도 이 폴백이 받는다.
         key_start = i
-        while i < n and (inner[i].isalnum() or inner[i] == '_'):
-            i += 1
-        key = inner[key_start:i]
+        if inner[i] in '"\'':
+            key, i = _extract_string(inner, i, inner[i])
+        else:
+            while i < n and inner[i] not in _KEY_STOP:
+                i += 1
+            key = inner[key_start:i]
         if not key:
             _reject_residue(inner, i, params)
             break

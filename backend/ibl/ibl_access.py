@@ -584,18 +584,20 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                     if m.strip() not in slots:
                         slots.append(m.strip())
                 # 관용구 = 이름 붙은 함수(2026-09-05): 그대로 쓰면 호출 한 줄, 고치면 정의 블록을 프로그램에 붙여 넣고 문장을 빼거나 더한다
-                head = f"- {alias or '(이름 없음)'} — {intent}" + (f" ({topic})" if topic else "") + used
+                # 이름 먼저(2026-09-05, 사용자 판정): 서명만 싣는다 — `[def:]` 본문을 여기 내리면 모델이 베낀다.
+                # 본문은 [self:memory]{op:"recall", node, store:"실행", expand:"이름"} 으로만.
+                head = f"- {alias or '(이름 없음)'} — {intent}" + (f" ({topic})" if topic else "") + f" · 문장 {len(sents)}" + used
                 lines.append(head)
                 if alias:
                     lines.append(f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in slots) + "}")
-                lines.append(f"  [def: {alias or '이름'}]{{")
-                lines.extend(f"    {sent}" for sent in sents)
-                lines.append("  }")
+                else:
+                    lines.append("  (이름 없음 — recall 로 가지를 열어 expand:\"#id\")")
                 if sum(1 for l in lines if l.startswith("- ")) >= IDIOMS_TOP:
                     break
             if lines:
-                text = ("<ibl_idioms note=\"자주 쓰는 관용구 = 이름 붙은 함수. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄(정의 없이 이름만으로 돈다), "
-                        "고쳐 쓰려면 [def: 이름]{…} 블록을 프로그램에 붙여 넣고 문장을 빼거나 더한 뒤 [fn:이름]{…} 으로 부른다. "
+                text = ("<ibl_idioms note=\"자주 쓰는 관용구 = 이름 붙은 함수. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄(정의 없이 이름만으로 돈다). "
+                        "본문은 여기 없다 — 고쳐 써야 할 때만 [self:memory]{op: \\\"recall\\\", node: \\\"<가지>\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 "
+                        "정의를 열어 [def: 이름]{…} 를 프로그램에 붙이고 문장을 빼거나 더한 뒤 [fn:이름]{…} 으로 부른다. "
                         "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 step 요약만 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
                         + "\n".join(lines) + "\n</ibl_idioms>")
     except Exception as e:

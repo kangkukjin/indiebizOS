@@ -571,15 +571,27 @@ class IBLUsageDB:
         if not name:
             return None
         with self._get_connection() as conn:
+            # 2026-09-05: 카테고리 무관 — 이름이 붙은 용례(관용구·다문장 프로그램)는 무엇이든 부를 수 있다(자동 작명과 한 벌)
             row = conn.execute(
-                "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias "
-                "FROM ibl_examples WHERE category='phrase' AND alias = ? ORDER BY updated_at DESC LIMIT 1",
+                "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category "
+                "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC LIMIT 1",
                 (name.strip(),)).fetchone()
         return dict(row) if row else None
 
+    def alias_of_code(self, ibl_code: str) -> str:
+        """ibl_code 정확 일치 용례의 이름(alias) — 없으면 "". 회상 top-1 이 *부를 수 있는* 함수인지 묻는 자리
+        (2026-09-05 이름 호출 학습 루프: 증류 게이트·귀속이 '베꼈나/불렀나'를 가른다)."""
+        if not ibl_code:
+            return ""
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT COALESCE(alias,'') FROM ibl_examples WHERE ibl_code = ? AND COALESCE(alias,'') != '' "
+                "ORDER BY updated_at DESC LIMIT 1", (ibl_code,)).fetchone()
+        return (row[0] or "").strip() if row else ""
+
     def phrase_aliases(self, limit: int = 12) -> List[str]:
         with self._get_connection() as conn:
-            rows = conn.execute("SELECT alias FROM ibl_examples WHERE category='phrase' AND COALESCE(alias,'') != '' "
+            rows = conn.execute("SELECT alias FROM ibl_examples WHERE COALESCE(alias,'') != '' "
                                 "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?", (limit,)).fetchall()
         return [r[0] for r in rows]
 

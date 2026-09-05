@@ -183,7 +183,7 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
         where = {"word": " AND COALESCE(category,'') != ?", "phrase": " AND COALESCE(category,'') = ?"}.get(kind, "")
         args = (norm_topic(topic),) + ((PHRASE_CATEGORY,) if where else ())
         rows = conn.execute(
-            "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, "
+            "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, updated_at, "
             "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
         return [dict(r) for r in rows]
@@ -268,7 +268,11 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
 # ─────────────────────────── 관용구 (phrase) ───────────────────────────
 
 def split_sentences(code: str) -> List[str]:
-    """`;` 로 이은 독립 문장들로 자른다 — 따옴표·중괄호 안의 `;` 는 경계가 아니다."""
+    """`;` 또는 줄바꿈으로 이은 독립 문장들로 자른다 — 따옴표·중괄호 안은 경계가 아니다.
+
+    ★2026-09-05: 줄바꿈도 경계다(파서 `_extract_statements` 가 `;` 를 개행과 같은 것으로 접는다). 종전엔 `;` 만
+    봐서 여러 줄 프로그램(팁 보고서 15단계)이 '문장 1' 로 잡혀 이름 먼저 회상이 본문을 그대로 내보내고
+    자동 작명이 건너뛰었다."""
     out, buf, q, depth = [], [], None, 0
     i, n = 0, len(code or "")
     while i < n:
@@ -285,7 +289,7 @@ def split_sentences(code: str) -> List[str]:
             depth += 1; buf.append(ch)
         elif ch in "}])":
             depth = max(0, depth - 1); buf.append(ch)
-        elif ch == ";" and depth == 0:
+        elif (ch == ";" or ch == "\n") and depth == 0:
             out.append("".join(buf).strip()); buf = []
         else:
             buf.append(ch)
@@ -339,11 +343,17 @@ def join_sentences(sentences: List[str]) -> str:
 
 
 def slot_names(code: str) -> List[str]:
+    """호출 서명의 슬롯 — 몸의 `${이름}` 가운데 *바깥에서 줘야 하는 것*만. 몸 안에서 `$이름 = …` 로 태어나는
+    변수와 그 경로 참조(`${원장.items.*.id}`)는 슬롯이 아니다(2026-09-05: 서명에 내부 변수가 새어 나왔다)."""
+    assigned = set(re.findall(r"(?m)^\s*\$\{?([\w가-힣]+)\}?\s*=", code or "")) | \
+               set(re.findall(r"[;\n]\s*\$\{?([\w가-힣]+)\}?\s*=", code or ""))
     seen, out = set(), []
     for m in SLOT_RE.findall(code or ""):
         k = m.strip()
-        if k and k not in seen:
-            seen.add(k); out.append(k)
+        base = re.split(r"[.\[]", k, 1)[0]
+        if not k or k in seen or base in assigned or "." in k or "*" in k:
+            continue
+        seen.add(k); out.append(k)
     return out
 
 
@@ -759,7 +769,108 @@ def map_text(db_path: Optional[str] = None) -> str:
     return "\n".join(lines)
 
 
-def recall(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
+EXPAND_HINT = ("본문은 요청할 때만 — expand:\"이름\"(함수 정의) · expand:\"#id\"(용례 한 건) · expand:\"주행\"(주행 절) · "
+               "expand:\"all\"(문서 전문). 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄로 부른다.")
+
+
+def _runs_count(text: str) -> int:
+    """`## 주행` 절의 주행 수 = `### ` 머리 수(주석 블록은 세지 않는다)."""
+    sec = _split_runs(text or "")[1]
+    return len(re.findall(r"(?m)^### ", sec))
+
+
+def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Dict[str, Any]],
+                       text: str, expand: Optional[str] = None) -> str:
+    """recall 이 모델에게 주는 본문 — **이름 먼저**(2026-09-05, 사용자 판정 "모델이 스스로 부르게").
+
+    왜: 옛 recall 은 가지 문서 전문(24줄 프로그램·주행 문장 묶음)을 돌려줬고, 모델은 보이는 것을
+    베껴 매 호 13~40K자를 다시 타이핑했다(`[fn:]` 호출 0). 본문이 안 보이면 베낄 것이 없어 부른다.
+      · 이름 있는 관용구 → 서명(호출 한 줄)·문장 수·성공/실패·마지막 날짜
+      · 한 문장 용례 → 그대로(낱말 사용)
+      · 여러 문장 무명 용례 → 문장 수만(이름이 붙기 전까지 expand:"#id")
+      · 주행 절 → 건수만(expand:"주행")
+    expand 는 그 하나만 연다. 문서 파일 자체(정본·사람이 읽는 원장)는 그대로다."""
+    exp = (expand or "").strip()
+    if exp in ("all", "전문"):
+        return text
+    if exp == "주행":
+        sec = _split_runs(text or "")[1]
+        return sec if sec.strip() else "## 주행\n(아직 없음)\n"
+    if exp.startswith("#"):
+        try:
+            rid = int(exp[1:])
+        except ValueError:
+            rid = -1
+        for r in list(words) + list(phrases):
+            if int(r.get("id") or -1) == rid:
+                return render_phrase(r) if r.get("alias") or r.get("category") == PHRASE_CATEGORY else render_line(r)
+        return f"(#{exp[1:]} 용례가 이 가지에 없습니다)"
+    if exp:
+        for r in list(phrases) + list(words):
+            if (r.get("alias") or "").strip() == exp:
+                return phrase_def_block(exp, r.get("ibl_code") or "") + "\n호출: " + phrase_call_line(exp, r.get("ibl_code") or "")
+        names = [p["alias"] for p in list(phrases) + list(words) if (p.get("alias") or "").strip()]
+        return f"(이름 '{exp}' 의 함수가 이 가지에 없습니다 — 부를 수 있는 이름: {', '.join(names) or '없음'})"
+
+    lines = [f"# 실행기억 — {topic}"]
+    g = gist_of(doc_path(topic)) if topic else ""
+    if g:
+        lines.append(f"> {g}")
+    lines.append("")
+    lines.append("## 부를 수 있는 함수 — 그대로 쓰려면 `[fn:이름]{슬롯: 값}` 한 줄(정의 없이 이름만으로 돈다). "
+                 "이번 일에 안 맞는 문장이 있을 때만 expand:\"이름\" 으로 정의를 열어 `[def:]` 로 고친다.")
+    named = [p for p in phrases if (p.get("alias") or "").strip()] + \
+            [w for w in words if (w.get("alias") or "").strip()]        # 자동 작명된 다문장 프로그램도 부른다(처방 2)
+    named.sort(key=lambda r: -(int(r.get("success_count") or 0) + int(r.get("fail_count") or 0)))
+    for p in named:
+        s, f = int(p.get("success_count") or 0), int(p.get("fail_count") or 0)
+        code = p.get("ibl_code") or ""
+        meta = [f"문장 {len(split_sentences(code))}"]
+        if s or f:
+            meta.append(f"✓{s}/✗{f}")
+        meta.append("마지막 " + (p.get("updated_at") or p.get("created_at") or "")[:10])
+        lines.append(f"- {p['alias']} — {_one_line(p.get('intent'))} · {' · '.join(meta)} ‹#{p['id']}›")
+        lines.append(f"  {phrase_call_line(p['alias'], code)}")
+    if not named:
+        lines.append("- (아직 이름 붙은 함수가 없다 — 이 주행이 성공하면 증류가 이름을 붙인다)")
+    lines.append("")
+    lines.append("## 용례 — 한 문장은 그대로 쓴다. 여러 문장짜리는 이름이 붙기 전까지 expand:\"#id\" 로 연다")
+    for r in words:
+        if (r.get("alias") or "").strip():
+            continue                                    # 위 '부를 수 있는 함수' 절에 이미 실렸다
+        n = len(split_sentences(r.get("ibl_code") or ""))
+        if n <= 1:
+            lines.append(render_line(r))
+        else:
+            s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
+            meta = [f"#{r['id']}"] + ([f"✓{s}/✗{f}"] if (s or f) else []) + [(r.get("created_at") or "")[:10]]
+            lines.append(f"- {_one_line(r.get('intent'))} → (문장 {n}, 이름 없음 — expand:\"#{r['id']}\") ‹{' · '.join(meta)}›")
+    for p in phrases:
+        if not (p.get("alias") or "").strip():
+            n = len(split_sentences(p.get("ibl_code") or ""))
+            lines.append(f"- (이름 없는 관용구) {_one_line(p.get('intent'))} · 문장 {n} — expand:\"#{p['id']}\" ‹#{p['id']}›")
+    if not words and not phrases:
+        lines.append("- (아직 없음)")
+    lines.append("")
+    lines.append(f"## 주행 {_runs_count(text)}건 — expand:\"주행\" 로 문장을 연다")
+    return "\n".join(lines) + "\n"
+
+
+def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
+    """JSON 봉투의 용례 행 — 여러 문장 무명 용례·관용구의 본문은 감추고 부를 수 있는 것만 싣는다."""
+    out = dict(r)
+    code = r.get("ibl_code") or ""
+    n = len(split_sentences(code))
+    alias = (r.get("alias") or "").strip()
+    if alias:
+        out["call"] = phrase_call_line(alias, code)
+        out["ibl_code"] = f"(문장 {n} — expand:\"{alias}\")"
+    elif n > 1:
+        out["ibl_code"] = f"(문장 {n}, 이름 없음 — expand:\"#{r.get('id')}\")"
+    return out
+
+
+def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = None) -> Dict[str, Any]:
     topic = norm_topic(topic)
     sync_topic(topic, db_path)
     path = doc_path(topic)
@@ -772,9 +883,14 @@ def recall(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
     rows = rows_of(topic, db_path, kind="word")
     phrases = rows_of(topic, db_path, kind="phrase")
     counts = topic_counts(db_path)
+    full = open(path, encoding="utf-8").read()
+    exp = (expand or "").strip()
+    text = render_names_first(topic, rows, phrases, full, exp)
+    opened = exp in ("all", "전문")
     return {"success": True, "topic": topic, "doc": path, "guide": guide_of(path) or seed_guides(topic),
-            "text": open(path, encoding="utf-8").read(),
-            "items": rows, "count": len(rows), "phrases": phrases, "phrase_count": len(phrases),
+            "text": text, "expand": exp or None, "expand_hint": EXPAND_HINT,
+            "items": rows if opened else [_hide_body(r) for r in rows], "count": len(rows),
+            "phrases": phrases if opened else [_hide_body(r) for r in phrases], "phrase_count": len(phrases),
             "children": [{"topic": c, "count": counts.get(c, 0), "gist": gist_of(doc_path(c))} for c in children_of(topic, db_path)],
             "parent": parent_of(topic)}
 

@@ -382,9 +382,10 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     block = A._idioms_block(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
-    assert block.index("- 자주찾기 — 자주 (개발) 사용 6회") < block.index("- (이름 없음) — 드물 (개발)")
+    assert block.index("- 자주찾기 — 자주 (개발) · 문장 3 사용 6회") < block.index("- (이름 없음) — 드물 (개발)")
     assert '  [fn:자주찾기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block          # 그대로 쓰는 호출 한 줄
-    assert "  [def: 자주찾기]{" in block and "    " + PHRASE[0] in block and "    " + PHRASE[2] in block   # 고쳐 쓰는 정의 블록
+    # 이름 먼저(2026-09-05): 정의 블록은 싣지 않는다 — 본문은 recall{expand:"이름"} 으로만
+    assert "  [def: 자주찾기]{" not in block and PHRASE[0] not in block and "expand" in block
     assert PIPE not in block                                   # 낱말은 싣지 않는다
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     assert "드물" not in A._idioms_block({"self"})              # sense 가 허용 밖이면 그 관용구는 빠진다

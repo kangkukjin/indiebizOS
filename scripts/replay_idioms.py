@@ -334,7 +334,7 @@ NAME_PROMPT = """아래는 IBL 관용구들(의도 + 골격 문장)이다. 관�
 JSON 객체로만 응답: {{"<id>": "이름", ...}}"""
 
 
-def name_idioms(apply: bool):
+def name_idioms(apply: bool, topics_prefix: str = ""):
     import hippo_tree
     import ibl_idiom
     from ibl_usage_db import IBLUsageDB
@@ -344,9 +344,13 @@ def name_idioms(apply: bool):
     with db._get_connection() as conn:
         rows = [dict(r) for r in conn.execute(
             "SELECT id, intent, ibl_code, COALESCE(alias,'') AS alias, COALESCE(topic,'') AS topic FROM ibl_examples "
-            "WHERE category='phrase' AND COALESCE(alias,'')='' ORDER BY id").fetchall()]
+            "WHERE COALESCE(alias,'')='' AND (category='phrase' OR category='pipeline') ORDER BY id").fetchall()]
+    # 다문장 프로그램(pipeline)도 이름을 받는다(2026-09-05 처방 2) — 한 문장짜리 pipeline 은 낱말이라 제외
+    rows = [r for r in rows if len(hippo_tree.split_sentences(r["ibl_code"])) >= 2]
+    if topics_prefix:
+        rows = [r for r in rows if (r.get("topic") or "").startswith(topics_prefix)]
     if not rows:
-        print("[name] 이름 없는 관용구 없음"); return 0
+        print("[name] 이름 없는 관용구·다문장 용례 없음"); return 0
     listing = "\n".join(f"{r['id']}: {r['intent']}\n   " + " / ".join(hippo_tree.split_sentences(r['ibl_code']))[:300] for r in rows)
     res = oneshot_ai_call(prompt=NAME_PROMPT.format(rows=listing), system_prompt="관용구 작명기. JSON 객체로만 응답.", role="background")
     verdict = parse_first_json(res or "") or {}
@@ -365,7 +369,7 @@ def name_idioms(apply: bool):
         for r in rows:
             row = db.find_phrase_by_alias  # noqa — 색인은 이름+의도
         with db._get_connection() as conn:
-            for r in conn.execute("SELECT id, intent, ibl_code, alias FROM ibl_examples WHERE category='phrase'").fetchall():
+            for r in conn.execute("SELECT id, intent, ibl_code, alias FROM ibl_examples WHERE COALESCE(alias,'')!=''").fetchall():
                 db._index_single(r["id"], f"{r['alias']} {r['intent']}".strip(), r["ibl_code"])
         for t in {r["topic"] for r in rows}:
             hippo_tree.refresh_topic(t)
@@ -399,6 +403,7 @@ def main():
     ap.add_argument("--project", default="", help="리허설 실행의 프로젝트 문맥(project_id) — 검색·논문 등 프로젝트 도구가 요구")
     ap.add_argument("--name-idioms", action="store_true",
                     help="이름 없는 관용구에 반성기가 이름을 붙인다(관용구=이름 붙은 함수, 2026-09-05) — 색인·가지 문서 갱신")
+    ap.add_argument("--topics", default="", help="작명 대상 주제 접두(예: 보고서/) — 비우면 전부")
     ap.add_argument("--programs", nargs="*", default=None,
                     help="짓기 재료: 완주가 실증된 프로그램 JSON({code, …})들 — 문장 줄을 실행 호출로 보고 같은 질문·같은 관문. 빈도 필터 없음")
     args = ap.parse_args()
@@ -410,7 +415,7 @@ def main():
     if args.rehearse:
         return rehearse(Path(args.rehearse), wp, apply=args.apply, project_id=args.project)
     if args.name_idioms:
-        return name_idioms(apply=args.apply)
+        return name_idioms(apply=args.apply, topics_prefix=args.topics)
     if args.programs is not None:
         episodes = load_programs(args.programs)
         shapes = Counter()

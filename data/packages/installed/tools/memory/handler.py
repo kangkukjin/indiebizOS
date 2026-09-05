@@ -50,7 +50,7 @@ def _op_recall(tool_input: dict, context) -> str:
             return json.dumps({"success": True, "store": "실행", "node": "", "map": hippo_tree.map_text(),
                                "nodes": hippo_tree.map_lines(), "items": hippo_tree.rows_of(""),
                                "message": "실행기억 지도(목차). 가지를 열려면 node 를 지정하라."}, ensure_ascii=False, indent=2)
-        out = hippo_tree.recall(node)
+        out = hippo_tree.recall(node, expand=tool_input.get("expand"))   # 이름 먼저(2026-09-05): 본문은 expand 로만
         out["store"] = "실행"
         return json.dumps(out, ensure_ascii=False, indent=2)
     db_path = memory_db._get_db_path(context.project_path, context.agent_id)

@@ -645,7 +645,10 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
     # ★귀속 관문(2026-09-02): 회상 top-1 의 액션이 실행에 실제로 등장했을 때만 귀속.
     #   증류 쪽(distill_experience)은 이미 이 관문을 썼는데 귀속 쪽만 없어서, 표면 어휘만
     #   닮은 고점수 회상이 전혀 안 쓰인 턴의 성공/실패까지 흡수했다 — 잘못된 강화·감쇠.
-    if not _recall_was_used(top_code, ibl_codes):
+    _alias = _alias_of_code(top_code)
+    if _alias and _fn_called(_alias, ibl_codes):
+        print(f"[해마피드백] 회상 함수 호출 [fn:{_alias}] — 귀속 (score={top_score:.2f})")
+    elif not _recall_was_used(top_code, ibl_codes):
         print(f"[해마피드백] 회상 미사용 — 귀속 스킵 (score={top_score:.2f}): {top_code[:50]}")
         return False
 
@@ -678,7 +681,7 @@ def _record_phrase_recall_outcome(ibl_codes: list, ibl_success, tool_calls: list
         clear_phrase_recall()
     except Exception:
         return 0
-    if not phrases or ibl_success is None or not ibl_codes:
+    if ibl_success is None or not ibl_codes:
         return 0
     n = 0
     try:
@@ -686,17 +689,69 @@ def _record_phrase_recall_outcome(ibl_codes: list, ibl_success, tool_calls: list
         db = IBLUsageDB()
         elapsed_ms = _ibl_elapsed_ms(tool_calls) if ibl_success else None
         tokens = turn_tokens if (ibl_success and turn_tokens and turn_tokens > 0) else None
-        for code in phrases:
-            if not _phrase_used(code, ibl_codes):
+        done = set()
+        # ① 이름으로 부른 관용구(2026-09-05) — 회상 채널에 올랐든 상시 블록에서 봤든, `[fn:이름]` 호출 자체가
+        #    사용이다. 부른 주행이 다음 회상에서 올라오게 성공/실패를 그 관용구에 기록한다.
+        for name in _fn_names_in(ibl_codes):
+            row = db.find_phrase_by_alias(name)
+            if not row or row["ibl_code"] in done:
+                continue
+            if db.update_success_by_code(row["ibl_code"], ibl_success, elapsed_ms=elapsed_ms, tokens=tokens):
+                n += 1
+                done.add(row["ibl_code"])
+                print(f"[해마피드백:관용구] [fn:{name}] 호출 {'성공' if ibl_success else '실패'} 기록")
+        # ② 회상된 관용구가 문장으로 쓰인 경우(종전 규약)
+        for code in (phrases or []):
+            if code in done or not _phrase_used(code, ibl_codes):
                 continue
             if db.update_success_by_code(code, ibl_success, elapsed_ms=elapsed_ms, tokens=tokens):
                 n += 1
+                done.add(code)
                 print(f"[해마피드백:관용구] {'성공' if ibl_success else '실패'} 기록: {code[:60]}")
         if n:
             IBLUsageRAG().clear_cache()
     except Exception as e:
         print(f"[해마피드백:관용구] 실패 (무시): {e}")
     return n
+
+
+_FN_CALL_RE = re.compile(r'\[fn:\s*([^\]\s]+)\s*\]')
+
+
+def _fn_names_in(ibl_calls: list) -> list:
+    """실행 궤적에 등장한 `[fn:이름]` 호출 이름들(순서 보존, 중복 제거)."""
+    out = []
+    for code in ibl_calls or []:
+        for m in _FN_CALL_RE.findall(code or ""):
+            if m not in out:
+                out.append(m)
+    return out
+
+
+def _fn_called(alias: str, ibl_calls: list) -> bool:
+    """회상 용례의 이름이 실행에서 `[fn:이름]` 으로 불렸는가 — '베꼈나/불렀나'의 갈림(2026-09-05)."""
+    return bool(alias) and alias in _fn_names_in(ibl_calls)
+
+
+def _beyond_fn_calls(ibl_calls: list, alias: str) -> list:
+    """`[fn:alias]{…}` 호출만으로 된 문장을 뺀 나머지 — 부른 뒤 *더한* 문장들."""
+    pat = re.compile(r'(?:\$[\w가-힣]+\s*=\s*)?\[fn:\s*' + re.escape(alias) + r'\s*\]\s*\{[^}]*\}')
+    out = []
+    for code in ibl_calls or []:
+        rest = pat.sub("", code or "")
+        rest = re.sub(r'^[\s;>&|?]+$', "", rest.strip())
+        if rest.strip():
+            out.append(code)
+    return out
+
+
+def _alias_of_code(code: str) -> str:
+    """회상 용례 코드의 이름(alias) — 원장 한 곳(IBLUsageDB.alias_of_code). 실패는 이름 없음으로."""
+    try:
+        from ibl_usage_db import IBLUsageDB
+        return IBLUsageDB().alias_of_code(code) or ""
+    except Exception:
+        return ""
 
 
 def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
@@ -848,10 +903,14 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
    모양이 없으면(단발 작업·한 문장뿐) phrase 를 빈 목록으로.
    매번 똑같이 도는 모양(정기 보고서)은 슬롯이 없어도 관용구다. 관용구에는 **이름**(phrase_name)을 붙여라 —
    짧은 한국어 동사형 명사(띄어쓰기 없이 2~5어절 붙여 씀, 예: 뉴스모아쓰기·직전보고서읽기·찾아고치기). 관용구는
-   이름 붙은 함수다: 다음 주행은 이 이름으로 그대로 부르거나 정의를 펼쳐 고쳐 쓴다.
-8. 결과는 반드시 JSON으로만 응답:
+   이름 붙은 함수다: 다음 주행은 이 이름으로 그대로 부르거나 정의를 펼쳐 고쳐 쓴다. 대표 code 가 여러 문장이면
+   code 에도 같은 규칙의 이름(code_name)을 붙여라(관용구와 다른 이름).
+8. **이름으로 부른 함수는 이름으로 남겨라** — 실행된 코드에 `[fn:이름]{{…}}` 호출이 있으면 code 와 phrase 는
+   그 호출 문장을 글자 그대로 품는다. 호출을 본문으로 풀어 쓰지 마라(함수는 이름으로 부른다 — 다음 주행도
+   그 이름을 부르고, 부른 뒤 더한 문장만 새로 배운다).
+9. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름"}}"""
+{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "code_name": "여러 문장 code 의 이름(한 문장이면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름"}}"""
 
 
 # ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
@@ -930,10 +989,25 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     # 회상이 실행에 실제 사용됐을 때만 신뢰한다 — 무관한 회상이 점수만 높은 경우
     # (표면 어휘 유사)는 새 패턴이므로 증류를 진행한다. top_code 없는 경로(조종실)는
     # 사용 여부를 알 수 없으므로 기존 점수 게이트 유지.
+    # ★2026-09-05 개정(사용자 판정 "이름으로 부르는 학습"): 옛 게이트는 회상 top-1 의 node:action
+    #   쌍이 실행에 하나라도 겹치면 "이미 아는 패턴"으로 보고 **조용히** 스킵했다. 그래서 회상이
+    #   잘 되는 가지일수록(부동산 0.81·팁 0.75) 새 프로그램이 한 번도 쌓이지 않았다 — 베낀 주행은
+    #   겹치기 마련이니 학습 루프가 자기 봉인. 이제 갈림은 '베꼈나/불렀나'다:
+    #   · 회상을 이름으로 불렀고(`[fn:이름]`) 그 밖에 더한 문장이 없으면 → 아는 것, 스킵
+    #   · 불렀고 더한 문장이 있으면 → 부른 것 위에 더한 것을 증류(호출을 품은 프로그램이 남는다)
+    #   · 부르지 않았으면(베꼈든 안 썼든) → 증류(가지가 자라야 다음 호가 부를 수 있다)
     if (top_score or 0.0) >= DISTILL_THRESHOLD:
-        if not top_code or _recall_was_used(top_code, ibl_calls):
-            return False
-        print(f"[경험증류] 고점수 회상(top={top_score:.2f})이 실행에 미사용 — 새 패턴으로 증류 진행")
+        if not top_code:
+            return False                     # 조종실 등 top_code 없는 경로: 점수 게이트 그대로
+        _alias = _alias_of_code(top_code)
+        if _alias and _fn_called(_alias, ibl_calls):
+            if not _beyond_fn_calls(ibl_calls, _alias):
+                print(f"[경험증류] 회상 함수 [fn:{_alias}] 만으로 완주 — 새 문장 없음, 증류 스킵")
+                return False
+            print(f"[경험증류] 회상 함수 [fn:{_alias}] 호출 + 더한 문장 — 부른 뒤 더한 것을 증류")
+        else:
+            print(f"[경험증류] 고점수 회상(top={top_score:.2f})을 이름으로 부르지 않음"
+                  f"({'이름 있음' if _alias else '이름 없음'} · 베낌 또는 미사용) — 증류 진행")
 
     # 증류: 실행 에이전트와 같은 모델로 반성
     try:
@@ -1068,6 +1142,17 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
         _birth_ms = _ibl_elapsed_ms(tool_calls)
+        # 자동 작명(2026-09-05, 처방 2): 여러 문장으로 된 대표 프로그램은 태어날 때 이름을 받는다 — 이름이
+        # 있어야 다음 호가 `[fn:이름]{인자}` 로 부르고, 회상은 본문 대신 서명을 보여 준다(이름 먼저).
+        # 한 문장짜리는 낱말이라 이름 없이 그대로 쓴다.
+        _alias = ""
+        try:
+            import hippo_tree as _ht
+            if len(_ht.split_sentences(code)) >= 2:
+                from ibl_idiom import sanitize_fn_name, unique_fn_name
+                _alias = unique_fn_name(sanitize_fn_name(distilled.get("code_name") or distilled.get("phrase_name"), intent), db, code)
+        except Exception:
+            _alias = ""
         example_id = db.add_example(
             intent=intent,
             ibl_code=code,
@@ -1076,6 +1161,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             difficulty=1,
             source="distilled",
             tags="auto",
+            alias=_alias,
             avg_ms=float(_birth_ms) if _birth_ms else -1.0,
             avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
             topic=_topic,
@@ -1105,7 +1191,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         rag = IBLUsageRAG()
         rag.clear_cache()
 
-        print(f"[경험증류] 저장 완료 (id={example_id}, score={top_score:.2f}/학습): "
+        print(f"[경험증류] 저장 완료 (id={example_id}{(' 이름 [fn:' + _alias + ']') if _alias else ''}, score={top_score:.2f}/학습): "
               f"\"{intent[:40]}\" → {code[:60]}")
         return True
 

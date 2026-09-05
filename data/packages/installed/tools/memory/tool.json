@@ -58,6 +58,10 @@
               "실행"
             ],
             "description": "recall/move 의 저장소 — 심층(기본, 사용자·세계 사실) | 실행(해마 IBL 용례의 주제 트리, <execution_map>)"
+          },
+          "expand": {
+            "type": "string",
+            "description": "recall(store 실행) 에서 본문 하나를 연다 — \"이름\"(함수 정의 [def:]) | \"#id\"(용례 한 건) | \"주행\"(주행 절) | \"all\"(문서 전문). 생략=이름·서명만(2026-09-05 이름 먼저)"
           }
         },
         "required": [

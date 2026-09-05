@@ -37,9 +37,15 @@
 
 **파이프라인의 자리**(08-27 판정): 검색→원장 제외→날짜 확인→선정→증류→절제→작성→원장 델타를 한 문장으로 엮어도 된다. 매번 무에서 짓지 않고 §2-0 골격을 그날 주제·검색어·원장 상태로 **재컴파일**한다. **판단 몫은 여전히 하나씩**: 원장 갱신 판단, 재탕 판정, 헌법 4(함의), 자막 부실 영상의 교체, 최종 편집. 초안은 재료이지 발행본이 아니다. 실패·품질 의심 시 옛 방식(하나씩 호출·읽기·판단, `deep_research.md`)으로.
 
-### 2-0. 성공 배관 재컴파일 골격
-08-28 실증에서 전 절차가 23문장 프로그램으로 완주됐다(정본 `docs/IBL_REPORT_PROGRAMS_HANDOFF.md`). 목적은 **배관을 다시 생각하는 턴을 없애고 판단을 소수의 칸에 모으는 것**.
+### 2-0. 배관은 이름으로 부른다 (2026-09-05 개정 — 골격을 다시 타이핑하지 않는다)
+매 호 같은 배관을 다시 쓰는 것이 이 보고서 시간의 대부분이었다(09-05 실측: 호당 IBL 13~40K자 재타이핑, 출력 토큰 35~57K ≈ 벽시계 전부). 배관은 **이름으로 부르고 판단은 인자로 준다** — 스위치식 자동화가 아니라, 무엇을 부르고 어떤 인자를 줄지를 매 호 모델이 정한다.
 
+1. `[self:memory]{op: "recall", node: "보고서/유튜브 AI 팁", store: "실행"}` — 부를 수 있는 함수의 **서명**을 본다(본문은 오지 않는다).
+2. 맞는 이름이 있으면 `[fn:이름]{이번 호의 인자}` 로 **한 줄로 부른다**. 인자가 곧 이번 호의 판단이다(주제·질의·기준일·편수·criteria).
+3. 이번 호에 안 맞는 문장이 있을 때만 `expand: "이름"` 으로 정의를 열어 `[def: 이름]{…}` 를 프로그램에 붙이고 그 문장만 고친 뒤 `[fn:이름]` 으로 부른다. 처음부터 다시 타이핑하지 않는다.
+4. 이름이 아직 없으면(가지가 비었거나 서명이 하나도 안 맞으면) 아래 단계를 **한 프로그램**(execute_ibl 한 번, 여러 줄)으로 짓는다. 성공하면 증류가 이름을 붙이고 다음 호가 부른다 — 이번 호의 프로그램이 다음 호의 함수다.
+
+단계(무엇을 하나 — 이름이 없을 때의 설계도이지 베낄 골격이 아니다. 자리표 예문은 두지 않는다):
 1. **상태 읽기** — 원장은 `[self:ledger]{op: "select"}`로 `id·verdict`만, 직전 보고서는 사전순 마지막 md. 오늘 주제는 여기서 판단(§2-2).
 2. **검색 한 묶음** — 질의 다섯 갈래(§2-3)를 `&` 병렬 → `union → dedup(video_id) → 원장 제외(not_in)`. 원장 제외는 산문이 아니라 술어.
 3. **날짜 확인 팬아웃** — `each + [sense:video]{op:"info"}` → 180일 필터 → 정렬 → select. 탈락분은 `too_old`로 원장 델타.
@@ -48,21 +54,7 @@
 6. **절제 한 칸** — 팁 전체를 `[table:ai]` 한 칸에: 영상당 2~5건·전체 8~15건·영상 균형, **오늘 주제의 기존 팁**(`tips.json`을 `where:{topic}`로 select)을 주입해 재탕 대조(`dedup_note`), hype 보정, implication.
 7. **산문·조립·상태 쓰기** — TL;DR·본문·시도·영상평·지켜볼 brief 5칸 내외 + M·K 계산 + `[table:document]`. 저장은 §2-6 순서(원장 먼저).
 
-자리표 예시(`<…>`는 그 회차 값으로 치환):
-```ibl
-$원장 = [self:ledger]{path: "outputs/ai_tips_reports/_covered_videos.json", op: "select", target: "covered", fields: ["id", "verdict"]}
-$기존팁 = [self:ledger]{path: "outputs/ai_tips_reports/db/tips.json", op: "select", fields: ["tip", "date"], where: {topic: "<주제>"}}
-$검색 = [sense:search_youtube]{query: "<한국어 주제 질의>", count: 12} & [sense:search_youtube]{query: "<영어 원천 질의>", count: 12} & [sense:search_youtube]{query: "<고유명사·워크플로 질의>", count: 12} & [sense:search_youtube]{query: "<회의론 질의>", count: 12} >> [table:union] >> [table:dedup]{by: "video_id"} >> [table:filter]{where: {field: "video_id", op: "not_in", value: "${원장.items.*.id}"}}
-$정보 = $검색 >> [table:each]{do: "[sense:video]{op: 'info', video_id: '$it.video_id'}", limit: 40}
-$신선 = $정보 >> [table:filter]{where: "upload_date >= <180일 전 YYYYMMDD>"} >> [table:sort]{by: "view_count", desc: true} >> [table:select]{columns: ["video_id","title","uploader","view_count","duration","upload_date","url"]}
-$심사 = $신선 >> [table:ai]{instruction: "오늘 주제(<주제>) 후보 심사. 모든 행 유지 + selected(true/false)·reason. 정확히 <N>편만 selected. 기준: ①제목 구체성(팁 밀도) 우선, 조회수 보조 ②duration 3600 이상 최대 1편 ③뉴스·단순 시연 후순위 ④한·영 층과 회의론을 섞어라", criteria: "입력의 모든 행이 유지되고 selected 가 true 인 행이 정확히 <N>행이다"}
-$선정 = $심사 >> [table:filter]{where: {field: "selected", op: "eq", value: true}}
-$증류 = $선정 >> [table:each]{do: "[sense:video]{op: 'transcript', video_id: '$it.video_id'} >> [self:struct]{schema: 'tip(실행형 팁 제목), how(단계·도구 설정·프롬프트 예문), tools(언급 도구), hype(과장 간극 한 줄, 없으면 빈 문자열), timestamp(MM:SS 추정)', grounded: true, criteria: '각 행에 tip·how 가 있고 2~6행이다'}", keep: ["title","uploader","url","video_id","view_count","duration"], limit: <N>, on_error: "continue"}
-$팁선별 = $증류 >> [table:ai]{instruction: "팁 절제. 영상당 2~5건·전체 8~15건, 한 영상에 몰아주지 말고 기준 미달 영상은 0건도 가능. 덕담·중복 제거. 재탕 대조 — 이미 수집한 <주제> 팁: $기존팁 . 겹치면 dedup_note 에 '이미 수집(날짜)—겹치는 지점'(새 팁은 빈 문자열). hype 가 비면 채우고 과장 없으면 '과장 없음'. implication: '이미 하는 것'/'이식 후보'/'해당 없음'+이유. 남긴 행의 다른 필드는 보존.", criteria: "모든 행에 tip·how·dedup_note·hype·implication 이 있고 전체 15행 이하다"}
-```
-(brief 산문 → M·K 계산 → `[table:document]` 조립 → 원장 델타 저장은 08-28 프로그램 원문을 따른다.)
-
-고쳐 쓰는 규칙: **검색어는 매 호 새로**(§2-3 규칙이 그날 검색어를 정한다 — 고정하면 같은 후보만 돈다) · 자막 플래키(같은 영상이 한 번은 성공, 다음은 실패)는 교체·재시도 1회 · 열 이름은 `uploader`(`channel`이 아니다) · 소스 장애·품질 실패 때만 옛 방식으로.
+인자 규칙(매 호 판단 — 부를 때 인자로 준다): **검색어는 매 호 새로**(§2-3 규칙이 그날 검색어를 정한다 — 고정하면 같은 후보만 돈다) · 자막 플래키(같은 영상이 한 번은 성공, 다음은 실패)는 교체·재시도 1회 · 열 이름은 `uploader`(`channel`이 아니다) · 소스 장애·품질 실패 때만 문장을 하나씩.
 
 **실행 예산**: 큰 `execute_ibl` 1회 + 후속 최대 2회(자막 실패 교체·검색어 보강). AI 판단은 심사 1 + 절제 1 + 산문 5칸 내외. 선정 2~4편(또는 정직한 실패 기록)·증류·절제·검법(§2-6)·머리줄 M·K 일치가 채워지면 닫는다. 자막 `each`·`struct` 처럼 120초를 넘길 것을 **아는** 실행은 처음부터 `wait: 240` 을 싣는다(표면 대기가 그만큼 늘어 타임아웃 봉투→회수 왕복이 사라진다 — 09-05 주행은 세 번 끊겼다). 그래도 넘기면 티켓을 받아 `recover{wait: 240}` 한 번으로 기다린다(셸 sleep 폴링 금지).
 

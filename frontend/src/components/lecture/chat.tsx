@@ -246,6 +246,24 @@ export function AIChatPanel(props: {
             🔄 spec 그대로 재렌더 (현재 디자인 적용)
           </button>
         )}
+        {/* HTML 조판 슬라이드 — 그림 편집은 불가(픽셀이 파생물)지만 '글자 얹기'는 된다.
+            얹은 글자는 deck 의 text_overlays 가 정본이라 재렌더 뒤 자동 재합성된다. */}
+        {mode === 'edit' && focusSlideId && !focusBaked && (
+          <div className="flex items-center gap-2">
+            <label className="text-[11px] text-stone-500 shrink-0">수정</label>
+            <div className="flex gap-1 flex-1">
+              <button
+                type="button"
+                onClick={() => setShowOverlayEditor(true)}
+                disabled={busy}
+                title="이미지 모델 없이 글자만 슬라이드 위에 얹는 배치 편집기 — 박스를 드래그로 놓고 문구·서체·크기·색을 자유로 (조판 픽셀 보존, 즉시·무료)"
+                className="flex-1 px-2 py-1 text-xs rounded border bg-white text-stone-700 border-stone-300 hover:border-stone-500 disabled:opacity-50"
+              >
+                🅰 글자 얹기
+              </button>
+            </div>
+          </div>
+        )}
         {mode === 'edit' && focusBaked && (
           <div className="flex items-center gap-2">
             <label className="text-[11px] text-stone-500 shrink-0">수정</label>

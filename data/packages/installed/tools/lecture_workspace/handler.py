@@ -33,6 +33,7 @@ _BAKED_LAYOUTS = slide_edit_ops.BAKED_LAYOUTS
 _load_slide_native = slide_edit_ops.load_slide_native
 _load_slide_overlay = slide_edit_ops.load_slide_overlay
 _discard_overlay_state = slide_edit_ops.discard_overlay_state
+_reapply_overlays = slide_edit_ops.reapply_overlays
 _slide_image_edit = slide_edit_ops.slide_image_edit
 
 
@@ -1026,6 +1027,10 @@ def _slide_rerender(tool_input: dict) -> str:
     except Exception as e:
         return _err(f"재렌더 실패: {e}", error_type="render_error")
 
+    # 얹은 글자가 있으면 새 렌더판 위에 재합성 (없으면 낡은 base.png 정리)
+    _reapply_overlays(slides_dir_path, slide_id, slide_meta,
+                      slides_dir_path / f"{slide_id}.png")
+
     # deck의 slide updated_at 갱신 (UI 캐시 무효화 + 변경 추적)
     from datetime import datetime
     now = datetime.now().isoformat(timespec="seconds")
@@ -1164,6 +1169,11 @@ def _slide_patch_spec(tool_input: dict) -> str:
         )
     except Exception as e:
         return _err(f"재렌더 실패: {e}", error_type="render_error")
+
+    # 얹은 글자가 있으면 새 렌더판 위에 재합성 (없으면 낡은 base.png 정리) —
+    # HTML 슬라이드의 PNG 는 파생물이라 이게 없으면 필드 편집 한 번에 글자가 사라진다.
+    _reapply_overlays(slides_dir_path, slide_id, deck["slides"][slide_id],
+                      slides_dir_path / f"{slide_id}.png")
 
     # deck 메타 갱신 (title이 patch에 있으면 deck의 slide title도 갱신)
     from datetime import datetime

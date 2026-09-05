@@ -58,7 +58,8 @@ def slide_image_edit(tool_input: dict) -> str:
     """통짜 이미지/업로드 이미지 슬라이드를 '부분 수정' — 다시 그리지 않고 현재 PNG를 편집.
 
     제목 한 줄만 바꾸려고 전체 재생성하면 비싸고 구도가 달라지는 문제를 해결.
-    layout이 native/image인 슬라이드에만 적용(텍스트 슬라이드는 필드 편집 ✏️ 사용).
+    instruction(그림 편집)은 구워진 슬라이드(native/composite/image)에만 적용.
+    글자 얹기(overlay_*)는 layout 무관 — HTML 슬라이드도 된다(렌더 뒤 reapply_overlays 재합성).
 
     두 경로:
     - instruction → 이미지 모델 최소 편집 (그림 자체를 바꿀 때. 픽셀 동일 비보장)
@@ -80,10 +81,15 @@ def slide_image_edit(tool_input: dict) -> str:
     meta = deck.get("slides", {}).get(slide_id)
     if not meta:
         return _err(f"슬라이드 없음: {slide_id}", error_type="not_found")
-    if meta.get("layout") not in BAKED_LAYOUTS:
+    # 이미지 모델 편집(instruction)만 '구워진' 슬라이드 전용이다 — 픽셀을 통째로 바꾸는데
+    # HTML 슬라이드의 PNG 는 spec 에서 매번 렌더되는 파생물이라 다음 렌더에 사라진다.
+    # '글자 얹기'(overlay_*)는 픽셀이 아니라 deck 의 text_overlays 가 정본이고 렌더 뒤
+    # reapply_overlays 가 재합성하므로 layout 을 가리지 않는다 (2026-09-05 대칭 보완).
+    is_overlay = bool(overlay_text or overlay_clear or overlay_set is not None)
+    if not is_overlay and meta.get("layout") not in BAKED_LAYOUTS:
         return _err(
-            "이미지 부분 수정은 글자가 이미지에 구워진 슬라이드에서만 됩니다. "
-            "텍스트 슬라이드는 필드 편집(✏️)을 쓰세요.",
+            "이미지 부분 수정(그림 편집)은 글자가 이미지에 구워진 슬라이드에서만 됩니다. "
+            "텍스트 슬라이드는 필드 편집(✏️) 또는 글자 얹기(overlay_text)를 쓰세요.",
             error_type="validation",
         )
 
@@ -140,6 +146,32 @@ def discard_overlay_state(slides_dir_path, slide_id: str, meta: dict = None) -> 
         meta.pop("text_overlays", None)
 
 
+def reapply_overlays(slides_dir_path, slide_id: str, meta: dict, png_path) -> bool:
+    """PNG 를 새로 렌더·합성한 뒤 얹은 글자를 다시 올린다 — 새 판이 새 '원본'.
+
+    HTML 슬라이드의 PNG 는 spec 에서 매번 렌더되는 파생물이라, 이 재적용이 없으면
+    얹은 글자가 필드 편집 한 번에 사라진다. composite 재합성 경로와 같은 계약.
+    얹은 글자가 없으면 낡은 base.png 만 정리한다. 반환: 재적용했으면 True.
+    """
+    import shutil
+    overlays = list((meta or {}).get("text_overlays") or [])
+    if not overlays:
+        discard_overlay_state(slides_dir_path, slide_id)
+        return False
+    orig = Path(slides_dir_path) / f"{slide_id}.base.png"
+    try:
+        shutil.copy2(str(png_path), str(orig))
+        so = load_slide_overlay()
+        r = json.loads(so.compose(str(orig), overlays, str(png_path)))
+        if not r.get("success"):
+            print(f"[slide_overlay] 재적용 실패(글자 없이 진행): {r.get('error')}")
+            return False
+    except Exception as e:
+        print(f"[slide_overlay] 재적용 실패(글자 없이 진행): {e}")
+        return False
+    return True
+
+
 def _sanitize_overlay(entry: dict, so) -> tuple:
     """오버레이 1건 검증·정규화 — (정규화 dict, None) 또는 (None, 오류문)."""
     if not isinstance(entry, dict):
@@ -156,6 +188,15 @@ def _sanitize_overlay(entry: dict, so) -> tuple:
         if position not in so.POSITIONS:
             return None, f"알 수 없는 position: {position!r}. 사용 가능: {sorted(so.POSITIONS)} 또는 x/y(%)"
         out["position"] = position
+    width = entry.get("width")  # 글상자 폭 % — 주면 그 폭에서 자동 줄바꿈
+    if width is not None:
+        try:
+            w = float(width)
+        except (TypeError, ValueError):
+            return None, f"width 는 숫자여야 합니다: {width!r}"
+        if not (5 <= w <= 100):
+            return None, f"width 범위(5~100 %) 밖: {w}"
+        out["width"] = round(w, 2)
     size_vw = entry.get("size_vw")
     if size_vw is not None:
         try:
@@ -242,6 +283,7 @@ def _overlay_text_edit(
             "y": tool_input.get("overlay_y"),
             "size": (tool_input.get("overlay_size") or "").strip() or None,
             "size_vw": tool_input.get("overlay_size_vw"),
+            "width": tool_input.get("overlay_width"),
             "font": (tool_input.get("overlay_font") or "").strip() or None,
             "color": (tool_input.get("overlay_color") or "white").strip(),
             "chip": bool(tool_input.get("overlay_chip")),

@@ -152,6 +152,10 @@
             "type": "number",
             "description": "image_edit+overlay_text 옵션 — 자유 글자 크기, 슬라이드 폭의 % (0.5~12, size 보다 우선)"
           },
+          "overlay_width": {
+            "type": "number",
+            "description": "image_edit+overlay_text 옵션 — 글상자 폭, 슬라이드 폭의 % (5~100). 주면 그 폭에서 자동 줄바꿈(긴 문구를 2~3줄로). 생략하면 내용 폭(70% 상한)"
+          },
           "overlay_font": {
             "type": "string",
             "description": "image_edit+overlay_text 옵션 — 서체 (sans 고딕 기본|serif 명조|gowun 고운바탕|jua 둥근 제목|black 헤드라인|pen 손글씨|brush 붓글씨)"

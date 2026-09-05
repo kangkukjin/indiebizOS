@@ -61,8 +61,10 @@ function boxStyle(ov: TextOverlay, selected: boolean): React.CSSProperties {
     position: 'absolute',
     left: `${ov.x ?? 50}%`,
     top: `${ov.y ?? 50}%`,
-    maxWidth: '70%',
+    // 폭을 정하면 그 폭에서 줄바꿈(2~3줄), 안 정하면 옛 기본(내용 폭·70% 상한)
+    ...(typeof ov.width === 'number' ? { width: `${ov.width}%` } : { maxWidth: '70%' }),
     whiteSpace: 'pre-line',
+    overflowWrap: 'break-word',
     lineHeight: 1.35,
     fontWeight: ov.weight === 'normal' ? 400 : 600,
     fontFamily: FONTS[ov.font || 'sans'] || FONTS.sans,
@@ -122,6 +124,14 @@ export function OverlayEditor(props: {
   onClose: () => void;
 }) {
   const { lectureId, slideId, initial, onSaved, onClose } = props;
+  // 씨(seed) = '열 때의 값' 한 번뿐. initial 은 부모가 렌더마다 새로 만드는 배열이라
+  // (chat.tsx: focusedSlide?.text_overlays || []) 그대로 동기화 소스로 쓰면 부모의 아무
+  // 리렌더(강의노트 자동저장 1분 타이머 등)에나 편집 중인 초안이 저장본으로 되감긴다 —
+  // 방금 추가한 글자 박스가 사라지고 선택이 풀려 도구 패널이 접히는 증상(2026-09-05 수리).
+  // 이 창은 초안의 주인이다: 씨는 슬라이드가 바뀔 때만 새로 받는다.
+  const seedRef = useRef<{ slideId: string; overlays: TextOverlay[] }>({ slideId, overlays: initial });
+  if (seedRef.current.slideId !== slideId) seedRef.current = { slideId, overlays: initial };
+  const seed = seedRef.current.overlays;
   const [overlays, setOverlays] = useState<TextOverlay[]>([]);
   const [selected, setSelected] = useState<number>(-1);
   const [busy, setBusy] = useState(false);
@@ -141,19 +151,22 @@ export function OverlayEditor(props: {
   }, []);
   const canvasRef = useRef<HTMLDivElement>(null);
   const legacyRefs = useRef<(HTMLDivElement | null)[]>([]);
-  const drag = useRef<{ idx: number; startX: number; startY: number; ox: number; oy: number } | null>(null);
+  // mode: 'move'=위치 드래그 · 'resize'=폭 드래그(오른쪽 아래 손잡이). ow=시작 폭(%)
+  const drag = useRef<
+    { idx: number; mode: 'move' | 'resize'; startX: number; startY: number; ox: number; oy: number; ow: number } | null
+  >(null);
 
   // 열 때: 9방 항목을 실측 좌표로 x/y 변환 (한 프레임 숨겨 그려 offset 측정)
   useEffect(() => {
-    const legacy = initial.filter((o) => o.x === undefined || o.y === undefined);
+    const legacy = seed.filter((o) => o.x === undefined || o.y === undefined);
     if (legacy.length === 0) {
-      setOverlays(initial.map((o) => ({ ...o })));
+      setOverlays(seed.map((o) => ({ ...o })));
       return;
     }
     // 다음 프레임에 legacyRefs 측정
     requestAnimationFrame(() => {
       const canvas = canvasRef.current;
-      const converted = initial.map((o, i) => {
+      const converted = seed.map((o, i) => {
         if (o.x !== undefined && o.y !== undefined) return { ...o };
         const el = legacyRefs.current[i];
         if (!canvas || !el) return { ...o, x: 30, y: 40 };
@@ -168,7 +181,7 @@ export function OverlayEditor(props: {
       });
       setOverlays(converted);
     });
-  }, [initial]);
+  }, [seed]);
 
   const sel = selected >= 0 && selected < overlays.length ? overlays[selected] : null;
   const patchSel = (patch: Partial<TextOverlay>) => {
@@ -177,11 +190,18 @@ export function OverlayEditor(props: {
   };
 
   // 드래그
-  const onPointerDown = (e: React.PointerEvent, idx: number) => {
+  const onPointerDown = (e: React.PointerEvent, idx: number, mode: 'move' | 'resize' = 'move') => {
     e.preventDefault();
     setSelected(idx);
     const o = overlays[idx];
-    drag.current = { idx, startX: e.clientX, startY: e.clientY, ox: o.x ?? 50, oy: o.y ?? 50 };
+    // 폭 드래그의 출발값 = 지금 화면에 그려진 실제 폭(%) — 손잡이를 잡는 순간 박스가 튀지 않게
+    let ow = o.width ?? 70;
+    if (mode === 'resize') {
+      const boxEl = (e.currentTarget as HTMLElement).parentElement;
+      const cr = canvasRef.current?.getBoundingClientRect();
+      if (boxEl && cr) ow = (boxEl.getBoundingClientRect().width / cr.width) * 100;
+    }
+    drag.current = { idx, mode, startX: e.clientX, startY: e.clientY, ox: o.x ?? 50, oy: o.y ?? 50, ow };
     (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -190,6 +210,12 @@ export function OverlayEditor(props: {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const cr = canvas.getBoundingClientRect();
+    if (d.mode === 'resize') {
+      const nw = d.ow + ((e.clientX - d.startX) / cr.width) * 100;
+      setOverlays((list) => list.map((o, i) =>
+        i === d.idx ? { ...o, width: Math.round(Math.min(100, Math.max(5, nw)) * 10) / 10 } : o));
+      return;
+    }
     const nx = d.ox + ((e.clientX - d.startX) / cr.width) * 100;
     const ny = d.oy + ((e.clientY - d.startY) / cr.height) * 100;
     setOverlays((list) => list.map((o, i) =>
@@ -199,6 +225,10 @@ export function OverlayEditor(props: {
 
   // 방향키 미세 이동 (0.5%)
   const onKeyDown = (e: React.KeyboardEvent) => {
+    // 입력 필드 안의 키는 글자 편집용 — 박스 이동·닫기로 가로채지 않는다
+    // (안 그러면 문구 입력 중 방향키가 캐럿 대신 박스를 움직이고 Enter 줄바꿈도 막힌다)
+    const t = e.target as HTMLElement | null;
+    if (t && ['INPUT', 'TEXTAREA', 'SELECT'].includes(t.tagName)) return;
     if (selected < 0) return;
     const step = e.shiftKey ? 2 : 0.5;
     const o = overlays[selected];
@@ -226,8 +256,8 @@ export function OverlayEditor(props: {
     onClose();
   };
 
-  const converting = overlays.length === 0 && initial.length > 0
-    && initial.some((o) => o.x === undefined || o.y === undefined);
+  const converting = overlays.length === 0 && seed.length > 0
+    && seed.some((o) => o.x === undefined || o.y === undefined);
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={onClose}>
@@ -264,7 +294,7 @@ export function OverlayEditor(props: {
             draggable={false}
           />
           {/* 9방 항목 실측용 숨김 렌더 (변환 전 한 프레임) */}
-          {converting && initial.map((o, i) => (
+          {converting && seed.map((o, i) => (
             <div key={`legacy-${i}`} ref={(el) => { legacyRefs.current[i] = el; }} style={legacyStyle(o)}>
               {o.text}
             </div>
@@ -277,6 +307,18 @@ export function OverlayEditor(props: {
               onClick={(e) => e.stopPropagation()}
             >
               {o.text}
+              {/* 폭 손잡이 — 선택한 박스의 오른쪽 아래. 좌우로 끌면 글상자가 좁아지고 글이 접힌다 */}
+              {i === selected && (
+                <span
+                  onPointerDown={(e) => { e.stopPropagation(); onPointerDown(e, i, 'resize'); }}
+                  title="드래그해서 글상자 폭 조절 — 좁히면 긴 글이 2~3줄로 접힙니다"
+                  style={{
+                    position: 'absolute', right: -7, bottom: -7, width: 13, height: 13,
+                    background: '#f59e0b', border: '1px solid #fff', borderRadius: 3,
+                    cursor: 'ew-resize', touchAction: 'none',
+                  }}
+                />
+              )}
             </div>
           ))}
         </div>
@@ -284,11 +326,12 @@ export function OverlayEditor(props: {
         {/* 선택 박스 도구 */}
         {sel ? (
           <div className="flex items-center gap-2 flex-wrap">
-            <input
+            <textarea
               value={sel.text}
               onChange={(e) => patchSel({ text: e.target.value })}
-              className="flex-1 min-w-40 px-2 py-1 text-sm border border-stone-300 rounded"
-              placeholder="문구"
+              rows={2}
+              className="flex-1 min-w-40 px-2 py-1 text-sm border border-stone-300 rounded resize-y"
+              placeholder="문구 — Enter 로 직접 줄바꿈, 폭을 좁히면 자동으로도 접힙니다"
             />
             <select
               value={sel.font && FONTS[sel.font] ? sel.font : 'sans'}
@@ -328,6 +371,14 @@ export function OverlayEditor(props: {
                 type="range" min={0.8} max={8} step={0.1}
                 value={sizeVwOf(sel)}
                 onChange={(e) => patchSel({ size_vw: Number(e.target.value), size: undefined })}
+              />
+            </label>
+            <label className="flex items-center gap-1 text-xs text-stone-500" title="글상자 폭 (슬라이드 폭 %) — 좁히면 긴 글이 여러 줄로 접힌다. 캔버스의 주황 손잡이를 끌어도 같다">
+              폭
+              <input
+                type="range" min={5} max={100} step={1}
+                value={sel.width ?? 70}
+                onChange={(e) => patchSel({ width: Number(e.target.value) })}
               />
             </label>
             <input

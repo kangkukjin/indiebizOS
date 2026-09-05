@@ -36,6 +36,7 @@ export interface TextOverlay {
   y?: number;          // 자유 좌표 — 슬라이드 높이의 %
   size?: string;       // small/medium/large
   size_vw?: number;    // 자유 크기 — 슬라이드 폭의 %
+  width?: number;      // 글상자 폭 — 슬라이드 폭의 % (5~100). 주면 그 폭에서 자동 줄바꿈
   font?: string;       // sans(기본)/serif/gowun/jua/black/pen/brush
   color?: string;      // white/black/#hex
   chip?: boolean;

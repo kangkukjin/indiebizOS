@@ -73,6 +73,20 @@ def _size_vw_of(ov: dict) -> float:
     return SIZE_VW.get(ov.get("size") or "small", SIZE_VW["small"])
 
 
+def _width_of(ov: dict):
+    """글상자 폭(슬라이드 폭의 %, 5~100) — 주면 그 폭에서 자동 줄바꿈(2~3줄 만들기).
+
+    없으면 None → 옛 기본값(max-width:70%)으로 그린다(기존 오버레이 무손상).
+    """
+    try:
+        w = float(ov.get("width"))
+    except (TypeError, ValueError):
+        return None
+    if not (5 <= w <= 100):
+        return None
+    return round(w, 2)
+
+
 def _free_xy_of(ov: dict):
     """자유 좌표 (x, y — 박스 좌상단, 슬라이드 폭·높이의 %) 또는 None."""
     try:
@@ -88,7 +102,11 @@ def _overlay_css(ov: dict) -> str:
     """오버레이 1건의 위치·스타일 CSS 선언. x/y(자유 좌표)가 있으면 9방(position)보다 우선."""
     font_stack = FONTS.get(ov.get("font") or "sans", _FONT_STACK)
     weight = "400" if ov.get("weight") == "normal" else "600"
-    decls = ["position:absolute", "max-width:70%", "white-space:pre-line",
+    box_w = _width_of(ov)
+    decls = ["position:absolute",
+             # 폭을 정하면 그 안에서 줄바꿈, 안 정하면 옛 기본(내용 폭, 70% 상한)
+             (f"width:{box_w}%" if box_w is not None else "max-width:70%"),
+             "white-space:pre-line", "overflow-wrap:break-word",
              "line-height:1.35", f"font-weight:{weight}",
              f"font-family:{font_stack}",
              f"font-size:{_size_vw_of(ov)}vw"]

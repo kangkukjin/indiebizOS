@@ -29,6 +29,16 @@ return items(rows, message="...", success=True)   # → {"items": [ {…}, … ]
 `table`(columns/rows)이나 단일값을 내고 싶어도 **별도 통화를 만들지 마라.** table은 items의
 파생 뷰이고(소비자가 items→table 재구성), 단일값은 길이 1 items다.
 
+### 1-1. 형태 보존 — 변환자는 들어온 형태로 낸다 (언어 개정 2026-09-06)
+
+- **items 가 들어오면 items 가 나간다.** 표형(columns/rows)은 *명시 표형 입력*을 받은 자리에서만 유지된다.
+  변환자가 items 를 표로 바꿔 내면 그 결과를 받는 다음 이항 변환자가 '통화 종류' 를 오판한다
+  (ep2882: `union` 이 표를 내고 → 2차 `union` 의 0행 items 가지가 승격되지 않아 사망).
+- **빈 items 도 통화다.** 0행은 정당한 빈손이지 형태 부재가 아니다 — 표 경로 승격 시 0행 표.
+- 선언(`flow.emits`)이 곧 실물이다. 검사기(`ibl_typecheck`)는 선언을 믿으므로, 선언과 다른 형태를
+  내는 변환자는 검사기를 거짓말쟁이로 만든다. 새 변환자를 쓸 때 `_explicit_table(prev)` 로 갈라라
+  (data-ops handler, `select`·`rename`·`groupby`·`union` 이 선례).
+
 ## 2. 기계가 읽을 값은 *평평한 필드*에 둔다
 
 변환자(filter/sort/groupby/…)는 도메인을 모른 채 `item.get("필드명")`으로 값을 직접 짚는다.

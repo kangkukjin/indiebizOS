@@ -105,7 +105,7 @@ def test_compute_and_groupby_observe_percent_numbers_the_same_way(data_ops):
                                    {"by": "group", "agg": {"total": ["sum", "v"]}})
 
     assert computed["items"][0]["next"] == 11
-    assert grouped["rows"][0][1] == 10
+    assert list(grouped["items"][0].values())[1] == 10   # 형태 보존(2026-09-06): items 입력=items
 
 
 def test_since_migrates_order_dependent_object_keys_without_false_new(
@@ -150,7 +150,7 @@ def test_nonfinite_object_keys_become_lossless_strict_json(data_ops):
     key = {float("nan"): "number-key", "NaN": "text-key"}
 
     result = data_ops._op_groupby({"items": [{"group": key}]}, {"by": "group"})
-    displayed = result["rows"][0][0]
+    displayed = list(result["items"][0].values())[0]   # 형태 보존(2026-09-06)
 
     assert result["group_key_coercions"][0]["nonfinite_parts"] == 1
     assert displayed == {"$object_pairs": [["NaN", "number-key"], ["NaN", "text-key"]]}
@@ -166,7 +166,7 @@ def test_malformed_number_is_excluded_consistently_downstream(data_ops):
         {"items": rows}, {"set": {"next": "v + 1"}})
     sorted_rows = data_ops._op_sort({"items": rows}, {"by": "v"})
 
-    assert grouped["rows"][0][1] == 10
+    assert list(grouped["items"][0].values())[1] == 10   # 형태 보존(2026-09-06): items 입력=items
     assert grouped["aggregation_skips"][0]["skipped"] == 1
     assert computed["items"][0]["next"] is None
     assert computed["compute_errors"] == 1

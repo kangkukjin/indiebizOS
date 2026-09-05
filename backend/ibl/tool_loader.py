@@ -229,8 +229,10 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 "resume": {
                     "type": "object",
                     "description": (
-                        "실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 같은 code 를 그 step 부터 다시 돈다. "
-                        "앞 단은 재실행하지 않고 스필된 직전 통화를 받는다(24h 유효)."
+                        "두 모드 중 하나(24h 유효). ①{from_step, prev_ref}: 실패 봉투의 resume 값 그대로 — 같은 code 를 "
+                        "그 step 부터 다시 돈다(앞 단은 재실행 없이 스필된 직전 통화를 받음). ②{vars_ref}: 부분 실패 봉투의 "
+                        "resume_vars.vars_ref — 산 $변수를 주입하니 죽은 문장만 고쳐 그 문장(들)을 code 로 보낸다. "
+                        "문장 하나가 죽었다고 전체를 다시 돌리지 말 것."
                     )
                 },
                 "verbose": {

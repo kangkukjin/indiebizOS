@@ -157,6 +157,26 @@ def _get_table(obj):
     return None, None
 
 
+def _explicit_table(obj) -> bool:
+    """★형태 보존(언어 개정 2026-09-06, ep2882): 명시 표형(columns/rows·table 키) 봉투인가 — items 재구성
+    가능(_get_table 승격)과 다르다. 변환자는 입력 형태를 보존한다: items→items, 표형은 표형 입력에만. 옛
+    union·select·rename·groupby 는 items 를 표로 바꿔 냈고 2차 union 의 0행 가지(승격 불가)에서 죽었다."""
+    if not isinstance(obj, dict):
+        return False
+    t = obj.get("table")
+    if isinstance(t, dict) and isinstance(t.get("rows"), list):
+        return True
+    return isinstance(obj.get("rows"), list) and isinstance(obj.get("columns"), list)
+
+
+def _table_or_empty(obj):
+    """표 경로 분기 승격 — _get_table, 단 빈 items 는 0행 표(0행 통화도 통화다, 2026-09-06)."""
+    t = _get_table(obj)[0]
+    if t is None and isinstance(obj, dict) and isinstance(obj.get("items"), list) and not obj["items"]:
+        return {"columns": [], "rows": []}
+    return t
+
+
 # 봉투 범위·거울 재투영은 형제 envelope_scope 로 분리(2026-09-02, 1500줄 규칙). 재수출이라 호출부는 그대로다.
 from common.pkg_utils import load_sibling as _load_sibling_scope
 
@@ -412,7 +432,8 @@ def _op_select(prev, params):
     if not cols_keep:
         return {"success": False, "error": "select: columns(남길 열/필드 이름 배열)가 필요합니다."}
     cols_keep = [str(c) for c in cols_keep]
-    table, env = _get_table(prev)
+    # 형태 보존(언어 개정 2026-09-06): 표 경로는 명시 표형 입력에만 — items 는 아래 items 경로.
+    table, env = _get_table(prev) if _explicit_table(prev) else (None, None)
     if table is not None:
         src_cols = [str(c) for c in (table.get("columns") or [])]
         missing = [c for c in cols_keep if c not in src_cols]
@@ -479,7 +500,8 @@ def _op_rename(prev, params):
         return {"success": False,
                 "error": f"rename: 새 이름이 서로 겹칩니다: {sorted(targets)} — 한 이름에 두 열을 접으면 값이 소실됩니다."}
 
-    table, env = _get_table(prev)
+    # 형태 보존(언어 개정 2026-09-06): 표 경로는 명시 표형 입력에만.
+    table, env = _get_table(prev) if _explicit_table(prev) else (None, None)
     if table is not None:
         src_cols = [str(c) for c in (table.get("columns") or [])]
         # 부재 판정은 판정기에게 (B28-1) — 관측이 0이면 부재를 주장하지 않는다
@@ -678,7 +700,12 @@ def _op_groupby(prev, params):
                     "source": src, "error": aggregate_error,
                 })
         out_rows.append(row)
-    res = _emit_table(env, {"columns": out_cols, "rows": out_rows})
+    # 형태 보존(언어 개정 2026-09-06): 집계도 변환자다 — items 입력엔 items(그룹 행 dict),
+    # 명시 표형 입력에만 표형. 옛 판은 늘 표를 내 `$집계.items` 참조·2차 union 을 막았다.
+    if _explicit_table(prev):
+        res = _emit_table(env, {"columns": out_cols, "rows": out_rows})
+    else:
+        res = _emit_items(env, [dict(zip(out_cols, row)) for row in out_rows])
     res = _value_semantics.attach_group_reports(
         res, group_key_coercions, aggregation_skips, aggregation_errors)
     if auto_named and isinstance(res, dict) and res.get("success", True):
@@ -935,7 +962,10 @@ def _op_union(prev, params):
     objs, _dead, _err = _handle_dead_branches("union", objs, params)
     if _err:
         return _err
-    tables = [_get_table(o)[0] for o in objs]
+    # ★형태 보존(언어 개정 2026-09-06): 표 경로는 명시 표형 분기가 있을 때만 — items 끼리는 items(선언
+    #   emits:items 와 한 벌). 옛 판은 표를 내고 `& 0행 items >> union` 에서 '1=table, 2=items' 로 죽었다(ep2882).
+    tables = ([_table_or_empty(o) for o in objs]
+              if any(_explicit_table(o) for o in objs) else [None] * len(objs))
     if all(t is not None for t in tables):
         cols = []
         for t in tables:

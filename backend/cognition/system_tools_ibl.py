@@ -485,7 +485,30 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     # --- IBL 코드 파싱 + 실행 ---
     try:
         from ibl_parser import parse_with_vars as _parse_with_vars
-        parsed, _tc_vars = _parse_with_vars(code)      # 검사기가 변수 이름을 알도록(세 번째 파싱 없이)
+        # ★재개 변수 모드(2026-09-06, ep2882): resume={vars_ref} 면 부분 실패 봉투의 산 변수를 읽어
+        #   파서에 시딩(preset_vars)하고 실행기에 같은 슬롯의 값을 넘긴다 — 죽은 문장만 다시 돈다.
+        _resume0 = tool_input.get("resume")
+        _preset_results = None
+        if isinstance(_resume0, dict) and _resume0.get("vars_ref"):
+            if _resume0.get("from_step"):
+                return json.dumps({"error": "resume 는 한 가지만 — {from_step, prev_ref}(같은 code 를 그 step 부터) 또는 "
+                                            "{vars_ref}(산 변수를 주입해 죽은 문장만) 중 하나."}, ensure_ascii=False)
+            from common.spill import read_ref as _read_ref
+            from ibl_parser import RESUME_SLOT_BASE
+            _vr = _resume0.get("vars_ref")
+            _body, _verr = _read_ref({"path": _vr} if isinstance(_vr, str) else (_vr or {}))
+            if _verr:
+                return json.dumps({"error": f"resume 실패 — {_verr}"}, ensure_ascii=False)
+            try:
+                _live = json.loads(_body)
+                assert isinstance(_live, dict)
+            except Exception:
+                return json.dumps({"error": "resume 실패 — vars_ref 가 {이름: 값} 스필이 아닙니다."}, ensure_ascii=False)
+            _preset = {str(n): RESUME_SLOT_BASE + k for k, n in enumerate(sorted(_live))}
+            _preset_results = {_preset[n]: _live[n] for n in _preset}
+            parsed, _tc_vars = _parse_with_vars(code, preset_vars=_preset)
+        else:
+            parsed, _tc_vars = _parse_with_vars(code)      # 검사기가 변수 이름을 알도록(세 번째 파싱 없이)
 
         if not parsed:
             return json.dumps({"error": f"IBL 파싱 실패: {code}"}, ensure_ascii=False)
@@ -535,6 +558,18 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             s.get("_parallel") or "_fallback_chain" in s
             for s in parsed
         )
+
+        # 재개 — 변수 모드(2026-09-06): 산 변수를 주입해 이 code(죽은 문장만) 를 처음부터 돈다.
+        if _preset_results is not None:
+            from workflow_engine import execute_pipeline
+            result = execute_pipeline(parsed, project_path, context={"_preset_results": _preset_results},
+                                      agent_id=agent_id)
+            if isinstance(result, dict):
+                result["resumed_vars"] = sorted(_preset)
+            from ibl_envelope import diet_envelope
+            result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
+            return dumps_public_result(result, producer="execute_ibl:resume_vars",
+                                       ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
 
         # 재개 (M5 §2.6): 실패 봉투의 resume={from_step, prev_ref} 로 그 step 부터 — 1~(from_step-1) 단은 재실행하지 않는다.
         resume = tool_input.get("resume")

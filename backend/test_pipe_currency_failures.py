@@ -137,9 +137,10 @@ def test_p1_stale_derived_views_removed():
         "items": [{"n": 2}, {"n": 1}], "table": {"columns": ["n"], "rows": [[2], [1]]}}), "by": "n"})
     assert out.get("success") and "table" not in out, f"stale table 잔존: {sorted(out)}"
     assert [r["n"] for r in out["items"]] == [1, 2]
-    # 대칭: table 산출(groupby)이 낡은 items 를 남기지 않는다
+    # 대칭: 명시 표형 입력의 groupby(표 산출)가 낡은 items 를 남기지 않는다
+    # (형태 보존 2026-09-06: items 입력이면 items 로 나가므로 표형 입력으로 검사)
     grp = _run("data_groupby", {"_prev_result": json.dumps({
-        "items": [{"g": "A"}, {"g": "A"}, {"g": "B"}]}), "by": "g"})
+        "columns": ["g"], "rows": [["A"], ["A"], ["B"]]}), "by": "g"})
     assert grp.get("success") and "items" not in grp, f"stale items 잔존: {sorted(grp)}"
     print("P1 OK — 변환 후 stale table/items 대칭 제거")
 
@@ -263,7 +264,8 @@ def test_p8_groupby_loud_params():
     """P8(⑧′ 실험 3): 없는 by → null 뭉갬 / dict 아닌 agg → count 위장 / unknown op → count 위장."""
     # 정상 집계 회귀 무손상 (indiebizOS 가 철회 근거로 쓴 그 케이스)
     ok = _run("data_groupby", {"items": _ROWS, "by": "d", "agg": {"size": "sum"}})
-    ok_rows = (ok.get("table") or {}).get("rows") or ok.get("rows")
+    ok_rows = ((ok.get("table") or {}).get("rows") or ok.get("rows")
+               or [list(r.values()) for r in ok.get("items") or []])   # 형태 보존(2026-09-06): items 입력=items
     assert ok.get("success") and ok_rows[0] == ["surface", 150.0], ok
     # 없는 by → [[null, N]] 대신 에러
     bad_by = _run("data_groupby", {"items": _ROWS, "by": "디렉토리"})
@@ -913,8 +915,8 @@ def test_p26_spill_resolved_at_injection_seam():
     assert json.loads(ti["params"]["_prev_result"])["items"] == json.loads(body)["items"], ti
     # ② 해소된 통화를 groupby 가 실제로 먹는가 (수리 전엔 "통화를 찾지 못했습니다")
     g = _run("data_groupby", {"_prev_result": ti["params"]["_prev_result"], "by": "영역"})
-    # groupby 는 표 형(columns/rows)으로 방출한다 — 그 자체가 P25 가 다루는 자리다
-    assert g.get("success") and sorted(g.get("rows") or []) == [["backend", 2], ["docs", 1]], g
+    # 형태 보존(2026-09-06): items 입력이라 그룹 행도 items 로 방출한다
+    assert g.get("success") and sorted(list(r.values()) for r in g.get("items") or []) == [["backend", 2], ["docs", 1]], g
     # ③ 스필이 아닌 평범한 통화는 손대지 않는다(빠른 경로)
     plain = json.dumps({"items": [{"a": 1}]}, ensure_ascii=False)
     assert _auto_inject_prev({"params": {}}, plain)["params"]["_prev_result"] == plain

@@ -302,22 +302,33 @@ def _transform(tool_input: dict) -> str:
     if not items:
         return _ok({"items": [], "rows_in": 0, "rows_out": 0,
                     "note": "입력 0행 — AI 호출 생략(비용 0)."})
-    payload, perr = _items_payload(items)
-    if perr:
-        return _fail(perr)
-
     fields = tool_input.get("fields")
     if fields is not None and not isinstance(fields, list):
         return _fail("fields 는 문자열 배열이어야 합니다.")
 
+    # ★색인 병합 계약(2026-09-06, ep2882 실측): 옛 계약은 모델이 **행 전체**를 다시 쓰게 했다 —
+    #   fields 에 title·summary·url 이 있으면 규칙 ⑤가 입력을 되받아쓰게 만들어, 출력 글자의 76%
+    #   (title 36·summary 23·url 9·date 8%)가 입력 echo 였고 새 정보(delta·label)는 13% 였다.
+    #   [table:ai] 한 호출 140초의 4분의 3이 그 echo 의 출력 토큰. 새 계약: 입력 행에 색인 `_i`
+    #   를 달아 보내고, 모델은 행마다 `{_i, 새로 만들거나 바꾼 필드}` 만 돌려준다 — 코드가 원 행에
+    #   병합한다(값 보존·순서 = 반환 순서·뺀 _i = 제거·_i 없는 행 = 신규). 모델이 계약을 어기고
+    #   _i 없이 전 행을 돌려주면 옛 계약(전체 행)으로 정직 폴백하고 `_merge: "full"` 로 신고한다.
+    dict_items = [r if isinstance(r, dict) else {"value": r} for r in items]
+    payload, perr = _items_payload([{"_i": i, **r} for i, r in enumerate(dict_items)])
+    if perr:
+        return _fail(perr)
+
     system = (
-        "너는 통화 변환자다. 입력 items(JSON 배열)를 지시대로 변환해 JSON 배열로만 출력한다. "
+        "너는 통화 변환자다. 입력 items(JSON 배열, 각 행에 색인 _i)를 지시대로 변환한다. "
+        "출력은 JSON 배열만: 행마다 {\"_i\": 색인, 새로 만들거나 값을 바꾼 필드…}. "
         "규칙: ①입력에 없는 사실·수치를 지어내지 말 것 ②지시가 행을 줄이거나 늘리라는 것이 "
-        "아니면 행 수를 보존할 것 ③기존 필드는 보존하고 필요한 필드만 추가·수정 "
+        "아니면 모든 _i 를 돌려줄 것(뺀 _i = 제거된 행, _i 없는 행 = 새 행) "
+        "③입력에 이미 있는 필드는 다시 쓰지 말 것 — 코드가 원 행에 병합한다(값을 바꿀 때만 그 필드를 적는다) "
         "④JSON 밖에 다른 글자를 쓰지 말 것."
     )
     if fields:
-        system += f" ⑤각 행은 다음 필드만 갖는다: {[str(f) for f in fields]}"
+        system += (f" ⑤병합 뒤 각 행은 다음 필드만 남는다: {[str(f) for f in fields]} — "
+                   "이 중 입력에 없는 필드만 채워라.")
 
     from oneshot_facade import oneshot_json, records_gate, mark_ai
     parsed, err = oneshot_json(f"[items]\n{payload}\n\n[지시]\n{instruction}", system)
@@ -326,15 +337,48 @@ def _transform(tool_input: dict) -> str:
     out, gerr = records_gate(parsed)
     if gerr:
         return _fail(f"변환 실패: {gerr}")
+    out, merge_mode, bad_idx = _merge_by_index(dict_items, out)
     if fields:
         keys = [str(f) for f in fields]
         out = [{k: r.get(k) for k in keys} for r in out]
 
-    result = {"items": mark_ai(out), "rows_in": len(items), "rows_out": len(out)}
+    result = {"items": mark_ai(out), "rows_in": len(items), "rows_out": len(out),
+              "_merge": merge_mode}
+    if bad_idx:
+        result["note"] = f"모델이 돌려준 _i {bad_idx} 은(는) 입력 범위 밖이라 새 행으로 받았습니다."
     if len(out) < len(items):
         # 조용한 깎기 금지 — 지시가 시킨 축소인지 하류가 판단할 수 있게 수를 신고한다.
         result["rows_dropped"] = len(items) - len(out)
     return _ok(result)
+
+
+def _merge_by_index(src: list, out: list):
+    """모델 반환(행마다 `_i` + 새/바뀐 필드)을 원 행에 병합. 반환 (rows, mode, bad_idx).
+
+    mode = "index"(계약 준수 — 하나라도 _i 를 달고 왔다) | "full"(옛 계약 폴백 — _i 전무, 전 행 그대로).
+    _i 가 있으면 원 행 사본 위에 반환 필드를 덮는다(키가 같으면 모델 값이 이긴다 — 값 수정 통로),
+    _i 가 없거나 범위 밖이면 새 행. 순서는 반환 순서. `_i` 는 출력에서 벗긴다."""
+    if not any(isinstance(r, dict) and "_i" in r for r in out):
+        return out, "full", []
+    rows, bad = [], []
+    for r in out:
+        if not isinstance(r, dict):
+            continue
+        r = dict(r)
+        i = r.pop("_i", None)
+        try:
+            i = int(i) if i is not None else None
+        except (TypeError, ValueError):
+            i = None
+        if i is not None and 0 <= i < len(src):
+            base = dict(src[i])
+            base.update(r)
+            rows.append(base)
+        else:
+            if i is not None:
+                bad.append(i)
+            rows.append(r)
+    return rows, "index", bad
 
 
 # ───────────────────────── 출구: [table:brief] ─────────────────────────

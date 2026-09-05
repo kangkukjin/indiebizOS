@@ -38,12 +38,18 @@ def test_sparse_items_to_table_preserves_later_keys(data_ops):
         "rows": [["B", None], ["A", 80]],
     }
 
-    # 실제 발견 경로: 두 items 분기가 table 로 흡수된 뒤 union 되어도 값이 남는다.
+    # 실제 발견 경로: 명시 표형 분기와 희소 items 분기가 union 되어도 뒤쪽 키의 값이 남는다.
+    # (형태 보존 2026-09-06: items 끼리는 items 로 이어지므로 표 경로는 명시 표형 분기로 검사)
     out = data_ops._op_union([
+        {"columns": ["name"], "rows": [["B"]]},
+        {"items": [{"name": "A", "score": 80}]},
+    ], {})
+    assert out["table"]["rows"] == [["B", None], ["A", 80]]
+    both = data_ops._op_union([
         {"items": [{"name": "B"}, {"name": "A", "score": 80}]},
         {"items": [{"name": "A", "score": 80}]},
     ], {})
-    assert out["table"]["rows"] == [["B", None], ["A", 80], ["A", 80]]
+    assert both["items"] == [{"name": "B"}, {"name": "A", "score": 80}, {"name": "A", "score": 80}]
 
 
 @pytest.mark.parametrize("desc, expected", [

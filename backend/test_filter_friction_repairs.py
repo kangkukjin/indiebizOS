@@ -95,8 +95,9 @@ def test_F4_count_1원소_리스트는_행수_출력명이다(h):
     out = h._op_groupby({"success": True, "items": list(ROWS)},
                         {"by": "구", "agg": {"건수": ["count"]}})
     assert out.get("success") is not False, out.get("error")
-    assert out["columns"] == ["구", "건수"]
-    assert sorted(map(tuple, out["rows"])) == [("강남", 1), ("용산", 2)]
+    # 형태 보존(언어 개정 2026-09-06): items 입력엔 그룹 행도 items — 열 이름은 행의 키 순서.
+    assert list(out["items"][0]) == ["구", "건수"]
+    assert sorted(tuple(r.values()) for r in out["items"]) == [("강남", 1), ("용산", 2)]
 
 
 def test_F4_count_스칼라_비실존_필드는_거절하되_옳은_모양을_가르친다(h):
@@ -111,8 +112,8 @@ def test_F4_실제_필드명이면_문서_계약_보존_nonnull_관측수(h):
     rows = [{"구": "용산", "가격": 1}, {"구": "용산", "가격": None}]
     out = h._op_groupby({"success": True, "items": rows},
                         {"by": "구", "agg": {"가격": "count"}})
-    assert out["columns"] == ["구", "count_가격"]
-    assert out["rows"] == [["용산", 1]]  # non-null 관측 수 — 행수(2)가 아니다
+    assert list(out["items"][0]) == ["구", "count_가격"]   # 형태 보존(2026-09-06): items 입력=items
+    assert out["items"] == [{"구": "용산", "count_가격": 1}]  # non-null 관측 수 — 행수(2)가 아니다
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

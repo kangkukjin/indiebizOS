@@ -47,6 +47,9 @@ def _rows(values):
 
 def _first_row(result):
     assert result.get("success", True) is not False, result
+    # 형태 보존(언어 개정 2026-09-06): items 입력엔 items(그룹 행 dict) — 표형은 명시 표형 입력에만.
+    if isinstance(result.get("items"), list) and result["items"]:
+        return dict(result["items"][0])
     columns = result.get("columns")
     rows = result.get("rows")
     if not isinstance(columns, list) or not isinstance(rows, list):

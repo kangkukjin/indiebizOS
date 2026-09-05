@@ -225,6 +225,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
     # $var 바인딩 저장소: step 인덱스 → 결과 문자열. 파서가 $var 를 {{_step_N_result}} 로
     # 치환해 두므로, 여기 저장된 값으로 실행 시점에 실제 결과가 주입된다 (문장 경계와 무관).
     step_results: Dict[int, str] = {}
+    # ★재개 변수 시딩(2026-09-06): 부분 실패 봉투의 산 변수(resume_vars.vars_ref)를 소비자가 읽어
+    #   {슬롯: 원형 문자열} 로 넘기면 그 슬롯이 "이미 실행된 앞 문장" 처럼 참조된다.
+    if isinstance(context, dict) and isinstance(context.get("_preset_results"), dict):
+        for _k, _v in context["_preset_results"].items():
+            step_results[int(_k)] = _v if isinstance(_v, str) else json.dumps(_v, ensure_ascii=False)
 
     # ── 문장 경계(`;` · 개행) ──────────────────────────────────────────────
     # 여러 문장이 한 리스트로 평탄화돼 들어오므로, 파서가 각 문장 첫 step 에 `_seq_boundary` 를
@@ -267,6 +272,31 @@ def execute_pipeline(steps: list, project_path: str = ".",
         out["error"] = f"{out.get('error') or ''} — 뿌리 {len(_seq['var_errors'])}: {_roots}"
         if _seq["derived"]:
             out["error"] += f" (연쇄 {_seq['derived']}개는 그 변수를 읽어 죽은 문장)"
+
+    def _resume_vars_note(out: dict) -> None:
+        """★부분 성공 봉투 재사용(2026-09-06, ep2882): 문장 하나가 죽었을 때 살아 있는 `$변수` 를 버리지
+        않는다 — 성공한 할당의 원형을 스필해 `resume_vars` 로 싣는다. 실행자는 죽은 문장만 고쳐
+        그 문장(들)을 code 로 보내고 `resume: {vars_ref}` 를 실으면 산 변수가 재실행 없이 주입된다.
+        옛 판은 39/39 step 이 살아 있어도 실행자가 전체를 다시 돌려 같은 검색·[table:ai] 를 두 번 지불했다."""
+        live = {}
+        for _i, _st in enumerate(steps):
+            _nm = _st.get("_assign_name") if isinstance(_st, dict) else None
+            if _nm and _nm != "return" and _i in step_results and _nm not in _seq["var_errors"]:
+                live[_nm] = step_results[_i]
+        if not live:
+            return
+        try:
+            from common.spill import spill_write
+            ref = spill_write(json.dumps(live, ensure_ascii=False), tag="resume_vars")["ref"]
+        except Exception:
+            return
+        _dead = sorted(_seq["var_errors"])
+        out["resume_vars"] = {
+            "vars_ref": ref["path"], "vars": sorted(live), "failed_vars": _dead,
+            "note": (f"산 변수 {', '.join('$' + n for n in sorted(live))} 은(는) 재실행하지 않아도 됩니다 — "
+                     f"죽은 문장{'(' + ', '.join('$' + n for n in _dead) + ')' if _dead else ''}만 고쳐 그 문장(들)과 뒤 문장을 "
+                     f"code 로 보내고 resume: {{vars_ref: \"{ref['path']}\"}} 를 실으세요(24h 유효). 전체 재실행 금지."),
+        }
 
     def _handle_failure(idx: int, abort_payload: dict, tb=None):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -316,6 +346,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if isinstance(_fr0, dict) and _fr0.get("_derived_from"):
                 _seq["derived"] += 1
             _root_note(abort_payload)
+            _resume_vars_note(abort_payload)
             if idx >= 1 and prev_result and not st.get("_seq_boundary"):
                 try:
                     from common.spill import spill_write
@@ -869,6 +900,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         out["statements_failed"] = _failed
         out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"
         _root_note(out)   # 뿌리를 error 문장 자체에 — 로그 절단·다이제스트 상한에서도 살아남게
+        _resume_vars_note(out)   # 산 변수는 스필로 — 죽은 문장만 다시(2026-09-06)
     # 경고 생산자가 넷(repeat 상한·on_error 건너뜀·0행 사유·병렬 분기 실패)이라 한 키에
     # 덮어쓰면 뒤엣것이 앞엣것을 지운다 — 모아서 한 번에 싣는다(B24-1 이 세 번째 생산자를
     # 더하면서 드러났고, 29회차 0행 사유가 네 번째다).

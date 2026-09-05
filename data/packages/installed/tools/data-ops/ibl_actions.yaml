@@ -110,7 +110,7 @@ actions:
       reads_fields: [columns]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기.
+    description: 통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기. 형태 보존 — items 입력은 items 로, 명시 표형 입력만 표형으로.
     target_description: 'columns(남길 열/필드 이름 배열, 필수). 예: [sense:...] >> [table:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
     group: transform
     router: handler
@@ -157,7 +157,7 @@ actions:
       reads_fields: [map]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — 열/필드 이름 바꾸기(관계대수 ρ). 소스가 다른 두 통화의 join 전 키 맞추기.
+    description: 통화 변환자 — 열/필드 이름 바꾸기(관계대수 ρ). 소스가 다른 두 통화의 join 전 키 맞추기. 형태 보존 — items 입력은 items 로.
     target_description: 'map({옛이름: 새이름} 딕셔너리, 필수). items·table 둘 다. 없는 이름·이름 충돌=명시 에러(값 무변경·비파괴). 예: [sense:realty]{source: "molit", region: "청주"} >> [table:rename]{map: {"아파트명": "단지명"}} — 이후 join{on: "단지명"} 이 성립.'
     group: transform
     router: handler
@@ -254,7 +254,7 @@ actions:
       reads_fields: [by]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — items를 키 필드로 그룹지어 집계. agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
+    description: 통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
     target_description: 'by(그룹 키 열, 필수) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:["count"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 table=[by열, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
     group: transform
     router: handler
@@ -299,7 +299,7 @@ actions:
     scope: workspace
     params:
       on_error: string
-    description: 통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup. 효과 봉투(write 등 부수효과 결과)는 1행으로 받는다(effect_rows 신고).
+    description: 통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup. 효과 봉투(write 등 부수효과 결과)는 1행으로 받는다(effect_rows 신고). 형태 보존(2026-09-06) — items 끼리는 items 로 나가고, 표형은 명시 표형 분기가 있을 때만(빈 items 는 0행 표로 승격).
     target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge. 효과 봉투(items/table 없는 success 봉투 — write·notify 결과)는 분기당 1행(그 봉투의 필드)으로 받고 effect_rows 에 분기 번호를 신고한다(2026-09-05) — 병렬 부수효과 문장을 union 으로 닫아도 된다. 부수효과만이면 맨몸 [A] & [B] 로 끝내도 되며(결과=분기 봉투 목록) union 은 그것을 표로 만든다.'
     group: transform
     router: handler

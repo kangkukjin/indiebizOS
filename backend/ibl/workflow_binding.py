@@ -98,8 +98,11 @@ def _extract_result_field_obj(raw: str, path: str) -> Any:
     #   가능: table, success)" 로 죽었다. 소비처 누락 — 같은 판정기(common.currency.derive_items)를
     #   여기서도 쓴다. 파생본은 사본에만(저장된 step 결과 원형은 불변, 토큰 중복 회피 규약 유지).
     #   효과·스칼라 봉투는 종전대로 정직 오류(통화가 아닌 것을 통화라 부르지 않는다).
+    #   ★2026-09-06 수리(ep2882 `${최신.items.0.path}` 실측): 파서가 넘기는 경로는 `.items.0.path` 처럼
+    #   **점으로 시작**하는데 `split(".", 1)[0]` 은 빈 문자열이라 이 가지가 한 번도 돌지 않았다 —
+    #   09-05 수리가 살아 있는 척만 했다. 앞 점을 벗기고 첫 마디를 본다(관문 시험 동봉).
     if (isinstance(obj, dict) and not isinstance(obj.get("items"), list)
-            and str(path).split(".", 1)[0] == "items"):
+            and str(path).lstrip(".").split(".", 1)[0] == "items"):
         from common.currency import derive_items
         obj = derive_items(dict(obj))
 

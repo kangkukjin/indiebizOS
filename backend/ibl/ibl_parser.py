@@ -73,7 +73,7 @@ def parse(code: str) -> List[Dict]:
     return parse_with_vars(code)[0]
 
 
-def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
+def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None) -> Tuple[List[Dict], Dict[str, int]]:
     """
     IBL 코드를 파싱하여 실행 가능한 step 리스트로 변환 (+ $변수명→최종 step 인덱스 맵 — repeat until 이 몸통 할당을 읽는 데 씀, 2026-08-22 M4)
 
@@ -155,7 +155,8 @@ def parse_with_vars(code: str) -> Tuple[List[Dict], Dict[str, int]]:
     # 변수명 → 그 변수가 할당된 문장의 *최종* step 인덱스 (파이프라인이면 마지막 step).
     # 문장이 step 으로 펼쳐진 *뒤* 채워지므로, 뒤 문장의 $var 참조가 정확한 인덱스로
     # 치환된다({{_step_N_result}} — 실행기가 step 별 결과를 저장해 치환. D4).
-    variables: Dict[str, int] = {}
+    # ★재개 변수 시딩(2026-09-06 ep2882): preset_vars={이름: 슬롯≥RESUME_SLOT_BASE}=이미 할당된 변수(실행기가 슬롯을 채움)
+    variables: Dict[str, int] = dict(preset_vars) if preset_vars else {}
     for _stmt_idx, stmt in enumerate(statements):
         # 문장 전체가 블록([goal:]/[if:]/[case:])이면 블록 step 하나로 —
         # desugar·파이프 분리에 넣으면 블록 내부 문장이 난도질당한다.
@@ -403,7 +404,7 @@ _ON_ERROR_RE = re.compile(r'^\s*\[on_error:\s*(stop|skip|null)\s*\]\s*', re.I)
 #: 블록 몸에서 **태어난** $변수에 발급하는 팬텀 슬롯의 시작 번호 (V49-1, 2026-08-27).
 #: 실제 step 인덱스는 문장 수만큼만 자라므로 이 위는 영구히 비어 있다 — 슬롯 공간을
 #: 나누는 것으로 "실행된 step 의 결과"와 "블록이 낳은 값"이 같은 사전에 섞여도 안 부딪친다.
-BORN_SLOT_BASE = 1_000_000
+BORN_SLOT_BASE, RESUME_SLOT_BASE = 1_000_000, 2_000_000   # 팬텀 슬롯 / 재개 변수 슬롯(2026-09-06, context["_preset_results"])
 
 
 _STEP_PATTERN = re.compile(

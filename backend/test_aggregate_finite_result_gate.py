@@ -74,7 +74,8 @@ def _aggregate(data_ops, values, op):
     rows = [{"group": "A", "v": value} for value in values]
     result = data_ops._op_groupby(
         {"items": rows}, {"by": "group", "agg": {"value": [op, "v"]}})
-    return result, result["rows"][0][1]
+    # 형태 보존(언어 개정 2026-09-06): items 입력엔 items — 집계열은 두 번째 값.
+    return result, list(result["items"][0].values())[1]
 
 
 def test_stable_aggregate_preserves_huge_integer_and_float_meaning(data_ops):

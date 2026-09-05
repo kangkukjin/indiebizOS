@@ -72,6 +72,9 @@ def _carriers(rows):
 
 
 def _result_rows(result):
+    # 형태 보존(언어 개정 2026-09-06): items 입력엔 items(그룹 행 dict) — 표형은 명시 표형 입력에만.
+    if isinstance(result.get("items"), list):
+        return [list(r.values()) for r in result["items"]]
     table = result.get("table") if isinstance(result.get("table"), dict) else result
     return table.get("rows") or []
 

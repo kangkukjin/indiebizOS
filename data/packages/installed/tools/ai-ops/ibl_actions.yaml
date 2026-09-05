@@ -40,7 +40,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(AI) — items 를 자연어 지시(instruction)대로 의미 변환(선별·주석·재구성). filter/sort 의 의미론적 형제 — 규칙으로 적을 수 있으면 filter/sort 가 싸고 결정적이니 그쪽 먼저.
-        target_description: 'instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · fields(선택 — 출력 행 필드 강제 배열, 생략=입력 필드 보존+추가 허용). 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. 실행마다 모델 비용(기어 실행 축).'
+        target_description: 'instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. 실행마다 모델 비용(기어 실행 축).'
         group: transform
         router: handler
         tool: ai_transform
@@ -48,7 +48,7 @@ nodes:
           instruction:
           - do
           - prompt
-        implementation: ai-ops handler — items 집합을 한 원샷(실행 축)에 넣어 지시대로 변환. JSON 검증+재시도 1회+정직 실패, 행 수 신고, _ai provenance. 0행=호출 생략(비용 0).
+        implementation: ai-ops handler — items 집합(행마다 색인 _i)을 한 원샷(실행 축)에 넣고, 모델은 행마다 {_i, 새로 만들거나 바꾼 필드}만 돌려준다 — 코드가 원 행에 병합(_merge:index; 입력 echo 제거로 출력 토큰 ÷4, 2026-09-06 ep2882). _i 전무=옛 계약(전체 행) 정직 폴백(_merge:full). JSON 검증+재시도 1회+정직 실패, 행 수 신고, _ai provenance. 0행=호출 생략(비용 0).
         target_key: instruction
         keywords:
         - 골라줘
@@ -124,7 +124,7 @@ tool_json:
           type: array
           items:
             type: string
-          description: 출력 행 필드 강제(선택, 생략=입력 필드 보존+추가 허용).
+          description: 병합 뒤 남길 필드(선택, 생략=입력 필드 보존+추가 허용). 입력 필드는 코드가 원 행에서 가져오므로 모델이 되쓰지 않는다.
         items:
           type: array
           description: 단독 호출용 items(파이프 없이 직접 공급).

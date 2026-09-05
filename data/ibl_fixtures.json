@@ -193,6 +193,7 @@
     "self:finance#ingest": "AI 구조화 호출(비용·편차) + 원장 쓰기 — 정기 실행 부적합",
     "self:goal#attempts": "task_id 필요 — 고정 fixture 부적합",
     "self:goal#delete": "goal_id 필요 + 종결 상태 전제 — 고정 fixture 부적합",
+    "self:lecture#load": "lecture_id 필요 — 고정 fixture 부적합",
     "self:goal#status": "goal_id 필요(list 결과의 id) — 고정 fixture 부적합",
     "self:health#ingest": "AI 구조화 호출(비용·편차) + 원장 쓰기 — 정기 실행 부적합",
     "self:material#list": "lecture_id 필요 — 고정 fixture 부적합",

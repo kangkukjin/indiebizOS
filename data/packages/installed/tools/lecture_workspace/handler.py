@@ -174,7 +174,33 @@ def _lecture_load(tool_input: dict) -> str:
     if not lecture_id:
         return _err("lecture_id는 필수입니다.")
     data = lecture_store.load_lecture(lecture_id)
+    # ★통화(2026-09-05, ep2858 실측): load 는 effect 가 아니라 items 다 — 모델이 `>> [table:take]{n: -6}` 로
+    #   "마지막 6장"을 집으려다 타입검사에 막혔다. items = deck 의 슬라이드를 slide_order 순으로 한 행씩
+    #   (순번·id·제목·레이아웃·스피커 노트·파일). deck 전문·경로는 종전대로 옆 키에 둔다.
+    data["items"] = _slide_rows(data.get("deck") or {})
     return _ok(data)
+
+
+def _slide_rows(deck: dict) -> list:
+    slides = deck.get("slides") or {}
+    if isinstance(slides, list):
+        slides = {s.get("id"): s for s in slides if isinstance(s, dict)}
+    order = [sid for sid in (deck.get("slide_order") or []) if sid in slides]
+    order += [sid for sid in slides if sid not in order]
+    rows = []
+    for i, sid in enumerate(order, 1):
+        s = slides.get(sid) or {}
+        rows.append({
+            "순번": i,
+            "slide_id": sid,
+            "제목": s.get("title") or "",
+            "layout": s.get("layout") or "",
+            "speaker_note": s.get("speaker_note") or "",
+            "png_file": s.get("png_file") or "",
+            "spec_file": s.get("spec_file") or "",
+            "updated_at": s.get("updated_at") or "",
+        })
+    return rows
 
 
 def _lecture_delete(tool_input: dict) -> str:

@@ -241,7 +241,9 @@ nodes:
               type: text
               placeholder: 곡·아티스트 검색
               required: true
-            action: '[sense:search_youtube]{query: "$q", count: 15}'
+            # 2026-09-05 15 → 45(사용자 "3배로"). 뷰가 list_action 이라 항목이 늘어도
+            # <audio> 는 생기지 않는다(preload 폭주와 무관). 상한은 tool_youtube.SEARCH_COUNT_MAX=75.
+            action: '[sense:search_youtube]{query: "$q", count: 45}'
             view:
             - type: list_action
               from: items
@@ -356,7 +358,7 @@ tool_json:
 
         limit:
           type: integer
-          description: 검색 결과 수 (1-25, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림
+          description: 검색 결과 수 (1-75, 기본 5). 상한 초과 시 조정하고 clamped/requested 로 알림
       required: []   # query 또는 queries 중 하나 — 핸들러가 검사
   - name: music_op
     description: 유튜브 음악 재생/대기열 단일 디스패처. op으로 play/add/skip/seek/queue/stop/download/relay 분기 (기본 play).

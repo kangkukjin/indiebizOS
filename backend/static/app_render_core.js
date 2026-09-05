@@ -242,8 +242,25 @@ function isSlowNet(conn) {
   return !!conn && ((!!conn.downlink && conn.downlink < 3) || (!!conn.rtt && conn.rtt > 250));
 }
 
-/** lazy: 목록에 떠 있다고 스트림을 미리 물지 않는다(요청 자체가 서버 작업인 src) */
-function preloadOf(p) { return p.lazy ? 'none' : 'metadata'; }
+/** preload='metadata' 를 허용할 목록 길이 상한 — 이 위는 항목 수만큼 요청이 나가므로 'none'. */
+var PRELOAD_LIST_MAX = 3;
+
+/**
+ * preload 결정 — lazy 선언이거나 **목록이 길면** 'none'(요청 자체가 서버 작업인 src).
+ *
+ * ★길이를 보는 이유(2026-09-05 실측). <audio preload="metadata"> 는 화면에 뜨는 것만으로
+ *   항목마다 요청을 하나씩 낸다. 음악앱은 한 폴더가 최대 500곡이라(handler._PLAY_CAP)
+ *   폴더를 여는 순간 500건이 동시에 서버를 친다. 그 소스가 곧 서버 작업이면(cue/ape →
+ *   /music/stream 의 ffmpeg 변환) 정작 재생을 누른 곡의 버퍼 보충이 그 뒤에 줄을 서서
+ *   굶는다 — 동시 60건에서 같은 Range 보충이 2.4ms → 13.8s 로 늘었다(=곡이 끊긴다).
+ *   'lazy 를 선언하지 않은 매니페스트가 잘못'이 아니다: 목록이 몇 개인지는 매니페스트가
+ *   아니라 **렌더러만** 안다(통화가 그때그때 다르다). 그러니 여기서 정한다.
+ *   n 을 넘기지 않는 옛 호출은 종전대로 'metadata'.
+ */
+function preloadOf(p, n) {
+  if (p.lazy) return 'none';
+  return (typeof n === 'number' && n > PRELOAD_LIST_MAX) ? 'none' : 'metadata';
+}
 
 /**
  * 백엔드가 서빙하는 라우트 프리픽스 — 통화의 src·image·poster 에 실려 오는
@@ -301,8 +318,10 @@ function resolveMediaUrl(raw, base) {
  * media_player 한 항목의 소스 결정 — T 는 표면의 템플릿 함수(이스케이프 정책 포함).
  * 고른 문자열을 URL 로 절대화하는 것은 resolveMediaUrl(표면이 base 를 넘긴다),
  * 여기선 *어떤 문자열을 고를지*만 정한다.
+ *
+ * n = 이 media_player 가 그리는 항목 수(표면이 arr.length 로 넘긴다) — preload 판정에 쓴다.
  */
-function mediaModel(p, it, T, slowNet) {
+function mediaModel(p, it, T, slowNet, n) {
   var lowRaw = (typeof p.src_low === 'string') ? T(p.src_low, it) : '';
   var src = (slowNet && lowRaw) ? lowRaw : (p.src ? T(p.src, it) : '');
   var isVideo = p.video === true || (typeof p.video === 'string' && /^(true|1)$/i.test(T(p.video, it)));
@@ -312,7 +331,7 @@ function mediaModel(p, it, T, slowNet) {
     isVideo: isVideo,
     poster: p.poster ? T(p.poster, it) : '',
     title: p.title ? T(p.title, it) : '',
-    preload: preloadOf(p),
+    preload: preloadOf(p, n),
   };
 }
 

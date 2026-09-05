@@ -330,7 +330,9 @@ function renderPrim(p,vi,data){
     // lazy: preload="none" — 항목마다 스트림을 미리 물지 않는다(유튜브 릴레이처럼 요청이
     // 곧 서버 작업(해소+ffmpeg)인 src 는 재생을 눌러야만 받게). video: '{is_video}'(또는
     // true) 참이면 <audio> 대신 <video>(poster 지원) — 데스크탑 파리티.
-    const pre=preloadOf(p);
+    // ★목록 길이를 함께 넘긴다 — 긴 목록(음악앱 한 폴더 최대 500곡)은 lazy 선언이 없어도
+    //   'none' 이어야 한다(판정은 공용 코어 preloadOf 가 정본).
+    const pre=preloadOf(p,arr.length);
     // src_low: 느린 회선(테슬라 실측 1.4Mbps — 원본 1080p 는 소리만 나오고 화면 정지)이면
     // 저대역 판 자동 선택. 판정·소스 선택은 공용 코어(isSlowNet/mediaModel)가 정본.
     const slowNet=isSlowNet(navigator.connection);

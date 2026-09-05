@@ -211,7 +211,11 @@ def _format_duration(seconds):
 
 # 검색 결과 상한 — yt-dlp ytsearchN 자체엔 제한이 없다. 가이드·앱 계기가 12를 쓰므로
 # 옛 상한 10 은 침묵 클램프였다(2026-08-18 수리). 넘으면 clamped 로 신고한다.
-SEARCH_COUNT_MAX = 25
+# 2026-09-05 25 → 75: 음악앱 검색 결과가 적다는 신고(사용자 "3배로"). 앱 계기가 15 →
+# 45 로 올라가는데 상한이 25 면 거기서 도로 잘린다 — 호출부만 키우는 것은 수리가 아니다.
+# 상한도 같은 배율로 올린다(25×3). 실측: ytsearch45 가 45건을 1.9초에 돌려주므로
+# yt-dlp 쪽엔 여유가 있고, 이 숫자는 순전히 우리가 스스로 건 것이다.
+SEARCH_COUNT_MAX = 75
 CHANNEL_ITEM_MAX = 25
 
 
@@ -355,7 +359,7 @@ def search_youtube(query: str, count: int = 5) -> dict:
 
     Args:
         query: 검색어
-        count: 검색 결과 수 (1-25, 기본 5). 상한 초과 시 clamped/requested 로 신고
+        count: 검색 결과 수 (1-75, 기본 5). 상한 초과 시 clamped/requested 로 신고
 
     Returns:
         dict: {success, count, results: [{video_id, title, channel, duration, url}, ...]}
@@ -434,7 +438,7 @@ def relay_youtube(query: str, media: str = "audio", count: int = 6) -> dict:
     Args:
         query: 검색어 또는 유튜브 URL
         media: audio(기본) | video — 소리만 / 영상+소리
-        count: 검색 결과 수 (1-10, URL 이면 무시)
+        count: 검색 결과 수 (1-SEARCH_COUNT_MAX — search_youtube 와 같은 상한, URL 이면 무시)
 
     Returns:
         dict: {success, items: [{title, channel, duration, video_id, stream, thumb, is_video}]}
@@ -484,7 +488,7 @@ def play_youtube(query: str, mode: str = "audio", count: int = 5) -> dict:
     Args:
         query: 검색어 또는 YouTube URL
         mode: 재생 모드 - "audio" (소리만, 기본), "video" (브라우저)
-        count: 검색 결과 수 (1-25, 기본 5). URL 직접 지정 시 무시됨.
+        count: 검색 결과 수 (1-75, 기본 5). URL 직접 지정 시 무시됨.
             상한 초과 시 clamped/requested 로 신고
 
     Returns:

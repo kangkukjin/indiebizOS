@@ -350,7 +350,8 @@ function ViewPrim({ p, data, onDrill, onRowAction, onStream, busyRow, dispatch, 
             className="self-start text-xs px-2 py-1 rounded border border-stone-300 text-stone-600 hover:bg-stone-50">🔀 랜덤</button>
         )}
         {arr.map((it, i) => {
-          const m = mediaModel(p, it, tpl, slowNet) as
+          // arr.length 를 함께 넘긴다 — 긴 목록은 lazy 선언이 없어도 preload='none'(공용 코어 판정).
+          const m = mediaModel(p, it, tpl, slowNet, arr.length) as
             { src: string; hls: string; isVideo: boolean; poster: string; title: string; preload: 'none' | 'metadata' };
           const src = audioUrl(m.src);
           // 플레이어의 세 소스(src·hls·poster)는 같은 규칙으로 푼다 — 원격 표면과 동형.

@@ -72,7 +72,7 @@ def main():
     print(json.dumps({"items": items, "ok": ok, "seconds": round(time.time() - t0, 1),
                       "message": f"{len(items)}파일 · 통과 {p_sum} · 실패 {f_sum}" + ("" if ok else " — 실패 목록은 items[].failures")},
                      ensure_ascii=False))
-    return 0 if ok else 1
+    return 0          # 시험·관문 실패는 *결과*(ok:false·items)이지 스크립트 고장이 아니다 — exit 1 이면 [self:script] 가 "스크립트 실패" 로 봉해 items 가 안 흐른다(ep2862 실측)
 
 
 if __name__ == "__main__":

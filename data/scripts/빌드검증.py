@@ -58,7 +58,7 @@ def main():
     failed = [i["gate"] for i in items if not i["ok"]]
     print(json.dumps({"items": items, "ok": ok,
                       "message": "관문 전부 통과" if ok else f"관문 실패: {', '.join(failed)}"}, ensure_ascii=False))
-    return 0 if ok else 1
+    return 0          # 시험·관문 실패는 *결과*(ok:false·items)이지 스크립트 고장이 아니다 — exit 1 이면 [self:script] 가 "스크립트 실패" 로 봉해 items 가 안 흐른다(ep2862 실측)
 
 
 if __name__ == "__main__":

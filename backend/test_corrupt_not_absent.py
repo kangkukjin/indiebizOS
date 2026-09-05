@@ -30,17 +30,18 @@ BROKEN_JSON = '{"tools": [ {"name": '
 def test_s1_broken_workflow_is_not_missing():
     """S1: 깨진 워크플로 파일은 '없음'이 아니라 problem 을 달고 온다."""
     import workflow_engine as wf
+    import workflow_store as st         # 원장 경로의 정본(2026-09-05 분리) — 재수출 이름을 갈아끼우면 본체는 그대로다
 
-    _orig = wf._get_workflows_path      # ★전역을 갈아끼우면 반드시 되돌린다 —
+    _orig = st._get_workflows_path      # ★전역을 갈아끼우면 반드시 되돌린다 —
     try:                                #   임시 폴더가 사라진 뒤 뒤 시험들이 그 자리를 본다
-        _run_s1(wf)
+        _run_s1(wf, st, Path)
     finally:
-        wf._get_workflows_path = _orig
+        st._get_workflows_path = _orig
 
 
-def _run_s1(wf):
+def _run_s1(wf, st, Path):
     with tempfile.TemporaryDirectory() as td:
-        wf._get_workflows_path = lambda: Path(td)          # noqa: E731
+        st._get_workflows_path = lambda: Path(td)          # noqa: E731
         (Path(td) / "broken.yaml").write_text(BROKEN_YAML, encoding="utf-8")
 
         got = wf.get_workflow("broken")

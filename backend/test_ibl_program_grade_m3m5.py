@@ -53,8 +53,11 @@ def _load(name, path):
 ROWS = {"success": True, "items": [{"title": "a", "n": 1}, {"title": "b", "n": 2}, {"title": "c", "n": 3}]}
 
 
-def _fake_factory(calls, state):
+def _fake_factory(calls, state, orig=None):
     def _fake(tool_input, project_path, agent_id=None, **kw):
+        if tool_input.get("_var_emit") and orig is not None:
+            # `$x >> …` 파이프 머리는 엔진의 변수 방출 규약 그대로(가짜 도구가 아니다)
+            return orig(tool_input, project_path, agent_id, **kw)
         for key, fn in (("_condition", ex._execute_condition), ("_case", ex._execute_case),
                         ("_try", cb._execute_try), ("_repeat", cb._execute_repeat)):
             if tool_input.get(key):
@@ -65,7 +68,7 @@ def _fake_factory(calls, state):
         if act == "rows":
             return json.dumps(ROWS)
         if act == "bad":
-            return json.dumps({"success": False, "error": "고장: " + str(p.get("why", "x"))})
+            return json.dumps({"success": False, "error": "고장: " + str(p.get("why", "x"))}, ensure_ascii=False)
         if act == "boom":
             raise RuntimeError("예외 발생")
         if act == "status":
@@ -95,7 +98,7 @@ def _run(code, calls=None, state=None, context=None):
     calls = calls if calls is not None else []
     state = state if state is not None else {}
     orig = ibl_engine.execute_ibl
-    ibl_engine.execute_ibl = _fake_factory(calls, state)
+    ibl_engine.execute_ibl = _fake_factory(calls, state, orig)
     try:
         return workflow_engine.execute_pipeline(parse(code), ".", context=context)
     finally:
@@ -160,6 +163,37 @@ def test_t5_on_error_null():
     out = _run('[on_error: null] [sense:bad]{} >> [self:sink]{}', calls)
     assert out["success"] and out["skipped_steps"] == [1]
     assert json.loads(calls[1]["params"]["_prev_result"]) == {"items": []}
+
+
+def test_t5b_on_error_null_assignment():
+    """`[on_error: null] $x = [실패]` — 접두가 할당 앞에 서도 파싱되고, 변수는 대체 통화(빈 items)를 든다
+    (2026-09-05 ep2827: 있을 수도 없을 수도 있는 상태 파일을 변수에 두는 관용구가 문법적으로 막혀 있었다)."""
+    calls = []
+    out = _run("[on_error: null] $x = [sense:bad]{}\n$x >> [self:sink]{}", calls)
+    assert out["success"], out
+    assert out["skipped_steps"] == [1]
+    sink = [c for c in calls if c.get("action") == "sink"]
+    assert len(sink) == 1 and json.loads(sink[0]["params"]["_prev_result"]) == {"items": []}
+    # skip 도 같은 규약 — 실패 step 을 건너뛰고 직전 통화(step1 의 rows)가 변수 값
+    calls = []
+    out = _run("[on_error: skip] $y = [sense:rows]{} >> [sense:bad]{}\n$y >> [self:sink]{}", calls)
+    assert out["success"] and out["skipped_steps"] == [2], out
+    sink = [c for c in calls if c.get("action") == "sink"]
+    assert len(sink) == 1 and len(json.loads(sink[0]["params"]["_prev_result"])["items"]) == 3
+
+
+def test_t5c_derived_failures_cite_root():
+    """할당 문장이 죽으면 뒤의 `$x` 참조 실패가 *원인*을 인용하고, 봉투 error 가 뿌리·연쇄를 가른다
+    (ep2827: '독립 문장 8개 실패' 뒤에 뿌리 1개가 숨어 다이제스트에 원인이 없었다)."""
+    calls = []
+    out = _run('$x = [sense:rows]{} >> [sense:bad]{why: "근본"}\n$x >> [self:sink]{}\n$x >> [self:sink]{}', calls)
+    assert out["success"] is False and out["statements_failed"] == 3, out
+    assert out["root_failures"] and out["root_failures"][0]["var"] == "x"
+    assert "뿌리 1" in out["error"] and "근본" in out["error"] and "연쇄 2" in out["error"], out["error"]
+    # 연쇄 문장의 step 기록도 원인을 인용한다("아직 값을 기록하지 않았습니다" 가 아니라)
+    derived = [r for r in out["results"] if isinstance(r, dict) and "할당 문장(step 2)" in json.dumps(r, ensure_ascii=False)]
+    assert len(derived) == 2, out["results"]
+    assert not any(c.get("action") == "sink" for c in calls)
 
 
 def test_t6_fallback_paren_branch():
@@ -321,7 +355,7 @@ def test_s2_resume(tmp_spill):
     from system_tools_ibl import _execute_ibl_unified
     calls, state = [], {}
     orig = ibl_engine.execute_ibl
-    ibl_engine.execute_ibl = _fake_factory(calls, state)
+    ibl_engine.execute_ibl = _fake_factory(calls, state, orig)
     try:
         code = '[sense:rows]{} >> [sense:take]{n: 2} >> [sense:bad]{} >> [self:sink]{}'
         out = json.loads(_execute_ibl_unified({"code": code}, ".", agent_id="t"))

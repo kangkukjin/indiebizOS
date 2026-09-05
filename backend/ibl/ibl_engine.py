@@ -722,9 +722,17 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         if _opt:
             _vpath = _vpath[:-1]
         if _name not in _vals:
+            _ve = (tool_input.get("_var_errors") or {}).get(_name)   # 할당 문장이 죽은 경우(2026-09-05)
             if _opt:
                 return {"success": True, "items": [], "rows_in": 0,
-                        "note": f"${_name} 미기록(분기 미진입 등) — 옵셔널 참조라 빈 통화로 흘립니다."}
+                        "note": (f"${_name} 미기록(분기 미진입 등) — 옵셔널 참조라 빈 통화로 흘립니다."
+                                 if not _ve else
+                                 f"${_name} 의 할당 문장(step {_ve['step']})이 실패해 값이 없습니다 — "
+                                 f"옵셔널 참조라 빈 통화로 흘립니다. 원인: {_ve['error']}")}
+            if _ve:
+                return {"success": False, "_derived_from": _name,
+                        "error": f"변수 ${_name} 의 할당 문장(step {_ve['step']})이 실패해 값이 없습니다 — "
+                                 f"원인: {_ve['error']}"}
             # 파서가 미할당은 걸렀으므로 여기는 "아직 기록 전"(안 탄 분기 등) — V49-1 규약.
             return {"success": False,
                     "error": f"변수 ${_name} 이(가) 아직 값을 기록하지 않았습니다 — "

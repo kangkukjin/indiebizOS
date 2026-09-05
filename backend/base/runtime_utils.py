@@ -17,6 +17,17 @@ from pathlib import Path
 # `$…` 는 IBL 변수라 못 쓰고, `~` 는 사람의 홈이라 몸의 기준과 다르다.
 WORKSPACE_TOKEN = "~workspace"
 
+# 창고 폴더 이름 — 몸의 명사이므로 코드가 정본(portal_warehouse 가 루트를 여기서 짓는다).
+WAREHOUSE_DIRNAME = "공유창고"
+
+# 세계의 산물 보관소 — 몸 안에 있지만 *몸의 살*이 아니라 몸의 작업대 위에 산물이 쌓이는 곳.
+# 헌법 '명사의 자리'의 예외 집합: 이 마디를 지나는 경로는 몸-명사가 아니라 세계의 명사다
+# (memory_db.body_noun_leak 이 이 집합으로 판정한다). 두 곳 다 git 밖(.gitignore)이고,
+# 정기 산출물이 outputs 에서 태어나 공유창고로 복사돼 공개면에 선다 — 같은 부류의 두 칸.
+# ★2026-09-05: 관문이 "outputs" 리터럴만 알아 공유창고 경로를 문 기억을 통째로 버렸다
+#   (ep2828 부동산 28호 작업기록 0건 저장, 같은 거부 로그 전수 12회).
+WORLD_PRODUCT_DIRS = ("outputs", WAREHOUSE_DIRNAME)
+
 
 def expand_body_path(raw) -> str:
     """경로 값 펼침의 **단일 해소점** — IBL 표면(엔진·system_tools·패키지)의 모든 경로 파라미터는

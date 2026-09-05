@@ -152,6 +152,7 @@
     "ibl/workflow_engine",
     "ibl/workflow_fallback",
     "ibl/workflow_parallel",
+    "ibl/workflow_store",
     "ibl/workflow_verdict",
     "ibl_embedding_trainer",
     "ibl_synthetic_opus",
@@ -272,8 +273,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 263,
-    "engine": 243,
+    "total": 264,
+    "engine": 244,
     "blocklist": 20
   }
 }

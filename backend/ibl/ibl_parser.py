@@ -556,10 +556,17 @@ def _extract_statements(lines: List[str]) -> Tuple[List[str], List[Optional[str]
     lines = [s for line in lines for s in (_split_by_operator(line, ';') or [line])]
 
     for line in lines:
-        m = _VAR_ASSIGN_PATTERN.match(line)
+        # `[on_error: …] $x = …` — 접두를 벗기고 할당을 본 뒤 문장에 접두를 돌려준다. 종전엔
+        # 접두가 앞에 서면 할당 정규식이 안 맞아 `$x =` 가 "해석되지 않은 텍스트"로 죽었다
+        # (2026-09-05 ep2827: 있을 수도 없을 수도 있는 상태 파일을 `[on_error: null]` 로
+        # 읽어 변수에 두는 관용구가 문법적으로 막혀 있었다). 접두의 의미(실패 step 을
+        # 대체 통화로 넘김)는 실행기가 할당 슬롯에도 같은 통화를 기록해 완성한다.
+        _pm = _ON_ERROR_RE.match(line)
+        _prefix = line[:_pm.end()] if _pm else ""
+        m = _VAR_ASSIGN_PATTERN.match(line[_pm.end():] if _pm else line)
         if m:
             assign_names.append(m.group(1) or m.group(2))
-            statements.append(m.group(3).strip())
+            statements.append(_prefix + m.group(3).strip())
         else:
             assign_names.append(None)
             statements.append(line)

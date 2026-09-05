@@ -364,6 +364,9 @@ async def execute_ibl(code: str, project_path: str = "",
         결과는 잃지 않는다).
     wait: recover 와 함께 — 결말이 날 때까지 **유한 대기**할 초(≤240). 기다렸는데도
         안 끝나면 진행 상태를 돌려준다(대기가 끝난 것이지 실행이 죽은 것이 아니다).
+        ★처음 실행(code)에도 통한다(2026-09-05): 자막 each·crawl 처럼 120초를 넘길 것을
+        *아는* 실행은 처음부터 wait(≤240)를 실어 표면 대기를 늘린다 — 타임아웃 봉투→회수의
+        왕복 한 번(ep2829: 한 주행에 세 번)을 없앤다. 기본 120 은 그대로다.
         ★긴 실행을 기다릴 때 셸 `sleep` 을 쓰지 말 것 — 전경 sleep 은 막히고 배경
         sleep 은 즉시 돌아와, 대기가 몇 초 간격 폴링으로 무너진다(폴링 1회 = 모델
         왕복 1회. 2026-09-01 실측: 한 주행의 도구 호출 45건 중 16건이 기다림이었다).
@@ -422,12 +425,14 @@ async def execute_ibl(code: str, project_path: str = "",
         import uuid
         ticket = uuid.uuid4().hex[:12]
         payload["ticket"] = ticket
+        # 호출자가 긴 실행을 알면 처음부터 wait 만큼(≤240) 기다린다 — 회수 경로와 같은 상한.
+        _t = int(max(120.0, min(float(wait or 0), 240.0)))
         raw = await anyio.to_thread.run_sync(
-            lambda: _post_backend("/ibl/execute", payload, 120)
+            lambda: _post_backend("/ibl/execute", payload, _t)
         )
         try:
             if isinstance(raw, str) and json.loads(raw).get("_surface_timeout"):
-                raw = _surface_timeout_envelope(ticket, 120)
+                raw = _surface_timeout_envelope(ticket, _t)
         except Exception:
             pass
     # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야

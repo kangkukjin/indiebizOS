@@ -976,9 +976,34 @@ def _op_union(prev, params):
                 key_sets.append(ks)
         return _branch_proto.attach_dead_note(
             _attach_branch_warning(_attach_shape_warning(env, key_sets), objs), _dead, _total)
+    # 효과 봉투(write·notify 같은 부수효과 결과 — items/table 없는 success 봉투)는 **1행 통화**로
+    # 받는다(2026-09-05 언어 개정, ep2827): 병렬 부수효과 문장 `[self:write] & [self:write] >>
+    # [table:union]` 이 "통화 종류가 같아야" 로 죽던 자리. 결과 = 효과 행(분기당 1행) + items 행,
+    # effect_rows 로 어느 분기가 효과였는지 신고. table 과의 혼합은 종전대로 정직 거절.
+    eff_idx = [i for i, o in enumerate(objs, 1) if _is_effect_env(o)]
+    if eff_idx and all(il is not None or _is_effect_env(o) for il, o in zip(item_lists, objs)):
+        out = []
+        for il, o in zip(item_lists, objs):
+            out.extend(il if il is not None else [_effect_row(o)])
+        env = _emit_items(_carry_flags(objs), out)
+        env["effect_rows"] = eff_idx
+        env["note"] = (f"분기 {eff_idx} 은(는) 효과 봉투(부수효과 결과)라 1행씩 실었습니다 — "
+                       "행 = 그 봉투의 필드(path·size·message …).")
+        return _branch_proto.attach_dead_note(_attach_branch_warning(env, objs), _dead, _total)
     return {"success": False,  # 죽은 분기는 걸러진 뒤 = 진짜 통화 혼합 — 분기별 통화를 이름 대 준다
             "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items). "
                      f"분기별 통화: {_branch_proto.currency_kinds(objs, _get_items, _get_table)}."}
+
+
+def _is_effect_env(o) -> bool:
+    """효과 봉투 판정 — 성공 dict 이면서 통화(items/table)를 안 실은 것(부수효과 액션의 결과 모양)."""
+    return (isinstance(o, dict) and o.get("success") is True
+            and _get_items(o)[0] is None and _get_table(o)[0] is None)
+
+
+def _effect_row(o: dict) -> dict:
+    """효과 봉투 → 1행: 내부 표지(`_…`)를 뺀 필드 그대로(출처를 지어내지 않는다)."""
+    return {k: v for k, v in o.items() if not str(k).startswith("_")}
 
 
 def _attach_branch_warning(env, objs):

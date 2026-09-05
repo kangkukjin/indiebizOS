@@ -23,6 +23,7 @@ from fastapi import APIRouter, HTTPException, Header, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response, FileResponse
 
 from portal_base import _ROOT, _check_secret, _core
+from runtime_utils import WAREHOUSE_DIRNAME
 
 router = APIRouter()
 
@@ -44,7 +45,7 @@ _MANIFEST_ABOUT = ("이 노드가 공유하는 파일 목록(요청자 레벨로
                    "origin_url=최초 파일, hops=리트윗 횟수. link=true 는 포인터(url=원 창고 직행), "
                    "link 없는 rt 항목은 이 창고가 사본을 직접 서빙한다.")
 
-_WAREHOUSE_ROOT = _ROOT / "공유창고"
+_WAREHOUSE_ROOT = _ROOT / WAREHOUSE_DIRNAME   # 창고 폴더 이름의 정본은 runtime_utils(몸-명사 예외 집합과 한 곳)
 _WAREHOUSE_LEVELS = {0: "0", 1: "1", 2: "2", 3: "3", 4: "4"}
 _WAREHOUSE_CONFIG = _ROOT / "data" / "warehouse.json"   # {title} — 미추적(실명 등 PII는 코드 밖)
 
@@ -52,9 +53,9 @@ _WAREHOUSE_CONFIG = _ROOT / "data" / "warehouse.json"   # {title} — 미추적(
 def _warehouse_title() -> str:
     try:
         return (json.loads(_WAREHOUSE_CONFIG.read_text(encoding="utf-8")).get("title")
-                or "공유창고")
+                or WAREHOUSE_DIRNAME)
     except Exception:
-        return "공유창고"
+        return WAREHOUSE_DIRNAME
 _BIZDOC_NAME = "비즈니스문서.md"
 _NODE_NPUB = None   # 프로세스 캐시 — IndieNetIdentity 로드가 매 요청 로그를 찍지 않게
 

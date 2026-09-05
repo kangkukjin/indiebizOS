@@ -589,6 +589,9 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
         vn, path = split_ref(m)
         path = path[1:]
         if vn not in vals:
+            _ve = (tool_input.get("_var_errors") or {}).get(vn)
+            if _ve:
+                raise ValueError(f"변수 ${vn} 의 할당 문장(step {_ve['step']})이 실패해 값이 없습니다 — 원인: {_ve['error']}")
             raise ValueError(f"변수 ${vn} 이(가) 앞에서 할당되지 않았습니다.")
         _loaded = _load_var(vals[vn])
         v = walk_path(_loaded, path or None)

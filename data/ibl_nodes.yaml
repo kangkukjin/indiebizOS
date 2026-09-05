@@ -7926,8 +7926,8 @@ nodes:
         scope: workspace
         params:
           on_error: string
-        description: 통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup.
-        target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge.'
+        description: 통화 변환자(이항) — 두 입력을 행 결합(이어붙이기). & 병렬로 공급. 중복 제거는 뒤에 >> dedup. 효과 봉투(write 등 부수효과 결과)는 1행으로 받는다(effect_rows 신고).
+        target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge. 효과 봉투(items/table 없는 success 봉투 — write·notify 결과)는 분기당 1행(그 봉투의 필드)으로 받고 effect_rows 에 분기 번호를 신고한다(2026-09-05) — 병렬 부수효과 문장을 union 으로 닫아도 된다. 부수효과만이면 맨몸 [A] & [B] 로 끝내도 되며(결과=분기 봉투 목록) union 은 그것을 표로 만든다.'
         group: transform
         router: handler
         tool: data_union

@@ -348,19 +348,24 @@ def body_noun_leak(text: str) -> Optional[str]:
     코드·system_docs 이지 기억 DB 가 아니다.
 
     판정은 반증 가능한 기계 검사 — 절대경로는 몸 루트 포함 여부, 상대경로는
-    몸 루트 아래 실존 여부. URL 은 세계의 명사라 통과. 예외 하나: 경로 마디에
-    `outputs` 가 들면 통과 — 그곳은 몸의 살이 아니라 몸의 작업대 위 *세계의
-    산물* 보관소다(산출 경로 단일 해소기 규약, tool_context.resolve_output_path).
+    몸 루트 아래 실존 여부. URL 은 세계의 명사라 통과. 예외: 경로 마디가
+    *세계의 산물 보관소*(runtime_utils.WORLD_PRODUCT_DIRS — outputs·공유창고)를
+    지나면 통과 — 그곳은 몸의 살이 아니라 몸의 작업대 위 산물이 쌓이는 곳이다
+    (산출 경로 단일 해소기 규약, tool_context.resolve_output_path).
+    ★2026-09-05: 예외가 "outputs" 리터럴 하나뿐이어서 공유창고(정기 산출물의 공개면
+      사본)를 문 작업기록이 통째로 버려졌다(ep2828 부동산 28호 저장 0건, 같은 거부
+      12회). 예외 집합은 코드 한 곳(runtime_utils)이 정본이다 — 여기서 이름을 세지 않는다.
     반환: 몸 내부를 가리키는 첫 토큰 / None(깨끗).
     """
     if not text:
         return None
     try:
-        from runtime_utils import get_base_path
+        from runtime_utils import get_base_path, WORLD_PRODUCT_DIRS
         base = Path(get_base_path()).resolve()
     except Exception:
         return None  # 백엔드 밖 단독 사용 — 루트 해소 불가 시 저장을 살린다
     base_s = str(base)
+    world_dirs = set(WORLD_PRODUCT_DIRS)
     for raw in _PATHLIKE_RE.findall(text):
         tok = raw.strip('.,;:!?"\'`()[]{}<>')
         if "/" not in tok or "://" in tok:
@@ -374,8 +379,8 @@ def body_noun_leak(text: str) -> Optional[str]:
             rel_parts = tok.strip("/").split("/")
         else:
             continue
-        if "outputs" in rel_parts:
-            continue  # 산출물 공간 — 세계의 산물
+        if world_dirs.intersection(rel_parts):
+            continue  # 세계의 산물 보관소(outputs·공유창고) — 몸의 명사가 아니다
         return tok
     return None
 

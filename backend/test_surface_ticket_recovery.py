@@ -357,6 +357,29 @@ def test_T13_표면이_wait_를_나른다():
     assert 'wait: 120' in mcp_src, "타임아웃 봉투가 wait 통로를 안내하지 않는다(통로 미지정)"
 
 
+def test_T14_처음_실행에도_wait_가_표면_대기를_늘린다(monkeypatch):
+    """긴 실행을 아는 호출은 처음부터 wait(≤240)로 기다린다 — 타임아웃 봉투→회수의 왕복을 없앤다
+    (2026-09-05 ep2829: 자막 each 가 한 주행에서 세 번 120초에 끊겨 매번 회수 왕복이 들었다)."""
+    sys.path.insert(0, _REPO)
+    import asyncio
+    import mcp_server
+    seen = []
+
+    def _fake_post(path, payload, timeout):
+        seen.append((path, timeout))
+        return json.dumps({"success": True, "items": []})
+    monkeypatch.setattr(mcp_server, "_post_backend", _fake_post)
+    for w, expect in ((0, 120), (200, 200), (999, 240), (None, 120)):
+        seen.clear()
+        asyncio.run(mcp_server.execute_ibl(code="[sense:x]{}", wait=w))
+        assert seen and seen[0][0] == "/ibl/execute" and seen[0][1] == expect, (w, seen)
+    # 타임아웃 봉투는 실제 기다린 초를 말한다
+    monkeypatch.setattr(mcp_server, "_post_backend",
+                        lambda p, pl, t: json.dumps({"error": "timed out", "_surface_timeout": True}))
+    out = asyncio.run(mcp_server.execute_ibl(code="[sense:x]{}", wait=200))
+    assert "200초" in out and "recover" in out, out
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 에 위임한다.
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))

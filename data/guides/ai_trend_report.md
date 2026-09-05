@@ -12,7 +12,7 @@
 
 ## 0. 저장·실행 규약 (예외 없음)
 
-- **고정 폴더** `~workspace/outputs/ai_trend_reports/` · **파일명** `ai_trend_report_YYYY-MM-DD.md`(작성 당일, 사전순=시간순). 상태 파일 3종이 같은 폴더에 산다: `_coverage_ledger.json`(최근 10호 태그) · `_methodology_rules.md`(규칙 원장) · `_scan_log.json`(빈 날 점검 로그, §4-1).
+- **고정 폴더** `~workspace/outputs/ai_trend_reports/` · **파일명** `ai_trend_report_YYYY-MM-DD.md`(작성 당일, 사전순=시간순). 상태 파일 3종이 같은 폴더에 산다: `_coverage_ledger.json`(최근 10호 태그) · `_methodology_rules.md`(규칙 원장) · `_scan_log.json`(빈 날 점검 로그, §4-1 — 빈 날이 한 번도 없었으면 **아직 없다**, §1-5).
 - **저장·검증은 IBL 액션으로** — `[self:write]`·`[self:edit]`·`[self:list]`·`[self:grep]`·`[self:read]`. 네이티브 `Write`·Bash `ls`/`grep` 금지: 결과 파일은 같아도 **네이티브 경로는 경험 증류에 접지되지 않아 해마에 남지 않는다**(08-20 실측 — 산출물이 정상이라 더 조용히 샜다).
 - **셸은 IBL 등가물이 없는 일에만.** 등록 스크립트: GitHub 다건 = `github저장소메타` · arXiv 카테고리 피드 = `arxiv최신피드` · HTML 렌더 = `보고서HTML`.
 - **파이프 안 AI step(`[table:ai]`·`[table:brief]`)에는 `criteria`를 단다** — 뒤 step이 의존하는 **재료 관문**에만, 기준은 **반증 가능한 속성**(행 수·필수 열·날짜 하한·중복 여부)으로. 취향 산문은 판정 불능만 낳고, 결정론 step에 걸면 재시도 없이 실패만 남는다. 정본 `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
@@ -26,6 +26,7 @@
 2. **본문에서** 이미 다룬 주제·수치·고유명사와 '지켜볼 점'을 기준선으로 잡는다. 지켜볼 점은 이번 호의 확인 대상이다.
 3. **커버리지 원장** `_coverage_ledger.json` — 직전 1호만 보면 3호 전 주제가 재부상할 때 NEW로 오판한다. 소진된 주제와 로테이션 차례를 여기서 본다. 없으면 건너뛴다.
 4. **규칙 원장** `_methodology_rules.md` — 사슬(직전 1호)의 깊이는 1이라 규칙은 여기 산다. **실행일·재확인일이 도래한 규칙만** 이번 호 '방법론 자기 점검' 대상이다.
+5. **점검 로그** `_scan_log.json` — 최근 빈 날(NEW 0)과 그날의 CHANGED 를 본다. 빈 날이 한 번도 없었으면 파일이 **없다** — 맨몸 `[self:read]` 는 정직하게 죽으므로(09-04·09-05 두 주행 연속 step 실패) 있을 수도 없을 수도 있는 상태 파일은 `[on_error: null] $스캔 = [self:read]{path: "<고정 폴더>/_scan_log.json"}` 로 읽는다 — 없으면 `$스캔` 이 빈 통화(`{items: []}`)를 든다. 새로 만들지 않는다(§4-1 의 append 가 첫 빈 날에 만든다).
 ---
 
 ## 2. 새 자료 조사
@@ -54,6 +55,7 @@
 $직전 = [self:file_find]{path: "<고정 폴더>", pattern: "ai_trend_report_*.md"} >> [table:sort]{by: "name", desc: true} >> [table:take]{n: 1} >> [self:read]{limit: 160}
 $원장 = [self:read]{path: "<고정 폴더>/_coverage_ledger.json"}
 $규칙 = [self:read]{path: "<고정 폴더>/_methodology_rules.md"}
+[on_error: null] $스캔 = [self:read]{path: "<고정 폴더>/_scan_log.json"}
 $투자재료 = [sense:search]{source: "gnews", queries: [<오늘의 투자 질의 3~4개, 한·영>]} & [sense:search]{source: "naver", query: "<투자 질의>", type: "news", sort: "date", count: 15} >> [table:union] >> [table:dedup]{by: "title"} >> [table:filter]{where: "date >= <3주 전 ISO>"}
 $투자 = $투자재료 >> [table:ai]{instruction: "투자·경제 증류. 기준선: $직전 --- 원장: $원장 --- NEW 는 date 가 <2주 전 ISO> 이후로 확인된 행에만. 원장·직전에 있는 줄거리는 실질 진전일 때만 CHANGED, 아니면 버려라. 단순 주가 등락·재탕은 버려라. 최대 8행.", fields: ["title","date","url","label","delta","summary"], criteria: "모든 행에 label(NEW/CHANGED/ONGOING)·delta·summary·url 이 있고, NEW 행의 date 는 <2주 전 ISO> 이후이며, 8행 이하다"}
 $투자신규 = $투자 >> [table:filter]{where: {field: "label", op: "eq", value: "NEW"}}

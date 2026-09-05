@@ -34,16 +34,12 @@ from ibl_traceback import build_tb, push_frame, tb_of, py_tail_of, attach_input
 
 # === 경로 ===
 
-def _get_workflows_path() -> Path:
-    """워크플로우 저장 디렉토리"""
-    env_path = os.environ.get("INDIEBIZ_BASE_PATH")
-    if env_path:
-        base = Path(env_path)
-    else:
-        base = Path(__file__).parent.parent.parent
-    wf_path = base / "data" / "workflows"
-    wf_path.mkdir(parents=True, exist_ok=True)
-    return wf_path
+# 워크플로 원장(저장·조회·삭제·등록 관문·slug)은 2026-09-05 형제 모듈로 이동(1500줄 규칙) —
+# 재수출로 `from workflow_engine import list_workflows/save_workflow/…` 경로 전부 유지. 정본은 workflow_store.
+from workflow_store import (  # noqa: E402,F401
+    _get_workflows_path, list_workflows, _resolve_workflow_id, get_workflow,
+    _SENTENCE_KEYS, _unclosed_reason, _validate_sentence, save_workflow, delete_workflow, _slugify,
+)
 
 
 # === 실패 판정 (단일 소스) ===
@@ -253,7 +249,24 @@ def execute_pipeline(steps: list, project_path: str = ".",
             # criteria 품질 계약(ibl_quality)의 step 별 판정 누산기 (2026-08-28) —
             # 판정이 step 기록에만 살면 뒷 step 의 표지가 로그 절단에 통째로 사라져
             # 라이브 관찰이 성립하지 않았다. skipped/halted 와 같은 승격 규약.
-            "criteria": []}
+            "criteria": [],
+            # ★2026-09-05 (ep2827): `$투자 = … >> [table:ai]` 가 죽자 뒤의 문장 7개가 전부
+            #   "변수 $투자 이(가) 아직 값을 기록하지 않았습니다" 로 죽고, 봉투의 error 는
+            #   "독립 문장 8개 실패" 였다 — 뿌리 1개가 연쇄 7개 뒤에 숨어 다이제스트(3건)에
+            #   원인이 한 줄도 안 실렸다. 실패한 할당 문장의 원인을 이름별로 남겨(var_errors)
+            #   뒤 참조가 *왜* 비었는지 말하게 하고, 연쇄(derived)는 뿌리와 갈라 센다.
+            "var_errors": {}, "derived": 0}
+
+    def _root_note(out: dict) -> None:
+        """실패 봉투에 뿌리(죽은 할당 문장)·연쇄를 싣는다 — error 문장 자체에도(절단 생존)."""
+        if not _seq["var_errors"]:
+            return
+        out["root_failures"] = [{"var": n, **v} for n, v in _seq["var_errors"].items()]
+        _roots = "; ".join(f"step {v['step']} ${n} 할당 실패: {v['error'][:200]}"
+                           for n, v in _seq["var_errors"].items())
+        out["error"] = f"{out.get('error') or ''} — 뿌리 {len(_seq['var_errors'])}: {_roots}"
+        if _seq["derived"]:
+            out["error"] += f" (연쇄 {_seq['derived']}개는 그 변수를 읽어 죽은 문장)"
 
     def _handle_failure(idx: int, abort_payload: dict, tb=None):
         """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
@@ -290,6 +303,19 @@ def execute_pipeline(steps: list, project_path: str = ".",
             abort_payload["branches_failed"] = list(_seq["branches_failed"])
         b = _next_boundary(idx + 1)
         if b < 0:
+            # 마지막 문장의 실패로 중단해도 앞 문장들의 독립 실패 수·뿌리는 봉투에 남는다
+            # (종전엔 중단 payload 가 _seq 누산을 통째로 버려 "8개 실패" 사실이 사라졌다).
+            if _seq["failed"]:
+                abort_payload["statements_failed"] = _seq["failed"] + 1
+            _fr0 = abort_payload.get("final_result")
+            if isinstance(_fr0, str) and _fr0[:1] == "{":
+                try:
+                    _fr0 = json.loads(_fr0)
+                except Exception:
+                    _fr0 = None
+            if isinstance(_fr0, dict) and _fr0.get("_derived_from"):
+                _seq["derived"] += 1
+            _root_note(abort_payload)
             if idx >= 1 and prev_result and not st.get("_seq_boundary"):
                 try:
                     from common.spill import spill_write
@@ -304,6 +330,24 @@ def execute_pipeline(steps: list, project_path: str = ".",
             return abort_payload
         _seq["skip_until"] = b
         _seq["failed"] += 1
+        # 실패한 문장이 `$이름 = …` 이면 원인을 이름에 남긴다(뒤 문장의 참조가 인용한다).
+        for _j in range(idx, b):
+            _sj = steps[_j] if isinstance(steps[_j], dict) else {}
+            if _sj.get("_assign_name"):
+                _seq["var_errors"].setdefault(_sj["_assign_name"], {
+                    "step": idx + 1, "error": str(abort_payload.get("error") or "")[:300]})
+                # 죽은 할당의 슬롯은 비운다 — 오류 봉투가 값으로 남으면 뒤 참조가 그 봉투를
+                # 다시 내어 "그 문장 자신의 실패"처럼 보이고 연쇄가 뿌리와 안 갈린다.
+                step_results.pop(_j, None)
+                break
+        _fr = abort_payload.get("final_result")
+        if isinstance(_fr, str) and _fr[:1] == "{":
+            try:
+                _fr = json.loads(_fr)
+            except Exception:
+                _fr = None
+        if isinstance(_fr, dict) and _fr.get("_derived_from"):
+            _seq["derived"] += 1          # 뿌리가 아니라 죽은 변수를 읽어서 죽은 문장
         return None
 
     def _after_failure(prev: str) -> str:
@@ -357,6 +401,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     step["_var_values"] = {**(step.get("_var_values") or {}),
                                            **{n: step_results[int(i)] for n, i in step["_vars"].items()
                                               if int(i) in step_results}}
+                    # 슬롯이 비었고 그 이름의 할당 문장이 실패했으면 원인을 같이 싣는다.
+                    _ve = {n: _seq["var_errors"][n] for n, i in step["_vars"].items()
+                           if n in _seq["var_errors"] and int(i) not in step_results}
+                    if _ve:
+                        step["_var_errors"] = _ve
             except ValueError as e:
                 results.append({
                     "step": i + 1,
@@ -654,6 +703,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if _abort is not None:
                 return _abort
             prev_result = _after_failure(prev_result)
+            # `[on_error: skip|null] $x = …` — 대체 통화가 곧 변수 값(할당 슬롯에도 기록).
+            # 종전엔 슬롯이 오류 봉투를 들고 있어 뒤 문장의 `$x` 가 그 오류를 다시 냈다.
+            if _seq["last_mode"] in ("skip", "null") and isinstance(steps[i], dict) \
+                    and steps[i].get("_assign_name"):
+                step_results[i] = prev_result
             continue
 
         # 파이프라인 자동 데이터 전달 (명시적 참조 없으면 params에 주입)
@@ -694,6 +748,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if _abort is not None:
                 return _abort
             prev_result = _after_failure(prev_result)
+            # `[on_error: skip|null] $x = …` — 대체 통화가 곧 변수 값(할당 슬롯에도 기록).
+            # 종전엔 슬롯이 오류 봉투를 들고 있어 뒤 문장의 `$x` 가 그 오류를 다시 냈다.
+            if _seq["last_mode"] in ("skip", "null") and isinstance(steps[i], dict) \
+                    and steps[i].get("_assign_name"):
+                step_results[i] = prev_result
             continue
 
         duration_ms = int((time.time() - step_start) * 1000)
@@ -785,6 +844,11 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if _abort is not None:
                 return _abort
             prev_result = _after_failure(prev_result)
+            # `[on_error: skip|null] $x = …` — 대체 통화가 곧 변수 값(할당 슬롯에도 기록).
+            # 종전엔 슬롯이 오류 봉투를 들고 있어 뒤 문장의 `$x` 가 그 오류를 다시 냈다.
+            if _seq["last_mode"] in ("skip", "null") and isinstance(steps[i], dict) \
+                    and steps[i].get("_assign_name"):
+                step_results[i] = prev_result
             continue
 
         # 다음 step으로 전달
@@ -804,6 +868,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
     if _failed:
         out["statements_failed"] = _failed
         out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"
+        _root_note(out)   # 뿌리를 error 문장 자체에 — 로그 절단·다이제스트 상한에서도 살아남게
     # 경고 생산자가 넷(repeat 상한·on_error 건너뜀·0행 사유·병렬 분기 실패)이라 한 키에
     # 덮어쓰면 뒤엣것이 앞엣것을 지운다 — 모아서 한 번에 싣는다(B24-1 이 세 번째 생산자를
     # 더하면서 드러났고, 29회차 0행 사유가 네 번째다).
@@ -957,186 +1022,6 @@ def preflight_sentence(code: Any) -> Dict:
                 "problem": f"지금 사전에 없는 어휘: {', '.join(dead)} — 은퇴했거나 이름이 바뀌었습니다.",
                 "dead_vocab": dead}
     return {"runnable": True, "problem": None, "dead_vocab": []}
-
-
-def list_workflows() -> List[Dict]:
-    """저장된 워크플로우 목록 (문장 pre-flight 동반 — preflight_sentence 참조)"""
-    wf_path = _get_workflows_path()
-    workflows = []
-    for f in sorted(wf_path.glob("*.yaml")):
-        try:
-            data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
-        except Exception as e:
-            # ★깨진 원장 항목을 조용히 감추지 않는다 — 목록에서 사라지면 "없는 것"이 된다.
-            workflows.append({
-                "id": f.stem, "name": f.stem, "description": "", "steps_count": 0,
-                "file": str(f), "runnable": False,
-                "problem": f"워크플로 파일을 읽을 수 없습니다: {e}",
-            })
-            continue
-        steps = data.get("steps") or data.get("do") or data.get("pipeline") or []
-        # ★B1 동형: steps 가 문자열(저장 원문)이면 len()이 글자 수가 된다 — 목록에서
-        # "스텝 121개"로 보이는 오표시 방지. 문장 하나 = 스텝 하나로 센다.
-        if isinstance(steps, str):
-            steps = [steps] if steps.strip() else []
-        raw_steps = data.get("steps") or data.get("do") or []
-        if isinstance(raw_steps, str):
-            raw_steps = [raw_steps] if raw_steps.strip() else []
-        pf = preflight_sentence(steps)
-        entry = {
-            "id": f.stem,
-            "name": data.get("name", f.stem),
-            "description": data.get("description", ""),
-            "steps_count": len(raw_steps),
-            "file": str(f),
-            "runnable": pf["runnable"],
-        }
-        # 시그니처 — 목록에서 "이 워크플로우가 무엇을 요구하는지"가 보여야 부를 수 있다.
-        sig = data.get("params_required")
-        if not isinstance(sig, list):
-            sig = _signature_of(data.get("steps") or data.get("do") or data.get("pipeline"))
-        if sig:
-            entry["params_required"] = sig
-        if isinstance(data.get("params_default"), dict) and data["params_default"]:
-            entry["params_default"] = data["params_default"]
-        if pf["problem"]:
-            entry["problem"] = pf["problem"]
-            if pf["dead_vocab"]:
-                entry["dead_vocab"] = pf["dead_vocab"]
-        workflows.append(entry)
-    return workflows
-
-
-def _resolve_workflow_id(name: str) -> str:
-    """name(또는 id)을 저장된 워크플로우 id로 해소. 코퍼스/사용자가 이름으로 호출해도
-    run/get/delete가 동작하도록 — id 정확일치 → 이름 일치 → slugify 순. 못 찾으면 입력 그대로."""
-    name = str(name).strip()
-    if not name:
-        return ""
-    wfs = list_workflows()
-    ids = {w["id"] for w in wfs}
-    if name in ids:
-        return name
-    for w in wfs:
-        if w.get("name") == name:
-            return w["id"]
-    slug = _slugify(name)
-    if slug in ids:
-        return slug
-    return name
-
-
-def get_workflow(workflow_id: str) -> Optional[Dict]:
-    """워크플로우 조회"""
-    wf_path = _get_workflows_path() / f"{workflow_id}.yaml"
-    if not wf_path.exists():
-        return None
-    try:
-        data = yaml.safe_load(wf_path.read_text(encoding="utf-8"))
-    except Exception as e:
-        # ★파일이 있는데 못 읽은 것을 None(=없음)으로 눙치지 않는다 — 바로 위
-        # list_workflows 가 이미 세운 계약과 같은 어휘로 신고한다(2026-08-22).
-        return {"id": workflow_id, "name": workflow_id, "runnable": False,
-                "problem": f"워크플로 파일을 읽을 수 없습니다: {e}"}
-    if not isinstance(data, dict):
-        return {"id": workflow_id, "name": workflow_id, "runnable": False,
-                "problem": f"워크플로 파일이 매핑이 아닙니다(빈 파일?): {type(data).__name__}"}
-    data["id"] = workflow_id
-    return data
-
-
-# === 등록 시점 문법 관문 (2026-08-17) ===
-# save 가 do 를 검증 없이 저장해 "저장은 됐는데 돌리면 깨지는" 지연 실패를 냈다
-# (실측: 따옴표가 잘린 do — `[self:read]{path: "` — 가 success:true 로 저장되고
-# run 에서야 엉뚱하게 실행됐다). [self:script]{op:"register"} 의 pre-flight 선례를
-# 문장에 적용한다: 등록=문법 관문, 실행 가능성은 런타임 몫이라 파싱만 하고 실행 안 함.
-#
-# ★파서만으로는 못 잡는다(실측): 파서는 닫히지 않은 따옴표·중괄호를 관대하게 흡수해
-#   위 잘린 문장을 query:"" 로 통과시킨다(_extract_bracket 의 "닫는 bracket 못 찾으면
-#   원본 반환"). 그 관대함은 실행 경로의 기존 계약이라 건드리지 않고, 등록 관문에서만
-#   균형을 따로 본다.
-
-_SENTENCE_KEYS = ("steps", "pipeline", "do")
-
-
-def _unclosed_reason(code: str) -> Optional[str]:
-    """따옴표·중괄호 균형 검사. 반환: 오류 사유|None.
-
-    문자열 상태를 줄 경계 너머로 승계하는 파서의 스캐너를 그대로 쓴다
-    (주석 줄을 스캔에서 빼는 규칙도 _preprocess 와 동일 — 주석 속 따옴표가
-    상태를 오염시키지 않게)."""
-    from ibl_parser import _scan_line_state
-    depth, in_string, string_char = 0, False, None
-    for line in str(code).split('\n'):
-        stripped = line.strip()
-        if not in_string and (not stripped or stripped.startswith('#')):
-            continue
-        d, in_string, string_char = _scan_line_state(stripped, in_string, string_char)
-        depth += d
-    if in_string:
-        return f"따옴표({string_char})가 닫히지 않았습니다"
-    if depth > 0:
-        return "중괄호 {가 닫히지 않았습니다"
-    if depth < 0:
-        return "여는 중괄호 없이 }가 있습니다"
-    return None
-
-
-def _validate_sentence(raw) -> Optional[str]:
-    """저장 전 do(문장 또는 문장 배열) 문법 검사. 반환: 오류문|None.
-
-    미할당 $변수는 합법(호출자 params 주입 자리)이라 파서가 리터럴로 통과시킨다.
-    이미 파싱된 dict step 은 파서를 지나온 값이므로 통과."""
-    from ibl_parser import parse as ibl_parse, IBLSyntaxError
-    sentences = raw if isinstance(raw, list) else [raw]
-    if not sentences:
-        return "do 가 비어 있습니다 — 저장할 IBL 문장이 필요합니다."
-    for one in sentences:
-        if isinstance(one, dict):
-            continue
-        if not isinstance(one, str) or not one.strip():
-            return "do 에 빈 문장이 있습니다 — 저장할 IBL 문장이 필요합니다."
-        reason = _unclosed_reason(one)
-        if reason:
-            return f"do 문법 오류 — {reason}: {one[:120]}"
-        try:
-            ibl_parse(one)
-        except IBLSyntaxError as e:
-            return f"do 문법 오류 — {e}"
-    return None
-
-
-def save_workflow(workflow: dict) -> str:
-    """
-    워크플로우 저장
-
-    Args:
-        workflow: {name, description?, steps: [...], id?}
-
-    Returns:
-        워크플로우 ID
-    """
-    wf_id = workflow.get("id") or _slugify(workflow.get("name", "workflow"))
-    wf_path = _get_workflows_path() / f"{wf_id}.yaml"
-
-    # id 필드는 YAML에 저장하지 않음 (파일명이 ID)
-    save_data = {k: v for k, v in workflow.items() if k != "id"}
-    save_data["updated"] = datetime.now().isoformat()
-
-    wf_path.write_text(
-        yaml.dump(save_data, allow_unicode=True, default_flow_style=False),
-        encoding="utf-8",
-    )
-    return wf_id
-
-
-def delete_workflow(workflow_id: str) -> bool:
-    """워크플로우 삭제"""
-    wf_path = _get_workflows_path() / f"{workflow_id}.yaml"
-    if wf_path.exists():
-        wf_path.unlink()
-        return True
-    return False
 
 
 def execute_workflow(workflow_id: str, project_path: str = ".",
@@ -1479,13 +1364,3 @@ from workflow_contract import (  # noqa: E402,F401
     _CALLER_VAR_RESERVED, coerce_caller_params, _normalize_steps_for_injection,
     _reserved_row_names, _apply_caller_params,
 )
-
-
-# === 유틸리티 ===
-
-def _slugify(text: str) -> str:
-    """텍스트를 파일명에 적합한 slug로 변환"""
-    # 한글은 유지, 특수문자 제거
-    slug = re.sub(r'[^\w가-힣\s-]', '', text)
-    slug = re.sub(r'[\s]+', '_', slug).strip('_')
-    return slug or "workflow"

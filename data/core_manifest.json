@@ -65,6 +65,7 @@
       "report"
     ],
     "scripts": [
+      "Cloudflare사용량.py",
       "arxiv최신피드.py",
       "github저장소메타.py",
       "나레이션생성.py",

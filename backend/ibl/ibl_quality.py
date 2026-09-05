@@ -41,8 +41,65 @@ _BLOCK_MARKS = ("_goal", "_condition", "_case", "_try", "_repeat", "_assign", "_
 _JUDGE_SYSTEM = (
     "너는 품질 판정자다. 도구 실행 결과가 주어진 기준을 충족하는지만 판정한다. "
     "기준에 명시된 것만 따지고, 기준 밖의 취향을 추가하지 마라. 애매하면 충족으로 판정하라. "
+    "'기계 계수' 블록이 주어지면 행 수·열 유무·조건 만족 행 수는 그 수로 판정한다 — 원문을 다시 세지 마라"
+    "(원문은 잘려 보일 수 있고, 계수는 결과 전체에서 센 정본이다). "
     '반드시 JSON 하나로만 답하라: {"pass": true|false, "reason": "한두 문장"}'
 )
+
+FACTS_MAX_COLS = 24         # 기계 계수에 실을 열 상한
+
+
+def _machine_facts(result: Any, max_cols: int = FACTS_MAX_COLS) -> str:
+    """결과 통화(items/table)에서 기계가 센 사실 한 블록 — 행 수·열별 값 있음 수·불리언 true 수.
+
+    2026-09-05(ep2832, 시스템 AI 보고): criteria "selected 가 true 인 행이 정확히 4행" 이 5행 결과에
+    pass 로 돌아왔다. 판정자는 원문 앞 6,000자만 보고 계수는 받지 못했다 — 48행 표는 그 안에
+    들어가지 않으니 셀 수가 없었다. 셀 수 있는 것은 기계가 세어 준다(반증 가능한 계수는 판정자의
+    추정이 아니라 정본). 통화가 아니면(효과·산문) 빈 문자열 — 판정은 종전대로 원문으로."""
+    obj = result
+    if isinstance(obj, str):
+        s = obj.strip()
+        if not s or s[0] not in "{[":
+            return ""
+        try:
+            obj = json.loads(s)
+        except (json.JSONDecodeError, ValueError):
+            return ""
+    items = None
+    if isinstance(obj, list):
+        items = obj
+    elif isinstance(obj, dict):
+        if isinstance(obj.get("items"), list):
+            items = obj["items"]
+        else:
+            try:
+                from common.currency import derive_items
+                d = derive_items(dict(obj))
+                if isinstance(d, dict) and isinstance(d.get("items"), list):
+                    items = d["items"]
+            except Exception:
+                items = None
+    if items is None:
+        return ""
+    n = len(items)
+    rows = [r for r in items if isinstance(r, dict)]
+    cols: list = []
+    for r in rows:
+        for k in r.keys():
+            if k not in cols:
+                cols.append(k)
+    lines = [f"행 수 {n}" + (f" (dict 행 {len(rows)})" if len(rows) != n else "")]
+    for c in cols[:max_cols]:
+        vals = [r.get(c) for r in rows]
+        present = sum(1 for v in vals if v is not None and v != "" and v != [] and v != {})
+        line = f"- {c}: 값 있음 {present}/{n}"
+        bools = [v for v in vals if isinstance(v, bool)]
+        if bools:
+            line += f" · true {sum(1 for v in bools if v)} · false {sum(1 for v in bools if not v)}"
+        lines.append(line)
+    if len(cols) > max_cols:
+        lines.append(f"- …외 열 {len(cols) - max_cols}개")
+    return "\n".join(lines)
 
 
 def _declared_props(action_config: Optional[dict]) -> Dict[str, Any]:
@@ -126,8 +183,12 @@ def _judge(criteria: str, result: Any, node: str, action: str,
             if isinstance(v, str) and v.strip():
                 inst = f"\n\n실행 지시:\n{v[:1000]}"
                 break
+    facts = _machine_facts(result)
+    facts_block = (f"기계 계수(결과 전체에서 센 정본 — 아래 원문이 잘려도 이 수가 맞다):\n{facts}\n\n"
+                   if facts else "")
     prompt = (f"[{node}:{action}] 실행 결과의 품질 판정.\n\n"
               f"충족해야 할 기준:\n{criteria}{inst}\n\n"
+              f"{facts_block}"
               f"실행 결과:{clipped}\n{s}\n\nJSON 으로만 답하라.")
     try:
         raw = _call_judge(prompt)

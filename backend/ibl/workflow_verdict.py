@@ -77,6 +77,19 @@ def err_reason_of(result) -> str:
         v = result.get(k)
         if isinstance(v, str) and v.strip():
             return v
+    # errors[] 관례(외부 API 봉투 — Cloudflare 등)도 사유다(2026-09-05 ep2833: error "" 로 신고된 분기 실패).
+    errs = result.get("errors")
+    if isinstance(errs, list) and errs:
+        parts = []
+        for e in errs[:3]:
+            if isinstance(e, dict):
+                msg = e.get("message") or e.get("error") or ""
+                code = e.get("code")
+                parts.append(f"{code}: {msg}" if code is not None and msg else (msg or str(e)[:120]))
+            elif isinstance(e, str) and e.strip():
+                parts.append(e.strip())
+        if parts:
+            return "; ".join(parts)
     subs = result.get("results")
     if isinstance(subs, list):
         for sub in subs:

@@ -3,7 +3,7 @@ actions:
   cloudflare_api:
     returns: effect
     description: Cloudflare API 호출 (Pages/Workers/R2/D1/Tunnel 모든 서비스 통합).
-    target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/data 옵션으로 요청 구성.
+    target_description: API endpoint 경로 (예 'zones/abc/dns_records'). method/body/params 옵션으로 요청 구성. 성공 result 는 items 통화로도 방출(list=행들, dict=1행 — each·변환자에 물린다), 실패는 error 에 사유(errors[] 합침). 사용량·무료 한도 대비(R2 저장/작업·Workers 요청)는 REST 가 아니라 등록 스크립트 [self:script]{op:"run", id:"Cloudflare사용량"} — GraphQL 분석은 여기서 부르지 않는다.
     group: cloudflare
     router: handler
     tool: cf_api

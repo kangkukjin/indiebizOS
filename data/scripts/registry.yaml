@@ -1,3 +1,12 @@
+Cloudflare사용량:
+  description: 'Cloudflare 사용량 vs 무료 한도 — args: days(기본 30)·account_id(기본 환경변수→/accounts)·sections(all|r2|workers).
+    items 통화(section 열): r2_storage 버킷별 최근 저장 GB·객체·pct_of_free(10GB), r2_ops 이달 Class
+    A/B 작업·pct_of_free(100만/1000만), workers 스크립트별 기간 요청·오류·최대 일요청·pct_of_free_max_day(10만/일).
+    토큰은 CLOUDFLARE_API_TOKEN 환경변수만(파일 직접 읽기 금지). 09-05 ep2833 의 임시 파이썬 셋을 얼린 것'
+  file: Cloudflare사용량.py
+  interpreter: python
+  registered_at: '2026-09-05T11:02:03'
+  timeout: 120
 arxiv최신피드:
   description: 'arXiv 카테고리 최신 제출 다건 피드 — args: categories(기본 cs.AI·cs.CL·cs.LG), limit(기본
     60, 별칭 max_results), sort(submitted|updated). UA·백오프·카테고리별 폴백 포함'

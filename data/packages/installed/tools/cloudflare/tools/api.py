@@ -5,6 +5,7 @@ cf_api - Cloudflare 범용 API 호출 도구
 토큰은 환경변수에서 안전하게 주입됩니다.
 """
 
+import json
 import requests
 from typing import Optional
 
@@ -77,7 +78,7 @@ def run(tool_input: dict, creds: dict) -> dict:
         # Cloudflare API 성공/실패 판단
         if isinstance(data, dict):
             cf_success = data.get("success", response.ok)
-            return {
+            out = {
                 "success": cf_success,
                 "status_code": response.status_code,
                 "result": data.get("result") if cf_success else None,
@@ -85,6 +86,26 @@ def run(tool_input: dict, creds: dict) -> dict:
                 "messages": data.get("messages"),
                 "result_info": data.get("result_info")
             }
+            if not cf_success:
+                # 사유는 최상위 error 에(2026-09-05 ep2833: 병렬 분기 실패가 error "" 로 신고됐다 —
+                # Cloudflare 봉투는 errors[] 에만 사유를 싣는다).
+                parts = []
+                for e in (data.get("errors") or []):
+                    if isinstance(e, dict):
+                        code, msg = e.get("code"), e.get("message") or ""
+                        parts.append(f"{code}: {msg}" if code is not None and msg else (msg or json.dumps(e, ensure_ascii=False)))
+                    elif e:
+                        parts.append(str(e))
+                out["error"] = "; ".join(parts) or f"HTTP {response.status_code}"
+            else:
+                # result 를 통화(items)로도 방출 — `[table:each]`·변환자가 물리게(2026-09-05: 버킷 3개를
+                # each 로 돌렸는데 do 결과가 통화가 아니라 원 행만 흘렀다). list=행들, dict=1행.
+                r = data.get("result")
+                if isinstance(r, list):
+                    out["items"] = r
+                elif isinstance(r, dict):
+                    out["items"] = [r]
+            return out
         else:
             return {
                 "success": response.ok,

@@ -6,7 +6,8 @@ items:[] 실은 실패 봉투는 B24-1c 가 0행+경고로 흘려보내던 것�
 
 개정(사용자 판정): 죽은 분기의 대접은 한 벌 — 기본 = 건너뛰고 신고(branches_skipped
 + warning), on_error:"stop" = 전부-아니면-실패. 전 분기 실패 = 정직 에러.
-산 분기끼리의 진짜 통화 혼합은 여전히 에러 + 분기별 통화 이름을 댄다.
+산 분기끼리의 진짜 통화 혼합(봉투 아닌 평문·수치)은 여전히 에러 + 분기별 통화 이름을 댄다.
+2026-09-05 개정(ep2827): 통화 없는 **성공** 봉투(효과·스칼라 결과)는 죽이지 않고 1행 통화로 받는다(effect_rows 신고).
 
 실행: python3 backend/test_union_dead_branch.py  (또는 pytest)
 """
@@ -73,10 +74,20 @@ def test_table_and_items_branches_unite_by_columns():
     assert "이름" in cols and "title" in cols
 
 
-def test_currencyless_live_branch_errors_with_kinds():
-    """산 분기가 통화 없이(스칼라 성공 봉투) 도달하면 — 여전히 에러 + 분기별 통화 이름."""
+def test_scalar_success_branch_becomes_effect_row():
+    """산 분기가 통화 없는 **성공** 봉투(스칼라·효과)로 도달하면 — 2026-09-05 언어 개정(ep2827): 죽이지 않고
+    1행 통화로 받는다(`[self:write] & [self:write] >> [table:union]` 부류). effect_rows 로 어느 분기였는지 신고."""
     scalar = json.dumps({"success": True, "result": "42"})
     r = H._op_union([scalar, ITEMS_A], {})
+    assert r.get("success") is not False, r
+    assert r.get("effect_rows") == [1]
+    assert _rows(r) == 3                                   # 효과 1행 + items 2행
+    assert "효과 봉투" in (r.get("note") or "")
+
+
+def test_currencyless_live_branch_errors_with_kinds():
+    """봉투도 아닌 평문·수치가 산 분기로 도달하면 — 여전히 에러 + 분기별 통화 이름(진짜 통화 혼합)."""
+    r = H._op_union(["42", ITEMS_A], {})
     assert r["success"] is False
     assert "통화 종류가 같아야" in r["error"]
     assert "1=없음" in r["error"]

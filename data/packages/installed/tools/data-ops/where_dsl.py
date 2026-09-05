@@ -33,7 +33,7 @@ handler.py 에서 분리(2026-08-22, 1500줄 규칙). 이 모듈은 **행 하나
 
 import re
 
-from common.value_semantics import (compare_order, list_membership,
+from common.value_semantics import (ValueKind, classify_value, compare_order, list_membership,
                                     negative_text_match, numeric_value,
                                     regex_text, sort_records, text_match,
                                     value_sort_key, values_equal)
@@ -82,6 +82,10 @@ _OPS = {
     "gt": lambda a, b: _num_cmp(a, b) > 0,
     ">=": lambda a, b: _num_cmp(a, b) >= 0,
     "ge": lambda a, b: _num_cmp(a, b) >= 0,
+    # gte/lte — 조건 언어(value_semantics.order_matches)와 같은 별칭 한 벌(2026-09-05: 표면마다 달라
+    # 시스템 AI 가 gte 를 쓰고 거절당했다. 같은 낱말은 어디서나 같은 뜻).
+    "gte": lambda a, b: _num_cmp(a, b) >= 0,
+    "lte": lambda a, b: _num_cmp(a, b) <= 0,
     "contains": lambda a, b: text_match("contains", a, b),
     "in": lambda a, b: list_membership(a, b),
     # 부정 멤버십 — api_transforms 의 not_in/not_contains 와 같은 계약(표면 동형성).
@@ -93,7 +97,7 @@ _OPS = {
     "endswith": lambda a, b: text_match("endswith", a, b),
 }
 
-_ORDER_OPS = {"<", "lt", "<=", "le", ">", "gt", ">=", "ge"}
+_ORDER_OPS = {"<", "lt", "<=", "le", "lte", ">", "gt", ">=", "ge", "gte"}
 _NULL_LEFT_REJECTING_OPS = _ORDER_OPS | {"!=", "ne"}
 
 
@@ -129,6 +133,15 @@ def _num_cmp(a, b):
     order = compare_order(a, b)
     if order is not None:
         return int(order)
+    # 원인을 갈라 말한다(2026-09-05): 둘 다 시각인데 시간대 표기가 한쪽에만 있으면 "종류" 가 아니라
+    # 시간대의 문제다 — 옛 문구는 시스템 AI 를 "날짜를 일시로 바꾸는" 우회로 보냈다.
+    ca, cb = classify_value(a), classify_value(b)
+    if ca.kind is ValueKind.DATETIME and cb.kind is ValueKind.DATETIME:
+        raise _WhereError(
+            f"크기 비교 불가 — 좌변 {str(a)[:40]!r} 과 우변 {str(b)[:40]!r} 은 둘 다 시각이지만 "
+            "한쪽만 시간대 표기(Z·+09:00)가 있습니다. 시간대를 지어내지 않습니다 — 날짜 하한은 "
+            "YYYY-MM-DD(달력 날짜는 시간대 없이 비교됨)로, 시각끼리는 같은 시간대 표기로 쓰세요"
+        )
     raise _WhereError(
         f"크기 비교 불가 — 좌변 {type(a).__name__}({str(a)[:40]!r}) 과 "
         f"우변 {type(b).__name__}({str(b)[:40]!r}) 은 숫자·날짜(ISO 8601)·문자열 중 "

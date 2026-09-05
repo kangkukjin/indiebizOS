@@ -7704,7 +7704,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
-        target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/not_in/not_contains/matches/startswith/endswith/eq/ne/lt/le/gt/ge — 예 "아파트명 matches 자이" · not_in 값=배열(구조형 {field, op: "not_in", value: [...]} — 원장 제외 등 안티조인) · "A and B or C" 논리식(조각 전부 비교식일 때, 우선순위 SQL — or 최하위; 비교식·비-비교식 혼합은 중의성 거절, 값 속의 and/or 는 구조형으로) · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). >> 파이프로 앞 통화를 자동 수용하고, items 파라미터로 행 목록(리터럴·`$변수` 원형)을 직접 받을 수도 있다(언어 개정 2026-08-27). 도메인 무관 — 모든 검색·목록 생산자에 적용.'
+        target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/not_in/not_contains/matches/startswith/endswith/eq/ne/lt/le/lte/gt/ge/gte — 예 "아파트명 matches 자이" · not_in 값=배열(구조형 {field, op: "not_in", value: [...]} — 원장 제외 등 안티조인) · "A and B or C" 논리식(조각 전부 비교식일 때, 우선순위 SQL — or 최하위; 비교식·비-비교식 혼합은 중의성 거절, 값 속의 and/or 는 구조형으로) · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). 날짜 하한은 YYYY-MM-DD 로 — 달력 날짜는 시간대 있는 시각(Z·+09:00)과도 그 값의 자기 시간대 날짜로 비교된다(2026-09-05); 시각이 있는 naive 와 aware 의 비교는 판정 불능 거절. >> 파이프로 앞 통화를 자동 수용하고, items 파라미터로 행 목록(리터럴·`$변수` 원형)을 직접 받을 수도 있다(언어 개정 2026-08-27). 도메인 무관 — 모든 검색·목록 생산자에 적용.'
         group: transform
         router: handler
         tool: data_filter

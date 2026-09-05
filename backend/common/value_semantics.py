@@ -60,6 +60,7 @@ class ClassifiedValue:
     number: Any = None
     text: str | None = None
     moment: Any = None      # DATETIME 의 파싱 정규형 (datetime — 날짜만이면 그날 00:00 naive)
+    date_only: bool = False  # 표기가 달력 날짜(YYYY-MM-DD)였다 — 시각도 시간대도 주장하지 않는 값
 
 
 def freeze_structure(value: Any, scalar_identity: Callable[[Any], Any]):
@@ -147,11 +148,29 @@ def datetime_value(value: Any):
         return None
 
 
+def _calendar_pair(a: "ClassifiedValue", b: "ClassifiedValue"):
+    """달력 날짜(YYYY-MM-DD) 와 aware 시각의 짝이면 (날짜, 날짜) — aware 값의 **자기 시간대** 달력 날짜.
+
+    2026-09-05 언어 개정(시스템 AI 보고): `date >= "2026-08-15"` 하한 필터가 gnews 의
+    `…T06:36:45+00:00` 에 판정 불능으로 죽었다. 달력 날짜는 시각도 시간대도 주장하지 않으므로
+    aware 값이 *적힌 시간대*의 날짜와 견주는 것은 어느 쪽에도 시간대를 지어내는 일이 아니다.
+    시각이 있는 naive 와 aware 의 짝은 종전대로 None(판정 불능)."""
+    if a.date_only and b.moment.tzinfo is not None:
+        return a.moment.date(), b.moment.date()
+    if b.date_only and a.moment.tzinfo is not None:
+        return a.moment.date(), b.moment.date()
+    return None
+
+
 def _moment_order(a: "ClassifiedValue", b: "ClassifiedValue"):
-    """두 시각의 순서. naive 와 aware 가 섞이면 판정 불능(None) — 시간대를 지어내지 않는다."""
+    """두 시각의 순서. naive 와 aware 가 섞이면 판정 불능(None) — 시간대를 지어내지 않는다.
+    예외 하나: 달력 날짜 vs aware 는 날짜끼리(_calendar_pair)."""
     left, right = a.moment, b.moment
     if (left.tzinfo is None) != (right.tzinfo is None):
-        return None
+        pair = _calendar_pair(a, b)
+        if pair is None:
+            return None
+        left, right = pair
     return OrderResult((left > right) - (left < right))
 
 
@@ -185,7 +204,8 @@ def classify_value(value: Any) -> ClassifiedValue:
         return ClassifiedValue(ValueKind.NUMBER, value, number=number)
     moment = datetime_value(value)
     if moment is not None:
-        return ClassifiedValue(ValueKind.DATETIME, value, moment=moment)
+        return ClassifiedValue(ValueKind.DATETIME, value, moment=moment,
+                               date_only=isinstance(value, str) and len(value.strip()) == 10)
     if isinstance(value, str):
         # NFC 정규형 — 같은 글자의 결합형(NFD, macOS 파일명)과 조합형이 다른 실체가
         # 되지 않게 한다(46회차 B46-2). 호환 분해(NFKC — 전각·리가처)는 하지 않는다:
@@ -209,8 +229,10 @@ def _conditional_scalar_equal(left: Any, right: Any) -> bool:
     if a.kind is ValueKind.DATETIME and b.kind is ValueKind.DATETIME:
         # 같은 순간은 표기가 달라도 같다(Z ↔ +00:00, 날짜만 ↔ 그날 00:00).
         # naive 와 aware 는 같은 순간임을 증명할 수 없다 — 다르다고 본다.
+        # 달력 날짜 vs aware 는 "그날인가" — aware 값의 자기 시간대 날짜로(순서 판정과 한 벌).
         if (a.moment.tzinfo is None) != (b.moment.tzinfo is None):
-            return False
+            pair = _calendar_pair(a, b)
+            return pair is not None and pair[0] == pair[1]
         return a.moment == b.moment
     # 기존 공개 계약: false == "false". bool은 숫자와는 절대 같지 않다.
     if ValueKind.BOOL in (a.kind, b.kind):

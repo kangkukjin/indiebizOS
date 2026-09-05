@@ -29,7 +29,7 @@
           },
           "keywords": {
             "type": "string",
-            "description": "save 옵션 — 검색 키워드(쉼표 구분)"
+            "description": "save 옵션 — 검색 키워드(쉼표 구분 문자열 또는 배열 — 배열은 쉼표로 합쳐 저장, 2026-09-05)"
           },
           "category": {
             "type": "string",

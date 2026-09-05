@@ -174,13 +174,31 @@ def _extract_hint(tool_input: dict) -> str:
     return ""
 
 
+def _failure_reason(result, limit: int = 160) -> str:
+    """실패 결과(JSON 문자열/dict)의 error 를 로그용 한 줄로 — 없으면 "".
+
+    2026-09-05(ep2831): 반사 경로의 도구 로그가 `-> ERR (21ms)` 만 남겨, 에피소드 로그만으로는
+    왜 죽었는지 알 수 없었다(두 호출의 인자 diff 로야 keywords 배열임을 알았다). 오늘 아침 고친
+    "원인 은닉" 부류 — 실패 줄은 사유를 싣는다."""
+    r = result
+    if isinstance(r, str):
+        try:
+            r = json.loads(r)
+        except (json.JSONDecodeError, TypeError, ValueError):
+            return ""
+    if not isinstance(r, dict) or r.get("success") is not False:
+        return ""
+    reason = str(r.get("error") or r.get("message") or "").strip().replace("\n", " ")
+    return reason if len(reason) <= limit else reason[:limit] + "…"
+
+
 def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
-             agent_id: str = None, success: bool = True):
+             agent_id: str = None, success: bool = True, reason: str = ""):
     """도구 실행을 IBL 형식으로 콘솔 로그
 
     개별 IBL 액션 기록(thread_context, X-Ray 푸시)은
     ibl_engine.py의 execute_ibl() 내부에서 직접 수행.
-    여기서는 콘솔 출력만 담당.
+    여기서는 콘솔 출력만 담당. 실패면 reason(오류 사유)을 같은 줄에 싣는다.
     """
     node, action = _tool_to_ibl_notation(tool_name, tool_input)
     hint = _extract_hint(tool_input)
@@ -190,7 +208,8 @@ def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
     timestamp = datetime.now().strftime("%H:%M:%S")
 
     hint_str = f" ({hint})" if hint else ""
-    print(f"[{timestamp}] {agent_tag}[{node}:{action}]{hint_str} -> {status} ({duration_ms:.0f}ms)")
+    reason_str = f": {reason}" if (not success and reason) else ""
+    print(f"[{timestamp}] {agent_tag}[{node}:{action}]{hint_str} -> {status} ({duration_ms:.0f}ms){reason_str}")
 
     # execute_ibl이 아닌 도구(request_user_approval 등)는 여기서 기록
     if tool_name != "execute_ibl":
@@ -205,7 +224,7 @@ def _log_ibl(tool_name: str, tool_input: dict, duration_ms: float,
             push_xray_event("tool", {
                 "node": node, "action": action, "hint": hint or "",
                 "success": success, "ms": round(duration_ms),
-                "agent": agent_id or "",
+                "agent": agent_id or "", "error": reason or "",
             })
         except Exception:
             pass
@@ -782,6 +801,7 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
     import time as _time
     start = _time.time()
     success = True
+    _reason = ""   # 실패 사유 — 로그 줄에 싣는다(_failure_reason)
 
     # 반복 호출 가드 (직결 경로 어댑터, 2026-08-14 두-경로 대칭 2탄) — 공용 코어는
     # repeat_guard(base), CC 경로 어댑터는 mcp_server.execute_ibl. 카운트는 결과와
@@ -832,7 +852,8 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
         if isinstance(result, str):
             result, _harvested = _harvest_images(result)
 
-        # 결과에서 성공/실패 판단
+        # 결과에서 성공/실패 판단 — 실패면 사유도 같이(로그 줄이 "왜"를 말하게)
+        _reason = _failure_reason(result)
         if isinstance(result, str):
             try:
                 r = json.loads(result)
@@ -871,13 +892,15 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
         return result
     except ToolCancelled:
         success = False
+        _reason = "사용자가 작업을 중단했습니다."
         return json.dumps({"success": False, "error": "사용자가 작업을 중단했습니다."}, ensure_ascii=False)
     except Exception as e:
         success = False
+        _reason = f"{type(e).__name__}: {str(e)[:140]}"
         raise
     finally:
         duration_ms = (_time.time() - start) * 1000
-        _log_ibl(tool_name, tool_input, duration_ms, agent_id, success)
+        _log_ibl(tool_name, tool_input, duration_ms, agent_id, success, reason=_reason)
 
 
 def _execute_tool_with_cancel(tool_name, tool_input, project_path, agent_id, cancel_check):

@@ -55,6 +55,16 @@ def _tree_refresh_all(db_path: str) -> None:
         print(f"[memory_tree] 전체 갱신 실패(무시): {e}")
 
 
+def normalize_keywords(keywords) -> str:
+    """keywords 의 저장 정규형 = 쉼표 문자열. 배열(list/tuple)은 합친다(2026-09-05, ep2831: 모델이 본성상
+    목록인 키워드를 배열로 넘겨 sqlite 바인딩(list 미지원)에서 죽었다 — 저장소가 두 표기를 다 받는다)."""
+    if keywords is None:
+        return ""
+    if isinstance(keywords, (list, tuple)):
+        return ", ".join(s for s in (str(k).strip() for k in keywords) if s)
+    return str(keywords)
+
+
 def normalize_category(category: str) -> str:
     """카테고리를 유효 집합으로 정규화. 빈 값/미지 값 → '기타'."""
     cat = (category or "").strip()
@@ -451,7 +461,7 @@ def save(project_path: str, agent_id: str,
     category = normalize_category(category)
     _reject_body_noun(content)
     content = mask_secrets(content)
-    keywords = mask_secrets(keywords)
+    keywords = mask_secrets(normalize_keywords(keywords))
     if source_ref:
         source_ref = mask_secrets(source_ref)
     db_path = _get_db_path(project_path, agent_id)

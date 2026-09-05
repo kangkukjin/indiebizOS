@@ -56,7 +56,8 @@ ACT_RE = re.compile(r"\[([a-z_]+):([a-z_0-9]+)\]")
 #   **trajectory_event(world_pulse.db) 의 ibl.started** 다 — 전 IBL 표면의 유일한
 #   초크포인트(system_tools_ibl)가 매 실행마다 actions·action_count·pipes·nested 를
 #   남긴다. 옛 예정석(ibl_usage.db.ibl_execution_logs)은 3주 넘게 0행이던 죽은
-#   배관이라 같은 날 제거했다.
+#   배관이라 같은 날 제거했다. 코드 원문 전량은 2026-09-06 부터 같은 DB 의
+#   ibl_code_corpus(원문 해시 키·성공/실패 누계, episode_logger.record_ibl_code)에 있다.
 #   ★아직 이 스크립트는 그 자리를 읽지 않는다(코퍼스만 읽는다). 읽게 되면 조합률의
 #     상한이 아니라 추정치를 말할 수 있다 — 그때까지 아래 숫자는 여전히 상한이다.
 BEHAVIOR_SOURCES = {"distilled"}   # 실행 경험 증류 = AI 가 실제로 쓴 문장 중 **새로운 것만**

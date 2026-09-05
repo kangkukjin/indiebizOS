@@ -86,7 +86,6 @@
     "datastore/decision_ledger",
     "datastore/face_config",
     "datastore/file_index",
-    "datastore/finance_ledger_sync",
     "datastore/focus_map",
     "datastore/forage_doc",
     "datastore/forage_memory",
@@ -202,7 +201,6 @@
     "surface/api_config_tiers",
     "surface/api_conversations",
     "surface/api_family_news",
-    "surface/api_finance",
     "surface/api_gmail",
     "surface/api_health",
     "surface/api_ibl",
@@ -279,8 +277,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 270,
-    "engine": 250,
+    "total": 268,
+    "engine": 248,
     "blocklist": 20
   }
 }

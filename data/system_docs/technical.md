@@ -240,7 +240,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **시스템 AI 대화 이력**: `data/system_ai_memory.db` (SQLite)
 - **시스템 AI 심층메모리**: `data/system_ai_state/memory_system_ai.db` (SQLite, 시맨틱 검색)
 - **프로젝트 에이전트 심층메모리**: `projects/{id}/memory_{agent}.db` (SQLite, 시맨틱 검색)
-- **World Pulse DB**: `data/world_pulse.db` (SQLite — pulse_log, self_checks, action_health, episode_log, episode_summary)
+- **World Pulse DB**: `data/world_pulse.db` (SQLite — pulse_log, self_checks, action_health, episode_log, episode_summary, trajectory_event, ibl_code_corpus[IBL 문장 원문·성공/실패 누계, 2026-09-06])
 - **대화 이력**: `projects/{id}/conversations.db` (SQLite)
 - **도구 패키지**: `data/packages/installed/tools/`
 - **비즈니스 DB**: `data/business.db` (SQLite)

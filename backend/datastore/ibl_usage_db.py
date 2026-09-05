@@ -308,7 +308,11 @@ class IBLUsageDB:
         #   · episode_log(world_pulse.db) — 턴 원문(절단 표식 동반)
         # 살아 있는 자리를 두고 빈 테이블을 남겨 두면 "채우면 된다"는 미래형 주석이
         # 지표 문서에 박제된다(실측: vocab_composition_metrics 가 3주간 그 자리를
-        # 가리키고 있었다). 되살릴 일이 생기면 이 무덤 표식을 지우고 새로 판다.
+        # 가리키고 있었다).
+        # 2026-09-06 원문 기록은 **되살렸다** — 단 여기가 아니라 world_pulse.db 의
+        # ibl_code_corpus(episode_logger.record_ibl_code, 원문 해시 키·성공/실패 누계).
+        # 이 DB 는 hippocampus.zip 으로 릴리스에 실리므로 사용자 원문을 담을 수 없다.
+        # 아래 DROP 은 옛 빈 표를 치우는 마이그레이션으로 남긴다.
 
         # 인덱스
         conn.execute("CREATE INDEX IF NOT EXISTS idx_examples_category ON ibl_examples(category)")

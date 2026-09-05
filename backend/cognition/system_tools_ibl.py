@@ -759,9 +759,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     """전 IBL 표면의 trajectory choke point.
 
     실행 본체의 많은 이른 return 을 건드리지 않고 wrapper 한 벌에서 start/end/resume 을
-    남긴다. 코드와 결과 원문은 저장하지 않는다 — 안정 해시·길이·액션 이름만 기록한다.
+    남긴다. 궤적에는 코드·결과 원문 대신 안정 해시·길이·액션 이름만 싣고, 코드 원문은
+    같은 해시를 키로 ibl_code_corpus(episode_logger.record_ibl_code)에 누적한다(2026-09-06).
     """
-    from episode_logger import trajectory_scope, record_trajectory_event
+    from episode_logger import trajectory_scope, record_trajectory_event, record_ibl_code
 
     code = str((tool_input or {}).get("code") or (tool_input or {}).get("pipeline") or "")
     actions = [f"{n}:{a}" for n, a in re.findall(r"\[([a-z_]+):([a-z_]+)\]", code)]
@@ -770,7 +771,7 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     # 그동안 해마 코퍼스의 `distilled` 행만 볼 수 있었는데, 그건 '새로운 실행'만
     # 남는 자리라 조합률이 구조적으로 과대추정된다(그 스크립트의 편향 고지 참조).
     # 옛 예정석(ibl_usage.db.ibl_execution_logs)은 2026-07-03 이래 호출자 0·0행으로
-    # 죽어 있었고 2026-08-31 에 제거했다 — 자리를 여기로 옮긴다.
+    # 죽어 있었고 2026-08-31 에 제거했다 — 조합 모양은 여기로, 원문은 ibl_code_corpus 로(아래).
     # ★원시값만 적고 "조합인가"의 판정은 지표 쪽이 소유한다(판정을 두 벌 두지 않는다).
     _pipes = code.count(">>")
     _nested = bool(re.search(r"\bdo\s*:\s*[\"'\[]", code))
@@ -825,6 +826,13 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             if _markers:
                 _finished["markers"] = _markers
             record_trajectory_event("ibl.finished", _finished)
+            # 원문 코퍼스 — 궤적은 해시만 싣는 계약이라 원문은 여기(같은 해시로 조인).
+            # 2026-09-06 부활. 실패 사유는 봉투의 error 한 줄(캡·마스킹은 기록기 몫).
+            record_ibl_code(
+                code, success=not failed, elapsed_ms=_finished["elapsed_ms"],
+                error=(obj.get("error") if failed and isinstance(obj, dict) else ""),
+                agent=agent_id or "",
+                origin=str((tool_input or {}).get("origin") or ""))
             return result
     except Exception as e:
         # trajectory 는 관측이다. 계측 실패가 IBL 실행을 막지 않는다.

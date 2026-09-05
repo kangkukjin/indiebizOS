@@ -88,6 +88,18 @@ def test_e1_declared_in_vocabulary():
     assert grep["params"]["include_logs"] == "boolean"
 
 
+# ---------------------------------------------------------------- E2 편집 결과가 반영 사실을 말한다
+def test_e2_edit_result_states_live_effect(tmp_path):
+    out, _ = _edit(tmp_path, replace_all=True)
+    assert "라이브 파일에 즉시 반영됨" in out and "apply 불필요" in out          # 비-RED(임시 폴더) — 몸이 구역 사실을 말한다
+    H = _load("handler")
+    n = H.live_effect_note
+    assert "/packages/reload" in n("/x/data/packages/installed/tools/web/handler.py")
+    assert "재기동" in n("/x/data/packages/installed/tools/web/tool_http.py")
+    assert "빌드" in n("/x/data/packages/installed/tools/web/ibl_actions.yaml")
+    assert "즉시 반영" in n("/x/data/guides/blog.md")
+
+
 # ---------------------------------------------------------------- T1 가지 출생 관문
 def _mk_db(path):
     conn = sqlite3.connect(path)

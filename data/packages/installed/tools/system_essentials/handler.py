@@ -420,6 +420,24 @@ def _vocab_gate_mod():
         _SIBLING_MODS.setdefault("vocab_write_gate", _load_sibling("vocab_write_gate"))
 
 
+def live_effect_note(path: str) -> str:
+    """비-RED 편집 결과에 붙는 **반영 사실 한 줄**(2026-09-05, ep2835·2836 실측: 모델이 RED 규칙·리로드 범위를 Bash 로 7회
+    조사하고 [self:patch]{op:"apply"} 를 헛불렀다 — 몸이 말하면 사라지는 왕복). 판정은 경로만 본다(추측 없음)."""
+    p = str(path or "").replace("\\", "/")
+    if "/data/packages/installed/" in p or p.startswith("data/packages/installed/"):
+        if p.endswith("/handler.py"):
+            return ("라이브 파일에 반영됨(RED 아님 — [self:patch] apply 불필요). 이 handler.py 는 다음 호출 전 "
+                    "POST /packages/reload(=[self:package]{op:\"reload\"}) 로 되살아난다.")
+        if p.endswith("/ibl_actions.yaml"):
+            return ("라이브 파일에 반영됨(RED 아님 — apply 불필요). 어휘 선언이라 파생물(ibl_nodes.yaml·tool.json)은 "
+                    "빌드가 재생성하고, 실행기는 /packages/reload 로 새 사전을 읽는다.")
+        if p.endswith(".py"):
+            return ("라이브 파일에 반영됨(RED 아님 — apply 불필요). ★패키지 형제 모듈(tool_*.py 등)은 /packages/reload 로 "
+                    "되살지 않는다 — 백엔드 재기동 뒤 반영(keeper 가 backend 파일 변경을 감지하면 자동, 아니면 재기동).")
+        return "라이브 파일에 반영됨(RED 아님 — apply 불필요)."
+    return "라이브 파일에 즉시 반영됨(RED 구역 아님 — [self:patch] apply 불필요, 리로드 없음)."
+
+
 def _vocab_enforce(path: str):
     """어휘 빌드 입력 쓰기 직후의 파생물 재생성 집행(09-01 ep2519) — 형제 vocab_write_gate."""
     try:
@@ -1068,6 +1086,7 @@ def execute(tool_input: dict, context) -> str:
             _vg = _vocab_enforce(file_path)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
             return (f"Successfully edited {os.path.abspath(file_path)}"
                     + (f" ({_replaced_n}곳 교체)" if _replaced_n > 1 else "")
+                    + " — " + live_effect_note(os.path.abspath(file_path))
                     + (_vocab_gate_mod().note(_vg) if _vg else ""))
 
         elif tool_name == "run_command":

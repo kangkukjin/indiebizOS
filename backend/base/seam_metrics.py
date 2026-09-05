@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Optional, Set
 
 SHELL_TOOLS = {"Bash", "shell", "run_command", "bash"}
 _VALUE_RE = re.compile(
-    r"(?<![\w/.-])(?:\d{4,}|/[\w./~-]{6,}|[A-Za-z_][\w-]{7,}\d[\w-]*|[\w-]*\d[\w-]*\.(?:json|md|py|db|txt|csv|yaml|log))(?![\w/.-])")
+    r"(?<![\w/.-])(?:\d{3,}|/[\w./~-]{6,}|[A-Za-z_][\w-]{7,}\d[\w-]*|[\w-]*\d[\w-]*\.(?:json|md|py|db|txt|csv|yaml|log))(?![\w/.-])")
 _NOISE = {"success", "message", "items", "true", "false", "null"}
 MAX_TEXT = 400_000        # 값 추출 상한 — 거대한 결과는 앞부분만(관측이지 분석이 아니다)
 
@@ -32,7 +32,7 @@ def is_shell_tool(name: Any) -> bool:
 
 
 def extract_values(text: Any) -> Set[str]:
-    """되찍힐 만한 값 — 4자리 이상 숫자·경로·숫자 섞인 긴 토큰·데이터 파일 이름. 소문자 정규화."""
+    """되찍힐 만한 값 — 3자리 이상 숫자(줄 번호 포함)·경로·숫자 섞인 긴 토큰·데이터 파일 이름. 소문자 정규화."""
     if not isinstance(text, str):
         try:
             import json
@@ -42,7 +42,7 @@ def extract_values(text: Any) -> Set[str]:
     out: Set[str] = set()
     for v in _VALUE_RE.findall(text[:MAX_TEXT]):
         v = v.strip("/.").lower()
-        if len(v) >= 4 and v not in _NOISE:
+        if len(v) >= 3 and v not in _NOISE:     # 줄 번호(3자리)도 되찍기의 단골 — ep2835 grep→read{start_line: 236}
             out.add(v)
     return out
 

@@ -283,9 +283,9 @@ def test_seam_metrics_counts_only_model_carried_data():
         '[ClaudeCode/시스템 AI] tool_result {"time": "2026-09-05"}\n'
     )
     m = M.seam_metrics_from_log(log)
-    # 인접 쌍: Bash→IBL(grep→read: 경로가 grep 입력에도 있었으니 건너간 데이터 아님), IBL→Bash, Bash→IBL(id 되찍기), IBL→IBL(아님)
+    # 인접 쌍: Bash→IBL(grep→read: 경로는 grep 입력에도 있었지만 **줄 번호 236** 이 되찍힘 — 이것도 경유), IBL→Bash, Bash→IBL(id 되찍기), IBL→IBL(아님)
     assert m["seams"] == 3
-    assert m["carried"] == 1 and m["carried_values"] == 3            # 1650·1651·1654 가 모델을 거쳐 건너감
+    assert m["carried"] == 2 and m["carried_values"] == 4            # 236 + 1650·1651·1654 가 모델을 거쳐 건너감
     assert M.seam_metrics_from_log("")["seams"] == 0
 
 

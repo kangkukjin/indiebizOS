@@ -192,7 +192,13 @@ async def reload_package_cache():
                     "message": f"캐시 초기화 {len(failed)}단계 실패 — 스테일 사전일 수 있습니다"
                                f"(백엔드 재기동 권장): "
                                f"{', '.join(f['step'] for f in failed)}"}
-        return {"status": "ok", "message": "패키지/도구/IBL노드 캐시(카탈로그+실행기+의식)를 초기화했습니다."}
+        return {"status": "ok",
+                "message": "패키지/도구/IBL노드 캐시(카탈로그+실행기+의식)를 초기화했습니다.",
+                # 되살린 범위를 몸이 말한다(2026-09-05 ep2836: 모델이 Bash 3회로 이 사실을 코드에서 찾았다)
+                "reloaded": ["어휘 카탈로그(ibl_nodes.yaml 재독)", "api_registry", "실행기 노드 표", "의식 캐시",
+                             "패키지 handler.py(다음 호출 때 새로 로드)"],
+                "not_reloaded": ["패키지 형제 모듈(tool_*.py·*_ops.py — 백엔드 재기동 필요)", "backend/*.py(keeper 가 파일 변경을 감지해 재기동)",
+                                 "mcp_server.py(별도 프로세스 — touch 로 재시작)"]}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

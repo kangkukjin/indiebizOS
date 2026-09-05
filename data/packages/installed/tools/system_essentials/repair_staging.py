@@ -852,8 +852,9 @@ def op_apply(ti):
                     + " 또는 ".join(f'[self:patch]{{op:"apply", proposal_id:"{x}"}}'
                                     for x in pend[:3]))
         return {"success": False, "error":
-                "적용할 스테이징 변경이 없습니다. RED 파일을 [self:write]/[self:edit] 로 "
-                "고치면 자동으로 격리 사본에 쌓입니다." + hint,
+                "적용할 스테이징 변경이 없습니다. RED 구역(backend/·frontend/·scripts/)의 파일을 [self:write]/[self:edit] 로 "
+                "고치면 자동으로 격리 사본에 쌓입니다. 이 턴의 편집이 전부 비-RED(data/·outputs/ 등)였다면 이미 라이브에 "
+                "반영돼 있어 apply 가 필요 없습니다(편집 결과의 '라이브 파일에 반영됨' 문장이 그 표지)." + hint,
                 "pending_proposals": pend}
 
     ok, checks = verify(repo, sess)

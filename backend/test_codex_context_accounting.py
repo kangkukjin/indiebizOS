@@ -14,16 +14,21 @@ import boot_paths  # noqa: F401
 
 
 def _rollout(tmp_path, thread_id, rounds, window=258_400, turns=1):
-    """token_count 이벤트가 있는 최소 롤아웃 파일. rounds = [(last_in, total_in), ...]"""
+    """token_count 이벤트가 있는 최소 롤아웃 파일.
+    rounds = [(last_in, total_in), ...] 또는 [(last_in, total_in, total_cached, total_out), ...]"""
     day = tmp_path / "sessions" / "2026" / "08" / "31"
     day.mkdir(parents=True, exist_ok=True)
     path = day / f"rollout-2026-08-31T00-00-00-{thread_id}.jsonl"
     lines = []
-    for last_in, total_in in rounds:
+    for r in rounds:
+        last_in, total_in = r[0], r[1]
+        total_cached = r[2] if len(r) > 2 else 0
+        total_out = r[3] if len(r) > 3 else 1
         lines.append(json.dumps({"type": "event_msg", "payload": {
             "type": "token_count",
             "info": {
-                "total_token_usage": {"input_tokens": total_in, "output_tokens": 1},
+                "total_token_usage": {"input_tokens": total_in, "cached_input_tokens": total_cached,
+                                      "output_tokens": total_out},
                 "last_token_usage": {"input_tokens": last_in, "output_tokens": 1},
                 "model_context_window": window,
             }}}, ensure_ascii=False))
@@ -114,3 +119,53 @@ if __name__ == "__main__":
     import pytest
 
     raise SystemExit(pytest.main([__file__, "-v"] + sys.argv[1:]))
+
+
+def test_cached_and_output_are_deltas_too(tmp_path, monkeypatch):
+    """2026-09-06 롤아웃 실측: 캐시 적중·출력도 스레드 생애 누적(출력 14→212→305). 셋 다
+    턴 머리 기준선을 빼야 [턴비용]·cache_read 가 이 턴의 몫이 된다."""
+    from providers.base import begin_turn_token_ledger, read_turn_tokens, read_turn_cache_read_tokens
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    _rollout(tmp_path, "thread-c", [(22_227, 22_227, 15_104, 14), (25_604, 95_540, 61_696, 425)])
+
+    p = _provider()
+    p._reset_turn_state()
+    begin_turn_token_ledger()
+    p._measure_context_size("thread-c")          # 기준선 in=95,540 cached=61,696 out=425
+    assert (p._turn_base_total, p._turn_base_cached, p._turn_base_output) == (95_540, 61_696, 425)
+    p._translate_stream_event(
+        {"type": "turn.completed",
+         "usage": {"input_tokens": 195_540, "output_tokens": 1_025,
+                   "cached_input_tokens": 151_696}},
+        "", 0.0)
+    assert p.metrics.total_input_tokens == 100_000
+    assert p.metrics.total_output_tokens == 600
+    assert p.metrics.total_cache_read_tokens == 90_000
+    assert read_turn_tokens() == 100_600 and read_turn_cache_read_tokens() == 90_000
+
+
+def test_small_resume_turn_does_not_inherit_previous_output(tmp_path, monkeypatch):
+    """실측 부류 'in=0 out=235': 모델 호출이 없던 resume 턴은 셋 다 0 이지 지난 턴 출력이 아니다."""
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    _rollout(tmp_path, "thread-d", [(65_203, 65_203, 11_008, 235)])
+    p = _provider()
+    p._reset_turn_state()
+    p._measure_context_size("thread-d")
+    p._translate_stream_event(
+        {"type": "turn.completed",
+         "usage": {"input_tokens": 65_203, "output_tokens": 235, "cached_input_tokens": 11_008}},
+        "", 0.0)
+    assert (p.metrics.total_input_tokens, p.metrics.total_output_tokens,
+            p.metrics.total_cache_read_tokens) == (0, 0, 0)
+
+
+def test_fresh_turn_records_cached_share(tmp_path, monkeypatch):
+    """fresh 턴은 기준선 0 — 캐시 적중분이 원장 cache_read 로 그대로 든다."""
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    p = _provider()
+    p._reset_turn_state()
+    p._translate_stream_event(
+        {"type": "turn.completed",
+         "usage": {"input_tokens": 19_554, "output_tokens": 5, "cached_input_tokens": 11_008}},
+        "", 0.0)
+    assert p.metrics.total_cache_read_tokens == 11_008 and p.metrics.total_output_tokens == 5

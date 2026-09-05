@@ -75,7 +75,11 @@ def read_thread_usage(thread_id: str) -> Optional[Dict[str, int]]:
     진짜 값은 롤아웃의 `token_count` 이벤트에 `last_token_usage` 로 들어 있다.
 
     Returns: {"context": 마지막 라운드 입력, "total": 스레드 누적 입력,
+              "total_cached": 스레드 누적 캐시 적중 입력, "total_output": 스레드 누적 출력,
               "window": 모델 컨텍스트 창} — 못 읽으면 None (추정하지 않는다).
+    누적 셋은 전부 턴 비용의 **기준선**이다(2026-09-06 실측: 롤아웃 대조에서 입력·캐시·출력이
+    모두 턴을 넘어 단조 증가 — 출력 14→212→305). 입력만 빼고 출력·캐시를 누적 그대로 적으면
+    작은 resume 턴이 in=0 out=235 처럼 지난 턴 출력을 제 몫으로 신고한다.
     """
     if not thread_id:
         return None
@@ -106,9 +110,12 @@ def read_thread_usage(thread_id: str) -> Optional[Dict[str, int]]:
                 break
         if not info:
             return None
+        total = info.get("total_token_usage") or {}
         return {
             "context": int((info["last_token_usage"] or {}).get("input_tokens") or 0),
-            "total": int((info.get("total_token_usage") or {}).get("input_tokens") or 0),
+            "total": int(total.get("input_tokens") or 0),
+            "total_cached": int(total.get("cached_input_tokens") or 0),
+            "total_output": int(total.get("output_tokens") or 0),
             "window": int(info.get("model_context_window") or 0),
         }
     except OSError:
@@ -260,6 +267,9 @@ class CodexProvider(CliSubprocessProvider):
         # 이 턴이 시작될 때의 스레드 누적 입력 — turn.completed 의 누적 합계에서 빼야
         # '이 턴이 쓴 토큰'이 나온다 (resume 스레드는 지난 턴들까지 합산돼 오기 때문).
         self._turn_base_total: int = 0
+        # 같은 기준선의 캐시 적중·출력 몫 — 셋 다 스레드 생애 누적이라 셋 다 빼야 한다.
+        self._turn_base_cached: int = 0
+        self._turn_base_output: int = 0
         # 롤아웃에서 읽은 모델 컨텍스트 창 (리셋 임계의 근거)
         self._observed_window: int = 0
 
@@ -304,6 +314,8 @@ class CodexProvider(CliSubprocessProvider):
     def _reset_turn_state(self) -> None:
         self._started_items.clear()
         self._turn_base_total = 0
+        self._turn_base_cached = 0
+        self._turn_base_output = 0
 
     def _measure_context_size(self, session_id: str) -> Optional[int]:
         """세션 크기를 Codex 의 롤아웃에서 실측한다 (read_thread_usage 참조).
@@ -316,6 +328,8 @@ class CodexProvider(CliSubprocessProvider):
             self._log(f"세션 {session_id[:8]}… 롤아웃을 못 읽음 — 컨텍스트 미측정")
             return None
         self._turn_base_total = usage["total"]
+        self._turn_base_cached = usage.get("total_cached", 0)
+        self._turn_base_output = usage.get("total_output", 0)
         if usage["window"]:
             self._observed_window = usage["window"]
         return usage["context"] or None
@@ -750,16 +764,23 @@ class CodexProvider(CliSubprocessProvider):
             self._last_context_size = 0
             # 이 턴의 비용 = 누적 − 턴 시작 누적. 기준선을 못 잡았으면(fresh 턴이거나
             # 롤아웃을 못 읽음) 누적 그대로 — fresh 턴에서는 둘이 같다.
+            # ★입력만이 아니라 캐시 적중·출력도 누적이다(2026-09-06 롤아웃 실측) — 옛 판은
+            #  출력을 누적 그대로, 캐시는 아예 안 적어 [턴비용] 이 지난 턴 출력을 제 몫으로
+            #  신고하고 캐시분은 0 으로 남겼다(claude_code 와 같은 사각지대).
             turn_input = max(0, input_tokens - self._turn_base_total)
-            self.metrics.record_request(latency_ms, turn_input, output_tokens)
-            # 누적 수치(input_tokens·cached·cache_write)는 전부 **스레드 생애 합계**다 —
+            turn_cached = max(0, cached - self._turn_base_cached)
+            turn_output = max(0, output_tokens - self._turn_base_output)
+            # OpenAI 계열 input_tokens 는 캐시분을 *포함*한다 — 원장 규약(전체 프롬프트)과 같음.
+            self.metrics.record_request(latency_ms, turn_input, turn_output,
+                                        cache_read_tokens=min(turn_cached, turn_input))
+            # 누적 수치(input_tokens·cached·cache_write·output)는 전부 **스레드 생애 합계**다 —
             # 턴 몫과 섞어 적으면 다시 오독을 부르므로 괄호 안에 따로 묶는다.
             cache_info = (f" cached={cached} cache_write={cache_write}"
                           if (cached or cache_write) else "")
             self._log(
                 f"turn.completed {latency_ms:.0f}ms "
-                f"in={turn_input} out={output_tokens} "
-                f"(스레드누적 in={input_tokens}{cache_info})"
+                f"in={turn_input} out={turn_output} cache_read={turn_cached} "
+                f"(스레드누적 in={input_tokens} out={output_tokens}{cache_info})"
             )
             out.append((
                 {"type": "final", "content": self._finalize_text(accumulated_text.strip())},

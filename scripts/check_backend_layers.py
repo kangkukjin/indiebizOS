@@ -40,7 +40,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 LAYERS = {
     "base": {
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
-        "episode_logger", "hls_ladder", "korean_utils", "limb_keys",
+        "episode_logger", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
         "phone_jobs", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "shell_shadow_gate",

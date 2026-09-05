@@ -99,7 +99,7 @@
 ## IBL 어휘 현황
 
 <!-- IBL_STATS:START -->
-**6노드 155 액션** — sense 43 · self 50 · limbs 14 · others 17 · engines 9 · table 22
+**6노드 154 액션** — sense 43 · self 50 · limbs 14 · others 17 · engines 8 · table 22
 (op 분기 액션 74개 / op 분기 패키지 30개, 나머지 op 액션은 backend-native 라우팅)
 <!-- IBL_STATS:END -->
 (위 수치는 빌드가 재생성 — 손 수정 금지)

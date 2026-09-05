@@ -119,6 +119,11 @@ def followup_rows(followup: dict) -> list:
             f'닫히지 않아 대기 상한{f"({cap}초)" if cap else ""}으로 강행했다 — 대개 그 턴이 '
             f'적용을 기다리며 살아 있던 경우다(자기가 자기 병목). 다음부터 예약 뒤에는 곧바로 '
             f'턴을 닫아라 — 그러면 몇 초 안에 적용된다.</wait>')
+    elif fu.get("wait_outcome") == "cut":
+        rows.append(
+            f'    <wait outcome="cut">예약한 턴({fu.get("episode_id") or "?"})은 다른 재기동에 잘려 '
+            f'스스로 닫히지 못했다 — 몸(/health)의 신고로 판정해 상한 대기 없이 적용했다. '
+            f'그 턴의 마지막 보고는 유실됐을 수 있다(주행기록 CUT 표식 확인).</wait>')
     if fu.get("quiesce_outcome") == "cap":
         # 도는 턴이 0 이 되기를 상한까지 기다리다 강행 — 잘렸을 수 있는 턴을 이름으로 댄다.
         qcap = int(fu.get("quiesce_cap_s") or 0)

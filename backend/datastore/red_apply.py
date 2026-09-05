@@ -45,6 +45,10 @@ TURN_CLOSE_CAP_S = float(os.environ.get("RED_APPLY_TURN_CAP_S", 900))
 DISTILL_GRACE_S = float(os.environ.get("RED_APPLY_DISTILL_GRACE_S", 120))
 NO_EPISODE_GRACE_S = float(os.environ.get("RED_APPLY_NO_EPISODE_GRACE_S", 10))
 SETTLE_S = float(os.environ.get("RED_APPLY_SETTLE_S", 2))
+# 몸이 "그 턴 안 돈다"고 답하는데 원장 행이 NULL 인 채 이만큼 지나면 = 잘린 턴(cut).
+# (2026-09-06 ep2891: 재기동 강행에 잘린 턴의 행을 900초 기다렸다 — 몸은 05:20 부터 답할 수 있었다.)
+# 짧은 유예는 막 닫히는 중인 _close_episode UPDATE 가 원장에 내려앉을 시간이다.
+BODY_GONE_CONFIRM_S = float(os.environ.get("RED_APPLY_BODY_GONE_CONFIRM_S", 10))
 # 판정 불능 유예 — 몸은 살아 있는데 도는 턴을 못 본 경우(옛 몸의 /health 등). 짧은 유예로
 # 떨어지기 전에 이만큼 다시 묻는다. '못 봤다'와 '없다'는 다른 사건이다(B28-1).
 UNKNOWN_LIVE_GRACE_S = float(os.environ.get("RED_APPLY_UNKNOWN_LIVE_GRACE_S", 60))
@@ -176,6 +180,22 @@ def _gate_mod():
     return reload_gate
 
 
+def _close_cut_turns(repo: str, ids, reason: str) -> int:
+    """강행 재기동이 자를 턴을 원장에서 닫는다(자르는 쪽이 닫는다, 2026-09-06 ep2891).
+    표식·모양은 episode_logger 가 소유 — 여기는 부르기만."""
+    if not ids:
+        return 0
+    try:
+        from episode_logger import close_cut_episodes
+        n = close_cut_episodes(ids, reason, db_path=os.path.join(repo, "data", "world_pulse.db"))
+        if n:
+            _log(f"잘리는 턴 {list(ids)} 원장 닫음({n}건, CUT 표식)")
+        return n
+    except Exception as e:
+        _log(f"잘리는 턴 닫기 실패(계속): {e!r}")
+        return 0
+
+
 def wait_quiescent(repo: str, key: str, exclude_episode=None) -> dict:
     """도는 턴이 0 이 될 때까지 기다리고, 그 순간 재기동 관문을 세운다 (2026-09-02).
 
@@ -231,6 +251,7 @@ def wait_quiescent(repo: str, key: str, exclude_episode=None) -> dict:
     gate.raise_gate(repo, key, phase="raised")
     _log(f"★정적 대기 상한({QUIESCE_CAP_S:.0f}초) — 도는 턴 {live} 이 남은 채 강행. "
          f"그 턴은 리로드에 잘릴 수 있다. 다음 턴 보고에 싣는다.")
+    _close_cut_turns(repo, live, f"red_apply {key}")
     return {"outcome": "cap", "waited_s": int(time.time() - t0),
             "live_turns": list(live or []), "gate": True}
 
@@ -303,11 +324,26 @@ def wait_turn_closed(repo: str, episode_id, agent_id=None) -> str:
         return "cap"
     t0 = time.time()
     row = None
+    gone_since = None
     while time.time() - t0 < TURN_CLOSE_CAP_S:
         row = _episode_row(db_path, episode_id)
         if row is not None and row[0]:
             _log(f"턴 종료 감지 (episode {episode_id}, {int(time.time() - t0)}초)")
             break
+        # ★출처 교차(2026-09-06 ep2891): 원장만 믿으면 재기동에 잘린 턴(END 못 씀·부팅 회수도 건너뜀)의
+        #   행이 영영 NULL 이라 상한까지 헛기다린다. 몸에게도 묻는다 — 몸이 살아서 "그 턴 없다"고
+        #   답하는데 원장이 유예 안에 닫히지 않으면 잘린 턴이다. 몸이 안 닿거나(재기동 중) 모르면(옛 몸)
+        #   원장만 본다 — '못 봤다'는 '없다'가 아니다(B28-1).
+        reached, live = _probe_live_turns()
+        if reached and live is not None and int(episode_id) not in live:
+            gone_since = gone_since or time.time()
+            if time.time() - gone_since >= BODY_GONE_CONFIRM_S:
+                _log(f"몸은 '턴 {episode_id} 안 돈다'고 답하는데 원장은 열린 채 "
+                     f"{BODY_GONE_CONFIRM_S:.0f}초 — 재기동에 잘린 턴으로 판정, 진행 "
+                     f"({int(time.time() - t0)}초)")
+                return "cut"
+        else:
+            gone_since = None
         time.sleep(2)
     else:
         _log(f"턴 종료 대기 상한({TURN_CLOSE_CAP_S:.0f}초) — 턴이 끊긴 것으로 보고 진행")
@@ -392,6 +428,9 @@ def main() -> int:
     if wait_outcome == "cap":
         _log("★상한 강행 — 예약한 턴이 스스로 닫히지 않았다. 대개 그 턴이 적용을 기다리며 "
              "살아 있던 경우이고, 그러면 이 대기는 통째로 낭비다. 다음 턴 보고에 싣는다.")
+    elif wait_outcome == "cut":
+        _log("예약한 턴은 재기동에 잘려 원장에 닫힘 기록이 없었다 — 몸의 신고로 판정했다(상한 대기 없음). "
+             "다음 턴 보고에 싣는다.")
 
     # 코드 루트의 backend 를 sys.path 에 — red_grant/thread_context/episode_logger 등
     sys.path.insert(0, str(CODE_ROOT / "backend"))

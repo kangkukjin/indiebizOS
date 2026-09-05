@@ -355,3 +355,81 @@ def test_o13_orphan_keeps_structural_trace_for_distillation(tmp_path):
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)
     import pytest
     raise SystemExit(pytest.main([__file__] + __import__("sys").argv[1:]))
+
+
+# ─── O9~O11: 재기동에 잘린 턴 (2026-09-06 ep2891) ─────────────────────────────
+# 실측: 정적 대기 상한(600초)에 닿은 리로드가 턴 2891 을 남긴 채 강행 → 그 턴은 END 를 못 씀 →
+# 부팅 회수는 궤적이 신선해(자식 보존 규칙) 건너뜀 → 행은 영영 NULL → red_apply 가 900초 헛기다림.
+
+def _fresh_trace(path, eid):
+    conn = sqlite3.connect(path)
+    from datetime import datetime
+    conn.execute(
+        "INSERT INTO trajectory_event (run_id, event_seq, episode_id, ts, kind, data) "
+        "VALUES ('r', 1, ?, ?, 'ibl.started', '{\"actions\": [\"self:patch\"]}')",
+        (eid, datetime.now().isoformat()))
+    conn.commit()
+    conn.close()
+
+
+def test_o9_breathing_row_is_resweeped_after_fresh_window(tmp_path):
+    """주인은 죽었지만 궤적이 신선한 행: 첫 회수는 보존(ep2393)하되 신선 창 뒤 재회수를 **예약**한다.
+    옛 판은 부팅 때 한 번만 물어 그 행이 영영 열려 있었다."""
+    import episode_logger as EL
+    import episode_orphans as EO          # 타이머·신선 창은 정본 모듈의 전역이다(재수출은 스냅샷)
+    path, orig = _tmp_db(tmp_path)
+    saved_fresh, saved_timer = EO._CHILD_TRACE_FRESH_SEC, EO._resweep_timer
+    try:
+        eid = _open_row(path, f"{_dead_pid()}:1")
+        _fresh_trace(path, eid)
+        EO._resweep_timer = None
+        EL._sweep_orphan_episodes()
+        ended, _ = _row(path, eid)
+        assert ended is None, "자식이 숨 쉬는 행을 첫 회수가 닫았다(ep2393 재발)"
+        assert EO._resweep_timer is not None and EO._resweep_timer.is_alive(), "재회수가 예약되지 않았다"
+        EO._resweep_timer.cancel()
+        # 신선 창이 지난 뒤의 두 번째 물음 — 이제 닫힌다
+        EO._CHILD_TRACE_FRESH_SEC = 0
+        EL._sweep_orphan_episodes()
+        ended, log = _row(path, eid)
+        assert ended and EL.ORPHAN_MARK in log, "신선 창 뒤에도 회수되지 않는다"
+    finally:
+        EO._CHILD_TRACE_FRESH_SEC = saved_fresh
+        if EO._resweep_timer is not None:
+            EO._resweep_timer.cancel()
+        EO._resweep_timer = saved_timer
+        EL._get_db = orig
+
+
+def test_o10_cutter_closes_the_turns_it_cuts(tmp_path):
+    """자르는 쪽이 닫는다: close_cut_episodes 는 NULL 행만 CUT 표식으로 닫고 궤적 한 줄을 붙인다."""
+    import episode_logger as EL
+    path, orig = _tmp_db(tmp_path)
+    try:
+        a = _open_row(path, "1:1")
+        b = _open_row(path, "1:1", ended="2026-09-06T05:00:00")     # 이미 닫힌 행
+        _fresh_trace(path, a)
+        n = EL.close_cut_episodes([a, b, "x"], "reload r1", db_path=path)
+        assert n == 1
+        ended, log = _row(path, a)
+        assert ended and EL.CUT_MARK in log and "reload r1" in log and "self:patch" in log
+        ended_b, log_b = _row(path, b)
+        assert ended_b == "2026-09-06T05:00:00" and EL.CUT_MARK not in log_b
+        assert EL.close_cut_episodes([], "r", db_path=path) == 0
+    finally:
+        EL._get_db = orig
+
+
+def test_o11_real_close_overwrites_cut_mark(tmp_path):
+    """잘린다고 닫았는데 그 턴이 죽기 전에 END 를 썼다면 — 진실(본 로그)이 표식을 덮는다."""
+    import episode_logger as EL
+    from datetime import datetime
+    path, orig = _tmp_db(tmp_path)
+    try:
+        a = _open_row(path, EL._process_identity())
+        EL.close_cut_episodes([a], "reload", db_path=path)
+        EL._close_episode(a, datetime.now(), "system_ai", "m", "본 로그", 12)
+        ended, log = _row(path, a)
+        assert ended and log == "본 로그"
+    finally:
+        EL._get_db = orig

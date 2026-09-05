@@ -163,3 +163,44 @@ def test_Q6_boot_recovers_written_gate():
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_Q7_cap_closes_the_turns_it_will_cut(tmp_path):
+    """상한 강행(cap)은 도는 턴을 죽인다 — 죽기 전에 리로더가 그 행을 CUT 표식으로 닫는다(2026-09-06 ep2891).
+    옛 판은 로그에 이름만 남겼고, 그 행은 부팅 회수도 건너뛰어(궤적 신선) red_apply 가 900초 기다렸다."""
+    import sqlite3
+    import episode_logger as EL
+    base = tmp_path
+    (base / "data").mkdir()
+    db = qr.ledger_path(str(base))
+    orig = EL._get_db
+
+    def _get_db():
+        conn = sqlite3.connect(db, timeout=10)
+        conn.row_factory = sqlite3.Row
+        return conn
+    EL._get_db = _get_db
+    try:
+        EL._ensure_episode_tables()
+        conn = sqlite3.connect(db)
+        conn.execute("INSERT INTO episode_log (started_at, agent, user_message, log, owner) "
+                     "VALUES ('2026-09-06T05:15:10', 'a', 'm', '', '1:1')")
+        conn.execute("INSERT INTO episode_log (started_at, ended_at, agent, user_message, log, owner) "
+                     "VALUES ('2026-09-06T05:00:00', '2026-09-06T05:01:00', 'a', 'm', 'ok', '1:1')")
+        conn.commit(); conn.close()
+        q = qr.prepare_restart(str(base), "http://x", "r7", probe=lambda: (True, [1, 2]),
+                               cap_s=0.05, poll_s=0.01, settle_s=0)
+        assert q["outcome"] == "cap" and q.get("cut") == 1
+        conn = sqlite3.connect(db)
+        r1 = conn.execute("SELECT ended_at, log FROM episode_log WHERE id=1").fetchone()
+        r2 = conn.execute("SELECT ended_at, log FROM episode_log WHERE id=2").fetchone()
+        conn.close()
+        assert r1[0] and EL.CUT_MARK in r1[1] and "r7" in r1[1]
+        assert r2 == ("2026-09-06T05:01:00", "ok")          # 이미 닫힌 행은 그대로
+        # observed 는 닫을 것이 없다
+        q2 = qr.prepare_restart(str(base), "http://x", "r8", probe=lambda: (True, []),
+                                cap_s=1, poll_s=0.01, settle_s=0)
+        assert q2["outcome"] == "observed" and "cut" not in q2
+    finally:
+        EL._get_db = orig
+        rg.lower_gate(str(base), "r7"); rg.lower_gate(str(base), "r8")

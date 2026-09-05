@@ -73,6 +73,23 @@ def wait_for_quiet(health_url: str, probe=None, cap_s: float = None, poll_s: flo
         time.sleep(poll_s)
 
 
+def ledger_path(base_path: str) -> str:
+    return os.path.join(str(base_path), "data", "world_pulse.db")
+
+
+def close_cut_turns(base_path: str, ids, reason: str) -> int:
+    """강행 재기동이 자를 턴을 원장에서 닫는다 — 표식·모양은 episode_logger 가 소유한다."""
+    try:
+        from episode_logger import close_cut_episodes
+        n = close_cut_episodes(ids, reason, db_path=ledger_path(base_path))
+        if n:
+            _log(f"잘리는 턴 {list(ids)} 원장 닫음({n}건, CUT 표식) — 적용 대기가 이 행을 기다리지 않게")
+        return n
+    except Exception as e:
+        _log(f"잘리는 턴 닫기 실패(계속): {e!r}")
+        return 0
+
+
 def prepare_restart(base_path: str, health_url: str, key: str, probe=None,
                     cap_s: float = None, poll_s: float = None, settle_s: float = None) -> dict:
     """재기동 직전 의례 — 도는 턴 0 대기 → 관문(written) → 되묻기(직후 진입 턴엔 양보).
@@ -104,6 +121,10 @@ def prepare_restart(base_path: str, health_url: str, key: str, probe=None,
         cap_s = remaining
     if q["outcome"] in ("cap", "unknown"):
         reload_gate.raise_gate(base_path, key, phase="written")   # 강행이어도 새 턴은 되돌린다
+    if q["outcome"] == "cap":
+        # 자르는 쪽이 닫는다(2026-09-06 ep2891): 이 재기동에 잘릴 턴은 END 를 못 쓰고, 부팅 회수는
+        # 궤적이 신선해 건너뛴다 — 그러면 red_apply 가 그 행이 닫히길 상한(900초)까지 기다린다.
+        q["cut"] = close_cut_turns(base_path, q["live"], f"reload {key}")
     q["gate"] = q["outcome"] != "no_body"
     q["waited_s"] = int(time.time() - t0)
     return q

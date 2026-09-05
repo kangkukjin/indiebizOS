@@ -8,6 +8,7 @@
     "base/doc_ir",
     "base/document_converter",
     "base/episode_logger",
+    "base/episode_orphans",
     "base/korean_utils",
     "base/limb_keys",
     "base/logging_utils",
@@ -278,8 +279,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 269,
-    "engine": 249,
+    "total": 270,
+    "engine": 250,
     "blocklist": 20
   }
 }

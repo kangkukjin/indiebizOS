@@ -9,6 +9,7 @@
 불가(월간 명세서 대사로 메꿈). 파싱 실패 알림은 원문 보존 + parsed=0 (침묵 실패 금지).
 이 모듈은 수거·파싱만 — 원장 기록은 handler/finance_storage 몫 (층 분리).
 """
+import os
 import re
 import time
 import shutil
@@ -194,13 +195,17 @@ def _record_to_row(rec: dict) -> dict:
         return {}  # 결제 무관 알림(혜택·공지)
     parsed = _parse_payment(title, body)
     # ★중복 방지 키에 알림 key 를 넣지 않는다 — 폰 포획소엔 그 값이 없다.
-    # pkg|ts|제목|본문 만으로 두 수거 경로(포획소·dumpsys)가 같은 결제에 같은 id 를 준다.
+    # ★시각도 넣지 않는다(2026-09-05 실측): 하나카드는 **같은 결제 알림을 7~238ms 간격으로
+    # 두 번 post** 한다(포획소 실측 — 하나카드 고유 알림 15건이 전부 2줄, 청주페이는 1줄).
+    # postTime 이 다르니 시각을 키에 넣으면 한 결제가 서로 다른 ext_id 를 얻어 원장에 두 번
+    # 적재된다. 결제 문구 자체가 시각·누적이용금액·잔액을 품고 있어 (앱|제목|본문)이 결제를
+    # 유일하게 가른다 — 두 수거 경로(포획소·dumpsys)가 같은 id 를 준다는 성질도 그대로다.
     # ★공백 정규화 필수(2026-08-17 실기 실측): dumpsys 는 여러 줄 필드를 줄마다 strip 해
     # 붙이므로 같은 알림인데도 포획소 원문과 공백이 달라져 id 가 갈렸다. 저장은 원문 그대로,
     # id 계산만 정규화한다.
     _n = lambda s: re.sub(r"\s+", " ", s or "").strip()
     rid = hashlib.sha1(
-        f"{rec['pkg']}|{rec['ts']}|{_n(title)}|{_n(body)}".encode()).hexdigest()[:20]
+        f"{rec['pkg']}|{_n(title)}|{_n(body)}".encode()).hexdigest()[:20]
     return {
         "ext_id": rid, "pkg": rec["pkg"], "source": PAY_PKGS[rec["pkg"]],
         "merchant": parsed["merchant"], "amount": parsed["amount"],
@@ -216,6 +221,17 @@ CAPTURE_PKG = "com.indiebiz.phoneagent"
 CAPTURE_PATH = "files/signals/notifications.jsonl"
 
 
+def _local_capture_path():
+    """이 몸이 스스로 들고 있는 포획소 파일 경로 — phone_notifications._local_signals_path 와 같은 계약.
+
+    있으면 '내 몸이 결제 알림을 직접 붙잡고 있다'는 뜻(폰), 없으면 USB 로 남의 몸에서 당겨온다.
+    """
+    base = os.environ.get("INDIEBIZ_BASE_PATH")
+    if not base:
+        return None
+    return os.path.join(os.path.dirname(base), "signals", "notifications.jsonl")
+
+
 def _read_phone_capture():
     """폰 포획소 JSONL → dumpsys 와 같은 모양의 레코드 목록. None = 포획소 없음."""
     adb = _adb()
@@ -224,6 +240,11 @@ def _read_phone_capture():
     out = r.stdout.decode("utf-8", "ignore")
     if r.returncode != 0 or "No such file" in out or not out.strip():
         return None  # 서비스가 아직 안 켜졌거나 포획분이 없다 — 호출자가 dumpsys 로 폴백
+    return _records_from_capture(out)
+
+
+def _records_from_capture(out: str):
+    """포획소 JSONL 텍스트 → 레코드 목록 (USB·폰 로컬 두 전송이 공유하는 해독기)."""
     recs = []
     import json as _json
     for line in out.replace("\r\n", "\n").split("\n"):
@@ -254,7 +275,17 @@ def collect_from_phone() -> tuple:
 
     포획소 우선 — 활성 알림만 읽던 옛 경로는 72시간 만료분을 원리적으로 못 가져온다.
     포획소가 없으면(서비스 미허용) dumpsys 로 폴백하되 출처를 정직하게 알린다.
+    ★자기 포획소 파일이 이 몸에 있으면(폰) USB 없이 그것을 직접 읽는다 — 같은 해독기·같은 ext_id.
     RuntimeError=정직 거부."""
+    # 능력 게이트(프로파일 이름이 아니라 실물 유무로 가른다): 이 몸이 포획소 파일을
+    # 직접 들고 있으면 USB 도 adb 도 필요 없다 — 폰이 자기 결제 알림을 자기 원장에 적는 길.
+    local = _local_capture_path()
+    if local and os.path.exists(local):
+        with open(local, "r", encoding="utf-8", errors="ignore") as f:
+            recs = _records_from_capture(f.read())
+        rows = [r for r in (_record_to_row(rec) for rec in recs) if r]
+        return rows, len(recs) - len(rows), "capture-local"
+
     adb = _adb()
     st = subprocess.run([adb, "get-state"], capture_output=True, timeout=10)
     if b"device" not in st.stdout:

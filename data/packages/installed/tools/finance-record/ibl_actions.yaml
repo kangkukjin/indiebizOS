@@ -21,10 +21,12 @@ actions:
     returns: items
     side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:finance]{op: "query", query_type: "summary"}'
-    runs_on: pc_only
+    # runs_on 미지정 = anywhere (2026-09-05): 옛 pc_only 의 근거는 sync 가 adb(USB)에
+    # 묶여 있던 것 하나였다. 이제 폰에서는 자기 포획소를 직접 읽으므로(finance_sync 의
+    # INDIEBIZ_PROFILE=phone 분기) 재무 원장은 health-record 와 같은 자격으로 폰에서 돈다.
     description: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
     group: finance
-    target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰 USB 연결 상태에서 결제 앱(하나카드·청주페이) 알림 수거→지출 병합(알림을 지우기 전에 수거). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
+    target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 결제 앱(하나카드·청주페이) 알림 수거→지출 병합. 맥에서는 폰 USB 연결이 필요하고, 폰에서 실행하면 자기 포획소를 직접 읽어 USB 없이 수거한다(같은 ext_id 라 두 몸이 같은 결제를 두 번 적지 않는다). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
     target_key: op
     router: handler
     tool: finance_op

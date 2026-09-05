@@ -169,7 +169,7 @@ def sync_finance_from_phone(input_data: dict) -> str:
         msg += f" (충전 {charges}건은 이체라 원장 제외)"
     if not rows:
         msg = "폰에 결제 알림이 없습니다."
-    elif new_rows and source == "capture":
+    elif new_rows and source.startswith("capture"):
         msg += " — 포획소에 남아 있으니 폰 알림은 지우셔도 됩니다."
     elif new_rows:
         msg += " — 수거된 알림은 이제 지우셔도 됩니다."

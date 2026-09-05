@@ -66,6 +66,7 @@ PHONE_VERIFIED_PACKAGES = {
     "business",  # 메신저(others:messages/neighbor/contact)+비즈니스 CRM(self:business*). business.db 폰 머지 토대 위. auto_response 는 pc_only 로 제외(PC 전용 폴러).
     "cctv",      # CCTV 검색(sense:cctv search) — 모듈 import importlib.util(stdlib)뿐, HLS는 WebView <video>+hls.js 재생.
     "health-record",  # 의료기록(self:health save/query) — storage 가 stdlib(sqlite)만. health_records.db 폰↔맥 합집합 머지(health_sync, business.db 선례) 토대.
+    "finance-record",  # 재무기록(self:finance save/query/sync) — health-record 와 대칭(모듈레벨 stdlib sqlite 만, ingest 의 무거운 파서는 지연 import). ★sync 가 폰서 의미를 갖는다: 결제 알림 포획소가 폰에 있으므로 폰은 adb 없이 자기 파일을 직접 읽는다(finance_sync.collect_from_phone 의 INDIEBIZ_PROFILE=phone 분기) — USB 를 기다리던 수거가 몸 안에서 끝난다. 폰↔맥 원장 머지는 아직 없음(health_sync 선례로 후속).
     # 2026-06-13 runs_on 정직성 회복: anywhere 인데 폰 미번들이던 이식 가능 패키지(HTTP API 조회류,
     # 자원이 외부라 몸 무관). 의존성 모듈레벨 스캔=stdlib/HTTP. A36 대표 액션 실행으로 import 확정.
     "cloudflare",       # Cloudflare API(HTTP)

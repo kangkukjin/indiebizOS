@@ -28,6 +28,43 @@ nodes:
         # 뉴스(구 search_gnews)·HN(구 search_hn)·네이버(구 web-kr search_naver)·가디언(구 study
         # search_guardian)은 2026-08-05 어휘 압축 (2)에서 source 축으로 흡수 — 검색 5액션 → search 하나.
         # 신문 계기(NewspaperInstrument.tsx)는 [sense:search]{source: gnews|hn} 배치 경로를 쓴다.
+      http:
+        returns: items
+        side_effect: false    # HEAD/GET 만 — 부작용 요청은 이 낱말이 아니다
+        runs_on: anywhere
+        fixture: '[sense:http]{op: "head", url: "https://example.com"}'
+        description: HTTP 탐침(읽기 전용, op 분기) — head(기본)/body 로 상태 코드·헤더·Content-Type·길이·Range 응답·지연을 items 1행으로. 본문을 읽는 건 crawl, 상태와 헤더를 보는 건 이것(curl 대신).
+        group: research
+        target_description: 'url 필수. op=head(기본): 상태·헤더만 / body: 본문을 max_bytes(기본 64KB)까지 받아 bytes·body_preview(텍스트일 때 앞 max_preview 자) 동반. range("bytes=0-99999" — 206·Content-Range 확인)·headers(추가 헤더 dict)·timeout(초, 기본 15). 4xx/5xx 는 success:true·ok:false·status 로 관측 — 연결 실패·타임아웃만 success:false. >> [table:select]{columns: ["status", "content_type", "elapsed_ms"]} 로 좁혀 받는다.'
+        router: handler
+        tool: http_probe
+        implementation: web/tool_http.py — urllib HEAD/GET, 리다이렉트 5홉 추적(final_url·redirected), Range 헤더 전달, 본문은 max_bytes 까지만. 텍스트 타입만 미리보기.
+        target_key: op
+        params:
+          url: string
+          headers: object
+          range: string
+          timeout: number
+          max_bytes: integer
+          max_preview: integer
+        ops:
+          default: head
+          side_effect:
+            head: false
+            body: false
+          fixture:
+            head: '[sense:http]{op: "head", url: "https://example.com"}'
+            body: '[sense:http]{op: "body", url: "https://example.com", max_bytes: 4096}'
+          values:
+            head: 상태·헤더만 (기본)
+            body: 본문 일부까지 — bytes·body_preview
+        keywords:
+        - HTTP
+        - 상태 코드
+        - 헤더
+        - 탐침
+        - curl
+        - Range
       feed:
         returns: items
         fixture: '[sense:feed]{url: "https://www.pewresearch.org/feed/", limit: 3}'
@@ -109,6 +146,34 @@ tool_json:
       모니터링, 웹 리서치에 활용.
     version: 1.3.0
   tools:
+  - name: http_probe
+    description: 'HTTP 탐침 — head(상태·헤더)/body(본문 일부까지)로 상태 코드·헤더·Content-Type·Range 응답·지연을 봅니다(읽기 전용, curl 대신). 본문 추출은 crawl_website.'
+    input_schema:
+      type: object
+      properties:
+        url:
+          type: string
+          description: 요청할 http/https 주소
+        op:
+          type: string
+          description: head(기본)/body
+        range:
+          type: string
+          description: 'Range 헤더 값 (예: bytes=0-99999)'
+        headers:
+          type: object
+          description: 추가 요청 헤더
+        timeout:
+          type: number
+          description: 초 (기본 15)
+        max_bytes:
+          type: integer
+          description: body 가 받을 본문 상한 바이트 (기본 65536)
+        max_preview:
+          type: integer
+          description: body_preview 글자 수 (기본 600)
+      required:
+      - url
   - name: fetch_feed
     description: 'RSS/Atom 피드를 읽어 최신 글 목록을 반환합니다.
 

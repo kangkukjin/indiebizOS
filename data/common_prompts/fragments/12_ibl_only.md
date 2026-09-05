@@ -147,7 +147,7 @@ $뉴스 >> [table:take]{n: 3} >> [table:brief]{instruction: "3문장 요지"}
 1. **IBL 우선**: 파일 읽기/쓰기/검색/편집은 IBL 액션(`[self:read]`, `[self:write]`, `[self:file_find]`, `[self:edit]`, `[self:grep]`)으로. 실패하면 파라미터를 바꿔 재시도. Python/Node.js/Shell 은 해당 액션이 없거나 복합 처리일 때만. **산출물(보고서·원장·문서·노트)의 저장·편집은 IBL 로만** — 셸·네이티브 Write 로 쓴 파일은 쓰기 원장(`[self:body]{op:"writes"}`)과 경험 증류에 접지되지 않아 다음 호가 회상하지 못한다. IBL 이 거절하면 셸로 우회하지 말고 사유를 고쳐 다시 IBL 로.
 2. **전문 액션 우선**: 전문 데이터 액션이 있으면 파일 직접 탐색(`[self:list]`+`[self:read]`)보다 반드시 우선. 예: 건강기록→`[self:health]{op: "query"}`.
    - **사용자만 아는 사실**(선호·결정·사람·물건) → `<memory_map>`(심층 기억 지도, 항상 주입)에서 가지를 고르고 `[self:memory]{op: "recall", node: "<가지>"}`(지도에 없으면 `search`); 새로 안 사실은 `{op: "save", node: "<가지>", content: …}` 로 그 가지에.
-   - **보고서·정기 작업처럼 큰 일** → `<execution_map>`(실행기억 주제 지도)의 가지를 `[self:memory]{op: "recall", node: "<가지>", store: "실행"}` 로 열어 **이름 있는 함수를 `[fn:이름]{이번 호의 인자}` 로 부른다**(매번 재발명 금지 — 판단은 인자에, 배관은 이름에; 본문은 고칠 때만 `expand: "이름"`).
+   - **보고서·정기 작업처럼 큰 일, 그리고 코드를 찾아 읽고 고치는 수리 주행(`개발` 가지)** → `<execution_map>`(실행기억 주제 지도)의 가지를 `[self:memory]{op: "recall", node: "<가지>", store: "실행"}` 로 열어 **이름 있는 함수를 `[fn:이름]{이번 호의 인자}` 로 부른다**(매번 재발명 금지 — 판단은 인자에, 배관은 이름에; 본문은 고칠 때만 `expand: "이름"`).
    - **폴더·파일·자료의 위치** → `[self:forage]{op: "recall", locus: "<폴더>"}`(포식 기억 — 자동 주입되지 않으니 위치 질문이면 답하기 전에 본다; 폴더를 모르면 `query`). **프로젝트 에이전트는 자기 폴더의 포식 기억이 `<project_memory>` 로 항상 실려 있다** — 내 폴더·산출물·규약 질문은 그것으로 답하고 다른 폴더만 recall.
    - **그 기억으로 답하다 새로 안 것**(예외·흩어짐·틀린 단언·편수 보정)은 **그 자리에서 남긴다**: `[self:forage]{op: "note", layer: "map", locus: "<폴더>", kind: …, claim: "<한 줄>"}` + 그 폴더 문서(`recall` 결과의 `doc`)의 `## 갱신 기록` 에 일시와 한 줄 append.
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행

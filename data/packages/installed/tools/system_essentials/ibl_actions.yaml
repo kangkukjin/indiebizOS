@@ -556,6 +556,47 @@ nodes:
         - 상태 기록
         - ledger
         - upsert
+  sense:
+    actions:
+      sqlite:
+        returns: items
+        columns_from: data   # 반환 열은 질의·표가 정한다 — 정적 검사기는 fixture 열을 이 낱말의 열로 쓰지 않는다
+        side_effect: false    # 읽기 전용 — mode=ro 연결 + 문장 머리 관문(SELECT/WITH/PRAGMA/EXPLAIN 만)
+        runs_on: anywhere
+        fixture: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
+        description: SQLite 파일 읽기 전용 조회 (op 분기) — query(SELECT → 행 items)·tables(표 목록·행 수)·schema(열 목록). 몸의 원장(.db)을 셸 sqlite3 대신 문장으로 본다. 쓰기는 거절.
+        group: system
+        target_description: 'op=query(기본): path(SQLite 파일 — ~workspace/·절대·저장소 상대)·query(SELECT/WITH/PRAGMA/EXPLAIN 만 — INSERT·UPDATE·DELETE·DDL 은 거절)·params(? 자리 값 목록)·limit(기본 200, 상한 2000 — 넘으면 truncated) → items(행 dict)+columns / tables: path → items(name·rows) / schema: path·table → items(cid·name·type·notnull·pk). 표·열 이름을 모르면 tables→schema→query 순. 결과는 >> [table:filter]/[table:groupby] 로 흐른다.'
+        router: handler
+        tool: sqlite_op
+        implementation: system_essentials/sqlite_ops.py — sqlite3 mode=ro URI 연결, 문장 머리 정규식 관문(쓰기 낱말 거절), fetchmany(limit+1) 로 절단 신고. 열 이름은 데이터(세계의 명사).
+        target_key: op
+        params:
+          path: string
+          query: string
+          params: array
+          limit: integer
+          table: string
+        ops:
+          default: query
+          side_effect:
+            query: false
+            tables: false
+            schema: false
+          fixture:
+            tables: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
+            schema: '[sense:sqlite]{op: "schema", path: "~workspace/data/ibl_usage.db", table: "ibl_examples"}'
+            query: '[sense:sqlite]{op: "query", path: "~workspace/data/ibl_usage.db", query: "SELECT name FROM sqlite_master WHERE type = ''table'' ORDER BY name", limit: 5}'
+          values:
+            query: SELECT 실행 — path·query(·params·limit) → 행 items + columns
+            tables: 표 목록과 행 수 — 어떤 표가 있나
+            schema: 한 표의 열 목록 — table 필수
+        keywords:
+        - sqlite
+        - DB 조회
+        - 원장 조회
+        - SQL
+        - 테이블
   table:
     actions:
       spreadsheet:
@@ -1427,6 +1468,31 @@ tool_json:
         limit:
           type: number
           description: find 결과 상한 (기본 50)
+  - name: sqlite_op
+    description: SQLite 파일 읽기 전용 조회 — query(SELECT)/tables/schema. 쓰기 SQL 은 거절한다(mode=ro).
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: query(기본)/tables/schema
+        path:
+          type: string
+          description: SQLite 파일 경로 (~workspace/·절대·저장소 상대)
+        query:
+          type: string
+          description: 'SELECT/WITH/PRAGMA/EXPLAIN 문 (op=query)'
+        params:
+          type: array
+          description: 'query 의 ? 자리에 순서대로 들어갈 값 목록'
+        limit:
+          type: integer
+          description: 행 상한 (기본 200, 최대 2000 — 넘으면 truncated)
+        table:
+          type: string
+          description: 표 이름 (op=schema)
+      required:
+      - path
   - name: ledger_op
     description: JSON 원장 원자 갱신·조회 — select/append/upsert/set. 관문(set target 필수·enum_fields·list_limits)은 넘으면 쓰지 않고 실패한다.
     input_schema:

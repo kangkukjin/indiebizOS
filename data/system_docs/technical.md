@@ -324,7 +324,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(16) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (**41개** — op 분기 **29개**가 `_OP_DISPATCHERS` 표준)
+- `data/packages/installed/tools/`: 설치된 도구 패키지 (**41개** — op 분기 **30개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (**5개**)
 - `data/api_registry.yaml`: API 도구 정의 — 45개 도구 중 37개가 `node: sense` 로 바인딩돼 로드 시 노드 액션에 자동 병합(`ibl_engine._merge_api_registry_actions`, 2026-08-22 실측)
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처

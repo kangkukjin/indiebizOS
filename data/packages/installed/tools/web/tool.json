@@ -6,6 +6,51 @@
   "version": "1.3.0",
   "tools": [
     {
+      "name": "http_probe",
+      "description": "HTTP 탐침 — head(상태·헤더)/body(본문 일부까지)로 상태 코드·헤더·Content-Type·Range 응답·지연을 봅니다(읽기 전용, curl 대신). 본문 추출은 crawl_website.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "description": "요청할 http/https 주소"
+          },
+          "op": {
+            "type": "string",
+            "description": "head(기본)/body",
+            "enum": [
+              "head",
+              "body"
+            ],
+            "default": "head"
+          },
+          "range": {
+            "type": "string",
+            "description": "Range 헤더 값 (예: bytes=0-99999)"
+          },
+          "headers": {
+            "type": "object",
+            "description": "추가 요청 헤더"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "초 (기본 15)"
+          },
+          "max_bytes": {
+            "type": "integer",
+            "description": "body 가 받을 본문 상한 바이트 (기본 65536)"
+          },
+          "max_preview": {
+            "type": "integer",
+            "description": "body_preview 글자 수 (기본 600)"
+          }
+        },
+        "required": [
+          "url"
+        ]
+      }
+    },
+    {
       "name": "fetch_feed",
       "description": "RSS/Atom 피드를 읽어 최신 글 목록을 반환합니다.\n\n## 사용 시점\n- 특정 사이트(블로그·뉴스·연구기관)의 새 글 목록이 필요할 때\n- 피드 URL(…/feed/, rss.xml, atom.xml)을 알거나 추정할 수 있을 때\n\n## 다른 도구와의 관계\n- crawl_website 는 피드의 글별 제목/날짜/링크 구조를 뭉갬 — 피드 URL 은 이 도구로\n- 키워드 검색은 search (이 도구는 \"이 사이트의 최신 글\" 열거)",
       "input_schema": {

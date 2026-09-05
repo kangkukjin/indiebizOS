@@ -13,6 +13,9 @@
 - **완성본 반복 실행 = 어휘층**: `[self:script]{op:"run", id}` — id 만 나른다.
 - 실행은 argv 리스트(셸 미경유 — 인젝션·따옴표 지옥 원리적 차단), args 는 JSON stdin.
 
+## 몸의 되풀이 명령은 등록돼 있다 (2026-09-05)
+관문 배터리·시험 실행처럼 매 수리 주행이 같은 명령을 치는 일은 이미 등록 스크립트다 — 셸로 다시 치지 말고 `[self:script]{op: "list"}` 로 id 를 보고 `run` 한다. 고치기 뒤 검증이 같은 프로그램에 든다: `[self:edit]{…}` ⏎ `[self:script]{op: "run", id: "<시험 스크립트>", args: {files: ["<시험 파일>"]}} >> [table:select]{columns: ["file", "passed", "failed", "failures"]}`. 결과가 items 라 실패 목록으로 바로 흐른다.
+
 ## op 4종
 
 ```

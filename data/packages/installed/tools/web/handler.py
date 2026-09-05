@@ -678,6 +678,19 @@ def launch_sites(action: str = "open_ui", name: str = None, url: str = None, pro
 
 # ============== 메인 핸들러 ==============
 
+# [sense:http] op 디스패처 — 빌드 --check 가 ops.values 와 AST 로 대조한다(2026-09-05). 구현=tool_http.probe
+def _http_head(tool_input):
+    return load_module("tool_http").probe({**tool_input, "op": "head"})
+
+
+def _http_body(tool_input):
+    return load_module("tool_http").probe({**tool_input, "op": "body"})
+
+
+_OP_DISPATCHERS = {"http_probe": {"head": _http_head, "body": _http_body}}
+_OP_DEFAULTS = {"http_probe": "head"}
+
+
 def execute(tool_input: dict, context):
     """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
@@ -743,6 +756,17 @@ def execute(tool_input: dict, context):
     # 일반화(2026-08-15) — 어떤 사이트의 피드든 항목 구조를 보존해 레코드 통화로.
     elif tool_name == "fetch_feed":
         return format_json(_fetch_feed(tool_input))
+
+    # HTTP 탐침 — [sense:http]{op: head|get, url} (2026-09-05, curl 우회 41회를 문장으로). 구현=tool_http.py
+    elif tool_name == "http_probe":
+        op = str(tool_input.get("op") or _OP_DEFAULTS["http_probe"]).strip().lower()
+        fn = _OP_DISPATCHERS["http_probe"].get(op)
+        if fn is None:
+            return format_json({"success": False, "items": [], "error": f"알 수 없는 op: {op} (가능: head/body)"})
+        try:
+            return format_json(fn(tool_input))
+        except Exception as e:
+            return format_json({"success": False, "items": [], "error": f"http 탐침 오류: {e}"})
 
     # 신문 발행 — 판 3파일 결정화([engines:newspaper]). 아래 search_gnews 배치 경로를
     # 그대로 재사용(shim 컨텍스트로 자기 재호출) — 취재·편성 로직 중복 없음.

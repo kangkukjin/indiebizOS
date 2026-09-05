@@ -37,6 +37,14 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-28T07:10:03'
   timeout: 120
+빌드검증:
+  description: '몸의 커밋 전 관문 배터리(build --check·층·동등성(+typecheck)·items 주입·경로 해석·파일 크기)를
+    한 번에 — args: gates(목록, 기본 전부)·timeout. items(gate·ok·exit·seconds·summary)+ok.
+    개발 주행의 Bash 검증 되풀이를 한 낱말로(2026-09-05)'
+  file: 빌드검증.py
+  interpreter: python
+  registered_at: '2026-09-05T13:46:00'
+  timeout: 900
 수리적용상태:
   description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args: key(특정 세션만),
     commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'
@@ -44,6 +52,13 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-24T03:39:12'
   timeout: 300
+시험:
+  description: 'pytest 를 파일·-k 단위로 — args: files(목록, 생략=backend 전수)·k·timeout. items(file·passed·failed·errors·failures[])+ok.
+    [self:edit] 뒤 검증을 같은 프로그램에서(2026-09-05)'
+  file: 시험.py
+  interpreter: python
+  registered_at: '2026-09-05T13:46:00'
+  timeout: 900
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
     도구 계수(IBL/Bash)와 실제 IBL 파서 기반 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)를 items 통화로.

@@ -803,6 +803,48 @@
       }
     },
     {
+      "name": "sqlite_op",
+      "description": "SQLite 파일 읽기 전용 조회 — query(SELECT)/tables/schema. 쓰기 SQL 은 거절한다(mode=ro).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "query(기본)/tables/schema",
+            "enum": [
+              "query",
+              "tables",
+              "schema"
+            ],
+            "default": "query"
+          },
+          "path": {
+            "type": "string",
+            "description": "SQLite 파일 경로 (~workspace/·절대·저장소 상대)"
+          },
+          "query": {
+            "type": "string",
+            "description": "SELECT/WITH/PRAGMA/EXPLAIN 문 (op=query)"
+          },
+          "params": {
+            "type": "array",
+            "description": "query 의 ? 자리에 순서대로 들어갈 값 목록"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "행 상한 (기본 200, 최대 2000 — 넘으면 truncated)"
+          },
+          "table": {
+            "type": "string",
+            "description": "표 이름 (op=schema)"
+          }
+        },
+        "required": [
+          "path"
+        ]
+      }
+    },
+    {
       "name": "ledger_op",
       "description": "JSON 원장 원자 갱신·조회 — select/append/upsert/set. 관문(set target 필수·enum_fields·list_limits)은 넘으면 쓰지 않고 실패한다.",
       "input_schema": {

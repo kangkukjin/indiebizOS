@@ -580,6 +580,12 @@ _OP_DISPATCHERS = {
         "upsert": _sib_op("ledger_ops", "op_upsert"),
         "set": _sib_op("ledger_ops", "op_set"),
     },
+    # SQLite 읽기 전용 조회 — Bash sqlite3 우회(새 요청 2주 65회)를 문장으로(2026-09-05). 관문은 sqlite_ops 머리말.
+    "sqlite_op": {
+        "query": _sib_op("sqlite_ops", "op_query"),
+        "tables": _sib_op("sqlite_ops", "op_tables"),
+        "schema": _sib_op("sqlite_ops", "op_schema"),
+    },
     "script_op": {
         "list": _sib_op("script_ops", "op_list"),
         "register": _sib_op("script_ops", "op_register"),
@@ -607,7 +613,7 @@ _OP_DISPATCHERS = {
         "discard": _patch_op("op_discard"),
     },
 }
-_OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "ledger_op": "select",
+_OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "ledger_op": "select", "sqlite_op": "query",
                 "patch_op": "propose", "body_op": "changes"}
 
 
@@ -736,9 +742,21 @@ def execute(tool_input: dict, context) -> str:
                 from doc_ir import markdown_to_blocks
                 with open(path, 'r', encoding='utf-8') as f:
                     _txt = f.read()
+                # blocks 도 줄 범위(offset/limit·start_line/end_line)를 존중한다(2026-09-05, 관용구 '찾아서각각읽기' 리허설
+                # 실측: grep 줄번호 주변을 문단으로 받으려 했는데 파일 머리부터 나왔다) — 범위를 먼저 자르고 문단으로 나눈다.
+                _b_off = int(tool_input.get("offset", 0) or 0)
+                _b_lim = tool_input.get("limit")
+                _b_range = None
+                if _b_off > 0 or _b_lim is not None:
+                    _lines = _txt.splitlines(keepends=True)
+                    _b_end = min(_b_off + int(_b_lim), len(_lines)) if _b_lim else len(_lines)
+                    _txt = "".join(_lines[_b_off:_b_end])
+                    _b_range = {"start_line": _b_off + 1, "end_line": _b_end, "total_lines": len(_lines)}
                 _parts = markdown_to_blocks(_txt)
-                return json.dumps({"success": True, "items": _parts, "message": _txt,
-                                   "path": path, "count": len(_parts)}, ensure_ascii=False)
+                _env = {"success": True, "items": _parts, "message": _txt, "path": path, "count": len(_parts)}
+                if _b_range:
+                    _env.update(_b_range)
+                return json.dumps(_env, ensure_ascii=False)
             offset = tool_input.get("offset", 0) or 0
             limit = tool_input.get("limit")
             file_size = os.path.getsize(path)

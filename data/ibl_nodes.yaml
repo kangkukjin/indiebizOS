@@ -2394,6 +2394,45 @@ nodes:
         tool: fetch_world_bank_data
         implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
         target_key: indicator
+      sqlite:
+        returns: items
+        columns_from: data
+        side_effect: false
+        runs_on: anywhere
+        fixture: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
+        description: SQLite 파일 읽기 전용 조회 (op 분기) — query(SELECT → 행 items)·tables(표 목록·행 수)·schema(열 목록). 몸의 원장(.db)을 셸 sqlite3 대신 문장으로 본다. 쓰기는 거절.
+        group: system
+        target_description: 'op=query(기본): path(SQLite 파일 — ~workspace/·절대·저장소 상대)·query(SELECT/WITH/PRAGMA/EXPLAIN 만 — INSERT·UPDATE·DELETE·DDL 은 거절)·params(? 자리 값 목록)·limit(기본 200, 상한 2000 — 넘으면 truncated) → items(행 dict)+columns / tables: path → items(name·rows) / schema: path·table → items(cid·name·type·notnull·pk). 표·열 이름을 모르면 tables→schema→query 순. 결과는 >> [table:filter]/[table:groupby] 로 흐른다.'
+        router: handler
+        tool: sqlite_op
+        implementation: system_essentials/sqlite_ops.py — sqlite3 mode=ro URI 연결, 문장 머리 정규식 관문(쓰기 낱말 거절), fetchmany(limit+1) 로 절단 신고. 열 이름은 데이터(세계의 명사).
+        target_key: op
+        params:
+          path: string
+          query: string
+          params: array
+          limit: integer
+          table: string
+        ops:
+          default: query
+          side_effect:
+            query: false
+            tables: false
+            schema: false
+          fixture:
+            tables: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
+            schema: '[sense:sqlite]{op: "schema", path: "~workspace/data/ibl_usage.db", table: "ibl_examples"}'
+            query: '[sense:sqlite]{op: "query", path: "~workspace/data/ibl_usage.db", query: "SELECT name FROM sqlite_master WHERE type = ''table'' ORDER BY name", limit: 5}'
+          values:
+            query: SELECT 실행 — path·query(·params·limit) → 행 items + columns
+            tables: 표 목록과 행 수 — 어떤 표가 있나
+            schema: 한 표의 열 목록 — table 필수
+        keywords:
+        - sqlite
+        - DB 조회
+        - 원장 조회
+        - SQL
+        - 테이블
       search:
         aliases:
           limit:
@@ -2422,6 +2461,43 @@ nodes:
         tool: crawl_website
         implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.
         target_key: url
+      http:
+        returns: items
+        side_effect: false
+        runs_on: anywhere
+        fixture: '[sense:http]{op: "head", url: "https://example.com"}'
+        description: HTTP 탐침(읽기 전용, op 분기) — head(기본)/body 로 상태 코드·헤더·Content-Type·길이·Range 응답·지연을 items 1행으로. 본문을 읽는 건 crawl, 상태와 헤더를 보는 건 이것(curl 대신).
+        group: research
+        target_description: 'url 필수. op=head(기본): 상태·헤더만 / body: 본문을 max_bytes(기본 64KB)까지 받아 bytes·body_preview(텍스트일 때 앞 max_preview 자) 동반. range("bytes=0-99999" — 206·Content-Range 확인)·headers(추가 헤더 dict)·timeout(초, 기본 15). 4xx/5xx 는 success:true·ok:false·status 로 관측 — 연결 실패·타임아웃만 success:false. >> [table:select]{columns: ["status", "content_type", "elapsed_ms"]} 로 좁혀 받는다.'
+        router: handler
+        tool: http_probe
+        implementation: web/tool_http.py — urllib HEAD/GET, 리다이렉트 5홉 추적(final_url·redirected), Range 헤더 전달, 본문은 max_bytes 까지만. 텍스트 타입만 미리보기.
+        target_key: op
+        params:
+          url: string
+          headers: object
+          range: string
+          timeout: number
+          max_bytes: integer
+          max_preview: integer
+        ops:
+          default: head
+          side_effect:
+            head: false
+            body: false
+          fixture:
+            head: '[sense:http]{op: "head", url: "https://example.com"}'
+            body: '[sense:http]{op: "body", url: "https://example.com", max_bytes: 4096}'
+          values:
+            head: 상태·헤더만 (기본)
+            body: 본문 일부까지 — bytes·body_preview
+        keywords:
+        - HTTP
+        - 상태 코드
+        - 헤더
+        - 탐침
+        - curl
+        - Range
       feed:
         returns: items
         fixture: '[sense:feed]{url: "https://www.pewresearch.org/feed/", limit: 3}'

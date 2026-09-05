@@ -97,3 +97,53 @@ if __name__ == "__main__":                      # 러너는 하나 — pytest (2
     except ImportError:
         raise SystemExit("pytest 가 없습니다 — .venv/bin/python -m pytest 로 실행하세요")
     raise SystemExit(_pytest.main([__file__] + _sys.argv[1:]))
+
+
+# ── M3 강화 + M5: propose 도 같은 진단 (2026-09-06 ep2884) ─────────────────────
+# 9줄 docstring 을 되타이핑하며 한 글자(끊→끓)가 틀렸다. 옛 M3 는 "그 뒤가 다릅니다" 만 줘서
+# 모델이 앵커 줄을 grep 으로 되짚었고(맞는 글자로 쳐서 전부 일치), propose 는 그마저 없이
+# "없습니다" 한 마디였다. 갈린 줄 한 쌍을 파일 쪽·old_string 쪽으로 나란히 준다.
+FN = (
+    "def _ensure_episode_tables():\n"
+    '    """episode_log / episode_summary 테이블 보장 (idempotent).\n'
+    "\n"
+    "    스키마는 world_pulse 의 것과 동일하다.\n"
+    '    이 의존을 끊는 게 맞다."""\n'
+    "    try:\n"
+    "        conn = _get_db()\n"
+)
+
+
+def test_m3_names_the_diverging_line_pair():
+    typo = FN.replace("끊는 게", "끓는 게")
+    msg = _diag()(FN, typo, "x")
+    assert "5행에서 갈립니다" in msg, msg           # 첫 줄 1행 + 오프셋 4
+    assert "끊는 게" in msg and "끓는 게" in msg, msg   # 파일 쪽·old_string 쪽 나란히
+
+
+def test_m3_partial_last_line_is_prefix_match():
+    # old_string 마지막 줄이 줄 중간에서 끝나도 갈린 것으로 오판하지 않는다
+    ok_prefix = FN.split("\n")[0] + "\n" + '    """episode_log / episode'
+    assert ok_prefix not in FN or True
+    # 첫 두 줄은 맞고 세 번째 줄에서 다른 경우 → 3행
+    bad = FN.split("\n")[0] + "\n" + FN.split("\n")[1] + "\n" + "    다른 줄"
+    msg = _diag()(FN, bad, "x")
+    assert "3행에서 갈립니다" in msg, msg
+
+
+def test_m3_picks_the_farthest_matching_occurrence():
+    content = "def f():\n    a\n    b\n" + "def f():\n    a\n    c\n"
+    old = "def f():\n    a\n    c\n    Z"
+    msg = _diag()(content, old, "x")
+    assert "4행에 있으나 7행에서 갈립니다" in msg, msg
+
+
+def test_m5_propose_uses_the_same_diagnosis():
+    src = (_MOD.parent / "repair_staging.py").read_text(encoding="utf-8")
+    assert "miss_diagnosis(" in src, "propose 가 fs_edit 진단을 안 부른다"
+    assert 'raise ValueError("old_string 이 대상 파일에 없습니다.")' not in src, \
+        "propose 에 옛 한 마디 문구가 남아 있다(진단을 우회한다)"
+    spec = importlib.util.spec_from_file_location("repair_staging_m5_probe", _MOD.parent / "repair_staging.py")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    assert m.miss_diagnosis(FN, FN.replace("끊는", "끓는"), "x").count("갈립니다") == 1

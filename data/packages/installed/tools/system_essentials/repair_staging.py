@@ -78,6 +78,16 @@ _is_git_repo = _gates._is_git_repo
 _file_sha = _gates._file_sha
 _module_name = _gates._module_name
 _smoke_env = _gates._smoke_env
+
+# 근접 실패 진단의 정본은 fs_edit.miss_diagnosis(edit_file 과 같은 한 곳). propose 의 old_string 대조가
+# "없습니다" 한 마디로 끝나면(2026-09-06 ep2884: docstring 한 글자 오타) 모델이 grep 으로 되돌아간다.
+# 고유 이름으로 spec-load — 맨 이름은 sys.modules 충돌(test_bare_handler_import_gate).
+_fs_edit_spec = importlib.util.spec_from_file_location(
+    "system_essentials_fs_edit_for_staging",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "fs_edit.py"))
+_fs_edit = importlib.util.module_from_spec(_fs_edit_spec)
+_fs_edit_spec.loader.exec_module(_fs_edit)
+miss_diagnosis = _fs_edit.miss_diagnosis
 _orphan_importers = _gates._orphan_importers
 _tsc_errors = _gates._tsc_errors
 _tsc_check = _gates._tsc_check
@@ -1187,7 +1197,9 @@ def op_propose(ti):
                 orig = f.read()
             cnt = orig.count(old_string)
             if cnt == 0:
-                raise ValueError("old_string 이 대상 파일에 없습니다.")
+                # 격리 사본의 씨는 라이브다(stage_file) — 진단도 그 내용 위에서, edit_file 과 같은 한 곳으로.
+                raise ValueError("old_string 이 대상 파일에 없습니다 — "
+                                 + miss_diagnosis(orig, old_string, new_string))
             if cnt > 1:
                 raise ValueError(f"old_string 이 {cnt}번 나와 모호합니다 — 주변 맥락을 더 포함하세요.")
             with open(st_abs, "w", encoding="utf-8") as f:

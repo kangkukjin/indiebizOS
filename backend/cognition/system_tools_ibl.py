@@ -119,55 +119,76 @@ def get_action_breaker_state() -> Dict[str, dict]:
     return out
 
 
-def _replace_file_refs_in_steps(steps: list, files: list):
+# $file:N 참조 — 한 번의 정규식 치환으로 끝낸다(2026-09-06 ep2884 실측):
+# 옛 판은 인덱스 순서로 str.replace 를 *반복* 해 `$file:1` 이 `$file:10` 의 접두를 먼저 먹었고
+# (시험 파일 제안에 episode_logger 본문+"0" 이 실렸다), 앞선 치환이 넣은 본문을 뒤 인덱스가
+# 다시 훑었다. 정규식 한 패스는 가장 긴 숫자를 한 토큰으로 읽고 삽입된 본문을 재검사하지 않는다.
+_FILE_REF_RE = re.compile(r"\$file:(\d+)")
+
+
+def _replace_file_refs_in_steps(steps: list, files: list, unresolved: Optional[set] = None) -> set:
     """파싱된 step 리스트의 params에서 $file:N 플레이스홀더를 실제 내용으로 치환.
 
     코드 문자열 수준에서 치환하면 HTML 등 따옴표/특수문자가 포함된 콘텐츠가
     IBL 파서를 깨뜨리므로, 파싱 후 params dict 값을 직접 교체한다.
-    """
+    반환: files 범위 밖이라 치환하지 못한 참조 집합(호출자가 정직하게 거절한다 — 옛 판은
+    `$file:25` 를 리터럴로 남겨 파일에 그대로 썼다)."""
+    if unresolved is None:
+        unresolved = set()
     for step in steps:
         # 일반 step
         params = step.get("params")
         if params and isinstance(params, dict):
-            _replace_file_refs_in_dict(params, files)
+            _replace_file_refs_in_dict(params, files, unresolved)
         # 병렬 branches
         branches = step.get("branches")
         if branches and isinstance(branches, list):
-            _replace_file_refs_in_steps(branches, files)
+            _replace_file_refs_in_steps(branches, files, unresolved)
         # fallback chain
         chain = step.get("_fallback_chain")
         if chain and isinstance(chain, list):
-            _replace_file_refs_in_steps(chain, files)
+            _replace_file_refs_in_steps(chain, files, unresolved)
+    return unresolved
 
 
-def _replace_file_refs_in_dict(d: dict, files: list):
+def _replace_file_refs_in_text(val: str, files: list, unresolved: set) -> str:
+    """문자열 하나의 $file:N 을 한 패스로 치환. 범위 밖은 그대로 두고 unresolved 에 적는다."""
+    if "$file:" not in val:
+        return val
+
+    def _one(m):
+        idx = int(m.group(1))
+        if idx < len(files):
+            return files[idx]
+        unresolved.add(m.group(0))
+        return m.group(0)
+    return _FILE_REF_RE.sub(_one, val)
+
+
+def _replace_file_refs_in_dict(d: dict, files: list, unresolved: Optional[set] = None):
     """dict 값에서 $file:N 플레이스홀더를 치환 (재귀)."""
+    if unresolved is None:
+        unresolved = set()
     for key, val in d.items():
         if isinstance(val, str):
-            for idx, file_content in enumerate(files):
-                placeholder = f"$file:{idx}"
-                if placeholder in val:
-                    val = val.replace(placeholder, file_content)
-            d[key] = val
+            d[key] = _replace_file_refs_in_text(val, files, unresolved)
         elif isinstance(val, dict):
-            _replace_file_refs_in_dict(val, files)
+            _replace_file_refs_in_dict(val, files, unresolved)
         elif isinstance(val, list):
-            _replace_file_refs_in_list(val, files)
+            _replace_file_refs_in_list(val, files, unresolved)
 
 
-def _replace_file_refs_in_list(lst: list, files: list):
+def _replace_file_refs_in_list(lst: list, files: list, unresolved: Optional[set] = None):
     """list 요소에서 $file:N 플레이스홀더를 치환 (재귀)."""
+    if unresolved is None:
+        unresolved = set()
     for i, val in enumerate(lst):
         if isinstance(val, str):
-            for idx, file_content in enumerate(files):
-                placeholder = f"$file:{idx}"
-                if placeholder in val:
-                    val = val.replace(placeholder, file_content)
-            lst[i] = val
+            lst[i] = _replace_file_refs_in_text(val, files, unresolved)
         elif isinstance(val, dict):
-            _replace_file_refs_in_dict(val, files)
+            _replace_file_refs_in_dict(val, files, unresolved)
         elif isinstance(val, list):
-            _replace_file_refs_in_list(val, files)
+            _replace_file_refs_in_list(val, files, unresolved)
 
 
 # files_from 파일당 상한 — 자동 스필 임계(200K자)와 같은 자릿수로 묶는다.
@@ -472,7 +493,12 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         # $file:N 치환 — 파싱 후 params 레벨에서 수행 (코드 문자열에서 치환하면
         # HTML 등 따옴표 포함 콘텐츠가 파서를 깨뜨림)
         if files and isinstance(files, list):
-            _replace_file_refs_in_steps(parsed, files)
+            _unresolved = _replace_file_refs_in_steps(parsed, files)
+            if _unresolved:
+                return json.dumps({"success": False, "error":
+                    f"$file:N 참조가 files 범위(0~{len(files) - 1}) 밖입니다: "
+                    f"{', '.join(sorted(_unresolved))} — files 항목 수와 번호를 맞추세요."},
+                    ensure_ascii=False)
 
         # 노드 접근 체크 — 복합 스텝(&/??/[goal:]/[if:]/[case:]) 내부까지 재귀 수집 (D5)
         if allowed is not None:

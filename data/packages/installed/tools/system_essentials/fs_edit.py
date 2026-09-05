@@ -56,14 +56,61 @@ def miss_diagnosis(content: str, old_string: str, new_string: str) -> str:
             return (f"{head} 공백·들여쓰기만 다릅니다 — 파일의 실제 모양은 "
                     f"{line_no}행부터 다음과 같습니다(그대로 쓰세요):\n{actual}")
 
-    # ③ 첫 줄은 있는데 뒤가 어긋남 — 어디서 갈렸는지 짚어 준다
-    first_line = next((l for l in old_string.split("\n") if l.strip()), "")
-    if first_line and first_line in content:
-        ln_no = content[:content.index(first_line)].count("\n") + 1
-        return (f"{head} 첫 줄은 {ln_no}행에 있으나 그 뒤가 다릅니다 — "
-                f"그 자리를 읽어 확인하세요.")
+    # ③ 첫 줄은 있는데 뒤가 어긋남 — *어느 줄에서* 갈렸는지, 파일 쪽과 old_string 쪽을 나란히 준다.
+    #    (2026-09-06 ep2884: 9줄 docstring 을 되타이핑하며 한 글자(끊→끓)가 틀렸는데 "그 뒤가
+    #    다릅니다" 만 받고 앵커 줄을 grep 으로 다시 뒤졌다 — grep 은 맞는 글자로 쳐서 전부 일치.
+    #    갈린 줄 한 쌍을 보여 주면 한 번에 끝난다.)
+    div = _divergence(content, old_string)
+    if div is not None:
+        ln_no, off, ol, fl = div
+        if off == 0:
+            return (f"{head} 첫 줄은 {ln_no}행에 있으나 그 뒤가 다릅니다 — "
+                    f"그 자리를 읽어 확인하세요.")
+        return (f"{head} 첫 줄은 {ln_no}행에 있으나 {ln_no + off}행에서 갈립니다 — "
+                f"파일: {_clip(fl)!r} / old_string: {_clip(ol)!r}. 파일 쪽 글자로 고치세요.")
 
     return f"{head} 파일 내용을 다시 확인하세요."
+
+
+def _clip(t, n: int = 160) -> str:
+    if t is None:
+        return "<파일 끝>"
+    return t if len(t) <= n else t[:n] + "…"
+
+
+def _divergence(content: str, old_string: str):
+    """old_string 첫 줄이 파일에 있을 때, 그 자리부터 줄 단위로 대조해 처음 갈린 줄을 찾는다.
+
+    반환: (첫 줄의 행번호, 갈린 줄 오프셋, old_string 쪽 줄, 파일 쪽 줄|None) 또는 None(첫 줄도 없음).
+    첫 줄이 여러 번 나오면 가장 멀리까지 맞는 자리를 고른다. old_string 의 마지막 줄은 줄 중간에서
+    끝날 수 있으므로 접두 일치로 본다."""
+    old_lines = old_string.split("\n")
+    k0 = next((i for i, l in enumerate(old_lines) if l.strip()), None)
+    if k0 is None:
+        return None
+    first_line = old_lines[k0]
+    tail = old_lines[k0:]
+    best = None
+    start = content.find(first_line)
+    while start >= 0:
+        file_lines = content[start:].split("\n")
+        off, ol, fl = len(tail), None, None
+        for j, cand in enumerate(tail):
+            if j == 0:
+                continue
+            got = file_lines[j] if j < len(file_lines) else None
+            last = (j == len(tail) - 1)
+            ok = got is not None and (got.startswith(cand) if last else got == cand)
+            if not ok:
+                off, ol, fl = j, cand, got
+                break
+        if best is None or off > best[1]:
+            best = (content[:start].count("\n") + 1, off, ol, fl)
+        start = content.find(first_line, start + 1)
+    if best is None or best[2] is None:
+        # 첫 줄이 있고 뒤도 전부 맞는데 count()==0 이었다 — 확신할 수 없으니 옛 문구
+        return (best[0], 0, None, None) if best else None
+    return best
 
 
 def replace_line_range(content: str, start_line, end_line, new_string: str, old_string=None) -> dict:

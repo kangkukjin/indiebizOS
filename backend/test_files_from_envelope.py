@@ -94,3 +94,46 @@ if __name__ == "__main__":
     # 러너는 하나 — pytest 에 위임 (test_single_runner 규약).
     import pytest
     sys.exit(pytest.main([__file__] + sys.argv[1:]))
+
+
+# ── $file:N 치환 자체의 계약 (2026-09-06 ep2884) ──────────────────────────────
+# 옛 판은 인덱스 순서로 str.replace 를 반복해 `$file:1` 이 `$file:10` 의 접두를 먼저 먹었다
+# (시험 파일 제안에 episode_logger 본문+"0" 이 실렸다). 한 패스 정규식으로 못박는다.
+
+def _steps(**params):
+    return [{"node": "self", "action": "write", "params": dict(params)}]
+
+
+def test_file_ref_two_digit_index_is_one_token():
+    files = [f"F{i}" for i in range(12)]
+    st = _steps(content="$file:10", old="$file:1", both="$file:11/$file:1/$file:0")
+    unresolved = sti._replace_file_refs_in_steps(st, files)
+    assert unresolved == set()
+    assert st[0]["params"]["content"] == "F10", st[0]["params"]
+    assert st[0]["params"]["old"] == "F1"
+    assert st[0]["params"]["both"] == "F11/F1/F0"
+
+
+def test_file_ref_inserted_content_is_not_rescanned():
+    # 0번 본문이 "$file:1" 이라는 글자를 품어도 1번 내용으로 다시 치환되지 않는다
+    files = ["본문에 $file:1 이라는 글자", "B"]
+    st = _steps(content="$file:0")
+    sti._replace_file_refs_in_steps(st, files)
+    assert st[0]["params"]["content"] == "본문에 $file:1 이라는 글자"
+
+
+def test_file_ref_out_of_range_is_reported_not_silently_written():
+    files = ["A"]
+    st = _steps(content="$file:0 + $file:7", nested={"k": ["$file:3"]})
+    unresolved = sti._replace_file_refs_in_steps(st, files)
+    assert unresolved == {"$file:7", "$file:3"}
+    assert st[0]["params"]["content"] == "A + $file:7"      # 범위 밖은 그대로(호출자가 거절)
+
+
+def test_file_ref_recurses_branches_and_fallback_chain():
+    files = ["X", "Y"]
+    st = [{"type": "parallel", "branches": _steps(content="$file:0"),
+           "_fallback_chain": _steps(content="$file:1")}]
+    sti._replace_file_refs_in_steps(st, files)
+    assert st[0]["branches"][0]["params"]["content"] == "X"
+    assert st[0]["_fallback_chain"][0]["params"]["content"] == "Y"

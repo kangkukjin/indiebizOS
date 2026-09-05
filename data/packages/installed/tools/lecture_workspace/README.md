@@ -73,7 +73,7 @@ indiebizOS/outputs/lectures/
 |------|------|
 | `[self:lecture]{op: "list"}` | 모든 강의 요약 목록 |
 | `[self:lecture]{op: "create", title, audience?, thesis?, duration_minutes?, design_system?}` | 새 강의 생성 |
-| `[self:lecture]{op: "load", lecture_id}` | 강의 데이터 전체 로드 |
+| `[self:lecture]{op: "load", lecture_id}` | 강의 데이터 로드 — items=슬라이드 행(slide_order 순), deck=전문 |
 | `[self:lecture]{op: "delete", lecture_id, confirm: true}` | 강의 삭제 (확인 필수) |
 | `[self:lecture]{op: "open", lecture_id?}` | 강의 만들기 창 열기 (Step 2에서 IPC 연결) |
 | `[self:deck]{op: "reorder", lecture_id, order: [...]}` | 슬라이드 순서만 갱신 |

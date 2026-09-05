@@ -78,7 +78,8 @@ SCOPE_ESTIMATE_KEY = "total_estimate"
 #: 승격 경고(describe_promoted)·병렬 가지 경고·MCP 경계 절단·grep 자체 절단문이 같은 한 줄을 쓴다.
 TRUNCATED_NEXT_STEP = (
     "절단은 같은 낱말 안에서 잇는다 — limit·범위 param(파일 패턴·줄 범위·output_mode·context)을 좁히거나 "
-    "`>> [table:filter]`/`[table:select]`/`[table:take]` 로 줄여 다시 실행할 것(셸 grep·cat 으로 갈아타지 말 것 — 그림자 관문이 거절한다)"
+    "`>> [table:filter]`/`[table:select]`/`[table:take]` 로 줄여 다시 실행할 것(셸 grep·cat 으로 갈아타지 말 것 — 그림자 관문이 거절한다). "
+    "결과를 `$이름 = …` 로 할당했다면 재실행 없이 다음 호출에서 `$이름 >> [table:take]{n: …}` 로 자른다(같은 턴의 변수는 산다)"
 )
 
 

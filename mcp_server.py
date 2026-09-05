@@ -362,7 +362,10 @@ async def execute_ibl(code: str, project_path: str = "",
     project_path를 비워두면 현재 호출 컨텍스트의 프로젝트가 사용됩니다.
 
     resume: 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 같은 code 를 그 step 부터
-        다시 돈다(앞 단 재실행 없음, 스필 24h 유효).
+        다시 돈다(앞 단 재실행 없음, 스필 24h 유효). {vars_ref} 는 부분 실패 봉투의 산 변수 주입.
+        ★턴 범위 변수(2026-09-06): 같은 턴 안에서는 resume 없이도 앞 호출의 `$이름 = …` 가 다음 호출에
+        그대로 보인다 — 앞 결과(JSON·행·본문)를 다시 치지 말고 `$이름` 으로 가리킬 것. 봉투 turn_vars 가
+        산 이름을 말한다. resume 은 턴을 넘는 24h 회수 자리.
     files: 긴 텍스트/코드를 IBL 파서 밖에서 전달. 코드에서 $file:0, $file:1 로 참조.
         ★수십 KB급 본문은 인라인 대신 files_from 으로 — 도구 호출 JSON 이 커지면
         호출 자체가 전송에서 깨진다(2026-08-30 ep2356, 60KB 실측).

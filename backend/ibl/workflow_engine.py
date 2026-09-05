@@ -273,16 +273,29 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if _seq["derived"]:
             out["error"] += f" (연쇄 {_seq['derived']}개는 그 변수를 읽어 죽은 문장)"
 
-    def _resume_vars_note(out: dict) -> None:
-        """★부분 성공 봉투 재사용(2026-09-06, ep2882): 문장 하나가 죽었을 때 살아 있는 `$변수` 를 버리지
-        않는다 — 성공한 할당의 원형을 스필해 `resume_vars` 로 싣는다. 실행자는 죽은 문장만 고쳐
-        그 문장(들)을 code 로 보내고 `resume: {vars_ref}` 를 실으면 산 변수가 재실행 없이 주입된다.
-        옛 판은 39/39 step 이 살아 있어도 실행자가 전체를 다시 돌려 같은 검색·[table:ai] 를 두 번 지불했다."""
+    def _live_vars() -> dict:
+        """살아 있는 `$변수` 원형 — 성공한 할당 문장의 최종 step 결과(죽은 할당은 제외)."""
         live = {}
         for _i, _st in enumerate(steps):
             _nm = _st.get("_assign_name") if isinstance(_st, dict) else None
             if _nm and _nm != "return" and _i in step_results and _nm not in _seq["var_errors"]:
                 live[_nm] = step_results[_i]
+        return live
+
+    def _attach_live_vars(out: dict) -> None:
+        """★턴 범위 변수(언어 개정 2026-09-06): 최상위 호출자(execute_ibl 표면)가 `_want_live_vars` 로 원할 때만
+        산 변수 원형을 내부 키로 싣는다 — 중첩 파이프(fn·each·goal·workflow)의 봉투를 부풀리지 않는다.
+        표면이 키를 떼어 턴 저장소(ibl_turn_vars)에 합치고, 같은 턴의 다음 호출이 `$이름` 으로 그대로 본다."""
+        if isinstance(context, dict) and context.get("_want_live_vars"):
+            out["_live_vars"] = _live_vars()
+
+    def _resume_vars_note(out: dict) -> None:
+        """★부분 성공 봉투 재사용(2026-09-06, ep2882): 문장 하나가 죽었을 때 살아 있는 `$변수` 를 버리지
+        않는다 — 성공한 할당의 원형을 스필해 `resume_vars` 로 싣는다. 실행자는 죽은 문장만 고쳐
+        그 문장(들)을 code 로 보내고 `resume: {vars_ref}` 를 실으면 산 변수가 재실행 없이 주입된다.
+        옛 판은 39/39 step 이 살아 있어도 실행자가 전체를 다시 돌려 같은 검색·[table:ai] 를 두 번 지불했다.
+        (같은 턴 안에서는 턴 범위 변수가 이 일을 암시적으로 한다 — 이 명시판은 턴을 넘는 24h 회수 자리.)"""
+        live = _live_vars()
         if not live:
             return
         try:
@@ -333,6 +346,13 @@ def execute_pipeline(steps: list, project_path: str = ".",
             abort_payload["branches_failed"] = list(_seq["branches_failed"])
         b = _next_boundary(idx + 1)
         if b < 0:
+            # 죽은 마지막 문장이 `$이름 = …` 이면 그 슬롯을 비운다 — 오류 봉투가 산 변수로 둔갑해
+            # 턴 변수·resume_vars 에 실리지 않게(중간 문장 실패 경로의 pop 과 한 벌, 2026-09-06).
+            for _j in range(idx, len(steps)):
+                _sj = steps[_j] if isinstance(steps[_j], dict) else {}
+                if _sj.get("_assign_name"):
+                    step_results.pop(_j, None)
+                    break
             # 마지막 문장의 실패로 중단해도 앞 문장들의 독립 실패 수·뿌리는 봉투에 남는다
             # (종전엔 중단 payload 가 _seq 누산을 통째로 버려 "8개 실패" 사실이 사라졌다).
             if _seq["failed"]:
@@ -347,6 +367,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 _seq["derived"] += 1
             _root_note(abort_payload)
             _resume_vars_note(abort_payload)
+            _attach_live_vars(abort_payload)
             if idx >= 1 and prev_result and not st.get("_seq_boundary"):
                 try:
                     from common.spill import spill_write
@@ -896,6 +917,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         "results": results,
         "final_result": prev_result,
     }
+    _attach_live_vars(out)   # 턴 범위 변수 — 성공·실패 무관, 산 변수는 다음 호출이 이름으로 본다(2026-09-06)
     if _failed:
         out["statements_failed"] = _failed
         out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"

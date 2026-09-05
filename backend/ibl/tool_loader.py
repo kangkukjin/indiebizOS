@@ -232,7 +232,9 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                         "두 모드 중 하나(24h 유효). ①{from_step, prev_ref}: 실패 봉투의 resume 값 그대로 — 같은 code 를 "
                         "그 step 부터 다시 돈다(앞 단은 재실행 없이 스필된 직전 통화를 받음). ②{vars_ref}: 부분 실패 봉투의 "
                         "resume_vars.vars_ref — 산 $변수를 주입하니 죽은 문장만 고쳐 그 문장(들)을 code 로 보낸다. "
-                        "문장 하나가 죽었다고 전체를 다시 돌리지 말 것."
+                        "문장 하나가 죽었다고 전체를 다시 돌리지 말 것. ★같은 턴 안에서는 resume 없이도 앞 호출의 "
+                        "`$이름 = …` 변수가 다음 호출에 그대로 보인다(턴 범위 변수, 2026-09-06) — 앞 결과를 다시 치지 말고 "
+                        "이름으로 가리킬 것. resume 은 턴을 넘는 24h 회수 자리."
                     )
                 },
                 "verbose": {

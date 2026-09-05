@@ -385,6 +385,39 @@ def _enrich_error_with_param_hint(result, code: str):
     return result
 
 
+def _attach_turn_vars(result, parsed, key, injected: list) -> None:
+    """턴 범위 변수(언어 개정 2026-09-06) — 실행 결과의 산 `$변수` 를 턴 저장소에 합치고 봉투에 정직하게 말한다.
+
+    엔진이 `_want_live_vars` 로 실어 준 내부 키 `_live_vars` 를 떼어 쓴다(파이프 경로). 단일 step 할당
+    (`$x = [sense:…]` 한 문장)은 엔진을 거치지 않으므로 여기서 봉투 원형을 그 이름의 값으로 삼는다.
+    key 가 없으면(task_id 없는 직접 표면) 저장하지 않는다 — 다른 턴으로 새는 침묵 폴백 금지."""
+    if not isinstance(result, dict):
+        return
+    live = result.pop("_live_vars", None)
+    if live is None and isinstance(parsed, list) and len(parsed) == 1 and isinstance(parsed[0], dict) \
+            and parsed[0].get("_assign_name") and result.get("success") is not False and "error" not in result:
+        live = {parsed[0]["_assign_name"]: json.dumps(result, ensure_ascii=False)}
+    if not key:
+        return
+    try:
+        from ibl_turn_vars import save as _save_turn_vars
+        kept, skipped = _save_turn_vars(key, live or {})
+    except Exception:
+        return
+    if not (kept or skipped or injected):
+        return
+    tv: dict = {}
+    if injected:
+        tv["injected"] = list(injected)
+    if kept:
+        tv["live"] = kept
+    if skipped:
+        tv["too_large"] = skipped
+    tv["note"] = ("같은 턴의 다음 execute_ibl 에서 $이름 으로 그대로 참조됩니다 — 값을 다시 치지 말 것. "
+                  "턴이 끝나면 소멸(턴을 넘는 회수는 resume:{vars_ref}).")
+    result["turn_vars"] = tv
+
+
 def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str = None,
                               cancel_check=None) -> str:
     """execute_ibl 통합 실행기 — IBL 코드 기반
@@ -489,12 +522,13 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         #   파서에 시딩(preset_vars)하고 실행기에 같은 슬롯의 값을 넘긴다 — 죽은 문장만 다시 돈다.
         _resume0 = tool_input.get("resume")
         _preset_results = None
+        _live: dict = {}
+        _explicit_names: list = []
         if isinstance(_resume0, dict) and _resume0.get("vars_ref"):
             if _resume0.get("from_step"):
                 return json.dumps({"error": "resume 는 한 가지만 — {from_step, prev_ref}(같은 code 를 그 step 부터) 또는 "
                                             "{vars_ref}(산 변수를 주입해 죽은 문장만) 중 하나."}, ensure_ascii=False)
             from common.spill import read_ref as _read_ref
-            from ibl_parser import RESUME_SLOT_BASE
             _vr = _resume0.get("vars_ref")
             _body, _verr = _read_ref({"path": _vr} if isinstance(_vr, str) else (_vr or {}))
             if _verr:
@@ -504,6 +538,16 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 assert isinstance(_live, dict)
             except Exception:
                 return json.dumps({"error": "resume 실패 — vars_ref 가 {이름: 값} 스필이 아닙니다."}, ensure_ascii=False)
+            _explicit_names = sorted(_live)
+        # ★턴 범위 변수(언어 개정 2026-09-06, 사용자 판정): 같은 턴(task_id)의 앞 호출이 `$이름 = …` 로 남긴 값 중
+        #   이 code 가 참조하는 이름을 같은 preset 기판으로 주입한다 — 모델이 앞 결과를 다시 치지 않게(ep2890·ep2884).
+        #   명시 resume:{vars_ref} 가 같은 이름을 실으면 명시가 이긴다. task_id 없는 호출은 턴 범위 없음.
+        from ibl_turn_vars import turn_key as _turn_key, preset_for as _turn_preset
+        _tkey = _turn_key(agent_id)
+        _turn_injected = _turn_preset(code, _tkey, exclude=set(_live))
+        _live.update(_turn_injected)
+        if _live:
+            from ibl_parser import RESUME_SLOT_BASE
             _preset = {str(n): RESUME_SLOT_BASE + k for k, n in enumerate(sorted(_live))}
             _preset_results = {_preset[n]: _live[n] for n in _preset}
             parsed, _tc_vars = _parse_with_vars(code, preset_vars=_preset)
@@ -562,13 +606,16 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         # 재개 — 변수 모드(2026-09-06): 산 변수를 주입해 이 code(죽은 문장만) 를 처음부터 돈다.
         if _preset_results is not None:
             from workflow_engine import execute_pipeline
-            result = execute_pipeline(parsed, project_path, context={"_preset_results": _preset_results},
+            result = execute_pipeline(parsed, project_path,
+                                      context={"_preset_results": _preset_results, "_want_live_vars": True},
                                       agent_id=agent_id)
             if isinstance(result, dict):
-                result["resumed_vars"] = sorted(_preset)
+                if _explicit_names:
+                    result["resumed_vars"] = _explicit_names
+                _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected))
             from ibl_envelope import diet_envelope
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
-            return dumps_public_result(result, producer="execute_ibl:resume_vars",
+            return dumps_public_result(result, producer="execute_ibl:resume_vars" if _explicit_names else "execute_ibl",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
 
         # 재개 (M5 §2.6): 실패 봉투의 resume={from_step, prev_ref} 로 그 step 부터 — 1~(from_step-1) 단은 재실행하지 않는다.
@@ -677,7 +724,10 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             # 파이프라인 / 병렬 / fallback → workflow_engine
             # 이미 파싱 + $file:N 치환된 steps를 직접 전달 (재파싱 방지)
             from workflow_engine import execute_pipeline
-            result = execute_pipeline(parsed, project_path, agent_id=agent_id)
+            result = execute_pipeline(parsed, project_path, context={"_want_live_vars": True}, agent_id=agent_id)
+
+        # 턴 범위 변수 — 산 `$변수` 를 턴 저장소에 합치고 봉투가 말한다(2026-09-06 언어 개정)
+        _attach_turn_vars(result, parsed, _tkey, [])
 
         # (map_data → [MAP:] 변환은 execute_tool 래퍼의 재귀 수확 단일 관문에서 처리 —
         #  단독/파이프/병렬 모양별 승격 분기는 병렬(&) 중첩에서 지도를 유실해 폐기. 2026-07-13)

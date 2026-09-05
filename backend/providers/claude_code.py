@@ -631,8 +631,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             # 선택압이 가장 큰 비용을 못 본 채 돌았다. Anthropic 은 input_tokens 에 캐시분이
             # 빠져 있으므로 원장의 input 은 전체 프롬프트(=input+cache_read+cache_create)로
             # 적어 다른 벤더와 같은 뜻으로 맞춘다(providers/anthropic.py 와 같은 규약).
-            self.metrics.record_request(latency_ms, input_tokens + cache_read + cache_create,
-                                        output_tokens, cache_read_tokens=cache_read)
+            self.metrics.record_usage(latency_ms, usage)   # 규약은 base.normalize_usage 한 곳
             err_flag = " (error)" if event.get("is_error") else ""
             cache_info = (f" cache_read={cache_read} cache_create={cache_create}"
                           if (cache_read or cache_create) else "")

@@ -172,14 +172,7 @@ class DeepSeekHTTPProvider(BaseProvider):
                     return (accumulated + f"\n\n[LLM 호출 오류] {e}").strip()
 
             # 토큰·캐시 적중 원장 (2026-09-02) — 그전엔 이 경로가 usage 를 아예 안 읽었다.
-            _usage = data.get("usage") or {}
-            if _usage:
-                from providers.base import extract_cached_prompt_tokens
-                _in = int(_usage.get("prompt_tokens") or 0)
-                _out = int(_usage.get("completion_tokens") or 0)
-                _cr = extract_cached_prompt_tokens(_usage)
-                self.metrics.record_request(0, _in, _out, cache_read_tokens=_cr)
-                print(f"[DeepSeekHTTP] 토큰: 입력={_in}, 출력={_out}, 캐시적중={_cr}")
+            self.metrics.record_usage(0, data.get("usage"), label="DeepSeekHTTP")
 
             choices = data.get("choices") or []
             if not choices:

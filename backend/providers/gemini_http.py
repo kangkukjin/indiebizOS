@@ -223,6 +223,7 @@ class GeminiHTTPProvider(BaseProvider):
             except Exception as e:
                 return (accumulated + f"\n\n[LLM 호출 오류] {e}").strip()
 
+            self.metrics.record_usage(0, data.get("usageMetadata"), label="GeminiHTTP")
             cands = data.get("candidates") or []
             if not cands:
                 fb = data.get("promptFeedback", {})
@@ -282,6 +283,7 @@ class GeminiHTTPProvider(BaseProvider):
         text = ""
         try:
             data = self._generate(final_contents, None)
+            self.metrics.record_usage(0, data.get("usageMetadata"), label="GeminiHTTP")
             cands = data.get("candidates") or []
             if cands:
                 parts = (cands[0].get("content") or {}).get("parts") or []

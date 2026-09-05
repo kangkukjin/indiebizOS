@@ -394,23 +394,13 @@ class OpenAIProvider(BaseProvider):
 
             # 토큰 사용량 추적
             latency_ms = (time.time() - start_time) * 1000
-            if usage_info:
-                input_tokens = getattr(usage_info, 'prompt_tokens', 0)
-                output_tokens = getattr(usage_info, 'completion_tokens', 0)
-                # 프리픽스 캐시 적중(DeepSeek prompt_cache_hit_tokens / OpenAI cached_tokens)
-                # — 2026-09-02 계측: 경량 티어 52K 입력이 캐시를 타는지 이 값 없이는 모른다.
-                from providers.base import extract_cached_prompt_tokens
-                cache_read = extract_cached_prompt_tokens(usage_info)
-                self.metrics.record_request(latency_ms, input_tokens, output_tokens,
-                                            cache_read_tokens=cache_read)
-                # 추론 토큰 가시화 — "출력=4096인데 텍스트 0자" 부류(ep889)를 로그에서 즉시 판별
-                _det = getattr(usage_info, 'completion_tokens_details', None)
-                _rt = getattr(_det, 'reasoning_tokens', 0) if _det else 0
-                _rt_note = f", 추론={_rt}" if _rt else ""
-                _cache_note = f", 캐시적중={cache_read}" if input_tokens else ""
-                print(f"[OpenAI] 토큰: 입력={input_tokens}, 출력={output_tokens}{_rt_note}{_cache_note}, 지연={latency_ms:.0f}ms")
-            else:
-                self.metrics.record_request(latency_ms)
+            # 추론 토큰 가시화 — "출력=4096인데 텍스트 0자" 부류(ep889)를 로그에서 즉시 판별
+            _det = getattr(usage_info, 'completion_tokens_details', None) if usage_info else None
+            _rt = getattr(_det, 'reasoning_tokens', 0) if _det else 0
+            # 프리픽스 캐시 적중(DeepSeek prompt_cache_hit_tokens / OpenAI cached_tokens)은
+            # base.normalize_usage 가 뽑는다 — 2026-09-02 계측: 이 값 없이는 캐시 적중을 모른다.
+            self.metrics.record_usage(latency_ms, usage_info, label="OpenAI",
+                                      extra=(f", 추론={_rt}" if _rt else ""))
 
             # thinking 소진 가드(ep889 부류): length인데 보이는 텍스트·도구 호출이 0
             # — 추론이 max_tokens를 전부 태운 경우. 이어쓰기(Auto-Continue)도 응답

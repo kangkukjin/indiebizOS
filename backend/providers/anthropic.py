@@ -365,18 +365,8 @@ class AnthropicProvider(BaseProvider):
                 # 토큰 사용량 추적
                 if hasattr(final_message, 'usage') and final_message.usage:
                     latency_ms = (time.time() - start_time) * 1000
-                    input_tokens = getattr(final_message.usage, 'input_tokens', 0)
-                    output_tokens = getattr(final_message.usage, 'output_tokens', 0)
-                    # Anthropic 은 input_tokens 에 캐시분이 *빠져* 있다 — 원장의 input 은
-                    # 전체 프롬프트(=input+cache_read)로 적어 다른 벤더와 같은 뜻으로 맞춘다.
-                    from providers.base import extract_cached_prompt_tokens
-                    cache_read = extract_cached_prompt_tokens(final_message.usage)
-                    # cache_creation 도 input_tokens 밖의 프롬프트분이다(쓰기 비용) — 빼면
-                    # 전체 프롬프트가 작게 적힌다(claude_code.py result 분기와 같은 규약).
-                    cache_create = int(getattr(final_message.usage, 'cache_creation_input_tokens', 0) or 0)
-                    self.metrics.record_request(latency_ms, input_tokens + cache_read + cache_create,
-                                                output_tokens, cache_read_tokens=cache_read)
-                    print(f"[Anthropic] 토큰: 입력={input_tokens + cache_read + cache_create}, 출력={output_tokens}, 캐시적중={cache_read}, 캐시생성={cache_create}, 지연={latency_ms:.0f}ms")
+                    # 원장 규약(전체 프롬프트=input+캐시 적중+캐시 생성)은 base.normalize_usage 한 곳.
+                    self.metrics.record_usage(latency_ms, final_message.usage, label="Anthropic")
 
             # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
             if not collected_text.strip() and not tool_uses and depth > 0 and empty_response_retries < 2:

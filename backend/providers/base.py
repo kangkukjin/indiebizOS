@@ -68,6 +68,73 @@ def read_turn_cache_read_tokens() -> Optional[int]:
     return int(led.get("cache_read", 0))
 
 
+# ── 벤더 usage → 원장 정규화 (단일 초크포인트, 2026-09-06) ─────────────────
+# 왜 여기 한 곳인가: 09-06 실측에서 원장 사각지대가 프로바이더마다 다른 모양으로 있었다 —
+# claude_code 는 캐시를 안 넘기고, codex 는 출력을 스레드 누적 그대로, gemini·ollama 는
+# 벤더 usage 를 아예 안 읽고 글자수÷4 로 추정, gemini_http 는 기록 자체가 없었다. 손으로
+# 셋을 고친 뒤 "거론 안 한 프로바이더는?"(사용자) — 부류 수리는 관문+초크포인트로만 닫힌다.
+# 규약: input = 전체 프롬프트(캐시 적중·생성 포함), cache_read ⊆ input, output = 생성 토큰
+# (추론/thinking 토큰 포함 — 벤더가 따로 주면 더한다). 인식 못 하면 None(미측정≠0).
+# 프로바이더 모듈은 record_request 를 직접 부르지 않는다(test_provider_usage_ledger_gate).
+_USAGE_FAMILIES = (
+    # Anthropic·Claude Code·Codex exec: input_tokens (Anthropic 은 캐시분이 *빠져* 있어 더하고,
+    # Codex 의 cached_input_tokens 는 input_tokens 에 이미 포함이라 더하지 않는다)
+    {"detect": ("input_tokens",),
+     "input": ("input_tokens", "cache_read_input_tokens", "cache_creation_input_tokens"),
+     "output": ("output_tokens",),
+     "cache_read": ("cache_read_input_tokens", "cached_input_tokens"),
+     "cache_create": ("cache_creation_input_tokens", "cache_write_input_tokens")},
+    # OpenAI 호환(OpenAI·DeepSeek·OpenRouter·Ollama /v1): prompt_tokens 는 캐시분 포함
+    {"detect": ("prompt_tokens",),
+     "input": ("prompt_tokens",), "output": ("completion_tokens",),
+     "cache_read": ("prompt_cache_hit_tokens", "prompt_tokens_details.cached_tokens"),
+     "cache_create": ()},
+    # Gemini SDK(snake) / REST(camel): prompt_token_count 는 cached_content 포함, thoughts 는 출력
+    {"detect": ("prompt_token_count", "promptTokenCount"),
+     "input": ("prompt_token_count|promptTokenCount",),
+     "output": ("candidates_token_count|candidatesTokenCount", "thoughts_token_count|thoughtsTokenCount"),
+     "cache_read": ("cached_content_token_count", "cachedContentTokenCount"),
+     "cache_create": ()},
+    # Ollama 네이티브 /api: prompt_eval_count / eval_count
+    {"detect": ("prompt_eval_count",),
+     "input": ("prompt_eval_count",), "output": ("eval_count",),
+     "cache_read": (), "cache_create": ()},
+)
+
+
+def _usage_get(obj, path: str):
+    """dict/SDK 객체 겸용 읽기. 'a.b' 는 중첩(정본 common.field_path 위임 — 점 경로 해석은
+    한 벌), 'x|y' 는 첫 존재 키. 객체 속성은 fallback 훅(호출자 정책)으로 잇는다."""
+    from common.field_path import walk_path, MISSING
+    for alt in path.split("|"):   # path-ok: '|' 는 대안 키 나열이지 경로 문법이 아니다
+        v = walk_path(obj, alt, fallback=lambda cur, seg: getattr(cur, seg, None))
+        if v is not MISSING and v is not None:
+            return v
+    return None
+
+
+def normalize_usage(usage) -> Optional[Dict[str, int]]:
+    """벤더 usage(dict·SDK 객체) → {"input","output","cache_read","cache_create"}. 인식 불가면 None."""
+    if usage is None:
+        return None
+    for fam in _USAGE_FAMILIES:
+        if not any(_usage_get(usage, k) is not None for k in fam["detect"]):
+            continue
+        def _sum(keys):
+            return sum(int(_usage_get(usage, k) or 0) for k in keys)
+        def _first(keys):
+            for k in keys:
+                v = _usage_get(usage, k)
+                if v:
+                    return int(v)
+            return 0
+        n = {"input": _sum(fam["input"]), "output": _sum(fam["output"]),
+             "cache_read": _first(fam["cache_read"]), "cache_create": _first(fam["cache_create"])}
+        n["cache_read"] = min(n["cache_read"], n["input"])
+        return n
+    return None
+
+
 def extract_cached_prompt_tokens(usage) -> int:
     """프로바이더 usage 에서 프리픽스 캐시 적중 입력 토큰을 벤더 중립으로 뽑는다.
 
@@ -126,6 +193,24 @@ class ProviderMetrics:
         if len(self._latencies) > 100:
             self._latencies = self._latencies[-100:]
         self.avg_request_latency_ms = sum(self._latencies) / len(self._latencies)
+
+    def record_usage(self, latency_ms: float, usage, label: str = "", extra: str = "") -> Optional[Dict[str, int]]:
+        """벤더 usage 를 원장에 적는 **유일한** 프로바이더 진입점(normalize_usage 규약).
+
+        usage 가 None/미인식이면 지연만 적고 토큰은 미기록(None) — 0 으로 오보하지 않는다.
+        label 이 있으면 표준 한 줄을 찍는다(프로바이더가 제 로그를 찍으려면 label="" 로)."""
+        n = normalize_usage(usage)
+        if n is None:
+            self.record_request(latency_ms)
+            if label:
+                print(f"[{label}] 토큰: 미측정 — 벤더 usage 없음(원장엔 None, 0 아님){extra}")
+            return None
+        self.record_request(latency_ms, n["input"], n["output"], cache_read_tokens=n["cache_read"])
+        if label:
+            cc = f", 캐시생성={n['cache_create']}" if n["cache_create"] else ""
+            print(f"[{label}] 토큰: 입력={n['input']}, 출력={n['output']}{extra}, "
+                  f"캐시적중={n['cache_read']}{cc}, 지연={latency_ms:.0f}ms")
+        return n
 
     def record_retry(self):
         """재시도 기록"""

@@ -770,9 +770,9 @@ class CodexProvider(CliSubprocessProvider):
             turn_input = max(0, input_tokens - self._turn_base_total)
             turn_cached = max(0, cached - self._turn_base_cached)
             turn_output = max(0, output_tokens - self._turn_base_output)
-            # OpenAI 계열 input_tokens 는 캐시분을 *포함*한다 — 원장 규약(전체 프롬프트)과 같음.
-            self.metrics.record_request(latency_ms, turn_input, turn_output,
-                                        cache_read_tokens=min(turn_cached, turn_input))
+            # 턴 몫으로 환산한 뒤 벤더 모양(Codex exec: input 은 cached 포함) 그대로 초크포인트에.
+            self.metrics.record_usage(latency_ms, {"input_tokens": turn_input, "output_tokens": turn_output,
+                                                   "cached_input_tokens": turn_cached})
             # 누적 수치(input_tokens·cached·cache_write·output)는 전부 **스레드 생애 합계**다 —
             # 턴 몫과 섞어 적으면 다시 오독을 부르므로 괄호 안에 따로 묶는다.
             cache_info = (f" cached={cached} cache_write={cache_write}"

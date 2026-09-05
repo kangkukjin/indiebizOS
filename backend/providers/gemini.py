@@ -509,11 +509,8 @@ class GeminiProvider(BaseProvider):
             print(f"[Gemini] 경고: 빈 응답")
             final_result = "(AI가 응답을 생성하지 않았습니다. 요청을 다시 시도하거나 더 구체적으로 질문해주세요.)"
 
-        # 전체 루프 지연시간 기록
+        # 전체 루프 지연시간 (토큰은 라운드마다 record_usage 로 적혔다)
         total_latency_ms = (time.time() - loop_start_time) * 1000
-        # Gemini는 토큰 수를 직접 제공하지 않으므로 추정 (4자당 1토큰)
-        estimated_output_tokens = len(final_result) // 4
-        self.metrics.record_request(total_latency_ms, 0, estimated_output_tokens)
 
         print(f"[Gemini] 최종 응답 생성 (iteration={iteration}, len={len(final_result)}, latency={total_latency_ms:.0f}ms)")
         yield {"type": "final", "content": final_result}
@@ -537,12 +534,18 @@ class GeminiProvider(BaseProvider):
         all_response_parts = []
 
         # API 호출 (재시도 포함)
+        _round_t0 = time.time()
+        _round_usage = None   # 스트림 청크의 usage_metadata 는 이 호출의 누적 — 마지막 것이 총계
         stream = self._create_stream_with_retry(contents, config)
 
         for chunk in self._iterate_stream_with_retry(stream, contents, config):
             # 중단 체크
             if cancel_check and cancel_check():
                 raise Exception("사용자가 중단했습니다.")
+
+            _um = getattr(chunk, 'usage_metadata', None)
+            if _um is not None:
+                _round_usage = _um
 
             if not hasattr(chunk, 'candidates') or not chunk.candidates:
                 continue
@@ -583,6 +586,9 @@ class GeminiProvider(BaseProvider):
                         "input": dict(fc.args) if fc.args else {}
                     }
 
+        # 토큰 원장 — 라운드(=API 호출) 단위로 벤더 usage_metadata 를 적는다. 옛 판은 이걸 안
+        # 읽고 루프 끝에서 글자수÷4 추정·입력 0 을 적었다(2026-09-06 원장 감사에서 적발).
+        self.metrics.record_usage((time.time() - _round_t0) * 1000, _round_usage, label="Gemini")
         # 로깅
         print(f"[Gemini][round={iteration}] 텍스트: {len(collected_text)}자, 도구: {len(function_calls)}개")
         if function_calls:

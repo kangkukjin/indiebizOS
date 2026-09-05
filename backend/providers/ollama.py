@@ -284,7 +284,8 @@ class OllamaProvider(BaseProvider):
                     stream = self._client.chat.completions.create(
                         model=self.model,
                         messages=messages,
-                        stream=True
+                        stream=True,
+                        stream_options={"include_usage": True},   # 마지막 청크에 usage
                     )
                     break
                 except Exception as e:
@@ -301,7 +302,10 @@ class OllamaProvider(BaseProvider):
                 yield {"type": "error", "content": "Ollama 연결 실패: 재시도 한도 초과"}
                 return
 
+            usage_info = None
             for chunk in stream:
+                if getattr(chunk, 'usage', None):
+                    usage_info = chunk.usage
                 delta = chunk.choices[0].delta if chunk.choices else None
                 if not delta:
                     continue
@@ -312,8 +316,9 @@ class OllamaProvider(BaseProvider):
 
             # 메트릭 기록
             latency_ms = (time.time() - start_time) * 1000
-            estimated_output_tokens = len(collected_text) // 4
-            self.metrics.record_request(latency_ms, 0, estimated_output_tokens)
+            # 옛 판은 글자수÷4 추정·입력 0 — 2026-09-06 원장 감사에서 적발. /v1 호환 경로는
+            # stream_options.include_usage 로 마지막 청크에 usage 가 온다(없으면 미측정으로 정직하게).
+            self.metrics.record_usage(latency_ms, usage_info, label="Ollama")
 
             yield {"type": "final", "content": collected_text}
 
@@ -363,7 +368,8 @@ class OllamaProvider(BaseProvider):
             create_params = {
                 "model": self.model,
                 "messages": messages,
-                "stream": True
+                "stream": True,
+                "stream_options": {"include_usage": True},   # 마지막 청크에 usage
             }
             if openai_tools:
                 create_params["tools"] = openai_tools
@@ -394,7 +400,10 @@ class OllamaProvider(BaseProvider):
                 yield {"type": "error", "content": "Ollama 연결 실패: 재시도 한도 초과"}
                 return
 
+            usage_info = None
             for chunk in stream:
+                if getattr(chunk, 'usage', None):
+                    usage_info = chunk.usage
                 if not chunk.choices:
                     continue
 
@@ -435,8 +444,9 @@ class OllamaProvider(BaseProvider):
 
             # 메트릭 기록
             latency_ms = (time.time() - start_time) * 1000
-            estimated_output_tokens = len(collected_text) // 4
-            self.metrics.record_request(latency_ms, 0, estimated_output_tokens)
+            # 옛 판은 글자수÷4 추정·입력 0 — 2026-09-06 원장 감사에서 적발. /v1 호환 경로는
+            # stream_options.include_usage 로 마지막 청크에 usage 가 온다(없으면 미측정으로 정직하게).
+            self.metrics.record_usage(latency_ms, usage_info, label="Ollama")
 
             # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
             if not collected_text.strip() and not tool_calls and depth > 0 and empty_response_retries < 2:

@@ -92,6 +92,17 @@ def _extract_result_field_obj(raw: str, path: str) -> Any:
         else:
             raise ValueError(
                 f"$변수 필드 추출 실패: 결과가 구조화 데이터가 아니라 '{path}' 경로를 풀 수 없습니다.")
+    # ★2026-09-05(시스템 AI 보고, 다단 union 조합 차단): `.items` 는 **통화**를 묻는 것이다 —
+    #   table(union·groupby·select)·blocks(document) 로 방출된 봉투에서 파이프 이음매는 derive_items
+    #   로 items 를 파생해 주는데, 변수 경로 읽기는 원형을 그대로 읽어 "items 필드가 없습니다(사용
+    #   가능: table, success)" 로 죽었다. 소비처 누락 — 같은 판정기(common.currency.derive_items)를
+    #   여기서도 쓴다. 파생본은 사본에만(저장된 step 결과 원형은 불변, 토큰 중복 회피 규약 유지).
+    #   효과·스칼라 봉투는 종전대로 정직 오류(통화가 아닌 것을 통화라 부르지 않는다).
+    if (isinstance(obj, dict) and not isinstance(obj.get("items"), list)
+            and str(path).split(".", 1)[0] == "items"):
+        from common.currency import derive_items
+        obj = derive_items(dict(obj))
+
     def _missing(cur, key):
         # 필드 힌트의 절단도 신고한다 (F18-1 부류 — 침묵 클램프 금지)
         if isinstance(cur, dict):

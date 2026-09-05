@@ -147,6 +147,12 @@ def _incoming(args):
         incoming = args.get("items")
         if incoming is None:
             incoming = [args.get("item")]
+    # 통화 봉투 `{items: [...]}` 는 그 목록이다(2026-09-05, 시스템 AI 보고): `[self:write]{format:"json"}`
+    # 이 파이프 싱크로 쓰는 파일이 이 모양인데(sink_ops V53-1 ⓑ), 어휘 설명이 권하는 "write 로 고정한
+    # 뒤 items_file 로 가리켜라" 조합이 봉투째 항목 하나로 감싸여 "key 'id'가 필요합니다" 로 죽었다.
+    # items 가 list 인 dict 만 푼다 — 그 외 dict 는 종전대로 항목 하나.
+    if isinstance(incoming, dict) and isinstance(incoming.get("items"), list):
+        incoming = incoming["items"]
     if not isinstance(incoming, list):
         incoming = [incoming]
     if any(item is None for item in incoming):

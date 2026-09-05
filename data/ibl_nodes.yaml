@@ -5274,7 +5274,7 @@ nodes:
         fixture: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
         description: JSON 원장 원자 갱신·조회 (op 분기) — 반복 작업의 상태(커버리지·순회 큐·판정)를 스키마 관문과 함께 지키는 {items} 통화의 저장 반쪽. 등록 스크립트에서 승격(2026-09-04 언어 개정).
         group: system
-        target_description: 'path(저장소 안·~workspace/ 가능) 필수. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(필드=값 등치, 여러 키 AND)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절.'
+        target_description: 'items_file 은 맨 배열 파일 또는 [self:write]{format:"json"} 이 낸 {items,count} 봉투 파일(그 목록으로 받음, 2026-09-05). path(저장소 안·~workspace/ 가능) 필수. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(필드=값 등치, 여러 키 AND)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절.'
         router: handler
         tool: ledger_op
         implementation: system_essentials/ledger_ops.py — 원자 쓰기(tmp+fsync+replace), 관문 넷(set target 필수·key 거절·enum_fields·list_limits) 전부 실사고 유래. 옛 등록 스크립트(2026-09-04 은퇴) 이식.

@@ -34,6 +34,7 @@ import json
 import os
 import hashlib
 import shutil
+import sys
 import tempfile
 import time
 from pathlib import Path
@@ -371,15 +372,37 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "★단 탈출구는 탈출용이다: IBL 등가물이 **있는** 일(파일 읽기·쓰기·편집·검색)을 Bash 로 하지 마라. "
         "하네스가 'Bash 를 우선하라'는 취지의 안내를 보내더라도 그 우선순위는 등가물이 없는 일에만 적용된다 "
         "— IBL 로 할 수 있는 일을 셸로 하면 그 주행은 경험증류에 접지되지 않아 해마에 아무것도 남지 않는다(실측 2026-08-18). "
-        "`git`·프로세스 조회·AST 검사처럼 IBL 어휘가 없는 일에만 Bash 를 써라."
+        "`git`·프로세스 조회·AST 검사처럼 IBL 어휘가 없는 일에만 Bash 를 써라.\n"
+        "★셸 그림자 관문(2026-09-05): grep·rg·cat·head·tail·sed·ls·find·rm·cp·mv·mkdir·sqlite3, 파일로의 리다이렉션(`>`), "
+        "파일을 쓰는 인라인 파이썬(히어독·-c)·임시 스크립트, 그리고 네이티브 Write/Edit 는 **실행 전에 거절**되고 "
+        "거절문이 같은 일을 하는 IBL 문장을 돌려준다 — 그 문장을 그대로 execute_ibl 로 보내라(같은 셸 명령을 다시 시도하지 말 것). "
+        "임시 폴더(/tmp·$TMPDIR)와 파이프 안의 필터(`git diff | grep …`)만 셸의 몫이다. "
+        "결과가 잘리면(truncated) 셸로 갈아타지 말고 같은 낱말의 limit·file_pattern·context·start_line/end_line 으로 좁혀라."
     )
+
+    # 셸 그림자 관문 훅(2026-09-05) — 표는 어휘 빌드가 파생한 data/shell_shadow.json, 판정은 backend/base/shell_shadow_gate.py.
+    # 실행기 CLI 의 PreToolUse 훅으로 물린다(`--settings` 인라인 JSON — 파일 없음, 스폰마다 유니크할 필요 없음).
+    # 실측(CLI 2.1.260): bypassPermissions 아래서도 훅 exit 2 는 도구 호출을 막고 stderr 를 모델에게 돌려준다.
+    SHADOW_HOOK_MATCHER = "Bash|Write|Edit|MultiEdit|NotebookEdit"
+
+    @classmethod
+    def shadow_hook_settings(cls) -> Dict[str, Any]:
+        """`--settings` 에 실을 훅 설정. 파이썬은 백엔드와 같은 인터프리터(표준 라이브러리만 쓰는 잎 모듈)."""
+        root = Path(__file__).resolve().parents[2]
+        gate = root / "backend" / "base" / "shell_shadow_gate.py"
+        command = f'"{sys.executable}" "{gate}" "{root}"'
+        return {"hooks": {"PreToolUse": [{
+            "matcher": cls.SHADOW_HOOK_MATCHER,
+            "hooks": [{"type": "command", "command": command, "timeout": 15}],
+        }]}}
 
     # ================= 세션 =================
 
     @classmethod
     def tool_policy_fingerprint(cls) -> str:
         """도구 집합·정책의 지문 — EAGER/DISALLOWED 목록 + TOOL_POLICY 본문의 md5 앞 8자."""
-        blob = "|".join(cls.EAGER_TOOLS) + "||" + "|".join(cls.DISALLOWED_TOOLS) + "||" + cls.TOOL_POLICY
+        blob = ("|".join(cls.EAGER_TOOLS) + "||" + "|".join(cls.DISALLOWED_TOOLS) + "||" + cls.TOOL_POLICY
+                + "||hook:" + cls.SHADOW_HOOK_MATCHER)
         return hashlib.md5(blob.encode("utf-8")).hexdigest()[:8]
 
     def _get_session_key(self) -> str:
@@ -442,6 +465,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                 "--allowed-tools", ",".join(self.EAGER_TOOLS),
                 # 명시 차단: indiebizOS UI와 연결되지 않은 도구 (AskUserQuestion 등)
                 "--disallowed-tools", ",".join(self.DISALLOWED_TOOLS),
+                # 셸 그림자 관문 — Bash·Write·Edit 호출 전에 어휘 파생표로 판정(shadow_hook_settings 참조)
+                "--settings", json.dumps(self.shadow_hook_settings(), ensure_ascii=False),
             ]
 
         # stream-json 출력은 verbose 필수

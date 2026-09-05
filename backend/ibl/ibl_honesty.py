@@ -72,6 +72,15 @@ HONESTY_ROUTE_KEYS = (
 #: 하나만 붙어도 "부분 실패·절단" 경고가 매번 붙었다(한 턴에 3/9 봉투) — 늑대소년.
 SCOPE_ESTIMATE_KEY = "total_estimate"
 
+#: 절단 표지 뒤의 **다음 걸음**(2026-09-05, ep2862·2866 실측): 두 주행 모두 첫 `[self:grep]` 이 truncated 를
+#: 받은 직후 셸 grep 으로 갈아탔다 — 표지가 "다른 데로 가라"로 읽힌 것이다. 표지는 사실만 말하지 말고
+#: 같은 낱말 안의 연속 문장을 실어야 다음 걸음이 IBL 안에 남는다(셸 그림자 관문이 어차피 거절한다).
+#: 승격 경고(describe_promoted)·병렬 가지 경고·MCP 경계 절단·grep 자체 절단문이 같은 한 줄을 쓴다.
+TRUNCATED_NEXT_STEP = (
+    "절단은 같은 낱말 안에서 잇는다 — limit·범위 param(파일 패턴·줄 범위·output_mode·context)을 좁히거나 "
+    "`>> [table:filter]`/`[table:select]`/`[table:take]` 로 줄여 다시 실행할 것(셸 grep·cat 으로 갈아타지 말 것 — 그림자 관문이 거절한다)"
+)
+
 
 def scope_violation(env: Any) -> Optional[str]:
     """봉투가 규모 불변식을 깨면 사유 한 줄, 아니면 None.
@@ -114,7 +123,10 @@ def describe_promoted(keys) -> str:
         parts.append("부분 실패·절단(" + ", ".join(fail) + ")")
     if route:
         parts.append("경로·출처 표지(" + ", ".join(route) + " — 실패가 아니라 *어떻게 흘렀나*의 사실)")
-    return " + ".join(parts)
+    out = " + ".join(parts)
+    if "truncated" in fail or "rows_dropped" in fail:
+        out += " · " + TRUNCATED_NEXT_STEP
+    return out
 
 
 def assigned_in_body(body: Any) -> list:

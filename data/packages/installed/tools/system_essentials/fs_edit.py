@@ -66,3 +66,33 @@ def miss_diagnosis(content: str, old_string: str, new_string: str) -> str:
     return f"{head} 파일 내용을 다시 확인하세요."
 
 
+def replace_line_range(content: str, start_line, end_line, new_string: str, old_string=None) -> dict:
+    """[start_line, end_line](1-기반 양끝 포함) 을 new_string 으로 교체 — ""=삭제 (2026-09-05).
+
+    old_string 이 함께 오면 그 범위 안에 있어야 한다(자리 확인 — 줄번호가 옛 읽기의 것일 때 엉뚱한 줄을
+    지우는 사고 방지). 반환 {"content", "note"} 또는 {"error"} — 오류문은 범위의 실제 첫 줄을 보여 준다."""
+    lines = content.splitlines(keepends=True)
+    total = len(lines)
+    try:
+        s = int(start_line)
+        e = int(end_line) if end_line is not None else s
+    except (TypeError, ValueError):
+        return {"error": "start_line/end_line 은 정수여야 합니다."}
+    if s < 1 or e < s or s > total:
+        return {"error": f"줄 범위가 파일 밖입니다: {s}~{e} (전체 {total}줄). [self:read]{{numbered: true}} 로 줄번호를 다시 확인하세요."}
+    e = min(e, total)
+    block = "".join(lines[s - 1:e])
+    if old_string and old_string not in block:
+        first = lines[s - 1].rstrip("\n")
+        if len(first) > 200:
+            first = first[:200] + "…"
+        return {"error": f"old_string 이 {s}~{e}행 안에 없습니다 — {s}행의 실제 내용: {first!r}. 줄번호가 옛 읽기의 것이면 다시 읽고 고치세요."}
+    new = new_string or ""
+    if new and not new.endswith("\n") and (e < total or block.endswith("\n")):
+        new += "\n"
+    out = "".join(lines[:s - 1]) + new + "".join(lines[e:])
+    n_new = new.count("\n") if new else 0
+    note = f"줄 {s}~{e}({e - s + 1}줄) {'삭제' if not new else f'→ {n_new}줄로 교체'}"
+    return {"content": out, "note": note}
+
+

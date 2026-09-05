@@ -53,7 +53,31 @@ def _find_rg():
 _RG_BIN = _find_rg()
 
 
-def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars, include_logs=False):
+def _context_windows(abs_fp, line_nums, context, cache):
+    """매칭 줄 앞뒤 context 줄 — {줄번호: [(n, text), …]} (2026-09-05, grep -A/-B/-C 의 자리).
+    파일은 인코딩 폴백으로 한 번만 읽어 cache 에 둔다(rg·파이썬 두 경로가 같은 창을 낸다)."""
+    lines = cache.get(abs_fp)
+    if lines is None:
+        lines = []
+        for enc, err in _GREP_ENCODINGS:
+            try:
+                with open(abs_fp, 'r', encoding=enc, errors=err) as f:
+                    lines = [l.rstrip("\n").rstrip("\r") for l in f]
+                break
+            except UnicodeDecodeError:
+                continue
+            except (PermissionError, OSError):
+                break
+        cache[abs_fp] = lines
+    out = {}
+    for ln in line_nums:
+        lo = max(1, ln - context)
+        hi = min(len(lines), ln + context)
+        out[ln] = [(n, lines[n - 1]) for n in range(lo, hi + 1)]
+    return out
+
+
+def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars, include_logs=False, ignore_case=False):
     """ripgrep --json 위임(고속 경로). 성공 시 (rows, search_done, hit_size_cap) —
     rows=[(절대경로, 줄번호, 내용)]. 매칭 0 은 정상 결과([], False, False).
     rg 실행 실패·패턴 문법 오류(exit 2)면 None 반환 → 호출부가 파이썬 경로로 폴백.
@@ -65,6 +89,8 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
     cmd = [_RG_BIN, "--json", "--no-messages", "--sort", "path", "--max-count", str(max_results)]
     if not use_regex:
         cmd.append("-F")
+    if ignore_case:
+        cmd.append("-i")
     if not os.path.isfile(root) and file_pattern and file_pattern != "**/*":
         cmd += ["--glob", file_pattern]
     for d in _GREP_SKIP_DIRS:
@@ -119,7 +145,7 @@ def _rg_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
     return rows, search_done, hit_size_cap
 
 
-def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False):
+def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False, ignore_case=False):
     """rg --count-matches 전수 계수(2026-08-08, ⑥′ 수리의 핵).
 
     내용을 반환하지 않으므로 토큰 상한이 필요 없다 — 표본이 아니라 **전수**.
@@ -132,6 +158,8 @@ def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False):
     cmd = [_RG_BIN, "--count-matches", "--with-filename", "--no-messages"]
     if not use_regex:
         cmd.append("-F")
+    if ignore_case:
+        cmd.append("-i")
     if not os.path.isfile(root) and file_pattern and file_pattern != "**/*":
         cmd += ["--glob", file_pattern]
     for d in _GREP_SKIP_DIRS:
@@ -155,7 +183,7 @@ def _rg_count(pattern, root, file_pattern, use_regex, include_logs=False):
     return dict(sorted(counts.items()))
 
 
-def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars, include_logs=False):
+def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars, max_total_chars, include_logs=False, ignore_case=False):
     """파이썬 스캔 경로 — rg 없거나 한글(비ASCII) 패턴일 때.
     파일별로 _GREP_ENCODINGS 순서로 처음부터 재시도(부분 커밋 없음=중복 방지).
     반환 (rows, search_done, hit_size_cap, regex_error) — rows=[(절대경로, 줄번호, 내용)].
@@ -165,10 +193,11 @@ def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
         # 잘못된 정규식(짝 안 맞는 괄호 등)은 크래시 대신 리터럴 검색으로 폴백한다 —
         # 절대 크래시도 침묵 실패도 만들지 않는다. 폴백 시 결과에 안내를 덧붙인다.
         try:
-            regex_pattern = re.compile(pattern)
+            regex_pattern = re.compile(pattern, re.IGNORECASE if ignore_case else 0)
         except re.error as e:
             regex_error = str(e)
             use_regex = False
+    lit = pattern.lower() if ignore_case else pattern
     # 검색할 파일 목록 (불필요 파일 필터링). root 가 단일 파일이면 그 파일만 검색한다 —
     # file_pattern 기본값 '**/*' 를 파일 경로에 join 하면 빈 목록 → 조용한 No matches 버그.
     # 사용자가 직접 지정한 파일이므로 SKIP 필터도 적용하지 않는다.
@@ -199,7 +228,8 @@ def _py_grep(pattern, root, file_pattern, use_regex, max_results, max_line_chars
             try:
                 with open(fp, 'r', encoding=enc, errors=err) as f:
                     for ln, line in enumerate(f, 1):
-                        matched = regex_pattern.search(line) if use_regex else (pattern in line)
+                        # vj-ok: grep 의 -i 는 값 판정이 아니라 검색 옵션(정규식 IGNORECASE 와 같은 층) — 기본은 대소문자 구분 검색
+                        matched = regex_pattern.search(line) if use_regex else (lit in (line.lower() if ignore_case else line))
                         if matched:
                             found.append((ln, line.rstrip()))
                             if len(found) >= max_results:
@@ -258,6 +288,12 @@ def run(tool_input: dict, project_path: str) -> str:
     if output_mode not in ("content", "files_with_matches", "count"):
         output_mode = "content"
     include_logs = bool(tool_input.get("include_logs", False))   # 로그·회전본은 기본 제외(2026-09-05)
+    ignore_case = bool(tool_input.get("ignore_case", False))     # grep -i (2026-09-05 그림자 관문)
+    try:
+        context = int(tool_input.get("context", 0) or 0)          # grep -A/-B/-C — 매칭 앞뒤 N줄
+    except (TypeError, ValueError):
+        context = 0
+    context = max(0, min(context, 10))  # clamp-ok: 문맥 상한 10줄 — 더 보려면 [self:read]{start_line,end_line}
     _excl_note = None if include_logs else "기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true"
     # max_results: 파라미터화(2026-08-08 ⑥′ — 옛 100 하드코딩은 올릴 길이 없었다)
     try:
@@ -277,7 +313,7 @@ def run(tool_input: dict, project_path: str) -> str:
     # 실행마다 다른 답), content 는 표본이되 진짜 total 을 봉투에 실을 수 있게 된다.
     full_counts = None  # {절대경로: 매칭수} 전수, 경로순 — None 이면 미가용(폴백)
     if _RG_BIN and pattern.isascii():
-        full_counts = _rg_count(pattern, root, file_pattern, use_regex, include_logs)
+        full_counts = _rg_count(pattern, root, file_pattern, use_regex, include_logs, ignore_case)
 
     # === 2층 검색: rg 고속 경로 → 파이썬 인코딩-인지 경로 (_rg_grep/_py_grep 참조) ===
     # 한글(비ASCII) 패턴은 cp949 파일을 rg 가 원리적으로 못 찾으므로 파이썬 경로로.
@@ -285,13 +321,13 @@ def run(tool_input: dict, project_path: str) -> str:
     regex_error = None
     if _RG_BIN and pattern.isascii():
         rg_out = _rg_grep(pattern, root, file_pattern, use_regex,
-                          max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS, include_logs)
+                          max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS, include_logs, ignore_case)
         if rg_out is not None:
             raw_rows, search_done, hit_size_cap = rg_out
     if raw_rows is None:
         raw_rows, search_done, hit_size_cap, regex_error = _py_grep(
             pattern, root, file_pattern, use_regex,
-            max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS, include_logs)
+            max_results, MAX_LINE_CHARS, MAX_TOTAL_CHARS, include_logs, ignore_case)
 
     results = []
     match_rows = []  # 공유 통화 table용 [파일, 줄번호, 내용]
@@ -327,9 +363,10 @@ def run(tool_input: dict, project_path: str) -> str:
 
     if search_done and hit_size_cap:
         truncated = ("\n... (결과가 너무 큽니다 — root_path/file_pattern 으로 범위를 좁히거나, "
-                     "output_mode='files_with_matches'/'count' 로 먼저 분포를 보세요.)")
+                     "output_mode='files_with_matches'/'count' 로 먼저 분포를 보세요. 셸 grep 으로 갈아타지 말 것.)")
     elif truncated_flag and output_mode == "content":
-        truncated = f"\n... (매칭 {grand_total}건 중 {len(match_rows)}건만 표시 — limit 로 조절(별칭 max_results, 최대 2000), 집계는 output_mode='count' 가 전수)"
+        truncated = (f"\n... (매칭 {grand_total}건 중 {len(match_rows)}건만 표시 — limit 로 조절(별칭 max_results, 최대 2000), "
+                     "집계는 output_mode='count' 가 전수. 이 낱말 안에서 좁힐 것 — 셸 grep 으로 갈아타지 말 것.)")
     else:
         truncated = ""
     truncated += regex_note
@@ -360,9 +397,24 @@ def run(tool_input: dict, project_path: str) -> str:
                           ensure_ascii=False)
 
     # output_mode == "content" (기본): 매칭 라인 (상한 내 표본, 경로순 결정적).
-    text = "\n".join(results) + truncated
     # === 단일 통화 items(행 dict — 파일/줄번호/내용) + 정직한 절단 신고(⑥′) ===
     items = [{"파일": r[0], "줄번호": r[1], "내용": r[2]} for r in match_rows]
+    if context > 0 and match_rows:
+        # 문맥(2026-09-05): 매칭 앞뒤 N줄을 '문맥' 필드로 — grep -C 모양(매칭 줄 ':'·문맥 줄 '-')
+        _cache = {}
+        _by_file = {}
+        for abs_fp, ln, _s in raw_rows:
+            _by_file.setdefault(abs_fp, []).append(ln)
+        _windows = {fp: _context_windows(fp, lns, context, _cache) for fp, lns in _by_file.items()}
+        blocks = []
+        for (abs_fp, ln, _s), it in zip(raw_rows, items):
+            win = _windows.get(abs_fp, {}).get(ln, [])
+            rel = it["파일"]
+            it["문맥"] = "\n".join(f"{n}{'>' if n == ln else ' '} {t[:MAX_LINE_CHARS]}" for n, t in win)
+            blocks.append("\n".join(f"{rel}{':' if n == ln else '-'}{n}{':' if n == ln else '-'} {t[:MAX_LINE_CHARS]}" for n, t in win))
+        text = "\n--\n".join(blocks) + truncated
+    else:
+        text = "\n".join(results) + truncated
     return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
                        "total_files": n_files, "truncated": truncated_flag},
                       ensure_ascii=False)

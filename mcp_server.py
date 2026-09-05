@@ -196,9 +196,20 @@ def _budget_for_agent(raw: str, parsed=None, budget: int = None) -> str:
                     out = json.dumps(slim, ensure_ascii=False)
                 return out
         raw = json.dumps(_condense_items(parsed, 1), ensure_ascii=False)
-    # 구조 축약으로도 안 줄면(거대 텍스트 등) 꼬리 절단 — 파일덤프보다 낫다.
-    head = raw[:budget]
-    return head + f" …[{len(raw) - len(head)}자 생략 — 범위를 좁혀 다시 실행하세요]"
+    # 구조 축약으로도 안 줄면(거대 텍스트 등) 꼬리 절단 — 파일덤프보다 낫다. 꼬리 안내까지 예산 안에.
+    tail_note = f" …[{{n}}자 생략 — {_truncated_next_step()}]"
+    head = raw[:max(0, budget - len(tail_note))]
+    return head + tail_note.replace("{n}", str(len(raw) - len(head)))
+
+
+def _truncated_next_step() -> str:
+    """절단 뒤의 다음 걸음 한 줄(2026-09-05) — 정본은 ibl_honesty.TRUNCATED_NEXT_STEP. 이 파일은 무의존성이
+    우선이라 lazy import + 폴백(같은 뜻의 짧은 문장)."""
+    try:
+        from ibl_honesty import TRUNCATED_NEXT_STEP
+        return TRUNCATED_NEXT_STEP
+    except Exception:
+        return "같은 낱말의 limit·범위 param 을 좁히거나 >> [table:take]/[table:select] 로 줄여 다시 실행할 것(셸로 갈아타지 말 것)"
 
 
 # ── 이미지 봉투 승격 (2026-08-14, 클로드 코드 경로 대칭) ──────────────────────

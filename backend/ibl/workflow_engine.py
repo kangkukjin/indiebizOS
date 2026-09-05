@@ -900,9 +900,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 b["step"], len(b["branches"]), b["of"],
                 ", ".join(sorted({k for br in b["branches"] for k in br["markers"]})))
             for b in _seq["branch_honesty"])
-        _warns.append(f"[병렬] 살아남은 분기 안에 부분 실패·경로 변경 신고가 있습니다: {_bh} — "
-                      "분기가 success 로 돌아왔다고 그 안이 온전한 것은 아닙니다"
-                      "(results[] 의 branches_honesty 참조).")
+        _bh_msg = (f"[병렬] 살아남은 분기 안에 부분 실패·경로 변경 신고가 있습니다: {_bh} — "
+                   "분기가 success 로 돌아왔다고 그 안이 온전한 것은 아닙니다"
+                   "(results[] 의 branches_honesty 참조).")
+        if any("truncated" in (br.get("markers") or {}) for b in _seq["branch_honesty"] for br in b["branches"]):
+            # 절단 가지 뒤의 다음 걸음(2026-09-05) — 가지 절단 직후 셸로 갈아타던 자리(ep2862·2866)
+            from ibl_honesty import TRUNCATED_NEXT_STEP as _tns
+            _bh_msg += " " + _tns + "."
+        _warns.append(_bh_msg)
     if _seq["fallback_used"]:
         # ★F35-1: `??` 가 갈아탄 사실 — 데이터의 **출처가 바뀌었다**는 뜻이라
         #   최상위에 없으면 읽는 쪽이 첫 가지 결과로 착각한다(교재의 정직 표지 1번).

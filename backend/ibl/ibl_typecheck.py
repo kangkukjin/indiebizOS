@@ -153,14 +153,10 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
         ent = shapes.get(f"{q}#{op}")
         if ent and ent.get("keys"):
             return list(ent["keys"])
-    ad = _action_def(node, action) or {}
     ent = shapes.get(q)
     if ent and ent.get("keys"):
-        # 액션 레벨 관측은 액션 fixture 의 op 하나가 낸 열이다 — 다른 op 로 부른 문장에 그 열을 빌려주지 않는다
-        # (2026-09-05 ep2858: `[self:lecture]{op:"load"}` 가 list fixture 의 title·meta·summary·url 을 받았다). 미상이 맞다.
-        fop = _fixture_op(ad)
-        if not (isinstance(op, str) and not _dynamic(op) and fop and op != fop):
-            return list(ent["keys"])
+        return list(ent["keys"])
+    ad = _action_def(node, action) or {}
     try:
         from ibl_ops import default_op
         d = default_op(ad)
@@ -171,18 +167,6 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
         if ent and ent.get("keys"):
             return list(ent["keys"])
     return None
-
-
-_FIXTURE_OP_RE = re.compile(r'\bop\s*:\s*["\']([\w-]+)["\']')
-
-
-def _fixture_op(action_def: Dict[str, Any]) -> Optional[str]:
-    """액션 레벨 fixture 문장이 부른 op(없으면 None) — 액션 레벨 관측 열의 출처."""
-    fx = (action_def or {}).get("fixture")
-    if not isinstance(fx, str):
-        return None
-    m = _FIXTURE_OP_RE.search(fx)
-    return m.group(1) if m else None
 
 
 def _dynamic(v: Any) -> bool:

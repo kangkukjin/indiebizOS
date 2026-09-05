@@ -89,6 +89,7 @@ from iblbuild_derive import (  # noqa: E402,F401
     build_tool_index,
     derive_phone_manifest,
     derive_fixtures,
+    derive_shell_shadow,
     collect_package_fragments,
     _TOOL_JSON_MARKER,
     derive_tool_json_docs,
@@ -578,6 +579,12 @@ def build(check: bool = False, validate_only: bool = False) -> int:
     if data is not None:
         fixtures_text = json.dumps(derive_fixtures(data), ensure_ascii=False, indent=2) + "\n"
 
+    # 셸 그림자 관문표 파생 (2026-09-05 — 액션별 shell_shadow: 블록 → 관문이 읽는 단일 표).
+    shadow_path = root / "data" / "shell_shadow.json"
+    shadow_text = None
+    if data is not None:
+        shadow_text = json.dumps(derive_shell_shadow(data), ensure_ascii=False, indent=2) + "\n"
+
     # tool.json 파생 (tool_json 블록 보유 패키지만 — 정합성을 검증에서 구조로).
     # op-bearing 도구의 enum/default 는 저장이 아니라 액션 ops 에서 주입되므로
     # src ↔ tool.json 드리프트가 이관 패키지에선 구조적으로 불가능하다.
@@ -712,6 +719,21 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 _print_derived_diff("ibl_fixtures.json", fx_on_disk, fixtures_text)
             else:
                 print("[build_ibl_nodes] check: ibl_fixtures.json 일치 ✓")
+        # 셸 그림자 관문표 정합 (소스는 액션별 shell_shadow: 블록)
+        shadow_ok = True
+        if shadow_text is not None:
+            sh_on_disk = shadow_path.read_text(encoding="utf-8") if shadow_path.is_file() else None
+            shadow_ok = sh_on_disk == shadow_text
+            if not shadow_ok:
+                print(
+                    f"[build_ibl_nodes] check: shell_shadow.json 불일치 — "
+                    f"`python3 scripts/build_ibl_nodes.py` 로 재생성 필요",
+                    file=sys.stderr,
+                )
+                _print_derived_diff("shell_shadow.json", sh_on_disk, shadow_text)
+            else:
+                print("[build_ibl_nodes] check: shell_shadow.json 일치 ✓")
+        fixtures_ok = fixtures_ok and shadow_ok
         # tool.json 파생 정합 (드리프트 방지 — 소스는 ibl_actions.yaml tool_json 블록 + ops)
         tool_json_ok = True
         for tj_path, tj_text in sorted(tool_json_docs.items()):
@@ -836,6 +858,9 @@ def build(check: bool = False, validate_only: bool = False) -> int:
     if fixtures_text is not None:
         atomic_write_text(fixtures_path, fixtures_text)
         print(f"[build_ibl_nodes] 작성: {fixtures_path}")
+    if shadow_text is not None:
+        atomic_write_text(shadow_path, shadow_text)
+        print(f"[build_ibl_nodes] 작성: {shadow_path} (셸 그림자 관문표)")
     tj_written = 0
     for tj_path, tj_text in sorted(tool_json_docs.items()):
         current = tj_path.read_text(encoding="utf-8") if tj_path.is_file() else None

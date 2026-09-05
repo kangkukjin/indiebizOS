@@ -97,6 +97,14 @@
           "limit": {
             "type": "integer",
             "description": "self:grep 파라미터"
+          },
+          "context": {
+            "type": "integer",
+            "description": "self:grep 파라미터"
+          },
+          "ignore_case": {
+            "type": "boolean",
+            "description": "self:grep 파라미터"
           }
         },
         "required": [
@@ -232,6 +240,14 @@
             "type": "boolean",
             "description": "true 면 old_string 이 여러 곳이어도 전부 교체 (기본 false = 파일 내 고유해야 함)"
           },
+          "start_line": {
+            "type": "integer",
+            "description": "줄 범위 편집 시작(1-기반 양끝 포함) — 주어지면 old_string 없이 [start_line, end_line] 을 new_string 으로 교체"
+          },
+          "end_line": {
+            "type": "integer",
+            "description": "줄 범위 편집 끝(생략 시 start_line 한 줄)"
+          },
           "path": {
             "type": "string",
             "description": "self:edit 의 주 파라미터"
@@ -239,7 +255,6 @@
         },
         "required": [
           "file_path",
-          "old_string",
           "new_string"
         ]
       }
@@ -571,6 +586,14 @@
             "description": "self:read 파라미터"
           },
           "max_rows": {
+            "type": "integer",
+            "description": "self:read 파라미터"
+          },
+          "numbered": {
+            "type": "boolean",
+            "description": "self:read 파라미터"
+          },
+          "tail": {
             "type": "integer",
             "description": "self:read 파라미터"
           }

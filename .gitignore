@@ -172,6 +172,8 @@ data/warehouse_media_web/
 !data/ibl_fixtures.json
 !data/phone_manifest.json
 !data/package_meta.json
+# 셸 그림자 관문표(2026-09-05) — 어휘 shell_shadow: 블록의 순수 파생물. 실행기 훅이 런타임에 읽으므로 신선 clone 에도 있어야 한다.
+!data/shell_shadow.json
 # origin opt-out 마커 — 커밋된 개인 패키지를 코어(배포)에서 빼는 예외 선언
 !data/**/.origin
 !data/ibl_nodes.yaml

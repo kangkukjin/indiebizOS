@@ -269,7 +269,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 `backend/providers/`: anthropic · openai · gemini · gemini_http · deepseek · openrouter · ollama · claude_code · codex
 - **Anthropic Claude** / **OpenAI GPT** / **Google Gemini**(HTTP 경량 경로 `gemini_http` 포함 — 폰도 쓰는 키-only 경로) / **DeepSeek**(V4 Pro·Flash, OpenAI 호환 API, 2026-07-22 신설) / **OpenRouter** / **Ollama**(로컬) / **claude_code**·**codex**(하네스 렌트)
 - **아웃오브프로세스 CLI 프로바이더 두 종**(`claude_code`·`codex`, 2026-08-31 codex 신설): CLI 를 subprocess 로 띄워 JSONL 을 내부 이벤트 어휘로 번역한다. 몸통은 `providers/cli_provider.py` 의 `CliSubprocessProvider` 공유 — 세션 영속(resume+크기 리셋)·신원 전파(episode/run/task/origin/agent_id 를 env·헤더로)·지도 봉투 재주입·정직 표지 요약·resume 실패 폴백·과부하 backoff 가 전부 거기 산다. 벤더 파일에는 바이너리 탐지·인증 격리·이벤트 번역·도구 정책만 남는다. 둘 다 **구독 인증**이라 API 키가 없다(`model_resolver._NO_KEY_PROVIDERS`; 판정은 `provider_needs_api_key()` 한 곳에서만 — 손복사 집합은 관문 `test_cli_provider_gates` 가 금지한다). 도구 브리지는 같은 `mcp_server.py`(execute_ibl·read_guide)를 공유하며 실명도 `mcp__indiebizos__*` 로 같다.
-  - ★**어휘 누수 방어가 서로 다르다**: claude_code 는 `--disallowed-tools` 로 Read·Grep·WebSearch 를 하드 차단해 IBL 등가물을 강제하지만, codex 의 파일 접근은 전부 shell 하나로 들어와 끌 수 없다(끄면 아무 일도 못 한다). codex 에서 설정으로 막는 건 web_search 뿐이고 나머지는 프롬프트가 감당한다 — 즉 **codex 쪽 누수 위험이 구조적으로 크다**. 누수가 의심되면 프롬프트를 덧대지 말고 `episode_log` 로 실측한 뒤 판정할 것.
+  - ★**어휘 누수 방어가 서로 다르다**: claude_code 는 `--disallowed-tools` 로 Read·Grep·WebSearch 를 하드 차단하고, 남은 구멍(Bash 의 grep·sed·cat·rm·리다이렉션, 파일을 쓰는 인라인 파이썬, 네이티브 Write/Edit)은 **셸 그림자 관문**(2026-09-05)이 막는다 — 낱말 yaml 의 `shell_shadow:` 블록을 빌드가 `data/shell_shadow.json` 으로 파생하고, `backend/base/shell_shadow_gate.py` 가 PreToolUse 훅(`--settings` 인라인 JSON)과 in-process `run_command` 두 자리에서 같은 판정으로 거절하며 **그 명령을 옮긴 IBL 문장**을 돌려준다(임시 폴더·파이프 안의 필터·git 등은 셸의 몫). codex 의 파일 접근은 전부 shell 하나로 들어와 끌 수 없다(끄면 아무 일도 못 한다). codex 에서 설정으로 막는 건 web_search 뿐이고 나머지는 프롬프트가 감당한다 — 즉 **codex 쪽 누수 위험이 구조적으로 크다**. 누수가 의심되면 프롬프트를 덧대지 말고 `episode_log` 로 실측한 뒤 판정할 것.
   - **codex 의 모델 표기 = `슬러그` 또는 `슬러그:추론강도`**(예: `gpt-5.6-sol:high`). Codex 는 모델과 추론강도가 **별개 축**이라(`-m` 과 `-c model_reasoning_effort`), 티어 설정의 `model` 한 칸이 둘을 함께 싣는다. ★별도 설정 칸이 아닌 이유는 편의가 아니라 캐시 정합이다 — 프로바이더 캐시 키가 `bucket|provider|model|keyhash` 라, 강도가 그 문자열 밖에 있으면 같은 슬러그를 쓰는 두 티어(고급=`sol:max` · 중급=`sol:low`)가 **캐시에서 충돌해 에러 없이 강도가 뒤바뀐다**. 강도를 안 적으면 사용자의 `~/.codex/config.toml` 을 따른다(ChatGPT 데스크톱 앱이 바꾸는 값이므로, 재현 가능한 비용·품질을 원하면 티어에 적을 것). 철자가 틀리면 경고 후 무시한다. **모델 슬러그·지원 강도의 정본은 우리가 아니라 `~/.codex/models_cache.json`**(원격 갱신 캐시) — 목록을 문서에 베끼지 않는다(모델명 하드코딩은 은퇴로 죽는다).
   - `--ignore-user-config` 를 원샷 다이어트에 **쓰지 않는다**(2026-08-31 실측 기각): 같은 질문에서 17,222→16,270 토큰(5.5%)만 아끼면서 사용자의 `model_reasoning_effort` 를 빼앗아 원샷만 모델 기본 강도로 떨어뜨린다 — 경로마다 강도가 다르면 비용도 품질도 재현되지 않는다. 남는 16K 는 Codex 자신의 기본 지침·AGENTS.md·작업공간 맥락이라 이 플래그로는 못 깎는다.
   - ★**codex 는 시스템 프롬프트를 붙일 플래그가 없다**(`--append-system-prompt` 등가물 부재). fresh 턴 프롬프트 머리에 싣고 resume 턴엔 생략하므로, 프롬프트가 바뀌면 세션 키(`키#프롬프트해시`)가 바뀌어 자동으로 fresh 로 끊긴다. '새 대화' 리셋은 `providers.clear_cli_sessions_for_agent` 가 접두 스윕으로 파생 키까지 지운다.
@@ -319,7 +319,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(27) → `datastore`(40) → `ibl`(42) → `cognition`(48) → `services`(28) → `surface`(61). `.py` 총 302개(test 제외).
+  `base`(28) → `datastore`(40) → `ibl`(42) → `cognition`(48) → `services`(28) → `surface`(61). `.py` 총 303개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(16) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -329,7 +329,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `data/api_registry.yaml`: API 도구 정의 — 45개 도구 중 37개가 `node: sense` 로 바인딩돼 로드 시 노드 액션에 자동 병합(`ibl_engine._merge_api_registry_actions`, 2026-08-22 실측)
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
-- `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper·audio_briefing)
+- `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)
 - `data/guides/`: 가이드 71개 (guide_db 등록 70). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
 <!-- IBL_STATS:END -->
 - `projects/`: 사용자 프로젝트 데이터 (24개 — 시스템 프로젝트 수동모드·앱모드 포함)

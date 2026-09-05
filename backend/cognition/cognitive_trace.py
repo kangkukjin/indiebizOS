@@ -334,6 +334,60 @@ def _ibl_safety_map() -> dict:
     return _SAFETY_MAP_CACHE
 
 
+_OP_SAFETY_MAP_CACHE: dict = {}
+
+
+def _ibl_op_safety_map() -> dict:
+    """{(node, action, op): safe} — op 축(2026-08-05). 액션 롤업만 보면 `[self:memory]{op:"recall"}` 같은 읽기 op 가
+    쓰기 액션 안에 갇혀 반성 턴을 헛돌린다(2026-09-05 실측: 2주 usage 494건에서 '부작용 액션' 사유 58회 중
+    memory·script·forage·body·notebook 의 읽기 op 가 다수, 반성 라운드 중앙값 46초). 조종실 검수기와 같은 단일 소스."""
+    if not _OP_SAFETY_MAP_CACHE:
+        try:
+            from ibl_safety import load_op_safety_map
+            _OP_SAFETY_MAP_CACHE.update(load_op_safety_map())
+        except Exception:
+            pass
+    return _OP_SAFETY_MAP_CACHE
+
+
+def _ibl_steps(code: str):
+    """코드 → [(node, action, params)] 전수(병렬·폴백·블록 안까지). 파싱 실패면 None(호출자가 정규식 폴백)."""
+    try:
+        from ibl_parser import parse
+        steps = parse(code)
+    except Exception:
+        return None
+    out = []
+
+    def walk(o):
+        if isinstance(o, dict):
+            if o.get("_node") and o.get("action"):
+                out.append((str(o["_node"]), str(o["action"]), o.get("params") if isinstance(o.get("params"), dict) else {}))
+            for v in o.values():
+                walk(v)
+        elif isinstance(o, list):
+            for v in o:
+                walk(v)
+    walk(steps)
+    return out
+
+
+def _action_safe(node: str, action: str, params: dict, safety: dict, op_safety: dict) -> bool:
+    """이 호출이 읽기인가 — **op 축 우선**: 실제 실행될 op 가 op 안전지도에 있으면 그 판정, 없으면 액션 롤업(미등록=쓰기 취급)."""
+    if op_safety:
+        op = None
+        try:
+            from ibl_access import load_nodes_raw
+            from ibl_ops import resolve_op
+            ad = ((load_nodes_raw() or {}).get("nodes", {}).get(node, {}).get("actions", {}).get(action)) or {}
+            op = resolve_op(ad, params or {})
+        except Exception:
+            op = None
+        if op is not None and (node, action, op) in op_safety:
+            return bool(op_safety[(node, action, op)])
+    return bool(safety.get((node, action), False))
+
+
 # 셸(run_command) 읽기 전용 인식 — 보수적 화이트리스트. 여기 없는 동사·리다이렉트·-i·-delete·xargs 는
 # "분류 불가"(읽기가 아님)로 두어 복잡도 규칙이 잡게 한다. 누락의 방향은 항상 "반성 한 번 더"(안전).
 _SHELL_READ_VERBS = {
@@ -386,8 +440,12 @@ def shell_command_is_read_only(command: str) -> bool:
     return True
 
 
-def _classify_call(tc: dict, safety: dict):
-    """도구 호출 1건 → ("read"|"write"|"unknown", 사유). 실패 판정은 호출자가 먼저 한다."""
+def _classify_call(tc: dict, safety: dict, op_safety: dict = None):
+    """도구 호출 1건 → ("read"|"write"|"unknown", 사유). 실패 판정은 호출자가 먼저 한다.
+    IBL 은 op 축으로 판정한다(2026-09-05) — 파싱해 (node, action, params) 를 얻고 실제 op 의 안전을 본다; 파싱 못 하는
+    코드는 정규식으로 액션만 뽑아 액션 롤업(보수)으로 떨어진다."""
+    if op_safety is None:
+        op_safety = _ibl_op_safety_map()
     name = str(tc.get("name", ""))
     base_name = name.rsplit("__", 1)[-1]  # mcp__indiebizos__execute_ibl → execute_ibl
     inp = tc.get("input") if isinstance(tc.get("input"), dict) else {}
@@ -398,8 +456,17 @@ def _classify_call(tc: dict, safety: dict):
         actions = _IBL_ACTION_RE.findall(code)
         if not actions:
             return "unknown", f"IBL 액션 없음 ({name})"
+        steps = _ibl_steps(code)
+        judged = set()
+        for node, action, params in (steps or []):
+            judged.add((node, action))
+            if not _action_safe(node, action, params, safety, op_safety):
+                op = (params or {}).get("op")
+                return "write", f"부작용 액션 ([{node}:{action}]" + (f'{{op: "{op}"}}' if isinstance(op, str) else "") + ")"
         for node, action in actions:
-            # 안전지도에 없거나(미등록) safe=False → 부작용 취급 (보수적)
+            if (node, action) in judged:
+                continue
+            # 파서가 못 편 자리(do 문자열 안 등)는 액션 롤업 — 안전지도에 없거나 safe=False → 부작용 취급 (보수적)
             if not safety.get((node, action), False):
                 return "write", f"부작용 액션 ([{node}:{action}])"
         return "read", ""
@@ -431,6 +498,7 @@ def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool
     """
     n = len(tool_calls or [])
     safety = _ibl_safety_map()
+    op_safety = _ibl_op_safety_map()
     unknown = []
     for tc in (tool_calls or []):
         if not isinstance(tc, dict):
@@ -446,7 +514,7 @@ def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool
             return True, f"빈 결과 ({name}) — 빈 껍데기 오해 위험"
         if _RESULT_FAILURE_RE.search(str(result)):
             return True, f"결과 내 실패 신호 ({name})"
-        kind, why = _classify_call(tc, safety)
+        kind, why = _classify_call(tc, safety, op_safety)
         if kind == "write":
             return True, why
         if kind == "unknown":

@@ -275,6 +275,19 @@ _FN_NAME_RE = re.compile(r'^[\w\uac00-\ud7a3][\w\uac00-\ud7a3.-]*$')
 _FN_NAME_RESERVED = {"if", "else", "case", "goal", "repeat", "try", "catch", "finally", "on_error", "def", "fn"}
 
 
+def same_program(code: str, phrase: list) -> bool:
+    """대표 code 와 관용구(phrase 문장 목록)가 **같은 프로그램**인가 — 슬롯·값을 비운 서명 열이 같으면 같다.
+    (2026-09-05 ep2847: 두 문장 프로그램이 관용구 `수리제안적용하기` 와 낱말 `수리제안적용하기2` 로 두 번 저장됐다 —
+    이름이 갈리면 회상이 둘을 다른 함수로 보여 준다. 한 프로그램은 한 이름.)"""
+    try:
+        import hippo_tree
+        cs = [_sig(_blank_slots(s)) for s in hippo_tree.split_sentences(code or "")]
+        ps = [_sig(_blank_slots(s)) for s in (phrase or []) if isinstance(s, str) and s.strip()]
+    except Exception:
+        return False
+    return bool(cs) and cs == ps
+
+
 def sanitize_fn_name(name, fallback: str = "") -> str:
     """관용구 이름 → `[fn:이름]`/`[def: 이름]` 에 설 수 있는 이름. 공백·기호는 지우고, 비면 의도에서 만든다."""
     s = re.sub(r"[^\w\uac00-\ud7a3.-]", "", str(name or "").strip())

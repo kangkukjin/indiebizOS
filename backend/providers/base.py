@@ -26,7 +26,23 @@ _turn_token_ledger: contextvars.ContextVar = contextvars.ContextVar(
 
 def begin_turn_token_ledger() -> None:
     """턴 시작 — 이 컨텍스트의 토큰 원장을 새로 편다(agent_pipeline 이 턴 머리에서 호출)."""
-    _turn_token_ledger.set({"input": 0, "output": 0, "cache_read": 0})
+    _turn_token_ledger.set({"input": 0, "output": 0, "cache_read": 0, "execution_calls": 0})
+
+
+def note_execution_call() -> int:
+    """실행 프로바이더 호출 1건을 원장에 세고, 이 호출이 턴에서 몇 번째인지(0부터) 돌려준다.
+
+    한 인지 턴은 실행 프로바이더를 여러 번 부를 수 있다 — goal 평가 재실행
+    (cognitive_eval), 자기반성 턴(agent_pipeline), 미이행 약속 재시도(ai_agent). 이 되부름은
+    같은 작업의 연속이라 세션을 끊으면 안 된다(ep718: 임계 150K 때 goal 재실행 3라운드가
+    태스크 도중 fresh 로 끊겨 탈선). 그래서 '턴의 첫 실행 호출인가'를 프로바이더 무관하게
+    여기서 판정한다. 원장이 없으면(파이프라인 밖 직접 호출) 0 — 첫 호출로 본다."""
+    led = _turn_token_ledger.get()
+    if led is None:
+        return 0
+    n = int(led.get("execution_calls", 0))
+    led["execution_calls"] = n + 1
+    return n
 
 
 def read_turn_tokens() -> Optional[int]:

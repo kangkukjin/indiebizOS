@@ -41,8 +41,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, Generator, List, Optional
 from urllib.parse import quote
 
-from .base import BaseProvider
-from episode_logger import truncate_for_log, record_trajectory_event
+from .base import BaseProvider, note_execution_call
+from episode_logger import truncate_for_log, record_trajectory_event, notify_round
 from seam_metrics import SeamTracker   # 셸↔IBL 이음매 관측(2026-09-05) — 값이 온전한 유일한 자리
 from ibl_honesty import HONESTY_KEYS   # 정직 표지 목록의 단일 소스 (손으로 적지 않는다)
 
@@ -412,10 +412,19 @@ class CliSubprocessProvider(BaseProvider):
     # 조절하는 건 천장이 아니라 비용/지연/품질(낡은 tool_result 희석)이다. 옛 150K(윈도우 15%)는
     # goal-eval 재실행 3라운드를 태스크 도중에 끊어 탈선시켰다(episode 718) → 300K(30%).
     # 2026-07-28 사용자 결정으로 500K(50%, 여유 500K)로 재상향 — 리셋 빈도 축소가 목적.
+    # 2026-09-06 사용자 결정으로 300K 로 되돌림 — 16일 실측: Claude Code 876턴이 캐시 읽기
+    # 13.99억 토큰, 시스템 AI 라운드당 컨텍스트 29만(일반 코딩 세션의 3~5배). fresh 리셋
+    # 7회 직후 턴에 품질 저하 신호 없음(평가된 3건 전부 ACHIEVED). 대신 리셋이 **작업
+    # 경계**를 존중하도록 판정을 _should_reset_session 으로 옮겼다 — ep718 부류(재실행
+    # 도중 절단)는 임계값이 아니라 타이밍 문제였다.
     # 트레이드: 세션이 길수록 턴당 캐시 읽기 비용과 낡은 tool_result 희석은 커진다.
     # 되돌릴 때 "200K 벽" 가정 금지 — 옛 200K 기억은 stale, 현 모델은 1M.
-    # 비용이 문제면 값 낮추기보다 낡은 tool_result 비우기.
-    SESSION_RESET_TOKEN_THRESHOLD = 500_000
+    # 턴 *안*의 tool_result 는 CLI 가 트랜스크립트를 소유해 여기서 못 비운다 — 그 비용은
+    # 결과를 처음부터 작게(파일 스필·라운드 축소) 만드는 쪽의 몫이다.
+    SESSION_RESET_TOKEN_THRESHOLD = 300_000
+    # 작업 경계 유예의 상한 — 유예는 한 턴뿐이고 이 배수를 넘으면 무조건 끊는다
+    # (유예가 무한 성장의 뒷문이 되지 않도록).
+    SESSION_RESET_GRACE_MULTIPLIER = 2
 
     # resume 실패 판정용 마커 — 이 문구가 에러 텍스트에 있으면 '세션이 사라졌다'로 보고
     # 매핑을 폐기한 뒤 fresh 로 한 번 더 돌린다. rate limit·인증 같은 일시 오류로는
@@ -516,6 +525,26 @@ class CliSubprocessProvider(BaseProvider):
         """임시 핸들 정리 (temp 파일 삭제 등)."""
         return None
 
+    def _should_reset_session(self, prev_size: int) -> tuple:
+        """크기 임계를 넘은 세션을 이번 호출에서 끊을지 — (끊는가, 로그 사유 또는 "").
+
+        임계 이하면 (False, "") 로 침묵. 임계 초과면 원칙은 fresh 리셋이되 **작업 경계**를
+        존중한다(2026-09-06 사용자 결정, 임계 500K→300K 와 함께):
+        ① 같은 인지 턴의 두 번째 이후 실행 호출(goal 재실행·자기반성·약속 재시도)은
+           절대 끊지 않는다 — ep718 의 뿌리(임계 자체가 아니라 태스크 도중의 리셋).
+        ② 직전 턴이 절단(max_tokens)·마감 실패로 끝났으면 다음 턴은 그 일을 잇는
+           요청일 공산이 크다("마저 완성해") — 한 턴 유예. 단 유예는 임계의
+           SESSION_RESET_GRACE_MULTIPLIER 배까지만(무한 성장 뒷문 금지).
+        리셋을 미룬 이유는 로그에 남긴다 — 침묵하면 '왜 안 끊겼나'를 못 되짚는다."""
+        thr = int(self.SESSION_RESET_TOKEN_THRESHOLD)
+        if prev_size <= thr:
+            return False, ""
+        if int(getattr(self, "_execution_call_ordinal", 0) or 0) > 0:
+            return False, "같은 턴의 재호출(작업 진행 중) — 리셋 유예"
+        if getattr(self, "_prev_turn_incomplete", False) and prev_size <= thr * self.SESSION_RESET_GRACE_MULTIPLIER:
+            return False, "직전 턴 미완(절단·마감) — 한 턴 유예"
+        return True, "fresh 리셋"
+
     def _measure_context_size(self, session_id: str) -> Optional[int]:
         """세션의 *현재* 컨텍스트 토큰 수를 벤더가 직접 잴 수 있으면 재서 돌려준다.
 
@@ -525,6 +554,30 @@ class CliSubprocessProvider(BaseProvider):
         임계를 넘어 멀쩡한 세션이 끊긴다 — 그런 벤더가 이 자리를 덮어쓴다.
         """
         return None
+
+    def _note_model_round(self, model: Optional[str] = None) -> int:
+        """벤더 어댑터가 '모델 응답 1건'을 본 자리에서 부른다 — 실행 라운드를 프로바이더 무관
+        스텝 원장(episode_logger.notify_round)에 찍는다.
+
+        ★2026-09-06 실측(연구 에이전트 09-06 에피소드 11건): model.round 42건이 전부 DeepSeek
+        무의식 분류·배경 원샷이고 **execution 라운드는 0건**. in-process 프로바이더는 자기 도구
+        루프에서 notify_round 를 부르지만, CLI 서브프로세스는 루프가 CLI 안에 살아 아무도 안
+        불렀다 — 스텝 원장을 만든 이유(정규식 회수가 gemini→claude_code 전환에 끊긴 사고,
+        episode_logger 주석 A)가 새 프로바이더에서 같은 모양으로 재발한 것. 그래서 가장 많이
+        쓰는 경로에서 '왕복 대비 IBL' 효율 지표가 계산 불능이었고, 에피소드통계의 라운드 열이
+        Claude Code 주행마다 비어 있었다.
+
+        라운드 경계는 벤더 어휘라 서브클래스가 판정해 부른다(claude_code = `assistant` 이벤트
+        1건 = API 응답 1건, --include-partial-messages 미사용이라 중복 없음). Codex exec JSONL 은
+        turn/item 단위만 노출해 API 응답 경계가 없다 — 그 어댑터는 경계가 생기면 여기를 부른다.
+        budget 은 CLI 가 자기 루프 상한을 노출하지 않아 0(=상한 미상)으로 둔다.
+        """
+        self._model_rounds = int(getattr(self, "_model_rounds", 0) or 0) + 1
+        try:
+            notify_round(self.CLI_DISPLAY, str(model or self.model or ""), self._model_rounds, 0)
+        except Exception:
+            pass  # 관측 기록 실패가 스트림 번역을 끊으면 안 된다 (_log_tool_use 의 seam 기록과 같은 규율)
+        return self._model_rounds
 
     def _reset_turn_state(self) -> None:
         """턴 시작 시 어댑터가 들고 있는 턴-국소 상태를 비운다.
@@ -651,6 +704,14 @@ class CliSubprocessProvider(BaseProvider):
         #  상태가 비어 있다"가 조건 없는 불변식이어야, 실패한 턴의 잔재가 다음 턴에
         #  섞이지 않는다(조건부로 두면 '초기화 안 된 턴' 뒤에 옛 지도 태그·페어링 캐시가
         #  살아남는다).
+        # 직전 턴이 미완으로 끝났나 — 출력 절단(max_tokens)·마감 실패(deadline). 리셋
+        # 판정(_should_reset_session)이 '작업 경계' 유예에 쓴다. 아래 초기화보다 먼저 찍는다.
+        self._prev_turn_incomplete = bool(
+            getattr(self, "_last_stop_reason", None) == "max_tokens"
+            or getattr(self, "last_failure_kind", None))
+        # 이 호출이 인지 턴에서 몇 번째 실행 호출인가(0=첫 호출). goal 재실행·자기반성·
+        # 약속 재시도는 1 이상 — 같은 작업의 연속이라 세션을 끊지 않는다.
+        self._execution_call_ordinal = note_execution_call()
         # 라운드별 컨텍스트 크기 릴레이 (이전 턴 값 잔류 방지)
         self._last_context_size = 0
         # 실패 범주도 턴 상태다 — 지난 턴의 마감이 이번 턴 판단에 새면 안 된다.
@@ -658,6 +719,7 @@ class CliSubprocessProvider(BaseProvider):
         # 지도 태그 누적 (이전 턴 지도가 새 응답에 새는 것 방지)
         self._pending_map_tags = []
         self._seam = SeamTracker()          # 이 턴의 셸↔IBL 이음매(인접·모델 경유)
+        self._model_rounds = 0              # 이 턴의 모델 응답(실행 라운드) 계수 — _note_model_round 가 올린다
         # 벤더 어댑터가 턴 사이에 들고 있는 상태도 함께 비운다
         self._reset_turn_state()
 
@@ -704,11 +766,11 @@ class CliSubprocessProvider(BaseProvider):
                         self._store.record_size(session_key_val, measured)
                     prev_size = int(
                         measured or self._store.load_sizes().get(session_key_val) or 0)
-                    if prev_size > self.SESSION_RESET_TOKEN_THRESHOLD:
-                        print(
-                            f"[{self.CLI_LABEL}] {self.agent_name}: 세션 컨텍스트 "
-                            f"{prev_size:,} > {self.SESSION_RESET_TOKEN_THRESHOLD:,} 토큰 → fresh 리셋"
-                        )
+                    do_reset, why = self._should_reset_session(prev_size)
+                    if why:
+                        print(f"[{self.CLI_LABEL}] {self.agent_name}: 세션 컨텍스트 "
+                              f"{prev_size:,} > {self.SESSION_RESET_TOKEN_THRESHOLD:,} 토큰 → {why}")
+                    if do_reset:
                         self._store.clear_agent(session_key_val)
                         self._store.clear_size(session_key_val)
                         stored_session_id = None

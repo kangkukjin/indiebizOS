@@ -516,6 +516,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
 
         if etype == "assistant":
             msg = event.get("message") or {}
+            # 모델 응답 1건 = 실행 라운드 1건 — 스텝 원장에 찍는다(cli_provider._note_model_round 주석).
+            # 이 줄이 없던 동안 Claude Code 주행의 execution 라운드는 0건으로 남았다(2026-09-06 실측).
+            self._note_model_round(msg.get("model"))
             # 라운드별 컨텍스트 크기 추적 — 매 assistant 라운드의 입력 컨텍스트
             # (in+cache_read+cache_create)를 갱신해 *마지막* 라운드 값을 남긴다.
             # result 이벤트의 usage 는 라운드 누적이라 세션 크기를 7배 부풀린다(버그).
@@ -620,8 +623,16 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             cache_read = int(usage.get("cache_read_input_tokens") or 0)
             cache_create = int(usage.get("cache_creation_input_tokens") or 0)
             # _last_context_size 는 assistant 라운드별로 갱신됨(마지막 라운드 = 세션 크기).
-            # result.usage 는 라운드 누적이라 여기서 쓰면 안 된다.
-            self.metrics.record_request(latency_ms, input_tokens, output_tokens)
+            # result.usage 는 라운드 누적이라 *세션 크기*로는 쓰면 안 되지만, 턴 원장이
+            # 원하는 것이 바로 그 누적(이 턴의 모델 소요 합)이다.
+            # ★2026-09-06 실측: 여기가 cache_read·cache_create 를 안 넘겨 Claude Code 턴의
+            # [턴비용]·해마 avg_tokens·turn_budget 고정물이 캐시분을 못 봤다 — 16일치
+            # 캐시 읽기 13.99억 토큰(전체 비용의 95%)이 원장에 0 으로 남았고, 토큰
+            # 선택압이 가장 큰 비용을 못 본 채 돌았다. Anthropic 은 input_tokens 에 캐시분이
+            # 빠져 있으므로 원장의 input 은 전체 프롬프트(=input+cache_read+cache_create)로
+            # 적어 다른 벤더와 같은 뜻으로 맞춘다(providers/anthropic.py 와 같은 규약).
+            self.metrics.record_request(latency_ms, input_tokens + cache_read + cache_create,
+                                        output_tokens, cache_read_tokens=cache_read)
             err_flag = " (error)" if event.get("is_error") else ""
             cache_info = (f" cache_read={cache_read} cache_create={cache_create}"
                           if (cache_read or cache_create) else "")

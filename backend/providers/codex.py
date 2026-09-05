@@ -219,7 +219,7 @@ class CodexProvider(CliSubprocessProvider):
     # (모델명 하드코딩이 은퇴로 죽는 것과 같은 부류).
     REASONING_EFFORTS = ("minimal", "low", "medium", "high", "xhigh", "max", "ultra")
 
-    # 리셋 임계는 **모델 창에서 파생**한다. 상속받는 500K 는 창 1M 짜리 Claude 기준이라
+    # 리셋 임계는 **모델 창에서 파생**한다. 상속받는 300K(2026-09-06, 옛 500K)는 창 1M 짜리 Claude 기준이라
     # Codex(창 272K, 실효 95% = 258.4K)에서는 창보다 커서 관문이 영영 안 걸린다 — 실측
     # 2026-08-31 스토리텔러 스레드는 한 턴에 229,322/258,400(89%)까지 찼는데도 조용했다.
     # 창의 절반에서 끊는 이유는 claude_code 와 같다(비용·지연·낡은 tool_result 희석).

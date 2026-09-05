@@ -371,9 +371,12 @@ class AnthropicProvider(BaseProvider):
                     # 전체 프롬프트(=input+cache_read)로 적어 다른 벤더와 같은 뜻으로 맞춘다.
                     from providers.base import extract_cached_prompt_tokens
                     cache_read = extract_cached_prompt_tokens(final_message.usage)
-                    self.metrics.record_request(latency_ms, input_tokens + cache_read, output_tokens,
-                                                cache_read_tokens=cache_read)
-                    print(f"[Anthropic] 토큰: 입력={input_tokens + cache_read}, 출력={output_tokens}, 캐시적중={cache_read}, 지연={latency_ms:.0f}ms")
+                    # cache_creation 도 input_tokens 밖의 프롬프트분이다(쓰기 비용) — 빼면
+                    # 전체 프롬프트가 작게 적힌다(claude_code.py result 분기와 같은 규약).
+                    cache_create = int(getattr(final_message.usage, 'cache_creation_input_tokens', 0) or 0)
+                    self.metrics.record_request(latency_ms, input_tokens + cache_read + cache_create,
+                                                output_tokens, cache_read_tokens=cache_read)
+                    print(f"[Anthropic] 토큰: 입력={input_tokens + cache_read + cache_create}, 출력={output_tokens}, 캐시적중={cache_read}, 캐시생성={cache_create}, 지연={latency_ms:.0f}ms")
 
             # 빈 응답 복구 처리 (도구 결과 후 빈 응답인 경우)
             if not collected_text.strip() and not tool_uses and depth > 0 and empty_response_retries < 2:

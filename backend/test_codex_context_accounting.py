@@ -84,7 +84,7 @@ def test_unreadable_rollout_measures_nothing(tmp_path, monkeypatch):
 
 
 def test_reset_threshold_derives_from_model_window(tmp_path, monkeypatch):
-    """임계는 상속받은 500K(창 1M Claude 기준)가 아니라 Codex 창에서 파생된다."""
+    """임계는 상속받은 300K(창 1M Claude 기준, 옛 500K)가 아니라 Codex 창에서 파생된다."""
     monkeypatch.setenv("CODEX_HOME", str(tmp_path))
     (tmp_path / "models_cache.json").write_text(json.dumps({"models": [
         {"slug": "gpt-5.6-sol", "context_window": 272_000,

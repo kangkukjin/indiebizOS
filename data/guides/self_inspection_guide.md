@@ -43,24 +43,18 @@
 
 ## 2. 데이터 소스 — 어디서 무엇을 가져오는가
 
-당신은 Claude Code provider이므로 **Bash 명령으로 SQLite를 직접 쿼리**할 수 있다. 다음이 주요 데이터 소스:
+원장은 **`[sense:sqlite]`(읽기 전용 SQL, 2026-09-05)** 로 문장 안에서 읽는다 — 결과가 items 라 `>> [table:filter]/[table:groupby]` 로 바로 흐르고, 셸 `sqlite3` 로 나가면 그 값이 다음 IBL 문장에 손으로 되찍히는 이음매가 생긴다. 표·열을 모르면 `op:"tables"`→`op:"schema"` 먼저. 다음이 주요 데이터 소스:
 
 ### A. episode_log (가장 중요)
 모든 사용자 요청의 실행 흐름 — 분류·의식·도구 호출·결과·평가 다 들어있음.
 
-```bash
-sqlite3 data/world_pulse.db "
-SELECT id, started_at, agent, substr(user_message, 1, 80) AS msg,
-       length(log) AS log_len, total_ms
-FROM episode_log
-WHERE started_at > datetime('now', '-7 days')
-ORDER BY id DESC;
-"
+```ibl
+[sense:sqlite]{path: "~workspace/data/world_pulse.db", query: "SELECT id, started_at, agent, substr(user_message, 1, 80) AS msg, length(log) AS log_len, total_ms FROM episode_log WHERE started_at > datetime('now', '-7 days') ORDER BY id DESC", limit: 50}
 ```
 
-특정 에피소드 전체 로그:
-```bash
-sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE id = ?;"
+특정 에피소드 전체 로그(길다 — 먼저 아래 trajectory 로, 원문은 정말 필요할 때만):
+```ibl
+[sense:sqlite]{path: "~workspace/data/world_pulse.db", query: "SELECT log FROM episode_log WHERE id = ?", params: [<id>], limit: 1}
 ```
 
 원인·실패·재개·파일 변경의 **순서**가 질문이면 원문 로그 grep보다 먼저 구조화 궤적을 쓴다:
@@ -76,23 +70,15 @@ episode memory, 정확한 실행 순서는 trajectory, 세부 원문이 정말 �
 ### B. episode_summary
 요약된 메트릭 (영구 보존).
 
-```bash
-sqlite3 data/world_pulse.db "
-SELECT * FROM episode_summary
-WHERE started_at > datetime('now', '-30 days')
-ORDER BY id DESC;
-"
+```ibl
+[sense:sqlite]{path: "~workspace/data/world_pulse.db", query: "SELECT * FROM episode_summary WHERE started_at > datetime('now', '-30 days') ORDER BY id DESC", limit: 200}
 ```
 
 ### C. IBL 건강 점검 결과
 일일 건강 점검(`scripts/ibl_health_check.py` = 정적+fixture+골든, AI 0) 이력. `__static__`·`__ibl_health__` 노드가 그 결과다.
 
-```bash
-sqlite3 data/world_pulse.db "
-SELECT node, action, success, error_message, timestamp FROM self_checks
-WHERE timestamp > datetime('now', '-7 days')
-ORDER BY id DESC;
-"
+```ibl
+[sense:sqlite]{path: "~workspace/data/world_pulse.db", query: "SELECT node, action, success, error_message, timestamp FROM self_checks WHERE timestamp > datetime('now', '-7 days') ORDER BY id DESC", limit: 200}
 ```
 
 (또는 직접 트리거: `[sense:self_check]` IBL 액션 = `run_daily_health_check`, 혹은 `python scripts/ibl_health_check.py` 단독 실행)

@@ -62,7 +62,8 @@ github저장소메타:
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
     도구 계수(IBL/Bash)와 실제 IBL 파서 기반 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)를 items 통화로.
-    조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로'
+    조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로 ★단순 조회(최근 N건·특정 열)는 [sense:sqlite] 로 — 이 스크립트는 로그
+    방언 파싱·조합 지표 집계 관습만'
   file: 에피소드통계.py
   interpreter: python
   registered_at: '2026-08-23T21:52:31'

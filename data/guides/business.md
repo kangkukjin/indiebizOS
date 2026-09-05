@@ -326,18 +326,17 @@ POST /business/messages {
 
 ## 8. 디버깅·관리
 
+```ibl
+# DB 검사 — 읽기 전용 낱말(셸 sqlite3 대신, 결과가 items 로 흐른다)
+[sense:sqlite]{op: "tables", path: "~workspace/data/business.db"}
+[sense:sqlite]{op: "schema", path: "~workspace/data/business.db", table: "neighbors"}
+
+# 채널·자동 응답 상태 — GET 은 HTTP 탐침 낱말로(상태·본문 미리보기)
+[sense:http]{op: "body", url: "http://127.0.0.1:8765/business/channels"}
+[sense:http]{op: "body", url: "http://127.0.0.1:8765/business/auto-response/status"}
+```
 ```bash
-# DB 직접 검사
-sqlite3 data/business.db ".tables"
-sqlite3 data/business.db ".schema neighbors"
-
-# 채널 상태 확인
-curl http://127.0.0.1:8765/business/channels
-
-# 자동 응답 상태
-curl http://127.0.0.1:8765/business/auto-response/status
-
-# 즉시 폴링
+# 즉시 폴링 — POST(부작용)는 낱말 밖, 셸로
 curl -X POST http://127.0.0.1:8765/business/channels/gmail/poll
 ```
 

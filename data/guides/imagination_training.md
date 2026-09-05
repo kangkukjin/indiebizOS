@@ -93,8 +93,8 @@ run_command: curl -s -X POST http://127.0.0.1:8765/ibl/validate -H "Content-Type
   - 문장 param 이 아니라 **body 필드**여야 `each`·폴백·병렬 가지까지 전파된다(project_id 와 같은 이유).
   - 덤: `origin` 이 `'user'` 가 아니므로 리허설은 RED 수정 그랜트를 못 받는다 —
     훈련 턴이 라이브 코어를 고쳤던 22회차 사고와 같은 방향의 보호다.
-  - 회차 뒤 대조: `sqlite3 data/world_pulse.db "select source, count(*) from action_health
-    where timestamp >= '<회차 시작>' group by 1"` — `training` 으로 쌓였는지 눈으로 확인한다.
+  - 회차 뒤 대조: `[sense:sqlite]{path: "~workspace/data/world_pulse.db", query: "select source, count(*) as n from action_health
+    where timestamp >= '<회차 시작>' group by 1"}` — `training` 으로 쌓였는지 items 로 확인한다(셸 sqlite3 대신).
 - ★**발화 실측은 시간 경계를 넘는다** (2026-09-02 54회차 신설): 트리거·스케줄의 *발화*(스케줄러
   틱·타이머 스레드·run_now)는 `origin:"training"` 이 실린 요청 스레드 밖에서 돌므로 건강 원장에
   `usage`(channel `scheduler`·빈 채널·`agent`)로 쌓이고, 소유자가 시스템 AI 로 귀속되면 시스템 AI

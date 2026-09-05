@@ -267,5 +267,44 @@ def test_distill_passes_cost_and_missed_to_note_run(monkeypatch, tmp_path):
     assert got["missed"] == {"retyped": ["뉴스모아쓰기"], "mergeable": ["1-2"]}
 
 
+# ---------------------------------------------------------------- 이음매 지표(셸↔IBL, 모델 경유)
+def test_seam_metrics_counts_only_model_carried_data():
+    M = _load_script()
+    log = (
+        '[ClaudeCode/시스템 AI] tool_use Bash {"command": "grep -rn mediaModel backend"}\n'
+        '[ClaudeCode/시스템 AI] tool_result backend/static/app_render_core.js:236: function mediaModel(\n'
+        '[ClaudeCode/시스템 AI] tool_use mcp__indiebizos__execute_ibl {"code": "[self:read]{path: \\"backend/static/app_render_core.js\\", start_line: 236}"}\n'
+        '[ClaudeCode/시스템 AI] tool_result {"result": "..."}\n'
+        '[ClaudeCode/시스템 AI] tool_use Bash {"command": "python3 - <<EOF\\nprint(ids)\\nEOF"}\n'
+        '[ClaudeCode/시스템 AI] tool_result [1650, 1651, 1654]\n'
+        '[ClaudeCode/시스템 AI] tool_use mcp__indiebizos__execute_ibl {"code": "[table:each]{items: [{id: 1650}, {id: 1651}, {id: 1654}], do: \\"[self:x]{}\\"}"}\n'
+        '[ClaudeCode/시스템 AI] tool_result {"success": true}\n'
+        '[ClaudeCode/시스템 AI] tool_use mcp__indiebizos__execute_ibl {"code": "[self:time]{}"}\n'
+        '[ClaudeCode/시스템 AI] tool_result {"time": "2026-09-05"}\n'
+    )
+    m = M.seam_metrics_from_log(log)
+    # 인접 쌍: Bash→IBL(grep→read: 경로가 grep 입력에도 있었으니 건너간 데이터 아님), IBL→Bash, Bash→IBL(id 되찍기), IBL→IBL(아님)
+    assert m["seams"] == 3
+    assert m["carried"] == 1 and m["carried_values"] == 3            # 1650·1651·1654 가 모델을 거쳐 건너감
+    assert M.seam_metrics_from_log("")["seams"] == 0
+
+
+def test_seam_tracker_at_provider_boundary_sees_full_results():
+    """프로바이더 자리의 트래커 — 결과 전문으로 되찍기를 잡는다(로그 절단과 무관). 다른 도구가 끼면 이음매가 아니다."""
+    from seam_metrics import SeamTracker, crossed_values
+    t = SeamTracker()
+    assert t.on_tool_use("Bash", {"command": "python3 -c 'print(ids)'"}) is None
+    t.on_tool_result("[1650, 1651, 1654]" + " x" * 500)                      # 300자 넘는 결과 — 로그라면 잘렸을 자리
+    obs = t.on_tool_use("mcp__indiebizos__execute_ibl", {"code": "[table:each]{items: [{id: 1650}, {id: 1651}, {id: 1654}]}"})
+    assert obs and obs["from"] == "shell" and obs["to"] == "ibl" and obs["carried"] and obs["values"] == 3
+    t.on_tool_result('{"success": true, "items": [{"path": "/tmp/out_2026.json"}]}')
+    obs2 = t.on_tool_use("Bash", {"command": "cat /tmp/out_2026.json"})
+    assert obs2 and obs2["from"] == "ibl" and obs2["carried"] and obs2["sample"] == ["tmp/out_2026.json"]   # 값은 앞뒤 /·. 을 벗겨 정규화
+    assert t.on_tool_use("Read", {"file_path": "/tmp/out_2026.json"}) is None   # 다른 도구 — 이음매 아님
+    assert t.on_tool_use("mcp__indiebizos__execute_ibl", {"code": "[self:time]{}"}) is None
+    assert t.summary() == {"seams": 2, "carried": 2, "carried_values": 4}
+    assert crossed_values("총 8행", "grep 8행", "[self:read]{limit: 8}") == []     # 짧은 수치·앞 입력에 있던 값은 안 센다
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))

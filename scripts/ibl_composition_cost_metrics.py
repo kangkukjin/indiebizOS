@@ -23,6 +23,7 @@
   실패        = ibl.finished.success == false
   첫 프로그램 = 첫 ibl.started 가 action_count ≥ 2 이고 그 ibl.finished 가 success (True/False/None=호출 없음)
   통화 부류 실패 = episode_log.log 의 통화 불일치·미기록 변수·타입 오류 메시지 매치 수
+  이음매·모델 경유 = 셸↔IBL 인접 쌍 수와 그중 값이 모델 컨텍스트를 거쳐 되찍힌 수(seam_metrics — 지표의 정본, 2026-09-05)
                    (정적 검사가 없앨 부류 — 09-05 실패의 대부분)
 필터: --days N(14) · --source usage · --all-sources · 정기 보고서(`보고서 써줘` 로 끝나는 요청)는
       기본 제외(--include-reports 로 포함) — 지표는 **새 요청**에서 잰다.
@@ -62,6 +63,65 @@ def is_report_request(user_message: Optional[str]) -> bool:
 
 def currency_failures(log: Optional[str]) -> int:
     return len(CURRENCY_FAIL_RE.findall(log or ""))
+
+
+# ── 이음매 지표 (2026-09-05, 사용자 정식화: "셸로 되는 일을 IBL 로 하는 게 핵심이 아니다 — 문제는 IBL 어휘와 셸이
+#    만나는 자리다. 둘은 조합이 안 되니 모델 소환으로 갈라지고, 그 자리에서는 IBL 이 합리적이다.")
+#    정본 = 프로바이더가 tool_result 전문을 보며 남기는 궤적 이벤트 `seam`(backend/base/seam_metrics.SeamTracker).
+#    그 이벤트가 없는 옛 에피소드는 episode_log 로그에서 추정한다 — 로그의 도구 결과는 300자에서 절단되므로 **하한**이다.
+from seam_metrics import SHELL_TOOLS, crossed_values  # noqa: E402  (판정기는 한 벌)
+_TOOL_LINE_RE = re.compile(r"^\[[^\]\n]+\] (tool_use|tool_result) ?(\w+)?", re.M)
+
+
+def _tool_events(log: str) -> List[Dict[str, str]]:
+    """로그 → [{tool, input, result}] (아웃오브프로세스 방언: '[X] tool_use <도구> <입력>' 뒤 '[X] tool_result <본문…>')."""
+    marks = list(_TOOL_LINE_RE.finditer(log or ""))
+    events: List[Dict[str, str]] = []
+    for i, m in enumerate(marks):
+        end = marks[i + 1].start() if i + 1 < len(marks) else len(log)
+        body = log[m.end():end]
+        if m.group(1) == "tool_use":
+            tool = m.group(2) or ""
+            events.append({"tool": "ibl" if "execute_ibl" in tool else tool, "input": body, "result": ""})
+        elif events:
+            events[-1]["result"] += body
+    return events
+
+
+def seam_metrics_from_log(log: Optional[str]) -> Dict[str, Any]:
+    """로그 추정(하한) — {seams, carried, carried_values}."""
+    ev = _tool_events(log or "")
+    seams = carried = carried_values = 0
+    for a, b in zip(ev, ev[1:]):
+        if not ({a["tool"], b["tool"]} == {"ibl"} or (a["tool"] in SHELL_TOOLS and b["tool"] == "ibl") or (a["tool"] == "ibl" and b["tool"] in SHELL_TOOLS)):
+            continue
+        if a["tool"] == b["tool"]:
+            continue
+        seams += 1
+        crossed = crossed_values(a["result"], a["input"], b["input"])
+        if crossed:
+            carried += 1
+            carried_values += len(crossed)
+    return {"seams": seams, "carried": carried, "carried_values": carried_values}
+
+
+def seam_metrics(conn: Optional[sqlite3.Connection], ep: Dict[str, Any]) -> Dict[str, Any]:
+    """정본(궤적 seam 이벤트) 우선, 없으면 로그 추정 + source 표지."""
+    if conn is not None:
+        rows = conn.execute("SELECT data FROM trajectory_event WHERE episode_id=? AND kind='seam'", (ep["id"],)).fetchall()
+        if rows:
+            seams = len(rows); carried = 0; values = 0
+            for (d,) in rows:
+                try:
+                    j = json.loads(d or "{}")
+                except ValueError:
+                    j = {}
+                if j.get("carried"):
+                    carried += 1; values += int(j.get("values") or 0)
+            return {"seams": seams, "carried": carried, "carried_values": values, "source": "trajectory"}
+    est = seam_metrics_from_log(ep.get("log"))
+    est["source"] = "log(하한)"
+    return est
 
 
 def _fmt_k(n: int) -> str:
@@ -120,6 +180,7 @@ def episode_metrics(conn: sqlite3.Connection, ep: Dict[str, Any]) -> Dict[str, A
         "first_program_success": first_ok,
         "first_call_actions": list(first["actions"]) if first else [],
         "currency_failures": currency_failures(ep.get("log")),
+        **{f"seam_{k}": v for k, v in seam_metrics(conn, ep).items()},
         "total_ms": int(ep.get("total_ms") or 0),
         "top_heads": [h for h, _ in heads.most_common(5)],
     }
@@ -182,7 +243,13 @@ def aggregate(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
             "reread_chars": sum(r["reread_chars"] for r in with_calls),
             "failed_calls": sum(r["failed_calls"] for r in with_calls),
             "currency_failures": sum(r["currency_failures"] for r in rows),
+            "seams": sum(r.get("seam_seams", 0) for r in rows),
+            "seams_carried": sum(r.get("seam_carried", 0) for r in rows),
+            "seam_carried_values": sum(r.get("seam_carried_values", 0) for r in rows),
         },
+        "episodes_with_carried_seam": sum(1 for r in rows if r.get("seam_carried", 0)),
+        "seam_source": {"trajectory": sum(1 for r in rows if r.get("seam_source") == "trajectory"),
+                        "log_lower_bound": sum(1 for r in rows if r.get("seam_source") != "trajectory")},
         "first_program_success": {"ok": fp_ok, "of": len(fp),
                                   "rate": round(fp_ok / len(fp), 2) if fp else None},
         "single_action_share": round(sum(r["single_action_calls"] for r in with_calls)
@@ -193,7 +260,7 @@ def aggregate(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
 # ─────────────────────────── 표면 ───────────────────────────
 
 def render_table(rows: List[Dict[str, Any]]) -> str:
-    head = f"{'id':>5} {'날짜':10} {'호출':>4} {'1액션':>5} {'액션/호출':>8} {'타이핑':>8} {'되읽기':>8} {'배율':>5} {'실패':>4} {'통화':>4} {'첫프로그램':6} {'시간':>7}  첫 호출 머리"
+    head = f"{'id':>5} {'날짜':10} {'호출':>4} {'1액션':>5} {'액션/호출':>8} {'타이핑':>8} {'되읽기':>8} {'배율':>5} {'실패':>4} {'통화':>4} {'이음매':>5} {'경유':>4} {'첫프로그램':6} {'시간':>7}  첫 호출 머리"
     lines = [head, "-" * len(head)]
     for r in sorted(rows, key=lambda x: x["id"]):
         fp = {True: "✓", False: "✗", None: "–"}[r["first_program_success"]]
@@ -201,7 +268,7 @@ def render_table(rows: List[Dict[str, Any]]) -> str:
         heads = ", ".join(r["first_call_actions"][:4]) + (" …" if len(r["first_call_actions"]) > 4 else "")
         lines.append(f"{r['id']:>5} {r['date']:10} {r['calls']:>4} {r['single_action_calls']:>5} "
                      f"{r['actions_per_call']:>8.2f} {_fmt_k(r['typed_chars']):>8} {_fmt_k(r['reread_chars']):>8} "
-                     f"{r['reread_ratio']:>5.1f} {r['failed_calls']:>4} {r['currency_failures']:>4} {fp:^10} {secs:>7}  {heads}")
+                     f"{r['reread_ratio']:>5.1f} {r['failed_calls']:>4} {r['currency_failures']:>4} {r.get('seam_seams', 0):>5} {r.get('seam_carried', 0):>4} {fp:^10} {secs:>7}  {heads}")
     return "\n".join(lines)
 
 
@@ -216,6 +283,9 @@ def render_summary(agg: Dict[str, Any]) -> str:
         f"타이핑 {_fmt_k(s['typed_chars'])} · 되읽기 {_fmt_k(s['reread_chars'])} · 실패 {s['failed_calls']} · "
         f"통화 부류 실패 {s['currency_failures']}",
         f"첫 프로그램 성공  {fp['ok']}/{fp['of']}" + (f" ({fp['rate']:.0%})" if fp['rate'] is not None else ""),
+        f"이음매(셸↔IBL 인접) {s['seams']} · 그중 모델 경유(값이 컨텍스트를 거쳐 건너감) {s['seams_carried']} "
+        f"({s['seam_carried_values']}값 · 에피소드 {agg['episodes_with_carried_seam']}) — 이 수가 파일로 건네면 사라질 왕복 "
+        f"[정본(궤적) {agg['seam_source']['trajectory']}건 · 로그 추정=하한 {agg['seam_source']['log_lower_bound']}건]",
     ])
 
 

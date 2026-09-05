@@ -20,6 +20,7 @@
     "base/repeat_guard",
     "base/runtime_utils",
     "base/safe_store",
+    "base/seam_metrics",
     "base/steer_inbox",
     "base/thread_context",
     "base/thumbnails",
@@ -274,8 +275,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 265,
-    "engine": 245,
+    "total": 266,
+    "engine": 246,
     "blocklist": 20
   }
 }

@@ -42,7 +42,8 @@ from typing import Any, Callable, Dict, Generator, List, Optional
 from urllib.parse import quote
 
 from .base import BaseProvider
-from episode_logger import truncate_for_log
+from episode_logger import truncate_for_log, record_trajectory_event
+from seam_metrics import SeamTracker   # 셸↔IBL 이음매 관측(2026-09-05) — 값이 온전한 유일한 자리
 from ibl_honesty import HONESTY_KEYS   # 정직 표지 목록의 단일 소스 (손으로 적지 않는다)
 
 # 로그 절단 폭 — 회고 가치 대 로그 예산의 값. 자른 자리는 truncate_for_log 가 반드시
@@ -656,6 +657,7 @@ class CliSubprocessProvider(BaseProvider):
         self.last_failure_kind = None
         # 지도 태그 누적 (이전 턴 지도가 새 응답에 새는 것 방지)
         self._pending_map_tags = []
+        self._seam = SeamTracker()          # 이 턴의 셸↔IBL 이음매(인접·모델 경유)
         # 벤더 어댑터가 턴 사이에 들고 있는 상태도 함께 비운다
         self._reset_turn_state()
 
@@ -1043,11 +1045,25 @@ class CliSubprocessProvider(BaseProvider):
         _cap = (_TOOLUSE_CAP_IBL if str(tool_name).endswith("execute_ibl")
                 else _TOOLUSE_CAP)
         self._log(f"tool_use {tool_name} {truncate_for_log(input_repr, _cap)}")
+        # 이음매 관측(2026-09-05): 앞 호출이 셸이고 이 호출이 IBL(또는 그 반대)이면 — 앞 **결과 전문**의 값이 이 입력에
+        # 되찍혔는지 본다. 궤적 이벤트(seam) + 로그 한 줄로 남겨 사후 지표가 절단된 로그에 기대지 않게 한다.
+        try:
+            _obs = self._seam.on_tool_use(tool_name, tool_input)
+            if _obs:
+                record_trajectory_event("seam", _obs)
+                if _obs.get("carried"):
+                    self._log(f"이음매 {_obs['from']}->{_obs['to']} 모델 경유 {_obs['values']}값 — 값이 컨텍스트를 거쳐 되찍힘(파일로 건네면 사라질 왕복)")
+        except Exception:
+            pass
 
     def _log_tool_result(self, result_text: str, is_error: bool):
         """도구 결과를 찍고, 지도 봉투를 캡처해 최종 응답 재주입을 예약한다."""
         # 머리는 자르되 **실패 신호는 삼키지 않는다**. (error) 줄은 폭 자체가 넓고
         # (평문 traceback 은 본문이 유일한 단서), 나머지는 300자 머리에 정직 표지 요약을 잇는다.
+        try:
+            self._seam.on_tool_result(result_text)     # 이음매 관측용 결과 전문(절단 전)
+        except Exception:
+            pass
         _cap = _TOOLRESULT_CAP_ERROR if is_error else _TOOLRESULT_CAP
         result_preview = _preview_with_signals(result_text.replace("\n", " "), _cap)
         err_tag = " (error)" if is_error else ""

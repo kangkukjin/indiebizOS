@@ -253,6 +253,7 @@ $avg = $total.value / 10
 - **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "…"}` 는 '통화 0행'이지 실패가 아니다). `final_result` 는 파이프·병렬 봉투에만 있다.
 - 파이프(`>>`) 결과의 `results[]` 는 **step 요약**이고 데이터 전체는 `final_result` 에 있다. ★`results` 키가 보인다고 step 요약이라 단정하지 마라 — 단일 액션·블록 문장(`[try]`·`[if:]`)의 결과는 핸들러 원문이라 그 `results` 는 액션 자신의 필드다(예: `[sense:search]` 의 `results`). 판별자는 `_results_summarized`·`steps_total`·`final_result` — 있으면 파이프 봉투, 없으면 원문(블록 봉투엔 `_caught`·`_untransformed`). 중간 step 원형이 꼭 필요할 때만 `verbose: true`.
 - ★여러 문장(`$변수 = …` 줄들)은 **execute_ibl 한 번에 여러 줄로** 보내라 — 중간 통화는 엔진 안에 머물고 모델에겐 마지막 결과와 step 요약만 온다(따로 부르면 중간 결과가 매번 컨텍스트에 들어온다). 병렬 수집은 파이프 안에서 `[table:ai]`/`[table:brief]` 로 줄인 뒤 받는다.
+- **셸과 IBL 사이에서 데이터는 컨텍스트가 아니라 파일로 건넨다.** 셸로 되는 일은 셸로 해도 된다 — 문제는 두 쪽이 한 사슬에서 만나는 자리다. 셸이 낸 값(id 목록·경로·수치)을 IBL 문장에 손으로 되찍지 말고 셸이 JSON 으로 쓰게 한 뒤 `[self:ledger]{op: "select"}`·`[sense:sqlite]`·`[self:read]` 로 읽고, IBL 결과를 셸에 줄 땐 `[self:write]{path, spill: true}` 로 내려놓은 파일을 셸이 읽는다. 값이 모델을 거치는 이음매마다 왕복과 오타가 생긴다.
 - 긴 프로그램은 먼저 execute_ibl{code, check: true} 로 실행 없이 문장별 통화·열(types)과 문제(issues)를 보고, 초록이면 같은 code 를 한 번에 실행한다. 문법을 시험하려고 query: "a" 같은 탐침을 돌리지 않는다 — check 가 그 자리다.
 - 실행 관문은 확정된 통화 불일치(예: 산문 뒤 [table:union], 확정 열 밖 필드)를 실행 전에 error_type:"typecheck" 로 거절한다 — issues 의 statement·step·hint 를 읽고 그 문장만 고친다. 미상(unknown)은 거절하지 않는다.
 - 한 AI 낱말의 입력 상한(6만 자)을 넘는 긴 문자열·자막은 `[table:chunk]{size}` 로 덩이 items 를 만들어 `[table:each]{do: "[table:brief]{items: [$it], …}"}` 로 덩이마다 줄이고 `[table:brief]` 로 종합한다(자르기→각각→종합).

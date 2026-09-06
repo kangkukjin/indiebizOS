@@ -154,6 +154,27 @@ _arm(json.dumps([{"date": "2026-08-01", "item": "카페라떼", "amount": 5500, 
                  {"date": "2026-08-02", "item": "김밥", "amount": 3000, "_quote": "환각2"}], ensure_ascii=False))
 r = run("ai_struct", {"schema": "finance", "text": SRC})
 check("S2 근거 대조 전멸 → 정직 실패", not r.get("success") and "전멸" in r.get("error", ""))
+check("S2-a 전멸 문구가 관문 해제(grounded:false)를 권하지 않는다(2026-09-07 ep2952)",
+      "grounded:false" not in r.get("error", "") and "끄면 창작" in r.get("error", ""))
+
+# ★근거 필드 누락(2026-09-07 ep2952 실측: 11건 전부 _quote None) — 환각이 아니라 형식 오류. 되먹임 1회로 회복한다.
+_arm(json.dumps([{"date": "2026-08-01", "item": "카페라떼", "amount": 5500}], ensure_ascii=False),
+     json.dumps([{"date": "2026-08-01", "item": "카페라떼", "amount": 5500, "_quote": "카페라떼 5,500원"}], ensure_ascii=False))
+r = run("ai_struct", {"schema": "finance", "text": SRC})
+check("S2-b _quote 전부 누락 → 형식 되먹임 1회 → 통과", r.get("success") and r.get("quote_retry") is True
+      and r["count"] == 1 and _FAKE["calls"] == 2 and not r.get("dropped_ungrounded"))
+_arm(json.dumps([{"date": "2026-08-01", "item": "카페라떼", "amount": 5500}], ensure_ascii=False),
+     json.dumps([{"date": "2026-08-01", "item": "카페라떼", "amount": 5500}], ensure_ascii=False))
+r = run("ai_struct", {"schema": "finance", "text": SRC})
+check("S2-c 두 번 다 누락 → '근거 필드 누락'(전멸·환각 아님), 해제 권고 없음",
+      not r.get("success") and "근거 필드 누락" in r.get("error", "") and "전멸" not in r.get("error", "")
+      and "grounded:false" not in r.get("error", "") and _FAKE["calls"] == 2)
+_arm(json.dumps([{"date": "2026-08-01", "item": "카페라떼", "amount": 5500, "_quote": "카페라떼 5,500원"},
+                 {"date": "2026-08-02", "item": "김밥", "amount": 3000}], ensure_ascii=False))
+r = run("ai_struct", {"schema": "finance", "text": SRC})
+check("S2-d 일부 누락 → 누락(missing_quote)과 불일치(dropped_ungrounded)를 갈라 신고",
+      r.get("success") and r["count"] == 1 and r.get("missing_quote") == 1 and not r.get("dropped_ungrounded")
+      and _FAKE["calls"] == 1)
 
 _arm(json.dumps([{"행사명": "야시장", "날짜": "2026-08-20"}], ensure_ascii=False))
 r = run("ai_struct", {"schema": "행사명, 날짜", "text": "8월 20일 야시장이 열린다"})

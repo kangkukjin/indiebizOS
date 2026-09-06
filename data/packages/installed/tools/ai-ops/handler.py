@@ -201,6 +201,11 @@ def _known_lines(known) -> list:
     return out
 
 
+def _quote_missing(records: list, quote_field: str = "_quote") -> int:
+    """근거 발췌가 아예 없는(None/빈 문자열) 기록 수 — 대조 실패(불일치)와 다른 사건이다."""
+    return sum(1 for r in (records or []) if not str((r or {}).get(quote_field) or "").strip())
+
+
 def _struct(tool_input: dict) -> str:
     schema = str(tool_input.get("schema") or "").strip()
     if not schema:
@@ -278,7 +283,10 @@ def _struct(tool_input: dict) -> str:
     if grounded:
         system += (" ⑤각 기록에 _quote 필드로 그 기록의 근거가 되는 원문의 **첫 구절 한 토막**(8~12단어 안, 원문 표기 그대로)만 "
                    "넣을 것 — 긴 인용은 쓰지 말 것. 나머지 문장은 코드가 원문에서 이어 붙인다.")
-    system += f"\n\n[출력 계약]\n{schema}"
+    # 근거 필드를 계약에 명시한다(2026-09-07 ep2952): 규칙 ⑤만으로는 "②확실치 않은 필드는 생략" 에 먹혀
+    # 모델이 _quote 를 통째로 빠뜨리는 출력이 나왔고(실측 11건 전부 None), 그것이 '근거 대조 전멸(환각 의심)'
+    # 으로 신고돼 실행자가 grounded 를 끄는 처방을 따랐다 — 관문이 스스로 자기 해제를 가르친 셈.
+    system += f"\n\n[출력 계약]\n{schema}" + (", _quote(근거 발췌 — 생략 불가)" if grounded else "")
     if extra_instruction:
         system += f"\n\n[추가 지시]\n{extra_instruction}"
     if known_lines:
@@ -312,13 +320,35 @@ def _struct(tool_input: dict) -> str:
 
     result = {"source": src.get("label"), "model_axis": "execution"}
     if grounded:
+        # ★두 사건을 가른다(2026-09-07 ep2952 재진단): '근거 필드 누락' 은 원문 대조 *이전* 의 추출기 형식
+        #   오류(환각 판정이 아니다 — 형식 되먹임 1회로 대개 회복), '근거 대조 전멸' 은 발췌가 있는데 원문과
+        #   어긋난 것. 옛 판은 둘을 한 문구로 뭉치고 첫 처방으로 grounded:false 를 권해, 관문이 자기 해제를
+        #   가르쳤다(실행자가 그대로 따라 60초 영상에서 원문에 없는 '방법' 을 지어 팁으로 실었다).
+        missing = _quote_missing(records)
+        if records and missing == len(records) and src.get("kind") != "image":
+            strict = (system + "\n\n[재시도] 직전 출력의 모든 기록에 _quote 가 없었다. _quote 는 생략할 수 없는 필드다 — "
+                      "각 기록에 그 근거가 되는 원문의 첫 구절 한 토막(원문 표기 그대로)을 반드시 넣어라.")
+            parsed2, err2 = oneshot_json(f"[원문]\n{src['text']}", strict)
+            records2 = records_gate(parsed2)[0] if (parsed2 is not None and not err2) else None
+            if records2:
+                records = records2
+                result["quote_retry"] = True
+            missing = _quote_missing(records)
+            if records and missing == len(records):
+                return _fail(f"근거 필드 누락 — 추출기가 두 번 모두 {len(records)}건 전부에 _quote 를 빠뜨렸습니다"
+                             "(원문 대조 이전의 형식 오류, 환각 판정 아님). grounded 를 끄면 창작이 통과합니다 — "
+                             "원문이 짧거나 계약에 맞는 내용이 없는지 확인하고 schema 를 줄이거나 instruction 으로 "
+                             "발췌 규칙을 명시하세요.")
         kept, dropped = grounded_filter(records, src["text"])
         if records and not kept:
-            return _fail(f"근거 대조 전멸 — 추출 {len(records)}건 모두 원문 발췌(_quote)가 "
-                         "원문과 불일치합니다(환각 의심). grounded:false 로 재시도하거나 원문을 확인하세요.")
+            return _fail(f"근거 대조 전멸 — 추출 {len(records)}건의 원문 발췌(_quote)가 모두 원문과 불일치합니다"
+                         "(발췌 표기 차이 또는 환각). grounded 를 끄면 창작이 통과합니다 — 원문을 확인하고 "
+                         "schema 를 줄이거나 instruction 으로 '원문 표기 그대로' 를 명시하세요.")
         result["grounded"] = True
-        if dropped:
-            result["dropped_ungrounded"] = dropped
+        if dropped - missing:
+            result["dropped_ungrounded"] = dropped - missing      # 발췌가 있었는데 원문과 어긋난 것
+        if missing:
+            result["missing_quote"] = missing                     # 발췌 자체가 없던 것(형식) — 환각과 섞지 않는다
         records = kept
         # 앵커 → 문장 확장: 모델은 첫 구절만 쳤고, 독자용 근거는 여기서 원문으로 채운다(2026-09-06)
         _exp = expand_quotes(records, src["text"]) if expand_quotes else 0

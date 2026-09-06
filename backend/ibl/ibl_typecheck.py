@@ -134,6 +134,10 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
         shapes = _return_shapes() or {}
     except Exception:
         return None
+    # ⟨키⟩ 항목(kind scalar — 효과·스칼라 봉투의 필드, 2026-09-06 F55-1)은 통화의 열이 아니다 —
+    # 여기서 걸러야 스칼라 액션이 items 처럼 열을 가진 것으로 읽히지 않는다.
+    shapes = {k: v for k, v in shapes.items()
+              if isinstance(v, dict) and v.get("kind") in (None, "items", "table")}
     q = f"{node}:{action}"
     if (_action_def(node, action) or {}).get("columns_from") == "data":
         return None                                  # 열은 데이터가 정한다(ledger·read·script) — fixture 열은 그 fixture 의 것

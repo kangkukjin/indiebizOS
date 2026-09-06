@@ -390,6 +390,23 @@
             "type": "string",
             "description": "items 입구 전용 — 이 필드로 섹션(heading+카드/표) 분할 (선택, 예 \"query\"). 2026-08-29 구현-읽기 감사 상환."
           },
+          "as": {
+            "type": "string",
+            "enum": [
+              "images",
+              "cards",
+              "table"
+            ],
+            "description": "items 입구 전용 — 행을 어느 블록으로 사상할지(언어 개정 2026-09-06, G55-2). images=행마다 image 블록(도면·사진·차트 N장), cards/table=자동 판별 강제. 미지정=cards/table 자동."
+          },
+          "src_field": {
+            "type": "string",
+            "description": "as:images 전용 — 그림 경로가 든 칸 이름(미지정=src·path·image·file·url 순 자동 탐지, 찾은 이름을 봉투 src_field 로 되돌려 말함)."
+          },
+          "caption_field": {
+            "type": "string",
+            "description": "as:images 전용 — 캡션 칸 이름(미지정=caption·title·name·label 순 자동)."
+          },
           "format": {
             "type": "string",
             "enum": [

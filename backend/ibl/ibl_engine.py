@@ -959,14 +959,20 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                     # n_items: "성공"과 "쓸모"를 가르는 한 숫자 — 빈 items 성공은
                     # 구성요소 생명주기(component_lifecycle)에서 생존 신호로 안 센다.
                     _n_items = len(_items) if isinstance(_items, list) else None
+                    # keys: 통화가 아닌 성공 봉투(효과·스칼라·message)의 키 — fixture 없는
+                    # 액션의 ⟨키⟩ 를 실사용에서 수확(2026-09-06 F55-1, shape 스윕 --from-health).
+                    _keys = None
+                    if _action_success and isinstance(_obj, dict) and _shape not in ("items", "error"):
+                        _keys = [str(k) for k in _obj.keys()
+                                 if isinstance(k, str) and not k.startswith("_") and k != "success"][:16]
                 else:
-                    _shape, _n_items = None, None
+                    _shape, _n_items, _keys = None, None, None
             except Exception:
-                _shape, _n_items = None, None
+                _shape, _n_items, _keys = None, None, None
             record_action_health(node, action, _action_success, _action_ms, source=_src,
                                  channel=get_call_channel(),
                                  error=(None if _action_success else _action_err),
-                                 shape=_shape, n_items=_n_items)
+                                 shape=_shape, n_items=_n_items, keys=_keys)
         except Exception:
             pass
 

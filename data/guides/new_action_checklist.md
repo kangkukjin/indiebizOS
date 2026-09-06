@@ -71,7 +71,7 @@
 > 왜 중요한가: `[sense:video]{op:"info"}` 는 `upload_date` 를 *최신성 필터를 위해* 넣어
 > 놓고 통화를 안 내서, `[table:each]` 팬아웃이 원 행만 흘리고(`passthrough_rows`)
 > `[table:filter]` 가 그 필드를 영영 못 봤다 — **액션이 자기 설계와 모순**이었다.
-> 실사용 우회는 `&` 8중 병렬 + 머릿속 날짜 판별이었다. 목록을 `results` 같은 **사적 키**에
+> 목록을 `results` 같은 **사적 키**에
 > 담는 것도 같은 병이다(2026-09-03 은퇴한 탐색 낱말이 그랬다) — 통화의 이름은 `items` 하나다.
 > 집행: `scripts/returns_drift_sweep.py`(주간)가 선언↔방출 불일치를 잡는다. 단 그 스윕은
 > *일치하는데 분류가 틀린* 경우는 못 잡는다 — 그건 이 표로 사람이 고르는 자리다.
@@ -197,11 +197,10 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
             close: 닫기
 ```
 
-> **op 축**(2026-08-05): `side_effect: true` 를 액션에 달면 그 안의 **읽기 op 까지 통째로**
-> 자동 건강검진에서 빠진다. 읽기 op 가 있으면 `ops.side_effect: {<op>: false}` 로 풀어줄 것 —
-> 단, **코드를 열어보고** 풀 것(실측: `sense:world` snapshot 은 이름과 달리 수집·저장을 하고,
-> 구 `sense:collect`(2026-08-15 은퇴) query 는 `action: delete` 가지를 품고 있어 둘 다 풀면 안 됐다).
-> 상세 규칙은 `ibl.md` "op 축" 절.
+> **쓰기 원시 관문**(2026-09-06 B55-1): `returns: scalar|items` 인데 구현이 쓰기 원시(open 'w'·write_text·makedirs·shutil·INSERT…)에 닿으면
+> `--check` 가 `side_effect: true|false` 선언을 요구한다(`iblbuild_side_effect_scan.py` — 이름이 아니라 코드가 앵커). 캐시만 쓰면 사유 주석과 **false**.
+> **op 축**(2026-08-05): `side_effect: true` 를 액션에 달면 그 안의 **읽기 op 까지** 건강검진에서 빠진다 — 읽기 op 는
+> `ops.side_effect: {<op>: false}` 로 풀되 **코드를 열어보고**(실측: `sense:world` snapshot 은 이름과 달리 저장을 했다). 상세 `ibl.md` "op 축".
 
 ### 빌드
 ```bash
@@ -380,4 +379,4 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 ## 실측 기록 (자동 누적)
 
 > 실행 에이전트가 턴 종료 후 덧붙인다.
-- 2026-08-24 실측: op 분기 액션은 `self.yaml` 에서 `target_key: op` 를 쓰는 경우가 많아, 액션 정의의 `params:` 에 타입을 주입해도 op 수준 파라미터(`read.path`·`write.path` 등)는 여전히 미선언으로 남는다 — `--check` 의 미선언 ✗ 가 그대로 유지된다(실측 34건).
+- 2026-08-24 실측: op 분기 액션(`target_key: op`)은 액션 `params:` 에 타입을 넣어도 op 수준 파라미터(`read.path` 등)가 미선언으로 남는다 — `--check` ✗ 유지(34건).

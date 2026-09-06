@@ -346,6 +346,27 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] flow 선언 완전성 통과 ✓ (모든 transform 액션이 flow 보유)")
 
+    # --- 부작용 정직성 (--check/--validate 전용, 2026-09-06 55회차 B55-1) ---
+    # handler 액션의 구현이 쓰기 원시(open 'w'·write_text·makedirs·INSERT…)에 닿는데
+    # returns:scalar/items 이고 side_effect 선언이 없으면 빌드 실패 — dry-run 'read' 라벨을 믿고
+    # 설계 파일이 만들어지던 자리. false 도 선언이다(캐시만 쓰는 읽기).
+    side_effect_failed = False
+    if data is not None and (check or validate_only):
+        from iblbuild_side_effect_scan import validate_side_effect_honesty
+        sissues, sunresolved = validate_side_effect_honesty(data, root)
+        if sissues:
+            side_effect_failed = True
+            print(f"[build_ibl_nodes] 부작용 정직성 실패: {len(sissues)}건 "
+                  f"(구현이 쓰기 원시를 부르는 scalar/items 액션은 side_effect: true|false 선언 필수)",
+                  file=sys.stderr)
+            for issue in sissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 부작용 정직성 통과 ✓ (쓰기 원시에 닿는 scalar/items 액션 전부 선언 보유)")
+        if sunresolved:
+            print(f"[build_ibl_nodes]   · 구현 시작점 미상 {len(sunresolved)}건(판정 보류, 빌드는 막지 않음): "
+                  f"{sunresolved[:5]}")
+
     # --- enum-가드: 파라미터 enum ↔ handler 분기 리터럴 정합 (--check/--validate 전용) ---
     # 드리프트 부류: handler 가 지원하는 discriminator 값(예 realty source=naver)이
     # 파생 스키마 enum 에 빠져 desc 산문만 진실을 아는 상태 (2026-07-28 메모 감사에서 발굴).
@@ -556,7 +577,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             print("[build_ibl_nodes] 가이드 부패 경고 없음 \u2713 (죽은 참조·고아 0)")
 
     if validate_only:
-        return 1 if (validation_failed or corpus_failed or fixture_failed or flow_failed
+        return 1 if (validation_failed or corpus_failed or fixture_failed or flow_failed or side_effect_failed
                      or enum_failed
                      or profile_failed or os_failed or launcher_failed
                      or textbook_failed or appvocab_failed or selfimg_failed
@@ -830,7 +851,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and tool_json_ok and core_manifest_ok and dist_filter_ok
                      and docs_ok
                      and not validation_failed
-                     and not corpus_failed and not fixture_failed and not flow_failed
+                     and not corpus_failed and not fixture_failed and not flow_failed and not side_effect_failed
                      and not enum_failed
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed

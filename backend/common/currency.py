@@ -104,6 +104,24 @@ def coerce_items_payload(value: Any) -> Any:
     return None
 
 
+def effect_row(envelope: Any, drop: Iterable[str] = ()) -> dict:
+    """효과·스칼라 봉투 → **행 하나** (2026-09-06 언어 개정 G55-1, 단일 승격기).
+
+    `[a] & [b] >> [table:union]` 은 효과 봉투(items/table 없는 success dict — write·notify·
+    arch_report 의 결과)를 분기당 1행으로 받았는데(09-05, effect_rows), 같은 봉투를
+    `[table:each]` 는 버리고 원 행만 흘렸다(55회차 실측 — 면적표 2건·도면 4장을 계산·생성하고
+    값만 폐기). 두 조합자가 같은 봉투를 정반대로 다루던 자리라, 승격 규칙을 **한 함수**로
+    두고 둘이 함께 부른다: 내부 표지(`_…`)는 행이 아니다 · 출처를 지어내지 않는다 ·
+    dict 가 아닌 스칼라(문자열·수)는 `value` 한 칸.
+    `drop` — 소비자가 자기 계약상 잉여인 키를 뺀다(each 는 성공·실패를 봉투가 이미 가르므로 success).
+    """
+    if isinstance(envelope, dict):
+        skip = set(drop)
+        return {k: v for k, v in envelope.items()
+                if not str(k).startswith("_") and k not in skip}
+    return {"value": envelope}
+
+
 def currency_shape_note(envelope: Any) -> str:
     """'받은 봉투' 진단 문자열 — each·reduce 가 공유한다 (B19-2).
 

@@ -270,6 +270,28 @@ def _each_success_rows(final: Any, base: dict):
     return [dict(base)], False
 
 
+def _each_collect_row(final: Any, base: dict) -> Tuple[list, dict]:
+    """collect 행 — do 의 효과·스칼라 결과를 `{원 행…, 결과 키…}` 한 행으로 (언어 개정 2026-09-06, G55-1).
+
+    승격 규칙은 union 의 효과 행과 **같은 함수**(`common.currency.effect_row`)다 — 55회차
+    실측에서 두 조합자가 같은 봉투를 정반대로 다뤘다(union=행으로 보존, each=폐기). `success` 는
+    each 의 봉투가 이미 성공·실패를 가르므로 뺀다. 원 행의 이름이 먼저다 — 결과 키가 원 행과
+    겹치면 결과 쪽이 `_2` 접미를 받고(keep 과 같은 규율, 침묵 덮어쓰기 금지) 봉투가 그 사실을 말한다.
+    """
+    from common.currency import effect_row
+    fields = effect_row(final, drop=("success",))
+    merged = dict(base)
+    renamed: dict = {}
+    for k, v in fields.items():
+        name = str(k)
+        while name in merged:
+            name += "_2"
+        if name != str(k):
+            renamed[str(k)] = name
+        merged[name] = v
+    return [merged], renamed
+
+
 _EACH_MAX_PARALLEL = 8
 
 
@@ -303,7 +325,7 @@ def _row_label(base: dict) -> str:
 
 
 def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -> Any:
-    """[table:each]{do, as, limit, on_error} — items 의 각 행에 IBL 문장을 적용.
+    """[table:each]{do, as, limit, on_error, keep, parallel, collect} — items 의 각 행에 IBL 문장을 적용.
 
     통화 계약(2026-08-23 언어 개정 — 사용자 판정): **성공은 통화로, 실패는 봉투로.**
 
@@ -333,6 +355,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
       2026-08-23 개정이 은퇴시킨 옛 `_ok` 상시 봉투의 재발이 아니다 — 그때는 전 문장이
       비용을 냈고(코퍼스 사용 0건), 이번엔 실패를 데이터로 쓰겠다고 선언한 문장만 켠다.
       진단층(errors+traceback)은 keep 이어도 그대로 싣는다(경계 규약 예외 없음).
+
+    `collect: true` (언어 개정 2026-09-06, 55회차 G55-1):
+      통화가 아닌 do 결과(효과·스칼라)를 `{원 행…, 결과 키…}` 행으로 승격한다 — 승격 규칙은
+      union 의 효과 행과 같은 함수(`common.currency.effect_row`). 봉투 `collected_rows` +
+      겹친 키의 `collect_renamed`. 켜지 않으면 종전대로 원 행 통과(passthrough_rows).
     """
     from ibl_parser import parse as ibl_parse, IBLSyntaxError
     from workflow_engine import execute_pipeline
@@ -378,6 +405,13 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     if not isinstance(keep, list):
         keep = [keep]
     keep = [str(k) for k in keep]
+    # ★collect (언어 개정 2026-09-06, G55-1 — 사용자 판정 "국소만 빼고 다 고쳐"): do 가 통화를
+    #   내지 않는 행(효과·스칼라 — arch_report 의 면적표, 도면 생성의 path, notify 의 message)의
+    #   결과를 버리지 않고 `{원 행…, 결과 키…}` 행으로 승격한다. 기본은 종전대로(원 행 통과 +
+    #   passthrough_rows) — 켠 문장만 비용을 낸다. do 가 통화를 내는 행은 collect 와 무관하게
+    #   종전 계약(행 대체 + keep)이다. [repeat:]{collect} 와 같은 낱말·같은 뜻(회차 결과를 통화로).
+    _cv = params.get("collect")
+    collect = _cv is True or str(_cv or "").strip().lower() in ("true", "1", "yes")
     depth = int(params.get("_depth") or 0)
 
     target = rows[:limit]
@@ -387,7 +421,8 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     ok_n = err_n = substeps = 0
     halted: Optional[str] = None
 
-    processed = noncurrency = currency_n = 0
+    processed = noncurrency = currency_n = collected_n = 0
+    collect_renamed: dict = {}
     # 트레이스백 경계 규약(docs/IBL_TRACEBACK_HANDOFF.md): 행 하나의 실패에도 do 문장
     # 안의 경로가 붙는다. 동일 오류의 무거운 상세(py_tail·input)는 첫 행에만(fold_heavy).
     from ibl_traceback import build_tb, push_frame, tb_of, py_tail_of, fold_heavy
@@ -537,11 +572,14 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             _rows_from, _was_currency = _each_success_rows(final, base)
             if _was_currency:
                 _rows_from = _each_carry(_rows_from, base, keep)
-            out_items.extend(_rows_from)
-            if not _was_currency:
-                noncurrency += 1
-            else:
                 currency_n += 1
+            elif collect:
+                _rows_from, _ren = _each_collect_row(final, base)
+                collect_renamed.update(_ren)
+                collected_n += 1
+            else:
+                noncurrency += 1
+            out_items.extend(_rows_from)
 
     # 중단 시 남은 행은 '처리 안 함'으로 정직하게 집계 (조용히 사라지지 않게)
     if halted:
@@ -593,8 +631,17 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             notes.append(f"{currency_n}행의 do 가 통화를 내어 **원 행이 do 결과로 대체**됐습니다"
                          f"(입력 {processed}행 → 출력 {len(out_items)}행) — 어느 행에서 나온 결과인지는 "
                          f"통화에 남지 않습니다. 원 행의 필드를 함께 보려면 keep: [\"필드\"] 를 쓰세요.")
-    # ★`collect` 은퇴(2026-08-23): 이 파라미터가 하던 일("_result 를 이어붙인 하나의 items")이
-    #   이제 기본 동작이다. 낱말을 남겨 두면 "켜야 되는 것"으로 읽혀 어휘가 무거워진다.
+    if collected_n:
+        # ★거울 신고(G55-1): 승격했으면 승격했다고, 이름이 밀렸으면 어디로 밀렸는지 말한다.
+        out["collected_rows"] = collected_n
+        _ren_note = (f" 원 행과 겹친 결과 키는 접미로 밀었습니다: {collect_renamed}."
+                     if collect_renamed else "")
+        notes.append(f"{collected_n}행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 "
+                     f"원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).{_ren_note}")
+        if collect_renamed:
+            out["collect_renamed"] = collect_renamed
+    # (옛 `collect` 2026-08-23 은퇴 — "_result 이어붙이기"는 기본 동작이 됐다. 2026-09-06 같은 낱말을
+    #  다른 축으로 되살림: 통화가 아닌 결과의 **승격**. 통화를 내는 do 에는 여전히 아무 뜻이 없다.)
     if skipped:
         if halted == "budget":
             notes.append(f"하위 스텝 예산({_EACH_MAX_SUBSTEPS}) 초과로 중단 — {skipped}건 미처리")

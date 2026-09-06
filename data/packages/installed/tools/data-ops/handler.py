@@ -1031,9 +1031,9 @@ def _is_effect_env(o) -> bool:
             and _get_items(o)[0] is None and _get_table(o)[0] is None)
 
 
-def _effect_row(o: dict) -> dict:
-    """효과 봉투 → 1행: 내부 표지(`_…`)를 뺀 필드 그대로(출처를 지어내지 않는다)."""
-    return {k: v for k, v in o.items() if not str(k).startswith("_")}
+def _effect_row(o: dict) -> dict:  # 효과 봉투→1행. 정본=common.currency.effect_row([table:each]{collect} 와 한 벌, 2026-09-06 G55-1)
+    from common.currency import effect_row
+    return effect_row(o)
 
 
 def _attach_branch_warning(env, objs):

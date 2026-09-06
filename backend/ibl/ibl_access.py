@@ -205,7 +205,10 @@ def _shape_suffix(qualified: str, op: str = None, ops: dict = None) -> str:
         return ""
     parts = ["·".join(ent["keys"][:8])]
     parts += [f"{label}: " + "·".join(keys[:8]) for label, keys in variants]
-    return " ⟨열: " + " | ".join(parts) + "⟩"
+    # ⟨열⟩=통화(items/table)의 열, ⟨키⟩=통화가 아닌 봉투(효과·스칼라)의 필드 — `$변수.키` 로 읽는 자리
+    # (2026-09-06 F55-1). 라벨이 갈려야 모델이 ⟨키⟩를 >> 변환자의 열로 오독하지 않는다.
+    label = "열" if ent.get("kind") in (None, "items", "table") else "키"
+    return f" ⟨{label}: " + " | ".join(parts) + "⟩"
 
 
 _PARAM_CACHE = {"mtime": None, "data": {}, "always": 0.8}

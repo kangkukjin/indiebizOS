@@ -113,7 +113,8 @@ def run_shape_sweep() -> Dict:
     if not script.exists():
         return {"error": "scripts/ibl_shape_sweep.py 없음"}
     try:
-        proc = subprocess.run([sys.executable, str(script)], cwd=str(_root),
+        # --from-health: fixture 없는(exempt) 스칼라·효과 액션의 ⟨키⟩ 를 실사용 원장에서 수확(F55-1).
+        proc = subprocess.run([sys.executable, str(script), "--from-health"], cwd=str(_root),
                               capture_output=True, text=True, timeout=900)
     except Exception as e:
         return {"error": f"스윕 실행 실패: {str(e)[:150]}"}

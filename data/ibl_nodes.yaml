@@ -2452,6 +2452,7 @@ nodes:
           headlines:
           - front_page
         returns: items
+        side_effect: false
         fixture: '[sense:search]{query: "climate policy"}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
         group: research
@@ -2462,6 +2463,7 @@ nodes:
         target_key: query
       crawl:
         returns: items
+        side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
         description: 웹페이지 원문 읽기 (URL 필요). items=문단 단위(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
         group: research
@@ -7456,6 +7458,7 @@ nodes:
         group: architecture
         runs_on: pc_only
         returns: scalar
+        side_effect: true
         exempt: 설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)
         category: create
         router: handler
@@ -7471,6 +7474,7 @@ nodes:
         group: architecture
         runs_on: pc_only
         returns: scalar
+        side_effect: true
         exempt: 설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)
         router: handler
         tool: modify_house_design
@@ -7486,6 +7490,7 @@ nodes:
         group: architecture
         runs_on: pc_only
         returns: scalar
+        side_effect: false
         exempt: 설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)
         category: get
         router: handler
@@ -7526,6 +7531,7 @@ nodes:
         group: architecture
         runs_on: pc_only
         returns: scalar
+        side_effect: false
         exempt: 설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)
         router: handler
         tool: generate_quantity_report
@@ -7577,6 +7583,7 @@ nodes:
         group: architecture
         runs_on: pc_only
         returns: items
+        side_effect: false
         exempt: 설계 저장 디렉토리 상태 의존(빈 몸에선 고정 fixture 불가)
         category: list
         router: handler
@@ -7903,7 +7910,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(고차) — items의 각 행에 IBL 문장(do)을 적용한다. 목록을 항목 단위 행동으로 잇는 유일한 어휘. 앞 통화 없이 items 를 직접 주면 리터럴 팬아웃(같은 액션 N번 대신).
-        target_description: 'do(각 행에 적용할 IBL 문장, 필수 — 행 값은 $it.필드 로 참조) · items(★입력을 직접 줄 때 — >> 앞 통화가 없어도 네가 방금 정한 목록으로 팬아웃: [table:each]{items: [{city: "청주"}, {city: "속초"}], do: "[sense:weather]{city: ''$it.city''}"} — 같은 액션을 파라미터만 바꿔 N번 부를 자리는 전부 이것) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop | keep — keep 은 실패 행을 {원 행…, _error} 로 **통화에도** 흘린다(언어 개정 2026-08-28): 후속이 [table:filter] 의 _error eq null/exists 로 성공·실패를 갈라 교체·재시도를 조합하는 자리. keep 은 전량 실패도 통화로 흘린다) · keep([부모 필드] — 팬아웃 결과 행에 원 행의 그 필드를 승계, 충돌 시 _2 접미. "어느 부모에서 왔는지"가 필요할 때) · parallel(동시 실행 수, 기본 1 — do 가 AI 원샷·자막·크롤처럼 느릴 때 2~8(언어 개정 2026-09-06): 결과 순서와 봉투 계약은 순차와 같고, on_error stop 은 병렬에서 이미 돈 뒤 행의 결과를 버린다. 같은 파일·원장에 쓰는 do 는 병렬로 돌리지 말 것). ★결과는 **통화 그대로**(2026-08-23 언어 개정): do 가 통화를 내면 그 행들이 감싸기 없이 흐르므로 뒤에 변환자를 바로 잇는다(flatten 불필요). do 가 통화를 안 내면(효과·스칼라 — notify·write 등) **원 행**이 흐르고 봉투가 passthrough_rows 로 그 사실을 말한다. 실패한 행은 통화에 섞지 않고 봉투의 errors: [{원 행…, _error}] + error_count + warning 으로 나른다(부분 실패는 파이프를 끊지 않되 반드시 보인다). 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[sense:crawl]{url: ''$it.url''}"} >> [table:select]{columns: ["title","price"]} / 종착: … >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
+        target_description: 'do(각 행에 적용할 IBL 문장, 필수 — 행 값은 $it.필드 로 참조) · items(★입력을 직접 줄 때 — >> 앞 통화가 없어도 네가 방금 정한 목록으로 팬아웃: [table:each]{items: [{city: "청주"}, {city: "속초"}], do: "[sense:weather]{city: ''$it.city''}"} — 같은 액션을 파라미터만 바꿔 N번 부를 자리는 전부 이것) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop | keep — keep 은 실패 행을 {원 행…, _error} 로 **통화에도** 흘린다(언어 개정 2026-08-28): 후속이 [table:filter] 의 _error eq null/exists 로 성공·실패를 갈라 교체·재시도를 조합하는 자리. keep 은 전량 실패도 통화로 흘린다) · keep([부모 필드] — 팬아웃 결과 행에 원 행의 그 필드를 승계, 충돌 시 _2 접미. "어느 부모에서 왔는지"가 필요할 때) · parallel(동시 실행 수, 기본 1 — do 가 AI 원샷·자막·크롤처럼 느릴 때 2~8(언어 개정 2026-09-06): 결과 순서와 봉투 계약은 순차와 같고, on_error stop 은 병렬에서 이미 돈 뒤 행의 결과를 버린다. 같은 파일·원장에 쓰는 do 는 병렬로 돌리지 말 것) · collect(true — 언어 개정 2026-09-06: do 가 통화를 **안 내는** 행(효과·스칼라 — 보고서 계산·도면 생성·write 의 path)의 결과 필드를 버리지 않고 {원 행…, 결과 키…} 한 행으로 승격한다. 원 행 이름이 먼저, 겹치는 결과 키는 _2 접미 + collect_renamed 신고. "각각에 대해 X 를 구해 표로" 의 자리 — 예: [engines:arch_list] >> [table:each]{collect: true, do: "[engines:arch_report]{design_id: ''$it.id'', report_type: ''coverage_ratio''}"} >> [table:select]{columns: ["name", "coverage_ratio"]}. do 가 통화를 내는 행에는 아무 뜻이 없다(종전 계약)). ★결과는 **통화 그대로**(2026-08-23 언어 개정): do 가 통화를 내면 그 행들이 감싸기 없이 흐르므로 뒤에 변환자를 바로 잇는다(flatten 불필요). do 가 통화를 안 내면(효과·스칼라 — notify·write 등) **원 행**이 흐르고 봉투가 passthrough_rows 로 그 사실을 말한다(결과가 필요하면 collect: true — collected_rows 로 신고). 실패한 행은 통화에 섞지 않고 봉투의 errors: [{원 행…, _error}] + error_count + warning 으로 나른다(부분 실패는 파이프를 끊지 않되 반드시 보인다). 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[sense:crawl]{url: ''$it.url''}"} >> [table:select]{columns: ["title","price"]} / 종착: … >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
         group: transform
         router: system
         func: table_each
@@ -8362,7 +8369,7 @@ nodes:
           filename:
           - path
         description: blocks(문서 구조 배열)·items(단일 통화)·markdown(이미 쓰인 글)을 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
-        target_description: 'blocks·items·markdown 중 하나 — blocks(문서 IR 블록 배열) / items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards 블록화, group_by 지정 시 그 필드로 섹션 heading 분할) / markdown(이미 마크다운으로 쓰인 글을 기계 변환, LLM 0·내용 안 고침 — [self:read] 결과를 >> 로 받으면 자동). 각 블록은 {type, ...}:
+        target_description: 'blocks·items·markdown 중 하나 — blocks(문서 IR 블록 배열) / items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards/table 블록화, group_by 지정 시 그 필드로 섹션 heading 분할; **as**(언어 개정 2026-09-06): "images" 면 행마다 image 블록 — 도면·사진·차트 N장을 그림으로(행 수가 변수여도), src_field(그림 경로 칸, 미지정=src·path·image·file·url 순 자동)·caption_field(캡션 칸, 미지정=caption·title·name·label 순). 빈 칸 행은 건너뛰고 images_skipped 로 신고. "cards"/"table" 은 자동 판별 강제. 예: [engines:arch_elevation]{…} & [engines:arch_elevation]{…} >> [table:union] >> [table:document]{as: "images", src_field: "path", title: "입면도"}) / markdown(이미 마크다운으로 쓰인 글을 기계 변환, LLM 0·내용 안 고침 — [self:read] 결과를 >> 로 받으면 자동). 각 블록은 {type, ...}:
 
           - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
 

@@ -106,13 +106,81 @@ def _rows_block(rows: list) -> dict:
     return {"type": "cards", "columns": 2, "items": rows}
 
 
-def _items_to_blocks(rows: list, group_by: str = None) -> list:
+# items→블록 사상의 열린 축(언어 개정 2026-09-06, G55-2). 자동(as 미지정)은 종전대로 cards/table 판별.
+_ITEMS_AS = ("images", "cards", "table")
+_IMAGE_SRC_FIELDS = ("src", "path", "image", "file", "url")
+_IMAGE_CAPTION_FIELDS = ("caption", "title", "name", "label")
+
+
+def _image_blocks(rows: list, src_field: str = None, caption_field: str = None, info: dict = None) -> list:
+    """행 N개 → image 블록 N개 (언어 개정 2026-09-06, G55-2).
+
+    55회차 실측: union 으로 모은 도면 2행을 document 에 넘기면 `| success | path | format |` 표가
+    되고, 그림이 되려면 blocks 에 `{type:"image", src:"${정면.path}"}` 를 **손으로** 행 수만큼
+    적어야 했다 — 행 수가 변수면 쓸 수 없는 우회. 도면·사진·차트가 전부 같은 자리에서 막혔다.
+    src_field 미지정이면 첫 행에서 관습 이름(src·path·image·file·url) 순으로 찾고, 어느 행이
+    그 칸을 비우면 그 행은 건너뛰되 `images_skipped` 로 신고한다(침묵 금지). 열 이름은 세계의
+    명사라 코드가 정하지 않는다 — 찾은 이름을 `src_field` 로 되돌려 말한다.
+    """
+    dicts = [r for r in rows if isinstance(r, dict)]
+    if info is None:
+        info = {}
+    sf = (src_field or "").strip() or None
+    if sf is None:
+        for cand in _IMAGE_SRC_FIELDS:
+            if any(isinstance(r.get(cand), str) and r.get(cand) for r in dicts):
+                sf = cand
+                break
+    cf = (caption_field or "").strip() or None
+    if cf is None:
+        for cand in _IMAGE_CAPTION_FIELDS:
+            if any(isinstance(r.get(cand), str) and r.get(cand) for r in dicts):
+                cf = cand
+                break
+    blocks, skipped = [], 0
+    if sf is None:
+        info["images_skipped"] = len(rows)
+        info["src_field"] = None
+        return []
+    for r in dicts:
+        src = r.get(sf)
+        if not isinstance(src, str) or not src.strip():
+            skipped += 1
+            continue
+        b = {"type": "image", "src": src.strip()}
+        cap = r.get(cf) if cf else None
+        if isinstance(cap, str) and cap.strip():
+            b["caption"] = cap.strip()
+        blocks.append(b)
+    skipped += len(rows) - len(dicts)
+    info["src_field"] = sf
+    if skipped:
+        info["images_skipped"] = skipped
+    return blocks
+
+
+def _items_to_blocks(rows: list, group_by: str = None, as_: str = None,
+                     src_field: str = None, caption_field: str = None, info: dict = None) -> list:
     """단일 통화 items → 문서 IR 블록. group_by 있으면 그 필드로 섹션(heading+표/카드) 분할.
-    이미 문서 IR(type+text) 이면 그대로 반환."""
+    이미 문서 IR(type+text) 이면 그대로 반환.
+    as(언어 개정 2026-09-06, G55-2): "images" 면 행마다 image 블록(src_field·caption_field),
+    "cards"/"table" 은 자동 판별을 그 쪽으로 강제. 미지정=종전 자동."""
     if not rows:
         return []
     if isinstance(rows[0], dict) and "type" in rows[0] and "text" in rows[0]:
         return rows  # 이미 문서 IR(산문)
+
+    def _block_of(part: list) -> list:
+        if as_ == "images":
+            return _image_blocks(part, src_field, caption_field, info)
+        if as_ == "cards":
+            return [{"type": "cards", "columns": 2, "items": part}]
+        if as_ == "table":
+            dicts = [r for r in part if isinstance(r, dict)]
+            cols = list(dicts[0].keys()) if dicts else []
+            return [{"type": "table", "columns": cols,
+                     "rows": [[r.get(c) for c in cols] for r in dicts]}]
+        return [_rows_block(part)]
     if group_by:
         groups, order = {}, []
         for r in rows:
@@ -125,9 +193,9 @@ def _items_to_blocks(rows: list, group_by: str = None) -> list:
         for key in order:
             if key:
                 blocks.append({"type": "heading", "level": 2, "text": key})
-            blocks.append(_rows_block(groups[key]))
+            blocks.extend(_block_of(groups[key]))
         return blocks
-    return [_rows_block(rows)]
+    return _block_of(rows)
 
 
 _MD_LINK = re.compile(r"\[([^\]]*)\]\(([^)\s]+)[^)]*\)")
@@ -425,6 +493,20 @@ def _render_document(tool_input, output_base=".", context=None):
         return None
 
     group_by = (tool_input.get("group_by") or "").strip() or None
+    # ★as / src_field / caption_field (언어 개정 2026-09-06, G55-2): items→블록 사상의 열린 축.
+    _as = (str(tool_input.get("as") or "").strip().lower()) or None
+    if _as is not None and _as not in _ITEMS_AS:
+        return _json.dumps({"success": False,
+                            "error": f"as '{_as}' 는 모릅니다 — items 를 블록으로 사상하는 방식은 "
+                                     f"{list(_ITEMS_AS)} 중 하나입니다(미지정=cards/table 자동 판별)."},
+                           ensure_ascii=False)
+    _src_field = (str(tool_input.get("src_field") or "").strip()) or None
+    _caption_field = (str(tool_input.get("caption_field") or "").strip()) or None
+    _items_info: dict = {}
+
+    def _blocks_from_items(rows):
+        return _items_to_blocks(rows, group_by, _as, _src_field, _caption_field, _items_info)
+
     blocks = tool_input.get("blocks")
     # ★blocks 의 `$변수` 주입 되읽기 (2026-08-27, B19-2 부류의 blocks 판): 변수 치환은
     #   JSON 문자열을 넣는다. blocks 전체("$구조.blocks")와 블록 안 구조 필드
@@ -452,7 +534,7 @@ def _render_document(tool_input, output_base=".", context=None):
     if isinstance(_inline, list):
         _arrived_rows = len(_inline)
     if not blocks and _inline:
-        blocks = _items_to_blocks(_inline, group_by)
+        blocks = _blocks_from_items(_inline)
     # 직접 표 통화 (인라인 table/columns+rows — spreadsheet 인라인 items 와 같은 부류)
     if not blocks:
         _tb = _table_block_of(tool_input)
@@ -489,7 +571,7 @@ def _render_document(tool_input, output_base=".", context=None):
                         blocks = po["blocks"]
                     elif isinstance(po.get("items"), list) and po["items"]:
                         # 단일 통화 items → 표/카드(또는 group_by 섹션) 블록. IR(type+text)이면 그대로.
-                        blocks = _items_to_blocks(po["items"], group_by)
+                        blocks = _blocks_from_items(po["items"])
                     else:
                         # 표 통화(columns/rows) 입구 — select/groupby 산출이 items 없이 표만 나를 때(⑭)
                         _tb = _table_block_of(po)
@@ -512,6 +594,13 @@ def _render_document(tool_input, output_base=".", context=None):
         except Exception:
             blocks = None
     if not isinstance(blocks, list) or not blocks:
+        if _as == "images" and _arrived_rows:
+            return _json.dumps({"success": False, "rows_in": _arrived_rows,
+                                "images_skipped": _items_info.get("images_skipped", _arrived_rows),
+                                "error": (f"as: images — {_arrived_rows}행 중 그림 경로를 가진 행이 없습니다"
+                                          + (f"(src_field '{_src_field}' 없음)" if _src_field else
+                                             f"(관습 이름 {list(_IMAGE_SRC_FIELDS)} 중 어느 것도 없음 — src_field 로 지정하세요)")
+                                          + ".")}, ensure_ascii=False)
         if _arrived_rows == 0:
             return _json.dumps({"success": False, "rows_in": 0,
                                 "error": ("입력 0행 — 문서로 렌더할 내용이 없습니다. 앞 단계가 통화를 "
@@ -529,6 +618,16 @@ def _render_document(tool_input, output_base=".", context=None):
                                        "렌더할 내용이 없습니다 — 파일을 만들지 않았습니다."},
                            ensure_ascii=False)
 
+    # 봉투 공통 신고층(모든 emitter 분기가 같은 것을 싣는다): when 생략 수 + images 사상 결과.
+    _extra: dict = {}
+    if _omitted_when:
+        _extra["blocks_omitted"] = _omitted_when
+    if _as == "images":
+        _extra["images"] = sum(1 for b in blocks if isinstance(b, dict) and b.get("type") == "image")
+        if _items_info.get("src_field"):
+            _extra["src_field"] = _items_info["src_field"]
+        if _items_info.get("images_skipped"):
+            _extra["images_skipped"] = _items_info["images_skipped"]
     title = tool_input.get("title") or ""
     meta = tool_input.get("meta") or ""
     theme = (tool_input.get("theme") or "default").strip().lower()
@@ -536,6 +635,9 @@ def _render_document(tool_input, output_base=".", context=None):
     if fmt == "md":
         fmt = "markdown"
     note = ""
+    if _extra.get("images_skipped"):
+        note += (f" ★as: images — {_extra['images_skipped']}행은 그림 경로 칸이 비어 건너뛰었습니다"
+                 f"(src_field={_extra.get('src_field')}).")
     if fmt not in ("html", "pdf", "png", "docx", "pptx", "typst", "markdown"):
         note = f" (format '{fmt}' 미지원 — html로 산출)"
         fmt = "html"
@@ -587,7 +689,7 @@ def _render_document(tool_input, output_base=".", context=None):
             out_path = ""
         return _json.dumps({"success": True, "path": out_path, "file": out_path,
                             "title": title, "format": "markdown", "markdown": md_text,
-                            "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
+                            "blocks": len(blocks), **_extra,
                             "message": f"문서 {len(blocks)}블록을 마크다운으로 렌더했습니다.{note}"},
                            ensure_ascii=False)
 
@@ -597,7 +699,7 @@ def _render_document(tool_input, output_base=".", context=None):
             out_path = _place(".pdf")
             _doc_blocks_to_typst(blocks, title, meta, out_path)
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                                "title": title, "format": "typst_pdf", "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
+                                "title": title, "format": "typst_pdf", "blocks": len(blocks), **_extra,
                                 "message": f"문서 {len(blocks)}블록을 typst 책 품질 PDF로 조판했습니다."},
                                ensure_ascii=False)
         except Exception as e:
@@ -613,7 +715,7 @@ def _render_document(tool_input, output_base=".", context=None):
             else:
                 _doc_blocks_to_pptx(blocks, title, out_path)
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                                "title": title, "format": fmt, "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
+                                "title": title, "format": fmt, "blocks": len(blocks), **_extra,
                                 "message": f"문서 {len(blocks)}블록을 {fmt.upper()}로 렌더했습니다."},
                                ensure_ascii=False)
         except Exception as e:
@@ -649,7 +751,7 @@ def _render_document(tool_input, output_base=".", context=None):
                     pg.screenshot(path=out_path, full_page=True)
                 br.close()
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                                "title": title, "format": fmt, "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
+                                "title": title, "format": fmt, "blocks": len(blocks), **_extra,
                                 "message": f"문서 {len(blocks)}블록을 {fmt.upper()}로 렌더했습니다."},
                                ensure_ascii=False)
         except Exception as e:
@@ -660,7 +762,7 @@ def _render_document(tool_input, output_base=".", context=None):
     with open(out_path, "w", encoding="utf-8") as f:
         f.write(doc)
     return _json.dumps({"success": True, "path": out_path, "file": out_path,
-                        "title": title, "format": "html", "blocks": len(blocks), **({"blocks_omitted": _omitted_when} if _omitted_when else {}),
+                        "title": title, "format": "html", "blocks": len(blocks), **_extra,
                         # 렌더된 HTML을 결과에 동봉 — 액션이 다른 몸(맥)으로 포워드돼 파일이
                         # 거기 생겨도, 호출한 몸(폰)이 파일 위치 의존 없이 콘텐츠로 바로 띄운다.
                         "html": doc,

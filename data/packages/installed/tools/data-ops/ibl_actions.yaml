@@ -366,7 +366,7 @@ actions:
       filename: [path]   # 모델이 path 로 자주 부름(실험 6 ⑮) — 조용한 무시 대신 filename 규칙(경로부는 기존 note 가 시끄럽게)으로
 
     description: blocks(문서 구조 배열)·items(단일 통화)·markdown(이미 쓰인 글)을 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
-    target_description: 'blocks·items·markdown 중 하나 — blocks(문서 IR 블록 배열) / items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards 블록화, group_by 지정 시 그 필드로 섹션 heading 분할) / markdown(이미 마크다운으로 쓰인 글을 기계 변환, LLM 0·내용 안 고침 — [self:read] 결과를 >> 로 받으면 자동). 각 블록은 {type, ...}:
+    target_description: 'blocks·items·markdown 중 하나 — blocks(문서 IR 블록 배열) / items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards/table 블록화, group_by 지정 시 그 필드로 섹션 heading 분할; **as**(언어 개정 2026-09-06): "images" 면 행마다 image 블록 — 도면·사진·차트 N장을 그림으로(행 수가 변수여도), src_field(그림 경로 칸, 미지정=src·path·image·file·url 순 자동)·caption_field(캡션 칸, 미지정=caption·title·name·label 순). 빈 칸 행은 건너뛰고 images_skipped 로 신고. "cards"/"table" 은 자동 판별 강제. 예: [engines:arch_elevation]{…} & [engines:arch_elevation]{…} >> [table:union] >> [table:document]{as: "images", src_field: "path", title: "입면도"}) / markdown(이미 마크다운으로 쓰인 글을 기계 변환, LLM 0·내용 안 고침 — [self:read] 결과를 >> 로 받으면 자동). 각 블록은 {type, ...}:
 
       - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}
 
@@ -657,6 +657,19 @@ tool_json:
         group_by:
           type: string
           description: items 입구 전용 — 이 필드로 섹션(heading+카드/표) 분할 (선택, 예 "query"). 2026-08-29 구현-읽기 감사 상환.
+        as:
+          type: string
+          enum:
+          - images
+          - cards
+          - table
+          description: items 입구 전용 — 행을 어느 블록으로 사상할지(언어 개정 2026-09-06, G55-2). images=행마다 image 블록(도면·사진·차트 N장), cards/table=자동 판별 강제. 미지정=cards/table 자동.
+        src_field:
+          type: string
+          description: as:images 전용 — 그림 경로가 든 칸 이름(미지정=src·path·image·file·url 순 자동 탐지, 찾은 이름을 봉투 src_field 로 되돌려 말함).
+        caption_field:
+          type: string
+          description: as:images 전용 — 캡션 칸 이름(미지정=caption·title·name·label 순 자동).
         format:
           type: string
           enum:

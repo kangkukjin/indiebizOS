@@ -6,6 +6,7 @@ package_manager(제거 후 정리)가 이 *데이터 쓰기* 때문에 인지층
 매듭의 교차층 간선이었다 — 데이터는 데이터층에.
 """
 import logging
+import json
 import sqlite3
 from datetime import datetime
 from typing import Dict, List
@@ -167,6 +168,11 @@ def _ensure_action_health_cols(conn):
             # "쓸모가 있었다"는 다르다 — sense:search_local 은 계수 19 에 결과 0 이었다
             # (2026-08-15). 빈 items 성공은 생존 신호가 아니므로 행 수를 함께 적는다.
             conn.execute("ALTER TABLE action_health ADD COLUMN n_items INTEGER")
+        if "keys" not in cols:
+            # keys = 통화가 아닌 성공 봉투의 키 목록(JSON, 2026-09-06 55회차 F55-1). fixture 가
+            # 없는(exempt) 스칼라·효과 액션의 반환 모양을 실사용에서 공짜로 적어, 주간 shape
+            # 스윕(--from-health)이 카탈로그 ⟨키: …⟩ 로 올린다 — "면제는 측정 면제가 아니다".
+            conn.execute("ALTER TABLE action_health ADD COLUMN keys TEXT")
         _AH_COLS_ENSURED = True
     except Exception:
         pass  # 마이그레이션 실패 시 아래 INSERT 가 구 스키마 폴백으로 감
@@ -225,7 +231,7 @@ NOT_ISOLATED_SQL = "COALESCE(source, 'usage') NOT IN ('test', 'training')"
 
 def record_action_health(node: str, action: str, success: bool, response_ms: int = None,
                          source: str = "usage", channel: str = None, error: str = None,
-                         shape: str = None, n_items: int = None):
+                         shape: str = None, n_items: int = None, keys: list = None):
     """액션 실행 결과를 action_health 테이블에 기록 — 경량, 실패 시 무시"""
     if source == "usage" and _in_test_process():
         source = "test"   # 시험의 의도된 실패를 실사용 통계에서 격리 (B18-1)
@@ -237,12 +243,18 @@ def record_action_health(node: str, action: str, success: bool, response_ms: int
         conn = _get_pulse_db()
         _ensure_action_health_cols(conn)
         err = (str(error)[:300] if error else None)
+        keys_json = None
+        if keys:
+            try:
+                keys_json = json.dumps([str(k) for k in keys][:16], ensure_ascii=False)
+            except Exception:
+                keys_json = None
         try:
             conn.execute(
-                "INSERT INTO action_health (node, action, success, response_ms, source, timestamp, channel, error, shape, n_items) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO action_health (node, action, success, response_ms, source, timestamp, channel, error, shape, n_items, keys) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (node, action, 1 if success else 0, response_ms, source,
-                 datetime.now().isoformat(), channel, err, shape, n_items)
+                 datetime.now().isoformat(), channel, err, shape, n_items, keys_json)
             )
         except sqlite3.OperationalError:
             # 구 스키마 폴백 (마이그레이션 실패 시에도 기록 자체는 산다)

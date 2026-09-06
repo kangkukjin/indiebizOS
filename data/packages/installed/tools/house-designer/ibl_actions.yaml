@@ -5,6 +5,7 @@ actions:
     group: architecture
     runs_on: pc_only
     returns: scalar
+    side_effect: true   # 설계 JSON 파일을 만든다(55회차 B55-1 — 데이터를 돌려주지만 세계를 바꾸는 부류)
     exempt: '설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)'
     category: create
     router: handler
@@ -20,6 +21,7 @@ actions:
     group: architecture
     runs_on: pc_only
     returns: scalar
+    side_effect: true   # 설계 JSON 파일을 고친다(55회차 B55-1)
     exempt: '설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)'
     router: handler
     tool: modify_house_design
@@ -35,6 +37,7 @@ actions:
     group: architecture
     runs_on: pc_only
     returns: scalar
+    side_effect: false   # 설계 디렉토리 보장(makedirs)만 — 읽기(부작용-정직성 관문 2026-09-06)
     exempt: '설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)'
     category: get
     router: handler
@@ -75,6 +78,7 @@ actions:
     group: architecture
     runs_on: pc_only
     returns: scalar
+    side_effect: false   # 설계 디렉토리 보장(makedirs)만 — 계산·읽기(부작용-정직성 관문 2026-09-06)
     exempt: '설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)'
     router: handler
     tool: generate_quantity_report
@@ -126,6 +130,7 @@ actions:
     group: architecture
     runs_on: pc_only
     returns: items
+    side_effect: false   # 설계 디렉토리 보장(makedirs)만 — 읽기(부작용-정직성 관문 2026-09-06)
     exempt: '설계 저장 디렉토리 상태 의존(빈 몸에선 고정 fixture 불가)'
     category: list
     router: handler

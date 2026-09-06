@@ -50,7 +50,7 @@
 | Polars | 큰 표(수백만 행) 빠른 가공·lazy | `pip:polars` | Pandas 보다 5~10배 |
 | DuckDB | 파일(CSV/Parquet) 위 SQL 분석, 메모리 내 OLAP | `pip:duckdb` | 서버 없음 · `[sense:sqlite]` 는 원장용 |
 | SQLite | 내장 | (표준) | 몸의 원장(.db) 읽기는 `[sense:sqlite]` 낱말 |
-| PostgreSQL | 다중 사용자·동시성 DB | 🔧 `brew install postgresql@16` + `pip:psycopg[binary]` | 개인 몸에선 보통 DuckDB/SQLite 로 족함 |
+| PostgreSQL | 다중 사용자·동시성 DB | 🔧 `brew install postgresql@16` + `pip:psycopg[binary]` | 개인 몸에선 DuckDB/SQLite 로 족함 · 공간 질의도 DuckDB `spatial` 확장이 PostGIS 보다 먼저 |
 | PyArrow | Parquet·Arrow 교환 | `pip:pyarrow` | |
 
 ### 시각화·이미지
@@ -78,15 +78,15 @@
 |---|---|---|---|
 | PyBullet | 강체 물리·로봇 시뮬 | `pip:pybullet` | |
 | MuJoCo | 정밀 다관절 물리(로봇·생체) | `pip:mujoco` | |
-| FEniCS | 유한요소(PDE) | 🔧 conda/도커 전용 | pip 불가 — 사용자 판단 |
+| FEniCSx (dolfinx 0.11) | 유한요소(PDE) | 🔧 conda `fenics-dolfinx` | pip 은 C++ 코어 선빌드 후에만 · 구 이름 FEniCS |
 | deal.II | C++ 유한요소 | 🔧 소스 빌드 | 파이썬 몸에선 비추천 |
-| OpenFOAM | CFD(유체) | 🔧 도커 이미지 | 대규모 · 사용자 몫 |
+| OpenFOAM | CFD(유체) | 🔧 `brew install --no-quarantine gerlero/openfoam/openfoam` (차선 도커) | 대규모 · 사용자 몫 · 메시=`pip:gmsh`, 후처리=`pip:pyvista` |
 
 ### 화학·생명
 | 도구 | 잘하는 일 | 통로 | 비고 |
 |---|---|---|---|
 | RDKit | SMILES 파싱·분자 그림·물성·유사도 | `pip:rdkit` | |
-| Open Babel | 분자 포맷 상호변환 | 🔧 `brew install open-babel` (또는 `pip:openbabel-wheel`) | |
+| Open Babel | 분자 포맷 상호변환 | 🔧 `brew install open-babel` (또는 `pip:openbabel-wheel`, py≤3.13 휠) | |
 | Biopython | 서열·PDB | `pip:biopython` | |
 
 ### 천문·지구·지리
@@ -112,8 +112,23 @@
 | Typst | 조판 PDF(가볍고 빠름) | `[table:document]{format: "typst"}` 낱말 | LaTeX 보다 먼저 |
 | LaTeX | 논문·수식 조판 | 🔧 `brew install --cask basictex` (`pdflatex`) | 무거움(수 GB) |
 | MathJax / KaTeX | 웹 수식 렌더 | 🌐 CDN | |
-| Jupyter | 대화형 노트북 | `pip:jupyterlab` | 몸 안에선 `[self:script]`·run_command 로 족함 |
+| Jupyter / marimo | 대화형 노트북 / 반응형 .py 노트북 | `pip:jupyterlab` · `pip:marimo` | 몸 안에선 `[self:script]`·run_command 로 족함 |
 | pypdf / pdfplumber | PDF 텍스트·표 추출 | `pip:pypdf` · `pip:pdfplumber` | `[self:read]` 가 PDF 를 읽으면 그게 먼저 |
+
+### 조사로 확인된 추가 표준 (2026-09-06, 상세·근거=`docs/world_map/D_science_engineering.md`)
+| 도구 | 잘하는 일 | 통로 | 비고 |
+|---|---|---|---|
+| OR-Tools / CVXPY | 조합·경로·스케줄 최적화 / 볼록·비선형 모델링 | `pip:ortools` · `pip:cvxpy` | 파이썬 최적화 2대 표준 |
+| xarray + netCDF4 · cdsapi | 라벨 N-D 배열·기후 자료(.nc) · ERA5 재분석 다운로드 | `pip:xarray netCDF4` · `pip:cdsapi`(무료 계정 키) | `[sense:weather]` 는 예보, 이건 과거 40년 |
+| Gmsh · VTK/PyVista | FEM 메시 생성 · 과학 3D 후처리 | `pip:gmsh` · `pip:pyvista` | 시뮬 파이프의 입구·출구 |
+| Cantera · KiCad `kicad-cli` · ngspice | 연소·반응 / 회로도·PCB 내보내기 / SPICE 배치 | `pip:cantera` · 🔧 `brew install --cask kicad` · 🔧 `brew install ngspice` | PySpice 는 정체 — ngspice -b 직접 |
+| CadQuery / build123d | 코드 CAD(STEP/STL) | `pip:cadquery` · `pip:build123d` | OpenSCAD 의 파이썬 짝 |
+| LAMMPS · ASE · pymatgen | 분자동역학 · 원자 구조 공용어 · 결정 분석(Materials Project API) | `pip:lammps` · `pip:ase` · `pip:pymatgen mp-api` | 전부 arm64 휠 |
+| Z3 · Lean 4 | SMT 솔버 · 정리 증명(Coq→Rocq 개명) | `pip:z3-solver` · 🔧 `brew install elan-init` | |
+| H3 · Graphviz · Manim · Quarto | 육각 지리 색인 · 그래프 배치(.dot) · 수학 애니메이션 · 과학 출판 | `pip:h3` · 🔧 `brew install graphviz`+`pip:graphviz` · `pip:manim` · 🔧 `brew install --cask quarto` | |
+| Kiwi (kiwipiepy) | 한국어 형태소·품사·문장 분리 | `pip:kiwipiepy` | Java 불요 — KoNLPy 대체 현 표준 |
+
+**연결(API·프로토콜·플랫폼)의 지도는 아직 이 문서에 없다** — 1차 조사 결과는 `docs/WORLD_MAP_CANDIDATES_2026-09-06.md`(1층 12개 구멍·2층 어휘 후보·쓰지 말 것). 형태는 사용자 판정 대기.
 
 ## 3. 지도 갱신 규약 — AI 가 쓰고 사람이 고친다
 

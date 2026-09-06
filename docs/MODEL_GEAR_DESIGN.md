@@ -54,8 +54,17 @@
 판정(EXECUTE/THINK/REPAIR)이 "숙고가 필요한가"를 모델 독립적으로 정하므로, 그 판정에 예산을 얹으면
 모델을 바꿔도 규칙이 남는다(사용자 원칙: 모델 교체를 살아남는 최적화만 한다).
 
-- 정본: `model_gear.json` 의 `lane_reasoning` (`EXECUTE: off`, `THINK/REPAIR: default`). 새 설치는
-  `model_resolver._DEFAULT_GEAR` 가 같은 값을 준다. 키 부재·미지 값 = `default`(동작 불변).
+- 정본: `model_gear.json` 의 `lane_reasoning`. **2026-09-06 개정: 전 차선 `default`(켜짐)** — 사용자 판정
+  "실행 모델은 think 를 켠다, 켜는 게 기본". 새 설치는 `model_resolver._DEFAULT_GEAR` 가 같은 값을 준다.
+  키 부재·미지 값 = `default`(동작 불변). 기제(`reasoning_mode` 배선·프로바이더 번역)는 그대로 두되 값만 되돌렸다.
+- 개정 이유(ep2901 부동산 31호 해부): 09-02 의 `EXECUTE: off` 는 경량 반사급 턴(날짜·git 상태) 실측을
+  차선 전체로 일반화한 것이었다. 그러나 EXECUTE 는 "의식의 재규정이 필요 없다"는 판정이지 "추론이 필요
+  없다"는 판정이 아니다 — 08-10 상향 뒤 THINK 는 장기·위험 작업에만 서므로 가이드·실행기억이 규정해 둔
+  보고서도 EXECUTE 로 떨어진다. ep2901 에서 추론 토큰(출력의 50%)은 고르게 퍼지지 않고 지역 판정(5,054
+  토큰·164s)·데이터 절단 설계 턴에 몰려 있었다 = 판단 자리의 예산. 또 CLI 프로바이더는 no-op 이라 이
+  정책은 경량 티어에만 실제 적용돼 왔고, 지금까지의 opus 보고서 품질은 전부 추론 켜진 채의 것이다.
+  반사급 턴의 지연을 다시 잡으려면 변수는 차선이 아니라 reflex 축(해마 top ≥ 0.85) 또는 회상된 턴 크기
+  (`avg_tokens`)여야 한다 — 미채택, 사용자 판정 대기.
 - 적용: `agent_pipeline` 이 provider 전환 뒤 턴 사본에 `reasoning_mode` 를 찍는다. 프로바이더가 자기
   표기로 번역(DeepSeek `thinking disabled` / Anthropic·Gemini budget 0 / o-시리즈 effort 생략 / CLI
   프로바이더는 no-op).

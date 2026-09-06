@@ -73,12 +73,12 @@
 
 | 항목 | 사실 | 확인할 것 |
 |---|---|---|
-| **OpenAlex API 키 필수** (2026-02-13~, 무료 계정 일 $1) | `sense:paper` 기본 소스가 openalex | 무키 호출이면 지금 깨져 있음 — `OPENALEX_API_KEY` 배선 |
-| **네이버 검색 API → NAVER API HUB 이관** (2026-07-31 신규 중단, 책·쇼핑·전문자료 종료, 구 인증 2027-06-30 까지) | `sense:search{naver}`·`sense:restaurant` 가 `openapi.naver.com` 사용 | 도메인·헤더(`X-NCP-APIGW-API-KEY-ID/KEY`) 이관 |
+| OpenAlex API 키 (조사원 주장: 2026-02-13~ 필수) | `sense:paper` 기본 소스가 openalex, 무키 호출(study/handler.py `_search_openalex`) | **실측 2026-09-06 무키 `GET /works?search=` → 200 정상** — "필수" 는 확인 안 됨(한도 차이일 수 있음). 지금은 수리 불요, 429/401 나오면 `OPENALEX_API_KEY`+`mailto` 배선 |
+| **네이버 검색 API → NAVER API HUB 이관** (2026-07-31 신규 중단, 책·쇼핑·전문자료 종료, 구 인증 2027-06-30 까지) | `backend/common/api_client.py` 의 `naver: https://openapi.naver.com`(공용 클라이언트 한 곳) | 지금은 동작(구 인증 유지 기간). 2027-06-30 전에 도메인·헤더(`X-NCP-APIGW-API-KEY-ID/KEY`) 이관 — 한 곳이라 작음 |
 | **Wikimedia 글로벌 한도** (UA 없는 IP 10 req/분) | `sense:entity` | 연락처 포함 User-Agent |
 | Crossref polite pool(`mailto=`) · PMC 1만 건 상한 · arXiv 429(3초 간격) | `sense:paper` 각 소스 | 한도 준수 배선 |
 | **AnkiConnect 기본 포트 8765** | indiebizOS 백엔드 포트와 동일 | Anki 어휘화 시 충돌 선처리 |
-| Bing Search API 전 계열 종료(2025-08) | 몸에 bing 참조가 남아 있으면 죽은 통로 | grep 확인 |
+| Bing Search API 전 계열 종료(2025-08) | 몸에 bing 참조 없음(grep 확인 2026-09-06) | 없음 |
 
 ## 6. 쓰지 말 것 (죽음·유료화·개인 불가 — 지도에 남길 가치)
 

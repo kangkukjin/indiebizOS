@@ -301,7 +301,11 @@ def _struct(tool_input: dict) -> str:
         if err:
             return _fail(f"구조화 실패: {err}")
 
-    from oneshot_facade import records_gate, grounded_filter, mark_ai, expand_quotes
+    from oneshot_facade import records_gate, grounded_filter, mark_ai
+    try:
+        from oneshot_facade import expand_quotes          # 앵커 확장(2026-09-06) — 옛 facade·시험 스텁이면 없음
+    except ImportError:
+        expand_quotes = None
     records, gerr = records_gate(parsed)
     if gerr:
         return _fail(f"구조화 실패: {gerr}")
@@ -317,7 +321,7 @@ def _struct(tool_input: dict) -> str:
             result["dropped_ungrounded"] = dropped
         records = kept
         # 앵커 → 문장 확장: 모델은 첫 구절만 쳤고, 독자용 근거는 여기서 원문으로 채운다(2026-09-06)
-        _exp = expand_quotes(records, src["text"])
+        _exp = expand_quotes(records, src["text"]) if expand_quotes else 0
         if _exp:
             result["quote_expanded"] = _exp
     if known_lines:

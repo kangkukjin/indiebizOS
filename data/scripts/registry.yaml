@@ -10,7 +10,9 @@ Cloudflare사용량:
 arch_render:
   description: '설계 JSON(design_*.json 경로 또는 design_id) → 헤드리스 Blender/Cycles 외관 렌더
     PNG + glTF(.glb). 옵션: --samples N --res W H --view auto|sw|se|ne|nw --out PNG
-    --gltf PATH --no-gltf. Three.js 뷰어(arch_view_3d)는 형상 확인용, 이쪽은 완성 컷용.'
+    --gltf PATH --no-gltf --sun always|auto|off --force. Three.js 뷰어(arch_view_3d)는 형상 확인용, 이쪽은 완성 컷용.
+    ★렌더 관문(2026-09-06): 같은 설계 60분 8회 상한, 직전과 같은 그림(Δ<0.02) 2회 연속이면 거절 — 봉투 gate 줄을 읽고
+    멈춰서 그림을 사용자에게 보여라(next 줄). 판정은 criteria archviz_draft|archviz|archviz_final 단계별. 가이드: arch_render.md'
   file: arch_render_cli.py
   interpreter: python
   registered_at: '2026-09-06T15:16:23'

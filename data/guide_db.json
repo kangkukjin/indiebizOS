@@ -1673,6 +1673,28 @@
       ],
       "file": "world_tools.md",
       "topic": "워크플로·스크립트"
+    },
+    {
+      "id": "arch_render",
+      "name": "건축 외관 렌더 절차",
+      "description": "집 설계(house-designer)의 외관 렌더를 뽑고 판정할 때 — 단계별 채점표(초안/제안/최종)·렌더 예산·조명 표준·그림을 사용자에게 보이는 순서.",
+      "keywords": [
+        "렌더",
+        "렌더링",
+        "외관",
+        "투시도",
+        "archviz",
+        "블렌더",
+        "blender",
+        "건축",
+        "집 설계",
+        "3D",
+        "그림자",
+        "조명",
+        "render"
+      ],
+      "file": "arch_render.md",
+      "topic": "부동산"
     }
   ]
 }

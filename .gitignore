@@ -408,3 +408,8 @@ data/notebook/
 
 # 턴 저장소 스필(ibl_turn_vars, 2026-09-05) — 런타임 산출, 개인 턴 데이터
 data/spill/
+
+# 렌더 자산 캐시(Poly Haven CC0 원본, 2026-09-06) — 언제든 다시 받을 수 있는 파생물.
+# 현재 1.2GB(모델 892M·텍스처 205M·HDRI 159M)라 저장소에 들어가면 안 된다.
+# 다시 채우기: python3 data/packages/installed/tools/house-designer/render_assets.py
+data/render_assets/

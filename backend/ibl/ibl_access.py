@@ -550,9 +550,53 @@ IDIOMS_TOP = 6
 _idioms_cache = {"t": 0.0, "text": "", "key": None}
 
 
+def _stored_signature(raw):
+    """저장 서명 → (names, known). 규약의 단일 소스는 원장(ibl_usage_db.parse_signature)."""
+    try:
+        from ibl_usage_db import parse_signature
+        return parse_signature(raw)
+    except Exception:
+        return ([], False)
+
+
+def _spread_by_topic(rows: list, top: int) -> list:
+    """①쓰인 것 먼저 ②남은 자리는 가지별 하나씩(라운드로빈) — 한 가지가 블록을 다 먹지 않게(2026-09-06).
+
+    rows 는 이미 (사용 횟수 DESC, created_at DESC) 로 정렬돼 있다. 사용된 것은 그 순서 그대로 앞에 두고,
+    미사용은 topic 을 돌며 한 건씩 뽑는다. 상시 블록은 이번 턴의 주제를 모르므로, 적어도 서로 다른 주제를
+    보여 주는 것이 한 주제로 몰리는 것보다 맞을 확률이 높다."""
+    used = [r for r in rows if (int(r[2] or 0) + int(r[3] or 0)) > 0]
+    rest = [r for r in rows if (int(r[2] or 0) + int(r[3] or 0)) == 0]
+    out = used[:top]
+    if len(out) >= top:
+        return out
+    buckets: dict = {}
+    for r in rest:
+        buckets.setdefault((r[4] or "").split("/")[0], []).append(r)
+    while len(out) < top and any(buckets.values()):
+        for k in list(buckets):
+            if not buckets[k]:
+                del buckets[k]
+                continue
+            out.append(buckets[k].pop(0))
+            if len(out) >= top:
+                break
+    return out
+
+
 def _idioms_block(allowed: Optional[Set[str]]) -> str:
-    """최빈도 관용구 블록 — 가벼운 sqlite 읽기(모델·벡터 무접촉), 5분 캐시.
-    순위 = 귀속된 사용 횟수(success+fail) 내림차순, 같으면 최근 것. 허용 노드 밖 어휘가 든 관용구는 뺀다."""
+    """부를 수 있는 이름 블록 — 가벼운 sqlite 읽기(모델·벡터 무접촉), 5분 캐시.
+
+    이 블록은 *시스템 프롬프트*라 이번 턴의 주제를 모른다(세션 시작에 한 번 굳는다). 관련성으로 나르는 일은
+    턴마다 도는 회상 채널(ibl_usage_rag.search_phrases)의 몫이고, 여기는 '이 몸이 실제로 부르는 이름' 을 건다.
+
+    순위(2026-09-06 개정): ①쓰인 것(success+fail>0) 내림차순 → ②남은 자리는 **가지별 하나씩** 최신순.
+    옛 순위는 사용 횟수 하나뿐이라 콜드스타트에 굳었다 — 아무도 안 쓰였으니 정렬이 '최신순'으로 무너져
+    한 가지에서 갓 태어난 이름 여섯이 자리를 다 먹고, 다른 주제의 턴에는 통째로 무관했다(09-06 실측).
+
+    `category='phrase'` 잠금은 풀었다(2026-09-06): `[fn:]` 해소는 이미 카테고리 무관인데(find_phrase_by_alias)
+    보여주기만 관용구로 잠겨 있어 자동 작명된 다문장 프로그램 14건이 부를 수 있는데도 안 보였다.
+    허용 노드 밖 어휘가 든 것은 뺀다."""
     import re as _re
     import sqlite3
     import time
@@ -565,38 +609,41 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
         db_path = get_base_path() / "data" / "ibl_usage.db"
         if db_path.exists():
             conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
-            _q = ("SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,''), {ret} FROM ibl_examples "
-                  "WHERE category='phrase' ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?")
-            try:
-                rows = conn.execute(_q.format(ret="COALESCE(returns,'')"), (IDIOMS_TOP * 3,)).fetchall()
-            except sqlite3.OperationalError:            # returns 열 이전 DB(폰 번들 등) — 반환 없이
-                rows = conn.execute(_q.format(ret="''"), (IDIOMS_TOP * 3,)).fetchall()
+            # 열 하나가 없다고 다른 열까지 버리면 안 된다 — 옛 판은 returns 부재가 signature 를
+            # 함께 NULL 로 만들어 멀쩡한 서명을 '미상'으로 가르쳤다. 있는 열만 골라 읽는다.
+            _cols = {r[1] for r in conn.execute("PRAGMA table_info(ibl_examples)").fetchall()}
+            _ret = "COALESCE(returns,'')" if "returns" in _cols else "''"
+            _sig = "signature" if "signature" in _cols else "NULL"
+            rows = conn.execute(
+                f"SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,''), {_ret}, {_sig} "
+                "FROM ibl_examples WHERE COALESCE(alias,'') != '' "
+                "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
+                (IDIOMS_TOP * 8,)).fetchall()
             conn.close()
-            lines = []
-            for intent, code, sc, fc, topic, alias, returns in rows:
+            # 자를 것을 먼저 자른다 — 걸러진 뒤에 자리 배분을 해야 블록이 IDIOMS_TOP 을 채운다.
+            kept = []
+            for r in rows:
+                code = r[1] or ""
                 nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - {"fn"}
                 if allowed is not None and not nodes <= set(allowed):
                     continue
+                if len(_split_sentences(code)) < 2:
+                    continue                       # 한 문장은 낱말 — 이름으로 부를 것이 없다
+                kept.append(r)
+            lines = []
+            for intent, code, sc, fc, topic, alias, returns, signature in _spread_by_topic(kept, IDIOMS_TOP):
                 sents = _split_sentences(code)
-                if len(sents) < 2:
-                    continue
                 used = f" 사용 {sc + fc}회" if (sc + fc) else ""
-                slots = []
-                for m in _re.findall(r"\$\{([^}]+)\}", code):
-                    if m.strip() not in slots:
-                        slots.append(m.strip())
-                # 관용구 = 이름 붙은 함수(2026-09-05): 그대로 쓰면 호출 한 줄, 고치면 정의 블록을 프로그램에 붙여 넣고 문장을 빼거나 더한다
-                # 이름 먼저(2026-09-05, 사용자 판정): 서명만 싣는다 — `[def:]` 본문을 여기 내리면 모델이 베낀다.
-                # 본문은 [self:memory]{op:"recall", node, store:"실행", expand:"이름"} 으로만.
-                head = f"- {alias or '(이름 없음)'} — {intent}" + (f" ({topic})" if topic else "") + f" · 문장 {len(sents)}" + used
-                lines.append(head)
-                if alias:
-                    # 서명 = 호출 한 줄 + 반환 모양(2026-09-05): 부르기 전에 무엇이 나올지 안다 — 뒤에 무엇을 이을지 정하는 자리
-                    lines.append(f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in slots) + "}" + (f" → {returns}" if returns else ""))
+                lines.append(f"- {alias} — {intent}" + (f" ({topic})" if topic else "") + f" · 문장 {len(sents)}" + used)
+                # 서명은 실행기가 원장 문에서 계산해 저장한 것(2026-09-06) — 여기서 `${…}` 로 다시 세면
+                # 표시와 실행이 갈라지고, 가르친 대로 부른 호출이 "인자 누락"으로 거절된다.
+                # 미계산(NULL)이면 빈 `{}` 를 가르치지 않는다 — 거짓 서명은 그 자리에서 실패하는 호출이다.
+                names, known = _stored_signature(signature)
+                if known:
+                    lines.append(f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}" + (f" → {returns}" if returns else ""))
                 else:
-                    lines.append("  (이름 없음 — recall 로 가지를 열어 expand:\"#id\")")
-                if sum(1 for l in lines if l.startswith("- ")) >= IDIOMS_TOP:
-                    break
+                    lines.append(f"  [fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
+                                 f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
             if lines:
                 text = ("<ibl_idioms note=\"자주 쓰는 관용구 = 이름 붙은 함수. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄(정의 없이 이름만으로 돈다). "
                         "본문은 여기 없다 — 고쳐 써야 할 때만 [self:memory]{op: \\\"recall\\\", node: \\\"<가지>\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 "

@@ -87,6 +87,8 @@ class UsageExample:
     avg_tokens: float = -1.0  # 성공 턴 토큰 EWMA(-1=미측정) — 토큰 선택압의 회상 표면
     topic: str = ""           # 주제 가지(hippo_tree) — 빈 값=뿌리
     alias: str = ""           # 관용구 이름(category=phrase) — `[fn:이름]{슬롯}` 으로 호출(2026-09-05)
+    signature: Optional[str] = None   # 호출 서명(2026-09-06) — 실행기가 문에서 계산. None=미계산
+    returns: str = ""         # 반환 모양(2026-09-05)
 
 
 # =============================================================================
@@ -129,6 +131,12 @@ def _syntax_reason(ibl_code: str) -> Optional[str]:
     except Exception as e:
         # 검증자 자체가 고장 = 검증 불가 = 거절. 침묵 통과는 관문의 자살.
         return f"검증자 예외: {e.__class__.__name__}: {e}"
+
+
+# 서명 계산자 슬롯은 ibl_signature_slot 로 옮겼다(2026-09-06, 1500줄 규칙) — 이름은 그대로 쓴다.
+from ibl_signature_slot import (          # noqa: F401  재수출: 원장의 문이 쓰는 이름
+    set_signature_computer, signature_of as _signature_of, parse_signature,
+)
 
 
 _QUOTED_RE = re.compile(r'"(?:\\.|[^"\\])*"' + r"|'(?:\\.|[^'\\])*'")
@@ -262,6 +270,10 @@ class IBLUsageDB:
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
         if "returns" not in cols:  # 함수 서명의 반환 모양(2026-09-05, ibl_typecheck.describe) — `items⟨title·url⟩`/`prose`/`?`
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN returns TEXT DEFAULT ''")
+        if "signature" not in cols:
+            # 호출 서명 = 바깥에서 줘야 하는 $이름들(2026-09-06). 실행기(_free_vars)가 문에서 계산해 넣는다.
+            # NULL=미계산(파서 없는 몸), ''=인자 없음 — 둘을 구분해야 거짓 `{}` 를 안 가르친다.
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN signature TEXT DEFAULT NULL")
 
         # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
         # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).
@@ -554,15 +566,17 @@ class IBLUsageDB:
             logger.warning(f"[IBL Usage DB] 남의 어휘 용례 거부(입구 소유-게이트): {ibl_code}")
             return 0
         now = datetime.now().isoformat()
+        # 서명은 문에서 한 번(2026-09-06) — 기록기마다 세면 표시와 실행이 갈라진다.
+        signature = _signature_of(ibl_code)
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns, signature)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (intent, ibl_code, nodes, category, difficulty, source, tags,
                  float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
                  float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
-                 _norm_topic(topic), (alias or "").strip(), (returns or "").strip())
+                 _norm_topic(topic), (alias or "").strip(), (returns or "").strip(), signature)
             )
             example_id = cursor.lastrowid
             conn.commit()
@@ -580,7 +594,7 @@ class IBLUsageDB:
             # 2026-09-05: 카테고리 무관 — 이름이 붙은 용례(관용구·다문장 프로그램)는 무엇이든 부를 수 있다(자동 작명과 한 벌)
             row = conn.execute(
                 "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category, "
-                "COALESCE(returns,'') AS returns "
+                "COALESCE(returns,'') AS returns, signature "
                 "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC LIMIT 1",
                 (name.strip(),)).fetchone()
         return dict(row) if row else None
@@ -1106,7 +1120,8 @@ class IBLUsageDB:
             return None
 
     def _search_rented(self, query: str, top_k: int, allowed_nodes: set = None,
-                       category: str = None, exclude_category: str = None) -> List["UsageExample"]:
+                       category: str = None, exclude_category: str = None,
+                       aliased_only: bool = False) -> List["UsageExample"]:
         """렌트 모드 검색: 맥 /embed 질의벡터 + 인메모리 brute-force 코사인 → UsageExample.
         벡터·문서 모두 L2 정규화라 dot = 코사인. FTS5 없이 순수 시맨틱(handoff '브루트포스 코사인')."""
         if not self._ensure_rented_index():
@@ -1117,7 +1132,7 @@ class IBLUsageDB:
             return []
         sims = self._rented_vecs @ qv  # (count,)
         # over-fetch 후 필터링(노드/카테고리)
-        over = min(len(sims), max(top_k * (100 if category else 5), top_k))
+        over = min(len(sims), max(top_k * (100 if (category or aliased_only) else 5), top_k))
         cand = np.argpartition(-sims, over - 1)[:over]
         cand = cand[np.argsort(-sims[cand])]
         results: List[UsageExample] = []
@@ -1127,6 +1142,8 @@ class IBLUsageDB:
                 ex_nodes = set(meta["nodes"].split(",")) if meta.get("nodes") else set()
                 if ex_nodes and not ex_nodes.intersection(allowed_nodes):
                     continue
+            if aliased_only and not (meta.get("alias") or "").strip():
+                continue
             if category and meta.get("category") != category:
                 continue
             if exclude_category and meta.get("category") == exclude_category:
@@ -1142,6 +1159,10 @@ class IBLUsageDB:
                 success_rate=round(success_rate, 2) if total else -1.0,
                 avg_ms=float(meta.get("avg_ms", -1.0)),
                 avg_tokens=float(meta.get("avg_tokens", -1.0)),
+                topic=meta.get("topic", "") or "",
+                alias=meta.get("alias", "") or "",
+                signature=meta.get("signature"),
+                returns=meta.get("returns", "") or "",
             ))
             if len(results) >= top_k:
                 break
@@ -1250,7 +1271,8 @@ class IBLUsageDB:
                       allowed_nodes: set = None,
                       category: str = None,
                       topic: str = None,
-                      exclude_category: str = None) -> List[UsageExample]:
+                      exclude_category: str = None,
+                      aliased_only: bool = False) -> List[UsageExample]:
         """메인 하이브리드 검색
 
         Args:
@@ -1262,6 +1284,8 @@ class IBLUsageDB:
                       후보를 넓게 뽑아 거른다(over_fetch ×100)
             exclude_category: 이 카테고리는 뺀다 — 낱말 채널이 관용구를 밀어내지 않게(반사 top-1 이
                       슬롯이 빈 관용구를 그대로 실행하면 안 된다)
+            aliased_only: 이름(alias) 붙은 것만 — 이름 채널(2026-09-06). 카테고리가 아니라 '부를 수 있는가'로
+                      고른다: `[fn:]` 해소가 카테고리 무관이므로 보여주기도 그래야 한다. 소수라 후보를 넓게 뽑는다.
 
         Returns:
             UsageExample 리스트 (점수 내림차순)
@@ -1275,7 +1299,7 @@ class IBLUsageDB:
 
         # 캐시 확인
         cache_key = hashlib.md5(
-            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}_{topic}_{exclude_category}".encode()
+            f"{query}_{top_k}_{alpha}_{allowed_nodes}_{category}_{topic}_{exclude_category}_{aliased_only}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:
@@ -1283,12 +1307,12 @@ class IBLUsageDB:
 
         # 렌트 모드(폰-자아 §6): 로컬 시맨틱 스택이 없으면 맥 /embed 렌트 + 인메모리 brute-force.
         if self._rented_mode():
-            results = self._search_rented(query, top_k, allowed_nodes, category, exclude_category)
+            results = self._search_rented(query, top_k, allowed_nodes, category, exclude_category, aliased_only)
             self._set_cached(cache_key, results)
             return results
 
         # 필터링 후 충분한 결과를 위해 넉넉히 — 주제 필터는 더 넓게, 카테고리 필터(관용구)는 훨씬 넓게
-        over_fetch = top_k * (100 if category else (10 if topic else 3))
+        over_fetch = top_k * (100 if (category or aliased_only) else (10 if topic else 3))
         use_semantic = self.is_semantic_available() and alpha > 0
 
         semantic_results = self.search_semantic(query, over_fetch) if use_semantic else []
@@ -1322,7 +1346,8 @@ class IBLUsageDB:
             placeholders = ','.join('?' * len(all_ids))
             rows = conn.execute(
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
-                           source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias
+                           source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias,
+                           signature, COALESCE(returns,'') AS returns
                     FROM ibl_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
@@ -1340,6 +1365,9 @@ class IBLUsageDB:
                 if example_nodes and not example_nodes.intersection(allowed_nodes):
                     continue
 
+            # 이름 필터링 — 부를 수 있는 것만(이름 채널)
+            if aliased_only and not (meta.get('alias') or '').strip():
+                continue
             # 카테고리 필터링
             if category and meta['category'] != category:
                 continue
@@ -1370,7 +1398,9 @@ class IBLUsageDB:
                 avg_ms=round(float(meta['avg_ms']), 0) if (meta['avg_ms'] or -1) >= 0 else -1.0,
                 avg_tokens=round(float(meta['avg_tokens']), 0) if (meta['avg_tokens'] or -1) >= 0 else -1.0,
                 topic=meta['topic'] or '',
-                alias=meta.get('alias') or ''
+                alias=meta.get('alias') or '',
+                signature=meta.get('signature'),
+                returns=meta.get('returns') or ''
             ))
 
             if len(results) >= top_k:

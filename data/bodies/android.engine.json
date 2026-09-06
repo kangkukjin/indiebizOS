@@ -95,6 +95,7 @@
     "datastore/health_sync",
     "datastore/hippo_tree",
     "datastore/ibl_registry",
+    "datastore/ibl_signature_slot",
     "datastore/ibl_usage_db",
     "datastore/install_approvals",
     "datastore/multi_chat_db",
@@ -282,8 +283,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 273,
-    "engine": 253,
+    "total": 274,
+    "engine": 254,
     "blocklist": 20
   }
 }

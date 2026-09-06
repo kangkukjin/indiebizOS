@@ -72,9 +72,18 @@ class IBLUsageRAG:
     # 0.45 미만은 무관 노이즈로 보고 넘기지 않는다.
     LOW_CONF_FLOOR = 0.45
     LOW_CONF_MAX = 2
-    # 관용구 채널(2026-09-04, docs/IBL_IDIOM_TIER_HANDOFF.md §2-c): 낱말 Top-5 옆에 관용구 Top-2 를
-    # 따로 검색해 싣는다. 낱말 임계(MIN_SCORE)와 같은 임계, 저신뢰 폴백 없음 — 틀린 골격이 낱말보다 해롭다.
+    # 관용구 채널(2026-09-04, docs/IBL_IDIOM_TIER_HANDOFF.md §2-c): 낱말 Top-5 옆에 이름 붙은 프로그램 Top-2 를
+    # 따로 검색해 싣는다.
+    #
+    # 문턱 개정(2026-09-06): 옛 규약은 "낱말 임계(0.65)와 같은 임계, 저신뢰 폴백 없음 — 틀린 골격이 낱말보다
+    # 해롭다" 였다. 그 근거는 이 채널이 `[def:]` **본문**을 실었다는 것이다 — 틀린 본문은 모델이 베낀다.
+    # 이제 본문을 빼고 **서명만** 싣는다(09-05 '이름 먼저' 판정을 상시 블록에 이어 여기에도). 베낄 것이
+    # 없으면 틀린 이름의 값은 두 줄이고, 모델은 부르거나 무시한다. 그래서 낱말의 저신뢰 바닥까지 연다 —
+    # 옛 문턱에서 이 채널은 09-05~06 이틀 동안 **2회** 발화했다(실측). 안 보이면 못 부른다.
     PHRASE_K = 2
+    PHRASE_MIN_SCORE = LOW_CONF_FLOOR
+    # 보여주기의 카테고리 잠금 해제(2026-09-06): `[fn:]` 해소는 이미 카테고리 무관인데
+    # (find_phrase_by_alias) 보여주기만 'phrase' 로 잠겨, 자동 작명된 다문장 프로그램이 안 보였다.
     PHRASE_CATEGORY = "phrase"
     CACHE_TTL = 300  # 5분
 
@@ -144,16 +153,16 @@ class IBLUsageRAG:
         return xml
 
     def search_phrases(self, user_query: str, allowed_nodes: set = None) -> list:
-        """관용구 채널 — `category='phrase'` 만 Top-PHRASE_K, MIN_SCORE 이상만(저신뢰 폴백 없음)."""
+        """이름 채널 — 이름(alias) 붙은 다문장 프로그램 Top-PHRASE_K, PHRASE_MIN_SCORE 이상. 본문 없이 서명만 실린다."""
         try:
             from ibl_usage_db import IBLUsageDB
             res = IBLUsageDB().search_hybrid(
                 query=user_query, top_k=self.PHRASE_K, allowed_nodes=allowed_nodes,
-                category=self.PHRASE_CATEGORY)
+                aliased_only=True)
         except Exception as e:
-            logger.error(f"[IBL RAG] 관용구 검색 실패: {e}")
+            logger.error(f"[IBL RAG] 이름 채널 검색 실패: {e}")
             return []
-        return [r for r in _own_only(res or []) if r.score >= self.MIN_SCORE]
+        return [r for r in _own_only(res or []) if r.score >= self.PHRASE_MIN_SCORE]
 
     def _select_references(self, results: list) -> tuple:
         """참조로 보여줄 용례 선별.
@@ -188,8 +197,10 @@ class IBLUsageRAG:
                     "토큰 소요 — 같은 목표를 같은 품질로 이룬다면 빠르고 싼 패턴이 좋다"
                     "(품질을 깎아 아끼는 것은 금물).")
         if phrases:
-            note += (" kind=\"phrase\" 는 관용구 = 이름 붙은 함수. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄(정의 없이 이름만으로 돈다), "
-                     "고쳐 쓰려면 [def: 이름]{…} 블록을 프로그램에 붙여 넣고 문장을 빼거나 더한 뒤 부른다. 여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
+            note += (" kind=\"phrase\" 는 이미 이름이 붙은 프로그램이다. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄 — 정의 없이 이름만으로 돈다. "
+                     "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
+                     "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:] 로 고쳐 부른다. "
+                     "여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
             # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가
@@ -209,28 +220,36 @@ class IBLUsageRAG:
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             lines.append(f'  <ref {attrs}><![CDATA[{_cdata(ex.ibl_code)}]]></ref>')
         for ex in phrases:
+            alias = (getattr(ex, "alias", "") or "").strip()
+            if not alias:
+                continue                      # 이름 없는 것은 부를 수 없다 — 본문을 실으면 베끼기가 된다
             try:
                 import hippo_tree
                 sents = hippo_tree.split_sentences(ex.ibl_code)
-                slots = hippo_tree.slot_names(ex.ibl_code)
             except Exception:
-                sents, slots = [ex.ibl_code], []
-            alias = (getattr(ex, "alias", "") or "").strip()
-            attrs = f'kind="phrase" intent="{_xml_attr(ex.intent)}" score="{ex.score}" sentences="{len(sents)}"'
-            if alias:
-                attrs += f' name="{_xml_attr(alias)}"'
-            if slots:
-                attrs += f' slots="{_xml_attr(", ".join(slots))}"'
+                sents = [ex.ibl_code]
+            # 서명 = 실행기가 원장 문에서 계산한 저장본(2026-09-06). 여기서 다시 세지 않는다 —
+            # 표시 서명이 실행 요구와 갈라지면 가르친 대로 부른 호출이 "인자 누락"으로 거절된다.
+            try:
+                from ibl_usage_db import parse_signature
+                names, known = parse_signature(getattr(ex, "signature", None))
+            except Exception:
+                names, known = [], False
+            attrs = f'kind="phrase" intent="{_xml_attr(ex.intent)}" score="{ex.score}" sentences="{len(sents)}" name="{_xml_attr(alias)}"'
+            if known and names:
+                attrs += f' slots="{_xml_attr(", ".join(names))}"'
             if ex.success_rate >= 0:
                 attrs += f' success_rate="{ex.success_rate}"'
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
-            # 관용구 = 이름 붙은 함수(2026-09-05): 호출 한 줄(그대로) + 정의 블록(고쳐 쓰기)
-            parts = []
-            if alias:
-                parts.append(f"[fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in slots) + "}")
-            parts.append(f"[def: {alias or '이름'}]{{\n" + "\n".join("  " + s for s in sents) + "\n}")
-            body = "\n".join(parts)
+            # 이름 먼저(2026-09-05 사용자 판정) — 본문(`[def:]`)은 싣지 않는다. 보이면 베낀다.
+            if known:
+                _ret = (getattr(ex, "returns", "") or "").strip()
+                body = (f"[fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}"
+                        + (f" → {_ret}" if _ret else ""))
+            else:
+                body = (f"[fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
+                        f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
             lines.append(f'  <ref {attrs}><![CDATA[\n{_cdata(body)}\n]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)
@@ -1203,14 +1222,26 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 return phrase_ok
         except Exception:
             pass
-        _alias = ""
+        _alias, _returns = "", ""
         try:
             import hippo_tree as _ht
             if len(_ht.split_sentences(code)) >= 2:
-                from ibl_idiom import sanitize_fn_name, unique_fn_name
-                _alias = unique_fn_name(sanitize_fn_name(distilled.get("code_name") or distilled.get("phrase_name"), intent), db, code)
+                # 부를 수 있는 것만 이름을 받는다(2026-09-06) — 관용구 증류와 같은 관문. 이름은 붙었는데
+                # 부를 수 없으면 회상 표면만 차지하고 매 호 본문을 다시 치게 만든다.
+                from workflow_contract import call_signature
+                from ibl_idiom import sanitize_fn_name, unique_fn_name, uncallable_reason
+                _why = uncallable_reason(call_signature(code), len(_ht.split_sentences(code)))
+                if _why:
+                    print(f"[경험증류] 부를 수 없는 모양 — 이름 없이 저장: {_why}")
+                else:
+                    _alias = unique_fn_name(sanitize_fn_name(distilled.get("code_name") or distilled.get("phrase_name"), intent), db, code)
+                    try:
+                        from ibl_typecheck import return_type_of
+                        _returns = return_type_of(code)     # 서명의 반환 모양 — 부르기 전에 무엇이 나올지
+                    except Exception:
+                        _returns = "?"
         except Exception:
-            _alias = ""
+            _alias, _returns = "", ""
         example_id = db.add_example(
             intent=intent,
             ibl_code=code,
@@ -1220,6 +1251,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             source="distilled",
             tags="auto",
             alias=_alias,
+            returns=_returns,
             avg_ms=float(_birth_ms) if _birth_ms else -1.0,
             avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
             topic=_topic,

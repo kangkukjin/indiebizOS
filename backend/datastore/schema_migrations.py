@@ -69,9 +69,36 @@ def _world_pulse_v1(conn: sqlite3.Connection) -> None:
             conn.execute(f"DELETE FROM {table} WHERE action IN ({ph})", olds)
 
 
+def _ibl_usage_v2(conn: sqlite3.Connection) -> None:
+    """이름 붙은 용례의 호출 서명 백필 (2026-09-06).
+
+    서명은 이제 원장 문(add_example)이 실행기의 계약으로 계산해 넣지만, 그 문이 생기기 전에 태어난
+    행은 비어 있다. 그 행들이 바로 어긋난 서명을 가르쳤다 — 표시가 `${…}` 정규식이던 시절의 유산이라
+    45건 중 10건이 실행 요구와 달랐고, 5건은 표시가 빈 `{}` 라 가르친 대로 부르면 100% 거절됐다.
+    해마 DB 는 릴리스에 실려 다른 몸으로 가므로, 사람이 스크립트를 돌리는 대신 여기서 따라잡는다.
+
+    서명을 못 구하는 행(파서 없는 몸·파스 불가)은 NULL 로 둔다 — 표시 쪽이 '미상'으로 말한다.
+    멱등: 이미 값이 있는 행은 건드리지 않는다."""
+    if not _has_table(conn, "ibl_examples"):
+        return
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(ibl_examples)").fetchall()}
+    if "signature" not in cols:
+        conn.execute("ALTER TABLE ibl_examples ADD COLUMN signature TEXT")
+    if "alias" not in cols:
+        return
+    from ibl_signature_slot import signature_of as _signature_of
+    rows = conn.execute("SELECT id, ibl_code FROM ibl_examples "
+                        "WHERE COALESCE(alias,'') != '' AND signature IS NULL").fetchall()
+    for rid, code in rows:
+        sig = _signature_of(code)
+        if sig is not None:
+            conn.execute("UPDATE ibl_examples SET signature=? WHERE id=?", (sig, rid))
+
+
 MIGRATIONS: Dict[str, List[Tuple[int, str, Callable[[sqlite3.Connection], None]]]] = {
     "ibl_usage": [
         (1, "storage/folder/cctv 액션명 통합 — ibl_examples.ibl_code 치환", _ibl_usage_v1),
+        (2, "이름 붙은 용례의 호출 서명 백필 — 표시 서명 = 실행 요구", _ibl_usage_v2),
     ],
     "world_pulse": [
         (1, "storage/folder/cctv 옛 액션명 행 삭제 — action_health/self_checks", _world_pulse_v1),

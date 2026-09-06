@@ -341,6 +341,34 @@ except Exception:
     pass
 
 
+# 부를 수 있어야 이름이다 (2026-09-06) — 09-06 실측: 이름 45건에 `[fn:]` 호출 0.
+# 이름은 붙는데 *부를 수 없는 모양*으로 태어나는 것이 뿌리 가운데 하나였다.
+#
+# 본문 인자(`…내용`·`…본문`·`…코드`)는 그 자체로는 죄가 아니다 — 편집 한 자리를 인자로 받으면서
+# 앞뒤 문장을 아껴 주는 이름은 값이 있다. 값이 없어지는 것은 **아낄 문장이 남지 않을 때**다:
+# 인자가 전부 본문이거나, 문장이 둘 이하인데 본문을 넘겨야 하면 부르는 값 = 치는 값이다.
+# 인자 상한은 따로 — 서명 한 줄이 본문보다 길면 부를 이유가 없다.
+#
+# 얼어붙은 것(인자 0)은 막지 않는다: `[fn:관문배터리돌리기]{}` 처럼 인자 없는 함수는 정당하고,
+# 실제로 쓰인 둘 가운데 하나다. 서명은 실행기가 원장 문에서 계산하므로 여기서 다시 세지 않는다.
+BODY_SLOT_RE = re.compile(r"(?:내용|본문|원문|코드|content|body|text)$", re.IGNORECASE)
+MAX_CALLABLE_SLOTS = 8
+
+
+def uncallable_reason(signature, sentences: int = 99) -> Optional[str]:
+    """부를 수 없는 서명이면 사유, 부를 수 있으면 None.
+
+    signature = 실행기(`workflow_contract.call_signature`)가 계산한 인자 이름 목록. sentences = 몸의 문장 수."""
+    names = [str(n) for n in (signature or [])]
+    if len(names) > MAX_CALLABLE_SLOTS:
+        return f"인자 {len(names)}개 — 상한 {MAX_CALLABLE_SLOTS}. 서명이 본문보다 길면 부를 이유가 없다"
+    body = [n for n in names if BODY_SLOT_RE.search(n)]
+    if body and (len(body) == len(names) or sentences <= 2):
+        return (f"본문만 넘기는 이름 — 인자 {', '.join(body)} / 문장 {sentences}: "
+                "아낄 문장이 남지 않아 부르는 값이 치는 값과 같다")
+    return None
+
+
 def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
                     tool_calls: list, turn_tokens: int = None) -> bool:
     """반성기의 두 번째 답(phrase·slots)을 관문에 통과시켜 `category='phrase'` 로 저장한다. 낱말 증류와 독립."""
@@ -407,6 +435,17 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
         _returns = return_type_of(code)                     # 서명의 반환 모양(2026-09-05) — 슬롯은 미상으로 두고 몸을 타입
     except Exception:
         _returns = "?"
+    # 부를 수 있는가 — 서명은 실행기의 것(`[fn:]` 이 인자 누락을 판정하는 바로 그 함수)으로 묻는다.
+    try:
+        from workflow_contract import call_signature
+        _sig = call_signature(code)
+    except Exception as e:
+        print(f"{tag} 서명 계산 불가 — 스킵({e.__class__.__name__}): {code[:60]}")
+        return False
+    why = uncallable_reason(_sig, n)
+    if why:
+        print(f"{tag} 부를 수 없는 이름 — 스킵: {why}")
+        return False
     example_id = db.add_example(
         intent=intent, ibl_code=code, nodes=nodes, category=hippo_tree.PHRASE_CATEGORY,
         difficulty=2, source="distilled", tags="auto,phrase",
@@ -426,5 +465,5 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     except Exception as e:
         print(f"{tag} 학습 파일 적재 실패(DB id={example_id}) — 재학습 원장 어긋남: {e}")
     IBLUsageRAG().clear_cache()
-    print(f"{tag} 저장 완료 (id={example_id}, 이름 [fn:{alias}], 문장 {n}, 슬롯 {len(hippo_tree.slot_names(code))}, 가지 '{topic}'): \"{intent[:40]}\"")
+    print(f"{tag} 저장 완료 (id={example_id}, 이름 [fn:{alias}], 문장 {n}, 슬롯 {len(_sig)}, 가지 '{topic}'): \"{intent[:40]}\"")
     return True

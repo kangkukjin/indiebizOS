@@ -53,4 +53,24 @@ def wire_ledger_syntax_gate() -> None:
     ibl_usage_db.set_code_validator(_validator)
 
 
+def wire_ledger_signature() -> None:
+    """해마 원장 문에 *서명 계산자* 를 꽂는다 — 구문 검증자와 같은 배선처, 같은 이유(2026-09-06).
+
+    이름 붙은 프로그램의 서명은 실행기(`[fn:]` 의 인자 누락 판정)가 정본이다. 표시 쪽이
+    `${…}` 정규식으로 따로 세면 갈라지고, 갈라진 서명을 가르치면 가르친 대로 부른 호출이
+    거절된다(09-06 실측 10/45). 문에서 한 번 계산해 저장하면 모든 표면이 같은 것을 읽는다.
+    """
+    try:
+        import ibl_usage_db
+    except Exception:
+        return
+
+    def _signature(ibl_code: str):
+        from workflow_contract import call_signature
+        return call_signature(ibl_code)
+
+    ibl_usage_db.set_signature_computer(_signature)
+
+
 wire_ledger_syntax_gate()
+wire_ledger_signature()

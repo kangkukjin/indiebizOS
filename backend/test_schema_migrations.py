@@ -35,18 +35,18 @@ def _usage_db():
 def test_t1_rewrites_and_stamps_version():
     conn = _usage_db()
     assert sm.current_version(conn) == 0
-    assert sm.apply(conn, "ibl_usage") == 1
+    assert sm.apply(conn, "ibl_usage") == sm.latest_version("ibl_usage")
     codes = [r[0] for r in conn.execute("SELECT ibl_code FROM ibl_examples ORDER BY id")]
     assert codes == ['[self:storage]{op: "scan", path: "/x"}', '[sense:cctv]{op: "nearby"}',
                      '[self:folder_note]{op: "get"}', '[self:storage]{op: "scan"}']
-    assert sm.current_version(conn) == 1
+    assert sm.current_version(conn) == sm.latest_version("ibl_usage")
 
 
 def test_t2_reapply_is_idempotent():
     conn = _usage_db()
     sm.apply(conn, "ibl_usage")
     before = list(conn.execute("SELECT ibl_code FROM ibl_examples ORDER BY id"))
-    assert sm.apply(conn, "ibl_usage") == 1
+    assert sm.apply(conn, "ibl_usage") == sm.latest_version("ibl_usage")
     assert list(conn.execute("SELECT ibl_code FROM ibl_examples ORDER BY id")) == before
 
 

@@ -168,12 +168,14 @@ def _conn(db_path: Optional[str] = None) -> sqlite3.Connection:
 def ensure_column(db_path: Optional[str] = None) -> None:
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
     try:
-        for col in ("topic", "alias", "returns"):
+        for col in ("topic", "alias", "returns", "signature"):
             try:
                 conn.execute(f"SELECT {col} FROM ibl_examples LIMIT 1")
             except sqlite3.OperationalError:
                 try:
-                    conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {col} TEXT DEFAULT ''")
+                    # signature 는 NULL=미계산 / ''=인자 없음 을 구분해야 한다(2026-09-06) — 기본값을 주지 않는다
+                    _default = "" if col == "signature" else " DEFAULT ''"
+                    conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {col} TEXT{_default}")
                     conn.commit()
                 except sqlite3.OperationalError:
                     pass
@@ -190,7 +192,8 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
         args = (norm_topic(topic),) + ((PHRASE_CATEGORY,) if where else ())
         rows = conn.execute(
             "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, updated_at, "
-            "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, COALESCE(returns,'') AS returns FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
+            "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, COALESCE(returns,'') AS returns, signature "
+            "FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
         return [dict(r) for r in rows]
     except sqlite3.OperationalError:
@@ -348,9 +351,27 @@ def join_sentences(sentences: List[str]) -> str:
     return "; ".join(_sentence_one_line(s) for s in sentences if s and s.strip())
 
 
-def slot_names(code: str) -> List[str]:
-    """호출 서명의 슬롯 — 몸의 `${이름}` 가운데 *바깥에서 줘야 하는 것*만. 몸 안에서 `$이름 = …` 로 태어나는
-    변수와 그 경로 참조(`${원장.items.*.id}`)는 슬롯이 아니다(2026-09-05: 서명에 내부 변수가 새어 나왔다)."""
+def _parse_signature(raw) -> tuple:
+    """저장된 서명 → (names, known). 규약의 단일 소스는 원장(ibl_usage_db.parse_signature)."""
+    try:
+        from ibl_usage_db import parse_signature
+        return parse_signature(raw)
+    except Exception:
+        return ([], False)
+
+
+def slot_names(code: str, signature: Any = None) -> List[str]:
+    """호출 서명의 슬롯.
+
+    ★정본은 저장된 `signature`(2026-09-06) — 실행기(`[fn:]` 인자 누락 판정)가 원장 문에서 계산한 것이다.
+    아래 `${이름}` 정규식은 서명이 아직 계산되지 않은 옛 행·파서 없는 몸을 위한 폴백일 뿐이다.
+    두 규칙이 갈라져 표시가 `{}` 인데 실행은 인자를 요구하면, 가르친 대로 부른 호출이 거절된다
+    (09-06 실측: 이름 붙은 45건 중 10건 불일치, 5건은 표시가 빈 서명).
+
+    몸 안에서 `$이름 = …` 로 태어나는 변수와 경로 참조(`${원장.items.*.id}`)는 슬롯이 아니다."""
+    names, known = _parse_signature(signature)
+    if known:
+        return names
     assigned = set(re.findall(r"(?m)^\s*\$\{?([\w가-힣]+)\}?\s*=", code or "")) | \
                set(re.findall(r"[;\n]\s*\$\{?([\w가-힣]+)\}?\s*=", code or ""))
     seen, out = set(), []
@@ -363,12 +384,12 @@ def slot_names(code: str) -> List[str]:
     return out
 
 
-def phrase_call_line(alias: str, code: str, returns: str = "") -> str:
-    """관용구를 그대로 쓰는 호출 한 줄 — `[fn:이름]{슬롯: "…", …} → 반환` (슬롯은 몸의 `${슬롯}`, 반환은 ibl_typecheck 가 계산한
-    `items⟨열⟩`/`prose`/`?` — 2026-09-05: 부르기 전에 무엇이 나올지 알아야 뒤 문장을 쓴다)."""
+def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = None) -> str:
+    """관용구를 그대로 쓰는 호출 한 줄 — `[fn:이름]{슬롯: "…", …} → 반환` (슬롯은 실행기가 계산한 저장 서명,
+    반환은 ibl_typecheck 가 계산한 `items⟨열⟩`/`prose`/`?` — 2026-09-05: 부르기 전에 무엇이 나올지 알아야 뒤 문장을 쓴다)."""
     if not alias:
         return ""
-    slots = slot_names(code or "")
+    slots = slot_names(code or "", signature)
     args = ", ".join(f'{s}: "…"' for s in slots)
     return f"[fn:{alias}]{{{args}}}" + (f" → {returns}" if returns else "")
 
@@ -388,7 +409,7 @@ def render_phrase(r: Dict[str, Any]) -> str:
     meta.append((r.get("created_at") or "")[:10])
     code = r.get("ibl_code") or ""
     sents = split_sentences(code)
-    slots = slot_names(code)
+    slots = slot_names(code, r.get("signature"))
     alias = (r.get("alias") or "").strip()
     head = "### " + (f"{alias} — " if alias else "") + f"{_one_line(r.get('intent'))} · 문장 {len(sents)}"
     if slots:
@@ -396,7 +417,7 @@ def render_phrase(r: Dict[str, Any]) -> str:
     head += f" ‹{' · '.join(m for m in meta if m)}›"
     lines = [head]
     if alias:
-        lines.append(f"호출: `{phrase_call_line(alias, code, (r.get('returns') or '').strip())}`")
+        lines.append(f"호출: `{phrase_call_line(alias, code, (r.get('returns') or '').strip(), r.get('signature'))}`")
     for i, sent in enumerate(sents, 1):
         lines.append(f"{i}. `{_one_line(sent).replace('`', chr(39))}`")
     return "\n".join(lines)
@@ -937,7 +958,8 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     if exp:
         for r in list(phrases) + list(words):
             if (r.get("alias") or "").strip() == exp:
-                return phrase_def_block(exp, r.get("ibl_code") or "") + "\n호출: " + phrase_call_line(exp, r.get("ibl_code") or "")
+                return phrase_def_block(exp, r.get("ibl_code") or "") + "\n호출: " + phrase_call_line(
+                    exp, r.get("ibl_code") or "", (r.get("returns") or "").strip(), r.get("signature"))
         names = [p["alias"] for p in list(phrases) + list(words) if (p.get("alias") or "").strip()]
         return f"(이름 '{exp}' 의 함수가 이 가지에 없습니다 — 부를 수 있는 이름: {', '.join(names) or '없음'})"
 
@@ -959,7 +981,7 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
             meta.append(f"✓{s}/✗{f}")
         meta.append("마지막 " + (p.get("updated_at") or p.get("created_at") or "")[:10])
         lines.append(f"- {p['alias']} — {_one_line(p.get('intent'))} · {' · '.join(meta)} ‹#{p['id']}›")
-        lines.append(f"  {phrase_call_line(p['alias'], code, (p.get('returns') or '').strip())}")
+        lines.append(f"  {phrase_call_line(p['alias'], code, (p.get('returns') or '').strip(), p.get('signature'))}")
     if not named:
         lines.append("- (아직 이름 붙은 함수가 없다 — 이 주행이 성공하면 증류가 이름을 붙인다)")
     lines.append("")
@@ -995,7 +1017,8 @@ def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
     n = len(split_sentences(code))
     alias = (r.get("alias") or "").strip()
     if alias:
-        out["call"] = phrase_call_line(alias, code, (r.get('returns') or '').strip() if isinstance(r, dict) else "")
+        out["call"] = phrase_call_line(alias, code, (r.get('returns') or '').strip() if isinstance(r, dict) else "",
+                                       r.get("signature") if isinstance(r, dict) else None)
         out["ibl_code"] = f"(문장 {n} — expand:\"{alias}\")"
     elif n > 1:
         out["ibl_code"] = f"(문장 {n}, 이름 없음 — expand:\"#{r.get('id')}\")"

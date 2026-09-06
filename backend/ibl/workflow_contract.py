@@ -150,6 +150,19 @@ def _free_vars(steps) -> List[str]:
     return found
 
 
+def call_signature(ibl_code: str) -> List[str]:
+    """IBL 원문의 **호출 서명** — 바깥에서 줘야 하는 `$이름` 목록. 층 밖의 공개 계약(2026-09-06).
+
+    `[fn:이름]{…}` 이 "인자 누락" 을 판정할 때 쓰는 바로 그 목록이다. 표시 쪽(회상·상시 블록·원장)이
+    `${…}` 정규식으로 따로 세면 두 소스가 갈라지고, 갈라진 서명을 가르치면 가르친 대로 부른 호출이
+    거절된다(09-06 실측 10/45). 서명을 묻는 자리는 전부 이 함수를 지난다.
+
+    파스 실패는 예외로 올린다 — 부르는 쪽이 '서명 미상'과 '인자 없음'을 갈라야 하기 때문이다.
+    """
+    from ibl_parser import parse
+    return list(_free_vars(parse(ibl_code)))
+
+
 def _signature_of(raw_body) -> List[str]:
     """저장 원문(문장·문장 배열·dict step 배열)에서 시그니처를 뽑는다. 실패하면 빈 목록."""
     try:

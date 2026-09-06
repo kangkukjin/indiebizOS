@@ -324,6 +324,7 @@ class _Ex:
     def __init__(self, code, intent="i", score=0.9, category="single", topic=""):
         self.ibl_code, self.intent, self.score, self.category, self.topic = code, intent, score, category, topic
         self.success_rate, self.avg_ms, self.avg_tokens, self.nodes = -1.0, -1.0, -1.0, ""
+        self.alias, self.signature, self.returns = "", None, ""
 
 
 def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monkeypatch):
@@ -333,8 +334,10 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     calls = []
     def fake_search(self, query, top_k=5, **kw):
         calls.append(kw)
-        if kw.get("category") == "phrase":
-            return [_Ex("; ".join(PHRASE), "찾아 읽고 고친다", 0.8, "phrase", "개발/프론트")]
+        if kw.get("aliased_only"):
+            ex = _Ex("; ".join(PHRASE), "찾아 읽고 고친다", 0.8, "phrase", "개발/프론트")
+            ex.alias, ex.signature, ex.returns = "찾아읽고고치기", "패턴 루트 파일 앞 뒤", "effect"
+            return [ex]
         return [_Ex(PIPE, "검색", 0.7)]
     monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
     monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
@@ -346,16 +349,30 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     xml, top_score, top_code = rag.build_execution_memory("컴포넌트 고쳐줘")
     assert top_code == PIPE and top_score == 0.7                      # 반사 top-1 은 낱말
     assert any(k.get("exclude_category") == "phrase" for k in calls)  # 낱말 채널은 관용구 제외
-    assert 'kind="phrase"' in xml and 'sentences="3"' in xml and "[def: 이름]{\n  " + PHRASE[0] in xml   # 이름 없는 옛 관용구도 정의 블록으로
-    assert 'slots="패턴, 루트, 파일, 앞, 뒤"' in xml
+    assert 'kind="phrase"' in xml and 'sentences="3"' in xml
+    assert 'slots="패턴, 루트, 파일, 앞, 뒤"' in xml and 'name="찾아읽고고치기"' in xml
+    # 이름 먼저(2026-09-05 판정을 회상 채널에도, 2026-09-06): 본문은 안 싣는다 — 서명 한 줄만
+    assert '[fn:찾아읽고고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"} → effect' in xml
+    assert "[def: " not in xml and PHRASE[0] not in xml
     assert thread_context.get_phrase_recall() == ["; ".join(PHRASE)]
-    # 관용구 임계: MIN_SCORE 미만은 싣지 않는다(저신뢰 폴백 없음)
+    # 문턱(2026-09-06): 본문을 안 싣게 됐으니 낱말의 저신뢰 바닥까지 연다 — 안 보이면 못 부른다
     calls.clear()
     def low(self, query, top_k=5, **kw):
-        return [_Ex("; ".join(PHRASE), score=0.5, category="phrase")] if kw.get("category") == "phrase" else []
+        if not kw.get("aliased_only"):
+            return []
+        ex = _Ex("; ".join(PHRASE), score=0.5, category="phrase")
+        ex.alias, ex.signature, ex.returns = "이름", "", ""
+        return [ex]
     monkeypatch.setattr(mod.IBLUsageDB, "search_hybrid", low)
     r.clear_cache()
-    assert r.search_phrases("x") == []
+    assert len(r.search_phrases("x")) == 1        # 0.5 ≥ 저신뢰 바닥(0.45)
+    def lower(self, query, top_k=5, **kw):
+        ex = _Ex("; ".join(PHRASE), score=0.3, category="phrase")
+        ex.alias = "이름"
+        return [ex] if kw.get("aliased_only") else []
+    monkeypatch.setattr(mod.IBLUsageDB, "search_hybrid", lower)
+    r.clear_cache()
+    assert r.search_phrases("x") == []            # 무관 노이즈는 여전히 뺀다
 
 
 # ---------------------------------------------------------------- P6 트레이너
@@ -384,9 +401,11 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     rows = [("자주", "; ".join(PHRASE), 5, 1), ("드물", '[sense:search]{query: "${q}"}; [table:take]{n: 3}', 0, 0),
             ("낱말", PIPE, 9, 0)]
     conn.execute("ALTER TABLE ibl_examples ADD COLUMN alias TEXT DEFAULT ''")
+    conn.execute("ALTER TABLE ibl_examples ADD COLUMN signature TEXT")
     for intent, code, sc, fc in rows:
-        conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, fail_count, created_at, updated_at, topic, alias) VALUES (?,?,?,?,?,?,?,?,?)",
-                     (intent, code, "phrase" if intent != "낱말" else "pipeline", sc, fc, now, now, "개발", "자주찾기" if intent == "자주" else ""))
+        conn.execute("INSERT INTO ibl_examples (intent, ibl_code, category, success_count, fail_count, created_at, updated_at, topic, alias, signature) VALUES (?,?,?,?,?,?,?,?,?,?)",
+                     (intent, code, "phrase" if intent != "낱말" else "pipeline", sc, fc, now, now, "개발",
+                      "자주찾기" if intent == "자주" else "", "패턴 루트 파일 앞 뒤" if intent == "자주" else None))
     conn.commit(); conn.close()
     (tmp_path / "data").mkdir()
     os.replace(db, str(tmp_path / "data" / "ibl_usage.db"))
@@ -394,10 +413,12 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     block = A._idioms_block(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
-    assert block.index("- 자주찾기 — 자주 (개발) · 문장 3 사용 6회") < block.index("- (이름 없음) — 드물 (개발)")
+    assert "- 자주찾기 — 자주 (개발) · 문장 3 사용 6회" in block
+    # 이름 없는 행은 싣지 않는다(2026-09-06) — 부를 것이 없고, 본문을 보여 주면 베끼기가 된다
+    assert "(이름 없음)" not in block and "드물" not in block
     assert '  [fn:자주찾기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block          # 그대로 쓰는 호출 한 줄
     # 이름 먼저(2026-09-05): 정의 블록은 싣지 않는다 — 본문은 recall{expand:"이름"} 으로만
     assert "  [def: 자주찾기]{" not in block and PHRASE[0] not in block and "expand" in block
     assert PIPE not in block                                   # 낱말은 싣지 않는다
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
-    assert "드물" not in A._idioms_block({"self"})              # sense 가 허용 밖이면 그 관용구는 빠진다
+    assert "자주찾기" not in A._idioms_block({"others"})        # self·sense 가 허용 밖이면 그 이름은 빠진다

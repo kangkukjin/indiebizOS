@@ -549,6 +549,7 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
     반환: calls(execute_ibl 호출 수)·single(액션 1개 호출)·failed·typed_chars(code 자수 합).
     """
     calls = single = failed = typed = 0
+    retyped = retyped_warns = pointed = fn_calls = 0
     for tc in tool_calls or []:
         if not isinstance(tc, dict):
             continue
@@ -560,12 +561,34 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
         code = code if isinstance(code, str) else str(code or "")
         calls += 1
         typed += len(code)
+        if isinstance(inp, dict):
+            for _f in (inp.get("files") or []):          # files 첨부도 모델이 친 글자다
+                typed += len(_f) if isinstance(_f, str) else 0
         if len(_IBL_HEAD_RE.findall(code)) <= 1:
             single += 1
+        fn_calls += code.count("[fn:")
         ok = tc.get("success") if "success" in tc else (not tc.get("is_error", False))
         if ok is False:
             failed += 1
-    return {"calls": calls, "single": single, "failed": failed, "typed_chars": typed}
+        # 되받아쓰기·가리킴(2026-09-06 [출력해부]) — 궤적 항목의 수치 메타 또는 결과 봉투에서
+        _rc, _pt = tc.get("retyped_chars"), tc.get("pointed")
+        if _rc is None or _pt is None:
+            _res = tc.get("result")
+            if isinstance(_res, str) and ('"retyped"' in _res or '"turn_vars"' in _res):
+                try:
+                    _o = json.loads(_res)
+                    if _rc is None:
+                        _rc = ((_o.get("retyped") or {}).get("verbatim_chars")) or 0
+                    if _pt is None:
+                        _pt = len(((_o.get("turn_vars") or {}).get("injected")) or [])
+                except Exception:
+                    pass
+        if _rc:
+            retyped += int(_rc)
+            retyped_warns += 1
+        pointed += int(_pt or 0)
+    return {"calls": calls, "single": single, "failed": failed, "typed_chars": typed,
+            "retyped_chars": retyped, "retyped_warns": retyped_warns, "pointed": pointed, "fn_calls": fn_calls}
 
 
 def _fmt_chars(n: int) -> str:
@@ -582,7 +605,8 @@ def run_cost_line(tool_calls: list) -> str:
     if not c["calls"]:
         return ""
     return (f"이번 주행: execute_ibl {c['calls']}회(액션 1개 호출 {c['single']}회) · 실패 {c['failed']} · "
-            f"타이핑 {_fmt_chars(c['typed_chars'])}")
+            f"타이핑 {_fmt_chars(c['typed_chars'])} · 되받아쓰기 {_fmt_chars(c['retyped_chars'])}"
+            f"({c['retyped_warns']}회 경고) · 가리킴 {c['pointed']}회 · [fn:] {c['fn_calls']}회")
 
 
 def build_reflection_message(response: str, tool_calls: list) -> str:

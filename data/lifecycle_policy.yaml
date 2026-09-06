@@ -20,3 +20,16 @@ guide_budget_globs:
   - data/common_prompts/fragments/*.md
 downscale_per_run: 2     # 하향 정규화 회차당 가이드 수 (LLM 비용 절제, guide_audit PER_RUN 과 같은 태도)
 section_unused_min_turns: 3   # 절 단위 '미사용' 판정 최소 관측 턴 — 귀속이 이만큼 돌았을 때만 3부류 압축
+
+# 되받아쓰기 관문 (docs/OUTPUT_RETYPING_HANDOFF.md §6, 2026-09-06) — 모델이 친 긴 문자열 인자가 이 턴의 변수 값·
+# 직전 결과 그림자·대상 파일 현재 내용과 그대로 겹치면 봉투가 말한다(warn). 파일 통째 재작성급 겹침은 실행 전
+# 거절(refuse — 차분·줄범위 edit 이 기계적 대안). 수치는 정책이지 코드가 아니다(ibl_retyping.load_policy).
+retyping:
+  min_param_chars: 200            # 이보다 짧은 문자열 인자는 보지 않는다(앵커 old_string·지시문)
+  min_segment_chars: 40           # 그대로 겹침으로 세는 최소 조각(줄·문장) 길이
+  warn_verbatim_chars: 2000       # 겹친 글자 합이 이 이상이면 warn
+  refuse_file_verbatim_chars: 8000   # 대상 파일 현재 내용과 이 이상 겹치면 refuse
+  warn_data_ratio: 0.5            # 숫자·URL 토큰 중 이미 있는 것의 비율이 이 이상이면 warn
+  warn_data_min_tokens: 20        # 비율 판정의 최소 토큰 수(짧은 글의 우연 일치 배제)
+  shadow_results: 8               # 직전 결과 그림자 보관 개수(턴 저장소 옆)
+  shadow_max_chars: 1000000       # 그림자 한 개 상한

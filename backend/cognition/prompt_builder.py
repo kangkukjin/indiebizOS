@@ -884,7 +884,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
         ok, err = validate_imagined_draft(draft)
         if ok:
             aug.append("실행 초안(기계 검증 통과):\n" + draft +
-                       "\n이 초안을 출발점으로 삼되, 그대로 복사하지 말고 실행 결과에 따라 "
+                       "\n이 초안이 출발점이다. 이 턴에 보관돼 있으니 그대로 맞으면 execute_ibl(code: \"$초안\") 한 줄로 "
+                       "실행하고(본문을 다시 치지 말 것), 고칠 것이 있으면 고친 문장만 적어라. 실행 결과에 따라 "
                        "파라미터·구성을 검증하며 다듬어라.")
         else:
             aug.append(f"실행 초안(검증 실패 — {err}):\n" + draft +

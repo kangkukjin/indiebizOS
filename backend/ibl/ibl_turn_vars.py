@@ -115,3 +115,79 @@ def clear(key: Optional[str]) -> None:
         os.remove(store_path(key))
     except OSError:
         pass
+
+
+# ── 결과 그림자 · 초안 (되받아쓰기 관문의 출처 ②·상상실행 초안 인계, 2026-09-06) ─────────────────
+# 이름 없는 최근 봉투의 final_result 를 턴 저장소 옆에 보관한다 — "$이름 을 안 붙였어도 방금 본 결과를
+# 다시 치면" 관문이 잡을 수 있게. 초안은 의식이 지은 imagined_ibl(검증 통과분)로, 실행자가 code:"$초안" 으로
+# 그대로 실행한다(500자 재타이핑 소거). 둘 다 task_id 키·24h GC 동승.
+
+def _task_key() -> Optional[str]:
+    try:
+        from thread_context import get_current_task_id
+        task = get_current_task_id() or ""
+    except Exception:
+        task = ""
+    return hashlib.sha256(task.encode("utf-8", "replace")).hexdigest()[:20] if task else None
+
+
+def shadow_path(key: str) -> str:
+    from common.spill import spill_dir
+    return os.path.join(spill_dir(), f"turn_shadow_{key}.json")
+
+
+def load_shadows(key: Optional[str]) -> List[str]:
+    if not key:
+        return []
+    p = shadow_path(key)
+    if not os.path.isfile(p):
+        return []
+    try:
+        with open(p, encoding="utf-8") as f:
+            obj = json.load(f)
+        return [s for s in obj if isinstance(s, str)] if isinstance(obj, list) else []
+    except Exception:
+        return []
+
+
+def save_shadow(key: Optional[str], value, keep: int = 8, max_chars: int = 1_000_000) -> None:
+    if not key or value is None:
+        return
+    s = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
+    if not s.strip() or len(s) > max_chars:
+        return
+    arr = load_shadows(key)
+    arr.append(s)
+    arr = arr[-max(1, int(keep)):]
+    p = shadow_path(key)
+    tmp = p + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(arr, f, ensure_ascii=False)
+    os.replace(tmp, p)
+
+
+def draft_path(key: str) -> str:
+    # .json — data/**/*.json 무시 규칙에 들어가 스필 부산물이 작업 트리에 뜨지 않는다(다른 스필 파일과 한 벌)
+    from common.spill import spill_dir
+    return os.path.join(spill_dir(), f"turn_draft_{key}.json")
+
+
+def save_draft(code: str) -> bool:
+    key = _task_key()
+    if not key or not (code or "").strip():
+        return False
+    with open(draft_path(key), "w", encoding="utf-8") as f:
+        json.dump({"code": code}, f, ensure_ascii=False)
+    return True
+
+
+def load_draft() -> str:
+    key = _task_key()
+    if not key:
+        return ""
+    try:
+        with open(draft_path(key), encoding="utf-8") as f:
+            obj = json.load(f)
+        return str(obj.get("code") or "") if isinstance(obj, dict) else ""
+    except (OSError, ValueError):
+        return ""

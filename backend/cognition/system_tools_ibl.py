@@ -385,7 +385,7 @@ def _enrich_error_with_param_hint(result, code: str):
     return result
 
 
-def _attach_turn_vars(result, parsed, key, injected: list) -> None:
+def _attach_turn_vars(result, parsed, key, injected: list, retyped=None) -> None:
     """턴 범위 변수(언어 개정 2026-09-06) — 실행 결과의 산 `$변수` 를 턴 저장소에 합치고 봉투에 정직하게 말한다.
 
     엔진이 `_want_live_vars` 로 실어 준 내부 키 `_live_vars` 를 떼어 쓴다(파이프 경로). 단일 step 할당
@@ -393,7 +393,19 @@ def _attach_turn_vars(result, parsed, key, injected: list) -> None:
     key 가 없으면(task_id 없는 직접 표면) 저장하지 않는다 — 다른 턴으로 새는 침묵 폴백 금지."""
     if not isinstance(result, dict):
         return
+    if retyped:
+        result["retyped"] = retyped        # 되받아쓰기 관문 warn — 봉투가 말한다(2026-09-06)
     live = result.pop("_live_vars", None)
+    # 결과 그림자 — 이름을 안 붙인 결과도 다음 호출의 되받아쓰기 대조 출처가 된다(관문 출처 ②)
+    try:
+        from ibl_turn_vars import save_shadow as _save_shadow
+        from ibl_retyping import load_policy as _rt_policy
+        _pol = _rt_policy()
+        _fr = result.get("final_result")
+        _save_shadow(key, _fr if _fr is not None else json.dumps(result, ensure_ascii=False),
+                     keep=int(_pol["shadow_results"]), max_chars=int(_pol["shadow_max_chars"]))
+    except Exception:
+        pass
     if live is None and isinstance(parsed, list) and len(parsed) == 1 and isinstance(parsed[0], dict) \
             and parsed[0].get("_assign_name") and result.get("success") is not False and "error" not in result:
         live = {parsed[0]["_assign_name"]: json.dumps(result, ensure_ascii=False)}
@@ -434,6 +446,17 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
 
     # --- IBL 코드 결정 ---
     code = tool_input.get("code") or tool_input.get("pipeline")
+    # ★상상실행 초안 인계(2026-09-06): code 가 "$초안" 이면 의식이 지은 초안(검증 통과분, 턴 보관)을 그대로 실행 —
+    #   실행자가 같은 500자를 다시 치지 않는다(ep2890 의식 초안 524자 vs 첫 호출 497자, 유사도 0.85).
+    if isinstance(code, str) and code.strip() in ("$초안", "${초안}", "$draft"):
+        from ibl_turn_vars import load_draft as _load_draft
+        _d = _load_draft()
+        if not _d:
+            return json.dumps({"error": "이 턴에 보관된 초안이 없습니다(의식 초안이 기계 검증을 통과했을 때만 "
+                                        "$초안 으로 실행됩니다) — 코드를 직접 적으세요."}, ensure_ascii=False)
+        code = _d
+        tool_input = dict(tool_input, code=_d)
+        print("[상상실행] 초안 그대로 실행 ($초안)")
 
     if not code:
         return json.dumps({
@@ -594,6 +617,27 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                                "hint": "issues 의 statement·step·hint 를 읽고 그 문장만 고치세요. 확인만 하려면 check: true.",
                                "traceback": build_tb(_msg, "typecheck")}, ensure_ascii=False, indent=2)
 
+        # ★되받아쓰기 관문(2026-09-06 일반 관문, docs/OUTPUT_RETYPING_HANDOFF.md §6): 모델이 친 긴 문자열 인자를
+        #   이 턴의 변수 값·직전 결과 그림자·대상 파일 현재 내용과 대조 — 이미 있는 글자를 다시 쳤으면 봉투가 말하고
+        #   (warn, 실행은 함), 파일 통째 재작성급 겹침이면 실행 전에 거절(refuse — 차분·줄범위 edit 이 기계적 대안).
+        #   어휘 이름 무관, 문자열 일치만. 임계는 lifecycle_policy.yaml `retyping:`.
+        _retyped = None
+        try:
+            from ibl_retyping import check_retyping as _check_retyping
+            from ibl_turn_vars import load as _tv_load, load_shadows as _tv_shadows
+            _retyped = _check_retyping(parsed, _tv_load(_tkey), _tv_shadows(_tkey))
+        except Exception:
+            _retyped = None
+        if _retyped:
+            print(f"[되받아쓰기] {_retyped.get('level')} verbatim={_retyped.get('verbatim_chars')} "
+                  f"data={_retyped.get('data_tokens')} src={','.join(_retyped.get('sources') or [])}")
+            if _retyped.get("level") == "refuse":
+                from ibl_traceback import build_tb
+                _msg = "되받아쓰기 거절 — " + str(_retyped.get("message") or "")
+                return json.dumps({"success": False, "error_type": "retyping", "error": _msg,
+                                   "retyped": _retyped, "hint": _retyped.get("hint"),
+                                   "traceback": build_tb(_msg, "retyping")}, ensure_ascii=False, indent=2)
+
         # 실행 분기 결정
         # 1) 병렬(_parallel) 또는 fallback(_fallback_chain) → workflow_engine
         # 2) 파이프라인(2개 이상 step) → workflow_engine
@@ -612,7 +656,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             if isinstance(result, dict):
                 if _explicit_names:
                     result["resumed_vars"] = _explicit_names
-                _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected))
+                _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected), _retyped)
             from ibl_envelope import diet_envelope
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
             return dumps_public_result(result, producer="execute_ibl:resume_vars" if _explicit_names else "execute_ibl",
@@ -726,8 +770,16 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             from workflow_engine import execute_pipeline
             result = execute_pipeline(parsed, project_path, context={"_want_live_vars": True}, agent_id=agent_id)
 
+        # 단일 step 이 JSON 문자열을 돌려주면(일부 핸들러) 봉투 표식(turn_vars·retyped)을 실을 수 있게 dict 로
+        if isinstance(result, str) and result.lstrip()[:1] == "{":
+            try:
+                _res_obj = json.loads(result)
+                if isinstance(_res_obj, dict):
+                    result = _res_obj
+            except Exception:
+                pass
         # 턴 범위 변수 — 산 `$변수` 를 턴 저장소에 합치고 봉투가 말한다(2026-09-06 언어 개정)
-        _attach_turn_vars(result, parsed, _tkey, [])
+        _attach_turn_vars(result, parsed, _tkey, [], _retyped)
 
         # (map_data → [MAP:] 변환은 execute_tool 래퍼의 재귀 수확 단일 관문에서 처리 —
         #  단독/파이프/병렬 모양별 승격 분기는 병렬(&) 중첩에서 지도를 유실해 폐기. 2026-07-13)

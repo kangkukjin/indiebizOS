@@ -556,7 +556,8 @@ class AgentGoalsMixin:
             f"지금까지의 실행 결과:\n{results_summary}\n\n"
             f"위 결과를 바탕으로 달성 조건이 충족되었는지 판단하세요.\n"
             f"반드시 첫 줄에 ACHIEVED 또는 NOT_ACHIEVED 중 하나만 적고,\n"
-            f"둘째 줄부터 간단한 판단 근거를 적으세요."
+            f"둘째 줄부터는 미충족 항목만 한 줄씩(최대 5줄) — 충족된 것·결과 내용을 다시 서술하지 마세요. "
+            f"ACHIEVED 면 첫 줄로 끝."
         )
 
         try:

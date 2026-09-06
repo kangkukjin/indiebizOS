@@ -142,6 +142,7 @@
     "ibl/ibl_predicates",
     "ibl/ibl_progress",
     "ibl/ibl_quality",
+    "ibl/ibl_retyping",
     "ibl/ibl_routing",
     "ibl/ibl_safety",
     "ibl/ibl_traceback",
@@ -280,8 +281,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 271,
-    "engine": 251,
+    "total": 272,
+    "engine": 252,
     "blocklist": 20
   }
 }

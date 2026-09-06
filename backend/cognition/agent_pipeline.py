@@ -459,6 +459,15 @@ class CognitivePipelineMixin:
                     from prompt_builder import compile_user_command
                     _fused = compile_user_command(message, consciousness_output)
                     augmented_message = f"{dynamic_context}\n\n{_fused}" if dynamic_context else _fused
+                    # 초안 인계(2026-09-06): 검증 통과 초안을 턴에 보관 — 실행자는 execute_ibl(code:"$초안") 로 그대로 실행
+                    try:
+                        from prompt_builder import validate_imagined_draft
+                        from ibl_turn_vars import save_draft
+                        _d0 = (consciousness_output.get("imagined_ibl") or "").strip()
+                        if _d0 and validate_imagined_draft(_d0)[0]:
+                            save_draft(_d0)
+                    except Exception:
+                        pass
                 elif dynamic_context:
                     augmented_message = f"{dynamic_context}\n\n{message}"
         else:
@@ -540,6 +549,15 @@ class CognitivePipelineMixin:
                                         "result": "", "is_error": False})
             elif et == "tool_result":
                 _rt = ev.get("result", "")
+                # 되받아쓰기·가리킴 수치 메타 — 결과 원문은 싣지 않고 수치만(2026-09-06 [출력해부])
+                try:
+                    _rs = _rt if isinstance(_rt, str) else json.dumps(_rt, ensure_ascii=False)
+                    if tool_calls_log and ('"retyped"' in _rs or '"turn_vars"' in _rs):
+                        _ro = json.loads(_rs)
+                        tool_calls_log[-1]["retyped_chars"] = int(((_ro.get("retyped") or {}).get("verbatim_chars")) or 0)
+                        tool_calls_log[-1]["pointed"] = len(((_ro.get("turn_vars") or {}).get("injected")) or [])
+                except Exception:
+                    pass
                 tool_results_log.append(_rt)
                 _is_err = bool(ev.get("is_error", False))
                 _rid = ev.get("id", "")
@@ -764,6 +782,15 @@ class CognitivePipelineMixin:
             except Exception:
                 turn_tokens = None
                 turn_cache_read = None
+            # [출력해부](2026-09-06) — 이 턴에서 모델이 친 글자·되받아쓰기·가리킴·함수 호출 한 줄(관문 탐지기의 부산물)
+            try:
+                from cognitive_trace import ibl_call_cost as _ibl_cost
+                _oc = _ibl_cost(tool_calls_log)
+                if _oc["calls"]:
+                    print(f"[출력해부] calls={_oc['calls']} typed={_oc['typed_chars']} retyped={_oc['retyped_chars']}"
+                          f"({_oc['retyped_warns']}) pointed={_oc['pointed']} fn={_oc['fn_calls']}")
+            except Exception:
+                pass
             # 상상실행 초안 채택 관찰 — 의식 초안(imagined_ibl)의 액션이 실제 실행에
             # 등장했는지 로그 한 줄(관찰 계기 — 초안 제도의 실측 근거를 쌓는다).
             try:

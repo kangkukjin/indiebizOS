@@ -211,20 +211,70 @@ def _normalize_slot_quoting(sentence: str, slots: dict) -> str:
     return "".join(out)
 
 
+def _statements_of(code: str) -> list:
+    """접지 비교의 단위 — 독립 문장. 양쪽(관용구·실행)을 같은 자로 자른다.
+
+    ★try/except 로 감싸지 않는다: 여기서 조용히 통짜 코드로 되돌아가면 관문이 옛 결함으로
+    복귀하면서 아무 신호도 안 남긴다(수리 중 실측 — 빠진 import 를 삼켜 측정이 그대로였다).
+    """
+    import hippo_tree                       # 지연 import(순환 방지) — 이 모듈의 규약
+    return hippo_tree.split_sentences(code or "") or ([code] if code else [])
+
+
+def _literal_binding_name(stmt: str) -> Optional[str]:
+    """`$이름 = <액션 없는 값>` 이면 이름, 아니면 None (리터럴·상수 바인딩)."""
+    from common.ibl_vars import ASSIGN_RE
+    m = ASSIGN_RE.match((stmt or "").strip())
+    if not m:
+        return None
+    rhs = m.group(3) or ""
+    return None if re.search(r'\[[a-z_-]+:[a-z_0-9]+\]', rhs) else (m.group(1) or m.group(2))
+
+
 def _phrase_grounded(phrase: list, slots: dict, ibl_calls: list) -> Optional[str]:
-    """관용구가 이 주행에 접지됐는가. 통과=None, 아니면 사유 한 줄."""
-    csigs = [_sig(_blank_slots(c)) for c in ibl_calls]     # 양쪽을 같은 규칙으로 비운다(변수·슬롯은 값이 아니라 자리)
+    """관용구가 이 주행에 접지됐는가. 통과=None, 아니면 사유 한 줄.
+
+    ★접지의 단위는 실행 **문장**이지 호출이 아니다 (2026-09-07 수리, ep2943 실측).
+    한 execute_ibl 호출은 대개 여러 독립 문장을 담은 *프로그램*인데, 종전엔 호출 하나를
+    통째로 한 서명으로 접어 관용구 문장(=한 문장)과 비교했다. 문장 수가 다르면
+    `len(p_acts) != len(c_acts)` 에서 반드시 어긋나므로 **실행된 문장을 글자 그대로
+    관용구에 넣어도 접지에 실패**했다 — 여러 줄로 일하는 턴, 곧 배울 값어치가 있는
+    턴일수록 확실히 떨어지는 관문이었다(실측: 실행 문장을 그대로 넣는 결정론적 재현에서
+    231턴 중 58턴 25% 거부, 08-25~09-06 실사용 접지 실패 12건도 같은 뿌리).
+    호출 경계에서 오는 거짓 매칭이 `pos` 를 먼저 소비해 '순서 어긋남'으로 둔갑하던 것도
+    같은 자리다.
+
+    `>>` 흐름 접지가 한 문장 안이라는 규약은 그대로 — 오히려 엄격해진다(종전엔 호출 안
+    아무 데나 있으면 됐다). 관용구 문장이 `;` 로 여럿을 품고 있으면 그 문장들도 같은 자로
+    잘라 순서대로 접지한다.
+    """
+    csigs = []                                            # 양쪽을 같은 규칙으로 비운다(변수·슬롯은 값이 아니라 자리)
+    bound = set()                                         # 실행이 상수로 묶은 이름들
+    for c in ibl_calls:
+        for st in _statements_of(c):
+            csigs.append(_sig(_blank_slots(st)))
+            nm = _literal_binding_name(st)
+            if nm:
+                bound.add(nm)
     pos = 0
     for i, sent in enumerate(phrase, 1):
-        psig = _sig(_blank_slots(sent))
-        if not psig or not any(x[0] == 'act' for x in psig):
-            return f"문장 {i} 액션 없음: {sent[:60]}"
-        j = next((k for k in range(pos, len(csigs)) if _sentence_matches(psig, csigs[k])), None)
-        if j is None:
-            if any(_sentence_matches(psig, csigs[k]) for k in range(0, pos)):
-                return f"문장 {i} 순서 어긋남(실행 순서의 부분열이 아님): {sent[:60]}"
-            return f"문장 {i} 실행에 없음(머리 열·인자 키·op 불일치): {sent[:60]}"
-        pos = j + 1
+        for part in _statements_of(sent) or [sent]:
+            psig = _sig(_blank_slots(part))
+            if not psig or not any(x[0] == 'act' for x in psig):
+                # 액션 없는 문장은 둘 중 하나다 — 산문이거나, 뒤 문장이 쓸 값을 묶는
+                # 상수 바인딩(`$기준 = "…"`, ep2882 실측). 바인딩은 관용구의 슬롯이 앉는
+                # 자리이므로, *이 주행이 같은 이름을 같은 방식으로 묶었을 때만* 통과시킨다.
+                # 산문은 그대로 거절(반성기가 설명을 문장 칸에 흘리는 부류).
+                nm = _literal_binding_name(part)
+                if nm and nm in bound:
+                    continue                              # 액션이 없으니 실행 순서(pos)를 소비하지 않는다
+                return f"문장 {i} 액션 없음: {part[:60]}"
+            j = next((k for k in range(pos, len(csigs)) if _sentence_matches(psig, csigs[k])), None)
+            if j is None:
+                if any(_sentence_matches(psig, csigs[k]) for k in range(0, pos)):
+                    return f"문장 {i} 순서 어긋남(실행 순서의 부분열이 아님): {part[:60]}"
+                return f"문장 {i} 실행에 없음(머리 열·인자 키·op 불일치): {part[:60]}"
+            pos = j + 1
     return None
 
 
@@ -422,8 +472,10 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
         print(f"{tag} 접지 실패 — 스킵: {why}")
         return False
     code = hippo_tree.join_sentences(phrase)
-    from ibl_param_vocab import code_syntax_error, check_code_params
-    err = code_syntax_error(code)
+    from ibl_param_vocab import check_code_params
+    # 구문 관문 = 낱말 경로와 같은 문(할당 앞점 복원 포함, 2026-09-06) — 관문이 두 벌이면 방언이 갈린다
+    from ibl_usage_rag import _syntax_gate_with_restore
+    code, err = _syntax_gate_with_restore(code, ibl_calls, tag)
     if err:
         print(f"{tag} 파싱 불가 — 스킵: {err} / {code[:80]}")
         return False

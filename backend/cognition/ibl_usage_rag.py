@@ -805,79 +805,11 @@ def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
     return False
 
 
-# ── 합성 접지 게이트 (2026-08-16) ─────────────────────────────────────────
-# 프롬프트 규칙 3("데이터가 흐를 때만 합성")을 경량 반성기가 어기고, 모델이
-# 매개한 별개 호출들을 >> 로 이어 붙인 실사례가 나왔다(구 용례 3805·3806 —
-# 다섯 >> 전부 통화가 흐르지 않는 죽은 파이프였고, 3805 는 old_string 앵커를
-# new_string 이 삼킨 edit 라 재생 시 규칙 원장을 파괴한다). 프롬프트는 권고일
-# 뿐이므로 기계로 막는다: **증류는 실행된 문장을 압축할 뿐, 새 문장을 창작하지
-# 않는다** — 증류 코드의 합성(>>·&·;·??)은 실행 이력의 *단일 호출* 안에 그
-# 액션들이 함께 합성돼 있던 경우에만 통과한다(압축=부분집합 허용, 별개 호출
-# 봉합=차단). 거짓 파이프는 조합성 지표(파이프 비율·문형 수)까지 오염시킨다.
-
-_QUOTED_STR_RE = re.compile(r'"(?:\\.|[^"\\])*"' + r"|'(?:\\.|[^'\\])*'")
-_COMPOSE_OP_RE = re.compile(r'>>|\?\?|&|;')
-_NODE_ACTION_RE = re.compile(r'\[([a-z_-]+:[a-z_0-9]+)\]')
-
-
-def _strip_strings(code: str) -> str:
-    """따옴표 문자열을 비운다 — 파라미터에 실려 가는 문장([self:trigger] pipeline,
-    [table:each] do 등) 속 연산자를 최상위 합성으로 오인하지 않기 위해."""
-    return _QUOTED_STR_RE.sub('""', code or "")
-
-
-def _composed(code: str) -> bool:
-    """따옴표 밖에 합성 연산자(>>·&·;·??)가 있는가."""
-    return bool(_COMPOSE_OP_RE.search(_strip_strings(code)))
-
-
-def _actions_of(code: str) -> set:
-    """따옴표 밖 [node:action] 집합."""
-    return set(_NODE_ACTION_RE.findall(_strip_strings(code)))
-
-
-def _heads_grounded(code: str, ibl_calls: list) -> bool:
-    """증류 코드의 액션 머리 집합이 실행된 호출들의 머리 집합 안에 있는가.
-
-    반성기는 실행 경험을 *일반화*하지 새 액션을 *발명*하지 않는다 — 실행에서 성공한
-    적 없는 머리는 검증 안 된 패턴이라 코퍼스에 못 들어온다(합성 접지의 머리판,
-    프롬프트 규칙 6 의 기계판). 액션 실존 검사(_validate_ibl_actions)와는 다른 질문이다:
-    그건 '사전에 있나', 이건 '이 주행에서 실제로 돌았나'.
-    """
-    acts = _actions_of(code)
-    if not acts:
-        return False
-    executed = set()
-    for call in ibl_calls:
-        executed |= _actions_of(call)
-    return acts <= executed
-
-
-_FLOW_OP_RE = re.compile(r'>>|\?\?|;')
-
-
-def _composition_grounded(code: str, ibl_calls: list) -> bool:
-    """증류 코드가 합성문이면 실행 이력에 접지됐는지 판정. 단문 증류는 무조건 통과.
-
-    두 갈래(2026-09-04 개정, ep2817 실측 — 그 턴의 가장 좋은 문장(지표 7개 `&`)이 버려졌다):
-      · **흐름 합성**(`>>`·`??`·`;`): 데이터가 흐른다는 주장이므로, 실행된 어느 *한* 호출이
-        그 액션들을 합성문으로 담고 있었어야 한다(별개 호출 봉합 = 거짓 관용구, 종전 규칙 그대로).
-      · **병렬만의 합성**(`&` 뿐): "동시에 돌릴 수 있다"는 주장이지 흐름이 아니다 — 가지마다
-        그 액션이 이 주행의 실행(어느 호출이든)에 있었으면 참이다. 08-28~09-04 합성 접지 스킵
-        28건 중 약 3분의 1이 이 부류였다(별개로 성공한 조회들을 `&` 로 묶은 것).
-    """
-    if not _composed(code):
-        return True
-    acts = _actions_of(code)
-    if not acts:
-        return False
-    stripped = _strip_strings(code)
-    if not _FLOW_OP_RE.search(stripped):
-        executed = set()
-        for call in ibl_calls:
-            executed |= _actions_of(call)
-        return acts <= executed
-    return any(_composed(call) and acts <= _actions_of(call) for call in ibl_calls)
+# ── 접지·구문 관문은 ibl_distill_gates.py 로 분할(2026-09-06, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
+from ibl_distill_gates import (  # noqa: E402,F401
+    _strip_strings, _composed, _actions_of, _heads_grounded, _composition_grounded,
+    _head_seq, _is_subseq, _restore_var_assignments, _syntax_gate_with_restore,
+)
 
 
 def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, topic_map: str) -> str:
@@ -1159,9 +1091,9 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         #   그 행 하나가 pre-commit 코퍼스 검사를 막아 저장소 전체의 커밋을 세웠다.
         #   순서가 중요하다: 아래 인자 게이트(check_code_params)는 파싱 실패를 [] 로
         #   돌려주므로, 구문은 반드시 그보다 먼저 묻는다.
-        from ibl_param_vocab import normalize_corpus_code, code_syntax_error
+        from ibl_param_vocab import normalize_corpus_code
         code = normalize_corpus_code(code)
-        _syntax_err = code_syntax_error(code)
+        code, _syntax_err = _syntax_gate_with_restore(code, ibl_calls, "[경험증류]")
         if _syntax_err:
             print(f"[경험증류] 파싱 불가 — 증류 스킵: {_syntax_err} / {code[:80]}")
             return phrase_ok

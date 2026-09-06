@@ -441,6 +441,9 @@ class PromptBuilder:
             task_framing = consciousness_output.get("task_framing", "")
             if task_framing:
                 consciousness_parts.append(f"# 현재 태스크\n{task_framing}")
+            assumptions = _assumption_lines(consciousness_output)
+            if assumptions:
+                consciousness_parts.append("# 이 계획의 전제\n" + assumptions)
 
             # 달성 기준 (실행 에이전트가 목표를 알고 행동하도록)
             achievement_criteria = consciousness_output.get("achievement_criteria", "")
@@ -668,6 +671,17 @@ def _build_system_ai_stable_prompt(
     return "\n\n".join(parts)
 
 
+def _assumption_lines(consciousness_output: dict) -> str:
+    """의식 출력의 assumptions(list[str]) 를 '- ' 줄 목록으로. 없거나 형식이 틀리면 빈 문자열."""
+    raw = (consciousness_output or {}).get("assumptions")
+    if isinstance(raw, str):
+        raw = [raw]
+    if not isinstance(raw, list):
+        return ""
+    items = [str(a).strip() for a in raw if isinstance(a, (str, int, float)) and str(a).strip()]
+    return "\n".join(f"- {a}" for a in items[:8])
+
+
 def _repair_turn_block(builder) -> str:
     """이 턴에 RED 그랜트가 살아 있으면 fragments/13_repair.md 본문, 아니면 빈 문자열."""
     try:
@@ -722,7 +736,7 @@ def _build_dynamic_context(
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
     # 수리 턴 교리 — 실행자에게 *직접* (2026-09-02).
-    # ★왜 여기인가: 의식 프롬프트의 수리 안전수칙은 task_framing(1-2문장 병목)을 거쳐야
+    # ★왜 여기인가: 의식 프롬프트의 수리 안전수칙은 task_framing 병목을 거쳐야
     #   실행자에 닿는데, 실행자 자신의 base 프롬프트에는 "요청 밖의 개선 금지"가 직접
     #   걸려 있어 반대 압력만 온전히 도달했다 — 그 결과가 "발견한 뿌리를 범위 밖이라
     #   안 고침 + 고칠까요?"(사용자 관찰 09-01). 소비처에 소비처 말로 둔다.
@@ -863,6 +877,12 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     task_framing = (co.get("task_framing") or "").strip()
     if task_framing:
         aug.append(task_framing)
+
+    # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증하고, 깨졌으면 계획을 밀지 않는다.
+    assumptions = _assumption_lines(co)
+    if assumptions:
+        aug.append("이 계획의 전제(첫 확인에서 검증하라. 하나라도 깨지면 그 위에 계속 짓지 말고, "
+                   "깨진 전제와 그 영향을 먼저 보고한 뒤 접근을 다시 세워라):\n" + assumptions)
 
     # 의식 프롬프트 출력 키는 capability_focus (consciousness_prompt.md 응답 형식).
     # 예전 ibl_focus 이름을 폴백으로 둔다 — 개명 드리프트로 highlight_actions·hint가

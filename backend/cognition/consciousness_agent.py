@@ -161,8 +161,13 @@ class ConsciousnessAgent:
         agent_role: str = "",
         agent_notes: str = "",
         available_tools: Optional[List[str]] = None,
+        repair: bool = False,
     ) -> Optional[Dict]:
         """의식 에이전트 실행 — 메타 판단 수행
+
+        repair=True 면 수리 턴의 규정 규칙(fragments/14_consciousness_repair.md)을
+        입력에 <repair_doctrine> 블록으로 싣는다 — 시스템 프롬프트(캐시 prefix)는
+        그대로이고, 수리 턴이 아닌 호출은 그 규칙을 읽지 않는다.
 
         Args:
             user_message: 사용자의 현재 메시지
@@ -188,7 +193,7 @@ class ConsciousnessAgent:
                     "tools": list              # IBL 외 가용 도구
                 },
                 "guide_files": list[str],  # 읽어야 할 가이드 파일
-                "context_notes": str,      # 추가 상황 메모
+                "assumptions": list[str],  # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증
                 "imagined_ibl": str        # 상상실행 초안(선택) — 기계 검증 후 융합
             }
         """
@@ -204,6 +209,7 @@ class ConsciousnessAgent:
             user_message, history, associative_memory,
             world_pulse, agent_name, agent_role, agent_notes,
             available_tools,
+            repair_doctrine=self._load_repair_doctrine() if repair else "",
         )
 
         try:
@@ -280,6 +286,7 @@ class ConsciousnessAgent:
         agent_role: str,
         agent_notes: str = "",
         available_tools: Optional[List[str]] = None,
+        repair_doctrine: str = "",
     ) -> str:
         """의식 에이전트에 전달할 입력 텍스트 구성"""
         parts = []
@@ -330,10 +337,32 @@ class ConsciousnessAgent:
                 "</available_tools>"
             )
 
+        # 수리 턴의 규정 규칙 — 수리 턴에만 실린다. 시스템 프롬프트가 아니라 입력에
+        # 두는 이유: 캐시 prefix 를 안 깨고, 수리가 아닌 턴이 수리 규칙을 읽지 않는다.
+        if repair_doctrine:
+            parts.append(
+                "<repair_doctrine note=\"이 턴은 시스템 자체 코드를 바꿀 수 있는 수리 턴이다. "
+                "task_framing·achievement_criteria 를 이 규칙으로 쓴다.\">\n"
+                f"{repair_doctrine}\n"
+                "</repair_doctrine>"
+            )
+
         # 사용자 메시지 (마지막에 — 가장 중요)
         parts.append(f"<user_message>\n{user_message}\n</user_message>")
 
         return "\n\n".join(parts)
+
+    _REPAIR_DOCTRINE_REL = "data/common_prompts/fragments/14_consciousness_repair.md"
+
+    def _load_repair_doctrine(self) -> str:
+        """수리 턴의 규정 규칙 본문. 매 호출 파일을 읽는다(작아서 싸고, 손으로 고치면 즉시 반영)."""
+        try:
+            from runtime_utils import get_base_path
+            path = get_base_path() / self._REPAIR_DOCTRINE_REL
+            return path.read_text(encoding="utf-8").strip() if path.exists() else ""
+        except Exception as e:
+            logger.warning(f"[ConsciousnessAgent] 수리 교리 적재 실패(생략): {e}")
+            return ""
 
     def _filter_unavailable_tools(self, result: Dict, available_tools: List[str]) -> None:
         """의식 출력의 capability_focus.tools에서 가용 도구 외 항목을 제거.
@@ -372,13 +401,18 @@ class ConsciousnessAgent:
         text = response.strip()
 
         # ```json ... ``` 블록 추출
+        # 닫는 펜스는 *마지막* 것 — 문자열 값 안의 ``` 가 JSON 을 조기 절단하던 자리.
         if "```json" in text:
             start = text.index("```json") + 7
-            end = text.index("```", start)
+            end = text.rindex("```")
+            if end <= start:
+                end = len(text)
             text = text[start:end].strip()
         elif "```" in text:
             start = text.index("```") + 3
-            end = text.index("```", start)
+            end = text.rindex("```")
+            if end <= start:
+                end = len(text)
             text = text[start:end].strip()
 
         # { 로 시작하는 부분만 추출 — `}` 누락 같은 깨진 응답은 None으로 graceful fail
@@ -446,6 +480,23 @@ class ConsciousnessAgent:
         text = response.strip()
         if len(text) < self._SALVAGE_MIN_CHARS:
             return None
+        # JSON 모양(펜스·중괄호로 시작)인데 파싱이 깨진 응답은 산문이 아니다 — 원문을
+        # 그대로 규정으로 넘기면 실행자가 "```json {" 로 시작하는 문제 정의를 받는다.
+        # task_framing 값만 정규식으로 건지고, 그것도 안 되면 버린다.
+        if text.startswith("```") or text.startswith("{"):
+            m = re.search(r'"task_framing"\s*:\s*"((?:[^"\\]|\\.)*)"', text, re.S)
+            framing = ""
+            if m:
+                try:
+                    framing = json.loads('"' + m.group(1) + '"')
+                except Exception:
+                    framing = m.group(1)
+            framing = framing.strip()
+            if len(framing) < self._SALVAGE_MIN_CHARS:
+                print("[ConsciousnessAgent] 형식 위반 — JSON 모양이나 task_framing 을 건질 수 없어 폐기")
+                return None
+            print(f"[ConsciousnessAgent] 형식 위반 — 깨진 JSON 에서 task_framing 만 구제 ({len(framing)}자)")
+            return {"task_framing": framing, "_salvaged": True}
         print(f"[ConsciousnessAgent] 형식 위반 — 내용만 구제해 task_framing 으로 전달 ({len(text)}자)")
         return {"task_framing": text, "_salvaged": True}
 

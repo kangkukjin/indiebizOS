@@ -33,8 +33,8 @@ def _read(name: str) -> str:
 
 
 def test_d1_consciousness_orders_root_fix():
-    """D1 — 뿌리 지시가 있고 옛 '보고만' 조항은 사라졌다."""
-    t = _read("consciousness_prompt.md")
+    """D1 — 뿌리 지시가 있고 옛 '보고만' 조항은 사라졌다 (수리 교리는 수리 턴 전용 조각에 산다)."""
+    t = _read("fragments/14_consciousness_repair.md")
     assert "뿌리에서 고치" in t
     assert "원인 사슬" in t
     # 은퇴 문구 — 사슬 위의 원인까지 보고만 하게 만들던 자리
@@ -43,7 +43,7 @@ def test_d1_consciousness_orders_root_fix():
 
 def test_d2_scope_is_the_chain_and_asking_is_bounded():
     """D2 — '명령 밖'=사슬 밖, 되묻기는 요구사항 변경·파괴적 변경 둘뿐."""
-    t = _read("consciousness_prompt.md")
+    t = _read("fragments/14_consciousness_repair.md")
     assert "사슬 밖" in t
     assert "같은 사슬 안이면 묻지 말고 고쳐라" in t
     assert "되묻기는 두 종류뿐" in t

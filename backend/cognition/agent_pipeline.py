@@ -355,7 +355,9 @@ class CognitivePipelineMixin:
             # (위임 사슬·스케줄러·외부 채널 = 미세팅 = fail-closed), origin 은 threading.local
             # 이라 위임으로 상속되지 않는다. 기계 안전판(격리 스테이징·compile·백업·워치독·
             # 자동 롤백)은 실행 주체와 무관하게 그대로 걸린다.
-            consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory)
+            # repair=True: 수리 턴의 규정 규칙(14_consciousness_repair.md)을 의식 입력에 싣는다.
+            consciousness_output = self._run_consciousness_or_reuse(message, history, execution_memory,
+                                                                    repair=True)
             from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
             _origin = get_task_origin()
             if _origin == "user":
@@ -390,6 +392,11 @@ class CognitivePipelineMixin:
                                 task_id=_g_task, reason=message)
                     _repair_granted_task = _g_task or "__untasked__"
                     print(f"[수리] 늦은 REPAIR 승격 (task={_g_task or '없음'}) — 의식 needs_repair 선언")
+                    # 분류기가 놓친 수리 턴이라 의식은 수리 교리 없이 규정을 세웠다 —
+                    # 교리를 싣고 한 번 더 깨워 규정(가설 원인 사슬·apply 기준)을 수리 턴 것으로 바꾼다.
+                    _re = self._run_consciousness_or_reuse(message, history, execution_memory, repair=True)
+                    if _re:
+                        consciousness_output = _re
                 else:
                     print(f"[수리] 의식 needs_repair 선언이지만 출처={_origin or '자율'}"
                           f" — 그랜트 없이 THINK 로 진행")

@@ -128,8 +128,12 @@ class CognitiveConsciousnessMixin:
     """의식(메타 판단)·무의식(분류) 메서드 모음."""
 
     def _run_consciousness_or_reuse(self, user_message: str, history: list,
-                                    execution_memory: str = "") -> Optional[dict]:
+                                    execution_memory: str = "",
+                                    repair: bool = False) -> Optional[dict]:
         """THINK 경로의 의식 진입점 — framing 재고가 있으면 재사용, 없으면 생성.
+
+        repair=True(수리 턴): 재고를 보지 않고 의식을 새로 깨우며 수리 교리를
+        입력에 싣는다 — 수리 권한이 걸린 지도는 어차피 재사용하지 않는다.
 
         THINK 판정은 "framing이 필요하다"는 수요다. 같은 대화에서 이미 만든
         framing이 지금 질문에 맞으면(fit 게이트, 경량 1회) 재사용하고 의식(Opus)
@@ -140,7 +144,7 @@ class CognitiveConsciousnessMixin:
         key = get_current_registry_key() or "default"
 
         # 후속 turn(히스토리 존재) + 저장된 framing 있을 때만 재사용 시도
-        prev = framing_cache_get(key) if history else None
+        prev = framing_cache_get(key) if (history and not repair) else None
 
         # ★권한은 캐시로 상속되지 않는다 (2026-08-22, 22회차 사고).
         # `needs_repair` 는 파이프라인에서 **RED 자기수정 그랜트**(고급 모델 고정 +
@@ -206,7 +210,10 @@ class CognitiveConsciousnessMixin:
                     return reused
 
         # 없거나 안 맞음 → 의식 에이전트가 새로 만든다
-        out = self._run_consciousness(user_message, history, execution_memory)
+        if repair:
+            out = self._run_consciousness(user_message, history, execution_memory, repair=True)
+        else:
+            out = self._run_consciousness(user_message, history, execution_memory)
         # 미완성 framing(clarification 요청)은 재고로 쌓지 않는다
         if out and not out.get("needs_clarification"):
             framing_cache_set(key, out)
@@ -276,7 +283,7 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
             return None
 
     def _run_consciousness(self, user_message: str, history: list,
-                           execution_memory: str = "") -> dict:
+                           execution_memory: str = "", repair: bool = False) -> dict:
         """의식 에이전트 실행 — 메타 판단
 
         사용자 메시지와 히스토리를 분석하여 프롬프트 최적화 지침을 반환합니다.
@@ -329,10 +336,12 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
                 agent_role=agent_role,
                 agent_notes=agent_notes,
                 available_tools=available_tools,
+                repair=repair,
             )
 
             if result:
-                self._log(f"[의식] 태스크: {result.get('task_framing', '')[:60]}")
+                self._log(f"[의식] 태스크{'(수리 교리 적재)' if repair else ''}: "
+                          f"{result.get('task_framing', '')[:60]}")
             return result
 
         except Exception as e:

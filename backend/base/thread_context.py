@@ -576,6 +576,13 @@ def restore(snap: dict):
         adopt_trace(trace)   # None 포함 set — 풀 스레드 재사용의 잔류 trace 청소
     except Exception:
         pass
+    # 복원은 *상태 전체*의 복원이다 — 스냅샷 이후 새로 생긴 키(예: 시험이 세운
+    # agent_id·task_id, 풀 스레드에 남은 잔류)를 지우지 않으면 "restore 했는데 새 키가
+    # 그대로"가 되어 다음 사용자에게 샌다(test_repair_root_doctrine D5 → 뒤 시험의
+    # registry_key 오염 실측). snap 에 없는 키는 걷어낸다.
+    for k in list(_thread_local.__dict__.keys()):
+        if k not in snap:
+            delattr(_thread_local, k)
     for k, v in snap.items():
         setattr(_thread_local, k, v)
 

@@ -19,7 +19,12 @@ def _load_module(name):
     return mod
 
 
-def execute(tool_name: str, params: dict, project_path: str = None) -> str:
+def execute(tool_input: dict, context) -> str:
+    """신규 시그니처(ToolContext) 진입점 — 실제 분기는 _dispatch 가 한다."""
+    return _dispatch(context.tool_name, tool_input or {}, context.project_path)
+
+
+def _dispatch(tool_name: str, params: dict, project_path: str = None) -> str:
     try:
         if tool_name == "create_house_design":
             return _create(params, project_path)
@@ -517,6 +522,10 @@ def _export_drawing(params, project_path):
 def _list(params, project_path):
     model = _load_module("design_model")
     designs = model.list_designs(project_path)
+    # items 는 IBL 통화 — table 변환자로 이어붙일 수 있게 designs 와 같이 싣는다
     if not designs:
-        return json.dumps({"success": True, "designs": [], "message": "저장된 설계가 없습니다."}, ensure_ascii=False)
-    return json.dumps({"success": True, "designs": designs, "message": f"{len(designs)}개 설계 발견"}, ensure_ascii=False)
+        return json.dumps({"success": True, "designs": [], "items": [], "count": 0,
+                           "message": "저장된 설계가 없습니다."}, ensure_ascii=False)
+    return json.dumps({"success": True, "designs": designs, "items": designs,
+                       "count": len(designs),
+                       "message": f"{len(designs)}개 설계 발견"}, ensure_ascii=False)

@@ -31,14 +31,12 @@
 | 수동모드 | 수동모드 | (시스템) 조종실 표면의 IBL 실행 컨텍스트 |
 | 앱모드 | 앱모드 | (시스템) 앱 표면의 IBL 실행 컨텍스트 |
 
-## 도구 패키지 (Tools) - 46개 (설치 41 · 미설치 5)
+## 도구 패키지 (Tools) - 46개
 에이전트가 사용할 수 있는 유틸리티
-
-> 이 절은 패키지 설치/제거 시 **전체 재생성**된다(`package_manager._regenerate_inventory_md` — tool.json 기준 스캔). 행을 손으로 고쳐도 다음 재생성에서 사라진다. (옛 주석의 `update_inventory_packages` 상태 칸 갱신은 호출자 없는 죽은 코드였다 — 2026-08-21 확인.)
 
 | ID | 이름 | 설명 | 상태 |
 |----|------|------|------|
-| ai-ops | AI Ops (원샷 낱말) | 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→ | 설치됨 |
+| ai-ops | AI Ops (원샷 낱말) | 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형 | 설치됨 |
 | android | Android Phone Control | ADB(uiautomator)로 안드로이드 폰 화면을 독해·터치·입력하는 | 설치됨 |
 | blog | Blog Tools | 개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 | 설치됨 |
 | browser-action | Browser Action | Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화 | 설치됨 |
@@ -53,10 +51,10 @@
 | culture | Culture & Arts | 공연, 도서, 전시 등 문화 예술 정보 조회 도구. KOPIS API로  | 설치됨 |
 | data-ops | Data Ops (통화 변환자) | 통화→통화 변환 동사(currency algebra). 생산자가 내는 공 | 설치됨 |
 | family-news | Family News | 가족신문 — 폰(USB) 사진으로 신문 판을 조판해 공개 주소에 누적 발 | 설치됨 |
-| finance-record | Finance Record | 재무 기록·조회. 지출·수입 거래와 자산·부채를 주체(개인/회사)별로 | 설치됨 |
+| finance-record | Finance Record | 재무 기록 및 조회 도구. 지출·수입 거래와 자산·부채 소유 현황을 저장 | 설치됨 |
 | guest-helper | Guest PC Helper (USB 손발) | USB 로 낯선 PC 에 꽂는 얇은 손발(헬퍼) — 허브가 셸/파일 명령 | 설치됨 |
 | health-record | Health Record | 건강 정보 기록 및 조회 도구. 혈압, 혈당, 체중 측정값과 증상, 투약 | 설치됨 |
-| house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 미설치 |
+| house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 설치됨 |
 | ibl-core | IBL Core | IBL(IndieBiz Logic) 노드-액션 통합 도구. 여러 도구를  | 설치됨 |
 | investment | Investment Tools | 한국/미국 기업의 주가·시세·재무·공시·뉴스 및 암호화폐 정보를 조회하는 | 설치됨 |
 | kosis | KOSIS Statistics | 통계청 KOSIS API를 통한 국가통계 조회 도구. 인구, GDP, 물 | 설치됨 |
@@ -67,7 +65,7 @@
 | memory | Memory | 에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [s | 설치됨 |
 | music-player | Music Player | 내 음악 라이브러리 — 소스 폴더의 음악 파일을 스캔해 정리하고(태그·앨 | 설치됨 |
 | nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동 | 미설치 |
-| notebook | Notebook | 근거 고정 질의 — 문서 더미(노트북)에 넣고 소스 안에서만 답하며 인용 | 설치됨 |
+| notebook | Notebook | 근거 고정 질의 — 문서 더미(노트북)에 넣고, 소스 안에서만 답하며 인 | 설치됨 |
 | pc-manager | PC Manager | PC 파일 탐색, 외장하드 관리, 저장소 스캔 도구. 파일 탐색기 GUI | 설치됨 |
 | photo-manager | Photo Manager | 사진/동영상 메타데이터 수집, 갤러리, 중복 탐지 도구.  ## 스캔 D | 설치됨 |
 | public-files | Public Files | 선택한 폴더를 외부 공개 사이트(Cloudflare)로 라이브 서빙하는  | 설치됨 |
@@ -99,10 +97,10 @@
 ## IBL 어휘 현황
 
 <!-- IBL_STATS:START -->
-**6노드 154 액션** — sense 43 · self 50 · limbs 14 · others 17 · engines 8 · table 22
+**6노드 164 액션** — sense 43 · self 50 · limbs 14 · others 17 · engines 18 · table 22
 (op 분기 액션 74개 / op 분기 패키지 30개, 나머지 op 액션은 backend-native 라우팅)
 <!-- IBL_STATS:END -->
 (위 수치는 빌드가 재생성 — 손 수정 금지)
 
 ---
-*마지막 업데이트: 2026-08-22 — 프로젝트 절 실측 재확인(활성 22 + 시스템 2 / 에이전트 33, `projects/projects.json`·`agents.yaml` 대조). 패키지 절은 설치/제거가 재생성하고 어휘 수치는 빌드 파생 마커 — 손 수정 금지. 이전: 2026-08-17*
+*마지막 업데이트: 2026-09-06 14:47*

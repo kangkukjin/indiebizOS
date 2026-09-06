@@ -479,6 +479,8 @@ sqlite3 data/world_pulse.db "SELECT log FROM episode_log WHERE log LIKE '%guide_
 당신은 점검자이지 수리공이 아니다. 본 것을 정직하게 보고하라.
 
 ## 실측 기록 (자동 누적)
+- 2026-09-06 실측: `self_checks` 표에는 `__static__`·`__ibl_health__` 정적 점검 결과만 쌓여 있어(299행), node/action별 실패 집계를 돌려도 실사용 액션 이름은 한 건도 나오지 않는다.
+- 2026-09-06 실측: 액션별 실사용 호출수·실패·응답시간의 실제 원장은 `data/world_pulse.db` 의 `action_health` 표다(누적 53,239행). 여기서 n≥5 필터로 평균/최대 ms 집계가 바로 나온다.
 - 2026-09-01 실측: 자기수정 중 중단된 에피소드(ep2519)는 episode_log 행은 남지만 log 가 0바이트·ended_at/total_ms 가 NULL 이어서, 가이드의 주력 경로인 log 원문 grep 이 아예 대상이 없다
 - 2026-09-01 실측: 그 빈 로그 에피소드의 실제 진행은 관련 파일들의 mtime 을 에피소드 started_at 과 대조해 복원할 수 있었다(어느 파일이 그 턴에 실제로 쓰였는지 판정)
 - 2026-08-31 실측: `[sense:self_check]` 표면 호출은 120초에 먼저 종료돼도 백엔드 검사가 계속 실행될 수 있으며, 최종 결과는 회수 티켓으로 받아야 했다.

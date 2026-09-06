@@ -263,7 +263,7 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 ---
 
 <!-- IBL_STATS:START -->
-## 현재 설치된 도구 패키지 (41개 — 빌드 파생)
+## 현재 설치된 도구 패키지 (42개 — 빌드 파생)
 
 **op 분기 30 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · **finance-record** · guest-helper · health-record · investment · lecture_workspace · **media_producer** · memory · music-player · **notebook** · pc-manager · public-files · radio · real-estate · study · system_essentials · web-builder · youtube. (전체 op 분기 액션은 **74개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
@@ -293,6 +293,7 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 | finance-record | Finance Record | 재무 원장 `[self:finance]{op}` — 소비(지출·수입 거래)와 소유(자산·부채)를 **주체(owner) 축**(개인/회사)으로 한 원장에. 폰 결제 알림 수거(`op:sync`)·다형 입력 적재(`ingest_engine` 공용). 2026-08-14 `[self:spend]` 흡수 |
 | guest-helper | Guest Helper | USB 손발 — 발급 `[self:limb]{op}`(USB 페이로드 생성·승인·폐기) + 조작 `[limbs:guestpc]{op}`(셸/파일). 헬퍼=Go 단일파일, 허브로 아웃바운드(그 PC 방화벽 무설정). 눈 없음(셸·파일만) |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
+| house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중 지붕, 필로티, 건물 프로파일, 계단(직선/L자/U턴/나선형/Winder |
 | ibl-core | IBL Core | IBL 핵심 도구 |
 | investment | Investment | 한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석 |
 | kosis | KOSIS | 통계청 KOSIS API 국가통계 조회 |

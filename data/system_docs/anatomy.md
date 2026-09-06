@@ -51,7 +51,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 ```
 
 <!-- IBL_STATS:START -->
-- **6개 노드 154 액션** = 에이전트가 세계와 맺는 관계: `sense`(지각, 43) · `self`(내 자원, 50) · `limbs`(장치·신체, 14) · `others`(소통, 17) · `engines`(생성, 8) · `table`(통화 변환 문법, 22)
+- **6개 노드 164 액션** = 에이전트가 세계와 맺는 관계: `sense`(지각, 43) · `self`(내 자원, 50) · `limbs`(장치·신체, 14) · `others`(소통, 17) · `engines`(생성, 18) · `table`(통화 변환 문법, 22)
 <!-- IBL_STATS:END -->
   (위 수치는 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 - API든 크롤링이든 안드로이드든 DB든 같은 문법으로 요청 — 프로토콜 차이는 드라이버가 감춘다.

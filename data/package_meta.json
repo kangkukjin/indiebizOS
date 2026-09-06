@@ -119,6 +119,11 @@
       "weight": "light",
       "locale": "universal"
     },
+    "house-designer": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "ibl-core": {
       "needs_key": [],
       "weight": "light",
@@ -274,6 +279,16 @@
     }
   },
   "action_owner": {
+    "engines:arch_create": "house-designer",
+    "engines:arch_elevation": "house-designer",
+    "engines:arch_export": "house-designer",
+    "engines:arch_floor_plan": "house-designer",
+    "engines:arch_get": "house-designer",
+    "engines:arch_list": "house-designer",
+    "engines:arch_modify": "house-designer",
+    "engines:arch_report": "house-designer",
+    "engines:arch_section": "house-designer",
+    "engines:arch_view_3d": "house-designer",
     "engines:image_gemini": "media_producer",
     "engines:image_read": "media_producer",
     "engines:newspaper": "web",

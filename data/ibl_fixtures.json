@@ -146,6 +146,11 @@
     "sense:world_bank": "[sense:world_bank]{indicator: \"GDP\", country: \"한국\"}"
   },
   "exempt": {
+    "engines:arch_create": "설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)",
+    "engines:arch_get": "설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)",
+    "engines:arch_list": "설계 저장 디렉토리 상태 의존(빈 몸에선 고정 fixture 불가)",
+    "engines:arch_modify": "설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)",
+    "engines:arch_report": "설계 세션·저장 상태 의존(빈 몸에선 고정 fixture 불가)",
     "engines:image_read": "기어-해소 비전 모델 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합",
     "engines:render": "실행마다 PNG 파일 생성(부작용) — 정기 합성 실행 부적합. Playwright 엔진 건강은 scripts/ci_playwright_smoke.py, xlsx 재계산 관문은 backend/test_render_xlsx_contract.py 가 담당.",
     "limbs:android#snapshot": "폰 연결(USB/네이티브) 의존 — 폰 꺼진 날마다 거짓 실패",

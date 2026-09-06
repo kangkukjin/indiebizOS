@@ -7,6 +7,14 @@ Cloudflare사용량:
   interpreter: python
   registered_at: '2026-09-05T11:02:03'
   timeout: 120
+arch_render:
+  description: '설계 JSON(design_*.json 경로 또는 design_id) → 헤드리스 Blender/Cycles 외관 렌더
+    PNG + glTF(.glb). 옵션: --samples N --res W H --view auto|sw|se|ne|nw --out PNG
+    --gltf PATH --no-gltf. Three.js 뷰어(arch_view_3d)는 형상 확인용, 이쪽은 완성 컷용.'
+  file: arch_render_cli.py
+  interpreter: python
+  registered_at: '2026-09-06T15:16:23'
+  timeout: 300
 arxiv최신피드:
   description: 'arXiv 카테고리 최신 제출 다건 피드 — args: categories(기본 cs.AI·cs.CL·cs.LG), limit(기본
     60, 별칭 max_results), sort(submitted|updated). UA·백오프·카테고리별 폴백 포함'

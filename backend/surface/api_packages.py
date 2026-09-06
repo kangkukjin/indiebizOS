@@ -153,52 +153,21 @@ async def list_tool_packages():
 @router.post("/packages/reload")
 async def reload_package_cache():
     """tool.json 등 패키지 메타를 수정한 뒤 런타임 캐시를 비운다.
-    backend 재시작 없이 신규 도구 매핑을 반영한다."""
-    def _catalog():
-        from ibl_access import invalidate_nodes_cache
-        invalidate_nodes_cache()
+    backend 재시작 없이 신규 도구 매핑을 반영한다.
 
-    def _registry():
-        # api_registry.yaml 편집 반영 — 안 비우면 reload_nodes가 낡은 레지스트리를 재병합해
-        # 삭제된 registry 액션이 실행기에 유령으로 남는다 (2026-07-03 발견).
-        from ibl_registry import reload_registry
-        reload_registry()
-
-    def _executor():
-        from ibl_engine import reload_nodes
-        reload_nodes()
-
-    def _consciousness():
-        # 의식 에이전트는 시스템 프롬프트에 IBL 카탈로그를 캐시로 박으므로,
-        # 카탈로그가 바뀌면 재빌드해야 stale 하지 않다(_load_prompt→build_environment).
-        from consciousness_agent import reset_consciousness_agent
-        reset_consciousness_agent()
-
+    절차는 ibl_routing.invalidate_runtime_caches 한 벌 — [self:package]{op:"reload"} 와 같은 몸통
+    (2026-09-06: 낱말 없이 HTTP 만 있어 모델이 curl 로 우회하던 자리를 낱말이 채웠다)."""
     try:
-        package_manager.invalidate_cache()
-        # IBL 노드 캐시 전부 비운다 — 액션 추가·제거·op 변경(ibl_nodes.yaml 재빌드) 반영.
-        # 순서: 카탈로그 → 레지스트리(실행기가 재병합하므로 먼저) → 실행기 → 의식.
-        # ★실패를 삼키지 않는다: 한 단계라도 못 비우면 스테일 사전인 채 200 OK 가 나가
-        #   "리로드했다"가 거짓말이 된다(침묵 클램프 부류, 2026-08-24).
-        failed = []
-        for name, step in (("catalog", _catalog), ("api_registry", _registry),
-                           ("executor", _executor), ("consciousness", _consciousness)):
-            try:
-                step()
-            except Exception as e:
-                failed.append({"step": name, "error": f"{type(e).__name__}: {e}"})
+        from ibl_routing import invalidate_runtime_caches, RELOAD_COVERS, RELOAD_DOES_NOT_COVER
+        failed = invalidate_runtime_caches()
         if failed:
-            return {"status": "partial", "failed_steps": failed,
+            return {"status": "partial", "failed_steps": [{"step": f} for f in failed],
                     "message": f"캐시 초기화 {len(failed)}단계 실패 — 스테일 사전일 수 있습니다"
-                               f"(백엔드 재기동 권장): "
-                               f"{', '.join(f['step'] for f in failed)}"}
+                               f"(백엔드 재기동 권장): {', '.join(failed)}"}
         return {"status": "ok",
                 "message": "패키지/도구/IBL노드 캐시(카탈로그+실행기+의식)를 초기화했습니다.",
                 # 되살린 범위를 몸이 말한다(2026-09-05 ep2836: 모델이 Bash 3회로 이 사실을 코드에서 찾았다)
-                "reloaded": ["어휘 카탈로그(ibl_nodes.yaml 재독)", "api_registry", "실행기 노드 표", "의식 캐시",
-                             "패키지 handler.py(다음 호출 때 새로 로드)"],
-                "not_reloaded": ["패키지 형제 모듈(tool_*.py·*_ops.py — 백엔드 재기동 필요)", "backend/*.py(keeper 가 파일 변경을 감지해 재기동)",
-                                 "mcp_server.py(별도 프로세스 — touch 로 재시작)"]}
+                "reloaded": RELOAD_COVERS, "not_reloaded": RELOAD_DOES_NOT_COVER}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

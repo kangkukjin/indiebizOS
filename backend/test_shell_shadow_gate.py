@@ -89,6 +89,11 @@ def test_s1_table_derived_from_vocabulary():
     ('sqlite3 data/world_pulse.db "select 1"', "sense:sqlite", 'query: "select 1"'),
     ("sed -i '' 's/a/b/' data/guides/x.md", "self:edit", 'path: "data/guides/x.md"'),
     ("cp data/a.txt data/b.txt", "self:copy", 'src: "data/a.txt", dest: "data/b.txt"'),
+    # 몸 자신의 리로드 API 를 셸로 두드리는 꼴(ep2904 ×4) — url_contains 가 curl 을 이 경로에서만 그림자로
+    ('curl -s -X POST http://localhost:8765/packages/reload -o /dev/null -w "%{http_code}\n"', "self:package",
+     '[self:package]{op: "reload"}'),
+    ("curl -s -X POST http://127.0.0.1:8765/packages/reload -H 'Content-Type: application/json' | head -c 400",
+     "self:package", '[self:package]{op: "reload"}'),
 ])
 def test_s2_shadow_commands_denied_with_translation(cmd, word, frag):
     v = _judge(cmd)
@@ -112,6 +117,19 @@ def test_s2_shadow_commands_denied_with_translation(cmd, word, frag):
 ])
 def test_s3_shell_own_work_passes(cmd):
     assert _judge(cmd) is None, cmd
+
+
+# ---------------------------------------------------------------- S2b fd 리다이렉션은 인자가 아니다
+@pytest.mark.parametrize("cmd, good, bad", [
+    ("ls -d /Applications/Blender.app 2>/dev/null", 'path: "/Applications/Blender.app"', '"2"'),
+    ("tail -5 data/script_runs/x.log 2>&1", 'tail: 5, path: "data/script_runs/x.log"', '"2"'),
+    ("cat -n backend/x.py 2> /dev/null", 'numbered: true, path: "backend/x.py"', '"2"'),
+])
+def test_s2b_fd_redirect_digit_not_an_argument(cmd, good, bad):
+    """ep2904: 거절문이 path: ["…", "2"] 를 가르쳐 재시도 문장을 틀리게 했다."""
+    v = _judge(cmd)
+    assert v and good in v, (cmd, v)
+    assert bad not in v, (cmd, v)
 
 
 # ---------------------------------------------------------------- S4 파일을 쓰는 파이썬

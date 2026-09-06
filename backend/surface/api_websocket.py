@@ -492,10 +492,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
     message = await asyncio.to_thread(_process_documents, data.get("documents", []), message)  # 문서 변환(textutil 등)은 스레드로
 
+    # 태스크 id 는 에피소드보다 먼저 정한다 — 이벤트 루프 한 스레드에서 여러 턴이 동시에
+    # 열리므로 thread-local 상속은 이웃 턴의 태스크를 물려받는다(2026-09-06 ep2905 → 명시 바인딩).
+    task_id = f"task_{uuid.uuid4().hex[:8]}"
     # 에피소드 로그 시작 (project_id 전달 — 종료 시 조종실 액티브 유령 청소용)
     try:
         from episode_logger import EpisodeLogger
-        EpisodeLogger.start_episode(agent_name, message, project_id=project_id)
+        EpisodeLogger.start_episode(agent_name, message, project_id=project_id, task_id=task_id)
     except Exception:
         pass
 
@@ -569,8 +572,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 사용자 메시지 저장 (이미지 포함)
         db.save_message(user_id, target_agent_id, message, images=images if images else None)
 
-        # 태스크 생성
-        task_id = f"task_{uuid.uuid4().hex[:8]}"
+        # 태스크 생성 (id 는 에피소드 시작 전에 정했다 — 명시 바인딩)
         try:
             db.create_task(
                 task_id=task_id,
@@ -932,10 +934,13 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         except Exception:
             extra_role = ""
 
+    # 태스크 id 는 에피소드보다 먼저 — 명시 바인딩(프로젝트 스트림 핸들러와 같은 이유, ep2905 실측
+    # 주인공: 이 핸들러가 설계 에이전트의 진행 중 태스크를 물려받아 run 을 공유·조기 종료시켰다).
+    task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
     # 에피소드 로그 시작
     try:
         from episode_logger import EpisodeLogger
-        EpisodeLogger.start_episode("system_ai", message)
+        EpisodeLogger.start_episode("system_ai", message, task_id=task_id)
     except Exception:
         pass
 
@@ -957,8 +962,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         )
         from thread_context import set_current_task_id, clear_all_context
 
-        # 태스크 생성 (위임 기능에 필요)
-        task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
+        # 태스크 생성 (위임 기능에 필요 — id 는 에피소드 시작 전에 정했다)
         try:
             create_task(
                 task_id=task_id,

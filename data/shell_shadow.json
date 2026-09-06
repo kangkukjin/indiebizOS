@@ -201,6 +201,25 @@
         "src"
       ]
     },
+    "self:package": {
+      "heads": [
+        "curl",
+        "wget",
+        "http",
+        "xh"
+      ],
+      "argmap": {
+        "url_contains": [
+          "/packages/reload"
+        ],
+        "skeleton": {
+          "op": "reload"
+        }
+      },
+      "params": [
+        "op"
+      ]
+    },
     "self:read": {
       "heads": [
         "cat",

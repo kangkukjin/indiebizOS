@@ -831,7 +831,30 @@ def _rebuild_ibl_vocab() -> Optional[str]:
     except Exception as e:  # noqa: BLE001
         return f"어휘 재빌드 예외: {e}"
 
-    # /packages/reload(api_packages)와 같은 절차·같은 순서.
+    failed = invalidate_runtime_caches()
+    if failed:
+        return ("어휘는 재빌드했으나 런타임 캐시 초기화 실패 — 스테일 사전일 수 있습니다"
+                f"(백엔드 재기동 권장): {', '.join(failed)}")
+    return None
+
+
+#: 런타임 캐시 초기화가 되살리는 범위 / 못 되살리는 범위 — 몸이 말한다(2026-09-05 ep2836).
+#  POST /packages/reload 와 [self:package]{op:"reload"} 가 같은 문장을 낸다(한 절차, 한 진실).
+RELOAD_COVERS = ["어휘 카탈로그(ibl_nodes.yaml 재독)", "api_registry", "실행기 노드 표", "의식 캐시",
+                 "패키지 handler.py(다음 호출 때 새로 로드)"]
+RELOAD_DOES_NOT_COVER = ["패키지 형제 모듈(tool_*.py·*_ops.py — 백엔드 재기동 필요)",
+                         "backend/*.py(keeper 가 파일 변경을 감지해 재기동)",
+                         "mcp_server.py(별도 프로세스 — touch 로 재시작)"]
+
+
+def invalidate_runtime_caches() -> list:
+    """패키지 메타 → 어휘 카탈로그 → api_registry → 실행기 → 의식 캐시를 이 순서로 비운다.
+
+    POST /packages/reload(api_packages)·install/remove 뒤·[self:package]{op:"reload"} 의 **단일 절차**
+    (2026-09-06: 세 자리가 각자 베껴 쓰다 08-24 에 한 자리만 registry 단계가 빠졌던 부류를 닫는다).
+    실패한 단계 이름 목록을 돌려준다 — 빈 목록이 성공. ★삼키지 않는다: 한 단계라도 못 비우면
+    스테일 사전인 채 "성공"이 나가 거짓말이 된다(침묵 클램프 부류).
+    """
     def _pkg_meta():
         from package_manager import package_manager
         package_manager.invalidate_cache()
@@ -841,9 +864,8 @@ def _rebuild_ibl_vocab() -> Optional[str]:
         invalidate_nodes_cache()
 
     def _registry():
-        # ★2026-08-24 발견: 여기만 이 단계가 빠져 있었다("동형"이라 적어두고 아니었다).
-        # 안 비우면 reload_nodes 가 낡은 레지스트리를 재병합해 삭제된 registry 액션이
-        # 실행기에 유령으로 남는다(/packages/reload 가 2026-07-03 에 고친 바로 그 병).
+        # ★2026-08-24 발견: 안 비우면 reload_nodes 가 낡은 레지스트리를 재병합해 삭제된
+        # registry 액션이 실행기에 유령으로 남는다(/packages/reload 가 2026-07-03 에 고친 병).
         from ibl_registry import reload_registry
         reload_registry()
 
@@ -851,8 +873,6 @@ def _rebuild_ibl_vocab() -> Optional[str]:
         from ibl_engine import reload_nodes
         reload_nodes()
 
-    # ★실패를 삼키지 않는다 — 한 단계라도 못 비우면 스테일 사전인 채 "재빌드 성공"이
-    #   반환돼 거짓말이 된다(침묵 클램프 부류).
     failed = []
     for name, step in (("package_meta", _pkg_meta), ("catalog", _catalog),
                        ("api_registry", _registry), ("executor", _executor),
@@ -861,14 +881,11 @@ def _rebuild_ibl_vocab() -> Optional[str]:
             step()
         except Exception as e:  # noqa: BLE001
             failed.append(f"{name}({type(e).__name__})")
-    if failed:
-        return ("어휘는 재빌드했으나 런타임 캐시 초기화 실패 — 스테일 사전일 수 있습니다"
-                f"(백엔드 재기동 권장): {', '.join(failed)}")
-    return None
+    return failed
 
 
 def _package_op(params: dict) -> dict:
-    """[self:package]{op} — list/info/install/remove. package_manager 래핑 + 어휘 재빌드."""
+    """[self:package]{op} — list/info/install/remove/reload. package_manager 래핑 + 어휘 재빌드 + 캐시 초기화."""
     from package_manager import package_manager
 
     op = (params.get("op") or "list").strip()
@@ -892,6 +909,19 @@ def _package_op(params: dict) -> dict:
             #   (`>> [table:filter]{where: "installed == true"}` 로 갈라 쓰게). 기존 두 키는 그대로.
             "items": [{**p, "installed": True} for p in inst] + [{**p, "installed": False} for p in avail],
         }
+
+    if op == "reload":
+        # POST /packages/reload 의 낱말 자리 — 편집 결과문이 이 op 을 약속해 왔는데(live_effect_note)
+        # 낱말엔 없어서 모델이 curl 로 우회했다(ep2904 ×4, 관문·해마 밖). 한 절차(invalidate_runtime_caches).
+        failed = invalidate_runtime_caches()
+        if failed:
+            return {"success": False, "status": "partial", "failed_steps": failed,
+                    "error": f"캐시 초기화 {len(failed)}단계 실패 — 스테일 사전일 수 있습니다"
+                             f"(백엔드 재기동 권장): {', '.join(failed)}",
+                    "reloaded": RELOAD_COVERS, "not_reloaded": RELOAD_DOES_NOT_COVER}
+        return {"success": True, "status": "ok",
+                "message": "패키지/도구/IBL노드 캐시(카탈로그+실행기+의식)를 초기화했습니다.",
+                "reloaded": RELOAD_COVERS, "not_reloaded": RELOAD_DOES_NOT_COVER}
 
     package_id = (params.get("package_id") or params.get("name") or "").strip()
     if not package_id:
@@ -925,7 +955,7 @@ def _package_op(params: dict) -> dict:
         result["success"] = True
         return result
 
-    return {"success": False, "error": "op 파라미터가 필요합니다. (list|info|install|remove)"}
+    return {"success": False, "error": "op 파라미터가 필요합니다. (list|info|install|remove|reload)"}
 
 
 def _execute_launcher_command(action: str, params: dict) -> dict:

@@ -193,6 +193,11 @@ def _split_redirects(seg: List[str]) -> Tuple[List[str], List[str], List[str]]:
     while i < len(seg):
         t = seg[i]
         if t in _REDIRECT_OPS:
+            # shlex punctuation_chars 는 `2>/dev/null`·`2>&1` 을 '2','>','…' 로 낸다 — 직전 토큰이
+            # 홀로 선 fd 번호면 인자가 아니라 리다이렉션의 일부다(ep2904: 거절문이 path: ["…", "2"]
+            # 를 가르쳐 재시도 문장을 틀리게 했다).
+            if cmd and len(cmd[-1]) == 1 and cmd[-1].isdigit() and i > 0 and seg[i - 1] == cmd[-1]:
+                cmd.pop()
             if i + 1 < len(seg):
                 writes.append(seg[i + 1])
                 i += 2
@@ -398,8 +403,18 @@ def judge_shell(command: str, cwd: Optional[str] = None, root: Optional[str] = N
             if need_flag and not any(a == need_flag or (a.startswith(need_flag) and not a.startswith("--")) for a in flagset):
                 continue
             spec = shadows.get(word) or {}
-            params, paths = _apply_argmap(args, spec, head)
             argmap = spec.get("argmap") or {}
+            # url_contains(데이터): 같은 머리(curl 등)라도 *이 부분문자열을 품은 인자*가 있을 때만
+            # 이 낱말의 그림자 — 몸 자신의 API 를 셸로 두드리는 꼴(ep2904: POST /packages/reload ×4).
+            # 인자 전부가 조건이므로 경로 판정을 타지 않는다.
+            needles = [str(n) for n in (argmap.get("url_contains") or [])]
+            if needles:
+                if not any(n in a for a in args for n in needles):
+                    continue
+                params = dict(argmap.get("skeleton") or {})
+                shown = " ".join(cmd[:6]) + (" …" if len(cmd) > 6 else "")
+                return _deny(shown, word, _render(word, params, spec), spec)
+            params, paths = _apply_argmap(args, spec, head)
             cwd_default = bool(argmap.get("cwd_default")) or head in (argmap.get("cwd_default_heads") or [])
             if not paths:
                 if piped and not cwd_default:

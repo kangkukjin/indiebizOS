@@ -18,6 +18,7 @@ executor 스레드(run_stream)에 걸쳐 있어도, executor 디스패치 시 `c
 
 import json
 import hashlib
+from typing import Optional
 import os
 import re
 import sys
@@ -231,7 +232,8 @@ class _Episode:
     __slots__ = ("agent", "user_message", "started_at", "buffer", "project_id", "episode_id",
                  "steps", "task_id", "trajectory")
 
-    def __init__(self, agent: str, user_message: str, project_id: str = ""):
+    def __init__(self, agent: str, user_message: str, project_id: str = "",
+                 task_id: Optional[str] = None):
         self.agent = agent
         self.user_message = (user_message or "")[:500]
         self.started_at = datetime.now()
@@ -240,13 +242,21 @@ class _Episode:
         self.episode_id = None  # END 저장 후 DB row id — 백그라운드 증류 로그 재합류(refresh)용
         self.steps = []  # 구조화 스텝 원장 (notify_round/record_role_switch — 정규식 회수 대체)
         # 태스크 컨텍스트 — write_ledger(쓰기 관문 원장)와의 조인 키(2026-08-21).
-        # 시작 시점 캡처 + end 늦은 캡처 2중(진입점마다 task 세우는 순서가 다름).
+        # ★명시 바인딩이 우선한다(2026-09-06 ep2904/2905): WebSocket 핸들러는 이벤트 루프
+        #   *한 스레드*에서 여러 턴을 동시에 연다 — threading.local 의 task_id 는 그 스레드
+        #   안에서 전역이라, 새 턴이 시작 시점에 상속하는 값은 *아직 도는 다른 턴의* 태스크다
+        #   (시스템 AI 턴이 설계 에이전트의 task_e64c9313 을 물려받아 run 을 공유·조기 종료,
+        #   30일 12건). 자기 태스크를 아는 진입점은 task_id= 로 넘긴다. None 일 때만 상속
+        #   (동기 진입점: 워커 스레드 한 턴 = 한 컨텍스트라 상속이 옳다) + end 늦은 캡처 2중.
         self.task_id = ""
-        try:
-            from thread_context import get_current_task_id
-            self.task_id = get_current_task_id() or ""
-        except Exception:
-            pass
+        if task_id is not None:
+            self.task_id = str(task_id or "")
+        else:
+            try:
+                from thread_context import get_current_task_id
+                self.task_id = get_current_task_id() or ""
+            except Exception:
+                pass
         self.trajectory = _Trajectory(trajectory_run_id(self.task_id), self.task_id)
 
 
@@ -280,8 +290,13 @@ class EpisodeLogger:
             pass
 
     @classmethod
-    def start_episode(cls, agent: str, user_message: str, project_id: str = ""):
+    def start_episode(cls, agent: str, user_message: str, project_id: str = "",
+                      task_id: Optional[str] = None):
         """에피소드 시작 — 현재 실행 컨텍스트에 새 에피소드를 건다.
+
+        task_id: 이 턴이 소유한 태스크(명시 바인딩). 이벤트 루프 스레드처럼 여러 턴이 한
+        스레드를 공유하는 진입점은 반드시 넘긴다 — thread-local 상속은 이웃 턴의 태스크를
+        물려받는다(2026-09-06 ep2905). None = 상속(동기 워커 스레드 진입점).
 
         ★동시 실행은 충돌하지 않는다: contextvar 는 태스크/스레드 로컬이라, 다른 태스크가
         시작한 에피소드는 여기서 보이지 않는다(옛 전역 _active 의 '강제종료' 충돌이 사라짐).
@@ -307,7 +322,7 @@ class EpisodeLogger:
             print(f"[Episode SALVAGE] 미종료 에피소드 박제 — 같은 컨텍스트에 새 시작 "
                   f"(agent={agent}, 새 메시지 동일 여부는 원장 비교)")
             cls._finalize(stale)  # 같은 컨텍스트의 누락 에피소드 salvage (데이터 보존)
-        ep = _Episode(agent, user_message, project_id)
+        ep = _Episode(agent, user_message, project_id, task_id=task_id)
         _current_episode.set(ep)
         # ★행을 먼저 만든다 — 이 턴이 리로드로 죽어도 기록은 남는다(_open_episode 참조).
         ep.episode_id = _open_episode(ep.started_at, agent, mask_secrets(ep.user_message),

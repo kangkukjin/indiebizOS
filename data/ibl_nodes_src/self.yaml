@@ -314,17 +314,25 @@
         # ★install/remove 는 폴더를 옮기고 어휘를 재빌드한다 — 명백한 부작용.
         side_effect: true
         fixture: '[self:package]{op: "list"}'
-        description: 도구 패키지 생애주기 관리 (op 분기). list=설치됨/설치가능 목록, info=상세, install/remove=폴더 이동+IBL 어휘 재빌드+캐시 초기화.
-        target_description: 'list — (파라미터 없음). info/install/remove — package_id(필수).'
+        description: 도구 패키지 생애주기 관리 (op 분기). list=설치됨/설치가능 목록, info=상세, install/remove=폴더 이동+IBL 어휘 재빌드+캐시 초기화, reload=런타임 캐시만 초기화(handler.py·어휘 선언 편집 뒤, POST /packages/reload 의 낱말 자리).
+        target_description: 'list/reload — (파라미터 없음). info/install/remove — package_id(필수). reload 는 되살린 범위(reloaded)와 못 되살린 범위(not_reloaded — tool_*.py·backend 는 재기동)를 봉투로 말한다.'
         group: system
         target_key: op
         router: system
         func: package_op
+        # ★셸 그림자(2026-09-06 ep2904): 몸 자신의 리로드 API 를 curl 로 두드린 4회 — 편집 결과문이
+        #   이 op 을 약속했는데 낱말엔 없었다. url_contains = 같은 머리(curl)라도 이 경로일 때만 그림자.
+        shell_shadow:
+          heads: [curl, wget, http, xh]
+          argmap:
+            url_contains: ["/packages/reload"]
+            skeleton: {op: reload}
         ops:
           default: list
           returns:
             install: effect
             remove: effect
+            reload: effect
             info: scalar
           side_effect:
             list: false
@@ -336,14 +344,17 @@
             info: 패키지 상세 정보 (package_id)
             install: not_installed→installed 이동 + IBL 어휘 재빌드 + 캐시 초기화 (package_id)
             remove: installed→not_installed 이동 + IBL 어휘 재빌드 + 캐시 초기화 (package_id)
+            reload: 런타임 캐시만 초기화 — 카탈로그·api_registry·실행기·의식·handler.py (POST /packages/reload 동형)
         implementation: package_manager.PackageManager 래핑. install/remove 후 build_ibl_nodes.py 서브프로세스 재빌드 +
-          ibl_access/ibl_engine/consciousness_agent 캐시 초기화(POST /packages/reload와 동형 절차).
+          ibl_routing.invalidate_runtime_caches(POST /packages/reload·reload op 과 한 절차).
         keywords:
         - 패키지
         - 도구
         - 설치
         - 제거
         - 능력
+        - 리로드
+        - reload
         - 확장
       install_lib:
         returns: effect

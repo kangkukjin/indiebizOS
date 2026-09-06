@@ -158,7 +158,7 @@ def _arm_resweep(delay_s: float):
     t.start()
 
 
-def _sweep_orphan_episodes():
+def _sweep_orphan_episodes(announce_idle: bool = True):
     """남아 있는 미종료 행 중 **주인이 죽은 것만** 닫는다.
 
     ★ended_at NULL 은 '이 턴은 끝을 못 봤다'는 정직한 신호지만, 죽은 뒤에는 그걸 닫을
@@ -202,7 +202,7 @@ def _sweep_orphan_episodes():
         conn.close()
         if breathing:
             _arm_resweep(_CHILD_TRACE_FRESH_SEC + 5)
-        if n or alive:
+        if n or (alive and announce_idle):
             try:
                 if _EL().EpisodeLogger._original_stdout:
                     _EL().EpisodeLogger._original_stdout.write(

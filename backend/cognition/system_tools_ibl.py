@@ -950,8 +950,22 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     called = False
     result = None
     try:
-        with trajectory_scope():
+        with trajectory_scope() as _tr:
             start = time.monotonic()
+            # ★무주 run 의 귀속 (2026-09-06). 봉투에 episode_id 가 안 실린 실행은 여기서
+            #   run 만 서고 episode_log 에는 행이 없다 — 궤적은 남는데 **주인이 없다**.
+            #   실측: 시험·외부 세션이 라이브 백엔드에 쏜 IBL 이 agent 라벨만 남기고 돌아,
+            #   사용자가 "내가 안 시켰는데 뭐가 돌고 있냐"고 물었을 때 원장으로 답할 수
+            #   없었다. 관측을 늘리는 게 아니라 **귀속을 복구**하는 것이다 — 누가(origin)
+            #   어느 작업으로(task_id) 쐈는지를 사건 자체에 적어 둔다.
+            _unowned = getattr(_tr, "episode_id", None) is None
+            _origin = ""
+            if _unowned:
+                try:
+                    from thread_context import get_task_origin
+                    _origin = get_task_origin() or ""
+                except Exception:
+                    _origin = ""
             record_trajectory_event("ibl.started", {
                 "code_sha256": hashlib.sha256(code.encode("utf-8", "replace")).hexdigest(),
                 "code_chars": len(code),
@@ -960,6 +974,9 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 "pipes": _pipes,
                 "nested": _nested,
                 "agent": agent_id or "",
+                "unowned": _unowned,
+                "origin": _origin,
+                "task_id": getattr(_tr, "task_id", "") or "",
             })
             if isinstance(resume, dict):
                 ref = resume.get("prev_ref")

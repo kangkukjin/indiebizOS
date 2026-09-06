@@ -289,6 +289,16 @@ class EpisodeLogger:
 
         project_id: 종료 시 조종실 '액티브 프로젝트' 유령 청소용(_finalize). 창닫힘 뒤 thread-hop
         누수 방어 — sysai 청소와 대칭."""
+        # ★회수는 부팅 전용이 아니다 (2026-09-06 ep2897). 부팅 sweep 은 *그때 열려 있던* 행만
+        #   본다 — 부팅 뒤에 태어나 죽은 고아는 sweep 이 아예 본 적이 없어 _arm_resweep 도 안
+        #   걸리고, 백엔드가 살아 있는 한 영영 NULL 로 남는다(ep2897: 10:04 위임 턴, 주인 죽음,
+        #   일은 10:33 에 다 끝냈는데 원장은 계속 '도는 중'이라 말했다). 새 턴을 여는 손이 지난
+        #   고아를 회수한다 — 부팅은 그 특수 사례일 뿐이다. 살아 있는 턴은 owner 생사 검사가
+        #   그대로 보존하고, 이 시점엔 자기 행이 아직 없어(_open_episode 前) 자해도 없다.
+        try:
+            _sweep_orphan_episodes(announce_idle=False)
+        except Exception:
+            pass          # 회수 실패가 턴 시작을 막지 않는다 — 관측 훅의 계약
         stale = _current_episode.get(None)
         if stale is not None:
             # 아직 contextvar 가 stale 이라 이 print 는 stale 버퍼에 기록된다 —

@@ -82,10 +82,19 @@ body { background:var(--paper); color:var(--ink); -webkit-text-size-adjust:100%;
 footer { text-align:center; color:var(--dim); font-size:.78rem; border-top:1px solid var(--line);
   margin-top:56px; padding-top:18px; }
 #lb { position:fixed; inset:0; background:rgba(20,16,12,.92); display:none;
-  align-items:center; justify-content:center; z-index:50; flex-direction:column; }
+  align-items:center; justify-content:center; z-index:50; flex-direction:column;
+  touch-action:pan-y; -webkit-user-select:none; user-select:none; }
 #lb.on { display:flex; }
-#lb img { max-width:96vw; max-height:86vh; object-fit:contain; border-radius:4px; }
-#lb .lb-cap { color:#cfc7b8; font-size:.85rem; margin-top:10px; }
+#lb img { max-width:96vw; max-height:84vh; object-fit:contain; border-radius:4px; }
+#lb .lb-cap { color:#cfc7b8; font-size:.85rem; margin-top:10px; text-align:center; padding:0 60px; }
+#lb .lb-cnt { position:absolute; top:12px; left:14px; color:#cfc7b8; font-size:.85rem; letter-spacing:.05em; }
+#lb .lb-x, #lb .lb-nav { position:absolute; border:0; cursor:pointer; color:#fff; font:inherit;
+  background:rgba(255,255,255,.14); border-radius:8px; line-height:1; }
+#lb .lb-x { top:8px; right:10px; width:38px; height:38px; font-size:1.3rem; }
+#lb .lb-nav { top:50%; transform:translateY(-50%); width:42px; height:68px; font-size:1.7rem; }
+#lb .lb-prev { left:8px; } #lb .lb-next { right:8px; }
+#lb .lb-x:hover, #lb .lb-nav:hover { background:rgba(255,255,255,.28); }
+#lb.one .lb-nav, #lb.one .lb-cnt { display:none; }
 """
 
 _JS = """
@@ -95,18 +104,54 @@ _JS = """
   var base = m ? m[0] : null;
   var edition = document.body.getAttribute('data-edition') || '';
 
-  // 라이트박스
+  // 라이트박스 = 갤러리: 신문에 실린 순서대로 앞뒤 이동(버튼·키보드 ←→·스와이프), 순번 표시.
   var lb = document.getElementById('lb');
   if (lb) {
-    document.querySelectorAll('.ph').forEach(function(p){
-      p.addEventListener('click', function(){
-        var img = p.querySelector('img');
-        lb.querySelector('img').src = img.getAttribute('data-full') || img.src;
-        lb.querySelector('.lb-cap').textContent = p.getAttribute('data-cap') || '';
-        lb.classList.add('on');
+    var phs = Array.prototype.slice.call(document.querySelectorAll('.ph'));
+    var cur = -1, swipedAt = 0;
+    var lbImg = lb.querySelector('img'), lbCap = lb.querySelector('.lb-cap'), lbCnt = lb.querySelector('.lb-cnt');
+    function fullOf(p){ var img = p.querySelector('img'); return img.getAttribute('data-full') || img.src; }
+    function show(i){
+      if (!phs.length) return;
+      cur = (i + phs.length) % phs.length;
+      var p = phs[cur];
+      lbImg.src = fullOf(p);
+      lbCap.textContent = p.getAttribute('data-cap') || '';
+      lbCnt.textContent = (cur + 1) + ' / ' + phs.length;
+      lb.classList.toggle('one', phs.length < 2);
+      lb.classList.add('on');
+      [cur + 1, cur - 1].forEach(function(j){   // 이웃 사진 미리 받기 — 넘길 때 안 기다리게
+        var q = phs[(j + phs.length) % phs.length];
+        if (q !== p) { var pre = new Image(); pre.src = fullOf(q); }
       });
+    }
+    function hide(){ lb.classList.remove('on'); }
+    function step(d, ev){ if (ev) ev.stopPropagation(); show(cur + d); }
+    phs.forEach(function(p, i){ p.addEventListener('click', function(){ show(i); }); });
+    lb.querySelector('.lb-prev').addEventListener('click', function(e){ step(-1, e); });
+    lb.querySelector('.lb-next').addEventListener('click', function(e){ step(1, e); });
+    lb.querySelector('.lb-x').addEventListener('click', function(e){ e.stopPropagation(); hide(); });
+    // 사진 자체를 누르면: 오른쪽 반=다음, 왼쪽 반=이전. 바깥(어두운 곳)을 누르면 닫기.
+    lbImg.addEventListener('click', function(e){
+      e.stopPropagation();
+      if (Date.now() - swipedAt < 400) return;
+      var r = lbImg.getBoundingClientRect();
+      step(e.clientX - r.left < r.width / 2 ? -1 : 1);
     });
-    lb.addEventListener('click', function(){ lb.classList.remove('on'); });
+    lb.addEventListener('click', function(){ if (Date.now() - swipedAt > 400) hide(); });
+    document.addEventListener('keydown', function(e){
+      if (!lb.classList.contains('on')) return;
+      if (e.key === 'ArrowRight') step(1);
+      else if (e.key === 'ArrowLeft') step(-1);
+      else if (e.key === 'Escape') hide();
+    });
+    var tx = null, ty = null;
+    lb.addEventListener('touchstart', function(e){ var t = e.touches[0]; tx = t.clientX; ty = t.clientY; }, { passive:true });
+    lb.addEventListener('touchend', function(e){
+      if (tx === null) return;
+      var t = e.changedTouches[0], dx = t.clientX - tx, dy = t.clientY - ty; tx = null;
+      if (Math.abs(dx) > 40 && Math.abs(dx) > Math.abs(dy) * 1.5) { swipedAt = Date.now(); show(cur + (dx < 0 ? 1 : -1)); }
+    }, { passive:true });
   }
 
   var gbList = document.getElementById('gb-list');
@@ -191,7 +236,7 @@ def _shell(title: str, body: str, edition_id: str = "") -> str:
 {body}
 <footer>가족만 보는 신문입니다 · 주소를 아는 사람만 볼 수 있어요<br>IndieBiz OS 가족신문</footer>
 </div>
-<div id="lb"><img alt=""><div class="lb-cap"></div></div>
+<div id="lb"><div class="lb-cnt"></div><button class="lb-x" type="button" aria-label="닫기">✕</button><button class="lb-nav lb-prev" type="button" aria-label="이전 사진">‹</button><img alt=""><div class="lb-cap"></div><button class="lb-nav lb-next" type="button" aria-label="다음 사진">›</button></div>
 <script>{_JS}</script>
 </body>
 </html>"""

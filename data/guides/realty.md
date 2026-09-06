@@ -59,7 +59,7 @@
 | `deal` | (기본 trade) | `trade` \| `rent` |
 | `start_month` | (기본 이번달) | `YYYYMM` 형식 (예: `202604`) |
 | `end_month` | (기본 start_month) | `YYYYMM` 형식. 범위 조회 |
-| `count_per_month` | (기본 30) | 월별 반환 건수 상한. **`source=molit` 전용** — zigbang·naver 는 이 키를 무시하고 응답에 `무시된_파라미터` 로 신고한다(호가 소스의 상한은 `limit`) |
+| `count_per_month` | (생략=전부) | 월별 반환 건수 상한. 생략하면 그 달 거래 전부(페이징). 잘리면 봉투 `truncated:true`·`total` 로 신고. **`source=molit` 전용** — zigbang·naver 는 이 키를 무시하고 응답에 `무시된_파라미터` 로 신고한다(호가 소스의 상한은 `limit`) |
 
 ### region_code 조회
 
@@ -114,7 +114,7 @@
 - **region_code 자릿수**: 5자리가 정확. 2자리(시도 단위)는 결과 폭주.
 - **start_month 형식**: `2026-04`나 `2026/04` 안 됨. 반드시 `202604`.
 - **type/deal 잘못 조합**: 둘 다 enum이라 오타나면 에러. `type:"apartment"`(X), `deal:"sale"`(X).
-- **count_per_month 너무 큼**: 한 번에 너무 많이 요청하면 API 응답 느려짐. 보통 30~50.
+- **`truncated:true` 무시**: `count_per_month` 를 줬는데 `total` 이 더 크면 표본이 잘린 것 — 판정 전에 상한을 풀어라.
 - **외국 부동산**: 이 액션은 한국만. 국토부 API 한계.
 
 ## 관련

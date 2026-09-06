@@ -93,7 +93,8 @@ def _resolve_query_params(tool_input):
     _ym = tool_input.get("year_month") or tool_input.get("month")
     if _ym and not start_month and not end_month:
         start_month = end_month = str(_ym)
-    count_per_month = tool_input.get("count_per_month", 30)
+    # 생략=그 달 전부(공용 모듈이 pageNo 로 페이징, 잘리면 truncated 신고). 숫자=명시 상한.
+    count_per_month = tool_input.get("count_per_month")
 
     # region_code가 없으면 region(지역 이름)을 받아 내부에서 자동 해소한다.
     # 코드를 호출자가 미리 찾아 넣게 하지 않는다 — 로컬 매핑(+카카오)이라 비용 0~소.

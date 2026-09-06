@@ -18,81 +18,40 @@ if _backend_dir not in sys.path:
 from common.auth_manager import get_api_key, check_api_key
 # 403 문구의 정본 — 데이터셋 이름·신청 링크를 여기서 손으로 적지 않는다.
 from common.datagokr_catalog import permission_error
+from common.pkg_utils import load_sibling
+_molit = load_sibling(__file__, "realty_molit_common")  # 페이징·잘림 신고·월 병렬 공용
 
 SERVICE_KEY = get_api_key('MOLIT_API_KEY') or ''
 BASE_URL = 'https://apis.data.go.kr/1613000/RTMSDataSvcSHRent/getRTMSDataSvcSHRent'
 
-def _get_months_range(start_month: str, end_month: str) -> list:
-    """시작월부터 종료월까지의 월 목록 생성"""
-    months = []
-    start = datetime.strptime(start_month, "%Y%m")
-    end = datetime.strptime(end_month, "%Y%m")
+def _parse_item(item, year_month: str) -> dict:
+    """XML item 한 건 → dict (필드 사전은 이 도구 고유)"""
+    deposit = _get_text(item, 'deposit')
+    monthly_rent = _get_text(item, 'monthlyRent')
+    rent_type = "전세" if monthly_rent == "0" or not monthly_rent else "월세"
 
-    current = start
-    while current <= end:
-        months.append(current.strftime("%Y%m"))
-        if current.month == 12:
-            current = current.replace(year=current.year + 1, month=1)
-        else:
-            current = current.replace(month=current.month + 1)
+    rent = {
+        "주택유형": _get_text(item, 'houseType'),
+        "법정동": _get_text(item, 'umdNm'),
+        "지번": _get_text(item, 'jibun'),
+        "계약유형": rent_type,
+        "보증금": deposit,
+        "월세": monthly_rent if rent_type == "월세" else "",
+        "계약면적": _get_text(item, 'contractArea'),
+        "건축년도": _get_text(item, 'buildYear'),
+        "거래년도": _get_text(item, 'dealYear'),
+        "거래월": _get_text(item, 'dealMonth'),
+        "거래일": _get_text(item, 'dealDay'),
+        "조회년월": year_month,
+    }
+    return rent
 
-    return months
 
-def _fetch_month_data(region_code: str, year_month: str, count: int) -> list:
-    """한 달 데이터 조회"""
-    try:
-        params = {
-            'serviceKey': SERVICE_KEY,
-            'LAWD_CD': region_code,
-            'DEAL_YMD': year_month,
-            'numOfRows': str(count)
-        }
+def _fetch_month_data(region_code: str, year_month: str, count) -> list:
+    """한 달 데이터 조회 (호환용 — 페이징은 공용 모듈이 한다)"""
+    return _molit.fetch_month_paged(BASE_URL, SERVICE_KEY, region_code, year_month, count, _parse_item)["rows"]
 
-        url = BASE_URL + '?' + urllib.parse.urlencode(params)
-        req = urllib.request.Request(url)
-
-        with urllib.request.urlopen(req, timeout=30) as response:
-            data = response.read().decode('utf-8')
-
-        root = ET.fromstring(data)
-        result_code = root.find('.//resultCode')
-
-        if result_code is None or result_code.text != '000':
-            return []
-
-        items = root.findall('.//item')
-        rents = []
-
-        for item in items:
-            deposit = _get_text(item, 'deposit')
-            monthly_rent = _get_text(item, 'monthlyRent')
-            rent_type = "전세" if monthly_rent == "0" or not monthly_rent else "월세"
-
-            rent = {
-                "주택유형": _get_text(item, 'houseType'),
-                "법정동": _get_text(item, 'umdNm'),
-                "지번": _get_text(item, 'jibun'),
-                "계약유형": rent_type,
-                "보증금": deposit,
-                "월세": monthly_rent if rent_type == "월세" else "",
-                "계약면적": _get_text(item, 'contractArea'),
-                "건축년도": _get_text(item, 'buildYear'),
-                "거래년도": _get_text(item, 'dealYear'),
-                "거래월": _get_text(item, 'dealMonth'),
-                "거래일": _get_text(item, 'dealDay'),
-                "조회년월": year_month,
-            }
-            rents.append(rent)
-
-        return rents
-    except urllib.error.HTTPError as e:
-        if e.code in (401, 403):
-            raise  # 인증/미승인 — 상위에서 친절히 안내
-        return []
-    except:
-        return []
-
-def get_house_rent(region_code: str, start_month: str, end_month: str = None, count_per_month: int = 30):
+def get_house_rent(region_code: str, start_month: str, end_month: str = None, count_per_month=None):
     """
     단독/다가구 전월세 실거래가 기간 범위 조회
     """
@@ -104,7 +63,7 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
         end_month = start_month
 
     try:
-        months = _get_months_range(start_month, end_month)
+        months = _molit.get_months_range(start_month, end_month)
 
         if len(months) > 12:
             return {
@@ -112,14 +71,8 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
                 "error": "최대 12개월까지만 조회 가능합니다."
             }
 
-        all_rents = []
-        months_with_data = []
-
-        for month in months:
-            rents = _fetch_month_data(region_code, month, count_per_month)
-            if rents:
-                all_rents.extend(rents)
-                months_with_data.append(month)
+        all_rents, months_with_data, total, truncated, errors = _molit.fetch_range(
+            BASE_URL, SERVICE_KEY, region_code, months, count_per_month, _parse_item)
 
         # 요약 통계
         if all_rents:
@@ -140,6 +93,8 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
                 "조회월수": len(months),
                 "데이터있는월": len(months_with_data),
                 "총거래건수": len(all_rents),
+                "전체건수": total,
+                "잘림": truncated,
                 "전세": jeonse_count,
                 "월세": wolse_count,
                 "전세_평균보증금": f"{sum(jeonse_deposits) // len(jeonse_deposits):,}만원" if jeonse_deposits else "N/A",
@@ -148,7 +103,9 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
             summary = {
                 "조회기간": f"{start_month} ~ {end_month}",
                 "조회월수": len(months),
-                "총거래건수": 0
+                "총거래건수": 0,
+                "전체건수": total,
+                "잘림": truncated
             }
 
         return {
@@ -156,6 +113,9 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
             "type": "단독/다가구 전월세 (기간조회)",
             "region_code": region_code,
             "period": f"{start_month} ~ {end_month}",
+            "total": total,
+            "truncated": truncated,
+            "errors": errors,  # {YYYYMM: 사유} — 비면 전 월 완전. 타임아웃 달은 0건이 아니라 불완전
             "summary": summary,
             "data": all_rents
         }
@@ -170,6 +130,4 @@ def get_house_rent(region_code: str, start_month: str, end_month: str = None, co
             "error": str(e)
         }
 
-def _get_text(item, tag):
-    elem = item.find(tag)
-    return elem.text.strip() if elem is not None and elem.text else ""
+_get_text = _molit.get_text

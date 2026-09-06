@@ -600,6 +600,7 @@ def _collect_tool_inventory() -> Dict[str, Any]:
                         agent_tool_names.append(tool_name)
                         break
         agent_tool_names.append("read_guide")
+        agent_tool_names.append("reframe")
     except Exception:
         pass
 

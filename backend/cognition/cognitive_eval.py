@@ -10,6 +10,7 @@ trace 직렬화·액션 원장은 cognitive_trace 모듈 함수를 쓴다.
 ★consciousness_output 키 소비처 — scripts/consciousness_schema_check.py CONSUMER_FILES 등록.
 """
 
+import json
 import re
 from pathlib import Path
 from typing import Optional, List, Dict, Any
@@ -661,6 +662,28 @@ class CognitiveEvalMixin:
                 self._log(f"[GoalEval] 라운드 소진, 현재 응답 반환 (미달성 → 증류 제외)")
                 return response
 
+            # 기계 방아쇠 — 치명(severity 3) 또는 두 번째 라운드도 미달이면 판단 없이 재규정한다
+            # (reframe.py). 이룰 수 없는 기준에 재실행만 반복하던 부류(ep2386)가 이 방아쇠가 잡는 것.
+            # 새 규정이 오면 이후 라운드의 기준은 새 기준이고, 재실행 메시지 앞에 새 규정이 실린다.
+            _reframe_note = ""
+            try:
+                from reframe import revise_from_eval, turn_key_for, render_for_executor
+                _new_co = revise_from_eval(turn_key_for(self), criteria, feedback, severity, round_num)
+            except Exception as _rfe:
+                _new_co = None
+                self._log(f"[GoalEval] 재규정 방아쇠 실패(무시): {_rfe}")
+            if _new_co:
+                consciousness_output = _new_co
+                _nc = (_new_co.get("achievement_criteria") or "").strip()
+                if _nc:
+                    criteria = _nc
+                try:
+                    _rendered = json.loads(render_for_executor({"revised": True, "output": _new_co}))
+                    _reframe_note = (_rendered.get("content") or "") + "\n\n"
+                except Exception:
+                    _reframe_note = "[재규정] 규정이 갱신됐다:\n" + (_new_co.get("task_framing") or "") + "\n\n"
+                self._log(f"[GoalEval] 재규정 반영 — 기준 갱신: {criteria[:80]}")
+
             # 피드백을 주입하여 재실행 — severity에 따라 전략 분기
             self._log(f"[GoalEval] 재실행 시작 (severity={severity_label}, 피드백 주입)")
 
@@ -686,6 +709,7 @@ class CognitiveEvalMixin:
                 )
 
             feedback_message = (
+                f"{_reframe_note}"
                 f"[평가 피드백] 이전 응답이 달성 기준을 충족하지 못했습니다. "
                 f"(심각도: {severity_label})\n\n"
                 f"달성 기준: {criteria}\n\n"

@@ -73,6 +73,16 @@ class GuideRequest(BaseModel):
     read: bool = True
 
 
+class ReframeRequest(BaseModel):
+    """턴 안 재규정 — claude_code(아웃오브프로세스 MCP) 브리지. GuideRequest 와 같은 이유·같은 모양."""
+    broken_assumption: str
+    evidence: str
+    progress: str = ""
+    kind: str = "other"
+    agent_id: Optional[str] = None
+    task_id: Optional[str] = None
+
+
 class TranslateRequest(BaseModel):
     """수동 모드: 자연어 의도 → IBL 코드 번역 요청"""
     intent: str
@@ -297,6 +307,25 @@ async def read_guide_bridge(req: GuideRequest):
     try:
         from ibl_routing import search_guide
         return search_guide(req.query, {"read": req.read})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/reframe")
+async def reframe_bridge(req: ReframeRequest):
+    """턴 안 재규정 — mcp_server.reframe 가 호출하는 HTTP 통로. in-process 경로(system_tools
+    'reframe')와 **동일한 execute_reframe** 를 부른다. 의식 재호출(수십 초)은 스레드로 — 이 서버는
+    MCP HTTP 마운트와 같은 루프라 루프를 막으면 자기 교착이다(_post_backend 주석)."""
+    import asyncio
+    try:
+        from reframe import execute_reframe
+        payload = {"broken_assumption": req.broken_assumption, "evidence": req.evidence,
+                   "progress": req.progress, "kind": req.kind}
+        raw = await asyncio.to_thread(execute_reframe, payload, req.agent_id or "system_ai")
+        try:
+            return json.loads(raw)
+        except Exception:
+            return {"revised": False, "content": raw}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

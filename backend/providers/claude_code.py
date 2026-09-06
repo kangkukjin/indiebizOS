@@ -323,6 +323,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         # 통로가 없었다(read_guide 호출이 'No such tool' 로 실패→file_find 우회 헛걸음). 이 한 줄이 메운다.
         # ★Claude Code 한정 — IBL 어휘로 승격하지 않으므로 다른 프로바이더 표면엔 영향 없음.
         "mcp__indiebizos__read_guide",
+        # MCP — 턴 안 재규정 브리지(reframe.py). read_guide 와 같은 이유로 MCP 로만 닿는다.
+        "mcp__indiebizos__reframe",
     ]
 
     # `--tools` 에 실을 내장 도구 = EAGER_TOOLS 중 내장(MCP 이름 제외). 2026-09-04 실측(CLI 2.1.258):
@@ -362,7 +364,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "가이드 읽기 도구의 정확한 이름은 `mcp__indiebizos__read_guide` 다(맨이름 `read_guide` 아님). "
         "공용 프롬프트·IBL 액션 설명이 `read_guide(query=...)` 로 가르치는 곳은 모두 이 도구를 뜻하니, "
         "`mcp__indiebizos__read_guide` 로 호출하라(file_find 로 data/guides 를 뒤지지 말 것 — 이 도구가 가이드 DB를 검색해 본문까지 준다).\n"
-        "이 두 MCP 도구는 세션 시작부터 로드돼 있다 — 스키마를 따로 찾거나 불러올 필요 없이 곧장 호출하라.\n"
+        "재규정 도구의 정확한 이름은 `mcp__indiebizos__reframe` 다(맨이름 `reframe` 아님) — 규정의 전제가 "
+        "깨졌거나 이 틀 안에서 풀 수 없거나 위험하다고 알게 되면 이 도구로 의식에게 되묻는다.\n"
+        "이 세 MCP 도구는 세션 시작부터 로드돼 있다 — 스키마를 따로 찾거나 불러올 필요 없이 곧장 호출하라.\n"
         "파일 읽기·웹 검색·grep 은 네이티브 도구가 아니라 IBL 로 하라. "
         "`Read`/`WebSearch`/`WebFetch`/`Grep`/`Glob` 은 비활성화돼 있다 — 대신 "
         "`mcp__indiebizos__execute_ibl` 로 "

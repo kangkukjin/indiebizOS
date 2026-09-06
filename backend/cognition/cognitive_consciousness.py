@@ -283,7 +283,8 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
             return None
 
     def _run_consciousness(self, user_message: str, history: list,
-                           execution_memory: str = "", repair: bool = False) -> dict:
+                           execution_memory: str = "", repair: bool = False,
+                           revision: dict = None) -> dict:
         """의식 에이전트 실행 — 메타 판단
 
         사용자 메시지와 히스토리를 분석하여 프롬프트 최적화 지침을 반환합니다.
@@ -337,6 +338,7 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
                 agent_notes=agent_notes,
                 available_tools=available_tools,
                 repair=repair,
+                revision=revision,
             )
 
             if result:

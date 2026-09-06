@@ -62,6 +62,13 @@ def get_all_system_ai_tools() -> List[Dict]:
             except Exception as e:
                 print(f"[시스템AI] {pkg_id}/tool.json 로드 실패: {e}")
 
+    # 턴 안 재규정 — 자기 관리 도구 부류(ask_user_question 과 같은 자리, IBL 어휘 아님)
+    try:
+        from reframe import TOOL_SCHEMA as _REFRAME_TOOL
+        tools.append(dict(_REFRAME_TOOL))
+    except Exception as e:
+        print(f"[시스템AI] reframe 도구 로드 실패(생략): {e}")
+
     # 가이드 검색 도구
     tools.append({
         "name": "read_guide",

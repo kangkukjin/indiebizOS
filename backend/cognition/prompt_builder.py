@@ -882,7 +882,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     assumptions = _assumption_lines(co)
     if assumptions:
         aug.append("이 계획의 전제(첫 확인에서 검증하라. 하나라도 깨지면 그 위에 계속 짓지 말고, "
-                   "깨진 전제와 그 영향을 먼저 보고한 뒤 접근을 다시 세워라):\n" + assumptions)
+                   "reframe 도구로 깨진 전제와 근거를 보내 재규정을 받아라 — 이 틀 안에서 풀 수 없거나 "
+                   "위험하다고 알게 됐을 때도 같다):\n" + assumptions)
 
     # 의식 프롬프트 출력 키는 capability_focus (consciousness_prompt.md 응답 형식).
     # 예전 ibl_focus 이름을 폴백으로 둔다 — 개명 드리프트로 highlight_actions·hint가

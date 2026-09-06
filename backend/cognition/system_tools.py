@@ -950,6 +950,12 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
         if tool_name == "request_user_approval":
             return execute_request_user_approval(tool_input, project_path)
 
+        # 턴 안 재규정 — 실행자가 깨진 전제를 들고 의식에게 되묻는다 (reframe.py, 두-경로 대칭:
+        # Claude Code 는 mcp_server.reframe → /ibl/reframe 로 같은 함수에 닿는다)
+        if tool_name == "reframe":
+            from reframe import execute_reframe
+            return execute_reframe(tool_input, agent_id)
+
         # 가이드 검색 (독립 도구 — IBL/Python 어디서든 사용 가능)
         if tool_name == "read_guide":
             from ibl_routing import search_guide  # 정의처 직수입(엔진 재수출 경유 아님)

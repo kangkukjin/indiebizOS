@@ -502,5 +502,36 @@ async def read_guide(query: str, read: bool = True) -> str:
     )
 
 
+@mcp.tool()
+async def reframe(broken_assumption: str, evidence: str, progress: str = "",
+                  kind: str = "other", ctx: Context = None) -> str:
+    """규정(현재 태스크·이 계획의 전제)이 실행 중 사실이 아니게 됐을 때 의식에게 재규정을 요청합니다.
+
+    전제가 깨졌거나, 이 틀 안에서는 풀 수 없거나, 그대로 하면 위험하다는 것을 알게 됐을 때 부르세요.
+    깨진 계획 위에 계속 짓거나 혼자 목표를 바꾸지 마세요 — 새 규정(문제·접근·전제·달성 기준)이
+    돌아오고 작업은 그 자리에서 이어집니다(처음부터 다시 시작하지 않습니다). 사소한 오류·재시도로
+    풀리는 실패에는 쓰지 않습니다. 한 턴에 최대 2회.
+
+    Args:
+        broken_assumption: 깨진 전제 또는 틀린 규정 한 문장('이 계획의 전제' 줄을 그대로 인용하면 좋다).
+        evidence: 그것이 깨졌음을 보여주는 근거 — 실제 도구 결과·오류·수치를 3줄 안팎으로.
+        progress: 지금까지 확보한 사실·산출물 요약(새 규정이 제약으로 흡수).
+        kind: impossible(이 틀 안에서 불가) · dangerous(그대로 하면 위해) · wrong_problem(문제가 다른 것) · other.
+
+    ※ in-process 프로바이더는 같은 도구를 자기 프로세스에서 직접 갖는다(system_tools 'reframe').
+      이 MCP 노출은 아웃오브프로세스인 Claude Code 가 같은 능력을 갖게 하는 통로다(read_guide 와 동형).
+    """
+    h_agent, _h_project, h_task, _h_origin = _http_identity(ctx)
+    payload = {
+        "broken_assumption": broken_assumption, "evidence": evidence,
+        "progress": progress or "", "kind": kind or "other",
+        "agent_id": h_agent or DEFAULT_AGENT_ID or None,
+        "task_id": h_task or DEFAULT_TASK_ID or None,
+    }
+    return await anyio.to_thread.run_sync(
+        lambda: _post_backend("/ibl/reframe", payload, 240)
+    )
+
+
 if __name__ == "__main__":
     mcp.run()

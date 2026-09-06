@@ -518,6 +518,13 @@ class AgentCognitiveMixin(
             }
         })
 
+        # 4) 턴 안 재규정 — 자기 관리 도구 부류(ask_user_question 과 같은 자리, IBL 어휘 아님)
+        try:
+            from reframe import TOOL_SCHEMA as _REFRAME_TOOL
+            tools.append(dict(_REFRAME_TOOL))
+        except Exception as e:
+            print(f"[AgentRunner] reframe 도구 로드 실패(생략): {e}")
+
         print(f"[AgentRunner] {self.config.get('name')}: IBL + 쉘 모드 (도구 {len(tools)}개)")
         return tools
 
@@ -527,7 +534,7 @@ class AgentCognitiveMixin(
         IBL(도메인 특화) + 쉘 + 가이드 검색 + 인지 도구.
         Python/Node.js 코드 실행은 write→run 패턴(`[self:write]` → `run_command`)으로 한다.
         """
-        return ["execute_ibl", "run_command", "read_guide",
+        return ["execute_ibl", "run_command", "read_guide", "reframe",
                 "todo_write", "ask_user_question", "enter_plan_mode", "exit_plan_mode"]
 
     def augment_with_ibl_references(self, user_message: str) -> str:

@@ -162,8 +162,12 @@ class ConsciousnessAgent:
         agent_notes: str = "",
         available_tools: Optional[List[str]] = None,
         repair: bool = False,
+        revision: Optional[Dict] = None,
     ) -> Optional[Dict]:
         """의식 에이전트 실행 — 메타 판단 수행
+
+        revision(턴 안 재규정, reframe.py): 실행 중 깨진 전제·근거·진행 요약을
+        <framing_revision> 블록으로 싣는다 — 의식은 확보된 사실을 제약으로 흡수해 다시 규정한다.
 
         repair=True 면 수리 턴의 규정 규칙(fragments/14_consciousness_repair.md)을
         입력에 <repair_doctrine> 블록으로 싣는다 — 시스템 프롬프트(캐시 prefix)는
@@ -210,6 +214,7 @@ class ConsciousnessAgent:
             world_pulse, agent_name, agent_role, agent_notes,
             available_tools,
             repair_doctrine=self._load_repair_doctrine() if repair else "",
+            revision=revision,
         )
 
         try:
@@ -287,6 +292,7 @@ class ConsciousnessAgent:
         agent_notes: str = "",
         available_tools: Optional[List[str]] = None,
         repair_doctrine: str = "",
+        revision: Optional[Dict] = None,
     ) -> str:
         """의식 에이전트에 전달할 입력 텍스트 구성"""
         parts = []
@@ -345,6 +351,27 @@ class ConsciousnessAgent:
                 "task_framing·achievement_criteria 를 이 규칙으로 쓴다.\">\n"
                 f"{repair_doctrine}\n"
                 "</repair_doctrine>"
+            )
+
+        # 턴 안 재규정 요청 — 실행자가 깨진 전제를 들고 되물은 경우(reframe.py)
+        if revision:
+            r = revision
+            prev_a = r.get("previous_assumptions") or []
+            prev_a_txt = "\n".join(f"- {a}" for a in prev_a) if prev_a else "(없음)"
+            parts.append(
+                "<framing_revision note=\"이것은 이 턴의 재규정 요청이다(요청 #"
+                f"{r.get('revision_no', 1)}, 방아쇠={r.get('trigger', '')}, 종류={r.get('kind', '')}). "
+                "실행 에이전트가 아래 규정으로 일하다가 전제가 깨졌음을 알았다. 사용자 메시지는 그대로이고, "
+                "이미 확보된 사실(progress)은 제약으로 흡수하며, 깨진 전제를 다시 세우지 않는 새 규정을 "
+                "처음부터 다시 쓴다. 이 틀 안에서 풀 수 없거나 위험하면 문제 공간을 좁히거나 "
+                "needs_clarification 으로 멈춘다.\">\n"
+                f"<previous_framing>\n{r.get('previous_framing', '')}\n</previous_framing>\n"
+                f"<previous_assumptions>\n{prev_a_txt}\n</previous_assumptions>\n"
+                f"<previous_criteria>\n{r.get('previous_criteria', '')}\n</previous_criteria>\n"
+                f"<broken_assumption>\n{r.get('broken_assumption', '')}\n</broken_assumption>\n"
+                f"<evidence>\n{r.get('evidence', '')}\n</evidence>\n"
+                f"<progress>\n{r.get('progress', '') or '(요약 없음)'}\n</progress>\n"
+                "</framing_revision>"
             )
 
         # 사용자 메시지 (마지막에 — 가장 중요)

@@ -84,7 +84,7 @@ LAYERS = {
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
         "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "ibl_idiom",
         "memory_consolidation", "prompt_builder", "repair_verdict_distill",
-        "routing_system", "switch_runner",
+        "reframe", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",
         "system_ai_tools", "system_hooks", "system_tools",
         "system_tools_delegate", "system_tools_ibl", "vocab_crystallization",

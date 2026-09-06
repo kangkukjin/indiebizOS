@@ -62,6 +62,7 @@
     "cognition/ibl_usage_rag",
     "cognition/memory_consolidation",
     "cognition/prompt_builder",
+    "cognition/reframe",
     "cognition/routing_system",
     "cognition/switch_runner",
     "cognition/system_ai_core",
@@ -284,8 +285,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 275,
-    "engine": 255,
+    "total": 276,
+    "engine": 256,
     "blocklist": 20
   }
 }

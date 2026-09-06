@@ -612,6 +612,21 @@ class CognitivePipelineMixin:
             from providers.base import begin_turn_token_ledger
             begin_turn_token_ledger()
 
+            # 5.5 턴 안 재규정 통로 — 의식 규정이 있는 턴에만 연다(reframe.py). 실행자가
+            # 깨진 전제를 들고 되물으면 의식이 다시 규정하고, 새 규정이 도구 결과로 같은
+            # 대화에 돌아온다. 키는 도구 실행이 실어 오는 agent_id 와 같아야 한다(조향과 동형).
+            _reframe_key = ""
+            if consciousness_output:
+                try:
+                    from reframe import open_turn as _rf_open, turn_key_for as _rf_key
+                    from thread_context import get_current_agent_id as _rf_cur
+                    _reframe_key = _rf_key(self, fallback=agent_name)
+                    _rf_open(_reframe_key, self, message, history, execution_memory,
+                             consciousness_output, repair=(_repair_granted_task is not None),
+                             aliases=[a for a in (_rf_cur() or "", agent_name or "") if a])
+                except Exception as _rfe:
+                    print(f"[재규정] 통로 열기 실패(무시): {_rfe}")
+
             # 6. 실행
             for event in self.ai.process_message_stream(
                 message_content=augmented_message,
@@ -623,6 +638,17 @@ class CognitivePipelineMixin:
                 if event.get("type") == "final":
                     final_content = event.get("content", "")
                 yield event
+
+            # 6.5 실행 중 재규정이 있었으면 이후 단계(평가 기준·증류)는 갱신 규정을 본다
+            if _reframe_key:
+                try:
+                    from reframe import current as _rf_current
+                    _rch = _rf_current(_reframe_key)
+                    if _rch is not None and _rch.revised:
+                        consciousness_output = _rch.current
+                        print(f"[재규정] 실행 중 {_rch.revisions}회 — 평가는 갱신 규정 기준")
+                except Exception:
+                    pass
 
             # 7. 평가 루프 (THINK 경로) — 달성 기준이 있으면 평가 후 재시도
             _eval_ran = False  # 평가 루프가 실제로 돌았는지 — 8번(반성)의 게이트
@@ -774,6 +800,12 @@ class CognitivePipelineMixin:
                 _left = _steer_clear(_skey) if _skey else 0
                 if _left:
                     print(f"[조향] 미배달 {_left}건 폐기 — 도구 호출 없이 턴 종료")
+            except Exception:
+                pass
+            # 재규정 통로 닫기 — 열려 있었으면 걷는다(평가 루프의 기계 방아쇠까지 다 지난 뒤)
+            try:
+                from reframe import close_turn as _rf_close, turn_key_for as _rf_key2
+                _rf_close(_rf_key2(self, fallback=agent_name))
             except Exception:
                 pass
             # thread_context의 node/action/ms 이력 합류 (X-Ray·증류용)

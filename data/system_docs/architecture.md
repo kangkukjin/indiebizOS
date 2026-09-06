@@ -305,6 +305,8 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 **의식 에이전트 메타 인지 가드 (2026-05-28, 2026-09-06 수리 턴 전용 조각으로 분리)**: backend 자기 편집=자기 reload 자해 인식, 첫 호출 성공 시 의심 즉시 갱신, timeout/실패 후 같은 코드 재시도 금지. 원래 consciousness_prompt 본문에 있었으나 수리 안전수칙과 함께 `fragments/14_consciousness_repair.md` 로 옮겨, REPAIR 분류·늦은 승격 턴에만 의식 입력의 `<repair_doctrine>` 블록으로 실린다(시스템 프롬프트 캐시 prefix 불변). 본문의 task_framing 은 이름 붙은 골격(문제·제약·세상의 방식·전문가의 방법·무게·멈춤선·위해·불분명)이고, 별도 `assumptions` 필드가 계획의 전제를 실행자에게 넘겨 첫 확인에서 깨진 전제를 알아채게 한다.
 
+**턴 안 재규정 (2026-09-06, `cognition/reframe.py`)**: 의식은 턴 시작에 한 번 규정하지만, 전제가 실행 중 반증되면(이 틀 안에서 불가·위험·문제가 다른 것) 실행자가 `reframe` 도구(자기 관리 도구 부류, IBL 어휘 아님 — 이음매 신호가 해마 코퍼스에 섞이지 않게)로 깨진 전제·근거·진행 요약을 보내고, 파이프라인이 연 턴 통로(`open_turn`, 키=agent_id)가 의식을 `<framing_revision>` 블록과 함께 다시 깨운다. 새 규정은 도구 결과로 같은 대화에 돌아오고(전체 재시작 없음), 통로의 갱신 규정을 평가 루프가 기준으로 쓴다. 판단 없는 기계 방아쇠도 하나 — 평가가 치명(severity 3)이거나 2라운드째 미달이면 평가자 피드백을 근거로 재규정(`revise_from_eval`). 상한 한 턴 2회, 권한(needs_repair)은 재규정으로 늘지 않는다. 두-경로 대칭: 인프로세스는 `system_tools` 디스패치, Claude Code 는 `mcp_server.reframe → /ibl/reframe`(read_guide 와 동형). 궤적 사건 `framing.revised`.
+
 **에피소딕 메모리**: 에피소드(사용자 명령→최종 응답)별 실행 로그 기록
 - `episode_log` 테이블: 전체 로그 (최근 100개 보존)
 - `episode_summary` 테이블: 인지 품질 지표 영구 보존 (해마 점수, 무의식 판정, 의식 소요시간, 실행 라운드, 평가 결과)
@@ -484,7 +486,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 311개**(test 제외, git 추적 기준) — 층 디렉토리 `base 29 · datastore 43 · ibl 44 · cognition 49 · services 28 · surface 62`(+ common 16·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
+- backend **.py 312개**(test 제외, git 추적 기준) — 층 디렉토리 `base 29 · datastore 43 · ibl 44 · cognition 50 · services 28 · surface 62`(+ common 16·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 42·false 18·미선언 104)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

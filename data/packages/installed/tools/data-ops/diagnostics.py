@@ -14,6 +14,8 @@ handler 에 남는다. 그건 필드가 아니라 **봉투 모양**을 묻는 �
 
 handler 가 load_sibling 으로 붙여 이름을 재수출하므로 기존 호출부는 그대로다.
 """
+import json
+
 
 def _observed_fields(rows=None, columns=None):
     """행/열에서 **실제로 관측된** 필드 이름 집합. 관측이 없으면 빈 집합."""
@@ -81,3 +83,36 @@ def _field_missing_error(verb, missing, rows):
             hint += (" ★목록 값(배열·${x.items.*.f} 열 벡터)은 문자열 where 에 못 들어갑니다 — "
                      "구조형으로 적으세요: where: {field: \"url\", op: \"not_in\", value: \"${본.items.*.url}\"}")
     return {"success": False, "error": f"{verb}: '{miss}' 필드가 어느 행에도 없습니다.{hint}"}
+
+
+def _empty_filter_note(out, where, rows, fields):
+    """filter 가 N>0 행에서 0행을 냈을 때 봉투가 **무엇을 어디서 찾았는지** 말한다 (2026-09-06, ep2882).
+
+    실측: `[sense:search]{…} >> [table:filter]{where: "lambda.ai"}` 가 0행 — 봉투는 count:0 만 말했다.
+    모델은 "where 가 url 필드를 보지 않는다"로 오진해 수리 신호를 올렸다. 실제로는 전-필드 부분일치가
+    8행의 title·url·summary 를 전부 봤고, 검색 결과에 그 도메인이 없었다(정당한 0행).
+    0행은 옳다 — 없던 것은 진단이다. 빈손이 자기 기준(조건·본 필드·입력 행수)을 말하지 않으면
+    정당한 0행과 고장이 같은 모양이 된다(ai-ops 0행 note·union effect note 와 같은 규율).
+    입력 0행은 여기서 말하지 않는다 — 그건 상류의 빈손이고 상류가 말한다.
+    """
+    if not isinstance(out, dict) or not out.get("success", True):
+        return out
+    kept = out.get("items")
+    if kept is None:
+        t = out.get("table")
+        kept = t.get("rows") if isinstance(t, dict) else out.get("rows")
+    if kept or not isinstance(kept, list):
+        return out
+    n = len([r for r in (rows or []) if isinstance(r, dict)])
+    if n == 0:
+        return out
+    observed = sorted(_observed_fields(rows=rows))
+    out["rows_in"] = n
+    if isinstance(where, str) and not fields:
+        out["note"] = (f"filter: 연산자 없는 문자열 {where!r} 은(는) 전-필드 부분일치 — 입력 {n}행의 필드 "
+                       f"{observed} 어느 문자열 값에도 그 글자가 없어 0행입니다(조건은 모든 필드를 봤음). "
+                       f"값이 정말 있는지 그 필드를 먼저 확인하고, 한 필드만 보려면 \"필드 contains 값\" 으로.")
+    else:
+        out["note"] = (f"filter: 조건 {json.dumps(where, ensure_ascii=False)} 에 맞는 행이 입력 {n}행 중 0행입니다"
+                       f"(지목 필드 {list(fields or [])} 는 있음 — 값이 조건을 만족하지 않음).")
+    return out

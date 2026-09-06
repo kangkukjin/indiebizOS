@@ -324,7 +324,7 @@ def _op_filter_impl(prev, params):
             missing = [f for f in _where_fields(where) if not any(f in r for r in dict_recs)]
             if missing:
                 return _field_missing_error("filter", missing, dict_recs)
-        return _emit_items(env, [r for r in dict_recs if _match(r, where)])
+        return _diag._empty_filter_note(_emit_items(env, [r for r in dict_recs if _match(r, where)]), where, dict_recs, _where_fields(where))
     table, env = _get_table(prev)
     if table is not None:
         dicts = _row_dicts(table)
@@ -335,7 +335,7 @@ def _op_filter_impl(prev, params):
         kept = [d for d in dicts if _match(d, where)]
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in kept]
-        return _emit_table(env, {"columns": cols, "rows": rows})
+        return _diag._empty_filter_note(_emit_table(env, {"columns": cols, "rows": rows}), where, dicts, _where_fields(where))
     # items/table 이 없어도 도메인 봉투의 원천 행(data/results)이 있으면 거기서 (sort 와 대칭)
     _wf = _where_fields(where)
     dug = _rows_for_field(prev, _wf[0] if _wf else None)
@@ -343,7 +343,7 @@ def _op_filter_impl(prev, params):
         missing = [f for f in _wf if not any(f in r for r in dug)]
         if missing:
             return _field_missing_error("filter", missing, dug)
-        return _emit_items({}, [r for r in dug if _match(r, where)])
+        return _diag._empty_filter_note(_emit_items({}, [r for r in dug if _match(r, where)]), where, dug, _wf)
     return _no_currency_error("filter", prev)
 
 

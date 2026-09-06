@@ -150,7 +150,8 @@ def main():
     # 나가던 경로 의존을 제거했다. 단일 통화 정본대로 items 입력 join은 items를 낸다.
     check('join 정상(items→items)', len(r.get('items', [])) == 1, r)
     r = H.execute({'_prev_result': prev}, _Ctx('data_union'))
-    check('union 정상', len(r.get('table', {}).get('rows', [])) == 2, r)
+    # 형태 보존(언어 개정 2026-09-06, 1e468150): items 분기끼리의 union 은 items 를 낸다 — 표는 명시 표형 입력에만.
+    check('union 정상(items→items)', len(r.get('items', [])) == 2, r)
 
     print('')
     print('결과: %d 통과 / %d 실패' % (_ok, _fail))

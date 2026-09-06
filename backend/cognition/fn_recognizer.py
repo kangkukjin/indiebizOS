@@ -39,15 +39,60 @@ def _aliased_shapes() -> Dict[str, str]:
     if _CACHE["shapes"] and time.time() - float(_CACHE["t"]) < _CACHE_TTL_S:
         return _CACHE["shapes"]  # type: ignore[return-value]
     m: Dict[str, str] = {}
+    programs = []
     try:
         from ibl_usage_db import IBLUsageDB
         for alias, code in IBLUsageDB().aliased_examples():
             if code and len(statements(code)) >= 2:
                 m.setdefault(shape(code), alias)
+                programs.append((alias, code))
     except Exception:
         pass
-    _CACHE.update(t=time.time(), shapes=m)
+    _CACHE.update(t=time.time(), shapes=m, programs=programs)
     return m
+
+
+def _aliased_programs() -> list:
+    """이름 있는 다문장 용례의 [(alias, code)] — _aliased_shapes 와 같은 캐시."""
+    _aliased_shapes()
+    return list(_CACHE.get("programs") or [])
+
+
+def variant_of(code: str) -> Optional[Dict[str, object]]:
+    """들어온 다문장 code 가 이름 있는 관용구의 **변형**인가 — 문장 서명(머리 열·인자 키 부분집합·op)의
+    순서 보존 부분열로 절반 이상(최소 2문장)이 겹치면 {alias, hit, total, missed}.
+
+    2026-09-07 ep2952 재진단: 실행자는 `[fn:유튜브팁보고서작성]` 을 expand 로 열어 본 뒤 본문을 손으로
+    베껴 *변형*(검색어 2→5, limit 45→70, 원장 필터 탈락)을 쳤다 — 모양(shape) 정확 일치 층은 슬롯 값만
+    다른 재타이핑만 잡으므로 이 부류가 통째로 샜다(09-06 이후 2,501 문장에 fn 0). 접지 관문과 같은 자
+    (ibl_idiom._sentence_matches)로 문장 단위로 대조한다 — 어휘 이름을 코드에 넣지 않는다."""
+    try:
+        from ibl_idiom import _sig, _blank_slots, _sentence_matches, _statements_of
+        csigs = [_sig(_blank_slots(st)) for st in _statements_of(code)]
+    except Exception:
+        return None
+    if len(csigs) < 2:
+        return None
+    best = None
+    for alias, pcode in _aliased_programs():
+        try:
+            psigs = [_sig(_blank_slots(st)) for st in _statements_of(pcode)]
+        except Exception:
+            continue
+        if len(psigs) < 2:
+            continue
+        pos, hit, missed = 0, 0, []
+        for idx, ps in enumerate(psigs, 1):
+            j = next((k for k in range(pos, len(csigs)) if _sentence_matches(ps, csigs[k])), None)
+            if j is None:
+                missed.append(idx)
+                continue
+            hit += 1
+            pos = j + 1
+        need = max(2, (len(psigs) + 1) // 2)
+        if hit >= need and (best is None or hit > best["hit"]):
+            best = {"alias": alias, "hit": hit, "total": len(psigs), "missed": missed}
+    return best
 
 
 def corpus_stats(code: str) -> Optional[Dict[str, int]]:
@@ -75,6 +120,13 @@ def fn_hint_for(code: str) -> Optional[Dict[str, object]]:
         return {"alias": alias,
                 "note": (f"이 프로그램은 [fn:{alias}]{{슬롯…}} 과 같은 모양입니다 — 다음부터 이름으로 부르세요"
                          f"(본문 {len(code)}자 재타이핑). 슬롯 이름은 [self:memory]{{op: \"recall\", expand: \"{alias}\"}} 로.")}
+    v = variant_of(code)
+    if v:
+        return {"alias": v["alias"], "variant": True, "hit": v["hit"], "total": v["total"],
+                "note": (f"이 프로그램은 [fn:{v['alias']}] 의 변형입니다 — 문장 {v['hit']}/{v['total']} 이 같은 서명"
+                         f"(달라진 정의 문장: {', '.join(map(str, v['missed'])) or '없음'}). 슬롯 값만 다르면 이름으로 부르고, "
+                         f"문장이 달라야 하면 expand 로 정의를 열어 [def: {v['alias']}] 로 고친 뒤 부르세요 — "
+                         f"본문을 새로 치면 이름·성공/실패 귀속이 끊기고 다음 호가 또 처음부터 조립합니다.")}
     st = corpus_stats(code)
     if st and st["seen_count"] >= 2 and st["success_count"] >= 1:
         return {"seen": st["seen_count"],

@@ -161,14 +161,21 @@ def _tool_to_ibl_notation(tool_name: str, tool_input: dict) -> tuple:
 
 
 def _extract_hint(tool_input: dict) -> str:
-    """tool_input에서 대표 파라미터 값 추출 (로그용)"""
+    """tool_input에서 대표 파라미터 값 추출 (로그용) — **한 줄**.
+
+    2026-09-07(ep2950~2952 감사): 여러 문장 IBL 의 `code` 를 개행째 실어 화살표 줄
+    (`[HH:MM:SS] [agent] [node:action] (힌트) -> OK (Nms)`) 이 물리적으로 쪼개졌다 — 꼬리 줄
+    `) -> OK (3ms)` 에는 `[node:action]` 이 없어 어떤 정규식도 못 센다(조종실 `에피소드통계` 가
+    ep2951 을 IBL 7 로 읽은 뿌리). 실패 사유(`_failure_reason`)는 이미 개행을 지우고 있었다 —
+    힌트만 빠뜨렸던 것. 절단은 개행 제거 *뒤에* 한다(앞 60자가 전부 첫 줄이면 둘째 문장이 안 보인다).
+    """
     # params 내부에서 주요 값 찾기
     params = tool_input.get("params", {})
     search_in = {**params, **tool_input}
 
     for key in ("query", "path", "url", "pattern", "command", "pipeline", "code", "agent_id", "message"):
         if key in search_in:
-            val = str(search_in[key])
+            val = " ".join(str(search_in[key]).split())
             return val[:60] if len(val) > 60 else val
 
     return ""

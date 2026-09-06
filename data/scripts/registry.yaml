@@ -10,9 +10,10 @@ Cloudflare사용량:
 arch_render:
   description: '설계 JSON(design_*.json 경로 또는 design_id) → 헤드리스 Blender/Cycles 외관 렌더
     PNG + glTF(.glb). 옵션: --samples N --res W H --view auto|sw|se|ne|nw --out PNG
-    --gltf PATH --no-gltf --sun always|auto|off --force. Three.js 뷰어(arch_view_3d)는 형상 확인용, 이쪽은 완성 컷용.
-    ★렌더 관문(2026-09-06): 같은 설계 60분 8회 상한, 직전과 같은 그림(Δ<0.02) 2회 연속이면 거절 — 봉투 gate 줄을 읽고
-    멈춰서 그림을 사용자에게 보여라(next 줄). 판정은 criteria archviz_draft|archviz|archviz_final 단계별. 가이드: arch_render.md'
+    --gltf PATH --no-gltf --sun always|auto|off --force. Three.js 뷰어(arch_view_3d)는
+    형상 확인용, 이쪽은 완성 컷용. ★렌더 관문(2026-09-06): 같은 설계 60분 8회 상한, 직전과 같은 그림(Δ<0.02) 2회 연속이면
+    거절 — 봉투 gate 줄을 읽고 멈춰서 그림을 사용자에게 보여라(next 줄). 판정은 criteria archviz_draft|archviz|archviz_final
+    단계별. 가이드: arch_render.md'
   file: arch_render_cli.py
   interpreter: python
   registered_at: '2026-09-06T15:16:23'
@@ -71,9 +72,10 @@ github저장소메타:
   timeout: 900
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
-    도구 계수(IBL/Bash)와 실제 IBL 파서 기반 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)를 items 통화로.
-    조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로 ★단순 조회(최근 N건·특정 열)는 [sense:sqlite] 로 — 이 스크립트는 로그
-    방언 파싱·조합 지표 집계 관습만'
+    IBL 계수·실패·fn([fn:] 호출 수)은 궤적(trajectory_event)이 정본, 코드 원문은 코퍼스(2026-09-07 — 로그 줄 쪼개짐과 무관),
+    조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)는 실제 파서를 턴 변수 문맥 안에서 돌린 값. items 통화로.
+    조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로 ★단순 조회(최근 N건·특정 열)는 [sense:sqlite] 로 — 이 스크립트는
+    집계 관습만'
   file: 에피소드통계.py
   interpreter: python
   registered_at: '2026-08-23T21:52:31'

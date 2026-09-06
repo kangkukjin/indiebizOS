@@ -661,7 +661,8 @@ def _idiom_lines(r) -> List[str]:
     """지도의 한 항목(두 줄): `- 이름 — 뜻 · 문장 n [· 사용 k회]` + 서명 한 줄."""
     intent, code, sc, fc, _topic, alias, returns, signature = r
     sents = _split_sentences(code)
-    used = f" · 사용 {int(sc or 0) + int(fc or 0)}회" if (int(sc or 0) + int(fc or 0)) else ""
+    _n = int(sc or 0) + int(fc or 0)
+    used = f" · 사용 {_n}회" if _n else " · 실행 0"     # 돈 적 없는 정의는 그렇다고 말한다(2026-09-07)
     head = f"- {alias} — {(intent or '').strip()[:120]} · 문장 {len(sents)}{used}"
     names, known = _stored_signature(signature)
     if known:

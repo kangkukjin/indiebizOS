@@ -278,6 +278,52 @@ def _phrase_grounded(phrase: list, slots: dict, ibl_calls: list) -> Optional[str
     return None
 
 
+def _slot_leaves(v):
+    if isinstance(v, dict):
+        for x in v.values():
+            yield from _slot_leaves(x)
+    elif isinstance(v, (list, tuple)):
+        for x in v:
+            yield from _slot_leaves(x)
+    elif v is not None:
+        yield v
+
+
+def slot_values_ungrounded(slots: dict, ibl_calls: list, code: str = "") -> Optional[str]:
+    """슬롯 **값**이 이 주행의 실행문에 글자 그대로 있는가. 통과=None, 아니면 사유 한 줄.
+
+    2026-09-07 ep2952 재진단: `유튜브팁보고서작성` 은 09-04 에 이름을 받았지만 실행 0 이었고, 본문의
+    `upload_date >= ${기준일}` 은 실행자가 베낀 판에서 그 자리(문자열 크기 비교 불가)로 죽었다 —
+    원 주행은 `20260311`(수) 로 돌았는데 반성기가 슬롯 값을 `"2026-03-11"` 로 옮겨 적으면
+    *한 번도 돈 적 없는 프로그램* 이 이름을 얻는다. 접지 관문(_phrase_grounded)은 설계상 값을 보지
+    않으므로(값은 추상화되는 자리) 이 구멍은 거기서 못 막는다. 여기서는 슬롯 값 하나하나가 실행문에
+    verbatim 으로 있는지만 본다 — 값을 대입하면 실행된 문장이 되살아나야 '검증된 정의' 다.
+    이름 붙은 44건 중 40건이 실행 0 이던 뿌리의 하나(다른 하나는 표시·서명, 09-06 수리).
+
+    code 를 주면 본문의 `${슬롯}` 이 slots 에 값을 갖는지도 본다(값 없는 슬롯 = 검증할 수 없는 정의).
+    몸 안 할당 변수·경로 참조(`${원장.items.*.id}`)는 슬롯이 아니다(hippo_tree.slot_names 와 같은 규칙)."""
+    hay = "\n".join(str(c) for c in (ibl_calls or []))
+    slots = slots if isinstance(slots, dict) else {}
+    if code:
+        import hippo_tree                   # 지연 import(순환 방지) — 이 모듈의 규약
+        for name in hippo_tree.slot_names(code):
+            if name not in slots or not list(_slot_leaves(slots.get(name))):
+                return f"슬롯 ${{{name}}} 에 이번 값이 없다 — 대입해 검증할 수 없는 정의"
+    for name, val in slots.items():
+        for leaf in _slot_leaves(val):
+            if isinstance(leaf, bool):
+                forms = ["true" if leaf else "false"]
+            elif isinstance(leaf, float) and leaf.is_integer():
+                forms = [str(int(leaf)), str(leaf)]
+            else:
+                forms = [str(leaf).strip()]
+            forms = [f for f in forms if f]
+            if forms and not any(f in hay for f in forms):
+                return (f"슬롯 {name} 의 값 '{forms[0][:40]}' 이(가) 실행문에 없다 — 값을 옮겨 적으며 바뀌었다"
+                        "(대입해도 실행된 문장이 되살아나지 않는 정의)")
+    return None
+
+
 def _phrase_private_reason(code: str) -> Optional[str]:
     """관용구 본문의 개인 명사 — 슬롯으로 비우지 못한 홈 경로·개인 명사 목록(data/private_nouns.txt, gitignore) 적발."""
     m = re.search(r'(?:/Users/|/home/|[A-Za-z]:\\Users\\)[^/\\"\'\s]+', code or "")
@@ -472,6 +518,11 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
         print(f"{tag} 접지 실패 — 스킵: {why}")
         return False
     code = hippo_tree.join_sentences(phrase)
+    # 값 접지(2026-09-07): 슬롯 값을 대입하면 실행된 문장이 되살아나야 한다 — 아니면 돈 적 없는 정의가 이름을 얻는다
+    why = slot_values_ungrounded(slots, ibl_calls, code=code)
+    if why:
+        print(f"{tag} 슬롯 값 접지 실패 — 스킵: {why}")
+        return False
     from ibl_param_vocab import check_code_params
     # 구문 관문 = 낱말 경로와 같은 문(할당 앞점 복원 포함, 2026-09-06) — 관문이 두 벌이면 방언이 갈린다
     from ibl_usage_rag import _syntax_gate_with_restore

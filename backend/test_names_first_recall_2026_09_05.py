@@ -90,7 +90,9 @@ def test_expand_opens_one_body(env):
     _add(db, "후보 영상을 모은다", PHRASE, t, category="phrase", alias="팁영상수집")
     HT.note_run(t, "오늘 주행", [SINGLE, MULTI], ok=True, db_path=db)
     body = HT.recall(t, db, expand="팁영상수집")["text"]
-    assert body.startswith("[def: 팁영상수집]{") and "search_youtube" in body and "호출:" in body
+    # 2026-09-07: 카드는 호출 한 줄이 먼저, 정의는 뒤(ep2952 — 정의가 먼저 보이자 실행자가 베껴 변형을 쳤다)
+    assert body.startswith("호출: [fn:팁영상수집]{") and "[def: 팁영상수집]{" in body and "search_youtube" in body
+    assert body.index("호출:") < body.index("[def: 팁영상수집]{")
     one = HT.recall(t, db, expand=f"#{m_id}")["text"]
     assert "[self:write]" in one
     runs = HT.recall(t, db, expand="주행")["text"]

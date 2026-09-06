@@ -401,6 +401,26 @@ def phrase_def_block(alias: str, code: str) -> str:
     return f"[def: {alias or '이름'}]{{\n{body}\n}}"
 
 
+def phrase_expand_card(r: Dict[str, Any]) -> str:
+    """expand:"이름" 이 여는 카드 — **호출 한 줄이 먼저**, 정의는 고칠 때만 쓰는 것으로 뒤에.
+
+    2026-09-07 ep2952 재진단: 의식이 `[fn:유튜브팁보고서작성]` 을 지정했고 실행자는 expand 로 정의를 열었는데,
+    옛 카드는 `[def:]` 본문이 먼저·호출 줄이 꼬리였다 — 본문이 보이자 실행자는 그것을 베껴 변형을 쳤다(35호출·실패 8).
+    실행 0 인 정의는 그렇다고 말한다(슬롯 값의 모양은 검증 전 — 첫 호출이 검증이다)."""
+    alias = (r.get("alias") or "").strip()
+    code = r.get("ibl_code") or ""
+    s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
+    ran = f"✓{s}/✗{f}" if (s or f) else "실행 0 — 아직 한 번도 돌지 않은 정의(슬롯 값의 모양은 검증 전, 첫 호출이 검증이다)"
+    call = phrase_call_line(alias, code, (r.get("returns") or "").strip(), r.get("signature"))
+    return "\n".join([
+        f"호출: {call}",
+        f"문장 {len(split_sentences(code))} · {ran}",
+        "그대로 쓰려면 위 한 줄. 아래 정의는 문장을 빼거나 더할 때만 — [def: 이름]{…} 를 프로그램에 붙여 고친 뒤 "
+        "[fn:이름]{…} 으로 부른다. 본문을 베껴 새로 치면 이름·성공/실패 귀속이 끊기고 다음 호가 또 처음부터 조립한다.",
+        phrase_def_block(alias, code),
+    ])
+
+
 def render_phrase(r: Dict[str, Any]) -> str:
     s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
     meta = [f"#{r['id']}"]
@@ -958,8 +978,7 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     if exp:
         for r in list(phrases) + list(words):
             if (r.get("alias") or "").strip() == exp:
-                return phrase_def_block(exp, r.get("ibl_code") or "") + "\n호출: " + phrase_call_line(
-                    exp, r.get("ibl_code") or "", (r.get("returns") or "").strip(), r.get("signature"))
+                return phrase_expand_card(r)
         names = [p["alias"] for p in list(phrases) + list(words) if (p.get("alias") or "").strip()]
         return f"(이름 '{exp}' 의 함수가 이 가지에 없습니다 — 부를 수 있는 이름: {', '.join(names) or '없음'})"
 
@@ -977,8 +996,7 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
         s, f = int(p.get("success_count") or 0), int(p.get("fail_count") or 0)
         code = p.get("ibl_code") or ""
         meta = [f"문장 {len(split_sentences(code))}"]
-        if s or f:
-            meta.append(f"✓{s}/✗{f}")
+        meta.append(f"✓{s}/✗{f}" if (s or f) else "실행 0")     # 돈 적 없는 정의는 그렇다고 말한다(2026-09-07)
         meta.append("마지막 " + (p.get("updated_at") or p.get("created_at") or "")[:10])
         lines.append(f"- {p['alias']} — {_one_line(p.get('intent'))} · {' · '.join(meta)} ‹#{p['id']}›")
         lines.append(f"  {phrase_call_line(p['alias'], code, (p.get('returns') or '').strip(), p.get('signature'))}")

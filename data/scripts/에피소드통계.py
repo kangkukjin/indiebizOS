@@ -22,6 +22,17 @@ args (stdin JSON):
   지렛대다(2026-08-28 실측: 벽시계의 ~98%가 모델 시간).
 
 ★숫자의 뜻 (이 스크립트가 무엇을 세는지 — 안 읽으면 오독한다):
+  · **IBL 계수·성공/실패·코드 원문의 1차 소스는 궤적(trajectory_event ibl.started/finished +
+    ibl_code_corpus)** 이다 (2026-09-07, ep2950~2952 감사). 로그 방언은 궤적이 없는 옛 주행의
+    폴백이고, 둘 다 있으면 어긋남을 상태에 신고한다(`로그계수 N≠궤적 M`). 뿌리: 로거가 여러 문장
+    code 를 개행째 힌트에 실어 화살표 줄이 쪼개졌고(ep2951 을 IBL 7 로 읽음 — 로거는 같은 날
+    고쳤다), 로그는 잘리지만 궤적·코퍼스는 온전하다. `실패` = ibl.finished success=false,
+    `fn` = `[fn:이름]` 호출 수(관용구 재사용의 실측 — 0 이면 결정화가 통로 없이 잠든 것).
+  · **문법오류는 턴 변수 문맥 안에서 판정한다** (2026-09-07). 한 턴의 호출들은 앞 호출의
+    `$변수` 를 이어 쓰므로 격리 파싱하면 "변수 $x 이(가) 앞에서 할당되지 않았습니다" 가 쏟아진다
+    (ep2951: 55건 중 20건 '문법오류', 실제 런타임 실패 4건 — 16건 오탐). 코드를 실행 순서대로
+    parse_with_vars 에 앞 호출의 변수를 주입해 판정한다. 코드 소스가 잘린 로그라 문맥이 불완전할
+    수 있으면 미할당 오류는 `문맥불명` 으로 따로 세고 문법오류로 신고하지 않는다.
   · 도구 호출은 **두 로그 방언**을 모두 읽는다 (vocab_crystallization._parse_episode 와 같은 문법):
       - 아웃오브프로세스(claude_code): '[ClaudeCode/X] tool_use <도구> <JSON>'
       - in-process(DeepSeek·Gemini 등): 화살표 '[HH:MM:SS] [agent] [node:action] (힌트) -> OK (Nms)'
@@ -95,7 +106,7 @@ def _load_backend():
         sys.path.insert(0, be)
     try:
         import boot_paths  # noqa: F401
-        from ibl_parser import parse
+        from ibl_parser import parse_with_vars as parse
     except Exception:
         return None, None
     try:
@@ -118,9 +129,12 @@ def _statements(steps):
     return out
 
 
-def _measure(code, parse):
-    """IBL 코드 한 덩이 → 조합 지표. 파싱 실패는 None 이 아니라 예외로 알린다."""
-    steps = parse(code)
+def _measure(code, parse, variables=None):
+    """IBL 코드 한 덩이 → (조합 지표, 이 코드까지의 변수 맵). 파싱 실패는 None 이 아니라 예외로 알린다.
+
+    variables = 앞 호출들이 할당한 `$변수` 맵(parse_with_vars 의 preset_vars) — 턴 안의 호출은 앞
+    호출의 변수를 이어 쓰므로 격리 파싱은 미할당 오탐을 낸다(2026-09-07). 반환 맵은 다음 코드에 넘긴다."""
+    steps, out_vars = parse(code, dict(variables or {}))
     m = {"문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
     for stmt in _statements(steps):
         m["문장"] += 1
@@ -137,7 +151,7 @@ def _measure(code, parse):
         m["최대단계"] = max(m["최대단계"], depth)
         if depth >= 2 or par or fb or blk:
             m["조합"] += 1
-    return m
+    return m, out_vars
 
 
 def _result_chars(payload, trunc_re):
@@ -256,8 +270,8 @@ def _code_of(kind, raw, trunc_re):
     raise ValueError("code 문자열을 복원하지 못함")
 
 
-def _measure_prefix(code, parse):
-    """잘린 코드 → 파싱되는 가장 긴 앞부분의 지표(하한). 못 읽으면 None.
+def _measure_prefix(code, parse, variables=None):
+    """잘린 코드 → (파싱되는 가장 긴 앞부분의 지표(하한), 변수 맵). 못 읽으면 (None, variables).
 
     하한이 안전한 이유: 잘린 자리는 조합을 숨길 수는 있어도 만들 수는 없다.
     앞부분 뒤에 조합 연산자가 보이면(예 '… >> [잘림') 그 문장이 조합이라는 건
@@ -267,10 +281,10 @@ def _measure_prefix(code, parse):
     while cut:
         i = cut.rfind("}")
         if i < 0:
-            return None
+            return None, variables
         cut = cut[:i + 1]
         try:
-            m = _measure(cut, parse)
+            m, out_vars = _measure(cut, parse, variables)
         except Exception:
             cut = cut[:i]
             continue
@@ -279,42 +293,99 @@ def _measure_prefix(code, parse):
             m["조합"] = min(m["문장"], m["조합"] + 1)
             m[{">>": "seq", "|": "seq", "&": "par", "??": "fb"}[op.group(1)]] += 1
             m["최대단계"] = max(m["최대단계"], 2)
-        return m
-    return None
+        return m, out_vars
+    return None, variables
 
 
-def _scan(log, parse, trunc_re=None):
-    """에피소드 로그 한 건 → 도구·조합 계수."""
+UNASSIGNED_RE = re.compile(r"앞에서 할당되지 않았습니다")
+
+
+def _pair_trajectory(events):
+    """한 주행의 궤적 사건(event_seq 순) → {"IBL", "실패", "fn", "중첩", "shas"}.
+
+    ibl.started 는 execute_ibl 한 번(조종실이 부른 호출 수와 같다 — nested 도 모델의 호출), ibl.finished 는
+    직전에 열린 started 에 짝지어 success 를 귀속한다(스택). `fn` = actions 머리가 `fn:` 인 것 = `[fn:이름]` 호출.
+    shas = started 순서의 코드 해시(코퍼스에서 원문을 찾는 열쇠)."""
+    out = {"IBL": 0, "실패": 0, "fn": 0, "중첩": 0, "shas": []}
+    stack = []
+    for kind, data in events:
+        try:
+            d = json.loads(data or "{}")
+        except Exception:
+            d = {}
+        if kind == "ibl.started":
+            out["IBL"] += 1
+            if d.get("nested"):
+                out["중첩"] += 1
+            out["fn"] += sum(1 for a in (d.get("actions") or []) if str(a).startswith("fn:"))
+            out["shas"].append(d.get("code_sha256") or "")
+            stack.append(d)
+        elif kind == "ibl.finished":
+            if stack:
+                stack.pop()
+            if d.get("success") is False:
+                out["실패"] += 1
+    return out
+
+
+def _scan(log, parse, trunc_re=None, traj=None, corpus=None):
+    """에피소드 로그 한 건 (+ 궤적·코퍼스) → 도구·조합 계수.
+
+    traj = _pair_trajectory 의 결과(없으면 None = 궤적 이전 주행 → 로그 방언 폴백).
+    corpus = {sha: code} — 궤적의 해시가 전부 풀리면 코드 소스는 코퍼스(온전·순서 보존), 아니면 로그.
+    """
     acc = {"IBL": 0, "Bash": 0, "기타도구": 0, "파싱실패": 0, "절단": 0, "절단불가": 0, "문법오류": 0,
-           "회수": 0,
+           "문맥불명": 0, "회수": 0, "실패": None, "fn": None, "중첩": 0,
            "문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
-    counts, codes, tool_lines, rchars, rchars_lower = _collect(log, trunc_re)
+    counts, log_codes, tool_lines, rchars, rchars_lower = _collect(log, trunc_re)
     acc.update(counts)
     acc["_결과문자"] = rchars
     acc["_결과문자하한"] = rchars_lower
+    acc["_로그IBL"] = counts["IBL"]
+    acc["_궤적"] = traj is not None
+    codes, source = log_codes, "log"
+    if traj is not None:
+        # 궤적이 1차 소스 — 로그 계수는 대조용으로만 남긴다(어긋나면 상태에 신고)
+        acc["IBL"] = traj["IBL"]
+        acc["실패"] = traj["실패"]
+        acc["fn"] = traj["fn"]
+        acc["중첩"] = traj["중첩"]
+        shas = [h for h in traj["shas"] if h]
+        if shas and corpus and all(h in corpus for h in shas):
+            codes, source = [("corpus", corpus[h]) for h in shas], "corpus"
+    acc["_코드소스"] = source
+    variables = {}                     # 턴 변수 문맥 — 실행 순서대로 앞 호출의 할당을 잇는다
     for kind, raw in codes:
         if parse is None:
             break
-        try:
-            code, cut = _code_of(kind, raw, trunc_re)
-        except Exception:
-            acc["파싱실패"] += 1        # 로그 줄 자체를 못 읽었다 = 형식 변화 신호
-            continue
-        if not code.strip() and RECOVER_KEY.search(raw):
+        if kind == "corpus":
+            code, cut = raw, False
+        else:
+            try:
+                code, cut = _code_of(kind, raw, trunc_re)
+            except Exception:
+                acc["파싱실패"] += 1        # 로그 줄 자체를 못 읽었다 = 형식 변화 신호
+                continue
+        if not code.strip() and (kind == "corpus" or RECOVER_KEY.search(raw)):
             # 회수 폴링은 문장이 아니다 — 조합·단계 지표에서 빼고 따로 센다.
             # (이 수 자체가 관측이다: 그 주행이 결과를 기다리며 쓴 모델 왕복 수)
             acc["회수"] += 1
             continue
         try:
-            got = _measure_prefix(code, parse) if cut else _measure(code, parse)
-        except Exception:
+            got, variables = (_measure_prefix(code, parse, variables) if cut
+                              else _measure(code, parse, variables))
+        except Exception as e:
             got = None
+            if UNASSIGNED_RE.search(str(e)) and source == "log":
+                # 로그는 잘리므로 앞 호출의 할당이 문맥에서 빠졌을 수 있다 — 미할당은 문법오류가 아니라 문맥 부족.
+                acc["문맥불명"] += 1
+                continue
         if got is None:
             # 세 사건을 한 칸에 뭉치면 셋 다 안 보인다:
             #   절단불가 = 잘린 자리에 완결된 문장이 없다 (관측 한계)
             #   문법오류 = 온전한 코드가 파서를 통과 못 한다 = 그 주행에서 에이전트가
             #              실제로 잘못 쓴 IBL 이다 (로그 문제가 아니라 관측된 사실 — 그
-            #              호출은 실행도 실패했다)
+            #              호출은 실행도 실패했다). 턴 변수 문맥을 주입한 뒤의 판정이다.
             acc["절단불가" if cut else "문법오류"] += 1
             continue
         if cut:
@@ -322,10 +393,41 @@ def _scan(log, parse, trunc_re=None):
         for k, v in got.items():
             acc[k] = max(acc[k], v) if k == "최대단계" else acc[k] + v
     acc["_tool_lines"] = tool_lines
-    # 코드를 못 본 IBL 호출 — in-process 디듀프(30초 창) 또는 IBL_DEBUG 이전 구판 로그.
+    # 코드를 못 본 IBL 호출 — in-process 디듀프(30초 창) 또는 IBL_DEBUG 이전 구판 로그, 코퍼스 이전 궤적.
     # 계수는 맞고 조합 지표에서만 빠진 몫이라 0 으로 뭉개지 않고 따로 신고한다.
     acc["코드미기록"] = max(0, acc["IBL"] - len(codes))
     return acc
+
+
+def _load_trajectory(conn, ids):
+    """선택된 주행들의 궤적 → {episode_id: _pair_trajectory(...)} 와 코퍼스 {sha: code}.
+    표가 없으면(옛 DB·시험 DB) 빈 값 — 로그 방언 폴백."""
+    if not ids:
+        return {}, {}
+    try:
+        q = ",".join("?" * len(ids))
+        rows = conn.execute(
+            f"SELECT episode_id, kind, data FROM trajectory_event "
+            f"WHERE episode_id IN ({q}) AND kind IN ('ibl.started', 'ibl.finished') "
+            f"ORDER BY episode_id, event_seq", list(ids)).fetchall()
+    except sqlite3.Error:
+        return {}, {}
+    by_ep = {}
+    for r in rows:
+        by_ep.setdefault(r[0], []).append((r[1], r[2]))
+    traj = {ep: _pair_trajectory(ev) for ep, ev in by_ep.items()}
+    shas = sorted({h for t in traj.values() for h in t["shas"] if h})
+    corpus = {}
+    try:
+        for i in range(0, len(shas), 500):
+            chunk = shas[i:i + 500]
+            q = ",".join("?" * len(chunk))
+            for h, code in conn.execute(
+                    f"SELECT code_sha256, code FROM ibl_code_corpus WHERE code_sha256 IN ({q})", chunk):
+                corpus[h] = code
+    except sqlite3.Error:
+        corpus = {}
+    return traj, corpus
 
 
 def _pct(a, b):
@@ -372,11 +474,13 @@ def main():
     conn = sqlite3.connect(str(DB), timeout=10)
     conn.row_factory = sqlite3.Row
     rows = conn.execute(sql, params + [limit]).fetchall()
+    traj_by_ep, corpus = _load_trajectory(conn, [r["id"] for r in rows])
     conn.close()
 
     items, skipped, unparsed, nocode, lowered, uncut, bad_ibl, polls = [], 0, 0, 0, 0, 0, 0, 0
+    no_ctx, no_traj, disagree = 0, 0, 0
     for r in rows:
-        a = _scan(r["log"], parse, trunc_re)
+        a = _scan(r["log"], parse, trunc_re, traj=traj_by_ep.get(r["id"]), corpus=corpus)
         tools = a["IBL"] + a["Bash"] + a["기타도구"]
         # 합계는 상태 표시와 따로 센다 — 한 주행이 절단과 파싱실패를 함께 가질 수 있고,
         # 상태 칸은 그중 하나만 보여주므로 여기서 누락되면 메시지가 조용히 적게 신고한다.
@@ -386,7 +490,12 @@ def main():
         bad_ibl += a["문법오류"]
         polls += a["회수"]
         nocode += a["코드미기록"]
-        if a["_tool_lines"] == 0:
+        no_ctx += a["문맥불명"]
+        if not a["_궤적"]:
+            no_traj += 1
+        elif a["_로그IBL"] != a["IBL"]:
+            disagree += 1
+        if a["_tool_lines"] == 0 and a["IBL"] == 0:
             _log = r["log"] or ""
             if not _log.strip():
                 state = "로그없음"
@@ -409,8 +518,14 @@ def main():
             state = f"절단하한 {a['절단']}"   # 조합·단계는 '실제 이상은 아닌 값'
         elif a["코드미기록"]:
             state = f"코드미기록 {a['코드미기록']}"
+        elif a["문맥불명"]:
+            state = f"문맥불명 {a['문맥불명']}"   # 잘린 로그라 변수 문맥이 불완전 — 문법오류로 신고하지 않는다
         elif a["회수"]:
             state = f"회수폴링 {a['회수']}"   # 결함이 아니라 '기다린 왕복' — 칸이 비면 ok
+        elif not a["_궤적"]:
+            state = "궤적없음"             # 궤적 이전 주행 — 계수는 로그 방언(잘림·쪼개짐 가능)
+        elif a["_로그IBL"] != a["IBL"]:
+            state = f"로그계수 {a['_로그IBL']}≠궤적 {a['IBL']}"   # 계기끼리 어긋남 — 로그 쪽이 못 센 것
         else:
             state = "ok"
         ts = (r["started_at"] or "")[5:16].replace("T", " ")
@@ -421,7 +536,8 @@ def main():
             "분류": r["unconscious_decision"], "평가": r["evaluation_result"],
             "라운드": r["execution_rounds"],
             "총초": round(r["total_ms"] / 1000) if r["total_ms"] else None,
-            "IBL": a["IBL"], "회수": a["회수"], "Bash": a["Bash"], "기타도구": a["기타도구"],
+            "IBL": a["IBL"], "실패": a["실패"], "fn": a["fn"],
+            "회수": a["회수"], "Bash": a["Bash"], "기타도구": a["기타도구"],
             "IBL비중": _pct(a["IBL"], tools),
             # 모델이 도구 결과로 읽은 문자수(천 단위) — 절단 표식의 숨긴 글자수까지 복원한
             # 정확값(옛 '...' 행만 하한). None = in-process 방언이라 결과 줄이 없음(0 아님).
@@ -438,8 +554,8 @@ def main():
         for it in items:
             g = groups.setdefault(it["에이전트"] or "?", {"에이전트": it["에이전트"], "주행": 0})
             g["주행"] += 1
-            for k in ("IBL", "회수", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록", "each",
-                      "결과천자"):
+            for k in ("IBL", "실패", "fn", "회수", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록",
+                      "each", "결과천자"):
                 g[k] = round(g.get(k, 0) + (it[k] or 0), 1)
             g["최대단계"] = max(g.get("최대단계") or 0, it["최대단계"] or 0)
         for g in groups.values():
@@ -472,8 +588,17 @@ def main():
                 "— 문장이 아니므로 조합 지표에서 뺐습니다(문법오류 아님). 이 수는 그 주행이 "
                 "결과를 기다리며 쓴 모델 왕복 수입니다 — 회수에 wait 초를 주면 한 번으로 줄어듭니다")
     if bad_ibl:
-        msg += (f" · IBL 호출 {bad_ibl}건은 코드 자체가 문법 오류였습니다 "
+        msg += (f" · IBL 호출 {bad_ibl}건은 코드 자체가 문법 오류였습니다(턴 변수 문맥을 주입한 뒤의 판정) "
                 "— 로그 문제가 아니라 그 주행에서 실제로 깨진 문장을 보냈다는 관측입니다")
+    if no_ctx:
+        msg += (f" · IBL 호출 {no_ctx}건은 앞 호출의 `$변수` 를 쓰는데 코드 소스가 잘린 로그라 문맥이 불완전합니다 "
+                "— 문법오류로 세지 않았습니다(문맥불명)")
+    if no_traj:
+        msg += (f" · {no_traj}건은 궤적(trajectory_event)이 없는 옛 주행이라 IBL 계수를 로그 방언에서 셌습니다 "
+                "— 실패·fn 칸은 비어 있습니다")
+    if disagree:
+        msg += (f" · {disagree}건은 로그 방언의 IBL 계수가 궤적과 어긋납니다(상태 칸) — 궤적이 정본이고, "
+                "로그 쪽은 여러 문장 code 를 개행째 실은 옛 로거의 줄 쪼개짐입니다(2026-09-07 수리 이전 행)")
     if unparsed:
         msg += (f" · ★IBL 호출 {unparsed}건은 절단 표식도 없이 로그 줄을 못 읽었습니다 "
                 "— 로그 형식이 바뀌었다는 신호일 수 있습니다")

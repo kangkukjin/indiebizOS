@@ -267,6 +267,16 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
                 IBLUsageDB().update_success_by_code(fdef["_idiom_code"], bool(out.get("success", True)))
             except Exception:
                 pass
+            if not out.get("success", True):
+                # 몸이 죽었으면 고칠 정의를 같은 봉투에(2026-09-07) — 실행자가 본문을 새로 조립하지 않고 [def:] 로 고쳐 부른다
+                try:
+                    from hippo_tree import phrase_def_block
+                    out["def"] = phrase_def_block(name, fdef["_idiom_code"])
+                    out.setdefault("hint", f"[fn:{name}] 의 몸이 실패했습니다 — 위 def 의 죽은 문장만 고쳐 "
+                                           f"[def: {name}]{{…}} 를 프로그램에 붙이고 [fn:{name}]{{…}} 으로 다시 부르세요"
+                                           "(본문을 새로 조립하지 말 것).")
+                except Exception:
+                    pass
         if required:
             out["params_required"] = required
         if inject_meta:

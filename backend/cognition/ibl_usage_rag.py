@@ -1166,8 +1166,11 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 # 부를 수 있는 것만 이름을 받는다(2026-09-06) — 관용구 증류와 같은 관문. 이름은 붙었는데
                 # 부를 수 없으면 회상 표면만 차지하고 매 호 본문을 다시 치게 만든다.
                 from workflow_contract import call_signature
-                from ibl_idiom import sanitize_fn_name, unique_fn_name, uncallable_reason
+                from ibl_idiom import sanitize_fn_name, unique_fn_name, uncallable_reason, slot_values_ungrounded
                 _why = uncallable_reason(call_signature(code), len(_ht.split_sentences(code)), code)
+                # 값 접지(2026-09-07): 슬롯 값을 대입해 실행된 문장이 되살아나지 않으면 돈 적 없는 정의 — 이름을 주지 않는다
+                #   (ep2952 재진단: 이름 붙은 44건 중 40건 실행 0, 그중 하나가 첫 호출부터 죽을 몸이었다)
+                _why = _why or slot_values_ungrounded(distilled.get("slots") or {}, ibl_calls, code=code)
                 if _why:
                     print(f"[경험증류] 부를 수 없는 모양 — 이름 없이 저장: {_why}")
                 else:

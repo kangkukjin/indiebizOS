@@ -3,7 +3,7 @@
 ## 요약 (가장 강력한 5개와 이유)
 1. **Google Workspace API(Sheets·Drive·Docs·Calendar)** — 개인 지식노동자 문서·표·일정의 사실상 세계 표준. Gmail 은 어휘에 있으나 Sheets/Drive/Calendar 는 없다. OAuth 데스크톱 앱을 개인 계정으로 만들면 심사 없이 쓴다(테스트 모드). 2026-05 이후 새 프로젝트는 쿼터 초과분 과금 예고 — 개인 사용량은 무료.
 2. **카카오톡 메시지 "나에게 보내기"** — 한국 개인용 푸시의 표준. 검수·비즈앱 없이 `talk_message` 동의만으로 내 폰 카톡에 도달. 현재 알림 어휘(`self:notify_user`=데스크톱, `limbs:phone`=USB)는 인터넷 너머 폰에 못 닿는다 — 이 구멍을 메운다.
-3. **Telegram Bot API** — 세계 개인 알림봇 표준(BotFather 토큰, 심사·과금 0, Bot API 10.2 2026-07). 워크스페이스 `kc/ktelegram` MCP 는 있으나 IBL 어휘 밖.
+3. **Telegram Bot API** — 세계 개인 알림봇 표준(BotFather 토큰, 심사·과금 0, Bot API 10.2 2026-07). 워크스페이스의 텔레그램 MCP 는 있으나 IBL 어휘 밖.
 4. **Notion API** — 노트·DB 도구의 표준. 내부 통합 토큰, 무료 플랜 가능, 3 req/s. 2025-09 데이터소스 개정으로 호출 형태가 바뀌었다(버전 헤더 고정 필수).
 5. **Kiwi(kiwipiepy)** — 한국어 형태소 분석의 현 표준(Java 불요, 순수 pip, 2026-02 벤치 활발). 블로그·자막·검색 파이프의 `table:` 변환자 후보.
 - 경보: **AnkiConnect 기본 포트가 8765** — indiebizOS 백엔드 포트와 동일. Anki 어휘화 시 포트 충돌을 먼저 처리해야 한다.

@@ -1,6 +1,6 @@
 # C. 통신·프로토콜·자동화·연결 (조사 2026-09-06)
 
-> 조사 방식: 웹 검색 55회 + 페이지 1회 정독. 기존 어휘 목록(`ibl_vocab_inventory.txt`)과 `data/ibl_nodes_src/*.yaml` 을 대조. 현재 몸의 채널 어휘는 **Gmail(IMAP/SMTP)·Nostr 두 channel_type 만** 이며(`others.yaml` channel_engine 라우터, `target_key: channel_type`), Telegram·Matrix 는 워크스페이스 `kc/` MCP 로만 존재하고 IBL 낱말은 아님. 따라서 메신저·푸시 부류의 어휘 후보 형태는 **새 낱말이 아니라 기존 `channel_type` 확장**으로 적었다(반-어휘-증식 원칙).
+> 조사 방식: 웹 검색 55회 + 페이지 1회 정독. 기존 어휘 목록(`ibl_vocab_inventory.txt`)과 `data/ibl_nodes_src/*.yaml` 을 대조. 현재 몸의 채널 어휘는 **Gmail(IMAP/SMTP)·Nostr 두 channel_type 만** 이며(`others.yaml` channel_engine 라우터, `target_key: channel_type`), Telegram·Matrix 는 워크스페이스의 별도 MCP 로만 존재하고 IBL 낱말은 아님. 따라서 메신저·푸시 부류의 어휘 후보 형태는 **새 낱말이 아니라 기존 `channel_type` 확장**으로 적었다(반-어휘-증식 원칙).
 
 ## 요약 (가장 강력한 5개)
 1. **MCP 공식 레지스트리 + 상위 서버군(GitHub·Playwright·filesystem 등)** — 2026년 AI 연결의 사실상 표준이자 앱스토어. 레지스트리 API 하나로 9,600여 서버를 발견·설치 가능. 몸이 MCP 클라이언트가 되면 어휘 없이도 남의 손을 빌린다.

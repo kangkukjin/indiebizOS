@@ -68,6 +68,7 @@ def validate_guide_wiring(root: Path) -> list[str]:
 _GUIDE_ORPHAN_BASELINE = {
     "world_pulse.md",     # 런타임 산출물 — world_pulse.py 가 쓰고 prompt_builder 가 읽음
     "forage_search.md",   # api_system_ai.py 가 경로로 직접 읽음
+    "world_tools_local.md",  # 이 몸의 실측(gitignore) — world_tools.md §1 이 [self:read] 경로로 직접 읽음, guide_db 등재 불가(새 몸엔 없음)
 }
 
 

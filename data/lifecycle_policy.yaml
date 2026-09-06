@@ -33,3 +33,10 @@ retyping:
   warn_data_min_tokens: 20        # 비율 판정의 최소 토큰 수(짧은 글의 우연 일치 배제)
   shadow_results: 8               # 직전 결과 그림자 보관 개수(턴 저장소 옆)
   shadow_max_chars: 1000000       # 그림자 한 개 상한
+
+# 봉투 기본값 반전 (2026-09-06 사용자 승인, docs/OUTPUT_RETYPING_HANDOFF.md §7 반성 2) — 에이전트 경계의 final_result 는
+# 큰 구조 데이터이면 미리보기(앞 rows 행), 긴 산문은 앞 prose_chars 자. 전체 값은 턴 저장소에. 앱 표면은 전체.
+envelope_preview:
+  rows: 8              # items/표 미리보기 행 수
+  min_chars: 3000      # 직렬화 길이가 이 미만이면 미리보기 없이 전체(왕복을 늘리지 않는다)
+  prose_chars: 12000   # 산문(문자열 통화) 미리보기 상한 — 파일 읽기·brief 대부분은 그대로 통과

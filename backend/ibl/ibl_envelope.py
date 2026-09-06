@@ -230,3 +230,73 @@ def diet_envelope(result: Any, verbose: bool = False) -> Any:
         if k in out:
             out[k] = out.pop(k)          # 재삽입 = 직렬화 순서상 맨 뒤로
     return out
+
+
+# ── 봉투 기본값 반전 — 에이전트 경계의 미리보기 (언어 개정 2026-09-06, 사용자 승인) ──────────────
+# 원칙: "모델이 보는 것 = 모델이 print 한 것"(프로그래매틱 툴 호출·MemEx 와 같은 방향). 결과의 전체 값은 턴
+# 저장소(이름 있으면 $변수, 없으면 그림자)에 살고, 봉투에는 **큰 구조 데이터의 미리보기**만 실린다 —
+# 모델이 통째 든 채 다음 호출에 다시 치던 재료(ep2890 본문 숫자 66%·URL 절반이 결과에 이미 있음)를 손에서 뺀다.
+# 왕복을 늘리지 않기 위해 작은 결과·산문·효과·스칼라는 그대로. 전체가 필요하면 verbose:true 로 *요구*하거나
+# `$이름 >> [table:take]/[table:select]/[table:filter]` 로 좁힌다. 앱·원격 표면(호출 통로 "app")은 렌더를 위해
+# 전체를 받는다(이 미리보기는 모델 경계에만). 임계는 data/lifecycle_policy.yaml `envelope_preview:` 데이터.
+
+PREVIEW_DEFAULT = {"rows": 8, "min_chars": 3000, "prose_chars": 12000}
+# ★순수 코어(문법·통화 계약)는 숙주를 몰라야 한다(층 관문 boot_paths ← ibl_envelope 적발) — 정책 파일은 여기서
+#   읽지 않는다. 호출자(execute_ibl 표면)가 lifecycle_policy 의 `envelope_preview:` 를 읽어 policy 인자로 넘긴다.
+
+
+PREVIEW_FULL_HINT = ("미리보기입니다 — 전체가 필요하면 verbose: true 로 요구하거나, `$이름 = …` 로 이름을 붙여 다음 문장에서 "
+                     "`$이름 >> [table:take]{n}`·`[table:select]`·`[table:filter]` 로 좁혀 받으세요. 행·값을 손으로 옮겨 적지 말 것.")
+
+
+def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
+    """items/표/산문 통화 하나를 미리보기로. 바꿀 것이 없으면 None."""
+    rows = int(pol["rows"])
+    if isinstance(obj, dict):
+        if isinstance(obj.get("items"), list) and len(obj["items"]) > rows and serialized_len >= int(pol["min_chars"]):
+            out = dict(obj)
+            out["items"] = obj["items"][:rows]
+            cols = []
+            first = obj["items"][0] if obj["items"] else None
+            if isinstance(first, dict):
+                cols = list(first.keys())[:20]
+            out["_preview"] = {"shown": rows, "total": len(obj["items"]), "chars": serialized_len,
+                               "columns": cols, "note": PREVIEW_FULL_HINT}
+            return out
+        if isinstance(obj.get("rows"), list) and isinstance(obj.get("columns"), list) \
+                and len(obj["rows"]) > rows and serialized_len >= int(pol["min_chars"]):
+            out = dict(obj)
+            out["rows"] = obj["rows"][:rows]
+            out["_preview"] = {"shown": rows, "total": len(obj["rows"]), "chars": serialized_len,
+                               "columns": list(obj["columns"])[:20], "note": PREVIEW_FULL_HINT}
+            return out
+        return None
+    if isinstance(obj, str):
+        cap = int(pol["prose_chars"])
+        if len(obj) > cap and not obj.lstrip().startswith(("{", "[")):
+            return obj[:cap] + f"\n…[미리보기 — 전체 {len(obj)}자 중 {cap}자. {PREVIEW_FULL_HINT}]"
+    return None
+
+
+def preview_envelope(result: Any, verbose: bool = False, policy: Dict[str, Any] = None) -> Any:
+    """에이전트 경계의 봉투 미리보기. verbose 또는 dict 아님이면 원형. final_result 가 있으면 그것을, 없으면(단일
+    step 원형) 봉투 자신의 items/rows 를 미리보기로. 전체 값은 호출자가 먼저 턴 저장소에 넣어 두었다.
+    policy: {rows, min_chars, prose_chars} — 없으면 PREVIEW_DEFAULT(코어는 정책 파일을 읽지 않는다)."""
+    if verbose or not isinstance(result, dict):
+        return result
+    pol = {**PREVIEW_DEFAULT, **(policy or {})}
+    if "final_result" in result:
+        fr = result.get("final_result")
+        obj = _parse_obj(fr) if isinstance(fr, str) else fr
+        ser_len = len(fr) if isinstance(fr, str) else len(json.dumps(fr, ensure_ascii=False, default=str))
+        prev = _preview_currency(obj if obj is not None else fr, pol, ser_len)
+        if prev is None:
+            return result
+        out = dict(result)
+        out["final_result"] = prev if not isinstance(fr, str) or isinstance(prev, str) \
+            else json.dumps(prev, ensure_ascii=False, default=str)
+        out["_preview"] = {"of": "final_result", "total_chars": ser_len}
+        return out
+    ser_len = len(json.dumps(result, ensure_ascii=False, default=str))
+    prev = _preview_currency(result, pol, ser_len)
+    return prev if isinstance(prev, dict) else result

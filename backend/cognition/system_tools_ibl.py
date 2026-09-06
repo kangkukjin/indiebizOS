@@ -385,6 +385,21 @@ def _enrich_error_with_param_hint(result, code: str):
     return result
 
 
+def _preview_boundary(result, tool_input: dict):
+    """봉투 기본값 반전(2026-09-06 승인) — 모델 경계에서만 큰 구조 데이터를 미리보기로. 앱·원격 표면(호출 통로
+    "app")은 렌더를 위해 전체를 받는다. 전체 값은 _attach_turn_vars 가 이미 턴 저장소(변수·그림자)에 두었다."""
+    try:
+        from thread_context import get_call_channel
+        if get_call_channel() == "app":
+            return result
+        from ibl_envelope import preview_envelope, PREVIEW_DEFAULT
+        from ibl_retyping import load_policy_block
+        return preview_envelope(result, verbose=bool((tool_input or {}).get("verbose")),
+                                policy=load_policy_block("envelope_preview", PREVIEW_DEFAULT))
+    except Exception:
+        return result
+
+
 def _attach_turn_vars(result, parsed, key, injected: list, retyped=None) -> None:
     """턴 범위 변수(언어 개정 2026-09-06) — 실행 결과의 산 `$변수` 를 턴 저장소에 합치고 봉투에 정직하게 말한다.
 
@@ -659,6 +674,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected), _retyped)
             from ibl_envelope import diet_envelope
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
+            result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
             return dumps_public_result(result, producer="execute_ibl:resume_vars" if _explicit_names else "execute_ibl",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
 
@@ -712,6 +728,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                         r["step"] += from_step - 1
             from ibl_envelope import diet_envelope
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
+            result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
             return dumps_public_result(result, producer="execute_ibl:resume",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
 
@@ -860,6 +877,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         if isinstance(result, dict):
             from ibl_envelope import diet_envelope
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose")))
+            result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
 
         if isinstance(result, dict):
             return dumps_public_result(result, producer="execute_ibl",

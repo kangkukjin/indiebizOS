@@ -40,25 +40,32 @@ HINT = ("있는 것은 치지 말고 가리켜라 — 앞 결과·데이터 행�
         "파일은 줄범위 edit·`old_string/new_string` 차분으로 — 통째 재작성·본문 옮겨 적기 금지.")
 
 _policy_cache: Dict[str, Any] = {}
+_POLICY_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+                            "data", "lifecycle_policy.yaml")     # backend/ibl/ → 저장소 루트 (숙주 모듈 불의존)
+_block_cache: Dict[str, Dict[str, Any]] = {}
+
+
+def load_policy_block(name: str, defaults: Dict[str, Any]) -> Dict[str, Any]:
+    """lifecycle_policy.yaml 의 한 블록을 defaults 위에 덮어 읽는다(캐시). 파일·yaml 부재는 defaults."""
+    if name in _block_cache:
+        return _block_cache[name]
+    pol = dict(defaults)
+    try:
+        import yaml
+        with open(_POLICY_PATH, encoding="utf-8") as f:
+            block = (yaml.safe_load(f) or {}).get(name) or {}
+        for k in defaults:
+            if k in block:
+                pol[k] = type(defaults[k])(block[k])
+    except Exception:
+        pass
+    _block_cache[name] = pol
+    return pol
 
 
 def load_policy() -> Dict[str, Any]:
-    if _policy_cache:
-        return _policy_cache
-    pol = dict(DEFAULT_POLICY)
-    try:
-        import yaml
-        from boot_paths import get_base_path  # type: ignore
-        p = os.path.join(str(get_base_path()), "data", "lifecycle_policy.yaml")
-        with open(p, encoding="utf-8") as f:
-            doc = yaml.safe_load(f) or {}
-        block = doc.get("retyping") or {}
-        for k in DEFAULT_POLICY:
-            if k in block:
-                pol[k] = type(DEFAULT_POLICY[k])(block[k])
-    except Exception:
-        pass
-    _policy_cache.update(pol)
+    if not _policy_cache:
+        _policy_cache.update(load_policy_block("retyping", DEFAULT_POLICY))
     return _policy_cache
 
 

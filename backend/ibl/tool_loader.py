@@ -240,9 +240,10 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 "verbose": {
                     "type": "boolean",
                     "description": (
-                        "파이프(>>) 봉투의 results[] 를 step 원형으로 받는다. 기본 false = step 요약"
-                        "(shape·count·preview)만 싣고 전체 데이터는 final_result 에. 중간 step 의 "
-                        "원형이 꼭 필요할 때만 true."
+                        "파이프(>>) 봉투의 results[] 를 step 원형으로, final_result 를 전체로 받는다. 기본 false = "
+                        "step 요약 + ★final_result 는 큰 구조 데이터(items/표 8행 초과·3,000자 이상)이면 앞 8행 미리보기"
+                        "(_preview{shown,total,columns}), 긴 산문은 앞 12,000자(2026-09-06 봉투 기본값 반전 — 전체 값은 턴에 "
+                        "보관되니 `$이름` 으로 가리켜 [table:take]/[table:select] 로 좁혀 받는다). 전부가 꼭 필요할 때만 true."
                     )
                 }
             },

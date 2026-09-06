@@ -113,6 +113,20 @@ def _format_item(item: dict, type_: str) -> dict:
     return base
 
 
+
+def _empty_query_note(query: str, items) -> dict:
+    """0건의 말하는 빈손 (2026-09-06, ep2890): 낱말 5개 질의("충주 개발 호암지구 서충주신도시 2026")가 0건 —
+    네이버는 질의 낱말을 전부 포함한 문서만 돌려주므로 낱말이 늘수록 급감한다(같은 날 실측: 4낱말 72건·
+    2낱말 3,194건). 봉투가 count 0 만 말하면 모델은 파라미터 이름(count vs limit)을 의심한다 — 뿌리를 말한다."""
+    if items:
+        return {}
+    words = [w for w in str(query or "").split() if w]
+    if len(words) < 3:
+        return {}
+    return {"note": (f"0건 — 네이버는 질의 낱말 {len(words)}개를 전부 포함한 문서만 돌려줍니다. "
+                     "핵심 낱말 2~3개로 줄이거나 질의를 나눠(&) 다시 검색하세요.")}
+
+
 def search_naver(
     query: str,
     type: str = "webkr",
@@ -186,4 +200,5 @@ def search_naver(
                    "summary": it.get("snippet", ""), "url": it.get("link", ""),
                    **_item_date_iso(it)} for it in items],
         "source": "네이버 검색 API",
+        **_empty_query_note(query, items),
     }

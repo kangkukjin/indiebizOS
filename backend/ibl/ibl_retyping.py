@@ -20,6 +20,8 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점
+
 DEFAULT_POLICY = {
     "min_param_chars": 200,
     "min_segment_chars": 40,
@@ -95,7 +97,7 @@ def typed_strings(steps: list, min_chars: int) -> List[Tuple[str, List[str]]]:
                 if str(k).startswith("_"):
                     continue
                 if isinstance(v, str) and 0 < len(v) < 1024 and ("/" in v or "\\" in v) and "\n" not in v:
-                    _p = os.path.expanduser(v)
+                    _p = expand_body_path(v)          # ~workspace/ 토큰도 파일로 본다 (단일 해소점)
                     if os.path.isfile(_p):
                         acc.append(_p)
                 else:

@@ -42,7 +42,7 @@ from pathlib import Path
 import yaml
 
 from common import platform_utils  # OS 이식성 단일 소스(분리 실행·생존 판정)
-from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
+from runtime_utils import WORKSPACE_TOKEN, expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 
 _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
 _SCRIPT_DIR = _ROOT / "data" / "scripts"           # 본문 (추적)
@@ -139,6 +139,25 @@ def _resolve_run_args(tool_input):
         return args, err, str(tool_input["args_file"]).strip()
     args, err = _coerce_args(tool_input.get("args"))
     return args, err, None
+
+
+
+def _expand_args_body_paths(obj):
+    """stdin args 안의 `~workspace/…` 문자열 값을 몸의 절대 경로로 펼친다 (2026-09-06, ep2890).
+
+    실측: `[self:script]{op:"run", id:"보고서HTML", args:{src:"~workspace/outputs/…"}}` 가
+    "src 파일이 없습니다: <repo>/~workspace/outputs/…" 로 죽고 절대경로 재실행에 성공했다.
+    토큰은 몸의 표기(runtime_utils.WORKSPACE_TOKEN)라 스크립트(세계의 코드)는 모른다 — 해소는
+    토큰을 아는 쪽, 즉 러너의 stdin 경계 한 곳에서 한다(스크립트마다 펼치면 30곳 산재의 재판).
+    `~/` 는 건드리지 않는다(스크립트 자신의 expanduser 몫). dict·list 는 재귀, 그 외 값은 불변.
+    """
+    if isinstance(obj, dict):
+        return {k: _expand_args_body_paths(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_expand_args_body_paths(v) for v in obj]
+    if isinstance(obj, str) and (obj == WORKSPACE_TOKEN or obj.startswith(WORKSPACE_TOKEN + "/")):
+        return expand_body_path(obj)
+    return obj
 
 
 def _atomic_write(path, text):
@@ -400,6 +419,7 @@ def op_run(tool_input):
     args, _aerr, _args_src = _resolve_run_args(tool_input)
     if _aerr:
         return {"success": False, "error": _aerr}
+    args = _expand_args_body_paths(args)
     stdin_data = json.dumps(args, ensure_ascii=False) if args is not None else None
     try:
         timeout = int(tool_input.get("timeout") or entry.get("timeout") or _DEFAULT_TIMEOUT)

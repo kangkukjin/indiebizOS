@@ -3,6 +3,7 @@
 법정동 코드 앞 5자리 (시군구 코드)
 """
 import json
+import re
 import os
 import sys
 from datetime import datetime, timezone
@@ -612,6 +613,27 @@ def _resolve_via_kakao(name: str):
     return None
 
 
+# 정식 행정구역명 → 카탈로그 축약 키 (2026-09-06, ep2890 부동산 30호: `city:"충청북도"` 가 "'충청북도'에 해당하는
+# 지역을 찾을 수 없습니다. 지원 도시: 강원, 경기, …, 충북" 으로 거절). 카탈로그 키는 축약형 하나인데 정식명은
+# 사람·모델이 가장 자연스럽게 쓰는 형태다 — 이름의 두 표기를 받는 것은 어휘 증식이 아니라 같은 낱말의 표기 관용.
+_PROVINCE_LONG_TO_SHORT = {
+    "충청북": "충북", "충청남": "충남", "전라북": "전북", "전라남": "전남",
+    "경상북": "경북", "경상남": "경남",
+}
+_ADMIN_SUFFIX_RE = re.compile(r"(특별자치도|특별자치시|특별시|광역시|자치도|도|시)$")
+
+
+def _normalize_region_name(city: str) -> str:
+    """'충청북도'→'충북', '강원특별자치도'→'강원', '세종특별자치시'→'세종', '부산광역시'→'부산'.
+    접미는 끝에서만 벗긴다(옛 replace("시","") 는 낱말 속 글자까지 지웠다)."""
+    s = str(city or "").strip()
+    prev = None
+    while s and s != prev:                       # '충청북도' → '충청북' 처럼 한 겹씩
+        prev = s
+        s = _ADMIN_SUFFIX_RE.sub("", s).strip()
+    return _PROVINCE_LONG_TO_SHORT.get(s, s)
+
+
 def get_region_codes(city: str = "", refresh: bool = False):
     """
     지역 코드 조회
@@ -628,7 +650,7 @@ def get_region_codes(city: str = "", refresh: bool = False):
     meta = _catalog_meta()
 
     if city:
-        city_normalized = city.replace("특별시", "").replace("광역시", "").replace("시", "").replace("도", "").strip()
+        city_normalized = _normalize_region_name(city)
 
         for key in codes:
             if city_normalized in key or key in city_normalized:

@@ -49,8 +49,11 @@
             "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
           },
           "by": {
-            "type": "string",
-            "description": "정렬 기준 필드/열 이름."
+            "description": "정렬 기준 필드/열 이름(목록이면 다단계 정렬 — 앞 키 우선).",
+            "type": [
+              "string",
+              "array"
+            ]
           },
           "desc": {
             "type": "boolean",
@@ -223,8 +226,11 @@
             "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
           },
           "by": {
-            "type": "string",
-            "description": "중복 판정 키 필드/열(미지정 시 records=title, table=첫 열)."
+            "description": "중복 판정 키 필드/열(미지정 시 records=title, table=첫 열).",
+            "type": [
+              "string",
+              "array"
+            ]
           }
         }
       }
@@ -272,8 +278,11 @@
             "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
           },
           "by": {
-            "type": "string",
-            "description": "그룹 키 열 이름."
+            "description": "그룹 키 열 이름(목록이면 교차집계 — 키마다 제 열로 나온다).",
+            "type": [
+              "string",
+              "array"
+            ]
           },
           "agg": {
             "type": "object",
@@ -292,18 +301,17 @@
         "type": "object",
         "properties": {
           "on": {
-            "type": "string",
-            "description": "조인 키 열/필드 이름(양쪽 통화에 존재). null·부재·빈 문자열 키는 제외."
+            "description": "조인 키 열/필드 이름(양쪽 통화에 존재; 목록이면 복합키). null·부재·빈 문자열 키는 제외.",
+            "type": [
+              "string",
+              "array"
+            ]
           },
           "left": {
             "description": "좌측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능)."
           },
           "right": {
             "description": "우측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능)."
-          },
-          "true": {
-            "type": "string",
-            "description": "table:join 의 주 파라미터"
           }
         },
         "required": [
@@ -339,12 +347,11 @@
             "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
           },
           "by": {
-            "type": "string",
-            "description": "중복 제거 키 필드(미지정 시 단순 concat)."
-          },
-          "on_error": {
-            "type": "string",
-            "description": "table:merge 파라미터"
+            "description": "중복 제거 키 필드(미지정 시 단순 concat).",
+            "type": [
+              "string",
+              "array"
+            ]
           }
         }
       }

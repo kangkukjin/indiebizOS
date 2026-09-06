@@ -237,6 +237,26 @@ def _check_action(
     target_key = action.get("target_key")
     ops = action.get("ops")
 
+    # --- ★YAML 1.1 불리언 접힘 관문 (2026-09-07) ---
+    # `target_key: on` 은 파서가 True 로 접는다. 실측: [table:join] 의 주 param 이 그렇게
+    # 접혀 빌드가 `"true"` 라는 유령 param 을 tool.json 에 실었고, 정작 `on` 은 한 번도
+    # 주 param 으로 선언된 적이 없었다(그래서 목록 값이 관문에서 원리적으로 막혔다).
+    # 같은 함정이 뷰 정의(`'on':`)에는 이미 체커가 있었는데 어휘 선언에는 없었다 —
+    # 사람이 고른 자리마다 막지 말고 부류를 관문이 잡는다.
+    _fold = {True: ("on", "yes", "true"), False: ("off", "no", "false")}
+    if isinstance(target_key, bool):
+        issues.append(
+            f"{qualified}: target_key 가 불리언 {target_key!r} — YAML 1.1 이 "
+            f"{'/'.join(_fold[target_key])} 를 접은 것입니다. 따옴표로 고정하세요(target_key: \"on\").")
+    for _pk in (action.get("params") or {}):
+        if isinstance(_pk, bool):
+            issues.append(
+                f"{qualified}: params 키가 불리언 {_pk!r} — YAML 1.1 접힘. "
+                f"따옴표로 고정하세요(\"on\": [\"string\", \"array\"]).")
+    for _ak, _alts in (action.get("aliases") or {}).items():
+        if isinstance(_ak, bool) or any(isinstance(a, bool) for a in (_alts or [])):
+            issues.append(f"{qualified}: aliases 에 불리언 이름 — YAML 1.1 접힘. 따옴표로 고정하세요.")
+
     # --- ops 스키마 자체 검증 ---
     if ops is not None:
         if target_key != "op":

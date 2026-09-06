@@ -282,6 +282,14 @@ _num_cmp = _wdsl._num_cmp
 _parse_where_str = _wdsl._parse_where_str
 _group_keys = _load_sibling_where(__file__, "group_keys")
 _group_identity, _relation_identity = _group_keys.group_identity, _group_keys.relation_identity
+# 관계 키 어휘(키 자리 문법)는 형제 모듈이 소유 — 이름만 재수출해 호출부는 불변.
+_norm, _join_key, _join_keys = _group_keys.norm_key, _group_keys.join_key, _group_keys.join_keys
+_join_row_key, _key_names, _dedup_key = _group_keys.join_row_key, _group_keys.key_names, _group_keys.dedup_key
+
+
+def _sort_multi(records, keys, desc=False):
+    """다단계 정렬 — 단일 키 판정기(_sort_records)를 형제 모듈에 주입한다."""
+    return _group_keys.sort_multi(records, keys, desc, _sort_records)
 # 패키지 소유 정책(집계 관측·그룹 표시값·since 원장 키) — 값의 뜻은 common 이 소유.
 _value_semantics = _load_sibling_where(__file__, "dataops_value_semantics")
 
@@ -348,13 +356,16 @@ def _op_filter_impl(prev, params):
 
 
 def _op_sort(prev, params):
-    """items|table → 정렬. params.by(필드/열명), params.desc(bool).
+    """items|table → 정렬. params.by(필드/열명 또는 다단계 키 목록), params.desc(bool).
+
+    by 가 목록이면 다단계 정렬(2026-09-07 언어 개정) — 앞 키가 우선, 동점을 뒤 키가
+    가른다. desc 는 전 키에 같이 걸린다(방향을 섞으려면 덜 중요한 키부터 sort 를 두 번).
 
     by 가 items/table 에 없으면 원천 행(data/results — groupby 의 _rows_for_field 선례)까지
     거슬러 찾고, 그래도 없으면 에러(2026-08-07 — 옛 침묵 no-op 은 원순서를 success 로
     돌려줘 하류 전체가 조용히 틀렸다. filter 의 '침묵 부분일치 금지' 원칙과 동일).
     """
-    by = params.get("by")
+    by_raw = params.get("by")
     desc = bool(params.get("desc", False))
     # F13-3 (2026-08-19 상상훈련 13회차): 자연 동의어 order:"desc"/"asc" 값-해석 —
     # 예전엔 경고만 뜨고 오름차순이 success 로 나가 요청 의미가 반전됐다.
@@ -362,27 +373,31 @@ def _op_sort(prev, params):
     if "desc" not in params and "order" in params:
         desc = str(params.get("order") or "").strip().lower() in (
             "desc", "descending", "reverse", "내림차순")
-    if not by:
+    keys, kerr = _key_names(by_raw, "sort", "by")
+    if kerr:
+        return kerr
+    if not keys:
         return {"success": False, "error": "sort: by(정렬 기준 필드/열명)가 필요합니다."}
-    by = str(by)
+    by = keys[0] if len(keys) == 1 else list(keys)   # 진단문에 적히는 표기
     # 파고들기는 입구가 담당 (F6) — by 가 카드 투영에 접혔으면 원천 행이 돌아온다.
-    recs, env = _get_items_for_fields(prev, [by])
+    recs, env = _get_items_for_fields(prev, keys)
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
-        if not dict_recs or any(by in r for r in dict_recs):
-            srt = _sort_records(dict_recs, by, desc)
+        if not dict_recs or all(any(k in r for r in dict_recs) for k in keys):
+            srt = _sort_multi(dict_recs, keys, desc)
             return _emit_items(env, srt)
     table, tenv = _get_table(prev)
-    if table is not None and by in [str(c) for c in (table.get("columns") or [])]:  # vj-ok: 열 이름 실존 검사
+    if table is not None and all(  # vj-ok: 열 이름 실존 검사
+            k in [str(c) for c in (table.get("columns") or [])] for k in keys):
         dicts = _row_dicts(table)
-        dicts = _sort_records(dicts, by, desc)
+        dicts = _sort_multi(dicts, keys, desc)
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in dicts]
         return _emit_table(tenv, {"columns": cols, "rows": rows})
     # 손실 투영(예: 주가 table=날짜·종가)이 정렬 키를 접은 경우 — 원천 행까지 거슬러 찾기
-    dug = _rows_for_field(prev, by)
-    if dug and any(by in r for r in dug):
-        srt = _sort_records(dug, by, desc)
+    dug = _rows_for_field(prev, keys)
+    if dug and all(any(k in r for r in dug) for k in keys):
+        srt = _sort_multi(dug, keys, desc)
         base_env = env if env is not None else (tenv if tenv is not None else (prev if isinstance(prev, dict) else {}))
         return _emit_items(base_env, srt)
     if recs is None and table is None and not dug:
@@ -398,7 +413,12 @@ def _op_sort(prev, params):
     if not avail and dug:
         avail = list(dug[0].keys())
     hint = f" 사용 가능한 필드: {avail}" if avail else ""
-    return {"success": False, "error": f"sort: '{by}' 필드가 어느 행에도 없습니다.{hint}"}
+    _rows = [r for r in (recs or []) if isinstance(r, dict)] or dug or []
+    miss = [k for k in keys if not any(k in r for r in _rows)] if _rows else list(keys)
+    if avail:
+        miss = [k for k in keys if k not in avail] or miss
+    return {"success": False,
+            "error": f"sort: '{"', '".join(miss)}' 필드가 어느 행에도 없습니다.{hint}"}
 
 
 # [table:chunk] 는 형제 모듈 chunk_ops.py (2026-09-05 어휘 개정, 1500줄 규칙 분리) — 형제 로더로만 불러온다(패키지 폴더는 sys.path 에 없다)
@@ -466,22 +486,6 @@ def _op_select(prev, params):
     return _no_currency_error("select", prev)
 
 
-def _norm(s):
-    """B38 falsey 스칼라 보존 + B41 구조 키의 재귀적·순서 독립 정규화."""
-    return _relation_identity(s)
-
-
-def _join_key(value):
-    """join 가능한 정규화 키. null·빈/공백 문자열은 관계 식별자가 아니다.
-
-    B38-2·G38-1(2026-08-25): items 경로는 null 을 빼고 table 경로는 ``""`` 로
-    조인했으며, 빈 문자열은 양쪽 모두에서 서로 연결됐다. 외부 자료의 빈 ID 둘을 같은
-    실체로 묶는 거짓 양성을 막기 위해 모든 통화 모양이 이 판정 한 벌을 쓴다.
-    """
-    key = _norm(value)
-    return key if key else None
-
-
 def _op_rename(prev, params):
     """열/필드 이름 바꾸기(관계대수 ρ). map={옛이름: 새이름}. table·items 둘 다.
 
@@ -538,23 +542,29 @@ def _op_rename(prev, params):
 
 
 def _op_dedup(prev, params):
-    """items|table → 중복 제거(첫 항목 유지). params.by(키 필드/열, 기본 title).
+    """items|table → 중복 제거(첫 항목 유지). params.by(키 필드/열 또는 복합키 목록, 기본 title).
+
+    by 가 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(2026-09-07 언어 개정).
 
     by 미지정 시 items는 title, table은 첫 열을 키로. 정규화(공백/대소문자) 후 동등 비교.
     (newspaper 내부에 묻혀있던 _dedup_rank를 통화 동사로 끌어올림 — 전 생산자 공용화.)
     """
-    by = params.get("by")
+    keys, kerr = _key_names(params.get("by"), "dedup", "by")
+    if kerr:
+        return kerr
     # 파고들기는 입구가 담당 (F6). 기본(title)은 관례라 파고들지 않는다.
-    recs, env = _get_items_for_fields(prev, [by] if by else None)
+    recs, env = _get_items_for_fields(prev, keys or None)
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
         # 명시 by 가 어느 행에도 없으면 무동작이 success 로 위장된다(⑧′). 기본(title)은 관례라 관대.
-        if by and dict_recs and not any(str(by) in r for r in dict_recs):
-            return _field_missing_error("dedup", by, dict_recs)
-        key = str(by) if by else "title"
+        if keys and dict_recs:
+            missing = [k for k in keys if not any(k in r for r in dict_recs)]
+            if missing:
+                return _field_missing_error("dedup", missing, dict_recs)
+        use = keys or ["title"]
         seen, out = set(), []
         for r in dict_recs:
-            k = _norm(r.get(key))
+            k = _dedup_key([r.get(c) for c in use])
             if k and k in seen:
                 continue
             seen.add(k)
@@ -563,13 +573,15 @@ def _op_dedup(prev, params):
     table, env = _get_table(prev)
     if table is not None:
         cols = [str(c) for c in (table.get("columns") or [])]
-        if by and str(by) not in cols:
+        missing = [k for k in keys if k not in cols]
+        if missing:
             # 잘못된 by 를 조용히 첫 열로 폴백하면 엉뚱한 키로 중복 제거된다(⑧′)
-            return {"success": False, "error": f"dedup: '{by}' 열이 없습니다. 실제 열: {cols}"}
-        ki = cols.index(str(by)) if by else 0
+            return {"success": False,
+                    "error": f"dedup: '{"', '".join(missing)}' 열이 없습니다. 실제 열: {cols}"}
+        idx = [cols.index(k) for k in keys] if keys else [0]
         seen, rows = set(), []
         for r in table.get("rows") or []:
-            k = _norm(r[ki] if ki < len(r) else None)
+            k = _dedup_key([(r[i] if i < len(r) else None) for i in idx])
             if k and k in seen:
                 continue
             seen.add(k)
@@ -590,15 +602,18 @@ _group_output_value = _value_semantics.strict_json_value
 
 
 def _rows_for_field(obj, field):
-    """그룹/집계 키 field 를 실제로 담은 표현을 골라 list-of-dicts 로 반환.
+    """그룹/집계 키 field(이름 하나 또는 복합키 목록)를 담은 표현을 list-of-dicts 로 반환.
 
     공유 통화 items(및 table) 외에도 도메인 생산자가 원천 행을 다른 키
     (data/results)에 담는 경우까지 후보로 본다. 옛 손실적 카드 투영이 도메인 필드를
     meta 문자열로 접어 groupby 가 그 필드를 못 찾던 문제(예: realty 가 '법정동'을 meta 로
     접음 — 원천은 data:[{...법정동...}] 에 그대로 있음)를 푼다.
 
-    후보 중 field 를 가진 첫 리스트를 우선(없으면 첫 비어있지 않은 리스트)으로 고른다.
+    후보 중 field 를 **전부** 가진 첫 리스트를 우선(없으면 첫 비어있지 않은 리스트)으로
+    고른다. 복합키(2026-09-07 언어 개정)에서는 키 하나만 가진 투영을 고르면 나머지
+    키가 "필드 없음" 으로 죽으므로, 판정은 키 집합 단위여야 한다.
     """
+    fields = [str(f) for f in ([field] if isinstance(field, str) else list(field or [])) if f]
     cands = []  # [(키, list-of-dicts)]
     if isinstance(obj, list):
         cands.append(("(root)", [x for x in obj if isinstance(x, dict)]))
@@ -618,9 +633,9 @@ def _rows_for_field(obj, field):
                         cands.append((f"{k}.{kk}", [x for x in vv if isinstance(x, dict)]))
     if not cands:
         return None
-    if field:
+    if fields:
         for _, rows in cands:
-            if any(field in r for r in rows):
+            if all(any(f in r for r in rows) for f in fields):
                 return rows
     for _, rows in cands:
         if rows:
@@ -629,19 +644,28 @@ def _rows_for_field(obj, field):
 
 
 def _op_groupby(prev, params):
-    """items|table|도메인 행목록 → 그룹 집계. params.by(그룹 키), params.agg.
+    """items|table|도메인 행목록 → 그룹 집계. params.by(그룹 키 또는 복합키 목록), params.agg.
 
     agg 형태: {새열명: [op, 원본열]} 또는 {원본열: op}. op = count/sum/avg/min/max.
-    기본: agg 없으면 그룹별 count.  반환 table = [by열, 집계열들].
+    기본: agg 없으면 그룹별 count.  반환 = [by열들, 집계열들].
+
+    by 가 목록이면 교차집계(2026-09-07 언어 개정) — 키마다 제 열로 나오므로 하류
+    filter/sort 가 그 열들을 그대로 쓴다.
 
     형제 동사들처럼 items 를 받는다. 나아가 옛 카드 투영이 그룹 키를 접은 경우
     원천 data/items 행까지 거슬러 키를 찾는다(_rows_for_field).
     """
-    by = params.get("by") or params.get("key") or params.get("group_by")
-    if not by:
+    by_raw = params.get("by")
+    if by_raw is None:
+        by_raw = params.get("key")            # 별칭은 **미지정일 때만** 넘긴다 — `or` 사슬은
+    if by_raw is None:                        # by: [] 를 삼켜 형제 동사와 다른 진단을 냈다
+        by_raw = params.get("group_by")
+    keys, kerr = _key_names(by_raw, "groupby", "by")
+    if kerr:
+        return kerr
+    if not keys:
         return {"success": False, "error": "groupby: by(그룹 키 열)가 필요합니다."}
-    by = str(by)
-    dicts = _rows_for_field(prev, by)
+    dicts = _rows_for_field(prev, keys)
     if not dicts:
         # F16-2 (2026-08-20 상상훈련 16회차): _rows_for_field 는 빈 리스트를 후보에서
         # 제외하므로 items:[] (통화 실존·0행)와 통화 부재가 여기서 접힌다. 빈손은
@@ -651,9 +675,10 @@ def _op_groupby(prev, params):
             return {"success": True, "items": [], "count": 0,
                     "message": "groupby: 0행 입력 — 집계할 행이 없습니다."}
         return {"success": False, "error": "groupby: 입력에서 items 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
-    if not any(by in d for d in dicts):
+    missing = [k for k in keys if not any(k in d for d in dicts)]
+    if missing:
         # 없는 by 를 조용히 받으면 전 행이 null 한 그룹으로 뭉개진다(⑧′ 실측: [[null, 83]])
-        return _field_missing_error("groupby", by, dicts)
+        return _field_missing_error("groupby", missing, dicts)
     _, env = _get_table(prev)
     env = env or {}
     # agg 모양 사전·정규화는 형제 모듈(agg_spec.py, 1500줄 규칙 분리 2026-08-27)
@@ -666,26 +691,32 @@ def _op_groupby(prev, params):
     groups, labels, order = {}, {}, []
     group_key_coercions = []
     for d in dicts:
-        gk = d.get(by)
-        gid = _group_identity(gk)
+        values = [d.get(k) for k in keys]
+        gid = tuple(_group_identity(v) for v in values)
         if gid not in groups:
             groups[gid] = []
-            label, changed = _group_output_value(gk)
-            labels[gid] = label
-            if changed:
-                group_key_coercions.append({
-                    "field": by, "key": label, "nonfinite_parts": changed,
-                })
+            cells = []
+            for key_name, raw_value in zip(keys, values):
+                label, changed = _group_output_value(raw_value)
+                cells.append(label)
+                if changed:
+                    group_key_coercions.append({
+                        "field": key_name, "key": label, "nonfinite_parts": changed,
+                    })
+            labels[gid] = cells
             order.append(gid)
         groups[gid].append(d)
-    out_cols = [by] + [s[0] for s in specs]
+    # 복합키는 키마다 제 열로 나온다(2026-09-07 언어 개정) — 합성 문자열 한 칸으로 접으면
+    # 하류 filter{계약유형 == '전세'}·sort 가 다시 쪼개야 한다(ep2951 이 하려던 바로 그 다음 문장).
+    out_cols = list(keys) + [s[0] for s in specs]
     out_rows = []
     aggregation_skips = []
     aggregation_errors = []
     for gid in order:
-        gk = labels[gid]
+        cells = labels[gid]
+        gk = cells[0] if len(cells) == 1 else list(cells)   # 신고문의 그룹 표기
         members = groups[gid]
-        row = [gk]
+        row = list(cells)
         for out_col, op, src in specs:
             value, skipped, aggregate_error = _aggregate_members(op, members, src)
             row.append(value)
@@ -717,160 +748,22 @@ def _op_groupby(prev, params):
     return res
 
 
-# ───────────────────────── since (검침 — 시간 차분) ─────────────────────────
+# ───────────────────────── 이항 동사 (& 병렬 두 입력) ─────────────────────────
 
-_SINCE_CAP = 5000                     # 스트림당 기준선 키 상한 — 초과분은 오래 안 보인 것부터 정리
-_SINCE_ID_CANDIDATES = ("url", "id", "link", "title")
-
-
-def _since_conn():
-    """검침 원장 연결 — 스트림별 last-seen 키·감시값 (data/table_since.db, WAL).
-
-    사라진 키를 지우지 않고 누적한다: 회전 소스(검색·RSS '최근 N개 창')에서 빠졌다
-    재등장한 행을 '새 것'으로 오보하지 않기 위해 (warehouse_feed 의 RSS 스냅샷 누적 선례).
-    """
-    import sqlite3
-    from pathlib import Path
-    path = Path(__file__).resolve().parents[5] / "data" / "table_since.db"   # notebook_core 선례
-    conn = sqlite3.connect(str(path), timeout=10)
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute(
-        "CREATE TABLE IF NOT EXISTS since_seen ("
-        " stream TEXT NOT NULL, k TEXT NOT NULL, watched TEXT,"
-        " first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,"
-        " PRIMARY KEY (stream, k))")
-    return conn
+# [table:since] 는 형제 모듈 since_ops.py — 유일하게 원장(data/table_since.db)을 쥔
+# 변환자라 순수 대수와 갈라 둔다. 통화 도우미는 인자로 넘긴다(branch_protocol 선례).
+_since_ops = _load_sibling_where(__file__, "since_ops")
+# ★원장 연결은 **이 이름으로** 넘긴다 — 시험이 임시 DB 로 갈아끼우는 지점이
+# handler 쪽 이름이라(test_condition_observability 등 3건), 형제 모듈이 제 전역을
+# 쓰면 monkeypatch 가 조용히 헛돌아 실제 원장에 쓰게 된다(★시험이 실물에 쓰는 부류).
+_since_conn = _since_ops.since_conn
 
 
 def _op_since(prev, params):
-    """items → 지난 검침 이후 새 행만 (+watch 필드 변화 행). 기준선은 스트림(key)별.
+    return _since_ops.op_since(prev, params, _get_items, _emit_items,
+                               _no_currency_error, _field_missing_error, _value_semantics,
+                               _since_conn)
 
-    warehouse_feed 의 seed/new/changed diff 를 통화 변환자로 일반화 — 모든 items
-    생산자에 곱해져 감시자가 된다. 첫 검침은 기준선만 저장하고 빈 items 를 정직하게
-    반환한다(첫 실행에 전부를 '새 것'으로 쏟으면 트리거 알림이 스팸이 된다).
-    """
-    key = params.get("key")
-    if not key or not str(key).strip():
-        return {"success": False, "error": (
-            "since: key(검침 스트림 이름)가 필요합니다 — 감시 파이프마다 고유한 이름을 주세요. "
-            '예: [sense:feed]{url:...} >> [table:since]{key: "하다뉴스"}')}
-    key = str(key).strip()
-
-    recs, env = _get_items(prev)
-    if recs is None:
-        return _no_currency_error("since", prev)
-    rows = [r for r in recs if isinstance(r, dict)]
-
-    by = params.get("by")
-    if by:
-        by = str(by)
-        if rows and not any(by in r for r in rows):
-            return _field_missing_error("since", [by], rows)
-    else:
-        by = next((c for c in _SINCE_ID_CANDIDATES
-                   if rows and all(r.get(c) not in (None, "") for r in rows)), None)
-        if rows and not by:
-            avail = sorted({f for r in rows for f in r.keys()})
-            return {"success": False, "error": (
-                "since: 행 식별 필드를 못 골랐습니다(후보 url/id/link/title 이 모든 행에 없음). "
-                f"by 로 지정하세요. 사용 가능한 필드: {avail[:12]}")}
-
-    watch = params.get("watch") or []
-    if isinstance(watch, str):
-        watch = [watch]
-    watch = [str(w) for w in watch if w]
-    if watch and rows:
-        missing = [w for w in watch if not any(w in r for r in rows)]
-        if missing:
-            return _field_missing_error("since", missing, rows)
-    peek = bool(params.get("peek"))
-
-    from datetime import datetime
-    now = datetime.now().isoformat(timespec="seconds")
-    conn = _since_conn()
-    trimmed = 0
-    try:
-        # 구조형 키는 순서 독립 정본 키로 읽고 쓴다. 구버전이 str(dict) 로 남긴
-        # 원장도 별칭으로 함께 색인해 필드 순서가 바뀐 같은 실체를 거짓 new 로
-        # 오보하지 않는다 (Codex 흡수, 2026-08-26).
-        seen, legacy_seen = _value_semantics.persisted_seen(conn.execute(
-            "SELECT k, watched FROM since_seen WHERE stream=?", (key,)))
-        first_run = not seen
-        out, n_new, n_changed = [], 0, 0
-        _missing = object()
-        for r in rows:
-            rk, legacy_rk = _value_semantics.persistent_keys(r.get(by))
-            previous = seen.get(rk, _missing)
-            if previous is _missing and legacy_rk != rk:  # vj-ok: 정본 키 비교
-                previous = seen.get(legacy_rk, _missing)  # 옛 str(dict) 원장 호환
-            if previous is _missing:
-                if not first_run:
-                    out.append({**r, "_since": "new"})
-                    n_new += 1
-            elif watch:
-                try:
-                    prev_wv = json.loads(previous) if previous else None
-                except Exception:
-                    prev_wv = None
-                cur_wv = {w: r.get(w) for w in watch}
-                # 감시 시작 전 키(prev_wv 없음)는 변화 판정 불가 — 거짓 changed 금지.
-                # 변화 판정은 조건 언어의 동등성 한 벌 — 원시 != 는 생산자의 표기 변경
-                # (1 → "1")을 값 변화로 오보한다(46회차 후속 census).
-                if prev_wv is not None and not _wdsl.values_equal(cur_wv, prev_wv):
-                    out.append({**r, "_since": "changed", "_since_prev": prev_wv})
-                    n_changed += 1
-        if not peek:
-            for r in rows:
-                rk, legacy_rk = _value_semantics.persistent_keys(r.get(by))
-                wjson = (json.dumps({w: r.get(w) for w in watch},
-                                    ensure_ascii=False, sort_keys=True)
-                         if watch else None)
-                conn.execute(
-                    "INSERT INTO since_seen (stream,k,watched,first_seen,last_seen)"
-                    " VALUES (?,?,?,?,?) ON CONFLICT(stream,k) DO UPDATE SET"
-                    " watched=excluded.watched, last_seen=excluded.last_seen",
-                    (key, rk, wjson, now, now))
-                _value_semantics.migrate_since_keys(conn, key, rk, legacy_rk, legacy_seen)
-            total = conn.execute(
-                "SELECT COUNT(*) FROM since_seen WHERE stream=?", (key,)).fetchone()[0]
-            if total > _SINCE_CAP:
-                trimmed = total - _SINCE_CAP
-                conn.execute(
-                    "DELETE FROM since_seen WHERE rowid IN (SELECT rowid FROM since_seen"
-                    " WHERE stream=? ORDER BY last_seen ASC LIMIT ?)", (key, trimmed))
-            conn.commit()
-        baseline = conn.execute(
-            "SELECT COUNT(*) FROM since_seen WHERE stream=?", (key,)).fetchone()[0]
-    finally:
-        conn.close()
-
-    result = _emit_items(env, out)
-    result["since_key"] = key
-    result["since_by"] = by
-    result["baseline_total"] = baseline
-    if first_run:
-        if peek:
-            result["note"] = (f"첫 검침(peek) — 기준선 저장 안 함({len(rows)}행 미기록). "
-                              "peek 없이 호출하면 기준선이 저장됩니다.")
-        else:
-            # ★P1 (2026-08-20, B15-2): 기계 판별용 플래그 — note 산문만으론 트리거·후속
-            # 파이프가 "첫 회라 0행"과 "고장이라 0행"을 구별할 수 없다. 2회차부턴 미표기.
-            result["seeded"] = True
-            result["note"] = (f"첫 검침 — 기준선 {len(rows)}행 저장(스트림 '{key}'). "
-                              "다음 호출부터 지난 검침 이후 새 행만 흐릅니다.")
-    elif not out:
-        result["note"] = f"지난 검침 이후 새 항목 없음 (기준선 {baseline}행)."
-    else:
-        parts = ([f"새 {n_new}건"] if n_new else []) + ([f"변경 {n_changed}건"] if n_changed else [])
-        result["note"] = "지난 검침 이후 " + "·".join(parts) + "."
-    if trimmed:
-        result["note"] += f" (기준선 상한 {_SINCE_CAP} 초과 — 오래 안 보인 {trimmed}키 정리)"
-    if peek and not first_run:
-        result["note"] += " (peek — 기준선 안 올림)"
-    return result
-
-
-# ───────────────────────── 이항 동사 (& 병렬 두 입력) ─────────────────────────
 
 def _extract_two(prev):
     """& 병렬 결과에서 두 객체 추출.
@@ -1067,7 +960,7 @@ def _attach_shape_warning(env, key_sets):
 
 
 def _op_merge(prev, params):
-    """병렬(&) 분기들의 items를 합친다(concat). params.by 지정 시 그 키로 중복 제거.
+    """병렬(&) 분기들의 items를 합친다(concat). params.by 지정 시 그 키(또는 복합키 목록)로 중복 제거.
 
     여러 검색 결과를 한 목록으로 모을 때. (table 결합은 union.) 분기 수 제한 없음.
     죽은 분기=기본 건너뛰고 신고, on_error:"stop"=전부-아니면-실패 (union 과 한 벌).
@@ -1094,14 +987,16 @@ def _op_merge(prev, params):
     out = []
     for il in item_lists:
         out.extend(il)
-    by = params.get("by")
-    if by or params.get("dedup"):
-        key = by or "title"
+    keys, kerr = _key_names(params.get("by"), "merge", "by")
+    if kerr:
+        return kerr
+    if keys or params.get("dedup"):
+        use = keys or ["title"]        # 복합키(2026-09-07 개정) — dedup 과 같은 판정 한 벌
         seen, dd = set(), []
         for r in out:
             if not isinstance(r, dict):
                 continue
-            k = _norm(r.get(key))
+            k = _dedup_key([r.get(c) for c in use])
             if k and k in seen:
                 continue
             seen.add(k)
@@ -1243,15 +1138,17 @@ def _suffix_collisions(base_cols, add_cols):
 
 
 def _op_join(prev, params):
-    """두 table을 키 열로 inner join. params.on(양쪽 공통 키 열명, 필수).
+    """두 table을 키 열로 inner join. params.on(양쪽 공통 키 열명 또는 복합키 목록, 필수).
 
     결과 열 = 좌측 전체 + 우측(키 제외). 서로 다른 소스를 한 키로 묶어 분석.
+    on 이 목록이면 복합키 조인(2026-09-07 언어 개정) — 키 일부가 빈 행은 조인 밖.
     예: [sense:stock]{op:history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}.
     """
-    on = params.get("on") or params.get("key")
-    if not on:
+    keys, kerr = _key_names(params.get("on") or params.get("key"), "join", "on")
+    if kerr:
+        return kerr
+    if not keys:
         return {"success": False, "error": "join: on(조인 키 열 이름)이 필요합니다."}
-    on = str(on)
     # left/right 직접 공급(& 병렬 대신 — $변수 참조로 파이프 낀 가지를 먹일 때).
     # 명시 파라미터가 파이프 입력보다 우선한다. (리터럴 get = 코퍼스-param 가드 가시성)
     if params.get("left") is not None and params.get("right") is not None:
@@ -1279,23 +1176,34 @@ def _op_join(prev, params):
             return {"success": False, "error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
         # 두 입력이 items 통화면 items inner join (table 분기와 대칭).
         # items 행도 dict 라 키 필드로 조인 가능 — merge/union 이 items 를 받는 것과 일관.
+        # ★키 실존은 표 경로처럼 **먼저** 본다(2026-09-07): 없는 키는 전 행에서 키 없음이 되어
+        #   0행이 success 로 나갔다 — 복합키에서는 오타 하나가 조용히 빈 표가 된다(⑧′ 부류).
+        for _side, _rows in (("좌", ra), ("우", rb)):
+            _dicts = [r for r in _rows if isinstance(r, dict)]
+            if not _dicts:
+                continue
+            _missing = [k for k in keys if not any(k in r for r in _dicts)]
+            if _missing:
+                return {"success": False,
+                        "error": f"join: 키 '{"', '".join(_missing)}' 이(가) {_side}측 items 의 "
+                                 f"어느 행에도 없습니다. 실제 필드: {list(_dicts[0].keys())}"}
         index = {}
         for r in rb:
             if not isinstance(r, dict):
                 continue
-            key = _join_key(r.get(on))
+            key = _join_keys(r, keys)
             if key is not None:
                 index.setdefault(key, []).append(r)
         out = []
         for l in ra:
             if not isinstance(l, dict):
                 continue
-            key = _join_key(l.get(on))
+            key = _join_keys(l, keys)
             if key is None:
                 continue
             lkeys = list(l.keys())
             for r in index.get(key, []):
-                add = [k for k in r.keys() if k != on]
+                add = [k for k in r.keys() if k not in keys]
                 disp = _suffix_collisions(lkeys, add)  # 동명 필드 _2 (침묵 오선택 방지)
                 merged = dict(l)
                 for orig, name in zip(add, disp):
@@ -1308,20 +1216,24 @@ def _op_join(prev, params):
         return {"success": False, "error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
     ca = [str(c) for c in (ta.get("columns") or [])]
     cb = [str(c) for c in (tb.get("columns") or [])]
-    if on not in ca or on not in cb:
-        return {"success": False, "error": f"join: 키 '{on}'이 양쪽 table 열에 모두 있어야 합니다(좌:{ca} 우:{cb})."}
-    lki, rki = ca.index(on), cb.index(on)
+    missing = [k for k in keys if k not in ca or k not in cb]
+    if missing:
+        return {"success": False,
+                "error": f"join: 키 '{"', '".join(missing)}'이(가) 양쪽 table 열에 "
+                         f"모두 있어야 합니다(좌:{ca} 우:{cb})."}
+    lki = [ca.index(k) for k in keys]
+    rki = [cb.index(k) for k in keys]
     # 우측을 키로 인덱싱
     index = {}
     for r in tb.get("rows") or []:
-        key = _join_key(r[rki] if rki < len(r) else None)
+        key = _join_row_key([(r[i] if i < len(r) else None) for i in rki])
         if key is not None:
             index.setdefault(key, []).append(r)
-    extra = [c for c in cb if c != on]  # 우측에서 가져올 열(키 제외, 읽기는 원본 이름)
+    extra = [c for c in cb if c not in keys]  # 우측에서 가져올 열(키 제외, 읽기는 원본 이름)
     out_cols = ca + _suffix_collisions(ca, extra)  # 표시 이름만 충돌 회피
     out_rows = []
     for r in ta.get("rows") or []:
-        key = _join_key(r[lki] if lki < len(r) else None)
+        key = _join_row_key([(r[i] if i < len(r) else None) for i in lki])
         if key is None:
             continue
         for rb_row in index.get(key, []):

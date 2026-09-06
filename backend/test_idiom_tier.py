@@ -413,7 +413,7 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     block = A._idioms_block(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
-    assert "- 자주찾기 — 자주 (개발) · 문장 3 사용 6회" in block
+    assert "[개발]" in block and "- 자주찾기 — 자주 · 문장 3 · 사용 6회" in block     # 이름 지도: 가지 머리 + 뜻·문장·사용(2026-09-06)
     # 이름 없는 행은 싣지 않는다(2026-09-06) — 부를 것이 없고, 본문을 보여 주면 베끼기가 된다
     assert "(이름 없음)" not in block and "드물" not in block
     assert '  [fn:자주찾기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block          # 그대로 쓰는 호출 한 줄
@@ -422,3 +422,37 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     assert PIPE not in block                                   # 낱말은 싣지 않는다
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     assert "자주찾기" not in A._idioms_block({"others"})        # self·sense 가 허용 밖이면 그 이름은 빠진다
+
+
+# ── 2026-09-06 속편: 이름은 경제로 판정 · 이름의 뜻이 intent ─────────────────────────────────────
+
+def test_p3_uncallable_by_saved_chars():
+    from ibl_idiom import uncallable_reason, saved_chars, MIN_SAVED_CHARS
+    # 얼어 있는 본문이 호출문보다 짧으면 부를 값이 없다
+    tiny = '[self:read]{path: "$파일"}; [self:list]{path: "$폴더"}'
+    sig = ["파일", "폴더"]
+    assert saved_chars(tiny, sig) < MIN_SAVED_CHARS
+    assert uncallable_reason(sig, 2, tiny) is not None
+    # 얼어 있는 본문이 길면(지시문·고정 인자) 부를 값이 있다
+    fat = ('[sense:search]{source: "gnews", query: "$질의", limit: 10} >> [table:dedup]{by: "url"} >> '
+           '[table:ai]{instruction: "사건 단위로 분류하고 한 줄 요지를 쓴다. 중복은 합치고 날짜를 붙인다", '
+           'fields: ["label", "date", "title", "summary", "url"]}; [self:write]{path: "$경로", content: "$요지"}')
+    assert uncallable_reason(["질의", "경로", "요지"], 2, fat) is None
+    # code 없이 부르면 옛 판정만(하위 호환)
+    assert uncallable_reason(sig, 2) is None
+
+
+def test_p3_phrase_meaning_becomes_intent(monkeypatch):
+    import ibl_usage_rag as rag
+    saved = _arm(monkeypatch, {"intent": "USB 연결된 폰에서 계기 트리 혼종 문제를 진단하고 수리한다", "code": "",
+                               "topic": "개발/프론트", "phrase": PHRASE, "slots": SLOTS, "phrase_name": "찾아읽고고치기",
+                               "phrase_meaning": "패턴으로 파일을 찾아 매칭 자리 주변을 읽고 지정한 줄을 고친다"})
+    assert rag.distill_experience("폰 계기 트리 고쳐줘", TOOL_CALLS, top_score=0.3) is True
+    assert saved and saved[0]["intent"] == "패턴으로 파일을 찾아 매칭 자리 주변을 읽고 지정한 줄을 고친다"
+    assert saved[0]["alias"] == "찾아읽고고치기"
+
+
+def test_p3_prompt_asks_for_meaning_and_frozen_value_rule():
+    import ibl_usage_rag as rag
+    p = rag._build_distill_prompt("x", "1. [self:read]{path: \"a\"}", "", "")
+    assert "phrase_meaning" in p and "무엇을 받아 무엇을 내는가" in p and "다음 주행에서도 같은 값" in p

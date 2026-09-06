@@ -944,6 +944,11 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
    "무엇을 어떻게 한다" 의 동사 골격만 남겨라: 좋은 예 `찾고슬라이드시험하기`·`제안적용하기`, 나쁜 예 `글자얹기문제수리`·
    `오버레이레이아웃무관허용및재적용`(사건 이름이라 다음 주행이 못 부른다). 12자를 넘으면 사건 이름일 가능성이 크다. 대표 code 가 여러 문장이면
    code 에도 같은 규칙의 이름(code_name)을 붙여라(관용구와 다른 이름).
+   ★이름에는 **뜻**(phrase_meaning)을 한 줄로 붙여라 — 이 함수가 *무엇을 받아 무엇을 내는가* 를 사건과 무관한 일반 서술로
+   (예: "패턴으로 파일을 찾아 매칭 자리 주변을 각각 읽는다", "직전 보고서를 찾아 기준선으로 읽는다"). 다음 주행은 이 줄을 읽고
+   부를지 정하므로, 이번 요청의 사정("사용자 우려에 대응", "USB 폰 문제")을 적으면 아무도 못 부른다. 80자 안.
+   ★슬롯으로 비우지 않은 값은 **다음 주행에서도 같은 값** 이어야 한다 — 이 파일에만 있는 함수 이름·이번 질의어·좌표를
+   본문에 얼려 두면 되풀이될 모양이 아니다(슬롯으로 비우거나 그 문장을 빼라).
 8. **이름으로 부른 함수는 이름으로 남겨라** — 실행된 코드에 `[fn:이름]{{…}}` 호출이 있으면 code 와 phrase 는
    그 호출 문장을 글자 그대로 품는다. 호출을 본문으로 풀어 쓰지 마라(함수는 이름으로 부른다 — 다음 주행도
    그 이름을 부르고, 부른 뒤 더한 문장만 새로 배운다).
@@ -957,7 +962,7 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
    적지 마라(이름과 번호만).
 10. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "code_name": "여러 문장 code 의 이름(한 문장이면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름", "retyped": ["다시 타이핑한 함수 이름"], "mergeable": ["3-7"]}}"""
+{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "code_name": "여러 문장 code 의 이름(한 문장이면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름", "phrase_meaning": "이 함수가 무엇을 받아 무엇을 내는가(한 줄)", "retyped": ["다시 타이핑한 함수 이름"], "mergeable": ["3-7"]}}"""
 
 
 # ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
@@ -1230,7 +1235,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 # 부를 수 없으면 회상 표면만 차지하고 매 호 본문을 다시 치게 만든다.
                 from workflow_contract import call_signature
                 from ibl_idiom import sanitize_fn_name, unique_fn_name, uncallable_reason
-                _why = uncallable_reason(call_signature(code), len(_ht.split_sentences(code)))
+                _why = uncallable_reason(call_signature(code), len(_ht.split_sentences(code)), code)
                 if _why:
                     print(f"[경험증류] 부를 수 없는 모양 — 이름 없이 저장: {_why}")
                 else:

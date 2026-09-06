@@ -485,6 +485,10 @@ _READ_ONLY_TOOL_NAMES = {"Read", "Grep", "Glob", "LS", "ToolSearch", "WebSearch"
                          "read_file", "search_files", "list_directory", "get_current_time"}
 
 
+#: 관문·하네스가 낸 거절 — 도구가 실패한 것이 아니라 몸이 막은 것(반성 발동 사유에서 제외, 2026-09-06)
+_GATE_REJECT_RE = re.compile(r"셸 그림자 거절|PreToolUse:\w+ hook error|<tool_use_error>Blocked:|hook blocked", re.I)
+
+
 def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool, str]:
     """자기반성 턴을 돌릴 가치가 있는 궤적인가 → (돌릴지, 사유).
 
@@ -507,6 +511,11 @@ def should_self_reflect(tool_calls: list, min_tool_calls: int = 3) -> Tuple[bool
         base_name = name.rsplit("__", 1)[-1]
         result = tc.get("result", "")
         if tc.get("is_error"):
+            # 관문의 거절(셸 그림자 훅)·하네스의 차단(sleep 금지 등)은 *세계의 실패* 가 아니라 몸이 제 일을 한
+            # 것이다 — 이를 오류로 세면 관문이 잘 돌수록 반성 턴(두 번째 실행)이 더 열린다(ep2910: 오류 6건 중
+            # 5건이 관문·하네스, 반성 14 라운드 +3M 토큰). 궤적에는 남되 실패 신호로 잡지 않는다.
+            if _GATE_REJECT_RE.search(str(result)):
+                continue
             return True, f"도구 오류 ({name})"
         # ToolSearch(스키마 로더)는 tool_result 본문이 비어 보이는 게 정상 동작이다
         # (도구 정의는 별도 블록으로 실림) — 빈-결과 트리거에서 제외 (에피소드 855·857 오발동).

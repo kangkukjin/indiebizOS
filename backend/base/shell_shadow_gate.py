@@ -12,7 +12,7 @@ Read·Grep 네이티브를 이름 골라 하드 차단했더니 물이 Bash 로 
 두 자리에서 같은 판정을 내린다. 거절문은 **그 명령을 옮긴 IBL 문장**을 돌려준다 — 다음 걸음이 IBL 안에 있게.
 새 낱말이 `shell_shadow:` 를 선언하면 관문이 저절로 넓어진다(코드에 낱말 이름 없음 — 헌법 '표준/사전 경계').
 
-통과(셸의 몫): git·pytest·빌드·등록 스크립트·프로세스 조회·파이프 안의 필터(stdin 을 받는 grep/head 등)·
+통과(셸의 몫): git·pytest·빌드·등록 스크립트·프로세스 조회·파이프 안의 필터(stdin 을 받는 grep/head 등, 서브셸 괄호 안 포함)·
 임시 폴더(/tmp·$TMPDIR) 안의 읽기/쓰기(셸 코드 루프의 짝).
 
 ★잎 모듈(표준 라이브러리만) — 훅은 Bash 호출마다 새 프로세스로 뜨므로 기동 비용이 곧 왕복 비용이다.
@@ -32,6 +32,9 @@ TABLE_REL = os.path.join("data", "shell_shadow.json")
 
 #: 파이프라인을 가르는 토큰(shlex punctuation_chars 가 낸다)
 _SEG_OPS = {"&&", "||", ";", "|", "|&", "&", "\n"}
+#: 서브셸 괄호 — 조각 경계이지 인자가 아니다(ep2910: `time ( … | grep -E … )` 의 `)` 가 grep 의 경로로 읽혀
+#: 파이프 필터가 [self:grep] 로 오판·거절됐다 — 셸의 몫인 필터가 IBL 로 밀려 결과 전문을 받는 퇴보)
+_PAREN_OPS = {"(", ")"}
 _REDIRECT_OPS = {">", ">>"}
 _ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 _WRAPPERS = {"sudo", "env", "command", "time", "nohup", "exec", "builtin"}
@@ -79,9 +82,16 @@ def _index(table: Dict[str, Any]) -> Tuple[Dict[str, List[Tuple[str, Optional[st
             kinds["redirect"] = word
         if spec.get("python_write"):
             kinds["python_write"] = word
-    # flag 있는 머리(sed -i)가 flag 없는 머리보다 먼저 판정되게
+    # flag 있는 머리(sed -i)가 flag 없는 머리보다 먼저, 같은 머리에서 url_contains(좁은 조건)를 가진 낱말이
+    # 일반 낱말보다 먼저 판정되게 — curl 은 그림자가 둘이다(몸의 API 두드리기 / HTTP 탐침, 2026-09-06 ep2910)
+    _shadows = table.get("shadows") or {}
+
+    def _narrow(word: str) -> bool:
+        spec = _shadows.get(word) or {}
+        return bool((spec.get("argmap") or {}).get("url_contains"))
+
     for h in heads:
-        heads[h].sort(key=lambda t: t[1] is None)
+        heads[h].sort(key=lambda t: (t[1] is None, not _narrow(t[0])))
     return heads, natives, kinds
 
 
@@ -162,10 +172,11 @@ def _segments(tokens: List[str]) -> List[Tuple[List[str], bool]]:
     cur: List[str] = []
     piped = False
     for t in tokens:
-        if t in _SEG_OPS:
+        if t in _SEG_OPS or t in _PAREN_OPS:
             if cur:
                 segs.append((cur, piped))
             cur = []
+            # `(` 는 새 조각의 시작(stdin 상속 없음), `)` 는 닫힘 — 둘 다 pipe 상태를 잇지 않는다.
             piped = t in ("|", "|&")
         else:
             cur.append(t)
@@ -414,8 +425,26 @@ def judge_shell(command: str, cwd: Optional[str] = None, root: Optional[str] = N
                 params = dict(argmap.get("skeleton") or {})
                 shown = " ".join(cmd[:6]) + (" …" if len(cmd) > 6 else "")
                 return _deny(shown, word, _render(word, params, spec), spec)
+            # not_when_flags(데이터): 이 flag 가 있으면 그 낱말의 그림자가 아니다 — 읽기 낱말(HTTP 탐침)의
+            # 머리(curl)로 쓰기 요청(-X POST·-d)이나 파일 저장(-o)을 할 때는 셸의 몫.
+            _not_when = [str(f) for f in (argmap.get("not_when_flags") or [])]
+            if _not_when and any(a == f or a.startswith(f + "=") for a in args for f in _not_when):
+                continue
             params, paths = _apply_argmap(args, spec, head)
             cwd_default = bool(argmap.get("cwd_default")) or head in (argmap.get("cwd_default_heads") or [])
+            if argmap.get("url_args"):
+                # 인자가 경로가 아니라 URL 인 낱말 — 경로 면제(임시 폴더)·stdin 판정을 타지 않는다.
+                # URL 이 하나도 없으면(curl 단독 등) 셸의 몫. skip_url_contains(데이터) 를 품은 URL 도 셸의 몫
+                # (몸 자신의 주소 — health 탐침은 09-05 판정대로 셸; /packages/reload 는 앞선 좁은 낱말이 잡는다).
+                _urls = [str(v) for v in params.values() if str(v).startswith(("http://", "https://"))]
+                if not _urls:
+                    break
+                _skip = [str(n) for n in (argmap.get("skip_url_contains") or [])]
+                if _skip and any(n in u for u in _urls for n in _skip):
+                    break
+                sentence = _render(word, params, spec)
+                shown = " ".join(cmd[:6]) + (" …" if len(cmd) > 6 else "")
+                return _deny(shown, word, sentence, spec)
             if not paths:
                 if piped and not cwd_default:
                     break  # 파이프 안의 필터(git diff | grep …) — 셸의 몫

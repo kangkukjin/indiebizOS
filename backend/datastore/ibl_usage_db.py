@@ -586,42 +586,32 @@ class IBLUsageDB:
         _tree_refresh(topic)
         return example_id
 
+    def update_intent(self, example_id: int, intent: str) -> bool:
+        """intent(이름이면 '함수의 뜻') 갱신 + 재색인 — 몸체는 ibl_name_search(2026-09-06)."""
+        from ibl_name_search import update_intent as _ui
+        return _ui(self, example_id, intent)
+
+    def search_aliased(self, query: str, top_k: int = 5, alpha: float = None,
+                       allowed_nodes: set = None) -> List["UsageExample"]:
+        """이름 채널 검색(2026-09-06) — 이름 부분집합 안의 원점수. 몸체는 ibl_name_search(1500줄 관문)."""
+        from ibl_name_search import search_aliased as _sa
+        return _sa(self, query, top_k=top_k, alpha=alpha, allowed_nodes=allowed_nodes)
+
     def find_phrase_by_alias(self, name: str) -> Optional[Dict]:
-        """이름으로 관용구 하나 — `[fn:이름]` 해소의 셋째 길(프로그램 정의 → 저장 워크플로 → 관용구). 없으면 None."""
-        if not name:
-            return None
-        with self._get_connection() as conn:
-            # 2026-09-05: 카테고리 무관 — 이름이 붙은 용례(관용구·다문장 프로그램)는 무엇이든 부를 수 있다(자동 작명과 한 벌)
-            row = conn.execute(
-                "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category, "
-                "COALESCE(returns,'') AS returns, signature "
-                "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC LIMIT 1",
-                (name.strip(),)).fetchone()
-        return dict(row) if row else None
+        from ibl_name_search import find_phrase_by_alias as _f
+        return _f(self, name)
 
     def alias_of_code(self, ibl_code: str) -> str:
-        """ibl_code 정확 일치 용례의 이름(alias) — 없으면 "". 회상 top-1 이 *부를 수 있는* 함수인지 묻는 자리
-        (2026-09-05 이름 호출 학습 루프: 증류 게이트·귀속이 '베꼈나/불렀나'를 가른다)."""
-        if not ibl_code:
-            return ""
-        with self._get_connection() as conn:
-            row = conn.execute(
-                "SELECT COALESCE(alias,'') FROM ibl_examples WHERE ibl_code = ? AND COALESCE(alias,'') != '' "
-                "ORDER BY updated_at DESC LIMIT 1", (ibl_code,)).fetchone()
-        return (row[0] or "").strip() if row else ""
+        from ibl_name_search import alias_of_code as _f
+        return _f(self, ibl_code)
 
     def aliased_examples(self, limit: int = 500) -> List[tuple]:
-        """이름 있는 용례 (alias, ibl_code) — 실행 관문의 모양 대조(fn_recognizer)가 읽는다(2026-09-06)."""
-        with self._get_connection() as conn:
-            rows = conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' "
-                                "ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
-        return [(r[0], r[1]) for r in rows]
+        from ibl_name_search import aliased_examples as _f
+        return _f(self, limit)
 
     def phrase_aliases(self, limit: int = 12) -> List[str]:
-        with self._get_connection() as conn:
-            rows = conn.execute("SELECT alias FROM ibl_examples WHERE COALESCE(alias,'') != '' "
-                                "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?", (limit,)).fetchall()
-        return [r[0] for r in rows]
+        from ibl_name_search import phrase_aliases as _f
+        return _f(self, limit)
 
     def add_examples_batch(self, examples: List[Dict]) -> int:
         """배치 추가 (임베딩 배치 생성)
@@ -1290,6 +1280,7 @@ class IBLUsageDB:
         Returns:
             UsageExample 리스트 (점수 내림차순)
         """
+        _alpha_given = alpha                 # 이름 채널은 제 비중(NAME_ALPHA)을 쓴다 — 원장 기본(1.0)을 물려주면 어휘 항이 죽는다
         if alpha is None:
             alpha = self.DEFAULT_ALPHA
 
@@ -1308,6 +1299,12 @@ class IBLUsageDB:
         # 렌트 모드(폰-자아 §6): 로컬 시맨틱 스택이 없으면 맥 /embed 렌트 + 인메모리 brute-force.
         if self._rented_mode():
             results = self._search_rented(query, top_k, allowed_nodes, category, exclude_category, aliased_only)
+            self._set_cached(cache_key, results)
+            return results
+
+        # 이름 채널(2026-09-06): 이름 부분집합 안에서 원점수로 — 사후 필터·전체 정규화의 두 결함을 비켜 간다.
+        if aliased_only:
+            results = self.search_aliased(query, top_k=top_k, alpha=_alpha_given, allowed_nodes=allowed_nodes)
             self._set_cached(cache_key, results)
             return results
 

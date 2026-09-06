@@ -291,6 +291,67 @@
         "format"
       ]
     },
+    "sense:http": {
+      "heads": [
+        "curl"
+      ],
+      "argmap": {
+        "positional": [
+          "url"
+        ],
+        "url_args": true,
+        "skip_url_contains": [
+          "127.0.0.1",
+          "localhost",
+          "0.0.0.0"
+        ],
+        "skeleton": {
+          "op": "body"
+        },
+        "flags": {
+          "-I": "op=head",
+          "--head": "op=head",
+          "-H": "headers",
+          "--header": "headers",
+          "-m": "timeout",
+          "--max-time": "timeout",
+          "-r": "range",
+          "--range": "range"
+        },
+        "not_when_flags": [
+          "-X",
+          "--request",
+          "-d",
+          "--data",
+          "--data-raw",
+          "--data-binary",
+          "--data-urlencode",
+          "-F",
+          "--form",
+          "-T",
+          "--upload-file",
+          "-o",
+          "-O",
+          "--output",
+          "--remote-name",
+          "-u",
+          "--user",
+          "-b",
+          "-c",
+          "--cookie",
+          "--cookie-jar"
+        ]
+      },
+      "params": [
+        "op",
+        "url",
+        "headers",
+        "range",
+        "timeout",
+        "max_bytes",
+        "max_preview"
+      ]
+    },
     "sense:sqlite": {
       "heads": [
         "sqlite3"

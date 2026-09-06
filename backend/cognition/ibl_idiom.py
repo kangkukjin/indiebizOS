@@ -353,12 +353,26 @@ except Exception:
 # 실제로 쓰인 둘 가운데 하나다. 서명은 실행기가 원장 문에서 계산하므로 여기서 다시 세지 않는다.
 BODY_SLOT_RE = re.compile(r"(?:내용|본문|원문|코드|content|body|text)$", re.IGNORECASE)
 MAX_CALLABLE_SLOTS = 8
+#: 부르면 아껴지는 자수의 하한 — 본문에서 슬롯을 뺀 *얼어 있는* 글자가 호출 한 줄보다 이만큼은 길어야 부를 값이 있다.
+#: (2026-09-06 속편: 인자 이름 접미사만 보는 관문은 "함수명 6개를 박은 grep + 통째 읽기 + 편집 본문 둘" 꼴을 통과시켰다 —
+#:  잴 것은 이름의 모양이 아니라 '호출 자수 대비 본문에 얼어 있는 자수' 다.)
+MIN_SAVED_CHARS = 40   # 실측(09-06, 이름 44건): 최소 43 — 쓰인 짧은 둘(패키지설치상태확인·수리제안적용 50)을 살리는 바닥
+_SLOT_REF_RE = re.compile(r"\$\{[^}]*\}|\$[A-Za-z0-9_가-힣]+")
 
 
-def uncallable_reason(signature, sentences: int = 99) -> Optional[str]:
+def saved_chars(code: str, signature) -> int:
+    """호출 한 줄 대신 본문을 칠 때 더 치게 되는 자수 = 얼어 있는 본문 − 호출문 길이(값 제외)."""
+    names = [str(n) for n in (signature or [])]
+    frozen = len(_SLOT_REF_RE.sub("", code or ""))
+    call = len("[fn:이름여덟자]{") + sum(len(n) + 4 for n in names) + 1
+    return frozen - call
+
+
+def uncallable_reason(signature, sentences: int = 99, code: str = "") -> Optional[str]:
     """부를 수 없는 서명이면 사유, 부를 수 있으면 None.
 
-    signature = 실행기(`workflow_contract.call_signature`)가 계산한 인자 이름 목록. sentences = 몸의 문장 수."""
+    signature = 실행기(`workflow_contract.call_signature`)가 계산한 인자 이름 목록. sentences = 몸의 문장 수.
+    code 를 주면 '부르면 아껴지는 자수'(saved_chars) 도 잰다 — 이름의 모양이 아니라 경제로 판정."""
     names = [str(n) for n in (signature or [])]
     if len(names) > MAX_CALLABLE_SLOTS:
         return f"인자 {len(names)}개 — 상한 {MAX_CALLABLE_SLOTS}. 서명이 본문보다 길면 부를 이유가 없다"
@@ -366,6 +380,11 @@ def uncallable_reason(signature, sentences: int = 99) -> Optional[str]:
     if body and (len(body) == len(names) or sentences <= 2):
         return (f"본문만 넘기는 이름 — 인자 {', '.join(body)} / 문장 {sentences}: "
                 "아낄 문장이 남지 않아 부르는 값이 치는 값과 같다")
+    if code:
+        saved = saved_chars(code, names)
+        if saved < MIN_SAVED_CHARS:
+            return (f"부르면 아끼는 자수 {saved} < {MIN_SAVED_CHARS} — 얼어 있는 본문이 호출문보다 짧아 "
+                    "부르는 값이 치는 값과 같다")
     return None
 
 
@@ -442,10 +461,16 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     except Exception as e:
         print(f"{tag} 서명 계산 불가 — 스킵({e.__class__.__name__}): {code[:60]}")
         return False
-    why = uncallable_reason(_sig, n)
+    why = uncallable_reason(_sig, n, code)
     if why:
         print(f"{tag} 부를 수 없는 이름 — 스킵: {why}")
         return False
+    # 이름의 뜻(2026-09-06): 저장되는 intent 는 *이 사건의 요약* 이 아니라 *함수의 뜻*(무엇을 받아 무엇을 내는가)이다.
+    # 이름 채널·상시 지도는 intent 로 검색·표시되는데, 사건 요약("USB 폰 계기 트리 혼종 수리")으로는 다음 주행이
+    # 자기 일과 맞춰 볼 수 없었다(09-06 실측: 자연 요청 2/2 에 이름 0건). 반성기가 phrase_meaning 을 주면 그것이 intent.
+    _meaning = str(distilled.get("phrase_meaning") or "").strip()
+    if _meaning:
+        intent = _meaning[:160]
     example_id = db.add_example(
         intent=intent, ibl_code=code, nodes=nodes, category=hippo_tree.PHRASE_CATEGORY,
         difficulty=2, source="distilled", tags="auto,phrase",

@@ -547,6 +547,8 @@ def build_environment(
 
 
 IDIOMS_TOP = 6
+IDIOMS_MAP_CHARS = 7000     # 이름 지도 예산(자) — 시스템 프롬프트 한 자리, 캐시되므로 왕복마다 새로 물지 않는다(2026-09-06)
+IDIOMS_MAP_ROWS = 400        # 지도 후보 상한(행)
 _idioms_cache = {"t": 0.0, "text": "", "key": None}
 
 
@@ -585,18 +587,14 @@ def _spread_by_topic(rows: list, top: int) -> list:
 
 
 def _idioms_block(allowed: Optional[Set[str]]) -> str:
-    """부를 수 있는 이름 블록 — 가벼운 sqlite 읽기(모델·벡터 무접촉), 5분 캐시.
+    """부를 수 있는 이름의 **지도** — 가벼운 sqlite 읽기(모델·벡터 무접촉), 5분 캐시.
 
-    이 블록은 *시스템 프롬프트*라 이번 턴의 주제를 모른다(세션 시작에 한 번 굳는다). 관련성으로 나르는 일은
-    턴마다 도는 회상 채널(ibl_usage_rag.search_phrases)의 몫이고, 여기는 '이 몸이 실제로 부르는 이름' 을 건다.
-
-    순위(2026-09-06 개정): ①쓰인 것(success+fail>0) 내림차순 → ②남은 자리는 **가지별 하나씩** 최신순.
-    옛 순위는 사용 횟수 하나뿐이라 콜드스타트에 굳었다 — 아무도 안 쓰였으니 정렬이 '최신순'으로 무너져
-    한 가지에서 갓 태어난 이름 여섯이 자리를 다 먹고, 다른 주제의 턴에는 통째로 무관했다(09-06 실측).
-
-    `category='phrase'` 잠금은 풀었다(2026-09-06): `[fn:]` 해소는 이미 카테고리 무관인데(find_phrase_by_alias)
-    보여주기만 관용구로 잠겨 있어 자동 작명된 다문장 프로그램 14건이 부를 수 있는데도 안 보였다.
-    허용 노드 밖 어휘가 든 것은 뺀다."""
+    2026-09-06 속편(사용자 판정 뒤 근본 집행): 옛 판은 6개만 보였다 — "관련성은 회상 채널 몫" 이라 했지만 회상은
+    사건 요약으로 검색돼 자연 요청에 이름 0건이었고, 상시 블록은 주제를 몰라 무관한 6개를 보였다. 관련성 판단이
+    양쪽 모두에서 비어 있었다. 이제 이 블록은 *지도* 다(심층기억 원칙 "지도가 있으면 단서는 지도에서 온다"):
+    가지별로 모든 이름을 뜻 한 줄과 서명으로 싣고, 무엇을 부를지는 모델이 이번 일과 맞춰 본다.
+    예산(IDIOMS_MAP_CHARS)을 넘으면 쓰인 것 → 가지별 라운드로빈 순으로 자른다(_spread_by_topic).
+    허용 노드 밖 어휘가 든 것·한 문장짜리는 뺀다. 서명은 원장 문에서 계산해 저장한 것만 가르친다(미상이면 미상이라 말한다)."""
     import re as _re
     import sqlite3
     import time
@@ -609,8 +607,6 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
         db_path = get_base_path() / "data" / "ibl_usage.db"
         if db_path.exists():
             conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
-            # 열 하나가 없다고 다른 열까지 버리면 안 된다 — 옛 판은 returns 부재가 signature 를
-            # 함께 NULL 로 만들어 멀쩡한 서명을 '미상'으로 가르쳤다. 있는 열만 골라 읽는다.
             _cols = {r[1] for r in conn.execute("PRAGMA table_info(ibl_examples)").fetchall()}
             _ret = "COALESCE(returns,'')" if "returns" in _cols else "''"
             _sig = "signature" if "signature" in _cols else "NULL"
@@ -618,9 +614,8 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                 f"SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,''), {_ret}, {_sig} "
                 "FROM ibl_examples WHERE COALESCE(alias,'') != '' "
                 "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
-                (IDIOMS_TOP * 8,)).fetchall()
+                (IDIOMS_MAP_ROWS,)).fetchall()
             conn.close()
-            # 자를 것을 먼저 자른다 — 걸러진 뒤에 자리 배분을 해야 블록이 IDIOMS_TOP 을 채운다.
             kept = []
             for r in rows:
                 code = r[1] or ""
@@ -630,22 +625,25 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                 if len(_split_sentences(code)) < 2:
                     continue                       # 한 문장은 낱말 — 이름으로 부를 것이 없다
                 kept.append(r)
+            # 예산 안에서 고른다: 쓰인 것 먼저, 남은 자리는 가지별 하나씩 — 그 뒤 가지별로 모아 그린다.
+            chosen, budget = [], IDIOMS_MAP_CHARS
+            for r in _spread_by_topic(kept, len(kept)):
+                entry = _idiom_lines(r)
+                cost = sum(len(x) + 1 for x in entry)
+                if cost > budget:
+                    continue
+                budget -= cost
+                chosen.append((r, entry))
+            groups: dict = {}
+            for r, entry in chosen:
+                groups.setdefault((r[4] or "").split("/")[0] or "기타", []).extend(entry)
             lines = []
-            for intent, code, sc, fc, topic, alias, returns, signature in _spread_by_topic(kept, IDIOMS_TOP):
-                sents = _split_sentences(code)
-                used = f" 사용 {sc + fc}회" if (sc + fc) else ""
-                lines.append(f"- {alias} — {intent}" + (f" ({topic})" if topic else "") + f" · 문장 {len(sents)}" + used)
-                # 서명은 실행기가 원장 문에서 계산해 저장한 것(2026-09-06) — 여기서 `${…}` 로 다시 세면
-                # 표시와 실행이 갈라지고, 가르친 대로 부른 호출이 "인자 누락"으로 거절된다.
-                # 미계산(NULL)이면 빈 `{}` 를 가르치지 않는다 — 거짓 서명은 그 자리에서 실패하는 호출이다.
-                names, known = _stored_signature(signature)
-                if known:
-                    lines.append(f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}" + (f" → {returns}" if returns else ""))
-                else:
-                    lines.append(f"  [fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
-                                 f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
+            for g in sorted(groups):
+                lines.append(f"[{g}]")
+                lines.extend(groups[g])
             if lines:
-                text = ("<ibl_idioms note=\"자주 쓰는 관용구 = 이름 붙은 함수. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄(정의 없이 이름만으로 돈다). "
+                text = ("<ibl_idioms note=\"이름 지도 — 자주 쓰는 관용구 = 이름 붙은 함수, 가지별. 각 이름의 뜻(무엇을 받아 무엇을 내는가)을 "
+                        "읽고 이번 일과 맞으면 [fn:이름]{슬롯: 값} 한 줄로 부른다(정의 없이 이름만으로 돈다). "
                         "본문은 여기 없다 — 고쳐 써야 할 때만 [self:memory]{op: \\\"recall\\\", node: \\\"<가지>\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 "
                         "정의를 열어 [def: 이름]{…} 를 프로그램에 붙이고 문장을 빼거나 더한 뒤 [fn:이름]{…} 으로 부른다. "
                         "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 step 요약만 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
@@ -656,8 +654,31 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
     return text
 
 
+def _idiom_lines(r) -> List[str]:
+    """지도의 한 항목(두 줄): `- 이름 — 뜻 · 문장 n [· 사용 k회]` + 서명 한 줄."""
+    intent, code, sc, fc, _topic, alias, returns, signature = r
+    sents = _split_sentences(code)
+    used = f" · 사용 {int(sc or 0) + int(fc or 0)}회" if (int(sc or 0) + int(fc or 0)) else ""
+    head = f"- {alias} — {(intent or '').strip()[:120]} · 문장 {len(sents)}{used}"
+    names, known = _stored_signature(signature)
+    if known:
+        sig = f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}" + (f" → {returns}" if returns else "")
+    else:
+        sig = (f"  [fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
+               f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
+    return [head, sig]
+
+
 def _split_sentences(code: str) -> List[str]:
-    """`;` 로 이은 독립 문장 분할 — 따옴표·괄호 안의 `;` 는 경계가 아니다(hippo_tree.split_sentences 와 같은 규칙)."""
+    """독립 문장 분할 — 정본은 hippo_tree.split_sentences(`;` 와 줄바꿈, 따옴표·괄호 안 제외).
+
+    옛 판은 `;` 만 갈랐다 — 줄바꿈으로 이은 다문장 프로그램(정기 보고서 프로그램 14건, 09-06 실측)이 '한 문장'
+    으로 세어져 이름 지도에서 통째로 빠졌다. 분할 규칙은 한 곳(hippo_tree)의 것을 쓴다; 아래 본문은 폴백."""
+    try:
+        import hippo_tree
+        return hippo_tree.split_sentences(code)
+    except Exception:
+        pass
     out, buf, q, depth = [], [], None, 0
     i, n = 0, len(code or "")
     while i < n:

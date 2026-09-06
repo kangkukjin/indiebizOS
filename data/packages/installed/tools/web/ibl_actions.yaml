@@ -40,6 +40,28 @@ nodes:
         tool: http_probe
         implementation: web/tool_http.py — urllib HEAD/GET, 리다이렉트 5홉 추적(final_url·redirected), Range 헤더 전달, 본문은 max_bytes 까지만. 텍스트 타입만 미리보기.
         target_key: op
+        # ★셸 그림자(2026-09-06 ep2910): 세상의 JSON API 를 curl 로 9회 두드렸다 — 이 낱말이 그 자리인데 그림자 표엔
+        #   curl 이 self:package(url_contains=/packages/reload)에만 있었다. curl 의 그림자는 둘이다(몸의 API / HTTP 탐침).
+        #   url_args = 인자는 경로가 아니라 URL(경로 면제 판정을 타지 않음) · not_when_flags = 쓰기 요청·파일 저장은 셸의 몫.
+        shell_shadow:
+          heads: [curl]
+          argmap:
+            positional: [url]
+            url_args: true
+            skip_url_contains: ["127.0.0.1", "localhost", "0.0.0.0"]   # 몸 자신의 주소(health 탐침 등)는 셸의 몫
+            skeleton: {op: body}
+            flags:
+              "-I": op=head
+              "--head": op=head
+              "-H": headers
+              "--header": headers
+              "-m": timeout
+              "--max-time": timeout
+              "-r": range
+              "--range": range
+            not_when_flags: ["-X", "--request", "-d", "--data", "--data-raw", "--data-binary", "--data-urlencode",
+                             "-F", "--form", "-T", "--upload-file", "-o", "-O", "--output", "--remote-name",
+                             "-u", "--user", "-b", "-c", "--cookie", "--cookie-jar"]
         params:
           url: string
           headers: object

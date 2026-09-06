@@ -238,3 +238,30 @@ def test_s9_grep_context_ignore_case_read_numbered_tail_edit_range(tmp_path):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+# ── 2026-09-06 속편(ep2910): 서브셸 괄호는 인자가 아니다 · curl 의 그림자는 둘 ─────────────────
+import pytest as _pt
+
+
+@_pt.mark.parametrize("cmd", [
+    'time ( /Applications/Blender.app/Contents/MacOS/Blender --background --python x.py 2>&1 | grep -E "^\\[render\\] (a|b)|Traceback" )',
+    "(cd backend && git status) | grep -c modified",
+    "git diff | grep -n foo",
+])
+def test_s10_subshell_parens_are_not_paths(cmd):
+    """`time ( … | grep … )` 의 `)` 가 grep 의 경로로 읽혀 파이프 필터가 거절됐다(ep2910 오탐)."""
+    assert _judge(cmd) is None
+
+
+def test_s10_curl_has_two_shadows():
+    """curl → 몸의 API 두드리기([self:package], url_contains)와 HTTP 탐침([sense:http])은 다른 낱말. 쓰기·저장은 셸의 몫."""
+    v = _judge('curl -s "https://api.polyhaven.com/assets?t=textures" | python3 -c "import sys"')
+    assert v and "[sense:http]" in v and 'op: "body"' in v and "api.polyhaven.com" in v
+    v = _judge("curl -I https://example.com")
+    assert v and "[sense:http]" in v and 'op: "head"' in v
+    v = _judge("curl -s -X POST http://127.0.0.1:8765/packages/reload")
+    assert v and "[self:package]" in v and "reload" in v
+    assert _judge('curl -X POST -d "{}" https://example.com/api') is None       # 쓰기 요청
+    assert _judge("curl -sL -o /tmp/a.bin https://example.com/a.bin") is None   # 파일 저장
+    assert _judge("curl --version") is None                                     # URL 없음

@@ -85,3 +85,18 @@ def test_file_write_tool_reflects():
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))
+
+
+def test_gate_rejection_is_not_a_world_failure(monkeypatch):
+    """관문(셸 그림자 훅)·하네스의 거절은 도구 오류가 아니다 — 관문이 잘 돌수록 반성 턴이 더 열리던 자리(ep2910: 오류 6건 중 5건)."""
+    _fake_safety(monkeypatch, {("self", "read"): True})
+    gate = {"name": "Bash", "input": {"command": "ls"}, "is_error": True,
+            "result": 'PreToolUse:Bash hook error: ["…"]: 셸 그림자 거절 — `ls` 은(는) [self:list] 로 표현되는 일입니다.'}
+    blocked = {"name": "Bash", "input": {"command": "sleep 90; tail x"}, "is_error": True,
+               "result": "<tool_use_error>Blocked: sleep 90 followed by: tail</tool_use_error>"}
+    reads = [_ibl('[self:read]{path: "a.py"}') for _ in range(3)]
+    ok, why = ct.should_self_reflect([gate, blocked] + reads, min_tool_calls=3)
+    assert not ok and "읽기만" in why
+    real = {"name": "Bash", "input": {"command": "python3 x.py"}, "is_error": True, "result": "Traceback: boom"}
+    ok, why = ct.should_self_reflect([gate] + reads + [real], min_tool_calls=3)
+    assert ok and "도구 오류" in why

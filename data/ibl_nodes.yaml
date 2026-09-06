@@ -2482,6 +2482,50 @@ nodes:
         tool: http_probe
         implementation: web/tool_http.py — urllib HEAD/GET, 리다이렉트 5홉 추적(final_url·redirected), Range 헤더 전달, 본문은 max_bytes 까지만. 텍스트 타입만 미리보기.
         target_key: op
+        shell_shadow:
+          heads:
+          - curl
+          argmap:
+            positional:
+            - url
+            url_args: true
+            skip_url_contains:
+            - 127.0.0.1
+            - localhost
+            - 0.0.0.0
+            skeleton:
+              op: body
+            flags:
+              -I: op=head
+              --head: op=head
+              -H: headers
+              --header: headers
+              -m: timeout
+              --max-time: timeout
+              -r: range
+              --range: range
+            not_when_flags:
+            - -X
+            - --request
+            - -d
+            - --data
+            - --data-raw
+            - --data-binary
+            - --data-urlencode
+            - -F
+            - --form
+            - -T
+            - --upload-file
+            - -o
+            - -O
+            - --output
+            - --remote-name
+            - -u
+            - --user
+            - -b
+            - -c
+            - --cookie
+            - --cookie-jar
         params:
           url: string
           headers: object

@@ -110,6 +110,46 @@ def grounded_filter(records: list, source_text: str, quote_field: str = "_quote"
     return kept, dropped
 
 
+_SENT_END = re.compile(r"[.!?。…]\s|\n")
+
+
+def expand_quotes(records: list, source_text: str, quote_field: str = "_quote",
+                  max_chars: int = 240) -> int:
+    """근거 앵커 확장(2026-09-06, 사용자 판정 "필요한 것은 없애지 않는다"): 모델은 근거의 **첫 구절**(짧은 앵커)만
+    적고, 여기서 원문에서 그 자리를 찾아 문장 끝(또는 max_chars)까지 이어 붙인다 — 독자가 보는 근거는 온전하고
+    모델이 옮겨 적는 글자는 준다(ep2897: _quote 8,633자=추출 내용의 3할). 대조(grounded_filter)는 앵커로 이미 끝났다.
+    반환 = 확장한 레코드 수. 앵커를 못 찾으면(정규화 차이) 그대로 둔다 — 조용히 지우지 않는다."""
+    if not source_text:
+        return 0
+    # 공백 제거 정규화 + 원문 인덱스 사상(대조와 같은 눈으로 위치를 찾는다)
+    norm_chars = []
+    idx_map = []
+    for i, ch in enumerate(source_text):
+        if not ch.isspace():
+            norm_chars.append(ch)
+            idx_map.append(i)
+    norm = "".join(norm_chars)
+    n = 0
+    for r in records:
+        q = r.get(quote_field)
+        if not isinstance(q, str) or not q.strip():
+            continue
+        if len(q) >= max_chars:
+            continue
+        pos = norm.find(_norm(q))
+        if pos < 0:
+            continue
+        start = idx_map[pos]
+        limit_end = min(len(source_text), start + max_chars)
+        m = _SENT_END.search(source_text, start + len(q), limit_end)
+        end = (m.start() + 1) if m else limit_end
+        expanded = source_text[start:end].strip()
+        if len(expanded) > len(q.strip()):
+            r[quote_field] = expanded
+            n += 1
+    return n
+
+
 def mark_ai(records: list) -> list:
     """AI 산출 provenance — 하류·증류·감사가 출처를 안다."""
     for r in records:

@@ -11,7 +11,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: AI 구조화 원자(입구) — 비정형 입력(파일·텍스트·파이프 본문)을 schema 계약의 레코드 items 통화로. 이미 표인 것은 [self:read]{tables:true}(결정론), 문서 조판용 IR 은 [table:structure].
-        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 파이프 봉투에 본문(text 등)과 items 가 병기되면 본문을 원문으로 쓰고 items 는 부속으로 신고(note) — 본문 없는 items 통화는 거절([table:ai]/[table:brief] 안내). 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
+        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · known([이미 있는 기록] — 같은 것은 다시 뽑지 않음, 2026-09-06) · instruction(추가 지시 — 2단 추출의 2차: "다음 제목들에 대해서만 how 를 채운다") · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 파이프 봉투에 본문(text 등)과 items 가 병기되면 본문을 원문으로 쓰고 items 는 부속으로 신고(note) — 본문 없는 items 통화는 거절([table:ai]/[table:brief] 안내). 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
         group: ai
         router: handler
         tool: ai_struct
@@ -109,7 +109,15 @@ tool_json:
           description: 직접 본문 텍스트(파일 대신).
         grounded:
           type: boolean
-          description: 각 레코드에 원문 발췌(_quote) 요구+코드 대조. 기본 finance/health 스키마=on, 그 외 off.
+          description: 각 레코드에 원문 근거 앵커(_quote — 첫 구절 한 토막) 요구+코드 대조, 대조 뒤 코드가 문장 끝까지 이어 붙임(quote_expanded 신고). 기본 finance/health 스키마=on, 그 외 off.
+        known:
+          type: array
+          description: '이미 있는 기록(문자열 목록, 또는 tip·title·name 필드가 있는 items) — 같은 내용은 다시 뽑지 않는다(known_excluded 신고). 예: 기존 팁 제목 목록, 이미 등재된 항목.'
+          items:
+            type: string
+        instruction:
+          type: string
+          description: '추가 자연어 지시(선택) — 예 "다음 팁 제목들에 대해서만 how·tools·hype 를 채운다: …" (2단 추출의 2차).'
       required:
       - schema
   - name: ai_transform

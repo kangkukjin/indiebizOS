@@ -174,6 +174,33 @@ def _src_from_envelope(prev, label="파이프 본문"):
     return src, pipe_note, body
 
 
+_KNOWN_CAP = 300
+
+
+def _known_lines(known) -> list:
+    """known 파라미터 → 프롬프트에 실을 한 줄들. 문자열 목록 · dict 목록(첫 문자열 필드) · items 봉투 모두 받는다."""
+    if isinstance(known, dict) and isinstance(known.get("items"), list):
+        known = known["items"]
+    if isinstance(known, str):
+        known = [known]
+    if not isinstance(known, list):
+        return []
+    out = []
+    for k in known:
+        if isinstance(k, dict):
+            v = next((str(x) for key in ("tip", "title", "name", "text") for x in [k.get(key)] if isinstance(x, str) and x.strip()), "")
+            if not v:
+                v = next((str(x) for x in k.values() if isinstance(x, str) and x.strip()), "")
+        else:
+            v = str(k or "")
+        v = " ".join(v.split())[:80]
+        if v and v not in out:
+            out.append(v)
+        if len(out) >= _KNOWN_CAP:
+            break
+    return out
+
+
 def _struct(tool_input: dict) -> str:
     schema = str(tool_input.get("schema") or "").strip()
     if not schema:
@@ -182,6 +209,10 @@ def _struct(tool_input: dict) -> str:
 
     file_path = str(tool_input.get("file") or "").strip()
     text = str(tool_input.get("text") or "").strip()
+    # known(이미 있는 기록 — 같은 것은 뽑지 않는다)·instruction(추가 지시): 2026-09-06 사용자 판정 "필요한 것은 없애지
+    # 않는다" — 후보 재현율은 두고, 아는 것을 다시 뽑는 출력만 줄인다(ep2897: 기존 팁 520건이 있는데 72건을 뽑아 28건 남김).
+    known_lines = _known_lines(tool_input.get("known"))
+    extra_instruction = str(tool_input.get("instruction") or "").strip()
 
     # 입력 획득: file/text 우선, 없으면 >> 파이프 본문(예: [sense:crawl] 결과)
     pipe_note = None
@@ -245,9 +276,14 @@ def _struct(tool_input: dict) -> str:
         "③날짜는 YYYY-MM-DD ④JSON 밖에 다른 글자를 쓰지 말 것."
     )
     if grounded:
-        system += (" ⑤각 기록에 _quote 필드로 그 기록의 근거가 되는 원문 발췌"
-                   "(원문 표기 그대로, 한 구절)를 넣을 것.")
+        system += (" ⑤각 기록에 _quote 필드로 그 기록의 근거가 되는 원문의 **첫 구절 한 토막**(8~12단어 안, 원문 표기 그대로)만 "
+                   "넣을 것 — 긴 인용은 쓰지 말 것. 나머지 문장은 코드가 원문에서 이어 붙인다.")
     system += f"\n\n[출력 계약]\n{schema}"
+    if extra_instruction:
+        system += f"\n\n[추가 지시]\n{extra_instruction}"
+    if known_lines:
+        system += ("\n\n[이미 있는 기록 — 아래와 같은 내용은 다시 뽑지 말 것(중복). 새 것만]\n"
+                   + "\n".join(f"- {k}" for k in known_lines))
 
     if src.get("kind") == "image":
         # 비전 패스스루(ingest_engine 정본 — 모달리티는 기어 무관, 2026-08-13 원칙)
@@ -265,7 +301,7 @@ def _struct(tool_input: dict) -> str:
         if err:
             return _fail(f"구조화 실패: {err}")
 
-    from oneshot_facade import records_gate, grounded_filter, mark_ai
+    from oneshot_facade import records_gate, grounded_filter, mark_ai, expand_quotes
     records, gerr = records_gate(parsed)
     if gerr:
         return _fail(f"구조화 실패: {gerr}")
@@ -280,6 +316,12 @@ def _struct(tool_input: dict) -> str:
         if dropped:
             result["dropped_ungrounded"] = dropped
         records = kept
+        # 앵커 → 문장 확장: 모델은 첫 구절만 쳤고, 독자용 근거는 여기서 원문으로 채운다(2026-09-06)
+        _exp = expand_quotes(records, src["text"])
+        if _exp:
+            result["quote_expanded"] = _exp
+    if known_lines:
+        result["known_excluded"] = len(known_lines)
     _notes = [n for n in (grounded_note, pipe_note) if n]
     if _notes:
         result["note"] = " ".join(_notes)

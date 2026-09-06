@@ -25,7 +25,18 @@
           },
           "grounded": {
             "type": "boolean",
-            "description": "각 레코드에 원문 발췌(_quote) 요구+코드 대조. 기본 finance/health 스키마=on, 그 외 off."
+            "description": "각 레코드에 원문 근거 앵커(_quote — 첫 구절 한 토막) 요구+코드 대조, 대조 뒤 코드가 문장 끝까지 이어 붙임(quote_expanded 신고). 기본 finance/health 스키마=on, 그 외 off."
+          },
+          "known": {
+            "type": "array",
+            "description": "이미 있는 기록(문자열 목록, 또는 tip·title·name 필드가 있는 items) — 같은 내용은 다시 뽑지 않는다(known_excluded 신고). 예: 기존 팁 제목 목록, 이미 등재된 항목.",
+            "items": {
+              "type": "string"
+            }
+          },
+          "instruction": {
+            "type": "string",
+            "description": "추가 자연어 지시(선택) — 예 \"다음 팁 제목들에 대해서만 how·tools·hype 를 채운다: …\" (2단 추출의 2차)."
           }
         },
         "required": [

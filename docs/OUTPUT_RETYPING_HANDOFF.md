@@ -146,3 +146,13 @@ THINK 게이트는 사용자 판정(장기/위험만) 유지. §2a·2c 가 먹�
 **반성 4 — 우회 통로 계측.** `[출력해부]` 는 IBL 봉투만 본다. Bash 원라이너·프로바이더 직접 호출의 되받아쓰기는 턴 전체 출력(도구 인자 전부) 기준으로 재야 한다 — `ibl_call_cost` 를 tool_calls 전체(Bash 포함)로 넓히는 것이 다음 걸음.
 
 출처: Anthropic engineering "Code execution with MCP"(2025-11) · Claude Platform docs "Programmatic tool calling" · Wang et al. "Executable Code Actions Elicit Better LLM Agents"(CodeAct, 2024) · Databricks "MemEx: A Programmable Scratchpad for LLM Agents" · Claude Code Edit 도구 설계 논의(old_string vs apply_patch).
+
+## 8. 팁 보고서 — 되받아쓰기가 아니라 추출 출력이 뿌리였다 (09-06, 사용자 "조금도 짧아지지 않았어")
+
+ep2897(10:04, 29분) 해부: 실행 축 원샷 8건 10.8분·48K 토큰(struct 6건: 입력 6~7K자 → 출력 2.7~12K 토큰) · 실행자 ≈17분 · 재기동 절단.
+`$팁` 실물: 4편에서 72건 추출 → 28건 생존(계약 "2~12행" 무시), 건당 how 198자·`_quote` 119자(자막 되받아쓰기 3할). 출력 34K 토큰 중
+내용은 ≈20K — 나머지는 CLI opus 사고 토큰 추정(측정 필요). 어제 18.4분은 축 표식이 없어 분리 불가(표식은 09-06 04:58 커밋).
+
+**품질 기준(사용자 "필요한 것은 없애지 않는다")으로 재판정**: 행 수 상한 ✗(재현율 손실) · 인용 제거 ✗(대조·독자 근거) · 사고 끄기 ⏸(A/B 없이 불가) ·
+병렬 ✅ · 2단 추출(제목→절제→선정분만 how)+known ✅ · 인용 앵커 확장 ✅. 집행: `[table:each]{parallel}` · `[self:struct]{known, instruction}` ·
+`expand_quotes` · 가이드 §5·6·6b. 기대: 원샷 축 10.8분 → 3분 안쪽, 출력 34K → 절반 아래. ⏳다음 06시 주행: struct 건수·quote_expanded·parallel 봉투·벽시계.

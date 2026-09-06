@@ -270,6 +270,18 @@ def _each_success_rows(final: Any, base: dict):
     return [dict(base)], False
 
 
+_EACH_MAX_PARALLEL = 8
+
+
+def _each_parallel(params: dict) -> int:
+    """parallel 파라미터 → 1..8. 잘못된 값·미지정은 1(순차)."""
+    try:
+        n = int(params.get("parallel") or 1)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, min(_EACH_MAX_PARALLEL, n))
+
+
 def _row_label(base: dict) -> str:
     """행을 사람이 알아볼 짧은 이름 — 진행 신고에 싣는다(어느 행에서 멈췄나).
 
@@ -389,21 +401,17 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             _tb_folds += 1
         return tb
 
-    for idx, row in enumerate(target):
-        processed += 1
+    # ── 병렬(언어 개정 2026-09-06, 사용자 판정 "그 셋으로 착수"): parallel(기본 1)이 2 이상이면 준비(치환·파싱)는
+    #    입력 순서대로, 실행만 스레드 풀에서, 집계는 다시 입력 순서대로 — 결과 순서·봉투 계약은 순차와 같다.
+    #    ep2897 실측: 자막→struct 원샷 6건이 순차로 10.8분(가장 긴 한 건 2.5분). 품질과 무관한 벽시계 항목.
+    #    thread-local(agent·task·allowed_nodes)·궤적 손잡이는 snapshot/restore 로 워커에 승계(workflow_parallel 과 한 벌).
+    parallel = _each_parallel(params)
+
+    def _prepare(idx: int, row):
+        """행 하나의 치환·파싱(실행 아님) → {kind: binding|syntax|ready, base, emsg|steps}."""
         base = dict(row) if isinstance(row, dict) else {_EACH_SCALAR_FIELD: row}
-
-        # ★회차 신고 (2026-09-01 실측 수리): 팬아웃은 "몇 번째 행"이 유일하게 의미 있는
-        #   진행 단위인데 그동안 아무 신고도 없어서, 회수가 본 마지막 갱신 시각이 1행
-        #   시작에 얼어 **멈춤과 느림이 구별 불가**였다(23분 무한 대기 사고의 절반).
-        #   좌표(step/of)는 소유자 것이므로 건드리지 않고 detail 칸만 쓴다.
-        from ibl_progress import beat as _beat
-        _beat({"row": idx + 1, "rows": len(target),
-               "row_label": _row_label(base), "depth": depth})
-
         sentence, missing = _each_substitute(do, row, var)
         if missing:
-            err_n += 1
             # 필드 힌트도 잘렸으면 잘렸다고 말한다 (F18-1 부류 — 침묵 클램프 금지):
             # 12개에서 끊긴 목록을 전부로 읽으면 있는 필드를 없다고 오판한다.
             if isinstance(row, dict):
@@ -412,8 +420,6 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             else:
                 avail = [_EACH_SCALAR_FIELD]
             # 관찰만 말하고 처방을 안 말하면 어휘를 포기한다(ba2cd50c 가 each 에서 배운 것).
-            # `$it.n.md` 부류는 '없는 필드'가 아니라 '경계를 못 그은 것' — 판정은
-            # 표기 규약을 아는 곳(common.ibl_vars) 한 벌이 한다.
             from common.ibl_vars import boundary_hint
             _row_fields = row if isinstance(row, dict) else ()
             _hint = ""
@@ -423,34 +429,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                     break
             _emsg = (f"행에 없는 필드: {', '.join(sorted(set(missing)))} "
                      f"(행 필드: {avail}){_hint}")
-            errors.append({**base, "_error": _emsg,
-                           "_traceback": _row_tb(build_tb(_emsg, "binding"), idx + 1)})
-            if on_error == "keep":
-                out_items.append({**base, "_error": _emsg})
-            if on_error == "stop":
-                halted = "on_error"
-                break
-            continue
-
+            return {"kind": "binding", "base": base, "emsg": _emsg}
         try:
             steps = ibl_parse(sentence)
         except IBLSyntaxError as e:
-            err_n += 1
-            errors.append({**base, "_error": f"IBL 문법 오류: {e}",
-                           "_traceback": _row_tb(build_tb(f"IBL 문법 오류: {e}", "syntax"),
-                                                 idx + 1)})
-            if on_error == "keep":
-                out_items.append({**base, "_error": f"IBL 문법 오류: {e}"})
-            if on_error == "stop":
-                halted = "on_error"
-                break
-            continue
-
-        substeps += len(steps)
-        if substeps > _EACH_MAX_SUBSTEPS:
-            halted = "budget"
-            break
-
+            return {"kind": "syntax", "base": base, "emsg": f"IBL 문법 오류: {e}"}
         _stamp_depth(steps, depth + 1)
         # each 의 do 는 *문자열*이라 행마다 새로 파싱된다 — 바깥에서 찍힌 워크플로우 호출
         # 스택이 여기서 끊기면, 워크플로우 → each → 자기 워크플로우 사슬이 가드를 우회한다.
@@ -458,15 +441,74 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         if _wf_stack:
             from workflow_contract import _stamp_wf_stack
             _stamp_wf_stack(steps, _wf_stack)
+        return {"kind": "ready", "base": base, "steps": steps}
+
+    def _execute(idx: int, prep: dict):
+        """행 하나 실행 — ★회차 신고(2026-09-01): 팬아웃의 유일한 진행 단위는 '몇 번째 행'."""
+        from ibl_progress import beat as _beat
+        _beat({"row": idx + 1, "rows": len(target),
+               "row_label": _row_label(prep["base"]), "depth": depth})
         try:
             # _each_do: do 하위 파이프에는 통화가 안 흐른다(행은 $it 치환뿐) — T1 머리
             # 변환자 거절이 do 문맥에 맞는 처방을 싣도록 알린다(2026-08-30).
-            res = execute_pipeline(steps, project_path,
-                                   context={"_each_do": True}, agent_id=agent_id)
+            return execute_pipeline(prep["steps"], project_path,
+                                    context={"_each_do": True}, agent_id=agent_id)
         except Exception as e:  # 실행기 자체가 터진 경우도 행 단위로 정직하게
-            res = {"success": False, "error": f"{type(e).__name__}: {e}",
-                   "traceback": build_tb(f"{type(e).__name__}: {e}", "exception",
-                                         py_tail=py_tail_of(e))}
+            return {"success": False, "error": f"{type(e).__name__}: {e}",
+                    "traceback": build_tb(f"{type(e).__name__}: {e}", "exception",
+                                          py_tail=py_tail_of(e))}
+
+    preps = [_prepare(i, r) for i, r in enumerate(target)]
+    # 하위 스텝 예산은 입력 순서 누적으로 — 병렬이어도 예산 밖 행은 실행하지 않는다
+    budget_cut = len(preps)
+    _acc = 0
+    for _i, _p in enumerate(preps):
+        if _p["kind"] == "ready":
+            _acc += len(_p["steps"])
+            if _acc > _EACH_MAX_SUBSTEPS:
+                budget_cut = _i
+                break
+    pre_results: dict = {}
+    _ready = [i for i, p_ in enumerate(preps[:budget_cut]) if p_["kind"] == "ready"]
+    if parallel > 1 and len(_ready) > 1:
+        import thread_context as _tc
+        from concurrent.futures import ThreadPoolExecutor
+        _snap = _tc.snapshot()
+
+        def _worker(i: int):
+            _tc.restore(_snap)
+            return i, _execute(i, preps[i])
+
+        with ThreadPoolExecutor(max_workers=min(parallel, len(_ready)),
+                                thread_name_prefix="ibl-each") as _ex:
+            for _i, _res in _ex.map(_worker, _ready):
+                pre_results[_i] = _res
+    parallel_discarded = 0
+
+    for idx, prep in enumerate(preps):
+        if idx >= budget_cut:
+            processed += 1           # 옛 계약과 같이 예산에 걸린 행은 처리 수에 든다
+            halted = "budget"
+            break
+        processed += 1
+        base = prep["base"]
+
+        if prep["kind"] in ("binding", "syntax"):
+            err_n += 1
+            _emsg = prep["emsg"]
+            errors.append({**base, "_error": _emsg,
+                           "_traceback": _row_tb(build_tb(_emsg, prep["kind"]), idx + 1)})
+            if on_error == "keep":
+                out_items.append({**base, "_error": _emsg})
+            if on_error == "stop":
+                halted = "on_error"
+                parallel_discarded = sum(1 for j in pre_results if j > idx)
+                break
+            continue
+
+        steps = prep["steps"]
+        substeps += len(steps)
+        res = pre_results[idx] if idx in pre_results else _execute(idx, prep)
 
         final = res.get("final_result") if isinstance(res, dict) else res
         if isinstance(final, str):
@@ -488,6 +530,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                 out_items.append({**base, "_error": res.get("error") or "실행 실패"})
             if on_error == "stop":
                 halted = "on_error"
+                parallel_discarded = sum(1 for j in pre_results if j > idx)
                 break
         else:
             ok_n += 1
@@ -513,6 +556,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         "error_count": err_n,
     }
     notes = []
+    if parallel > 1:
+        out["parallel"] = parallel
+        if parallel_discarded:
+            notes.append(f"on_error=stop: 병렬로 이미 실행된 뒤 행 {parallel_discarded}건의 결과는 버렸습니다"
+                         "(순차 의미 보존 — 실행은 됐으니 부작용은 남을 수 있음).")
     if errors:
         # 실패는 통화에 섞지 않고 봉투로 — halted_steps·branches_failed·empty_notes 와 같은 규약.
         out["errors"] = errors

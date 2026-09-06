@@ -698,10 +698,23 @@ def _pool_candidates(edition: dict) -> list:
     return [c for c in (edition.get("pool") or []) if c[0] not in excluded]
 
 
-def _next_edit_name(photos_dir: Path) -> str:
-    n = 0
-    while (photos_dir / f"e{n:03d}.jpg").exists():
-        n += 1
+_EDIT_NAME_RE = re.compile(r"e(\d+)\.jpg")
+
+
+def _next_edit_name(edition: dict, photos_dir: Path) -> str:
+    """보충 사진 파일명 — 판 안에서 한 번 쓴 이름은 다시 쓰지 않는다.
+    (뺀 사진의 이름을 새 보충 사진이 물려받으면 같은 URL 이라 브라우저 캐시가 뺀 사진을
+    그대로 보여준다 — '빼도 다시 들어간다'로 보이는 원인.) 정본 = edition.edit_seq 단조 증가,
+    옛 초안(edit_seq 없음)은 디스크·목록·뺀 이름 중 최대 번호 다음부터 잇는다."""
+    n = int(edition.get("edit_seq") or 0)
+    seen = [f.name for f in photos_dir.glob("e*.jpg")]
+    seen += [p.get("file", "") for d in edition.get("days", []) for p in d.get("photos", [])]
+    seen += list(edition.get("removed_files") or [])
+    for name in seen:
+        m = _EDIT_NAME_RE.fullmatch(name or "")
+        if m:
+            n = max(n, int(m.group(1)) + 1)
+    edition["edit_seq"] = n + 1
     return f"e{n:03d}.jpg"
 
 
@@ -736,7 +749,7 @@ def _refill_from_pool(edition: dict, photos_dir: Path, ref_ms: int):
             continue   # 폰 미연결·파일 소실 — 다음 후보
         gps = _gps_from_exif(tmp)
         place = _reverse_geocode(*gps) if gps else ""
-        fname = _next_edit_name(photos_dir)
+        fname = _next_edit_name(edition, photos_dir)
         ok = _make_web_photo(tmp, photos_dir / fname)
         tmp.unlink(missing_ok=True)
         if not ok:
@@ -749,6 +762,15 @@ def _refill_from_pool(edition: dict, photos_dir: Path, ref_ms: int):
         edition["pool"] = [c for c in edition.get("pool") or [] if c[0] != src]
         return photo, ""
     return None, "폰에서 후보 사진을 가져오지 못했습니다 — USB 연결 후 다시 빼면 채워집니다"
+
+
+def _thumb_url(path: Path) -> str:
+    """편집 그리드 썸네일 URL — 파일 mtime 을 붙여 같은 이름·다른 내용이 캐시에 물리지 않게."""
+    try:
+        v = int(path.stat().st_mtime)
+    except OSError:
+        v = 0
+    return f"/photo/thumbnail?path={path}&v={v}"
 
 
 def _fn_photos(params: dict) -> str:
@@ -769,7 +791,7 @@ def _fn_photos(params: dict) -> str:
                 "title": f"{day.get('label', day.get('date', ''))} {p.get('time', '')}".strip(),
                 "meta": f"📍 {p['place']}" if p.get("place") else "장소 정보 없음",
                 "place": p.get("place", ""),
-                "image": f"/photo/thumbnail?path={photos_dir / p.get('file', '')}",
+                "image": _thumb_url(photos_dir / p.get('file', '')),
             })
     for f in edition.get("family") or []:
         rows.append({
@@ -777,7 +799,7 @@ def _fn_photos(params: dict) -> str:
             "title": f"가족이 보낸 사진 · {f.get('name', '')}",
             "meta": f.get("at", "") or "가족 업로드",
             "place": "",
-            "image": f"/photo/thumbnail?path={photos_dir / f.get('file', '')}",
+            "image": _thumb_url(photos_dir / f.get('file', '')),
         })
     pool_left = len(_pool_candidates(edition))
     if edition.get("pool") is None:
@@ -822,6 +844,7 @@ def _fn_remove_photo(params: dict) -> str:
         return _fail(f"사진을 찾을 수 없습니다: {fname}")
 
     (photos_dir / fname).unlink(missing_ok=True)
+    edition.setdefault("removed_files", []).append(fname)   # 이 이름은 이 판에서 다시 쓰지 않는다
     filled, why_not = None, ""
     if is_family:
         # 뺀 가족 사진은 업로드 후보에서도 제외 — 다음 판에 되살아나지 않게.

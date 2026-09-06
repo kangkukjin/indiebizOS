@@ -459,7 +459,8 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
         반사의 정의는 "이미 찾은 답을 그대로 내보냄"이다. 아래 셋은 그 정의에 안 맞는데도
         해마 점수만으로 반사가 걸려 의식(달성 기준·진실 소스 정의)을 건너뛰던 자리다
         (ep1173/1176/1177: '홈페이지 업데이트'가 폰트 변경 용례 0.891 로 반사 → 12분 주행,
-        앞의 두 번은 파일 한 글자도 못 고치고 종료). 2026-08-10 판정 '장기간 또는 위험'의 집행.
+        앞의 두 번은 파일 한 글자도 못 고치고 종료). 2026-09-06 판정 '여러 단계 또는 위험'과 동형 —
+        거부권에 걸린 요청은 분류기로 내려가고, 분류기는 여러 단계를 THINK 로 올린다.
 
         ★주제어(홈페이지·배포 같은 세계의 명사)로 판정하지 않는다 — 요청과 회상의 *모양*으로
           판정한다. 그래야 새 도메인이 생겨도 목록을 늘릴 필요가 없다.
@@ -551,7 +552,7 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
             response = oneshot_ai_call(user_message, system_prompt=system_prompt)
 
             if response is None:
-                return "EXECUTE"  # AI 미준비 시 기본값 — 과잉 각성이 더 흔한 오류(2026-08-10 기준 상향)
+                return "EXECUTE"  # AI 미준비 시 기본값 — 판정이 아니라 고장이므로 값싼 경로(09-06 개정에서도 유지)
 
             result = response.strip().upper()
             # SESSION_RESET 우선 검사 (EXECUTE 키워드가 들어있는 경우와 충돌 방지)
@@ -563,7 +564,7 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
 
         except Exception as e:
             self._log(f"[무의식] 분류 실패: {e}")
-            return "EXECUTE"  # 실패 시 기본값 — 실행 에이전트(본격 모델)가 감당, 의식은 장기·위험 전용
+            return "EXECUTE"  # 실패 시 기본값 — 고장은 값싼 경로로. 판정 기준(여러 단계·위험=THINK)은 unconscious_prompt.md
 
 
 install()

@@ -5,6 +5,16 @@
 
 import type { APIClientCore } from './api-types';
 
+/** [self:install_lib] 승인 대기/승인 항목 (backend/datastore/install_approvals.py) */
+export interface InstallApprovalEntry {
+  package: string;
+  spec?: string;
+  reason?: string;
+  source?: string;
+  requested_at?: string;
+  approved_at?: string;
+}
+
 export function applyPackagesMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
 
@@ -48,6 +58,29 @@ export function applyPackagesMethods<T extends APIClientCore>(client: T) {
         method: 'POST',
         body: JSON.stringify({}),
       });
+    },
+
+    // ============ 라이브러리 설치 승인 ([self:install_lib] 사람 전용 채널) ============
+
+    async getInstallApprovals() {
+      return client.request<{
+        pending: Record<string, InstallApprovalEntry>;
+        approved: Record<string, InstallApprovalEntry>;
+      }>('/install-approvals');
+    },
+
+    async approveInstall(pkg: string) {
+      return client.request<{ success: boolean; approved: InstallApprovalEntry; message: string }>(
+        '/install-approvals/approve',
+        { method: 'POST', body: JSON.stringify({ package: pkg }) },
+      );
+    },
+
+    async rejectInstall(pkg: string) {
+      return client.request<{ success: boolean; removed: InstallApprovalEntry }>(
+        '/install-approvals/reject',
+        { method: 'POST', body: JSON.stringify({ package: pkg }) },
+      );
     },
 
     async uninstallPackage(packageId: string) {

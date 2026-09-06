@@ -28,7 +28,7 @@ _LOCK = threading.Lock()
 def canonical_name(spec: str) -> str:
     """패키지 스펙에서 정규화된 이름을 뽑는다 (PEP 503).
     'DDGS[full]>=1.0' → 'ddgs'. 승인 대조는 항상 이 이름으로 한다."""
-    name = re.split(r"[\[<>=!~;@ ]", (spec or "").strip(), 1)[0]
+    name = re.split(r"[\[<>=!~;@ ]", (spec or "").strip(), maxsplit=1)[0]
     return re.sub(r"[-_.]+", "-", name).lower()
 
 

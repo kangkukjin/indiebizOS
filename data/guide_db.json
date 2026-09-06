@@ -1636,6 +1636,43 @@
       ],
       "file": "map.md",
       "topic": "여행·숙소·맛집"
+    },
+    {
+      "id": "world_tools",
+      "name": "세상의 도구 지도",
+      "description": "몸 밖의 우수한 도구(라이브러리·프로그램·웹 라이브러리) 목차 — 수치·데이터·시각화·3D·물리·화학·천문·지리·양자·조판. 표준 라이브러리로 새로 짜기 전에 열 것. 확인(check)→승인→사용 골격, 자동 설치 없음.",
+      "keywords": [
+        "라이브러리",
+        "library",
+        "설치",
+        "install",
+        "pip",
+        "시뮬레이션",
+        "simulation",
+        "3D",
+        "블렌더",
+        "blender",
+        "화학",
+        "분자",
+        "천문",
+        "별",
+        "지리",
+        "GIS",
+        "양자",
+        "quantum",
+        "조판",
+        "LaTeX",
+        "듀크DB",
+        "duckdb",
+        "폴라스",
+        "polars",
+        "opencv",
+        "rdkit",
+        "astropy",
+        "geopandas"
+      ],
+      "file": "world_tools.md",
+      "topic": "워크플로·스크립트"
     }
   ]
 }

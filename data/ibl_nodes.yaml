@@ -3041,8 +3041,8 @@ nodes:
         - 확장
       install_lib:
         returns: effect
-        description: 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치(쓰기가능 pylibs). 의존성 누락 에러를 채운다. ★사람 승인 게이트 — 미승인 패키지는 설치되지 않고 승인 대기열 등록(approval_required), 승인 후 재호출하면 설치. package="playwright"면 chromium 바이너리도 함께 받는다.
-        target_description: 'package(필수) — pip 패키지명. 예: ddgs, playwright, matplotlib. 설치 위치=쓰기가능 userData/pylibs, 승인은 사용자가 HTTP /install-approvals/approve 로.'
+        description: 파이썬 라이브러리(pip) 확인·승인 설치. 이미 있으면 installed 즉답, check:true=확인만(부작용 0, installed/approved/pending/missing). ★사람 승인 게이트 — 미승인은 대기열+알림(approval_required), 사용자가 도구 관리 창에서 승인한 뒤 같은 호출을 다시 하면 설치.
+        target_description: 'package(필수) — pip 패키지명(세상의 도구 지도 world_tools.md 의 이름 그대로). check(선택, bool) — 확인만. reason(선택) — 왜 필요한지 한 줄(승인 화면에 보임). 설치 위치=쓰기가능 pylibs, 재기동 불요. package="playwright"면 chromium 바이너리도 함께. 예: {package: "duckdb", check: true}.'
         group: system
         router: system
         func: install_lib

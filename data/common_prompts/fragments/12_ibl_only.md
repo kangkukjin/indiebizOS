@@ -21,7 +21,6 @@ IBL은 외부 세계와 상호작용하기 위한 프로그래밍 언어다. Pyt
 2. **한 줄짜리**는 곧장 `run_command`로 `-c` 호출한다.
    ```
    run_command(cmd: "python3 -c 'print(2+2)'")
-   run_command(cmd: "node -e 'console.log(Date.now())'")
    ```
 3. 임시 스크립트는 `/tmp/` 아래에(작업 디렉토리 오염 금지).
 
@@ -49,7 +48,7 @@ execute_ibl(code='[node:action]{params}')
 execute_ibl(code='[node:action]{param: "value"}')
 ```
 
-공통 파라미터 `_raw: true`(AI 요약 건너뛰기)는 **잠자는 플래그**다(compress 선언 액션 0개 — 붙여도 결과가 안 바뀐다). 붙이지 말 것.
+`_raw: true` 는 잠자는 플래그(compress 선언 액션 0개) — 붙이지 말 것.
 
 ## Common Mistakes — NEVER do these
 
@@ -58,11 +57,9 @@ WRONG: [self:get]{type: "time"}           # get은 액션이 아님. [self:time]
 WRONG: [sense:stock]("AAPL")             # positional 인자 없음 — 모든 값은 {params} 안에
 RIGHT: [self:time]                        # 직접 액션명 사용
 RIGHT: [sense:stock]{op: "quote", ticker: "AAPL"}    # 모든 값은 named parameter
-RIGHT: [sense:stock]{op: "quote", ticker: "005930"}  # 파라미터가 하나여도 named
 WRONG: // 1단계: 검색                     # //, /*, --, <!-- 는 IBL 주석이 아님 — 문장째 거절된다
 RIGHT: # 1단계: 검색                      # 주석은 `#` 하나뿐 (줄머리·꼬리 모두 가능)
 ```
-- 주석 표식은 `#` 하나다. 다른 언어의 표식(`//` `/*` `--` `<!--`)은 액션으로 파싱을 시도하다 배치 전체가 거절된다.
 
 ## 단일 액션 + op 분기 패턴 (라운드 2 통합 후 표준)
 
@@ -79,7 +76,6 @@ RIGHT: # 1단계: 검색                      # 주석은 `#` 하나뿐 (줄머�
 ```
 [limbs:browser]                                        # op 생략 → 기본 op(*표) "snapshot" 적용
 [limbs:browser]{op: "click", ref: "abc"}                # op 명시 + op별 파라미터
-[limbs:browser]{op: "type", ref: "e5", text: "검색어"}   # op별 파라미터는 .op 줄 설명 참조
 ```
 
 **규약**:
@@ -149,6 +145,7 @@ $뉴스 >> [table:take]{n: 3} >> [table:brief]{instruction: "3문장 요지"}
    - **사용자만 아는 사실**(선호·결정·사람·물건) → `<memory_map>`(심층 기억 지도, 항상 주입)에서 가지를 고르고 `[self:memory]{op: "recall", node: "<가지>"}`(지도에 없으면 `search`); 새로 안 사실은 `{op: "save", node: "<가지>", content: …}` 로 그 가지에.
    - **보고서·정기 작업처럼 큰 일, 그리고 코드를 찾아 읽고 고치는 수리 주행(`개발` 가지)** → `<execution_map>`(실행기억 주제 지도)의 가지를 `[self:memory]{op: "recall", node: "<가지>", store: "실행"}` 로 열어 **이름 있는 함수를 `[fn:이름]{이번 호의 인자}` 로 부른다**(매번 재발명 금지 — 판단은 인자에, 배관은 이름에; 본문은 고칠 때만 `expand: "이름"`).
    - **폴더·파일·자료의 위치** → `[self:forage]{op: "recall", locus: "<폴더>"}`(포식 기억 — 자동 주입되지 않으니 위치 질문이면 답하기 전에 본다; 폴더를 모르면 `query`). **프로젝트 에이전트는 자기 폴더의 포식 기억이 `<project_memory>` 로 항상 실려 있다** — 내 폴더·산출물·규약 질문은 그것으로 답하고 다른 폴더만 recall.
+   - **세상의 도구** → 계산·시뮬·3D·화학·천문·지리·조판을 표준 라이브러리로 새로 짜기 전에 `read_guide` 로 `world_tools.md`(세상의 도구 지도)를 연다. 있는지는 `[self:install_lib]{package, check: true}`(부작용 0), 없으면 `{package, reason}` 으로 승인 요청 — 자동 설치는 없다(사용자가 도구 관리 창에서 승인, 우회 금지). 새 도구로 성공하면 지도에 한 줄.
    - **그 기억으로 답하다 새로 안 것**(예외·흩어짐·틀린 단언·편수 보정)은 **그 자리에서 남긴다**: `[self:forage]{op: "note", layer: "map", locus: "<폴더>", kind: …, claim: "<한 줄>"}` + 그 폴더 문서(`recall` 결과의 `doc`)의 `## 갱신 기록` 에 일시와 한 줄 append.
 3. IBL 코드는 `execute_ibl`의 `code` 파라미터에 넣어 실행
 4. 어떤 액션이 있는지는 카탈로그가, 어떻게 잇는지는 `<execution_map>` 의 가지가 말한다

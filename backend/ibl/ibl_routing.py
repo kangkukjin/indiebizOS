@@ -717,46 +717,87 @@ def _route_system(func_name: str, params: dict, project_path: str, agent_id: str
     return {"error": f"알 수 없는 시스템 함수: {func_name}"}
 
 
+def _installed_distribution(package: str):
+    """pip 배포판 이름으로 설치 여부를 본다(import 이름 매핑 불요 — pillow→PIL 같은 짝을 몰라도 됨).
+    pylibs 가 sys.path 에 있으니 런타임 설치분도 잡힌다. 반환: 버전 문자열 또는 None."""
+    try:
+        from importlib import metadata
+        import install_approvals
+        name = install_approvals.canonical_name(package)
+        try:
+            return metadata.version(name)
+        except metadata.PackageNotFoundError:
+            # 정규화 전 표기(대소문자·언더바)로 한 번 더 — dist-info 는 원표기를 쓰기도 한다
+            raw = package.split("[")[0].split("=")[0].split(">")[0].split("<")[0].strip()
+            try:
+                return metadata.version(raw)
+            except metadata.PackageNotFoundError:
+                return None
+    except Exception:
+        return None
+
+
 def _install_lib(params: dict) -> dict:
-    """self:install_lib — 도구가 필요로 하는 파이썬 라이브러리를 런타임에 설치.
+    """self:install_lib — 파이썬 라이브러리를 확인하거나, 사람 승인 뒤 런타임에 설치.
     의존성 누락 에러('X 라이브러리 없음')를 사용자 승낙 후 그 자리에서 채우는 데 쓴다.
 
     ★공급망 방어 게이트(Floor #1 패턴): '사용자 승낙'을 프롬프트 문구가 아니라 코드로
-    강제한다. 사람이 HTTP 채널(POST /install-approvals/approve — IBL 로는 못 닿음)로
-    승인해 두지 않은 패키지는 pip 를 실행하지 않고 대기열 등록 + 알림으로 끝낸다.
-    승인은 설치 성공 시 1회 소비된다. 위협 모델·한계는 install_approvals 모듈 참조."""
+    강제한다. 사람이 HTTP 채널(POST /install-approvals/approve — 조종실 도구 관리 창의
+    '라이브러리 설치 승인' 판이 부른다)로 승인해 두지 않은 패키지는 pip 를 실행하지 않고
+    대기열 등록 + 알림으로 끝낸다. 승인은 설치 성공 시 1회 소비된다.
+
+    2026-09-06 (세상의 도구 지도, 사용자 판정 '지도 참조 + 필요하면 승인 요청, 완전 자동설치는 아님'):
+    - 이미 깔린 패키지는 승인 없이 installed 즉답 — 지도가 '있음'을 적지 않는 대신 이 호출이 정본.
+    - check:true 는 확인만(등록·알림·설치 0) — 후보를 고를 때 여러 번 물어도 흔적이 없다.
+    - AI 에게 주는 봉투에서 curl 우회 안내를 뺐다(승인 채널은 사람 것)."""
     package = (params.get("package") or params.get("name") or params.get("lib") or "").strip()
     if not package:
-        return {"error": "설치할 라이브러리를 package 로 지정하세요. 예: [self:install_lib]{package: \"ddgs\"}"}
+        return {"error": "설치할 라이브러리를 package 로 지정하세요. 예: [self:install_lib]{package: \"duckdb\", check: true}"}
+    check_only = params.get("check") in (True, "true", "True", 1, "1", "yes")
 
     import install_approvals
+    name = install_approvals.canonical_name(package)
+
+    version = _installed_distribution(package)
+    if version:
+        return {"success": True, "status": "installed", "package": name, "version": version,
+                "message": f"'{name}' {version} 은 이미 설치돼 있습니다 — 바로 import 하세요."}
+
+    if check_only:
+        state = install_approvals.list_state()
+        if name in state.get("approved", {}):
+            status, msg = "approved", f"'{name}' 은 승인돼 있습니다 — check 없이 같은 호출을 하면 설치됩니다."
+        elif name in state.get("pending", {}):
+            status, msg = "pending", f"'{name}' 은 승인 대기 중입니다(사용자가 도구 관리 창에서 승인). 재촉하지 말고 다른 방법으로 잇거나 정직하게 멈추세요."
+        else:
+            status, msg = "missing", f"'{name}' 은 없습니다. 필요하면 {{package: \"{name}\", reason: \"<왜>\"}} 로 승인을 요청하세요(자동 설치 없음)."
+        return {"success": True, "status": status, "package": name, "installed": False, "message": msg}
 
     if not install_approvals.is_approved(package):
         entry = install_approvals.request_approval(
             package, reason=str(params.get("reason") or ""), source="ibl")
         try:
             from notification_manager import get_notification_manager
+            why = (entry.get("reason") or "").strip()
             get_notification_manager().create(
-                title="패키지 설치 승인 대기",
-                message=(f"AI가 파이썬 라이브러리 '{package}' 설치를 요청했습니다. "
-                         f"승인: POST /install-approvals/approve {{\"package\": \"{package}\"}}"),
+                title="라이브러리 설치 승인 대기",
+                message=(f"AI가 파이썬 라이브러리 '{name}' 설치를 요청했습니다"
+                         + (f" — {why}" if why else "") +
+                         ". 조종실 도구 관리 창 '라이브러리 설치 승인'에서 승인 또는 거부하세요."),
                 type="warning", source="install_gate",
             )
         except Exception:
             pass  # 알림 실패가 게이트 응답을 막지 않는다
         return {
             "success": False,
+            "status": "pending",
             "approval_required": True,
             "package": entry["package"],
             "message": (
-                f"'{package}' 설치에는 사람의 사전 승인이 필요합니다(공급망 방어 게이트). "
-                f"승인 대기열에 등록하고 알림을 보냈습니다. 사용자에게 이 패키지가 왜 필요한지 "
-                f"알리세요. 승인은 사용자가 직접 합니다(AI가 대신 승인할 수 없습니다) — "
+                f"'{name}' 설치에는 사람의 사전 승인이 필요합니다(공급망 방어 게이트). "
+                f"승인 대기열에 등록하고 알림을 보냈습니다. 사용자에게 이 패키지가 왜 필요한지 한 줄로 "
+                f"알리세요. 승인은 사용자가 도구 관리 창에서 직접 합니다(AI 가 대신 승인할 수 없고 셸로 우회하지 않습니다) — "
                 f"승인 후 같은 호출을 다시 실행하면 설치됩니다."
-            ),
-            "how_to_approve": (
-                f"curl -X POST http://localhost:8765/install-approvals/approve "
-                f"-H 'Content-Type: application/json' -d '{{\"package\": \"{package}\"}}'"
             ),
         }
 
@@ -764,6 +805,8 @@ def _install_lib(params: dict) -> dict:
     result = install_python_dependency(package)
     if result.get("success"):
         install_approvals.consume(package)  # 실패 시엔 승인 유지 → 재시도 가능
+        result["status"] = "installed"
+        result["package"] = name
     return result
 
 

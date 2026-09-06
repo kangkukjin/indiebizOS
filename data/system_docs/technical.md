@@ -62,6 +62,7 @@ see_also: [architecture.md, ibl.md]
 - `GET /packages/{package_id}` - 패키지 상세 정보
 - `POST /packages/{package_id}/install` - 패키지 설치
 - `POST /packages/{package_id}/uninstall` - 패키지 제거
+- `GET /install-approvals` · `POST /install-approvals/approve|reject` - `[self:install_lib]` 공급망 방어 게이트의 **사람 전용 승인 채널**(조종실 도구 관리 창 '라이브러리 설치 승인' 판이 부른다, 2026-09-06). AI 는 `check:true`(부작용 0)로 있는지 보고, 없으면 `{package, reason}` 으로 대기열 등록+알림만 — 자동 설치는 없다(사용자 판정). 이미 깔린 배포판은 승인 없이 installed 즉답. 어떤 도구가 세상에 있는지는 **세상의 도구 지도** `data/guides/world_tools.md`(guide_db 등록, 12_ibl_only Key Principles 2 가 입구) — AI 가 쓰고 사람이 고치는 목차. 가드 `test_world_tools_install_gate_2026_09_06`.
 - `POST /packages/analyze-folder` - 폴더 분석
 - `POST /packages/analyze-folder-ai` - AI 폴더 분석
 - `POST /packages/register` - 외부 도구 등록
@@ -330,7 +331,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)
-- `data/guides/`: 가이드 71개 (guide_db 등록 70). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
+- `data/guides/`: 가이드 72개 (guide_db 등록 71). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
 <!-- IBL_STATS:END -->
 - `projects/`: 사용자 프로젝트 데이터 (24개 — 시스템 프로젝트 수동모드·앱모드 포함)
 - `data/_backups/YYYY-MM-DD_<이름>/`: **일회성 백업의 유일한 주소**(2026-08-14 규약). 작업 폴더·`data/` 루트에 `*_backup*` 사본 금지. **git 추적 대상이 아니다** — 규약 정본 `README.md` 하나만 `!` 예외

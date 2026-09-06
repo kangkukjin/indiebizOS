@@ -10,6 +10,7 @@
 import { useState, useEffect } from 'react';
 import { X, Package, Download, Trash2, Check, AlertCircle, FolderOpen, ChevronDown, ChevronRight, FolderPlus, XCircle, Sparkles, Loader2, Search, Globe } from 'lucide-react';
 import { api } from '../../../lib/api';
+import type { InstallApprovalEntry } from '../../../lib/api-packages';
 import { ToolSearchDialog } from './ToolSearchDialog';
 
 interface PackageInfo {
@@ -122,6 +123,10 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
   // 패키지 공개 로딩 상태
   const [publishLoading, setPublishLoading] = useState<string | null>(null);
 
+  // [self:install_lib] 승인 대기 — AI 는 승인을 요청만 하고, 사람이 여기서 누른다(자동 설치 없음).
+  const [installApprovals, setInstallApprovals] = useState<InstallApprovalEntry[]>([]);
+  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
+
   // 패키지 공개 다이얼로그 상태
   const [publishDialog, setPublishDialog] = useState<{
     show: boolean;
@@ -142,6 +147,40 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
       loadPackages();
     }
   }, [show]);
+
+  const loadInstallApprovals = async () => {
+    try {
+      const r = await api.getInstallApprovals();
+      setInstallApprovals(Object.values(r.pending || {}));
+    } catch {
+      /* 승인 판은 부가 표면 — 실패해도 도구 관리 창은 산다 */
+    }
+  };
+
+  useEffect(() => {
+    if (!show) return;
+    loadInstallApprovals();
+    const t = setInterval(loadInstallApprovals, 10000);
+    return () => clearInterval(t);
+  }, [show]);
+
+  const handleInstallApproval = async (pkg: string, decision: 'approve' | 'reject') => {
+    setApprovalLoading(pkg);
+    try {
+      if (decision === 'approve') {
+        const r = await api.approveInstall(pkg);
+        setMessage({ type: 'success', text: r.message || `'${pkg}' 설치를 승인했습니다. AI가 다음 호출에서 설치합니다.` });
+      } else {
+        await api.rejectInstall(pkg);
+        setMessage({ type: 'success', text: `'${pkg}' 설치 요청을 거부했습니다.` });
+      }
+      await loadInstallApprovals();
+    } catch (e) {
+      setMessage({ type: 'error', text: `처리 실패: ${e instanceof Error ? e.message : String(e)}` });
+    } finally {
+      setApprovalLoading(null);
+    }
+  };
 
   const loadPackages = async () => {
     setIsLoading(true);
@@ -470,6 +509,44 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
           }`}>
             {message.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
             <span className="text-sm">{message.text}</span>
+          </div>
+        )}
+
+        {/* 라이브러리 설치 승인 — AI 가 요청한 pip 패키지, 사람만 승인/거부 */}
+        {installApprovals.length > 0 && (
+          <div className="mx-4 mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2">
+            <div className="flex items-center gap-2 text-amber-800 text-sm font-medium">
+              <AlertCircle size={16} />
+              <span>라이브러리 설치 승인 대기 ({installApprovals.length})</span>
+              <span className="text-xs font-normal text-amber-700">AI가 요청했습니다. 승인해야 설치됩니다 — 자동 설치는 없습니다.</span>
+            </div>
+            {installApprovals.map((e) => (
+              <div key={e.package} className="flex items-center gap-3 bg-white rounded-md px-3 py-2 border border-amber-100">
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-mono text-gray-800 truncate">{e.spec || e.package}</div>
+                  <div className="text-xs text-gray-500 truncate">
+                    {e.reason ? e.reason : '(사유 없음)'}
+                    {e.requested_at ? ` · ${e.requested_at.replace('T', ' ')}` : ''}
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleInstallApproval(e.package, 'approve')}
+                  disabled={approvalLoading === e.package}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
+                >
+                  {approvalLoading === e.package ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
+                  승인
+                </button>
+                <button
+                  onClick={() => handleInstallApproval(e.package, 'reject')}
+                  disabled={approvalLoading === e.package}
+                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
+                >
+                  <XCircle size={12} />
+                  거부
+                </button>
+              </div>
+            ))}
           </div>
         )}
 

@@ -216,14 +216,16 @@ def test_reflection_message_leads_with_run_cost():
              {"name": "execute_ibl", "input": {"code": "[self:time]"}, "result": "x", "is_error": False},
              {"name": "Bash", "input": {"command": "ls"}, "result": "x", "is_error": False}]
     c = ibl_call_cost(calls)
-    assert c == {"calls": 3, "single": 2, "failed": 1, "typed_chars": len(S1) + len(S2) + len("[self:time]")}
+    _core = {k: c[k] for k in ("calls", "single", "failed", "typed_chars")}      # 2026-09-06 확장 키(되받아쓰기·가리킴·밖 도구)는 별도 가드
+    assert _core == {"calls": 3, "single": 2, "failed": 1, "typed_chars": len(S1) + len(S2) + len("[self:time]")}
     line = run_cost_line(calls)
-    assert line == f"이번 주행: execute_ibl 3회(액션 1개 호출 2회) · 실패 1 · 타이핑 {c['typed_chars']}자"
+    assert line.startswith(f"이번 주행: execute_ibl 3회(액션 1개 호출 2회) · 실패 1 · 타이핑 {c['typed_chars']}자")
     assert "?" not in line                                                  # 수치만 — 질문 없음(출력 계약)
     msg = build_reflection_message("초안", calls)
     assert msg.index(line) < msg.index("## 지금까지의 궤적") < msg.index("## 네가 내놓으려던 응답")
     # 증류용 모양({tool_name, success})도 같은 계수
-    assert ibl_call_cost([{"tool_name": "execute_ibl", "input": {"code": S2}, "success": False}]) == \
+    _c2 = ibl_call_cost([{"tool_name": "execute_ibl", "input": {"code": S2}, "success": False}])
+    assert {k: _c2[k] for k in ("calls", "single", "failed", "typed_chars")} == \
         {"calls": 1, "single": 0, "failed": 1, "typed_chars": len(S2)}
     assert run_cost_line([{"name": "Bash", "input": {}}]) == ""
     assert "이번 주행:" not in build_reflection_message("초안", [{"name": "Bash", "input": {}, "result": ""}])

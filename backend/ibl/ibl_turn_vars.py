@@ -191,3 +191,40 @@ def load_draft() -> str:
         return str(obj.get("code") or "") if isinstance(obj, dict) else ""
     except (OSError, ValueError):
         return ""
+
+
+# ── 이번 턴에 이미 친 내용 (되받아쓰기 관문 출처 ④, 2026-09-06) — 같은 글자를 두 자리에 치는 것(ep2884: 같은
+# 패치를 라이브·워크트리·propose 세 자리에 46K자)을 두 번째 자리에서 잡는다. 결과가 아니라 *입력*의 그림자.
+
+def typed_path(key: str) -> str:
+    from common.spill import spill_dir
+    return os.path.join(spill_dir(), f"turn_typed_{key}.json")
+
+
+def load_typed(key: Optional[str]) -> List[str]:
+    if not key:
+        return []
+    p = typed_path(key)
+    if not os.path.isfile(p):
+        return []
+    try:
+        with open(p, encoding="utf-8") as f:
+            obj = json.load(f)
+        return [s for s in obj if isinstance(s, str)] if isinstance(obj, list) else []
+    except Exception:
+        return []
+
+
+def save_typed(key: Optional[str], strings: List[str], keep: int = 16, max_chars: int = 400_000) -> None:
+    if not key or not strings:
+        return
+    arr = load_typed(key)
+    for s in strings:
+        if isinstance(s, str) and s.strip() and len(s) <= max_chars and s not in arr:
+            arr.append(s)
+    arr = arr[-max(1, int(keep)):]
+    p = typed_path(key)
+    tmp = p + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(arr, f, ensure_ascii=False)
+    os.replace(tmp, p)

@@ -400,7 +400,7 @@ def _preview_boundary(result, tool_input: dict):
         return result
 
 
-def _attach_turn_vars(result, parsed, key, injected: list, retyped=None) -> None:
+def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint=None) -> None:
     """턴 범위 변수(언어 개정 2026-09-06) — 실행 결과의 산 `$변수` 를 턴 저장소에 합치고 봉투에 정직하게 말한다.
 
     엔진이 `_want_live_vars` 로 실어 준 내부 키 `_live_vars` 를 떼어 쓴다(파이프 경로). 단일 step 할당
@@ -410,6 +410,8 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None) -> None
         return
     if retyped:
         result["retyped"] = retyped        # 되받아쓰기 관문 warn — 봉투가 말한다(2026-09-06)
+    if fn_hint:
+        result["fn_hint"] = fn_hint        # 이름 있는 프로그램 — 다음부터 [fn:이름] 으로(2026-09-06)
     live = result.pop("_live_vars", None)
     # 결과 그림자 — 이름을 안 붙인 결과도 다음 호출의 되받아쓰기 대조 출처가 된다(관문 출처 ②)
     try:
@@ -638,11 +640,25 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         #   어휘 이름 무관, 문자열 일치만. 임계는 lifecycle_policy.yaml `retyping:`.
         _retyped = None
         try:
-            from ibl_retyping import check_retyping as _check_retyping
-            from ibl_turn_vars import load as _tv_load, load_shadows as _tv_shadows
-            _retyped = _check_retyping(parsed, _tv_load(_tkey), _tv_shadows(_tkey))
+            from ibl_retyping import check_retyping as _check_retyping, typed_strings as _typed_strings, \
+                load_policy as _rt_load_policy
+            from ibl_turn_vars import load as _tv_load, load_shadows as _tv_shadows, load_typed as _tv_typed, \
+                save_typed as _tv_save_typed
+            _retyped = _check_retyping(parsed, _tv_load(_tkey), _tv_shadows(_tkey), typed_before=_tv_typed(_tkey))
+            # 이번 호출에 친 긴 문자열을 입력 그림자로 — 다음 호출이 같은 글자를 다른 자리에 치면 잡힌다(출처 ④)
+            _tv_save_typed(_tkey, [s for s, _ in _typed_strings(parsed, int(_rt_load_policy()["min_param_chars"]))])
         except Exception:
             _retyped = None
+        # ★이름 있는 프로그램 인식(§2c, 2026-09-06): 다문장 code 가 이름 있는 관용구와 같은 모양이면 봉투가
+        #   "[fn:이름] 이다" 라고 말한다(실행은 그대로). 이름이 없어도 원문 코퍼스에 되풀이면 "N번째" 를 말한다.
+        _fn_hint = None
+        try:
+            from fn_recognizer import fn_hint_for as _fn_hint_for
+            _fn_hint = _fn_hint_for(code)
+            if _fn_hint:
+                print(f"[이름있음] {_fn_hint.get('alias') or ('코퍼스 ' + str(_fn_hint.get('seen')))}: {str(_fn_hint.get('note'))[:90]}")
+        except Exception:
+            _fn_hint = None
         if _retyped:
             print(f"[되받아쓰기] {_retyped.get('level')} verbatim={_retyped.get('verbatim_chars')} "
                   f"data={_retyped.get('data_tokens')} src={','.join(_retyped.get('sources') or [])}")
@@ -671,7 +687,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             if isinstance(result, dict):
                 if _explicit_names:
                     result["resumed_vars"] = _explicit_names
-                _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected), _retyped)
+                _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected), _retyped, _fn_hint)
             from ibl_envelope import diet_envelope
             result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
@@ -796,7 +812,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             except Exception:
                 pass
         # 턴 범위 변수 — 산 `$변수` 를 턴 저장소에 합치고 봉투가 말한다(2026-09-06 언어 개정)
-        _attach_turn_vars(result, parsed, _tkey, [], _retyped)
+        _attach_turn_vars(result, parsed, _tkey, [], _retyped, _fn_hint)
 
         # (map_data → [MAP:] 변환은 execute_tool 래퍼의 재귀 수확 단일 관문에서 처리 —
         #  단독/파이프/병렬 모양별 승격 분기는 병렬(&) 중첩에서 지도를 유실해 폐기. 2026-07-13)

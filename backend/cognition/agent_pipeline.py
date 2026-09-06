@@ -786,9 +786,10 @@ class CognitivePipelineMixin:
             try:
                 from cognitive_trace import ibl_call_cost as _ibl_cost
                 _oc = _ibl_cost(tool_calls_log)
-                if _oc["calls"]:
+                if _oc["calls"] or _oc["other_calls"]:
                     print(f"[출력해부] calls={_oc['calls']} typed={_oc['typed_chars']} retyped={_oc['retyped_chars']}"
-                          f"({_oc['retyped_warns']}) pointed={_oc['pointed']} fn={_oc['fn_calls']}")
+                          f"({_oc['retyped_warns']}) pointed={_oc['pointed']} fn={_oc['fn_calls']}"
+                          f" outside={_oc['other_calls']}/{_oc['other_typed_chars']}")
             except Exception:
                 pass
             # 상상실행 초안 채택 관찰 — 의식 초안(imagined_ibl)의 액션이 실제 실행에

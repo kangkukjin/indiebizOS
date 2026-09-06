@@ -646,10 +646,14 @@ def record_recall_outcome(top_code: str, top_score: float, tool_calls: list,
     #   증류 쪽(distill_experience)은 이미 이 관문을 썼는데 귀속 쪽만 없어서, 표면 어휘만
     #   닮은 고점수 회상이 전혀 안 쓰인 턴의 성공/실패까지 흡수했다 — 잘못된 강화·감쇠.
     _alias = _alias_of_code(top_code)
+    _pointed = _pointed_count(tool_calls)     # 가리킴(턴 변수 주입) — 베끼지 않고 앞 결과를 가리킨 횟수(2026-09-06 §3)
     if _alias and _fn_called(_alias, ibl_codes):
-        print(f"[해마피드백] 회상 함수 호출 [fn:{_alias}] — 귀속 (score={top_score:.2f})")
+        print(f"[해마피드백] 회상 함수 호출 [fn:{_alias}] — 귀속 (score={top_score:.2f}, 가리킴 {_pointed})")
     elif not _recall_was_used(top_code, ibl_codes):
-        print(f"[해마피드백] 회상 미사용 — 귀속 스킵 (score={top_score:.2f}): {top_code[:50]}")
+        # ★_recall_was_used 는 이 턴의 *모든* execute_ibl 코드를 본다 — 앞 호출이 회상 액션을 실행하고 뒤 호출이
+        #   `$이름` 으로 가리키기만 해도 귀속은 산다(가리키면 귀속이 끊기는 역보상 없음). 여기 오면 회상 액션이
+        #   턴 어디에도 없었던 것.
+        print(f"[해마피드백] 회상 미사용 — 귀속 스킵 (score={top_score:.2f}, 가리킴 {_pointed}): {top_code[:50]}")
         return False
 
     elapsed_ms = _ibl_elapsed_ms(tool_calls) if ibl_success else None
@@ -716,6 +720,18 @@ def _record_phrase_recall_outcome(ibl_codes: list, ibl_success, tool_calls: list
 
 
 _FN_CALL_RE = re.compile(r'\[fn:\s*([^\]\s]+)\s*\]')
+
+
+def _pointed_count(tool_calls: list) -> int:
+    """이 턴의 가리킴 횟수 — 궤적 항목의 `pointed`(turn_vars.injected 수) 합. 베끼기 대신 가리킨 정도(§3)."""
+    n = 0
+    for tc in tool_calls or []:
+        if isinstance(tc, dict):
+            try:
+                n += int(tc.get("pointed") or 0)
+            except (TypeError, ValueError):
+                pass
+    return n
 
 
 def _fn_names_in(ibl_calls: list) -> list:

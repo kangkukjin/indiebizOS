@@ -76,7 +76,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store",
     },
     "cognition": {
-        "agent_cognitive", "agent_communication", "agent_goals",
+        "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
         "agent_pipeline", "agent_runner", "ai_agent",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "cognitive_recall", "cognitive_trace", "history_checkpoint",

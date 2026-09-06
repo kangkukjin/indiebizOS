@@ -550,11 +550,16 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
     """
     calls = single = failed = typed = 0
     retyped = retyped_warns = pointed = fn_calls = 0
+    other_calls = other_typed = 0          # IBL 밖 도구(셸 등) — 우회 통로도 모델이 친 글자다(2026-09-06 반성 4)
     for tc in tool_calls or []:
         if not isinstance(tc, dict):
             continue
         name = tc.get("tool_name") or tc.get("name") or ""
         if name != "execute_ibl":
+            other_calls += 1
+            _oi = tc.get("input")
+            if isinstance(_oi, dict):
+                other_typed += sum(len(v) for v in _oi.values() if isinstance(v, str))
             continue
         inp = tc.get("input")
         code = inp.get("code", "") if isinstance(inp, dict) else ""
@@ -588,7 +593,8 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
             retyped_warns += 1
         pointed += int(_pt or 0)
     return {"calls": calls, "single": single, "failed": failed, "typed_chars": typed,
-            "retyped_chars": retyped, "retyped_warns": retyped_warns, "pointed": pointed, "fn_calls": fn_calls}
+            "retyped_chars": retyped, "retyped_warns": retyped_warns, "pointed": pointed, "fn_calls": fn_calls,
+            "other_calls": other_calls, "other_typed_chars": other_typed}
 
 
 def _fmt_chars(n: int) -> str:
@@ -602,11 +608,14 @@ def run_cost_line(tool_calls: list) -> str:
     """`이번 주행: execute_ibl k회(액션 1개 호출 j회) · 실패 m · 타이핑 NK자` — 수치만, 질문 없음
     (반성 출력 계약은 사용자 답만 허용). IBL 호출이 없으면 빈 문자열."""
     c = ibl_call_cost(tool_calls)
-    if not c["calls"]:
+    if not c["calls"] and not c["other_typed_chars"]:     # IBL 도 없고 밖 도구가 친 글자도 없으면 줄 없음
         return ""
-    return (f"이번 주행: execute_ibl {c['calls']}회(액션 1개 호출 {c['single']}회) · 실패 {c['failed']} · "
+    line = (f"이번 주행: execute_ibl {c['calls']}회(액션 1개 호출 {c['single']}회) · 실패 {c['failed']} · "
             f"타이핑 {_fmt_chars(c['typed_chars'])} · 되받아쓰기 {_fmt_chars(c['retyped_chars'])}"
             f"({c['retyped_warns']}회 경고) · 가리킴 {c['pointed']}회 · [fn:] {c['fn_calls']}회")
+    if c["other_calls"]:
+        line += f" · IBL 밖 도구 {c['other_calls']}회 {_fmt_chars(c['other_typed_chars'])}"
+    return line
 
 
 def build_reflection_message(response: str, tool_calls: list) -> str:

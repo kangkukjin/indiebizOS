@@ -49,6 +49,7 @@
     "cognition/distill_queue",
     "cognition/doc_drift",
     "cognition/fixture_sweeps",
+    "cognition/fn_recognizer",
     "cognition/forage_consolidation",
     "cognition/goal_evaluator",
     "cognition/guide_audit",
@@ -281,8 +282,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 272,
-    "engine": 252,
+    "total": 273,
+    "engine": 253,
     "blocklist": 20
   }
 }

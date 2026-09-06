@@ -596,6 +596,13 @@ class IBLUsageDB:
                 "ORDER BY updated_at DESC LIMIT 1", (ibl_code,)).fetchone()
         return (row[0] or "").strip() if row else ""
 
+    def aliased_examples(self, limit: int = 500) -> List[tuple]:
+        """이름 있는 용례 (alias, ibl_code) — 실행 관문의 모양 대조(fn_recognizer)가 읽는다(2026-09-06)."""
+        with self._get_connection() as conn:
+            rows = conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' "
+                                "ORDER BY updated_at DESC LIMIT ?", (limit,)).fetchall()
+        return [(r[0], r[1]) for r in rows]
+
     def phrase_aliases(self, limit: int = 12) -> List[str]:
         with self._get_connection() as conn:
             rows = conn.execute("SELECT alias FROM ibl_examples WHERE COALESCE(alias,'') != '' "

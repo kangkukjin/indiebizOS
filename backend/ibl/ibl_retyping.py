@@ -5,7 +5,8 @@
 
   ① 이 턴의 변수 값(`$이름 = …`, ibl_turn_vars)          → "$이름 으로 가리켜라"
   ② 직전 결과 그림자(이름 없는 최근 봉투 final_result)  → "이름을 붙여 $이름 으로 가리켜라"
-  ③ 대상 파일 현재 내용(그 step 의 경로 param 이 가리키는 파일) → "줄범위 edit·차분으로"
+  ③ 대상 파일 현재 내용(그 step 의 경로 param 이 가리키는 파일) → "짧은 앵커 edit·차분으로"
+  ④ 이번 턴에 이미 친 내용(입력 그림자)                    → "같은 글자를 두 자리에 치지 마라 — 첫 자리의 결과를 가리켜라"
 
 와 대조한다. 잣대는 두 가지: 그대로 겹치는 조각 글자 수(verbatim_chars — 줄·문장 단위 부분열)와
 데이터 토큰(숫자·URL) 중 이미 있는 것의 비율(data_tokens). 어휘 이름은 보지 않는다 — 문자열 일치만.
@@ -164,7 +165,8 @@ def measure(text: str, sources: Dict[str, str], min_seg: int) -> Dict[str, Any]:
 
 
 def check_retyping(steps: list, turn_values: Optional[Dict[str, str]], shadows: Optional[List[str]],
-                   policy: Optional[Dict[str, Any]] = None) -> Optional[Dict[str, Any]]:
+                   policy: Optional[Dict[str, Any]] = None,
+                   typed_before: Optional[List[str]] = None) -> Optional[Dict[str, Any]]:
     """None(문제 없음) 또는 {level: warn|refuse, verbatim_chars, by_source, data_tokens, sources, message, hint}."""
     pol = policy or load_policy()
     typed = typed_strings(steps, int(pol["min_param_chars"]))
@@ -173,6 +175,7 @@ def check_retyping(steps: list, turn_values: Optional[Dict[str, str]], shadows: 
     var_src = {f"${n}": (v if isinstance(v, str) else json.dumps(v, ensure_ascii=False))[:_SOURCE_CAP]
                for n, v in (turn_values or {}).items()}
     shadow_src = _cap_join(list(shadows or []))
+    typed_src = _cap_join(list(typed_before or []))      # 출처 ④ 이번 턴에 이미 친 내용(두 자리에 같은 글자)
     total_verbatim = 0
     file_verbatim = 0
     by_source: Dict[str, int] = {}
@@ -182,6 +185,8 @@ def check_retyping(steps: list, turn_values: Optional[Dict[str, str]], shadows: 
         sources: Dict[str, str] = dict(var_src)
         if shadow_src:
             sources["직전 결과"] = shadow_src
+        if typed_src:
+            sources["이번 턴에 이미 친 내용"] = typed_src
         for p in paths:
             if p not in file_cache:
                 try:

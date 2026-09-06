@@ -481,6 +481,30 @@ def notify_round(provider: str, model: str, round_no: int, budget: int):
         })
 
 
+def notify_usage(provider: str, model: str, latency_ms: float, usage: dict):
+    """모델 호출 1건의 지연·토큰 — 구조화 스텝 원장 기록.
+
+    (2026-09-07) consciousness_ms 관측이 `latency=` 정규식(옛 Gemini 산문)에 결박돼
+    프로바이더 전환(2026-07-12)만으로 조용히 끊겼던 결함의 수리 — notify_round 와
+    같은 처방이다. 모든 프로바이더가 record_usage 한 곳을 지나므로 여기 한 줄이면
+    산문 방언(지연=Nms · latency=Nms · result Nms)을 더는 읽지 않아도 된다.
+    역할 태그는 set_step_role 의 컨텍스트값 — 의식·무의식·평가가 스스로 갈린다."""
+    ep = _current_episode.get(None)
+    if ep is None:
+        return
+    role = _current_role.get("") or "execution"
+    step = {"event": "usage", "role": role, "latency_ms": int(latency_ms)}
+    if provider:
+        step["provider"] = provider
+    if model:
+        step["model"] = model
+    for k in ("input", "output", "cache_read", "cache_create"):
+        if usage and usage.get(k) is not None:
+            step[k] = int(usage[k])
+    ep.steps.append(step)
+    record_trajectory_event("model.usage", step)
+
+
 def record_role_switch(role: str, provider: str, model: str):
     """역할 전환(프로바이더 스왑) 1건 기록 — 어느 프롬프트·모델로 돌았는지의 사후 추적용."""
     ep = _current_episode.get(None)
@@ -944,14 +968,23 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
     if unc_match:
         unconscious_decision = unc_match.group(1) or unc_match.group(2)
 
-    # 의식 소요시간 추출 — ConsciousnessAgent 직후의 Gemini latency
+    # 의식 소요시간 — ①구조화 원장(프로바이더 무관) ②산문 폴백(옛 로그).
+    # 옛 정규식은 `latency=` 하나만 봤다. 그건 Gemini 산문 방언이라 2026-07-12 프로바이더
+    # 전환과 함께 조용히 끊겼고(그 뒤 THINK 턴 161건 전부 NULL, x-ray 의 avg_consciousness_ms
+    # 는 두 달 내내 None), "의식이 느린가"를 물어도 답할 수치가 없었다. execution_rounds 가
+    # 2026-08-14 에 이미 같은 병으로 수리된 자리 — 처방도 같다: 원장이 1차, 산문은 폴백.
     consciousness_ms = None
-    cons_match = re.search(r'\[ConsciousnessAgent\] AI 호출 시작.*?\[ConsciousnessAgent\] AI 응답 수신', log_text, re.DOTALL)
-    if cons_match:
-        # 해당 구간 내 latency 추출
-        latency_match = re.search(r'latency=(\d+)ms', cons_match.group(0))
-        if latency_match:
-            consciousness_ms = int(latency_match.group(1))
+    usage_steps = [s for s in (steps or [])
+                   if s.get("event") == "usage" and s.get("role") == "consciousness"]
+    if usage_steps:
+        # 의식은 원샷이지만 빈 응답 재시도가 붙을 수 있다 — 턴이 실제로 기다린 총합.
+        consciousness_ms = sum(int(s.get("latency_ms") or 0) for s in usage_steps)
+    else:
+        cons_match = re.search(
+            r'\[ConsciousnessAgent\] AI 호출 시작.*?\[ConsciousnessAgent\] AI 응답 수신',
+            log_text, re.DOTALL)
+        if cons_match:
+            consciousness_ms = _latency_from_prose(cons_match.group(0))
 
     # 실행 라운드 수 — ①구조화 원장(프로바이더 무관) ②정규식 폴백(옛 로그·원장 없는 몸).
     # 옛 정규식은 [Gemini] 하드코딩이라 프로바이더 전환만으로 관측이 끊겼었다(2026-08-14
@@ -1014,6 +1047,25 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
         conn.close()
     except Exception:
         pass
+
+
+# 산문 지연 방언 — 프로바이더마다 제 포맷으로 찍는다. 새 로그는 usage 스텝 원장을
+# 쓰므로 이 표는 **옛 로그 재요약 전용**이다. 새 방언을 여기 늘리지 말 것: 늘려야 한다면
+# 그 프로바이더가 record_usage 를 안 지나간다는 뜻이고, 고칠 자리는 그쪽이다.
+_PROSE_LATENCY_DIALECTS = (
+    r'지연=(\d+)ms',            # providers/base.record_usage 표준 한 줄
+    r'latency=(\d+)ms',         # 옛 Gemini/Anthropic/Ollama 최종응답 줄
+    r'result (\d+)ms in=',      # claude_code CLI 결과 줄
+)
+
+
+def _latency_from_prose(text):
+    """옛 로그 구간에서 모델 지연(ms)을 방언 무관으로 뽑는다. 못 찾으면 None."""
+    for pat in _PROSE_LATENCY_DIALECTS:
+        m = re.search(pat, text)
+        if m:
+            return int(m.group(1))
+    return None
 
 
 def _final_evaluation_result(log_text):

@@ -206,6 +206,14 @@ class ProviderMetrics:
                 print(f"[{label}] 토큰: 미측정 — 벤더 usage 없음(원장엔 None, 0 아님){extra}")
             return None
         self.record_request(latency_ms, n["input"], n["output"], cache_read_tokens=n["cache_read"])
+        # 구조화 스텝 원장 — 관측의 진실 소스는 아래 print(산문) 가 아니라 이 한 줄이다.
+        try:
+            from episode_logger import notify_usage
+            # ProviderMetrics 는 프로바이더 이름·모델을 모른다(label 이 유일한 단서).
+            # 없으면 빈 문자열로 둔다 — 클래스명을 프로바이더로 사칭하지 않는다.
+            notify_usage(label or "", "", latency_ms, n)
+        except Exception:
+            pass
         if label:
             cc = f", 캐시생성={n['cache_create']}" if n["cache_create"] else ""
             print(f"[{label}] 토큰: 입력={n['input']}, 출력={n['output']}{extra}, "

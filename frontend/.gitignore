@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 설치 파일용 git 추적 스테이지 (scripts/build_dist_stage.py 가 매 빌드 재생성)
+.dist_stage

@@ -7,6 +7,7 @@ data/scripts/ 에 등록하면 무조건 코어(=배포 동봉)가 됐다. regis
 실행: .venv/bin/python -m pytest backend/test_core_seam_scripts.py -q
 """
 import importlib.util
+import json
 import os
 import sys
 
@@ -67,3 +68,47 @@ def test_live_manifest_has_scripts_category():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+# ── 설치 파일 data 스테이지 (2026-09-06: ../data 통째 denylist 가 18GB·개인 자료를 실었다) ──
+
+def test_dist_stage_ships_only_git_tracked_data(tmp_path, monkeypatch):
+    """스테이지엔 git 이 추적하는 data/ 파일만 온다 — 미추적(백업·원장·기억)은 이름을 몰라도 빠진다."""
+    import subprocess
+    repo = tmp_path / "repo"
+    (repo / "data" / "guides").mkdir(parents=True)
+    (repo / "data" / "guides" / "a.md").write_text("tracked", encoding="utf-8")
+    (repo / "data" / "_backups").mkdir()
+    (repo / "data" / "_backups" / "README.md").write_text("tracked readme", encoding="utf-8")
+    (repo / "data" / "_backups" / "2026_big.db").write_bytes(b"x" * 1000)      # 미추적
+    (repo / "data" / "ibl_usage.db").write_bytes(b"y" * 1000)                   # 미추적
+    (repo / "data" / "한글폴더").mkdir()
+    (repo / "data" / "한글폴더" / "문서.md").write_text("nfc", encoding="utf-8")  # 추적, 한글 경로
+    env = {"GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@t", "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@t",
+           "PATH": os.environ.get("PATH", "")}
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True, env=env)
+    subprocess.run(["git", "add", "data/guides/a.md", "data/_backups/README.md", "data/한글폴더/문서.md"], cwd=repo, check=True, env=env)
+    subprocess.run(["git", "commit", "-q", "-m", "t"], cwd=repo, check=True, env=env)
+
+    bds = _load("build_dist_stage")
+    monkeypatch.setattr(bds, "REPO_ROOT", repo)
+    monkeypatch.setattr(bds, "DATA_DIR", repo / "data")
+    monkeypatch.setattr(bds, "STAGE_ROOT", repo / "frontend" / ".dist_stage")
+    monkeypatch.setattr(bds, "STAGE_DATA", repo / "frontend" / ".dist_stage" / "data")
+    assert bds.build_stage() == 0
+    staged = sorted(str(p.relative_to(repo / "frontend" / ".dist_stage" / "data")) for p in (repo / "frontend" / ".dist_stage" / "data").rglob("*") if p.is_file())
+    assert staged == ["_backups/README.md", "guides/a.md", "한글폴더/문서.md"]
+
+
+def test_dist_stage_check_refuses_whole_data_source(tmp_path, monkeypatch):
+    """package.json 의 data 항목이 ../data 통째로 돌아가면 --check 가 막는다."""
+    bds = _load("build_dist_stage")
+    fe = tmp_path / "frontend"; fe.mkdir()
+    pkg = fe / "package.json"
+    (fe / ".gitignore").write_text(".dist_stage\n", encoding="utf-8")
+    monkeypatch.setattr(bds, "REPO_ROOT", tmp_path)
+    monkeypatch.setattr(bds, "PKG_JSON", pkg)
+    pkg.write_text(json.dumps({"build": {"extraResources": [{"from": "../data", "to": "data"}]}}), encoding="utf-8")
+    assert bds.check() == 1
+    pkg.write_text(json.dumps({"build": {"extraResources": [{"from": ".dist_stage/data", "to": "data"}]}}), encoding="utf-8")
+    assert bds.check() == 0

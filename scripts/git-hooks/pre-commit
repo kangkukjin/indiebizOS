@@ -80,7 +80,7 @@ fi
 
 # 표준 코어 매니페스트 드리프트 — 패키지/앱/중앙어휘가 추가·제거되면 core_manifest.json 이
 # 배포 집합(git 추적)과 어긋날 수 있다. 코어/사용자 경계의 단일 진실이므로 stale 커밋 차단.
-if echo "$staged" | grep -qE '^(data/packages/(installed|not_installed)/[^/]+/[^/]+/|data/instruments/.*\.yaml|data/ibl_nodes_src/.*\.yaml|scripts/build_core_manifest\.py|scripts/build_dist_filter\.py|frontend/package\.json)'; then
+if echo "$staged" | grep -qE '^(data/packages/(installed|not_installed)/[^/]+/[^/]+/|data/instruments/.*\.yaml|data/ibl_nodes_src/.*\.yaml|scripts/build_core_manifest\.py|scripts/build_dist_filter\.py|scripts/build_dist_stage\.py|frontend/package\.json|frontend/\.gitignore)'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] 표준 코어 매니페스트 검사 실행..."
   if ! python3 "$repo_root/scripts/build_core_manifest.py" --check; then
@@ -103,6 +103,16 @@ if echo "$staged" | grep -qE '^(data/packages/(installed|not_installed)/[^/]+/[^
     exit 1
   fi
   echo "[pre-commit] 설치 파일 필터 OK ✓"
+  # 설치 파일의 data 원천이 git 추적 스테이지인지 (2026-09-06: ../data 통째 denylist 가 18GB·개인 자료를 실었다)
+  echo "[pre-commit] 설치 파일 스테이지 검사 실행..."
+  if ! python3 "$repo_root/scripts/build_dist_stage.py" --check; then
+    echo "" >&2
+    echo "[pre-commit] package.json data 항목이 git 추적 스테이지(.dist_stage/data)를 보지 않음 — 커밋 차단." >&2
+    echo "[pre-commit]   • from 은 \".dist_stage/data\" (scripts/build_dist_stage.py 가 매 빌드 재생성) — ../data 통째로 되돌리지 말 것" >&2
+    echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 설치 파일 스테이지 OK ✓"
 fi
 
 # 윈도우 이식성 정적 검사 — 유닉스 전용 stdlib(fcntl 등)의 무가드 톱레벨 import 는

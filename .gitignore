@@ -404,3 +404,6 @@ data/forage_surveys/
 data/hippocampus_tree/
 # 노트북 원장·소스 카드 — 개인 자료(2026-09-04)
 data/notebook/
+
+# 턴 저장소 스필(ibl_turn_vars, 2026-09-05) — 런타임 산출, 개인 턴 데이터
+data/spill/

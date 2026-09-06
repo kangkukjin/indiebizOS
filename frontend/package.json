@@ -18,10 +18,11 @@
     "preview": "vite preview",
     "electron:dev": "concurrently -k \"vite\" \"wait-on http://localhost:5173 && electron .\"",
     "dist:filter": "python3 ../scripts/build_core_manifest.py && python3 ../scripts/build_dist_filter.py",
-    "electron:build": "npm run dist:filter && vite build && electron-builder",
-    "electron:build:win": "npm run dist:filter && vite build && electron-builder --win",
-    "electron:build:mac": "npm run dist:filter && vite build && electron-builder --mac",
-    "electron:build:linux": "npm run dist:filter && vite build && electron-builder --linux",
+    "dist:stage": "python3 ../scripts/build_dist_stage.py",
+    "electron:build": "npm run dist:filter && npm run dist:stage && vite build && electron-builder",
+    "electron:build:win": "npm run dist:filter && npm run dist:stage && vite build && electron-builder --win",
+    "electron:build:mac": "npm run dist:filter && npm run dist:stage && vite build && electron-builder --mac",
+    "electron:build:linux": "npm run dist:filter && npm run dist:stage && vite build && electron-builder --linux",
     "electron:preview": "vite build && electron .",
     "prepare:python:win": "node scripts/prepare-python-win.js",
     "prepare:python:mac": "node scripts/prepare-python-mac.js",
@@ -103,7 +104,7 @@
         ]
       },
       {
-        "from": "../data",
+        "from": ".dist_stage/data",
         "to": "data",
         "filter": [
           "**/*",

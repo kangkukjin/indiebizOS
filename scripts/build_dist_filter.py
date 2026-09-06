@@ -16,11 +16,9 @@ electron-builder 파일 필터의 *매니페스트 주도* 생성기.
 기존 secret/런타임 제외(그 hard-won 손목록)는 **건드리지 않는다** — 순수 추가라
 어떤 코어 파일도 떨어뜨리지 않는다(비-코어만 뺌). 크러프트도 안전한 패턴만.
 
-★주의(미완): 코어 *런타임 자산* 중 git 미추적인 것(임베딩 모델 data/models/,
-해마 코퍼스 data/training/, 일부 빌드 산출물)은 순수 git-포함으로는 빠진다.
-현재는 기존 필터가 이들을 (제외 목록에 없어서) 담고 있으므로 이 스크립트도 건드리지
-않는다. 완전한 '스테이징 트리 포함' 전환은 실빌드 검증 + 코어-자산 allowlist 확정
-후속 작업. (docs/CORE_USER_INSTALL_SEAM 참조)
+★2026-09-06 전환 완료: data 항목의 원천이 `../data` 통째가 아니라 git 추적 스테이지
+(`scripts/build_dist_stage.py` → frontend/.dist_stage/data)다. 이 필터는 그 위의 2차 관문.
+미추적 자산(모델 data/models)은 첫 실행 다운로드라 빠지는 게 맞다. 되돌림은 --check 가 막는다.
 
 사용:
     python3 scripts/build_dist_filter.py           # 필터 재생성

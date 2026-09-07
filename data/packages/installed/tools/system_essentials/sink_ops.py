@@ -9,9 +9,20 @@ import os
 
 
 def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool, *,
-               _red_write_prepare, _red_write_finalize, _vocab_enforce) -> str:
+               _red_write_prepare, _red_write_finalize, _vocab_enforce, agent_id: str = "") -> str:
     """쓸 경로가 정해진 뒤의 싱크 본체. 반환 = 결과 봉투 JSON 문자열(핸들러 계약)."""
     content = tool_input.get("content")  # 파이프 싱크(구 output op:file 흡수 2026-08-05): 생략 시 _prev_result, ""는 유효
+    # 자작 관문(2026-09-07) — 모델이 **직접 친** 구현 코드만 센다. 파이프로 흘러든 본문
+    # (_prev_result)은 도구 결과지 자작이 아니므로 content 가 있을 때만 판정한다.
+    if isinstance(content, str):
+        try:
+            from selfbuild_gate import note_code_write as _sb_note
+            _refusal = _sb_note(agent_id, path, content)
+        except Exception:
+            _refusal = None                     # 관문 고장은 쓰기를 막지 않는다
+        if _refusal:
+            return json.dumps({"success": False, "error": _refusal, "gate": "selfbuild"},
+                              ensure_ascii=False)
     piped = False
     # ★V53-1 ⓑ (2026-09-02 사용자 판정): `format: "json"` = 통화 보존 스위치. 파이프 싱크의
     #   텍스트/JSON 갈림(11회차 규칙 — message 가 있으면 산문)은 그대로 두고, 이 스위치가

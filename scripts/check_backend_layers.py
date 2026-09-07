@@ -43,7 +43,7 @@ LAYERS = {
         "episode_logger", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
         "phone_jobs", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
-        "shell_shadow_gate",
+        "selfbuild_gate", "shell_shadow_gate",
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
     "data": {

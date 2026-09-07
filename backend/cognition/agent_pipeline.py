@@ -612,6 +612,19 @@ class CognitivePipelineMixin:
             from providers.base import begin_turn_token_ledger
             begin_turn_token_ledger()
 
+            # 5.4 자작 관문 원장 초기화 — 턴마다 새로 센다(EXECUTE 턴도 코드를 쓴다).
+            # 키는 재규정·조향과 같은 agent_id 다. TTL 이 있어 안 걷혀도 삭지만, 턴 경계는
+            # 여기가 정본 — 앞 턴의 누적이 다음 턴을 막으면 그게 새 침묵이 된다.
+            try:
+                from reframe import turn_key_for as _sb_keyfn
+                from thread_context import get_current_agent_id as _sb_cur
+                from selfbuild_gate import reset as _sb_reset
+                for _k in {_sb_keyfn(self, fallback=agent_name), _sb_cur() or "", agent_name or ""}:
+                    if _k:
+                        _sb_reset(_k)
+            except Exception as _sbe:
+                print(f"[자작관문] 원장 초기화 실패(무시): {_sbe}")
+
             # 5.5 턴 안 재규정 통로 — 의식 규정이 있는 턴에만 연다(reframe.py). 실행자가
             # 깨진 전제를 들고 되물으면 의식이 다시 규정하고, 새 규정이 도구 결과로 같은
             # 대화에 돌아온다. 키는 도구 실행이 실어 오는 agent_id 와 같아야 한다(조향과 동형).

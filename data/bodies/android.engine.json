@@ -22,6 +22,7 @@
     "base/runtime_utils",
     "base/safe_store",
     "base/seam_metrics",
+    "base/selfbuild_gate",
     "base/shell_shadow_gate",
     "base/steer_inbox",
     "base/thread_context",
@@ -286,8 +287,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 277,
-    "engine": 257,
+    "total": 278,
+    "engine": 258,
     "blocklist": 20
   }
 }

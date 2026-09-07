@@ -842,7 +842,7 @@ def execute(tool_input: dict, context) -> str:
             return _sink.write_sink(
                 tool_input, path, _live_target, redirected,
                 _red_write_prepare=_red_write_prepare, _red_write_finalize=_red_write_finalize,
-                _vocab_enforce=_vocab_enforce)
+                _vocab_enforce=_vocab_enforce, agent_id=agent_id)  # 자작 관문(2026-09-07)
 
         elif tool_name == "fill_op":
             # 양식 채우기(PDF 폼/DOCX 자리표시자) — office_ops 로 이동 (2026-07-18 모듈화).

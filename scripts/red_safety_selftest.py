@@ -191,8 +191,13 @@ def main():
         up = (REPO / "data/common_prompts/unconscious_prompt.md").read_text(encoding="utf-8")
         check("prompt_contract_categories",
               all(t in up for t in ("EXECUTE", "THINK", "REPAIR", "SESSION_RESET")))
+        # 수리 교리는 2026-09-06 정리(89f81be6)로 조각으로 옮겼다 — 본문에 있으면 모든 턴에
+        # 실리므로, REPAIR 턴에만 <repair_doctrine> 로 적재한다. 검사도 그 자리를 따라간다
+        # (2026-09-07: 옛 검사가 옮겨간 문구를 본문에서 찾고 있어 정리 이후 줄곧 빨강이었다).
+        rp = (REPO / "data/common_prompts/fragments/14_consciousness_repair.md").read_text(encoding="utf-8")
         cp = (REPO / "data/common_prompts/consciousness_prompt.md").read_text(encoding="utf-8")
-        check("prompt_contract_repair_rules", "시스템 수리 안전수칙" in cp)
+        check("prompt_contract_repair_rules",
+              "수리 안전수칙" in rp and "수리 안전수칙" not in cp)
 
     finally:
         thread_context.clear_all_context()

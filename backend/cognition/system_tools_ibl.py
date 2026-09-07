@@ -84,9 +84,42 @@ def _params_sig(params) -> str:
 
 # IBL_DEBUG 로그 디듀프 — 동일 코드 반복(=UI 라이브-상태 폴링)을 시간창으로 접어
 # 디버그 로그 도배를 막는다. 일회성 명령·서로 다른 조회는 영향 없음.
-_ibl_log_seen: Dict[str, float] = {}
+_ibl_log_seen: Dict[str, float] = {}       # 코드 → 마지막으로 **찍은** 시각
+_ibl_log_folded: Dict[str, int] = {}       # 그 뒤 창 안에서 접은 실행 수
 _IBL_LOG_WINDOW = 30.0       # 같은 코드 재로그 최소 간격(초)
 _IBL_DEBUG_CAP = 2000        # providers/claude_code.py _TOOLUSE_CAP_IBL 과 같은 값
+
+
+def _ibl_debug_log(code: str, capped: str) -> None:
+    """IBL 코드 디버그 줄 — 폭주는 접되 **조용히 접지 않는다**(2026-09-07).
+
+    옛 판은 30초 창 안의 동일 코드를 말없이 버렸다. 폴링 도배는 막았지만, **실패 뒤
+    같은 명령을 다시 보내는 것**(디버깅의 기본 몸짓)도 같이 접혔다 — 로그를 가장
+    열심히 읽는 바로 그 순간이다.
+
+    실측(2026-09-07): 같은 `[self:memory]{op:"save"…}` 가 15초 안에 네 번 실행돼
+    (실패 2 + **성공 2 = 기억 원장 2행**) 로그에는 한 줄만 남았다. 로그만 보면
+    "한 번 실행"이라, 원인을 시스템의 이중 저장으로 오진할 수 있었다(action_health
+    5건과 대조해서야 갈렸다). 부작용 액션의 실행 횟수를 감추는 로그는 거짓말이다.
+
+    그래서 창 자체는 유지하되(도배 방지) **접은 수를 창 만료 때 한 줄로 신고한다** —
+    침묵 클램프 금지와 같은 규약. 창은 마지막 *출력* 시각 기준이라, 계속 도는 폴링도
+    30초마다 두 줄(코드 + 접힘 수)로 자기 존재를 밝힌다.
+    """
+    now = time.monotonic()
+    # ① 창이 지난 코드는 접힘 수를 신고하고 물러난다(무한 성장 정리도 겸한다)
+    for key in [k for k, t in _ibl_log_seen.items() if now - t > _IBL_LOG_WINDOW]:
+        _ibl_log_seen.pop(key, None)
+        folded = _ibl_log_folded.pop(key, 0)
+        if folded:
+            print(f"[IBL_DEBUG] (같은 코드 {folded}회 생략 — {int(_IBL_LOG_WINDOW)}s 창) "
+                  f"code={truncate_for_log(key, 200)}")
+    # ② 창 안의 재실행은 접고, 창 밖(또는 처음)이면 찍는다
+    if code in _ibl_log_seen:
+        _ibl_log_folded[code] = _ibl_log_folded.get(code, 0) + 1
+        return
+    print(f"[IBL_DEBUG] code={capped}")
+    _ibl_log_seen[code] = now
 
 
 def reset_action_breaker(key: Optional[str] = None) -> int:
@@ -496,17 +529,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     # 디버그 — 잘림 한도 2000자. 표식 모양은 episode_logger 가 소유한다(단일 진실):
     # 옛 판은 `... [trunc, total=N]` 로 자기만의 모양을 썼는데, 같은 사실을 두 모양으로
     # 적으면 읽는 쪽이 두 벌을 알아야 한다(이름 드리프트). 폭도 tool_use 쪽과 맞춘다.
-    _c = truncate_for_log(code, _IBL_DEBUG_CAP)
-    # 폴링 도배 방지 — 동일 코드가 _IBL_LOG_WINDOW 초 안에 또 오면 로그 생략.
-    # (UI 라이브-상태 폴링 op:queue 류가 디버그 로그를 덮는 걸 막음. 일회성 명령·서로 다른 조회는 그대로 보임.)
-    _now_log = time.monotonic()
-    _last_log = _ibl_log_seen.get(code)
-    if _last_log is None or (_now_log - _last_log) > _IBL_LOG_WINDOW:
-        print(f"[IBL_DEBUG] code={_c}")
-    _ibl_log_seen[code] = _now_log
-    if len(_ibl_log_seen) > 256:  # 가벼운 정리 — 창 지난 항목 제거(무한 성장 방지)
-        for _k in [_k for _k, _v in _ibl_log_seen.items() if _now_log - _v >= _IBL_LOG_WINDOW]:
-            _ibl_log_seen.pop(_k, None)
+    _ibl_debug_log(code, truncate_for_log(code, _IBL_DEBUG_CAP))
 
     # --- 서킷 브레이커 체크: open 상태면 쿨다운 동안만 차단, 경과하면 half-open 시험 허용 ---
     # 단일 액션만 체크 (파이프라인/병렬은 개별 액션이 아니라 통과)

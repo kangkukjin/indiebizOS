@@ -60,7 +60,7 @@ SURFACE_FILES = {
     "backend/cognition/agent_goals.py",
     "backend/ibl/ibl_parser.py",
     "backend/common/safe_expr.py",
-    "data/packages/installed/tools/data-ops/where_dsl.py",
+    "backend/common/row_conditions.py",
     "data/packages/installed/tools/data-ops/handler.py",
     "data/packages/installed/tools/data-ops/group_keys.py",
     "data/packages/installed/tools/data-ops/dataops_value_semantics.py",

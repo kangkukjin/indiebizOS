@@ -1226,3 +1226,7 @@ IBL은 Phase 0(원시 도구 호출)에서 시작하여, 드라이버 기반 프
 *Phase 25: 5-Node 최종 구조 재설계. source→sense(외부 정보), system→self(개인 도메인), interface+stream→limbs(신체/장치), team+messenger→others(협업/통신), forge→engines(엔진/창작). 총 308 액션.*
 *Phase 26: self 노드에 log_attempt, get_attempts (전략 에스컬레이션/라운드 메모리). sense 노드에 cctv_refresh, cctv_stats (UTIC 실시간 API).*
 *최근 변경(2026-08-28): 08-27~28 언어 개정 여덟(확장 경로·옵셔널·each keep·파이프 if 통과·blocks when 등)의 문법 절 정리, ISO 8601 날짜 의미론·filter 부정 멤버십 규약 신설, 봉투의 errors 다이제스트와 criteria 판정자의 `rubric` 정직 신고 반영. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+
+### ledger와 filter의 조건 언어 통일 (2026-09-07)
+
+`[self:ledger]{op:"select",where}`는 `[table:filter]`와 같은 조건 언어를 쓴다: `{field,op,value}`, `{필드:값}` 등치 단축형, 문자열 비교(and/or), 조건 배열(AND). 해석 정본은 `backend/common/row_conditions.py`이며 data-ops의 `where_dsl.py`는 호환 입구다. ledger의 필드 조회·투영은 기존 점 경로를 유지한다. 단축형도 공통 값 의미론을 따른다(숫자 표기·공백·대소문자·ISO 날짜). 모르는 연산자와 깨진 정규식은 성공 0건이 아닌 실패로 반환한다.

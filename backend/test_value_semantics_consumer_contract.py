@@ -230,7 +230,7 @@ def test_consumer_modules_cannot_reintroduce_local_scalar_policy(where_dsl):
         _ROOT / "backend/cognition/agent_goals.py",
         _ROOT / "backend/cognition/goal_evaluator.py",
         _ROOT / "backend/common/safe_expr.py",
-        _WHERE,
+        _ROOT / "backend/common/row_conditions.py",
     ]
     forbidden = (
         "float(str(", "return float(s)", "float(sense_value)", "float(compare_raw)",

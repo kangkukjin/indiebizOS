@@ -15,6 +15,7 @@ import tempfile
 from pathlib import Path
 
 from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
+from common.row_conditions import _match, _WhereError
 from common.field_path import MISSING, parse_path, walk_path  # 점 경로 해석 단일 코어
 
 _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
@@ -177,11 +178,11 @@ def op_select(tool_input):
         fields = args.get("fields")
         if fields is not None and not isinstance(fields, list):
             raise ValueError("fields 는 배열이어야 합니다.")
-        where = args.get("where") or {}
-        if not isinstance(where, dict):
-            raise ValueError("where 는 {필드: 값} 객체여야 합니다.")
+        where = args.get("where")
+        if where is not None and not isinstance(where, (str, dict, list)):
+            raise ValueError("where 는 table:filter와 같은 문자열·조건 객체·AND 배열이어야 합니다.")
         rows = [r for r in array if isinstance(r, dict)
-                and all(_key_value(r, k) == v for k, v in where.items())]
+                and _match(r, where, get_value=_key_value)]
         total = len(rows)
         limit = args.get("limit")
         if limit not in (None, ""):
@@ -191,7 +192,7 @@ def op_select(tool_input):
         # 봉투 규모 불변식: total 은 where 를 통과한 모집단, limit 으로 덜 냈으면 표본
         return {"success": True, "op": "select", "path": str(path), "count": len(rows),
                 "total": total, "truncated": total > len(rows), "items": rows}
-    except (OSError, ValueError, TypeError) as exc:
+    except (OSError, ValueError, TypeError, _WhereError) as exc:
         return _fail(exc)
 
 

@@ -940,8 +940,12 @@
             "description": "select 열 선택"
           },
           "where": {
-            "type": "object",
-            "description": "select 행 필터 {필드: 값} (AND)"
+            "type": [
+              "string",
+              "object",
+              "array"
+            ],
+            "description": "select 행 필터 — table:filter와 같은 {field,op,value}·{필드:값}·문자열 비교(and/or)·AND 배열. 동등성은 공통 값 의미론(숫자·공백·대소문자·ISO 날짜), 필드는 점 경로 지원."
           },
           "limit": {
             "type": "integer",

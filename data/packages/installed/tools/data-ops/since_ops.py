@@ -11,11 +11,8 @@ since 는 유일하게 **원장을 쥔** 변환자다(data/table_since.db — �
 
 import json
 
-from common.pkg_utils import load_sibling
-
-# 변화 판정(values_equal)의 소유자는 조건 언어 — since 도 같은 한 벌을 쓴다.
-# (형제 직접 로드: 패키지 폴더는 sys.path 에 없다. where_dsl 은 handler 를 되부르지 않는다.)
-_wdsl = load_sibling(__file__, "where_dsl")
+# 변화 판정도 공통 값 의미론에 직접 위임한다.
+from common import value_semantics as _wdsl
 
 
 _SINCE_CAP = 5000                     # 스트림당 기준선 키 상한 — 초과분은 오래 안 보인 것부터 정리

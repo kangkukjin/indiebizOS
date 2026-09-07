@@ -265,11 +265,9 @@ def _no_currency_error(verb, prev):
                      f"있습니다. 통화를 내는 액션·op 으로 바꾸거나 선언(returns)을 확인하세요."}
 
 
-# 조건 언어(where 미니 DSL)·정렬 키는 where_dsl.py 로 분리(2026-08-22, 1500줄 규칙).
-# 이 파일은 통화 대수(관계대수)만 — 판정은 저 모듈이 한다.
+# 조건 언어·정렬 키는 ledger와 공유한다 — 이 파일은 통화 대수만 담당.
+from common import row_conditions as _wdsl
 from common.pkg_utils import load_sibling as _load_sibling_where
-
-_wdsl = _load_sibling_where(__file__, "where_dsl")
 _WhereError = _wdsl._WhereError
 _OPS = _wdsl._OPS
 _match = _wdsl._match

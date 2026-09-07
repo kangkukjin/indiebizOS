@@ -104,6 +104,50 @@ def coerce_items_payload(value: Any) -> Any:
     return None
 
 
+def stamp_success(value: Any) -> Any:
+    """봉투에 `success` 를 채운다 — **모든 라우터가 공유하는 결과 계약** (2026-09-07, 사용자 판정).
+
+    비대칭이 있었다: 실패는 `success: false` 를 말하는데 성공은 아무 말도 안 하는 낱말이
+    많았다(정적 스윕 42함수 · 실측 `shape="dict"` 성공 봉투 296건/10액션). 그래서
+    `resp.get("success")` 로 판정한 쪽은 **성공을 실패로 읽는다** — 실측 사고: 성공한
+    `[self:memory]{op:"save"}` 를 실패로 읽고 같은 요청을 다시 보내 기억 원장에 같은
+    내용이 두 행 생겼다(2026-09-07 추적).
+
+    엔진 경계와 패키지가 **같은 한 벌**을 쓴다(판정기는 하나) — 규약 넷:
+      · 딕셔너리 봉투는 success 를 **맨 앞에** — 사람도 모델도 첫 줄에서 결과를 본다
+      · 이미 success 가 있으면 손대지 않는다(제 값을 가진 낱말이 이긴다)
+      · `error` 가 실려 있으면 false — 엔진의 성공 판정(`result.get("error")` 참이면 실패)과
+        같은 규칙이라 두 곳이 갈라지지 않는다
+      · **산문·목록 통화는 감싸지 않는다** — 통화가 문자열·배열인 자리를 봉투로 바꾸면
+        통화 모양이 달라지고 하류가 받는 것이 바뀐다
+
+    ★이 함수는 **실패를 참으로 물들이면 안 된다**: 다른 필드로만 실패를 말하는 봉투
+    (`{"deleted": false, "message": "삭제 실패"}` 류)는 낱말 쪽에서 error 로 고쳐야 한다.
+    경계 실측으로 그런 자리를 훑어 memory:delete 하나를 먼저 닫았다(2026-09-07).
+    """
+    if isinstance(value, dict):
+        if "success" in value:
+            return value
+        stamped = {"success": not value.get("error")}
+        stamped.update(value)
+        return stamped
+    if isinstance(value, str):
+        text = value.lstrip()
+        if not text.startswith("{"):
+            return value                    # 산문·목록 통화 — 봉투가 아니다
+        import json as _json
+        try:
+            obj = _json.loads(value)
+        except Exception:
+            return value
+        if not isinstance(obj, dict) or "success" in obj:
+            return value
+        stamped = {"success": not obj.get("error")}
+        stamped.update(obj)
+        return _json.dumps(stamped, ensure_ascii=False)
+    return value
+
+
 def effect_row(envelope: Any, drop: Iterable[str] = ()) -> dict:
     """효과·스칼라 봉투 → **행 하나** (2026-09-06 언어 개정 G55-1, 단일 승격기).
 

@@ -914,6 +914,11 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         # NaN/Infinity가 계산·분기·저장으로 전염되지 않게 한다.
         from common.value_semantics import public_result
         result = public_result(result, producer=f"{node}:{action}")
+        # 같은 경계의 봉투 계약(2026-09-07, 사용자 판정): 실패만 success 를 말하고 성공은
+        # 침묵하던 비대칭을 여기서 닫는다 — 낱말마다 기억하지 않는다. 이미 success 를
+        # 가진 봉투·산문·목록 통화는 그대로 흐른다(common.currency 가 규약의 단일 소유자).
+        from common.currency import stamp_success
+        result = stamp_success(result)
 
         # 결과에서 성공/실패 판단
         if isinstance(result, dict):

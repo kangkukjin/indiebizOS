@@ -90,32 +90,19 @@ _OP_DISPATCHERS = {
 
 
 def _with_success(payload: str) -> str:
-    """딕셔너리 봉투에 success 를 채운다 (2026-09-07).
+    """딕셔너리 봉투에 success 를 채운다 — 규약의 소유자는 `common.currency.stamp_success`.
 
     비대칭이 있었다: 실패는 `success: false` 를 말하는데 성공은 아무 말도 안 했다
     (`{"memory_id": 500, "message": "…저장 완료…"}`). 그래서 `resp.get("success")` 로
-    성공을 판정한 쪽이 **성공한 저장을 실패로 읽고 같은 요청을 또 보냈다** — 기억
-    원장에 같은 내용이 두 행 생긴 실측(2026-09-07)의 직접 원인이다.
+    판정한 쪽이 **성공한 저장을 실패로 읽고 같은 요청을 또 보냈다** — 기억 원장에 같은
+    내용이 두 행 생긴 실측(2026-09-07)의 직접 원인이다.
 
-    op 마다 손으로 넣지 않고 디스패치 초크포인트 하나에서 채운다 — 새 op 도 자동으로
-    같은 계약을 갖는다. 이미 success/error 가 있으면 손대지 않고, **산문 반환**
-    (read 의 전문)은 통화가 문자열이라 그대로 흘린다(감싸면 통화 모양이 바뀐다).
+    엔진 경계에도 같은 계약이 있지만(모든 라우터 공유) 여기에도 두는 이유: 이 핸들러는
+    엔진 밖에서도 불린다(직접 호출·시험). **두 벌이 아니라 같은 함수**를 부른다.
+    산문 반환(read 의 전문)은 그 함수가 통화 모양 그대로 흘린다.
     """
-    if not isinstance(payload, str):
-        return payload
-    stripped = payload.lstrip()
-    if not stripped.startswith("{"):
-        return payload                      # 산문 통화 — 봉투가 아니다
-    try:
-        obj = json.loads(payload)
-    except Exception:
-        return payload
-    if not isinstance(obj, dict) or "success" in obj:
-        return payload
-    # success 를 맨 앞에 — 읽는 쪽(사람·모델)이 첫 줄에서 결과를 본다
-    out = {"success": "error" not in obj}
-    out.update(obj)
-    return json.dumps(out, ensure_ascii=False, indent=2)
+    from common.currency import stamp_success
+    return stamp_success(payload)
 
 
 def execute(tool_input: dict, context) -> str:

@@ -72,9 +72,9 @@ github저장소메타:
   timeout: 900
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
-    IBL 계수·실패·fn([fn:] 호출 수)은 궤적(trajectory_event)이 정본, 코드 원문은 코퍼스(2026-09-07 — 로그 줄 쪼개짐과 무관),
-    조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)는 실제 파서를 턴 변수 문맥 안에서 돌린 값. items 통화로.
-    조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로 ★단순 조회(최근 N건·특정 열)는 [sense:sqlite] 로 — 이 스크립트는
+    IBL 계수·실패·fn([fn:] 호출 수)은 궤적(trajectory_event)이 정본, 코드 원문은 코퍼스(2026-09-07 — 로그
+    줄 쪼개짐과 무관), 조합 지표(문장·조합률·최대단계·seq/par/fb/블록/each)는 실제 파서를 턴 변수 문맥 안에서 돌린 값. items
+    통화로. 조종실에서 자기 주행을 되돌아보는 유일한 IBL 경로 ★단순 조회(최근 N건·특정 열)는 [sense:sqlite] 로 — 이 스크립트는
     집계 관습만'
   file: 에피소드통계.py
   interpreter: python

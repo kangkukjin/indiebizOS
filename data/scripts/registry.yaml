@@ -33,13 +33,27 @@ github저장소메타:
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
 나레이션생성:
-  description: '등록된 목소리로 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts,
-    voice(키·이름·별칭, 기본=원장 voices.json 의 default 항목), gpu(기본 T4), out_dir, force(재생성).
-    표준 낭독 속도 1.0x(원속도·무보정), speed 로 조정'
+  description: '등록된 목소리로 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id
+    또는 texts 또는 texts_file(이름→원고 객체를 담은 JSON 경로), voice(키·이름·별칭,
+    기본=원장 voices.json의 default), gpu(기본 T4), out_dir(texts·texts_file 모드의
+    출력 폴더, 기본 outputs/narration), force(기존 wav 재생성), speed(기본 1.0x).
+    입력 우선순위는 lecture_id > texts > texts_file. lecture_id 모드는 강의 노트를 읽어
+    강의폴더/narration에 저장한다(out_dir 미사용). 실음성 인사말을 붙일 때는 원고추출 결과를
+    texts_file로 받고 out_dir를 강의폴더/narration_raw로 지정한 뒤 인사말붙이기를 실행한다.'
   file: 나레이션생성.py
   interpreter: python
   registered_at: '2026-08-22T03:03:36'
   timeout: 2400
+나레이션원고추출:
+  description: '강의 노트에서 시작·끝 인사말을 뺀 본문 원고를 JSON으로 저장 — args: lecture_id(필수),
+    out(저장 경로, 기본 강의폴더/narration_texts.json), intro(첫 장 앞에서 제거할 문구,
+    기본 표준 인트로), outro(끝 장 뒤에서 제거할 문구, 기본 표준 아웃트로),
+    strict(기본 true: 해당 문구가 없으면 실패, false: 일치하는 문구만 제거).
+    원본 스피커 노트는 보존한다. 반환 path를 나레이션생성의 texts_file로 넘긴다.'
+  file: 나레이션원고추출.py
+  interpreter: python
+  registered_at: '2026-09-07T20:07:16'
+  timeout: 300
 보고서HTML:
   description: '마크다운 보고서 → 공유창고용 자족 HTML(스타일 인라인·다크모드 대응). args: src·dst(필수) · title(기본=첫
     h1) · subtitle(머리 한 줄) · theme(plain|card) · accent · drop_lines(그 문자열이 든 줄 제거
@@ -87,6 +101,17 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-20T00:52:17'
   timeout: 1800
+인사말붙이기:
+  description: '본문 wav의 음량을 정적 게인으로 정렬하고 첫·끝 장에 실음성 인사말을 접합 — args:
+    lecture_id(필수), raw_dir(본문 wav 폴더, 기본 강의폴더/narration_raw),
+    out_dir(결과 폴더, 기본 강의폴더/narration), bookends(intro.wav·outro.wav 폴더,
+    기본 outputs/narration/bookends3), target_lufs(기본 -27.8), gap(접합 간격 초, 기본 0.3).
+    모든 슬라이드의 본문 wav와 인사말 파일이 필요하다. 다음 [self:deck]{op:video}가
+    강의폴더/narration의 결과 wav를 사용한다.'
+  file: 인사말붙이기.py
+  interpreter: python
+  registered_at: '2026-09-07T20:13:14'
+  timeout: 300
 잔여추정:
   description: '탐색 잔여 측정(Wilson CI 추정 + 미관측 표본) — 구 self:residual 대체. args: mode(estimate|sample),
     estimate=relevant·sampled(별칭 n)·unseen(별칭 pool), sample=n·q(별칭 query)·kind·path·seen·start·end·ext(별칭

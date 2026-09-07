@@ -200,6 +200,7 @@
           "!**/tokens/**",
           "!packages/installed/extensions/gmail/config.yaml",
           "!*.log",
+          "!scripts/tips_nest.py",
           "!__GEN_END__"
         ]
       },

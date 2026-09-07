@@ -12,7 +12,7 @@ stdout을 가로채서 에피소드 진행 중 print 출력을 버퍼에 수집�
 executor 스레드(run_stream)에 걸쳐 있어도, executor 디스패치 시 `copy_context()`로
 컨텍스트를 넘기면 같은 에피소드 객체로 모인다(api_websocket 의 run_stream submit 참조).
 
-- episode_log: 전체 로그 (최근 1000개만 보존)
+- episode_log: 전체 로그 (최근 MAX_EPISODES 개만 보존)
 - episode_summary: 요약 지표 (영구 보존)
 """
 
@@ -33,7 +33,11 @@ from pathlib import Path
 from runtime_utils import get_base_path
 from logging_utils import mask_secrets
 
-MAX_EPISODES = 1000
+# 창 크기 — 몸이 자기 삶을 되짚는 롤링 창(2026-09-07 1000→10000, 사용자 지시).
+# 실측 기준선: 1행당 episode_log 21KB + 궤적 15KB ≒ 37KB, 하루 약 24주행
+# → 10000칸 ≒ 400일치 ≒ world_pulse.db 370MB 대. 읽는 쪽 질의는 전부
+# LIMIT 또는 날짜 창이라 창 크기에 비례해 무거워지지 않는다.
+MAX_EPISODES = 10000
 
 # ─── 로그 절단 표식 — 단일 진실 ───────────────────────────────────────────────
 # 로그로 흘려보내는 긴 값(도구 인자·결과·IBL 코드)은 자를 수밖에 없지만, **자른 사실과
@@ -1085,9 +1089,9 @@ def _final_evaluation_result(log_text):
 
 
 def _cleanup_old_episodes(keep_id=None):
-    """episode_log에서 MAX_EPISODES(1000)개 초과 시 오래된 것 삭제 (episode_summary는 유지)
+    """episode_log에서 MAX_EPISODES 개 초과 시 오래된 것 삭제 (episode_summary는 유지)
 
-    ★삭제 순서는 시험분 먼저(B18-2, 2026-08-22): 1000칸은 몸이 자기 삶을 되짚는 창인데
+    ★삭제 순서는 시험분 먼저(B18-2, 2026-08-22): 그 칸은 몸이 자기 삶을 되짚는 창인데
     시험 프로세스의 주행이 같은 칸을 먹으면 **실사용 주행이 그만큼 일찍 창 밖으로
     밀려난다**(실측: 창 999건 중 36건이 시험 유래). 표식이 있으니 순서만 바꾸면 된다 —
     같은 출처 안에서는 종전대로 오래된 것부터.
@@ -1157,7 +1161,7 @@ def get_episode_list(limit: int = 20, include_test: bool = False):
 def get_episode_journal(limit: int = 30, include_test: bool = False):
     """주행기록계 — 분석 가능한(전체 로그 보존) 에피소드를 요약 지표와 함께 반환.
 
-    episode_log(전체 로그, 최근 1000개 cap) LEFT JOIN episode_summary(지표, 영구)로
+    episode_log(전체 로그, 최근 MAX_EPISODES 개 cap) LEFT JOIN episode_summary(지표, 영구)로
     각 주행의 시간·에이전트·요청·해마점수·판단·평가결과·라운드·소요를 한 줄에 담는다.
     분석 스위치가 쓰는 목록이라 log 가 남아있는 episode_log 기준(요약만 남은 옛 주행 제외).
     """

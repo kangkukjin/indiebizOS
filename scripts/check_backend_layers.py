@@ -54,7 +54,7 @@ LAYERS = {
         "install_approvals",
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
-        "red_grant", "red_report", "red_watchdog", "schema_migrations", "service_status", "switch_manager", "system_ai_memory",
+        "red_grant", "red_report", "red_watchdog", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
         "system_docs",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
         "websocket_manager", "xray_stream",
@@ -78,6 +78,7 @@ LAYERS = {
     },
     "cognition": {
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
+        "weekly_audits",
         "agent_pipeline", "agent_runner", "ai_agent",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "cognitive_recall", "cognitive_trace", "history_checkpoint",

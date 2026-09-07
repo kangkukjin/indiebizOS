@@ -554,56 +554,14 @@ def run_maintenance_bundle() -> Dict:
     except Exception as e:
         logger.warning(f"[Maintenance] 생명주기 번들 실패 (무시): {e}")
 
-    # 8.7) 데이터 소유 감사 (주간 카덴스) — 소유 선언 레지스트리(data_ownership.DECLARATIONS)
-    #      에 안 잡히는 data/·outputs/ 항목을 깃발로. 고아 캐시 소탕의 기계화 —
-    #      **보고만, 삭제 없음**(실집행=사용자). _backups 30일 초과분도 삭제 후보로 보고.
+    # 8.7~8.9 + 8) 주간 감사 넷(데이터 소유·문서 드리프트·저장소 낭비·어휘 개념중복).
+    #      정형(카덴스·원장 기록·개별 격리)은 weekly_audits 가 소유한다 — 감사가 늘 때마다
+    #      이 파일이 자라던 자리(fixture_sweeps·component_lifecycle 과 같은 이유, 1500줄 규칙).
     try:
-        from data_ownership import run_data_ownership_check
-        do = run_data_ownership_check()
-        result["data_ownership"] = do
-        if do.get("orphans"):
-            logger.warning(f"[Maintenance] 주인 없는 파일 {len(do['orphans'])}건 — data_ownership_flags.json")
-        if do.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님) — 성공/실패 무관 기록
-            try:
-                save_self_check(do)
-            except Exception:
-                pass
+        from weekly_audits import run_weekly_audits
+        result.update(run_weekly_audits(save_self_check))
     except Exception as e:
-        logger.warning(f"[Maintenance] 데이터 소유 감사 실패 (무시): {e}")
-
-    # 8.8) 문서 드리프트 감사 (주간 카덴스) — 빌드의 문서 파생(마커 구간)이 못 덮는
-    #      *산문 속* 낡음을 깃발로: 복합 수치 주장·죽은 참조(은퇴 함수를 정본으로
-    #      가르치는 문서)·날짜 모순. **보고만, 고치지 않음**(산문 수정=사람/AI 판단).
-    try:
-        from doc_drift import run_doc_drift_check
-        dd = run_doc_drift_check()
-        result["doc_drift"] = dd
-        if dd.get("flags"):
-            logger.warning(f"[Maintenance] 문서 드리프트 {len(dd['flags'])}건 — doc_drift_flags.json")
-        if dd.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님) — 성공/실패 무관 기록
-            try:
-                save_self_check(dd)
-            except Exception:
-                pass
-    except Exception as e:
-        logger.warning(f"[Maintenance] 문서 드리프트 감사 실패 (무시): {e}")
-
-    # 8) 어휘 개념중복 감사 (주간 카덴스) — 압축 상설 기관의 *실증* 신호.
-    #    build --check 의 압축 경고(자백·구조)와 달리 코퍼스를 읽어야 해서 여기 산다
-    #    (빌드는 코퍼스를 안 읽는 원칙). 교차-액션 최근접 cos≥0.95 쌍을 깃발로.
-    try:
-        from vocab_overlap_audit import run_vocab_overlap_check
-        vo = run_vocab_overlap_check()
-        result["vocab_overlap"] = vo
-        if vo.get("flags"):
-            logger.warning(f"[Maintenance] 어휘 개념중복 후보 {len(vo['flags'])}쌍 — ibl_overlap_flags.json")
-        if vo.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님) — 성공/실패 무관 기록
-            try:
-                save_self_check(vo)
-            except Exception:
-                pass
-    except Exception as e:
-        logger.warning(f"[Maintenance] 어휘 개념중복 감사 실패 (무시): {e}")
+        logger.warning(f"[Maintenance] 주간 감사 묶음 실패 (무시): {e}")
 
     return result
 

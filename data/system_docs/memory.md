@@ -65,10 +65,10 @@ see_also: [architecture.md, ibl.md]
 ## 3. 일화 기억 — 에피소드 로그/요약 (경험·반성의 재료)
 
 - **저장** (`episode_logger.py`): 사용자 명령 1건 = 1 에피소드. stdout 전체를 가로채 종료 시 저장.
-  - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **1000건** 롤링)
+  - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **10,000건** 롤링 — `episode_logger.MAX_EPISODES`, 2026-09-07 1000→10000. 실측 1행 ≒ 37KB(로그 21KB + 궤적 15KB)·하루 약 24주행이라 창 = 약 400일치 ≒ 370MB 대)
   - `ibl_code_corpus` (2026-09-06 부활, 사용자 판정 "필요한 정보가 지워지고 있다"): 몸이 실제로 쓴 **IBL 문장 원문 전량**. 전 IBL 표면의 초크포인트(`system_tools_ibl._execute_ibl_unified`)가 매 실행 `episode_logger.record_ibl_code` 로 upsert — 키=원문 sha256(궤적 `ibl.started.code_sha256` 과 같아 한 DB 안에서 조인), 같은 문장은 한 행에 seen/success/fail 누계·마지막 실패 사유·last_agent/origin, 본문은 `mask_secrets` 를 거치고 바뀌었으면 `masked=1`(해시는 원문 기준). 롤링 없이 영구(중복 제거 뒤 월 수 MB 미만). ibl_usage.db 가 아닌 world_pulse.db 인 이유 = 해마 DB 는 hippocampus.zip 으로 릴리스에 실려 사용자 원문을 담을 수 없다. `source` 는 B18-2(실사용이 한 번 밟은 행은 `usage` 유지). 파인튜닝 코퍼스·조합률 실측(`scripts/vocab_composition_metrics.py`, 아직 미독)의 정본 자리.
   - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, GoalEval 최종 판정(ACHIEVED/NOT_ACHIEVED/**NULL**) (**영구 보존**). `NULL`은 실패가 아니라 GoalEval 미실행일 수 있다: 의식이 달성 기준을 만든 THINK만 GoalEval을 타고, EXECUTE/Reflex는 조건부 SelfReflect가 별도 바닥이다. 여러 평가 라운드는 마지막 `[GoalEval] 라운드 N: ...` 구조 마커가 정본이며 산문 `평가 응답`은 구로그 폴백이다.
-  - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 1000건 롤링에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
+  - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 롤링 창에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
 - **조인(2026-08-21)**: 에피소드에 `task_id` 가 실려 **쓰기 관문 원장(`write_ledger`) ↔ episode ↔ tasks** 3중 조인이 닫혔다 — "이 파일이 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오른다(`[self:body]{op:"writes"}`).
 - **태스크 명시 바인딩(2026-09-06 ep2905)**: 이벤트 루프 *한 스레드*에서 여러 턴이 동시에 열리므로 thread-local task_id 를 시작 시점에 상속하면 *이웃 턴의* 태스크를 물려받는다(시스템 AI 턴이 설계 에이전트의 진행 중 task 를 받아 run 공유·조기 종료, 30일 12건). WebSocket 스트림 핸들러는 `start_episode(…, task_id=)` 로 자기 태스크를 먼저 정해 넘기고, None 일 때만 상속(동기 워커 진입점). 관문 `test_episode_task_binding_2026_09_06.py`.

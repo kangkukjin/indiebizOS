@@ -241,6 +241,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 ### 몸 원장 (Body Ledger, 2026-08-21)
 "몸이 언제 어떻게 바뀌었나"를 몸 스스로 회상하는 네 기둥. 계기는 `[self:grep]` 사건이었다 — 2026-08-05 층 분리 같은 **몸 개조가 회상 불가능**해서 낡은 가정이 6주간 잠복했다. 몸이 바뀌면 몸에 대한 가정이 깨지므로, 변화 자체가 연상 가능한 기억이어야 한다.
 1. **소유 선언 레지스트리**(`backend/cognition/data_ownership.py`) — 데이터 가족마다 주인·수명·백업 계급을 선언. 새 데이터 가족을 만들면 `DECLARATIONS` 등재가 의무다.
+   - **주간 감사 넷**(`backend/cognition/weekly_audits.py`, 2026-09-07): 데이터 소유·문서 드리프트·**저장소 낭비**·어휘 개념중복. 정형(카덴스·self_checks 기록·개별 격리)을 이 모듈이 소유해 호출부가 감사 수만큼 자라지 않는다. 저장소 낭비 감사(`backend/datastore/store_waste_audit.py`, CLI `scripts/check_db_waste.py`)는 **살아있는 내용보다 껍데기가 큰 DB** 를 깃발한다 — 빈 vec0 청크(옛 sqlite-vec 이 회수 안 한 잔재)·미회수 프리페이지. 계기: `ibl_usage.db` 791MB 중 내용은 2.5MB, 698MB 가 유효 비트 전부 0인 빈 청크였다(같은 부류가 blog_insight.db 133MB). 청크 1개짜리는 **할당 단위**라 깃발하지 않는다(재구성해도 안 줄어든다). 보고만, 고치지 않음 — VACUUM·재구성은 백업이 앞서는 파괴적 작업.
 2. **어휘**(`[self:body]{op}`) — 읽기 여섯: `changes`(최근 파일 변화, 미커밋 포함) / `log`(커밋) / `file`(한 파일의 일생, 이름변경·이동 관통) / `diff`(실제 바뀐 줄) / `writes`(관문 통과 쓰기) / `trajectory`(한 실행의 핵심 사건 순서 — hash·ref, 원문 아님). **쓰기 하나: `commit`(각인, 2026-08-27)** — 지정한 `paths` 만 원장에 기록한다(`message`·`paths` 필수, 관문 통과 필요). 명명 헌법 2조대로 `[self:commit]` 신조어가 아니라 몸 원장 낱말의 **굴절**로 들어왔고, 공유 인덱스 계약을 지킨다(남의 스테이징 생존 + 각인 후 인덱스 동기화). 부작용 op 라 fixture 를 두지 않는다(건강검진이 실행해 버린다) — 용례는 `data/guides/body.md`. 가드 `test_body_commit.py` C1~C8. 정본 = `docs/SELF_EVOLUTION_AUTOMATION_HANDOFF.md`.
 3. **쓰기 관문 원장**(`backend/base/write_ledger.py`) — git 이 못 보는 런타임 쓰기(`data/`·`outputs/`)를 관문 통과 시 append-only 로 한 줄. 행위자(agent·task·origin)가 실려 episode·tasks 와 조인된다. ★**전수 감시 데몬은 두지 않는다**(관문 훅만) — 그래서 관문 밖 직접 쓰기는 원리적으로 미기록이고, `writes` op 는 그 **부분성을 정직하게 광고**한다. 폴링류(심장박동 가족)의 행위자 없는 쓰기는 6시간당 1건으로 압축.
 4. **정본 서열** — git 커밋(사건) > `docs/`(설계) > `data/system_docs/`(장기기억). 하네스 뷰(`CLAUDE.md`)는 시스템 *바깥*이라, 바깥 뷰에만 있는 사실은 누출로 친다.
@@ -486,7 +487,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 317개**(test 제외, git 추적 기준) — 층 디렉토리 `base 30 · datastore 43 · ibl 44 · cognition 51 · services 28 · surface 62`(+ common 17·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
+- backend **.py 319개**(test 제외, git 추적 기준) — 층 디렉토리 `base 30 · datastore 44 · ibl 44 · cognition 52 · services 28 · surface 62`(+ common 17·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

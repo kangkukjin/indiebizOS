@@ -77,6 +77,7 @@
     "cognition/system_tools_ibl",
     "cognition/vocab_crystallization",
     "cognition/vocab_overlap_audit",
+    "cognition/weekly_audits",
     "cognition/world_pulse",
     "cognition/world_pulse_collectors",
     "cognition/world_pulse_health",
@@ -115,6 +116,7 @@
     "datastore/red_watchdog",
     "datastore/schema_migrations",
     "datastore/service_status",
+    "datastore/store_waste_audit",
     "datastore/switch_manager",
     "datastore/system_ai_memory",
     "datastore/system_docs",
@@ -278,8 +280,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 267,
-    "engine": 248,
+    "total": 269,
+    "engine": 250,
     "blocklist": 19
   }
 }

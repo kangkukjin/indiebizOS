@@ -8,7 +8,11 @@ from __future__ import annotations
 
 import ast
 import json
+import re as _re
 from pathlib import Path
+
+# 런타임 컨테이너 관문(ibl_routing)이 스칼라로 강제하는 타입 — 관문과 같은 집합.
+_SCALAR_TYPES = {"string", "integer", "number", "boolean"}
 
 from iblbuild_common import (
     CORPUS_PARAM_ALLOW,
@@ -208,11 +212,25 @@ def validate_impl_reads(data: dict, root: Path) -> list[str]:
     aliases_by_action = _extract_action_param_aliases(data)
 
     pkg_declared: dict[Path, set[str]] = {}
+    pkg_scalar_only: dict[Path, set[str]] = {}     # 선언은 있으나 스칼라 전용인 자리
     tool_pkg: dict[str, Path] = {}
     for tname, (pkg_dir, tdef) in tool_index.items():
         tool_pkg[tname] = pkg_dir
-        props = set((((tdef.get("input_schema") or {}).get("properties")) or {}).keys())
-        pkg_declared.setdefault(pkg_dir, set()).update(props)
+        _props = (((tdef.get("input_schema") or {}).get("properties")) or {})
+        pkg_declared.setdefault(pkg_dir, set()).update(_props.keys())
+        for _k, _v in _props.items():
+            _t = _v.get("type") if isinstance(_v, dict) else None
+            if isinstance(_t, str) and _t in _SCALAR_TYPES:
+                pkg_scalar_only.setdefault(pkg_dir, set()).add(_k)
+    # 한 패키지 안에서 같은 이름이 다른 도구엔 array 로 선언돼 있으면 스칼라 전용이 아니다
+    for _pkg, _keys in pkg_scalar_only.items():
+        for tname, (pkg_dir, tdef) in tool_index.items():
+            if pkg_dir != _pkg:
+                continue
+            for _k, _v in ((((tdef.get("input_schema") or {}).get("properties")) or {})).items():
+                _t = _v.get("type") if isinstance(_v, dict) else None
+                if _k in _keys and not (isinstance(_t, str) and _t in _SCALAR_TYPES):
+                    _keys.discard(_k)
 
     pkg_alias: dict[Path, set[str]] = {}
     for node_name, node in (data.get("nodes", {}) or {}).items():
@@ -242,6 +260,18 @@ def validate_impl_reads(data: dict, root: Path) -> list[str]:
                     reads[k] = reads.get(k) or c
         undeclared = {k: c for k, c in reads.items()
                       if k not in known and k not in IMPL_READ_ALLOW.get(name, set())}
+        # ★선언은 있는데 **스칼라 전용**인 자리에 구현이 컨테이너를 기대하면, 미선언과
+        #   똑같이 런타임 관문이 거절해 기능이 죽는다(2026-09-07). 옛 판은 `k not in known`
+        #   에서 걸러져 이 자리를 원리적으로 못 봤다 — memory keywords 가 바로 그 모양이었다
+        #   (저장소는 배열을 받게 고쳤는데 선언이 string 이라 관문이 2일 더 막았다).
+        narrowed = sorted(k for k, c in reads.items()
+                          if c and k in pkg_scalar_only.get(pkg_dir, set())
+                          and k not in IMPL_READ_ALLOW.get(name, set()))
+        if narrowed:
+            issues.append(
+                f"{name}: 구현이 컨테이너를 기대하는 param 이 스칼라로 선언됨 — {narrowed} "
+                f"(런타임 관문이 목록/사전을 거절한다; ibl_actions.yaml params 에 "
+                f"[\"string\", \"array\"] 처럼 유니온으로 넓힐 것)")
         dead = sorted(k for k, c in undeclared.items() if c)
         if dead:
             issues.append(
@@ -267,3 +297,35 @@ def validate_impl_reads(data: dict, root: Path) -> list[str]:
     return issues
 
 
+# 산문이 컨테이너를 **대안으로 명시**하는 어법만 — 경로·이름·enum 설명의 "목록"은 안 걸린다
+# (실측: 전 어휘 스윕에서 정확히 두 자리, 오탐 0).
+_CONTAINER_PROSE = _re.compile(
+    r"또는\s*(배열|리스트|목록)|(배열|리스트|목록)\s*(도|이나)\s*(허용|가능|받|된다|쓸)")
+
+
+def validate_param_type_vs_prose(root: Path) -> list[str]:
+    """선언 내부 모순 관문 (2026-09-07): 산문은 "배열도 된다"고 말하는데 타입은 스칼라.
+
+    왜: 2026-09-05 수리가 `[self:memory]{keywords}` 의 **저장소와 산문**만 고치고
+    타입 선언을 두어, 낱말이 스스로 "배열도 받습니다"라고 적어 놓은 채 실행 관문이
+    배열을 거절했다(ep2834 가 같은 날 두 번 더 죽었다 — 커밋 90분 뒤). 같은 모양이
+    `publish_newspaper.keywords` 에도 있었다(구현 `_parse_keywords` 는 리스트를 먼저 받는다).
+
+    산문은 모델이 읽고 타입은 관문이 읽는다 — 둘이 어긋나면 **모델이 문서대로 쓸수록
+    죽는다**. 사람이 고른 자리마다 고치지 말고 부류를 빌드가 잡는다.
+    """
+    issues: list[str] = []
+    for tname, (pkg_dir, tdef) in sorted(build_tool_index(root).items()):
+        for key, spec in ((((tdef.get("input_schema") or {}).get("properties")) or {})).items():
+            if not isinstance(spec, dict):
+                continue
+            declared = spec.get("type")
+            if not (isinstance(declared, str) and declared in _SCALAR_TYPES):
+                continue
+            if _CONTAINER_PROSE.search(str(spec.get("description") or "")):
+                issues.append(
+                    f"{pkg_dir.name}/{tname}: `{key}` 의 설명은 컨테이너를 허용한다고 "
+                    f"말하는데 타입은 {declared} — 실행 관문이 목록/사전을 거절해 "
+                    f"문서대로 쓴 문장이 죽는다. params 에 [\"{declared}\", \"array\"] 로 "
+                    f"넓히거나, 정말 스칼라만 받는다면 설명에서 그 문구를 지울 것")
+    return issues

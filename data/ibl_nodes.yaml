@@ -4111,6 +4111,10 @@ nodes:
         target_description: save — content 필수(+node 가지 경로 권장 — 예 "가족/어머니"; 비우면 뿌리(미배치) — +category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). recall — node 의 가지를 연다(문서 전문 + 그 가지의 기억 + 하위 가지; node 생략 = 지도 전체); store:"실행" 이면 실행기억(IBL 용례) 주제 트리(<execution_map>)를 연다 — **이름 먼저**(2026-09-05) — 부를 수 있는 함수의 서명(`[fn:이름]{슬롯}` 한 줄)·한 문장 용례·여러 문장 용례의 문장 수·주행 건수만 돌려준다. 본문은 expand 로만 — expand:"이름"(함수 정의 `[def:]`, 고쳐 쓸 때) · expand:"#id"(용례 한 건) · expand:"주행"(주행 절) · expand:"all"(문서 전문). 이름이 있으면 부르고, 없거나 안 맞을 때만 연다. move — memory_id 를 node 가지로 옮김(store 동일). category 유효값 = 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 그 밖의 값은 '기타' 로 저장되며 봉투가 category_normalized 로 신고한다. search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션(유효값 밖이면 0건이 아니라 명시 거절). read/delete — memory_id (search 결과 items 의 memory_id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
         target_key: op
         router: handler
+        params:
+          keywords:
+          - string
+          - array
         tool: memory_op
         aliases:
           top_k:
@@ -7761,6 +7765,10 @@ nodes:
         group: media_produce
         target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정 outputs/newspaper_config.json), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued) — 진행 상태는 앱모드 outputs/newspaper_publish_state.json.
         router: handler
+        params:
+          keywords:
+          - string
+          - array
         tool: publish_newspaper
         implementation: tool_newspaper.py — handler 의 gnews 배치 경로([sense:search]{source:"gnews"} 의 queries 팬아웃 — RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.
         keywords:

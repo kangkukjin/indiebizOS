@@ -9,6 +9,8 @@ actions:
     target_description: save — content 필수(+node 가지 경로 권장 — 예 "가족/어머니"; 비우면 뿌리(미배치) — +category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). recall — node 의 가지를 연다(문서 전문 + 그 가지의 기억 + 하위 가지; node 생략 = 지도 전체); store:"실행" 이면 실행기억(IBL 용례) 주제 트리(<execution_map>)를 연다 — **이름 먼저**(2026-09-05) — 부를 수 있는 함수의 서명(`[fn:이름]{슬롯}` 한 줄)·한 문장 용례·여러 문장 용례의 문장 수·주행 건수만 돌려준다. 본문은 expand 로만 — expand:"이름"(함수 정의 `[def:]`, 고쳐 쓸 때) · expand:"#id"(용례 한 건) · expand:"주행"(주행 절) · expand:"all"(문서 전문). 이름이 있으면 부르고, 없거나 안 맞을 때만 연다. move — memory_id 를 node 가지로 옮김(store 동일). category 유효값 = 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 그 밖의 값은 '기타' 로 저장되며 봉투가 category_normalized 로 신고한다. search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션(유효값 밖이면 0건이 아니라 명시 거절). read/delete — memory_id (search 결과 items 의 memory_id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
     target_key: op
     router: handler
+    params:
+      keywords: ["string", "array"]   # 키워드는 본성상 목록 — 저장소가 두 표기를 다 받는다(normalize_keywords, 2026-09-05)
     tool: memory_op
     aliases:
       top_k: [limit]   # 정본=top_k(문서·스키마). 관습어 limit 도 수용 — 옛 핸들러가 limit만 읽어 문서된 top_k가 침묵 무시되던 버그(2026-08-05)의 봉합.
@@ -77,7 +79,7 @@ tool_json:
           type: string
           description: save 필수 — 저장 내용
         keywords:
-          type: string
+          # type 은 액션 params 블록이 단일 소스(string|array)
           description: save 옵션 — 검색 키워드(쉼표 구분 문자열 또는 배열 — 배열은 쉼표로 합쳐 저장, 2026-09-05)
         category:
           type: string

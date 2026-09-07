@@ -185,8 +185,11 @@
         "type": "object",
         "properties": {
           "keywords": {
-            "type": "string",
-            "description": "섹션 키워드 목록 (쉼표/개행 구분, JSON 리스트도 허용). 미지정 시 서버 설정(newspaper_config.json)."
+            "description": "섹션 키워드 목록 (쉼표/개행 구분, JSON 리스트도 허용). 미지정 시 서버 설정(newspaper_config.json).",
+            "type": [
+              "string",
+              "array"
+            ]
           },
           "title": {
             "type": "string",

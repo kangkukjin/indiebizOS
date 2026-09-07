@@ -132,7 +132,8 @@ from iblbuild_appview import (  # noqa: E402,F401
     _template_param_keys,
     validate_app_template_params,
 )
-from iblbuild_params_check import validate_declared_params, validate_impl_reads
+from iblbuild_params_check import (validate_declared_params, validate_impl_reads,
+                                   validate_param_type_vs_prose)
 from iblbuild_validators import (  # noqa: E402,F401
     _extract_op_dispatchers,
     _extract_op_defaults,
@@ -293,6 +294,19 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 print(f"  ✗ {issue}", file=sys.stderr)
         else:
             print("[build_ibl_nodes] 구현-읽기 감사 통과 ✓ (죽은 컨테이너 자리 0 · 신규 미선언 0)")
+
+        # --- 선언 내부 모순 관문 (2026-09-07) ---
+        # 산문은 모델이 읽고 타입은 관문이 읽는다. 09-05 수리가 memory keywords 의
+        # 저장소·산문만 고치고 타입을 두어, 낱말이 "배열도 받습니다"라고 적어 놓은 채
+        # 실행 관문이 배열을 거절했다 — 문서대로 쓸수록 죽는 자리.
+        pissues = validate_param_type_vs_prose(root)
+        if pissues:
+            corpus_failed = True
+            print(f"[build_ibl_nodes] 선언 내부 모순: {len(pissues)}건", file=sys.stderr)
+            for issue in pissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 선언 내부 모순 없음 ✓ (산문의 컨테이너 허용 = 타입 선언)")
 
         # 코퍼스 어휘 생존 검사 (2026-08-22) — param 정합은 "핸들러가 이 키를 읽나" 만 묻고
         # "이 액션이 아직 있나" 는 묻지 않았다. 그 틈으로 은퇴 어휘 20여 종 208항목이

@@ -122,6 +122,8 @@ nodes:
         group: media_produce
         target_description: 전부 선택 — keywords(키워드 목록, 리스트 또는 쉼표 구분·미지정 시 서버 설정 outputs/newspaper_config.json), title(제호), sources(기본 "gnews,guardian"), wait(true=동기 발행·완료까지 블로킹). 기본은 백그라운드 시작 후 즉시 반환(queued) — 진행 상태는 앱모드 outputs/newspaper_publish_state.json.
         router: handler
+        params:
+          keywords: ["string", "array"]   # 구현 _parse_keywords 가 리스트를 먼저 받는다
         tool: publish_newspaper
         implementation: tool_newspaper.py — handler 의 gnews 배치 경로([sense:search]{source:"gnews"} 의 queries 팬아웃 — RSS 병렬+편집장 일괄 curate+가디언 합류) 재사용 → query 태그로 섹션 조립(핫토픽 맨 앞) → JSON(데스크탑 카드 그리드)/MD(폰·원격 뷰어)/HTML(공유)+newspaper_archive/ 날짜본 저장. 설정 파일 없으면 기본값(청주 데일리·12키워드) 결정화.
         keywords:
@@ -388,7 +390,7 @@ tool_json:
       type: object
       properties:
         keywords:
-          type: string
+          # type 은 액션 params 블록이 단일 소스(string|array)
           description: 섹션 키워드 목록 (쉼표/개행 구분, JSON 리스트도 허용). 미지정 시 서버 설정(newspaper_config.json).
         title:
           type: string

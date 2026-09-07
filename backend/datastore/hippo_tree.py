@@ -168,14 +168,18 @@ def _conn(db_path: Optional[str] = None) -> sqlite3.Connection:
 def ensure_column(db_path: Optional[str] = None) -> None:
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
     try:
-        for col in ("topic", "alias", "returns", "signature"):
+        # 자리: 컬럼 → 선언. 여기 없는 컬럼을 rows_of 가 SELECT 하면 OperationalError 로 **가지 전체가 빈다**
+        # (rows_of 의 except 는 [] 를 돌려준다) — 새 컬럼은 반드시 이 자리에도 등록한다.
+        for col, decl in (("topic", "TEXT DEFAULT ''"), ("alias", "TEXT DEFAULT ''"),
+                          ("returns", "TEXT DEFAULT ''"),
+                          # signature 는 NULL=미계산 / ''=인자 없음 을 구분해야 한다(2026-09-06) — 기본값을 주지 않는다
+                          ("signature", "TEXT"),
+                          ("bypass_count", "INTEGER DEFAULT 0")):     # 우회 횟수(2026-09-07)
             try:
                 conn.execute(f"SELECT {col} FROM ibl_examples LIMIT 1")
             except sqlite3.OperationalError:
                 try:
-                    # signature 는 NULL=미계산 / ''=인자 없음 을 구분해야 한다(2026-09-06) — 기본값을 주지 않는다
-                    _default = "" if col == "signature" else " DEFAULT ''"
-                    conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {col} TEXT{_default}")
+                    conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {col} {decl}")
                     conn.commit()
                 except sqlite3.OperationalError:
                     pass
@@ -192,7 +196,8 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
         args = (norm_topic(topic),) + ((PHRASE_CATEGORY,) if where else ())
         rows = conn.execute(
             "SELECT id, intent, ibl_code, nodes, category, source, success_count, fail_count, created_at, updated_at, "
-            "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, COALESCE(returns,'') AS returns, signature "
+            "COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, COALESCE(returns,'') AS returns, signature, "
+            "COALESCE(bypass_count,0) AS bypass_count "
             "FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
         return [dict(r) for r in rows]
@@ -411,6 +416,12 @@ def phrase_expand_card(r: Dict[str, Any]) -> str:
     code = r.get("ibl_code") or ""
     s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
     ran = f"✓{s}/✗{f}" if (s or f) else "실행 0 — 아직 한 번도 돌지 않은 정의(슬롯 값의 모양은 검증 전, 첫 호출이 검증이다)"
+    # 우회 횟수(2026-09-07): '실행 0' 만으로는 *아직 안 써 본 새 정의* 와 *열어 보고 매번 거부당한 낡은 정의* 가
+    # 표면에서 글자가 같았다. 거부가 쌓였으면 이 본문을 다시 베끼지 말고 고쳐 부르라는 뜻이다.
+    b = int(r.get("bypass_count") or 0)
+    if b:
+        ran += (f" · 거부 {b}회 — 이 정의를 열어 보고 부르지 않은 실행이 {b}번. 또 베끼지 말고, 안 맞는 문장을 "
+                f"아래 [def:] 로 고쳐 부르면 그 골격이 다음 증류에서 이 이름의 새 본문이 된다")
     call = phrase_call_line(alias, code, (r.get("returns") or "").strip(), r.get("signature"))
     return "\n".join([
         f"호출: {call}",
@@ -997,6 +1008,8 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
         code = p.get("ibl_code") or ""
         meta = [f"문장 {len(split_sentences(code))}"]
         meta.append(f"✓{s}/✗{f}" if (s or f) else "실행 0")     # 돈 적 없는 정의는 그렇다고 말한다(2026-09-07)
+        if int(p.get("bypass_count") or 0):
+            meta.append(f"거부 {int(p['bypass_count'])}회")       # 부르지 않고 손으로 친 실행의 수(2026-09-07)
         meta.append("마지막 " + (p.get("updated_at") or p.get("created_at") or "")[:10])
         lines.append(f"- {p['alias']} — {_one_line(p.get('intent'))} · {' · '.join(meta)} ‹#{p['id']}›")
         lines.append(f"  {phrase_call_line(p['alias'], code, (p.get('returns') or '').strip(), p.get('signature'))}")

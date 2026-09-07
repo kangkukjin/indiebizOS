@@ -680,6 +680,20 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             _fn_hint = _fn_hint_for(code)
             if _fn_hint:
                 print(f"[이름있음] {_fn_hint.get('alias') or ('코퍼스 ' + str(_fn_hint.get('seen')))}: {str(_fn_hint.get('note'))[:90]}")
+                # 우회를 **사건으로** 적는다(2026-09-07): 이름이 있는데 부르지 않고 손으로 친 실행 하나.
+                # 여기 오는 code 에는 `[fn:`/`[def:` 가 없다(fn_hint_for 의 입구 조건) — 그러니 이름이 짚였다는 것은
+                # 곧 우회다. 지금까지 이 사건은 아무 흔적도 안 남겼고(✓0/✗0), 그래서 낡은 정의가 '아직 안 써 본
+                # 새 정의' 와 표면에서 글자가 같았다. 실패로 세지 않는다 — 정의가 실패한 게 아니라 거부당한 것이다.
+                if _fn_hint.get("alias"):
+                    try:
+                        from ibl_name_search import record_bypass
+                        from ibl_usage_db import IBLUsageDB
+                        _n = record_bypass(IBLUsageDB(), str(_fn_hint["alias"]))
+                        if _n:
+                            _fn_hint["bypass_count"] = _n
+                            print(f"[이름우회] {_fn_hint['alias']} 거부 {_n}회 — 부르지 않고 손으로 친 실행")
+                    except Exception as _e:
+                        print(f"[이름우회] 기록 실패({_e.__class__.__name__}) — {_fn_hint.get('alias')}")
         except Exception:
             _fn_hint = None
         if _retyped:

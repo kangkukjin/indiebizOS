@@ -5,7 +5,8 @@
       같아야 하고(문자열·수치는 비워 비교), 순서는 실행 순서의 부분열. 순서 어긋남·미실행 문장은 거절.
   P2  증류는 낱말(code)과 관용구(phrase)를 독립으로 저장한다 — 낱말이 스킵돼도 관용구는 산다. 관용구는
       category='phrase', 코드는 `; ` 로 이은 문장 열, 슬롯은 `${…}` 그대로(값은 저장하지 않는다).
-  P3  회상된 관용구가 실행에 쓰였으면(머리 열 부분열 절반 이상) 새 관용구를 뽑지 않고, 귀속은 그 관용구에 간다.
+  P3  회상된 관용구를 **이름으로 불러** 썼으면 새 관용구를 뽑지 않고, 귀속은 그 관용구에 간다. 부르지 않고
+      베낀 턴은 사용이 아니다(2026-09-07) — 그 자리는 낡은 정의의 덮어쓰기로 간다.
   P4  가지 문서 `## 관용구` 절이 정본 — 렌더/파싱 왕복, 사람이 적은 새 블록은 색인 INSERT, 지우면 DELETE.
       지도에 `관용구 n`.
   P5  회상 XML: 낱말 채널은 관용구를 제외하고(반사 top-1 은 낱말만), 관용구는 kind="phrase" 번호 목록으로 실린다.
@@ -128,6 +129,9 @@ def _arm(monkeypatch, reply, recall=None):
     monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
     monkeypatch.setattr(mod.IBLUsageDB, "add_example", lambda self, **kw: saved.append(kw) or len(saved))
     monkeypatch.setattr(mod.IBLUsageDB, "_index_single", lambda self, *a, **k: None)
+    # 이름 조회도 임시로(2026-09-07 덮어쓰기 길이 생기면서) — 스텁을 안 두면 증류가 실 원장의 이름을 읽고 덮는다
+    monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias", lambda self, name: None)
+    monkeypatch.setattr(mod.IBLUsageDB, "alias_of_code", lambda self, code: "")
     import ibl_usage_rag as rag
     monkeypatch.setattr(rag, "_validate_ibl_actions", lambda code: True)
     import ibl_param_vocab
@@ -197,11 +201,24 @@ def test_p3_phrase_used_half_rule():
     assert rag._phrase_used(code, [EDIT, GREP, READ]) is True     # 순서 보존 부분열(grep, read)
 
 
-def test_p3_known_phrase_used_skips_new_phrase(monkeypatch):
+def test_p3_known_phrase_called_by_name_skips_new_phrase(monkeypatch):
+    """이름으로 **부른** 턴만 사용 — 근접 중복을 막는 원래 뜻은 그대로다."""
+    import ibl_usage_rag as rag
+    calls = TOOL_CALLS + [{"tool_name": "execute_ibl",
+                           "input": {"code": '[fn:아는관용구]{패턴: "notebook"}'}, "success": True}]
+    saved = _arm(monkeypatch, {"intent": "x", "code": "", "topic": "개발/프론트", "phrase": PHRASE, "slots": SLOTS},
+                 recall=["; ".join(PHRASE)])
+    assert rag.distill_experience("x", calls, top_score=0.3) is False and saved == []
+
+
+def test_p3_retyped_but_not_called_is_not_use(monkeypatch):
+    """부르지 않고 베낀 턴은 사용이 아니다(2026-09-07 개정) — 옛 문은 여기서 스킵해 갱신본의 증류를 막았고,
+    그것이 낡은 정의를 원장에 살려두던 마지막 문이었다(09-07 유튜브팁 보고서)."""
     import ibl_usage_rag as rag
     saved = _arm(monkeypatch, {"intent": "x", "code": "", "topic": "개발/프론트", "phrase": PHRASE, "slots": SLOTS},
                  recall=["; ".join(PHRASE)])
-    assert rag.distill_experience("x", TOOL_CALLS, top_score=0.3) is False and saved == []
+    assert rag.distill_experience("x", TOOL_CALLS, top_score=0.3) is True
+    assert [s["category"] for s in saved] == ["phrase"]
 
 
 def test_p3_recall_outcome_attributes_to_used_phrase(monkeypatch):

@@ -274,6 +274,12 @@ class IBLUsageDB:
             # 호출 서명 = 바깥에서 줘야 하는 $이름들(2026-09-06). 실행기(_free_vars)가 문에서 계산해 넣는다.
             # NULL=미계산(파서 없는 몸), ''=인자 없음 — 둘을 구분해야 거짓 `{}` 를 안 가르친다.
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN signature TEXT DEFAULT NULL")
+        if "bypass_count" not in cols:
+            # 우회 횟수(2026-09-07) — 이 이름의 프로그램을 *부르지 않고* 손으로 친 실행의 수.
+            # 실행 0 인 정의는 ✓0/✗0 이라 아무 흔적도 안 남겼다: 우회할수록 실행 0 이 유지되고,
+            # 실행 0 이라 아무도 갱신하지 않는 자기강화 루프의 눈. 성공/실패와 섞지 않는다 —
+            # 정의가 실패한 게 아니라 거부당한 것이다.
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN bypass_count INTEGER DEFAULT 0")
 
         # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
         # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).

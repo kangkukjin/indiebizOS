@@ -407,6 +407,75 @@ def unique_fn_name(name: str, db, code: str) -> str:
         name = f"{base}{n}"
 
 
+def stale_unrun_row(name: str, db, code: str, topic: str = "", ibl_calls: list = None) -> Optional[dict]:
+    """새 골격이 **돈 적 없는 이름**의 갱신본이면 그 행(덮어쓸 자리) — 아니면 None (2026-09-07 사용자 판정).
+
+    옛 길은 갱신이 없었다: 같은 이름·다른 골격이면 `unique_fn_name` 이 `이름2` 를 만들고 낡은 정의는 이름을
+    붙든 채 원장에 남았다. 실측(09-07 유튜브팁 보고서): `유튜브팁보고서작성` 은 09-04 에 이름을 받고 ✓0/✗0 인데
+    가이드 §2-0 은 09-05·09-06 에 두 번 개정돼(검색 2→5갈래·심사 한 칸 신설) 본문이 낡았다 — 실행자는 매 호
+    expand 로 열어 "낡았다" 고 판단하고 손으로 다시 짓는다. **우회할수록 실행 0 이 유지되고, 실행 0 이라 아무도
+    갱신하지 않는** 자기강화 루프. 돈 적 없는 정의는 지킬 것이 없으므로 덮는다.
+
+    두 길로 찾는다:
+      ① 같은 이름, 다른 골격 — 반성기가 같은 이름을 다시 지었다.
+      ② 이름은 달라도 이 골격이 그 이름의 **변형** — 정의를 열어 손으로 고쳐 돌린 모양(fn_recognizer.variant_of).
+      ③ 이번 턴에 **회상됐는데 부르지 않은** 이름 — 문장 서명이 달라져(가지 2→5 같은 개정) ②가 못 잡는 자리.
+         실행자가 "낡았다" 고 판단하고 손으로 다시 지은 바로 그 경우다(09-07 유튜브팁 보고서의 실물).
+    ②③ 어느 쪽도 새 판정기를 만들지 않는다 — ②는 실행 관문의 자(_sentence_matches), ③은 회상 사용 판정의
+    자(_phrase_used)를 그대로 쓴다. 관문이 두 벌이면 방언이 갈린다.
+    셋 다 **가지가 같고 ✓0/✗0** 일 때만: 한 번이라도 돈 정의는 남의 실행 이력이라 덮지 않는다(이름2 로 간다).
+    """
+    def _candidate(alias: str) -> Optional[dict]:
+        try:
+            row = db.find_phrase_by_alias(alias)
+        except Exception:
+            return None
+        if not row or (row.get("ibl_code") or "") == code:
+            return None                                  # 없거나 이미 같은 골격 — 덮을 것이 없다
+        if int(row.get("success_count") or 0) or int(row.get("fail_count") or 0):
+            return None                                  # 돈 적 있는 정의는 이력이 있다 — 이름2 로 간다
+        try:
+            from ibl_usage_db import _norm_topic
+            if _norm_topic(row.get("topic") or "") != _norm_topic(topic or ""):
+                return None                              # 다른 가지의 같은 이름은 남의 함수다
+        except Exception:
+            return None
+        return row
+
+    hit = _candidate(name)
+    if hit:
+        return hit
+    try:
+        from fn_recognizer import variant_of
+        v = variant_of(code)
+    except Exception:
+        v = None
+    if v:
+        hit = _candidate(str(v["alias"]))
+        if hit:
+            return hit
+    # ③ 회상됐는데 부르지 않은 이름 — 이 턴이 그 이름의 일을 이름 없이 했다면 그 정의가 낡은 것이다.
+    #    '했다' 의 자는 회상 사용 판정과 같다(_phrase_used): 관계 없는 턴은 머리 열이 안 겹쳐 걸리지 않는다.
+    if not ibl_calls or any("[fn:" in (c or "") for c in ibl_calls):
+        return None                                      # 이름으로 부른 턴은 우회가 아니다
+    try:
+        from thread_context import get_phrase_recall
+        recalled = list(get_phrase_recall() or [])
+    except Exception:
+        return None
+    for known in recalled:
+        if not _phrase_used(known, ibl_calls):
+            continue
+        try:
+            alias = db.alias_of_code(known)
+        except Exception:
+            alias = ""
+        hit = _candidate(alias) if alias else None
+        if hit:
+            return hit
+    return None
+
+
 def _phrase_code_by_alias(name: str):
     """검사기(ibl_typecheck)에 관용구 몸을 내주는 소스 — `[fn:이름]` 의 반환 모양 추론용(2026-09-05, 의존 역전 등록)."""
     from ibl_usage_db import IBLUsageDB
@@ -503,11 +572,15 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     if not topic:
         print(f"{tag} topic 없음 — 스킵")
         return False
-    # 이미 아는 관용구가 이 턴에 쓰였으면 다시 뽑지 않는다(근접 중복 축적 방지)
+    # 이미 아는 관용구가 이 턴에 쓰였으면 다시 뽑지 않는다(근접 중복 축적 방지).
+    # 단 **부르지 않고 베낀 것은 쓴 것이 아니다**(2026-09-07): 낡은 정의를 손으로 고쳐 돌린 턴은 문장 머리가
+    # 절반 넘게 겹쳐 '사용' 으로 읽혔고, 그래서 갱신본이 증류되지 못했다 — 낡은 정의를 살려두던 마지막 문.
+    # 이름으로 부른 턴(`[fn:]`)만 사용으로 친다. 베낀 턴은 아래 덮어쓰기 길로 간다.
+    _called_by_name = any("[fn:" in (c or "") for c in (ibl_calls or []))
     try:
         from thread_context import get_phrase_recall
         for known in get_phrase_recall():
-            if _phrase_used(known, ibl_calls):
+            if _phrase_used(known, ibl_calls) and _called_by_name:
                 print(f"{tag} 회상된 관용구가 실행에 쓰임 — 새 관용구 스킵: {known[:60]}")
                 return False
     except Exception:
@@ -551,7 +624,10 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     db = IBLUsageDB()
     birth_ms = _ibl_elapsed_ms(tool_calls)
     # 관용구 = 이름 붙은 함수(2026-09-05): 반성기의 phrase_name → 정리·유일화. `[fn:이름]{슬롯}` 으로 불린다.
-    alias = unique_fn_name(sanitize_fn_name(distilled.get("phrase_name"), intent), db, code)
+    _name = sanitize_fn_name(distilled.get("phrase_name"), intent)
+    # 돈 적 없는 이름의 갱신본이면 새 이름(이름2)이 아니라 **그 이름을 물려받아 본문을 덮는다**(2026-09-07)
+    _stale = stale_unrun_row(_name, db, code, topic, ibl_calls)
+    alias = ((_stale.get("alias") or "").strip() or _name) if _stale else unique_fn_name(_name, db, code)
     try:
         from ibl_typecheck import return_type_of
         _returns = return_type_of(code)                     # 서명의 반환 모양(2026-09-05) — 슬롯은 미상으로 두고 몸을 타입
@@ -574,12 +650,19 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     _meaning = str(distilled.get("phrase_meaning") or "").strip()
     if _meaning:
         intent = _meaning[:160]
-    example_id = db.add_example(
-        intent=intent, ibl_code=code, nodes=nodes, category=hippo_tree.PHRASE_CATEGORY,
-        difficulty=2, source="distilled", tags="auto,phrase",
-        avg_ms=float(birth_ms) if birth_ms else -1.0,
-        avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
-        topic=topic, alias=alias, returns=_returns)
+    _replaced_code = ""
+    if _stale:
+        from ibl_name_search import replace_example
+        _replaced_code = _stale.get("ibl_code") or ""
+        example_id = replace_example(db, int(_stale["id"]), intent=intent, ibl_code=code, nodes=nodes,
+                                     topic=topic, alias=alias, returns=_returns)
+    else:
+        example_id = db.add_example(
+            intent=intent, ibl_code=code, nodes=nodes, category=hippo_tree.PHRASE_CATEGORY,
+            difficulty=2, source="distilled", tags="auto,phrase",
+            avg_ms=float(birth_ms) if birth_ms else -1.0,
+            avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
+            topic=topic, alias=alias, returns=_returns)
     if not example_id:
         print(f"{tag} 원장이 거부 — 학습 파일에도 적재하지 않음: {code[:60]}")
         return False
@@ -588,10 +671,15 @@ def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
     distilled_path = Path(__file__).parent.parent.parent / "data" / "training" / "ibl_distilled.json"
     try:
         existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
+        if _replaced_code:
+            # 덮어쓴 본문은 재학습 원장에서도 지운다(2026-09-07) — DB 만 고치면 다음 재학습이 옛 골격을
+            # 되살린다(선언이 산문보다 좁았던 부류, `declaration-narrower-than-prose`).
+            existing = [e for e in existing if (e or {}).get("ibl_code") != _replaced_code]
         existing.append({"intent": intent, "ibl_code": code, "category": hippo_tree.PHRASE_CATEGORY})
         distilled_path.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
         print(f"{tag} 학습 파일 적재 실패(DB id={example_id}) — 재학습 원장 어긋남: {e}")
     IBLUsageRAG().clear_cache()
-    print(f"{tag} 저장 완료 (id={example_id}, 이름 [fn:{alias}], 문장 {n}, 슬롯 {len(_sig)}, 가지 '{topic}'): \"{intent[:40]}\"")
+    _how = f"본문 덮어씀(옛 골격 {len(_replaced_code)}자, 실행 0)" if _replaced_code else "저장 완료"
+    print(f"{tag} {_how} (id={example_id}, 이름 [fn:{alias}], 문장 {n}, 슬롯 {len(_sig)}, 가지 '{topic}'): \"{intent[:40]}\"")
     return True

@@ -156,7 +156,68 @@ def find_phrase_by_alias(db, name: str) -> Optional[Dict]:
         # 2026-09-05: 카테고리 무관 — 이름이 붙은 용례(관용구·다문장 프로그램)는 무엇이든 부를 수 있다(자동 작명과 한 벌)
         row = conn.execute(
             "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category, "
-            "COALESCE(returns,'') AS returns, signature "
+            "COALESCE(returns,'') AS returns, signature, "
+            # 실행 이력·우회 횟수도 준다(2026-09-07) — 증류의 덮어쓰기 판정이 '돈 적 있는가'를 여기서 묻는다
+            "COALESCE(success_count,0) AS success_count, COALESCE(fail_count,0) AS fail_count, "
+            "COALESCE(bypass_count,0) AS bypass_count "
             "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC LIMIT 1",
             (name.strip(),)).fetchone()
     return dict(row) if row else None
+
+
+def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: str = "",
+                    topic: str = "", alias: str = "", returns: str = "") -> int:
+    """돈 적 없는 이름의 **본문을 덮는다** — 새 이름(이름2)을 만들지 않는다(2026-09-07 사용자 판정).
+
+    왜: 증류에는 갱신 경로가 없었다. `unique_fn_name` 은 같은 이름·다른 골격을 만나면 `이름2` 를 새로 만들고
+    `add_example` 은 삽입뿐이라, 가이드가 개정되면 낡은 정의가 이름을 붙든 채 원장에 남았다. 실행자는 매 호
+    expand 로 열어 "낡았다" 고 판단하고 손으로 다시 짓는다 — 우회할수록 실행 0 이 유지되고, 실행 0 이라
+    아무도 갱신하지 않는다(09-07 유튜브팁 보고서 실측: `유튜브팁보고서작성` 09-04 생성, ✓0/✗0, 본문은
+    검색 2갈래·심사 없음인데 가이드 §2-0 은 09-05·09-06 개정으로 5갈래·심사 한 칸). **한 번도 돈 적 없는
+    정의는 지킬 가치가 없다** — 부른 적도 성공한 적도 없는 글자일 뿐이다. 실행 이력이 있으면 이 길로 오지 않는다.
+
+    성공/실패 카운트는 건드리지 않는다(0 인 채로 남는다 — 새 본문도 아직 안 돌았다). 우회 횟수는 0 으로
+    되돌린다: 거부당한 것은 옛 본문이고, 새 본문은 아직 거부당한 적이 없다.
+    """
+    if not example_id or not (ibl_code or "").strip():
+        return 0
+    from ibl_usage_db import _norm_topic, _signature_of, _syntax_reason, _tree_refresh
+    why = _syntax_reason(ibl_code)
+    if why:
+        logger.warning(f"[IBL Usage DB] 파싱 불가 본문 덮어쓰기 거부(입구 구문-게이트): {why} / {ibl_code[:100]}")
+        return 0
+    now = datetime.now().isoformat()
+    with db._get_connection() as conn:
+        old = conn.execute("SELECT COALESCE(topic,'') AS topic FROM ibl_examples WHERE id = ?",
+                           (example_id,)).fetchone()
+        if not old:
+            return 0
+        conn.execute(
+            "UPDATE ibl_examples SET intent = ?, ibl_code = ?, nodes = ?, topic = ?, alias = ?, returns = ?, "
+            "signature = ?, bypass_count = 0, updated_at = ? WHERE id = ?",
+            (intent, ibl_code, nodes, _norm_topic(topic), (alias or "").strip(), (returns or "").strip(),
+             _signature_of(ibl_code), now, example_id))
+        conn.commit()
+    db._index_single(example_id, (f"{alias} {intent}" if alias else intent), ibl_code)
+    _tree_refresh(topic, old["topic"])
+    return int(example_id)
+
+
+def record_bypass(db, alias: str) -> int:
+    """이 이름의 프로그램을 **부르지 않고 손으로 친** 실행 하나를 원장에 적는다 — 반환: 누계(못 찾으면 0).
+
+    2026-09-07: 우회는 지금까지 아무 흔적도 남기지 않았다(✓0/✗0). 그래서 낡은 정의는 '실행 0' 으로만 보였고,
+    그건 '아직 안 써 본 새 정의' 와 글자가 같다 — 표면이 둘을 구별하지 못하니 정리도 증류도 집을 수 없었다.
+    실패로 세지 않는다: 정의가 실패한 게 아니라 거부당한 것이다(`no-counter-watch` 의 카운터가 아니라 사건 기록 —
+    이 수는 표면이 '거부 N회' 로 말하고, 증류의 덮어쓰기가 지운다)."""
+    alias = (alias or "").strip()
+    if not alias:
+        return 0
+    with db._get_connection() as conn:
+        cur = conn.execute(
+            "UPDATE ibl_examples SET bypass_count = COALESCE(bypass_count,0) + 1 WHERE alias = ?", (alias,))
+        conn.commit()
+        if not cur.rowcount:
+            return 0
+        row = conn.execute("SELECT COALESCE(bypass_count,0) FROM ibl_examples WHERE alias = ?", (alias,)).fetchone()
+    return int(row[0]) if row else 0

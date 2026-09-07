@@ -41,7 +41,6 @@
     "api_ytrelay",
     "api_nas_hls",
     "hls_ladder",
-    "migrate_vocab_cheap_merges",
     "red_apply",
     "repair_verdict_distill",
     "data_ownership"
@@ -57,12 +56,13 @@
     "api_ytrelay": "유튜브 릴레이 서빙 면(yt-dlp+ffmpeg 리먹스·5GB 캐시) — 릴레이는 PC 몸이 받고 표면은 URL 만 문다(폰 표면도 @hub 주소로 시청)",
     "api_nas_hls": "NAS HLS 서빙 면 — NAS 파인더 서빙 자체가 PC 몸 전용(폰은 브라우저로 시청)",
     "hls_ladder": "HLS 렌디션 사다리 빌더(ffmpeg 인코딩 워커) — 서빙 면(showcase·NAS)과 한 몸, PC 전용",
-    "migrate_vocab_cheap_merges": "1회성 코퍼스 마이그레이션 스크립트(2026-08-05 어휘 압축) — 폰 런타임 불필요",
     "red_apply": "지연 적용 수행자(git worktree 격리의 짝) — 폰 몸은 git 저장소가 아니라 격리 스테이징 자체가 폴백(S5b)이라 예약 적용이 원리적으로 없음. uvicorn --reload 도 폰엔 없다",
-    "data_ownership": "허브(맥 저장소) 전용 감사 — DECLARATIONS 가 맥 data/ 가족을 선언하므로 폰에서 돌면 폰-로컬 파일을 고아로 오판"
+    "data_ownership": "허브(맥 저장소) 전용 감사 — DECLARATIONS 가 맥 data/ 가족을 선언하므로 폰에서 돌면 폰-로컬 파일을 고아로 오판",
+    "migrate_* (글롭)": "맥 원장 일회성 마이그레이션 스크립트 — 폰 몸의 엔진이 아니다(폰은 자기 원장을 가진 독립 자아). 지금까지 10개가 번들에 실려 있었고 아무도 import 하지 않았다(2026-09-07 실측). 이름으로 하나(migrate_vocab_cheap_merges)만 걸려 있던 것을 글롭으로 올린다 — 부류는 파일별로 전개하지 않는다."
   },
   "_force_exclude_glob": [
-    "test_*"
+    "test_*",
+    "migrate_*"
   ],
   "notes": "absent_packages는 '없는 능력'의 선언이지 손-큐레이션이 아니다. windows/linux 데스크탑 몸은 전체 트리를 소스로 돌리므로(서브셋 번들 불요) 이 파생이 필요 없고, OS 차이는 substrate seam(check_os_branches)이 담당한다 — 이 프로파일 메커니즘은 '제약된 몸'(android·향후 ios)용이다."
 }

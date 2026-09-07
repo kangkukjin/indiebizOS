@@ -169,16 +169,6 @@
     "ibl/workflow_verdict",
     "ibl_embedding_trainer",
     "ibl_synthetic_opus",
-    "migrate_alias_retirement",
-    "migrate_blog_action",
-    "migrate_culture_action",
-    "migrate_finance_action",
-    "migrate_health_persons",
-    "migrate_nodes",
-    "migrate_paper_action",
-    "migrate_video_action",
-    "migrate_web_action",
-    "migrate_webcam_action",
     "prompt_benchmark",
     "services/android_calibrate",
     "services/auto_response",
@@ -277,18 +267,18 @@
     "hls_ladder": "force_exclude (프로파일 명시)",
     "ibl_opus_bulk_gen": "force_exclude (프로파일 명시)",
     "ibl_synthetic_generator": "top-level import: google",
-    "migrate_vocab_cheap_merges": "force_exclude (프로파일 명시)",
     "nip17": "top-level import: pynostr",
     "nip44": "top-level import: cryptography",
     "red_apply": "force_exclude (프로파일 명시)",
     "repair_verdict_distill": "force_exclude (프로파일 명시)"
   },
   "blocklist_globs": [
+    "migrate_*",
     "test_*"
   ],
   "counts": {
-    "total": 278,
-    "engine": 258,
-    "blocklist": 20
+    "total": 267,
+    "engine": 248,
+    "blocklist": 19
   }
 }

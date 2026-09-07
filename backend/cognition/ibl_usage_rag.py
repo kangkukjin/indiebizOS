@@ -1166,11 +1166,18 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 # 부를 수 있는 것만 이름을 받는다(2026-09-06) — 관용구 증류와 같은 관문. 이름은 붙었는데
                 # 부를 수 없으면 회상 표면만 차지하고 매 호 본문을 다시 치게 만든다.
                 from workflow_contract import call_signature
-                from ibl_idiom import sanitize_fn_name, unique_fn_name, uncallable_reason, slot_values_ungrounded
+                from ibl_idiom import (sanitize_fn_name, unique_fn_name, uncallable_reason,
+                                       slot_values_ungrounded, _phrase_private_reason)
                 _why = uncallable_reason(call_signature(code), len(_ht.split_sentences(code)), code)
                 # 값 접지(2026-09-07): 슬롯 값을 대입해 실행된 문장이 되살아나지 않으면 돈 적 없는 정의 — 이름을 주지 않는다
                 #   (ep2952 재진단: 이름 붙은 44건 중 40건 실행 0, 그중 하나가 첫 호출부터 죽을 몸이었다)
                 _why = _why or slot_values_ungrounded(distilled.get("slots") or {}, ibl_calls, code=code)
+                # 개인 명사(2026-09-07 전수 감사): 관용구 증류에만 달려 있던 관문 — 이 두 번째 작명 경로에는 없었다.
+                #   실측: 이름 붙은 44건 중 6건이 홈 경로가 박힌 몸(슬롯 0)인데 위 두 관문을 그대로 통과한다
+                #   (슬롯이 없으면 값 접지는 검사할 것이 없어 침묵한다). 그런 몸은 낡은 게 아니라 **처음부터 다시
+                #   쓸 수 없다** — 이름을 붙들고 회상 표면만 차지하고 영원히 실행 0 이다. 관문을 한쪽 길에만 단 부류.
+                #   용례로는 저장한다(이 턴의 사실이므로) — 주지 않는 것은 **이름**이다.
+                _why = _why or _phrase_private_reason(code)
                 if _why:
                     print(f"[경험증류] 부를 수 없는 모양 — 이름 없이 저장: {_why}")
                 else:

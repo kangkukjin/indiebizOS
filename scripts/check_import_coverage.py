@@ -52,6 +52,13 @@ SCAN_ROOTS = [
 SCAN_FILES = [ROOT / "mcp_server.py"]
 SKIP_DIRS = {"__pycache__", "_archive", "node_modules", ".git", ".venv"}
 
+# 별도 인터프리터가 제공하는 이름은 해당 진입 파일에서만 제외한다.
+# render_blender.py 는 `blender --background --python` 으로 실행되어 Blender의
+# bpy·mathutils 를 쓴다. 다른 .venv 코드의 같은 import 는 계속 결손으로 잡는다.
+EXTERNAL_RUNTIME_IMPORTS = {
+    "data/packages/installed/tools/house-designer/render_blender.py": {"bpy", "mathutils"},
+}
+
 # ── 허용목록 ────────────────────────────────────────────────────────────────
 # 이 몸(.venv 데스크탑)에 *원리적으로 없는* 이름만 올린다 — "설치 귀찮음" 은 사유가
 # 못 된다(그건 requirements 에 넣어야 할 신호). 항목마다 사유 필수.
@@ -140,12 +147,17 @@ def collect_imports():
             print(f"[warn] parse skip {path.relative_to(ROOT)}: {e.__class__.__name__}")
             continue
         rel = str(path.relative_to(ROOT))
+        runtime_imports = EXTERNAL_RUNTIME_IMPORTS.get(path.relative_to(ROOT).as_posix(), set())
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for alias in node.names:
-                    found.setdefault(alias.name.split(".")[0], []).append(f"{rel}:{node.lineno}")
+                    name = alias.name.split(".")[0]
+                    if name not in runtime_imports:
+                        found.setdefault(name, []).append(f"{rel}:{node.lineno}")
             elif isinstance(node, ast.ImportFrom) and not node.level and node.module:
-                found.setdefault(node.module.split(".")[0], []).append(f"{rel}:{node.lineno}")
+                name = node.module.split(".")[0]
+                if name not in runtime_imports:
+                    found.setdefault(name, []).append(f"{rel}:{node.lineno}")
     return found
 
 

@@ -295,6 +295,26 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
                     embedded_lists.add(key)
         return s
 
+    def _sub_code(s: str):
+        # do는 나중에 다시 파싱되는 IBL이다. 값에 작은따옴표가 있으면
+        # 바깥 파싱 뒤 단순 삽입이 안쪽 문자열을 닫아 버렸다. each의 행 치환과
+        # 같은 리터럴 규약으로 넣되, do 전체를 받는 슬롯은 코드 그대로 전달한다.
+        if any(is_sole_ref(s, key) for key in caller if key not in reserved):
+            return _sub_str(s)
+        from common.ibl_vars import inside_ibl_string, ibl_escape, ibl_literal
+
+        def replace(match):
+            key, path = split_ref(match)
+            if key not in caller or key in reserved:
+                return match.group(0)
+            hits.add(key)
+            value = caller[key]
+            if path:
+                value = _embed(value) + path
+            return ibl_escape(value) if inside_ibl_string(s, match.start()) else ibl_literal(value)
+
+        return REF_RE.sub(replace, s)
+
     def _walk(obj):
         if isinstance(obj, str):
             return _sub_str(obj)
@@ -308,7 +328,8 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
                     out = {k: v for k, v in obj.items()}
                     out["_var_values"] = {**(obj.get("_var_values") or {}), nm: caller[nm]}
                     return out
-            return {k: _walk(v) for k, v in obj.items()}
+            return {k: _sub_code(v) if k == "do" and isinstance(v, str) else _walk(v)
+                    for k, v in obj.items()}
         if isinstance(obj, list):
             return [_walk(v) for v in obj]
         return obj

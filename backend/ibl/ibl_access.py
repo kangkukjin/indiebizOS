@@ -620,6 +620,15 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                 "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
                 (IDIOMS_MAP_ROWS,)).fetchall()
             conn.close()
+            # 수동 등록 교재. 몸이 바뀌면 옛 예시를 가르치지 않는다(원장/교재 드리프트).
+            teaching = {}
+            catalog = get_base_path() / "data" / "idioms" / "curated.json"
+            if catalog.exists():
+                import json
+                try:
+                    teaching = {e["name"]: e for e in json.loads(catalog.read_text(encoding="utf-8"))["idioms"]}
+                except (ValueError, KeyError, TypeError):
+                    logger.warning("관용구 교재를 읽지 못함: %s", catalog)
             kept = []
             for r in rows:
                 code = r[1] or ""
@@ -632,7 +641,10 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
             # 예산 안에서 고른다: 쓰인 것 먼저, 남은 자리는 가지별 하나씩 — 그 뒤 가지별로 모아 그린다.
             chosen, budget = [], IDIOMS_MAP_CHARS
             for r in _spread_by_topic(kept, len(kept)):
-                entry = _idiom_lines(r)
+                lesson = teaching.get(r[5], {})
+                if lesson.get("body", "").strip() != r[1].strip():
+                    lesson = {}
+                entry = _idiom_lines(r, lesson)
                 cost = sum(len(x) + 1 for x in entry)
                 if cost > budget:
                     continue
@@ -648,6 +660,8 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
             if lines:
                 text = ("<ibl_idioms note=\"관용구 — 자주 쓰는 표현을 한 낱말로 접은 것. 낱말을 매번 조합하지 말고, "
                         "'언제' 가 이번 일과 맞으면 [fn:이름]{슬롯: 값} 한 줄로 불러라(정의 없이 이름만으로 돈다). "
+                        "관용구도 문장 속 표현이다: 생산자 >> [fn:이름]{인자} >> 다른 낱말·관용구로 이어라. "
+                        "'앞 통화'를 받는 표현에는 목록·긴 원문을 인자로 다시 쓰지 않는다. "
                         "'골격' 은 무엇이 도는지 알라고 적은 것 — 부를 때는 필요 없다. 이번 일에 한 문장이 안 맞을 때만 "
                         "[self:memory]{op: \\\"recall\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 정의를 열어 "
                         "[def: 이름]{…} 를 프로그램에 붙이고 그 문장만 고친 뒤 부른다. "
@@ -660,7 +674,7 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
     return text
 
 
-def _idiom_lines(r) -> List[str]:
+def _idiom_lines(r, lesson=None) -> List[str]:
     """지도의 한 항목 — **호출 · 언제 · 골격** 세 줄 (2026-09-07 사용자 판정 "언제 어떻게 쓰는지 설명해야").
 
     옛 판은 `이름 — 뜻` + 서명이었다. 뜻은 *무엇을 하는가* 라서 **부를 조건**이 없었다 — 모델은 이름을
@@ -671,7 +685,8 @@ def _idiom_lines(r) -> List[str]:
     _n = int(sc or 0) + int(fc or 0)
     names, known = _stored_signature(signature)
     if known:
-        call = f"- {alias}{{" + ", ".join(names) + "}" + (f" → {returns}" if returns else "")
+        from hippo_tree import phrase_call_line
+        call = "- " + phrase_call_line(alias, code, returns, signature)
     else:
         call = f"- {alias}{{…}} — 서명 미상, 부르기 전에 expand 로 인자 확인"
     if _n:
@@ -680,6 +695,9 @@ def _idiom_lines(r) -> List[str]:
     skel = _skeleton(code)
     if skel:
         out.append(f"  골격: {skel}")
+    if lesson:
+        out.append(f"  입력: {lesson['inputs']}")
+        out.append("  조합 예: " + lesson["example"].replace("\n", "; "))
     return out
 
 

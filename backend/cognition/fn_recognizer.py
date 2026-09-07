@@ -23,7 +23,8 @@ _CACHE_TTL_S = 60
 
 
 def statements(code: str) -> list:
-    return [l for l in (code or "").split("\n") if l.strip() and not l.strip().startswith("#")]
+    from hippo_tree import split_sentences
+    return split_sentences(code or "")
 
 
 def shape(code: str) -> str:

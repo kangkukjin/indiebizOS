@@ -61,7 +61,9 @@ def _gates(name: str, when: str, code: str):
         parse_function_body(code)
     except Exception as e:
         return None, f"파싱 불가: {e}"
-    tc = typecheck_code(code)
+    tc = typecheck_code(f"[def: {name}]{{\n{code}\n}}")
+    if tc.get("syntax_error"):
+        return None, f"타입 검사 파싱 불가: {tc['syntax_error']}"
     errs = [i for i in (tc.get("issues") or []) if i.get("level") == "error"]
     if errs:
         return None, f"타입 오류: {(errs[0].get('message') or '')[:120]}"

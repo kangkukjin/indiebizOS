@@ -447,7 +447,7 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
     assert "[개발]" in block
     # 항목 = 호출 · 언제 · 골격 (뜻 한 줄이 아니라 **부를 조건**)
-    assert "- 찾아고치기{패턴, 루트, 파일, 앞, 뒤}" in block
+    assert '- [fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}' in block
     assert "  언제: 어디 있는지 모르는 것을 읽어야 할 때" in block
     assert "  골격: self:grep → self:read → self:edit" in block
     assert "· 사용 6회" in block
@@ -464,8 +464,8 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
 def test_p3_uncallable_by_saved_chars():
     from ibl_idiom import uncallable_reason, saved_chars, MIN_SAVED_CHARS
     # 얼어 있는 본문이 호출문보다 짧으면 부를 값이 없다
-    tiny = '[self:read]{path: "$파일"}; [self:list]{path: "$폴더"}'
-    sig = ["파일", "폴더"]
+    tiny = '$x = $값; $return = $x'
+    sig = ["값"]
     assert saved_chars(tiny, sig) < MIN_SAVED_CHARS
     assert uncallable_reason(sig, 2, tiny) is not None
     # 얼어 있는 본문이 길면(지시문·고정 인자) 부를 값이 있다

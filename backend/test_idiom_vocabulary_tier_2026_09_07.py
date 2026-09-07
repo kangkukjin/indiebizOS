@@ -52,7 +52,7 @@ def test_map_entry_says_when_and_how():
     for line in text.splitlines():
         if line.startswith("- "):
             continue
-        assert not line.startswith("  ") or line.startswith(("  언제:", "  골격:")), line
+        assert not line.startswith("  ") or line.startswith(("  언제:", "  골격:", "  입력:", "  조합 예:")), line
     assert "  언제:" in text and "  골격:" in text
 
 

@@ -16,7 +16,8 @@
 """
 
 import re
-from typing import Callable, Iterable, List, Tuple
+import json
+from typing import Any, Callable, Iterable, List, Tuple
 
 # 이름 = 파서의 `\w+` 와 같다(선행 숫자 허용 — 옛 문장 무회귀). 숫자 이름을 걸러야 하는
 # 곳(시그니처)은 발견 후 이름으로 판단한다 — 표기 규칙과 정책을 섞지 않는다.
@@ -149,3 +150,67 @@ def boundary_hint(path: str, available, var: str = "it") -> str:
             return (f" — 혹시 `${{{var}.{head}}}{tail}` 를 뜻했나요? "
                     f"변수 뒤에 글자가 붙으면 괄호로 경계를 그으세요（맨몸형은 글자·점을 이름에 먹습니다）.")
     return ""
+
+
+# 값 → 지연 파싱되는 IBL 코드. 함수 인자와 each 행 치환이 같은 규약을 쓴다.
+def ibl_escape(value: Any) -> str:
+    """치환 값을 IBL 문자열 리터럴 안에 안전하게 넣을 형태로 만든다.
+
+    파서(`ibl_parser_values._extract_string`)는 따옴표 안에서 `\\` 다음 글자를 리터럴로
+    받으므로, 백슬래시와 양쪽 따옴표만 이스케이프하면 '…' / "…" 어느 쪽에 놓여도 문자열이
+    조기 종료되지 않는다(제목에 따옴표가 든 행이 문장을 깨뜨리던 부류의 차단).
+    """
+    if value is None:
+        return ""
+    if isinstance(value, (dict, list)):
+        s = json.dumps(value, ensure_ascii=False)
+    else:
+        s = str(value)
+    return s.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+
+
+def inside_ibl_string(text: str, pos: int) -> bool:
+    """text[pos] 자리가 IBL 문자열 리터럴 **안**인가 (따옴표·백슬래시 이스케이프 인식)."""
+    q = None
+    i = 0
+    while i < pos:
+        c = text[i]
+        if q:
+            if c == "\\":
+                i += 2
+                continue
+            if c == q:
+                q = None
+        elif c in "\"'":
+            q = c
+        i += 1
+    return q is not None
+
+
+def ibl_literal(value: Any) -> str:
+    """따옴표 **밖** 자리에 놓일 값의 IBL 리터럴 표기 (B27-3, 27회차).
+
+    `$it` 치환은 문장을 파싱하기 **전에** 텍스트로 이뤄진다. 그래서 치환된 값은 자기가 놓인
+    자리의 문법을 만족해야 하는데, 지금까지는 어느 자리든 **맨몸 텍스트**를 넣었다.
+    파라미터 자리에서는 저자가 따옴표를 직접 쓰므로(`{message: '$it.title'}`) 우연히 맞았고,
+    조건 자리에서는 저자가 따옴표를 쓸 수 없으므로(`$변수` 는 원래 맨몸으로 쓰는 문법) 깨졌다.
+    실측(2026-08-23):
+        [self:body]{days: 2, limit: 3} >> [table:each]{do: "[if: $it.영역 matches 'backend']{…} [else]{…}"}
+        → condition: "backend/ibl matches 'backend'"
+          "'backend/ibl' 은(는) 소스 참조·$변수·리터럴·술어 함수 어느 것도 아닙니다"
+    값은 옳게 뽑혔는데 **따옴표가 없어서** 판정 불능이 됐고, 판정 불능이라 else 도 보류되어
+    each 의 전 행이 실패했다. 즉 `each × [if:]` — 목록의 각 행을 조건으로 가르는, 가장 자연스러운
+    교차 — 가 통째로 말할 수 없는 문장이었다(전 코퍼스 3,582문장에 이 교차 0건).
+
+    ★근본 자리: 값을 만드는 곳이 아니라 **자리를 아는 곳**이 표기를 정해야 한다.
+    숫자·불리언·null 은 맨몸이 곧 리터럴이므로 그대로 두고(조건의 크기 비교가 문자열로
+    변질되지 않게), 그 밖은 따옴표를 씌운다. 실측으로 확인한 조건 문법의 수용 형태:
+        [if: 'backend/ibl' matches 'backend'] ✓   [if: 3 > 1] ✓   [if: true] ✓
+    """
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return json.dumps(value)
+    return '"' + ibl_escape(value) + '"'

@@ -120,21 +120,31 @@ def cmd_add(a):
     return 0
 
 
-def _promote(name: str, on: bool) -> int:
+def _promote(name: str, on: bool, when: str = "") -> int:
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
     row = db.find_phrase_by_alias(name)
     if not row:
         print(f"✗ '{name}' 이 없다")
         return 1
+    if on and when:
+        # 승격하며 '언제'를 다시 쓴다 — 자동 증류가 남긴 intent 는 *무엇을 하는가*(뜻)라서
+        # 지도의 '언제' 자리에 그대로 두면 부를 조건이 되지 못한다(2026-09-07).
+        info, why = _gates(name, when, row["ibl_code"])
+        if why:
+            print(f"✗ 승격 거절 — {why}")
+            return 1
     conn = sqlite3.connect(_db_path(), timeout=10)
-    conn.execute("UPDATE ibl_examples SET always_on=? WHERE alias=?", (1 if on else 0, name))
+    if on and when:
+        conn.execute("UPDATE ibl_examples SET always_on=1, intent=? WHERE alias=?", (when, name))
+    else:
+        conn.execute("UPDATE ibl_examples SET always_on=? WHERE alias=?", (1 if on else 0, name))
     conn.commit()
     conn.close()
     print(f"✓ {name} → {'상시 소개(어휘)' if on else '등록만'}")
     if on:
         from workflow_contract import call_signature
-        n = db.add_examples_batch([_corpus_example(name, call_signature(row["ibl_code"]), row["intent"])])
+        n = db.add_examples_batch([_corpus_example(name, call_signature(row["ibl_code"]), when or row["intent"])])
         print(f"  코퍼스에 호출 용례 {n}건 심음 — 낱말은 문장 안에 있는 모습을 본 적 있어야 불린다")
     return 0
 
@@ -177,7 +187,7 @@ def main():
     if a.add:
         return cmd_add(a)
     if a.promote:
-        return _promote(a.promote, True)
+        return _promote(a.promote, True, a.when)
     if a.demote:
         return _promote(a.demote, False)
     if a.candidates:

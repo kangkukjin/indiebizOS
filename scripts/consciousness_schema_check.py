@@ -12,6 +12,11 @@ hint가 사용자 명령 융합에서 조용히 사라진 2026-07-06 버그가 �
   - 소비처가 읽는 키는 반드시 생산자가 내는 키(∪ 승인된 레거시 별칭)여야 한다.
     그렇지 않으면 그 읽기는 *항상 빈 값* → 조언이 조용히 버려진다.
 
+★이 감사는 **한 방향만** 본다(소비처 ⊆ 생산자). 반대 방향 — 프롬프트가 요구하는 칸이
+실제 조립에 닿는가 — 은 backend/test_consciousness_output_routing_2026_09_07.py 가 맡는다.
+그 구멍으로 capability_focus.tools 가 5개월(84.9% 의 턴에서 채워지며) 아무 데도 닿지 않았다
+(2026-09-07 실측·폐지). 둘 다 같은 pre-commit 블록에서 돈다.
+
 정적 검사만 한다(백엔드 불필요). AST 1-hop: 함수 안에서
   cons = {consciousness_output 파라미터, `X = consciousness_output ...` 로 바인딩된 X}
   focus = {`Y = <cons>.get("capability_focus"|"ibl_focus") ...` 로 바인딩된 Y}

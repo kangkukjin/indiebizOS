@@ -64,7 +64,7 @@ fi
 
 # 의식 출력 스키마 이름 드리프트 — 프롬프트 응답 형식(생산자)이나 소비처 코드가 스테이징되면
 # 생산자↔소비처 키 정합을 검사(개명 시 highlight_actions/hint 무성음 누락 방지, 4번째 층).
-if echo "$staged" | grep -qE '^(data/common_prompts/consciousness_prompt\.md|backend/cognition/(prompt_builder|agent_cognitive|consciousness_agent)\.py|scripts/consciousness_schema_check\.py)$'; then
+if echo "$staged" | grep -qE '^(data/common_prompts/consciousness_prompt\.md|backend/cognition/(prompt_builder|agent_cognitive|agent_pipeline|consciousness_agent|cognitive_consciousness|cognitive_eval|reframe)\.py|backend/test_consciousness_output_routing_2026_09_07\.py|scripts/consciousness_schema_check\.py)$'; then
   repo_root=$(git rev-parse --show-toplevel)
   echo "[pre-commit] 의식 출력 스키마 정합 검사 실행..."
   if ! python3 "$repo_root/scripts/consciousness_schema_check.py"; then
@@ -75,7 +75,20 @@ if echo "$staged" | grep -qE '^(data/common_prompts/consciousness_prompt\.md|bac
     echo "[pre-commit]   • 우회: \`git commit --no-verify\` (권장 X)" >&2
     exit 1
   fi
-  echo "[pre-commit] 의식 출력 스키마 정합 OK ✓"
+  # 반대 방향(생산자 ⊆ 소비처) — 프롬프트가 요구하는 칸이 실제 조립에 닿는지.
+  # 정적 감사는 "소비처가 미선언 키를 읽는가"만 봐서, 채워지고도 아무 데도 안 닿는 칸
+  # (capability_focus.tools 는 5개월, primary_nodes 는 도달 불가 분기에만 — 2026-09-07 실측)
+  # 을 못 봤다. 이쪽은 표식을 심어 실제 조립문에서 찾는 기능 시험이 오라클이다.
+  echo "[pre-commit] 의식 출력 라우팅 검사 실행..."
+  if ! "$repo_root/.venv/bin/python" -m pytest "$repo_root/backend/test_consciousness_output_routing_2026_09_07.py" >/dev/null 2>&1; then
+    "$repo_root/.venv/bin/python" -m pytest "$repo_root/backend/test_consciousness_output_routing_2026_09_07.py" >&2
+    echo "" >&2
+    echo "[pre-commit] 의식 출력 라우팅 실패 — 커밋 차단." >&2
+    echo "[pre-commit]   • 프롬프트가 요구하는 칸이 실행자·평가·재규정 어디에도 안 닿는다(출력 토큰 낭비)." >&2
+    echo "[pre-commit]   • 소비처를 만들거나 consciousness_prompt.md 응답 형식에서 그 칸을 지워라." >&2
+    exit 1
+  fi
+  echo "[pre-commit] 의식 출력 라우팅 OK ✓"
 fi
 
 # 표준 코어 매니페스트 드리프트 — 패키지/앱/중앙어휘가 추가·제거되면 core_manifest.json 이

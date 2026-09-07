@@ -539,9 +539,11 @@ def build_environment(
 
     parts.append("</ibl_actions>")
 
-    # 관용구 상시 블록 (2026-09-04, 사용자 판정 "최빈도 관용구는 교재 프롬프트에 넣어 언제나 기억하게"):
-    # 해마 관용구(category='phrase') 가운데 가장 많이 쓰인 것 IDIOMS_TOP 건. 데이터(반증 가능 — 쓰이지
-    # 않으면 순위에서 빠진다)이지 교재 산문이 아니다. 나머지 관용구는 회상 채널(Top-2)로 온다.
+    # 관용구 상시 블록 — **어휘 층**(2026-09-07 사용자 판정 "그런 관용구는 실질적으로 어휘나 마찬가지"):
+    # 여기 서는 것은 매 턴 세금을 물므로 어휘와 같은 규율을 받는다(ibl.md §8: 작업보다 느리게 자란다).
+    # 그래서 ①`always_on=1` 인 것만 선다 ②그 표는 자동 증류가 아니라 사람이 부정기로 고른다
+    # (scripts/register_idiom.py). `always_on=0` 인 등록 관용구는 이름으로 부를 수는 있으나 소개되지
+    # 않는다 — 앱 버튼 같은 명시 호출의 자리다.
     idioms = _idioms_block(allowed)
     if idioms:
         parts.append(idioms)
@@ -549,7 +551,6 @@ def build_environment(
     return "\n".join(parts)
 
 
-IDIOMS_TOP = 6
 IDIOMS_MAP_CHARS = 7000     # 이름 지도 예산(자) — 시스템 프롬프트 한 자리, 캐시되므로 왕복마다 새로 물지 않는다(2026-09-06)
 IDIOMS_MAP_ROWS = 400        # 지도 후보 상한(행)
 _idioms_cache = {"t": 0.0, "text": "", "key": None}
@@ -615,7 +616,7 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
             _sig = "signature" if "signature" in _cols else "NULL"
             rows = conn.execute(
                 f"SELECT intent, ibl_code, success_count, fail_count, COALESCE(topic,''), COALESCE(alias,''), {_ret}, {_sig} "
-                "FROM ibl_examples WHERE COALESCE(alias,'') != '' "
+                "FROM ibl_examples WHERE COALESCE(alias,'') != '' AND COALESCE(always_on,0) = 1 "
                 "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
                 (IDIOMS_MAP_ROWS,)).fetchall()
             conn.close()
@@ -645,11 +646,13 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                 lines.append(f"[{g}]")
                 lines.extend(groups[g])
             if lines:
-                text = ("<ibl_idioms note=\"이름 지도 — 자주 쓰는 관용구 = 이름 붙은 함수, 가지별. 각 이름의 뜻(무엇을 받아 무엇을 내는가)을 "
-                        "읽고 이번 일과 맞으면 [fn:이름]{슬롯: 값} 한 줄로 부른다(정의 없이 이름만으로 돈다). "
-                        "본문은 여기 없다 — 고쳐 써야 할 때만 [self:memory]{op: \\\"recall\\\", node: \\\"<가지>\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 "
-                        "정의를 열어 [def: 이름]{…} 를 프로그램에 붙이고 문장을 빼거나 더한 뒤 [fn:이름]{…} 으로 부른다. "
-                        "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 step 요약만 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
+                text = ("<ibl_idioms note=\"관용구 — 자주 쓰는 표현을 한 낱말로 접은 것. 낱말을 매번 조합하지 말고, "
+                        "'언제' 가 이번 일과 맞으면 [fn:이름]{슬롯: 값} 한 줄로 불러라(정의 없이 이름만으로 돈다). "
+                        "'골격' 은 무엇이 도는지 알라고 적은 것 — 부를 때는 필요 없다. 이번 일에 한 문장이 안 맞을 때만 "
+                        "[self:memory]{op: \\\"recall\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 정의를 열어 "
+                        "[def: 이름]{…} 를 프로그램에 붙이고 그 문장만 고친 뒤 부른다. "
+                        "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 "
+                        "step 요약만 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
                         + "\n".join(lines) + "\n</ibl_idioms>")
     except Exception as e:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")
@@ -658,19 +661,55 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
 
 
 def _idiom_lines(r) -> List[str]:
-    """지도의 한 항목(두 줄): `- 이름 — 뜻 · 문장 n [· 사용 k회]` + 서명 한 줄."""
+    """지도의 한 항목 — **호출 · 언제 · 골격** 세 줄 (2026-09-07 사용자 판정 "언제 어떻게 쓰는지 설명해야").
+
+    옛 판은 `이름 — 뜻` + 서명이었다. 뜻은 *무엇을 하는가* 라서 **부를 조건**이 없었다 — 모델은 이름을
+    읽고도 이번 일과 맞는지 판정할 자리가 없었다(실측: 이름 38건 · 호출 7회). `언제` 는 등록된 intent 를
+    그 자리에 세운 것이고(등록 관문이 '언제'로 쓰게 요구한다), `골격` 은 저장하지 않고 몸에서 파생한다
+    — 파생물을 저장하면 몸과 갈라진다."""
     intent, code, sc, fc, _topic, alias, returns, signature = r
-    sents = _split_sentences(code)
     _n = int(sc or 0) + int(fc or 0)
-    used = f" · 사용 {_n}회" if _n else " · 실행 0"     # 돈 적 없는 정의는 그렇다고 말한다(2026-09-07)
-    head = f"- {alias} — {(intent or '').strip()[:120]} · 문장 {len(sents)}{used}"
     names, known = _stored_signature(signature)
     if known:
-        sig = f"  [fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}" + (f" → {returns}" if returns else "")
+        call = f"- {alias}{{" + ", ".join(names) + "}" + (f" → {returns}" if returns else "")
     else:
-        sig = (f"  [fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
-               f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
-    return [head, sig]
+        call = f"- {alias}{{…}} — 서명 미상, 부르기 전에 expand 로 인자 확인"
+    if _n:
+        call += f"  · 사용 {_n}회"
+    out = [call, f"  언제: {(intent or '').strip()[:150]}"]
+    skel = _skeleton(code)
+    if skel:
+        out.append(f"  골격: {skel}")
+    return out
+
+
+def _skeleton(code: str) -> str:
+    """몸 → 골격 한 줄(`grep → take → each{read}` 꼴). 파생물이므로 저장하지 않는다."""
+    import re as _re
+    heads = []
+    # 제어 블록([repeat:]·[if:]·[try])도 골격이다 — 액션만 세면 "무엇이 도는가" 의 절반이 빠진다
+    # (실측: 띄우고기다리기가 `self:script` 한 낱말로 줄어 기다림이 사라졌다).
+    for m in _re.finditer(r'\[([a-z_]+):\s*([a-z_]+)?|\[(try)\]', code or ""):
+        if m.group(3):
+            heads.append("try")
+            continue
+        node, act = m.group(1), m.group(2)
+        if node == "fn":
+            continue
+        if node in ("repeat", "if", "else", "case", "goal", "def", "on_error"):
+            heads.append(node)
+            continue
+        if not act:
+            continue
+        heads.append(act if node == "table" else f"{node}:{act}")
+    if not heads:
+        return ""
+    seen, out = set(), []
+    for h in heads:                      # 이어진 같은 액션은 한 번만 — 골격은 모양이지 횟수가 아니다
+        if out and out[-1] == h:
+            continue
+        out.append(h)
+    return " → ".join(out[:8]) + (" …" if len(out) > 8 else "")
 
 
 def _split_sentences(code: str) -> List[str]:

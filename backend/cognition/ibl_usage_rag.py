@@ -860,27 +860,11 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
 {topic_map or "(아직 가지 없음)"}
 6. **code 의 대괄호 머리는 실행된 코드의 머리를 글자 그대로 옮겨라** — 머리를 새로 짓거나,
    인자 값(node·path 따위)을 머리 안에 넣지 마라. 머리가 실행에 없던 것이면 그 용례는 버려진다.
-7. **관용구(phrase)** — code 와 별개의 두 번째 질문: 「이 주행에서 **되풀이될 모양**은 무엇인가?」
-   실행된 문장들 가운데 되풀이될 뼈대가 되는 문장 3~8개를 **실행 순서 그대로** 골라 목록으로 적되,
-   이 주행에만 속하는 값(경로·이름·질의어·날짜·좌표)은 슬롯으로 비우고, 비운 값은 slots 에
-   `{{"슬롯이름": "이번 주행의 값"}}` 로 적어라(한국어 명사, 짧게). 표기: 따옴표 안의 문자열 값은
-   따옴표를 그대로 두고 안을 `${{슬롯이름}}` 으로, 따옴표 없는 수치 값은 `$슬롯이름` 으로.
-   문장은 실행된 것을 글자 그대로 옮기고 값만 슬롯으로 바꾼다 — 인자를 빼거나 더하지 말고,
-   문장을 새로 짓거나 `>>` 로 이어 붙이지 마라(별개로 실행된 문장은 별개 항목). ★`&` 로 병렬 실행된 문장은
-   **통째로** 옮겨라 — 한 가지만 떼어 문장으로 적으면 실행된 적 없는 모양이라 버려진다(가지를 줄이는 것은 되지만
-   가지 하나짜리로 만들지는 말 것). 되풀이될 모양이 없으면(단발 작업·한 문장뿐) phrase 를 빈 목록으로.
-   매번 똑같이 도는 모양(정기 보고서)은 슬롯이 없어도 관용구다. 관용구에는 **이름**(phrase_name)을 붙여라 —
-   짧은 한국어 동사형 명사(띄어쓰기 없이 2~5어절 붙여 씀, 예: 뉴스모아쓰기·직전보고서읽기·찾아고치기). 관용구는
-   이름 붙은 함수다: 다음 주행은 이 이름으로 그대로 부르거나 정의를 펼쳐 고쳐 쓴다.
-   ★이름은 **이번 사건이 아니라 되풀이될 모양**을 말한다 — 결함·기능·파일·강의·상품 이름(이번 값이 될 명사)을 넣지 마라.
-   "무엇을 어떻게 한다" 의 동사 골격만 남겨라: 좋은 예 `찾고슬라이드시험하기`·`제안적용하기`, 나쁜 예 `글자얹기문제수리`·
-   `오버레이레이아웃무관허용및재적용`(사건 이름이라 다음 주행이 못 부른다). 12자를 넘으면 사건 이름일 가능성이 크다. 대표 code 가 여러 문장이면
-   code 에도 같은 규칙의 이름(code_name)을 붙여라(관용구와 다른 이름).
-   ★이름에는 **뜻**(phrase_meaning)을 한 줄로 붙여라 — 이 함수가 *무엇을 받아 무엇을 내는가* 를 사건과 무관한 일반 서술로
-   (예: "패턴으로 파일을 찾아 매칭 자리 주변을 각각 읽는다", "직전 보고서를 찾아 기준선으로 읽는다"). 다음 주행은 이 줄을 읽고
-   부를지 정하므로, 이번 요청의 사정("사용자 우려에 대응", "USB 폰 문제")을 적으면 아무도 못 부른다. 80자 안.
-   ★슬롯으로 비우지 않은 값은 **다음 주행에서도 같은 값** 이어야 한다 — 이 파일에만 있는 함수 이름·이번 질의어·좌표를
-   본문에 얼려 두면 되풀이될 모양이 아니다(슬롯으로 비우거나 그 문장을 빼라).
+   ★`&` 로 병렬 실행된 문장은 **통째로** 옮겨라 — 한 가지만 떼어 문장으로 적으면 실행된 적 없는
+   모양이라 버려진다(가지를 줄이는 것은 되지만 가지 하나짜리로 만들지는 말 것).
+7. **이 주행에 이름 붙은 함수를 썼다면** 그 사실만 남긴다 — 관용구(재사용 뼈대)를 *새로 지어 달라는*
+   요청은 이제 하지 않는다(2026-09-07 사용자 판정: 상시 프롬프트에 서는 관용구는 어휘이고, 어휘는
+   자동으로 늘지 않는다). 이름 등록은 사람이 부정기로 고른다 — 너는 용례(code)와 주행만 남겨라.
 8. **이름으로 부른 함수는 이름으로 남겨라** — 실행된 코드에 `[fn:이름]{{…}}` 호출이 있으면 code 와 phrase 는
    그 호출 문장을 글자 그대로 품는다. 호출을 본문으로 풀어 쓰지 마라(함수는 이름으로 부른다 — 다음 주행도
    그 이름을 부르고, 부른 뒤 더한 문장만 새로 배운다).
@@ -894,7 +878,7 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
    적지 마라(이름과 번호만).
 10. 결과는 반드시 JSON으로만 응답:
 
-{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "code_name": "여러 문장 code 의 이름(한 문장이면 빈 문자열)", "topic": "가지/경로", "phrase": ["문장1", "문장2"], "slots": {{"슬롯이름": "이번 값"}}, "phrase_name": "관용구이름", "phrase_meaning": "이 함수가 무엇을 받아 무엇을 내는가(한 줄)", "retyped": ["다시 타이핑한 함수 이름"], "mergeable": ["3-7"]}}"""
+{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로", "retyped": ["다시 타이핑한 함수 이름"], "mergeable": ["3-7"]}}"""
 
 
 # ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
@@ -1069,14 +1053,12 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             except Exception as _e:
                 print(f"[경험증류] 주행 기록 실패: {_e}")
 
-        # 관용구 증류 (2026-09-04, docs/IBL_IDIOM_TIER_HANDOFF.md): 반성기의 두 번째 답. 낱말(code)과
-        # 독립 — 낱말이 스킵돼도 관용구는 저장될 수 있고 그 반대도 같다.
+        # 관용구 자동 증류 **중단** (2026-09-07, 사용자 판정): 상시 프롬프트에 소개되는 관용구는
+        # 실질적으로 **어휘**다 — 어휘는 자동으로 늘어나서는 안 된다(ibl.md §8 "작업보다 느리게").
+        # 09-04~09-07 사흘에 38건이 자동으로 이름을 얻었고 34건이 실행 0 이었다. 등록은 이제
+        # 부정기 **수동** 경로(scripts/register_idiom.py)로만 — 에피소드 기억을 사람이 살펴 고른다.
+        # `_distill_phrase` 는 남긴다(수동 경로·replay_idioms 가 같은 관문을 쓴다). 부르는 자리가 없을 뿐.
         phrase_ok = False
-        try:
-            phrase_ok = _distill_phrase(intent or user_message[:80], distilled, ibl_calls, _topic,
-                                        tool_calls, turn_tokens)
-        except Exception as _e:
-            print(f"[경험증류:관용구] 실패(무시): {_e}")
 
         if not intent or not code:
             # code 빈 문자열 = 반성기가 "재사용 IBL 패턴 없음"으로 판단한 의도적 스킵
@@ -1148,47 +1130,12 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
         _birth_ms = _ibl_elapsed_ms(tool_calls)
-        # 자동 작명(2026-09-05, 처방 2): 여러 문장으로 된 대표 프로그램은 태어날 때 이름을 받는다 — 이름이
-        # 있어야 다음 호가 `[fn:이름]{인자}` 로 부르고, 회상은 본문 대신 서명을 보여 준다(이름 먼저).
-        # 한 문장짜리는 낱말이라 이름 없이 그대로 쓴다.
-        # 한 프로그램은 한 이름(2026-09-05): 관용구로 이미 저장된 것과 같은 프로그램이면 낱말로 또 저장하지 않는다
-        try:
-            from ibl_idiom import same_program as _same_program
-            if phrase_ok and _same_program(code, distilled.get("phrase") or []):
-                print("[경험증류] 대표 code 가 관용구와 같은 프로그램 — 낱말 중복 저장 생략(이름 하나)")
-                return phrase_ok
-        except Exception:
-            pass
+        # 자동 작명 중단 (2026-09-07, 사용자 판정 — 위 관용구 증류 중단과 한 벌): 이름을 주는 길이
+        # 둘이라 한쪽만 끊으면 샌다(09-07 전수 감사가 확인한 그 비대칭). 용례는 종전대로 코퍼스에
+        # 쌓되 **이름은 주지 않는다** — 상시 프롬프트에 서는 이름은 곧 어휘이고, 어휘는 사람이 고른다.
+        # 이름·반환 모양을 계산하던 관문들(uncallable_reason·slot_values_ungrounded·_phrase_private_reason)은
+        # 수동 등록 경로(scripts/register_idiom.py)가 그대로 쓴다 — 관문은 살아 있고 방아쇠만 사람에게 갔다.
         _alias, _returns = "", ""
-        try:
-            import hippo_tree as _ht
-            if len(_ht.split_sentences(code)) >= 2:
-                # 부를 수 있는 것만 이름을 받는다(2026-09-06) — 관용구 증류와 같은 관문. 이름은 붙었는데
-                # 부를 수 없으면 회상 표면만 차지하고 매 호 본문을 다시 치게 만든다.
-                from workflow_contract import call_signature
-                from ibl_idiom import (sanitize_fn_name, unique_fn_name, uncallable_reason,
-                                       slot_values_ungrounded, _phrase_private_reason)
-                _why = uncallable_reason(call_signature(code), len(_ht.split_sentences(code)), code)
-                # 값 접지(2026-09-07): 슬롯 값을 대입해 실행된 문장이 되살아나지 않으면 돈 적 없는 정의 — 이름을 주지 않는다
-                #   (ep2952 재진단: 이름 붙은 44건 중 40건 실행 0, 그중 하나가 첫 호출부터 죽을 몸이었다)
-                _why = _why or slot_values_ungrounded(distilled.get("slots") or {}, ibl_calls, code=code)
-                # 개인 명사(2026-09-07 전수 감사): 관용구 증류에만 달려 있던 관문 — 이 두 번째 작명 경로에는 없었다.
-                #   실측: 이름 붙은 44건 중 6건이 홈 경로가 박힌 몸(슬롯 0)인데 위 두 관문을 그대로 통과한다
-                #   (슬롯이 없으면 값 접지는 검사할 것이 없어 침묵한다). 그런 몸은 낡은 게 아니라 **처음부터 다시
-                #   쓸 수 없다** — 이름을 붙들고 회상 표면만 차지하고 영원히 실행 0 이다. 관문을 한쪽 길에만 단 부류.
-                #   용례로는 저장한다(이 턴의 사실이므로) — 주지 않는 것은 **이름**이다.
-                _why = _why or _phrase_private_reason(code)
-                if _why:
-                    print(f"[경험증류] 부를 수 없는 모양 — 이름 없이 저장: {_why}")
-                else:
-                    _alias = unique_fn_name(sanitize_fn_name(distilled.get("code_name") or distilled.get("phrase_name"), intent), db, code)
-                    try:
-                        from ibl_typecheck import return_type_of
-                        _returns = return_type_of(code)     # 서명의 반환 모양 — 부르기 전에 무엇이 나올지
-                    except Exception:
-                        _returns = "?"
-        except Exception:
-            _alias, _returns = "", ""
         example_id = db.add_example(
             intent=intent,
             ibl_code=code,

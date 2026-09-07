@@ -104,14 +104,16 @@ def test_g2_batch_drops_bad_keeps_good(db):
 
 
 def test_g2_fail_closed_when_unregistered(db, monkeypatch):
-    import ibl_usage_db as mod
-    monkeypatch.setattr(mod, "_CODE_VALIDATOR", None)
+    # 슬롯의 주인은 ibl_signature_slot 이다(2026-09-07 이동 — 1500줄 규칙). 원장은 재수출만 하므로
+    # `ibl_usage_db._CODE_VALIDATOR` 에 꽂아 봐야 읽는 쪽은 안 바뀐다 — 공개 이음매로 꽂는다.
+    import ibl_signature_slot as slot
+    monkeypatch.setattr(slot, "_CODE_VALIDATOR", None)
     with pytest.raises(RuntimeError):
         db.add_example(intent="x", ibl_code=GOOD)
     # 검증자 자체가 고장 = 검증 불가 = 거절(침묵 통과 아님)
-    def _broken(code):
+    def _broken(code, function_body=False):
         raise ValueError("boom")
-    monkeypatch.setattr(mod, "_CODE_VALIDATOR", _broken)
+    monkeypatch.setattr(slot, "_CODE_VALIDATOR", _broken)
     assert db.add_example(intent="x", ibl_code=GOOD) == 0
     assert _count(db) == 0
 
@@ -130,7 +132,8 @@ def _fresh(code: str, *, layer_dirs_on_path: bool = False) -> str:
 def test_g3_boot_paths_wires_lazily():
     out = _fresh(
         "import sys, boot_paths, ibl_usage_db\n"
-        "print(ibl_usage_db._CODE_VALIDATOR is not None, 'ibl_param_vocab' in sys.modules)\n"
+        "import ibl_signature_slot as slot\n"
+        "print(slot._CODE_VALIDATOR is not None, 'ibl_param_vocab' in sys.modules)\n"
         f"print(ibl_usage_db._syntax_reason({GOOD!r}) is None)\n"
         "print('ibl_param_vocab' in sys.modules)\n")
     assert out.splitlines() == ["True False", "True", "True"]

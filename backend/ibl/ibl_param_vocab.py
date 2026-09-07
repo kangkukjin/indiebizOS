@@ -462,7 +462,7 @@ def normalize_corpus_code(code: str) -> str:
     return s
 
 
-def code_syntax_error(code: str) -> Optional[str]:
+def code_syntax_error(code: str, function_body: bool = False) -> Optional[str]:
     """이 코드가 IBL 로 파싱되나 — 안 되면 사유 한 줄, 되면 None.
 
     ★해마 적재의 구문 관문. 이 모듈·증류 경로의 다른 검사들(어휘 소유·액션 실존·인자)는
@@ -478,8 +478,11 @@ def code_syntax_error(code: str) -> Optional[str]:
     if not s:
         return "빈 코드"
     try:
-        from ibl_parser import parse
-        parse(s)
+        # 관용구 골격·워크플로 몸은 **함수 몸**이다 — 미할당 `$이름` 이 자리를 가리지 않고
+        # 시그니처다(언어 개정 2026-09-07). 최상위 문법으로 읽으면 파이프 머리 슬롯
+        # (`$목록 >> [table:take]`)을 오타로 보고 원장 입구에서 거절한다.
+        from ibl_parser import parse, parse_function_body
+        parse_function_body(s) if function_body else parse(s)
         return None
     except Exception as e:
         first = str(e).splitlines()[0] if str(e) else e.__class__.__name__

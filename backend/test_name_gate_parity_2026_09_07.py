@@ -42,16 +42,22 @@ def test_g1_개인명사가_박힌_몸은_낱말_경로에서도_이름을_못_�
     assert (saved[0].get("alias") or "") == ""          # G1: 이름은 주지 않는다
 
 
-def test_g1_슬롯으로_비운_몸은_이름을_받는다(monkeypatch):
-    """관문이 '두 문장이면 무조건 거절' 로 넓어지지 않았는지 — 비워진 몸은 여전히 이름을 받는다."""
-    clean = ('[self:grep]{pattern: "${패턴}", root_path: "${루트}", limit: 60}\n'
-             '[self:read]{path: "${파일}", start_line: 440, end_line: 620}')
-    saved = _arm(monkeypatch, {"intent": "찾아 읽기", "code": clean, "topic": "개발/프론트",
-                               "code_name": "찾아읽기", "phrase": [], "slots": SLOTS})
-    import ibl_usage_rag as rag
-    rag.distill_experience("찾아 읽기", TOOL_CALLS, top_score=0.3)
-    assert saved and (saved[0].get("alias") or "") == "찾아읽기"
+def test_g1_슬롯으로_비운_몸은_수동_경로에서_이름을_받는다():
+    """관문의 뜻은 살아 있다 — 슬롯으로 비운 몸은 이름을 받을 자격이 있다. 바뀐 것은 **누가 주는가**다.
 
+    2026-09-07 사용자 판정으로 자동 작명이 멈췄다(어휘는 자동으로 늘지 않는다). 그래서 이 계약을
+    확인하는 자리가 증류 경로에서 등록 관문으로 옮겨졌다 — 개인 명사가 든 몸은 여전히 거절된다."""
+    import sys as _sys, os as _os
+    _sys.path.insert(0, _os.path.join(_os.path.dirname(_os.path.dirname(_os.path.abspath(__file__))), "scripts"))
+    import register_idiom
+    slotted = ('[self:grep]{pattern: "${패턴}", root_path: "${루트}", limit: 60}; '
+               '[self:read]{path: "${파일}", start_line: 440, end_line: 620}')
+    info, why = register_idiom._gates("찾아읽기", "어디 있는지 모르는 것을 읽어야 할 때", slotted)
+    assert why is None and info["signature"] == ["패턴", "루트", "파일"], (why, info)
+
+    private = ('[self:grep]{pattern: "x", root_path: "/Users/kangkukjin/Desktop", limit: 60}; '
+               '[self:read]{path: "/Users/kangkukjin/Desktop/a.py", start_line: 1, end_line: 20}')
+    assert register_idiom._gates("찾아읽기2", "어디 있는지 모르는 것을 읽어야 할 때", private)[0] is None
 
 def test_g1_두_경로가_같은_관문을_부른다():
     """짝이 맞는지 자리로도 확인 — 한쪽에만 달린 관문이 이 부류를 만들었다."""

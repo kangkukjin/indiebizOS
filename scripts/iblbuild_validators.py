@@ -560,12 +560,14 @@ def _corpus_entries(root: Path, include_db: bool = False):
     try:
         import sqlite3
         con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
-        rows = con.execute("SELECT intent, ibl_code FROM ibl_examples").fetchall()
+        # alias·category 도 낸다 — 관용구 골격은 함수 몸으로 읽어야 한다(언어 개정 2026-09-07).
+        rows = con.execute("SELECT intent, ibl_code, COALESCE(alias,''), COALESCE(category,'') "
+                           "FROM ibl_examples").fetchall()
         con.close()
     except Exception:
         return
-    for intent, code in rows:
-        yield "ibl_usage.db", {"intent": intent, "ibl_code": code}
+    for intent, code, alias, category in rows:
+        yield "ibl_usage.db", {"intent": intent, "ibl_code": code, "alias": alias, "category": category}
 
 
 def validate_corpus_vocab(data: dict, root: Path) -> list[str] | None:
@@ -607,8 +609,11 @@ def validate_corpus_vocab(data: dict, root: Path) -> list[str] | None:
         seen_any = True
         code = e.get("ibl_code") or ""
         intent = str(e.get("intent") or "")[:40]
+        # 관용구 골격은 **함수 몸**이다 — 미할당 `$이름` 이 자리를 가리지 않고 시그니처다
+        # (언어 개정 2026-09-07). 최상위 문법으로 읽으면 파이프 머리·병렬 분기 슬롯을 오타로 본다.
+        _is_body = bool(e.get("alias")) or e.get("category") == "phrase"
         try:
-            parsed = ibl_parser.parse(code)
+            parsed = (ibl_parser.parse_function_body(code) if _is_body else ibl_parser.parse(code))
         except Exception as ex:
             issues.append(f"{fname}: 파싱 불가 — {intent} :: {str(ex)[:60]}")
             continue

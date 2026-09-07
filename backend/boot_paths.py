@@ -46,9 +46,9 @@ def wire_ledger_syntax_gate() -> None:
     except Exception:
         return  # 원장이 없는 몸이면 꽂을 문도 없다
 
-    def _validator(ibl_code: str):
+    def _validator(ibl_code: str, function_body: bool = False):
         from ibl_param_vocab import code_syntax_error
-        return code_syntax_error(ibl_code)
+        return code_syntax_error(ibl_code, function_body)
 
     ibl_usage_db.set_code_validator(_validator)
 

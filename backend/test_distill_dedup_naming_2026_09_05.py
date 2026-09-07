@@ -34,7 +34,7 @@ def test_d1_same_program_by_blank_signature():
 
 
 # ---------------------------------------------------------------- D2
-def test_d2_distill_skips_word_when_same_as_saved_phrase(monkeypatch, tmp_path):
+def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path):
     import ibl_usage_db as mod
     import thread_context
     import hippo_tree
@@ -68,16 +68,27 @@ def test_d2_distill_skips_word_when_same_as_saved_phrase(monkeypatch, tmp_path):
     calls = [{"tool_name": "execute_ibl", "input": {"code": STATUS}, "success": True},
              {"tool_name": "execute_ibl", "input": {"code": APPLY}, "success": True}]
     assert rag.distill_experience("#repair 적용해줘", calls, top_score=0.3) is True
+    # ★정책 반전(2026-09-07): 자동 경로는 관용구도 이름도 만들지 않는다 — 상시 프롬프트에 서는
+    #   이름은 곧 어휘이고, 어휘는 자동으로 늘지 않는다. 그래서 '관용구와 낱말이 겹치니 하나만
+    #   저장한다'는 중복 방지도 자리가 사라졌다(겹칠 관용구가 안 태어난다). 남는 것은 용례 하나뿐.
     cats = [s.get("category") for s in saved]
-    assert cats == ["phrase"], cats                    # 관용구 하나만 — 같은 프로그램의 낱말(…2)은 저장하지 않는다
-    assert saved[0]["alias"] == "수리제안적용하기"
+    assert "phrase" not in cats, cats
+    assert all(not s.get("alias") for s in saved), "자동 경로가 아직 이름을 준다"
 
 
 # ---------------------------------------------------------------- N1 · R1
-def test_n1_prompt_names_shapes_not_incidents():
+def test_n1_name_shape_rule_is_now_a_gate_not_prose():
+    """"이름은 사건이 아니라 모양" — 반성기 프롬프트의 산문이던 규약이 **등록 관문**이 됐다(2026-09-07).
+
+    셀 수 있으면 관문이 실패시킨다(카운터 심고 두고 보기 금지)."""
     import ibl_usage_rag as rag
     p = rag._build_distill_prompt("u", "  1. " + STATUS, "", "")
-    assert "이번 사건이 아니라 되풀이될 모양" in p and "12자" in p
+    assert "phrase_name" not in p                       # 모델에게 짓게 하지 않는다
+    sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), "scripts"))
+    import register_idiom
+    good = '[self:patch]{op: "status"}; [self:patch]{op: "apply", id: "${제안번호}"}'
+    assert register_idiom._gates("오버레이레이아웃무관허용및재적용", "제안을 적용해야 할 때", good)[0] is None
+    assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때", good)[1] is None
 
 
 def test_r1_repair_fragment_routes_to_recall_scripts_and_find():

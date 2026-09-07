@@ -174,7 +174,12 @@ def ensure_column(db_path: Optional[str] = None) -> None:
                           ("returns", "TEXT DEFAULT ''"),
                           # signature 는 NULL=미계산 / ''=인자 없음 을 구분해야 한다(2026-09-06) — 기본값을 주지 않는다
                           ("signature", "TEXT"),
-                          ("bypass_count", "INTEGER DEFAULT 0")):     # 우회 횟수(2026-09-07)
+                          ("bypass_count", "INTEGER DEFAULT 0"),     # 우회 횟수(2026-09-07)
+                          # 상시 소개 여부(2026-09-07 사용자 판정): 1 = 시스템 프롬프트의 이름 지도에 선다
+                          # = **어휘**. 어휘는 자동으로 늘지 않는다 — 사람이 부정기로 고른다
+                          # (scripts/register_idiom.py). 0 = 등록만 — 이름으로 부를 수는 있으나 소개되지
+                          # 않아 보통은 쓰이지 않는다(앱 버튼 같은 명시 호출의 자리).
+                          ("always_on", "INTEGER DEFAULT 0")):
             try:
                 conn.execute(f"SELECT {col} FROM ibl_examples LIMIT 1")
             except sqlite3.OperationalError:

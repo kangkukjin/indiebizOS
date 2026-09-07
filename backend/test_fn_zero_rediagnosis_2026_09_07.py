@@ -138,11 +138,16 @@ def test_슬롯_값이_실행문에_없으면_이름을_받지_못한다():
     assert slot_values_ungrounded({}, calls, code=code)                            # 값 없는 슬롯 = 검증 불가
 
 
-def test_자동_작명은_값_접지를_지난다(monkeypatch):
-    """rag 의 자동 작명 분기가 slot_values_ungrounded 를 부른다 — 부를 수 없는 모양과 같은 문."""
+def test_작명_경로가_사라졌고_값_접지_관문은_남았다():
+    """자동 작명은 중단됐다(2026-09-07 사용자 판정) — 그러나 값 접지 관문은 수동·재생 경로에 그대로 산다.
+
+    옛 판은 rag 의 자동 작명 분기가 이 관문을 부르는지 소스로 확인했다. 그 분기가 없어졌으므로
+    확인할 것이 바뀐다: ①rag 에 작명 분기가 없다 ②관문 자체는 관용구 저장 경로(_distill_phrase)에 있다."""
     src = (ROOT / "backend" / "cognition" / "ibl_usage_rag.py").read_text(encoding="utf-8")
-    i = src.index("자동 작명(2026-09-05, 처방 2)")
-    assert "slot_values_ungrounded(distilled.get(\"slots\")" in src[i:i + 3000]
+    assert "unique_fn_name(sanitize_fn_name(" not in src, "자동 작명 분기가 남아 있다"
+    idiom = (ROOT / "backend" / "cognition" / "ibl_idiom.py").read_text(encoding="utf-8")
+    i = idiom.index("def _distill_phrase")
+    assert "slot_values_ungrounded" in idiom[i:i + 4000], "관용구 저장 경로에서 값 접지 관문이 빠졌다"
 
 
 # ── 회상 표면 ────────────────────────────────────────────────────────────────

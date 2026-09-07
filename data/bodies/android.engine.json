@@ -274,6 +274,7 @@
   },
   "blocklist_globs": [
     "migrate_*",
+    "retire_*",
     "test_*"
   ],
   "counts": {

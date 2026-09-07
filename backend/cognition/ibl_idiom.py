@@ -553,6 +553,44 @@ def uncallable_reason(signature, sentences: int = 99, code: str = "") -> Optiona
     return None
 
 
+#: 서명이 본문만큼 길어지는 경계 — 이 이상이면 부르는 값이 치는 값과 같다(uncallable 의 상한 8보다 엄격).
+FROZEN_SLOT_CEILING = 6
+_PATHY_RE = re.compile(r'"([^"]*[/\\][^"]*)"')
+_EXT_RE = re.compile(r'\.[A-Za-z0-9]{2,5}$')
+_URL_RE = re.compile(r'[a-z][a-z0-9+.-]*://')
+
+
+def frozen_incident_reason(code: str, signature) -> Optional[str]:
+    """몸에 **이번 값**이 얼어 있으면 사유, 다시 부를 수 있으면 None (2026-09-07 이름 회수 감사).
+
+    옛 반성기 프롬프트가 산문으로만 말하던 규약을 관문으로 옮긴 것: "슬롯으로 비우지 않은 값은
+    다음 주행에서도 같은 값이어야 한다 — 이 파일에만 있는 이름·이번 질의어·좌표를 얼려 두면
+    되풀이될 모양이 아니다." 산문은 지켜지지 않았다(38건 중 8건이 그 부류로 태어났다).
+
+    셋 중 하나면 얼어 있다:
+      ① 슬롯으로 안 비운 **경로·URL 리터럴** — 남의 그날 그 파일·그 출처를 다시 만진다
+      ② 슬롯 0 — 부를 때 바꿀 것이 없다(매크로이지 함수가 아니다)
+      ③ 슬롯 FROZEN_SLOT_CEILING 개 이상 — 서명이 본문만큼 길어 부르는 값이 치는 값과 같다
+    `_phrase_private_reason`(홈 절대경로)의 형제 — 그쪽이 **개인정보**를, 이쪽이 **일회성**을 본다.
+    """
+    names = [str(n) for n in (signature or [])]
+    if not names:
+        return "슬롯 0 — 부를 때 바꿀 것이 없다(매크로이지 함수가 아니다)"
+    if len(names) >= FROZEN_SLOT_CEILING:
+        return (f"슬롯 {len(names)}개 — 상한 {FROZEN_SLOT_CEILING}. 서명이 본문만큼 길면 "
+                f"부르는 값이 치는 값과 같다")
+    for m in _PATHY_RE.finditer(code or ""):
+        lit = m.group(1)
+        if "$" in lit:
+            continue                          # 슬롯으로 비운 자리는 얼어 있지 않다
+        if _URL_RE.match(lit):
+            return f"출처 URL 이 얼어 있다: {lit[:60]} — 부르는 쪽이 바꿀 수 없다"
+        tail = lit.rstrip("/").rsplit("/", 1)[-1]
+        if _EXT_RE.search(tail):
+            return f"경로 리터럴이 얼어 있다: {lit[:60]} — 다음 주행에도 같은 파일일 리 없다"
+    return None
+
+
 def _distill_phrase(intent: str, distilled: dict, ibl_calls: list, topic: str,
                     tool_calls: list, turn_tokens: int = None) -> bool:
     """반성기의 두 번째 답(phrase·slots)을 관문에 통과시켜 `category='phrase'` 로 저장한다. 낱말 증류와 독립."""

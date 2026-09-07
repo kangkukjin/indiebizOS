@@ -44,7 +44,8 @@ def _gates(name: str, when: str, code: str):
     from ibl_parser import parse_function_body
     from ibl_typecheck import typecheck_code, return_type_of
     from workflow_contract import call_signature
-    from ibl_idiom import uncallable_reason, _phrase_private_reason, sanitize_fn_name
+    from ibl_idiom import (uncallable_reason, _phrase_private_reason, sanitize_fn_name,
+                           frozen_incident_reason)
     import hippo_tree
 
     if sanitize_fn_name(name, name) != name:
@@ -66,7 +67,8 @@ def _gates(name: str, when: str, code: str):
         return None, f"타입 오류: {(errs[0].get('message') or '')[:120]}"
     sig = call_signature(code)
     n = len(hippo_tree.split_sentences(code))
-    why = uncallable_reason(sig, n, code) or _phrase_private_reason(code)
+    # 일회성 관문(2026-09-07): 슬롯 0·슬롯 6+·얼어붙은 경로 리터럴 — 다시 부를 수 없는 몸에는 이름을 주지 않는다.
+    why = uncallable_reason(sig, n, code) or _phrase_private_reason(code) or frozen_incident_reason(code, sig)
     if why:
         return None, why
     return {"signature": sig, "returns": return_type_of(code), "sentences": n}, None

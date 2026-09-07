@@ -109,7 +109,10 @@ LAYERS = {
 }
 SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common"}
-EXEMPT_PREFIX = ("test_", "migrate_")
+#: 층 배정 밖 — 시험과 **원장 일회성 유지보수 스크립트**(migrate_/retire_). 폰 번들의
+#: _force_exclude_glob 과 같은 부류를 가리킨다(data/bodies/android.json) — 두 자리가 갈리면
+#: 한쪽만 통과하는 모듈이 생긴다. 부류는 파일별로 전개하지 않는다(2026-09-07 retire_ 추가).
+EXEMPT_PREFIX = ("test_", "migrate_", "retire_")
 EXEMPT = {"prompt_benchmark", "ibl_opus_bulk_gen", "ibl_synthetic_generator",
           "ibl_synthetic_opus", "ibl_embedding_trainer",
           "boot_paths", "conftest"}  # 부트스트랩 — backend 루트가 정위치
@@ -199,7 +202,7 @@ def misplaced_modules(backend_dir):
         if lay in ("ASSEMBLY", "UNASSIGNED"):
             expect = ""          # 조립 루트·미배정은 backend 루트
         elif lay is None:
-            expect = ""          # 검사 밖(test_/migrate_/생성기)도 루트
+            expect = ""          # 검사 밖(test_/migrate_/retire_/생성기)도 루트
         else:
             expect = LAYER_DIR_OF[lay]
         if name in ("boot_paths", "conftest"):
@@ -394,7 +397,7 @@ def private_symbol_leaks(backend_dir, pkg_tools=PKG_TOOLS):
 
     for name, rel in sorted(module_paths(backend_dir).items()):
         lay = layer_of(name)
-        if lay is None:            # test_*/migrate_* 등 검사 밖 — 화이트박스 시험은 정당
+        if lay is None:            # test_*/migrate_*/retire_* 등 검사 밖 — 화이트박스 시험은 정당
             continue
         if lay == "ibl" or name in SEAM_MODULES:
             continue               # 층 안(친구-모듈) 공유는 규칙 밖
@@ -501,6 +504,7 @@ def self_test() -> int:
     assert layer_of("api_anything") == "surface"
     assert layer_of("test_foo") is None
     assert layer_of("migrate_bar") is None
+    assert layer_of("retire_bar") is None
     assert layer_of("api") == "ASSEMBLY"
     assert layer_of("ibl_parser") == "ibl"
     # 교차층 순환 검출: data ↔ surface 인공 순환

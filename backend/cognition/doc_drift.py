@@ -14,6 +14,8 @@ data_ownership 이 잡은 my_profile.txt 선언 부패와 같은 부류. 이 감
 4) 스크립트 등록 설명 args ↔ 소스 실인자 — data/scripts/registry.yaml 의 설명은
    손으로 쓴 둘째 사본이다. 실증: 옛 JSON 원장 스크립트의 set 은 value 를 받는데 설명 args 목록에
    없어, 설명만 보고 호출한 갱신이 대상을 null 로 덮고 성공을 보고했다(2026-08-30 사고)
+5) 등록부가 가리키는 스크립트가 git 에 추적되는가 — 4)는 워킹 트리를 읽으므로, 설명만
+   커밋하고 소스를 안 올리면 초록의 근거가 저장소 밖에 선다(2026-09-07 b812bd68 사고)
 
 ## 규율
 - 역사 서술은 침범하지 않는다: 꼬리 changelog 줄(`*마지막/최종 업데이트`)·화살표(→)·
@@ -264,6 +266,37 @@ def _script_args_flags(name: str, desc: str, src: str) -> List[Dict]:
     return flags
 
 
+def _untracked_script_flags(entries, tracked) -> List[Dict]:
+    """등록부가 가리키는 파일이 git 에 추적되는가 (순수 함수 — 시험용 분리).
+
+    설명(registry.yaml)만 커밋하고 소스는 워킹 트리에 두면 args 대조가 초록이 된다 —
+    감사는 워킹 트리를 읽으므로, 초록의 근거가 저장소 밖(추적 안 된 파일)에 선다.
+    실증: b812bd68 이 나레이션 args 문서만 커밋 → 로컬 초록, 깨끗한 클론은 깃발 3건
+    (설명이 주장하는 texts_file 을 HEAD 소스가 안 읽음 + 등록 파일 2개 부재, 2026-09-07).
+    """
+    out = []
+    for name, fname in entries:
+        if fname and fname not in tracked:
+            out.append({"kind": "script_untracked",
+                        "doc": f"data/scripts/registry.yaml#{name}", "line": 0,
+                        "claim": f"등록부가 가리키는 파일이 git 에 없음: {fname}",
+                        "hint": "설명만 커밋되고 소스는 워킹 트리에 남았다 — 같은 커밋에 소스를 실을 것"})
+    return out
+
+
+def _tracked_script_files():
+    """data/scripts 아래 git 추적 파일 이름 집합 — 실패는 None(=못 봄, unchecked 행)."""
+    try:
+        r = subprocess.run(["git", "-C", str(_ROOT), "ls-files", "-z", "data/scripts"],
+                           capture_output=True, text=True, timeout=10)
+    except Exception:
+        return None
+    if r.returncode != 0:
+        return None
+    # -z = 따옴표 없는 날 경로(한글 파일명이 \353.. 로 인용되는 것을 피한다)
+    return {part.split("/")[-1] for part in r.stdout.split("\0") if part}
+
+
 def _check_script_registry(flags: List[Dict], unchecked: List[str]) -> None:
     import yaml
     reg_path = _ROOT / "data" / "scripts" / "registry.yaml"
@@ -274,6 +307,13 @@ def _check_script_registry(flags: List[Dict], unchecked: List[str]) -> None:
     except Exception as e:
         unchecked.append(f"data/scripts/registry.yaml({e.__class__.__name__})")
         return
+    tracked = _tracked_script_files()
+    if tracked is None:
+        unchecked.append("data/scripts(git ls-files)")
+    else:
+        flags.extend(_untracked_script_flags(
+            [(n, str(e.get("file") or "")) for n, e in registry.items() if isinstance(e, dict)],
+            tracked))
     for name, entry in registry.items():
         if not isinstance(entry, dict):
             continue

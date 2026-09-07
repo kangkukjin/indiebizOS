@@ -11,7 +11,7 @@ import boot_paths  # noqa: E402,F401
 from doc_drift import (  # noqa: E402
     _check_dates, _check_dead_refs, _check_stats_claims,
     _collect_ident_tokens, _is_historical, _mask, measure,
-    _script_args_flags, _script_desc_args,
+    _script_args_flags, _script_desc_args, _untracked_script_flags,
 )
 
 FACTS = {"node_count": 6, "total": 149, "tools_n": 41, "exts_n": 5}
@@ -98,6 +98,20 @@ def test_t7_script_registry_args_drift():
     assert toks == ["repos", "query", "op", "limit"], toks
     # 'args:' 나열이 아예 없고 소스도 인자를 안 읽으면 깃발 0
     assert not _script_args_flags("z", "인자 없는 요약 스크립트", "print(1)")
+
+
+def test_t8_registry_points_at_untracked_source():
+    # 사고 재현(2026-09-07 b812bd68): 설명(registry.yaml)만 커밋하고 소스는 워킹 트리에
+    # 두면 args 대조는 워킹 트리를 읽어 초록이 된다 — 초록의 근거가 저장소 밖에 선다.
+    # 깨끗한 클론에서만 되살아나므로 '추적되는가' 를 따로 묻는다.
+    tracked = {"산다.py"}
+    flags = _untracked_script_flags([("등록", "없다.py"), ("멀쩡", "산다.py")], tracked)
+    assert len(flags) == 1, flags
+    assert flags[0]["kind"] == "script_untracked" and "없다.py" in flags[0]["claim"], flags
+    # 소스가 같은 커밋에 실리면 깃발 0
+    assert not _untracked_script_flags([("등록", "없다.py")], tracked | {"없다.py"})
+    # file 이 빈 항목은 이 검사의 몫이 아니다(읽기 실패가 unchecked 로 잡는다)
+    assert not _untracked_script_flags([("빈칸", "")], tracked)
 
 
 def test_t6_real_repo_clean():

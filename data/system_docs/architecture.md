@@ -263,7 +263,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수)
+  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus, guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
 - **framing 재사용 게이트 (2026-05-31)** — `agent_cognitive._run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
@@ -303,7 +303,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 **정적 정합성 검증 합류 (2026-05-28 신설, 현행 배관은 2026-06-27 단순화)**: `build_ibl_nodes.py`의 삼각 검증(src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS`)을 self-check 사이클이 실행 — 현행은 `world_pulse_health.run_ibl_health_check()`가 `scripts/ibl_health_check.py`를 subprocess로 돌려 §1A 결과를 `self_checks` 테이블에 `__static__:ibl_consistency` 식별자로 기록(옛 `run_static_ibl_check()`는 2026-06-27 은퇴). 정적 부채(누락된 등록, op 키 drift)와 런타임 부채(액션 실패)가 같은 사이클에서 잡힘. pre-commit 훅(commit 시점)과 일일 건강 점검(하루 1회)의 이중 검증 채널.
 
-**의식 에이전트 메타 인지 가드 (2026-05-28, 2026-09-06 수리 턴 전용 조각으로 분리)**: backend 자기 편집=자기 reload 자해 인식, 첫 호출 성공 시 의심 즉시 갱신, timeout/실패 후 같은 코드 재시도 금지. 원래 consciousness_prompt 본문에 있었으나 수리 안전수칙과 함께 `fragments/14_consciousness_repair.md` 로 옮겨, REPAIR 분류·늦은 승격 턴에만 의식 입력의 `<repair_doctrine>` 블록으로 실린다(시스템 프롬프트 캐시 prefix 불변). 본문의 task_framing 은 이름 붙은 골격(문제·제약·세상의 방식·전문가의 방법·무게·멈춤선·위해·불분명)이고, 별도 `assumptions` 필드가 계획의 전제를 실행자에게 넘겨 첫 확인에서 깨진 전제를 알아채게 한다.
+**의식 에이전트 메타 인지 가드 (2026-05-28, 2026-09-06 수리 턴 전용 조각으로 분리)**: backend 자기 편집=자기 reload 자해 인식, 첫 호출 성공 시 의심 즉시 갱신, timeout/실패 후 같은 코드 재시도 금지. 원래 consciousness_prompt 본문에 있었으나 수리 안전수칙과 함께 `fragments/14_consciousness_repair.md` 로 옮겨, REPAIR 분류·늦은 승격 턴에만 의식 입력의 `<repair_doctrine>` 블록으로 실린다(시스템 프롬프트 캐시 prefix 불변). 본문의 task_framing 은 이름 붙은 골격(문제·제약·세상의 방식·무게·멈춤선·위해·불분명)이고, 별도 `assumptions` 필드가 계획의 전제를 실행자에게 넘겨 첫 확인에서 깨진 전제를 알아채게 한다. 2026-09-07 사용자 설계로 옛 골격 줄 '전문가의 방법'은 독립 필드 `expert_choice` 로 승격돼, 실행자 명령에 `전문가의 선택:` 이라는 제 이름의 섹션(한 문장·이름 강제)으로 실린다 — 규정 산문 안의 한 줄은 1,300자 덩어리에 묻혔고, hint 가 별도 명령문 줄로 떼어졌을 때 살아난 것과 같은 자리다.
 
 **턴 안 재규정 (2026-09-06, `cognition/reframe.py`)**: 의식은 턴 시작에 한 번 규정하지만, 전제가 실행 중 반증되면(이 틀 안에서 불가·위험·문제가 다른 것) 실행자가 `reframe` 도구(자기 관리 도구 부류, IBL 어휘 아님 — 이음매 신호가 해마 코퍼스에 섞이지 않게)로 깨진 전제·근거·진행 요약을 보내고, 파이프라인이 연 턴 통로(`open_turn`, 키=agent_id)가 의식을 `<framing_revision>` 블록과 함께 다시 깨운다. 새 규정은 도구 결과로 같은 대화에 돌아오고(전체 재시작 없음), 통로의 갱신 규정을 평가 루프가 기준으로 쓴다. 판단 없는 기계 방아쇠도 하나 — 평가가 치명(severity 3)이거나 2라운드째 미달이면 평가자 피드백을 근거로 재규정(`revise_from_eval`). 상한 한 턴 2회, 권한(needs_repair)은 재규정으로 늘지 않는다. 두-경로 대칭: 인프로세스는 `system_tools` 디스패치, Claude Code 는 `mcp_server.reframe → /ibl/reframe`(read_guide 와 동형). 궤적 사건 `framing.revised`.
 

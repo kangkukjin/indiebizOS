@@ -224,6 +224,13 @@ def render_for_executor(env: dict) -> str:
                      "사실을 짧게 정리한 뒤 다음 질문으로 응답을 마무리하라:\n" + out["clarification_question"].strip())
     lines.append("현재 태스크:\n" + (out.get("task_framing") or "").strip())
     try:
+        from prompt_builder import _expert_choice_line
+        _ex = _expert_choice_line(out)
+    except Exception:
+        _ex = ""
+    if _ex:
+        lines.append("전문가의 선택: " + _ex)
+    try:
         from prompt_builder import _assumption_lines
         a = _assumption_lines(out)
     except Exception:

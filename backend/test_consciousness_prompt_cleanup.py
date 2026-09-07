@@ -30,7 +30,7 @@ def test_main_prompt_has_no_repair_tail_or_history():
                  "폐지되었다", "ep1264", "ep2386", "2026-06-28", "2026-08-19", "1-2문장", "1~2문장"):
         assert dead not in t, f"본문에 남아선 안 되는 문구: {dead}"
     # 골격과 전제 칸은 있어야 한다
-    for keep in ("세상의 방식", "전문가의 방법", "무게·멈춤선", "assumptions", "<repair_doctrine>"):
+    for keep in ("세상의 방식", "expert_choice", "무게·멈춤선", "assumptions", "<repair_doctrine>"):
         assert keep in t, f"본문에 있어야 하는 문구: {keep}"
     # 중복 조항은 한 번만
     assert t.count("수단(능력)은 가두지 않는다") == 1

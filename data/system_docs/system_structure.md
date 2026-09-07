@@ -281,7 +281,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - reflex_hint가 있을 때만 provider를 'reflex' 축 티어(균형 기어 기본=중급)로 교체 후 try/finally로 복원
   - 무의식 EXECUTE는 'execute' 축 유지 — 분류 오판이 품질 저하로 이어지지 않게 하는 방어. 덕분에 무의식은 EXECUTE 쪽으로 과감하게 기울 수 있다
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
-  - 출력 필드: task_framing, achievement_criteria, history_summary, capability_focus, guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지)
+  - 출력 필드: task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus, guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지)
   - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<execution_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<execution_map>` 의 guide: 줄, 2026-09-03)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **framing 재사용 (의식 진입 게이트, 2026-05-31)** — `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`

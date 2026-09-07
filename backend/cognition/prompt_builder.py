@@ -850,6 +850,19 @@ def draft_adoption(draft_code: str, tool_calls: list):
     return bool(pairs & executed)
 
 
+def _expert_choice_line(consciousness_output: dict) -> str:
+    """의식의 expert_choice 를 실행자 명령의 한 줄로 정규화한다 (없으면 빈 문자열).
+
+    한 문장 계약이므로 개행은 공백으로 눕힌다. 내용의 질(이름이 들어있는가)은 기계가
+    판정할 수 없어 프롬프트의 ○/✕ 예시와 실주행 관측이 맡는다 — 여기서 상투구를
+    정규식으로 거르려 들면 "감정사는 거래 사례부터 본다" 같은 합격 문장이 먼저 죽는다.
+    """
+    v = (consciousness_output or {}).get("expert_choice")
+    if not isinstance(v, str):
+        return ""
+    return " ".join(v.split()).strip()
+
+
 def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     """의식 경로 '사용자 명령 변형기' — [사용자 원문 명령 + 의식의 보강]을 하나의 '사용자 명령'
     프레임으로 융합하되, 그 사이에 **당위 앵커**를 끼운다.
@@ -877,6 +890,13 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     task_framing = (co.get("task_framing") or "").strip()
     if task_framing:
         aug.append(task_framing)
+
+    # 전문가의 선택 — 규정 산문에 묻히지 않도록 제 이름의 섹션으로. 실행자가 요청의 낱말에서
+    # 출발하는 것을 막는 자리다(09-07 사용자 설계). 여러 줄로 오면 한 줄로 눕힌다 — 이 자리가
+    # 두 번째 task_framing 이 되면 섹션으로 뽑은 값이 사라진다.
+    expert = _expert_choice_line(co)
+    if expert:
+        aug.append("전문가의 선택: " + expert)
 
     # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증하고, 깨졌으면 계획을 밀지 않는다.
     assumptions = _assumption_lines(co)

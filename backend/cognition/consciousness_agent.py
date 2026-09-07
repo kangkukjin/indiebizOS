@@ -190,6 +190,7 @@ class ConsciousnessAgent:
                 "history_summary": str,    # 히스토리 맥락 요약 (원본 대체)
                 "task_framing": str,       # 지금 풀어야 할 문제 정의
                 "achievement_criteria": str, # 달성 기준 (비어있으면 평가 루프 안 탐)
+                "expert_choice": str,      # 전문가의 선택 — 실행자 명령의 제 이름 섹션(한 문장)
                 "capability_focus": {      # IBL 포커싱 (프롬프트 응답 형식 키)
                     "primary_nodes": list,     # 주요 노드
                     "highlight_actions": list, # 강조할 액션

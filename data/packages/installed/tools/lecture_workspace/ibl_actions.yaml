@@ -193,7 +193,7 @@ tool_json:
 
       - create: AI로 슬라이드 한 장 생성 (instruction, +insert_at. lecture_id 미지정 시 스크래치 덱에 자동 등록 — 구 engines:slide 단발 생성 흡수)
 
-      - edit: 슬라이드 AI 재생성 — 현재 spec을 컨텍스트로 (lecture_id, slide_id, instruction)
+      - edit: 슬라이드 AI 재생성 — 현재 spec을 컨텍스트로 (lecture_id, slide_id, instruction). 덱에서의 자리(slide_order)와 이미 적어둔 스피커 노트는 그대로 — 재생성은 그 장의 spec·PNG만 바꾼다
 
       - delete: 슬라이드 파일+deck 항목 제거 (lecture_id, slide_id)
 

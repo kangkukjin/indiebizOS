@@ -527,7 +527,10 @@ def register_slide(
     insert_at: Optional[int] = None,
     speaker_note: Optional[str] = None,
 ) -> dict:
-    """슬라이드 메타를 deck에 등록. insert_at이 None이면 끝에 추가, 정수면 그 위치에 삽입.
+    """슬라이드 메타를 deck에 등록.
+
+    insert_at=None: 새 슬라이드는 끝에 추가, 이미 slide_order에 있는 슬라이드는 제자리 유지
+      (편집·재생성이 순서를 바꾸지 않는다). 정수면 그 위치로 이동/삽입.
 
     spec_file/png_file은 lecture_dir 기준 상대 경로 (예: 'slides/s001.json').
     speaker_note: 강의 노트(말할 내용). 기존 슬라이드 재등록(편집/재생성) 시에는 사용자가
@@ -552,12 +555,18 @@ def register_slide(
         meta["speaker_note"] = note
     slides[slide_id] = meta
     order = deck.setdefault("slide_order", [])
-    if slide_id in order:
-        order.remove(slide_id)
-    if insert_at is None or insert_at >= len(order):
-        order.append(slide_id)
+    if slide_id in order and insert_at is None:
+        # 기존 슬라이드 재등록(편집/재생성) = 제자리 유지. insert_at 없음은 "위치를 말하지
+        # 않았다"는 뜻이지 "끝으로 보내라"가 아니다 — 옛 동작(remove 후 append)은 편집 한
+        # 번에 그 장을 덱 맨 뒤로 밀어 마지막 장 계약(인사말·맺음)을 조용히 깨뜨렸다.
+        pass
     else:
-        order.insert(max(0, insert_at), slide_id)
+        if slide_id in order:
+            order.remove(slide_id)
+        if insert_at is None or insert_at >= len(order):
+            order.append(slide_id)
+        else:
+            order.insert(max(0, insert_at), slide_id)
     write_deck(lecture_id, deck)
     return deck["slides"][slide_id]
 

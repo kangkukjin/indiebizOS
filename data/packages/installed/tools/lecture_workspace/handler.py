@@ -891,7 +891,7 @@ def _generate_and_register_slide(
     # deck 갱신
     title = slide_spec.get("title") or slide_spec.get("quote", "")[:30] or "(제목 없음)"
     layout = slide_spec.get("layout", "lecture_body")
-    lecture_store.register_slide(
+    registered = lecture_store.register_slide(
         lecture_id=lecture_id,
         slide_id=slide_id,
         title=title,
@@ -902,6 +902,11 @@ def _generate_and_register_slide(
         # AI가 뽑은 스피커 노트를 강의 노트 초안으로 시드 (사용자가 이미 적었으면 보존됨)
         speaker_note=ai_response.get("speaker_note"),
     )
+    # 응답의 speaker_note = **실제로 덱에 저장된 노트**. AI 초안을 그대로 돌려주면
+    # 호출자는 "노트가 덮였다"고 읽고 멀쩡한 노트를 다시 쓰게 된다(부작용 정직성).
+    stored_note = registered.get("speaker_note") or ""
+    draft_note = (ai_response.get("speaker_note") or "").strip()
+    note_draft_discarded = bool(draft_note) and draft_note != stored_note
 
     # 누적 메모 패치
     memo_signals = ai_response.get("memo_signals") or {}
@@ -920,7 +925,9 @@ def _generate_and_register_slide(
         # 절대 경로 — 평가 루프 시각 산출물 수집기가 결과에서 이미지를 찾게 한다 (네이티브 경로와 동일 의도)
         "png_path": str((lecture_dir_path / rendered["png_file"]).resolve()),
         "reasoning": ai_response.get("reasoning"),
-        "speaker_note": ai_response.get("speaker_note"),
+        "speaker_note": stored_note,
+        # 기존 노트가 있어 AI 초안을 버렸다 — 노트는 손대지 않았다는 신호
+        **({"speaker_note_draft_discarded": True} if note_draft_discarded else {}),
         "memo_signals": memo_signals,
         "mode": "edit" if focus_slide_id else "create",
     }

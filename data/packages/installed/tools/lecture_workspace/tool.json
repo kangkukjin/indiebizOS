@@ -59,7 +59,7 @@
     },
     {
       "name": "slide_op",
-      "description": "슬라이드 한 장의 유일한 어휘 — op 파라미터로 분기:\n- create: AI로 슬라이드 한 장 생성 (instruction, +insert_at. lecture_id 미지정 시 스크래치 덱에 자동 등록 — 구 engines:slide 단발 생성 흡수)\n- edit: 슬라이드 AI 재생성 — 현재 spec을 컨텍스트로 (lecture_id, slide_id, instruction)\n- delete: 슬라이드 파일+deck 항목 제거 (lecture_id, slide_id)\n- patch: spec 일부 필드만 직접 patch (AI 호출 없음) (lecture_id, slide_id, patch)\n- rerender: spec 변경 없이 PNG만 재렌더 (AI 호출 없음) (lecture_id, slide_id)",
+      "description": "슬라이드 한 장의 유일한 어휘 — op 파라미터로 분기:\n- create: AI로 슬라이드 한 장 생성 (instruction, +insert_at. lecture_id 미지정 시 스크래치 덱에 자동 등록 — 구 engines:slide 단발 생성 흡수)\n- edit: 슬라이드 AI 재생성 — 현재 spec을 컨텍스트로 (lecture_id, slide_id, instruction). 덱에서의 자리(slide_order)와 이미 적어둔 스피커 노트는 그대로 — 재생성은 그 장의 spec·PNG만 바꾼다\n- delete: 슬라이드 파일+deck 항목 제거 (lecture_id, slide_id)\n- patch: spec 일부 필드만 직접 patch (AI 호출 없음) (lecture_id, slide_id, patch)\n- rerender: spec 변경 없이 PNG만 재렌더 (AI 호출 없음) (lecture_id, slide_id)",
       "input_schema": {
         "type": "object",
         "properties": {

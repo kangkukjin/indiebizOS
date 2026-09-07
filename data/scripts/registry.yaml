@@ -120,6 +120,13 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-15T14:02:43'
   timeout: 300
+팁중첩변환:
+  description: '유튜브 AI 팁 보고서: 평탄 팁 행을 tips.json 스키마(source 중첩)로 변환 — IBL compute 가
+    dict 를 못 만드는 한 단계만 담당'
+  file: tips_nest.py
+  interpreter: python
+  registered_at: '2026-09-07T17:20:01'
+  timeout: 300
 폴더용량:
   description: outputs 폴더 용량 요약 (items)
   file: 샘플_폴더용량.py

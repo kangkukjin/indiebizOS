@@ -9,6 +9,7 @@ args (stdin JSON):
                (deck video 가 이 폴더를 먼저 보고, 있으면 TTS 대신 그 파일을 쓴다)
   texts      : {"이름": "문장"} — 임시 문장용. out_dir 과 함께 쓴다.
   out_dir    : texts 모드의 저장 폴더 (기본 outputs/narration)
+  texts_file : 위 texts 를 담은 JSON 파일 경로 (원고가 길 때 args 대신 파일로)
   voice      : data/voice/voices.json 의 키·이름·별칭 (기본 = 원장에서 default: true 인 항목)
   gpu        : T4(기본)/L4/A100 — 계정 티어에 따라 가용성 다름
   force      : true 면 이미 있는 wav 도 다시 굽는다 (기본 false)
@@ -239,8 +240,11 @@ def collect_jobs(args):
         return items, out_dir
 
     texts = args.get("texts") or {}
+    # texts_file: 원고가 길면 args 에 통째로 싣지 않고 {"이름": "문장"} JSON 파일로 넘긴다
+    if not texts and args.get("texts_file"):
+        texts = json.loads(Path(args["texts_file"]).read_text(encoding="utf-8"))
     if not texts:
-        fail("lecture_id 또는 texts 중 하나는 필요합니다.")
+        fail("lecture_id 또는 texts(texts_file) 중 하나는 필요합니다.")
     out_dir = Path(args.get("out_dir") or (ROOT / "outputs" / "narration"))
     items = []
     for name, text in texts.items():

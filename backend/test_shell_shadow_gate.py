@@ -265,3 +265,80 @@ def test_s10_curl_has_two_shadows():
     assert _judge('curl -X POST -d "{}" https://example.com/api') is None       # 쓰기 요청
     assert _judge("curl -sL -o /tmp/a.bin https://example.com/a.bin") is None   # 파일 저장
     assert _judge("curl --version") is None                                     # URL 없음
+
+
+# ────────────────────────────────────────────────────────────────────────────
+# S11 (2026-09-07 ep3073) — 관문은 **셸이 보는 것을 봐야** 하고, 되돌림 문장은 **돌아야** 한다.
+# 홍보영상 주행의 셸 거절 3건이 전부 오탐이거나 못 도는 처방이었다. 셋 다 뿌리가 같다:
+# 관문이 셸 인자를 *그대로* 읽고 그대로 처방에 옮겨, 그 문자열이 IBL 에서 같은 뜻인지를
+# 묻지 않았다. 아래 셋은 그 세 자리를 고정한다.
+# ────────────────────────────────────────────────────────────────────────────
+
+def test_s11_변수에_담긴_임시경로는_리터럴과_같게_판정된다():
+    """`O=/tmp/x; mkdir -p $O` — 같은 일이 표현 방식 때문에 갈리면 안 된다.
+
+    ep3073: ffmpeg 프레임 추출(셸의 몫)이 곁다리 `mkdir -p $O` 때문에 거절됐다.
+    처방은 `{path: "$O"}` 라 그대로 돌리면 `$O` 라는 이름의 폴더가 생겼을 것이고,
+    실측에서 모델은 mkdir 을 빼는 것으로 우회해 **폴더가 이미 있어야만 도는** 명령을 남겼다.
+    """
+    assert _judge('O=/tmp/qa; mkdir -p $O\nffmpeg -y -i "/Users/x.mp4" -frames:v 1 "$O/f.png"') is None
+    assert _judge("mkdir -p /tmp/qa") is None                    # 리터럴은 종전대로 통과
+    # 펴 놓고 보니 프로젝트 경로면 거절이 옳다 — 그리고 처방에 `$` 가 남지 않아야 한다
+    v = _judge("F=%s/README.md; cat $F" % ROOT)
+    assert v and "[self:read]" in v and "$F" not in v and "README.md" in v
+
+
+def test_s11_모르는_변수는_기권한다():
+    """값을 모르는 자리에 처방을 내면 반드시 틀린다 — 거짓 처방보다 기권이 낫다."""
+    assert _judge("mkdir -p $UNKNOWN_DIR") is None
+    assert _judge("cat $SOME_FILE") is None
+
+
+def test_s11_임시폴더에만_쓰는_스크립트는_셸의_몫():
+    """관문 교리('임시 폴더 안의 읽기/쓰기는 셸 코드 루프의 짝')가 본문 훑기에도 닿아야 한다.
+
+    ep3073: `/tmp/haneseu_texts.py` 는 프로젝트의 deck.json 을 *읽어* 계산하고
+    `/tmp/…json` 에만 *썼는데* 거절됐다 — 본문 훑기가 '쓰기가 있느냐'만 보고
+    '어디에 쓰느냐'를 안 물었다. 읽기 경로가 프로젝트 안인 것은 이 낱말의 그림자가 아니다.
+    """
+    import tempfile
+    tmp = tempfile.gettempdir()
+    only_tmp = os.path.join(tmp, "s11_only_tmp.py")
+    to_project = os.path.join(tmp, "s11_to_project.py")
+    indirect = os.path.join(tmp, "s11_indirect.py")
+    unknown = os.path.join(tmp, "s11_unknown.py")
+    try:
+        with open(only_tmp, "w", encoding="utf-8") as f:
+            f.write("import json, pathlib\n"
+                    "deck = json.loads(pathlib.Path('%s/package.json').read_text())\n"
+                    "pathlib.Path('%s/out.json').write_text(json.dumps(deck))\n" % (ROOT, tmp))
+        with open(to_project, "w", encoding="utf-8") as f:
+            f.write("import pathlib\npathlib.Path('%s/real.txt').write_text('x')\n" % ROOT)
+        with open(indirect, "w", encoding="utf-8") as f:   # ep3073 의 실제 모양(변수 간접)
+            f.write("import pathlib\nout = pathlib.Path('%s/i.json')\nout.write_text('{}')\n" % tmp)
+        with open(unknown, "w", encoding="utf-8") as f:    # 대상 미상 = 보수적으로 거절
+            f.write("import pathlib, sys\npathlib.Path(sys.argv[1]).write_text('x')\n")
+        assert _judge("python3 %s" % only_tmp) is None
+        assert _judge("python3 %s" % indirect) is None
+        assert _judge("python3 %s" % to_project) is not None
+        assert _judge("python3 %s" % unknown) is not None
+    finally:
+        for p in (only_tmp, to_project, indirect, unknown):
+            try:
+                os.remove(p)
+            except OSError:
+                pass
+
+
+def test_s11_글로브는_경로가_아니라_무늬로_처방된다():
+    """`ls .../*/ ` 의 처방이 `{path: ".../*/"}` 라 실행하면 ENOENT 로 죽었다(ep3073 실측).
+
+    어느 param 이 무늬 자리인지는 낱말이 데이터로 말한다(argmap.glob_param) — 관문 코드에
+    낱말 이름을 두지 않는다(헌법 '표준/사전 경계'). 끝의 구분자는 뗀다: 무늬는 **이름**에
+    걸리므로 `*/` 는 어떤 이름과도 안 맞아 0행짜리 처방이 된다.
+    """
+    v = _judge("ls -dt %s/outputs/*/ | head -8" % ROOT)
+    assert v and "[self:list]" in v
+    assert 'path: "%s/outputs"' % ROOT in v, v
+    assert 'pattern: "*"' in v, v
+    assert 'path: "%s/outputs/' % ROOT not in v, v   # 글로브가 path 에 실리지 않았다

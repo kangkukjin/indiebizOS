@@ -800,6 +800,20 @@ def typecheck(steps: List[Any], variables: Optional[Dict[str, int]] = None) -> D
     try:
         c = _Checker(variables)
         c.run(steps or [])
+        # ★실행 경로가 이미 갖고 있던 두 규칙(T1 머리 변환자·T2 이음매 기아)을 여기서도 본다
+        #   (2026-09-07). 이 둘은 workflow_engine 에만 배선돼 있어서 `check: true` 가
+        #   **초록을 주고 실행이 죽는** 자리가 있었다 — `[self:write] >> [table:select]`
+        #   실측. check 의 약속이 "초록이면 실행하라"이므로 거짓 초록은 약속 위반이다.
+        #   판정은 ibl_pipe_types 한 벌이 소유한다(두 자리가 같은 답을 내도록).
+        from ibl_pipe_types import head_transform_error, seam_starvation_error
+        _steps = steps or []
+        _head_err = head_transform_error(_steps)
+        if _head_err:
+            c._issue("error", 0, "pipeline", _head_err)
+        _seam = seam_starvation_error(_steps)
+        if _seam:
+            _si, _seam_err = _seam
+            c._issue("error", _si, "pipeline", _seam_err)
         errors = [i for i in c.issues if i.get("severity") == "error"]
         return {"ok": not errors, "issues": c.issues, "types": c.types, "fn_returns": c.fn_returns}
     except Exception as e:                            # pragma: no cover — 안전망

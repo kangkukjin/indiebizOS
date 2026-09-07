@@ -48,6 +48,44 @@ _PY_WRITE_RE = re.compile(
     r"shutil\.(?:rmtree|move|copy\w*)\(|os\.rename\(|os\.replace\(|os\.makedirs\(|\.rename\(|\.replace_text\(")
 _PY_HEADS = re.compile(r"^python[0-9.]*(?:\.exe)?$")
 _MAX_SCRIPT_SCAN = 200_000
+#: 같은 명령 안의 `NAME=값` 대입 — 관문은 셸이 보는 것을 봐야 한다(2026-09-07 ep3073)
+_VAR_ASSIGN_RE = re.compile(r"(?:^|[;&|\n]|\A)\s*([A-Za-z_][A-Za-z0-9_]*)=([^\s;&|\n]*)", re.M)
+_VAR_REF_RE = re.compile(r"\$\{?([A-Za-z_][A-Za-z0-9_]*)\}?")
+#: 글로브 메타문자 — 이게 든 인자는 경로가 아니라 무늬다
+_GLOB_META_RE = re.compile(r"[*?\[]")
+
+
+def _var_bindings(command: str) -> Dict[str, str]:
+    """같은 명령 안에서 대입된 셸 변수 — `O=/tmp/x; mkdir -p $O` 를 셸처럼 읽기 위함.
+
+    ★왜(2026-09-07 ep3073): `mkdir -p $O`(O=/tmp/qa_haneseu)가 거절됐다. 관문의 교리는
+    임시 폴더 안의 쓰기를 셸의 몫으로 두는데, 경로가 **변수에 담기면** 그 면제가 닿지
+    않았다 — 같은 일이 리터럴 `/tmp/…` 면 통과하고 변수면 거절이라, 관문이 표현 방식을
+    벌한 꼴이다. 게다가 되돌림 문장이 `{path: "$O"}` 라 그대로 실행하면 `$O` 라는 이름의
+    폴더가 생긴다(실행 가능한 거짓 처방). 실측에서 모델은 mkdir 을 **빼는** 것으로
+    우회했고, 그 명령은 폴더가 이미 있을 때만 도는 물건이 됐다 — 관문이 코드를 나쁘게 만들었다.
+    """
+    out: Dict[str, str] = {}
+    for m in _VAR_ASSIGN_RE.finditer(command):
+        val = m.group(2).strip().strip("'\"")
+        if val:
+            out[m.group(1)] = val
+    # 대입값 안의 변수도 한 번 더 편다(O=$BASE/x 꼴)
+    for k, v in list(out.items()):
+        out[k] = _VAR_REF_RE.sub(lambda mm: out.get(mm.group(1), mm.group(0)), v)
+    return out
+
+
+def _expand(tok: str, varmap: Dict[str, str]) -> str:
+    """토큰 안의 `$NAME`·`${NAME}` 을 같은 명령의 대입값으로 편다(모르는 이름은 그대로)."""
+    if not tok or "$" not in tok:
+        return tok
+    return _VAR_REF_RE.sub(lambda m: varmap.get(m.group(1), m.group(0)), tok)
+
+
+def _unresolved(tok: str) -> bool:
+    """아직 `$` 가 남았다 = 관문이 이 값을 모른다 → 판정 기권(거짓 처방 금지)."""
+    return "$" in str(tok)
 
 
 # ---------------------------------------------------------------- 표
@@ -247,6 +285,19 @@ def _render(word: str, params: Dict[str, Any], spec: Dict[str, Any]) -> str:
     return f"[{word}]{{{body}}}"
 
 
+def _split_glob(val: str) -> Tuple[str, str]:
+    """`/a/b/*/` → ("/a/b", "*/") — 첫 메타문자 앞 마지막 구분자에서 가른다."""
+    m = _GLOB_META_RE.search(val)
+    head_part = val[:m.start()] if m else val
+    cut = head_part.rfind(os.sep)
+    # 무늬는 **이름**에 걸린다 — 끝의 구분자(`*/`=셸의 "폴더만")는 어떤 이름과도 안 맞아
+    # 0행을 내는 처방이 된다(실측). 자리표시를 떼어 실제로 쓸모 있는 문장을 준다.
+    tail = (val if cut <= 0 else val[cut + 1:]).rstrip(os.sep)
+    if cut <= 0:
+        return (".", tail or val)
+    return (val[:cut], tail)
+
+
 def _apply_argmap(args: List[str], spec: Dict[str, Any], head: str) -> Tuple[Dict[str, Any], List[str]]:
     """셸 인자를 낱말 param 으로 — argmap(데이터)이 정한다. 반환 (params, 경로로 읽힌 인자들).
 
@@ -317,9 +368,20 @@ def _apply_argmap(args: List[str], spec: Dict[str, Any], head: str) -> Tuple[Dic
             params[name] = vals[0] if len(vals) == 1 else vals
             paths.extend(vals)
         else:
-            params[name] = pos_vals[idx]
+            val = pos_vals[idx]
+            # 글로브는 경로가 아니라 무늬다(2026-09-07 ep3073) — 그대로 path 에 실으면
+            # 되돌림 문장이 실행 시 ENOENT 로 죽는다(`[self:list]{path: ".../*/"}` 실측).
+            # 어느 param 이 무늬 자리인지는 낱말이 데이터로 말한다(argmap.glob_param).
+            gp = argmap.get("glob_param")
+            if gp and name in path_params and _GLOB_META_RE.search(val):
+                prefix, pattern = _split_glob(val)
+                params[name] = prefix
+                params[str(gp)] = pattern
+                paths.append(prefix)
+                continue
+            params[name] = val
             if name in path_params:
-                paths.append(pos_vals[idx])
+                paths.append(val)
     for k, v in (argmap.get("skeleton") or {}).items():
         params.setdefault(k, v)
     return params, paths
@@ -360,13 +422,56 @@ def _judge_python(command: str, cmd: List[str], cwd: Optional[str], kinds: Dict[
         except OSError:
             # 같은 명령 안에서 히어독으로 막 쓰고 바로 돌리는 꼴 — 파일이 아직 없으니 명령 본문이 곧 스크립트
             body = command if "<<" in command else ""
-    if body and _PY_WRITE_RE.search(body):
+    if body and _PY_WRITE_RE.search(body) and not _writes_only_to_temp(body, cwd):
         # 되돌림 문장은 낱말이 데이터로 준다(python_write_hint) — 관문 코드에 낱말 이름을 두지 않는다
         sentence = str(spec.get("python_write_hint") or _render(word, dict((spec.get("argmap") or {}).get("skeleton") or {}), spec))
         shown = "python … (파일을 쓰는 인라인·임시 스크립트)"
         return (f"셸 그림자 거절 — `{shown}` 은 [{word}] 의 그림자입니다(쓰기 원장·RED 격리·해마 밖). IBL 로:\n  {sentence}"
                 + _hint_tail(word, spec))
     return None
+
+
+_PY_STR_RE = re.compile(r"""['"]([^'"\n]{2,})['"]""")
+_PY_WRITE_LINE_RE = re.compile(
+    r"(?:([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*(?:write_text|write_bytes|writelines|write)\s*\(|"
+    r"open\s*\(|json\.dump\s*\(|\.to_csv\s*\(|os\.makedirs\s*\(|shutil\.(?:copy\w*|move)\s*\()")
+
+
+def _writes_only_to_temp(body: str, cwd: Optional[str]) -> bool:
+    """스크립트가 **임시 폴더에만** 쓰면 셸의 몫이다 (2026-09-07 ep3073).
+
+    ★왜: 이 관문의 교리는 처음부터 "임시 폴더(/tmp·$TMPDIR) 안의 읽기/쓰기는 셸 코드
+    루프의 짝"인데, 본문 훑기는 **쓰기가 있느냐**만 보고 **어디에 쓰느냐**를 묻지 않았다.
+    ep3073 에서 `/tmp/haneseu_texts.py` 는 프로젝트의 deck.json 을 *읽어* 계산하고
+    `/tmp/haneseu_texts.json` 에만 *썼는데* 거절됐다 — 교리상 통과여야 할 것이 막힌 것이다.
+    (읽기 경로가 프로젝트 안이라는 이유로 막으면 안 된다: 읽기는 이 낱말의 그림자가 아니다.)
+
+    보수적으로 판정한다 — **쓰기 자리의 대상을 하나라도 못 읽어내면 False**(=종전대로 거절).
+    ep2862 가 막은 것(대량 편집이 /tmp 파이썬으로 새는 꼴)은 대상이 프로젝트 경로라 그대로 걸린다.
+    """
+    lines = body.splitlines()
+    literals: Dict[str, str] = {}      # 변수 → 문자열 리터럴(경로 간접 참조 해소)
+    for ln in lines:
+        m = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+)$", ln)
+        if m:
+            lit = _PY_STR_RE.search(m.group(2))
+            if lit:
+                literals[m.group(1)] = lit.group(1)
+    targets: List[str] = []
+    for ln in lines:
+        if not _PY_WRITE_RE.search(ln):
+            continue
+        found = [v for v in _PY_STR_RE.findall(ln) if "/" in v or v.startswith("~")]
+        if not found:
+            # `out.write_text(...)` 꼴 — 수신 변수의 리터럴을 앞줄에서 찾는다
+            wm = _PY_WRITE_LINE_RE.search(ln)
+            recv = wm.group(1) if wm else None
+            if recv and recv in literals:
+                found = [literals[recv]]
+        if not found:
+            return False           # 대상 미상 = 기권하지 않고 종전대로 거절
+        targets.extend(found)
+    return bool(targets) and all(is_exempt_path(t, cwd) for t in targets)
 
 
 def judge_shell(command: str, cwd: Optional[str] = None, root: Optional[str] = None,
@@ -380,6 +485,12 @@ def judge_shell(command: str, cwd: Optional[str] = None, root: Optional[str] = N
         return None
     heads, _natives, kinds = _index(table)
     tokens = _tokenize(command)
+    # ★관문은 셸이 보는 것을 봐야 한다(2026-09-07) — 같은 명령 안의 변수를 편 뒤 판정한다.
+    #   펴지 않으면 임시 폴더 면제가 변수 뒤에 숨은 경로에 안 닿고, 되돌림 문장에 `$NAME`
+    #   이 그대로 실려 실행하면 그 이름의 파일·폴더가 생긴다.
+    varmap = _var_bindings(command)
+    if varmap:
+        tokens = [_expand(t, varmap) for t in tokens]
     for seg, piped in _segments(tokens):
         seg = _strip_wrappers(seg)
         if not seg:
@@ -396,6 +507,8 @@ def judge_shell(command: str, cwd: Optional[str] = None, root: Optional[str] = N
             for target in writes:
                 if target in ("/dev/null", "&1", "&2", "1", "2") or target.startswith("&"):
                     continue
+                if _unresolved(target):
+                    continue      # 값을 모르는 자리 — 거짓 처방보다 기권이 낫다
                 if not is_exempt_path(target, cwd):
                     spec = shadows.get(w_word) or {}
                     sentence = f"[{w_word}]{{path: {_q(target)}, content: \"<내용>\"}}"
@@ -456,6 +569,8 @@ def judge_shell(command: str, cwd: Optional[str] = None, root: Optional[str] = N
                             break
                 else:
                     break  # stdin 을 읽는 cat/head/tail — 셸 파이프의 몫
+            if any(_unresolved(p) for p in paths):
+                break         # 값을 모르는 경로 — 기권(거짓 처방 금지)
             if all(is_exempt_path(p, cwd) for p in paths):
                 break
             sentence = _render(word, params, spec)

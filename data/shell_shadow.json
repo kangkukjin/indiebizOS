@@ -161,7 +161,8 @@
         "positional": [
           "path"
         ],
-        "cwd_default": true
+        "cwd_default": true,
+        "glob_param": "pattern"
       },
       "params": [
         "path",

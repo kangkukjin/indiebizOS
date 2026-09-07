@@ -433,64 +433,11 @@ class PromptBuilder:
         if execution_memory and not skip_dynamic:
             parts.append(execution_memory)
 
-        # 4.3 의식 에이전트 출력 — IBL 포커싱 힌트 + 태스크 프레이밍
-        if consciousness_output and not skip_dynamic:
-            consciousness_parts = []
-
-            # 태스크 프레이밍 (지금 풀어야 할 문제 정의)
-            task_framing = consciousness_output.get("task_framing", "")
-            if task_framing:
-                consciousness_parts.append(f"# 현재 태스크\n{task_framing}")
-            assumptions = _assumption_lines(consciousness_output)
-            if assumptions:
-                consciousness_parts.append("# 이 계획의 전제\n" + assumptions)
-
-            # 달성 기준 (실행 에이전트가 목표를 알고 행동하도록)
-            achievement_criteria = consciousness_output.get("achievement_criteria", "")
-            if achievement_criteria:
-                consciousness_parts.append(f"# 달성해야 할 목표의 기준\n{achievement_criteria}\n\n이 기준을 모두 충족하도록 응답을 구성하라. 응답 완성 전에 각 항목을 스스로 점검하라.")
-
-            # NOTE: history_summary는 messages 파라미터에서 원본 히스토리를 대체하므로 여기엔 넣지 않음
-
-            # IBL 포커싱 힌트 (제한이 아닌 초점 설정)
-            # 키는 capability_focus (consciousness_prompt.md); ibl_focus는 구 이름 폴백.
-            ibl_focus = consciousness_output.get("capability_focus") or consciousness_output.get("ibl_focus") or {}
-            if ibl_focus:
-                focus_parts = []
-                primary = ibl_focus.get("primary_nodes", [])
-                highlight = ibl_focus.get("highlight_actions", [])
-                hint = ibl_focus.get("hint", "")
-                if primary:
-                    focus_parts.append(f"주요 노드: {', '.join(primary)}")
-                if highlight:
-                    focus_parts.append(f"주목할 액션: {', '.join(highlight)}")
-                if hint:
-                    focus_parts.append(f"접근 방향: {hint}")
-                if focus_parts:
-                    consciousness_parts.append(
-                        "<focus note=\"참고용 힌트 — 다른 액션도 자유롭게 사용 가능\">\n"
-                        + "\n".join(focus_parts)
-                        + "\n</focus>"
-                    )
-
-            # context_notes 출력 필드도 폐지 (2026-06-28 self_awareness/world_state와 함께).
-            # 프롬프트 응답 형식에 없어 항상 빈 값이었다 → 죽은 읽기 제거(2026-07-06 스키마 감사).
-            # 맥락은 task_framing으로 흡수한다.
-
-            # self_awareness·world_state 출력 필드 폐지 (2026-06-28). 의식은 task_framing
-            # 으로 문제를 규정하고 self/world 맥락을 그 안에 녹인다. 모델명만 남긴다.
-            if model_name:
-                consciousness_parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
-
-            if consciousness_parts:
-                parts.append("\n".join(consciousness_parts))
-
-            # 의식 에이전트가 지정한 가이드 파일 로드 & 주입
-            guide_files = consciousness_output.get("guide_files", [])
-            for guide in guide_files:
-                block = self._guide_block(guide)
-                if block:
-                    parts.append(block)
+        # 4.3 의식 출력 조립 분기 제거 (2026-09-07). 두 표면(시스템 AI·프로젝트 에이전트)
+        # 모두 split 경로(skip_dynamic=True) + compile_user_command 를 쓰므로 이 분기는
+        # 도달 불가였고, 여기서만 읽히던 capability_focus.primary_nodes 는 의식이 96%의
+        # 턴에서 채우고도 아무 데도 닿지 않았다. 조립의 단일 소스 =
+        # compile_user_command(명령) + _build_dynamic_context(배경).
 
         # 4.5 자원 목록 (가이드 제목 배경 지식)
         resource_list = self._build_resource_list()

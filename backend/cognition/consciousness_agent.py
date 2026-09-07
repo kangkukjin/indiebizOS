@@ -192,10 +192,8 @@ class ConsciousnessAgent:
                 "achievement_criteria": str, # 달성 기준 (비어있으면 평가 루프 안 탐)
                 "expert_choice": str,      # 전문가의 선택 — 실행자 명령의 제 이름 섹션(한 문장)
                 "capability_focus": {      # IBL 포커싱 (프롬프트 응답 형식 키)
-                    "primary_nodes": list,     # 주요 노드
                     "highlight_actions": list, # 강조할 액션
-                    "hint": str,               # AI에게 줄 힌트
-                    "tools": list              # IBL 외 가용 도구
+                    "hint": str                # 접근 방향 (IBL 밖 도구 이름도 여기서)
                 },
                 "guide_files": list[str],  # 읽어야 할 가이드 파일
                 "assumptions": list[str],  # 규정이 성립하는 전제 — 실행자가 첫 확인으로 검증
@@ -262,11 +260,6 @@ class ConsciousnessAgent:
                 # 형식은 어겼어도 *내용*은 살린다 (아래 _salvage_framing 참조).
                 result = self._salvage_framing(response)
             if result:
-                # 의식이 추천한 도구를 실제 가용 도구로 필터링.
-                # 가용 목록 밖의 도구를 추천하면 실행 에이전트가 헛걸음(ToolSearch 실패 등)
-                # 한다 — 라벨지 케이스에서 ask_user_question이 그 사례.
-                if available_tools is not None:
-                    self._filter_unavailable_tools(result, available_tools)
                 import json as _json
                 print(f"[ConsciousnessAgent] 파싱 결과:\n{_json.dumps(result, ensure_ascii=False, indent=2)}")
             else:
@@ -334,11 +327,11 @@ class ConsciousnessAgent:
         if associative_memory:
             parts.append(associative_memory)
 
-        # 가용 도구 목록 — 의식이 capability_focus.tools에 추천할 때
+        # 가용 도구 목록 — 의식이 hint 에서 도구 이름을 부를 때
         # 이 목록 밖의 도구를 적으면 실행 에이전트가 헛걸음한다.
         if available_tools:
             parts.append(
-                "<available_tools note=\"capability_focus.tools에는 이 목록의 도구만 적어라. "
+                "<available_tools note=\"hint 에서 도구 이름을 부를 땐 이 목록 안에서만 골라라. "
                 "이외 도구를 추천하면 실행 에이전트가 도구를 찾지 못해 헛걸음한다.\">\n"
                 f"{', '.join(available_tools)}\n"
                 "</available_tools>"
@@ -391,28 +384,6 @@ class ConsciousnessAgent:
         except Exception as e:
             logger.warning(f"[ConsciousnessAgent] 수리 교리 적재 실패(생략): {e}")
             return ""
-
-    def _filter_unavailable_tools(self, result: Dict, available_tools: List[str]) -> None:
-        """의식 출력의 capability_focus.tools에서 가용 도구 외 항목을 제거.
-
-        의식 에이전트가 ask_user_question 같은 도구를 추천했는데 실제 에이전트에
-        없으면, 실행 에이전트가 그 도구를 찾으려 헛걸음한다 (예: Claude Code의
-        ToolSearch 실패). 사일런트하게 제거하지 않고 로그로 남겨서 의식 프롬프트
-        개선의 단서로 쓴다.
-        """
-        cap = result.get("capability_focus")
-        if not isinstance(cap, dict):
-            return
-        tools = cap.get("tools")
-        if not isinstance(tools, list):
-            return
-        available_set = set(available_tools)
-        kept = [t for t in tools if isinstance(t, str) and t in available_set]
-        dropped = [t for t in tools if isinstance(t, str) and t not in available_set]
-        if dropped:
-            print(f"[ConsciousnessAgent] 가용하지 않은 도구 제거: {dropped} "
-                  f"(가용: {sorted(available_set)})")
-        cap["tools"] = kept
 
     def _parse_response(self, response: str) -> Optional[Dict]:
         """AI 응답에서 JSON 추출 및 파싱.

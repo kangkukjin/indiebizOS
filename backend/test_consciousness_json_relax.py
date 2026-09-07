@@ -79,6 +79,8 @@ def test_nested_trailing_comma_recovered():
 '''.strip()
     result = p._parse_response(text)
     assert result is not None
+    # (tools·primary_nodes 는 2026-09-07 폐지된 칸 — 이 고정물은 당시 실제 응답의 기록이고,
+    #  파서는 키 이름을 모르므로 회귀 가치는 그대로다. 새 스키마는 consciousness_prompt.md 참조)
     assert result["capability_focus"]["tools"] == ["read_guide", "run_command"]
     assert result["capability_focus"]["primary_nodes"] == ["self"]
     print("✓ 중첩 trailing comma 복구")

@@ -315,7 +315,7 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
             else:
                 agent_notes = self.config.get("notes", "")
 
-            # 가용 도구 목록 — 의식이 capability_focus.tools에 추천할 수 있는 범위.
+            # 가용 도구 목록 — 의식이 hint 에서 이름을 부를 수 있는 도구의 범위.
             # 시스템 AI는 system_ai_tools, 프로젝트 에이전트는 _get_available_tools().
             try:
                 if self.config.get("_is_system_ai"):

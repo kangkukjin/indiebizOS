@@ -142,10 +142,8 @@ task_framing 과 hint 가 옳으려면 참이어야 하는 사실을 짧은 문�
 
 능력을 제한하지 않고 문제를 기준으로 시선을 유도한다.
 
-- **primary_nodes**: 이 문제와 가장 관련 있는 IBL 노드들.
 - **highlight_actions**: 특히 유용할 IBL 액션 이름들 (반드시 ibl_nodes에 실제 존재하는 액션만 — 없는 액션을 추천하면 에이전트가 헛발을 밟는다).
-- **tools**: 유용할 IBL 외 도구(`<available_tools>` 목록 안에서만, 없으면 빈 배열). 코드 실행이 필요하면 `run_command`를 넣고 hint에 write→run 패턴을 명시한다.
-- **hint**: 어떤 방향으로 접근할지 짧은 힌트. 단일 액션이 op으로 동작을 분기하면(예: `self:photo`의 op=scan/search/detail) **사용자 의도에 맞는 op까지 명시**한다 — 실행 에이전트는 카탈로그에서 op 목록을 보지만 어느 op인지는 의도 해석이 필요하다. 예: "처음 보는 사진 폴더면 [self:photo]{op:scan}으로 인덱싱부터, 이미 인덱싱됐으면 op:search".
+- **hint**: 어떤 방향으로 접근할지 짧은 힌트. IBL 밖의 도구가 필요하면 여기서 이름을 부른다(`<available_tools>` 목록 안에서만) — 코드 실행이 필요하면 `run_command` 와 write→run 패턴을 명시한다. 단일 액션이 op으로 동작을 분기하면(예: `self:photo`의 op=scan/search/detail) **사용자 의도에 맞는 op까지 명시**한다 — 실행 에이전트는 카탈로그에서 op 목록을 보지만 어느 op인지는 의도 해석이 필요하다. 예: "처음 보는 사진 폴더면 [self:photo]{op:scan}으로 인덱싱부터, 이미 인덱싱됐으면 op:search".
 
 ### 5. guide_files — 문제를 풀 때 참조할 지식
 
@@ -175,9 +173,7 @@ task_framing 과 hint 가 옳으려면 참이어야 하는 사실을 짧은 문�
   "achievement_criteria": "비교 기간 매출/영업이익 수치 포함, 변화 원인 분석, 소스 한계 명시",
   "history_summary": "이전 대화에서 삼성전자 2024년 실적을 분석함. 매출 증가 추세 확인. 사용자가 최신 상황 비교를 요청한 상태",
   "capability_focus": {
-    "primary_nodes": ["sense", "self"],
     "highlight_actions": ["sense:search", "self:write"],
-    "tools": ["run_command"],
     "hint": "최신 실적 데이터를 검색으로 확보하고, 수치 비교가 필요하면 [self:write]로 분석 스크립트를 /tmp에 떨군 뒤 run_command 'python3 /tmp/x.py'로 실행하는 write→run 패턴"
   },
   "imagined_ibl": "[sense:search]{query:\"삼성전자 2025 분기 실적\"}",

@@ -264,7 +264,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus, guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수)
+  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
 - **framing 재사용 게이트 (2026-05-31)** — `agent_cognitive._run_consciousness_or_reuse()` + `_consciousness_fit_gate()`

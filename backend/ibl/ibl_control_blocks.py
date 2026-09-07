@@ -215,9 +215,12 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
                     "error": (f"[fn:{name}] — 이 프로그램에 [def: {name}]{{…}} 정의가 없고, 저장 워크플로에도 관용구에도 '{name}' 이 없습니다. "
                               "같은 프로그램에 정의를 두거나(정의는 호출 뒤에 와도 됩니다) 있는 이름을 부르세요."
                               + (f" 관용구 이름: {', '.join(names)}" if names else ""))}
-        from ibl_parser import parse as _parse
+        from ibl_parser import parse_function_body as _parse_body
         try:
-            body_steps = _parse(row["ibl_code"])
+            # 관용구 골격 = 함수 몸이다 — 미할당 `$이름` 은 자리를 가리지 않고 시그니처
+            # (언어 개정 2026-09-07). 최상위 parse 로 읽으면 파이프 머리 슬롯이 파싱 에러가 돼
+            # 통화를 둘 이상 받는 관용구를 저장은 되고 부를 수는 없었다.
+            body_steps = _parse_body(row["ibl_code"])
         except Exception as e:
             return {"success": False, "fn": name, "error": f"[fn:{name}] 관용구 골격 파싱 실패: {e}"}
         from workflow_contract import _free_vars

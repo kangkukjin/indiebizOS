@@ -445,3 +445,41 @@ def _extract_unquoted(text: str, pos: int):
     while i < len(text) and text[i] not in ',}]':
         i += 1
     return text[pos:i].strip(), i
+
+
+# === 변수 표기 → 통화 방출 step (2026-09-07 이동 — 1500줄 규칙) ===
+
+def _var_emit_step(text: str, variables: Optional[Dict], where: str,
+                   free_ok: bool = False) -> Optional[Dict]:
+    """통짜 변수 참조(`$이름` · `$이름.경로`)를 통화 방출 step 으로 — 표기의 **단일 주인**.
+
+    두 자리가 이 한 벌을 쓴다: 파이프 머리(`$변수 >> [액션]`, 언어 개정 2026-08-27)와
+    병렬 분기(`$변수 & $변수`, 언어 개정 2026-09-01 — 사용자 판정). 표기를 자리마다
+    다시 읽으면 방언이 갈린다(같은 `$a.b?` 가 한 자리에선 되고 다른 자리에선 안 되는 부류).
+
+    반환: _var_emit step / None(변수 표기가 아니거나 예약어 `$items`).
+    미할당은 여기서 정직한 파싱 에러 — 실행까지 끌고 가지 않는다(V49-1 규약).
+    """
+    from common.ibl_vars import REF_RE as _VREF, split_ref as _vsplit
+    m = _VREF.fullmatch((text or "").strip())
+    if m is None:
+        return None
+    name, path = _vsplit(m)
+    if name == "items":            # `$items` 는 집합 바인딩 예약어 — 그 규약대로 둔다
+        return None
+    if not variables or name not in variables:
+        # 함수 몸(닫힌 스코프)에서는 미할당 = **시그니처 슬롯**이다 (언어 개정 2026-09-07,
+        # 사용자 판정 "언어 한계가 있다면 그걸 극복해야지"). 종전엔 자유 변수가 **파라미터 값
+        # 자리에서만** 시그니처였고 파이프 머리·병렬 분기에서는 파싱 에러였다 — 같은 이름이
+        # 자리에 따라 시그니처였다 안 됐다 하는 **자리의 비대칭**(2026-09-01 병렬 분기 개정과
+        # 같은 부류). 그래서 관용구는 통화를 하나(파이프로 흘러드는 앞 통화)만, 그것도 첫
+        # 문장에서만 받을 수 있었고, 둘 이상의 통화를 받는 관용구(원장 누적·델타·join)는
+        # 아예 말할 수 없어 도메인 머리를 몸에 박는 길밖에 없었다.
+        # 값은 호출자가 인자로 싣는다(_apply_caller_params 가 _var_values 로 스탬프).
+        if free_ok:
+            return {"_var_emit": True, "name": name, "path": path, "_free": True}
+        raise IBLSyntaxError(
+            f"변수 ${name} 이(가) 앞에서 할당되지 않았습니다 — {where} 변수는 "
+            f"앞 문장의 `${name} = …` 할당이 필요합니다.")
+    return {"_var_emit": True, "name": name, "path": path,
+            "_vars": {name: variables[name]}}

@@ -733,6 +733,12 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                 return {"success": False, "_derived_from": _name,
                         "error": f"변수 ${_name} 의 할당 문장(step {_ve['step']})이 실패해 값이 없습니다 — "
                                  f"원인: {_ve['error']}"}
+            if tool_input.get("_free"):
+                # 함수 몸의 시그니처 슬롯인데 호출자가 안 채웠다(언어 개정 2026-09-07).
+                # "아직 기록 전" 이라 말하면 고칠 자리를 몸에서 찾게 된다 — 고칠 자리는 호출문이다.
+                return {"success": False, "params_missing": [_name],
+                        "error": f"인자 누락: ${_name} — 이 이름은 함수 몸의 시그니처 슬롯입니다. "
+                                 f"부를 때 {{{_name}: 값}} 으로 통화를 넘기세요."}
             # 파서가 미할당은 걸렀으므로 여기는 "아직 기록 전"(안 탄 분기 등) — V49-1 규약.
             return {"success": False,
                     "error": f"변수 ${_name} 이(가) 아직 값을 기록하지 않았습니다 — "
@@ -744,6 +750,10 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
             except ValueError as e:
                 return {"success": False, "error": str(e)}
             return _as_currency(_out)
+        if tool_input.get("_free"):
+            # 호출자가 인자로 실은 값은 **step 결과 봉투가 아니라 평범한 값**(items 리스트·
+            # 산문·스칼라)이다 — 통화로 감싸 흘린다(언어 개정 2026-09-07).
+            return _as_currency(_vals[_name])
         # 통짜 `$변수` 는 저장된 step 결과 원형 그대로 — 감싸지 않는다. 변수가 병렬
         # (`$p = [A] & [B]`) 결과를 들고 있으면 그 맨 list 가 곧 "입력 여러 개" 계약이다.
         return _vals[_name]

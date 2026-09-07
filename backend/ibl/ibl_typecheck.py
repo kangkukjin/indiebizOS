@@ -746,9 +746,9 @@ class _Checker:
         if key in _FN_CACHE:
             return _FN_CACHE[key]
         try:
-            from ibl_parser import parse_with_vars
+            from ibl_parser import parse_function_body      # 함수 몸 — 자유 변수가 시그니처(2026-09-07)
             from workflow_contract import _free_vars
-            steps, _vars = parse_with_vars(code)
+            steps = parse_function_body(code)
             sig = _free_vars(steps)
         except Exception:
             return unknown()
@@ -820,8 +820,8 @@ def return_type_of(code: str, signature: Optional[List[str]] = None) -> str:
     """함수·관용구·워크플로 몸의 반환 타입 한 낱말(서명 표시용) — `items⟨title·url⟩` / `prose` / `?`.
     인자는 미상으로 두고 몸을 타입한다. 실패는 "?"(정직)."""
     try:
-        from ibl_parser import parse_with_vars
-        steps, _ = parse_with_vars(code or "")
+        from ibl_parser import parse_function_body          # 함수 몸 — 자유 변수가 시그니처(2026-09-07)
+        steps = parse_function_body(code or "")
         if signature is None:
             from workflow_contract import _free_vars
             signature = _free_vars(steps)

@@ -73,7 +73,16 @@ def parse(code: str) -> List[Dict]:
     return parse_with_vars(code)[0]
 
 
-def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None) -> Tuple[List[Dict], Dict[str, int]]:
+def parse_function_body(code: str) -> List[Dict]:
+    """함수 몸(닫힌 스코프)으로 파싱 — 미할당 `$이름` 은 자리를 가리지 않고 시그니처다.
+
+    표기의 **단일 주인**(언어 개정 2026-09-07): `[def:]` 몸 · 저장된 관용구 골격 · 서명 계산이
+    한 벌을 쓴다. 최상위 프로그램은 종전대로 `parse` — 거기서 미할당은 정직한 파싱 에러다."""
+    return parse_with_vars(code, free_vars_ok=True)[0]
+
+
+def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None,
+                    free_vars_ok: bool = False) -> Tuple[List[Dict], Dict[str, int]]:
     """
     IBL 코드를 파싱하여 실행 가능한 step 리스트로 변환 (+ $변수명→최종 step 인덱스 맵 — repeat until 이 몸통 할당을 읽는 데 씀, 2026-08-22 M4)
 
@@ -226,14 +235,14 @@ def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None) -
             #   뿐이라 프로그램이 부자연스러웠다. 세그먼트가 통짜 변수 참조면 `_var_emit`
             #   스텝으로 탈당의 — 실행기(ibl_engine)가 저장된 결과를 통화로 방출한다.
             #   미할당은 파싱 시점 정직 에러(실행까지 끌고 가지 않는다).
-            parsed = _var_emit_step(_st0, variables, "파이프 머리")
+            parsed = _var_emit_step(_st0, variables, "파이프 머리", free_vars_ok)
             if parsed is not None:
                 if _stmt_idx > 0 and idx == 0:
                     parsed["_seq_boundary"] = True
                 all_steps.append(parsed)
                 continue
             # 각 세그먼트 내에서 & 또는 ?? 연산자 처리
-            parsed = _parse_group(seg_text.strip(), variables)
+            parsed = _parse_group(seg_text.strip(), variables, free_vars_ok)
             if parsed is None:
                 _st = seg_text.strip()
                 # F16-1 (2026-08-20 상상훈련 16회차): 분기 헤더가 홀로 오면(중괄호 몸 누락)
@@ -371,6 +380,7 @@ def parse_step(text: str) -> Optional[Dict]:
 # 이동 (2026-07-18 모듈화 — 1500줄 규칙). 재수출로 기존 import 경로 전부 불변.
 from ibl_parser_values import (  # noqa: E402,F401
     IBLSyntaxError,
+    _var_emit_step,
     _parse_params,
     _parse_relaxed_params,
     _extract_value,
@@ -645,32 +655,8 @@ def _split_pipeline(text: str) -> List[tuple]:
     return segments
 
 
-def _var_emit_step(text: str, variables: Optional[Dict], where: str) -> Optional[Dict]:
-    """통짜 변수 참조(`$이름` · `$이름.경로`)를 통화 방출 step 으로 — 표기의 **단일 주인**.
-
-    두 자리가 이 한 벌을 쓴다: 파이프 머리(`$변수 >> [액션]`, 언어 개정 2026-08-27)와
-    병렬 분기(`$변수 & $변수`, 언어 개정 2026-09-01 — 사용자 판정). 표기를 자리마다
-    다시 읽으면 방언이 갈린다(같은 `$a.b?` 가 한 자리에선 되고 다른 자리에선 안 되는 부류).
-
-    반환: _var_emit step / None(변수 표기가 아니거나 예약어 `$items`).
-    미할당은 여기서 정직한 파싱 에러 — 실행까지 끌고 가지 않는다(V49-1 규약).
-    """
-    from common.ibl_vars import REF_RE as _VREF, split_ref as _vsplit
-    m = _VREF.fullmatch((text or "").strip())
-    if m is None:
-        return None
-    name, path = _vsplit(m)
-    if name == "items":            # `$items` 는 집합 바인딩 예약어 — 그 규약대로 둔다
-        return None
-    if not variables or name not in variables:
-        raise IBLSyntaxError(
-            f"변수 ${name} 이(가) 앞에서 할당되지 않았습니다 — {where} 변수는 "
-            f"앞 문장의 `${name} = …` 할당이 필요합니다.")
-    return {"_var_emit": True, "name": name, "path": path,
-            "_vars": {name: variables[name]}}
-
-
-def _parse_group(text: str, variables: Optional[Dict] = None) -> Optional[Dict]:
+def _parse_group(text: str, variables: Optional[Dict] = None,
+                 free_ok: bool = False) -> Optional[Dict]:
     """
     >> 로 분리된 하나의 세그먼트를 파싱.
     내부에 & 또는 ?? 연산자가 있으면 특수 노드로 변환.
@@ -717,7 +703,7 @@ def _parse_group(text: str, variables: Optional[Dict] = None) -> Optional[Dict]:
             #   말할 수 없었다(09-01 부동산 보고서 실측: 그날 세 주행의 유일한 진짜 문법
             #   오류였다). 변수를 파이프 머리로 놓는 길은 이미 열려 있었는데(2026-08-27),
             #   같은 값이 분기 자리에만 못 서던 **자리의 비대칭**이 결함이었다.
-            branch = _var_emit_step(p, variables, "병렬 분기의")
+            branch = _var_emit_step(p, variables, "병렬 분기의", free_ok)
             if branch is None:
                 # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): 분기 하나에만
                 # 전처리를 붙이는 표현 — [A] & ([B] >> [table:rename]{...}) >> [table:merge].

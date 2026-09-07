@@ -128,6 +128,12 @@ def _free_vars(steps) -> List[str]:
     found: List[str] = []
 
     def _walk(obj):
+        if isinstance(obj, dict) and obj.get("_var_emit") and obj.get("_free"):
+            # 자유 변수가 파이프 머리·병렬 분기에 선 자리 (언어 개정 2026-09-07) — 이름이
+            # 문자열이 아니라 step 의 필드에 있어 아래 문자열 훑기로는 잡히지 않는다.
+            nm = obj.get("name") or ""
+            if nm and nm not in reserved and nm not in found and not nm[0].isdigit():
+                found.append(nm)
         if isinstance(obj, str):
             for m in REF_RE.finditer(obj):
                 name, _path = split_ref(m)
@@ -159,8 +165,8 @@ def call_signature(ibl_code: str) -> List[str]:
 
     파스 실패는 예외로 올린다 — 부르는 쪽이 '서명 미상'과 '인자 없음'을 갈라야 하기 때문이다.
     """
-    from ibl_parser import parse
-    return list(_free_vars(parse(ibl_code)))
+    from ibl_parser import parse_function_body
+    return list(_free_vars(parse_function_body(ibl_code)))
 
 
 def _signature_of(raw_body) -> List[str]:
@@ -293,6 +299,15 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
         if isinstance(obj, str):
             return _sub_str(obj)
         if isinstance(obj, dict):
+            if obj.get("_var_emit") and obj.get("_free"):
+                # 자유 변수 통화 방출(언어 개정 2026-09-07): 문자열 치환이 아니라 **봉투로**
+                # 싣는다 — 통화(items·표·산문)를 문자열에 끼워 넣으면 모양이 죽는다.
+                nm = obj.get("name") or ""
+                if nm in caller:
+                    hits.add(nm)
+                    out = {k: v for k, v in obj.items()}
+                    out["_var_values"] = {**(obj.get("_var_values") or {}), nm: caller[nm]}
+                    return out
             return {k: _walk(v) for k, v in obj.items()}
         if isinstance(obj, list):
             return [_walk(v) for v in obj]

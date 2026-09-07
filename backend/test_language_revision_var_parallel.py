@@ -102,10 +102,18 @@ def test_P5_안_탄_분기의_변수는_그_분기만_실패한다():
 def test_P6_표기_규약이_머리_자리와_한_벌이다():
     """단일 주인(_var_emit_step) — 한 자리에서만 되는 표기가 생기면 방언이다."""
     import ibl_parser
-    src = open(os.path.join(_REPO, "backend", "ibl", "ibl_parser.py"), encoding="utf-8").read()
-    assert src.count("_var_emit_step(") >= 3, "머리·분기가 같은 주인을 안 쓴다"
-    assert '"_var_emit": True' not in src.split("def _var_emit_step")[0], \
-        "_var_emit step 을 주인 밖에서 또 짓고 있다"
+    _ibl = os.path.join(_REPO, "backend", "ibl")
+    src = open(os.path.join(_ibl, "ibl_parser.py"), encoding="utf-8").read()
+    # 두 자리(파이프 머리·병렬 분기)가 주인을 부른다 — 정의가 어느 형제 모듈에 살든(2026-09-07
+    # 이동, 1500줄 규칙) 세는 것은 **호출**이다. 파일 안 등장 횟수로 세면 모듈화가 관문을 깬다.
+    assert src.count("_var_emit_step(") - src.count("def _var_emit_step(") == 2, \
+        "머리·분기가 같은 주인을 안 쓴다"
+    owners = [f for f in os.listdir(_ibl) if f.endswith(".py")
+              and "def _var_emit_step(" in open(os.path.join(_ibl, f), encoding="utf-8").read()]
+    assert owners == ["ibl_parser_values.py"], f"_var_emit_step 의 주인이 하나가 아니다: {owners}"
+    _owner_src = open(os.path.join(_ibl, owners[0]), encoding="utf-8").read()
+    for _f, _s in (("ibl_parser.py", src), (owners[0], _owner_src.split("def _var_emit_step")[0])):
+        assert '"_var_emit": True' not in _s, f"{_f}: _var_emit step 을 주인 밖에서 또 짓고 있다"
     # 같은 표기가 두 자리에서 같은 판정을 받는다 (통과/거절이 갈리지 않는다)
     for expr, ok in (("$a", True), ("$a.items", True), ("$items", False), ("$a?", False)):
         head = _TWO + f'{expr} >> [table:take]{{n: 1}}'

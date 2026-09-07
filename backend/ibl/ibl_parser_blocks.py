@@ -675,7 +675,10 @@ def _parse_def_block(code: str) -> Optional[Dict]:
     if _PARSE_VARS is None:
         raise RuntimeError("ibl_parser_blocks: parse_with_vars 미주입 — ibl_parser 를 먼저 import 해야 한다")
     try:
-        steps, _vars = _PARSE_VARS(body)          # 닫힌 스코프 — 바깥 변수 표 없이 따로 파싱
+        # 닫힌 스코프 — 바깥 변수 표 없이 따로 파싱. free_vars_ok: 미할당 `$이름` 은 자리를
+        # 가리지 않고 시그니처다(언어 개정 2026-09-07) — 파라미터 값뿐 아니라 파이프 머리·
+        # 병렬 분기에서도. 이래야 통화를 둘 이상 받는 관용구를 말할 수 있다.
+        steps, _vars = _PARSE_VARS(body, free_vars_ok=True)
     except IBLSyntaxError as e:
         raise IBLSyntaxError(f"[def: {name}] 몸의 문법 오류: {e}")
     from workflow_contract import _free_vars

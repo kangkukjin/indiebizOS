@@ -295,6 +295,12 @@ import sys as _sys
 _sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend", "base"))
 from repeat_guard import advise as _repeat_advisory  # noqa: E402  (key, signature) -> str
 
+# 표면 대기 상한은 backend/common/spill.py 가 소유한다(클라이언트 벽과 짝인 수라 한 곳에서만
+# 정해져야 한다 — 여기서 따로 적으면 벽과 어긋나도 아무도 모른다). spill 은 stdlib 뿐이라
+# 얇게 끌어와도 이 서버의 가벼움을 해치지 않는다.
+_sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
+from common.spill import TICKET_MAX_WAIT_S as _MAX_WAIT_S  # noqa: E402
+
 
 def _post_backend(path: str, payload: dict, timeout: int) -> str:
     """백엔드 REST 로의 blocking HTTP POST. 반드시 워커 스레드에서 부를 것.
@@ -332,9 +338,9 @@ def _surface_timeout_envelope(ticket: str, timeout_s: int) -> str:
         "success": False, "surface_timeout": True, "ticket": ticket,
         "error": (f"표면 대기({timeout_s}초)가 실행보다 먼저 끝났습니다 — 실행은 백엔드에서 "
                   "계속 돌고 있고, 결과 봉투는 잃지 않습니다."),
-        "note": (f'회수: execute_ibl{{code: "", recover: "{ticket}", wait: 120}} — wait 초 동안 '
-                 "결말을 기다렸다가 돌려줍니다(≤240, 생략하면 즉답). 완료면 원 봉투가, 아직 "
-                 "돌고 있으면 진행 상태(마지막 움직임 시각 포함)가 옵니다(보관 24h). "
+        "note": (f'회수: execute_ibl{{code: "", recover: "{ticket}", wait: {_MAX_WAIT_S}}} — wait 초 '
+                 f"동안 결말을 기다렸다가 돌려줍니다(≤{_MAX_WAIT_S}, 생략하면 즉답). 완료면 원 "
+                 "봉투가, 아직 돌고 있으면 진행 상태(마지막 움직임 시각 포함)가 옵니다(보관 24h). "
                  "★셸 sleep 으로 기다리지 말 것 — 그 자리는 이 wait 가 맡는다."),
     }, ensure_ascii=False)
 
@@ -380,11 +386,11 @@ async def execute_ibl(code: str, project_path: str = "",
         (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
         기록 없음이면 만료(24h)/미탑재를 정직하게 알린다(F51-1: 표면 대기가 끊겨도
         결과는 잃지 않는다).
-    wait: recover 와 함께 — 결말이 날 때까지 **유한 대기**할 초(≤240). 기다렸는데도
+    wait: recover 와 함께 — 결말이 날 때까지 **유한 대기**할 초. 기다렸는데도
         안 끝나면 진행 상태를 돌려준다(대기가 끝난 것이지 실행이 죽은 것이 아니다).
-        ★처음 실행(code)에도 통한다(2026-09-05): 자막 each·crawl 처럼 120초를 넘길 것을
-        *아는* 실행은 처음부터 wait(≤240)를 실어 표면 대기를 늘린다 — 타임아웃 봉투→회수의
-        왕복 한 번(ep2829: 한 주행에 세 번)을 없앤다. 기본 120 은 그대로다.
+        ★처음 실행(code)에는 실을 필요가 없다(2026-09-07 개정): 표면이 언제나 상한까지
+        기다리므로 느린 실행을 미리 알아맞혀 wait 를 실을 이유가 사라졌다. 옛 규약(기본
+        120초 + 아는 호출만 늘리기)은 예측이 틀릴 때마다 회수 왕복을 물렸다.
         ★긴 실행을 기다릴 때 셸 `sleep` 을 쓰지 말 것 — 전경 sleep 은 막히고 배경
         sleep 은 즉시 돌아와, 대기가 몇 초 간격 폴링으로 무너진다(폴링 1회 = 모델
         왕복 1회. 2026-09-01 실측: 한 주행의 도구 호출 45건 중 16건이 기다림이었다).
@@ -439,7 +445,7 @@ async def execute_ibl(code: str, project_path: str = "",
         # 회수 경로(F51-1) — 실행이 아니라 조회. 신원·payload 는 필요 없다.
         # wait 를 주면 백엔드가 그만큼 유한 대기하므로 HTTP 대기도 그 위로 잡는다
         # (여기가 먼저 끊기면 유한 대기를 준 의미가 없다).
-        _w = max(0.0, min(float(wait or 0), 240.0))
+        _w = max(0.0, min(float(wait or 0), float(_MAX_WAIT_S)))
         raw = await anyio.to_thread.run_sync(
             lambda: _post_backend("/ibl/recover",
                                   {"ticket": recover, "wait": _w}, int(_w) + 30)
@@ -450,8 +456,12 @@ async def execute_ibl(code: str, project_path: str = "",
         import uuid
         ticket = uuid.uuid4().hex[:12]
         payload["ticket"] = ticket
-        # 호출자가 긴 실행을 알면 처음부터 wait 만큼(≤240) 기다린다 — 회수 경로와 같은 상한.
-        _t = int(max(120.0, min(float(wait or 0), 240.0)))
+        # ★표면은 언제나 상한까지 기다린다(2026-09-07) — 호출자가 느림을 미리 알 필요가 없다.
+        #   옛 규약은 기본 120초였고, 넘길 것을 *아는* 호출만 wait 로 늘리게 했다. 그러나
+        #   느림은 호출 전에 알 수 있는 사실이 아니고(같은 [self:slide] 가 3초일 때도 120초일
+        #   때도 있다), 틀리면 값이 왕복 한 번이다. 짧게 기다려 버는 것은 없으므로(위 spill.py
+        #   주석) 예측을 요구하지 않고 늘 상한을 쓴다. wait 는 회수(recover) 쪽 파라미터로 남는다.
+        _t = int(_MAX_WAIT_S)
         raw = await anyio.to_thread.run_sync(
             lambda: _post_backend("/ibl/execute", payload, _t)
         )

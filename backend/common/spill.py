@@ -17,8 +17,22 @@ import uuid
 from typing import Any, Dict, Optional, Tuple
 
 SPILL_TTL_S = 24 * 3600
-# 회수의 유한 대기 상한 (2026-09-01) — `[self:script]{op:"status", wait}` 와 같은 값·같은 규율.
-TICKET_MAX_WAIT_S = 240
+# ── 표면 대기의 벽 (2026-09-07 개정) ────────────────────────────────────────
+# ★왜 두 수가 짝인가: 표면 대기를 끊는 벽은 **둘**이다 — 우리 HTTP 대기와, 그 위에
+#   있는 MCP 클라이언트의 hard wall-clock. 옛 240 은 뒤엣것을 *모르는 채로* 그 아래
+#   어딘가에 있으라고 고른 수였다(클라이언트 기본값은 우리가 안 적었으니 미지수).
+#   모르는 수 밑에 숨는 대신, 클라이언트 벽을 **우리가 config 에 못박고**(providers 의
+#   MCP config `timeout`) 우리 상한을 그 아래로 파생한다. 짝을 깨지 말 것 —
+#   우리 봉투가 벽보다 먼저 와야 정직한 티켓 안내가 살고, 늦으면 클라이언트의
+#   구조 없는 오류가 대신 온다(티켓도 안내도 없이).
+# ★왜 늘려도 되는가: 표면 대기를 짧게 잡아 얻는 것이 없다. 대기가 끊겨도 에이전트가
+#   풀려나는 게 아니라 곧장 recover 로 다시 막히기 때문이다(ep3073 실측: 네 번 끊겼고
+#   네 번 다 즉시 같은 티켓을 다시 기다렸다 — 끊김이 산 정보는 0, 든 비용은 왕복 4회).
+#   짧은 대기는 트레이드오프가 아니라 순손실이었다.
+SURFACE_CLIENT_WALL_S = 900     # MCP 클라이언트 tool timeout — config `timeout` 으로 명시
+SURFACE_WALL_MARGIN_S = 60      # 우리 봉투가 벽을 이기는 여유
+# 회수의 유한 대기 상한 — `[self:script]{op:"status", wait}` 와 같은 값·같은 규율.
+TICKET_MAX_WAIT_S = SURFACE_CLIENT_WALL_S - SURFACE_WALL_MARGIN_S
 TICKET_POLL_S = 2.0
 AUTO_SPILL_THRESHOLD = 200_000          # 문자 — 이 위는 모델 컨텍스트로 돌려 보낼 크기가 아니다
 # 봉투 **표시 사본**의 가지당 상한 — providers 절단(액션당 MAX_TOOL_RESULT_LENGTH=16,000,

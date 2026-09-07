@@ -278,11 +278,16 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         """
         if os.environ.get("INDIEBIZOS_MCP_HTTP", "0") != "1":
             return None
+        from common.spill import SURFACE_CLIENT_WALL_S
         cfg = {"mcpServers": {"indiebizos": {
             "type": "http",
             # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
             "url": "http://localhost:8765/mcp/",
             "headers": self._identity_headers(),
+            # ★클라이언트의 hard wall-clock 을 우리가 못박는다(2026-09-07) — 안 적으면 CLI
+            #   기본값(미지수, 버전 따라 변함) 아래로 우리 대기를 숨겨야 했다. 이 수가
+            #   표면 대기 상한(TICKET_MAX_WAIT_S)의 짝이다. 진행 알림은 이 벽을 못 늘린다.
+            "timeout": SURFACE_CLIENT_WALL_S * 1000,
         }}}
         fd, path = tempfile.mkstemp(prefix="ccmcp_", suffix=".json")
         with os.fdopen(fd, "w", encoding="utf-8") as f:

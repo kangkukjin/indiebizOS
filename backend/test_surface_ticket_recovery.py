@@ -354,30 +354,65 @@ def test_T13_표면이_wait_를_나른다():
         _cleanup(t)
     mcp_src = open(os.path.join(_REPO, "mcp_server.py"), encoding="utf-8").read()
     assert '"wait": _w' in mcp_src, "MCP 표면이 wait 를 백엔드로 안 나른다"
-    assert 'wait: 120' in mcp_src, "타임아웃 봉투가 wait 통로를 안내하지 않는다(통로 미지정)"
+    assert 'recover: "{ticket}", wait:' in mcp_src, "타임아웃 봉투가 wait 통로를 안내하지 않는다(통로 미지정)"
 
 
-def test_T14_처음_실행에도_wait_가_표면_대기를_늘린다(monkeypatch):
-    """긴 실행을 아는 호출은 처음부터 wait(≤240)로 기다린다 — 타임아웃 봉투→회수의 왕복을 없앤다
-    (2026-09-05 ep2829: 자막 each 가 한 주행에서 세 번 120초에 끊겨 매번 회수 왕복이 들었다)."""
+def test_T14_표면은_예측_없이_늘_상한까지_기다린다(monkeypatch):
+    """★2026-09-07 개정: 표면 대기는 호출자의 예측에 걸려 있지 않다.
+
+    옛 규약은 기본 120초 + "넘길 것을 *아는* 호출만 wait 로 늘리기"였다. 그러나 느림은
+    호출 전에 알 수 있는 사실이 아니고(ep3073: 같은 [self:slide] 가 90~125초, 3장 묶으면
+    300초), 예측이 틀릴 때마다 값이 회수 왕복 한 번이었다 — 그 주행에서 네 번.
+    짧은 대기가 버는 것은 없으므로(끊겨도 에이전트는 곧장 recover 로 다시 막힌다)
+    실행 경로는 wait 와 무관하게 늘 상한까지 기다린다."""
     sys.path.insert(0, _REPO)
     import asyncio
     import mcp_server
+    from common.spill import TICKET_MAX_WAIT_S
     seen = []
 
     def _fake_post(path, payload, timeout):
         seen.append((path, timeout))
         return json.dumps({"success": True, "items": []})
     monkeypatch.setattr(mcp_server, "_post_backend", _fake_post)
-    for w, expect in ((0, 120), (200, 200), (999, 240), (None, 120)):
+    for w in (0, 200, 999, None):
         seen.clear()
         asyncio.run(mcp_server.execute_ibl(code="[sense:x]{}", wait=w))
-        assert seen and seen[0][0] == "/ibl/execute" and seen[0][1] == expect, (w, seen)
+        assert seen and seen[0][0] == "/ibl/execute", (w, seen)
+        assert seen[0][1] == TICKET_MAX_WAIT_S, (
+            f"wait={w} 에서 표면 대기가 {seen[0][1]} — 상한 {TICKET_MAX_WAIT_S} 이어야 한다")
     # 타임아웃 봉투는 실제 기다린 초를 말한다
     monkeypatch.setattr(mcp_server, "_post_backend",
                         lambda p, pl, t: json.dumps({"error": "timed out", "_surface_timeout": True}))
-    out = asyncio.run(mcp_server.execute_ibl(code="[sense:x]{}", wait=200))
-    assert "200초" in out and "recover" in out, out
+    out = asyncio.run(mcp_server.execute_ibl(code="[sense:x]{}"))
+    assert f"{TICKET_MAX_WAIT_S}초" in out and "recover" in out, out
+
+
+def test_T15_클라이언트_벽이_표면_상한보다_높다(tmp_path, monkeypatch):
+    """★짝 불변식(2026-09-07): 우리 봉투가 클라이언트의 hard wall 보다 먼저 와야 한다.
+
+    벽이 우리 대기보다 낮으면 티켓 안내가 실린 정직한 봉투 대신 구조 없는 클라이언트
+    오류가 오고, 회수 통로 자체를 모델이 못 본다. 그래서 두 수는 한 곳에서 파생되고,
+    생성되는 MCP config 는 그 벽을 **명시**한다(안 적으면 CLI 기본값이라는 미지수 아래
+    숨는 꼴 — 옛 240 이 그 자리였다)."""
+    from common.spill import SURFACE_CLIENT_WALL_S, TICKET_MAX_WAIT_S
+    assert SURFACE_CLIENT_WALL_S > TICKET_MAX_WAIT_S, "클라이언트 벽이 표면 상한보다 낮다"
+    # 회수 경로는 대기 위에 HTTP 여유 30초를 더 얹는다 — 그것까지 벽 아래여야 한다.
+    assert TICKET_MAX_WAIT_S + 30 < SURFACE_CLIENT_WALL_S, "회수 HTTP 여유가 벽을 넘는다"
+
+    # 생성되는 stdio 설정이 벽을 실제로 적는가 + 성한 옛 설정에 빠진 벽을 채우는가
+    from providers import cli_provider
+    cfg = tmp_path / "claude_code_mcp.json"
+    cfg.write_text(json.dumps({"mcpServers": {"indiebizos": {
+        "command": sys.executable, "args": ["x.py"]}}}), encoding="utf-8")
+    cli_provider._ensure_tool_timeout(cfg)
+    got = json.loads(cfg.read_text(encoding="utf-8"))["mcpServers"]["indiebizos"]
+    assert got["timeout"] == SURFACE_CLIENT_WALL_S * 1000, got
+    # 사람이 적어 둔 값은 존중한다 — 덮지 않는다
+    cfg.write_text(json.dumps({"mcpServers": {"indiebizos": {
+        "command": sys.executable, "args": ["x.py"], "timeout": 12345}}}), encoding="utf-8")
+    cli_provider._ensure_tool_timeout(cfg)
+    assert json.loads(cfg.read_text(encoding="utf-8"))["mcpServers"]["indiebizos"]["timeout"] == 12345
 
 
 if __name__ == "__main__":

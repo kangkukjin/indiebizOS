@@ -91,7 +91,7 @@ passthrough_rows)를 읽고 어느 가지가 왜 비었는지 판단**할 것.
   아니라 스크래치에(정본 폴더는 정기보고 앱·아카이브 규약이 읽는다).
 - ★라이브 backend/ 에 스크래치 .py 를 만들 땐 감시 밖 이름(`test_*.py`·`_이름.py`)만.
 - ★120초 넘는 실행은 표면이 끊겨도 정상 — ticket 을 싣고 recover 로 회수(F51-1 규약).
-  기다릴 땐 `recover{wait: 초}`(≤240) 한 번으로 — 셸 `sleep` 은 전경이 막히고 배경은 즉시
+  기다릴 땐 `recover{wait: 초}`(상한=`common/spill.py` `TICKET_MAX_WAIT_S`) 한 번으로 — 셸 `sleep` 은 전경이 막히고 배경은 즉시
   돌아와 대기가 몇 초 간격 폴링으로 무너진다(2026-09-01 실측: 도구 호출의 36%가 기다림).
 - ★zsh 로 봉투 JSON 을 다룰 때 `echo "$JSON"` 금지(백슬래시 훼손) — printf/파일로.
 - ★어휘·문법을 고치면: 가드 시험 신설, 옛 계약은 `data/retired_contracts.yaml` 등록,

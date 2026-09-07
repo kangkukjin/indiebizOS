@@ -202,6 +202,32 @@ def _data_dir() -> Path:
         return Path(__file__).resolve().parents[2] / "data"
 
 
+def _ensure_tool_timeout(path: Path) -> None:
+    """성한 설정에 **빠진 `timeout` 만** 채운다 (2026-09-07).
+
+    ★왜 재생성이 아니라 병합인가: `_broken()` 은 command·script 만 보므로 옛 설정(=이 몸에서
+    실제로 도는 것)은 성한 것으로 판정돼 영영 안 고쳐진다. 그렇다고 통째로 다시 쓰면 "이 몸의
+    커스텀 설정은 존중한다"는 이 함수의 약속을 깬다. 그래서 **없을 때만** 넣는다 —
+    사람이 제 값을 적어 뒀으면 그대로 둔다.
+
+    이 수는 표면 대기 상한의 짝이다(common/spill.py 주석) — 클라이언트의 hard wall 이
+    우리 대기보다 낮으면, 우리의 정직한 티켓 봉투 대신 구조 없는 클라이언트 오류가 온다.
+    """
+    try:
+        from common.spill import SURFACE_CLIENT_WALL_S
+        with open(path, "r", encoding="utf-8") as f:
+            cfg = json.load(f)
+        srv = ((cfg.get("mcpServers") or {}).get("indiebizos") or {})
+        if not srv or "timeout" in srv:
+            return
+        srv["timeout"] = SURFACE_CLIENT_WALL_S * 1000
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(cfg, f, ensure_ascii=False, indent=2)
+        print(f"[MCP] 브리지 설정에 tool timeout 보강: {SURFACE_CLIENT_WALL_S}s")
+    except (json.JSONDecodeError, OSError, TypeError, ValueError, ImportError) as e:
+        print(f"[MCP] tool timeout 보강 실패(무시): {e}")
+
+
 def ensure_mcp_bridge_config() -> Optional[Path]:
     """CLI 프로바이더 공유 stdio MCP 브리지 설정(claude_code_mcp.json)을 파생 보장.
 
@@ -234,15 +260,18 @@ def ensure_mcp_bridge_config() -> Optional[Path]:
             return True
 
     if path.exists() and not _broken():
+        _ensure_tool_timeout(path)   # 성한 설정은 덮지 않고, 빠진 벽만 채운다
         return path
     if not server.exists():
         return path if path.exists() else None   # 파생 재료가 없으면 손대지 않는다
     try:
+        from common.spill import SURFACE_CLIENT_WALL_S
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump({"mcpServers": {"indiebizos": {
                 "command": sys.executable,
                 "args": [str(server)],
+                "timeout": SURFACE_CLIENT_WALL_S * 1000,
             }}}, f, ensure_ascii=False, indent=2)
         print(f"[MCP] 브리지 설정 파생 생성: {path} (python={sys.executable})")
         return path

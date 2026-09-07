@@ -68,7 +68,9 @@
       "arch_render_cli.py",
       "arxiv최신피드.py",
       "github저장소메타.py",
+      "tips_nest.py",
       "나레이션생성.py",
+      "나레이션원고추출.py",
       "보고서HTML.py",
       "빌드검증.py",
       "샘플_폴더용량.py",
@@ -76,6 +78,7 @@
       "시험.py",
       "에피소드통계.py",
       "음성받아쓰기.py",
+      "인사말붙이기.py",
       "잔여추정.py"
     ],
     "vocab_fragments": [

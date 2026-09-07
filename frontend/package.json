@@ -200,9 +200,6 @@
           "!**/tokens/**",
           "!packages/installed/extensions/gmail/config.yaml",
           "!*.log",
-          "!scripts/tips_nest.py",
-          "!scripts/나레이션원고추출.py",
-          "!scripts/인사말붙이기.py",
           "!__GEN_END__"
         ]
       },

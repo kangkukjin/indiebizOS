@@ -89,6 +89,35 @@ _OP_DISPATCHERS = {
 # memory_op는 op 필수 — _OP_DEFAULTS 항목 없음.
 
 
+def _with_success(payload: str) -> str:
+    """딕셔너리 봉투에 success 를 채운다 (2026-09-07).
+
+    비대칭이 있었다: 실패는 `success: false` 를 말하는데 성공은 아무 말도 안 했다
+    (`{"memory_id": 500, "message": "…저장 완료…"}`). 그래서 `resp.get("success")` 로
+    성공을 판정한 쪽이 **성공한 저장을 실패로 읽고 같은 요청을 또 보냈다** — 기억
+    원장에 같은 내용이 두 행 생긴 실측(2026-09-07)의 직접 원인이다.
+
+    op 마다 손으로 넣지 않고 디스패치 초크포인트 하나에서 채운다 — 새 op 도 자동으로
+    같은 계약을 갖는다. 이미 success/error 가 있으면 손대지 않고, **산문 반환**
+    (read 의 전문)은 통화가 문자열이라 그대로 흘린다(감싸면 통화 모양이 바뀐다).
+    """
+    if not isinstance(payload, str):
+        return payload
+    stripped = payload.lstrip()
+    if not stripped.startswith("{"):
+        return payload                      # 산문 통화 — 봉투가 아니다
+    try:
+        obj = json.loads(payload)
+    except Exception:
+        return payload
+    if not isinstance(obj, dict) or "success" in obj:
+        return payload
+    # success 를 맨 앞에 — 읽는 쪽(사람·모델)이 첫 줄에서 결과를 본다
+    out = {"success": "error" not in obj}
+    out.update(obj)
+    return json.dumps(out, ensure_ascii=False, indent=2)
+
+
 def execute(tool_input: dict, context) -> str:
     """메모리 & 스킬 도구 실행 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
@@ -101,7 +130,7 @@ def execute(tool_input: dict, context) -> str:
             fn = _OP_DISPATCHERS[tool_name].get(op)
             if fn is None:
                 return json.dumps({"success": False, "error": f"알 수 없는 op '{op}'. (save|search|read|delete|recall|move)"}, ensure_ascii=False)
-            return fn(tool_input, context)
+            return _with_success(fn(tool_input, context))
 
         return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
     except Exception as e:
@@ -302,7 +331,15 @@ def _memory_delete(db, tool_input, project_path, agent_id):
         return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)
 
     deleted = db.delete(project_path, agent_id, memory_id)
+    if not deleted:
+        # ★못 지운 것을 success 로 내보내면 초크포인트가 거짓을 물들인다(⑧′) —
+        #   지울 행이 없었다는 사실은 실패로 말해야 다음 문장이 멈춘다.
+        return json.dumps({
+            "success": False, "deleted": False, "memory_id": memory_id,
+            "error": f"메모리 ID {memory_id} 를 찾지 못해 삭제하지 못했습니다 "
+                     f"(이미 지워졌거나 다른 자아·프로젝트의 기억일 수 있습니다).",
+        }, ensure_ascii=False, indent=2)
     return json.dumps({
-        "deleted": deleted,
-        "message": f"메모리 ID {memory_id} 삭제 완료" if deleted else "삭제 실패"
+        "success": True, "deleted": True, "memory_id": memory_id,
+        "message": f"메모리 ID {memory_id} 삭제 완료"
     }, ensure_ascii=False, indent=2)

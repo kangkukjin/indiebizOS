@@ -1,0 +1,5 @@
+$정보=[self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/experiments/ai_tips_onepass_2026_09_08/02_info.json"};
+$건수=[self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/experiments/ai_tips_onepass_2026_09_08/07_edited.json"} >> [table:groupby]{by:"video_id",agg:{n:["count"]}};
+$원장=$정보 & $건수 >> [table:join]{on:"video_id",how:"left",defaults:{n:0}} >> [table:select]{columns:{"title":"title","upload_date":"upload_date","id":"video_id","channel":"uploader","date":"'2026-09-08'","topic":"'디버깅'","verdict":"'tips_' + str(n) if n > 0 else ('too_old' if upload_date < '2026-03-12' else 'not_selected')","note":"'자막에서 팁 추출' if n > 0 else '선정·정독·팁 확정 제외; 실험 단계 파일 참조'"}};
+$팁=[self:read]{path:"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/experiments/ai_tips_onepass_2026_09_08/09_tips_flat.json"} >> [table:select]{columns:{"tip":"tip","how":"how","topic":"topic","date":"date","report":"report","try_candidate":"try_candidate","source":{"video_id":"video_id","title":"title","channel":"channel","url":"url"}}};
+$return={"ledger":$원장.items,"tips":$팁.items};

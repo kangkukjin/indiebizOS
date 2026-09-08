@@ -1,0 +1,1 @@
+[table:take]{items:[{id:"a",name:"A",price:3}],n:1} >> [table:each]{do:"[table:take]{items:[{label:$it.name,source:{id:$it.id},prices:[$it.price]}],n:1}"}

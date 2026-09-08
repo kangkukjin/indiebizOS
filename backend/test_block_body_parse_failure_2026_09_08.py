@@ -17,14 +17,13 @@ def test_invalid_nonempty_branch_is_a_syntax_error(code):
 
 
 def test_report_guard_cannot_discard_unparsed_outer_variable_pipeline():
-    # 현 파서의 블록 외부 변수 파이프 지원 공백이다. 이 시험은 그 기능이
-    # 구현됐다고 주장하지 않으며, 본문을 버린 성공만 금지한다.
+    # 언어 개정으로 외부 변수 파이프를 지원한다. 본문을 버리지 않고 보존해야 한다.
     code = ('$자료 = [table:take]{items:[{id:1}],n:1}; '
             '[if: count($자료.items) == 1]{'
             '$델타 = $자료 >> [table:take]{n:1}; '
             '$델타 >> [self:write]{path:"outputs/never_written.json",format:"json"}}')
-    with pytest.raises(IBLSyntaxError, match="블록 본문 해석 실패"):
-        parse(code)
+    steps = parse(code)
+    assert len(steps[1]['branches'][0]['action']) == 4
 
 
 def test_explicit_empty_branch_remains_empty():

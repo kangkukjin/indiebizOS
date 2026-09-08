@@ -1,0 +1,1 @@
+$a=[table:take]{items:[{id:"a"},{id:"b"},{id:"c"}],n:3};$b=[table:take]{items:[{id:"a",n:2},{id:"c",n:1}],n:2};$yes=$a & $b >> [table:join]{on:"id"};$no=$a >> [table:filter]{where:{field:"id",op:"not_in",value:"${b.items.*.id}"}} >> [table:compute]{set:{n:"0"}};$yes & $no >> [table:union] >> [table:sort]{by:"id"}

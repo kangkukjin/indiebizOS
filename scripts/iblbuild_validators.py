@@ -1102,6 +1102,7 @@ def validate_node_guides(data: dict, root: Path) -> list[str]:
 # always_on 플래그를 함께, 의식적으로 바꿔야 하며, 여기 선언을 갱신하지 않으면 빌드가 멈춘다.
 # 내용어(그 외 노드의 액션)는 개인 사전: yaml+패키지 데이터만으로 추가·제거되어야 하고
 # 파서·엔진 코드에 이름이 박히면 안 된다 (별칭·always_on 데이터화로 확립된 불변식).
+# 2026-09-08 구조 투영·관계 결합·each 블록 개정: 기존 코어 안의 확장, 노드 추가 없음.
 STANDARD_CORE_NODES = {"self", "others", "table"}
 
 

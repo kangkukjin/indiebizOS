@@ -484,6 +484,13 @@ class _Checker:
     def _check_scalar_exprs(self, flow, params, idx, at):
         """사전이 선언한 식 슬롯만 검사. 평가는 하지 않고 런타임 컴파일러를 공유한다."""
         from common.safe_expr import compile_expr
+        from common.safe_expr import compile_projection
+        for key in (flow or {}).get('projection_params', []):
+            if isinstance(params.get(key), dict):
+                try:
+                    compile_projection(params[key])
+                except (SyntaxError, ValueError, TypeError) as exc:
+                    self._issue('error', idx, at, f'투영 식 오류 — {exc}', expected='scalar expression')
         slots = (flow or {}).get("scalar_expr_params") or []
         for key in slots:
             spec = params.get(key)
@@ -500,7 +507,7 @@ class _Checker:
                     compile_expr(expr)
                 except (SyntaxError, ValueError, TypeError) as exc:
                     self._issue("error", idx, at, f"'{column}' 식 오류 — {exc}",
-                                hint="한 줄 식의 구문을 고치세요. 중첩 객체·목록 생성은 등록된 [self:script]로 처리합니다.",
+                                hint="한 줄 식·객체·목록 구성 구문을 확인하세요. 임의 실행문은 등록된 [self:script]로 처리합니다.",
                                 expected="scalar expression")
             return
 
@@ -563,12 +570,16 @@ class _Checker:
         accepts = str(flow.get("accepts") or "any")
         emits = str(flow.get("emits") or "same")
         columns = flow.get("columns")
+        for variant, value in flow.get('columns_variants', {}).items():
+            key, _, expected = variant.partition('=')
+            if str(params.get(key)) == expected:
+                columns = value
         cparam = flow.get("columns_param")
         inp, _src = self._input_for(params, prev, flow)
         # each 의 do — 안쪽 문장을 타입해 방출 열을 안다($it = 입력 행)
         do_t: Optional[T] = None
         if isinstance(params.get("do"), str) and params.get("do").strip():
-            do_t = self._type_do(params["do"], inp)
+            do_t = self._type_do(params["do"], inp, params.get('as') or 'it', idx)
             if do_t is not None and do_t.kind == "prose" and params.get("collect") in (None, False, "false"):
                 self._issue("warning", idx, at,
                             "do의 최종 결과가 산문인데 collect가 꺼져 있어 산문이 결과 행에 남지 않습니다.",
@@ -603,6 +614,8 @@ class _Checker:
         if base_for_fields is not None and base_for_fields.kind == "bundle":
             base_for_fields = self._bundle_union(base_for_fields)
         for pname in (flow.get("reads_fields") or []):
+            if pname in flow.get('projection_params', []) and isinstance(params.get(pname), dict):
+                continue
             if pname in params and base_for_fields is not None:
                 for f in self._fields_in(params[pname]):
                     self._check_field(base_for_fields, f, idx, at)
@@ -624,6 +637,8 @@ class _Checker:
             elif inp.kind == "items":
                 in_cols, in_closed = inp.cols, inp.closed
         lit = params.get(cparam) if cparam else None
+        if columns == 'left':
+            return inp.branches[0].copy() if inp is not None and inp.branches else T('items')
         if columns in (None, "keep"):
             return T("items", in_cols, in_closed)
         if columns == "reset":
@@ -639,6 +654,15 @@ class _Checker:
                     u.closed = False
             return T("items", u.cols, u.closed)
         if columns == "subset":
+            if isinstance(lit, dict) and cparam in flow.get('projection_params', []):
+                from common.safe_expr import compile_projection, projection_fields
+                try:
+                    refs = projection_fields(compile_projection(lit))
+                    for field in refs:
+                        self._check_field(T('items', in_cols, in_closed), field, idx, at)
+                except (SyntaxError, ValueError, TypeError):
+                    pass  # 식 관문이 이미 오류를 신고했다.
+                return T('items', list(lit), closed=True)
             if isinstance(lit, list) and lit and all(isinstance(c, str) and not _dynamic(c) for c in lit):
                 base = T("items", in_cols, in_closed)
                 for c in lit:
@@ -721,15 +745,19 @@ class _Checker:
                         hint="그 가지를 통화를 내는 액션·op 으로 바꾸세요(스칼라·산문·효과는 join/merge 할 행이 없습니다).",
                         expected="items×items", got=[br.kind for br in inp.branches])
 
-    def _type_do(self, do_code: str, inp: Optional[T]) -> Optional[T]:
-        """each 의 do 문장 — `$it` 은 입력 행(열 = 입력 열)으로 두고 안쪽을 타입. 파싱 실패는 기권."""
+    def _type_do(self, do_code: str, inp: Optional[T], alias='it', idx=0) -> Optional[T]:
+        """실행기와 같은 코드 IR을 검사한다. 동적 코드만 기권, 확정 구문 오류는 거절."""
+        from common.ibl_vars import REF_RE
+        if REF_RE.fullmatch(str(do_code).strip()):
+            return None
         try:
-            from ibl_parser import parse_with_vars
-            steps, variables = parse_with_vars(do_code)
-        except Exception:
+            from ibl_code_ir import compile_code
+            steps = compile_code(do_code).tree
+        except Exception as exc:
+            self._issue('error', idx, 'each.do', f'본문 구문 오류 — {exc}')
             return None
         row = T("items", inp.cols, inp.closed) if (inp is not None and inp.kind == "items") else unknown()
-        sub = _Checker(variables, self.fn_depth, given={"it": row, **self.given})
+        sub = _Checker(None, self.fn_depth, given={**self.given, str(alias).lstrip('$'): row})
         sub.fn_defs = self.fn_defs
         sub.fn_returns = self.fn_returns
         out = sub.run(steps)

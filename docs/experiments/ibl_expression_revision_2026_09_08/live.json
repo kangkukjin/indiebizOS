@@ -1,0 +1,149 @@
+[
+  {
+    "case": "projection",
+    "http": 200,
+    "seconds": 0.0683,
+    "ok": true,
+    "actual": [
+      {
+        "label": "A",
+        "source": {
+          "id": "a"
+        },
+        "prices": [
+          3
+        ]
+      }
+    ],
+    "result": {
+      "success": true,
+      "steps_completed": 2,
+      "steps_total": 2,
+      "_action_count": 2,
+      "results": [
+        {
+          "step": 1,
+          "node": "table",
+          "action": "take",
+          "result": "{\"items\": [{\"id\": \"a\", \"name\": \"A\", \"price\": 3}], \"count\": 1, \"success\": true}",
+          "duration_ms": 43
+        },
+        {
+          "step": 2,
+          "node": "table",
+          "action": "select",
+          "result": "{\"items\": [{\"label\": \"A\", \"source\": {\"id\": \"a\"}, \"prices\": [3]}], \"count\": 1, \"success\": true}",
+          "duration_ms": 4
+        }
+      ],
+      "final_result": "{\"items\": [{\"label\": \"A\", \"source\": {\"id\": \"a\"}, \"prices\": [3]}], \"count\": 1, \"success\": true}"
+    }
+  },
+  {
+    "case": "left_join",
+    "http": 200,
+    "seconds": 0.0307,
+    "ok": true,
+    "actual": [
+      {
+        "id": "a",
+        "n": 2
+      },
+      {
+        "id": "b",
+        "n": 0
+      },
+      {
+        "id": "c",
+        "n": 1
+      }
+    ],
+    "result": {
+      "success": true,
+      "steps_completed": 5,
+      "steps_total": 5,
+      "_action_count": 6,
+      "results": [
+        {
+          "step": 1,
+          "node": "table",
+          "action": "take",
+          "result": "{\"items\": [{\"id\": \"a\"}, {\"id\": \"b\"}, {\"id\": \"c\"}], \"count\": 3, \"success\": true}",
+          "duration_ms": 3
+        },
+        {
+          "step": 2,
+          "node": "table",
+          "action": "take",
+          "result": "{\"items\": [{\"id\": \"a\", \"n\": 2}, {\"id\": \"c\", \"n\": 1}], \"count\": 2, \"success\": true}",
+          "duration_ms": 3
+        },
+        {
+          "step": 3,
+          "type": "parallel",
+          "branches": 2,
+          "result": "[\"{\\\"items\\\": [{\\\"id\\\": \\\"a\\\"}, {\\\"id\\\": \\\"b\\\"}, {\\\"id\\\": \\\"c\\\"}], \\\"count\\\": 3, \\\"success\\\": true}\", \"{\\\"items\\\": [{\\\"id\\\": \\\"a\\\", \\\"n\\\": 2}, {\\\"id\\\": \\\"c\\\", \\\"n\\\": 1}], \\\"count\\\": 2, \\\"success\\\": true}\"]",
+          "duration_ms": 0
+        },
+        {
+          "step": 4,
+          "node": "table",
+          "action": "join",
+          "result": "{\"items\": [{\"id\": \"a\", \"n\": 2}, {\"id\": \"b\", \"n\": 0}, {\"id\": \"c\", \"n\": 1}], \"count\": 3, \"success\": true}",
+          "duration_ms": 4
+        },
+        {
+          "step": 5,
+          "node": "table",
+          "action": "sort",
+          "result": "{\"items\": [{\"id\": \"a\", \"n\": 2}, {\"id\": \"b\", \"n\": 0}, {\"id\": \"c\", \"n\": 1}], \"count\": 3, \"success\": true}",
+          "duration_ms": 4
+        }
+      ],
+      "final_result": "{\"items\": [{\"id\": \"a\", \"n\": 2}, {\"id\": \"b\", \"n\": 0}, {\"id\": \"c\", \"n\": 1}], \"count\": 3, \"success\": true}",
+      "turn_vars": {
+        "live": [
+          "a",
+          "b"
+        ],
+        "note": "같은 턴의 다음 execute_ibl 에서 $이름 으로 그대로 참조됩니다 — 값을 다시 치지 말 것. 턴이 끝나면 소멸(턴을 넘는 회수는 resume:{vars_ref})."
+      }
+    }
+  },
+  {
+    "case": "code_block",
+    "http": 200,
+    "seconds": 0.0286,
+    "ok": true,
+    "actual": [
+      {
+        "id": 1,
+        "label": "item 1"
+      },
+      {
+        "id": 2,
+        "label": "item 2"
+      }
+    ],
+    "result": {
+      "items": [
+        {
+          "id": 1,
+          "label": "item 1"
+        },
+        {
+          "id": 2,
+          "label": "item 2"
+        }
+      ],
+      "count": 2,
+      "rows_processed": 2,
+      "ok_count": 2,
+      "error_count": 0,
+      "parallel": 2,
+      "rows_replaced": 2,
+      "success": true,
+      "message": "2행의 do 가 통화를 내어 **원 행이 do 결과로 대체**됐습니다(입력 2행 → 출력 2행) — 어느 행에서 나온 결과인지는 통화에 남지 않습니다. 원 행의 필드를 함께 보려면 keep: [\"필드\"] 를 쓰세요."
+    }
+  }
+]

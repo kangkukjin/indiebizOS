@@ -6,6 +6,7 @@ data-ops `[table:compute]` 의 `_compute_compile` 과 같은 화이트리스트�
 """
 import ast as _ast
 import math as _math
+from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
 FUNCS: Dict[str, Any] = {"round": round, "abs": abs, "min": min, "max": max, "int": int,
@@ -31,6 +32,7 @@ def _contains(s, sub):
     return text_match("contains", s, sub)
 NODES = (_ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Constant, _ast.Name, _ast.Load,
          _ast.Call, _ast.Compare, _ast.BoolOp, _ast.IfExp, _ast.Subscript, _ast.Tuple,
+         _ast.Dict, _ast.List,
          _ast.Add, _ast.Sub, _ast.Mult, _ast.Div, _ast.FloorDiv, _ast.Mod, _ast.Pow,
          _ast.USub, _ast.UAdd, _ast.Not, _ast.And, _ast.Or,
          _ast.Eq, _ast.NotEq, _ast.Lt, _ast.LtE, _ast.Gt, _ast.GtE)
@@ -91,12 +93,15 @@ def compile_expr(expr: str) -> Tuple[Any, List[str], List[str]]:
                 raise ValueError("허용되지 않는 구문: " + type(n).__name__ +
                                  " — 문자열 포함 검사는 contains(열, 문자열), 부정은 not contains(열, 문자열). "
                                  "목록 소속 검사는 [table:filter]{where:{field:..., op:\"in\", value:[...]}} 로.")
-            if isinstance(n, (_ast.Dict, _ast.List)):
-                raise ValueError("허용되지 않는 구문: " + type(n).__name__ +
-                                 " — compute 식은 dict/list를 생성하지 않습니다. 평탄 열을 계산한 뒤 "
-                                 "중첩 변환은 등록된 [self:script]로 처리하세요.")
-            raise ValueError(f"허용되지 않는 구문: {type(n).__name__} — 한 줄 산술·비교·조건식만. "
-                             "상태가 dict 이거나 분기가 섞이면 [self:script] 로.")
+            raise ValueError(f"허용되지 않는 구문: {type(n).__name__} — 한 줄 식과 객체·목록 구성만. "
+                             "컴프리헨션·임의 호출·속성 접근은 지원하지 않습니다.")
+        if isinstance(n, _ast.Dict) and any(
+                not isinstance(k, _ast.Constant) or not isinstance(k.value, str) for k in n.keys):
+            raise ValueError("객체 키는 문자열 상수여야 합니다(펼침·동적 키 불가).")
+        if isinstance(n, _ast.Dict):
+            keys = [k.value for k in n.keys]
+            if len(keys) != len(set(keys)):
+                raise ValueError("객체에 중복된 키가 있습니다.")
         if isinstance(n, _ast.Call) and not (isinstance(n.func, _ast.Name) and n.func.id in (*FUNCS, "col")):
             raise ValueError("허용 함수: " + ", ".join(sorted(FUNCS)) + ", col")
         if isinstance(n, _ast.Name) and n.id.startswith("__"):
@@ -122,14 +127,58 @@ def as_num(v: Any):
     return numeric_value(v)
 
 
-def eval_expr(code: Any, row: Dict[str, Any], extra: Dict[str, Any] = None) -> Any:
-    scope = {k: (as_num(v) if as_num(v) is not None else v) for k, v in row.items()
+def eval_expr(code: Any, row: Dict[str, Any], extra: Dict[str, Any] = None,
+              *, preserve_values: bool = False) -> Any:
+    scope = {k: (as_num(v) if not preserve_values and as_num(v) is not None else v) for k, v in row.items()
              if isinstance(k, str) and k.isidentifier() and k != _CMP_NAME}
     if extra:
         scope.update(extra)
-    scope["col"] = lambda name: (as_num(row.get(name)) if as_num(row.get(name)) is not None else row.get(name))
+    scope["col"] = lambda name: (as_num(row.get(name)) if not preserve_values and as_num(row.get(name)) is not None else row.get(name))
     # 유한 결과 관문 — 1e308*2 같은 오버플로가 Infinity 로 통화에 실려 하류 계산·분기·
     # 저장으로 전염되기 전에 여기서 ValueError 로 끊는다(compute/reduce/assign 공유).
     from common.value_semantics import require_finite_numbers
     return require_finite_numbers(eval(
         code, {"__builtins__": {}, **FUNCS, _CMP_NAME: _semantic_compare}, scope))
+
+
+@dataclass
+class ProjectionExpr:
+    code: Any
+    names: List[str]
+    cols: List[str]
+
+
+def compile_projection(spec):
+    """선언된 객체·목록 모양을 유지하고 잎의 한 줄 식만 컴파일한다."""
+    if isinstance(spec, dict):
+        if any(not isinstance(k, str) for k in spec):
+            raise ValueError('투영의 키는 문자열이어야 합니다.')
+        return {k: compile_projection(v) for k, v in spec.items()}
+    if isinstance(spec, list):
+        return [compile_projection(v) for v in spec]
+    if isinstance(spec, str):
+        return ProjectionExpr(*compile_expr(spec))
+    if spec is None or isinstance(spec, (int, float, bool)):
+        return spec
+    raise ValueError('투영에는 객체·목록·한 줄 식·JSON 값만 쓸 수 있습니다.')
+
+
+def projection_fields(plan):
+    if isinstance(plan, ProjectionExpr):
+        return set(plan.names) | set(plan.cols)
+    if isinstance(plan, (dict, list)):
+        vals = plan.values() if isinstance(plan, dict) else plan
+        return set().union(*(projection_fields(v) for v in vals))
+    return set()
+
+
+def eval_projection(plan, row):
+    # 투영은 복사·재구성이다. "007" 같은 식별자를 숫자로 바꾸지 않는다.
+    # 계산할 문자열 숫자는 int/float로 명시 변환한다. compute의 기존 수치 관측은 불변.
+    if isinstance(plan, ProjectionExpr):
+        return eval_expr(plan.code, row, preserve_values=True)
+    if isinstance(plan, dict):
+        return {k: eval_projection(v, row) for k, v in plan.items()}
+    if isinstance(plan, list):
+        return [eval_projection(v, row) for v in plan]
+    return plan

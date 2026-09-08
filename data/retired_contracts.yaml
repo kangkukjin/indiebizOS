@@ -25,6 +25,15 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: structured_expression_ban
+    retired: 2026-09-08
+    reason: 일반 구조 변환을 외부 스크립트로 보내던 표현 제한을 폐지했다.
+    instead: 한 줄 객체·목록 구성과 select 투영 객체를 지원한다. 임의 실행문은 script의 영역이다.
+    phrases:
+      - "compute 식은 dict/list를 생성하지 않습니다"
+      - "dict/list 생성은 불가하며"
+      - "중첩 객체·목록 생성은 등록된 [self:script]로 처리합니다"
+      - "목록·사전 리터럴을 식에 직접 할당하는 문법은 지원하지 않습니다"
   - id: claude_assistant_block_is_response
     retired: 2026-09-08
     reason: Claude assistant 이벤트는 동일 응답의 thinking·text·tool_use 블록으로 반복돼 실전 라운드를 19에서 45로 부풀렸다.

@@ -1,0 +1,162 @@
+{
+  "ai_calls": 0,
+  "scope": "동일 입력의 결정론 변환; 전체 보고서·모델 품질/비용 측정 아님",
+  "cases": [
+    {
+      "name": "projection",
+      "expected": [
+        {
+          "label": "A",
+          "source": {
+            "id": "a"
+          },
+          "prices": [
+            3
+          ]
+        }
+      ],
+      "before": {
+        "chars": 154,
+        "ok": true,
+        "preflight": true,
+        "actual": [
+          {
+            "label": "A",
+            "source": {
+              "id": "a"
+            },
+            "prices": [
+              3
+            ]
+          }
+        ],
+        "error": null
+      },
+      "after": {
+        "chars": 127,
+        "ok": true,
+        "preflight": true,
+        "actual": [
+          {
+            "label": "A",
+            "source": {
+              "id": "a"
+            },
+            "prices": [
+              3
+            ]
+          }
+        ],
+        "error": null
+      },
+      "saved_chars": 27,
+      "saved_percent": 17.5
+    },
+    {
+      "name": "left_join",
+      "expected": [
+        {
+          "id": "a",
+          "n": 2
+        },
+        {
+          "id": "b",
+          "n": 0
+        },
+        {
+          "id": "c",
+          "n": 1
+        }
+      ],
+      "before": {
+        "chars": 314,
+        "ok": true,
+        "preflight": true,
+        "actual": [
+          {
+            "id": "a",
+            "n": 2
+          },
+          {
+            "id": "b",
+            "n": 0
+          },
+          {
+            "id": "c",
+            "n": 1
+          }
+        ],
+        "error": null
+      },
+      "after": {
+        "chars": 194,
+        "ok": true,
+        "preflight": true,
+        "actual": [
+          {
+            "id": "a",
+            "n": 2
+          },
+          {
+            "id": "b",
+            "n": 0
+          },
+          {
+            "id": "c",
+            "n": 1
+          }
+        ],
+        "error": null
+      },
+      "saved_chars": 120,
+      "saved_percent": 38.2
+    },
+    {
+      "name": "code_block",
+      "expected": [
+        {
+          "id": 1,
+          "label": "item 1"
+        },
+        {
+          "id": 2,
+          "label": "item 2"
+        }
+      ],
+      "before": {
+        "chars": 165,
+        "ok": true,
+        "preflight": true,
+        "actual": [
+          {
+            "id": 1,
+            "label": "item 1"
+          },
+          {
+            "id": 2,
+            "label": "item 2"
+          }
+        ],
+        "error": null
+      },
+      "after": {
+        "chars": 160,
+        "ok": true,
+        "preflight": true,
+        "actual": [
+          {
+            "id": 1,
+            "label": "item 1"
+          },
+          {
+            "id": 2,
+            "label": "item 2"
+          }
+        ],
+        "error": null
+      },
+      "saved_chars": 5,
+      "saved_percent": 3.0
+    }
+  ]
+}

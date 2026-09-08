@@ -1,0 +1,1 @@
+[table:each]{items:[{id:1},{id:2}],parallel:2} {$x=[table:take]{items:[$it],n:1};[if:count($x.items)>0]{$x >> [table:compute]{set:{label:"'item ' + str(id)"}}}}

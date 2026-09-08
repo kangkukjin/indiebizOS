@@ -70,7 +70,7 @@ LAYERS = {
         "ibl_exec_each", "ibl_exec_sense", "ibl_ops", "ibl_param_vocab", "ibl_code_binding", "ibl_code_ir",
         "ibl_progress",
         "ibl_predicates",
-        "ibl_parser", "ibl_parser_blocks", "ibl_parser_values", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
+        "ibl_parser", "ibl_parser_blocks", "ibl_parser_values", "ibl_parser_scope", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
         "ibl_safety", "ibl_translate", "package_manager", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
         "workflow_parallel", "workflow_fallback", "workflow_contract",

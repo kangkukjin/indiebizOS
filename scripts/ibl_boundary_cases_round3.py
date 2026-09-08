@@ -57,11 +57,11 @@ def cases():
         ('fn_arg_missing', '[def:f]{$return=$x}\n[fn:f]{}'),
         ('catch_outside', each([{'id': 1}], take('"$error.action"'))),
         ('each_wrong_alias', each([{'id': 1}], take('$it.id'), **{'as': 'x'})),
-        ('compute_dict', '[table:compute]{items:[{v:1}],set:{x:"{\'v\':v}"}}'),
         ('compute_missing_column', '[table:compute]{items:[{v:1}],set:{x:"missing+1"}}'),
         ('catch_rethrow', '[try]{[self:read]{path:"missing"}}[catch]{[self:read]{path:"still-missing"}}'),
     ]
     for name, code in negatives:
         add(name, code, error=True)
+    add('compute_dict', '[table:compute]{items:[{v:1}],set:{x:"{\'v\':v}"}}', [{'v':1,'x':{'v':1}}])
     assert len(rows) == 100
     return rows

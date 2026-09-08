@@ -7919,7 +7919,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(고차) — items의 각 행에 IBL 문장(do)을 적용한다. 목록을 항목 단위 행동으로 잇는 유일한 어휘. 앞 통화 없이 items 를 직접 주면 리터럴 팬아웃(같은 액션 N번 대신).
-        target_description: '산문 요약을 각 행에 남길 때: [table:each]{collect:true, do:"[sense:crawl]{url:''$it.url''} >> [table:brief]{instruction:''핵심 요약''}"}. 문자열 산문은 value 열, 객체 결과는 해당 키로 보존한다. do(각 행에 적용할 IBL 문장, 필수 — 행 값은 $it.필드 로 참조) · items(★입력을 직접 줄 때 — >> 앞 통화가 없어도 네가 방금 정한 목록으로 팬아웃: [table:each]{items: [{city: "청주"}, {city: "속초"}], do: "[sense:weather]{city: ''$it.city''}"} — 같은 액션을 파라미터만 바꿔 N번 부를 자리는 전부 이것) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop | keep — keep 은 실패 행을 {원 행…, _error} 로 **통화에도** 흘린다(언어 개정 2026-08-28): 후속이 [table:filter] 의 _error eq null/exists 로 성공·실패를 갈라 교체·재시도를 조합하는 자리. keep 은 전량 실패도 통화로 흘린다) · keep([부모 필드] — 팬아웃 결과 행에 원 행의 그 필드를 승계, 충돌 시 _2 접미. "어느 부모에서 왔는지"가 필요할 때) · parallel(동시 실행 수, 기본 1 — do 가 AI 원샷·자막·크롤처럼 느릴 때 2~8(언어 개정 2026-09-06): 결과 순서와 봉투 계약은 순차와 같고, on_error stop 은 병렬에서 이미 돈 뒤 행의 결과를 버린다. 같은 파일·원장에 쓰는 do 는 병렬로 돌리지 말 것) · collect(true — 언어 개정 2026-09-06: do 가 통화를 **안 내는** 행(효과·스칼라 — 보고서 계산·도면 생성·write 의 path)의 결과 필드를 버리지 않고 {원 행…, 결과 키…} 한 행으로 승격한다. 원 행 이름이 먼저, 겹치는 결과 키는 _2 접미 + collect_renamed 신고. "각각에 대해 X 를 구해 표로" 의 자리 — 예: [engines:arch_list] >> [table:each]{collect: true, do: "[engines:arch_report]{design_id: ''$it.id'', report_type: ''coverage_ratio''}"} >> [table:select]{columns: ["name", "coverage_ratio"]}. do 가 통화를 내는 행에는 아무 뜻이 없다(종전 계약)). ★결과는 **통화 그대로**(2026-08-23 언어 개정): do 가 통화를 내면 그 행들이 감싸기 없이 흐르므로 뒤에 변환자를 바로 잇는다(flatten 불필요). do 가 통화를 안 내면(효과·스칼라 — notify·write 등) **원 행**이 흐르고 봉투가 passthrough_rows 로 그 사실을 말한다(결과가 필요하면 collect: true — collected_rows 로 신고). 실패한 행은 통화에 섞지 않고 봉투의 errors: [{원 행…, _error}] + error_count + warning 으로 나른다(부분 실패는 파이프를 끊지 않되 반드시 보인다). 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[sense:crawl]{url: ''$it.url''}"} >> [table:select]{columns: ["title","price"]} / 종착: … >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
+        target_description: '산문 요약을 각 행에 남길 때: [table:each]{collect:true, do:"[sense:crawl]{url:''$it.url''} >> [table:brief]{instruction:''핵심 요약''}"}. 문자열 산문은 value 열, 객체 결과는 해당 키로 보존한다. 코드 블록 표기: [table:each]{parallel:4,as:v} { [액션]{id:$v.id} >> [액션] }. 기존 do 문자열과 같은 실행이며 둘을 동시에 쓰면 오류. do(각 행에 적용할 IBL 문장; 블록을 쓰면 생략 — 행 값은 $it.필드 로 참조) · items(★입력을 직접 줄 때 — >> 앞 통화가 없어도 네가 방금 정한 목록으로 팬아웃: [table:each]{items: [{city: "청주"}, {city: "속초"}], do: "[sense:weather]{city: ''$it.city''}"} — 같은 액션을 파라미터만 바꿔 N번 부를 자리는 전부 이것) · as(행 참조 이름, 기본 "it") · limit(처리 상한, 기본 20 — 넘으면 앞에서 자르고 skipped 로 알림) · on_error(continue 기본 | stop | keep — keep 은 실패 행을 {원 행…, _error} 로 **통화에도** 흘린다(언어 개정 2026-08-28): 후속이 [table:filter] 의 _error eq null/exists 로 성공·실패를 갈라 교체·재시도를 조합하는 자리. keep 은 전량 실패도 통화로 흘린다) · keep([부모 필드] — 팬아웃 결과 행에 원 행의 그 필드를 승계, 충돌 시 _2 접미. "어느 부모에서 왔는지"가 필요할 때) · parallel(동시 실행 수, 기본 1 — do 가 AI 원샷·자막·크롤처럼 느릴 때 2~8(언어 개정 2026-09-06): 결과 순서와 봉투 계약은 순차와 같고, on_error stop 은 병렬에서 이미 돈 뒤 행의 결과를 버린다. 같은 파일·원장에 쓰는 do 는 병렬로 돌리지 말 것) · collect(true — 언어 개정 2026-09-06: do 가 통화를 **안 내는** 행(효과·스칼라 — 보고서 계산·도면 생성·write 의 path)의 결과 필드를 버리지 않고 {원 행…, 결과 키…} 한 행으로 승격한다. 원 행 이름이 먼저, 겹치는 결과 키는 _2 접미 + collect_renamed 신고. "각각에 대해 X 를 구해 표로" 의 자리 — 예: [engines:arch_list] >> [table:each]{collect: true, do: "[engines:arch_report]{design_id: ''$it.id'', report_type: ''coverage_ratio''}"} >> [table:select]{columns: ["name", "coverage_ratio"]}. do 가 통화를 내는 행에는 아무 뜻이 없다(종전 계약)). ★결과는 **통화 그대로**(2026-08-23 언어 개정): do 가 통화를 내면 그 행들이 감싸기 없이 흐르므로 뒤에 변환자를 바로 잇는다(flatten 불필요). do 가 통화를 안 내면(효과·스칼라 — notify·write 등) **원 행**이 흐르고 봉투가 passthrough_rows 로 그 사실을 말한다(결과가 필요하면 collect: true — collected_rows 로 신고). 실패한 행은 통화에 섞지 않고 봉투의 errors: [{원 행…, _error}] + error_count + warning 으로 나른다(부분 실패는 파이프를 끊지 않되 반드시 보인다). 예: [sense:used]{q:"자전거"} >> [table:take]{n:3} >> [table:each]{do: "[sense:crawl]{url: ''$it.url''}"} >> [table:select]{columns: ["title","price"]} / 종착: … >> [table:each]{do: "[self:notify_user]{message: ''$it.title''}"}'
         group: transform
         router: system
         func: table_each
@@ -8123,10 +8123,14 @@ nodes:
           columns_param: columns
           reads_fields:
           - columns
+          projection_params:
+          - columns
+          - cols
+          - fields
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items에서 지정한 열/필드만 남긴다(투영). 차트·문서 전 좁히기. 형태 보존 — items 입력은 items 로, 명시 표형 입력만 표형으로.
-        target_description: 'columns(남길 열/필드 이름 배열, 필수). 예: [sense:...] >> [table:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
+        target_description: 'columns(열 이름 배열 또는 {출력열: 식} 투영 객체, 필수). 투영 객체는 중첩 객체·목록을 만들며 잎 문자열은 한 줄 식이다. 예 columns:{tip:"tip",source:{id:"video_id",url:"url"},cost:"qty * price"}. 문자열 상수는 식 안에서 따옴표로 감싼다. 투영은 원래 값·타입을 보존하며 숫자 문자열 계산은 int/float로 명시 변환한다. 필드 결측·계산 실패는 전체 투영 오류. 예: [sense:...] >> [table:select]{columns: ["연도","GDP"]}. 표가 넓을 때 차트/문서 전에 좁히기.'
         group: transform
         router: handler
         tool: data_select
@@ -8152,7 +8156,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
-        target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby. 문자열 포함은 contains(tip, "툴 콜"), 부정은 not contains(tip, "툴 콜")로 쓴다. Python의 in/not in 구문은 불가. dict/list 생성은 불가하며 실행 전 식 검사로 거절한다. 중첩 데이터 변환은 등록된 self:script로.'
+        target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby. 문자열 포함은 contains(tip, "툴 콜"), 부정은 not contains(tip, "툴 콜")로 쓴다. Python의 in/not in 구문은 불가. 객체·목록 구성도 가능하다(예 source: "{''id'': video_id, ''url'': url}"). 키는 중복 없는 문자열 상수. 컴프리헨션·펼침·임의 호출은 불가. 필드를 재배치하며 원형 타입을 보존하려면 select의 투영 객체를 쓴다.'
         group: transform
         router: handler
         tool: data_compute
@@ -8306,20 +8310,25 @@ nodes:
           - right
           emits: items
           columns: union
+          columns_variants:
+            how=semi: left
+            how=anti: left
           reads_fields:
           - 'on'
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
-        target_description: 'on(조인 키 이름, 양쪽에 존재, 필수 — 목록이면 복합키 조인이고 키 일부가 빈 행은 조인 밖). 표형 table 입력=열 기준, items=필드 기준. null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급 — 가지에 파이프가 필요하면(rename 등) 변수에 담아 left/right 로: $a = [A] >> [table:rename]{...} 후 [table:join]{left: "$a", right: "$b", on: ...}. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.'
+        description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 결합(how=inner/left/right/full/semi/anti). 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
+        target_description: 'how(inner 기본, left=왼쪽 보존, right=오른쪽 보존, full=양쪽 보존, semi=일치하는 왼쪽 행, anti=불일치 왼쪽 행). semi/anti는 오른쪽 중복으로 왼쪽 행을 복제하지 않는다. defaults({결과열:기본값})는 left/right/full에서 짝이 없는 쪽의 열에만 적용; 실제 null은 바꾸지 않는다. 빈 items에는 defaults로 빈 쪽 열을 선언할 수 있다. on(조인 키 이름, 양쪽에 존재, 필수 — 목록이면 복합키 조인이고 키 일부가 빈 행은 불일치 행으로 처리). 표형 table 입력=열 기준, items=필드 기준. null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급 — 가지에 파이프가 필요하면(rename 등) 변수에 담아 left/right 로: $a = [A] >> [table:rename]{...} 후 [table:join]{left: "$a", right: "$b", on: ...}. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.'
         group: transform
         router: handler
         params:
+          how: string
+          defaults: object
           'on':
           - string
           - array
         tool: data_join
-        implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 inner join(우측 인덱싱, 키 정규화 비교). items·표형 table 입력 모두 지원(같은 형태끼리).
+        implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 how 방식 결합(우측 인덱싱, 키 정규화 비교). items·표형 table 입력 모두 지원(같은 형태끼리).
         target_key: 'on'
         keywords:
         - 조인

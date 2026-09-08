@@ -1,0 +1,1 @@
+$a=[table:take]{items:[{id:"a"},{id:"b"},{id:"c"}],n:3};$b=[table:take]{items:[{id:"a",n:2},{id:"c",n:1}],n:2};$a & $b >> [table:join]{on:"id",how:"left",defaults:{n:0}} >> [table:sort]{by:"id"}

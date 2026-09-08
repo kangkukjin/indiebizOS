@@ -1,0 +1,1 @@
+[table:take]{items:[{id:"a",name:"A",price:3}],n:1} >> [table:select]{columns:{label:"name",source:{id:"id"},prices:["price"]}}

@@ -9,6 +9,7 @@ import re
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ibl_parser_values import IBLSyntaxError, _parse_params
+from ibl_parser_scope import BODY_NAMES
 
 # 본체 parse 주입 슬롯 — ibl_parser 가 자기 정의 직후 등록한다.
 _PARSE: Optional[Callable[[str], List[Dict]]] = None
@@ -389,6 +390,8 @@ def _parse_case(code: str) -> Optional[Dict]:
                 i += 1
             # action 파싱
             action_text, end = _extract_action_at(inner, i)
+            if not action_text:
+                raise IBLSyntaxError("case: default 본문이 비어 있습니다.")
             if action_text:
                 default_action = _parse_block_body(action_text)
                 i = end
@@ -412,6 +415,8 @@ def _parse_case(code: str) -> Optional[Dict]:
 
             # action 파싱
             action_text, end = _extract_action_at(inner, i)
+            if not action_text:
+                raise IBLSyntaxError("case: 분기 본문이 비어 있습니다.")
             if action_text:
                 branch = {"pattern": pattern, "action": _parse_block_body(action_text)}
 
@@ -424,7 +429,7 @@ def _parse_case(code: str) -> Optional[Dict]:
                 i = end
             continue
 
-        i += 1  # 파싱 불가능한 문자 건너뛰기
+        raise IBLSyntaxError(f"case: 패턴은 따옴표로 감싸고 뒤에 : 문장을 적으세요: {inner[i:i + 60]!r}")
 
     return {
         "_case": True,
@@ -435,47 +440,29 @@ def _parse_case(code: str) -> Optional[Dict]:
 
 
 def _extract_action_at(text: str, pos: int) -> Tuple[str, int]:
-    """
-    텍스트의 pos 위치에서 [goal:...]{...} 또는 [node:action]{...} 추출
-
-    Returns:
-        (action_text, end_position) 또는 ("", pos)
-    """
-    if pos >= len(text):
-        return ("", pos)
-
-    # [로 시작하는 위치 찾기
-    while pos < len(text) and text[pos] in ' \t\n\r':
-        pos += 1
-
-    if pos >= len(text) or text[pos] != '[':
-        return ("", pos)
-
-    start = pos
-
-    # [ ] 매칭
-    bracket_depth = 0
-    i = pos
+    """case 한 갈래의 전체 문장/파이프를 읽는다. 따옴표·컨테이너 안 쉼표는 값이다."""
+    start, i, depth, quote = pos, pos, 0, None
     while i < len(text):
-        if text[i] == '[':
-            bracket_depth += 1
-        elif text[i] == ']':
-            bracket_depth -= 1
-            if bracket_depth == 0:
-                i += 1
-                break
+        ch = text[i]
+        if quote:
+            if ch == '\\':
+                i += 2
+                continue
+            if ch == quote:
+                quote = None
+        elif ch in '\"\'':
+            quote = ch
+        elif ch in '[{(':
+            depth += 1
+        elif ch in ']})':
+            depth -= 1
+        elif depth == 0 and ch == ',':
+            break
+        elif depth == 0 and ch == '\n' and re.match(
+                r"\s*(?:default\s*:|[\"'].*?[\"']\s*:)", text[i + 1:]):
+            break
         i += 1
-
-    # { } 매칭 (있으면)
-    while i < len(text) and text[i] in ' \t\n\r':
-        i += 1
-
-    if i < len(text) and text[i] == '{':
-        body, end_pos = _extract_bracket_raw(text, i, '{', '}')
-        if body is not None:
-            i = end_pos + 1
-
-    return (text[start:i], i)
+    return text[start:i].strip(), i
 
 
 def _parse_block_body(body: str) -> Optional[Dict]:
@@ -513,7 +500,7 @@ def _parse_block_body(body: str) -> Optional[Dict]:
         raise RuntimeError(
             "ibl_parser_blocks: parse 미주입 — ibl_parser 를 먼저 import 해야 한다")
     try:
-        steps = _PARSE(body)
+        steps = _PARSE_VARS(body, free_vars_ok=BODY_NAMES.get())[0]
         if len(steps) == 1:
             return steps[0]
         return steps
@@ -646,7 +633,7 @@ def _take_brace_body(text: str, prefix: "re.Pattern") -> Optional[Tuple[Any, str
         raise IBLSyntaxError(
             f"{label} 블록은 있지만 몸을 해석하지 못했습니다: {body.strip()[:60]!r}. "
             "몸에는 IBL 문장 또는 지원되는 한 줄 식을 쓰세요 "
-            "(목록·사전 리터럴을 식에 직접 할당하는 문법은 지원하지 않습니다)."
+            "(객체·목록 구성은 허용하며 임의 실행문은 지원하지 않습니다)."
             + (f" 원인: {parse_error}" if parse_error else "")
         ) from parse_error
     return parsed, text[end + 1:].strip()
@@ -780,7 +767,9 @@ def _parse_repeat_block(code: str) -> Optional[Dict]:
     if not body_src:
         raise IBLSyntaxError("repeat 몸이 비어 있습니다.")
     if _PARSE_VARS is not None:
-        steps, body_vars = _PARSE_VARS(body_src)
+        names = BODY_NAMES.get()
+        names = True if names is True else frozenset(names) | {out['var']}
+        steps, body_vars = _PARSE_VARS(body_src, free_vars_ok=names)
     else:
         steps, body_vars = _PARSE(body_src), {}
     out["body"] = steps

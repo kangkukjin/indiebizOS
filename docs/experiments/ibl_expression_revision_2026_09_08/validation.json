@@ -1,0 +1,21 @@
+{
+  "backend": {
+    "passed": 3125,
+    "skipped": 2,
+    "seconds": 113.03
+  },
+  "new_tests": 51,
+  "vocabulary_check": true,
+  "retired_contracts_check": true,
+  "backend_layers_check": true,
+  "android_bundle_generated": true,
+  "physical_android_tested": false,
+  "live_examples_passed": 3,
+  "report_data": {
+    "ledger_rows": 49,
+    "tip_rows": 13,
+    "equal": true,
+    "ai_calls": 0
+  },
+  "full_report_ai_benchmark_rerun": false
+}

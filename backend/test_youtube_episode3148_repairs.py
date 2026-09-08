@@ -130,7 +130,7 @@ def test_compute_contains_prescription_executes():
     assert probe(dict(id='contains', code=code, expected=expected, error=False, contains=None))['ok']
 
 
-@pytest.mark.parametrize('expr,hint', [("'툴 콜' in tip", 'contains('), ("{'id': 1}", 'self:script')])
+@pytest.mark.parametrize('expr,hint', [("'툴 콜' in tip", 'contains('), ("[id for id in rows]", 'ListComp')])
 def test_compute_rejects_unsupported_syntax_with_specific_remedy(expr, hint):
     from common.safe_expr import compile_expr
     with pytest.raises(ValueError, match=__import__('re').escape(hint)):

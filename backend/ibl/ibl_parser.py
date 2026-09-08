@@ -63,6 +63,7 @@ IBL 코드 텍스트를 파싱하여 실행 가능한 step 리스트로 변환�
 
 import re
 import json
+from ibl_parser_scope import scoped_block, emitted_names, take_do_body
 from typing import List, Dict, Optional, Any, Tuple
 
 
@@ -184,7 +185,7 @@ def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None,
         _piped = len(_split_pipeline(stmt)) > 1
         # 식 할당 `$n = 0` / `$n = $n + 1` / `$s = $r.count * 2` (M6 — 카운터·상태 변수): 우변이 액션이
         # 아니면 한 줄 식 문장. $변수는 값 바인딩(_vars), 평가는 ibl_control_blocks._execute_assign.
-        if assign_names[_stmt_idx] and not _piped and not stmt.lstrip().startswith(('[', '(')):
+        if assign_names[_stmt_idx] and not _piped and not re.match(r'^\s*\[(?:[\w]+:|try\]|on_error:)', stmt) and not stmt.lstrip().startswith('('):
             blk = {"_assign": True, "name": assign_names[_stmt_idx], "expr": stmt.strip()}
             refs = set(_var_names(stmt))
             vars_used = {n: i for n, i in variables.items() if n in refs}
@@ -196,7 +197,7 @@ def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None,
             all_steps.append(blk)
             variables[assign_names[_stmt_idx]] = len(all_steps) - 1
             continue
-        blk = None if _piped else _parse_statement_block(stmt)
+        blk = None if _piped else scoped_block(_parse_statement_block, stmt, variables, free_vars_ok)
         if blk is not None:
             # 블록도 앞 문장의 $변수를 본다 (2026-08-22 프로그램급 IBL M2): 분기 몸의
             # 파라미터는 일반 step 처럼 {{_step_N_result}} 치환, 조건식·case 소스 안의 $변수는
@@ -242,7 +243,8 @@ def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None,
                 all_steps.append(parsed)
                 continue
             # 각 세그먼트 내에서 & 또는 ?? 연산자 처리
-            parsed = _parse_group(seg_text.strip(), variables, free_vars_ok)
+            parsed = scoped_block(lambda s: _parse_group(s, variables, free_vars_ok),
+                                  seg_text.strip(), variables, free_vars_ok)
             if parsed is None:
                 _st = seg_text.strip()
                 # F16-1 (2026-08-20 상상훈련 16회차): 분기 헤더가 홀로 오면(중괄호 몸 누락)
@@ -1054,6 +1056,8 @@ def _parse_step(text: str) -> Optional[Dict]:
         elif isinstance(extracted, str):
             params = _parse_params(extracted)
         tail = remaining[_bend:].strip() if isinstance(_bend, int) and _bend > 0 else ""
+    if (node, action) == ('table', 'each'):
+        tail = take_do_body(params, tail)
 
     # 노드 주소지정 @별칭 (다중 노드): [node:action]{...}@폰2 → target_node="폰2".
     # params 블록 밖(tail)에서만 찾아 파라미터 값 내 @(이메일 등)와 충돌 없음. 한글 별칭 허용.
@@ -1178,7 +1182,7 @@ def _resolve_block_variables(blk: dict, variables: Dict[str, int], nested: bool 
     out = dict(blk)
     if nested:
         return out
-    refs = set(_var_names(json.dumps(blk, ensure_ascii=False)))
+    refs = set(_var_names(json.dumps(blk, ensure_ascii=False))) | emitted_names(blk)
     vars_used = {name: idx for name, idx in variables.items() if name in refs}
     if vars_used:
         out["_vars"] = vars_used

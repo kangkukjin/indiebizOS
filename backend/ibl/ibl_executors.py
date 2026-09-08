@@ -76,7 +76,7 @@ def _nest(step: Any, tool_input: dict) -> Any:
         out["_fn_depth"] = tool_input["_fn_depth"]          # 함수 몸 안의 [fn:] 호출이 깊이를 잇는다(재귀 가드)
     # 블록 속 블록이 바깥 문장의 $변수를 계속 읽게 — 변수 값 봉투 계승 (2026-08-22 M2)
     if tool_input.get("_var_values") and (out.get("_condition") or out.get("_case")
-                                          or out.get("_try") or out.get("_repeat") or out.get("_assign")):
+                                          or out.get("_try") or out.get("_repeat") or out.get("_assign") or out.get("_var_emit")):
         out["_var_values"] = {**tool_input["_var_values"], **(out.get("_var_values") or {})}
     return out
 
@@ -230,7 +230,7 @@ def _stamp_var_values(steps: Any, values: Dict[str, Any]) -> None:
     for st in steps:
         if not isinstance(st, dict):
             continue
-        if any(st.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign")):
+        if any(st.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign", "_var_emit")):
             st["_var_values"] = {**values, **(st.get("_var_values") or {})}
         for key in ("branches", "body", "catch", "finally", "default", "action", "_branch_steps"):
             v = st.get(key)
@@ -266,11 +266,12 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
     except ValueError as e:
         return {"success": False, "error": f"분기 몸의 $변수 치환 실패: {e}"}
     if isinstance(action, list):
-        from workflow_engine import execute_pipeline
+        from workflow_engine import execute_pipeline, _promote_final_currency
         steps = [_nest(s, tool_input) for s in action]
         _stamp_var_values(steps, tool_input.get("_var_values") or {})
-        return _carry(execute_pipeline(steps, project_path, agent_id=agent_id,
-                                       context=({"_prev_result": prev} if prev else None)))
+        return _promote_final_currency(_carry(execute_pipeline(
+            steps, project_path, agent_id=agent_id,
+            context=({"_prev_result": prev} if prev else None))))
     from ibl_engine import execute_ibl
     from workflow_engine import _auto_inject_prev
     st = _nest(action, tool_input)

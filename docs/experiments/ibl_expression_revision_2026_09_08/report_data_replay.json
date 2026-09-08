@@ -1,0 +1,18 @@
+{
+  "http": 200,
+  "seconds": 0.1184,
+  "ai_calls": 0,
+  "chars": 1081,
+  "ledger_rows": 49,
+  "tip_rows": 13,
+  "ledger_equal": true,
+  "tips_equal": true,
+  "scope": "기존 보고서 자료의 결합/구조 변환만 재실행. 파일 쓰기·검색·모델 호출 없음.",
+  "inputs": {
+    "02_info.json": "57f9228188591359c5699a50d9e7dad2e8ed9ecd70341c8f94e48eedf5020bb6",
+    "07_edited.json": "dc5a6c1c28a1ecbc5e591193c562e8c20c584ff3acb99a0dc2e441c46477fccf",
+    "09_tips_flat.json": "1056c2b53dc40952802b6c45f61304ae245ff52d94711785209777c2e614c9e7",
+    "08_ledger_delta.json": "d65407cdb3466a07edf2959815fe714670ff226719508d38f533c8e3b3703d4b",
+    "10_tips_nested.json": "10bfc9e9f286d8ecd9b0b50a597f4ad5cb61b5cf0826ce7b1fb41622476f7c80"
+  }
+}

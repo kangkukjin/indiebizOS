@@ -170,6 +170,10 @@ def compile_code(code, _captures=None):
             return [lower(v) for v in obj]
         if isinstance(obj, dict):
             out = {k: lower(v) for k, v in obj.items()}
+            if obj.get('_var_emit') and obj.get('name') in captures:
+                name = obj['name']
+                namespace, index = captures[name]
+                out['_ir_expr_refs'] = {name: Ref(namespace, index, '', '$' + name)}
             if any(obj.get(k) for k in ('_assign', '_condition', '_repeat', '_case')):
                 refs = {}
                 for key in ('expr', 'condition', 'source'):

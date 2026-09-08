@@ -135,15 +135,21 @@
             "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."
           },
           "fields": {
-            "type": "array",
-            "description": "남길 필드 이름 배열(columns 의 동의 표기)."
+            "type": [
+              "array",
+              "object"
+            ],
+            "description": "열 이름 배열 또는 투영 객체(columns의 동의 표기)."
           },
           "columns": {
-            "type": "array",
+            "type": [
+              "array",
+              "object"
+            ],
             "items": {
               "type": "string"
             },
-            "description": "남길 열/필드 이름 배열."
+            "description": "열 이름 배열 또는 {출력열: 식} 중첩 투영 객체. 잎 문자열은 식; 원형 타입 보존."
           }
         },
         "required": [
@@ -296,10 +302,26 @@
     },
     {
       "name": "data_join",
-      "description": "table×table 또는 items×items → 키 열로 inner join. on(양쪽 공통 키 열, 필수). null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력, 또는 left/right 에 직접(변수 참조 가능). 예: [A] & [B] >> [table:join]{on:\"연도\"}.",
+      "description": "table×table 또는 items×items → 키 열로 결합. how=inner(기본)/left/right/full/semi/anti; defaults는 보존 결합의 빈 쪽 열만 채운다. on(양쪽 공통 키 열, 필수). null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과 열=좌측 전체+우측(키 제외). & 병렬 두 입력, 또는 left/right 에 직접(변수 참조 가능). 예: [A] & [B] >> [table:join]{on:\"연도\"}.",
       "input_schema": {
         "type": "object",
         "properties": {
+          "how": {
+            "type": "string",
+            "enum": [
+              "inner",
+              "left",
+              "right",
+              "full",
+              "semi",
+              "anti"
+            ],
+            "description": "결합 방식. 기본 inner."
+          },
+          "defaults": {
+            "type": "object",
+            "description": "left/right/full에서 짝이 없는 쪽의 결과 열에 넣을 기본값."
+          },
           "on": {
             "description": "조인 키 열/필드 이름(양쪽 통화에 존재; 목록이면 복합키). null·부재·빈 문자열 키는 제외.",
             "type": [

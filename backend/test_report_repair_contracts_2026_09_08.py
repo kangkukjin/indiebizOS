@@ -51,13 +51,12 @@ def test_missing_date_and_provider_failure(youtube):
 
 
 @pytest.mark.parametrize('slot', ['set', 'columns', 'expr'])
-def test_dict_compute_rejected_before_collection(slot):
+def test_dict_compute_allowed_after_expression_revision(slot):
     from ibl_typecheck import typecheck_code
     code = ('$자료 = [sense:search]{query: "자료"}\n'
             f'$자료 >> [table:compute]{{{slot}: {{source: "{{\'title\': title}}"}}}}')
     tc = typecheck_code(code)
-    assert not tc['ok'], tc
-    assert any('Dict' in i['message'] for i in tc['issues']), tc
+    assert tc['ok'], tc
 
 
 def test_preflight_matches_runtime_and_defers_dynamic():
@@ -81,9 +80,9 @@ def test_expression_contract_is_data_not_action_name(monkeypatch):
                                        'scalar_expr_params': ['formula']}
     } if a == 'custom_formula' else real(n, a))
     checker = tc._Checker()
-    checker._type_action({'params': {'formula': '{"x": 1}', 'items': [{'x': 1}]}},
+    checker._type_action({'params': {'formula': '[x for x in rows]', 'items': [{'x': 1}]}},
                          'custom', 'custom_formula', None, 0)
-    assert any('Dict' in i['message'] for i in checker.issues)
+    assert any('ListComp' in i['message'] for i in checker.issues)
 
 
 @pytest.fixture
@@ -132,7 +131,7 @@ def test_invalid_revision_leaves_old_body(registry, code, reason):
 
 def test_bad_expression_in_named_body_is_not_hidden_or_cached(monkeypatch):
     import ibl_typecheck as tc
-    bad = '$return = [table:compute]{set: {source: "{\'title\': title}"}}'
+    bad = '$return = [table:compute]{set: {source: "[title for title in rows]"}}'
     assert not tc.typecheck_code('[def: 수리대상]{' + bad + '}')['ok']
     monkeypatch.setattr(tc, '_external_fn_code', lambda name: bad)
     for _ in range(2):
@@ -144,7 +143,7 @@ def test_registration_does_not_ignore_severity(registry):
     reg, _db = registry
     info, why = reg._gates('시험추리기', '입력 목록을 받아 출처를 생성할 때',
                           '$자료 = [table:take]{n: "${개수}"}\n'
-                          '$return = $자료 >> [table:compute]{set: {source: "{\'x\': x}"}}')
+                          '$return = $자료 >> [table:compute]{set: {source: "[x for x in rows]"}}')
     assert info is None and '타입 오류' in why
 
 
@@ -158,7 +157,7 @@ def test_invalid_final_expression_runs_no_earlier_tool(monkeypatch, tmp_path):
     monkeypatch.setattr(workflow_engine, 'execute_pipeline', forbidden)
     result = json.loads(_execute_ibl_unified_impl({'code':
         '$자료 = [sense:search]{query: "회귀 fixture"}\n'
-        '$자료 >> [table:compute]{set: {source: "{\'title\': title}"}}'}, str(tmp_path)))
+        '$자료 >> [table:compute]{set: {source: "[title for title in rows]"}}'}, str(tmp_path)))
     assert result['success'] is False and result['error_type'] == 'typecheck', result
 
 

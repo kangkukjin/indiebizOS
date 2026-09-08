@@ -17,7 +17,7 @@
   traceback = {
     frames: [{kind, …위치 필드}…],   # 바깥→안쪽. kind ∈ pipeline|parallel|fallback|each|block|workflow
     error: str,                      # 원형 오류문 — 다이어트 대상 아님(ibl_envelope 원칙)
-    error_type: str,                 # tool_error|exception|syntax|binding|quality†  †품질 계약 예약(후속)
+    error_type: str,                 # tool_error|exception|syntax|binding|quality|policy
     input: {…}?,                     # 실패 프레임에 들어간 통화 요약 — summarize_result 재사용(B27-1: 판정기는 하나)
     py_tail: [str]?,                 # 예외일 때만 — 파이썬 트레이스백 꼬리
   }
@@ -29,7 +29,7 @@
 import json
 from typing import Any, Dict, Optional
 
-ERROR_TYPES = ("tool_error", "exception", "syntax", "binding", "quality")
+ERROR_TYPES = ("tool_error", "exception", "syntax", "binding", "quality", "policy")
 
 _ERR_MAX = 2000       # error 원형 상한 — 진단은 안 깎지만 무한정도 아니다(스필 통화 오폭 방지)
 PY_TAIL_FRAMES = 4    # 파이썬 꼬리 프레임 수

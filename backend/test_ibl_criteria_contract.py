@@ -61,7 +61,9 @@ J_PASS = '{"pass": true, "reason": "기준 충족"}'
 
 def _run_step(code_step, judge):
     iq._call_judge = judge
-    with actor_context(agent_id="test", origin="test"):
+    # 이 배터리는 허용 상태의 품질 계약을 검증한다. 로컬 실험 설정과 격리.
+    from unittest.mock import patch
+    with patch("tool_ai_policy.agent_tool_ai_allowed", return_value=True), actor_context(agent_id="test", origin="test"):
         return execute_ibl(code_step, ".", "test")
 
 

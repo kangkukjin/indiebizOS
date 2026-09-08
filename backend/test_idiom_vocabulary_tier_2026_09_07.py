@@ -64,6 +64,40 @@ def test_skeleton_keeps_control_blocks():
     assert "repeat" in got, got
 
 
+@pytest.mark.parametrize("body", [
+    '$x = [table:take]{items: [], n: 1}; $return = $x >> [if:not empty($items)]{[table:take]{n: 1}}',
+    '$x = [table:take]{items: [], n: 1}; [repeat:1]{$return = $x}',
+    '[def:local]{$return = [table:take]{items: [], n: 1}}; $return = [fn:local]{}',
+    '$x = [table:take]{items: [], n: 1}; [on_error:skip] $x >> [table:take]{n: 1}',
+])
+def test_scoped_map_keeps_control_words_but_filters_real_nodes(tmp_path, monkeypatch, body):
+    """제어문 때문에 이름이 사라지지 않고, each 안의 금지 노드는 계속 걸러진다."""
+    import sqlite3
+    import ibl_access as access
+    import runtime_utils
+    from ibl_parser import parse_function_body
+
+    parse_function_body(body)
+    (tmp_path / "data").mkdir()
+    with sqlite3.connect(tmp_path / "data" / "ibl_usage.db") as conn:
+        conn.execute("CREATE TABLE ibl_examples (intent, ibl_code, success_count, fail_count, "
+                     "topic, alias, returns, signature, always_on, created_at)")
+        conn.executemany("INSERT INTO ibl_examples VALUES (?,?,?,?,?,?,?,?,?,?)", [
+            ("제어문이 있는 상시 관용구", body, 0, 0, "시험", "제어문시험", "", "", 1, "2026-09-08"),
+            ("중첩된 외부 노드가 필요한 관용구",
+             '$x = [table:take]{items: [], n: 1}; $return = $x >> '
+             '[table:each]{do: "[sense:crawl]{url: \'$it.url\'}"}',
+             0, 0, "시험", "금지노드시험", "", "", 1, "2026-09-08"),
+        ])
+    monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
+    monkeypatch.setattr(access, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
+    for allowed in ({"self", "others", "table"},
+                    {"self", "others", "table", "sense", "limbs", "engines"}):
+        block = access._idioms_block(allowed)
+        assert "[fn:제어문시험]" in block
+        assert ("[fn:금지노드시험]" in block) == ("sense" in allowed)
+
+
 def test_registration_requires_a_when():
     """등록 관문 — '언제' 없이는 등록되지 않는다(지도가 실을 것이 없다)."""
     sys.path.insert(0, os.path.join(_REPO, "scripts"))

@@ -602,6 +602,7 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
     import re as _re
     import sqlite3
     import time
+    from ibl_parser_blocks import _FN_RESERVED_NAMES
     key = tuple(sorted(allowed)) if allowed is not None else None
     if _idioms_cache["text"] is not None and time.time() - _idioms_cache["t"] < 300 and _idioms_cache["key"] == key:
         return _idioms_cache["text"]
@@ -632,7 +633,9 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
             kept = []
             for r in rows:
                 code = r[1] or ""
-                nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - {"fn"}
+                # 제어문은 노드가 아니다. 파서의 예약어를 공유해야 if/repeat/def가
+                # 있는 관용구도 노드 제한 환경에서 소개된다(전체 6노드 허용도 동일).
+                nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - _FN_RESERVED_NAMES
                 if allowed is not None and not nodes <= set(allowed):
                     continue
                 if len(_split_sentences(code)) < 2:

@@ -1,0 +1,211 @@
+{
+  "base_commit": "722ac10d5b6d6cf8ab9365ce674ebddcd8fadd85",
+  "observed_at": "2026-09-08T22:32:37.688163",
+  "scope": "읽기 전용 계수. 과거 실행의 인과 대조가 아니며 잘린 입력은 호출명 검사에서 제외. 원장 사용 횟수는 품질 점수가 아니다.",
+  "active_before": [
+    {
+      "alias": "각각읽고요약",
+      "success_count": 0,
+      "fail_count": 0,
+      "always_on": 1,
+      "returns": "items⟨열 미상⟩",
+      "created_at": "2026-09-07T21:51:41.311153"
+    },
+    {
+      "alias": "원장에누적",
+      "success_count": 0,
+      "fail_count": 0,
+      "always_on": 1,
+      "returns": "effect",
+      "created_at": "2026-09-07T12:35:43.674615"
+    },
+    {
+      "alias": "위치마다읽기",
+      "success_count": 1,
+      "fail_count": 0,
+      "always_on": 1,
+      "returns": "items⟨열 미상⟩",
+      "created_at": "2026-09-08T13:45:11.922024"
+    },
+    {
+      "alias": "잘라각각종합",
+      "success_count": 0,
+      "fail_count": 0,
+      "always_on": 1,
+      "returns": "prose",
+      "created_at": "2026-09-07T12:34:51.227347"
+    },
+    {
+      "alias": "최신범위읽기",
+      "success_count": 1,
+      "fail_count": 0,
+      "always_on": 1,
+      "returns": "scalar",
+      "created_at": "2026-09-08T13:45:11.984348"
+    }
+  ],
+  "episodes": [
+    {
+      "episode_id": 3089,
+      "started_at": "2026-09-08T04:00:40.766665",
+      "total_ms": 1462365,
+      "unconscious_decision": "THINK",
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 22,
+      "ibl_finished": 22,
+      "ibl_failed": 2,
+      "ibl_elapsed_ms_sum": 610726,
+      "policy_flags": [
+        "unrecorded"
+      ],
+      "log_sha256": "890bae4e8da8f73b7135adfdfd14846a47a195b052d80fd9ff0005feec8c244e",
+      "parsed_tool_inputs": 18,
+      "unparsed_or_truncated_inputs": 4,
+      "fn_names_in_parsed_inputs": []
+    },
+    {
+      "episode_id": 3090,
+      "started_at": "2026-09-08T05:00:41.122085",
+      "total_ms": 609177,
+      "unconscious_decision": "THINK",
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 31,
+      "ibl_finished": 31,
+      "ibl_failed": 1,
+      "ibl_elapsed_ms_sum": 7004,
+      "policy_flags": [
+        "unrecorded"
+      ],
+      "log_sha256": "935c748f88688fe4589e92811a18a11ad8e3e2b9a5f7e89af941724c8ec42971",
+      "parsed_tool_inputs": 30,
+      "unparsed_or_truncated_inputs": 1,
+      "fn_names_in_parsed_inputs": []
+    },
+    {
+      "episode_id": 3091,
+      "started_at": "2026-09-08T06:00:41.972214",
+      "total_ms": 1354813,
+      "unconscious_decision": "EXECUTE",
+      "evaluation_result": null,
+      "ibl_started": 36,
+      "ibl_finished": 36,
+      "ibl_failed": 10,
+      "ibl_elapsed_ms_sum": 596843,
+      "policy_flags": [
+        "unrecorded"
+      ],
+      "log_sha256": "30c090837f2d4c702fb34e53d92fe1a5e2cd0365b1c050c55f31f82d40fdba38",
+      "parsed_tool_inputs": 34,
+      "unparsed_or_truncated_inputs": 2,
+      "fn_names_in_parsed_inputs": [
+        "최신파일읽기",
+        "유튜브팁보고서작성"
+      ]
+    },
+    {
+      "episode_id": 3176,
+      "started_at": "2026-09-08T17:43:22.764297",
+      "total_ms": 762162,
+      "unconscious_decision": "THINK",
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 18,
+      "ibl_finished": 18,
+      "ibl_failed": 3,
+      "ibl_elapsed_ms_sum": 64332,
+      "policy_flags": [
+        "unrecorded"
+      ],
+      "log_sha256": "9b561635d1dc2b97dc937f09dd6875f9690cde43b6ccf001448fd19c7eaa2de9",
+      "parsed_tool_inputs": 17,
+      "unparsed_or_truncated_inputs": 1,
+      "fn_names_in_parsed_inputs": []
+    },
+    {
+      "episode_id": 3194,
+      "started_at": "2026-09-08T21:38:57.307888",
+      "total_ms": 809316,
+      "unconscious_decision": "THINK",
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 42,
+      "ibl_finished": 42,
+      "ibl_failed": 1,
+      "ibl_elapsed_ms_sum": 9462,
+      "policy_flags": [
+        "False"
+      ],
+      "log_sha256": "bc03ec2482410f6c98dfb3fb70be7ca7c9bfce9447b16e9854d45c7978d4a095",
+      "parsed_tool_inputs": 40,
+      "unparsed_or_truncated_inputs": 2,
+      "fn_names_in_parsed_inputs": []
+    }
+  ],
+  "saved_prompt_snapshots": [
+    {
+      "modified_at": "2026-09-08T21:39:46.002030",
+      "prompt_chars": 95979,
+      "idiom_chars": 1780,
+      "idiom_offset": 89975,
+      "names": [
+        "원장에누적",
+        "최신범위읽기",
+        "위치마다읽기"
+      ],
+      "sha256": "cefdc10b3bef9145afb80f0f2a065295167d69e7a3039baab52d544a5de29d95"
+    },
+    {
+      "modified_at": "2026-09-08T15:17:18.180568",
+      "prompt_chars": 97672,
+      "idiom_chars": 2692,
+      "idiom_offset": 90756,
+      "names": [
+        "원장에누적",
+        "각각읽고요약",
+        "최신범위읽기",
+        "위치마다읽기",
+        "잘라각각종합"
+      ],
+      "sha256": "737afd75dcd7ea135d6deef78f3e799c7ea5c662a600f65e8944ab957967c003"
+    }
+  ],
+  "boundary_replay": {
+    "suite": "scripts/ibl_boundary_probe.py --round6",
+    "passed": 75,
+    "cases": 75
+  },
+  "focused_baseline_tests": 96,
+  "map_after": {
+    "unrestricted": {
+      "names": [
+        "원장에누적",
+        "최신범위읽기",
+        "위치마다읽기"
+      ],
+      "chars": 1780
+    },
+    "all_six": {
+      "names": [
+        "원장에누적",
+        "최신범위읽기",
+        "위치마다읽기"
+      ],
+      "chars": 1780
+    },
+    "core": {
+      "names": [
+        "원장에누적",
+        "최신범위읽기",
+        "위치마다읽기"
+      ],
+      "chars": 1780
+    }
+  },
+  "changes": [
+    "parser reserved words excluded from node dependencies",
+    "two AI-calling idioms demoted in catalog and live ledger"
+  ],
+  "full_backend_regression": {
+    "passed": 3067,
+    "command": ".venv/bin/python -m pytest backend/ -q",
+    "exit_code": 0
+  }
+}

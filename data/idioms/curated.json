@@ -1,7 +1,9 @@
 {
   "version": 2,
-  "note": "수동 선정·등록 입력. always_on:false는 상시 추천에서 제외한 호환 정의다. 실행 정본은 해마 원장/가지 문서. 검증 결과와 퇴출 근거는 docs/IBL_IDIOM_VALUE_2026_09_08.md.",
+  "note": "수동 선정·등록 입력. 상시 관용구는 실행 중 AI를 호출하지 않는 절차를 고른다. always_on:false는 상시 추천에서 제외한 호환 정의다. 실행 정본은 해마 원장/가지 문서. 검증은 docs/IBL_IDIOM_VALUE_2026_09_08.md, 현재 선정 기준은 docs/IBL_OPTIMIZATION_REVIEW_2026_09_08.md.",
   "demote": {
+    "각각읽고요약": "각 원문 요약에 AI를 호출한다. 판단을 추가 호출로 넘기지 않는 상시 관용구라는 사용자 기준에 따라 명시 호출용으로 유지한다.",
+    "잘라각각종합": "덩이별 요약과 마지막 종합에 AI를 호출한다. 판단을 추가 호출로 넘기지 않는 상시 관용구라는 사용자 기준에 따라 명시 호출용으로 유지한다.",
     "표보고조회하기": "표를 보고 SQL을 만드는 중간 판단이 빠져 있다.",
     "행마다붙이기": "호출자가 each 본문을 다시 작성해야 한다. 자주 쓰는 URL 읽기·요약을 각각읽고요약으로 구체화한다.",
     "띄우고기다리기": "작업 인자를 전달하지 못하고 실패 종료와 시간 초과를 구별하지 못한다.",
@@ -24,6 +26,7 @@
     },
     {
       "name": "각각읽고요약",
+      "always_on": false,
       "when": "URL 목록의 앞 개수개를 각각 크롤하고 짧게 요약하여 title·url과 함께 돌려줄 때. 실패 행은 _error로 보존한다.",
       "topic": "목록 다루기",
       "body": "$대상 = [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{do: \"[sense:crawl]{url: '$it.url'} >> [table:brief]{instruction: '${지시}'}\", keep: [\"title\", \"url\"], limit: \"${개수}\", collect: true, on_error: \"keep\"}",
@@ -32,6 +35,7 @@
     },
     {
       "name": "잘라각각종합",
+      "always_on": false,
       "when": "긴 원문·자막을 15000자 이하 덩이로 나누어 각각 요약하고 종합할 때. 모든 덩이를 처리하므로 길수록 AI 호출이 늘어난다.",
       "topic": "큰 것 다루기",
       "body": "$덩이 = [table:chunk]{size: 15000}\n$부분 = $덩이 >> [table:each]{do: \"[table:brief]{items: [$it], instruction: '${덩이지시}'}\", limit: \"$덩이.count\", collect: true, on_error: \"stop\"}\n$return = $부분 >> [table:brief]{instruction: \"${종합지시}\"}",

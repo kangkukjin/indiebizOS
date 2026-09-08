@@ -87,6 +87,14 @@ def compile_expr(expr: str) -> Tuple[Any, List[str], List[str]]:
     tree = _ast.parse(str(expr), mode="eval")
     for n in _ast.walk(tree):
         if not isinstance(n, NODES):
+            if isinstance(n, (_ast.In, _ast.NotIn)):
+                raise ValueError("허용되지 않는 구문: " + type(n).__name__ +
+                                 " — 문자열 포함 검사는 contains(열, 문자열), 부정은 not contains(열, 문자열). "
+                                 "목록 소속 검사는 [table:filter]{where:{field:..., op:\"in\", value:[...]}} 로.")
+            if isinstance(n, (_ast.Dict, _ast.List)):
+                raise ValueError("허용되지 않는 구문: " + type(n).__name__ +
+                                 " — compute 식은 dict/list를 생성하지 않습니다. 평탄 열을 계산한 뒤 "
+                                 "중첩 변환은 등록된 [self:script]로 처리하세요.")
             raise ValueError(f"허용되지 않는 구문: {type(n).__name__} — 한 줄 산술·비교·조건식만. "
                              "상태가 dict 이거나 분기가 섞이면 [self:script] 로.")
         if isinstance(n, _ast.Call) and not (isinstance(n.func, _ast.Name) and n.func.id in (*FUNCS, "col")):

@@ -161,10 +161,8 @@ def _src_from_envelope(prev, label="파이프 본문"):
             # 자막류 외부화 파일은 `[MM:SS] 문장` 병기 포맷이다 — 표식·헤더를 걷어 흐르는
             # 본문으로 정규화해야 grounded 대조(_quote 부분열)가 성립한다(2026-08-27 실측).
             if isinstance(_fsrc.get("text"), str):
-                _lines = [re.sub(r"^\[[0-9:.]+\]\s*", "", ln)
-                          for ln in _fsrc["text"].splitlines()
-                          if not ln.lstrip().startswith("#")]
-                _fsrc["text"] = re.sub(r"\s+", " ", " ".join(_lines)).strip()
+                _fsrc['_time_segments'] = _time_segments(text=_fsrc['text'])
+                _fsrc["text"] = _untimed_text(_fsrc['text'])
             src = _fsrc
             pipe_note = "외부화 봉투(saved_to_file)를 따라가 파일 전문을 원문으로 썼습니다."
             return src, pipe_note, body
@@ -172,6 +170,69 @@ def _src_from_envelope(prev, label="파이프 본문"):
                or prev.get("summary") or prev.get("preview")
                or prev.get("message") or "").strip()
     return src, pipe_note, body
+
+
+def _untimed_text(text):
+    lines = [re.sub(r'^\[[0-9:.]+\]\s*', '', ln) for ln in text.splitlines()
+             if not ln.lstrip().startswith('#')]
+    return re.sub(r'\s+', ' ', ' '.join(lines)).strip()
+
+
+def _time_segments(prev=None, text=''):
+    """자막 시간의 원본을 보존한다. 모델 본문은 시간표시 없이 기존 규약대로 간다."""
+    from common.value_semantics import numeric_value
+    if isinstance(prev, dict):
+        segments = prev.get('segments') or prev.get('items')
+        if isinstance(segments, list) and any(
+                isinstance(s, dict) and 'start' in s and 'text' in s for s in segments):
+            return [(numeric_value(s.get('start')), s['text']) for s in segments
+                    if isinstance(s, dict) and isinstance(s.get('text'), str)]
+        text = prev.get('formatted_transcript') or text
+    segments = []
+    for line in str(text or '').splitlines():
+        match = re.match(r'^\[(?:(\d+):)?(\d+):(\d{2})(?:\.(\d+))?\]\s*(.*)$', line)
+        if match:
+            hours, minutes, seconds, fraction, body = match.groups()
+            if int(seconds) >= 60 or (hours is not None and int(minutes) >= 60):
+                continue
+            start = int(hours or 0) * 3600 + int(minutes) * 60 + int(seconds)
+            segments.append((start, body))
+        elif segments and line.strip() and not line.lstrip().startswith('#'):
+            start, body = segments[-1]
+            segments[-1] = (start, body + ' ' + line)
+    return segments
+
+
+def _ground_timestamps(records, segments):
+    """근거 앵커의 시작 세그먼트 시각을 매긴다. 중복/결측은 null+행별 이유."""
+    from bisect import bisect_right
+    source, offsets, times = '', [], []
+    for seconds, text in segments:
+        normalized = re.sub(r'\s+', '', text)
+        if normalized:
+            offsets.append(len(source))
+            times.append(seconds)
+            source += normalized
+    mapped = 0
+    for row in records:
+        quote = re.sub(r'\s+', '', str(row.get('_quote') or ''))
+        matches, pos = set(), 0
+        while source and quote:
+            pos = source.find(quote, pos)
+            if pos < 0:
+                break
+            matches.add(times[bisect_right(offsets, pos) - 1])
+            pos += 1
+        row['timestamp'] = None  # 모델이 만든 시각도 원본 근거로 덮어 검증한다.
+        if len(matches) == 1 and None not in matches and next(iter(matches)) >= 0:
+            seconds = int(next(iter(matches)))
+            row['timestamp'] = f'{seconds // 60:02d}:{seconds % 60:02d}'
+            row.pop('_timestamp_error', None)
+            mapped += 1
+        else:
+            row['_timestamp_error'] = ('ambiguous_quote' if len(matches) > 1 else
+                                       'no_source_time' if not segments else 'unmatched_quote')
+    return mapped
 
 
 _KNOWN_CAP = 300
@@ -250,7 +311,8 @@ def _struct(tool_input: dict) -> str:
             # "이미 items 통화" 거절은 쓸 본문이 없거나 요약 한 줄뿐일 때만 (2026-08-20
             # ep1325 야생 실측: 대표 용례 crawl>>struct 가 이 거절로 죽어 있었다).
             # 문서-모양 게이트는 write v4 와 같은 규율 — 오분류는 통화 보존(거절) 쪽으로.
-            doc_shaped = ("\n" in body) or (len(body) >= 200)
+            doc_shaped = (("\n" in body) or (len(body) >= 200)
+                          or (bool(prev.get('transcript')) and bool(_time_segments(prev))))
             if not doc_shaped:
                 return _fail("입력이 이미 items 통화입니다 — 통화의 의미 변환은 [table:ai], "
                              "산문 종합은 [table:brief] 를 쓰세요. (본문 텍스트가 함께 오는 "
@@ -266,6 +328,11 @@ def _struct(tool_input: dict) -> str:
                    "images": None, "label": label}
     if not src.get("ok"):
         return _fail(src.get("error") or "원문 추출 실패")
+    time_segments = src.get('_time_segments') or _time_segments(prev, src.get('text', ''))
+    if time_segments and _time_segments(text=src.get('text', '')):
+        src['text'] = _untimed_text(src['text'])
+    wants_timestamp = bool(re.search(r'\btimestamp\b', schema) and
+                           (time_segments or re.search(r'\bMM:SS\b', schema, re.I)))
 
     # grounded 기본값: 원장 스키마=on, 그 외=off, 파라미터로 양방향 오버라이드 (판정 4)
     g = tool_input.get("grounded")
@@ -350,6 +417,10 @@ def _struct(tool_input: dict) -> str:
         if missing:
             result["missing_quote"] = missing                     # 발췌 자체가 없던 것(형식) — 환각과 섞지 않는다
         records = kept
+        if wants_timestamp:
+            result['timestamp_grounded'] = _ground_timestamps(records, time_segments)
+            if result['timestamp_grounded'] < len(records):
+                result['missing_timestamp'] = len(records) - result['timestamp_grounded']
         # 앵커 → 문장 확장: 모델은 첫 구절만 쳤고, 독자용 근거는 여기서 원문으로 채운다(2026-09-06)
         _exp = expand_quotes(records, src["text"]) if expand_quotes else 0
         if _exp:

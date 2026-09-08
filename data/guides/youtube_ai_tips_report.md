@@ -50,9 +50,9 @@
 2. **검색 한 묶음** — 질의 다섯 갈래(§2-3)를 `&` 병렬 → `union → dedup(video_id) → 원장 제외(not_in)`. 원장 제외는 산문이 아니라 술어.
 3. **날짜 확인 팬아웃** — `each + [sense:video]{op:"info"}` → ISO 날짜로 180일 필터 → 정렬 → select. `upload_date`는 `YYYY-MM-DD`, 기준일도 같은 형식으로 준다. 날짜 확인 실패 행은 최신으로 간주하지 않는다. 탈락분은 `too_old`로 원장 델타.
 4. **심사 한 칸** — 신선 후보 전체를 `[table:ai]` 한 칸에, 모든 행 유지 + `selected/reason`, 정확히 N편. `criteria` 필수.
-5. **증류 1차 — 제목만, 병렬** — 선정 편마다 `transcript → [self:struct]{schema: "tip(실행형 팁 제목·동사로 끝남), timestamp", grounded: true, known: $기존팁제목}` 을 `[table:each]{…, parallel: 4, on_error: "continue"}` 로. `how`·`tools`·`hype` 는 여기서 쓰지 않는다(2026-09-06: 편당 18건을 뽑아 6할을 버리면서 후보마다 200자 `how` 를 쓴 것이 출력의 절반이었다 — 후보 재현율은 그대로 두고 버려질 본문만 안 쓴다). `known` 에는 오늘 주제 기존 팁의 제목(`tips.json` select `tip`)을 넣어 아는 것을 다시 뽑지 않는다. 근거는 앵커 한 토막만 — 문장 확장은 코드가 한다(`quote_expanded`). 긴 자막의 외부화 파일·스필 참조는 struct 가 봉투째 따라간다 — 파일 경로를 손으로 옮기지 않는다. 자막 실패 편의 교체·재시도는 문장 밖 판단.
+5. **증류 1차 — 제목만, 병렬** — 선정 편마다 `transcript → [self:struct]{schema: "tip(실행형 팁 제목·동사로 끝남), timestamp(MM:SS)", grounded: true, known: $기존팁제목}` 을 `[table:each]{…, parallel: 4, on_error: "continue"}` 로. `how`·`tools`·`hype` 는 여기서 쓰지 않는다(2026-09-06: 편당 18건을 뽑아 6할을 버리면서 후보마다 200자 `how` 를 쓴 것이 출력의 절반이었다 — 후보 재현율은 그대로 두고 버려질 본문만 안 쓴다). `known` 에는 오늘 주제 기존 팁의 제목(`tips.json` select `tip`)을 넣어 아는 것을 다시 뽑지 않는다. 근거는 앵커 한 토막만 — 문장 확장은 코드가 한다(`quote_expanded`). 긴 자막의 외부화 파일·스필 참조는 struct 가 봉투째 따라간다 — 파일 경로를 손으로 옮기지 않는다. 자막 실패 편의 교체·재시도는 문장 밖 판단.
 6. **절제 한 칸** — 1차 팁 전체를 `[table:ai]` 한 칸에: 영상당 2~5건·전체 8~15건·영상 균형, 재탕 대조(`dedup_note`), `selected`.
-6b. **증류 2차 — 선정분만 상세** — 선정된 팁의 영상마다 `transcript → [self:struct]{schema: "tip(주어진 제목 그대로), how(따라할 단계·설정·명령어·프롬프트 예문 구체 — 원문에 단계가 없으면 빈 문자열, 지어내지 않는다), tools, hype(과장 간극 한 줄)", grounded: true, instruction: "다음 팁 제목들에 대해서만: …"}` 을 `parallel: 4` each 로. 선정 안 된 후보의 본문은 영원히 쓰지 않는다.
+6b. **증류 2차 — 선정분만 상세** — 선정된 팁의 영상마다 `transcript → [self:struct]{schema: "tip(주어진 제목 그대로), how(따라할 단계·설정·명령어·프롬프트 예문 구체 — 원문에 단계가 없으면 빈 문자열, 지어내지 않는다), tools, hype(과장 간극 한 줄), timestamp(MM:SS)", grounded: true, instruction: "다음 팁 제목들에 대해서만: …"}` 을 `parallel: 4` each 로. 선정 안 된 후보의 본문은 영원히 쓰지 않는다.
 7. **산문·조립·상태 쓰기** — TL;DR·본문·시도·영상평·지켜볼 brief 5칸 내외 + M·K 계산 + `[table:document]`. 저장은 §2-6 순서(원장 먼저).
 
 인자 규칙(매 호 판단 — 부를 때 인자로 준다): **검색어는 매 호 새로**(§2-3 규칙이 그날 검색어를 정한다 — 고정하면 같은 후보만 돈다) · 자막 플래키(같은 영상이 한 번은 성공, 다음은 실패)는 교체·재시도 1회 · 열 이름은 `uploader`(`channel`이 아니다) · 소스 장애·품질 실패 때만 문장을 하나씩.
@@ -60,6 +60,17 @@
 **실행 예산(목표)**: 큰 `execute_ibl` 1회 + 후속 최대 2회(자막 실패 교체·검색어 보강). AI 판단은 심사 1 + 절제 1 + 증류 1차·2차(each 병렬) + 산문 5칸 내외. 선정 2~4편(또는 정직한 실패 기록)·증류·절제·검법(§2-6)·머리줄 M·K 일치가 채워지면 닫는다. 느릴 것을 미리 알아맞혀 `wait` 를 실을 필요는 없다(09-07: 표면 대기는 늘 상한까지 간다). 그래도 넘기면 티켓을 받아 봉투가 안내하는 `recover{wait: …}` 한 번으로 기다린다(셸 sleep 폴링 금지).
 
 **실패 복구**: 실패 봉투의 뿌리 오류부터 고친다. `resume.vars_ref`는 성공한 변수 복구용이며 실패한 변수나 생성되지 않은 파일을 만들어 주지 않는다. `~workspace/`로 고정한 중간 파일과 검증된 변수에서 재개하고, 완료된 수집·증류는 다시 실행하지 않는다. 끝에서는 `select`·`take`·짧은 `$return`으로 판단에 필요한 결과만 돌려준다.
+
+**값 전달·구조화 규칙**
+
+- 기존 팁 목록은 `known: ${기존팁.items.*.tip}`로 전달한다. each의 do 안에서도 같은 값 참조를 쓰며 제목을 코드에 손으로 붙이지 않는다. 따옴표·줄바꿈이 든 목록은 실행기가 데이터로 주입한다. known을 빼서 구문 오류를 우회하지 않는다.
+- `grounded:true`와 `schema`의 `timestamp(MM:SS)`를 함께 사용한다. 코드는 원본 자막의 시간과 `_quote`를 연결해 시각을 채운다. `timestamp:null`/`_timestamp_error`는 근거 위치가 없거나 여러 곳이라는 뜻이므로 00:00으로 채우지 않는다. 그 행만 원문을 확인하거나 시각 미확인으로 표시한다. `timestamp_grounded`와 `missing_timestamp`도 확인한다.
+- `try_candidate`는 `contains(tip, "툴 콜")` 같은 식으로 만든다. Python의 `in` 대신 이미 지원하는 contains를 쓴다.
+- `source` 객체를 compute로 만들지 않는다. `tip/how/topic/video_id/title/channel/url/date/report/try_candidate` 평탄 열을 준비하고 `self:write{format:"json"}`으로 저장한 뒤 아래 등록 스크립트를 바로 호출한다. `try_candidate`는 문자열이 아닌 불리언이다. src/out은 이번 실행의 공유 경로이며, 출력 파일을 원장 append의 items_file로 넘긴다. 이 등록본을 찾으려고 매번 script list를 다시 읽을 필요는 없다.
+
+```ibl
+[self:script]{op:"run",id:"팁행source중첩",args:{src:"~workspace/outputs/ai_tips_reports/_tips_flat.json",out:"~workspace/outputs/ai_tips_reports/_tips_nested.json"}}
+```
 
 ### 2-1. 원장 읽기
 `[self:ledger]{path:"outputs/ai_tips_reports/_covered_videos.json", op:"select", target:"covered", fields:["id","verdict"]}` — 다룬·탈락 영상 id(중복 방지)만. `recent_topics`(최근 10 주제)는 `target:"recent_topics"`로 따로. **197KB 원장을 `[self:read]`로 통째 읽지 않는다** — 제목·메모는 제외 판정에 쓰이지 않는다. 직전 보고서의 "지켜볼 점 / 내일 주제 후보"도 읽는다.

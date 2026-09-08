@@ -271,7 +271,9 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str], _names: Dict[in
         new = {}
         for k, v in obj.items():
             if k == "params":
-                new[k] = {pk: (_sub_step_refs(pv, step_results, names or {}, sink, pk)
+                new[k] = {pk: (_bind_step_code(pv, step_results)
+                               if pk == 'do' and obj.get('_node') == 'table' and obj.get('action') == 'each'
+                               else _sub_step_refs(pv, step_results, names or {}, sink, pk)
                                if isinstance(pv, str)
                                else _inject_step_results(pv, step_results, names))
                           for pk, pv in v.items()}
@@ -283,6 +285,18 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str], _names: Dict[in
     if isinstance(obj, list):
         return [_inject_step_results(v, step_results, _names) for v in obj]
     return obj
+
+
+def _bind_step_code(code, step_results):
+    """파이프 슬롯도 지연 코드의 문자열/중첩 깊이를 존중하며 한 번만 주입한다."""
+    from ibl_code_binding import bind_scoped_code
+
+    def resolve(index, path):
+        raw = step_results.get(int(index), '')
+        return True, _extract_result_field_obj(raw, path) if path else _v4_var_payload(raw)
+
+    return bind_scoped_code(code, resolve, ref_re=_STEP_RESULT_RE,
+                            split=lambda m: (int(m.group(1)), m.group(2)), typed_paths=True)
 
 
 # $items 집합 바인딩 행 수 상한 — 초과는 침묵 절단 대신 정직 거절(take 로 줄이라고 안내).

@@ -21,29 +21,40 @@ def parse_binding_body(code):
     return parse_function_body(code.replace('\\u0024', '\\uFF04'))
 
 
-def bind_scoped_code(sentence, resolve, blocked=frozenset()):
+def bind_scoped_code(sentence, resolve, blocked=frozenset(), *, ref_re=None,
+                     split=None, typed_paths=False):
     """지연 파싱되는 코드의 참조를 한 번 치환. resolve(name, path) → (found, value).
 
     each 행·함수 인자·제어문 값이 같은 문자열/스코프 규약을 쓴다. 삽입 값은
     다시 참조로 훑지 않으며, 중첩 do의 코드 깊이와 안쪽 이름을 보존한다.
     """
     from common.ibl_vars import REF_RE, split_ref
+    ref_re, split = ref_re or REF_RE, split or split_ref
+    options = dict(ref_re=ref_re, split=split, typed_paths=typed_paths)
     if isinstance(sentence, list):
-        return [bind_scoped_code(s, resolve, blocked) for s in sentence]
+        return [bind_scoped_code(s, resolve, blocked, **options) for s in sentence]
     if not isinstance(sentence, str):
         return sentence
 
     def replace_range(start, end):
         parts, pos = [], start
-        for match in REF_RE.finditer(sentence, start, end):
-            name, path = split_ref(match)
+        for match in ref_re.finditer(sentence, start, end):
+            name, path = split(match)
             found, value = (False, None) if name in blocked else resolve(name, path)
             rendered = match.group(0)
             if found:
                 rendered = (_each_escape(value) if _inside_string(sentence, match.start())
                             else _each_literal(value))
-            parts.extend((sentence[pos:match.start()], rendered))
-            pos = match.end()
+            left, right = match.span()
+            # 파이프의 통짜 .path 값은 따옴표로 감쌌어도 원형을 보존한다.
+            # do를 다시 파싱할 때도 일반 param과 같은 계약이다.
+            if (found and typed_paths and path and left > pos and right < end
+                    and sentence[left - 1] in "\"'" and sentence[right] == sentence[left - 1]
+                    and not _inside_string(sentence, left - 1)):
+                left, right = left - 1, right + 1
+                rendered = _each_literal(value)
+            parts.extend((sentence[pos:left], rendered))
+            pos = right
         return ''.join(parts) + sentence[pos:end]
 
     pieces, cursor = [], 0
@@ -52,7 +63,7 @@ def bind_scoped_code(sentence, resolve, blocked=frozenset()):
         if inner is None:
             pieces.append(sentence[start:end])  # 닫힌 함수 몸은 호출자가 채운다.
         else:
-            rewritten = bind_scoped_code(inner, resolve, blocked | bound)
+            rewritten = bind_scoped_code(inner, resolve, blocked | bound, **options)
             pieces.append(json.dumps(rewritten, ensure_ascii=False) if encoded else rewritten)
         cursor = end
     pieces.append(replace_range(cursor, len(sentence)))

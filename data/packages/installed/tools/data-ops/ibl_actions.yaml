@@ -136,7 +136,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
-    target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby. dict/list 생성은 불가하며 실행 전 식 검사로 거절한다. 중첩 데이터 변환은 등록된 self:script로.'
+    target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby. 문자열 포함은 contains(tip, "툴 콜"), 부정은 not contains(tip, "툴 콜")로 쓴다. Python의 in/not in 구문은 불가. dict/list 생성은 불가하며 실행 전 식 검사로 거절한다. 중첩 데이터 변환은 등록된 self:script로.'
     group: transform
     router: handler
     tool: data_compute

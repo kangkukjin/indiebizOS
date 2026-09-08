@@ -3120,7 +3120,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: AI 구조화 원자(입구) — 비정형 입력(파일·텍스트·파이프 본문)을 schema 계약의 레코드 items 통화로. 이미 표인 것은 [self:read]{tables:true}(결정론), 문서 조판용 IR 은 [table:structure].
-        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · known([이미 있는 기록] — 같은 것은 다시 뽑지 않음, 2026-09-06) · instruction(추가 지시 — 2단 추출의 2차: "다음 제목들에 대해서만 how 를 채운다") · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 파이프 봉투에 본문(text 등)과 items 가 병기되면 본문을 원문으로 쓰고 items 는 부속으로 신고(note) — 본문 없는 items 통화는 거절([table:ai]/[table:brief] 안내). 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
+        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · known([이미 있는 기록] — 같은 것은 다시 뽑지 않음, 2026-09-06) · instruction(추가 지시 — 2단 추출의 2차: "다음 제목들에 대해서만 how 를 채운다") · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 파이프 봉투에 본문(text 등)과 items 가 병기되면 본문을 원문으로 쓰고 items 는 부속으로 신고(note) — 본문 없는 items 통화는 거절([table:ai]/[table:brief] 안내). 시간이 있는 자막에서 grounded=true와 schema의 timestamp를 함께 쓰면 코드가 _quote의 시작 세그먼트 시각을 MM:SS로 복원한다(추가 모델 호출 없음). timestamp(MM:SS)를 요청했지만 원본 시간이 없거나 구절 위치가 여러 곳이면 timestamp=null과 _timestamp_error를 남긴다. missing_timestamp/ timestamp_grounded로 건수를 신고한다. 일반 날짜 timestamp 필드는 이 자막 규약의 대상이 아니다. 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
         group: ai
         router: handler
         tool: ai_struct
@@ -8152,7 +8152,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
-        target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby. dict/list 생성은 불가하며 실행 전 식 검사로 거절한다. 중첩 데이터 변환은 등록된 self:script로.'
+        target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby. 문자열 포함은 contains(tip, "툴 콜"), 부정은 not contains(tip, "툴 콜")로 쓴다. Python의 in/not in 구문은 불가. dict/list 생성은 불가하며 실행 전 식 검사로 거절한다. 중첩 데이터 변환은 등록된 self:script로.'
         group: transform
         router: handler
         tool: data_compute

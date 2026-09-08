@@ -25,7 +25,7 @@
           },
           "grounded": {
             "type": "boolean",
-            "description": "각 레코드에 원문 근거 앵커(_quote — 첫 구절 한 토막) 요구+코드 대조, 대조 뒤 코드가 문장 끝까지 이어 붙임(quote_expanded 신고). 기본 finance/health 스키마=on, 그 외 off."
+            "description": "각 레코드에 원문 근거 앵커(_quote — 첫 구절 한 토막) 요구+코드 대조, 대조 뒤 코드가 문장 끝까지 이어 붙임(quote_expanded 신고). 시간 자막의 timestamp는 근거 앵커로 결정론 복원, 결측/중복 위치는 null+_timestamp_error. 기본 finance/health 스키마=on, 그 외 off."
           },
           "known": {
             "type": "array",

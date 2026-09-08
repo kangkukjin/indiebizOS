@@ -809,6 +809,7 @@ def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
 from ibl_distill_gates import (  # noqa: E402,F401
     _strip_strings, _composed, _actions_of, _heads_grounded, _composition_grounded,
     _head_seq, _is_subseq, _restore_var_assignments, _syntax_gate_with_restore,
+    _recover_distill_selection,
 )
 
 
@@ -862,6 +863,9 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
    인자 값(node·path 따위)을 머리 안에 넣지 마라. 머리가 실행에 없던 것이면 그 용례는 버려진다.
    ★`&` 로 병렬 실행된 문장은 **통째로** 옮겨라 — 한 가지만 떼어 문장으로 적으면 실행된 적 없는
    모양이라 버려진다(가지를 줄이는 것은 되지만 가지 하나짜리로 만들지는 말 것).
+   변수 생산자도 보존하라 — 앞 호출에서 만든 변수를 쓰면 그 할당부터 함께 남긴다.
+   액션 뒤에 `.필드`를 붙이지 마라: `$r = [self:memory]{{op:"recall"}}` 다음 문장의
+   `$r.phrases`처럼 원래 두 문장을 유지한다. `do` 안 코드의 따옴표도 원문 그대로다.
 7. **이 주행에 이름 붙은 함수를 썼다면** 그 사실만 남긴다 — 관용구(재사용 뼈대)를 *새로 지어 달라는*
    요청은 이제 하지 않는다(2026-09-07 사용자 판정: 상시 프롬프트에 서는 관용구는 어휘이고, 어휘는
    자동으로 늘지 않는다). 이름 등록은 사람이 부정기로 고른다 — 너는 용례(code)와 주행만 남겨라.
@@ -943,7 +947,10 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             continue
         if not tc.get("success", True):
             continue
-        code = tc.get("input", {}).get("code", "")
+        inputs = tc.get("input") or {}
+        if not isinstance(inputs, dict) or inputs.get("check"):
+            continue  # 검사 통과는 실행 성공이 아니다 — 접지·주행 기록에서도 제외
+        code = inputs.get("code", "")
         if code:
             ibl_calls.append(code)
             if tc.get("quality") == "pass_after_retry":
@@ -1077,8 +1084,14 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         code = normalize_corpus_code(code)
         code, _syntax_err = _syntax_gate_with_restore(code, ibl_calls, "[경험증류]")
         if _syntax_err:
-            print(f"[경험증류] 파싱 불가 — 증류 스킵: {_syntax_err} / {code[:80]}")
-            return phrase_ok
+            print(f"[경험증류] 파싱 불가 — 성공 원문 선택으로 1회 복구: {_syntax_err} / {code[:80]}")
+            recovered, recovery_note = _recover_distill_selection(
+                intent, code, _syntax_err, ibl_calls, oneshot_ai_call)
+            if recovered is None:
+                print(f"[경험증류] 원문 복구 거절 — 증류 스킵: {recovery_note}")
+                return phrase_ok
+            code = recovered
+            print(f"[경험증류] 원문 복구: {recovery_note} — 접지·어휘·인자 관문 계속")
 
         # 머리 접지 게이트 (2026-09-04): 실행에 없던 액션 머리는 코퍼스에 못 들어온다.
         if not _heads_grounded(code, ibl_calls):

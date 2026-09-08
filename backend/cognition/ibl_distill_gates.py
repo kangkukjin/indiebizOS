@@ -191,3 +191,65 @@ def _syntax_gate_with_restore(code: str, ibl_calls: list, tag: str):
                   + " · ".join(f"${n}" for n in restored))
             return fixed, None
     return code, err
+
+
+def _recover_distill_selection(intent: str, code: str, error: str,
+                               ibl_calls: list, ask):
+    """한 번만 원문 선택을 다시 묻는다. 모델은 번호만, 코드는 성공 실행 이력이 소유한다.
+
+    ep3219/3223/3224: 자유 재작성 중 액션 뒤 필드 접근·빠진 변수 생산자·중첩 따옴표
+    손상으로 증류가 끝났다. 구문을 느슨하게 하거나 코드를 또 쓰게 하지 않고, 같은
+    의도를 충족하는 원문 호출(의존 호출 포함)을 고르게 한다. 복구 실패는 적재하지 않는다.
+    """
+    import json
+    from runtime_utils import parse_first_json
+    from ibl_param_vocab import code_syntax_error
+    from workflow_contract import call_signature
+
+    prompt = f"""IBL 용례의 구문 검사에 실패했다. 같은 의도의 용례를 성공 실행 원문에서 복구하라.
+의도: {intent}
+검사 오류: {error}
+거절된 코드(참고일 뿐, 다시 쓰지 마라):
+{code}
+
+성공한 실제 호출 목록(JSON; id는 이 목록에서만 유효):
+{json.dumps([{"id": i + 1, "code": c} for i, c in enumerate(ibl_calls)], ensure_ascii=False)}
+
+규칙:
+- 코드를 작성하지 말고 call_ids에 선택한 호출 번호만 적어라. 각 호출의 원문 전체가 그대로 쓰인다.
+- 번호는 실행 순서대로, 중복 없이 고른다. 필요한 변수의 할당 호출도 그 앞에 함께 고른다.
+- 별개 호출을 새 파이프로 연결하지 않는다. 함수 호출·do 안 따옴표·필드 접근은 원문 그대로다.
+- 이 코드만으로 위 의도를 충족해야 한다. 의도를 더 작은 일로 바꾸거나 준비·저장·알림만 고르지 마라.
+- files/턴 밖 변수/모델이 읽고 판단한 결과에 의존해 독립 실행할 수 없으면 call_ids를 빈 목록으로 둔다.
+- 여러 호출을 고를 때에도 실행에 없던 합성은 허용되지 않는다. 가능하면 독립된 한 호출을 고른다.
+응답은 JSON 하나: {{"call_ids": [1], "reason": "이 선택이 같은 의도를 충족하는 이유, 또는 선택 불가 이유"}}
+"""
+    try:
+        response = ask(prompt=prompt, system_prompt="성공한 IBL 원문을 번호로 선택한다. JSON만 출력하라.",
+                       role="background")
+        selection = parse_first_json(response or "")
+    except Exception as exc:
+        return None, f"원문 선택 호출 실패: {exc}"
+    if not isinstance(selection, dict):
+        return None, "원문 선택 응답이 JSON 객체가 아님"
+    ids = selection.get("call_ids")
+    if not isinstance(ids, list):
+        return None, "call_ids 목록 없음"
+    if not ids:
+        return None, "독립 실행 원문 없음: " + str(selection.get("reason") or "선택하지 않음")[:200]
+    if (any(type(i) is not int or not 1 <= i <= len(ibl_calls) for i in ids)
+            or ids != sorted(set(ids))):
+        return None, "call_ids는 범위 안의 중복 없는 실행 순서여야 함"
+    # 모델이 함께 낸 code가 있어도 읽지 않는다. 개행은 독립 호출의 경계를 보존한다.
+    restored = "\n".join(ibl_calls[i - 1] for i in ids)
+    err = code_syntax_error(restored)
+    if err:
+        return None, f"선택 원문 구문 거절: {err}"
+    # 파서는 인자 문자열의 미할당 변수를 리터럴로 남길 수 있다. 저장할 용례는
+    # 함수 몸이 아니므로 그 자유 변수도 닫혀야 한다(서명 판정의 단일 소스 재사용).
+    free = call_signature(restored)
+    if free:
+        return None, "선택 원문에 외부 변수 남음: " + ", ".join(free)
+    if "$file:" in restored:
+        return None, "선택 원문에 files 인자가 필요한 참조 남음"
+    return restored, "호출 " + ", ".join(map(str, ids))

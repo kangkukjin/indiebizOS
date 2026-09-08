@@ -6,7 +6,7 @@ owner_code: >
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-09-03
+last_updated: 2026-09-09
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -93,6 +93,7 @@ see_also: [architecture.md, ibl.md]
 - 임계값: 표시 MIN_SCORE 0.65 / 증류 DISTILL_THRESHOLD 0.7 — 단 점수 ≥ 0.7이어도 회상 top-1 액션이 실행에 실제 사용되지 않았으면(가짜 유사도) 새 패턴으로 보고 증류 진행(`_recall_was_used`, 2026-08-07 ep949 학습 유실 수리. top_code 없는 조종실 경로는 점수 게이트 그대로)
 - **증류 게이트 셋째 신호 — 품질**(2026-08-27): 구조 실패·목표 미달성에 이어 **AI step 품질 미달**이 학습 회로에 붙었다. ①미달(`error_type:"quality"`) 봉투는 `success:false` → 이미 있던 증류 성공 필터가 거른다(새 코드 0줄, 사슬 핵심 고리를 회귀로 고정) ②재시도로 통과한 건은 `pass_after_retry`+`criteria_feedback` 을 봉투에서 캐 반성 프롬프트에 병기 — "첫 미달 사유가 재발하지 않게 instruction 을 다듬어라(criteria 보존)"로 먹여, 약한 지시 대신 **개선된 지시**가 증류된다. ★게이트 규칙(미달 용례를 학습하지 마라)은 판정 데이터가 쌓인 뒤에 정당화되는 것이 아니라 지금 참이다 — 미루면 그 사이 오염 용례가 코퍼스에 들어가 재학습 때 해마에 구워진다. 정본 = `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
 - **증류의 관문 한 벌**(`backend/cognition/ibl_distill_gates.py`, 2026-09-06 rag 에서 분할): 머리 접지·합성 접지·구문 관문을 낱말 경로와 관용구 경로가 **같은 문**으로 지난다(문이 두 벌이면 방언이 갈린다). **할당 앞점 복원**(같은 날, ep2905 `$실패`·ep2943 `$fx` 실측): 반성기가 실행된 `$fx = A & B >> [table:union]` 을 옮기며 좌변만 떨어뜨리고 뒷문장의 `$fx >> …` 는 남기는 부류가 있어, 구문 관문이 정직하게 거절한 대가로 **GoalEval ACHIEVED 인 주행이 학습 0건**이 됐다(30일 2건). 프롬프트로 더 타이르는 대신 기계가 되살린다 — 좌변 이름은 *실행된* 할당문에서만 오고, 같은 문장인지는 접지 게이트와 같은 자(머리 열의 순서 보존 부분열 = 증류는 압축이므로 부분집합 허용)로 묻고, 후보가 갈리면 손대지 않는다. 실행에 없던 할당은 되살리지 않는다(그 자리는 거절이 정직하다). 복원 뒤에도 접지·액션 실존·인자 게이트는 그대로 다 지난다 — 관문을 여는 게 아니라 관문 앞까지 못 오던 문장을 데려다 놓는 것. 회귀 `backend/test_distill_var_assignment_2026_09_06.py`.
+- **구문 실패의 원문 복구**(2026-09-09, ep3219·3223·3224): 반성기가 액션 뒤에 `.phrases`를 붙이거나, 변수 생산 호출을 빼거나, `each.do`의 중첩 따옴표를 깨뜨렸다. 할당 앞점 복원으로 해결되지 않는 구문 실패에는 경량 모델에 **성공한 호출 번호만 한 번** 다시 고르게 한다. 코드는 번호가 가리키는 원문 전체를 실행 순서대로 연결하므로 새 인자·파이프·따옴표를 만들지 않는다. 같은 의도를 독립적으로 충족하는 원문이 없으면 빈 선택으로 끝낸다. 복구본은 구문·자유 변수·첨부파일 의존을 검사한 뒤 기존 머리 접지·합성 접지·어휘·인자 관문을 모두 지난다. 정상 증류에는 추가 모델 호출이 없고, `check:true`는 실행이 아니므로 증류 입력·접지 근거·주행 본문에서 제외한다. 주행 기록과 대표 용례 적재는 별도이며 자동 함수 작명은 계속 중단이다. 회귀 `backend/test_distill_source_recovery_2026_09_09.py`.
 - 상세: 아래 **부록: 연상기억 심층**
 
 **(c) 워크플로우** — 명시적으로 저장된 조합, **2026-08-22부터 함수 쪽으로 한 칸**

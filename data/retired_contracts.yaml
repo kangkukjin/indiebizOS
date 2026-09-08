@@ -25,6 +25,12 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: claude_assistant_block_is_response
+    retired: 2026-09-08
+    reason: Claude assistant 이벤트는 동일 응답의 thinking·text·tool_use 블록으로 반복돼 실전 라운드를 19에서 45로 부풀렸다.
+    instead: 응답 ID별 한 번 집계한다. ID가 없는 옛 이벤트만 개별 계수한다.
+    phrases:
+      - "--include-partial-messages 미사용이라 중복 없음"
   - id: recall_automatic_naming_promise
     retired: 2026-09-08
     reason: 자동 작명을 중단했지만 가지 회상의 빈 목록 안내는 다음 증류가 이름을 붙인다고 약속했다.

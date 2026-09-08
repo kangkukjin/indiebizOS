@@ -479,10 +479,11 @@ def notify_round(provider: str, model: str, round_no: int, budget: int):
     if ep is not None:
         ep.steps.append({"event": "round", "provider": provider, "model": model,
                          "round": round_no, "budget": budget, "role": role})
-        record_trajectory_event("model.round", {
-            "provider": provider, "model": model, "round": round_no,
-            "budget": budget, "role": role,
-        })
+    # MCP 재진입은 _Episode 없이 trajectory만 복원한다. 원샷도 그 척추에 기록한다.
+    record_trajectory_event("model.round", {
+        "provider": provider, "model": model, "round": round_no,
+        "budget": budget, "role": role,
+    })
 
 
 def notify_usage(provider: str, model: str, latency_ms: float, usage: dict):
@@ -494,19 +495,33 @@ def notify_usage(provider: str, model: str, latency_ms: float, usage: dict):
     산문 방언(지연=Nms · latency=Nms · result Nms)을 더는 읽지 않아도 된다.
     역할 태그는 set_step_role 의 컨텍스트값 — 의식·무의식·평가가 스스로 갈린다."""
     ep = _current_episode.get(None)
-    if ep is None:
-        return
     role = _current_role.get("") or "execution"
     step = {"event": "usage", "role": role, "latency_ms": int(latency_ms)}
     if provider:
         step["provider"] = provider
     if model:
         step["model"] = model
-    for k in ("input", "output", "cache_read", "cache_create"):
+    for k in ("input", "output", "cache_read", "cache_create", "reasoning"):
         if usage and usage.get(k) is not None:
             step[k] = int(usage[k])
-    ep.steps.append(step)
+    if ep is not None:
+        ep.steps.append(step)
     record_trajectory_event("model.usage", step)
+
+
+def notify_response_snapshot(provider: str, model: str, response_id: str, usage: dict,
+                             block_types: list):
+    """동일 응답의 누적 스냅샷. 본문 없이 usage 총계와 별도의 분석 내역을 남긴다.
+
+    run/provider/role/response_id로 묶어 각 usage 필드의 최댓값을 읽는다.
+    스냅샷끼리 또는 model.usage와 합산하지 않는다. 사건 시각은 수신 시각이며 API 시작이 아니다.
+    """
+    data = {"provider": provider, "model": model, "response_id": response_id,
+            "role": _current_role.get("") or "execution", "block_types": block_types,
+            "accounting": "response_cumulative_snapshot"}
+    data.update({k: int(usage[k]) for k in ("input", "output", "cache_read", "cache_create", "reasoning")
+                 if usage.get(k) is not None})
+    record_trajectory_event("model.response_snapshot", data)
 
 
 def record_role_switch(role: str, provider: str, model: str):

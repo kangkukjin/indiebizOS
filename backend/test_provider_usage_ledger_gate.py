@@ -122,7 +122,8 @@ def test_deepseek_dict_shape_top_level_hit():
 def test_gemini_sdk_shape_thoughts_count_as_output():
     u = SimpleNamespace(prompt_token_count=12_000, candidates_token_count=800, thoughts_token_count=1_500,
                         cached_content_token_count=9_000, total_token_count=14_300)
-    assert _norm(u) == {"input": 12_000, "output": 2_300, "cache_read": 9_000, "cache_create": 0}
+    assert _norm(u) == {"input": 12_000, "output": 2_300, "cache_read": 9_000, "cache_create": 0,
+                       "reasoning": 1_500}
 
 
 def test_gemini_rest_camel_shape():

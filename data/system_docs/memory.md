@@ -260,6 +260,8 @@ see_also: [architecture.md, ibl.md]
 
 **시간·토큰 선택압 (2026-08-30)**: 시간·토큰이 좌표/총계로만 있고 **비용**으로는 없어 같은 목표를 싸고 빠르게 이루는 표현에 유인이 없던 공백(사용자 판정 2건: "더 빨리 하는 것에 인센티브가 없어" → "토큰 소모를 상관없어하는 태도도 문제. 단 품질을 깎아 아끼는 것은 금물")을 ①의 같은 배선에 비용 축 둘로 추가. 두 축은 **다른 낭비**를 잰다 — `avg_ms`=IBL 실행의 빠르기(`agent_pipeline._collect`가 tool_start→tool_result 이음매에서 `elapsed_ms` 도장), `avg_tokens`=그 표현을 두른 턴의 모델 소요(불필요한 서치·재시도가 찍히는 자리 — `providers.base` **턴 토큰 원장**: contextvar 에 record_request 단일 길목이 겹쳐 적어 프로바이더 스왑·평가/반성 oneshot 까지 한 턴으로 합산, `[턴비용] tokens=` 로그). `record_recall_outcome`이 **성공 실행만** EWMA(α=0.3, -1=미측정)로 귀속, 증류는 출생 실측을 심음. 소비 2곳 — 회상 XML `avg_ms`·`avg_tokens` 속성(표시로 AI가 판단, note 에 "품질을 깎아 아끼는 것은 금물" 계약 명기) + 근접중복 정리 생존키(`_dedup_quality`: 성공률→시도수→**빠르기**→**토큰 검약**→최신 — 비용은 신뢰를 넘지 못하고, 실측이 미측정을 이긴다). 훈계 0 — 전부 이음매. 폰 렌트 인덱스도 동반(export_hippo_index). 관문=`test_time_selection.py` T1~T9.
 
+**비용 관측 경계(2026-09-08)**: 출력 토큰은 추론을 포함한다. `model.usage.reasoning`은 공급자가 제공할 때만 기록하는 부분집합이며 더하지 않는다. Claude 라운드는 assistant 블록 수가 아니라 응답 ID 수다. `model.response_snapshot`은 응답 ID별 누적 관측(본문 없음)이라 같은 ID의 필드별 최댓값을 읽고 usage 총계와 합산하지 않는다. MCP 재진입은 `_Episode` 없이 trajectory만 복원돼도 하위 AI의 round/usage를 기록한다. 프로세스별 메모리 토큰 합계는 재진입 전체 비용과 다를 수 있으므로 전체 감사는 연결된 usage를 확인한다. 중첩 실행 시간은 더하지 않는다. 과거 기록 정정·관측 한계: `docs/IBL_EPISODE3176_COST_DIAGNOSIS.md`.
+
 **검증(2026-05-31)**: 고점수+성공→success_count, 고점수+실패→fail_count, 저점수(THINK)·비IBL→무시, 표시 가드(tried 0.5/0.0 표시·untried 숨김), 환각 액션(sense:teleport 등) 폐기 모두 확인.
 
 ### ✅ 추가 구현 — 해마 정리 패스 (③④⑤, 2026-05-31)

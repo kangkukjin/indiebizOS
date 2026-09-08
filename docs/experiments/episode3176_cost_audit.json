@@ -1,0 +1,1663 @@
+{
+  "schema": 1,
+  "episodes": [
+    {
+      "episode_id": 3090,
+      "session_sha256": "8355999d10b54f1e3149c8cde44bb690338b2d456ae43cb441f65fab518953cc",
+      "started_at": "2026-09-08T05:00:41.122085",
+      "ended_at": "2026-09-08T05:10:50.301085",
+      "total_ms": 609177,
+      "ibl_calls": 31,
+      "ibl_elapsed_ms": 7004,
+      "outside_ibl_ms": 602173,
+      "execution_latency_ms": 559529,
+      "assistant_events": 68,
+      "unique_responses": 33,
+      "output_tokens": 34235,
+      "thinking_tokens": 14026,
+      "nonthinking_output_tokens": 20209,
+      "calls": [
+        {
+          "event_seq": 10,
+          "started_at": "2026-09-08T05:01:31.384551",
+          "ended_at": "2026-09-08T05:01:31.410668",
+          "elapsed_ms": 26,
+          "success": true
+        },
+        {
+          "event_seq": 15,
+          "started_at": "2026-09-08T05:01:35.613893",
+          "ended_at": "2026-09-08T05:01:35.754588",
+          "elapsed_ms": 140,
+          "success": true
+        },
+        {
+          "event_seq": 19,
+          "started_at": "2026-09-08T05:01:42.162820",
+          "ended_at": "2026-09-08T05:01:42.216320",
+          "elapsed_ms": 53,
+          "success": true
+        },
+        {
+          "event_seq": 23,
+          "started_at": "2026-09-08T05:01:48.647560",
+          "ended_at": "2026-09-08T05:01:48.686095",
+          "elapsed_ms": 38,
+          "success": true
+        },
+        {
+          "event_seq": 27,
+          "started_at": "2026-09-08T05:01:57.812723",
+          "ended_at": "2026-09-08T05:01:57.845974",
+          "elapsed_ms": 33,
+          "success": true
+        },
+        {
+          "event_seq": 32,
+          "started_at": "2026-09-08T05:02:16.007685",
+          "ended_at": "2026-09-08T05:02:16.120100",
+          "elapsed_ms": 112,
+          "success": true
+        },
+        {
+          "event_seq": 37,
+          "started_at": "2026-09-08T05:02:38.285911",
+          "ended_at": "2026-09-08T05:02:40.280416",
+          "elapsed_ms": 1994,
+          "success": true
+        },
+        {
+          "event_seq": 41,
+          "started_at": "2026-09-08T05:02:56.918880",
+          "ended_at": "2026-09-08T05:02:57.728232",
+          "elapsed_ms": 809,
+          "success": true
+        },
+        {
+          "event_seq": 46,
+          "started_at": "2026-09-08T05:03:16.521453",
+          "ended_at": "2026-09-08T05:03:18.502768",
+          "elapsed_ms": 1981,
+          "success": true
+        },
+        {
+          "event_seq": 50,
+          "started_at": "2026-09-08T05:03:34.384797",
+          "ended_at": "2026-09-08T05:03:35.456491",
+          "elapsed_ms": 1071,
+          "success": true
+        },
+        {
+          "event_seq": 54,
+          "started_at": "2026-09-08T05:03:57.919392",
+          "ended_at": "2026-09-08T05:03:57.925235",
+          "elapsed_ms": 5,
+          "success": false
+        },
+        {
+          "event_seq": 58,
+          "started_at": "2026-09-08T05:04:01.358038",
+          "ended_at": "2026-09-08T05:04:01.405004",
+          "elapsed_ms": 47,
+          "success": true
+        },
+        {
+          "event_seq": 62,
+          "started_at": "2026-09-08T05:04:08.749181",
+          "ended_at": "2026-09-08T05:04:08.761999",
+          "elapsed_ms": 12,
+          "success": true
+        },
+        {
+          "event_seq": 66,
+          "started_at": "2026-09-08T05:04:40.516853",
+          "ended_at": "2026-09-08T05:04:40.541146",
+          "elapsed_ms": 24,
+          "success": true
+        },
+        {
+          "event_seq": 70,
+          "started_at": "2026-09-08T05:04:49.395196",
+          "ended_at": "2026-09-08T05:04:49.449746",
+          "elapsed_ms": 54,
+          "success": true
+        },
+        {
+          "event_seq": 75,
+          "started_at": "2026-09-08T05:05:13.163804",
+          "ended_at": "2026-09-08T05:05:13.212631",
+          "elapsed_ms": 48,
+          "success": true
+        },
+        {
+          "event_seq": 79,
+          "started_at": "2026-09-08T05:05:36.254525",
+          "ended_at": "2026-09-08T05:05:36.296605",
+          "elapsed_ms": 42,
+          "success": true
+        },
+        {
+          "event_seq": 83,
+          "started_at": "2026-09-08T05:05:55.381854",
+          "ended_at": "2026-09-08T05:05:55.439702",
+          "elapsed_ms": 57,
+          "success": true
+        },
+        {
+          "event_seq": 88,
+          "started_at": "2026-09-08T05:07:08.647942",
+          "ended_at": "2026-09-08T05:07:08.684941",
+          "elapsed_ms": 37,
+          "success": true
+        },
+        {
+          "event_seq": 93,
+          "started_at": "2026-09-08T05:07:18.088809",
+          "ended_at": "2026-09-08T05:07:18.107020",
+          "elapsed_ms": 18,
+          "success": true
+        },
+        {
+          "event_seq": 101,
+          "started_at": "2026-09-08T05:08:59.164159",
+          "ended_at": "2026-09-08T05:08:59.198936",
+          "elapsed_ms": 34,
+          "success": true
+        },
+        {
+          "event_seq": 106,
+          "started_at": "2026-09-08T05:09:02.596824",
+          "ended_at": "2026-09-08T05:09:02.635255",
+          "elapsed_ms": 38,
+          "success": true
+        },
+        {
+          "event_seq": 109,
+          "started_at": "2026-09-08T05:09:06.935533",
+          "ended_at": "2026-09-08T05:09:07.078831",
+          "elapsed_ms": 143,
+          "success": true
+        },
+        {
+          "event_seq": 114,
+          "started_at": "2026-09-08T05:09:19.764550",
+          "ended_at": "2026-09-08T05:09:19.779095",
+          "elapsed_ms": 14,
+          "success": true
+        },
+        {
+          "event_seq": 117,
+          "started_at": "2026-09-08T05:09:31.649203",
+          "ended_at": "2026-09-08T05:09:31.687829",
+          "elapsed_ms": 38,
+          "success": true
+        },
+        {
+          "event_seq": 121,
+          "started_at": "2026-09-08T05:09:34.559167",
+          "ended_at": "2026-09-08T05:09:34.573145",
+          "elapsed_ms": 14,
+          "success": true
+        },
+        {
+          "event_seq": 124,
+          "started_at": "2026-09-08T05:09:45.431581",
+          "ended_at": "2026-09-08T05:09:45.451901",
+          "elapsed_ms": 20,
+          "success": true
+        },
+        {
+          "event_seq": 128,
+          "started_at": "2026-09-08T05:09:49.575037",
+          "ended_at": "2026-09-08T05:09:49.594894",
+          "elapsed_ms": 19,
+          "success": true
+        },
+        {
+          "event_seq": 132,
+          "started_at": "2026-09-08T05:10:09.190933",
+          "ended_at": "2026-09-08T05:10:09.205474",
+          "elapsed_ms": 14,
+          "success": true
+        },
+        {
+          "event_seq": 135,
+          "started_at": "2026-09-08T05:10:17.092589",
+          "ended_at": "2026-09-08T05:10:17.131653",
+          "elapsed_ms": 39,
+          "success": true
+        },
+        {
+          "event_seq": 138,
+          "started_at": "2026-09-08T05:10:23.821284",
+          "ended_at": "2026-09-08T05:10:23.851730",
+          "elapsed_ms": 30,
+          "success": true
+        }
+      ],
+      "responses": [
+        {
+          "response_id": "msg_011Cepg67VvtE6tFdYTZkZ4w",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:01:30.848Z",
+          "last_block_at": "2026-09-07T20:01:31.363Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 111,
+            "cache_read_input_tokens": 82811,
+            "cache_creation_input_tokens": 40297,
+            "thinking_tokens": 0
+          },
+          "fragments": [
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 78,
+          "text_chars": 60
+        },
+        {
+          "response_id": "msg_011Cepg6MTa3jufmuPmNt3Rg",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:01:33.200Z",
+          "last_block_at": "2026-09-07T20:01:35.600Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 287,
+            "cache_read_input_tokens": 123108,
+            "cache_creation_input_tokens": 2539,
+            "thinking_tokens": 28
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 404,
+          "text_chars": 79
+        },
+        {
+          "response_id": "msg_011Cepg6fXm2bEnxWHg1xvkp",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:01:39.309Z",
+          "last_block_at": "2026-09-07T20:01:42.148Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 438,
+            "cache_read_input_tokens": 125647,
+            "cache_creation_input_tokens": 2461,
+            "thinking_tokens": 119
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 578,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepg78xXEUiHcr4Jq2z9Z",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:01:46.141Z",
+          "last_block_at": "2026-09-07T20:01:48.633Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 428,
+            "cache_read_input_tokens": 128108,
+            "cache_creation_input_tokens": 3916,
+            "thinking_tokens": 166
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 431,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepg7cjsTmZUYciemVe86",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:01:55.443Z",
+          "last_block_at": "2026-09-07T20:01:57.775Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 638,
+            "cache_read_input_tokens": 132024,
+            "cache_creation_input_tokens": 3803,
+            "thinking_tokens": 378
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 433,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepg8JH8cG15fP21iQDDn",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:02:12.430Z",
+          "last_block_at": "2026-09-07T20:02:15.994Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1106,
+            "cache_read_input_tokens": 135827,
+            "cache_creation_input_tokens": 3974,
+            "thinking_tokens": 801
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 361,
+          "text_chars": 145
+        },
+        {
+          "response_id": "msg_011Cepg9eeWehqYod6ENAtka",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:02:34.323Z",
+          "last_block_at": "2026-09-07T20:02:38.254Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1602,
+            "cache_read_input_tokens": 139801,
+            "cache_creation_input_tokens": 2473,
+            "thinking_tokens": 1088
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 918,
+          "text_chars": 83
+        },
+        {
+          "response_id": "msg_011CepgBRqPKCuji7YK4oopg",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:02:53.803Z",
+          "last_block_at": "2026-09-07T20:02:56.904Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1008,
+            "cache_read_input_tokens": 142274,
+            "cache_creation_input_tokens": 8362,
+            "thinking_tokens": 576
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 822,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgCint9jmqe5UuABUWN",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:03:10.524Z",
+          "last_block_at": "2026-09-07T20:03:16.487Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1235,
+            "cache_read_input_tokens": 150636,
+            "cache_creation_input_tokens": 7834,
+            "thinking_tokens": 650
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 803,
+          "text_chars": 81
+        },
+        {
+          "response_id": "msg_011CepgEGKyAo919XqeqXtFD",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:03:29.273Z",
+          "last_block_at": "2026-09-07T20:03:34.370Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 977,
+            "cache_read_input_tokens": 158470,
+            "cache_creation_input_tokens": 7842,
+            "thinking_tokens": 509
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 732,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgFW4kHfcp2TFwyS5a7",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:03:56.135Z",
+          "last_block_at": "2026-09-07T20:03:57.883Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1443,
+            "cache_read_input_tokens": 166312,
+            "cache_creation_input_tokens": 6555,
+            "thinking_tokens": 1210
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 298,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgH9wL9QHEqWh7MFsk2",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:04:00.532Z",
+          "last_block_at": "2026-09-07T20:04:01.343Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 283,
+            "cache_read_input_tokens": 172867,
+            "cache_creation_input_tokens": 2190,
+            "thinking_tokens": 53
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 280,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgHQqGs4v2aHs4RKoLX",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:04:08.471Z",
+          "last_block_at": "2026-09-07T20:04:08.736Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 408,
+            "cache_read_input_tokens": 175057,
+            "cache_creation_input_tokens": 4701,
+            "thinking_tokens": 315
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 90,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgHxTYrb2dyKbfvPo66",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:04:39.377Z",
+          "last_block_at": "2026-09-07T20:04:40.484Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1694,
+            "cache_read_input_tokens": 179758,
+            "cache_creation_input_tokens": 2742,
+            "thinking_tokens": 1546
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 175,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgLHgkD1q7msAQ8FMRq",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:04:47.209Z",
+          "last_block_at": "2026-09-07T20:04:49.381Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 525,
+            "cache_read_input_tokens": 182500,
+            "cache_creation_input_tokens": 9393,
+            "thinking_tokens": 278
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 371,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgLxAXHD6YVN6MFEdxx",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:05:08.386Z",
+          "last_block_at": "2026-09-07T20:05:13.131Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1468,
+            "cache_read_input_tokens": 191893,
+            "cache_creation_input_tokens": 12948,
+            "thinking_tokens": 1042
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 498,
+          "text_chars": 27
+        },
+        {
+          "response_id": "msg_011CepgNiNrrFCevqzVtsMww",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:05:33.928Z",
+          "last_block_at": "2026-09-07T20:05:36.240Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1275,
+            "cache_read_input_tokens": 204841,
+            "cache_creation_input_tokens": 3215,
+            "thinking_tokens": 1041
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 342,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgQQSuLULfWtaA5jdXz",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:05:51.787Z",
+          "last_block_at": "2026-09-07T20:05:55.344Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1144,
+            "cache_read_input_tokens": 208056,
+            "cache_creation_input_tokens": 4619,
+            "thinking_tokens": 721
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 544,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgRpPLz1mpEP2cdor34",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:06:19.095Z",
+          "last_block_at": "2026-09-07T20:07:08.606Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 4962,
+            "cache_read_input_tokens": 212675,
+            "cache_creation_input_tokens": 4533,
+            "thinking_tokens": 1162
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 5792,
+          "text_chars": 55
+        },
+        {
+          "response_id": "msg_011CepgXDGta4WV6advUGWPn",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:07:12.169Z",
+          "last_block_at": "2026-09-07T20:07:18.074Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 506,
+            "cache_read_input_tokens": 217208,
+            "cache_creation_input_tokens": 5385,
+            "thinking_tokens": 109
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 558,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgXv3L6LBMz6BdZrAiJ",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:07:21.456Z",
+          "last_block_at": "2026-09-07T20:08:53.922Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 6079,
+            "cache_read_input_tokens": 222593,
+            "cache_creation_input_tokens": 854,
+            "thinking_tokens": 93
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 6859,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepgf2eeYRd1BweU65dV1",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:08:58.670Z",
+          "last_block_at": "2026-09-07T20:08:59.120Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 252,
+            "cache_read_input_tokens": 223447,
+            "cache_creation_input_tokens": 6124,
+            "thinking_tokens": 104
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 166,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgfMg9WVYrJbjin19ut",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:09:01.774Z",
+          "last_block_at": "2026-09-07T20:09:02.583Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 205,
+            "cache_read_input_tokens": 229571,
+            "cache_creation_input_tokens": 708,
+            "thinking_tokens": 84
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 154,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepgfch2KeU5ERujUMGG2",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:09:06.921Z",
+          "last_block_at": "2026-09-07T20:09:06.921Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 217,
+            "cache_read_input_tokens": 230279,
+            "cache_creation_input_tokens": 1551,
+            "thinking_tokens": 0
+          },
+          "fragments": [
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 288,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgfwsSgaG1K4W2PWji9",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:09:18.298Z",
+          "last_block_at": "2026-09-07T20:09:19.750Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 731,
+            "cache_read_input_tokens": 231830,
+            "cache_creation_input_tokens": 468,
+            "thinking_tokens": 568
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 110,
+          "text_chars": 63
+        },
+        {
+          "response_id": "msg_011CepggtRMaWQMzBXKmLxZF",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:09:31.614Z",
+          "last_block_at": "2026-09-07T20:09:31.614Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 703,
+            "cache_read_input_tokens": 232298,
+            "cache_creation_input_tokens": 2679,
+            "thinking_tokens": 0
+          },
+          "fragments": [
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 790,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepghm57EkVbH1EQ9N1Mq",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:09:34.504Z",
+          "last_block_at": "2026-09-07T20:09:34.545Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 132,
+            "cache_read_input_tokens": 234977,
+            "cache_creation_input_tokens": 1240,
+            "thinking_tokens": 27
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 110,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepghyVEMzUeqCJkNNP5o",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:09:45.418Z",
+          "last_block_at": "2026-09-07T20:09:45.418Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 571,
+            "cache_read_input_tokens": 236217,
+            "cache_creation_input_tokens": 1421,
+            "thinking_tokens": 0
+          },
+          "fragments": [
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 590,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgimyTrdQbzELoV97Q1",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:09:48.727Z",
+          "last_block_at": "2026-09-07T20:09:49.561Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 228,
+            "cache_read_input_tokens": 237638,
+            "cache_creation_input_tokens": 705,
+            "thinking_tokens": 108
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 149,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepgj5dMJy1zwoCqubBnx",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:10:08.176Z",
+          "last_block_at": "2026-09-07T20:10:09.159Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1146,
+            "cache_read_input_tokens": 238343,
+            "cache_creation_input_tokens": 879,
+            "thinking_tokens": 1046
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 97,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CepgkXbKz83JZXYutYmoK",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:10:17.078Z",
+          "last_block_at": "2026-09-07T20:10:17.078Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 823,
+            "cache_read_input_tokens": 239222,
+            "cache_creation_input_tokens": 1238,
+            "thinking_tokens": 0
+          },
+          "fragments": [
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 1043,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepgm7cDMgqE6SyVrQXZ3",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:10:23.807Z",
+          "last_block_at": "2026-09-07T20:10:23.807Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 354,
+            "cache_read_input_tokens": 240460,
+            "cache_creation_input_tokens": 1505,
+            "thinking_tokens": 0
+          },
+          "fragments": [
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 463,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Cepgmc4zFfhy3dGUFLxL6",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-07T20:10:29.666Z",
+          "last_block_at": "2026-09-07T20:10:47.111Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1256,
+            "cache_read_input_tokens": 241965,
+            "cache_creation_input_tokens": 1023,
+            "thinking_tokens": 204
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ]
+          ],
+          "tool_argument_chars": 0,
+          "text_chars": 1254
+        }
+      ]
+    },
+    {
+      "episode_id": 3176,
+      "session_sha256": "a9ac61f3e4d952a4ed968e4a122202bf1e45f31ed157d30074780fbc4b58685a",
+      "started_at": "2026-09-08T17:43:22.764297",
+      "ended_at": "2026-09-08T17:56:04.927082",
+      "total_ms": 762162,
+      "ibl_calls": 18,
+      "ibl_elapsed_ms": 64332,
+      "outside_ibl_ms": 697830,
+      "execution_latency_ms": 727245,
+      "assistant_events": 45,
+      "unique_responses": 19,
+      "output_tokens": 44326,
+      "thinking_tokens": 22630,
+      "nonthinking_output_tokens": 21696,
+      "calls": [
+        {
+          "event_seq": 9,
+          "started_at": "2026-09-08T17:43:59.406661",
+          "ended_at": "2026-09-08T17:43:59.431831",
+          "elapsed_ms": 25,
+          "success": true
+        },
+        {
+          "event_seq": 13,
+          "started_at": "2026-09-08T17:44:06.243891",
+          "ended_at": "2026-09-08T17:44:06.273935",
+          "elapsed_ms": 30,
+          "success": false
+        },
+        {
+          "event_seq": 17,
+          "started_at": "2026-09-08T17:44:09.558071",
+          "ended_at": "2026-09-08T17:44:09.564361",
+          "elapsed_ms": 6,
+          "success": true
+        },
+        {
+          "event_seq": 22,
+          "started_at": "2026-09-08T17:44:14.729398",
+          "ended_at": "2026-09-08T17:44:14.761806",
+          "elapsed_ms": 32,
+          "success": true
+        },
+        {
+          "event_seq": 27,
+          "started_at": "2026-09-08T17:44:25.977888",
+          "ended_at": "2026-09-08T17:44:26.008843",
+          "elapsed_ms": 31,
+          "success": false
+        },
+        {
+          "event_seq": 31,
+          "started_at": "2026-09-08T17:44:32.449718",
+          "ended_at": "2026-09-08T17:44:32.491928",
+          "elapsed_ms": 42,
+          "success": true
+        },
+        {
+          "event_seq": 36,
+          "started_at": "2026-09-08T17:44:50.834450",
+          "ended_at": "2026-09-08T17:44:50.890419",
+          "elapsed_ms": 56,
+          "success": false
+        },
+        {
+          "event_seq": 40,
+          "started_at": "2026-09-08T17:45:09.686482",
+          "ended_at": "2026-09-08T17:45:09.688915",
+          "elapsed_ms": 2,
+          "success": true
+        },
+        {
+          "event_seq": 45,
+          "started_at": "2026-09-08T17:45:43.472035",
+          "ended_at": "2026-09-08T17:45:46.065523",
+          "elapsed_ms": 2593,
+          "success": true
+        },
+        {
+          "event_seq": 50,
+          "started_at": "2026-09-08T17:46:33.105648",
+          "ended_at": "2026-09-08T17:47:31.460810",
+          "elapsed_ms": 58354,
+          "success": true
+        },
+        {
+          "event_seq": 54,
+          "started_at": "2026-09-08T17:48:07.884746",
+          "ended_at": "2026-09-08T17:48:09.550744",
+          "elapsed_ms": 1666,
+          "success": true
+        },
+        {
+          "event_seq": 58,
+          "started_at": "2026-09-08T17:48:27.618923",
+          "ended_at": "2026-09-08T17:48:28.645345",
+          "elapsed_ms": 1026,
+          "success": true
+        },
+        {
+          "event_seq": 62,
+          "started_at": "2026-09-08T17:48:51.678471",
+          "ended_at": "2026-09-08T17:48:51.708471",
+          "elapsed_ms": 30,
+          "success": true
+        },
+        {
+          "event_seq": 67,
+          "started_at": "2026-09-08T17:50:11.064814",
+          "ended_at": "2026-09-08T17:50:11.103412",
+          "elapsed_ms": 38,
+          "success": true
+        },
+        {
+          "event_seq": 72,
+          "started_at": "2026-09-08T17:54:12.993854",
+          "ended_at": "2026-09-08T17:54:13.091082",
+          "elapsed_ms": 97,
+          "success": true
+        },
+        {
+          "event_seq": 79,
+          "started_at": "2026-09-08T17:54:54.565181",
+          "ended_at": "2026-09-08T17:54:54.639495",
+          "elapsed_ms": 74,
+          "success": true
+        },
+        {
+          "event_seq": 83,
+          "started_at": "2026-09-08T17:55:03.721905",
+          "ended_at": "2026-09-08T17:55:03.822996",
+          "elapsed_ms": 101,
+          "success": true
+        },
+        {
+          "event_seq": 87,
+          "started_at": "2026-09-08T17:55:32.487489",
+          "ended_at": "2026-09-08T17:55:32.616796",
+          "elapsed_ms": 129,
+          "success": true
+        }
+      ],
+      "responses": [
+        {
+          "response_id": "msg_011CeqgEJRjb9ygj1qPsuciA",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:43:58.684Z",
+          "last_block_at": "2026-09-08T08:43:59.393Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 222,
+            "cache_read_input_tokens": 7052,
+            "cache_creation_input_tokens": 120918,
+            "thinking_tokens": 97
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 131,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgEf2ioBNWYzwkWKoy8",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:44:05.273Z",
+          "last_block_at": "2026-09-08T08:44:06.232Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 408,
+            "cache_read_input_tokens": 127970,
+            "cache_creation_input_tokens": 6460,
+            "thinking_tokens": 262
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 207,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgF9GbawayMGikAWDoz",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:44:08.709Z",
+          "last_block_at": "2026-09-08T08:44:09.546Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 175,
+            "cache_read_input_tokens": 134430,
+            "cache_creation_input_tokens": 3409,
+            "thinking_tokens": 52
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 127,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgFQQRfERsJw42ZFyQz",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:44:12.581Z",
+          "last_block_at": "2026-09-08T08:44:14.718Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 338,
+            "cache_read_input_tokens": 137839,
+            "cache_creation_input_tokens": 4796,
+            "thinking_tokens": 57
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 420,
+          "text_chars": 53
+        },
+        {
+          "response_id": "msg_011CeqgFmPzKV5UhXS65s2F7",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:44:22.439Z",
+          "last_block_at": "2026-09-08T08:44:25.950Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 704,
+            "cache_read_input_tokens": 142635,
+            "cache_creation_input_tokens": 2881,
+            "thinking_tokens": 371
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 443,
+          "text_chars": 65
+        },
+        {
+          "response_id": "msg_011CeqgGbyEGBuXfQov7bPFZ",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:44:30.628Z",
+          "last_block_at": "2026-09-08T08:44:32.438Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 392,
+            "cache_read_input_tokens": 145516,
+            "cache_creation_input_tokens": 6022,
+            "thinking_tokens": 126
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 448,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgH5tkXzJxbaASUwVAo",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:44:46.903Z",
+          "last_block_at": "2026-09-08T08:44:50.823Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1060,
+            "cache_read_input_tokens": 151538,
+            "cache_creation_input_tokens": 3594,
+            "thinking_tokens": 689
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 477,
+          "text_chars": 94
+        },
+        {
+          "response_id": "msg_011CeqgJRdvq6GnkqthEpPCv",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:45:09.358Z",
+          "last_block_at": "2026-09-08T08:45:09.660Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 964,
+            "cache_read_input_tokens": 155132,
+            "cache_creation_input_tokens": 3450,
+            "thinking_tokens": 900
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 19,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgKpmzvfujDY1KTwREH",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:45:38.583Z",
+          "last_block_at": "2026-09-08T08:45:43.447Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 2144,
+            "cache_read_input_tokens": 158582,
+            "cache_creation_input_tokens": 13235,
+            "thinking_tokens": 1527
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 1173,
+          "text_chars": 30
+        },
+        {
+          "response_id": "msg_011CeqgNW3Td7Er4qGZY6U7S",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:46:25.685Z",
+          "last_block_at": "2026-09-08T08:46:33.080Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 3194,
+            "cache_read_input_tokens": 171817,
+            "cache_creation_input_tokens": 7711,
+            "thinking_tokens": 2473
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 969,
+          "text_chars": 79
+        },
+        {
+          "response_id": "msg_011CeqgWG9mA8seqeut2Hivo",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:48:02.224Z",
+          "last_block_at": "2026-09-08T08:48:07.856Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 2484,
+            "cache_read_input_tokens": 179528,
+            "cache_creation_input_tokens": 12100,
+            "thinking_tokens": 1785
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 1132,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgZ5W8ucPiwbKrVwwtR",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:48:25.750Z",
+          "last_block_at": "2026-09-08T08:48:27.607Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 972,
+            "cache_read_input_tokens": 191628,
+            "cache_creation_input_tokens": 9503,
+            "thinking_tokens": 711
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 374,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgaVWHxTCnJkDtRBALQ",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:48:50.975Z",
+          "last_block_at": "2026-09-08T08:48:51.649Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1338,
+            "cache_read_input_tokens": 201131,
+            "cache_creation_input_tokens": 7474,
+            "thinking_tokens": 1153
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 216,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011CeqgcBi2iwkUYnzNP5VPf",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:50:02.362Z",
+          "last_block_at": "2026-09-08T08:50:11.039Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 5423,
+            "cache_read_input_tokens": 208605,
+            "cache_creation_input_tokens": 23828,
+            "thinking_tokens": 4356
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 1224,
+          "text_chars": 31
+        },
+        {
+          "response_id": "msg_011Ceqgi3bniXnXPWD8L6oYB",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:51:51.411Z",
+          "last_block_at": "2026-09-08T08:54:12.965Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 18061,
+            "cache_read_input_tokens": 232433,
+            "cache_creation_input_tokens": 11700,
+            "thinking_tokens": 5833
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 15133,
+          "text_chars": 20
+        },
+        {
+          "response_id": "msg_011Ceqh1usCiAhnBgWtzvz1Q",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:54:45.980Z",
+          "last_block_at": "2026-09-08T08:54:54.538Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 2667,
+            "cache_read_input_tokens": 244133,
+            "cache_creation_input_tokens": 37426,
+            "thinking_tokens": 1737
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "text"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 1029,
+          "text_chars": 35
+        },
+        {
+          "response_id": "msg_011Ceqh4wdCmNbuQw9iGkgMT",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:55:01.695Z",
+          "last_block_at": "2026-09-08T08:55:03.710Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 603,
+            "cache_read_input_tokens": 281559,
+            "cache_creation_input_tokens": 4395,
+            "thinking_tokens": 346
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 329,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Ceqh5cXmgUeXGAf9N98e6",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:55:08.716Z",
+          "last_block_at": "2026-09-08T08:55:32.460Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1674,
+            "cache_read_input_tokens": 285954,
+            "cache_creation_input_tokens": 854,
+            "thinking_tokens": 155
+          },
+          "fragments": [
+            [
+              "thinking"
+            ],
+            [
+              "tool_use"
+            ]
+          ],
+          "tool_argument_chars": 1699,
+          "text_chars": 0
+        },
+        {
+          "response_id": "msg_011Ceqh7jsMUj88KRnnEX6bm",
+          "model": "claude-opus-5",
+          "effort": "high",
+          "first_block_at": "2026-09-08T08:56:01.535Z",
+          "last_block_at": "2026-09-08T08:56:01.535Z",
+          "usage": {
+            "input_tokens": 2,
+            "output_tokens": 1503,
+            "cache_read_input_tokens": 286808,
+            "cache_creation_input_tokens": 2465,
+            "thinking_tokens": 0
+          },
+          "fragments": [
+            [
+              "text"
+            ]
+          ],
+          "tool_argument_chars": 0,
+          "text_chars": 1696
+        }
+      ]
+    }
+  ]
+}

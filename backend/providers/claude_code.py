@@ -505,6 +505,32 @@ class ClaudeCodeProvider(CliSubprocessProvider):
 
         return cmd
 
+    def _reset_turn_state(self) -> None:
+        super()._reset_turn_state()
+        self._response_ids = set()
+
+    def _observe_response(self, msg: Dict) -> None:
+        """assistant는 내용 블록별로 여러 번 온다. 응답 ID로 계수하고 비용 내역을 보존한다."""
+        response_id = msg.get("id")
+        seen = getattr(self, "_response_ids", None)
+        if seen is None:
+            self._response_ids = seen = set()
+        if not response_id or response_id not in seen:
+            self._note_model_round(msg.get("model"))
+            if response_id:
+                seen.add(response_id)
+        if response_id:
+            try:
+                from .base import normalize_usage
+                from episode_logger import notify_response_snapshot
+                usage = normalize_usage(msg.get("usage"))
+                if usage is not None:
+                    notify_response_snapshot(self.CLI_DISPLAY, msg.get("model") or self.model or "",
+                                             response_id, usage,
+                                             [b.get("type", "") for b in msg.get("content", [])])
+            except Exception:
+                pass  # 관측 실패가 실행·스트림을 바꾸지 않는다.
+
     # ================= 이벤트 번역 =================
 
     def _stream_error_text(self, event: Dict) -> Optional[str]:
@@ -525,9 +551,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
 
         if etype == "assistant":
             msg = event.get("message") or {}
-            # 모델 응답 1건 = 실행 라운드 1건 — 스텝 원장에 찍는다(cli_provider._note_model_round 주석).
-            # 이 줄이 없던 동안 Claude Code 주행의 execution 라운드는 0건으로 남았다(2026-09-06 실측).
-            self._note_model_round(msg.get("model"))
+            self._observe_response(msg)
             # 라운드별 컨텍스트 크기 추적 — 매 assistant 라운드의 입력 컨텍스트
             # (in+cache_read+cache_create)를 갱신해 *마지막* 라운드 값을 남긴다.
             # result 이벤트의 usage 는 라운드 누적이라 세션 크기를 7배 부풀린다(버그).

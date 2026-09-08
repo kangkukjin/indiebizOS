@@ -1,0 +1,240 @@
+{
+  "task_id": "ai-tips-onepass-20260908-v1",
+  "ibl_invocations": 1,
+  "completed_model_calls": 12,
+  "tokens": {
+    "input": 102780,
+    "output": 17746,
+    "cache_read": 30518,
+    "cache_create": 72238,
+    "reasoning": 10910
+  },
+  "by_role": {
+    "oneshot:execution": {
+      "calls": 6,
+      "input": 58670,
+      "output": 15973,
+      "cache_read": 13988,
+      "cache_create": 44670,
+      "reasoning": 9987,
+      "latency_ms": 206287
+    },
+    "oneshot:evaluate": {
+      "calls": 6,
+      "input": 44110,
+      "output": 1773,
+      "cache_read": 16530,
+      "cache_create": 27568,
+      "reasoning": 923,
+      "latency_ms": 39345
+    }
+  },
+  "usage": [
+    {
+      "cache_create": 9251,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 9253,
+      "latency_ms": 42613,
+      "output": 3205,
+      "reasoning": 1496,
+      "role": "oneshot:execution",
+      "event_seq": 7,
+      "ts": "2026-09-08T23:02:40.310999"
+    },
+    {
+      "cache_create": 9146,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 9148,
+      "latency_ms": 7621,
+      "output": 348,
+      "reasoning": 232,
+      "role": "oneshot:evaluate",
+      "event_seq": 11,
+      "ts": "2026-09-08T23:02:48.275020"
+    },
+    {
+      "cache_create": 6903,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 6905,
+      "latency_ms": 24886,
+      "output": 2035,
+      "reasoning": 1428,
+      "role": "oneshot:execution",
+      "event_seq": 20,
+      "ts": "2026-09-08T23:03:16.568781"
+    },
+    {
+      "cache_create": 9482,
+      "cache_read": 3541,
+      "event": "usage",
+      "input": 13025,
+      "latency_ms": 23169,
+      "output": 1885,
+      "reasoning": 1255,
+      "role": "oneshot:execution",
+      "event_seq": 24,
+      "ts": "2026-09-08T23:03:40.063521"
+    },
+    {
+      "cache_create": 3350,
+      "cache_read": 3541,
+      "event": "usage",
+      "input": 6893,
+      "latency_ms": 19711,
+      "output": 1553,
+      "reasoning": 1027,
+      "role": "oneshot:execution",
+      "event_seq": 28,
+      "ts": "2026-09-08T23:04:00.131457"
+    },
+    {
+      "cache_create": 3171,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6479,
+      "latency_ms": 7427,
+      "output": 383,
+      "reasoning": 220,
+      "role": "oneshot:evaluate",
+      "event_seq": 32,
+      "ts": "2026-09-08T23:04:07.871198"
+    },
+    {
+      "cache_create": 7128,
+      "cache_read": 3541,
+      "event": "usage",
+      "input": 10671,
+      "latency_ms": 26582,
+      "output": 1968,
+      "reasoning": 1383,
+      "role": "oneshot:execution",
+      "event_seq": 36,
+      "ts": "2026-09-08T23:04:34.971495"
+    },
+    {
+      "cache_create": 3187,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6495,
+      "latency_ms": 3990,
+      "output": 148,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 39,
+      "ts": "2026-09-08T23:04:39.283711"
+    },
+    {
+      "cache_create": 3150,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6458,
+      "latency_ms": 7407,
+      "output": 366,
+      "reasoning": 213,
+      "role": "oneshot:evaluate",
+      "event_seq": 43,
+      "ts": "2026-09-08T23:04:47.206897"
+    },
+    {
+      "cache_create": 3112,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6420,
+      "latency_ms": 3783,
+      "output": 120,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 46,
+      "ts": "2026-09-08T23:04:51.505678"
+    },
+    {
+      "cache_create": 8556,
+      "cache_read": 3365,
+      "event": "usage",
+      "input": 11923,
+      "latency_ms": 69326,
+      "output": 5327,
+      "reasoning": 3398,
+      "role": "oneshot:execution",
+      "event_seq": 51,
+      "ts": "2026-09-08T23:06:01.361974"
+    },
+    {
+      "cache_create": 5802,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 9110,
+      "latency_ms": 9117,
+      "output": 408,
+      "reasoning": 258,
+      "role": "oneshot:evaluate",
+      "event_seq": 55,
+      "ts": "2026-09-08T23:06:10.845805"
+    }
+  ],
+  "response_ids": 12,
+  "models": [
+    "claude-opus-5"
+  ],
+  "stage_counts": {
+    "01_search": 54,
+    "02_info": 49,
+    "03_selection": 24,
+    "04_tip_candidates": 31,
+    "05_tip_selection": 31
+  },
+  "timing": {
+    "started_at": "2026-09-08T14:01:30.842268+00:00",
+    "finished_at": "2026-09-08T14:06:11.528546+00:00",
+    "wall_seconds": 280.63444216601783,
+    "code_chars": 13797,
+    "code_sha256": "da060828358d101d30cafd8702bd1c8f09bb85d53de4ccb4f16a3d177420a320"
+  },
+  "production_ledgers_unchanged": true,
+  "selected_videos": [
+    {
+      "video_id": "p8e2E1DTw2Y",
+      "title": "How to Debug MCP Server Connection Issues in Claude [2026 GUIDE]",
+      "uploader": "Nexustech ",
+      "upload_date": "2026-07-07",
+      "duration": "255",
+      "language": "en",
+      "branch": "한국어",
+      "reason": "MCP 서버 연결 실패의 증상 재현과 로그 확인 순서를 다루는 구체적 문제 해결 가이드라 한국어 층 대표로 넣었다."
+    },
+    {
+      "video_id": "VPaIBbkykvk",
+      "title": "How to Debug in Claude Code (Complete Tutorial)",
+      "uploader": "Zenva AI",
+      "upload_date": "2026-07-08",
+      "duration": "1644",
+      "language": "en",
+      "branch": "영어",
+      "reason": "27분 분량의 완전 튜토리얼로 디버깅 전 과정을 단계별로 보여 줄 밀도가 있다."
+    },
+    {
+      "video_id": "jSgrgr1Mj7s",
+      "title": "Fix Failing Regression Tests with Claude Code and Playwright MCP.",
+      "uploader": "Agentic FM",
+      "upload_date": "2026-06-30",
+      "duration": "525",
+      "language": "en",
+      "branch": "워크플로",
+      "reason": "실패한 회귀 테스트를 Playwright MCP로 재현하고 수정 후 다시 검증하는 흐름이 요구 조건에 정확히 들어맞는다."
+    },
+    {
+      "video_id": "mBBdzeeeUU4",
+      "title": "Course 32: Debugging Like a Vibe Coder — Conversational Problem Solving with CLAUDE Code",
+      "uploader": "CODE2VIBE Academy",
+      "upload_date": "2026-07-29",
+      "duration": "1200",
+      "language": "en",
+      "branch": "회의론",
+      "reason": "회의론 층에서 대화형 문제 해결 절차를 20분간 강의 형식으로 다뤄 관점 다양성을 채운다."
+    }
+  ],
+  "evidence_checks": []
+}

@@ -1,0 +1,106 @@
+[
+  {
+    "video_id": "p8e2E1DTw2Y",
+    "tip": "/mcp list 로 서버가 등록됐는지 먼저 확인하라",
+    "timestamp": "00:48",
+    "expected_seconds": 48,
+    "seconds": 48,
+    "match": true
+  },
+  {
+    "video_id": "p8e2E1DTw2Y",
+    "tip": "터미널에서 실시간 MCP 로그 파일을 띄워 기동 과정을 관찰하라",
+    "timestamp": "01:20",
+    "expected_seconds": 80,
+    "seconds": 80,
+    "match": true
+  },
+  {
+    "video_id": "p8e2E1DTw2Y",
+    "tip": "Cloud 를 거치지 않고 터미널에서 MCP 서버를 직접 실행해 격리하라",
+    "timestamp": "02:06",
+    "expected_seconds": 126,
+    "seconds": 126,
+    "match": true
+  },
+  {
+    "video_id": "VPaIBbkykvk",
+    "tip": "코드 변경 전에 기존 테스트를 돌려 통과 기준선을 확보하라",
+    "timestamp": "04:09",
+    "expected_seconds": 249,
+    "seconds": 249,
+    "match": true
+  },
+  {
+    "video_id": "VPaIBbkykvk",
+    "tip": "테스트 스위트가 없으면 build·lint·dev 실행으로 최소 검증을 대체하라",
+    "timestamp": "10:50",
+    "expected_seconds": 650,
+    "seconds": 650,
+    "match": true
+  },
+  {
+    "video_id": "VPaIBbkykvk",
+    "tip": "느낌표 명령으로 터미널 출력을 컨텍스트에 직접 밀어넣어라",
+    "timestamp": "16:09",
+    "expected_seconds": 969,
+    "seconds": 969,
+    "match": true
+  },
+  {
+    "video_id": "VPaIBbkykvk",
+    "tip": "고친 버그는 회귀 테스트 케이스로 고정해 재발을 잡아라",
+    "timestamp": "20:26",
+    "expected_seconds": 1226,
+    "seconds": 1226,
+    "match": true
+  },
+  {
+    "video_id": "jSgrgr1Mj7s",
+    "tip": "실패 원인 구간에 실제로 무엇이 렌더링되는지 브라우저로 확인하라",
+    "timestamp": "04:46",
+    "expected_seconds": 286,
+    "seconds": 286,
+    "match": true
+  },
+  {
+    "video_id": "jSgrgr1Mj7s",
+    "tip": "페이지 픽스처에서 어긋난 로케이터를 실제 문구로 교체하라",
+    "timestamp": "05:27",
+    "expected_seconds": 327,
+    "seconds": 327,
+    "match": true
+  },
+  {
+    "video_id": "jSgrgr1Mj7s",
+    "tip": "에이전트에게 앱을 탐색시켜 테스트 커버리지 갭 분석 리포트를 생성하라",
+    "timestamp": "06:33",
+    "expected_seconds": 393,
+    "seconds": 393,
+    "match": true
+  },
+  {
+    "video_id": "mBBdzeeeUU4",
+    "tip": "버그는 원인 추정 대신 사용자가 보는 증상으로 서술하라",
+    "timestamp": "01:59",
+    "expected_seconds": 119,
+    "seconds": 119,
+    "match": true
+  },
+  {
+    "video_id": "mBBdzeeeUU4",
+    "tip": "이미 시도한 조치와 그 결과를 명시해 탐색 범위를 좁혀라",
+    "timestamp": "04:40",
+    "expected_seconds": 280,
+    "seconds": 280,
+    "match": true
+  },
+  {
+    "video_id": "mBBdzeeeUU4",
+    "tip": "실패 테스트를 신호로 걸어 git bisect를 자동 실행시켜라",
+    "timestamp": "11:14",
+    "expected_seconds": 674,
+    "seconds": 674,
+    "match": true
+  }
+]

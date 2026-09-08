@@ -1,0 +1,595 @@
+{
+  "task_id": "ai-tips-onepass-20260908-v1",
+  "ibl_invocations": 4,
+  "completed_model_calls": 28,
+  "tokens": {
+    "input": 261209,
+    "output": 40366,
+    "cache_read": 60331,
+    "cache_create": 200822,
+    "reasoning": 13252
+  },
+  "by_role": {
+    "oneshot:execution": {
+      "calls": 14,
+      "input": 151826,
+      "output": 36427,
+      "cache_read": 17353,
+      "cache_create": 134445,
+      "reasoning": 11212,
+      "latency_ms": 486440
+    },
+    "oneshot:evaluate": {
+      "calls": 14,
+      "input": 109383,
+      "output": 3939,
+      "cache_read": 42978,
+      "cache_create": 66377,
+      "reasoning": 2040,
+      "latency_ms": 85881
+    }
+  },
+  "usage": [
+    {
+      "cache_create": 9251,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 9253,
+      "latency_ms": 42613,
+      "output": 3205,
+      "reasoning": 1496,
+      "role": "oneshot:execution",
+      "event_seq": 7,
+      "ts": "2026-09-08T23:02:40.310999"
+    },
+    {
+      "cache_create": 9146,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 9148,
+      "latency_ms": 7621,
+      "output": 348,
+      "reasoning": 232,
+      "role": "oneshot:evaluate",
+      "event_seq": 11,
+      "ts": "2026-09-08T23:02:48.275020"
+    },
+    {
+      "cache_create": 6903,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 6905,
+      "latency_ms": 24886,
+      "output": 2035,
+      "reasoning": 1428,
+      "role": "oneshot:execution",
+      "event_seq": 20,
+      "ts": "2026-09-08T23:03:16.568781"
+    },
+    {
+      "cache_create": 9482,
+      "cache_read": 3541,
+      "event": "usage",
+      "input": 13025,
+      "latency_ms": 23169,
+      "output": 1885,
+      "reasoning": 1255,
+      "role": "oneshot:execution",
+      "event_seq": 24,
+      "ts": "2026-09-08T23:03:40.063521"
+    },
+    {
+      "cache_create": 3350,
+      "cache_read": 3541,
+      "event": "usage",
+      "input": 6893,
+      "latency_ms": 19711,
+      "output": 1553,
+      "reasoning": 1027,
+      "role": "oneshot:execution",
+      "event_seq": 28,
+      "ts": "2026-09-08T23:04:00.131457"
+    },
+    {
+      "cache_create": 3171,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6479,
+      "latency_ms": 7427,
+      "output": 383,
+      "reasoning": 220,
+      "role": "oneshot:evaluate",
+      "event_seq": 32,
+      "ts": "2026-09-08T23:04:07.871198"
+    },
+    {
+      "cache_create": 7128,
+      "cache_read": 3541,
+      "event": "usage",
+      "input": 10671,
+      "latency_ms": 26582,
+      "output": 1968,
+      "reasoning": 1383,
+      "role": "oneshot:execution",
+      "event_seq": 36,
+      "ts": "2026-09-08T23:04:34.971495"
+    },
+    {
+      "cache_create": 3187,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6495,
+      "latency_ms": 3990,
+      "output": 148,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 39,
+      "ts": "2026-09-08T23:04:39.283711"
+    },
+    {
+      "cache_create": 3150,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6458,
+      "latency_ms": 7407,
+      "output": 366,
+      "reasoning": 213,
+      "role": "oneshot:evaluate",
+      "event_seq": 43,
+      "ts": "2026-09-08T23:04:47.206897"
+    },
+    {
+      "cache_create": 3112,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6420,
+      "latency_ms": 3783,
+      "output": 120,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 46,
+      "ts": "2026-09-08T23:04:51.505678"
+    },
+    {
+      "cache_create": 8556,
+      "cache_read": 3365,
+      "event": "usage",
+      "input": 11923,
+      "latency_ms": 69326,
+      "output": 5327,
+      "reasoning": 3398,
+      "role": "oneshot:execution",
+      "event_seq": 51,
+      "ts": "2026-09-08T23:06:01.361974"
+    },
+    {
+      "cache_create": 5802,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 9110,
+      "latency_ms": 9117,
+      "output": 408,
+      "reasoning": 258,
+      "role": "oneshot:evaluate",
+      "event_seq": 55,
+      "ts": "2026-09-08T23:06:10.845805"
+    },
+    {
+      "cache_create": 7178,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 7180,
+      "latency_ms": 14478,
+      "output": 987,
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "event_seq": 66,
+      "ts": "2026-09-08T23:08:31.009345"
+    },
+    {
+      "cache_create": 13326,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 13328,
+      "latency_ms": 23010,
+      "output": 1597,
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "event_seq": 69,
+      "ts": "2026-09-08T23:08:54.535512"
+    },
+    {
+      "cache_create": 7157,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 7159,
+      "latency_ms": 17431,
+      "output": 1294,
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "event_seq": 72,
+      "ts": "2026-09-08T23:09:12.485118"
+    },
+    {
+      "cache_create": 10927,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 10929,
+      "latency_ms": 27043,
+      "output": 1802,
+      "reasoning": 663,
+      "role": "oneshot:execution",
+      "event_seq": 76,
+      "ts": "2026-09-08T23:09:39.869902"
+    },
+    {
+      "cache_create": 4179,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 7487,
+      "latency_ms": 7567,
+      "output": 415,
+      "reasoning": 322,
+      "role": "oneshot:evaluate",
+      "event_seq": 80,
+      "ts": "2026-09-08T23:09:47.919328"
+    },
+    {
+      "cache_create": 3556,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 6864,
+      "latency_ms": 9249,
+      "output": 517,
+      "reasoning": 344,
+      "role": "oneshot:evaluate",
+      "event_seq": 84,
+      "ts": "2026-09-08T23:09:57.688151"
+    },
+    {
+      "cache_create": 3813,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 7121,
+      "latency_ms": 3775,
+      "output": 149,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 87,
+      "ts": "2026-09-08T23:10:01.978194"
+    },
+    {
+      "cache_create": 3753,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 7061,
+      "latency_ms": 9807,
+      "output": 555,
+      "reasoning": 451,
+      "role": "oneshot:evaluate",
+      "event_seq": 91,
+      "ts": "2026-09-08T23:10:12.300755"
+    },
+    {
+      "cache_create": 13539,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 13541,
+      "latency_ms": 24401,
+      "output": 1691,
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "event_seq": 94,
+      "ts": "2026-09-08T23:10:37.217832"
+    },
+    {
+      "cache_create": 11151,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 11153,
+      "latency_ms": 20785,
+      "output": 1312,
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "event_seq": 97,
+      "ts": "2026-09-08T23:10:58.310147"
+    },
+    {
+      "cache_create": 4467,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 7775,
+      "latency_ms": 3485,
+      "output": 127,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 100,
+      "ts": "2026-09-08T23:11:02.087305"
+    },
+    {
+      "cache_create": 4083,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 7391,
+      "latency_ms": 3879,
+      "output": 129,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 103,
+      "ts": "2026-09-08T23:11:06.482112"
+    },
+    {
+      "cache_create": 11514,
+      "cache_read": 3365,
+      "event": "usage",
+      "input": 14881,
+      "latency_ms": 31322,
+      "output": 1963,
+      "reasoning": 562,
+      "role": "oneshot:execution",
+      "event_seq": 108,
+      "ts": "2026-09-08T23:11:38.352706"
+    },
+    {
+      "cache_create": 6766,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 10074,
+      "latency_ms": 3326,
+      "output": 93,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 111,
+      "ts": "2026-09-08T23:11:42.004673"
+    },
+    {
+      "cache_create": 14983,
+      "cache_read": 0,
+      "event": "usage",
+      "input": 14985,
+      "latency_ms": 121683,
+      "output": 9808,
+      "reasoning": 0,
+      "role": "oneshot:execution",
+      "event_seq": 119,
+      "ts": "2026-09-08T23:16:25.463690"
+    },
+    {
+      "cache_create": 8192,
+      "cache_read": 3306,
+      "event": "usage",
+      "input": 11500,
+      "latency_ms": 5448,
+      "output": 181,
+      "reasoning": 0,
+      "role": "oneshot:evaluate",
+      "event_seq": 122,
+      "ts": "2026-09-08T23:16:31.430584"
+    }
+  ],
+  "response_ids": 28,
+  "models": [
+    "claude-opus-5"
+  ],
+  "stage_counts": {
+    "01_search": 54,
+    "02_info": 49,
+    "03_selection": 24,
+    "04_tip_candidates": 31,
+    "05_tip_selection": 31,
+    "06_details": 13,
+    "07_edited": 13,
+    "08_ledger_delta": 49,
+    "09_tips_flat": 13,
+    "10_tips_nested": 13
+  },
+  "timing": {
+    "started_at": "2026-09-08T14:01:30.842268+00:00",
+    "finished_at": "2026-09-08T14:06:11.528546+00:00",
+    "wall_seconds": 280.63444216601783,
+    "code_chars": 13797,
+    "code_sha256": "da060828358d101d30cafd8702bd1c8f09bb85d53de4ccb4f16a3d177420a320"
+  },
+  "timings": {
+    "run": {
+      "started_at": "2026-09-08T14:01:30.842268+00:00",
+      "finished_at": "2026-09-08T14:06:11.528546+00:00",
+      "wall_seconds": 280.63444216601783,
+      "code_chars": 13797,
+      "code_sha256": "da060828358d101d30cafd8702bd1c8f09bb85d53de4ccb4f16a3d177420a320"
+    },
+    "recovery": {
+      "started_at": "2026-09-08T14:08:16.358568+00:00",
+      "finished_at": "2026-09-08T14:11:42.602860+00:00",
+      "wall_seconds": 206.2379828330013,
+      "code_chars": 9413,
+      "code_sha256": "a0787a0c94b955885660bc1b87fbb78ef047ebba508005da0dd699b265ded016"
+    },
+    "finish": {
+      "started_at": "2026-09-08T14:14:22.849315+00:00",
+      "finished_at": "2026-09-08T14:16:32.061780+00:00",
+      "wall_seconds": 129.20792695798445,
+      "code_chars": 7006,
+      "code_sha256": "facd9ff0164bcd8a6bcac5e8af63c98a56edbd07ebc1ccd2384329e8e2d73905"
+    },
+    "qualityfix": {
+      "started_at": "2026-09-08T14:18:38.426210+00:00",
+      "finished_at": "2026-09-08T14:18:38.687893+00:00",
+      "wall_seconds": 0.26158624998060986,
+      "code_chars": 2336,
+      "code_sha256": "c8f47aa142e78855f53b9bb5375a6d5eeb2a988d9c0deaca042c6590c6c0abff"
+    }
+  },
+  "execution_wall_seconds_sum": 616.3419382069842,
+  "elapsed_including_repairs_seconds": 1027.845625,
+  "production_ledgers_unchanged": true,
+  "selected_videos": [
+    {
+      "video_id": "p8e2E1DTw2Y",
+      "title": "How to Debug MCP Server Connection Issues in Claude [2026 GUIDE]",
+      "uploader": "Nexustech ",
+      "upload_date": "2026-07-07",
+      "duration": "255",
+      "language": "en",
+      "branch": "한국어",
+      "reason": "MCP 서버 연결 실패의 증상 재현과 로그 확인 순서를 다루는 구체적 문제 해결 가이드라 한국어 층 대표로 넣었다."
+    },
+    {
+      "video_id": "VPaIBbkykvk",
+      "title": "How to Debug in Claude Code (Complete Tutorial)",
+      "uploader": "Zenva AI",
+      "upload_date": "2026-07-08",
+      "duration": "1644",
+      "language": "en",
+      "branch": "영어",
+      "reason": "27분 분량의 완전 튜토리얼로 디버깅 전 과정을 단계별로 보여 줄 밀도가 있다."
+    },
+    {
+      "video_id": "jSgrgr1Mj7s",
+      "title": "Fix Failing Regression Tests with Claude Code and Playwright MCP.",
+      "uploader": "Agentic FM",
+      "upload_date": "2026-06-30",
+      "duration": "525",
+      "language": "en",
+      "branch": "워크플로",
+      "reason": "실패한 회귀 테스트를 Playwright MCP로 재현하고 수정 후 다시 검증하는 흐름이 요구 조건에 정확히 들어맞는다."
+    },
+    {
+      "video_id": "mBBdzeeeUU4",
+      "title": "Course 32: Debugging Like a Vibe Coder — Conversational Problem Solving with CLAUDE Code",
+      "uploader": "CODE2VIBE Academy",
+      "upload_date": "2026-07-29",
+      "duration": "1200",
+      "language": "en",
+      "branch": "회의론",
+      "reason": "회의론 층에서 대화형 문제 해결 절차를 20분간 강의 형식으로 다뤄 관점 다양성을 채운다."
+    }
+  ],
+  "evidence_checks": [
+    {
+      "video_id": "p8e2E1DTw2Y",
+      "tip": "/mcp list 로 서버가 등록됐는지 먼저 확인하라",
+      "timestamp": "00:48",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "p8e2E1DTw2Y",
+      "tip": "터미널에서 실시간 MCP 로그 파일을 띄워 기동 과정을 관찰하라",
+      "timestamp": "01:20",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "p8e2E1DTw2Y",
+      "tip": "Cloud 를 거치지 않고 터미널에서 MCP 서버를 직접 실행해 격리하라",
+      "timestamp": "02:06",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "VPaIBbkykvk",
+      "tip": "코드 변경 전에 기존 테스트를 돌려 통과 기준선을 확보하라",
+      "timestamp": "04:09",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "VPaIBbkykvk",
+      "tip": "테스트 스위트가 없으면 build·lint·dev 실행으로 최소 검증을 대체하라",
+      "timestamp": "10:50",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "VPaIBbkykvk",
+      "tip": "느낌표 명령으로 터미널 출력을 컨텍스트에 직접 밀어넣어라",
+      "timestamp": "16:09",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "VPaIBbkykvk",
+      "tip": "고친 버그는 회귀 테스트 케이스로 고정해 재발을 잡아라",
+      "timestamp": "20:26",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "jSgrgr1Mj7s",
+      "tip": "실패 원인 구간에 실제로 무엇이 렌더링되는지 브라우저로 확인하라",
+      "timestamp": "04:46",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "jSgrgr1Mj7s",
+      "tip": "페이지 픽스처에서 어긋난 로케이터를 실제 문구로 교체하라",
+      "timestamp": "05:27",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "jSgrgr1Mj7s",
+      "tip": "에이전트에게 앱을 탐색시켜 테스트 커버리지 갭 분석 리포트를 생성하라",
+      "timestamp": "06:33",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "mBBdzeeeUU4",
+      "tip": "버그는 원인 추정 대신 사용자가 보는 증상으로 서술하라",
+      "timestamp": "01:59",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "mBBdzeeeUU4",
+      "tip": "이미 시도한 조치와 그 결과를 명시해 탐색 범위를 좁혀라",
+      "timestamp": "04:40",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    },
+    {
+      "video_id": "mBBdzeeeUU4",
+      "tip": "실패 테스트를 신호로 걸어 git bisect를 자동 실행시켜라",
+      "timestamp": "11:14",
+      "timestamp_error": null,
+      "quote_present_in_saved_transcript": true,
+      "how_nonempty": true
+    }
+  ],
+  "artifact_checks": {
+    "report_chars": 11228,
+    "tip_headings": 13,
+    "implication_lines": 13,
+    "header_matches_updated_ledgers": true,
+    "info_ids_equal_ledger_delta_ids": true,
+    "html_exists": true,
+    "html_links": 17,
+    "html_contains_private_implications": false,
+    "sections": [
+      "한눈에 (TL;DR)",
+      "오늘의 팁",
+      "시도 후보",
+      "오늘의 영상",
+      "지켜볼 점 / 내일 주제 후보",
+      "이 호의 한계"
+    ],
+    "M": 594,
+    "K": 151,
+    "T": 1273
+  }
+}

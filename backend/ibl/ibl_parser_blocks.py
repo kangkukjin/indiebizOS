@@ -517,8 +517,11 @@ def _parse_block_body(body: str) -> Optional[Dict]:
         if len(steps) == 1:
             return steps[0]
         return steps
-    except IBLSyntaxError:
-        return None
+    except IBLSyntaxError as exc:
+        # 비어 있는 몸과 해석에 실패한 몸은 다르다. 실패를 None으로 바꾸면
+        # if/case가 조건만 맞았다는 성공을 반환하고 본문의 쓰기를 전부 버린다.
+        # 2026-09-08 AI 팁 실험: check 통과 → 저장 분기 누락 → 보고서 없는 success.
+        raise IBLSyntaxError(f"블록 본문 해석 실패: {exc}") from exc
 
 
 def _extract_bracket_raw(text: str, start: int,
@@ -633,14 +636,19 @@ def _take_brace_body(text: str, prefix: "re.Pattern") -> Optional[Tuple[Any, str
     body, end = _extract_bracket_raw(text, brace, '{', '}')
     if body is None:
         raise IBLSyntaxError(f"{text[:12].strip()} 블록 중괄호가 닫히지 않았습니다.")
-    parsed = _parse_block_body(body.strip())
+    parse_error = None
+    try:
+        parsed = _parse_block_body(body.strip())
+    except IBLSyntaxError as exc:
+        parsed, parse_error = None, exc
     if parsed is None:
         label = text.lstrip().split(']', 1)[0].lstrip('[') or "블록"
         raise IBLSyntaxError(
             f"{label} 블록은 있지만 몸을 해석하지 못했습니다: {body.strip()[:60]!r}. "
             "몸에는 IBL 문장 또는 지원되는 한 줄 식을 쓰세요 "
             "(목록·사전 리터럴을 식에 직접 할당하는 문법은 지원하지 않습니다)."
-        )
+            + (f" 원인: {parse_error}" if parse_error else "")
+        ) from parse_error
     return parsed, text[end + 1:].strip()
 
 

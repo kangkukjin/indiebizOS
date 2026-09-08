@@ -1,0 +1,13 @@
+{
+  "prepared_at": "2026-09-08T14:00:13.062439+00:00",
+  "date": "2026-09-08",
+  "cutoff": "2026-03-12",
+  "topic": "디버깅",
+  "task_id": "ai-tips-onepass-20260908-v1",
+  "scope": "실제 검색·자막·AI; 원장 복사본; HTML 로컬 실험판. 배포·알림 제외.",
+  "inputs": {
+    "_covered_videos.json": "4af876433a5471e7393f7184353821242f1abecfa2ad6add871f72db72e34d04",
+    "db/tips.json": "0f37b3b6880429e9ec781716fc25ff74c184814b20f3f2344e46daccb293572b"
+  },
+  "guide_sha256": "5858e6d5e4751a4bf861adeececa98e6e8abb1fbef4d8c65dfaed7f8081b912e"
+}

@@ -149,6 +149,7 @@ def test_find_read_and_edit_confirm(run, tmp_path):
     p = tmp_path / 'note.txt'; p.write_text('TODO\n초안\n')
     result = run('[fn:좁혀서읽기]{패턴: "TODO", 루트: ' + json.dumps(str(tmp_path)) + ', 파일패턴: "*.txt"}')
     assert result['items'] and 'TODO' in json.dumps(result, ensure_ascii=False)
+    assert '초안' in json.dumps(result, ensure_ascii=False), '읽은 문맥이 사라지고 검색 행만 남으면 실패다'
     run('[fn:고치고확인하기]{파일: ' + json.dumps(str(p)) + ', 앞: "초안", 뒤: "완료", 확인: "완료"}')
     assert p.read_text() == 'TODO\n완료\n'
 

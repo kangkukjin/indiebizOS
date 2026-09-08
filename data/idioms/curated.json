@@ -21,7 +21,7 @@
       "when": "URL 목록의 앞 개수개를 각각 크롤하고 짧게 요약하여 title·url과 함께 돌려줄 때. 실패 행은 _error로 보존한다.",
       "topic": "목록 다루기",
       "body": "$대상 = [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{do: \"[sense:crawl]{url: '$it.url'} >> [table:brief]{instruction: '${지시}'}\", keep: [\"title\", \"url\"], limit: \"${개수}\", collect: true, on_error: \"keep\"}",
-      "inputs": "앞 통화: title·url 열이 있는 items. 개수: 0 이상의 정수, 지시: 각 원문의 짧은 요약 지시. 크롤 원문이 brief 상한을 넘으면 실패 행으로 남는다.",
+      "inputs": "앞 통화: title·url 열이 있는 items. 개수: 0 이상의 정수, 지시: 각 원문의 짧은 요약 지시. 크롤 원문이 brief 상한을 넘으면 실패 행으로 남는다. 반환 items: 성공 행은 title·url·message(요약문)·rows_in, 실패 행은 title·url·_error. 요약이라는 열은 만들지 않는다.",
       "example": "[sense:search]{query: \"도서관 소식\"} >> [fn:중복빼고추리기]{키: \"url\", 개수: 3} >> [fn:각각읽고요약]{개수: 3, 지시: \"핵심 두 문장\"} >> [table:brief]{instruction: \"출처와 함께 공통점을 정리\"}"
     },
     {
@@ -44,8 +44,8 @@
       "name": "좁혀서읽기",
       "when": "파일 내용에서 패턴의 위치를 찾고 앞 3곳을 일치 줄부터 30줄씩 읽을 때. 전체 일치 목록이 필요한 작업에는 grep을 직접 쓴다.",
       "topic": "찾기",
-      "body": "$hits = [self:grep]{pattern: \"${패턴}\", path: \"${루트}\", file_pattern: \"${파일패턴}\", limit: 6}; $return = $hits >> [table:take]{n: 3} >> [table:each]{do: \"[self:read]{path: '$it.파일', start_line: $it.줄번호, limit: 30}\", keep: [\"파일\", \"줄번호\"]}",
-      "inputs": "패턴: 찾을 문자열, 루트: 검색 경로, 파일패턴: 글롭. 반환 items에 파일·줄번호를 보존한다.",
+      "body": "$hits = [self:grep]{pattern: \"${패턴}\", path: \"${루트}\", file_pattern: \"${파일패턴}\", limit: 6}; $return = $hits >> [table:take]{n: 3} >> [table:each]{do: \"[self:read]{path: '$it.파일', start_line: $it.줄번호, limit: 30}\", keep: [\"파일\", \"줄번호\"], collect: true}",
+      "inputs": "패턴: 찾을 문자열, 루트: 검색 경로, 파일패턴: 글롭. 반환 items에 파일·줄번호를 보존한다. 읽은 본문은 value 열에 모은다.",
       "example": "[fn:좁혀서읽기]{패턴: \"TODO\", 루트: \"src\", 파일패턴: \"*.py\"} >> [table:brief]{instruction: \"미완성 작업을 정리\"}"
     },
     {

@@ -172,7 +172,7 @@ def ibl_escape(value: Any) -> str:
 
 
 def inside_ibl_string(text: str, pos: int) -> bool:
-    """text[pos] 자리가 IBL 문자열 리터럴 **안**인가 (따옴표·백슬래시 이스케이프 인식)."""
+    """text[pos] 자리가 IBL 문자열 리터럴 **안**인가 (주석·따옴표·이스케이프 인식)."""
     q = None
     i = 0
     while i < pos:
@@ -183,6 +183,10 @@ def inside_ibl_string(text: str, pos: int) -> bool:
                 continue
             if c == q:
                 q = None
+        elif c == '#':
+            end = text.find('\n', i)
+            i = pos if end < 0 else end
+            continue
         elif c in "\"'":
             q = c
         i += 1

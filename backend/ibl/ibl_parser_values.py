@@ -503,3 +503,54 @@ def _var_emit_step(text: str, variables: Optional[Dict], where: str,
             f"앞 문장의 `${name} = …` 할당이 필요합니다.")
     return {"_var_emit": True, "name": name, "path": path,
             "_vars": {name: variables[name]}}
+
+
+def _scan_line_state(text: str, in_string: bool, string_char: Optional[str]):
+    """한 줄을 스캔해 (중괄호 깊이 변화량, 끝 시점 문자열 상태)를 반환.
+
+    문자열 리터럴 내부의 중괄호는 세지 않고, 문자열 열림/닫힘 상태를 줄 경계
+    너머로 승계할 수 있게 시작 상태를 인자로 받는다. (D3 — _preprocess 전용)
+    """
+    depth = 0
+    i = 0
+    while i < len(text):
+        ch = text[i]
+        if in_string:
+            if ch == '\\':
+                i += 1  # 이스케이프 건너뛰기
+            elif ch == string_char:  # vj-ok: 렉서 문자 비교
+                in_string = False
+                string_char = None
+        else:
+            if ch == '#':
+                end = text.find('\n', i)
+                i = len(text) if end < 0 else end
+                continue
+            if ch == '"' or ch == "'":
+                in_string = True
+                string_char = ch
+            elif ch == '{':
+                depth += 1
+            elif ch == '}':
+                depth -= 1
+        i += 1
+    return depth, in_string, string_char
+
+
+def _strip_line_comment(text: str, in_string: bool, quote: Optional[str]) -> str:
+    """한 물리 줄의 문자열 밖 # 이후를 제거. 열린 문자열 상태는 앞줄에서 승계한다."""
+    i = 0
+    while i < len(text):
+        char = text[i]
+        if in_string:
+            if char == "\\":
+                i += 2
+                continue
+            if char == quote:  # vj-ok: 렉서 문자 비교
+                in_string, quote = False, None
+        elif char == '#':
+            return text[:i].rstrip()
+        elif char in "\"'":
+            in_string, quote = True, char
+        i += 1
+    return text

@@ -7,6 +7,20 @@ from common.ibl_vars import (
 )
 
 
+def parse_binding_body(code):
+    """자유 변수 검사용 AST. 값으로 운반한 Unicode dollar는 참조로 세지 않는다.
+
+    실행할 원문/AST는 바꾸지 않는다. 검사에서만 전각 dollar로 바꿔 중첩 JSON을
+    여러 번 디코딩해도 삽입된 데이터를 변수 참조로 다시 해석하지 않게 한다.
+    """
+    from ibl_parser import parse_function_body
+    if isinstance(code, list) and all(isinstance(s, str) for s in code):
+        code = '\n'.join(code)
+    if not isinstance(code, str):
+        return code
+    return parse_function_body(code.replace('\\u0024', '\\uFF04'))
+
+
 def bind_scoped_code(sentence, resolve, blocked=frozenset()):
     """지연 파싱되는 코드의 참조를 한 번 치환. resolve(name, path) → (found, value).
 
@@ -33,13 +47,13 @@ def bind_scoped_code(sentence, resolve, blocked=frozenset()):
         return ''.join(parts) + sentence[pos:end]
 
     pieces, cursor = [], 0
-    for start, end, inner, bound in _scoped_regions(sentence):
+    for start, end, inner, bound, encoded in _scoped_regions(sentence):
         pieces.append(replace_range(cursor, start))
         if inner is None:
             pieces.append(sentence[start:end])  # 닫힌 함수 몸은 호출자가 채운다.
         else:
             rewritten = bind_scoped_code(inner, resolve, blocked | bound)
-            pieces.append(json.dumps(rewritten, ensure_ascii=False))
+            pieces.append(json.dumps(rewritten, ensure_ascii=False) if encoded else rewritten)
         cursor = end
     pieces.append(replace_range(cursor, len(sentence)))
     return ''.join(pieces)
@@ -49,15 +63,36 @@ def _scoped_regions(sentence):
     """원문에서 별도 바인더가 소유하는 구간을 찾는다. 값/괄호 독해는 파서에 위임.
 
     AST를 다시 출력하면 '$it.n'과 $it.n의 문자열/숫자 구분이 없어지므로,
-    원문을 보존하고 중첩 each의 do 및 닫힌 함수 정의만 구간으로 다룬다.
-    반환 (start, end, decoded_code|None, bound_names).
+    원문을 보존하고 do·반복·오류 처리의 바인딩 범위와 주석/닫힌 정의를 다룬다.
+    반환 (start, end, decoded_code|None, bound_names, JSON으로 인코딩할지).
     """
     from ibl_parser_values import _extract_value, _extract_string
-    from ibl_parser_blocks import _extract_bracket_raw
+    from ibl_parser_blocks import (_extract_bracket_raw, _block_header,
+                                   _REPEAT_PREFIX, _repeat_options)
     regions, pos = [], 0
     while pos < len(sentence):
+        if sentence[pos] == '#':
+            end = sentence.find('\n', pos)
+            end = len(sentence) if end < 0 else end
+            regions.append((pos, end, None, set(), False))
+            pos = end
+            continue
         if sentence[pos] in '\"\'':
             _, pos = _extract_string(sentence, pos, sentence[pos])
+            continue
+        header = _block_header(sentence[pos:], _REPEAT_PREFIX) if sentence[pos] == '[' else None
+        control = re.match(r'\[(catch|finally)\]\s*\{', sentence[pos:])
+        if header is not None or control:
+            brace = pos + (header[1] if header else control.end() - 1)
+            raw, end = _extract_bracket_raw(sentence, brace, '{', '}')
+            if raw is None:
+                break
+            bound = {_repeat_options(header[0])['var']} if header else {'error'}
+            if header:
+                start = pos + _REPEAT_PREFIX.match(sentence[pos:]).end()
+                regions.append((start, brace, sentence[start:brace], bound, False))
+            regions.append((brace + 1, end, raw, bound, False))
+            pos = end + 1
             continue
         match = re.match(r'\[(table\s*:\s*each|def\s*:[^\]]+)\]\s*\{', sentence[pos:])
         if not match:
@@ -68,7 +103,7 @@ def _scoped_regions(sentence):
         if raw is None:
             break  # 실제 파싱 단계가 닫히지 않은 블록을 진단한다.
         if match.group(1).startswith('def'):
-            regions.append((pos, end + 1, None, set()))
+            regions.append((pos, end + 1, None, set(), False))
         else:
             fields, idx = {}, brace + 1
             while idx < end:
@@ -98,8 +133,6 @@ def _scoped_regions(sentence):
                 start, stop, value = fields['do']
                 alias = str(fields.get('as', (0, 0, 'it'))[2] or 'it').lstrip('$').strip()
                 if isinstance(value, (str, list)):
-                    regions.append((start, stop, value, {alias or 'it'}))
+                    regions.append((start, stop, value, {alias or 'it'}, True))
         pos = end + 1
     return regions
-
-

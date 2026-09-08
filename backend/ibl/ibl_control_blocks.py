@@ -26,40 +26,47 @@ _REPEAT_MAX_SUBSTEPS = 500
 
 def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
     """문자열 속 `$이름[.경로]` 를 값으로 치환 — $error(try)·$i(repeat). 이름 경계 존중($items 불침범)."""
+    from common.field_path import walk_path, MISSING
+
+    def resolve(name, path):
+        value = walk_path(mapping[name], path.rstrip('?').lstrip('.'))
+        if value is MISSING and not path.endswith('?'):
+            raise ValueError(f"${name}{path} 경로가 값에 없습니다.")
+        return value
+
     if isinstance(obj, str):
+        from common.ibl_vars import REF_RE, split_ref, refs_pattern
+        sole = REF_RE.fullmatch(obj)
+        if sole:
+            name, path = split_ref(sole)
+            if name in mapping and resolve(name, path) is MISSING:
+                return None  # 선택 경로 결측은 값 자리 null, 문장 안에서는 빈 문자열.
+
         def _one(m):
-            from common.ibl_vars import split_ref
             name, path = split_ref(m)
-            path = path[1:]
             if name not in mapping:
                 return m.group(0)
-            val = mapping[name]
-            if path:
-                from ibl_predicates import walk_path, _MISSING
-                v = walk_path(val, path)
-                val = "" if v is _MISSING else v
+            val = resolve(name, path)
+            if val is MISSING:
+                return ''
             return val if isinstance(val, str) else json.dumps(val, ensure_ascii=False)
-        from common.ibl_vars import refs_pattern
         return re.sub(refs_pattern(mapping), _one, obj)
     if isinstance(obj, dict):
         if obj.get('_def'):
             return obj  # 함수 몸의 이름은 그 함수의 호출자가 채운다.
         if obj.get('_node') == 'table' and obj.get('action') == 'each':
             from ibl_code_binding import bind_scoped_code
-            from common.field_path import walk_path, MISSING
             params = obj.get('params') or {}
             alias = str(params.get('as') or 'it').lstrip('$').strip() or 'it'
 
-            def resolve(name, path):
+            def resolve_code(name, path):
                 if name not in mapping:
                     return False, None
-                value = walk_path(mapping[name], path.rstrip('?').lstrip('.'))
-                if value is MISSING:
-                    return (True, None) if path.endswith('?') else (False, None)
-                return True, value
+                value = resolve(name, path)
+                return True, None if value is MISSING else value
 
             result = {k: _subst_tokens(v, mapping) for k, v in obj.items() if k != 'params'}
-            result['params'] = {k: bind_scoped_code(v, resolve, {alias}) if k == 'do'
+            result['params'] = {k: bind_scoped_code(v, resolve_code, {alias}) if k == 'do'
                                 else _subst_tokens(v, mapping) for k, v in params.items()}
             return result
         result = {}
@@ -350,6 +357,18 @@ def _block_tb(err: Any, block: str) -> dict:
     return push_frame(tb, {"kind": "block", "block": block})
 
 
+def _run_bound_body(body, mapping, tool_input, project_path, agent_id, honesty=None):
+    """몸의 바인딩 실패도 실행 실패로 보고해 복구/finally/회차 진단을 보장한다."""
+    from ibl_traceback import build_tb
+    try:
+        bound = _subst_tokens(_copy.deepcopy(body), mapping)
+    except ValueError as exc:
+        message = f"몸의 $변수 치환 실패: {exc}"
+        return None, True, {"error": message, "summary": message[:200], "step": 1,
+                            "traceback": build_tb(message, "binding")}, {}
+    return _run_body(bound, tool_input, project_path, agent_id, honesty=honesty)
+
+
 def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
     """[try]{…} [catch]{…} [finally]{…} — 실패 규약(설계 §2.4):
     catch 도 실패하면 원 오류 + catch 오류 둘 다 봉투에(덮어쓰기 금지). finally 는 결과를 바꾸지 않는다.
@@ -361,8 +380,7 @@ def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
     if not failed:
         out = result
     elif catch is not None:
-        c_body = _subst_tokens(_copy.deepcopy(catch), {"error": err})
-        c_res, c_failed, c_err, _ = _run_body(c_body, tool_input, project_path, agent_id)
+        c_res, c_failed, c_err, _ = _run_bound_body(catch, {"error": err}, tool_input, project_path, agent_id)
         if c_failed:
             # 파이썬과 같은 규약: 처리 중의 실패가 최종 오류 — catch 의 트레이스백이 바깥으로.
             # try 쪽 경로는 try_error.traceback 에 그대로 남는다.
@@ -377,13 +395,13 @@ def _execute_try(tool_input: dict, project_path: str, agent_id: str) -> Any:
         out = {"success": False, "error": f"try 실패(catch 없음): {err.get('summary')}", "try_error": err,
                "traceback": _block_tb(err, "try")}
     if fin is not None:
-        f_body = _subst_tokens(_copy.deepcopy(fin), {"error": err if failed else {"error": None, "summary": ""}})
-        _, f_failed, f_err, _ = _run_body(f_body, tool_input, project_path, agent_id)
+        _, f_failed, f_err, _ = _run_bound_body(
+            fin, {"error": err if failed else {"error": None, "summary": ""}},
+            tool_input, project_path, agent_id)
         if f_failed:
-            if isinstance(out, dict):
-                out["finally_error"] = f_err
-            else:
-                print(f"[IBL_TRY] finally 실패(결과 불변): {f_err.get('summary')}")
+            if not isinstance(out, dict):
+                out = {"result": out}
+            out["finally_error"] = f_err
     if caught_meta is not None:
         # ★B48-1(48회차 상상훈련): catch 결과가 **스칼라**면 `_caught` 를 실을 dict 가
         #   없어 표지가 조용히 버려졌다. 실측:
@@ -501,7 +519,7 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     for i in range(max_n):
         if mode == "while":
             try:
-                ok, _ = evaluate(cond, _resolve, cur_vars)
+                ok, _ = evaluate(cond, _resolve, {**cur_vars, var: i})
             except PredicateError as e:
                 halted, err_info = "condition_error", {"error": str(e)}
                 break
@@ -518,11 +536,10 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
             break
         # 회차마다 *현재* 변수 값으로 몸을 치환한다(M6 — `$n = $n + 1` 이 돌고 while 이 몸 변수를 본다):
         # 텍스트 자리($x·$x.path)는 v4/경로 추출로, 안쪽 블록·식 할당은 _var_values 스탬프로.
-        it_body = _subst_tokens(_copy.deepcopy(body), {var: i})
         it_input = {**tool_input, "_var_values": cur_vars}     # 몸 치환·스탬프는 _run_body 가 현재 값으로
         _round_honesty: Dict[str, Any] = {}
-        result, failed, err, by_idx = _run_body(it_body, it_input, project_path, agent_id,
-                                                honesty=_round_honesty)
+        result, failed, err, by_idx = _run_bound_body(body, {var: i}, it_input, project_path, agent_id,
+                                                    honesty=_round_honesty)
         iterations += 1
         _absorb_honesty(_round_honesty, iterations)   # 경계는 신고를 삼키지 않는다 (B27-4)
         if failed:
@@ -545,7 +562,7 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
                     **{n: by_idx[int(ix)] for n, ix in body_vars.items() if int(ix) in by_idx}}
         if mode == "until":
             try:
-                ok, _ = evaluate(cond, _resolve, cur_vars)
+                ok, _ = evaluate(cond, _resolve, {**cur_vars, var: i})
             except PredicateError as e:
                 halted, err_info = "condition_error", {"error": str(e)}
                 break

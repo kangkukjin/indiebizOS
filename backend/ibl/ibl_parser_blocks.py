@@ -524,7 +524,7 @@ def _parse_block_body(body: str) -> Optional[Dict]:
 def _extract_bracket_raw(text: str, start: int,
                          open_ch: str, close_ch: str) -> Tuple[Optional[str], int]:
     """
-    text[start] 위치의 여는 괄호부터 닫는 괄호까지 내용 추출 (문자열 리터럴 인식)
+    text[start] 위치의 여는 괄호부터 닫는 괄호까지 내용 추출 (문자열·주석 인식)
 
     Returns:
         (내부 내용 문자열, 닫는 괄호 위치) 또는 (None, -1)
@@ -540,6 +540,10 @@ def _extract_bracket_raw(text: str, start: int,
     while i < len(text):
         ch = text[i]
         if not in_string:
+            if ch == '#':
+                end = text.find('\n', i)
+                i = len(text) if end < 0 else end
+                continue
             if ch == '"' or ch == "'":
                 in_string = True
                 string_char = ch
@@ -763,6 +767,21 @@ def _parse_repeat_block(code: str) -> Optional[Dict]:
     rest = code[end + 1:].strip()
     if rest:
         raise IBLSyntaxError(f"repeat 블록 뒤에 해석되지 않은 텍스트가 있습니다: '{rest[:60]}' — 줄로 분리하세요.")
+    out = _repeat_options(header)
+    body_src = body_txt.strip()
+    if not body_src:
+        raise IBLSyntaxError("repeat 몸이 비어 있습니다.")
+    if _PARSE_VARS is not None:
+        steps, body_vars = _PARSE_VARS(body_src)
+    else:
+        steps, body_vars = _PARSE(body_src), {}
+    out["body"] = steps
+    out["body_vars"] = body_vars
+    return out
+
+
+def _repeat_options(header: str) -> Dict:
+    """반복 헤더의 옵션과 회차 이름. 실행 AST와 지연 코드 바인더가 공유한다."""
     parts = _split_top_commas(header)
     if not parts:
         raise IBLSyntaxError("repeat 헤더가 비어 있습니다 — [repeat: 5] / [repeat: until 조건, max: N] / [repeat: while 조건, max: N]")
@@ -801,13 +820,4 @@ def _parse_repeat_block(code: str) -> Optional[Dict]:
         raise IBLSyntaxError("repeat until/while 에는 max(반복 상한)가 필수입니다 — 상한 없는 루프는 금지.")
     if out["mode"] == "count" and out["max"] is None:
         out["max"] = out["count"]
-    body_src = body_txt.strip()
-    if not body_src:
-        raise IBLSyntaxError("repeat 몸이 비어 있습니다.")
-    if _PARSE_VARS is not None:
-        steps, body_vars = _PARSE_VARS(body_src)
-    else:
-        steps, body_vars = _PARSE(body_src), {}
-    out["body"] = steps
-    out["body_vars"] = body_vars
     return out

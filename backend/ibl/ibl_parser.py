@@ -385,6 +385,8 @@ from ibl_parser_values import (  # noqa: E402,F401
     _parse_relaxed_params,
     _extract_value,
     _extract_string,
+    _scan_line_state,
+    _strip_line_comment,
     _extract_bracket,
     _extract_number,
     _extract_unquoted,
@@ -482,6 +484,7 @@ def _preprocess(code: str) -> List[str]:
         # `\n` 이스케이프로 쓴 문장은 한 줄이라 멀쩡했던 것이 진단을 늦췄다.
         # \r 만 떼는 이유: 윈도우 줄끝은 내용이 아니라 줄 구분자의 잔재다.
         text = line.rstrip('\r') if in_string else stripped
+        text = _strip_line_comment(text, in_string, string_char)
         entries.append((text, in_string))
         _d, in_string, string_char = _scan_line_state(text, in_string, string_char)
 
@@ -517,34 +520,6 @@ def _preprocess(code: str) -> List[str]:
         i += 1
 
     return result
-
-
-def _scan_line_state(text: str, in_string: bool, string_char: Optional[str]):
-    """한 줄을 스캔해 (중괄호 깊이 변화량, 끝 시점 문자열 상태)를 반환.
-
-    문자열 리터럴 내부의 중괄호는 세지 않고, 문자열 열림/닫힘 상태를 줄 경계
-    너머로 승계할 수 있게 시작 상태를 인자로 받는다. (D3 — _preprocess 전용)
-    """
-    depth = 0
-    i = 0
-    while i < len(text):
-        ch = text[i]
-        if in_string:
-            if ch == '\\':
-                i += 1  # 이스케이프 건너뛰기
-            elif ch == string_char:  # vj-ok: 렉서 문자 비교
-                in_string = False
-                string_char = None
-        else:
-            if ch == '"' or ch == "'":
-                in_string = True
-                string_char = ch
-            elif ch == '{':
-                depth += 1
-            elif ch == '}':
-                depth -= 1
-        i += 1
-    return depth, in_string, string_char
 
 
 def _extract_statements(lines: List[str]) -> Tuple[List[str], List[Optional[str]]]:

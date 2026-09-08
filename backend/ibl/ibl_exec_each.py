@@ -105,7 +105,7 @@ def _each_foreign_vars(do: str, var: str) -> list:
                 visit({k: v for k, v in params.items() if k != 'do'}, bound)
                 inner = params.get('do') or ''
                 try:
-                    nested = parse_function_body(inner) if isinstance(inner, str) else inner
+                    nested = parse_binding_body(inner)
                 except Exception:
                     nested = inner  # 문법 오류는 실행 단계가 진단한다.
                 visit(nested, bound | {alias})
@@ -121,8 +121,8 @@ def _each_foreign_vars(do: str, var: str) -> list:
                 visit(value, local)
 
     try:
-        from ibl_parser import parse_function_body
-        tree = parse_function_body(do)
+        from ibl_code_binding import parse_binding_body
+        tree = parse_binding_body(do)
     except Exception:
         tree = do  # 문법 오류의 본 진단은 행 실행기가 맡는다.
     visit(tree, {var, 'items'} | assigned)

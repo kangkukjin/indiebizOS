@@ -84,10 +84,10 @@ def _bound_names(steps) -> set:
     계산돼, 교재가 M6 에서 가르치는 `do: '…$return = …'` 저장본이 **저장은 되고 실행은
     거절**됐다(`params_required: ['r']` → run 에서 '인자 누락: $r').
 
-    즉 시그니처는 `사용` 이 아니라 `사용 − 할당` 이다. 묶는 자리 셋:
+    즉 시그니처는 `사용` 이 아니라 `사용 − 할당` 이다. 할당 자리 둘:
       · `_assign_name`  — 파이프/액션 할당의 대상(`$r = [self:time]`, `$t = A >> B`)
       · `_assign` step 의 `name` — 식 할당(`$avg = $total.value / 10`, `$return = $avg`)
-      · `_repeat` 의 `var` — 회차 변수(기본 `i`)
+    `_repeat`의 회차 변수는 해당 몸/조건에서만 묶으므로 _free_vars가 따로 다룬다.
     중첩 몸(body·branches·catch·finally)까지 훑는다 — `_reserved_row_names` 와 같은 순회.
 
     ★위치가 아니라 집합으로 뺀다(할당 *전* 참조도 인자로 안 센다). 그 방향이 안전한 쪽이다 —
@@ -106,9 +106,6 @@ def _bound_names(steps) -> set:
                 n2 = obj.get("name")
                 if isinstance(n2, str) and n2.strip():
                     names.add(n2.strip())
-            if obj.get("_repeat"):
-                v = obj.get("var")
-                names.add(v.strip() if isinstance(v, str) and v.strip() else "i")
             for v in obj.values():
                 _walk(v)
         elif isinstance(obj, list):
@@ -133,13 +130,14 @@ def _free_vars(steps) -> List[str]:
         if isinstance(obj, dict) and obj.get('_def'):
             return  # 중첩 정의는 별도 시그니처를 가진 닫힌 함수다.
         if isinstance(obj, dict) and obj.get('_node') == 'table' and obj.get('action') == 'each':
-            from ibl_parser import parse_function_body, IBLSyntaxError
+            from ibl_parser import IBLSyntaxError
+            from ibl_code_binding import parse_binding_body
             params = obj.get('params') or {}
             _walk({k: v for k, v in params.items() if k != 'do'}, bound)
             code = params.get('do') or ''
             alias = str(params.get('as') or 'it').lstrip('$').strip() or 'it'
             try:
-                body = parse_function_body(code) if isinstance(code, str) else code
+                body = parse_binding_body(code)
             except IBLSyntaxError:
                 body = code  # 인자로 받는 do 슬롯도 서명에 남긴다.
             _walk(body, bound | {alias} | _bound_names(body))
@@ -166,6 +164,8 @@ def _free_vars(steps) -> List[str]:
                 if key in ('_raw', '_vars', '_fn_ref'):
                     continue
                 local = bound | {'error'} if obj.get('_try') and key in ('catch', 'finally') else bound
+                if obj.get('_repeat') and key in ('body', 'condition'):
+                    local = bound | {obj.get('var') or 'i'}
                 _walk(value, local)
         elif isinstance(obj, list):
             for v in obj:
@@ -368,9 +368,11 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
                     expressions += [b.get('condition') for b in obj.get('branches', [])]
                 used = {split_ref(m)[0] for expression in expressions
                         for m in REF_RE.finditer(str(expression or ''))}
-                bound = {k: v for k, v in caller.items() if k in used and k not in blocked}
+                local = blocked | {obj.get('var') or 'i'} if obj.get('_repeat') else blocked
+                bound = {k: v for k, v in caller.items() if k in used and k not in local}
                 hits.update(bound)
-                result = {k: v if k in expression_keys else _walk(v, blocked) for k, v in obj.items()}
+                result = {k: v if k in expression_keys else _walk(v, local if k == 'body' else blocked)
+                          for k, v in obj.items()}
                 if obj.get('_condition'):
                     result['branches'] = [
                         {k: v if k == 'condition' else _walk(v, blocked) for k, v in branch.items()}
@@ -387,7 +389,8 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
                     out = {k: v for k, v in obj.items()}
                     out["_var_values"] = {**(obj.get("_var_values") or {}), nm: caller[nm]}
                     return out
-            return {k: _sub_code(v, blocked) if k == "do" and isinstance(v, str) else _walk(v, blocked)
+            return {k: _sub_code(v, blocked) if k == "do" and isinstance(v, str) else
+                    _walk(v, blocked | {'error'} if obj.get('_try') and k in ('catch', 'finally') else blocked)
                     for k, v in obj.items()}
         if isinstance(obj, list):
             return [_walk(v, blocked) for v in obj]

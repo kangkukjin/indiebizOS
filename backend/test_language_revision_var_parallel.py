@@ -104,10 +104,7 @@ def test_P6_표기_규약이_머리_자리와_한_벌이다():
     import ibl_parser
     _ibl = os.path.join(_REPO, "backend", "ibl")
     src = open(os.path.join(_ibl, "ibl_parser.py"), encoding="utf-8").read()
-    # 두 자리(파이프 머리·병렬 분기)가 주인을 부른다 — 정의가 어느 형제 모듈에 살든(2026-09-07
-    # 이동, 1500줄 규칙) 세는 것은 **호출**이다. 파일 안 등장 횟수로 세면 모듈화가 관문을 깬다.
-    assert src.count("_var_emit_step(") - src.count("def _var_emit_step(") == 2, \
-        "머리·분기가 같은 주인을 안 쓴다"
+    # 주인은 하나이고 열린 자리의 판정은 같다. 호출 개수 고정은 새 자리 추가를 막는다.
     owners = [f for f in os.listdir(_ibl) if f.endswith(".py")
               and "def _var_emit_step(" in open(os.path.join(_ibl, f), encoding="utf-8").read()]
     assert owners == ["ibl_parser_values.py"], f"_var_emit_step 의 주인이 하나가 아니다: {owners}"
@@ -119,13 +116,14 @@ def test_P6_표기_규약이_머리_자리와_한_벌이다():
         head = _TWO + f'{expr} >> [table:take]{{n: 1}}'
         branch = _TWO + f'{expr} & $b >> [table:union]'
         got = []
-        for code in (head, branch):
+        parenthesized = _TWO + f'({expr} >> [table:take]{{n:1}}) & $b >> [table:union]'
+        for code in (head, branch, parenthesized):
             try:
                 parse(code)
                 got.append(True)
             except IBLSyntaxError:
                 got.append(False)
-        assert got[0] == got[1] == ok, f"{expr}: 머리={got[0]} 분기={got[1]} (기대 {ok})"
+        assert all(x == ok for x in got), f"{expr}: 머리·분기·괄호 분기={got} (기대 {ok})"
     assert ibl_parser  # 임포트 사용 표시
 
 

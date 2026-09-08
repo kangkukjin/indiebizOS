@@ -25,6 +25,19 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: unclosed-container-string-fallback
+    retired: 2026-09-08
+    reason: 닫히지 않은 item 객체가 뒤 인자를 삼킨 문자열로 원장에 저장될 수 있었다.
+    instead: 닫는 괄호가 없는 구조는 파싱 오류. 원장은 객체 행만 저장·조회한다.
+    phrases:
+      - "닫는 bracket을 못 찾으면 원본 반환"
+  - id: parallel-parenthesis-actions-only
+    retired: 2026-09-08
+    reason: 같은 변수 통화가 괄호 분기에서만 금지되어 불필요한 중간 할당을 강제했다.
+    instead: 병렬 괄호 분기는 일반 액션과 변수 통화를 같은 파이프로 받는다. 폴백은 시도만 받는다.
+    phrases:
+      - "괄호 안=일반 step 파이프만"
+      - "[node:action]{...} step 을 >> 로 이은 파이프만 허용합니다"
   - id: population-reduction-is-truncation
     retired: 2026-09-08
     reason: 조건 선별·중복 제거·집계까지 표본 절단으로 취급해 정상 보고서에 잘림 경고가 붙었다.

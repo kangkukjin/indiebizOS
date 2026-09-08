@@ -406,8 +406,9 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
                     i += 1
                 i += 1
         i += 1
-    # 닫는 bracket을 못 찾으면 원본 반환
-    return text[pos:], len(text)
+    # 닫히지 않은 구조를 문자열로 저장하면 뒤 인자까지 item 안으로 삼켜 원장이 오염된다.
+    raise IBLSyntaxError(f"닫히지 않은 {open_br}{close_br} 구조입니다 — 닫는 '{close_br}'가 필요합니다. "
+                         "객체·배열은 문자열로 대신 해석하지 않습니다.")
 
 
 def _extract_number(text: str, pos: int):

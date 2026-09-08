@@ -545,6 +545,11 @@ class _Checker:
         do_t: Optional[T] = None
         if isinstance(params.get("do"), str) and params.get("do").strip():
             do_t = self._type_do(params["do"], inp)
+            if do_t is not None and do_t.kind == "prose" and params.get("collect") in (None, False, "false"):
+                self._issue("warning", idx, at,
+                            "do의 최종 결과가 산문인데 collect가 꺼져 있어 산문이 결과 행에 남지 않습니다.",
+                            hint="요약을 모으려면 collect:true를 지정하세요. 문자열은 value 열로 모입니다.",
+                            got="prose", expected="collected prose")
 
         # ── accepts ──
         if inp is not None and inp.kind != "unknown":

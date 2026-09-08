@@ -707,7 +707,7 @@ def _parse_group(text: str, variables: Optional[Dict] = None,
             if branch is None:
                 # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): 분기 하나에만
                 # 전처리를 붙이는 표현 — [A] & ([B] >> [table:rename]{...}) >> [table:merge].
-                branch = _parse_paren_branch(p)
+                branch = _parse_paren_branch(p, variables, free_ok, allow_vars=True)
             if branch is None:
                 branch = _parse_step(p)
             if branch is None:
@@ -760,11 +760,13 @@ def _parse_group(text: str, variables: Optional[Dict] = None,
     return step
 
 
-def _parse_paren_branch(text: str) -> Optional[Dict]:
+def _parse_paren_branch(text: str, variables: Optional[Dict] = None,
+                        free_ok: bool = False, *, allow_vars: bool = False) -> Optional[Dict]:
     """병렬 분기의 괄호 파이프 '([A]{} >> [B]{})' → {_branch_steps: [step, ...]} (G13-1).
 
     괄호가 분기 *전체*를 감싸는 경우만(첫 '(' 의 짝이 마지막 문자) — 아니면 None 을
-    돌려 일반 step 파싱으로 넘긴다. 괄호 안은 >> 로 이은 일반 step 들만 허용:
+    돌려 일반 step 파싱으로 넘긴다. 괄호 안은 >> 로 이은 일반 step 들을 허용하며,
+    병렬 분기에서는 변수 통화도 같은 방출기로 읽는다(2026-09-08). 폴백은 시도만 받는다.
     중첩 병렬/폴백/블록은 명시 에러(우선순위 미정의 → 침묵 소실 방지, D1 과 같은 원칙).
     (단일 step) 은 괄호가 무의미하므로 그 step 자체로 푼다.
     """
@@ -809,17 +811,23 @@ def _parse_paren_branch(text: str) -> Optional[Dict]:
     if not inner:
         raise IBLSyntaxError("괄호 분기가 비어 있습니다: ()")
     steps = []
+    used_vars = {}
     for seg_text, _op in _split_pipeline(inner):
-        st = _parse_step(seg_text.strip())
+        st = (_var_emit_step(seg_text.strip(), variables, "괄호 분기의", free_ok)
+              if allow_vars else None)
+        if st is None:
+            st = _parse_step(seg_text.strip())
         if st is None:
             raise IBLSyntaxError(
                 f"괄호 분기 파이프 파싱 실패: {seg_text.strip()} — 괄호 분기 안은 "
-                "[node:action]{...} step 을 >> 로 이은 파이프만 허용합니다"
+                "액션 step(병렬에서는 변수 통화도 가능)을 >> 로 이은 파이프만 허용합니다"
                 "(중첩 병렬/폴백/블록 불가).")
+        used_vars.update(st.pop("_vars", None) or {})
         steps.append(st)
-    if len(steps) == 1:
-        return steps[0]
-    return {"_branch_steps": steps}
+    result = steps[0] if len(steps) == 1 else {"_branch_steps": steps}
+    if used_vars:
+        result["_vars"] = used_vars
+    return result
 
 
 def _split_by_operator(text: str, operator: str) -> List[str]:
@@ -1197,6 +1205,8 @@ def _resolve_block_variables(blk: dict, variables: Dict[str, int], nested: bool 
 
 def format_step(step: dict) -> str:
     """step을 IBL 텍스트로 포맷팅 (역변환)"""
+    if step.get("_var_emit"):
+        return "${" + step["name"] + (step.get("path") or "") + "}"
     # 괄호 분기 파이프 (G13-1)
     if step.get("_branch_steps"):
         return "(" + " >> ".join(format_step(s) for s in step["_branch_steps"]) + ")"

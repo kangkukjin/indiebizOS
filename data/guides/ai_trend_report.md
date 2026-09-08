@@ -53,6 +53,8 @@
 7. **상태 쓰기** — md 저장, 원장 append(`[self:ledger]`, §4). 규칙 승격·은퇴는 문장 밖.
 8. **에피소드 메모** — 재사용/변형/새로 조립 중 무엇이었는지, 호출 수·소요시간.
 
+**행별 원문 요약**: `[table:each]{collect:true, do:"[sense:crawl]{url:'$it.url'} >> [table:brief]{instruction:'핵심 요약'}"}`로 모은다. 문자열 요약은 `value` 열에 남는다. `collect` 없이 산문으로 끝내면 원 행만 흐르므로 요약 수집에 쓰지 않는다. 변수를 분기별로 가공할 때는 `($기술 >> [table:take]{n:-6}) & $사례`처럼 괄호 안에서 바로 이을 수 있다.
+
 인자 규칙(매 호 판단 — 부를 때 인자로 준다): **질의는 매 호 새로**(고정하면 매일 같은 세계만 본다, §3-2) · **날짜 세 자리가 한 벌**(수집 3주·NEW 2주·오늘 — 하나라도 옛 값이면 신선도가 통째로 무너진다) · 가지가 마르면 §2-3 공란 조항과 (B-2) 채널 교체가 골격보다 우선 · 소스 장애·품질 실패 때만 문장을 하나씩.
 
 **실행 예산**: 큰 `execute_ibl` 1회 + 조건부 후속 최대 2회(부족 섹션·심화). AI 의미 판단은 증류 3~4칸 + 산문·점검 6~8칸. 증류·게이트·심화·저장·원장이 채워지면 더 조사하지 않는다.
@@ -197,7 +199,8 @@
 ```
 
 저장 직후:
-- **커버리지 원장 append**: `[self:ledger]{path: "outputs/ai_trend_reports/_coverage_ledger.json", op: "append", item: {date: "YYYY-MM-DD", tags: [<명사구 ≤25개>]}, max_items: 10, list_limits: {tags: {max_items: 25, max_item_len: 24}}}`. 거절되면 태그를 줄여 다시 — 원장을 손으로 고치지 않는다. 전체 보고서 날만.
+- **커버리지 원장 append**: `[self:ledger]{path: "~workspace/outputs/ai_trend_reports/_coverage_ledger.json", op: "append", item: {date: "YYYY-MM-DD", tags: [<명사구 ≤25개>]}, max_items: 10, list_limits: {tags: {max_items: 25, max_item_len: 24}}}`. 태그 상한으로 거절되면 태그를 줄여 다시 실행한다. 형태·손상 오류는 메시지의 원인을 수리하며 태그 축소로 우회하지 않는다. 전체 보고서 날만.
+- **심층 기억**: 보고서 작업 이력은 `node:"보고서/AI 동향", category:"작업기록"`으로 저장한다. `기록`은 유효 분류가 아니다. 주제는 node·keywords에 적으며, 분류가 불명확하면 category를 생략한다.
 - **규칙 원장**: 승격·은퇴 판정이 난 날만 §3-3 템플릿대로 갱신 + 카운터(연속 무값·마지막 값 날짜) 갱신. 판정 없는 날은 카운터만.
 - 사용자에게 절대경로와 핵심 변화 요약을 보고한다. HTML 렌더(`보고서HTML`)·`[self:output]{op: "gui"}`는 사용자가 원할 때.
 

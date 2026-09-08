@@ -554,7 +554,9 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         #   말 없이 원 행을 흘리면 소비자가 그걸 do 의 결과로 오독한다.
         out["passthrough_rows"] = noncurrency
         notes.append(f"{noncurrency}행의 do 가 통화를 내지 않아(효과·스칼라) **원 행**을 "
-                     f"그대로 흘렸습니다 — 통화에 있는 값은 do 의 결과가 아닙니다.")
+                     f"그대로 흘렸습니다 — 통화에 있는 값은 do 의 결과가 아닙니다. "
+                     "산문·스칼라 결과도 필요하면 each에 collect:true를 지정하세요 "
+                     "(문자열 산문은 value 열, 객체 결과는 결과 키로 보존됩니다).")
     if currency_n:
         # ★B32-1 (32회차): 위 신고의 **거울**. 지금까지 한 방향(스칼라→원 행 통과)만 말하고
         #   반대 방향(do 가 통화를 내어 **원 행이 대체됨**)은 침묵했다. 실측: 2행을 넣었더니
@@ -632,4 +634,3 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     if notes:
         out["message"] = " / ".join(notes)
     return out
-

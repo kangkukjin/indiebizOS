@@ -110,6 +110,8 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
             last = None
             for j, sub in enumerate(subs):
                 ti = dict(sub)
+                if ti.get("_var_emit") and var_values:
+                    ti["_var_values"] = {**var_values, **(ti.get("_var_values") or {})}
                 if "node" in ti and "_node" not in ti:
                     ti["_node"] = ti.pop("node")
                 ti = _inject_prev_result(ti, sub_prev)

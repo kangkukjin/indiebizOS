@@ -158,7 +158,17 @@ def _incoming(args):
         incoming = [incoming]
     if any(item is None for item in incoming):
         raise ValueError("item 또는 items(또는 items_file)가 필요합니다.")
+    _require_object_rows(incoming, "입력")
     return incoming
+
+
+def _require_object_rows(rows, label):
+    """원장 행은 필드로 검색할 객체다. 문자열 등을 조용히 저장·누락하지 않는다."""
+    bad = [i + 1 for i, row in enumerate(rows) if not isinstance(row, dict)]
+    if bad:
+        raise ValueError(f"{label} 원장에 객체가 아닌 항목 {len(bad)}개가 있습니다 "
+                         f"(첫 위치 {bad[0]}, 1부터 셈). item은 객체, items는 객체 배열이어야 합니다. "
+                         "문자열로 감싼 인자를 풀고, 기존 손상 항목은 백업 후 복구하세요.")
 
 
 def _fail(exc):
@@ -178,6 +188,7 @@ def op_select(tool_input):
         array = _get_target(json.loads(path.read_text(encoding="utf-8")), target, create_list=False)
         if not isinstance(array, list):
             raise ValueError("select target 은 JSON 배열이어야 합니다.")
+        _require_object_rows(array, "저장된")
         fields = args.get("fields")
         if fields is not None and not isinstance(fields, list):
             raise ValueError("fields 는 배열이어야 합니다.")
@@ -208,6 +219,7 @@ def _write_rows(tool_input, op):
         array = _get_target(root, target, create_list=True)
         if not isinstance(array, list):
             raise ValueError("append/upsert target은 JSON 배열이어야 합니다.")
+        _require_object_rows(array, "저장된")
         incoming = _incoming(args)
         for item in incoming:
             _check_list_limits(item, args.get("list_limits"))

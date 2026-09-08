@@ -64,12 +64,10 @@ HONESTY_ROUTE_KEYS = (
 )
 
 
-#: 봉투 규모 불변식 (2026-09-04, ep2814 실측): `total` 은 **items 가 뽑힌 셀 수 있는 모집단의 수**다
-#: — 그래서 `total > len(items)` 면 표본이고 봉투는 스스로 `truncated` 를 켜야 한다
-#: (data-ops `_restate_scope` 가 이 정의로 하류에서 truncated 를 되살린다). 제공자의 추정치
-#: (네이버 검색 "18,804,311건", 카카오 total_count 따위)는 모집단이 아니므로 `total` 이라
-#: 부르면 안 된다 — 그런 수는 `total_estimate` 로 낸다. 실측: 네이버 검색 뒤에 table 낱말이
-#: 하나만 붙어도 "부분 실패·절단" 경고가 매번 붙었다(한 턴에 3/9 봉투) — 늑대소년.
+#: total은 현재 집합의 기수다. 조건 선별·중복 제거·집계 뒤에는 새 집합으로 재진술한다.
+#: total > len(items)는 표본 신고가 필요하지만 역은 성립하지 않는다 — 상류 truncated는
+#: 집합이 바뀌어 total == count가 돼도 보존된다(원천 누락이 복구된 것이 아니다).
+#: 제공자 추정치는 셀 수 있는 모집단이 아니므로 total_estimate로 낸다.
 SCOPE_ESTIMATE_KEY = "total_estimate"
 
 #: 절단 표지 뒤의 **다음 걸음**(2026-09-05, ep2862·2866 실측): 두 주행 모두 첫 `[self:grep]` 이 truncated 를
@@ -77,9 +75,11 @@ SCOPE_ESTIMATE_KEY = "total_estimate"
 #: 같은 낱말 안의 연속 문장을 실어야 다음 걸음이 IBL 안에 남는다(셸 그림자 관문이 어차피 거절한다).
 #: 승격 경고(describe_promoted)·병렬 가지 경고·MCP 경계 절단·grep 자체 절단문이 같은 한 줄을 쓴다.
 TRUNCATED_NEXT_STEP = (
-    "절단은 같은 낱말 안에서 잇는다 — limit·범위 param(파일 패턴·줄 범위·output_mode·context)을 좁히거나 "
-    "`>> [table:filter]`/`[table:select]`/`[table:take]` 로 줄여 다시 실행할 것(셸 grep·cat 으로 갈아타지 말 것 — 그림자 관문이 거절한다). "
-    "결과를 `$이름 = …` 로 할당했다면 재실행 없이 다음 호출에서 `$이름 >> [table:take]{n: …}` 로 자른다(같은 턴의 변수는 산다)"
+    "먼저 절단 위치를 확인하라. 원천 수집이 잘렸으면 같은 조회의 페이지·범위를 나눠 누락분을 가져와라. "
+    "하류 filter/select/take는 이미 없는 원천 행을 복구하지 못한다. "
+    "요청한 상위 N개 표본이면 추가 수집은 불필요하다. "
+    "전달 메시지만 잘렸고 전체 결과가 변수·파일에 남아 있으면 다시 수집하지 말고 "
+    "`$이름 >> [table:select]{columns: […]} >> [table:take]{n: …}` 또는 저장 파일에서 필요한 부분을 읽어라"
 )
 
 

@@ -186,13 +186,14 @@ _reproject_mirrors = _scope._reproject_mirrors
 _restate_scope = _scope._restate_scope
 
 
-def _emit_items(envelope, new_items):
+def _emit_items(envelope, new_items, *, population=False):
     """변환된 항목들을 원 envelope에 비파괴로 끼워 반환.
 
     단일 통화 키 `items`로 내보낸다(2026-06-27 단일통화 컷오버 완료 — 옛 이중방출 은퇴).
     """
     out = dict(envelope) if isinstance(envelope, dict) else {}
-    _orig = [out.get("items"), out.get("rows")]   # 거울 판정 기준 (덮어쓰기 전에 잡는다)
+    _orig = [out.get("items"), out.get("rows"),
+             (out.get("table") or {}).get("rows") if isinstance(out.get("table"), dict) else None]   # 거울 판정 기준 (덮어쓰기 전에 잡는다)
     out.pop("message", None)            # 변환 후 stale·O(items) 산문 제거 (파이프 블로업·정합성)
     out.pop("text", None)               # 동류 — 원본 전체를 서술하는 text 가 take(5) 뒤에도 15줄이면 거짓말(2026-08-08 실측)
     # stale 파생 뷰 제거 — message 와 같은 원리. items 만 갱신하고 낡은 table 을 남기면
@@ -204,13 +205,15 @@ def _emit_items(envelope, new_items):
     out["items"] = new_items          # 단일 통화
     out["count"] = len(new_items)
     out.setdefault("success", True)
-    _restate_scope(out, len(_orig[0]) if isinstance(_orig[0], list) else None, len(new_items))
+    _restate_scope(out, next((len(o) for o in _orig if isinstance(o, list)), None),
+                   len(new_items), population=population)
     return _reproject_mirrors(out, _orig, new_items)
 
 
-def _emit_table(envelope, new_table):
+def _emit_table(envelope, new_table, *, population=False):
     out = dict(envelope) if isinstance(envelope, dict) else {}
-    _orig = [out.get("items"), out.get("rows")]   # 거울 판정 기준 (덮어쓰기 전에)
+    _orig = [out.get("items"), out.get("rows"),
+             (out.get("table") or {}).get("rows") if isinstance(out.get("table"), dict) else None]   # 거울 판정 기준 (덮어쓰기 전에)
     out.pop("message", None)            # 변환 후 stale 산문 제거
     out.pop("text", None)               # 동류(2026-08-08)
     # 대칭: table 만 갱신하고 낡은 items 를 남기면 같은 stale 부류 (2026-08-07).
@@ -223,7 +226,7 @@ def _emit_table(envelope, new_table):
         out["rows"] = new_table.get("rows", [])
     out.setdefault("success", True)
     _prior = next((len(o) for o in _orig if isinstance(o, list)), None)
-    _restate_scope(out, _prior, len(new_table.get("rows") or []))
+    _restate_scope(out, _prior, len(new_table.get("rows") or []), population=population)
     # 표 경로의 거울 키는 행 dict 로 투영한다 — 도메인 키에 열-배열을 꽂으면 모양이 깨진다.
     return _reproject_mirrors(out, _orig, _row_dicts(new_table))
 
@@ -330,7 +333,7 @@ def _op_filter_impl(prev, params):
             missing = [f for f in _where_fields(where) if not any(f in r for r in dict_recs)]
             if missing:
                 return _field_missing_error("filter", missing, dict_recs)
-        return _diag._empty_filter_note(_emit_items(env, [r for r in dict_recs if _match(r, where)]), where, dict_recs, _where_fields(where))
+        return _diag._empty_filter_note(_emit_items(env, [r for r in dict_recs if _match(r, where)], population=True), where, dict_recs, _where_fields(where))
     table, env = _get_table(prev)
     if table is not None:
         dicts = _row_dicts(table)
@@ -341,7 +344,7 @@ def _op_filter_impl(prev, params):
         kept = [d for d in dicts if _match(d, where)]
         cols = table.get("columns") or []
         rows = [[d.get(str(c)) for c in cols] for d in kept]
-        return _diag._empty_filter_note(_emit_table(env, {"columns": cols, "rows": rows}), where, dicts, _where_fields(where))
+        return _diag._empty_filter_note(_emit_table(env, {"columns": cols, "rows": rows}, population=True), where, dicts, _where_fields(where))
     # items/table 이 없어도 도메인 봉투의 원천 행(data/results)이 있으면 거기서 (sort 와 대칭)
     _wf = _where_fields(where)
     dug = _rows_for_field(prev, _wf[0] if _wf else None)
@@ -349,7 +352,7 @@ def _op_filter_impl(prev, params):
         missing = [f for f in _wf if not any(f in r for r in dug)]
         if missing:
             return _field_missing_error("filter", missing, dug)
-        return _diag._empty_filter_note(_emit_items({}, [r for r in dug if _match(r, where)]), where, dug, _wf)
+        return _diag._empty_filter_note(_emit_items({}, [r for r in dug if _match(r, where)], population=True), where, dug, _wf)
     return _no_currency_error("filter", prev)
 
 
@@ -567,7 +570,7 @@ def _op_dedup(prev, params):
                 continue
             seen.add(k)
             out.append(r)
-        return _emit_items(env, out)
+        return _emit_items(env, out, population=True)
     table, env = _get_table(prev)
     if table is not None:
         cols = [str(c) for c in (table.get("columns") or [])]
@@ -584,7 +587,7 @@ def _op_dedup(prev, params):
                 continue
             seen.add(k)
             rows.append(r)
-        return _emit_table(env, {"columns": cols, "rows": rows})
+        return _emit_table(env, {"columns": cols, "rows": rows}, population=True)
     return _no_currency_error("dedup", prev)
 
 
@@ -670,7 +673,7 @@ def _op_groupby(prev, params):
         # filter/take 처럼 0행으로 흘려보낸다(F17 "빈손 계약은 verb 마다 심사"의 잔여 verb).
         recs, _env0 = _get_items(prev)
         if recs is not None and len(recs) == 0:
-            return {"success": True, "items": [], "count": 0,
+            return {**_emit_items(_env0, [], population=True),
                     "message": "groupby: 0행 입력 — 집계할 행이 없습니다."}
         return {"success": False, "error": "groupby: 입력에서 items 통화(또는 data/items 행 목록)를 찾지 못했습니다."}
     missing = [k for k in keys if not any(k in d for d in dicts)]
@@ -732,9 +735,9 @@ def _op_groupby(prev, params):
     # 형태 보존(언어 개정 2026-09-06): 집계도 변환자다 — items 입력엔 items(그룹 행 dict),
     # 명시 표형 입력에만 표형. 옛 판은 늘 표를 내 `$집계.items` 참조·2차 union 을 막았다.
     if _explicit_table(prev):
-        res = _emit_table(env, {"columns": out_cols, "rows": out_rows})
+        res = _emit_table(env, {"columns": out_cols, "rows": out_rows}, population=True)
     else:
-        res = _emit_items(env, [dict(zip(out_cols, row)) for row in out_rows])
+        res = _emit_items(env, [dict(zip(out_cols, row)) for row in out_rows], population=True)
     res = _value_semantics.attach_group_reports(
         res, group_key_coercions, aggregation_skips, aggregation_errors)
     if auto_named and isinstance(res, dict) and res.get("success", True):
@@ -1001,7 +1004,7 @@ def _op_merge(prev, params):
             dd.append(r)
         out = dd
     return _branch_proto.attach_dead_note(
-        _attach_branch_warning(_emit_items(_carry_flags(objs), out), objs), _dead, _total)
+        _attach_branch_warning(_emit_items(_carry_flags(objs), out, population=bool(keys or params.get("dedup"))), objs), _dead, _total)
 
 
 def _op_flatten(prev, params):
@@ -1090,7 +1093,7 @@ def _op_flatten(prev, params):
         # 파이프를 완주시킨다(each 와 같은 수리 — "목록 필드가 없다" 오류의 전제는
         # "행이 있는데"라 행 0개엔 성립하지 않는다).
         if not recs:
-            res = _emit_items(env, [])
+            res = _emit_items(env, [], population=True)
             res["message"] = "flatten: 입력 0행 — 펼칠 것 없음 (빈 목록)"
             return res
         sample = sorted({kk for r in recs[:20] if isinstance(r, dict) for kk in r.keys()})[:12]
@@ -1108,7 +1111,7 @@ def _op_flatten(prev, params):
         return {"success": False,
                 "error": (f"flatten: field '{field}' 에서 목록을 가진 행이 없습니다"
                           f"(행 {len(recs)}개 전부 건너뜀). 행 필드 예: {sample}")}
-    res = _emit_items(env, out)
+    res = _emit_items(env, out, population=True)
     if skipped:
         res["skipped_rows"] = skipped
     if keep_missing:

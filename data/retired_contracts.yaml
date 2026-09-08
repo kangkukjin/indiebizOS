@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: population-reduction-is-truncation
+    retired: 2026-09-08
+    reason: 조건 선별·중복 제거·집계까지 표본 절단으로 취급해 정상 보고서에 잘림 경고가 붙었다.
+    instead: 집합 재정의는 기존 total을 결과 행수로 갱신하고 실제 상류 truncated만 승계한다. take는 표본 규약을 유지한다.
+    phrases:
+      - "take/filter/dedup 전부"
+      - "filter·dedup 도 같은 부류"
+      - "truncated == total > len(items)"
   - id: json_ledger_script
     retired: 2026-09-04
     reason: >-

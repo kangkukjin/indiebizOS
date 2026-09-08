@@ -803,7 +803,7 @@ def test_p22_copy_empty_hands_vs_no_currency():
 def test_p23_unary_transformers_restate_scope():
     """P23(26회차 B26-1·B26-2): 단항 변환자가 봉투의 자기-기수 서술을 안 고쳐 거짓말을 했다.
 
-    시스템 자신의 정의: truncated == total > len(items) (portal_warehouse:304 · test_body_vocab T1/T5).
+    2026-09-08 개정: 조건으로 새 집합을 만드는 것은 표본 절단이 아니다.
     ⑭가 이항 변환자에 `_carry_flags` 를 달았지만 단항 경로는 안 쓸었다.
     """
     trunc_free = json.dumps({"success": True, "total": 29,  "truncated": False,
@@ -811,9 +811,9 @@ def test_p23_unary_transformers_restate_scope():
     # take: 29 → 1 이면 total(29) > 1 이므로 truncated 가 켜져야 한다
     t = _run("data_take", {"_prev_result": trunc_free, "n": 1})
     assert t.get("truncated") is True and t.get("count") == 1 and t.get("total") == 29, t
-    # filter·dedup 도 같은 부류
+    # filter는 새 집합 — total도 선별한 집합의 기수로 재진술
     f = _run("data_filter", {"_prev_result": trunc_free, "where": "n < 5"})
-    assert f.get("truncated") is True and f.get("count") == 5, {k: f.get(k) for k in ("truncated", "count")}
+    assert f.get("truncated") is False and f.get("count") == f.get("total") == 5, f
     # ★기수 불변 변환(sort)은 건드리지 않는다 — 오폭 방지
     s = _run("data_sort", {"_prev_result": trunc_free, "by": "n"})
     assert s.get("truncated") is False and s.get("count") == 29, {k: s.get(k) for k in ("truncated", "count")}

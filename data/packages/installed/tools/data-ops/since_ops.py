@@ -141,7 +141,7 @@ def op_since(prev, params, get_items, emit_items,
     finally:
         conn.close()
 
-    result = emit_items(env, out)
+    result = emit_items(env, out, population=True)
     result["since_key"] = key
     result["since_by"] = by
     result["baseline_total"] = baseline

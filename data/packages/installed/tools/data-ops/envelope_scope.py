@@ -81,43 +81,25 @@ def _reproject_mirrors(out, originals, new_rows):
     return out
 
 
-def _restate_scope(out, prior_len, new_len):
-    """변환 뒤 봉투가 **자기 기수를 다시 말하게** 한다 (B26-1·B26-2, 상상훈련 26회차).
+def _restate_scope(out, prior_len, new_len, *, population=False):
+    """현재 집합의 기수와 원천 잘림을 구분한다(2026-09-08 언어 개정).
 
-    이 시스템은 `truncated` 를 스스로 이렇게 정의해 둔다 — **truncated == total > len(items)**
-    (`surface/portal_warehouse.py:304` · `test_body_vocab` T1/T5). 그런데 단항 변환자는
-    `total` 을 그대로 물고 내려가면서 `truncated` 를 재계산하지 않아, 봉투가 자기
-    불변식을 깨뜨렸다. 실측(2026-08-23):
-        [self:grep]{…}                    → total 29 · items 29 · truncated false   (참)
-        … >> [table:take]{n: 1}            → total 29 · items  1 · truncated false   (거짓)
-        … >> [table:filter]{…}            → total 29 · items 27 · truncated false   (거짓)
-        … >> [table:dedup]{by: "파일"}      → total 29 · items  1 · truncated false   (거짓)
-    즐 "29건 전부를 보여준다"고 말하면서 1건을 낸다. ★이것은 새 부류가 아니라
-    이미 세 번 봉한 '잘림 침묵'의 네 번째 자리다 — ⑥′(file_find `truncated/total` 봉투키)·
-    ⑫(grep 전수 계수)·⑭(`_carry_flags` 로 이항 변환자 승계). 그 스윗이 **단항 경로에만**
-    안 닿았고, 단항은 이 병목(`_emit_items`/`_emit_table`) 하나로 전부 통과한다.
-
-    규칙은 전부 기존 계약에서 끌어왔다 — 새 의미를 만들지 않는다:
-      ① `truncated` 는 **켜기만** 한다(단조). `total` 이 결과 기수보다 크면 True.
-         끄지 않는 이유: 상류가 *다른 사유*로 잘렸을 수 있고, 그걸 지우면 새 거짓말이다
-         (`_carry_flags` 의 truncated=OR 승계와 같은 방향).
-      ② `total` 은 **지어내지 않는다** — 없으면 없는 채로 둔다. 이것은 `_carry_flags` 의
-         join 조항("지어낸 total 은 또 다른 거짓말")을 단항에 그대로 적용한 것.
-         그래서 take 가 아무 신고도 안 뿌리는 경우가 남는데, **침묵은 거짓말이 아니다** —
-         고치는 것은 `truncated: false` 라는 *적극적 거짓 주장*뿐이다.
-      ③ 기수가 **변한** 변환 뒤의 봉투 `summary` 는 변환 전 집계라 stale 이다.
-         실측: `[sense:realty]{…} >> [table:groupby]{by: "법정동", agg: {평균가: ["avg", "거래금액"]}}`
-         → items 는 법정동별 평균 14행인데 봉투는 `summary.평균가: "31,952만원"`(전체 평균)·
-         `summary.총거래건수: 90` 을 그대로 들고 있다. `message`/`text` 를 여기서 떨어내는
-         것과 **같은 부류**다(변환 전 집합을 서술하는 다이제스트).
-         단, message/text 처럼 무조건이 아니라 **기수 변경 시에만** 지우는 이유:
-         그 둘은 O(items) 산문이라 파이프 블로업까지 걸리지만, summary 는 작은 집계라
-         유일한 문제가 stale 이고 그건 집합이 바뀌었을 때만 발생한다(sort·select 뒤엔 참).
-         → 오폭을 피하면서 거짓말만 정확히 지운다.
+    filter/dedup/groupby/since/flatten/중복 병합은 집합을 다시 정의하므로,
+    기존 total이 있으면 결과 기수로 바꾼다. 그 자체로 truncated를 켜지 않는다.
+    이미 켜진 상류 truncated는 보존한다. 불완전 입력에서 만든 결과의 total은
+    관측된 결과 기수이며, 아직 수집하지 않은 원천의 결과 수를 뜻하지 않는다.
+    take와 행 보존 변환은 기존 total을 유지한다. total 없는 봉투에 추정치를
+    만들지 않으며, 상류가 total > 입력 행수인데 표지를 빠뜨렸으면 보완한다.
     """
     tot = out.get("total")
-    if isinstance(tot, int) and not isinstance(tot, bool) and tot > new_len:  # vj-ok: 봉투 계수 비교
+    known = isinstance(tot, int) and not isinstance(tot, bool)
+    if population:
+        if known:
+            if prior_len is not None and tot > prior_len:  # vj-ok: 봉투 계수 비교
+                out["truncated"] = True
+            out["total"] = new_len
+    elif known and tot > new_len:  # vj-ok: 봉투 계수 비교
         out["truncated"] = True
-    if prior_len is not None and prior_len != new_len and isinstance(out.get("summary"), (dict, str)):  # vj-ok: 봉투 계수 비교
+    if (population or (prior_len is not None and prior_len != new_len)) and isinstance(out.get("summary"), (dict, str)):
         out.pop("summary", None)
     return out

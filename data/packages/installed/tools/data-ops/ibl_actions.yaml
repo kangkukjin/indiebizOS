@@ -15,7 +15,7 @@ actions:
       reads_fields: [where]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴).
+    description: "통화 변환자 — items에서 조건(where)에 맞는 것만 남긴다(부분집합·비파괴). 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
     target_description: 'where(필터 조건): 문자열 "필드 op 값"(op=기호 >= <= > < == != · 워드 contains/in/not_in/not_contains/matches/startswith/endswith/eq/ne/lt/le/lte/gt/ge/gte — 예 "아파트명 matches 자이" · not_in 값=배열(구조형 {field, op: "not_in", value: [...]} — 원장 제외 등 안티조인) · "A and B or C" 논리식(조각 전부 비교식일 때, 우선순위 SQL — or 최하위; 비교식·비-비교식 혼합은 중의성 거절, 값 속의 and/or 는 구조형으로) · 연산자 없는 문자열은 전 필드 부분일치(예 "전세") · {field, op, value} 구조형 · {열:값} 단축형 · 조건 배열(AND). 모르는 op 은 정직 거절(침묵 == 폴백 없음). 날짜 하한은 YYYY-MM-DD 로 — 달력 날짜는 시간대 있는 시각(Z·+09:00)과도 그 값의 자기 시간대 날짜로 비교된다(2026-09-05); 시각이 있는 naive 와 aware 의 비교는 판정 불능 거절. >> 파이프로 앞 통화를 자동 수용하고, items 파라미터로 행 목록(리터럴·`$변수` 원형)을 직접 받을 수도 있다(언어 개정 2026-08-27). 도메인 무관 — 모든 검색·목록 생산자에 적용.'
     group: transform
     router: handler
@@ -60,7 +60,7 @@ actions:
       columns: keep
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤.
+    description: "통화 변환자 — items에서 상위 n개만(음수면 뒤에서 n). 보통 sort 뒤. 표본 추출: 기존 total을 유지하며 반환 행보다 크면 truncated를 신고한다."
     target_description: 'n(취할 개수, 기본 10; 음수=뒤에서 n개). 보통 sort 뒤에 써 상위 N 추출: [...] >> [table:sort]{by:..} >> [table:take]{n:5}.'
     group: transform
     router: handler
@@ -184,7 +184,7 @@ actions:
       reads_fields: [field]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다.
+    description: "통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
     target_description: 'field(펼칠 중첩 목록 경로, 필수에 가까움. 점 표기 "payload.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. [table:each] 는 결과 통화를 그대로 내므로 flatten 없이 바로 다음 변환자로 잇는다. 예: 중첩 tags 열을 펴려면 ... >> [table:flatten]{field: "tags", keep: ["title"]}.'
     group: transform
     router: handler
@@ -206,7 +206,7 @@ actions:
       reads_fields: [by]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교).
+    description: "통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교). 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
     target_description: by(중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
     group: transform
     router: handler
@@ -233,7 +233,7 @@ actions:
     side_effect: true
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자(검침) — 지난 호출 이후 새로 나타난 행만 통과. 모든 items 생산자 × since = 감시자("새 것 있으면 알려줘"), 트리거와 조합하면 정기 감시가 한 문장.
+    description: "통화 변환자(검침) — 지난 호출 이후 새로 나타난 행만 통과. 모든 items 생산자 × since = 감시자(\"새 것 있으면 알려줘\"), 트리거와 조합하면 정기 감시가 한 문장. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
     target_description: 'key(검침 스트림 이름, 필수 — 감시 파이프마다 고유하게) · by(행 식별 필드, 생략=url/id/link/title 자동 선택) · watch(값 변화도 보고할 필드 배열, 예 ["price"] — 변화 행은 _since:"changed"+_since_prev 동반) · peek(true=기준선 안 올리고 미리보기). 첫 실행=기준선만 저장하고 빈 items+note(스팸 방지). 예: [sense:feed]{url:...} >> [table:since]{key:"하다뉴스"}.'
     group: transform
     router: handler
@@ -258,8 +258,8 @@ actions:
       reads_fields: [by]
     runs_on: anywhere
     scope: workspace
-    description: 통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
-    target_description: 'by(그룹 키 열, 필수 — 목록이면 교차집계: ["아파트명", "계약유형"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:["count"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}.'
+    description: "통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 \"count\")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null."
+    target_description: "by(그룹 키 열, 필수 — 목록이면 교차집계: [\"아파트명\", \"계약유형\"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:\"count\" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:[\"count\"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 'op_원본열'(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
     group: transform
     router: handler
     params:
@@ -332,7 +332,7 @@ actions:
     scope: workspace
     params:
       on_error: string
-    description: 통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.)
+    description: "통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.) 중복 제거 시 기존 total을 결과 행수로 갱신하며, 상류의 실제 truncated는 보존한다."
     target_description: 'by(선택, 중복 제거 키 필드 — 목록이면 복합키; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 표형 결합은 table:union. 예: [sense:search]{source: "gnews", ...} & [sense:search]{...} >> [table:merge]{by: title}.'
     group: transform
     router: handler

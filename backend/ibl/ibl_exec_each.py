@@ -54,10 +54,13 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
         if not field:
             return _render(row, m.start())
         if isinstance(row, dict):
-            if field not in row:
+            from common.field_path import walk_path, MISSING
+            # 점이 실제 열 이름에 들어 있으면 그 열을 우선하고, 아니면 공용 경로로.
+            value = row[field] if field in row else walk_path(row, field)
+            if value is MISSING:
                 missing.append(field)
                 return m.group(0)
-            return _render(row.get(field), m.start())
+            return _render(value, m.start())
         # 스칼라 행: 호출자가 출력에서 {_EACH_SCALAR_FIELD: row} 로 감싸므로
         # `$it.value` 도 그 값 자체로 푼다(`$it` 와 같은 뜻). 그 밖의 필드는 정직하게 없음.
         if field == _EACH_SCALAR_FIELD:
@@ -74,11 +77,12 @@ def _each_foreign_vars(do: str, var: str) -> list:
     """do 문장 안에서 **해석되지 않을** `$변수` 이름 목록 (F14-1, 2026-08-20 14회차).
 
     행 참조(`$<var>`)·예약어 `$items`·do 안에서 자기 할당된 변수는 정상.
+    catch/finally의 $error와 repeat 몸·조건의 회차 변수는 그 블록 안에서만 정상이다.
     그 밖의 `$이름` 은 어떤 행에서도 치환되지 않고 리터럴로 하류에 흘러간다 —
     14회차 실측: `as:"google"` 지정 후 `$it.title` 이 통째로 구글 검색어가 되어
     무관한 결과 30건이 success 로 완주했다(유령 변수의 침묵 통과).
     ★외부 파이프의 `$변수` 는 each 실행 전에 상위 해석기가 이미 치환하므로,
-    여기 남은 것은 전부 오타/참조명 불일치다.
+    여기 남은 참조는 내부 제어문의 바인딩 범위를 검사한 뒤 오타인지 판단한다.
     """
     from common.ibl_vars import REF_RE, split_ref
     # 자기 할당(`$x = …`) — 경계 판정만 표기 모듈로 옮기고, "= 뒤가 오면 할당" 이라는
@@ -89,11 +93,35 @@ def _each_foreign_vars(do: str, var: str) -> list:
         if not path and re.match(r"\s*=", do[m.end():]):
             assigned.add(name)
     foreign = []
-    for name, _path in (split_ref(m) for m in REF_RE.finditer(do)):
-        if name == var or name == "items" or name in assigned or name[0].isdigit():
-            continue
-        if name not in foreign:
-            foreign.append(name)
+
+    def visit(obj, bound):
+        if isinstance(obj, str):
+            for match in REF_RE.finditer(obj):
+                name, _ = split_ref(match)
+                if name not in bound and not name[0].isdigit() and name not in foreign:
+                    foreign.append(name)
+        elif isinstance(obj, list):
+            for item in obj:
+                visit(item, bound)
+        elif isinstance(obj, dict):
+            if obj.get('_def'):
+                return  # 함수 정의는 자기 인자·닫힌 스코프를 가진다.
+            for key, value in obj.items():
+                if key in ('_raw', '_vars', '_fn_ref'):
+                    continue
+                local = bound
+                if obj.get('_try') and key in ('catch', 'finally'):
+                    local = bound | {'error'}
+                if obj.get('_repeat') and key in ('body', 'condition'):
+                    local = bound | {obj.get('var') or 'i'}
+                visit(value, local)
+
+    try:
+        from ibl_parser import parse_function_body
+        tree = parse_function_body(do)
+    except Exception:
+        tree = do  # 문법 오류의 본 진단은 행 실행기가 맡는다.
+    visit(tree, {var, 'items'} | assigned)
     return foreign
 
 

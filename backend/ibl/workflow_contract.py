@@ -267,6 +267,8 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
     치환 규칙(파서 _resolve_variables 와 동일한 이름 경계):
       - 값이 정확히 "$key" 하나면 원시 타입 보존(숫자·리스트·dict 그대로)
       - 문자열 속에 섞여 있으면 문자열 임베드(dict/list 는 JSON)
+      - 경로 참조는 공용 field_path로 실제 값을 추출하며 결측은 오류(옵셔널은 None)
+      - 식·조건은 코드 치환 대신 실행기의 값 바인딩, 주입된 데이터는 재치환하지 않음
     메타: params_injected(주입된 키) / params_warning(대응 $변수 없는 키·예약 이름 —
     조용히 버리지 않고 알린다)."""
     reserved = _reserved_row_names(steps)
@@ -279,21 +281,37 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
         return str(value)
 
     def _sub_str(s: str):
-        for key, value in caller.items():
-            if key in reserved:
-                continue
-            if is_sole_ref(s, key):
-                hits.add(key)
-                return value  # 통짜 참조 — 원시 타입 보존
-            before = s
-            # 경로(`$r.file`)는 이름만 갈아끼우고 뒤에 그대로 붙인다 — 주입값은 step 결과가
-            # 아니라 평범한 값이라, 경로 해석은 하류(파라미터 소비자)의 몫이다.
-            s = sub_ref(s, key, lambda path, _v=value: _embed(_v) + path)
-            if s != before:
-                hits.add(key)
-                if isinstance(value, list):
-                    embedded_lists.add(key)
-        return s
+        sole = REF_RE.fullmatch(s)
+        if sole:
+            key, path = split_ref(sole)
+            if key in caller and key not in reserved:
+                return _resolve(key, path)
+
+        def replace(match):
+            key, path = split_ref(match)
+            if key not in caller or key in reserved:
+                return match.group(0)
+            value = _resolve(key, path)
+            if isinstance(value, list):
+                embedded_lists.add(key)
+            return _embed(value)
+
+        # 주입된 데이터의 $문자를 다음 인자의 참조로 다시 해석하지 않는다.
+        return REF_RE.sub(replace, s)
+
+    def _resolve(key, path):
+        from common.field_path import walk_path, MISSING
+        hits.add(key)
+        value = caller[key]
+        optional = path.endswith('?')
+        field = path.rstrip('?').lstrip('.')
+        if field:
+            value = walk_path(value, field)
+            if value is MISSING:
+                if optional:
+                    return None
+                raise ValueError(f"인자 ${key}{path} 경로가 값에 없습니다.")
+        return value
 
     def _sub_code(s: str):
         # do는 나중에 다시 파싱되는 IBL이다. 값에 작은따옴표가 있으면
@@ -307,10 +325,7 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
             key, path = split_ref(match)
             if key not in caller or key in reserved:
                 return match.group(0)
-            hits.add(key)
-            value = caller[key]
-            if path:
-                value = _embed(value) + path
+            value = _resolve(key, path)
             return ibl_escape(value) if inside_ibl_string(s, match.start()) else ibl_literal(value)
 
         return REF_RE.sub(replace, s)
@@ -319,6 +334,25 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
         if isinstance(obj, str):
             return _sub_str(obj)
         if isinstance(obj, dict):
+            if obj.get('_assign') or obj.get('_condition') or obj.get('_repeat') or obj.get('_case'):
+                # 식·조건은 실행기의 값 바인더가 해석한다. 값이 0/false/문자열이어도
+                # 코드 텍스트로 바꾸지 않는다(따옴표 탈출·빈 식·이중 치환 방지).
+                expression_keys = {'expr', 'condition', 'source'}
+                expressions = [obj.get(k) for k in expression_keys]
+                if obj.get('_condition'):
+                    expressions += [b.get('condition') for b in obj.get('branches', [])]
+                used = {split_ref(m)[0] for expression in expressions
+                        for m in REF_RE.finditer(str(expression or ''))}
+                bound = {k: v for k, v in caller.items() if k in used and k not in reserved}
+                hits.update(bound)
+                result = {k: v if k in expression_keys else _walk(v) for k, v in obj.items()}
+                if obj.get('_condition'):
+                    result['branches'] = [
+                        {k: v if k == 'condition' else _walk(v) for k, v in branch.items()}
+                        for branch in obj.get('branches', [])]
+                if bound:
+                    result['_var_values'] = {**(obj.get('_var_values') or {}), **bound}
+                return result
             if obj.get("_var_emit") and obj.get("_free"):
                 # 자유 변수 통화 방출(언어 개정 2026-09-07): 문자열 치환이 아니라 **봉투로**
                 # 싣는다 — 통화(items·표·산문)를 문자열에 끼워 넣으면 모양이 죽는다.

@@ -598,7 +598,7 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
     미할당 $변수·없는 경로·허용 밖 구문은 정직 에러(거짓·0 으로 접지 않음)."""
     from common.safe_expr import compile_expr, eval_expr, FUNCS
     from ibl_predicates import walk_path, _MISSING, _load_var
-    expr = str(tool_input.get("expr") or "").strip()
+    expr = str(tool_input.get("expr", "")).strip()
     name = tool_input.get("name")
     vals = _vars_with_items(tool_input)
     scope: Dict[str, Any] = {}
@@ -628,7 +628,9 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
             text = v if isinstance(v, str) else str(_scalar_of(v))
             return json.dumps(text, ensure_ascii=False)[1:-1].replace("'", "\\'")
         key = f"_v{len(scope)}"
-        scope[key] = _scalar_of(v)
+        # 참조 하나를 그대로 반환할 때는 문자열 식별자(007 등)의 원형을 유지한다.
+        # 실제 산술식에 참여할 때만 기존 숫자 관측 규칙을 적용한다.
+        scope[key] = v if m.span() == (0, len(expr)) and not isinstance(v, dict) else _scalar_of(v)
         return key
     try:
         from common.ibl_vars import REF_RE

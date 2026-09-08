@@ -395,8 +395,27 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
                 # 3. 중첩 객체면 재귀적 relaxed 파싱
                 if open_br == '{':
                     return _parse_relaxed_params(raw), i + 1
-                # 배열이면 원본 문자열 반환 (최선)
-                return raw, i + 1
+                # 변수 값이 든 배열도 객체와 같은 재귀 파서를 쓴다. 문자열 폴백은
+                # [{n:$i}]를 반복 치환 뒤에도 str로 남겨 통화 연결을 깨뜨렸다.
+                values = []
+                cursor = 1
+                while cursor < len(raw) - 1:
+                    while cursor < len(raw) - 1 and raw[cursor].isspace():
+                        cursor += 1
+                    if cursor >= len(raw) - 1:
+                        break
+                    value, end = _extract_value(raw, cursor)
+                    if end <= cursor:
+                        raise IBLSyntaxError('배열 원소를 해석하지 못했습니다.')
+                    values.append(value)
+                    cursor = end
+                    while cursor < len(raw) - 1 and raw[cursor].isspace():
+                        cursor += 1
+                    if cursor < len(raw) - 1:
+                        if raw[cursor] != ',':
+                            raise IBLSyntaxError('배열 원소 사이에는 쉼표가 필요합니다.')
+                        cursor += 1
+                return values, i + 1
         elif ch in '"\'':
             # 문자열 리터럴 내부 건너뛰기
             quote = ch

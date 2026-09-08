@@ -1156,7 +1156,7 @@ def _op_join(prev, params):
         return {"success": False,
                 "error": f"join: 입력이 {len(prev)}개 — join 은 두 입력만 받습니다. 여러 개는 [table:union/merge]로 합치거나 둘씩 나눠 join 하세요."}
     if not isinstance(prev, list) or len(prev) < 2:
-        return {"success": False, "error": "join: & 병렬로 두 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}
+        return {"success": False, "error": "join: & 병렬 또는 left/right로 두 입력이 필요합니다. 예: [A] & [B] >> [table:join]{on: \"연도\"}"}
     a, b = _extract_two(prev)
     if a is None or b is None:
         # 입력 개수 탓으로 돌리면 자가교정 단서가 틀린다 — 진짜 원인은 분기 출력이 통화가 아님.

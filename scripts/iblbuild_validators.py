@@ -1417,6 +1417,16 @@ def validate_flow_coverage(data: dict, root: Path) -> list[str]:
             if not isinstance(flow, dict):
                 continue
             acc, em, col = flow.get("accepts"), flow.get("emits"), flow.get("columns")
+            reads = flow.get("reads_fields")
+            if reads is not None and (not isinstance(reads, list)
+                    or any(not isinstance(p, str) or not p for p in reads)):
+                issues.append(f"{node_name}:{action_name}: flow.reads_fields 는 문자열 슬롯 목록이어야 한다(on은 따옴표 필수)")
+            direct = flow.get("input_params")
+            if direct is not None and (not isinstance(direct, list) or not direct
+                    or any(not isinstance(p, str) or not p for p in direct)
+                    or len(set(direct)) != len(direct)
+                    or (acc == "pair" and len(direct) != 2)):
+                issues.append(f"{node_name}:{action_name}: flow.input_params 는 중복 없는 입력 슬롯 목록이어야 한다(pair는 2개)")
             if acc not in _FLOW_ACCEPTS:
                 issues.append(f"{node_name}:{action_name}: flow.accepts={acc!r} 는 허용값이 아니다 {sorted(_FLOW_ACCEPTS)}")
             if em not in _FLOW_EMITS:

@@ -171,7 +171,10 @@ def op_select(tool_input):
         path = _target_path(args.get("path"))
         target = _parts(args.get("target"))
         if not path.exists():
-            return {"success": False, "items": [], "error": f"원장이 없습니다: {path}"}
+            return {"success": False, "items": [], "error": f"원장이 없습니다: {path}",
+                    "path": str(path),
+                    "hint": "원장 상대경로는 저장소 루트 기준입니다. self:write는 프로젝트 기준이므로 "
+                            "공유 파일은 양쪽 모두 ~workspace/ 접두 또는 쓰기 결과의 절대경로를 사용하세요."}
         array = _get_target(json.loads(path.read_text(encoding="utf-8")), target, create_list=False)
         if not isinstance(array, list):
             raise ValueError("select target 은 JSON 배열이어야 합니다.")

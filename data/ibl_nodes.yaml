@@ -4940,7 +4940,7 @@ nodes:
           spill=true: items
         description: 텍스트 파일 새로 쓰기·덮어쓰기 (append 아님). 파이프 싱크 겸용 — content 생략 시 직전 step 결과를 저장(message 있으면 산문, 없으면 JSON). format:"json" 이면 통화 {items, count} JSON 원장. spill:true 면 봉투에 참조(ref)만.
         group: file
-        target_description: 쓸 파일 경로 (절대 또는 상대) + content. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format:"json" = 통화 보존 스위치 — 생산자 모양과 무관하게 {items, count} JSON 원장으로 저장(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:"json"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
+        target_description: 쓸 파일 경로 + content. 상대경로는 현재 프로젝트 기준(시스템 AI는 data/일 수 있음). 원장과 공유할 파일은 ~workspace/ 접두 또는 반환된 절대경로를 쓴다. content 생략 시 파이프의 직전 step 결과를 저장. 기존 파일은 묻지 않고 덮어쓴다. 파이프 싱크의 모양 — 통화에 message(산문)가 있으면 그 산문을, 없으면 JSON 을 쓴다(정직 표지·_메타는 파일에서 빼고 excluded_meta 로 신고). format:"json" = 통화 보존 스위치 — 생산자 모양과 무관하게 {items, count} JSON 원장으로 저장(원장 누적 관용구 `$본 = [self:read]{path}` → `$본.items & (새 조회 >> …) >> [table:union] >> [table:dedup]{by} >> [self:write]{path, format:"json"}` 의 첫 저장이 이것으로 선다). spill:true = 스필 싱크 — 결과 봉투에 {items:[], ref:{path,kind,count,bytes}} 만 실어 results[]·모델 컨텍스트를 덜어낸다. 뒤 step 은 참조를 투명 해소해 원래 데이터를 그대로 본다(흐름 불변). 나중에 다시 읽으려면 [self:read]{path}.
         router: handler
         tool: write_file
         implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).
@@ -5457,7 +5457,7 @@ nodes:
         fixture: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
         description: JSON 원장 원자 갱신·조회 (op 분기) — 반복 작업의 상태(커버리지·순회 큐·판정)를 스키마 관문과 함께 지키는 {items} 통화의 저장 반쪽. 등록 스크립트에서 승격(2026-09-04 언어 개정).
         group: system
-        target_description: 'items_file 은 맨 배열 파일 또는 [self:write]{format:"json"} 이 낸 {items,count} 봉투 파일(그 목록으로 받음, 2026-09-05). path(저장소 안·~workspace/ 가능) 필수. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(table:filter와 같은 조건: {field,op,value}·{필드:값}·문자열·AND 배열, 필드 점 경로 지원)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절.'
+        target_description: 'items_file 은 맨 배열 파일 또는 [self:write]{format:"json"} 이 낸 {items,count} 봉투 파일(그 목록으로 받음, 2026-09-05). path(저장소 안·~workspace/ 가능) 필수. path와 items_file의 상대경로는 저장소 루트 기준이며 self:write의 프로젝트 기준과 다르다. 공유 파일은 양쪽에 ~workspace/ 접두 또는 쓰기 결과의 절대경로를 사용한다. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(table:filter와 같은 조건: {field,op,value}·{필드:값}·문자열·AND 배열, 필드 점 경로 지원)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절.'
         router: handler
         tool: ledger_op
         implementation: system_essentials/ledger_ops.py — 원자 쓰기(tmp+fsync+replace), 관문 넷(set target 필수·key 거절·enum_fields·list_limits) 전부 실사고 유래. 옛 등록 스크립트(2026-09-04 은퇴) 이식.
@@ -8297,10 +8297,13 @@ nodes:
         returns: transform
         flow:
           accepts: pair
+          input_params:
+          - left
+          - right
           emits: items
           columns: union
           reads_fields:
-          - true
+          - 'on'
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 inner join. 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.

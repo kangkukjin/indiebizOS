@@ -508,13 +508,25 @@ class _Checker:
             return T(returns)
         return unknown()
 
-    def _input_for(self, params: Dict[str, Any], prev: Optional[T]) -> Tuple[Optional[T], str]:
-        """변환자의 입력 — items param 이 있으면 그것(자리표면 그 타입·리터럴이면 열 추출), 아니면 직전 통화."""
+    def _input_for(self, params: Dict[str, Any], prev: Optional[T],
+                   flow: Optional[Dict[str, Any]] = None) -> Tuple[Optional[T], str]:
+        """선언된 직접 입력 → items → 직전 통화 순서. 직접 입력도 타입·열을 검사한다."""
+        from ibl_pipe_types import explicit_input_params
+        names = explicit_input_params({"flow": flow or {}}, params)
+        if names:
+            inputs = [self._input_for({"items": params[n]}, None)[0] for n in names]
+            return (inputs[0] if len(inputs) == 1 else T("bundle", branches=inputs)), "direct params"
         if "items" in params:
             v = params["items"]  # items-ok: 정적 검사 — 값을 소비하지 않고 자리표·리터럴의 모양(열 이름)만 본다
             t = self._param_ref_type(v)
             if t is not None:
                 return t, "items param"
+            if isinstance(v, dict) and isinstance(v.get("items"), list):
+                return self._input_for({"items": v["items"]}, None)
+            if isinstance(v, dict) and isinstance(v.get("table"), dict):
+                cols = v["table"].get("columns")
+                return T("items", cols if isinstance(cols, list) else None,
+                         closed=isinstance(cols, list)), "table literal"
             if isinstance(v, list):
                 first = v[0] if v else None
                 cols = list(first.keys()) if isinstance(first, dict) else None
@@ -528,7 +540,7 @@ class _Checker:
         emits = str(flow.get("emits") or "same")
         columns = flow.get("columns")
         cparam = flow.get("columns_param")
-        inp, _src = self._input_for(params, prev)
+        inp, _src = self._input_for(params, prev, flow)
         # each 의 do — 안쪽 문장을 타입해 방출 열을 안다($it = 입력 행)
         do_t: Optional[T] = None
         if isinstance(params.get("do"), str) and params.get("do").strip():
@@ -589,6 +601,13 @@ class _Checker:
             return T("items")
         if columns == "union":
             u = self._bundle_union(inp) if (inp is not None and inp.kind == "bundle") else T("items", in_cols, in_closed)
+            # 이항 입력의 동명 비키 열은 실행기가 접미사로 바꿀 수 있다.
+            # 단순 union 선언만으로 새 이름을 확정할 수 없으므로 닫힌 열로 오거절하지 않는다.
+            if accepts == "pair" and inp is not None and len(inp.branches) == 2:
+                keys = {f for p in (flow.get("reads_fields") or []) for f in self._fields_in(params.get(p))}
+                overlap = set(inp.branches[0].cols or []) & set(inp.branches[1].cols or [])
+                if overlap - keys:
+                    u.closed = False
             return T("items", u.cols, u.closed)
         if columns == "subset":
             if isinstance(lit, list) and lit and all(isinstance(c, str) and not _dynamic(c) for c in lit):

@@ -131,6 +131,15 @@ def step_currency(step: Any) -> Optional[str]:
     return ad.get("returns")
 
 
+def explicit_input_params(action_def: Dict[str, Any], params: Dict[str, Any]) -> List[str]:
+    """사전에 선언된 직접 통화 입력. 여러 슬롯은 모두 공급돼야 한 묶음이다."""
+    names = (action_def.get("flow") or {}).get("input_params")
+    if (isinstance(names, list) and names
+            and all(isinstance(n, str) and params.get(n) is not None for n in names)):
+        return names
+    return []
+
+
 def head_transform_error(steps: List[Dict[str, Any]],
                          has_incoming: bool = False,
                          each_do: bool = False) -> Optional[str]:
@@ -155,6 +164,8 @@ def head_transform_error(steps: List[Dict[str, Any]],
     params = head.get("params") or {}
     if isinstance(params, dict) and "items" in params:
         return None  # 변환 대상을 직접 실었다(언어 개정 ③)
+    if isinstance(params, dict) and explicit_input_params(_action_def(node, action) or {}, params):
+        return None  # 직접 공급한 통화도 파이프 입력과 같은 검사 대상으로 넘긴다
     if each_do:
         # do 하위 파이프에는 통화가 흐르지 않는다(행은 $it 치환뿐) — 일반 처방
         # ("앞에 생산자")는 do 안에서 오도다. 행 전체 변환은 each 의 일이 아니라
@@ -194,6 +205,8 @@ def seam_starvation_error(steps: List[Dict[str, Any]]) -> Optional[Tuple[int, st
         b_params = b.get("params") if isinstance(b.get("params"), dict) else {}
         if "items" in b_params:
             continue  # 변환 대상을 직접 실었다(언어 개정 ③) — 이음매 통화가 필요 없다
+        if explicit_input_params(_action_def(b_node, b_action) or {}, b_params):
+            continue
         a = steps[i - 1]
         if step_currency(a) != "effect":
             continue  # items·transform=흐른다, scalar=데이터 의존 승격 가능성(기권), None=판정 불능

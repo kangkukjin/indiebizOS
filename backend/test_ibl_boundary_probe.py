@@ -11,10 +11,11 @@ from ibl_boundary_cases_round2 import cases as round2_cases
 from ibl_boundary_cases_round2 import additional_cases as round2_additional
 from ibl_boundary_cases_round3 import cases as round3_cases
 from ibl_boundary_cases_round4 import cases as round4_cases
+from ibl_boundary_cases_round5 import cases as round5_cases
 from ibl_boundary_probe import probe
 
 
-@pytest.mark.parametrize('case', cases() + additional_cases() + round2_cases() + round2_additional() + round3_cases() + round4_cases(), ids=lambda c: c['id'])
+@pytest.mark.parametrize('case', cases() + additional_cases() + round2_cases() + round2_additional() + round3_cases() + round4_cases() + round5_cases(), ids=lambda c: c['id'])
 def test_boundary_sentences(case):
     result = probe(case)
     assert result['syntax_ok'], result.get('error_text')
@@ -125,6 +126,62 @@ def test_comment_preprocessing_preserves_string_content(code, expected):
     steps = parse(code)
     assert len(steps) == 1
     assert steps[0]['params']['content'] == expected
+
+
+@pytest.mark.parametrize('header,iterations,halted', [
+    ('0', 0, None), ('0,max:6', 0, None), ('3,max:0', 0, 'max'),
+    ('2,max:6', 2, None), ('3,max:1', 1, 'max'),
+    ('while true,max:0', 0, 'max'), ('until false,max:0', 0, 'max'),
+    ('while false,max:3', 0, None),
+])
+@pytest.mark.parametrize('collect', ['false', 'true'])
+def test_repeat_budget_controls_calls_and_reports_incomplete(header, iterations, halted, collect):
+    from test_ibl_program_grade_m3m5 import _run, _final
+    calls = []
+    out = _run('[repeat:' + header + ',collect:' + collect + ']{[self:work]{}}', calls)
+    final = _final(out)
+    assert out['success'] and len(calls) == iterations
+    assert final['iterations'] == iterations and final.get('halted') == halted
+    if not iterations:
+        assert final['items'] == [] and final['count'] == 0
+    if halted:
+        assert 'max=' in final['note']
+
+
+def test_zero_repeat_preserves_state_and_still_runs_outer_finally():
+    from idiom_experiment_worker import run_trial
+    from ibl_boundary_cases import payload
+    trial = run_trial('$n=7\n[try]{[repeat:0]{$n=$n+1\n[self:read]{path:"absent"}}}'
+                      '[finally]{[self:read]{path:"note.txt"}}\n$return=$n', 'dedup')
+    assert trial['result']['success'] and trial['observed']['leaf_calls'] == ['self:read']
+    assert payload(trial['result']) == 7
+
+
+@pytest.mark.parametrize('params,span,message', [
+    ('tail:1', (2, 2), '초안\n'), ('tail:3', (1, 2), '제목\n초안\n'),
+    ('limit:0', (None, None), ''), ('offset:8,limit:2', (None, None), ''),
+])
+def test_blocks_read_range_metadata_matches_contents(params, span, message):
+    from idiom_experiment_worker import run_trial
+    from idiom_value_cases import final_value
+    result = run_trial('[self:read]{path:"note.txt",blocks:true,' + params + '}', 'dedup')['result']
+    final = final_value(result)
+    assert result['success'] and final['message'] == message
+    assert (final['start_line'], final['end_line']) == span
+    assert final['total_lines'] == 2
+
+
+@pytest.mark.parametrize('separator', ['\u2028', '\u2029', '\x85', '\v', '\f'])
+def test_blocks_and_plain_read_share_physical_line_numbers(separator):
+    from ibl_boundary_cases import literal as q
+    from idiom_experiment_worker import run_trial
+    from idiom_value_cases import final_value
+    code = '[self:write]{path:"outputs/lines.txt",content:' + q('a' + separator + 'b\nc\n') + '}'
+    code += '\n[self:read]{path:"outputs/lines.txt",blocks:true,start_line:2,limit:1}'
+    result = run_trial(code, 'dedup')['result']
+    final = final_value(result)
+    assert result['success'] and final['message'] == 'c\n'
+    assert final['total_lines'] == 2
 
 
 if __name__ == '__main__':

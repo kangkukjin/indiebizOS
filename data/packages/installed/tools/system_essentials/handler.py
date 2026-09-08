@@ -29,6 +29,7 @@ _FIND_DEADLINE_S = _fs_find.FIND_DEADLINE_S
 _bounded_find = _fs_find.bounded_find
 _expand_braces = _fs_find.expand_braces
 _normalize_read_range = _load_sibling("fs_read_range").normalize_read_range
+_text_read_bounds = _load_sibling("fs_read_range").text_read_bounds
 
 # 시스템 AI 전용 상태 폴더 (data/system_ai_state/)
 DATA_PATH = Path(__file__).parent.parent.parent.parent
@@ -737,24 +738,21 @@ def execute(tool_input: dict, context) -> str:
             if tool_input.get("blocks"):
                 from doc_ir import markdown_to_blocks
                 with open(path, 'r', encoding='utf-8') as f:
-                    _txt = f.read()
+                    _lines = f.readlines()
+                _txt = ''.join(_lines)
                 # blocks 도 줄 범위(offset/limit·start_line/end_line)를 존중한다(2026-09-05, 관용구 '찾아서각각읽기' 리허설
                 # 실측: grep 줄번호 주변을 문단으로 받으려 했는데 파일 머리부터 나왔다) — 범위를 먼저 자르고 문단으로 나눈다.
-                _b_off = int(tool_input.get("offset", 0) or 0)
-                _b_lim = tool_input.get("limit")
+                _b_off, _b_end, _ranged = _text_read_bounds(tool_input, len(_lines))
                 _b_range = None
-                if _b_off > 0 or _b_lim is not None:
-                    _lines = _txt.splitlines(keepends=True)
-                    _b_end = min(_b_off + int(_b_lim), len(_lines)) if _b_lim is not None else len(_lines)
+                if _ranged:
                     _txt = "".join(_lines[_b_off:_b_end])
-                    _b_range = {"start_line": _b_off + 1, "end_line": _b_end, "total_lines": len(_lines)}
+                    _b_range = {"start_line": _b_off + 1 if _txt else None,
+                                "end_line": _b_end if _txt else None, "total_lines": len(_lines)}
                 _parts = markdown_to_blocks(_txt)
                 _env = {"success": True, "items": _parts, "message": _txt, "path": path, "count": len(_parts)}
                 if _b_range:
                     _env.update(_b_range)
                 return json.dumps(_env, ensure_ascii=False)
-            offset = tool_input.get("offset", 0) or 0
-            limit = tool_input.get("limit")
             file_size = os.path.getsize(path)
 
             with open(path, 'r', encoding='utf-8') as f:
@@ -762,15 +760,7 @@ def execute(tool_input: dict, context) -> str:
 
             total_lines = len(lines)
 
-            # tail:N — 파일 끝에서 N줄(tail -n N 의 자리, 2026-09-05 그림자 관문). 총 줄 수를 몰라도 꼬리를 본다.
-            _tail = tool_input.get("tail")
-            if _tail:
-                try:
-                    _tn = max(1, int(_tail))
-                    offset = max(0, total_lines - _tn)
-                    limit = _tn
-                except (TypeError, ValueError):
-                    pass
+            offset, end, ranged = _text_read_bounds(tool_input, total_lines)
             # numbered:true — 각 줄 앞에 줄번호(cat -n 의 자리). grep 줄번호·edit start_line 과 같은 자.
             _numbered = bool(tool_input.get("numbered"))
 
@@ -780,8 +770,7 @@ def execute(tool_input: dict, context) -> str:
                 return ''.join(f"{n}\t{l}" for n, l in enumerate(seq, start=first_no))
 
             # offset/limit 적용
-            if offset > 0 or limit is not None:
-                end = min(offset + limit, total_lines) if limit is not None else total_lines
+            if ranged:
                 selected = lines[offset:end]
                 content = _join(selected, offset + 1)
                 # 표시는 1-기반 양끝 포함 — grep 줄번호·start_line/end_line 과 같은 자로 읽힌다

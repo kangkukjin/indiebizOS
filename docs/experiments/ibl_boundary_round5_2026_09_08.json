@@ -1,0 +1,2944 @@
+{
+  "base_commit": "7a3e5e7bfd331a041ebf9037339c1b3dfe54c4db",
+  "method": "100 fixed grammatical IBL programs; actual parser, workflow engine and local file/table handlers in temporary fixtures; no model or network calls. 12 tail/range conflict cases clarify a newly explicit contract. Supplemental guards are separate.",
+  "before": {
+    "cases": 100,
+    "passed": 52,
+    "syntax_passed": 100
+  },
+  "after": {
+    "cases": 100,
+    "passed": 100,
+    "syntax_passed": 100
+  },
+  "rows": [
+    {
+      "id": "r5_count_0_None_False",
+      "code": "[repeat:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_0_None_True",
+      "code": "[def:검증]{$return=[repeat:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_0_0_False",
+      "code": "[repeat:0,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_0_0_True",
+      "code": "[def:검증]{$return=[repeat:0,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_0_1_False",
+      "code": "[repeat:0,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_0_1_True",
+      "code": "[def:검증]{$return=[repeat:0,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_0_6_False",
+      "code": "[repeat:0,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_0_6_True",
+      "code": "[def:검증]{$return=[repeat:0,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_1_None_False",
+      "code": "[repeat:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_1_None_True",
+      "code": "[def:검증]{$return=[repeat:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_1_0_False",
+      "code": "[repeat:1,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_1_0_True",
+      "code": "[def:검증]{$return=[repeat:1,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_1_1_False",
+      "code": "[repeat:1,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_1_1_True",
+      "code": "[def:검증]{$return=[repeat:1,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_1_6_False",
+      "code": "[repeat:1,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_1_6_True",
+      "code": "[def:검증]{$return=[repeat:1,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_2_None_False",
+      "code": "[repeat:2,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_2_None_True",
+      "code": "[def:검증]{$return=[repeat:2,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_2_0_False",
+      "code": "[repeat:2,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_2_0_True",
+      "code": "[def:검증]{$return=[repeat:2,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_2_1_False",
+      "code": "[repeat:2,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_2_1_True",
+      "code": "[def:검증]{$return=[repeat:2,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_2_6_False",
+      "code": "[repeat:2,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_2_6_True",
+      "code": "[def:검증]{$return=[repeat:2,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_3_None_False",
+      "code": "[repeat:3,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_3_None_True",
+      "code": "[def:검증]{$return=[repeat:3,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_3_0_False",
+      "code": "[repeat:3,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_3_0_True",
+      "code": "[def:검증]{$return=[repeat:3,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_3_1_False",
+      "code": "[repeat:3,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_3_1_True",
+      "code": "[def:검증]{$return=[repeat:3,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_3_6_False",
+      "code": "[repeat:3,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_3_6_True",
+      "code": "[def:검증]{$return=[repeat:3,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_4_None_False",
+      "code": "[repeat:4,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        },
+        {
+          "n": "3"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_4_None_True",
+      "code": "[def:검증]{$return=[repeat:4,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        },
+        {
+          "n": "3"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_4_0_False",
+      "code": "[repeat:4,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_4_0_True",
+      "code": "[def:검증]{$return=[repeat:4,max:0,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_count_4_1_False",
+      "code": "[repeat:4,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_4_1_True",
+      "code": "[def:검증]{$return=[repeat:4,max:1,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_4_6_False",
+      "code": "[repeat:4,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        },
+        {
+          "n": "3"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_count_4_6_True",
+      "code": "[def:검증]{$return=[repeat:4,max:6,collect:true]{[table:take]{items:[{n:$i}],n:1}}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "n": "0"
+        },
+        {
+          "n": "1"
+        },
+        {
+          "n": "2"
+        },
+        {
+          "n": "3"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          },
+          {
+            "n": "4"
+          },
+          {
+            "n": "5"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "n": "0"
+          },
+          {
+            "n": "1"
+          },
+          {
+            "n": "2"
+          },
+          {
+            "n": "3"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_zero_while true_False_False",
+      "code": "[repeat:while true,max:0,collect:false]{[self:read]{path:\"absent\"}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": {
+          "iterations": 1,
+          "mode": "while",
+          "last": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "halted": "error",
+          "success": false,
+          "error": "repeat 1회차에서 중단 — Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "repeat_error": {
+            "error": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "step": 1,
+            "node": "self",
+            "action": "read",
+            "summary": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "traceback": {
+              "frames": [
+                {
+                  "kind": "block",
+                  "block": "repeat",
+                  "iteration": 1
+                },
+                {
+                  "kind": "pipeline",
+                  "step": 1,
+                  "of": 1,
+                  "node": "self",
+                  "action": "read"
+                }
+              ],
+              "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+              "error_type": "tool_error"
+            },
+            "iteration": 1
+          },
+          "traceback": {
+            "frames": [
+              {
+                "kind": "block",
+                "block": "repeat",
+                "iteration": 1
+              },
+              {
+                "kind": "pipeline",
+                "step": 1,
+                "of": 1,
+                "node": "self",
+                "action": "read"
+              }
+            ],
+            "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "error_type": "tool_error"
+          }
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_zero_while true_False_True",
+      "code": "[def:검증]{$return=[repeat:while true,max:0,collect:false]{[self:read]{path:\"absent\"}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": {
+          "iterations": 1,
+          "mode": "while",
+          "last": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "halted": "error",
+          "success": false,
+          "error": "repeat 1회차에서 중단 — Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "repeat_error": {
+            "error": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "step": 1,
+            "node": "self",
+            "action": "read",
+            "summary": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "traceback": {
+              "frames": [
+                {
+                  "kind": "block",
+                  "block": "repeat",
+                  "iteration": 1
+                },
+                {
+                  "kind": "pipeline",
+                  "step": 1,
+                  "of": 1,
+                  "node": "self",
+                  "action": "read"
+                }
+              ],
+              "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+              "error_type": "tool_error"
+            },
+            "iteration": 1
+          },
+          "traceback": {
+            "frames": [
+              {
+                "kind": "block",
+                "block": "repeat",
+                "iteration": 1
+              },
+              {
+                "kind": "pipeline",
+                "step": 1,
+                "of": 1,
+                "node": "self",
+                "action": "read"
+              }
+            ],
+            "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "error_type": "tool_error"
+          }
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_zero_while true_True_False",
+      "code": "[repeat:while true,max:0,collect:true]{[self:read]{path:\"absent\"}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_zero_while true_True_True",
+      "code": "[def:검증]{$return=[repeat:while true,max:0,collect:true]{[self:read]{path:\"absent\"}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_zero_until false_False_False",
+      "code": "[repeat:until false,max:0,collect:false]{[self:read]{path:\"absent\"}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": {
+          "iterations": 1,
+          "mode": "until",
+          "last": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "halted": "error",
+          "success": false,
+          "error": "repeat 1회차에서 중단 — Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "repeat_error": {
+            "error": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "step": 1,
+            "node": "self",
+            "action": "read",
+            "summary": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "traceback": {
+              "frames": [
+                {
+                  "kind": "block",
+                  "block": "repeat",
+                  "iteration": 1
+                },
+                {
+                  "kind": "pipeline",
+                  "step": 1,
+                  "of": 1,
+                  "node": "self",
+                  "action": "read"
+                }
+              ],
+              "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+              "error_type": "tool_error"
+            },
+            "iteration": 1
+          },
+          "traceback": {
+            "frames": [
+              {
+                "kind": "block",
+                "block": "repeat",
+                "iteration": 1
+              },
+              {
+                "kind": "pipeline",
+                "step": 1,
+                "of": 1,
+                "node": "self",
+                "action": "read"
+              }
+            ],
+            "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "error_type": "tool_error"
+          }
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_zero_until false_False_True",
+      "code": "[def:검증]{$return=[repeat:until false,max:0,collect:false]{[self:read]{path:\"absent\"}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": {
+          "iterations": 1,
+          "mode": "until",
+          "last": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "halted": "error",
+          "success": false,
+          "error": "repeat 1회차에서 중단 — Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+          "repeat_error": {
+            "error": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "step": 1,
+            "node": "self",
+            "action": "read",
+            "summary": "Step 1 에러: Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "traceback": {
+              "frames": [
+                {
+                  "kind": "block",
+                  "block": "repeat",
+                  "iteration": 1
+                },
+                {
+                  "kind": "pipeline",
+                  "step": 1,
+                  "of": 1,
+                  "node": "self",
+                  "action": "read"
+                }
+              ],
+              "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+              "error_type": "tool_error"
+            },
+            "iteration": 1
+          },
+          "traceback": {
+            "frames": [
+              {
+                "kind": "block",
+                "block": "repeat",
+                "iteration": 1
+              },
+              {
+                "kind": "pipeline",
+                "step": 1,
+                "of": 1,
+                "node": "self",
+                "action": "read"
+              }
+            ],
+            "error": "Error: [Errno 2] No such file or directory: '<fixture>/absent'",
+            "error_type": "tool_error"
+          }
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_zero_until false_True_False",
+      "code": "[repeat:until false,max:0,collect:true]{[self:read]{path:\"absent\"}}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_zero_until false_True_True",
+      "code": "[def:검증]{$return=[repeat:until false,max:0,collect:true]{[self:read]{path:\"absent\"}}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_tail_int_1_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_int_1_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1}}\n[fn:검증]{}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_int_1_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_tail_int_1_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_tail_int_2_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 2}",
+      "expected": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_int_2_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 2}}\n[fn:검증]{}",
+      "expected": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_int_2_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 2}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "제목\n초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_tail_int_2_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 2}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "제목\n초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_tail_int_3_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 3}",
+      "expected": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_int_3_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 3}}\n[fn:검증]{}",
+      "expected": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 1-2 / 전체 2줄, 14바이트]\n제목\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_int_3_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 3}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "제목\n초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_tail_int_3_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 3}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "제목\n초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_tail_str_1_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": \"1\"}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_str_1_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": \"1\"}}\n[fn:검증]{}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_tail_str_1_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": \"1\"}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_tail_str_1_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": \"1\"}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_range_0_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"start_line\": 2, \"end_line\": 2}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_range_0_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"start_line\": 2, \"end_line\": 2}}\n[fn:검증]{}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_range_0_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"start_line\": 2, \"end_line\": 2}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_range_0_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"start_line\": 2, \"end_line\": 2}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_range_1_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"start\": 1, \"end\": 2}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_range_1_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"start\": 1, \"end\": 2}}\n[fn:검증]{}",
+      "expected": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      }
+    },
+    {
+      "id": "r5_range_1_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"start\": 1, \"end\": 2}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_range_1_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"start\": 1, \"end\": 2}}\n[fn:검증]{}",
+      "expected": [
+        {
+          "type": "paragraph",
+          "text": "초안"
+        }
+      ],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "초안"
+          }
+        ]
+      }
+    },
+    {
+      "id": "r5_range_2_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"offset\": 1, \"limit\": 0}",
+      "expected": "[줄 없음 / 전체 2줄, 14바이트]\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      }
+    },
+    {
+      "id": "r5_range_2_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"offset\": 1, \"limit\": 0}}\n[fn:검증]{}",
+      "expected": "[줄 없음 / 전체 2줄, 14바이트]\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      }
+    },
+    {
+      "id": "r5_range_2_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"offset\": 1, \"limit\": 0}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_range_2_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"offset\": 1, \"limit\": 0}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_range_3_False_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"start_line\": 8, \"limit\": 2}",
+      "expected": "[줄 없음 / 전체 2줄, 14바이트]\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      }
+    },
+    {
+      "id": "r5_range_3_False_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"start_line\": 8, \"limit\": 2}}\n[fn:검증]{}",
+      "expected": "[줄 없음 / 전체 2줄, 14바이트]\n",
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "[줄 없음 / 전체 2줄, 14바이트]\n"
+      }
+    },
+    {
+      "id": "r5_range_3_True_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"start_line\": 8, \"limit\": 2}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_range_3_True_True",
+      "code": "[def:검증]{$return=[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"start_line\": 8, \"limit\": 2}}\n[fn:검증]{}",
+      "expected": [],
+      "error": false,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": []
+      }
+    },
+    {
+      "id": "r5_invalid_0_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1, \"offset\": 0}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_0_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1, \"offset\": 0}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_1_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1, \"start\": 0}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_1_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1, \"start\": 0}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_2_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1, \"start_line\": 1}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_2_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1, \"start_line\": 1}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목\n초안"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_3_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1, \"end\": 1}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_3_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1, \"end\": 1}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_4_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1, \"end_line\": 1}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_4_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1, \"end_line\": 1}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "type": "paragraph",
+            "text": "제목"
+          }
+        ]
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_5_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1, \"limit\": 0}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": "[줄 2-2 / 전체 2줄, 14바이트]\n초안\n"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_5_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1, \"limit\": 0}",
+      "expected": null,
+      "error": true,
+      "new_contract": true,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": []
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_6_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"offset\": true}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: offset는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: offset는 정수여야 합니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_6_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"offset\": true}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: offset는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: offset는 정수여야 합니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_7_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": true}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_7_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": true}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_8_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"limit\": false}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: limit는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: limit는 정수여야 합니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_8_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"limit\": false}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: limit는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: limit는 정수여야 합니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_9_False",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": false, \"tail\": 1.5}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      }
+    },
+    {
+      "id": "r5_invalid_9_True",
+      "code": "[self:read]{\"path\": \"note.txt\", \"blocks\": true, \"tail\": 1.5}",
+      "expected": null,
+      "error": true,
+      "new_contract": false,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": {
+          "success": false,
+          "error": "read 범위 오류: tail는 정수여야 합니다."
+        }
+      }
+    }
+  ],
+  "supplemental": {
+    "tests": 26,
+    "scope": [
+      "16 loop invocation/iteration/halted checks",
+      "zero repeat state preservation with outer finally",
+      "4 blocks content/span/empty metadata checks",
+      "5 Unicode separator physical line checks"
+    ],
+    "discovery": "blocks read splitlines counted U+2028 as another physical line; writing a\\u2028b\\nc\\n then reading line 2 returned b instead of c. readlines now defines both modes.",
+    "oracle_note": "A first supplemental state test used the older mock runner which did not execute assignments; replaced with the real isolated worker, without changing expected value 7."
+  },
+  "live_smoke": {
+    "package_reload": "ok",
+    "read_tail_blocks": "last line only, passed",
+    "read_conflicting_range": "rejected, passed",
+    "repeat": "running backend still uses old engine; 0 ran once and 2,max6 ran six. Restart deferred because health reported live episode 3148 and preflight found an unsubmitted staging session. Source fixes verified by isolated real engine tests."
+  }
+}

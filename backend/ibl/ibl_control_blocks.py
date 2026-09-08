@@ -438,7 +438,13 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     from common.currency import derive_items
     mode = tool_input.get("mode")
     cond = tool_input.get("condition")
-    max_n = min(int(tool_input.get("max") or tool_input.get("count") or 1), _REPEAT_MAX_ITER)
+    count = tool_input.get("count")
+    requested = int(count) if count is not None else None
+    cap = tool_input.get("max")
+    cap = int(cap) if cap is not None else (requested if requested is not None else 1)
+    # 0은 유효한 예산이다. max는 고정 횟수를 늘리지 않는 상한이다.
+    planned = min(requested, cap) if mode == "count" and requested is not None else cap
+    max_n = min(planned, _REPEAT_MAX_ITER)
     collect = bool(tool_input.get("collect"))
     var = tool_input.get("var") or "i"
     body = tool_input.get("body")
@@ -452,7 +458,7 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     if every_s > _REPEAT_EVERY_MAX_S:
         notes.append(f"every {every_s:.0f}s → 상한 {_REPEAT_EVERY_MAX_S}s 로 줄임(문장 안 휴지 상한; 더 길면 [goal:]/[self:schedule])")
         every_s = _REPEAT_EVERY_MAX_S
-    if int(tool_input.get("max") or tool_input.get("count") or 1) > _REPEAT_MAX_ITER:
+    if planned > _REPEAT_MAX_ITER:
         notes.append(f"max → 상한 {_REPEAT_MAX_ITER} 로 줄임")
 
     def _resolve(src: str):
@@ -572,11 +578,11 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
             halted = "wall"
             break
     else:
-        if mode in ("until", "while"):
+        if mode in ("until", "while") or (requested is not None and max_n < requested):
             halted = "max"
 
     out: Dict[str, Any] = {"iterations": iterations, "mode": mode}
-    if collect:
+    if collect or iterations == 0:
         out["items"] = collected
         out["count"] = len(collected)
     else:
@@ -602,7 +608,8 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
     else:
         out["success"] = True
         if halted == "max":
-            notes.append(f"max={max_n} 도달 — 종료 조건 미충족(성공 아님·실패 아님, 통화는 냄)")
+            reason = f"요청 {requested}회 중 {iterations}회 실행" if mode == "count" else "종료 조건 미충족"
+            notes.append(f"max={max_n} 도달 — {reason}(성공 아님·실패 아님, 통화는 냄)")
         elif halted == "wall":
             notes.append(f"벽시계 상한 {_REPEAT_WALL_MAX_S}s 도달로 중단 — 긴 대기는 [self:script]{{wait}}·[goal:]")
         elif halted == "budget":
@@ -618,7 +625,8 @@ def _execute_repeat(tool_input: dict, project_path: str, agent_id: str) -> Any:
         out["_var_updates"] = _upd
     # 되쓸 슬롯이 없어 떨군 이름은 조용히 두지 않는다 (B49-2) — 바깥에 없던 이름은
     # step_results 에 자리가 없어 원리적으로 못 나간다. 그 사실 자체가 신고 대상이다.
-    _note_vars_dropped(out, body, kept=set(_upd))
+    if iterations:
+        _note_vars_dropped(out, body, kept=set(_upd))
     for _k, _v in carried.items():                # 몸통의 정직 신고를 바깥으로 (B27-4)
         if _k not in out:
             out[_k] = _v

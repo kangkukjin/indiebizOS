@@ -1012,23 +1012,6 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
 
 
 def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
-    """앱/에이전트의 호출 통로를 보존하며 중첩·병렬에도 도구 AI 정책을 적용한다."""
-    from tool_ai_policy import tool_ai_scope, ToolAIBlocked, blocked_result
-    from common.value_semantics import public_result
-    node = tool_input.get("_node") or "ibl"
-    action = tool_input.get("action") or "block"
-    with tool_ai_scope(node, action, agent_id):
-        try:
-            result = _execute_ibl_with_criteria(tool_input, project_path, agent_id)
-        except ToolAIBlocked:
-            result = blocked_result(node, action)
-        if isinstance(result, dict) and result.get("error_type") == "tool_ai_policy":
-            from ibl_traceback import build_tb
-            result["traceback"] = build_tb(result["error"], "policy")
-        return public_result(result, producer=f"{node}:{action}")
-
-
-def _execute_ibl_with_criteria(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """모든 IBL 실행 모양에 공개 결과 계약 + criteria 품질 계약을 적용하는 최외곽 관문.
 
     criteria (표준 기능어 param, 2026-08-27 언어 개정): leaf 액션의 params 에서 엔진이
@@ -1042,14 +1025,6 @@ def _execute_ibl_with_criteria(tool_input: dict, project_path: str, agent_id: st
     node = tool_input.get("_node") or "ibl"
     action = tool_input.get("action") or "block"
     criteria = pop_criteria(tool_input)
-    from tool_ai_policy import tool_ai_blocked, blocked_result
-    if tool_ai_blocked():
-        cfg = load_nodes_installed().get("nodes", {}).get(node, {}).get("actions", {}).get(action, {})
-        if criteria or cfg.get("ai_call"):
-            from episode_logger import record_trajectory_event
-            record_trajectory_event("ai.policy_blocked", {"node": node, "action": action,
-                                                        "criteria": bool(criteria)})
-            return blocked_result(node, action)
     result = public_result(_execute_ibl_impl(tool_input, project_path, agent_id),
                            producer=f"{node}:{action}")
     # 봉투 규모 불변식 신고 (2026-09-04): 원천이 total>items 를 침묵하면 여기서 이름을 대고

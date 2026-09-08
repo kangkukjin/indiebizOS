@@ -256,7 +256,6 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **NIP-17/NIP-44 모듈**: `backend/base/nip17.py` (gift-wrap DM) + `backend/base/nip44.py` (암호화, 공식 테스트 벡터 150/150). channel_engine 송신은 NIP-17, 수신은 NIP-04+NIP-17 병행 fan-out
 - **외부 API 키 (`.env`)**: 패키지 핸들러가 외부 서비스 호출 시 `.env`에서 로드. 예: `NANET_API_KEY` — 국회도서관 국가학술정보(LOSI) OpenAPI (losi-open.nanet.go.kr, 연구자·학위논문 검색 `[sense:researcher]`·`[sense:paper]{source: "nanet"}`, study 패키지, auth_manager 'nanet' 레지스트리).
 - **IBL 노드 정의 (소스)**: `data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml` — 단일 진실 소스, 직접 편집. op-bearing 액션은 `ops: {default, values}` 블록 의무.
-- **자율주행 도구 원샷 실험 설정**: `data/agent_tool_policy.json`의 `allow_agent_tool_oneshot` (미설정=true). false면 에이전트 IBL 안의 추가 AI·criteria를 차단하고 AI 액션 카탈로그를 제외한다. 앱 직접 실행과 IBL 밖 인지/최종 평가는 유지. 로컬 설정, 코드/기어 변경 없이 되돌림. 범위·관측·검증은 `docs/AGENT_TOOL_ONESHOT_EXPERIMENT.md`.
 - **IBL 노드 정의 (빌드 산출물)**: `data/ibl_nodes.yaml` — `scripts/build_ibl_nodes.py`로 생성, 런타임 로드, 직접 편집 금지
 - **웹앱 등기부**: `data/webapps.json` — **파생 밖 예외만** 담는 수동 보충분(원장 아님). 진실 소스 7곳(포털·게시판·가족신문·공개파일·정기보고·web-builder `sites.json`·`outputs/web-projects/*/wrangler.toml`)은 `data/packages/installed/tools/system_essentials/webapp_registry.py` 가 매 호출 재계산. 어휘 `[self:webapp]{op}`.
 - **이웃 창고 둘러보기 시드**: `data/warehouse_directory.json` — 장르별 후보 목록(자가 생성·사용자 편집 가능). live 경로는 Neocities 태그 브라우즈를 요청 1회로 파싱.
@@ -326,7 +325,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(31) → `datastore`(44) → `ibl`(46) → `cognition`(52) → `services`(28) → `surface`(62). `.py` 총 322개(test 제외).
+  `base`(30) → `datastore`(44) → `ibl`(46) → `cognition`(52) → `services`(28) → `surface`(62). `.py` 총 321개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(17) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

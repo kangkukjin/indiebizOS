@@ -374,8 +374,6 @@ def _enrich_error_with_param_hint(result, code: str):
         is_err = (obj.get("success") is False) or ("error" in obj and not obj.get("success"))
         if not is_err or obj.get("_param_hint") or obj.get("blocked"):
             return result
-        if (obj.get("traceback") or {}).get("error_type") == "policy":
-            return result  # 설정에 따른 차단은 인자를 고쳐 재시도할 문제가 아니다.
         from ibl_parser import parse as _p
         parsed = _p(code)
         if not (parsed and len(parsed) == 1 and not parsed[0].get("_parallel")):
@@ -974,7 +972,6 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     같은 해시를 키로 ibl_code_corpus(episode_logger.record_ibl_code)에 누적한다(2026-09-06).
     """
     from episode_logger import trajectory_scope, record_trajectory_event, record_ibl_code
-    from tool_ai_policy import agent_tool_ai_allowed
 
     code = str((tool_input or {}).get("code") or (tool_input or {}).get("pipeline") or "")
     actions = [f"{n}:{a}" for n, a in re.findall(r"\[([a-z_]+):([a-z_]+)\]", code)]
@@ -1015,7 +1012,6 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 "pipes": _pipes,
                 "nested": _nested,
                 "agent": agent_id or "",
-                "allow_agent_tool_oneshot": agent_tool_ai_allowed(),
                 "unowned": _unowned,
                 "origin": _origin,
                 "task_id": getattr(_tr, "task_id", "") or "",

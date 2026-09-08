@@ -833,9 +833,6 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
 
     용도: 무의식 에이전트 분류, 경험 증류, 포식 정리 등 가벼운 AI 호출.
     """
-    from tool_ai_policy import require_tool_ai_allowed
-    require_tool_ai_allowed()
-
     # 0차: 이미지 입력이면 비전 모달리티 슬롯 우선 (2026-08-27 벤더 중립화) —
     # 텍스트 축 티어(경량 deepseek 등)는 비전이 없을 수 있다. gear modality.image 가
     # 정하는 프로바이더가 있으면 그걸 쓰고, 미설정이면 role-축 모델에 그대로 싣는다
@@ -967,9 +964,6 @@ def system_ai_call(prompt: str, system_prompt: str = None,
       - evaluate(달성 기준 평가) → 평가 축(기어 프리셋상 경량 — opus→경량 개선)
     리졸버 프로바이더 우선 → 옛 system_ai 원샷 getter → 의식 에이전트(본격) 순 폴백.
     """
-    from tool_ai_policy import require_tool_ai_allowed
-    require_tool_ai_allowed()
-
     # 0차: 이미지 입력이면 비전 모달리티 슬롯 우선 (2026-08-27 벤더 중립화) —
     # 텍스트 축 티어(경량 deepseek 등)는 비전이 없을 수 있다. gear modality.image 가
     # 정하는 프로바이더가 있으면 그걸 쓰고, 미설정이면 role-축 모델에 그대로 싣는다

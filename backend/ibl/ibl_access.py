@@ -388,11 +388,6 @@ def build_environment(
 
     parts = []
 
-    from tool_ai_policy import agent_tool_ai_allowed, prompt_notice
-    allow_tool_ai = agent_tool_ai_allowed()
-    if not allow_tool_ai:
-        parts.append(prompt_notice())
-
     # 12_ibl_only.md를 기본 IBL 교재로 첫머리에 삽입
     # (문법, Goal 시스템, 파이프라인 vs 에이전틱 사고 등 핵심 개념 포함)
     from runtime_utils import get_base_path
@@ -436,8 +431,6 @@ def build_environment(
             # prompt_hidden: 에이전트 카탈로그에서만 숨김(실행은 ibl_engine이 별도 yaml 로드라 유지).
             # 배관 액션(예: engines:icon — 앱 전용 호출, AI 어휘 밖)에 사용.
             if action_config.get("prompt_hidden"):
-                continue
-            if not allow_tool_ai and action_config.get("ai_call"):
                 continue
             # 몸 소유-필터(몸 독립, 2026-07-22): 이 몸이 실행 못 하는 남의 어휘는
             # 카탈로그에서 제외 — 학습·구사 대상이 아니다(맥=phone_only 제외, 폰=runnable만).
@@ -609,9 +602,7 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
     import re as _re
     import sqlite3
     import time
-    from tool_ai_policy import agent_tool_ai_allowed
-    allow_tool_ai = agent_tool_ai_allowed()
-    key = (tuple(sorted(allowed)) if allowed is not None else None, allow_tool_ai)
+    key = tuple(sorted(allowed)) if allowed is not None else None
     if _idioms_cache["text"] is not None and time.time() - _idioms_cache["t"] < 300 and _idioms_cache["key"] == key:
         return _idioms_cache["text"]
     text = ""
@@ -639,15 +630,8 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                 except (ValueError, KeyError, TypeError):
                     logger.warning("관용구 교재를 읽지 못함: %s", catalog)
             kept = []
-            blocked_actions = {
-                (n, a) for n, nc in load_nodes_raw().get("nodes", {}).items()
-                for a, ac in nc.get("actions", {}).items()
-                if isinstance(ac, dict) and ac.get("ai_call")
-            } if not allow_tool_ai else set()
             for r in rows:
                 code = r[1] or ""
-                if blocked_actions.intersection(_re.findall(r"\[([a-z_-]+):([a-z_-]+)\]", code)):
-                    continue
                 nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - {"fn"}
                 if allowed is not None and not nodes <= set(allowed):
                     continue

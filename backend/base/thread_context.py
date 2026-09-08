@@ -266,15 +266,6 @@ def clear_call_channel():
     _thread_local.call_channel = None
 
 
-def get_tool_ai_scope():
-    """IBL 실행 중인 AI 정책 범위. None이면 인지·평가 등 도구 밖 호출."""
-    return getattr(_thread_local, 'tool_ai_scope', None)
-
-
-def set_tool_ai_scope(scope):
-    _thread_local.tool_ai_scope = scope
-
-
 def is_web_surface() -> bool:
     """요청 표면이 브라우저인가 — 출력지(소리·저장) 판정용."""
     return get_current_surface() == 'web'
@@ -614,7 +605,6 @@ def clear_all_context():
     _thread_local.health_check_mode = False
     _thread_local.call_channel = None
     _thread_local.surface_ticket = None
-    _thread_local.tool_ai_scope = None
     _thread_local.progress_ticket = None
 
 

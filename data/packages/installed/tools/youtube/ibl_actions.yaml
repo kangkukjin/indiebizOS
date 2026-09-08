@@ -9,7 +9,7 @@ nodes:
         description: 유튜브 동영상 조회·시청 (op 분기). 메타·자막·요약 + 시청 앱(추천 피드·시청 페이지·시청 기록 — 재생은 맥 경유 릴레이, 유튜브 직접 접속 없음). 검색은 search_youtube.
         target_description: 'op로 분기 (기본 info). info/transcript/languages/summarize 는 url 또는 video_id 필수.
 
-          - info: 메타데이터(제목·조회수·채널).
+          - info: 메타데이터(제목·조회수·채널·upload_date=ISO YYYY-MM-DD). 원 공급자 날짜는 upload_date_raw로 보존. 날짜 누락·달력 오류는 실패.
 
           - transcript: 자막/스크립트 추출. language 옵션.
 

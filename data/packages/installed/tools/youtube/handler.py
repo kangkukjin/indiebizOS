@@ -83,7 +83,7 @@ _INFO_ROW_KEYS = ("title", "duration", "uploader", "view_count", "upload_date")
 
 
 def _snapshot_row(result, video_id=None, url=None):
-    """단일 개체 조회 결과에 items 1행을 병기한다 (원 키는 그대로 보존).
+    """단일 개체 조회 결과에 items 1행을 병기한다. 날짜는 ISO, 원 표기는 upload_date_raw.
 
     ★2026-08-24 B36-2: op:info 는 6필드 레코드(=표의 한 줄)인데 통화를 안 내서
     `[table:each]` 팬아웃이 원 행을 그대로 흘리고(passthrough_rows) `[table:filter]`
@@ -92,6 +92,23 @@ def _snapshot_row(result, video_id=None, url=None):
     """
     if not isinstance(result, dict) or not result.get("success"):
         return result
+    # 공급자 YYYYMMDD는 IBL 날짜가 아니다. 액션 경계에서만 변환하고
+    # 원 표기는 보존한다. 비교기의 ISO 전용 계약은 넓히지 않는다.
+    if "upload_date" in result:
+        from common.value_semantics import datetime_value
+        raw = result["upload_date"]
+        value = raw
+        if isinstance(raw, str) and len(raw) == 8 and raw.isascii() and raw.isdigit():
+            value = f"{raw[:4]}-{raw[4:6]}-{raw[6:]}"
+        moment = datetime_value(value) if isinstance(value, str) and len(value) == 10 else None
+        if moment is None:
+            return {**result, "success": False, "items": [],
+                    "error": "video info: upload_date가 없거나 유효한 달력 날짜가 아닙니다",
+                    "upload_date_raw": raw}
+        result = {**result, "upload_date": moment.date().isoformat(), "upload_date_raw": raw}
+    else:
+        return {**result, "success": False, "items": [],
+                "error": "video info: upload_date가 없어 최신성을 확인할 수 없습니다"}
     row = {k: result[k] for k in _INFO_ROW_KEYS if k in result}
     if not row:
         return result

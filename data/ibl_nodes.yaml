@@ -2576,7 +2576,7 @@ nodes:
         description: 유튜브 동영상 조회·시청 (op 분기). 메타·자막·요약 + 시청 앱(추천 피드·시청 페이지·시청 기록 — 재생은 맥 경유 릴레이, 유튜브 직접 접속 없음). 검색은 search_youtube.
         target_description: 'op로 분기 (기본 info). info/transcript/languages/summarize 는 url 또는 video_id 필수.
 
-          - info: 메타데이터(제목·조회수·채널).
+          - info: 메타데이터(제목·조회수·채널·upload_date=ISO YYYY-MM-DD). 원 공급자 날짜는 upload_date_raw로 보존. 날짜 누락·달력 오류는 실패.
 
           - transcript: 자막/스크립트 추출. language 옵션.
 
@@ -8145,10 +8145,14 @@ nodes:
           emits: items
           columns: add
           columns_param: set
+          scalar_expr_params:
+          - set
+          - columns
+          - expr
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 열끼리 계산해 파생 열 추가(비율·차이·증감률). 받은 숫자를 네가 다시 타이핑하지 말고 이걸로.
-        target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby.'
+        target_description: 'set({새열: "식"} 필수, 여러 열 가능). 식=열 이름(식별자) 또는 col("열 이름(특수문자)") · 숫자 · + - * / // % ** · round/abs/min/max/int/float/len · 문자열 함수 split/replace/strip/upper/lower/contains/join(언어 개정 2026-08-27 — 예 split(name, " (")[0]) · 비교·조건식(a if c else b). 숫자 문자열("3,500")은 수치로. 없는 열=정직 에러(실제 열 동봉), 0 나눗셈 등=그 행 None + note. 예: [sense:realty]{…} >> [table:compute]{set: {전세가율: "round(보증금 / 매매가 * 100, 1)"}} >> [table:sort]{by: "전세가율", desc: true}. 집계(합·평균)는 groupby. dict/list 생성은 불가하며 실행 전 식 검사로 거절한다. 중첩 데이터 변환은 등록된 self:script로.'
         group: transform
         router: handler
         tool: data_compute

@@ -1421,6 +1421,11 @@ def validate_flow_coverage(data: dict, root: Path) -> list[str]:
             if reads is not None and (not isinstance(reads, list)
                     or any(not isinstance(p, str) or not p for p in reads)):
                 issues.append(f"{node_name}:{action_name}: flow.reads_fields 는 문자열 슬롯 목록이어야 한다(on은 따옴표 필수)")
+            expr_slots = flow.get("scalar_expr_params")
+            if expr_slots is not None and (not isinstance(expr_slots, list) or not expr_slots
+                    or any(not isinstance(p, str) or not p for p in expr_slots)
+                    or len(set(expr_slots)) != len(expr_slots)):
+                issues.append(f"{node_name}:{action_name}: flow.scalar_expr_params 는 중복 없는 식 슬롯 목록이어야 한다")
             direct = flow.get("input_params")
             if direct is not None and (not isinstance(direct, list) or not direct
                     or any(not isinstance(p, str) or not p for p in direct)

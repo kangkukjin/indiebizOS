@@ -67,7 +67,7 @@ def validate_catalog(catalog):
             if required != supplied:
                 raise ValueError(f"{e['name']}: {call['action']} 인자 {supplied} != {required}")
         tc = typecheck_code(code)
-        errors = [i for i in tc.get("issues", []) if i.get("level") == "error"]
+        errors = [i for i in tc.get("issues", []) if i.get("severity", i.get("level")) == "error"]
         if tc.get("syntax_error") or errors:
             raise ValueError(f"{e['name']}: 조합 용례 타입 오류 {tc.get('syntax_error') or errors}")
         infos[e["name"]] = info

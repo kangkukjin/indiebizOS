@@ -481,6 +481,29 @@ class _Checker:
                 out.extend(_Checker._fields_in(v))
         return [f for f in out if f]
 
+    def _check_scalar_exprs(self, flow, params, idx, at):
+        """사전이 선언한 식 슬롯만 검사. 평가는 하지 않고 런타임 컴파일러를 공유한다."""
+        from common.safe_expr import compile_expr
+        slots = (flow or {}).get("scalar_expr_params") or []
+        for key in slots:
+            spec = params.get(key)
+            if not spec:
+                continue
+            # 동적 슬롯은 실행 때 정해진다. 하위 별칭을 대신 검사하지 않는다.
+            if isinstance(spec, str) and _dynamic(spec):
+                return
+            expressions = spec.items() if isinstance(spec, dict) else [(key, spec)]
+            for column, expr in expressions:
+                if _dynamic(expr):
+                    continue
+                try:
+                    compile_expr(expr)
+                except (SyntaxError, ValueError, TypeError) as exc:
+                    self._issue("error", idx, at, f"'{column}' 식 오류 — {exc}",
+                                hint="한 줄 식의 구문을 고치세요. 중첩 객체·목록 생성은 등록된 [self:script]로 처리합니다.",
+                                expected="scalar expression")
+            return
+
     # ── 낱말·변환자 ──
     def _type_action(self, st: Dict[str, Any], node: str, action: str, prev: Optional[T], idx: int) -> T:
         at = f"{node}:{action}"
@@ -495,6 +518,7 @@ class _Checker:
         except Exception:
             returns = ad.get("returns")
         flow = ad.get("flow") if isinstance(ad.get("flow"), dict) else None
+        self._check_scalar_exprs(flow, params, idx, at)
         if returns == "transform" or (flow and flow.get("emits") and returns != "effect"):
             if flow:
                 return self._type_transform(st, node, action, params, flow, prev, idx, at)
@@ -739,6 +763,11 @@ class _Checker:
         sub.fn_defs = dict(self.fn_defs)
         sub.fn_returns = dict(self.fn_returns)
         out = sub.run(steps)
+        # 리터럴 식의 구문 위반은 호출 인자와 무관하다. 반환 타입 추론에 묻지 않는다.
+        for issue in sub.issues:
+            if issue.get("expected") == "scalar expression":
+                self.issues.append({**issue, "statement": self.stmt,
+                                    "at": f"fn.body › {issue['at']}"})
         # `$return = …` 규약 — 그 문장의 결과가 반환(마지막이 effect 여도 됨)
         for i, s in enumerate(steps):
             if isinstance(s, dict) and s.get("_assign_name") == "return":
@@ -776,8 +805,11 @@ class _Checker:
             sig = _free_vars(steps)
         except Exception:
             return unknown()
+        before = len(self.issues)
         t = self._type_fn_body(steps, sig)
-        _FN_CACHE[key] = t
+        # 캐시가 오류를 삼켜 두 번째 호출만 초록이 되지 않게 한다.
+        if len(self.issues) == before:
+            _FN_CACHE[key] = t
         if len(_FN_CACHE) > 256:
             _FN_CACHE.pop(next(iter(_FN_CACHE)))
         self.fn_returns[name] = describe(t)

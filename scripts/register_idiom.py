@@ -18,6 +18,7 @@
 쓰기:
   python3 scripts/register_idiom.py --list
   python3 scripts/register_idiom.py --add 이름 --when "언제 부르는가" --body 몸.ibl [--always-on]
+  python3 scripts/register_idiom.py --update 이름 --body 수리.ibl --reason "재발 원인과 검증 결과"
   python3 scripts/register_idiom.py --promote 이름 | --demote 이름
   python3 scripts/register_idiom.py --candidates [--days 3]     # 부정기 수동 수집 보조
 """
@@ -42,6 +43,8 @@ def _db_path():
 def _gates(name: str, when: str, code: str):
     """등록 관문 — 자동 증류가 쓰던 바로 그 관문들. 방아쇠만 사람에게 갔지 자는 그대로다."""
     from ibl_parser import parse_function_body
+    from ibl_usage_rag import _validate_ibl_actions
+    from ibl_param_vocab import check_code_params
     from ibl_typecheck import typecheck_code, return_type_of
     from workflow_contract import call_signature
     from ibl_idiom import (uncallable_reason, _phrase_private_reason, sanitize_fn_name,
@@ -61,10 +64,12 @@ def _gates(name: str, when: str, code: str):
         parse_function_body(code)
     except Exception as e:
         return None, f"파싱 불가: {e}"
+    if not _validate_ibl_actions(code) or check_code_params(code):
+        return None, "존재하지 않는 액션 또는 인자"
     tc = typecheck_code(f"[def: {name}]{{\n{code}\n}}")
     if tc.get("syntax_error"):
         return None, f"타입 검사 파싱 불가: {tc['syntax_error']}"
-    errs = [i for i in (tc.get("issues") or []) if i.get("level") == "error"]
+    errs = [i for i in (tc.get("issues") or []) if i.get("severity", i.get("level")) == "error"]
     if errs:
         return None, f"타입 오류: {(errs[0].get('message') or '')[:120]}"
     sig = call_signature(code)
@@ -109,7 +114,7 @@ def cmd_add(a):
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
     if db.find_phrase_by_alias(a.add):
-        print(f"✗ 이름 '{a.add}' 이 이미 있다 — --promote/--demote 로 층만 바꾸거나 다른 이름을 쓰라")
+        print(f"✗ 이름 '{a.add}' 이 이미 있다 — 본문 수리는 --update, 소개 층은 --promote/--demote로 바꾸라")
         return 1
     eid = db.add_example(intent=a.when, ibl_code=code, nodes="", category="phrase",
                          source="manual_registry", tags="manual", topic=a.topic or "",
@@ -121,6 +126,65 @@ def cmd_add(a):
     if a.promote_too:
         return _promote(a.add, True)
     print("  (상시 소개는 --promote 이름 또는 --always-on 으로 — 어휘가 되므로 따로 고른다)")
+    return 0
+
+
+def update_idiom(db, name, code, reason, when=""):
+    """명시 개정: 같은 호출 서명·이름 유지, 옛 본문과 통계를 한 트랜잭션으로 보존."""
+    import json
+    from datetime import datetime
+    from workflow_contract import call_signature
+    from ibl_usage_db import _signature_of, _tree_refresh
+
+    old = db.find_phrase_by_alias(name)
+    if not old:
+        raise ValueError(f"'{name}' 이 없다")
+    if not reason.strip():
+        raise ValueError("--reason에 수리 이유와 검증 결과를 적으세요")
+    intent = when or old["intent"]
+    info, why = _gates(name, intent, code)
+    if why:
+        raise ValueError(f"개정 거절 — {why}")
+    if set(call_signature(old["ibl_code"])) != set(info["signature"]):
+        raise ValueError("호출 서명이 달라집니다 — 기존 인자를 유지해 수리하세요")
+    if old["ibl_code"].strip() == code.strip() and old["intent"] == intent:
+        return False
+    now = datetime.now().isoformat()
+    with db._get_connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        current = conn.execute("SELECT * FROM ibl_examples WHERE id=?", (old["id"],)).fetchone()
+        if (not current or current["ibl_code"] != old["ibl_code"]
+                or current["intent"] != old["intent"] or current["alias"] != name):
+            raise ValueError("검사 중 본문이 바뀌었습니다 — 새 정의를 읽고 다시 개정하세요")
+        conn.execute("""CREATE TABLE IF NOT EXISTS ibl_idiom_revisions (
+            id INTEGER PRIMARY KEY, example_id INTEGER NOT NULL, alias TEXT NOT NULL,
+            revised_at TEXT NOT NULL, reason TEXT NOT NULL, old_row TEXT NOT NULL,
+            new_code TEXT NOT NULL)""")
+        conn.execute("INSERT INTO ibl_idiom_revisions "
+                     "(example_id, alias, revised_at, reason, old_row, new_code) VALUES (?,?,?,?,?,?)",
+                     (old["id"], name, now, reason, json.dumps(dict(current), ensure_ascii=False), code))
+        conn.execute("UPDATE ibl_examples SET ibl_code=?, intent=?, returns=?, signature=?, "
+                     "success_count=0, fail_count=0, bypass_count=0, avg_ms=-1, avg_tokens=-1, "
+                     "updated_at=? WHERE id=?",
+                     (code, intent, info["returns"], _signature_of(code), now, old["id"]))
+        conn.commit()
+    # 새 본문에 옛 실적을 붙이지 않는다. 이름·always_on·topic·용례 id는 유지한다.
+    db._index_single(old["id"], f"{name} {intent}", code)
+    if hasattr(db, "_search_cache"):
+        db._search_cache.clear()
+    _tree_refresh(old["topic"])
+    return True
+
+
+def cmd_update(a):
+    from ibl_usage_db import IBLUsageDB
+    code = open(a.body, encoding="utf-8").read().strip() if os.path.exists(a.body) else a.body
+    try:
+        changed = update_idiom(IBLUsageDB(), a.update, code, a.reason, a.when)
+    except ValueError as exc:
+        print(f"✗ {exc}")
+        return 1
+    print(f"✓ {a.update}: " + ("개정 완료 — 이전 본문·실적은 ibl_idiom_revisions에 보존" if changed else "변경 없음"))
     return 0
 
 
@@ -176,6 +240,8 @@ def main():
     p = argparse.ArgumentParser(description="관용구 수동 등록·승격")
     p.add_argument("--list", action="store_true")
     p.add_argument("--add", metavar="이름")
+    p.add_argument("--update", metavar="이름", help="호출 서명을 유지하며 본문을 명시 개정")
+    p.add_argument("--reason", default="", help="개정 이유와 검증 결과")
     p.add_argument("--when", default="", help="언제 부르는가 — 지도에 실리는 조건")
     p.add_argument("--body", default="", help="몸(.ibl 파일 경로 또는 코드 문자열)")
     p.add_argument("--topic", default="", help="가지")
@@ -188,6 +254,8 @@ def main():
     p.add_argument("--min-seen", type=int, default=2)
     a = p.parse_args()
     a.promote_too = bool(a.add and a.always_on)
+    if a.update:
+        return cmd_update(a)
     if a.add:
         return cmd_add(a)
     if a.promote:

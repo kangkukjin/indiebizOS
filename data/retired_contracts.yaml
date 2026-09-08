@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: automatic-report-idiom-repair
+    retired: 2026-09-08
+    reason: 자동 작명을 중단했는데 세 보고서 가이드가 자동 등록·본문 갱신을 약속했다.
+    instead: 신규 관용구는 수동 등록, 기존 본문은 register_idiom.py --update로 이력 보존 개정한다.
+    phrases:
+      - "성공하면 증류가 이름을 붙이고 다음 호가 부른다"
+      - "고쳐서 부르면 그 골격이 다음 증류에서 그 이름의 새 본문이 된다"
   - id: unclosed-container-string-fallback
     retired: 2026-09-08
     reason: 닫히지 않은 item 객체가 뒤 인자를 삼킨 문자열로 원장에 저장될 수 있었다.

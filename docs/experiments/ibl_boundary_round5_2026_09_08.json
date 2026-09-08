@@ -2940,5 +2940,184 @@
     "read_tail_blocks": "last line only, passed",
     "read_conflicting_range": "rejected, passed",
     "repeat": "running backend still uses old engine; 0 ran once and 2,max6 ran six. Restart deferred because health reported live episode 3148 and preflight found an unsubmitted staging session. Source fixes verified by isolated real engine tests."
+  },
+  "live_final": {
+    "checked_at": "2026-09-08T15:37:38.931658+09:00",
+    "rows": [
+      {
+        "id": "zero_count",
+        "code": "[repeat:0]{[self:read]{path:\"outputs/nonexistent_round5.txt\"}}",
+        "passed": true,
+        "result": {
+          "iterations": 0,
+          "mode": "count",
+          "items": [],
+          "count": 0,
+          "success": true
+        }
+      },
+      {
+        "id": "count_before_cap",
+        "code": "[repeat:2,max:6,collect:true]{[table:take]{items:[{i:$i}],n:1}}",
+        "passed": true,
+        "result": {
+          "iterations": 2,
+          "mode": "count",
+          "items": [
+            {
+              "i": "0"
+            },
+            {
+              "i": "1"
+            }
+          ],
+          "count": 2,
+          "success": true
+        }
+      },
+      {
+        "id": "cap_before_count",
+        "code": "[repeat:6,max:2,collect:true]{[table:take]{items:[{i:$i}],n:1}}",
+        "passed": true,
+        "result": {
+          "iterations": 2,
+          "mode": "count",
+          "items": [
+            {
+              "i": "0"
+            },
+            {
+              "i": "1"
+            }
+          ],
+          "count": 2,
+          "halted": "max",
+          "success": true,
+          "note": "max=2 도달 — 요청 6회 중 2회 실행(성공 아님·실패 아님, 통화는 냄)"
+        }
+      },
+      {
+        "id": "zero_condition_cap",
+        "code": "[repeat:while true,max:0]{[self:read]{path:\"outputs/nonexistent_round5.txt\"}}",
+        "passed": true,
+        "result": {
+          "iterations": 0,
+          "mode": "while",
+          "items": [],
+          "count": 0,
+          "halted": "max",
+          "success": true,
+          "note": "max=0 도달 — 종료 조건 미충족(성공 아님·실패 아님, 통화는 냄)"
+        }
+      },
+      {
+        "id": "tail_blocks",
+        "code": "[self:read]{path:\"outputs/round5_live.txt\",tail:1,blocks:true}",
+        "passed": true,
+        "result": {
+          "success": true,
+          "items": [
+            {
+              "type": "paragraph",
+              "text": "last"
+            }
+          ],
+          "message": "last\n",
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/round5_live.txt",
+          "count": 1,
+          "start_line": 2,
+          "end_line": 2,
+          "total_lines": 2
+        }
+      },
+      {
+        "id": "empty_blocks",
+        "code": "[self:read]{path:\"outputs/round5_live.txt\",blocks:true,limit:0}",
+        "passed": true,
+        "result": {
+          "success": true,
+          "items": [],
+          "message": "",
+          "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/round5_live.txt",
+          "count": 0,
+          "start_line": null,
+          "end_line": null,
+          "total_lines": 2
+        }
+      },
+      {
+        "id": "range_conflict",
+        "code": "[self:read]{path:\"outputs/round5_live.txt\",tail:1,limit:0}",
+        "passed": true,
+        "result": {
+          "success": false,
+          "error": "read 범위 오류: tail은 offset/start/start_line/end_line/end/limit와 함께 지정할 수 없습니다.",
+          "_param_hint": "[self:read] 올바른 사용법: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능). — 위 사용법에 맞는 파라미터명/값으로 다시 시도하세요."
+        }
+      },
+      {
+        "id": "function_loop",
+        "code": "[def:검증]{$return=[repeat:2,max:6,collect:true]{[table:take]{items:[{i:$i}],n:1}}}\n[fn:검증]{}",
+        "passed": true,
+        "result": {
+          "success": true,
+          "steps_completed": 2,
+          "steps_total": 2,
+          "_action_count": 2,
+          "_results_summarized": true,
+          "_hint": "results[] 는 step 요약(shape·count·bytes·preview) — 전체 데이터는 final_result. step 원형이 필요하면 verbose: true 로 다시 실행.",
+          "results": [
+            {
+              "step": 1,
+              "node": "?",
+              "action": "?",
+              "duration_ms": 0,
+              "bytes": 109,
+              "keys": [
+                "defined",
+                "message",
+                "signature",
+                "success",
+                "todo"
+              ],
+              "shape": "message",
+              "preview": "[def: 검증] 정의됨 — 시그니처 (인자 없음)"
+            },
+            {
+              "step": 2,
+              "node": "fn",
+              "action": "검증",
+              "duration_ms": 6,
+              "bytes": 530,
+              "keys": [
+                "count",
+                "final_result",
+                "fn",
+                "fn_source",
+                "items",
+                "results",
+                "returned",
+                "steps_completed",
+                "steps_total",
+                "success"
+              ],
+              "shape": "items",
+              "count": 2,
+              "columns": [
+                "i"
+              ],
+              "preview": "{\"i\": \"0\"}"
+            }
+          ],
+          "final_result": "{\"success\": true, \"steps_completed\": 1, \"steps_total\": 1, \"_action_count\": 1, \"returned\": \"$return\", \"items\": [{\"i\": \"0\"}, {\"i\": \"1\"}], \"count\": 2, \"fn\": \"검증\", \"fn_source\": \"def\", \"_results_summarized\": true, \"_hint\": \"results[] 는 step 요약(shape·count·bytes·preview) — 전체 데이터는 final_result. step 원형이 필요하면 verbose: true 로 다시 실행.\", \"results\": [{\"step\": 1, \"node\": \"repeat\", \"action\": \"block\", \"duration_ms\": 6, \"bytes\": 98, \"keys\": [\"count\", \"items\", \"iterations\", \"mode\", \"success\"], \"shape\": \"items\", \"count\": 2, \"columns\": [\"i\"], \"preview\": \"{\\\"i\\\": \\\"0\\\"}\"}], \"final_result\": \"{\\\"iterations\\\": 2, \\\"mode\\\": \\\"count\\\", \\\"items\\\": [{\\\"i\\\": \\\"0\\\"}, {\\\"i\\\": \\\"1\\\"}], \\\"count\\\": 2, \\\"success\\\": true}\"}"
+        }
+      }
+    ],
+    "oracle_note": "Function invocation API returns a pipeline envelope; final_result was unwrapped before judging. Original root-items-only check was an oracle error, not an execution failure.",
+    "live_turns_after": [],
+    "passed": 8,
+    "cases": 8,
+    "worker_pid": 12487,
+    "activation": "Existing automatic reloader had already restarted at 15:30:33 after its 600-second cap (episode 3148 CUT in log). Follow-up observed no live turns and verified loaded code; no additional manual restart."
   }
 }

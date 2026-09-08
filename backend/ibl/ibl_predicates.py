@@ -283,7 +283,8 @@ def walk_path(obj: Any, path: Optional[str]) -> Any:
 
     걷는 규칙의 정본은 common.field_path 한 벌이다(2026-08-27 경로 방언 통일).
     """
-    return _fp_walk(obj, path) if path else obj
+    from common.currency import value_result_field_view
+    return _fp_walk(value_result_field_view(obj, path), path) if path else obj
 
 
 def _num(v: Any) -> Optional[float]:

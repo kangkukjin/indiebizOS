@@ -637,6 +637,27 @@ _OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "l
                 "patch_op": "propose", "body_op": "changes"}
 
 
+def _file_views(path):
+    """list/file_find가 공유하는 파일 통화와 표시용 표 행. 필드는 두 입구에서 같다."""
+    path = os.path.abspath(path)
+    name = os.path.basename(path)
+    try:
+        stat = os.stat(path)
+        is_dir = os.path.isdir(path)
+        size = None if is_dir else stat.st_size
+        mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
+    except OSError:
+        is_dir, size, mtime = False, None, ""
+    record = {
+        "title": name + ("/" if is_dir else ""),
+        "meta": " · ".join(x for x in [
+            "디렉터리" if is_dir else (f"{size:,}B" if size is not None else None), mtime or None] if x),
+        "summary": "", "url": path, "name": name, "size": size,
+        "mtime": mtime, "path": path, "dir": os.path.dirname(path), "is_dir": is_dir,
+    }
+    return record, [name, size if size is not None else "", mtime, path]
+
+
 def execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
@@ -835,25 +856,9 @@ def execute(tool_input: dict, context) -> str:
             rows = []
             records = []  # records 통화(보편) — 파일=명사. 선언 returns:records와 일치.
             for name in items:
-                full = os.path.join(dir_path, name)
-                try:
-                    st = os.stat(full)
-                    is_dir = os.path.isdir(full)
-                    size = "" if is_dir else st.st_size
-                    mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
-                except OSError:
-                    is_dir, size, mtime = False, "", ""
-                abs_full = os.path.abspath(full)
-                rows.append([name, size, mtime, abs_full])
-                records.append({
-                    "title": name + ("/" if is_dir else ""),
-                    "meta": " · ".join(x for x in [
-                        ("디렉터리" if is_dir else (f"{size:,}B" if isinstance(size, int) else None)),
-                        (mtime or None),
-                    ] if x),
-                    "summary": "",
-                    "url": abs_full,
-                })
+                record, row = _file_views(os.path.join(dir_path, name))
+                records.append(record)
+                rows.append(row)
             table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
             _out = {"text": text, "table": table, "items": records, "total": len(records)}
             if pattern:
@@ -963,31 +968,9 @@ def execute(tool_input: dict, context) -> str:
                 rows = []
                 records = []  # records 통화(보편) — 파일=명사. 선언 returns:records와 일치.
                 for p in absolute_paths:
-                    try:
-                        is_dir = os.path.isdir(p)
-                        st = os.stat(p)
-                        size = "" if is_dir else st.st_size
-                        mtime = datetime.fromtimestamp(st.st_mtime).strftime("%Y-%m-%d %H:%M")
-                    except OSError:
-                        is_dir, size, mtime = False, "", ""
-                    rows.append([os.path.basename(p), size, mtime, p])
-                    records.append({
-                        "title": os.path.basename(p) + ("/" if is_dir else ""),
-                        "meta": " · ".join(x for x in [
-                            ("디렉터리" if is_dir else (f"{size:,}B" if isinstance(size, int) else None)),
-                            (mtime or None),
-                        ] if x),
-                        "summary": "",
-                        "url": p,
-                        # 원천 필드 병기(2026-08-08) — meta 문자열에만 접으면 파이프가
-                        # sort{by:size} 할 재료를 잃는다(침묵 실패 부류).
-                        "name": os.path.basename(p),
-                        "size": (size if isinstance(size, int) else None),
-                        "mtime": mtime,
-                        "path": p,
-                        "dir": os.path.dirname(p),
-                        "is_dir": is_dir,
-                    })
+                    record, row = _file_views(p)
+                    records.append(record)
+                    rows.append(row)
                 table = {"columns": ["이름", "크기", "수정일", "경로"], "rows": rows}
                 # truncated/total 은 기계가 읽는 봉투 키(2026-08-08) — 경고가 text 헤더
                 # 문자열에만 살면 파이프에서 소멸해 부분 결과가 전량인 척 저장된다.

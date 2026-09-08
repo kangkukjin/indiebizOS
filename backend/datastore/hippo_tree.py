@@ -205,7 +205,9 @@ def rows_of(topic: str, db_path: Optional[str] = None, kind: str = "all") -> Lis
             "COALESCE(bypass_count,0) AS bypass_count "
             "FROM ibl_examples WHERE COALESCE(topic,'') = ?" + where +
             " ORDER BY created_at, id", args).fetchall()
-        return [dict(r) for r in rows]
+        from ibl_usage_db import execution_success_rate
+        return [{**dict(r), 'success_rate': execution_success_rate(r['success_count'] or 0, r['fail_count'] or 0)}
+                for r in rows]
     except sqlite3.OperationalError:
         return []
     finally:
@@ -1016,10 +1018,12 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
         if int(p.get("bypass_count") or 0):
             meta.append(f"거부 {int(p['bypass_count'])}회")       # 부르지 않고 손으로 친 실행의 수(2026-09-07)
         meta.append("마지막 " + (p.get("updated_at") or p.get("created_at") or "")[:10])
+        if p.get('topic') and p['topic'] != topic:
+            meta.append('상위 가지 ' + p['topic'])
         lines.append(f"- {p['alias']} — {_one_line(p.get('intent'))} · {' · '.join(meta)} ‹#{p['id']}›")
         lines.append(f"  {phrase_call_line(p['alias'], code, (p.get('returns') or '').strip(), p.get('signature'))}")
     if not named:
-        lines.append("- (아직 이름 붙은 함수가 없다 — 이 주행이 성공하면 증류가 이름을 붙인다)")
+        lines.append("- (이 범위에 이름 붙은 함수가 없다. 자동 작명은 중단됐으며 검증 후 수동 등록한다.)")
     lines.append("")
     lines.append("## 용례 — 한 문장은 그대로 쓴다. 여러 문장짜리는 이름이 붙기 전까지 expand:\"#id\" 로 연다")
     for r in words:
@@ -1073,15 +1077,32 @@ def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = No
         refresh_topic(topic, db_path)
     rows = rows_of(topic, db_path, kind="word")
     phrases = rows_of(topic, db_path, kind="phrase")
+    # 가지를 좁혀 회상해도 상위의 공통 함수는 보인다. 이름만 상속하며
+    # 상위의 무명 용례·주행 본문은 끌어오지 않는다. 같은 이름은 가까운 정의가 우선.
+    inherited = []
+    seen = {r.get('alias') for r in rows + phrases if r.get('alias')}
+    ancestor = parent_of(topic)
+    while topic and ancestor is not None:
+        for row in rows_of(ancestor, db_path):
+            name = (row.get('alias') or '').strip()
+            if name and name not in seen:
+                inherited.append(row)
+                seen.add(name)
+        if not ancestor:
+            break
+        ancestor = parent_of(ancestor)
     counts = topic_counts(db_path)
     full = open(path, encoding="utf-8").read()
     exp = (expand or "").strip()
-    text = render_names_first(topic, rows, phrases, full, exp)
+    text = render_names_first(topic, rows, phrases + inherited, full, exp)
     opened = exp in ("all", "전문")
+    visible = rows + phrases + inherited
     return {"success": True, "topic": topic, "doc": path, "guide": guide_of(path) or seed_guides(topic),
             "text": text, "expand": exp or None, "expand_hint": EXPAND_HINT,
-            "items": rows if opened else [_hide_body(r) for r in rows], "count": len(rows),
+            "items": visible if opened else [_hide_body(r) for r in visible], "count": len(visible),
+            "example_count": len(rows),
             "phrases": phrases if opened else [_hide_body(r) for r in phrases], "phrase_count": len(phrases),
+            "inherited_function_count": len(inherited),
             "children": [{"topic": c, "count": counts.get(c, 0), "gist": gist_of(doc_path(c))} for c in children_of(topic, db_path)],
             "parent": parent_of(topic)}
 

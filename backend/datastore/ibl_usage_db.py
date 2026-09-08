@@ -45,6 +45,11 @@ DB_PATH = _resolve_db_path()
 # 데이터 클래스
 # =============================================================================
 
+def execution_success_rate(success_count, fail_count):
+    """검색·가지 회상이 공유하는 과거 실행 성공률. -1은 미검증이다."""
+    total = success_count + fail_count
+    return round(success_count / total, 2) if total else -1.0
+
 def _norm_topic(topic) -> str:
     try:
         import hippo_tree
@@ -1108,7 +1113,7 @@ class IBLUsageDB:
             if exclude_category and meta.get("category") == exclude_category:
                 continue
             total = meta.get("success_count", 0) + meta.get("fail_count", 0)
-            success_rate = (meta["success_count"] / total) if total else -1.0
+            success_rate = execution_success_rate(meta["success_count"], meta["fail_count"])
             results.append(UsageExample(
                 id=meta["id"], intent=meta["intent"], ibl_code=meta["ibl_code"],
                 nodes=meta.get("nodes", ""), category=meta.get("category", "single"),
@@ -1349,7 +1354,7 @@ class IBLUsageDB:
             total = meta['success_count'] + meta['fail_count']
             # 시도 이력이 없으면 -1.0 sentinel (미검증). 있으면 0~1 성공률.
             # 0.0(전부 실패)과 미검증을 구분해야 연상이 '실패한 사례'를 표시할 수 있다.
-            success_rate = (meta['success_count'] / total) if total else -1.0
+            success_rate = execution_success_rate(meta['success_count'], meta['fail_count'])
 
             results.append(UsageExample(
                 id=meta['id'],

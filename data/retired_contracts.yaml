@@ -25,6 +25,18 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: recall_automatic_naming_promise
+    retired: 2026-09-08
+    reason: 자동 작명을 중단했지만 가지 회상의 빈 목록 안내는 다음 증류가 이름을 붙인다고 약속했다.
+    instead: 이름 있는 함수는 검증 후 수동 등록한다. 가지 회상은 조상의 공통 함수 카드도 보여 준다.
+    phrases:
+      - "이 주행이 성공하면 증류가 이름을 붙인다"
+  - id: list_directory_recursive_hint
+    retired: 2026-09-08
+    reason: list는 한 디렉토리 조회인데 recursive 옵션이 있다고 가르쳤다.
+    instead: list는 pattern으로 이름을 선별한다. 재귀 탐색은 file_find를 쓴다.
+    phrases:
+      - "조회할 디렉토리 경로. recursive 옵션으로 하위 포함 가능."
   - id: global-it-reservation
     retired: 2026-09-08
     reason: each 밖의 $it까지 예약해 함수의 필수 인자 검출과 명시 값 전달을 막았다.

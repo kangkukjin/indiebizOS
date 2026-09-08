@@ -92,6 +92,10 @@ def _extract_result_field_obj(raw: str, path: str) -> Any:
         else:
             raise ValueError(
                 f"$변수 필드 추출 실패: 결과가 구조화 데이터가 아니라 '{path}' 경로를 풀 수 없습니다.")
+    # 식 할당은 실제 값과 진단 봉투를 따로 보존한다. 구조 값의 필드/목록은
+    # 원형에서 읽고, 기존 .value/.message 등 진단 접근은 값에 그 키가 없을 때 유지한다.
+    from common.currency import value_result_field_view
+    obj = value_result_field_view(obj, path)
     # ★2026-09-05(시스템 AI 보고, 다단 union 조합 차단): `.items` 는 **통화**를 묻는 것이다 —
     #   table(union·groupby·select)·blocks(document) 로 방출된 봉투에서 파이프 이음매는 derive_items
     #   로 items 를 파생해 주는데, 변수 경로 읽기는 원형을 그대로 읽어 "items 필드가 없습니다(사용
@@ -138,6 +142,10 @@ def _v4_var_payload(raw: str) -> str:
     폴백=봉투 원형. 명시 경로($var.field.path)는 불변 — 정밀 추출은 경로가 정본.
     규칙은 write v4(system_essentials)와 같은 게이트를 쓴다: 오분류는 항상 안전 방향
     (봉투=구조 보존)으로 떨어진다."""
+    from common.currency import value_result_payload
+    is_value, value = value_result_payload(raw)
+    if is_value and isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False)
     s = (raw or "").strip()
     if not s.startswith("{"):
         return raw
@@ -219,31 +227,29 @@ def _sub_step_refs(text: str, step_results: Dict[int, str], names: Dict[int, str
     세 번째 문에서 뿌리를 뽑는다). bare `$var`(경로 없음)는 v4 추출 계약(F17-3) 그대로 —
     산문 정본을 뽑는 그 계약은 이 개정과 다른 사건이다. 문장 **속** 참조는 글자 자리이므로
     종전대로 문자열화(+G31-1 목록 표식)."""
-    from ibl_code_ir import Literal, Template, bind_template
+    from ibl_code_ir import Literal, Template, Ref, bind_template
     if isinstance(text, Literal):
         return text
-    if isinstance(text, Template):
-        return bind_template(text, lambda n, p: (True,
-            _extract_result_field_obj(step_results.get(n, ""), p) if p
-            else _v4_var_payload(step_results.get(n, ""))), namespace="step", typed_paths=True)
-    _m_sole = _STEP_RESULT_RE.fullmatch(text.strip())
-    if _m_sole is not None and _m_sole.group(2):
-        return _extract_result_field_obj(step_results.get(int(_m_sole.group(1)), ""),
-                                         _m_sole.group(2))
-    sole = _m_sole is not None
+    if not isinstance(text, Template):
+        match = _STEP_RESULT_RE.fullmatch(text.strip())
+        if not match and not _STEP_RESULT_RE.search(text):
+            return text
+        text = Template(text.strip() if match else text, quoted=True)
+    sole = len(text.parts) == 1 and isinstance(text.parts[0], Ref) and text.parts[0].namespace == 'step'
 
-    def _sub(m):
-        n = int(m.group(1))
-        base = step_results.get(n, "")
-        p = m.group(2)
-        val = _extract_result_field(base, p) if p else _v4_var_payload(base)
+    def resolve(index, path):
+        raw = step_results.get(index, "")
+        value = _extract_result_field_obj(raw, path) if path else _v4_var_payload(raw)
         if sink is not None and not sole:
-            lst = _is_json_list(val)
-            if lst is not None:
-                label = names.get(n) if names else None
-                sink.append((param_key, f"${label or f'step{n + 1}'}{p}", len(lst)))
-        return val
-    return _STEP_RESULT_RE.sub(_sub, text)
+            rows = value if isinstance(value, list) else _is_json_list(value) if isinstance(value, str) else None
+            if rows is not None:
+                label = names.get(index) if names else None
+                sink.append((param_key, f"${label or f'step{index + 1}'}{path}", len(rows)))
+        return True, value
+
+    # 파이프 참조도 지연 코드와 같은 IR 바인더를 쓴다. 삽입한 값 속의 $items와
+    # 원문에 원래 있던 $items를 구별해 다음 바인더로 넘긴다.
+    return bind_template(text, resolve, namespace="step", typed_paths=True)
 
 
 def _inject_step_results(obj: Any, step_results: Dict[int, str], _names: Dict[int, str] = None) -> Any:

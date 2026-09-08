@@ -1,0 +1,20 @@
+{
+  "episode_id": 3176,
+  "fixtures": [
+    {
+      "event_seq": 13,
+      "code_sha256": "d322399750b48b84bcfd39025a864959b52ce1029b2964273a306a156c56cbc5",
+      "code": "$fns = [self:memory]{op: \"recall\", node: \"보고서/부동산 발굴\", store: \"실행\"}\n$fns >> [table:select]{columns: [\"alias\", \"intent\", \"signature\", \"returns\", \"success_rate\", \"bypass_count\"]}"
+    },
+    {
+      "event_seq": 27,
+      "code_sha256": "73795564d8c442e7792506d96e3222b20b738fc9ff760ba3e23018230f2cda43",
+      "code": "$q = $rot.queue\n$미방문 = $q >> [table:filter]{where: \"visits == 0\"} >> [table:take]{n: 5} >> [table:select]{columns: [\"slug\", \"name\", \"unit\", \"tier\", \"visits\", \"last_visited\"]}\n$관심 = $q >> [table:filter]{where: \"verdict == 관심\"} >> [table:sort]{by: \"last_visited\"} >> [table:take]{n: 5} >> [table:select]{columns: [\"slug\", \"name\", \"last_visited\", \"visits\", \"verdict\"]}\n$cfg & $미방문 & $관심 >> [table:union]"
+    },
+    {
+      "event_seq": 36,
+      "code_sha256": "db8c6326b0b7b20e7ae18afbf728faca9841d87a0039f61d51686c3c8c3c998b",
+      "code": "$ef = $rot.explore_first\n$직전 = [self:read]{path: \"~workspace/outputs/housing_reports/housing_report_2026-09-08_서산시.md\"}\n$thesis = [self:read]{path: \"~workspace/outputs/housing_reports/_thesis.md\"}\n$dbs = [self:list]{path: \"~workspace/outputs/housing_reports/db/regions\", pattern: \"*.json\"} >> [table:select]{columns: [\"name\"]} >> [table:take]{n: 40}\n$코드 = [sense:realty]{op: \"codes\", city: \"충남\"} >> [table:filter]{where: \"지역 matches 당진|서산\"}\n$코드"
+    }
+  ]
+}

@@ -309,7 +309,9 @@ def test_p4_phrase_section_roundtrip_and_map(env):
     assert HT.rows_of("개발/프론트", db, kind="phrase")[0]["alias"] == "찾아서고치기"
     assert "개발/프론트 (1 · 관용구 1)" in HT.map_text(db)
     r = HT.recall("개발/프론트", db)
-    assert r["count"] == 1 and r["phrase_count"] == 1 and r["phrases"][0]["id"] == pid
+    # recall의 items는 용례와 호출 가능한 함수를 함께 싣는다. count는 통화 행수다.
+    assert r["count"] == len(r["items"]) == 2 and r["example_count"] == 1
+    assert r["phrase_count"] == 1 and r["phrases"][0]["id"] == pid
 
 
 def test_p4_human_block_inserted_and_removed_block_deleted(env):

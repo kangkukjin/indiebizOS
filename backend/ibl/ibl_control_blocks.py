@@ -665,8 +665,9 @@ def _scalar_of(v: Any) -> Any:
 
 
 def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
-    """`$이름 = 식` (M6): 한 줄 식(common.safe_expr)에 $변수 값을 바인딩해 평가. 결과는 스칼라 봉투
-    {value, message} — 뒤 문장의 `$이름` 은 message(v4)로, 조건·식에서는 value 로 읽힌다.
+    """`$이름 = 식` (M6): 한 줄 식(common.safe_expr)에 $변수 값을 바인딩해 평가.
+    결과의 원형 값은 _value_result 봉투에 보존한다. 파이프·조건·식은 같은 값을 읽으며
+    목록 방출은 items 통화가 된다. message는 표시용이고 구조 값을 대신하지 않는다.
     따옴표 안 참조는 텍스트 보간이며, 밖 참조는 식의 값 바인딩이다.
     미할당 $변수·없는 경로·허용 밖 구문은 정직 에러(거짓·0 으로 접지 않음)."""
     from common.safe_expr import compile_expr, eval_expr, FUNCS
@@ -688,7 +689,13 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
             if not optional:
                 raise ValueError(f"변수 ${vn} 이(가) 앞에서 할당되지 않았습니다.")
         _loaded = _load_var(vals.get(vn))
-        v = walk_path(_loaded, path or None)
+        from common.currency import value_result_payload
+        is_value, payload = value_result_payload(_loaded)
+        if is_value and path:
+            from workflow_binding import _extract_result_field_obj
+            v = _extract_result_field_obj(_loaded, path + ('?' if optional else ''))
+        else:
+            v = payload if is_value else walk_path(_loaded, path or None)
         if v is _MISSING and optional:
             v = None
         if v is _MISSING:
@@ -707,7 +714,9 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
         key = f"_v{len(scope)}"
         # 참조 하나를 그대로 반환할 때는 문자열 식별자(007 등)의 원형을 유지한다.
         # 실제 산술식에 참여할 때만 기존 숫자 관측 규칙을 적용한다.
-        scope[key] = v if m.span() == (0, len(expr)) and not isinstance(v, dict) else _scalar_of(v)
+        # 경로로 꺼낸 dict와 이미 값인 할당 결과는 봉투가 아니다. 그 안의
+        # value/message/items 키를 다시 벗기면 사용자 데이터가 사라진다.
+        scope[key] = v if m.span() == (0, len(expr)) and (path or is_value or not isinstance(v, dict)) else _scalar_of(v)
         return key
     try:
         from common.ibl_vars import REF_RE
@@ -722,7 +731,8 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
                 "assigned": name}
     if isinstance(value, float) and value.is_integer() and "/" not in expr:
         value = int(value)
-    return {"success": True, "value": value, "message": str(value), "assigned": name}
+    return {"success": True, "value": value, "message": str(value), "assigned": name,
+            "_value_result": True}
 
 
 def _execute_table_reduce(params: dict, project_path: str, agent_id: str = None) -> Any:

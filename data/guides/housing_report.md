@@ -17,6 +17,7 @@
 - **배포 = 로컬 md 누적 + 공유창고 누적 등재.** 매 호 HTML을 `공유창고/0/부동산 보고서/부동산 보고서 <YYYY-MM-DD> <지역>.html`로 **새 파일로 쌓는다**(덮어쓰기 금지 — 호마다 지역이 달라 어제 호를 오늘 호가 대체할 수 없다. 파일명 고정, 사용자 지시 08-12). 렌더의 유일한 통로는 등록 스크립트 **`보고서HTML`**(어제 HTML 스타일 베끼기·`/tmp` 즉석 변환기 금지). 공유판 머리글에 예산 수치 등 탐색 조건 상세를 싣지 않는다. `/r/` 공개면 발행은 하지 않는다.
 - **저장·검증은 IBL 액션으로**, 셸은 IBL 등가물이 없는 일에만. JSON 갱신은 **`[self:ledger]`**(파이썬 원라이너·히어독·손 문자열 치환 금지). **`[self:ledger]` 규약 셋**: ①`set`은 `target` 필수 — target 없는 set은 파일 전체를 갈아치우므로 거절된다(08-31: `{op:"set", key:"explore_first"}` 한 줄이 순회 원장을 105B로 덮었다. `key`는 upsert의 것) ②지역·순회 upsert엔 `enum_fields: {verdict: ["미판정","관심","보류","기각"]}` ③커버리지 append엔 `list_limits`.
 - **파이프 AI step(`[table:ai]`·`[table:brief]`)에는 `criteria`** — 뒤 step이 의존하는 재료 관문에만, 반증 가능한 속성(행 수·필수 열·값 집합)으로. 정본 `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
+- **실행기억** `[self:memory]{op:"recall",node:"보고서/부동산 발굴",store:"실행"}`에는 상위 `보고서`의 공통 함수도 보인다. 호출 카드의 입력·반환·성적을 보고 맞는 중간 작업에만 쓴다(`success_rate:-1`은 미검증).
 
 ---
 

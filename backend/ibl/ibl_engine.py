@@ -756,6 +756,10 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
             # 호출자가 인자로 실은 값은 **step 결과 봉투가 아니라 평범한 값**(items 리스트·
             # 산문·스칼라)이다 — 통화로 감싸 흘린다(언어 개정 2026-09-07).
             return _as_currency(_vals[_name])
+        from common.currency import value_result_payload
+        _is_value, _value = value_result_payload(_vals[_name])
+        if _is_value:
+            return _as_currency(_value)
         # 통짜 `$변수` 는 저장된 step 결과 원형 그대로 — 감싸지 않는다. 변수가 병렬
         # (`$p = [A] & [B]`) 결과를 들고 있으면 그 맨 list 가 곧 "입력 여러 개" 계약이다.
         return _vals[_name]

@@ -1,0 +1,432 @@
+{
+  "checked_at": "2026-09-08T15:48:35.781268+00:00",
+  "scope": "구문·컴파일·IR 직렬화·정적 검사만. 보고서 프로그램 실행 없음.",
+  "report_program_executed": false,
+  "report_model_calls": 0,
+  "source_fetches": 0,
+  "report_or_ledger_writes": 0,
+  "before": {
+    "chars": 13797,
+    "utf8_bytes": 17481,
+    "lines": 101,
+    "action_occurrences": 81,
+    "sha256": "da060828358d101d30cafd8702bd1c8f09bb85d53de4ccb4f16a3d177420a320"
+  },
+  "after": {
+    "chars": 10357,
+    "utf8_bytes": 14608,
+    "lines": 143,
+    "action_occurrences": 65,
+    "sha256": "afcf38302606116ba3f3a0b18f4b021cbb38f9290b2a0862b0782e333faf1373"
+  },
+  "saved_chars": 3440,
+  "saved_percent": 24.93,
+  "comparison_note": "주석·공백 포함 소스 길이. 표현력 확장 외에 공통 경로 변수화·검색 데이터화·지시문 편집을 포함; 의미 동등·품질·토큰 절감률을 증명하지 않음.",
+  "local": {
+    "parse_ok": true,
+    "ir_compile_ok": true,
+    "ir_json_roundtrip_ok": true,
+    "top_level_steps": 70,
+    "named_variables": 49,
+    "seconds": 0.3527096670004539,
+    "typecheck_ok": true,
+    "error_count": 0,
+    "warning_count": 23,
+    "issues": [
+      {
+        "severity": "warning",
+        "statement": 23,
+        "step": 34,
+        "at": "table:filter",
+        "message": "'selected' 은(는) 관측된 열 items⟨video_id·title·uploader·duration·view_count·upload_date·url·branch·info_error·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "duration",
+          "view_count",
+          "upload_date",
+          "url",
+          "branch",
+          "info_error"
+        ],
+        "got": "selected"
+      },
+      {
+        "severity": "warning",
+        "statement": 28,
+        "step": 45,
+        "at": "table:filter",
+        "message": "'selected' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "selected"
+      },
+      {
+        "severity": "warning",
+        "statement": 32,
+        "step": 54,
+        "at": "table:join",
+        "message": "'tip' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "tip"
+      },
+      {
+        "severity": "warning",
+        "statement": 39,
+        "step": 68,
+        "at": "table:filter",
+        "message": "'try_candidate' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "try_candidate"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 7,
+        "at": "table:select",
+        "message": "'try_candidate' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "try_candidate"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 7,
+        "at": "table:select",
+        "message": "'tip' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "tip"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 7,
+        "at": "table:select",
+        "message": "'how' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "how"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'tip' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "tip"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'how' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "how"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'tools' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "tools"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'hype' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "hype"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'timestamp' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "timestamp"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'implication' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "implication"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'try_candidate' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "try_candidate"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'tip' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "tip"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'how' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "how"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'tools' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "tools"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'hype' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "hype"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'timestamp' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "timestamp"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'implication' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "implication"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 2,
+        "at": "table:select",
+        "message": "'try_candidate' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "try_candidate"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 4,
+        "at": "table:select",
+        "message": "'language' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "language"
+      },
+      {
+        "severity": "warning",
+        "statement": 41,
+        "step": 4,
+        "at": "table:select",
+        "message": "'language' 은(는) 관측된 열 items⟨video_id·title·uploader·url·…⟩ 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
+        "hint": "열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
+        "expected": [
+          "video_id",
+          "title",
+          "uploader",
+          "url"
+        ],
+        "got": "language"
+      }
+    ]
+  },
+  "app": {
+    "endpoint": "POST /ibl/validate",
+    "http_status": 200,
+    "valid": true,
+    "typecheck_ok": true,
+    "seconds": 0.17343416600488126,
+    "invalid_steps": [],
+    "notices": [
+      {
+        "node": "table",
+        "action": "ai",
+        "message": "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."
+      },
+      {
+        "node": "self",
+        "action": "struct",
+        "message": "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."
+      },
+      {
+        "node": "table",
+        "action": "ai",
+        "message": "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."
+      },
+      {
+        "node": "self",
+        "action": "struct",
+        "message": "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."
+      },
+      {
+        "node": "table",
+        "action": "ai",
+        "message": "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."
+      },
+      {
+        "node": "table",
+        "action": "brief",
+        "message": "AI 낱말 — 실행마다 모델 호출(비용·출력 편차). 검수는 출력 내용을 예측하지 못합니다."
+      }
+    ],
+    "warning_count": 23,
+    "issues_equal_to_local": false,
+    "issue_comparison_note": "로컬과 앱의 경고 내용 집합은 같으며 투영 참조 필드 집합의 순회 순서 때문에 나열 순서는 다를 수 있다.",
+    "issue_sets_equal_to_local": true
+  }
+}

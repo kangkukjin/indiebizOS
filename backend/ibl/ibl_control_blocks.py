@@ -594,6 +594,7 @@ def _scalar_of(v: Any) -> Any:
 def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
     """`$이름 = 식` (M6): 한 줄 식(common.safe_expr)에 $변수 값을 바인딩해 평가. 결과는 스칼라 봉투
     {value, message} — 뒤 문장의 `$이름` 은 message(v4)로, 조건·식에서는 value 로 읽힌다.
+    따옴표 안 참조는 텍스트 보간이며, 밖 참조는 식의 값 바인딩이다.
     미할당 $변수·없는 경로·허용 밖 구문은 정직 에러(거짓·0 으로 접지 않음)."""
     from common.safe_expr import compile_expr, eval_expr, FUNCS
     from ibl_predicates import walk_path, _MISSING, _load_var
@@ -618,6 +619,14 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
             from common.ibl_vars import boundary_hint
             raise ValueError(f"${vn}.{path} 경로가 값에 없습니다."
                              + boundary_hint(path, _loaded if isinstance(_loaded, dict) else (), vn))
+        from common.ibl_vars import inside_ibl_string
+        if inside_ibl_string(expr, m.start()):
+            # 따옴표 안에서 _v0를 넣으면 eval은 변수 대신 문자열 "_v0"를 만든다.
+            # 이 자리는 텍스트 보간이다. 제어 문자·따옴표·백슬래시를 Python 문자열
+            # 리터럴 내용으로 이스케이프하여 값이 식의 코드로 탈출하지 못하게 한다.
+            # 숫자처럼 생긴 문자열(예: 007)은 그대로 보존한다.
+            text = v if isinstance(v, str) else str(_scalar_of(v))
+            return json.dumps(text, ensure_ascii=False)[1:-1].replace("'", "\\'")
         key = f"_v{len(scope)}"
         scope[key] = _scalar_of(v)
         return key

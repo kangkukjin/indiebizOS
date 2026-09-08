@@ -925,7 +925,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         result = _enrich_error_with_param_hint(result, code)
 
         # 봉투 다이어트 (2026-08-22 프로그램급 IBL M1): 파이프 봉투의 results[] 는 step 요약,
-        # final_result 만 원형 — 여기는 에이전트 경계(인프로세스·MCP 재진입·/ibl/execute 공통).
+        # 실제 final_result 데이터는 원형, 그 안의 fn 봉투도 실행 기록만 요약한다.
+        # 여기는 에이전트 경계(인프로세스·MCP 재진입·/ibl/execute 공통).
         # verbose: true 가 옛 모양. 표면은 final_result 만 읽으므로 무영향.
         if isinstance(result, dict):
             from ibl_envelope import diet_envelope

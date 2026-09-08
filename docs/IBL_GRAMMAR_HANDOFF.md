@@ -486,7 +486,7 @@ RAG 재인덱싱 3,702편. 발행물 재생성 → **12문단 + 이미지 1**, f
 ⑤기능어 추가 시 `STANDARD_CORE_NODES`/표준-코어 가드 ⑥시드 10~20(`add_examples_batch`)·재학습 대기열 ⑦`changelog.log` 한 줄.
 
 ### §11-1. M1 봉투 다이어트 + 스필 싱크 (2026-08-22)
-- `ibl/ibl_envelope.py` — 에이전트 경계(`_execute_ibl_unified`)에서 파이프 봉투 `results[]` 를 step 요약(shape·count·bytes·columns·preview)으로, `final_result` 원형. 실패 step 오류문 원형 보존. 표지 `_results_summarized`.
+- `ibl/ibl_envelope.py` — 에이전트 경계(`_execute_ibl_unified`)에서 파이프 봉투 `results[]` 를 step 요약(shape·count·bytes·columns·preview)으로. 실제 반환 데이터는 원형이며, `final_result`가 fn 실행 봉투이면 그 내부 실행 기록도 같은 규칙으로 요약한다(2026-09-08 관용구 반복 실험). 실패 step 오류문·함수 정의·traceback·정직 표지 보존. 표지 `_results_summarized`. 업무 items 안의 데이터는 순회하지 않고, 실행·턴 변수의 원형도 바꾸지 않는다.
 - `verbose:true`(도구 스키마·`IBLRequest`) = 옛 모양. MCP `_trim_for_agent` 는 표지가 있으면 `final_result` 를 지우지 않는다(유일한 원형). 평가자 `cognitive_trace._unwrap_payload` 는 표지가 있으면 `final_result` 를 증거로.
 - `[self:write]{spill:true}` → `{items:[], ref:{path,kind,count,bytes}, spilled:true}`. 자동 ref 해소(변환자 `_get_items`)는 M5.
 - ★정정: write 는 원래 종단 싱크(`{success,path,size}`) — "뒤 step 이 전체 통화를 받는다"는 설계 전제는 틀렸고, 누수는 `results[]`+`final_result` 중복뿐.

@@ -25,6 +25,11 @@
 | 재귀 | 모양으로는 가능(정의 표 참조), 실행 깊이 5에서 정직 거절 — 반복은 `[repeat:]`/`[table:each]`. |
 
 ## 3. 구현
+
+2026-09-08 반복 실험 수리: 식 할당 `$경로 = "${최신.items.0.path}"`는 따옴표 안에서 실제 경로를 보간한다. 내부 식 바인딩 이름 `_v0`를 문자열로 저장하던 오류를 고쳤다. 따옴표 밖 참조는 종전의 값 바인딩이며, 보간 값의 따옴표·백슬래시·제어 문자는 이스케이프한다. 가드 `test_assign_string_refs.py`.
+
+모델 반환 경계는 `final_result` 안의 fn 봉투도 실행 기록만 요약한다. 반환 데이터·오류·정의·경고는 유지하며, `verbose:true`와 실행 중 값은 원형이다. 가드 `test_nested_fn_envelope.py`, 실측은 `IBL_IDIOM_EXPERIMENT_ROUND2_2026_09_08.md`.
+
 - 파서 `ibl_parser_blocks._parse_def_block` · `ibl_parser._bind_fn_defs`(정의 표 `_FN_TABLES[tid]` + 호출 step 에 `_fn_ref{table,name,params,todo}`,
   정의 문장 앞당김 후 문장 경계 재표기). ★몸통을 호출 step 에 박지 않는다 — 재귀 정의가 자기 자신을 품는 순환 구조가 되어
   실행기의 치환 걷기가 무한 재귀했다(첫 판 실측). step 은 비순환·JSON-안전.

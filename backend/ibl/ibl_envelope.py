@@ -5,7 +5,8 @@
 두 번 실린다. 08-21 실측: 보고서류 에피소드 하나에 IBL 47회, 그 결과 전부가 컨텍스트에 쌓였다.
 
 여기서는 **에이전트 경계**(`_execute_ibl_unified` — 인프로세스 도구·MCP 재진입·/ibl/execute 공통)
-에서 `results[]` 를 step 별 *요약*(shape·count·bytes·preview)으로 접고 `final_result` 는 원형으로 둔다.
+에서 `results[]` 를 step 별 *요약*(shape·count·bytes·preview)으로 접는다. `final_result`의
+실제 반환 데이터는 원형이며, 그 값이 fn 실행 봉투면 내부 results[]에도 같은 규칙을 적용한다.
   - 실패 step 은 원형 오류문을 그대로 싣는다(어디서 왜 — 진단 정보는 다이어트 대상이 아님).
   - `verbose: true` 면 손대지 않는다(옛 모양 그대로).
   - 표면(조종실·앱·폰·웹소켓)은 이미 final_result 만 읽는다 → 무영향.
@@ -21,6 +22,8 @@ KEYS_MAX = 12
 
 _HINT = ("results[] 는 step 요약(shape·count·bytes·preview) — 전체 데이터는 final_result. "
          "step 원형이 필요하면 verbose: true 로 다시 실행.")
+
+_FN_SUMMARY_DEPTH = 8  # 실행기의 함수 깊이보다 여유 있게; 비정상 봉투는 더 내려가지 않는다.
 
 
 def _clamp_names(names, out: Dict[str, Any], field: str) -> list:
@@ -206,7 +209,24 @@ def summarize_step(entry: Any) -> Any:
     return out
 
 
-def diet_envelope(result: Any, verbose: bool = False) -> Any:
+def _diet_fn_result(raw: Any, depth: int) -> Any:
+    """반환값 위치의 엔진 소유 fn 봉투만 방문한다. 업무 rows/items는 순회하지 않는다."""
+    if depth >= _FN_SUMMARY_DEPTH:
+        return raw
+    obj = _parse_obj(raw)
+    if not (isinstance(obj, dict)
+            and obj.get('fn_source') in ('idiom', 'def', 'workflow')
+            and isinstance(obj.get('fn'), str)
+            and isinstance(obj.get('steps_total'), int)
+            and isinstance(obj.get('results'), list)):
+        return raw
+    thin = diet_envelope(obj, _fn_depth=depth + 1)
+    if thin is obj:
+        return raw
+    return json.dumps(thin, ensure_ascii=False) if isinstance(raw, str) else thin
+
+
+def diet_envelope(result: Any, verbose: bool = False, *, _fn_depth: int = 0) -> Any:
     """파이프 봉투의 results[] 를 요약으로. 봉투가 아니거나 verbose 면 원형.
 
     ★거대 필드는 꼬리로 (2026-08-28): 에피소드 로그는 봉투 직렬화의 꼬리를 절단한다.
@@ -224,6 +244,11 @@ def diet_envelope(result: Any, verbose: bool = False) -> Any:
         return result
     out = dict(result)
     out["results"] = [summarize_step(e) for e in results]
+    if 'final_result' in out:
+        # 함수 호출도 한 step이다. 최종 값 안의 fn 봉투를 그대로 두면 내부 원문을
+        # 모델에게 다시 보내 관용구가 줄인 작성량보다 반환량이 커진다. 실행·턴 변수의
+        # 원형은 건드리지 않고 복사본의 실행 기록만 접는다. 오류·정직 표지·반환값 보존.
+        out['final_result'] = _diet_fn_result(out['final_result'], _fn_depth)
     out["_results_summarized"] = True
     out["_hint"] = _HINT
     for k in ("results", "final_result"):

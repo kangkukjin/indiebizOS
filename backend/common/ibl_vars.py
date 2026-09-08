@@ -166,7 +166,9 @@ def ibl_escape(value: Any) -> str:
         s = json.dumps(value, ensure_ascii=False)
     else:
         s = str(value)
-    return s.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+    # 값의 $는 코드 참조가 아니다. 지연 파싱 사이에 다시 치환되지 않도록
+    # 표준 Unicode escape로 싣고, 마지막 문자열 파서가 원래 글자를 복원한다.
+    return s.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'").replace('$', '\\u0024')
 
 
 def inside_ibl_string(text: str, pos: int) -> bool:
@@ -215,5 +217,5 @@ def ibl_literal(value: Any) -> str:
     if isinstance(value, (int, float)):
         return json.dumps(value)
     if isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
+        return json.dumps(value, ensure_ascii=False).replace('$', '\\u0024')
     return '"' + ibl_escape(value) + '"'

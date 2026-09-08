@@ -126,7 +126,7 @@ def _free_vars(steps) -> List[str]:
     표기는 맨몸 `$이름` 과 괄호 `${이름}` 둘 다(common.ibl_vars).
     `$100` 처럼 숫자로 시작하는 이름은 인자로 세지 않는다 — 파서는 변수로 읽지만
     가격·금액 리터럴일 확률이 훨씬 높고, 잘못 세면 멀쩡한 저장본이 거절된다."""
-    reserved = _reserved_row_names(steps) | _SIGNATURE_EXTRA_RESERVED | _bound_names(steps)
+    reserved = _CALLER_VAR_RESERVED | _SIGNATURE_EXTRA_RESERVED | _bound_names(steps)
     found: List[str] = []
 
     def _walk(obj, bound=reserved):
@@ -292,7 +292,7 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
       - 식·조건은 코드 치환 대신 실행기의 값 바인딩, 주입된 데이터는 재치환하지 않음
     메타: params_injected(주입된 키) / params_warning(대응 $변수 없는 키·예약 이름 —
     조용히 버리지 않고 알린다)."""
-    reserved = _reserved_row_names(steps)
+    reserved = set(_CALLER_VAR_RESERVED)
     hits = set()
     embedded_lists = set()   # 목록이 문장 속에 JSON 으로 들어간 키 (G31-1 — 같은 사실, 같은 신고)
 
@@ -301,16 +301,16 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
             return json.dumps(value, ensure_ascii=False)
         return str(value)
 
-    def _sub_str(s: str):
+    def _sub_str(s: str, blocked):
         sole = REF_RE.fullmatch(s)
         if sole:
             key, path = split_ref(sole)
-            if key in caller and key not in reserved:
+            if key in caller and key not in blocked:
                 return _resolve(key, path)
 
         def replace(match):
             key, path = split_ref(match)
-            if key not in caller or key in reserved:
+            if key not in caller or key in blocked:
                 return match.group(0)
             value = _resolve(key, path)
             if isinstance(value, list):
@@ -334,29 +334,31 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
                 raise ValueError(f"인자 ${key}{path} 경로가 값에 없습니다.")
         return value
 
-    def _sub_code(s: str):
-        # do는 나중에 다시 파싱되는 IBL이다. 값에 작은따옴표가 있으면
-        # 바깥 파싱 뒤 단순 삽입이 안쪽 문자열을 닫아 버렸다. each의 행 치환과
-        # 같은 리터럴 규약으로 넣되, do 전체를 받는 슬롯은 코드 그대로 전달한다.
-        if any(is_sole_ref(s, key) for key in caller if key not in reserved):
-            return _sub_str(s)
-        from common.ibl_vars import inside_ibl_string, ibl_escape, ibl_literal
+    def _sub_code(s, blocked):
+        if isinstance(s, str) and any(is_sole_ref(s, key) for key in caller if key not in blocked):
+            return _sub_str(s, blocked)
+        from ibl_code_binding import bind_scoped_code
 
-        def replace(match):
-            key, path = split_ref(match)
-            if key not in caller or key in reserved:
-                return match.group(0)
-            value = _resolve(key, path)
-            return ibl_escape(value) if inside_ibl_string(s, match.start()) else ibl_literal(value)
+        def resolve(key, path):
+            if key not in caller:
+                return False, None
+            return True, _resolve(key, path)
 
-        return REF_RE.sub(replace, s)
+        return bind_scoped_code(s, resolve, blocked)
 
-    def _walk(obj):
+    def _walk(obj, blocked=reserved):
         if isinstance(obj, str):
-            return _sub_str(obj)
+            return _sub_str(obj, blocked)
         if isinstance(obj, dict):
             if obj.get('_def'):
                 return obj
+            if obj.get('_node') == 'table' and obj.get('action') == 'each':
+                params = obj.get('params') or {}
+                alias = str(params.get('as') or 'it').lstrip('$').strip() or 'it'
+                out = {k: _walk(v, blocked) for k, v in obj.items() if k != 'params'}
+                out['params'] = {k: _sub_code(v, blocked | {alias}) if k == 'do'
+                                 else _walk(v, blocked) for k, v in params.items()}
+                return out
             if obj.get('_assign') or obj.get('_condition') or obj.get('_repeat') or obj.get('_case'):
                 # 식·조건은 실행기의 값 바인더가 해석한다. 값이 0/false/문자열이어도
                 # 코드 텍스트로 바꾸지 않는다(따옴표 탈출·빈 식·이중 치환 방지).
@@ -366,12 +368,12 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
                     expressions += [b.get('condition') for b in obj.get('branches', [])]
                 used = {split_ref(m)[0] for expression in expressions
                         for m in REF_RE.finditer(str(expression or ''))}
-                bound = {k: v for k, v in caller.items() if k in used and k not in reserved}
+                bound = {k: v for k, v in caller.items() if k in used and k not in blocked}
                 hits.update(bound)
-                result = {k: v if k in expression_keys else _walk(v) for k, v in obj.items()}
+                result = {k: v if k in expression_keys else _walk(v, blocked) for k, v in obj.items()}
                 if obj.get('_condition'):
                     result['branches'] = [
-                        {k: v if k == 'condition' else _walk(v) for k, v in branch.items()}
+                        {k: v if k == 'condition' else _walk(v, blocked) for k, v in branch.items()}
                         for branch in obj.get('branches', [])]
                 if bound:
                     result['_var_values'] = {**(obj.get('_var_values') or {}), **bound}
@@ -380,23 +382,24 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
                 # 자유 변수 통화 방출(언어 개정 2026-09-07): 문자열 치환이 아니라 **봉투로**
                 # 싣는다 — 통화(items·표·산문)를 문자열에 끼워 넣으면 모양이 죽는다.
                 nm = obj.get("name") or ""
-                if nm in caller:
+                if nm in caller and nm not in blocked:
                     hits.add(nm)
                     out = {k: v for k, v in obj.items()}
                     out["_var_values"] = {**(obj.get("_var_values") or {}), nm: caller[nm]}
                     return out
-            return {k: _sub_code(v) if k == "do" and isinstance(v, str) else _walk(v)
+            return {k: _sub_code(v, blocked) if k == "do" and isinstance(v, str) else _walk(v, blocked)
                     for k, v in obj.items()}
         if isinstance(obj, list):
-            return [_walk(v) for v in obj]
+            return [_walk(v, blocked) for v in obj]
         return obj
 
     new_steps = _walk(steps)
     meta = {}
     if hits:
         meta["params_injected"] = sorted(hits)
-    unmatched = sorted(set(caller) - hits - reserved)
-    skipped = sorted(set(caller) & reserved)
+    reserved_names = _reserved_row_names(steps)
+    unmatched = sorted(set(caller) - hits - reserved_names)
+    skipped = sorted((set(caller) & reserved_names) - hits)
     warnings = []
     if unmatched:
         warnings.append(f"params {unmatched} 에 대응하는 $변수가 문장에 없어 주입되지 않았습니다.")

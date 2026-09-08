@@ -331,7 +331,12 @@ class Evaluator:
             return payload
         if kind == "var":
             name, path = payload
+            optional = bool(path and path.endswith('?'))
+            if optional:
+                path = path.rstrip('?') or None
             if name not in self.vars:
+                if optional:
+                    return None
                 raise PredicateError(
                     f"변수 ${name} 이(가) 이 문장 앞에서 할당되지 않았습니다 — "
                     f"`${name} = [node:action]{{...}}` 문장을 먼저 두세요.")
@@ -341,6 +346,8 @@ class Evaluator:
                 return base["value"]
             v = walk_path(base, path)
             if v is _MISSING:
+                if optional:
+                    return None
                 if checked:
                     return _MISSING
                 hint = ""

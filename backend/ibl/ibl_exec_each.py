@@ -43,122 +43,27 @@ def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
     빈/쓰레기 쿼리가 _ok:true 로 완주).
     """
     missing: list = []
-    regions = _each_scoped_regions(sentence)
-
-    def _render(value: Any, at: int) -> str:
-        """자리를 보고 표기를 고른다 (B27-3) — 따옴표 안이면 본문만, 밖이면 리터럴로."""
-        return _each_escape(value) if _inside_string(sentence, at) else _each_literal(value)
-
-    def _sub(m):
-        # group(1)=괄호형 경로(`${it.title}`), group(2)=맨몸 경로(`$it.title`)
-        field = ((m.group(1) if m.group(1) is not None else m.group(2)) or "").lstrip(".")
-        optional = field.endswith('?')
-        field = field.rstrip('?')
+    def resolve(name, path):
+        if name != var:
+            return False, None
+        from common.field_path import walk_path, MISSING
+        optional = path.endswith('?')
+        field = path.rstrip('?').lstrip('.')
         if not field:
-            return _render(row, m.start())
-        if isinstance(row, dict):
-            from common.field_path import walk_path, MISSING
-            # 점이 실제 열 이름에 들어 있으면 그 열을 우선하고, 아니면 공용 경로로.
-            value = row[field] if field in row else walk_path(row, field)
-            if value is MISSING:
-                if optional:
-                    return _render(None, m.start())
-                missing.append(field)
-                return m.group(0)
-            return _render(value, m.start())
-        # 스칼라 행: 호출자가 출력에서 {_EACH_SCALAR_FIELD: row} 로 감싸므로
-        # `$it.value` 도 그 값 자체로 푼다(`$it` 와 같은 뜻). 그 밖의 필드는 정직하게 없음.
-        if field == _EACH_SCALAR_FIELD:
-            return _render(row, m.start())
-        if optional:
-            return _render(None, m.start())
-        missing.append(field)
-        return m.group(0)
-
-    from common.ibl_vars import ref_pattern
-    pattern = re.compile(ref_pattern(var))
-
-    def _replace_range(start, end):
-        parts, pos = [], start
-        for match in pattern.finditer(sentence, start, end):
-            parts.extend((sentence[pos:match.start()], _sub(match)))
-            pos = match.end()
-        return ''.join(parts) + sentence[pos:end]
-
-    # 안쪽 do는 한 번 더 파싱될 코드다. 바깥에서 같은 이름을 먹지 않고,
-    # 다른 이름의 바깥 행만 안쪽 코드의 따옴표 깊이에 맞춰 넣는다.
-    pieces, cursor = [], 0
-    for start, end, inner, bound in regions:
-        pieces.append(_replace_range(cursor, start))
-        if inner is None or var in bound:
-            pieces.append(sentence[start:end])
+            return True, row
+        if isinstance(row, (dict, list)):
+            value = row[field] if isinstance(row, dict) and field in row else walk_path(row, field)
         else:
-            rewritten, absent = _each_substitute(inner, row, var)
-            missing.extend(absent)
-            pieces.append(json.dumps(rewritten, ensure_ascii=False))
-        cursor = end
-    if not regions:
-        return pattern.sub(_sub, sentence), missing
-    pieces.append(_replace_range(cursor, len(sentence)))
-    return ''.join(pieces), missing
+            value = row if field == _EACH_SCALAR_FIELD else MISSING
+        if value is MISSING:
+            if optional:
+                return True, None
+            missing.append(field)
+            return False, None
+        return True, value
 
-
-def _each_scoped_regions(sentence):
-    """원문에서 별도 바인더가 소유하는 구간을 찾는다. 값/괄호 독해는 파서에 위임.
-
-    AST를 다시 출력하면 '$it.n'과 $it.n의 문자열/숫자 구분이 없어지므로,
-    원문을 보존하고 중첩 each의 do 및 닫힌 함수 정의만 구간으로 다룬다.
-    반환 (start, end, decoded_code|None, bound_names).
-    """
-    from ibl_parser_values import _extract_value, _extract_string
-    from ibl_parser_blocks import _extract_bracket_raw
-    regions, pos = [], 0
-    while pos < len(sentence):
-        if sentence[pos] in '\"\'':
-            _, pos = _extract_string(sentence, pos, sentence[pos])
-            continue
-        match = re.match(r'\[(table\s*:\s*each|def\s*:[^\]]+)\]\s*\{', sentence[pos:])
-        if not match:
-            pos += 1
-            continue
-        brace = pos + match.end() - 1
-        raw, end = _extract_bracket_raw(sentence, brace, '{', '}')
-        if raw is None:
-            break  # 실제 파싱 단계가 닫히지 않은 블록을 진단한다.
-        if match.group(1).startswith('def'):
-            regions.append((pos, end + 1, None, set()))
-        else:
-            fields, idx = {}, brace + 1
-            while idx < end:
-                while idx < end and sentence[idx] in ' \t\r\n,':
-                    idx += 1
-                if idx >= end:
-                    break
-                if sentence[idx] in '\"\'':
-                    key, idx = _extract_string(sentence, idx, sentence[idx])
-                else:
-                    key_match = re.match(r'\w+', sentence[idx:])
-                    if not key_match:
-                        break
-                    key = key_match.group(0)
-                    idx += len(key)
-                while idx < end and sentence[idx].isspace():
-                    idx += 1
-                if idx >= end or sentence[idx] != ':':
-                    break
-                idx += 1
-                while idx < end and sentence[idx].isspace():
-                    idx += 1
-                start = idx
-                value, idx = _extract_value(sentence, idx)
-                fields[key] = (start, idx, value)
-            if 'do' in fields:
-                start, stop, value = fields['do']
-                alias = str(fields.get('as', (0, 0, 'it'))[2] or 'it').lstrip('$').strip()
-                if isinstance(value, str):
-                    regions.append((start, stop, value, {alias or 'it'}))
-        pos = end + 1
-    return regions
+    from ibl_code_binding import bind_scoped_code
+    return bind_scoped_code(sentence, resolve), missing
 
 
 def _each_foreign_vars(do: str, var: str) -> list:

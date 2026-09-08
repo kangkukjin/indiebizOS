@@ -44,14 +44,42 @@ def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
     if isinstance(obj, dict):
         if obj.get('_def'):
             return obj  # 함수 몸의 이름은 그 함수의 호출자가 채운다.
+        if obj.get('_node') == 'table' and obj.get('action') == 'each':
+            from ibl_code_binding import bind_scoped_code
+            from common.field_path import walk_path, MISSING
+            params = obj.get('params') or {}
+            alias = str(params.get('as') or 'it').lstrip('$').strip() or 'it'
+
+            def resolve(name, path):
+                if name not in mapping:
+                    return False, None
+                value = walk_path(mapping[name], path.rstrip('?').lstrip('.'))
+                if value is MISSING:
+                    return (True, None) if path.endswith('?') else (False, None)
+                return True, value
+
+            result = {k: _subst_tokens(v, mapping) for k, v in obj.items() if k != 'params'}
+            result['params'] = {k: bind_scoped_code(v, resolve, {alias}) if k == 'do'
+                                else _subst_tokens(v, mapping) for k, v in params.items()}
+            return result
         result = {}
+        expression_keys = {'expr', 'condition', 'source'} if any(
+            obj.get(k) for k in ('_assign', '_condition', '_repeat', '_case')) else set()
         for key, value in obj.items():
             local = mapping
             if obj.get('_repeat') and key in ('body', 'condition'):
                 local = {k: v for k, v in mapping.items() if k != (obj.get('var') or 'i')}
             if obj.get('_try') and key in ('catch', 'finally'):
                 local = {k: v for k, v in mapping.items() if k != 'error'}
-            result[key] = _subst_tokens(value, local) if local else value
+            result[key] = value if key in expression_keys else (_subst_tokens(value, local) if local else value)
+        if expression_keys:
+            bound = {k: v for k, v in mapping.items()
+                     if not obj.get('_repeat') or k != (obj.get('var') or 'i')}
+            result['_var_values'] = {**(obj.get('_var_values') or {}), **bound}
+            if obj.get('_condition'):
+                result['branches'] = [
+                    {k: v if k == 'condition' else _subst_tokens(v, mapping)
+                     for k, v in branch.items()} for branch in obj.get('branches', [])]
         return result
     if isinstance(obj, list):
         return [_subst_tokens(v, mapping) for v in obj]
@@ -616,14 +644,18 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
     def _bind(m):
         from common.ibl_vars import split_ref
         vn, path = split_ref(m)
-        path = path[1:]
+        optional = path.endswith('?')
+        path = path.rstrip('?').lstrip('.')
         if vn not in vals:
             _ve = (tool_input.get("_var_errors") or {}).get(vn)
             if _ve:
                 raise ValueError(f"변수 ${vn} 의 할당 문장(step {_ve['step']})이 실패해 값이 없습니다 — 원인: {_ve['error']}")
-            raise ValueError(f"변수 ${vn} 이(가) 앞에서 할당되지 않았습니다.")
-        _loaded = _load_var(vals[vn])
+            if not optional:
+                raise ValueError(f"변수 ${vn} 이(가) 앞에서 할당되지 않았습니다.")
+        _loaded = _load_var(vals.get(vn))
         v = walk_path(_loaded, path or None)
+        if v is _MISSING and optional:
+            v = None
         if v is _MISSING:
             # each 와 같은 부류 — `${x.y}` 를 안 쓰면 뒤에 붙은 글자가 경로에 먹힌다.
             from common.ibl_vars import boundary_hint

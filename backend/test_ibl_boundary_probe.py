@@ -9,10 +9,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from ibl_boundary_cases import cases, additional_cases
 from ibl_boundary_cases_round2 import cases as round2_cases
 from ibl_boundary_cases_round2 import additional_cases as round2_additional
+from ibl_boundary_cases_round3 import cases as round3_cases
 from ibl_boundary_probe import probe
 
 
-@pytest.mark.parametrize('case', cases() + additional_cases() + round2_cases() + round2_additional(), ids=lambda c: c['id'])
+@pytest.mark.parametrize('case', cases() + additional_cases() + round2_cases() + round2_additional() + round3_cases(), ids=lambda c: c['id'])
 def test_boundary_sentences(case):
     result = probe(case)
     assert result['syntax_ok'], result.get('error_text')

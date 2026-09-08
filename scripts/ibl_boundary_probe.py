@@ -35,6 +35,7 @@ def main():
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--additional', action='store_true')
     parser.add_argument('--round2', action='store_true')
+    parser.add_argument('--round3', action='store_true')
     args = parser.parse_args()
     if args.out.exists():
         parser.error('기존 기록을 덮어쓰지 않습니다')
@@ -44,6 +45,9 @@ def main():
         from ibl_boundary_cases_round2 import cases as round2_cases
         from ibl_boundary_cases_round2 import additional_cases as round2_additional
         selected = round2_additional() if args.additional else round2_cases()
+    if args.round3:
+        from ibl_boundary_cases_round3 import cases as round3_cases
+        selected = round3_cases()
     for case in selected:
         row = probe(case)
         rows.append(row)

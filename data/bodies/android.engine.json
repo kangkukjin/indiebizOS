@@ -133,6 +133,7 @@
     "ibl/event_engine",
     "ibl/ibl_access",
     "ibl/ibl_code_binding",
+    "ibl/ibl_code_ir",
     "ibl/ibl_control_blocks",
     "ibl/ibl_engine",
     "ibl/ibl_envelope",
@@ -281,8 +282,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 270,
-    "engine": 251,
+    "total": 271,
+    "engine": 252,
     "blocklist": 19
   }
 }

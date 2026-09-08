@@ -34,6 +34,16 @@ def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
             raise ValueError(f"${name}{path} 경로가 값에 없습니다.")
         return value
 
+    from ibl_code_ir import Literal, Template, bind_template
+    if isinstance(obj, Literal):
+        return obj
+    if isinstance(obj, Template):
+        def resolve_param(n, p):
+            if n not in mapping:
+                return False, None
+            value = resolve(n, p)
+            return True, None if value is MISSING else (value if isinstance(value, str) else json.dumps(value, ensure_ascii=False))
+        return bind_template(obj, resolve_param)
     if isinstance(obj, str):
         from common.ibl_vars import REF_RE, split_ref, refs_pattern
         sole = REF_RE.fullmatch(obj)
@@ -55,7 +65,7 @@ def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
         if obj.get('_def'):
             return obj  # 함수 몸의 이름은 그 함수의 호출자가 채운다.
         if obj.get('_node') == 'table' and obj.get('action') == 'each':
-            from ibl_code_binding import bind_scoped_code
+            from ibl_code_ir import bind_code
             params = obj.get('params') or {}
             alias = str(params.get('as') or 'it').lstrip('$').strip() or 'it'
 
@@ -66,7 +76,7 @@ def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
                 return True, None if value is MISSING else value
 
             result = {k: _subst_tokens(v, mapping) for k, v in obj.items() if k != 'params'}
-            result['params'] = {k: bind_scoped_code(v, resolve_code, {alias}) if k == 'do'
+            result['params'] = {k: bind_code(v, resolve_code, {alias}) if k == 'do'
                                 else _subst_tokens(v, mapping) for k, v in params.items()}
             return result
         result = {}

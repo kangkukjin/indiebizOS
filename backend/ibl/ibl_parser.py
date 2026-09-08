@@ -1081,6 +1081,8 @@ def _parse_step(text: str) -> Optional[Dict]:
             if k not in params:
                 params[k] = v
 
+    from ibl_code_ir import source_slots
+    params = source_slots(params)
     step = {
         "_node": node,
         "action": action,
@@ -1139,7 +1141,11 @@ def _resolve_variables_used(step: dict, variables: Dict[str, int]):
                                    lambda path, _i=step_idx: "{{_step_%d_result%s}}" % (_i, path))
                 if val != before:  # vj-ok: 이스케이프 수렴 검사
                     used[var_name] = step_idx
-            resolved[key] = val
+            from ibl_code_ir import SourceText, Template, link_template
+            original = step[key]
+            resolved[key] = (link_template(original, {n: i for n, i in variables.items() if n not in _shadowed})
+                             if isinstance(original, Template) else
+                             SourceText(val, original.quoted) if isinstance(original, SourceText) else val)
         elif isinstance(val, dict):
             sub, sub_used = _resolve_variables_used(val, variables)
             resolved[key] = sub

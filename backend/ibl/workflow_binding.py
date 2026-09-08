@@ -219,6 +219,13 @@ def _sub_step_refs(text: str, step_results: Dict[int, str], names: Dict[int, str
     세 번째 문에서 뿌리를 뽑는다). bare `$var`(경로 없음)는 v4 추출 계약(F17-3) 그대로 —
     산문 정본을 뽑는 그 계약은 이 개정과 다른 사건이다. 문장 **속** 참조는 글자 자리이므로
     종전대로 문자열화(+G31-1 목록 표식)."""
+    from ibl_code_ir import Literal, Template, bind_template
+    if isinstance(text, Literal):
+        return text
+    if isinstance(text, Template):
+        return bind_template(text, lambda n, p: (True,
+            _extract_result_field_obj(step_results.get(n, ""), p) if p
+            else _v4_var_payload(step_results.get(n, ""))), namespace="step", typed_paths=True)
     _m_sole = _STEP_RESULT_RE.fullmatch(text.strip())
     if _m_sole is not None and _m_sole.group(2):
         return _extract_result_field_obj(step_results.get(int(_m_sole.group(1)), ""),
@@ -289,14 +296,13 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str], _names: Dict[in
 
 def _bind_step_code(code, step_results):
     """파이프 슬롯도 지연 코드의 문자열/중첩 깊이를 존중하며 한 번만 주입한다."""
-    from ibl_code_binding import bind_scoped_code
+    from ibl_code_ir import bind_code
 
     def resolve(index, path):
         raw = step_results.get(int(index), '')
         return True, _extract_result_field_obj(raw, path) if path else _v4_var_payload(raw)
 
-    return bind_scoped_code(code, resolve, ref_re=_STEP_RESULT_RE,
-                            split=lambda m: (int(m.group(1)), m.group(2)), typed_paths=True)
+    return bind_code(code, resolve, namespace="capture", typed_paths=True)
 
 
 # $items 집합 바인딩 행 수 상한 — 초과는 침묵 절단 대신 정직 거절(take 로 줄이라고 안내).
@@ -323,11 +329,12 @@ def _bind_items_params(tool_input: dict, prev_result: str):
 
     반환: (tool_input, error_str|None) — 참조가 없으면 원본 그대로, 바인딩 실패는 정직 에러.
     """
+    from ibl_code_ir import Literal, Code
     params = tool_input.get("params")
     if not isinstance(params, dict):
         return tool_input, None
     refs = {k: m for k, v in params.items()
-            if isinstance(v, str) and (m := _ITEMS_REF.match(v.strip()))}
+            if isinstance(v, str) and not isinstance(v, (Literal, Code)) and (m := _ITEMS_REF.match(v.strip()))}
 
     # ★문장 *속* `$items`/`$items.필드` (31회차 B31-2 → G31-1 판정, 2026-08-23):
     #   실측(31회차): `[self:memory]{content: '… $items.title'}` 이 success:true 로 **글자 그대로**
@@ -339,7 +346,7 @@ def _bind_items_params(tool_input: dict, prev_result: str):
     from common.ibl_vars import ref_pattern
     _in_text = re.compile(ref_pattern("items"))
     mixed = {k: v for k, v in params.items()
-             if isinstance(v, str) and k not in refs and _in_text.search(v)}
+             if isinstance(v, str) and not isinstance(v, (Literal, Code)) and k not in refs and _in_text.search(v)}
 
     if not refs and not mixed:
         return tool_input, None
@@ -467,7 +474,9 @@ def _inject_prev_result(tool_input: dict, prev_result: str) -> dict:
     injected = {}
     for key, val in tool_input.items():
         if isinstance(val, str):
-            injected[key] = val.replace("{{_prev_result}}", prev_result)
+            from ibl_code_ir import Code, Literal, Template
+            injected[key] = (val if isinstance(val, (Code, Literal, Template))
+                             else val.replace("{{_prev_result}}", prev_result))
         elif isinstance(val, dict):
             injected[key] = _inject_prev_result(val, prev_result)
         else:
@@ -478,6 +487,9 @@ def _inject_prev_result(tool_input: dict, prev_result: str) -> dict:
 def _has_prev_ref(tool_input: dict) -> bool:
     """tool_input 어디에든 {{_prev_result}} 참조가 남아있는지 확인"""
     for key, val in tool_input.items():
+        from ibl_code_ir import Literal, Code, Template
+        if isinstance(val, (Literal, Code, Template)):
+            continue
         if isinstance(val, str) and "{{_prev_result}}" in val:
             return True
         elif isinstance(val, dict) and _has_prev_ref(val):

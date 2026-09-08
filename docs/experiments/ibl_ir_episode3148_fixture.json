@@ -1,0 +1,34 @@
+{
+  "episode": 3148,
+  "timestamp": "2026-09-08T15:19:36.627510",
+  "code": "$선정 = $신선 >> [table:filter]{where: {field: \"video_id\", op: \"in\", value: [\"N7b1PJc7SFc\", \"jnedfk5PL2A\", \"aaiEg5ZniyQ\", \"lEWqPRvsohY\"]}}\n$팁1차 = $선정 >> [table:each]{do: \"[sense:video]{op: 'transcript', video_id: '$it.video_id'} >> [self:struct]{schema: 'tip(실행형 팁 제목·동사로 끝남·구체 도구/수치 포함), timestamp(MM:SS)', grounded: true, known: '${기존팁.items.*.tip}'}\", parallel: 4, on_error: \"continue\", keep: [\"video_id\", \"title\", \"uploader\"]}\n$팁1차 >> [table:select]{columns: [\"video_id\", \"tip\", \"timestamp\"]} >> [table:take]{n: 70}",
+  "code_sha256": "3ade46a58bcad58aec4c7647f5e8386b4176df22c4cb3879d2c2653f67e573a6",
+  "note": "실패한 IBL 원문은 그대로. 선행 변수와 영상/AI 응답은 외부 호출 없는 경계 재생을 위한 고정물이며 전체 보고서 재생이 아님.",
+  "known": [
+    "'그 음성이 말한 문장'을 함께 넣어라 (ref_text)",
+    "$items {{_step_0_result.items}}",
+    "줄1\n줄2"
+  ],
+  "videos": [
+    {
+      "video_id": "N7b1PJc7SFc",
+      "title": "fixture 0",
+      "uploader": "fixture"
+    },
+    {
+      "video_id": "jnedfk5PL2A",
+      "title": "fixture 1",
+      "uploader": "fixture"
+    },
+    {
+      "video_id": "aaiEg5ZniyQ",
+      "title": "fixture 2",
+      "uploader": "fixture"
+    },
+    {
+      "video_id": "lEWqPRvsohY",
+      "title": "fixture 3",
+      "uploader": "fixture"
+    }
+  ]
+}

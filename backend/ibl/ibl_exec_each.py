@@ -1,5 +1,5 @@
 """
-ibl_exec_each.py — [table:each] 실행기(행마다 $it 치환 → 파이프 실행) + 입력 통화 추출.
+ibl_exec_each.py — [table:each] 실행기(한 번 컴파일 → 행 값 바인딩 → 파이프 실행).
 
 2026-08-23 ibl_executors.py 에서 이사(1500줄 규칙). 재수출 = ibl_executors.
 """
@@ -34,7 +34,9 @@ from common.ibl_vars import (
 
 
 def _each_substitute(sentence: str, row: Any, var: str) -> Tuple[str, list]:
-    """문장 안의 `$it.필드` / `$it` 를 행 값으로 치환. 반환: (치환된 문장, 없는 필드 목록).
+    """옛 문자열 치환의 진단/호환 함수. 실제 each 실행은 ibl_code_ir를 사용한다.
+
+    문장 안의 `$it.필드` / `$it` 를 행 값으로 치환. 반환: (치환된 문장, 없는 필드 목록).
 
     ★없는 필드는 조용히 빈 값으로 만들지 않고 목록으로 돌려준다 — 호출자가 그 행을
     실패로 표시한다(빈 문자열로 밀어 넣으면 "성공처럼 보이는 오동작"이 된다).
@@ -81,13 +83,23 @@ def _each_foreign_vars(do: str, var: str) -> list:
     # 자기 할당(`$x = …`) — 경계 판정만 표기 모듈로 옮기고, "= 뒤가 오면 할당" 이라는
     # 옛 규칙은 그대로 둔다(`==` 도 할당으로 세는 관용까지 포함 — 무회귀).
     assigned = set()
-    for m in REF_RE.finditer(do):
+    for m in REF_RE.finditer(str(do)):
         name, path = split_ref(m)
         if not path and re.match(r"\s*=", do[m.end():]):
             assigned.add(name)
     foreign = []
 
     def visit(obj, bound):
+        from ibl_code_ir import Code, Literal, Template, Ref
+        if isinstance(obj, Literal):
+            return
+        if isinstance(obj, Code):
+            return visit(obj.tree, bound)
+        if isinstance(obj, Template):
+            for part in obj.parts:
+                if isinstance(part, Ref) and part.namespace == "name":
+                    visit(part.source, bound)
+            return
         if isinstance(obj, str):
             for match in REF_RE.finditer(obj):
                 name, _ = split_ref(match)
@@ -97,6 +109,7 @@ def _each_foreign_vars(do: str, var: str) -> list:
             for item in obj:
                 visit(item, bound)
         elif isinstance(obj, dict):
+            bound = bound | set(obj.get('_var_values') or {})
             if obj.get('_def'):
                 return  # 함수 정의는 자기 인자·닫힌 스코프를 가진다.
             if obj.get('_node') == 'table' and obj.get('action') == 'each':
@@ -105,13 +118,14 @@ def _each_foreign_vars(do: str, var: str) -> list:
                 visit({k: v for k, v in params.items() if k != 'do'}, bound)
                 inner = params.get('do') or ''
                 try:
-                    nested = parse_binding_body(inner)
+                    from ibl_code_ir import Code
+                    nested = inner.tree if isinstance(inner, Code) else parse_binding_body(inner)
                 except Exception:
                     nested = inner  # 문법 오류는 실행 단계가 진단한다.
                 visit(nested, bound | {alias})
                 return
             for key, value in obj.items():
-                if key in ('_raw', '_vars', '_fn_ref'):
+                if key in ('_raw', '_vars', '_fn_ref', '_var_values', '_ir_expr_refs'):
                     continue
                 local = bound
                 if obj.get('_try') and key in ('catch', 'finally'):
@@ -122,7 +136,8 @@ def _each_foreign_vars(do: str, var: str) -> list:
 
     try:
         from ibl_code_binding import parse_binding_body
-        tree = parse_binding_body(do)
+        from ibl_code_ir import Code
+        tree = do.tree if isinstance(do, Code) else parse_binding_body(do)
     except Exception:
         tree = do  # 문법 오류의 본 진단은 행 실행기가 맡는다.
     visit(tree, {var, 'items'} | assigned)
@@ -336,7 +351,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
       union 의 효과 행과 같은 함수(`common.currency.effect_row`). 봉투 `collected_rows` +
       겹친 키의 `collect_renamed`. 켜지 않으면 종전대로 원 행 통과(passthrough_rows).
     """
-    from ibl_parser import parse as ibl_parse, IBLSyntaxError
+    from ibl_parser import IBLSyntaxError
     from workflow_engine import execute_pipeline
 
     do = params.get("do")
@@ -346,7 +361,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         return {"success": False, "items": [], "count": 0,
                 "error": "each: do(각 행에 적용할 IBL 문장)가 필요합니다. "
                          "예) [table:each]{do: \"[self:notify_user]{message: '$it.title'}\"}"}
-    do = str(do)
+    from ibl_code_ir import Code, compile_code, bind_code
+    try:
+        do = compile_code(do)
+    except IBLSyntaxError as e:
+        return {"success": False, "items": [], "count": 0, "error": f"IBL 문법 오류: {e}"}
     var = (str(params.get("as") or "it").lstrip("$").strip()) or "it"
 
     # ★유령 변수 사전 차단 (F14-1): 어떤 행에서도 치환되지 않을 `$이름` 은 저작 오류라
@@ -420,7 +439,24 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     def _prepare(idx: int, row):
         """행 하나의 치환·파싱(실행 아님) → {kind: binding|syntax|ready, base, emsg|steps}."""
         base = dict(row) if isinstance(row, dict) else {_EACH_SCALAR_FIELD: row}
-        sentence, missing = _each_substitute(do, row, var)
+        from common.field_path import walk_path, MISSING
+        missing = []
+
+        def resolve(name, path):
+            if name != var:
+                return False, None
+            field = path.rstrip("?").lstrip(".")
+            value = row if not field else (
+                (row[field] if isinstance(row, dict) and field in row else walk_path(row, field)) if isinstance(row, (dict, list)) else
+                row if field == _EACH_SCALAR_FIELD else MISSING)
+            if value is MISSING:
+                if path.endswith("?"):
+                    return True, None
+                missing.append(field)
+                return False, None
+            return True, value
+
+        plan = bind_code(do, resolve)
         if missing:
             # 필드 힌트도 잘렸으면 잘렸다고 말한다 (F18-1 부류 — 침묵 클램프 금지):
             # 12개에서 끊긴 목록을 전부로 읽으면 있는 필드를 없다고 오판한다.
@@ -441,12 +477,12 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                      f"(행 필드: {avail}){_hint}")
             return {"kind": "binding", "base": base, "emsg": _emsg}
         try:
-            steps = ibl_parse(sentence)
+            steps = plan.tree
         except IBLSyntaxError as e:
             return {"kind": "syntax", "base": base, "emsg": f"IBL 문법 오류: {e}"}
         _stamp_depth(steps, depth + 1)
-        # each 의 do 는 *문자열*이라 행마다 새로 파싱된다 — 바깥에서 찍힌 워크플로우 호출
-        # 스택이 여기서 끊기면, 워크플로우 → each → 자기 워크플로우 사슬이 가드를 우회한다.
+        # 행마다 독립된 AST에 호출 스택을 승계한다. 컴파일 본문은 재사용하되
+        # 실행 중 상태는 행 사이에 공유하지 않는다.
         _wf_stack = params.get("_wf_stack")
         if _wf_stack:
             from workflow_contract import _stamp_wf_stack

@@ -302,6 +302,11 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
         return str(value)
 
     def _sub_str(s: str, blocked):
+        from ibl_code_ir import Literal, Template, bind_template
+        if isinstance(s, Literal):
+            return s
+        if isinstance(s, Template):
+            return bind_template(s, lambda k, p: (True, _resolve(k, p)) if k in caller else (False, None), blocked)
         sole = REF_RE.fullmatch(s)
         if sole:
             key, path = split_ref(sole)
@@ -337,14 +342,14 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
     def _sub_code(s, blocked):
         if isinstance(s, str) and any(is_sole_ref(s, key) for key in caller if key not in blocked):
             return _sub_str(s, blocked)
-        from ibl_code_binding import bind_scoped_code
+        from ibl_code_ir import bind_code
 
         def resolve(key, path):
             if key not in caller:
                 return False, None
             return True, _resolve(key, path)
 
-        return bind_scoped_code(s, resolve, blocked)
+        return bind_code(s, resolve, blocked)
 
     def _walk(obj, blocked=reserved):
         if isinstance(obj, str):

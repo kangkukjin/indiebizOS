@@ -159,7 +159,8 @@ def forward_to_phone(phone_url: str, node: str, action: str, params: dict,
     """
     code = f"[{node}:{action}]"
     if params:
-        code += json.dumps(params, ensure_ascii=False)
+        from ibl_code_ir import transport_params
+        code += json.dumps(transport_params(params), ensure_ascii=False)
     payload = {"code": code}
     if agent_id:
         payload["agent_id"] = agent_id
@@ -247,7 +248,8 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,
                 "mac_unreachable": True}
     code = f"[{node}:{action}]"
     if params:
-        code += json.dumps(params, ensure_ascii=False)
+        from ibl_code_ir import transport_params
+        code += json.dumps(transport_params(params), ensure_ascii=False)
     payload = {"code": code, "project_id": "앱모드"}
     if agent_id:
         payload["agent_id"] = agent_id  # 호출자 신원 전파 — 맥서 폰-자아로 기록(미동봉 시만 system_ai 폴백)
@@ -828,7 +830,8 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                 "available_actions": available}
 
     router = action_config.get("router")
-    params = tool_input.get("params", {})
+    from ibl_code_ir import receive_params
+    params = receive_params(tool_input.get("params", {}))
 
     # 중첩 깊이를 params 에 실어 라우터가 볼 수 있게 한다 (_prev_result 와 같은 관습 —
     # '_' 접두 키는 파라미터 어휘 가드에서 제외된다). [table:each] 가 하위 문장에 깊이를

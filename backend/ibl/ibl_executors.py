@@ -178,6 +178,21 @@ def _subst_var_refs(obj: Any, values: Dict[str, Any]) -> Any:
         return sub_refs(o, names, _one)
 
     def _walk(o, key=None, sink=None, pkey=None):
+        from ibl_code_ir import Code, Literal, Template, bind_code, bind_template
+        from workflow_binding import _extract_result_field_obj
+        if isinstance(o, Literal):
+            return o
+        if isinstance(o, (Code, Template)):
+            def resolve(name, path):
+                if name not in names:
+                    return False, None
+                raw = values[name]
+                if isinstance(raw, Literal) and not path:
+                    return True, raw
+                raw = raw if isinstance(raw, str) else json.dumps(raw, ensure_ascii=False)
+                return True, _extract_result_field_obj(raw, path) if path else _v4_var_payload(raw)
+            return (bind_code(o, resolve, typed_paths=True) if isinstance(o, Code)
+                    else bind_template(o, resolve, typed_paths=True))
         if isinstance(o, str):
             if key in ("condition", "expr", "source"):
                 return o

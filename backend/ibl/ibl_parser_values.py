@@ -7,6 +7,7 @@ ibl_parser.py 에서 verbatim 이동: {params} 파싱(_parse_params/_parse_relax
 """
 import json
 import re
+from ibl_code_ir import CAPTURE, SourceText
 from typing import Dict, Optional, Tuple
 
 
@@ -35,7 +36,7 @@ def _parse_params(text: str) -> dict:
     # "모르는 이스케이프는 원문 보존"으로 고쳐져 있어도 이 경로에서 통째로 무효가 됐고,
     # `[self:grep]{pattern: "\d+"}` 같은 정규식 param 이 조용히 다른 패턴으로 바뀌어
     # 0건을 돌려줬다(침묵 실패). 두 파서가 같은 입력에 다른 답을 내면 안 된다.
-    if not _has_nonstandard_escape(text):
+    if not CAPTURE.get() and not _has_nonstandard_escape(text):
         # 1. JSON5 시도 — unquoted keys, 양쪽 따옴표, trailing comma 등 모두 처리
         try:
             import pyjson5
@@ -185,6 +186,24 @@ def _diagnose_residue(residue: str) -> str:
 _KEY_STOP = frozenset(' \t\n\r:,{}[]"\'=')
 
 
+def _parameter_space(text, pos, comma=False):
+    """형태를 보존하는 파서도 JSON5의 공백·주석 규칙을 공유한다."""
+    while pos < len(text):
+        if text[pos].isspace() or (comma and text[pos] == ','):
+            pos += 1
+        elif CAPTURE.get() and text.startswith('//', pos):
+            end = text.find('\n', pos + 2)
+            pos = len(text) if end < 0 else end + 1
+        elif CAPTURE.get() and text.startswith('/*', pos):
+            end = text.find('*/', pos + 2)
+            if end < 0:
+                raise IBLSyntaxError('닫히지 않은 JSON5 주석입니다.')
+            pos = end + 2
+        else:
+            break
+    return pos
+
+
 def _parse_relaxed_params(text: str) -> dict:
     """
     느슨한 파라미터 파싱 — 배열 [...], 중첩 객체 {...} 포함 지원
@@ -210,8 +229,7 @@ def _parse_relaxed_params(text: str) -> dict:
 
     while i < n:
         # 공백, 쉼표 건너뛰기
-        while i < n and inner[i] in ' \t\n\r,':
-            i += 1
+        i = _parameter_space(inner, i, comma=True)
         if i >= n:
             break
 
@@ -232,8 +250,7 @@ def _parse_relaxed_params(text: str) -> dict:
             break
 
         # 공백 건너뛰기
-        while i < n and inner[i] in ' \t':
-            i += 1
+        i = _parameter_space(inner, i)
 
         # : 건너뛰기
         if i < n and inner[i] == ':':
@@ -243,8 +260,7 @@ def _parse_relaxed_params(text: str) -> dict:
             break
 
         # 공백 건너뛰기
-        while i < n and inner[i] in ' \t':
-            i += 1
+        i = _parameter_space(inner, i)
 
         if i >= n:
             break
@@ -257,6 +273,21 @@ def _parse_relaxed_params(text: str) -> dict:
 
 
 def _extract_value(text: str, pos: int):
+    value, end = _extract_value_plain(text, pos)
+    if CAPTURE.get() and isinstance(value, str):
+        # 값 해석은 기존 JSON5와 같다. 직접 파싱은 참조의 따옴표 여부만 보존한다.
+        raw = text[pos:end]
+        if raw[:1] in ('"', "'") and not _has_nonstandard_escape(raw):
+            try:
+                import pyjson5
+                value = pyjson5.loads(raw)
+            except Exception:
+                pass  # 비표준 문자열은 기존 relaxed 해석을 유지한다.
+        value = SourceText(value, text[pos:pos + 1] in ("\"", "'"))
+    return value, end
+
+
+def _extract_value_plain(text: str, pos: int):
     """
     위치 pos에서 value를 추출. (value, new_pos) 반환.
 
@@ -266,6 +297,18 @@ def _extract_value(text: str, pos: int):
         return "", pos
 
     ch = text[pos]
+    if CAPTURE.get():
+        from ibl_code_ir import STEP_RE
+        slot = STEP_RE.match(text, pos)
+        if slot:
+            return slot.group(), slot.end()
+        number = re.match(r'[+-]?(?:0[xX][0-9a-fA-F]+|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?)', text[pos:])
+        if number and ('.' in number[0] or any(c in number[0] for c in 'eExX+')):
+            try:
+                import pyjson5
+                return pyjson5.loads(number[0]), pos + number.end()
+            except Exception:
+                pass
 
     # 문자열 (큰따옴표)
     if ch == '"':
@@ -363,6 +406,9 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
     depth = 0
     i = pos
     while i < len(text):
+        if CAPTURE.get() and text[i:i + 2] in ('//', '/*'):
+            i = _parameter_space(text, i)
+            continue
         ch = text[i]
         if ch == open_br:
             depth += 1
@@ -371,7 +417,7 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
             if depth == 0:
                 raw = text[pos:i + 1]
                 # 표준 밖 이스케이프(`\d` 등)는 JSON5 가 백슬래시째 먹으므로 우회 (위 주석 참조)
-                if not _has_nonstandard_escape(raw):
+                if not CAPTURE.get() and not _has_nonstandard_escape(raw):
                     # 1. JSON5 시도 — 모든 JSON-like 입력의 표준 해석기
                     try:
                         import pyjson5
@@ -404,8 +450,7 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
                 values = []
                 cursor = 1
                 while cursor < len(raw) - 1:
-                    while cursor < len(raw) - 1 and raw[cursor].isspace():
-                        cursor += 1
+                    cursor = _parameter_space(raw, cursor)
                     if cursor >= len(raw) - 1:
                         break
                     value, end = _extract_value(raw, cursor)
@@ -413,8 +458,7 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
                         raise IBLSyntaxError('배열 원소를 해석하지 못했습니다.')
                     values.append(value)
                     cursor = end
-                    while cursor < len(raw) - 1 and raw[cursor].isspace():
-                        cursor += 1
+                    cursor = _parameter_space(raw, cursor)
                     if cursor < len(raw) - 1:
                         if raw[cursor] != ',':
                             raise IBLSyntaxError('배열 원소 사이에는 쉼표가 필요합니다.')

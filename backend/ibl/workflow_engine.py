@@ -427,6 +427,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
         return prev
 
     for i, step in enumerate(steps):
+        # 원격 IR는 값 치환보다 먼저 복원한다. 전송 문자열을 다시 코드로 읽지 않는다.
+        if isinstance(step, dict) and isinstance(step.get("params"), dict) and "_ibl_ir" in step["params"]:
+            from ibl_code_ir import receive_params
+            step = {**step, "params": receive_params(step["params"])}
         if i < _seq["skip_until"]:
             continue  # 실패한 문장의 남은 step — 건너뛴다(다음 문장 경계까지)
         if isinstance(step, dict) and step.get("_seq_boundary"):

@@ -1,11 +1,16 @@
 {
-  "version": 1,
-  "note": "수동 선정·등록 입력. 실행 정본은 해마 원장/가지 문서. 본문이 달라지면 이 교재는 표시하지 않는다. 자동 등록하지 않는다.",
+  "version": 2,
+  "note": "수동 선정·등록 입력. always_on:false는 상시 추천에서 제외한 호환 정의다. 실행 정본은 해마 원장/가지 문서. 검증 결과와 퇴출 근거는 docs/IBL_IDIOM_VALUE_2026_09_08.md.",
   "demote": {
     "표보고조회하기": "표를 보고 SQL을 만드는 중간 판단이 빠져 있다.",
     "행마다붙이기": "호출자가 each 본문을 다시 작성해야 한다. 자주 쓰는 URL 읽기·요약을 각각읽고요약으로 구체화한다.",
     "띄우고기다리기": "작업 인자를 전달하지 못하고 실패 종료와 시간 초과를 구별하지 못한다.",
-    "모아서추리기": "두 출처·같은 질의로 고정된 수집 대신 생산자와 중복 제거·요약 관용구를 조합한다."
+    "모아서추리기": "두 출처·같은 질의로 고정된 수집 대신 생산자와 중복 제거·요약 관용구를 조합한다.",
+    "중복빼고추리기": "두 번의 기존 비교에서 직접 조합 대비 이득 근거가 약함. dedup >> take로 충분하다.",
+    "고치고확인하기": "확인 0건도 성공이며 테스트 판정을 대신하지 못함. edit와 검증을 과제에 맞게 조합한다.",
+    "덜어내고요지만": "파일 저장이 요약 입력량을 줄이지 않으며 별도 저장 비용이 추가된다. 보존이 필요한 경우만 명시 조합한다.",
+    "좁혀서읽기": "고정 개수·줄 범위를 새 매개변수 관용구로 대체. 과거 명시 호출은 호환 유지.",
+    "최신파일읽기": "고정 개수·줄 범위를 새 매개변수 관용구로 대체. 과거 명시 호출은 호환 유지."
   },
   "idioms": [
     {
@@ -14,7 +19,8 @@
       "topic": "목록 다루기",
       "body": "$고유 = [table:dedup]{by: \"${키}\"}\n$return = $고유 >> [table:take]{n: \"${개수}\"}",
       "inputs": "앞 통화: items. 키: 중복 판정 열 이름, 개수: 0 이상의 정수.",
-      "example": "[sense:search]{query: \"도서관 소식\"} >> [fn:중복빼고추리기]{키: \"url\", 개수: 5} >> [table:select]{columns: [\"title\", \"url\"]}"
+      "example": "[sense:search]{query: \"도서관 소식\"} >> [fn:중복빼고추리기]{키: \"url\", 개수: 5} >> [table:select]{columns: [\"title\", \"url\"]}",
+      "always_on": false
     },
     {
       "name": "각각읽고요약",
@@ -22,7 +28,7 @@
       "topic": "목록 다루기",
       "body": "$대상 = [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{do: \"[sense:crawl]{url: '$it.url'} >> [table:brief]{instruction: '${지시}'}\", keep: [\"title\", \"url\"], limit: \"${개수}\", collect: true, on_error: \"keep\"}",
       "inputs": "앞 통화: title·url 열이 있는 items. 개수: 0 이상의 정수, 지시: 각 원문의 짧은 요약 지시. 크롤 원문이 brief 상한을 넘으면 실패 행으로 남는다. 반환 items: 성공 행은 title·url·message(요약문)·rows_in, 실패 행은 title·url·_error. 요약이라는 열은 만들지 않는다.",
-      "example": "[sense:search]{query: \"도서관 소식\"} >> [fn:중복빼고추리기]{키: \"url\", 개수: 3} >> [fn:각각읽고요약]{개수: 3, 지시: \"핵심 두 문장\"} >> [table:brief]{instruction: \"출처와 함께 공통점을 정리\"}"
+      "example": "[sense:search]{query:\"도서관 소식\"} >> [table:dedup]{by:\"url\"} >> [fn:각각읽고요약]{개수:3,지시:\"핵심 두 문장\"} >> [table:brief]{instruction:\"출처와 함께 공통점을 정리\"}"
     },
     {
       "name": "잘라각각종합",
@@ -34,11 +40,11 @@
     },
     {
       "name": "원장에누적",
-      "when": "기존 목록과 새 목록을 합쳐 키별 중복을 빼고 JSON 파일에 저장할 때. 같은 키는 기존 행을 보존하며 갱신(upsert)은 하지 않는다.",
+      "when": "기존 목록과 새 목록을 하나 또는 여러 열의 키로 중복 제거해 JSON에 누적 저장할 때. 같은 키는 기존 행 보존. 기존 행 갱신(upsert)은 하지 않는다.",
       "topic": "되풀이 실행",
       "body": "$합 = $옛것 & $새것 >> [table:union] >> [table:dedup]{by: \"${키}\"}; $return = $합 >> [self:write]{path: \"${원장}\", format: \"json\"}",
-      "inputs": "옛것·새것: items 봉투 또는 목록(변수로 전달). 키: 중복 판정 열, 원장: 저장 경로.",
-      "example": "$옛목록 = [self:read]{path: \"기록.json\"}\n$새목록 = [self:read]{path: \"추가.json\"}\n[fn:원장에누적]{옛것: \"$옛목록\", 새것: \"$새목록\", 키: \"id\", 원장: \"기록.json\"}"
+      "inputs": "옛것·새것: items 봉투 또는 JSON 행 목록(변수 자체를 전달). 키: 열 이름 문자열 또는 열 이름 목록(복합키, 예 [\"id\",\"kind\"]). 원장: 저장 경로. 같은 키면 기존 행 전체를 보존한다. 합성키 열을 만들지 않는다.",
+      "example": "$옛목록=[self:read]{path:\"기록.json\"}\n$새목록=[self:read]{path:\"추가.json\"}\n[fn:원장에누적]{옛것:\"$옛목록\",새것:\"$새목록\",키:[\"id\",\"kind\"],원장:\"기록.json\"}"
     },
     {
       "name": "좁혀서읽기",
@@ -46,7 +52,8 @@
       "topic": "찾기",
       "body": "$hits = [self:grep]{pattern: \"${패턴}\", path: \"${루트}\", file_pattern: \"${파일패턴}\", limit: 6}; $return = $hits >> [table:take]{n: 3} >> [table:each]{do: \"[self:read]{path: '$it.파일', start_line: $it.줄번호, limit: 30}\", keep: [\"파일\", \"줄번호\"], collect: true}",
       "inputs": "패턴: 찾을 문자열, 루트: 검색 경로, 파일패턴: 글롭. 반환 items에 파일·줄번호를 보존한다. 읽은 본문은 value 열에 모은다.",
-      "example": "[fn:좁혀서읽기]{패턴: \"TODO\", 루트: \"src\", 파일패턴: \"*.py\"} >> [table:brief]{instruction: \"미완성 작업을 정리\"}"
+      "example": "[fn:좁혀서읽기]{패턴: \"TODO\", 루트: \"src\", 파일패턴: \"*.py\"} >> [table:brief]{instruction: \"미완성 작업을 정리\"}",
+      "always_on": false
     },
     {
       "name": "고치고확인하기",
@@ -54,7 +61,8 @@
       "topic": "고치기",
       "body": "[self:edit]{path: \"${파일}\", old_string: \"${앞}\", new_string: \"${뒤}\"}; $return = [self:grep]{pattern: \"${확인}\", path: \"${파일}\", limit: 5}",
       "inputs": "파일: 경로, 앞·뒤: 치환 전후 문자열, 확인: 수정 후 찾을 패턴. 일치 0행이면 확인되지 않은 것이다.",
-      "example": "[fn:고치고확인하기]{파일: \"메모.txt\", 앞: \"초안\", 뒤: \"완료\", 확인: \"완료\"} >> [table:take]{n: 1}"
+      "example": "[fn:고치고확인하기]{파일: \"메모.txt\", 앞: \"초안\", 뒤: \"완료\", 확인: \"완료\"} >> [table:take]{n: 1}",
+      "always_on": false
     },
     {
       "name": "덜어내고요지만",
@@ -62,7 +70,8 @@
       "topic": "큰 것 다루기",
       "body": "$원문 = [sense:crawl]{url: \"${주소}\"} >> [self:write]{path: \"${스필경로}\", spill: true}; $return = $원문 >> [table:brief]{instruction: \"${지시}\"}",
       "inputs": "주소: 웹 URL, 스필경로: 원문 보존 파일, 지시: 요약 지시. 긴 원문의 분할 요약에는 잘라각각종합을 사용한다.",
-      "example": "[fn:덜어내고요지만]{주소: \"https://example.org/article\", 스필경로: \"원문.json\", 지시: \"핵심 세 문장\"} >> [self:write]{path: \"요약.md\"}"
+      "example": "[fn:덜어내고요지만]{주소: \"https://example.org/article\", 스필경로: \"원문.json\", 지시: \"핵심 세 문장\"} >> [self:write]{path: \"요약.md\"}",
+      "always_on": false
     },
     {
       "name": "최신파일읽기",
@@ -70,7 +79,24 @@
       "topic": "찾기",
       "body": "$최신 = [self:file_find]{path: \"${폴더}\", pattern: \"${패턴}\"} >> [table:filter]{where: {field: \"is_dir\", op: \"eq\", value: false}} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$return = $최신 >> [self:read]{limit: 160}",
       "inputs": "폴더: 검색 경로, 패턴: 파일 글롭. 전체 최신을 보장하려면 200건 이내로 폴더·패턴을 좁힌다.",
-      "example": "[fn:최신파일읽기]{폴더: \"보고서\", 패턴: \"*.md\"} >> [table:brief]{instruction: \"직전 보고서의 핵심만 정리\"}"
+      "example": "[fn:최신파일읽기]{폴더: \"보고서\", 패턴: \"*.md\"} >> [table:brief]{instruction: \"직전 보고서의 핵심만 정리\"}",
+      "always_on": false
+    },
+    {
+      "name": "위치마다읽기",
+      "when": "grep으로 찾은 위치 목록에서 앞 개수곳을 일치 줄부터 줄수만큼 읽고 위치·본문·실패를 모을 때. 전체 위치만 필요하면 grep 결과를 그대로 쓴다.",
+      "topic": "찾기",
+      "body": "$대상 = [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{do: \"[self:read]{path: '$it.파일', start_line: $it.줄번호, limit: ${줄수}}\", keep: [\"파일\", \"줄번호\"], limit: \"${개수}\", collect: true, on_error: \"keep\"}",
+      "inputs": "앞 통화: grep의 파일·줄번호 열. 개수: 처리할 위치 수(0 이상). 줄수: 위치당 읽을 줄 수(1 이상). 반환: 파일·줄번호·value(본문), 실패는 _error. 본문 의미 판단은 하지 않는다.",
+      "example": "[self:grep]{path:\"notes\",pattern:\"TODO\",file_pattern:\"*.txt\",limit:20} >> [fn:위치마다읽기]{개수:5,줄수:12}"
+    },
+    {
+      "name": "최신범위읽기",
+      "when": "좁힌 폴더에서 수정시각이 최신인 파일의 지정 줄 범위를 읽을 때. 파일명 순서가 아니다. 후보 200건 초과·동률이면 전체 최신 보장은 못 한다.",
+      "topic": "찾기",
+      "body": "$후보 = [self:file_find]{path: \"${폴더}\", pattern: \"${패턴}\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1}\n$return = $후보 >> [if:not empty($items)]{[self:read]{start_line:\"${시작줄}\",limit:\"${줄수}\"}}",
+      "inputs": "폴더·패턴: 파일 검색 범위. 시작줄: 1부터 시작, 줄수: 1 이상의 읽을 줄 수. 반환은 본문 문자열; 후보 없음은 빈 items. 최신 후보 검색 상한은 200건이다.",
+      "example": "[fn:최신범위읽기]{폴더:\"reports\",패턴:\"*.md\",시작줄:1,줄수:220}"
     }
   ]
 }

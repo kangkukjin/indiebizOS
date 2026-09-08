@@ -19,7 +19,7 @@ ENTRIES = {e['name']: e for e in CATALOG['idioms']}
 
 
 def test_catalog_checks_signatures_and_composed_examples():
-    assert len(validate_catalog(CATALOG)) == 8
+    assert set(validate_catalog(CATALOG)) == set(ENTRIES)
     broken = json.loads(json.dumps(CATALOG))
     broken['idioms'][0]['example'] = '[fn:중복빼고추리기]{키: "id"}'
     with pytest.raises(ValueError, match='인자'):

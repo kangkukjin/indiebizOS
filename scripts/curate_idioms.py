@@ -29,7 +29,8 @@ def validate_catalog(catalog):
     from ibl_param_vocab import check_code_params
     entries = catalog["idioms"]
     names = [e["name"] for e in entries]
-    if len(names) != len(set(names)) or set(names) & set(catalog.get("demote", {})):
+    active = {e['name'] for e in entries if e.get('always_on', True)}
+    if len(names) != len(set(names)) or active & set(catalog.get("demote", {})):
         raise ValueError("중복 이름 또는 승격/강등 충돌")
     definitions = "\n".join(f"[def: {e['name']}]{{\n{e['body']}\n}}" for e in entries)
     infos = {}
@@ -130,7 +131,7 @@ def apply_catalog(catalog, infos, local_encoder=False):
             if n != 1:
                 raise RuntimeError(f"{e['name']}: 조합 용례 저장 실패")
         with db._get_connection() as con:
-            con.execute("UPDATE ibl_examples SET always_on=1 WHERE id=?", (rid,))
+            con.execute("UPDATE ibl_examples SET always_on=? WHERE id=?", (int(e.get('always_on', True)), rid))
             con.commit()
             seed_id = con.execute("SELECT id FROM ibl_examples WHERE source='idiom_registry' AND ibl_code=?",
                                   (e["example"],)).fetchone()[0]

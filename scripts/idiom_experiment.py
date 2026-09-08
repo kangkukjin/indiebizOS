@@ -27,6 +27,7 @@ OUT = ROOT / 'outputs/idiom_experiment_2026-09-08'
 ARMS = ['none', 'current', 'compact', 'scoped']
 CATALOG = json.loads((ROOT / 'data/idioms/curated.json').read_text())
 ENTRIES = {e['name']: e for e in CATALOG['idioms']}
+SUITE = 'legacy'
 
 
 def dump(path, value):
@@ -39,6 +40,8 @@ def compact(names):
     lines = ['<ibl_idioms>사용 가능한 등록 함수. 맞으면 호출하고, 요구와 다르면 기본 액션을 조합한다.']
     for name in names:
         e = ENTRIES[name]
+        if not e.get('always_on', True):
+            continue
         args = ', '.join(f'{s}: …' for s in call_signature(e['body']))
         lines.append(f'[fn:{name}]{{{args}}}\n조건: {e["when"]}\n입출력: {e["inputs"]}')
     return '\n'.join(lines) + '\n</ibl_idioms>'
@@ -67,7 +70,7 @@ def prepare():
         raise RuntimeError('이 러너는 현재 claude_code 실행 프로바이더용이다')
     manifest = {'base_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
                 'provider': config['provider'], 'model': config['model'], 'effort': 'medium',
-                'arms': ARMS, 'cases': CASES, 'max_repairs': 1, 'trial_timeout_s': 120,
+                'arms': ARMS, 'cases': CASES, 'suite': SUITE, 'max_repairs': 1, 'trial_timeout_s': 120,
                 'scope_selection': '과제별 후보를 사람이 미리 지정한 oracle; 검색 비용·정확도 미포함',
                 'scope': '전체 IBL 참고서를 가진 단일 프로그램 생성과 1회 피드백 수리; 웹·brief는 fixture',
                 'prompt_chars': {}, 'prompt_sha256': {}}
@@ -82,6 +85,8 @@ def prepare():
             manifest['prompt_chars'][key] = len(prompt)
             manifest['prompt_sha256'][key] = hashlib.sha256(prompt.encode()).hexdigest()
     manifest['source_sha256'] = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in [Path(__file__), ROOT / 'scripts/idiom_experiment_worker.py', ROOT / 'scripts/idiom_experiment_cases.py']}
+    if SUITE == 'value_v3':
+        manifest['source_sha256']['idiom_value_cases.py'] = hashlib.sha256((ROOT / 'scripts/idiom_value_cases.py').read_bytes()).hexdigest()
     dump(OUT / 'catalog.json', CATALOG)
     dump(OUT / 'manifest.json', manifest)
     return manifest
@@ -89,8 +94,9 @@ def prepare():
 
 def execute(code, case_id, named):
     try:
+        suite = json.loads((OUT / 'manifest.json').read_text()).get('suite', 'legacy')
         p = subprocess.run([sys.executable, str(ROOT / 'scripts/idiom_experiment_worker.py')],
-                           input=json.dumps({'code': code, 'case_id': case_id, 'named': named, 'catalog': json.loads((OUT / 'catalog.json').read_text()) if (OUT / 'catalog.json').exists() else CATALOG}),
+                           input=json.dumps({'code': code, 'case_id': case_id, 'named': named, 'suite': suite, 'catalog': json.loads((OUT / 'catalog.json').read_text()) if (OUT / 'catalog.json').exists() else CATALOG}),
                            text=True, capture_output=True, cwd=ROOT, timeout=30)
         if p.returncode:
             return {'quality_ok': False, 'verdict': 'worker_error', 'worker_error': p.stderr[-1500:]}
@@ -159,7 +165,7 @@ def trial(manifest, case, arm, repeat):
 
 
 def main():
-    global OUT
+    global OUT, CASES, SUITE
     p = argparse.ArgumentParser()
     p.add_argument('--prepare', action='store_true')
     p.add_argument('--run', action='store_true')
@@ -168,8 +174,14 @@ def main():
     p.add_argument('--cases', default='')
     p.add_argument('--arms', default=','.join(ARMS))
     p.add_argument('--out', type=Path, default=OUT)
+    p.add_argument('--suite', choices=['legacy', 'value_v3'], default='legacy')
     a = p.parse_args()
     OUT = a.out.resolve()
+    SUITE = a.suite
+    if (OUT / 'manifest.json').exists():
+        SUITE = json.loads((OUT / 'manifest.json').read_text()).get('suite', 'legacy')
+    if SUITE == 'value_v3':
+        from idiom_value_cases import CASES
     if a.repeat < 1 or not 1 <= a.workers <= 4:
         p.error('repeat >= 1, workers 1..4가 필요합니다')
     if set(a.arms.split(',')) - set(ARMS):

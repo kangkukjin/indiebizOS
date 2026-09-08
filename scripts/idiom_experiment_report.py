@@ -37,12 +37,12 @@ def metrics(trials):
     }
 
 
-def replay(trial, catalogs):
+def replay(trial, catalogs, suite='legacy'):
     result = {'id': trial['id'], 'case': trial['case'], 'arm': trial['arm'],
               'original_first_pass': trial['attempts'][0]['execution']['quality_ok']}
     for label, catalog in catalogs.items():
         req = {'code': trial['attempts'][0]['code'], 'case_id': trial['case'],
-               'named': trial['arm'] != 'none', 'catalog': catalog}
+               'named': trial['arm'] != 'none', 'catalog': catalog, 'suite': suite}
         p = subprocess.run([sys.executable, str(ROOT / 'scripts/idiom_experiment_worker.py')],
                            input=json.dumps(req), text=True, capture_output=True, timeout=30, cwd=ROOT)
         if p.returncode:
@@ -79,7 +79,8 @@ def main():
         catalogs = {'baseline': json.loads((a.out / 'catalog.json').read_text()),
                     'repaired': json.loads((ROOT / 'data/idioms/curated.json').read_text())}
         with ThreadPoolExecutor(max_workers=2) as pool:
-            rows = list(pool.map(lambda r: replay(r, catalogs), trials))
+            suite = json.loads((a.out / 'manifest.json').read_text()).get('suite', 'legacy')
+            rows = list(pool.map(lambda r: replay(r, catalogs, suite), trials))
         payload = {'mode': '同一 first-attempt code; fresh fixture per execution; no model generation',
                    'catalogs': catalogs, 'trials': rows,
                    'worker_sha256': hashlib.sha256((ROOT / 'scripts/idiom_experiment_worker.py').read_bytes()).hexdigest()}

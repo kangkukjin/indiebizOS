@@ -27,7 +27,12 @@ def load(name, path):
     return mod
 
 
-def run_trial(code, case_id, named=True, catalog=None):
+def run_trial(code, case_id, named=True, catalog=None, suite='legacy'):
+    setup_case, judge_case = setup, judge
+    if suite == 'value_v3':
+        from idiom_value_cases import setup as setup_case, judge as judge_case
+    elif suite != 'legacy':
+        raise ValueError('unknown suite')
     entries = {e["name"]: e for e in (catalog or CATALOG)["idioms"]}
     import ibl_engine
     import ibl_usage_db
@@ -58,7 +63,7 @@ def run_trial(code, case_id, named=True, catalog=None):
             return list(entries) if named else []
     with tempfile.TemporaryDirectory(prefix='ibl_idiom_trial_') as tmp, ExitStack() as stack:
         root = Path(tmp).resolve()
-        setup(root)
+        setup_case(root)
         stack.enter_context(patch.object(ibl_usage_db, 'IBLUsageDB', DB))
         stack.enter_context(patch.object(workflow_engine, 'get_workflow', lambda name: None))
         stack.enter_context(patch.object(ibl_typecheck, 'FN_CODE_SOURCES', [lambda n: entries[n]['body'] if named and n in entries else None]))
@@ -117,7 +122,7 @@ def run_trial(code, case_id, named=True, catalog=None):
             else:
                 with actor_context(agent_id='idiom-experiment', origin='test'):
                     result = workflow_engine.execute_pipeline(steps, str(root))
-            ok, verdict = judge(case_id, result, root, observed)
+            ok, verdict = judge_case(case_id, result, root, observed)
         except Exception as exc:
             result = {'success': False, 'error': f'{type(exc).__name__}: {exc}'}
             ok, verdict = False, result['error']
@@ -128,5 +133,5 @@ def run_trial(code, case_id, named=True, catalog=None):
 if __name__ == '__main__':
     req = json.loads(sys.stdin.read())
     with contextlib.redirect_stdout(io.StringIO()):
-        result = run_trial(req['code'], req['case_id'], req.get('named', True), req.get('catalog'))
+        result = run_trial(req['code'], req['case_id'], req.get('named', True), req.get('catalog'), req.get('suite', 'legacy'))
     print(json.dumps(result, ensure_ascii=False))

@@ -168,6 +168,10 @@ _RESIDUE_CAUSES = (
 
 def _diagnose_residue(residue: str) -> str:
     """남은 조각의 첫 토큰으로 원인을 판별해 한 줄 안내를 만든다."""
+    if re.match(r'\s*(?:\+|-|\*\*?|/|%)\s*(?:\d|\$|\()', residue):
+        return ('→ 파라미터 값 자리에서는 산술식을 직접 계산하지 않습니다. '
+                '먼저 `$끝줄 = $시작줄 + 3`처럼 변수에 계산한 뒤 `{end_line: $끝줄}`로 전달하세요. '
+                '줄 수가 정해져 있으면 `{start_line: $시작줄, limit: 4}`로 읽을 수 있습니다.')
     for rx, render in _RESIDUE_CAUSES:
         m = rx.match(residue)
         if m:

@@ -28,6 +28,7 @@ _fs_find = _load_sibling("fs_find")
 _FIND_DEADLINE_S = _fs_find.FIND_DEADLINE_S
 _bounded_find = _fs_find.bounded_find
 _expand_braces = _fs_find.expand_braces
+_normalize_read_range = _load_sibling("fs_read_range").normalize_read_range
 
 # 시스템 AI 전용 상태 폴더 (data/system_ai_state/)
 DATA_PATH = Path(__file__).parent.parent.parent.parent
@@ -658,33 +659,10 @@ def execute(tool_input: dict, context) -> str:
 
     # 단일 액션 패턴: read {format} 통합 액션. format 명시 또는 확장자 자동 인식.
     if tool_name == "read_op":
-        # start_line/end_line (1-기반, 양끝 포함) → offset/limit 흡수 (2026-08-10, ep1014):
-        # 모델이 이 철자를 자연스럽게 쓴다. 별칭(이름변경)으로 못 푸는 이유 — offset 은
-        # 0-기반이라 start_line=280 은 offset=279 로 *계산*해야 한다 (end 흡수와 같은 부류).
-        if (tool_input.get("start_line") is not None
-                or tool_input.get("end_line") is not None):
-            try:
-                _sl = tool_input.get("start_line")
-                _el = tool_input.get("end_line")
-                _upd = {}
-                if _sl is not None and not tool_input.get("offset"):
-                    _upd["offset"] = max(0, int(_sl) - 1)
-                if _el is not None and tool_input.get("limit") is None:
-                    _first = int(_sl) if _sl is not None else int(tool_input.get("offset") or 0) + 1
-                    _upd["limit"] = max(1, int(_el) - _first + 1)
-                if _upd:
-                    tool_input = {**tool_input, **_upd}
-            except (TypeError, ValueError):
-                pass  # 숫자 아님 — 기존 흐름에 맡김, 런타임 param 경고층이 알림
-        # end(끝 줄/블록) → limit 흡수: start 는 액션 aliases(레지스트리)가 offset 으로
-        # 변환하지만, end 는 이름변경이 아니라 계산(limit = end − offset)이라 여기서 흡수.
-        # (모델이 start/end 를 써 조용히 무시되고 통파일이 오던 silent-ignore 해소.)
-        if tool_input.get("end") is not None and tool_input.get("limit") is None:
-            try:
-                _end_off = int(tool_input.get("offset") or tool_input.get("start") or 0)
-                tool_input = {**tool_input, "limit": max(1, int(tool_input["end"]) - _end_off)}
-            except (TypeError, ValueError):
-                pass  # 숫자 아님 — 기존 흐름(무시)에 맡김, 런타임 param 경고층이 알림
+        try:
+            tool_input = _normalize_read_range(tool_input)
+        except ValueError as exc:
+            return json.dumps({"success": False, "error": f"read 범위 오류: {exc}"}, ensure_ascii=False)
         # 파이프라인 자동 바인딩: path 가 없으면 직전 step 결과에서 파일 경로 추출.
         # "방금 찾은 파일을 읽기"([self:file_find]{...} | take: 1 >> [self:read]) 조합 개통.
         if not (tool_input.get("path") or tool_input.get("file_path") or tool_input.get("target")):
@@ -767,7 +745,7 @@ def execute(tool_input: dict, context) -> str:
                 _b_range = None
                 if _b_off > 0 or _b_lim is not None:
                     _lines = _txt.splitlines(keepends=True)
-                    _b_end = min(_b_off + int(_b_lim), len(_lines)) if _b_lim else len(_lines)
+                    _b_end = min(_b_off + int(_b_lim), len(_lines)) if _b_lim is not None else len(_lines)
                     _txt = "".join(_lines[_b_off:_b_end])
                     _b_range = {"start_line": _b_off + 1, "end_line": _b_end, "total_lines": len(_lines)}
                 _parts = markdown_to_blocks(_txt)
@@ -803,12 +781,13 @@ def execute(tool_input: dict, context) -> str:
 
             # offset/limit 적용
             if offset > 0 or limit is not None:
-                end = min(offset + limit, total_lines) if limit else total_lines
+                end = min(offset + limit, total_lines) if limit is not None else total_lines
                 selected = lines[offset:end]
                 content = _join(selected, offset + 1)
                 # 표시는 1-기반 양끝 포함 — grep 줄번호·start_line/end_line 과 같은 자로 읽힌다
                 # (옛 표기는 0-기반 범위를 "줄"이라 찍어 1씩 어긋났다).
-                header = f"[줄 {offset + 1}-{min(end, total_lines)} / 전체 {total_lines}줄, {file_size:,}바이트]\n"
+                span = f"{offset + 1}-{min(end, total_lines)}" if selected else "없음"
+                header = f"[줄 {span} / 전체 {total_lines}줄, {file_size:,}바이트]\n"
                 return header + content
             else:
                 # 전체 읽기 — 대용량 파일 방어 (1MB 제한)

@@ -114,8 +114,8 @@ def test_S3_기존_경로는_그대로다(aiops):
     assert "부속" in (out.get("note") or "")
 
 
-def test_S4_외부화_파일이_사라졌으면_봉투_본문으로_폴백(aiops):
-    """따라간 파일이 없다고 빈손 죽음이 되면 안 된다 — preview 라도 원문으로."""
+def test_S4_외부화_파일이_사라졌으면_전문인_척하지_않는다(aiops):
+    """미리보기로 전문 추출을 대신하면 손실을 숨긴다. 모델 호출 전에 실패한다."""
     mod, seen = aiops
     out = json.loads(mod._struct({
         "schema": "팁(tip)",
@@ -123,8 +123,8 @@ def test_S4_외부화_파일이_사라졌으면_봉투_본문으로_폴백(aiops
                          "preview": "미리보기 본문이다 " * 20},
     }))
     # 스텁 extract_source 는 없는 파일에서 예외 — 실제 구현은 ok:false 를 낸다.
-    # 어느 쪽이든 struct 가 preview 폴백 또는 정직 에러로 끝나야 한다(침묵 금지).
-    assert out.get("success") is not False or out.get("error")
+    assert out.get("success") is False and out.get("error")
+    assert 'prompt' not in seen
 
 
 def test_S5_스필_참조_봉투는_본문을_복원한다(aiops, tmp_path, monkeypatch):

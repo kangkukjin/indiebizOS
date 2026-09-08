@@ -4,6 +4,41 @@ from contextvars import ContextVar
 BODY_NAMES = ContextVar('ibl_body_names', default=frozenset())
 
 
+def merge_layout_lines(entries):
+    """괄호 안과 연산자 앞뒤 개행은 같은 문장이다. 문자열 내용은 보존한다."""
+    result, current, stack = [], [], []
+    quote = None
+    operators = ('>>', '??', '&', '|')
+    pairs = {'}': '{', ']': '[', ')': '('}
+    for line, was_in_string in entries:
+        continued = current and (stack or quote or was_in_string
+            or line.startswith(operators)
+            or current[-1].rstrip().endswith(operators))
+        if current and not continued:
+            result.append('\n'.join(current))
+            current = []
+        current.append(line)
+        i = 0
+        while i < len(line):
+            ch = line[i]
+            if quote:
+                if ch == '\\':
+                    i += 2
+                    continue
+                if ch == quote:
+                    quote = None
+            elif ch in ('"', "'"):
+                quote = ch
+            elif ch in '{[(':
+                stack.append(ch)
+            elif ch in pairs and stack and stack[-1] == pairs[ch]:
+                stack.pop()
+            i += 1
+    if current:
+        result.append('\n'.join(current))
+    return result
+
+
 def scoped_block(parse_block, text, variables, free_ok):
     names = True if free_ok is True else frozenset(variables or ()) | frozenset(free_ok or ())
     token = BODY_NAMES.set(names)

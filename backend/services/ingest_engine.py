@@ -110,7 +110,8 @@ def extract_source(path: str = None, text: str = None) -> dict:
     if not path:
         if not text:
             return {"ok": False, "error": "입력이 없습니다 — text 또는 file 을 주세요."}
-        return {"ok": True, "kind": "text", "text": text[:_TEXT_CAP], "images": None, "label": "텍스트 입력"}
+        return {"ok": True, "kind": "text", "text": text[:_TEXT_CAP], "images": None,
+                "label": "텍스트 입력", "truncated": len(text) > _TEXT_CAP, "source_chars": len(text)}
 
     if not os.path.isfile(path):
         return {"ok": False, "error": f"파일을 찾을 수 없습니다: {path}"}
@@ -142,8 +143,9 @@ def extract_source(path: str = None, text: str = None) -> dict:
         return {"ok": False, "error": err}
     if not (body or "").strip():
         return {"ok": False, "error": f"{label}: 내용이 비어 있습니다."}
-    merged = (f"{body}\n\n[사용자 메모] {text}" if text else body)[:_TEXT_CAP]
-    return {"ok": True, "kind": "text", "text": merged, "images": None, "label": label}
+    merged = f"{body}\n\n[사용자 메모] {text}" if text else body
+    return {"ok": True, "kind": "text", "text": merged[:_TEXT_CAP], "images": None,
+            "label": label, "truncated": len(merged) > _TEXT_CAP, "source_chars": len(merged)}
 
 
 # ── ③ 구조화 추출 ──

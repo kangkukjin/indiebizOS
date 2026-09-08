@@ -93,7 +93,7 @@ def test_structure_literals_in_assignment_compute_and_reduce():
     assert result['value'] == [2, 3]
 
 
-@pytest.mark.parametrize('expr', ['[x for x in xs]', '{**x}', "{x:1}", "{'a':1,'a':2}",
+@pytest.mark.parametrize('expr', ['[x for x in xs]', '{**x}', "{x+1:1}", "{'a':1,'a':2}",
                                   'x.__class__', '__import__("os")', '[*xs]'])
 def test_structure_expressions_do_not_enable_arbitrary_execution(expr):
     with pytest.raises((ValueError, SyntaxError)):

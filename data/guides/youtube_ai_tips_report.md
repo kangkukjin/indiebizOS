@@ -66,10 +66,18 @@
 - 기존 팁 목록은 `known: ${기존팁.items.*.tip}`로 전달한다. each의 do 안에서도 같은 값 참조를 쓰며 제목을 코드에 손으로 붙이지 않는다. 따옴표·줄바꿈이 든 목록은 실행기가 데이터로 주입한다. known을 빼서 구문 오류를 우회하지 않는다.
 - `grounded:true`와 `schema`의 `timestamp(MM:SS)`를 함께 사용한다. 코드는 원본 자막의 시간과 `_quote`를 연결해 시각을 채운다. `timestamp:null`/`_timestamp_error`는 근거 위치가 없거나 여러 곳이라는 뜻이므로 00:00으로 채우지 않는다. 그 행만 원문을 확인하거나 시각 미확인으로 표시한다. `timestamp_grounded`와 `missing_timestamp`도 확인한다.
 - `try_candidate`는 `contains(tip, "툴 콜")` 같은 식으로 만든다. Python의 `in` 대신 이미 지원하는 contains를 쓴다.
-- `source` 객체를 compute로 만들지 않는다. `tip/how/topic/video_id/title/channel/url/date/report/try_candidate` 평탄 열을 준비하고 `self:write{format:"json"}`으로 저장한 뒤 아래 등록 스크립트를 바로 호출한다. `try_candidate`는 문자열이 아닌 불리언이다. src/out은 이번 실행의 공유 경로이며, 출력 파일을 원장 append의 items_file로 넘긴다. 이 등록본을 찾으려고 매번 script list를 다시 읽을 필요는 없다.
+- 자막은 `$자막 >> [self:write]{path:"${출력}/transcripts/${it.video_id}.json",format:"json"}`으로 원문·구간·언어를 함께 보존한다. 뒤의 `struct{file:...}` 두 단계가 같은 JSON을 읽는다. 타임스탬프 문자열을 직접 조립할 필요가 없다. 원문 파일·스필 참조가 없으면 실패로 확인하며 미리보기를 전문 대신 쓰지 않는다.
+- `schema:"tip(제목), how(단계), timestamp(MM:SS)"`의 명시된 필드는 정적 검사와 결과 행의 누락 검사에 함께 쓰인다. `table:ai`에도 같은 선택적 schema를 쓸 수 있다. 의미·재현 가능성은 instruction/criteria로 판단하고, 필드 존재 검사를 AI에게 반복시키지 않는다.
+- `source` 객체는 일반 값 구성으로 만든다. `try_candidate` 불리언도 그대로 복사한다. 결과를 JSON으로 저장해 원장 append의 items_file로 넘긴다. 아래 `$편집`, `$주제`, `$날짜`는 앞에서 만든 값이다.
 
 ```ibl
-[self:script]{op:"run",id:"팁행source중첩",args:{src:"~workspace/outputs/ai_tips_reports/_tips_flat.json",out:"~workspace/outputs/ai_tips_reports/_tips_nested.json"}}
+$중첩팁 = $편집 >> [table:each] {
+  $return = [{
+    tip:$it.tip, how:$it.how, topic:$주제, date:$날짜,
+    try_candidate:$it.try_candidate,
+    source:{video_id:$it.video_id,title:$it.title,channel:$it.uploader,url:$it.url}
+  }]
+}
 ```
 
 ### 2-1. 원장 읽기

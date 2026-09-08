@@ -115,15 +115,24 @@ def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool,
                     "파이프 싱크(… >> [self:write]{path, format: \"json\"})로 주거나 JSON 문자열을 주세요.")},
                     ensure_ascii=False)
         if isinstance(content, dict):
+            from common.source_snapshot import source_snapshot
+            try:
+                body = source_snapshot(content)
+            except ValueError as exc:
+                return json.dumps({"success": False, "error": str(exc)}, ensure_ascii=False)
             try:
                 from common.currency import derive_items as _derive_items
                 _d = _derive_items(dict(content))
             except ImportError:
                 _d = content
             if isinstance(_d, dict) and isinstance(_d.get("items"), list):
-                content = {"items": _d["items"], "count": len(_d["items"])}
+                content = {"items": _d["items"], "count": len(_d["items"]), **body}
             else:
                 content, _m2 = _strip_envelope_meta(content)
+                content.update(body)
+                if body.get('source_file'):
+                    for key in ('saved_to_file', 'file_path', 'preview'):
+                        content.pop(key, None)
                 if _m2:
                     excluded_meta = sorted(set(excluded_meta or []) | set(_m2))
         elif isinstance(content, list):

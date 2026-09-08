@@ -25,6 +25,21 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: projection_numeric_exception
+    retired: 2026-09-09
+    reason: 복사에서 숫자 문자열을 바꾸고 투영에서만 명시 변환을 요구하던 자리별 차이를 없앴다.
+    instead: 모든 공용 식은 복사·문자열 함수에서 원형을 보존하고 산술 자리에서 숫자를 관측한다.
+    phrases:
+      - "숫자 문자열 계산은 int/float로 명시 변환한다"
+      - "source` 객체를 compute로 만들지 않는다"
+      - '결과는 스칼라 — 뒤 문장의 `"$x"` 엔 값 문자열이'
+  - id: source_preview_as_full_text
+    retired: 2026-09-09
+    reason: 원문 파일 소실을 preview로 대체하면 모델이 일부만 보고 전문 처리에 성공한 것처럼 보인다.
+    instead: JSON 저장 시 원문 전문을 보존하고 원문 파일 소실·입력 상한 초과는 추출 전에 실패한다.
+    phrases:
+      - "조용히 아래 본문 사슬(preview 폴백)로"
+      - "원문에 없는 수치·날짜·항목을 지어내지 말 것 ②확실치 않은 필드는 생략"
   - id: structured_expression_ban
     retired: 2026-09-08
     reason: 일반 구조 변환을 외부 스크립트로 보내던 표현 제한을 폐지했다.

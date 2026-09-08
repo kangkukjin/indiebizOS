@@ -6,12 +6,13 @@ nodes:
     actions:
       struct:
         returns: items
+        schema_param: schema
         ai_call: true
         exempt: 원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)
         runs_on: anywhere
         scope: workspace
         description: AI 구조화 원자(입구) — 비정형 입력(파일·텍스트·파이프 본문)을 schema 계약의 레코드 items 통화로. 이미 표인 것은 [self:read]{tables:true}(결정론), 문서 조판용 IR 은 [table:structure].
-        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · known([이미 있는 기록] — 같은 것은 다시 뽑지 않음, 2026-09-06) · instruction(추가 지시 — 2단 추출의 2차: "다음 제목들에 대해서만 how 를 채운다") · schema(필수 — 출력 레코드 계약: 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)") · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 파이프 봉투에 본문(text 등)과 items 가 병기되면 본문을 원문으로 쓰고 items 는 부속으로 신고(note) — 본문 없는 items 통화는 거절([table:ai]/[table:brief] 안내). 시간이 있는 자막에서 grounded=true와 schema의 timestamp를 함께 쓰면 코드가 _quote의 시작 세그먼트 시각을 MM:SS로 복원한다(추가 모델 호출 없음). timestamp(MM:SS)를 요청했지만 원본 시간이 없거나 구절 위치가 여러 곳이면 timestamp=null과 _timestamp_error를 남긴다. missing_timestamp/ timestamp_grounded로 건수를 신고한다. 일반 날짜 timestamp 필드는 이 자막 규약의 대상이 아니다. 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
+        target_description: 'file(경로 — 이미지/PDF/엑셀/CSV/텍스트) 또는 text(직접 본문) 또는 >> 파이프 본문(예 [sense:crawl] 결과) 중 하나 · known([이미 있는 기록] — 같은 것은 다시 뽑지 않음, 2026-09-06) · instruction(추가 지시 — 2단 추출의 2차: "다음 제목들에 대해서만 how 를 채운다") · schema(필수 — 자유 라벨 "finance" 또는 필드 명세 "date, item, amount(원)". 필드 명세는 정적 검사·AI 출력 지시·필드 존재 검사를 공유하며 값 미확인은 null) · grounded(bool — 각 레코드에 원문 발췌 _quote 를 요구하고 코드가 원문 대조·탈락 수 신고. finance/health 원장 스키마=기본 on, 이미지 입력=원리상 off). 파이프 봉투에 본문(text 등)과 items 가 병기되면 본문을 원문으로 쓰고 items 는 부속으로 신고(note) — 본문 없는 items 통화는 거절([table:ai]/[table:brief] 안내). 시간이 있는 자막에서 grounded=true와 schema의 timestamp를 함께 쓰면 코드가 _quote의 시작 세그먼트 시각을 MM:SS로 복원한다(추가 모델 호출 없음). timestamp(MM:SS)를 요청했지만 원본 시간이 없거나 구절 위치가 여러 곳이면 timestamp=null과 _timestamp_error를 남긴다. missing_timestamp/ timestamp_grounded로 건수를 신고한다. 일반 날짜 timestamp 필드는 이 자막 규약의 대상이 아니다. 반환 items(_ai:true) — >> filter/each/save 로 조합. 실행마다 모델 비용(기어 실행 축, 이미지=비전 패스스루).'
         group: ai
         router: handler
         tool: ai_struct
@@ -36,11 +37,12 @@ nodes:
           emits: items
           columns: open
           columns_param: fields
+          schema_param: schema
         ai_call: true
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(AI) — items 를 자연어 지시(instruction)대로 의미 변환(선별·주석·재구성). filter/sort 의 의미론적 형제 — 규칙으로 적을 수 있으면 filter/sort 가 싸고 결정적이니 그쪽 먼저.
-        target_description: 'instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. 실행마다 모델 비용(기어 실행 축).'
+        target_description: 'instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · schema(선택 — 새 필드 명세 "selected(불리언), reason(사유)". 정적 검사·출력 지시·필드 존재 검사 공용) · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. 실행마다 모델 비용(기어 실행 축).'
         group: transform
         router: handler
         tool: ai_transform
@@ -125,6 +127,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        schema:
+          type: string
+          description: '선택 출력 계약. 예 "selected(불리언), reason(선정 사유)". 필드 명세는 정적 검사·출력 지시·필드 존재 검사에 함께 쓰며, 입력 필드는 유지한다.'
         instruction:
           type: string
           description: '자연어 지시(예 "광고성 행 제거", "각 행에 요약 summary 필드 추가").'

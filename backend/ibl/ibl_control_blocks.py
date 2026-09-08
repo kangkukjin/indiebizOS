@@ -712,11 +712,11 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
             text = v if isinstance(v, str) else str(_scalar_of(v))
             return json.dumps(text, ensure_ascii=False)[1:-1].replace("'", "\\'")
         key = f"_v{len(scope)}"
-        # 참조 하나를 그대로 반환할 때는 문자열 식별자(007 등)의 원형을 유지한다.
-        # 실제 산술식에 참여할 때만 기존 숫자 관측 규칙을 적용한다.
         # 경로로 꺼낸 dict와 이미 값인 할당 결과는 봉투가 아니다. 그 안의
         # value/message/items 키를 다시 벗기면 사용자 데이터가 사라진다.
-        scope[key] = v if m.span() == (0, len(expr)) and (path or is_value or not isinstance(v, dict)) else _scalar_of(v)
+        # 참조는 객체/목록 안에서도 원형이다. 숫자 관측은 공용 식 평가기가
+        # 실제 산술 연산 자리에서만 한다. 액션 봉투의 기존 값 추출은 유지한다.
+        scope[key] = v if path or is_value or not isinstance(v, dict) else _scalar_of(v)
         return key
     try:
         from common.ibl_vars import REF_RE

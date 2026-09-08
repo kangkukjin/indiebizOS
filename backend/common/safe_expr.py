@@ -39,6 +39,7 @@ NODES = (_ast.Expression, _ast.BinOp, _ast.UnaryOp, _ast.Constant, _ast.Name, _a
 
 
 _CMP_NAME = "_semantic_compare"
+_NUMBER_NAME = "_observe_number"
 _CMP_OPS = {_ast.Eq: "==", _ast.NotEq: "!=", _ast.Lt: "<", _ast.LtE: "<=",
             _ast.Gt: ">", _ast.GtE: ">="}
 
@@ -84,9 +85,52 @@ class _CompareRewriter(_ast.NodeTransformer):
                          args=[node.left, pairs], keywords=[])
 
 
+class _ValueSpelling(_ast.NodeTransformer):
+    """IBL의 값 표기: 객체 키는 이름, true/false/null은 어디서나 같은 리터럴."""
+    def visit_Dict(self, node):
+        node.keys = [_ast.copy_location(_ast.Constant(k.id), k)
+                     if isinstance(k, _ast.Name) else k for k in node.keys]
+        return self.generic_visit(node)
+
+    def visit_Name(self, node):
+        values = {'true': True, 'false': False, 'null': None}
+        return (_ast.copy_location(_ast.Constant(values[node.id]), node)
+                if node.id in values else node)
+
+
+class _NumericObservation(_ast.NodeTransformer):
+    """복사와 문자열 함수는 원형, 숫자 연산에 쓰이는 필드만 수치로 관측한다."""
+    @staticmethod
+    def operand(node):
+        if (isinstance(node, (_ast.Name, _ast.Subscript)) or
+                isinstance(node, _ast.Call) and isinstance(node.func, _ast.Name)
+                and node.func.id == 'col'):
+            return _ast.Call(func=_ast.Name(id=_NUMBER_NAME, ctx=_ast.Load()),
+                             args=[node], keywords=[])
+        return node
+
+    def visit_BinOp(self, node):
+        self.generic_visit(node)
+        node.left, node.right = self.operand(node.left), self.operand(node.right)
+        return node
+
+    def visit_UnaryOp(self, node):
+        self.generic_visit(node)
+        if not isinstance(node.op, _ast.Not):
+            node.operand = self.operand(node.operand)
+        return node
+
+    def visit_Call(self, node):
+        self.generic_visit(node)
+        if isinstance(node.func, _ast.Name) and node.func.id in {
+                'round', 'abs', 'min', 'max', 'int', 'float', 'sqrt', 'log'}:
+            node.args = [self.operand(arg) for arg in node.args]
+        return node
+
+
 def compile_expr(expr: str) -> Tuple[Any, List[str], List[str]]:
     """(code, 식별자 이름들, col("…") 열 이름들). 허용 밖 구문은 ValueError — 그 이상은 [self:script] 의 자리."""
-    tree = _ast.parse(str(expr), mode="eval")
+    tree = _ValueSpelling().visit(_ast.parse(str(expr), mode="eval"))
     for n in _ast.walk(tree):
         if not isinstance(n, NODES):
             if isinstance(n, (_ast.In, _ast.NotIn)):
@@ -113,7 +157,7 @@ def compile_expr(expr: str) -> Tuple[Any, List[str], List[str]]:
             and isinstance(n.args[0], _ast.Constant)]
     # 비교 의미론 위임은 검증 **후** 재작성 — 사용자 식이 _semantic_compare 를 직접
     # 부를 수는 없다(화이트리스트가 원본 트리에서 이미 막았다).
-    tree = _ast.fix_missing_locations(_CompareRewriter().visit(tree))
+    tree = _ast.fix_missing_locations(_CompareRewriter().visit(_NumericObservation().visit(tree)))
     return compile(tree, "<expr>", "eval"), names, cols
 
 
@@ -129,16 +173,17 @@ def as_num(v: Any):
 
 def eval_expr(code: Any, row: Dict[str, Any], extra: Dict[str, Any] = None,
               *, preserve_values: bool = False) -> Any:
-    scope = {k: (as_num(v) if not preserve_values and as_num(v) is not None else v) for k, v in row.items()
-             if isinstance(k, str) and k.isidentifier() and k != _CMP_NAME}
+    scope = {k: v for k, v in row.items()
+             if isinstance(k, str) and k.isidentifier() and k not in (_CMP_NAME, _NUMBER_NAME)}
     if extra:
         scope.update(extra)
-    scope["col"] = lambda name: (as_num(row.get(name)) if not preserve_values and as_num(row.get(name)) is not None else row.get(name))
+    scope["col"] = lambda name: row.get(name)
     # 유한 결과 관문 — 1e308*2 같은 오버플로가 Infinity 로 통화에 실려 하류 계산·분기·
     # 저장으로 전염되기 전에 여기서 ValueError 로 끊는다(compute/reduce/assign 공유).
     from common.value_semantics import require_finite_numbers
     return require_finite_numbers(eval(
-        code, {"__builtins__": {}, **FUNCS, _CMP_NAME: _semantic_compare}, scope))
+        code, {"__builtins__": {}, **FUNCS, _CMP_NAME: _semantic_compare,
+               _NUMBER_NAME: lambda v: as_num(v) if as_num(v) is not None else v}, scope))
 
 
 @dataclass
@@ -173,8 +218,7 @@ def projection_fields(plan):
 
 
 def eval_projection(plan, row):
-    # 투영은 복사·재구성이다. "007" 같은 식별자를 숫자로 바꾸지 않는다.
-    # 계산할 문자열 숫자는 int/float로 명시 변환한다. compute의 기존 수치 관측은 불변.
+    # 복사·문자열 함수는 원형, 산술의 숫자 관측은 assign/compute/reduce와 같다.
     if isinstance(plan, ProjectionExpr):
         return eval_expr(plan.code, row, preserve_values=True)
     if isinstance(plan, dict):

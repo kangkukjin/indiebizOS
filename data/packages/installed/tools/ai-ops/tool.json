@@ -50,6 +50,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "schema": {
+            "type": "string",
+            "description": "선택 출력 계약. 예 \"selected(불리언), reason(선정 사유)\". 필드 명세는 정적 검사·출력 지시·필드 존재 검사에 함께 쓰며, 입력 필드는 유지한다."
+          },
           "instruction": {
             "type": "string",
             "description": "자연어 지시(예 \"광고성 행 제거\", \"각 행에 요약 summary 필드 추가\")."

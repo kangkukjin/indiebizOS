@@ -1,0 +1,156 @@
+# 이전 실험과 같은 기준일·주제·검색어. 출력 폴더에는 실행 전에 원장/DB 복사본을 준비한다.
+$날짜 = "2026-09-08";
+$기준일 = "2026-03-12";
+$주제 = "디버깅";
+$출력 = "~workspace/outputs/experiments/ibl_learnability_2026_09_09";
+$원장 = $출력 + "/_covered_videos.json";
+$DB = $출력 + "/db/tips.json";
+$파일명 = "ai_tips_report_" + $날짜 + "_" + $주제 + ".md";
+$보고경로 = $출력 + "/" + $파일명;
+$HTML경로 = $출력 + "/AI 팁 보고서 " + $날짜 + " " + $주제 + ".html";
+
+$기존영상 = [self:ledger]{path:$원장,target:"covered",fields:["id","verdict"]}
+  >> [table:rename]{map:{id:"video_id"}};
+$최근주제 = [self:ledger]{path:$원장,target:"recent_topics"};
+$기존팁 = [self:ledger]{path:$DB,fields:["tip","date"],where:{topic:$주제}};
+
+# 다섯 갈래의 차이는 데이터로 쓰고 검색 문장은 한 번 쓴다.
+$질의 = [
+  {"branch": "한국어", "query": "클로드 코드 디버깅 오류 수정"},
+  {"branch": "영어", "query": "AI coding debugging workflow"},
+  {"branch": "워크플로", "query": "Claude Code debug failing tests"},
+  {"branch": "회의론", "query": "AI coding debugging limitations"},
+  {"branch": "행위", "query": "에러 로그 AI 버그 재현"}
+];
+$검색 = [table:each]{items:$질의,limit:5,parallel:5,keep:["branch"]} {
+  [sense:search_youtube]{query:$it.query,count:12}
+} >> [table:dedup]{by:"video_id"};
+$검색 >> [self:write]{path:"${출력}/01_search.json",format:"json"};
+$신규 = $검색 & $기존영상 >> [table:join]{on:"video_id",how:"anti"};
+
+$조회 = $신규 >> [table:each]{limit:60,parallel:4,on_error:"keep",keep:["branch","url"]} {
+  [sense:video]{op:"info",video_id:$it.video_id}
+};
+# 조회 실패 행의 선택적 필드를 명시적으로 정규화한다. 투영의 결측 오류를 숨기지 않는다.
+$정보 = $조회 >> [table:each]{limit:60} {
+  [table:take]{n:1,items:[{
+    video_id:$it.video_id,title:"${it.title?}",uploader:"${it.uploader?}",
+    duration:"${it.duration?}",view_count:"${it.view_count?}",
+    upload_date:"${it.upload_date?}",url:"${it.url?}",
+    branch:"${it.branch?}",info_error:"${it._error?}"
+  }]}
+};
+$정보 >> [self:write]{path:"${출력}/02_info.json",format:"json"};
+$최신 = $정보 >> [table:filter]{where:[
+  {field:"info_error",op:"eq",value:""},
+  {field:"upload_date",op:"gte",value:$기준일},
+  {field:"upload_date",op:"lte",value:$날짜}
+]};
+$심사 = $최신 >> [table:ai]{
+  schema:"selected(불리언), reason(선정 이유), language(ko/en)",
+  instruction:"모든 입력 행·원 필드를 유지하고 selected(불리언), reason(한국어 한 문장), language(ko/en 자막 요청 언어)만 추가하라. ${주제}의 실제 재현·로그·테스트 실패·수정 검증에 쓸 구체적 조작 지식이 있을 영상을 정확히 4편 선정(후보가 4편 미만이면 전부). 한·영 층과 관점을 섞고 관련 최신 회의론 자료가 있으면 포함한다. branch는 검색 갈래이지 실제 언어·회의론 성격의 증거가 아니다. 확인되지 않은 다양성을 확보했다고 단정하지 말라. 같은 채널 중복·뉴스·홍보·단순 시연보다 구체적 튜토리얼 우선. duration은 초이며 3600초 이상 최대 1편.",
+  criteria:"입력 행 수·video_id·원 필드 보존. 모든 행에 selected 불리언, reason, language(ko/en). selected true 4편(후보 4편 미만이면 전부), 3600초 이상 최대 1편."
+};
+$심사 >> [self:write]{path:"${출력}/03_selection.json",format:"json"};
+$선정 = $심사 >> [table:filter]{where:{selected:true}} >> [table:take]{n:4};
+
+# 자막은 한 번 받아 원문·구간·언어를 JSON으로 보존한다. 두 추출 단계가 같은 원문을 읽는다.
+$팁후보 = $선정 >> [table:each]{limit:4,parallel:4,on_error:"continue",keep:["video_id","title","uploader","url"]} {
+  $자막 = [sense:video]{op:"transcript",video_id:$it.video_id,language:$it.language}
+    ?? [sense:video]{op:"transcript",video_id:$it.video_id,language:"en"};
+  $자막 >> [self:write]{path:"${출력}/transcripts/${it.video_id}.json",format:"json"};
+  $제목 = [self:struct]{
+    file:"${출력}/transcripts/${it.video_id}.json",grounded:true,known:"${기존팁.items.*.tip}",
+    schema:"tip(한국어 실행형 팁 제목·동사로 끝남), timestamp(MM:SS)",
+    instruction:"${주제}·재현·로그·테스트·검증의 실제 조작 팁만 최대 8개. 덕담·홍보 제외. 제목과 타임스탬프만. 근거 _quote는 원문 철자 그대로 8~12단어 안의 앵커.",
+    criteria:"행마다 tip와 _quote 존재. 실행 가능한 팁 최대 8행. timestamp는 원문 시간 또는 null이며 꾸민 시각 금지."
+  };
+  $제목 >> [table:compute]{set:{language:"'${자막.language}'"}}
+};
+$팁후보 >> [self:write]{path:"${출력}/04_tip_candidates.json",format:"json"};
+$절제 = $팁후보 >> [table:ai]{
+  schema:"selected(불리언), dedup_note(중복 판정 이유)",
+  instruction:"입력 모든 행·원 필드를 유지하고 selected 불리언과 dedup_note 한 문장만 추가. 영상당 2~5개, 전체 8~15개(가능하면 12개)의 가장 실행 가능한 팁을 선정하라. 영상 균형·서로 다른 디버깅 단계·반대 관점을 살리고 같은 행동의 재탕 제거. 오늘 주제 기존 팁: ${기존팁.items}. 재탕은 selected false와 수집 날짜. 유효 후보가 적으면 수를 채우려고 만들지 말라.",
+  criteria:"입력 행수·tip·video_id·원 필드 보존. selected 불리언과 dedup_note 존재. 선정 영상당 2~5행, 전체 8~15행. 원문 밖 팁 추가 금지."
+};
+$절제 >> [self:write]{path:"${출력}/05_tip_selection.json",format:"json"};
+$선정팁 = $절제 >> [table:filter]{where:{selected:true}} >> [table:take]{n:15};
+$정독영상 = $선정 & $선정팁 >> [table:join]{on:"video_id",how:"semi"};
+$상세 = $정독영상 >> [table:each]{limit:4,parallel:4,on_error:"continue",keep:["video_id","title","uploader","url"]} {
+  $이영상팁 = [table:filter]{items:$선정팁.items,where:{field:"video_id",op:"eq",value:$it.video_id}};
+  [self:struct]{
+    file:"${출력}/transcripts/${it.video_id}.json",grounded:true,known:"${기존팁.items.*.tip}",
+    schema:"tip(주어진 제목 그대로), how(구체적 단계·설정·명령·프롬프트; 원문에 없으면 빈 문자열), tools(문자열), hype(과장 간극 한국어 한 줄; 없으면 빈 문자열), timestamp(MM:SS)",
+    instruction:"다음 제목들 각각 1행: ${이영상팁.items.*.tip}. how는 한국어로 원문에서 설명한 방법만. 명령·메뉴 경로·도구 이름·프롬프트 예문은 원문 표기. 원문에 없는 명령·수치·단계는 보완하지 않는다. 고유명사 철자가 불확실하면 (자막 표기·철자 불확실)을 붙인다. _quote 원문 앵커 필수.",
+    criteria:"요청한 tip 제목 각각 1행, 새 제목 금지. 모든 행에 how/tools/hype/_quote. 원문에서 말한 방법만, timestamp는 원문 시간 또는 null."
+  }
+};
+$상세 >> [self:write]{path:"${출력}/06_details.json",format:"json"};
+# 존재 결합은 왼쪽 행을 복제하거나 불필요한 _2 열을 만들지 않는다.
+$확정 = $상세 & $선정팁 >> [table:join]{on:["video_id","tip"],how:"semi"};
+$팁수 = $확정 >> [table:groupby]{by:"video_id",agg:{n:["count"]}};
+$완료영상 = $정독영상 & $팁수 >> [table:join]{on:"video_id"};
+$편집 = $확정 >> [table:ai]{
+  schema:"implication(우리 시스템 함의), try_candidate(불리언)",
+  instruction:"모든 입력 행·사실·방법·출처를 보존하고 implication(한 줄)과 try_candidate(불리언, true 최대 3개)만 추가하라. 사용자는 Claude Code·IndieBiz OS를 쓰는 고급 사용자이며 실행 오류·AI 호출·시간·토큰을 줄이고 싶다. implication은 이미 하는 것/이식 후보/해당 없음 중 하나로 시작. 실제 구현을 확인하지 않았으므로 이미 하는 것·해당 없음으로 단정하지 말고 구체적 제안은 원문 사실과 분리해 '이식 후보:'로 적는다. 시도 후보는 오늘 호 안에서만 끝난다. 개인 시스템 맥락은 implication에만 적는다.",
+  criteria:"입력 행수·원 필드 보존. 모든 행에 implication과 try_candidate 불리언, true 최대 3행. 원문 밖 방법 추가 금지."
+};
+$편집 >> [self:write]{path:"${출력}/07_edited.json",format:"json"};
+$불균형 = $팁수 >> [table:filter]{where:"n < 2 or n > 5"};
+$장편 = $완료영상 >> [table:filter]{where:"duration >= 3600"};
+$시도 = $편집 >> [table:filter]{where:{try_candidate:true}};
+$수 = {"tips":len($편집.items),"videos":len($완료영상.items),"checked":len($정보.items),"fresh":len($최신.items)};
+
+[if: $수.tips >= 8 and $수.tips <= 15 and $수.videos >= 2 and $수.videos <= 4 and empty($불균형.items) and count($장편.items) <= 1 and count($시도.items) <= 3] {
+  # 각 행에서 팁 목록을 다시 검색하던 반복문을 left join + 투영으로 교체한다.
+  $원장델타 = $정보 & $팁수 >> [table:join]{on:"video_id",how:"left",defaults:{n:0}}
+    >> [table:each]{limit:60} {
+      $return = [{
+        id:$it.video_id,title:$it.title,channel:$it.uploader,upload_date:$it.upload_date,
+        date:$날짜,topic:$주제,
+        verdict:"tips_" + str($it.n) if $it.n > 0 else ("not_selected" if $it.info_error else ("too_old" if $it.upload_date < $기준일 else "not_selected")),
+        note:"영상 정보 조회 실패; 최신성 미확인" if $it.info_error else ("자막에서 팁 추출" if $it.n > 0 else "선정·정독·팁 확정 제외; 단계 파일 참조")
+      }]
+    };
+  $원장델타 >> [self:write]{path:"${출력}/08_ledger_delta.json",format:"json"};
+  # 외부 스크립트와 평탄 파일을 거치지 않고 DB 스키마를 직접 만든다.
+  $중첩팁 = $편집 >> [table:each] {
+    $return = [{
+      tip:$it.tip,how:$it.how,topic:$주제,date:$날짜,report:$파일명,try_candidate:$it.try_candidate,
+      source:{video_id:$it.video_id,title:$it.title,channel:$it.uploader,url:$it.url}
+    }]
+  };
+  $중첩팁 >> [self:write]{path:"${출력}/10_tips_nested.json",format:"json"};
+
+  $원장갱신 = [self:ledger]{op:"upsert",path:$원장,target:"covered",key:"id",items_file:"${출력}/08_ledger_delta.json"};
+  $주제갱신 = [self:ledger]{op:"append",path:$원장,target:"recent_topics",item:{date:$날짜,topic:$주제},max_items:10};
+  $팁갱신 = [self:ledger]{op:"append",path:$DB,items_file:"${출력}/10_tips_nested.json"};
+  $누적팁 = [self:ledger]{path:$DB,fields:["tip"]};
+  $누적영상 = [self:ledger]{path:$원장,target:"covered",fields:["id","verdict"]};
+  $다룬영상 = $누적영상 >> [table:filter]{where:{field:"verdict",op:"startswith",value:"tips_"}};
+  $오늘원장 = [self:ledger]{path:$원장,target:"covered",fields:["id"],where:{date:$날짜,topic:$주제}}
+    >> [table:rename]{map:{id:"video_id"}};
+  $누락 = $정보 & $오늘원장 >> [table:join]{on:"video_id",how:"anti"};
+  $누적 = {"M":len($누적팁.items),"K":len($다룬영상.items),"T":len($누적영상.items)};
+
+  [if: empty($누락.items) and count($오늘원장.items) == $수.checked] {
+    $보고재료 = $편집 >> [table:select]{columns:["tip","how","tools","hype","timestamp","_quote","video_id","title","uploader","url","implication","try_candidate"]};
+    $언어 = $팁후보 >> [table:select]{columns:["video_id","language"]} >> [table:dedup]{by:"video_id"};
+    $보고서 = $보고재료 >> [table:brief]{
+      instruction:"유튜브 AI 팁 보고서 완성본을 한국어 Markdown으로 쓴다. H1은 '# 유튜브 AI 팁 보고서 — ${날짜} — ${주제}'. 머리줄은 '> 오늘의 영상 ${수.videos}편 · 누적: 팁 ${누적.M}개 / 다룬 영상 ${누적.K}편(후보 등재 ${누적.T}편)'. ## 한눈에 (TL;DR): 최강 신호 2~3개. 영상 간 일치·반대는 실제 근거가 있을 때만. ## 오늘의 팁: 입력 ${수.tips}개 전부를 제목 그대로 '### 번호. 제목'으로 배치. 각각 - **방법**: how의 단계·설정 빠짐없이, - **출처**: [title](url) — uploader · timestamp, - **보정**: hype(없으면 생략), - **우리 시스템 함의**: implication 순서. 원문 밖 단계·명령·수치 금지. how가 비면 영상 확인 필요, timestamp가 null이면 시각 미확인, 불확실한 고유명사는 자막 표기·철자 불확실이라고 적는다. ## 시도 후보: try_candidate true만 최대 3개, 개인 시스템 식별자·경로·커밋명은 쓰지 않는다. 그날의 가벼운 제안이며 재촉·누적 부채 금지. ## 오늘의 영상: 실제 목록 ${완료영상.items} 각각 [title](url) — uploader · view_count회 · duration초 · upload_date · 팁 밀도·과장 한줄평. ## 지켜볼 점 / 내일 주제 후보: 남은 논점과 최근 주제 ${최근주제.items}에 없는 후보 2개. ## 이 호의 한계: 자막만 읽었고 실효 미검증, 날짜 확인 ${수.checked}편 중 180일 통과 ${수.fresh}편, 팁 기여 정독 ${수.videos}편. 실제 자막 언어 ${언어.items}를 보고 한·영 편중을 명시하고 branch만으로 회의론 확보를 주장하지 않는다. 원장 복사본을 쓴 로컬 실험판이며 누적 수도 복사본 기준임을 명시. 개인 맥락은 함의 줄에만. _quote 장문 인용 금지, 전체 코드펜스 금지.",
+      criteria:"지정 H1·머리줄·6개 섹션. 입력 팁 모두에 방법·정확한 출처 URL·시각 또는 시각 미확인·함의. 입력 밖 방법·명령·수치 금지. 시도 후보 최대 3개. 실효 미검증·실험판·실제 자료 편중 명시. 개인 맥락은 함의 줄 밖에 없음."
+    };
+    $보고서 >> [self:write]{path:$보고경로};
+    $html = [self:script]{op:"run",id:"보고서HTML",args:{src:$보고경로,dst:$HTML경로,subtitle:"IBL 실험판 · 자막 기반 · 실효 미검증",theme:"card",drop_lines:["우리 시스템 함의"]}};
+    [if: $html.items.0.dropped_lines == $수.tips and $html.items.0.links >= $수.tips + $수.videos] {
+      $return = {"status":"draft_written","report":$보고경로,"html":$HTML경로,"today":$수,"cumulative":$누적};
+    } [else] {
+      $return = {"status":"html_check_failed","report":$보고경로,"html":$HTML경로};
+    }
+  } [else] {
+    $return = {"status":"ledger_check_failed","missing":$누락.items,"expected":$수.checked};
+  }
+} [else] {
+  [self:ledger]{op:"append",path:"${출력}/_scan_log.json",item:{date:$날짜,reason:"팁8~15・영상2~4・영상당2~5・장편≤1・시도≤3 검법 미충족. 단계 파일 참조.",retry:"자료·품질 관문 확인"},max_items:60};
+  $return = {"status":"quality_gate_failed","today":$수};
+}

@@ -99,7 +99,7 @@ def test_struct_prompt_carries_known_and_instruction_and_expands(monkeypatch):
     def _fake_oneshot_json(prompt, system, role="execution"):
         captured["system"] = system
         captured["prompt"] = prompt
-        return [{"tip": "출력 형식을 JSON 으로 고정한다", "_quote": "시스템 프롬프트에 출력 형식을"},
+        return [{"tip": "출력 형식을 JSON 으로 고정한다", "timestamp": None, "_quote": "시스템 프롬프트에 출력 형식을"},
                 {"tip": "환각 항목", "_quote": "원문에 없음"}], None
 
     monkeypatch.setattr(oneshot_facade, "oneshot_json", _fake_oneshot_json)

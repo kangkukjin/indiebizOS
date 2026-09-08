@@ -133,8 +133,8 @@ def _load_json_envelope(path: str):
         obj = json.loads(raw)
     except Exception:
         return raw, None         # JSON 이 아니면 평문 본문으로 본다
-    obj, _ = _resolve_spill(obj)
-    return obj, None
+    obj, error = _resolve_spill(obj)
+    return obj, error
 
 
 def _src_from_envelope(prev, label="파이프 본문"):
@@ -150,13 +150,14 @@ def _src_from_envelope(prev, label="파이프 본문"):
     if not isinstance(prev, dict):
         return src, pipe_note, body
     if prev.get("saved_to_file") and prev.get("file_path"):
-        # 파일이 사라졌으면(24h 정리 등) 조용히 아래 본문 사슬(preview 폴백)로 —
-        # 따라가기 실패가 문장을 죽이면 안 된다.
+        # 원문 파일이 없으면 실패한다. preview를 전문처럼 보내면 품질 유실이 숨는다.
         try:
             from ingest_engine import extract_source
             _fsrc = extract_source(path=str(prev["file_path"]), text=None)
         except Exception:
             _fsrc = {"ok": False}
+        if not _fsrc.get("ok"):
+            return {"ok": False, "error": _fsrc.get("error") or "원문 파일 읽기 실패"}, None, ""
         if _fsrc.get("ok"):
             # 자막류 외부화 파일은 `[MM:SS] 문장` 병기 포맷이다 — 표식·헤더를 걷어 흐르는
             # 본문으로 정규화해야 grounded 대조(_quote 부분열)가 성립한다(2026-08-27 실측).
@@ -273,6 +274,12 @@ def _struct(tool_input: dict) -> str:
         return _fail('schema(출력 레코드 계약)가 필요합니다 — 자유 라벨(예 "finance") '
                      '또는 필드 명세 텍스트(예 "date, item, amount(원)").')
 
+    from common.record_schema import schema_fields, schema_instruction, records_schema_error
+    try:
+        declared = schema_fields(schema)
+    except ValueError as exc:
+        return _fail(str(exc))
+
     file_path = str(tool_input.get("file") or "").strip()
     text = str(tool_input.get("text") or "").strip()
     # known(이미 있는 기록 — 같은 것은 뽑지 않는다)·instruction(추가 지시): 2026-09-06 사용자 판정 "필요한 것은 없애지
@@ -302,7 +309,9 @@ def _struct(tool_input: dict) -> str:
     else:
         if prev is None:
             prev = _parse_prev(tool_input.get("_prev_result"))
-            prev, _ = _resolve_spill(prev)
+            prev, error = _resolve_spill(prev)
+            if error:
+                return _fail(error)
         src, _note, body = _src_from_envelope(prev, label)
         if _note:
             pipe_note = (pipe_note + " " + _note) if pipe_note else _note
@@ -324,10 +333,13 @@ def _struct(tool_input: dict) -> str:
         if src is None:
             if not body:
                 return _fail("입력이 없습니다 — file(경로)·text(본문)·>> 파이프 본문 중 하나를 주세요.")
-            src = {"ok": True, "kind": "text", "text": body[:_ITEMS_CAP],
+            src = {"ok": True, "kind": "text", "text": body,
                    "images": None, "label": label}
     if not src.get("ok"):
         return _fail(src.get("error") or "원문 추출 실패")
+    if src.get('truncated') or len(src.get('text') or '') > _ITEMS_CAP:
+        return _fail(f"원문이 입력 상한({_ITEMS_CAP:,}자)을 넘습니다 — 일부를 전문으로 처리하지 않습니다. "
+                     "[table:chunk]로 원문을 나눠 각 덩이를 struct로 처리하세요.", error_type='input_size')
     time_segments = src.get('_time_segments') or _time_segments(prev, src.get('text', ''))
     if time_segments and _time_segments(text=src.get('text', '')):
         src['text'] = _untimed_text(src['text'])
@@ -344,15 +356,16 @@ def _struct(tool_input: dict) -> str:
 
     system = (
         f"너는 구조화 추출기다. 원문에서 '{schema}' 계약에 맞는 기록을 추출해 JSON 배열로만 출력한다. "
-        "규칙: ①원문에 없는 수치·날짜·항목을 지어내지 말 것 ②확실치 않은 필드는 생략 "
+        "규칙: ①원문에 없는 수치·날짜·항목을 지어내지 말 것 ②확실치 않은 값은 추측하지 말 것 "
         "③날짜는 YYYY-MM-DD ④JSON 밖에 다른 글자를 쓰지 말 것."
     )
     if grounded:
         system += (" ⑤각 기록에 _quote 필드로 그 기록의 근거가 되는 원문의 **첫 구절 한 토막**(8~12단어 안, 원문 표기 그대로)만 "
                    "넣을 것 — 긴 인용은 쓰지 말 것. 나머지 문장은 코드가 원문에서 이어 붙인다.")
-    # 근거 필드를 계약에 명시한다(2026-09-07 ep2952): 규칙 ⑤만으로는 "②확실치 않은 필드는 생략" 에 먹혀
+    # 근거 필드를 계약에 명시한다(2026-09-07 ep2952): 옛 결측 필드 생략 지시 때문에
     # 모델이 _quote 를 통째로 빠뜨리는 출력이 나왔고(실측 11건 전부 None), 그것이 '근거 대조 전멸(환각 의심)'
     # 으로 신고돼 실행자가 grounded 를 끄는 처방을 따랐다 — 관문이 스스로 자기 해제를 가르친 셈.
+    system += schema_instruction(schema)
     system += f"\n\n[출력 계약]\n{schema}" + (", _quote(근거 발췌 — 생략 불가)" if grounded else "")
     if extra_instruction:
         system += f"\n\n[추가 지시]\n{extra_instruction}"
@@ -430,6 +443,9 @@ def _struct(tool_input: dict) -> str:
     _notes = [n for n in (grounded_note, pipe_note) if n]
     if _notes:
         result["note"] = " ".join(_notes)
+    schema_error = records_schema_error(records, schema)
+    if schema_error:
+        return _fail(schema_error, error_type="schema", fields=declared)
     result["items"] = mark_ai(records)
     result["count"] = len(records)
     return _ok(result)
@@ -442,6 +458,12 @@ def _transform(tool_input: dict) -> str:
     if not instruction:
         return _fail('instruction(자연어 지시)이 필요합니다 — 예 "광고성 행 제거", '
                      '"각 행에 한 줄 요약 summary 필드 추가".')
+    schema = str(tool_input.get("schema") or "").strip()
+    from common.record_schema import schema_fields, schema_instruction, records_schema_error
+    try:
+        declared = schema_fields(schema)
+    except ValueError as exc:
+        return _fail(str(exc))
     items, prev = _prev_items(tool_input)
     if items is None:
         return _fail("입력 통화가 없습니다 — >> 파이프로 앞 액션의 items 를 받습니다. "
@@ -452,6 +474,8 @@ def _transform(tool_input: dict) -> str:
     fields = tool_input.get("fields")
     if fields is not None and not isinstance(fields, list):
         return _fail("fields 는 문자열 배열이어야 합니다.")
+    if fields and declared and set(declared) - set(fields):
+        return _fail("fields가 schema에 선언한 필드를 제거합니다.")
 
     # ★색인 병합 계약(2026-09-06, ep2882 실측): 옛 계약은 모델이 **행 전체**를 다시 쓰게 했다 —
     #   fields 에 title·summary·url 이 있으면 규칙 ⑤가 입력을 되받아쓰게 만들어, 출력 글자의 76%
@@ -473,6 +497,8 @@ def _transform(tool_input: dict) -> str:
         "③입력에 이미 있는 필드는 다시 쓰지 말 것 — 코드가 원 행에 병합한다(값을 바꿀 때만 그 필드를 적는다) "
         "④JSON 밖에 다른 글자를 쓰지 말 것."
     )
+    if schema:
+        system += f"\n[출력 계약]\n{schema}" + schema_instruction(schema, merged=True)
     if fields:
         system += (f" ⑤병합 뒤 각 행은 다음 필드만 남는다: {[str(f) for f in fields]} — "
                    "이 중 입력에 없는 필드만 채워라.")
@@ -485,6 +511,9 @@ def _transform(tool_input: dict) -> str:
     if gerr:
         return _fail(f"변환 실패: {gerr}")
     out, merge_mode, bad_idx = _merge_by_index(dict_items, out)
+    schema_error = records_schema_error(out, schema)
+    if schema_error:
+        return _fail(schema_error, error_type="schema", fields=declared)
     if fields:
         keys = [str(f) for f in fields]
         out = [{k: r.get(k) for k in keys} for r in out]

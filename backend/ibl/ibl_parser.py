@@ -496,35 +496,8 @@ def _preprocess(code: str) -> List[str]:
     if not entries:
         return []
 
-    # 1단계: 이어지는 줄을 이전 줄에 합치기.
-    #   - 열린 문자열 안에서 시작하는 줄 = 앞 줄 문자열의 내용 → '\n' 으로 병합(내용 보존)
-    #   - >> 로 시작하는 줄 = 멀티라인 파이프라인 → ' ' 로 병합
-    merged = []
-    for line, was_in_string in entries:
-        if merged and was_in_string:
-            merged[-1] = merged[-1] + '\n' + line
-        elif merged and line.startswith('>>'):
-            merged[-1] = merged[-1] + ' ' + line
-        else:
-            merged.append(line)
-
-    # 2단계: 멀티라인 { } 블록 병합
-    #   이전 줄의 { } 균형이 맞지 않으면 다음 줄을 합침 (문자열 상태 승계 —
-    #   문자열 안의 중괄호가 깊이를 오염시키지 않게)
-    result = []
-    i = 0
-    while i < len(merged):
-        current = merged[i]
-        depth, s_in, s_ch = _scan_line_state(current, False, None)
-        while (depth > 0 or s_in) and i + 1 < len(merged):
-            i += 1
-            current = current + '\n' + merged[i]
-            d2, s_in, s_ch = _scan_line_state(merged[i], s_in, s_ch)
-            depth += d2
-        result.append(current)
-        i += 1
-
-    return result
+    from ibl_parser_scope import merge_layout_lines
+    return merge_layout_lines(entries)
 
 
 def _extract_statements(lines: List[str]) -> Tuple[List[str], List[Optional[str]]]:
@@ -1049,7 +1022,8 @@ def _parse_step(text: str) -> Optional[Dict]:
     params = {}
     remaining = text[m.end():].strip()
     tail = remaining
-    if remaining.startswith('{'):
+    body_only = (node, action) == ('table', 'each') and re.match(r'^\{\s*[$\[]', remaining)
+    if remaining.startswith('{') and not body_only:
         extracted, _bend = _extract_bracket(remaining, 0, '{', '}')
         if isinstance(extracted, dict):
             params = extracted

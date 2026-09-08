@@ -224,8 +224,7 @@ class _Checker:
         self.issues.append(d)
 
     # ── 진입 ──
-    def run(self, steps: List[Any]) -> T:
-        prev: Optional[T] = None
+    def run(self, steps: List[Any], prev: Optional[T] = None) -> T:
         last: Optional[T] = None
         stmt_last_name: Optional[str] = None
         self.stmt = 1 if steps else 0
@@ -249,7 +248,7 @@ class _Checker:
             self.env[i] = t
             if st.get("_assign_name"):
                 stmt_last_name = st["_assign_name"]
-                self.name_to_idx.setdefault(stmt_last_name, i)
+                self.name_to_idx[stmt_last_name] = i
             born = st.get("_born_vars")
             if isinstance(born, dict):
                 for n, slot in born.items():
@@ -274,7 +273,7 @@ class _Checker:
         if st.get("_def"):
             return self._type_def(st, idx)
         if st.get("_assign"):
-            return T("scalar")
+            return self._type_assign(st, idx)
         if st.get("_var_emit"):
             return self._type_var_emit(st, idx)
         if st.get("_parallel"):
@@ -312,6 +311,28 @@ class _Checker:
             return unknown()
         return self._type_action(st, node, action, prev, idx)
 
+    def _type_assign(self, st, idx):
+        """값 구성의 모양을 그대로 읽는다. 참조 값·조건식 결과는 추측하지 않는다."""
+        import ast
+        from common.ibl_vars import REF_RE
+        from common.safe_expr import compile_expr
+        expr = REF_RE.sub('_value', str(st.get('expr') or ''))
+        try:
+            compile_expr(expr)
+            body = ast.parse(expr, mode='eval').body
+        except (SyntaxError, ValueError) as exc:
+            self._issue('error', idx, '$' + str(st.get('name')), f'값 구성 식 오류 — {exc}',
+                        expected='scalar expression')
+            return unknown()
+        if not isinstance(body, ast.List):
+            return T('scalar')
+        cols = []
+        for row in body.elts:
+            if not isinstance(row, ast.Dict):
+                return T('items')
+            cols.extend(k.id if isinstance(k, ast.Name) else k.value for k in row.keys)
+        return T('items', cols, closed=True)
+
     def _type_branch(self, b: Any, prev: Optional[T], idx: int) -> T:
         if isinstance(b, dict) and b.get("_branch_steps"):
             return self._type_sub(b["_branch_steps"], prev)
@@ -320,14 +341,19 @@ class _Checker:
         return unknown()
 
     def _type_body(self, body: Any, prev: Optional[T]) -> T:
-        """블록 몸(단일 step dict 또는 step 리스트) — 몸 안의 파이프도 같은 규칙, 몸은 직전 통화를 받는다."""
+        """블록의 슬롯은 지역 번호다. 바깥 변수는 번호가 아닌 이름으로 계승한다."""
         if body is None:
             return unknown()
-        if isinstance(body, list):
-            return self._type_sub(body, prev)
-        if isinstance(body, dict):
-            return self._type_sub([body], prev)
-        return unknown()
+        steps = body if isinstance(body, list) else [body] if isinstance(body, dict) else []
+        sub = _Checker(None, self.fn_depth, given=self._scope_types())
+        sub.fn_defs, sub.fn_returns = self.fn_defs, self.fn_returns
+        out = sub.run(steps, prev)
+        self.issues.extend({**issue, 'statement': self.stmt} for issue in sub.issues)
+        return out
+
+    def _scope_types(self):
+        return {**self.given, **{name: self.env[i] for name, i in self.name_to_idx.items()
+                                if i in self.env}}
 
     def _type_sub(self, steps: List[Any], prev: Optional[T]) -> T:
         """안쪽 파이프 — 바깥 env 를 공유(변수는 보이고), 신고도 같은 목록에."""
@@ -387,13 +413,11 @@ class _Checker:
     def _type_var_emit(self, st: Dict[str, Any], idx: int) -> T:
         name = st.get("name") or ""
         at = f"${name}"
-        if name in self.given:
-            return self._apply_path(self.given[name], st.get("path") or "", idx, at)
         vi = (st.get("_vars") or {}).get(name)
         if vi is None:
             vi = self.name_to_idx.get(name)
         if vi is None:
-            return unknown()
+            return self._apply_path(self.given.get(name, unknown()), st.get("path") or "", idx, at)
         t = self._lookup(int(vi))
         if t is None:
             return unknown()
@@ -414,6 +438,12 @@ class _Checker:
             return None
         m = _STEP_REF_RE.fullmatch(v.strip())
         if not m:
+            from common.ibl_vars import REF_RE, split_ref
+            ref = REF_RE.fullmatch(v.strip())
+            if ref:
+                name, path = split_ref(ref)
+                t = self._scope_types().get(name)
+                return self._apply_path(t, path, 0, f'${name}') if t else None
             return None
         t = self._lookup(int(m.group(1)))
         if t is None:
@@ -534,10 +564,24 @@ class _Checker:
             f = params.get("fields")
             if isinstance(f, list) and f and all(isinstance(c, str) and not _dynamic(c) for c in f):
                 return T("items", [str(c) for c in f], closed=True)      # fields 리터럴 = 이 호출이 확정한 열(ledger select 등)
-            return T("items", _catalog_cols(node, action, params))
+            declared = self._schema_columns(ad, params, idx, at)
+            cols = list(dict.fromkeys((_catalog_cols(node, action, params) or []) + declared))
+            return T("items", cols or None)
         if returns in ("scalar", "effect"):
             return T(returns)
         return unknown()
+
+    def _schema_columns(self, definition, params, idx, at):
+        key = definition.get('schema_param')
+        value = params.get(key) if key else None
+        if not value or _dynamic(value):
+            return []
+        from common.record_schema import schema_fields
+        try:
+            return schema_fields(value) or []
+        except ValueError as exc:
+            self._issue('error', idx, at, str(exc))
+            return []
 
     def _input_for(self, params: Dict[str, Any], prev: Optional[T],
                    flow: Optional[Dict[str, Any]] = None) -> Tuple[Optional[T], str]:
@@ -682,6 +726,13 @@ class _Checker:
                 return T("items", list(in_cols) + [str(k) for k in lit.keys()], closed=in_closed)
             return T("items", in_cols, False) if in_cols else T("items")
         if columns == "open":
+            declared = self._schema_columns(flow, params, idx, at)
+            if declared:
+                if isinstance(lit, list) and lit:
+                    for field in set(declared) - set(lit):
+                        self._issue('error', idx, at, f'fields가 schema의 {field!r} 필드를 제거합니다.')
+                else:
+                    return T('items', list(dict.fromkeys((in_cols or []) + declared)), closed=False)
             # ai(fields 로 확정) · each(keep + do 의 열)
             if isinstance(lit, list) and lit and all(isinstance(c, str) and not _dynamic(c) for c in lit) and cparam == "fields":
                 return T("items", [str(c) for c in lit], closed=True)
@@ -689,7 +740,8 @@ class _Checker:
                 keep = [str(c) for c in (params.get("keep") or []) if isinstance(c, str)] if isinstance(params.get("keep"), list) else []
                 if do_t.kind == "items":
                     cols = (do_t.cols or []) + keep
-                    return T("items", cols or None, closed=False)
+                    closed = do_t.closed and not keep and params.get('on_error') != 'keep'
+                    return T("items", cols or None, closed=closed)
                 # do 가 통화를 안 내면 원 행이 흐른다(passthrough)
                 return T("items", in_cols, False) if in_cols else T("items")
             return T("items", in_cols, False) if in_cols else T("items")
@@ -757,7 +809,7 @@ class _Checker:
             self._issue('error', idx, 'each.do', f'본문 구문 오류 — {exc}')
             return None
         row = T("items", inp.cols, inp.closed) if (inp is not None and inp.kind == "items") else unknown()
-        sub = _Checker(None, self.fn_depth, given={**self.given, str(alias).lstrip('$'): row})
+        sub = _Checker(None, self.fn_depth, given={**self._scope_types(), str(alias).lstrip('$'): row})
         sub.fn_defs = self.fn_defs
         sub.fn_returns = self.fn_returns
         out = sub.run(steps)

@@ -245,8 +245,9 @@ def _each_success_rows(final: Any, base: dict):
     통화 판정은 몸의 단일 게이트 `common.currency.derive_items` 가 한다(여기서 items/
     table/blocks 를 각자 알아보지 않는다 — 판정기가 둘이면 갈라진다).
     """
-    from common.currency import derive_items
+    from common.currency import derive_items, value_result_payload
 
+    _, final = value_result_payload(final)
     if isinstance(final, list):
         return [r if isinstance(r, dict) else {_EACH_SCALAR_FIELD: r} for r in final], True
     if isinstance(final, dict):

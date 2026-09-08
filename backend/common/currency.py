@@ -100,6 +100,7 @@ def coerce_items_payload(value: Any) -> Any:
     받는 모양: list(그대로) · {"items": [...]} 봉투 · 그 둘의 JSON 문자열.
     그 밖(빈 문자열·JSON 아님·스칼라)은 None — 호출자의 기존 진단 경로를 그대로 둔다.
     """
+    _, value = value_result_payload(value)
     if isinstance(value, list):
         return value
     if isinstance(value, dict):

@@ -42,7 +42,17 @@ def _subst_tokens(obj: Any, mapping: Dict[str, Any]) -> Any:
         from common.ibl_vars import refs_pattern
         return re.sub(refs_pattern(mapping), _one, obj)
     if isinstance(obj, dict):
-        return {k: _subst_tokens(v, mapping) for k, v in obj.items()}
+        if obj.get('_def'):
+            return obj  # 함수 몸의 이름은 그 함수의 호출자가 채운다.
+        result = {}
+        for key, value in obj.items():
+            local = mapping
+            if obj.get('_repeat') and key in ('body', 'condition'):
+                local = {k: v for k, v in mapping.items() if k != (obj.get('var') or 'i')}
+            if obj.get('_try') and key in ('catch', 'finally'):
+                local = {k: v for k, v in mapping.items() if k != 'error'}
+            result[key] = _subst_tokens(value, local) if local else value
+        return result
     if isinstance(obj, list):
         return [_subst_tokens(v, mapping) for v in obj]
     return obj

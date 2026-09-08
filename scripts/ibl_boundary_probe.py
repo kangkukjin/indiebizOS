@@ -34,11 +34,17 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--out', type=Path, required=True)
     parser.add_argument('--additional', action='store_true')
+    parser.add_argument('--round2', action='store_true')
     args = parser.parse_args()
     if args.out.exists():
         parser.error('기존 기록을 덮어쓰지 않습니다')
     rows = []
-    for case in additional_cases() if args.additional else cases():
+    selected = additional_cases() if args.additional else cases()
+    if args.round2:
+        from ibl_boundary_cases_round2 import cases as round2_cases
+        from ibl_boundary_cases_round2 import additional_cases as round2_additional
+        selected = round2_additional() if args.additional else round2_cases()
+    for case in selected:
         row = probe(case)
         rows.append(row)
         print(row['id'], 'PASS' if row['ok'] else 'FAIL', flush=True)

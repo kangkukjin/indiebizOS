@@ -15,7 +15,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 import boot_paths  # noqa: F401,E402
 from ibl_usage_db import IBLUsageDB  # noqa: E402
-from ibl.ibl_parser import parse as parse_ibl  # noqa: E402  시드 전 문법 검증
+from ibl_parser import parse as parse_ibl  # noqa: E402  시드 전 문법 검증
 
 # (intent, code, nodes, category, tags)
 NEW = [

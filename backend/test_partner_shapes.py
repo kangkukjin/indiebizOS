@@ -69,7 +69,7 @@ def test_sweep_excludes_self_pipe_but_keeps_self_parallel():
     sys.path.insert(0, _SCRIPTS)
     import collections
     from ibl_partner_sweep import _collect
-    from ibl.ibl_parser import parse
+    from ibl_parser import parse
 
     pairs = collections.defaultdict(collections.Counter)
     _collect(parse('[limbs:browser]{op: "click"} >> [limbs:browser]{op: "type"}'), pairs, parse)
@@ -91,7 +91,7 @@ def test_sweep_does_not_chain_across_independent_statements():
     sys.path.insert(0, _SCRIPTS)
     import collections
     from ibl_partner_sweep import _collect
-    from ibl.ibl_parser import parse
+    from ibl_parser import parse
 
     pairs = collections.defaultdict(collections.Counter)
     _collect(parse('[self:patch]{path: "a"}\n[sense:search]{query: "b"} >> [table:filter]{where: "c"}'),
@@ -105,7 +105,7 @@ def test_sweep_counts_sentences_inside_each_do():
     sys.path.insert(0, _SCRIPTS)
     import collections
     from ibl_partner_sweep import _collect
-    from ibl.ibl_parser import parse
+    from ibl_parser import parse
 
     pairs = collections.defaultdict(collections.Counter)
     _collect(parse('[table:each]{items: [{a: 1}], do: "[sense:realty]{region: \'$it.a\'} >> [table:take]{n: 2}"}'),

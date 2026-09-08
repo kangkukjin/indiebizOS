@@ -17,7 +17,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
 
-from ibl.ibl_parser_values import IBLSyntaxError, _parse_params  # noqa: E402
+from ibl_parser_values import IBLSyntaxError, _parse_params  # noqa: E402
 
 
 def _reject(text):

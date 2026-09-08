@@ -97,6 +97,8 @@ def _bound_names(steps) -> set:
 
     def _walk(obj):
         if isinstance(obj, dict):
+            if obj.get('_def'):
+                return
             n = obj.get("_assign_name")
             if isinstance(n, str) and n.strip():
                 names.add(n.strip())
@@ -127,17 +129,31 @@ def _free_vars(steps) -> List[str]:
     reserved = _reserved_row_names(steps) | _SIGNATURE_EXTRA_RESERVED | _bound_names(steps)
     found: List[str] = []
 
-    def _walk(obj):
+    def _walk(obj, bound=reserved):
+        if isinstance(obj, dict) and obj.get('_def'):
+            return  # 중첩 정의는 별도 시그니처를 가진 닫힌 함수다.
+        if isinstance(obj, dict) and obj.get('_node') == 'table' and obj.get('action') == 'each':
+            from ibl_parser import parse_function_body, IBLSyntaxError
+            params = obj.get('params') or {}
+            _walk({k: v for k, v in params.items() if k != 'do'}, bound)
+            code = params.get('do') or ''
+            alias = str(params.get('as') or 'it').lstrip('$').strip() or 'it'
+            try:
+                body = parse_function_body(code) if isinstance(code, str) else code
+            except IBLSyntaxError:
+                body = code  # 인자로 받는 do 슬롯도 서명에 남긴다.
+            _walk(body, bound | {alias} | _bound_names(body))
+            return
         if isinstance(obj, dict) and obj.get("_var_emit") and obj.get("_free"):
             # 자유 변수가 파이프 머리·병렬 분기에 선 자리 (언어 개정 2026-09-07) — 이름이
             # 문자열이 아니라 step 의 필드에 있어 아래 문자열 훑기로는 잡히지 않는다.
             nm = obj.get("name") or ""
-            if nm and nm not in reserved and nm not in found and not nm[0].isdigit():
+            if nm and nm not in bound and nm not in found and not nm[0].isdigit():
                 found.append(nm)
         if isinstance(obj, str):
             for m in REF_RE.finditer(obj):
                 name, _path = split_ref(m)
-                if name in reserved or name in found or name[0].isdigit():
+                if name in bound or name in found or name[0].isdigit():
                     continue
                 # `$file:0` 은 변수가 아니라 파서의 파일 참조 플레이스홀더다(files 인자가
                 # 붙지 않은 채 남으면 여기까지 온다) — 인자로 세면 "인자 누락: $file" 이라는
@@ -146,11 +162,14 @@ def _free_vars(steps) -> List[str]:
                     continue
                 found.append(name)
         elif isinstance(obj, dict):
-            for v in obj.values():
-                _walk(v)
+            for key, value in obj.items():
+                if key in ('_raw', '_vars', '_fn_ref'):
+                    continue
+                local = bound | {'error'} if obj.get('_try') and key in ('catch', 'finally') else bound
+                _walk(value, local)
         elif isinstance(obj, list):
             for v in obj:
-                _walk(v)
+                _walk(v, bound)
 
     _walk(steps)
     return found
@@ -248,6 +267,8 @@ def _reserved_row_names(steps) -> set:
 
     def _walk(obj):
         if isinstance(obj, dict):
+            if obj.get('_def'):
+                return
             a = obj.get("as")
             if isinstance(a, str) and a.strip():
                 names.add(a.strip())
@@ -334,6 +355,8 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
         if isinstance(obj, str):
             return _sub_str(obj)
         if isinstance(obj, dict):
+            if obj.get('_def'):
+                return obj
             if obj.get('_assign') or obj.get('_condition') or obj.get('_repeat') or obj.get('_case'):
                 # 식·조건은 실행기의 값 바인더가 해석한다. 값이 0/false/문자열이어도
                 # 코드 텍스트로 바꾸지 않는다(따옴표 탈출·빈 식·이중 치환 방지).

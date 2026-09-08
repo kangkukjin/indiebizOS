@@ -53,7 +53,7 @@ def test_V3_문장_속_참조는_문자열화():
 
 
 def test_V4_변수_파이프_머리_탈당의():
-    from ibl.ibl_parser import parse_with_vars
+    from ibl_parser import parse_with_vars
     steps, _ = parse_with_vars(
         '$표 = [table:take]{items: [{a: 1}], n: 1}\n$표 >> [table:sort]{by: "a"}')
     emits = [s for s in steps if isinstance(s, dict) and s.get("_var_emit")]
@@ -67,7 +67,7 @@ def test_V4_변수_파이프_머리_탈당의():
 
 
 def test_V5_미할당_머리는_파싱_에러_예약어는_비적용():
-    from ibl.ibl_parser import parse_with_vars
+    from ibl_parser import parse_with_vars
     # ★파서와 같은 평면 경로로 — ibl.ibl_parser_values 로 받으면 모듈 이중 정체로
     #   예외 클래스가 다른 객체가 되어 raises 가 못 잡는다(싱글턴 이중 임포트 부류).
     from ibl_parser_values import IBLSyntaxError

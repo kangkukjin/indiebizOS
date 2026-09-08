@@ -101,7 +101,7 @@ def _codes_from_episodes():
 
 
 def observe(min_ratio: float = 0.05):
-    from ibl.ibl_parser import parse
+    from ibl_parser import parse
 
     corpus = _codes_from_corpus()
     execs, trunc, malformed = _codes_from_episodes()

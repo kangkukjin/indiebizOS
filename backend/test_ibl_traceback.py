@@ -22,7 +22,7 @@ import boot_paths  # noqa: F401 — 층 디렉토리 등재
 
 from thread_context import actor_context  # noqa: E402
 from ibl.workflow_engine import execute_pipeline  # noqa: E402
-from ibl.ibl_parser import parse as ibl_parse  # noqa: E402
+from ibl_parser import parse as ibl_parse  # noqa: E402
 from ibl.ibl_traceback import build_tb, push_frame, tb_of, py_tail_of, fold_heavy  # noqa: E402
 
 PASS = FAIL = 0

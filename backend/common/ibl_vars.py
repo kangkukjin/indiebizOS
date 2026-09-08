@@ -203,8 +203,9 @@ def ibl_literal(value: Any) -> str:
     교차 — 가 통째로 말할 수 없는 문장이었다(전 코퍼스 3,582문장에 이 교차 0건).
 
     ★근본 자리: 값을 만드는 곳이 아니라 **자리를 아는 곳**이 표기를 정해야 한다.
-    숫자·불리언·null 은 맨몸이 곧 리터럴이므로 그대로 두고(조건의 크기 비교가 문자열로
-    변질되지 않게), 그 밖은 따옴표를 씌운다. 실측으로 확인한 조건 문법의 수용 형태:
+    숫자·불리언·null·객체·목록은 원래 타입의 리터럴, 문자열만 따옴표를 씌운다.
+    객체까지 문자열로 감싸면 items:[$it]가 객체 행을 JSON 텍스트 행으로 바꾼다.
+    실측으로 확인한 조건 문법의 수용 형태:
         [if: 'backend/ibl' matches 'backend'] ✓   [if: 3 > 1] ✓   [if: true] ✓
     """
     if isinstance(value, bool):
@@ -213,4 +214,6 @@ def ibl_literal(value: Any) -> str:
         return "null"
     if isinstance(value, (int, float)):
         return json.dumps(value)
+    if isinstance(value, (dict, list)):
+        return json.dumps(value, ensure_ascii=False)
     return '"' + ibl_escape(value) + '"'

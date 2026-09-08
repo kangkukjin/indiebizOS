@@ -28,7 +28,7 @@ for _p in ("", "base", "cognition", "datastore", "ibl", "services", "surface", "
         sys.path.insert(0, _d)
 
 import boot_paths  # noqa: F401,E402  (독립 스크립트 규약)
-from ibl.ibl_parser import parse, IBLSyntaxError  # noqa: E402
+from ibl_parser import parse, IBLSyntaxError  # noqa: E402
 
 PROMPT = os.path.join(os.path.dirname(BACKEND), "data", "common_prompts",
                       "fragments", "12_ibl_only.md")

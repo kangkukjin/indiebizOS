@@ -95,10 +95,31 @@ def _ibl_usage_v2(conn: sqlite3.Connection) -> None:
             conn.execute("UPDATE ibl_examples SET signature=? WHERE id=?", (sig, rid))
 
 
+def _ibl_usage_v3(conn: sqlite3.Connection) -> None:
+    """중첩 함수/each/catch 스코프 수리 뒤 저장된 호출 서명도 현재 실행 계약으로 갱신.
+
+    본문·통계는 그대로 두고 계산 가능한 이름의 서명만 바꾼다. 계산자가 없는 몸은
+    옛 서명을 확정하지 않고 NULL로 두어 미계산 상태를 보존한다.
+    """
+    if not _has_table(conn, 'ibl_examples'):
+        return
+    cols = {row[1] for row in conn.execute('PRAGMA table_info(ibl_examples)')}
+    if not {'signature', 'alias'} <= cols:
+        return
+    from ibl_signature_slot import signature_of
+    rows = conn.execute("SELECT id, ibl_code, signature FROM ibl_examples "
+                        "WHERE COALESCE(alias,'') != ''").fetchall()
+    for rid, code, old in rows:
+        new = signature_of(code)
+        if new != old:
+            conn.execute('UPDATE ibl_examples SET signature=? WHERE id=?', (new, rid))
+
+
 MIGRATIONS: Dict[str, List[Tuple[int, str, Callable[[sqlite3.Connection], None]]]] = {
     "ibl_usage": [
         (1, "storage/folder/cctv 액션명 통합 — ibl_examples.ibl_code 치환", _ibl_usage_v1),
         (2, "이름 붙은 용례의 호출 서명 백필 — 표시 서명 = 실행 요구", _ibl_usage_v2),
+        (3, "중첩 스코프 수리의 호출 서명 재계산", _ibl_usage_v3),
     ],
     "world_pulse": [
         (1, "storage/folder/cctv 옛 액션명 행 삭제 — action_health/self_checks", _world_pulse_v1),

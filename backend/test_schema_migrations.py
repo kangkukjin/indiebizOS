@@ -83,6 +83,19 @@ def test_t5_unknown_db_name_raises():
         sm.apply(sqlite3.connect(":memory:"), "nope")
 
 
+def test_t6_scope_signature_refresh_preserves_body_and_statistics():
+    conn = sqlite3.connect(':memory:')
+    conn.execute('CREATE TABLE ibl_examples (id INTEGER PRIMARY KEY, alias TEXT, '
+                 'ibl_code TEXT, signature TEXT, success_count INTEGER)')
+    code = '[try]{[self:read]{path:"x"}}[catch]{[self:read]{path:"$error.summary"}}'
+    conn.execute('INSERT INTO ibl_examples VALUES (1, ?, ?, ?, 7)', ('재시도', code, 'error'))
+    conn.execute('PRAGMA user_version=2')
+    conn.commit()
+    assert sm.apply(conn, 'ibl_usage') == 3
+    assert conn.execute('SELECT ibl_code, signature, success_count FROM ibl_examples').fetchone() == (code, '', 7)
+    assert sm.apply(conn, 'ibl_usage') == 3
+
+
 if __name__ == "__main__":
     # 직접 실행도 pytest 로 위임 — 두 번째 러너는 드리프트한다(test_single_runner R2)
     import pytest as _pytest

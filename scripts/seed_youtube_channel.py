@@ -82,7 +82,7 @@ NEW = [
 
 def _preflight():
     import yaml
-    from ibl.ibl_parser import parse
+    from ibl_parser import parse
 
     registry = yaml.safe_load((ROOT / "data" / "ibl_nodes.yaml").read_text(encoding="utf-8"))
     video = registry["nodes"]["sense"]["actions"]["video"]

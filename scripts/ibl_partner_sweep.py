@@ -124,7 +124,7 @@ def _collect(steps, pairs, parse):
 
 
 def observe(top_n: int = TOP_N, min_count: int = MIN_COUNT):
-    from ibl.ibl_parser import parse
+    from ibl_parser import parse
 
     corpus = _codes_from_corpus()
     execs, trunc, malformed = _codes_from_episodes()

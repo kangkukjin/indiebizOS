@@ -119,7 +119,7 @@ def _bound_names(steps) -> set:
 def _free_vars(steps) -> List[str]:
     """파스 후에도 리터럴로 남은 `$이름` 목록 = 이 워크플로우의 시그니처.
 
-    행 참조($it/each as)·집합 바인딩($items)·$return 은 런타임 바인더 소유라 제외.
+    행 참조($it/each as)는 해당 do에서만 제외. 집합 바인딩($items)·$return은 예약.
     표기는 맨몸 `$이름` 과 괄호 `${이름}` 둘 다(common.ibl_vars).
     `$100` 처럼 숫자로 시작하는 이름은 인자로 세지 않는다 — 파서는 변수로 읽지만
     가격·금액 리터럴일 확률이 훨씬 높고, 잘못 세면 멀쩡한 저장본이 거절된다."""
@@ -207,8 +207,9 @@ def _signature_of(raw_body) -> List[str]:
 # 파스 *후* dict 값 층에서 주입하므로 ①문장 안 할당($x = …)이 항상 이기고
 # ②값에 따옴표·개행이 들어도 IBL 문법을 깨뜨리지 않는다.
 
-# $it(each 행 참조)·$items(집합 바인딩) — 런타임 바인더 소유라 주입 금지.
-_CALLER_VAR_RESERVED = {"it", "items"}
+# $items만 전역 예약. $it는 each의 기본 지역 이름이며, 함수 밖의 행을
+# 암묵 캡처하지 않는다. do 바깥에서 쓰면 다른 이름처럼 명시 인자가 필요하다.
+_CALLER_VAR_RESERVED = {"items"}
 
 
 def coerce_caller_params(raw) -> tuple:
@@ -262,13 +263,15 @@ def _normalize_steps_for_injection(steps) -> tuple:
 
 
 def _reserved_row_names(steps) -> set:
-    """주입 금지 이름 — $it/$items + 문장 안 each 가 as 로 정한 커스텀 행 이름."""
+    """진단용 이름 — $items + 문장 안 each의 지역 행 이름."""
     names = set(_CALLER_VAR_RESERVED)
 
     def _walk(obj):
         if isinstance(obj, dict):
             if obj.get('_def'):
                 return
+            if obj.get('_node') == 'table' and obj.get('action') == 'each':
+                names.add(str((obj.get('params') or {}).get('as') or 'it').lstrip('$').strip())
             a = obj.get("as")
             if isinstance(a, str) and a.strip():
                 names.add(a.strip())
@@ -412,7 +415,7 @@ def _apply_caller_params(steps: list, caller: dict) -> tuple:
     if unmatched:
         warnings.append(f"params {unmatched} 에 대응하는 $변수가 문장에 없어 주입되지 않았습니다.")
     if skipped:
-        warnings.append(f"params {skipped} 는 예약 이름($it/$items/each as)이라 주입하지 않습니다.")
+        warnings.append(f"params {skipped} 는 집합 예약 이름($items) 또는 each의 지역 행 이름이라 주입하지 않습니다.")
     if embedded_lists:
         warnings.append(f"params {sorted(embedded_lists)} 는 목록인데 문장 속에 섞여 JSON 으로 들어갔습니다 — "
                         f"산문이면 [table:brief], 행마다면 [table:each]{{do: \"…$it.필드…\"}}.")

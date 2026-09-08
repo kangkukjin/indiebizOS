@@ -12,10 +12,11 @@ from ibl_boundary_cases_round2 import additional_cases as round2_additional
 from ibl_boundary_cases_round3 import cases as round3_cases
 from ibl_boundary_cases_round4 import cases as round4_cases
 from ibl_boundary_cases_round5 import cases as round5_cases
+from ibl_boundary_cases_round6 import cases as round6_cases
 from ibl_boundary_probe import probe
 
 
-@pytest.mark.parametrize('case', cases() + additional_cases() + round2_cases() + round2_additional() + round3_cases() + round4_cases() + round5_cases(), ids=lambda c: c['id'])
+@pytest.mark.parametrize('case', cases() + additional_cases() + round2_cases() + round2_additional() + round3_cases() + round4_cases() + round5_cases() + round6_cases(), ids=lambda c: c['id'])
 def test_boundary_sentences(case):
     result = probe(case)
     assert result['syntax_ok'], result.get('error_text')

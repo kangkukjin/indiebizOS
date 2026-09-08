@@ -287,7 +287,7 @@ def _bind_fn_defs(all_steps: List[Dict]) -> None:
 
     호출이 정의보다 앞에 와도 된다(앞당김). 같은 이름의 정의가 둘이면 정직 오류. 정의가 없는 `[fn:이름]` 은
     붙이지 않는다 — 실행기가 저장 워크플로(원장)에서 같은 이름을 찾는다(두 길이 `[fn:]` 하나로 합쳐진다).
-    블록 몸(if/try/repeat/each 의 do 문자열은 실행 시 파싱되므로 제외)과 함수 몸 안의 호출에도 붙여 재귀·상호 호출이
+    블록·함수 몸의 호출에도 붙인다. each의 지연 코드는 정의 표를 물려받아 컴파일 후 연결한다. 재귀·상호 호출이
     모양으로 가능하되, 실행기의 깊이 가드가 무한 재귀를 끊는다."""
     defs: Dict[str, Dict] = {}
     for st in all_steps:
@@ -308,6 +308,9 @@ def _bind_fn_defs(all_steps: List[Dict]) -> None:
 
     def _walk(obj):
         if isinstance(obj, dict):
+            if obj.get('_node') == 'table' and obj.get('action') == 'each':
+                params = obj.get('params') or {}
+                params['_fn_scopes'] = list(params.get('_fn_scopes') or []) + [tid]
             if obj.get("_node") == "fn" and obj.get("action") in defs and "_fn_ref" not in obj:
                 d = defs[obj["action"]]
                 obj["_fn_ref"] = {"table": tid, "name": d["name"], "params": list(d.get("signature") or []), "todo": bool(d.get("todo"))}

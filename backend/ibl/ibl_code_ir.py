@@ -206,6 +206,37 @@ def pack(value):
     return ['value', value]
 
 
+def link_function_scopes(plan, scopes):
+    """지연 코드의 함수 이름도 작성 위치의 정의를 본다. 지역 정의가 우선한다.
+
+    값 캡처와 별개인 이름 연결이다. 정의 본문을 문자열에 복제하지 않고 기존
+    비순환 함수 표 참조를 사용하며, 행마다 원래 계획을 변경하지 않는다.
+    """
+    if not scopes:
+        return plan
+    from ibl_parser import fn_definition
+
+    def walk(obj):
+        if isinstance(obj, Code):
+            return Code(str(obj), walk(obj.tree), obj.scope)
+        if isinstance(obj, list):
+            return [walk(v) for v in obj]
+        if not isinstance(obj, dict):
+            return copy.deepcopy(obj)
+        out = {k: walk(v) for k, v in obj.items()}
+        if obj.get('_node') == 'fn' and not obj.get('_fn_ref'):
+            for scope in scopes:
+                definition = fn_definition(scope, obj.get('action'))
+                if definition:
+                    out['_fn_ref'] = {'table': scope, **{k: definition[k] for k in ('name', 'params', 'todo')}}
+                    break
+        if obj.get('_node') == 'table' and obj.get('action') == 'each':
+            params = out.setdefault('params', {})
+            params['_fn_scopes'] = list(dict.fromkeys(list(params.get('_fn_scopes') or []) + list(scopes)))
+        return out
+    return walk(plan)
+
+
 def unpack(data):
     tag, *args = data
     if tag == 'code':

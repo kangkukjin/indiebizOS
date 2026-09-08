@@ -122,7 +122,12 @@ def run_trial(code, case_id, named=True, catalog=None, suite='legacy'):
             else:
                 with actor_context(agent_id='idiom-experiment', origin='test'):
                     result = workflow_engine.execute_pipeline(steps, str(root))
-            ok, verdict = judge_case(case_id, result, root, observed)
+            # 품질 오라클의 모양 가정이 깨져도 실제 엔진 결과를 예외로 덮지 않는다.
+            # 문장 경계 probe는 별도 오라클로 스칼라 행 같은 일반 통화도 검증한다.
+            try:
+                ok, verdict = judge_case(case_id, result, root, observed)
+            except Exception as exc:
+                ok, verdict = False, f'fixture judge: {type(exc).__name__}: {exc}'
         except Exception as exc:
             result = {'success': False, 'error': f'{type(exc).__name__}: {exc}'}
             ok, verdict = False, result['error']

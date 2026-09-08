@@ -1359,7 +1359,7 @@ def execute(tool_input: dict, context):
     params = dict(tool_input or {})
     if tool_name == "data_chunk":
         # 평문 통화(자막·크롤 본문)를 받는 유일한 변환자 — _parse_prev 는 JSON 아닌 문자열을 버리므로 원문을 직접 준다.
-        raw = params.get("_prev_result")
+        raw = params["items"] if params.get("items") is not None else params.get("_prev_result")
         prev = _parse_prev(raw)
         if prev is None and isinstance(raw, str) and raw.strip():
             prev = raw
@@ -1369,13 +1369,18 @@ def execute(tool_input: dict, context):
         if prev is None and params.get("text") is None:
             return {"success": False, "error": "chunk: 입력이 없습니다 — >> 앞 통화(문자열/봉투) 또는 text 파라미터."}
         return fn(prev, params)
-    prev = _parse_prev(params.get("_prev_result"))
+    # 자동 전달은 기본 입력이다. 명시한 통화(빈 목록 포함)가 있으면 그것을
+    # 사용한다. 그렇지 않으면 items:$items.열로 고른 열마저 원본 행으로 덮인다.
+    pairs = (("left", "right"), ("table1", "table2"), ("a", "b"))
+    explicit = (any(params.get(k) is not None for k in ("items", "table", "inputs"))
+                or any(params.get(a) is not None and params.get(b) is not None for a, b in pairs))
+    prev = None if explicit else _parse_prev(params.get("_prev_result"))
     if prev is None:
-        # 파이프 입력(>>)이 없으면 params 에서 통화를 직접 수용 — 단독 호출/자가점검 지원.
+        # 명시한 통화가 우선이며, 없을 때 파이프 입력(>>)을 수용한다.
         # (파이프 통화와 params 통화는 같은 모양이라 정합적이다.)
         # 이항(merge/join/union): (left,right)/(table1,table2)/(a,b) 쌍 또는 inputs 리스트 → [A, B].
         # 단항(filter/sort/take/select/dedup/groupby): items(단일 통화) 또는 table(표형).
-        for k1, k2 in (("left", "right"), ("table1", "table2"), ("a", "b")):
+        for k1, k2 in pairs:
             if params.get(k1) is not None and params.get(k2) is not None:
                 prev = [params[k1], params[k2]]
                 break

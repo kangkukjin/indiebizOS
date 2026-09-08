@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: global-it-reservation
+    retired: 2026-09-08
+    reason: each 밖의 $it까지 예약해 함수의 필수 인자 검출과 명시 값 전달을 막았다.
+    instead: $items는 집합 예약어이고 $it는 해당 each의 do에서만 지역 행 이름이다. 다른 위치에서는 일반 함수 인자다.
+    phrases:
+      - '_CALLER_VAR_RESERVED = {"it", "items"}'
+      - '변수 `$items $it $i $error $return`'
   - id: automatic-report-idiom-repair
     retired: 2026-09-08
     reason: 자동 작명을 중단했는데 세 보고서 가이드가 자동 등록·본문 갱신을 약속했다.

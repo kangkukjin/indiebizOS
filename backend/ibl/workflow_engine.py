@@ -441,7 +441,9 @@ def execute_pipeline(steps: list, project_path: str = ".",
         # $var 바인딩 치환 — {{_step_N_result[.path]}} 를 저장된 step 결과로 (branches/체인 포함).
         # 문장 경계의 prev_result 리셋과 독립이라, 앞 문장 결과를 명시 참조로 가져올 수 있다.
         # 필드 경로(.path) 추출 실패는 정직한 step 실패로 — 침묵 "" 치환 금지 (G1, 2026-08-16).
-        if step_results and isinstance(step, dict):
+        # 지연 코드는 첫 step에서도 컴파일해 경계를 세운다. 앞 결과의 유무에
+        # 따라 do 안의 $items를 바깥 통화로 읽으면 같은 문장의 의미가 달라진다.
+        if isinstance(step, dict):
             try:
                 step = _inject_step_results(step, step_results)
                 # 블록 조건식의 $변수 = 값 바인딩 (2026-08-22 M2): 파서가 적어 둔 _vars

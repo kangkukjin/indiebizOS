@@ -361,9 +361,9 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         return {"success": False, "items": [], "count": 0,
                 "error": "each: do(각 행에 적용할 IBL 문장)가 필요합니다. "
                          "예) [table:each]{do: \"[self:notify_user]{message: '$it.title'}\"}"}
-    from ibl_code_ir import Code, compile_code, bind_code
+    from ibl_code_ir import Code, compile_code, bind_code, link_function_scopes
     try:
-        do = compile_code(do)
+        do = link_function_scopes(compile_code(do), params.get('_fn_scopes'))
     except IBLSyntaxError as e:
         return {"success": False, "items": [], "count": 0, "error": f"IBL 문법 오류: {e}"}
     var = (str(params.get("as") or "it").lstrip("$").strip()) or "it"

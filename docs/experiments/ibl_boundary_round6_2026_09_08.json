@@ -1,0 +1,2012 @@
+{
+  "baseline": "cef3c8d9b66ac2b862c07788dba68254dc47919e",
+  "baseline_method": "original production modules executed in isolated process; current fixture judge",
+  "cases": 75,
+  "positive_cases": 72,
+  "negative_controls": 3,
+  "before_passed": 44,
+  "before_wrong_success": 1,
+  "after_passed": 75,
+  "syntax_passed": 75,
+  "fixture_corrections": [
+    "Bare write file names are redirected to outputs/; corrected read path.",
+    "Function dollar payload must enter through a row value; authored top-level $items is a live reference.",
+    "Use object-valued projected columns to compare each and direct forms; each promotes scalar rows to value objects."
+  ],
+  "rows": [
+    {
+      "id": "r6_mixed_0_each",
+      "code": "[table:each]{\"items\": [{\"v\": \"plain\"}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "plain / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_d4p2k_ge/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_d4p2k_ge/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "plain / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_0_nested",
+      "code": "[table:each]{\"items\": [{\"v\": \"plain\"}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\\\\\"probe.txt\\\\\\\",content:\\\\\\\"${it.v} / $items.v\\\\\\\"}\\\", \\\"as\\\": \\\"child\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "plain / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_atr767ua/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_atr767ua/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "plain / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_0_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${prefix} / $items.v\\\"}\"}}\n[table:each]{\"items\": [{\"v\": \"plain\"}], \"do\": \"[fn:f]{prefix:$it.v}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "plain / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_kpx8vl5g/outputs/probe.txt'",
+        "error_text": "Step 3 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_kpx8vl5g/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "plain / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_0_repeat",
+      "code": "[table:each]{\"items\": [{\"v\": \"plain\"}], \"do\": \"[repeat:1]{[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "plain / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_qkbc_20x/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_qkbc_20x/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "plain / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_1_each",
+      "code": "[table:each]{\"items\": [{\"v\": \"$items\"}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$items / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_oyk9261z/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_oyk9261z/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$items / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_1_nested",
+      "code": "[table:each]{\"items\": [{\"v\": \"$items\"}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\\\\\"probe.txt\\\\\\\",content:\\\\\\\"${it.v} / $items.v\\\\\\\"}\\\", \\\"as\\\": \\\"child\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$items / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_l0w07w_n/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_l0w07w_n/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$items / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_1_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${prefix} / $items.v\\\"}\"}}\n[table:each]{\"items\": [{\"v\": \"$items\"}], \"do\": \"[fn:f]{prefix:$it.v}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$items / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_x4tu8n4q/outputs/probe.txt'",
+        "error_text": "Step 3 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_x4tu8n4q/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$items / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_1_repeat",
+      "code": "[table:each]{\"items\": [{\"v\": \"$items\"}], \"do\": \"[repeat:1]{[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$items / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_5s4rwj7r/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_5s4rwj7r/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$items / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_2_each",
+      "code": "[table:each]{\"items\": [{\"v\": \"${items.v}\"}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "${items.v} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_6oxsybu6/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_6oxsybu6/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "${items.v} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_2_nested",
+      "code": "[table:each]{\"items\": [{\"v\": \"${items.v}\"}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\\\\\"probe.txt\\\\\\\",content:\\\\\\\"${it.v} / $items.v\\\\\\\"}\\\", \\\"as\\\": \\\"child\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "${items.v} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_9wqq0auf/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_9wqq0auf/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "${items.v} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_2_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${prefix} / $items.v\\\"}\"}}\n[table:each]{\"items\": [{\"v\": \"${items.v}\"}], \"do\": \"[fn:f]{prefix:$it.v}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "${items.v} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_nzwke572/outputs/probe.txt'",
+        "error_text": "Step 3 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_nzwke572/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "${items.v} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_2_repeat",
+      "code": "[table:each]{\"items\": [{\"v\": \"${items.v}\"}], \"do\": \"[repeat:1]{[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "${items.v} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_s105zrzu/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_s105zrzu/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "${items.v} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_3_each",
+      "code": "[table:each]{\"items\": [{\"v\": \"$it.v\"}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$it.v / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_s75x179w/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_s75x179w/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$it.v / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_3_nested",
+      "code": "[table:each]{\"items\": [{\"v\": \"$it.v\"}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\\\\\"probe.txt\\\\\\\",content:\\\\\\\"${it.v} / $items.v\\\\\\\"}\\\", \\\"as\\\": \\\"child\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$it.v / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_t5t07z9x/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_t5t07z9x/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$it.v / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_3_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${prefix} / $items.v\\\"}\"}}\n[table:each]{\"items\": [{\"v\": \"$it.v\"}], \"do\": \"[fn:f]{prefix:$it.v}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$it.v / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_ma1icyl6/outputs/probe.txt'",
+        "error_text": "Step 3 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_ma1icyl6/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$it.v / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_3_repeat",
+      "code": "[table:each]{\"items\": [{\"v\": \"$it.v\"}], \"do\": \"[repeat:1]{[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "$it.v / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_1265lik4/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_1265lik4/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "$it.v / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_4_each",
+      "code": "[table:each]{\"items\": [{\"v\": \"한글 \\\"quote\\\"\"}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "한글 \"quote\" / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_a6tjrolg/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_a6tjrolg/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "한글 \"quote\" / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_4_nested",
+      "code": "[table:each]{\"items\": [{\"v\": \"한글 \\\"quote\\\"\"}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\\\\\"probe.txt\\\\\\\",content:\\\\\\\"${it.v} / $items.v\\\\\\\"}\\\", \\\"as\\\": \\\"child\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "한글 \"quote\" / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_l6vz0zsy/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_l6vz0zsy/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "한글 \"quote\" / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_4_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${prefix} / $items.v\\\"}\"}}\n[table:each]{\"items\": [{\"v\": \"한글 \\\"quote\\\"\"}], \"do\": \"[fn:f]{prefix:$it.v}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "한글 \"quote\" / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_jew5kk7b/outputs/probe.txt'",
+        "error_text": "Step 3 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_jew5kk7b/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "한글 \"quote\" / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_4_repeat",
+      "code": "[table:each]{\"items\": [{\"v\": \"한글 \\\"quote\\\"\"}], \"do\": \"[repeat:1]{[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "한글 \"quote\" / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial__eucqrpz/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial__eucqrpz/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "한글 \"quote\" / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_5_each",
+      "code": "[table:each]{\"items\": [{\"v\": \"{{_step_0_result}}\"}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "{{_step_0_result}} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_z7i70pw4/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_z7i70pw4/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "{{_step_0_result}} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_5_nested",
+      "code": "[table:each]{\"items\": [{\"v\": \"{{_step_0_result}}\"}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\\\\\"probe.txt\\\\\\\",content:\\\\\\\"${it.v} / $items.v\\\\\\\"}\\\", \\\"as\\\": \\\"child\\\"}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "{{_step_0_result}} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_8m1eno1g/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_8m1eno1g/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "{{_step_0_result}} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_5_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${prefix} / $items.v\\\"}\"}}\n[table:each]{\"items\": [{\"v\": \"{{_step_0_result}}\"}], \"do\": \"[fn:f]{prefix:$it.v}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "{{_step_0_result}} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_qo06wnck/outputs/probe.txt'",
+        "error_text": "Step 3 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_qo06wnck/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "{{_step_0_result}} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_mixed_5_repeat",
+      "code": "[table:each]{\"items\": [{\"v\": \"{{_step_0_result}}\"}], \"do\": \"[repeat:1]{[table:take]{items:[{v:7}],n:1} >> [self:write]{path:\\\"probe.txt\\\",content:\\\"${it.v} / $items.v\\\"}}\"}\n[self:read]{path:\"outputs/probe.txt\"}",
+      "expected": "{{_step_0_result}} / [7]",
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_81g26tef/outputs/probe.txt'",
+        "error_text": "Step 2 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_idiom_trial_81g26tef/outputs/probe.txt'"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": "{{_step_0_result}} / [7]",
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 99
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 99
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_capture_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 0
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_capture_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 0
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_assign_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": "10"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "10"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "10"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_assign_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": "10"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "10"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "10"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_repeat_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 0
+        },
+        {
+          "v": 0
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          },
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          },
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_repeat_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 0
+        },
+        {
+          "v": 0
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          },
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          },
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_local_shadow_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 0
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_0_local_shadow_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 0}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 0
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 0
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_capture_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_capture_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_assign_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": "11"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "11"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "11"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_assign_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": "11"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "11"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "11"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_repeat_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 1
+        },
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          },
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          },
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_repeat_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 1
+        },
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          },
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          },
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_local_shadow_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_1_local_shadow_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 1}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 1
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 1
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_capture_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_capture_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_assign_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": "17"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "17"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "17"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_assign_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": "17"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "17"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "17"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_repeat_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 7
+        },
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          },
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          },
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_repeat_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 7
+        },
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          },
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          },
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_local_shadow_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_2_local_shadow_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": 7}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": 99
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"[if:$it.v >= 1]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": 99
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": 99
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_capture_if_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": -2
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_capture_if_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"[if:${outer.items.0.v} > $it.v]{[table:take]{items:[{v:$it.v}],n:1}}[else]{[table:take]{items:[{v:99}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": -2
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_assign_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": "8"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "8"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "8"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_assign_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"$n=$it.v + ${outer.items.0.v}\\n[table:take]{items:[{v:$n}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": "8"
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "8"
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": "8"
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_repeat_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": -2
+        },
+        {
+          "v": -2
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          },
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          },
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_repeat_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"[repeat:2,collect:true]{[table:take]{items:[{v:$it.v}],n:1}}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": -2
+        },
+        {
+          "v": -2
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          },
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          },
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_local_shadow_1",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 1}",
+      "expected": [
+        {
+          "v": -2
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_control_3_local_shadow_4",
+      "code": "$outer=[table:take]{items:[{v:10}],n:1}\n[table:each]{\"items\": [{\"v\": -2}], \"do\": \"$n=[table:take]{items:[{v:$it.v}],n:1}\\n[table:take]{items:[{v:${n.items.0.v}}],n:1}\", \"parallel\": 4}",
+      "expected": [
+        {
+          "v": -2
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": -2
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items_direct",
+      "code": "[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items,n:1}",
+      "expected": [
+        {
+          "v": {
+            "x": 7
+          }
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": {
+              "x": 7
+            }
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": {
+              "x": 7
+            }
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items_each",
+      "code": "[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items,n:1}\"}",
+      "expected": [
+        {
+          "v": {
+            "x": 7
+          }
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": null,
+        "error_text": "Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": {
+              "x": 7
+            }
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items_nested",
+      "code": "[table:each]{\"items\": [{}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items,n:1}\\\", \\\"as\\\": \\\"child\\\"}\"}",
+      "expected": [
+        {
+          "v": {
+            "x": 7
+          }
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": null,
+        "error_text": "Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": {
+              "x": 7
+            }
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items,n:1}\"}}\n[fn:f]{}",
+      "expected": [
+        {
+          "v": {
+            "x": 7
+          }
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": null,
+        "error_text": "Step 2 에러: Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": {
+              "x": 7
+            }
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items.v_direct",
+      "code": "[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items.v,n:1}",
+      "expected": [
+        {
+          "x": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": true,
+        "actual": [
+          {
+            "v": {
+              "x": 7
+            }
+          }
+        ],
+        "error_text": null
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "x": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items.v_each",
+      "code": "[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items.v,n:1}\"}",
+      "expected": [
+        {
+          "x": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": null,
+        "error_text": "Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "x": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items.v_nested",
+      "code": "[table:each]{\"items\": [{}], \"do\": \"[table:each]{\\\"items\\\": [{}], \\\"do\\\": \\\"[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items.v,n:1}\\\", \\\"as\\\": \\\"child\\\"}\"}",
+      "expected": [
+        {
+          "x": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": null,
+        "error_text": "Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "x": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_currency_$items.v_function",
+      "code": "[def:f]{$return=[table:each]{\"items\": [{}], \"do\": \"[table:take]{items:[{v:{x:7}}],n:1} >> [table:take]{items:$items.v,n:1}\"}}\n[fn:f]{}",
+      "expected": [
+        {
+          "x": 7
+        }
+      ],
+      "error": false,
+      "before": {
+        "ok": false,
+        "runtime_success": false,
+        "actual": null,
+        "error_text": "Step 2 에러: Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": true,
+        "actual": [
+          {
+            "x": 7
+          }
+        ],
+        "error_text": null
+      }
+    },
+    {
+      "id": "r6_missing_row",
+      "code": "[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[table:take]{items:[{v:$it.absent}],n:1}\"}",
+      "expected": null,
+      "error": true,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": [],
+        "error_text": "Step 1 에러: each: 1건 전부 실패 — 첫 오류: 행에 없는 필드: absent (행 필드: ['v'])"
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": [],
+        "error_text": "Step 1 에러: each: 1건 전부 실패 — 첫 오류: 행에 없는 필드: absent (행 필드: ['v'])"
+      }
+    },
+    {
+      "id": "r6_missing_var",
+      "code": "[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[table:take]{items:[{v:$unknown}],n:1}\"}",
+      "expected": null,
+      "error": true,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": [],
+        "error_text": "Step 1 에러: each: do 안에 해석되지 않는 변수 $unknown — 행 참조 이름은 '$it' 입니다. 행 값은 '$it.필드' 로 참조하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": [],
+        "error_text": "Step 1 에러: each: do 안에 해석되지 않는 변수 $unknown — 행 참조 이름은 '$it' 입니다. 행 값은 '$it.필드' 로 참조하세요."
+      }
+    },
+    {
+      "id": "r6_missing_currency",
+      "code": "[table:each]{\"items\": [{\"v\": 1}], \"do\": \"[self:write]{path:\\\"probe.txt\\\",content:\\\"$items.v\\\"}\"}",
+      "expected": null,
+      "error": true,
+      "before": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": null,
+        "error_text": "Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      },
+      "after": {
+        "ok": true,
+        "runtime_success": false,
+        "actual": [],
+        "error_text": "Step 1 에러: each: 1건 전부 실패 — 첫 오류: Step 1 $items 바인딩 실패: 이전 step 결과에 items 통화가 없습니다. 앞 액션이 통화를 내는 생산자/변환자인지 확인하세요."
+      }
+    }
+  ]
+}

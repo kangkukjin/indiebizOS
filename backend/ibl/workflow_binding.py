@@ -262,7 +262,7 @@ def _inject_step_results(obj: Any, step_results: Dict[int, str], _names: Dict[in
         return _sub_step_refs(obj, step_results, _names or {}, None, None)
     if isinstance(obj, dict):
         # 블록은 건드리지 않는다 (M6): 몸은 안쪽 파이프의 인덱스 공간 — 바깥 치환은 실행기가 _vars/_var_values 로.
-        if any(obj.get(k) for k in ("_condition", "_case", "_try", "_repeat", "_assign", "_goal")):
+        if any(obj.get(k) for k in ("_def", "_condition", "_case", "_try", "_repeat", "_assign", "_goal")):
             return obj
         names = _names
         _nm = {}
@@ -329,26 +329,23 @@ def _bind_items_params(tool_input: dict, prev_result: str):
 
     반환: (tool_input, error_str|None) — 참조가 없으면 원본 그대로, 바인딩 실패는 정직 에러.
     """
-    from ibl_code_ir import Literal, Code
+    from ibl_code_ir import Literal, Code, Template, Ref, bind_template
     params = tool_input.get("params")
     if not isinstance(params, dict):
         return tool_input, None
-    refs = {k: m for k, v in params.items()
-            if isinstance(v, str) and not isinstance(v, (Literal, Code)) and (m := _ITEMS_REF.match(v.strip()))}
-
-    # ★문장 *속* `$items`/`$items.필드` (31회차 B31-2 → G31-1 판정, 2026-08-23):
-    #   실측(31회차): `[self:memory]{content: '… $items.title'}` 이 success:true 로 **글자 그대로**
-    #   `$items.title` 을 저장했다(12건) — 치환도 경고도 실패도 없었다. 그날 거절로 막았고,
-    #   사용자 판정으로 **치환 + 신고**로 개정했다: 값 전체 참조와 같은 자료(전체 행 / 필드
-    #   목록)를 JSON 으로 문장에 넣고 `_list_in_text` 표식을 남긴다. 산문이 필요한 사람은
-    #   엔진의 경고가 [table:brief]/[table:each] 로 안내하고, 데이터를 AI 지시문에 먹이려는
-    #   사람(두 목록 → 한 지시문)은 그대로 쓴다. 규칙은 `$변수`와 동일 — 예약어 특수 취급 없음.
     from common.ibl_vars import ref_pattern
-    _in_text = re.compile(ref_pattern("items"))
-    mixed = {k: v for k, v in params.items()
-             if isinstance(v, str) and not isinstance(v, (Literal, Code)) and k not in refs and _in_text.search(v)}
+    in_text = re.compile(ref_pattern("items"))
 
-    if not refs and not mixed:
+    def references(value):
+        if isinstance(value, (Literal, Code)):
+            return False
+        if isinstance(value, Template):
+            return any(isinstance(p, Ref) and p.namespace == 'name' and p.name == 'items'
+                       for p in value.parts)
+        return isinstance(value, str) and bool(in_text.search(value))
+
+    pending = {k: v for k, v in params.items() if references(v)}
+    if not pending:
         return tool_input, None
 
     # 이전 결과에서 items 통화 추출 (prev_result 는 _to_prev_currency 가 이미 items 파생을 마친 JSON)
@@ -375,55 +372,54 @@ def _bind_items_params(tool_input: dict, prev_result: str):
         return tool_input, (f"$items 바인딩 거절: 행 {len(items)}개 — 상한 {ITEMS_BIND_CAP}. "
                             f"앞에 [table:take]{{n: ...}} 또는 filter 로 줄여 주세요(침묵 절단 금지).")
 
-    out = dict(tool_input)
-    out["params"] = dict(params)
-    for key, m in refs.items():
-        field = m.group(1) or m.group(2)   # 괄호형 `${items.열}` / 맨몸 `$items.열`
-        if field:
-            missing = [1 for r in items if not (isinstance(r, dict) and field in r)]
-            if items and len(missing) == len(items):
-                return tool_input, (f"$items.{field} 바인딩 실패: '{field}' 필드가 어느 행에도 없습니다. "
-                                    f"실제 필드: {sorted(items[0].keys()) if isinstance(items[0], dict) else '비-dict 행'}")
-            out["params"][key] = [r.get(field) for r in items if isinstance(r, dict)]
+    out = {**tool_input, "params": dict(params)}
+    bound = {}
+    for key, value in pending.items():
+        # Template의 문자열은 로그용 원문이다. 부분 바인딩으로 이미 들어온 값은
+        # parts에만 있으므로 문자열을 다시 훑으면 값이 유실되거나 참조로 재해석된다.
+        template = value if isinstance(value, Template) else Template(value, quoted=True)
+        if not isinstance(value, Template):
+            # 일반 문자열의 다른 이름/슬롯은 이 바인더의 참조가 아니다.
+            template = Template(value, quoted=True, parts=[
+                p.source if isinstance(p, Ref) and (p.namespace != 'name' or p.name != 'items') else p
+                for p in template.parts])
+        slots = [p for p in template.parts if not (isinstance(p, str) and not p.strip())]
+        sole = (_ITEMS_REF.fullmatch(str(template).strip()) and len(slots) == 1
+                and isinstance(slots[0], Ref) and slots[0].namespace == 'name' and slots[0].name == 'items')
+        if sole:
+            template = Template(str(template), quoted=False, parts=slots)
         else:
-            out["params"][key] = items
-
-    for key, text in mixed.items():
+            template = Template(str(template), quoted=True, parts=template.parts)
         notes = []
 
-        def _repl(path, _notes=notes):
-            if not path:
+        def resolve(name, path):
+            if name != 'items':
+                return False, None
+            field = path.lstrip('.')
+            if not field:
                 payload = items
+            elif re.fullmatch(r'\w+', field) and (sole or not field.isdigit()):
+                if items and not any(isinstance(r, dict) and field in r for r in items):
+                    raise ValueError(
+                        f"$items.{field} 바인딩 실패: '{field}' 필드가 어느 행에도 없습니다. 실제 필드: "
+                        f"{sorted(items[0].keys()) if isinstance(items[0], dict) else '비-dict 행'}")
+                payload = [r.get(field) for r in items if isinstance(r, dict)]
             else:
-                seg = path.lstrip(".").split(".")  # path-ok: $items 행별 벡터 치환 — 단일 객체 걷기가 아니라 행 사상(M 시리즈 검증 계약)
-                if len(seg) == 1 and not seg[0].isdigit():
-                    field = seg[0]
-                    missing = [1 for r in items if not (isinstance(r, dict) and field in r)]
-                    if items and len(missing) == len(items):
-                        raise ValueError(
-                            f"$items.{field} 치환 실패: '{field}' 필드가 어느 행에도 없습니다. 실제 필드: "
-                            f"{sorted(items[0].keys()) if isinstance(items[0], dict) else '비-dict 행'}")
-                    payload = [r.get(field) for r in items if isinstance(r, dict)]
-                else:
-                    val = _extract_result_field(json.dumps(items, ensure_ascii=False), path)
-                    lst = _is_json_list(val)
-                    if lst is not None:
-                        _notes.append((f"$items{path}", len(lst)))
-                    return val
-            _notes.append((f"$items{path}", len(payload)))
-            return json.dumps(payload, ensure_ascii=False)
+                payload = _extract_result_field_obj(items, path)
+            if not sole and isinstance(payload, list):
+                notes.append((f"$items{path}", len(payload)))
+            return True, payload
+
         try:
-            out["params"][key] = _in_text.sub(lambda m: _repl(m.group(1) if m.group(1) is not None
-                                                               else (m.group(2) or "")), text)
-        except ValueError as e:
-            return tool_input, str(e)
+            out["params"][key] = bind_template(template, resolve)
+        except ValueError as exc:
+            return tool_input, str(exc)
+        if sole:
+            bound[key] = len(out["params"][key])
         for ref, rows in notes:
             _mark_list_in_text(out, key, ref, rows)
-    # ★B31-1 (31회차): 무엇이 집합으로 바인딩됐는지 표식을 남긴다.
-    #   이 step 이 실패하면 _items_bound_note 가 그 사실을 오류문에 실어 준다 — 아래 참조.
-    if refs:   # 문장 속 치환만 있던 step 에 빈 바인딩 표식을 남기지 않는다(번역 오탐 방지)
-        out["_items_bound"] = {k: (len(out["params"][k]) if isinstance(out["params"][k], list) else 1)
-                               for k in refs}
+    if bound:
+        out["_items_bound"] = bound
     return out, None
 
 

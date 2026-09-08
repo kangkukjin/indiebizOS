@@ -1915,3 +1915,5 @@
 2026-09-08 [audit+experiment+docs] ep3176 원샷 지연 실측: 원본53.379초/4248출력 중3436추론(80.9%), 원본은 _i·reason만 작성. 같은60행·Opus5·도구없는 CLI 8회 재생: high37~42초, off9초(2/2오선별), low14~16초, 기본시스템설명교체high28~30초(입력3370토큰감소). 빠른 조건의 이상치 경고 소실도 확인해 동일품질 개선으로 단정하거나 전역 적용하지 않음. 제품코드·설정 변경 없음. docs/IBL_EPISODE3176_ONESHOT_LATENCY.md 및 docs/experiments/episode3176_oneshot_latency.json.
 
 2026-09-08 [ibl+providers+policy+tests+docs] 사용자 원샷 제거 비교 실험 준비: 로컬 agent_tool_policy.allow_agent_tool_oneshot=false 적용. agent IBL의 ai_call 메타데이터 액션 5종과 내부 공용 원샷·criteria 차단, 앱 직접 실행/도구 밖 인지·평가는 보존. 카탈로그·상시 관용구 소개 필터, 중첩/병렬 정책 승계·복원, 차단 traceback/재시도 오안내 방지, ibl.started 설정 및 ai.policy_blocked 기록. 도메인 규칙·모델/기어 변경 없음. 집중40·전체3086 통과, 라이브5·Android/어휘/층/은퇴 관문 통과. 보고서는 사용자가 앱에서 직접 실행 예정. docs/AGENT_TOOL_ONESHOT_EXPERIMENT.md.
+
+2026-09-08 [audit+docs] 원샷 차단 후 ep3194 공주 보고서 감사: 809.316초, 이전 당진762.162초 대비+47.154초. IBL64.332→9.462초·실패3→1이나 주 모델응답19→43, 도구밖 주실행+73.666초, 사전계획/최종평가+28.537초. 원샷 차단 지킴/차단재시도0, fn0. 별도도구원샷 포함 실행출력48728→44102(-9.5%), 누적입력3726549→8654015(대부분캐시). 다른도시·조사량 차이이므로 동일입력 A/B로 해석하지 않음. 제품코드/설정 변경 없음. docs/IBL_EPISODE3194_NO_ONESHOT_COST.md 및 응답별 감사 JSON.

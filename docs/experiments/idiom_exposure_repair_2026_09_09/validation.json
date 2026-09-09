@@ -1,0 +1,142 @@
+{
+  "regression": {
+    "command": ".venv/bin/python3 -m pytest backend/ -o addopts='' -q",
+    "passed": 3231,
+    "skipped": 2,
+    "warnings": 116,
+    "seconds": 113.22
+  },
+  "references": [
+    {
+      "case": "direct_latest",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "direct_latest",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "direct_context",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "direct_context",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "direct_ledger",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "direct_ledger",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "embedded_latest",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "embedded_latest",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "embedded_context",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "embedded_context",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "embedded_ledger",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "embedded_ledger",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_latest",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_latest",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_context",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_context",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "named",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "inline",
+      "quality_ok": true,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_latest",
+      "solution": "wrong",
+      "quality_ok": false,
+      "runtime_ok": true
+    },
+    {
+      "case": "direct_context",
+      "solution": "wrong",
+      "quality_ok": false,
+      "runtime_ok": true
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "wrong",
+      "quality_ok": false,
+      "runtime_ok": true
+    }
+  ],
+  "reference_validation_ok": true,
+  "operating_registry_body_signature_exposure_unchanged": true,
+  "live_prompt_inputs_and_example_restored": true,
+  "new_model_generation_calls": 0,
+  "android_bundle_check": "passed"
+}

@@ -142,10 +142,10 @@ def _v4_var_payload(raw: str) -> str:
     폴백=봉투 원형. 명시 경로($var.field.path)는 불변 — 정밀 추출은 경로가 정본.
     규칙은 write v4(system_essentials)와 같은 게이트를 쓴다: 오분류는 항상 안전 방향
     (봉투=구조 보존)으로 떨어진다."""
-    from common.currency import value_result_payload
+    from common.currency import value_result_payload, fn_result_payload
     is_value, value = value_result_payload(raw)
-    if is_value and isinstance(value, (dict, list)):
-        return json.dumps(value, ensure_ascii=False)
+    if is_value and (isinstance(value, (dict, list)) or fn_result_payload(raw)[0]):
+        return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False)
     s = (raw or "").strip()
     if not s.startswith("{"):
         return raw
@@ -587,7 +587,10 @@ def _to_prev_currency(result: Any) -> str:
 
     JSON 문자열 결과(대다수 핸들러)도 파싱→파생→재직렬화로 커버. 파싱 불가면 원형 그대로.
     """
-    from common.currency import derive_items
+    from common.currency import derive_items, fn_result_payload
+    # 원형 실행 기록은 results[]/step_results에 남긴다. 하류는 함수 몸이 반환한
+    # 값을 받는다(items뿐 아니라 산문·빈 값·효과도 같은 경계 규약).
+    _, result = fn_result_payload(result)
     r = result
     if isinstance(r, str):
         s = r.strip()

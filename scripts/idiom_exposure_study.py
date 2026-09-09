@@ -25,7 +25,7 @@ import time
 from idiom_exposure_cases import CASES, GOLD, INLINE
 
 ARMS = ("hidden", "exposed")
-DEFAULT = ROOT / "outputs/idiom_exposure_2026_09_09_v1"
+DEFAULT = ROOT / "outputs/idiom_exposure_2026_09_09_v2"
 
 
 def dump(path, value):
@@ -101,7 +101,8 @@ def prepare(out):
         order = list(ARMS if i % 2 == 0 else reversed(ARMS))
         schedule.extend([dict(pair, arm=arm) for arm in order])
     manifest = {
-        "version": 1,
+        "version": 2,
+        "oracle_policy": "Repair only unmet task requirements; runtime_ok is recorded independently. Accept equivalent body containers and Korean error fields. Original v1 remains frozen.",
         "base_commit": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
         ).strip(),

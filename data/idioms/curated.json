@@ -90,7 +90,7 @@
       "name": "위치마다읽기",
       "when": "grep으로 찾은 위치 목록에서 앞 개수곳을 일치 줄부터 줄수만큼 읽고 위치·본문·실패를 모을 때. 전체 위치만 필요하면 grep 결과를 그대로 쓴다.",
       "topic": "찾기",
-      "body": "$대상 = [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{do: \"[self:read]{path: '$it.파일', start_line: $it.줄번호, limit: ${줄수}}\", keep: [\"파일\", \"줄번호\"], limit: \"${개수}\", collect: true, on_error: \"keep\"}",
+      "body": "$대상 = [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{keep: [\"파일\", \"줄번호\"], limit: \"${개수}\", collect: true, on_error: \"keep\"} {\n  [self:read]{path: '$it.파일', start_line: $it.줄번호, limit: ${줄수}}\n}",
       "inputs": "앞 통화: grep의 파일·줄번호 열. 개수: 처리할 위치 수(0 이상). 줄수: 위치당 읽을 줄 수(1 이상). 반환: 파일·줄번호·value(본문), 실패는 _error. 본문 의미 판단은 하지 않는다.",
       "example": "[self:grep]{path:\"notes\",pattern:\"TODO\",file_pattern:\"*.txt\",limit:20} >> [fn:위치마다읽기]{개수:5,줄수:12}"
     },

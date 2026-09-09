@@ -241,6 +241,8 @@ def run(req):
         }
         return {
             "quality_ok": bool(ok),
+            "runtime_ok": isinstance(result, dict)
+            and result.get("success") is True,
             "verdict": verdict,
             "result": result,
             "observed": observed,

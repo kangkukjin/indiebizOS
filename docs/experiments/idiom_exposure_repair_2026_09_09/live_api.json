@@ -1,0 +1,34 @@
+{
+  "code": "[def: 본문]{$return = [self:read]{path:\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_fn_live_79q5nppc/body.txt\",start_line:1,limit:2}}\n[fn:본문]{} >> [self:write]{path:\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_fn_live_79q5nppc/saved.txt\"}",
+  "api_result": {
+    "success": true,
+    "steps_completed": 3,
+    "steps_total": 3,
+    "_action_count": 3,
+    "results": [
+      {
+        "step": 1,
+        "node": "?",
+        "action": "?",
+        "result": "{\"success\": true, \"defined\": \"본문\", \"signature\": [], \"todo\": false, \"message\": \"[def: 본문] 정의됨 — 시그니처 (인자 없음)\"}",
+        "duration_ms": 0
+      },
+      {
+        "step": 2,
+        "node": "fn",
+        "action": "본문",
+        "result": "{\"success\": true, \"steps_completed\": 1, \"steps_total\": 1, \"_action_count\": 1, \"results\": [{\"step\": 1, \"node\": \"self\", \"action\": \"read\", \"result\": \"[줄 1-2 / 전체 2줄, 33바이트]\\n원문 첫 줄\\n원문 둘째 줄\\n\", \"duration_ms\": 4}], \"final_result\": \"[줄 1-2 / 전체 2줄, 33바이트]\\n원문 첫 줄\\n원문 둘째 줄\\n\", \"returned\": \"$return\", \"fn\": \"본문\", \"fn_source\": \"def\", \"_fn_result\": true}",
+        "duration_ms": 4
+      },
+      {
+        "step": 3,
+        "node": "self",
+        "action": "write",
+        "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_fn_live_79q5nppc/saved.txt\", \"size\": 38}",
+        "duration_ms": 6
+      }
+    ],
+    "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_fn_live_79q5nppc/saved.txt\", \"size\": 38}"
+  },
+  "saved": "[줄 1-2 / 전체 2줄, 33바이트]\n원문 첫 줄\n원문 둘째 줄\n"
+}

@@ -102,7 +102,8 @@ def run(monkeypatch, tmp_path):
                       context={'_prev_result': json.dumps(prev, ensure_ascii=False) if isinstance(prev, (dict, list)) else prev} if prev is not None else None)
         assert out.get('success'), str(out)[:2500]
         result = out.get('final_result')
-        return json.loads(result) if isinstance(result, str) and result.strip().startswith(('{', '[')) else result
+        from common.currency import coerce_json_param
+        return coerce_json_param(result)  # '[줄 ...]'로 시작하는 산문은 JSON이 아니다
     execute.observed = observed
     return execute
 

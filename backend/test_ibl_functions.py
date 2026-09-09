@@ -109,7 +109,7 @@ def test_f3_call_with_params_return_and_flowing_currency():
     assert "params_warning" not in fn_env                                  # 배관 키(_raw)는 인자로 새지 않는다
     assert [r["a"] for r in fn_env["items"]] == [1, 2]                    # 인자 k=2 가 몸의 $k 에 들어갔다
     assert [c["action"] for c in calls] == ["rows", "take"]
-    assert _final(out)["fn"] == "앞둘"                                     # 마지막 문장의 통화가 정의 신고에 가려지지 않는다
+    assert _final(out)["items"] == fn_env["items"]                        # 반환값은 몸의 값, 함수 진단은 results[]에 보존
     # 앞 통화가 몸의 첫 문장으로 흐른다 + $return 규약
     calls.clear()
     out = _run('[x:rows]{} >> [fn:둘]{}\n[def: 둘]{$t = [x:take]{n: 2}\n$return = $t}', calls)

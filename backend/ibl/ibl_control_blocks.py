@@ -253,6 +253,7 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             if isinstance(res, dict):
                 res["fn"] = name
                 res["fn_source"] = "workflow"
+                res["_fn_result"] = True
             return res
         row = None
         try:
@@ -319,6 +320,7 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
     if isinstance(out, dict):
         out["fn"] = name
         out["fn_source"] = "idiom" if fdef.get("_idiom_code") else "def"
+        out["_fn_result"] = True
         if fdef.get("_idiom_code"):
             # 이름으로 부른 관용구는 쓰인 것 — 해마의 성공/실패 귀속(상시 블록 순위·재학습의 회상 귀속)
             try:
@@ -345,7 +347,8 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             out.update(inject_meta)
         if not out.get("success", True) and isinstance(out.get("traceback"), dict):
             push_frame(out["traceback"], {"kind": "fn", "name": name})
-        # 함수 결과의 통화: final_result 가 있으면 그것이 이 step 의 결과 — 바깥 파이프가 그대로 잇는다
+        # .items 명시 접근의 호환 뷰. 하류·맨몸 변수의 실제 반환값은
+        # common.currency.fn_result_payload가 읽으므로 scalar도 같은 값으로 잇는다.
         if out.get("final_result") is not None and "items" not in out:
             fr = _parse_final(out.get("final_result"))
             if isinstance(fr, dict) and isinstance(fr.get("items"), list):

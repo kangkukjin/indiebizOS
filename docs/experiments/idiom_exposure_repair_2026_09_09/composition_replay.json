@@ -1,0 +1,29 @@
+{
+  "schema_worker_sha256": "b29838e992c8e46782b1561546f6ded466ea57cfbce5240476938ef3b2c8e08f",
+  "rows": [
+    {
+      "label": "named_pipeline",
+      "code": "[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12} >> [self:write]{path:\"outputs/excerpt.txt\"}\n[self:read]{path:\"queue.json\"} >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"id\"} >> [self:write]{path:\"outputs/pending.json\",format:\"json\"}",
+      "quality_ok": true,
+      "runtime_ok": true,
+      "excerpt_chars": 305,
+      "excerpt": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-47877 LINE-11\nDOCUMENT-30725 LINE-12\nDOCUMENT-24107 LINE-13\nDOCUMENT-65412 LINE-14\nDOCUMENT-50164 LINE-15\nDOCUMENT-69175 LINE-16\nDOCUMENT-61690 LINE-17\nDOCUMENT-67027 LINE-18\nDOCUMENT-17000 LINE-19\nDOCUMENT-52204 LINE-20\nDOCUMENT-35993 LINE-21\nDOCUMENT-12084 LINE-22\n"
+    },
+    {
+      "label": "literal_body",
+      "code": "$후보 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1}\n$return = $후보 >> [if:not empty($items)]{[self:read]{start_line:\"11\",limit:\"12\"}}\n$return >> [self:write]{path:\"outputs/excerpt.txt\"}\n[self:read]{path:\"queue.json\"} >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"id\"} >> [self:write]{path:\"outputs/pending.json\",format:\"json\"}",
+      "quality_ok": true,
+      "runtime_ok": true,
+      "excerpt_chars": 305,
+      "excerpt": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-47877 LINE-11\nDOCUMENT-30725 LINE-12\nDOCUMENT-24107 LINE-13\nDOCUMENT-65412 LINE-14\nDOCUMENT-50164 LINE-15\nDOCUMENT-69175 LINE-16\nDOCUMENT-61690 LINE-17\nDOCUMENT-67027 LINE-18\nDOCUMENT-17000 LINE-19\nDOCUMENT-52204 LINE-20\nDOCUMENT-35993 LINE-21\nDOCUMENT-12084 LINE-22\n"
+    },
+    {
+      "label": "explicit_value",
+      "code": "$part=[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}\n[self:write]{path:\"outputs/excerpt.txt\",content:$part.final_result}\n[self:read]{path:\"queue.json\"} >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"id\"} >> [self:write]{path:\"outputs/pending.json\",format:\"json\"}",
+      "quality_ok": true,
+      "runtime_ok": true,
+      "excerpt_chars": 305,
+      "excerpt": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-47877 LINE-11\nDOCUMENT-30725 LINE-12\nDOCUMENT-24107 LINE-13\nDOCUMENT-65412 LINE-14\nDOCUMENT-50164 LINE-15\nDOCUMENT-69175 LINE-16\nDOCUMENT-61690 LINE-17\nDOCUMENT-67027 LINE-18\nDOCUMENT-17000 LINE-19\nDOCUMENT-52204 LINE-20\nDOCUMENT-35993 LINE-21\nDOCUMENT-12084 LINE-22\n"
+    }
+  ]
+}

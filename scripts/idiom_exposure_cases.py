@@ -1,6 +1,7 @@
-"""Frozen tasks and artifact oracles for the 2026-09-09 exposure experiment.
+"""Tasks and artifact oracles for the 2026-09-09 exposure experiment.
 
 Task text never includes the preferred alias or reference program. Data vary by seed.
+The original v1 oracle is preserved in the committed experiment's frozen_sources.
 """
 
 import sys
@@ -203,15 +204,31 @@ def accumulated(old, incoming):
     return result
 
 
+def returned_body(value):
+    """본문의 동등한 반환 형태를 읽되 실행 기록에서 정답을 찾지는 않는다."""
+    from common.currency import value_result_payload
+
+    is_value, payload = value_result_payload(value)
+    if is_value:
+        return returned_body(payload)
+    if isinstance(value, str):
+        return content(value)
+    if isinstance(value, dict):
+        if isinstance(value.get("items"), list):
+            return returned_body(value["items"])
+        for key in ("content", "본문", "value", "text", "message"):
+            if key in value:
+                return returned_body(value[key])
+    if isinstance(value, list):
+        chunks = [returned_body(row) for row in value]
+        if all(chunk is not None for chunk in chunks):
+            return [line for chunk in chunks for line in chunk]
+    return None
+
+
 def judge(case_id, result, root, observed, initial):
-    if not isinstance(result, dict) or not result.get("success"):
-        return (
-            False,
-            "runtime: "
-            + str(result.get("error") if isinstance(result, dict) else result)[
-                :1800
-            ],
-        )
+    # 요구한 결과와 무오류 실행은 별도 축이다. 부수 오류 때문에 맞던 결과를
+    # 다시 생성시키지 않는다. worker는 runtime_ok와 원형 오류도 함께 기록한다.
     mutable = {"registry.json"} if case_id == "counter_ledger" else set()
     for name, raw in initial.items():
         if name not in mutable and (
@@ -229,7 +246,7 @@ def judge(case_id, result, root, observed, initial):
         )
 
     if case_id in ("direct_latest", "counter_latest"):
-        ok = content(final) == expected_lines(
+        ok = returned_body(final) == expected_lines(
             latest if case_id == "direct_latest" else by_date
         )
     elif case_id == "embedded_latest":
@@ -270,7 +287,11 @@ def judge(case_id, result, root, observed, initial):
                     and row.get("줄번호") == target["줄번호"]
                 )
                 if target["파일"] not in initial:
-                    ok = ok and bool(row.get("_error") or row.get("error"))
+                    ok = ok and bool(
+                        row.get("_error")
+                        or row.get("error")
+                        or row.get("오류")
+                    )
                 else:
                     expected = expected_lines(
                         target["파일"], target["줄번호"], 5

@@ -2,6 +2,8 @@
 
 실행일: 2026-09-09. [결과 보고서](/Users/kangkukjin/Desktop/AI/indiebizOS/docs/IBL_IDIOM_EXPOSURE_RESULT_2026_09_09.md), [생성 전 계획](/Users/kangkukjin/Desktop/AI/indiebizOS/docs/IBL_IDIOM_EXPOSURE_PROTOCOL_2026_09_09.md).
 
+후속 수리로 현재 실행 스크립트는 v2 판정기를 사용한다. 아래 파일들은 **당시 v1의 고정 증거**이며 다시 생성하거나 덮어쓰지 않았다. 당시 생성 소스는 `frozen_sources.json`에 있다. [수리 내역](/Users/kangkukjin/Desktop/AI/indiebizOS/docs/IBL_IDIOM_EXPOSURE_REPAIRS_2026_09_09.md).
+
 ## 자료 구분
 
 | 파일 | 내용 |

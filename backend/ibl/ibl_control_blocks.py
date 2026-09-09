@@ -360,6 +360,12 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
     return out
 
 
+
+def _prose_paths():
+    """산문에 물을 수 있는 이름의 단일 소스 = workflow_binding._PROSE_PATHS (여기 복제하면 둘이 갈라진다)."""
+    from workflow_binding import _PROSE_PATHS
+    return _PROSE_PATHS
+
 def _block_tb(err: Any, block: str) -> dict:
     """블록 몸의 실패(err = _run_body 의 오류 정보)에 블록 경계 프레임을 얹는다 — 경계 규약.
 
@@ -701,6 +707,10 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
         if is_value and path:
             from workflow_binding import _extract_result_field_obj
             v = _extract_result_field_obj(_loaded, path + ('?' if optional else ''))
+        elif isinstance(_loaded, str) and path and path.lstrip(".") in _prose_paths():
+            # 산문 결과의 `.text`/`.message`/`.content` 는 그 산문(09-04 규칙) — 식 할당의 경로 걷기는
+            # 문자열을 걸을 수 없어 결측으로 떨어졌다(09-09 v3 실측: `$a = "${doc.text?}"` → 빈 값).
+            v = _loaded
         else:
             v = payload if is_value else walk_path(_loaded, path or None)
         if v is _MISSING and optional:
@@ -716,7 +726,9 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
             # 이 자리는 텍스트 보간이다. 제어 문자·따옴표·백슬래시를 Python 문자열
             # 리터럴 내용으로 이스케이프하여 값이 식의 코드로 탈출하지 못하게 한다.
             # 숫자처럼 생긴 문자열(예: 007)은 그대로 보존한다.
-            text = v if isinstance(v, str) else str(_scalar_of(v))
+            # 옵셔널 `?` 의 결측(None)은 "빈 값"이다(ibl.md `${x.y?}`) — "None" 글자를 찍으면 `"${it.줄번호?}${it.line?}"`
+            # 이 "4None" 이 돼 뒤 산술이 죽는다(09-09 노출 실험 v3 hidden 실측, direct_context_2).
+            text = v if isinstance(v, str) else ("" if v is None else str(_scalar_of(v)))
             return json.dumps(text, ensure_ascii=False)[1:-1].replace("'", "\\'")
         key = f"_v{len(scope)}"
         # 경로로 꺼낸 dict와 이미 값인 할당 결과는 봉투가 아니다. 그 안의

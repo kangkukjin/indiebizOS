@@ -102,7 +102,7 @@ def value_result_field_view(obj: Any, path: str) -> Any:
         return value
     if isinstance(obj, dict) and first in obj:
         return obj
-    if isinstance(value, str) and first in ('message', 'text'):
+    if isinstance(value, str) and first in ('message', 'text', 'content'):
         return {first: value}
     if isinstance(value, (dict, list)):
         return {'items': value} if isinstance(value, list) and first == 'items' else value

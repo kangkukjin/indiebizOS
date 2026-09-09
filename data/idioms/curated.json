@@ -131,6 +131,63 @@
           "code": "$본문 = [fn:최신범위읽기]{폴더:\"notes\",패턴:\"*.txt\",시작줄:1,줄수:200}; $본문 >> [table:brief]{instruction:\"핵심 세 줄\"}"
         }
       ]
+    },
+    {
+      "name": "미처리만고르기",
+      "always_on": true,
+      "when": "후보 목록에서 이미 처리한 키를 제외하고 중복 없는 새 행만 남길 때. 후보의 첫 행과 순서를 보존하며 기존 행 갱신은 감지하지 않는다.",
+      "topic": "되풀이 실행",
+      "body": "$고유 = $후보 >> [table:dedup]{by: \"${키}\"}\n$return = $고유 & $처리됨 >> [table:join]{on: \"${키}\", how: \"anti\"}",
+      "inputs": "후보·처리됨: 같은 키 열을 가진 items 또는 JSON 행 목록(변수 자체 전달). 키: 열 이름 또는 복합키 목록. 처리됨이 비면 고유 후보 전부, 후보가 비면 빈 items. 키는 비어 있지 않아야 한다. null·빈 키는 미일치 행으로 남으므로 실행 전에 확인한다. 결과는 후보의 원래 열을 보존한다.",
+      "example": "$후보=[sense:search]{query:\"도서관 소식\"}; $기록=[self:read]{path:\"outputs/처리목록.json\"}; [fn:미처리만고르기]{후보:$후보,처리됨:$기록,키:\"url\"} >> [table:take]{n:5}",
+      "examples": [
+        {
+          "intent": "제출 목록에서 이미 처리한 id·kind 복합키를 빼고 새 제출만 중복 없이 JSON으로 저장해줘",
+          "code": "$제출=[self:read]{path:\"제출.json\"}; $처리=[self:read]{path:\"처리완료.json\"}; [fn:미처리만고르기]{후보:$제출,처리됨:$처리,키:[\"id\",\"kind\"]} >> [self:write]{path:\"outputs/새제출.json\",format:\"json\"}"
+        },
+        {
+          "intent": "수집한 URL 가운데 아직 읽지 않은 것만 골라 원문을 모아줘",
+          "code": "$후보=[self:read]{path:\"읽을거리.json\"}; $완료=[self:read]{path:\"읽은목록.json\"}; $새것=[fn:미처리만고르기]{후보:$후보,처리됨:$완료,키:\"url\"}; [fn:주소마다읽기]{목록:$새것,개수:5}"
+        }
+      ]
+    },
+    {
+      "name": "묶어순위내기",
+      "always_on": true,
+      "when": "숫자 열이 있는 목록을 하나 또는 여러 열로 묶고 합계가 큰 그룹부터 개수만큼 고를 때. 그룹별 합계와 전체 행수(건수)를 함께 반환한다.",
+      "topic": "집계",
+      "body": "$집계 = $목록 >> [table:groupby]{by: \"${묶음}\", agg: {합계: [\"sum\", \"${값열}\"], 건수: [\"count\"]}}\n$return = $집계 >> [table:sort]{by: \"합계\", desc: true} >> [table:take]{n: \"${개수}\"}",
+      "inputs": "목록: items 또는 JSON 행 목록. 묶음: 그룹 열 이름 또는 복합키 목록(합계·건수라는 열명은 그룹 키로 쓰지 않는다). 값열: 합산할 숫자 열 이름. 개수: 0 이상의 정수. 반환 열: 그룹 키들·합계·건수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 합계 null, 건수는 그룹의 전체 행수다. 평균·가중 순위·단위 변환은 하지 않는다.",
+      "example": "$목록=[self:read]{path:\"매출.json\"}; [fn:묶어순위내기]{목록:$목록,묶음:\"상품\",값열:\"금액\",개수:5}",
+      "examples": [
+        {
+          "intent": "부서와 비용항목별 지출 합계를 내고 큰 순서로 10개를 골라 저장해줘",
+          "code": "$지출=[self:read]{path:\"지출.json\"}; [fn:묶어순위내기]{목록:$지출,묶음:[\"부서\",\"항목\"],값열:\"금액\",개수:10} >> [self:write]{path:\"outputs/지출순위.json\",format:\"json\"}"
+        },
+        {
+          "intent": "완료한 운동 기록만 골라 종목별 누적 시간을 비교해줘",
+          "code": "$운동=[self:read]{path:\"운동기록.json\"} >> [table:filter]{where:{field:\"완료\",op:\"eq\",value:true}}; [fn:묶어순위내기]{목록:$운동,묶음:\"종목\",값열:\"분\",개수:5}"
+        }
+      ]
+    },
+    {
+      "name": "주소마다읽기",
+      "always_on": true,
+      "when": "url 열이 있는 목록에서 중복 URL을 빼고 앞 개수개 페이지의 원문 문단을 모을 때. 출처와 실패를 보존하며 요약·평가·AI 호출은 하지 않는다.",
+      "topic": "수집",
+      "body": "$고유 = $목록 >> [table:dedup]{by: \"url\"}\n$대상 = $고유 >> [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{keep: [\"title\", \"url\"], limit: \"${개수}\", collect: true, on_error: \"keep\"} {\n  [sense:crawl]{url: \"$it.url\"}\n}",
+      "inputs": "목록: url 열이 있는 items 또는 JSON 행 목록(변수 자체 전달), title은 선택. 검색 결과가 link 열이면 먼저 rename으로 url에 맞춘다. 개수: 읽을 고유 URL 수(0 이상). 성공은 문단 단위 items(type·text 등)에 url·원래 title을 붙이고, 실패는 _error 행으로 남긴다. 같은 URL은 첫 행을 보존한다. 개수는 페이지 수이며 반환 문단 수는 더 많을 수 있다. 페이지당 크롤러 기본 상한은 10,000자다. 접근 제한·원문 추출 한계는 그대로다.",
+      "example": "$주소=[sense:search]{query:\"도서관 소식\"}; [fn:주소마다읽기]{목록:$주소,개수:3}",
+      "examples": [
+        {
+          "intent": "학습 자료의 URL 목록에서 중복을 빼고 앞 5개 원문과 출처를 JSON으로 모아줘",
+          "code": "$자료=[self:read]{path:\"학습자료.json\"}; [fn:주소마다읽기]{목록:$자료,개수:5} >> [self:write]{path:\"outputs/학습원문.json\",format:\"json\"}"
+        },
+        {
+          "intent": "검토 목록에서 승인한 페이지의 원문만 출처와 함께 모아줘",
+          "code": "$승인=[self:read]{path:\"검토목록.json\"} >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}}; [fn:주소마다읽기]{목록:$승인,개수:4}"
+        }
+      ]
     }
   ]
 }

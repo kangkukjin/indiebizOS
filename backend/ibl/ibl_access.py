@@ -829,6 +829,8 @@ def invalidate_nodes_cache():
     _nodes_data_cache = None
     _node_groups_cache = None
     _package_meta_cache = None
+    # 관용구 지도·잎 액션 병기도 같은 환경의 일부다. 명시 reload 뒤 5분간 옛 지도를 보지 않는다.
+    _idioms_cache.update({"t": 0.0, "text": None, "key": None, "anchors": {}})
 
     # node_registry 도 같은 ibl_nodes.yaml 을 자기 캐시(_node_cache·_typed_node_cache)에
     # 물고 있다. 그쪽 무효화 함수는 정의만 있고 호출자가 0이었다(2026-08-18 발견) —

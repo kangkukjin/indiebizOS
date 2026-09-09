@@ -53,7 +53,8 @@ def test_pruned_catalog_keeps_only_intended_recommendations():
     catalog = json.loads((ROOT / 'data/idioms/curated.json').read_text())
     validate_catalog(catalog)
     active = {e['name'] for e in catalog['idioms'] if e.get('always_on', True)}
-    assert active == {'원장에누적', '위치마다읽기', '최신범위읽기'}
+    assert active == {'원장에누적', '위치마다읽기', '최신범위읽기',
+                      '미처리만고르기', '묶어순위내기', '주소마다읽기'}
     # 호환 항목을 명시 강등하면서도 선정집을 멱등 재적용할 수 있다.
     assert not active.intersection(catalog['demote'])
 

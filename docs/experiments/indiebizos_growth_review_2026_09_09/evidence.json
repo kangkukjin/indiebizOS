@@ -1,0 +1,720 @@
+{
+  "audited_head": "175e5af6565387e84f5171c4f7e4a2d3ec1b9386",
+  "generated_at": "2026-09-09T10:47:22.395428+09:00",
+  "scope": {
+    "metadata_since": "2026-09-04",
+    "distillation_logs_since": "2026-09-07",
+    "read_only_databases": true,
+    "metadata_episodes": 123
+  },
+  "episode_metrics": [
+    {
+      "episode_id": 3219,
+      "started_at": "2026-09-09T04:00:44.555868",
+      "agent": "system_ai",
+      "hippocampus_score": 0.5227,
+      "unconscious_decision": "THINK",
+      "consciousness_ms": 26314,
+      "total_ms": 1048576,
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 19,
+      "ibl_failed": 1,
+      "ibl_interval_union_ms": 294964,
+      "model_usage": [
+        {
+          "cache_create": 0,
+          "cache_read": 2176,
+          "event": "usage",
+          "input": 2181,
+          "latency_ms": 687,
+          "output": 2,
+          "provider": "OpenAI",
+          "role": "oneshot:classify"
+        },
+        {
+          "cache_create": 98705,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 98707,
+          "latency_ms": 26314,
+          "output": 1549,
+          "reasoning": 0,
+          "role": "consciousness"
+        },
+        {
+          "cache_create": 35044,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 35046,
+          "latency_ms": 75400,
+          "output": 5467,
+          "reasoning": 3878,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 10015,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 10017,
+          "latency_ms": 2851,
+          "output": 90,
+          "reasoning": 0,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 21609,
+          "cache_read": 3440,
+          "event": "usage",
+          "input": 25051,
+          "latency_ms": 74418,
+          "output": 5873,
+          "reasoning": 4332,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 6884,
+          "cache_read": 3306,
+          "event": "usage",
+          "input": 10192,
+          "latency_ms": 5782,
+          "output": 340,
+          "reasoning": 225,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 22200,
+          "cache_read": 3440,
+          "event": "usage",
+          "input": 25642,
+          "latency_ms": 41243,
+          "output": 3012,
+          "reasoning": 1579,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 4847,
+          "cache_read": 3306,
+          "event": "usage",
+          "input": 8155,
+          "latency_ms": 2561,
+          "output": 64,
+          "reasoning": 0,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 12724,
+          "cache_read": 3440,
+          "event": "usage",
+          "input": 16166,
+          "latency_ms": 64208,
+          "output": 4631,
+          "reasoning": 3678,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 5273,
+          "cache_read": 3306,
+          "event": "usage",
+          "input": 8581,
+          "latency_ms": 2893,
+          "output": 81,
+          "reasoning": 0,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 369803,
+          "cache_read": 4535646,
+          "event": "usage",
+          "input": 4905489,
+          "latency_ms": 1016645,
+          "output": 46723,
+          "reasoning": 18045,
+          "role": "execution"
+        },
+        {
+          "cache_create": 39681,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 39683,
+          "latency_ms": 2273,
+          "output": 9,
+          "reasoning": 0,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 9785,
+          "latency_ms": 2553,
+          "output": 247,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 2010,
+          "latency_ms": 1201,
+          "output": 143,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 361,
+          "latency_ms": 604,
+          "output": 9,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        }
+      ],
+      "drive_reported_typed_chars": 30608
+    },
+    {
+      "episode_id": 3223,
+      "started_at": "2026-09-09T05:00:45.130048",
+      "agent": "system_ai",
+      "hippocampus_score": 0.8096,
+      "unconscious_decision": "THINK",
+      "consciousness_ms": 37732,
+      "total_ms": 946486,
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 26,
+      "ibl_failed": 3,
+      "ibl_interval_union_ms": 7864,
+      "model_usage": [
+        {
+          "cache_create": 0,
+          "cache_read": 2176,
+          "event": "usage",
+          "input": 2184,
+          "latency_ms": 950,
+          "output": 2,
+          "provider": "OpenAI",
+          "role": "oneshot:classify"
+        },
+        {
+          "cache_create": 13467,
+          "cache_read": 86671,
+          "event": "usage",
+          "input": 100140,
+          "latency_ms": 37732,
+          "output": 2485,
+          "reasoning": 706,
+          "role": "consciousness"
+        },
+        {
+          "cache_create": 257423,
+          "cache_read": 6448844,
+          "event": "usage",
+          "input": 6706321,
+          "latency_ms": 900410,
+          "output": 59938,
+          "reasoning": 35976,
+          "role": "execution"
+        },
+        {
+          "cache_create": 21585,
+          "cache_read": 15196,
+          "event": "usage",
+          "input": 36783,
+          "latency_ms": 5649,
+          "output": 275,
+          "reasoning": 266,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 12514,
+          "latency_ms": 2682,
+          "output": 399,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 2003,
+          "latency_ms": 742,
+          "output": 1,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        }
+      ],
+      "drive_reported_typed_chars": 26176
+    },
+    {
+      "episode_id": 3224,
+      "started_at": "2026-09-09T06:00:45.711658",
+      "agent": "system_ai",
+      "hippocampus_score": 0.7036,
+      "unconscious_decision": "THINK",
+      "consciousness_ms": 31431,
+      "total_ms": 1219617,
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 39,
+      "ibl_failed": 5,
+      "ibl_interval_union_ms": 510265,
+      "model_usage": [
+        {
+          "cache_create": 0,
+          "cache_read": 2176,
+          "event": "usage",
+          "input": 2185,
+          "latency_ms": 683,
+          "output": 2,
+          "provider": "OpenAI",
+          "role": "oneshot:classify"
+        },
+        {
+          "cache_create": 12334,
+          "cache_read": 86671,
+          "event": "usage",
+          "input": 99007,
+          "latency_ms": 31431,
+          "output": 2052,
+          "reasoning": 355,
+          "role": "consciousness"
+        },
+        {
+          "cache_create": 15798,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 15800,
+          "latency_ms": 29501,
+          "output": 2111,
+          "reasoning": 1169,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 6119,
+          "cache_read": 8325,
+          "event": "usage",
+          "input": 14446,
+          "latency_ms": 50806,
+          "output": 3916,
+          "reasoning": 2508,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 3370,
+          "cache_read": 8325,
+          "event": "usage",
+          "input": 11697,
+          "latency_ms": 4768,
+          "output": 214,
+          "reasoning": 210,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 4056,
+          "cache_read": 8325,
+          "event": "usage",
+          "input": 12383,
+          "latency_ms": 44564,
+          "output": 3743,
+          "reasoning": 2283,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 4447,
+          "cache_read": 8325,
+          "event": "usage",
+          "input": 12774,
+          "latency_ms": 18520,
+          "output": 1512,
+          "reasoning": 954,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 6009,
+          "cache_read": 8325,
+          "event": "usage",
+          "input": 14336,
+          "latency_ms": 33189,
+          "output": 2257,
+          "reasoning": 1628,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 11695,
+          "event": "usage",
+          "input": 11697,
+          "latency_ms": 4724,
+          "output": 209,
+          "reasoning": 205,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 15798,
+          "event": "usage",
+          "input": 15800,
+          "latency_ms": 42553,
+          "output": 3332,
+          "reasoning": 2132,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 14444,
+          "event": "usage",
+          "input": 14446,
+          "latency_ms": 49173,
+          "output": 3643,
+          "reasoning": 2393,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 12381,
+          "event": "usage",
+          "input": 12383,
+          "latency_ms": 32939,
+          "output": 2671,
+          "reasoning": 1289,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 12772,
+          "event": "usage",
+          "input": 12774,
+          "latency_ms": 17741,
+          "output": 1398,
+          "reasoning": 935,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 14334,
+          "event": "usage",
+          "input": 14336,
+          "latency_ms": 22940,
+          "output": 1521,
+          "reasoning": 1042,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 10152,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 10154,
+          "latency_ms": 19930,
+          "output": 1408,
+          "reasoning": 0,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 8053,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 8055,
+          "latency_ms": 31593,
+          "output": 2167,
+          "reasoning": 941,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 11505,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 11507,
+          "latency_ms": 40758,
+          "output": 2834,
+          "reasoning": 1477,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 8431,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 8433,
+          "latency_ms": 24669,
+          "output": 1920,
+          "reasoning": 832,
+          "role": "oneshot:execution"
+        },
+        {
+          "cache_create": 184982,
+          "cache_read": 7758663,
+          "event": "usage",
+          "input": 7943725,
+          "latency_ms": 1178530,
+          "output": 47136,
+          "reasoning": 19065,
+          "role": "execution"
+        },
+        {
+          "cache_create": 37755,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 37757,
+          "latency_ms": 7063,
+          "output": 336,
+          "reasoning": 327,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 11777,
+          "latency_ms": 6263,
+          "output": 1013,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 1280,
+          "event": "usage",
+          "input": 1978,
+          "latency_ms": 2148,
+          "output": 283,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 604,
+          "latency_ms": 791,
+          "output": 14,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        }
+      ],
+      "drive_reported_typed_chars": 32784
+    },
+    {
+      "episode_id": 3240,
+      "started_at": "2026-09-09T10:01:22.434362",
+      "agent": "스토리텔러",
+      "hippocampus_score": 0.5566,
+      "unconscious_decision": "THINK",
+      "consciousness_ms": 50227,
+      "total_ms": 277162,
+      "evaluation_result": "ACHIEVED",
+      "ibl_started": 10,
+      "ibl_failed": 0,
+      "ibl_interval_union_ms": 184,
+      "model_usage": [
+        {
+          "cache_create": 0,
+          "cache_read": 2048,
+          "event": "usage",
+          "input": 2198,
+          "latency_ms": 1061,
+          "output": 2,
+          "provider": "OpenAI",
+          "role": "oneshot:classify"
+        },
+        {
+          "cache_create": 98381,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 98383,
+          "latency_ms": 50227,
+          "output": 3240,
+          "reasoning": 1186,
+          "role": "consciousness"
+        },
+        {
+          "cache_create": 442532,
+          "cache_read": 3431387,
+          "event": "usage",
+          "input": 3873937,
+          "latency_ms": 205864,
+          "output": 11154,
+          "reasoning": 4708,
+          "role": "execution"
+        },
+        {
+          "cache_create": 28399,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 28401,
+          "latency_ms": 8200,
+          "output": 354,
+          "reasoning": 345,
+          "role": "oneshot:evaluate"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 4854,
+          "latency_ms": 2125,
+          "output": 240,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 1308,
+          "latency_ms": 2336,
+          "output": 185,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        },
+        {
+          "cache_create": 0,
+          "cache_read": 0,
+          "event": "usage",
+          "input": 315,
+          "latency_ms": 708,
+          "output": 9,
+          "provider": "OpenAI",
+          "role": "oneshot:background"
+        }
+      ],
+      "drive_reported_typed_chars": 4120
+    }
+  ],
+  "distillation": {
+    "records": [
+      {
+        "episode_id": 3067,
+        "started_at": "2026-09-07T16:57:46.492451",
+        "outcome": "no_pattern",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3068,
+        "started_at": "2026-09-07T17:03:15.003078",
+        "outcome": "syntax_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3070,
+        "started_at": "2026-09-07T18:38:06.808886",
+        "outcome": "saved",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3071,
+        "started_at": "2026-09-07T18:42:21.416765",
+        "outcome": "saved",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3072,
+        "started_at": "2026-09-07T18:46:09.006351",
+        "outcome": "saved",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3073,
+        "started_at": "2026-09-07T19:33:20.335269",
+        "outcome": "no_pattern",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3089,
+        "started_at": "2026-09-08T04:00:40.766665",
+        "outcome": "composition_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3090,
+        "started_at": "2026-09-08T05:00:41.122085",
+        "outcome": "syntax_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3091,
+        "started_at": "2026-09-08T06:00:41.972214",
+        "outcome": "syntax_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3176,
+        "started_at": "2026-09-08T17:43:22.764297",
+        "outcome": "syntax_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3194,
+        "started_at": "2026-09-08T21:38:57.307888",
+        "outcome": "composition_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3219,
+        "started_at": "2026-09-09T04:00:44.555868",
+        "outcome": "syntax_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3223,
+        "started_at": "2026-09-09T05:00:45.130048",
+        "outcome": "syntax_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3224,
+        "started_at": "2026-09-09T06:00:45.711658",
+        "outcome": "syntax_rejected",
+        "drive_record_saved": true
+      },
+      {
+        "episode_id": 3240,
+        "started_at": "2026-09-09T10:01:22.434362",
+        "outcome": "composition_rejected",
+        "drive_record_saved": true
+      }
+    ],
+    "outcome_counts": {
+      "no_pattern": 2,
+      "syntax_rejected": 7,
+      "saved": 3,
+      "composition_rejected": 3
+    },
+    "denominator_note": "Episodes containing a distillation log, not all episodes or all memory types. Most precede current repairs."
+  },
+  "semantic_memory_examples": [
+    {
+      "id": 4559,
+      "intent": "시장 스냅샷·뉴스 헤드라인·날씨를 묶은 월드 펄스 화면을 HTML로 생성해 열기",
+      "ibl_code": "[sense:world]{op: \"snapshot\"}",
+      "source": "distilled",
+      "success_count": 0,
+      "fail_count": 0,
+      "updated_at": "2026-09-07T18:39:56.544330"
+    },
+    {
+      "id": 4561,
+      "intent": "파일을 특정 위치(공유창고)의 갤러리 폴더 안으로 이동/저장한다",
+      "ibl_code": "[others:showcase]{op: \"status\"} & [others:showcase]{op: \"basket_list\"} >> [table:union]",
+      "source": "distilled",
+      "success_count": 0,
+      "fail_count": 0,
+      "updated_at": "2026-09-07T18:51:18.486248"
+    }
+  ],
+  "pure_function_probes": {
+    "shape_variable_dependency_collision": {
+      "left": "$a = [sense:search]{query:\"x\"}; $b = [self:read]{path:\"y\"}; $a >> [table:count]",
+      "right": "$a = [sense:search]{query:\"x\"}; $b = [self:read]{path:\"y\"}; $b >> [table:count]",
+      "same_shape": true
+    },
+    "composition_gate_order_loss": {
+      "executed": "[self:read]{path:\"a\"} >> [self:write]{path:\"b\"}",
+      "candidate": "[self:write]{path:\"b\"} >> [self:read]{path:\"a\"}",
+      "accepted_by_this_gate_only": true
+    },
+    "limit": "Pure helper calls only. No action executed, corpus changed, or complete registration pipeline tested."
+  }
+}

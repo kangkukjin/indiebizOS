@@ -226,7 +226,8 @@ def test_C13_교재도_같은_계약을_가르친다():
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     p = os.path.join(root, "data", "common_prompts", "fragments", "12_ibl_only.md")
     src = open(p, encoding="utf-8").read()
-    each_line = [ln for ln in src.splitlines() if "**고차**" in ln and "each{" in ln]
+    # 옵션/본문 표기가 바뀌어도 같은 액션의 계약을 검사한다.
+    each_line = [ln for ln in src.splitlines() if "**고차**" in ln and "[table:each]" in ln]
     assert each_line, "교재에서 each 설명을 못 찾았다"
     ln = each_line[0]
     assert "원 행에 `_ok`" not in ln, "교재가 은퇴한 _ok 감싸기 계약을 아직 가르친다"

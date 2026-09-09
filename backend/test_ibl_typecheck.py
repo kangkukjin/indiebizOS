@@ -166,5 +166,51 @@ def test_t12_return_type_of():
     assert TC.return_type_of("") == "?"
 
 
+@pytest.mark.parametrize('items,mapping,reason', [
+    ('[{other:1}]', '{파일:"file",path:"file"}', '후보'),
+    ('[{파일:"a",path:"b"}]', '{파일:"file",path:"file"}', '함께 접힙니다'),
+    ('[{파일:"a"},{path:"b"}]', '{파일:"file",path:"file"}', '함께 접힙니다'),
+    ('[{파일:"a",file:"b"}]', '{파일:"file",path:"file"}', '기존 열'),
+    ('[{파일:"a"}]', '{missing:"file"}', 'missing'),
+])
+@pytest.mark.parametrize('direct', [False, True])
+def test_rename_closed_columns_reject_missing_candidates_and_collisions(items, mapping, reason, direct):
+    code = (f'[table:rename]{{items:{items},map:{mapping}}}' if direct else
+            f'{items} >> [table:rename]{{map:{mapping}}}')
+    r = _tc(code)
+    assert not r['ok'] and len(_errors(r)) == 1, r
+    assert reason in _errors(r)[0]['message'], r
+
+
+@pytest.mark.parametrize('mapping,warn', [
+    ('{title:"name",headline:"name"}', False),
+    ('{missing:"name",headline:"name"}', True),
+    ('{title:"name",url:"name"}', True),
+    ('{title:"url",headline:"url"}', True),
+])
+def test_rename_observed_columns_never_become_certain_errors(mapping, warn):
+    r = _tc(SEARCH + f' >> [table:rename]{{map:{mapping}}}')
+    assert r['ok'] and not _errors(r), r
+    assert bool(_warnings(r)) == warn, r
+
+
+@pytest.mark.parametrize('code', [
+    '[self:read]{path:"unknown.json"} >> [table:rename]{map:{a:"out",b:"out"}}',
+    '$mapping=[self:read]{path:"map.json"}; [{a:1}] >> [table:rename]{map:$mapping}',
+    '$name="out"; [{a:1}] >> [table:rename]{map:{a:$name,b:$name}}',
+])
+def test_rename_unknown_input_or_dynamic_map_defers_to_execution(code):
+    r = _tc(code)
+    assert r['ok'] and not r['issues'] and not r.get('abstained'), r
+
+
+def test_rename_output_columns_still_catch_downstream_typo():
+    code = '[{파일:"a"}] >> [table:rename]{map:{파일:"file",path:"file"}}'
+    r = _tc(code)
+    assert r['ok'] and not r['issues'] and r['types'] == ['(1) items⟨file⟩'], r
+    r = _tc(code + ' >> [table:select]{columns:["path"]}')
+    assert not r['ok'] and all(i['at'] == 'table:select' for i in _errors(r)), r
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

@@ -8184,7 +8184,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 열/필드 이름 바꾸기(관계대수 ρ). 소스가 다른 두 통화의 join 전 키 맞추기. 형태 보존 — items 입력은 items 로.
-        target_description: 'map({옛이름: 새이름} 딕셔너리, 필수). items·table 둘 다. 없는 이름·이름 충돌=명시 에러(값 무변경·비파괴). 예: [sense:realty]{source: "molit", region: "청주"} >> [table:rename]{map: {"아파트명": "단지명"}} — 이후 join{on: "단지명"} 이 성립.'
+        target_description: 'map({옛이름: 새이름} 딕셔너리, 필수). items·table 둘 다. 같은 새 이름의 옛 이름들은 후보 집합: map:{파일:"file",path:"file"}는 입력 전체의 관측 열 중 정확히 하나를 file로 바꾼다. 후보 0개·2개 이상, 단일 옛 이름 부재, 기존 열 덮어쓰기는 명시 에러(값 무변경·비파괴). 행마다 다른 후보를 합치지 않는다. 관측 열 없는 빈 items는 판정 유보하며, 0행 table도 columns가 있으면 그 열로 판정한다. 예: [sense:realty]{source: "molit", region: "청주"} >> [table:rename]{map: {"아파트명": "단지명"}} — 이후 join{on: "단지명"} 이 성립.'
         group: transform
         router: handler
         tool: data_rename

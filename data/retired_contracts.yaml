@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: rename_all_source_names_required
+    retired: 2026-09-09
+    reason: 같은 새 이름을 가리키는 옛 이름들이 후보 집합이 되었으므로 지도 전체의 이름을 필수로 요구하던 설명을 은퇴한다.
+    instead: 입력 전체에 정확히 한 후보가 있어야 한다. 후보 0개·2개 이상, 단일 이름 부재·기존 열 덮어쓰기는 오류이며 관측 열이 없으면 판정을 유보한다.
+    phrases:
+      - '없는 이름·이름 충돌=명시 에러(값 무변경·비파괴)'
+      - '없는 이름·충돌=명시 에러, 값 무변경'
   - id: projection_numeric_exception
     retired: 2026-09-09
     reason: 복사에서 숫자 문자열을 바꾸고 투영에서만 명시 변환을 요구하던 자리별 차이를 없앴다.

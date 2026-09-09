@@ -117,6 +117,8 @@ flow:
 
 `returns: items|scalar|effect` 인 생산자(낱말)는 선언이 이미 충분하다 — 열은 카탈로그에서.
 
+**2026-09-09 후보 지도 정합 보완**: `columns: rename`의 `columns_param`은 같은 출력 이름별 후보 집합으로 검사한다. `reads_fields`에서 지도 키를 개별 필수 열로 중복 검사하지 않는다. 예를 들어 `[{파일:"a.txt"}] >> [table:rename]{map:{파일:"file",path:"file"}}`은 `items⟨file⟩`이며 경고도 없다. 후보 0개·2개 이상, 단일 옛 이름 부재·기존 열 충돌은 닫힌 열에서 error, 카탈로그 관측 열에서 warning이다. 열 미상·동적 지도는 기권한다. 직접 items의 열은 첫 행이 아니라 모든 dict 행의 합집합이며, 관측 열 없는 빈 items는 부재를 단정하지 않는다. 런타임의 판정 범위도 입력 전체다(행별 후보 대체 없음). 액션 이름 분기는 추가하지 않는다. 회귀는 `backend/test_ibl_typecheck.py`와 `backend/test_language_limits_2026_09_09.py`의 검수·실행 조합을 함께 본다.
+
 ### 2-3. 추론기 `backend/ibl/ibl_typecheck.py` (ibl 층, `check_backend_layers.LAYERS` 등록)
 입력 = `parse_with_vars(code)` 의 (steps, variables) — **파싱을 다시 하지 않는다**(`_execute_ibl_unified_impl` 은 이미 두 번 파싱한다: `_pre_parse`·`parse_ibl`; 검사기는 그 결과를 받는다).
 

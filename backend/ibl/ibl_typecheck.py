@@ -489,6 +489,34 @@ class _Checker:
                         hint="열 이름이 확실치 않으면 check: true 로 types 를 보고, 필요하면 앞에 [table:select] 로 열을 확정하세요.",
                         expected=t.cols, got=field)
 
+    def _type_rename(self, mapping: Any, inp: T, idx: int, at: str) -> T:
+        """columns:rename 선언의 후보 지도. 확정 열만 오류, 관측 열은 경고, 미상은 기권."""
+        if (not isinstance(mapping, dict) or inp.cols is None
+                or any(_dynamic(k) or _dynamic(v) for k, v in mapping.items())):
+            return T("items")
+        mapping = {str(k): str(v) for k, v in mapping.items()}
+        groups: Dict[str, List[str]] = {}
+        for old, new in mapping.items():
+            groups.setdefault(new, []).append(old)
+        severity = "error" if inp.closed else "warning"
+        for new, olds in groups.items():
+            if len(olds) == 1:
+                self._check_field(inp, olds[0], idx, at)
+                continue
+            present = [old for old in olds if old in inp.cols]
+            if len(present) == 1:
+                continue                                  # 나머지 후보의 부재는 허용된 입력이다.
+            reason = (f"후보 {olds} 가운데 열이 하나도 없습니다" if not present else
+                      f"열 {present} 이(가) 함께 접힙니다 — 한 이름에 두 열을 접으면 값이 소실됩니다")
+            self._issue(severity, idx, at, f"새 이름 '{new}'의 {reason} — 입력 열 {describe(inp)}.",
+                        expected="후보 가운데 정확히 한 열", got=present)
+        # 후보 밖의 기존 열을 덮는 것도 충돌이다. 교환(A↔B)은 원자적으로 허용한다.
+        clashes = [new for old, new in mapping.items()
+                   if old in inp.cols and new in inp.cols and new not in mapping]
+        if clashes:
+            self._issue(severity, idx, at, f"새 이름 {clashes} 이(가) 기존 열과 겹칩니다 — 덮어쓰면 값이 소실됩니다.")
+        return T("items", [mapping.get(c, c) for c in inp.cols], closed=inp.closed)
+
     @staticmethod
     def _fields_in(value: Any) -> List[str]:
         """reads_fields 가 가리키는 param 값에서 열 이름 후보 — 문자열 where 의 머리, dict 의 field/키, 목록의 각 항."""
@@ -603,9 +631,9 @@ class _Checker:
                 return T("items", cols if isinstance(cols, list) else None,
                          closed=isinstance(cols, list)), "table literal"
             if isinstance(v, list):
-                first = v[0] if v else None
-                cols = list(first.keys()) if isinstance(first, dict) else None
-                return T("items", cols, closed=bool(cols)), "items literal"
+                # 후보 열의 존재는 첫 행이 아니라 입력 전체에서 본다(런타임 rename과 같은 범위).
+                cols = list(dict.fromkeys(k for row in v if isinstance(row, dict) for k in row))
+                return T("items", cols, closed=bool(cols) and all(isinstance(row, dict) for row in v)), "items literal"
             return unknown(), "items param"
         return prev, "pipe"
 
@@ -660,6 +688,8 @@ class _Checker:
         for pname in (flow.get("reads_fields") or []):
             if pname in flow.get('projection_params', []) and isinstance(params.get(pname), dict):
                 continue
+            if columns == "rename" and pname == cparam:
+                continue                                  # 후보 지도는 아래 열 흐름에서 집합으로 한 번 검사한다.
             if pname in params and base_for_fields is not None:
                 for f in self._fields_in(params[pname]):
                     self._check_field(base_for_fields, f, idx, at)
@@ -714,13 +744,7 @@ class _Checker:
                 return T("items", [str(c) for c in lit], closed=True)
             return T("items")                                # 동적 columns — 미상
         if columns == "rename":
-            if isinstance(lit, dict) and in_cols is not None and not any(_dynamic(k) or _dynamic(v) for k, v in lit.items()):
-                base = T("items", in_cols, in_closed)
-                for k in lit.keys():
-                    self._check_field(base, str(k), idx, at)
-                new = [str(lit.get(c, c)) for c in in_cols]
-                return T("items", new, closed=in_closed)
-            return T("items", None)
+            return self._type_rename(lit, T("items", in_cols, in_closed), idx, at)
         if columns == "add":
             if isinstance(lit, dict) and in_cols is not None:
                 return T("items", list(in_cols) + [str(k) for k in lit.keys()], closed=in_closed)

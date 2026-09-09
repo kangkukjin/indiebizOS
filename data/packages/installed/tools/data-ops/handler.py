@@ -525,14 +525,17 @@ def _op_rename(prev, params):
     """열/필드 이름 바꾸기(관계대수 ρ). map={옛이름: 새이름}. table·items 둘 다.
 
     소스가 다른 두 통화를 join 으로 묶기 전 키 이름을 맞추는 용도(2026-08-16
-    molit '아파트명' vs naver 'title' 실측에서 어휘화). 없는 이름을 조용히 넘기거나
-    기존 열을 덮어쓰면 침묵 소실이라 전부 명시 에러. 교환(A↔B)은 원자적으로 허용.
+    molit '아파트명' vs naver 'title' 실측에서 어휘화). 같은 새 이름의 옛 이름들은 후보 집합이며,
+    입력 전체에서 정확히 하나가 관측되어야 한다(행마다 다른 후보를 합치는 기능은 아니다).
+    후보 0개·2개 이상, 단일 옛 이름 부재, 기존 열 덮어쓰기는 명시 에러.
+    관측 열이 없으면 판정을 유보한다. 교환(A↔B)은 원자적으로 허용.
     """
     m = params.get("map") or params.get("columns")
     if not isinstance(m, dict) or not m:
         return {"success": False, "error": (
             'rename: map({옛이름: 새이름})이 필요합니다. '
-            '예: [table:rename]{map: {"아파트명": "단지명"}}')}
+            '예: [table:rename]{map: {"아파트명": "단지명"}}. '
+            '같은 새 이름의 옛 이름들은 후보 집합이며 입력 전체에 정확히 하나 있어야 합니다.')}
     m = {str(k): str(v) for k, v in m.items()}
 
     # 형태 보존(언어 개정 2026-09-06): 표 경로는 명시 표형 입력에만.

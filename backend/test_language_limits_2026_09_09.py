@@ -101,5 +101,38 @@ def test_rename_two_present_columns_to_one_name_still_refused_and_single_absent_
     assert not r["success"] and "없는열" in r["error"]
 
 
+@pytest.mark.parametrize('code', [
+    '[{파일:"a.txt"}] >> [table:rename]{map:{파일:"file",path:"file"}}',
+    '[table:rename]{items:[{파일:"a.txt"}],map:{파일:"file",path:"file"}}',
+    '[{파일:"a.txt",extra:1}] >> [table:select]{columns:["파일"]} '
+    '>> [table:rename]{columns:{파일:"file",path:"file"}}',
+    '$q=[{path:"a.txt"}]; ($q >> [table:filter]{where:"path eq missing"} '
+    '>> [table:rename]{map:{파일:"file",path:"file"}}) '
+    '?? ($q >> [table:rename]{map:{파일:"file",path:"file"}})',
+])
+def test_rename_candidate_compositions_validate_and_execute(code):
+    from api_ibl import validate_code
+    code += ' >> [table:select]{columns:["file"]}'
+    checked = validate_code(code)
+    assert checked['valid'] and checked['typecheck']['ok'], checked
+    assert not checked['typecheck']['issues'], checked
+    r = execute(code)
+    assert r['success'], r
+    assert final(r)['items'] == [{'file': 'a.txt'}]
+
+
+@pytest.mark.parametrize('head', ['[] >> ', '[{}] >> '])
+def test_rename_unobserved_candidate_columns_do_not_reject_empty_input(head):
+    r = execute(head + '[table:rename]{map:{파일:"file",path:"file"}}')
+    assert r['success'], r
+    assert final(r)['items'] == ([] if head.startswith('[]') else [{}])
+
+
+def test_rename_atomic_swap_keeps_both_values():
+    r = execute('[{a:1,b:2}] >> [table:rename]{map:{a:"b",b:"a"}}')
+    assert r['success'], r
+    assert final(r)['items'] == [{'b': 1, 'a': 2}]
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

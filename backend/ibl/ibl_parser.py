@@ -236,6 +236,20 @@ def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None,
             #   뿐이라 프로그램이 부자연스러웠다. 세그먼트가 통짜 변수 참조면 `_var_emit`
             #   스텝으로 탈당의 — 실행기(ibl_engine)가 저장된 결과를 통화로 방출한다.
             #   미할당은 파싱 시점 정직 에러(실행까지 끌고 가지 않는다).
+            # ★값 구성 리터럴을 파이프 머리로 (언어 개정 2026-09-09, 사용자 판정): `[{…}] >> [self:write]{…}`.
+            #   종전엔 `$x = [{…}]` 로 할당한 뒤 `$x >>` 로만 흘릴 수 있었다(노출 실험 v3 hidden 실측 —
+            #   `[{path: "${최신.items.0.path}", …}] >> [self:write]` 가 "파싱 실패"). 값 구성은 이미 식 할당의
+            #   것이므로 이름 없는 식 할당 step 으로 파싱하고, 실행기가 그 값을 통화로 방출한다(_as_currency).
+            if idx == 0 and len(segments) > 1 and _is_value_literal_head(_st0):   # 머리 = 뒤에 파이프가 있을 때만(홀로는 뜻 없음)
+                parsed = {"_assign": True, "name": None, "expr": _st0, "_literal_head": True}
+                _lrefs = set(_var_names(_st0))
+                _lvars = {n: i for n, i in variables.items() if n in _lrefs}
+                if _lvars:
+                    parsed["_vars"] = _lvars
+                if _stmt_idx > 0:
+                    parsed["_seq_boundary"] = True
+                all_steps.append(parsed)
+                continue
             parsed = _var_emit_step(_st0, variables, "파이프 머리", free_vars_ok)
             if parsed is not None:
                 if _stmt_idx > 0 and idx == 0:
@@ -282,6 +296,17 @@ def parse_with_vars(code: str, preset_vars: "Optional[Dict[str, int]]" = None,
 
     _bind_fn_defs(all_steps)
     return all_steps, variables
+
+
+_VALUE_LITERAL_HEAD_RE = re.compile(r'^(?:\{|\[\s*(?:[\[\{"\'\]\-\d$]|true\b|false\b|null\b))')
+
+
+def _is_value_literal_head(text: str) -> bool:
+    """세그먼트가 **값 구성 리터럴**(목록·객체)인가 — `[node:action]`·블록 헤더(`[if:`·`[try]`)와 갈린다.
+
+    액션·블록은 `[` 뒤에 식별자와 `:` 가 온다(`[try]` 는 식별자와 `]`). 값 구성은 `[` 뒤에 `{`·`[`·따옴표·
+    숫자·`$변수`·true/false/null 이 오거나 `{` 로 시작한다. 뜻은 식 할당의 우변과 같다(ibl.md 값 구성)."""
+    return bool(_VALUE_LITERAL_HEAD_RE.match((text or "").strip()))
 
 
 def _bind_fn_defs(all_steps: List[Dict]) -> None:
@@ -678,9 +703,16 @@ def _parse_group(text: str, variables: Optional[Dict] = None,
     # ?? 연산자 확인 (fallback)
     if len(fallback_parts) > 1:
         chain = []
+        merged_fb_vars: Dict[str, int] = {}
         for part in fallback_parts:
             # 괄호 파이프 가지 (프로그램급 IBL M3): A ?? (B >> C) — 병렬 괄호 분기와 같은 규칙·같은 파서.
-            step = _parse_paren_branch(part.strip())
+            # ★언어 개정 2026-09-09(사용자 판정 "남긴 언어 한계 셋도 다 고쳐"): 괄호 가지의 **머리**에 변수가
+            #   설 수 있다 — `($q >> [table:filter]{…}) ?? ($q >> [table:take]{n: 1})`. 09-01 병렬 개정과 같은
+            #   자리의 비대칭이 폴백 자리에 남아 있었다(노출 실험 v3 hidden 실측). 가지는 여전히 *시도*다:
+            #   변수 뒤에 액션이 이어져야 한다 — 변수 홀로는 시도가 아니므로 종전 규칙대로 거절한다.
+            step = _parse_paren_branch(part.strip(), variables, free_ok, allow_vars=True)
+            if step is not None and step.get("_var_emit"):
+                step = None                                   # `($q)` = 변수 홀로 — 아래 규칙 거절문으로
             if step is None:
                 step = _parse_step(part.strip())
             if step is None:
@@ -692,7 +724,8 @@ def _parse_group(text: str, variables: Optional[Dict] = None,
                 #   규칙으로 적으면 경계가 선언이 아니라 **도출**이 되고, 새 자리의 답이
                 #   저절로 따라온다. 그리고 거절은 더 싼 처방을 가리켜야 한다.
                 from common.ibl_vars import REF_RE as _VREF2, split_ref as _vsplit2
-                _m2 = _VREF2.fullmatch(_p)
+                _p_bare = _p[1:-1].strip() if _p.startswith('(') and _p.endswith(')') else _p   # `($q)` 도 변수 홀로
+                _m2 = _VREF2.fullmatch(_p_bare)
                 if _m2:
                     _n2 = _vsplit2(_m2)[0]
                     raise IBLSyntaxError(
@@ -702,8 +735,12 @@ def _parse_group(text: str, variables: Optional[Dict] = None,
                         f"이 연산자의 값인데, 이미 값이 된 변수끼리는 둘 다 치른 뒤라 아낄 것이 "
                         f"없습니다. 폴백은 값을 **만들 때** 거세요: `${_n2} = [액션] ?? [액션]`.")
                 raise IBLSyntaxError(f"fallback 요소 파싱 실패: {_p}")
+            merged_fb_vars.update(step.pop("_vars", None) or {})
             chain.append(step)
-        return {"_fallback_chain": chain}
+        out_fb: Dict = {"_fallback_chain": chain}
+        if merged_fb_vars:
+            out_fb["_vars"] = merged_fb_vars                  # 병렬과 같은 규약 — 컨테이너가 대표로 든다
+        return out_fb
 
     # 일반 단일 step
     step = _parse_step(text)

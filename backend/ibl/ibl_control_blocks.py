@@ -746,7 +746,7 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
             raise ValueError(f"알 수 없는 이름 {unknown} — 문자열이면 따옴표로, 변수면 $ 를 붙이세요.")
         value = eval_expr(code, {}, scope)
     except Exception as e:
-        return {"success": False, "error": f"${name} = {expr}: {type(e).__name__ if not isinstance(e, ValueError) else '식 오류'} {e}",
+        return {"success": False, "error": f"{('$' + str(name)) if name else '값 구성'} = {expr}: {type(e).__name__ if not isinstance(e, ValueError) else '식 오류'} {e}",
                 "assigned": name}
     if isinstance(value, float) and value.is_integer() and "/" not in expr:
         value = int(value)

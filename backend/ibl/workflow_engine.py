@@ -657,7 +657,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
             # Fallback 실행
             try:
                 result, fallback_log = _execute_fallback(step["_fallback_chain"], project_path,
-                                                         prev_result, agent_id=agent_id)
+                                                         prev_result, agent_id=agent_id,
+                                                         var_values=step.get("_var_values"))
             except Exception as e:
                 results.append({
                     "step": i + 1, "type": "fallback",

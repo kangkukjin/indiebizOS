@@ -708,7 +708,11 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         return _execute_repeat(tool_input, project_path, agent_id)
     if tool_input.get("_assign"):
         from ibl_control_blocks import _execute_assign
-        return _execute_assign(tool_input, project_path, agent_id)
+        _asg = _execute_assign(tool_input, project_path, agent_id)
+        if tool_input.get("_literal_head") and isinstance(_asg, dict) and _asg.get("success", True):
+            # 값 구성 리터럴 파이프 머리(언어 개정 2026-09-09) — 이름에 묶지 않고 값을 곧장 통화로
+            return _as_currency(_asg.get("value"))
+        return _asg
     if tool_input.get("_var_emit"):
         # `$변수 >> [액션]` 파이프 머리 (언어 개정 2026-08-27, 사용자 판정) — 변수의 저장
         # 결과를 통화로 방출. 값은 실행기가 _vars 로 실어 준 _var_values(원 step 결과

@@ -491,6 +491,36 @@ def _op_select(prev, params):
     return _no_currency_error("select", prev)
 
 
+def _resolve_rename_candidates(m: dict, observed: set):
+    """같은 새 이름을 가리키는 옛 이름들 = **후보 집합**(언어 개정 2026-09-09, 사용자 판정).
+
+    `map: {파일: "file", path: "file", 줄번호: "line", lineno: "line"}` 은 "이 중 있는 것을 file 로" 다 —
+    소스마다 다른 열 이름을 한 지도로 받는 자연스러운 문장인데, 종전엔 새 이름 겹침으로 통째 거절했다
+    (노출 실험 v3 hidden 실측 2건). 규약: 후보 집합은 실물이 **정확히 하나**여야 한다 — 0개면 정직 거절(어느
+    후보도 없다), 2개 이상이면 종전대로 겹침 거절(한 이름에 두 열을 접으면 값이 소실). 관측이 없으면(0행)
+    판정하지 않고 지도를 그대로 둔다(B28-1: 증거의 부재는 부재의 증거가 아니다). 단일 옛 이름은 종전 규칙."""
+    groups: dict = {}
+    for old, new in m.items():
+        groups.setdefault(new, []).append(old)
+    out = dict(m)
+    for new, olds in groups.items():
+        if len(olds) < 2:
+            continue
+        if not observed:
+            continue
+        present = [o for o in olds if o in observed]
+        if not present:
+            return m, (f"rename: 새 이름 '{new}' 의 후보 {olds} 가운데 실제 열이 하나도 없습니다. "
+                       f"실제 열: {sorted(observed)[:12]}")
+        if len(present) > 1:
+            return m, (f"rename: 새 이름 '{new}' 에 실제 열 {present} 이(가) 함께 접힙니다 — "
+                       f"한 이름에 두 열을 접으면 값이 소실됩니다.")
+        for o in olds:
+            if o != present[0]:   # vj-ok: 열 이름(옛 이름) 비교 — 값 판정이 아니다
+                out.pop(o, None)
+    return out, None
+
+
 def _op_rename(prev, params):
     """열/필드 이름 바꾸기(관계대수 ρ). map={옛이름: 새이름}. table·items 둘 다.
 
@@ -504,15 +534,14 @@ def _op_rename(prev, params):
             'rename: map({옛이름: 새이름})이 필요합니다. '
             '예: [table:rename]{map: {"아파트명": "단지명"}}')}
     m = {str(k): str(v) for k, v in m.items()}
-    targets = list(m.values())
-    if len(set(targets)) != len(targets):
-        return {"success": False,
-                "error": f"rename: 새 이름이 서로 겹칩니다: {sorted(targets)} — 한 이름에 두 열을 접으면 값이 소실됩니다."}
 
     # 형태 보존(언어 개정 2026-09-06): 표 경로는 명시 표형 입력에만.
     table, env = _get_table(prev) if _explicit_table(prev) else (None, None)
     if table is not None:
         src_cols = [str(c) for c in (table.get("columns") or [])]
+        m, _why = _resolve_rename_candidates(m, _observed_fields(columns=src_cols))
+        if _why:
+            return {"success": False, "error": _why}
         # 부재 판정은 판정기에게 (B28-1) — 관측이 0이면 부재를 주장하지 않는다
         missing = _absent_fields(list(m), _observed_fields(columns=src_cols))
         if missing:
@@ -528,6 +557,9 @@ def _op_rename(prev, params):
     recs, env = _get_items(prev)
     if recs is not None:
         dict_recs = [r for r in recs if isinstance(r, dict)]
+        m, _why = _resolve_rename_candidates(m, _observed_fields(rows=dict_recs))
+        if _why:
+            return {"success": False, "error": _why}
         # 부재 판정은 판정기에게 (B28-1) — 빈손이면 형제 8개 verb 처럼 0행으로 흘려보낸다
         missing = _absent_fields(list(m), _observed_fields(rows=dict_recs))
         if missing:

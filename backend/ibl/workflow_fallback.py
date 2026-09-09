@@ -8,7 +8,7 @@ import time
 
 
 def _execute_fallback(chain: list, project_path: str, prev_result: str,
-                      agent_id: str = None) -> tuple:
+                      agent_id: str = None, var_values: dict = None) -> tuple:
     """
     Fallback 실행 - 첫 번째 성공하는 액션까지 순차 시도 (Phase 9)
 
@@ -40,7 +40,14 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         try:
             if step.get("_branch_steps"):
                 # 괄호 파이프 가지 (M3): A ?? (B >> C) — 가지 안을 파이프로 돌려 final_result 를 가지의 결과로.
-                env = execute_pipeline(list(step["_branch_steps"]), project_path,
+                # 변수 머리(`($q >> …)`, 언어 개정 2026-09-09)는 병렬과 같이 값을 사본에 싣는다.
+                subs = []
+                for sub in step["_branch_steps"]:
+                    ti_sub = dict(sub)
+                    if ti_sub.get("_var_emit") and var_values:
+                        ti_sub["_var_values"] = {**var_values, **(ti_sub.get("_var_values") or {})}
+                    subs.append(ti_sub)
+                env = execute_pipeline(subs, project_path,
                                        context={"_prev_result": prev_result}, agent_id=agent_id)
                 if isinstance(env, dict) and not env.get("success", True):
                     result = {"error": f"괄호 가지 실패: {env.get('error')}", "_branch_envelope": env.get("results")}

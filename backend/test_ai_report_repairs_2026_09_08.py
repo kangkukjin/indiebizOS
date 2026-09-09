@@ -43,9 +43,11 @@ def test_parenthesized_free_slot_in_function_and_missing_variable():
     assert parse('[def:끝둘]{($목록 >> [table:take]{n:-2}) & $다른 >> [table:union]}')
     with pytest.raises(IBLSyntaxError, match='할당되지'):
         parse('($미할당 >> [table:take]{n:1}) & [self:time]')
-    # 폴백은 시도를 받는 자리라는 종전 계약 유지.
+    # 폴백은 시도를 받는 자리 — 언어 개정 2026-09-09 로 괄호 가지의 **변수 머리 파이프**는 시도다(허용),
+    # 변수 홀로는 종전대로 시도가 아니다(거절). 정본 test_language_limits_2026_09_09.
+    assert parse('$x = [self:time]; [self:time] ?? ($x >> [table:take]{n:1})')
     with pytest.raises(IBLSyntaxError):
-        parse('$x = [self:time]; [self:time] ?? ($x >> [table:take]{n:1})')
+        parse('$x = [self:time]; [self:time] ?? ($x)')
 
 
 @pytest.mark.parametrize('code', [

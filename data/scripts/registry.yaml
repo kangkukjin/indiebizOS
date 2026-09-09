@@ -36,12 +36,17 @@ github저장소메타:
   description: '등록된 목소리로 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts
     또는 texts_file(이름→원고 객체를 담은 JSON 경로), voice(키·이름·별칭, 기본=원장 voices.json의 default),
     gpu(기본 T4), out_dir(texts·texts_file 모드의 출력 폴더, 기본 outputs/narration), force(기존
-    wav 재생성), speed(기본 1.0x). 입력 우선순위는 lecture_id > texts > texts_file. lecture_id
-    모드는 강의 노트를 읽어 강의폴더/narration에 저장한다(out_dir 미사용). 실음성 인사말을 붙일 때는 원고추출 결과를 texts_file로
-    받고 out_dir를 강의폴더/narration_raw로 지정한 뒤 인사말붙이기를 실행한다.'
+    wav 재생성), speed(기본 1.0x), chunk(기본 true — 2026-09-09 표준: 원고를 문장 단위(70자 상한 묶음)로
+    따로 굽고 0.35초 숨으로 접합, 장 끝 0.40초 여운. 긴 텍스트 통짜 굽기가 문장 끝을 뭉개는 원인이라 호출 단위를 바꾼 것. false
+    면 옛 통짜), chunk_max_chars·chunk_gap·chunk_tail(조각 상한·숨·여운). 입력 우선순위는 lecture_id
+    > texts > texts_file. lecture_id 모드는 강의 노트를 읽어 강의폴더/narration에 저장한다(out_dir 미사용).
+    실음성 인사말을 붙일 때는 원고추출 결과를 texts_file로 받고 out_dir를 강의폴더/narration_raw로 지정한 뒤 인사말붙이기를
+    실행한다. batch(기본 4 — 2026-09-10: 참조 음성 프롬프트는 세션당 1회, 조각은 batch 개씩 한 호출; OOM 이면 반으로).
+    진행은 stderr 로 흘러 background 실행 시 status 의 progress 에 실시간으로 보인다. 예산=글자 수×실측 0.38초/자×1.5
+    캡, 실제 중단 기준은 진행 무소식 600초. 회수는 out.tar 하나, 회수·정지 앞에 세션 토큰 갱신(1시간 만료 함정). 긴 덱은 background:true 로.'
   file: 나레이션생성.py
   interpreter: python
-  registered_at: '2026-08-22T03:03:36'
+  registered_at: '2026-09-10T00:00:53'
   timeout: 2400
 나레이션원고추출:
   description: '강의 노트에서 시작·끝 인사말을 뺀 본문 원고를 JSON으로 저장 — args: lecture_id(필수), out(저장

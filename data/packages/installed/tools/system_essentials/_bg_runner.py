@@ -14,6 +14,9 @@ def _write(path, d):
     os.replace(tmp, path)
 
 
+LIVE_MARK = "--- stderr (진행, 실시간) ---\n"
+
+
 def main():
     job_path = Path(sys.argv[1])
     job = json.loads(job_path.read_text(encoding="utf-8"))
@@ -21,20 +24,40 @@ def main():
     _write(job_path, job)
     started = time.time()
     timed_out = False
+    log_path = Path(job["log"])
+    # stderr 는 로그 파일에 **실시간**으로 흘린다(2026-09-10). 종전엔 capture_output 이 둘 다 파이프에
+    # 가둬 끝날 때 한 번에 썼고, 그래서 status 는 40분 동안 'running' 밖에 말할 게 없었다.
+    # stdout 은 통화(JSON) 자리라 그대로 잡아 둔다. 스크립트가 진행을 말하려면 stderr 에 쓰면 된다.
     try:
-        proc = subprocess.run([job["interpreter"], job["script"]], input=job.get("stdin"),
-                              capture_output=True, text=True, timeout=job.get("timeout") or 300,
-                              cwd=str(Path(job["script"]).parent))
-        code, out, err = proc.returncode, proc.stdout or "", proc.stderr or ""
-    except subprocess.TimeoutExpired as te:
-        code, timed_out = -1, True
-        out = te.stdout.decode("utf-8", "replace") if isinstance(te.stdout, bytes) else (te.stdout or "")
-        err = te.stderr.decode("utf-8", "replace") if isinstance(te.stderr, bytes) else (te.stderr or "")
+        log_fh = open(log_path, "w", encoding="utf-8", buffering=1)
+        log_fh.write(f"# {job['job_id']} running since {job.get('started_at')}\n{LIVE_MARK}")
+    except OSError:
+        log_fh = None
+    try:
+        proc = subprocess.Popen([job["interpreter"], job["script"]],
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                                stderr=(log_fh if log_fh else subprocess.PIPE), text=True,
+                                cwd=str(Path(job["script"]).parent))
+        try:
+            out, err = proc.communicate(input=job.get("stdin"), timeout=job.get("timeout") or 300)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+            out, err = proc.communicate()
+            timed_out = True
+        code = -1 if timed_out else proc.returncode
+        out, err = out or "", err or ""
     except OSError as e:
         code, out, err = -2, "", str(e)
+    if log_fh:
+        log_fh.close()
+        try:
+            live = log_path.read_text(encoding="utf-8")
+            err = live.split(LIVE_MARK, 1)[1] if LIVE_MARK in live else ""
+        except OSError:
+            pass
     dur = int((time.time() - started) * 1000)
     try:
-        Path(job["log"]).write_text(f"# {job['job_id']} exit={code} {dur}ms\n--- stdout ---\n{out}\n--- stderr ---\n{err}", encoding="utf-8")
+        log_path.write_text(f"# {job['job_id']} exit={code} {dur}ms\n--- stdout ---\n{out}\n--- stderr ---\n{err}", encoding="utf-8")
     except OSError:
         pass
     ok = code == 0 and not timed_out

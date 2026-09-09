@@ -150,4 +150,7 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
 ```
 - 러너는 별도 프로세스(`_bg_runner.py`)라 백엔드 리로드·워커 교체에 살아남는다. `running` 인데 러너 pid 가 죽었으면 `lost` 로 정직 표시.
 - 상태 파일 `data/script_runs/jobs/<job_id>.json`, 로그 `data/script_runs/<job_id>.log`.
+- **진행 가시성(2026-09-10)**: 러너가 스크립트의 **stderr 를 로그에 실시간**으로 흘리고, `status` 는 running
+  행에 `progress`(마지막 줄들)를 싣는다. 긴 스크립트는 진행을 stderr 에 쓰면 된다(stdout 은 통화 자리).
+  실사고: 55분짜리 나레이션 생성이 26라운드 내내 'running' 만 돌려줬다 — 로그가 끝난 뒤에야 생겼기 때문.
 - wait 상한 240초(초과 요청은 신고 후 상한). 더 긴 작업은 status 를 다시 부르거나 트리거에 맡긴다.

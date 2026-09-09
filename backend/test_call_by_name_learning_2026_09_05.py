@@ -98,10 +98,10 @@ def test_g4_fn_call_counts_as_recall_used(monkeypatch, capsys):
     _, recorded = _arm(monkeypatch)
     # 베낀 주행: 종전 규약대로 쌍 겹침 = 사용(귀속) — 불변
     assert rag.record_recall_outcome(RECALLED, 0.9, _calls(COPY_RUN)) is True
-    # 부른 주행: 쌍은 안 겹쳐도 [fn:] 호출이 곧 사용
+    # 부른 주행은 실행 자리에서 이미 기록 — 턴 집계로 중복 기록하지 않는다.
     recorded.clear()
-    assert rag.record_recall_outcome(RECALLED, 0.9, _calls(CALL_PLUS_RUN)) is True
-    assert recorded and recorded[-1] == (RECALLED, True)
+    assert rag.record_recall_outcome(RECALLED, 0.9, _calls(CALL_PLUS_RUN)) is False
+    assert recorded == []
     assert "함수 호출" in capsys.readouterr().out
 
 
@@ -109,12 +109,11 @@ def test_g4_named_phrase_call_is_attributed_without_recall(monkeypatch, capsys):
     import ibl_usage_rag as rag
     _, recorded = _arm(monkeypatch)
     n = rag._record_phrase_recall_outcome(CALL_PLUS_RUN, True, _calls(CALL_PLUS_RUN))
-    assert n == 1 and recorded == [(RECALLED, True)]
-    assert "[fn:팁영상수집]" in capsys.readouterr().out
-    # 실패한 주행은 실패로 귀속
+    assert n == 0 and recorded == []
+    # 뒤의 무관한 문장이 실패해도 호출 자리의 판정을 바꾸지 않는다.
     recorded.clear()
     rag._record_phrase_recall_outcome(CALL_PLUS_RUN, False, _calls(CALL_PLUS_RUN))
-    assert recorded == [(RECALLED, False)]
+    assert recorded == []
 
 
 def test_g4_distill_prompt_teaches_calls_by_name():

@@ -438,8 +438,8 @@ def _preview_boundary(result, tool_input: dict):
 def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint=None) -> None:
     """턴 범위 변수(언어 개정 2026-09-06) — 실행 결과의 산 `$변수` 를 턴 저장소에 합치고 봉투에 정직하게 말한다.
 
-    엔진이 `_want_live_vars` 로 실어 준 내부 키 `_live_vars` 를 떼어 쓴다(파이프 경로). 단일 step 할당
-    (`$x = [sense:…]` 한 문장)은 엔진을 거치지 않으므로 여기서 봉투 원형을 그 이름의 값으로 삼는다.
+    엔진이 `_want_live_vars` 로 실어 준 내부 키 `_live_vars` 를 떼어 쓴다.
+    단일 step 할당도 같은 엔진을 지나므로 산문·목록·스칼라까지 원래 값으로 저장된다.
     key 가 없으면(task_id 없는 직접 표면) 저장하지 않는다 — 다른 턴으로 새는 침묵 폴백 금지."""
     if not isinstance(result, dict):
         return
@@ -458,9 +458,6 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
                      keep=int(_pol["shadow_results"]), max_chars=int(_pol["shadow_max_chars"]))
     except Exception:
         pass
-    if live is None and isinstance(parsed, list) and len(parsed) == 1 and isinstance(parsed[0], dict) \
-            and parsed[0].get("_assign_name") and result.get("success") is not False and "error" not in result:
-        live = {parsed[0]["_assign_name"]: json.dumps(result, ensure_ascii=False)}
     if not key:
         return
     try:
@@ -710,8 +707,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
 
         # 실행 분기 결정
         # 1) 병렬(_parallel) 또는 fallback(_fallback_chain) → workflow_engine
-        # 2) 파이프라인(2개 이상 step) → workflow_engine
-        # 3) 단일 step → 직접 execute_ibl
+        # 2) 파이프라인 또는 할당(단일 step 포함) → workflow_engine
+        # 3) 할당 없는 단일 step → 직접 execute_ibl
         has_special = any(
             s.get("_parallel") or "_fallback_chain" in s
             for s in parsed
@@ -798,7 +795,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                                "traceback": build_tb(_type_err, "binding")},
                               ensure_ascii=False, indent=2)
 
-        if len(parsed) == 1 and not has_special:
+        if len(parsed) == 1 and not has_special and not parsed[0].get("_assign_name"):
             # 단일 step 직접 실행
             step = parsed[0]
             # ★진행 신고의 소유권도 여기서 집는다 (2026-09-01).

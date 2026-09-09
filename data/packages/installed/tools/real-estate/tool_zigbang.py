@@ -5,7 +5,7 @@
 
 비공식 내부 API(apis.zigbang.com). 키 불필요. 한국 IP에서 차단 약함.
 흐름: 지명→좌표(/v2/search, Nominatim 폴백) → geohash5 → 리스트(마커 id) →
-거리 선필터 → 상세(/v3/items/{id}) 병렬조회 → records 통화.
+거리 선필터 → 상세(/v3/items/{id}) 병렬조회 → items 통화.
 
 리스트 개편(2026-08-10 실측): 옛 `/v2/items/{cat}` 이 404 로 은퇴 →
 `/house/property/v1/items/{villas|onerooms|officetels}` (경로가 복수형).
@@ -308,13 +308,11 @@ def get_zigbang_listings(tool_input: dict):
         rows.append(row)
     rows.sort(key=lambda r: (r["distance_m"] if r["distance_m"] is not None else 1e9))
 
-    # 단일 통화 items — 열린 dict(title·meta·summary·url·image + lat·lng·distance_m).
-    # 옛 records가 5칸으로 접던 lat/lng를 items는 그대로 노출 → 지도/차트 소비자가 직독.
+    # 상세에서 읽은 숫자·식별자도 통화에 보존한다. 화면용 필드만 고르면
+    # 보증금·면적·층이 meta 산문에 갇혀 filter·sort·재방문 대조가 불가능해진다.
+    # deposit/rent는 API 원단위인 만원(네이버의 price/rent는 원)이다.
     # map_data 봉투는 지도 위젯용으로 별도 유지(center 포함, items에서 유도 불가한 줌 기준점).
-    items_out = [{"title": r["title"], "meta": r["meta"], "summary": r["summary"],
-                  "url": r["url"], "image": r["image"],
-                  "lat": r.get("lat"), "lng": r.get("lng"),
-                  "distance_m": r.get("distance_m")} for r in rows]
+    items_out = [dict(r) for r in rows]
     lease_label = "/".join(sales_types)
     message = f"직방 '{matched or region}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건 (상세는 items)"
     return {

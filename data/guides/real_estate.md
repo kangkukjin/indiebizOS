@@ -64,10 +64,10 @@
 | `limit` | 최대 매물 수 | 30 |
 
 ### 반환 (items 통화)
-각 매물: `{title, meta, summary, url, image}`
+각 매물: `{title, meta, summary, url, image, itemId, salesType, deposit, rent, area_m2, floor, address, lat, lng, distance_m}`
 - `meta` = `전세 1억 5,000만 · 78㎡ · 2/4층 · 쓰리룸 · 평택시 동삭동 664-19 · 중심에서 2380m`
 - `url` = `https://www.zigbang.com/home/villa/items/49460021` (클릭 시 직방 매물 페이지)
-- `image` = 썸네일. `data[]`엔 lat/lng·deposit·rent·area_m2 등 원자료, `map_data`엔 지도 마커.
+- `image` = 썸네일. 원자료도 `items[]`의 같은 행에 있다. `deposit`·`rent`는 **만원**, `area_m2`는 ㎡. `map_data`는 지도 마커다. 예: `>> [table:filter]{where:"deposit >= 20000"}`. 네이버의 `price`(원)를 직방에 그대로 쓰지 않는다.
 
 ### ⚠️ source=zigbang가 약한 것
 - **아파트** — 직방은 단지 단위라 이 경로는 거부됨. 아파트 매물은 `source:"naver"`(§4), 시세는 source=molit.
@@ -231,9 +231,10 @@
 - `deposit_min`/`deposit_max`를 걸면 60건 상한이 전부 띠 안으로 채워진다 — 안 걸면 재고를 절반 이하로 과소평가. 단 보증금 기준이라 월세가 섞이니 `meta matches ^전세`를 함께.
 - 첫 방문 동네는 `deal:"rent"`로 먼저(전세 0건 ≠ 매물 없음 — 원룸 월세 시장일 수 있다). `lease:"전세"`로 좁히는 것은 그다음.
 - 좌표를 자주 비운다(진주 39건 중 16건 lat/lng=0) — 동네가 중요한 물건은 상세 페이지로. `map_data.markers`에 전량 meta가 오고 `summary`(중개사 문구)는 items에만 — 부산물은 summary에 살므로 가격대를 쪼개 전수 열람.
-- 지명 해소 함정: 행정동이 아니라 **법정동**으로, 실패하면 인접 동. 세대분리형 원룸이 "전용 84㎡"로 잡힌다 — 본문 확인.
+- 지명 해소 함정: 행정동이 아니라 **법정동**으로. `region:"전주 장동"`이 검색 첫 후보인 **완산구 색장동**으로 붙어 두 호 연속 0건이 났다(09-09 특정·수리). 지금은 주소 성분이 맞는 유일 후보인 덕진구 장동을 고른다. 불일치·동명이면 후보와 오류를 내므로 상위 시·군·구를 붙여 다시 조회한다. `조회지역`도 확인한다. 세대분리형 원룸이 "전용 84㎡"로 잡히는 경우는 본문 확인.
+- **같은 매물이 새 article ID로 재등록된다(09-09 발견)** — 재방문 델타에서 URL 대조만 하면 생존을 크게 과소평가한다(전주 2차: URL 기준 1/6 생존 vs 물건 기준 4/6). 소멸 판정 전에 **중개사·전용면적·층·가격·설명 문구**가 같은 행이 새 ID로 있는지 보고, DB에는 옛 URL을 `gone` + "→ 새 ID로 재등록" 주석으로 남긴다. 확인일(`확인 YYYYMMDD`)이 새 ID에서 갱신되므로 시장 체류 기간은 **가장 오래된 ID의 확인일**로 센다.
 
-**zigbang** — `price` 열이 없다(가격은 `meta` 안). 비수도권 다가구·빌라는 0건이 잦다(원주·울산) — 사실상 naver 단일 소스. 부산물 키워드 검색과 교차 확인용.
+**zigbang** — `price` 열은 없고 `deposit`·`rent`(**만원**)로 계산한다. 09-09 수리로 상세 숫자·면적·층·매물 ID를 `items`에도 보존한다(예전에는 `meta`에만 남음). 비수도권 다가구·빌라는 0건이 잦다(원주·울산) — naver와 교차 확인한다.
 
 **`[sense:commercial]`(상권)** — 반경 1.5km 결과는 스필될 수 있고 1만 행에서 잘린다(`truncated`). 밀도 높은 곳은 1.5km가 타임아웃 → 1.0km. 업종 집계는 `[table:groupby]{by: "업종"}`(단순 행수는 `agg` 생략 — `agg: "count"`·리스트 형은 거절) → **반드시 `sort{by:"count"}` 뒤에 `take`**. 중심 좌표·주소 확인·생활 업종 규칙은 부동산 가이드 §3-1b. `category` 파라미터는 없다(업종은 `indsLclsCd`).
 

@@ -93,12 +93,40 @@ def _api_get(path, params=None, _retried=False):
     return r.json()
 
 
+def _region_matches(keyword, address):
+    """검색은 부분 문자열을 반환하므로 주소 성분으로 재검증한다(장동 ≠ 색장동).
+
+    시·군·구·도의 약칭은 허용하되 동·읍·면·리는 정확한 이름으로 맞춘다.
+    지명 목록을 코드에 넣지 않고 API가 준 주소만 대조한다.
+    """
+    parts = str(address or "").split()
+    suffixes = ("특별자치도", "특별자치시", "특별시", "광역시", "시", "군", "구", "도")
+    terms = keyword.split()
+    if len(terms) == 1 and keyword == "".join(parts):
+        return True
+    for term in terms:
+        for i, part in enumerate(parts):
+            if term == part or any(part == term + suffix for suffix in suffixes):
+                parts = parts[i + 1:]
+                break
+        else:
+            return False
+    return bool(terms)
+
+
 def _resolve_keyword(keyword):
-    """지명/단지명 → {'mode': 'region'|'complex', ...}. 동(regions) 우선, 없으면 단지(complexes)."""
+    """지역은 주소 성분이 맞는 유일 후보만 선택. 검색 순위로 다른 동을 고르지 않는다."""
     d = _api_get("/api/search", {"keyword": keyword})
     regions = d.get("regions") or []
     if regions:
-        r0 = regions[0]
+        matches = {r["cortarNo"]: r for r in regions
+                   if _region_matches(keyword, r.get("cortarName"))}
+        if len(matches) != 1:
+            candidates = list(matches.values()) if matches else regions
+            names = ", ".join(r.get("cortarName", "") for r in candidates)
+            reason = "여러 지역과 일치합니다" if matches else "주소 성분과 정확히 일치하는 지역이 없습니다"
+            raise ValueError(f"'{keyword}'은(는) {reason}. 검색 후보: {names}. 시·군·구와 동 이름을 함께 지정하세요.")
+        r0 = next(iter(matches.values()))
         return {"mode": "region", "cortarNo": r0["cortarNo"],
                 "matched": r0.get("cortarName") or keyword,
                 "lat": r0.get("centerLat"), "lng": r0.get("centerLon")}

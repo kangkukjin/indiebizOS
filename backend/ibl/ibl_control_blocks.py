@@ -310,6 +310,7 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             st2["_fn_depth"] = depth + 1
         nested.append(st2)
     context = {"_prev_result": prev} if prev else None
+    started = _time.monotonic()
     try:
         env = execute_pipeline(nested, project_path, context=context, agent_id=agent_id)
     except Exception as e:
@@ -322,7 +323,10 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             # 이름으로 부른 관용구는 쓰인 것 — 해마의 성공/실패 귀속(상시 블록 순위·재학습의 회상 귀속)
             try:
                 from ibl_usage_db import IBLUsageDB
-                IBLUsageDB().update_success_by_code(fdef["_idiom_code"], bool(out.get("success", True)))
+                ok = bool(out.get("success", True))
+                elapsed = max(1, round((_time.monotonic() - started) * 1000)) if ok else None
+                IBLUsageDB().update_success_by_code(fdef["_idiom_code"], ok, elapsed_ms=elapsed)
+                print(f"[해마피드백:관용구] [fn:{name}] 몸 {'성공' if ok else '실패'} 기록(실행 자리)")
             except Exception:
                 pass
             if not out.get("success", True):

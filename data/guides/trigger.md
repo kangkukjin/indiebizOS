@@ -186,3 +186,8 @@ $t = [self:trigger]{op:"create", name:"morning_news", cron:"0 8 * * *", do:"…"
 
 - [[architecture_ibl_action_criteria]] — 모드 3(IBL 없음, 어드민) — 스위치 등록이 여기 해당
 - `scheduler_guide.md` — 캘린더/스케줄 규약(repeat 표·요일 코드·첫 발화 규칙)
+
+## 실측 기록 (자동 누적)
+
+> 실행 에이전트가 턴 종료 후 덧붙인다.
+- 2026-09-09 실측: `[self:trigger]{op:"disable"}`는 미러 캘린더 이벤트(`[IBL] <name>`)의 `enabled`도 함께 false로 내린다 — 재조회로 확인. 가이드는 update·delete 의 이벤트 동기화만 적고 enable/disable 은 언급이 없다.

@@ -273,7 +273,16 @@ class CognitivePipelineMixin:
             return
         self._sync_execution_gear()
         with self.turn_ai_scope():
-            yield from self._cognitive_stream_body(message, history, **kwargs)
+            from providers.base import begin_turn_token_ledger
+            begin_turn_token_ledger()  # 선택·재검토·의식 호출 비용도 같은 턴에 계상
+            from pursuit_bind import enter, leave, observe
+            _ptoken = enter(self, message, history, enabled=not kwargs.get("force_role"))
+            try:
+                for event in self._cognitive_stream_body(message, history, **kwargs):
+                    observe(event)
+                    yield event
+            finally:
+                leave(_ptoken)
 
     def _cognitive_stream_body(
         self,
@@ -329,6 +338,12 @@ class CognitivePipelineMixin:
             yield {"type": "final", "content": reset_text}
             yield {"type": "_turn_meta", "tool_calls": [], "session_reset": True}
             return
+
+        # 과제 선택·재검토는 실행 차선과 독립. 정정이면 빠른 실행도 의식을 깨운다.
+        from pursuit_bind import prepare as _p_prepare
+        execution_memory, _p_review = _p_prepare(execution_memory)
+        if _p_review and request_type != "REPAIR":
+            request_type, reflex_hint = "THINK", None
 
         # 3. 의식(THINK) / reflex·force_role 모델 스왑
         # 스왑 헬퍼는 runner-제네릭(시스템AI 전용 아님) — system_ai_core에 기거할 뿐.
@@ -407,6 +422,9 @@ class CognitivePipelineMixin:
             if not images:
                 original_provider = _switch_to_midtier(self)
 
+        from pursuit_bind import refresh_memory
+        execution_memory = refresh_memory(execution_memory)
+
         # Clarification fast-path — 의식이 정보 부족으로 확인을 요청하면 실행 스킵
         # 추론 예산은 차선에 걸린다(EXECUTE=off, THINK/REPAIR=default — 정본 model_gear.json
         # lane_reasoning). 모델·티어가 아니라 무의식 관문의 판정이 정하므로 모델 교체를 살아남는다.
@@ -425,6 +443,9 @@ class CognitivePipelineMixin:
         if _clarify_text:
             print(f"[의식] clarification fast-path: 실행 에이전트 스킵")
             _restore_provider(self, original_provider)
+            from pursuit_bind import finish as _p_finish
+            _packet = _p_finish(_clarify_text, clarification=True)
+            self._after_response_async(message, _clarify_text, tool_calls=[], **({"pursuit_packet": _packet} if _packet else {}))
             yield {"type": "text", "content": _clarify_text}
             yield {"type": "final", "content": _clarify_text}
             yield {"type": "_turn_meta", "tool_calls": [], "clarify": True}
@@ -608,9 +629,7 @@ class CognitivePipelineMixin:
         try:
             from thread_context import clear_tool_calls as _clear_tc
             _clear_tc()  # 턴 시작 — 이전 턴 잔여 이력 제거
-            # 턴 토큰 원장 개시 — 실행·평가·반성의 모든 모델 호출(스왑 포함)이 겹쳐 적힌다.
-            from providers.base import begin_turn_token_ledger
-            begin_turn_token_ledger()
+            # 턴 토큰 원장은 cognitive_stream 진입에서 이미 열었다(인지 비용 포함).
 
             # 5.4 자작 관문 원장 초기화 — 턴마다 새로 센다(EXECUTE 턴도 코드를 쓴다).
             # 키는 재규정·조향과 같은 agent_id 다. TTL 이 있어 안 걷혀도 삭지만, 턴 경계는
@@ -862,10 +881,12 @@ class CognitivePipelineMixin:
             # ★백그라운드 실행 — 증류가 스트림 종료·에피소드 END 를 붙잡지 않게
             # (ep889: 증류 꼬리 6분이 턴을 물고 있었다). 컨텍스트 동반은 래퍼가 처리.
             if not force_role:
+                from pursuit_bind import finish as _p_finish
+                _packet = _p_finish(final_content, tool_calls_log, interrupted=not bool(final_content) or bool(_error_text))
                 self._after_response_async(
                     message, final_content,
                     tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
-                    turn_tokens=turn_tokens,
+                    turn_tokens=turn_tokens, **({"pursuit_packet": _packet} if _packet else {}),
                 )
 
         if _error_text is not None:

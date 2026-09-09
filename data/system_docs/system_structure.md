@@ -281,11 +281,12 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - reflex_hint가 있을 때만 provider를 'reflex' 축 티어(균형 기어 기본=중급)로 교체 후 try/finally로 복원
   - 무의식 EXECUTE는 'execute' 축 유지 — 분류 오판이 품질 저하로 이어지지 않게 하는 방어. 덕분에 무의식은 EXECUTE 쪽으로 과감하게 기울 수 있다
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
-  - 출력 필드: task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
+  - 출력 필드: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
   - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<execution_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<execution_map>` 의 guide: 줄, 2026-09-03)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
-- **framing 재사용 (의식 진입 게이트, 2026-05-31)** — `_run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
-  - THINK 시 같은 대화의 직전 framing이 재고(30분 TTL)에 있고 경량 fit 게이트가 적합 판정하면 의식(Opus) 호출을 스킵·재사용(criteria만 갱신). 없음/안 맞음/실패 또는 SESSION_RESET·재시작 시엔 풀 의식. 상세: architecture.md
+- **과제 선택·규정 재사용** — `pursuit_bind.py`와 `_run_consciousness_or_reuse()`
+  - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE/Reflex도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.
+  - 진행은 원문 턴을 먼저 저장하고 비동기 갱신한다. 다음 턴은 미반영 진행을 먼저 따라잡는다. 상세: architecture.md와 memory.md.
 - **평가 에이전트 (경량 AI)** — `cognitive_eval._run_goal_evaluation_stream()`
   - achievement_criteria가 있을 때만 실행. NOT_ACHIEVED 시 피드백과 함께 재실행 (최대 3라운드)
   - **제너레이터** — 평가·재실행 구간의 이벤트를 그대로 흘린다(`yield from`). 재실행도 실행 단계와 같이 도구·본문이 실시간으로 보인다
@@ -297,6 +298,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 164 액션(sense 43·self 50·limbs 14·others 17·engines 18·table 22)·42 도구 패키지 + 5 extensions·backend .py 324(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 164 액션(sense 43·self 50·limbs 14·others 17·engines 18·table 22)·42 도구 패키지 + 5 extensions·backend .py 329(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-08-22): system_docs 목록 13문서(harness_haerye 누락분)·유령 파일(my_profile.txt) 제거·자가점검 카덴스 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

@@ -66,6 +66,8 @@ def get_all_system_ai_tools() -> List[Dict]:
     try:
         from reframe import TOOL_SCHEMA as _REFRAME_TOOL
         tools.append(dict(_REFRAME_TOOL))
+        from pursuit_tools import TOOL_SCHEMA as _PURSUIT_TOOL
+        tools.append(dict(_PURSUIT_TOOL))
     except Exception as e:
         print(f"[시스템AI] reframe 도구 로드 실패(생략): {e}")
 

@@ -41,7 +41,7 @@ IndieBiz OS는 AI에게 지능적인 몸을 만들어주는 하네스(harness)�
     ├─ top_score ≥ 0.85 → EXECUTE + reflex_hint (무의식 스킵)
     └─ 미만 → [1B] 무의식 (경량 AI) → EXECUTE/THINK
     ↓                                              ↓ THINK ( = framing 수요)
-EXECUTE/Reflex                          [2] framing 재고 확인 → 있고 맞으면 재사용(의식 스킵)
+EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효하면 재사용(의식 스킵)
     │                                      없음/안맞음 → 의식 에이전트(본격 AI): task_framing + 달성 기준
     ↓                                              ↓
 [3] 실행 에이전트
@@ -264,14 +264,15 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
+  - 출력: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
-- **framing 재사용 게이트 (2026-05-31)** — `agent_cognitive._run_consciousness_or_reuse()` + `_consciousness_fit_gate()`
-  - 설계 원리: THINK = "framing이 필요하다"는 *수요* 선언. 분류기(무의식)는 history-blind라 "직전 태스크의 변주"를 알 수 없다 — 그래서 의식 호출 직전에 "그 수요를 *재고*로 충당할 수 있나"를 별개 신호로 묻는다 (분류기를 재심사하지 않음)
-  - 같은 대화(registry_key)에서 만든 framing이 30분 내 재고에 있고 경량 fit 게이트가 적합 판정 → 의식(Opus) 호출 스킵, 재사용. turn마다 바뀌는 achievement_criteria만 게이트가 새로 생성 (비싼 framing 재사용 / 싼 criteria 갱신)
-  - 캐시: 모듈 레벨 `_FRAMING_CACHE` (30분 TTL), SESSION_RESET·재시작·**대화 삭제**(2026-09-02 — 시스템 AI 대화에는 conversation id 가 없어 '새 대화'의 경계는 리셋·TTL·삭제 셋뿐인데 삭제만 캐시에 닿지 않았다; `system_ai_memory.clear_conversations` 의 삭제 훅이 그 에이전트 키의 재고를 폐기) 시 폐기. fits=false·재고 없음·게이트 실패 시 풀 의식 폴백(품질 손실 0)
-  - 효과: 연속 THINK turn에서 의식 40~54초 + Opus 호출 제거. 주제 전환은 명시적=SESSION_RESET / 암묵적=fit 게이트가 분담
+- **과제 선택·규정 재검토 (2026-09-09)** — `pursuit_bind.py`, `pursuit_ledger.py`
+  - 여러 턴의 과제를 자아별 대화 DB에 영속화한다. task_id는 한 턴, pursuit는 여러 턴의 일이다.
+  - 선택(같은 과제인가)과 재검토(규정이 유효한가)를 분리한다. 반박은 연결을 끊지 않고 규정을 다시 쓴다. EXECUTE/Reflex도 연결·진행 갱신에 참여하고, 정정이면 의식을 거친다.
+  - 과제 goal_criteria와 턴 achievement_criteria는 별개. 규정 재사용은 과제에 연결된 턴만 가능하며 30분 캐시는 폐지했다. 수리 권한은 기억으로 상속하지 않는다.
+  - 턴 원문을 먼저 저장하고 비동기 요약한다. 다음 턴은 미반영 요약을 먼저 따라잡는다. 버전 검사·멱등 사건·필드별 출처 순서로 늦은 요약이 후속 정정을 덮지 못한다.
+  - 대화 삭제·재시작과 과제는 독립. 상세 계약: `docs/PURSUIT_LEDGER_HANDOFF_2026_09_09.md`, 기억 지도: memory.md 작업 기억 절.
 - **평가 에이전트 (경량 AI)** — `cognitive_eval._run_goal_evaluation_stream()`
   - achievement_criteria 대비 평가. NOT_ACHIEVED 시 재실행 (최대 3라운드)
   - **스트림 안**에서 돈다: 평가 진행 표지와 재실행 에이전트의 이벤트가 그대로 흐른다. 블로킹 함수였던 옛 판은 재실행(실측 10분)이 통째로 화면 밖이라 WS 유휴 타임아웃(600초)을 구조적으로 넘겼다(2026-08-22 수리)
@@ -487,7 +488,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 324개**(test 제외, git 추적 기준) — 층 디렉토리 `base 30 · datastore 44 · ibl 47 · cognition 52 · services 28 · surface 62`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
+- backend **.py 329개**(test 제외, git 추적 기준) — 층 디렉토리 `base 30 · datastore 45 · ibl 47 · cognition 55 · services 28 · surface 63`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

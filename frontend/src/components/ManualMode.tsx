@@ -19,6 +19,7 @@ import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
 import { NodePresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
+import { PursuitLedger } from './launcher-components/PursuitLedger';
 import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus, RecallPreviewResult } from '../lib/api-ibl';
 
 // 계기판 서비스 라벨
@@ -570,6 +571,7 @@ export default function ManualMode() {
 
         {/* 몸 원장 — [self:body] 통화의 사람용 표면 (2026-08-21 시험 설치 — 쓸모없으면 이 줄과 BodyLedger.tsx 제거) */}
         <BodyLedger />
+        <PursuitLedger />
 
         {/* 주행기록계 — 지난 주행 목록 + 분석 스위치 */}
         <EpisodeJournal />

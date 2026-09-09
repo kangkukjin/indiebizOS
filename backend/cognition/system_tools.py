@@ -963,6 +963,11 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
             from reframe import execute_reframe
             return execute_reframe(tool_input, agent_id)
 
+        if tool_name == "pursuit":
+            from pursuit_tools import execute_pursuit
+            from thread_context import get_current_task_id
+            return execute_pursuit(tool_input, agent_id, get_current_task_id())
+
         # 가이드 검색 (독립 도구 — IBL/Python 어디서든 사용 가능)
         if tool_name == "read_guide":
             from ibl_routing import search_guide  # 정의처 직수입(엔진 재수출 경유 아님)

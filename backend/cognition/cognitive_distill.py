@@ -633,7 +633,7 @@ AI 답변: {ai_response[:1400]}
 
     def _after_response_async(self, user_message: str, response: str, *,
                               tool_calls=None, hippo_score: float = None, top_code: str = None,
-                              turn_tokens: int = None):
+                              turn_tokens: int = None, pursuit_packet=None):
         """_after_response 를 **영속 큐**(distill_queue)에 적재 — 증류가 턴(스트림 종료·
         에피소드 END·총 소요 측정)을 붙잡지 않게(ep889: 실작업 4.6분에 증류 꼬리 6분) 하되,
         데몬 스레드 시절과 달리 프로세스가 죽어도 작업이 사라지지 않는다(2026-09-02: 행으로
@@ -676,6 +676,7 @@ AI 답변: {ai_response[:1400]}
             "guides_used": guides_used,
             "turn_tokens": turn_tokens,   # 턴 마감 시점에 읽은 값 — 증류 자체 소모는 미포함
             "goal_eval": _ge,
+            "pursuit": pursuit_packet,
         }
         ctx = contextvars.copy_context()
         ep = EpisodeLogger.current()

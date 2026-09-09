@@ -31,7 +31,7 @@ see_also: [architecture.md, ibl.md]
 | # | 인간 기억 | indiebizOS 구현 | 저장소 | 무엇을 기억하나 |
 |---|---|---|---|---|
 | 1 | **의미 기억** (정적 지식) | 시스템 문서 + 시스템 메모 | `data/system_docs/*.md`, `data/system_ai_memo.txt` | 시스템 자신에 대한 변하지 않는 지식 |
-| 2 | **작업 기억** (단기) | 대화 이력 | `system_ai_memory.db:conversations`, `projects/{id}/conversations.db` | 진행 중인 대화 (Masking으로 축약) |
+| 2 | **작업 기억** (단기·과제 영속층) | 대화 이력 + 과제 원장 | `system_ai_memory.db:conversations`, `projects/{id}/conversations.db` | 진행 중인 대화 (Masking으로 축약) |
 | 3 | **일화 기억** (경험) | 에피소드 로그/요약 | `world_pulse.db:episode_log / episode_summary` | "무슨 일이 있었나" + 인지 품질 지표 |
 | 4 | **절차 기억** (방법) | IBL 액션 + 워크플로우 + **해마** | `ibl_nodes.yaml`, `data/workflows/*.yaml`, `ibl_usage.db` | "어떻게 하는가" — 자연어→IBL 코드 |
 | 5 | **관계 기억** (사용자 사실) | **심층메모리** | 에이전트별 `memory.db` (memory 패키지) | 사용자 선호·결정·중요날짜·작업기록 |
@@ -61,6 +61,23 @@ see_also: [architecture.md, ibl.md]
   - 그 이전 + 500자 초과: `[이전 대화: {첫줄}… ({길이}자)]`로 축약
 - **요약 체크포인트** (2026-08-14, `history_checkpoint.py`): 창 밖으로 밀려난 턴은 경량 AI가 **재귀 요약**해 `history_checkpoints` 테이블(시스템 AI 는 `system_ai_memory.db`, 프로젝트/위임 쌍은 그 `conversations.db`)에 보존하고 히스토리 머리에 주입한다. 저장 깔때기(`save_conversation`/`save_message`)가 SQL 선판정 후 백그라운드로 갱신, 키별 동시 1개.
 - **삭제 의미** (2026-09-02): 대화 삭제 = 원문 + 체크포인트 **한 트랜잭션** + 대화 이미지 파일(`system_ai_images/`) (`system_ai_memory.clear_conversations`). 요약만 남기면 지운 대화가 다음 대화 머리에 되살아난다. 체크포인트 갱신 스레드는 요약(LLM) 뒤 **IMMEDIATE 잠금 안에서 요약한 행이 아직 있는지 재확인**하고 저장한다 — 요약 도중 삭제가 끼면 버린다(`stale:deleted`).
+
+### 과제 영속층 (2026-09-09)
+
+작업 기억의 상위 층 `pursuit`는 규정·전제·진행·다음을 여러 턴에 걸쳐 보존한다.
+시스템 AI는 `system_ai_memory.db`, 프로젝트 에이전트는 해당 `conversations.db`의 자아 키로 격리한다.
+상태=pursuit, 사건=pursuit_event, 요약 처리 상태와 원문=pursuit_turn. 전체 완료 기준(goal_criteria)은
+턴 평가 기준과 다르다. 도구 `pursuit`는 인지 이음매이며 IBL 어휘가 아니다.
+
+과제 선택과 규정 재검토를 분리하고, 반박은 같은 과제에서 규정을 다시 쓴다. 모든 실행 경로에서
+참여 가능하며 정정이 있으면 빠른 실행도 의식을 거친다. 도구 결과·턴 원문을 먼저 영속화한 뒤
+기존 증류 큐에서 진행을 고쳐 쓴다. 다음 턴은 아직 반영되지 않은 완료 턴을 먼저 따라잡는다.
+버전·멱등 사건·필드별 출처 순서가 늦은 요약의 후속 정정 덮어쓰기를 막는다.
+
+목차는 최대 10줄, 본문은 3000자 예산이고 생략된 필드는 read로 펼친다. 사건 기록은 개수 상한이 없다.
+대화 삭제와 독립이며 조종실에서 명시 삭제한다. 기존 일일 순찰이 30일 무접촉을 보류,
+120일을 보관 상태로 바꾸며 실제 삭제하지 않는다. 중단 턴의 원문과 미반영 요약은 만료하지 않는다.
+상세 계약: `docs/PURSUIT_LEDGER_HANDOFF_2026_09_09.md`.
 
 ## 3. 일화 기억 — 에피소드 로그/요약 (경험·반성의 재료)
 
@@ -161,6 +178,7 @@ see_also: [architecture.md, ibl.md]
 사용자 입력
   │
   ├─[2 작업기억]  최근 7턴 회상 (Observation Masking)
+  ├─[과제]       선택 → 미반영 진행 따라잡기 → 규정 재검토 (모든 실행 경로)
   ├─[4b 해마]     유사 IBL 선례 검색 → 점수 산출 ┐
   ├─[5 심층메모리] 기억 지도(가지 목차) 합성      ┘→ 연상기억(<execution_memory>+<memory_map>) 합성 — 내용은 recall 로
   ├─[7 포식기억]   포식 의도 시 냄새지도 주입 (<forage_memory>, 해마 옆)
@@ -173,6 +191,7 @@ see_also: [architecture.md, ibl.md]
   │
   ▼ 실행 (IBL 엔진 → 도구 / 워크플로우)
   │
+  ├─[과제]       턴 원문 먼저 저장 → 기존 증류 큐로 진행 갱신
   ├─[3 일화기억]   에피소드 로그 + 인지 품질 요약 저장
   ├─[5 심층메모리] 대화에서 사용자 사실 자동 증류 → 저장/업데이트  ← 사용자 지식 흡수 루프
   ├─[4b 해마]      점수<0.7 & 성공 → 경험 증류 → 절차기억 누적     ← 절차 학습 루프

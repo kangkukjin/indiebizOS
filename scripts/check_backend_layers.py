@@ -47,7 +47,7 @@ LAYERS = {
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
     "data": {
-        "agent_registry", "body_trust", "boot_status", "business_manager",
+        "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
         "forage_memory", "forage_doc", "hippo_tree", "guide_registry", "health_sync", "finance_ledger_sync", "ibl_registry",
         "ibl_signature_slot", "ibl_name_search", "ibl_usage_db",
@@ -85,7 +85,7 @@ LAYERS = {
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
         "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "ibl_idiom", "ibl_distill_gates",
         "memory_consolidation", "prompt_builder", "repair_verdict_distill",
-        "reframe", "routing_system", "switch_runner",
+        "pursuit_bind", "pursuit_tools", "pursuit_maintenance", "reframe", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",
         "system_ai_tools", "system_hooks", "system_tools",
         "system_tools_delegate", "system_tools_ibl", "vocab_crystallization",

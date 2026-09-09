@@ -330,6 +330,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         "mcp__indiebizos__read_guide",
         # MCP — 턴 안 재규정 브리지(reframe.py). read_guide 와 같은 이유로 MCP 로만 닿는다.
         "mcp__indiebizos__reframe",
+        "mcp__indiebizos__pursuit",
     ]
 
     # `--tools` 에 실을 내장 도구 = EAGER_TOOLS 중 내장(MCP 이름 제외). 2026-09-04 실측(CLI 2.1.258):

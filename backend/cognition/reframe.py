@@ -79,6 +79,8 @@ class TurnChannel:
         self.current = dict(consciousness_output or {})
         self.repair = bool(repair)
         self.registry_key = registry_key or "default"
+        from pursuit_bind import current as pursuit_current
+        self.pursuit = pursuit_current()
         self.revisions = 0
         self.log: list = []          # [{trigger, broken, kind, ts}]
         self.opened_at = time.time()
@@ -184,18 +186,16 @@ def _revise(ch: TurnChannel, trigger: str, broken: str, evidence: str, progress:
         out["_repair_declared_mid_turn"] = True
     out["_revision"] = {k: revision[k] for k in ("trigger", "kind", "revision_no", "broken_assumption")}
     out["_framing_origin"] = ch.original.get("task_framing", "")
+    # 과제 사건과 현재 규정에 즉시 반영. 연결 없는 독립 시험 채널은 원장 대상이 아니다.
+    from pursuit_bind import revised as _p_revised
+    _pb = ch.pursuit
+    if _pb is not None:
+        _p_revised(ch, out, revision["broken_assumption"], revision["evidence"])
     ch.current = out
     ch.revisions += 1
     ch.log.append({"trigger": trigger, "kind": kind, "broken": revision["broken_assumption"][:200],
                    "ts": time.time()})
 
-    # 재고(framing 캐시) 갱신 — 다음 턴의 fit 게이트가 옛 지도를 들지 않도록
-    try:
-        from cognitive_consciousness import framing_cache_set
-        if not out.get("needs_clarification"):
-            framing_cache_set(ch.registry_key, out)
-    except Exception:
-        pass
     try:
         from episode_logger import record_trajectory_event
         record_trajectory_event("framing.revised", {

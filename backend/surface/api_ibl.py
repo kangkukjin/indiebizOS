@@ -7,6 +7,8 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/ibl", tags=["ibl"])
+from api_pursuits import router as pursuits_router
+router.include_router(pursuits_router)
 
 class IBLRequest(BaseModel):
     code: str

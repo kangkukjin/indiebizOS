@@ -1,8 +1,8 @@
-"""증류 영속 큐 + framing 삭제 훅 + action_health 보존정책 회귀 테스트 (2026-09-02).
+"""증류 영속 큐 + 과제 독립 + action_health 보존정책 회귀 테스트 (2026-09-02).
 
   ① distill_queue: 적재→실행→행 삭제 / 실패 재시도(attempts·last_error) / 상한→failed /
      부팅 resume(러너 해소·orphaned·상한) / drain
-  ② 시스템 AI 대화 삭제 → framing 재고 폐기(그 에이전트 키만)
+  ② 시스템 AI 대화 삭제 → 과제는 독립 보존
   ③ _cleanup_old_data 가 action_health 와 큐 종결 행도 보존기간으로 정리
 
 실행: .venv/bin/python -m pytest -q backend/test_distill_queue.py
@@ -116,23 +116,18 @@ def test_drain_idle_immediately(dq):
     assert dq.DistillQueue.get().drain(timeout=1) == {"drained": True, "left": 0}
 
 
-# ---------- ② framing 삭제 훅 ----------
+# ---------- ② 대화 삭제와 과제 독립 ----------
 
-def test_clear_conversations_drops_system_ai_framing(tmp_path, monkeypatch):
+def test_clear_conversations_preserves_pursuit(tmp_path, monkeypatch):
     import system_ai_memory as sam
-    import cognitive_consciousness as cc
-    cc.install()
+    from pursuit_ledger import PursuitLedger
     monkeypatch.setattr(sam, "MEMORY_DB_PATH", tmp_path / "system_ai_memory.db")
     monkeypatch.setattr(sam, "DATA_PATH", tmp_path)
     sam.init_memory_db()
-    cc.clear_framing_cache()
-    cc.framing_cache_set("system:system_ai", {"task_framing": "지운 대화의 지도"})
-    cc.framing_cache_set("proj:비서", {"task_framing": "다른 몸의 지도"})
-
+    ledger = PursuitLedger(sam.MEMORY_DB_PATH, "system_ai:system_ai")
+    row = ledger.create("계속할 일", "전체 기준", "turn1")
     sam.clear_conversations()
-    assert cc.framing_cache_get("system:system_ai") is None      # 지운 대화의 지도는 폐기
-    assert cc.framing_cache_get("proj:비서") is not None          # 다른 에이전트는 무관
-    cc.clear_framing_cache()
+    assert ledger.get(row["id"])["goal_criteria"] == "전체 기준"
 
 
 # ---------- ③ 보존정책 ----------

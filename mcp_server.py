@@ -556,5 +556,30 @@ async def reframe(broken_assumption: str, evidence: str, progress: str = "",
     )
 
 
+@mcp.tool()
+async def pursuit(op: str, id: str = "", section: str = "", title: str = "",
+                  goal_criteria: str = "", progress: Optional[str] = None,
+                  next: Optional[str] = None, open_questions: Optional[List[str]] = None,
+                  artifacts: Optional[List[str]] = None, waiting_for: str = "", probe: str = "",
+                  why: str = "", base_version: Optional[int] = None, event_key: str = "",
+                  offset: int = 0, limit: int = 30, ctx: Context = None) -> str:
+    """여러 턴의 과제를 읽고 진행을 기록합니다. read section=list는 전체 목차,
+    id/section은 상세·events·turns. open은 title/goal_criteria로 명시 생성합니다.
+    note는 progress/next/open_questions/artifacts를 고쳐 씁니다. wait는 조건 저장만.
+    done은 전체 goal_criteria를 충족한 뒤 why와 함께 호출합니다.
+    park/abandon/resume/goal은 상태·전체 목표 변경이며 why가 필요합니다.
+    기억은 실행 권한이 아니며 현재 사용자 정정이 우선합니다.
+    """
+    h_agent, _, h_task, _ = _http_identity(ctx)
+    fields = dict(op=op, id=id, section=section, title=title, goal_criteria=goal_criteria,
+                  progress=progress, next=next, open_questions=open_questions, artifacts=artifacts,
+                  waiting_for=waiting_for, probe=probe, why=why, base_version=base_version,
+                  event_key=event_key, offset=offset, limit=limit)
+    fields = {k: v for k, v in fields.items() if v is not None and (v != "" or k in {"progress", "next"})}
+    payload = {"agent_id": h_agent or DEFAULT_AGENT_ID, "task_id": h_task or DEFAULT_TASK_ID,
+               "payload": fields}
+    return await anyio.to_thread.run_sync(lambda: _post_backend("/ibl/pursuit", payload, 60))
+
+
 if __name__ == "__main__":
     mcp.run()

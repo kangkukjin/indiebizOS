@@ -99,9 +99,24 @@ def _bool_probes():
     }
 
 
-def test_every_prompt_key_reaches_a_consumer():
+def test_every_prompt_key_reaches_a_consumer(tmp_path):
     keys = _prompt_schema_keys()
     co = _fill(keys)
+    from pursuit_bind import Binding, _current, accept_output
+    from pursuit_ledger import PursuitLedger
+    ledger = PursuitLedger(tmp_path / "pursuit.db", "routing-test")
+    binding = Binding(None, ledger, "routing-test", "routing-turn", "과제", [])
+    token = _current.set(binding)
+    try:
+        accept_output({**co, "scope": "turn"})
+        assert binding.row is None
+        accept_output({**co, "scope": "pursuit"})
+        assert binding.row is not None
+        assert binding.row["title"] == _sentinel("title")
+        assert binding.row["goal_criteria"] == _sentinel("goal_criteria")
+    finally:
+        _current.reset(token)
+    keys -= {"scope", "title", "goal_criteria"}
     text = _assembled_text(co)
     probes = _bool_probes()
 

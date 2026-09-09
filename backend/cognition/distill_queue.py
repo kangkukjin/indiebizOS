@@ -178,6 +178,9 @@ class DistillQueue:
             set_goal_eval_outcome(ge.get("achieved", True), ge.get("severity", 0) or 0)
 
         def _call():
+            if p.get("pursuit"):
+                from pursuit_bind import distill
+                distill(p["pursuit"])
             job.runner._after_response(
                 p.get("user_message", ""), p.get("response", ""),
                 tool_calls=p.get("tool_calls"), hippo_score=p.get("hippo_score"),

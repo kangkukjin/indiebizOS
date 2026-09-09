@@ -37,9 +37,6 @@ from cognitive_trace import (  # noqa: F401
 from cognitive_consciousness import (  # noqa: F401
     SESSION_RESET_RESPONSE,
     handle_session_reset,
-    framing_cache_get,
-    framing_cache_set,
-    clear_framing_cache,
     CognitiveConsciousnessMixin,
 )
 from cognitive_recall import CognitiveRecallMixin  # noqa: F401
@@ -522,6 +519,8 @@ class AgentCognitiveMixin(
         try:
             from reframe import TOOL_SCHEMA as _REFRAME_TOOL
             tools.append(dict(_REFRAME_TOOL))
+            from pursuit_tools import TOOL_SCHEMA as _PURSUIT_TOOL
+            tools.append(dict(_PURSUIT_TOOL))
         except Exception as e:
             print(f"[AgentRunner] reframe 도구 로드 실패(생략): {e}")
 
@@ -534,7 +533,7 @@ class AgentCognitiveMixin(
         IBL(도메인 특화) + 쉘 + 가이드 검색 + 인지 도구.
         Python/Node.js 코드 실행은 write→run 패턴(`[self:write]` → `run_command`)으로 한다.
         """
-        return ["execute_ibl", "run_command", "read_guide", "reframe",
+        return ["execute_ibl", "run_command", "read_guide", "reframe", "pursuit",
                 "todo_write", "ask_user_question", "enter_plan_mode", "exit_plan_mode"]
 
     def augment_with_ibl_references(self, user_message: str) -> str:

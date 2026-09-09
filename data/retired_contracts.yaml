@@ -25,6 +25,15 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: transient_framing_cache
+    retired: 2026-09-09
+    reason: 턴 간 규정 보관을 자아별 과제 원장으로 옮기고 선택과 재검토를 분리했다.
+    instead: pursuit_bind의 선택·재검토, goal_criteria와 턴 기준 분리, 대화 삭제와 독립인 과제 원장을 사용한다.
+    phrases:
+      - '_FRAMING_CACHE'
+      - '_consciousness_fit_gate('
+      - 'framing_cache_set('
+      - 'framing_cache_get('
   - id: rename_all_source_names_required
     retired: 2026-09-09
     reason: 같은 새 이름을 가리키는 옛 이름들이 후보 집합이 되었으므로 지도 전체의 이름을 필수로 요구하던 설명을 은퇴한다.

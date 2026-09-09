@@ -1,11 +1,11 @@
 """
-cognitive_consciousness.py - 의식·무의식(분류) 믹스인 + framing 캐시
+cognitive_consciousness.py - 의식·무의식(분류) 믹스인 + 과제 규정 검토
 IndieBiz OS Core
 
 agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 3단 인지의
 판단 층 — 무의식 분류(_decide_request_type/_classify_request, Reflex·태그 강제
-포함), 의식 에이전트 실행/재사용(framing 캐시+fit 게이트), 의식 출력의 히스토리
-적용·되묻기. SESSION_RESET 처리도 여기(세션 매핑+framing 캐시를 함께 비운다).
+포함), 의식 에이전트 실행/재사용(영속 과제 선택+재검토), 의식 출력의 히스토리
+적용·되묻기. SESSION_RESET은 CLI 세션 매핑을 비운다. 영속 과제는 대화 삭제·재설정과 독립이다.
 기존 import 경로(agent_cognitive)는 재수출로 유지된다.
 """
 
@@ -19,87 +19,6 @@ from typing import Optional, Dict, Any
 # ============================================================
 
 SESSION_RESET_RESPONSE = "새 세션을 시작했습니다. 무엇을 도와드릴까요?"
-
-
-# ============================================================
-# 의식 framing 캐시 (연속 turn 재사용)
-# ------------------------------------------------------------
-# THINK 판정 = "framing이 필요하다"는 수요 선언이다. 같은 대화 맥락에서 이미
-# 의식 에이전트가 만든 framing이 지금 질문에 맞으면, 그걸 재사용해 비싼 의식
-# (Opus) 호출을 건너뛴다. 없거나 안 맞으면 의식 에이전트가 새로 만든다.
-#   키: registry_key (project_id:agent_id)
-#   값: {"output": dict, "ts": epoch_seconds}
-# ============================================================
-
-_FRAMING_CACHE: Dict[str, Dict[str, Any]] = {}
-_FRAMING_TTL_SEC = 1800  # 30분 — 오래된 동선이 새 대화로 새지 않도록 만료
-
-# fit 게이트의 framing 고쳐쓰기(amend) 방어 — 둘 다 **결정론**이다(의미 판단 없음).
-_AMEND_MIN_LEN = 20        # 이보다 짧은 amended_framing 은 지도로 취급하지 않는다
-_AMEND_CHAIN_MAX = 2       # 연속 고쳐쓰기 상한 — 넘으면 재사용 포기·의식 재각성(티어 역전 차단)
-
-
-def framing_cache_get(key: str) -> Optional[dict]:
-    """저장된 framing 조회 (TTL 경과 시 폐기하고 None)."""
-    import time as _t
-    entry = _FRAMING_CACHE.get(key)
-    if not entry:
-        return None
-    if _t.time() - entry.get("ts", 0) > _FRAMING_TTL_SEC:
-        _FRAMING_CACHE.pop(key, None)
-        return None
-    return entry.get("output")
-
-
-def framing_cache_set(key: str, output: dict):
-    """framing 저장 (빈 값·미완성 framing은 호출 측에서 걸러 보낼 것)."""
-    import time as _t
-    if key and output:
-        _FRAMING_CACHE[key] = {"output": output, "ts": _t.time()}
-
-
-def clear_framing_cache(key: str = None):
-    """framing 캐시 무효화. key 없으면 전체."""
-    if key:
-        _FRAMING_CACHE.pop(key, None)
-    else:
-        _FRAMING_CACHE.clear()
-
-
-def clear_framing_for_agent(agent_id: str) -> list:
-    """agent_id 가 같은 모든 registry_key(project:agent) 의 framing 재고 폐기. 반환=지운 키."""
-    keys = [k for k in list(_FRAMING_CACHE) if k == agent_id or k.endswith(f":{agent_id}")]
-    for k in keys:
-        _FRAMING_CACHE.pop(k, None)
-    return keys
-
-
-def _on_system_conversations_cleared():
-    """시스템 AI 대화 삭제 → 그 대화에서 뜬 framing 재고도 폐기 (2026-09-02).
-
-    시스템 AI 대화에는 conversation id 가 없다 — '새 대화'의 경계는 SESSION_RESET·TTL·
-    **삭제** 셋뿐인데 삭제만 캐시에 닿지 않아, 지운 대화의 지도가 30분 안의 다음 대화에
-    재사용됐다(fit 게이트는 옛 지도가 '맞는지'만 보지 '어느 대화 것인지'는 모른다).
-    """
-    keys = clear_framing_for_agent("system_ai")
-    if keys:
-        print(f"[framing] 대화 삭제 → 재고 폐기: {', '.join(keys)}")
-
-
-_HOOK_INSTALLED = False
-
-
-def install():
-    """datastore 층에 대화 삭제 훅 등록 (멱등 — 임포트 시 1회, history_checkpoint.install 선례)."""
-    global _HOOK_INSTALLED
-    if _HOOK_INSTALLED:
-        return
-    try:
-        import system_ai_memory
-        system_ai_memory.register_clear_hook(_on_system_conversations_cleared)
-        _HOOK_INSTALLED = True
-    except Exception:
-        pass
 
 
 def handle_session_reset() -> str:
@@ -117,7 +36,6 @@ def handle_session_reset() -> str:
         from thread_context import get_current_registry_key
         key = get_current_registry_key() or "default"
         clear_cli_sessions_for_agent(key)
-        clear_framing_cache(key)  # 저장된 의식 framing도 함께 폐기
         print(f"[SESSION_RESET] 세션 매핑 클리어: {key}")
     except Exception as e:
         print(f"[SESSION_RESET] 매핑 클리어 실패 (무시): {e}")
@@ -130,157 +48,9 @@ class CognitiveConsciousnessMixin:
     def _run_consciousness_or_reuse(self, user_message: str, history: list,
                                     execution_memory: str = "",
                                     repair: bool = False) -> Optional[dict]:
-        """THINK 경로의 의식 진입점 — framing 재고가 있으면 재사용, 없으면 생성.
-
-        repair=True(수리 턴): 재고를 보지 않고 의식을 새로 깨우며 수리 교리를
-        입력에 싣는다 — 수리 권한이 걸린 지도는 어차피 재사용하지 않는다.
-
-        THINK 판정은 "framing이 필요하다"는 수요다. 같은 대화에서 이미 만든
-        framing이 지금 질문에 맞으면(fit 게이트, 경량 1회) 재사용하고 의식(Opus)
-        호출을 건너뛴다. 없거나 안 맞으면 의식 에이전트가 새로 만들어 저장한다.
-        per-turn으로 바뀌는 achievement_criteria만 게이트가 새로 뽑는다.
-        """
-        from thread_context import get_current_registry_key
-        key = get_current_registry_key() or "default"
-
-        # 후속 turn(히스토리 존재) + 저장된 framing 있을 때만 재사용 시도
-        prev = framing_cache_get(key) if (history and not repair) else None
-
-        # ★권한은 캐시로 상속되지 않는다 (2026-08-22, 22회차 사고).
-        # `needs_repair` 는 파이프라인에서 **RED 자기수정 그랜트**(고급 모델 고정 +
-        # 라이브 코어 쓰기 권한)로 환산된다. 그런데 재사용 경로는 `dict(prev)` 로
-        # 통째로 물려주고 게이트는 criteria·amended_framing 만 새로 뽑으므로,
-        # *의식이 본 적 없는 턴*이 앞 턴의 수리 권한을 그대로 쓰게 된다 —
-        # 헌법 3조건의 '의식 각성'이 실제로는 빠진 채 승격되는 구멍이다
-        # (`_consciousness_needs_repair` 주석의 "이 자리가 이미 충족" 은
-        #  풀 의식 경로에서만 참이었다).
-        # 실측: "상상훈련을 다시 한번 해줘" 에 직전 `#repair` 턴의 framing
-        # (task_framing="…유효한 것만 수리해야 한다", criteria="…수정분은
-        #  [self:patch]{op:apply} 로 통과시킬 것") 이 fits=true 로 재사용돼,
-        # 보고만 해야 할 훈련 턴이 라이브 코어를 고치고 지연 적용까지 갔다
-        # (task_sysai_6521f965 → workflow_contract.py 19:45:59 적용).
-        # 대조군: 같은 지시라도 의식이 깬 21회차는 보고만 하고 끝났다.
-        # → 수리 권한이 걸린 지도는 재사용하지 않는다. 값을 몰래 벗겨 지도만 쓰면
-        #   "고쳐라" 라고 적힌 지도를 든 채 권한만 없는 상태가 되어 더 나쁘다.
-        if prev and prev.get("needs_repair"):
-            self._log("[의식] 재고 framing 이 needs_repair(수리 권한) 선언 — "
-                      "재사용 금지, 의식 재각성 (권한은 캐시로 상속되지 않는다)")
-            prev = None
-
-        if prev:
-            gate = self._consciousness_fit_gate(user_message, prev)
-            if gate and gate.get("fits"):
-                # 3값 게이트: fits=true 여도 산출물·범위가 커졌으면 지도를 고쳐 쓴다.
-                # (이진이던 시절엔 criteria 만 새로 뽑히고 task_framing 은 첫 판 그대로라,
-                #  옛 지도로 새 땅을 걷는 상태가 구조적으로 만들어졌다 — 2026-08-20 15:01 턴
-                #  실례: '#repair 남겨둔 것 다 처리해' 에 어제의 '판정하라(코드 수정 금지)'
-                #  framing 이 그대로 재사용됐다.)
-                amended = str(gate.get("amended_framing") or "").strip()
-                if amended and len(amended) < _AMEND_MIN_LEN:
-                    # 결정론 하한만 본다. "핵심어가 남았나" 같은 의미 검사를 여기 두면
-                    # 가드가 막으려는 병(경량 모델의 의미 오판)을 가드 안에 다시 들인다.
-                    self._log(f"[의식] amended_framing 무시 (하한 미달 {len(amended)}자)")
-                    amended = ""
-                chain = int(prev.get("_amend_count") or 0)
-                if amended and chain >= _AMEND_CHAIN_MAX:
-                    # ★래칫 — 진짜 구조적 위험은 한 번의 나쁜 수정이 아니라 **누적 드리프트**다.
-                    # 매 턴 경량 모델이 지도를 조금씩 고쳐 쓰면 N턴 뒤 framing 은 의식(고급
-                    # 모델)의 산물이 아니라 경량 모델의 산물인데 겉보기엔 '재사용'이다
-                    # (3단 인지의 티어 역전이 조용히 일어난다). 수정 사슬이 상한에 닿으면
-                    # 재사용을 포기하고 의식을 깨워 지도를 새로 뜬다 — '고쳐 쓸 권한'과
-                    # '지도의 저작권은 의식에 있다'를 양립시키는 자리.
-                    self._log(f"[의식] amend 사슬 상한({chain}회) — 의식 재각성으로 지도 재작성")
-                else:
-                    reused = dict(prev)
-                    if amended:
-                        reused.setdefault("_framing_origin",
-                                          prev.get("task_framing", ""))  # 드리프트 관측용 원본
-                        reused["task_framing"] = amended
-                        reused["_amend_count"] = chain + 1
-                    reused["achievement_criteria"] = (
-                        gate.get("criteria") or prev.get("achievement_criteria", "")
-                    )
-                    reused["history_summary"] = ""  # 실제 최근 history가 그대로 흐르도록
-                    if amended:
-                        framing_cache_set(key, reused)  # 갱신된 지도를 재고에도 반영
-                    self._log(
-                        f"[의식] framing {'갱신 재사용(amend %d)' % reused.get('_amend_count', 0) if amended else '재사용'}"
-                        f" (Opus 스킵): {reused.get('task_framing', '')[:50]}"
-                    )
-                    return reused
-
-        # 없거나 안 맞음 → 의식 에이전트가 새로 만든다
-        if repair:
-            out = self._run_consciousness(user_message, history, execution_memory, repair=True)
-        else:
-            out = self._run_consciousness(user_message, history, execution_memory)
-        # 미완성 framing(clarification 요청)은 재고로 쌓지 않는다
-        if out and not out.get("needs_clarification"):
-            framing_cache_set(key, out)
-        return out
-
-    def _consciousness_fit_gate(self, user_message: str, prev_framing: dict) -> Optional[dict]:
-        """저장된 framing이 현재 질문에 맞는지 경량 모델로 판정 + 이번 turn 달성 기준 생성.
-
-        Returns:
-            {"fits": bool, "amended_framing": str, "criteria": str}
-            또는 None(실패 → 호출 측은 풀 의식 폴백)
-
-        ★3값이다 — fits 는 '이 framing 을 버릴까'만 답하고, 버리지 않기로 했더라도
-          범위가 커졌으면 amended_framing 으로 지도를 고쳐 준다. 이진이면 '맞다'와
-          '틀렸다' 사이의 가장 흔한 경우(같은 일인데 더 커진 일)를 표현할 수 없다.
-          게이트는 실패한 적이 없었다 — 판정 규칙 1이 시킨 대로 했고, 결함은 반환의
-          표현력에 있었다. 소비 측 가드(_AMEND_MIN_LEN·_AMEND_CHAIN_MAX)와 한 쌍.
-        """
-        try:
-            from consciousness_agent import oneshot_ai_call
-
-            task_framing = (prev_framing or {}).get("task_framing", "")
-            if not task_framing:
-                return None
-
-            prompt = f"""아래는 직전까지 진행 중인 태스크의 정의(framing)다.
-
-[진행 중 태스크]
-{task_framing}
-
-[사용자의 새 메시지]
-{user_message}
-
-판정하라:
-1. 이 framing이 새 메시지를 푸는 데 그대로 맞는가? 같은 태스크의 연장·변주(조건/방향/대상만 바뀐 경우)면 맞고(fits=true), 주제가 바뀌었으면 안 맞다(fits=false).
-2. ★같은 주제라도, 사용자가 직전 결론·전제를 **반박**하거나("아니야", "다시 찾아봐", "있어/없어" 단언, "틀렸어") 자신의 직접 경험으로 새 사실을 단언하면 fits=false다 — 기존 framing의 전제가 무너졌으므로 새 정보를 반영해 처음부터 다시 프레이밍해야 한다. 재사용은 이전 접근이 여전히 유효할 때만 정당하다.
-3. ★fits=true 라도 **새 메시지가 할 일을 넓혔거나 다음 단계로 옮겨갔으면**(산출물이 늘었다·조건이 붙었다·'판정'에서 '적용'으로 넘어갔다 등) 옛 framing 을 그대로 두지 말고, 그 변화를 반영해 **고쳐 쓴 framing 전문**을 amended_framing 에 담아라. 그대로 충분하면 빈 문자열(""). 시험은 하나다 — 「이 framing 만 들고 새 메시지를 풀 수 있는가?」 아니면 고쳐 써라(지도가 낡은 채 재사용되면 옛 지도로 새 땅을 걷게 된다).
-4. 이번 메시지의 구체적 달성 기준을 한 줄로 작성하라 — amended_framing 을 썼으면 그 기준도 새 범위에 맞춰라.
-
-JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria": "..."}}"""
-
-            resp = oneshot_ai_call(
-                prompt,
-                system_prompt="진행 중 태스크 framing의 적합성 판정기. JSON으로만 응답.",
-                role="background",
-            )
-            if not resp:
-                return None
-
-            cleaned = resp.strip()
-            if cleaned.startswith("```"):
-                cleaned = cleaned.split("\n", 1)[-1]
-                if cleaned.endswith("```"):
-                    cleaned = cleaned[:-3]
-                cleaned = cleaned.strip()
-
-            data = json.loads(cleaned)
-            if not isinstance(data, dict) or "fits" not in data:
-                return None
-            return {
-                "fits": bool(data.get("fits")),
-                "amended_framing": str(data.get("amended_framing", "") or ""),
-                "criteria": str(data.get("criteria", "") or ""),
-            }
-        except Exception as e:
-            self._log(f"[의식] fit 게이트 실패 (풀 의식 폴백): {e}")
-            return None
+        """영속 과제의 규정을 검토·재사용한다. 연결 없는 턴은 의식을 새로 깨운다."""
+        from pursuit_bind import run_consciousness
+        return run_consciousness(self, user_message, history, execution_memory, repair)
 
     def _run_consciousness(self, user_message: str, history: list,
                            execution_memory: str = "", repair: bool = False,
@@ -576,6 +346,3 @@ JSON으로만 응답: {{"fits": true/false, "amended_framing": "...", "criteria"
         except Exception as e:
             self._log(f"[무의식] 분류 실패: {e}")
             return "EXECUTE"  # 실패 시 기본값 — 고장은 값싼 경로로. 판정 기준(여러 단계·위험=THINK)은 unconscious_prompt.md
-
-
-install()

@@ -719,6 +719,28 @@ _REASON_HINTS = {
 
 
 def crawl_website(url: str, max_length: int = 10000) -> dict:
+    """크롤 결과에 원천 절단의 위치·규모·동일 URL 재조회 인자를 붙인다.
+
+    max_length는 수집 상한이다. verbose/take/select로 이미 잘린 원문을 복구할
+    수 없으므로, 모든 수집 경로의 반환을 이 경계에서 한 번 설명한다.
+    """
+    result = _crawl_website_impl(url, max_length)
+    if result.get("truncated"):
+        source = result.get("url") or url
+        total = result.get("length")
+        entry = {"scope": "source", "source": source, "unit": "characters",
+                 "retained": max_length, "total": total}
+        if isinstance(total, int) and total > max_length:
+            entry["retry"] = {"url": source, "max_length": total}
+        result["truncations"] = [entry]
+        result["warning"] = (
+            f"원문 수집 상한 {max_length}자에서 잘렸습니다(전체 {total}자). "
+            "전체 원문이 필요하면 truncations[].retry의 url·max_length로 다시 조회하세요. "
+            "verbose는 표시량만 바꾸며, 저장 변수의 take/select/filter도 누락 원문을 복구하지 못합니다.")
+    return result
+
+
+def _crawl_website_impl(url: str, max_length: int = 10000) -> dict:
     """
     웹사이트를 크롤링하여 텍스트 내용을 추출한다.
     1단계: curl_cffi 정적 (TLS 크롬 위장, ~1초)

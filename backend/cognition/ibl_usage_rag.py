@@ -940,6 +940,9 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     #   docs/IBL_QUALITY_CONTRACT_HANDOFF.md §6).
     ibl_calls = []
     retry_notes = []
+    evidence_notes = []
+    import json
+    from ibl_honesty import truncation_evidence
     for tc in tool_calls:
         if not isinstance(tc, dict):
             continue
@@ -953,7 +956,16 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             continue  # 검사 통과는 실행 성공이 아니다 — 접지·주행 기록에서도 제외
         code = inputs.get("code", "")
         if code:
+            evidence = tc.get("evidence") or truncation_evidence(tc.get("result"))
+            cuts = evidence.get("truncations") or []
+            if any(c.get("scope") == "source" for c in cuts if isinstance(c, dict)):
+                # 요청한 표본/미리보기와 달리 생산자가 확인한 원천 누락이다.
+                # 뒤에 재수집했다면 그 성공 호출이 별도로 후보에 들어온다.
+                print(f"[경험증류] 원천 절단 호출 제외: {code[:100]}")
+                continue
             ibl_calls.append(code)
+            if cuts:
+                evidence_notes.append(f"  - 후보 {len(ibl_calls)}: {json.dumps(cuts, ensure_ascii=False)}")
             if tc.get("quality") == "pass_after_retry":
                 fb = tc.get("quality_feedback")
                 retry_notes.append(f"  - {code[:200]}" + (f" — 첫 미달 사유: {fb}" if fb else ""))
@@ -989,8 +1001,14 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     try:
         tool_log = "\n".join(f"  {i+1}. {code}" for i, code in enumerate(ibl_calls))
         retry_block = ""
+        if evidence_notes:
+            retry_block = ("\n\n다음 후보에는 절단/표본 범위 증거가 있다:\n"
+                           + "\n".join(evidence_notes)
+                           + "\nselection은 의도한 표본, unknown은 절단 위치 미확정이다. "
+                           "전량 수집·완전한 조사의 성공 용례로 일반화하지 말고 "
+                           "그 범위에 맞는 의도만 저장하라. 표시용 preview는 원천 누락이 아니다.")
         if retry_notes:
-            retry_block = ("\n\n다음 코드는 첫 실행이 criteria 기준 미달로 판정돼 "
+            retry_block += ("\n\n다음 코드는 첫 실행이 criteria 기준 미달로 판정돼 "
                            "재시도 후에야 통과했다:\n" + "\n".join(retry_notes) +
                            "\n→ 용례를 만들 때 instruction 을 미달 사유가 재발하지 않게 "
                            "다듬어라 — 재시도 비용을 물지 않는 지시가 좋은 용례다. "

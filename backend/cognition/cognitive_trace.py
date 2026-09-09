@@ -180,6 +180,12 @@ def serialize_tool_trace(
         brief = _brief_input(entry["input"])
         err_tag = " [ERROR]" if entry["is_error"] else ""
         header = f"[{idx}] {name}({brief}){err_tag}" if brief else f"[{idx}] {name}{err_tag}"
+        # 본문 발췌가 잘려도 수집 범위의 한계는 호출 헤더와 함께 남긴다.
+        from ibl_honesty import truncation_evidence
+        cuts = truncation_evidence(entry["result"]).get("truncations") or []
+        if cuts:
+            scopes = ",".join(sorted({str(c.get("scope", "unknown")) for c in cuts}))
+            header += f" [절단 증거 {len(cuts)}건: {scopes}; 전량 확인으로 간주하지 말 것]"
 
         if detailed:
             if omitted_run > 0:

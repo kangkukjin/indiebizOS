@@ -343,7 +343,7 @@ tool_json:
 
       - news.google.com 기사 링크는 실제 기사 URL 로 자동 해소 후 크롤
 
-      - 본문이 잘리면(truncated: true) max_length 를 늘려 재호출
+      - 본문이 잘리면(truncated: true) truncations 에 scope:source·source(URL)·retained·total·retry:{url,max_length} 가 실린다. 전체 원문이 필요하면 retry 인자로 재호출한다. verbose·하류 take/select/filter 는 수집 누락을 복구하지 못한다.
 
       - Cloudflare 급 완전 챌린지·로그인 벽은 reason(bot_blocked/login_required) 으로 정직 반환 → 다른 소스 시도
 

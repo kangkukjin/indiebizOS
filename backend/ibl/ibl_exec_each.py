@@ -418,6 +418,20 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
 
     processed = noncurrency = currency_n = collected_n = 0
     collect_renamed: dict = {}
+    # 각 행의 실패 수와 내부 부분 실패 수는 다른 단위다. 내부 표지는 위치와
+    # 함께 보존하고, 플래그만 바깥으로 승계한다(중복 집계·error_count 덮기 금지).
+    from ibl_honesty import markers_of, HONESTY_FLAG_KEYS
+    row_honesty: list = []
+    inherited_flags: dict = {}
+
+    def carry_honesty(result, final=None, **location):
+        markers = {**markers_of(final), **markers_of(result)}
+        if markers:
+            row_honesty.append({**location, "markers": markers})
+            inherited_flags.update({k: v for k, v in markers.items()
+                                    if k in HONESTY_FLAG_KEYS})
+
+    carry_honesty(envelope, scope="input")
     # 트레이스백 경계 규약(docs/IBL_TRACEBACK_HANDOFF.md): 행 하나의 실패에도 do 문장
     # 안의 경로가 붙는다. 동일 오류의 무거운 상세(py_tail·input)는 첫 행에만(fold_heavy).
     from ibl_traceback import build_tb, push_frame, tb_of, py_tail_of, fold_heavy
@@ -566,6 +580,8 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                 except Exception:
                     pass
 
+        carry_honesty(res, final, row=idx + 1, label=_row_label(base))
+
         if isinstance(res, dict) and not res.get("success", True):
             err_n += 1
             # do 문장 안의 트레이스백을 승계하고 each 프레임 한 칸을 얹는다 — 어느 행의,
@@ -605,6 +621,9 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         "ok_count": ok_n,
         "error_count": err_n,
     }
+    if row_honesty:
+        out["row_honesty"] = row_honesty
+        out.update(inherited_flags)
     notes = []
     if parallel > 1:
         out["parallel"] = parallel

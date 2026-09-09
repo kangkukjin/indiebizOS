@@ -26,6 +26,8 @@ HONESTY_LIST_KEYS = (
     "branches_failed",    # 병렬 가지 전체 실패
     "empty_notes",        # 0행 사유
     "vars_dropped",       # 블록 몸이 할당한 변수가 경계 밖으로 못 나갔다 (B49-2)
+    "row_honesty",        # each 입력/내부 행의 표지 — 행 실패 계수와 분리한 출처
+    "truncations",        # 절단 위치·규모·복구 인자(생산자가 선언)
 )
 
 #: 수량형 — 0 이 아니면 신고한다.
@@ -118,12 +120,15 @@ def describe_promoted(keys) -> str:
     분류가 바뀌어도 경고문이 자동으로 따라오게(HONESTY_KEYS 한 벌과 같은 이유)."""
     ks = sorted(str(k) for k in (keys or []))
     route = [k for k in ks if k in HONESTY_ROUTE_KEYS]
-    fail = [k for k in ks if k not in HONESTY_ROUTE_KEYS]
+    nested = [k for k in ks if k == "row_honesty"]
+    fail = [k for k in ks if k not in HONESTY_ROUTE_KEYS and k not in nested]
     parts = []
     if fail:
         parts.append("부분 실패·절단(" + ", ".join(fail) + ")")
     if route:
         parts.append("경로·출처 표지(" + ", ".join(route) + " — 실패가 아니라 *어떻게 흘렀나*의 사실)")
+    if nested:
+        parts.append("내부 실행 표지(row_honesty — 입력·행 위치와 markers 참조)")
     out = " + ".join(parts)
     if "truncated" in fail or "rows_dropped" in fail:
         out += " · " + TRUNCATED_NEXT_STEP
@@ -299,3 +304,55 @@ def merge_into(env: Any, into: Optional[dict]) -> None:
             into[k] = (into.get(k) or 0) + v
         else:
             into[k] = v
+
+
+def truncation_evidence(env: Any) -> Dict[str, Any]:
+    """평가·증류용 절단 증거. 봉투 경계만 읽고 사용자 items/text 내용은 탐색하지 않는다.
+
+    source는 생산자가 확인한 원천 절단, selection은 의도한 표본, unknown은
+    구형 표지의 미확정 범위다. _preview는 전달 미리보기이며 원천 절단이 아니다.
+    step 요약·MCP text 블록·each의 출처 표지도 같은 경로로 읽는다.
+    """
+    import json
+
+    found, seen = [], set()
+    truncated = preview = False
+
+    def visit(obj, depth=0):
+        nonlocal truncated, preview
+        if depth > 16:
+            return
+        if isinstance(obj, str):
+            try:
+                obj = json.loads(obj)
+            except (ValueError, TypeError):
+                return
+        if isinstance(obj, list):
+            for child in obj:
+                visit(child, depth + 1)
+            return
+        if not isinstance(obj, dict):
+            return
+        truncated = truncated or bool(obj.get("truncated"))
+        preview = preview or bool(obj.get("_preview"))
+        for entry in obj.get("truncations") or []:
+            if not isinstance(entry, dict):
+                continue
+            key = json.dumps(entry, sort_keys=True, ensure_ascii=False, default=str)
+            if key not in seen:
+                seen.add(key)
+                found.append(dict(entry))
+        for key in ("final_result", "result", "results", "row_honesty",
+                    "branches_honesty", "branches", "markers"):
+            if key in obj:
+                visit(obj[key], depth + 1)
+        if obj.get("type") == "text":  # MCP ContentBlock
+            visit(obj.get("text"), depth + 1)
+
+    visit(env)
+    if truncated and not found:
+        found.append({"scope": "unknown"})
+    out = {"truncations": found} if found else {}
+    if preview:
+        out["preview"] = True
+    return out

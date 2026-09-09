@@ -27,7 +27,7 @@ def load(name, path):
     return mod
 
 
-def run_trial(code, case_id, named=True, catalog=None, suite='legacy'):
+def run_trial(code, case_id, named=True, catalog=None, suite='legacy', source_results=None):
     setup_case, judge_case = setup, judge
     if suite == 'value_v3':
         from idiom_value_cases import setup as setup_case, judge as judge_case
@@ -92,6 +92,8 @@ def run_trial(code, case_id, named=True, catalog=None, suite='legacy'):
             if n == 'sense' and a == 'crawl':
                 url = p.get('url', '')
                 observed['crawl'].append(url)
+                if source_results is not None and url in source_results:
+                    return json.loads(json.dumps(source_results[url]))
                 if url == 'https://fixture.test/bad':
                     return {'success': False, 'error': 'fixture source unavailable'}
                 if url not in {'https://fixture.test/a', 'https://fixture.test/c', 'https://fixture.test/d'}:

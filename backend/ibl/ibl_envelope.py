@@ -137,6 +137,15 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
     if isinstance(obj, dict):
         keys = sorted(k for k in obj.keys() if isinstance(k, str) and not k.startswith("_"))
         out["keys"] = _clamp_names(keys, out, "keys")
+        # 절단 증거는 step이 중간 결과가 되어도 사라지면 안 된다(ep3286).
+        # 큰 원문은 접되 생산자의 위치·규모·복구 인자는 남긴다.
+        from ibl_honesty import truncation_evidence
+        evidence = truncation_evidence(obj)
+        if evidence.get("truncations"):
+            out["truncated"] = True
+            out["truncations"] = evidence["truncations"]
+        if obj.get("row_honesty"):
+            out["row_honesty"] = obj["row_honesty"]
         # 부분 실패(each 의 errors[])는 진단 정보다 — 다이어트 대상이 아니다.
         # 옛 요약은 이 배열을 통째로 접으면서 message 의 "errors 참조"만 남겨, 다문장
         # 프로그램에서 어느 행이 왜 실패했는지 회수 불능이었다(2026-08-28 팁 보고서

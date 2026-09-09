@@ -612,6 +612,10 @@ class CognitivePipelineMixin:
                             except Exception:
                                 pass  # 판정 불가면 옛 동작(성공 취급) — 여기서 턴을 깨지 않는다
                         tool_calls_log[_idx]["success"] = not _is_err
+                        from ibl_honesty import truncation_evidence
+                        _evidence = truncation_evidence(_rt)
+                        if _evidence:
+                            tool_calls_log[_idx]["evidence"] = _evidence
                         _t0 = tool_calls_log[_idx].pop("_t0", None)
                         if _t0 is not None:
                             tool_calls_log[_idx]["elapsed_ms"] = \

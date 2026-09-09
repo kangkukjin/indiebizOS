@@ -22,6 +22,13 @@ from pathlib import Path
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _isolated_crawl_cache(monkeypatch, tmp_path):
+    from common import spill
+    monkeypatch.setattr(spill, "_root", lambda: str(tmp_path))
 
 _PKG = (Path(__file__).resolve().parent.parent
         / "data/packages/installed/tools/web/tool_webcrawl.py")

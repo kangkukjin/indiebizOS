@@ -287,24 +287,66 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
     """items/표/산문 통화 하나를 미리보기로. 바꿀 것이 없으면 None."""
     rows = int(pol["rows"])
     if isinstance(obj, dict):
+        out = dict(obj)
+        meta = {}
         if isinstance(obj.get("items"), list) and len(obj["items"]) > rows and serialized_len >= int(pol["min_chars"]):
-            out = dict(obj)
             out["items"] = obj["items"][:rows]
             cols = []
             first = obj["items"][0] if obj["items"] else None
             if isinstance(first, dict):
                 cols = list(first.keys())[:20]
-            out["_preview"] = {"shown": rows, "total": len(obj["items"]), "chars": serialized_len,
-                               "columns": cols, "note": PREVIEW_FULL_HINT}
-            return out
+            meta.update(shown=rows, total=len(obj["items"]), columns=cols)
         if isinstance(obj.get("rows"), list) and isinstance(obj.get("columns"), list) \
                 and len(obj["rows"]) > rows and serialized_len >= int(pol["min_chars"]):
-            out = dict(obj)
             out["rows"] = obj["rows"][:rows]
-            out["_preview"] = {"shown": rows, "total": len(obj["rows"]), "chars": serialized_len,
-                               "columns": list(obj["columns"])[:20], "note": PREVIEW_FULL_HINT}
-            return out
-        return None
+            meta.update(shown=rows, total=len(obj["rows"]), columns=list(obj["columns"])[:20])
+        # 행이 적어도 문단 하나가 수만 자일 수 있다. 원형은 보관한 뒤, 표시 사본의
+        # 데이터 문자열 예산을 함께 센다. 생산자의 선언은 데이터이며 액션명은 모른다.
+        display = obj.get("_display") or {}
+        cap = display.get("max_chars") if isinstance(display, dict) else None
+        cap = cap if isinstance(cap, int) and not isinstance(cap, bool) and cap > 0 else int(pol["prose_chars"])
+        if isinstance(display, dict) and isinstance(out.get("items"), list) and (meta or serialized_len > cap):
+            mirrors = display.get("mirror_fields") or []
+            omitted = [k for k in mirrors if isinstance(k, str) and k != "items" and isinstance(out.get(k), str)]
+            for k in omitted:
+                out.pop(k)
+            if omitted:
+                meta["omitted_fields"] = omitted
+        remaining = cap
+        clips = []
+        from ibl_honesty import HONESTY_KEYS
+        preserve = set(HONESTY_KEYS) | {"url", "path", "type", "id", "source_ref",
+                                       "error", "_error", "warning", "reason", "traceback"}
+
+        def clip(value, path):
+            nonlocal remaining
+            if isinstance(value, str):
+                shown = min(len(value), remaining)
+                remaining -= shown
+                if shown < len(value):
+                    clips.append({"path": path, "shown": shown, "total": len(value)})
+                    return value[:shown]
+                return value
+            if isinstance(value, list):
+                return [clip(v, path + [i]) for i, v in enumerate(value)]
+            if isinstance(value, dict):
+                return {k: v if k in preserve else clip(v, path + [k])
+                        for k, v in value.items()}
+            return value
+
+        for field in ("items", "rows", "text", "content"):
+            if field in out:
+                out[field] = clip(out[field], [field])
+        if clips:
+            meta["fields"] = clips
+            meta["text_chars"] = cap - remaining
+        if not meta:
+            return None
+        meta.update(chars=serialized_len, note=PREVIEW_FULL_HINT)
+        if obj.get("source_ref"):
+            meta["note"] += " 원문 파일은 source_ref.path에 보관돼 있습니다. 원문 보관은 전량 검토를 뜻하지 않습니다."
+        out["_preview"] = meta
+        return out
     if isinstance(obj, str):
         cap = int(pol["prose_chars"])
         if len(obj) > cap and not obj.lstrip().startswith(("{", "[")):

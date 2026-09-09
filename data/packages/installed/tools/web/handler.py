@@ -94,16 +94,8 @@ def _fetch_feed(tool_input: dict) -> dict:
 
 
 def _text_to_blocks(title, text):
-    """비정형 텍스트 → 문서 IR blocks(heading + 문단들). 0-LLM. crawl·pdf 등 공용 패턴.
-    빈 줄(\\n\\n)로 문단 분리, 너무 긴 문단은 그대로 둠(렌더가 처리)."""
-    blocks = []
-    if title:
-        blocks.append({"type": "heading", "level": 1, "text": str(title)})
-    for para in str(text or "").split("\n\n"):
-        para = para.strip()
-        if para:
-            blocks.append({"type": "paragraph", "text": para})
-    return blocks or [{"type": "paragraph", "text": str(text or "")}]
+    """원문 보관과 동일한 문단 변환기."""
+    return load_module("webcrawl_store").text_to_blocks(title, text)
 
 
 def _rfc2822_iso(published: str) -> dict:
@@ -744,9 +736,11 @@ def execute(tool_input: dict, context):
 
         try:
             tool_webcrawl = load_module("tool_webcrawl")
-            result = tool_webcrawl.crawl_website(url, max_length)
+            result = tool_webcrawl.crawl_website(url, max_length,
+                                                refresh=tool_input.get("refresh", False),
+                                                project_path=getattr(context, "project_path", None))
             # 단일 통화 items = 문서 IR(type+text 항목) — 크롤한 페이지 텍스트를 문단 블록으로. crawl(url) >> document{pdf}.
-            if isinstance(result, dict) and result.get("success") and result.get("text"):
+            if isinstance(result, dict) and result.get("success") and result.get("text") and "items" not in result:
                 result["items"] = _text_to_blocks(result.get("title"), result.get("text"))
             return format_json(result)
         except Exception as e:

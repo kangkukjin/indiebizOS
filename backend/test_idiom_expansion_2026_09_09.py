@@ -116,8 +116,11 @@ def test_crawl_handler_converts_raw_paragraphs_without_model_call(tmp_path, monk
     monkeypatch.setattr(consciousness_agent, 'oneshot_ai_call', forbidden)
     monkeypatch.setattr(oneshot_facade, 'execution_oneshot', forbidden)
     handler = load('_idiom_raw_web', ROOT / 'data/packages/installed/tools/web/handler.py')
-    monkeypatch.setattr(handler, 'load_module', lambda name: SimpleNamespace(
-        crawl_website=lambda url, max_length: {'success': True, 'title': '제목', 'text': '첫 문단\n\n둘째 문단'}))
+    original_loader = handler.load_module
+    crawler = SimpleNamespace(crawl_website=lambda url, max_length, **kwargs:
+                              {'success': True, 'title': '제목', 'text': '첫 문단\n\n둘째 문단'})
+    monkeypatch.setattr(handler, 'load_module', lambda name:
+                        crawler if name == 'tool_webcrawl' else original_loader(name))
     result = decoded(handler.execute({'url': 'https://fixture.test/a'}, ToolContext(str(tmp_path), 'crawl_website')))
     assert result['items'] == [{'type': 'heading', 'level': 1, 'text': '제목'},
                                {'type': 'paragraph', 'text': '첫 문단'}, {'type': 'paragraph', 'text': '둘째 문단'}]

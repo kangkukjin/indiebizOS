@@ -44,6 +44,8 @@ IBL 표현 계층:     [node:action]{params}
 
 **IBL 표준** — 모든 IndieBiz 인스턴스가 공유하는 언어. 두 부분:
 
+**크롤 원문 보관(2026-09-09 후속 수리)**: `sense:crawl`은 추출한 전문을 `source_ref`·문단 통화·턴 변수에 보존한다. `max_length`는 모델 표시 예산이며 `_preview`만 만든다. 같은 URL은 기본 15분 캐시를 재사용하고, 최신 내용 갱신만 `refresh:true`로 요청한다. 큰 문단과 중복 본문까지 모델 경계에서 줄이며 실제 원천 누락 표지와 구분한다. [계약·복구·검증](../../docs/CRAWL_SOURCE_RETENTION_2026_09_09.md).
+
 **절단 증거 보존(2026-09-09 수리)**: `each`는 입력과 자식 실행의 진단을 `row_honesty`의 위치·`markers`로 보존하며 관용구·투영·중간 step 요약을 지나도 전달한다. 직접 처리 행의 `error_count`와 내부 실패 계수는 합산하지 않는다. 원천 수집 상한은 생산자가 `truncations[{scope:source,source,unit,retained,total,retry}]`로 설명하며 `retry` 파라미터로 재수집할 수 있다. 의도한 행 표본(`selection`), 출처 불명 절단(`unknown`), 표시용 `_preview`를 구분한다. [실행·평가·학습 경계 수리](../../docs/EPISODE3286_TRUNCATION_REPAIR_2026_09_09.md).
 
 **2026-09-08 표현력 개정**(사용자 지시 “다 고쳐봐”): 한 줄 식은 객체·목록 구성을 허용한다(문자열 상수 키, 중복·펼침·컴프리헨션·임의 호출 금지). `select{columns}`는 기존 열 배열에 더해 `{출력열: 식}` 형태의 중첩 투영 객체를 받는다. 잎 문자열은 식이며 문자열 상수는 식 안에서 인용한다. 복사와 문자열 함수는 원형 타입을 보존하고 산술에서만 공용 숫자 관측을 적용한다(assign/compute/select/reduce 동일, 2026-09-09 보완). `join{how}`는 inner(기본)/left/right/full/semi/anti; `defaults`는 보존 결합의 짝 없는 쪽만 채운다. `each`는 `[table:each]{옵션} { IBL 문장들 }`로 몸을 직접 받는다(기존 do 문자열과 같은 IR, 동시 지정 금지). if/case/try/repeat 몸의 바깥 변수 방출은 바깥 슬롯 번호를 복사하지 않고 값으로 연결한다. 최상위 오타는 실행 전 오류, 함수는 닫힌 인자 범위를 유지한다. 기존 3개 표준 코어 노드와 액션 수는 불변이다. [설계·검증·한계](../../docs/IBL_EXPRESSION_REVISION_2026_09_08.md).

@@ -93,7 +93,8 @@ def run_trial(code, case_id, named=True, catalog=None, suite='legacy', source_re
                 url = p.get('url', '')
                 observed['crawl'].append(url)
                 if source_results is not None and url in source_results:
-                    return json.loads(json.dumps(source_results[url]))
+                    fixture = source_results[url]
+                    return fixture(p) if callable(fixture) else json.loads(json.dumps(fixture))
                 if url == 'https://fixture.test/bad':
                     return {'success': False, 'error': 'fixture source unavailable'}
                 if url not in {'https://fixture.test/a', 'https://fixture.test/c', 'https://fixture.test/d'}:

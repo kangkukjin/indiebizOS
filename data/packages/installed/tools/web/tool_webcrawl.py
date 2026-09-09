@@ -183,10 +183,10 @@ def _parse_html(html: str, url: str) -> tuple[str, str]:
     return title, text
 
 
-def _truncate(text: str, max_length: int) -> tuple[str, int, bool]:
-    """텍스트를 max_length로 자르고 (text, original_length, truncated) 반환."""
+def _truncate(text: str, max_length: int | None) -> tuple[str, int, bool]:
+    """내부 추출 보조. 공개 크롤은 None으로 전문을 받아 저장한다."""
     original_length = len(text)
-    truncated = original_length > max_length
+    truncated = max_length is not None and original_length > max_length
     if truncated:
         text = text[:max_length] + "\n\n... (내용 생략됨)"
     return text, original_length, truncated
@@ -718,29 +718,36 @@ _REASON_HINTS = {
 }
 
 
-def crawl_website(url: str, max_length: int = 10000) -> dict:
-    """크롤 결과에 원천 절단의 위치·규모·동일 URL 재조회 인자를 붙인다.
+def crawl_website(url: str, max_length: int = 10000, *, refresh: bool = False,
+                  project_path: str = None) -> dict:
+    """원문은 전문 보관·통화로 반환하고 max_length는 모델 표시 예산만 선언한다.
 
-    max_length는 수집 상한이다. verbose/take/select로 이미 잘린 원문을 복구할
-    수 없으므로, 모든 수집 경로의 반환을 이 경계에서 한 번 설명한다.
+    동일 URL의 읽기는 캐시를 재사용한다. 새 내용 확인은 refresh=True로 명시한다.
+    원문 파일(source_ref)은 표시량·갱신 호출과 독립된 스냅샷이다.
     """
-    result = _crawl_website_impl(url, max_length)
-    if result.get("truncated"):
-        source = result.get("url") or url
-        total = result.get("length")
-        entry = {"scope": "source", "source": source, "unit": "characters",
-                 "retained": max_length, "total": total}
-        if isinstance(total, int) and total > max_length:
-            entry["retry"] = {"url": source, "max_length": total}
-        result["truncations"] = [entry]
-        result["warning"] = (
-            f"원문 수집 상한 {max_length}자에서 잘렸습니다(전체 {total}자). "
-            "전체 원문이 필요하면 truncations[].retry의 url·max_length로 다시 조회하세요. "
-            "verbose는 표시량만 바꾸며, 저장 변수의 take/select/filter도 누락 원문을 복구하지 못합니다.")
+    if not isinstance(max_length, int) or isinstance(max_length, bool) or max_length < 1:
+        return {"success": False, "error": "max_length는 양의 정수(모델 표시량)여야 합니다."}
+    if not isinstance(refresh, bool):
+        return {"success": False, "error": "refresh는 true/false여야 합니다."}
+    if not isinstance(url, str) or not url.strip():
+        return {"success": False, "error": "URL이 필요합니다."}
+    url = url.strip()
+    if not url.startswith(('http://', 'https://')):
+        url = 'https://' + url
+    from common.pkg_utils import load_singleton
+    store = load_singleton(__file__, "webcrawl_store")
+    try:
+        result = store.fetch_once(url, lambda: _crawl_website_impl(url, None),
+                                  refresh=refresh, project_path=project_path)
+    except OSError as exc:
+        return {"success": False, "url": url, "error": f"원문 보관 실패: {exc}",
+                "reason": "source_storage_failed"}
+    if result.get("success"):
+        result["_display"] = {"max_chars": max_length, "mirror_fields": ["text"]}
     return result
 
 
-def _crawl_website_impl(url: str, max_length: int = 10000) -> dict:
+def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
     """
     웹사이트를 크롤링하여 텍스트 내용을 추출한다.
     1단계: curl_cffi 정적 (TLS 크롬 위장, ~1초)
@@ -756,7 +763,7 @@ def _crawl_website_impl(url: str, max_length: int = 10000) -> dict:
     # gnews 래퍼면 실제 기사 URL 로 해소 후 정상 사다리 (해소 실패 시 원 URL 로 진행)
     resolved = _resolve_google_news(url)
     if resolved and not _GNEWS_ARTICLE_RE.match(resolved):  # 재귀 루프 가드
-        result = crawl_website(resolved, max_length)  # 해소 URL 은 래퍼가 아니라 재귀 1회로 끝
+        result = _crawl_website_impl(resolved, max_length)  # 수집만 재귀 — 보관·표시는 바깥 경계 한 번
         result["resolved_from"] = url
         return result
 
@@ -861,4 +868,4 @@ def use_tool(tool_input: dict) -> dict:
     """도구 인터페이스"""
     url = tool_input.get('url', '')
     max_length = tool_input.get('max_length', 10000)
-    return crawl_website(url, max_length)
+    return crawl_website(url, max_length, refresh=tool_input.get('refresh', False))

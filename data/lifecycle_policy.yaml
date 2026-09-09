@@ -40,3 +40,7 @@ envelope_preview:
   rows: 8              # items/표 미리보기 행 수
   min_chars: 3000      # 직렬화 길이가 이 미만이면 미리보기 없이 전체(왕복을 늘리지 않는다)
   prose_chars: 12000   # 산문(문자열 통화) 미리보기 상한 — 파일 읽기·brief 대부분은 그대로 통과
+
+# 크롤 원문은 spill에 24h 보관. URL 재사용 기간과 모델 표시 예산은 별개다.
+webcrawl_cache:
+  reuse_seconds: 900   # 명시 refresh=true는 이 기간 안에도 새 스냅샷을 수집

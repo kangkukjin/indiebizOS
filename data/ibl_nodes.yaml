@@ -2465,9 +2465,9 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
-        description: 웹페이지 원문 읽기 (URL 필요). items=문단 단위(type+text 항목). 검색 스니펫으로 부족할 때 상세 내용 확인용.
+        description: 웹페이지 원문 읽기 (URL 필요). 전문을 보관하고 items=문단 단위로 전달. 큰 결과는 모델에만 미리보기, 추가 읽기는 저장 변수·source_ref 사용. 같은 URL은 캐시 재사용, 새 내용은 refresh:true.
         group: research
-        target_description: 읽을 페이지 URL (http/https). 검색 결과의 link 필드 그대로 전달 가능.
+        target_description: 읽을 페이지 URL (http/https). max_length는 모델 표시 글자 예산(기본 10000)이며 원문·IBL 후속 처리량을 자르지 않는다. 새 내용 갱신은 refresh:true, 더 읽기는 저장 변수·source_ref.path.
         router: handler
         tool: crawl_website
         implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.

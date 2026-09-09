@@ -43,6 +43,8 @@ def nb(tmp_path, monkeypatch):
     monkeypatch.setattr(core, "DB_PATH", tmp_path / "nb" / "notebooks.db")
     (tmp_path / "nb").mkdir()
     monkeypatch.setattr(core, "semantic_available", lambda: False)   # FTS 만 — 모델 무접촉
+    # 등록·검색만 검증한다. 카드 데몬이 fixture 종료 후 실 DB/모델을 읽지 않게 한다.
+    monkeypatch.setattr(H, "_card_after_index", lambda *args: None)
     return core, H
 
 

@@ -25,6 +25,15 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: crawl_display_limit_drops_source
+    retired: 2026-09-09
+    reason: 받은 전문을 표시 한도에서 버려 같은 페이지를 재조회하던 낭비를 없앤다.
+    instead: 원문은 캐시·스냅샷·IBL 통화에 보존하고 max_length는 모델 표시 예산이다. 추가 읽기는 변수·source_ref, 갱신만 refresh.
+    phrases:
+      - 'max_length는 수집 상한이다'
+      - '페이지당 크롤러 기본 상한은 10,000자'
+      - '본문이 잘리면(truncated: true) max_length 를 늘려 재호출'
+      - '원문 수집 상한 {max_length}자에서 잘렸습니다'
   - id: transient_framing_cache
     retired: 2026-09-09
     reason: 턴 간 규정 보관을 자아별 과제 원장으로 옮기고 선택과 재검토를 분리했다.

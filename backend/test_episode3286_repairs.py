@@ -90,17 +90,22 @@ def test_projection_and_summarized_intermediate_result_keep_evidence():
     assert truncation_evidence(compact)['truncations'] == [CUT]
 
 
-def test_crawl_retry_parameters_fetch_complete_source(monkeypatch):
+def test_crawl_preserves_complete_source_with_small_display_budget(monkeypatch, tmp_path):
+    from common import spill
+    monkeypatch.setattr(spill, "_root", lambda: str(tmp_path))
     crawler = load('_ep3286_crawler', ROOT / 'data/packages/installed/tools/web/tool_webcrawl.py')
+    calls = []
     def fetch(url, max_length):
+        calls.append(max_length)
         text, length, truncated = crawler._truncate('a' * 23218, max_length)
         return dict(success=True, url=url, text=text, length=length, truncated=truncated)
     monkeypatch.setattr(crawler, '_crawl_website_impl', fetch)
-    short = crawler.crawl_website(URL)
-    assert short['truncations'] == [CUT] and 'verbose' in short['warning']
-    full = crawler.crawl_website(**short['truncations'][0]['retry'])
-    assert len(full['text']) == 23218 and not full['truncated']
-    assert not full.get('truncations') and not full.get('warning')
+    first = crawler.crawl_website(URL)
+    full = crawler.crawl_website(URL, max_length=23218)
+    assert calls == [None] and full['cache']['hit']
+    assert len(first['text']) == len(full['text']) == 23218
+    assert not first.get('truncated') and not first.get('truncations')
+    assert json.loads(Path(first['source_ref']['path']).read_text())['text'] == full['text']
 
 
 def test_sample_and_preview_do_not_become_source_truncation():

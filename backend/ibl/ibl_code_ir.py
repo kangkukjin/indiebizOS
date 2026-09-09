@@ -13,6 +13,7 @@ from common.ibl_vars import REF_RE, split_ref
 
 CAPTURE = ContextVar('ibl_typed_parameters', default=False)
 STEP_RE = re.compile(r'\{\{_step_(\d+)_result((?:\.(?:\w+|\*))*\??)\}\}')
+FILE_RE = re.compile(r'\$file:(\d+)')
 
 
 class Literal(str):
@@ -53,11 +54,16 @@ class Code(str):
 def _parts(text, slots=True):
     matches = [(m.start(), m.end(), Ref('name', *split_ref(m), m.group()))
                for m in REF_RE.finditer(text)]
+    matches += [(m.start(), m.end(), Ref('file', int(m[1]), '', m.group()))
+                for m in FILE_RE.finditer(text)]
     if slots:
         matches += [(m.start(), m.end(), Ref('step', int(m[1]), m[2], m.group()))
                     for m in STEP_RE.finditer(text)]
     pos = 0
-    for start, end, ref in sorted(matches):
+    # $file:10은 $file 변수와 겹쳐 보이지만 첨부 참조 한 개다(가장 긴 토큰).
+    for start, end, ref in sorted(matches, key=lambda match: (match[0], -match[1])):
+        if start < pos:
+            continue
         if start > pos:
             yield text[pos:start]
         yield ref
@@ -118,10 +124,13 @@ def bind_template(template, resolve, blocked=frozenset(), namespace='name', type
             continue
         if len(template.parts) == 1 and (not template.quoted or (typed_paths and part.path)):
             return literal(value)
-        parts.append(_text(value))
+        parts.append(Literal(_text(value)))
     if not any(isinstance(p, Ref) for p in parts):
         return Literal(''.join(parts))
-    return Template(str(template), template.quoted, parts)
+    # 미해결 참조가 남아도 문자열 뷰는 현재 parts를 보여야 한다. 옛 뷰를 쓰면
+    # JSON 직렬화/파일 쓰기에서 이미 해소한 컴파일러 슬롯이 그대로 새어 나온다.
+    text = ''.join(p.source if isinstance(p, Ref) else p for p in parts)
+    return Template(text, template.quoted, parts)
 
 
 def compile_code(code, _captures=None):

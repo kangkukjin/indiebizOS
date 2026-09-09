@@ -22,14 +22,14 @@
 import hashlib
 import json
 import os
-import re
 from typing import Dict, List, Optional, Tuple
+
+from common.ibl_vars import find_names
 
 MAX_VALUE_CHARS = 4_000_000    # 이보다 큰 값은 싣지 않는다(그런 통화는 대개 이미 스필 참조) — 봉투 too_large 로 신고
 MAX_STORE_CHARS = 32_000_000   # 턴 저장소 총량 — 넘치면 오래된 이름부터 덜어낸다
 
 RESERVED = frozenset({"items", "it", "i", "error", "return", "file"})
-_REF_RE = re.compile(r"\$\{?([^\W\d]\w*)")
 
 
 def turn_key(agent_id: Optional[str]) -> Optional[str]:
@@ -94,7 +94,7 @@ def save(key: Optional[str], live: Dict[str, object]) -> Tuple[List[str], List[s
 
 def referenced(code: str) -> List[str]:
     """code 가 참조하는 `$이름` 들(예약 이름 제외)."""
-    return sorted(set(_REF_RE.findall(code or "")) - RESERVED)
+    return sorted(set(find_names(code)) - RESERVED)
 
 
 def preset_for(code: str, key: Optional[str], exclude=()) -> Dict[str, str]:

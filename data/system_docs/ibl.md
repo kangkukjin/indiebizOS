@@ -4,7 +4,7 @@ scope: IBL 명세, 6-Node 구조(액션 수=본문 '핵심 노드 분류' 빌드
 owner_code: ibl_engine.py, ibl_parser.py, ibl_access.py, ibl_routing.py
 source_of_truth: data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml
 build_tool: scripts/build_ibl_nodes.py
-last_updated: 2026-08-28
+last_updated: 2026-09-09
 see_also: [memory.md, packages.md, technical.md]
 ---
 
@@ -693,6 +693,8 @@ param 값이 **통짜 `.path` 참조 하나**(`items: "$순회.queue"`, `columns
 ### 괄호 표기 `${변수명}` (2026-08-22)
 
 `$변수명` 과 `${변수명}` 은 **같은 뜻**이다. 경로도 괄호 안에 넣는다 — `${r.file}`.
+숫자로 시작하는 이름도 허용한다. `$1차`, `${1차}`, `${ 1차 }`는 같은 변수이며,
+같은 턴의 다음 `execute_ibl` 호출에서도 저장된 결과를 참조한다.
 
 괄호가 필요한 이유는 경계다. 이름 경계가 `\w` 라서 한국어에서는 조사·단위가 이름에 먹힌다:
 
@@ -730,6 +732,19 @@ param 값이 **통짜 `.path` 참조 하나**(`items: "$순회.queue"`, `columns
 - `$file:0` → files 배열의 첫 번째 항목으로 치환
 - `$file:1` → files 배열의 두 번째 항목으로 치환
 - 이스케이프 문제 없이 코드, JSON, 마크다운 등 모든 텍스트를 안전하게 전달 가능
+
+**변수 이름 자체를 산문에 쓰기**: IBL 문자열에 직접 쓴 `$이름`은 따옴표나
+마크다운 백틱 안에서도 변수 참조다. `[self:edit]`의 `old_string`·`new_string`에
+그 글자 자체를 넣으려면 `files`로 본문을 전달한다. 첨부에서 들어온 `$이름`,
+`$items`, 내부 슬롯 모양, `$file:N`은 데이터로 보존되며 다시 치환하지 않는다.
+주변 IBL 소스에 직접 쓴 참조는 계속 바인딩된다.
+
+```json
+{
+  "code": "[self:edit]{path:\"note.md\",old_string:\"$file:0\",new_string:\"$file:1\"}",
+  "files": ["기존 문장", "변수 `$1차`와 `$일차`를 비교했다."]
+}
+```
 
 **크기 경계와 `files_from`(2026-08-30, ep2356)**: 인라인 `files` 는 본문이 도구 호출 JSON
 안에 실리므로, 수십 KB급이 되면 **호출 자체가 전송에서 깨진다**(60KB 한글 본문이

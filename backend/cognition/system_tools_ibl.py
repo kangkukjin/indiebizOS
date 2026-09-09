@@ -152,11 +152,10 @@ def get_action_breaker_state() -> Dict[str, dict]:
     return out
 
 
-# $file:N 참조 — 한 번의 정규식 치환으로 끝낸다(2026-09-06 ep2884 실측):
+# $file:N 참조 — 한 번의 바인딩으로 끝낸다(2026-09-06 ep2884 실측):
 # 옛 판은 인덱스 순서로 str.replace 를 *반복* 해 `$file:1` 이 `$file:10` 의 접두를 먼저 먹었고
 # (시험 파일 제안에 episode_logger 본문+"0" 이 실렸다), 앞선 치환이 넣은 본문을 뒤 인덱스가
-# 다시 훑었다. 정규식 한 패스는 가장 긴 숫자를 한 토큰으로 읽고 삽입된 본문을 재검사하지 않는다.
-_FILE_REF_RE = re.compile(r"\$file:(\d+)")
+# 다시 훑었다. IR은 가장 긴 숫자를 한 토큰으로 읽고 삽입된 본문을 데이터로 보존한다.
 
 
 def _replace_file_refs_in_steps(steps: list, files: list, unresolved: Optional[set] = None) -> set:
@@ -185,17 +184,20 @@ def _replace_file_refs_in_steps(steps: list, files: list, unresolved: Optional[s
 
 
 def _replace_file_refs_in_text(val: str, files: list, unresolved: set) -> str:
-    """문자열 하나의 $file:N 을 한 패스로 치환. 범위 밖은 그대로 두고 unresolved 에 적는다."""
-    if "$file:" not in val:
+    """첨부만 바인딩하고 그 본문의 $변수/슬롯은 다시 해석하지 않는다."""
+    from ibl_code_ir import Literal, Template, bind_template
+
+    if isinstance(val, Literal) or "$file:" not in val:
         return val
 
-    def _one(m):
-        idx = int(m.group(1))
+    def _one(idx, path):
         if idx < len(files):
-            return files[idx]
-        unresolved.add(m.group(0))
-        return m.group(0)
-    return _FILE_REF_RE.sub(_one, val)
+            return True, files[idx]
+        unresolved.add(f"$file:{idx}")
+        return False, None
+
+    template = val if isinstance(val, Template) else Template(val, quoted=True)
+    return bind_template(template, _one, namespace="file")
 
 
 def _replace_file_refs_in_dict(d: dict, files: list, unresolved: Optional[set] = None):

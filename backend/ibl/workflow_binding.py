@@ -381,16 +381,16 @@ def _bind_items_params(tool_input: dict, prev_result: str):
     out = {**tool_input, "params": dict(params)}
     bound = {}
     for key, value in pending.items():
-        # Template의 문자열은 로그용 원문이다. 부분 바인딩으로 이미 들어온 값은
-        # parts에만 있으므로 문자열을 다시 훑으면 값이 유실되거나 참조로 재해석된다.
+        # 문자열 뷰가 같아도 원래 참조와 바인딩된 값은 다르므로 parts로 판정한다.
         template = value if isinstance(value, Template) else Template(value, quoted=True)
         if not isinstance(value, Template):
             # 일반 문자열의 다른 이름/슬롯은 이 바인더의 참조가 아니다.
             template = Template(value, quoted=True, parts=[
                 p.source if isinstance(p, Ref) and (p.namespace != 'name' or p.name != 'items') else p
                 for p in template.parts])
-        slots = [p for p in template.parts if not (isinstance(p, str) and not p.strip())]
-        sole = (_ITEMS_REF.fullmatch(str(template).strip()) and len(slots) == 1
+        slots = [p for p in template.parts
+                 if not (isinstance(p, str) and not isinstance(p, Literal) and not p.strip())]
+        sole = (len(slots) == 1
                 and isinstance(slots[0], Ref) and slots[0].namespace == 'name' and slots[0].name == 'items')
         if sole:
             template = Template(str(template), quoted=False, parts=slots)

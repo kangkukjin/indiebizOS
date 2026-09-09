@@ -10,8 +10,8 @@
   - 실패 step 은 원형 오류문을 그대로 싣는다(어디서 왜 — 진단 정보는 다이어트 대상이 아님).
   - `verbose: true` 면 손대지 않는다(옛 모양 그대로).
   - 표면(조종실·앱·폰·웹소켓)은 이미 final_result 만 읽는다 → 무영향.
-  - 봉투에 `_results_summarized: true` 표지 — MCP 브리지(_trim_for_agent)·평가자(cognitive_trace)가
-    "final_result 를 지우면 안 된다"를 이 표지로 안다.
+  - 봉투에 `_results_summarized: true` 표지 — results[]가 요약임을 알린다.
+    MCP도 전달 한도 초과 시 이 요약기를 쓰며, final_result는 verbose 여부와 무관하게 보존한다.
 """
 import json
 from typing import Any, Dict

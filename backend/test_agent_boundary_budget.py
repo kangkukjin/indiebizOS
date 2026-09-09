@@ -83,6 +83,65 @@ def test_b3_three_action_envelope_passes_untouched(monkeypatch):
     assert len(one) <= m._agent_budget_chars(1) + 120 and "생략" in one
 
 
+def test_verbose_small_envelope_keeps_explicit_final_result():
+    final = json.dumps({"items": [7, 8, 9, 10], "count": 4})
+    env = {"success": True, "results": [{"step": 1, "result": final}], "final_result": final}
+    raw = json.dumps(env)
+    assert _mcp()._trim_for_agent(raw) == raw
+
+
+def test_negative_take_survives_verbose_turn_variable_delivery(tmp_path, monkeypatch):
+    """ep3219: 엔진은 4행을 냈지만 verbose 원장 10행 뒤의 최종 값이 MCP에서 잘렸다."""
+    from common import spill
+    from system_tools import _execute_ibl_unified
+    from thread_context import actor_context
+
+    monkeypatch.setattr(spill, "spill_dir", lambda: str(tmp_path))
+    rows = [{"id": n, "body": "원장 내용" * 160} for n in range(1, 11)]
+    ledger = tmp_path / "ledger.json"
+    rules = tmp_path / "rules.md"
+    ledger.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    rules.write_text("방법론 규칙\n" * 1500, encoding="utf-8")
+    code = ('$규칙 = [self:read]{path:' + json.dumps(str(rules)) + '}\n'
+            '$원장 = [self:read]{path:' + json.dumps(str(ledger)) + '}')
+    with actor_context(agent_id="probe", task_id="task_take_delivery"):
+        first = json.loads(_execute_ibl_unified({"code": code}, str(tmp_path), agent_id="probe"))
+        assert first["success"], first
+        raw = _execute_ibl_unified({"code": '$규칙\n$원장 >> [table:take]{n: -4}', "verbose": True},
+                                   str(tmp_path), agent_id="probe")
+    original = json.loads(raw)
+    assert len(json.loads(original["results"][1]["result"])) == 10
+    delivered = _mcp()._trim_for_agent(raw, actions=1)
+    assert len(raw) > _mcp()._agent_budget_chars(1) >= len(delivered)
+    out = json.loads(delivered)
+    final = json.loads(out["final_result"])
+    assert final["count"] == 4 and final["items"] == rows[-4:]
+    assert out["results"][1]["count"] == 10 and out["results"][2]["count"] == 4
+    assert out["_results_summarized"] and out["_trimmed"]
+    assert "final_result" in original and "result" in original["results"][1]
+
+
+@pytest.mark.parametrize("success", [True, False])
+def test_oversized_final_stays_recoverable_json(tmp_path, monkeypatch, success):
+    from common import spill
+
+    monkeypatch.setattr(spill, "spill_dir", lambda: str(tmp_path))
+    final = {"items": [{"id": 7, "body": "큰 값" * 20000}], "count": 1}
+    env = {"success": success, "steps_total": 2,
+           "results": [{"step": 1, "result": "중간 값" * 5000}],
+           "final_result": json.dumps(final, ensure_ascii=False)}
+    if not success:
+        env.update(error="실패 상세" * 10000, resume={"from_step": 2, "vars_ref": "/tmp/live.json"})
+    raw = json.dumps(env, ensure_ascii=False)
+    text = _mcp()._trim_for_agent(raw)
+    out = json.loads(text)
+    assert len(text) <= _mcp()._agent_budget_chars(1)
+    assert out["success"] is success and out["_spilled"] and out["_trimmed"]
+    saved, error = spill.read_ref(out["ref"])
+    assert error is None and json.loads(saved) == env
+    assert out["final_result_summary"]["count"] == 1
+
+
 # ---------------------------------------------------------------- B4 도구 집합
 def test_b4_command_narrows_builtins_and_policy_stops_asking_toolsearch():
     from providers.claude_code import ClaudeCodeProvider as P

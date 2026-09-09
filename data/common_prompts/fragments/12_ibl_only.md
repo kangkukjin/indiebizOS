@@ -234,6 +234,7 @@ $avg = $total.value / 10
 **규모 낱말** — `total` 은 items 가 뽑힌 **셀 수 있는 모집단** 수라 `total > items` 면 봉투가 `truncated` 를 스스로 켠다(표본). 제공자 추정치는 `total_estimate` — 절단이 아니다.
 
 ### 봉투 읽는 법
+- MCP: `_trimmed`=축약, 최종값=`final_result`. `_spilled`는 `ref.path` 읽기(재실행 금지).
 - **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "…"}` 는 '통화 0행'이지 실패가 아니다). `final_result` 는 파이프·병렬 봉투에만 있다.
 - 파이프(`>>`) 결과의 `results[]` 는 **step 요약**, `final_result` 는 **미리보기**(큰 items/표=앞 8행+`_preview`, 긴 산문=앞 12,000자). 전체는 턴에 있으니 `$이름 >> [table:take]{n}`·`[table:select]` 로 **필요한 만큼만** 받고, 전부 필요하면 `verbose: true`. ★`results` 키가 보인다고 step 요약이라 단정하지 마라 — 단일 액션·블록 문장(`[try]`·`[if:]`)의 결과는 핸들러 원문이라 그 `results` 는 액션 자신의 필드다(예: `[sense:search]` 의 `results`). 판별자는 `_results_summarized`·`steps_total`·`final_result` — 있으면 파이프 봉투, 없으면 원문(블록 봉투엔 `_caught`·`_untransformed`). 중간 step 원형이 꼭 필요할 때만 `verbose: true`.
 - ★여러 문장(`$변수 = …` 줄들)은 **execute_ibl 한 번에 여러 줄로** 보내라 — 중간 통화는 엔진 안에 머물고 모델에겐 마지막 결과와 step 요약만 온다(따로 부르면 중간 결과가 매번 컨텍스트에 들어온다). 병렬 수집은 파이프 안에서 `[table:ai]`/`[table:brief]` 로 줄인 뒤 받는다.

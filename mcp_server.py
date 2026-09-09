@@ -6,8 +6,12 @@
 import json
 import os
 import re
+import sys
 import urllib.request
 from typing import Optional, List
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
+import boot_paths  # noqa: E402,F401
 
 import anyio
 from mcp.server.fastmcp import FastMCP, Context
@@ -78,29 +82,25 @@ def _http_trajectory(ctx):
 
 
 def _trim_for_agent(raw: str, actions: int = 1) -> str:
-    """에이전트에게 줄 응답에서 중복 필드(final_result) 제거.
-
-    파이프라인(>> & ??) 결과에서 final_result는 마지막 step의 '사본'이다 —
-    results[-1]에 이미 같은 내용이 들어있고, final_result는 내부 소비자(프론트엔드 UI 펼침·
-    웹소켓·캘린더 Goal)를 위한 출력 계약이다. 에이전트(LLM)는 results를 직접 읽으므로
-    final_result는 순수 중복 → 토큰만 ~2배로 부풀린다(대형 step에서 한도 초과·파일덤프 유발).
-    따라서 '에이전트 경계'인 여기서만 벗겨낸다 — REST 봉투를 받는 내부 계약은 그대로 둔다.
-    파싱 불가/형태 불일치면 원본 그대로 반환(graceful). 재직렬화는 ensure_ascii=False
-    (한글이 \\uXXXX로 부풀지 않도록).
-    """
+    """최종 반환값을 보존하며 전달 예산에 맞춘다. 초과하면 중간 실행 기록부터 접는다."""
+    original_raw = raw
     try:
         data = json.loads(raw)
     except Exception:
         return raw
-    # ★2026-08-22 M1 봉투 다이어트: results[] 가 step *요약*이면(_results_summarized) final_result
-    # 가 유일한 원형 — 지우면 데이터가 사라진다. 옛 모양(verbose)일 때만 중복 제거.
-    if (isinstance(data, dict) and "final_result" in data
-            and isinstance(data.get("results"), list) and data["results"]
-            and not data.get("_results_summarized")):
-        data.pop("final_result", None)
-        raw = json.dumps(data, ensure_ascii=False)
+    budget = _agent_budget_chars(actions)
+    if len(raw) > budget and isinstance(data, dict):
+        # ep3219: verbose의 final_result를 지운 뒤 꼬리를 자르면 원장 10행만 남고
+        # take가 낸 마지막 4행은 사라졌다. 값 대신 실행 기록을 공용 요약기로 접는다.
+        from ibl_envelope import diet_envelope
+        slim = diet_envelope(data)
+        if slim is not data:
+            slim["_trimmed"] = "전달 한도로 중간 결과 원문을 표시에서 생략했습니다. 최종 반환값은 final_result입니다."
+            slim["_hint"] = "results[]는 단계 요약입니다. 중간 값은 저장된 변수·파일에서 필요한 부분만 읽으세요."
+            data = slim
+            raw = json.dumps(data, ensure_ascii=False)
     return _budget_for_agent(raw, data if isinstance(data, dict) else None,
-                             budget=_agent_budget_chars(actions))
+                             budget=budget, original_raw=original_raw)
 
 
 # 에이전트에게 줄 응답의 크기 예산(문자) — 2026-09-04 개정: 고정 24,000자 → **프로바이더 규칙과
@@ -172,7 +172,7 @@ def _condense_items(obj, cap: int):
     return obj
 
 
-def _budget_for_agent(raw: str, parsed=None, budget: int = None) -> str:
+def _budget_for_agent(raw: str, parsed=None, budget: int = None, original_raw: str = None) -> str:
     """예산 초과 응답을 단계 축약. 층 선택 원칙: 여기는 '에이전트 경계' —
     REST/프론트/웹소켓이 받는 원본 계약은 건드리지 않는다."""
     if budget is None:
@@ -187,15 +187,27 @@ def _budget_for_agent(raw: str, parsed=None, budget: int = None) -> str:
     if parsed is not None:
         for cap in (10, 5, 3, 1):
             slim = _condense_items(parsed, cap)
+            if isinstance(slim, dict):
+                slim["_trimmed"] = (f"전달 한도로 items 표시를 소스당 최대 {cap}개로 줄였습니다"
+                                    " — 전체 개수는 count/total/_omitted_items 참조. "
+                                    "전체 값은 저장된 변수·파일에서 필요한 부분만 읽으세요.")
             out = json.dumps(slim, ensure_ascii=False)
             if len(out) <= budget:
-                if isinstance(slim, dict):
-                    slim["_trimmed"] = (f"결과가 커서 items 를 소스당 {cap}개로 줄였습니다"
-                                        " — 전체 개수는 total/_omitted_items 참조, "
-                                        "더 필요하면 limit·필터로 범위를 좁혀 다시 실행하세요")
-                    out = json.dumps(slim, ensure_ascii=False)
                 return out
-        raw = json.dumps(_condense_items(parsed, 1), ensure_ascii=False)
+        # JSON을 문자 단위로 자르면 최종 값·오류·정직 표지가 사라지고 JSON도 깨진다.
+        # 큰 값은 원형으로 보관하고 참조를 반환한다. 실행을 다시 요구하지 않는다.
+        from common.spill import spill_write
+        from ibl_envelope import summarize_result
+        saved = spill_write(original_raw if original_raw is not None else raw, tag="mcp_result")
+        saved["_trimmed"] = "전달 한도로 본문 표시를 생략했습니다. ref.path의 저장된 결과를 읽으세요(재실행 불필요)."
+        if isinstance(parsed, dict):
+            if "success" in parsed:
+                saved["success"] = parsed["success"]
+            if "final_result" in parsed:
+                summary = summarize_result(parsed["final_result"])
+                if len(json.dumps({**saved, "final_result_summary": summary}, ensure_ascii=False)) <= budget:
+                    saved["final_result_summary"] = summary
+        return json.dumps(saved, ensure_ascii=False)
     # 구조 축약으로도 안 줄면(거대 텍스트 등) 꼬리 절단 — 파일덤프보다 낫다. 꼬리 안내까지 예산 안에.
     tail_note = f" …[{{n}}자 생략 — {_truncated_next_step()}]"
     head = raw[:max(0, budget - len(tail_note))]
@@ -203,8 +215,7 @@ def _budget_for_agent(raw: str, parsed=None, budget: int = None) -> str:
 
 
 def _truncated_next_step() -> str:
-    """절단 뒤의 다음 걸음 한 줄(2026-09-05) — 정본은 ibl_honesty.TRUNCATED_NEXT_STEP. 이 파일은 무의존성이
-    우선이라 lazy import + 폴백(같은 뜻의 짧은 문장)."""
+    """절단 뒤의 다음 걸음 한 줄 — 정본은 ibl_honesty.TRUNCATED_NEXT_STEP."""
     try:
         from ibl_honesty import TRUNCATED_NEXT_STEP
         return TRUNCATED_NEXT_STEP
@@ -220,7 +231,7 @@ def _truncated_next_step() -> str:
 # 수확해 MCP ImageContent 로 승격한다. 봉투 계약·상한은 system_tools 와 동일
 # 유지 의무 — {"image_data": {"b64", "media_type", ...메타}}, 상한 4장, 본문엔
 # b64 뺀 메타를 `image` 키로 남김. ★예산(_budget_for_agent)보다 먼저 돌 것.
-# (공용 코어 추출은 직결 경로 정리 때 — 지금은 mcp_server 무의존성 유지가 우선.)
+# (이미지 수확의 공용 코어 추출은 직결 경로 정리 때.)
 
 _IMAGE_ENVELOPE_KEY = "image_data"
 _MAX_TOOL_IMAGES = 4
@@ -382,6 +393,8 @@ async def execute_ibl(code: str, project_path: str = "",
         ★큰 구조 데이터는 미리보기: items/표 8행 초과·3,000자 이상이면 앞 8행 + _preview{shown,total,columns},
         긴 산문은 앞 12,000자 — 2026-09-06 봉투 기본값 반전. 전체 값은 턴에 보관되므로 `$이름` 으로 가리켜
         [table:take]/[table:select]/[table:filter] 로 좁혀 받는다. 행·값을 손으로 옮겨 적지 말 것).
+        MCP 전달 한도를 넘으면 중간 기록부터 요약하고 _trimmed로 알린다. 최종 값도 너무 크면
+        _spilled/ref로 저장된 결과를 가리킨다 — 중간 results를 최종 반환값으로 읽거나 재실행하지 말 것.
     recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
         (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
         기록 없음이면 만료(24h)/미탑재를 정직하게 알린다(F51-1: 표면 대기가 끊겨도
@@ -473,7 +486,7 @@ async def execute_ibl(code: str, project_path: str = "",
     # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야
     # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
     cleaned, images = _harvest_images_for_mcp(raw)
-    text = _trim_for_agent(cleaned, _count_actions(code))
+    text = await anyio.to_thread.run_sync(lambda: _trim_for_agent(cleaned, _count_actions(code)))
     # 반복 호출 가드 — 조언은 예산 밖 부록(±200자)이라 절단과 무관.
     # ★회수(recover) 폴링은 반복이 정상 사용이라 가드를 안 태운다(F51-1).
     if not recover:

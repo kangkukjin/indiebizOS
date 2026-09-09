@@ -1,0 +1,338 @@
+{
+  "groups": {
+    "all": {
+      "hidden": {
+        "n": 27,
+        "first_requirement_ok": 9,
+        "final_requirement_ok": 12,
+        "ever_requirement_ok": 12,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 3
+      },
+      "exposed": {
+        "n": 27,
+        "first_requirement_ok": 16,
+        "final_requirement_ok": 20,
+        "ever_requirement_ok": 22,
+        "first_correct_then_regressed": 2,
+        "first_correct_with_runtime_error": 4
+      }
+    },
+    "applicable": {
+      "hidden": {
+        "n": 18,
+        "first_requirement_ok": 3,
+        "final_requirement_ok": 4,
+        "ever_requirement_ok": 4,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 1
+      },
+      "exposed": {
+        "n": 18,
+        "first_requirement_ok": 9,
+        "final_requirement_ok": 12,
+        "ever_requirement_ok": 13,
+        "first_correct_then_regressed": 1,
+        "first_correct_with_runtime_error": 4
+      }
+    },
+    "direct": {
+      "hidden": {
+        "n": 9,
+        "first_requirement_ok": 1,
+        "final_requirement_ok": 2,
+        "ever_requirement_ok": 2,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 1
+      },
+      "exposed": {
+        "n": 9,
+        "first_requirement_ok": 6,
+        "final_requirement_ok": 8,
+        "ever_requirement_ok": 8,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 1
+      }
+    },
+    "embedded": {
+      "hidden": {
+        "n": 9,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 2,
+        "ever_requirement_ok": 2,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      },
+      "exposed": {
+        "n": 9,
+        "first_requirement_ok": 3,
+        "final_requirement_ok": 4,
+        "ever_requirement_ok": 5,
+        "first_correct_then_regressed": 1,
+        "first_correct_with_runtime_error": 3
+      }
+    },
+    "counter": {
+      "hidden": {
+        "n": 9,
+        "first_requirement_ok": 6,
+        "final_requirement_ok": 8,
+        "ever_requirement_ok": 8,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 2
+      },
+      "exposed": {
+        "n": 9,
+        "first_requirement_ok": 7,
+        "final_requirement_ok": 8,
+        "ever_requirement_ok": 9,
+        "first_correct_then_regressed": 1,
+        "first_correct_with_runtime_error": 0
+      }
+    }
+  },
+  "cases": {
+    "counter_context": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 3,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 3,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      }
+    },
+    "counter_latest": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 3,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 1
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 3,
+        "final_requirement_ok": 2,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 1,
+        "first_correct_with_runtime_error": 0
+      }
+    },
+    "counter_ledger": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 2,
+        "ever_requirement_ok": 2,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 1
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 3,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      }
+    },
+    "direct_context": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 0,
+        "final_requirement_ok": 0,
+        "ever_requirement_ok": 0,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 0,
+        "final_requirement_ok": 2,
+        "ever_requirement_ok": 2,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      }
+    },
+    "direct_latest": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 0,
+        "final_requirement_ok": 0,
+        "ever_requirement_ok": 0,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 3,
+        "final_requirement_ok": 3,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      }
+    },
+    "direct_ledger": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 1,
+        "final_requirement_ok": 2,
+        "ever_requirement_ok": 2,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 1
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 3,
+        "final_requirement_ok": 3,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 1
+      }
+    },
+    "embedded_context": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 0,
+        "final_requirement_ok": 0,
+        "ever_requirement_ok": 0,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 1,
+        "final_requirement_ok": 1,
+        "ever_requirement_ok": 2,
+        "first_correct_then_regressed": 1,
+        "first_correct_with_runtime_error": 1
+      }
+    },
+    "embedded_latest": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 0,
+        "final_requirement_ok": 0,
+        "ever_requirement_ok": 0,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 0,
+        "final_requirement_ok": 0,
+        "ever_requirement_ok": 0,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      }
+    },
+    "embedded_ledger": {
+      "hidden": {
+        "n": 3,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 2,
+        "ever_requirement_ok": 2,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 0
+      },
+      "exposed": {
+        "n": 3,
+        "first_requirement_ok": 2,
+        "final_requirement_ok": 3,
+        "ever_requirement_ok": 3,
+        "first_correct_then_regressed": 0,
+        "first_correct_with_runtime_error": 2
+      }
+    }
+  },
+  "schema_differences": [],
+  "requirement_differences": [
+    {
+      "id": "counter_latest_0_hidden",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "counter_latest_2_exposed",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "counter_latest_2_hidden",
+      "attempt": 1,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "counter_ledger_0_hidden",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "direct_context_1_exposed",
+      "attempt": 1,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "direct_ledger_2_exposed",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "direct_ledger_2_hidden",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "embedded_context_1_exposed",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "embedded_ledger_0_exposed",
+      "attempt": 1,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "embedded_ledger_1_exposed",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "id": "embedded_ledger_2_exposed",
+      "attempt": 0,
+      "primary": false,
+      "audited": true,
+      "verdict": "품질 기준 통과"
+    }
+  ]
+}

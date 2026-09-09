@@ -1,0 +1,420 @@
+{
+  "version": 1,
+  "base_commit": "44827d7b511b37d59509fbb873ca967b718e1c7c",
+  "created_at": "2026-09-09T12:15:23+0900",
+  "provider": "claude_code",
+  "model": "opus",
+  "effort": "high",
+  "repeats": 3,
+  "max_repairs": 1,
+  "model_timeout_s": 180,
+  "worker_timeout_s": 30,
+  "cli_version": "2.1.260 (Claude Code)",
+  "arms": [
+    "hidden",
+    "exposed"
+  ],
+  "cases": [
+    {
+      "id": "direct_latest",
+      "group": "direct",
+      "relevant": "최신범위읽기",
+      "task": "drafts/*.md의 문서 중 가장 최근에 수정된 문서에서 11~22줄 본문을 반환해 줘. 파일명의 날짜가 아니라 수정시각 기준이다. 후보는 4개, 수정시각 동률은 없고 모두 80줄이다."
+    },
+    {
+      "id": "direct_context",
+      "group": "direct",
+      "relevant": "위치마다읽기",
+      "task": "locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다."
+    },
+    {
+      "id": "direct_ledger",
+      "group": "direct",
+      "relevant": "원장에누적",
+      "task": "existing.json과 arrivals.json의 행을 합쳐 outputs/archive.json에 JSON으로 보관해 줘. id와 kind가 모두 같아야 같은 항목이고, 중복이면 먼저 있던 행 전체를 보존한다. 기존 목록 뒤에 새로운 고유 행을 붙이는 순서다. 입력 파일은 변경하지 마."
+    },
+    {
+      "id": "embedded_latest",
+      "group": "embedded",
+      "relevant": "최신범위읽기",
+      "task": "인수인계 자료 두 개를 준비해 줘. drafts/*.md 네 문서 중 수정시각이 가장 최근인 문서의 11~22줄을 outputs/excerpt.txt에 저장하고, queue.json에서 state가 open이고 priority가 3 이상인 항목을 id 오름차순으로 outputs/pending.json에 저장해 줘. 문서들은 모두 80줄이고 수정시각 동률은 없다. JSON은 원래 행의 모든 필드를 보존한다. 입력 파일은 변경하지 마."
+    },
+    {
+      "id": "embedded_context",
+      "group": "embedded",
+      "relevant": "위치마다읽기",
+      "task": "수정 검토 자료를 준비해 줘. review_locations.json에는 파일·줄번호·state·priority 열이 있다. state=open, priority>=3인 위치를 파일명 오름차순으로 정렬한 앞 세 곳의 지정 줄부터 5줄씩 본문을 수집해서 outputs/snippets.json에 저장해 줘. 각 결과에는 파일·줄번호·본문이 필요하고 읽을 수 없는 곳은 위치와 오류를 남긴다. 별도로 state=closed인 원래 행 전부를 파일명 오름차순으로 outputs/closed.json에 저장해 줘. 입력 파일은 변경하지 마."
+    },
+    {
+      "id": "embedded_ledger",
+      "group": "embedded",
+      "relevant": "원장에누적",
+      "task": "자료 반입을 정리해 줘. submissions.json에서 approved=true인 행의 id·kind·value만 취해 existing.json에 있던 행들과 함께 outputs/archive.json에 저장한다. id와 kind가 모두 같으면 기존 행 전체를 보존하고, 새 고유 행은 원래 제출 순서로 뒤에 붙인다. approved=false인 원래 행은 모두 outputs/rejected.json에 따로 보관한다. 입력 파일은 변경하지 마."
+    },
+    {
+      "id": "counter_latest",
+      "group": "counter",
+      "relevant": null,
+      "task": "drafts/*.md에서 파일명에 적힌 YYYY-MM-DD 날짜가 가장 늦은 문서의 11~22줄 본문을 반환해 줘. 수정시각은 선정 기준이 아니다. 후보는 report_YYYY-MM-DD.md 형식의 네 파일이며 모두 80줄이다."
+    },
+    {
+      "id": "counter_context",
+      "group": "counter",
+      "relevant": null,
+      "task": "notes/*.txt에서 NEEDLE이 나타나는 모든 위치와 그 일치 줄만 반환해 줘. 파일·줄번호·일치 내용을 보존한다. 주변 본문을 별도로 읽거나 위치 개수를 줄이지 마."
+    },
+    {
+      "id": "counter_ledger",
+      "group": "counter",
+      "relevant": null,
+      "task": "registry.json의 records 목록에 updates.json의 행들을 id 기준으로 반영해 줘. 같은 id는 새로 온 필드 값으로 갱신하되 새 행에 없는 기존 필드는 보존하고, 없는 id는 추가한다. records 이외의 메타데이터도 유지해야 한다. updates.json은 변경하지 마. 결과는 registry.json에 저장해 줘."
+    }
+  ],
+  "schedule": [
+    {
+      "case": "embedded_latest",
+      "repeat": 0,
+      "seed": 2026090903,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_latest",
+      "repeat": 0,
+      "seed": 2026090903,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_context",
+      "repeat": 1,
+      "seed": 2026091008,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_context",
+      "repeat": 1,
+      "seed": 2026091008,
+      "arm": "hidden"
+    },
+    {
+      "case": "counter_ledger",
+      "repeat": 0,
+      "seed": 2026090908,
+      "arm": "hidden"
+    },
+    {
+      "case": "counter_ledger",
+      "repeat": 0,
+      "seed": 2026090908,
+      "arm": "exposed"
+    },
+    {
+      "case": "embedded_latest",
+      "repeat": 1,
+      "seed": 2026091004,
+      "arm": "exposed"
+    },
+    {
+      "case": "embedded_latest",
+      "repeat": 1,
+      "seed": 2026091004,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_context",
+      "repeat": 2,
+      "seed": 2026091103,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_context",
+      "repeat": 2,
+      "seed": 2026091103,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_ledger",
+      "repeat": 2,
+      "seed": 2026091104,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_ledger",
+      "repeat": 2,
+      "seed": 2026091104,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_ledger",
+      "repeat": 2,
+      "seed": 2026091107,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_ledger",
+      "repeat": 2,
+      "seed": 2026091107,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_ledger",
+      "repeat": 0,
+      "seed": 2026090902,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_ledger",
+      "repeat": 0,
+      "seed": 2026090902,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_ledger",
+      "repeat": 1,
+      "seed": 2026091003,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_ledger",
+      "repeat": 1,
+      "seed": 2026091003,
+      "arm": "exposed"
+    },
+    {
+      "case": "embedded_ledger",
+      "repeat": 1,
+      "seed": 2026091006,
+      "arm": "exposed"
+    },
+    {
+      "case": "embedded_ledger",
+      "repeat": 1,
+      "seed": 2026091006,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_context",
+      "repeat": 2,
+      "seed": 2026091106,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_context",
+      "repeat": 2,
+      "seed": 2026091106,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_latest",
+      "repeat": 1,
+      "seed": 2026091001,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_latest",
+      "repeat": 1,
+      "seed": 2026091001,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_latest",
+      "repeat": 0,
+      "seed": 2026090900,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_latest",
+      "repeat": 0,
+      "seed": 2026090900,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_latest",
+      "repeat": 1,
+      "seed": 2026091007,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_latest",
+      "repeat": 1,
+      "seed": 2026091007,
+      "arm": "hidden"
+    },
+    {
+      "case": "counter_context",
+      "repeat": 2,
+      "seed": 2026091109,
+      "arm": "hidden"
+    },
+    {
+      "case": "counter_context",
+      "repeat": 2,
+      "seed": 2026091109,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_latest",
+      "repeat": 2,
+      "seed": 2026091108,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_latest",
+      "repeat": 2,
+      "seed": 2026091108,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_context",
+      "repeat": 0,
+      "seed": 2026090904,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_context",
+      "repeat": 0,
+      "seed": 2026090904,
+      "arm": "exposed"
+    },
+    {
+      "case": "embedded_ledger",
+      "repeat": 0,
+      "seed": 2026090905,
+      "arm": "exposed"
+    },
+    {
+      "case": "embedded_ledger",
+      "repeat": 0,
+      "seed": 2026090905,
+      "arm": "hidden"
+    },
+    {
+      "case": "counter_ledger",
+      "repeat": 1,
+      "seed": 2026091009,
+      "arm": "hidden"
+    },
+    {
+      "case": "counter_ledger",
+      "repeat": 1,
+      "seed": 2026091009,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_context",
+      "repeat": 0,
+      "seed": 2026090907,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_context",
+      "repeat": 0,
+      "seed": 2026090907,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_context",
+      "repeat": 0,
+      "seed": 2026090901,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_context",
+      "repeat": 0,
+      "seed": 2026090901,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_ledger",
+      "repeat": 2,
+      "seed": 2026091110,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_ledger",
+      "repeat": 2,
+      "seed": 2026091110,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_context",
+      "repeat": 1,
+      "seed": 2026091005,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_context",
+      "repeat": 1,
+      "seed": 2026091005,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_context",
+      "repeat": 1,
+      "seed": 2026091002,
+      "arm": "exposed"
+    },
+    {
+      "case": "direct_context",
+      "repeat": 1,
+      "seed": 2026091002,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_latest",
+      "repeat": 2,
+      "seed": 2026091105,
+      "arm": "hidden"
+    },
+    {
+      "case": "embedded_latest",
+      "repeat": 2,
+      "seed": 2026091105,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_latest",
+      "repeat": 0,
+      "seed": 2026090906,
+      "arm": "exposed"
+    },
+    {
+      "case": "counter_latest",
+      "repeat": 0,
+      "seed": 2026090906,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_latest",
+      "repeat": 2,
+      "seed": 2026091102,
+      "arm": "hidden"
+    },
+    {
+      "case": "direct_latest",
+      "repeat": 2,
+      "seed": 2026091102,
+      "arm": "exposed"
+    }
+  ],
+  "seed": 2026090901,
+  "registry_policy": "Same three callable bodies in BOTH arms; only the live introduction block differs. No stored-memory retrieval.",
+  "scope": "Single IBL program generation with full current grammar/catalog plus base prompt; fresh-session one repair. Not the complete app agent loop.",
+  "primary": "Intention-to-treat paired exposed-minus-hidden: quality, total wall time, all-model output tokens, input/cache buckets. No conditioning on observed use.",
+  "subgroups": "direct, embedded, counter separate; applicable=direct+embedded; counter measures inappropriate use and exposure tax.",
+  "timing": "One model process at a time; adjacent paired conditions; order counterbalanced; startup and API duration separately retained.",
+  "inference": "Paired descriptive estimates and task-cluster bootstrap; 9 task templates are not a population workload sample.",
+  "frozen_rules": "Do not tune tasks, prompts, engine or idioms after model generation starts. Missing usage is not zero. Transport failures remain in results.",
+  "prompt_chars": {
+    "hidden": 84476,
+    "exposed": 86029
+  },
+  "prompt_sha256": {
+    "hidden": "47e15111fbadfe600b7d19fb2396365ce33c18730548963e648e8521bb256927",
+    "exposed": "04caa1367c026752f0444c1d7045b35acba458bf53b83ee4f841efa078c54fb0"
+  },
+  "source_sha256": {
+    "idiom_exposure_study.py": "489d63adad41fb5ef967a6097e4af554a9b7d3a6d985ba84e7abedd4ac571d1f",
+    "idiom_exposure_cases.py": "0e04ff6e3344944fabfe220e5cdd761b256c4a87bd3a19a8222bd1a0272cbcc1",
+    "idiom_exposure_worker.py": "0a0c7271f37387c86a2fdefe24ea73a41e8efbc51d8c0e7cfb8c188058033ff0"
+  }
+}

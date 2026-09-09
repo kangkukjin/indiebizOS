@@ -1,0 +1,3562 @@
+{
+  "manifest": {
+    "version": 1,
+    "base_commit": "44827d7b511b37d59509fbb873ca967b718e1c7c",
+    "created_at": "2026-09-09T12:58:29+0900",
+    "provider": "claude_code",
+    "model": "opus",
+    "effort": "high",
+    "repeats": 3,
+    "max_repairs": 0,
+    "model_timeout_s": 180,
+    "worker_timeout_s": 30,
+    "cli_version": "2.1.260 (Claude Code)",
+    "arms": [
+      "hidden",
+      "exposed"
+    ],
+    "cases": [
+      {
+        "id": "direct_latest",
+        "group": "direct",
+        "relevant": "최신범위읽기",
+        "task": "drafts/*.md의 문서 중 가장 최근에 수정된 문서에서 11~22줄 본문을 반환해 줘. 파일명의 날짜가 아니라 수정시각 기준이다. 후보는 4개, 수정시각 동률은 없고 모두 80줄이다."
+      },
+      {
+        "id": "direct_context",
+        "group": "direct",
+        "relevant": "위치마다읽기",
+        "task": "notes/*.txt에서 NEEDLE을 검색하고, 파일명 오름차순·같은 파일에서는 줄번호 오름차순으로 앞 세 위치를 골라 각각 그 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 함께 반환해 줘. 앞 세 위치 이외의 본문은 읽지 마."
+      },
+      {
+        "id": "direct_ledger",
+        "group": "direct",
+        "relevant": "원장에누적",
+        "task": "existing.json과 arrivals.json의 행을 합쳐 outputs/archive.json에 JSON으로 보관해 줘. id와 kind가 모두 같아야 같은 항목이고, 중복이면 먼저 있던 행 전체를 보존한다. 기존 목록 뒤에 새로운 고유 행을 붙이는 순서다. 입력 파일은 변경하지 마."
+      },
+      {
+        "id": "embedded_latest",
+        "group": "embedded",
+        "relevant": "최신범위읽기",
+        "task": "인수인계 자료 두 개를 준비해 줘. drafts/*.md 네 문서 중 수정시각이 가장 최근인 문서의 11~22줄을 outputs/excerpt.txt에 저장하고, queue.json에서 state가 open이고 priority가 3 이상인 항목을 id 오름차순으로 outputs/pending.json에 저장해 줘. 문서들은 모두 80줄이고 수정시각 동률은 없다. JSON은 원래 행의 모든 필드를 보존한다. 입력 파일은 변경하지 마."
+      },
+      {
+        "id": "embedded_context",
+        "group": "embedded",
+        "relevant": "위치마다읽기",
+        "task": "수정 검토 자료를 준비해 줘. review_locations.json에는 파일·줄번호·state·priority 열이 있다. state=open, priority>=3인 위치를 파일명 오름차순으로 정렬한 앞 세 곳의 지정 줄부터 5줄씩 본문을 수집해서 outputs/snippets.json에 저장해 줘. 각 결과에는 파일·줄번호·본문이 필요하고 읽을 수 없는 곳은 위치와 오류를 남긴다. 별도로 state=closed인 원래 행 전부를 파일명 오름차순으로 outputs/closed.json에 저장해 줘. 입력 파일은 변경하지 마."
+      },
+      {
+        "id": "embedded_ledger",
+        "group": "embedded",
+        "relevant": "원장에누적",
+        "task": "자료 반입을 정리해 줘. submissions.json에서 approved=true인 행의 id·kind·value만 취해 existing.json에 있던 행들과 함께 outputs/archive.json에 저장한다. id와 kind가 모두 같으면 기존 행 전체를 보존하고, 새 고유 행은 원래 제출 순서로 뒤에 붙인다. approved=false인 원래 행은 모두 outputs/rejected.json에 따로 보관한다. 입력 파일은 변경하지 마."
+      },
+      {
+        "id": "counter_latest",
+        "group": "counter",
+        "relevant": null,
+        "task": "drafts/*.md에서 파일명에 적힌 YYYY-MM-DD 날짜가 가장 늦은 문서의 11~22줄 본문을 반환해 줘. 수정시각은 선정 기준이 아니다. 후보는 report_YYYY-MM-DD.md 형식의 네 파일이며 모두 80줄이다."
+      },
+      {
+        "id": "counter_context",
+        "group": "counter",
+        "relevant": null,
+        "task": "notes/*.txt에서 NEEDLE이 나타나는 모든 위치와 그 일치 줄만 반환해 줘. 파일·줄번호·일치 내용을 보존한다. 주변 본문을 별도로 읽거나 위치 개수를 줄이지 마."
+      },
+      {
+        "id": "counter_ledger",
+        "group": "counter",
+        "relevant": null,
+        "task": "registry.json의 records 목록에 updates.json의 행들을 id 기준으로 반영해 줘. 같은 id는 새로 온 필드 값으로 갱신하되 새 행에 없는 기존 필드는 보존하고, 없는 id는 추가한다. records 이외의 메타데이터도 유지해야 한다. updates.json은 변경하지 마. 결과는 registry.json에 저장해 줘."
+      }
+    ],
+    "schedule": [
+      {
+        "case": "direct_context",
+        "repeat": 2,
+        "seed": 2026091103,
+        "arm": "exposed"
+      },
+      {
+        "case": "direct_context",
+        "repeat": 0,
+        "seed": 2026090901,
+        "arm": "exposed"
+      },
+      {
+        "case": "direct_context",
+        "repeat": 1,
+        "seed": 2026091002,
+        "arm": "exposed"
+      }
+    ],
+    "seed": 2026090901,
+    "registry_policy": "Same three callable bodies in BOTH arms; only the live introduction block differs. No stored-memory retrieval.",
+    "scope": "Single IBL program generation with full current grammar/catalog plus base prompt; fresh-session one repair. Not the complete app agent loop.",
+    "primary": "Exploratory positive-context check: current exposed introduction, actual grep results followed by bounded context reading, three fresh first attempts. Excluded from the 54 randomized trials and all primary effect estimates.",
+    "subgroups": "direct, embedded, counter separate; applicable=direct+embedded; counter measures inappropriate use and exposure tax.",
+    "timing": "One model process at a time; adjacent paired conditions; order counterbalanced; startup and API duration separately retained.",
+    "inference": "Paired descriptive estimates and task-cluster bootstrap; 9 task templates are not a population workload sample.",
+    "frozen_rules": "No introduction, idiom body, language, or production code changes. Three fresh exposed sessions after the primary study; no repair. This exploratory positive-context check was designed after observing the primary study and does not identify the cause of historical non-use.",
+    "prompt_chars": {
+      "hidden": 84476,
+      "exposed": 86029
+    },
+    "prompt_sha256": {
+      "hidden": "47e15111fbadfe600b7d19fb2396365ce33c18730548963e648e8521bb256927",
+      "exposed": "04caa1367c026752f0444c1d7045b35acba458bf53b83ee4f841efa078c54fb0"
+    },
+    "source_sha256": {
+      "idiom_exposure_study.py": "489d63adad41fb5ef967a6097e4af554a9b7d3a6d985ba84e7abedd4ac571d1f",
+      "idiom_exposure_cases.py": "0e04ff6e3344944fabfe220e5cdd761b256c4a87bd3a19a8222bd1a0272cbcc1",
+      "idiom_exposure_worker.py": "0a0c7271f37387c86a2fdefe24ea73a41e8efbc51d8c0e7cfb8c188058033ff0"
+    },
+    "pre_generation_amendments": [
+      {
+        "time": "2026-09-09T13:31:32+0900",
+        "superseded_task": "locations.json은 앞선 grep 검색에서 얻어 저장한 파일·줄번호 열의 위치 목록이다. 그 뒤 한 파일이 삭제된 상태다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+        "reason": "An explicit live grep-to-context task is a better positive context check than merely labeling saved JSON as past grep results. No probe model calls have occurred."
+      }
+    ],
+    "fixture_note": "Same seeded notes files. The hidden locations.json oracle reference is replaced by notes/00.txt:4, notes/00.txt:13, notes/01.txt:4, which are the first three real grep locations. It is not mentioned to the model.",
+    "probe_source_sha256": {
+      "probe_worker.py": "b45da39fb707e350d2a876be60ee47e9b1b5f497b20a21bccf6b963f08ab967a",
+      "probe_runner.py": "c0a59dea9b181ac820217da4c5d3b125daa400936593342148e52869ae421bac"
+    }
+  },
+  "summary": {
+    "completed_trials": 3,
+    "planned_trials": 3,
+    "groups": {
+      "all": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 3,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 3,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 3,
+              "sum": 139.862282,
+              "mean": 46.62076066666667,
+              "median": 41.786016000000004
+            },
+            "model_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "api_s": {
+              "known_n": 3,
+              "sum": 139.781,
+              "mean": 46.593666666666664,
+              "median": 41.774
+            },
+            "first_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "thinking_tokens": {
+              "known_n": 3,
+              "sum": 9083,
+              "mean": 3027.6666666666665,
+              "median": 2613
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 3,
+              "sum": 1217,
+              "mean": 405.6666666666667,
+              "median": 409
+            },
+            "first_output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "first_code_chars": {
+              "known_n": 3,
+              "sum": 1590,
+              "mean": 530,
+              "median": 542
+            },
+            "first_input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_new": {
+              "known_n": 3,
+              "sum": 3084,
+              "mean": 1028,
+              "median": 1028
+            },
+            "input_cache_create": {
+              "known_n": 3,
+              "sum": 1597,
+              "mean": 532.3333333333334,
+              "median": 532
+            },
+            "input_cache_read": {
+              "known_n": 3,
+              "sum": 190590,
+              "mean": 63530,
+              "median": 63530
+            },
+            "reported_cost_usd": {
+              "known_n": 3,
+              "sum": 0.370733,
+              "mean": 0.12357766666666667,
+              "median": 0.11110600000000001
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        },
+        "attempt_usage": {
+          "hidden": {
+            "attempts": 0,
+            "output_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "thinking_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_total": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_new": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_create": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_read": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            }
+          },
+          "exposed": {
+            "attempts": 3,
+            "output_tokens": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 10300,
+              "exact_total": 10300
+            },
+            "thinking_tokens": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 9083,
+              "exact_total": 9083
+            },
+            "input_total": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 195271,
+              "exact_total": 195271
+            },
+            "input_new": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 3084,
+              "exact_total": 3084
+            },
+            "input_cache_create": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 1597,
+              "exact_total": 1597
+            },
+            "input_cache_read": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 190590,
+              "exact_total": 190590
+            }
+          }
+        }
+      },
+      "applicable": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 3,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 3,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 3,
+              "sum": 139.862282,
+              "mean": 46.62076066666667,
+              "median": 41.786016000000004
+            },
+            "model_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "api_s": {
+              "known_n": 3,
+              "sum": 139.781,
+              "mean": 46.593666666666664,
+              "median": 41.774
+            },
+            "first_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "thinking_tokens": {
+              "known_n": 3,
+              "sum": 9083,
+              "mean": 3027.6666666666665,
+              "median": 2613
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 3,
+              "sum": 1217,
+              "mean": 405.6666666666667,
+              "median": 409
+            },
+            "first_output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "first_code_chars": {
+              "known_n": 3,
+              "sum": 1590,
+              "mean": 530,
+              "median": 542
+            },
+            "first_input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_new": {
+              "known_n": 3,
+              "sum": 3084,
+              "mean": 1028,
+              "median": 1028
+            },
+            "input_cache_create": {
+              "known_n": 3,
+              "sum": 1597,
+              "mean": 532.3333333333334,
+              "median": 532
+            },
+            "input_cache_read": {
+              "known_n": 3,
+              "sum": 190590,
+              "mean": 63530,
+              "median": 63530
+            },
+            "reported_cost_usd": {
+              "known_n": 3,
+              "sum": 0.370733,
+              "mean": 0.12357766666666667,
+              "median": 0.11110600000000001
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        },
+        "attempt_usage": {
+          "hidden": {
+            "attempts": 0,
+            "output_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "thinking_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_total": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_new": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_create": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_read": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            }
+          },
+          "exposed": {
+            "attempts": 3,
+            "output_tokens": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 10300,
+              "exact_total": 10300
+            },
+            "thinking_tokens": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 9083,
+              "exact_total": 9083
+            },
+            "input_total": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 195271,
+              "exact_total": 195271
+            },
+            "input_new": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 3084,
+              "exact_total": 3084
+            },
+            "input_cache_create": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 1597,
+              "exact_total": 1597
+            },
+            "input_cache_read": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 190590,
+              "exact_total": 190590
+            }
+          }
+        }
+      },
+      "direct": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 3,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 3,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 3,
+              "sum": 139.862282,
+              "mean": 46.62076066666667,
+              "median": 41.786016000000004
+            },
+            "model_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "api_s": {
+              "known_n": 3,
+              "sum": 139.781,
+              "mean": 46.593666666666664,
+              "median": 41.774
+            },
+            "first_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "thinking_tokens": {
+              "known_n": 3,
+              "sum": 9083,
+              "mean": 3027.6666666666665,
+              "median": 2613
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 3,
+              "sum": 1217,
+              "mean": 405.6666666666667,
+              "median": 409
+            },
+            "first_output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "first_code_chars": {
+              "known_n": 3,
+              "sum": 1590,
+              "mean": 530,
+              "median": 542
+            },
+            "first_input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_new": {
+              "known_n": 3,
+              "sum": 3084,
+              "mean": 1028,
+              "median": 1028
+            },
+            "input_cache_create": {
+              "known_n": 3,
+              "sum": 1597,
+              "mean": 532.3333333333334,
+              "median": 532
+            },
+            "input_cache_read": {
+              "known_n": 3,
+              "sum": 190590,
+              "mean": 63530,
+              "median": 63530
+            },
+            "reported_cost_usd": {
+              "known_n": 3,
+              "sum": 0.370733,
+              "mean": 0.12357766666666667,
+              "median": 0.11110600000000001
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        },
+        "attempt_usage": {
+          "hidden": {
+            "attempts": 0,
+            "output_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "thinking_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_total": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_new": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_create": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_read": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            }
+          },
+          "exposed": {
+            "attempts": 3,
+            "output_tokens": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 10300,
+              "exact_total": 10300
+            },
+            "thinking_tokens": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 9083,
+              "exact_total": 9083
+            },
+            "input_total": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 195271,
+              "exact_total": 195271
+            },
+            "input_new": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 3084,
+              "exact_total": 3084
+            },
+            "input_cache_create": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 1597,
+              "exact_total": 1597
+            },
+            "input_cache_read": {
+              "known_attempts": 3,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 190590,
+              "exact_total": 190590
+            }
+          }
+        }
+      },
+      "embedded": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        },
+        "attempt_usage": {
+          "hidden": {
+            "attempts": 0,
+            "output_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "thinking_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_total": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_new": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_create": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_read": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            }
+          },
+          "exposed": {
+            "attempts": 0,
+            "output_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "thinking_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_total": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_new": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_create": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_read": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            }
+          }
+        }
+      },
+      "counter": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        },
+        "attempt_usage": {
+          "hidden": {
+            "attempts": 0,
+            "output_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "thinking_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_total": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_new": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_create": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_read": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            }
+          },
+          "exposed": {
+            "attempts": 0,
+            "output_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "thinking_tokens": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_total": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_new": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_create": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            },
+            "input_cache_read": {
+              "known_attempts": 0,
+              "unknown_attempts": 0,
+              "known_sum_lower_bound": 0,
+              "exact_total": 0
+            }
+          }
+        }
+      }
+    },
+    "cases": {
+      "direct_context": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 3,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 3,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 3,
+              "sum": 139.862282,
+              "mean": 46.62076066666667,
+              "median": 41.786016000000004
+            },
+            "model_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "api_s": {
+              "known_n": 3,
+              "sum": 139.781,
+              "mean": 46.593666666666664,
+              "median": 41.774
+            },
+            "first_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "thinking_tokens": {
+              "known_n": 3,
+              "sum": 9083,
+              "mean": 3027.6666666666665,
+              "median": 2613
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 3,
+              "sum": 1217,
+              "mean": 405.6666666666667,
+              "median": 409
+            },
+            "first_output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "first_code_chars": {
+              "known_n": 3,
+              "sum": 1590,
+              "mean": 530,
+              "median": 542
+            },
+            "first_input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_new": {
+              "known_n": 3,
+              "sum": 3084,
+              "mean": 1028,
+              "median": 1028
+            },
+            "input_cache_create": {
+              "known_n": 3,
+              "sum": 1597,
+              "mean": 532.3333333333334,
+              "median": 532
+            },
+            "input_cache_read": {
+              "known_n": 3,
+              "sum": 190590,
+              "mean": 63530,
+              "median": 63530
+            },
+            "reported_cost_usd": {
+              "known_n": 3,
+              "sum": 0.370733,
+              "mean": 0.12357766666666667,
+              "median": 0.11110600000000001
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        }
+      }
+    },
+    "idioms": {
+      "원장에누적": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        }
+      },
+      "위치마다읽기": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 3,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 3,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 3,
+              "sum": 139.862282,
+              "mean": 46.62076066666667,
+              "median": 41.786016000000004
+            },
+            "model_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "api_s": {
+              "known_n": 3,
+              "sum": 139.781,
+              "mean": 46.593666666666664,
+              "median": 41.774
+            },
+            "first_wall_s": {
+              "known_n": 3,
+              "sum": 138.53688200000002,
+              "mean": 46.17896066666667,
+              "median": 41.310362
+            },
+            "output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "thinking_tokens": {
+              "known_n": 3,
+              "sum": 9083,
+              "mean": 3027.6666666666665,
+              "median": 2613
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 3,
+              "sum": 1217,
+              "mean": 405.6666666666667,
+              "median": 409
+            },
+            "first_output_tokens": {
+              "known_n": 3,
+              "sum": 10300,
+              "mean": 3433.3333333333335,
+              "median": 2933
+            },
+            "first_code_chars": {
+              "known_n": 3,
+              "sum": 1590,
+              "mean": 530,
+              "median": 542
+            },
+            "first_input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_total": {
+              "known_n": 3,
+              "sum": 195271,
+              "mean": 65090.333333333336,
+              "median": 65090
+            },
+            "input_new": {
+              "known_n": 3,
+              "sum": 3084,
+              "mean": 1028,
+              "median": 1028
+            },
+            "input_cache_create": {
+              "known_n": 3,
+              "sum": 1597,
+              "mean": 532.3333333333334,
+              "median": 532
+            },
+            "input_cache_read": {
+              "known_n": 3,
+              "sum": 190590,
+              "mean": 63530,
+              "median": 63530
+            },
+            "reported_cost_usd": {
+              "known_n": 3,
+              "sum": 0.370733,
+              "mean": 0.12357766666666667,
+              "median": 0.11110600000000001
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        }
+      },
+      "최신범위읽기": {
+        "arms": {
+          "hidden": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          },
+          "exposed": {
+            "n": 0,
+            "first_ok": 0,
+            "final_ok": 0,
+            "first_named": 0,
+            "first_executed_named": 0,
+            "first_raw_named": 0,
+            "first_code_parsed": 0,
+            "any_named": 0,
+            "any_executed_named": 0,
+            "any_raw_named": 0,
+            "repairs": 0,
+            "wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "model_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "api_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_wall_s": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "thinking_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "nonthinking_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_output_tokens": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_code_chars": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "first_input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_total": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_new": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_create": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "input_cache_read": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            },
+            "reported_cost_usd": {
+              "known_n": 0,
+              "sum": 0,
+              "mean": null,
+              "median": null
+            }
+          }
+        },
+        "paired": {
+          "pairs": 0,
+          "first_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "final_ok": {
+            "both": 0,
+            "hidden_only": 0,
+            "exposed_only": 0,
+            "neither": 0
+          },
+          "wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_wall_s": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_output_tokens": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          },
+          "first_input_total": {
+            "known_pairs": 0,
+            "mean_exposed_minus_hidden": null,
+            "median_difference": null,
+            "aggregate_ratio": null,
+            "task_cluster_bootstrap_95_mean_difference": null
+          }
+        }
+      }
+    },
+    "models": [
+      "claude-haiku-4-5-20251001",
+      "claude-opus-5"
+    ]
+  },
+  "trials": [
+    {
+      "case": "direct_context",
+      "repeat": 0,
+      "seed": 2026090901,
+      "arm": "exposed",
+      "id": "direct_context_0_exposed",
+      "group": "direct",
+      "started_at": "2026-09-09T13:53:19+0900",
+      "quality_ok": false,
+      "total_wall_ms": 30112.584,
+      "attempts": [
+        {
+          "code": "[self:mkdir]{path: \"outputs\"}\n\n$히트 = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", limit: 200}\n\n$정렬 = $히트 >> [table:sort]{by: \"줄번호\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3} >> [table:compute]{set: {끝줄: \"줄번호 + 4\"}}\n\n$결과 = [table:each]{items: \"$정렬\"} {\n  $본 = [self:read]{path: \"$it.파일\", start_line: $it.줄번호, end_line: $it.끝줄}\n  $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본.content}]\n}\n\n$결과 >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}\n\n$결과 >> [table:select]{columns: [\"파일\", \"줄번호\", \"본문\"]}",
+          "written_aliases": [],
+          "raw_response_aliases": [],
+          "model": {
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 533,
+              "cache_read_input_tokens": 63530,
+              "output_tokens": 2367,
+              "output_tokens_details": {
+                "thinking_tokens": 1981
+              },
+              "server_tool_use": {
+                "web_search_requests": 0,
+                "web_fetch_requests": 0
+              },
+              "service_tier": "standard",
+              "cache_creation": {
+                "ephemeral_1h_input_tokens": 533,
+                "ephemeral_5m_input_tokens": 0
+              },
+              "inference_geo": "not_available",
+              "iterations": [
+                {
+                  "input_tokens": 2,
+                  "output_tokens": 2367,
+                  "cache_read_input_tokens": 63530,
+                  "cache_creation_input_tokens": 533,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0,
+                    "ephemeral_1h_input_tokens": 533
+                  },
+                  "type": "message"
+                }
+              ],
+              "speed": "standard"
+            },
+            "modelUsage": {
+              "claude-haiku-4-5-20251001": {
+                "inputTokens": 1026,
+                "outputTokens": 23,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0,
+                "webSearchRequests": 0,
+                "costUSD": 0.001141,
+                "contextWindow": 200000,
+                "maxOutputTokens": 32000,
+                "thinkingTokens": 0,
+                "canonicalModel": "claude-haiku-4-5",
+                "provider": "firstParty",
+                "costBasis": "list"
+              },
+              "claude-opus-5": {
+                "inputTokens": 2,
+                "outputTokens": 2367,
+                "cacheReadInputTokens": 63530,
+                "cacheCreationInputTokens": 533,
+                "webSearchRequests": 0,
+                "costUSD": 0.09628,
+                "contextWindow": 1000000,
+                "maxOutputTokens": 64000,
+                "thinkingTokens": 1981,
+                "canonicalModel": "claude-opus-5",
+                "provider": "firstParty",
+                "costBasis": "list"
+              }
+            },
+            "duration_ms": 29193,
+            "duration_api_ms": 29844,
+            "total_cost_usd": 0.09742100000000001,
+            "is_error": false,
+            "subtype": "success",
+            "num_turns": 1,
+            "returncode": 0,
+            "wall_ms": 29690.772
+          },
+          "execution": {
+            "quality_ok": false,
+            "verdict": "runtime: Step 11 에러: 변수 $결과 의 할당 문장(step 8)이 실패해 값이 없습니다 — 원인: Step 8 에러: each: 3건 전부 실패 — 첫 오류: Step 2 에러: $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본.content}]: 식 오류 $본.content 경로가 값에 없습니다. — 뿌리 1: step 8 $결과 할당 실패: Step 8 에러: each: 3건 전부 실패 — 첫 오류: Step 2 에러: $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본.content}]: 식 오류 $본.content 경로가 값에 없습니다. (연쇄 2개는 그 변수를 읽어 죽은 문장)",
+            "observed": {
+              "leaf_calls": [
+                "self:mkdir",
+                "self:grep",
+                "table:sort",
+                "table:sort",
+                "table:take",
+                "table:compute",
+                "table:each",
+                "self:read",
+                "self:read",
+                "self:read"
+              ],
+              "fn_calls": []
+            },
+            "runtime_ms": 288.928,
+            "typecheck": {
+              "ok": true,
+              "issues": [],
+              "types": [
+                "(1) effect",
+                "$히트: items⟨파일·줄번호·내용·…⟩",
+                "$정렬: items⟨파일·줄번호·내용·끝줄·…⟩",
+                "$결과: items⟨파일·줄번호·본문⟩",
+                "(5) effect",
+                "(6) items⟨파일·줄번호·본문⟩"
+              ],
+              "fn_returns": {}
+            },
+            "artifacts": {},
+            "worker_wall_ms": 420.8947910228744,
+            "runtime_success": false,
+            "runtime_error": "Step 11 에러: 변수 $결과 의 할당 문장(step 8)이 실패해 값이 없습니다 — 원인: Step 8 에러: each: 3건 전부 실패 — 첫 오류: Step 2 에러: $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본.content}]: 식 오류 $본.content 경로가 값에 없습니다. — 뿌리 1: step 8 $결과 할당 실패: Step 8 에러: each: 3건 전부 실패 — 첫 오류: Step 2 에러: $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본.content}]: 식 오류 $본.content 경로가 값에 없습니다. (연쇄 2개는 그 변수를 읽어 죽은 문장)"
+          }
+        }
+      ]
+    },
+    {
+      "case": "direct_context",
+      "repeat": 1,
+      "seed": 2026091002,
+      "arm": "exposed",
+      "id": "direct_context_1_exposed",
+      "group": "direct",
+      "started_at": "2026-09-09T13:53:49+0900",
+      "quality_ok": false,
+      "total_wall_ms": 67963.682,
+      "attempts": [
+        {
+          "code": "# notes/*.txt 에서 NEEDLE 위치 검색 → 파일 asc, 줄번호 asc → 앞 3개만 본문 5줄 읽기\n$위치 = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 500}\n\n$앞셋 = $위치 >> [table:sort]{by: \"줄번호\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3} >> [table:compute]{set: {끝줄: \"줄번호 + 4\"}}\n\n$결과 = $앞셋 >> [table:each]{limit: 3} {\n  $본문 = [self:read]{path: \"${it.파일}\", start_line: ${it.줄번호}, end_line: ${it.끝줄}}\n  $텍스트 = \"${본문.content?}\"\n  $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $텍스트 if $텍스트 else $본문}]\n}\n\n$결과 >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}\n$결과 >> [table:select]{columns: [\"파일\", \"줄번호\"]}",
+          "written_aliases": [],
+          "raw_response_aliases": [],
+          "model": {
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 532,
+              "cache_read_input_tokens": 63530,
+              "output_tokens": 4960,
+              "output_tokens_details": {
+                "thinking_tokens": 4489
+              },
+              "server_tool_use": {
+                "web_search_requests": 0,
+                "web_fetch_requests": 0
+              },
+              "service_tier": "standard",
+              "cache_creation": {
+                "ephemeral_1h_input_tokens": 532,
+                "ephemeral_5m_input_tokens": 0
+              },
+              "inference_geo": "not_available",
+              "iterations": [
+                {
+                  "input_tokens": 2,
+                  "output_tokens": 4960,
+                  "cache_read_input_tokens": 63530,
+                  "cache_creation_input_tokens": 532,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0,
+                    "ephemeral_1h_input_tokens": 532
+                  },
+                  "type": "message"
+                }
+              ],
+              "speed": "standard"
+            },
+            "modelUsage": {
+              "claude-haiku-4-5-20251001": {
+                "inputTokens": 1026,
+                "outputTokens": 17,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0,
+                "webSearchRequests": 0,
+                "costUSD": 0.001111,
+                "contextWindow": 200000,
+                "maxOutputTokens": 32000,
+                "thinkingTokens": 0,
+                "canonicalModel": "claude-haiku-4-5",
+                "provider": "firstParty",
+                "costBasis": "list"
+              },
+              "claude-opus-5": {
+                "inputTokens": 2,
+                "outputTokens": 4960,
+                "cacheReadInputTokens": 63530,
+                "cacheCreationInputTokens": 532,
+                "webSearchRequests": 0,
+                "costUSD": 0.161095,
+                "contextWindow": 1000000,
+                "maxOutputTokens": 64000,
+                "thinkingTokens": 4489,
+                "canonicalModel": "claude-opus-5",
+                "provider": "firstParty",
+                "costBasis": "list"
+              }
+            },
+            "duration_ms": 67091,
+            "duration_api_ms": 68163,
+            "total_cost_usd": 0.162206,
+            "is_error": false,
+            "subtype": "success",
+            "num_turns": 1,
+            "returncode": 0,
+            "wall_ms": 67535.748
+          },
+          "execution": {
+            "quality_ok": false,
+            "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+            "observed": {
+              "leaf_calls": [
+                "self:grep",
+                "table:sort",
+                "table:sort",
+                "table:take",
+                "table:compute",
+                "table:each",
+                "self:read",
+                "self:read",
+                "self:read",
+                "self:write",
+                "table:select"
+              ],
+              "fn_calls": []
+            },
+            "runtime_ms": 295.816,
+            "typecheck": {
+              "ok": true,
+              "issues": [],
+              "types": [
+                "$위치: items⟨파일·줄번호·내용·…⟩",
+                "$앞셋: items⟨파일·줄번호·내용·끝줄·…⟩",
+                "$결과: items⟨파일·줄번호·본문⟩",
+                "(4) effect",
+                "(5) items⟨파일·줄번호⟩"
+              ],
+              "fn_returns": {}
+            },
+            "artifacts": {
+              "outputs/needle_hits.json": "{\n  \"items\": [\n    {\n      \"파일\": \"notes/00.txt\",\n      \"줄번호\": 4,\n      \"본문\": \"None\"\n    },\n    {\n      \"파일\": \"notes/00.txt\",\n      \"줄번호\": 13,\n      \"본문\": \"None\"\n    },\n    {\n      \"파일\": \"notes/01.txt\",\n      \"줄번호\": 4,\n      \"본문\": \"None\"\n    }\n  ],\n  \"count\": 3\n}"
+            },
+            "worker_wall_ms": 426.98362504597753,
+            "runtime_success": true,
+            "runtime_error": null
+          }
+        }
+      ]
+    },
+    {
+      "case": "direct_context",
+      "repeat": 2,
+      "seed": 2026091103,
+      "arm": "exposed",
+      "id": "direct_context_2_exposed",
+      "group": "direct",
+      "started_at": "2026-09-09T13:52:37+0900",
+      "quality_ok": false,
+      "total_wall_ms": 41786.016,
+      "attempts": [
+        {
+          "code": "$위치 = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\"}\n$앞셋 = $위치 >> [table:sort]{by: \"줄번호\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3}\n$결과 = $앞셋 >> [table:each]{limit: 3} {\n  $끝 = $it.줄번호 + 4\n  $본문 = [self:read]{path: \"${it.파일}\", start_line: ${it.줄번호}, end_line: ${끝}}\n  $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본문}]\n}\n$결과 >> [self:write]{path: \"outputs/needle_결과.json\", format: \"json\"}",
+          "written_aliases": [],
+          "raw_response_aliases": [],
+          "model": {
+            "usage": {
+              "input_tokens": 2,
+              "cache_creation_input_tokens": 532,
+              "cache_read_input_tokens": 63530,
+              "output_tokens": 2916,
+              "output_tokens_details": {
+                "thinking_tokens": 2613
+              },
+              "server_tool_use": {
+                "web_search_requests": 0,
+                "web_fetch_requests": 0
+              },
+              "service_tier": "standard",
+              "cache_creation": {
+                "ephemeral_1h_input_tokens": 532,
+                "ephemeral_5m_input_tokens": 0
+              },
+              "inference_geo": "not_available",
+              "iterations": [
+                {
+                  "input_tokens": 2,
+                  "output_tokens": 2916,
+                  "cache_read_input_tokens": 63530,
+                  "cache_creation_input_tokens": 532,
+                  "cache_creation": {
+                    "ephemeral_5m_input_tokens": 0,
+                    "ephemeral_1h_input_tokens": 532
+                  },
+                  "type": "message"
+                }
+              ],
+              "speed": "standard"
+            },
+            "modelUsage": {
+              "claude-haiku-4-5-20251001": {
+                "inputTokens": 1026,
+                "outputTokens": 17,
+                "cacheReadInputTokens": 0,
+                "cacheCreationInputTokens": 0,
+                "webSearchRequests": 0,
+                "costUSD": 0.001111,
+                "contextWindow": 200000,
+                "maxOutputTokens": 32000,
+                "thinkingTokens": 0,
+                "canonicalModel": "claude-haiku-4-5",
+                "provider": "firstParty",
+                "costBasis": "list"
+              },
+              "claude-opus-5": {
+                "inputTokens": 2,
+                "outputTokens": 2916,
+                "cacheReadInputTokens": 63530,
+                "cacheCreationInputTokens": 532,
+                "webSearchRequests": 0,
+                "costUSD": 0.10999500000000001,
+                "contextWindow": 1000000,
+                "maxOutputTokens": 64000,
+                "thinkingTokens": 2613,
+                "canonicalModel": "claude-opus-5",
+                "provider": "firstParty",
+                "costBasis": "list"
+              }
+            },
+            "duration_ms": 40867,
+            "duration_api_ms": 41774,
+            "total_cost_usd": 0.11110600000000001,
+            "is_error": false,
+            "subtype": "success",
+            "num_turns": 1,
+            "returncode": 0,
+            "wall_ms": 41310.362
+          },
+          "execution": {
+            "quality_ok": false,
+            "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+            "observed": {
+              "leaf_calls": [
+                "self:grep",
+                "table:sort",
+                "table:sort",
+                "table:take",
+                "table:each",
+                "self:read",
+                "self:read",
+                "self:read",
+                "self:write"
+              ],
+              "fn_calls": []
+            },
+            "runtime_ms": 293.423,
+            "typecheck": {
+              "ok": true,
+              "issues": [],
+              "types": [
+                "$위치: items⟨파일·줄번호·내용·…⟩",
+                "$앞셋: items⟨파일·줄번호·내용·…⟩",
+                "$결과: items⟨파일·줄번호·본문⟩",
+                "(4) effect"
+              ],
+              "fn_returns": {}
+            },
+            "artifacts": {
+              "outputs/needle_결과.json": "{\n  \"items\": [\n    {\n      \"파일\": \"notes/00.txt\",\n      \"줄번호\": 4,\n      \"본문\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-11424-4\\nN0-12770-5\\nN0-11686-6\\nN0-15912-7\\nN0-15598-8\\n\"\n    },\n    {\n      \"파일\": \"notes/00.txt\",\n      \"줄번호\": 13,\n      \"본문\": \"[줄 13-17 / 전체 25줄, 305바이트]\\nNEEDLE N0-74105-13\\nN0-61900-14\\nN0-59920-15\\nN0-41414-16\\nN0-38043-17\\n\"\n    },\n    {\n      \"파일\": \"notes/01.txt\",\n      \"줄번호\": 4,\n      \"본문\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-17451-4\\nN1-83812-5\\nN1-74691-6\\nN1-75063-7\\nN1-94856-8\\n\"\n    }\n  ],\n  \"count\": 3\n}"
+            },
+            "worker_wall_ms": 428.48300002515316,
+            "runtime_success": true,
+            "runtime_error": null
+          }
+        }
+      ]
+    }
+  ],
+  "validation": {
+    "ok": true,
+    "rows": [
+      {
+        "label": "named",
+        "code": "[self:grep]{path:\"notes\",pattern:\"NEEDLE\",file_pattern:\"*.txt\",limit:100} >> [table:sort]{by:\"줄번호\"} >> [table:sort]{by:\"파일\"} >> [fn:위치마다읽기]{개수:3,줄수:5}",
+        "expected": true,
+        "result": {
+          "quality_ok": true,
+          "verdict": "품질 기준 통과",
+          "result": {
+            "success": true,
+            "steps_completed": 4,
+            "steps_total": 4,
+            "_action_count": 4,
+            "results": [
+              {
+                "step": 1,
+                "node": "self",
+                "action": "grep",
+                "result": "{\"text\": \"notes/00.txt:4: NEEDLE N0-53605-4\\nnotes/00.txt:13: NEEDLE N0-95990-13\\nnotes/01.txt:4: NEEDLE N1-49943-4\\nnotes/01.txt:13: NEEDLE N1-13921-13\\nnotes/02.txt:4: NEEDLE N2-53466-4\\nnotes/02.txt:13: NEEDLE N2-26077-13\\nnotes/03.txt:4: NEEDLE N3-36347-4\\nnotes/03.txt:13: NEEDLE N3-62051-13\\nnotes/04.txt:4: NEEDLE N4-55413-4\\nnotes/04.txt:13: NEEDLE N4-52695-13\\nnotes/05.txt:4: NEEDLE N5-86725-4\\nnotes/05.txt:13: NEEDLE N5-56291-13\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false}",
+                "duration_ms": 18
+              },
+              {
+                "step": 2,
+                "node": "table",
+                "action": "sort",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false, \"count\": 12, \"success\": true}",
+                "duration_ms": 0
+              },
+              {
+                "step": 3,
+                "node": "table",
+                "action": "sort",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false, \"count\": 12, \"success\": true}",
+                "duration_ms": 0
+              },
+              {
+                "step": 4,
+                "node": "fn",
+                "action": "위치마다읽기",
+                "result": "{\"success\": true, \"steps_completed\": 3, \"steps_total\": 3, \"_action_count\": 3, \"results\": [{\"step\": 1, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"each\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N1-49943-4\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 3, \\\"error_count\\\": 0, \\\"collected_rows\\\": 3, \\\"success\\\": true, \\\"message\\\": \\\"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"duration_ms\": 0}], \"final_result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N1-49943-4\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 3, \\\"error_count\\\": 0, \\\"collected_rows\\\": 3, \\\"success\\\": true, \\\"message\\\": \\\"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"returned\": \"$return\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\", \"value\": \"[줄 13-17 / 전체 25줄, 305바이트]\\nNEEDLE N0-95990-13\\nN0-46503-14\\nN0-55226-15\\nN0-33397-16\\nN0-97183-17\\n\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}], \"count\": 3, \"fn\": \"위치마다읽기\", \"fn_source\": \"idiom\", \"params_required\": [\"개수\", \"줄수\"], \"params_injected\": [\"개수\", \"줄수\"]}",
+                "duration_ms": 1
+              }
+            ],
+            "final_result": "{\"success\": true, \"steps_completed\": 3, \"steps_total\": 3, \"_action_count\": 3, \"results\": [{\"step\": 1, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"each\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N1-49943-4\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 3, \\\"error_count\\\": 0, \\\"collected_rows\\\": 3, \\\"success\\\": true, \\\"message\\\": \\\"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"duration_ms\": 0}], \"final_result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N1-49943-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N1-49943-4\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 3, \\\"error_count\\\": 0, \\\"collected_rows\\\": 3, \\\"success\\\": true, \\\"message\\\": \\\"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"returned\": \"$return\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\", \"value\": \"[줄 13-17 / 전체 25줄, 305바이트]\\nNEEDLE N0-95990-13\\nN0-46503-14\\nN0-55226-15\\nN0-33397-16\\nN0-97183-17\\n\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}], \"count\": 3, \"fn\": \"위치마다읽기\", \"fn_source\": \"idiom\", \"params_required\": [\"개수\", \"줄수\"], \"params_injected\": [\"개수\", \"줄수\"]}"
+          },
+          "observed": {
+            "leaf_calls": [
+              "self:grep",
+              "table:sort",
+              "table:sort",
+              "table:take",
+              "table:each",
+              "self:read",
+              "self:read",
+              "self:read"
+            ],
+            "fn_calls": [
+              "위치마다읽기"
+            ]
+          },
+          "runtime_ms": 300.981,
+          "typecheck": {
+            "ok": true,
+            "issues": [],
+            "types": [
+              "(1) items⟨열 미상⟩"
+            ],
+            "fn_returns": {
+              "위치마다읽기": "items⟨열 미상⟩"
+            }
+          },
+          "artifacts": {}
+        }
+      },
+      {
+        "label": "inline",
+        "code": "[self:grep]{path:\"notes\",pattern:\"NEEDLE\",file_pattern:\"*.txt\",limit:100} >> [table:sort]{by:\"줄번호\"} >> [table:sort]{by:\"파일\"} >> [table:take]{n:3} >> [table:each]{keep:[\"파일\",\"줄번호\"],limit:3,collect:true,on_error:\"keep\"} {[self:read]{path:$it.파일,start_line:$it.줄번호,limit:5}}",
+        "expected": true,
+        "result": {
+          "quality_ok": true,
+          "verdict": "품질 기준 통과",
+          "result": {
+            "success": true,
+            "steps_completed": 5,
+            "steps_total": 5,
+            "_action_count": 5,
+            "results": [
+              {
+                "step": 1,
+                "node": "self",
+                "action": "grep",
+                "result": "{\"text\": \"notes/00.txt:4: NEEDLE N0-53605-4\\nnotes/00.txt:13: NEEDLE N0-95990-13\\nnotes/01.txt:4: NEEDLE N1-49943-4\\nnotes/01.txt:13: NEEDLE N1-13921-13\\nnotes/02.txt:4: NEEDLE N2-53466-4\\nnotes/02.txt:13: NEEDLE N2-26077-13\\nnotes/03.txt:4: NEEDLE N3-36347-4\\nnotes/03.txt:13: NEEDLE N3-62051-13\\nnotes/04.txt:4: NEEDLE N4-55413-4\\nnotes/04.txt:13: NEEDLE N4-52695-13\\nnotes/05.txt:4: NEEDLE N5-86725-4\\nnotes/05.txt:13: NEEDLE N5-56291-13\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false}",
+                "duration_ms": 12
+              },
+              {
+                "step": 2,
+                "node": "table",
+                "action": "sort",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false, \"count\": 12, \"success\": true}",
+                "duration_ms": 0
+              },
+              {
+                "step": 3,
+                "node": "table",
+                "action": "sort",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false, \"count\": 12, \"success\": true}",
+                "duration_ms": 0
+              },
+              {
+                "step": 4,
+                "node": "table",
+                "action": "take",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": true, \"count\": 3, \"success\": true}",
+                "duration_ms": 0
+              },
+              {
+                "step": 5,
+                "node": "table",
+                "action": "each",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\", \"value\": \"[줄 13-17 / 전체 25줄, 305바이트]\\nNEEDLE N0-95990-13\\nN0-46503-14\\nN0-55226-15\\nN0-33397-16\\nN0-97183-17\\n\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}], \"count\": 3, \"rows_processed\": 3, \"ok_count\": 3, \"error_count\": 0, \"collected_rows\": 3, \"success\": true, \"message\": \"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\"}",
+                "duration_ms": 1
+              }
+            ],
+            "final_result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\", \"value\": \"[줄 13-17 / 전체 25줄, 305바이트]\\nNEEDLE N0-95990-13\\nN0-46503-14\\nN0-55226-15\\nN0-33397-16\\nN0-97183-17\\n\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}], \"count\": 3, \"rows_processed\": 3, \"ok_count\": 3, \"error_count\": 0, \"collected_rows\": 3, \"success\": true, \"message\": \"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\"}"
+          },
+          "observed": {
+            "leaf_calls": [
+              "self:grep",
+              "table:sort",
+              "table:sort",
+              "table:take",
+              "table:each",
+              "self:read",
+              "self:read",
+              "self:read"
+            ],
+            "fn_calls": []
+          },
+          "runtime_ms": 298.639,
+          "typecheck": {
+            "ok": true,
+            "issues": [],
+            "types": [
+              "(1) items⟨파일·줄번호·내용·…⟩"
+            ],
+            "fn_returns": {}
+          },
+          "artifacts": {}
+        }
+      },
+      {
+        "label": "wrong_count",
+        "code": "[self:grep]{path:\"notes\",pattern:\"NEEDLE\",file_pattern:\"*.txt\",limit:100} >> [table:sort]{by:\"줄번호\"} >> [table:sort]{by:\"파일\"} >> [fn:위치마다읽기]{개수:2,줄수:5}",
+        "expected": false,
+        "result": {
+          "quality_ok": false,
+          "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+          "result": {
+            "success": true,
+            "steps_completed": 4,
+            "steps_total": 4,
+            "_action_count": 4,
+            "results": [
+              {
+                "step": 1,
+                "node": "self",
+                "action": "grep",
+                "result": "{\"text\": \"notes/00.txt:4: NEEDLE N0-53605-4\\nnotes/00.txt:13: NEEDLE N0-95990-13\\nnotes/01.txt:4: NEEDLE N1-49943-4\\nnotes/01.txt:13: NEEDLE N1-13921-13\\nnotes/02.txt:4: NEEDLE N2-53466-4\\nnotes/02.txt:13: NEEDLE N2-26077-13\\nnotes/03.txt:4: NEEDLE N3-36347-4\\nnotes/03.txt:13: NEEDLE N3-62051-13\\nnotes/04.txt:4: NEEDLE N4-55413-4\\nnotes/04.txt:13: NEEDLE N4-52695-13\\nnotes/05.txt:4: NEEDLE N5-86725-4\\nnotes/05.txt:13: NEEDLE N5-56291-13\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false}",
+                "duration_ms": 11
+              },
+              {
+                "step": 2,
+                "node": "table",
+                "action": "sort",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false, \"count\": 12, \"success\": true}",
+                "duration_ms": 0
+              },
+              {
+                "step": 3,
+                "node": "table",
+                "action": "sort",
+                "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false, \"count\": 12, \"success\": true}",
+                "duration_ms": 0
+              },
+              {
+                "step": 4,
+                "node": "fn",
+                "action": "위치마다읽기",
+                "result": "{\"success\": true, \"steps_completed\": 3, \"steps_total\": 3, \"_action_count\": 3, \"results\": [{\"step\": 1, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 2, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 2, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"each\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}], \\\"count\\\": 2, \\\"rows_processed\\\": 2, \\\"ok_count\\\": 2, \\\"error_count\\\": 0, \\\"collected_rows\\\": 2, \\\"success\\\": true, \\\"message\\\": \\\"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"duration_ms\": 0}], \"final_result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}], \\\"count\\\": 2, \\\"rows_processed\\\": 2, \\\"ok_count\\\": 2, \\\"error_count\\\": 0, \\\"collected_rows\\\": 2, \\\"success\\\": true, \\\"message\\\": \\\"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"returned\": \"$return\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\", \"value\": \"[줄 13-17 / 전체 25줄, 305바이트]\\nNEEDLE N0-95990-13\\nN0-46503-14\\nN0-55226-15\\nN0-33397-16\\nN0-97183-17\\n\"}], \"count\": 2, \"fn\": \"위치마다읽기\", \"fn_source\": \"idiom\", \"params_required\": [\"개수\", \"줄수\"], \"params_injected\": [\"개수\", \"줄수\"]}",
+                "duration_ms": 1
+              }
+            ],
+            "final_result": "{\"success\": true, \"steps_completed\": 3, \"steps_total\": 3, \"_action_count\": 3, \"results\": [{\"step\": 1, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 2, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\"}], \\\"total\\\": 12, \\\"excluded\\\": \\\"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\\\", \\\"total_files\\\": 6, \\\"truncated\\\": true, \\\"count\\\": 2, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"each\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}], \\\"count\\\": 2, \\\"rows_processed\\\": 2, \\\"ok_count\\\": 2, \\\"error_count\\\": 0, \\\"collected_rows\\\": 2, \\\"success\\\": true, \\\"message\\\": \\\"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"duration_ms\": 0}], \"final_result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"내용\\\": \\\"NEEDLE N0-53605-4\\\", \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 13, \\\"내용\\\": \\\"NEEDLE N0-95990-13\\\", \\\"value\\\": \\\"[줄 13-17 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-95990-13\\\\nN0-46503-14\\\\nN0-55226-15\\\\nN0-33397-16\\\\nN0-97183-17\\\\n\\\"}], \\\"count\\\": 2, \\\"rows_processed\\\": 2, \\\"ok_count\\\": 2, \\\"error_count\\\": 0, \\\"collected_rows\\\": 2, \\\"success\\\": true, \\\"message\\\": \\\"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"returned\": \"$return\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\", \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\", \"value\": \"[줄 13-17 / 전체 25줄, 305바이트]\\nNEEDLE N0-95990-13\\nN0-46503-14\\nN0-55226-15\\nN0-33397-16\\nN0-97183-17\\n\"}], \"count\": 2, \"fn\": \"위치마다읽기\", \"fn_source\": \"idiom\", \"params_required\": [\"개수\", \"줄수\"], \"params_injected\": [\"개수\", \"줄수\"]}"
+          },
+          "observed": {
+            "leaf_calls": [
+              "self:grep",
+              "table:sort",
+              "table:sort",
+              "table:take",
+              "table:each",
+              "self:read",
+              "self:read"
+            ],
+            "fn_calls": [
+              "위치마다읽기"
+            ]
+          },
+          "runtime_ms": 298.8,
+          "typecheck": {
+            "ok": true,
+            "issues": [],
+            "types": [
+              "(1) items⟨열 미상⟩"
+            ],
+            "fn_returns": {
+              "위치마다읽기": "items⟨열 미상⟩"
+            }
+          },
+          "artifacts": {}
+        }
+      }
+    ]
+  },
+  "sources": {
+    "probe_worker.py": "\"\"\"Execute one generated program in a fresh fixture using the current IBL engine.\"\"\"\nimport sys\nfrom pathlib import Path\nROOT=Path('/Users/kangkukjin/Desktop/AI/indiebizOS')\nsys.path.insert(0,str(ROOT/'scripts'))\nsys.path.insert(0,str(ROOT/'backend'))\nimport boot_paths  # noqa: E402,F401\n\nimport contextlib\nimport io\nimport json\nimport tempfile\nimport time\nfrom unittest.mock import patch\nfrom idiom_experiment_worker import load\nfrom idiom_exposure_cases import setup as base_setup,judge\n\ndef setup(root,seed):\n    base_setup(root,seed)\n    (root/'locations.json').write_text(json.dumps([\n        {'파일':'notes/00.txt','줄번호':4},\n        {'파일':'notes/00.txt','줄번호':13},\n        {'파일':'notes/01.txt','줄번호':4}],ensure_ascii=False))\n\n\n\ndef run(req):\n    import ibl_engine,ibl_usage_db,workflow_engine,ibl_typecheck,episode_logger,write_ledger\n    import oneshot_facade,consciousness_agent\n    from common import spill\n    from ibl_parser import parse_with_vars\n    from ibl_control_blocks import _execute_fn\n    from ibl_executors import _execute_table_each\n    from tool_context import ToolContext\n    from thread_context import actor_context\n    entries={e['alias']:e for e in req['registry']}\n    dataops=load('_exposure_dataops',ROOT/'data/packages/installed/tools/data-ops/handler.py')\n    fs=load('_exposure_fs',ROOT/'data/packages/installed/tools/system_essentials/handler.py')\n    ledger=load('_exposure_ledger',ROOT/'data/packages/installed/tools/system_essentials/ledger_ops.py')\n    observed={'leaf_calls':[],'fn_calls':[]}\n    class DB:\n        def find_phrase_by_alias(self,name):return entries.get(name)\n        def update_success_by_code(self,*a,**k):pass\n        def phrase_aliases(self,*a,**k):return list(entries)\n    def forbidden_ai(*a,**k):raise ValueError('Only deterministic fixture actions are permitted')\n    with tempfile.TemporaryDirectory(prefix='ibl_exposure_') as tmp,contextlib.ExitStack() as stack:\n        root=Path(tmp).resolve();setup(root,req['seed'])\n        initial={str(p.relative_to(root)):p.read_bytes() for p in root.rglob('*') if p.is_file()}\n        def path_of(raw):\n            p=Path(str(raw));p=(p if p.is_absolute() else root/p).resolve()\n            if not p.is_relative_to(root):raise ValueError('Path outside isolated fixture')\n            return p\n        stack.enter_context(patch.object(ibl_usage_db,'IBLUsageDB',DB))\n        stack.enter_context(patch.object(workflow_engine,'get_workflow',lambda name:None))\n        stack.enter_context(patch.object(ibl_typecheck,'FN_CODE_SOURCES',[lambda name:entries.get(name,{}).get('ibl_code')]))\n        stack.enter_context(patch.object(spill,'_root',lambda:str(root/'_spill')))\n        stack.enter_context(patch.object(write_ledger,'_LEDGER_PATH',root/'_writes.jsonl'))\n        stack.enter_context(patch.object(episode_logger,'record_trajectory_event',lambda *a,**k:None))\n        stack.enter_context(patch.object(oneshot_facade,'execution_oneshot',forbidden_ai))\n        stack.enter_context(patch.object(consciousness_agent,'oneshot_ai_call',forbidden_ai))\n        stack.enter_context(patch.object(ledger,'_target_path',path_of))\n        original=ibl_engine._execute_ibl_impl\n        public_execute=ibl_engine.execute_ibl\n        def leaf(ti,project,agent_id=None):\n            n,a=ti.get('_node'),ti.get('action');p=dict(ti.get('params') or {})\n            if p.get('criteria'):return {'success':False,'error':'AI criteria are not available in this deterministic experiment'}\n            if n=='fn':\n                observed['fn_calls'].append(a)\n                return _execute_fn(ti,project,agent_id)\n            if ti.get('_def') or any(ti.get(k) for k in ['_condition','_case','_try','_repeat','_var_emit','_assign','_parallel','_fallback']):\n                return original(ti,project,agent_id)\n            observed['leaf_calls'].append(f'{n}:{a}')\n            if n=='table' and a=='each':\n                p['_depth']=ti.get('_depth',0)\n                return _execute_table_each(p,project,agent_id=agent_id)\n            if n=='table' and 'data_'+str(a) in dataops._DISPATCH:\n                return dataops.execute(p,ToolContext(project,'data_'+a))\n            mapped={'read':'read_op','file_find':'glob_files','grep':'grep_files','edit':'edit_file','write':'write_file','list':'list_directory'}\n            if n=='self' and (a in mapped or a=='ledger'):\n                try:\n                    for key in ('path','root_path','file_path','directory','items_file','files_from','source','destination'):\n                        if isinstance(p.get(key),str):path_of(p[key])\n                    if a=='ledger':\n                        func=getattr(ledger,'op_'+str(p.get('op','select')),None)\n                        return func(p) if func else {'success':False,'error':'Unknown ledger operation'}\n                    return fs.execute(p,ToolContext(project,mapped[a],agent_id='exposure-fixture'))\n                except ValueError as exc:return {'success':False,'error':str(exc)}\n            return {'success':False,'error':f'Unavailable fixture action {n}:{a}'}\n        def public(ti,project,agent_id=None):\n            if (ti.get('params') or {}).get('criteria'):\n                return {'success':False,'error':'AI criteria are not available in this deterministic experiment'}\n            return public_execute(ti,project,agent_id)\n        stack.enter_context(patch.object(ibl_engine,'_execute_ibl_impl',leaf))\n        stack.enter_context(patch.object(ibl_engine,'execute_ibl',public))\n        started=time.perf_counter();checked={}\n        try:\n            steps,variables=parse_with_vars(req['code']);checked=ibl_typecheck.typecheck(steps,variables)\n            if checked.get('abstained'):raise ValueError('Type checker abstained: '+checked['abstained'])\n            if not checked['ok']:result={'success':False,'error':json.dumps(checked['issues'],ensure_ascii=False)}\n            else:\n                with actor_context(agent_id='exposure-fixture',origin='test'):\n                    result=workflow_engine.execute_pipeline(steps,str(root))\n            try:ok,verdict=judge(req['case_id'],result,root,observed,initial)\n            except (OSError,ValueError,TypeError,KeyError,AttributeError) as exc:\n                ok,verdict=False,f'Expected artifact missing or invalid: {type(exc).__name__}: {exc}'\n        except Exception as exc:\n            result={'success':False,'error':f'{type(exc).__name__}: {exc}'};ok=False;verdict=result['error']\n        artifacts={str(p.relative_to(root)):p.read_text() for p in (root/'outputs').rglob('*') if p.is_file()}\n        return {'quality_ok':bool(ok),'verdict':verdict,'result':result,'observed':observed,'runtime_ms':round((time.perf_counter()-started)*1000,3),'typecheck':checked,'artifacts':artifacts}\n\n\nif __name__=='__main__':\n    req=json.loads(sys.stdin.read())\n    with contextlib.redirect_stdout(io.StringIO()):out=run(req)\n    print(json.dumps(out,ensure_ascii=False))\n",
+    "probe_runner.py": "import sys,json,subprocess,time\nfrom pathlib import Path\nROOT=Path('/Users/kangkukjin/Desktop/AI/indiebizOS')\nsys.path.insert(0,str(ROOT/'scripts'))\nimport idiom_exposure_study as study\nOUT=Path(__file__).resolve().parent\n\ndef execute(out,code,case_id,seed):\n    start=time.perf_counter()\n    req={'code':code,'case_id':case_id,'seed':seed,'registry':json.loads((out/'registry.json').read_text())}\n    p=subprocess.run([sys.executable,str(out/'probe_worker.py')],input=json.dumps(req),text=True,capture_output=True,cwd=ROOT,timeout=30)\n    result=json.loads(p.stdout) if p.returncode==0 else {'quality_ok':False,'verdict':'worker_error','error':p.stderr[-1600:]}\n    result['worker_wall_ms']=(time.perf_counter()-start)*1000\n    return result\n\nif __name__=='__main__':\n    m=json.loads((OUT/'manifest.json').read_text())\n    for f,h in m['source_sha256'].items():assert study.sha(ROOT/'scripts'/f)==h\n    for arm,h in m['prompt_sha256'].items():assert study.sha(OUT/'prompts'/f'{arm}.txt')==h\n    for f,h in m['probe_source_sha256'].items():assert study.sha(OUT/f)==h\n    assert json.loads((OUT/'probe_validation.json').read_text())['ok']\n    study.execute=execute\n    for spec in m['schedule']:\n        result=study.trial(OUT,m,spec)\n        print(json.dumps({'id':result['id'],'ok':result['quality_ok'],'written':result['attempts'][0]['written_aliases']},ensure_ascii=False),flush=True)\n"
+  }
+}

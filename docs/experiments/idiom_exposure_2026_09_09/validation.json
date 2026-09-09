@@ -1,0 +1,206 @@
+{
+  "primary_reference_ok": true,
+  "primary_references": [
+    {
+      "case": "direct_latest",
+      "solution": "named",
+      "code": "[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "direct_latest",
+      "solution": "inline",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "direct_context",
+      "solution": "named",
+      "code": "[self:read]{path:\"locations.json\"} >> [fn:위치마다읽기]{개수:3,줄수:5}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "direct_context",
+      "solution": "inline",
+      "code": "[self:read]{path:\"locations.json\"} >> [table:take]{n:3} >> [table:each]{keep:[\"파일\",\"줄번호\"],limit:3,collect:true,on_error:\"keep\"} {[self:read]{path:$it.파일,start_line:$it.줄번호,limit:5}}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "direct_ledger",
+      "solution": "named",
+      "code": "$old=[self:read]{path:\"existing.json\"}\n$new=[self:read]{path:\"arrivals.json\"}\n[fn:원장에누적]{옛것:$old,새것:$new,키:[\"id\",\"kind\"],원장:\"outputs/archive.json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "direct_ledger",
+      "solution": "inline",
+      "code": "$old=[self:read]{path:\"existing.json\"}\n$new=[self:read]{path:\"arrivals.json\"}\n$old & $new >> [table:union] >> [table:dedup]{by:[\"id\",\"kind\"]} >> [self:write]{path:\"outputs/archive.json\",format:\"json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "embedded_latest",
+      "solution": "named",
+      "code": "$part=[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}\n[self:write]{path:\"outputs/excerpt.txt\",content:$part.final_result}\n[self:read]{path:\"queue.json\"} >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"id\"} >> [self:write]{path:\"outputs/pending.json\",format:\"json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "embedded_latest",
+      "solution": "inline",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12} >> [self:write]{path:\"outputs/excerpt.txt\"}\n[self:read]{path:\"queue.json\"} >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"id\"} >> [self:write]{path:\"outputs/pending.json\",format:\"json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "embedded_context",
+      "solution": "named",
+      "code": "$r=[self:read]{path:\"review_locations.json\"}\n$r >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"파일\"} >> [fn:위치마다읽기]{개수:3,줄수:5} >> [self:write]{path:\"outputs/snippets.json\",format:\"json\"}\n$r >> [table:filter]{where:\"state == 'closed'\"} >> [table:sort]{by:\"파일\"} >> [self:write]{path:\"outputs/closed.json\",format:\"json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "embedded_context",
+      "solution": "inline",
+      "code": "$r=[self:read]{path:\"review_locations.json\"}\n$r >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"파일\"} >> [table:take]{n:3} >> [table:each]{keep:[\"파일\",\"줄번호\"],limit:3,collect:true,on_error:\"keep\"} {[self:read]{path:$it.파일,start_line:$it.줄번호,limit:5}} >> [self:write]{path:\"outputs/snippets.json\",format:\"json\"}\n$r >> [table:filter]{where:\"state == 'closed'\"} >> [table:sort]{by:\"파일\"} >> [self:write]{path:\"outputs/closed.json\",format:\"json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "embedded_ledger",
+      "solution": "named",
+      "code": "$o=[self:read]{path:\"existing.json\"}\n$s=[self:read]{path:\"submissions.json\"}\n$n=$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}} >> [table:select]{columns:[\"id\",\"kind\",\"value\"]}\n[fn:원장에누적]{옛것:$o,새것:$n,키:[\"id\",\"kind\"],원장:\"outputs/archive.json\"}\n$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:false}} >> [self:write]{path:\"outputs/rejected.json\",format:\"json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "embedded_ledger",
+      "solution": "inline",
+      "code": "$o=[self:read]{path:\"existing.json\"}\n$s=[self:read]{path:\"submissions.json\"}\n$n=$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}} >> [table:select]{columns:[\"id\",\"kind\",\"value\"]}\n$o & $n >> [table:union] >> [table:dedup]{by:[\"id\",\"kind\"]} >> [self:write]{path:\"outputs/archive.json\",format:\"json\"}\n$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:false}} >> [self:write]{path:\"outputs/rejected.json\",format:\"json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "counter_latest",
+      "solution": "named",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:sort]{by:\"name\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "counter_latest",
+      "solution": "inline",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:sort]{by:\"name\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "counter_context",
+      "solution": "named",
+      "code": "[self:grep]{path:\"notes\",pattern:\"NEEDLE\",file_pattern:\"*.txt\",limit:100}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "counter_context",
+      "solution": "inline",
+      "code": "[self:grep]{path:\"notes\",pattern:\"NEEDLE\",file_pattern:\"*.txt\",limit:100}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "named",
+      "code": "[self:ledger]{op:\"upsert\",path:\"registry.json\",target:\"records\",key:\"id\",items_file:\"updates.json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "inline",
+      "code": "[self:ledger]{op:\"upsert\",path:\"registry.json\",target:\"records\",key:\"id\",items_file:\"updates.json\"}",
+      "quality_ok": true,
+      "verdict": "품질 기준 통과"
+    },
+    {
+      "case": "counter_latest",
+      "solution": "wrong",
+      "code": "[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}",
+      "quality_ok": false,
+      "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. drafts/*.md에서 파일명에 적힌 YYYY-MM-DD 날짜가 가장 늦은 문서의 11~22줄 본문을 반환해 줘. 수정시각은 선정 기준이 아니다. 후보는 report_YYYY-MM-DD.md 형식의 네 파일이며 모두 80줄이다."
+    },
+    {
+      "case": "direct_context",
+      "solution": "wrong",
+      "code": "[self:read]{path:\"locations.json\"}",
+      "quality_ok": false,
+      "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다."
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "wrong",
+      "code": "[self:ledger]{op:\"append\",path:\"registry.json\",target:\"records\",items_file:\"updates.json\"}",
+      "quality_ok": false,
+      "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. registry.json의 records 목록에 updates.json의 행들을 id 기준으로 반영해 줘. 같은 id는 새로 온 필드 값으로 갱신하되 새 행에 없는 기존 필드는 보존하고, 없는 id는 추가한다. records 이외의 메타데이터도 유지해야 한다. updates.json은 변경하지 마. 결과는 registry.json에 저장해 줘."
+    }
+  ],
+  "semantic_audit_controls": [
+    {
+      "case": "direct_latest",
+      "label": "same_scalar",
+      "code": "[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}",
+      "expected": true,
+      "observed": true
+    },
+    {
+      "case": "direct_latest",
+      "label": "equivalent_items",
+      "code": "$r=[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}\n$return=[{본문:$r}]",
+      "expected": true,
+      "observed": true
+    },
+    {
+      "case": "counter_latest",
+      "label": "wrong_document",
+      "code": "[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}",
+      "expected": false,
+      "observed": false
+    },
+    {
+      "case": "direct_context",
+      "label": "korean_error",
+      "code": "[self:read]{path:\"locations.json\"} >> [fn:위치마다읽기]{개수:3,줄수:5} >> [table:rename]{map:{\"_error\":\"오류\"}}",
+      "expected": true,
+      "observed": true
+    },
+    {
+      "case": "direct_ledger",
+      "label": "incidental_error",
+      "code": "[self:mkdir]{path:\"outputs\"}\n$old=[self:read]{path:\"existing.json\"}\n$new=[self:read]{path:\"arrivals.json\"}\n[fn:원장에누적]{옛것:$old,새것:$new,키:[\"id\",\"kind\"],원장:\"outputs/archive.json\"}",
+      "expected": true,
+      "observed": true
+    },
+    {
+      "case": "direct_context",
+      "label": "no_body",
+      "code": "[self:read]{path:\"locations.json\"}",
+      "expected": false,
+      "observed": false
+    }
+  ],
+  "regression": {
+    "command": ".venv/bin/python3 -m pytest backend/ -o addopts='' -q",
+    "passed": 3213,
+    "skipped": 2,
+    "warnings": 116,
+    "seconds": 113.37
+  },
+  "replayed_attempts": 91,
+  "executable_programs_replayed": 87,
+  "schema_grade_differences": 0
+}

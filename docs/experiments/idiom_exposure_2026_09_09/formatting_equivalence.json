@@ -1,0 +1,14 @@
+{
+  "idiom_exposure_study.py": {
+    "ast_equivalent": true,
+    "current_sha256": "fcdfb40be96240bc16bdbfc68bd2f11cc388f51d6001b8138b873addf694b3d9"
+  },
+  "idiom_exposure_cases.py": {
+    "ast_equivalent": true,
+    "current_sha256": "ef2b82963f9a958c8f1d76eb1ddb9668966eefff5d811ed283d9adb2563a1a5d"
+  },
+  "idiom_exposure_worker.py": {
+    "ast_equivalent": true,
+    "current_sha256": "70b0cf6e5e851f8133bae9cf81427f1626b6dd700f74d25cff725fcbf5c004ee"
+  }
+}

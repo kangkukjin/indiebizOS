@@ -27,7 +27,7 @@ def bound(ledger, row, monkeypatch):
         'assumptions': ['대상은 부산이다']})
     b = pb.Binding(runner, ledger, 'agent', 'turn_b', '아니 서울이 아니라 부산이야', [])
     token = pb._current.set(b)
-    monkeypatch.setattr(pb, 'ask_json', lambda p: {'action': 'rewrite', 'criteria': '부산 조회',
+    monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'action': 'rewrite', 'criteria': '부산 조회',
                          'broken_assumption': '대상은 서울이다', 'evidence': '사용자 정정'})
     yield b
     pb._current.reset(token)
@@ -83,7 +83,7 @@ def test_s1_same_pursuit_correction_rewrites_without_shrinking_goal(bound, row):
 def test_s2_choose_old_pursuit_after_other_work(bound, row, monkeypatch):
     bound.ledger.create('다른 일', '다른 기준', 'unrelated')
     answers = iter([{'id': row['id']}, {'action': 'keep', 'criteria': '다음 단계'}])
-    monkeypatch.setattr(pb, 'ask_json', lambda p: next(answers))
+    monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: next(answers))
     memory, needs_review = pb.prepare('')
     assert not needs_review and bound.row['progress'] == '원본 수집 완료'
     assert row['id'] in memory and '<goal_criteria>' in memory
@@ -91,7 +91,7 @@ def test_s2_choose_old_pursuit_after_other_work(bound, row, monkeypatch):
 
 
 def test_ambiguous_selection_is_unbound(bound, monkeypatch):
-    monkeypatch.setattr(pb, 'ask_json', lambda p: {'id': None})
+    monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'id': None})
     _, needs_review = pb.prepare('')
     assert bound.row is None and not needs_review
 
@@ -117,7 +117,7 @@ def test_s3_pending_read_catches_up_before_execution(bound, row, monkeypatch):
     a = bound.ledger.begin_turn(row['id'], 'a', '보고서 생성')
     bound.ledger.finish_turn(row['id'], 'a', '보고서 생성 완료', [{'name': 'write', 'result': 'report.pdf'}])
     answers = iter([{'progress': '보고서 생성 완료', 'next': 'PDF 검증'}, {'action': 'keep', 'criteria': '검증'}])
-    monkeypatch.setattr(pb, 'ask_json', lambda p: next(answers))
+    monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: next(answers))
     bound.message = row['id'] + ' 이어서'
     memory, _ = pb.prepare('')
     assert '보고서 생성 완료' in memory and bound.row['next'] == 'PDF 검증'
@@ -128,7 +128,7 @@ def test_pending_failure_stops_execution_and_retains_raw(bound, row, monkeypatch
     bound.ledger.begin_turn(row['id'], 'a', '파일 만들기')
     bound.ledger.finish_turn(row['id'], 'a', 'file created', [{'result': 'file.txt'}])
     bound.message = row['id']
-    monkeypatch.setattr(pb, 'ask_json', lambda p: (_ for _ in ()).throw(ValueError('model unavailable')))
+    monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: (_ for _ in ()).throw(ValueError('model unavailable')))
     with pytest.raises(ValueError, match='진행 갱신'):
         pb.prepare('')
     assert bound.row is None
@@ -140,7 +140,7 @@ def test_summary_cas_retries_after_actual_concurrent_write(ledger, row, monkeypa
     pid = row['id']; a = ledger.begin_turn(pid, 'a', 'a')
     ledger.finish_turn(pid, 'a', '완료', [])
     calls = []
-    def model(prompt):
+    def model(prompt, **kwargs):
         calls.append(prompt)
         if len(calls) == 1:
             b = ledger.begin_turn(pid, 'b', '정정')
@@ -303,7 +303,7 @@ def test_pipeline_reflex_correction_and_durable_finish(tmp_path, monkeypatch):
     monkeypatch.setattr(ap, '_reload_gate_notice', lambda: '')
     monkeypatch.setattr(core, '_restore_provider', lambda *a: None)
     monkeypatch.setattr(core, '_switch_to_midtier', lambda *a: pytest.fail('정정 턴이 Reflex에 남았다'))
-    monkeypatch.setattr(pb, 'ask_json', lambda p: {'action': 'rewrite', 'criteria': '',
+    monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'action': 'rewrite', 'criteria': '',
                          'broken_assumption': '대상 서울', 'evidence': '사용자 부산 정정'})
     try:
         events = list(runner.cognitive_stream(row['id'] + ' 아니 부산으로 조회해'))
@@ -326,7 +326,7 @@ def test_explicit_completed_pursuit_can_resume(bound, row, monkeypatch):
     with bound.ledger.connect(True) as c:
         c.execute("UPDATE pursuit_turn SET state='applied'")
     bound.message = row['id'] + ' 다시 이어가'
-    monkeypatch.setattr(pb, 'ask_json', lambda p: {'action': 'keep', 'criteria': '재개'})
+    monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'action': 'keep', 'criteria': '재개'})
     pb.prepare(''); bound.aliases = {'agent'}
     result = json.loads(execute_pursuit({'op': 'resume', 'why': '사용자 재개'}, 'agent', bound.task))
     assert result['result']['status'] == 'active'

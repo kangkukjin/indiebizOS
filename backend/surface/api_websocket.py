@@ -495,6 +495,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     # 태스크 id 는 에피소드보다 먼저 정한다 — 이벤트 루프 한 스레드에서 여러 턴이 동시에
     # 열리므로 thread-local 상속은 이웃 턴의 태스크를 물려받는다(2026-09-06 ep2905 → 명시 바인딩).
     task_id = f"task_{uuid.uuid4().hex[:8]}"
+    _finalize_task_row = None
     # 에피소드 로그 시작 (project_id 전달 — 종료 시 조종실 액티브 유령 청소용)
     try:
         from episode_logger import EpisodeLogger
@@ -590,13 +591,15 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         # 스트리밍 처리를 위한 큐
         event_queue = asyncio.Queue()
         final_content = ""
+        stream_error = ""
+        stream_cancelled = False
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
         tool_calls_log = []  # X-Ray/태스크 이력용 — 제너레이터 _turn_meta에서 수신
 
-        def _complete_task_row(final_text: str):
-            """태스크 행을 completed 로 닫고 X-Ray 이벤트를 민다.
+        def _finalize_task_row(final_text: str):
+            """실제 종료 원인으로 태스크를 닫고 X-Ray 이벤트를 민다.
 
             정상 종료와 '타임아웃 후 워커 완주' 두 자리가 같은 마무리를 쓰도록 한 곳에
             둔다 — 옛 판은 소비자 쪽에만 있어서, 타임아웃이 나면 살아 있는 워커 위에
@@ -604,6 +607,8 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             """
             if not task_id:
                 return
+            status = "failed" if stream_error else "cancelled" if stream_cancelled else "completed"
+            result = stream_error or ("사용자가 중단했습니다." if stream_cancelled else final_text)
             try:
                 import json as _json
                 tool_history_json = _json.dumps(tool_calls_log, ensure_ascii=False) if tool_calls_log else None
@@ -614,24 +619,26 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     except Exception:
                         pass
                     cursor.execute("""
-                        UPDATE tasks SET status = 'completed', result = ?,
+                        UPDATE tasks SET status = ?, result = ?,
                                          completed_at = CURRENT_TIMESTAMP, tool_history = ?
                         WHERE task_id = ?
-                    """, ((final_text or "")[:500], tool_history_json, task_id))
+                    """, (status, (result or "")[:500], tool_history_json, task_id))
                     conn.commit()
                 # X-Ray 실시간 이벤트
                 try:
                     from xray_stream import push_xray_event
-                    push_xray_event("task_complete", {
+                    event_name = {"completed": "task_complete", "failed": "task_failed", "cancelled": "task_cancelled"}[status]
+                    push_xray_event(event_name, {
                         "task_id": task_id,
                         "request": (message or "")[:100],
                         "agent": agent_name,
                         "tool_count": len(tool_calls_log),
+                        "status": status,
                     })
                 except Exception:
                     pass
             except Exception as ct_err:
-                print(f"[WS] complete_task 실패 (무시): {ct_err}")
+                print(f"[WS] finalize_task 실패 (무시): {ct_err}")
 
         def run_stream():
             """워커 스레드 — 인지 파이프라인 제너레이터를 소비해 이벤트를 pump (transport 어댑터).
@@ -639,7 +646,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             인지 오케스트레이션(연상→분류→의식→실행→평가→반성→증류)은 전부
             runner.cognitive_stream(agent_pipeline.py) 안에서 일어난다.
             """
-            nonlocal final_content
+            nonlocal final_content, stream_error, stream_cancelled
             # 별도 스레드이므로 컨텍스트 재설정 필요
             from thread_context import set_user_input as _set_user_input, set_task_origin as _set_origin
             set_current_agent_id(agent_id)
@@ -664,6 +671,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     # 중단 즉시 탈출 (5라운드 감사 (A) — sysai 워커와 대칭): cancel_check 는
                     # 도구 경계에서만 잡히므로, 긴 텍스트 스트리밍 중에도 여기서 끊는다.
                     if is_cancelled(client_id):
+                        stream_cancelled = True
                         asyncio.run_coroutine_threadsafe(
                             event_queue.put({"type": "cancelled", "content": "사용자가 중단했습니다."}),
                             loop)
@@ -675,7 +683,10 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         continue
                     # tool_start/tool_result/thinking은 provider에서 이미 print되므로 중복 제거.
                     if event_type == "error":
+                        stream_error = event.get("content") or "알 수 없는 오류"
                         print(f"[WS run_stream] error: {event.get('content', '')[:300]}")
+                    elif event_type == "cancelled":
+                        stream_cancelled = True
                     elif event_type == "text":
                         # ★청크마다 찍지 않는다(2026-08-25): 청크 크기는 프로바이더가 정한다
                         # — in-process DeepSeek 은 1~5자씩 흘려보내 한 턴이 수백 줄이 됐다
@@ -694,25 +705,32 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                         final_content = event.get("content", "")
                         print(f"[WS run_stream] final_content 설정됨 (len={len(final_content)})")
             except Exception as e:
+                stream_error = str(e) or type(e).__name__
                 print(f"[WS run_stream] 예외 발생: {e}")
+                from episode_logger import record_trajectory_event
+                record_trajectory_event("run.failed", {"error": stream_error, "error_type": type(e).__name__})
                 asyncio.run_coroutine_threadsafe(
                     event_queue.put({"type": "error", "content": str(e)}),
                     loop
                 )
             finally:
+                if not stream_error and not stream_cancelled and not filter_internal_markers(final_content):
+                    stream_error = "최종 응답 없이 작업이 종료되었습니다. 다시 시도해주세요."
+                    asyncio.run_coroutine_threadsafe(
+                        event_queue.put({"type": "error", "content": stream_error}), loop)
                 print(f"[WS run_stream] 스트림 종료, final_content len={len(final_content)}, "
                       f"text {_text_chars}자/{_text_chunks}청크, timed_out={timed_out}")
                 if timed_out:
                     # 타임아웃 이후 완주분 인계 — 소비자는 이미 떠났으므로 저장·태스크
                     # 닫기·원장 닫기를 실제로 끝낸 여기서 한다(시스템 AI 경로와 대칭).
-                    if final_content:
+                    if final_content and not stream_error and not stream_cancelled:
                         try:
                             filtered = filter_internal_markers(final_content)
                             msg_id = db.save_message_undelivered(target_agent_id, user_id, filtered)
                             print(f"[WS run_stream] 타임아웃 후 미전달 메시지 저장 완료: message_id={msg_id}")
                         except Exception as save_err:
                             print(f"[WS run_stream] 타임아웃 후 메시지 저장 실패: {save_err}")
-                    _complete_task_row(final_content)
+                    _finalize_task_row(final_content)
                     try:
                         from episode_logger import EpisodeLogger
                         EpisodeLogger.end_episode()
@@ -761,12 +779,12 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             event_type = event.get("type")
 
             if event_type == "cancelled":
-                # 중단 확인 전송 후 즉시 종료 (sysai 소비자와 대칭)
+                # 종료 신호까지 받아 워커의 finally·도구 메타가 저장된 뒤 태스크를 닫는다.
                 await manager.send_message(client_id, {
                     "type": "cancelled",
                     "message": event.get("content", "중단됨"),
                 })
-                break
+                continue
 
             if event_type == "text":
                 # 텍스트 청크 전송
@@ -845,7 +863,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     "type": "error",
                     "message": event.get("content", "알 수 없는 오류")
                 })
-                break
+                # 뒤따르는 _turn_meta와 종료 신호를 받아 실패 원장·도구 이력을 보존한다.
 
         # 취소 플래그 턴-종료 리셋 (5라운드 감사 (D) — 남은 True 가 같은 client_id 의
         # 다른 경로/다음 소비에 새지 않게. 시작 리셋과 양단 대칭.)
@@ -853,7 +871,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
         # AI 응답 저장 (final_content 사용)
         print(f"[WS] while 루프 종료, final_content 길이: {len(final_content)}")
-        if final_content:
+        if final_content and not stream_error and not stream_cancelled:
             # 내부 시스템 마커 필터링
             final_content = filter_internal_markers(final_content)
             # 도구 결과 이미지 수집하여 저장
@@ -868,9 +886,9 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 "message_id": message_id
             })
 
-        # 태스크 완료 처리 (X-Ray 타임라인용)
+        # 태스크 종료 처리 (실패·취소를 완료로 기록하지 않는다)
         # tool_calls_log는 run_stream 스레드에서 수집됨 — thread_context가 아닌 이 변수를 직접 사용
-        _complete_task_row(final_content)
+        _finalize_task_row(final_content)
 
         # 완료 알림
         await manager.send_message(client_id, {
@@ -892,6 +910,9 @@ async def handle_chat_message_stream(client_id: str, data: dict):
     except Exception as e:
         import traceback
         traceback.print_exc()
+        if _finalize_task_row is not None:
+            stream_error = str(e) or type(e).__name__
+            _finalize_task_row(final_content)
         # 에피소드 로그 종료 (에러 시에도)
         try:
             from episode_logger import EpisodeLogger

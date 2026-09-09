@@ -718,7 +718,7 @@ _REASON_HINTS = {
 }
 
 
-def crawl_website(url: str, max_length: int = 10000, *, refresh: bool = False,
+def crawl_website(url: str, max_length: int = 60000, *, refresh: bool = False,
                   project_path: str = None) -> dict:
     """원문은 전문 보관·통화로 반환하고 max_length는 모델 표시 예산만 선언한다.
 
@@ -743,7 +743,8 @@ def crawl_website(url: str, max_length: int = 10000, *, refresh: bool = False,
         return {"success": False, "url": url, "error": f"원문 보관 실패: {exc}",
                 "reason": "source_storage_failed"}
     if result.get("success"):
-        result["_display"] = {"max_chars": max_length, "mirror_fields": ["text"]}
+        result["_display"] = {"max_chars": max_length, "mirror_fields": ["text"],
+                              "limit_rows": False}
     return result
 
 
@@ -867,5 +868,5 @@ def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
 def use_tool(tool_input: dict) -> dict:
     """도구 인터페이스"""
     url = tool_input.get('url', '')
-    max_length = tool_input.get('max_length', 10000)
+    max_length = tool_input.get('max_length', 60000)
     return crawl_website(url, max_length, refresh=tool_input.get('refresh', False))

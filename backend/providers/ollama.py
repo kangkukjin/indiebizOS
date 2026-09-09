@@ -259,6 +259,8 @@ class OllamaProvider(BaseProvider):
             if actions > 1:
                 max_length = max_length * actions
 
+        from ibl_envelope import display_delivery_budget
+        max_length = display_delivery_budget(result, max_length)
         if len(result) <= max_length:
             return result
 

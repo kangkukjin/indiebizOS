@@ -729,7 +729,7 @@ def execute(tool_input: dict, context):
     # 웹페이지 크롤링
     elif tool_name == "crawl_website":
         url = tool_input.get("url")
-        max_length = tool_input.get("max_length", 10000)
+        max_length = tool_input.get("max_length", 60000)
 
         if not url:
             return format_json({"success": False, "error": "URL이 제공되지 않았습니다."})

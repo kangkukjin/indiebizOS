@@ -252,8 +252,10 @@ class GeminiHTTPProvider(BaseProvider):
                 out = str(out)
                 if out.startswith("[[APPROVAL_REQUESTED]]"):
                     out = out.replace("[[APPROVAL_REQUESTED]]", "")
-                if len(out) > 16000:
-                    out = out[:16000]
+                from ibl_envelope import display_delivery_budget
+                max_length = display_delivery_budget(out, 16000)
+                if len(out) > max_length:
+                    out = out[:max_length]
                 self.metrics.record_tool_call()
                 resp_parts.append({"functionResponse": {"name": name, "response": {"result": out}}})
             # functionResponse 턴 (role 은 google REST 규약상 'user')

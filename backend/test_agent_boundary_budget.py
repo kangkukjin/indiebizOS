@@ -64,6 +64,31 @@ def test_b2_count_actions_from_code():
     assert m._count_actions("") == 1
 
 
+def test_cli_host_has_room_for_declared_display_and_keeps_explicit_limit(monkeypatch):
+    from common.spill import DISPLAY_MCP_OUTPUT_TOKENS
+    from providers.claude_code import ClaudeCodeProvider
+    inst = object.__new__(ClaudeCodeProvider)
+    inst._effective_token = None
+    monkeypatch.setattr(inst, '_identity_env', lambda: {})
+    monkeypatch.delenv('MAX_MCP_OUTPUT_TOKENS', raising=False)
+    env = inst._build_env()
+    assert env['MAX_MCP_OUTPUT_TOKENS'] == str(DISPLAY_MCP_OUTPUT_TOKENS)
+    monkeypatch.setenv('MAX_MCP_OUTPUT_TOKENS', env['MAX_MCP_OUTPUT_TOKENS'])
+    assert _mcp()._host_cap_chars() >= 60000 + 16000
+    monkeypatch.setenv('MAX_MCP_OUTPUT_TOKENS', '10000')
+    assert inst._build_env()['MAX_MCP_OUTPUT_TOKENS'] == '10000'
+
+
+def test_declared_display_does_not_remove_overall_delivery_bound():
+    from common.spill import AUTO_SPILL_THRESHOLD
+    from ibl_envelope import display_delivery_budget
+    ordinary = json.dumps({'items': [{'text': '가' * 70000}]}, ensure_ascii=False)
+    assert display_delivery_budget(ordinary, 16000) == 16000
+    huge = json.dumps({'_display': {'max_chars': 60000}, 'items': [
+        {'text': '가' * (AUTO_SPILL_THRESHOLD + 10000)}]}, ensure_ascii=False)
+    assert display_delivery_budget(huge, 16000) == AUTO_SPILL_THRESHOLD
+
+
 # ---------------------------------------------------------------- B3 ep2800 재현
 def _envelope(total_chars: int) -> str:
     body = ("가" * 400 + "\n") * (total_chars // 401 + 1)

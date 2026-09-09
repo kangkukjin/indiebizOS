@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: crawl_first_display_10k
+    retired: 2026-09-09
+    reason: 첫 표시가 작아 대부분의 문서를 다시 읽던 왕복을 줄인다.
+    instead: 크롤 첫 표시는 기본 60000자이며 문단 수로 먼저 자르지 않는다. 전문은 보관하고 추가 읽기는 변수·source_ref를 사용한다.
+    phrases:
+      - 'max_length는 모델 표시 글자 예산(기본 10000)'
+      - '모델 미리보기 글자 예산(양의 정수, 기본 10000)'
   - id: crawl_display_limit_drops_source
     retired: 2026-09-09
     reason: 받은 전문을 표시 한도에서 버려 같은 페이지를 재조회하던 낭비를 없앤다.

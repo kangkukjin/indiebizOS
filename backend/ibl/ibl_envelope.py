@@ -283,29 +283,53 @@ PREVIEW_FULL_HINT = ("미리보기입니다 — 전체가 필요하면 verbose: 
                      "`$이름 >> [table:take]{n}`·`[table:select]`·`[table:filter]` 로 좁혀 받으세요. 행·값을 손으로 옮겨 적지 말 것.")
 
 
+def display_delivery_budget(raw: str, default: int) -> int:
+    """생산자가 선언한 미리보기를 전달 단계의 옛 16K 제한으로 다시 자르지 않는다.
+
+    execute_ibl에서 표시 예산을 적용한 결과용이다. JSON 구조·출처·진단도 함께
+    전달하되, 전체 전송은 기존 자동 스필 임계 아래로 제한한다. 액션 이름은 모른다.
+    """
+    if len(raw) <= default or "_display" not in raw:
+        return default
+    obj = _parse_obj(raw)
+    if not isinstance(obj, dict):
+        return default
+    final = obj.get("final_result", obj)
+    final = _parse_obj(final) if isinstance(final, str) else final
+    display = final.get("_display") if isinstance(final, dict) else None
+    cap = display.get("max_chars") if isinstance(display, dict) else None
+    if not isinstance(cap, int) or isinstance(cap, bool) or cap <= 0:
+        return default
+    from common.spill import AUTO_SPILL_THRESHOLD
+    return max(default, min(len(raw), AUTO_SPILL_THRESHOLD))
+
+
 def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
     """items/표/산문 통화 하나를 미리보기로. 바꿀 것이 없으면 None."""
     rows = int(pol["rows"])
     if isinstance(obj, dict):
         out = dict(obj)
         meta = {}
-        if isinstance(obj.get("items"), list) and len(obj["items"]) > rows and serialized_len >= int(pol["min_chars"]):
+        display = obj.get("_display") or {}
+        display = display if isinstance(display, dict) else {}
+        # 문단 통화는 행 개수보다 글자 예산으로 읽는다. 일반 표는 기존 행 제한 유지.
+        limit_rows = display.get("limit_rows") is not False
+        if limit_rows and isinstance(obj.get("items"), list) and len(obj["items"]) > rows and serialized_len >= int(pol["min_chars"]):
             out["items"] = obj["items"][:rows]
             cols = []
             first = obj["items"][0] if obj["items"] else None
             if isinstance(first, dict):
                 cols = list(first.keys())[:20]
             meta.update(shown=rows, total=len(obj["items"]), columns=cols)
-        if isinstance(obj.get("rows"), list) and isinstance(obj.get("columns"), list) \
+        if limit_rows and isinstance(obj.get("rows"), list) and isinstance(obj.get("columns"), list) \
                 and len(obj["rows"]) > rows and serialized_len >= int(pol["min_chars"]):
             out["rows"] = obj["rows"][:rows]
             meta.update(shown=rows, total=len(obj["rows"]), columns=list(obj["columns"])[:20])
         # 행이 적어도 문단 하나가 수만 자일 수 있다. 원형은 보관한 뒤, 표시 사본의
         # 데이터 문자열 예산을 함께 센다. 생산자의 선언은 데이터이며 액션명은 모른다.
-        display = obj.get("_display") or {}
-        cap = display.get("max_chars") if isinstance(display, dict) else None
+        cap = display.get("max_chars")
         cap = cap if isinstance(cap, int) and not isinstance(cap, bool) and cap > 0 else int(pol["prose_chars"])
-        if isinstance(display, dict) and isinstance(out.get("items"), list) and (meta or serialized_len > cap):
+        if isinstance(out.get("items"), list) and (meta or serialized_len > cap):
             mirrors = display.get("mirror_fields") or []
             omitted = [k for k in mirrors if isinstance(k, str) and k != "items" and isinstance(out.get(k), str)]
             for k in omitted:
@@ -328,6 +352,15 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
                     return value[:shown]
                 return value
             if isinstance(value, list):
+                if not limit_rows and path in (["items"], ["rows"]):
+                    shown = []
+                    for i, item in enumerate(value):
+                        if remaining <= 0:
+                            break
+                        shown.append(clip(item, path + [i]))
+                    if len(shown) < len(value):
+                        meta.update(shown=len(shown), total=len(value))
+                    return shown
                 return [clip(v, path + [i]) for i, v in enumerate(value)]
             if isinstance(value, dict):
                 return {k: v if k in preserve else clip(v, path + [k])

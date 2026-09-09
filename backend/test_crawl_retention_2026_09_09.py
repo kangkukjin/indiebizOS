@@ -152,18 +152,8 @@ def test_invalid_display_budget_does_not_fetch(crawl, budget):
 
 
 def test_saved_full_document_flows_through_ibl_and_next_turn_call(crawl, monkeypatch, tmp_path):
-    import ibl_engine
-    from tool_context import ToolContext
     crawler, calls = crawl
-    handler = load_sibling(CRAWLER, 'handler')
-    original_loader = handler.load_module
-    monkeypatch.setattr(handler, 'load_module', lambda n: crawler if n == 'tool_webcrawl' else original_loader(n))
-    original = ibl_engine._execute_ibl_impl
-    def leaf(ti, project, agent_id=None):
-        if ti.get('_node') == 'sense' and ti.get('action') == 'crawl':
-            return handler.execute(ti.get('params') or {}, ToolContext(project, 'crawl_website', agent_id=agent_id))
-        return original(ti, project, agent_id)
-    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
+    _wire_crawler_to_ibl(crawler, monkeypatch)
     task = 'crawl-retained-fixture'
     shown = _run('$원문=[sense:crawl]{url:"' + URL + '",max_length:500}', tmp_path, task)
     assert shown.get('_preview') or _fr(shown).get('_preview')
@@ -174,6 +164,66 @@ def test_saved_full_document_flows_through_ibl_and_next_turn_call(crawl, monkeyp
     assert calls == [URL]
     app = _run('[sense:crawl]{url:"' + URL + '"}', tmp_path, task, channel='app')
     assert 'tail-proof' in json.dumps(app, ensure_ascii=False) and not app.get('_preview')
+    assert calls == [URL]
+
+
+def _wire_crawler_to_ibl(crawler, monkeypatch):
+    import ibl_engine
+    from tool_context import ToolContext
+    handler = load_sibling(CRAWLER, 'handler')
+    original_loader = handler.load_module
+    monkeypatch.setattr(handler, 'load_module', lambda n: crawler if n == 'tool_webcrawl' else original_loader(n))
+    original = ibl_engine._execute_ibl_impl
+    def leaf(ti, project, agent_id=None):
+        if ti.get('_node') == 'sense' and ti.get('action') == 'crawl':
+            return handler.execute(ti.get('params') or {}, ToolContext(project, 'crawl_website', agent_id=agent_id))
+        return original(ti, project, agent_id)
+    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
+
+
+@pytest.mark.parametrize('paragraphs', [26, 55])
+@pytest.mark.parametrize('assigned', [False, True])
+def test_first_crawl_displays_60k_past_eighth_paragraph_and_reaches_providers(
+        crawl, monkeypatch, tmp_path, paragraphs, assigned):
+    import importlib
+    import mcp_server
+    crawler, calls = crawl
+    text = '\n\n'.join(f'{i:02d}:' + '가' * 1997 for i in range(paragraphs)) + 'tail-proof'
+    monkeypatch.setattr(crawler, '_parse_html', lambda html, url: ('제목', text))
+    _wire_crawler_to_ibl(crawler, monkeypatch)
+    task = f'crawl-first-60k-{paragraphs}-{assigned}'
+    code = ('$원문=' if assigned else '') + '[sense:crawl]{url:"' + URL + '"}'
+    out = _run(code, tmp_path, task)
+    final = _fr(out) or out
+    saved = json.loads(Path(final['source_ref']['path']).read_text())
+    shown_text = ''.join(row['text'] for row in final['items'])
+    full_text = ''.join(row['text'] for row in saved['items'])
+    assert shown_text == full_text[:60000]
+    assert len(final['items']) > 8 and saved['text'] == text
+    assert 'text' not in final  # 중복 본문을 전송하지 않는다
+    if len(full_text) > 60000:
+        assert final['_preview']['total'] == len(saved['items'])
+        assert final['_preview']['shown'] == len(final['items'])
+        assert len(final['items']) < len(saved['items'])  # 빈 문단 껍데기도 보내지 않는다
+    else:
+        assert final['items'] == saved['items'] and 'tail-proof' in shown_text
+    raw = json.dumps(out, ensure_ascii=False)
+    assert len(raw) > 16000
+    for module, name in [('anthropic', 'AnthropicProvider'), ('openai', 'OpenAIProvider'),
+                         ('ollama', 'OllamaProvider')]:
+        cls = getattr(importlib.import_module(f'providers.{module}'), name)
+        assert cls._truncate_tool_result(object.__new__(cls), raw) == raw
+    monkeypatch.delenv('MAX_MCP_OUTPUT_TOKENS', raising=False)
+    assert mcp_server._trim_for_agent(raw, actions=1) == raw
+    # 명시한 호스트 제한은 여전히 지키고 저장 원문 참조를 남긴다.
+    monkeypatch.setenv('MAX_MCP_OUTPUT_TOKENS', '10000')
+    limited_raw = mcp_server._trim_for_agent(raw, actions=1)
+    limited = json.loads(limited_raw)
+    assert len(limited_raw) <= 16000 and limited['_trimmed']
+    assert (_fr(limited) or limited)['source_ref'] == final['source_ref']
+    if assigned:
+        tail = _run('$원문 >> [table:filter]{where:"text contains \'tail-proof\'"}', tmp_path, task)
+        assert 'tail-proof' in json.dumps((_fr(tail) or tail)['items'], ensure_ascii=False)
     assert calls == [URL]
 
 

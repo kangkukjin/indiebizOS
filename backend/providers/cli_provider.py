@@ -1311,6 +1311,8 @@ class CliSubprocessProvider(BaseProvider):
         """subprocess에 전달할 env — 기본은 상속 환경 + 신원. 인증은 서브클래스가 덧쓴다."""
         env = os.environ.copy()
         env.update(self._identity_env())
+        from common.spill import DISPLAY_MCP_OUTPUT_TOKENS
+        env.setdefault("MAX_MCP_OUTPUT_TOKENS", str(DISPLAY_MCP_OUTPUT_TOKENS))
         return env
 
     def _save_images_to_temp(self, images: List[Dict]) -> List[str]:

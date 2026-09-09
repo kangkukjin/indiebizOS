@@ -35,6 +35,9 @@ SURFACE_WALL_MARGIN_S = 60      # 우리 봉투가 벽을 이기는 여유
 TICKET_MAX_WAIT_S = SURFACE_CLIENT_WALL_S - SURFACE_WALL_MARGIN_S
 TICKET_POLL_S = 2.0
 AUTO_SPILL_THRESHOLD = 200_000          # 문자 — 이 위는 모델 컨텍스트로 돌려 보낼 크기가 아니다
+# 표시 예산이 있는 문서(기본 본문 60K + JSON 구조)의 MCP 전달 여유.
+# CLI 생성자와 MCP 경계가 같은 값을 쓴다. 명시한 사용자 환경값은 우선한다.
+DISPLAY_MCP_OUTPUT_TOKENS = 125_000     # MCP 경계의 1.6자/토큰 환산으로 200K자
 # 봉투 **표시 사본**의 가지당 상한 — providers 절단(액션당 MAX_TOOL_RESULT_LENGTH=16,000,
 # 3벌 동일)과 동율. 병렬 가지 원형이 이 위면 표시 사본을 스필 참조+preview 로 바꾼다
 # (2026-08-29: 구조-무지 머리·꼬리 절단이 첫 큰 가지 뒤의 가지를 통째로 증발시키던 자리).

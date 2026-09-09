@@ -455,6 +455,8 @@ class GeminiProvider(BaseProvider):
                     _actions = int(_action_match.group(1))
                     if _actions > 1:
                         _max_len = _max_len * _actions
+                from ibl_envelope import display_delivery_budget
+                _max_len = display_delivery_budget(tool_output, _max_len)
                 truncated_output = tool_output[:_max_len] if len(tool_output) > _max_len else tool_output
                 function_response_parts.append(self._function_response_part(fc, truncated_output))
 

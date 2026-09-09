@@ -44,7 +44,7 @@ IBL 표현 계층:     [node:action]{params}
 
 **IBL 표준** — 모든 IndieBiz 인스턴스가 공유하는 언어. 두 부분:
 
-**크롤 원문 보관(2026-09-09 후속 수리)**: `sense:crawl`은 추출한 전문을 `source_ref`·문단 통화·턴 변수에 보존한다. `max_length`는 모델 표시 예산이며 `_preview`만 만든다. 같은 URL은 기본 15분 캐시를 재사용하고, 최신 내용 갱신만 `refresh:true`로 요청한다. 큰 문단과 중복 본문까지 모델 경계에서 줄이며 실제 원천 누락 표지와 구분한다. [계약·복구·검증](../../docs/CRAWL_SOURCE_RETENTION_2026_09_09.md).
+**크롤 원문 보관(2026-09-09 후속 수리)**: `sense:crawl`은 추출한 전문을 `source_ref`·문단 통화·턴 변수에 보존한다. `max_length`는 모델 표시 예산(기본 6만자)이며 `_preview`만 만든다. 문단 수로 먼저 자르지 않고 표시 예산을 전달 경계까지 존중한다. 같은 URL은 기본 15분 캐시를 재사용하고, 최신 내용 갱신만 `refresh:true`로 요청한다. 큰 문단과 중복 본문까지 모델 경계에서 줄이며 실제 원천 누락 표지와 구분한다. [계약·복구·검증](../../docs/CRAWL_SOURCE_RETENTION_2026_09_09.md).
 
 **절단 증거 보존(2026-09-09 수리)**: `each`는 입력과 자식 실행의 진단을 `row_honesty`의 위치·`markers`로 보존하며 관용구·투영·중간 step 요약을 지나도 전달한다. 직접 처리 행의 `error_count`와 내부 실패 계수는 합산하지 않는다. 원천 수집 상한은 생산자가 `truncations[{scope:source,source,unit,retained,total,retry}]`로 설명하며 `retry` 파라미터로 재수집할 수 있다. 의도한 행 표본(`selection`), 출처 불명 절단(`unknown`), 표시용 `_preview`를 구분한다. [실행·평가·학습 경계 수리](../../docs/EPISODE3286_TRUNCATION_REPAIR_2026_09_09.md).
 

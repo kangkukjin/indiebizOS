@@ -89,6 +89,11 @@ def _trim_for_agent(raw: str, actions: int = 1) -> str:
     except Exception:
         return raw
     budget = _agent_budget_chars(actions)
+    from ibl_envelope import display_delivery_budget
+    display_budget = display_delivery_budget(raw, budget)
+    if display_budget > budget:
+        from common.spill import DISPLAY_MCP_OUTPUT_TOKENS
+        budget = min(display_budget, _host_cap_chars(DISPLAY_MCP_OUTPUT_TOKENS))
     if len(raw) > budget and isinstance(data, dict):
         # ep3219: verbose의 final_result를 지운 뒤 꼬리를 자르면 원장 10행만 남고
         # take가 낸 마지막 4행은 사라졌다. 값 대신 실행 기록을 공용 요약기로 접는다.
@@ -117,14 +122,14 @@ _HOST_MCP_TOKENS_DEFAULT = 25_000   # claude CLI MAX_MCP_OUTPUT_TOKENS 기본값
 _CHARS_PER_TOKEN = 1.6              # 한글·JSON 혼합 실봉투 실측
 
 
-def _host_cap_chars() -> int:
+def _host_cap_chars(default_tokens: int = _HOST_MCP_TOKENS_DEFAULT) -> int:
     """호스트 CLI 의 MCP 결과 한도(토큰)를 문자로 — env 로 올리면 여기도 따라 올라간다."""
     try:
         tokens = int(os.environ.get("MAX_MCP_OUTPUT_TOKENS") or 0)
     except ValueError:
         tokens = 0
     if tokens <= 0:
-        tokens = _HOST_MCP_TOKENS_DEFAULT
+        tokens = default_tokens
     return int(tokens * _CHARS_PER_TOKEN)
 
 

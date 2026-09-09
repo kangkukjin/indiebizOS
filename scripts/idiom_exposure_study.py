@@ -25,7 +25,7 @@ import time
 from idiom_exposure_cases import CASES, GOLD, INLINE
 
 ARMS = ("hidden", "exposed")
-DEFAULT = ROOT / "outputs/idiom_exposure_2026_09_09_v2"
+DEFAULT = ROOT / "outputs/idiom_exposure_2026_09_09_v3"
 
 
 def dump(path, value):
@@ -60,14 +60,15 @@ def prepare(out):
         "위치마다읽기",
         "최신범위읽기",
     }
+    # v3 (2026-09-09 지렛대 4): 관용구는 상시 블록만이 아니라 어휘 목록의 잎 액션 줄 아래에도 병기된다.
+    # 비노출 조건은 둘 다 없는 환경(expose_idioms=False) — 부를 수 있는 능력은 두 조건이 같다.
     current = _idioms_block(None)
     full = build_environment()
-    assert current in full
-    base = (
-        (ROOT / "data/common_prompts/base_prompt_v6.md").read_text()
-        + "\n"
-        + full.replace(current, "")
-    )
+    hidden_env = build_environment(expose_idioms=False)
+    assert current in full and "↳ 관용구" in full
+    assert current not in hidden_env and "↳ 관용구" not in hidden_env
+    base_prompt = (ROOT / "data/common_prompts/base_prompt_v6.md").read_text() + "\n"
+    envs = {"hidden": base_prompt + hidden_env, "exposed": base_prompt + full}
     # This is a code-composition test, not the entire autonomous application.
     header = (
         '주어진 작업을 수행하는 IBL 프로그램을 작성하라. 응답은 JSON {"code":"IBL 코드"} 하나다. '
@@ -83,10 +84,7 @@ def prepare(out):
     for arm in ARMS:
         p = out / "prompts" / f"{arm}.txt"
         p.parent.mkdir(parents=True, exist_ok=True)
-        p.write_text(
-            header + base + ("\n" + current if arm == "exposed" else ""),
-            encoding="utf-8",
-        )
+        p.write_text(header + envs[arm], encoding="utf-8")
     config = resolve("execution")
     assert config["provider"] == "claude_code"
     rng = random.Random(2026090901)
@@ -101,7 +99,10 @@ def prepare(out):
         order = list(ARMS if i % 2 == 0 else reversed(ARMS))
         schedule.extend([dict(pair, arm=arm) for arm in order])
     manifest = {
-        "version": 2,
+        "version": 3,
+        "levers": "2026-09-09 exposure levers 1-4: self-contained 위치마다읽기 signature (위치 slot), '언제' by input shape, "
+                  "producer-varied call examples in the corpus (invisible to this fresh-session lab), and idiom lines co-located "
+                  "under leaf actions in <ibl_actions> plus the <ibl_idioms> block. fn scalar-return repair (aa5bd220) is in both arms.",
         "oracle_policy": "Repair only unmet task requirements; runtime_ok is recorded independently. Accept equivalent body containers and Korean error fields. Original v1 remains frozen.",
         "base_commit": subprocess.check_output(
             ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True

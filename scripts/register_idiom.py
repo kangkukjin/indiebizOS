@@ -129,8 +129,12 @@ def cmd_add(a):
     return 0
 
 
-def update_idiom(db, name, code, reason, when=""):
-    """명시 개정: 같은 호출 서명·이름 유지, 옛 본문과 통계를 한 트랜잭션으로 보존."""
+def update_idiom(db, name, code, reason, when="", resign=False):
+    """명시 개정: 같은 호출 서명·이름 유지, 옛 본문과 통계를 한 트랜잭션으로 보존.
+
+    resign=True 는 **서명 개정**(슬롯이 달라지는 개정, 2026-09-09 노출 실험 지렛대 1 — 파이프형을 자족형으로).
+    옛 서명으로 부르는 코퍼스 용례는 다음 회상에서 거절당할 몸이므로 함께 고쳐야 한다 — 여기서는 그 행을
+    찾아 돌려주고(callers), 고치는 것은 부르는 쪽의 책임이다."""
     import json
     from datetime import datetime
     from workflow_contract import call_signature
@@ -145,8 +149,9 @@ def update_idiom(db, name, code, reason, when=""):
     info, why = _gates(name, intent, code)
     if why:
         raise ValueError(f"개정 거절 — {why}")
-    if set(call_signature(old["ibl_code"])) != set(info["signature"]):
-        raise ValueError("호출 서명이 달라집니다 — 기존 인자를 유지해 수리하세요")
+    resigned = set(call_signature(old["ibl_code"])) != set(info["signature"])
+    if resigned and not resign:
+        raise ValueError("호출 서명이 달라집니다 — 기존 인자를 유지해 수리하거나 --resign 으로 서명 개정을 명시하세요")
     if old["ibl_code"].strip() == code.strip() and old["intent"] == intent:
         return False
     now = datetime.now().isoformat()
@@ -173,6 +178,12 @@ def update_idiom(db, name, code, reason, when=""):
     if hasattr(db, "_search_cache"):
         db._search_cache.clear()
     _tree_refresh(old["topic"])
+    if resigned:
+        with db._get_connection() as conn:
+            callers = conn.execute("SELECT id, source, ibl_code FROM ibl_examples WHERE id != ? AND ibl_code LIKE ?",
+                                   (old["id"], f"%[fn:{name}]%")).fetchall()
+        for c in callers:
+            print(f"  ! 옛 서명으로 부르는 용례 #{c['id']}({c['source']}): {c['ibl_code'][:100]!r} — 새 서명 {info['signature']} 으로 고칠 것")
     return True
 
 
@@ -180,7 +191,7 @@ def cmd_update(a):
     from ibl_usage_db import IBLUsageDB
     code = open(a.body, encoding="utf-8").read().strip() if os.path.exists(a.body) else a.body
     try:
-        changed = update_idiom(IBLUsageDB(), a.update, code, a.reason, a.when)
+        changed = update_idiom(IBLUsageDB(), a.update, code, a.reason, a.when, resign=a.resign)
     except ValueError as exc:
         print(f"✗ {exc}")
         return 1
@@ -242,6 +253,7 @@ def main():
     p.add_argument("--add", metavar="이름")
     p.add_argument("--update", metavar="이름", help="호출 서명을 유지하며 본문을 명시 개정")
     p.add_argument("--reason", default="", help="개정 이유와 검증 결과")
+    p.add_argument("--resign", action="store_true", help="--update 와 함께 — 호출 서명(슬롯)이 달라지는 개정을 명시 허용")
     p.add_argument("--when", default="", help="언제 부르는가 — 지도에 실리는 조건")
     p.add_argument("--body", default="", help="몸(.ibl 파일 경로 또는 코드 문자열)")
     p.add_argument("--topic", default="", help="가지")

@@ -48,7 +48,17 @@
       "topic": "되풀이 실행",
       "body": "$합 = $옛것 & $새것 >> [table:union] >> [table:dedup]{by: \"${키}\"}; $return = $합 >> [self:write]{path: \"${원장}\", format: \"json\"}",
       "inputs": "옛것·새것: items 봉투 또는 JSON 행 목록(변수 자체를 전달). 키: 열 이름 문자열 또는 열 이름 목록(복합키, 예 [\"id\",\"kind\"]). 원장: 저장 경로. 같은 키면 기존 행 전체를 보존한다. 합성키 열을 만들지 않는다.",
-      "example": "$옛목록=[self:read]{path:\"기록.json\"}\n$새목록=[self:read]{path:\"추가.json\"}\n[fn:원장에누적]{옛것:\"$옛목록\",새것:\"$새목록\",키:[\"id\",\"kind\"],원장:\"기록.json\"}"
+      "example": "$옛목록=[self:read]{path:\"기록.json\"}\n$새목록=[self:read]{path:\"추가.json\"}\n[fn:원장에누적]{옛것:\"$옛목록\",새것:\"$새목록\",키:[\"id\",\"kind\"],원장:\"기록.json\"}",
+      "examples": [
+        {
+          "intent": "뉴스 검색 결과를 기존 뉴스 원장에 url 기준으로 중복 없이 누적 저장해줘",
+          "code": "$옛 = [self:read]{path:\"outputs/뉴스원장.json\"}; $새 = [sense:search]{query:\"도서관 소식\"}; [fn:원장에누적]{옛것:$옛,새것:$새,키:\"url\",원장:\"outputs/뉴스원장.json\"}"
+        },
+        {
+          "intent": "제출 목록에서 승인된 행만 골라 id·kind 복합키로 기존 승인 원장에 누적해줘(기존 행 우선)",
+          "code": "$옛 = [self:read]{path:\"outputs/승인원장.json\"}; $새 = [self:read]{path:\"제출.json\"} >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}} >> [table:select]{columns:[\"id\",\"kind\",\"value\"]}; [fn:원장에누적]{옛것:$옛,새것:$새,키:[\"id\",\"kind\"],원장:\"outputs/승인원장.json\"}"
+        }
+      ]
     },
     {
       "name": "좁혀서읽기",
@@ -88,11 +98,21 @@
     },
     {
       "name": "위치마다읽기",
-      "when": "grep으로 찾은 위치 목록에서 앞 개수곳을 일치 줄부터 줄수만큼 읽고 위치·본문·실패를 모을 때. 전체 위치만 필요하면 grep 결과를 그대로 쓴다.",
+      "when": "파일·줄번호 열이 있는 위치 목록(grep 결과·JSON 파일·filter 결과)의 앞 개수곳을 각 줄번호부터 줄수만큼 읽어 위치·본문·실패를 한 목록으로 모을 때. 위치만 필요하면 그 목록을 그대로 쓴다.",
       "topic": "찾기",
-      "body": "$대상 = [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{keep: [\"파일\", \"줄번호\"], limit: \"${개수}\", collect: true, on_error: \"keep\"} {\n  [self:read]{path: '$it.파일', start_line: $it.줄번호, limit: ${줄수}}\n}",
-      "inputs": "앞 통화: grep의 파일·줄번호 열. 개수: 처리할 위치 수(0 이상). 줄수: 위치당 읽을 줄 수(1 이상). 반환: 파일·줄번호·value(본문), 실패는 _error. 본문 의미 판단은 하지 않는다.",
-      "example": "[self:grep]{path:\"notes\",pattern:\"TODO\",file_pattern:\"*.txt\",limit:20} >> [fn:위치마다읽기]{개수:5,줄수:12}"
+      "body": "$대상 = $위치 >> [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{keep: [\"파일\", \"줄번호\"], limit: \"${개수}\", collect: true, on_error: \"keep\"} {\n  [self:read]{path: '$it.파일', start_line: $it.줄번호, limit: ${줄수}}\n}",
+      "inputs": "위치: 파일·줄번호 열이 있는 items(변수 자체를 전달 — grep 결과·read 로 읽은 JSON 행·filter/sort 결과). 개수: 읽을 위치 수(0 이상). 줄수: 위치당 읽을 줄 수(1 이상). 반환: 파일·줄번호·value(본문) 행, 실패한 위치는 _error 행으로 남는다. 본문 의미 판단은 하지 않는다.",
+      "example": "$위치 = [self:grep]{path:\"notes\",pattern:\"TODO\",file_pattern:\"*.txt\",limit:20}; [fn:위치마다읽기]{위치:$위치,개수:5,줄수:12}",
+      "examples": [
+        {
+          "intent": "JSON 파일에 적힌 위치 목록(파일·줄번호) 앞 3곳을 각각 5줄씩 읽어 본문과 실패를 한 목록으로 모아줘",
+          "code": "$위치 = [self:read]{path:\"위치목록.json\"}; [fn:위치마다읽기]{위치:$위치,개수:3,줄수:5}"
+        },
+        {
+          "intent": "검토 목록에서 열린(open) 위치만 골라 파일명 순으로 정렬한 뒤 앞 3곳의 5줄 본문을 모아 JSON 으로 저장해줘",
+          "code": "$검토 = [self:read]{path:\"검토목록.json\"} >> [table:filter]{where:{field:\"state\",op:\"eq\",value:\"open\"}} >> [table:sort]{by:\"파일\"}; [fn:위치마다읽기]{위치:$검토,개수:3,줄수:5} >> [self:write]{path:\"outputs/발췌.json\",format:\"json\"}"
+        }
+      ]
     },
     {
       "name": "최신범위읽기",
@@ -100,7 +120,17 @@
       "topic": "찾기",
       "body": "$후보 = [self:file_find]{path: \"${폴더}\", pattern: \"${패턴}\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1}\n$return = $후보 >> [if:not empty($items)]{[self:read]{start_line:\"${시작줄}\",limit:\"${줄수}\"}}",
       "inputs": "폴더·패턴: 파일 검색 범위. 시작줄: 1부터 시작, 줄수: 1 이상의 읽을 줄 수. 반환은 본문 문자열; 후보 없음은 빈 items. 최신 후보 검색 상한은 200건이다.",
-      "example": "[fn:최신범위읽기]{폴더:\"reports\",패턴:\"*.md\",시작줄:1,줄수:220}"
+      "example": "[fn:최신범위읽기]{폴더:\"reports\",패턴:\"*.md\",시작줄:1,줄수:220}",
+      "examples": [
+        {
+          "intent": "보고서 폴더에서 가장 최근에 고친 문서의 앞 40줄을 파일로 떼어 저장해줘",
+          "code": "[fn:최신범위읽기]{폴더:\"outputs/reports\",패턴:\"*.md\",시작줄:1,줄수:40} >> [self:write]{path:\"outputs/최신_머리.txt\"}"
+        },
+        {
+          "intent": "가장 최근에 고친 메모 하나의 요지를 세 줄로 정리해줘",
+          "code": "$본문 = [fn:최신범위읽기]{폴더:\"notes\",패턴:\"*.txt\",시작줄:1,줄수:200}; $본문 >> [table:brief]{instruction:\"핵심 세 줄\"}"
+        }
+      ]
     }
   ]
 }

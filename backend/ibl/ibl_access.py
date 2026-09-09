@@ -351,7 +351,8 @@ def build_environment(
     allowed_nodes: Optional[List[str]] = None,
     project_path: Optional[str] = None,
     agent_id: Optional[str] = None,
-    allowed_set: Optional[Set[str]] = None
+    allowed_set: Optional[Set[str]] = None,
+    expose_idioms: bool = True,
 ) -> str:
     """
     에이전트의 IBL 환경 프롬프트를 동적 생성.
@@ -364,6 +365,8 @@ def build_environment(
         allowed_nodes: agents.yaml의 allowed_nodes. None/[]이면 전체 노드.
         project_path: 프로젝트 경로 (동료 에이전트 탐색용)
         agent_id: 현재 에이전트 ID (자신을 제외하기 위해)
+        expose_idioms: False 면 관용구를 어디에도 소개하지 않는다(어휘 목록 병기·상시 블록 둘 다).
+            노출 실험의 비노출 조건이 쓰는 스위치 — 부를 수 있는 능력은 그대로다.
 
     Returns:
         환경 프롬프트 문자열
@@ -411,6 +414,11 @@ def build_environment(
 
     # usage, pipeline, principles는 12_ibl_only.md에서 이미 커버하므로 생략
 
+    # 관용구 병기(2026-09-09 지렛대 4): 관용구는 어휘다 — 모델이 낱말을 훑는 자리(잎 액션 줄 바로 아래)에
+    # 한 줄로 선다. 부록(<ibl_idioms>)만 있으면 탐색 순간에 안 보인다(노출 실험: 자족형 둘은 6/6, 부록만 본
+    # 파이프형은 1/6). 어느 낱말 옆에 서는지는 몸의 마지막 잎 액션에서 파생한다(코드에 이름 없음).
+    anchors = _idiom_anchors(allowed) if expose_idioms else {}
+
     # 노드 상세
     for node_name, node_config in visible.items():
         desc = node_config.get("description", "")
@@ -453,9 +461,11 @@ def build_environment(
                 parts.append(f"  [{grp_name}]")
                 for action_name, action_config in grp_actions:
                     parts.append(_emit_action_line(node_name, action_name, action_config))
+                    parts.extend(anchors.get(f"{node_name}:{action_name}", ()))
 
         for action_name, action_config in ungrouped:
             parts.append(_emit_action_line(node_name, action_name, action_config))
+            parts.extend(anchors.get(f"{node_name}:{action_name}", ()))
 
     # 동료 에이전트 노드
     peers = _load_peer_agents(project_path, agent_id)
@@ -544,7 +554,7 @@ def build_environment(
     # 그래서 ①`always_on=1` 인 것만 선다 ②그 표는 자동 증류가 아니라 사람이 부정기로 고른다
     # (scripts/register_idiom.py). `always_on=0` 인 등록 관용구는 이름으로 부를 수는 있으나 소개되지
     # 않는다 — 앱 버튼 같은 명시 호출의 자리다.
-    idioms = _idioms_block(allowed)
+    idioms = _idioms_block(allowed) if expose_idioms else ""
     if idioms:
         parts.append(idioms)
 
@@ -553,7 +563,7 @@ def build_environment(
 
 IDIOMS_MAP_CHARS = 7000     # 이름 지도 예산(자) — 시스템 프롬프트 한 자리, 캐시되므로 왕복마다 새로 물지 않는다(2026-09-06)
 IDIOMS_MAP_ROWS = 400        # 지도 후보 상한(행)
-_idioms_cache = {"t": 0.0, "text": "", "key": None}
+_idioms_cache = {"t": 0.0, "text": "", "key": None, "anchors": {}}
 
 
 def _stored_signature(raw):
@@ -607,6 +617,7 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
     if _idioms_cache["text"] is not None and time.time() - _idioms_cache["t"] < 300 and _idioms_cache["key"] == key:
         return _idioms_cache["text"]
     text = ""
+    anchors: dict = {}
     try:
         from runtime_utils import get_base_path
         db_path = get_base_path() / "data" / "ibl_usage.db"
@@ -656,6 +667,9 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
             groups: dict = {}
             for r, entry in chosen:
                 groups.setdefault((r[4] or "").split("/")[0] or "기타", []).extend(entry)
+                anchor = _anchor_action(r[1])
+                if anchor:
+                    anchors.setdefault(anchor, []).append(_anchor_line(r))
             lines = []
             for g in sorted(groups):
                 lines.append(f"[{g}]")
@@ -673,8 +687,36 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
                         + "\n".join(lines) + "\n</ibl_idioms>")
     except Exception as e:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")
-    _idioms_cache.update({"t": time.time(), "text": text, "key": key})
+    _idioms_cache.update({"t": time.time(), "text": text, "key": key, "anchors": anchors})
     return text
+
+
+def _idiom_anchors(allowed: Optional[Set[str]]) -> dict:
+    """어휘 목록 병기용 — `node:action` → 그 잎 액션 줄 아래 설 관용구 한 줄들. 상시 블록과 같은 행·같은 캐시."""
+    _idioms_block(allowed)
+    return dict(_idioms_cache.get("anchors") or {})
+
+
+def _anchor_action(code: str) -> str:
+    """몸의 **마지막 잎 액션**(결과를 내는 낱말) — 관용구가 어느 낱말 옆에 서는지는 몸이 정한다."""
+    import re as _re
+    from ibl_parser_blocks import _FN_RESERVED_NAMES
+    last = ""
+    for node, act in _re.findall(r'\[([a-z_]+):\s*([a-z_]+)', code or ""):
+        if node in _FN_RESERVED_NAMES or node == "fn":
+            continue
+        last = f"{node}:{act}"
+    return last
+
+
+def _anchor_line(r) -> str:
+    """병기 한 줄: `↳ 관용구 [fn:이름]{슬롯…} → 반환 :: 언제(첫 문장)`. 교재 전체는 <ibl_idioms> 에."""
+    intent, code, _sc, _fc, _topic, alias, returns, signature = r
+    from hippo_tree import phrase_call_line
+    call = phrase_call_line(alias, code, returns, signature)
+    when = (intent or "").strip()
+    first = when.split(". ")[0].rstrip(".")[:130]     # 실험 v3 는 90자 절단으로 돌았다(evidence exposure_delta.txt) — 문장이 잘려 130 으로
+    return f"    ↳ 관용구 {call} :: {first} (교재: ibl_idioms)"
 
 
 def _idiom_lines(r, lesson=None) -> List[str]:

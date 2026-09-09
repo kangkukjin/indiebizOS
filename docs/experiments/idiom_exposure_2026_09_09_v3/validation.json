@@ -1,0 +1,1671 @@
+{
+  "ok": true,
+  "rows": [
+    {
+      "case": "direct_latest",
+      "solution": "named",
+      "code": "[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "fn",
+              "action": "최신범위읽기",
+              "result": "{\"success\": true, \"steps_completed\": 6, \"steps_total\": 6, \"_action_count\": 6, \"results\": [{\"step\": 1, \"node\": \"self\", \"action\": \"file_find\", \"result\": \"{\\\"text\\\": \\\"4개 매칭 | root: /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\", \\\"table\\\": {\\\"columns\\\": [\\\"이름\\\", \\\"크기\\\", \\\"수정일\\\", \\\"경로\\\"], \\\"rows\\\": [[\\\"report_2026-08-03.md\\\", 1831, \\\"2020-09-13 21:41\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\"], [\\\"report_2026-08-11.md\\\", 1831, \\\"2020-09-13 22:11\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\"], [\\\"report_2026-08-19.md\\\", 1831, \\\"2020-09-13 21:56\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\"], [\\\"report_2026-08-27.md\\\", 1831, \\\"2020-09-13 21:26\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\"]]}, \\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false}\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"table\", \"action\": \"filter\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false, \\\"count\\\": 4, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"sort\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false, \\\"count\\\": 4, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 4, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": true, \\\"count\\\": 1, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 5, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_udzb5ocw/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": true, \\\"count\\\": 1, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 6, \"node\": \"if\", \"action\": \"block\", \"result\": \"[줄 11-22 / 전체 80줄, 1,831바이트]\\nDOCUMENT-12071 LINE-11\\nDOCUMENT-10839 LINE-12\\nDOCUMENT-91452 LINE-13\\nDOCUMENT-54295 LINE-14\\nDOCUMENT-81664 LINE-15\\nDOCUMENT-27022 LINE-16\\nDOCUMENT-30949 LINE-17\\nDOCUMENT-83201 LINE-18\\nDOCUMENT-43130 LINE-19\\nDOCUMENT-84986 LINE-20\\nDOCUMENT-13023 LINE-21\\nDOCUMENT-69497 LINE-22\\n\", \"duration_ms\": 0, \"matched\": \"not empty($items)\", \"matched_value\": false}], \"final_result\": \"[줄 11-22 / 전체 80줄, 1,831바이트]\\nDOCUMENT-12071 LINE-11\\nDOCUMENT-10839 LINE-12\\nDOCUMENT-91452 LINE-13\\nDOCUMENT-54295 LINE-14\\nDOCUMENT-81664 LINE-15\\nDOCUMENT-27022 LINE-16\\nDOCUMENT-30949 LINE-17\\nDOCUMENT-83201 LINE-18\\nDOCUMENT-43130 LINE-19\\nDOCUMENT-84986 LINE-20\\nDOCUMENT-13023 LINE-21\\nDOCUMENT-69497 LINE-22\\n\", \"returned\": \"$return\", \"fn\": \"최신범위읽기\", \"fn_source\": \"idiom\", \"_fn_result\": true, \"params_required\": [\"폴더\", \"패턴\", \"시작줄\", \"줄수\"], \"params_injected\": [\"시작줄\", \"줄수\", \"패턴\", \"폴더\"]}",
+              "duration_ms": 2
+            }
+          ],
+          "final_result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-12071 LINE-11\nDOCUMENT-10839 LINE-12\nDOCUMENT-91452 LINE-13\nDOCUMENT-54295 LINE-14\nDOCUMENT-81664 LINE-15\nDOCUMENT-27022 LINE-16\nDOCUMENT-30949 LINE-17\nDOCUMENT-83201 LINE-18\nDOCUMENT-43130 LINE-19\nDOCUMENT-84986 LINE-20\nDOCUMENT-13023 LINE-21\nDOCUMENT-69497 LINE-22\n"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:file_find",
+            "table:filter",
+            "table:sort",
+            "table:take",
+            "self:read"
+          ],
+          "fn_calls": [
+            "최신범위읽기"
+          ]
+        },
+        "runtime_ms": 282.312,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) scalar"
+          ],
+          "fn_returns": {
+            "최신범위읽기": "scalar"
+          }
+        },
+        "artifacts": {},
+        "worker_wall_ms": 409.025
+      }
+    },
+    {
+      "case": "direct_latest",
+      "solution": "inline",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 5,
+          "steps_total": 5,
+          "_action_count": 5,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "file_find",
+              "result": "{\"text\": \"4개 매칭 | root: /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\", \"table\": {\"columns\": [\"이름\", \"크기\", \"수정일\", \"경로\"], \"rows\": [[\"report_2026-08-03.md\", 1831, \"2020-09-13 21:41\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\"], [\"report_2026-08-11.md\", 1831, \"2020-09-13 22:11\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\"], [\"report_2026-08-19.md\", 1831, \"2020-09-13 21:56\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\"], [\"report_2026-08-27.md\", 1831, \"2020-09-13 21:26\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\"]]}, \"items\": [{\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false}",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false, \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false, \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "take",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_lxlkgyj8/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": true, \"count\": 1, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "self",
+              "action": "read",
+              "result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-12071 LINE-11\nDOCUMENT-10839 LINE-12\nDOCUMENT-91452 LINE-13\nDOCUMENT-54295 LINE-14\nDOCUMENT-81664 LINE-15\nDOCUMENT-27022 LINE-16\nDOCUMENT-30949 LINE-17\nDOCUMENT-83201 LINE-18\nDOCUMENT-43130 LINE-19\nDOCUMENT-84986 LINE-20\nDOCUMENT-13023 LINE-21\nDOCUMENT-69497 LINE-22\n",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-12071 LINE-11\nDOCUMENT-10839 LINE-12\nDOCUMENT-91452 LINE-13\nDOCUMENT-54295 LINE-14\nDOCUMENT-81664 LINE-15\nDOCUMENT-27022 LINE-16\nDOCUMENT-30949 LINE-17\nDOCUMENT-83201 LINE-18\nDOCUMENT-43130 LINE-19\nDOCUMENT-84986 LINE-20\nDOCUMENT-13023 LINE-21\nDOCUMENT-69497 LINE-22\n"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:file_find",
+            "table:filter",
+            "table:sort",
+            "table:take",
+            "self:read"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 282.608,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) scalar"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 410.518
+      }
+    },
+    {
+      "case": "direct_context",
+      "solution": "named",
+      "code": "$r=[self:read]{path:\"locations.json\"}\n[fn:위치마다읽기]{위치:$r,개수:3,줄수:5}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 2,
+          "steps_total": 2,
+          "_action_count": 2,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"파일\": \"notes/01.txt\", \"줄번호\": 4}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "fn",
+              "action": "위치마다읽기",
+              "result": "{\"success\": true, \"steps_completed\": 4, \"steps_total\": 4, \"_action_count\": 4, \"results\": [{\"step\": 1, \"node\": \"?\", \"action\": \"?\", \"result\": \"[{\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4}, {\\\"파일\\\": \\\"notes/missing.txt\\\", \\\"줄번호\\\": 2}, {\\\"파일\\\": \\\"notes/04.txt\\\", \\\"줄번호\\\": 8}]\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4}, {\\\"파일\\\": \\\"notes/missing.txt\\\", \\\"줄번호\\\": 2}, {\\\"파일\\\": \\\"notes/04.txt\\\", \\\"줄번호\\\": 8}], \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4}, {\\\"파일\\\": \\\"notes/missing.txt\\\", \\\"줄번호\\\": 2}, {\\\"파일\\\": \\\"notes/04.txt\\\", \\\"줄번호\\\": 8}], \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 4, \"node\": \"table\", \"action\": \"each\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N1-49943-4\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/missing.txt\\\", \\\"줄번호\\\": 2, \\\"_error\\\": \\\"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\\\"}, {\\\"파일\\\": \\\"notes/04.txt\\\", \\\"줄번호\\\": 8, \\\"value\\\": \\\"[줄 8-12 / 전체 25줄, 305바이트]\\\\nN4-29303-8\\\\nN4-55050-9\\\\nN4-45318-10\\\\nN4-78564-11\\\\nN4-53931-12\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 2, \\\"error_count\\\": 1, \\\"errors\\\": [{\\\"파일\\\": \\\"notes/missing.txt\\\", \\\"줄번호\\\": 2, \\\"_error\\\": \\\"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\\\", \\\"_traceback\\\": {\\\"frames\\\": [{\\\"kind\\\": \\\"each\\\", \\\"item\\\": 2, \\\"of\\\": 3}, {\\\"kind\\\": \\\"pipeline\\\", \\\"step\\\": 1, \\\"of\\\": 1, \\\"node\\\": \\\"self\\\", \\\"action\\\": \\\"read\\\"}], \\\"error\\\": \\\"Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\\\", \\\"error_type\\\": \\\"tool_error\\\"}}], \\\"collected_rows\\\": 2, \\\"success\\\": true, \\\"warning\\\": \\\"[each] 1/3행 실패 (성공 2) — 통화에는 성공분만 흐릅니다. 실패한 원 행과 사유는 봉투의 errors 를 보세요.\\\", \\\"message\\\": \\\"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외). / on_error=keep: 실패 1행이 _error 표식과 함께 통화에 흘렀습니다 — [table:filter]{where: {field: \\\\\\\"_error\\\\\\\", op: \\\\\\\"eq\\\\\\\", value: null}} 로 성공만, exists 로 실패만 가를 수 있습니다. / 1/3건 실패 (성공 2) — errors 참조\\\"}\", \"duration_ms\": 0}], \"final_result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 4, \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N1-49943-4\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/missing.txt\\\", \\\"줄번호\\\": 2, \\\"_error\\\": \\\"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\\\"}, {\\\"파일\\\": \\\"notes/04.txt\\\", \\\"줄번호\\\": 8, \\\"value\\\": \\\"[줄 8-12 / 전체 25줄, 305바이트]\\\\nN4-29303-8\\\\nN4-55050-9\\\\nN4-45318-10\\\\nN4-78564-11\\\\nN4-53931-12\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 2, \\\"error_count\\\": 1, \\\"errors\\\": [{\\\"파일\\\": \\\"notes/missing.txt\\\", \\\"줄번호\\\": 2, \\\"_error\\\": \\\"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\\\", \\\"_traceback\\\": {\\\"frames\\\": [{\\\"kind\\\": \\\"each\\\", \\\"item\\\": 2, \\\"of\\\": 3}, {\\\"kind\\\": \\\"pipeline\\\", \\\"step\\\": 1, \\\"of\\\": 1, \\\"node\\\": \\\"self\\\", \\\"action\\\": \\\"read\\\"}], \\\"error\\\": \\\"Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\\\", \\\"error_type\\\": \\\"tool_error\\\"}}], \\\"collected_rows\\\": 2, \\\"success\\\": true, \\\"warning\\\": \\\"[each] 1/3행 실패 (성공 2) — 통화에는 성공분만 흐릅니다. 실패한 원 행과 사유는 봉투의 errors 를 보세요.\\\", \\\"message\\\": \\\"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외). / on_error=keep: 실패 1행이 _error 표식과 함께 통화에 흘렀습니다 — [table:filter]{where: {field: \\\\\\\"_error\\\\\\\", op: \\\\\\\"eq\\\\\\\", value: null}} 로 성공만, exists 로 실패만 가를 수 있습니다. / 1/3건 실패 (성공 2) — errors 참조\\\"}\", \"errors\": [{\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\", \"_traceback\": {\"frames\": [{\"kind\": \"each\", \"item\": 2, \"of\": 3}, {\"kind\": \"pipeline\", \"step\": 1, \"of\": 1, \"node\": \"self\", \"action\": \"read\"}], \"error\": \"Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\", \"error_type\": \"tool_error\"}}], \"error_count\": 1, \"warning\": \"마지막 통화가 정직 표지를 실었습니다: 부분 실패·절단(error_count, errors) — success 만 보고 '다 됐다'로 읽지 말고 표지의 뜻대로 보고할 것.\", \"returned\": \"$return\", \"items\": [{\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"value\": \"[줄 8-12 / 전체 25줄, 305바이트]\\nN4-29303-8\\nN4-55050-9\\nN4-45318-10\\nN4-78564-11\\nN4-53931-12\\n\"}], \"count\": 3, \"fn\": \"위치마다읽기\", \"fn_source\": \"idiom\", \"_fn_result\": true, \"params_required\": [\"위치\", \"개수\", \"줄수\"], \"params_injected\": [\"개수\", \"위치\", \"줄수\"]}",
+              "duration_ms": 1
+            }
+          ],
+          "final_result": "{\"items\": [{\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"value\": \"[줄 8-12 / 전체 25줄, 305바이트]\\nN4-29303-8\\nN4-55050-9\\nN4-45318-10\\nN4-78564-11\\nN4-53931-12\\n\"}], \"count\": 3, \"rows_processed\": 3, \"ok_count\": 2, \"error_count\": 1, \"errors\": [{\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\", \"_traceback\": {\"frames\": [{\"kind\": \"each\", \"item\": 2, \"of\": 3}, {\"kind\": \"pipeline\", \"step\": 1, \"of\": 1, \"node\": \"self\", \"action\": \"read\"}], \"error\": \"Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'\", \"error_type\": \"tool_error\"}}], \"collected_rows\": 2, \"success\": true, \"warning\": \"[each] 1/3행 실패 (성공 2) — 통화에는 성공분만 흐릅니다. 실패한 원 행과 사유는 봉투의 errors 를 보세요.\", \"message\": \"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외). / on_error=keep: 실패 1행이 _error 표식과 함께 통화에 흘렀습니다 — [table:filter]{where: {field: \\\"_error\\\", op: \\\"eq\\\", value: null}} 로 성공만, exists 로 실패만 가를 수 있습니다. / 1/3건 실패 (성공 2) — errors 참조\"}",
+          "errors": [
+            {
+              "파일": "notes/missing.txt",
+              "줄번호": 2,
+              "_error": "Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'",
+              "_traceback": {
+                "frames": [
+                  {
+                    "kind": "each",
+                    "item": 2,
+                    "of": 3
+                  },
+                  {
+                    "kind": "pipeline",
+                    "step": 1,
+                    "of": 1,
+                    "node": "self",
+                    "action": "read"
+                  }
+                ],
+                "error": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure__pp52sad/notes/missing.txt'",
+                "error_type": "tool_error"
+              }
+            }
+          ],
+          "error_count": 1,
+          "warning": "마지막 통화가 정직 표지를 실었습니다: 부분 실패·절단(error_count, errors) — success 만 보고 '다 됐다'로 읽지 말고 표지의 뜻대로 보고할 것."
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "table:take",
+            "table:each",
+            "self:read",
+            "self:read",
+            "self:read"
+          ],
+          "fn_calls": [
+            "위치마다읽기"
+          ]
+        },
+        "runtime_ms": 282.204,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "$r: scalar",
+            "(2) items⟨열 미상⟩"
+          ],
+          "fn_returns": {
+            "위치마다읽기": "items⟨열 미상⟩"
+          }
+        },
+        "artifacts": {},
+        "worker_wall_ms": 417.234
+      }
+    },
+    {
+      "case": "direct_context",
+      "solution": "inline",
+      "code": "$r=[self:read]{path:\"locations.json\"}\n$r >> [table:take]{n:3} >> [table:each]{keep:[\"파일\",\"줄번호\"],limit:3,collect:true,on_error:\"keep\"} {[self:read]{path:$it.파일,start_line:$it.줄번호,limit:5}}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 4,
+          "steps_total": 4,
+          "_action_count": 4,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"파일\": \"notes/01.txt\", \"줄번호\": 4}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"파일\": \"notes/01.txt\", \"줄번호\": 4}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "table",
+              "action": "take",
+              "result": "{\"items\": [{\"파일\": \"notes/01.txt\", \"줄번호\": 4}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8}], \"count\": 3, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "each",
+              "result": "{\"items\": [{\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"value\": \"[줄 8-12 / 전체 25줄, 305바이트]\\nN4-29303-8\\nN4-55050-9\\nN4-45318-10\\nN4-78564-11\\nN4-53931-12\\n\"}], \"count\": 3, \"rows_processed\": 3, \"ok_count\": 2, \"error_count\": 1, \"errors\": [{\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'\", \"_traceback\": {\"frames\": [{\"kind\": \"each\", \"item\": 2, \"of\": 3}, {\"kind\": \"pipeline\", \"step\": 1, \"of\": 1, \"node\": \"self\", \"action\": \"read\"}], \"error\": \"Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'\", \"error_type\": \"tool_error\"}}], \"collected_rows\": 2, \"success\": true, \"warning\": \"[each] 1/3행 실패 (성공 2) — 통화에는 성공분만 흐릅니다. 실패한 원 행과 사유는 봉투의 errors 를 보세요.\", \"message\": \"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외). / on_error=keep: 실패 1행이 _error 표식과 함께 통화에 흘렀습니다 — [table:filter]{where: {field: \\\"_error\\\", op: \\\"eq\\\", value: null}} 로 성공만, exists 로 실패만 가를 수 있습니다. / 1/3건 실패 (성공 2) — errors 참조\"}",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "{\"items\": [{\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N1-49943-4\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\n\"}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"value\": \"[줄 8-12 / 전체 25줄, 305바이트]\\nN4-29303-8\\nN4-55050-9\\nN4-45318-10\\nN4-78564-11\\nN4-53931-12\\n\"}], \"count\": 3, \"rows_processed\": 3, \"ok_count\": 2, \"error_count\": 1, \"errors\": [{\"파일\": \"notes/missing.txt\", \"줄번호\": 2, \"_error\": \"Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'\", \"_traceback\": {\"frames\": [{\"kind\": \"each\", \"item\": 2, \"of\": 3}, {\"kind\": \"pipeline\", \"step\": 1, \"of\": 1, \"node\": \"self\", \"action\": \"read\"}], \"error\": \"Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'\", \"error_type\": \"tool_error\"}}], \"collected_rows\": 2, \"success\": true, \"warning\": \"[each] 1/3행 실패 (성공 2) — 통화에는 성공분만 흐릅니다. 실패한 원 행과 사유는 봉투의 errors 를 보세요.\", \"message\": \"2행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외). / on_error=keep: 실패 1행이 _error 표식과 함께 통화에 흘렀습니다 — [table:filter]{where: {field: \\\"_error\\\", op: \\\"eq\\\", value: null}} 로 성공만, exists 로 실패만 가를 수 있습니다. / 1/3건 실패 (성공 2) — errors 참조\"}",
+          "errors": [
+            {
+              "파일": "notes/missing.txt",
+              "줄번호": 2,
+              "_error": "Step 1 에러: Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'",
+              "_traceback": {
+                "frames": [
+                  {
+                    "kind": "each",
+                    "item": 2,
+                    "of": 3
+                  },
+                  {
+                    "kind": "pipeline",
+                    "step": 1,
+                    "of": 1,
+                    "node": "self",
+                    "action": "read"
+                  }
+                ],
+                "error": "Error: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_t0003uco/notes/missing.txt'",
+                "error_type": "tool_error"
+              }
+            }
+          ],
+          "error_count": 1,
+          "warning": "마지막 통화가 정직 표지를 실었습니다: 부분 실패·절단(error_count, errors) — success 만 보고 '다 됐다'로 읽지 말고 표지의 뜻대로 보고할 것."
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "table:take",
+            "table:each",
+            "self:read",
+            "self:read",
+            "self:read"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 279.981,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "$r: scalar",
+            "(2) items⟨열 미상⟩"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 408.349
+      }
+    },
+    {
+      "case": "direct_ledger",
+      "solution": "named",
+      "code": "$old=[self:read]{path:\"existing.json\"}\n$new=[self:read]{path:\"arrivals.json\"}\n[fn:원장에누적]{옛것:$old,새것:$new,키:[\"id\",\"kind\"],원장:\"outputs/archive.json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 3,
+          "steps_total": 3,
+          "_action_count": 3,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "fn",
+              "action": "원장에누적",
+              "result": "{\"success\": true, \"steps_completed\": 5, \"steps_total\": 5, \"_action_count\": 6, \"results\": [{\"step\": 1, \"type\": \"parallel\", \"branches\": 2, \"result\": \"[\\\"[{\\\\\\\"id\\\\\\\": 1, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 705, \\\\\\\"original\\\\\\\": true}, {\\\\\\\"id\\\\\\\": 2, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 822, \\\\\\\"original\\\\\\\": true}, {\\\\\\\"id\\\\\\\": 1, \\\\\\\"kind\\\\\\\": \\\\\\\"b\\\\\\\", \\\\\\\"value\\\\\\\": 451, \\\\\\\"original\\\\\\\": true}, {\\\\\\\"id\\\\\\\": 4, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 169, \\\\\\\"original\\\\\\\": true}]\\\", \\\"[{\\\\\\\"id\\\\\\\": 1, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 1212}, {\\\\\\\"id\\\\\\\": 3, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 1042}, {\\\\\\\"id\\\\\\\": 2, \\\\\\\"kind\\\\\\\": \\\\\\\"b\\\\\\\", \\\\\\\"value\\\\\\\": 1809}, {\\\\\\\"id\\\\\\\": 3, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 1263}, {\\\\\\\"id\\\\\\\": 4, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 1366}, {\\\\\\\"id\\\\\\\": 5, \\\\\\\"kind\\\\\\\": \\\\\\\"b\\\\\\\", \\\\\\\"value\\\\\\\": 1353}]\\\"]\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"table\", \"action\": \"union\", \"result\": \"{\\\"items\\\": [{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1212}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1042}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1263}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1366}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}], \\\"count\\\": 10, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"dedup\", \"result\": \"{\\\"items\\\": [{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1042}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}], \\\"count\\\": 7, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 4, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1042}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}], \\\"count\\\": 7, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 5, \"node\": \"self\", \"action\": \"write\", \"result\": \"{\\\"success\\\": true, \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_2abul7li/outputs/archive.json\\\", \\\"size\\\": 594, \\\"format\\\": \\\"json\\\", \\\"message\\\": \\\"JSON 원장 저장 — 7행 (archive.json)\\\"}\", \"duration_ms\": 1}], \"final_result\": \"{\\\"success\\\": true, \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_2abul7li/outputs/archive.json\\\", \\\"size\\\": 594, \\\"format\\\": \\\"json\\\", \\\"message\\\": \\\"JSON 원장 저장 — 7행 (archive.json)\\\"}\", \"returned\": \"$return\", \"fn\": \"원장에누적\", \"fn_source\": \"idiom\", \"_fn_result\": true, \"params_required\": [\"옛것\", \"새것\", \"키\", \"원장\"], \"params_injected\": [\"새것\", \"옛것\", \"원장\", \"키\"]}",
+              "duration_ms": 2
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_2abul7li/outputs/archive.json\", \"size\": 594, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 7행 (archive.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "self:read",
+            "table:union",
+            "table:dedup",
+            "self:write"
+          ],
+          "fn_calls": [
+            "원장에누적"
+          ]
+        },
+        "runtime_ms": 283.615,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "$old: scalar",
+            "$new: scalar",
+            "(3) effect"
+          ],
+          "fn_returns": {
+            "원장에누적": "effect"
+          }
+        },
+        "artifacts": {
+          "outputs/archive.json": "{\n  \"items\": [\n    {\n      \"id\": 1,\n      \"kind\": \"a\",\n      \"value\": 705,\n      \"original\": true\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"a\",\n      \"value\": 822,\n      \"original\": true\n    },\n    {\n      \"id\": 1,\n      \"kind\": \"b\",\n      \"value\": 451,\n      \"original\": true\n    },\n    {\n      \"id\": 4,\n      \"kind\": \"a\",\n      \"value\": 169,\n      \"original\": true\n    },\n    {\n      \"id\": 3,\n      \"kind\": \"a\",\n      \"value\": 1042\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"b\",\n      \"value\": 1809\n    },\n    {\n      \"id\": 5,\n      \"kind\": \"b\",\n      \"value\": 1353\n    }\n  ],\n  \"count\": 7\n}"
+        },
+        "worker_wall_ms": 416.269
+      }
+    },
+    {
+      "case": "direct_ledger",
+      "solution": "inline",
+      "code": "$old=[self:read]{path:\"existing.json\"}\n$new=[self:read]{path:\"arrivals.json\"}\n$old & $new >> [table:union] >> [table:dedup]{by:[\"id\",\"kind\"]} >> [self:write]{path:\"outputs/archive.json\",format:\"json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 6,
+          "steps_total": 6,
+          "_action_count": 7,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "type": "parallel",
+              "branches": 2,
+              "result": "[\"[{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}]\", \"[{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1212}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1042}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1263}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1366}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}]\"]",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "union",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}, {\"id\": 1, \"kind\": \"a\", \"value\": 1212}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}], \"count\": 10, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "table",
+              "action": "dedup",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}], \"count\": 7, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 6,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_oo8hkrun/outputs/archive.json\", \"size\": 594, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 7행 (archive.json)\"}",
+              "duration_ms": 1
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_oo8hkrun/outputs/archive.json\", \"size\": 594, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 7행 (archive.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "self:read",
+            "table:union",
+            "table:dedup",
+            "self:write"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 279.44,
+        "typecheck": {
+          "ok": true,
+          "issues": [
+            {
+              "severity": "warning",
+              "statement": 3,
+              "step": 4,
+              "at": "table:union",
+              "message": "[table:union] 의 가지 1, 가지 2 은(는) 스칼라 선언 액션입니다 — items 로 승격되지 않으면 실행에서 '통화 종류가 같아야 합니다' 로 죽습니다.",
+              "hint": "통화(items)를 내는 op 가 있으면 그것을 쓰세요.",
+              "got": [
+                "scalar",
+                "scalar"
+              ]
+            }
+          ],
+          "types": [
+            "$old: scalar",
+            "$new: scalar",
+            "(3) effect"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {
+          "outputs/archive.json": "{\n  \"items\": [\n    {\n      \"id\": 1,\n      \"kind\": \"a\",\n      \"value\": 705,\n      \"original\": true\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"a\",\n      \"value\": 822,\n      \"original\": true\n    },\n    {\n      \"id\": 1,\n      \"kind\": \"b\",\n      \"value\": 451,\n      \"original\": true\n    },\n    {\n      \"id\": 4,\n      \"kind\": \"a\",\n      \"value\": 169,\n      \"original\": true\n    },\n    {\n      \"id\": 3,\n      \"kind\": \"a\",\n      \"value\": 1042\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"b\",\n      \"value\": 1809\n    },\n    {\n      \"id\": 5,\n      \"kind\": \"b\",\n      \"value\": 1353\n    }\n  ],\n  \"count\": 7\n}"
+        },
+        "worker_wall_ms": 409.249
+      }
+    },
+    {
+      "case": "embedded_latest",
+      "solution": "named",
+      "code": "$part=[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}\n[self:write]{path:\"outputs/excerpt.txt\",content:$part.final_result}\n[self:read]{path:\"queue.json\"} >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"id\"} >> [self:write]{path:\"outputs/pending.json\",format:\"json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 6,
+          "steps_total": 6,
+          "_action_count": 6,
+          "results": [
+            {
+              "step": 1,
+              "node": "fn",
+              "action": "최신범위읽기",
+              "result": "{\"success\": true, \"steps_completed\": 6, \"steps_total\": 6, \"_action_count\": 6, \"results\": [{\"step\": 1, \"node\": \"self\", \"action\": \"file_find\", \"result\": \"{\\\"text\\\": \\\"4개 매칭 | root: /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\", \\\"table\\\": {\\\"columns\\\": [\\\"이름\\\", \\\"크기\\\", \\\"수정일\\\", \\\"경로\\\"], \\\"rows\\\": [[\\\"report_2026-08-03.md\\\", 1831, \\\"2020-09-13 21:41\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\"], [\\\"report_2026-08-11.md\\\", 1831, \\\"2020-09-13 22:11\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\"], [\\\"report_2026-08-19.md\\\", 1831, \\\"2020-09-13 21:56\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\"], [\\\"report_2026-08-27.md\\\", 1831, \\\"2020-09-13 21:26\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\"]]}, \\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false}\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"table\", \"action\": \"filter\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false, \\\"count\\\": 4, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"sort\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false, \\\"count\\\": 4, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 4, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": true, \\\"count\\\": 1, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 5, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": true, \\\"count\\\": 1, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 6, \"node\": \"if\", \"action\": \"block\", \"result\": \"[줄 11-22 / 전체 80줄, 1,831바이트]\\nDOCUMENT-12071 LINE-11\\nDOCUMENT-10839 LINE-12\\nDOCUMENT-91452 LINE-13\\nDOCUMENT-54295 LINE-14\\nDOCUMENT-81664 LINE-15\\nDOCUMENT-27022 LINE-16\\nDOCUMENT-30949 LINE-17\\nDOCUMENT-83201 LINE-18\\nDOCUMENT-43130 LINE-19\\nDOCUMENT-84986 LINE-20\\nDOCUMENT-13023 LINE-21\\nDOCUMENT-69497 LINE-22\\n\", \"duration_ms\": 0, \"matched\": \"not empty($items)\", \"matched_value\": false}], \"final_result\": \"[줄 11-22 / 전체 80줄, 1,831바이트]\\nDOCUMENT-12071 LINE-11\\nDOCUMENT-10839 LINE-12\\nDOCUMENT-91452 LINE-13\\nDOCUMENT-54295 LINE-14\\nDOCUMENT-81664 LINE-15\\nDOCUMENT-27022 LINE-16\\nDOCUMENT-30949 LINE-17\\nDOCUMENT-83201 LINE-18\\nDOCUMENT-43130 LINE-19\\nDOCUMENT-84986 LINE-20\\nDOCUMENT-13023 LINE-21\\nDOCUMENT-69497 LINE-22\\n\", \"returned\": \"$return\", \"fn\": \"최신범위읽기\", \"fn_source\": \"idiom\", \"_fn_result\": true, \"params_required\": [\"폴더\", \"패턴\", \"시작줄\", \"줄수\"], \"params_injected\": [\"시작줄\", \"줄수\", \"패턴\", \"폴더\"]}",
+              "duration_ms": 2
+            },
+            {
+              "step": 2,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/outputs/excerpt.txt\", \"size\": 305}",
+              "duration_ms": 1
+            },
+            {
+              "step": 3,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"state\": \"open\", \"priority\": 1, \"title\": \"T-49493\"}, {\"id\": 2, \"state\": \"open\", \"priority\": 2, \"title\": \"T-40896\"}, {\"id\": 3, \"state\": \"closed\", \"priority\": 3, \"title\": \"T-34455\"}, {\"id\": 4, \"state\": \"open\", \"priority\": 4, \"title\": \"T-93533\"}, {\"id\": 5, \"state\": \"open\", \"priority\": 0, \"title\": \"T-33878\"}, {\"id\": 6, \"state\": \"closed\", \"priority\": 1, \"title\": \"T-59074\"}, {\"id\": 7, \"state\": \"open\", \"priority\": 2, \"title\": \"T-7807\"}, {\"id\": 8, \"state\": \"open\", \"priority\": 3, \"title\": \"T-8575\"}, {\"id\": 9, \"state\": \"closed\", \"priority\": 4, \"title\": \"T-48344\"}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"id\": 4, \"state\": \"open\", \"priority\": 4, \"title\": \"T-93533\"}, {\"id\": 8, \"state\": \"open\", \"priority\": 3, \"title\": \"T-8575\"}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"id\": 4, \"state\": \"open\", \"priority\": 4, \"title\": \"T-93533\"}, {\"id\": 8, \"state\": \"open\", \"priority\": 3, \"title\": \"T-8575\"}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 6,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/outputs/pending.json\", \"size\": 226, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (pending.json)\"}",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_dpjwqilk/outputs/pending.json\", \"size\": 226, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (pending.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:file_find",
+            "table:filter",
+            "table:sort",
+            "table:take",
+            "self:read",
+            "self:write",
+            "self:read",
+            "table:filter",
+            "table:sort",
+            "self:write"
+          ],
+          "fn_calls": [
+            "최신범위읽기"
+          ]
+        },
+        "runtime_ms": 289.952,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "$part: scalar",
+            "(2) effect",
+            "(3) effect"
+          ],
+          "fn_returns": {
+            "최신범위읽기": "scalar"
+          }
+        },
+        "artifacts": {
+          "outputs/excerpt.txt": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-12071 LINE-11\nDOCUMENT-10839 LINE-12\nDOCUMENT-91452 LINE-13\nDOCUMENT-54295 LINE-14\nDOCUMENT-81664 LINE-15\nDOCUMENT-27022 LINE-16\nDOCUMENT-30949 LINE-17\nDOCUMENT-83201 LINE-18\nDOCUMENT-43130 LINE-19\nDOCUMENT-84986 LINE-20\nDOCUMENT-13023 LINE-21\nDOCUMENT-69497 LINE-22\n",
+          "outputs/pending.json": "{\n  \"items\": [\n    {\n      \"id\": 4,\n      \"state\": \"open\",\n      \"priority\": 4,\n      \"title\": \"T-93533\"\n    },\n    {\n      \"id\": 8,\n      \"state\": \"open\",\n      \"priority\": 3,\n      \"title\": \"T-8575\"\n    }\n  ],\n  \"count\": 2\n}"
+        },
+        "worker_wall_ms": 418.833
+      }
+    },
+    {
+      "case": "embedded_latest",
+      "solution": "inline",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12} >> [self:write]{path:\"outputs/excerpt.txt\"}\n[self:read]{path:\"queue.json\"} >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"id\"} >> [self:write]{path:\"outputs/pending.json\",format:\"json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 10,
+          "steps_total": 10,
+          "_action_count": 10,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "file_find",
+              "result": "{\"text\": \"4개 매칭 | root: /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\", \"table\": {\"columns\": [\"이름\", \"크기\", \"수정일\", \"경로\"], \"rows\": [[\"report_2026-08-03.md\", 1831, \"2020-09-13 21:41\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\"], [\"report_2026-08-11.md\", 1831, \"2020-09-13 22:11\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\"], [\"report_2026-08-19.md\", 1831, \"2020-09-13 21:56\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\"], [\"report_2026-08-27.md\", 1831, \"2020-09-13 21:26\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\"]]}, \"items\": [{\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false}",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false, \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false, \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "take",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": true, \"count\": 1, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "self",
+              "action": "read",
+              "result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-12071 LINE-11\nDOCUMENT-10839 LINE-12\nDOCUMENT-91452 LINE-13\nDOCUMENT-54295 LINE-14\nDOCUMENT-81664 LINE-15\nDOCUMENT-27022 LINE-16\nDOCUMENT-30949 LINE-17\nDOCUMENT-83201 LINE-18\nDOCUMENT-43130 LINE-19\nDOCUMENT-84986 LINE-20\nDOCUMENT-13023 LINE-21\nDOCUMENT-69497 LINE-22\n",
+              "duration_ms": 0
+            },
+            {
+              "step": 6,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/outputs/excerpt.txt\", \"size\": 305}",
+              "duration_ms": 1
+            },
+            {
+              "step": 7,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"state\": \"open\", \"priority\": 1, \"title\": \"T-49493\"}, {\"id\": 2, \"state\": \"open\", \"priority\": 2, \"title\": \"T-40896\"}, {\"id\": 3, \"state\": \"closed\", \"priority\": 3, \"title\": \"T-34455\"}, {\"id\": 4, \"state\": \"open\", \"priority\": 4, \"title\": \"T-93533\"}, {\"id\": 5, \"state\": \"open\", \"priority\": 0, \"title\": \"T-33878\"}, {\"id\": 6, \"state\": \"closed\", \"priority\": 1, \"title\": \"T-59074\"}, {\"id\": 7, \"state\": \"open\", \"priority\": 2, \"title\": \"T-7807\"}, {\"id\": 8, \"state\": \"open\", \"priority\": 3, \"title\": \"T-8575\"}, {\"id\": 9, \"state\": \"closed\", \"priority\": 4, \"title\": \"T-48344\"}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 8,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"id\": 4, \"state\": \"open\", \"priority\": 4, \"title\": \"T-93533\"}, {\"id\": 8, \"state\": \"open\", \"priority\": 3, \"title\": \"T-8575\"}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 9,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"id\": 4, \"state\": \"open\", \"priority\": 4, \"title\": \"T-93533\"}, {\"id\": 8, \"state\": \"open\", \"priority\": 3, \"title\": \"T-8575\"}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 10,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/outputs/pending.json\", \"size\": 226, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (pending.json)\"}",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_w38enrap/outputs/pending.json\", \"size\": 226, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (pending.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:file_find",
+            "table:filter",
+            "table:sort",
+            "table:take",
+            "self:read",
+            "self:write",
+            "self:read",
+            "table:filter",
+            "table:sort",
+            "self:write"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 282.045,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) effect",
+            "(2) effect"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {
+          "outputs/excerpt.txt": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-12071 LINE-11\nDOCUMENT-10839 LINE-12\nDOCUMENT-91452 LINE-13\nDOCUMENT-54295 LINE-14\nDOCUMENT-81664 LINE-15\nDOCUMENT-27022 LINE-16\nDOCUMENT-30949 LINE-17\nDOCUMENT-83201 LINE-18\nDOCUMENT-43130 LINE-19\nDOCUMENT-84986 LINE-20\nDOCUMENT-13023 LINE-21\nDOCUMENT-69497 LINE-22\n",
+          "outputs/pending.json": "{\n  \"items\": [\n    {\n      \"id\": 4,\n      \"state\": \"open\",\n      \"priority\": 4,\n      \"title\": \"T-93533\"\n    },\n    {\n      \"id\": 8,\n      \"state\": \"open\",\n      \"priority\": 3,\n      \"title\": \"T-8575\"\n    }\n  ],\n  \"count\": 2\n}"
+        },
+        "worker_wall_ms": 409.445
+      }
+    },
+    {
+      "case": "embedded_context",
+      "solution": "named",
+      "code": "$r=[self:read]{path:\"review_locations.json\"}\n$sel=$r >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"파일\"}\n[fn:위치마다읽기]{위치:$sel,개수:3,줄수:5} >> [self:write]{path:\"outputs/snippets.json\",format:\"json\"}\n$r >> [table:filter]{where:\"state == 'closed'\"} >> [table:sort]{by:\"파일\"} >> [self:write]{path:\"outputs/closed.json\",format:\"json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 10,
+          "steps_total": 10,
+          "_action_count": 10,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "fn",
+              "action": "위치마다읽기",
+              "result": "{\"success\": true, \"steps_completed\": 4, \"steps_total\": 4, \"_action_count\": 4, \"results\": [{\"step\": 1, \"node\": \"?\", \"action\": \"?\", \"result\": \"[{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 5, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 4}, {\\\"파일\\\": \\\"notes/02.txt\\\", \\\"줄번호\\\": 6, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3}, {\\\"파일\\\": \\\"notes/03.txt\\\", \\\"줄번호\\\": 7, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 4}]\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 5, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 4}, {\\\"파일\\\": \\\"notes/02.txt\\\", \\\"줄번호\\\": 6, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3}], \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 5, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 4}, {\\\"파일\\\": \\\"notes/02.txt\\\", \\\"줄번호\\\": 6, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3}], \\\"count\\\": 3, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 4, \"node\": \"table\", \"action\": \"each\", \"result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3, \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 5, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 4, \\\"value\\\": \\\"[줄 5-9 / 전체 25줄, 305바이트]\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\nN1-16856-9\\\\n\\\"}, {\\\"파일\\\": \\\"notes/02.txt\\\", \\\"줄번호\\\": 6, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3, \\\"value\\\": \\\"[줄 6-10 / 전체 25줄, 305바이트]\\\\nN2-92740-6\\\\nN2-13249-7\\\\nN2-81257-8\\\\nN2-85493-9\\\\nN2-37005-10\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 3, \\\"error_count\\\": 0, \\\"collected_rows\\\": 3, \\\"success\\\": true, \\\"message\\\": \\\"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"duration_ms\": 0}], \"final_result\": \"{\\\"items\\\": [{\\\"파일\\\": \\\"notes/00.txt\\\", \\\"줄번호\\\": 4, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3, \\\"value\\\": \\\"[줄 4-8 / 전체 25줄, 305바이트]\\\\nNEEDLE N0-53605-4\\\\nN0-11122-5\\\\nN0-21385-6\\\\nN0-73680-7\\\\nN0-60052-8\\\\n\\\"}, {\\\"파일\\\": \\\"notes/01.txt\\\", \\\"줄번호\\\": 5, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 4, \\\"value\\\": \\\"[줄 5-9 / 전체 25줄, 305바이트]\\\\nN1-37078-5\\\\nN1-65018-6\\\\nN1-36386-7\\\\nN1-88760-8\\\\nN1-16856-9\\\\n\\\"}, {\\\"파일\\\": \\\"notes/02.txt\\\", \\\"줄번호\\\": 6, \\\"state\\\": \\\"open\\\", \\\"priority\\\": 3, \\\"value\\\": \\\"[줄 6-10 / 전체 25줄, 305바이트]\\\\nN2-92740-6\\\\nN2-13249-7\\\\nN2-81257-8\\\\nN2-85493-9\\\\nN2-37005-10\\\\n\\\"}], \\\"count\\\": 3, \\\"rows_processed\\\": 3, \\\"ok_count\\\": 3, \\\"error_count\\\": 0, \\\"collected_rows\\\": 3, \\\"success\\\": true, \\\"message\\\": \\\"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\\\"}\", \"returned\": \"$return\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3, \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4, \"value\": \"[줄 5-9 / 전체 25줄, 305바이트]\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\nN1-16856-9\\n\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3, \"value\": \"[줄 6-10 / 전체 25줄, 305바이트]\\nN2-92740-6\\nN2-13249-7\\nN2-81257-8\\nN2-85493-9\\nN2-37005-10\\n\"}], \"count\": 3, \"fn\": \"위치마다읽기\", \"fn_source\": \"idiom\", \"_fn_result\": true, \"params_required\": [\"위치\", \"개수\", \"줄수\"], \"params_injected\": [\"개수\", \"위치\", \"줄수\"]}",
+              "duration_ms": 1
+            },
+            {
+              "step": 6,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_fsjorxbp/outputs/snippets.json\", \"size\": 657, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 3행 (snippets.json)\", \"excluded_meta\": [\"error_count\"]}",
+              "duration_ms": 1
+            },
+            {
+              "step": 7,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 8,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 9,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 10,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_fsjorxbp/outputs/closed.json\", \"size\": 237, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (closed.json)\"}",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_fsjorxbp/outputs/closed.json\", \"size\": 237, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (closed.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "table:filter",
+            "table:sort",
+            "table:take",
+            "table:each",
+            "self:read",
+            "self:read",
+            "self:read",
+            "self:write",
+            "table:filter",
+            "table:sort",
+            "self:write"
+          ],
+          "fn_calls": [
+            "위치마다읽기"
+          ]
+        },
+        "runtime_ms": 283.84,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "$r: scalar",
+            "$sel: scalar",
+            "(3) effect",
+            "(4) effect"
+          ],
+          "fn_returns": {
+            "위치마다읽기": "items⟨열 미상⟩"
+          }
+        },
+        "artifacts": {
+          "outputs/snippets.json": "{\n  \"items\": [\n    {\n      \"파일\": \"notes/00.txt\",\n      \"줄번호\": 4,\n      \"state\": \"open\",\n      \"priority\": 3,\n      \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"\n    },\n    {\n      \"파일\": \"notes/01.txt\",\n      \"줄번호\": 5,\n      \"state\": \"open\",\n      \"priority\": 4,\n      \"value\": \"[줄 5-9 / 전체 25줄, 305바이트]\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\nN1-16856-9\\n\"\n    },\n    {\n      \"파일\": \"notes/02.txt\",\n      \"줄번호\": 6,\n      \"state\": \"open\",\n      \"priority\": 3,\n      \"value\": \"[줄 6-10 / 전체 25줄, 305바이트]\\nN2-92740-6\\nN2-13249-7\\nN2-81257-8\\nN2-85493-9\\nN2-37005-10\\n\"\n    }\n  ],\n  \"count\": 3\n}",
+          "outputs/closed.json": "{\n  \"items\": [\n    {\n      \"파일\": \"notes/04.txt\",\n      \"줄번호\": 8,\n      \"state\": \"closed\",\n      \"priority\": 3\n    },\n    {\n      \"파일\": \"notes/05.txt\",\n      \"줄번호\": 9,\n      \"state\": \"closed\",\n      \"priority\": 4\n    }\n  ],\n  \"count\": 2\n}"
+        },
+        "worker_wall_ms": 413.499
+      }
+    },
+    {
+      "case": "embedded_context",
+      "solution": "inline",
+      "code": "$r=[self:read]{path:\"review_locations.json\"}\n$sel=$r >> [table:filter]{where:\"state == 'open' and priority >= 3\"} >> [table:sort]{by:\"파일\"}\n$sel >> [table:take]{n:3} >> [table:each]{keep:[\"파일\",\"줄번호\"],limit:3,collect:true,on_error:\"keep\"} {[self:read]{path:$it.파일,start_line:$it.줄번호,limit:5}} >> [self:write]{path:\"outputs/snippets.json\",format:\"json\"}\n$r >> [table:filter]{where:\"state == 'closed'\"} >> [table:sort]{by:\"파일\"} >> [self:write]{path:\"outputs/closed.json\",format:\"json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 12,
+          "steps_total": 12,
+          "_action_count": 12,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "?",
+              "action": "?",
+              "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 6,
+              "node": "table",
+              "action": "take",
+              "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}], \"count\": 3, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 7,
+              "node": "table",
+              "action": "each",
+              "result": "{\"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3, \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4, \"value\": \"[줄 5-9 / 전체 25줄, 305바이트]\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\nN1-16856-9\\n\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3, \"value\": \"[줄 6-10 / 전체 25줄, 305바이트]\\nN2-92740-6\\nN2-13249-7\\nN2-81257-8\\nN2-85493-9\\nN2-37005-10\\n\"}], \"count\": 3, \"rows_processed\": 3, \"ok_count\": 3, \"error_count\": 0, \"collected_rows\": 3, \"success\": true, \"message\": \"3행의 do 가 통화를 내지 않아(효과·스칼라) collect 로 그 결과 필드를 원 행에 붙였습니다 — 행 = 원 행 + do 봉투의 필드(내부 표지·success 제외).\"}",
+              "duration_ms": 0
+            },
+            {
+              "step": 8,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_5iz3wx91/outputs/snippets.json\", \"size\": 657, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 3행 (snippets.json)\", \"excluded_meta\": [\"error_count\"]}",
+              "duration_ms": 1
+            },
+            {
+              "step": 9,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/02.txt\", \"줄번호\": 6, \"state\": \"open\", \"priority\": 3}, {\"파일\": \"notes/03.txt\", \"줄번호\": 7, \"state\": \"open\", \"priority\": 4}, {\"파일\": \"notes/01.txt\", \"줄번호\": 5, \"state\": \"open\", \"priority\": 4}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 10,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 11,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"파일\": \"notes/04.txt\", \"줄번호\": 8, \"state\": \"closed\", \"priority\": 3}, {\"파일\": \"notes/05.txt\", \"줄번호\": 9, \"state\": \"closed\", \"priority\": 4}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 12,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_5iz3wx91/outputs/closed.json\", \"size\": 237, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (closed.json)\"}",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_5iz3wx91/outputs/closed.json\", \"size\": 237, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (closed.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "table:filter",
+            "table:sort",
+            "table:take",
+            "table:each",
+            "self:read",
+            "self:read",
+            "self:read",
+            "self:write",
+            "table:filter",
+            "table:sort",
+            "self:write"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 283.147,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "$r: scalar",
+            "$sel: scalar",
+            "(3) effect",
+            "(4) effect"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {
+          "outputs/snippets.json": "{\n  \"items\": [\n    {\n      \"파일\": \"notes/00.txt\",\n      \"줄번호\": 4,\n      \"state\": \"open\",\n      \"priority\": 3,\n      \"value\": \"[줄 4-8 / 전체 25줄, 305바이트]\\nNEEDLE N0-53605-4\\nN0-11122-5\\nN0-21385-6\\nN0-73680-7\\nN0-60052-8\\n\"\n    },\n    {\n      \"파일\": \"notes/01.txt\",\n      \"줄번호\": 5,\n      \"state\": \"open\",\n      \"priority\": 4,\n      \"value\": \"[줄 5-9 / 전체 25줄, 305바이트]\\nN1-37078-5\\nN1-65018-6\\nN1-36386-7\\nN1-88760-8\\nN1-16856-9\\n\"\n    },\n    {\n      \"파일\": \"notes/02.txt\",\n      \"줄번호\": 6,\n      \"state\": \"open\",\n      \"priority\": 3,\n      \"value\": \"[줄 6-10 / 전체 25줄, 305바이트]\\nN2-92740-6\\nN2-13249-7\\nN2-81257-8\\nN2-85493-9\\nN2-37005-10\\n\"\n    }\n  ],\n  \"count\": 3\n}",
+          "outputs/closed.json": "{\n  \"items\": [\n    {\n      \"파일\": \"notes/04.txt\",\n      \"줄번호\": 8,\n      \"state\": \"closed\",\n      \"priority\": 3\n    },\n    {\n      \"파일\": \"notes/05.txt\",\n      \"줄번호\": 9,\n      \"state\": \"closed\",\n      \"priority\": 4\n    }\n  ],\n  \"count\": 2\n}"
+        },
+        "worker_wall_ms": 410.092
+      }
+    },
+    {
+      "case": "embedded_ledger",
+      "solution": "named",
+      "code": "$o=[self:read]{path:\"existing.json\"}\n$s=[self:read]{path:\"submissions.json\"}\n$n=$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}} >> [table:select]{columns:[\"id\",\"kind\",\"value\"]}\n[fn:원장에누적]{옛것:$o,새것:$n,키:[\"id\",\"kind\"],원장:\"outputs/archive.json\"}\n$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:false}} >> [self:write]{path:\"outputs/rejected.json\",format:\"json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 9,
+          "steps_total": 9,
+          "_action_count": 9,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "table",
+              "action": "select",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 1212}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 6,
+              "node": "fn",
+              "action": "원장에누적",
+              "result": "{\"success\": true, \"steps_completed\": 5, \"steps_total\": 5, \"_action_count\": 6, \"results\": [{\"step\": 1, \"type\": \"parallel\", \"branches\": 2, \"result\": \"[\\\"[{\\\\\\\"id\\\\\\\": 1, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 705, \\\\\\\"original\\\\\\\": true}, {\\\\\\\"id\\\\\\\": 2, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 822, \\\\\\\"original\\\\\\\": true}, {\\\\\\\"id\\\\\\\": 1, \\\\\\\"kind\\\\\\\": \\\\\\\"b\\\\\\\", \\\\\\\"value\\\\\\\": 451, \\\\\\\"original\\\\\\\": true}, {\\\\\\\"id\\\\\\\": 4, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 169, \\\\\\\"original\\\\\\\": true}]\\\", \\\"[{\\\\\\\"id\\\\\\\": 1, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 1212}, {\\\\\\\"id\\\\\\\": 2, \\\\\\\"kind\\\\\\\": \\\\\\\"b\\\\\\\", \\\\\\\"value\\\\\\\": 1809}, {\\\\\\\"id\\\\\\\": 3, \\\\\\\"kind\\\\\\\": \\\\\\\"a\\\\\\\", \\\\\\\"value\\\\\\\": 1263}, {\\\\\\\"id\\\\\\\": 5, \\\\\\\"kind\\\\\\\": \\\\\\\"b\\\\\\\", \\\\\\\"value\\\\\\\": 1353}]\\\"]\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"table\", \"action\": \"union\", \"result\": \"{\\\"items\\\": [{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1212}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1263}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}], \\\"count\\\": 8, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"dedup\", \"result\": \"{\\\"items\\\": [{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1263}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}], \\\"count\\\": 7, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 4, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1263}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}], \\\"count\\\": 7, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 5, \"node\": \"self\", \"action\": \"write\", \"result\": \"{\\\"success\\\": true, \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_orqswfjf/outputs/archive.json\\\", \\\"size\\\": 594, \\\"format\\\": \\\"json\\\", \\\"message\\\": \\\"JSON 원장 저장 — 7행 (archive.json)\\\"}\", \"duration_ms\": 1}], \"final_result\": \"{\\\"success\\\": true, \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_orqswfjf/outputs/archive.json\\\", \\\"size\\\": 594, \\\"format\\\": \\\"json\\\", \\\"message\\\": \\\"JSON 원장 저장 — 7행 (archive.json)\\\"}\", \"returned\": \"$return\", \"fn\": \"원장에누적\", \"fn_source\": \"idiom\", \"_fn_result\": true, \"params_required\": [\"옛것\", \"새것\", \"키\", \"원장\"], \"params_injected\": [\"새것\", \"옛것\", \"원장\", \"키\"]}",
+              "duration_ms": 2
+            },
+            {
+              "step": 7,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 8,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 9,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_orqswfjf/outputs/rejected.json\", \"size\": 217, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (rejected.json)\"}",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_orqswfjf/outputs/rejected.json\", \"size\": 217, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (rejected.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "self:read",
+            "table:filter",
+            "table:select",
+            "table:union",
+            "table:dedup",
+            "self:write",
+            "table:filter",
+            "self:write"
+          ],
+          "fn_calls": [
+            "원장에누적"
+          ]
+        },
+        "runtime_ms": 286.457,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "$o: scalar",
+            "$s: scalar",
+            "$n: items⟨id·kind·value⟩",
+            "(4) effect",
+            "(5) effect"
+          ],
+          "fn_returns": {
+            "원장에누적": "effect"
+          }
+        },
+        "artifacts": {
+          "outputs/archive.json": "{\n  \"items\": [\n    {\n      \"id\": 1,\n      \"kind\": \"a\",\n      \"value\": 705,\n      \"original\": true\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"a\",\n      \"value\": 822,\n      \"original\": true\n    },\n    {\n      \"id\": 1,\n      \"kind\": \"b\",\n      \"value\": 451,\n      \"original\": true\n    },\n    {\n      \"id\": 4,\n      \"kind\": \"a\",\n      \"value\": 169,\n      \"original\": true\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"b\",\n      \"value\": 1809\n    },\n    {\n      \"id\": 3,\n      \"kind\": \"a\",\n      \"value\": 1263\n    },\n    {\n      \"id\": 5,\n      \"kind\": \"b\",\n      \"value\": 1353\n    }\n  ],\n  \"count\": 7\n}",
+          "outputs/rejected.json": "{\n  \"items\": [\n    {\n      \"id\": 3,\n      \"kind\": \"a\",\n      \"value\": 1042,\n      \"approved\": false\n    },\n    {\n      \"id\": 4,\n      \"kind\": \"a\",\n      \"value\": 1366,\n      \"approved\": false\n    }\n  ],\n  \"count\": 2\n}"
+        },
+        "worker_wall_ms": 417.353
+      }
+    },
+    {
+      "case": "embedded_ledger",
+      "solution": "inline",
+      "code": "$o=[self:read]{path:\"existing.json\"}\n$s=[self:read]{path:\"submissions.json\"}\n$n=$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}} >> [table:select]{columns:[\"id\",\"kind\",\"value\"]}\n$o & $n >> [table:union] >> [table:dedup]{by:[\"id\",\"kind\"]} >> [self:write]{path:\"outputs/archive.json\",format:\"json\"}\n$s >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:false}} >> [self:write]{path:\"outputs/rejected.json\",format:\"json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 12,
+          "steps_total": 12,
+          "_action_count": 13,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 5,
+              "node": "table",
+              "action": "select",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 1212}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}], \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 6,
+              "type": "parallel",
+              "branches": 2,
+              "result": "[\"[{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 705, \\\"original\\\": true}, {\\\"id\\\": 2, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 822, \\\"original\\\": true}, {\\\"id\\\": 1, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 451, \\\"original\\\": true}, {\\\"id\\\": 4, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 169, \\\"original\\\": true}]\", \"{\\\"items\\\": [{\\\"id\\\": 1, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1212}, {\\\"id\\\": 2, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1809}, {\\\"id\\\": 3, \\\"kind\\\": \\\"a\\\", \\\"value\\\": 1263}, {\\\"id\\\": 5, \\\"kind\\\": \\\"b\\\", \\\"value\\\": 1353}], \\\"count\\\": 4, \\\"success\\\": true}\"]",
+              "duration_ms": 0
+            },
+            {
+              "step": 7,
+              "node": "table",
+              "action": "union",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}, {\"id\": 1, \"kind\": \"a\", \"value\": 1212}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}], \"count\": 8, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 8,
+              "node": "table",
+              "action": "dedup",
+              "result": "{\"items\": [{\"id\": 1, \"kind\": \"a\", \"value\": 705, \"original\": true}, {\"id\": 2, \"kind\": \"a\", \"value\": 822, \"original\": true}, {\"id\": 1, \"kind\": \"b\", \"value\": 451, \"original\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 169, \"original\": true}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353}], \"count\": 7, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 9,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_6du1x4vm/outputs/archive.json\", \"size\": 594, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 7행 (archive.json)\"}",
+              "duration_ms": 1
+            },
+            {
+              "step": 10,
+              "node": "?",
+              "action": "?",
+              "result": "[{\"id\": 1, \"kind\": \"a\", \"value\": 1212, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 2, \"kind\": \"b\", \"value\": 1809, \"approved\": true}, {\"id\": 3, \"kind\": \"a\", \"value\": 1263, \"approved\": true}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}, {\"id\": 5, \"kind\": \"b\", \"value\": 1353, \"approved\": true}]",
+              "duration_ms": 0
+            },
+            {
+              "step": 11,
+              "node": "table",
+              "action": "filter",
+              "result": "{\"items\": [{\"id\": 3, \"kind\": \"a\", \"value\": 1042, \"approved\": false}, {\"id\": 4, \"kind\": \"a\", \"value\": 1366, \"approved\": false}], \"count\": 2, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 12,
+              "node": "self",
+              "action": "write",
+              "result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_6du1x4vm/outputs/rejected.json\", \"size\": 217, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (rejected.json)\"}",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "{\"success\": true, \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_6du1x4vm/outputs/rejected.json\", \"size\": 217, \"format\": \"json\", \"message\": \"JSON 원장 저장 — 2행 (rejected.json)\"}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read",
+            "self:read",
+            "table:filter",
+            "table:select",
+            "table:union",
+            "table:dedup",
+            "self:write",
+            "table:filter",
+            "self:write"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 281.464,
+        "typecheck": {
+          "ok": true,
+          "issues": [
+            {
+              "severity": "warning",
+              "statement": 4,
+              "step": 7,
+              "at": "table:union",
+              "message": "[table:union] 의 가지 1 은(는) 스칼라 선언 액션입니다 — items 로 승격되지 않으면 실행에서 '통화 종류가 같아야 합니다' 로 죽습니다.",
+              "hint": "통화(items)를 내는 op 가 있으면 그것을 쓰세요.",
+              "got": [
+                "scalar",
+                "items"
+              ]
+            }
+          ],
+          "types": [
+            "$o: scalar",
+            "$s: scalar",
+            "$n: items⟨id·kind·value⟩",
+            "(4) effect",
+            "(5) effect"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {
+          "outputs/archive.json": "{\n  \"items\": [\n    {\n      \"id\": 1,\n      \"kind\": \"a\",\n      \"value\": 705,\n      \"original\": true\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"a\",\n      \"value\": 822,\n      \"original\": true\n    },\n    {\n      \"id\": 1,\n      \"kind\": \"b\",\n      \"value\": 451,\n      \"original\": true\n    },\n    {\n      \"id\": 4,\n      \"kind\": \"a\",\n      \"value\": 169,\n      \"original\": true\n    },\n    {\n      \"id\": 2,\n      \"kind\": \"b\",\n      \"value\": 1809\n    },\n    {\n      \"id\": 3,\n      \"kind\": \"a\",\n      \"value\": 1263\n    },\n    {\n      \"id\": 5,\n      \"kind\": \"b\",\n      \"value\": 1353\n    }\n  ],\n  \"count\": 7\n}",
+          "outputs/rejected.json": "{\n  \"items\": [\n    {\n      \"id\": 3,\n      \"kind\": \"a\",\n      \"value\": 1042,\n      \"approved\": false\n    },\n    {\n      \"id\": 4,\n      \"kind\": \"a\",\n      \"value\": 1366,\n      \"approved\": false\n    }\n  ],\n  \"count\": 2\n}"
+        },
+        "worker_wall_ms": 414.348
+      }
+    },
+    {
+      "case": "counter_latest",
+      "solution": "named",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:sort]{by:\"name\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 4,
+          "steps_total": 4,
+          "_action_count": 4,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "file_find",
+              "result": "{\"text\": \"4개 매칭 | root: /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-03.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-11.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-19.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\", \"table\": {\"columns\": [\"이름\", \"크기\", \"수정일\", \"경로\"], \"rows\": [[\"report_2026-08-03.md\", 1831, \"2020-09-13 21:41\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-03.md\"], [\"report_2026-08-11.md\", 1831, \"2020-09-13 22:11\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-11.md\"], [\"report_2026-08-19.md\", 1831, \"2020-09-13 21:56\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-19.md\"], [\"report_2026-08-27.md\", 1831, \"2020-09-13 21:26\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\"]]}, \"items\": [{\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false}",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false, \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "table",
+              "action": "take",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_3peyvyrw/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": true, \"count\": 1, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "self",
+              "action": "read",
+              "result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-99426 LINE-11\nDOCUMENT-83748 LINE-12\nDOCUMENT-99592 LINE-13\nDOCUMENT-62199 LINE-14\nDOCUMENT-85606 LINE-15\nDOCUMENT-60428 LINE-16\nDOCUMENT-17940 LINE-17\nDOCUMENT-85256 LINE-18\nDOCUMENT-10316 LINE-19\nDOCUMENT-38423 LINE-20\nDOCUMENT-93238 LINE-21\nDOCUMENT-28911 LINE-22\n",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-99426 LINE-11\nDOCUMENT-83748 LINE-12\nDOCUMENT-99592 LINE-13\nDOCUMENT-62199 LINE-14\nDOCUMENT-85606 LINE-15\nDOCUMENT-60428 LINE-16\nDOCUMENT-17940 LINE-17\nDOCUMENT-85256 LINE-18\nDOCUMENT-10316 LINE-19\nDOCUMENT-38423 LINE-20\nDOCUMENT-93238 LINE-21\nDOCUMENT-28911 LINE-22\n"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:file_find",
+            "table:sort",
+            "table:take",
+            "self:read"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 277.888,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) scalar"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 407.8
+      }
+    },
+    {
+      "case": "counter_latest",
+      "solution": "inline",
+      "code": "[self:file_find]{path:\"drafts\",pattern:\"*.md\"} >> [table:sort]{by:\"name\",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 4,
+          "steps_total": 4,
+          "_action_count": 4,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "file_find",
+              "result": "{\"text\": \"4개 매칭 | root: /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-03.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-11.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-19.md\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\", \"table\": {\"columns\": [\"이름\", \"크기\", \"수정일\", \"경로\"], \"rows\": [[\"report_2026-08-03.md\", 1831, \"2020-09-13 21:41\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-03.md\"], [\"report_2026-08-11.md\", 1831, \"2020-09-13 22:11\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-11.md\"], [\"report_2026-08-19.md\", 1831, \"2020-09-13 21:56\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-19.md\"], [\"report_2026-08-27.md\", 1831, \"2020-09-13 21:26\", \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\"]]}, \"items\": [{\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false}",
+              "duration_ms": 0
+            },
+            {
+              "step": 2,
+              "node": "table",
+              "action": "sort",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-19.md\", \"meta\": \"1,831B · 2020-09-13 21:56\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-19.md\", \"name\": \"report_2026-08-19.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:56\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-19.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-11.md\", \"meta\": \"1,831B · 2020-09-13 22:11\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-11.md\", \"name\": \"report_2026-08-11.md\", \"size\": 1831, \"mtime\": \"2020-09-13 22:11\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-11.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}, {\"title\": \"report_2026-08-03.md\", \"meta\": \"1,831B · 2020-09-13 21:41\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-03.md\", \"name\": \"report_2026-08-03.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:41\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-03.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": false, \"count\": 4, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 3,
+              "node": "table",
+              "action": "take",
+              "result": "{\"items\": [{\"title\": \"report_2026-08-27.md\", \"meta\": \"1,831B · 2020-09-13 21:26\", \"summary\": \"\", \"url\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\", \"name\": \"report_2026-08-27.md\", \"size\": 1831, \"mtime\": \"2020-09-13 21:26\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts/report_2026-08-27.md\", \"dir\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_ir5mq7jd/drafts\", \"is_dir\": false}], \"total\": 4, \"truncated\": true, \"count\": 1, \"success\": true}",
+              "duration_ms": 0
+            },
+            {
+              "step": 4,
+              "node": "self",
+              "action": "read",
+              "result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-99426 LINE-11\nDOCUMENT-83748 LINE-12\nDOCUMENT-99592 LINE-13\nDOCUMENT-62199 LINE-14\nDOCUMENT-85606 LINE-15\nDOCUMENT-60428 LINE-16\nDOCUMENT-17940 LINE-17\nDOCUMENT-85256 LINE-18\nDOCUMENT-10316 LINE-19\nDOCUMENT-38423 LINE-20\nDOCUMENT-93238 LINE-21\nDOCUMENT-28911 LINE-22\n",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-99426 LINE-11\nDOCUMENT-83748 LINE-12\nDOCUMENT-99592 LINE-13\nDOCUMENT-62199 LINE-14\nDOCUMENT-85606 LINE-15\nDOCUMENT-60428 LINE-16\nDOCUMENT-17940 LINE-17\nDOCUMENT-85256 LINE-18\nDOCUMENT-10316 LINE-19\nDOCUMENT-38423 LINE-20\nDOCUMENT-93238 LINE-21\nDOCUMENT-28911 LINE-22\n"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:file_find",
+            "table:sort",
+            "table:take",
+            "self:read"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 278.989,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) scalar"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 406.208
+      }
+    },
+    {
+      "case": "counter_context",
+      "solution": "named",
+      "code": "[self:grep]{path:\"notes\",pattern:\"NEEDLE\",file_pattern:\"*.txt\",limit:100}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "grep",
+              "result": "{\"text\": \"notes/00.txt:4: NEEDLE N0-53605-4\\nnotes/00.txt:13: NEEDLE N0-95990-13\\nnotes/01.txt:4: NEEDLE N1-49943-4\\nnotes/01.txt:13: NEEDLE N1-13921-13\\nnotes/02.txt:4: NEEDLE N2-53466-4\\nnotes/02.txt:13: NEEDLE N2-26077-13\\nnotes/03.txt:4: NEEDLE N3-36347-4\\nnotes/03.txt:13: NEEDLE N3-62051-13\\nnotes/04.txt:4: NEEDLE N4-55413-4\\nnotes/04.txt:13: NEEDLE N4-52695-13\\nnotes/05.txt:4: NEEDLE N5-86725-4\\nnotes/05.txt:13: NEEDLE N5-56291-13\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false}",
+              "duration_ms": 11
+            }
+          ],
+          "final_result": "{\"text\": \"notes/00.txt:4: NEEDLE N0-53605-4\\nnotes/00.txt:13: NEEDLE N0-95990-13\\nnotes/01.txt:4: NEEDLE N1-49943-4\\nnotes/01.txt:13: NEEDLE N1-13921-13\\nnotes/02.txt:4: NEEDLE N2-53466-4\\nnotes/02.txt:13: NEEDLE N2-26077-13\\nnotes/03.txt:4: NEEDLE N3-36347-4\\nnotes/03.txt:13: NEEDLE N3-62051-13\\nnotes/04.txt:4: NEEDLE N4-55413-4\\nnotes/04.txt:13: NEEDLE N4-52695-13\\nnotes/05.txt:4: NEEDLE N5-86725-4\\nnotes/05.txt:13: NEEDLE N5-56291-13\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:grep"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 290.277,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) items⟨파일·줄번호·내용·…⟩"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 417.397
+      }
+    },
+    {
+      "case": "counter_context",
+      "solution": "inline",
+      "code": "[self:grep]{path:\"notes\",pattern:\"NEEDLE\",file_pattern:\"*.txt\",limit:100}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "grep",
+              "result": "{\"text\": \"notes/00.txt:4: NEEDLE N0-53605-4\\nnotes/00.txt:13: NEEDLE N0-95990-13\\nnotes/01.txt:4: NEEDLE N1-49943-4\\nnotes/01.txt:13: NEEDLE N1-13921-13\\nnotes/02.txt:4: NEEDLE N2-53466-4\\nnotes/02.txt:13: NEEDLE N2-26077-13\\nnotes/03.txt:4: NEEDLE N3-36347-4\\nnotes/03.txt:13: NEEDLE N3-62051-13\\nnotes/04.txt:4: NEEDLE N4-55413-4\\nnotes/04.txt:13: NEEDLE N4-52695-13\\nnotes/05.txt:4: NEEDLE N5-86725-4\\nnotes/05.txt:13: NEEDLE N5-56291-13\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false}",
+              "duration_ms": 9
+            }
+          ],
+          "final_result": "{\"text\": \"notes/00.txt:4: NEEDLE N0-53605-4\\nnotes/00.txt:13: NEEDLE N0-95990-13\\nnotes/01.txt:4: NEEDLE N1-49943-4\\nnotes/01.txt:13: NEEDLE N1-13921-13\\nnotes/02.txt:4: NEEDLE N2-53466-4\\nnotes/02.txt:13: NEEDLE N2-26077-13\\nnotes/03.txt:4: NEEDLE N3-36347-4\\nnotes/03.txt:13: NEEDLE N3-62051-13\\nnotes/04.txt:4: NEEDLE N4-55413-4\\nnotes/04.txt:13: NEEDLE N4-52695-13\\nnotes/05.txt:4: NEEDLE N5-86725-4\\nnotes/05.txt:13: NEEDLE N5-56291-13\", \"items\": [{\"파일\": \"notes/00.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N0-53605-4\"}, {\"파일\": \"notes/00.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N0-95990-13\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N1-49943-4\"}, {\"파일\": \"notes/01.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N1-13921-13\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N2-53466-4\"}, {\"파일\": \"notes/02.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N2-26077-13\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N3-36347-4\"}, {\"파일\": \"notes/03.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N3-62051-13\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N4-55413-4\"}, {\"파일\": \"notes/04.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N4-52695-13\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 4, \"내용\": \"NEEDLE N5-86725-4\"}, {\"파일\": \"notes/05.txt\", \"줄번호\": 13, \"내용\": \"NEEDLE N5-56291-13\"}], \"total\": 12, \"excluded\": \"기본 제외: 로그(*.log·회전본)·_backups·.worktrees·spill — 로그를 보려면 include_logs: true\", \"total_files\": 6, \"truncated\": false}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:grep"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 292.711,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) items⟨파일·줄번호·내용·…⟩"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 424.705
+      }
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "named",
+      "code": "[self:ledger]{op:\"upsert\",path:\"registry.json\",target:\"records\",key:\"id\",items_file:\"updates.json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "ledger",
+              "result": "{\"success\": true, \"op\": \"upsert\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_yppvbzne/registry.json\", \"count\": 5, \"items\": [{\"id\": 2, \"value\": 1018}, {\"id\": 4, \"value\": 1065}, {\"id\": 6, \"value\": 1419}]}",
+              "duration_ms": 1
+            }
+          ],
+          "final_result": "{\"success\": true, \"op\": \"upsert\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_yppvbzne/registry.json\", \"count\": 5, \"items\": [{\"id\": 2, \"value\": 1018}, {\"id\": 4, \"value\": 1065}, {\"id\": 6, \"value\": 1419}]}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:ledger"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 279.937,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) effect"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 409.274
+      }
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "inline",
+      "code": "[self:ledger]{op:\"upsert\",path:\"registry.json\",target:\"records\",key:\"id\",items_file:\"updates.json\"}",
+      "execution": {
+        "quality_ok": true,
+        "runtime_ok": true,
+        "verdict": "품질 기준 통과",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "ledger",
+              "result": "{\"success\": true, \"op\": \"upsert\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_070e4p00/registry.json\", \"count\": 5, \"items\": [{\"id\": 2, \"value\": 1018}, {\"id\": 4, \"value\": 1065}, {\"id\": 6, \"value\": 1419}]}",
+              "duration_ms": 1
+            }
+          ],
+          "final_result": "{\"success\": true, \"op\": \"upsert\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_070e4p00/registry.json\", \"count\": 5, \"items\": [{\"id\": 2, \"value\": 1018}, {\"id\": 4, \"value\": 1065}, {\"id\": 6, \"value\": 1419}]}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:ledger"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 281.645,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) effect"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 410.868
+      }
+    },
+    {
+      "case": "counter_latest",
+      "solution": "wrong",
+      "code": "[fn:최신범위읽기]{폴더:\"drafts\",패턴:\"*.md\",시작줄:11,줄수:12}",
+      "execution": {
+        "quality_ok": false,
+        "runtime_ok": true,
+        "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. drafts/*.md에서 파일명에 적힌 YYYY-MM-DD 날짜가 가장 늦은 문서의 11~22줄 본문을 반환해 줘. 수정시각은 선정 기준이 아니다. 후보는 report_YYYY-MM-DD.md 형식의 네 파일이며 모두 80줄이다.",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "fn",
+              "action": "최신범위읽기",
+              "result": "{\"success\": true, \"steps_completed\": 6, \"steps_total\": 6, \"_action_count\": 6, \"results\": [{\"step\": 1, \"node\": \"self\", \"action\": \"file_find\", \"result\": \"{\\\"text\\\": \\\"4개 매칭 | root: /private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\\n/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\", \\\"table\\\": {\\\"columns\\\": [\\\"이름\\\", \\\"크기\\\", \\\"수정일\\\", \\\"경로\\\"], \\\"rows\\\": [[\\\"report_2026-08-03.md\\\", 1831, \\\"2020-09-13 21:41\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\"], [\\\"report_2026-08-11.md\\\", 1831, \\\"2020-09-13 22:11\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\"], [\\\"report_2026-08-19.md\\\", 1831, \\\"2020-09-13 21:56\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\"], [\\\"report_2026-08-27.md\\\", 1831, \\\"2020-09-13 21:26\\\", \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\"]]}, \\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false}\", \"duration_ms\": 0}, {\"step\": 2, \"node\": \"table\", \"action\": \"filter\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false, \\\"count\\\": 4, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 3, \"node\": \"table\", \"action\": \"sort\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-19.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:56\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\", \\\"name\\\": \\\"report_2026-08-19.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:56\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-19.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-03.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:41\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\", \\\"name\\\": \\\"report_2026-08-03.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:41\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-03.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}, {\\\"title\\\": \\\"report_2026-08-27.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 21:26\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\", \\\"name\\\": \\\"report_2026-08-27.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 21:26\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-27.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": false, \\\"count\\\": 4, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 4, \"node\": \"table\", \"action\": \"take\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": true, \\\"count\\\": 1, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 5, \"node\": \"?\", \"action\": \"?\", \"result\": \"{\\\"items\\\": [{\\\"title\\\": \\\"report_2026-08-11.md\\\", \\\"meta\\\": \\\"1,831B · 2020-09-13 22:11\\\", \\\"summary\\\": \\\"\\\", \\\"url\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"name\\\": \\\"report_2026-08-11.md\\\", \\\"size\\\": 1831, \\\"mtime\\\": \\\"2020-09-13 22:11\\\", \\\"path\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts/report_2026-08-11.md\\\", \\\"dir\\\": \\\"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_gqy4bbrv/drafts\\\", \\\"is_dir\\\": false}], \\\"total\\\": 4, \\\"truncated\\\": true, \\\"count\\\": 1, \\\"success\\\": true}\", \"duration_ms\": 0}, {\"step\": 6, \"node\": \"if\", \"action\": \"block\", \"result\": \"[줄 11-22 / 전체 80줄, 1,831바이트]\\nDOCUMENT-12071 LINE-11\\nDOCUMENT-10839 LINE-12\\nDOCUMENT-91452 LINE-13\\nDOCUMENT-54295 LINE-14\\nDOCUMENT-81664 LINE-15\\nDOCUMENT-27022 LINE-16\\nDOCUMENT-30949 LINE-17\\nDOCUMENT-83201 LINE-18\\nDOCUMENT-43130 LINE-19\\nDOCUMENT-84986 LINE-20\\nDOCUMENT-13023 LINE-21\\nDOCUMENT-69497 LINE-22\\n\", \"duration_ms\": 0, \"matched\": \"not empty($items)\", \"matched_value\": false}], \"final_result\": \"[줄 11-22 / 전체 80줄, 1,831바이트]\\nDOCUMENT-12071 LINE-11\\nDOCUMENT-10839 LINE-12\\nDOCUMENT-91452 LINE-13\\nDOCUMENT-54295 LINE-14\\nDOCUMENT-81664 LINE-15\\nDOCUMENT-27022 LINE-16\\nDOCUMENT-30949 LINE-17\\nDOCUMENT-83201 LINE-18\\nDOCUMENT-43130 LINE-19\\nDOCUMENT-84986 LINE-20\\nDOCUMENT-13023 LINE-21\\nDOCUMENT-69497 LINE-22\\n\", \"returned\": \"$return\", \"fn\": \"최신범위읽기\", \"fn_source\": \"idiom\", \"_fn_result\": true, \"params_required\": [\"폴더\", \"패턴\", \"시작줄\", \"줄수\"], \"params_injected\": [\"시작줄\", \"줄수\", \"패턴\", \"폴더\"]}",
+              "duration_ms": 2
+            }
+          ],
+          "final_result": "[줄 11-22 / 전체 80줄, 1,831바이트]\nDOCUMENT-12071 LINE-11\nDOCUMENT-10839 LINE-12\nDOCUMENT-91452 LINE-13\nDOCUMENT-54295 LINE-14\nDOCUMENT-81664 LINE-15\nDOCUMENT-27022 LINE-16\nDOCUMENT-30949 LINE-17\nDOCUMENT-83201 LINE-18\nDOCUMENT-43130 LINE-19\nDOCUMENT-84986 LINE-20\nDOCUMENT-13023 LINE-21\nDOCUMENT-69497 LINE-22\n"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:file_find",
+            "table:filter",
+            "table:sort",
+            "table:take",
+            "self:read"
+          ],
+          "fn_calls": [
+            "최신범위읽기"
+          ]
+        },
+        "runtime_ms": 283.308,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) scalar"
+          ],
+          "fn_returns": {
+            "최신범위읽기": "scalar"
+          }
+        },
+        "artifacts": {},
+        "worker_wall_ms": 414.17
+      }
+    },
+    {
+      "case": "direct_context",
+      "solution": "wrong",
+      "code": "[self:read]{path:\"locations.json\"}",
+      "execution": {
+        "quality_ok": false,
+        "runtime_ok": true,
+        "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "read",
+              "result": "[{\"파일\": \"notes/01.txt\", \"줄번호\": 4}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8}]",
+              "duration_ms": 0
+            }
+          ],
+          "final_result": "[{\"파일\": \"notes/01.txt\", \"줄번호\": 4}, {\"파일\": \"notes/missing.txt\", \"줄번호\": 2}, {\"파일\": \"notes/04.txt\", \"줄번호\": 8}]"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:read"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 282.188,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) scalar"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 410.554
+      }
+    },
+    {
+      "case": "counter_ledger",
+      "solution": "wrong",
+      "code": "[self:ledger]{op:\"append\",path:\"registry.json\",target:\"records\",items_file:\"updates.json\"}",
+      "execution": {
+        "quality_ok": false,
+        "runtime_ok": true,
+        "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. registry.json의 records 목록에 updates.json의 행들을 id 기준으로 반영해 줘. 같은 id는 새로 온 필드 값으로 갱신하되 새 행에 없는 기존 필드는 보존하고, 없는 id는 추가한다. records 이외의 메타데이터도 유지해야 한다. updates.json은 변경하지 마. 결과는 registry.json에 저장해 줘.",
+        "result": {
+          "success": true,
+          "steps_completed": 1,
+          "steps_total": 1,
+          "_action_count": 1,
+          "results": [
+            {
+              "step": 1,
+              "node": "self",
+              "action": "ledger",
+              "result": "{\"success\": true, \"op\": \"append\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_31uovqq8/registry.json\", \"count\": 7, \"items\": [{\"id\": 2, \"value\": 1018}, {\"id\": 4, \"value\": 1065}, {\"id\": 6, \"value\": 1419}]}",
+              "duration_ms": 1
+            }
+          ],
+          "final_result": "{\"success\": true, \"op\": \"append\", \"path\": \"/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_31uovqq8/registry.json\", \"count\": 7, \"items\": [{\"id\": 2, \"value\": 1018}, {\"id\": 4, \"value\": 1065}, {\"id\": 6, \"value\": 1419}]}"
+        },
+        "observed": {
+          "leaf_calls": [
+            "self:ledger"
+          ],
+          "fn_calls": []
+        },
+        "runtime_ms": 280.742,
+        "typecheck": {
+          "ok": true,
+          "issues": [],
+          "types": [
+            "(1) effect"
+          ],
+          "fn_returns": {}
+        },
+        "artifacts": {},
+        "worker_wall_ms": 409.869
+      }
+    }
+  ]
+}

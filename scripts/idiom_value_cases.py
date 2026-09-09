@@ -90,8 +90,8 @@ def judge(case_id, result, root, observed):
 
 
 GOLD = {
-    'five_contexts': '[self:grep]{path:"notes",pattern:"NEEDLE",file_pattern:"*.txt",limit:20} >> [table:sort]{by:"파일"} >> [fn:위치마다읽기]{개수:5,줄수:7}',
-    'partial_contexts': '[self:read]{path:"hits.json"} >> [fn:위치마다읽기]{개수:3,줄수:4}',
+    'five_contexts': '$위치 = [self:grep]{path:"notes",pattern:"NEEDLE",file_pattern:"*.txt",limit:20} >> [table:sort]{by:"파일"}; [fn:위치마다읽기]{위치:$위치,개수:5,줄수:7}',
+    'partial_contexts': '$위치 = [self:read]{path:"hits.json"}; [fn:위치마다읽기]{위치:$위치,개수:3,줄수:4}',
     'latest_full': '[fn:최신범위읽기]{폴더:"reports",패턴:"*.md",시작줄:1,줄수:220}',
     'latest_window': '[fn:최신범위읽기]{폴더:"reports",패턴:"*.md",시작줄:25,줄수:7}',
     'empty_latest': '[fn:최신범위읽기]{폴더:"reports",패턴:"*.rst",시작줄:1,줄수:10}',

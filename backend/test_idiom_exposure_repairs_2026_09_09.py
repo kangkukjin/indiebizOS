@@ -124,7 +124,16 @@ def test_current_block_body_keeps_teaching_in_actual_introduction(
 
     catalog = json.loads((ROOT / "data/idioms/curated.json").read_text())
     lesson = next(e for e in catalog["idioms"] if e["name"] == "위치마다읽기")
-    row = next(e for e in REGISTRY if e["alias"] == "위치마다읽기")
+    # 불변식은 교재 몸 == **운영 원장의 현재 몸**(다르면 소개기가 교재를 버린다). v1 스냅샷은 09-09 서명 개정
+    # (파이프형→자족형, 지렛대 1) 이전의 몸이라 비교 대상이 아니다 — 운영 원장을 읽기 전용으로 본다.
+    live = ROOT / "data/ibl_usage.db"
+    if not live.exists():
+        pytest.skip("운영 원장 없음")
+    with sqlite3.connect(f"file:{live}?mode=ro", uri=True) as con:
+        con.row_factory = sqlite3.Row
+        row = dict(con.execute(
+            "SELECT intent, ibl_code, alias, returns, signature FROM ibl_examples "
+            "WHERE alias='위치마다읽기' AND always_on=1").fetchone())
     assert (
         lesson["body"] == row["ibl_code"]
     )  # 운영 몸을 옛 교재로 되돌리지 않는다

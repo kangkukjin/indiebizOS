@@ -1,0 +1,5476 @@
+[
+ {
+  "id": "counter_context_0_exposed",
+  "case": "counter_context",
+  "arm": "exposed",
+  "seed": 2026090907,
+  "quality_ok": true,
+  "total_wall_ms": 47745.006,
+  "attempts": [
+   {
+    "code": "# notes/*.txt 에서 NEEDLE 이 나온 모든 위치와 그 일치 줄만 (주변 본문 읽지 않음, 개수 줄이지 않음)\n$히트 = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 1000}\n$히트 >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. notes/*.txt에서 NEEDLE이 나타나는 모든 위치와 그 일치 줄만 반환해 줘. 파일·줄번호·일치 내용을 보존한다. 주변 본문을 별도로 읽거나 위치 개수를 줄이지 마.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 695,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 681,
+     "output_tokens_details": {
+      "thinking_tokens": 503
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 695,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 681,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 695,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 695
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 681,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 695,
+      "webSearchRequests": 0,
+      "costUSD": 0.056112499999999996,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 503,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 11675.094,
+    "duration_api_ms": 9538,
+    "total_cost_usd": 0.056112499999999996
+   },
+   {
+    "code": "# notes/*.txt 의 NEEDLE 일치 위치 전부 — 파일·줄번호·일치 줄만 보존 (주변 본문 미열람, 개수 미축소)\n$히트 = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 1000}\n$행 = $히트 >> [table:select]{columns: [\"파일\", \"줄번호\", \"내용\"]}\n$행 >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}\n$행 >> [table:take]{n: 1000}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "table:select",
+     "self:write",
+     "table:take"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 3650,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 2366,
+     "output_tokens_details": {
+      "thinking_tokens": 2126
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 3650,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2366,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 3650,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 3650
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2366,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 3650,
+      "webSearchRequests": 0,
+      "costUSD": 0.1277875,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2126,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 35207.413,
+    "duration_api_ms": 33317,
+    "total_cost_usd": 0.1277875
+   }
+  ]
+ },
+ {
+  "id": "counter_context_0_hidden",
+  "case": "counter_context",
+  "arm": "hidden",
+  "seed": 2026090907,
+  "quality_ok": false,
+  "total_wall_ms": 94739.996,
+  "attempts": [
+   {
+    "code": "$hits = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 1000, output_mode: \"content\"}\n$hits >> [table:select]{columns: [\"파일\", \"줄번호\", \"내용\"]} >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. notes/*.txt에서 NEEDLE이 나타나는 모든 위치와 그 일치 줄만 반환해 줘. 파일·줄번호·일치 내용을 보존한다. 주변 본문을 별도로 읽거나 위치 개수를 줄이지 마.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "table:select",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 695,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 274,
+     "output_tokens_details": {
+      "thinking_tokens": 121
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 695,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 274,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 695,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 695
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 274,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 695,
+      "webSearchRequests": 0,
+      "costUSD": 0.0449225,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 121,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 7852.047,
+    "duration_api_ms": 3963,
+    "total_cost_usd": 0.0449225
+   },
+   {
+    "code": "# notes/*.txt 의 NEEDLE 위치를 파일 단위로 빠짐없이 훑는다 (본문 통독 없이 grep 만 사용)\n$hits = ([self:file_find]{path: \"notes\", pattern: \"*.txt\"} >> [table:each]{limit: 200, do: \"[self:grep]{pattern: 'NEEDLE', root_path: 'notes', file_pattern: '$it.name', regex: false, limit: 10000, output_mode: 'content', include_logs: true}\"}) ?? [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 10000, output_mode: \"content\", include_logs: true}\n\n# 파일·줄번호·일치 내용 세 열만 보존해 전량 저장 (행 축소·요약 없음)\n$hits >> [table:select]{columns: [\"파일\", \"줄번호\", \"내용\"]} >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. notes/*.txt에서 NEEDLE이 나타나는 모든 위치와 그 일치 줄만 반환해 줘. 파일·줄번호·일치 내용을 보존한다. 주변 본문을 별도로 읽거나 위치 개수를 줄이지 마.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:each",
+     "self:grep",
+     "self:grep",
+     "self:grep",
+     "self:grep",
+     "self:grep",
+     "self:grep",
+     "table:select",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 4405,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 6279,
+     "output_tokens_details": {
+      "thinking_tokens": 5888
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 4405,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 6279,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 4405,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 4405
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 6279,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 4405,
+      "webSearchRequests": 0,
+      "costUSD": 0.23214750000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5888,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 86011.946,
+    "duration_api_ms": 83394,
+    "total_cost_usd": 0.23214750000000003
+   }
+  ]
+ },
+ {
+  "id": "counter_context_1_exposed",
+  "case": "counter_context",
+  "arm": "exposed",
+  "seed": 2026091008,
+  "quality_ok": true,
+  "total_wall_ms": 7501.238,
+  "attempts": [
+   {
+    "code": "$위치 = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 1000}\n$위치 >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}\n$위치",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 694,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 304,
+     "output_tokens_details": {
+      "thinking_tokens": 189
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 694,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 304,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 694,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 694
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 304,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 694,
+      "webSearchRequests": 0,
+      "costUSD": 0.046677500000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 189,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 7081.435,
+    "duration_api_ms": 5124,
+    "total_cost_usd": 0.046677500000000004
+   }
+  ]
+ },
+ {
+  "id": "counter_context_1_hidden",
+  "case": "counter_context",
+  "arm": "hidden",
+  "seed": 2026091008,
+  "quality_ok": true,
+  "total_wall_ms": 91681.307,
+  "attempts": [
+   {
+    "code": "# notes/*.txt 안의 NEEDLE 전 위치 수집 (파일·줄번호·내용 보존, 축약 없음)\n$hits = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, output_mode: \"content\", limit: 5000}\n$hits >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. notes/*.txt에서 NEEDLE이 나타나는 모든 위치와 그 일치 줄만 반환해 줘. 파일·줄번호·일치 내용을 보존한다. 주변 본문을 별도로 읽거나 위치 개수를 줄이지 마.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 690,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 385,
+     "output_tokens_details": {
+      "thinking_tokens": 216
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 690,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 385,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 690,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 690
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 385,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 690,
+      "webSearchRequests": 0,
+      "costUSD": 0.047647499999999995,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 216,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 8537.294,
+    "duration_api_ms": 6450,
+    "total_cost_usd": 0.047647499999999995
+   },
+   {
+    "code": "# notes/*.txt 안의 NEEDLE 일치 위치 전수 수집 — 파일·줄번호·내용 그대로, 축약·표본 없음\n$hits = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, output_mode: \"content\", limit: 5000, include_logs: true}\n\n# 일치 행(파일·줄번호·내용)만 JSON 원장으로 저장 — 주변 본문은 읽지도 담지도 않음\n$hits.items >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}\n\n# 저장본을 그대로 되읽어 전 행을 결과로 반환 (요약·상위 N 절단 없음)\n[self:ledger]{op: \"select\", path: \"outputs/needle_hits.json\", target: \"items\", fields: [\"파일\", \"줄번호\", \"내용\"], limit: 5000} ?? [self:read]{path: \"outputs/needle_hits.json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "self:write",
+     "self:ledger"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 3647,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 5769,
+     "output_tokens_details": {
+      "thinking_tokens": 5380
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 3647,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5769,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 3647,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 3647
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5769,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 3647,
+      "webSearchRequests": 0,
+      "costUSD": 0.2118175,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5380,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 82253.365,
+    "duration_api_ms": 79547,
+    "total_cost_usd": 0.2118175
+   }
+  ]
+ },
+ {
+  "id": "counter_context_2_exposed",
+  "case": "counter_context",
+  "arm": "exposed",
+  "seed": 2026091109,
+  "quality_ok": true,
+  "total_wall_ms": 16994.03,
+  "attempts": [
+   {
+    "code": "# notes/*.txt 에서 NEEDLE 이 나온 모든 위치·일치 줄 (개수 축소·본문 추가 읽기 없음)\n$위치 = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 1000}\n$위치 >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}\n$위치 >> [table:select]{columns: [\"파일\", \"줄번호\", \"내용\"]}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "self:write",
+     "table:select"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 692,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 939,
+     "output_tokens_details": {
+      "thinking_tokens": 731
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 692,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 939,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 692,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 692
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 939,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 692,
+      "webSearchRequests": 0,
+      "costUSD": 0.0625325,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 731,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 16589.487,
+    "duration_api_ms": 14674,
+    "total_cost_usd": 0.0625325
+   }
+  ]
+ },
+ {
+  "id": "counter_context_2_hidden",
+  "case": "counter_context",
+  "arm": "hidden",
+  "seed": 2026091109,
+  "quality_ok": false,
+  "total_wall_ms": 189098.129,
+  "attempts": [
+   {
+    "code": "# notes/*.txt 에서 NEEDLE 전수 검색 — 파일·줄번호·일치 내용 그대로 보존\n$hits = [self:grep]{pattern: \"NEEDLE\", root_path: \"notes\", file_pattern: \"*.txt\", regex: false, limit: 1000}\n$hits >> [self:write]{path: \"outputs/needle_hits.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. notes/*.txt에서 NEEDLE이 나타나는 모든 위치와 그 일치 줄만 반환해 줘. 파일·줄번호·일치 내용을 보존한다. 주변 본문을 별도로 읽거나 위치 개수를 줄이지 마.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:grep",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 688,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 452,
+     "output_tokens_details": {
+      "thinking_tokens": 295
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 688,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 452,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 688,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 688
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 452,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 688,
+      "webSearchRequests": 0,
+      "costUSD": 0.0493025,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 295,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 8674.53,
+    "duration_api_ms": 6608,
+    "total_cost_usd": 0.0493025
+   },
+   {
+    "code": "",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": null,
+    "verdict": "model_transport_error",
+    "fn_calls": null,
+    "leaf_calls": null,
+    "usage": null,
+    "modelUsage": null,
+    "wall_ms": 180014.186,
+    "duration_api_ms": null,
+    "total_cost_usd": null
+   }
+  ]
+ },
+ {
+  "id": "counter_latest_0_exposed",
+  "case": "counter_latest",
+  "arm": "exposed",
+  "seed": 2026090906,
+  "quality_ok": true,
+  "total_wall_ms": 20761.577,
+  "attempts": [
+   {
+    "code": "$목록 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} ?? [self:file_find]{pattern: \"drafts/*.md\"}\n$최신 = $목록 >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}\n[self:read]{path: \"${최신.items.0.path}\", start_line: 11, end_line: 22}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 716,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 1242,
+     "output_tokens_details": {
+      "thinking_tokens": 1089
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 716,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1242,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 716,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 716
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1242,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 716,
+      "webSearchRequests": 0,
+      "costUSD": 0.07034750000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1089,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 20350.935,
+    "duration_api_ms": 18485,
+    "total_cost_usd": 0.07034750000000001
+   }
+  ]
+ },
+ {
+  "id": "counter_latest_0_hidden",
+  "case": "counter_latest",
+  "arm": "hidden",
+  "seed": 2026090906,
+  "quality_ok": false,
+  "total_wall_ms": 83483.302,
+  "attempts": [
+   {
+    "code": "# drafts/*.md 중 파일명 날짜(YYYY-MM-DD)가 가장 늦은 문서의 11~22줄 본문\n$files = [self:file_find]{path: \"drafts\", pattern: \"*.md\"}\n$top = $files >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}\n$name = \"${top.items.0.name}\"\n$path = \"${top.items.0.path}\"\n$doc = [self:read]{path: \"$path\", start_line: 11, end_line: 22}\n$body = \"${doc.content?}${doc.text?}${doc.message?}\"\n$out = [{file: \"$name\", path: \"$path\", start_line: 11, end_line: 22, content: \"$body\"}]\n$out >> [self:write]{path: \"outputs/result.json\", format: \"json\"}\n$doc >> [self:write]{path: \"outputs/selected_body.md\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. drafts/*.md에서 파일명에 적힌 YYYY-MM-DD 날짜가 가장 늦은 문서의 11~22줄 본문을 반환해 줘. 수정시각은 선정 기준이 아니다. 후보는 report_YYYY-MM-DD.md 형식의 네 파일이며 모두 80줄이다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 723,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 3088,
+     "output_tokens_details": {
+      "thinking_tokens": 2743
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 723,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 3088,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 723,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 723
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 3088,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 723,
+      "webSearchRequests": 0,
+      "costUSD": 0.1155525,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2743,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 39314.821,
+    "duration_api_ms": 37324,
+    "total_cost_usd": 0.1155525
+   },
+   {
+    "code": "# drafts/*.md 중 파일명 날짜(YYYY-MM-DD)가 가장 늦은 문서의 11~22줄 본문 (수정시각 무시)\n$files = [self:file_find]{path: \"drafts\", pattern: \"*.md\"}\n$top = $files >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}\n$name = \"${top.items.0.name}\"\n$path = \"${top.items.0.path}\"\n$doc = [self:read]{path: \"$path\", start_line: 11, end_line: 22}\n$c = \"${doc.content?}\"\n$t = \"${doc.text?}\"\n$m = \"${doc.message?}\"\n$body = $c if $c != \"\" else $t\n$body = $body if $body != \"\" else $m\n$out = [{file: $name, path: $path, start_line: 11, end_line: 22, line_count: 12, content: $body}]\n$out >> [self:write]{path: \"outputs/result.json\", format: \"json\"}\n[self:write]{path: \"outputs/selected_body.md\", content: \"$body\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. drafts/*.md에서 파일명에 적힌 YYYY-MM-DD 날짜가 가장 늦은 문서의 11~22줄 본문을 반환해 줘. 수정시각은 선정 기준이 아니다. 후보는 report_YYYY-MM-DD.md 형식의 네 파일이며 모두 80줄이다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5226,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 3112,
+     "output_tokens_details": {
+      "thinking_tokens": 2703
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5226,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 3112,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5226,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5226
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 3112,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5226,
+      "webSearchRequests": 0,
+      "costUSD": 0.1611825,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2703,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 43358.241,
+    "duration_api_ms": 41281,
+    "total_cost_usd": 0.1611825
+   }
+  ]
+ },
+ {
+  "id": "counter_latest_1_exposed",
+  "case": "counter_latest",
+  "arm": "exposed",
+  "seed": 2026091007,
+  "quality_ok": true,
+  "total_wall_ms": 16894.39,
+  "attempts": [
+   {
+    "code": "# drafts 의 report_YYYY-MM-DD.md 중 파일명 날짜가 가장 늦은 문서의 11~22줄\n$목록 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"}\n$최신 = $목록 >> [table:filter]{where: \"name contains report_\"} >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}\n$본문 = [self:read]{path: \"${최신.items.0.path}\", start_line: 11, end_line: 22}\n$본문",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 719,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 851,
+     "output_tokens_details": {
+      "thinking_tokens": 643
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 719,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 851,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 719,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 719
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 851,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 719,
+      "webSearchRequests": 0,
+      "costUSD": 0.060602500000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 643,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 16501.319,
+    "duration_api_ms": 14238,
+    "total_cost_usd": 0.060602500000000004
+   }
+  ]
+ },
+ {
+  "id": "counter_latest_1_hidden",
+  "case": "counter_latest",
+  "arm": "hidden",
+  "seed": 2026091007,
+  "quality_ok": true,
+  "total_wall_ms": 30387.511,
+  "attempts": [
+   {
+    "code": "# drafts/*.md 중 파일명 날짜(YYYY-MM-DD)가 가장 늦은 문서의 11~22줄 추출\n# report_YYYY-MM-DD.md 는 접두사가 동일하므로 파일명 사전순 내림차순 = 날짜 최신순\n$목록 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} ?? [self:file_find]{pattern: \"drafts/*.md\"}\n$최신 = $목록 >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}\n$본문 = [self:read]{path: \"${최신.items.0.path}\", start_line: 11, end_line: 22}\n$본문 >> [self:write]{path: \"outputs/latest_draft_11_22.md\"}\n$본문 >> [self:write]{path: \"outputs/result.json\", format: \"json\"}\n$본문",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 722,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 2256,
+     "output_tokens_details": {
+      "thinking_tokens": 1916
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 722,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2256,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 722,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 722
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2256,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 722,
+      "webSearchRequests": 0,
+      "costUSD": 0.09474250000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1916,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 29994.552,
+    "duration_api_ms": 27933,
+    "total_cost_usd": 0.09474250000000001
+   }
+  ]
+ },
+ {
+  "id": "counter_latest_2_exposed",
+  "case": "counter_latest",
+  "arm": "exposed",
+  "seed": 2026091108,
+  "quality_ok": true,
+  "total_wall_ms": 24095.846,
+  "attempts": [
+   {
+    "code": "# drafts/*.md 중 파일명 날짜(YYYY-MM-DD)가 가장 늦은 문서의 11~22줄\n# report_YYYY-MM-DD.md 는 고정 접두사 + 제로패딩 날짜라 파일명 내림차순 = 날짜 최신순 (수정시각 미사용)\n$최신 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}\n[if: exists($최신.items.0.path)]{[self:read]{path: \"${최신.items.0.path}\", start_line: 11, end_line: 22}}\n[else]{[self:read]{path: \"drafts/${최신.items.0.name}\", start_line: 11, end_line: 22}}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 715,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 1598,
+     "output_tokens_details": {
+      "thinking_tokens": 1299
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 715,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1598,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 715,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 715
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1598,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 715,
+      "webSearchRequests": 0,
+      "costUSD": 0.0792375,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1299,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 23701.667,
+    "duration_api_ms": 20639,
+    "total_cost_usd": 0.0792375
+   }
+  ]
+ },
+ {
+  "id": "counter_latest_2_hidden",
+  "case": "counter_latest",
+  "arm": "hidden",
+  "seed": 2026091108,
+  "quality_ok": true,
+  "total_wall_ms": 38725.477,
+  "attempts": [
+   {
+    "code": "$top = ([self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}) ?? ([self:file_find]{pattern: \"drafts/*.md\"} >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1})\n$선정 = \"${top.items.0.name}\"\n$본문 = [self:read]{path: \"${top.items.0.path}\", start_line: 11, end_line: 22}\n$본문",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 723,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 2470,
+     "output_tokens_details": {
+      "thinking_tokens": 2259
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 723,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2470,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 723,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 723
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2470,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 723,
+      "webSearchRequests": 0,
+      "costUSD": 0.1001025,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2259,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 38326.389,
+    "duration_api_ms": 36038,
+    "total_cost_usd": 0.1001025
+   }
+  ]
+ },
+ {
+  "id": "counter_ledger_0_exposed",
+  "case": "counter_ledger",
+  "arm": "exposed",
+  "seed": 2026090908,
+  "quality_ok": true,
+  "total_wall_ms": 91720.958,
+  "attempts": [
+   {
+    "code": "# 1) 격리 폴더의 실제 파일과 내용을 먼저 읽는다 (내용을 지어내지 않는다)\n$파일들 = [self:list]{path: \".\"}\n$업데이트 = [self:read]{path: \"updates.json\"}\n$기존 = [self:read]{path: \"registry.json\"}\n\n# 2) registry.json 의 records 배열만 id 기준으로 upsert\n#    - 같은 id: 새 행의 필드로 갱신, 새 행에 없는 기존 필드는 보존\n#    - 없는 id: 추가\n#    - target 을 records 로 한정하므로 그 밖의 메타데이터는 그대로 유지된다\n#    - updates.json 은 읽기만 하고 쓰지 않는다\n[self:ledger]{op: \"upsert\", path: \"registry.json\", target: \"records\", key: \"id\", items_file: \"updates.json\"}\n\n# 3) 저장 결과 확인 (records 병합 + 메타데이터 유지 검증)\n[self:read]{path: \"registry.json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:list",
+     "self:read",
+     "self:read",
+     "self:ledger",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 739,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 5687,
+     "output_tokens_details": {
+      "thinking_tokens": 5291
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 739,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5687,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 739,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 739
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5687,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 739,
+      "webSearchRequests": 0,
+      "costUSD": 0.18170250000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5291,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 91298.119,
+    "duration_api_ms": 88949,
+    "total_cost_usd": 0.18170250000000002
+   }
+  ]
+ },
+ {
+  "id": "counter_ledger_0_hidden",
+  "case": "counter_ledger",
+  "arm": "hidden",
+  "seed": 2026090908,
+  "quality_ok": true,
+  "total_wall_ms": 30851.496,
+  "attempts": [
+   {
+    "code": "# 1) 원본과 갱신 입력을 먼저 읽어 구조를 확인한다 (updates.json 은 읽기만, 변경 없음)\n$before = [self:read]{path: \"registry.json\"}\n$updates = [self:read]{path: \"updates.json\"}\n\n# 2) records 배열에만 id 기준 upsert — 같은 id 는 새 필드로 갱신(없는 필드는 기존 값 보존), 새 id 는 추가,\n#    records 밖의 메타데이터는 target 지정이라 그대로 유지된다\n[self:ledger]{op: \"upsert\", path: \"registry.json\", target: \"records\", key: \"id\", items_file: \"updates.json\"}\n\n# 3) 반영 결과 확인\n[self:read]{path: \"registry.json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "self:ledger",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 747,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 1844,
+     "output_tokens_details": {
+      "thinking_tokens": 1545
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 747,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1844,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 747,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 747
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1844,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 747,
+      "webSearchRequests": 0,
+      "costUSD": 0.0846925,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1545,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 30416.582,
+    "duration_api_ms": 28474,
+    "total_cost_usd": 0.0846925
+   }
+  ]
+ },
+ {
+  "id": "counter_ledger_1_exposed",
+  "case": "counter_ledger",
+  "arm": "exposed",
+  "seed": 2026091009,
+  "quality_ok": true,
+  "total_wall_ms": 86388.147,
+  "attempts": [
+   {
+    "code": "# registry.json 의 records 를 updates.json 행들로 id 기준 병합 (부분 갱신 + 신규 추가, 메타데이터 보존)\n\n# 1) 현재 상태 확인 (원본 보존용 스냅샷)\n$원본 = [self:read]{path: \"registry.json\"}\n$갱신 = [self:read]{path: \"updates.json\"}\n\n# 2) 안전장치 — 프로젝트 밖 scratchpad 에 원본 사본 (실패해도 진행)\n[on_error: skip] [self:copy]{src: \"registry.json\", dest: \"/private/tmp/claude-501/-private-var-folders-dj-b53qswrj4wl6k23mmmnqhtyc0000gn-T-exposure-model-5-4ombxu/cbcebd50-3f6d-4f9f-89de-f45064217251/scratchpad/registry.orig.json\"}\n\n# 3) records 자리만 id 키로 upsert — 같은 id 는 새 필드 값으로 갱신(기존 필드 보존), 없는 id 는 추가, records 밖 메타데이터는 손대지 않음\n[self:ledger]{op: \"upsert\", path: \"registry.json\", target: \"records\", key: \"id\", items_file: \"updates.json\"}\n\n# 4) 검증 — 저장된 결과 되읽기\n[self:read]{path: \"registry.json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "self:copy",
+     "self:ledger",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 741,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 5444,
+     "output_tokens_details": {
+      "thinking_tokens": 4930
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 741,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5444,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 741,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 741
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5444,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 741,
+      "webSearchRequests": 0,
+      "costUSD": 0.1756475,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4930,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 85985.782,
+    "duration_api_ms": 83587,
+    "total_cost_usd": 0.1756475
+   }
+  ]
+ },
+ {
+  "id": "counter_ledger_1_hidden",
+  "case": "counter_ledger",
+  "arm": "hidden",
+  "seed": 2026091009,
+  "quality_ok": true,
+  "total_wall_ms": 84809.793,
+  "attempts": [
+   {
+    "code": "# 1) 원본 두 파일을 먼저 읽어 구조와 내용을 확인한다 (지어내지 않고 실제 값으로 작업)\n$before = [self:read]{path: \"registry.json\"}\n$updates = [self:read]{path: \"updates.json\"}\n\n# 2) registry.json 의 records 배열에만 id 기준 upsert\n#    - 같은 id: 새 행의 필드로 갱신, 새 행에 없는 기존 필드는 보존\n#    - 없는 id: 추가\n#    - target 밖(메타데이터)은 건드리지 않음, updates.json 은 읽기만 함\n$result = [self:ledger]{op: \"upsert\", path: \"registry.json\", target: \"records\", key: \"id\", items_file: \"updates.json\"}\n\n# 3) 반영 결과 검증 — 저장된 registry.json 을 되읽어 records 와 메타데이터를 확인\n$after = [self:read]{path: \"registry.json\"}\n",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "self:ledger",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 735,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 5814,
+     "output_tokens_details": {
+      "thinking_tokens": 5448
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 735,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5814,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 735,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 735
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5814,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 735,
+      "webSearchRequests": 0,
+      "costUSD": 0.18382249999999997,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5448,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 84394.222,
+    "duration_api_ms": 82232,
+    "total_cost_usd": 0.18382249999999997
+   }
+  ]
+ },
+ {
+  "id": "counter_ledger_2_exposed",
+  "case": "counter_ledger",
+  "arm": "exposed",
+  "seed": 2026091110,
+  "quality_ok": true,
+  "total_wall_ms": 37060.041,
+  "attempts": [
+   {
+    "code": "# 1) 작업 폴더와 대상 파일 확인\n[self:list]{path: \".\"}\n\n# 2) 원본과 업데이트 내용을 그대로 읽어 둔다 (지어내지 않고 실제 구조 확인)\n$원본 = [self:read]{path: \"registry.json\"}\n$업데이트 = [self:read]{path: \"updates.json\"}\n\n# 3) records 배열만 id 기준으로 upsert — 같은 id는 새 필드로 갱신(기존 필드 보존), 없는 id는 추가.\n#    target 지정이므로 records 밖 메타데이터는 건드리지 않고, updates.json 은 읽기만 한다.\n[self:ledger]{op: \"upsert\", path: \"registry.json\", target: \"records\", key: \"id\", items_file: \"updates.json\"}\n\n# 4) 저장 결과 확인\n[self:read]{path: \"registry.json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:list",
+     "self:read",
+     "self:read",
+     "self:ledger",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 747,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 2348,
+     "output_tokens_details": {
+      "thinking_tokens": 2001
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 747,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2348,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 747,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 747
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2348,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 747,
+      "webSearchRequests": 0,
+      "costUSD": 0.0983075,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2001,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 36649.087,
+    "duration_api_ms": 34699,
+    "total_cost_usd": 0.0983075
+   }
+  ]
+ },
+ {
+  "id": "counter_ledger_2_hidden",
+  "case": "counter_ledger",
+  "arm": "hidden",
+  "seed": 2026091110,
+  "quality_ok": true,
+  "total_wall_ms": 72774.715,
+  "attempts": [
+   {
+    "code": "# 1) 대상 파일의 실제 경로 확인 (격리 폴더 기준)\n$regf = [self:file_find]{pattern: \"registry.json\"}\n$updf = [self:file_find]{pattern: \"updates.json\"}\n\n# 2) 원본 구조 확인 (records + 메타데이터, updates 행 구조)\n$before = [self:read]{path: \"registry.json\"}\n$upd = [self:read]{path: \"updates.json\"}\n\n# 3) records 배열만 id 기준 upsert — 같은 id는 새 필드 값으로 갱신(기존 필드 보존), 없는 id는 추가.\n#    원장 원자 갱신이라 records 이외 최상위 메타데이터는 그대로 유지된다. updates.json 은 읽기만 한다.\n[self:ledger]{op: \"upsert\", path: \"${regf.items.0.path}\", target: \"records\", key: \"id\", items_file: \"${updf.items.0.path}\"} ?? [self:ledger]{op: \"upsert\", path: \"registry.json\", target: \"records\", key: \"id\", items_file: \"updates.json\"}\n\n# 4) 검증 — 반영된 registry.json 전문 확인\n[self:read]{path: \"registry.json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "self:file_find",
+     "self:read",
+     "self:read",
+     "self:ledger",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 747,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 5051,
+     "output_tokens_details": {
+      "thinking_tokens": 4585
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 747,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5051,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 747,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 747
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5051,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 747,
+      "webSearchRequests": 0,
+      "costUSD": 0.16486750000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4585,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 72369.198,
+    "duration_api_ms": 70385,
+    "total_cost_usd": 0.16486750000000003
+   }
+  ]
+ },
+ {
+  "id": "direct_context_0_exposed",
+  "case": "direct_context",
+  "arm": "exposed",
+  "seed": 2026090901,
+  "quality_ok": true,
+  "total_wall_ms": 9049.664,
+  "attempts": [
+   {
+    "code": "# locations.json 의 위치 목록을 순서대로 읽어, 앞 3곳에서 각 지정 줄부터 5줄씩 본문을 모은다\n$위치 = [self:read]{path: \"locations.json\"}\n[fn:위치마다읽기]{위치: $위치, 개수: 3, 줄수: 5}",
+    "written_aliases": [
+     "위치마다읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "위치마다읽기"
+    ],
+    "leaf_calls": [
+     "self:read",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 734,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 345,
+     "output_tokens_details": {
+      "thinking_tokens": 218
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 734,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 345,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 734,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 734
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 345,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 734,
+      "webSearchRequests": 0,
+      "costUSD": 0.0481025,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 218,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 8645.022,
+    "duration_api_ms": 5563,
+    "total_cost_usd": 0.0481025
+   }
+  ]
+ },
+ {
+  "id": "direct_context_0_hidden",
+  "case": "direct_context",
+  "arm": "hidden",
+  "seed": 2026090901,
+  "quality_ok": false,
+  "total_wall_ms": 157204.097,
+  "attempts": [
+   {
+    "code": "# locations.json 의 위치 목록을 읽어, 각 위치에서 지정 줄부터 5줄씩 본문을 읽는다.\n# 없는 파일은 오류 행으로 남기고, 나머지 위치는 계속 처리한다.\n\n$src = [self:ledger]{op: \"select\", path: \"locations.json\"} ?? [self:struct]{file: \"locations.json\", schema: \"파일(파일 경로), 줄번호(시작 줄 번호)\"}\n\n$rows = $src >> [table:rename]{map: {파일: \"file_path\", file: \"file_path\", filename: \"file_path\", path: \"file_path\", 파일경로: \"file_path\", 줄번호: \"line_start\", line: \"line_start\", lineno: \"line_start\", line_no: \"line_start\", start_line: \"line_start\", 줄: \"line_start\"}} >> [table:compute]{set: {line_end: \"line_start + 4\"}}\n\n$out = $rows >> [table:each]{on_error: \"skip\"} {\n  $row = [{파일: $it.file_path, 줄번호: $it.line_start, 본문: null, 오류: \"읽기 실패\"}]\n  [try]{\n    $body = [self:read]{path: $it.file_path, start_line: $it.line_start, end_line: $it.line_end}\n    $row = [{파일: $it.file_path, 줄번호: $it.line_start, 본문: \"${body.content?}\", 오류: null}]\n  }\n  [catch]{\n    $row = [{파일: $it.file_path, 줄번호: $it.line_start, 본문: null, 오류: \"${error.summary?}\"}]\n  }\n  $return = $row\n}\n\n$out >> [self:write]{path: \"outputs/locations_read.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:ledger",
+     "table:rename"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 735,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 6869,
+     "output_tokens_details": {
+      "thinking_tokens": 6213
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 735,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 6869,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 735,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 735
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 6869,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 735,
+      "webSearchRequests": 0,
+      "costUSD": 0.2101975,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 6213,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 103102.191,
+    "duration_api_ms": 98998,
+    "total_cost_usd": 0.2101975
+   },
+   {
+    "code": "# locations.json 의 위치 목록을 순서대로 읽어, 각 위치에서 지정 줄부터 5줄씩 본문을 가져온다.\n# 파일이 없으면 그 위치와 오류를 남기고, 나머지 위치는 계속 읽는다.\n# (직전 실패 원인: table:rename 으로 여러 별칭을 한 이름에 접으려다 충돌 — 원래 열 이름 파일/줄번호를 그대로 쓴다)\n\n$src = [self:ledger]{op: \"select\", path: \"locations.json\"}\n\n$out = $src >> [table:each]{limit: 50} {\n  $끝 = $it.줄번호 + 4\n  $본문 = \"\"\n  $오류 = \"\"\n  [try]{\n    $r = [self:read]{path: \"${it.파일}\", start_line: ${it.줄번호}, end_line: ${끝}}\n    $본문 = \"${r.content?}\"\n  }\n  [catch]{\n    $오류 = \"${error.summary?}\"\n  }\n  [if: empty($본문) and empty($오류)]{\n    $오류 = \"본문을 읽지 못했습니다\"\n  }\n  $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본문, 오류: $오류}]\n}\n\n$out >> [self:write]{path: \"outputs/locations_read.json\", format: \"json\"}\n",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:ledger",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5268,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 3820,
+     "output_tokens_details": {
+      "thinking_tokens": 3292
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5268,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 3820,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5268,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5268
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 3820,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5268,
+      "webSearchRequests": 0,
+      "costUSD": 0.1793025,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 3292,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 53255.91,
+    "duration_api_ms": 51322,
+    "total_cost_usd": 0.1793025
+   }
+  ]
+ },
+ {
+  "id": "direct_context_1_exposed",
+  "case": "direct_context",
+  "arm": "exposed",
+  "seed": 2026091002,
+  "quality_ok": true,
+  "total_wall_ms": 14544.576,
+  "attempts": [
+   {
+    "code": "# locations.json 의 위치 목록에서 앞 3곳을 각 줄번호부터 5줄씩 읽는다\n$위치 = [self:read]{path: \"locations.json\"}\n[fn:위치마다읽기]{위치: $위치, 개수: 3, 줄수: 5}",
+    "written_aliases": [
+     "위치마다읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "위치마다읽기"
+    ],
+    "leaf_calls": [
+     "self:read",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 736,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 938,
+     "output_tokens_details": {
+      "thinking_tokens": 825
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 736,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 938,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 736,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 736
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 938,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 736,
+      "webSearchRequests": 0,
+      "costUSD": 0.0629475,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 825,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 14138.158,
+    "duration_api_ms": 12131,
+    "total_cost_usd": 0.0629475
+   }
+  ]
+ },
+ {
+  "id": "direct_context_1_hidden",
+  "case": "direct_context",
+  "arm": "hidden",
+  "seed": 2026091002,
+  "quality_ok": false,
+  "total_wall_ms": 189549.891,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n$원본 = [self:read]{path: \"locations.json\"}\n\n$결과 = $원본 >> [table:each] {\n  $경로 = \"${it.파일?}${it.file?}${it.path?}${it.filename?}\"\n  $줄값 = \"${it.줄번호?}${it.line?}${it.line_number?}${it.lineno?}${it.start_line?}\"\n  $시작 = $줄값 + 0\n  $끝 = $줄값 + 4\n  $return = [{파일: $경로, 줄번호: $시작, 본문: null, 오류: \"읽지 못함\"}]\n  [try]{\n    $읽기 = [self:read]{path: $경로, start_line: $시작, end_line: $끝}\n    $return = [{파일: $경로, 줄번호: $시작, 본문: \"${읽기.content?}${읽기.text?}\", 오류: null}]\n  }\n  [catch]{\n    $return = [{파일: $경로, 줄번호: $시작, 본문: null, 오류: \"${error.summary?}\"}]\n  }\n}\n\n$결과 >> [self:write]{path: \"outputs/locations_read.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 739,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 10681,
+     "output_tokens_details": {
+      "thinking_tokens": 10230
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 739,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 10681,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 739,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 739
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 10681,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 739,
+      "webSearchRequests": 0,
+      "costUSD": 0.3055375,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 10230,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 160206.314,
+    "duration_api_ms": 158025,
+    "total_cost_usd": 0.3055375
+   },
+   {
+    "code": "$원본 = [self:read]{path: \"locations.json\"}\n\n$결과 = $원본 >> [table:each]{limit: 50} {\n  $경로 = $it.파일\n  $시작 = $it.줄번호\n  $끝 = $it.줄번호 + 4\n  $return = [{파일: $경로, 줄번호: $시작, 본문: null, 오류: \"읽지 못함\"}]\n  [try]{\n    $읽기 = [self:read]{path: $경로, start_line: $시작, end_line: $끝}\n    $return = [{파일: $경로, 줄번호: $시작, 본문: \"${읽기.content?}${읽기.text?}\", 오류: null}]\n  }\n  [catch]{\n    $return = [{파일: $경로, 줄번호: $시작, 본문: null, 오류: \"${error.summary?}\"}]\n  }\n}\n\n$결과 >> [self:write]{path: \"outputs/locations_read.json\", format: \"json\"}\n$결과 >> [self:write]{path: \"locations_read.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5461,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 2023,
+     "output_tokens_details": {
+      "thinking_tokens": 1629
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5461,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2023,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5461,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5461
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2023,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5461,
+      "webSearchRequests": 0,
+      "costUSD": 0.1363075,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1629,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 28519.203,
+    "duration_api_ms": 26409,
+    "total_cost_usd": 0.1363075
+   }
+  ]
+ },
+ {
+  "id": "direct_context_2_exposed",
+  "case": "direct_context",
+  "arm": "exposed",
+  "seed": 2026091103,
+  "quality_ok": true,
+  "total_wall_ms": 8940.325,
+  "attempts": [
+   {
+    "code": "$위치 = [self:read]{path: \"locations.json\"}\n[fn:위치마다읽기]{위치: $위치, 개수: 3, 줄수: 5}",
+    "written_aliases": [
+     "위치마다읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "위치마다읽기"
+    ],
+    "leaf_calls": [
+     "self:read",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 729,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 409,
+     "output_tokens_details": {
+      "thinking_tokens": 341
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 729,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 409,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 729,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 729
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 409,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 729,
+      "webSearchRequests": 0,
+      "costUSD": 0.0496525,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 341,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 8534.816,
+    "duration_api_ms": 6355,
+    "total_cost_usd": 0.0496525
+   }
+  ]
+ },
+ {
+  "id": "direct_context_2_hidden",
+  "case": "direct_context",
+  "arm": "hidden",
+  "seed": 2026091103,
+  "quality_ok": false,
+  "total_wall_ms": 172825.616,
+  "attempts": [
+   {
+    "code": "# 1) 위치 목록 읽기 (JSON 원장 → 폴백 일반 읽기)\n$src = [self:ledger]{op: \"select\", path: \"locations.json\"} ?? [self:read]{path: \"locations.json\"}\n\n# 2) 목록 순서대로 각 위치에서 지정 줄부터 5줄 읽기 — 없는 파일은 오류를 행에 남기고 계속\n$rows = $src >> [table:each]{limit: 50} {\n  $p = \"${it.파일?}${it.file?}${it.path?}\"\n  $ln = \"${it.줄번호?}${it.line?}${it.line_no?}\"\n  $end = $ln + 4\n  $return = [{파일: $p, 줄번호: $ln, 본문: null, 오류: \"읽기 실패\"}]\n  [try]{\n    $t = [self:read]{path: \"$p\", start_line: $ln, end_line: $end}\n    $return = [{파일: $p, 줄번호: $ln, 본문: \"${t.content?}${t.text?}${t.본문?}\", 오류: null}]\n  }\n  [catch]{\n    $return = [{파일: $p, 줄번호: $ln, 본문: null, 오류: \"$error.summary\"}]\n  }\n}\n\n# 3) 결과 저장 (행 배열/items 봉투)\n$rows >> [self:write]{path: \"outputs/locations_read.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:ledger",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 737,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 8694,
+     "output_tokens_details": {
+      "thinking_tokens": 8164
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 737,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 8694,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 737,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 737
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 8694,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 737,
+      "webSearchRequests": 0,
+      "costUSD": 0.25584250000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 8164,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 133726.988,
+    "duration_api_ms": 131300,
+    "total_cost_usd": 0.25584250000000003
+   },
+   {
+    "code": "# 1) 위치 목록 읽기 (파일·줄번호 열)\n[self:mkdir]{path: \"outputs\"}\n$src = [self:ledger]{op: \"select\", path: \"locations.json\"} ?? [self:read]{path: \"locations.json\"}\n\n# 2) 목록 순서대로 각 위치에서 지정 줄부터 5줄 읽기 — 줄번호는 숫자 그대로 쓴다(문자열 보간 금지)\n$rows = $src >> [table:each]{limit: 50, on_error: \"skip\"} {\n  $p = $it.파일\n  $ln = $it.줄번호\n  $end = $ln + 4\n  $return = [{파일: $p, 줄번호: $ln, 본문: null, 오류: \"읽기 실패\"}]\n  [try]{\n    $t = [self:read]{path: \"$p\", start_line: $ln, end_line: $end}\n    $body = \"${t.content?}${t.text?}${t.본문?}\"\n    $err = null if $body != \"\" else \"읽기 실패: 본문 없음\"\n    $return = [{파일: $p, 줄번호: $ln, 본문: $body, 오류: $err}]\n  }\n  [catch]{\n    $return = [{파일: $p, 줄번호: $ln, 본문: null, 오류: \"$error.summary\"}]\n  }\n}\n\n# 3) 결과 저장 (파일·줄번호·본문·오류 행 배열)\n$rows >> [self:write]{path: \"outputs/locations_read.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. locations.json은 파일·줄번호 열이 있는 위치 목록이다. 목록 순서대로 세 위치에서 각각 지정 줄부터 5줄씩 본문을 읽어 줘. 파일·줄번호·본문을 반환하고, 없는 파일은 해당 위치와 오류를 남겨 줘. 한 곳이 없어도 나머지는 읽어야 한다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:ledger",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5266,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 2802,
+     "output_tokens_details": {
+      "thinking_tokens": 2228
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5266,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2802,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5266,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5266
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2802,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5266,
+      "webSearchRequests": 0,
+      "costUSD": 0.15383249999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2228,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 38274.871,
+    "duration_api_ms": 36335,
+    "total_cost_usd": 0.15383249999999998
+   }
+  ]
+ },
+ {
+  "id": "direct_latest_0_exposed",
+  "case": "direct_latest",
+  "arm": "exposed",
+  "seed": 2026090900,
+  "quality_ok": true,
+  "total_wall_ms": 8620.449,
+  "attempts": [
+   {
+    "code": "$본문 = [fn:최신범위읽기]{폴더: \"drafts\", 패턴: \"*.md\", 시작줄: 11, 줄수: 12}\n$본문",
+    "written_aliases": [
+     "최신범위읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "최신범위읽기"
+    ],
+    "leaf_calls": [
+     "self:file_find",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 696,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 360,
+     "output_tokens_details": {
+      "thinking_tokens": 288
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 696,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 360,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 696,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 696
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 360,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 696,
+      "webSearchRequests": 0,
+      "costUSD": 0.04809750000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 288,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 8222.36,
+    "duration_api_ms": 6155,
+    "total_cost_usd": 0.04809750000000001
+   }
+  ]
+ },
+ {
+  "id": "direct_latest_0_hidden",
+  "case": "direct_latest",
+  "arm": "hidden",
+  "seed": 2026090900,
+  "quality_ok": true,
+  "total_wall_ms": 38193.6,
+  "attempts": [
+   {
+    "code": "# drafts/*.md 중 mtime 최신 1건의 11~22줄 본문 추출\n$후보 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$경로 = $후보.items.0.path\n$본문 = [self:read]{path: \"${경로}\", start_line: 11, end_line: 22}\n$본문 >> [self:write]{path: \"outputs/draft_latest_lines_11_22.md\"}\n[self:read]{path: \"${경로}\", start_line: 11, end_line: 22}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 692,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 2966,
+     "output_tokens_details": {
+      "thinking_tokens": 2728
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 692,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2966,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 692,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 692
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2966,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 692,
+      "webSearchRequests": 0,
+      "costUSD": 0.11219249999999999,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2728,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 37794.868,
+    "duration_api_ms": 35806,
+    "total_cost_usd": 0.11219249999999999
+   }
+  ]
+ },
+ {
+  "id": "direct_latest_1_exposed",
+  "case": "direct_latest",
+  "arm": "exposed",
+  "seed": 2026091001,
+  "quality_ok": true,
+  "total_wall_ms": 5617.538,
+  "attempts": [
+   {
+    "code": "[fn:최신범위읽기]{폴더: \"drafts\", 패턴: \"*.md\", 시작줄: 11, 줄수: 12}",
+    "written_aliases": [
+     "최신범위읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "최신범위읽기"
+    ],
+    "leaf_calls": [
+     "self:file_find",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 697,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 150,
+     "output_tokens_details": {
+      "thinking_tokens": 88
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 697,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 150,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 697,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 697
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 150,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 697,
+      "webSearchRequests": 0,
+      "costUSD": 0.04285750000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 88,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 5225.182,
+    "duration_api_ms": 3170,
+    "total_cost_usd": 0.04285750000000001
+   }
+  ]
+ },
+ {
+  "id": "direct_latest_1_hidden",
+  "case": "direct_latest",
+  "arm": "hidden",
+  "seed": 2026091001,
+  "quality_ok": false,
+  "total_wall_ms": 136705.725,
+  "attempts": [
+   {
+    "code": "# drafts/*.md 중 수정시각(mtime) 최신 파일의 11~22줄 본문 추출\n$목록 = [self:file_find]{pattern: \"drafts/*.md\"} ?? [self:file_find]{path: \"drafts\", pattern: \"*.md\"}\n$최신 = $목록 >> [table:select]{columns: [\"name\", \"path\", \"mtime\", \"size\"]} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$경로 = \"${최신.items.0.path}\"\n$본문 = [self:read]{path: \"$경로\", start_line: 11, end_line: 22}\n$본문 >> [self:write]{path: \"outputs/latest_draft_lines_11_22.md\"}\n$행 = [{path: \"$경로\", name: \"${최신.items.0.name}\", mtime: \"${최신.items.0.mtime}\", start_line: 11, end_line: 22, content: \"${본문.content?}\"}]\n$행 >> [self:write]{path: \"outputs/result.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. drafts/*.md의 문서 중 가장 최근에 수정된 문서에서 11~22줄 본문을 반환해 줘. 파일명의 날짜가 아니라 수정시각 기준이다. 후보는 4개, 수정시각 동률은 없고 모두 80줄이다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:select",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 701,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 1862,
+     "output_tokens_details": {
+      "thinking_tokens": 1456
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 701,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1862,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 701,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 701
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1862,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 701,
+      "webSearchRequests": 0,
+      "costUSD": 0.08468250000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1456,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 28091.72,
+    "duration_api_ms": 26129,
+    "total_cost_usd": 0.08468250000000001
+   },
+   {
+    "code": "# drafts/*.md 중 수정시각(mtime)이 가장 최근인 문서의 11~22줄 본문 추출\n$목록 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} ?? [self:file_find]{pattern: \"drafts/*.md\"}\n$최신 = $목록 >> [table:select]{columns: [\"name\", \"path\", \"mtime\", \"size\"]} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$경로 = \"${최신.items.0.path}\"\n$이름 = \"${최신.items.0.name}\"\n$수정시각 = \"${최신.items.0.mtime}\"\n\n# (1) 본문 텍스트: 파일의 11~22줄만 읽는다\n$본문 = [self:read]{path: \"$경로\", start_line: 11, end_line: 22}\n$텍스트 = \"\"\n[if: exists($본문.content)]{$텍스트 = \"${본문.content}\"}\n[else if: exists($본문.text)]{$텍스트 = \"${본문.text}\"}\n[else if: exists($본문.message)]{$텍스트 = \"${본문.message}\"}\n\n# (2) 줄 단위 원문 보존: 그 파일의 모든 줄을 줄번호와 함께 받아 11~22만 남긴다\n$원줄 = [self:grep]{pattern: \"^\", root_path: \"drafts\", file_pattern: \"$이름\", regex: true, limit: 300} ?? [self:grep]{pattern: \".\", root_path: \"drafts\", file_pattern: \"$이름\", regex: true, limit: 300}\n$줄 = $원줄 >> [table:filter]{where: {field: \"줄번호\", op: \">=\", value: 11}} >> [table:filter]{where: {field: \"줄번호\", op: \"<=\", value: 22}} >> [table:rename]{map: {\"파일\": \"file\", \"줄번호\": \"line\", \"내용\": \"text\"}} >> [table:select]{columns: [\"file\", \"line\", \"text\"]} >> [table:sort]{by: \"line\"}\n\n# (3) 결과 원장: 줄 행이 있으면 12행, 없으면 본문 한 행\n$대체 = [{file: \"$경로\", name: \"$이름\", mtime: \"$수정시각\", start_line: 11, end_line: 22, text: \"$텍스트\"}]\n[if: empty($줄)]{$대체 >> [self:write]{path: \"outputs/result.json\", format: \"json\"}}\n[else]{$줄 >> [self:write]{path: \"outputs/result.json\", format: \"json\"}}\n\n# (4) 본문 파일 (산문 그대로)\n[if: exists($본문.content)]{[self:write]{path: \"outputs/latest_draft_lines_11_22.md\", content: \"${본문.content}\"}}\n[else if: exists($본문.text)]{[self:write]{path: \"outputs/latest_draft_lines_11_22.md\", content: \"${본문.text}\"}}\n[else]{$본문 >> [self:write]{path: \"outputs/latest_draft_lines_11_22.md\"}}\n",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. drafts/*.md의 문서 중 가장 최근에 수정된 문서에서 11~22줄 본문을 반환해 줘. 파일명의 날짜가 아니라 수정시각 기준이다. 후보는 4개, 수정시각 동률은 없고 모두 80줄이다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:select",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:grep",
+     "table:filter",
+     "table:filter",
+     "table:rename",
+     "table:select",
+     "table:sort",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5206,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 8530,
+     "output_tokens_details": {
+      "thinking_tokens": 7348
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5206,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 8530,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5206,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5206
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 8530,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5206,
+      "webSearchRequests": 0,
+      "costUSD": 0.2964325,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 7348,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 107792.674,
+    "duration_api_ms": 103999,
+    "total_cost_usd": 0.2964325
+   }
+  ]
+ },
+ {
+  "id": "direct_latest_2_exposed",
+  "case": "direct_latest",
+  "arm": "exposed",
+  "seed": 2026091102,
+  "quality_ok": true,
+  "total_wall_ms": 6084.468,
+  "attempts": [
+   {
+    "code": "[fn:최신범위읽기]{폴더: \"drafts\", 패턴: \"*.md\", 시작줄: 11, 줄수: 12}",
+    "written_aliases": [
+     "최신범위읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "최신범위읽기"
+    ],
+    "leaf_calls": [
+     "self:file_find",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "self:read"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 698,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 162,
+     "output_tokens_details": {
+      "thinking_tokens": 100
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 698,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 162,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 698,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 698
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 162,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 698,
+      "webSearchRequests": 0,
+      "costUSD": 0.043167500000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 100,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 5661.545,
+    "duration_api_ms": 3536,
+    "total_cost_usd": 0.043167500000000004
+   }
+  ]
+ },
+ {
+  "id": "direct_latest_2_hidden",
+  "case": "direct_latest",
+  "arm": "hidden",
+  "seed": 2026091102,
+  "quality_ok": false,
+  "total_wall_ms": 52709.852,
+  "attempts": [
+   {
+    "code": "# drafts/*.md 중 수정시각(mtime) 최신 문서의 11~22줄 본문\n$목록 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} ?? [self:file_find]{path: \".\", pattern: \"drafts/*.md\"}\n$최신 = $목록 >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$본문 = [self:read]{path: \"${최신.items.0.path}\", start_line: 11, end_line: 22}\n$본문 >> [self:write]{path: \"outputs/excerpt.md\"}\n[{path: \"${최신.items.0.path}\", mtime: \"${최신.items.0.mtime}\", start_line: 11, end_line: 22, content: \"$본문\"}] >> [self:write]{path: \"outputs/result.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "IBLSyntaxError: 파싱 실패: [{path: \"${최신.items.0.path}\", mtime: \"${최신.items.0.mtime}\", start_line: 11, end_line: 22, content: \"$본문\"}]",
+    "fn_calls": [],
+    "leaf_calls": [],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 701,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 2189,
+     "output_tokens_details": {
+      "thinking_tokens": 1860
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 701,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2189,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 701,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 701
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2189,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 701,
+      "webSearchRequests": 0,
+      "costUSD": 0.0928575,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1860,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 28069.677,
+    "duration_api_ms": 25636,
+    "total_cost_usd": 0.0928575
+   },
+   {
+    "code": "# drafts/*.md 중 수정시각(mtime) 최신 문서의 11~22줄 본문\n$목록 = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} ?? [self:file_find]{path: \".\", pattern: \"drafts/*.md\"}\n$최신 = $목록 >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$경로 = \"${최신.items.0.path}\"\n$수정시각 = \"${최신.items.0.mtime?}\"\n$본문 = [self:read]{path: \"$경로\", start_line: 11, end_line: 22}\n$본문 >> [self:write]{path: \"outputs/excerpt.md\"}\n$결과 = [{path: \"$경로\", mtime: \"$수정시각\", start_line: 11, end_line: 22, content: \"${본문.content?}\", text: \"${본문.text?}\", raw: \"$본문\"}]\n$결과 >> [self:write]{path: \"outputs/result.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. drafts/*.md의 문서 중 가장 최근에 수정된 문서에서 11~22줄 본문을 반환해 줘. 파일명의 날짜가 아니라 수정시각 기준이다. 후보는 4개, 수정시각 동률은 없고 모두 80줄이다.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 1242,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 1648,
+     "output_tokens_details": {
+      "thinking_tokens": 1255
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 1242,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1648,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 1242,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 1242
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1648,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 1242,
+      "webSearchRequests": 0,
+      "costUSD": 0.08474250000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1255,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 24088.74,
+    "duration_api_ms": 22083,
+    "total_cost_usd": 0.08474250000000001
+   }
+  ]
+ },
+ {
+  "id": "direct_ledger_0_exposed",
+  "case": "direct_ledger",
+  "arm": "exposed",
+  "seed": 2026090902,
+  "quality_ok": true,
+  "total_wall_ms": 8070.216,
+  "attempts": [
+   {
+    "code": "# existing.json + arrivals.json → outputs/archive.json (id+kind 복합키, 선행 행 보존)\n$옛것 = [self:read]{path: \"existing.json\"}\n$새것 = [self:read]{path: \"arrivals.json\"}\n[fn:원장에누적]{옛것: \"$옛것\", 새것: \"$새것\", 키: [\"id\", \"kind\"], 원장: \"outputs/archive.json\"}",
+    "written_aliases": [
+     "원장에누적"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "원장에누적"
+    ],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "table:union",
+     "table:dedup",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 739,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 424,
+     "output_tokens_details": {
+      "thinking_tokens": 255
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 739,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 424,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 739,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 739
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 424,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 739,
+      "webSearchRequests": 0,
+      "costUSD": 0.050127500000000005,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 255,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 7668.584,
+    "duration_api_ms": 5764,
+    "total_cost_usd": 0.050127500000000005
+   }
+  ]
+ },
+ {
+  "id": "direct_ledger_0_hidden",
+  "case": "direct_ledger",
+  "arm": "hidden",
+  "seed": 2026090902,
+  "quality_ok": true,
+  "total_wall_ms": 56498.294,
+  "attempts": [
+   {
+    "code": "# existing.json + arrivals.json → outputs/archive.json (id+kind 기준 중복 제거, 먼저 있던 행 보존)\n$기존 = [self:read]{path: \"existing.json\"}\n$신규 = [self:read]{path: \"arrivals.json\"}\n$기존 & $신규 >> [table:union] >> [table:dedup]{by: [\"id\", \"kind\"]} >> [self:write]{path: \"outputs/archive.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "table:union",
+     "table:dedup",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 739,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 3930,
+     "output_tokens_details": {
+      "thinking_tokens": 3748
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 739,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 3930,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 739,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 739
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 3930,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 739,
+      "webSearchRequests": 0,
+      "costUSD": 0.1367625,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 3748,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 56096.349,
+    "duration_api_ms": 54115,
+    "total_cost_usd": 0.1367625
+   }
+  ]
+ },
+ {
+  "id": "direct_ledger_1_exposed",
+  "case": "direct_ledger",
+  "arm": "exposed",
+  "seed": 2026091003,
+  "quality_ok": true,
+  "total_wall_ms": 9049.61,
+  "attempts": [
+   {
+    "code": "# existing.json + arrivals.json → outputs/archive.json (id·kind 복합키, 먼저 있던 행 보존)\n$옛것 = [self:read]{path: \"existing.json\"}\n$새것 = [self:read]{path: \"arrivals.json\"}\n[fn:원장에누적]{옛것: \"$옛것\", 새것: \"$새것\", 키: [\"id\", \"kind\"], 원장: \"outputs/archive.json\"}",
+    "written_aliases": [
+     "원장에누적"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "원장에누적"
+    ],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "table:union",
+     "table:dedup",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 735,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 433,
+     "output_tokens_details": {
+      "thinking_tokens": 260
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 735,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 433,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 735,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 735
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 433,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 735,
+      "webSearchRequests": 0,
+      "costUSD": 0.0503125,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 260,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 8646.596,
+    "duration_api_ms": 6281,
+    "total_cost_usd": 0.0503125
+   }
+  ]
+ },
+ {
+  "id": "direct_ledger_1_hidden",
+  "case": "direct_ledger",
+  "arm": "hidden",
+  "seed": 2026091003,
+  "quality_ok": true,
+  "total_wall_ms": 70974.07,
+  "attempts": [
+   {
+    "code": "# existing.json + arrivals.json 을 합쳐 outputs/archive.json 에 보관 (입력 파일은 읽기만)\n$기존 = [self:read]{path: \"existing.json\"}\n$신규 = [self:read]{path: \"arrivals.json\"}\n$기존행 = $기존 >> [table:take]{n: 100000}\n$신규행 = $신규 >> [table:take]{n: 100000}\n$기존행.items & $신규행.items >> [table:union] >> [table:dedup]{by: [\"id\", \"kind\"]} >> [self:write]{path: \"outputs/archive.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "table:take",
+     "table:take",
+     "table:union",
+     "table:dedup",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 734,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 5156,
+     "output_tokens_details": {
+      "thinking_tokens": 4920
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 734,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5156,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 734,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 734
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5156,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 734,
+      "webSearchRequests": 0,
+      "costUSD": 0.16736250000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4920,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 70570.069,
+    "duration_api_ms": 68527,
+    "total_cost_usd": 0.16736250000000003
+   }
+  ]
+ },
+ {
+  "id": "direct_ledger_2_exposed",
+  "case": "direct_ledger",
+  "arm": "exposed",
+  "seed": 2026091104,
+  "quality_ok": true,
+  "total_wall_ms": 9265.923,
+  "attempts": [
+   {
+    "code": "$옛것 = [self:read]{path: \"existing.json\"}\n$새것 = [self:read]{path: \"arrivals.json\"}\n[fn:원장에누적]{옛것: \"$옛것\", 새것: \"$새것\", 키: [\"id\", \"kind\"], 원장: \"outputs/archive.json\"}",
+    "written_aliases": [
+     "원장에누적"
+    ],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "원장에누적"
+    ],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "table:union",
+     "table:dedup",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 730,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 468,
+     "output_tokens_details": {
+      "thinking_tokens": 341
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 730,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 468,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 730,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 730
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 468,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 730,
+      "webSearchRequests": 0,
+      "costUSD": 0.0511375,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 341,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 8860.048,
+    "duration_api_ms": 6873,
+    "total_cost_usd": 0.0511375
+   }
+  ]
+ },
+ {
+  "id": "direct_ledger_2_hidden",
+  "case": "direct_ledger",
+  "arm": "hidden",
+  "seed": 2026091104,
+  "quality_ok": true,
+  "total_wall_ms": 139653.571,
+  "attempts": [
+   {
+    "code": "# existing.json + arrivals.json 병합 → outputs/archive.json (id+kind 복합키, 선착순 보존)\n$ex = [self:read]{path: \"existing.json\"}\n$ar = [self:read]{path: \"arrivals.json\"}\n$all = $ex & $ar >> [table:union]\n$all >> [table:dedup]{by: [\"id\", \"kind\"]} >> [self:write]{path: \"outputs/archive.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "self:read",
+     "table:union",
+     "table:dedup",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 735,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 9717,
+     "output_tokens_details": {
+      "thinking_tokens": 9538
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 735,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 9717,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 735,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 735
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 9717,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 735,
+      "webSearchRequests": 0,
+      "costUSD": 0.2813975,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 9538,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 139254.491,
+    "duration_api_ms": 136915,
+    "total_cost_usd": 0.2813975
+   }
+  ]
+ },
+ {
+  "id": "embedded_context_0_exposed",
+  "case": "embedded_context",
+  "arm": "exposed",
+  "seed": 2026090904,
+  "quality_ok": true,
+  "total_wall_ms": 26920.666,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n$원본 = [self:read]{path: \"review_locations.json\"}\n\n$대상 = $원본 >> [table:filter]{where: \"state == 'open' and priority >= 3\"} >> [table:sort]{by: \"파일\"}\n\n$스니펫 = [fn:위치마다읽기]{위치: $대상, 개수: 3, 줄수: 5} >> [table:rename]{map: {value: \"본문\"}}\n\n$스니펫 >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n$원본 >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"파일\"} >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}",
+    "written_aliases": [
+     "위치마다읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "위치마다읽기"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "table:rename",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 843,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 1984,
+     "output_tokens_details": {
+      "thinking_tokens": 1680
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 843,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1984,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 843,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 843
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1984,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 843,
+      "webSearchRequests": 0,
+      "costUSD": 0.09016750000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1680,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 26516.219,
+    "duration_api_ms": 24350,
+    "total_cost_usd": 0.09016750000000001
+   }
+  ]
+ },
+ {
+  "id": "embedded_context_0_hidden",
+  "case": "embedded_context",
+  "arm": "hidden",
+  "seed": 2026090904,
+  "quality_ok": true,
+  "total_wall_ms": 108481.117,
+  "attempts": [
+   {
+    "code": "# 수정 검토 자료 준비 — 입력은 읽기만 한다\n[self:mkdir]{path: \"outputs\"}\n\n$본 = [self:read]{path: \"review_locations.json\"}\n\n# state=open, priority>=3 → 파일명 오름차순 앞 3곳\n$열림 = $본 >> [table:filter]{where: \"state == 'open'\"} >> [table:filter]{where: \"priority >= 3\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3}\n\n# 각 위치의 지정 줄부터 5줄 수집 (실패하면 위치+오류를 남긴다)\n$조각 = $열림 >> [table:each]{} {\n  $경로 = $it.파일\n  $시작 = $it.줄번호\n  $끝 = $it.줄번호 + 4\n  $return = [{파일: $경로, 줄번호: $시작, 오류: \"읽을 수 없음\"}]\n  [try]{\n    $r = [self:read]{path: $경로, start_line: $시작, end_line: $끝}\n    $return = [{파일: $경로, 줄번호: $시작, 본문: \"${r.content?}${r.text?}\"}]\n  }\n  [catch]{\n    $return = [{파일: $경로, 줄번호: $시작, 오류: \"$error.summary\"}]\n  }\n}\n\n$조각 >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n# state=closed 원래 행 전부 (파일명 오름차순)\n$본 >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"파일\"} >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. 수정 검토 자료를 준비해 줘. review_locations.json에는 파일·줄번호·state·priority 열이 있다. state=open, priority>=3인 위치를 파일명 오름차순으로 정렬한 앞 세 곳의 지정 줄부터 5줄씩 본문을 수집해서 outputs/snippets.json에 저장해 줘. 각 결과에는 파일·줄번호·본문이 필요하고 읽을 수 없는 곳은 위치와 오류를 남긴다. 별도로 state=closed인 원래 행 전부를 파일명 오름차순으로 outputs/closed.jso",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 835,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 5214,
+     "output_tokens_details": {
+      "thinking_tokens": 4567
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 835,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5214,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 835,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 835
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5214,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 835,
+      "webSearchRequests": 0,
+      "costUSD": 0.16982250000000002,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4567,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 68861.336,
+    "duration_api_ms": 66856,
+    "total_cost_usd": 0.16982250000000002
+   },
+   {
+    "code": "# 수정 검토 자료 준비 — 입력 파일(review_locations.json)은 읽기만 한다\n$본 = [self:read]{path: \"review_locations.json\"}\n\n# state=open, priority>=3 → 파일명 오름차순 앞 3곳\n$열림 = $본 >> [table:filter]{where: \"state == 'open'\"} >> [table:filter]{where: \"priority >= 3\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3}\n\n# 각 위치의 지정 줄부터 5줄 수집 (읽기 실패면 위치+오류)\n$조각 = $열림 >> [table:each]{} {\n  $경로 = $it.파일\n  $시작 = $it.줄번호\n  $끝 = $it.줄번호 + 4\n  $return = [{파일: $경로, 줄번호: $시작, 오류: \"읽을 수 없음\"}]\n  [try]{\n    $r = [self:read]{path: $경로, start_line: $시작, end_line: $끝}\n    $return = [{파일: $경로, 줄번호: $시작, 본문: $r}]\n  }\n  [catch]{\n    $return = [{파일: $경로, 줄번호: $시작, 오류: \"$error.summary\"}]\n  }\n}\n\n$조각 >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n# state=closed 원래 행 전부 (파일명 오름차순)\n$본 >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"파일\"} >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5389,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 2964,
+     "output_tokens_details": {
+      "thinking_tokens": 2346
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5389,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2964,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5389,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5389
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2964,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5389,
+      "webSearchRequests": 0,
+      "costUSD": 0.1591125,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2346,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 38815.917,
+    "duration_api_ms": 36921,
+    "total_cost_usd": 0.1591125
+   }
+  ]
+ },
+ {
+  "id": "embedded_context_1_exposed",
+  "case": "embedded_context",
+  "arm": "exposed",
+  "seed": 2026091005,
+  "quality_ok": true,
+  "total_wall_ms": 35079.249,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n$본 = [self:read]{path: \"review_locations.json\"}\n$대상 = $본 >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"open\"}} >> [table:filter]{where: {field: \"priority\", op: \"gte\", value: 3}} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3}\n$조각 = [fn:위치마다읽기]{위치: $대상, 개수: 3, 줄수: 5} >> [table:rename]{map: {value: \"본문\"}}\n$조각 >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n$본 >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"closed\"}} >> [table:sort]{by: \"파일\"} >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}",
+    "written_aliases": [
+     "위치마다읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "위치마다읽기"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "table:rename",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 835,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 2727,
+     "output_tokens_details": {
+      "thinking_tokens": 2372
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 835,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2727,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 835,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 835
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2727,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 835,
+      "webSearchRequests": 0,
+      "costUSD": 0.1086625,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2372,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 34662.602,
+    "duration_api_ms": 32755,
+    "total_cost_usd": 0.1086625
+   }
+  ]
+ },
+ {
+  "id": "embedded_context_1_hidden",
+  "case": "embedded_context",
+  "arm": "hidden",
+  "seed": 2026091005,
+  "quality_ok": false,
+  "total_wall_ms": 141425.106,
+  "attempts": [
+   {
+    "code": "# 수정 검토 자료 준비 — 입력은 읽기만 한다\n[self:mkdir]{path: \"outputs\"}\n\n$본 = [self:read]{path: \"review_locations.json\"}\n\n# open + priority>=3 → 파일명 오름차순 앞 3곳, 끝줄(시작+4) 계산\n$대상 = $본 >> [table:filter]{where: \"state == 'open'\"} >> [table:filter]{where: \"priority >= 3\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3} >> [table:compute]{set: {끝줄: \"줄번호 + 4\"}}\n\n# 각 위치에서 지정 줄부터 5줄 수집 — 실패하면 위치와 오류를 남긴다\n$스니펫 = [table:each]{items: \"$대상\", as: \"it\"} {\n  [try]{\n    $읽음 = [self:read]{path: \"${it.파일}\", start_line: $it.줄번호, end_line: $it.끝줄}\n    $return = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $읽음.content}]\n  }\n  [catch]{\n    $return = [{파일: $it.파일, 줄번호: $it.줄번호, 오류: $error.summary}]\n  }\n}\n$스니펫 >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n# state=closed 원래 행 전부 — 파일명 오름차순\n$본 >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"파일\"} >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. 수정 검토 자료를 준비해 줘. review_locations.json에는 파일·줄번호·state·priority 열이 있다. state=open, priority>=3인 위치를 파일명 오름차순으로 정렬한 앞 세 곳의 지정 줄부터 5줄씩 본문을 수집해서 outputs/snippets.json에 저장해 줘. 각 결과에는 파일·줄번호·본문이 필요하고 읽을 수 없는 곳은 위치와 오류를 남긴다. 별도로 state=closed인 원래 행 전부를 파일명 오름차순으로 outputs/closed.jso",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:compute",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 836,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 4891,
+     "output_tokens_details": {
+      "thinking_tokens": 4261
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 836,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 4891,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 836,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 836
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 4891,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 836,
+      "webSearchRequests": 0,
+      "costUSD": 0.16175750000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 4261,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 63278.666,
+    "duration_api_ms": 61034,
+    "total_cost_usd": 0.16175750000000003
+   },
+   {
+    "code": "# 수정 검토 자료 준비 — 입력 파일(review_locations.json)은 읽기만 한다\n$본 = [self:read]{path: \"review_locations.json\"}\n\n# state=open · priority>=3 → 파일명 오름차순 앞 3곳, 끝줄(시작+4) 계산\n$대상 = $본 >> [table:filter]{where: \"state == 'open'\"} >> [table:filter]{where: \"priority >= 3\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3} >> [table:compute]{set: {끝줄: \"줄번호 + 4\"}}\n\n# 각 위치에서 지정 줄부터 5줄 수집 — 반환 모양을 가리지 않고 본문을 확보, 실패는 위치+오류로 남긴다\n$스니펫 = [table:each]{items: \"$대상\", as: \"it\"} {\n  $읽음 = \"\"\n  $본문 = \"\"\n  $오류 = \"\"\n  $결과 = []\n  [try]{\n    $읽음 = [self:read]{path: \"${it.파일}\", start_line: ${it.줄번호}, end_line: ${it.끝줄}}\n    $오류 = \"${읽음.error?}\"\n    $본문 = \"${읽음.content?}${읽음.text?}\"\n  }\n  [catch]{\n    $오류 = \"${error.summary?}\"\n  }\n  [if: empty($본문) and empty($오류)]{\n    $본문 = \"${읽음}\"\n  }\n  [if: empty($오류)]{\n    $결과 = [{파일: $it.파일, 줄번호: $it.줄번호, 본문: $본문}]\n  }\n  [else]{\n    $결과 = [{파일: $it.파일, 줄번호: $it.줄번호, 오류: $오류}]\n  }\n  $return = $결과\n}\n$스니펫 >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n# state=closed 원래 행 전부 — 파일명 오름차순\n$본 >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"파일\"} >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. 수정 검토 자료를 준비해 줘. review_locations.json에는 파일·줄번호·state·priority 열이 있다. state=open, priority>=3인 위치를 파일명 오름차순으로 정렬한 앞 세 곳의 지정 줄부터 5줄씩 본문을 수집해서 outputs/snippets.json에 저장해 줘. 각 결과에는 파일·줄번호·본문이 필요하고 읽을 수 없는 곳은 위치와 오류를 남긴다. 별도로 state=closed인 원래 행 전부를 파일명 오름차순으로 outputs/closed.jso",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:compute",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5508,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 6013,
+     "output_tokens_details": {
+      "thinking_tokens": 5177
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5508,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 6013,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5508,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5508
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 6013,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5508,
+      "webSearchRequests": 0,
+      "costUSD": 0.23652750000000003,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5177,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 77332.534,
+    "duration_api_ms": 73870,
+    "total_cost_usd": 0.23652750000000003
+   }
+  ]
+ },
+ {
+  "id": "embedded_context_2_exposed",
+  "case": "embedded_context",
+  "arm": "exposed",
+  "seed": 2026091106,
+  "quality_ok": true,
+  "total_wall_ms": 21023.991,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n$원본 = [self:read]{path: \"review_locations.json\"}\n\n$대상 = $원본 >> [table:filter]{where: \"state == 'open'\"} >> [table:filter]{where: \"priority >= 3\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3}\n\n$본문 = [fn:위치마다읽기]{위치: $대상, 개수: 3, 줄수: 5} >> [table:rename]{map: {value: \"본문\"}}\n\n$본문 >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n$원본 >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"파일\"} >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}",
+    "written_aliases": [
+     "위치마다읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "위치마다읽기"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "table:rename",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 837,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 1501,
+     "output_tokens_details": {
+      "thinking_tokens": 1173
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 837,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1501,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 837,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 837
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1501,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 837,
+      "webSearchRequests": 0,
+      "costUSD": 0.0780325,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1173,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 20618.226,
+    "duration_api_ms": 18101,
+    "total_cost_usd": 0.0780325
+   }
+  ]
+ },
+ {
+  "id": "embedded_context_2_hidden",
+  "case": "embedded_context",
+  "arm": "hidden",
+  "seed": 2026091106,
+  "quality_ok": false,
+  "total_wall_ms": 205352.64,
+  "attempts": [
+   {
+    "code": "# 수정 검토 자료 준비 — 입력은 읽기만 하고 변경하지 않는다\n[self:mkdir]{path: \"outputs\"}\n\n$src = [self:read]{path: \"review_locations.json\"}\n\n# 열 이름 정규화 (이미 file/line 이면 그대로 통과)\n$norm = $src >> [table:rename]{map: {\"파일\": \"file\", \"파일명\": \"file\", \"경로\": \"file\", \"path\": \"file\", \"filename\": \"file\", \"줄번호\": \"line\", \"줄\": \"line\", \"line_no\": \"line\", \"lineno\": \"line\", \"line_number\": \"line\", \"상태\": \"state\", \"우선순위\": \"priority\"}}\n\n# state=open & priority>=3 → 파일명 오름차순 → 앞 세 곳\n$open3 = $norm >> [table:filter]{where: \"state == 'open' and priority >= 3\"} >> [table:sort]{by: \"file\"} >> [table:take]{n: 3}\n\n# 지정 줄부터 5줄 본문 수집 (실패한 곳은 위치와 오류를 남긴다)\n$snips = $open3 >> [table:each]{limit: 10} {\n  $row = [{file: $it.file, line: $it.line, 파일: $it.file, 줄번호: $it.line, text: null, 본문: null, error: \"읽기 실패\", 오류: \"읽기 실패\"}]\n  [try]{\n    $doc = [self:read]{path: $it.file, start_line: $it.line, end_line: $it.line + 4}\n    $row = [{file: $it.file, line: $it.line, 파일: $it.file, 줄번호: $it.line, text: \"${doc.content?}${doc.text?}\", 본문: \"${doc.content?}${doc.text?}\"}]\n  }\n  [catch]{\n    $row = [{file: $it.file, line: $it.line, 파일: $it.file, 줄번호: $it.line, text: null, 본문: null, error: \"$error.summary\", 오류: \"$error.summary\"}]\n  }\n  $return = $row\n}\n$snips >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n# state=closed 원래 행 전부 — 파일명 오름차순\n$closed = $norm >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"file\"}\n$closed >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}\n\n# 확인용: 입력 원본 열 구조\n$src >> [table:take]{n: 3}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "Expected artifact missing or invalid: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_o55cn3x7/outputs/snippets.json'",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "table:rename",
+     "table:take"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 839,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 9730,
+     "output_tokens_details": {
+      "thinking_tokens": 8758
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 839,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 9730,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 839,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 839
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 9730,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 839,
+      "webSearchRequests": 0,
+      "costUSD": 0.2827625,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 8758,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 148832.107,
+    "duration_api_ms": 146331,
+    "total_cost_usd": 0.2827625
+   },
+   {
+    "code": "# 수정 검토 자료 준비 — 입력 파일은 읽기만 하고 변경하지 않는다\n# 입력 열 이름은 실제로 파일·줄번호·state·priority 이므로 rename 없이 그대로 쓴다\n\n$src = [self:read]{path: \"review_locations.json\"}\n\n# state=open & priority>=3 → 파일명 오름차순 → 앞 세 곳\n$open3 = $src >> [table:filter]{where: \"state == 'open' and priority >= 3\"} >> [table:sort]{by: \"파일\"} >> [table:take]{n: 3}\n\n# 지정 줄부터 5줄 본문 수집 (읽을 수 없으면 위치와 오류를 남긴다)\n$snips = $open3 >> [table:each]{limit: 10} {\n  $f = $it.파일\n  $ln = $it.줄번호\n  $end = $ln + 4\n  $txt = \"\"\n  $err = \"\"\n  [try]{\n    $doc = [self:read]{path: $f, start_line: $ln, end_line: $end}\n    $txt = \"${doc.content?}${doc.text?}\"\n  }\n  [catch]{\n    $err = \"$error.summary\"\n  }\n  $return = [{파일: $f, 줄번호: $ln, 본문: $txt, 오류: $err, file: $f, line: $ln, text: $txt, error: $err}]\n}\n$snips >> [self:write]{path: \"outputs/snippets.json\", format: \"json\"}\n\n# state=closed 원래 행 전부 — 파일명 오름차순\n$closed = $src >> [table:filter]{where: \"state == 'closed'\"} >> [table:sort]{by: \"파일\"}\n$closed >> [self:write]{path: \"outputs/closed.json\", format: \"json\"}\n",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. 수정 검토 자료를 준비해 줘. review_locations.json에는 파일·줄번호·state·priority 열이 있다. state=open, priority>=3인 위치를 파일명 오름차순으로 정렬한 앞 세 곳의 지정 줄부터 5줄씩 본문을 수집해서 outputs/snippets.json에 저장해 줘. 각 결과에는 파일·줄번호·본문이 필요하고 읽을 수 없는 곳은 위치와 오류를 남긴다. 별도로 state=closed인 원래 행 전부를 파일명 오름차순으로 outputs/closed.jso",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:read",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "table:each",
+     "self:read",
+     "self:read",
+     "self:read",
+     "self:write",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5659,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 4239,
+     "output_tokens_details": {
+      "thinking_tokens": 3571
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5659,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 4239,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5659,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5659
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 4239,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5659,
+      "webSearchRequests": 0,
+      "costUSD": 0.19368749999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 3571,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 55713.442,
+    "duration_api_ms": 53461,
+    "total_cost_usd": 0.19368749999999998
+   }
+  ]
+ },
+ {
+  "id": "embedded_latest_0_exposed",
+  "case": "embedded_latest",
+  "arm": "exposed",
+  "seed": 2026090903,
+  "quality_ok": true,
+  "total_wall_ms": 27804.252,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n$발췌 = [fn:최신범위읽기]{폴더: \"drafts\", 패턴: \"*.md\", 시작줄: 11, 줄수: 12}\n[self:write]{path: \"outputs/excerpt.txt\", content: \"$발췌\"}\n\n$대기 = [self:read]{path: \"queue.json\"}\n$대기 >> [table:filter]{where: \"state == 'open' and priority >= 3\"} >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [
+     "최신범위읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "최신범위읽기"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:file_find",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:read",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 65052,
+     "cache_read_input_tokens": 0,
+     "output_tokens": 1852,
+     "output_tokens_details": {
+      "thinking_tokens": 1617
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 65052,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1852,
+       "cache_read_input_tokens": 0,
+       "cache_creation_input_tokens": 65052,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 65052
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1852,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 65052,
+      "webSearchRequests": 0,
+      "costUSD": 0.69683,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1617,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 27392.53,
+    "duration_api_ms": 23239,
+    "total_cost_usd": 0.69683
+   }
+  ]
+ },
+ {
+  "id": "embedded_latest_0_hidden",
+  "case": "embedded_latest",
+  "arm": "hidden",
+  "seed": 2026090903,
+  "quality_ok": false,
+  "total_wall_ms": 120422.975,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n$docs = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n\n$excerpt = [self:read]{path: \"${docs.items.0.path}\", start_line: 11, end_line: 22}\n\n[self:write]{path: \"outputs/excerpt.txt\", content: \"${excerpt.content}\"}\n\n[self:ledger]{op: \"select\", path: \"queue.json\"} >> [table:filter]{where: \"state == 'open' and priority >= 3\"} >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "Expected artifact missing or invalid: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_a6s6_dj1/outputs/excerpt.txt'",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:ledger",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 63020,
+     "cache_read_input_tokens": 0,
+     "output_tokens": 2590,
+     "output_tokens_details": {
+      "thinking_tokens": 2295
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 63020,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2590,
+       "cache_read_input_tokens": 0,
+       "cache_creation_input_tokens": 63020,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 63020
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2590,
+      "cacheReadInputTokens": 0,
+      "cacheCreationInputTokens": 63020,
+      "webSearchRequests": 0,
+      "costUSD": 0.6949600000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2295,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 43774.929,
+    "duration_api_ms": 31892,
+    "total_cost_usd": 0.6949600000000001
+   },
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n$docs = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$p = \"${docs.items.0.path}\"\n$doc = [self:read]{path: \"$p\", start_line: 11, end_line: 22}\n\n$body = \"${doc.content?}\"\n[if: empty($body)]{$body = \"${doc.text?}\"}\n[if: empty($body)]{$body = \"${doc.result?}\"}\n[self:write]{path: \"outputs/excerpt.txt\", content: \"$body\"}\n\n$q = [self:ledger]{op: \"select\", path: \"queue.json\"} ?? [self:ledger]{op: \"select\", path: \"queue.json\", target: \"items\"}\n$rows = []\n[try]{$rows = $q >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"open\"}} >> [table:filter]{where: {field: \"priority\", op: \"gte\", value: 3}}}\n[catch]{$rows = []}\n[if: empty($rows)]{$rows = $q >> [table:filter]{where: \"state == 'open' and priority >= 3\"}}\n$rows >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. 인수인계 자료 두 개를 준비해 줘. drafts/*.md 네 문서 중 수정시각이 가장 최근인 문서의 11~22줄을 outputs/excerpt.txt에 저장하고, queue.json에서 state가 open이고 priority가 3 이상인 항목을 id 오름차순으로 outputs/pending.json에 저장해 줘. 문서들은 모두 80줄이고 수정시각 동률은 없다. JSON은 원래 행의 모든 필드를 보존한다. 입력 파일은 변경하지 마.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:ledger",
+     "table:filter",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5097,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 5735,
+     "output_tokens_details": {
+      "thinking_tokens": 5202
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5097,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 5735,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5097,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5097
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 5735,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5097,
+      "webSearchRequests": 0,
+      "costUSD": 0.22546750000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5202,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 75785.481,
+    "duration_api_ms": 73764,
+    "total_cost_usd": 0.22546750000000004
+   }
+  ]
+ },
+ {
+  "id": "embedded_latest_1_exposed",
+  "case": "embedded_latest",
+  "arm": "exposed",
+  "seed": 2026091004,
+  "quality_ok": true,
+  "total_wall_ms": 29252.575,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n$본문 = [fn:최신범위읽기]{폴더: \"drafts\", 패턴: \"*.md\", 시작줄: 11, 줄수: 12}\n[self:write]{path: \"outputs/excerpt.txt\", content: \"$본문\"}\n\n$큐 = [self:read]{path: \"queue.json\"}\n$큐 >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"open\"}} >> [table:filter]{where: {field: \"priority\", op: \"gte\", value: 3}} >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [
+     "최신범위읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "최신범위읽기"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:file_find",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 800,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 2215,
+     "output_tokens_details": {
+      "thinking_tokens": 1941
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 800,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2215,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 800,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 800
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2215,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 800,
+      "webSearchRequests": 0,
+      "costUSD": 0.0955125,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1941,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 28799.344,
+    "duration_api_ms": 26781,
+    "total_cost_usd": 0.0955125
+   }
+  ]
+ },
+ {
+  "id": "embedded_latest_1_hidden",
+  "case": "embedded_latest",
+  "arm": "hidden",
+  "seed": 2026091004,
+  "quality_ok": false,
+  "total_wall_ms": 144922.426,
+  "attempts": [
+   {
+    "code": "# 인수인계 자료 1: 최신 수정 draft의 11~22줄 발췌\n[self:mkdir]{path: \"outputs\"}\n\n$docs = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} ?? [self:file_find]{pattern: \"drafts/*.md\"}\n$top = $docs >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$latest = \"${top.items.0.path}\"\n$ex = [self:read]{path: \"$latest\", start_line: 11, end_line: 22}\n[self:write]{path: \"outputs/excerpt.txt\", content: \"${ex.content}\"} ?? [self:write]{path: \"outputs/excerpt.txt\", content: \"${ex.text}\"} ?? ([self:read]{path: \"$latest\", start_line: 11, end_line: 22} >> [self:write]{path: \"outputs/excerpt.txt\"})\n\n# 인수인계 자료 2: queue.json 중 state=open & priority>=3, id 오름차순 (모든 필드 보존)\n$q = [self:ledger]{op: \"select\", path: \"queue.json\"} ?? [self:read]{path: \"queue.json\"}\n$open = ($q >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"open\"}}) ?? ($q >> [table:filter]{where: \"state == 'open'\"})\n$pending = ($open >> [table:filter]{where: {field: \"priority\", op: \"gte\", value: 3}}) ?? ($open >> [table:filter]{where: \"priority >= 3\"})\n$pending >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "IBLSyntaxError: 괄호 분기 파이프 파싱 실패: $q — 괄호 분기 안은 액션 step(병렬에서는 변수 통화도 가능)을 >> 로 이은 파이프만 허용합니다(중첩 병렬/폴백/블록 불가).",
+    "fn_calls": [],
+    "leaf_calls": [],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 794,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 8487,
+     "output_tokens_details": {
+      "thinking_tokens": 7829
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 794,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 8487,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 794,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 794
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 8487,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 794,
+      "webSearchRequests": 0,
+      "costUSD": 0.2512375,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 7829,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 101832.434,
+    "duration_api_ms": 99601,
+    "total_cost_usd": 0.2512375
+   },
+   {
+    "code": "# 인수인계 자료 1: 최신 수정 draft의 11~22줄 발췌\n[self:mkdir]{path: \"outputs\"}\n\n$docs = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} ?? [self:file_find]{pattern: \"drafts/*.md\"}\n$top = $docs >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$latest = \"${top.items.0.path}\"\n$ex = [self:read]{path: \"$latest\", start_line: 11, end_line: 22}\n[self:write]{path: \"outputs/excerpt.txt\", content: \"${ex.content}\"} ?? [self:write]{path: \"outputs/excerpt.txt\", content: \"${ex.text}\"} ?? ([self:read]{path: \"$latest\", start_line: 11, end_line: 22} >> [self:write]{path: \"outputs/excerpt.txt\"})\n\n# 인수인계 자료 2: queue.json 중 state=open & priority>=3, id 오름차순 (모든 필드 보존)\n$q = [self:ledger]{op: \"select\", path: \"queue.json\"} ?? [self:read]{path: \"queue.json\"}\n$q >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"open\"}} >> [table:filter]{where: {field: \"priority\", op: \"gte\", value: 3}} >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "Expected artifact missing or invalid: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_m9lgpb1i/outputs/excerpt.txt'",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:ledger",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 1670,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 3314,
+     "output_tokens_details": {
+      "thinking_tokens": 2732
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 1670,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 3314,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 1670,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 1670
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 3314,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 1670,
+      "webSearchRequests": 0,
+      "costUSD": 0.1306725,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2732,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 42543.952,
+    "duration_api_ms": 40565,
+    "total_cost_usd": 0.1306725
+   }
+  ]
+ },
+ {
+  "id": "embedded_latest_2_exposed",
+  "case": "embedded_latest",
+  "arm": "exposed",
+  "seed": 2026091105,
+  "quality_ok": true,
+  "total_wall_ms": 32468.206,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n\n# 1) drafts/*.md 중 수정시각 최신 문서의 11~22줄(12줄) 발췌\n$본문 = [fn:최신범위읽기]{폴더: \"drafts\", 패턴: \"*.md\", 시작줄: 11, 줄수: 12}\n[self:write]{path: \"outputs/excerpt.txt\", content: \"$본문\"}\n\n# 2) queue.json 에서 state=open & priority>=3 → id 오름차순, 모든 필드 보존\n$큐 = [self:read]{path: \"queue.json\"}\n$대기 = $큐 >> [table:filter]{where: {field: \"state\", op: \"==\", value: \"open\"}} >> [table:filter]{where: {field: \"priority\", op: \">=\", value: 3}} >> [table:sort]{by: \"id\"}\n$대기 >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [
+     "최신범위읽기"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "최신범위읽기"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:file_find",
+     "table:filter",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:read",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 792,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 2559,
+     "output_tokens_details": {
+      "thinking_tokens": 2193
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 792,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 2559,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 792,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 792
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 2559,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 792,
+      "webSearchRequests": 0,
+      "costUSD": 0.1040325,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 2193,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 32005.107,
+    "duration_api_ms": 30079,
+    "total_cost_usd": 0.1040325
+   }
+  ]
+ },
+ {
+  "id": "embedded_latest_2_hidden",
+  "case": "embedded_latest",
+  "arm": "hidden",
+  "seed": 2026091105,
+  "quality_ok": true,
+  "total_wall_ms": 100740.494,
+  "attempts": [
+   {
+    "code": "# 인수인계 자료 2종 생성 (입력 파일 무변경)\n[self:mkdir]{path: \"outputs\"}\n\n# 1) drafts/*.md 중 수정시각 최신 문서의 11~22줄 → outputs/excerpt.txt\n$latest = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$doc = [self:read]{path: \"${latest.items.0.path}\", start_line: 11, end_line: 22}\n[self:write]{path: \"outputs/excerpt.txt\", content: \"${doc.content}\"}\n\n# 2) queue.json 에서 state=open & priority>=3 → id 오름차순 → outputs/pending.json (필드 전부 보존)\n$rows = [self:ledger]{op: \"select\", path: \"queue.json\"} ?? [self:read]{path: \"queue.json\"}\n$rows >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"open\"}} >> [table:filter]{where: {field: \"priority\", op: \"gte\", value: 3}} >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": false,
+    "verdict": "Expected artifact missing or invalid: FileNotFoundError: [Errno 2] No such file or directory: '/private/var/folders/dj/b53qswrj4wl6k23mmmnqhtyc0000gn/T/ibl_exposure_0ifkmpvu/outputs/excerpt.txt'",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:ledger",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 796,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 3707,
+     "output_tokens_details": {
+      "thinking_tokens": 3224
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 796,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 3707,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 796,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 796
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 3707,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 796,
+      "webSearchRequests": 0,
+      "costUSD": 0.1317575,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 3224,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 46055.488,
+    "duration_api_ms": 43940,
+    "total_cost_usd": 0.1317575
+   },
+   {
+    "code": "# 인수인계 자료 2종 (입력 파일 무변경)\n\n# 1) drafts/*.md 중 수정시각이 가장 최근인 문서의 11~22줄 → outputs/excerpt.txt\n$latest = [self:file_find]{path: \"drafts\", pattern: \"*.md\"} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$src = $latest.items.0.path\n$doc = [self:read]{path: \"$src\", start_line: 11, end_line: 22}\n[if: exists($doc.content)]{[self:write]{path: \"outputs/excerpt.txt\", content: \"${doc.content}\"}}\n[else if: exists($doc.text)]{[self:write]{path: \"outputs/excerpt.txt\", content: \"${doc.text}\"}}\n[else if: exists($doc.message)]{[self:write]{path: \"outputs/excerpt.txt\", content: \"${doc.message}\"}}\n[else]{[self:write]{path: \"outputs/excerpt.txt\", content: \"${doc}\"}}\n\n# 2) queue.json 에서 state=open & priority>=3 → id 오름차순 → outputs/pending.json (모든 필드 보존)\n$rows = [self:ledger]{op: \"select\", path: \"queue.json\"} ?? [self:read]{path: \"queue.json\"}\n$rows >> [table:filter]{where: {field: \"state\", op: \"eq\", value: \"open\"}} >> [table:filter]{where: {field: \"priority\", op: \"gte\", value: 3}} >> [table:sort]{by: \"id\"} >> [self:write]{path: \"outputs/pending.json\", format: \"json\"}\n\n# 3) 산출물 확인\n[self:list]{path: \"outputs\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:file_find",
+     "table:sort",
+     "table:take",
+     "self:read",
+     "self:write",
+     "self:ledger",
+     "table:filter",
+     "table:filter",
+     "table:sort",
+     "self:write",
+     "self:list"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5272,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 4167,
+     "output_tokens_details": {
+      "thinking_tokens": 3503
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5272,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 4167,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5272,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5272
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 4167,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5272,
+      "webSearchRequests": 0,
+      "costUSD": 0.18801749999999998,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 3503,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 53736.04,
+    "duration_api_ms": 51610,
+    "total_cost_usd": 0.18801749999999998
+   }
+  ]
+ },
+ {
+  "id": "embedded_ledger_0_exposed",
+  "case": "embedded_ledger",
+  "arm": "exposed",
+  "seed": 2026090905,
+  "quality_ok": true,
+  "total_wall_ms": 22320.303,
+  "attempts": [
+   {
+    "code": "# 자료 반입 정리 — 입력 파일은 읽기만 한다\n[self:mkdir]{path: \"outputs\"}\n\n$기존 = [self:read]{path: \"existing.json\"}\n$제출 = [self:read]{path: \"submissions.json\"}\n\n# 승인된 행만 id·kind·value 로 좁힌다 (원래 제출 순서 유지)\n$승인 = $제출 >> [table:filter]{where: {field: \"approved\", op: \"eq\", value: true}} >> [table:select]{columns: [\"id\", \"kind\", \"value\"]}\n\n# 기존 행 먼저 + 승인 행 뒤 → id·kind 복합키로 중복 제거(기존 행 전체 보존) → 저장\n[fn:원장에누적]{옛것: \"$기존\", 새것: \"$승인\", 키: [\"id\", \"kind\"], 원장: \"outputs/archive.json\"}\n\n# 반려된 원래 행은 전체 필드 그대로 따로 보관\n$제출 >> [table:filter]{where: {field: \"approved\", op: \"eq\", value: false}} >> [self:write]{path: \"outputs/rejected.json\", format: \"json\"}",
+    "written_aliases": [
+     "원장에누적"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "원장에누적"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "self:read",
+     "table:filter",
+     "table:select",
+     "table:union",
+     "table:dedup",
+     "self:write",
+     "table:filter",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 778,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 1592,
+     "output_tokens_details": {
+      "thinking_tokens": 1142
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 778,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1592,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 778,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 778
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1592,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 778,
+      "webSearchRequests": 0,
+      "costUSD": 0.07971750000000001,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1142,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 21914.472,
+    "duration_api_ms": 20072,
+    "total_cost_usd": 0.07971750000000001
+   }
+  ]
+ },
+ {
+  "id": "embedded_ledger_0_hidden",
+  "case": "embedded_ledger",
+  "arm": "hidden",
+  "seed": 2026090905,
+  "quality_ok": true,
+  "total_wall_ms": 91888.921,
+  "attempts": [
+   {
+    "code": "# 자료 반입 정리 — 승인분 병합 아카이브 + 반려분 보관\n[self:list]{path: \".\"}\n[self:mkdir]{path: \"outputs\"}\n\n$sub = [self:read]{path: \"submissions.json\"}\n$ex = [self:read]{path: \"existing.json\"}\n\n$exrows = $ex >> [table:take]{n: 1000}\n$approved = $sub >> [table:filter]{where: \"approved == true\"} >> [table:select]{columns: [\"id\", \"kind\", \"value\"]}\n$rejected = $sub >> [table:filter]{where: \"approved == false\"}\n\n$exrows & $approved >> [table:union] >> [table:dedup]{by: [\"id\", \"kind\"]} >> [self:write]{path: \"outputs/archive.json\", format: \"json\"}\n\n$rejected >> [self:write]{path: \"outputs/rejected.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:list",
+     "self:mkdir",
+     "self:read",
+     "self:read",
+     "table:take",
+     "table:filter",
+     "table:select",
+     "table:filter",
+     "table:union",
+     "table:dedup",
+     "self:write",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 775,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 6692,
+     "output_tokens_details": {
+      "thinking_tokens": 6336
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 775,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 6692,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 775,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 775
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 6692,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 775,
+      "webSearchRequests": 0,
+      "costUSD": 0.2061725,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 6336,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 91456.064,
+    "duration_api_ms": 89123,
+    "total_cost_usd": 0.2061725
+   }
+  ]
+ },
+ {
+  "id": "embedded_ledger_1_exposed",
+  "case": "embedded_ledger",
+  "arm": "exposed",
+  "seed": 2026091006,
+  "quality_ok": true,
+  "total_wall_ms": 28760.877,
+  "attempts": [
+   {
+    "code": "# 자료 반입 정리 — 입력 파일은 읽기만 한다\n[self:mkdir]{path: \"outputs\"}\n\n$기존 = [self:read]{path: \"existing.json\"}\n$원본 = [self:read]{path: \"submissions.json\"}\n\n# 승인분: id·kind·value 만 투영 (원래 제출 순서 유지)\n$승인 = $원본 >> [table:filter]{where: \"approved == true\"} >> [table:select]{columns: [\"id\", \"kind\", \"value\"]}\n\n# 기존 행 먼저 + 승인 신규분 뒤에, id+kind 복합키로 중복 제거(기존 행 전체 보존)\n[fn:원장에누적]{옛것: \"$기존\", 새것: \"$승인\", 키: [\"id\", \"kind\"], 원장: \"outputs/archive.json\"}\n\n# 미승인 원래 행은 전 필드 그대로 별도 보관\n$원본 >> [table:filter]{where: \"approved == false\"} >> [self:write]{path: \"outputs/rejected.json\", format: \"json\"}",
+    "written_aliases": [
+     "원장에누적"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "원장에누적"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "self:read",
+     "table:filter",
+     "table:select",
+     "table:union",
+     "table:dedup",
+     "self:write",
+     "table:filter",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 775,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 1921,
+     "output_tokens_details": {
+      "thinking_tokens": 1506
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 775,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1921,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 775,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 775
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1921,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 775,
+      "webSearchRequests": 0,
+      "costUSD": 0.0879125,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1506,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 28354.637,
+    "duration_api_ms": 26500,
+    "total_cost_usd": 0.0879125
+   }
+  ]
+ },
+ {
+  "id": "embedded_ledger_1_hidden",
+  "case": "embedded_ledger",
+  "arm": "hidden",
+  "seed": 2026091006,
+  "quality_ok": true,
+  "total_wall_ms": 261208.95,
+  "attempts": [
+   {
+    "code": "# 자료 반입 정리: submissions.json(승인분) + existing.json → outputs/archive.json, 미승인 → outputs/rejected.json\n[on_error: skip] [self:mkdir]{path: \"outputs\"}\n\n$sub = [self:read]{path: \"submissions.json\"}\n$ex = [self:read]{path: \"existing.json\"}\n\n# 기존 행은 원형 그대로 보존 (통화로 정규화만)\n$exr = $ex >> [table:take]{n: 100000}\n\n# 기존 행의 (id, kind) 복합 키 목록\n$exk = $exr >> [table:each]{limit: 2000} {\n  $return = [{_mk: \"${it.id}|${it.kind}\"}]\n}\n\n# 제출분 중 approved=true 만 id·kind·value 로 추리고 복합 키 부착 (제출 순서 유지)\n$app = $sub >> [table:each]{limit: 2000} {\n  $row = [{id: $it.id, kind: $it.kind, value: $it.value, _mk: \"${it.id}|${it.kind}\"}]\n  $return = $row if $it.approved else []\n}\n\n# 제출분 내부 중복 제거 → 기존과 (id,kind) 겹치는 행 제외 → 키 열 제거\n$new = $app >> [table:dedup]{by: \"_mk\"} >> [table:filter]{where: {field: \"_mk\", op: \"not_in\", value: \"${exk.items.*._mk}\"}} >> [table:select]{columns: [\"id\", \"kind\", \"value\"]}\n\n# approved=false 인 원래 행 전체 보관\n$rej = $sub >> [table:each]{limit: 2000} {\n  $one = [$it]\n  $return = [] if $it.approved else $one\n}\n\n$rej >> [self:write]{path: \"outputs/rejected.json\", format: \"json\"}\n\n# 기존 행 먼저, 새 고유 행을 제출 순서대로 뒤에 append\n$exr.items & $new.items >> [table:union] >> [self:write]{path: \"outputs/archive.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": false,
+    "runtime_ok": true,
+    "verdict": "요구한 본문·행·보존 조건과 결과가 다릅니다. 자료 반입을 정리해 줘. submissions.json에서 approved=true인 행의 id·kind·value만 취해 existing.json에 있던 행들과 함께 outputs/archive.json에 저장한다. id와 kind가 모두 같으면 기존 행 전체를 보존하고, 새 고유 행은 원래 제출 순서로 뒤에 붙인다. approved=false인 원래 행은 모두 outputs/rejected.json에 따로 보관한다. 입력 파일은 변경하지 마.",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "self:read",
+     "table:take",
+     "table:each",
+     "table:each",
+     "table:dedup",
+     "table:filter",
+     "table:select",
+     "table:each",
+     "self:write",
+     "table:union",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 775,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 13104,
+     "output_tokens_details": {
+      "thinking_tokens": 12323
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 775,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 13104,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 775,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 775
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 13104,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 775,
+      "webSearchRequests": 0,
+      "costUSD": 0.3664725,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 12323,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 173965.433,
+    "duration_api_ms": 169822,
+    "total_cost_usd": 0.3664725
+   },
+   {
+    "code": "# 자료 반입 정리: submissions.json(승인분) + existing.json → outputs/archive.json, 미승인 원본 → outputs/rejected.json\n[on_error: skip] [self:mkdir]{path: \"outputs\"}\n\n$sub = [self:read]{path: \"submissions.json\"}\n$ex = [self:read]{path: \"existing.json\"}\n\n# 기존 행은 원형 그대로 (통화로만 정규화)\n$exr = $ex >> [table:take]{n: 100000}\n\n# 기존 행의 (id, kind) 복합 키\n$exk = $exr >> [table:each]{limit: 2000} {\n  $return = [{_mk: \"${it.id}|${it.kind}\"}]\n}\n\n# 승인분만 id·kind·value 로 추리고 복합 키 부착 (제출 순서 유지)\n$app = $sub >> [table:each]{limit: 2000} {\n  $row = [{id: $it.id, kind: $it.kind, value: $it.value, _mk: \"${it.id}|${it.kind}\"}]\n  $return = $row if $it.approved else []\n}\n\n# 승인분 내부 중복 제거 → 기존과 (id,kind) 겹치는 행 제외 → 키 열 제거\n$new = $app >> [table:dedup]{by: \"_mk\"} >> [table:filter]{where: {field: \"_mk\", op: \"not_in\", value: \"${exk.items.*._mk}\"}} >> [table:select]{columns: [\"id\", \"kind\", \"value\"]}\n\n# 미승인 원래 행 전체 보관 (원 필드 그대로 재구성)\n$rej = $sub >> [table:each]{limit: 2000} {\n  $row = [{id: $it.id, kind: $it.kind, value: $it.value, approved: $it.approved}]\n  $return = [] if $it.approved else $row\n}\n\n$rej >> [self:write]{path: \"outputs/rejected.json\", format: \"json\"}\n\n# 기존 행 먼저, 새 고유 행을 제출 순서대로 뒤에 이어붙임\n($exr >> [table:take]{n: 100000}) & ($new >> [table:take]{n: 100000}) >> [table:union] >> [self:write]{path: \"outputs/archive.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": true,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "self:read",
+     "table:take",
+     "table:each",
+     "table:each",
+     "table:dedup",
+     "table:filter",
+     "table:select",
+     "table:each",
+     "self:write",
+     "table:take",
+     "table:take",
+     "table:union",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 5352,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 6703,
+     "output_tokens_details": {
+      "thinking_tokens": 5858
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 5352,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 6703,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 5352,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 5352
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 6703,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 5352,
+      "webSearchRequests": 0,
+      "costUSD": 0.25221750000000004,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 5858,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 86434.91,
+    "duration_api_ms": 82926,
+    "total_cost_usd": 0.25221750000000004
+   }
+  ]
+ },
+ {
+  "id": "embedded_ledger_2_exposed",
+  "case": "embedded_ledger",
+  "arm": "exposed",
+  "seed": 2026091107,
+  "quality_ok": true,
+  "total_wall_ms": 21738.057,
+  "attempts": [
+   {
+    "code": "[self:mkdir]{path: \"outputs\"}\n$제출 = [self:read]{path: \"submissions.json\"}\n$기존 = [self:read]{path: \"existing.json\"}\n$승인 = $제출 >> [table:filter]{where: \"approved == true\"} >> [table:select]{columns: [\"id\", \"kind\", \"value\"]}\n[fn:원장에누적]{옛것: \"$기존\", 새것: \"$승인\", 키: [\"id\", \"kind\"], 원장: \"outputs/archive.json\"}\n$제출 >> [table:filter]{where: \"approved == false\"} >> [self:write]{path: \"outputs/rejected.json\", format: \"json\"}",
+    "written_aliases": [
+     "원장에누적"
+    ],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [
+     "원장에누적"
+    ],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "self:read",
+     "table:filter",
+     "table:select",
+     "table:union",
+     "table:dedup",
+     "self:write",
+     "table:filter",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 774,
+     "cache_read_input_tokens": 64255,
+     "output_tokens": 1601,
+     "output_tokens_details": {
+      "thinking_tokens": 1338
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 774,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 1601,
+       "cache_read_input_tokens": 64255,
+       "cache_creation_input_tokens": 774,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 774
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 1601,
+      "cacheReadInputTokens": 64255,
+      "cacheCreationInputTokens": 774,
+      "webSearchRequests": 0,
+      "costUSD": 0.0799025,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 1338,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 21337.932,
+    "duration_api_ms": 19410,
+    "total_cost_usd": 0.0799025
+   }
+  ]
+ },
+ {
+  "id": "embedded_ledger_2_hidden",
+  "case": "embedded_ledger",
+  "arm": "hidden",
+  "seed": 2026091107,
+  "quality_ok": true,
+  "total_wall_ms": 113896.326,
+  "attempts": [
+   {
+    "code": "# 자료 반입 정리 — 입력 파일은 읽기만 하고 결과는 outputs/ 에만 쓴다\n[self:mkdir]{path: \"outputs\"}\n\n$sub = [self:read]{path: \"submissions.json\"}\n$ex = [self:read]{path: \"existing.json\"}\n\n# 승인된 제출: id·kind·value 만, 원래 제출 순서 유지\n$approved = $sub >> [table:filter]{where: {field: \"approved\", op: \"eq\", value: true}} >> [table:select]{columns: [\"id\", \"kind\", \"value\"]}\n\n# 반려된 원래 행은 전체 필드 그대로 보관\n$rejected = $sub >> [table:filter]{where: {field: \"approved\", op: \"eq\", value: false}}\n$rejected >> [self:write]{path: \"outputs/rejected.json\", format: \"json\"}\n\n# 기존 행 먼저 → 승인 행 이어붙임 → (id, kind) 중복은 먼저 온 기존 행 보존\n$ex & $approved >> [table:union] >> [table:dedup]{by: [\"id\", \"kind\"]} >> [self:write]{path: \"outputs/archive.json\", format: \"json\"}",
+    "written_aliases": [],
+    "quality_ok": true,
+    "runtime_ok": false,
+    "verdict": "품질 기준 통과",
+    "fn_calls": [],
+    "leaf_calls": [
+     "self:mkdir",
+     "self:read",
+     "self:read",
+     "table:filter",
+     "table:select",
+     "table:filter",
+     "self:write",
+     "table:union",
+     "table:dedup",
+     "self:write"
+    ],
+    "usage": {
+     "input_tokens": 2,
+     "cache_creation_input_tokens": 778,
+     "cache_read_input_tokens": 62225,
+     "output_tokens": 8332,
+     "output_tokens_details": {
+      "thinking_tokens": 7869
+     },
+     "server_tool_use": {
+      "web_search_requests": 0,
+      "web_fetch_requests": 0
+     },
+     "service_tier": "standard",
+     "cache_creation": {
+      "ephemeral_1h_input_tokens": 778,
+      "ephemeral_5m_input_tokens": 0
+     },
+     "inference_geo": "not_available",
+     "iterations": [
+      {
+       "input_tokens": 2,
+       "output_tokens": 8332,
+       "cache_read_input_tokens": 62225,
+       "cache_creation_input_tokens": 778,
+       "cache_creation": {
+        "ephemeral_5m_input_tokens": 0,
+        "ephemeral_1h_input_tokens": 778
+       },
+       "type": "message"
+      }
+     ],
+     "speed": "standard"
+    },
+    "modelUsage": {
+     "claude-opus-5": {
+      "inputTokens": 2,
+      "outputTokens": 8332,
+      "cacheReadInputTokens": 62225,
+      "cacheCreationInputTokens": 778,
+      "webSearchRequests": 0,
+      "costUSD": 0.24720250000000005,
+      "contextWindow": 1000000,
+      "maxOutputTokens": 64000,
+      "thinkingTokens": 7869,
+      "canonicalModel": "claude-opus-5",
+      "provider": "firstParty",
+      "costBasis": "list"
+     }
+    },
+    "wall_ms": 113490.026,
+    "duration_api_ms": 111183,
+    "total_cost_usd": 0.24720250000000005
+   }
+  ]
+ }
+]

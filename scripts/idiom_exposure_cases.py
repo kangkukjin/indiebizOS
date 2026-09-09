@@ -361,10 +361,10 @@ def judge(case_id, result, root, observed, initial):
 
 GOLD = {
     "direct_latest": '[fn:최신범위읽기]{폴더:"drafts",패턴:"*.md",시작줄:11,줄수:12}',
-    "direct_context": '[self:read]{path:"locations.json"} >> [fn:위치마다읽기]{개수:3,줄수:5}',
+    "direct_context": '$r=[self:read]{path:"locations.json"}\n[fn:위치마다읽기]{위치:$r,개수:3,줄수:5}',
     "direct_ledger": '$old=[self:read]{path:"existing.json"}\n$new=[self:read]{path:"arrivals.json"}\n[fn:원장에누적]{옛것:$old,새것:$new,키:["id","kind"],원장:"outputs/archive.json"}',
     "embedded_latest": '[fn:최신범위읽기]{폴더:"drafts",패턴:"*.md",시작줄:11,줄수:12} >> [self:write]{path:"outputs/excerpt.txt"}\n[self:read]{path:"queue.json"} >> [table:filter]{where:"state == \'open\' and priority >= 3"} >> [table:sort]{by:"id"} >> [self:write]{path:"outputs/pending.json",format:"json"}',
-    "embedded_context": '$r=[self:read]{path:"review_locations.json"}\n$r >> [table:filter]{where:"state == \'open\' and priority >= 3"} >> [table:sort]{by:"파일"} >> [fn:위치마다읽기]{개수:3,줄수:5} >> [self:write]{path:"outputs/snippets.json",format:"json"}\n$r >> [table:filter]{where:"state == \'closed\'"} >> [table:sort]{by:"파일"} >> [self:write]{path:"outputs/closed.json",format:"json"}',
+    "embedded_context": '$r=[self:read]{path:"review_locations.json"}\n$sel=$r >> [table:filter]{where:"state == \'open\' and priority >= 3"} >> [table:sort]{by:"파일"}\n[fn:위치마다읽기]{위치:$sel,개수:3,줄수:5} >> [self:write]{path:"outputs/snippets.json",format:"json"}\n$r >> [table:filter]{where:"state == \'closed\'"} >> [table:sort]{by:"파일"} >> [self:write]{path:"outputs/closed.json",format:"json"}',
     "embedded_ledger": '$o=[self:read]{path:"existing.json"}\n$s=[self:read]{path:"submissions.json"}\n$n=$s >> [table:filter]{where:{field:"approved",op:"eq",value:true}} >> [table:select]{columns:["id","kind","value"]}\n[fn:원장에누적]{옛것:$o,새것:$n,키:["id","kind"],원장:"outputs/archive.json"}\n$s >> [table:filter]{where:{field:"approved",op:"eq",value:false}} >> [self:write]{path:"outputs/rejected.json",format:"json"}',
     "counter_latest": '[self:file_find]{path:"drafts",pattern:"*.md"} >> [table:sort]{by:"name",desc:true} >> [table:take]{n:1} >> [self:read]{start_line:11,limit:12}',
     "counter_context": '[self:grep]{path:"notes",pattern:"NEEDLE",file_pattern:"*.txt",limit:100}',
@@ -382,7 +382,8 @@ for key in INLINE:
             '[fn:최신범위읽기]{폴더:"drafts",패턴:"*.md",시작줄:11,줄수:12}',
             LATEST,
         )
-        .replace("[fn:위치마다읽기]{개수:3,줄수:5}", CONTEXT)
+        .replace("[fn:위치마다읽기]{위치:$r,개수:3,줄수:5}", "$r >> " + CONTEXT)
+        .replace("[fn:위치마다읽기]{위치:$sel,개수:3,줄수:5}", "$sel >> " + CONTEXT)
     )
 INLINE["direct_ledger"] = INLINE["direct_ledger"].replace(
     '[fn:원장에누적]{옛것:$old,새것:$new,키:["id","kind"],원장:"outputs/archive.json"}',

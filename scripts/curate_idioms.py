@@ -40,37 +40,39 @@ def validate_catalog(catalog):
         info, why = _gates(e["name"], e["when"], e["body"])
         if why:
             raise ValueError(f"{e['name']}: {why}")
-        code = definitions + "\n" + e["example"]
-        if not _validate_ibl_actions(code) or check_code_params(code):
-            raise ValueError(f"{e['name']}: 존재하지 않는 어휘 또는 인자 — {check_code_params(code)}")
-        steps = parse(code)
-        calls = []
-        def walk(obj):
-            if isinstance(obj, dict):
-                if obj.get("_def"):
-                    return
-                if obj.get("_node") == "fn":
-                    calls.append(obj)
-                for v in obj.values():
-                    walk(v)
-            elif isinstance(obj, list):
-                for v in obj:
-                    walk(v)
-        walk(steps)
-        if not any(c.get("action") == e["name"] for c in calls):
-            raise ValueError(f"{e['name']}: 용례가 자신의 이름을 부르지 않는다")
-        for call in calls:
-            target = next((x for x in entries if x["name"] == call["action"]), None)
-            if target is None:
-                raise ValueError(f"선정집 밖 호출: {call['action']}")
-            required = set(call_signature(target["body"]))
-            supplied = {k for k in call.get("params", {}) if not k.startswith("_")}
-            if required != supplied:
-                raise ValueError(f"{e['name']}: {call['action']} 인자 {supplied} != {required}")
-        tc = typecheck_code(code)
-        errors = [i for i in tc.get("issues", []) if i.get("severity", i.get("level")) == "error"]
-        if tc.get("syntax_error") or errors:
-            raise ValueError(f"{e['name']}: 조합 용례 타입 오류 {tc.get('syntax_error') or errors}")
+        # 대표 용례(example)와 생산자가 다른 용례(examples[].code)는 같은 관문을 지난다(2026-09-09).
+        for sample in [e["example"]] + [x["code"] for x in e.get("examples", [])]:
+            code = definitions + "\n" + sample
+            if not _validate_ibl_actions(code) or check_code_params(code):
+                raise ValueError(f"{e['name']}: 존재하지 않는 어휘 또는 인자 — {check_code_params(code)}")
+            steps = parse(code)
+            calls = []
+            def walk(obj):
+                if isinstance(obj, dict):
+                    if obj.get("_def"):
+                        return
+                    if obj.get("_node") == "fn":
+                        calls.append(obj)
+                    for v in obj.values():
+                        walk(v)
+                elif isinstance(obj, list):
+                    for v in obj:
+                        walk(v)
+            walk(steps)
+            if not any(c.get("action") == e["name"] for c in calls):
+                raise ValueError(f"{e['name']}: 용례가 자신의 이름을 부르지 않는다")
+            for call in calls:
+                target = next((x for x in entries if x["name"] == call["action"]), None)
+                if target is None:
+                    raise ValueError(f"선정집 밖 호출: {call['action']}")
+                required = set(call_signature(target["body"]))
+                supplied = {k for k in call.get("params", {}) if not k.startswith("_")}
+                if required != supplied:
+                    raise ValueError(f"{e['name']}: {call['action']} 인자 {supplied} != {required}")
+            tc = typecheck_code(code)
+            errors = [i for i in tc.get("issues", []) if i.get("severity", i.get("level")) == "error"]
+            if tc.get("syntax_error") or errors:
+                raise ValueError(f"{e['name']}: 조합 용례 타입 오류 {tc.get('syntax_error') or errors}")
         infos[e["name"]] = info
     return infos
 
@@ -130,6 +132,20 @@ def apply_catalog(catalog, infos, local_encoder=False):
                                            topic=e["topic"])])
             if n != 1:
                 raise RuntimeError(f"{e['name']}: 조합 용례 저장 실패")
+        # 생산자가 다른 조합 용례(2026-09-09 지렛대 3): 낱말은 문장 안에 있는 모습을 본 적 있어야 불린다 —
+        # 한 생산자(grep)만 보면 다른 생산자(JSON 읽기·filter 결과) 앞에서 안 부른다. 각 항목은 {intent, code}.
+        for extra in e.get("examples", []):
+            with db._get_connection() as con:
+                dup = con.execute("SELECT id FROM ibl_examples WHERE source='idiom_registry' AND ibl_code=?",
+                                  (extra["code"],)).fetchone()
+            if dup:
+                continue
+            n = db.add_examples_batch([dict(intent=extra["intent"], ibl_code=extra["code"], nodes="fn",
+                                           category="phrase", source="idiom_registry", tags="manual,composed",
+                                           topic=e["topic"])])
+            if n != 1:
+                raise RuntimeError(f"{e['name']}: 조합 용례 저장 실패 — {extra['code'][:80]}")
+            print(f"  용례 심음: {extra['code'][:80]}")
         with db._get_connection() as con:
             con.execute("UPDATE ibl_examples SET always_on=? WHERE id=?", (int(e.get('always_on', True)), rid))
             con.commit()

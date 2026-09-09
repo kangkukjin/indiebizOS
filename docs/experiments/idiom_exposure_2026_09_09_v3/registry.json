@@ -1,0 +1,26 @@
+[
+  {
+    "id": 4547,
+    "alias": "원장에누적",
+    "ibl_code": "$합 = $옛것 & $새것 >> [table:union] >> [table:dedup]{by: \"${키}\"}; $return = $합 >> [self:write]{path: \"${원장}\", format: \"json\"}",
+    "intent": "기존 목록과 새 목록을 하나 또는 여러 열의 키로 중복 제거해 JSON에 누적 저장할 때. 같은 키는 기존 행 보존. 기존 행 갱신(upsert)은 하지 않는다.",
+    "signature": "옛것 새것 키 원장",
+    "returns": "effect"
+  },
+  {
+    "id": 4573,
+    "alias": "위치마다읽기",
+    "ibl_code": "$대상 = $위치 >> [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{keep: [\"파일\", \"줄번호\"], limit: \"${개수}\", collect: true, on_error: \"keep\"} {\n  [self:read]{path: '$it.파일', start_line: $it.줄번호, limit: ${줄수}}\n}",
+    "intent": "파일·줄번호 열이 있는 위치 목록(grep 결과·JSON 파일·filter 결과)의 앞 개수곳을 각 줄번호부터 줄수만큼 읽어 위치·본문·실패를 한 목록으로 모을 때. 위치만 필요하면 그 목록을 그대로 쓴다.",
+    "signature": "위치 개수 줄수",
+    "returns": "items⟨열 미상⟩"
+  },
+  {
+    "id": 4575,
+    "alias": "최신범위읽기",
+    "ibl_code": "$후보 = [self:file_find]{path: \"${폴더}\", pattern: \"${패턴}\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by:\"mtime\",desc:true} >> [table:take]{n:1}\n$return = $후보 >> [if:not empty($items)]{[self:read]{start_line:\"${시작줄}\",limit:\"${줄수}\"}}",
+    "intent": "좁힌 폴더에서 수정시각이 최신인 파일의 지정 줄 범위를 읽을 때. 파일명 순서가 아니다. 후보 200건 초과·동률이면 전체 최신 보장은 못 한다.",
+    "signature": "폴더 패턴 시작줄 줄수",
+    "returns": "scalar"
+  }
+]

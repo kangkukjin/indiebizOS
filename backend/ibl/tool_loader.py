@@ -240,7 +240,10 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 "describe": {"type": "array", "items": {"type": "string"}, "maxItems": 6,
                              "description": "code를 비우고 액션 이름 1~6개의 계약 조회. 실행하지 않음."},
                 "read_result": {"type": "object", "properties": {
-                    "id": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}},
+                    "id": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"},
+                    "path": {"type": "array", "maxItems": 16,
+                             "items": {"anyOf": [{"type": "string"}, {"type": "integer", "minimum": 0}]},
+                             "description": "선택 경로, 예 [final_result,items,0]. 중첩 JSON을 해제한 값의 문자 페이지. 생략=원 봉투."}},
                     "required": ["id"], "description": "code를 비우고 result_ref.id의 저장된 원문을 읽는다. 재실행 없음."},
                 "verbose": {
                     "type": "boolean",

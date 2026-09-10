@@ -699,13 +699,13 @@ def execute(tool_input: dict, context) -> str:
                     pass
         fmt = (tool_input.get("format") or "").strip().lower()
         if not fmt:
-            raw = tool_input.get("path") or ""
+            raw = _get_path(tool_input)
             ext = os.path.splitext(raw)[1].lower().lstrip(".")
             if ext == "pdf":
                 fmt = "pdf"
             elif ext in ("docx", "doc"):
                 fmt = "docx"
-            elif ext in ("xlsx", "xlsm"):
+            elif ext in ("xlsx", "xlsm", "xls"):
                 fmt = "xlsx"
             else:
                 fmt = "text"
@@ -714,7 +714,7 @@ def execute(tool_input: dict, context) -> str:
             tool_name = "read_pdf"
         elif fmt == "docx":
             tool_name = "read_docx"
-        elif fmt == "xlsx":
+        elif fmt in ("xlsx", "xlsm", "xls"):
             tool_name = "read_xlsx"
         else:
             tool_name = "read_file"

@@ -307,8 +307,11 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
     from conversation_db import ConversationDB
     from thread_context import (set_current_agent_id, set_current_agent_name,
                                 set_current_project_id, set_task_origin, set_user_input,
-                                clear_all_context)
+                                set_current_task_id, clear_called_agent, clear_all_context)
+    from uuid import uuid4
 
+    task_id = f"task_{uuid4().hex}"
+    db = None
     try:
         project_path = project_manager.get_project_path(project_id)
         agent_name = runner.config.get("name", agent_id)
@@ -319,6 +322,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         set_current_project_id(project_id)
         set_task_origin("user")  # 원격 런처 에이전트 명령 HTTP = 사람의 직접 명령
         set_user_input(command)  # 쓰기 관문 원장·episode 조인이 읽는 행위자 칸 (WS 경로와 대칭)
+        set_current_task_id(task_id)
+        clear_called_agent()
 
         # 에피소드 로깅 — 이 엔드포인트는 원격 런처 자율주행 탭이 프로젝트 에이전트에게
         # 보내는 HTTP 경로인데, start/end 가 WebSocket 핸들러(api_websocket)에만 배선돼
@@ -327,12 +332,13 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         # 두 경우를 다 덮는다.
         try:
             from episode_logger import EpisodeLogger
-            EpisodeLogger.start_episode(agent_name, command, project_id=project_id)
+            EpisodeLogger.start_episode(agent_name, command, project_id=project_id, task_id=task_id)
         except Exception:
             pass
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
+        db.create_task(task_id, "user@gui", "gui", command, agent_name)
 
         # 사용자 및 에이전트 ID
         user_id = db.get_or_create_agent("user", "human")
@@ -363,14 +369,30 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
 
         # AI 응답 저장
         db.save_message(target_agent_id, user_id, response)
+        task = db.get_task(task_id) or {}
+        if result.get("error") or result.get("cancelled"):
+            with db.get_connection() as conn:
+                conn.execute("UPDATE tasks SET status=?, result=?, completed_at=CURRENT_TIMESTAMP WHERE task_id=?",
+                             ("failed" if result.get("error") else "cancelled", response, task_id))
+                conn.commit()
+        elif not task.get("pending_delegations"):
+            db.complete_task(task_id, response)
         return response
+    except Exception as exc:
+        if db is not None:
+            with db.get_connection() as conn:
+                conn.execute("UPDATE tasks SET status='failed', result=?, completed_at=CURRENT_TIMESTAMP WHERE task_id=?",
+                             (str(exc), task_id))
+                conn.commit()
+        raise
     finally:
-        clear_all_context()
         try:
             from episode_logger import EpisodeLogger
             EpisodeLogger.end_episode()
         except Exception:
             pass
+        finally:
+            clear_all_context()
 
 
 @router.post("/projects/{project_id}/agents/{agent_id}/command")

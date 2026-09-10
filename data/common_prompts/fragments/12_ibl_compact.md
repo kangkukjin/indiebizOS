@@ -13,8 +13,10 @@ IBL은 정보 흐름 언어다. 도구 execute_ibl(CLI: mcp__indiebizos__execute
 긴 신규 본문은 files에 넣고 `$file:0`으로 참조한다. 이미 파일이면 files_from에 경로만 전달한다.
 수정은 기존 파일의 정확한 문자열/범위만 바꾼다. 전체 보고서·HTML을 다시 생성하지 않는다.
 
-최종 데이터는 final_result, results는 단계 상태다. _preview·partial·오류·실패 개수를 함께 확인한다.
-result_ref가 있으면 code="", read_result={id,offset,limit}로 이미 저장된 원문을 읽는다.
+파이프 최종 값은 final_result, results는 단계 상태다. 단일 결과는 객체 자체다. _preview·partial·오류·실패 개수를 함께 확인한다.
+result_ref가 있으면 code="", read_result={id,offset,limit,path?}로 저장된 원문을 읽는다.
+path:["final_result","items"] 또는 ["items",0]은 해당 값만 JSON을 해제해 읽는다(문자 단위 페이지).
+_model_omitted는 items 옆의 큰 보조 원자료를 표시에서만 생략했다는 뜻이다. 원본·$변수는 보존된다.
 상세를 보기 위해 크롤·생성·쓰기·업로드를 다시 실행하지 않는다. 다음 페이지는 next_offset.
 실패의 resume 또는 resume_vars는 앞의 성공 결과를 재사용하는 손잡이다. 앞 단 전체를 다시 돌리지 않는다.
 도구가 돌려준 작업 ID·로그·티켓을 보관하고 status/recover의 유한 wait로 기다린다.

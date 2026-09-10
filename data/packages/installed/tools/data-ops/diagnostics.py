@@ -73,6 +73,9 @@ def _field_missing_error(verb, missing, rows):
     miss = "', '".join(str(m) for m in missing) if isinstance(missing, (list, tuple)) else str(missing)
     hint = f" 사용 가능한 필드: {avail}" if avail else ""
     if verb == "filter":
+        if "(" in miss:
+            hint += (' where의 왼쪽은 계산식이 아닌 필드 이름입니다. 길이 등 계산은 먼저 '
+                     '[table:compute]{set:{문자수:"len(text)"}} >> [table:filter]{where:"문자수 > 200"}로 하세요.')
         # 워드 연산자 합류(B19-1) 뒤엔 "필드 op 값" 문자열이 조건으로 읽히므로, 전-필드
         # 검색을 의도했던 문장이 여기로 온다 — 그 갈림길을 오류문이 직접 안내한다.
         hint += " (모든 필드에서 그냥 찾으려면 연산자 없는 문자열을 주세요: where: \"자이\")"

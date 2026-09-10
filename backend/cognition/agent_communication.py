@@ -279,17 +279,20 @@ class AgentCommunicationMixin:
                 self._log(f"외부인 메시지 무시: {from_addr}")
                 return
 
+            task_id = f"task_{uuid.uuid4().hex}"
+            set_current_task_id(task_id)
+
             # 에피소드 로깅 — 외부 채널(이메일/Nostr) 명령도 주행기록에 남긴다. 소유자 확인
             # 통과 후에만 시작(외부인·시스템 메시지는 에피소드 안 만듦). 종료는 아래 finally
             # 한 곳 — SESSION_RESET·clarification 조기 return 경로까지 전부 지나간다.
             try:
                 from episode_logger import EpisodeLogger
-                EpisodeLogger.start_episode(self.config.get('name', ''), content, project_id=self.project_id or "")
+                EpisodeLogger.start_episode(self.config.get('name', ''), content,
+                                            project_id=self.project_id or "", task_id=task_id)
             except Exception:
                 pass
 
             # 태스크 생성
-            task_id = f"task_{uuid.uuid4().hex[:8]}"
             requester_info = f"{from_addr}@{contact_type}"
 
             try:
@@ -465,9 +468,9 @@ class AgentCommunicationMixin:
                     if task_match:
                         extracted_task_id = task_match.group(1)
 
-                if extracted_task_id:
-                    set_current_task_id(extracted_task_id)
-                    print(f"   [task_id] {extracted_task_id}")
+                extracted_task_id = extracted_task_id or f"task_{uuid.uuid4().hex}"
+                set_current_task_id(extracted_task_id)
+                print(f"   [task_id] {extracted_task_id}")
 
                 # call_agent 호출 플래그 초기화
                 clear_called_agent()

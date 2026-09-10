@@ -49,6 +49,8 @@ pyobjc-framework-CoreLocation; sys_platform == "darwin"
 # === 2026-08-13 .venv 전환 잔재 감사에서 합류 (3.14 홈브루에만 있던 미선언 의존성) ===
 # system_essentials [self:sheet]·office_ops — 엑셀 장부 부분 편집
 openpyxl
+# system_essentials [self:read] — 구형 XLS 통계 자료(UTF-8 텍스트로 읽지 않음)
+xlrd
 # system_essentials office_ops·data-ops·lecture_workspace — 워드 문서
 python-docx
 # computer-use 패키지 — 마우스/키보드/화면(pyautogui) + macOS 캡처·OCR(Quartz/AS/Vision)

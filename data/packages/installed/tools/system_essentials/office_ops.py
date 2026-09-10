@@ -486,10 +486,48 @@ def read_docx(tool_input: dict, project_path: str) -> str:
         return json.dumps({"success": False, "error": f"DOCX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
 
 
+def _open_legacy_xls(path):
+    """xlrd를 기존 읽기 전용 시트 인터페이스에 맞춘다. 중간 변환 파일은 만들지 않는다."""
+    import xlrd
+    book = xlrd.open_workbook(str(path), on_demand=True)
+
+    class Sheet:
+        def __init__(self, sheet):
+            self.sheet = sheet
+            self.max_row, self.max_column = sheet.nrows, sheet.ncols
+
+        def iter_rows(self, values_only=True):
+            for i in range(self.max_row):
+                row = []
+                for cell in self.sheet.row(i):
+                    value = cell.value
+                    if cell.ctype == xlrd.XL_CELL_DATE:
+                        value = xlrd.xldate.xldate_as_datetime(value, book.datemode)
+                    elif cell.ctype == xlrd.XL_CELL_BOOLEAN:
+                        value = bool(value)
+                    elif cell.ctype == xlrd.XL_CELL_ERROR:
+                        value = xlrd.error_text_from_code.get(value, f"#ERROR:{value}")
+                    elif cell.ctype in (xlrd.XL_CELL_EMPTY, xlrd.XL_CELL_BLANK):
+                        value = None
+                    row.append(value)
+                yield tuple(row)
+
+    class Workbook:
+        sheetnames = book.sheet_names()
+
+        def __getitem__(self, name):
+            return Sheet(book.sheet_by_name(name))
+
+        def close(self):
+            book.release_resources()
+
+    return Workbook()
+
+
 def read_xlsx(tool_input: dict, project_path: str) -> str:
     import openpyxl
 
-    file_path = tool_input.get("file_path") or tool_input.get("path")
+    file_path = _get_path(tool_input)
     sheet_name = tool_input.get("sheet")  # 특정 시트만 (생략 시 전체)
     try:
         max_rows = int(tool_input.get("max_rows", 200) or 200)
@@ -505,15 +543,17 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
     if not path.exists():
         return json.dumps({"success": False, "error": f"파일을 찾을 수 없습니다: {path}"}, ensure_ascii=False)
 
+    wb = _wb_raw = None
     try:
         # read_only=True(대용량 안전), data_only=True(수식 대신 계산값)
-        wb = openpyxl.load_workbook(str(path), read_only=True, data_only=True)
+        legacy = path.suffix.lower() == ".xls"
+        wb = _open_legacy_xls(path) if legacy else openpyxl.load_workbook(str(path), read_only=True, data_only=True)
         # 수식 보완 로드: data_only=True는 '엑셀이 계산해 캐시한 값'을 읽으므로, 프로그램이
         # 만들어 엑셀이 연 적 없는 파일은 수식 셀이 None(빈칸)으로 조용히 나온다(ep951 실측
         # — 금액·합계가 소리 없이 유실돼 파이프라인에 틀린 데이터가 흐름). 캐시가 없는
         # 수식 셀만 수식 원문("=SUM(...)")으로 정직하게 표시한다. 캐시가 있으면 기존 그대로 값.
         try:
-            _wb_raw = openpyxl.load_workbook(str(path), read_only=True, data_only=False)
+            _wb_raw = None if legacy else openpyxl.load_workbook(str(path), read_only=True, data_only=False)
         except Exception:
             _wb_raw = None
 
@@ -536,6 +576,9 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
                 )
 
         all_sheets = list(wb.sheetnames)
+        if sheet_name and sheet_name not in all_sheets:
+            return json.dumps({"success": False, "error": f"시트가 없습니다: {sheet_name}",
+                               "sheets": all_sheets}, ensure_ascii=False)
         targets = [sheet_name] if sheet_name else all_sheets
 
         parts = []
@@ -612,10 +655,6 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
                     body.append(cells)
                 table = {"columns": columns, "rows": body}
 
-        wb.close()
-        if _wb_raw is not None:
-            _wb_raw.close()
-
         res = {
             "success": True,
             "sheet_count": len(all_sheets),
@@ -624,10 +663,20 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
         }
         if table is not None:
             res["table"] = table
+        if legacy:
+            res["note"] = "XLS는 저장된 셀 값만 읽었습니다. 수식 재계산·원문 복원은 하지 않습니다."
         return json.dumps(res, ensure_ascii=False)
 
+    except ImportError as e:
+        return json.dumps({"success": False, "error": f"스프레드시트 읽기 의존성 누락: {e.name}. "
+                           "backend/requirements-tools.txt의 의존성을 설치한 뒤 같은 self:read를 재시도하세요."}, ensure_ascii=False)
     except Exception as e:
-        return json.dumps({"success": False, "error": f"XLSX를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+        return json.dumps({"success": False, "error": f"스프레드시트를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+    finally:
+        if wb is not None:
+            wb.close()
+        if _wb_raw is not None:
+            _wb_raw.close()
 
 
 # records-관습 카드의 표시용 키들 — 이 밖의 키가 하나라도 있으면 도메인 필드(size 등)가

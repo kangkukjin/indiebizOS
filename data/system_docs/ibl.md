@@ -638,7 +638,9 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
 
 실행 봉투의 `results[]`는 중간 단계, `final_result`는 최종 반환값이다. MCP 전달
 모델 경계는 `verbose:true`라도 중간 기록을 요약한다. 전문은 같은 턴의 `result_ref.id`를
-`execute_ibl(code:"", read_result:{id,offset,limit})`로 읽는다. 입력 계약은
+`execute_ibl(code:"", read_result:{id,offset,limit,path?})`로 읽는다. path는 키/배열 인덱스의
+목록(예 `["final_result","items"]`)이며 중첩 JSON 문자열을 해제한 값에 문자 페이지를 적용한다.
+생략하면 원 봉투 그대로다. `_model_omitted`는 items 옆 큰 보조 원자료를 모델 표시에서만 생략했다는 표식이다. 입력 계약은
 `execute_ibl(code:"", describe:["node:action"])`으로 조회한다. 둘 다 새 실행을 만들지 않는다.
 앱·프로그램은 원 계약을 받으며, 전체 데이터와 턴 변수는 표시 축약과 별도로 보존한다.
 최종 값까지 너무 크면 JSON을 잘라 보내지 않고 `_spilled/ref`로 저장 결과를

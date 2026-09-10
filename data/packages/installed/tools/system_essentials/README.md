@@ -14,3 +14,7 @@
 - 모든 에이전트 (기본 도구)
 - 파일 관리 에이전트
 - 시스템 관리 에이전트
+
+`[self:read]{path:"통계.xls",sheet:"Table 1",max_rows:200}`는 구형 XLS도 표로 읽습니다.
+XLS는 xlrd, XLSX/XLSM은 openpyxl을 사용하며 의존성은 backend/requirements-tools.txt에 선언됩니다.
+XLS는 저장된 셀 값만 읽고 수식을 재계산하지 않습니다. 파일 형식 오류는 읽기 실패로 반환합니다.

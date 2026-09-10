@@ -273,12 +273,15 @@ class CognitivePipelineMixin:
             return
         self._sync_execution_gear()
         from thread_context import actor_context, get_current_agent_id, get_current_task_id
+        from episode_logger import episode_task_id
+        from uuid import uuid4
         from providers.base import turn_token_scope
         from world_pulse import _load_config
         resource_limits = _load_config().get("agent_resource_limits", {})
         agent_id = get_current_agent_id() or getattr(self.ai, "agent_id", None)
-        with self.turn_ai_scope(), actor_context(agent_id=agent_id), \
-                turn_token_scope(agent_id, get_current_task_id(), (getattr(self.ai, "agent_id", None),),
+        task_id = episode_task_id() or get_current_task_id() or f"task_{uuid4().hex}"
+        with self.turn_ai_scope(), actor_context(agent_id=agent_id, task_id=task_id), \
+                turn_token_scope(agent_id, task_id, (getattr(self.ai, "agent_id", None),),
                                  hard_token_limit=resource_limits.get("hard_token_limit"),
                                  deadline_s=resource_limits.get("deadline_s")):
             # 화면·위임·스케줄러가 신원을 생략해도 감독과 MCP가 같은 턴을 찾는다.
@@ -500,15 +503,6 @@ class CognitivePipelineMixin:
                     from prompt_builder import compile_user_command
                     _fused = compile_user_command(message, consciousness_output)
                     augmented_message = f"{dynamic_context}\n\n{_fused}" if dynamic_context else _fused
-                    # 초안 인계(2026-09-06): 검증 통과 초안을 턴에 보관 — 실행자는 execute_ibl(code:"$초안") 로 그대로 실행
-                    try:
-                        from prompt_builder import validate_imagined_draft
-                        from ibl_turn_vars import save_draft
-                        _d0 = (consciousness_output.get("imagined_ibl") or "").strip()
-                        if _d0 and validate_imagined_draft(_d0)[0]:
-                            save_draft(_d0)
-                    except Exception:
-                        pass
                 elif dynamic_context:
                     augmented_message = f"{dynamic_context}\n\n{message}"
         else:
@@ -541,6 +535,16 @@ class CognitivePipelineMixin:
                     self.ai._provider.system_prompt = stable_prompt
                 if dynamic_context:
                     augmented_message = f"{dynamic_context}\n\n{message}"
+
+        # 시스템 AI·프로젝트 에이전트 모두 동일한 초안 인계. 이전에는 시스템 분기에만
+        # 저장이 있어 프로젝트 실행자는 정상 task가 있어도 $초안을 회수하지 못했다.
+        if consciousness_output:
+            from prompt_builder import validate_imagined_draft
+            from ibl_turn_vars import save_draft
+            _d0 = (consciousness_output.get("imagined_ibl") or "").strip()
+            if _d0 and validate_imagined_draft(_d0)[0]:
+                if not save_draft(_d0):
+                    raise RuntimeError("의식 초안을 턴에 저장하지 못했습니다")
 
         # 히스토리 편집 (의식 요약 있으면 대체, 없으면 원본 유지)
         history = self._apply_consciousness_to_history(history, consciousness_output)

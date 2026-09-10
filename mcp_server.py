@@ -397,7 +397,7 @@ async def execute_ibl(code: str, project_path: str = "",
         files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: 먼저 임시 파일에
         쓰고 여기에 경로만 싣는다.
     describe: code를 비우고 ["node:action"]으로 계약 조회(1~6개, 실행 없음).
-    read_result: code를 비우고 {id,offset,limit}로 result_ref의 기존 원문 회수(재실행 없음).
+    read_result: code를 비우고 {id,offset,limit,path?}로 기존 원문 회수. path는 키/인덱스 배열(예 ["final_result","items"]), 중첩 JSON을 해제한 값의 문자 페이지. 생략하면 원 봉투(재실행 없음).
     verbose: 모델은 중간 요약과 최종 미리보기를 유지한다. 전문은 read_result로 읽는다.
     recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
         (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,

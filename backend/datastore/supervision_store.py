@@ -71,7 +71,8 @@ class TurnStore:
         if not re.fullmatch(r"[0-9a-f]{64}", key or ""):
             raise ValueError("잘못된 증거 ID")
         text = (self.directory / (key + ".txt")).read_text(encoding="utf-8")
-        return {"id": key, "offset": offset, "chars": len(text), "text": text[offset:offset + limit]}
+        end = offset + limit if limit is not None else None
+        return {"id": key, "offset": offset, "chars": len(text), "text": text[offset:end]}
 
     def log(self, kind, **fields):
         with self.lock:

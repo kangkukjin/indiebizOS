@@ -12,21 +12,12 @@
 import { useEffect, useState } from 'react';
 import { Gauge, Loader2, Settings2, Save, Check, Brain, Boxes } from 'lucide-react';
 import { api } from '../../lib/api';
-
-interface GearState {
-  current_gear: string;
-  gears: string[];
-  presets: Record<string, Record<string, string>>;
-  axes: Record<string, { tier: string; provider: string; model: string }>;
-  tiers?: string[];
-  axis_names?: string[];
-  consciousness_enabled?: boolean;
-}
+import type { ModelGearState } from '../../lib/api-system-ai';
 
 interface AgentInfo { id: string; name: string; project: string; }
 
 const GEAR_DESC: Record<string, string> = {
-  절약: '전부 경량 — 가장 빠르고 저렴',
+  절약: '기어 역할 경량 — 빠르고 저렴',
   균형: '실행·의식 중급 — 기본',
   최대: '실행·의식 고급 — 최고 품질',
 };
@@ -37,7 +28,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
   onToggleStruct?: () => void;   // 'indiebizOS의 구조'(anatomy) 토글 — 설정 옆 작은 버튼으로 노출
   structOpen?: boolean;
 } = {}) {
-  const [gear, setGear] = useState<GearState | null>(null);
+  const [gear, setGear] = useState<ModelGearState | null>(null);
   const [changing, setChanging] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [togglingMind, setTogglingMind] = useState(false);
@@ -56,6 +47,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
     try { setGear(await api.getModelGear()); } catch (e) { console.error('Failed to load gear:', e); }
   };
   useEffect(() => { load(); }, []);
+  useEffect(() => { if (showSettings) load(); }, [showSettings]);
 
   // 설정 패널 열 때 프리셋 드래프트 + 핀 현황 로드
   useEffect(() => {
@@ -117,6 +109,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
     try {
       const r = await api.updateModelGearOverrides(next);
       setOverrides(r.overrides || {});
+      await load();
       signalGearChange();
     } catch (e) { console.error('Failed to set pin:', e); }
     setSavingPin(null);
@@ -125,6 +118,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
   const gears = gear?.gears ?? ['절약', '균형', '최대'];
   const tiers = gear?.tiers ?? TIERS;
   const axes = gear?.axis_names ?? AXES;
+  const axisLabel = (axis: string) => gear?.axis_info?.[axis]?.label ?? axis;
 
   return (
     <div className="rounded-xl border border-stone-200 bg-white/70 p-4 space-y-3">
@@ -186,7 +180,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-500 pt-1 border-t border-stone-100">
           {Object.entries(gear.axes).map(([axis, info]) => (
             <span key={axis} className="flex items-center gap-1">
-              <span className="text-stone-400">{axis}</span>
+              <span className="text-stone-400" title={gear.axis_info?.[axis]?.description}>{axisLabel(axis)}</span>
               <span className="text-stone-700 font-medium">{info.tier}</span>
             </span>
           ))}
@@ -200,10 +194,10 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
         <span className="text-[11.5px] flex items-center gap-1.5 min-w-0">
           <Brain size={13} className={conscious ? 'text-stone-600' : 'text-stone-300'} />
           <span className={`font-medium ${conscious ? 'text-stone-700' : 'text-stone-400'}`}>
-            의식 {conscious ? '켜짐' : '꺼짐'}
+            최초 숙고 {conscious ? '켜짐' : '꺼짐'}
           </span>
           <span className="text-stone-400 truncate">
-            {conscious ? '— 복잡한 일은 숙고(THINK)' : '— 반사+바로 실행, 빠름·저렴'}
+            {conscious ? '— 복잡한 일은 계획부터' : '— 바로 실행부터'}
           </span>
         </span>
         <button
@@ -211,7 +205,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           disabled={togglingMind || !gear}
           role="switch"
           aria-checked={conscious}
-          title="끄면 THINK(의식) 경로를 차단합니다. 반사(고확신)는 유지. #think 로 한 건만 깨울 수 있습니다."
+          title="최초 THINK 숙고를 끕니다. 중간 감독·최종 검수는 작업 조건에 따라 계속 적용됩니다. #think 로 한 건만 숙고할 수 있습니다."
           className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${
             conscious ? 'bg-stone-800' : 'bg-stone-300'
           }`}
@@ -223,6 +217,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           />
         </button>
       </div>
+      <p className="text-[10.5px] text-stone-400">중간 감독·최종 검수는 작업 조건에 따라 적용됩니다.</p>
 
       {/* ⚙ 설정 패널 — 프리셋 편집 + 에이전트 핀 */}
       {showSettings && (
@@ -230,7 +225,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           {/* 1. 프리셋 편집기 */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-stone-600">기어 프리셋 — 각 기어가 4축을 어느 티어로</span>
+              <span className="text-xs font-semibold text-stone-600">기어 프리셋 — 역할별 모델 등급</span>
               <button
                 onClick={savePresets}
                 disabled={savingPresets}
@@ -245,7 +240,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
                 <thead>
                   <tr className="text-stone-400">
                     <th className="text-left font-medium py-1 pr-2">기어</th>
-                    {axes.map((axis) => <th key={axis} className="font-medium py-1 px-1 text-center">{axis}</th>)}
+                    {axes.map((axis) => <th key={axis} title={gear?.axis_info?.[axis]?.description} className="font-medium py-1 px-1 text-center">{axisLabel(axis)}</th>)}
                   </tr>
                 </thead>
                 <tbody>
@@ -267,6 +262,27 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
                   ))}
                 </tbody>
               </table>
+            </div>
+            <div className="space-y-1 text-[11px] text-stone-500">
+              {axes.map((axis) => (
+                <p key={axis}><b className="text-stone-600">{axisLabel(axis)}</b> · {gear?.axis_info?.[axis]?.description}</p>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <span className="text-xs font-semibold text-stone-600">시각·청각·기억 모델</span>
+            <p className="text-[11px] text-stone-500">현재 선택 경로와 별도 설정입니다. 조회 전용 항목은 이 기어에서 변경하지 않습니다.</p>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {gear?.sensory_models?.map((item) => (
+                <div key={item.id} className="min-w-0 rounded-lg border border-stone-200 bg-white p-2.5 space-y-1">
+                  <div className="text-xs font-semibold text-stone-700">{item.label}</div>
+                  <div className="text-[11px] font-medium text-stone-700 break-all">{item.model ? `${item.provider ? item.provider + ' / ' : ''}${item.model}` : '미설정'}</div>
+                  <div className="text-[10.5px] text-stone-500">{item.policy}</div>
+                  <p className="text-[11px] text-stone-500">{item.detail}</p>
+                  <p className="text-[10px] text-stone-400 break-all">설정 출처: {item.source}</p>
+                </div>
+              ))}
             </div>
           </div>
 

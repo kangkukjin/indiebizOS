@@ -12,7 +12,7 @@
    - `중급` = `midtier_ai_config.json`
    - `고급` = `system_ai_config.json` (← 옛 '시스템' 라벨 교체)
 2. **4 축** = 텍스트 역할 종류. 각각 독립적으로 티어 배정:
-   - `분류` (라우팅) · `평가` (채점) · `실행` (일) · `의식` (심사숙고)
+   - `분류` (라우팅·증류) · `평가` (화면 이름 **보조 AI**) · `실행` (일·이미지 채점) · `의식` (계획·감독·최종 승인)
    - ★평가≠분류, 의식≠시스템AI — 옛날엔 용접돼 있던 걸 분리.
 3. **기어** = 축→티어 매핑. 프리셋 3단 + 사용자지정:
 
@@ -44,8 +44,8 @@
 | 축 | 역할 |
 |---|---|
 | 분류 | 무의식 분류 / 백그라운드 정리(경험증류·포식정리·recall압축·심층메모리) |
-| 평가 | GoalEval 평가자 |
-| 의식 | consciousness |
+| 평가 (보조 AI) | 노트북 근거 답변·단계 기준 검사·감독 없는 기존 GoalEval |
+| 의식 | 계획·중간 감독·재계획·최종 승인 |
 | 실행 | 프로젝트 에이전트 / 시스템AI / Reflex / 수동번역 / android / auto_response / **임베디드 텍스트 생성(슬라이드·정기보고·신문 본문)** |
 
 ## 차선별 추론 예산 (lane_reasoning, 2026-09-02)
@@ -80,14 +80,29 @@
 기어와 무관한 **별도 설정**(생성=핸들러 패스스루: Gemini 이미지 키, 해마=fine-tuned 모델).
 계기판 설정창에서 별도 구역으로 노출.
 
-**비전 입력(이미지를 *읽는* 것)은 2026-08-27 예약석이 채워졌다**: `modality.image` =
-설정 파일 이름(`vision_ai_config.json`, 티어 json 과 같은 {provider, model} 모양, 키는 .env).
-`model_resolver.get_vision_provider()` 가 해소하고, 원샷(oneshot/system_ai_call)은 images
-가 있으면 이 슬롯을 **0차**로 우선한다(텍스트 축 경량=deepseek 은 비전이 없으므로) —
-미설정이면 role-축 모델에 그대로 싣는다. 소비처: image_read(read/critic)·ingest 이미지
-추출·GoalEval 시각 평가. 벤더·모델명은 코드가 아니라 이 데이터에 산다(모델 은퇴 시
-설정 한 줄 교체 — 2026-08-27 실측: gemini-3-pro-preview 은퇴를 데이터로 흡수).
-관문: `backend/test_vision_gear_contract.py`(범용 비전 경로에 벤더 URL·키 직참조 금지).
+**이미지 읽기·채점 (2026-09-10)**: `image_read`의 read/critic은 모두 실행 역할이다.
+`resolve_image_execution()`이 실제 실행 모델(핀·수리 승격 포함)의 이미지 입력 능력을 확인한다.
+지원하면 같은 모델로 이미지와 기준만 보내는 원샷 검수를 수행한다. 실행 이력은 복사하지 않는다.
+미지원·미확인일 때만 `modality.image`의 설정 파일(`vision_ai_config.json`)로 보완한다.
+대체 모델도 없거나 명시적으로 비전 미지원이면 실패하며, 이미지를 빼고 채점하지 않는다.
+모델 호출을 통한 지원 여부 시험·재시도는 없다. 실제 선택은 `model.image_route`에 기록한다.
+
+입력 능력은 티어/직접 핀 설정의 `input_modalities: [text, image]` 또는
+`data/model_input_capabilities.yaml`의 관측 규칙으로 선언한다(그 밖은 미확인).
+이미지를 전송하지 않는 어댑터는 능력 선언으로 우회할 수 없다. 모델명·벤더별 지원 여부는
+코드 조건이 아니라 근거 URL이 붙은 데이터이며, 새 모델은 데이터만 추가한다.
+
+이미지 추출·기존 평가·의식의 **최종 시각 검수**는 별도 비전 슬롯을 유지한다.
+이미지 채점의 실행 역할과 전체 목표를 승인하는 의식 역할은 모델 등급을 공유하더라도 구분된다.
+
+**설정 노출**: 데스크탑·원격 조종실 설정에서 이미지 채점의 현재 선택 모델과 대체 이유,
+별도 비전·음성 받아쓰기·오디오 분석·임베딩·동영상 슬롯을 조회 전용으로 보여준다.
+오디오는 설치 패키지의 `audio_models.yaml`을 직접 읽는다. `/model-gear` 조회는 프로바이더를
+생성하거나 모델을 호출하지 않으며 비밀키를 노출하지 않는다. 별도 슬롯은 기어 변경으로 바뀌지 않는다.
+`평가` 저장 키는 유지하면서 화면 이름을 **보조 AI**로 바꾸고 용도를 설명한다.
+의식 토글은 **최초 숙고**로 명명한다. 중간 감독·최종 검수는 작업 조건에 따라 계속 적용된다.
+
+관문: `backend/test_vision_gear_contract.py`, `backend/test_image_execution_models.py`.
 
 ## 해소 흐름 (resolve)
 
@@ -96,7 +111,7 @@ resolve(role, agent_id?) →
   1. 오버라이드(agent_id, 그다음 role) 있으면 → 그 티어/모델
   2. role → axis      (model_gear.json: role_axis)
   3. axis → tier      (현재 기어 preset)
-  4. tier → 모델       (티어 config; api_key 비면 고급 키 폴백)
+  4. tier → 모델       (티어 config; 키는 해당 provider의 .env 설정)
 ```
 
 config를 매 호출 읽으므로 기어 변경이 **즉시 반영**(핫리로드 — 재시작 불요).
@@ -106,7 +121,7 @@ provider 객체는 `provider|model|key` 로 캐시 → 기어 바뀌면 키가 �
 ## 파일
 
 - `data/model_gear.json` — 단일 진실원 (현재기어·tiers·presets·role_axis·overrides·modality)
-- `backend/model_resolver.py` — `resolve()` / `get_gear()` / `set_gear()` / `get_provider_for()`
+- `backend/base/model_resolver.py` — `resolve()` / `get_gear()` / `set_gear()` / `get_provider_for()`
 
 ## 빌드 단계
 

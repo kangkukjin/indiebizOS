@@ -238,6 +238,7 @@ _GEAR_AXIS_ROLES = {"분류": "classify", "평가": "evaluate", "실행": "execu
 def _describe_gear() -> dict:
     """현재 기어 상태 + 4축이 어느 티어/모델로 해소되는지(UI 표시용)."""
     import model_resolver as M
+    from model_settings_view import describe_model_settings
     gear = M._load_gear()
     axes = {}
     for axis, role in _GEAR_AXIS_ROLES.items():
@@ -251,6 +252,7 @@ def _describe_gear() -> dict:
         "tiers": M.TIERS,
         "axis_names": M.AXES,
         "consciousness_enabled": M.consciousness_enabled(),
+        **describe_model_settings(gear),
     }
 
 

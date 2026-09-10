@@ -199,6 +199,7 @@
     "services/indienet_relay",
     "services/indienet_social",
     "services/ingest_engine",
+    "services/model_settings_view",
     "services/multi_chat_manager",
     "services/nas_music",
     "services/nas_subtitle",
@@ -295,8 +296,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 284,
-    "engine": 265,
+    "total": 285,
+    "engine": 266,
     "blocklist": 19
   }
 }

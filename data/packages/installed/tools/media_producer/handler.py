@@ -80,7 +80,7 @@ def execute(tool_input: dict, context) -> str:
         return generate_gemini_image(tool_input, output_base)
     elif tool_name == "read_image":
         # 단일 액션 + op 분기 (2026-08-05 image_critic 흡수, 변형=op).
-        # 구 read_gemini_image — 2026-08-27 벤더 중립화(모델은 기어가 단독 결정, vision_read.py).
+        # 구 read_gemini_image — 2026-08-27 벤더 중립화(실행 모델 우선·필요시 비전 대체, vision_read.py).
         op = (tool_input.get("op") or "read").strip() or "read"
         fn = _OP_DISPATCHERS["read_image"].get(op)
         if fn is None:

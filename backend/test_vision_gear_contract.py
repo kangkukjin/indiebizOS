@@ -2,8 +2,8 @@
 
 시각 읽기·채점은 범용 능력 — 모델은 기어가 단독 결정한다(에이전트·코드별 벤더 고정 금지).
 - vision_read(critic/read)와 ingest _vision_json 은 기어-해소 원샷을 탄다.
-- 이미지 입력이 있으면 원샷은 기어의 비전 모달리티 슬롯(modality.image →
-  vision_ai_config.json)을 0차로 우선한다 — 텍스트 축 티어(경량 deepseek)는 비전이 없다.
+- 이미지 읽기·채점은 실행 모델 우선, 입력 미지원/미확인 때 비전 슬롯을 사용한다.
+- 나머지 원샷 이미지 추출·기존 평가는 별도 비전 슬롯을 유지한다.
 - 재발 방지 관문: 범용 비전 경로 소스에 벤더 API URL 직서술 금지(이미지 *생성* 등
   벤더 고유 기능 파일은 대상 아님).
 
@@ -45,8 +45,8 @@ def png(tmp_path):
 # ── vision_read: 기어 라우팅 계약 ─────────────────────────────────
 
 
-def test_critic_routes_evaluate_axis_with_image(vr, png, monkeypatch):
-    """critic = 평가 축(role=evaluate) + 이미지 동봉 — GoalEval 평가자와 같은 눈."""
+def test_critic_routes_execution_axis_with_image(vr, png, monkeypatch):
+    """critic = 실행 역할 + 이미지 동봉. 전체 목표의 최종 승인과 분리된다."""
     calls = []
 
     def fake(prompt, system_prompt=None, images=None, role=None):
@@ -57,7 +57,7 @@ def test_critic_routes_evaluate_axis_with_image(vr, png, monkeypatch):
     out = vr.critique_image({"image_path": png, "intent": "t"}, ".")
     verdict = json.loads(out.split("verdict_json:", 1)[1].strip())
     assert verdict["passed"] is True and verdict["tier"] == "vision"
-    assert calls[0]["role"] == "evaluate"
+    assert calls[0]["role"] == "execution"
     assert calls[0]["images"] and calls[0]["images"][0]["media_type"] == "image/png"
 
 

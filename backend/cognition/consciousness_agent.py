@@ -526,7 +526,8 @@ _lightweight_provider_initialized = False
 
 # 원샷 호출 직렬화 — oneshot_ai_call 이 공유 프로바이더의 system_prompt 를 임시 교체하는
 # 방식이라, 백그라운드 증류(_after_response_async)와 다음 턴 분류가 겹치면 프롬프트가 교차
-# 오염된다(포식 브라우저 스레드에서도 잠복하던 레이스). 호출은 수 초라 직렬화 비용은 미미.
+# 오염된다(포식 브라우저 스레드에서도 잠복하던 레이스). 같은 provider만 직렬화한다.
+# 이미지 검수처럼 오래 걸리는 다른 모델이 분류기까지 기다리게 하지 않는다.
 #
 # ★전경 우선(2026-09-02): 평범한 Lock 은 선착순이라, 증류 워커가 원샷을 연달아 잡으면
 # 다음 턴의 분류기(전경 — 사용자가 기다리는 왕복)가 그 뒤에 줄을 섰다. 잠금은 하나의
@@ -590,7 +591,14 @@ class _PriorityLock:
             self.release()
 
 
-_oneshot_call_lock = _PriorityLock()
+_provider_lock_guard = _threading.Lock()
+
+
+def _oneshot_lock_for(provider):
+    with _provider_lock_guard:
+        if not hasattr(provider, "_oneshot_call_lock"):
+            provider._oneshot_call_lock = _PriorityLock()
+        return provider._oneshot_call_lock
 
 # 직전 원샷 호출의 **실패 범주** (2026-09-01) — 반환은 문자열 하나뿐이라 "왜 실패했나"가
 # 실릴 자리가 없다. 프로바이더가 값으로 말한 범주(base.last_failure_kind)를 호출한
@@ -865,7 +873,7 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
 
     # ★직렬화: system_prompt 임시 교체가 공유 싱글턴 변이라 동시 호출 시 프롬프트 교차 오염
     # (백그라운드 증류 스레드 + 메인 턴 분류가 같은 provider 를 만짐). 락으로 스왑~복원을 원자화.
-    with _oneshot_call_lock.held(background=is_oneshot_background()):
+    with _oneshot_lock_for(provider).held(background=is_oneshot_background()):
         # 시스템 프롬프트 임시 교체
         original_system_prompt = None
         if system_prompt is not None:
@@ -957,21 +965,48 @@ def reset_system_oneshot_provider():
     _clear_resolver_cache()
 
 
+def _execution_image_provider():
+    """실행자의 실제 모델/핀을 유지한 이미지 검수. 이력 없이 한 번 호출한다."""
+    from model_resolver import get_image_execution_provider
+    from thread_context import get_current_agent_id
+    from supervision_bus import current
+    controller = current()
+    execution = getattr(controller.runner.ai, "config", None) if controller else None
+    agent_id = controller.owner if controller else get_current_agent_id()
+    provider, descriptor = get_image_execution_provider(agent_id=agent_id, execution=execution)
+    try:
+        from episode_logger import record_trajectory_event
+        record_trajectory_event("model.image_route", {
+            "role": "execution", **{k: descriptor.get(k) for k in
+                ("provider", "model", "source", "image_route", "image_reason")},
+        })
+    except Exception:
+        pass
+    logger.info("[image] %s (%s/%s)", descriptor.get("image_reason"),
+                descriptor.get("provider"), descriptor.get("model"))
+    return provider
+
+
 def system_ai_call(prompt: str, system_prompt: str = None,
                    images: list = None, role: str = "translate") -> Optional[str]:
     """원샷 호출 — 모델은 기어 리졸버가 role 로 해소한다(oneshot_ai_call 과 같은 계약).
 
     과거엔 무조건 system_ai(본격) 모델이었으나, 이제 role 로 티어가 갈린다:
       - translate(수동 번역) → 실행 축
-      - evaluate(달성 기준 평가) → 평가 축(기어 프리셋상 경량 — opus→경량 개선)
+      - evaluate(기존 달성 기준 평가·보조 AI) → 평가 축
+      - execution + images(이미지 읽기·채점) → 실행 모델 우선, 미지원/미확인 시 비전 슬롯
     리졸버 프로바이더 우선 → 옛 system_ai 원샷 getter → 의식 에이전트(본격) 순 폴백.
     """
-    # 0차: 이미지 입력이면 비전 모달리티 슬롯 우선 (2026-08-27 벤더 중립화) —
-    # 텍스트 축 티어(경량 deepseek 등)는 비전이 없을 수 있다. gear modality.image 가
-    # 정하는 프로바이더가 있으면 그걸 쓰고, 미설정이면 role-축 모델에 그대로 싣는다
-    # (고급 티어처럼 비전 가능할 수 있으므로 — 실패는 호출자에게 정직하게 돌아간다).
+    # 실행 역할의 이미지는 실행 모델 우선. 나머지 이미지 소비처는 별도 비전 슬롯 유지.
     provider = None
-    if images:
+    if images and role == "execution":
+        try:
+            provider = _execution_image_provider()
+        except Exception as exc:
+            logger.warning("[image] 실행 이미지 모델 해소 실패: %s", exc)
+        if provider is None:
+            return None  # 이미지 없는 텍스트 모델로 채점을 계속하지 않는다.
+    elif images:
         try:
             from model_resolver import get_vision_provider
             provider, _vd = get_vision_provider(oneshot=True)
@@ -989,28 +1024,29 @@ def system_ai_call(prompt: str, system_prompt: str = None,
             return None
         provider = agent._provider
 
-    original_system_prompt = None
-    if system_prompt is not None:
-        original_system_prompt = provider.system_prompt
-        provider.system_prompt = system_prompt
-    try:
-        # 스텝 원장 역할 태그 — oneshot_ai_call 과 같은 이유(호출 이음매에 태그).
+    with _oneshot_lock_for(provider).held(background=is_oneshot_background()):
+        original_system_prompt = None
+        if system_prompt is not None:
+            original_system_prompt = provider.system_prompt
+            provider.system_prompt = system_prompt
         try:
-            from episode_logger import set_step_role
-            set_step_role(f"oneshot:{role}")
-        except Exception:
-            pass
-        return provider.process_message(
-            message=prompt, history=[], images=images, execute_tool=None
-        )
-    except Exception as e:
-        logger.warning(f"[system_ai_call] 실패: {e}")
-        return None
-    finally:
-        try:
-            from episode_logger import set_step_role
-            set_step_role("")
-        except Exception:
-            pass
-        if original_system_prompt is not None:
-            provider.system_prompt = original_system_prompt
+            # 스텝 원장 역할 태그 — oneshot_ai_call 과 같은 이유(호출 이음매에 태그).
+            try:
+                from episode_logger import set_step_role
+                set_step_role(f"oneshot:{role}")
+            except Exception:
+                pass
+            return provider.process_message(
+                message=prompt, history=[], images=images, execute_tool=None
+            )
+        except Exception as e:
+            logger.warning(f"[system_ai_call] 실패: {e}")
+            return None
+        finally:
+            try:
+                from episode_logger import set_step_role
+                set_step_role("")
+            except Exception:
+                pass
+            if original_system_prompt is not None:
+                provider.system_prompt = original_system_prompt

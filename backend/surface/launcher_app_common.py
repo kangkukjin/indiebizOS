@@ -205,7 +205,7 @@ async function loadPeer(){
 
 /* ===== 모델 기어 — 계기판 변속 레버 + 설정(프리셋·핀). data-속성 위임으로 따옴표 함정 회피 ===== */
 let gearState=null, gearOpen=false, gearAgents=[], gearOverrides={}, gearPresetDraft={};
-const GEAR_DESC={'절약':'전부 경량 — 빠르고 저렴','균형':'실행·의식 중급 — 기본','최대':'실행·의식 고급 — 최고 품질'};
+const GEAR_DESC={'절약':'기어 역할 경량 — 빠르고 저렴','균형':'실행·의식 중급 — 기본','최대':'실행·의식 고급 — 최고 품질'};
 async function loadGear(){
   try{ const r=await jfetch('/model-gear'); if(r.ok){ gearState=await r.json(); renderGear(); return; } }catch(e){}
   const el=document.getElementById('gearLever'); if(el) el.style.display='none';
@@ -226,16 +226,17 @@ function renderGear(){
   h+='</div>';
   if(g.axes){
     h+='<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;color:var(--dim)">';
-    Object.keys(g.axes).forEach(function(ax){ h+='<span>'+esc(ax)+' <b style="color:var(--txt)">'+esc(g.axes[ax].tier)+'</b></span>'; });
+    Object.keys(g.axes).forEach(function(ax){ h+='<span>'+esc((g.axis_info&&g.axis_info[ax]?g.axis_info[ax].label:ax))+' <b style="color:var(--txt)">'+esc(g.axes[ax].tier)+'</b></span>'; });
     h+='<span style="color:var(--dim)">· 티어별 모델은 설정 ▸ 모델 설정</span></div>';
   }
   if(typeof g.consciousness_enabled!=='undefined'){
     const on=g.consciousness_enabled!==false;
     h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">';
-    h+='<span style="font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+(on?'var(--txt)':'var(--dim)')+'">🧠 의식 '+(on?'켜짐':'꺼짐')+'</b> <span style="color:var(--dim)">'+(on?'— 복잡한 일은 숙고(THINK)':'— 반사+바로 실행, 빠름·저렴')+'</span></span>';
-    h+='<button data-act="mind" role="switch" aria-checked="'+on+'" title="끄면 THINK(의식) 경로를 차단합니다. 반사(고확신)는 유지." style="position:relative;flex-shrink:0;width:40px;height:20px;border-radius:9999px;border:none;cursor:pointer;background:'+(on?'var(--acc)':'var(--line)')+'">';
+    h+='<span style="font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+(on?'var(--txt)':'var(--dim)')+'">🧠 최초 숙고 '+(on?'켜짐':'꺼짐')+'</b> <span style="color:var(--dim)">'+(on?'— 복잡한 일은 계획부터':'— 바로 실행부터')+'</span></span>';
+    h+='<button data-act="mind" role="switch" aria-checked="'+on+'" title="최초 THINK 숙고를 끕니다. 중간 감독·최종 검수는 작업 조건에 따라 계속 적용됩니다." style="position:relative;flex-shrink:0;width:40px;height:20px;border-radius:9999px;border:none;cursor:pointer;background:'+(on?'var(--acc)':'var(--line)')+'">';
     h+='<span style="position:absolute;top:2px;left:'+(on?'22px':'2px')+';width:16px;height:16px;border-radius:9999px;background:#fff;transition:left .15s"></span></button></div>';
   }
+  h+='<p style="font-size:10px;color:var(--dim);margin-top:6px">중간 감독·최종 검수는 작업 조건에 따라 적용됩니다.</p>';
   if(gearOpen) h+=renderGearSettings();
   el.innerHTML=h;
 }
@@ -244,7 +245,7 @@ function renderGearSettings(){
   let h='<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--line)">';
   h+='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:600">기어 프리셋</span><button data-act="savePresets" style="font-size:11px;padding:3px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg3);color:var(--txt)">저장</button></div>';
   h+='<table style="width:100%;font-size:11px;border-collapse:collapse"><tr style="color:var(--dim)"><td style="padding:2px 4px">기어</td>';
-  axes.forEach(function(ax){ h+='<td style="padding:2px;text-align:center">'+esc(ax)+'</td>'; });
+  axes.forEach(function(ax){ h+='<td style="padding:2px;text-align:center">'+esc((g.axis_info&&g.axis_info[ax]?g.axis_info[ax].label:ax))+'</td>'; });
   h+='</tr>';
   Object.keys(gearPresetDraft).forEach(function(gn){
     h+='<tr><td style="padding:3px 4px;font-weight:600">'+esc(gn)+'</td>';
@@ -256,6 +257,16 @@ function renderGearSettings(){
     h+='</tr>';
   });
   h+='</table>';
+  axes.forEach(function(ax){ const info=(g.axis_info||{})[ax]; if(info) h+='<p style="font-size:11px;color:var(--dim);margin:5px 0"><b>'+esc(info.label)+'</b> · '+esc(info.description)+'</p>'; });
+  h+='<div style="margin:16px 0"><b style="font-size:12px">시각·청각·기억 모델</b><p style="font-size:11px;color:var(--dim)">현재 선택 경로와 별도 설정입니다. 조회 전용 항목은 이 기어에서 변경하지 않습니다.</p>';
+  (g.sensory_models||[]).forEach(function(item){
+    h+='<div style="border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px;font-size:11px;overflow-wrap:anywhere">';
+    h+='<b>'+esc(item.label)+'</b><div style="margin:4px 0">'+esc(item.model?((item.provider?item.provider+' / ':'')+item.model):'미설정')+'</div>';
+    h+='<div style="color:var(--dim)">'+esc(item.policy)+'</div><p style="color:var(--dim);margin:4px 0">'+esc(item.detail)+'</p>';
+    h+='<div style="color:var(--dim);font-size:10px">설정 출처: '+esc(item.source)+'</div></div>';
+  });
+  h+='</div>';
+
   h+='<div style="font-size:12px;font-weight:600;margin:12px 0 6px">에이전트 핀 — 특정 에이전트만 고정</div><div style="max-height:200px;overflow-y:auto">';
   gearAgents.forEach(function(a){
     const cur=gearOverrides[a.id]||'';
@@ -274,6 +285,7 @@ async function setGearTo(name){
 async function gearToggle(){
   gearOpen=!gearOpen;
   if(gearOpen){
+    await loadGear();
     if(gearState&&gearState.presets) gearPresetDraft=JSON.parse(JSON.stringify(gearState.presets));
     try{ const r=await jfetch('/model-gear/overrides'); if(r.ok){ const d=await r.json(); gearAgents=d.agents||[]; gearOverrides=d.overrides||{}; } }catch(e){}
   }
@@ -284,7 +296,7 @@ async function saveGearPresets(){
 }
 async function setGearPin(id,tier){
   const next=Object.assign({},gearOverrides); if(tier) next[id]=tier; else delete next[id];
-  try{ const r=await jfetch('/model-gear/overrides',{method:'PUT',body:JSON.stringify({overrides:next})}); if(r.ok){ const d=await r.json(); gearOverrides=d.overrides||{}; renderGear(); } }catch(e){}
+  try{ const r=await jfetch('/model-gear/overrides',{method:'PUT',body:JSON.stringify({overrides:next})}); if(r.ok){ const d=await r.json(); gearOverrides=d.overrides||{}; await loadGear(); } }catch(e){}
 }
 async function setConsciousness(enabled){
   try{ const r=await jfetch('/model-gear/consciousness',{method:'PUT',body:JSON.stringify({enabled:enabled})}); if(r.ok){ gearState=await r.json(); renderGear(); } }catch(e){}

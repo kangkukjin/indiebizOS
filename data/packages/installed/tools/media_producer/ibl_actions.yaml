@@ -136,19 +136,19 @@ nodes:
           question: [query, prompt]
         # 세계를 바꾸지 않는 순수 읽기(기어-해소 비전 조회) — 반환은 단일값 → scalar.
         # 구 image_critic(채점)을 op:critic 으로 흡수 (2026-08-05 어휘 중복 압축 — 변형=op
-        # 명명 헌법). 2026-08-27 벤더 중립화: 모델은 기어가 단독 결정(vision_read.py).
+        # 명명 헌법). 2026-08-27 벤더 중립화: 모델은 실행 역할 우선, 미지원/미확인 때 별도 비전 설정(vision_read.py).
         returns: scalar
         side_effect: false   # 두 op 모두 순수 읽기(비전 조회) — 세계를 바꾸지 않는다
         # fixture 대신 면제 — self:ask 선례(LLM 원샷 호출)와 같은 이유.
         exempt: 기어-해소 비전 모델 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합
         runs_on: anywhere
         scope: workspace
-        description: 이미지 읽기·평가 (op 분기, 모델=기어 해소). read(기본)=시각 QA·OCR·자유서술 답변(실행 축), critic=의도 정합 채점(passed/score/issues/notes, 평가 축 — GoalEval 평가자와 같은 눈) — criteria 로 data/criteria/*.yaml 취향 파일을 기준으로 심사.
+        description: 이미지 읽기·채점 — 이미지 입력이 가능한 실행 모델 우선, 미지원·미확인 시 비전 대체. read=시각 QA·OCR, critic=의도 정합 채점. criteria로 취향 기준 지정. 전체 목표의 최종 승인은 의식.
         target_description: 'image_path(절대 경로 또는 data URI, path 로도 받음) 필수. read — question(무엇을 읽거나 답할지, 생략 시 전체 묘사. query/intent/prompt 로도 받음). critic — intent(무엇을 표현해야 하는가) 필수 + criteria(취향 파일 이름 예 "web"/"visual_base"/"sheet" 또는 yaml 경로 — data/criteria/, extends 사슬 지원, 지정 시 preset 대신 적용)/preset(general 기본|slide_illustration — 슬라이드 일러스트 기준표는 명시 요청제)/style_preset/checks(추가 체크 배열)/prescreen(render 행의 0층 관측 ''$it.prescreen'' — 차 있으면 비전 호출 없이 즉시 실패 verdict, tier: prescreen. 비용 계층화) 옵션.'
         group: media_produce
         router: handler
         tool: read_image
-        implementation: vision_read.py — 기어-해소 원샷(system_ai_call, read=실행 축/critic=평가 축, 벤더 SDK 직호출 금지 관문=test_vision_gear_contract). read=자유서술(보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(criteria 체크·prescreen 0층 단락, 반환 verdict_json+tier·rubric — 적용 기준표 정직 신고, 미지정=general 기본표(매체 중립) — 매체 기준은 criteria/preset 명시).
+        implementation: vision_read.py — 기어-해소 원샷(system_ai_call, read/critic=실행 역할·이미지 입력 능력에 따라 비전 대체, 벤더 SDK 직호출 금지 관문=test_vision_gear_contract). read=자유서술(보이는 텍스트/숫자 그대로·추측 금지) / critic=평가(criteria 체크·prescreen 0층 단락, 반환 verdict_json+tier·rubric — 적용 기준표 정직 신고, 미지정=general 기본표(매체 중립) — 매체 기준은 criteria/preset 명시).
         target_key: op
         ops:
           default: read
@@ -294,7 +294,7 @@ tool_json:
       required:
       - text
   - name: read_image
-    description: 이미지 읽기·평가 (op 분기, 모델=기어 해소). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes, tier} + 사람 가독 요약).
+    description: 이미지 읽기·채점 (실행 모델 우선, 이미지 입력 미지원·미확인 시 별도 비전 모델). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes, tier} + 사람 가독 요약).
     input_schema:
       type: object
       properties:

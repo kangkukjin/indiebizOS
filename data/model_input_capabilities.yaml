@@ -1,0 +1,27 @@
+# 이미지 입력 능력 관측표. 먼저 맞는 규칙을 사용하며, 나머지는 미확인으로 남긴다.
+# 새 모델은 이 표 또는 티어/핀 설정의 input_modalities: [text, image]로 선언한다.
+# 모르는 모델을 시험 호출하거나 이미지 없이 채점하지 않고, 명시된 비전 슬롯으로 보완한다.
+# 2026-09-10: 현재 사용 모델의 문서·로컬 이미지 경로를 확인했다.
+image_transport_disabled: [deepseek_http, deepseek-http]
+rules:
+  - providers: [deepseek]
+    models: [deepseek-v4-flash-vision-exp]
+    image: true
+    source: https://api-docs.deepseek.com/guides/vision/
+  - providers: [deepseek]
+    models: [deepseek-v4-flash, deepseek-v4-pro, deepseek-chat, deepseek-reasoner]
+    image: false
+    source: https://api-docs.deepseek.com/guides/vision/
+  - providers: [claude_code, claude-code, claudecode, anthropic]
+    models: [opus, sonnet, haiku, 'claude-3-*', 'claude-opus-4*', 'claude-sonnet-4*', 'claude-haiku-4*', claude-opus-5]
+    image: true
+    source: https://platform.claude.com/docs/en/build-with-claude/vision
+  - providers: [openai, codex, codex_cli, codex-cli]
+    models: [gpt-4o, gpt-4o-mini, 'gpt-4o-20*', 'gpt-4o-mini-20*', 'gpt-4.1*', gpt-5, gpt-5-mini, gpt-5-nano,
+             'gpt-5.1*', 'gpt-5.2*', 'gpt-5.4*', 'gpt-5.5*', gpt-5.6-sol, gpt-5.6-terra, gpt-5.6-luna, gpt-6-astra, o3, o4-mini]
+    image: true
+    source: https://developers.openai.com/api/docs/guides/images-vision
+  - providers: [google, gemini, gemini_http, gemini-http, google_http]
+    models: [gemini-3.8-flash, gemini-2.5-flash, gemini-2.5-pro]
+    image: true
+    source: https://ai.google.dev/gemini-api/docs/image-understanding

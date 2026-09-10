@@ -239,7 +239,8 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **고급 AI 슬롯 (구 '본격' / 시스템 AI config 재사용)**: `data/system_ai_config.json`
 - **중급 AI 슬롯**: `data/midtier_ai_config.json`
 - **경량 AI 슬롯 (원샷=분류·평가·증류 등)**: `data/lightweight_ai_config.json`
-- **비전 슬롯 (`modality.image`, 2026-08-27)**: `data/vision_ai_config.json` — `{provider, model}` **데이터**(키는 `.env` 정본). 텍스트 4축 티어에는 비전이 없어 기어의 예약석을 실채운 자리다. `get_vision_provider()` 가 해소하고, 원샷(`oneshot`/`system_ai_call`)이 `images` 를 감지하면 **0차로 우선**한다 — GoalEval 의 시각 평가까지 같은 이음매를 타므로 프리셋과 무관하다. 미설정이면 `(None, 사유)` 를 돌려 role-축 프로바이더로 **정직하게 폴백**한다(새 설치가 조용히 깨지지 않는다). ★**벤더 이름이 코드에 박히면 그 모델의 은퇴가 곧 몸의 고장이다** — 실제로 구 하드코딩 모델의 은퇴 404 를 데이터 한 줄 교체로 흡수했다. 벤더 URL·키 직참조 금지는 관문(`test_vision_gear_contract`)이 지킨다. 정본 = `docs/MODEL_GEAR_DESIGN.md` 모달리티 절.
+- **이미지 모델 선택 (2026-09-10)**: 이미지 읽기·채점(`image_read` 두 op, `system_ai_call(role="execution", images=...)`)은 `resolve_image_execution()`으로 실제 실행 모델·핀·수리 승격을 우선한다. 이미지 입력 능력은 티어/핀 설정의 `input_modalities` 또는 `data/model_input_capabilities.yaml` 관측표로 확인한다. 미지원·미확인 때 `modality.image`가 가리키는 별도 비전 설정을 사용하고, 유효한 대체 모델도 없으면 채점을 실패로 반환한다. 긴 실행 이력은 재전송하지 않는다. 이미지 추출·기존 평가·의식의 최종 시각 검수는 별도 비전 설정을 유지한다. `model.image_route` 사건에 실제 모델과 선택 사유를 남긴다.
+- **조종실 모델 조회**: `GET /model-gear`의 `axis_info`는 역할 설명, `sensory_models`는 이미지 채점의 현재 모델·비전 대체 모델·오디오 두 모델·그 밖의 모달리티 슬롯을 노출한다. `services/model_settings_view.py`가 설정을 읽고 비밀키 없는 필드만 응답하며 조회에 AI 호출은 없다. 데스크탑·원격 조종실이 같은 응답을 표시한다. 저장 키 `평가`는 화면에서 **보조 AI**, 의식 토글은 **최초 숙고**로 표시한다. 정본 설계 = `docs/MODEL_GEAR_DESIGN.md`.
 - **스위치 목록**: `data/switches.json`
 - **프로젝트 목록**: `projects/projects.json`
 - **프로젝트 에이전트**: `projects/{id}/agents.yaml`
@@ -326,7 +327,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(33) → `datastore`(46) → `ibl`(47) → `cognition`(57) → `services`(28) → `surface`(64). `.py` 총 336개(test 제외).
+  `base`(33) → `datastore`(46) → `ibl`(47) → `cognition`(57) → `services`(29) → `surface`(64). `.py` 총 337개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(19) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

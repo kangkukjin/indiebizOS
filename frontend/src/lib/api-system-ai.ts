@@ -5,6 +5,21 @@
 
 import type { APIClientCore } from './api-types';
 
+export interface ModelGearState {
+  current_gear: string;
+  gears: string[];
+  presets: Record<string, Record<string, string>>;
+  axes: Record<string, { tier: string; provider: string; model: string }>;
+  tiers?: string[];
+  axis_names?: string[];
+  consciousness_enabled?: boolean;
+  axis_info?: Record<string, { label: string; description: string }>;
+  sensory_models?: Array<{
+    id: string; label: string; provider: string; model: string;
+    policy: string; detail: string; source: string;
+  }>;
+}
+
 export function applySystemAIMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
 
@@ -113,13 +128,7 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
     // ============ 모델 기어 (계기판 변속) ============
 
     async getModelGear() {
-      return client.request<{
-        current_gear: string;
-        gears: string[];
-        presets: Record<string, Record<string, string>>;
-        axes: Record<string, { tier: string; provider: string; model: string }>;
-        consciousness_enabled?: boolean;
-      }>('/model-gear');
+      return client.request<ModelGearState>('/model-gear');
     },
 
     // 의식 토글 — OFF 면 THINK 경로 차단(반사 유지 + 바로 실행). 핫리로드.
@@ -135,13 +144,7 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
     },
 
     async setModelGear(gear: string) {
-      return client.request<{
-        status: string;
-        current_gear: string;
-        gears: string[];
-        presets: Record<string, Record<string, string>>;
-        axes: Record<string, { tier: string; provider: string; model: string }>;
-      }>('/model-gear', {
+      return client.request<ModelGearState & { status: string }>('/model-gear', {
         method: 'PUT',
         body: JSON.stringify({ gear }),
       });
@@ -149,15 +152,7 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
 
     // 기어 프리셋 정의 편집 (각 기어가 4축을 어느 티어로 매핑하는지)
     async updateModelGearPresets(presets: Record<string, Record<string, string>>) {
-      return client.request<{
-        status: string;
-        current_gear: string;
-        gears: string[];
-        presets: Record<string, Record<string, string>>;
-        axes: Record<string, { tier: string; provider: string; model: string }>;
-        tiers: string[];
-        axis_names: string[];
-      }>('/model-gear/presets', {
+      return client.request<ModelGearState & { status: string }>('/model-gear/presets', {
         method: 'PUT',
         body: JSON.stringify({ presets }),
       });

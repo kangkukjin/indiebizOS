@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: image_critic_evaluation_axis
+    retired: 2026-09-10
+    reason: 개별 이미지 채점은 실행 역할로 옮겼다. 최종 목표 승인은 의식이 맡는다.
+    instead: 이미지 읽기·채점은 이미지 입력이 가능한 실행 모델 우선, 미지원·미확인 시 별도 비전 모델로 보완한다.
+    phrases:
+      - 'critic=평가 축'
+      - '의도 정합 verdict (기어 평가 축)'
+      - '평가 축 모델이 비전을 지원하는지'
   - id: listen_microphone_only
     retired: 2026-09-10
     reason: 듣기 어휘가 파일 전사·내용 분석·신호 검사도 포괄한다. 마이크가 없어도 파일을 들을 수 있다.

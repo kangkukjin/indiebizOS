@@ -197,7 +197,7 @@
     },
     {
       "name": "read_image",
-      "description": "이미지 읽기·평가 (op 분기, 모델=기어 해소). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes, tier} + 사람 가독 요약).",
+      "description": "이미지 읽기·채점 (실행 모델 우선, 이미지 입력 미지원·미확인 시 별도 비전 모델). read(기본)=질문에 자유서술로 답함(시각 QA·OCR·검증), critic=의도 정합 채점(JSON {passed, score, issues, notes, tier} + 사람 가독 요약).",
       "input_schema": {
         "type": "object",
         "properties": {

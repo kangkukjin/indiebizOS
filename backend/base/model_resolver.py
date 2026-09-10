@@ -14,7 +14,8 @@ IndieBiz OS Core
 config 파일을 매 호출 읽으므로(작은 JSON) 기어 변경이 즉시 반영된다(핫리로드).
 provider 객체는 (provider,model,key) 키로 캐시 — 기어가 바뀌면 캐시 키가 달라져 자동 교체.
 
-모달리티(이미지/임베딩/동영상)는 기어 무관 — 여기서 다루지 않는다(핸들러 패스스루).
+이미지 읽기·채점은 실행 모델 우선, 입력 능력 미확인/미지원 때 비전 슬롯으로 해소한다.
+그 밖의 비전 소비처와 오디오·임베딩은 별도 설정을 사용한다.
 설계: docs/MODEL_GEAR_DESIGN.md
 """
 import json
@@ -23,6 +24,7 @@ import logging
 import os
 import re
 import unicodedata
+from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Optional, Dict, Any, Tuple
 
@@ -235,7 +237,10 @@ def _load_tier_config(tier: str, gear: dict) -> dict:
                 f"[model_resolver] {fname} 에 남은 레거시 키를 사용합니다 — "
                 f"{env_var_for_provider(provider) or 'ENV'} 로 옮기세요(.env 가 정본).")
             api_key = legacy
-    return {"provider": provider, "model": model, "api_key": api_key, "tier": tier}
+    result = {"provider": provider, "model": model, "api_key": api_key, "tier": tier}
+    if isinstance(cfg.get("input_modalities"), list):
+        result["input_modalities"] = cfg["input_modalities"]
+    return result
 
 
 def resolve(role: str, agent_id: Optional[str] = None) -> dict:
@@ -259,6 +264,8 @@ def resolve(role: str, agent_id: Optional[str] = None) -> dict:
                 return d
             if isinstance(ov, dict):  # 직접 모델 핀
                 return {
+                    **({"input_modalities": ov["input_modalities"]}
+                       if isinstance(ov.get("input_modalities"), list) else {}),
                     "provider": (ov.get("provider") or "anthropic").strip(),
                     "model": (ov.get("model") or "").strip(),
                     "api_key": (ov.get("apiKey") or ov.get("api_key") or "").strip(),
@@ -511,21 +518,13 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
     return prov, d
 
 
-def get_vision_provider(oneshot: bool = True) -> Tuple[Any, dict]:
-    """비전(이미지 입력) 모달리티 프로바이더 — gear `modality.image` 가 단독 결정.
-
-    텍스트 4축(분류/평가/실행/의식)의 티어 모델은 비전이 없을 수 있다(경량 deepseek 실측).
-    모달리티는 기어 축과 무관한 별도 슬롯(model_gear._doc 의 예약석)이며, 값은 티어 json 과
-    같은 모양({provider, model})의 설정 파일 이름이다. 키는 티어와 같은 규약(.env 정본).
-    미설정(None)이면 (None, desc) — 호출자는 role-축 프로바이더로 폴백한다(고급 티어처럼
-    그 축 모델이 비전을 지원할 수 있으므로). 벤더는 코드가 아니라 이 데이터에 산다
-    (2026-08-27 비전 벤더 중립화 — 구 gemini_vision.py/_gemini_vision_json 직호출 폐지).
-    """
+def resolve_vision() -> dict:
+    """별도 비전 슬롯의 설정만 해소한다. 조회는 프로바이더를 생성하지 않는다."""
     gear = _load_gear()
     fname = str(((gear.get("modality") or {}).get("image")) or "").strip()
     if not fname:
-        return None, {"provider": "", "model": "", "api_key": "",
-                      "tier": "(modality)", "axis": "(vision)", "source": "modality.image 미설정"}
+        return {"provider": "", "model": "", "api_key": "",
+                "tier": "(modality)", "axis": "(vision)", "source": "modality.image 미설정"}
     cfg = {}
     p = _data_path() / fname
     if p.exists():
@@ -542,7 +541,70 @@ def get_vision_provider(oneshot: bool = True) -> Tuple[Any, dict]:
             api_key = legacy
     d = {"provider": provider, "model": model, "api_key": api_key,
          "tier": "(modality)", "axis": "(vision)", "source": f"modality.image→{fname}"}
+    if isinstance(cfg.get("input_modalities"), list):
+        d["input_modalities"] = cfg["input_modalities"]
+    return d
+
+
+def get_vision_provider(oneshot: bool = True) -> Tuple[Any, dict]:
+    """별도 비전 프로바이더. 이미지 추출·최종 시각 검수 등이 사용한다."""
+    d = resolve_vision()
     return _provider_from_desc(d, oneshot=oneshot), d
+
+
+def image_input_support(descriptor: dict) -> Optional[bool]:
+    """이미지 입력 능력: 명시 설정 → 관측 데이터. 미확인은 None(지원으로 추측하지 않음).
+
+    모델 이름은 세계의 명사이므로 코드 분기가 아니라 데이터가 소유한다.
+    HTTP 등 이미지 전달이 없는 어댑터는 모델 설정으로 우회할 수 없다.
+    """
+    import yaml
+    try:
+        catalog = yaml.safe_load((_data_path() / "model_input_capabilities.yaml").read_text()) or {}
+    except (OSError, ValueError, yaml.YAMLError):
+        catalog = {}
+    if not isinstance(catalog, dict):
+        catalog = {}
+    provider = str(descriptor.get("provider") or "").lower()
+    if provider in catalog.get("image_transport_disabled", []):
+        return False
+    modalities = descriptor.get("input_modalities")
+    if isinstance(modalities, list):
+        return "image" in modalities
+    model = str(descriptor.get("model") or "").lower()
+    for entry in catalog.get("rules", []):
+        if not isinstance(entry, dict):
+            continue
+        if provider in entry.get("providers", []) and any(
+                fnmatchcase(model, pattern) for pattern in entry.get("models", [])):
+            return entry.get("image") if isinstance(entry.get("image"), bool) else None
+    return None
+
+
+def resolve_image_execution(agent_id: Optional[str] = None, execution: Optional[dict] = None) -> dict:
+    """이미지 읽기·채점 = 실행 역할. 해당 모델이 볼 수 없으면 비전 슬롯으로 보완.
+
+    실행 중에는 호출자가 실제 실행 설정을 전달해 핀·수리 승격·턴 도중 기어 변경도 보존한다.
+    이미지 입력을 거부/누락하는 모델에 유료 시험 호출을 보내지 않는다.
+    """
+    d = dict(execution) if execution is not None else resolve("execution", agent_id)
+    if "source" not in d and d.get("_gear_source"):
+        d["source"] = d["_gear_source"]
+    support = image_input_support(d)
+    if support is True and d.get("model"):
+        return {**d, "image_route": "execution", "image_reason": "이미지 입력 지원 — 실행 모델 사용"}
+    reason = "실행 모델의 이미지 입력 미지원" if support is False else "실행 모델의 이미지 입력 지원 미확인"
+    fallback = resolve_vision()
+    if fallback.get("model") and image_input_support(fallback) is not False:
+        return {**fallback, "image_route": "fallback", "image_reason": reason + " — 별도 비전 모델 사용"}
+    return {"provider": "", "model": "", "api_key": "", "image_route": "unavailable",
+            "source": fallback.get("source", ""), "image_reason": reason + " — 사용 가능한 비전 대체 모델 없음"}
+
+
+def get_image_execution_provider(agent_id: Optional[str] = None,
+                                 execution: Optional[dict] = None) -> Tuple[Any, dict]:
+    d = resolve_image_execution(agent_id, execution)
+    return _provider_from_desc(d, oneshot=True), d
 
 
 def resolve_agent_ai(base_ai: Optional[dict], project_id: str, agent_id: str) -> dict:
@@ -561,7 +623,7 @@ def resolve_agent_ai(base_ai: Optional[dict], project_id: str, agent_id: str) ->
     Returns: ai_config(dict). 해소 실패 시 model 키가 없는 dict → 호출자가 정직하게 거절.
     """
     out = dict(base_ai or {})
-    for k in ("provider", "model", "api_key", "apiKey"):
+    for k in ("provider", "model", "api_key", "apiKey", "input_modalities"):
         out.pop(k, None)                     # 레거시 제거 — 기어가 전적으로 채운다
     pin = f"{project_id}:{agent_id}" if (project_id and agent_id) else (agent_id or "")
     try:
@@ -574,4 +636,6 @@ def resolve_agent_ai(base_ai: Optional[dict], project_id: str, agent_id: str) ->
         out["model"] = d["model"]
         out["api_key"] = d.get("api_key", "")
         out["_gear_source"] = d.get("source", "")
+        if "input_modalities" in d:
+            out["input_modalities"] = d["input_modalities"]
     return out

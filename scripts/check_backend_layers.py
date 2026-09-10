@@ -96,7 +96,7 @@ LAYERS = {
         "android_calibrate", "auto_response", "business_sync",
         "calendar_actions", "calendar_html", "cdn_provision",
         "channel_poller", "ffmpeg_provision", "gen_newspaper",
-        "generate_newspaper", "hippocampus_provision", "indienet",
+        "generate_newspaper", "hippocampus_provision", "indienet", "model_settings_view",
         "ingest_engine",
         "indienet_common", "indienet_publish", "indienet_relay",
         "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",

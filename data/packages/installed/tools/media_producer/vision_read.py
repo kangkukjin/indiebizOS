@@ -3,10 +3,9 @@
 handler.py 에서 2026-08-05 분리 (1500줄 규칙). 디스패치 표(_OP_DISPATCHERS)는 AST 가드
 때문에 handler.py 에 남고, 구현만 여기 산다.
 
-★모델은 기어가 단독 결정한다 (2026-08-27 수리 — 구 gemini_vision.py 벤더 고정 폐지).
-시각 읽기·채점은 범용 능력이라 벤더 SDK 직호출이 아니라 기어-해소 원샷(system_ai_call)을
-탄다: read=실행 축(role "execution") / critic=평가 축(role "evaluate") — GoalEval 평가자와
-같은 눈. 벤더 고유 기능(이미지 *생성*)만 gemini_image.py 에 남는다.
+시각 읽기·채점은 실행 역할의 짧은 원샷(system_ai_call)이다. 이미지 입력이 가능한
+실행 모델을 쓰고, 미지원/미확인일 때만 별도 비전 설정으로 보완한다. 실행 이력은
+재전송하지 않으며, 작업 전체의 최종 승인은 의식 감독이 맡는다.
 재발 방지 관문 = test_vision_gear_contract(이 파일에 벤더 URL 금지).
 """
 import os
@@ -19,7 +18,7 @@ _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
 _CRITERIA_DIR = _ROOT / "data" / "criteria"
 
 
-def _ai_call(prompt, system_prompt=None, images=None, role="evaluate"):
+def _ai_call(prompt, system_prompt=None, images=None, role="execution"):
     """기어-해소 멀티모달 원샷 — 모델·키는 기어에서 흘러나온다(에이전트별 설정 금지).
 
     consciousness_agent.system_ai_call 과 같은 계약(반환 str|None). 함수 한 겹인 이유:
@@ -135,7 +134,7 @@ def _load_criteria(name_or_path, _seen=None):
 
 
 def critique_image(tool_input, output_base):
-    """이미지를 기준에 대고 채점한다 — 의도 정합 verdict (기어 평가 축).
+    """이미지를 기준에 대고 채점한다 — 실행 역할의 의도 정합 verdict.
 
     파라미터:
       - image_path (필수): 평가할 이미지 절대 경로 (또는 base64 data URI)
@@ -258,11 +257,11 @@ def critique_image(tool_input, output_base):
         "passed는 issues가 없거나 score>=7일 때 true." + hard_rule
     )
 
-    # 채점 = 평가 축 — GoalEval 평가자(system_ai_call role="evaluate")와 같은 눈.
-    text = _ai_call(instruction, images=[image], role="evaluate")
+    # 개별 산출물 채점은 실행 역할, 전체 목표의 최종 승인은 의식 역할이다.
+    text = _ai_call(instruction, images=[image], role="execution")
     if not text or not str(text).strip():
         return json.dumps({"success": False,
-                           "error": "기어 모델 호출 실패 — 평가 축 모델이 비전을 지원하는지 기어 설정을 확인하세요."},
+                           "error": "이미지 채점 실패 — 조종실 기어 설정의 이미지 읽기·채점 모델과 비전 대체 설정을 확인하세요."},
                           ensure_ascii=False)
     text = str(text).strip()
     # ```json ... ``` 코드 펜스 제거
@@ -340,6 +339,6 @@ def read_image(tool_input, output_base):
     text = _ai_call(instruction, images=[image], role="execution")
     if not text or not str(text).strip():
         return json.dumps({"success": False,
-                           "error": "기어 모델 호출 실패 — 실행 축 모델이 비전을 지원하는지 기어 설정을 확인하세요."},
+                           "error": "이미지 읽기 실패 — 조종실 기어 설정의 이미지 읽기·채점 모델과 비전 대체 설정을 확인하세요."},
                           ensure_ascii=False)
     return str(text).strip()

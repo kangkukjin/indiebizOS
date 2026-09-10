@@ -460,7 +460,8 @@ def create_image_slide(tool_input: dict, output_base: str, style: str, slide_id:
     user += "\n위 정보로 JSON 한 객체를 출력하라."
     try:
         ai = _get_ai()
-        resp = ai.process_message(user, history=[], images=[], execute_tool=None)
+        from consciousness_agent import call_oneshot_provider
+        resp = call_oneshot_provider(ai, user, role="slide_image_author")
         spec = _extract_json(resp)
     except Exception as e:
         return json.dumps({"success": False, "message": f"저작 실패: {e}"}, ensure_ascii=False)

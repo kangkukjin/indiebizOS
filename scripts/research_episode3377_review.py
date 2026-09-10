@@ -58,7 +58,7 @@ def budget_replay(calls):
             if controller.finalizing:
                 controller.final_usage[key] += call["usage"][key]
     return {"config": config, "calls": rows,
-            "note": "Observed inputs held fixed; current pure policy replay, not model behavior replay."}
+            "note": "Observed inputs held fixed; allocation arithmetic only. Does not simulate soft model_admitted admission or predict model behavior."}
 
 
 def main():

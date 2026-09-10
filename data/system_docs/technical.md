@@ -204,9 +204,12 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - 기본 사용자 턴은 `conscious_supervisor`가 계획·중간 감독·최종 승인을 소유한다. THINK/REPAIR는 계획을 검수까지 이어가고, EXECUTE/Reflex는 정상 조회의 추가 호출을 생략하다가 실패·세계 변경·긴 작업에서 승격한다. 강제 내부 역할은 제외한다.
 - `supervision_bus`는 agent+task로 구분한 실제 도구 경계다. 의식의 직접 실행은 실행자가 멈춘 경계에서 동일한 기존 도구·권한으로 수행한다. MCP 연결은 `/ibl/supervision`, Claude Code 네이티브는 `supervision_hook.py`를 사용한다. Codex 네이티브의 개입은 다음 MCP IBL 경계까지 지연될 수 있다.
 - 중간 관찰의 모델 잠금은 실행을 막지 않는다. 시작 예고는 진척이 아니며, 확정된 지시만 실행 경계에서 전달한다. Claude Code의 응답 ID별 중간 usage로 예산을 갱신한다. `state`는 변경분, `evidence id=ibl:node:action`은 현재 액션 계약이다. 턴 전체 비용은 작업대 `cost.json`, 응답 이후 기억 후처리는 `postprocess.json`이다.
-- 후보는 `data/spill/supervision/<turn-id>/`에 저장한다. 전체 본문 검수·버전·해시가 맞으면 그대로 전송하고, 보완은 `patch`로 변경 블록만 제출한다. 빈 판정/API 오류/누락된 본문은 `UNKNOWN`이며 통과시키지 않는다.
+- 후보는 `data/spill/supervision/<turn-id>/`에 저장한다. 전체 본문 검수·버전·해시가 맞으면 그대로 전송한다. 보완은 `patch`의 유일한 문자열 치환(`old_string/new_string`, 같은 블록은 `replacements`)이나 블록 교체로 원자적으로 적용한다. 빈 판정/API 오류/누락된 본문은 `UNKNOWN`이며 통과시키지 않는다.
 - `episode_summary.evaluation_result`: 승인 `ACHIEVED`, 보완 미달 `NOT_ACHIEVED`, 검수 불명 `UNKNOWN`, 검수 미실행 `NULL`. 실제 행동·근거·판정은 `supervision.*`와 `validation.completed` 사건으로 연결한다.
-- 설정은 `world_pulse_config.json`의 `conscious_supervisor` 객체. 기본 한도·실제 제약은 `docs/CONSCIOUS_SUPERVISOR_PLAN_2026_09_10.md` 구현 기록과 `conscious_supervisor.DEFAULTS`를 참조한다. 감독을 끄거나 신원 없는 호출에서는 기존 GoalEval/SelfReflect가 호환 경로로 남으며, 그 구형 평가의 빈 응답 통과 정책도 그대로다.
+- 설정은 `world_pulse_config.json`의 `conscious_supervisor` 객체. `budget_mode=soft`가 기본이며 계획·중간 점검 몫을 분리하고 소프트 초과는 추가 탐색을 막되 진행 중 판정을 버리지 않는다. 최종 검수·보완 횟수와 호출 시간은 계속 제한한다. 명시적 `hard` 모드는 구형 엄격 배분을 유지한다. 기본값의 정본은 `conscious_supervisor.DEFAULTS`다.
+- 전체 작업의 실제 제한은 선택 설정 `agent_resource_limits.{hard_token_limit,deadline_s}`다. 기본은 둘 다 미설정이며 실행·의식·내부 원샷의 공통 원장으로 집계한다. 캐시를 포함한 input+output 관측량이며 금액이 아니다. 보완 전에 재검수 예상량도 점검한다. CLI 내부의 사용량 보고 지연 때문에 개별 API 요청 직전의 정확한 한도 보장은 아니다.
+- 감독은 대상 오류·목표·작업의 유효 조건으로 지시 신선도를 판단한다. 무관한 크롤링 진척은 기존 지시를 무효화하지 않는다. `supervision_checkpoint`를 반환한 제작 사전 검사에서는 실행 경계가 잠시 멈추고 읽기 검수가 가능하다. 재사용 검수는 파일·의존 입력·명시한 검사기 파일·기준 지문과 범위를 대조하며 최종 승인을 대신하지 않는다.
+- 범위가 한정된 보완은 캐시 재개 입력과 새 입력의 휴리스틱 비교로 문맥을 선택한다. 원문·작업 ID·변수는 유지하고 긴 인계는 증거 참조로 넘긴다. 비교는 벤더 가격이나 지연시간 예측이 아니다. 구현·검증 기록은 `docs/AGENT_EFFICIENCY_REPAIRS_2026_09_11.md`다. 감독을 끄거나 신원 없는 호출에서는 기존 GoalEval/SelfReflect가 호환 경로로 남는다.
 
 ## IBL 도구 — execute_ibl
 
@@ -327,7 +330,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(33) → `datastore`(47) → `ibl`(47) → `cognition`(57) → `services`(29) → `surface`(64). `.py` 총 338개(test 제외).
+  `base`(34) → `datastore`(48) → `ibl`(47) → `cognition`(59) → `services`(29) → `surface`(64). `.py` 총 342개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(19) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

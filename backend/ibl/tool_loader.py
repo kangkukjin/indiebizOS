@@ -184,7 +184,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
     description = (
         f"IBL 코드를 실행합니다. "
         f"사용 가능한 노드: {node_list}. "
-        f"노드/액션 상세는 시스템 프롬프트의 <ibl_executor> 참조."
+        f"액션 계약은 code=빈 문자열, describe=[node:action]으로 조회. 저장된 원문은 read_result로 회수."
     )
 
     return {
@@ -237,13 +237,16 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                         "이름으로 가리킬 것. resume 은 턴을 넘는 24h 회수 자리."
                     )
                 },
+                "describe": {"type": "array", "items": {"type": "string"}, "maxItems": 6,
+                             "description": "code를 비우고 액션 이름 1~6개의 계약 조회. 실행하지 않음."},
+                "read_result": {"type": "object", "properties": {
+                    "id": {"type": "string"}, "offset": {"type": "integer"}, "limit": {"type": "integer"}},
+                    "required": ["id"], "description": "code를 비우고 result_ref.id의 저장된 원문을 읽는다. 재실행 없음."},
                 "verbose": {
                     "type": "boolean",
                     "description": (
-                        "파이프(>>) 봉투의 results[] 를 step 원형으로, final_result 를 전체로 받는다. 기본 false = "
-                        "step 요약 + ★final_result 는 큰 구조 데이터(items/표 8행 초과·3,000자 이상)이면 앞 8행 미리보기"
-                        "(_preview{shown,total,columns}), 긴 산문은 앞 12,000자(2026-09-06 봉투 기본값 반전 — 전체 값은 턴에 "
-                        "보관되니 `$이름` 으로 가리켜 [table:take]/[table:select] 로 좁혀 받는다). 전부가 꼭 필요할 때만 true."
+                        "앱 표면의 원형 표시 옵션. 모델 표면은 중간 기록 요약과 최종 값 미리보기를 유지한다. "
+                        "전문은 result_ref.id를 read_result={id,offset,limit}로 조회한다. 작업을 다시 실행하지 말 것."
                     )
                 }
             },

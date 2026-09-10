@@ -29,12 +29,23 @@ _active_turn_ledgers = {}
 
 
 @contextmanager
-def turn_token_scope(agent_id, task_id, aliases=()):
+def turn_token_scope(agent_id, task_id, aliases=(), *, hard_token_limit=None, deadline_s=None):
     """주 실행과 MCP 재진입이 공유하는 턴 원장. 다른 턴·종료된 턴은 합산하지 않는다."""
+    import math
+    if hard_token_limit is not None and (isinstance(hard_token_limit, bool) or not isinstance(hard_token_limit, int) or hard_token_limit <= 0):
+        raise ValueError("hard_token_limit는 양의 정수 또는 null이어야 합니다")
+    if deadline_s is not None and (isinstance(deadline_s, bool) or not isinstance(deadline_s, (int, float)) or not math.isfinite(deadline_s) or deadline_s <= 0):
+        raise ValueError("deadline_s는 유한한 양수 또는 null이어야 합니다")
     previous = _turn_token_ledger.get()
     begin_turn_token_ledger()
     ledger = _turn_token_ledger.get()
+    if hard_token_limit is not None:
+        ledger["hard_token_limit"] = hard_token_limit
+    if deadline_s is not None:
+        ledger["deadline"] = time.monotonic() + deadline_s
     keys = {(agent, task_id) for agent in (agent_id, *aliases) if agent and task_id}
+    ledger["scope_owner"] = agent_id
+    ledger["scope_aliases"] = [key[0] for key in keys]
     with _turn_ledger_lock:
         if any(key in _active_turn_ledgers for key in keys):
             _turn_token_ledger.set(previous)
@@ -57,8 +68,10 @@ def adopt_turn_token_ledger(agent_id, task_id):
     with _turn_ledger_lock:
         ledger = _active_turn_ledgers.get((agent_id, task_id))
     token = _turn_token_ledger.set(ledger)
+    from model_call_context import adopt_call_context
     try:
-        yield
+        with adopt_call_context(agent_id, task_id):
+            yield
     finally:
         _turn_token_ledger.reset(token)
 
@@ -94,6 +107,24 @@ def read_turn_tokens() -> Optional[int]:
         return None
     total = int(led.get("input", 0)) + int(led.get("output", 0))
     return total if total > 0 else None
+
+
+def turn_limit_reason():
+    ledger = _turn_token_ledger.get()
+    if not ledger:
+        return None
+    if ledger.get("deadline") and time.monotonic() >= ledger["deadline"]:
+        return {"kind": "task_deadline", "reason": "설정된 전체 작업 시간 한도에 도달했습니다"}
+    if ledger.get("hard_token_limit") and (read_turn_tokens() or 0) >= ledger["hard_token_limit"]:
+        return {"kind": "task_budget", "reason": "설정된 전체 작업 토큰 한도에 도달했습니다"}
+    return None
+
+
+def remaining_turn_tokens():
+    """명시한 전체 작업 한도의 남은 관측량. 한도가 없으면 None이다."""
+    ledger = _turn_token_ledger.get() or {}
+    limit = ledger.get("hard_token_limit")
+    return max(0, limit - (read_turn_tokens() or 0)) if limit else None
 
 
 def read_turn_cache_read_tokens() -> Optional[int]:
@@ -249,6 +280,8 @@ class ProviderMetrics:
             if label:
                 print(f"[{label}] 토큰: 미측정 — 벤더 usage 없음(원장엔 None, 0 아님){extra}")
             return None
+        from model_call_context import observe_usage
+        observe_usage(n)
         self.record_request(latency_ms, n["input"], n["output"], cache_read_tokens=n["cache_read"])
         # 구조화 스텝 원장 — 관측의 진실 소스는 아래 print(산문) 가 아니라 이 한 줄이다.
         try:
@@ -376,6 +409,13 @@ class BaseProvider(ABC):
     - 에러 복구 기본 패턴
     """
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        from model_call_context import trace_provider_method
+        for name in ("process_message", "process_message_stream"):
+            if name in cls.__dict__:
+                setattr(cls, name, trace_provider_method(cls.__dict__[name]))
+
     def __init__(
         self,
         api_key: str,
@@ -423,6 +463,10 @@ class BaseProvider(ABC):
         for name, value in vars(self).items():
             if isinstance(value, (dict, list, set)):
                 setattr(view, name, copy.copy(value))
+        view.no_tools = True
+        view.agent_role = "oneshot"
+        view.disable_session_persistence = True
+        view.tools = []
         view.metrics = ProviderMetrics()
         view.last_failure_kind = None
         view._pending_map_tags = []
@@ -437,6 +481,9 @@ class BaseProvider(ABC):
         (2026-08-14) execution_rounds 관측이 `[Gemini] 라운드` 정규식에 결박돼 프로바이더
         전환만으로 조용히 끊겼던 결함의 수리 — 모든 프로바이더 루프가 이 한 줄을 부른다.
         episode_logger 부재(비정상 환경)면 print 폴백으로 강등(라운드 표시는 항상 남음)."""
+        hard_limit = turn_limit_reason()
+        if hard_limit:
+            raise RuntimeError(hard_limit["reason"])
         if round_no > getattr(self, "max_role_rounds", budget):
             raise RuntimeError("의식 역할의 호출 라운드 예산에 도달했습니다")
         name = type(self).__name__.replace("Provider", "")

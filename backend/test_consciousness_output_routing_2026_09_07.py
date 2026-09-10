@@ -56,6 +56,8 @@ def _fill(keys) -> dict:
         target, name = (out["capability_focus"], sub) if sub else (out, head)
         if name in ("assumptions", "guide_files", "highlight_actions", "primary_nodes", "tools"):
             target[name] = [_sentinel(key)]
+        elif name == "criteria":
+            target[name] = [{"text": _sentinel(key), "user_quote": "", "fallback": "한계를 명시"}]
         elif name.startswith("needs_"):
             target[name] = True
         else:

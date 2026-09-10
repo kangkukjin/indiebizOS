@@ -40,7 +40,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 LAYERS = {
     "base": {
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
-        "episode_logger", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
+        "episode_logger", "model_call_context", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
         "phone_jobs", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "selfbuild_gate", "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
@@ -55,7 +55,7 @@ LAYERS = {
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
         "red_grant", "red_report", "red_watchdog", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
-        "system_docs", "supervision_store", "supervision_delivery",
+        "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
         "websocket_manager", "xray_stream",
     },
@@ -79,7 +79,7 @@ LAYERS = {
     "cognition": {
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
         "weekly_audits",
-        "agent_pipeline", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime",
+        "agent_pipeline", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",

@@ -58,6 +58,7 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
     from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
     from workflow_engine import (_inject_prev_result, _auto_inject_prev,
                                  is_error_result, _to_prev_currency)
+    import contextvars
     import threading
     import time
 
@@ -192,7 +193,7 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
         executor = ThreadPoolExecutor(max_workers=len(indices))
         try:
             future_to_idx = {
-                executor.submit(_run_branch, idx, branches[idx]): idx
+                executor.submit(contextvars.copy_context().run, _run_branch, idx, branches[idx]): idx
                 for idx in indices
             }
             pending = set(future_to_idx)

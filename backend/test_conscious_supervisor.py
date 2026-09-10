@@ -344,8 +344,9 @@ def test_same_poll_with_elapsed_numbers_is_not_progress(supervisor):
 
 
 def test_verdict_from_before_real_progress_is_not_delivered(supervisor, monkeypatch):
+    active = supervisor._start("inspect", {"target": "stalled"})
     def invoke(c, *args, **kwargs):
-        c.progress({"completed": 8})
+        c._finish(active, "recovered")
         return verdict(c, "REWORK", instruction="예전 작업을 다시 시작하라")
     monkeypatch.setattr("supervisor_runtime.invoke", invoke)
     supervisor.review("tool_stalled")
@@ -439,8 +440,8 @@ def test_start_announcement_cannot_invalidate_intervention(supervisor, monkeypat
 
 def test_progress_after_review_before_delivery_retires_old_instruction(supervisor, monkeypatch):
     monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="재시도"))
-    supervisor.review("tool_stalled")
     key = supervisor._start("inspect", {})
+    supervisor.review("tool_stalled")
     supervisor._finish(key, "recovered")
     assert supervisor.boundary() is None
     assert supervisor.pending is None
@@ -562,7 +563,7 @@ def test_supervisor_action_contract_comes_from_registry():
     from supervisor_runtime import action_schema
     schema = action_schema("self:list")
     assert schema["action"] == "self:list"
-    assert "path" in schema["guide"]
+    assert "path" in json.dumps(schema["definition"])
     assert schema["definition"]
 
 

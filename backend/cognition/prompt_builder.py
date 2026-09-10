@@ -418,7 +418,7 @@ class PromptBuilder:
         # 4. IBL 환경 프롬프트 (Phase 16: 단일 경로)
         if ibl_only:
             from ibl_access import build_environment
-            ibl = build_environment(allowed_nodes, project_path, agent_id)
+            ibl = build_environment(allowed_nodes, project_path, agent_id, compact=True)
             if ibl:
                 parts.append(ibl)
 
@@ -593,7 +593,7 @@ def _build_system_ai_stable_prompt(
 
     from ibl_access import build_environment
     # allowed_set 이 오면 그 노드 집합만(포식=sense+self). None이면 전체.
-    ibl_env = build_environment(allowed_nodes=None, allowed_set=allowed_set)
+    ibl_env = build_environment(allowed_nodes=None, allowed_set=allowed_set, compact=True)
     if ibl_env:
         parts.append(ibl_env)
 
@@ -838,6 +838,10 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if task_framing:
         aug.append(task_framing)
 
+    from supervisor_handoff import criteria_contract
+    if co.get("achievement_criteria") or co.get("criteria"):
+        aug.append("기준의 출처: " + json.dumps(criteria_contract(user_message, co), ensure_ascii=False))
+
     # 전문가의 선택 — 규정 산문에 묻히지 않도록 제 이름의 섹션으로. 실행자가 요청의 낱말에서
     # 출발하는 것을 막는 자리다(09-07 사용자 설계). 여러 줄로 오면 한 줄로 눕힌다 — 이 자리가
     # 두 번째 task_framing 이 되면 섹션으로 뽑은 값이 사라진다.
@@ -860,6 +864,13 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if highlight:
         # 팔레트가 열려 있다는 건 사실 — '(이 밖의 액션도 가능)'은 *목록*에만 남긴다.
         aug.append("쓸 수 있는 IBL 액션: " + ", ".join(highlight) + " (이 밖의 액션도 가능).")
+        try:
+            from model_result_view import describe_actions
+            from thread_context import get_allowed_nodes
+            contracts = describe_actions(list(dict.fromkeys(highlight))[:4], get_allowed_nodes())
+            aug.append("이번 작업의 상세 계약: " + json.dumps(contracts, ensure_ascii=False))
+        except (ValueError, KeyError, TypeError):
+            pass
     hint = (cap_focus.get("hint") or "").strip()
     if hint:
         # 방법 지시는 허가 어조에서 분리해 명령문 줄로.

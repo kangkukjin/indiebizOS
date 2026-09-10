@@ -16,7 +16,9 @@ DEFAULTS = {"enabled": True, "max_reviews": 2, "review_interval_s": 240,
             "call_timeout_s": 180, "max_tools_per_call": 10, "max_tools_total": 40,
             "final_tool_reserve": 12, "max_repairs": 2,
             "max_input_tokens": 300000, "max_output_tokens": 16000,
-            "final_input_reserve": 80000, "final_output_reserve": 4000}
+            "final_input_reserve": 80000, "final_output_reserve": 4000,
+            "budget_mode": "soft", "review_input_reserve": 60000, "review_output_reserve": 2000,
+            "repair_context_chars": 32000}
 
 
 def open_supervisor(runner, message, history, cancel_check=None):
@@ -76,6 +78,15 @@ class Supervisor:
         self.pursuit = None
         self.repair_granted = False
         self.usage = {"input": 0, "output": 0}
+        self.final_usage = {"input": 0, "output": 0}
+        self.phase_usage = {}
+        self.issues = {}
+        self.last_decision = None
+        self.checkpoints = set()
+        self.checkpoint = None
+        from verification_cache import VerificationCache
+        self.verifications = VerificationCache()
+        self.call_stop = None
         self.call_metrics = None
         self.call_usage = {}
         self.state_cursor = 0
@@ -98,7 +109,10 @@ class Supervisor:
     def log(self, kind, role=None, **fields):
         from supervision_bus import identity
         role = role or ("consciousness" if identity()[0] == self.supervisor_id else "execution")
-        row = self.store.log(kind, **{"role": role, "phase": self.phase, "time": time.time(), "task_id": self.task, **fields})
+        phase = ("repair" if self.finalizing else "execute") if role == "execution" else self.phase
+        from model_call_context import fields as call_fields
+        trace = {k: v for k, v in call_fields().items() if k in {"call_id", "parent_call_id"}}
+        row = self.store.log(kind, **{"role": role, "phase": phase, "time": time.time(), "task_id": self.task, **trace, **fields})
         # 큰 도구 본문은 한 파일, 사건 척추에는 손잡이만 보낸다.
         try:
             from episode_logger import record_trajectory_event
@@ -117,14 +131,77 @@ class Supervisor:
         return self.stopped.is_set() or bool(self.cancel_check and self.cancel_check())
 
     def call_cancelled(self):
-        return self.cancelled() or time.monotonic() >= self.call_deadline or not self.model_budget_available()
+        from providers.base import turn_limit_reason
+        task_limit = turn_limit_reason()
+        if task_limit:
+            self.call_stop = task_limit
+        elif self.cancelled():
+            self.call_stop = {"kind": "cancelled", "reason": "사용자가 취소했거나 감독 턴이 종료되었습니다"}
+        elif time.monotonic() >= self.call_deadline:
+            self.call_stop = {"kind": "deadline", "reason": "의식 호출 시간 한도를 초과했습니다"}
+        elif self.config["budget_mode"] == "hard" and not self.model_budget_available():
+            self.call_stop = {"kind": "budget", "reason": "의식 호출 토큰 예산을 소진했습니다"}
+        return self.call_stop is not None
 
-    def model_budget_available(self):
+    def model_budget_remaining(self):
+        remaining = {}
         for key in ("input", "output"):
             in_flight = getattr(self.call_metrics, f"total_{key}_tokens", 0) if self.call_metrics else 0
             in_flight = max(in_flight, self.call_usage.get(key, 0))
-            reserve = 0 if self.finalizing else self.config[f"final_{key}_reserve"]
-            if self.usage[key] + in_flight >= self.config[f"max_{key}_tokens"] - reserve:
+            reserve = min(self.config[f"final_{key}_reserve"], self.config[f"max_{key}_tokens"])
+            # 한 CLI 라운드의 입력은 한꺼번에 청구된다. 계획의 마지막 라운드가
+            # 한도를 넘었어도 따로 확보한 최종 검수 몫까지 먹지 않는다.
+            # 실제 초과량은 usage에 그대로 남긴다(예산 숫자로 비용을 깎지 않음).
+            if self.finalizing:
+                planning_spent = self.usage[key] - self.final_usage[key]
+                limit = max(reserve, self.config[f"max_{key}_tokens"] - planning_spent)
+                spent = self.final_usage[key]
+            else:
+                limit, spent = self.config[f"max_{key}_tokens"] - reserve, self.usage[key] - self.final_usage[key]
+            remaining[key] = max(0, limit - spent - in_flight)
+        return remaining
+
+    def model_budget_available(self):
+        return all(value > 0 for value in self.model_budget_remaining().values())
+
+    def model_admitted(self, phase):
+        """입장 심사와 진행 중 취소를 분리한다. 기본 배분은 소프트 한도다."""
+        if self.config["budget_mode"] == "hard":
+            return self.model_budget_available()
+        if phase == "final":
+            return True  # max_repairs가 재검수 횟수를 제한. 판정 없는 보완을 만들지 않는다.
+        bucket = "review" if phase == "review" else "plan"
+        spent = self.phase_usage.get(bucket, {})
+        for key in ("input", "output"):
+            middle = self.config[f"review_{key}_reserve"]
+            limit = middle if bucket == "review" else max(1, self.config[f"max_{key}_tokens"]
+                    - self.config[f"final_{key}_reserve"] - middle)
+            in_flight = max(getattr(self.call_metrics, f"total_{key}_tokens", 0), self.call_usage.get(key, 0))
+            if spent.get(key, 0) + in_flight >= limit:
+                return False
+        return True
+
+    def review_conditions(self, reason):
+        return {"goal": digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)),
+                "issues": {k: dict(v) for k, v in self.issues.items() if v["open"] and k == self.last_signature},
+                "active": list(self.active) if reason == "tool_stalled" else [],
+                "jobs": {k: self.job_signature(v) for k, v in self.job_states.items()
+                         if reason in {"job_failed", "job_stalled"}}}
+
+    @staticmethod
+    def job_signature(state):
+        return [state.get(k) for k in ("phase", "units", "job_status", "cleanup")]
+
+    def conditions_valid(self, conditions):
+        if conditions["goal"] != digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)):
+            return False
+        if any(self.issues.get(k) != v for k, v in conditions["issues"].items()):
+            return False
+        if conditions["active"] and not any(k in self.active for k in conditions["active"]):
+            return False
+        for key, signature in conditions["jobs"].items():
+            state = self.job_states.get(key, {})
+            if self.job_signature(state) != signature:
                 return False
         return True
 
@@ -184,20 +261,27 @@ class Supervisor:
             events = [e for e in self.recent if e["seq"] > (cursor if delta else self.review_cursor)]
             state = {"original_goal": self.message, "framing": self.framing,
                     "conversation_evidence": {k: self.history_ref[k] for k in ("id", "chars")},
-                    "phase": self.phase, "elapsed_s": round(now - self.started),
+                    "phase": self.phase, "executor_paused": self.executor_paused, "checkpoint": self.checkpoint, "elapsed_s": round(now - self.started),
                     "active": [{**{k: x for k, x in v.items() if not k.startswith("_")},
                                 "elapsed_s": round(now - v["started"])} for v in self.active.values()],
                     "events": events,
                     "earlier_events": "evidence id=events, offset=사건 seq로 이전 원문을 읽을 수 있습니다",
                     "jobs": list(self.job_states.values()),
-                    "tools": list(self.catalog), "response": self.store.manifest() if self.store.version else None,
+                    "tools": [name for name in self.catalog if name not in {"pursuit", "reframe", "supervision"}],
+                    "response": self.store.manifest() if self.store.version else None,
                     "pending_delivery": self.delivery.manifest(),
                     "pursuit_completion_request": self.done_request,
                     "original_pursuit": self.original_pursuit,
                     "tools_remaining": self.config["max_tools_total"] - self.tools_used, "usage": dict(self.usage),
                     "cursor": self.store.sequence,
-                    "budget_remaining": {k: max(0, self.config[f"max_{k}_tokens"] - self.usage[k]
-                                                   - self.call_usage.get(k, 0)) for k in ("input", "output")}}
+                    "budget_remaining": self.model_budget_remaining(),
+                    "budget_policy": self.config["budget_mode"], "phase_usage": self.phase_usage,
+                    "open_issues": dict([(k, v) for k, v in self.issues.items() if v["open"]][-12:]),
+                    "open_issue_count": sum(v["open"] for v in self.issues.values()),
+                    "previous_review": self.last_decision,
+                    "criteria_contract": __import__("supervisor_handoff").criteria_contract(self.message, self.framing),
+                    "reusable_checks": self.verifications.valid(digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False))),
+                    "visual_review": getattr(self, "visual_review", {})}
             if mark:
                 self.state_cursor = state["cursor"]
             if delta:
@@ -246,10 +330,16 @@ class Supervisor:
             self.repeats = self.repeats + 1 if sig == self.last_signature and result_signature == self.last_result else 1
             self.last_signature, self.last_result = sig, result_signature
             self.failures = self.failures + 1 if error else 0
+            if error or self.repeats >= 3:
+                prior = self.issues.get(sig, {})
+                self.issues[sig] = {"open": True, "generation": prior.get("generation", 0),
+                                    "kind": "failure" if error else "repeat"}
+            elif sig in self.issues and self.issues[sig]["open"]:
+                self.issues[sig] = {"open": False, "generation": self.issues[sig]["generation"] + 1}
             if self.repeats == 1 and not error and not job_observation:
                 self.last_progress = time.monotonic()
                 self.exec_revision += 1  # 시작 예고·실패·같은 status 반복은 진척이 아니다.
-                if self.trigger in {"repeated_failure", "unchanged_repeat", "tool_stalled", "long_task_checkpoint"}:
+                if self.trigger in {"tool_stalled", "long_task_checkpoint"}:
                     self.trigger = ""
             if self.failures >= 2 or self.repeats >= 3:
                 self.trigger = "repeated_failure" if self.failures >= 2 else "unchanged_repeat"
@@ -277,6 +367,18 @@ class Supervisor:
             self._finish(key, {"error": str(exc)}, True)
             raise
         self._finish(key, result, _failed(result))
+        checkpoint = _find_checkpoint(result)
+        if checkpoint and not self.finalizing:
+            signature = digest(json.dumps(checkpoint, sort_keys=True, ensure_ascii=False))
+            if signature not in self.checkpoints:
+                self.checkpoints.add(signature)
+                self.checkpoint = checkpoint
+                self.log("milestone.reached", role="harness", evidence=self.store.evidence(checkpoint))
+                self.review("milestone", paused=True)
+                notice = self.boundary()
+                if notice:
+                    return json.dumps({"result": result, "supervisor_instruction": notice,
+                                       "already_executed": True}, ensure_ascii=False)
         return result
 
     def observe_native(self, event):
@@ -301,7 +403,8 @@ class Supervisor:
 
     def _take_pending(self):
         notice, self.pending = self.pending, None
-        if notice and notice.get("revision", self.exec_revision) != self.exec_revision:
+        if notice and (("conditions" in notice and not self.conditions_valid(notice["conditions"]))
+                       or ("conditions" not in notice and notice.get("revision", self.exec_revision) != self.exec_revision)):
             self.log("decision.stale", role="harness", reviewed_revision=notice["revision"], current_revision=self.exec_revision)
             return None
         if notice:
@@ -371,15 +474,16 @@ class Supervisor:
         try:
             now = time.monotonic()
             if (self.finalizing or self.cancelled() or self.reviews >= self.config["max_reviews"]
-                    or not self.model_budget_available()
+                    or not self.model_admitted("review")
                     or (self.reviews and now - self.last_review < self.config["review_interval_s"])):
                 return
             self.reviews += 1
-            self.executor_paused = False  # 중간 호출은 관찰 전용. 직접 실행은 계획/최종 검수에서만.
+            self.executor_paused = paused  # 의미 이정표에서만 실행자가 정지해 읽기 검증을 허용한다.
             self.last_review = now
             self.trigger = ""
             self.enabled = True  # 긴 EXECUTE도 이상 신호가 있으면 의식 감독으로 승격한다.
             revision = self.exec_revision
+            conditions = self.review_conditions(reason)
             cursor = self.store.sequence
             decision = parse_decision(invoke(self, json.dumps({"trigger": reason, **self.state()}, ensure_ascii=False), phase="review"))
             if self.cancelled():
@@ -388,11 +492,12 @@ class Supervisor:
             self.review_cursor = cursor
             if decision["status"] in {"REWORK", "UNKNOWN"} and decision.get("instruction"):
                 with self.lock:
-                    if revision != self.exec_revision:
+                    if not self.conditions_valid(conditions):
                         self.log("decision.stale", role="harness", reviewed_revision=revision, current_revision=self.exec_revision)
                         return  # 관찰 중 실제로 회복한 작업에는 옛 정체 지시를 주지 않는다.
                     self.pending = {"id": uuid.uuid4().hex, "reason": decision["reason"],
-                                    "instruction": decision["instruction"], "review": self.reviews, "revision": revision}
+                                    "instruction": decision["instruction"], "review": self.reviews, "revision": revision,
+                                    "conditions": conditions}
         except Exception as exc:
             self.log("review.error", role="consciousness", error=str(exc))
         finally:
@@ -412,6 +517,8 @@ class Supervisor:
                 if (self.call_cancelled() or self.call_tools >= self.config["max_tools_per_call"]
                         or self.tools_used >= self.config["max_tools_total"] - reserve):
                     raise ValueError("감독 도구 예산 소진. 가능한 근거만으로 UNKNOWN/실행 위임을 판정하세요")
+                if self.phase != "final" and op in {"execute", "evidence"} and not self.model_admitted(self.phase):
+                    raise ValueError("이번 단계의 추가 탐색 배분을 소진했습니다. 현재 근거로 판정을 마치고 미해결은 실행자에게 위임하세요")
                 self.call_tools += 1
                 self.tools_used += 1
             elif op not in {"state", "response", "evidence", "patch", "keep"}:
@@ -449,14 +556,18 @@ class Supervisor:
                 with self.lock:
                     if self.active or not self.executor_paused:
                         raise ValueError("실행자가 아직 작업 중입니다. 기록을 관찰하고 다음 정지 경계에서 필요한 지시를 남기세요")
-                    if any(j.phase != "complete" for j in self.jobs.values()):
+                    if self.phase == "review" or any(j.phase != "complete" for j in self.jobs.values()):
                         from cognitive_trace import _classify_call, _ibl_safety_map, _ibl_op_safety_map
                         kind, _ = _classify_call({"name": name, "input": args}, _ibl_safety_map(), _ibl_op_safety_map())
                         if kind != "read":
                             raise ValueError("백그라운드 작성자가 남아 있습니다. 자원·산출물 회수 후 수정하세요")
                 self.log("ownership.acquired", role="consciousness", name=name)
                 try:
-                    result = self._execute(name, args, project_path=self.project_path, agent_id=self.owner)
+                    from thread_context import actor_context
+                    # ToolContext는 kwargs가 아니라 thread_context를 읽는다.
+                    # 감독 신원은 모델·권한 확인용, 실제 도구 자원은 실행자 소유다.
+                    with actor_context(agent_id=self.owner):
+                        result = self._execute(name, args, project_path=self.project_path, agent_id=self.owner)
                 finally:
                     self.log("ownership.released", role="consciousness", name=name)
             else:
@@ -469,6 +580,16 @@ class Supervisor:
             self.log("tool.supervisor" if is_manager else "response.operation", role="consciousness" if is_manager else "execution",
                      operation=op, input=self.store.evidence(payload), result=self.store.evidence(result),
                      is_error=_failed(result) or (isinstance(result, dict) and bool(result.get("requires_approval"))))
+            if is_manager and op == "execute":
+                # 원문은 작업대에 보존하고 모델에는 필요한 범위만 보낸다.
+                # 크롤·기억의 중첩 JSON 전문이 매 라운드 재독되던 ep3364 수리.
+                ref = self.store.evidence(result)
+                if ref["chars"] > 12000:
+                    failed = _failed(result)
+                    approval = isinstance(result, dict) and result.get("requires_approval")
+                    result = {"success": not failed, "requires_approval": bool(approval), "evidence": {k: ref[k] for k in ("id", "chars")},
+                              "page": self.store.read_evidence(ref["id"], 0, 12000),
+                              "hint": "나머지 원문은 evidence id와 offset=12000으로 읽으세요"}
             if multimedia and isinstance(result, dict) and result.get("images"):
                 return {"content": json.dumps({"success": True, "result": result.get("content", "")}, ensure_ascii=False),
                         "images": result["images"], "details": result.get("details")}
@@ -491,7 +612,7 @@ class Supervisor:
     def finalize(self, response, history, collect, cancel_check=None, tool_calls=None):
         from supervisor_runtime import invoke, parse_decision, repair_message
         from thread_context import set_goal_eval_outcome
-        set_goal_eval_outcome(False, 2)  # 저장·증거 수집부터 실패하면 성공 경험으로 증류하지 않는다.
+        set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="검수 진행 중")
         self.finalizing = True
         self.review_cursor = 0  # 최종 검수는 이번 턴 전체 궤적과 원래 전체 목표를 다시 대조한다.
         self.store.put_response(response)
@@ -504,13 +625,17 @@ class Supervisor:
                 yield {"type": "thinking", "content": "의식이 목표 달성 근거와 저장된 응답을 검수하고 있습니다."}
                 self.store.coverage.clear()
                 if hasattr(self.runner, "_collect_visual_artifacts"):
-                    self.final_images = self.runner._collect_visual_artifacts(self.store.text, tool_calls=tool_calls or []) or None
+                    artifacts = self.runner._collect_visual_artifacts(self.store.text, tool_calls=tool_calls or []) or []
+                    self.final_images, self.visual_review = self.verifications.visual_input(artifacts,
+                        digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)), self.store)
                 prompt = json.dumps({"phase": "final", **self.state()}, ensure_ascii=False)
                 # 짧은 후보는 첫 호출에 그대로 제공. 장문은 범위 도구로 끝까지 읽는다.
                 page = self.store.read_response(0, 12000, mark=True)
                 prompt += "\nresponse_first_page=" + json.dumps(page, ensure_ascii=False)
                 try:
-                    decision = parse_decision(invoke(self, prompt, phase="final"))
+                    raw = invoke(self, prompt, phase="final")
+                    decision = ({"status": "UNKNOWN", **self.call_stop} if self.call_stop
+                                else parse_decision(raw))
                 except Exception as exc:
                     decision = {"status": "UNKNOWN", "reason": str(exc)}
                 if decision["status"] == "CONTINUE":
@@ -526,6 +651,8 @@ class Supervisor:
                 delivery = self.delivery.manifest()
                 if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
                     decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
+                self.verifications.remember(decision.get("checks", []),
+                    digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)), self.store)
                 self.log("decision", role="consciousness", decision=decision, response=manifest)
                 from episode_logger import record_trajectory_event
                 record_trajectory_event("validation.completed", {
@@ -536,18 +663,35 @@ class Supervisor:
                 })
                 if decision["status"] != "REWORK" or attempt >= self.config["max_repairs"]:
                     break
+                expected = max(self.config["final_input_reserve"],
+                               self.phase_usage.get("final", {}).get("last_input", 0))
+                remaining = self.model_budget_remaining()["input"]
+                from providers.base import remaining_turn_tokens
+                task_remaining = remaining_turn_tokens()
+                last_input = (getattr(getattr(self.runner.ai, "_provider", None), "_last_prompt_usage", {}) or {}).get("input", 0)
+                cycle_expected = expected + max(last_input, self.config["repair_context_chars"] // 2)
+                if ((self.config["budget_mode"] == "hard" and remaining < expected)
+                        or (task_remaining is not None and task_remaining < cycle_expected)):
+                    self.log("repair.skipped", role="harness", reason="재검수 여력 부족", expected_input=expected)
+                    decision = {"status": "UNKNOWN", "reason": "재검수 여력이 없어 보완을 시작하지 않았습니다"}
+                    break
+                self.log("repair.admitted", role="harness", expected_recheck_input=expected,
+                         allocation_extension=max(0, expected - remaining), budget_policy=self.config["budget_mode"])
+                self.last_decision = decision
                 self.phase = "repair"
                 self.executor_paused = False
                 self.repair_kept = False
                 before_version = self.store.version
                 self.log("ownership.handoff", role="harness", to="execution", instruction=decision.get("instruction"))
-                # 같은 실행 세션을 이어받는다. 모든 사용자용 본문은 patch 도구가 저장하며 재타이핑하지 않는다.
-                for event in self.runner.ai.process_message_stream(repair_message(self, decision), history=history,
-                                                                   images=None, cancel_check=cancel_check):
-                    collect(event)
-                    self.observe_native(event)
-                    if event.get("type") not in {"text", "final"}:
-                        yield event
+                from supervisor_handoff import repair_execution
+                with repair_execution(self, decision, history) as (executor, repair_history, checkpoint):
+                    prompt = repair_message(self, decision) + "\n작업 인계=" + json.dumps(checkpoint, ensure_ascii=False, default=str)
+                    for event in executor.process_message_stream(prompt, history=repair_history,
+                                                                 images=None, cancel_check=cancel_check):
+                        collect(event)
+                        self.observe_native(event)
+                        if event.get("type") not in {"text", "final"}:
+                            yield event
                 self.log("ownership.handoff", role="harness", to="consciousness")
                 self.executor_paused = True
                 if self.store.version == before_version and not self.repair_kept:
@@ -585,7 +729,16 @@ class Supervisor:
                 self.log("pursuit.approval_conflict", role="harness", error=str(exc))
                 approved = False
                 decision = {"status": "UNKNOWN", "reason": "검수 중 전체 과제가 변경되어 완료 승인을 적용하지 못했습니다"}
-        set_goal_eval_outcome(approved, 0 if approved else 2)
+        status = "ACHIEVED" if approved else "NOT_ACHIEVED" if decision["status"] == "REWORK" else "UNKNOWN"
+        set_goal_eval_outcome(approved, 2 if status == "NOT_ACHIEVED" else 0,
+                              status=status, reason=decision.get("reason", ""))
+        # 과거 원문·승인 지문과 실패 범주를 보존해 다음 요청에서 재검수할 수 있다.
+        (self.store.directory / "review_status.json").write_text(json.dumps({
+            "status": status, "reason": decision.get("reason", ""),
+            "stop_kind": decision.get("kind"), "response": self.store.manifest(),
+            "original_goal": self.message, "episode_id": self.episode_id,
+            "learning": "eligible" if approved else "deferred" if status == "UNKNOWN" else "rejected",
+        }, ensure_ascii=False), encoding="utf-8")
         print(f"[ConsciousSupervisor] 최종 판정: {decision['status']}")
         final = self.store.text
         if not approved:
@@ -620,3 +773,19 @@ def _job_observation(value):
     if isinstance(value, list):
         return [row for item in value for row in _job_observation(item)]
     return []
+
+
+def _find_checkpoint(value):
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return None
+    if isinstance(value, dict):
+        if isinstance(value.get("supervision_checkpoint"), dict):
+            return value["supervision_checkpoint"]
+        for key in ("final_result", "result"):
+            found = _find_checkpoint(value.get(key))
+            if found:
+                return found
+    return None

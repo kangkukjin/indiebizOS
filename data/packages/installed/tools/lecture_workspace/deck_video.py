@@ -30,6 +30,7 @@ _BACKEND_DIR = str(Path(__file__).resolve().parents[5] / "backend")
 if _BACKEND_DIR not in sys.path:
     sys.path.insert(0, _BACKEND_DIR)
 
+import boot_paths  # noqa: E402,F401 — 독립 렌더 자식도 backend 층 경로를 설치한다.
 import lecture_store  # noqa: E402
 import lecture_video_captions  # noqa: E402
 

@@ -493,17 +493,19 @@ def notify_round(provider: str, model: str, round_no: int, budget: int):
 
     print 는 기존 `[<프로바이더>] 라운드 N/M 시작` 포맷을 보존(사람 습관·기존 로그 연속성),
     관측의 진실 소스는 steps 원장이다. 에피소드 컨텍스트 밖(테스트 등)이면 print 만."""
-    role = _current_role.get("") or "execution"
+    from model_call_context import fields
+    call = fields(next_round=True)
+    role = call.get("role") or _current_role.get("") or "execution"
     print(f"[{provider}] 라운드 {round_no}/{budget} 시작"
           + (f" (role={role})" if role != "execution" else ""))
     ep = _current_episode.get(None)
     if ep is not None:
         ep.steps.append({"event": "round", "provider": provider, "model": model,
-                         "round": round_no, "budget": budget, "role": role})
+                         "round": round_no, "budget": budget, "role": role, **call})
     # MCP 재진입은 _Episode 없이 trajectory만 복원한다. 원샷도 그 척추에 기록한다.
     record_trajectory_event("model.round", {
         "provider": provider, "model": model, "round": round_no,
-        "budget": budget, "role": role,
+        "budget": budget, "role": role, **call,
     })
 
 
@@ -517,7 +519,9 @@ def notify_usage(provider: str, model: str, latency_ms: float, usage: dict):
     역할 태그는 set_step_role 의 컨텍스트값 — 의식·무의식·평가가 스스로 갈린다."""
     ep = _current_episode.get(None)
     role = _current_role.get("") or "execution"
-    step = {"event": "usage", "role": role, "latency_ms": int(latency_ms)}
+    from model_call_context import fields
+    step = {"event": "usage", "role": role, "latency_ms": int(latency_ms), **fields(),
+            "accounting": "billable_usage"}
     if provider:
         step["provider"] = provider
     if model:
@@ -537,7 +541,9 @@ def notify_response_snapshot(provider: str, model: str, response_id: str, usage:
     run/provider/role/response_id로 묶어 각 usage 필드의 최댓값을 읽는다.
     스냅샷끼리 또는 model.usage와 합산하지 않는다. 사건 시각은 수신 시각이며 API 시작이 아니다.
     """
-    data = {"provider": provider, "model": model, "response_id": response_id,
+    from model_call_context import fields, observe_usage
+    observe_usage(usage, snapshot=True, response_id=response_id)
+    data = {**fields(), "provider": provider, "model": model, "response_id": response_id,
             "role": _current_role.get("") or "execution", "block_types": block_types,
             "accounting": "response_cumulative_snapshot"}
     data.update({k: int(usage[k]) for k in ("input", "output", "cache_read", "cache_create", "reasoning")
@@ -1044,7 +1050,8 @@ def _extract_and_save_summary(episode_id, started_at, agent, user_message, log_t
         except Exception:
             steps_json = None
     if round_steps:
-        execution_rounds = max(int(s.get("round") or 0) for s in round_steps)
+        from model_call_context import count_execution_rounds
+        execution_rounds = count_execution_rounds(round_steps)
     elif not steps:
         # 폴백 정규식은 **원장 자체가 없을 때만**(옛 에피소드·미계장 몸). 원장이 있는데
         # 실행 라운드가 0이면 그 자체가 "관측 불가"라는 사실 = NULL 유지.

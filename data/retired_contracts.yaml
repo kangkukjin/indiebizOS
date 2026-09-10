@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: verbose_rerun_for_detail
+    retired: 2026-09-11
+    reason: 중간 상세를 얻기 위한 작업 재실행은 중복 비용과 부작용을 만든다.
+    instead: '기존 result_ref를 execute_ibl(code:"", read_result:{id,offset,limit})로 읽는다.'
+    phrases:
+      - 'step 원형이 필요하면 verbose: true 로 다시 실행.'
+      - '전부 필요하면 `verbose: true`'
+      - '중간 step 원형이 꼭 필요할 때만 `verbose: true`'
   - id: image_critic_evaluation_axis
     retired: 2026-09-10
     reason: 개별 이미지 채점은 실행 역할로 옮겼다. 최종 목표 승인은 의식이 맡는다.

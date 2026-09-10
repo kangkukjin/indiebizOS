@@ -186,6 +186,8 @@ data/warehouse_media_web/
 !data/packages/**/tsconfig.json
 # 몸 프로파일(사람 저술)과 그 빌드 파생 — build.gradle 이 engine.json 을 읽는다.
 !data/bodies/*.json
+# 재현 가능한 영상 제작법 소스(작업별 진행 상태는 각 덱 아래 런타임 파일).
+!data/recipes/narrated_video_v1.json
 
 # 특수 폴더 및 파일
 ..bfg-report/

@@ -91,7 +91,7 @@ def main():
     lecture_id = args.get("lecture_id")
     if not lecture_id:
         fail("lecture_id 가 필요합니다.")
-    lec = ROOT / "outputs" / "lectures" / lecture_id
+    lec = Path(args.get("lecture_dir") or (ROOT / "outputs" / "lectures" / lecture_id))
     deck_path = lec / "deck.json"
     if not deck_path.exists():
         fail(f"강의를 찾을 수 없습니다: {deck_path}")

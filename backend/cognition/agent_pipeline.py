@@ -274,9 +274,13 @@ class CognitivePipelineMixin:
         self._sync_execution_gear()
         from thread_context import actor_context, get_current_agent_id, get_current_task_id
         from providers.base import turn_token_scope
+        from world_pulse import _load_config
+        resource_limits = _load_config().get("agent_resource_limits", {})
         agent_id = get_current_agent_id() or getattr(self.ai, "agent_id", None)
         with self.turn_ai_scope(), actor_context(agent_id=agent_id), \
-                turn_token_scope(agent_id, get_current_task_id(), (getattr(self.ai, "agent_id", None),)):
+                turn_token_scope(agent_id, get_current_task_id(), (getattr(self.ai, "agent_id", None),),
+                                 hard_token_limit=resource_limits.get("hard_token_limit"),
+                                 deadline_s=resource_limits.get("deadline_s")):
             # 화면·위임·스케줄러가 신원을 생략해도 감독과 MCP가 같은 턴을 찾는다.
             from pursuit_bind import enter, leave, observe
             _ptoken = enter(self, message, history, enabled=not kwargs.get("force_role"))

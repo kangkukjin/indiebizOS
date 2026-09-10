@@ -235,12 +235,9 @@ class ConsciousnessAgent:
             except Exception:
                 pass
             for attempt in range(max_retries + 1):
-                response = supervisor.plan(input_text, self._supervisor_prompt, revision) if supervisor else self._provider.process_message(
-                    message=input_text,
-                    history=[],
-                    images=None,
-                    execute_tool=None
-                )
+                response = supervisor.plan(input_text, self._supervisor_prompt, revision) if supervisor else call_oneshot_provider(
+                    self._provider, input_text, system_prompt=self._prompt,
+                    role="compatibility_plan", step_role="consciousness")
                 if response and response.strip():
                     break
                 if attempt < max_retries:
@@ -873,46 +870,37 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
             return None
         provider = agent._provider
 
-    # 공유 provider의 호출 수만 제한한다. 실제 프롬프트·계측은 독립 사본에서 변경한다.
+    return call_oneshot_provider(provider, prompt, system_prompt=system_prompt, images=images, role=role)
+
+
+def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, role="execution", step_role=None):
+    """선택된 모델을 유지하며 원샷 계약·동시성·계측을 한 경로에서 적용한다."""
+    from episode_logger import _current_role
+    from model_call_context import set_purpose, reset_purpose
     with _oneshot_lock_for(provider).held(background=is_oneshot_background()):
         if callable(getattr(provider, "oneshot_view", None)):
             provider = provider.oneshot_view()
-        # 시스템 프롬프트 임시 교체
-        original_system_prompt = None
+        else:
+            import copy
+            provider = copy.copy(provider)
+        provider.no_tools = True
+        provider.agent_role = f"oneshot:{role}"
+        provider.disable_session_persistence = True
+        provider.tools = []
         if system_prompt is not None:
-            original_system_prompt = provider.system_prompt
             provider.system_prompt = system_prompt
-
+        token = _current_role.set(step_role or f"oneshot:{role}")
+        purpose_token = set_purpose(role)
+        _oneshot_failure.kind = None
         try:
-            # 스텝 원장 역할 태그 (2026-08-15): 원샷도 프로바이더 루프를 지나 라운드가
-            # 찍히는데, 태그가 없으면 전부 role=execution 으로 뭉개져 원장의 해상도가
-            # 죽는다(에피소드 1083 실측 — indiebizOS 감사). 스왑 이음매가 아니라 호출
-            # 이음매에 태그를 건다.
-            try:
-                from episode_logger import set_step_role
-                set_step_role(f"oneshot:{role}")
-            except Exception:
-                pass
-            _oneshot_failure.kind = None
-            return provider.process_message(
-                message=prompt,
-                history=[],
-                images=images,
-                execute_tool=None
-            )
-        except Exception as e:
-            logger.warning(f"[oneshot_ai_call] 실패: {e}")
+            return provider.process_message(message=prompt, history=[], images=images, execute_tool=None)
+        except Exception as exc:
+            logger.warning("[oneshot] %s 호출 실패: %s", role, exc)
             return None
         finally:
-            # 프로바이더가 값으로 말한 실패 범주를 이 스레드에 남긴다 (성공이면 None).
             _oneshot_failure.kind = getattr(provider, "last_failure_kind", None)
-            try:
-                from episode_logger import set_step_role
-                set_step_role("")
-            except Exception:
-                pass
-            if original_system_prompt is not None:
-                provider.system_prompt = original_system_prompt
+            _current_role.reset(token)
+            reset_purpose(purpose_token)
 
 
 def _get_system_oneshot_provider():
@@ -1027,31 +1015,4 @@ def system_ai_call(prompt: str, system_prompt: str = None,
             return None
         provider = agent._provider
 
-    with _oneshot_lock_for(provider).held(background=is_oneshot_background()):
-        if callable(getattr(provider, "oneshot_view", None)):
-            provider = provider.oneshot_view()
-        original_system_prompt = None
-        if system_prompt is not None:
-            original_system_prompt = provider.system_prompt
-            provider.system_prompt = system_prompt
-        try:
-            # 스텝 원장 역할 태그 — oneshot_ai_call 과 같은 이유(호출 이음매에 태그).
-            try:
-                from episode_logger import set_step_role
-                set_step_role(f"oneshot:{role}")
-            except Exception:
-                pass
-            return provider.process_message(
-                message=prompt, history=[], images=images, execute_tool=None
-            )
-        except Exception as e:
-            logger.warning(f"[system_ai_call] 실패: {e}")
-            return None
-        finally:
-            try:
-                from episode_logger import set_step_role
-                set_step_role("")
-            except Exception:
-                pass
-            if original_system_prompt is not None:
-                provider.system_prompt = original_system_prompt
+    return call_oneshot_provider(provider, prompt, system_prompt=system_prompt, images=images, role=role)

@@ -370,6 +370,8 @@ async def execute_ibl(code: str, project_path: str = "",
                       recover: Optional[str] = None,
                       wait: float = 0,
                       check: bool = False,
+                      describe: Optional[List[str]] = None,
+                      read_result: Optional[dict] = None,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
@@ -394,12 +396,9 @@ async def execute_ibl(code: str, project_path: str = "",
     files_from: files 의 경로 참조판(로컬 파일 경로 목록) — 서버가 내용을 읽어 인라인
         files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: 먼저 임시 파일에
         쓰고 여기에 경로만 싣는다.
-    verbose: 파이프 봉투 results[] 를 step 원형으로, final_result 를 전체로 받는다(기본 false = step 요약 +
-        ★큰 구조 데이터는 미리보기: items/표 8행 초과·3,000자 이상이면 앞 8행 + _preview{shown,total,columns},
-        긴 산문은 앞 12,000자 — 2026-09-06 봉투 기본값 반전. 전체 값은 턴에 보관되므로 `$이름` 으로 가리켜
-        [table:take]/[table:select]/[table:filter] 로 좁혀 받는다. 행·값을 손으로 옮겨 적지 말 것).
-        MCP 전달 한도를 넘으면 중간 기록부터 요약하고 _trimmed로 알린다. 최종 값도 너무 크면
-        _spilled/ref로 저장된 결과를 가리킨다 — 중간 results를 최종 반환값으로 읽거나 재실행하지 말 것.
+    describe: code를 비우고 ["node:action"]으로 계약 조회(1~6개, 실행 없음).
+    read_result: code를 비우고 {id,offset,limit}로 result_ref의 기존 원문 회수(재실행 없음).
+    verbose: 모델은 중간 요약과 최종 미리보기를 유지한다. 전문은 read_result로 읽는다.
     recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
         (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
         기록 없음이면 만료(24h)/미탑재를 정직하게 알린다(F51-1: 표면 대기가 끊겨도
@@ -431,6 +430,10 @@ async def execute_ibl(code: str, project_path: str = "",
     task_id = h_task or DEFAULT_TASK_ID
     origin = h_origin or DEFAULT_TASK_ORIGIN
     payload = {"code": code, "project_path": effective_path}
+    if describe is not None:
+        payload["describe"] = describe
+    if read_result is not None:
+        payload["read_result"] = read_result
     # 없을 때만 빼서 옛 호출의 payload 모양을 바꾸지 않는다(무회귀) — B23-1
     if resume is not None:
         payload["resume"] = resume

@@ -20,8 +20,7 @@ PREVIEW_CHARS = 160          # message/text 미리보기 길이
 PREVIEW_ITEM_CHARS = 300     # 첫 행(JSON) 미리보기 길이
 KEYS_MAX = 12
 
-_HINT = ("results[] 는 step 요약(shape·count·bytes·preview) — 전체 데이터는 final_result. "
-         "step 원형이 필요하면 verbose: true 로 다시 실행.")
+_HINT = "results는 단계 요약, 최종 값은 final_result. 원문은 result_ref를 read_result로 조회. 재실행 금지."
 
 _FN_SUMMARY_DEPTH = 8  # 실행기의 함수 깊이보다 여유 있게; 비정상 봉투는 더 내려가지 않는다.
 
@@ -292,7 +291,7 @@ PREVIEW_DEFAULT = {"rows": 8, "min_chars": 3000, "prose_chars": 12000}
 #   읽지 않는다. 호출자(execute_ibl 표면)가 lifecycle_policy 의 `envelope_preview:` 를 읽어 policy 인자로 넘긴다.
 
 
-PREVIEW_FULL_HINT = ("미리보기입니다 — 전체가 필요하면 verbose: true 로 요구하거나, `$이름 = …` 로 이름을 붙여 다음 문장에서 "
+PREVIEW_FULL_HINT = ("미리보기입니다 — 전체는 result_ref를 read_result로 읽거나, `$이름 = …` 로 이름을 붙여 다음 문장에서 "
                      "`$이름 >> [table:take]{n}`·`[table:select]`·`[table:filter]` 로 좁혀 받으세요. 행·값을 손으로 옮겨 적지 말 것.")
 
 

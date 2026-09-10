@@ -427,11 +427,11 @@ def _preview_boundary(result, tool_input: dict):
         from thread_context import get_call_channel
         if get_call_channel() == "app":
             return result
-        from ibl_envelope import preview_envelope, PREVIEW_DEFAULT
-        from ibl_retyping import load_policy_block
-        return preview_envelope(result, verbose=bool((tool_input or {}).get("verbose")),
-                                policy=load_policy_block("envelope_preview", PREVIEW_DEFAULT))
-    except Exception:
+        from model_result_view import project_result
+        return project_result(result, verbose=bool((tool_input or {}).get("verbose")))
+    except Exception as exc:
+        from episode_logger import record_trajectory_event
+        record_trajectory_event("context.projection_failed", {"error": str(exc)})
         return result
 
 
@@ -492,6 +492,16 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
 
     # 노드 접근 제어 (allowed_nodes)
     allowed = get_allowed_nodes()
+    if tool_input.get("describe") is not None or tool_input.get("read_result") is not None:
+        from model_result_view import describe_actions, read_result
+        if tool_input.get("code") or tool_input.get("pipeline") or (tool_input.get("describe") is not None and tool_input.get("read_result") is not None):
+            return json.dumps({"error": "조회에는 code를 비우고 describe/read_result 중 하나만 사용하세요"}, ensure_ascii=False)
+        try:
+            value = (describe_actions(tool_input["describe"], allowed) if tool_input.get("describe") is not None
+                     else read_result(tool_input["read_result"]))
+            return json.dumps(value, ensure_ascii=False)
+        except (ValueError, KeyError, TypeError, OSError) as exc:
+            return json.dumps({"error": str(exc)}, ensure_ascii=False)
 
     # --- IBL 코드 결정 ---
     code = tool_input.get("code") or tool_input.get("pipeline")
@@ -725,7 +735,6 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                     result["resumed_vars"] = _explicit_names
                 _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected), _retyped, _fn_hint)
             from ibl_envelope import diet_envelope
-            result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
             return dumps_public_result(result, producer="execute_ibl:resume_vars" if _explicit_names else "execute_ibl",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
@@ -779,7 +788,6 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                     if isinstance(r, dict) and isinstance(r.get("step"), int):
                         r["step"] += from_step - 1
             from ibl_envelope import diet_envelope
-            result = diet_envelope(result, verbose=bool(tool_input.get("verbose"))) if isinstance(result, dict) else result
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
             return dumps_public_result(result, producer="execute_ibl:resume",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
@@ -929,7 +937,6 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         # verbose: true 가 옛 모양. 표면은 final_result 만 읽으므로 무영향.
         if isinstance(result, dict):
             from ibl_envelope import diet_envelope
-            result = diet_envelope(result, verbose=bool(tool_input.get("verbose")))
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
 
         if isinstance(result, dict):

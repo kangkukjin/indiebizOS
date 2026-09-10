@@ -14,6 +14,8 @@ router.include_router(supervision_router)
 
 class IBLRequest(BaseModel):
     code: str
+    describe: Optional[List[str]] = None
+    read_result: Optional[dict] = None
     verbose: bool = False              # 파이프 봉투 results[] 원형(true) / step 요약(기본) — ibl_envelope (2026-08-22 M1)
     check: bool = False                # 정적 통화 검사만(실행 없음) — ibl_typecheck (2026-09-05)
     resume: Optional[dict] = None      # 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 그 step 부터 재개.
@@ -203,6 +205,10 @@ async def execute_ibl_code(req: IBLRequest):
                     # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서
                     # 옛 호출의 tool_input 모양을 바꾸지 않는다(무회귀).
                     _ti = {"code": req.code, "verbose": req.verbose}
+                    if req.describe is not None:
+                        _ti["describe"] = req.describe
+                    if req.read_result is not None:
+                        _ti["read_result"] = req.read_result
                     if req.resume is not None:
                         _ti["resume"] = req.resume
                     if req.files is not None:

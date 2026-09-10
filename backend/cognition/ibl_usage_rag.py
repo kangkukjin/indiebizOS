@@ -920,7 +920,11 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     _ge = get_goal_eval_outcome()
     clear_goal_eval_outcome()
     if _ge is not None and not _ge.get("achieved", True):
-        print(f"[경험증류] 목표 미달성(severity={_ge.get('severity')}) — 증류 스킵: \"{user_message[:40]}\"")
+        if _ge.get("status") == "UNKNOWN":
+            print(f"[경험증류] 검수 미완료 — 재검수까지 학습 보류: {_ge.get('reason', '')} "
+                  f'"{user_message[:40]}"')
+        else:
+            print(f"[경험증류] 목표 미달성(severity={_ge.get('severity')}) — 증류 스킵: \"{user_message[:40]}\"")
         return False
 
     # 해마 비활성(폰 기본)이면 증류도 건너뜀 — 안 그러면 top_score=0.0 이 매 명령마다 증류

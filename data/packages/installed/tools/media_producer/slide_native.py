@@ -501,7 +501,8 @@ def create_native_slide(tool_input: dict, output_base: str, slide_id: str = None
     user = "\n".join(parts)
     try:
         ai = _get_author_ai()
-        resp = ai.process_message(user, history=[], images=[], execute_tool=None)
+        from consciousness_agent import call_oneshot_provider
+        resp = call_oneshot_provider(ai, user, role="slide_native_author")
         spec = _sanitize_spec(_extract_json(resp))
     except Exception as e:
         return json.dumps({"success": False, "error": f"저작 실패: {e}"}, ensure_ascii=False)

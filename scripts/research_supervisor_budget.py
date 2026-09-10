@@ -102,7 +102,7 @@ def simulate_budget(source, plan_inputs, final_inputs):
         if controller.finalizing:
             controller.final_usage["input"] += cumulative
     return {"config": config, "traces": traces,
-            "note": "Input-only trace replay, holding observed requests fixed; no outcome prediction."}
+            "note": "Input-only allocation arithmetic, holding observed requests fixed; excludes soft model_admitted admission; no outcome prediction."}
 
 
 def input_price_proxy(row, base, write, read):

@@ -43,13 +43,17 @@ def test_large_items_are_previewed_but_turn_var_keeps_full(tmp_path, task):
     assert out.get("success") is True
     fr = _fr(out)
     assert len(fr["items"]) == 8 and fr["_preview"]["total"] == 60 and "단지" in fr["_preview"]["columns"]
-    assert "verbose" in fr["_preview"]["note"] and out["_preview"]["of"] == "final_result"
+    assert "read_result" in fr["_preview"]["note"] and out["_preview"]["of"] == "final_result"
     # 전체는 턴 변수에 — 좁혀 요구하면 그만큼 온다
     nxt = _run('$표 >> [table:take]{n: 3}', tmp_path, task)
     assert len(_fr(nxt)["items"]) == 3 and "_preview" not in _fr(nxt)
-    # 60행 전부가 꼭 필요하면 verbose
-    full = _run('$표 >> [table:take]{n: 60}', tmp_path, task, verbose=True)
-    assert len(_fr(full)["items"]) == 60 and "_preview" not in full
+    # 60행 전부는 앞 작업의 증거를 읽는다. 실행을 반복할 필요가 없다.
+    page = _run('', tmp_path, task, read_result={"id": out["result_ref"]["id"], "limit": 24000})
+    raw = page["text"]
+    while page["next_offset"] is not None:
+        page = _run('', tmp_path, task, read_result={"id": out["result_ref"]["id"], "offset": page["next_offset"], "limit": 24000})
+        raw += page["text"]
+    assert _fr(json.loads(raw))["items"] == ROWS
 
 
 def test_small_results_are_untouched(tmp_path, task):

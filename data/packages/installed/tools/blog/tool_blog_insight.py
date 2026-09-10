@@ -572,7 +572,8 @@ def blog_insight_report(count: int = 50, category: Optional[str] = None, project
                 for m in missing:
                     prompt = f"다음 블로그 글을 500자 내외로 요약하고 핵심 키워드 3개를 추출해줘. 형식: 요약내용 | 키워드1,키워드2,키워드3\n\n제목: {m['title']}\n내용: {m['content'][:2000]}"
                     try:
-                        res = ai.process_message(prompt, history=[])
+                        from consciousness_agent import call_oneshot_provider
+                        res = call_oneshot_provider(ai, prompt, role="blog_summary")
                         if "|" in res:
                             summ, kws = res.split("|", 1)
                             blog_save_summary(m['post_id'], summ.strip(), kws.strip())
@@ -587,7 +588,8 @@ def blog_insight_report(count: int = 50, category: Optional[str] = None, project
         ai = get_report_ai()
         context = "\n".join([f"- {s['title']} ({s['category']}): {s['summary'][:100]}..." for s in summaries[:20]])
         prompt = f"다음 블로그 요약들을 분석하여 1.최근 관심사 분석, 2.학습 방향 제안(3가지 구체적 영역과 프로젝트), 3.검색할 뉴스 키워드 3개를 마크다운으로 작성해줘.\n\n{context}"
-        analysis = ai.process_message(prompt, history=[])
+        from consciousness_agent import call_oneshot_provider
+        analysis = call_oneshot_provider(ai, prompt, role="blog_insight")
         
         # 뉴스 키워드 파싱 (간단히)
         news_keywords = ["AI", "기술", "비즈니스"]

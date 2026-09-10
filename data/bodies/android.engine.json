@@ -13,6 +13,7 @@
     "base/limb_keys",
     "base/logging_utils",
     "base/mime_compat",
+    "base/model_call_context",
     "base/model_resolver",
     "base/phone_jobs",
     "base/quiescent_reload",
@@ -67,12 +68,14 @@
     "cognition/ibl_usage_generator",
     "cognition/ibl_usage_rag",
     "cognition/memory_consolidation",
+    "cognition/model_result_view",
     "cognition/prompt_builder",
     "cognition/pursuit_bind",
     "cognition/pursuit_maintenance",
     "cognition/pursuit_tools",
     "cognition/reframe",
     "cognition/routing_system",
+    "cognition/supervisor_handoff",
     "cognition/supervisor_runtime",
     "cognition/switch_runner",
     "cognition/system_ai_core",
@@ -131,6 +134,7 @@
     "datastore/switch_manager",
     "datastore/system_ai_memory",
     "datastore/system_docs",
+    "datastore/verification_cache",
     "datastore/warehouse_catalog",
     "datastore/warehouse_directory",
     "datastore/warehouse_items",
@@ -297,8 +301,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 286,
-    "engine": 267,
+    "total": 290,
+    "engine": 271,
     "blocklist": 19
   }
 }

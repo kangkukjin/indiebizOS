@@ -135,15 +135,16 @@ def test_negative_take_survives_verbose_turn_variable_delivery(tmp_path, monkeyp
         raw = _execute_ibl_unified({"code": '$규칙\n$원장 >> [table:take]{n: -4}', "verbose": True},
                                    str(tmp_path), agent_id="probe")
     original = json.loads(raw)
-    assert len(json.loads(original["results"][1]["result"])) == 10
+    assert original["results"][1]["count"] == 10
+    assert "result_ref" in original
     delivered = _mcp()._trim_for_agent(raw, actions=1)
-    assert len(raw) > _mcp()._agent_budget_chars(1) >= len(delivered)
+    assert len(delivered) <= _mcp()._agent_budget_chars(1)
     out = json.loads(delivered)
     final = json.loads(out["final_result"])
     assert final["count"] == 4 and final["items"] == rows[-4:]
     assert out["results"][1]["count"] == 10 and out["results"][2]["count"] == 4
-    assert out["_results_summarized"] and out["_trimmed"]
-    assert "final_result" in original and "result" in original["results"][1]
+    assert out["_results_summarized"]
+    assert "final_result" in original and "result" not in original["results"][1]
 
 
 @pytest.mark.parametrize("success", [True, False])

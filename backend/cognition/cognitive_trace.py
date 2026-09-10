@@ -273,6 +273,9 @@ def build_action_ledger(items: List[Union[str, Dict[str, Any]]]) -> str:
         inp = ent["input"] if isinstance(ent["input"], dict) else {}
         code = inp.get("code")
         if "execute_ibl" in name and isinstance(code, str):
+            if not code and (inp.get("describe") is not None or inp.get("read_result") is not None):
+                _slot("execute_ibl(메타데이터 조회)")["count"] += 1
+                continue
             acts = _IBL_ACTION_RE.findall(code)
             targets = _IBL_TARGET_RE.findall(code)
             if not acts:
@@ -459,6 +462,8 @@ def _classify_call(tc: dict, safety: dict, op_safety: dict = None):
         return "write", f"파일 변경 ({base_name})"
     if base_name == "execute_ibl":
         code = str(inp.get("code", ""))
+        if not code and (inp.get("describe") is not None or inp.get("read_result") is not None):
+            return "read", "IBL 계약·기존 결과 조회"
         actions = _IBL_ACTION_RE.findall(code)
         if not actions:
             return "unknown", f"IBL 액션 없음 ({name})"
@@ -565,6 +570,7 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
     """
     calls = single = failed = typed = 0
     retyped = retyped_warns = pointed = fn_calls = 0
+    metadata_calls = 0
     other_calls = other_typed = 0          # IBL 밖 도구(셸 등) — 우회 통로도 모델이 친 글자다(2026-09-06 반성 4)
     for tc in tool_calls or []:
         if not isinstance(tc, dict):
@@ -579,6 +585,9 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
         inp = tc.get("input")
         code = inp.get("code", "") if isinstance(inp, dict) else ""
         code = code if isinstance(code, str) else str(code or "")
+        if not code and isinstance(inp, dict) and (inp.get("describe") is not None or inp.get("read_result") is not None):
+            metadata_calls += 1
+            continue
         calls += 1
         typed += len(code)
         if isinstance(inp, dict):
@@ -609,7 +618,7 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
         pointed += int(_pt or 0)
     return {"calls": calls, "single": single, "failed": failed, "typed_chars": typed,
             "retyped_chars": retyped, "retyped_warns": retyped_warns, "pointed": pointed, "fn_calls": fn_calls,
-            "other_calls": other_calls, "other_typed_chars": other_typed}
+            "other_calls": other_calls, "other_typed_chars": other_typed, "metadata_calls": metadata_calls}
 
 
 def _fmt_chars(n: int) -> str:

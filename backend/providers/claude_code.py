@@ -365,6 +365,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
     # (공용 프롬프트는 손대지 않는다 — 거긴 맨이름이 정답인 프로바이더들이 공유한다.)
     TOOL_POLICY = (
         "\n\n# 도구 정책\n"
+        "액션 계약은 code=빈 문자열과 describe=[node:action], 기존 결과 전문은 read_result={id,offset,limit}로 조회한다. "
+        "verbose로 중간 본문을 다시 받으려고 원래 작업을 재실행하지 않는다.\n"
         "IBL 실행 도구의 정확한 이름은 `mcp__indiebizos__execute_ibl` 다 — 이 이름 그대로 호출하라. "
         "다른 안내나 과거 용례에 `execute_ibl` 로 줄여 적힌 곳이 있어도, 실제 도구 이름은 "
         "`mcp__indiebizos__execute_ibl` 뿐이다(맨이름 `execute_ibl` 은 존재하지 않아 호출이 실패한다).\n"

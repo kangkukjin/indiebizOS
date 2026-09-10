@@ -43,7 +43,8 @@ github저장소메타:
     실음성 인사말을 붙일 때는 원고추출 결과를 texts_file로 받고 out_dir를 강의폴더/narration_raw로 지정한 뒤 인사말붙이기를
     실행한다. batch(기본 4 — 2026-09-10: 참조 음성 프롬프트는 세션당 1회, 조각은 batch 개씩 한 호출; OOM 이면 반으로).
     진행은 stderr 로 흘러 background 실행 시 status 의 progress 에 실시간으로 보인다. 예산=글자 수×실측 0.38초/자×1.5
-    캡, 실제 중단 기준은 진행 무소식 600초. 회수는 out.tar 하나, 회수·정지 앞에 세션 토큰 갱신(1시간 만료 함정). 긴 덱은 background:true 로.'
+    캡, 실제 중단 기준은 진행 무소식 600초. 회수는 out.tar 하나, 회수·정지 앞에 세션 토큰 갱신(1시간 만료 함정). 긴 덱은 background:true
+    로.'
   file: 나레이션생성.py
   interpreter: python
   registered_at: '2026-09-10T00:00:53'
@@ -52,7 +53,10 @@ github저장소메타:
   description: '강의 노트에서 시작·끝 인사말을 뺀 본문 원고를 JSON으로 저장 — args: lecture_id(필수), out(저장
     경로, 기본 강의폴더/narration_texts.json), intro(첫 장 앞에서 제거할 문구, 기본 표준 인트로), outro(끝 장
     뒤에서 제거할 문구, 기본 표준 아웃트로), strict(기본 true: 해당 문구가 없으면 실패, false: 일치하는 문구만 제거). 원본
-    스피커 노트는 보존한다. 반환 path를 나레이션생성의 texts_file로 넘긴다.'
+    source(## s001 — 제목 형식의 원고 경로), apply_notes:true면 노트·자료 사본을 원본과 일괄 동기화한다. source
+    생략 시 저장된 원본을 대조하며 불일치는 실패한다. inspect:true는 무쓰기 길이 추정·불일치 조회. chars_per_second(6.67)·bookend_seconds(8.7)로
+    estimated_seconds를 반환한다. 반환 path를 나레이션생성의 texts_file로 넘긴다. lecture_dir(선택): 프로젝트
+    덱의 실제 강의 폴더 경로.'
   file: 나레이션원고추출.py
   interpreter: python
   registered_at: '2026-09-07T20:07:16'
@@ -80,6 +84,15 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-24T03:39:12'
   timeout: 300
+슬라이드틀적용:
+  description: '공통 HTML 틀 한 벌 + 장별 JSON을 AI 호출 없이 덱에 적용. args: lecture_id, lecture_dir(선택),
+    template_path({{slot}} 틀 파일), contents_path([{id,title,speaker_note,fields:{...}}]
+    파일), inspect. 문자열은 HTML escape, *_html 슬롯만 명시적 HTML 삽입. 변경된 장만 렌더. 창작 그림/SVG는
+    내용 JSON에 따로 제작하고 바깥 HTML을 반복 생성하지 않음.'
+  file: 슬라이드틀적용.py
+  interpreter: python
+  registered_at: '2026-09-11T00:00:00'
+  timeout: 1800
 시험:
   description: 'pytest 를 파일·-k 단위로 — args: files(목록, 생략=backend 전수)·k·timeout. items(file·passed·failed·errors·failures[])+ok.
     [self:edit] 뒤 검증을 같은 프로그램에서(2026-09-05)'
@@ -97,6 +110,25 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-23T21:52:31'
   timeout: 300
+영상음량정렬:
+  description: '영상 정적 게인과 재인코딩 후 true peak 검증 — args: src, dst, target_lufs(-21),
+    max_true_peak(-1), inspect:true(측정만). 비디오 복사·AAC 오디오 변환, 압축·리미터·속도 변경 없음. items.path·lufs·true_peak·seconds,
+    gain_db·target_shortfall_db 반환. 측정 결과는 .audio.json에 보존.'
+  file: 영상음량정렬.py
+  interpreter: python
+  registered_at: '2026-09-10T19:00:00'
+  timeout: 300
+영상제작파이프라인:
+  description: '원고 검토 이정표→노트 동기화→등록 목소리→인사말→덱 영상→측정. args: lecture_id, lecture_dir(프로젝트
+    덱), source(정본 원고), references(원천 글 경로 배열), voice, mode(inspect 기본|run), manifest_hash,
+    narration(음성 옵션), render(렌더 옵션), normalize(정적 음량 옵션). inspect는 AI·제작 없이 지문과 점검
+    근거 반환. 검토 후 같은 인자와 manifest_hash로 run, background:true. 변경된 장만 음성 재생성, 동일 입력·산출물
+    지문은 재사용. 모델·목소리 임의 변경 없음. 실패 시 완료 단계 보존. 가이드 video_workflow.md bookends(선택): 인사말
+    음성 폴더.'
+  file: 영상제작파이프라인.py
+  interpreter: python
+  registered_at: '2026-09-11T00:00:00'
+  timeout: 10800
 음성받아쓰기:
   description: '[sense:listen]{path, op:"transcribe"} 호환 래퍼. 새 작업은 listen으로 파일을 직접
     듣는다. args: path, out, segment_seconds, prompt, instruction(전사 지침), model. 공통 모델
@@ -110,7 +142,7 @@ github저장소메타:
     raw_dir(본문 wav 폴더, 기본 강의폴더/narration_raw), out_dir(결과 폴더, 기본 강의폴더/narration),
     bookends(intro.wav·outro.wav 폴더, 기본 outputs/narration/bookends3), target_lufs(기본
     -27.8), gap(접합 간격 초, 기본 0.3). 모든 슬라이드의 본문 wav와 인사말 파일이 필요하다. 다음 [self:deck]{op:video}가
-    강의폴더/narration의 결과 wav를 사용한다.'
+    강의폴더/narration의 결과 wav를 사용한다. lecture_dir(선택): 프로젝트 덱의 실제 강의 폴더 경로.'
   file: 인사말붙이기.py
   interpreter: python
   registered_at: '2026-09-07T20:13:14'

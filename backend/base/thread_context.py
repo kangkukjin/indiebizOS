@@ -502,9 +502,11 @@ def clear_tool_calls():
 # 시간이 갈수록 추천 품질을 깎는다(복리 출혈). 증류 전에 이 판정을 보고 거른다.
 # None = 평가 안 함(EXECUTE/Reflex 등) → 증류 허용(기존 동작).
 
-def set_goal_eval_outcome(achieved: bool, severity: int = 0):
+def set_goal_eval_outcome(achieved: bool, severity: int = 0, *, status=None, reason=""):
     """현재 스레드의 목표 평가 최종 판정 저장."""
     _thread_local.goal_eval_outcome = {"achieved": bool(achieved), "severity": int(severity)}
+    if status is not None:
+        _thread_local.goal_eval_outcome.update(status=status, reason=reason)
 
 
 def get_goal_eval_outcome():

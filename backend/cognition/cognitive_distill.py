@@ -231,9 +231,12 @@ class CognitiveDistillMixin:
 
             # 기억은 출처를 기억한다 — 추출된 사실(claim)과 별개로 원 발화 스팬을 동봉.
             # 나중에 "이 기억이 어디서 왔나"를 대조할 수 있는 최소 단위(검증 기관 없이 기록만).
+            from episode_logger import EpisodeLogger
+            episode = EpisodeLogger.current()
             source_ref = json.dumps(
-                {"utterance": user_message[:200], "task": get_current_task_id() or ""},
-                ensure_ascii=False)
+                {"utterance": user_message,
+                 "task": get_current_task_id() or getattr(episode, "task_id", ""),
+                 "episode_id": getattr(episode, "episode_id", None)}, ensure_ascii=False)
 
             # 1단계: 대화에서 기억할 정보 조각 추출
             # 날짜 앵커 — 없으면 경량 모델이 연도를 자기 추측으로 채워 오염된다
@@ -255,7 +258,9 @@ class CognitiveDistillMixin:
 이번 한 번의 요청·지시("~찾아줘", "~해줘")나 이번 검색의 일회성 조건(용량·가격대·수량)은
 선호가 아니다 → 저장하지 마라. 요청문 자체를 그대로 content 로 옮기는 것 금지.
 (나쁜 예: "4T나 5T 제품을 찾아줘" → 이건 그 순간의 요청이지 선호가 아님 — 제외.
- 좋은 예: "중고는 필요없어" 라고 말했다면 → "중고 제품은 원하지 않음" 은 선호.)
+좋은 예: "중고는 필요없어" 라고 말했다면 → "중고 제품은 원하지 않음" 은 선호.)
+영상 한 편의 길이·목소리·시점·전달 위치도 이번 작업의 조건이다. 향후에도 적용하라는
+근거 없이 "항상 선호한다"로 일반화하지 마라. 결과에 꼭 필요하면 해당 작업기록에 한정한다.
 
 ★각 조각에 **node(주제 가지)** 를 적어라 — 이 자아의 기억 지도(아래)에서 가장 알맞은 가지를 고른다.
 기존 가지를 우선하고, 정말 새 주제면 새 경로("상위/하위" 꼴, 최대 3단, 한국어 명사)를 만든다.
@@ -394,7 +399,10 @@ AI: {ai_response[:500]}"""
                     merged = f"{latest['content']}\n[보충] {addition}"
                     merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
                     memory_db.update(project_path, agent_id, top["id"],
-                                     content=merged, keywords=merged_kw)
+                                     content=merged, keywords=merged_kw,
+                                     source_ref=json.dumps({"previous": top.get("source_ref"),
+                                                            "supplement": json.loads(source_ref)},
+                                                           ensure_ascii=False))
                     updated_count += 1
                     print(f"[심층메모리] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
                 elif j == "NEW":
@@ -613,6 +621,8 @@ AI 답변: {ai_response[:1400]}
         if not response:
             return
         log = getattr(self, "_log", None) or print
+        from thread_context import get_goal_eval_outcome
+        evaluation = get_goal_eval_outcome()  # 경험 증류가 소비하기 전에 기억용 상태를 보존한다.
         # 1) 경험 증류(해마) — 도구 실행이 있었을 때만. + Reflex top-1 성공률 피드백.
         if write_experience and tool_calls:
             try:
@@ -626,7 +636,11 @@ AI 답변: {ai_response[:1400]}
         # 2) 심층/의미 메모리 증류.
         if write_deep:
             try:
-                self._distill_deep_memory(user_message, response)
+                memory_response = response
+                if evaluation and evaluation.get("status") == "UNKNOWN":
+                    memory_response = ("검수 미완료(성공 판정으로 저장하지 말 것): "
+                                       + evaluation.get("reason", "") + "\n" + response)
+                self._distill_deep_memory(user_message, memory_response)
             except Exception as e:
                 log(f"[심층메모리] 오류 (무시): {e}")
         # 3) 포식 기억 증류(냄새지도·주인모델).
@@ -676,6 +690,7 @@ AI 답변: {ai_response[:1400]}
         from thread_context import (
             get_current_agent_id, get_current_project_id, get_current_agent_name,
             get_current_registry_key, get_goal_eval_outcome, clear_goal_eval_outcome,
+            get_current_task_id,
         )
         from episode_logger import EpisodeLogger
 
@@ -698,6 +713,7 @@ AI 답변: {ai_response[:1400]}
             "guides_used": guides_used,
             "turn_tokens": turn_tokens,   # 턴 마감 시점에 읽은 값 — 증류 자체 소모는 미포함
             "goal_eval": _ge,
+            "task_id": get_current_task_id(),
             "pursuit": pursuit_packet,
         }
         from supervision_bus import current as current_supervisor

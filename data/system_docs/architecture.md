@@ -63,7 +63,7 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
 - **심층메모리**: 같은 fine-tuned 모델로 시맨틱 검색 (2026-05-16 도입)
 - **점수 정규화**: 모든 검색 경로(시맨틱·하이브리드·FTS5 폴백)에서 0~1 보장
 - **의식 감독 통합(2026-09-10)**: `conscious_supervisor`가 계획·재규정·중간 점검·완료 승인을 책임지고, `supervisor_runtime`이 공통 `AIAgent`의 의식 역할을 호출한다. 실행자의 별도 보고 없이 `supervision_bus`의 실제 도구 경계와 `supervision_watch`의 시계·로그 증분을 읽는다. `agent_id + task_id`로 턴을 격리한다. 검수 대상은 `supervision_store`에 한 번 생성한 응답 후보이며 버전·SHA-256·본문 읽기 범위를 대조한다. 승인하면 같은 문자열을 전송하고, 보완은 변경 블록만 패치한다. `pursuit done`은 완료 요청이며 이번 턴 승인과 전체 과제 승인을 분리한다.
-- **비용과 호환 경로**: 정상 조회에는 의식 호출을 추가하지 않는다. 중간 검토는 기본 최대 2회·최소 240초 간격이고 최종 검수 예산을 따로 남긴다. 빈 응답·오류·읽지 않은 본문·지문 불일치는 `UNKNOWN`이다. 감독 비활성 또는 신원 없는 호출의 GoalEval/SelfReflect는 호환 경로로 남는다. 에피소드의 `NULL`은 검수 미실행이며 실패를 뜻하지 않는다.
+- **비용과 호환 경로**: 정상 조회에는 의식 호출을 추가하지 않는다. 중간 검토는 기본 최대 2회·최소 240초 간격이다. 계획·중간 검토 몫과 최종 검수 여력을 나누되 소프트 배분 초과로 진행 중 판정을 폐기하지 않는다. 전체 작업의 명시적 한도는 실행·의식·내부 원샷의 공통 원장이 소유한다. 기본 IBL 입력은 짧은 능력 지도이며 상세 계약과 큰 결과는 기존 도구의 읽기 인자로 조회한다. 빈 응답·오류·읽지 않은 본문·지문 불일치는 `UNKNOWN`이다. 감독 비활성 또는 신원 없는 호출의 GoalEval/SelfReflect는 호환 경로로 남는다. 에피소드의 `NULL`은 검수 미실행이며 실패를 뜻하지 않는다.
 - 상세: `data/system_docs/memory.md`
 
 ## 사용자 표면 — 런처의 세 모드 (트릴레마)
@@ -490,7 +490,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 338개**(test 제외, git 추적 기준) — 층 디렉토리 `base 33 · datastore 47 · ibl 47 · cognition 57 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **74개**(guide_db 등록 **73**)
+- backend **.py 342개**(test 제외, git 추적 기준) — 층 디렉토리 `base 34 · datastore 48 · ibl 47 · cognition 59 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **74개**(guide_db 등록 **73**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

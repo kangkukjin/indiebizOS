@@ -61,7 +61,8 @@ TOOL_SCHEMA = {
                    "evidence id=events는 사건, tool:이름은 도구 스키마, ibl:node:action은 액션 계약. "
                    "response로 응답 원문을 읽고, "
                    "execute로 기존 도구를 사용한다. patch는 response의 블록 ID·해시·버전을 "
-                   "지정해 변경 부분만 교체한다. keep는 보완 완료 신호. 별도 진행 보고는 불필요하다.",
+                   "지정해 변경 부분만 교체한다. 짧은 수정은 old_string/new_string으로 하며 나머지는 그대로 둔다. "
+                   "keep는 보완 완료 신호. 별도 진행 보고는 불필요하다.",
     "input_schema": {"type": "object", "properties": {
         "op": {"type": "string", "enum": ["state", "evidence", "response", "execute", "patch", "keep"]},
         "id": {"type": "string"}, "offset": {"type": "integer", "minimum": 0},
@@ -70,6 +71,10 @@ TOOL_SCHEMA = {
         "version": {"type": "integer"},
         "patches": {"type": "array", "items": {"type": "object", "properties": {
             "id": {"type": "string"}, "hash": {"type": "string"}, "text": {"type": "string"},
-        }, "required": ["id", "hash", "text"], "additionalProperties": False}},
+            "old_string": {"type": "string"}, "new_string": {"type": "string"},
+            "replacements": {"type": "array", "maxItems": 50, "items": {"type": "object", "properties": {
+                "old_string": {"type": "string"}, "new_string": {"type": "string"}},
+                "required": ["old_string", "new_string"], "additionalProperties": False}},
+        }, "required": ["id", "hash"], "additionalProperties": False}},
     }, "required": ["op"], "additionalProperties": False},
 }

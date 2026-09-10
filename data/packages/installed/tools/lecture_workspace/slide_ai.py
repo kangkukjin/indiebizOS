@@ -1177,7 +1177,10 @@ def generate_slide_response(
                           neighbor_briefs, user_image_path=user_image_path)
     ai = _get_slide_ai()
     images = _load_vision_image(user_image_path)
-    response_text = ai.process_message(prompt, history=[], images=images, execute_tool=None)
+    from consciousness_agent import call_oneshot_provider
+    response_text = call_oneshot_provider(ai, prompt, images=images, role="slide")
+    if not response_text:
+        raise ValueError("슬라이드 모델이 유효한 응답을 반환하지 않았습니다")
 
     parsed = extract_json(response_text)
     if "slide" not in parsed:
@@ -1273,7 +1276,8 @@ def outline_from_materials(
     # 계약=긴 강의자료 → JSON 목록 한 방. 하이브리드 thinking 차단(0자 응답 방지).
     provider.disable_thinking = True
     provider.init_client()
-    response_text = provider.process_message(user_prompt, history=[], images=[], execute_tool=None)
+    from consciousness_agent import call_oneshot_provider
+    response_text = call_oneshot_provider(provider, user_prompt, role="outline")
 
     parsed = extract_json(response_text)
     slides = parsed.get("slides")

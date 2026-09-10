@@ -638,7 +638,8 @@ def summarize_youtube(
         # 프로바이더별 SDK 분기는 provider 계층이 이미 흡수한다 — 여기서 다시 갈래를
         # 치면 새 프로바이더가 생길 때마다 이 파일이 뒤처진다(그게 옛 결함이었다).
         ai = get_summary_ai_client()
-        summary_content = ai.process_message(summary_prompt, history=[])
+        from consciousness_agent import call_oneshot_provider
+        summary_content = call_oneshot_provider(ai, summary_prompt, role="youtube_summary")
 
         if not (summary_content or "").strip():
             raise RuntimeError("요약 모델이 빈 응답을 냈습니다")

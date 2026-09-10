@@ -132,6 +132,11 @@ task_framing 과 hint 가 옳으려면 참이어야 하는 사실을 짧은 문�
 - "비교 기간 매출/영업이익 수치 포함, 변화 원인 분석, 소스 한계 명시"
 - "2개 이상 소스 교차 검증, 전망의 근거·한계 명시"
 
+달성 기준과 함께 `criteria:[{text,user_quote,fallback}]`를 남긴다. user_quote는 사용자가 직접 요구한
+조건의 정확한 원문 일부일 때만 채운다. 원문 근거가 없는 사례 수·조사 범위는 잠정 조사 목표다.
+발견한 증거가 제한적이면 fallback(범위 축소·한계 명시)을 적용한다. 계획에서 임의로 정한
+수량을 최종 검수 때 사용자 필수 조건처럼 강제하지 않는다.
+
 ### 3. history_summary — 문제와 관련된 과거만
 
 이전 히스토리에서 **정의된 문제와 관련된 맥락만** 추려 요약한다(원본 히스토리를 대체해 전달됨).
@@ -176,6 +181,7 @@ task_framing 과 hint 가 옳으려면 참이어야 하는 사실을 짧은 문�
   "needs_repair": false,
   "assumptions": ["이전 대화의 2024년 분석 수치가 history_summary 로 넘어온다", "최근 분기 실적이 이미 공시돼 검색에 잡힌다"],
   "achievement_criteria": "비교 기간 매출/영업이익 수치 포함, 변화 원인 분석, 소스 한계 명시",
+  "criteria": [{"text": "최근 2개 분기 비교", "user_quote": "", "fallback": "직접 비교할 자료가 부족하면 확인한 기간과 한계를 명시"}],
   "history_summary": "이전 대화에서 삼성전자 2024년 실적을 분석함. 매출 증가 추세 확인. 사용자가 최신 상황 비교를 요청한 상태",
   "capability_focus": {
     "highlight_actions": ["sense:search", "self:write"],

@@ -347,12 +347,21 @@ def render_action_line(node_name: str, action_name: str, action_config, indent: 
     return "\n".join(lines)
 
 
+def render_action_brief(node, action, config):
+    """능력 이름과 용도는 상시 노출, 긴 인자 계약은 필요할 때 조회한다."""
+    if not isinstance(config, dict):
+        return f"[{node}:{action}] {str(config)[:180]}"
+    description = " ".join(str(config.get("description", "")).split())
+    return f"[{node}:{action}] {description[:220]}" + ("… (describe로 상세 조회)" if len(description) > 220 else "")
+
+
 def build_environment(
     allowed_nodes: Optional[List[str]] = None,
     project_path: Optional[str] = None,
     agent_id: Optional[str] = None,
     allowed_set: Optional[Set[str]] = None,
     expose_idioms: bool = True,
+    compact: bool = False,
 ) -> str:
     """
     에이전트의 IBL 환경 프롬프트를 동적 생성.
@@ -394,7 +403,7 @@ def build_environment(
     # 12_ibl_only.md를 기본 IBL 교재로 첫머리에 삽입
     # (문법, Goal 시스템, 파이프라인 vs 에이전틱 사고 등 핵심 개념 포함)
     from runtime_utils import get_base_path
-    ibl_only_path = get_base_path() / "data" / "common_prompts" / "fragments" / "12_ibl_only.md"
+    ibl_only_path = get_base_path() / "data" / "common_prompts" / "fragments" / ("12_ibl_compact.md" if compact else "12_ibl_only.md")
     if ibl_only_path.exists():
         parts.append(ibl_only_path.read_text(encoding='utf-8').strip())
     else:
@@ -460,11 +469,11 @@ def build_environment(
             for grp_name, grp_actions in grouped.items():
                 parts.append(f"  [{grp_name}]")
                 for action_name, action_config in grp_actions:
-                    parts.append(render_action_line(node_name, action_name, action_config))
+                    parts.append((render_action_brief if compact else render_action_line)(node_name, action_name, action_config))
                     parts.extend(anchors.get(f"{node_name}:{action_name}", ()))
 
         for action_name, action_config in ungrouped:
-            parts.append(render_action_line(node_name, action_name, action_config))
+            parts.append((render_action_brief if compact else render_action_line)(node_name, action_name, action_config))
             parts.extend(anchors.get(f"{node_name}:{action_name}", ()))
 
     # 동료 에이전트 노드

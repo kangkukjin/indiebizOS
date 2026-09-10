@@ -12,6 +12,7 @@ state는 현재 상태와 사용 가능한 기존 도구의 목록, execute는 n
 호출한다. 필요한 스키마는 evidence id='tool:도구이름'으로 읽는다.
 조사·검증과 범위가 명확한 작은 수정은 직접 해도 된다. 실행 중 작업과 동시에 쓰지 마라.
 탐색·대량 제작으로 커지는 일은 instruction에 구체적인 다음 행동을 적어 실행자에게 넘겨라.
+계획에서는 핵심 불확실성만 1~2번 조회하고 계획 JSON을 확정한다. 지난 작업 전체를 재탐색하지 마라.
 외부 작업을 중복 시작하지 마라. heartbeat는 진척이 아니다. 정체만으로 실패라고 단정하지 마라.
 최종 검수에서는 response로 후보 본문을 끝까지 읽고 실제 산출물·목표 달성 근거를 확인하라.
 첫 입력에 상태와 응답 첫 페이지가 있다. 같은 state를 다시 읽지 말고 필요한 증거만 읽어라.
@@ -20,14 +21,21 @@ state 재조회는 변경분이다. evidence의 파일 쓰기 성공 영수증�
 여러 경로를 string 인자에 배열로 넣지 말고 독립 문장이나 [table:each]로 실행한다.
 파일 조회 등 IBL로 표현되는 작업을 셸로 우회하지 마라. 거절된 명령은 실행 증거가 아니다.
 실제 액션의 인자·설명은 evidence id='ibl:node:action'으로, 도구 스키마는 'tool:도구이름'으로 읽는다.
-본문을 다시 출력하지 마라. 수정은 patch로 version, patches[{id,hash,text}]의 변경 블록만 쓴다.
+본문을 다시 출력하지 마라. 수정은 patch로 version, patches[{id,hash,old_string,new_string}]으로 유일한 문자열만 교체한다. 전체 블록 교체 text는 필요할 때만 쓴다.
 수정한 부분은 다시 읽어라. 승인한 후보의 정확한 version/hash를 답에 넣어라.
+사용자 필수 조건과 당신이 세운 조사 목표를 구분하라. 사용자 원문 인용으로 확인되지 않은
+수량·사례 수 등은 잠정 목표다. 근거가 부족하면 범위를 정직하게 줄이고 미충족을 밝힌다.
+잠정 목표 미달만으로 반복 보완을 요구하지 마라. REWORK에는 발견한 모든 결함을 한 번에
+묶어 instruction에 담고, 각각의 완료 증거·허용되는 대안·중단 조건을 적어라.
+수정 범위가 기존 파일·응답의 국소 변경이면 repair_scope="local", 새 조사면 "research"로 지정한다.
+재검수는 수정한 주장과 그에 의존하는 요약·개수·유일성·출처·인과 표현을 함께 확인한다.
 판정은 JSON 하나: {"status":"APPROVED|REWORK|UNKNOWN|CONTINUE", "reason":"짧은 근거",
 "instruction":"필요할 때만 다음 실행 지시", "evidence_ids":["직접 확인한 근거 ID"],
 "response_version":0,"response_hash":"", "pursuit_status":"APPROVED|UNKNOWN"}.
 APPROVED는 최종 검수에서만, CONTINUE는 중간 점검에서만 쓴다. 근거 부족/오류는 UNKNOWN이다.
 CONTINUE일 때 instruction은 빈 문자열이다. 실제 행동 변경이 필요할 때만 REWORK와 최소 지시를 쓴다.
-중간 관찰 중에는 실행자가 계속 일한다. 기존 로그만 읽고 직접 execute를 호출하지 마라.
+중간 관찰 중에는 실행자가 계속 일한다. 기존 로그만 읽어라. 단 executor_paused=true인 의미 이정표에서는
+execute로 필요한 파일·원천 근거만 읽을 수 있다. 쓰기·제작을 시작하지 말고 지시로 넘겨라.
 pursuit_status는 이번 턴 기준과 별개로 전체 과제의 goal_criteria 충족을 확인했을 때만 APPROVED다.
 상세 사고 과정이나 장문 평가 보고를 쓰지 말고 판정과 필요한 지시만 남겨라.
 """
@@ -42,7 +50,16 @@ FINAL_REVIEW_PROMPT = """최종 검수는 파일 생성 영수증이나 실행�
 판정에는 실제로 확인한 증거 ID만 쓰고 장문의 본문을 다시 작성하지 마라.
 pending_delivery가 있으면 staged 경로의 실제 초안과 알림의 수치·문구를 확인하라.
 승인할 때 그 manifest의 hash를 delivery_hash에 넣어라. 수정 후에는 state로 새 지문을 확인하라.
+검증을 마친 파일은 checks:[{path,status:"passed",coverage,tool_version,evidence_ids,dependencies,validator_paths}]로 남긴다.
+coverage는 실제 검토한 범위, dependencies는 원문·원고 등 의존 파일 경로다. 파일 생성 영수증은 통과 근거가 아니다.
+validator_paths는 쓴 검증 스크립트·제작법 파일 경로다. 버전 문자열과 함께 기록하면 코드 변경 때 무효화된다.
+visual_review.attached는 이번에 첨부된 픽셀의 근거 ID다. 배치·가독성을 확인한 경우만 coverage="visual_layout"로 남긴다.
+이 범위의 재사용은 이미지 속 사실·주장이나 보고서와의 의미 일치까지 승인하지 않는다. 그 부분은 별도로 검수한다.
+reusable_checks는 파일·의존 입력·기준의 지문이 일치하는 지난 검수다. 범위를 확인하고 재사용하되
+새로 바뀐 주장과 요약·숫자·유일성·인과 관계는 검토한다. 검사하지 않은 범위를 확대해 말하지 않는다.
 승인된 바이트의 공개와 알림 전송은 하네스가 맡는다. 직접 공개하거나 같은 본문을 다시 생성하지 마라.
+축약물은 원문의 중심 논지·대안·적용 대상의 단서가 보존됐는지 확인한다. 전사 일치만으로
+발음·문장 끝·음질을 통과시키지 말고 오디오 검수 근거와 관측 범위를 구분한다.
 """
 
 
@@ -68,8 +85,7 @@ def action_schema(qualified):
     from ibl_access import load_nodes_raw, render_action_line
     node, action = qualified.split(":", 1)
     config = load_nodes_raw()["nodes"][node]["actions"][action]
-    return {"action": qualified, "guide": render_action_line(node, action, config),
-            "definition": config}
+    return {"action": qualified, "definition": config}
 
 
 def tool_context(controller):
@@ -78,7 +94,9 @@ def tool_context(controller):
     names = [f"{node}:{action}" for node, spec in nodes.items() for action in spec.get("actions", {})]
     focus = ((controller.framing or {}).get("capability_focus") or {}).get("highlight_actions", [])
     return {"available_actions": names, "focused_actions": [action_schema(n) for n in dict.fromkeys(focus) if n in names],
-            "tool_schemas": list(controller.catalog.values())}
+            "tools": [{"name": name, "description": spec.get("description", "")[:200]}
+                      for name, spec in controller.catalog.items() if name not in {"pursuit", "reframe", "supervision"}],
+            "schema_hint": "전체 스키마는 evidence id=tool:이름으로 조회. pursuit/reframe은 실행자가 직접 호출한다."}
 
 
 class UsageSnapshots:
@@ -94,19 +112,23 @@ class UsageSnapshots:
         if usage.get("input", 0) >= before.get("input", 0):
             for key in ("input", "cache_read", "cache_create"):
                 before[key] = usage.get(key, 0)
-        before["output"] = max(before.get("output", 0), usage.get("output", 0))
+        for key in ("output", "reasoning"):
+            before[key] = max(before.get(key, 0), usage.get(key, 0))
         self.controller.call_usage = {key: sum(r.get(key, 0) for r in self.responses.values())
-                                      for key in ("input", "output", "cache_read", "cache_create")}
+                                      for key in ("input", "output", "cache_read", "cache_create", "reasoning")}
 
     def reconcile(self, metrics, elapsed_ms):
         # 강제 중단이면 CLI의 마지막 result가 없다. 관측된 부분 소모도 원장에 남긴다.
         live = self.controller.call_usage
         if metrics.total_requests or not live:
             return
+        from model_call_context import mark_partial
+        mark_partial()
         metrics.record_usage(elapsed_ms, {
             "input_tokens": live["input"] - live["cache_read"] - live["cache_create"],
             "output_tokens": live["output"], "cache_read_input_tokens": live["cache_read"],
             "cache_creation_input_tokens": live["cache_create"],
+            "output_tokens_details": {"reasoning_tokens": live.get("reasoning", 0)},
         })
 
 
@@ -116,14 +138,19 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
     from thread_context import snapshot, restore, set_current_agent_id
     from episode_logger import set_step_role
 
+    from model_call_context import set_purpose, reset_purpose
+    purpose_token = set_purpose(phase)
     previous = snapshot()
     started = time.monotonic()
     controller.call_deadline = started + controller.config["call_timeout_s"]
     controller.call_tools = 0
     controller.call_usage = {}
+    controller.call_stop = None
     controller.phase = phase
     try:
-        if not controller.model_budget_available():
+        if not controller.model_admitted(phase):
+            controller.call_stop = {"kind": "budget", "reason": "의식 호출 토큰 예산을 소진했습니다"}
+            controller.log("model.skipped", stop_kind=controller.call_stop["kind"], detail=controller.call_stop["reason"])
             return ""
         restore(controller.context)
         set_current_agent_id(controller.supervisor_id)
@@ -131,7 +158,7 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         prompt += "\ntool_context=" + json.dumps(tool_context(controller), ensure_ascii=False)
         # 별도 프로바이더 객체/세션: 실행자의 resume 기록과 singleton provider를 건드리지 않는다.
         config = resolve("consciousness")
-        if phase == "final" and controller.final_images:
+        if phase == "final" and (controller.final_images or getattr(controller, "visual_review", {}).get("reused")):
             from model_resolver import get_vision_provider
             vision, descriptor = get_vision_provider(oneshot=False)
             if vision is not None:
@@ -147,6 +174,9 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         agent._provider.disable_session_persistence = True
         snapshots = UsageSnapshots(controller)
         agent._provider.usage_snapshot_callback = snapshots.observe
+        from model_call_context import call_scope
+        call_context = call_scope(agent._provider)
+        call_context.__enter__()
         controller.call_metrics = agent._provider.metrics
         controller.log("model.started", phase=phase, model=agent.model, provider=agent.provider_name)
         response = ""
@@ -156,7 +186,8 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
             if event.get("type") == "final":
                 response = event.get("content", "")
             elif event.get("type") == "error":
-                controller.log("model.error", detail=event.get("content", ""))
+                stop = controller.call_stop or {"kind": "provider", "reason": event.get("content", "")}
+                controller.log("model.error", detail=stop["reason"], stop_kind=stop["kind"])
             elif event.get("type") in {"tool_start", "tool_result"}:
                 name = event.get("name") or event.get("tool") or ""
                 call_id = event.get("id")
@@ -179,18 +210,28 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         if controller.call_metrics:
             if "snapshots" in locals():
                 snapshots.reconcile(controller.call_metrics, (time.monotonic() - started) * 1000)
+            bucket = "plan" if phase == "reframe" else phase
+            spent = controller.phase_usage.setdefault(bucket, {"input": 0, "output": 0})
+            spent["input"] += controller.call_metrics.total_input_tokens
+            spent["output"] += controller.call_metrics.total_output_tokens
+            spent["last_input"] = controller.call_metrics.total_input_tokens
             controller.usage["input"] += controller.call_metrics.total_input_tokens
             controller.usage["output"] += controller.call_metrics.total_output_tokens
+            if controller.finalizing:
+                controller.final_usage["input"] += controller.call_metrics.total_input_tokens
+                controller.final_usage["output"] += controller.call_metrics.total_output_tokens
             controller.call_metrics = None
         controller.call_usage = {}
+        if "call_context" in locals():
+            call_context.__exit__(None, None, None)
         restore(previous)
+        reset_purpose(purpose_token)
         set_step_role("execution")
 
 
 def repair_message(controller, decision):
-    return ("의식 검수 보완 지시: " + str(decision.get("instruction") or decision.get("reason"))
+    return ("의식 검수 보완 지시는 함께 제공된 작업 인계의 repair를 읽으세요."
             + "\n기존 산출물을 유지하며 필요한 작업만 수행하세요. 사용자용 응답은 이미 작업대에 저장됐습니다."
             " supervision(CLI: mcp__indiebizos__supervision) op=response로 원문 블록을 읽고,"
-            " op=patch에 version과 patches[{id,hash,text}]를 넣어 변경된 부분만 교체하세요."
-            " 본문 수정이 없으면 op=keep. 장문의 답을 다시 출력하지 말고 마지막엔 PATCH_DONE만 답하세요.\n"
-            + json.dumps(controller.store.manifest(), ensure_ascii=False))
+            " op=patch에 version과 patches[{id,hash,old_string,new_string}]를 넣어 유일한 문자열로 변경된 부분만 교체하세요. 여러 수정을 한 호출에 묶으세요. 같은 블록의 여러 변경은 replacements:[{old_string,new_string},...]로 묶습니다."
+            " 본문 수정이 없으면 op=keep. 장문의 답을 다시 출력하지 말고 마지막엔 PATCH_DONE만 답하세요.\n")

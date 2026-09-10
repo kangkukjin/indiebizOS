@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "id": "narrated_video",
+  "inputs": ["lecture_id", "source", "voice", "references"],
+  "checkpoint": "source_and_narration",
+  "steps": ["prepare_notes", "narration", "bookends", "render", "measure"],
+  "defaults": {"chunk": true, "speed": 1.0, "captions": true},
+  "completion": ["all_slides", "source_hash_matches", "audio_duration", "actual_listening_scope"],
+  "on_error": "stop_preserving_completed_artifacts",
+  "quality_policy": "Keep the selected model, voice and requested visual quality. Mechanical measurements do not certify meaning or pronunciation."
+}

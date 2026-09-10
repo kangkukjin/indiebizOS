@@ -25,8 +25,9 @@ def dispatch(agent_id, task_id, payload, boundary=False):
         restore(supervisor.context)
         set_current_agent_id(agent_id)
         from providers.base import adopt_turn_token_ledger
+        from model_call_context import adopt_call_context
         from episode_logger import trajectory_scope
-        with adopt_turn_token_ledger(supervisor.owner, task_id), \
+        with adopt_turn_token_ledger(supervisor.owner, task_id), adopt_call_context(agent_id, task_id), \
                 trajectory_scope(task_id=task_id, episode_id=getattr(supervisor, "episode_id", None)):
             if boundary:
                 return {"active": True, "instruction": supervisor.boundary()}

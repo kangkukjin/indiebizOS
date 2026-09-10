@@ -98,6 +98,8 @@ class CognitiveConsciousnessMixin:
                 self._log(f"[의식] 가용 도구 목록 조회 실패 (검증 스킵): {e}")
                 available_tools = None
 
+            from supervision_bus import current as _supervisor_current
+            _supervisor = _supervisor_current()
             result = agent.process(
                 user_message=user_message,
                 history=history,
@@ -109,6 +111,7 @@ class CognitiveConsciousnessMixin:
                 available_tools=available_tools,
                 repair=repair,
                 revision=revision,
+                **({"supervisor": _supervisor} if _supervisor else {}),
             )
 
             if result:

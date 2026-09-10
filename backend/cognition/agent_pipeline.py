@@ -277,11 +277,17 @@ class CognitivePipelineMixin:
             begin_turn_token_ledger()  # 선택·재검토·의식 호출 비용도 같은 턴에 계상
             from pursuit_bind import enter, leave, observe
             _ptoken = enter(self, message, history, enabled=not kwargs.get("force_role"))
+            from conscious_supervisor import open_supervisor
+            _supervisor = None
             try:
+                if not kwargs.get("force_role"):
+                    _supervisor = open_supervisor(self, message, history, kwargs.get("cancel_check"))
                 for event in self._cognitive_stream_body(message, history, **kwargs):
                     observe(event)
                     yield event
             finally:
+                if _supervisor:
+                    _supervisor.close()
                 leave(_ptoken)
 
     def _cognitive_stream_body(
@@ -664,6 +670,10 @@ class CognitivePipelineMixin:
                     print(f"[재규정] 통로 열기 실패(무시): {_rfe}")
 
             # 6. 실행
+            from supervision_bus import current as _supervisor_current
+            _supervisor = _supervisor_current()
+            if _supervisor:
+                _supervisor.configure(consciousness_output, repair=(_repair_granted_task is not None))
             for event in self.ai.process_message_stream(
                 message_content=augmented_message,
                 history=history,
@@ -671,8 +681,12 @@ class CognitivePipelineMixin:
                 cancel_check=cancel_check,
             ):
                 _collect(event)
+                if _supervisor:
+                    _supervisor.observe_native(event)
                 if event.get("type") == "final":
                     final_content = event.get("content", "")
+                if _supervisor and _supervisor.enabled and event.get("type") in {"text", "final"}:
+                    continue  # 저장된 후보만 검수 후 한 번 전달한다.
                 yield event
 
             # 6.5 실행 중 재규정이 있었으면 이후 단계(평가 기준·증류)는 갱신 규정을 본다
@@ -688,7 +702,14 @@ class CognitivePipelineMixin:
 
             # 7. 평가 루프 (THINK 경로) — 달성 기준이 있으면 평가 후 재시도
             _eval_ran = False  # 평가 루프가 실제로 돌았는지 — 8번(반성)의 게이트
-            if consciousness_output and final_content:
+            if _supervisor and final_content and not _supervisor.enabled and eval_tool_calls and not reflex_hint:
+                from cognitive_trace import should_self_reflect
+                _supervisor.enabled = should_self_reflect(eval_tool_calls, min_tool_calls=3)[0]
+            if _supervisor and _supervisor.enabled and final_content:
+                _eval_ran = True
+                final_content = yield from _supervisor.finalize(final_content, history, _collect, cancel_check,
+                                                                tool_calls=eval_tool_calls)
+            elif consciousness_output and final_content:
                 criteria = self._extract_achievement_criteria(consciousness_output)
                 if criteria:
                     from world_pulse import _load_config as _load_wp_config

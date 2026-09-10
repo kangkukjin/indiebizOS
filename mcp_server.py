@@ -562,6 +562,23 @@ async def reframe(broken_assumption: str, evidence: str, progress: str = "",
 
 
 @mcp.tool()
+async def supervision(op: str, id: str = "", offset: int = 0, limit: int = 12000,
+                      name: str = "", input: Optional[dict] = None, version: Optional[int] = None,
+                      patches: Optional[List[dict]] = None, ctx: Context = None) -> str:
+    """의식·실행 공유 작업대. state/evidence/response로 원문을 읽습니다.
+    의식은 execute(name,input)로 기존 도구를 사용합니다. 필요한 스키마는 evidence(id='tool:이름').
+    보완할 때 patch(version,patches=[{id,hash,text}])로 변경 블록만 교체합니다.
+    장문 응답 전체를 다시 출력하지 마세요. 수정 불필요 시 keep.
+    response의 offset은 블록 번호, evidence의 offset은 문자 위치입니다.
+    """
+    agent, _, task, _ = _http_identity(ctx)
+    payload = {"op": op, "id": id, "offset": offset, "limit": limit, "name": name,
+               "input": input or {}, "version": version, "patches": patches or []}
+    req = {"agent_id": agent or DEFAULT_AGENT_ID, "task_id": task or DEFAULT_TASK_ID, "payload": payload}
+    return await anyio.to_thread.run_sync(lambda: _post_backend("/ibl/supervision", req, 240))
+
+
+@mcp.tool()
 async def pursuit(op: str, id: str = "", section: str = "", title: str = "",
                   goal_criteria: str = "", progress: Optional[str] = None,
                   next: Optional[str] = None, open_questions: Optional[List[str]] = None,

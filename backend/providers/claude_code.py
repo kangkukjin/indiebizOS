@@ -331,6 +331,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         # MCP — 턴 안 재규정 브리지(reframe.py). read_guide 와 같은 이유로 MCP 로만 닿는다.
         "mcp__indiebizos__reframe",
         "mcp__indiebizos__pursuit",
+        "mcp__indiebizos__supervision",
     ]
 
     # `--tools` 에 실을 내장 도구 = EAGER_TOOLS 중 내장(MCP 이름 제외). 2026-09-04 실측(CLI 2.1.258):
@@ -404,6 +405,10 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         return {"hooks": {"PreToolUse": [{
             "matcher": cls.SHADOW_HOOK_MATCHER,
             "hooks": [{"type": "command", "command": command, "timeout": 15}],
+        }, {
+            "matcher": "|".join(cls.EAGER_BUILTIN_TOOLS),
+            "hooks": [{"type": "command", "command": f'"{sys.executable}" "{root / "backend/base/supervision_hook.py"}"',
+                       "timeout": 230}],
         }]}}
 
     # ================= 세션 =================
@@ -459,11 +464,15 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             # 비대화 모드에서 권한 프롬프트로 멈추지 않도록 — MCP 호출은 indiebizOS 자체 게이트
             "--permission-mode", "bypassPermissions",
         ]
-        if tools_mode == "none":
+        supervisor_role = getattr(self, "agent_role", "execution") == "consciousness"
+        if supervisor_role:
+            cmd += ["--tools", "Read", "--allowed-tools", "Read,mcp__indiebizos__supervision",
+                    "--disallowed-tools", ",".join(t for t in self.EAGER_TOOLS if t != "mcp__indiebizos__supervision")]
+        elif tools_mode == "none":
             cmd += ["--tools", ""]                  # 원샷: 도구 스키마 0
         elif tools_mode == "read":
             cmd += ["--tools", "Read"]              # 원샷+이미지: 파일 읽기만
-        if tools_mode:
+        if tools_mode or supervisor_role:
             # 원샷은 CLAUDE.md·settings 도 안 읽는다(모델·권한은 인자로 명시됨) — cwd 의
             # 프로젝트 지침 ~3.4K 가 "2문장 요약해" 에 따라붙던 것(실측 8.5K→5.1K).
             cmd += ["--setting-sources", ""]
@@ -498,7 +507,7 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             cmd += ["--append-system-prompt-file", system_prompt_file]
         else:
             cmd += ["--append-system-prompt",
-                    (self.system_prompt or "") + ("" if tools_mode else self.TOOL_POLICY)]
+                    (self.system_prompt or "") + ("" if tools_mode or supervisor_role else self.TOOL_POLICY)]
 
         # MCP 브리지 (IBL execute_ibl 등) — 도구 없는 원샷은 브리지도 안 세운다(프로세스 기동 비용)
         if mcp_config_path and tools_mode is None:

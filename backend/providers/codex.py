@@ -473,7 +473,7 @@ class CodexProvider(CliSubprocessProvider):
         """
         body = super()._build_prompt_with_history(message, history)
         head = (self.system_prompt or "")
-        if not getattr(self, "no_tools", False):
+        if not getattr(self, "no_tools", False) and getattr(self, "agent_role", "execution") != "consciousness":
             head += self.TOOL_POLICY
         if not head.strip():
             return body
@@ -511,6 +511,11 @@ class CodexProvider(CliSubprocessProvider):
             # indiebizOS 자체 게이트(IBL 승인·write_ledger)가 맡는다.
             "--dangerously-bypass-approvals-and-sandbox",
         ]
+        if getattr(self, "agent_role", "execution") == "consciousness":
+            # 의식의 실제 변경은 공유 작업대에서 소유권/예산을 검사한 뒤 기존 도구로 한다.
+            # Codex 네이티브 셸은 끌 수 없으므로 직접 파일 변경은 OS 샌드박스로 제한한다.
+            cmd.remove("--dangerously-bypass-approvals-and-sandbox")
+            cmd += ["--sandbox", "read-only", "-c", 'approval_policy="never"']
 
         # 사용자의 config.toml 에 있는 notify 훅(데스크톱 알림 클라이언트)은 백엔드 호출마다
         # 튀어나오면 안 된다 — 우리 서브프로세스에서만 끈다(사용자 파일은 안 건드림).

@@ -163,6 +163,7 @@ class ConsciousnessAgent:
         available_tools: Optional[List[str]] = None,
         repair: bool = False,
         revision: Optional[Dict] = None,
+        supervisor=None,
     ) -> Optional[Dict]:
         """의식 에이전트 실행 — 메타 판단 수행
 
@@ -225,7 +226,7 @@ class ConsciousnessAgent:
             # AI 호출 (도구 없이, 히스토리 없이 — 원샷, 503 재시도)
             import time as _time
             response = ""
-            max_retries = 2
+            max_retries = 0 if supervisor else 2
             # 스텝 원장 역할 태그 — 의식 호출도 프로바이더 루프를 지나 라운드가 찍힌다.
             try:
                 from episode_logger import set_step_role
@@ -233,7 +234,7 @@ class ConsciousnessAgent:
             except Exception:
                 pass
             for attempt in range(max_retries + 1):
-                response = self._provider.process_message(
+                response = supervisor.plan(input_text, self._prompt, revision) if supervisor else self._provider.process_message(
                     message=input_text,
                     history=[],
                     images=None,

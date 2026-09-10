@@ -67,13 +67,15 @@ class AIAgent:
         agent_id: str = None,
         project_path: str = ".",
         tools: List[Dict] = None,
-        execute_tool_func: Callable = None
+        execute_tool_func: Callable = None,
+        role: str = "execution",
     ):
         self.config = ai_config
         self.system_prompt = system_prompt
         self.agent_name = agent_name
         self.agent_id = agent_id
         self.project_path = project_path
+        self.role = role
 
         # 커스텀 도구 실행 함수 (시스템 AI 등에서 사용)
         self._custom_execute_tool = execute_tool_func
@@ -84,6 +86,11 @@ class AIAgent:
         else:
             agent_tools = load_agent_tools(project_path, agent_id)
             self.tools = SYSTEM_TOOLS + agent_tools
+        if role == "execution":
+            from supervision_bus import TOOL_SCHEMA
+            self.tools = list(self.tools)
+            if not any(t.get("name") == "supervision" for t in self.tools):
+                self.tools.append(TOOL_SCHEMA)
 
         self.provider_name = ai_config.get("provider", "anthropic")
         self.model = ai_config.get("model", "claude-sonnet-4-20250514")
@@ -117,6 +124,9 @@ class AIAgent:
                 thinking_budget=thinking_budget
             )
             self._provider.init_client()
+            self._provider.agent_role = self.role
+            if self.role == "consciousness":
+                self._provider.max_role_rounds = 12
             if thinking_budget > 0:
                 print(f"[AIAgent] Extended Thinking 활성화 (budget={thinking_budget})")
         except Exception as e:
@@ -185,7 +195,8 @@ class AIAgent:
         history = history or []
 
         # 커스텀 execute_tool이 있으면 사용, 없으면 기본 execute_tool 사용
-        tool_executor = self._custom_execute_tool if self._custom_execute_tool else execute_tool
+        from supervision_bus import wrap
+        tool_executor = wrap(self._custom_execute_tool or execute_tool)
 
         try:
             self._last_tool_images = []  # 턴 시작 시 초기화
@@ -220,7 +231,7 @@ class AIAgent:
             # 이력 속성이 없는 프로바이더(anthropic 등 in-process 계열)는 빈 리스트
             # 그대로라 옛 동작(False)과 동일 — 회귀 없음, 가드 실효는 claude_code 경로.
             _had_tools = bool(self._last_tool_calls or self._last_tool_results)
-            if _is_unfulfilled_promise(response, _had_tools):
+            if self.role == "execution" and _is_unfulfilled_promise(response, _had_tools):
                 print(f"[AIAgent] ⚡ 미완료 약속 감지, 실행 유도")
                 retry_history = list(history) + [
                     {"role": "user", "content": message_content},
@@ -275,7 +286,8 @@ class AIAgent:
         history = history or []
 
         # 커스텀 execute_tool이 있으면 사용, 없으면 기본 execute_tool 사용
-        tool_executor = self._custom_execute_tool if self._custom_execute_tool else execute_tool
+        from supervision_bus import wrap
+        tool_executor = wrap(self._custom_execute_tool or execute_tool)
 
         # 프로바이더가 스트리밍을 지원하는지 확인
         if hasattr(self._provider, 'process_message_stream'):
@@ -313,7 +325,7 @@ class AIAgent:
                     yield event
 
                 # 미완료 약속 감지 → 실행 유도 (1회)
-                if _is_unfulfilled_promise(final_content, had_tool_calls):
+                if self.role == "execution" and _is_unfulfilled_promise(final_content, had_tool_calls):
                     print(f"[AIAgent] ⚡ 미완료 약속 감지 (스트리밍), 실행 유도")
                     yield {"type": "thinking", "content": "⚡ 실행 유도 — 계획이 아닌 실행을 시작합니다"}
 
@@ -354,7 +366,7 @@ class AIAgent:
                     getattr(self._provider, '_last_tool_calls', None)
                     or getattr(self._provider, '_last_tool_results', None)
                 )
-                if _is_unfulfilled_promise(response, _had_tools):
+                if self.role == "execution" and _is_unfulfilled_promise(response, _had_tools):
                     print(f"[AIAgent] ⚡ 미완료 약속 감지 (일괄), 실행 유도")
                     retry_history = list(history) + [
                         {"role": "user", "content": message_content},

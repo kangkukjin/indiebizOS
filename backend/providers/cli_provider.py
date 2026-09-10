@@ -740,7 +740,8 @@ class CliSubprocessProvider(BaseProvider):
             or getattr(self, "last_failure_kind", None))
         # 이 호출이 인지 턴에서 몇 번째 실행 호출인가(0=첫 호출). goal 재실행·자기반성·
         # 약속 재시도는 1 이상 — 같은 작업의 연속이라 세션을 끊지 않는다.
-        self._execution_call_ordinal = note_execution_call()
+        self._execution_call_ordinal = (0 if getattr(self, "agent_role", "execution") == "consciousness"
+                                        else note_execution_call())
         # 라운드별 컨텍스트 크기 릴레이 (이전 턴 값 잔류 방지)
         self._last_context_size = 0
         # 실패 범주도 턴 상태다 — 지난 턴의 마감이 이번 턴 판단에 새면 안 된다.
@@ -1198,7 +1199,8 @@ class CliSubprocessProvider(BaseProvider):
         스레드 수로 묶인다(내용 해시로 가르면 턴마다 새 파일이 쌓인다).
         """
         # 도구 없는 원샷에는 도구 정책(차단 네이티브→IBL 안내)이 무의미 — 싣지 않는다
-        text = (self.system_prompt or "") + ("" if getattr(self, "no_tools", False) else self.TOOL_POLICY)
+        text = (self.system_prompt or "") + ("" if getattr(self, "no_tools", False)
+               or getattr(self, "agent_role", "execution") == "consciousness" else self.TOOL_POLICY)
         safe = re.sub(
             r"[^A-Za-z0-9_.-]", "_",
             str(self.agent_id or self.agent_name or "default"),
@@ -1272,6 +1274,10 @@ class CliSubprocessProvider(BaseProvider):
         task_id = self._current_task_id()
         if task_id:
             env["INDIEBIZOS_TASK_ID"] = str(task_id)
+        from supervision_bus import current as supervisor_current
+        if (getattr(self, "agent_role", "execution") != "consciousness"
+                and supervisor_current(self.agent_id, task_id)):
+            env["INDIEBIZOS_SUPERVISED"] = "1"
         # 태스크 출처: 'user'(사람의 직접 명령) 여부가 원장 행위자·자기수정 게이트의 축.
         origin = self._current_task_origin()
         if origin:

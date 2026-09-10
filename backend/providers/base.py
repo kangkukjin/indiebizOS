@@ -382,6 +382,8 @@ class BaseProvider(ABC):
         (2026-08-14) execution_rounds 관측이 `[Gemini] 라운드` 정규식에 결박돼 프로바이더
         전환만으로 조용히 끊겼던 결함의 수리 — 모든 프로바이더 루프가 이 한 줄을 부른다.
         episode_logger 부재(비정상 환경)면 print 폴백으로 강등(라운드 표시는 항상 남음)."""
+        if round_no > getattr(self, "max_role_rounds", budget):
+            raise RuntimeError("의식 역할의 호출 라운드 예산에 도달했습니다")
         name = type(self).__name__.replace("Provider", "")
         try:
             from episode_logger import notify_round

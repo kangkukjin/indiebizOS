@@ -82,15 +82,21 @@ def fail(msg, **extra):
 
 
 _T0 = time.time()
+_PROGRESS_STATE = {}
 
 
-def progress(msg):
+def progress(msg, phase=None, **metrics):
     """진행 줄 — stderr 로 흘린다. stdout 은 통화(JSON) 자리라 섞지 않는다.
 
     백그라운드 러너(_bg_runner)가 stderr 를 로그 파일에 **실시간**으로 쓰므로, status 폴링이
     '돌고 있다'만이 아니라 '어디까지'를 본다(2026-09-10 — 40분 동안 running 만 보던 문제의 처방).
     """
-    print(f"[{time.time() - _T0:6.0f}s] {msg}", file=sys.stderr, flush=True)
+    _PROGRESS_STATE.update(metrics)
+    if phase:
+        _PROGRESS_STATE["phase"] = phase
+    record = {**_PROGRESS_STATE, "elapsed_s": round(time.time() - _T0)}
+    print(f"[{time.time() - _T0:6.0f}s] {msg} PROGRESS " + json.dumps(record, ensure_ascii=False),
+          file=sys.stderr, flush=True)
 
 
 def colab_bin():
@@ -211,7 +217,10 @@ def run_exec_streaming(script_path, cap, stall_load=STALL_LOAD, stall_gen=STALL_
                 last = time.time()
                 if "모델 적재 완료" in s:
                     loaded = True
-                progress(s)
+                units = re.search(r"\[gen\] (\d+)/(\d+)", s)
+                metrics = {"completed": int(units[1]), "total": int(units[2])} if units else {}
+                progress(s, phase="generate" if loaded else "model-load",
+                         stall_after_s=stall_gen if loaded else stall_load, **metrics)
         if time.time() - last > limit:
             p.kill()
             p.wait(timeout=30)
@@ -509,14 +518,17 @@ def main():
     total_chars = sum(len(j["text"]) for j in jobs)
     # 캡 = 기동·적재 + 실측 속도×글자 수×여유. 조각 수는 캡에 안 들어간다 — 배치가 조각당 비용을 바꾸기 때문.
     cap = int(LOAD_BUDGET + SEC_PER_CHAR * total_chars * BUDGET_MARGIN)
+    _PROGRESS_STATE.update(total=len(jobs), completed=0, total_chars=total_chars,
+                           expected_seconds=cap, expected_sec_per_char=SEC_PER_CHAR,
+                           resource=SESSION, resource_state="not_started", retrieval="pending", cleanup="pending")
     progress(f"{len(items)}장 {len(jobs)}조각 {total_chars}자 · batch {batch} · {gpu} · "
              f"예상 생성 {SEC_PER_CHAR * total_chars / 60:.0f}분(캡 {cap // 60}분, 무소식 {STALL_GEN}초면 중단)")
 
     try:
-        progress("콜랩 세션 여는 중")
+        progress("콜랩 세션 여는 중", phase="session-start", stall_after_s=600)
         run(["new", "-s", SESSION, "--gpu", gpu], timeout=600)
         started = True
-        progress("qwen-tts 설치 중")
+        progress("qwen-tts 설치 중", phase="install", resource_state="running", stall_after_s=1200)
         run(["install", "-s", SESSION, "qwen-tts", "soundfile"], timeout=1200)
 
         with tempfile.TemporaryDirectory() as td:
@@ -532,7 +544,7 @@ def main():
             run(["upload", "-s", SESSION, str(ref_wav), "/content/work/ref.wav"], timeout=600)
             run(["upload", "-s", SESSION, str(td / "job.json"), "/content/work/job.json"], timeout=300)
 
-            progress("원격 생성 시작 (모델 다운로드 5~10분은 조용하다)")
+            progress("원격 생성 시작 (모델 다운로드 5~10분은 조용하다)", phase="model-load", stall_after_s=STALL_LOAD)
             gen_t0 = time.time()
             p_out, _ = run_exec_streaming(td / "gen.py", cap)
             gen_secs = time.time() - gen_t0
@@ -543,7 +555,7 @@ def main():
         with tempfile.TemporaryDirectory() as dl:
             dl = Path(dl)
             # 회수 = tar 하나 (조각별 download 는 조각당 1.4초 직렬 — 165조각이면 4분). tar 가 없으면 옛 경로.
-            progress("생성물 회수 중 (out.tar)")
+            progress("생성물 회수 중 (out.tar)", phase="download", completed=len(jobs), retrieval="running", stall_after_s=600)
             tar_path = dl / "out.tar"
             r = run(["download", "-s", SESSION, "/content/work/out.tar", str(tar_path)], timeout=600, check=False)
             if r.returncode == 0 and tar_path.exists():
@@ -582,13 +594,14 @@ def main():
 
         # 표준 낭독 속도 적용 — 회수 직후 제자리 타임스트레치(피치 보존).
         # 재실행 때 이미 있는 wav 는 건너뛰므로 두 번 늘어나지 않는다.
-        progress(f"접합·재타이밍 중 ({len(saved)}장)")
+        progress(f"접합·재타이밍 중 ({len(saved)}장)", phase="retime", retrieval="complete")
         retimed = sum(1 for it in saved if retime(it["target"], speed))
 
         elapsed = round(time.time() - t0)
         measured = round(gen_secs / max(1, total_chars), 3)   # 다음 예산 보정의 근거 — SEC_PER_CHAR 와 대조
         mode = (f"문장 단위 {len(jobs)}조각 batch {batch}, 숨 {gap}s·여운 {tail}s" if chunk else f"통짜 batch {batch}")
-        progress(f"완료 {elapsed}초 · 생성 {gen_secs:.0f}초 = {measured}초/자 (예산 상수 {SEC_PER_CHAR})")
+        progress(f"완료 {elapsed}초 · 생성 {gen_secs:.0f}초 = {measured}초/자 (예산 상수 {SEC_PER_CHAR})",
+                 phase="generated", measured_sec_per_char=measured)
         print(json.dumps({
             "items": [{
                 "title": it["id"],
@@ -613,6 +626,7 @@ def main():
         fail(f"{type(e).__name__}: {e}")
     finally:
         if started:
+            progress("원격 파일 정리·자원 반납 중", phase="cleanup", cleanup="running", stall_after_s=300)
             # 목소리는 생체정보다 — 원격 파일을 지우고 세션을 반납한다.
             # 실패해도 stop 은 반드시 시도한다 (안 끄면 최대 24시간 과금).
             # 실패 경로로 왔어도 토큰이 죽어 있을 수 있다 — 정리·정지 앞에 갱신(09-10: 정지 실패로 VM 이 켜진 채 남았다).
@@ -625,8 +639,12 @@ def main():
                        "[os.remove(p) for p in glob.glob('/content/work/*')]")
             except Exception:
                 pass
-            subprocess.run([COLAB, "--config", str(CFG), "stop", "-s", SESSION],
-                           capture_output=True, text=True, timeout=300)
+            stopped = subprocess.run([COLAB, "--config", str(CFG), "stop", "-s", SESSION],
+                                     capture_output=True, text=True, timeout=300)
+            progress("자원 반납 " + ("완료" if stopped.returncode == 0 else "실패"),
+                     phase="complete" if stopped.returncode == 0 else "cleanup_failed",
+                     cleanup="complete" if stopped.returncode == 0 else "failed",
+                     resource_state="released" if stopped.returncode == 0 else "unknown")
         CFG.unlink(missing_ok=True)
 
 

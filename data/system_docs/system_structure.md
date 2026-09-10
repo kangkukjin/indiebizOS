@@ -255,7 +255,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
      · EXECUTE / THINK     → 본격 모델 유지 (무의식 EXECUTE 오분류여도 품질 방어)
      · 도구: execute_ibl + run_command + read_guide + 인지도구(4) — Python/Node.js는 [self:write]→run_command 패턴
    ↓
-[4] 평가 루프        — achievement_criteria 있을 때만 (경량 AI, 최대 3라운드)
+[4] 의식 감독·검수   — 사건에 따른 중간 점검, 저장된 응답 승인 또는 변경 블록 보완
    ↓
 [5] 증류             — 해마 경험 증류 + 심층메모리 증류 (자동)
 ```
@@ -270,7 +270,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 - **연상 단계 (단계 0)** — `agent_cognitive._build_execution_memory()`
   - 해마(`ibl_usage_rag.build_execution_memory()`)와 심층메모리 지도(`_memory_map_scent()`, `<memory_map>` 목차만 — 내용은 recall 로)를 합쳐 단일 묶음 반환
   - 반환: `(xml, top_score, top_code)` — 검색 한 번으로 점수/코드까지 확보 (이전 3회 중복 호출 제거)
-  - 모든 에이전트(무의식/의식/실행/평가)가 같은 묶음을 공유
+  - 무의식/의식의 계획/실행이 같은 묶음을 공유. 감독·검수에는 목표·규정·실제 증거를 전달
 - **Reflex 분기** — 호출 측(`agent_communication`, `api_websocket`, `system_ai_core`)이 직접 분기
   - `top_score >= REFLEX_SCORE_THRESHOLD (0.85)` 이면 무의식 모델 호출 스킵
   - reflex_hint로 매칭된 IBL 코드를 실행 에이전트에 힌트로 전달
@@ -287,17 +287,18 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 - **과제 선택·규정 재사용** — `pursuit_bind.py`와 `_run_consciousness_or_reuse()`
   - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE/Reflex도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.
   - 진행은 원문 턴을 먼저 저장하고 비동기 갱신한다. 다음 턴은 미반영 진행을 먼저 따라잡는다. 상세: architecture.md와 memory.md.
-- **평가 에이전트 (경량 AI)** — `cognitive_eval._run_goal_evaluation_stream()`
-  - achievement_criteria가 있을 때만 실행. NOT_ACHIEVED 시 피드백과 함께 재실행 (최대 3라운드)
-  - **제너레이터** — 평가·재실행 구간의 이벤트를 그대로 흘린다(`yield from`). 재실행도 실행 단계와 같이 도구·본문이 실시간으로 보인다
-  - 입력에 `## 연상기억` 섹션으로 연상 묶음 그대로 전달
-  - 프롬프트: `data/common_prompts/evaluator_prompt.md` + 시스템 구조 + IBL 단편
+- **의식의 감독·검수** — `conscious_supervisor.py` + `supervisor_runtime.py`
+  - 의식과 실행은 같은 AIAgent 기반, 역할·신원·세션·예산은 분리. 의식도 공유 작업대에서 기존 도구로 확인·작은 수정을 수행한다.
+  - 하네스가 실제 도구·로그 증분·진척 정체를 관찰한다. 실행자의 별도 보고나 매 스텝 모델 반성은 없다. 짧은 정상 조회는 추가 의식 호출 없이 끝난다.
+  - 검수한 후보의 버전·해시·전체 읽기 범위가 맞으면 원문 그대로 전달한다. 보완은 patch로 변경 블록만 제출한다. UNKNOWN은 미승인이다.
+  - `pursuit done`은 전체 목표 검수를 요청한다. 이번 턴 승인과 전체 과제 완료 승인은 별개이며 원장 버전도 대조한다.
+  - 감독을 끄거나 신원이 없는 호출의 `cognitive_eval`/SelfReflect는 호환 경로다. 실제 개입 경계·기본 한도는 architecture.md와 감독 설계 문서의 구현 기록을 참조한다.
 - **공통 원칙**
   - 시스템 AI와 프로젝트 에이전트 모두 동일한 AgentRunner 인지 메서드 사용 (`_is_system_ai` 플래그로 DB·도구만 분리)
   - 모델·API 키는 모두 모델 기어가 해소한 티어에서 상속 (에이전트별 키 설정 폐지). 티어 슬롯의 키가 비면 고급(시스템 AI) 키로 폴백
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 164 액션(sense 43·self 50·limbs 14·others 17·engines 18·table 22)·42 도구 패키지 + 5 extensions·backend .py 329(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 164 액션(sense 43·self 50·limbs 14·others 17·engines 18·table 22)·42 도구 패키지 + 5 extensions·backend .py 336(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-08-22): system_docs 목록 13문서(harness_haerye 누락분)·유령 파일(my_profile.txt) 제거·자가점검 카덴스 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

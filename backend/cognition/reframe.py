@@ -254,9 +254,13 @@ def render_for_executor(env: dict) -> str:
                        "content": "\n\n".join(lines)}, ensure_ascii=False, indent=2)
 
 
-def execute_reframe(tool_input: dict, agent_id: str) -> str:
+def execute_reframe(tool_input: dict, agent_id: str, task_id: str = None) -> str:
     """도구 진입점(두 경로 공용). 반환 = JSON 문자열."""
     tool_input = tool_input or {}
+    from supervision_bus import current as supervisor_current
+    supervisor = supervisor_current(agent_id, task_id)
+    if supervisor:
+        return supervisor.reframe(tool_input)
     ch = current(agent_id or "")
     if ch is None:
         return json.dumps({"revised": False,

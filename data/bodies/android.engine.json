@@ -25,6 +25,9 @@
     "base/selfbuild_gate",
     "base/shell_shadow_gate",
     "base/steer_inbox",
+    "base/supervision_bus",
+    "base/supervision_hook",
+    "base/supervision_watch",
     "base/thread_context",
     "base/thumbnails",
     "base/window_requests",
@@ -44,6 +47,7 @@
     "cognition/cognitive_recall",
     "cognition/cognitive_trace",
     "cognition/component_lifecycle",
+    "cognition/conscious_supervisor",
     "cognition/consciousness_agent",
     "cognition/corpus_vocab_audit",
     "cognition/derived_freshness",
@@ -69,6 +73,7 @@
     "cognition/pursuit_tools",
     "cognition/reframe",
     "cognition/routing_system",
+    "cognition/supervisor_runtime",
     "cognition/switch_runner",
     "cognition/system_ai_core",
     "cognition/system_ai_plans",
@@ -121,6 +126,7 @@
     "datastore/schema_migrations",
     "datastore/service_status",
     "datastore/store_waste_audit",
+    "datastore/supervision_store",
     "datastore/switch_manager",
     "datastore/system_ai_memory",
     "datastore/system_docs",
@@ -232,6 +238,7 @@
     "surface/api_pursuits",
     "surface/api_report",
     "surface/api_scheduler",
+    "surface/api_supervision",
     "surface/api_switches",
     "surface/api_system_ai",
     "surface/api_tunnel",
@@ -288,8 +295,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 277,
-    "engine": 258,
+    "total": 284,
+    "engine": 265,
     "blocklist": 19
   }
 }

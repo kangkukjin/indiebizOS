@@ -62,6 +62,8 @@ def claim(total: int = 0) -> Optional[str]:
 
 def report_step(ticket: Optional[str], step: int, of: int, action: str) -> None:
     """소유자의 좌표 갱신 — best-effort(신고가 본 실행을 깨지 않는다)."""
+    from supervision_bus import progress
+    progress({"step": step, "of": of, "action": action})
     if not ticket:
         return
     try:
@@ -80,6 +82,8 @@ def beat(detail: dict) -> None:
     """
     if not detail:
         return
+    from supervision_bus import progress
+    progress(detail)
     try:
         from thread_context import get_progress_ticket
         ticket = get_progress_ticket()

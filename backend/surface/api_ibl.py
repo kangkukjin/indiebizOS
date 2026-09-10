@@ -9,6 +9,8 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/ibl", tags=["ibl"])
 from api_pursuits import router as pursuits_router
 router.include_router(pursuits_router)
+from api_supervision import router as supervision_router
+router.include_router(supervision_router)
 
 class IBLRequest(BaseModel):
     code: str
@@ -208,7 +210,10 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["files_from"] = req.files_from
                     if req.check:
                         _ti["check"] = True
-                    return _execute_ibl_unified(_ti, project_path, agent_id=agent_id)
+                    from supervision_bus import current as supervisor_current
+                    supervisor = supervisor_current(agent_id, req.task_id)
+                    call = lambda: _execute_ibl_unified(_ti, project_path, agent_id=agent_id)
+                    return supervisor.run_tool("execute_ibl", _ti, call) if supervisor else call()
                 finally:
                     set_current_project_id(_prev_pid)
                     set_current_surface(_prev_surface)
@@ -323,7 +328,7 @@ async def reframe_bridge(req: ReframeRequest):
         from reframe import execute_reframe
         payload = {"broken_assumption": req.broken_assumption, "evidence": req.evidence,
                    "progress": req.progress, "kind": req.kind}
-        raw = await asyncio.to_thread(execute_reframe, payload, req.agent_id or "system_ai")
+        raw = await asyncio.to_thread(execute_reframe, payload, req.agent_id or "system_ai", req.task_id)
         try:
             return json.loads(raw)
         except Exception:

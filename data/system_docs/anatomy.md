@@ -68,7 +68,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 
 ## 3. 어떻게 생각하는가 — 인지 파이프라인 (뇌)
 
-자율주행 표면의 내부. 인간의 인지 과정을 모델링한다: **분류(반사) → 의식(계획) → 실행 → 평가(성찰)**.
+자율주행 표면의 내부. **분류(반사) → 의식의 계획 → 실행과 조건부 감독 → 의식의 검수·승인**이다.
 
 ```
 사용자 메시지
@@ -76,12 +76,14 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
   ↓ [1] 반사   해마 점수 ≥ 0.85 → 곧장 실행(무의식 스킵) / 미만 → 경량 AI가 EXECUTE·THINK 분류
   ↓ [2] 의식   (THINK만) 본격 AI가 "지금 무슨 문제를 풀어야 하나" 규정 + 달성 기준
   ↓ [3] 실행   IBL 엔진 → 도구 실행
-  ↓ [4a] THINK 평가   경량 AI가 달성 기준 대비 검증, NOT_ACHIEVED면 재시도(최대 3라운드)
-  ↓ [4b] EXECUTE 반성 달성 기준은 없고, 실패·복잡 궤적·세계 변경이면 실행기 SelfReflect 1회
+  ↔ [4a] 의식 감독   하네스가 실패 반복·진척 정체·장시간 작업을 관찰, 필요한 때만 의식 호출
+  ↓ [4b] 의식 검수   저장된 응답·산출물 확인 → 승인 시 원문 전달, 보완 시 변경 블록만 수정
   ↓ [5] 증류   성공 경험을 해마·심층메모리에 저장 (다음엔 더 빠르게)
 ```
 
-**평가값의 뜻**: GoalEval은 의식이 달성 기준을 만든 `THINK` 턴에만 돈다. `EXECUTE`/Reflex의 `evaluation_result=NULL`은 “실패”가 아니라 “GoalEval 미실행”이며, 그 갈래의 바닥은 조건부 SelfReflect다. 에피소드 판정을 읽을 때 분류와 평가값을 반드시 함께 봐야 한다.
+**감독과 평가값**: `conscious_supervisor`가 계획·중간 검토·최종 승인을 같은 의식 역할에 모은다. 의식과 실행은 같은 `AIAgent`를 쓰며 신원·세션·예산은 분리한다. 짧고 정상적인 조회는 추가 의식 호출이 없고, 실패·세계 변경·긴 작업은 감독으로 승격한다. `evaluation_result`의 `ACHIEVED`는 승인, `NOT_ACHIEVED`는 보완 미완료, `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 감독을 명시적으로 끈 경로와 신원 없는 내부 호출은 기존 GoalEval/SelfReflect를 유지한다.
+
+**실제 개입 경계**: API 도구·MCP IBL 호출과 Claude Code 네이티브 훅에서 다음 행동 전에 지시를 전달한다. 이미 진행 중인 원격 연산은 임의로 취소하지 않는다. Codex 네이티브 도구는 관찰되지만 실행 전 훅이 없어 다음 MCP IBL 경계에서 지시를 받는다. 상세 구현·예산·제약: `docs/CONSCIOUS_SUPERVISOR_PLAN_2026_09_10.md`의 구현 기록.
 
 **모델 기어**(절약/균형/최대 레버, 조종실에 노출)가 4축(분류·평가·실행·의식)을 티어(경량/중급/본격)로 매핑 — 비용/속도를 한 손잡이로 변속. 의식 토글을 끄면 THINK 경로를 차단해 빠르고 싸게 돈다.
 → 상세: [architecture.md](architecture.md) "인지 파이프라인" · 뇌 구조 대응표는 [memory.md](memory.md) 부록

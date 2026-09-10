@@ -199,13 +199,13 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 | `final` | 최종 응답 |
 | `error` | 에러 발생 |
 
-### GoalEval과 SelfReflect의 실행 조건
+### 의식 감독·검수의 실행 조건
 
-- `THINK`: ConsciousnessAgent가 `achievement_criteria`를 만들면 GoalEval이 최대 3라운드 평가·재실행한다.
-- `EXECUTE`: `consciousness_output=None`이므로 GoalEval에 진입하지 않는다. 도구 실패·복잡 궤적·세계 변경이 있으면 실행기 자신의 SelfReflect가 한 번 돈다.
-- `Reflex`와 강제 역할 실행은 SelfReflect도 생략한다.
-- `episode_summary.evaluation_result`는 GoalEval 구조 마커의 마지막 라운드를 저장한다. `NULL`은 평가 미실행이며 실패와 동의어가 아니다.
-- **현재 실패 의미론 주의**: 평가 모델이 빈 응답/API 오류를 내면 `_evaluate_achievement()`는 턴을 깨지 않기 위해 성공으로 통과시키고 로그에 `AI 응답 없음 (API 오류 등), 통과 처리`를 남긴다. 그러므로 `ACHIEVED`만으로 외부 효과 완료를 단정하지 말고 action ledger·생성 파일·배포/HTTP 같은 증거를 함께 본다. 이 fail-open은 현행 동작을 정직하게 기록한 것이며, 신뢰성 개선 대상이다.
+- 기본 사용자 턴은 `conscious_supervisor`가 계획·중간 감독·최종 승인을 소유한다. THINK/REPAIR는 계획을 검수까지 이어가고, EXECUTE/Reflex는 정상 조회의 추가 호출을 생략하다가 실패·세계 변경·긴 작업에서 승격한다. 강제 내부 역할은 제외한다.
+- `supervision_bus`는 agent+task로 구분한 실제 도구 경계다. 의식의 직접 실행은 실행자가 멈춘 경계에서 동일한 기존 도구·권한으로 수행한다. MCP 연결은 `/ibl/supervision`, Claude Code 네이티브는 `supervision_hook.py`를 사용한다. Codex 네이티브의 개입은 다음 MCP IBL 경계까지 지연될 수 있다.
+- 후보는 `data/spill/supervision/<turn-id>/`에 저장한다. 전체 본문 검수·버전·해시가 맞으면 그대로 전송하고, 보완은 `patch`로 변경 블록만 제출한다. 빈 판정/API 오류/누락된 본문은 `UNKNOWN`이며 통과시키지 않는다.
+- `episode_summary.evaluation_result`: 승인 `ACHIEVED`, 보완 미달 `NOT_ACHIEVED`, 검수 불명 `UNKNOWN`, 검수 미실행 `NULL`. 실제 행동·근거·판정은 `supervision.*`와 `validation.completed` 사건으로 연결한다.
+- 설정은 `world_pulse_config.json`의 `conscious_supervisor` 객체. 기본 한도·실제 제약은 `docs/CONSCIOUS_SUPERVISOR_PLAN_2026_09_10.md` 구현 기록과 `conscious_supervisor.DEFAULTS`를 참조한다. 감독을 끄거나 신원 없는 호출에서는 기존 GoalEval/SelfReflect가 호환 경로로 남으며, 그 구형 평가의 빈 응답 통과 정책도 그대로다.
 
 ## IBL 도구 — execute_ibl
 
@@ -325,7 +325,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(30) → `datastore`(45) → `ibl`(47) → `cognition`(55) → `services`(28) → `surface`(63). `.py` 총 329개(test 제외).
+  `base`(33) → `datastore`(46) → `ibl`(47) → `cognition`(57) → `services`(28) → `surface`(64). `.py` 총 336개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(19) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

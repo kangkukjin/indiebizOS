@@ -20,9 +20,9 @@ IndieBiz OS는 AI에게 지능적인 몸을 만들어주는 하네스(harness)�
 |------------|------------------|------|
 | 신경계 | IBL (6노드 — 액션 수는 아래 '시스템 통계', 빌드 파생) | 감각/행동의 상시 연결 |
 | 감각기관 전처리 | 감각 전처리 (postprocess) | 원시 정보를 압축하여 뇌에 전달 |
-| 선택적 주의력 | 의식 에이전트 | 매 턴 메타 판단 — 문제 정의, 초점, 달성 기준 |
+| 선택적 주의력 | 의식 에이전트 | 문제 정의·초점·달성 기준, 사건에 따른 감독·재계획 |
 | 반사 신경 | 경량 AI (분류) | EXECUTE/THINK 분류 — 축은 **한 방에 끝나는가 / 여러 단계로 일하는가**: 한 방(단일 조회·단발 생성·대화)=EXECUTE, **여러 단계(여러 도구·출처, 종합 판단) 또는 위험**=THINK(2026-09-06 사용자 판정 — 08-10 '장기·위험만' 기준을 되돌림, 애매하면 THINK) |
-| 자기 교정 | 평가 에이전트 | 달성 기준 대비 평가, NOT_ACHIEVED 시 재시도 |
+| 자기 교정 | 의식의 최종 검수 | 증거·응답 원문을 승인하거나 변경 부분의 보완을 지시 |
 | 자의식/각성 | World Pulse | 매시간 세계/사용자/자기 상태 수집 |
 | 면역계 | 일일 건강 점검 + action_health | 매일 1회 fixture·골든 검사(**AI 0** — 옛 'AI가 assumed 액션을 순찰'하던 배선은 은퇴), 모든 액션 실행을 자동 기록 · **세포 사멸**(`component_lifecycle`, 2026-09-02): 참조도 쓸모 실행도 없는 가이드·워크플로우·스크립트·낱말이 유예 뒤 candidate(보이는 표식)→retired 로 — 가역 층은 기계가 `_retired/` 이동+커밋, 낱말은 판정 큐 · **수면 후반부**(`guide_downscale`): 예산(36KB) 초과 가이드를 주간 압축, 기계 대조(어휘 참조·절 제목·경로 보존)가 관문. 정본 docs/COMPONENT_APOPTOSIS_HANDOFF.md |
 | 자율신경계 | 스케줄러, 이벤트 엔진 | 의식 없이 돌아가는 리듬 |
@@ -50,8 +50,9 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
     (자동 변속기[무의식 분류기]가 작업마다 티어를 고르고, 수동 레버[절약/균형/최대]가 전체를 변속.
      상세: system_structure.md "모델 기어")
     ↓
-[4a] THINK → GoalEval (경량 AI, 달성 기준 있을 때만, 최대 3라운드)
-     EXECUTE → GoalEval 없음; 실패·복잡 궤적·세계 변경이면 SelfReflect 1회
+[4a] 하네스 관찰 → 실패 반복·정체·긴 작업에서만 의식 검토 (상시 모델 호출 아님)
+[4b] 의식 검수 → 저장된 후보를 승인하거나 실행자에게 부분 보완 인계
+     정상적인 짧은 조회는 추가 의식 호출 없음; 실패·세계 변경은 감독 승격
     ↓
 [5] 증류 (해마 경험 증류 + 심층메모리 증류)
 ```
@@ -61,7 +62,8 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
 - **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. **실제 런타임 검색 ~99%** (라이브 세대·측정표는 memory.md '현재 라이브 모델' — 재학습은 **로컬 M4 Pro**가 정본 경로, 클라우드는 옛 맥에어 OOM 한정이었다). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건. 절차·함정은 `data/guides/hippocampus_retraining.md`.
 - **심층메모리**: 같은 fine-tuned 모델로 시맨틱 검색 (2026-05-16 도입)
 - **점수 정규화**: 모든 검색 경로(시맨틱·하이브리드·FTS5 폴백)에서 0~1 보장
-- **두 검증 갈래**: GoalEval은 `consciousness_output`과 그 안의 달성 기준이 있는 `THINK`에서만 돈다. `EXECUTE`는 평가값을 만들지 않고, 도구 호출에 실패 신호·복잡성·세계 변경이 있을 때 실행기 자신이 같은 세션으로 SelfReflect한다. 그러므로 `episode_summary.evaluation_result=NULL`은 미달성이 아니라 **평가 미실행**일 수 있다. Reflex·강제 역할은 SelfReflect도 생략한다.
+- **의식 감독 통합(2026-09-10)**: `conscious_supervisor`가 계획·재규정·중간 점검·완료 승인을 책임지고, `supervisor_runtime`이 공통 `AIAgent`의 의식 역할을 호출한다. 실행자의 별도 보고 없이 `supervision_bus`의 실제 도구 경계와 `supervision_watch`의 시계·로그 증분을 읽는다. `agent_id + task_id`로 턴을 격리한다. 검수 대상은 `supervision_store`에 한 번 생성한 응답 후보이며 버전·SHA-256·본문 읽기 범위를 대조한다. 승인하면 같은 문자열을 전송하고, 보완은 변경 블록만 패치한다. `pursuit done`은 완료 요청이며 이번 턴 승인과 전체 과제 승인을 분리한다.
+- **비용과 호환 경로**: 정상 조회에는 의식 호출을 추가하지 않는다. 중간 검토는 기본 최대 2회·최소 240초 간격이고 최종 검수 예산을 따로 남긴다. 빈 응답·오류·읽지 않은 본문·지문 불일치는 `UNKNOWN`이다. 감독 비활성 또는 신원 없는 호출의 GoalEval/SelfReflect는 호환 경로로 남는다. 에피소드의 `NULL`은 검수 미실행이며 실패를 뜻하지 않는다.
 - 상세: `data/system_docs/memory.md`
 
 ## 사용자 표면 — 런처의 세 모드 (트릴레마)
@@ -307,7 +309,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 **의식 에이전트 메타 인지 가드 (2026-05-28, 2026-09-06 수리 턴 전용 조각으로 분리)**: backend 자기 편집=자기 reload 자해 인식, 첫 호출 성공 시 의심 즉시 갱신, timeout/실패 후 같은 코드 재시도 금지. 원래 consciousness_prompt 본문에 있었으나 수리 안전수칙과 함께 `fragments/14_consciousness_repair.md` 로 옮겨, REPAIR 분류·늦은 승격 턴에만 의식 입력의 `<repair_doctrine>` 블록으로 실린다(시스템 프롬프트 캐시 prefix 불변). 본문의 task_framing 은 이름 붙은 골격(문제·제약·세상의 방식·무게·멈춤선·위해·불분명)이고, 별도 `assumptions` 필드가 계획의 전제를 실행자에게 넘겨 첫 확인에서 깨진 전제를 알아채게 한다. 2026-09-07 사용자 설계로 옛 골격 줄 '전문가의 방법'은 독립 필드 `expert_choice` 로 승격돼, 실행자 명령에 `전문가의 선택:` 이라는 제 이름의 섹션(한 문장·이름 강제)으로 실린다 — 규정 산문 안의 한 줄은 1,300자 덩어리에 묻혔고, hint 가 별도 명령문 줄로 떼어졌을 때 살아난 것과 같은 자리다.
 
-**턴 안 재규정 (2026-09-06, `cognition/reframe.py`)**: 의식은 턴 시작에 한 번 규정하지만, 전제가 실행 중 반증되면(이 틀 안에서 불가·위험·문제가 다른 것) 실행자가 `reframe` 도구(자기 관리 도구 부류, IBL 어휘 아님 — 이음매 신호가 해마 코퍼스에 섞이지 않게)로 깨진 전제·근거·진행 요약을 보내고, 파이프라인이 연 턴 통로(`open_turn`, 키=agent_id)가 의식을 `<framing_revision>` 블록과 함께 다시 깨운다. 새 규정은 도구 결과로 같은 대화에 돌아오고(전체 재시작 없음), 통로의 갱신 규정을 평가 루프가 기준으로 쓴다. 판단 없는 기계 방아쇠도 하나 — 평가가 치명(severity 3)이거나 2라운드째 미달이면 평가자 피드백을 근거로 재규정(`revise_from_eval`). 상한 한 턴 2회, 권한(needs_repair)은 재규정으로 늘지 않는다. 두-경로 대칭: 인프로세스는 `system_tools` 디스패치, Claude Code 는 `mcp_server.reframe → /ibl/reframe`(read_guide 와 동형). 궤적 사건 `framing.revised`.
+**턴 안 재규정 (`cognition/reframe.py`, 감독 통합 2026-09-10)**: 실행자가 `reframe`으로 실제 반증을 제시하면 해당 agent+task의 감독이 같은 의식 역할·중간 검토 예산으로 규정을 바꾼다. 새 규정은 도구 결과로 실행자에게 돌아오며 이미 만든 산출물을 유지한다. 권한은 재규정으로 늘어나지 않는다. 감독 없는 호환 경로에는 기존 `open_turn`과 평가의 `revise_from_eval`이 남는다. IBL 어휘를 추가하지 않고 인지 역할 사이의 내부 도구로 연결한다. 양쪽의 실제 행동·근거·판정·인계·응답 버전은 `supervision.*`, 검수 결과는 `validation.completed` 사건과 작업대 `events.jsonl`에 남는다.
 
 **에피소딕 메모리**: 에피소드(사용자 명령→최종 응답)별 실행 로그 기록
 - `episode_log` 테이블: 전체 로그 (최근 100개 보존)
@@ -488,7 +490,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 329개**(test 제외, git 추적 기준) — 층 디렉토리 `base 30 · datastore 45 · ibl 47 · cognition 55 · services 28 · surface 63`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
+- backend **.py 336개**(test 제외, git 추적 기준) — 층 디렉토리 `base 33 · datastore 46 · ibl 47 · cognition 57 · services 28 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **73개**(guide_db 등록 **72**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

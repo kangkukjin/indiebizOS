@@ -65,6 +65,14 @@ def execute_pursuit(payload, agent_id, task_id=None):
             if "base_version" in payload and payload["base_version"] != b.row["version"]:
                 raise ValueError("base_version이 읽은 원장과 다릅니다. read 후 다시 시도하세요")
             why = payload.get("why", "")
+            if op == "done":
+                from supervision_bus import current
+                supervisor = current(agent_id, task_id)
+                if supervisor:
+                    if not why.strip():
+                        raise ValueError("완료 요청에는 달성 근거 why가 필요합니다")
+                    result = supervisor.request_done(b, why)
+                    return json.dumps({"success": True, "result": result}, ensure_ascii=False)
             if op == "note":
                 patch = {k: payload[k] for k in ("progress", "next", "open_questions", "artifacts") if k in payload}
                 if not patch:

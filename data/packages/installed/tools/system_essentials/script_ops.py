@@ -60,6 +60,20 @@ _STDERR_TAIL = 2000
 _DEFAULT_TIMEOUT = 300
 
 
+def _review_environment():
+    """등록 스크립트에 턴의 비공개 검수 작업대를 전달한다(스크립트 이름과 무관한 계약)."""
+    from supervision_bus import current
+    supervisor = current()
+    return supervisor.delivery.environment() if supervisor else None
+
+
+def _observe_publication():
+    from supervision_bus import current
+    supervisor = current()
+    if supervisor and supervisor.delivery.manifest():
+        supervisor.enabled = True
+
+
 def _coerce_args(args):
     """run 의 args 경계 관용 (2026-08-30, ep2357): dict 또는 JSON 객체 *문자열*.
 
@@ -437,6 +451,7 @@ def op_run(tool_input):
             [interp, str(p)],
             input=stdin_data, capture_output=True, text=True,
             timeout=timeout, cwd=str(p.parent),
+            env=_review_environment(),
         )
         exit_code, stdout, stderr = proc.returncode, proc.stdout or "", proc.stderr or ""
         timed_out = False
@@ -492,6 +507,7 @@ def op_run(tool_input):
             res.setdefault(k, v)
     else:
         res["stdout"] = stdout[-_STDOUT_TAIL:]
+    _observe_publication()
     return res
 
 
@@ -543,6 +559,7 @@ def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp
             [sys.executable or "python3", str(_BG_RUNNER), str(job_path)],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             cwd=str(script_path.parent),
+            env=_review_environment(),
         )
     except OSError as e:
         job["status"] = "failed"; job["error"] = f"러너 기동 실패: {e}"
@@ -625,4 +642,5 @@ def op_status(tool_input):
                 for k in ("items", "table", "stdout"):
                     if k in r:
                         res[k] = r[k]
+    _observe_publication()
     return res

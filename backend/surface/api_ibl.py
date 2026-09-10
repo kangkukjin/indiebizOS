@@ -189,6 +189,7 @@ async def execute_ibl_code(req: IBLRequest):
             # 실행 전에 걸어, 이 run 의 모든 사건(ibl.*·side_effect.*)이 부모 에피소드에
             # 실리게 한다. 신원이 안 실린 직접 호출은 종전대로(초크포인트가 run 을 세움).
             from contextlib import nullcontext
+            from providers.base import adopt_turn_token_ledger
             _adopt = nullcontext()
             if req.episode_id is not None or req.parent_run_id:
                 from episode_logger import trajectory_scope
@@ -196,7 +197,7 @@ async def execute_ibl_code(req: IBLRequest):
                                           parent_run_id=req.parent_run_id or "",
                                           episode_id=req.episode_id)
             with _adopt, actor_context(agent_id=agent_id, task_id=req.task_id or None,
-                                       origin=_origin):
+                                       origin=_origin), adopt_turn_token_ledger(agent_id, req.task_id):
                 try:
                     from system_tools import _execute_ibl_unified
                     # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서

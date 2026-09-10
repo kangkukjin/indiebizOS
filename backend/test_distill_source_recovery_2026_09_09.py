@@ -78,9 +78,9 @@ def test_no_candidate_or_bad_model_output_does_not_retry():
         assert code is None and why and len(seen) == 1
 
 
-def test_missing_producer_is_rejected_but_explicit_source_dependency_works():
+def test_missing_producer_is_closed_from_successful_source():
     calls = ['$x = [self:time]', '$x >> [table:select]{columns: ["date"]}']
-    for ids, expected in [([2], None), ([1, 2], "\n".join(calls))]:
+    for ids, expected in [([2], "\n".join(calls)), ([1, 2], "\n".join(calls))]:
         code, _ = _recover_distill_selection("x", "broken", "bad", calls,
             lambda **kw: json.dumps({"call_ids": ids}))
         assert code == expected
@@ -181,7 +181,7 @@ def test_healthy_distill_has_no_extra_model_call(monkeypatch, tmp_path):
     assert len(asked) == len(stored) == 1
 
 
-def test_recovery_does_not_bypass_composition_or_parameter_gates(monkeypatch, tmp_path):
+def test_recovery_preserves_independent_statements_and_parameter_gate(monkeypatch, tmp_path):
     for idx, sources in enumerate([
         ['[sense:search]{query: "x"} >> [table:take]{n: 1}', '[self:read]{path: "/tmp/x"}'],
         ['[sense:search]{made_up_parameter_xyz: "x"}'],
@@ -190,8 +190,9 @@ def test_recovery_does_not_bypass_composition_or_parameter_gates(monkeypatch, tm
             {"intent": "x", "code": 'broken'}, {"call_ids": list(range(1, len(sources) + 1))},
         ])
         calls = [{"tool_name": "execute_ibl", "input": {"code": c}, "success": True} for c in sources]
-        assert not rag.distill_experience("x", calls, 0.0)
-        assert len(asked) == 2 and stored == []
+        assert bool(rag.distill_experience("x", calls, 0.0)) is (idx == 0)
+        assert len(asked) == 2
+        assert bool(stored) is (idx == 0)
 
 
 if __name__ == "__main__":

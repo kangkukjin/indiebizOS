@@ -550,11 +550,12 @@ def is_oneshot_background() -> bool:
 
 
 class _PriorityLock:
-    """전경 우선 뮤텍스 — 배경은 전경 대기자가 없을 때만 잡는다(진행 중 호출은 선점 안 함)."""
+    """전경 우선 호출 슬롯. 배경은 전경 대기자가 없을 때 진입하며 진행 중 호출은 선점하지 않는다."""
 
-    def __init__(self):
+    def __init__(self, capacity=1):
         self._cond = _threading.Condition()
-        self._held = False
+        self._held = 0
+        self._capacity = capacity
         self._fg_waiting = 0
         self._bg_waiting = 0
         self.bg_yields = 0   # 전경이 대기 중인 배경을 앞질러 잡은 횟수(관찰용 — 게이트 아님)
@@ -566,9 +567,9 @@ class _PriorityLock:
             else:
                 self._fg_waiting += 1
             try:
-                while self._held or (background and self._fg_waiting > 0):
+                while self._held >= self._capacity or (background and self._fg_waiting > 0):
                     self._cond.wait()
-                self._held = True
+                self._held += 1
                 if not background and self._bg_waiting > 0:
                     self.bg_yields += 1
             finally:
@@ -579,7 +580,7 @@ class _PriorityLock:
 
     def release(self) -> None:
         with self._cond:
-            self._held = False
+            self._held -= 1
             self._cond.notify_all()
 
     @_contextmanager
@@ -597,7 +598,8 @@ _provider_lock_guard = _threading.Lock()
 def _oneshot_lock_for(provider):
     with _provider_lock_guard:
         if not hasattr(provider, "_oneshot_call_lock"):
-            provider._oneshot_call_lock = _PriorityLock()
+            from providers.base import BaseProvider
+            provider._oneshot_call_lock = _PriorityLock(4 if isinstance(provider, BaseProvider) else 1)
         return provider._oneshot_call_lock
 
 # 직전 원샷 호출의 **실패 범주** (2026-09-01) — 반환은 문자열 하나뿐이라 "왜 실패했나"가
@@ -871,9 +873,10 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
             return None
         provider = agent._provider
 
-    # ★직렬화: system_prompt 임시 교체가 공유 싱글턴 변이라 동시 호출 시 프롬프트 교차 오염
-    # (백그라운드 증류 스레드 + 메인 턴 분류가 같은 provider 를 만짐). 락으로 스왑~복원을 원자화.
+    # 공유 provider의 호출 수만 제한한다. 실제 프롬프트·계측은 독립 사본에서 변경한다.
     with _oneshot_lock_for(provider).held(background=is_oneshot_background()):
+        if callable(getattr(provider, "oneshot_view", None)):
+            provider = provider.oneshot_view()
         # 시스템 프롬프트 임시 교체
         original_system_prompt = None
         if system_prompt is not None:
@@ -1025,6 +1028,8 @@ def system_ai_call(prompt: str, system_prompt: str = None,
         provider = agent._provider
 
     with _oneshot_lock_for(provider).held(background=is_oneshot_background()):
+        if callable(getattr(provider, "oneshot_view", None)):
+            provider = provider.oneshot_view()
         original_system_prompt = None
         if system_prompt is not None:
             original_system_prompt = provider.system_prompt

@@ -146,6 +146,13 @@ def summarize_result(raw: Any) -> Dict[str, Any]:
             out["truncations"] = evidence["truncations"]
         if obj.get("row_honesty"):
             out["row_honesty"] = obj["row_honesty"]
+        from ibl_honesty import HONESTY_COUNT_KEYS, HONESTY_FLAG_KEYS
+        for key in ("rows_requested", "rows_processed", "ok_count", "skipped") + \
+                HONESTY_COUNT_KEYS + HONESTY_FLAG_KEYS:
+            if key in obj:
+                out[key] = obj[key]
+        if obj.get("incomplete_steps"):
+            out["incomplete_steps"] = obj["incomplete_steps"]
         # 부분 실패(each 의 errors[])는 진단 정보다 — 다이어트 대상이 아니다.
         # 옛 요약은 이 배열을 통째로 접으면서 message 의 "errors 참조"만 남겨, 다문장
         # 프로그램에서 어느 행이 왜 실패했는지 회수 불능이었다(2026-08-28 팁 보고서
@@ -246,6 +253,12 @@ def diet_envelope(result: Any, verbose: bool = False, *, _fn_depth: int = 0) -> 
     재배열로 모든 생산자(성공·실패·중단 봉투)의 표지가 절단 생존이 된다."""
     if verbose or not isinstance(result, dict):
         return result
+    if result.get("_results_summarized"):
+        return result
+    from ibl_honesty import completion_evidence
+    incomplete = completion_evidence(result)
+    if incomplete:
+        result = {**result, "incomplete_steps": incomplete}
     results = result.get("results")
     if not isinstance(results, list) or not results:
         return result

@@ -86,6 +86,8 @@ def _episode_source() -> str:
 _current_episode: contextvars.ContextVar = contextvars.ContextVar(
     "indiebiz_episode", default=None
 )
+_live_episode_lock = threading.RLock()
+_live_episodes = {}
 
 # episode 이 없는 직접 IBL 표면(앱/수동/원격)도 같은 궤적 척추를 쓴다. 이 값은
 # contextvars 라 asyncio.to_thread/copy_context 경계를 따라가며, 중첩 실행은 바깥 run 을
@@ -135,15 +137,28 @@ def trajectory_scope(task_id: str = "", parent_run_id: str = "", episode_id=None
     contextvar 는 프로세스 경계를 못 건너므로, 부모가 env/헤더→payload 로 실어 보낸
     값을 여기서 채택해 자식 run 이 같은 척추(episode)에 걸리게 한다(task_id 복원 선례)."""
     existing = _current_trace()
-    if existing is not None:
-        yield existing
-        return
     if not task_id:
         try:
             from thread_context import get_current_task_id
             task_id = get_current_task_id() or ""
         except Exception:
             task_id = ""
+    # MCP로 같은 백엔드에 돌아온 호출도 주행의 steps/usage에 합산한다.
+    # episode ID와 task ID가 모두 일치하는 활성 턴만 채택한다.
+    with _live_episode_lock:
+        parent = _live_episodes.get(episode_id)
+    if (parent is not None and parent.task_id == task_id and task_id
+            and _current_episode.get(None) is None
+            and (existing is None or (existing.episode_id == parent.episode_id and existing.task_id == task_id))):
+        token = _current_episode.set(parent)
+        try:
+            yield parent.trajectory
+        finally:
+            _current_episode.reset(token)
+        return
+    if existing is not None:
+        yield existing
+        return
     trace = _Trajectory(trajectory_run_id(task_id), task_id, parent_run_id)
     if episode_id is not None:
         try:
@@ -333,6 +348,9 @@ class EpisodeLogger:
                                       ep.task_id, ep.trajectory.run_id,
                                       ep.trajectory.parent_run_id)
         ep.trajectory.episode_id = ep.episode_id
+        if ep.episode_id is not None:
+            with _live_episode_lock:
+                _live_episodes[ep.episode_id] = ep
         record_trajectory_event("request.received", {
             "message_sha256": hashlib.sha256((ep.user_message or "").encode(
                 "utf-8", "replace")).hexdigest(),
@@ -373,6 +391,9 @@ class EpisodeLogger:
         end_episode 와 start_episode 의 salvage 가 모두 지나는 단일 choke point이므로,
         런 종료 시 조종실 '액티브 프로젝트'의 sysai 유령 등록을 여기서 확정 청소한다.
         (등록/해제 스레드가 달라 _active_work 스레드-키 대칭이 깨지는 누수 방어)."""
+        with _live_episode_lock:
+            if _live_episodes.get(ep.episode_id) is ep:
+                del _live_episodes[ep.episode_id]
         # 저장과 독립적으로 먼저 청소 — 저장이 실패해도 유령은 반드시 사라진다.
         # 등록/해제 스레드가 갈리는 thread-hop(자기반성 턴 등) 누수를 에피소드 END 에서 확정 청소.
         if (ep.agent or "") == "system_ai":

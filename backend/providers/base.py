@@ -10,6 +10,8 @@ IndieBiz OS Core
 
 import time
 import contextvars
+import threading
+from contextlib import contextmanager
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass, field
@@ -22,6 +24,43 @@ from dataclasses import dataclass, field
 # 궤적 척추(contextvars 승계)와 같은 결. 원장이 없으면(파이프라인 밖 호출) 무기록.
 _turn_token_ledger: contextvars.ContextVar = contextvars.ContextVar(
     "turn_token_ledger", default=None)
+_turn_ledger_lock = threading.RLock()
+_active_turn_ledgers = {}
+
+
+@contextmanager
+def turn_token_scope(agent_id, task_id, aliases=()):
+    """주 실행과 MCP 재진입이 공유하는 턴 원장. 다른 턴·종료된 턴은 합산하지 않는다."""
+    previous = _turn_token_ledger.get()
+    begin_turn_token_ledger()
+    ledger = _turn_token_ledger.get()
+    keys = {(agent, task_id) for agent in (agent_id, *aliases) if agent and task_id}
+    with _turn_ledger_lock:
+        if any(key in _active_turn_ledgers for key in keys):
+            _turn_token_ledger.set(previous)
+            raise RuntimeError("이미 실행 중인 턴의 비용 원장입니다")
+        for key in keys:
+            _active_turn_ledgers[key] = ledger
+    try:
+        yield ledger
+    finally:
+        with _turn_ledger_lock:
+            for key in keys:
+                if _active_turn_ledgers.get(key) is ledger:
+                    del _active_turn_ledgers[key]
+        _turn_token_ledger.set(previous)
+
+
+@contextmanager
+def adopt_turn_token_ledger(agent_id, task_id):
+    """같은 백엔드로 돌아온 도구 호출만 활성 원장에 연결하고 워커 문맥을 복원한다."""
+    with _turn_ledger_lock:
+        ledger = _active_turn_ledgers.get((agent_id, task_id))
+    token = _turn_token_ledger.set(ledger)
+    try:
+        yield
+    finally:
+        _turn_token_ledger.reset(token)
 
 
 def begin_turn_token_ledger() -> None:
@@ -188,9 +227,10 @@ class ProviderMetrics:
         self.total_cache_read_tokens += int(cache_read_tokens or 0)
         led = _turn_token_ledger.get()
         if led is not None:
-            led["input"] += int(input_tokens or 0)
-            led["output"] += int(output_tokens or 0)
-            led["cache_read"] = led.get("cache_read", 0) + int(cache_read_tokens or 0)
+            with _turn_ledger_lock:
+                led["input"] += int(input_tokens or 0)
+                led["output"] += int(output_tokens or 0)
+                led["cache_read"] = led.get("cache_read", 0) + int(cache_read_tokens or 0)
         self.last_request_latency_ms = latency_ms
         self._latencies.append(latency_ms)
         # 최근 100개만 유지
@@ -375,6 +415,21 @@ class BaseProvider(ABC):
         # 재시도를 붙이면 범주 오류다 — 출력이 틀린 게 아니라 **없다**. 문자열을
         # 냄새 맡아 분기하면(문구 매칭) 문구가 바뀌는 날 조용히 죽으므로 값으로 나른다.
         self.last_failure_kind: Optional[str] = None
+
+    def oneshot_view(self):
+        """독립 원샷 상태. 연결 클라이언트는 공유하고 프롬프트·버퍼·계측은 호출별로 둔다."""
+        import copy
+        view = copy.copy(self)
+        for name, value in vars(self).items():
+            if isinstance(value, (dict, list, set)):
+                setattr(view, name, copy.copy(value))
+        view.metrics = ProviderMetrics()
+        view.last_failure_kind = None
+        view._pending_map_tags = []
+        for name in ("_last_tool_images", "_last_tool_results", "_last_tool_calls"):
+            if hasattr(view, name):
+                setattr(view, name, [])
+        return view
 
     def _notify_round(self, round_no: int, budget: int):
         """도구 루프 라운드 시작 1건 — 구조화 스텝 원장 기록 + 사람용 마커 print.

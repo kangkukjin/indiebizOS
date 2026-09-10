@@ -32,6 +32,19 @@ pursuit_status는 이번 턴 기준과 별개로 전체 과제의 goal_criteria 
 상세 사고 과정이나 장문 평가 보고를 쓰지 말고 판정과 필요한 지시만 남겨라.
 """
 
+FINAL_REVIEW_PROMPT = """최종 검수는 파일 생성 영수증이나 실행자의 완료 선언만으로 통과시키지 않는다.
+저장된 산출물의 본문을 직접 읽고 최초 성공 기준과 대조하라. 필요한 원천 증거만 선택해 읽는다.
+원문에서 추출한 사실과 편집자가 덧붙인 해석을 구분하라. 서로 다른 범위·층위의 설명은
+동시에 성립할 수 있다. 동일 대상·조건의 양립 불가능한 주장인지 확인하기 전에는 대립으로 단정하지 마라.
+재현 가능한 절차가 기준이면 구체적인 조작·설정·예문 없는 원칙을 팁에서 분리하라.
+자막만 읽었으면 영상 화면을, 로그만 읽었으면 산출물 내용을 직접 확인했다고 서술할 수 없다.
+부분 중단은 성공 수·실패 수·미처리 수와 복구 증거를 확인하라. 근거 부족은 REWORK로 돌려라.
+판정에는 실제로 확인한 증거 ID만 쓰고 장문의 본문을 다시 작성하지 마라.
+pending_delivery가 있으면 staged 경로의 실제 초안과 알림의 수치·문구를 확인하라.
+승인할 때 그 manifest의 hash를 delivery_hash에 넣어라. 수정 후에는 state로 새 지문을 확인하라.
+승인된 바이트의 공개와 알림 전송은 하네스가 맡는다. 직접 공개하거나 같은 본문을 다시 생성하지 마라.
+"""
+
 
 def parse_decision(raw):
     text = (raw or "").strip()
@@ -123,7 +136,10 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
             vision, descriptor = get_vision_provider(oneshot=False)
             if vision is not None:
                 config = descriptor  # 역할은 의식 그대로, 이미지 모달리티의 기존 모델 설정을 사용한다.
-        agent = AIAgent(config, planning_prompt or ROLE_PROMPT,
+        role_prompt = planning_prompt or ROLE_PROMPT
+        if phase == "final":
+            role_prompt += "\n" + FINAL_REVIEW_PROMPT
+        agent = AIAgent(config, role_prompt,
                         agent_name="의식 감독", agent_id=controller.supervisor_id,
                         project_path=controller.project_path, tools=[TOOL_SCHEMA],
                         execute_tool_func=lambda name, payload, **kw: controller.tool(payload),

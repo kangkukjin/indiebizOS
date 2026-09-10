@@ -28,11 +28,13 @@ HONESTY_LIST_KEYS = (
     "vars_dropped",       # 블록 몸이 할당한 변수가 경계 밖으로 못 나갔다 (B49-2)
     "row_honesty",        # each 입력/내부 행의 표지 — 행 실패 계수와 분리한 출처
     "truncations",        # 절단 위치·규모·복구 인자(생산자가 선언)
+    "incomplete_steps",   # 중간 step의 부분 실패 — 하류 집계로 지우지 않는다
 )
 
 #: 수량형 — 0 이 아니면 신고한다.
 HONESTY_COUNT_KEYS = (
     "error_count",        # each 행별 실패 수
+    "rows_unprocessed",   # 요청했지만 중단으로 시도하지 못한 행(의도한 limit 표본 제외)
     "passthrough_rows",   # each do 가 통화를 안 내서 원 행이 흘렀다
     "rows_replaced",      # each do 결과가 원 행을 대체했다(출처 행 소실)
     "rows_dropped",       # 원천 절단
@@ -304,6 +306,49 @@ def merge_into(env: Any, into: Optional[dict]) -> None:
             into[k] = (into.get(k) or 0) + v
         else:
             into[k] = v
+
+
+def completion_evidence(env: Any) -> list:
+    """실행 봉투의 미완료 경계만 수집. 사용자 items/text 속 오류라는 단어는 판정하지 않는다.
+
+    같은 상류 계수가 여러 경계에 남을 수 있으므로 행 수는 경계별 관측값이며 합산하지 않는다.
+    """
+    import json
+    found = []
+
+    def visit(value, path="", depth=0):
+        if depth > 16:
+            return
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except (ValueError, TypeError):
+                return
+        if isinstance(value, list):
+            for i, row in enumerate(value):
+                visit(row, f"{path}[{i}]", depth + 1)
+            return
+        if not isinstance(value, dict):
+            return
+        recorded = value.get("incomplete_steps")
+        if isinstance(recorded, list) and recorded:
+            # 이미 모은 경계 증거는 그대로 읽는다. 매 요약 때 원본까지 다시 세어 증식하지 않는다.
+            visit(recorded, f"{path}.incomplete_steps" if path else "incomplete_steps", depth + 1)
+            return
+        counts = {k: value[k] for k in ("error_count", "rows_unprocessed")
+                  if isinstance(value.get(k), int) and not isinstance(value[k], bool) and value[k] > 0}
+        if counts:
+            row = {"at": path or "result", **counts}
+            for k in ("rows_requested", "rows_processed", "ok_count", "halted"):
+                if k in value:
+                    row[k] = value[k]
+            found.append(row)
+        for key in ("results", "result", "final_result", "row_honesty", "markers", "branches"):
+            if key in value:
+                visit(value[key], f"{path}.{key}" if path else key, depth + 1)
+
+    visit(env)
+    return found
 
 
 def truncation_evidence(env: Any) -> Dict[str, Any]:

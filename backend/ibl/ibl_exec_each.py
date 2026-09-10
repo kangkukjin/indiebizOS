@@ -533,6 +533,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     _ready = [i for i, p_ in enumerate(preps[:budget_cut]) if p_["kind"] == "ready"]
     if parallel > 1 and len(_ready) > 1:
         import thread_context as _tc
+        import contextvars
         from concurrent.futures import ThreadPoolExecutor
         _snap = _tc.snapshot()
 
@@ -542,13 +543,13 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
 
         with ThreadPoolExecutor(max_workers=min(parallel, len(_ready)),
                                 thread_name_prefix="ibl-each") as _ex:
-            for _i, _res in _ex.map(_worker, _ready):
+            futures = [_ex.submit(contextvars.copy_context().run, _worker, i) for i in _ready]
+            for _i, _res in (future.result() for future in futures):
                 pre_results[_i] = _res
     parallel_discarded = 0
 
     for idx, prep in enumerate(preps):
         if idx >= budget_cut:
-            processed += 1           # 옛 계약과 같이 예산에 걸린 행은 처리 수에 든다
             halted = "budget"
             break
         processed += 1
@@ -617,6 +618,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     out: Dict[str, Any] = {
         "items": out_items,
         "count": len(out_items),
+        "rows_requested": len(target),
         "rows_processed": processed,
         "ok_count": ok_n,
         "error_count": err_n,
@@ -683,6 +685,10 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         else:
             notes.append(f"limit={limit} 로 앞에서 잘랐습니다 — {skipped}건 미처리")
         out["skipped"] = skipped
+    if halted:
+        out["halted"] = halted
+        if halted == "budget":
+            out["rows_unprocessed"] = len(target) - processed
     if on_error == "keep" and err_n:
         # keep = 실패를 데이터로 쓰겠다는 선언 — 실패 행이 통화에 섞였음을 반드시 말한다.
         notes.append(f"on_error=keep: 실패 {err_n}행이 _error 표식과 함께 통화에 흘렀습니다 — "
@@ -721,4 +727,9 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             notes.append(f"{err_n}/{processed}건 실패 (성공 {ok_n}) — errors 참조")
     if notes:
         out["message"] = " / ".join(notes)
+    if halted == "budget":
+        out.update(success=False, error_type="budget",
+                   error=f"each: 하위 스텝 예산({_EACH_MAX_SUBSTEPS}) 초과 — "
+                         f"요청 {len(target)}행, 처리 {processed}행, 미처리 {len(target) - processed}행. "
+                         "완료한 행을 반복하지 말고 원입력의 미처리 행만 분할해 재개하세요.")
     return out

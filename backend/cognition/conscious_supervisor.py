@@ -43,7 +43,11 @@ class Supervisor:
         self.cancel_check = cancel_check
         self.project_path = getattr(runner.ai, "project_path", ".")
         self.context = snapshot()
+        from episode_logger import EpisodeLogger
+        self.episode_id = getattr(EpisodeLogger.current(), "episode_id", None)
         self.store = TurnStore(directory or (get_base_path() / "data" / "spill" / "supervision" / self.turn_id))
+        from supervision_delivery import DeliveryQueue
+        self.delivery = DeliveryQueue(self.store.directory / "delivery", get_base_path() / "공유창고", self.log)
         self.history_ref = self.store.evidence(self.history)
         self.lock = threading.RLock()
         self.review_lock = threading.Lock()
@@ -187,6 +191,7 @@ class Supervisor:
                     "earlier_events": "evidence id=events, offset=사건 seq로 이전 원문을 읽을 수 있습니다",
                     "jobs": list(self.job_states.values()),
                     "tools": list(self.catalog), "response": self.store.manifest() if self.store.version else None,
+                    "pending_delivery": self.delivery.manifest(),
                     "pursuit_completion_request": self.done_request,
                     "original_pursuit": self.original_pursuit,
                     "tools_remaining": self.config["max_tools_total"] - self.tools_used, "usage": dict(self.usage),
@@ -518,6 +523,9 @@ class Supervisor:
                     decision = {"status": "UNKNOWN", "reason": "본문 검수 범위 또는 승인 버전·지문이 일치하지 않습니다"}
                 if decision["status"] == "APPROVED" and self.done_request and decision.get("pursuit_status") != "APPROVED":
                     decision = {"status": "UNKNOWN", "reason": "이번 턴과 별개인 전체 과제의 목표 달성이 승인되지 않았습니다"}
+                delivery = self.delivery.manifest()
+                if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
+                    decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
                 self.log("decision", role="consciousness", decision=decision, response=manifest)
                 from episode_logger import record_trajectory_event
                 record_trajectory_event("validation.completed", {
@@ -547,13 +555,32 @@ class Supervisor:
                     self.log("repair.unconfirmed", role="harness", decision=decision)
                     break
         approved = decision["status"] == "APPROVED"
-        if approved and self.done_request and decision.get("pursuit_status") == "APPROVED":
+        completion_binding = None
+        if approved and self.done_request:
             try:
                 from pursuit_bind import resolve_session
-                b = resolve_session(self.owner, self.task)
-                if b.row["id"] != self.done_request["id"] or b.row["version"] != self.done_request["version"]:
+                completion_binding = resolve_session(self.owner, self.task)
+                if (completion_binding.row["id"] != self.done_request["id"]
+                        or completion_binding.row["version"] != self.done_request["version"]):
                     raise ValueError("검수 중 과제 버전이 바뀌었습니다")
-                b.write({"status": "done"}, kind="supervisor.approved", why=decision["reason"], key=self.turn_id)
+            except Exception as exc:
+                self.log("pursuit.approval_conflict", role="harness", error=str(exc))
+                approved = False
+                decision = {"status": "UNKNOWN", "reason": "검수 중 전체 과제가 변경되어 완료 승인을 적용하지 못했습니다"}
+        if approved:
+            try:
+                self.delivery.deliver(decision.get("delivery_hash"), self.cancelled)
+            except Exception as exc:
+                self.log("delivery.failed", role="harness", error=str(exc))
+                approved = False
+                decision = {"status": "UNKNOWN", "reason": f"검수한 산출물·알림을 전달하지 못했습니다: {exc}"}
+                record_trajectory_event("validation.completed", {
+                    "validator": "conscious_supervisor", "status": "UNKNOWN", "achieved": False,
+                    "feedback_text": decision["reason"], "stage": "delivery"})
+        if approved and self.done_request and decision.get("pursuit_status") == "APPROVED":
+            try:
+                completion_binding.write({"status": "done"}, kind="supervisor.approved",
+                                         why=decision["reason"], key=self.turn_id)
             except Exception as exc:
                 self.log("pursuit.approval_conflict", role="harness", error=str(exc))
                 approved = False
@@ -571,7 +598,8 @@ class Supervisor:
 
 def _failed(value):
     from workflow_engine import is_error_result
-    return is_error_result(value)
+    from ibl_honesty import completion_evidence
+    return is_error_result(value) or bool(completion_evidence(value))
 
 
 def _job_observation(value):

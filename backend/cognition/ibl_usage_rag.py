@@ -943,7 +943,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     retry_notes = []
     evidence_notes = []
     import json
-    from ibl_honesty import truncation_evidence
+    from ibl_honesty import truncation_evidence, completion_evidence
     for tc in tool_calls:
         if not isinstance(tc, dict):
             continue
@@ -957,6 +957,9 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             continue  # 검사 통과는 실행 성공이 아니다 — 접지·주행 기록에서도 제외
         code = inputs.get("code", "")
         if code:
+            if completion_evidence(tc.get("result")):
+                print(f"[경험증류] 미완료 행을 가진 호출 제외: {code[:100]}")
+                continue
             evidence = tc.get("evidence") or truncation_evidence(tc.get("result"))
             cuts = evidence.get("truncations") or []
             if any(c.get("scope") == "source" for c in cuts if isinstance(c, dict)):

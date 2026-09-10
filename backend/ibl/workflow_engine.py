@@ -925,6 +925,10 @@ def execute_pipeline(steps: list, project_path: str = ".",
         "final_result": prev_result,
     }
     _attach_live_vars(out)   # 턴 범위 변수 — 성공·실패 무관, 산 변수는 다음 호출이 이름으로 본다(2026-09-06)
+    from ibl_honesty import completion_evidence
+    incomplete = completion_evidence(out)
+    if incomplete:
+        out["incomplete_steps"] = incomplete
     if _failed:
         out["statements_failed"] = _failed
         out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"

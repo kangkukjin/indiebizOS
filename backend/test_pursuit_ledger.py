@@ -303,6 +303,9 @@ def test_pipeline_reflex_correction_and_durable_finish(tmp_path, monkeypatch):
     monkeypatch.setattr(ap, '_reload_gate_notice', lambda: '')
     monkeypatch.setattr(core, '_restore_provider', lambda *a: None)
     monkeypatch.setattr(core, '_switch_to_midtier', lambda *a: pytest.fail('정정 턴이 Reflex에 남았다'))
+    # 감독 신원 연결 후 이 통합 시험도 최종 검수에 도달한다. 실제 CLI/모델 호출은 금지.
+    monkeypatch.setattr('supervisor_runtime.invoke', lambda *a, **k: json.dumps({
+        'status': 'UNKNOWN', 'reason': '조회만 끝났고 전체 보고서는 아직 완성되지 않았다'}))
     monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'action': 'rewrite', 'criteria': '',
                          'broken_assumption': '대상 서울', 'evidence': '사용자 부산 정정'})
     try:

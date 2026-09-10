@@ -207,11 +207,12 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 
 ★**`success:true`도 아래 정직 표지를 보고 전에 확인하라.**
 - `_fallback_used` — **`??` 가 다음 가지로 갈아탔다** = 데이터의 *출처가 바뀌었다*. `[sense:stock] ?? [sense:search]` 에 이 표지가 붙으면 시세가 아니라 검색 결과다.
-- `ok_count` / `error_count` / `errors` — `[table:each]` 의 **행별 부분 실패**. `error_count > 0` 이면 통화엔 **성공분만** 흐르고 실패 원 행과 사유는 `errors: [{원 행…, _error}]` 에 있다. `passthrough_rows` 가 있으면 그 행들은 **원 행**이 흐른 것 — 통화의 값을 `do` 의 결과로 읽지 마라.
+- `ok_count`/`error_count`/`errors` — each의 성공·실패 수와 실패 원 행·사유(`_error`). 부분 실패 시 성공 행만 통화로 흐른다. `passthrough_rows`는 do 결과 대신 원 행이 흐른 수다.
+- `rows_unprocessed`=요청했지만 미시도한 행 수. `incomplete_steps`=중간 실패·미처리 경계(경계별 계수는 합산 금지). 예산 중단은 실패다. 완료 행은 반복하지 않고 미처리 입력만 재개한다.
 - `rows_in` — emitter(chart·document)가 **입력을 받긴 받았는데 쓸 수 없었다**(0행·값 열 없음).
 - `skipped_steps` / `warning`(`[on_error:]`) · `_caught`(`[try]` 가 실패를 삼키고 catch 로 갔다 — catch 결과가 평문이어도 붙는다) · `condition_errors`(`[if:]` 판정 불능) · `halted`(`[repeat:]` 상한) · `truncated` / `rows_dropped`(원천 절단).
 - `row_honesty`=each 내부 표지, `truncations`=절단 범위. `error_count:0`≠전량. `_preview`는 변수·`source_ref.path`로 더 읽는다.
-- `branches_failed`(`&` 가지가 **통째로** 죽음) / `branches_honesty`(가지는 살았는데 그 **안**에 부분 실패·경로 변경 — `success: true` 병렬 봉투여도 "다 됐다"가 아니다) · `empty_notes`(중간 step 의 0행 사유 — 0건≠'없다') · `statements_failed`(독립 문장 중 죽은 수) · `vars_dropped`(블록 몸 안에서 **태어난** `$변수`는 블록 밖으로 못 나간다 — 밖에서 쓸 값은 블록 **앞에서** 할당하고 몸에서 재할당하라).
+- `branches_failed`=병렬 `&` 분기 실패, `branches_honesty`=성공 분기 내부의 부분 실패·경로 변경(`success:true`도 전량 성공이 아니다). `empty_notes`=중간 0행 사유(0건≠없다). `statements_failed`=실패한 독립 문장 수. `vars_dropped`=블록 내부에서 태어나 밖으로 못 나간 변수. 밖에서 쓸 변수는 블록 앞에서 할당하고 몸에서 재할당하라.
 - `_criteria_retried` — `criteria` 가 첫 출력을 미달로 판정해 **재시도본이 통과**했다(`criteria_feedback` 에 사유). `criteria_verdict: "unjudged"` 는 판정 불능이라 통과 처리된 것 — "기준을 통과했다"고 말하면 안 된다.
 표지가 있으면 **응답에 그 사실을 적어라.** 누락하면 결과를 오해하게 한다.
 

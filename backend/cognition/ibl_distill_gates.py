@@ -74,6 +74,12 @@ def _composition_grounded(code: str, ibl_calls: list) -> bool:
         그 액션이 이 주행의 실행(어느 호출이든)에 있었으면 참이다. 08-28~09-04 합성 접지 스킵
         28건 중 약 3분의 1이 이 부류였다(별개로 성공한 조회들을 `&` 로 묶은 것).
     """
+    # 독립 문장 경계는 데이터 파이프가 아니다. 원문 의존 호출을 개행으로 보존한
+    # 복구본을 '한 호출에 없던 합성'으로 거절하지 않되, 각 문장의 새 파이프는 계속 막는다.
+    import hippo_tree
+    statements = hippo_tree.split_sentences(code)
+    if len(statements) > 1:
+        return all(_composition_grounded(statement, ibl_calls) for statement in statements)
     if not _composed(code):
         return True
     acts = _actions_of(code)
@@ -193,6 +199,49 @@ def _syntax_gate_with_restore(code: str, ibl_calls: list, tag: str):
     return code, err
 
 
+def _close_source_dependencies(ids: list, ibl_calls: list):
+    """선택한 성공 원문의 빠진 생산자를 실행 순서대로 닫는다. 새 코드는 생성하지 않는다."""
+    from common.ibl_vars import ASSIGN_RE, find_names
+    from workflow_contract import call_signature
+    import hippo_tree
+
+    contracts = []
+    try:
+        for call in ibl_calls:
+            exports, required = set(), set()
+            for stmt in hippo_tree.split_sentences(call):
+                free = set(call_signature(stmt))
+                assignment = ASSIGN_RE.match(stmt.strip())
+                name = (assignment.group(1) or assignment.group(2)) if assignment else None
+                if name and name in find_names(assignment.group(3)):
+                    free.add(name)  # $x = $x ...는 이전 판본을 읽는다.
+                required.update(free - exports)
+                if name:
+                    exports.add(name)
+            contracts.append((exports, required))
+    except Exception as exc:
+        return None, f"원문 의존성 해석 실패: {exc}"
+
+    selected = set(ids)
+
+    def include(i):
+        for name in contracts[i - 1][1]:
+            producer = next((j for j in range(i - 1, 0, -1)
+                             if name in contracts[j - 1][0]), None)
+            if producer is None:
+                raise ValueError(f"외부 변수 ${name}의 앞선 생산자가 없습니다")
+            if producer not in selected:
+                selected.add(producer)
+                include(producer)
+
+    try:
+        for i in ids:
+            include(i)
+    except ValueError as exc:
+        return None, str(exc)
+    return sorted(selected), None
+
+
 def _recover_distill_selection(intent: str, code: str, error: str,
                                ibl_calls: list, ask):
     """한 번만 원문 선택을 다시 묻는다. 모델은 번호만, 코드는 성공 실행 이력이 소유한다.
@@ -240,6 +289,9 @@ def _recover_distill_selection(intent: str, code: str, error: str,
     if (any(type(i) is not int or not 1 <= i <= len(ibl_calls) for i in ids)
             or ids != sorted(set(ids))):
         return None, "call_ids는 범위 안의 중복 없는 실행 순서여야 함"
+    ids, dependency_error = _close_source_dependencies(ids, ibl_calls)
+    if dependency_error:
+        return None, dependency_error
     # 모델이 함께 낸 code가 있어도 읽지 않는다. 개행은 독립 호출의 경계를 보존한다.
     restored = "\n".join(ibl_calls[i - 1] for i in ids)
     err = code_syntax_error(restored)

@@ -272,9 +272,12 @@ class CognitivePipelineMixin:
             yield {"type": "_turn_meta", "tool_calls": [], "reload_gate": True}
             return
         self._sync_execution_gear()
-        with self.turn_ai_scope():
-            from providers.base import begin_turn_token_ledger
-            begin_turn_token_ledger()  # 선택·재검토·의식 호출 비용도 같은 턴에 계상
+        from thread_context import actor_context, get_current_agent_id, get_current_task_id
+        from providers.base import turn_token_scope
+        agent_id = get_current_agent_id() or getattr(self.ai, "agent_id", None)
+        with self.turn_ai_scope(), actor_context(agent_id=agent_id), \
+                turn_token_scope(agent_id, get_current_task_id(), (getattr(self.ai, "agent_id", None),)):
+            # 화면·위임·스케줄러가 신원을 생략해도 감독과 MCP가 같은 턴을 찾는다.
             from pursuit_bind import enter, leave, observe
             _ptoken = enter(self, message, history, enabled=not kwargs.get("force_role"))
             from conscious_supervisor import open_supervisor

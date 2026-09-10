@@ -462,6 +462,14 @@ def execute_send_notification(tool_input: dict, project_path: str) -> str:
     noti_type = tool_input.get("type", "info")
 
     try:
+        from supervision_bus import current
+        supervisor = current()
+        if supervisor:
+            supervisor.enabled = True
+            supervisor.delivery.notify(title, message, noti_type)
+            return json.dumps({"success": True, "queued_for_review": True, "delivered_to_launcher": False,
+                               "message": "의식의 최종 승인 후 하네스가 알림을 전달합니다. 재호출할 필요 없습니다."},
+                              ensure_ascii=False)
         from notify_dispatch import notify_user
         delivered = notify_user(title=title, body=message, kind=noti_type, source="ai")
         return json.dumps({"success": True, "delivered_to_launcher": delivered}, ensure_ascii=False)

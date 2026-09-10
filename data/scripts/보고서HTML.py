@@ -129,11 +129,24 @@ def main():
                 f'<title>{esc(title)}</title>\n<style>{css}</style>\n</head>\n'
                 f'<body>\n<main>\n{head_html}{body}\n</main>\n</body>\n</html>\n')
 
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_text(html, encoding="utf-8")
+        # 감독 턴에서는 비공개 초안을 만든다. 하네스가 검수한 바이트를 승인 뒤 공개한다.
+        sys.path.insert(0, str(_ROOT / "backend"))
+        import boot_paths  # noqa: F401
+        from supervision_delivery import stage_artifact
+        publication = stage_artifact(dst, html.encode("utf-8"), _ROOT / "공유창고")
+        if publication:
+            output_path = Path(publication["staged"])
+        else:
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            dst.write_text(html, encoding="utf-8")
+            output_path = dst
 
-        print(json.dumps({"success": True, "items": [{
-            "path": str(dst), "title": title, "theme": theme,
+        print(json.dumps({"success": True,
+                         **({"publication_pending": True, "publication": publication,
+                             "message": "검수 대기 초안입니다. 승인 후 하네스가 공개하며 재생성할 필요 없습니다."}
+                            if publication else {}), "items": [{
+            "path": str(output_path), "title": title, "theme": theme,
+            **({"public_target": str(dst)} if publication else {}),
             "bytes": len(html.encode("utf-8")),
             "headings": len(re.findall(r'<h[123][ >]', body)),
             "links": len(re.findall(r'<a href=', body)),

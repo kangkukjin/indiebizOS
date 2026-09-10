@@ -55,7 +55,7 @@ LAYERS = {
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
         "red_grant", "red_report", "red_watchdog", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
-        "system_docs", "supervision_store",
+        "system_docs", "supervision_store", "supervision_delivery",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
         "websocket_manager", "xray_stream",
     },

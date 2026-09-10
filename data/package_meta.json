@@ -6,9 +6,7 @@
       "locale": "universal"
     },
     "android": {
-      "needs_key": [
-        "GEMINI_API_KEY"
-      ],
+      "needs_key": [],
       "weight": "light",
       "locale": "universal"
     },

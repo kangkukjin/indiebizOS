@@ -33,6 +33,7 @@ data/plan.md
 
 # 캐시 및 임시 파일
 data/thumbnail_cache/
+data/audio_cache/
 
 # 백엔드 데이터 (개인정보 포함)
 backend/data/

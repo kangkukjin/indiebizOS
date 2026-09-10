@@ -62,7 +62,7 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 - **조회**: `[sense:phone]{op: notifications}` 또는 `/phone/notifications` API — "지금 폰에 연락 오나"의 정답 소스
 - **위치**: `[sense:here]`(지표어 — 모든 몸) — 상시 수집 폐기, 물을 때 1회 능동 조회. 폰=fused GPS ±수십 m / 데스크탑 사다리(2026-08-06)=선언 위치(`data/body_location.json`, 고정 몸 정답) > OS 위치서비스(WiFi AP 지문 수십~수백 m, 랩탑 정답 — macOS CoreLocation·Windows GeoCoordinateWatcher·Linux GeoClue, 권한거부=조용히 폴백) > IP 지오(도시 수준, ISP 등록지라 틀릴 수 있음) + 움직임-증거 캐시(네트워크 지문). source=gps|declared|wifi|ip. 걸음수 수집은 폐기됨(2026-06-12).
 - **카메라**: `[sense:see]`(phone_only) — 온디맨드 촬영(Camera2 정지캡처→폰 jpg, 3A 수렴). facing=back/front.
-- **마이크**: `[sense:listen]{op: transcribe|record}`(phone_only) — 온디맨드 받아쓰기(STT→텍스트, 포워드 무손실)/녹음(→폰 m4a 파일).
+- **듣기**: `[sense:listen]{path, op: transcribe|analyze|inspect}`는 파일 전사·내용 이해·신호 검사. path 없이 transcribe/record는 기존 몸의 마이크 받아쓰기/녹음(폰 녹음 파일은 폰에 남음). 파일 처리는 FFmpeg가 있는 몸에서 실행한다.
 
 ### 맥↔폰 양방향 연합 (분산 IBL, 2026-06-17 라이브)
 폰↔맥이 서로의 전용 액션을 빌려 쓴다(상세=ibl.md 분산 IBL 절). 통신 관점 요약:

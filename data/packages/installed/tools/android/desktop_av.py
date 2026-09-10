@@ -10,8 +10,8 @@ ffmpeg 는 라디오·유튜브가 쓰는 공급 체계(common.platform_utils.fi
 ffmpeg_provision)를 재사용. 데스크탑 STT 는 Gemini 오디오 이해(GEMINI_API_KEY,
 맥·폰 공통 프로비저닝) — 없으면 녹음 파일만 정직 반환.
 """
-import base64
 import os
+from pathlib import Path
 import platform
 import re
 import subprocess
@@ -192,35 +192,15 @@ def _record(ff, sysname: str, duration: int, device=None) -> dict:
 
 
 def _gemini_stt(path: str) -> dict:
-    """녹음 파일 → Gemini 오디오 이해로 받아쓰기. 키 없으면 정직히 불능."""
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if not api_key:
-        return {"ok": False, "error": "이 몸에 STT 수단이 없습니다(GEMINI_API_KEY 부재) — 녹음 파일만 반환."}
-    try:
-        import httpx
-        with open(path, "rb") as f:
-            b64 = base64.b64encode(f.read()).decode()
-        # ★2.5-flash 명시(gemini-flash-latest+thinkingBudget:0 은 400 — body_ask 선례)
-        model = os.environ.get("BODY_ASK_COMPILE_MODEL", "gemini-2.5-flash")
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
-        payload = {
-            "contents": [{"parts": [
-                {"inline_data": {"mime_type": "audio/mp4", "data": b64}},
-                {"text": "이 오디오의 발화를 정확히 받아써라(한국어 우선). 발화가 없으면 정확히 (무음) 이라고만. 받아쓴 텍스트만 출력."},
-            ]}],
-            "generationConfig": {"maxOutputTokens": 800,
-                                 "thinkingConfig": {"thinkingBudget": 0}},
-        }
-        with httpx.Client(timeout=60.0) as client:
-            r = client.post(url, params={"key": api_key}, json=payload,
-                            headers={"Content-Type": "application/json"})
-            r.raise_for_status()
-            data = r.json()
-        parts = (data.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
-        text = "".join(p.get("text", "") for p in parts).strip()
-        return {"ok": True, "text": text}
-    except Exception as e:  # noqa: BLE001
-        return {"ok": False, "error": f"STT 실패: {e}"}
+    """마이크 녹음도 파일과 같은 전사 모델·캐시·사용량 원장을 사용한다."""
+    from runtime_utils import get_base_path
+    from tool_context import ToolContext
+    from android_audio import listen_file
+    result = listen_file({"path": path}, ToolContext(str(get_base_path()), "phone_listen"))
+    if not result.get("success"):
+        return {"ok": False, "error": result.get("error", "마이크 전사 실패")}
+    text = Path(result["transcript_path"]).read_text(encoding="utf-8")
+    return {"ok": True, "text": text, "result_path": result["result_path"]}
 
 
 def listen_desktop(op: str, tool_input: dict) -> dict:
@@ -242,8 +222,7 @@ def listen_desktop(op: str, tool_input: dict) -> dict:
         return rec
     stt = _gemini_stt(rec["path"])
     if not stt.get("ok"):
-        rec["note"] = stt.get("error")
-        return rec  # 녹음은 성공 — STT 불능만 정직 병기
+        return {**rec, "success": False, "error": stt.get("error"), "recorded": True}
     return {"success": True, "text": stt["text"], "source": "mic+gemini",
             "path": rec["path"], "device": rec.get("device"),
             "duration_sec": duration, "measured_at": rec.get("measured_at")}

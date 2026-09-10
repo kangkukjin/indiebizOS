@@ -131,18 +131,79 @@
     },
     {
       "name": "phone_listen",
-      "description": "폰 마이크 온디맨드 입력. op=transcribe(기본): 지금 발화를 받아써 텍스트로(STT, ko-KR, timeout_sec 대기). record: duration_sec 초 녹음해 파일로(경로 반환). 상시 청취 아닌 호출 시 1회. 폰 네이티브 전용(맥/원격은 분산 IBL 포워드 — transcribe 텍스트는 무손실, record 파일은 폰 잔류).",
+      "description": "소리 듣기: path로 오디오/영상 파일을 지정하면 전사·내용 분석·신호 검사. 파일에 question을 주면 analyze. path 생략 시 기존 마이크 받아쓰기/녹음. 결과 원문은 result_path, 전사문은 transcript_path. 파일의 일부만 검사했으면 coverage에 표시하며 전체 검수로 간주하지 않는다.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "transcribe=받아쓰기(STT→텍스트), record=녹음(→오디오 파일)",
+            "description": "transcribe=파일/마이크 받아쓰기, record=마이크 녹음, analyze=파일 내용 질문, inspect=로컬 신호 측정",
             "enum": [
               "transcribe",
-              "record"
+              "record",
+              "analyze",
+              "inspect"
             ],
             "default": "transcribe"
+          },
+          "path": {
+            "type": "string",
+            "description": "오디오/영상 파일 경로. 상대경로는 작업 컨텍스트 기준, ~workspace/ 지원. 지정하면 마이크를 켜지 않는다."
+          },
+          "question": {
+            "type": "string",
+            "description": "소리에 대한 질문. 예: 노래 사이에 대화가 남았는가? 파일 경로와 함께 쓰면 analyze."
+          },
+          "start": {
+            "type": "number",
+            "description": "파일에서 듣기 시작할 시각(초, 기본 0)"
+          },
+          "end": {
+            "type": "number",
+            "description": "파일에서 듣기 끝낼 시각(초, 기본 파일 끝)"
+          },
+          "ranges": {
+            "type": "array",
+            "description": "여러 구간 [{start:초,end:초}]. start/end와 함께 쓰지 않는다. 겹친 구간은 합친다.",
+            "items": {
+              "type": "object",
+              "properties": {
+                "start": {
+                  "type": "number"
+                },
+                "end": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "start",
+                "end"
+              ]
+            }
+          },
+          "segment_seconds": {
+            "type": "number",
+            "description": "모델에 보내는 분할 길이(5~300초, 기본은 audio_models.yaml). 긴 작업은 완료 구간 캐시로 재개한다."
+          },
+          "timestamps": {
+            "type": "boolean",
+            "description": "전사에서 단어별 시각 요청(기본 false). analyze의 시각은 추정치이다."
+          },
+          "instruction": {
+            "type": "string",
+            "description": "사용자 지정 전사 지침. 지정하면 범용 오디오 모델을 사용한다. 일반 내용 질문은 question."
+          },
+          "model": {
+            "type": "string",
+            "description": "오디오 모델 재정의. 생략하면 공통 audio_models.yaml 설정을 사용한다."
+          },
+          "out": {
+            "type": "string",
+            "description": "전사문 저장 경로. 생략하면 outputs/transcripts에 내용 해시를 포함해 저장한다."
+          },
+          "refresh": {
+            "type": "boolean",
+            "description": "true면 같은 파일·구간·조건의 분석 캐시를 갱신한다. 기본은 기존 증거 재사용."
           },
           "timeout_sec": {
             "type": "integer",

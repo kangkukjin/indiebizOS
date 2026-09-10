@@ -25,6 +25,15 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: listen_microphone_only
+    retired: 2026-09-10
+    reason: 듣기 어휘가 파일 전사·내용 분석·신호 검사도 포괄한다. 마이크가 없어도 파일을 들을 수 있다.
+    instead: '파일은 [sense:listen]{path, op:transcribe|analyze|inspect}; path 생략 시 기존 마이크 transcribe/record.'
+    phrases:
+      - '[sense:listen] 을 쓰지 말 것'
+      - '파일 STT의 유일한 경로'
+      - "IBL 에 없는 '파일 STT'"
+      - 'sense:listen` 은 마이크+클라우드'
   - id: crawl_first_display_10k
     retired: 2026-09-09
     reason: 첫 표시가 작아 대부분의 문서를 다시 읽던 왕복을 줄인다.

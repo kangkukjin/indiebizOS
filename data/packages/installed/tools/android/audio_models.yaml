@@ -1,0 +1,13 @@
+# 파일/마이크 오디오의 공통 설정. 키는 .env, 모델·API 선택은 이 데이터가 소유한다.
+# 공식 계약: https://ai.google.dev/gemini-api/docs/transcribe · /docs/audio
+provider: google
+base_url: https://generativelanguage.googleapis.com/v1beta
+transcribe:
+  model: gemini-3.5-transcribe
+  api: interactions
+analyze:
+  model: gemini-3.8-flash
+  api: generate_content
+segment_seconds: 120
+request_timeout_s: 90
+call_budget_s: 240

@@ -749,7 +749,7 @@ def _here_desktop(tool_input: dict) -> dict:
 
 
 def _listen_run(op: str, tool_input: dict) -> dict:
-    """폰 마이크 온디맨드 ([sense:listen]) — transcribe(STT→텍스트)/record(녹음→파일). phone_only.
+    """파일 없는 [sense:listen]의 기존 마이크 동작 — transcribe/record.
 
     Chaquopy→Kotlin PhoneActions. transcribe 는 텍스트라 맥↔폰 포워드 무손실;
     record 파일은 폰에 잔류(경로 반환, 회수는 후속). 상시 수집 아닌 호출 시 1회.
@@ -791,11 +791,20 @@ def _listen_run(op: str, tool_input: dict) -> dict:
 
 
 def _listen_transcribe(tool_input: dict) -> dict:
-    return _listen_run("transcribe", tool_input)
+    result = _listen_run("transcribe", tool_input)
+    return {**result, "items": [dict(result)] if result.get("success") else []}
 
 
 def _listen_record(tool_input: dict) -> dict:
     return _listen_run("record", tool_input)
+
+
+def _listen_analyze(tool_input: dict) -> dict:
+    return {"success": False, "error": "analyze는 path와 question으로 파일을 지정하세요. 마이크 녹음은 op=record입니다"}
+
+
+def _listen_inspect(tool_input: dict) -> dict:
+    return {"success": False, "error": "inspect는 path가 필요합니다. 모델 호출 없이 파일의 신호를 검사합니다"}
 
 
 def _phone_capture(tool_input: dict) -> dict:
@@ -972,10 +981,12 @@ _OP_DISPATCHERS = {
         "notifications": _phone_notifications,
     },
     # 2026-06-12 폰 현재위치 온디맨드 ([sense:here]) — 단일 목적이라 op 없음(디스패처 미등록).
-    # 2026-06-12 폰 마이크 ([sense:listen]) — transcribe(STT)/record(녹음).
+    # 듣기 한 어휘 — 파일은 공통 오디오 경로, path 없는 호출은 기존 몸의 마이크.
     "phone_listen": {
         "transcribe": _listen_transcribe,
         "record": _listen_record,
+        "analyze": _listen_analyze,
+        "inspect": _listen_inspect,
     },
     # 2026-06-11 송신측(폰→동작) — [limbs:phone]. sense:phone(입력)의 출력 짝.
     # Chaquopy Java 브리지로 Kotlin PhoneActions 호출(폰 네이티브 전용, runs_on phone_only).
@@ -1001,7 +1012,7 @@ _OP_DEFAULTS = {"android_op": "snapshot", "phone_op": "notifications",
 
 def execute(tool_input: dict, context) -> dict:
     """ToolContext 기반 표준 시그니처. limbs:android(PC-ADB or 폰 네이티브 접근성) + sense:phone(알림 피드)
-    + sense:here(현재위치) + sense:listen(마이크) + sense:see(카메라) + limbs:phone(폰 네이티브 effector) 디스패처."""
+    + sense:here(현재위치) + sense:listen(파일/마이크 듣기) + sense:see(카메라) + limbs:phone(폰 네이티브 effector) 디스패처."""
     tool_name = context.tool_name
     if tool_name == "phone_locate":
         return _phone_locate(tool_input)
@@ -1009,6 +1020,11 @@ def execute(tool_input: dict, context) -> dict:
         return _phone_capture(tool_input)
     if tool_name in _OP_DISPATCHERS:
         op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
+        if tool_name == "phone_listen" and "path" in tool_input:
+            from android_audio import listen_file
+            if tool_input.get("question") and op == "transcribe":
+                op = "analyze"
+            return listen_file(tool_input, context, op)
         fn = _OP_DISPATCHERS[tool_name].get(op)
         if fn is None:
             return {"success": False,

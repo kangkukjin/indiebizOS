@@ -51,12 +51,14 @@ class _SyncHandlerTimeout(Exception):
 def _run_sync_with_timeout(fn, args: tuple, timeout: float, tool_name: str):
     """동기 함수를 워커 스레드에서 실행해 타임아웃을 부여한다 (D6).
 
-    thread_context(threading.local)는 snapshot/restore 로 워커 스레드에 승계한다
+    thread_context(threading.local)는 snapshot/restore, 토큰 원장·에피소드 contextvars는
+    copy_context로 워커 스레드에 승계한다.
     (패키지 핸들러들은 get_current_task_id 등 *읽기*만 한다 — 전수 확인 2026-08-05).
     풀 대신 호출마다 새 스레드를 쓰는 이유: 핸들러가 execute_ibl 을 재귀 호출하는
     구조라 고정 풀은 자기교착 위험이 있다. 타임아웃 시 스레드는 데몬으로 남아 완주한다.
     """
     import threading
+    import contextvars
     import thread_context as _tc
     snap = _tc.snapshot()
     box: dict = {}
@@ -68,7 +70,8 @@ def _run_sync_with_timeout(fn, args: tuple, timeout: float, tool_name: str):
         except BaseException as e:  # 원 예외를 호출 스레드로 그대로 재전파
             box["exc"] = e
 
-    t = threading.Thread(target=_worker, daemon=True,
+    ctx = contextvars.copy_context()  # 도구 안의 모델 사용량·에피소드도 같은 턴 원장에 적는다.
+    t = threading.Thread(target=lambda: ctx.run(_worker), daemon=True,
                          name=f"ibl-handler-{tool_name}")
     t.start()
     t.join(timeout)

@@ -2,6 +2,14 @@
   "description": "가이드 파일 DB - data/guides/ 폴더에서 파일 관리",
   "guides": [
     {
+      "id": "audio_listen",
+      "name": "소리 듣기 — 파일 전사·음악 검수·마이크",
+      "description": "[sense:listen]으로 오디오/영상 파일을 듣는다. path와 question, 구간 전사·내용 분석·로컬 신호 검사. 긴 원문은 저장하고 실행·감독이 같은 캐시 증거를 재사용한다.",
+      "keywords": ["듣기", "오디오", "음성 파일", "음악 검수", "대화 제거", "받아쓰기", "전사", "STT", "마이크", "무음", "접합", "listen"],
+      "file": "audio_listen.md",
+      "topic": "슬라이드·영상"
+    },
+    {
       "id": "goal",
       "name": "목표 선언(Goal) 문법 가이드",
       "description": "반복·예약·조건부 실행이 필요할 때 goal 블록을 작성하는 문법 정본. if/case 분기, every/until/deadline 시간 표현, 필수 안전장치(max_rounds/max_cost), 전략 전환 규칙.",

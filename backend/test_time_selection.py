@@ -159,7 +159,8 @@ def test_t5_reference_xml_shows_avg_ms():
     xml = IBLUsageRAG()._format_references([measured, unmeasured])
     assert 'avg_ms="1300"' in xml
     assert xml.count("avg_ms=") == 1  # 미측정은 숨김(-1 sentinel 미노출)
-    assert "avg_ms는 과거 성공 실행의 평균 소요시간" in xml  # 필드 설명이 note 에 있음
+    assert "avg_ms는 성공 IBL 도구 지연 합의 평균" in xml
+    assert "추론·셸·감독 시간 제외" in xml  # 전체 작업 시간으로 오인하지 않도록 범위를 밝힌다.
 
 
 # ── T6: 토큰 EWMA — 성공만, 시간과 독립 누적 ──────────────────────────────

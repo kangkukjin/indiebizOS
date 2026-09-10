@@ -15,7 +15,7 @@
 |---|---|---|---|---|
 | 1 | **인터넷 너머 내 폰에 닿는 알림이 없다** (`self:notify_user`=데스크탑, `limbs:phone`=USB) | Telegram Bot API(S) · 카카오톡 "나에게 보내기"(S, 검수 불요) · ntfy(A) · **Apprise**(A, 100+ 서비스 한 URL) | `others:channel_send{channel_type:"telegram"\|"kakao_me"\|"ntfy"}` — channel_engine 확장, Apprise 를 다중 백엔드로 | 자율주행 보고서·승인 요청·경보가 밖에 있는 사용자에게 못 간다 |
 | 2 | **영상·음성 변환 어휘가 없다** — 몸이 ffmpeg 를 8파일에서 내부 호출하면서 | ffmpeg 9(S) | `table:media{op: convert\|trim\|concat\|extract_audio\|probe\|thumbnail}` | 유튜브 작업 매 호 셸로 우회 |
-| 3 | **파일 음성 전사(오프라인·한국어 대량)가 없다** — `sense:listen` 은 마이크+클라우드 | whisper.cpp / mlx-whisper(맥) · faster-whisper(윈)(S) | `engines:stt{path, lang, format:"srt"}` | 강의·유튜브 자막·회의 녹음 |
+| 3 | **오프라인 음성 전사 후보** — 2026-09-10 listen의 파일 클라우드 전사 구현됨 | whisper.cpp / mlx-whisper(맥) · faster-whisper(윈)(S) | `engines:stt{path, lang, format:"srt"}` | 강의·유튜브 자막·회의 녹음 |
 | 4 | **문서 any→any 변환이 없다** — `table:document` 는 렌더 전용 | pandoc(S) · LibreOffice headless(S, 내부 사용) · Calibre(S, epub) · Docling(A, PDF→구조) | `table:document{op:"convert", to, engine}` + `self:read{engine:"docling"}` | 저술·출판 파이프(docx↔md↔epub↔hwpx) |
 | 5 | **공공데이터포털을 "찾아서 부르는" 관문이 없다** — 데이터셋 6개만 코드에 열거 | data.go.kr 카탈로그+범용 호출(S) · 기상청 API허브(S, 관측·특보·지진) · KIPRIS 특허(S) · TAGO 대중교통(A) | `sense:datagokr{op:"search"\|"call"}` · `sense:weather{source:"kma"}` · `sense:patent` · `sense:transit` | 한국 공공 API 수천 개가 데이터로 들어온다 |
 | 6 | **월·일 단위 거시 데이터가 없다** — `sense:world_bank` 는 연간 | FRED(S, 무료 키 필수) · 한국은행 ECOS(S) · OECD/IMF/BIS SDMX(A) · Frankfurter 환율(A) | `sense:macro{source:"fred"\|"ecos"\|"oecd"\|"imf"}` · `sense:fx` | 투자·경제 보고서의 정본 소스 |

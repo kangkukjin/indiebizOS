@@ -98,8 +98,9 @@ github저장소메타:
   registered_at: '2026-08-23T21:52:31'
   timeout: 300
 음성받아쓰기:
-  description: '오디오/영상 파일 받아쓰기(Gemini) — args: path(필수), out, segment_seconds(기본 300),
-    prompt, model. 축약 금지·인사말 보존 verbatim. [sense:listen]은 마이크 전용이라 파일 STT의 유일한 경로.'
+  description: '[sense:listen]{path, op:"transcribe"} 호환 래퍼. 새 작업은 listen으로 파일을 직접
+    듣는다. args: path, out, segment_seconds, prompt, instruction(전사 지침), model. 공통 모델
+    설정·구간 캐시·전사문과 원문 경로를 사용한다.'
   file: 음성받아쓰기.py
   interpreter: python
   registered_at: '2026-08-20T00:52:17'

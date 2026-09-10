@@ -263,7 +263,7 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 | **교재** | `ibl_usage.db`의 자연어→IBL 용례 + 재학습용 데이터 | 어떤 표현에서 이 액션/op를 떠올리는가 |
 | **관측** | `ibl_param_shapes.json` + fixture 반환 shape | 어떤 인자와 반환 열을 실제로 쓰는가 |
 
-`target_description`과 `tool_json.input_schema`에 인자를 자세히 적어도 그것만으로 에이전트의 IBL 카탈로그에 인자명이 실리는 것은 아니다. 런타임 카탈로그는 `ibl_access._emit_action_line()`이 `description`·`ops.values`를 방출하고, `⟨인자: …⟩`는 코퍼스와 실행 로그에서 **관측된 키**만 `ibl_param_sweep.py`가 만든다. 같은 규율로 `⟨동반: …⟩`(그 낱말 뒤에 실제로 이어진 낱말)은 `ibl_partner_sweep.py`가 만든다 — 선언이 아니라 흔적이라 새 액션은 첫 조합이 관측될 때까지 비어 있다. 따라서 새 op의 설명만 추가하면 AI는 존재는 보되 호출 모양을 몰라 범용 크롤·셸로 우회할 수 있다. 첫 등록은 자동 증류를 기다리지 말고 `data/guides/new_action_checklist.md`에 따라 다양한 manual seed를 넣고 실제 연상 프로브를 통과시킨다.
+`target_description`과 `tool_json.input_schema`에 인자를 자세히 적어도 그것만으로 에이전트의 IBL 카탈로그에 인자명이 실리는 것은 아니다. 런타임 카탈로그는 `ibl_access.render_action_line()`이 `description`·`ops.values`를 방출하고, `⟨인자: …⟩`는 코퍼스와 실행 로그에서 **관측된 키**만 `ibl_param_sweep.py`가 만든다. 같은 규율로 `⟨동반: …⟩`(그 낱말 뒤에 실제로 이어진 낱말)은 `ibl_partner_sweep.py`가 만든다 — 선언이 아니라 흔적이라 새 액션은 첫 조합이 관측될 때까지 비어 있다. 따라서 새 op의 설명만 추가하면 AI는 존재는 보되 호출 모양을 몰라 범용 크롤·셸로 우회할 수 있다. 첫 등록은 자동 증류를 기다리지 말고 `data/guides/new_action_checklist.md`에 따라 다양한 manual seed를 넣고 실제 연상 프로브를 통과시킨다.
 
 ## 6. 가능성을 여는 세 가지 모드 — *큐레이션이 어디 있는가*로 고른다
 
@@ -285,7 +285,7 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 
 ## 7. 프롬프트 비용 — 어휘는 *상시 세금*, 가이드는 *주문형*
 
-액션 설명은 *모든 프롬프트*의 시스템 프롬프트에 실린다(`ibl_access._emit_action_line`).
+액션 설명은 *모든 프롬프트*의 시스템 프롬프트에 실린다(`ibl_access.render_action_line`).
 Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*에 붙는다 — 안 쓰는 대화에도.
 가이드는 의식 에이전트가 *필요할 때만* 부른다.
 → **Mode C는 큐레이션 비용뿐 아니라 프롬프트 비용에서도 이긴다.** desc 비용은 [memory.md]·desc 길이 규율 참조.
@@ -371,6 +371,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - `pc_only`: 데스크톱(맥·리눅스·윈도우) 하드웨어·무거운 의존·미검증 패키지(예: `limbs:os_open`/`open_window`=데스크탑 GUI, `self:manage_events`=무거운 api_system_ai 의존). 폰서 직접 실행 못 함 → **허브(데스크톱)에 단건 라우팅**(아래 분산 IBL).
 - `phone_only`: 폰 하드웨어 전용 — 현재 `limbs:phone` 하나(알림·진동·토스트·복사·TTS·앱실행 + 문자·전화는 스테이징=작성창/다이얼러를 채워 열고 전송·통화는 사용자 탭). PC에선 graceful 거부(또는 INDIEBIZ_PHONE_URL 설정 시 분산 IBL 로 폰에 포워드).
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
+- **파일 듣기** (2026-09-10): `[sense:listen]{path}`는 파일 전사, `{path, question}`은 소리 내용 분석, `{path, op:"inspect"}`는 원본 신호 검사다. path 생략 시 기존 마이크 동작. 파일에 마이크는 불필요하며 실행·감독은 같은 구간 분석 증거를 재사용한다. [오디오 듣기 가이드](../guides/audio_listen.md).
 <!-- RUNS_ON:START -->
 - 현 분포: `anywhere` 118 · `pc_only` 45 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
 <!-- RUNS_ON:END -->
@@ -952,7 +953,7 @@ self:
 | `backend/ibl/ibl_engine.py` | IBL 실행 엔진, 동사 해석, 라우팅, 자동 발견 |
 | `backend/ibl/api_engine.py` | API 레지스트리 실행 엔진, transform 후처리 |
 | `backend/ibl/ibl_parser.py` | IBL 문법 파서 (`>>`, `&`, `??`) |
-| `backend/ibl/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`_emit_action_line` — op 자식 노출) |
+| `backend/ibl/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`render_action_line` — op 자식 노출) |
 | `backend/ibl/workflow_engine.py` | 파이프라인 실행, 워크플로우 관리 |
 | `backend/ibl/trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 |
 | `data/workflows/` | 저장된 워크플로우 YAML |

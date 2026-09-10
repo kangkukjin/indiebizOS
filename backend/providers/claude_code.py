@@ -535,6 +535,9 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                 from episode_logger import notify_response_snapshot
                 usage = normalize_usage(msg.get("usage"))
                 if usage is not None:
+                    callback = getattr(self, "usage_snapshot_callback", None)
+                    if callback:
+                        callback(response_id, usage)
                     notify_response_snapshot(self.CLI_DISPLAY, msg.get("model") or self.model or "",
                                              response_id, usage,
                                              [b.get("type", "") for b in msg.get("content", [])])

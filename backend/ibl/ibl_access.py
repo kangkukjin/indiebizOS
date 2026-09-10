@@ -101,7 +101,7 @@ def get_denied_message(node: str, allowed: Set[str]) -> dict:
 # ============ 환경 프롬프트 생성 ============
 
 
-# 카탈로그 줄-표기 범례 — R1q+R3 인코딩(2026-07-28). 아래 _emit_action_line 과 한 몸.
+# 카탈로그 줄-표기 범례 — R1q+R3 인코딩(2026-07-28). 아래 render_action_line 과 한 몸.
 CATALOG_LEGEND = (
     "# 표기법: '노드:액션 :: 설명' = 액션 한 줄 (호출은 [노드:액션]{...}). "
     "그 아래 들여쓴 '.op이름 설명' = 그 액션의 op (*표 = 기본 op, op 생략 시 적용; "
@@ -308,7 +308,7 @@ def _op_adds_information(ent: dict, base: dict, always: float) -> bool:
     return bool(set(op_keys) - base_keys) or bool(op_plain - base_plain)
 
 
-def _emit_action_line(node_name: str, action_name: str, action_config, indent: str = "  ") -> str:
+def render_action_line(node_name: str, action_name: str, action_config, indent: str = "  ") -> str:
     """단일 액션을 완전수식 줄-표기(R1q)로 직렬화.
 
     형식: '노드:액션 :: 설명' + 들여쓴 '.op* 설명' 자식 줄.
@@ -460,11 +460,11 @@ def build_environment(
             for grp_name, grp_actions in grouped.items():
                 parts.append(f"  [{grp_name}]")
                 for action_name, action_config in grp_actions:
-                    parts.append(_emit_action_line(node_name, action_name, action_config))
+                    parts.append(render_action_line(node_name, action_name, action_config))
                     parts.extend(anchors.get(f"{node_name}:{action_name}", ()))
 
         for action_name, action_config in ungrouped:
-            parts.append(_emit_action_line(node_name, action_name, action_config))
+            parts.append(render_action_line(node_name, action_name, action_config))
             parts.extend(anchors.get(f"{node_name}:{action_name}", ()))
 
     # 동료 에이전트 노드

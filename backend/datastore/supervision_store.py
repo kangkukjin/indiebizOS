@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 import threading
+from collections import Counter
 from pathlib import Path
 
 EVENT_PAGE_LIMIT = 12000
@@ -22,6 +23,7 @@ class TurnStore:
         self.blocks = []
         self.coverage = set()
         self.sequence = 0
+        self.cost = Counter()
 
     def evidence(self, value):
         text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
@@ -41,9 +43,35 @@ class TurnStore:
         with self.lock:
             self.sequence += 1
             record = {"seq": self.sequence, "kind": kind, **fields}
+            if kind == "tool.finished":
+                self.cost["execution_calls"] += 1
+                self.cost["execution_failures"] += int(bool(fields.get("is_error")))
+                self.cost["execution_tool_s"] += fields.get("elapsed_s", 0)
+            elif kind in {"tool.supervisor", "tool.error"} and fields.get("role") == "consciousness":
+                self.cost["supervisor_tools"] += 1
+                self.cost["supervisor_tool_failures"] += int(kind == "tool.error" or bool(fields.get("is_error")))
+            elif kind == "model.native_tool":
+                self.cost["supervisor_native_tools"] += int(fields.get("event_type") == "tool_start")
+                self.cost["supervisor_native_failures"] += int(bool(fields.get("is_error")))
+            elif kind == "model.started":
+                self.cost["supervisor_calls"] += 1
+            elif kind == "model.finished":
+                self.cost["supervisor_model_s"] += fields.get("elapsed_s", 0)
+                for key, value in fields.get("usage", {}).items():
+                    self.cost["supervisor_" + key] += value
+            elif kind in {"decision.stale", "instruction.delivered"}:
+                self.cost[kind] += 1
             with (self.directory / "events.jsonl").open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(record, ensure_ascii=False, default=str) + "\n")
         return record
+
+    def cost_summary(self, elapsed_s):
+        with self.lock:
+            summary = {**self.cost, "wall_s": round(elapsed_s, 3), "events_path": str(self.directory / "events.jsonl"),
+                       "time_scope": "wall_s=사용자 턴 경과, model/tool_s=겹칠 수 있는 호출 지연 합",
+                       "token_scope": "supervisor 입력은 캐시 포함. 후처리 비용은 postprocess.json에 별도 기록"}
+            (self.directory / "cost.json").write_text(json.dumps(summary, ensure_ascii=False), encoding="utf-8")
+            return summary
 
     def read_events(self, offset=0, limit=12000):
         requested = limit

@@ -143,6 +143,7 @@ def test_real_boundary_returns_instruction_before_side_effect(supervisor, monkey
     for _ in range(3):
         execute("inspect", {"same": True})
     assert len(supervisor.calls) == 3
+    supervisor.tick()  # 관찰은 watcher가 한다. 실행 경계는 모델을 기다리지 않는다.
     blocked = json.loads(execute("inspect", {"side_effect": True}))
     assert blocked["not_executed"] is True
     assert blocked["supervisor_instruction"]["instruction"]
@@ -390,6 +391,179 @@ def test_cli_profiles_limit_manager_and_install_execution_boundary():
     cmd = codex._build_command()
     assert "--dangerously-bypass-approvals-and-sandbox" not in cmd
     assert cmd[cmd.index("--sandbox") + 1] == "read-only"
+
+
+def test_observation_does_not_hold_native_or_api_boundary(supervisor, monkeypatch):
+    entered, release, finished = threading.Event(), threading.Event(), threading.Event()
+
+    def review(c, *args, **kwargs):
+        entered.set()
+        assert release.wait(3)
+        return verdict(c, "CONTINUE", instruction="불필요한 지시")
+
+    monkeypatch.setattr("supervisor_runtime.invoke", review)
+    thread = threading.Thread(target=lambda: supervisor.review("tool_stalled"))
+    thread.start()
+    assert entered.wait(2)
+    result = []
+
+    def execute():
+        assert supervisor.boundary() is None
+        result.append(supervisor.run_tool("inspect", {}, lambda: "completed"))
+        finished.set()
+
+    worker = threading.Thread(target=execute)
+    worker.start()
+    try:
+        assert finished.wait(1), "관찰 모델을 기다리느라 실제 도구가 멈췄다"
+        assert result == ["completed"]
+    finally:
+        release.set()
+        thread.join(3)
+        worker.join(3)
+    journal = (supervisor.store.directory / "events.jsonl").read_text()
+    assert "decision.stale" not in journal  # CONTINUE는 진척 후에도 폐기할 개입이 없다.
+    assert supervisor.pending is None
+
+
+def test_start_announcement_cannot_invalidate_intervention(supervisor, monkeypatch):
+    def review(c, *args, **kwargs):
+        c.observe_native({"type": "tool_start", "id": "next", "name": "Bash", "input": {}})
+        return verdict(c, "REWORK", instruction="정체 원인을 확인")
+
+    monkeypatch.setattr("supervisor_runtime.invoke", review)
+    supervisor.review("tool_stalled")
+    assert supervisor.boundary()["instruction"] == "정체 원인을 확인"
+    assert "decision.stale" not in (supervisor.store.directory / "events.jsonl").read_text()
+
+
+def test_progress_after_review_before_delivery_retires_old_instruction(supervisor, monkeypatch):
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="재시도"))
+    supervisor.review("tool_stalled")
+    key = supervisor._start("inspect", {})
+    supervisor._finish(key, "recovered")
+    assert supervisor.boundary() is None
+    assert supervisor.pending is None
+
+
+def test_long_but_progressing_work_does_not_consume_review(supervisor, monkeypatch):
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: pytest.fail("정상 진행 중 시간 점검"))
+    key = supervisor._start("inspect", {})
+    supervisor._finish(key, "progress")
+    now = supervisor.started + 500
+    supervisor.last_progress = now - 10
+    supervisor.tick(now)
+    assert supervisor.reviews == 0
+
+
+def test_manager_state_is_delta_and_cannot_consume_job_progress(supervisor, tmp_path):
+    path = tmp_path / "job.log"
+    path.write_text('PROGRESS {"phase":"generate","completed":1,"total":4}\n')
+    job = JobWatch(path)
+    supervisor.jobs[str(path)] = job
+    full = supervisor.state()
+    assert "original_goal" in full
+    delta = manager_tool(supervisor, {"op": "state"})["result"]
+    assert not delta["changed"] and "original_goal" not in delta
+    assert job.offset == 0  # 상태 조회는 로그를 소비하지 않는다.
+    supervisor.tick()
+    delta = manager_tool(supervisor, {"op": "state"})["result"]
+    assert delta["changed"] and delta["jobs"][0]["units"] == [1, 4]
+
+
+def test_cli_partial_usage_updates_budget_without_double_counting(supervisor, monkeypatch):
+    from providers.claude_code import ClaudeCodeProvider
+    from providers.base import ProviderMetrics
+    from supervisor_runtime import UsageSnapshots
+    provider = object.__new__(ClaudeCodeProvider)
+    provider.model = "test"
+    provider._note_model_round = lambda *a: None
+    snapshots = UsageSnapshots(supervisor)
+    provider.usage_snapshot_callback = snapshots.observe
+    supervisor.call_metrics = ProviderMetrics()
+    supervisor.config.update(max_input_tokens=1000, final_input_reserve=200)
+    first = {"id": "msg-1", "usage": {"input_tokens": 100, "output_tokens": 5,
+                                        "cache_read_input_tokens": 500, "cache_creation_input_tokens": 100}}
+    provider._observe_response(first)
+    provider._observe_response(first)  # 같은 응답의 다른 content block
+    assert supervisor.call_usage["input"] == 700
+    assert supervisor.model_budget_available()
+    provider._observe_response({"id": "msg-2", "usage": {"input_tokens": 110, "output_tokens": 3}})
+    assert not supervisor.model_budget_available()  # CLI 마지막 result 이전에 중단 조건 도달
+    snapshots.reconcile(supervisor.call_metrics, 10)
+    snapshots.reconcile(supervisor.call_metrics, 10)
+    assert supervisor.call_metrics.total_input_tokens == 810
+    assert supervisor.call_metrics.total_output_tokens == 8
+    assert supervisor.call_metrics.total_requests == 1
+    assert supervisor.call_metrics.total_cache_read_tokens == 500
+
+
+def test_executor_state_read_does_not_advance_managers_cursor(supervisor):
+    baseline = supervisor.state()["cursor"]
+    key = supervisor._start("inspect", {})
+    supervisor._finish(key, "new evidence")
+    # 지금 actor는 실행자. 감독 모델이 아직 못 본 변경을 읽음으로 표시하면 안 된다.
+    result = json.loads(supervisor.tool({"op": "state"}))
+    assert result["success"] and supervisor.state_cursor == baseline
+    delta = manager_tool(supervisor, {"op": "state"})["result"]
+    assert any(e["kind"] == "tool.finished" for e in delta["events"])
+
+
+def test_cli_final_totals_are_not_added_again_to_snapshots(supervisor):
+    from providers.base import ProviderMetrics
+    from supervisor_runtime import UsageSnapshots
+    snapshots = UsageSnapshots(supervisor)
+    snapshots.observe("m", {"input": 500, "output": 5})
+    metrics = ProviderMetrics()
+    metrics.record_usage(20, {"input_tokens": 520, "output_tokens": 8})
+    snapshots.reconcile(metrics, 20)
+    assert metrics.total_input_tokens == 520 and metrics.total_requests == 1
+
+
+def test_supervisor_mcp_results_are_not_logged_as_native_reads(supervisor, monkeypatch):
+    from providers.base import ProviderMetrics
+    from supervisor_runtime import invoke
+
+    class Agent:
+        def __init__(self, *args, **kwargs):
+            self._provider = SimpleNamespace(metrics=ProviderMetrics())
+            self.model, self.provider_name = "test", "test"
+
+        def process_message_stream(self, *args, **kwargs):
+            yield {"type": "tool_start", "id": "mcp-1", "name": "mcp__indiebizos__supervision"}
+            yield {"type": "tool_result", "id": "mcp-1", "name": "", "result": "already logged"}
+            yield {"type": "tool_start", "id": "read-1", "name": "Read"}
+            yield {"type": "tool_result", "id": "read-1", "name": "", "result": "actual native evidence"}
+            yield {"type": "final", "content": "{}"}
+
+    monkeypatch.setattr("ai_agent.AIAgent", Agent)
+    monkeypatch.setattr("model_resolver.resolve", lambda *a: {})
+    invoke(supervisor, "test")
+    events = [json.loads(line) for line in (supervisor.store.directory / "events.jsonl").read_text().splitlines()]
+    native = [e for e in events if e["kind"] == "model.native_tool"]
+    assert len(native) == 2 and all(e["name"] == "Read" for e in native)
+
+
+def test_manager_errors_are_typed_and_counted_in_whole_turn_cost(supervisor):
+    supervisor.executor_paused = True
+    supervisor._execute = lambda *a, **kw: json.dumps({"requires_approval": True, "command": "probe"})
+    result = manager_tool(supervisor, {"op": "execute", "name": "inspect", "input": {}})
+    assert result["success"] is False
+    assert isinstance(result["result"], dict)
+    key = supervisor._start("Bash", {})
+    supervisor._finish(key, "denied", error=True)
+    summary = supervisor.store.cost_summary(10)
+    assert summary["supervisor_tool_failures"] == 1
+    assert summary["execution_calls"] == 1 and summary["execution_failures"] == 1
+    assert summary["wall_s"] == 10
+
+
+def test_supervisor_action_contract_comes_from_registry():
+    from supervisor_runtime import action_schema
+    schema = action_schema("self:list")
+    assert schema["action"] == "self:list"
+    assert "path" in schema["guide"]
+    assert schema["definition"]
 
 
 if __name__ == "__main__":

@@ -281,6 +281,11 @@ def _q(v: Any) -> str:
 
 
 def _render(word: str, params: Dict[str, Any], spec: Dict[str, Any]) -> str:
+    # 셸의 여러 경로는 scalar 인자에 배열을 넣는 계약이 아니다. 각 경로의 결과를 함께 반환한다.
+    path_params = (spec.get("argmap") or {}).get("path_params") or (spec.get("argmap") or {}).get("positional") or []
+    for name in path_params:
+        if isinstance(params.get(name), list):
+            return " & ".join(_render(word, {**params, name: value}, spec) for value in params[name])
     body = ", ".join(f"{k}: {_q(v)}" for k, v in params.items() if v not in (None, ""))
     return f"[{word}]{{{body}}}"
 

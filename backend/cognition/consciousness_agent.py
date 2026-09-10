@@ -104,7 +104,7 @@ class ConsciousnessAgent:
             logger.warning(f"[ConsciousnessAgent] 프롬프트 재적재 실패(옛 본문 유지): {e}")
 
     def _load_prompt(self):
-        """의식 에이전트 전용 프롬프트 로드 (베이스 프롬프트 불필요 — 도구를 쓰지 않고 JSON만 출력)"""
+        """의식 프롬프트 로드. 감독 경로는 도구로 계약을 읽고, 도구 없는 호환 경로는 사전을 주입한다."""
         from runtime_utils import get_base_path
 
         base_path = get_base_path()
@@ -127,7 +127,8 @@ class ConsciousnessAgent:
         if structure:
             self._prompt += f"\n\n<system_structure>\n{structure}\n</system_structure>"
 
-        # IBL 환경 주입 — 문법서 + **액션 카탈로그(사전) 전체**.
+        self._supervisor_prompt = self._prompt  # 감독은 작업대로 필요한 스키마를 읽는다.
+        # IBL 환경 주입 — 도구 없는 호환 경로는 문법서 + 액션 카탈로그 전체.
         # 의식이 어떤 액션이 실재하는지 알아야 capability_focus.highlight_actions를 *검증 가능하게*
         # 줄 수 있다(prompt의 "실제 존재하는 액션만" 규칙이 비로소 지켜짐). build_environment =
         # 12_ibl_only.md(문법) + 노드별 카탈로그 → 별도 12_ibl_only 주입은 불필요(중복).
@@ -234,7 +235,7 @@ class ConsciousnessAgent:
             except Exception:
                 pass
             for attempt in range(max_retries + 1):
-                response = supervisor.plan(input_text, self._prompt, revision) if supervisor else self._provider.process_message(
+                response = supervisor.plan(input_text, self._supervisor_prompt, revision) if supervisor else self._provider.process_message(
                     message=input_text,
                     history=[],
                     images=None,

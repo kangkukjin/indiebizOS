@@ -57,7 +57,9 @@ def progress(detail):
 
 TOOL_SCHEMA = {
     "name": "supervision",
-    "description": "의식·실행 공유 작업대. state/evidence/response로 원문을 읽고, "
+    "description": "의식·실행 공유 작업대. state는 최초 입력 이후 변경분(offset=사건 cursor). "
+                   "evidence id=events는 사건, tool:이름은 도구 스키마, ibl:node:action은 액션 계약. "
+                   "response로 응답 원문을 읽고, "
                    "execute로 기존 도구를 사용한다. patch는 response의 블록 ID·해시·버전을 "
                    "지정해 변경 부분만 교체한다. keep는 보완 완료 신호. 별도 진행 보고는 불필요하다.",
     "input_schema": {"type": "object", "properties": {

@@ -4,7 +4,6 @@ import threading
 import time
 import uuid
 import contextvars
-from contextlib import nullcontext
 from collections import deque
 from pathlib import Path
 
@@ -74,6 +73,9 @@ class Supervisor:
         self.repair_granted = False
         self.usage = {"input": 0, "output": 0}
         self.call_metrics = None
+        self.call_usage = {}
+        self.state_cursor = 0
+        self.job_states = {}
         self.executor_paused = True
         self.cli_executor = hasattr(getattr(runner.ai, "_provider", None), "disable_session_persistence")
         self.final_images = None
@@ -116,6 +118,7 @@ class Supervisor:
     def model_budget_available(self):
         for key in ("input", "output"):
             in_flight = getattr(self.call_metrics, f"total_{key}_tokens", 0) if self.call_metrics else 0
+            in_flight = max(in_flight, self.call_usage.get(key, 0))
             reserve = 0 if self.finalizing else self.config[f"final_{key}_reserve"]
             if self.usage[key] + in_flight >= self.config[f"max_{key}_tokens"] - reserve:
                 return False
@@ -170,21 +173,34 @@ class Supervisor:
             restore(previous)
             self.phase = "execute"
 
-    def state(self):
+    def state(self, *, delta=False, offset=None, mark=True):
         now = time.monotonic()
         with self.lock:
-            return {"original_goal": self.message, "framing": self.framing,
+            cursor = self.state_cursor if offset is None else offset
+            events = [e for e in self.recent if e["seq"] > (cursor if delta else self.review_cursor)]
+            state = {"original_goal": self.message, "framing": self.framing,
                     "conversation_evidence": {k: self.history_ref[k] for k in ("id", "chars")},
                     "phase": self.phase, "elapsed_s": round(now - self.started),
                     "active": [{**{k: x for k, x in v.items() if not k.startswith("_")},
                                 "elapsed_s": round(now - v["started"])} for v in self.active.values()],
-                    "events": [e for e in self.recent if e["seq"] > self.review_cursor],
+                    "events": events,
                     "earlier_events": "evidence id=events, offset=사건 seq로 이전 원문을 읽을 수 있습니다",
-                    "jobs": [j.poll(now) for j in self.jobs.values()],
+                    "jobs": list(self.job_states.values()),
                     "tools": list(self.catalog), "response": self.store.manifest() if self.store.version else None,
                     "pursuit_completion_request": self.done_request,
                     "original_pursuit": self.original_pursuit,
-                    "tools_remaining": self.config["max_tools_total"] - self.tools_used, "usage": dict(self.usage)}
+                    "tools_remaining": self.config["max_tools_total"] - self.tools_used, "usage": dict(self.usage),
+                    "cursor": self.store.sequence,
+                    "budget_remaining": {k: max(0, self.config[f"max_{k}_tokens"] - self.usage[k]
+                                                   - self.call_usage.get(k, 0)) for k in ("input", "output")}}
+            if mark:
+                self.state_cursor = state["cursor"]
+            if delta:
+                for key in ("original_goal", "framing", "conversation_evidence", "tools", "original_pursuit"):
+                    state.pop(key, None)  # 같은 모델 호출의 최초 snapshot에 이미 제공했다.
+                state.update(since=cursor, changed=bool(events),
+                             hint="최초 snapshot 이후 변경분. 과거 원문은 evidence id=events로 읽으세요")
+            return state
 
     def progress(self, detail):
         if __import__("supervision_bus").identity()[0] == self.supervisor_id:
@@ -202,14 +218,12 @@ class Supervisor:
         key = uuid.uuid4().hex
         with self.lock:
             self.active[key] = {"name": name, "started": time.monotonic(), "input": self.store.evidence(payload), "_payload": payload}
-            self.exec_revision += 1
             self.recent.append(self.log("tool.started", id=key, name=name, input=self.active[key]["input"]))
         return key
 
     def _finish(self, key, result, error=False):
         with self.lock:
             call = self.active.pop(key, {})
-            self.exec_revision += 1
             self.completed_calls += 1
             from cognitive_trace import should_self_reflect, _classify_call, _ibl_safety_map, _ibl_op_safety_map
             trace = {"name": call.get("name", ""), "input": call.get("_payload", {}), "result": result, "is_error": error}
@@ -229,6 +243,9 @@ class Supervisor:
             self.failures = self.failures + 1 if error else 0
             if self.repeats == 1 and not error and not job_observation:
                 self.last_progress = time.monotonic()
+                self.exec_revision += 1  # 시작 예고·실패·같은 status 반복은 진척이 아니다.
+                if self.trigger in {"repeated_failure", "unchanged_repeat", "tool_stalled", "long_task_checkpoint"}:
+                    self.trigger = ""
             if self.failures >= 2 or self.repeats >= 3:
                 self.trigger = "repeated_failure" if self.failures >= 2 else "unchanged_repeat"
             self._discover_jobs(result)
@@ -242,12 +259,12 @@ class Supervisor:
         if notice:
             # 아직 실행하지 않았다. 새 지시를 읽은 모델이 다시 선택한 호출만 실행한다.
             return json.dumps({"success": False, "not_executed": True, "supervisor_instruction": notice}, ensure_ascii=False)
-        # 검수의 소유권 획득과 실제 작업 등록 사이에 틈을 두지 않는다.
-        with (nullcontext() if self.finalizing and self.phase == "repair" else self.review_lock):
+        # 모델 관찰 잠금은 실행을 막지 않는다. 지시 전달과 실제 작업 등록만 원자적으로 한다.
+        with self.lock:
             if self.pending:
-                notice, self.pending = self.pending, None
-                self.log("instruction.delivered", role="harness", instruction=notice)
-                return json.dumps({"success": False, "not_executed": True, "supervisor_instruction": notice}, ensure_ascii=False)
+                notice = self._take_pending()
+                if notice:
+                    return json.dumps({"success": False, "not_executed": True, "supervisor_instruction": notice}, ensure_ascii=False)
             key = self._start(name, payload)
         try:
             result = execute()
@@ -273,15 +290,18 @@ class Supervisor:
             return "이 실행은 종료 또는 중단됐습니다. 새 작업을 시작하지 마세요."
         if self.finalizing and self.phase == "repair":
             return None  # 최종 검수 잠금을 가진 하네스가 실행자에게 명시적으로 인계했다.
-        if self.trigger and not self.finalizing:
-            self.review(self.trigger, paused=not self.cli_executor)
-        # 비동기 검수가 쓰는 동안 새 실제 동작을 시작하지 않는다.
-        with self.review_lock:
-            with self.lock:
-                notice, self.pending = self.pending, None
-                if notice:
-                    self.log("instruction.delivered", role="harness", instruction=notice)
-                return notice
+        # 관찰 호출은 watcher가 맡는다. 훅/API 스레드는 확정된 개입만 다음 행동 전에 전달한다.
+        with self.lock:
+            return self._take_pending()
+
+    def _take_pending(self):
+        notice, self.pending = self.pending, None
+        if notice and notice.get("revision", self.exec_revision) != self.exec_revision:
+            self.log("decision.stale", role="harness", reviewed_revision=notice["revision"], current_revision=self.exec_revision)
+            return None
+        if notice:
+            self.log("instruction.delivered", role="harness", instruction=notice)
+        return notice
 
     def _discover_jobs(self, value):
         if isinstance(value, str):
@@ -319,6 +339,7 @@ class Supervisor:
         with self.lock:
             for job in self.jobs.values():
                 observed = job.poll(now)
+                self.job_states[str(job.path)] = observed
                 if observed["changed"]:
                     self.last_progress = now
                     self.repeats = 0
@@ -331,7 +352,8 @@ class Supervisor:
             if self.active and now - self.last_progress >= self.config["stall_s"]:
                 self.trigger = self.trigger or "tool_stalled"
             waiting_on_job = any(j.phase != "complete" for j in self.jobs.values())
-            if now - self.last_review >= self.config["long_task_s"] and self.recent and not waiting_on_job:
+            if (now - self.last_review >= self.config["long_task_s"] and self.recent and not waiting_on_job
+                    and now - self.last_progress >= self.config["stall_s"]):
                 self.trigger = self.trigger or "long_task_checkpoint"
             trigger = self.trigger
         if trigger:
@@ -348,7 +370,7 @@ class Supervisor:
                     or (self.reviews and now - self.last_review < self.config["review_interval_s"])):
                 return
             self.reviews += 1
-            self.executor_paused = paused
+            self.executor_paused = False  # 중간 호출은 관찰 전용. 직접 실행은 계획/최종 검수에서만.
             self.last_review = now
             self.trigger = ""
             self.enabled = True  # 긴 EXECUTE도 이상 신호가 있으면 의식 감독으로 승격한다.
@@ -359,12 +381,13 @@ class Supervisor:
                 return
             self.log("decision", role="consciousness", trigger=reason, decision=decision)
             self.review_cursor = cursor
-            if revision != self.exec_revision:
-                self.log("decision.stale", role="harness", reviewed_revision=revision, current_revision=self.exec_revision)
-                return  # 느리던 작업이 이미 움직였으면 옛 정체 판정으로 되돌리지 않는다.
             if decision["status"] in {"REWORK", "UNKNOWN"} and decision.get("instruction"):
-                self.pending = {"id": uuid.uuid4().hex, "reason": decision["reason"],
-                                "instruction": decision["instruction"], "review": self.reviews}
+                with self.lock:
+                    if revision != self.exec_revision:
+                        self.log("decision.stale", role="harness", reviewed_revision=revision, current_revision=self.exec_revision)
+                        return  # 관찰 중 실제로 회복한 작업에는 옛 정체 지시를 주지 않는다.
+                    self.pending = {"id": uuid.uuid4().hex, "reason": decision["reason"],
+                                    "instruction": decision["instruction"], "review": self.reviews, "revision": revision}
         except Exception as exc:
             self.log("review.error", role="consciousness", error=str(exc))
         finally:
@@ -392,11 +415,14 @@ class Supervisor:
             if offset < 0 or not 1 <= limit <= 24000:
                 raise ValueError("offset은 0 이상, limit은 1~24000이어야 합니다")
             if op == "state":
-                result = self.state()
+                result = self.state(delta=is_manager and bool(self.state_cursor), offset=offset or None, mark=is_manager)
             elif op == "evidence":
                 key = payload.get("id", "")
                 if key == "events":
                     result = self.store.read_events(offset, limit)
+                elif key.startswith("ibl:"):
+                    from supervisor_runtime import action_schema
+                    result = action_schema(key[4:])
                 else:
                     result = self.catalog[key[5:]] if key.startswith("tool:") else self.store.read_evidence(key, offset, limit)
             elif op == "response":
@@ -430,12 +456,20 @@ class Supervisor:
                     self.log("ownership.released", role="consciousness", name=name)
             else:
                 raise ValueError("알 수 없는 감독 작업")
+            if isinstance(result, str):
+                try:
+                    result = json.loads(result)
+                except ValueError:
+                    pass
             self.log("tool.supervisor" if is_manager else "response.operation", role="consciousness" if is_manager else "execution",
-                     operation=op, input=self.store.evidence(payload), result=self.store.evidence(result))
+                     operation=op, input=self.store.evidence(payload), result=self.store.evidence(result),
+                     is_error=_failed(result) or (isinstance(result, dict) and bool(result.get("requires_approval"))))
             if multimedia and isinstance(result, dict) and result.get("images"):
                 return {"content": json.dumps({"success": True, "result": result.get("content", "")}, ensure_ascii=False),
                         "images": result["images"], "details": result.get("details")}
-            return json.dumps({"success": True, "result": result}, ensure_ascii=False, default=str)
+            # 문자열 JSON을 다시 문자열 안에 감싸지 않는다. 실제 거절/오류도 바깥에 전파한다.
+            blocked = isinstance(result, dict) and bool(result.get("requires_approval"))
+            return json.dumps({"success": not (_failed(result) or blocked), "result": result}, ensure_ascii=False, default=str)
         except Exception as exc:
             self.log("tool.error", role="consciousness" if is_manager else "execution", operation=op, error=str(exc))
             return json.dumps({"success": False, "error": str(exc)}, ensure_ascii=False)

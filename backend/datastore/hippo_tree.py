@@ -611,7 +611,7 @@ def _clean_missed(missed: Optional[Dict[str, Any]]) -> Dict[str, List[str]]:
 def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
              when: Optional[str] = None, db_path: Optional[str] = None,
              calls: Optional[int] = None, failed: Optional[int] = None, typed_chars: Optional[int] = None,
-             missed: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+             missed: Optional[Dict[str, Any]] = None, turn_cost=None) -> Dict[str, Any]:
     """주행 하나(성공한 문장 묶음)를 가지 문서의 `## 주행` 절에 적는다 (2026-09-04, 사용자 판정).
 
     왜: 증류는 에피소드당 대표 문장 하나를 코퍼스에 넣는데, 가장 값진 주행(보고서 40문장·앱 개발
@@ -642,6 +642,8 @@ def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
     if calls is not None:
         head_line += f" · 호출 {int(calls)} · 실패 {int(failed or 0)} · 타이핑 {_fmt_chars(typed_chars or 0)}"
     lines = [head_line]
+    if turn_cost:
+        lines.append("전체 비용(위 머리는 IBL만): " + json.dumps(turn_cost, ensure_ascii=False))
     m_ = _clean_missed(missed)
     if m_["retyped"] or m_["mergeable"]:
         parts = []

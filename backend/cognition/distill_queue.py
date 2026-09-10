@@ -178,6 +178,10 @@ class DistillQueue:
             set_goal_eval_outcome(ge.get("achieved", True), ge.get("severity", 0) or 0)
 
         def _call():
+            from providers.base import read_turn_tokens
+            import time
+            started = time.monotonic()
+            before_tokens = read_turn_tokens()
             if p.get("pursuit"):
                 from pursuit_bind import distill
                 distill(p["pursuit"])
@@ -186,7 +190,18 @@ class DistillQueue:
                 tool_calls=p.get("tool_calls"), hippo_score=p.get("hippo_score"),
                 top_code=p.get("top_code"), guides_used=p.get("guides_used"),
                 turn_tokens=p.get("turn_tokens"),
+                **({"turn_cost": p["turn_cost"]} if p.get("turn_cost") else {}),
             )
+            if p.get("turn_cost"):
+                from pathlib import Path
+                from episode_logger import record_trajectory_event
+                after_tokens = read_turn_tokens()
+                cost = {"elapsed_s": round(time.monotonic() - started, 3),
+                        "tokens": after_tokens - (before_tokens or 0) if after_tokens is not None else None,
+                        "scope": "응답 이후 기억 후처리; 사용자 턴 비용과 별도"}
+                path = Path(p["turn_cost"]["events_path"]).with_name("postprocess.json")
+                path.write_text(json.dumps(cost, ensure_ascii=False), encoding="utf-8")
+                record_trajectory_event("distillation.cost", cost)
         if job.ctx is not None:
             job.ctx.run(_call)
         else:

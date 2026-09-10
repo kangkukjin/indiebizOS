@@ -315,6 +315,8 @@ AI: {ai_response[:500]}"""
                 )
                 top = (memory_db.read(project_path, agent_id, existing[0]["id"])
                        if existing else None)
+                if top and content in top.get("content", ""):
+                    continue  # 이미 담긴 사실은 모델 호출도 DB 갱신도 하지 않는다.
                 if top:
                     pending.append((fact, top))
                 else:
@@ -327,20 +329,32 @@ AI: {ai_response[:500]}"""
                     saved_count += 1
                     print(f"[심층메모리] NEW [{fact['category']}] @{fact['node'] or '뿌리'}: \"{content[:50]}\"")
 
-            # 3단계: 유사쌍이 있으면 '단 한 번'의 배치 호출로 전부 판정 (조각마다 호출 X)
+            # 같은 기존 기억을 가리키는 사실을 합친다. 옛 snapshot으로 여러 번 덮지 않는다.
+            grouped = {}
+            for fact, top in pending:
+                if top["id"] not in grouped:
+                    grouped[top["id"]] = (dict(fact), top)
+                else:
+                    merged_fact = grouped[top["id"]][0]
+                    merged_fact["content"] += "\n" + fact["content"]
+                    merged_fact["keywords"] = _merge_keywords(merged_fact["keywords"], fact["keywords"])
+            pending = list(grouped.values())
+            # 3단계: 본문 전체를 대조하고 UPDATE는 새 사실만 반환한다.
             verdicts = []
             if pending:
                 pairs_text = "\n".join(
-                    f'{i+1}. 기존: {top["content"][:200]}\n   신규: {fact["content"][:200]}'
+                    f'{i+1}. 기존: {top["content"]}\n   신규 후보: {fact["content"]}'
                     for i, (fact, top) in enumerate(pending)
                 )
                 batch_prompt = (
                     "각 쌍의 '기존 기억'과 '신규 정보'의 관계를 판정하라.\n"
-                    "SAME(완전 동일) / UPDATE(기존도 유효한데 정보 보충) / "
+                    "SAME(이미 기존에 포함된 사실; 표현/순서가 달라도 동일) / UPDATE(새 사실만 보충) / "
                     "REPLACE(기존이 틀렸거나 옛 정보라 새 정보로 정정·대체) / "
                     "NEW(서로 다른 정보) 중 하나씩.\n\n"
                     f"{pairs_text}\n\n"
-                    '쌍 순서대로 JSON으로만 응답: {"verdicts": ["SAME"|"UPDATE"|"REPLACE"|"NEW", ...]}'
+                    'UPDATE는 기존에 없는 사실만 content에 적고, REPLACE/NEW는 저장할 본문을 적어라. '
+                    '기존 사실을 다시 요약하거나 반복하지 마라. 새 사실이 없으면 SAME. '
+                    '쌍 순서대로 JSON: {"verdicts": [{"action":"SAME|UPDATE|REPLACE|NEW", "content":""}, ...]}'
                 )
                 resp = oneshot_ai_call(
                     prompt=batch_prompt,
@@ -353,36 +367,44 @@ AI: {ai_response[:500]}"""
 
             # 4단계: 판정 적용 (verdict 누락/불명은 NEW로 안전 처리)
             for i, (fact, top) in enumerate(pending):
-                j = (verdicts[i] if i < len(verdicts) else "NEW")
-                j = str(j).strip().upper()
+                choice = verdicts[i] if i < len(verdicts) else {}
+                j = str(choice.get("action", "") if isinstance(choice, dict) else choice).strip().upper()
+                addition = str(choice.get("content", "") or "").strip() if isinstance(choice, dict) else ""
                 content = fact["content"]
                 keywords = fact["keywords"]
                 category = fact["category"]
-                if "SAME" in j:
-                    memory_db.update(project_path, agent_id, top["id"])
+                if j == "SAME":
                     print(f"[심층메모리] SAME 스킵: \"{content[:50]}\"")
-                elif "REPLACE" in j:
+                elif j == "REPLACE":
                     # 정정 → 기존을 새 정보로 덮어쓰기 (옛/틀린 정보 폐기, 출처도 새 발화로 교체)
                     merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
                     memory_db.update(project_path, agent_id, top["id"],
-                                     content=content, keywords=merged_kw,
+                                     content=addition or content, keywords=merged_kw,
                                      source_ref=source_ref)
                     updated_count += 1
                     print(f"[심층메모리] REPLACE: \"{content[:50]}\" → 기존 ID {top['id']} 덮어씀")
-                elif "UPDATE" in j:
-                    # 보충 → 기존 내용에 덧붙임 (둘 다 유효)
-                    merged = f"{top['content']}\n[보충] {content}"
+                elif j == "UPDATE":
+                    if not addition or addition in top["content"]:
+                        print("[심층메모리] 추가 사실 없는 UPDATE 생략")
+                        continue
+                    latest = memory_db.read(project_path, agent_id, top["id"])
+                    if not latest or latest["content"] != top["content"]:
+                        print("[심층메모리] 판정 중 원문 변경 — 덮어쓰기 생략")
+                        continue
+                    merged = f"{latest['content']}\n[보충] {addition}"
                     merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
                     memory_db.update(project_path, agent_id, top["id"],
                                      content=merged, keywords=merged_kw)
                     updated_count += 1
                     print(f"[심층메모리] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
-                else:  # NEW (또는 불명)
+                elif j == "NEW":
                     memory_db.save(project_path=project_path, agent_id=agent_id,
-                                   content=content, keywords=keywords, category=category,
+                                   content=addition or content, keywords=keywords, category=category,
                                    source_ref=source_ref, node=fact.get("node", ""))
                     saved_count += 1
                     print(f"[심층메모리] NEW [{category}] @{fact.get('node') or '뿌리'}: \"{content[:50]}\"")
+                else:
+                    print("[심층메모리] 관계 판정 불명 — 중복 저장 생략")
 
             if saved_count or updated_count:
                 print(f"[심층메모리] 저장 {saved_count}건, 업데이트 {updated_count}건: "
@@ -576,7 +598,7 @@ AI 답변: {ai_response[:1400]}
                         tool_calls=None, hippo_score: float = None, top_code: str = None,
                         write_experience: bool = True, write_deep: bool = True,
                         write_forage: bool = True, assume_forage: bool = False,
-                        guides_used=None, turn_tokens: int = None):
+                        guides_used=None, turn_tokens: int = None, turn_cost=None):
         """턴 종료 후 메모리 쓰기 초크포인트 — 진입점마다 복붙되던 증류 배선을 한 곳으로.
 
         WS 채팅·에이전트 채널·포식 브라우저가 각자 복붙하던 [경험증류 + 심층메모리 + 포식기억]
@@ -596,7 +618,7 @@ AI 답변: {ai_response[:1400]}
             try:
                 from ibl_usage_rag import distill_experience, record_recall_outcome
                 distill_experience(user_message, tool_calls, hippo_score, top_code=top_code,
-                                   turn_tokens=turn_tokens)
+                                   turn_tokens=turn_tokens, turn_cost=turn_cost)
                 record_recall_outcome(top_code, hippo_score, tool_calls,
                                       turn_tokens=turn_tokens)
             except Exception as e:
@@ -678,6 +700,13 @@ AI 답변: {ai_response[:1400]}
             "goal_eval": _ge,
             "pursuit": pursuit_packet,
         }
+        from supervision_bus import current as current_supervisor
+        supervisor = current_supervisor()
+        if supervisor:
+            import time
+            payload["turn_cost"] = supervisor.store.cost_summary(time.monotonic() - supervisor.started)
+            supervisor.log("cost.summary", role="harness", cost=payload["turn_cost"])
+            print("[감독비용] " + json.dumps(payload["turn_cost"], ensure_ascii=False))
         ctx = contextvars.copy_context()
         ep = EpisodeLogger.current()
         try:

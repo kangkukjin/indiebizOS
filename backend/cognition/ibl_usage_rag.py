@@ -193,7 +193,8 @@ class IBLUsageRAG:
         else:
             note = ("참고 용례. execute_ibl 도구로 실행하고, 텍스트 응답에 IBL 코드를 넣지 마라. "
                     "success_rate는 과거 실행 성공률(0~1)이니 낮으면 신중히 참고하라(없으면 미검증). "
-                    "avg_ms는 과거 성공 실행의 평균 소요시간(ms), avg_tokens는 그 턴의 평균 모델 "
+                    "avg_ms는 성공 IBL 도구 지연 합의 평균(ms; 추론·셸·감독 시간 제외), "
+                    "avg_tokens는 그 턴 전체의 평균 모델 "
                     "토큰 소요 — 같은 목표를 같은 품질로 이룬다면 빠르고 싼 패턴이 좋다"
                     "(품질을 깎아 아끼는 것은 금물).")
         if phrases:
@@ -894,7 +895,7 @@ from ibl_idiom import (  # noqa: E402,F401
 
 
 def distill_experience(user_message: str, tool_calls: list, top_score: float,
-                       top_code: str = None, turn_tokens: int = None) -> bool:
+                       top_code: str = None, turn_tokens: int = None, turn_cost=None) -> bool:
     """실행 경험을 증류하여 해마에 저장한다.
 
     조건: 도구 호출이 있었고, 해마 점수가 DISTILL_THRESHOLD 미만일 때 — 단
@@ -1000,6 +1001,8 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     # 증류: 실행 에이전트와 같은 모델로 반성
     try:
         tool_log = "\n".join(f"  {i+1}. {code}" for i, code in enumerate(ibl_calls))
+        if turn_cost:
+            tool_log += "\n[전체 실행·감독 비용; IBL 호출 수와 범위가 다름]\n" + json.dumps(turn_cost, ensure_ascii=False)
         retry_block = ""
         if evidence_notes:
             retry_block = ("\n\n다음 후보에는 절단/표본 범위 증거가 있다:\n"
@@ -1069,7 +1072,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 _missed = {"retyped": distilled.get("retyped") or [], "mergeable": distilled.get("mergeable") or []}
                 _run = hippo_tree.note_run(_topic, intent or user_message[:80], ibl_calls, ok=True,
                                            calls=_cost["calls"], failed=_cost["failed"],
-                                           typed_chars=_cost["typed_chars"], missed=_missed)
+                                           typed_chars=_cost["typed_chars"], missed=_missed, turn_cost=turn_cost)
                 if _run.get("success"):
                     print(f"[경험증류] 주행 기록 → 가지 '{_topic}' ({_run['sentences']}문장"
                           + (", 절단" if _run.get("truncated") else "")

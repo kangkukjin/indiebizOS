@@ -70,7 +70,7 @@ def test_emit_line_places_params_before_columns():
         ibl_access._return_shapes = lambda: {"table:filter": {"keys": ["a", "b"]}}
         ibl_access._partners = lambda: {"table:filter": {"n": 9, "top": [[">>table:sort", 4]]}}
         try:
-            line = ibl_access._emit_action_line("table", "filter", {"description": "걸러낸다"})
+            line = ibl_access.render_action_line("table", "filter", {"description": "걸러낸다"})
         finally:
             ibl_access._return_shapes, ibl_access._partners = saved
     assert line.strip() == (

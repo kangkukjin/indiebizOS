@@ -203,6 +203,7 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 
 - 기본 사용자 턴은 `conscious_supervisor`가 계획·중간 감독·최종 승인을 소유한다. THINK/REPAIR는 계획을 검수까지 이어가고, EXECUTE/Reflex는 정상 조회의 추가 호출을 생략하다가 실패·세계 변경·긴 작업에서 승격한다. 강제 내부 역할은 제외한다.
 - `supervision_bus`는 agent+task로 구분한 실제 도구 경계다. 의식의 직접 실행은 실행자가 멈춘 경계에서 동일한 기존 도구·권한으로 수행한다. MCP 연결은 `/ibl/supervision`, Claude Code 네이티브는 `supervision_hook.py`를 사용한다. Codex 네이티브의 개입은 다음 MCP IBL 경계까지 지연될 수 있다.
+- 중간 관찰의 모델 잠금은 실행을 막지 않는다. 시작 예고는 진척이 아니며, 확정된 지시만 실행 경계에서 전달한다. Claude Code의 응답 ID별 중간 usage로 예산을 갱신한다. `state`는 변경분, `evidence id=ibl:node:action`은 현재 액션 계약이다. 턴 전체 비용은 작업대 `cost.json`, 응답 이후 기억 후처리는 `postprocess.json`이다.
 - 후보는 `data/spill/supervision/<turn-id>/`에 저장한다. 전체 본문 검수·버전·해시가 맞으면 그대로 전송하고, 보완은 `patch`로 변경 블록만 제출한다. 빈 판정/API 오류/누락된 본문은 `UNKNOWN`이며 통과시키지 않는다.
 - `episode_summary.evaluation_result`: 승인 `ACHIEVED`, 보완 미달 `NOT_ACHIEVED`, 검수 불명 `UNKNOWN`, 검수 미실행 `NULL`. 실제 행동·근거·판정은 `supervision.*`와 `validation.completed` 사건으로 연결한다.
 - 설정은 `world_pulse_config.json`의 `conscious_supervisor` 객체. 기본 한도·실제 제약은 `docs/CONSCIOUS_SUPERVISOR_PLAN_2026_09_10.md` 구현 기록과 `conscious_supervisor.DEFAULTS`를 참조한다. 감독을 끄거나 신원 없는 호출에서는 기존 GoalEval/SelfReflect가 호환 경로로 남으며, 그 구형 평가의 빈 응답 통과 정책도 그대로다.

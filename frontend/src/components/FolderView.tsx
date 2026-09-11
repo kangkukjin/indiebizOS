@@ -5,6 +5,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { Folder, FolderPlus, Plus } from 'lucide-react';
 import { api } from '../lib/api';
+import { IS_WEB_SURFACE } from '../lib/backend-origin';
+import { openProject } from '../lib/surface-navigation';
 import type { Project } from '../types';
 
 // 드롭 타겟 정보
@@ -94,11 +96,9 @@ export function FolderView({ folderId }: FolderViewProps) {
     if (item.type === 'folder') {
       if (window.electron?.openFolderWindow) {
         window.electron.openFolderWindow(item.id, item.name);
-      }
+      } else window.location.hash = `/folder/${encodeURIComponent(item.id)}`;
     } else {
-      if (window.electron?.openProjectWindow) {
-        window.electron.openProjectWindow(item.id, item.name);
-      }
+      openProject(item.id, item.name);
     }
   };
 
@@ -284,7 +284,7 @@ export function FolderView({ folderId }: FolderViewProps) {
       {/* 콘텐츠 영역 */}
       <div
         className="flex-1 relative p-4"
-        style={{ overflow: draggedItem ? 'visible' : 'hidden' }}
+        style={{ overflow: IS_WEB_SURFACE ? 'auto' : draggedItem ? 'visible' : 'hidden' }}
         onContextMenu={handleContextMenu}
       >
         {items.length === 0 ? (
@@ -292,6 +292,14 @@ export function FolderView({ folderId }: FolderViewProps) {
             <Folder size={48} className="mb-4" />
             <p>폴더가 비어있습니다</p>
             <p className="text-sm mt-2">우클릭하여 새 항목을 만들 수 있습니다</p>
+          </div>
+        ) : IS_WEB_SURFACE ? (
+          <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-4">
+            {items.map(item => <button key={item.id} onClick={() => handleOpenItem(item)}
+              className="p-3 rounded-xl hover:bg-white flex flex-col items-center gap-2 min-w-0">
+              <span className="text-3xl">{item.type === 'folder' ? '📂' : '📁'}</span>
+              <span className="text-xs break-all">{item.name}</span>
+            </button>)}
           </div>
         ) : (
           <>

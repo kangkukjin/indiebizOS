@@ -1,3 +1,4 @@
+import { iblSurface } from '../lib/remote-session';
 /**
  * YtMusicInstrument — 유튜브 뮤직 "계기(instrument)" (앱 모드)
  *
@@ -38,7 +39,7 @@ async function runIBL<T = Record<string, unknown>>(code: string): Promise<T & { 
   try {
     const res = await fetch(IBL_ENDPOINT, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, project_id: PROJECT_ID }),
+      body: JSON.stringify({ ...iblSurface, code, project_id: PROJECT_ID }),
     });
     return await res.json();
   } catch {

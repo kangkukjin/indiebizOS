@@ -1,3 +1,4 @@
+import { checkRemoteSession } from '../../lib/remote-session';
 /**
  * ChatView - 통합 채팅 컴포넌트
  *
@@ -412,6 +413,8 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     };
 
     websocket.onclose = (event) => {
+      checkRemoteSession(event.code);
+      if (event.code === 1008) return;
       console.log(`WebSocket closed (code: ${event.code}, intentional: ${intentionalCloseRef.current})`);
       setWs(null);
 

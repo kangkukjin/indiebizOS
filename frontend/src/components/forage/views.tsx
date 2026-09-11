@@ -9,15 +9,22 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { API, WebView } from './support';
 import type { Tab, PoolItem } from './support';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
+import { RemoteBrowserTab } from './RemoteBrowserTab';
 
 // 탭 하나 = webview 하나. 자기 네비 이벤트를 부모 Tab 상태로 올리고, 팝업(target=_blank 등)은 새 탭으로.
 // src 는 initialUrl 로 최초 1회만 로드 — 이후 이동은 goBack/reload 등 imperative 로만(재로드 튐 방지).
-export function BrowserTabView({ tab, onUpdate, registerRef, onOpenTab }: {
+type BrowserTabProps = {
   tab: Tab;
   onUpdate: (id: string, patch: Partial<Tab>) => void;
   registerRef: (id: string, el: any) => void;
   onOpenTab: (url: string) => void;
-}) {
+};
+
+export function BrowserTabView(props: BrowserTabProps) {
+  return window.electron ? <NativeBrowserTab {...props} /> : <RemoteBrowserTab {...props} />;
+}
+
+function NativeBrowserTab({ tab, onUpdate, registerRef, onOpenTab }: BrowserTabProps) {
   const ref = useRef<any>(null);
   useEffect(() => {
     const el = ref.current;

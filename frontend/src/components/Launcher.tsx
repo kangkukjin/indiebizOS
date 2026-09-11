@@ -2,7 +2,7 @@ import { openSystemAI } from '../lib/surface-navigation';
 /**
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
-import { BACKEND_ORIGIN } from '../lib/backend-origin';
+import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
@@ -630,8 +630,8 @@ export function Launcher() {
   return (
     <div className="h-full flex flex-col bg-[#F5F1EB]">
       {/* 상단 툴바 */}
-      <div className="h-11 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]">
-        <div className="flex items-center gap-1.5 no-drag">
+      <div className="launcher-toolbar min-h-11 shrink-0 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]">
+        <div className="flex flex-wrap justify-end items-center gap-1.5 no-drag whitespace-nowrap">
           {/* 모드 선택기 — 네 표면(자율주행/조종실/앱/공유창고)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
             <button
@@ -900,6 +900,25 @@ export function Launcher() {
             >
               다시 시도
             </button>
+          </div>
+        ) : IS_WEB_SURFACE ? (
+          <div className="h-full overflow-auto p-4">
+            <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-4">
+              {displayProjects.map(project => <button key={project.id} onClick={() => handleOpenProject(project)}
+                className="p-3 rounded-xl hover:bg-white flex flex-col items-center gap-2 min-w-0">
+                <span className="text-3xl">{project.type === 'folder' ? '📂' : '📁'}</span>
+                <span className="text-xs break-all">{project.name}</span>
+              </button>)}
+              {displaySwitches.map(sw => <button key={sw.id} onClick={() => handleExecuteSwitch(sw)}
+                className="p-3 rounded-xl hover:bg-white flex flex-col items-center gap-2 min-w-0">
+                <span className="text-3xl">⚡</span><span className="text-xs break-all">{sw.name}</span>
+              </button>)}
+              {multiChatRooms.map(room => <button key={room.id} onClick={() => handleOpenMultiChatRoom(room)}
+                className="p-3 rounded-xl hover:bg-white flex flex-col items-center gap-2 min-w-0">
+                <span className="text-3xl">💬</span><span className="text-xs break-all">{room.name}</span>
+              </button>)}
+              <button onClick={handleOpenTrash} className="p-3 rounded-xl hover:bg-white text-sm">🗑️ 휴지통</button>
+            </div>
           </div>
         ) : (
           <>

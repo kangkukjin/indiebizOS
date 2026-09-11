@@ -8,6 +8,7 @@
  *   api-multi-chat.ts - 다중채팅 (방, 참가자, 메시지)
  */
 import { BACKEND_ORIGIN, WEBSOCKET_ORIGIN } from './backend-origin';
+import { checkRemoteSession } from './remote-session';
 
 import type { Project, Switch, Agent, Tool, SchedulerTask, SchedulerAction, AppLayout } from '../types';
 import { applySystemAIMethods } from './api-system-ai';
@@ -40,6 +41,7 @@ class APIClientBase {
     });
 
     if (!response.ok) {
+      checkRemoteSession(response.status);
       const error = await response.json().catch(() => ({ detail: response.statusText }));
       // error.detail이 객체일 수 있으므로 문자열로 변환
       const detail = error.detail;
@@ -680,6 +682,8 @@ export function createChatWebSocket(clientId: string, onReconnect?: () => void) 
     ws = new WebSocket(`${WEBSOCKET_ORIGIN}/ws/chat/${clientId}`);
 
     ws.onclose = (event) => {
+      checkRemoteSession(event.code);
+      if (event.code === 1008) return;
       console.log(`[WS] 연결 종료 (code: ${event.code})`);
       // 정상 종료가 아닌 경우 재연결 시도
       if (event.code !== 1000 && reconnectAttempts < maxReconnectAttempts) {

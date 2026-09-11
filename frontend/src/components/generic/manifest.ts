@@ -1,3 +1,4 @@
+import { iblSurface } from '../../lib/remote-session';
 /**
  * generic/manifest.ts — 매니페스트 타입 + IBL 실행 + 데스크탑 전용 헬퍼 (비-JSX 공용층)
  *
@@ -156,7 +157,7 @@ export async function runIBL(code: string): Promise<Json> {
   const res = await fetch(IBL_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, project_id: '앱모드', project_path: '.' }),
+    body: JSON.stringify({ ...iblSurface, code, project_id: '앱모드', project_path: '.' }),
   });
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   // 합성(>>) 액션의 final_result 펼치기는 공용 코어(원격 ibl() 과 같은 규칙)

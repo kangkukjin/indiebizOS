@@ -1,3 +1,4 @@
+import { iblSurface } from './remote-session';
 /**
  * api-ibl.ts - 수동 모드(IBL 컴파일러 프론트엔드) API
  * APIClient mixin: 자연어→IBL 번역, dry-run 검증, 실행, 액션 카탈로그.
@@ -142,7 +143,7 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
     async executeIBL(code: string, projectId?: string, projectPath = '.') {
       return client.request<unknown>('/ibl/execute', {
         method: 'POST',
-        body: JSON.stringify({ code, project_id: projectId ?? null, project_path: projectPath }),
+        body: JSON.stringify({ ...iblSurface, code, project_id: projectId ?? null, project_path: projectPath }),
       });
     },
 

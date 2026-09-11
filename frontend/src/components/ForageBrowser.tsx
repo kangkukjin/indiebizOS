@@ -1,3 +1,4 @@
+import { iblSurface } from '../lib/remote-session';
 /**
  * ForageBrowser — 계기판에 박힌 "포식 브라우저" (개인 검색엔진 + 도로)
  *
@@ -414,8 +415,11 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
   const loading = !!activeTab?.loading;
   const activeWebview = (): any => (activeId ? webviewRefs.current[activeId] : null);
 
-  const registerRef = (id: string, el: any) => { if (el) webviewRefs.current[id] = el; };
-  const updateTab = (id: string, patch: Partial<Tab>) =>
+  const registerRef = useCallback((id: string, el: any) => {
+    if (el) webviewRefs.current[id] = el;
+    else delete webviewRefs.current[id];
+  }, []);
+  const updateTab = useCallback((id: string, patch: Partial<Tab>) =>
     setTabs((prev) => prev.map((t) => {
       if (t.id !== id) return t;
       if (patch.url && patch.url !== t.url && t.kind === 'web') {
@@ -434,7 +438,7 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
         }).catch(() => { /* 기록 실패는 조용히 */ });
       }
       return { ...t, ...patch };
-    }));
+    })), []);
 
   // 새 탭으로 사이트 열기 — 즐겨찾기·검색결과·링크 클릭이 전부 여기로(각각 별개 탭이 쌓인다).
   const openTab = (url: string) => {
@@ -681,7 +685,7 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
   const iblExec = async (code: string): Promise<any> => {
     const r = await fetch(`${API}/ibl/execute`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ code, project_id: '앱모드' }),
+      body: JSON.stringify({ ...iblSurface, code, project_id: '앱모드' }),
     });
     const d = await r.json();
     let res = (d && typeof d === 'object' && 'result' in d) ? (d as any).result : d;
@@ -874,7 +878,7 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
             <NavBtn onClick={() => activeWebview()?.goBack()} disabled={!canBack} label="‹" title="뒤로" />
             <NavBtn onClick={() => activeWebview()?.goForward()} disabled={!canFwd} label="›" title="앞으로" />
             <NavBtn onClick={() => activeWebview()?.reload()} label="⟳" title="새로고침" />
-            <button
+            {window.electron && <button
               onClick={toggleTranslation}
               disabled={translating}
               title={activeTab?.translated ? "원본 보기" : "한국어로 번역"}
@@ -886,7 +890,7 @@ export function ForageBrowser({ open, onClose, openUrl, onUrlConsumed }: {
             >
               <span>🌐</span>
               <span>{translating ? '번역 중…' : activeTab?.translated ? '원본' : '번역'}</span>
-            </button>
+            </button>}
             <button
               onClick={toggleFavorite}
               title={currentFav ? '즐겨찾기에서 빼기' : '이 페이지를 즐겨찾기에 추가'}

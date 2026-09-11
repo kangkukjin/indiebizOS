@@ -266,6 +266,7 @@
     "surface/launcher_app_warehouse",
     "surface/launcher_layout",
     "surface/launcher_lite",
+    "surface/launcher_react",
     "surface/launcher_render_core",
     "surface/launcher_surface_phone",
     "surface/launcher_surface_remote",
@@ -308,8 +309,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 297,
-    "engine": 278,
+    "total": 298,
+    "engine": 279,
     "blocklist": 19
   }
 }

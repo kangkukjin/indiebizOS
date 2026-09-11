@@ -81,5 +81,88 @@ def test_auth_failure_is_closed(client, monkeypatch, failing):
             pytest.fail("판정 실패를 통과로 처리했다")
 
 
+@pytest.fixture
+def web_client(monkeypatch, tmp_path):
+    import api_launcher_web as auth
+    import launcher_react
+    from fastapi.responses import JSONResponse
+    root = tmp_path / "dist"
+    root.mkdir()
+    (root / "assets").mkdir()
+    (root / "assets/app.js").write_text("/* test bundle */")
+    (root / "assets/app.css").write_text("body {}")
+    (root / "index.html").write_text('<html lang="ko"><head><meta name="indiebiz-remote-shell" content="1" />'
+                                    '<script type="module" src="./assets/app.js"></script></head><body><div id="root"></div></body></html>')
+    monkeypatch.setattr(launcher_react, "bundle_root", lambda: root)
+    monkeypatch.setattr(auth, "sessions", {})
+    monkeypatch.setattr(auth, "load_config", lambda: {"enabled": True, "password_hash": auth.hash_password("test-password")})
+    app = FastAPI()
+
+    @app.middleware("http")
+    async def guard(request, next_call):
+        if auth.is_external_request(request) and not (
+                auth.is_public_remote_path(request.method, request.url.path) or auth.verify_session(request)):
+            return JSONResponse({"detail": "login required"}, status_code=401)
+        return await next_call(request)
+
+    app.include_router(auth.router)
+
+    @app.get("/projects")
+    def projects():
+        return {"test": True}
+
+    with TestClient(app, base_url="https://remote.invalid") as test_client:
+        yield test_client, root
+
+
+def test_react_shell_public_assets_and_session_cookie_flow(web_client):
+    client, _ = web_client
+    shell = client.get("/launcher/app")
+    assert shell.status_code == 200
+    assert 'data-indiebiz-surface="remote"' in shell.text
+    assert '<base href="/launcher/ui/">' in shell.text
+    assert shell.headers["cache-control"] == "no-store"
+    assert client.get("/launcher/ui/assets/app.js").status_code == 200
+    assert client.get("/launcher/ui/assets/app.css").headers["content-type"].startswith("text/css")
+    assert client.get("/launcher/auth/session").json() == {"external": True, "authenticated": False}
+    assert client.get("/projects").status_code == 401
+    assert client.post("/launcher/auth/login", json={"password": "wrong"}).status_code == 401
+    login = client.post("/launcher/auth/login", json={"password": "test-password"})
+    assert login.status_code == 200
+    assert "HttpOnly" in login.headers["set-cookie"] and "Secure" in login.headers["set-cookie"]
+    assert client.get("/launcher/auth/session").json()["authenticated"] is True
+    assert client.get("/projects").status_code == 200
+    assert client.post("/launcher/auth/logout").status_code == 200
+    assert client.get("/projects").status_code == 401
+
+
+def test_bundle_asset_boundary_and_no_private_formats(web_client, tmp_path):
+    client, root = web_client
+    outside = tmp_path / "private.js"
+    outside.write_text("private")
+    (root / "assets/escape.js").symlink_to(outside)
+    (root / "assets/private.json").write_text("{}")
+    (root / "assets/app.js.map").write_text("{}")
+    for path in ["assets/escape.js", "assets/private.json", "assets/app.js.map", "index.html", "%2e%2e/private.js"]:
+        assert client.get("/launcher/ui/" + path).status_code == 404
+    assert client.post("/launcher/ui/assets/app.js").status_code == 401
+    assert client.get("/launcher/ui/missing.js").status_code == 404
+
+
+def test_missing_old_or_partial_bundle_retains_legacy_and_portal_helper(web_client, monkeypatch):
+    import api_launcher_web as auth
+    import launcher_react
+    client, root = web_client
+    monkeypatch.setattr(auth, "_launcher_surface_html", lambda: "legacy-shared-phone-portal")
+    assert auth.get_launcher_webapp_html() == "legacy-shared-phone-portal"
+    (root / "assets/app.js").unlink()
+    assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
+    (root / "index.html").write_text("old desktop bundle")
+    assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
+    monkeypatch.setattr(launcher_react, "bundle_root", lambda: None)
+    assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
+    assert client.get("/launcher/lite").status_code == 200
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

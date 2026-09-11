@@ -10,6 +10,7 @@ import { useEffect, useState, useRef } from 'react';
 import type * as React from 'react';
 import { useAppStore } from '../../stores/appStore';
 import { api } from '../../lib/api';
+import { openProject } from '../../lib/surface-navigation';
 import type { Project, Switch } from '../../types';
 import type {
   ContextMenuState,
@@ -40,8 +41,6 @@ export function useLauncherDesktop(opts: {
     switches,
     loadProjects,
     loadSwitches,
-    setCurrentProject,
-    setCurrentView,
   } = useAppStore();
 
   const [multiChatRooms, setMultiChatRooms] = useState<MultiChatRoom[]>([]);
@@ -104,15 +103,10 @@ export function useLauncherDesktop(opts: {
       if (window.electron?.openFolderWindow) {
         window.electron.openFolderWindow(project.id, project.name);
       } else {
-        window.location.hash = `/folder/${project.id}`;
+        window.location.hash = `/folder/${encodeURIComponent(project.id)}`;
       }
     } else {
-      if (window.electron?.openProjectWindow) {
-        window.electron.openProjectWindow(project.id, project.name);
-      } else {
-        setCurrentProject(project);
-        setCurrentView('manager');
-      }
+      openProject(project.id, project.name);
     }
   };
 

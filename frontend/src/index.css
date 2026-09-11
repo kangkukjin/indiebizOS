@@ -198,3 +198,6 @@ body {
 .chat-markdown tr:hover {
   background: rgba(0, 0, 0, 0.06);
 }
+
+/* 원격 셸의 홈/로그아웃 바 아래에서 기존 전용 창이 남은 높이를 사용한다. */
+.remote-content > .h-screen { height: 100%; width: 100%; }

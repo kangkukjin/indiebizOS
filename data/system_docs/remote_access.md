@@ -1,8 +1,8 @@
 ---
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, NAS 연동
-owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, nas_*.py
-last_updated: 2026-08-22
+owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_react.py, nas_*.py
+last_updated: 2026-09-11
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 
@@ -17,7 +17,7 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 | 기능 | 경로 | 목적 |
 |-----|------|------|
 | **원격 Finder** | `/nas/app` | 파일 탐색, 동영상 스트리밍, 다운로드 |
-| **원격 런처** | `/launcher/app` | 데스크탑과 동형인 5탭(자율주행 / 조종실 / 앱 계기 / 공유창고 / 포식) |
+| **원격 런처** | `/launcher/app` | 공통 React 화면의 자율주행·조종실·앱·공유창고와 검색 브라우저 |
 
 각 기능은 **별도의 비밀번호**로 독립적으로 활성화할 수 있습니다.
 
@@ -50,11 +50,12 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 - 스위치 한 번 터치로 뉴스 수집, 리포트 생성 등 자동화 작업 실행
 - 집 PC의 AI 에이전트 전체를 원격으로 구동하는 개인 AI 서버
 
-### 표면 분리 — 원격 런처(PC의 일부) vs 폰 네이티브(독립 시스템) (2026-07-22)
+### 표면 분리 — 원격 런처(PC의 일부)와 폰 네이티브(독립 시스템)
 
-두 표면은 같은 HTML 조각을 쓰지만 **정체가 다르다**. 그래서 조립을 코드에서 갈랐다:
-- 기질(탭별 모듈) = `backend/surface/launcher_app_{common,warehouse,autopilot,manual,appmode}.py` + 셸 조각
-- 정체(표면 조립) = `launcher_surface_remote.py`(원격 5탭 — PC의 일부) / `launcher_surface_phone.py`(폰 3탭 — 독립 시스템: 자율주행·조종실·앱)
+- `/launcher/app`은 데스크톱과 같은 React 빌드를 읽는다. 소스 설치의 `frontend/dist`, asar:false 배포의 `Resources/app/dist`를 찾으며, 새 인증 셸 표식이 없거나 번들이 없으면 기존 `launcher_surface_remote.py` 화면을 제공한다. `/launcher/lite`는 계속 독립 경량 화면이다.
+- 원격 셸만 `data-indiebiz-surface="remote"`를 선언한다. HTTP/WS는 그 문서의 origin을 사용하며, 로그인 전에는 데이터·소켓을 여는 React App을 마운트하지 않는다. HttpOnly 세션 쿠키, 후속 HTTP/WS 거절, 주기적 세션 확인과 로그아웃을 사용한다. 정적 파일 라우트 `/launcher/ui/`는 번들 안의 허용 파일 형식만 제공한다.
+- 설정·메시지·에피소드/시스템 로그는 공통 React 컴포넌트다. 원격의 프로젝트·앱은 터치 가능한 타일이고, 새 창은 같은 창의 hash 라우트로 이동한다. 검색 브라우저는 iframe 허용 여부와 새 탭 열기를 제공하며 네이티브 페이지 DOM 조작은 Electron에만 있다. 데스크톱의 저장된 아이콘 좌표는 원격 타일 배치로 바꾸지 않는다.
+- 폰 `launcher_surface_phone.py`와 포털 회원용 `get_launcher_webapp_html()`은 기존 HTML 조립 계약을 유지한다. 기질은 `backend/surface/launcher_app_{common,warehouse,autopilot,manual,appmode}.py`와 셸 조각이다. 회원용 실행 권한을 소유자 React 셸로 우회하지 않는다.
 - 폰 조종실은 **로컬 완결**(`/ibl/translate`·`validate`·`distill`·`actions/catalog`) — 옛 '리모컨' 프록시는 은퇴했다. 폰은 자기 어휘(자기 사전)만 컴파일한다.
 
 ### 결과는 *어느 표면이 물었나* 로 착지한다
@@ -72,7 +73,7 @@ Cloudflare 발급(`cdn_provision`)은 터널뿐 아니라 R2 캐시 Worker 까�
 
 ### 원격 런처 ≠ 폰 네이티브 (구분)
 
-여기 원격 런처는 **집 PC를 외부에서 조종하는 리모컨**이다 — 백엔드는 집 PC에서 돌고 터널로 노출된다. 결과를 폰서 못 보여주면 집에서 실행해도 됨(라디오는 집 PC 스피커, 신문은 집 화면). 같은 `/launcher/app` HTML이라 `/launcher/config`의 `host`로 맥락을 구분: `host!=phone-local`이면 REMOTE 배지·"집 PC 재생" 류 안내를 보인다.
+여기 원격 런처는 **집 PC를 외부에서 조종하는 리모컨**이다 — 백엔드는 집 PC에서 돌고 터널로 노출된다. React 계기의 직접 IBL 요청은 `surface:"web"`을 전달해 기존 웹 재생·결과 착지 계약을 사용한다. 명시적으로 PC 클립보드를 지정한 전송 등은 그 목적지를 유지한다.
 
 이와 별개로 **폰 네이티브**(`phone-companion/`)는 indiebizOS를 **폰에서 직접** 구동한다 — 온디바이스 Python 백엔드(Chaquopy)가 같은 launcher HTML을 폰 로컬(`127.0.0.1:8765`)로 서빙하고, 실제 IBL 엔진이 폰 안전 패키지를 로컬 실행한다(`host=phone-local`, 배지 숨김). 라디오는 mpv 대신 stream URL을 WebView(hls.js)로 돌려 **폰 스피커**로 재생. 능력 경계는 `runs_on` 태그 + `data/phone_manifest.json`로 강제(`ibl.md` 참조). 즉 "폰에서 모든 것"=폰 네이티브의 일, "집을 조종"=원격 런처의 일 — 두 모델을 섞지 않는다.
 

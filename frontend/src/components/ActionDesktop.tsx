@@ -14,7 +14,7 @@ import { openPhoto, openPCManager, openLecture, openExternalLink } from '../lib/
  * 카탈로그(무엇이 존재하나)와 레이아웃(어떻게 배치했나)의 분리 — 새 app: 블록은
  * 홈에 자동 등장(기존 불변식 보존), 사용자는 그 위에서 배치/정리/제거.
  */
-import { BACKEND_ORIGIN } from '../lib/backend-origin';
+import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
 import { MapInstrument } from './MapInstrument';
@@ -479,7 +479,15 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
       )}
 
       {/* 앱 아이콘 — 위치 fallback은 고정 카탈로그 인덱스(홈 목록 변동에 안 흔들림) */}
-      {homeApps.map((d) => {
+      {IS_WEB_SURFACE && <div className="absolute inset-0 overflow-auto p-5 pb-24">
+        <div className="mb-5 flex justify-end"><button onClick={() => setStoreOpen(true)} className="text-sm underline">앱저장소</button></div>
+        <Grid>
+          {homeApps.map(d => <IconTile key={d.id} icon={d.icon} label={d.label} soon={d.soon} onClick={() => openApp(d)} />)}
+          {folderTargets.map(fid => <IconTile key={fid} icon={layout.folders[fid].icon} label={layout.folders[fid].label}
+            onClick={() => setOpenFolderId(fid)} />)}
+        </Grid>
+      </div>}
+      {!IS_WEB_SURFACE && homeApps.map((d) => {
         const p = posOf(d.id, catalogIndex.get(d.id) ?? 0);
         return (
           <DraggableIcon
@@ -505,7 +513,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
       })}
 
       {/* 폴더 아이콘 — 폴더는 생성 시 명시 위치를 가지므로 fallback은 거의 안 쓰이나, 안정적으로 카탈로그 뒤에 둔다 */}
-      {folderTargets.map((fid, i) => {
+      {!IS_WEB_SURFACE && folderTargets.map((fid, i) => {
         const f = layout.folders[fid];
         const p = posOf(fid, APPS.length + i);
         return (

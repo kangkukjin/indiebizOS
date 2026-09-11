@@ -1,3 +1,4 @@
+import { iblSurface, checkRemoteSession } from './remote-session';
 /**
  * 앱 모드 계기(instrument) 공용 헬퍼 — 커스텀 계기가 IBL/AI 를 부르는 **정본 경로**.
  *
@@ -27,8 +28,10 @@ export async function iblExecuteApp(code: string): Promise<unknown> {
   const res = await fetch(`${API}/ibl/execute`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ code, project_id: APP_PROJECT_ID }),
+    body: JSON.stringify({ ...iblSurface, code, project_id: APP_PROJECT_ID }),
   });
+  checkRemoteSession(res.status);
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const d = await res.json();
   let r: unknown =
     d?.final_result ??

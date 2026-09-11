@@ -504,6 +504,9 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # 데이터 API 는 여전히 세션 게이트 뒤)
     if path in ("/launcher/app", "/launcher/lite"):
         return True
+    # 정적 React 번들만 서빙하는 라우트. 실제 파일 형식/경계는 launcher_react가 검사한다.
+    if method == "GET" and (path.startswith("/launcher/ui/") or path == "/launcher/auth/session"):
+        return True
     # 홈 화면 설치 3종(매니페스트·서비스워커·아이콘) — 설치 판단은 로그인보다 먼저 일어난다.
     # 셋 다 정적 자산이라 노출해도 새는 정보가 없다(아이콘·앱 이름뿐).
     if method == "GET" and (path == "/launcher/manifest.webmanifest"
@@ -820,8 +823,22 @@ async def logout(request: Request, response: Response):
 
 @router.get("/app", response_class=HTMLResponse)
 async def get_webapp():
-    """원격 런처 웹앱"""
-    return get_launcher_webapp_html()
+    """공통 React 셸. 미빌드/구버전 설치에서는 기존 원격 화면을 유지한다."""
+    from launcher_react import react_shell
+    return HTMLResponse(react_shell() or get_launcher_webapp_html(), headers={"Cache-Control": "no-store"})
+
+
+@router.get("/auth/session")
+async def remote_session(request: Request):
+    external = is_external_request(request)
+    return JSONResponse({"external": external, "authenticated": not external or verify_session(request)},
+                        headers={"Cache-Control": "no-store"})
+
+
+@router.get("/ui/{path:path}")
+async def react_asset(path: str):
+    from launcher_react import serve_asset
+    return serve_asset(path)
 
 
 @router.get("/lite", response_class=HTMLResponse)

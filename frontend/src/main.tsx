@@ -2,6 +2,8 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
+import { IS_WEB_SURFACE } from './lib/backend-origin'
+import { RemoteSession } from './components/RemoteSession'
 
 /* Electron 전용: 내장 alert()/confirm() 은 윈도우에서 닫힌 뒤 렌더러가 키보드 포커스를
    잃어 모든 입력창이 죽는다(electron#19977). 메인프로세스 dialog 판으로 갈아끼운다.
@@ -25,6 +27,6 @@ if (bridge?.dialogPing && bridge?.dialogAlert && bridge?.dialogConfirm) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    {IS_WEB_SURFACE ? <RemoteSession><App /></RemoteSession> : <App />}
   </StrictMode>,
 )

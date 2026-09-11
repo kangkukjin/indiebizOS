@@ -56,6 +56,7 @@ class TurnStore:
         self.version = 0
         self.blocks = []
         self.coverage = set()
+        self.evidence_coverage = {}
         self.sequence = 0
         self.cost = Counter()
 
@@ -67,12 +68,34 @@ class TurnStore:
             path.write_text(text, encoding="utf-8")
         return {"id": key, "chars": len(text), "excerpt": text[:1000]}
 
-    def read_evidence(self, key, offset=0, limit=12000):
+    def read_evidence(self, key, offset=0, limit=12000, *, mark=False):
         if not re.fullmatch(r"[0-9a-f]{64}", key or ""):
             raise ValueError("잘못된 증거 ID")
         text = (self.directory / (key + ".txt")).read_text(encoding="utf-8")
         end = offset + limit if limit is not None else None
+        if mark:
+            self.evidence_coverage.setdefault(key, []).append((offset, min(end or len(text), len(text))))
         return {"id": key, "offset": offset, "chars": len(text), "text": text[offset:end]}
+
+    def evidence_fully_read(self, key):
+        length = self.read_evidence(key, 0, 0)["chars"]
+        end = 0
+        for start, stop in sorted(self.evidence_coverage.get(key, [])):
+            if start > end:
+                return False
+            end = max(end, stop)
+        return end >= length
+
+    def evidence_quote_read(self, key, quote):
+        if not isinstance(quote, str) or not quote.strip():
+            return False
+        try:
+            text = self.read_evidence(key, 0, None)["text"]
+        except (ValueError, OSError, TypeError):
+            return False
+        escaped = json.dumps(quote, ensure_ascii=False)[1:-1]
+        return any(quote in text[a:b] or escaped in text[a:b]
+                   for a, b in self.evidence_coverage.get(key, []))
 
     def log(self, kind, **fields):
         with self.lock:

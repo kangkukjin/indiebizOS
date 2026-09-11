@@ -94,6 +94,7 @@ class Supervisor:
         self.executor_paused = True
         self.cli_executor = hasattr(getattr(runner.ai, "_provider", None), "disable_session_persistence")
         self.final_images = None
+        self.content_artifacts = []
         self._native = {}
         self._execute = getattr(runner.ai, "_custom_execute_tool", None)
         if self._execute is None:
@@ -256,6 +257,7 @@ class Supervisor:
 
     def state(self, *, delta=False, offset=None, mark=True):
         now = time.monotonic()
+        from providers.base import read_turn_tokens, read_turn_cache_read_tokens
         with self.lock:
             cursor = self.state_cursor if offset is None else offset
             events = [e for e in self.recent if e["seq"] > (cursor if delta else self.review_cursor)]
@@ -274,6 +276,8 @@ class Supervisor:
                     "original_pursuit": self.original_pursuit,
                     "tools_remaining": self.config["max_tools_total"] - self.tools_used, "usage": dict(self.usage),
                     "cursor": self.store.sequence,
+                    "execution_cost": dict(self.store.cost),
+                    "turn_tokens": read_turn_tokens(), "turn_cache_read_tokens": read_turn_cache_read_tokens(),
                     "budget_remaining": self.model_budget_remaining(),
                     "budget_policy": self.config["budget_mode"], "phase_usage": self.phase_usage,
                     "open_issues": dict([(k, v) for k, v in self.issues.items() if v["open"]][-12:]),
@@ -281,7 +285,8 @@ class Supervisor:
                     "previous_review": self.last_decision,
                     "criteria_contract": __import__("supervisor_handoff").criteria_contract(self.message, self.framing),
                     "reusable_checks": self.verifications.valid(digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False))),
-                    "visual_review": getattr(self, "visual_review", {})}
+                    "visual_review": getattr(self, "visual_review", {}),
+                    "content_artifacts": self.content_artifacts}
             if mark:
                 self.state_cursor = state["cursor"]
             if delta:
@@ -339,7 +344,7 @@ class Supervisor:
             if self.repeats == 1 and not error and not job_observation:
                 self.last_progress = time.monotonic()
                 self.exec_revision += 1  # 시작 예고·실패·같은 status 반복은 진척이 아니다.
-                if self.trigger in {"tool_stalled", "long_task_checkpoint"}:
+                if self.trigger == "tool_stalled":
                     self.trigger = ""
             if self.failures >= 2 or self.repeats >= 3:
                 self.trigger = "repeated_failure" if self.failures >= 2 else "unchanged_repeat"
@@ -460,8 +465,8 @@ class Supervisor:
             if self.active and now - self.last_progress >= self.config["stall_s"]:
                 self.trigger = self.trigger or "tool_stalled"
             waiting_on_job = any(j.phase != "complete" for j in self.jobs.values())
-            if (now - self.last_review >= self.config["long_task_s"] and self.recent and not waiting_on_job
-                    and now - self.last_progress >= self.config["stall_s"]):
+            if (now - self.last_review >= self.config["long_task_s"] and self.recent
+                    and (not waiting_on_job or self.active)):
                 self.trigger = self.trigger or "long_task_checkpoint"
             trigger = self.trigger
         if trigger:
@@ -536,7 +541,7 @@ class Supervisor:
                     from supervisor_runtime import action_schema
                     result = action_schema(key[4:])
                 else:
-                    result = self.catalog[key[5:]] if key.startswith("tool:") else self.store.read_evidence(key, offset, limit)
+                    result = self.catalog[key[5:]] if key.startswith("tool:") else self.store.read_evidence(key, offset, limit, mark=is_manager)
             elif op == "response":
                 result = self.store.read_response(offset, limit, mark=is_manager)
             elif op in {"patch", "keep"}:
@@ -588,7 +593,7 @@ class Supervisor:
                     failed = _failed(result)
                     approval = isinstance(result, dict) and result.get("requires_approval")
                     result = {"success": not failed, "requires_approval": bool(approval), "evidence": {k: ref[k] for k in ("id", "chars")},
-                              "page": self.store.read_evidence(ref["id"], 0, 12000),
+                              "page": self.store.read_evidence(ref["id"], 0, 12000, mark=is_manager),
                               "hint": "나머지 원문은 evidence id와 offset=12000으로 읽으세요"}
             if multimedia and isinstance(result, dict) and result.get("images"):
                 return {"content": json.dumps({"success": True, "result": result.get("content", "")}, ensure_ascii=False),
@@ -624,6 +629,8 @@ class Supervisor:
                     break
                 yield {"type": "thinking", "content": "의식이 목표 달성 근거와 저장된 응답을 검수하고 있습니다."}
                 self.store.coverage.clear()
+                from supervisor_content import discover, validate
+                self.content_artifacts = discover(self, self.store.text, tool_calls)
                 if hasattr(self.runner, "_collect_visual_artifacts"):
                     artifacts = self.runner._collect_visual_artifacts(self.store.text, tool_calls=tool_calls or []) or []
                     self.final_images, self.visual_review = self.verifications.visual_input(artifacts,
@@ -651,6 +658,11 @@ class Supervisor:
                 delivery = self.delivery.manifest()
                 if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
                     decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
+                content_error = validate(self, decision)
+                if content_error:
+                    decision = {"status": "REWORK", "reason": content_error,
+                                "instruction": "산출물 본문·출처·최종 집계를 검증하고 content_checks 근거를 준비하세요. " + content_error,
+                                "repair_scope": "local"}
                 self.verifications.remember(decision.get("checks", []),
                     digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)), self.store)
                 self.log("decision", role="consciousness", decision=decision, response=manifest)

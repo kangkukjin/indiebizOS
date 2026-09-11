@@ -29,7 +29,7 @@ def test_parallel_param_is_clamped():
 
 def test_parallel_keeps_order_and_matches_sequential(tmp_path):
     do = '[table:take]{items: [{"got": $it.v}], n: 1}'
-    seq = _execute_table_each({"items": ROWS, "do": do}, str(tmp_path))
+    seq = _execute_table_each({"items": ROWS, "do": do, "parallel": 1}, str(tmp_path))
     par = _execute_table_each({"items": ROWS, "do": do, "parallel": 4}, str(tmp_path))
     assert seq["success"] and par["success"] and par.get("parallel") == 4 and "parallel" not in seq
     assert [r["got"] for r in _items(seq)] == [0, 1, 2, 3, 4, 5]

@@ -34,6 +34,9 @@ state 재조회는 변경분이다. evidence의 파일 쓰기 성공 영수증�
 "response_version":0,"response_hash":"", "pursuit_status":"APPROVED|UNKNOWN"}.
 APPROVED는 최종 검수에서만, CONTINUE는 중간 점검에서만 쓴다. 근거 부족/오류는 UNKNOWN이다.
 CONTINUE일 때 instruction은 빈 문자열이다. 실제 행동 변경이 필요할 때만 REWORK와 최소 지시를 쓴다.
+long_task_checkpoint는 정체가 아닌 시간·비용 점검이다. state의 진행·호출 비용을 보고
+독립 읽기/AI 변환은 병렬 each, 공통 자료는 한 번 읽기, 변하지 않은 검증은 재사용을 고려한다.
+품질·성공 기준·모델 기어를 낮추지 말고 바꿀 행동이 있을 때만 지시하라.
 중간 관찰 중에는 실행자가 계속 일한다. 기존 로그만 읽어라. 단 executor_paused=true인 의미 이정표에서는
 execute로 필요한 파일·원천 근거만 읽을 수 있다. 쓰기·제작을 시작하지 말고 지시로 넘겨라.
 pursuit_status는 이번 턴 기준과 별개로 전체 과제의 goal_criteria 충족을 확인했을 때만 APPROVED다.
@@ -168,7 +171,10 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
                 config = descriptor  # 역할은 의식 그대로, 이미지 모달리티의 기존 모델 설정을 사용한다.
         role_prompt = planning_prompt or ROLE_PROMPT
         if phase == "final":
+            from supervisor_content import CONTRACT
             role_prompt += "\n" + FINAL_REVIEW_PROMPT
+            if controller.content_artifacts:
+                role_prompt += "\n" + CONTRACT
         agent = AIAgent(config, role_prompt,
                         agent_name="의식 감독", agent_id=controller.supervisor_id,
                         project_path=controller.project_path, tools=[TOOL_SCHEMA],

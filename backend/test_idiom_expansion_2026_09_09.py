@@ -89,7 +89,7 @@ def test_empty_results_do_not_expand_into_full_read(code):
 
 def test_url_gather_preserves_raw_text_sources_and_failures_without_summary():
     result, observed = run('$목록=[self:read]{path:"input.json"}; [fn:주소마다읽기]{목록:$목록,개수:3}')
-    assert observed['crawl'] == ['https://fixture.test/a', 'https://fixture.test/bad', 'https://fixture.test/c']
+    assert sorted(observed['crawl']) == ['https://fixture.test/a', 'https://fixture.test/bad', 'https://fixture.test/c']
     assert [(r['title'], r['url']) for r in result['items']] == [
         ('first', 'https://fixture.test/a'), ('broken', 'https://fixture.test/bad'), ('third', 'https://fixture.test/c')]
     assert result['items'][0]['text'] == 'SOURCE:https://fixture.test/a'

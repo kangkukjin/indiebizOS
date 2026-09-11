@@ -6,6 +6,7 @@ memory_db.py - 에이전트별 메모리 SQLite 저장소
 임베딩 모델: backend/ibl_usage_db.py의 fine-tuned 모델 공유 사용
 """
 import os
+import json
 import re
 import sys
 import struct
@@ -627,7 +628,7 @@ def read(project_path: str, agent_id: str, memory_id: int,
 
 def update(project_path: str, agent_id: str, memory_id: int,
            content: str = None, keywords: str = None, category: str = None,
-           source_ref: str = None, node: str = None) -> bool:
+           source_ref: str = None, node: str = None, expected_content: str = None) -> bool:
     """기존 항목 업데이트 (변경 필드만; used_at 자동 갱신; 임베딩 재생성; node 바뀌면 두 문서 갱신)"""
     if content is not None:
         _reject_body_noun(content)
@@ -663,6 +664,9 @@ def update(project_path: str, agent_id: str, memory_id: int,
         params.append(memory_id)
 
         sql = f"UPDATE memories SET {', '.join(sets)} WHERE id = ?"
+        if expected_content is not None:
+            sql += " AND content = ?"
+            params.append(expected_content)
         cur = conn.execute(sql, params)
         conn.commit()
         if cur.rowcount == 0:
@@ -954,7 +958,7 @@ def get_by_id(db_path: str, memory_id: int) -> Optional[Dict]:
 
 
 def apply_merge(db_path: str, keep_id: int, content: str,
-                keywords: str, category: str, drop_ids: List[int]) -> bool:
+                keywords: str, category: str, drop_ids: List[int], *, expected_contents=None) -> bool:
     """클러스터 병합 적용 — keep_id를 정규 병합본으로 덮어쓰고 나머지 삭제.
 
     content/keywords/category를 keep_id에 갱신하고 재인덱싱, drop_ids는
@@ -962,9 +966,18 @@ def apply_merge(db_path: str, keep_id: int, content: str,
     category = normalize_category(category)
     conn = sqlite3.connect(db_path, timeout=10)
     try:
+        conn.execute("BEGIN IMMEDIATE")
+        members = list(dict.fromkeys([keep_id, *drop_ids]))
+        marks = ",".join("?" for _ in members)
+        evidence = conn.execute(f"SELECT id, content, created_at, source_ref FROM memories WHERE id IN ({marks})", members).fetchall()
+        if (len(evidence) != len(members) or (expected_contents is not None
+                and any(expected_contents.get(r[0]) != r[1] for r in evidence))):
+            conn.rollback()
+            return False
+        sources = [{"id": r[0], "content": r[1], "created_at": r[2], "source_ref": r[3]} for r in evidence]
         conn.execute(
-            "UPDATE memories SET content=?, keywords=?, category=? WHERE id=?",
-            (content, keywords, category, keep_id)
+            "UPDATE memories SET content=?, keywords=?, category=?, source_ref=? WHERE id=?",
+            (content, keywords, category, json.dumps({"merged_sources": sources}, ensure_ascii=False), keep_id)
         )
         if drop_ids:
             ph = ",".join("?" * len(drop_ids))

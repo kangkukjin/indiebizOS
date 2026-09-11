@@ -279,6 +279,14 @@ def _recover_distill_selection(intent: str, code: str, error: str,
         selection = parse_first_json(response or "")
     except Exception as exc:
         return None, f"원문 선택 호출 실패: {exc}"
+    return select_distill_source(selection, ibl_calls)
+
+
+def select_distill_source(selection, ibl_calls):
+    """Validate IDs and dependency closure without paying for a second generation."""
+    from ibl_param_vocab import code_syntax_error
+    from workflow_contract import call_signature
+
     if not isinstance(selection, dict):
         return None, "원문 선택 응답이 JSON 객체가 아님"
     ids = selection.get("call_ids")

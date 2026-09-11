@@ -68,6 +68,7 @@
     "cognition/ibl_usage_generator",
     "cognition/ibl_usage_rag",
     "cognition/memory_consolidation",
+    "cognition/memory_evidence",
     "cognition/model_result_view",
     "cognition/prompt_builder",
     "cognition/pursuit_bind",
@@ -75,6 +76,7 @@
     "cognition/pursuit_tools",
     "cognition/reframe",
     "cognition/routing_system",
+    "cognition/supervisor_content",
     "cognition/supervisor_handoff",
     "cognition/supervisor_runtime",
     "cognition/switch_runner",
@@ -301,8 +303,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 290,
-    "engine": 271,
+    "total": 292,
+    "engine": 273,
     "blocklist": 19
   }
 }

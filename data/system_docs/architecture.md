@@ -490,7 +490,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 342개**(test 제외, git 추적 기준) — 층 디렉토리 `base 34 · datastore 48 · ibl 47 · cognition 59 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **74개**(guide_db 등록 **73**)
+- backend **.py 344개**(test 제외, git 추적 기준) — 층 디렉토리 `base 34 · datastore 48 · ibl 47 · cognition 61 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **75개**(guide_db 등록 **74**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

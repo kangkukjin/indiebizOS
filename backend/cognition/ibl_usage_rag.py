@@ -382,7 +382,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     results = _own_only(results)
     top_score = results[0].score if results else 0.0
     top_code = results[0].ibl_code if results else ""
-    if is_long_doc:
+    if is_long_doc or (results and getattr(results[0], "source", "") == "distilled_component"):
         top_score = min(top_score, 0.80)   # Reflex(≥0.85) 발동 금지 — 문서는 반사 대상이 아님
 
     # 관용구 채널(2026-09-04): 문장 여러 개의 골격 Top-2. 긴 문서엔 싣지 않는다(표면 우연).
@@ -811,7 +811,7 @@ def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
 from ibl_distill_gates import (  # noqa: E402,F401
     _strip_strings, _composed, _actions_of, _heads_grounded, _composition_grounded,
     _head_seq, _is_subseq, _restore_var_assignments, _syntax_gate_with_restore,
-    _recover_distill_selection,
+    _recover_distill_selection, select_distill_source,
 )
 
 
@@ -826,65 +826,27 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
     자리표 대신 '실행된 머리를 그대로'를 규칙으로 말하고, 시험이 이 문자열에 `[node:` 가
     없음을 고정한다(test_hippo_syntax_gate G5).
     """
-    return f"""다음은 사용자 명령과 그에 대해 실행된 IBL 코드 목록이다.
-이 경험에서 핵심 패턴을 추출하여 용례로 만들어라.
-
+    return f"""성공한 실행 원문에서 재사용할 문장 번호만 선택하라. 코드를 재작성하지 마라.
 사용자 명령: {user_message}
-
-실행된 IBL 코드:
+실행 원문(번호는 source_ids):
 {tool_log}{retry_block}
 
 규칙:
-1. 사용자 명령을 일반화하라 (고유명사는 유지하되, 패턴으로서 재사용 가능하게)
-2. 실행된 코드에서 중복/탐색성 호출을 제거하고 핵심만 남겨라
-3. 액션 합성(>> 또는 &)은 *데이터가 실제로 흐를 때만* 하라:
-   - 한 액션의 출력이 다음 액션의 입력으로 흐르면(예: 조회 → 변환 → 차트) `>>`,
-     한 동작으로 동시에 묶이면 `&`. 이때만 합성이 *참된 관용구*다.
-   - ★실행된 코드 가운데 **합성문**(`&`·`>>` 가 든 문장)이 있으면 **그 문장을 대표로** 남겨라
-     (그대로 또는 압축) — 실행에서 함께 돌았던 문장이 가장 참된 관용구다. 단일 액션으로
-     줄이지 마라(2026-09-04: 대표를 단일 액션으로 접던 규칙이 코퍼스를 1액션 문장 80% 로 굳혔다).
-   - 별개로 하나씩 호출한 단계를 `>>` 로 봉합하지 마라 — `>>` 는 데이터 흐름을 뜻하므로
-     흐르지 않는 단계를 이으면 *거짓 관용구*다. `&` 로 묶는 것은 각 가지가 이 주행에서
-     실제로 성공했을 때만. 합성문이 하나도 없었으면 가장 핵심(load-bearing)인 단일 액션
-     하나로 대표하라.
-   - ★단, 남은 후보가 *꼬리*뿐이면 대표를 세우지 마라 — 등기·알림·저장·검증처럼 일이
-     끝난 뒤 딸려 붙는 부산물, 실패한 탐색, 준비 단계가 그렇다. 실작업이 IBL 밖
-     (셸·파일 편집·긴 추론)에서 이뤄진 주행이 이 모양이 된다. 이때는 규칙 4 로 간다.
-4. **대표 코드를 확정하기 전에 시험하라**: 「이 code 만 실행하면 사용자의 intent 가
-   충족되는가?」 — 아니면(더 큰 일의 한 조각·부산물일 뿐이면) 억지로 대표 코드를
-   지어내지 말고 code 를 빈 문자열("")로 두어 증류를 건너뛰게 하라.
-   ★카테고리로 판정하지 마라('순수 분석이냐 빌드냐' 따위) — 카테고리는 예상한 경우만
-   덮고 예상 못 한 모양을 조용히 통과시킨다. 시험은 언제나 위 한 문장이다.
-   통과 못 하면 스킵이 옳다 — 없는 용례보다 *틀린* 용례가 해롭다(단발 오시드가 반사로
-   굳으면 다음번 같은 요청을 그 한 줄로 끝내 버린다).
-5. **topic(주제 가지)** 을 적어라 — 아래 실행기억 지도에서 이 용례가 속할 가지를 고른다. 기존 가지 우선,
-   정말 새 주제면 새 경로(`상위/하위`, 최대 2단, 한국어 명사). 한두 건짜리 가지는 만들지 마라.
-[실행기억 지도]
+- source_ids는 실행 순서대로 중복 없이 선택한다. 필요한 변수 생산자도 포함한다.
+- intent에는 선택한 코드가 실제로 완수하는 일을 적는다.
+- 전체 요청을 완수하면 scope="task". 독립 실행 가능한 부분 절차는 scope="component"로
+  남기고 intent도 그 부분에 한정한다. 부분 절차를 전체 요청의 성공 용례로 포장하지 마라.
+- 파일 첨부($file:)·외부 변수·실행 중 모델이 작성한 본문에 의존하는 문장은 제외한다.
+- 탐색 부산물·쓰기 영수증·알림만으로 더 큰 일을 완수한다고 하지 마라.
+- criteria 재시도 후보는 성공한 최종 지시가 원문에 있을 때만 선택한다. 지시를 고쳐 쓰지 마라.
+- 함께 실행된 합성문은 그 문장을 대표로 선택한다. 단일 액션으로 줄이지 마라.
+- 병렬 실행된 문장은 통째로 보존된다. 이름으로 부른 함수는 본문으로 풀지 마라. 새 함수·별칭을 만들지 마라.
+- topic은 기존 실행기억 가지를 우선한다. 반복되지 않은 새 하위 가지는 만들지 마라.
 {topic_map or "(아직 가지 없음)"}
-6. **code 의 대괄호 머리는 실행된 코드의 머리를 글자 그대로 옮겨라** — 머리를 새로 짓거나,
-   인자 값(node·path 따위)을 머리 안에 넣지 마라. 머리가 실행에 없던 것이면 그 용례는 버려진다.
-   ★`&` 로 병렬 실행된 문장은 **통째로** 옮겨라 — 한 가지만 떼어 문장으로 적으면 실행된 적 없는
-   모양이라 버려진다(가지를 줄이는 것은 되지만 가지 하나짜리로 만들지는 말 것).
-   변수 생산자도 보존하라 — 앞 호출에서 만든 변수를 쓰면 그 할당부터 함께 남긴다.
-   액션 뒤에 `.필드`를 붙이지 마라: `$r = [self:memory]{{op:"recall"}}` 다음 문장의
-   `$r.phrases`처럼 원래 두 문장을 유지한다. `do` 안 코드의 따옴표도 원문 그대로다.
-7. **이 주행에 이름 붙은 함수를 썼다면** 그 사실만 남긴다 — 관용구(재사용 뼈대)를 *새로 지어 달라는*
-   요청은 이제 하지 않는다(2026-09-07 사용자 판정: 상시 프롬프트에 서는 관용구는 어휘이고, 어휘는
-   자동으로 늘지 않는다). 이름 등록은 사람이 부정기로 고른다 — 너는 용례(code)와 주행만 남겨라.
-8. **이름으로 부른 함수는 이름으로 남겨라** — 실행된 코드에 `[fn:이름]{{…}}` 호출이 있으면 code 와 phrase 는
-   그 호출 문장을 글자 그대로 품는다. 호출을 본문으로 풀어 쓰지 마라(함수는 이름으로 부른다 — 다음 주행도
-   그 이름을 부르고, 부른 뒤 더한 문장만 새로 배운다).
-9. **되풀이 검토** — 세 번째 질문: 「이 주행은 무엇을 되풀이했나?」 실행된 문장들 가운데
-   (a) 이미 이름 있는 함수/관용구가 있었는데(위 실행기억 지도의 가지에 있는 이름, 또는 이 목록에서
-       같은 문장 묶음이 두 번 이상 타이핑된 것) 그 이름을 부르지 않고 본문을 다시 타이핑한 것 → retyped 에
-       그 이름을(이름이 없으면 짧은 한국어 이름을 지어) 적어라.
-   (b) 결과를 보려고 한 문장씩 따로 실행했지만 데이터가 앞에서 뒤로 흐르거나 서로 독립이라 **한 프로그램으로
-       묶어 한 번에** 돌릴 수 있었던 연속 문장들 → mergeable 에 문장 번호 범위("3-7")로 적어라.
-   호출 수가 곧 비용이다 — 다음 주행이 이 답을 읽고 줄인다. 없으면 빈 목록. 경로·질의어 같은 값은
-   적지 마라(이름과 번호만).
-10. 결과는 반드시 JSON으로만 응답:
-
-{{"intent": "일반화된 사용자 의도", "code": "IBL 코드 원문 (재사용 패턴 없으면 빈 문자열)", "topic": "가지/경로", "retyped": ["다시 타이핑한 함수 이름"], "mergeable": ["3-7"]}}"""
+- 되풀이 검토: retyped는 이름 있는 함수를 재타이핑한 경우 이름만, mergeable은 묶을 수 있는 번호 범위만 적는다.
+JSON: {{"intent":"선택한 절차의 의도", "source_ids":[1], "scope":"task|component",
+"topic":"가지/경로", "retyped":[], "mergeable":[]}}
+독립 실행 원문이 없으면 source_ids:[]로 두어 주행 기록만 남긴다."""
 
 
 # ── 관용구 층은 ibl_idiom.py 로 분할(2026-09-04, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──
@@ -1007,7 +969,9 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
 
     # 증류: 실행 에이전트와 같은 모델로 반성
     try:
-        tool_log = "\n".join(f"  {i+1}. {code}" for i, code in enumerate(ibl_calls))
+        import hippo_tree
+        source_calls = [stmt for call in ibl_calls for stmt in hippo_tree.split_sentences(call)]
+        tool_log = json.dumps([{"id": i + 1, "code": c} for i, c in enumerate(source_calls)], ensure_ascii=False)
         if turn_cost:
             tool_log += "\n[전체 실행·감독 비용; IBL 호출 수와 범위가 다름]\n" + json.dumps(turn_cost, ensure_ascii=False)
         retry_block = ""
@@ -1020,8 +984,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         if retry_notes:
             retry_block += ("\n\n다음 코드는 첫 실행이 criteria 기준 미달로 판정돼 "
                            "재시도 후에야 통과했다:\n" + "\n".join(retry_notes) +
-                           "\n→ 용례를 만들 때 instruction 을 미달 사유가 재발하지 않게 "
-                           "다듬어라 — 재시도 비용을 물지 않는 지시가 좋은 용례다. "
+                           "\n→ 성공한 최종 instruction 원문이 없으면 해당 문장은 선택하지 마라. "
                            "criteria 파라미터 자체는 보존하라(품질 계약).")
 
         try:
@@ -1051,7 +1014,13 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             print(f"[경험증류] JSON 추출 실패: {result.strip()[:100]}")
             return False
         intent = distilled.get("intent", "").strip()
-        code = distilled.get("code", "").strip()
+        component = distilled.get("scope") == "component"
+        if "source_ids" in distilled:
+            code, selection_note = select_distill_source({"call_ids": distilled["source_ids"]}, source_calls)
+            code = code or ""
+            print(f"[경험증류] 원문 선택: {selection_note}")
+        else:
+            code = distilled.get("code", "").strip()  # 구 저장 반성 응답의 호환 경로
         _topic = str(distilled.get("topic", "") or "").strip()
         # 새 하위 가지의 출생은 되풀이가 증명한다(2026-09-05, hippo_tree.settle_topic) — 1건짜리 가지 억제
         try:
@@ -1184,12 +1153,12 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             nodes=nodes,
             category=category,
             difficulty=1,
-            source="distilled",
+            source="distilled_component" if component else "distilled",
             tags="auto",
             alias=_alias,
             returns=_returns,
-            avg_ms=float(_birth_ms) if _birth_ms else -1.0,
-            avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0) else -1.0,
+            avg_ms=float(_birth_ms) if _birth_ms and not component else -1.0,
+            avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0 and not component) else -1.0,
             topic=_topic,
         )
 
@@ -1207,7 +1176,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
         distilled_path = Path(__file__).parent.parent.parent / "data" / "training" / "ibl_distilled.json"
         try:
             existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
-            existing.append({"intent": intent, "ibl_code": code})
+            existing.append({"intent": intent, "ibl_code": code, "source": "distilled_component" if component else "distilled"})
             distilled_path.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
         except Exception as e:
             # 두 원장 어긋남의 형제 — DB 엔 들어갔는데 학습 파일에 못 남았으면 침묵이 아니라 소리.

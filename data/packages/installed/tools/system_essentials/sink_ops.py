@@ -145,15 +145,16 @@ def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool,
     os.makedirs(os.path.dirname(path), exist_ok=True)
     with open(path, 'w', encoding='utf-8') as f:
         f.write(content)
+    byte_size = len(content.encode("utf-8"))
     _red_write_finalize(path)  # backend .py 면 워치독(헬스체크·자동 롤백) 보장
     # 쓰기 관문 원장 — 행위자 동반 사건 기록(관측일 뿐, 실패해도 본 쓰기 무영향)
     try:
         from write_ledger import log_write
-        log_write(path, event="write", gate="self_write", size=len(content))
+        log_write(path, event="write", gate="self_write", size=byte_size)
     except Exception:
         pass
     abs_path = os.path.abspath(path)
-    result = {"success": True, "path": abs_path, "size": len(content)}
+    result = {"success": True, "path": abs_path, "size": byte_size, "chars": len(content)}
     if _json_mode:
         result["format"] = "json"
         # 앱 표면(원격·폰 행 버튼)은 message 만 토스트한다 — 저장 행 수를 한 줄로(2026-09-04 지도 저장 버튼).
@@ -197,7 +198,7 @@ def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool,
         elif extracted == "message":
             _kind = "message"
         result["items"] = []
-        result["ref"] = {"path": abs_path, "kind": _kind, "count": _count, "bytes": len(content)}
+        result["ref"] = {"path": abs_path, "kind": _kind, "count": _count, "bytes": byte_size}
         result["spilled"] = True
     return json.dumps(result, ensure_ascii=False)
 

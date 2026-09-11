@@ -287,12 +287,20 @@ _EACH_MAX_PARALLEL = 8
 
 
 def _each_parallel(params: dict) -> int:
-    """parallel 파라미터 → 1..8. 잘못된 값·미지정은 1(순차)."""
-    try:
-        n = int(params.get("parallel") or 1)
-    except (TypeError, ValueError):
+    """Explicit concurrency wins; auto parallelizes only declared read-only bodies."""
+    value = params.get("parallel", "auto")
+    if value != "auto":
+        try:
+            return max(1, min(_EACH_MAX_PARALLEL, int(value or 1)))
+        except (TypeError, ValueError):
+            return 1
+    if str(params.get("on_error") or "continue").lower() == "stop":
         return 1
-    return max(1, min(_EACH_MAX_PARALLEL, n))
+    from ibl_safety import load_safety_map
+    safety = load_safety_map()
+    code = str(params.get("do") or "")
+    actions = re.findall(r"\[([a-z_][a-z0-9_-]*):([^\]{}\s]+)\]", code)
+    return 4 if actions and all(safety.get(tuple(a), False) for a in actions) else 1
 
 
 def _row_label(base: dict) -> str:
@@ -445,7 +453,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
             _tb_folds += 1
         return tb
 
-    # ── 병렬(언어 개정 2026-09-06, 사용자 판정 "그 셋으로 착수"): parallel(기본 1)이 2 이상이면 준비(치환·파싱)는
+    # ── 병렬(언어 개정 2026-09-06, 사용자 판정 "그 셋으로 착수"): parallel(auto: 선언된 읽기만 4)이 2 이상이면 준비(치환·파싱)는
     #    입력 순서대로, 실행만 스레드 풀에서, 집계는 다시 입력 순서대로 — 결과 순서·봉투 계약은 순차와 같다.
     #    ep2897 실측: 자막→struct 원샷 6건이 순차로 10.8분(가장 긴 한 건 2.5분). 품질과 무관한 벽시계 항목.
     #    thread-local(agent·task·allowed_nodes)·궤적 손잡이는 snapshot/restore 로 워커에 승계(workflow_parallel 과 한 벌).

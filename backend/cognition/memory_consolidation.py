@@ -101,7 +101,7 @@ def _merge_cluster_llm(items: List[Dict], today: str) -> List[Dict]:
 
     listing = "\n".join(
         f'- id={it["id"]} (생성 {str(it.get("created_at",""))[:10]}, '
-        f'분류 {it.get("category") or "미분류"}): {(it.get("content") or "")[:300]}'
+        f'분류 {it.get("category") or "미분류"}): {(it.get("content") or "")}'
         for it in items
     )
     prompt = f"""아래는 의미가 비슷해 보여 묶인 기억 후보들이다. 오늘 날짜는 {today}.
@@ -110,12 +110,12 @@ def _merge_cluster_llm(items: List[Dict], today: str) -> List[Dict]:
 
 이들 중 '정확히 같은 사실'을 가리키는 것끼리만 병합하라.
 - 비슷하지만 다른 사실(예: 사용자 본인 주소 vs 자녀 주소, 다른 시점의 다른 작업)은 병합하지 말 것.
-- 병합 시 가장 최신·구체적인 정보로 모순을 정정하고, 낡은/틀린 내용은 버려라(append 금지, 정규 병합본을 새로 써라).
-- "다음 주", "어제" 같은 상대 시간은 오늘({today}) 기준 절대 날짜로 바꿔라.
+- 남길 원문 레코드 source_ids를 고른다. 내용을 재작성하거나 상대 날짜를 오늘 기준으로 바꾸지 마라.
+- 보충 정보가 있으면 해당 원문도 source_ids에 포함한다. 같은 사실인 중복 레코드만 삭제한다.
 - 키워드는 합집합으로 중복 제거. 분류는 사용자선호|사용자정보|작업기록|의사결정|중요날짜|기타 중 하나.
 
 JSON으로만 응답:
-{{"merges": [{{"keep_id": <남길 id>, "drop_ids": [<삭제할 id들>], "content": "<정규 병합본>", "keywords": "k1,k2", "category": "<분류>"}}]}}
+{{"merges": [{{"keep_id": <남길 id>, "drop_ids": [<삭제할 id들>], "source_ids": [<남길 원문 id들>], "keywords": "k1,k2", "category": "<분류>"}}]}}
 병합할 그룹이 없으면 {{"merges": []}}."""
 
     resp = oneshot_ai_call(
@@ -140,11 +140,18 @@ JSON으로만 응답:
     out = []
     for m in merges:
         keep = m.get("keep_id")
-        drops = [d for d in m.get("drop_ids", []) if d in valid_ids and d != keep]
-        content = (m.get("content") or "").strip()
+        drops = list(dict.fromkeys(d for d in m.get("drop_ids", []) if type(d) is int and d in valid_ids and d != keep))
+        chosen = m.get("source_ids")
+        members = {keep, *drops}
+        if (not isinstance(chosen, list) or not chosen
+                or any(type(i) is not int or i not in members for i in chosen)
+                or len(chosen) != len(set(chosen))):
+            continue
+        content = "\n\n".join(next(it["content"] for it in items if it["id"] == i) for i in chosen)
         if keep not in valid_ids or not drops or not content:
             continue
         out.append({
+            "expected_contents": {it["id"]: it["content"] for it in items if it["id"] in members},
             "keep_id": keep,
             "drop_ids": drops,
             "content": content,
@@ -163,19 +170,20 @@ def _compact_record_llm(item: Dict, today: str) -> Optional[Dict]:
     반환 {content, keywords} 또는 None(실패/압축 효과 없음 → 스킵)."""
     from consciousness_agent import oneshot_ai_call
 
+    from memory_evidence import source_units, selected_content
     content = item.get("content", "") or ""
+    units = source_units(content.replace("\n[보충] ", "\n\n"), "")
     prompt = f"""아래는 같은 주제로 여러 번 [보충]되며 비대해진 하나의 기억이다. 오늘 날짜는 {today}.
-이를 *간결한 하나의 기억*으로 다시 써라.
+남길 원문 단위의 source_ids를 선택하라. 본문을 재작성하지 마라.
 - 서로 구별되는 사실은 모두 보존한다(정보 손실 금지).
 - 중복·이미 더 최신 정보로 대체된 내용만 버린다.
-- "[보충]" 표식은 없애고 자연스러운 문장으로 합쳐라.
-- "어제"·"다음 주" 같은 상대 시간은 오늘({today}) 기준 절대 날짜로 바꿔라.
+- 상대 날짜는 원문 그대로 보존한다. 기록 생성 시점이 해석 기준이다.
 - keywords 는 핵심만 추려 새로 만든다(나열 과다 금지).
 
-기억:
-{content}
+원문 단위:
+{json.dumps(units, ensure_ascii=False)}
 
-JSON으로만 응답: {{"content": "<압축본>", "keywords": "k1,k2,..."}}"""
+JSON으로만 응답: {{"source_ids": [1], "keywords": "k1,k2,..."}}"""
     resp = oneshot_ai_call(
         prompt=prompt,
         system_prompt="기억 압축기. 구별되는 사실은 보존하고 중복만 제거. JSON으로만 응답.",
@@ -195,7 +203,7 @@ JSON으로만 응답: {{"content": "<압축본>", "keywords": "k1,k2,..."}}"""
         return None
     if not isinstance(data, dict):
         return None
-    new_content = (data.get("content") or "").strip()
+    new_content = selected_content(data.get("source_ids"), units)
     new_keywords = (data.get("keywords") or "").strip()
     # 안전: 비었거나 압축 효과 없으면(원본 이상) 스킵 — 정보손실/무의미 갱신 방지
     if not new_content or len(new_content) >= len(content):
@@ -429,10 +437,12 @@ def consolidate_one(db_path: str, force: bool = False) -> Dict:
                 print(f"[정리] 병합 판정 실패 (스킵): {e}")
                 continue
             for mg in merges:
-                mdb.apply_merge(
+                applied = mdb.apply_merge(
                     db_path, mg["keep_id"], mg["content"],
-                    mg["keywords"], mg["category"], mg["drop_ids"],
+                    mg["keywords"], mg["category"], mg["drop_ids"], expected_contents=mg["expected_contents"],
                 )
+                if not applied:
+                    continue
                 stats["merged"] += 1
                 stats["dropped"] += len(mg["drop_ids"])
 
@@ -452,10 +462,10 @@ def consolidate_one(db_path: str, force: bool = False) -> Dict:
             continue
         # apply_merge 를 drop_ids=[] 로 = 단일 레코드 content/keywords 갱신 + 재임베딩.
         # used_at 미변경이라 자석은 유지하되 *크기만* 줄인다(키워드 표면·내용 압축).
-        mdb.apply_merge(db_path, rec["id"], new["content"],
+        applied = mdb.apply_merge(db_path, rec["id"], new["content"],
                         new["keywords"] or (rec.get("keywords") or ""),
-                        rec.get("category") or "", [])
-        stats["compacted"] += 1
+                        rec.get("category") or "", [], expected_contents={rec["id"]: content})
+        stats["compacted"] += int(bool(applied))
 
     # 3) 상한 초과 시 LRU 가지치기 (보호 카테고리 제외)
     stats["pruned"] = mdb.prune_lru(db_path)

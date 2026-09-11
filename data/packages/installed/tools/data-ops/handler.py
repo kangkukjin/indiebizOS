@@ -202,6 +202,7 @@ def _emit_items(envelope, new_items, *, population=False):
     if isinstance(out.get("columns"), list) and isinstance(out.get("rows"), list):
         out.pop("columns", None)
         out.pop("rows", None)
+    _scope.invalidate_derived_checks(out, _orig, new_items)
     out["items"] = new_items          # 단일 통화
     out["count"] = len(new_items)
     out.setdefault("success", True)
@@ -225,6 +226,7 @@ def _emit_table(envelope, new_table, *, population=False):
         out["columns"] = new_table.get("columns", [])
         out["rows"] = new_table.get("rows", [])
     out.setdefault("success", True)
+    _scope.invalidate_derived_checks(out, _orig, _row_dicts(new_table))
     _prior = next((len(o) for o in _orig if isinstance(o, list)), None)
     _restate_scope(out, _prior, len(new_table.get("rows") or []), population=population)
     # 표 경로의 거울 키는 행 dict 로 투영한다 — 도메인 키에 열-배열을 꽂으면 모양이 깨진다.

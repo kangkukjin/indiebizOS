@@ -447,14 +447,17 @@ def test_progress_after_review_before_delivery_retires_old_instruction(superviso
     assert supervisor.pending is None
 
 
-def test_long_but_progressing_work_does_not_consume_review(supervisor, monkeypatch):
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: pytest.fail("정상 진행 중 시간 점검"))
+def test_long_progressing_work_gets_bounded_cost_review(supervisor, monkeypatch):
+    seen = []
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: (seen.append(kw) or '{"status":"CONTINUE","reason":"독립 처리 병렬 실행 중"}'))
     key = supervisor._start("inspect", {})
     supervisor._finish(key, "progress")
     now = supervisor.started + 500
     supervisor.last_progress = now - 10
     supervisor.tick(now)
-    assert supervisor.reviews == 0
+    assert supervisor.reviews == 1
+    supervisor.tick(now + 1)
+    assert len(seen) == 1
 
 
 def test_manager_state_is_delta_and_cannot_consume_job_progress(supervisor, tmp_path):

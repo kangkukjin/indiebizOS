@@ -107,3 +107,22 @@ def _restate_scope(out, prior_len, new_len, *, population=False):
     if (population or (prior_len is not None and prior_len != new_len)) and isinstance(out.get("summary"), (dict, str)):
         out.pop("summary", None)
     return out
+
+
+def invalidate_derived_checks(out, originals, new_rows):
+    """Checks and AI row counters describe their own input revision, not later rows."""
+    from common.value_semantics import values_equal
+    original = next((o for o in originals if isinstance(o, list)), None)
+    if original is None or values_equal(original, new_rows):
+        return out
+    fields = ("criteria_verdict", "criteria_feedback", "criteria_attempts", "rows_in",
+              "rows_out", "rows_dropped", "_merge")
+    upstream = {k: out.pop(k) for k in fields if k in out}
+    if upstream:
+        import hashlib
+        import json
+        revision = hashlib.sha256(json.dumps(original, ensure_ascii=False,
+            sort_keys=True, default=str).encode()).hexdigest()
+        out["_upstream_check"] = {"checks": upstream, "input_hash": revision,
+                                  "applies_to": "previous_items"}
+    return out

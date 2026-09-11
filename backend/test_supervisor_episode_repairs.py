@@ -45,7 +45,7 @@ def memory_harness(tmp_path, monkeypatch):
 
 def test_memory_merges_same_target_once_and_stores_only_novel_content(memory_harness, monkeypatch):
     h = memory_harness
-    facts = [{"content": "추가 사실 A", "keywords": "a"}, {"content": "추가 사실 B", "keywords": "b"}]
+    facts = [{"source_ids": [2], "keywords": "a"}, {"source_ids": [3], "keywords": "b"}]
 
     def model(prompt, **kw):
         h.prompts.append(prompt)
@@ -58,9 +58,9 @@ def test_memory_merges_same_target_once_and_stores_only_novel_content(memory_har
 
     monkeypatch.setattr("consciousness_agent.oneshot_ai_call", model)
     before = h.state["content"]
-    h.runner._distill_deep_memory("작업", "결과")
+    h.runner._distill_deep_memory("작업", "추가 사실 A\n\n추가 사실 B")
     assert len(h.updates) == 1 and not h.saved
-    assert h.state["content"] == before + "\n[보충] 새로 확인한 사실 A와 B"
+    assert h.state["content"] == before + "\n[보충] 추가 사실 A\n추가 사실 B"
 
 
 def test_already_contained_memory_needs_no_comparison_model_or_write(memory_harness, monkeypatch):
@@ -69,10 +69,10 @@ def test_already_contained_memory_needs_no_comparison_model_or_write(memory_harn
 
     def model(**kw):
         calls.append(kw)
-        return json.dumps([{"content": "뒤쪽에 이미 기록한 중요한 사실", "keywords": "k"}])
+        return json.dumps([{"source_ids": [2], "keywords": "k"}])
 
     monkeypatch.setattr("consciousness_agent.oneshot_ai_call", model)
-    h.runner._distill_deep_memory("작업", "결과")
+    h.runner._distill_deep_memory("작업", "뒤쪽에 이미 기록한 중요한 사실")
     assert len(calls) == 1 and not h.updates and not h.saved
 
 

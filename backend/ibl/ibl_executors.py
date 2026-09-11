@@ -155,7 +155,7 @@ def _subst_var_refs(obj: Any, values: Dict[str, Any]) -> Any:
     바인딩 자리라 건드리지 않고, `$items` 는 엔진의 집합 바인딩 예약어라 제외한다 (M6).
     ★문장 속 참조가 목록을 JSON 으로 넣으면 그 step 에 `_list_in_text` 표식(G31-1) — 파이프의
       주입기(_inject_step_results)와 같은 표식이라 안쪽 파이프의 엔진이 같은 문장으로 번역한다."""
-    from workflow_engine import _v4_var_payload, _extract_result_field, _mark_list_in_text, _is_json_list
+    from workflow_binding import _v4_var_payload, _extract_result_field, _mark_list_in_text, _is_json_list
     names = [k for k in (values or {}) if k != "items"]
     if not names:
         return obj
@@ -273,7 +273,7 @@ def _run_branch(action: Any, tool_input: dict, project_path: str, agent_id: str)
             steps, project_path, agent_id=agent_id,
             context=({"_prev_result": prev} if prev else None))))
     from ibl_engine import execute_ibl
-    from workflow_engine import _auto_inject_prev
+    from workflow_binding import _auto_inject_prev
     st = _nest(action, tool_input)
     if prev and isinstance(st, dict) and not st.get("_assign"):
         st = _auto_inject_prev(st, prev)

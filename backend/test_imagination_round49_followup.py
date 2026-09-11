@@ -143,12 +143,17 @@ def test_F48_7_마지막_통화의_표지가_봉투_최상위로_오른다(tmp_p
     assert "warning" in env and "부분 실패" in env["warning"], env.get("warning")
 
 
-def test_F48_7_승격은_표지_목록_한_벌을_따른다():
-    """승격 대상이 손으로 적혀 있으면 표지를 늘렸을 때 또 뒤처진다 — markers_of 위임 확인."""
-    import inspect
+def test_F48_7_승격은_표지_목록_한_벌을_따른다(monkeypatch):
+    """F48-7: 소유 목록에 새 표지가 생기면 실행기를 고치지 않아도 승격한다."""
+    import ibl_honesty
+    import ibl_engine
     import workflow_engine
-    src = inspect.getsource(workflow_engine.execute_pipeline)
-    assert "_honesty_markers_of(prev_result)" in src, "승격이 표지 단일 소스를 안 쓴다"
+    monkeypatch.setattr(ibl_honesty, "HONESTY_FLAG_KEYS", ibl_honesty.HONESTY_FLAG_KEYS + ("future_marker",))
+    payload = {"items": [{"id": 1}], "future_marker": True}
+    monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *_a, **_k: payload)
+    out = workflow_engine.execute_pipeline([{"_node": "self", "action": "read", "params": {"path": "fixture"}}])
+    assert out["future_marker"] is True
+    assert json.loads(out["final_result"]) == payload
 
 
 # ─────────────────── 관문: 표지 전파 ───────────────────

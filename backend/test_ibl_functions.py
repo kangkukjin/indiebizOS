@@ -15,6 +15,7 @@ import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
+import workflow_store  # 시험 대역도 저장소 소유자에 설치한다.
 import ibl_engine  # noqa: E402
 import ibl_executors as ex  # noqa: E402
 import ibl_control_blocks as cb  # noqa: E402
@@ -139,7 +140,7 @@ def test_f4_honest_failures_and_workflow_fallback(monkeypatch):
     assert not out["success"] and "깊이 상한" in json.dumps(out, ensure_ascii=False)
     out = _run('[fn:없는이름]{}')
     assert not out["success"] and "정의가 없고" in _fn_error(out)
-    monkeypatch.setattr(workflow_engine, "get_workflow", lambda wid: {"name": wid} if wid == "저장된것" else None)
+    monkeypatch.setattr(workflow_store, "get_workflow", lambda wid: {"name": wid} if wid == "저장된것" else None)
     monkeypatch.setattr(workflow_engine, "execute_workflow", lambda wid, pp, params=None, **kw: {"success": True, "workflow_id": wid, "got": params})
     out = _run('[fn:저장된것]{city: "수원"}')
     fn_env = _step_env(out, 0)
@@ -168,7 +169,7 @@ if __name__ == "__main__":
 def test_f6_fn_resolves_named_idiom_after_def_and_workflow(monkeypatch):
     import ibl_usage_db as mod
     calls = []
-    monkeypatch.setattr(workflow_engine, "get_workflow", lambda wid: None)
+    monkeypatch.setattr(workflow_store, "get_workflow", lambda wid: None)
     monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
     monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
     monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias",

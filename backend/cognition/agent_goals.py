@@ -305,7 +305,7 @@ class AgentGoalsMixin:
                     # 라운드 실패의 트레이스백 승계 + goal 프레임 — 경계 규약
                     # (docs/IBL_TRACEBACK_HANDOFF.md). 종전엔 str(result)[:500] 절단이
                     # 봉투째 뭉갰다 — "몇 라운드째의 어느 액션이 무슨 입력으로"가 사라졌다.
-                    from workflow_engine import is_error_result
+                    from workflow_verdict import is_error_result
                     if is_error_result(result):
                         from ibl_traceback import tb_of, build_tb, push_frame
                         _err = (result.get("error") if isinstance(result, dict)

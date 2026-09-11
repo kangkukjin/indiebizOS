@@ -33,6 +33,7 @@ import sys
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401 — 층 디렉토리 등재
+import workflow_contract
 
 import ibl_engine  # noqa: E402
 import workflow_engine  # noqa: E402
@@ -370,12 +371,12 @@ def test_w11_mutual_cycle_rejected():
 
 def test_w12_depth_cap():
     # 단위: 스택이 상한에 닿으면 순환이 아니어도 거절
-    stack = [f"w{i}" for i in range(workflow_engine.MAX_WORKFLOW_DEPTH)]
+    stack = [f"w{i}" for i in range(workflow_contract.MAX_WORKFLOW_DEPTH)]
     pushed, err = workflow_engine._wf_push(stack, "w_last")
     assert pushed is None and "중첩 깊이 상한" in err, (pushed, err)
 
     # 실경로: 순환 없는 사슬 w0→w1→…→wN 이 상한에서 끊긴다
-    n = workflow_engine.MAX_WORKFLOW_DEPTH + 2
+    n = workflow_contract.MAX_WORKFLOW_DEPTH + 2
     ids = [f"_t_rec_chain{i}" for i in range(n)]
     for i, wid in enumerate(ids):
         body = (f'[self:workflow]{{op: "run", workflow_id: "{ids[i + 1]}"}}'
@@ -388,7 +389,7 @@ def test_w12_depth_cap():
     finally:
         for wid in ids:
             _cleanup(wid)
-    print(f"W12 OK — 워크플로우 중첩 깊이 상한({workflow_engine.MAX_WORKFLOW_DEPTH})")
+    print(f"W12 OK — 워크플로우 중첩 깊이 상한({workflow_contract.MAX_WORKFLOW_DEPTH})")
 
 
 # === 스케줄 표면 — 저장된 인자를 실행 시점까지 나르는가 (2026-08-22) ===

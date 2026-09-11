@@ -159,7 +159,9 @@ def _run_body(body: Any, tool_input: dict, project_path: str, agent_id: str,
     list(파이프)면 execute_pipeline 봉투의 final_result 를 결과로(통화가 바로 흐르게), dict 면 execute_ibl.
     honesty(선택): 몸통 봉투의 정직 신고를 담아 갈 dict — 주면 `_collect_honesty` 가 채운다(B27-4).
     """
-    from workflow_engine import execute_pipeline, is_error_result, _auto_inject_prev
+    from workflow_engine import execute_pipeline
+    from workflow_verdict import is_error_result
+    from workflow_binding import _auto_inject_prev
     from ibl_traceback import build_tb, tb_of, py_tail_of
     prev = _prev_of(tool_input)
     if context is None and prev:
@@ -247,7 +249,8 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
                     "error": f"[fn:{name}] 의 정의 표를 찾지 못했습니다(프로그램 정의 표가 밀려남) — 프로그램을 다시 실행하세요."}
     if not fdef:
         # 둘째 길: 저장 워크플로(원장) · 셋째 길: 이름 붙은 관용구(해마, 2026-09-05 — 관용구는 이름 붙은 함수)
-        from workflow_engine import execute_workflow, get_workflow
+        from workflow_engine import execute_workflow
+        from workflow_store import get_workflow
         if get_workflow(name) is not None:
             res = execute_workflow(name, project_path, params=caller or None)
             if isinstance(res, dict):

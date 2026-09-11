@@ -149,12 +149,25 @@ def test_i12_failure_note_and_envelope_warning_speak_the_mark():
     assert "무시" in w, "정당한 용법(AI 에 데이터 먹이기)을 틀렸다고 읽게 하면 안 된다"
 
 
-def test_i13_engine_wires_the_mark_into_the_envelope():
-    """배선 가드 — 표식을 올리는 자리(step 기록)와 번역하는 자리(봉투 경고)가 엔진에 실재해야 한다."""
-    import workflow_engine
-    src = open(workflow_engine.__file__, encoding="utf-8").read()
-    assert '_seq["list_in_text"].append(' in src, "step 기록이 표식을 안 모은다"
-    assert "_list_in_text_warning(_seq[\"list_in_text\"])" in src, "봉투 경고가 표식을 안 번역한다"
+def test_i13_engine_wires_the_mark_into_the_envelope(monkeypatch):
+    """I13: 실제 봉투에 표식·경고가 함께 남고, 다음 실행으로 새지 않는다."""
+    import ibl_engine
+    from workflow_engine import execute_pipeline
+    from ibl_parser import parse
+
+    def fake(step, *_args, **_kwargs):
+        if step["action"] == "read":
+            return {"items": [{"title": "a"}, {"title": "b"}]}
+        return {"success": True, "message": "saved"}
+
+    monkeypatch.setattr(ibl_engine, "execute_ibl", fake)
+    out = execute_pipeline(parse('$곡 = [self:read]{path:"fixture"}; '
+                                 '[self:write]{path:"out",content:"목록: $곡 끝"}'))
+    assert out["success"]
+    assert out["list_in_text"][0]["refs"][0]["rows"] == 2
+    assert "[목록→글자]" in out["warning"] and "$곡" in out["warning"]
+    clean = execute_pipeline(parse('[self:write]{path:"out",content:"고정"}'))
+    assert clean["success"] and "list_in_text" not in clean and "warning" not in clean
 
 
 def test_i14_caller_params_list_embed_is_reported():

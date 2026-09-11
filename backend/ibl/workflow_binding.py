@@ -11,7 +11,7 @@ step 과 step 사이에서 값이 어떻게 옮겨 앉는가 하나다:
   · 통화 정규화·표시 (_to_prev_currency·_step_label·_to_string)
 
 호출자(workflow_parallel·workflow_fallback·ibl_control_blocks·ibl_executors·테스트)는
-지금까지처럼 `from workflow_engine import ...` 로 계속 집어간다 — 본체가 재수출한다.
+이 소유 모듈에서 직접 가져온다. 바인딩을 읽기 위해 실행 본체를 거치지 않는다.
 """
 
 import re

@@ -19,6 +19,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import boot_paths  # noqa: E402,F401
+import workflow_store  # 시험 대역도 저장소 소유자에 설치한다.
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -176,7 +177,7 @@ def test_관용구_호출_실패_봉투에_정의가_실린다(monkeypatch, tmp_
     import ibl_usage_db
     monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", lambda: _DB())
     import workflow_engine
-    monkeypatch.setattr(workflow_engine, "get_workflow", lambda name: None)
+    monkeypatch.setattr(workflow_store, "get_workflow", lambda name: None)
     monkeypatch.setattr(workflow_engine, "execute_pipeline",
                         lambda *a, **k: {"success": False, "error": "Step 1 에러: 파일 없음"})
     out = cb._execute_fn({"_node": "fn", "action": "읽고세기", "params": {"경로": "/없음"}}, str(tmp_path), "t")

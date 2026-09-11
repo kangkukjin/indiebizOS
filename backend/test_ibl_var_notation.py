@@ -25,6 +25,7 @@ import sys
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
+import workflow_binding
 
 import workflow_engine  # noqa: E402
 from common.ibl_vars import (find_names, sub_ref, is_sole_ref, split_ref, REF_RE)  # noqa: E402
@@ -111,10 +112,10 @@ def test_b7_blocks_execute():
 
 
 def test_b8_items_binding():
-    assert workflow_engine._ITEMS_REF.match("${items}"), "괄호형 $items 미인식"
-    m = workflow_engine._ITEMS_REF.match("${items.name}")
+    assert workflow_binding._ITEMS_REF.match("${items}"), "괄호형 $items 미인식"
+    m = workflow_binding._ITEMS_REF.match("${items.name}")
     assert m and (m.group(1) or m.group(2)) == "name", m
-    m2 = workflow_engine._ITEMS_REF.match("$items.name")
+    m2 = workflow_binding._ITEMS_REF.match("$items.name")
     assert m2 and (m2.group(1) or m2.group(2)) == "name", m2
     print("B8 OK — $items 집합 바인딩 예약어의 괄호형")
 

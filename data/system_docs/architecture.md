@@ -213,6 +213,7 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 
 **중간 결과 보존 — 원칙의 현행 모양(2026-08-22 봉투 다이어트, M1)**
 - `workflow_engine`/`ibl_engine`은 중간 결과를 절삭하지 않고 전부 누적한다(엔진 안쪽은 원형 그대로).
+- 파이프 실행마다 `pipeline_state.PipelineState`가 직전 통화·단계 원문·변수 슬롯·실패/정직성 누산·진행 티켓을 소유한다. 실패 후 독립 문장으로 건너뛰기, 살아 있는 변수와 재개 통화의 스필은 이 상태의 메서드로 모았다. 순차/병렬/폴백의 실행 순서와 최종 봉투 조립은 `workflow_engine`이 맡고, 바인딩·실패 판정·저장 소비자는 각각 `workflow_binding`·`workflow_verdict`·`workflow_store`에서 직접 읽는다.
 - 바뀐 것은 **에이전트 경계**다: `results[]`는 step 요약(shape·count·bytes·columns·preview, 실패 step은 오류문 원형)으로 접히고 **`final_result` 하나만 원형**으로 나간다. 옛 모양은 `verbose: true`.
   - 원칙은 유지된다("각 단계가 무엇을 냈는지 보인다") — 접힌 것은 *같은 내용의 중복 전송*이지 관측 자체가 아니다.
 - `[self:write]{spill:true}` 스필 싱크와 **자동 스필**(이음매 통화 200K자 초과 → `data/spill/` 참조 봉투)도 같은 계열: 통화를 참조로 바꾸고 소비자가 투명 해소.
@@ -490,7 +491,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 347개**(test 제외, git 추적 기준) — 층 디렉토리 `base 35 · datastore 48 · ibl 48 · cognition 62 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **75개**(guide_db 등록 **74**)
+- backend **.py 348개**(test 제외, git 추적 기준) — 층 디렉토리 `base 35 · datastore 48 · ibl 49 · cognition 62 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **75개**(guide_db 등록 **74**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

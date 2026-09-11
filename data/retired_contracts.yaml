@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: workflow_helper_facade
+    retired: 2026-09-11
+    reason: 바인딩·실패 판정·저장을 읽는 내부 소비자가 실행 엔진을 경유해 순환 의존을 만들었다.
+    instead: 실행은 workflow_engine, 바인딩은 workflow_binding, 실패 판정은 workflow_verdict, 저장은 workflow_store에서 직접 가져온다.
+    phrases:
+      - 'workflow_engine import _is_empty_result'
+      - 'workflow_engine._ITEMS_REF'
+      - 'workflow_engine.MAX_WORKFLOW_DEPTH'
   - id: goal_eval_fail_open
     retired: 2026-09-11
     reason: 평가 모델 오류·판정 부재를 달성으로 기록하면 검수하지 않은 결과가 성공 경험으로 학습된다.

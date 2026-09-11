@@ -22,8 +22,9 @@ def _execute_fallback(chain: list, project_path: str, prev_result: str,
         (result, log) - 성공한 결과 또는 마지막 에러, 시도 로그
     """
     from ibl_engine import execute_ibl
-    from workflow_engine import (execute_pipeline, _inject_prev_result, _auto_inject_prev,
-                                 is_error_result, _is_empty_result, _step_label)
+    from workflow_engine import execute_pipeline
+    from workflow_binding import _inject_prev_result, _auto_inject_prev, _step_label
+    from workflow_verdict import is_error_result, _is_empty_result
 
     log = []
     last_result = None

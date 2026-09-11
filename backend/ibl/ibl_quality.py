@@ -253,7 +253,7 @@ def apply_criteria(criteria: str, result: Any, tool_input: dict, node: str, acti
                    rerun: Callable[[dict], Any]) -> Any:
     """실행 결과에 품질 계약 적용 — 판정 → (미달이면 재시도 1회 → 재판정) → 통과 신고
     또는 error_type=quality 실패. execute_ibl 최외곽 관문에서만 부른다."""
-    from workflow_engine import is_error_result
+    from workflow_verdict import is_error_result
     from ibl_traceback import build_tb
 
     if is_error_result(result):

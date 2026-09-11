@@ -777,7 +777,7 @@ class Supervisor:
 
 
 def _failed(value):
-    from workflow_engine import is_error_result
+    from workflow_verdict import is_error_result
     from ibl_honesty import completion_evidence
     return is_error_result(value) or bool(completion_evidence(value))
 

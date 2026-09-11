@@ -40,7 +40,7 @@ PRIOR = ('[self:workflow]{op: "save", name: "일일리포트", '
 
 # ── 대체본이 정말 통과하는지 먼저 확인 (교재를 고치는 스크립트가 또 틀리면 안 된다) ──
 from ibl_parser import parse                      # noqa: E402
-from workflow_engine import _validate_sentence    # noqa: E402
+from workflow_store import _validate_sentence    # noqa: E402
 from workflow_contract import _free_vars          # noqa: E402
 
 body = parse(NEW)[0]["params"]["do"]

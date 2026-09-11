@@ -96,11 +96,12 @@ def test_return_projection_keeps_values_and_does_not_mutate_diagnostics(value):
 
 def test_saved_workflow_called_as_function_uses_same_value_gate(monkeypatch):
     import workflow_engine
+    import workflow_store
     from ibl_control_blocks import _execute_fn
     from workflow_binding import _to_prev_currency
 
     monkeypatch.setattr(
-        workflow_engine, "get_workflow", lambda name: {"name": name}
+        workflow_store, "get_workflow", lambda name: {"name": name}
     )
     monkeypatch.setattr(
         workflow_engine,

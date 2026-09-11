@@ -35,21 +35,21 @@ def _load(path, name):
 
 def test_b21_1_korean_prefix_is_error():
     """B21-1 그물: 한글 오류 접두도 실패로 읽힌다(영어판과 대칭)."""
-    from workflow_engine import is_error_result
+    from workflow_verdict import is_error_result
     assert is_error_result("오류: html은 필수입니다.") is True
     assert is_error_result("Error: nope") is True
 
 
 def test_b21_1_success_text_still_ok():
     """과잉 거절 방지: 정상 결과 문자열은 그대로 성공이어야 한다."""
-    from workflow_engine import is_error_result
+    from workflow_verdict import is_error_result
     assert is_error_result("렌더링 완료: /tmp/a.png") is False
     assert is_error_result("HTML 동영상 제작 완료: /tmp/a.mp4") is False
 
 
 def test_b21_1_contract_is_dict_not_prefix():
     """B21-1 본체: media_producer 는 실패를 dict 로 낸다 — 접두 없는 실패도 잡히게."""
-    from workflow_engine import is_error_result
+    from workflow_verdict import is_error_result
     mp = _load(MP, "mp_contract_probe")
     err = mp._err("렌더링 중 오류 발생: boom")   # 옛 평문이었다면 접두가 없어 안 잡히던 모양
     assert isinstance(err, dict) and err.get("success") is False, err

@@ -30,6 +30,7 @@ import tempfile
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401 — 층 디렉토리 등재
+import workflow_store as _workflow_store
 
 _ROOT = os.path.dirname(__file__.rsplit('/', 2)[0] + '/')
 _PKG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -401,7 +402,7 @@ def test_p13_document_open_dict_and_table():
 
 def test_p14_fallback_empty_predicate():
     """P14(⑯ 실험 7): ??가 빈 결과(total:0·items:[])를 성공으로 세어 폴백이 안 돌았다."""
-    from ibl.workflow_engine import _is_empty_result, is_error_result
+    from workflow_verdict import _is_empty_result, is_error_result
     # 빈손 판정 — 구조 신호
     assert _is_empty_result({"success": True, "items": [], "total": 0}) is True
     assert _is_empty_result(json.dumps({"total": 0, "items": []})) is True
@@ -698,7 +699,7 @@ def test_p20_workflow_save_syntax_gate():
         # 몸통 자체가 없으면 거부 — run 에서야 "steps 가 없습니다" 를 만나던 부류
         assert save(name="p20_nobody").get("success") is False
         # 거부된 것은 하나도 파일로 남지 않는다
-        assert not list((_wf._get_workflows_path()).glob("p20_*.yaml")), "거부인데 저장됨"
+        assert not list((_workflow_store._get_workflows_path()).glob("p20_*.yaml")), "거부인데 저장됨"
 
         # 정상 문장은 그대로 저장된다 (회귀 없음)
         assert save(name="p20_ok", steps='[sense:weather]{city: "서울"}').get("success") is True

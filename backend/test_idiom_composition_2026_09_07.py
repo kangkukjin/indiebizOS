@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 import boot_paths  # noqa: F401
+import workflow_store  # 시험 대역도 저장소 소유자에 설치한다.
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'scripts'))
@@ -71,7 +72,7 @@ def run(monkeypatch, tmp_path):
         def update_success_by_code(self, code, ok, **kw):
             observed['used'].append(ok)
     monkeypatch.setattr(ibl_usage_db, 'IBLUsageDB', DB)
-    monkeypatch.setattr(workflow_engine, 'get_workflow', lambda name: None)
+    monkeypatch.setattr(workflow_store, 'get_workflow', lambda name: None)
 
     def leaf(ti, project, agent=None):
         node, act = ti.get('_node'), ti.get('action')

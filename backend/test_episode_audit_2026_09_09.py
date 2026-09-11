@@ -5,6 +5,7 @@ from pathlib import Path
 import uuid
 
 import boot_paths  # noqa: F401
+import workflow_store  # 시험 대역도 저장소 소유자에 설치한다.
 import pytest
 
 from system_tools import _execute_ibl_unified
@@ -135,7 +136,7 @@ def test_named_idiom_records_its_own_result_once(run, monkeypatch, tmp_path, bod
             '[self:read]' + json.dumps({"path": str(tmp_path / "missing_body.txt")}))
     row = {"id": 1, "alias": "직전보고서찾아읽기", "ibl_code": body}
     hits = []
-    monkeypatch.setattr(workflow_engine, "get_workflow", lambda name: None)
+    monkeypatch.setattr(workflow_store, "get_workflow", lambda name: None)
     monkeypatch.setattr(ibl_usage_db.IBLUsageDB, "find_phrase_by_alias", lambda self, name: row)
     monkeypatch.setattr(ibl_usage_db.IBLUsageDB, "alias_of_code", lambda self, code: row["alias"])
     monkeypatch.setattr(ibl_usage_db.IBLUsageDB, "update_success_by_code",

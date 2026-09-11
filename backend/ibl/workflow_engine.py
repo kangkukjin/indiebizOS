@@ -5,12 +5,13 @@ IBL Phase 5의 핵심.
 여러 IBL 액션을 순차 연결하고, YAML로 저장/로드하여 반복 실행합니다.
 
 사용법:
-    from workflow_engine import execute_pipeline, execute_workflow, list_workflows
+    from workflow_engine import execute_pipeline, execute_workflow
+    from workflow_store import list_workflows
 
     # 파이프라인 직접 실행
     steps = [
-        {"_node": "fs", "action": "exec_python", "target": "print(42)"},
-        {"_node": "system", "action": "notify", "target": "결과: {{_prev_result}}"},
+        {"_node": "self", "action": "time"},
+        {"_node": "self", "action": "read", "params": {"path": "README.md"}},
     ]
     result = execute_pipeline(steps, ".")
 
@@ -18,35 +19,26 @@ IBL Phase 5의 핵심.
     result = execute_workflow("daily_news", ".")
 """
 
-import os
-import re
 import json
 import time
-import yaml
-from pathlib import Path
-from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional
 # 정직 표지의 단일 소스 (B48-1/2) — 잎 모듈이라 순환 참조가 없다.
 from ibl_honesty import markers_of as _honesty_markers_of  # noqa: F401
 # 트레이스백의 단일 소스 (2026-08-27, docs/IBL_TRACEBACK_HANDOFF.md) — 역시 잎 모듈.
-from ibl_traceback import build_tb, push_frame, tb_of, py_tail_of, attach_input
+from ibl_traceback import build_tb, push_frame, tb_of, py_tail_of
+from pipeline_state import PipelineState
 
 
 # === 경로 ===
 
-# 워크플로 원장(저장·조회·삭제·등록 관문·slug)은 2026-09-05 형제 모듈로 이동(1500줄 규칙) —
-# 재수출로 `from workflow_engine import list_workflows/save_workflow/…` 경로 전부 유지. 정본은 workflow_store.
-from workflow_store import (  # noqa: E402,F401
-    _get_workflows_path, list_workflows, _resolve_workflow_id, get_workflow,
-    _SENTENCE_KEYS, _unclosed_reason, _validate_sentence, save_workflow, delete_workflow, _slugify,
-)
+# 저장·조회는 workflow_store 소유. 내부 소비자는 소유 모듈에서 직접 가져온다.
+from workflow_store import list_workflows, _resolve_workflow_id, get_workflow, _SENTENCE_KEYS, _validate_sentence, save_workflow, delete_workflow
 
 
 # === 실패 판정 (단일 소스) ===
 
-# 판정·사유 3형제는 2026-08-29 형제 모듈로 이동(1500줄 규칙) — 재수출로 기존
-# `from workflow_engine import is_error_result` 경로 전부 유지. 정본은 workflow_verdict.
-from workflow_verdict import is_error_result, err_reason_of, _is_empty_result  # noqa: F401
+# 실패 판정은 workflow_verdict 소유.
+from workflow_verdict import is_error_result, err_reason_of
 
 
 # === 파이프라인 실행 ===
@@ -209,9 +201,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                                              "of": len(steps),
                                              "node": _b.get("_node") or _b.get("node", "?"),
                                              "action": _b.get("action", "?")})}
-    results = []
-    total = len(steps)
-    action_count = 0  # 실제 실행된 액션 수 (병렬 branches 포함)
+    state = PipelineState(steps=steps, context=context, prev_result=prev_result)
 
     # 표면 티켓 진행 신고 (2026-08-29 ⑨) — claim-by-clear: 최외곽 파이프라인이 티켓을
     # 집어 들며 스레드에서 비워, 안쪽 실행(each 하위 파이프·블록·중첩 워크플로우·병렬
@@ -221,223 +211,21 @@ def execute_pipeline(steps: list, project_path: str = ".",
     # 2026-09-01: 소유(claim)와 신고(beat)의 분리는 ibl_progress 한 벌이 소유한다 —
     # 소유자가 아니면(안쪽 파이프) 좌표 대신 detail 로 자기 위치를 말한다.
     from ibl_progress import claim as _claim_progress, report_step as _report_step, beat as _beat
-    _ticket = _claim_progress(len(steps))
-    # $var 바인딩 저장소: step 인덱스 → 결과 문자열. 파서가 $var 를 {{_step_N_result}} 로
-    # 치환해 두므로, 여기 저장된 값으로 실행 시점에 실제 결과가 주입된다 (문장 경계와 무관).
-    step_results: Dict[int, str] = {}
-    # ★재개 변수 시딩(2026-09-06): 부분 실패 봉투의 산 변수(resume_vars.vars_ref)를 소비자가 읽어
-    #   {슬롯: 원형 문자열} 로 넘기면 그 슬롯이 "이미 실행된 앞 문장" 처럼 참조된다.
-    if isinstance(context, dict) and isinstance(context.get("_preset_results"), dict):
-        for _k, _v in context["_preset_results"].items():
-            step_results[int(_k)] = _v if isinstance(_v, str) else json.dumps(_v, ensure_ascii=False)
+    state.ticket = _claim_progress(len(state.steps))
+    state.seed_results()
 
-    # ── 문장 경계(`;` · 개행) ──────────────────────────────────────────────
-    # 여러 문장이 한 리스트로 평탄화돼 들어오므로, 파서가 각 문장 첫 step 에 `_seq_boundary` 를
-    # 붙여 둔다. `>>` 는 "성공했을 때만 다음"이지만 문장 경계는 "되든 안 되든 다음"이다.
-    # 실패해도 다음 문장으로 건너뛰어 계속 실행하고, _prev_result 는 경계를 넘기지 않는다(독립).
-    # ★정직: 건너뛰었다고 실패를 숨기지 않는다 — 실패한 문장이 하나라도 있으면 success=False 이고
-    #   results 에 그 실패가 그대로 남는다(스케줄러가 조용히 성공으로 착각하지 않게).
-    def _next_boundary(from_idx: int) -> int:
-        for j in range(from_idx, total):
-            if isinstance(steps[j], dict) and steps[j].get("_seq_boundary"):
-                return j
-        return -1
-
-    _seq = {"skip_until": -1, "failed": 0, "last_mode": None, "skipped": [], "halted": [],
-            "branches_failed": [], "empty_notes": [], "list_in_text": [],
-            # ★F35-1 (35회차): `??` 가 갈아탄 사실을 봉투 최상위로 올리는 누산기.
-            #   교재는 `_fallback_used` 를 정직 표지 **1번**으로 가르치는데 실물이 없었다.
-            "fallback_used": [],
-            # ★B48-2 (48회차): 병렬 가지가 *성공*으로 돌아왔을 때 그 안의 부분 실패
-            #   (each 의 error_count·errors, truncated, _fallback_used …) 를 담는 누산기.
-            "branch_honesty": [],
-            # criteria 품질 계약(ibl_quality)의 step 별 판정 누산기 (2026-08-28) —
-            # 판정이 step 기록에만 살면 뒷 step 의 표지가 로그 절단에 통째로 사라져
-            # 라이브 관찰이 성립하지 않았다. skipped/halted 와 같은 승격 규약.
-            "criteria": [],
-            # ★2026-09-05 (ep2827): `$투자 = … >> [table:ai]` 가 죽자 뒤의 문장 7개가 전부
-            #   "변수 $투자 이(가) 아직 값을 기록하지 않았습니다" 로 죽고, 봉투의 error 는
-            #   "독립 문장 8개 실패" 였다 — 뿌리 1개가 연쇄 7개 뒤에 숨어 다이제스트(3건)에
-            #   원인이 한 줄도 안 실렸다. 실패한 할당 문장의 원인을 이름별로 남겨(var_errors)
-            #   뒤 참조가 *왜* 비었는지 말하게 하고, 연쇄(derived)는 뿌리와 갈라 센다.
-            "var_errors": {}, "derived": 0}
-
-    def _root_note(out: dict) -> None:
-        """실패 봉투에 뿌리(죽은 할당 문장)·연쇄를 싣는다 — error 문장 자체에도(절단 생존)."""
-        if not _seq["var_errors"]:
-            return
-        out["root_failures"] = [{"var": n, **v} for n, v in _seq["var_errors"].items()]
-        _roots = "; ".join(f"step {v['step']} ${n} 할당 실패: {v['error'][:200]}"
-                           for n, v in _seq["var_errors"].items())
-        out["error"] = f"{out.get('error') or ''} — 뿌리 {len(_seq['var_errors'])}: {_roots}"
-        if _seq["derived"]:
-            out["error"] += f" (연쇄 {_seq['derived']}개는 그 변수를 읽어 죽은 문장)"
-
-    def _live_vars() -> dict:
-        """살아 있는 `$변수` 원형 — 성공한 할당 문장의 최종 step 결과(죽은 할당은 제외)."""
-        live = {}
-        for _i, _st in enumerate(steps):
-            _nm = _st.get("_assign_name") if isinstance(_st, dict) else None
-            if _nm and _nm != "return" and _i in step_results and _nm not in _seq["var_errors"]:
-                live[_nm] = step_results[_i]
-        return live
-
-    def _attach_live_vars(out: dict) -> None:
-        """★턴 범위 변수(언어 개정 2026-09-06): 최상위 호출자(execute_ibl 표면)가 `_want_live_vars` 로 원할 때만
-        산 변수 원형을 내부 키로 싣는다 — 중첩 파이프(fn·each·goal·workflow)의 봉투를 부풀리지 않는다.
-        표면이 키를 떼어 턴 저장소(ibl_turn_vars)에 합치고, 같은 턴의 다음 호출이 `$이름` 으로 그대로 본다."""
-        if isinstance(context, dict) and context.get("_want_live_vars"):
-            out["_live_vars"] = _live_vars()
-
-    def _resume_vars_note(out: dict) -> None:
-        """★부분 성공 봉투 재사용(2026-09-06, ep2882): 문장 하나가 죽었을 때 살아 있는 `$변수` 를 버리지
-        않는다 — 성공한 할당의 원형을 스필해 `resume_vars` 로 싣는다. 실행자는 죽은 문장만 고쳐
-        그 문장(들)을 code 로 보내고 `resume: {vars_ref}` 를 실으면 산 변수가 재실행 없이 주입된다.
-        옛 판은 39/39 step 이 살아 있어도 실행자가 전체를 다시 돌려 같은 검색·[table:ai] 를 두 번 지불했다.
-        (같은 턴 안에서는 턴 범위 변수가 이 일을 암시적으로 한다 — 이 명시판은 턴을 넘는 24h 회수 자리.)"""
-        live = _live_vars()
-        if not live:
-            return
-        try:
-            from common.spill import spill_write
-            ref = spill_write(json.dumps(live, ensure_ascii=False), tag="resume_vars")["ref"]
-        except Exception:
-            return
-        _dead = sorted(_seq["var_errors"])
-        out["resume_vars"] = {
-            "vars_ref": ref["path"], "vars": sorted(live), "failed_vars": _dead,
-            "note": (f"산 변수 {', '.join('$' + n for n in sorted(live))} 은(는) 재실행하지 않아도 됩니다 — "
-                     f"죽은 문장{'(' + ', '.join('$' + n for n in _dead) + ')' if _dead else ''}만 고쳐 그 문장(들)과 뒤 문장을 "
-                     f"code 로 보내고 resume: {{vars_ref: \"{ref['path']}\"}} 를 실으세요(24h 유효). 전체 재실행 금지."),
-        }
-
-    def _handle_failure(idx: int, abort_payload: dict, tb=None):
-        """실패 처리. ①그 step 의 문장이 [on_error: skip|null] 이면 건너뛰고 계속(신고 동반),
-        ②뒤에 독립 문장이 있으면 거기로 건너뛰고 계속(None 반환),
-        ③없으면 중단 payload — 2단 이상 진행했으면 재개 지점(resume)을 스필해 싣는다(M5 §2.6)."""
-        st = steps[idx] if isinstance(steps[idx], dict) else {}
-        # ── 트레이스백 조립의 단일 지점 (docs/IBL_TRACEBACK_HANDOFF.md) ──
-        # 호출부가 tb 를 안 만든 실패(앞으로 생길 새 실패 지점 포함)도 여기서 기본
-        # 프레임을 얻는다 — 등록 목록이 아니라 통과 지점이 규약을 강제한다(B48-1).
-        # 실패 프레임의 입력 통화(prev_result)도 여기 한 곳에서만 단다.
-        if tb is None:
-            _n, _a = _step_label(st)
-            tb = build_tb(abort_payload.get("error"),
-                          frame={"kind": "pipeline", "step": idx + 1, "of": total,
-                                 "node": _n, "action": _a})
-        attach_input(tb, prev_result)
-        abort_payload["traceback"] = tb
-        # 계속-실행 경로(문장 건너뛰기·on_error)에서도 실패 step 기록에 남긴다 —
-        # 봉투 다이어트(summarize_step)는 result 외 키를 보존하므로 그대로 살아남는다.
-        if results and isinstance(results[-1], dict) and results[-1].get("step") == idx + 1:
-            results[-1].setdefault("traceback", tb)
-        mode = st.get("_on_error")
-        if mode in ("skip", "null"):
-            _seq["last_mode"] = mode
-            _seq["skipped"].append(idx + 1)
-            if results and isinstance(results[-1], dict) and results[-1].get("step") == idx + 1:
-                results[-1]["skipped"] = mode
-            return None
-        _seq["last_mode"] = None
-        # ★F24-1(24회차): 중단 payload 는 봉투 조립부를 거치지 않아 앞 step 에서 죽은 병렬
-        # 분기가 통째로 사라졌다 — 괄호 분기가 죽으면 union 의 2차 증상("통화 종류가 다릅니다")
-        # 만 보이고 진짜 원인(분기 사망)은 어디에도 없었다. 중단 경로에도 같이 싣는다.
-        if _seq["branches_failed"]:
-            abort_payload["branches_failed"] = list(_seq["branches_failed"])
-        b = _next_boundary(idx + 1)
-        if b < 0:
-            # 죽은 마지막 문장이 `$이름 = …` 이면 그 슬롯을 비운다 — 오류 봉투가 산 변수로 둔갑해
-            # 턴 변수·resume_vars 에 실리지 않게(중간 문장 실패 경로의 pop 과 한 벌, 2026-09-06).
-            for _j in range(idx, len(steps)):
-                _sj = steps[_j] if isinstance(steps[_j], dict) else {}
-                if _sj.get("_assign_name"):
-                    step_results.pop(_j, None)
-                    break
-            # 마지막 문장의 실패로 중단해도 앞 문장들의 독립 실패 수·뿌리는 봉투에 남는다
-            # (종전엔 중단 payload 가 _seq 누산을 통째로 버려 "8개 실패" 사실이 사라졌다).
-            if _seq["failed"]:
-                abort_payload["statements_failed"] = _seq["failed"] + 1
-            _fr0 = abort_payload.get("final_result")
-            if isinstance(_fr0, str) and _fr0[:1] == "{":
-                try:
-                    _fr0 = json.loads(_fr0)
-                except Exception:
-                    _fr0 = None
-            if isinstance(_fr0, dict) and _fr0.get("_derived_from"):
-                _seq["derived"] += 1
-            _root_note(abort_payload)
-            _resume_vars_note(abort_payload)
-            _attach_live_vars(abort_payload)
-            if idx >= 1 and prev_result and not st.get("_seq_boundary"):
-                try:
-                    from common.spill import spill_write
-                    ref = spill_write(prev_result, tag=f"resume_step{idx + 1}")["ref"]
-                    abort_payload["resume"] = {
-                        "from_step": idx + 1, "prev_ref": ref,
-                        "note": (f"step {idx + 1} 부터 다시 돌리려면 execute_ibl(code, resume={{from_step: {idx + 1}, "
-                                 f"prev_ref: \"{ref['path']}\"}}) — 1~{idx} 단은 재실행하지 않습니다(스필 24h 유효)."),
-                    }
-                except Exception:
-                    pass
-            return abort_payload
-        _seq["skip_until"] = b
-        _seq["failed"] += 1
-        # 실패한 문장이 `$이름 = …` 이면 원인을 이름에 남긴다(뒤 문장의 참조가 인용한다).
-        for _j in range(idx, b):
-            _sj = steps[_j] if isinstance(steps[_j], dict) else {}
-            if _sj.get("_assign_name"):
-                _seq["var_errors"].setdefault(_sj["_assign_name"], {
-                    "step": idx + 1, "error": str(abort_payload.get("error") or "")[:300]})
-                # 죽은 할당의 슬롯은 비운다 — 오류 봉투가 값으로 남으면 뒤 참조가 그 봉투를
-                # 다시 내어 "그 문장 자신의 실패"처럼 보이고 연쇄가 뿌리와 안 갈린다.
-                step_results.pop(_j, None)
-                break
-        _fr = abort_payload.get("final_result")
-        if isinstance(_fr, str) and _fr[:1] == "{":
-            try:
-                _fr = json.loads(_fr)
-            except Exception:
-                _fr = None
-        if isinstance(_fr, dict) and _fr.get("_derived_from"):
-            _seq["derived"] += 1          # 뿌리가 아니라 죽은 변수를 읽어서 죽은 문장
-        return None
-
-    def _after_failure(prev: str) -> str:
-        """실패 뒤 다음 step 에 넘길 통화 — skip=직전 통화 그대로, null=빈 items, 그 외=끊김."""
-        m = _seq["last_mode"]
-        if m == "skip":
-            return prev
-        if m == "null":
-            return '{"items": []}'
-        return ""
-
-    def _spill_if_large(prev: str, idx: int) -> str:
-        """자동 스필(M5 §2.5-3): 이음매 통화가 임계를 넘으면 파일로 내리고 참조만 흘린다 — 신고 동반."""
-        try:
-            from common.spill import AUTO_SPILL_THRESHOLD, spill_write
-            if idx < total - 1 and isinstance(prev, str) and len(prev) > AUTO_SPILL_THRESHOLD:
-                env = spill_write(prev, tag=f"step{idx + 1}")
-                if results and isinstance(results[-1], dict):
-                    results[-1]["spilled"] = env["ref"]
-                    results[-1]["note"] = (f"통화 {len(prev):,}자 > 임계 {AUTO_SPILL_THRESHOLD:,} — 스필 파일로 내리고 "
-                                           "참조만 다음 step 에 넘겼습니다(변환자·each·$items·write 는 투명하게 읽음)")
-                return json.dumps(env, ensure_ascii=False)
-        except Exception:
-            pass
-        return prev
-
-    for i, step in enumerate(steps):
+    for i, step in enumerate(state.steps):
         # 원격 IR는 값 치환보다 먼저 복원한다. 전송 문자열을 다시 코드로 읽지 않는다.
         if isinstance(step, dict) and isinstance(step.get("params"), dict) and "_ibl_ir" in step["params"]:
             from ibl_code_ir import receive_params
             step = {**step, "params": receive_params(step["params"])}
-        if i < _seq["skip_until"]:
+        if i < state.skip_until:
             continue  # 실패한 문장의 남은 step — 건너뛴다(다음 문장 경계까지)
         if isinstance(step, dict) and step.get("_seq_boundary"):
             # 문장 경계 — 앞 문장이 성공했어도 결과를 넘기지 않는다(독립).
             # 실패 경로는 각 _handle_failure 뒤에서 리셋하지만, 성공 경로는 여기가 유일한 관문
             # (없으면 _auto_inject_prev 가 앞 문장 결과를 다음 문장 첫 step 에 무조건 주입한다).
-            prev_result = ""
+            state.prev_result = ""
         # $var 바인딩 치환 — {{_step_N_result[.path]}} 를 저장된 step 결과로 (branches/체인 포함).
         # 문장 경계의 prev_result 리셋과 독립이라, 앞 문장 결과를 명시 참조로 가져올 수 있다.
         # 필드 경로(.path) 추출 실패는 정직한 step 실패로 — 침묵 "" 치환 금지 (G1, 2026-08-16).
@@ -445,7 +233,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         # 따라 do 안의 $items를 바깥 통화로 읽으면 같은 문장의 의미가 달라진다.
         if isinstance(step, dict):
             try:
-                step = _inject_step_results(step, step_results)
+                step = _inject_step_results(step, state.step_results)
                 # 블록 조건식의 $변수 = 값 바인딩 (2026-08-22 M2): 파서가 적어 둔 _vars
                 # {이름: step 인덱스} 를 실제 결과로 — 텍스트 치환이 아니라 봉투로 싣는다.
                 if step.get("_vars"):
@@ -457,73 +245,73 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     #   조건에 들어갔다 — 판정 불능이어야 할 자리가 조용히 거짓이 된다.
                     #   빠뜨리면 술어 언어가 기존대로 정직하게 "미할당"을 신고한다.
                     step["_var_values"] = {**(step.get("_var_values") or {}),
-                                           **{n: step_results[int(i)] for n, i in step["_vars"].items()
-                                              if int(i) in step_results}}
+                                           **{n: state.step_results[int(i)] for n, i in step["_vars"].items()
+                                              if int(i) in state.step_results}}
                     # 슬롯이 비었고 그 이름의 할당 문장이 실패했으면 원인을 같이 싣는다.
-                    _ve = {n: _seq["var_errors"][n] for n, i in step["_vars"].items()
-                           if n in _seq["var_errors"] and int(i) not in step_results}
+                    _ve = {n: state.var_errors[n] for n, i in step["_vars"].items()
+                           if n in state.var_errors and int(i) not in state.step_results}
                     if _ve:
                         step["_var_errors"] = _ve
             except ValueError as e:
-                results.append({
+                state.results.append({
                     "step": i + 1,
                     "node": _step_label(step)[0],
                     "action": step.get("action", "?"),
                     "error": str(e),
                     "duration_ms": 0,
                 })
-                _abort = _handle_failure(i, {
-                    "success": False, "steps_completed": i, "steps_total": total,
-                    "results": results, "final_result": None,
+                _abort = state.handle_failure(i, {
+                    "success": False, "steps_completed": i, "steps_total": state.total,
+                    "results": state.results, "final_result": None,
                     "error": f"Step {i+1} 변수 치환 실패: {str(e)}",
                 }, tb=build_tb(str(e), "binding",
-                               frame={"kind": "pipeline", "step": i + 1, "of": total,
+                               frame={"kind": "pipeline", "step": i + 1, "of": state.total,
                                       "node": _step_label(step)[0],
                                       "action": step.get("action", "?")}))
                 if _abort is not None:
                     return _abort
-                prev_result = _after_failure(prev_result)
+                state.prev_result = state.after_failure(state.prev_result)
                 continue
         step_start = time.time()
 
         # 진행 신고(⑨) — step 시작 시점: "지금 몇 번째 step 의 무엇이 돌고 있나".
         # 소유자면 좌표를, 아니면(each 의 do·블록 몸 같은 하위 파이프) detail 로.
         _pn, _pa = _step_label(step)
-        if _ticket:
-            _report_step(_ticket, i + 1, total, f"[{_pn}:{_pa}]")
+        if state.ticket:
+            _report_step(state.ticket, i + 1, state.total, f"[{_pn}:{_pa}]")
         else:
-            _beat({"substep": i + 1, "substeps": total,
+            _beat({"substep": i + 1, "substeps": state.total,
                    "subaction": f"[{_pn}:{_pa}]"})
 
         # Phase 9: 특수 노드 처리 (병렬, fallback)
         if step.get("_parallel"):
             # 병렬 실행
             try:
-                result = _execute_parallel(step["branches"], project_path, prev_result,
-                                           raw=(i < total - 1),
+                result = _execute_parallel(step["branches"], project_path, state.prev_result,
+                                           raw=(i < state.total - 1),
                                            var_values=step.get("_var_values"))
             except Exception as e:
-                results.append({
+                state.results.append({
                     "step": i + 1, "type": "parallel",
                     "error": str(e),
                     "duration_ms": int((time.time() - step_start) * 1000),
                 })
-                _abort = _handle_failure(i, {
-                    "success": False, "steps_completed": i, "steps_total": total,
-                    "results": results, "final_result": None,
+                _abort = state.handle_failure(i, {
+                    "success": False, "steps_completed": i, "steps_total": state.total,
+                    "results": state.results, "final_result": None,
                     "error": f"Step {i+1} 병렬 실행 예외: {str(e)}",
                 }, tb=build_tb(str(e), "exception", py_tail=py_tail_of(e),
-                               frame={"kind": "parallel", "step": i + 1, "of": total}))
+                               frame={"kind": "parallel", "step": i + 1, "of": state.total}))
                 if _abort is not None:
                     return _abort
-                prev_result = _after_failure(prev_result)
+                state.prev_result = state.after_failure(state.prev_result)
                 continue
 
             duration_ms = int((time.time() - step_start) * 1000)
             result_str = _to_string(result)
 
             # 괄호 분기 파이프는 속 step 수만큼 (G13-1)
-            action_count += sum(
+            state.action_count += sum(
                 (len(b.get("_branch_steps") or ()) or 1) if isinstance(b, dict) else 1
                 for b in step["branches"])
             # ★B24-1(24회차 상상훈련): **병렬만 실패 신고 키가 없었다.** 순차는
@@ -572,7 +360,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
             }
             if _bfail:
                 _rec["branches_failed"] = _bfail
-                _seq["branches_failed"].append({"step": i + 1, "failed": _bfail,
+                state.branches_failed.append({"step": i + 1, "failed": _bfail,
                                                 "of": len(_branches)})
             # ★B48-2(48회차 상상훈련): B24-1 이 고친 것은 가지가 **통째로** 죽은 경우뿐이다.
             #   가지가 success:true 로 돌아오면 그 안의 부분 실패는 봉투에서 통째로 증발했다:
@@ -590,7 +378,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
                     _bhon.append({"branch": _bi + 1, "markers": _m})
             if _bhon:
                 _rec["branches_honesty"] = _bhon
-                _seq["branch_honesty"].append({"step": i + 1, "branches": _bhon,
+                state.branch_honesty.append({"step": i + 1, "branches": _bhon,
                                                "of": len(_branches)})
             # 가지 표시 스필 (2026-08-29, "results[]는 원형" 규약 개정 — 사용자 판정):
             # 원형이 ENVELOPE_KEEP_MAX 를 넘는 가지는 표시 사본에서 스필 참조+preview 로
@@ -623,8 +411,8 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if _spilled_bi:
                 _rec["result"] = _to_string(_display)
                 _rec["branches_spilled"] = _spilled_bi
-            results.append(_rec)
-            step_results[i] = result_str
+            state.results.append(_rec)
+            state.step_results[i] = result_str
             # 전 가지 실패 = 아무것도 못 가져온 것. 그것을 성공이라 부르면 그 뒤의 모든 단계가
             # 빈손 위에서 돈다 — 순차 step 실패와 같은 경로로 보낸다(resume 참조도 여기서 붙는다).
             # ★파괴적 변경: 사용자 판정(2026-08-22 '네 의견대로 고쳐'). 한 가지만 실패면
@@ -633,23 +421,23 @@ def execute_pipeline(steps: list, project_path: str = ".",
                 _why = "; ".join(f"분기 {b['branch']}([{b['node']}:{b['action']}]): {b['error'][:120]}"
                                  for b in _bfail)
                 # 첫 실패 가지의 트레이스백이 문장 트레이스백이 된다(가지별 원형은 branches_failed 에).
-                _abort = _handle_failure(i, {
-                    "success": False, "steps_completed": i, "steps_total": total,
-                    "results": results, "final_result": result_str,
+                _abort = state.handle_failure(i, {
+                    "success": False, "steps_completed": i, "steps_total": state.total,
+                    "results": state.results, "final_result": result_str,
                     "error": f"Step {i+1} 병렬 전 가지 실패({len(_bfail)}/{len(_branches)}): {_why}",
                 }, tb=(_bfail[0].get("traceback")
                        or build_tb(_why, frame={"kind": "parallel", "step": i + 1,
-                                                "of": total, "branch": _bfail[0]["branch"]})))
+                                                "of": state.total, "branch": _bfail[0]["branch"]})))
                 if _abort is not None:
                     return _abort
-                prev_result = _after_failure(prev_result)
+                state.prev_result = state.after_failure(state.prev_result)
                 continue
-            if _spilled_bi and i == total - 1:
+            if _spilled_bi and i == state.total - 1:
                 # 마지막 step 의 prev = final_result(봉투로 나감) — 소비할 다음 step 이 없으니
                 # 표시 사본(스필 반영)을 낸다. 중간 step 은 아래 원형 경로(다음 step 이 소비).
-                prev_result = _to_prev_currency(_display)
+                state.prev_result = _to_prev_currency(_display)
             else:
-                prev_result = _spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — 임계 초과=자동 스필(M5)
+                state.prev_result = state.spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — 임계 초과=자동 스필(M5)
 
             continue
 
@@ -657,23 +445,23 @@ def execute_pipeline(steps: list, project_path: str = ".",
             # Fallback 실행
             try:
                 result, fallback_log = _execute_fallback(step["_fallback_chain"], project_path,
-                                                         prev_result, agent_id=agent_id,
+                                                         state.prev_result, agent_id=agent_id,
                                                          var_values=step.get("_var_values"))
             except Exception as e:
-                results.append({
+                state.results.append({
                     "step": i + 1, "type": "fallback",
                     "error": str(e),
                     "duration_ms": int((time.time() - step_start) * 1000),
                 })
-                _abort = _handle_failure(i, {
-                    "success": False, "steps_completed": i, "steps_total": total,
-                    "results": results, "final_result": None,
+                _abort = state.handle_failure(i, {
+                    "success": False, "steps_completed": i, "steps_total": state.total,
+                    "results": state.results, "final_result": None,
                     "error": f"Step {i+1} fallback 실행 예외: {str(e)}",
                 }, tb=build_tb(str(e), "exception", py_tail=py_tail_of(e),
-                               frame={"kind": "fallback", "step": i + 1, "of": total}))
+                               frame={"kind": "fallback", "step": i + 1, "of": state.total}))
                 if _abort is not None:
                     return _abort
-                prev_result = _after_failure(prev_result)
+                state.prev_result = state.after_failure(state.prev_result)
                 continue
 
             duration_ms = int((time.time() - step_start) * 1000)
@@ -681,7 +469,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
 
             # fallback 결과에 에러가 있으면 (모든 체인 실패 — `_all_failed` 는 _execute_fallback 이 붙인다)
             is_err = isinstance(result, dict) and result.get("_all_failed") and is_error_result(result)
-            action_count += 1
+            state.action_count += 1
             _rec_fb = {
                 "step": i + 1, "type": "fallback",
                 "chain_length": len(step["_fallback_chain"]),
@@ -705,32 +493,32 @@ def execute_pipeline(steps: list, project_path: str = ".",
             if _fb_ok and _fb_ok[0].get("attempt", 1) > 1:
                 _fb_at = _fb_ok[0]["attempt"]
                 _rec_fb["_fallback_used"] = _fb_at
-                _seq["fallback_used"].append({
+                state.fallback_used.append({
                     "step": i + 1, "attempt": _fb_at,
                     "action": f"{_fb_ok[0].get('node')}:{_fb_ok[0].get('action')}",
                     "skipped": [f"{a.get('node')}:{a.get('action')}" for a in (fallback_log or [])
                                 if a.get("attempt", 0) < _fb_at],
                 })
-            results.append(_rec_fb)
-            step_results[i] = result_str
+            state.results.append(_rec_fb)
+            state.step_results[i] = result_str
 
             if is_err:
                 # 결과는 마지막 시도의 실패 봉투 — 그 안의 트레이스백을 승계(파이썬과 같은 규약:
                 # 폴백 전체 실패의 오류는 마지막 시도의 오류다). attempts[] 가 앞 시도들을 나른다.
-                _abort = _handle_failure(i, {
-                    "success": False, "steps_completed": i, "steps_total": total,
-                    "results": results, "final_result": result,
+                _abort = state.handle_failure(i, {
+                    "success": False, "steps_completed": i, "steps_total": state.total,
+                    "results": state.results, "final_result": result,
                     "error": f"Step {i+1} fallback 체인 전체 실패",
                 }, tb=build_tb(f"fallback 체인 전체 실패({len(step['_fallback_chain'])}시도)",
                                nested=tb_of(result),
-                               frame={"kind": "fallback", "step": i + 1, "of": total,
+                               frame={"kind": "fallback", "step": i + 1, "of": state.total,
                                       "attempts": len(step["_fallback_chain"])}))
                 if _abort is not None:
                     return _abort
-                prev_result = _after_failure(prev_result)
+                state.prev_result = state.after_failure(state.prev_result)
                 continue
 
-            prev_result = _spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — results[]는 원형 · 임계 초과=자동 스필(M5)
+            state.prev_result = state.spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — results[]는 원형 · 임계 초과=자동 스필(M5)
             continue
 
         # 일반 step (기존 로직)
@@ -739,43 +527,43 @@ def execute_pipeline(steps: list, project_path: str = ".",
             tool_input["_node"] = tool_input.pop("node")
 
         # {{_prev_result}} 템플릿 치환
-        tool_input = _inject_prev_result(tool_input, prev_result)
+        tool_input = _inject_prev_result(tool_input, state.prev_result)
 
         # ★$items 집합 바인딩 (G1-③) — 값 바인딩, 텍스트 치환 아님. 실패는 정직한 step 실패.
-        tool_input, _bind_err = _bind_items_params(tool_input, prev_result)
+        tool_input, _bind_err = _bind_items_params(tool_input, state.prev_result)
         if _bind_err:
-            results.append({
+            state.results.append({
                 "step": i + 1,
                 "node": _step_label(tool_input)[0],
                 "action": _step_label(tool_input)[1],
                 "error": _bind_err,
                 "duration_ms": 0,
             })
-            _abort = _handle_failure(i, {
-                "success": False, "steps_completed": i, "steps_total": total,
-                "results": results, "final_result": None,
+            _abort = state.handle_failure(i, {
+                "success": False, "steps_completed": i, "steps_total": state.total,
+                "results": state.results, "final_result": None,
                 "error": f"Step {i+1} {_bind_err}",
             }, tb=build_tb(_bind_err, "binding",
-                           frame={"kind": "pipeline", "step": i + 1, "of": total,
+                           frame={"kind": "pipeline", "step": i + 1, "of": state.total,
                                   "node": _step_label(tool_input)[0],
                                   "action": _step_label(tool_input)[1]}))
             if _abort is not None:
                 return _abort
-            prev_result = _after_failure(prev_result)
+            state.prev_result = state.after_failure(state.prev_result)
             # `[on_error: skip|null] $x = …` — 대체 통화가 곧 변수 값(할당 슬롯에도 기록).
             # 종전엔 슬롯이 오류 봉투를 들고 있어 뒤 문장의 `$x` 가 그 오류를 다시 냈다.
-            if _seq["last_mode"] in ("skip", "null") and isinstance(steps[i], dict) \
-                    and steps[i].get("_assign_name"):
-                step_results[i] = prev_result
+            if state.last_mode in ("skip", "null") and isinstance(state.steps[i], dict) \
+                    and state.steps[i].get("_assign_name"):
+                state.step_results[i] = state.prev_result
             continue
 
         # 파이프라인 자동 데이터 전달 (명시적 참조 없으면 params에 주입)
-        tool_input = _auto_inject_prev(tool_input, prev_result)
+        tool_input = _auto_inject_prev(tool_input, state.prev_result)
 
         # >> 파이프 중간 단계는 raw로 실행 — postprocess:compress가 구조화 통화(records/table)를
         # 죽이지 않게. 압축은 에이전트가 보는 *최종* 출력에만(마지막 step). 중간은 다음 step이 소비하는
         # 기계용이라 구조 보존이 맞다. (앱·GUI가 쓰던 _raw 메커니즘 재사용)
-        if i < total - 1:
+        if i < state.total - 1:
             _p = tool_input.get("params")
             if not isinstance(_p, dict):
                 _p = {}
@@ -786,32 +574,32 @@ def execute_pipeline(steps: list, project_path: str = ".",
         try:
             result = execute_ibl(tool_input, project_path, agent_id=agent_id)
         except Exception as e:
-            results.append({
+            state.results.append({
                 "step": i + 1,
                 "node": _step_label(tool_input)[0],
                 "action": _step_label(tool_input)[1],
                 "error": str(e),
                 "duration_ms": int((time.time() - step_start) * 1000),
             })
-            _abort = _handle_failure(i, {
+            _abort = state.handle_failure(i, {
                 "success": False,
                 "steps_completed": i,
-                "steps_total": total,
-                "results": results,
+                "steps_total": state.total,
+                "results": state.results,
                 "final_result": None,
                 "error": f"Step {i+1} 실행 중 예외: {str(e)}",
             }, tb=build_tb(str(e), "exception", py_tail=py_tail_of(e),
-                           frame={"kind": "pipeline", "step": i + 1, "of": total,
+                           frame={"kind": "pipeline", "step": i + 1, "of": state.total,
                                   "node": _step_label(tool_input)[0],
                                   "action": _step_label(tool_input)[1]}))
             if _abort is not None:
                 return _abort
-            prev_result = _after_failure(prev_result)
+            state.prev_result = state.after_failure(state.prev_result)
             # `[on_error: skip|null] $x = …` — 대체 통화가 곧 변수 값(할당 슬롯에도 기록).
             # 종전엔 슬롯이 오류 봉투를 들고 있어 뒤 문장의 `$x` 가 그 오류를 다시 냈다.
-            if _seq["last_mode"] in ("skip", "null") and isinstance(steps[i], dict) \
-                    and steps[i].get("_assign_name"):
-                step_results[i] = prev_result
+            if state.last_mode in ("skip", "null") and isinstance(state.steps[i], dict) \
+                    and state.steps[i].get("_assign_name"):
+                state.step_results[i] = state.prev_result
             continue
 
         duration_ms = int((time.time() - step_start) * 1000)
@@ -822,7 +610,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         # 에러 확인 (단일 소스)
         is_err = is_error_result(result)
 
-        action_count += 1
+        state.action_count += 1
         _rec = {
             "step": i + 1,
             "node": _step_label(tool_input)[0],
@@ -841,7 +629,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if isinstance(_qmeta, dict):
             _rec.update(_qmeta)
             if _qmeta.get("criteria_verdict"):
-                _seq["criteria"].append({
+                state.criteria.append({
                     "step": i + 1, "action": f'{_rec["node"]}:{_rec["action"]}',
                     "verdict": _qmeta["criteria_verdict"],
                     **({"retried": True} if _qmeta.get("_criteria_retried")
@@ -853,14 +641,14 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if isinstance(_lit, list) and _lit:
             _rec["list_in_text"] = list(_lit)
             _n, _a = _step_label(tool_input)
-            _seq["list_in_text"].append({"step": i + 1, "action": f"{_n}:{_a}", "refs": list(_lit)})
+            state.list_in_text.append({"step": i + 1, "action": f"{_n}:{_a}", "refs": list(_lit)})
         # ★F23-2(상상훈련 23회차): [repeat:] 가 종료 조건을 못 채우고 상한에 걸려 멈추면
         # 블록 결과는 halted 와 "성공 아님·실패 아님" note 를 정확히 싣는데, **파이프 봉투
         # 최상위는 success: true** 였다 — 자동화가 success 만 보면 "조건을 만족하고 끝났다"로
         # 읽는다. skipped_steps 와 같은 승격 규약으로 봉투 표면까지 올린다(실패로 뒤집지는
         # 않는다 — 통화는 실제로 나왔고 note 도 실패가 아니라고 말한다).
         if isinstance(result, dict) and result.get("halted") in ("max", "wall", "budget"):
-            _seq["halted"].append({"step": i + 1, "halted": result["halted"],
+            state.halted.append({"step": i + 1, "halted": result["halted"],
                                    "iterations": result.get("iterations")})
         # ★29회차 관찰: **0행의 이유**는 통화에 실을 자리가 없어 파이프 중간에서 사라진다.
         # `[table:since]` 첫 검침은 "기준선 3행을 세웠다(그래서 0건)" 라고 정직하게 말하지만,
@@ -869,62 +657,62 @@ def execute_pipeline(steps: list, project_path: str = ".",
         # 승격 규약은 halted/skipped_steps 와 같다. **모양으로만 판정**한다(어휘 이름을 엔진에
         # 심지 않는다): 통화가 0행인데 note 를 달고 있는 중간 step. 마지막 step 은
         # final_result 로 이미 보이므로 싣지 않는다(중복 토큰 0).
-        if i < total - 1 and isinstance(result, dict):
+        if i < state.total - 1 and isinstance(result, dict):
             _note = result.get("note")
             if (isinstance(result.get("items"), list) and not result["items"]
                     and isinstance(_note, str) and _note.strip()):
                 _n, _a = _step_label(tool_input)
-                _seq["empty_notes"].append({"step": i + 1, "action": f"{_n}:{_a}",
+                state.empty_notes.append({"step": i + 1, "action": f"{_n}:{_a}",
                                             "note": _note.strip()})
-        results.append(_rec)
-        step_results[i] = result_str
+        state.results.append(_rec)
+        state.step_results[i] = result_str
         # 블록 몸이 재할당한 바깥 변수(M6 repeat) — 루프 뒤 `$n` 이 최신값이 되게 되쓴다
         if isinstance(result, dict) and isinstance(result.get("_var_updates"), dict) and step.get("_vars"):
             for _n, _raw in result["_var_updates"].items():
                 _ix = step["_vars"].get(_n)
                 if _ix is not None:
-                    step_results[int(_ix)] = _raw if isinstance(_raw, str) else json.dumps(_raw, ensure_ascii=False)
+                    state.step_results[int(_ix)] = _raw if isinstance(_raw, str) else json.dumps(_raw, ensure_ascii=False)
 
         if is_err:
             err_msg = err_reason_of(result)   # error→message→중첩 회수 — 빈 "Step N 에러: " 방지
             err_msg = _items_bound_note(tool_input, err_msg)   # ★B31-1: 집합 바인딩 사실을 실패에 실어 준다
             # 결과가 중첩 실행(run_pipeline·워크플로우·each·블록)의 봉투면 그 안의
             # 트레이스백을 승계하고 이 파이프의 프레임 한 칸만 얹는다 — 경계 규약.
-            _abort = _handle_failure(i, {
+            _abort = state.handle_failure(i, {
                 "success": False,
                 "steps_completed": i,
-                "steps_total": total,
-                "results": results,
+                "steps_total": state.total,
+                "results": state.results,
                 "final_result": result,
                 "error": f"Step {i+1} 에러: {err_msg}",
             }, tb=build_tb(err_msg, nested=tb_of(result),
-                           frame={"kind": "pipeline", "step": i + 1, "of": total,
+                           frame={"kind": "pipeline", "step": i + 1, "of": state.total,
                                   "node": _rec["node"], "action": _rec["action"]}))
             if _abort is not None:
                 return _abort
-            prev_result = _after_failure(prev_result)
+            state.prev_result = state.after_failure(state.prev_result)
             # `[on_error: skip|null] $x = …` — 대체 통화가 곧 변수 값(할당 슬롯에도 기록).
             # 종전엔 슬롯이 오류 봉투를 들고 있어 뒤 문장의 `$x` 가 그 오류를 다시 냈다.
-            if _seq["last_mode"] in ("skip", "null") and isinstance(steps[i], dict) \
-                    and steps[i].get("_assign_name"):
-                step_results[i] = prev_result
+            if state.last_mode in ("skip", "null") and isinstance(state.steps[i], dict) \
+                    and state.steps[i].get("_assign_name"):
+                state.step_results[i] = state.prev_result
             continue
 
         # 다음 step으로 전달
-        prev_result = _spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — results[]는 원형 · 임계 초과=자동 스필(M5)
+        state.prev_result = state.spill_if_large(_to_prev_currency(result), i)  # 파이프 이음매 통화 파생(D13) — results[]는 원형 · 임계 초과=자동 스필(M5)
 
     # 문장 경계를 넘어 계속 실행했더라도 실패는 숨기지 않는다 — 실패한 문장이 있으면 success=False.
     # (건너뛰기는 "계속 실행"이지 "없던 일"이 아니다. 스케줄러·평가자가 조용히 성공으로 읽으면 안 된다.)
-    _failed = _seq["failed"]
+    _failed = state.failed
     out = {
         "success": _failed == 0,
-        "steps_completed": total,
-        "steps_total": total,
-        "_action_count": action_count,
-        "results": results,
-        "final_result": prev_result,
+        "steps_completed": state.total,
+        "steps_total": state.total,
+        "_action_count": state.action_count,
+        "results": state.results,
+        "final_result": state.prev_result,
     }
-    _attach_live_vars(out)   # 턴 범위 변수 — 성공·실패 무관, 산 변수는 다음 호출이 이름으로 본다(2026-09-06)
+    state.attach_live_vars(out)   # 턴 범위 변수 — 성공·실패 무관, 산 변수는 다음 호출이 이름으로 본다(2026-09-06)
     from ibl_honesty import completion_evidence
     incomplete = completion_evidence(out)
     if incomplete:
@@ -932,64 +720,64 @@ def execute_pipeline(steps: list, project_path: str = ".",
     if _failed:
         out["statements_failed"] = _failed
         out["error"] = f"독립 문장 {_failed}개 실패(나머지는 계속 실행됨)"
-        _root_note(out)   # 뿌리를 error 문장 자체에 — 로그 절단·다이제스트 상한에서도 살아남게
-        _resume_vars_note(out)   # 산 변수는 스필로 — 죽은 문장만 다시(2026-09-06)
+        state.root_note(out)   # 뿌리를 error 문장 자체에 — 로그 절단·다이제스트 상한에서도 살아남게
+        state.resume_vars_note(out)   # 산 변수는 스필로 — 죽은 문장만 다시(2026-09-06)
     # 경고 생산자가 넷(repeat 상한·on_error 건너뜀·0행 사유·병렬 분기 실패)이라 한 키에
     # 덮어쓰면 뒤엣것이 앞엣것을 지운다 — 모아서 한 번에 싣는다(B24-1 이 세 번째 생산자를
     # 더하면서 드러났고, 29회차 0행 사유가 네 번째다).
     _warns = []
-    if _seq["halted"]:
-        out["halted_steps"] = list(_seq["halted"])
-        _hs = ", ".join(f"step {h['step']}({h['halted']})" for h in _seq["halted"])
+    if state.halted:
+        out["halted_steps"] = list(state.halted)
+        _hs = ", ".join(f"step {h['step']}({h['halted']})" for h in state.halted)
         _warns.append(f"[repeat] 상한으로 중단: {_hs} — 종료 조건은 충족되지 않았습니다"
                       "(성공 아님·실패 아님, 통화는 냄). success 만 보고 '조건 달성'으로 읽지 말 것.")
-    if _seq["skipped"]:
-        out["skipped_steps"] = list(_seq["skipped"])
-        _warns.append(f"[on_error] 로 step {', '.join(map(str, _seq['skipped']))} 실패를 건너뛰었습니다 — "
+    if state.skipped:
+        out["skipped_steps"] = list(state.skipped)
+        _warns.append(f"[on_error] 로 step {', '.join(map(str, state.skipped))} 실패를 건너뛰었습니다 — "
                       "결과는 부분입니다(results[] 의 skipped 표지·error 참조).")
-    if _seq["empty_notes"]:
-        out["empty_notes"] = list(_seq["empty_notes"])
-        _es = " / ".join(f"step {e['step']}[{e['action']}] {e['note']}" for e in _seq["empty_notes"])
+    if state.empty_notes:
+        out["empty_notes"] = list(state.empty_notes)
+        _es = " / ".join(f"step {e['step']}[{e['action']}] {e['note']}" for e in state.empty_notes)
         _warns.append(f"[0행 사유] {_es} — 0건이 '없다'는 뜻이 아닐 수 있습니다(중간 step 의 신고).")
-    if _seq["branches_failed"]:
-        out["branches_failed"] = list(_seq["branches_failed"])
-        _bs = ", ".join(f"step {b['step']}({len(b['failed'])}/{b['of']} 분기)" for b in _seq["branches_failed"])
+    if state.branches_failed:
+        out["branches_failed"] = list(state.branches_failed)
+        _bs = ", ".join(f"step {b['step']}({len(b['failed'])}/{b['of']} 분기)" for b in state.branches_failed)
         _warns.append(f"[병렬] 분기 실패: {_bs} — 결과는 부분입니다"
                       "(살아남은 분기만 다음 step 으로 흐릅니다. results[] 의 branches_failed 참조).")
-    if _seq["branch_honesty"]:
+    if state.branch_honesty:
         # ★B48-2: 가지가 죽지 않았어도 가지 *안*에서 부분 실패가 있었다는 사실.
         #   이게 없으면 "3곳 다 조회했다"가 실제로는 "3곳 중 2곳"이다.
-        out["branches_honesty"] = list(_seq["branch_honesty"])
+        out["branches_honesty"] = list(state.branch_honesty)
         _bh = ", ".join(
             "step {}({}/{} 분기: {})".format(
                 b["step"], len(b["branches"]), b["of"],
                 ", ".join(sorted({k for br in b["branches"] for k in br["markers"]})))
-            for b in _seq["branch_honesty"])
+            for b in state.branch_honesty)
         _bh_msg = (f"[병렬] 살아남은 분기 안에 부분 실패·경로 변경 신고가 있습니다: {_bh} — "
                    "분기가 success 로 돌아왔다고 그 안이 온전한 것은 아닙니다"
                    "(results[] 의 branches_honesty 참조).")
-        if any("truncated" in (br.get("markers") or {}) for b in _seq["branch_honesty"] for br in b["branches"]):
+        if any("truncated" in (br.get("markers") or {}) for b in state.branch_honesty for br in b["branches"]):
             # 절단 가지 뒤의 다음 걸음(2026-09-05) — 가지 절단 직후 셸로 갈아타던 자리(ep2862·2866)
             from ibl_honesty import TRUNCATED_NEXT_STEP as _tns
             _bh_msg += " " + _tns + "."
         _warns.append(_bh_msg)
-    if _seq["fallback_used"]:
+    if state.fallback_used:
         # ★F35-1: `??` 가 갈아탄 사실 — 데이터의 **출처가 바뀌었다**는 뜻이라
         #   최상위에 없으면 읽는 쪽이 첫 가지 결과로 착각한다(교재의 정직 표지 1번).
-        out["_fallback_used"] = list(_seq["fallback_used"])
+        out["_fallback_used"] = list(state.fallback_used)
         _fs = ", ".join(f"step {f['step']}({f['action']}, {f['attempt']}번째 가지)"
-                        for f in _seq["fallback_used"])
+                        for f in state.fallback_used)
         _warns.append(f"폴백 발동: {_fs} — 앞 가지를 버리고 갈아탔으므로 **데이터의 출처가 "
                       f"다릅니다**(건너뛴 가지는 results[] 의 attempts 참조).")
-    if _seq["list_in_text"]:
-        out["list_in_text"] = list(_seq["list_in_text"])
-        _warns.append(_list_in_text_warning(_seq["list_in_text"]))
-    if _seq["criteria"]:
+    if state.list_in_text:
+        out["list_in_text"] = list(state.list_in_text)
+        _warns.append(_list_in_text_warning(state.list_in_text))
+    if state.criteria:
         # criteria 판정을 봉투 최상위로 (2026-08-28) — pass 도 싣는다: 라이브 관찰의
         # 분모(판정 총수)가 없으면 unjudged 비율·재시도 통과율을 셀 수 없다. 항목당
         # 한 줄 요약이라 다이어트 위반이 아니다. fail 은 여기 안 온다(step 실패 경로).
-        out["criteria_steps"] = list(_seq["criteria"])
-        _nq = [c for c in _seq["criteria"] if c["verdict"] != "pass"]
+        out["criteria_steps"] = list(state.criteria)
+        _nq = [c for c in state.criteria if c["verdict"] != "pass"]
         if _nq:
             _cs = ", ".join(f"step {c['step']}({c['verdict']})" for c in _nq)
             _warns.append(f"[criteria] 무조건 통과가 아니었습니다: {_cs} — "
@@ -1004,7 +792,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
     #   이제 통화 안의 표지도 봉투 최상위로 올린다 — 걷는 쪽은 `HONESTY_KEYS` 한 벌
     #   (markers_of)이라 표지를 늘려도 승격이 자동으로 따라온다.
     #   ★통화(final_result)는 건드리지 않는다 — 복사만 한다(하류 계약 불변).
-    _promoted = _honesty_markers_of(prev_result)
+    _promoted = _honesty_markers_of(state.prev_result)
     _new = [k for k in _promoted if k not in out]
     for _k in _new:
         out[_k] = _promoted[_k]
@@ -1028,15 +816,8 @@ from workflow_parallel import _execute_parallel  # noqa: F401
 from workflow_fallback import _execute_fallback  # noqa: E402,F401
 
 
-# 변수·통화 바인딩 헬퍼는 형제 모듈 workflow_binding.py 로 분리 (2026-08-22, 1500줄 규칙 —
-# 병렬 실패 신고(branches_failed) 추가로 초과). 재수출이라 기존 import 경로는 그대로.
-from workflow_binding import (  # noqa: E402,F401
-    _STEP_RESULT_RE, _ITEMS_REF,
-    _extract_result_field, _v4_var_payload, _inject_step_results,
-    _bind_items_params, _items_bound_note, _list_in_text_warning, _mark_list_in_text,
-    _is_json_list, _inject_prev_result, _has_prev_ref, _auto_inject_prev,
-    _to_prev_currency, _step_label, _to_string,
-)
+# 변수·통화 바인딩은 workflow_binding 소유. 실행기가 쓰는 이름만 가져온다.
+from workflow_binding import _inject_step_results, _bind_items_params, _items_bound_note, _list_in_text_warning, _inject_prev_result, _auto_inject_prev, _to_prev_currency, _step_label, _to_string
 
 
 # === 워크플로우 CRUD ===
@@ -1324,10 +1105,7 @@ def execute_workflow_action(action: str, params: dict,
 
 # === 워크플로우 호출 계약 — 재귀·순환 가드 + 시그니처 (2026-08-22) ===
 # 본체는 workflow_contract.py (1500줄 규칙). 이름은 여기서도 그대로 쓰인다.
-from workflow_contract import (  # noqa: E402,F401
-    MAX_WORKFLOW_DEPTH, _INLINE_FRAME, _wf_push, _stamp_wf_stack,
-    _free_vars, _signature_of,
-)
+from workflow_contract import _INLINE_FRAME, _wf_push, _stamp_wf_stack, _free_vars, _signature_of
 
 
 def _run_inline(params: dict, project_path: str,
@@ -1430,7 +1208,4 @@ def _promote_final_currency(out, steps: Optional[list] = None):
 
 
 # 호출자 params 주입기도 workflow_contract 로 이관(2026-08-22) — 시그니처와 같은 계약.
-from workflow_contract import (  # noqa: E402,F401
-    _CALLER_VAR_RESERVED, coerce_caller_params, _normalize_steps_for_injection,
-    _reserved_row_names, _apply_caller_params,
-)
+from workflow_contract import coerce_caller_params, _normalize_steps_for_injection, _apply_caller_params

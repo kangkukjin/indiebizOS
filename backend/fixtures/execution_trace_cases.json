@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "task_id": "shared-task",
+  "owner": "agent-a",
+  "other_owner": "agent-b",
+  "projects": ["project-a", "project-b"],
+  "events": [
+    {"kind": "model.call_started", "data": {"call_id": "parent", "role": "execution"}},
+    {"kind": "model.usage", "data": {"call_id": "parent", "round_index": 1, "accounting": "billable_usage", "input": 100, "output": 10}},
+    {"kind": "model.response_snapshot", "data": {"call_id": "parent", "response_id": "r1", "input": 100, "output": 10}},
+    {"kind": "model.response_snapshot", "data": {"call_id": "parent", "response_id": "r1", "input": 100, "output": 20}},
+    {"kind": "model.usage", "data": {"call_id": "parent", "round_index": 2, "accounting": "billable_usage", "input": 200, "output": 20}},
+    {"kind": "model.usage", "data": {"call_id": "child", "parent_call_id": "parent", "round_index": 1, "accounting": "billable_usage", "input": 50, "output": 5}},
+    {"kind": "model.call_finished", "data": {"call_id": "parent", "accounting": "boundary_only", "input": 350, "output": 35}},
+    {"kind": "side_effect.write", "data": {"gate": "fixture", "size": 7}}
+  ],
+  "expected_usage": {"input": 350, "output": 35},
+  "failure_matrix": ["empty", "missing", "unavailable", "malformed", "partial", "forbidden"],
+  "invariants": ["same-agent-concurrent-tasks", "same-task-other-project", "mcp-reentry", "parent-child-calls", "late-completion", "jsonl-rotation", "truncated-tail", "db-lock", "missing-evidence", "invalid-reference", "forbidden-path", "runtime-conflict", "insert-during-pagination", "no-source-mutation"]
+}

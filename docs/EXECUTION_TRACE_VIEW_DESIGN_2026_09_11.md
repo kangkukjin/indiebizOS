@@ -138,3 +138,16 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 ## 10. 다른 세션에 넘길 요청
 
 > 정본 `/Users/kangkukjin/Desktop/AI/indiebizOS`의 AGENTS.md와 이 문서를 읽고 L0→L1→L2 순서로 구현하라. 원장을 물리적으로 합치거나 새 이벤트 DB를 만들지 말고, 기존 trajectory와 출처별 원장을 한 작업 기준으로 연결하는 읽기 서비스를 만들어라. 실패/빈 값/부분성/권한/비용 중복을 구분하고 원문·검수·CAS·복구 계약을 보존하라. 실제 코드의 최신 소비처를 재확인하고, 새 브랜치/clone 없이 정본 main에 검토 가능한 묶음별로 커밋하라. 이 문서에 검증과 남은 조건을 기록하라.
+
+## 11. L0 — 확인된 reader·신원 지도 (2026-09-11)
+
+- `episode_logger._get_db`는 mkdir/WAL 설정, `get_trajectory`는 오류→[]이므로 새 읽기 경로에서 호출하지 않는다. `episode_log.owner`는 **프로세스 신원**이며 자아 ID가 아니다. `agent`도 표시 이름이다. episode에는 project 컬럼이 없다.
+- `trajectory_run_id(task)`는 task 문자열만 해시한다. 프로젝트별 같은 문자열은 같은 run이다. episode가 있는 사건은 episode FK로 분리하고, episode 없는 옛 사건은 자아/프로젝트를 증명하지 못하면 `ambiguous`로 남긴다. 이를 고치기 위한 기존 행 UPDATE는 없다.
+- 프로젝트 DB는 `projects/projects.json`에 등록된 경로의 `conversations.db`, 시스템 자아 DB는 `INDIEBIZ_USERDATA` 또는 data의 `system_ai_memory.db`이다. `ConversationDB`/`PursuitLedger` 생성자는 스키마를 쓰므로 조회에서 만들지 않는다. `pursuit_turn.episode_id`와 `pursuit.agent_key`가 episode→저장소/자아의 명시적 연결이다. project task 입력은 검증한 등록 범위에서만 읽는다.
+- tasks의 `delegated_to`는 표시 이름이다. 이를 자아 ID로 바꾸지 않는다. 프로젝트 messages 및 시스템 conversations에는 task FK가 없으므로 시간·이름으로 메시지를 붙이지 않는다. tasks.result와 pursuit_turn.response는 실제 task 키로 참조 가능하다. 미전달 플래그를 변경하지 않는다.
+- `ConsciousSupervisor.log`의 trajectory `data.store`+`data.seq`는 작업대 연결이다. store 경로는 허용 루트 바로 아래 turn ID로 재검증한다. TurnStore seq는 파일 내에서도 재시작 시 중복 가능하므로 파일 세대/offset도 보존하고 대응 후보가 여럿이면 합치지 않는다. evidence 조회는 coverage를 기록하지 않는다. 응답 원문은 검수 승인 지문과 현재 manifest가 맞는 버전만 제공한다.
+- `write_ledger`의 두 세대만 읽는다. run/event_seq+episode가 맞으면 두 관측의 참조를 연결한다. 옛 agent/task만 있는 행은 범위를 증명하지 못하면 내보내지 않는다. 관문 밖 쓰기·heartbeat 압축·회전 전 기록 부재를 부분성으로 명시한다.
+- `model.usage`의 `accounting=billable_usage`만 토큰을 합산한다. 동일 call의 여러 행은 별개다. snapshot·boundary·cost.json은 합산하지 않는다.
+- `EpisodeJournal.tsx`의 기존 상세 펼치기를 소비처로 사용한다. 기존 `/world-pulse/episodes/{id}/trajectory`는 호환을 유지하고 같은 주행 아래 통합 조회/원문 페이지를 추가한다. 기존 전역 `remote_access_guard`의 로컬 또는 원격 런처 세션 계약을 따르며 공개 경로에는 추가하지 않는다. 새 IBL 낱말은 없다.
+- 읽기 전용 실측: trajectory 77,990행/20,136 run, 최대 run 872행, data 최대 4,105자. 쓰기 JSONL 5,792,300바이트(회전 파일 없음). 등록 프로젝트 24개. supervision 62개, 사건 파일 중앙값 1,832/최대 202,464바이트. 본문·키·메시지는 표본 출력하지 않았다.
+- 합성 입력: `backend/fixtures/execution_trace_cases.json`. 여러 provider round+부모/자식 비용 정답은 input=350/output=35이며 누적 snapshot/호출 종료를 더하면 시험이 실패해야 한다. 실패·누락·충돌·페이지/권한 불변식도 이 fixture를 바탕으로 시험한다.

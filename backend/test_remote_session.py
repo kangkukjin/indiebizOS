@@ -14,7 +14,7 @@ def client(monkeypatch):
     monkeypatch.setattr(auth, "sessions", {"valid-session": {"created": "test"}})
     monkeypatch.setattr(ws, "manager", WebSocketManager())
     monkeypatch.setattr(ws, "_stream_tasks", {})
-    monkeypatch.setattr(ws, "_stream_agent_keys", {})
+    monkeypatch.setattr(ws.streams, "_stream_agent_keys", {})
     app = FastAPI()
     app.include_router(ws.router)
     with TestClient(app) as test_client:
@@ -41,7 +41,7 @@ def test_remote_session_allows_ping_and_revocation_blocks_next_request(client, m
     async def chat(*args):
         called.append(args)
 
-    monkeypatch.setattr(ws, "handle_chat_message", chat)
+    monkeypatch.setattr(ws.streams, "handle_chat_message", chat)
     with client.websocket_connect("wss://remote.invalid/ws/chat/probe", headers=headers) as sock:
         sock.send_json({"type": "ping"})
         assert sock.receive_json() == {"type": "pong"}
@@ -113,6 +113,17 @@ def web_client(monkeypatch, tmp_path):
 
     with TestClient(app, base_url="https://remote.invalid") as test_client:
         yield test_client, root
+
+
+def test_shared_stream_tool_event_preserves_failure_and_call_identity():
+    from chat_streams import tool_event_payload
+    result = tool_event_payload({"type": "tool_result", "id": "parallel-call-a", "name": "execute_ibl",
+                                 "result": {"error": "failed", "result_ref": "retained"},
+                                 "is_error": True, "images": ["not duplicated"]}, "agent")
+    assert result == {"type": "tool_result", "agent": "agent", "id": "parallel-call-a", "name": "execute_ibl",
+                      "result": {"error": "failed", "result_ref": "retained"}, "is_error": True}
+    assert tool_event_payload({"type": "tool_start", "id": "b", "input": {"code": "test"}}, "agent") == {
+        "type": "tool_start", "agent": "agent", "name": "unknown", "id": "b", "input": {"code": "test"}}
 
 
 def test_react_shell_public_assets_and_session_cookie_flow(web_client):

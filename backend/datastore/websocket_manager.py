@@ -236,8 +236,8 @@ def send_launcher_command_sync(command: str, params: dict = None, timeout: float
 
 # ============ 채팅 스트림 진입점 주입 슬롯 ============
 # calendar_actions(서비스층)가 예약 작업을 "프론트가 보낸 것과 동일한 경로"로
-# 주입하는데, 그 핸들러(handle_chat_message_stream 등)는 라우터 모듈(api_websocket)에
-# 산다. 핸들러를 옮기는 대신 진입점만 주입(의존 역전) — api_websocket 이 로드
+# 주입하는데, 그 핸들러(handle_chat_message_stream 등)는 chat_streams 서비스에
+# 산다. 허브에 진입점을 주입해 등록한다(의존 역전) — chat_streams가 로드
 # 말미에 등록한다 (ibl_parser ↔ ibl_parser_blocks 와 같은 패턴, 2026-08-05 ⑦).
 
 _chat_stream_entry = None        # async (client_id, data) — 프로젝트 에이전트 채팅
@@ -245,7 +245,7 @@ _system_ai_stream_entry = None   # async (client_id, data) — 시스템 AI 채�
 
 
 def register_chat_streams(chat_entry, system_ai_entry) -> None:
-    """채팅 스트림 핸들러 주입 (api_websocket 로드 말미에 1회)"""
+    """채팅 스트림 핸들러 주입 (chat_streams 로드 말미에 1회)"""
     global _chat_stream_entry, _system_ai_stream_entry
     _chat_stream_entry = chat_entry
     _system_ai_stream_entry = system_ai_entry

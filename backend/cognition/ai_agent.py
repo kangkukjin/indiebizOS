@@ -273,7 +273,7 @@ class AIAgent:
             - {"type": "tool_result", "id": "...", "name": "...", "input": {...},
                "result": "...", "is_error": bool} - 도구 결과
               (id = start↔result 페어링 키, is_error = 성공/실패 판정. 둘 다 표면까지
-               그대로 나른다 — api_websocket.tool_event_payload 가 이 계약의 유일한 통로다.)
+               그대로 나른다 — chat_streams.tool_event_payload 가 이 계약의 유일한 통로다.)
             - {"type": "thinking", "content": "..."} - AI 사고 과정
             - {"type": "final", "content": "..."} - 최종 응답
             - {"type": "error", "content": "..."} - 에러

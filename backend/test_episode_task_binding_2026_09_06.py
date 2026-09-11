@@ -75,7 +75,7 @@ def test_none_still_inherits_for_sync_entrypoints(tmp_path):
 
 def test_ws_handlers_bind_task_before_episode():
     """관문: 이벤트 루프 스레드의 두 스트림 핸들러는 start_episode 에 task_id= 를 넘긴다 (AST)."""
-    src = open(os.path.join(BACKEND, "surface", "api_websocket.py"), encoding="utf-8").read()
+    src = open(os.path.join(BACKEND, "services", "chat_streams.py"), encoding="utf-8").read()
     tree = ast.parse(src)
     seen = {}
     for fn in tree.body:

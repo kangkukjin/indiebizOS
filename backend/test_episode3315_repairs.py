@@ -112,7 +112,7 @@ def test_real_prepare_preserves_pursuit_and_episode_link(tmp_path, monkeypatch, 
 
 @pytest.fixture
 def ws_env(tmp_path, monkeypatch):
-    import api_websocket as ws
+    import chat_streams as ws
     import episode_logger as el
     import xray_stream
     from conversation_db import ConversationDB

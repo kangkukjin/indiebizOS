@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: chat_stream_service_owner
+    retired: 2026-09-11
+    reason: 대화·작업 기록과 인지 스트림 실행이 WebSocket 라우터에 섞여 있었다.
+    instead: 인증·수신은 api_websocket, 실행과 도구 이벤트 전달은 chat_streams 서비스, 연결 허브는 websocket_manager가 맡는다.
+    phrases:
+      - 'api_websocket.tool_event_payload'
+      - 'from api_websocket import handle_chat_message_stream'
   - id: model_compat_cross_provider_key
     retired: 2026-09-11
     reason: 호환 getter가 환경 키를 놓치고 제공자 확인 없이 다른 티어 키를 전달할 수 있었다. 키 저장 실패도 성공 응답으로 숨겨졌다.

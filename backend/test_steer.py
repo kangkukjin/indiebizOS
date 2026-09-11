@@ -74,7 +74,7 @@ def test_http_steer_requires_unambiguous_active_target():
 
 
 def test_websocket_two_windows_target_their_own_tasks(monkeypatch):
-    import api_websocket as ws
+    import chat_streams as ws
     import steer_inbox as si
     from types import SimpleNamespace
     from unittest.mock import AsyncMock
@@ -85,9 +85,9 @@ def test_websocket_two_windows_target_their_own_tasks(monkeypatch):
         "window-b": ("system_ai", "system_ai", "b"),
     })
     with si.task_scope(["system_ai"], "a"), si.task_scope(["system_ai"], "b"):
-        asyncio.run(ws._accept_stream_steer("window-a", {"message": "A만"}, "system_ai"))
-        asyncio.run(ws._accept_stream_steer("window-b", {"message": "B만"}, "system_ai"))
-        asyncio.run(ws._accept_stream_steer("window-a", {"message": "다른 에이전트"}, "other"))
+        asyncio.run(ws.accept_stream_steer("window-a", {"message": "A만"}, "system_ai"))
+        asyncio.run(ws.accept_stream_steer("window-b", {"message": "B만"}, "system_ai"))
+        asyncio.run(ws.accept_stream_steer("window-a", {"message": "다른 에이전트"}, "other"))
         assert si.drain("system_ai", "a") == ["A만"]
         assert si.drain("system_ai", "b") == ["B만"]
         assert "⚠" in send.call_args.args[1]["message"]

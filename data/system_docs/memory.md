@@ -794,7 +794,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 | `backend/ibl_embedding_trainer.py` | 해마 학습 스크립트 (베이스 모델에서 fine-tuning) |
 | `backend/cognition/cognitive_recall.py` | `_build_execution_memory()` — 해마+기억 지도 합성, `_memory_map_scent()` (agent_cognitive 믹스인) |
 | `data/packages/installed/tools/memory/memory_db.py` | 심층메모리 (시맨틱 우선 + LIKE 폴백, 2026-05-16 시맨틱 추가) |
-| `backend/surface/api_websocket.py` | GUI/WS 경로 — 연상 단계 → Reflex 분기 → 실행 |
+| `backend/services/chat_streams.py` | GUI/WS 실행 서비스 — 인지 파이프라인 호출·대화/작업 기록·스트림 전달 (인증/수신은 api_websocket) |
 | `backend/cognition/agent_communication.py` | 채널 경로 — 동일 패턴 (2026-05-17 중급 모델 전환 추가로 일관성 확보) |
 | `backend/cognition/system_ai_core.py` | 시스템 AI 경로 — 동일 패턴 |
 | `backend/cognition/prompt_builder.py` | 시스템 프롬프트에 연상기억 삽입 (외부 래퍼 없이 직접) |

@@ -290,3 +290,11 @@ blue/green을 “9겹에서 2겹”으로 계산하는 데는 반대한다. [api
 - API 사전의 등록 여부·목록·설정 조회를 로더(`ibl_registry`)로 옮기고 소비자는 직접 import한다. `api_engine`의 등록 도구 직접 실행과 `api_pipeline`의 선언 실행을 유지했다. IBL 바인딩 없는 가짜 등록 도구를 두 진입점으로 실행하는 시험으로 연결을 확인했다.
 - 새 사례는 기존 모델/감독 주제 시험과 API 사전 주제 시험에 담았다. 관련 **63 passed**.
 - 새 시험 파일의 직접 실행도 pytest로 위임하도록 저장소 관문에 맞췄다. 최종 전체 backend **3,663 passed, 1 skipped**. 로그: `outputs/system_simplification/stage6d-tests.log`. 층 가드·폰 번들·IBL 파생·은퇴 계약 검사 통과.
+
+
+### 6e.1 — 원격 React 연결의 선행조건: WebSocket 세션 인증
+
+- 기존 HTTP 인증 미들웨어가 WebSocket에는 적용되지 않아 원격 채팅/런처 소켓이 세션 없이 수락되는 틈을 확인했다. React를 연결하기 전에 두 소켓에 같은 외부 판정·런처 세션 계약을 적용했다.
+- 접속 전과 각 후속 메시지에서 검사한다. 로그아웃·검증 실패 뒤 새 명령을 실행하지 않고 1008로 닫는다. 프록시가 Host를 localhost로 바꿔도 외부로 판정한다. 로컬 데스크톱의 무인증 연결과 이미 승인된 작업의 배경 완주 계약은 유지한다.
+- 미인증 접속, 쿠키/헤더 인증, 세션 회수 뒤 실행 차단, 로컬 연결, 판정자 예외를 실제 ASGI WebSocket으로 확인했다. 관련 **54 passed**. UI 통합·React 전환 자체는 다음 묶음에서 집행한다.
+- 전체 backend **3,671 passed, 1 skipped**. 로그: `outputs/system_simplification/stage6e1-tests.log`. 폰 번들·IBL 파생 검사 통과.

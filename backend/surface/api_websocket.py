@@ -211,9 +211,23 @@ from websocket_manager import (  # noqa: E402
 )
 
 
+async def _authorize_websocket(websocket: WebSocket) -> bool:
+    """HTTP와 같은 로컬/원격·세션 판정. HTTP 미들웨어는 WS에 적용되지 않는다."""
+    try:
+        from api_launcher_web import is_external_request, verify_session
+        if not is_external_request(websocket) or verify_session(websocket):
+            return True
+    except Exception as exc:
+        print(f"[WS] 인증 판정 실패: {type(exc).__name__}")
+    await websocket.close(code=1008, reason="원격 런처 로그인이 필요합니다.")
+    return False
+
+
 @router.websocket("/ws/launcher")
 async def websocket_launcher(websocket: WebSocket):
     """런처 전용 WebSocket — 백엔드→런처 명령 전달 채널"""
+    if not await _authorize_websocket(websocket):
+        return
     await websocket.accept()
     set_launcher_ws(websocket, asyncio.get_running_loop())
     print("[WS] Launcher 연결됨")
@@ -222,9 +236,13 @@ async def websocket_launcher(websocket: WebSocket):
         while True:
             # Launcher→백엔드 메시지 (ping/ack 등)
             data = await websocket.receive_json()
+            if not await _authorize_websocket(websocket):
+                break
             if data.get("type") == "ping":
                 await websocket.send_json({"type": "pong"})
     except (WebSocketDisconnect, Exception):
+        pass
+    finally:
         clear_launcher_ws()
         print("[WS] Launcher 연결 해제")
 
@@ -234,12 +252,17 @@ async def websocket_launcher(websocket: WebSocket):
 @router.websocket("/ws/chat/{client_id}")
 async def websocket_chat(websocket: WebSocket, client_id: str):
     """채팅 WebSocket 엔드포인트"""
+    if not await _authorize_websocket(websocket):
+        return
     print(f"[WS] 연결: {client_id}")
     await manager.connect(websocket, client_id)
 
     try:
         while True:
             data = await websocket.receive_json()
+            if not await _authorize_websocket(websocket):
+                manager.disconnect(client_id)
+                break
             message_type = data.get("type", "chat")
 
             if message_type == "chat":

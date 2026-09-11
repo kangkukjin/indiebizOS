@@ -182,6 +182,8 @@ Cloudflare 발급(`cdn_provision`)은 터널뿐 아니라 R2 캐시 Worker 까�
 | `/warehouse-feed/*` | GET/POST | ✓ | 공유창고 이웃 탭(피드·검색·리트윗) |
 | `/launcher/instruments` | GET | ✓(외부만) | 앱 계기 매니페스트 — ibl_nodes.yaml의 `app:` 블록에서 자동 파생. 데스크탑(localhost)은 무인증, 터널 경유는 launcher 세션 필요 |
 
+WebSocket `/ws/chat/{client_id}`·`/ws/launcher`도 같은 원격 판정과 런처 세션을 사용한다. 접속 수락 전과 각 후속 메시지에서 검사하며, 세션 부재·로그아웃·검증 오류는 1008로 연결을 닫고 새 명령을 실행하지 않는다. HTTP 미들웨어만으로 WebSocket을 보호한다고 가정하지 않는다. 이미 승인된 배경 작업의 완주·기록은 기존 수명을 따른다.
+
 ### 설정 파일
 경로: `data/launcher_web_config.json`
 

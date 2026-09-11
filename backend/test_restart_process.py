@@ -11,7 +11,7 @@ import urllib.request
 from pathlib import Path
 
 import pytest
-from restart_process import ProcessAdapter, alive, identity, signal_owned
+from restart_process import ProcessAdapter, alive, identity, signal_owned, tree
 from restart_protocol import atomic_json, code_manifest, control_dir, read_json, request
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -133,6 +133,30 @@ def http(port, path, *, token=None, parent=None, payload=None, timeout=3, extra=
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(req, timeout=timeout) as response:
         return json.load(response)
+
+
+@pytest.mark.parametrize("clock_shift", [-2, 2])
+def test_clock_correction_preserves_worker_and_child_ownership(runtime, monkeypatch, clock_shift):
+    """실제 시계는 건드리지 않고 장수 제어자가 보는 NTP 보정만 주입한다."""
+    _psosx = pytest.importorskip("psutil._psosx")
+    if not hasattr(_psosx, "INIT_BOOT_TIME"):
+        pytest.skip("시계 보정 전 psutil 버전")
+
+    base, port, _, state = runtime
+    before = state()
+    child = identity(http(port, "/process", payload={})["pid"])
+    monkeypatch.setattr(_psosx, "INIT_BOOT_TIME", _psosx.boot_time() + clock_shift)
+
+    assert identity(before["worker"]["pid"])["born"] == before["worker"]["born"]
+    assert alive(before["worker"])
+    members = tree(before["worker"])
+    assert child in members and before["worker"] in members
+    adapter = ProcessAdapter(base, base, port)
+    adapter.stop({"stop_tree": [dict(child, born=child["born"] - 1)]}, force=True)
+    assert alive(child), "PID가 재사용된 영수증은 여전히 거절해야 한다"
+    adapter.stop({"stop_tree": [child]}, force=True)
+    eventually(lambda: adapter.stopped({"stop_tree": [child]}))
+    assert alive(before["worker"])
 
 
 def test_real_timeout_drain_and_identical_request_after_controller_restart(runtime):

@@ -396,4 +396,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 비밀 인증을 포함하므로 공유/커밋 대상이 아니다. 운영은 `.venv/bin/python3 backend/api.py
 restart --wait`와 `status`, `shutdown --wait`를 사용한다. 수동 keeper 표식·포트 소탕은
 필요 없다. 기존 승인 작업·취소·MCP 결과 회수는 drain 중에도 유지한다.
+macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시계 보정의 영향을 받는
+`psutil.Process.create_time()` 표시값으로 사망을 판정하면 살아 있는 워커가 종료 대상에서
+누락될 수 있다. [2026-09-12 장애와 재현](../../docs/RESTART_CLOCK_IDENTITY_2026_09_12.md).
 정본 설계·장애 시험·복구 한계: [재기동 제어 §9](../../docs/RESTART_COORDINATION_DESIGN_2026_09_11.md).

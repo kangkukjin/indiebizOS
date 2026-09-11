@@ -140,6 +140,55 @@ def test_t2_pipeline_rejects_before_execution():
     assert frames and frames[-1].get("step") == 2, "프레임은 굶는 변환자 자리"
 
 
+def _unified(monkeypatch, tmp_path, code):
+    import json
+    import thread_context
+    import system_tools_ibl as unified
+    snap = thread_context.snapshot()
+    thread_context.clear_all_context()
+    monkeypatch.setattr(unified, "_ibl_debug_log", lambda *args: None)
+    try:
+        return json.loads(unified._execute_ibl_unified_impl({"code": code}, str(tmp_path)))
+    finally:
+        thread_context.restore(snap)
+
+
+def test_unified_pipeline_has_no_extra_head_check(monkeypatch, tmp_path):
+    import ibl_pipe_types
+    import ibl_engine
+    calls = []
+    original = ibl_pipe_types.head_transform_error
+
+    def counted(*args, **kwargs):
+        calls.append(kwargs)
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(ibl_pipe_types, "head_transform_error", counted)
+    monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *a, **kw: {"items": [{"a": 1}]})
+    result = _unified(monkeypatch, tmp_path,
+                      '[sense:search]{query:"sample"} >> [table:take]{n:1}')
+    assert result.get("success") is True
+    assert len(calls) == 2, "check 탐침과 실행기 각각 한 번; 중간 호출은 불필요하다"
+
+
+def test_unified_abstained_checker_keeps_execution_guards(monkeypatch, tmp_path):
+    import ibl_typecheck
+    import ibl_engine
+    executed = []
+    monkeypatch.setattr(ibl_typecheck, "typecheck",
+                        lambda *a, **kw: {"ok": True, "abstained": "test"})
+    monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *a, **kw: executed.append(a))
+    for code in (
+        '[table:take]{n:1}',
+        '[table:dedup]{by:"a"} >> [table:take]{n:1}',
+        '[limbs:browser]{op:"click",ref:"b1"} >> [table:take]{n:1}',
+    ):
+        result = _unified(monkeypatch, tmp_path, code)
+        assert result.get("success") is False
+        assert result["traceback"]["error_type"] == "binding"
+    assert executed == [], "검사기가 기권해도 부작용 전 거절해야 한다"
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, "-v"]))

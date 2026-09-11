@@ -790,18 +790,17 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             return dumps_public_result(result, producer="execute_ibl:resume",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
 
-        # 파이프 정적 타입 검사 (T1, 2026-08-29) — 단일 step 은 execute_pipeline 을 안 지나므로
-        # 여기서도 한 벌 검사(ibl_pipe_types 단일 소스). 홀로 선 변환자(예: [table:take]{n:3})가
-        # 빈 입력 위에서 그럴듯한 "성공"을 내던 자리를 실행 전에 정직 거절.
-        from ibl_pipe_types import head_transform_error
-        _type_err = head_transform_error(parsed)
-        if _type_err:
-            from ibl_traceback import build_tb
-            return json.dumps({"success": False, "error": _type_err,
-                               "traceback": build_tb(_type_err, "binding")},
-                              ensure_ascii=False, indent=2)
-
         if len(parsed) == 1 and not has_special and not parsed[0].get("_assign_name"):
+            # 직접 실행은 pipeline 관문을 지나지 않는다. 전체 검사기가 기권해도
+            # T1은 여기서 보장한다. 파이프/재개/중첩 실행의 T1·T2는 실행기가 맡는다.
+            from ibl_pipe_types import head_transform_error
+            _type_err = head_transform_error(parsed)
+            if _type_err:
+                from ibl_traceback import build_tb
+                return json.dumps({"success": False, "error": _type_err,
+                                   "traceback": build_tb(_type_err, "binding")},
+                                  ensure_ascii=False, indent=2)
+
             # 단일 step 직접 실행
             step = parsed[0]
             # ★진행 신고의 소유권도 여기서 집는다 (2026-09-01).

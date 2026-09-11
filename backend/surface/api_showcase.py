@@ -17,6 +17,7 @@ import os
 import json
 import asyncio
 import hashlib
+import logging
 import tempfile
 from pathlib import Path
 
@@ -140,8 +141,14 @@ def list_dir(slug: str, path: str = Query(default=""), x_showcase_secret: str = 
     dirs, items, sub_files = [], [], []
     try:
         entries = sorted(os.scandir(target), key=lambda e: e.name)
-    except OSError:
-        entries = []
+    except OSError as exc:
+        logging.getLogger(__name__).warning(
+            "공개파일 폴더 조회 실패: folder_id=%s errno=%s", fid, exc.errno,
+        )
+        detail = ("공유 폴더를 읽을 권한이 없습니다. 호스트의 폴더 접근 권한을 확인하세요."
+                  if isinstance(exc, PermissionError) else
+                  "공유 폴더를 읽지 못했습니다. 저장장치 연결 상태를 확인하세요.")
+        raise HTTPException(status_code=503, detail=detail) from exc
     for e in entries:
         if e.name.startswith("."):
             continue

@@ -245,38 +245,6 @@ class PromptBuilder:
             logger.debug(f"[PromptBuilder] 정체성 폴백 실패: {e}")
         return ""
 
-    def _build_resource_list(self) -> str:
-        """자원 목록 생성 — guide_db.json에서 가이드 제목을 읽어 한 줄 목록으로 반환
-
-        에이전트가 '어떤 가이드가 존재하는지' 배경 지식으로 기억하게 하여,
-        능동적 검색(read_guide) 없이도 관련 가이드를 떠올릴 수 있게 합니다.
-        """
-        cache_key = "__resource_list__"
-        if cache_key in self._cache:
-            return self._cache[cache_key]
-
-        guide_db_path = get_base_path() / "data" / "guide_db.json"
-        if not guide_db_path.exists():
-            return ""
-
-        try:
-            data = json.loads(guide_db_path.read_text(encoding='utf-8'))
-            guides = data.get("guides", [])
-            if not guides:
-                return ""
-
-            names = [g["name"] for g in guides if g.get("name")]
-            if not names:
-                return ""
-
-            resource_text = "# 자원 목록\n참고 가능한 가이드: " + " / ".join(names)
-            self._cache[cache_key] = resource_text
-            logger.debug(f"[PromptBuilder] 자원 목록 생성: {len(names)}개 가이드, ~{len(resource_text)}자")
-            return resource_text
-        except Exception as e:
-            logger.warning(f"[PromptBuilder] 자원 목록 생성 실패: {e}")
-            return ""
-
     # ── 프로젝트 폴더 포식 기억 (2026-09-05, 사용자 판정 "주입 쪽으로") ─────────────
     # 프로젝트 에이전트에게 프로젝트 폴더는 곧 cwd 다 — 코딩 하네스가 CLAUDE.md 를 매번 올리듯
     # 그 폴더의 포식 기억 문서(정본: data/forage_surveys/mac/<경로>/memory.md)를 안정 프롬프트에
@@ -439,11 +407,6 @@ class PromptBuilder:
         # 턴에서 채우고도 아무 데도 닿지 않았다. 조립의 단일 소스 =
         # compile_user_command(명령) + _build_dynamic_context(배경).
 
-        # 4.5 자원 목록 (가이드 제목 배경 지식)
-        resource_list = self._build_resource_list()
-        if resource_list:
-            parts.append(resource_list)
-
         # 4.6 World Pulse 직접 주입 폐지 (2026-06-28) — self/world 스냅샷은 이제 의식
         # 에이전트 입력으로만 흐르고 task_framing 으로 녹여 전달된다. 실행 에이전트
         # (EXECUTE/Reflex)는 ambient 주입 없이, 필요 시 sense:here/host/world 로 pull.
@@ -596,10 +559,6 @@ def _build_system_ai_stable_prompt(
     ibl_env = build_environment(allowed_nodes=None, allowed_set=allowed_set, compact=True)
     if ibl_env:
         parts.append(ibl_env)
-
-    resource_list = builder._build_resource_list()
-    if resource_list:
-        parts.append(resource_list)
 
     delegation_prompt = builder._load_file("fragments/10_system_ai_delegation.md")
     if delegation_prompt:

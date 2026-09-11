@@ -77,6 +77,16 @@ def _read(p):
     return open(p, encoding="utf-8").read()
 
 
+def test_empty_body_map_includes_guide_topics_without_writing_memory(env, tmp_path):
+    HT, db = env
+    (tmp_path / "guide_db.json").write_text(json.dumps({"guides": [
+        {"file": "new.md", "name": "새 가이드", "topic": "새 주제"},
+    ]}, ensure_ascii=False))
+    assert "새 주제 (0) · guide: new.md" in HT.map_text(db)
+    assert not (tmp_path / "tree").exists()
+    assert HT.topic_counts(db) == {}
+
+
 def test_refresh_renders_topic_doc_and_map(env):
     HT, db = env
     a = _add(db, "부동산 실거래가를 조회", '[sense:realty]{source: "molit", region: "오송"}', "부동산", ok=3)

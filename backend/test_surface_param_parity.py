@@ -67,5 +67,26 @@ def test_code_is_required_everywhere():
     assert "code" in _mcp_args()
 
 
+def test_retired_verbose_is_hidden_but_saved_remote_arguments_are_accepted():
+    import sys
+    sys.path.insert(0, str(ROOT))
+    from mcp_server import execute_ibl
+    from mcp.server.fastmcp.utilities.func_metadata import func_metadata
+    from api_ibl import IBLRequest
+    assert "verbose" not in _schema_params() | _rest_fields() | _mcp_args()
+    remote = func_metadata(execute_ibl, skip_names=["ctx"]).arg_model.model_validate({"code": "", "verbose": True})
+    rest = IBLRequest(code="", verbose=True)
+    assert "verbose" not in remote.model_dump() and "verbose" not in rest.model_dump()
+    assert remote.code == rest.code == ""
+
+
+def test_app_returns_original_independently_of_retired_verbose(monkeypatch):
+    from system_tools_ibl import _preview_boundary
+    monkeypatch.setattr("thread_context.get_call_channel", lambda: "app")
+    value = {"items": [{"text": "원문" * 20000}]}
+    assert _preview_boundary(value, {}) is value
+    assert _preview_boundary(value, {"verbose": False}) is value
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

@@ -8,7 +8,7 @@
 에서 `results[]` 를 step 별 *요약*(shape·count·bytes·preview)으로 접는다. `final_result`의
 실제 반환 데이터는 원형이며, 그 값이 fn 실행 봉투면 내부 results[]에도 같은 규칙을 적용한다.
   - 실패 step 은 원형 오류문을 그대로 싣는다(어디서 왜 — 진단 정보는 다이어트 대상이 아님).
-  - `verbose: true` 면 손대지 않는다(옛 모양 그대로).
+  - 내부 요약 함수의 verbose 인자는 원형 보존용이다. 모델 도구의 표시 옵션이 아니다.
   - 표면(조종실·앱·폰·웹소켓)은 이미 final_result 만 읽는다 → 무영향.
   - 봉투에 `_results_summarized: true` 표지 — results[]가 요약임을 알린다.
     MCP도 전달 한도 초과 시 이 요약기를 쓰며, final_result는 verbose 여부와 무관하게 보존한다.
@@ -282,7 +282,7 @@ def diet_envelope(result: Any, verbose: bool = False, *, _fn_depth: int = 0) -> 
 # 원칙: "모델이 보는 것 = 모델이 print 한 것"(프로그래매틱 툴 호출·MemEx 와 같은 방향). 결과의 전체 값은 턴
 # 저장소(이름 있으면 $변수, 없으면 그림자)에 살고, 봉투에는 **큰 구조 데이터의 미리보기**만 실린다 —
 # 모델이 통째 든 채 다음 호출에 다시 치던 재료(ep2890 본문 숫자 66%·URL 절반이 결과에 이미 있음)를 손에서 뺀다.
-# 왕복을 늘리지 않기 위해 작은 결과·산문·효과·스칼라는 그대로. 전체가 필요하면 verbose:true 로 *요구*하거나
+# 왕복을 늘리지 않기 위해 작은 결과·산문·효과·스칼라는 그대로. 전체가 필요하면 read_result로 읽거나
 # `$이름 >> [table:take]/[table:select]/[table:filter]` 로 좁힌다. 앱·원격 표면(호출 통로 "app")은 렌더를 위해
 # 전체를 받는다(이 미리보기는 모델 경계에만). 임계는 data/lifecycle_policy.yaml `envelope_preview:` 데이터.
 

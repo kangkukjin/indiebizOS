@@ -106,13 +106,19 @@ def seed_guides(topic: str) -> str:
     지도에 가이드가 하나도 안 실린다. 문서의 `guide:` 줄이 정본(사람·AI 가 고친 것이 이긴다)이고,
     문서가 없거나 줄이 비었을 때만 이 씨앗이 채운다. 반환은 문서와 같은 꼴 — 쉼표 목록.
     """
+    return _guide_seed_index().get(norm_topic(topic), "")
+
+
+def _guide_seed_index() -> Dict[str, str]:
+    """새 몸도 기억 문서 없이 guide_db의 같은 지도를 받는다."""
     global _seed_cache
     p = guide_db_path()
     try:
         mt = os.path.getmtime(p)
     except OSError:
-        return ""
-    if _seed_cache[0] != mt:
+        return {}
+    key = (p, mt)
+    if _seed_cache[0] != key:
         idx: Dict[str, List[str]] = {}
         try:
             with open(p, encoding="utf-8") as f:
@@ -122,8 +128,8 @@ def seed_guides(topic: str) -> str:
                         idx.setdefault(t, []).append(str(g["file"]))
         except (OSError, ValueError):
             idx = {}
-        _seed_cache = (mt, {t: ", ".join(v) for t, v in idx.items()})
-    return _seed_cache[1].get(norm_topic(topic), "")
+        _seed_cache = (key, {t: ", ".join(v) for t, v in idx.items()})
+    return _seed_cache[1]
 
 
 def doc_dir() -> str:
@@ -932,12 +938,14 @@ def map_lines(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
     counts = topic_counts(db_path)
     pcounts = phrase_counts(db_path)
     out = []
-    for t in all_topics(db_path):
+    seeds = _guide_seed_index()
+    topics = set(all_topics(db_path)) | set(seeds)
+    for t in sorted(topics, key=lambda s: (s.count("/"), s)):
         p = doc_path(t)
         ex = os.path.exists(p)
         out.append({"topic": t, "count": counts.get(t, 0), "phrases": pcounts.get(t, 0), "runs": runs_of(p) if ex else 0,
                     "gist": gist_of(p) if ex else "",
-                    "guide": (guide_of(p) if ex else "") or seed_guides(t), "doc": p if ex else None})
+                    "guide": (guide_of(p) if ex else "") or seeds.get(t, ""), "doc": p if ex else None})
     return out
 
 

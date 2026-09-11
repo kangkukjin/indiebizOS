@@ -428,7 +428,7 @@ def _preview_boundary(result, tool_input: dict):
         if get_call_channel() == "app":
             return result
         from model_result_view import project_result
-        return project_result(result, verbose=bool((tool_input or {}).get("verbose")))
+        return project_result(result)
     except Exception as exc:
         from episode_logger import record_trajectory_event
         record_trajectory_event("context.projection_failed", {"error": str(exc)})
@@ -734,7 +734,6 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 if _explicit_names:
                     result["resumed_vars"] = _explicit_names
                 _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected), _retyped, _fn_hint)
-            from ibl_envelope import diet_envelope
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
             return dumps_public_result(result, producer="execute_ibl:resume_vars" if _explicit_names else "execute_ibl",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
@@ -787,7 +786,6 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 for r in result.get("results") or []:
                     if isinstance(r, dict) and isinstance(r.get("step"), int):
                         r["step"] += from_step - 1
-            from ibl_envelope import diet_envelope
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
             return dumps_public_result(result, producer="execute_ibl:resume",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
@@ -934,9 +932,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         # 봉투 다이어트 (2026-08-22 프로그램급 IBL M1): 파이프 봉투의 results[] 는 step 요약,
         # 실제 final_result 데이터는 원형, 그 안의 fn 봉투도 실행 기록만 요약한다.
         # 여기는 에이전트 경계(인프로세스·MCP 재진입·/ibl/execute 공통).
-        # verbose: true 가 옛 모양. 표면은 final_result 만 읽으므로 무영향.
+        # 모델에는 표시 사본, 앱에는 원형을 전달한다. 전문 조회는 read_result가 맡는다.
         if isinstance(result, dict):
-            from ibl_envelope import diet_envelope
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
 
         if isinstance(result, dict):

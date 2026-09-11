@@ -245,13 +245,6 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                              "items": {"anyOf": [{"type": "string"}, {"type": "integer", "minimum": 0}]},
                              "description": "선택 경로, 예 [final_result,items,0]. 중첩 JSON을 해제한 값의 문자 페이지. 생략=원 봉투."}},
                     "required": ["id"], "description": "code를 비우고 result_ref.id의 저장된 원문을 읽는다. 재실행 없음."},
-                "verbose": {
-                    "type": "boolean",
-                    "description": (
-                        "앱 표면의 원형 표시 옵션. 모델 표면은 중간 기록 요약과 최종 값 미리보기를 유지한다. "
-                        "전문은 result_ref.id를 read_result={id,offset,limit}로 조회한다. 작업을 다시 실행하지 말 것."
-                    )
-                }
             },
             "required": ["code"]
         }

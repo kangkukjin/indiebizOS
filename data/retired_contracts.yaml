@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: verbose_display_switch
+    retired: 2026-09-11
+    reason: verbose는 모델·REST·MCP 어디에서도 결과 표시를 바꾸지 않는 무효 입력이었다.
+    instead: 모델은 result_ref/read_result로 원문을 읽고 앱의 원형 표시는 호출 통로 app으로 결정한다. 옛 원격 호출의 추가 인자는 무시한다.
+    phrases:
+      - '앱 표면의 원형 표시 옵션.'
+      - 'verbose: true 가 옛 모양.'
+      - '전체가 필요하면 verbose:true 로 *요구*'
   - id: verbose_rerun_for_detail
     retired: 2026-09-11
     reason: 중간 상세를 얻기 위한 작업 재실행은 중복 비용과 부작용을 만든다.

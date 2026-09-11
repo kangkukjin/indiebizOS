@@ -20,6 +20,7 @@ ibl_engine.py - IBL 노드-액션 실행 엔진
 - ibl_executors.py: 노드 실행, 출력 핸들러, Goal 관리, 제어 흐름
 """
 
+import runtime_work
 import os
 import json
 import asyncio
@@ -51,7 +52,8 @@ def _get_persistent_loop() -> asyncio.AbstractEventLoop:
         loop.run_forever()
 
     _persistent_thread = threading.Thread(target=_run_loop, args=(_persistent_loop,), daemon=True)
-    _persistent_thread.start()
+    with runtime_work.service_scope():
+        _persistent_thread.start()
     return _persistent_loop
 
 
@@ -1006,6 +1008,7 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     return _attach_param_warning(result, _param_warning)
 
 
+@runtime_work.tracked("ibl")
 def execute_ibl(tool_input: dict, project_path: str, agent_id: str = None) -> Any:
     """모든 IBL 실행 모양에 공개 결과 계약 + criteria 품질 계약을 적용하는 최외곽 관문.
 

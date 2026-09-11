@@ -16,6 +16,7 @@ fresh 설치(특히 윈도우)엔 해마의 세 조각이 다 없다(맥 개발�
 ★공급 자체는 실기 번들·네트워크·릴리스 에셋 존재가 필요해 개발기에서 종단 검증 불가.
   경로·전개 레이아웃·멱등·폴백 로직만 정적 검증됨. 에셋은 scripts/publish_hippocampus.py 로 올린다.
 """
+import runtime_work
 import os
 import threading
 import tempfile
@@ -126,4 +127,4 @@ def provision_async(enabled: bool = True):
         except Exception as e:
             print(f"[해마공급] 공급 중 오류(무시): {e}")
 
-    threading.Thread(target=_run, daemon=True, name="hippocampus-provision").start()
+    threading.Thread(target=runtime_work.bind_boot(_run), daemon=True, name="hippocampus-provision").start()

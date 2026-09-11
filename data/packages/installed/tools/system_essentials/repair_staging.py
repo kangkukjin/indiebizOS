@@ -108,6 +108,14 @@ SESSION_TTL_DAYS = 7          # 이보다 오래된 종료 세션은 기회주�
 SAFETY_SUFFIXES = (
     "backend/datastore/red_grant.py",
     "backend/datastore/red_watchdog.py",
+    "backend/datastore/restart_red.py",
+    "backend/base/restart_protocol.py",
+    "backend/base/restart_process.py",
+    "backend/base/restart_child.py",
+    "backend/base/runtime_work.py",
+    "backend/services/restart_controller.py",
+    "backend/services/restart_helper.py",
+    "backend/surface/api_runtime.py",
     "tools/system_essentials/handler.py",
     "tools/system_essentials/repair_staging.py",
     "tools/system_essentials/repair_gates.py",
@@ -689,8 +697,10 @@ def _schedule_deferred_apply(repo: str, sess: dict, checks: list, verify_cmd: st
             json.dump(job, f, ensure_ascii=False, indent=2)
         if not os.environ.get("INDIEBIZ_REPAIR_NO_SPAWN"):   # 테스트 심 — 수행자는 직접 기동
             log = open(job_path + ".log", "ab")
-            subprocess.Popen([sys.executable, script, job_path],
-                             stdout=log, stderr=log, start_new_session=True, cwd=repo)
+            from runtime_work import service_scope
+            with service_scope():
+                subprocess.Popen([sys.executable, script, job_path],
+                                 stdout=log, stderr=log, start_new_session=True, cwd=repo)
     except Exception as e:
         print(f"[수리 스테이징] 지연 적용 예약 실패: {e}")
         try:

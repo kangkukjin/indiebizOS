@@ -751,12 +751,6 @@ app.whenReady().then(async () => {
   // IPC 설정
   setupIPC();
 
-  // 의도 표식 제거 — 시스템이 다시 살아났다 (수리 워치독·keeper 정상 작동 재개)
-  try {
-    const marker = path.join(getBasePath(), 'data', '.intentional_shutdown');
-    if (fs.existsSync(marker)) fs.unlinkSync(marker);
-  } catch (e) { /* 무시 */ }
-
   // Python 백엔드 시작
   try {
     console.log('[Electron] Python 백엔드 시작 시도...');

@@ -6,6 +6,7 @@ IndieBiz OS Core
 프로젝트 에이전트로부터 위임 결과를 수신하고 처리합니다.
 """
 
+import runtime_work
 import json
 import re
 import threading
@@ -29,7 +30,7 @@ class SystemAIRunner:
     """시스템 AI 실행기 - 메시지 큐 기반 비동기 처리"""
 
     # 클래스 변수 (AgentRunner와 공유 가능하도록 설계)
-    internal_messages: List[dict] = []  # 시스템 AI 전용 메시지 큐
+    internal_messages: List[dict] = runtime_work.WorkMessages()  # 시스템 AI 전용 메시지 큐
     _instance: Optional['SystemAIRunner'] = None  # 싱글톤
     _lock = threading.RLock()
 
@@ -217,22 +218,13 @@ class SystemAIRunner:
 
     def _check_internal_messages(self):
         """내부 메시지 확인 및 처리"""
-        with SystemAIRunner._lock:
-            if not SystemAIRunner.internal_messages:
-                return
-            msg_dict = SystemAIRunner.internal_messages.pop(0)
+        def pop():
+            with SystemAIRunner._lock:
+                return (SystemAIRunner.internal_messages.pop(0)
+                        if SystemAIRunner.internal_messages else None)
 
-        # 일감이 있을 때만 기어 재해소 (박제 방지, 불변이면 무비용)
-        self._sync_gear()
-
-        while msg_dict:
-            if not isinstance(msg_dict, dict):
-                with SystemAIRunner._lock:
-                    if not SystemAIRunner.internal_messages:
-                        break
-                    msg_dict = SystemAIRunner.internal_messages.pop(0)
-                continue
-
+        for msg_dict in runtime_work.message_stream(pop):
+            self._sync_gear()
             try:
                 from_agent = msg_dict.get('from_agent', 'unknown')
                 content = msg_dict.get('content', '')
@@ -399,12 +391,6 @@ class SystemAIRunner:
                 import traceback
                 print(f"[SystemAIRunner] 메시지 처리 실패: {e}")
                 traceback.print_exc()
-
-            # 다음 메시지
-            with SystemAIRunner._lock:
-                if not SystemAIRunner.internal_messages:
-                    break
-                msg_dict = SystemAIRunner.internal_messages.pop(0)
 
     def _process_via_cognition(self, ai_message: str, history: list) -> str:
         """위임 한 턴을 인지 파이프라인으로 돌린다 (연상→분류→의식→실행→평가→반성→증류).

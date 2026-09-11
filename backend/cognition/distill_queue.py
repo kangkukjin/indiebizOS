@@ -56,7 +56,7 @@ def _conn():
 
 
 class _Job:
-    __slots__ = ("row_id", "runner", "payload", "ident", "ctx", "ep", "attempts")
+    __slots__ = ("runtime_lease", "retry_pending", "row_id", "runner", "payload", "ident", "ctx", "ep", "attempts")
 
     def __init__(self, row_id, runner, payload, ident, ctx=None, ep=None, attempts=0):
         self.row_id, self.runner, self.payload, self.ident = row_id, runner, payload, ident
@@ -103,6 +103,9 @@ class DistillQueue:
         return row_id
 
     def _put(self, job: _Job):
+        import runtime_work
+        if not hasattr(job, "runtime_lease"):
+            job.runtime_lease = runtime_work.reserve("distill", kind="finalizer")
         self._idle.clear()
         self._q.put(job)
         self._ensure_worker()
@@ -112,7 +115,9 @@ class DistillQueue:
             if self._worker is None or not self._worker.is_alive():
                 self._worker = threading.Thread(target=self._loop, daemon=True,
                                                 name="distill-queue")
-                self._worker.start()
+                from runtime_work import service_scope
+                with service_scope():
+                    self._worker.start()
 
     # ---------- 소비 ----------
 
@@ -129,9 +134,13 @@ class DistillQueue:
             except queue.Empty:
                 self._idle.set()
                 continue
+            job.retry_pending = False
             try:
-                self._run_job(job)
+                with job.runtime_lease.activate():
+                    self._run_job(job)
             finally:
+                if not job.retry_pending:
+                    job.runtime_lease.close()
                 self._q.task_done()
                 if self._q.empty():
                     self._idle.set()
@@ -150,6 +159,7 @@ class DistillQueue:
             if job.attempts < MAX_ATTEMPTS:
                 self._mark(job.row_id, "pending", attempts=job.attempts, error=err)
                 print(f"[증류큐] #{job.row_id} 실패 {job.attempts}/{MAX_ATTEMPTS} — 재시도: {err[:120]}")
+                job.retry_pending = True
                 self._put(job)
             else:
                 self._mark(job.row_id, "failed", attempts=job.attempts, error=err)
@@ -276,6 +286,10 @@ class DistillQueue:
         싱글턴, 그 밖 → agent_registry 의 살아있는 러너. 못 찾으면 orphaned 로 표시하고 이유를
         남긴다(침묵 폐기 금지). 재개 행은 attempts 를 이어 센다(무한 재시도 방지).
         """
+        import runtime_work
+        work = runtime_work.registry()
+        if work is not None and not work.accepting:
+            return {"skipped": "activation_pending"}
         if not (force or self._resume_armed):
             return {"skipped": "not armed"}
         self._resume_armed = False

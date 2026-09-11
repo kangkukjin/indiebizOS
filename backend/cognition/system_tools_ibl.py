@@ -4,6 +4,7 @@ system_tools.py 에서 verbatim 이동: execute_ibl 단일도구의 실행 본�
 (_execute_ibl_unified — 첨부파일 참조 치환·엔진 위임·param 힌트 보강).
 system_tools 가 재수출하므로 기존 `from system_tools import _execute_ibl_unified` 불변.
 """
+import runtime_work
 import json
 import hashlib
 import os
@@ -965,6 +966,8 @@ def _collect_honesty_markers(obj) -> dict:
     return out
 
 
+@runtime_work.tracked("ibl-program", bypass=lambda tool_input, *a, **kw:
+                      bool(tool_input.get("describe") or tool_input.get("read_result") or tool_input.get("check")))
 def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None,
                          cancel_check=None) -> str:
     """전 IBL 표면의 trajectory choke point.

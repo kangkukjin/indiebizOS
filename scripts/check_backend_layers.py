@@ -39,7 +39,8 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
-        "audit_lifecycle", "execution_workers",
+        "audit_lifecycle", "execution_workers", "runtime_work",
+        "restart_protocol", "restart_process", "restart_child", "runtime_legacy",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "episode_logger", "model_call_context", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
@@ -55,7 +56,7 @@ LAYERS = {
         "install_approvals",
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
-        "red_grant", "red_report", "red_watchdog", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
+        "red_grant", "red_report", "red_watchdog", "restart_red", "schema_migrations", "service_status", "store_waste_audit", "switch_manager", "system_ai_memory",
         "system_docs", "supervision_store", "verification_cache", "supervision_delivery",
         "warehouse_catalog", "warehouse_directory", "warehouse_items",
         "websocket_manager", "xray_stream",
@@ -94,7 +95,7 @@ LAYERS = {
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {
-        "android_calibrate", "auto_response", "business_sync",
+        "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper",
         "calendar_actions", "calendar_html", "cdn_provision",
         "channel_poller", "ffmpeg_provision", "gen_newspaper",
         "generate_newspaper", "hippocampus_provision", "indienet", "model_settings_view",

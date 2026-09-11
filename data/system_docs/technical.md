@@ -330,7 +330,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(36) → `datastore`(48) → `ibl`(50) → `cognition`(62) → `services`(32) → `surface`(65). `.py` 총 354개(test 제외).
+  `base`(41) → `datastore`(49) → `ibl`(50) → `cognition`(62) → `services`(34) → `surface`(66). `.py` 총 363개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(19) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -387,3 +387,13 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 ### 파일 듣기 (2026-09-10)
 
 `sense:listen`의 path 입력과 analyze/inspect를 추가했다. 구현·모델 설정은 android 패키지의 android_audio*.py와 audio_models.yaml. 범위/비용/캐시/재개 계약은 [audio_listen](../guides/audio_listen.md), 설계는 [AUDIO_LISTEN_2026_09_10](../../docs/AUDIO_LISTEN_2026_09_10.md).
+
+### 데스크탑 재기동 제어 (R1)
+
+`backend/api.py` 직접 실행·Electron·start.sh·keeper 호환 입구는 백엔드 밖의
+`restart_controller`로 합류한다. 워커 하나의 실행 접수와 실제 종료를 `runtime_work`로
+관측하며 UNKNOWN이면 예정 재기동을 보류한다. `data/restart_control/`는 로컬 제어 상태이고
+비밀 인증을 포함하므로 공유/커밋 대상이 아니다. 운영은 `.venv/bin/python3 backend/api.py
+restart --wait`와 `status`, `shutdown --wait`를 사용한다. 수동 keeper 표식·포트 소탕은
+필요 없다. 기존 승인 작업·취소·MCP 결과 회수는 drain 중에도 유지한다.
+정본 설계·장애 시험·복구 한계: [재기동 제어 §9](../../docs/RESTART_COORDINATION_DESIGN_2026_09_11.md).

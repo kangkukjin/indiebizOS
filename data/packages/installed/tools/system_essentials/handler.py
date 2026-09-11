@@ -341,15 +341,20 @@ def _red_write_prepare(path: str, new_content=None) -> str | None:
                 files[abs_path] = backup
             else:
                 files[abs_path] = None  # 신규 파일 — 롤백 = 삭제
-        with open(manifest_path, "w", encoding="utf-8") as f:
-            json.dump(manifest, f, ensure_ascii=False, indent=2)
+        import hashlib
+        from restart_protocol import atomic_json
+        manifest.setdefault("target_hashes", {})[abs_path] = (
+            hashlib.sha256(new_content.encode()).hexdigest() if isinstance(new_content, str) else None)
+        atomic_json(manifest_path, manifest)
         # 매니페스트 mtime 갱신 = 워치독 조용 타이머 리셋(연쇄 편집을 한 검사로 묶음)
     except Exception as e:
         return f"Error: RED 백업 실패로 쓰기를 중단합니다(안전판 없이는 안 쓴다): {e}"
     # 쓰기가 확정된 시점에만 keeper 를 재운다 — backend/*.py 만 리로드를 부른다.
     backend_root = str(_REPO_ROOT / "backend")
     if abs_path.endswith(".py") and abs_path.startswith(backend_root + os.sep):
-        _keeper_pause(grant.get("task_id") or "notask")
+        from restart_protocol import control_dir
+        if not (control_dir(_REPO_ROOT) / "state.json").exists():
+            _keeper_pause(grant.get("task_id") or "notask")
     return None
 
 
@@ -366,6 +371,15 @@ def _red_write_finalize(path: str):
         return
     grant = _red_grant_active()
     if not grant:
+        return
+    from restart_protocol import code_manifest, control_dir, read_json, request
+    if read_json(control_dir(_REPO_ROOT) / "state.json"):
+        bdir = _red_backup_dir(grant)
+        manifest_path = os.path.join(bdir, "manifest.json")
+        digest = code_manifest(_REPO_ROOT)["digest"]
+        request(_REPO_ROOT, "red_verify", operation="red_verify",
+                request_id="red-verify-" + digest[:40], artifact_digest=digest,
+                payload={"manifest_path": manifest_path})
         return
     try:
         bdir = _red_backup_dir(grant)

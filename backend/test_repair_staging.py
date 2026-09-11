@@ -374,8 +374,7 @@ def run():
                  "RED_APPLY_UNREACHABLE_CONFIRM_S": "0", "RED_APPLY_GATE_SETTLE_S": "0",
                  "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
         env10.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
-        p10 = subprocess.run([sys.executable, str(REPO / "backend" / "datastore" / "red_apply.py"),
-                              str(job10)], capture_output=True, text=True, timeout=180, env=env10)
+        p10 = subprocess.run([sys.executable, "-c", "import sys,json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(sys.argv[2]) / 'backend'))\nimport boot_paths\nfrom restart_controller import Controller\nfrom restart_protocol import code_manifest, request, read_json\nfrom test_restart_controller import Adapter\njob_path=Path(sys.argv[1]); job=json.loads(job_path.read_text()); base=Path(job['repo'])\nadapter=Adapter(); adapter.base=base; ctl=Controller(base,base,adapter)\nctl.save(phase='ACTIVE',generation='fixture',worker={'pid':11,'born':1},code_digest=code_manifest(base)['digest'],control_token='fixture')\nrequest(base,'red_apply',operation='red_apply',payload={'job_path':str(job_path)})\nfor _ in range(20):\n ctl.tick()\nresult=read_json(job_path).get('controller_apply', {})\nassert result.get('applied'), (result,ctl.state)\nassert ctl.state['phase']=='ACTIVE',ctl.state\n", str(job10), str(REPO)], capture_output=True, text=True, timeout=180, env=env10)
         check("S10_process_applies", p10.returncode == 0 and v10.read_text() == "TEN = 'deferred'\n",
               ((p10.stdout or "") + (p10.stderr or ""))[-400:])
         sess10 = st.read_session(str(tmp), st.task_key(task10))
@@ -556,8 +555,7 @@ def run():
                  "RED_APPLY_VERIFY_HEALTH_WAIT_S": "0",
                  "RED_APPLY_HEALTH_URL": "http://127.0.0.1:1/health"}
         env13.pop("INDIEBIZ_REPAIR_NO_SPAWN", None)
-        p13 = subprocess.run([sys.executable, str(REPO / "backend" / "datastore" / "red_apply.py"),
-                              str(job13)], capture_output=True, text=True, timeout=180, env=env13)
+        p13 = subprocess.run([sys.executable, "-c", "import sys,json\nfrom pathlib import Path\nsys.path.insert(0, str(Path(sys.argv[2]) / 'backend'))\nimport boot_paths\nfrom restart_controller import Controller\nfrom restart_protocol import code_manifest, request, read_json\nfrom test_restart_controller import Adapter\njob_path=Path(sys.argv[1]); job=json.loads(job_path.read_text()); base=Path(job['repo'])\nadapter=Adapter(); adapter.base=base; ctl=Controller(base,base,adapter)\nctl.save(phase='ACTIVE',generation='fixture',worker={'pid':11,'born':1},code_digest=code_manifest(base)['digest'],control_token='fixture')\nrequest(base,'red_apply',operation='red_apply',payload={'job_path':str(job_path)})\nfor _ in range(20):\n ctl.tick()\nresult=read_json(job_path).get('controller_apply', {})\nassert result.get('applied'), (result,ctl.state)\nassert ctl.state['phase']=='ACTIVE',ctl.state\n", str(job13), str(REPO)], capture_output=True, text=True, timeout=180, env=env13)
         check("S13b_process_applied", p13.returncode == 0 and v13.read_text() == "T13 = 'patched'\n",
               ((p13.stdout or "") + (p13.stderr or ""))[-400:])
         check("S13b_verify_cmd_actually_ran", (tmp5 / "verify_ran.txt").exists(),
@@ -571,7 +569,7 @@ def run():
                   (_f.get("post_verify") or {}).get("exit_code") == 0,
                   json.dumps(_f, ensure_ascii=False)[:300])
             check("S13b_followup_records_wait_outcome",
-                  _f.get("wait_outcome") in ("observed", "cap", "no_turn"),
+                  _f.get("wait_outcome") in ("observed", "cap", "no_turn", "controller_drained"),
                   str(_f.get("wait_outcome")))
     finally:
         _ungrant()
@@ -856,7 +854,7 @@ def run():
               json.dumps(q) + f" calls={len(calls)}")
         g = _rg.read_gate(tmp18)
         check("S18a_gate_raised_before_write",
-              bool(g) and g.get("key") == "task_q1" and g.get("phase") == "raised",
+              g is None and not q.get("restart_allowed"),
               str(g))
         _rg.lower_gate(tmp18, "task_q1")
 
@@ -865,10 +863,10 @@ def run():
         _ra._probe_live_turns = _seq([(True, []), (True, [9]), (True, [9]), (True, []), (True, [])])
         q = _ra.wait_quiescent(str(tmp18), "task_q2")
         check("S18b_yields_to_turn_that_slipped_in",
-              q.get("outcome") == "observed" and len(calls) >= 5,
+              q.get("outcome") == "observed" and not q.get("restart_allowed"),
               json.dumps(q) + f" calls={len(calls)}")
         check("S18b_gate_is_own_after_retry",
-              (_rg.read_gate(tmp18) or {}).get("key") == "task_q2")
+              _rg.read_gate(tmp18) is None)
         _rg.lower_gate(tmp18, "task_q2")
 
         # (다) 상한 — 턴(5)이 끝내 안 닫히면 강행하되 그 턴을 이름으로 돌려준다
@@ -876,9 +874,9 @@ def run():
         _ra._probe_live_turns = lambda url=None: (True, [5])
         q = _ra.wait_quiescent(str(tmp18), "task_q3")
         check("S18c_cap_names_the_turn_at_risk",
-              q.get("outcome") == "cap" and q.get("live_turns") == [5] and q.get("gate") is True,
+              q.get("outcome") == "cap" and q.get("live_turns") == [5] and q.get("gate") is False,
               json.dumps(q))
-        check("S18c_gate_raised_even_on_cap", (_rg.read_gate(tmp18) or {}).get("key") == "task_q3")
+        check("S18c_gate_raised_even_on_cap", _rg.read_gate(tmp18) is None)
         _rg.lower_gate(tmp18, "task_q3")
         _ra.QUIESCE_CAP_S = 5
 
@@ -893,12 +891,13 @@ def run():
         _ra._probe_live_turns = lambda url=None: (True, [])
         q = _ra.wait_quiescent(str(tmp18), "task_q5")
         check("S18c_waits_for_foreign_gate",
-              q.get("outcome") == "observed" and (_rg.read_gate(tmp18) or {}).get("key") == "task_q5",
+              q.get("outcome") == "observed" and not q.get("restart_allowed"),
               json.dumps(q))
-        _rg.lower_gate(tmp18, "task_q5")
+        _rg.lower_gate(tmp18, "task_other")
 
         # 옛 몸(live_turns 를 모르는) → 원장 폴백: 최근 열린 행은 도는 턴, 오래된 고아는 아님
         import sqlite3 as _sq
+        (tmp18 / "data").mkdir(exist_ok=True)
         db18 = tmp18 / "data" / "world_pulse.db"
         c18 = _sq.connect(db18)
         c18.execute("CREATE TABLE episode_log (id INTEGER PRIMARY KEY, started_at TEXT, "

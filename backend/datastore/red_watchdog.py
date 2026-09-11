@@ -25,6 +25,7 @@ import json
 import os
 import shutil
 import sys
+from pathlib import Path
 import time
 import urllib.request
 
@@ -42,6 +43,14 @@ SAFETY_SUFFIXES = (
     # suffix 매칭이라 디렉토리 포함 전체 접미사로 적는다.
     "backend/datastore/red_grant.py",
     "backend/datastore/red_watchdog.py",
+    "backend/datastore/restart_red.py",
+    "backend/base/restart_protocol.py",
+    "backend/base/restart_process.py",
+    "backend/base/restart_child.py",
+    "backend/base/runtime_work.py",
+    "backend/services/restart_controller.py",
+    "backend/services/restart_helper.py",
+    "backend/surface/api_runtime.py",
     "tools/system_essentials/handler.py",
     # 격리 스테이징(2026-08-17) — 여기가 망가지면 수리가 조용히 라이브 직행으로
     # 폴백하거나(격리 상실) 적용이 안 되고도 됐다고 보고될 수 있다. /health 로는
@@ -166,6 +175,17 @@ def _manifest_owner(manifest_path: str) -> str:
 
 def main():
     manifest_path = sys.argv[1]
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import boot_paths  # noqa: F401
+    from restart_protocol import code_manifest, control_dir, read_json, request
+    manifest = read_json(manifest_path, {})
+    repo = manifest.get("repo")
+    if repo and read_json(control_dir(repo) / "state.json"):
+        digest = code_manifest(repo)["digest"]
+        request(repo, "red_verify", operation="red_verify",
+                request_id="red-verify-" + digest[:40], artifact_digest=digest,
+                payload={"manifest_path": str(Path(manifest_path).resolve())})
+        return
     started = time.time()
     result_path = manifest_path.replace("manifest.json", "result.json")
 

@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: independent_restart_force_on_unknown
+    retired: 2026-09-11
+    reason: 리로더·keeper·RED의 독자 타이머가 관측 불능을 작업 없음으로 읽고 승인된 작업을 잘랐다.
+    instead: restart_controller의 같은 접수/등록 경계로 drain한다. UNKNOWN과 대기 상한은 보류하며 강제중단은 명시 정책과 실제 종료 기록을 요구한다.
+    phrases:
+      - '몸이 안 닿음 — 자를 턴 없음, 재기동'
+      - '의례 실패가 리로드를 막아선 안 된다'
   - id: chat_client_global_cancel
     retired: 2026-09-11
     reason: client_id 하나의 취소 상태와 연결 정리가 재접속 뒤 새 실행에 간섭했다.

@@ -11,6 +11,7 @@ IndieBiz OS Core
 - agent_goals.py: Goal 실행, 판단 루프, 전략 해석, 조건 평가
 """
 
+import runtime_work
 import threading
 from datetime import datetime
 from pathlib import Path
@@ -83,7 +84,7 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
             with AgentRunner._lock:
                 AgentRunner.agent_registry[registry_key] = self
                 if registry_key not in AgentRunner.internal_messages:
-                    AgentRunner.internal_messages[registry_key] = []
+                    AgentRunner.internal_messages[registry_key] = runtime_work.WorkMessages()
             print(f"[AgentRunner] {agent_config.get('name')} 레지스트리 등록됨 (key: {registry_key})")
 
     def start(self):
@@ -235,7 +236,7 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
             }
 
             if to_agent_id not in cls.internal_messages:
-                cls.internal_messages[to_agent_id] = []
+                cls.internal_messages[to_agent_id] = runtime_work.WorkMessages()
 
             cls.internal_messages[to_agent_id].append(msg_dict)
             print(f"[AgentRunner] 메시지 큐 추가: {from_agent} → {to_agent_id}")

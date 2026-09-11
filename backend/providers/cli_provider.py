@@ -1261,7 +1261,10 @@ class CliSubprocessProvider(BaseProvider):
 
     def _identity_env(self) -> Dict[str, str]:
         """재진입 IBL 실행이 복원할 신원 — env 통로 (서브클래스 _build_env 가 합친다)."""
+        from runtime_work import parent_token
         env: Dict[str, str] = {}
+        if parent_token():
+            env["INDIEBIZ_RUNTIME_PARENT"] = parent_token()
         if self.project_path and self.project_path != ".":
             env["INDIEBIZOS_PROJECT_PATH"] = str(self.project_path)
         # 발신 신원: subprocess 가 MCP→/ibl/execute로 IBL을 돌릴 때 자기 agent_id를 갖고 가게 한다.
@@ -1295,7 +1298,10 @@ class CliSubprocessProvider(BaseProvider):
 
         ★헤더는 ASCII 전용이라 한글 신원은 quote() 로 퍼센트 인코딩(서버가 unquote).
         """
+        from runtime_work import parent_token
         headers: Dict[str, str] = {}
+        if parent_token():
+            headers["X-Runtime-Parent"] = parent_token()
         if self.agent_id:
             headers["X-IndieBiz-Agent-Id"] = quote(str(self.agent_id))
         if self.project_path and self.project_path != ".":

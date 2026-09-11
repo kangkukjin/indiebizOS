@@ -7,6 +7,7 @@ IndieBiz OS Core
 - Nostr: 실시간 WebSocket
 """
 
+import runtime_work
 import os
 import sys
 import json
@@ -563,6 +564,7 @@ class ChannelPoller:
             except ValueError:
                 pass
 
+    @runtime_work.tracked("channel:_handle_nostr_dm", defer=True)
     def _handle_nostr_dm(self, event: dict):
         """Nostr DM 처리 → DB 저장"""
         try:
@@ -620,6 +622,7 @@ class ChannelPoller:
         except Exception as e:
             self._log(f"Nostr DM 처리 실패: {e}")
 
+    @runtime_work.tracked("channel:_handle_nostr_giftwrap", defer=True)
     def _handle_nostr_giftwrap(self, event: dict):
         """NIP-17 gift-wrap(kind:1059) DM 처리 → unwrap → business.db (자동응답 입력).
 
@@ -681,6 +684,7 @@ class ChannelPoller:
 
     # ============ Gmail 폴링 ============
 
+    @runtime_work.tracked("channel:_poll_gmail", defer=True)
     def _poll_gmail(self):
         """Gmail 폴링"""
         try:
@@ -817,6 +821,7 @@ class ChannelPoller:
             self._fired_channel_triggers.add(fire_key)
             self._fire_channel_pipeline(t, contact_type, contact_value, subject, content)
 
+    @runtime_work.tracked("channel:_fire_channel_pipeline", defer=True)
     def _fire_channel_pipeline(self, trigger: dict, contact_type: str,
                                contact_value: str, subject: str, content: str):
         """채널 트리거 파이프라인을 데몬 스레드에서 실행 (폴링 루프 블로킹 방지).
@@ -1141,6 +1146,7 @@ class ChannelPoller:
                     break
                 time.sleep(1)
 
+    @runtime_work.tracked("channel:_poll_pending_messages", defer=True)
     def _poll_pending_messages(self):
         """pending 상태의 발신 메시지를 조회하여 발송"""
         try:

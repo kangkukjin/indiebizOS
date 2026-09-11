@@ -1,5 +1,6 @@
 """채팅 실행의 수명. 연결 교체 뒤에도 이미 승인한 워커는 자기 취소/조향 문맥을 유지한다."""
 import asyncio
+import runtime_work
 from contextvars import ContextVar
 from dataclasses import dataclass, field
 from threading import Event
@@ -14,6 +15,7 @@ class ChatRun:
     cancelled: Event = field(default_factory=Event)
     task: asyncio.Task | None = None
     finished: bool = False
+    lease: Any = None
 
 
 _current: ContextVar[ChatRun | None] = ContextVar("chat_run", default=None)
@@ -37,7 +39,8 @@ class ChatRuns:
     def begin(self, client_id: str, connection=None) -> ChatRun:
         if self.owned(client_id, connection) is not None:
             raise RuntimeError("이 연결에는 이미 실행 중인 작업이 있습니다")
-        run = ChatRun(client_id, connection)
+        lease = runtime_work.reserve("chat")
+        run = ChatRun(client_id, connection, lease=lease)
         self.active[client_id] = run
         return run
 
@@ -49,18 +52,24 @@ class ChatRuns:
     async def invoke(self, run, handler, data, manager):
         token = _current.set(run)
         try:
-            with manager.connection_scope(run.client_id, run.connection):
+            with run.lease.activate(), manager.connection_scope(run.client_id, run.connection):
                 return await handler(run.client_id, data)
         finally:
             run.finished = True
             if self.active.get(run.client_id) is run:
                 self.active.pop(run.client_id, None)
             _current.reset(token)
+            run.lease.close()
 
     def start(self, handler, client_id, data, connection, manager):
         # 수신 루프가 다음 cancel을 읽기 전에 상태를 만든다. 시작 직전 취소도 잃지 않는다.
         run = self.begin(client_id, connection)
-        task = asyncio.create_task(self.invoke(run, handler, data, manager))
+        try:
+            task = asyncio.create_task(self.invoke(run, handler, data, manager))
+        except BaseException:
+            run.lease.close()
+            self.active.pop(client_id, None)
+            raise
         run.task = task
         self.background.add(task)
 
@@ -68,6 +77,7 @@ class ChatRuns:
             self.background.discard(completed)
             # invoke에 진입하기 전 취소된 태스크도 정리한다.
             run.finished = True
+            run.lease.close()
             if self.active.get(client_id) is run:
                 self.active.pop(client_id, None)
             if not completed.cancelled() and completed.exception():

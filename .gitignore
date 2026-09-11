@@ -418,3 +418,6 @@ data/spill/
 # 현재 1.2GB(모델 892M·텍스처 205M·HDRI 159M)라 저장소에 들어가면 안 된다.
 # 다시 채우기: python3 data/packages/installed/tools/house-designer/render_assets.py
 data/render_assets/
+
+# 외부 재기동 제어 상태/로컬 소유 인증 토큰
+data/restart_control/

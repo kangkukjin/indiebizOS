@@ -9,6 +9,25 @@ import json
 import time as _boot_time
 from pathlib import Path
 
+# 모든 데스크탑 실행 입구는 import 부작용 전에 외부 제어자로 합류한다.
+_managed_entry = False
+if os.environ.get("INDIEBIZ_MANAGED_WORKER") == "1":
+    try:
+        _generation = os.environ["INDIEBIZ_RUNTIME_GENERATION"]
+        _receipt_path = (Path(os.environ["INDIEBIZ_BASE_PATH"]) / "data/restart_control/workers"
+                         / (_generation + ".json"))
+        _receipt = json.loads(_receipt_path.read_text())
+        _managed_entry = _receipt.get("pid") == os.getpid() and _receipt.get("nonce") == _generation
+    except (OSError, ValueError, KeyError):
+        pass
+if __name__ == "__main__" and not _managed_entry:
+    sys.path.insert(0, str(Path(__file__).parent))
+    import boot_paths
+    from restart_controller import main as controller_main
+    raise SystemExit(controller_main(code_root=Path(__file__).parent.parent))
+# 자식 도구가 api.py를 실행하면 제어 요청으로 돌아오게 한다. 기동 허가는 1회용이다.
+os.environ.pop("INDIEBIZ_MANAGED_WORKER", None)
+
 # 부팅 프로파일 기준점 — 아래 무거운 임포트들보다 먼저 심어야 "임포트에 몇 초"가 보인다.
 # boot_status 원장의 각 entry 에 elapsed(기동 후 경과초)로 붙는다(/world-pulse/health).
 _PROC_T0 = _boot_time.monotonic()
@@ -93,6 +112,17 @@ if _parent_proc is not None:
 
     _threading.Thread(target=_die_with_parent, daemon=True,
                       name="parent-death-watch").start()
+import runtime_work
+_legacy_runtime = False
+if _parent_proc is not None and not os.environ.get("INDIEBIZ_RUNTIME_GENERATION"):
+    from runtime_legacy import register as register_legacy_runtime
+    register_legacy_runtime(BASE_PATH, BACKEND_PATH.parent, _parent_proc.pid)
+    _legacy_runtime = True
+if os.environ.get("INDIEBIZ_RUNTIME_GENERATION") and runtime_work.registry() is None:
+    runtime_work.install(os.environ["INDIEBIZ_RUNTIME_GENERATION"])
+    runtime_work.install_worker_tracking()
+    if _legacy_runtime:
+        runtime_work.registry().gate("ACTIVE")
 import boot_status  # 부팅 서브시스템 성패 원장 (관측 — /world-pulse/health 가 노출)
 
 # 매니저 임포트
@@ -253,7 +283,7 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 print(f"[Tunnel] 공개면 자가검증 실패 (무시): {e}")
 
-        threading.Thread(target=_tunnel_boot, daemon=True, name="tunnel-boot").start()
+        threading.Thread(target=runtime_work.bind_boot(_tunnel_boot, service_children=True), daemon=True, name="tunnel-boot").start()
         boot_status.record("Tunnel", True)
     except Exception as e:
         print(f"[Tunnel] 기동 스레드 시작 실패 (무시): {e}")
@@ -320,7 +350,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[WorldPulse] 초기화 실패 (무시): {e}")
             boot_status.record("WorldPulse:today", False, e)
-    threading.Thread(target=_deferred_world_pulse, daemon=True).start()
+    threading.Thread(target=runtime_work.bind_boot(_deferred_world_pulse), daemon=True).start()
     print("[WorldPulse] 백그라운드 수집 스레드 시작")
 
     # 파생물 신선도 순찰(2026-09-01, ep2519 사슬 수리) — 백엔드가 죽어 있던 사이의
@@ -339,7 +369,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             print(f"[boot] 파생물 신선도 순찰 실패 (무시): {e}")
             boot_status.record("파생물신선도", False, e)
-    threading.Thread(target=_deferred_derived_freshness, daemon=True).start()
+    threading.Thread(target=runtime_work.bind_boot(_deferred_derived_freshness), daemon=True).start()
 
     # 부팅 완료 신고 — 이 줄 이후 uvicorn 이 요청을 받기 시작한다. 느리면 원장을 보라.
     _boot_total = _boot_time.monotonic() - _PROC_T0
@@ -603,6 +633,9 @@ app.include_router(notifications_router, tags=["notifications"])
 app.include_router(gmail_router, tags=["gmail"])
 app.include_router(business_router, tags=["business"])
 app.include_router(health_router, tags=["health-sync"])
+from api_runtime import router as runtime_router, RuntimeAdmission
+app.include_router(runtime_router)
+app.add_middleware(RuntimeAdmission)
 app.include_router(finance_router, tags=["finance-sync"])
 app.include_router(multi_chat_router, tags=["multi-chat"])
 app.include_router(pcmanager_router, tags=["pcmanager"])
@@ -763,26 +796,15 @@ if __name__ == "__main__":
     # 프로덕션(패키징)에서는 reload 비활성화 (파일 감시자 오류 방지)
     is_production = os.environ.get("INDIEBIZ_PRODUCTION", "").lower() in ("1", "true")
 
-    # ★리로드는 도는 턴이 0 일 때만 (2026-09-02): 누가 backend/*.py 를 썼든(Claude Code
-    #   세션·[self:script]·run_command·git) 파일 변경은 결국 리로더의 restart() 를 지난다.
-    #   거기서 /health 의 live_turns 가 빌 때까지 기다리고 관문을 세운 뒤 재기동한다 —
-    #   편집자마다 협조를 구하는 대신 그물을 한 자리에 친다. uvicorn.run 호출은 그대로다.
-    if not is_production:
-        from quiescent_reload import install as _install_quiescent_reload
-        _install_quiescent_reload(BASE_PATH)
-
-    # reload_delay: 시스템 AI가 backend/*.py를 여러 번 빠르게 편집할 때 (예:
-    # 패치 → 검증 → 추가 패치) 매 편집마다 reload되어 WebSocket이 끊기고 자기
-    # 컨텍스트를 잃는 자해 패턴을 방지. 2초 디바운스로 일반적인 연쇄 편집은
-    # 한 번의 reload로 묶이게 한다. (uvicorn 기본 0.25초 → 2.0초)
+    # 파일 감시·검사·drain은 외부 제어자가 소유한다. 실행 워커는 항상 1개.
     uvicorn.run(
-        "api:app",
+        app,
         # 기본 localhost 전용. 분산 IBL LAN 테스트 등 LAN 도달이 필요하면 .env 에
         # INDIEBIZ_BIND_HOST=0.0.0.0 으로 opt-in(=LAN 노출, 외부요청 인증 게이트는
         # 터널 호스트네임 기준이라 LAN 직결은 우회됨 — 신뢰 LAN에서만).
         host=os.environ.get("INDIEBIZ_BIND_HOST", "127.0.0.1"),
         port=port,
-        reload=not is_production,
+        reload=False,
         # ★서버가 **한 번도 import 하지 않는 파일**로는 재기동하지 않는다 (2026-08-23).
         #   실측 사고: 다른 세션이 `backend/test_each_envelope_remedy.py` 를 새로 쓰자
         #   WatchFiles 가 이를 감지해 08:12:38 에 리로드 → [SystemAIRunner] 시스템 AI 중지 →

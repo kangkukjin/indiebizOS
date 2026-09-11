@@ -231,8 +231,13 @@ def _post_backend(path: str, payload: dict, timeout: int) -> str:
     (모든 호출이 urllib timeout 까지 동결 — 라이브 검증에서 실측 120초). stdio 는
     별도 프로세스라 우연히 무사했을 뿐, 같은 이유로 blocking 은 스레드로 뺀다.
     """
+    payload = dict(payload)
+    parent = payload.pop("_runtime_parent", None) or os.environ.get("INDIEBIZ_RUNTIME_PARENT")
+    headers = {"Content-Type": "application/json"}
+    if parent:
+        headers["X-Runtime-Parent"] = parent
     data = json.dumps(payload).encode()
-    req = urllib.request.Request(f"{BASE}{path}", data=data, headers={"Content-Type": "application/json"})
+    req = urllib.request.Request(f"{BASE}{path}", data=data, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             return resp.read().decode()
@@ -332,6 +337,14 @@ async def execute_ibl(code: str, project_path: str = "",
     task_id = h_task or DEFAULT_TASK_ID
     origin = h_origin or DEFAULT_TASK_ORIGIN
     payload = {"code": code, "project_path": effective_path}
+    try:
+        request_context = ctx.request_context if ctx is not None else None
+        runtime_parent = (request_context.request.headers.get("x-runtime-parent")
+                          if request_context and request_context.request else None)
+    except (AttributeError, LookupError):
+        runtime_parent = None
+    if runtime_parent:
+        payload["_runtime_parent"] = runtime_parent
     if describe is not None:
         payload["describe"] = describe
     if read_result is not None:

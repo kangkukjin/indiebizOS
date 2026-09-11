@@ -6,6 +6,7 @@ AgentRunner의 외부 채널 통신, 내부 메시지 처리, 위임 체인 보�
 통신 관련 메서드를 분리한 Mixin 클래스입니다.
 """
 
+import runtime_work
 import json
 import re
 import uuid
@@ -242,6 +243,7 @@ class AgentCommunicationMixin:
             self._process_channel_message(channel, msg)
         return callback
 
+    @runtime_work.tracked("agent-channel", defer=True)
     def _process_channel_message(self, channel, msg):
         """외부 채널에서 받은 메시지 처리"""
         import time as time_module
@@ -428,23 +430,13 @@ class AgentCommunicationMixin:
         if not my_key:
             return
 
-        # 스레드 안전하게 메시지 가져오기
         from agent_runner import AgentRunner
-        with AgentRunner._lock:
-            messages = AgentRunner.internal_messages.get(my_key, [])
-            if not messages:
-                return
-            msg_dict = messages.pop(0)
+        def pop():
+            with AgentRunner._lock:
+                messages = AgentRunner.internal_messages.get(my_key, [])
+                return messages.pop(0) if messages else None
 
-        while msg_dict:
-            if not isinstance(msg_dict, dict):
-                print(f"[AgentRunner] {my_name} 경고: 유효하지 않은 메시지 - 건너뛰기")
-                # 다음 메시지 가져오기 (무한 루프 방지)
-                with AgentRunner._lock:
-                    messages = AgentRunner.internal_messages.get(my_key, [])
-                    msg_dict = messages.pop(0) if messages else None
-                continue
-
+        for msg_dict in runtime_work.message_stream(pop):
             try:
                 from_agent = msg_dict.get('from_agent', 'unknown')
                 content = msg_dict.get('content', '')
@@ -598,13 +590,6 @@ class AgentCommunicationMixin:
                 except Exception:
                     pass
 
-            # 다음 메시지 가져오기 (스레드 안전)
-            with AgentRunner._lock:
-                messages = AgentRunner.internal_messages.get(my_key, [])
-                if not messages:
-                    break
-                msg_dict = messages.pop(0)
-
     def _send_to_external_channel(self, channel_type: str, requester: str, response: str, task_id: str):
         """
         외부 채널(email, nostr)로 최종 결과 전송 - 자기 채널 사용
@@ -718,7 +703,7 @@ class AgentCommunicationMixin:
 
             with AgentRunner._lock:
                 if target_key not in AgentRunner.internal_messages:
-                    AgentRunner.internal_messages[target_key] = []
+                    AgentRunner.internal_messages[target_key] = runtime_work.WorkMessages()
                 AgentRunner.internal_messages[target_key].append(msg_dict)
 
             print(f"[AgentRunner] {my_name} → {from_agent}: 응답 전달 완료")
@@ -914,7 +899,7 @@ class AgentCommunicationMixin:
 
                                 with AgentRunner._lock:
                                     if target_key not in AgentRunner.internal_messages:
-                                        AgentRunner.internal_messages[target_key] = []
+                                        AgentRunner.internal_messages[target_key] = runtime_work.WorkMessages()
                                     AgentRunner.internal_messages[target_key].append(msg_dict)
 
                                 print(f"[자동 보고] {my_name} → {report_to}: {task_id} → {parent_task_id}")

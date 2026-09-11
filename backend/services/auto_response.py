@@ -5,6 +5,7 @@ auto_response.py - 자동응답 서비스 V3 (Tool Use 통합)
 판단과 응답을 한 번의 AI 호출로 처리합니다.
 """
 
+import runtime_work
 import json
 import re
 import time
@@ -243,6 +244,7 @@ class AutoResponseService:
                 self._log(f"처리 오류: {e}")
             self._stop_event.wait(timeout=self._check_interval)
 
+    @runtime_work.tracked("auto-response", defer=True)
     def _check_unreplied_messages(self):
         try:
             bm = self._get_business_manager()

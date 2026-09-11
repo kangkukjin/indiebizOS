@@ -15,6 +15,7 @@ userData/bin 에 심는다 → 사용자 무설치(OOTB).
 
 공급된 bin 디렉토리는 PATH + INDIEBIZ_BIN_DIR 로 노출 → common.platform_utils.find_binary 가 인식.
 """
+import runtime_work
 import os
 import threading
 import tempfile
@@ -148,4 +149,4 @@ def provision_async(enabled: bool = True):
         except Exception as e:
             print(f"[ffmpeg공급] 공급 중 오류(무시): {e}")
 
-    threading.Thread(target=_run, daemon=True, name="ffmpeg-provision").start()
+    threading.Thread(target=runtime_work.bind_boot(_run), daemon=True, name="ffmpeg-provision").start()

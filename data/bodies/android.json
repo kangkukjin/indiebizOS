@@ -43,7 +43,14 @@
     "hls_ladder",
     "red_apply",
     "repair_verdict_distill",
-    "data_ownership"
+    "data_ownership",
+    "restart_controller",
+    "restart_process",
+    "restart_child",
+    "restart_helper",
+    "restart_red",
+    "api_runtime",
+    "runtime_legacy"
   ],
   "_force_exclude_reasons": {
     "api": "맥 백엔드 진입점(dotenv) — 폰은 phone_api.serve()",
@@ -59,7 +66,14 @@
     "red_apply": "지연 적용 수행자(git worktree 격리의 짝) — 폰 몸은 git 저장소가 아니라 격리 스테이징 자체가 폴백(S5b)이라 예약 적용이 원리적으로 없음. uvicorn --reload 도 폰엔 없다",
     "data_ownership": "허브(맥 저장소) 전용 감사 — DECLARATIONS 가 맥 data/ 가족을 선언하므로 폰에서 돌면 폰-로컬 파일을 고아로 오판",
     "retire_* (글롭)": "맥 원장 일회성 회수 스크립트 — migrate_* 와 같은 부류(원장 유지보수, 폰 몸의 엔진이 아니다). 2026-09-07 retire_frozen_aliases 가 붙으면서 부류를 넓혔다: 이름을 하나 더 적는 대신 글롭 하나를 더 둔다.",
-    "migrate_* (글롭)": "맥 원장 일회성 마이그레이션 스크립트 — 폰 몸의 엔진이 아니다(폰은 자기 원장을 가진 독립 자아). 지금까지 10개가 번들에 실려 있었고 아무도 import 하지 않았다(2026-09-07 실측). 이름으로 하나(migrate_vocab_cheap_merges)만 걸려 있던 것을 글롭으로 올린다 — 부류는 파일별로 전개하지 않는다."
+    "migrate_* (글롭)": "맥 원장 일회성 마이그레이션 스크립트 — 폰 몸의 엔진이 아니다(폰은 자기 원장을 가진 독립 자아). 지금까지 10개가 번들에 실려 있었고 아무도 import 하지 않았다(2026-09-07 실측). 이름으로 하나(migrate_vocab_cheap_merges)만 걸려 있던 것을 글롭으로 올린다 — 부류는 파일별로 전개하지 않는다.",
+    "restart_controller": "데스크탑 단일 현역 재기동 제어자 — 폰 phone_api의 부팅/종료 계약과 독립(R1)",
+    "restart_process": "데스크탑 단일 현역 재기동 제어자 — 폰 phone_api의 부팅/종료 계약과 독립(R1)",
+    "restart_child": "데스크탑 단일 현역 재기동 제어자 — 폰 phone_api의 부팅/종료 계약과 독립(R1)",
+    "restart_helper": "데스크탑 단일 현역 재기동 제어자 — 폰 phone_api의 부팅/종료 계약과 독립(R1)",
+    "restart_red": "데스크탑 단일 현역 재기동 제어자 — 폰 phone_api의 부팅/종료 계약과 독립(R1)",
+    "api_runtime": "데스크탑 단일 현역 재기동 제어자 — 폰 phone_api의 부팅/종료 계약과 독립(R1)",
+    "runtime_legacy": "데스크탑 uvicorn 이전 마스터의 단일 제어자 인계 — 폰에 해당 없음"
   },
   "_force_exclude_glob": [
     "test_*",

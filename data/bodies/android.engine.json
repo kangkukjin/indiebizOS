@@ -22,7 +22,9 @@
     "base/r2_client",
     "base/reload_gate",
     "base/repeat_guard",
+    "base/restart_protocol",
     "base/runtime_utils",
+    "base/runtime_work",
     "base/safe_store",
     "base/seam_metrics",
     "base/selfbuild_gate",
@@ -293,6 +295,7 @@
     "api_env": "via api_config",
     "api_lecture_workspace": "force_exclude (프로파일 명시)",
     "api_nas_hls": "force_exclude (프로파일 명시)",
+    "api_runtime": "force_exclude (프로파일 명시)",
     "api_showcase": "via hls_ladder",
     "api_ytrelay": "force_exclude (프로파일 명시)",
     "cdn_provision": "force_exclude (프로파일 명시)",
@@ -305,7 +308,13 @@
     "nip17": "top-level import: pynostr",
     "nip44": "top-level import: cryptography",
     "red_apply": "force_exclude (프로파일 명시)",
-    "repair_verdict_distill": "force_exclude (프로파일 명시)"
+    "repair_verdict_distill": "force_exclude (프로파일 명시)",
+    "restart_child": "force_exclude (프로파일 명시)",
+    "restart_controller": "force_exclude (프로파일 명시)",
+    "restart_helper": "force_exclude (프로파일 명시)",
+    "restart_process": "force_exclude (프로파일 명시)",
+    "restart_red": "force_exclude (프로파일 명시)",
+    "runtime_legacy": "force_exclude (프로파일 명시)"
   },
   "blocklist_globs": [
     "migrate_*",
@@ -313,8 +322,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 302,
-    "engine": 283,
-    "blocklist": 19
+    "total": 311,
+    "engine": 285,
+    "blocklist": 26
   }
 }

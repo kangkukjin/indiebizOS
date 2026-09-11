@@ -17,6 +17,7 @@ transport에 남는 것: 에피소드 start/end, thread_context 설정, event pu
 DB save_message, 태스크·세션·클라이언트 관리, 취소/타임아웃 처리.
 """
 
+import runtime_work
 import copy as _copy
 import json
 import threading as _threading
@@ -148,6 +149,8 @@ def per_turn_provider_view(provider):
 
 def _reload_gate_notice() -> str:
     """재기동 관문이 서 있으면 안내문, 아니면 "" — 실패는 정상(관문 없음)으로 접는다."""
+    if runtime_work.registry() is not None:
+        return ""
     try:
         from runtime_utils import get_base_path
         from reload_gate import bounce_notice
@@ -255,6 +258,7 @@ class CognitivePipelineMixin:
         except Exception:
             pass
 
+    @runtime_work.tracked("cognition")
     def cognitive_stream(self, message: str, history: Optional[list] = None, **kwargs):
         """턴 사유 AI 뷰를 세우고 본체를 흘린다 (동시 턴 격리 — turn_ai_scope 참조).
 

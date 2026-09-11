@@ -30,6 +30,7 @@ calendar_events.json이 유일한 정보 원천(Single Source of Truth)입니다
 - calendar_html.py: HTML 캘린더 생성
 """
 
+import runtime_work
 import json
 import os
 import shutil
@@ -636,6 +637,7 @@ class CalendarManagerBase:
 
         return False
 
+    @runtime_work.tracked("schedule", defer=True)
     def _execute_task(self, task: dict):
         """작업 실행"""
         action_name = task.get("action")

@@ -43,9 +43,9 @@ def test_keeper_refuses_without_venv():
     # 되살릴 수 없으면 되살리지 않고 신고해야 한다 — 거절이 기동보다 앞에 있어야 한다
     assert "재기동 보류" in t, "keeper 가 .venv 부재를 신고하지 않는다"
     guard_at = t.index("재기동 보류")
-    launch_at = t.index('nohup "$PY" api.py')
+    launch_at = t.index('exec "$REPO/.venv/bin/python3" api.py serve')
     assert guard_at < launch_at, "거절이 기동 뒤에 있다 — 잘못된 몸으로 이미 떴다"
-    assert "return 1" in t[guard_at:launch_at], "신고만 하고 그대로 되살린다"
+    assert "exit 1" in t[guard_at:launch_at], "신고만 하고 그대로 되살린다"
 
 
 def test_electron_dev_pins_venv():

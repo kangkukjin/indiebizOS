@@ -1,33 +1,10 @@
-"""
-red_apply.py - 지연 적용 수행자 (분리 프로세스, 2026-08-19)
+"""RED 지연 적용 요청자.
 
-★왜: [self:patch]{op:"apply"} 가 backend/*.py 를 그 자리에서 쓰면 uvicorn 리로드
-(reload_delay 2초)가 **그 턴을 실행 중인 워커를 죽인다** — 최종 응답, 주행기록의
-로그 버퍼(END 저장 전까지 메모리에만 있다), 증류 데몬 스레드가 전부 그 워커 안에
-산다. 검증(격리 워크트리)은 턴 안에서 이미 끝났으므로, 여기는 **쓰기만** 맡는다:
-
-  ①턴이 완전히 닫히기를 기다린다 — 주행기록 ended_at(=응답 전송·버퍼 저장 완료)
-    → 증류 재합류(cognitive_distill 의 finally 가 refresh_episode 로 log 를 한 번
-    다시 쓴다 — 그 길이 변화가 신호)
-  ①′**도는 턴이 0 이 될 때까지** 기다린다 (2026-09-02, wait_quiescent) — 예약한 턴만
-    기다리면 그 뒤에 시작한 **다음 턴**을 리로드가 자른다(실측 ep1917, #repair 절단율
-    16%). /health 의 live_turns 가 출처. 0 을 본 순간 재기동 관문(reload_gate)을 세우고
-    한 번 더 확인한 뒤에야 쓴다 — 관문은 쓰기~새 몸 부팅 사이의 창에 들어온 새 턴을
-    정직하게 되돌려보낸다(옛 몸 안에서 기다리게 하면 그 기다림은 옛 몸과 함께 죽는다).
-  ②쓰기 직전 재검증한다 — 예약~수행 사이의 라이브 드리프트까지 live_sync 가 맞춘다
-  ③라이브에 쓰고 워치독(red_watchdog)에게 헬스 판정·자동 롤백을 넘긴다
-
-"자기 죽음 이후에 실행돼야 하는 단계는 죽음을 넘는 프로세스가 맡는다"(라이브 백엔드
-편집 규약, 2026-08-17 개정)의 적용-단계 판이다. 판정 보고는 다음 턴(red_report).
-
-★그랜트: red_grant 는 인메모리 싱글턴이라 이 프로세스에서의 재발급은 이 프로세스에만
-존재한다 — 턴에서 검증된 그랜트가 잡 파일로 이월된 것이지 새 권한 발급이 아니다
-(워치독이 그랜트 없이 백업을 복원하는 것과 같은 부류: 능력은 파일이 나른다).
-
+예약 턴의 종료/증류 관측을 보존한 뒤 외부 restart_controller에 잡을 인계한다.
+실제 drain, 적용 시점, 새 세대 검증과 복구는 제어자가 소유한다. 이 프로세스는
+백엔드를 종료하거나 작업 상한을 강제중단 허가로 바꾸지 않는다.
+기존 관측 함수들은 과거 기록과 호환 시험을 위한 진단 표면이다.
 사용: python3 red_apply.py <job.json>
-잡: {"key","repo","episode_id","task_id","agent_id","reason","scheduled_at","handler_path"}
-코드 루트=이 파일의 저장소(sys.path·handler 폴백) / 데이터 루트=job["repo"] — 테스트의
-가짜 저장소에서 둘이 갈라진다(배터리 S10).
 """
 import importlib.util
 import json
@@ -181,80 +158,14 @@ def _gate_mod():
     return reload_gate
 
 
-def _close_cut_turns(repo: str, ids, reason: str) -> int:
-    """강행 재기동이 자를 턴을 원장에서 닫는다(자르는 쪽이 닫는다, 2026-09-06 ep2891).
-    표식·모양은 episode_logger 가 소유 — 여기는 부르기만."""
-    if not ids:
-        return 0
-    try:
-        from episode_logger import close_cut_episodes
-        n = close_cut_episodes(ids, reason, db_path=os.path.join(repo, "data", "world_pulse.db"))
-        if n:
-            _log(f"잘리는 턴 {list(ids)} 원장 닫음({n}건, CUT 표식)")
-        return n
-    except Exception as e:
-        _log(f"잘리는 턴 닫기 실패(계속): {e!r}")
-        return 0
-
 
 def wait_quiescent(repo: str, key: str, exclude_episode=None) -> dict:
-    """도는 턴이 0 이 될 때까지 기다리고, 그 순간 재기동 관문을 세운다 (2026-09-02).
-
-    반환 {"outcome": "observed" | "cap" | "no_body", "waited_s", "live_turns": [...],
-          "gate": bool}.
-    - observed: 0 을 봤고, 관문을 세운 뒤 되물어도 0 — 쓸 수 있다.
-    - cap: 상한까지 0 이 안 됐다 — 관문을 세우고 강행한다(도는 턴이 잘릴 수 있다).
-      ★상한은 안전망이지 시간표가 아니다 — 결말을 followup 에 실어 다음 턴이 본다.
-    - no_body: 몸이 UNREACHABLE_CONFIRM_S 동안 안 닿았다 — 자를 턴이 없다.
-
-    ★예약한 턴이 닫힌 뒤 시작한 턴도 턴이다 — 옛 코드는 예약한 턴 하나만 기다렸고 그래서
-    **다음 턴**이 잘렸다(ep1917). 남의 관문이 서 있으면(다른 수행자가 쓰는 중) 그것도
-    '도는 것'으로 보고 기다린다 — 그 리로드 위에 또 쓰지 않는다.
-    """
-    gate = _gate_mod()
-    t0 = time.time()
-    unreachable_since = None
-    live = []
-    while True:
-        other = gate.read_gate(repo)
-        if other and other.get("key") != key:
-            _log(f"남의 재기동 관문({other.get('key')}, {other.get('phase')}) — 기다림")
-            time.sleep(QUIESCE_POLL_S)
-            if time.time() - t0 > QUIESCE_CAP_S:
-                break
-            continue
-        live = _live_turns_now(repo, exclude_episode)
-        if live is None:
-            unreachable_since = unreachable_since or time.time()
-            if time.time() - unreachable_since >= UNREACHABLE_CONFIRM_S:
-                _log(f"몸이 {UNREACHABLE_CONFIRM_S:.0f}초 동안 안 닿음 — 자를 턴이 없다고 보고 진행")
-                return {"outcome": "no_body", "waited_s": int(time.time() - t0),
-                        "live_turns": [], "gate": False}
-            time.sleep(min(QUIESCE_POLL_S, 1.0))
-            continue
-        unreachable_since = None
-        if not live:
-            # 0 을 봤다 — 관문을 세우고, 관문이 보이기 전에 들어온 턴이 없는지 되묻는다.
-            gate.raise_gate(repo, key, phase="raised")
-            time.sleep(GATE_SETTLE_S)
-            again = _live_turns_now(repo, exclude_episode)
-            if not again:
-                _log(f"도는 턴 0 확인 ({int(time.time() - t0)}초) — 재기동 관문 세움, 쓰기 진행")
-                return {"outcome": "observed", "waited_s": int(time.time() - t0),
-                        "live_turns": [], "gate": True}
-            # 그 사이 턴이 들어왔다 — 관문을 내리고 그 턴을 살린다(적용이 양보한다).
-            gate.lower_gate(repo, key)
-            _log(f"관문 직후 턴 진입 {again} — 관문 내리고 다시 기다림")
-            live = again
-        if time.time() - t0 > QUIESCE_CAP_S:
-            break
-        time.sleep(QUIESCE_POLL_S)
-    gate.raise_gate(repo, key, phase="raised")
-    _log(f"★정적 대기 상한({QUIESCE_CAP_S:.0f}초) — 도는 턴 {live} 이 남은 채 강행. "
-         f"그 턴은 리로드에 잘릴 수 있다. 다음 턴 보고에 싣는다.")
-    _close_cut_turns(repo, live, f"red_apply {key}")
-    return {"outcome": "cap", "waited_s": int(time.time() - t0),
-            "live_turns": list(live or []), "gate": True}
+    """호환 진단. 실제 gate/drain은 restart_controller의 요청으로만 수행한다."""
+    from quiescent_reload import wait_for_quiet
+    q = wait_for_quiet(HEALTH_URL, probe=_probe_live_turns,
+                       cap_s=QUIESCE_CAP_S, poll_s=QUIESCE_POLL_S)
+    return {"outcome": q["outcome"], "waited_s": q["waited_s"],
+            "live_turns": q["live"], "gate": False, "restart_allowed": False}
 
 
 def wait_turn_closed(repo: str, episode_id, agent_id=None) -> str:
@@ -439,70 +350,21 @@ def main() -> int:
     from red_grant import issue_grant
     from thread_context import set_current_task_id, set_current_agent_id
 
-    # ①′ 도는 턴 0 + 재기동 관문 — 예약한 턴 다음에 시작한 턴도 자르지 않는다(2026-09-02)
-    quiesce = wait_quiescent(repo, job["key"], exclude_episode=job.get("episode_id"))
+    from restart_protocol import code_manifest, control_dir, read_json, request
+    if read_json(control_dir(repo) / "state.json"):
+        import hashlib
+        rid = "red-" + hashlib.sha256((job["key"] + job["scheduled_at"]).encode()).hexdigest()[:40]
+        req = request(repo, "red_apply", request_id=rid, operation="red_apply",
+                      artifact_digest=code_manifest(CODE_ROOT)["digest"],
+                      payload={"job_path": str(Path(job_path).resolve())})
+        job["restart_request_id"] = req["request_id"]
+        from restart_protocol import atomic_json
+        atomic_json(job_path, job)
+        _log(f"제어자에게 적용 인계: {req['request_id']}")
+        return 0
 
-    task_id = job.get("task_id") or job["key"]
-    agent_id = job.get("agent_id") or "system_ai"
-    set_current_task_id(task_id)
-    set_current_agent_id(agent_id)
-    issue_grant(agent_id=agent_id, task_id=task_id,
-                reason=f"지연 적용 수행: {job.get('reason') or job['key']}")
-
-    gate = _gate_mod()
-    try:
-        handler = _load_handler(job)
-        staging = handler._staging_mod()
-        out = staging.perform_scheduled_apply(
-            repo, job["key"],
-            prepare=handler._red_write_prepare, finalize=handler._red_write_finalize)
-    except BaseException:
-        gate.lower_gate(repo, job["key"])       # 못 썼으면 관문은 거짓말이다 — 즉시 내린다
-        raise
-    _log(f"결과: {json.dumps(out, ensure_ascii=False)[:500]}")
-    if out.get("applied"):
-        # 썼다 — 리로드가 온다. 관문을 written 으로 올려 새 몸이 부팅에서 회수하게 한다.
-        gate.mark_written(repo, job["key"])
-    else:
-        gate.lower_gate(repo, job["key"])
-
-    # 적용 후 검증 — 위탁받았을 때만. 적용이 안 일어났으면 돌릴 이유가 없다.
-    cmd = (job.get("verify_cmd") or "").strip()
-    post = None
-    if cmd:
-        post = (_run_post_verify(repo, cmd) if out.get("applied") else
-                {"ran": False, "cmd": cmd,
-                 "output": "적용이 일어나지 않아 검증 명령을 돌리지 않았습니다."})
-
-    # 후속 기록 — result.json 을 워치독이 나중에 통째로 덮으므로 **옆자리 파일**에 남긴다.
-    try:
-        staging.write_followup(repo, staging.task_key(job["key"]), {
-            "wait_outcome": wait_outcome,
-            "turn_cap_s": TURN_CLOSE_CAP_S,
-            "episode_id": job.get("episode_id"),
-            "quiesce_outcome": quiesce.get("outcome"),
-            "quiesce_wait_s": quiesce.get("waited_s"),
-            "quiesce_cap_s": QUIESCE_CAP_S,
-            "live_turns_at_cap": quiesce.get("live_turns") if quiesce.get("outcome") == "cap" else [],
-            "post_verify": post,
-        })
-    except Exception as e:
-        _log(f"후속 기록 실패(계속): {e}")
-
-    try:
-        job["done_at"] = datetime.now().isoformat()
-        job["applied"] = bool(out.get("applied"))
-        job["wait_outcome"] = wait_outcome
-        job["quiesce_outcome"] = quiesce.get("outcome")
-        job["quiesce_wait_s"] = quiesce.get("waited_s")
-        if post is not None:
-            job["post_verify"] = post
-        job["outcome_note"] = (out.get("error") or out.get("message") or out.get("note") or "")[:300]
-        with open(job_path, "w", encoding="utf-8") as f:
-            json.dump(job, f, ensure_ascii=False, indent=2)
-    except Exception as e:
-        _log(f"잡 파일 갱신 실패(계속): {e}")
-    return 0 if out.get("applied") or out.get("success") else 1
+    _log("재기동 제어자가 없어 적용을 보류합니다. 예약 사본은 보존됩니다.")
+    return 2
 
 
 if __name__ == "__main__":

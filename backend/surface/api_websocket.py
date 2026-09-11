@@ -81,7 +81,10 @@ async def websocket_chat(websocket: WebSocket, client_id: str):
                 else:
                     handler = (streams.handle_system_ai_chat_stream if message_type == "system_ai_stream"
                                else streams.handle_chat_message_stream)
-                    runs.registry.start(handler, client_id, data, websocket, manager)
+                    try:
+                        runs.registry.start(handler, client_id, data, websocket, manager)
+                    except __import__("runtime_work").AdmissionClosed as exc:
+                        await manager.send_message(client_id, {"type": "error", "content": str(exc), "executed": False})
             elif message_type == "cancel":
                 # 중단 요청 처리
                 runs.registry.cancel(client_id, websocket)

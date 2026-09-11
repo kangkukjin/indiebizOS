@@ -10,6 +10,7 @@
 - 비용 = asker-pays: 내가 읽고 싶어 내가 폴링. 이웃 쪽엔 정적 서빙 ~0 뿐.
 - 첫 폴링은 kind='seed'(현재 파일 전체 — 팔로우 직후 지난 트윗 보이듯), 이후 new/changed.
 """
+import runtime_work
 import sqlite3
 import threading
 import time
@@ -542,6 +543,7 @@ def _reconcile_identity(base: str, npub: str) -> None:
         print(f"[창고피드] 신원 치유 실패(무시): {e}")
 
 
+@runtime_work.tracked("warehouse-poll", defer=True)
 def poll_all() -> List[Dict]:
     """등기부(창고 연락처)의 모든 창고를 폴링 — 같은 주소는 한 번만."""
     results = []

@@ -21,6 +21,7 @@ IndieBiz OS Core
 - world_pulse_health.py: Self-Check, 건강 모니터링, 가이드 파일 생성
 """
 
+import runtime_work
 import json
 import logging
 import sqlite3
@@ -445,7 +446,7 @@ def register_pulse_tasks():
                 logger.info("[WorldPulse] 최근 펄스 없어서 수집 완료")
             except Exception as e:
                 logger.error(f"[WorldPulse] 시작 시 펄스 체크 실패: {e}")
-        threading.Thread(target=_initial_pulse_if_needed, daemon=True, name="initial-world-pulse").start()
+        threading.Thread(target=runtime_work.bind_boot(_initial_pulse_if_needed), daemon=True, name="initial-world-pulse").start()
 
 
     except Exception as e:

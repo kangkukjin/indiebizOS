@@ -1,37 +1,31 @@
 /**
- * backend-process.js — 파이썬 백엔드 프로세스 생명주기 + keeper + 시스템 전체 정리
+ * backend-process.js — 단일 재기동 제어자의 시작·의도적 종료 입구
  * (main.js 에서 분리, 2026-08-06 1500줄 규칙)
  *
- * 창=시스템 손잡이(2026-08-05 개편): 창을 다 닫으면 fullSystemCleanup 이 백엔드·keeper·
- * 터널까지 정리한다. pythonProcess 전역이 곧 그 상태라 이 모듈이 통째로 소유한다.
+ * 창=시스템 손잡이: 창을 다 닫으면 fullSystemCleanup 이 종료 의도를 기록하고
+ * 제어자의 소유 프로세스 정리가 끝나기를 기다린다.
  */
 import { app, dialog } from 'electron';
-import { spawn, execSync } from 'child_process';
+import { spawn, execFileSync } from 'child_process';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
 
-import { initUserData, isPortAvailable } from './bootstrap.js';
+import { initUserData } from './bootstrap.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
-const API_PORT = 8765;
+const API_PORT = Number(process.env.INDIEBIZ_API_PORT || 8765);
 
-// Python 프로세스 — 이 전역이 곧 백엔드 상태다.
+// 이 창이 시작한 제어자 프로세스와 공통 요청 명령. 워커 상태는 제어자가 소유한다.
 let pythonProcess = null;
+let backendCommand = null;
 
 /**
  * Python 백엔드 시작
  */
 async function startPythonBackend() {
-  // 포트 확인 - 이미 사용 중이면 기존 서버를 그대로 사용 (start.sh가 먼저 띄운 경우)
-  const available = await isPortAvailable(API_PORT);
-  if (!available) {
-    console.log(`[Python] 포트 ${API_PORT} 사용 중 - 기존 서버 사용`);
-    return;
-  }
-
   // 경로 설정
   let backendPath;
   let pythonPath;
@@ -147,8 +141,8 @@ async function startPythonBackend() {
     console.warn('[Python] 런타임 로그 파일 열기 실패:', e.message);
   }
 
-  // Python 프로세스 시작 — detached=자기 프로세스 그룹 (uvicorn 워커·multiprocessing
-  // 자식까지 그룹 킬로 한 번에 정리하기 위함. "시스템이 꺼지면 다 정리하고 죽는다")
+  // 창과 분리된 제어자가 워커의 죽음을 넘어 정리·복구를 완료한다.
+  backendCommand = { pythonPath, pythonArgs, backendPath, basePath };
   pythonProcess = spawn(pythonPath, pythonArgs, {
     cwd: backendPath,
     detached: process.platform !== 'win32',
@@ -227,17 +221,27 @@ async function startPythonBackend() {
   });
 
   // 서버 준비 대기
-  await waitForServer();
+  if (!await waitForServer()) {
+    throw new Error("백엔드 실행 준비를 확인하지 못했습니다. 재기동 제어 상태와 시스템 로그를 확인하세요.");
+  }
 }
 
 /**
  * 서버 준비 대기
  */
-async function waitForServer(maxAttempts = 30) {
-  for (let i = 0; i < maxAttempts; i++) {
+async function waitForServer(timeoutMs = 330000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
     try {
-      const response = await fetch(`http://127.0.0.1:${API_PORT}/health`);
-      if (response.ok) {
+      const state = JSON.parse(fs.readFileSync(path.join(getBasePath(), 'data', 'restart_control', 'state.json'), 'utf8'));
+      if (state.phase === 'FAILED') return false;
+      const response = await fetch(`http://127.0.0.1:${API_PORT}/runtime/status`, {
+        headers: { 'X-Runtime-Control': state.control_token },
+        signal: AbortSignal.timeout(2000)
+      });
+      const status = response.ok ? await response.json() : {};
+      if (status.generation === state.generation && status.code_digest === state.code_digest &&
+          status.accepting && ['ready', 'degraded'].includes(status.readiness)) {
         console.log('[Python] 서버 준비 완료');
         return true;
       }
@@ -254,28 +258,16 @@ async function waitForServer(maxAttempts = 30) {
  * Python 백엔드 종료
  */
 function stopPythonBackend() {
-  if (pythonProcess) {
-    console.log('[Python] 백엔드 종료 중...');
-    if (process.platform === 'win32') {
-      // Windows: SIGTERM이 지원되지 않으므로 taskkill로 프로세스 트리 전체 종료
-      spawn('taskkill', ['/pid', pythonProcess.pid.toString(), '/f', '/t']);
-    } else {
-      // detached 스폰이라 자기 프로세스 그룹 — 그룹 킬로 uvicorn 워커·
-      // multiprocessing 자식까지 한 번에 (음수 pid = 그룹).
-      // ★SIGTERM 만으론 uvicorn 우아한 종료가 30초+ 끌린다(실측) — 2초 유예 후
-      // SIGKILL 추격으로 "즉시 깨끗이"를 보장한다. (절대경로 스폰이라 잔여 소탕의
-      // "python3 api.py" 패턴에 안 걸리므로 여기서 확정해야 한다.)
-      const gpid = pythonProcess.pid;
-      try {
-        process.kill(-gpid, 'SIGTERM');
-      } catch (e) {
-        try { pythonProcess.kill('SIGTERM'); } catch (e2) { /* 이미 죽음 */ }
-      }
-      try { execSync('sleep 2'); } catch (e) { /* 무시 */ }
-      try { process.kill(-gpid, 'SIGKILL'); } catch (e) { /* 이미 죽음 — 정상 */ }
-    }
-    pythonProcess = null;
-  }
+  // 종료 요청을 보낸 프로세스가 죽어도 의도와 정리 절차는 제어자가 소유한다.
+  const command = backendCommand;
+  if (!command) return;
+  execFileSync(command.pythonPath, [...command.pythonArgs, 'shutdown', '--wait'], {
+    cwd: command.backendPath,
+    env: { ...process.env, INDIEBIZ_BASE_PATH: command.basePath },
+    timeout: 45000,
+    stdio: 'pipe'
+  });
+  pythonProcess = null;
 }
 
 /**
@@ -286,28 +278,14 @@ function getBasePath() {
 }
 
 /**
- * 감독 데몬(keeper) 보장 — 앱이 떠 있는 동안 백엔드가 죽으면 1분 내 재기동.
- * 멱등(스크립트가 pid 파일로 중복 방지). 종료 시 fullSystemCleanup 이 keeper 부터 죽인다.
+ * 기존 호출부 호환. 감독은 startPythonBackend가 시작한 제어자가 맡는다.
  */
 function ensureKeeper() {
-  if (process.platform === 'win32') return;  // bash 스크립트 — 윈도우는 후속
-  try {
-    const script = path.join(getBasePath(), 'scripts', 'backend_keeper.sh');
-    if (!fs.existsSync(script)) return;
-    const kp = spawn('bash', [script], { detached: true, stdio: 'ignore' });
-    kp.unref();
-    console.log('[Electron] keeper 보장');
-  } catch (e) {
-    console.warn('[Electron] keeper 기동 실패 (무시):', e.message);
-  }
+  // startPythonBackend가 동일 제어자를 시작한다. 경쟁 감시 데몬을 추가하지 않는다.
 }
 
 /**
- * 시스템 전체 정리 — "시스템이 꺼지면 다 정리하고 죽는다. 뭘 남기지 말고."
- * (사용자 확정 2026-08-05. 옛 start.sh trap cleanup 의 Electron 이식판.)
- * 순서가 중요: ①keeper 먼저(안 그러면 죽인 백엔드를 1분 내 부활시킨다)
- * ②내가 스폰한 백엔드 그룹 ③잔여 소탕(start.sh 가 띄운 백엔드·유령 워커·터널).
- * "cloudflared tunnel run" 패턴은 원격관리 터널(--config 낀 명령)과 안 겹친다(07-20 검증).
+ * 종료 의도를 먼저 내구 기록하고 제어자가 실제 종료를 확인할 때까지 기다린다.
  */
 let _systemCleaned = false;
 function fullSystemCleanup() {
@@ -315,43 +293,26 @@ function fullSystemCleanup() {
   _systemCleaned = true;
   console.log('[Electron] 시스템 전체 정리 시작');
   const basePath = getBasePath();
-  // 0) 의도 표식 — 수리 워치독(red_watchdog)·keeper 가 "의도된 종료"임을 알게 한다.
-  //    없으면 워치독이 죽은 /health 를 보고 방금 한 정상 수리를 오판 롤백한다(충돌 봉합 08-05).
-  //    다음 시작(whenReady)이 표식을 지운다.
   try {
-    fs.writeFileSync(path.join(basePath, 'data', '.intentional_shutdown'),
-                     new Date().toISOString());
-  } catch (e) { /* 무시 */ }
-  // 1) keeper
-  try {
-    const pidf = path.join(basePath, 'data', 'backend_keeper.pid');
-    if (fs.existsSync(pidf)) {
-      const kpid = parseInt(fs.readFileSync(pidf, 'utf-8').trim(), 10);
-      if (kpid) { try { process.kill(kpid, 'SIGKILL'); } catch (e) { /* 이미 없음 */ } }
-      fs.unlinkSync(pidf);
+    fs.mkdirSync(path.join(basePath, 'data'), { recursive: true });
+    const marker = path.join(basePath, 'data', '.intentional_shutdown');
+    const temporary = marker + '.' + process.pid + '.tmp';
+    const fd = fs.openSync(temporary, 'w', 0o600);
+    try {
+      fs.writeFileSync(fd, new Date().toISOString());
+      fs.fsyncSync(fd);
+    } finally { fs.closeSync(fd); }
+    fs.renameSync(temporary, marker);
+    if (process.platform !== 'win32') {
+      const directory = fs.openSync(path.dirname(marker), 'r');
+      try { fs.fsyncSync(directory); } finally { fs.closeSync(directory); }
     }
-  } catch (e) { /* 무시 */ }
-  if (process.platform !== 'win32') {
-    try { execSync('pkill -f "scripts/backend_keepe[r].sh" 2>/dev/null; true', { shell: '/bin/bash' }); } catch (e) { /* 무시 */ }
+    stopPythonBackend();
+    console.log('[Electron] 시스템 전체 정리 완료');
+  } catch (e) {
+    console.error('[Electron] 제어자 종료 확인 실패:', e.message);
+    // 의도 표식은 남는다. 재개된 제어자는 새 현역을 띄우기 전에 종료를 완수한다.
   }
-  // 2) 내가 스폰한 백엔드 그룹
-  stopPythonBackend();
-  // 3) 잔여 소탕
-  try {
-    if (process.platform === 'win32') {
-      execSync(
-        `powershell -NoProfile -Command "Get-NetTCPConnection -LocalPort ${API_PORT} -State Listen -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess -Unique | ForEach-Object { taskkill /F /T /PID $_ }"`,
-        { timeout: 15000 });
-    } else {
-      // ★진범 봉합(08-05): 아이콘 PATH 에 /usr/sbin 없음→lsof 폴백 / pkill -f 자기셸 매칭→브래킷 트릭.
-      execSync(
-        `$(command -v lsof || echo /usr/sbin/lsof) -ti :${API_PORT} -sTCP:LISTEN | xargs kill -9 2>/dev/null; ` +
-        'pkill -9 -f "(python3|Python) ap[i].py" 2>/dev/null; ' +
-        'pkill -f "cloudflared tunnel ru[n]" 2>/dev/null; true',
-        { shell: '/bin/bash', timeout: 15000 });
-    }
-  } catch (e) { /* 무시 */ }
-  console.log('[Electron] 시스템 전체 정리 완료');
 }
 
 /**

@@ -37,6 +37,8 @@ class ScopeResolver:
             raise ReadFault("partial", "scope_registry_budget")
         scopes = {"system": self.system_db} if access.allows("system") else {}
         for project in projects:
+            if not isinstance(project, dict):
+                raise ReadFault("malformed", "invalid_scope_registry")
             if project.get("type") != "project":
                 continue
             key = project.get("id")
@@ -92,7 +94,7 @@ class ScopeResolver:
             diagnostics.append("ambiguous_scope_identity")
         else:
             diagnostics.append("scope_identity_missing" if not failed_scopes else "scope_lookup_incomplete")
-        # Explicit project+owner with a real pursuit binding is still required for task-only.
+        # Episode joins require a pursuit FK; a scoped task row can still report its own state.
         if episode_id is None:
             if selected is None and not owners and project and owner and not failed_scopes:
                 from conversation_db import read_task_trace
@@ -116,7 +118,8 @@ class ScopeResolver:
             raise ReadFault("partial", "ambiguous_run_identity")
         run = next(iter(runs)) if len(runs) == 1 else trajectory_run_id(task) if not runs and task else None
         identity = {"task_id": task, "run_id": run, "episode_ids": [r["id"] for r in episodes],
-                    "project": selected[0] if selected else None, "owner": selected[1] if selected else None,
+                    "project": selected[0] if selected else None, "owner": selected[1] if selected and candidates else None,
+                    "owner_relationship": "explicit" if selected and candidates else "missing",
                     "relationship": "ambiguous" if len(runs) > 1 else "explicit" if runs else "deterministic_legacy" if task else "missing",
                     "scope_relationship": "explicit" if selected else "ambiguous" if len(owners) > 1 else "missing"}
         return {"identity": identity, "episodes": episodes, "bindings": candidates if selected else [],

@@ -48,7 +48,7 @@ def guarded(source, fn):
         return result(source, status="missing", reason="source_missing")
     except PermissionError:
         return result(source, status="forbidden", reason="access_denied")
-    except (json.JSONDecodeError, UnicodeError, TypeError, ValueError, KeyError):
+    except (json.JSONDecodeError, UnicodeError, TypeError, ValueError, KeyError, AttributeError):
         return result(source, status="malformed", reason="invalid_source_record")
     except sqlite3.DatabaseError as exc:
         unavailable = getattr(exc, "sqlite_errorcode", None) in {

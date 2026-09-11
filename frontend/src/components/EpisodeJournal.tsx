@@ -8,6 +8,7 @@ import { openSystemAI } from '../lib/surface-navigation';
  */
 import { getBackendOrigin as getApiUrl } from '../lib/backend-origin';
 import { useState, useCallback } from 'react';
+import { ExecutionTraceDetail } from './ExecutionTraceDetail';
 import { Activity, RotateCw, Loader2, Check, AlertTriangle, Zap, Brain, Gauge, Microscope, ChevronDown, ChevronRight } from 'lucide-react';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
@@ -74,21 +75,9 @@ export function EpisodeJournal() {
   const [loading, setLoading] = useState(false);
   // 사용자 명령을 누르면 그 주행의 실행기억(전체 로그)을 인라인으로 펼친다. 한 번에 하나.
   const [expandedId, setExpandedId] = useState<number | null>(null);
-  const [logs, setLogs] = useState<Record<number, { status: 'loading' | 'ok' | 'error'; text?: string }>>({});
-
   const toggleLog = useCallback((id: number) => {
-    const willExpand = expandedId !== id;
-    setExpandedId(willExpand ? id : null);
-    // 펼치는 순간, 아직 못 받았거나 실패했던 로그만 (다시) 가져온다 — 전체 로그를 그대로 보여준다.
-    if (willExpand && (!logs[id] || logs[id].status === 'error')) {
-      setLogs((p) => ({ ...p, [id]: { status: 'loading' } }));
-      getApiUrl()
-        .then((base) => fetch(`${base}/xray/episodes/${id}`))
-        .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-        .then((data) => setLogs((p) => ({ ...p, [id]: { status: 'ok', text: data.log || '' } })))
-        .catch(() => setLogs((p) => ({ ...p, [id]: { status: 'error' } })));
-    }
-  }, [expandedId, logs]);
+    setExpandedId(current => current === id ? null : id);
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -150,14 +139,13 @@ export function EpisodeJournal() {
       <div className={`space-y-1.5 ${open ? '' : 'hidden'}`}>
         {(rows ?? []).map((ep) => {
           const expanded = expandedId === ep.id;
-          const logState = logs[ep.id];
           return (
           <div key={ep.id} className="py-1.5 border-b border-stone-100 last:border-0">
             <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1">
                 <button
                   onClick={() => toggleLog(ep.id)}
-                  title="이 주행의 실행기억(전체 로그)을 그대로 펼쳐 봅니다"
+                  title="이 주행의 사건·상태·비용·증거를 조회합니다"
                   aria-expanded={expanded}
                   className="w-full text-left text-[13px] text-stone-700 hover:text-stone-900 flex items-center gap-1 group"
                 >
@@ -190,17 +178,7 @@ export function EpisodeJournal() {
             </div>
             {expanded && (
               <div className="mt-2 ml-4 rounded-lg border border-stone-200 bg-stone-50/80 overflow-hidden">
-                {(!logState || logState.status === 'loading') && (
-                  <div className="px-3 py-2 text-[11px] text-stone-400 flex items-center gap-1.5">
-                    <Loader2 size={12} className="animate-spin" /> 실행기억 불러오는 중…
-                  </div>
-                )}
-                {logState?.status === 'error' && (
-                  <div className="px-3 py-2 text-[11px] text-red-500">기록을 불러오지 못했습니다 (로그가 만료됐을 수 있습니다).</div>
-                )}
-                {logState?.status === 'ok' && (
-                  <pre className="max-h-96 overflow-auto px-3 py-2 text-[11px] leading-relaxed text-stone-700 font-mono whitespace-pre-wrap break-words">{logState.text || '(로그가 비어 있습니다)'}</pre>
-                )}
+                <ExecutionTraceDetail key={ep.id} episodeId={ep.id} />
               </div>
             )}
           </div>

@@ -295,5 +295,45 @@ def test_missing_source_appearing_midpage_expires_and_retention_deletes(trace):
     assert svc.query(ACCESS, episode_id=1, limit=1, cursor=first['next_cursor'])['cursor_expired']
 
 
+def test_failed_runtime_and_malformed_private_metadata_preserve_other_sources(trace):
+    svc, root = trace
+    def broken(ids):
+        raise RuntimeError('unavailable runtime observer')
+    svc.runtime_probe = broken
+    before = source_files(root)
+    page = svc.query(ACCESS, episode_id=1)
+    assert page['status'] == 'ok' and page['events']
+    assert page['state']['task'] == 'completed'
+    assert any(s['source'] == 'runtime' and s['status'] == 'unavailable' for s in page['sources'])
+    assert source_files(root) == before
+    store, ev = add_store(svc, root)
+    ref = svc.query(ACCESS, episode_id=1)['links']['evidence'][0]['source_ref']
+    path = store.directory / (ev['id'] + '.txt')
+    path.write_text('changed bytes')
+    before = source_files(root)
+    assert svc.document(ACCESS, ref, episode_id=1)['reason'] == 'evidence_hash_mismatch'
+    assert svc.document(ACCESS, 'invalid ref', episode_id=1)['status'] == 'forbidden'
+    assert source_files(root) == before
+    (root / 'projects/projects.json').write_text('[null]')
+    before = source_files(root)
+    assert svc.query(ACCESS, episode_id=1)['status'] == 'malformed'
+    assert source_files(root) == before
+
+
+def test_pending_publication_summary_never_exposes_or_delivers_bytes(trace):
+    svc, root = trace
+    store, _ = add_store(svc, root)
+    store.log('delivery.pending', task_id='shared-task', manifest={
+        'hash': 'b' * 64, 'artifacts': [{'staged': '/PRIVATE-DRAFT', 'bytes': 7}],
+        'notifications': [{'body': 'PRIVATE-NOTIFICATION'}]})
+    before = source_files(root)
+    page = svc.query(ACCESS, episode_id=1)
+    event = next(e for e in page['events'] if e['kind'] == 'supervision.delivery.pending')
+    assert event['summary']['artifact_count'] == 1 and event['summary']['notification_count'] == 1
+    assert 'PRIVATE-DRAFT' not in json.dumps(page)
+    assert 'PRIVATE-NOTIFICATION' not in json.dumps(page)
+    assert source_files(root) == before
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

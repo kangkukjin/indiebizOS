@@ -23,6 +23,7 @@ MAX_TOKEN = 64000
 TOKEN_FIELDS = ("input", "output", "cache_read", "cache_create", "reasoning")
 SAFE_FIELDS = {"call_id", "parent_call_id", "provider", "model", "role", "phase", "round_index",
                "accounting", "usage_partial", "response_id", "status", "version", "gate", "event",
+               "hash", "bytes", "manifest_hash",
                "path", "size", "elapsed_ms", "latency_ms", "elapsed_s", "is_error", "operation", "name",
                "child_task_id", "child_run_id", "parent_task_id", "parent_run_id", *TOKEN_FIELDS}
 
@@ -119,6 +120,11 @@ class ExecutionTrace:
                 summary = {k: v for k, v in data.items() if k in SAFE_FIELDS
                            and isinstance(v, (str, int, float, bool, type(None)))}
                 summary = {k: v[:160] if isinstance(v, str) else v for k, v in summary.items()}
+                manifest = data.get("manifest")
+                if kind.endswith("delivery.pending") and isinstance(manifest, dict):
+                    summary.update(manifest_hash=str(manifest.get("hash", ""))[:64],
+                                   artifact_count=len(manifest["artifacts"]) if isinstance(manifest.get("artifacts"), list) else None,
+                                   notification_count=len(manifest["notifications"]) if isinstance(manifest.get("notifications"), list) else None)
                 row = {"source": source, "source_record_id": record, "source_ref": reference(source, record),
                        "identity": ident, "kind": kind, "observed_at": observed_time(when),
                        "summary": summary, "links": links or [], "diagnostics": []}
@@ -242,7 +248,16 @@ class ExecutionTrace:
                             diagnostics.append("evidence:" + str(availability.get("reason") or availability["status"]))
             if not stores:
                 sources.append({"source": "supervision", "status": "missing", "reason": "explicit_store_link_missing", "observed_at": stamp()})
-            runtime = self.runtime_probe(ident["episode_ids"])
+            try:
+                runtime = self.runtime_probe(ident["episode_ids"])
+                if runtime.get("status") not in {"running", "unknown"}:
+                    raise ValueError("invalid runtime observation")
+                sources.append({"source": "runtime", "status": "ok", "observed_at": stamp()})
+            except Exception:
+                runtime = {"status": "unknown", "observed_at": stamp()}
+                sources.append({"source": "runtime", "status": "unavailable",
+                                "reason": "runtime_probe_failed", "observed_at": stamp()})
+                diagnostics.append("runtime_probe_failed")
             own = next((r for r in task_source["rows"] if r["task_id"] == ident["task_id"]), {})
             task_state = own.get("status", "unknown")
             conflict = runtime["status"] == "running" and (task_state == "completed" or any(r["ended_at"] for r in resolved["episodes"]))

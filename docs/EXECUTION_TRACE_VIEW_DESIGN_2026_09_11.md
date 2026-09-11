@@ -1,6 +1,6 @@
 # 실행 기록의 통합 조회 설계와 원장 물리 통합 판단
 
-상태: **구현 전 인계 설계**. 기준: 정본 main `777430f9`, 2026-09-11.
+상태: **L0→L1→L2 구현, 최종 회귀 확인 중**. 설계 기준: 정본 main `777430f9`, 2026-09-11. 구현·검증 기록은 11~13절.
 관련: [단순화 수리 기록](SYSTEM_SIMPLIFICATION_PLAN.md), [재기동 제어 설계](RESTART_COORDINATION_DESIGN_2026_09_11.md).
 
 ## 1. 결정
@@ -163,3 +163,17 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 - 같은 페이지의 trajectory/write 명시 연결은 observations로 묶고 두 원본 ID를 남긴다. 페이지를 넘는 대응은 observation_of 참조로 남긴다. 작업대 반복 seq는 파일 위치별로 보존하고 ambiguous로 표시한다. 여러 실제 usage는 모두 합산하며 `complete=false`는 best-effort 기록만으로 전체 청구의 완전성을 증명할 수 없다는 뜻이다. `recorded_events_complete`는 기록된 청구 사건의 페이지 읽기 완료만 뜻한다.
 - L1 합성 회귀 **14개 통과**: 비용 정답/반복 쓰기/같은 task 다른 프로젝트/같은 자아 다른 task/잠금·빈 결과·부재·손상/회전·삭제/증거 접근·해시·검수/CAS/늦은 완료·상태 충돌/페이지 중 삽입/원본 무변경/본문 변경 커서 만료/예산 진행. 기존 trajectory/write/pursuit/task binding/concurrency/delivery 시험 **65개 통과**. 층 검사 통과, Android 번들 재생성 완료.
 - 실사용 최근 episode 읽기 표본: **42ms**, 명시 자아 범위 해소 성공, 104개 개요 사건, 다음 커서 있음. 원래 4KB에서 잘린 작업대 trajectory 데이터는 `malformed_store_link`로 표시됐고 실제 원장을 손대지 않았다. 전체 backend 회귀는 L2 완료 후 결과를 아래에 기록한다.
+
+
+## 13. L2 — 주행기록·원문 페이지 연결
+
+- 조종실 → 주행기록 → 요청 행 펼치기에서 통합 기록을 조회한다. 사건·현재 DB 상태·별도 runtime 관측·에피소드 종료 기록·측정 토큰·부모/자식/과제 version·출처 상태를 표시한다. 원문은 명시적으로 열며 도구/검수 증거는 접을 수 있는 목록이다. 기존 분석 버튼과 `/trajectory` 응답은 유지한다.
+- HTTP: GET/POST `/world-pulse/episodes/{id}/trace`, POST 같은 경로의 `/document`. task/run은 POST `/world-pulse/execution-trace`에 project/owner/task_id 또는 run_id를 지정하고 원문은 `/world-pulse/execution-trace/document`로 읽는다. POST는 읽기 요청만 수행하며 긴 커서를 URL에 싣지 않는다. 부작용은 없다. 모든 진입점은 기존 로컬/원격 런처 인증을 적용하고 공개 경로에 등록하지 않았다.
+- `missing`→404, `forbidden`→403, 인증 미확인→401/503, 읽기 실패→503, 형식 오류→422. 일부 출처 실패는 200 응답 안의 출처 상태/partial로 보인다. 만료된 커서는 새 스냅샷 조회를 요구한다. 프런트는 늦게 도착한 이전 요청/원문 응답을 무시하며 재조회 시 이전 페이지 누계를 초기화한다.
+- best-effort인 비용의 전체 완전성을 주장하지 않는다. 기록된 청구 사건의 페이지 누계만 표시하고 snapshot/boundary/supervisor cost 중복은 제외한다. 공개 대기 사건은 manifest 지문·산출물 수·알림 수만 요약하며 초안 본문/알림 내용은 개요에 싣지 않는다.
+- 인증/입력 경계 포함 합성 시험 **19개 통과**. runtime observer 오류가 다른 출처 조회를 막지 않음, malformed 메타데이터/원문 지문 오류 뒤 원본 무변경, 공개 대기물 무노출/무송신까지 포함한다. 저장소 단일 시험 러너 규약과 사설 값 판정 관문도 통과한다.
+- 실제 localhost 화면에서 최근 주행의 **104→204 사건 페이지 누적**, **12,000→24,000자 원문 페이지**, 새로 조회 시 원문 폐쇄와 104건 첫 페이지 복귀를 확인했다. 출처별 부분성과 비용 표시, 접는 증거 목록을 시각 검증했다. 원격 통신·분석 AI·알림 발송은 실행하지 않았다. 초기 앱 연결 재시도 중 기존 기어/스위치 로더의 네트워크 오류가 있었고 이후 로드됐으며, 통합 기록 컴포넌트의 렌더 오류는 관측되지 않았다.
+- TypeScript(`npx tsc -p tsconfig.app.json`), 변경한 두 컴포넌트 ESLint, `npm run build` 통과. 기존 큰 JS chunk 경고는 남아 있으며 이 변경의 오류가 아니다.
+- 전체 backend 첫 실행의 실패 2건(새 시험의 `__main__` 누락, SQLite 오류 문구의 사설 소문자 비교)을 수정했다. 재실행은 **3,876 passed / 1 skipped / 116 warnings**(249.75초). 최종 보강 후 전체 결과는 아래에 추가한다.
+
+남는 경계: 메시지 FK 없는 과거 대화, 범위를 증명하지 못하는 episode 없는 옛 run/write, 이미 정리된 원문은 복원하지 않는다. 이는 명시적 missing/ambiguous/partial이다. SQLite 사건 원장은 기존 append-only 계약, JSONL은 기존 append/회전 계약에 의존한다. 한도 초과 신원 후보/작업대/원문은 partial로 반환하며 한도를 우회해 전체 디스크를 스캔하지 않는다. 원장 물리 통합·새 이벤트 DB·L3 캐시/색인은 도입하지 않았다.

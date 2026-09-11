@@ -4,8 +4,12 @@ IndieBiz OS Core
 """
 
 import asyncio
+from contextlib import contextmanager
+from contextvars import ContextVar
 from typing import Dict, Optional
 from fastapi import WebSocket
+
+_connection_scope = ContextVar("chat_connection_scope", default=None)
 
 
 class WebSocketManager:
@@ -22,8 +26,10 @@ class WebSocketManager:
         self.active_connections[client_id] = websocket
         print(f"[WS] 연결 등록: {client_id} (총 {len(self.active_connections)}개)")
 
-    def disconnect(self, client_id: str):
+    def disconnect(self, client_id: str, expected=None):
         """클라이언트 연결 해제"""
+        if expected is not None and self.active_connections.get(client_id) is not expected:
+            return
         if client_id in self.active_connections:
             del self.active_connections[client_id]
             print(f"[WS] 연결 해제: {client_id} (총 {len(self.active_connections)}개)")
@@ -32,6 +38,15 @@ class WebSocketManager:
         """클라이언트 연결 상태 확인"""
         return client_id in self.active_connections
 
+    @contextmanager
+    def connection_scope(self, client_id, connection):
+        """이 작업의 송신은 접수한 연결에만 전달한다. 연결을 갈아 끼운 뒤의 늦은 송신은 버린다."""
+        token = _connection_scope.set((client_id, connection))
+        try:
+            yield
+        finally:
+            _connection_scope.reset(token)
+
     async def send_message(self, client_id: str, message: dict):
         """특정 클라이언트에 메시지 전송"""
         if client_id not in self.active_connections:
@@ -39,6 +54,9 @@ class WebSocketManager:
             return False
 
         websocket = self.active_connections[client_id]
+        scoped = _connection_scope.get()
+        if scoped is not None and scoped[0] == client_id and scoped[1] is not websocket:
+            return False
         try:
             await websocket.send_json(message)
             return True
@@ -47,7 +65,7 @@ class WebSocketManager:
             # 연결이 닫힌 경우 disconnect
             if any(keyword in error_msg.lower() for keyword in ["closed", "close", "disconnect"]):  # vj-ok: 오류문 분류 표식
                 print(f"[WS] 연결 끊김 감지: {client_id}")
-                self.disconnect(client_id)
+                self.disconnect(client_id, websocket)
             else:
                 # 일시적 에러는 로그만 남기고 연결 유지
                 print(f"[WS 전송 에러] {client_id}: {e} (연결 유지)")
@@ -67,14 +85,14 @@ class WebSocketManager:
     async def broadcast(self, message: dict):
         """모든 클라이언트에 브로드캐스트"""
         disconnected = []
-        for client_id, websocket in self.active_connections.items():
+        for client_id, websocket in list(self.active_connections.items()):
             try:
                 await websocket.send_json(message)
             except Exception:
-                disconnected.append(client_id)
+                disconnected.append((client_id, websocket))
 
-        for client_id in disconnected:
-            self.disconnect(client_id)
+        for client_id, websocket in disconnected:
+            self.disconnect(client_id, websocket)
 
     async def send_to_agent_chat(self, project_id: str, agent_id: str, message: dict) -> bool:
         """
@@ -88,16 +106,16 @@ class WebSocketManager:
         sent = False
         disconnected = []
 
-        for client_id, websocket in self.active_connections.items():
+        for client_id, websocket in list(self.active_connections.items()):
             if client_id.startswith(prefix):
                 try:
                     await websocket.send_json(message)
                     sent = True
                 except Exception:
-                    disconnected.append(client_id)
+                    disconnected.append((client_id, websocket))
 
-        for client_id in disconnected:
-            self.disconnect(client_id)
+        for client_id, websocket in disconnected:
+            self.disconnect(client_id, websocket)
 
         return sent
 
@@ -110,15 +128,15 @@ class WebSocketManager:
         """시스템 AI 대화창에 메시지 전송 (client_id가 'system_ai_'로 시작하는 연결)"""
         sent = False
         disconnected = []
-        for client_id, websocket in self.active_connections.items():
+        for client_id, websocket in list(self.active_connections.items()):
             if client_id.startswith("system_ai_"):
                 try:
                     await websocket.send_json(message)
                     sent = True
                 except Exception:
-                    disconnected.append(client_id)
-        for client_id in disconnected:
-            self.disconnect(client_id)
+                    disconnected.append((client_id, websocket))
+        for client_id, websocket in disconnected:
+            self.disconnect(client_id, websocket)
         return sent
 
     def find_system_ai_connections(self) -> list:
@@ -180,10 +198,11 @@ def set_launcher_ws(websocket, loop) -> None:
     _launcher_loop = loop
 
 
-def clear_launcher_ws() -> None:
+def clear_launcher_ws(expected=None) -> None:
     """런처 WS 연결 해제"""
     global _launcher_ws
-    _launcher_ws = None
+    if expected is None or _launcher_ws is expected:
+        _launcher_ws = None
 
 
 async def send_launcher_command(command: str, params: dict = None) -> bool:
@@ -192,8 +211,9 @@ async def send_launcher_command(command: str, params: dict = None) -> bool:
     if not _launcher_ws:
         print(f"[WS] Launcher 미연결, 명령 전달 불가: {command}")
         return False
+    websocket = _launcher_ws
     try:
-        await _launcher_ws.send_json({
+        await websocket.send_json({
             "type": "launcher_command",
             "command": command,
             "params": params or {}
@@ -201,7 +221,7 @@ async def send_launcher_command(command: str, params: dict = None) -> bool:
         return True
     except Exception as e:
         print(f"[WS] Launcher 명령 전달 실패: {e}")
-        _launcher_ws = None
+        clear_launcher_ws(websocket)
         return False
 
 

@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: chat_client_global_cancel
+    retired: 2026-09-11
+    reason: client_id 하나의 취소 상태와 연결 정리가 재접속 뒤 새 실행에 간섭했다.
+    instead: chat_runs의 실행별 Event·조향 대상, 연결 identity를 확인하는 송신/해제로 격리한다. 키 사전 확인은 실행 모델 해소 결과를 사용한다.
+    phrases:
+      - "취소 플래그 턴-종료 리셋"
+      - "중단 플래그 초기화"
   - id: chat_stream_service_owner
     retired: 2026-09-11
     reason: 대화·작업 기록과 인지 스트림 실행이 WebSocket 라우터에 섞여 있었다.

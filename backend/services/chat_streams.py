@@ -4,19 +4,20 @@ import uuid
 import asyncio
 import contextvars
 import yaml
+from functools import wraps
+import chat_runs as runs
 from execution_workers import create_executor
 from websocket_manager import manager
 from conversation_db import ConversationDB
 
 project_manager = None
 executor = create_executor("chat-stream", max_workers=4)
-_stream_agent_keys: dict = {}
-cancel_flags: dict[str, bool] = {}
 _TOOL_EVENT_FIELDS = ("id", "name", "input", "result")
 
 async def accept_stream_steer(client_id, data, target):
     """연결이 소유한 실행에만 조향한다. 준비 중/다른 에이전트의 입력은 접수하지 않는다."""
-    key, name, task_id = _stream_agent_keys.get(client_id, (None, None, None))
+    run = runs.registry.active.get(client_id)
+    key, name, task_id = run.target if run else (None, None, None)
     if key and task_id and target in (key, name):
         from steer_inbox import post
         try:
@@ -95,12 +96,14 @@ def tool_event_payload(event: dict, agent: str) -> dict:
 
 def is_cancelled(client_id: str) -> bool:
     """클라이언트의 중단 요청 여부 확인"""
-    return cancel_flags.get(client_id, False)
+    return runs.registry.is_cancelled(client_id)
 
 
 def set_cancel(client_id: str, value: bool):
-    """클라이언트의 중단 플래그 설정"""
-    cancel_flags[client_id] = value
+    """현재 실행의 일방향 중단 요청. 새 실행은 새 Event로 시작한다."""
+    run = runs.registry.current(client_id)
+    if run is not None and value:
+        run.cancelled.set()
 
 
 def get_agent_runners():
@@ -170,6 +173,14 @@ def init_manager(pm):
     project_manager = pm
 
 
+def owned_entry(handler):
+    @wraps(handler)
+    async def invoke(client_id, data):
+        return await runs.registry.call(handler, client_id, data, manager)
+    return invoke
+
+
+@owned_entry
 async def handle_chat_message(client_id: str, data: dict):
     """채팅 메시지 처리 (기존 동기 방식)"""
     message = data.get("message", "")
@@ -222,13 +233,6 @@ async def handle_chat_message(client_id: str, data: dict):
             await _bail_stream(client_id, f"에이전트 '{agent_name}'의 AI가 준비되지 않았습니다.")
             return
 
-        # 스레드 컨텍스트 설정 (call_agent 등에서 발신자 정보로 사용)
-        from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id, set_user_input
-        set_current_agent_id(agent_id)
-        set_current_agent_name(agent_name)
-        set_current_project_id(project_id)
-        set_user_input(message)
-
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
 
@@ -255,10 +259,6 @@ async def handle_chat_message(client_id: str, data: dict):
             )
         except Exception as e:
             print(f"[WS] 태스크 생성 실패: {e}")
-
-        # 스레드 컨텍스트에 task_id 설정 (call_agent에서 사용)
-        from thread_context import set_current_task_id
-        set_current_task_id(task_id)
 
         # ★ LLM 파이프라인(의식+실행)을 워커 스레드로 오프로드한다 — 이벤트 루프를
         # 막지 않기 위해. 동기 블로킹(process_message_with_history)을 async 핸들러에서
@@ -340,15 +340,13 @@ async def handle_chat_message(client_id: str, data: dict):
     except Exception as e:
         import traceback
         traceback.print_exc()
-        # 컨텍스트 정리
-        from thread_context import clear_all_context
-        clear_all_context()
         await manager.send_message(client_id, {
             "type": "error",
             "message": str(e)
         })
 
 
+@owned_entry
 async def handle_chat_message_stream(client_id: str, data: dict):
     """채팅 메시지 처리 (스트리밍 방식)"""
     message = data.get("message", "")
@@ -404,9 +402,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
         # 조향 키 등록 (2026-08-15) — provider.agent_id 와 같은 값(yaml id)이어야
         # execute_tool 의 drain 과 만난다. 수신 루프의 조향 분기가 이 등록을 읽는다.
-        _stream_agent_keys[client_id] = (agent_id or agent_name, agent_name, task_id)
-        # 턴 취소 플래그 리셋 (sysai 핸들러와 동일 계약 — 직전 턴의 중단이 새 턴을 즉사시키지 않게)
-        set_cancel(client_id, False)
+        runs.registry.bind_target(client_id, (agent_id or agent_name, agent_name, task_id))
 
         # 실행 중인 AgentRunner 확인 — 등기부에 없으면 자동 시작 (재기동으로 비워진 등기부 복구)
         runner_info = _ensure_agent_runner(project_id, agent_id, agent_config, agents_data)
@@ -422,9 +418,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
 
         # 스레드 컨텍스트 설정
         from thread_context import set_current_agent_id, set_current_agent_name, set_current_project_id, set_current_task_id
-        set_current_agent_id(agent_id)
-        set_current_agent_name(agent_name)
-        set_current_project_id(project_id)
 
         # 대화 DB
         db = ConversationDB(str(project_path / "conversations.db"))
@@ -451,8 +444,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             )
         except Exception as e:
             print(f"[WS] 태스크 생성 실패: {e}")
-
-        set_current_task_id(task_id)
 
         # 스트리밍 처리를 위한 큐
         event_queue = asyncio.Queue()
@@ -633,10 +624,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 })
                 # 뒷정리는 하지 않는다 — 워커가 살아 있다(시스템 AI 경로와 같은 부류의
                 # 고아 실행 수리, 2026-08-22). 저장·태스크 닫기·Episode END 는 워커의
-                # finally 가 완주 시점에 한다. thread_context 만 이 스레드 몫으로 비운다
-                # (threading.local — 워커가 비워도 루프 스레드 것은 안 지워진다).
-                from thread_context import clear_all_context as _cac_loop
-                _cac_loop()
+                # finally 가 완주 시점에 한다. 이벤트 루프에는 작업 TLS를 쓰지 않는다.
                 return
 
             if event is None:
@@ -731,10 +719,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                 })
                 # 뒤따르는 _turn_meta와 종료 신호를 받아 실패 원장·도구 이력을 보존한다.
 
-        # 취소 플래그 턴-종료 리셋 (5라운드 감사 (D) — 남은 True 가 같은 client_id 의
-        # 다른 경로/다음 소비에 새지 않게. 시작 리셋과 양단 대칭.)
-        set_cancel(client_id, False)
-
         # AI 응답 저장 (final_content 사용)
         print(f"[WS] while 루프 종료, final_content 길이: {len(final_content)}")
         if final_content and not stream_error and not stream_cancelled:
@@ -769,9 +753,6 @@ async def handle_chat_message_stream(client_id: str, data: dict):
         except Exception:
             pass
 
-        # 컨텍스트 정리
-        from thread_context import clear_all_context
-        clear_all_context()
 
     except Exception as e:
         import traceback
@@ -785,14 +766,13 @@ async def handle_chat_message_stream(client_id: str, data: dict):
             EpisodeLogger.end_episode()
         except Exception:
             pass
-        from thread_context import clear_all_context
-        clear_all_context()
         await manager.send_message(client_id, {
             "type": "error",
             "message": str(e)
         })
 
 
+@owned_entry
 async def handle_system_ai_chat_stream(client_id: str, data: dict):
     """시스템 AI 채팅 메시지 처리 (스트리밍 방식)
 
@@ -822,7 +802,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     # 태스크 id 는 에피소드보다 먼저 — 명시 바인딩(프로젝트 스트림 핸들러와 같은 이유, ep2905 실측
     # 주인공: 이 핸들러가 설계 에이전트의 진행 중 태스크를 물려받아 run 을 공유·조기 종료시켰다).
     task_id = f"task_sysai_{uuid.uuid4().hex[:8]}"
-    _stream_agent_keys[client_id] = ("system_ai", "system_ai", task_id)
+    runs.registry.bind_target(client_id, ("system_ai", "system_ai", task_id))
     # 에피소드 로그 시작
     try:
         from episode_logger import EpisodeLogger
@@ -838,7 +818,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         })
 
         # 시스템 AI 설정 및 헬퍼 함수 로드
-        from system_ai_core import load_system_ai_config
+        from system_ai_core import _resolve_system_ai_config
         from system_ai_memory import (
             save_conversation,
             get_history_for_ai,
@@ -847,6 +827,16 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             get_task
         )
         from thread_context import set_current_task_id, clear_all_context
+
+        config = _resolve_system_ai_config()
+        api_key = config.get("api_key", "")
+        provider = config.get("provider", "anthropic")
+
+        # ★provider 를 보고 판정한다 — claude_code(중앙 OAuth)·ollama 는 키가 원래 없다.
+        from model_resolver import provider_needs_api_key
+        if not api_key and provider_needs_api_key(provider):
+            await _bail_stream(client_id, f"API 키가 설정되지 않았습니다. ({provider})")
+            return
 
         # 태스크 생성 (위임 기능에 필요 — id 는 에피소드 시작 전에 정했다)
         try:
@@ -860,20 +850,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             )
         except Exception as e:
             print(f"[WS] 시스템 AI 태스크 생성 실패: {e}")
-
-        # 스레드 컨텍스트에 task_id 설정 (call_project_agent에서 사용)
-        set_current_task_id(task_id)
-
-        config = load_system_ai_config()
-        api_key = config.get("apiKey", "")
-        provider = config.get("provider", "anthropic")
-        model = config.get("model", "claude-sonnet-4-20250514")
-
-        # ★provider 를 보고 판정한다 — claude_code(중앙 OAuth)·ollama 는 키가 원래 없다.
-        from model_resolver import provider_needs_api_key
-        if not api_key and provider_needs_api_key(provider):
-            await _bail_stream(client_id, f"API 키가 설정되지 않았습니다. ({provider})")
-            return
 
         # 최근 대화 히스토리 로드 (조회 + 역할 매핑 + Observation Masking 통합)
         history = get_history_for_ai(limit=7, thread=conv_thread)
@@ -890,9 +866,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         timed_out = False  # 타임아웃 발생 여부 (워커 스레드에서 확인)
         loop = asyncio.get_running_loop()
 
-        # 중단 플래그 초기화
-        set_cancel(client_id, False)
-
         def run_stream():
             """워커 스레드 — 시스템 AI 인지 파이프라인 제너레이터를 pump (transport 어댑터).
 
@@ -906,15 +879,16 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             from thread_context import set_task_origin as _set_origin
             _set_origin("user")  # 시스템 AI 채팅창 = 사람의 직접 명령 (RED 수리 그랜트 전제조건)
             from system_ai_core import get_system_ai_runner
-            runner = get_system_ai_runner()
-            gen = runner.cognitive_stream(
-                message, history,
-                images=images if images else None,
-                action_hint=action_hint,
-                extra_role=extra_role,
-                cancel_check=lambda: is_cancelled(client_id),
-            )
+            gen = None
             try:
+                runner = get_system_ai_runner()
+                gen = runner.cognitive_stream(
+                    message, history,
+                    images=images if images else None,
+                    action_hint=action_hint,
+                    extra_role=extra_role,
+                    cancel_check=lambda: is_cancelled(client_id),
+                )
                 for event in gen:
                     # 중단 요청 시 루프 탈출 (gen.close()가 제너레이터 뒷정리 실행)
                     if is_cancelled(client_id):
@@ -943,7 +917,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 )
             finally:
                 # 조기 종료(취소·예외)여도 제너레이터 finally(모델 복원·메모리 쓰기) 실행 보장
-                gen.close()
+                if gen is not None:
+                    gen.close()
                 if timed_out:
                     # 타임아웃 이후 완주분 인계 — 소비자(WS)는 이미 떠났으므로 저장·
                     # 전송·원장 닫기를 실제로 끝낸 쪽인 여기서 한다.
@@ -1014,10 +989,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 #  게다가 워커의 finally 가 완성본을 또 저장해 대화가 이중 적재됐다.
                 #  살아 있는 실행 위에 "끝남"을 찍지 않는다 — 뒷정리 전부를
                 #  워커의 finally 한 곳으로 넘기고 여기서는 전송만 끝낸다.
-                #  ★단 이벤트 루프 *스레드*의 thread_context 는 여기서 비운다 —
-                #   thread_context 는 threading.local 이라 워커가 비워도 이 스레드
-                #   것은 안 지워지고, 공유 루프 스레드에 task_id 가 남는다.
-                clear_all_context()
+                #  작업 TLS는 워커에만 설정하므로 공유 이벤트 루프를 비울 필요가 없다.
                 return
 
             if event is None:
@@ -1120,8 +1092,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 })
                 break
 
-        # 취소 플래그 턴-종료 리셋 (5라운드 감사 (D) — 에이전트 경로와 양단 대칭)
-        set_cancel(client_id, False)
 
         # AI 응답 저장
         # final_content가 비어있으면 도구만 실행되고 텍스트 응답이 없는 경우
@@ -1205,7 +1175,6 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
         except Exception:
             pass
 
-        clear_all_context()
 
     except Exception as e:
         import traceback
@@ -1216,19 +1185,10 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
             EpisodeLogger.end_episode()
         except Exception:
             pass
-        try:
-            from thread_context import clear_all_context
-            clear_all_context()
-        except:
-            pass
         await manager.send_message(client_id, {
             "type": "error",
             "message": str(e)
         })
-
-
-def clear_stream_target(client_id):
-    _stream_agent_keys.pop(client_id, None)
 
 
 # 예약 작업 등은 허브에 주입된 같은 서비스 진입점을 사용한다.

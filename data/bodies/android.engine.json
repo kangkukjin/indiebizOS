@@ -202,6 +202,7 @@
     "services/business_sync",
     "services/calendar_actions",
     "services/calendar_html",
+    "services/chat_runs",
     "services/chat_streams",
     "services/gen_newspaper",
     "services/generate_newspaper",
@@ -311,8 +312,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 300,
-    "engine": 281,
+    "total": 301,
+    "engine": 282,
     "blocklist": 19
   }
 }

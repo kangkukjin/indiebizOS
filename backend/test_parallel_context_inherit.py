@@ -102,7 +102,7 @@ def test_R3_옛_5칸도_여전히_건너간다(monkeypatch):
         assert row["project_id"] == "부동산", f"기존에 나르던 칸이 유실됐다: {row}"
 
 
-@pytest.mark.parametrize("boundary", ["parallel", "offload", "timeout"])
+@pytest.mark.parametrize("boundary", ["parallel", "offload", "timeout", "tool-thread"])
 def test_R4_경계는_열거가_아니라_통째_승계여야_한다(monkeypatch, boundary):
     """새 thread-local 칸과 새 ContextVar도 소비자 수정 없이 건너가야 한다."""
     import asyncio
@@ -127,6 +127,10 @@ def test_R4_경계는_열거가_아니라_통째_승계여야_한다(monkeypatch
         result = _execute_parallel(_branches(), None, "")
         assert len(result) == 2
         assert all(row["items"] == expected["items"] for row in result)
+    elif boundary == "tool-thread":
+        import system_tools
+        monkeypatch.setattr(system_tools, "_execute_tool_inner", observe)
+        assert system_tools._execute_tool_with_cancel("probe", {}, "", "test", lambda: False) == expected
     elif boundary == "timeout":
         assert _run_sync_with_timeout(observe, (), 2, "probe") == expected
     else:

@@ -12,9 +12,10 @@ def client(monkeypatch):
     import api_websocket as ws
     from websocket_manager import WebSocketManager
     monkeypatch.setattr(auth, "sessions", {"valid-session": {"created": "test"}})
-    monkeypatch.setattr(ws, "manager", WebSocketManager())
-    monkeypatch.setattr(ws, "_stream_tasks", {})
-    monkeypatch.setattr(ws.streams, "_stream_agent_keys", {})
+    manager = WebSocketManager()
+    monkeypatch.setattr(ws, "manager", manager)
+    monkeypatch.setattr(ws.streams, "manager", manager)
+    monkeypatch.setattr(ws.runs, "registry", ws.runs.ChatRuns())
     app = FastAPI()
     app.include_router(ws.router)
     with TestClient(app) as test_client:
@@ -177,3 +178,18 @@ def test_missing_old_or_partial_bundle_retains_legacy_and_portal_helper(web_clie
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_old_socket_cannot_control_or_remove_same_id_reconnection(client, monkeypatch):
+    import api_websocket as ws
+    cancelled = []
+    monkeypatch.setattr(ws.runs.registry, 'cancel', lambda *a: cancelled.append(a))
+    with client.websocket_connect('ws://localhost:8765/ws/chat/replaced') as old:
+        with client.websocket_connect('ws://localhost:8765/ws/chat/replaced') as new:
+            old.send_json({'type': 'cancel'})
+            with pytest.raises(WebSocketDisconnect) as exc:
+                old.receive_json()
+            assert exc.value.code == 1000
+            new.send_json({'type': 'ping'})
+            assert new.receive_json() == {'type': 'pong'}
+    assert cancelled == []

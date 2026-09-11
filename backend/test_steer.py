@@ -80,10 +80,10 @@ def test_websocket_two_windows_target_their_own_tasks(monkeypatch):
     from unittest.mock import AsyncMock
     send = AsyncMock()
     monkeypatch.setattr(ws, "manager", SimpleNamespace(send_message=send))
-    monkeypatch.setattr(ws, "_stream_agent_keys", {
-        "window-a": ("system_ai", "system_ai", "a"),
-        "window-b": ("system_ai", "system_ai", "b"),
-    })
+    monkeypatch.setattr(ws.runs, "registry", ws.runs.ChatRuns())
+    for client_id, task in [("window-a", "a"), ("window-b", "b")]:
+        ws.runs.registry.begin(client_id)
+        ws.runs.registry.bind_target(client_id, ("system_ai", "system_ai", task))
     with si.task_scope(["system_ai"], "a"), si.task_scope(["system_ai"], "b"):
         asyncio.run(ws.accept_stream_steer("window-a", {"message": "A만"}, "system_ai"))
         asyncio.run(ws.accept_stream_steer("window-b", {"message": "B만"}, "system_ai"))

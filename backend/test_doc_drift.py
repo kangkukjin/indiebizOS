@@ -17,6 +17,17 @@ from doc_drift import (  # noqa: E402
 FACTS = {"node_count": 6, "total": 149, "tools_n": 41, "exts_n": 5}
 
 
+def test_unchecked_document_is_not_reported_as_success(tmp_path, monkeypatch):
+    import doc_drift
+    monkeypatch.setattr(doc_drift, "_STATE_PATH", tmp_path / "state.json")
+    monkeypatch.setattr(doc_drift, "_FLAGS_PATH", tmp_path / "flags.json")
+    monkeypatch.setattr(doc_drift, "measure", lambda: {"flags": [], "unchecked": ["unreadable.md"]})
+    result = doc_drift.run_doc_drift_check(force=True)
+    assert not result["success"] and result["data_quality"] == "audit_incomplete"
+    assert result["error_message"]
+    assert doc_drift._should_run()  # 다음 유지보수 때 다시 검사한다.
+
+
 def test_t1_stale_compound_claim_flagged():
     text = "시스템은 6노드 144 액션을 갖는다.\nIt has 6 nodes, 144 composable actions."
     flags = _check_stats_claims("x.md", text, FACTS)

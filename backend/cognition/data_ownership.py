@@ -35,7 +35,6 @@ _ROOT = Path(__file__).parent.parent.parent
 _STATE_PATH = _ROOT / "data" / ".data_ownership_state.json"
 _FLAGS_PATH = _ROOT / "data" / "data_ownership_flags.json"
 
-CADENCE_HOURS = 168          # 주 1회 (vocab_overlap 과 같은 카덴스)
 BACKUP_STALE_DAYS = 30       # 백업 규약: 30일 지난 _backups 항목 = 삭제 후보
 _MAX_FLAGS = 80              # 보고 상한 — 그 이상이면 개별 파일이 아니라 구조 문제
 
@@ -268,14 +267,9 @@ def run_data_ownership_check(force: bool = False) -> Dict:
     run_maintenance_bundle 합류. 깃발은 data/data_ownership_flags.json 에 —
     **보고만, 삭제 없음**(고아 판정의 실집행은 사용자 결정).
     """
-    if not force:
-        try:
-            state = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
-            last = datetime.fromisoformat(state["last_run"])
-            if datetime.now() - last < timedelta(hours=CADENCE_HOURS):
-                return {"skipped": "cadence"}
-        except Exception:
-            pass
+    from audit_lifecycle import due
+    if not due(_STATE_PATH, force):
+        return {"skipped": "cadence"}
 
     started = datetime.now()
     error = None
@@ -300,16 +294,17 @@ def run_data_ownership_check(force: bool = False) -> Dict:
     except Exception as e:
         logger.debug(f"[DataOwnership] 판정 큐 적립 실패 (무시): {e}")
     try:
+        _FLAGS_PATH.write_text(json.dumps({
+            "measured_at": started.isoformat(), "declarations": len(DECLARATIONS), "error": error,
+            **report,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
         _STATE_PATH.write_text(json.dumps({
             "last_run": started.isoformat(), "orphans": report.get("orphans_total", 0),
             "stale_backups": len(stale), "error": error,
         }, ensure_ascii=False), encoding="utf-8")
-        _FLAGS_PATH.write_text(json.dumps({
-            "measured_at": started.isoformat(), "declarations": len(DECLARATIONS),
-            **report,
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
-        logger.warning(f"[DataOwnership] 상태 저장 실패 (무시): {e}")
+        error = f"{error + '; ' if error else ''}상태 저장 실패: {e}"
+        logger.warning(f"[DataOwnership] {error}")
 
     if orphans:
         head = "; ".join(o["path"] for o in orphans[:5])
@@ -330,5 +325,5 @@ def run_data_ownership_check(force: bool = False) -> Dict:
         "data_quality": ("ok" if not orphans and not error
                          else "orphans" if orphans else "audit_incomplete"),
         "error_message": (f"주인 없는 항목 {n}건 — data_ownership_flags.json" if orphans else error),
-        "orphans": orphans, "stale_backups": stale,
+        "orphans": orphans, "stale_backups": stale, "error": error,
     }

@@ -15,18 +15,10 @@ data_ownership·doc_drift·store_waste·vocab_overlap 은 모두 같은 모양�
 - 카덴스 스킵(`{"skipped": "cadence"}`)은 원장에 남기지 않는다 — 안 돈 것은 사건이 아니다.
 """
 import logging
-from typing import Dict, List, Tuple
+from typing import Dict
+from audit_lifecycle import AUDITS, normalize_result
 
 logger = logging.getLogger(__name__)
-
-# (결과 키, 모듈, 함수) — 순서는 실행 순서. 새 주간 감사는 여기 한 줄로 합류한다.
-AUDITS: List[Tuple[str, str, str]] = [
-    ("data_ownership", "data_ownership", "run_data_ownership_check"),
-    ("doc_drift", "doc_drift", "run_doc_drift_check"),
-    ("store_waste", "store_waste_audit", "run_store_waste_check"),
-    ("vocab_overlap", "vocab_overlap_audit", "run_vocab_overlap_check"),
-]
-
 
 def run_weekly_audits(save_self_check) -> Dict:
     """주간 감사 넷을 돌리고 {결과 키: self_check 형식} 을 반환."""
@@ -34,15 +26,17 @@ def run_weekly_audits(save_self_check) -> Dict:
     for key, module, func in AUDITS:
         try:
             mod = __import__(module, fromlist=[func])
-            r = getattr(mod, func)()
-            result[key] = r
-            if r.get("error_message"):
-                logger.warning(f"[Maintenance] {r['error_message']}")
-            if r.get("node"):  # 실제 실행됨 (카덴스 스킵이 아님) — 성공/실패 무관 기록
-                try:
-                    save_self_check(r)
-                except Exception as e:
-                    logger.warning(f"[Maintenance] {key} 원장 기록 실패 (무시): {e}")
+            r = normalize_result(getattr(mod, func)())
         except Exception as e:
             logger.warning(f"[Maintenance] {key} 감사 실패 (무시): {e}")
+            r = normalize_result({"node": "__static__", "action": key, "success": False,
+                                  "error": str(e) or type(e).__name__, "error_message": str(e) or type(e).__name__})
+        result[key] = r
+        if r.get("error_message"):
+            logger.warning(f"[Maintenance] {r['error_message']}")
+        if r.get("node") and r["audit_status"] != "skipped":
+            try:
+                save_self_check(r)
+            except Exception as e:
+                logger.warning(f"[Maintenance] {key} 원장 기록 실패 (무시): {e}")
     return result

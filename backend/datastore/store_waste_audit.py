@@ -34,7 +34,7 @@
 import json
 import logging
 import sqlite3
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
@@ -44,7 +44,6 @@ _ROOT = Path(__file__).parent.parent.parent
 _STATE_PATH = _ROOT / "data" / ".store_waste_state.json"
 _FLAGS_PATH = _ROOT / "data" / "store_waste_flags.json"
 
-CADENCE_HOURS = 168          # 주 1회 (doc_drift·data_ownership 과 같은 카덴스)
 
 VEC_MIN_CHUNKS = 2           # 청크 1개 = 구조적 최소 할당, 잔재가 아니다
 VEC_MAX_OCCUPANCY = 0.5      # 점유율이 이 아래면 잔재
@@ -138,16 +137,9 @@ def measure() -> Dict:
     return {"flags": flags, "structural": structural, "unchecked": unchecked}
 
 
-def _should_run(force: bool) -> bool:
-    if force:
-        return True
-    try:
-        last = json.loads(_STATE_PATH.read_text(encoding="utf-8")).get("last_run")
-        if last and datetime.fromisoformat(last) > datetime.now() - timedelta(hours=CADENCE_HOURS):
-            return False
-    except Exception:
-        pass
-    return True
+def _should_run(force: bool = False) -> bool:
+    from audit_lifecycle import due
+    return due(_STATE_PATH, force)
 
 
 def run_store_waste_check(force: bool = False) -> Dict:
@@ -169,16 +161,17 @@ def run_store_waste_check(force: bool = False) -> Dict:
         logger.warning(f"[StoreWaste] {error}")
     reclaim = round(sum(f.get("reclaim_mb", 0) for f in flags), 1)
     try:
+        _FLAGS_PATH.write_text(json.dumps({
+            "measured_at": started.isoformat(), "flags": flags,
+            "structural": structural, "unchecked": unchecked, "error": error,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
         _STATE_PATH.write_text(json.dumps({
             "last_run": started.isoformat(), "flag_count": len(flags),
             "reclaim_mb": reclaim, "unchecked": unchecked, "error": error,
         }, ensure_ascii=False), encoding="utf-8")
-        _FLAGS_PATH.write_text(json.dumps({
-            "measured_at": started.isoformat(), "flags": flags,
-            "structural": structural, "unchecked": unchecked,
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
-        logger.warning(f"[StoreWaste] 상태 저장 실패 (무시): {e}")
+        error = f"{error + '; ' if error else ''}상태 저장 실패: {e}"
+        logger.warning(f"[StoreWaste] {error}")
     if flags:
         logger.warning(f"[StoreWaste] 저장소 낭비 {len(flags)}건 / 회수 가능 {reclaim}MB — store_waste_flags.json")
     else:
@@ -186,13 +179,13 @@ def run_store_waste_check(force: bool = False) -> Dict:
     return {
         "node": "__static__",
         "action": "store_waste",
-        "success": not flags and not error,
+        "success": not flags and not error and not unchecked,
         "response_ms": int((datetime.now() - started).total_seconds() * 1000),
-        "data_quality": ("ok" if not flags and not error
+        "data_quality": ("ok" if not flags and not error and not unchecked
                          else "waste" if flags else "audit_incomplete"),
         "error_message": (f"저장소 낭비 {len(flags)}건 / 회수 가능 {reclaim}MB — store_waste_flags.json"
-                          if flags else error),
-        "flags": flags, "structural": structural, "unchecked": unchecked,
+                          if flags else error or (f"{len(unchecked)}개 관측 불가" if unchecked else None)),
+        "flags": flags, "structural": structural, "unchecked": unchecked, "error": error,
         "reclaim_mb": reclaim,
     }
 

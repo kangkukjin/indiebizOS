@@ -16,7 +16,8 @@ from __future__ import annotations
 
 import json
 import re
-from datetime import datetime, timedelta
+from hashlib import sha256
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
@@ -31,20 +32,8 @@ _ROOT = Path(__file__).parent.parent.parent
 _STATE_PATH = _ROOT / "data" / ".ibl_overlap_audit_state.json"
 _FLAGS_PATH = _ROOT / "data" / "ibl_overlap_flags.json"
 
-CADENCE_HOURS = 168        # 주 1회 (description_drift 와 같은 카덴스)
 COS_THRESHOLD = 0.95       # 2026-08-05 감사 기준 — "게시판 목록 보여줘" 쌍이 0.990 이었다
 _MAX_FLAGS = 40            # 보고 상한 (그 이상이면 개별쌍이 아니라 구조 문제)
-
-
-def _should_run(force: bool) -> bool:
-    if force:
-        return True
-    try:
-        state = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
-        last = datetime.fromisoformat(state["last_run"])
-        return datetime.now() - last >= timedelta(hours=CADENCE_HOURS)
-    except Exception:
-        return True
 
 
 def _action_of(code: str) -> str:
@@ -52,9 +41,8 @@ def _action_of(code: str) -> str:
     return f"{m.group(1)}:{m.group(2)}" if m else "?"
 
 
-def _measure_overlaps() -> List[Dict]:
-    """코퍼스 임베딩에서 교차-액션 최근접쌍(cos ≥ COS_THRESHOLD)을 액션쌍 단위로 집계."""
-    import numpy as np
+def _load_corpus():
+    """지문과 검사가 같은 스냅샷을 쓴다. 임베딩 누락은 깨끗한 코퍼스가 아니다."""
     from ibl_usage_db import IBLUsageDB
 
     db = IBLUsageDB()
@@ -62,24 +50,51 @@ def _measure_overlaps() -> List[Dict]:
     if conn is None:
         raise RuntimeError("sqlite-vec 연결 불가 (미설치?)")
     try:
+        conn.execute("BEGIN")
+        total = conn.execute("SELECT COUNT(*) FROM ibl_examples").fetchone()[0]
         rows = conn.execute(
             "SELECT e.id, e.intent, e.ibl_code, v.embedding "
-            "FROM ibl_examples e JOIN ibl_examples_vec v ON v.rowid = e.id"
+            "FROM ibl_examples e JOIN ibl_examples_vec v ON v.rowid = e.id ORDER BY e.id"
         ).fetchall()
     finally:
         conn.close()
+    if len(rows) != total:
+        raise ValueError(f"임베딩 관측 부족: {len(rows)}/{total}행")
+    return rows
+
+
+def _corpus_fingerprint(rows):
+    digest = sha256(Path(__file__).read_bytes())  # 검사 규칙의 변경도 새 입력이다.
+    for row in rows:
+        digest.update(json.dumps(list(row[:3]), ensure_ascii=False).encode())
+        digest.update(sha256(row[3]).digest())
+    return digest.hexdigest()
+
+
+def _measure_overlaps(rows=None) -> List[Dict]:
+    """코퍼스 임베딩에서 교차-액션 최근접쌍(cos ≥ COS_THRESHOLD)을 액션쌍 단위로 집계."""
+    import numpy as np
+    rows = _load_corpus() if rows is None else rows
     if not rows:
         return []
 
     intents = [r[1] or "" for r in rows]
     acts = [_action_of(r[2]) for r in rows]
+    if "?" in acts:
+        raise ValueError("액션을 식별하지 못한 예문이 있어 교차-액션 검사를 완료할 수 없습니다")
     mat = np.vstack([np.frombuffer(r[3], dtype=np.float32) for r in rows])
-    mat = mat / (np.linalg.norm(mat, axis=1, keepdims=True) + 1e-9)
+    norms = np.linalg.norm(mat, axis=1, keepdims=True)
+    if not np.isfinite(mat).all() or (norms <= 0).any():
+        raise ValueError("비유한 또는 빈 임베딩이 있어 검사를 완료할 수 없습니다")
+    mat = mat / norms
     sim = mat @ mat.T
     np.fill_diagonal(sim, -1.0)
+    action_array = np.asarray(acts)
 
     pairs: Dict[tuple, Dict] = {}
     for i in range(len(rows)):
+        # 같은 액션의 더 가까운 이웃이 교차-액션 후보를 가리지 않게 먼저 제외한다.
+        sim[i, action_array == acts[i]] = -1.0
         j = int(sim[i].argmax())
         score = float(sim[i][j])
         if score < COS_THRESHOLD or acts[i] == acts[j] or acts[i] == "?" or acts[j] == "?":
@@ -105,32 +120,45 @@ def run_vocab_overlap_check(force: bool = False) -> Dict:
     run_maintenance_bundle(self-check 사이클)에 합류한다. 6h마다 호출돼도 주 1회만 실제 실행.
     플래그는 data/ibl_overlap_flags.json + self_checks(__ibl_health__:vocab_overlap)에 남는다.
     """
-    if not _should_run(force):
-        return {"skipped": "cadence"}
-
     started = datetime.now()
     flags: List[Dict] = []
     error = None
+    fingerprint = None
+    rows = []
+    from audit_lifecycle import due, next_cadence, read_state
+    previous = read_state(_STATE_PATH)
     try:
-        flags = _measure_overlaps()
+        rows = _load_corpus()
+        if not rows:
+            return {"skipped": "empty_corpus", "checked_examples": 0}
+        fingerprint = _corpus_fingerprint(rows)
+        if not due(_STATE_PATH, force, fingerprint=fingerprint):
+            return {"skipped": "cadence", "fingerprint": fingerprint}
+        flags = _measure_overlaps(rows)
     except Exception as e:
         # ★측정 실패도 실패다 — 못 본 것을 '중복 0'으로 보고하면 이 감사는 눈이 먼 것.
         error = f"측정 실패: {e}"
         logger.warning(f"[VocabOverlap] {error}")
 
     try:
-        _STATE_PATH.write_text(json.dumps({
-            "last_run": started.isoformat(),
-            "flag_count": len(flags),
-            "error": error,
-        }, ensure_ascii=False), encoding="utf-8")
+        cadence = next_cadence(previous, fingerprint=fingerprint,
+                               clean=not flags and not error, complete=bool(rows) and not error)
         _FLAGS_PATH.write_text(json.dumps({
             "measured_at": started.isoformat(),
             "threshold": COS_THRESHOLD,
             "flags": flags,
+            "error": error, "checked_examples": len(rows), "fingerprint": fingerprint,
         }, ensure_ascii=False, indent=2), encoding="utf-8")
+        _STATE_PATH.write_text(json.dumps({
+            "last_run": started.isoformat(),
+            "flag_count": len(flags),
+            "error": error,
+            "fingerprint": fingerprint, "coverage": "complete" if not error and rows else "insufficient",
+            "outcome": "failed" if error else "findings" if flags else "clean", **cadence,
+        }, ensure_ascii=False), encoding="utf-8")
     except Exception as e:
-        logger.warning(f"[VocabOverlap] 상태 저장 실패 (무시): {e}")
+        error = f"{error + '; ' if error else ''}상태 저장 실패: {e}"
+        logger.warning(f"[VocabOverlap] {error}")
 
     if flags:
         head = "; ".join(f"{f['actions'][0]}↔{f['actions'][1]}({f['max_cos']})" for f in flags[:5])
@@ -146,7 +174,8 @@ def run_vocab_overlap_check(force: bool = False) -> Dict:
         "data_quality": ("ok" if not flags and not error
                          else "vocab_overlap" if flags else "audit_incomplete"),
         "error_message": (f"{len(flags)}쌍 개념중복 후보 — ibl_overlap_flags.json" if flags else error),
-        "flags": flags,
+        "flags": flags, "error": error, "checked_examples": len(rows), "fingerprint": fingerprint,
+        "coverage": "complete" if not error and rows else "insufficient",
     }
 
 

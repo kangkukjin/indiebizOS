@@ -163,6 +163,9 @@ def test_display_policy_controls_model_copy_and_keeps_structured_diagnostics(tmp
     policy.write_text("envelope_preview:\n  rows: 2\n  min_chars: 10\n  prose_chars: 80\n  step_chars: 20\n")
     monkeypatch.setattr(ibl_retyping, "_POLICY_PATH", str(policy))
     monkeypatch.setattr(ibl_retyping, "_block_cache", {})
+    # 좁은 기본값의 첫 호출이 같은 정책 블록의 다른 설정 키를 가리지 않아야 한다.
+    from ibl_envelope import PREVIEW_DEFAULT
+    ibl_retyping.load_policy_block("envelope_preview", PREVIEW_DEFAULT)
     original = {"success": False, "results": [{"step": 7, "type": "action", "error": "오류" * 500}],
                 "final_result": {"items": [{"text": "긴 산문" * 50} for _ in range(5)]}}
     out = view.project_result(original)

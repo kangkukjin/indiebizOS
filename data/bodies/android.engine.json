@@ -3,6 +3,7 @@
   "body": "android",
   "engine_modules": [
     "base/ai_candidates",
+    "base/audit_lifecycle",
     "base/desktop_notify",
     "base/device_registry",
     "base/doc_ir",
@@ -305,8 +306,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 294,
-    "engine": 275,
+    "total": 295,
+    "engine": 276,
     "blocklist": 19
   }
 }

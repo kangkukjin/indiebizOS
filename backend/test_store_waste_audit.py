@@ -10,6 +10,16 @@ import boot_paths  # noqa: F401
 import store_waste_audit as SW
 
 
+def test_unchecked_database_is_not_reported_as_success(tmp_path, monkeypatch):
+    monkeypatch.setattr(SW, "_STATE_PATH", tmp_path / "state.json")
+    monkeypatch.setattr(SW, "_FLAGS_PATH", tmp_path / "flags.json")
+    monkeypatch.setattr(SW, "measure", lambda: {"flags": [], "structural": [], "unchecked": ["bad.db"]})
+    result = SW.run_store_waste_check(force=True)
+    assert not result["success"] and result["data_quality"] == "audit_incomplete"
+    assert result["error_message"]
+    assert SW._should_run()
+
+
 def _make_vec_db(path, chunks, live_per_chunk, chunk_size=1024, dim=768):
     """vec0 그림자 테이블의 디스크 모양을 그대로 세운다."""
     path.parent.mkdir(parents=True, exist_ok=True)

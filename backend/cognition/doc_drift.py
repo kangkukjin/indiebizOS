@@ -27,7 +27,7 @@ import json
 import logging
 import re
 import subprocess
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
@@ -37,7 +37,6 @@ _ROOT = Path(__file__).parent.parent.parent
 _STATE_PATH = _ROOT / "data" / ".doc_drift_state.json"
 _FLAGS_PATH = _ROOT / "data" / "doc_drift_flags.json"
 
-CADENCE_HOURS = 168     # 주 1회 (data_ownership·vocab_overlap 과 같은 카덴스)
 _MAX_FLAGS = 80         # 보고 상한 — 그 이상이면 개별 문장이 아니라 구조 문제
 
 # 감사 대상 (README 2종 + system_docs 산문 전부)
@@ -329,16 +328,8 @@ def _check_script_registry(flags: List[Dict], unchecked: List[str]) -> None:
 # ── 진입점 ───────────────────────────────────────────────────────────────────
 
 def _should_run(force: bool = False) -> bool:
-    if force:
-        return True
-    try:
-        st = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
-        last = st.get("last_run")
-        if not last:
-            return True
-        return datetime.now() - datetime.fromisoformat(last) >= timedelta(hours=CADENCE_HOURS)
-    except Exception:
-        return True
+    from audit_lifecycle import due
+    return due(_STATE_PATH, force)
 
 
 def measure() -> Dict:
@@ -385,15 +376,16 @@ def run_doc_drift_check(force: bool = False) -> Dict:
         error = f"측정 실패: {e}"
         logger.warning(f"[DocDrift] {error}")
     try:
+        _FLAGS_PATH.write_text(json.dumps({
+            "measured_at": started.isoformat(), "flags": flags, "unchecked": unchecked, "error": error,
+        }, ensure_ascii=False, indent=2), encoding="utf-8")
         _STATE_PATH.write_text(json.dumps({
             "last_run": started.isoformat(), "flag_count": len(flags),
             "unchecked": unchecked, "error": error,
         }, ensure_ascii=False), encoding="utf-8")
-        _FLAGS_PATH.write_text(json.dumps({
-            "measured_at": started.isoformat(), "flags": flags, "unchecked": unchecked,
-        }, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
-        logger.warning(f"[DocDrift] 상태 저장 실패 (무시): {e}")
+        error = f"{error + '; ' if error else ''}상태 저장 실패: {e}"
+        logger.warning(f"[DocDrift] {error}")
     if flags:
         logger.warning(f"[DocDrift] 문서 드리프트 {len(flags)}건 — doc_drift_flags.json")
     else:
@@ -401,10 +393,10 @@ def run_doc_drift_check(force: bool = False) -> Dict:
     return {
         "node": "__static__",
         "action": "doc_drift",
-        "success": not flags and not error,
+        "success": not flags and not error and not unchecked,
         "response_ms": int((datetime.now() - started).total_seconds() * 1000),
-        "data_quality": ("ok" if not flags and not error
+        "data_quality": ("ok" if not flags and not error and not unchecked
                          else "drift" if flags else "audit_incomplete"),
-        "error_message": (f"문서 드리프트 {len(flags)}건 — doc_drift_flags.json" if flags else error),
-        "flags": flags, "unchecked": unchecked,
+        "error_message": (f"문서 드리프트 {len(flags)}건 — doc_drift_flags.json" if flags else error or (f"{len(unchecked)}개 관측 불가" if unchecked else None)),
+        "flags": flags, "unchecked": unchecked, "error": error,
     }

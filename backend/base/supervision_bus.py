@@ -59,10 +59,12 @@ TOOL_SCHEMA = {
     "name": "supervision",
     "description": "의식·실행 공유 작업대. state는 최초 입력 이후 변경분(offset=사건 cursor). "
                    "evidence id=events는 사건, tool:이름은 도구 스키마, ibl:node:action은 액션 계약. "
+                   "인계된 target_blocks 본문을 우선 사용하고, 누락·변경된 블록만 response로 읽는다. "
                    "response는 id로 특정 블록 하나를 읽는다(id 우선). id 생략 시 offset=블록 순번, limit=문자 예산으로 페이지를 읽는다. "
                    "calculate는 input:{expression,values,unit}의 사칙연산을 코드로 계산한다(unit=minutes면 시·분도 반환). "
                    "execute로 기존 도구를 사용한다. patch는 response의 블록 ID·해시·버전을 "
-                   "지정해 변경 부분만 교체한다. 짧은 수정은 old_string/new_string으로 하며 나머지는 그대로 둔다. "
+                   "지정해 변경 부분만 교체한다. 독립적인 여러 블록은 patches 한 배열, 같은 블록의 여러 수정은 replacements로 묶는다. "
+                   "짧은 수정은 old_string/new_string으로 하며 나머지는 그대로 둔다. "
                    "keep는 보완 완료 신호. 별도 진행 보고는 불필요하다.",
     "input_schema": {"type": "object", "properties": {
         "op": {"type": "string", "enum": ["state", "evidence", "response", "execute", "patch", "keep", "calculate"]},

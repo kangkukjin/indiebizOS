@@ -11,6 +11,103 @@ from test_conscious_supervisor import supervisor, finish  # noqa: F401
 from test_supervision_delivery import prepare as stage
 
 
+@pytest.mark.parametrize("scope,has_artifact,active", [
+    ("local", False, False), ("research", False, False),
+    ("local", True, False), ("local", False, True),
+])
+def test_repair_targets_are_delivered_in_all_execution_paths(supervisor, scope, has_artifact, active):
+    from supervisor_handoff import repair_execution
+    provider = SimpleNamespace(system_prompt="기존 규칙", tools=[], _last_prompt_usage={})
+    supervisor.runner.ai._provider = provider
+    supervisor.store.put_response("첫 원문\n\n둘째 원문")
+    expected = [dict(b) for b in supervisor.store.blocks]
+    supervisor.content_artifacts = [{"path": "existing-artifact"}] if has_artifact else []
+    if active:
+        supervisor.active["running"] = {}
+    decision = {"repair_scope": scope, "repair_block_ids": ["0", "missing", "1", "0", None]}
+    with repair_execution(supervisor, decision, ["history"]) as (ai, history, packet):
+        assert packet["target_blocks"] == {"version": packet["response"]["version"], "blocks": expected}
+        assert not supervisor.store.coverage  # 입력을 구성한 일을 모델 열람으로 기록하지 않는다.
+        assert (ai is supervisor.runner.ai) == (scope == "research" or has_artifact or active)
+
+
+def test_handoff_target_snapshot_cannot_patch_a_newer_response(supervisor):
+    from supervisor_handoff import handoff_state
+    supervisor.store.put_response("옛 본문")
+    packet = handoff_state(supervisor, {"repair_block_ids": ["0"]})
+    block = packet["target_blocks"]["blocks"][0]
+    supervisor.store.patch(1, [{"id": block["id"], "hash": block["hash"], "text": "새 본문"}])
+    assert block["text"] == "옛 본문" and packet["target_blocks"]["version"] == 1
+    with pytest.raises(ValueError, match="버전"):
+        supervisor.store.patch(packet["target_blocks"]["version"], [
+            {"id": block["id"], "hash": block["hash"], "text": "늦은 수정"}])
+    assert supervisor.store.text == "새 본문"
+
+
+def test_bounded_targets_preserve_whole_blocks_and_recover_omissions(supervisor):
+    from supervisor_handoff import handoff_state, bounded_handoff
+    supervisor.config["repair_context_chars"] = 5000
+    supervisor.store.put_response("\n\n".join(f"단락 {i}: " + "원문" * 600 for i in range(8)))
+    state = handoff_state(supervisor, {"repair_block_ids": [b["id"] for b in supervisor.store.blocks]})
+    packet = bounded_handoff(supervisor, state)
+    assert len(json.dumps(packet, ensure_ascii=False)) <= 5000
+    page = packet["target_blocks"]
+    assert 0 < len(page["blocks"]) < len(state["target_blocks"]["blocks"])
+    assert page["blocks"] == state["target_blocks"]["blocks"][:len(page["blocks"])]
+    assert page["version"] == state["response"]["version"]
+    assert page["omitted_blocks"] == len(state["target_blocks"]["blocks"]) - len(page["blocks"])
+    recovered = json.loads(supervisor.store.read_evidence(page["evidence"]["id"], 0, None)["text"])
+    assert recovered == state["target_blocks"]
+    assert not supervisor.store.coverage
+
+
+def test_background_compaction_keeps_small_repair_targets_inline(supervisor):
+    from supervisor_handoff import handoff_state, bounded_handoff
+    supervisor.store.put_response("고칠 본문")
+    state = handoff_state(supervisor, {"repair_block_ids": ["0"], "reason": "근거" * 20000})
+    packet = bounded_handoff(supervisor, state)
+    assert packet["target_blocks"] == state["target_blocks"]
+    assert len(json.dumps(packet, ensure_ascii=False)) <= supervisor.config["repair_context_chars"]
+
+
+@pytest.mark.parametrize("scope", ["local", "research"])
+def test_executor_can_apply_the_prompt_batch_example_without_response_reads(supervisor, monkeypatch, scope):
+    from supervision_store import digest
+    supervisor.runner.ai._provider = SimpleNamespace(system_prompt="실행 규칙", tools=[], _last_prompt_usage={})
+    evaluations, packets = [], []
+
+    def evaluate(prompt, **kwargs):
+        evaluations.append(prompt)
+        if len(evaluations) == 1:
+            return ('NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: ' + scope
+                    + '\nREPAIR_BLOCK_IDS: ["0", "1"]\n두 문단을 수정하라')
+        assert "체류 80분" in prompt and "영업 여부 미확인" in prompt and "수정 문구" in prompt
+        return "ACHIEVED"
+
+    def repair(prompt, **kwargs):
+        packet = json.loads(prompt.split("작업 인계=", 1)[1])
+        packets.append(packet)
+        page = packet["target_blocks"]
+        batch = json.loads(next(line for line in prompt.splitlines() if line.startswith('{"op": "patch"')))
+        batch["version"] = page["version"]
+        assert len(batch["patches"]) == len(page["blocks"]) == 2
+        for patch, block in zip(batch["patches"], page["blocks"]):
+            assert block["hash"] == digest(block["text"])
+            patch.update(id=block["id"], hash=block["hash"])
+        result = json.loads(supervisor.tool(batch))
+        assert result["success"], result
+        assert result["result"]["version"] == page["version"] + 1
+        yield {"type": "final", "content": "PATCH_DONE"}
+
+    supervisor.runner.ai.process_message_stream = repair
+    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
+    result = finish(supervisor, "체류 100분, 영업 확정\n\n기존 문구")[-1]["content"]
+    assert result == "체류 80분, 영업 여부 미확인\n\n수정 문구"
+    assert len(evaluations) == 2 and len(packets) == 1
+    events = [json.loads(line) for line in (supervisor.store.directory / "events.jsonl").read_text().splitlines()]
+    assert [e["operation"] for e in events if e["kind"] == "response.operation"] == ["patch"]
+
+
 def test_real_oneshot_cannot_call_tools_or_resume_executor(supervisor, monkeypatch):
     calls = []
 

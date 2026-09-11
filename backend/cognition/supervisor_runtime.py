@@ -240,6 +240,20 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
 def repair_message(controller, decision):
     return ("평가자의 보완 지시는 함께 제공된 작업 인계의 repair를 읽으세요."
             + "\n기존 산출물을 유지하며 필요한 작업만 수행하세요. 사용자용 응답은 이미 작업대에 저장됐습니다."
-            " supervision(CLI: mcp__indiebizos__supervision) op=response로 원문 블록을 읽고,"
-            " op=patch에 version과 patches[{id,hash,old_string,new_string}]를 넣어 유일한 문자열로 변경된 부분만 교체하세요. 여러 수정을 한 호출에 묶으세요. 같은 블록의 여러 변경은 replacements:[{old_string,new_string},...]로 묶습니다."
+            " 인계의 target_blocks.blocks에는 수정 대상의 본문·id·hash가, target_blocks.version에는 버전이 있습니다."
+            " 전달된 본문을 그대로 사용하고, 누락된 블록이나 버전·해시 충돌로 변경이 확인된 블록만"
+            " supervision(CLI: mcp__indiebizos__supervision) op=response로 id를 지정해 읽으세요."
+            " 독립적인 수정은 같은 버전의 patches 배열 하나에 묶습니다. 같은 블록은 한 번만 넣고"
+            " 겹치지 않는 여러 변경을 replacements에 담아 변경된 부분만 교체하세요."
+            " old_string은 그 블록 원문에서 정확히 한 번 일치해야 합니다."
+            " 여러 patch 호출을 병렬로 보내면 버전이 충돌하므로 한 도구 호출로 제출하세요."
+            " 앞 수정의 결과가 필요할 때만 다음 호출로 나눕니다.\n"
+            "묶음 호출 예시(가상 id·hash·본문이며 실제 인계 값으로 바꿔 사용):\n"
+            + json.dumps({"op": "patch", "version": 1, "patches": [
+                {"id": "A", "hash": "A의 hash", "replacements": [
+                    {"old_string": "체류 100분", "new_string": "체류 80분"},
+                    {"old_string": "영업 확정", "new_string": "영업 여부 미확인"}]},
+                {"id": "B", "hash": "B의 hash", "old_string": "기존 문구", "new_string": "수정 문구"}
+            ]}, ensure_ascii=False)
+            + "\n"
             " 본문 수정이 없으면 op=keep. 장문의 답을 다시 출력하지 말고 마지막엔 PATCH_DONE만 답하세요.\n")

@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: goal_eval_fail_open
+    retired: 2026-09-11
+    reason: 평가 모델 오류·판정 부재를 달성으로 기록하면 검수하지 않은 결과가 성공 경험으로 학습된다.
+    instead: UNKNOWN으로 기록하고 재실행 없이 현재 응답과 검수 미완료 사유를 반환한다. 성공 학습은 보류한다.
+    phrases:
+      - '평가 오류 (통과 처리)'
+      - '평가 스킵=통과'
+      - 'AI 응답 없음 (API 오류 등), 통과 처리'
   - id: verbose_display_switch
     retired: 2026-09-11
     reason: verbose는 모델·REST·MCP 어디에서도 결과 표시를 바꾸지 않는 무효 입력이었다.

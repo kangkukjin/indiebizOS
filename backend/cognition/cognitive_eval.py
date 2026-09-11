@@ -32,7 +32,7 @@ _SEVERITY_RE = re.compile(r"SEVERITY\s*[:：]\s*([123])", re.IGNORECASE)
 
 
 def parse_eval_verdict(text: str) -> tuple:
-    """평가자 응답에서 (achieved: bool, severity: int)를 관용적으로 파싱한다.
+    """평가자 응답에서 (achieved: bool|None, severity: int)를 관용적으로 파싱한다.
 
     프롬프트는 '첫 줄에 ACHIEVED/NOT_ACHIEVED만'을 지시하지만, 평가자가 에이전틱
     프로바이더(claude_code 등 도구 사용)로 돌면 최종 응답이 서사체가 되어 판정이
@@ -41,8 +41,7 @@ def parse_eval_verdict(text: str) -> tuple:
     지시 강화로는 못 막으므로 파서가 흡수한다:
       1차: 판정 토큰으로 시작하는 첫 줄 (장식 관통)
       2차: 본문 어디든 첫 판정 토큰 등장
-      3차: 판정 토큰 부재 → 통과 (기존 '평가 스킵=통과' 편향과 일치 —
-           잘못된 NOT_ACHIEVED 는 전체 재실행 낭비를 부른다)
+      3차: 판정 토큰 부재 → None(검수 미완료). 실패로 단정해 재실행하지도 않는다.
     severity 는 NOT_ACHIEVED 일 때 본문 전체에서 SEVERITY: n 탐색 (미표기=2).
     """
     achieved = None
@@ -53,10 +52,10 @@ def parse_eval_verdict(text: str) -> tuple:
             break
     if achieved is None:
         m = _VERDICT_WORD_RE.search(text)
-        achieved = (m is None) or not m.group(0).upper().startswith("NOT")
+        achieved = None if m is None else not m.group(0).upper().startswith("NOT")
 
     severity = 0
-    if not achieved:
+    if achieved is False:
         m = _SEVERITY_RE.search(text)
         severity = int(m.group(1)) if m else 2  # 미표기 시 중간값
     return achieved, severity
@@ -386,7 +385,7 @@ class CognitiveEvalMixin:
         도구 활용의 적절성까지 평가한다.
 
         Returns:
-            (achieved: bool, feedback: str, severity: int)
+            (achieved: bool|None, feedback: str, severity: int). None은 검수 미완료.
             severity: 0=N/A(achieved), 1=경미, 2=중대, 3=치명
         """
         evaluator_system_prompt = self._load_evaluator_prompt()
@@ -490,19 +489,20 @@ class CognitiveEvalMixin:
             eval_response = system_ai_call(prompt, system_prompt=evaluator_system_prompt,
                                            images=eval_images, role="evaluate")
             if eval_response is None or not eval_response.strip():
-                self._log("[GoalEval] AI 응답 없음 (API 오류 등), 통과 처리")
-                return True, "평가 스킵 (AI 응답 없음)", 0
+                self._log("[GoalEval] AI 응답 없음 — 검수 미완료")
+                return None, "평가 모델의 응답이 없어 검수를 마치지 못했습니다", 0
 
             self._log(f"[GoalEval] 평가 응답: {eval_response[:200]}")
 
             # 관용 파서 — 서두 문장·마크다운 장식 뒤로 밀린 판정도 흡수 (모듈 함수 참조)
             achieved, severity = parse_eval_verdict(eval_response)
-
+            if achieved is None:
+                return None, "평가 응답에 달성 여부 판정이 없습니다: " + eval_response, 0
             return achieved, eval_response, severity
 
         except Exception as e:
             self._log(f"[GoalEval] 평가 오류: {e}")
-            return True, f"평가 오류 (통과 처리): {e}", 0
+            return None, f"평가 오류로 검수를 마치지 못했습니다: {e}", 0
 
     def _run_goal_evaluation_stream(self, user_message: str, criteria: str,
                                     initial_response: str, history: list,
@@ -553,6 +553,23 @@ class CognitiveEvalMixin:
         clear_goal_eval_outcome()
         response = initial_response
 
+        def unreviewed(reason, *, status="UNKNOWN"):
+            set_goal_eval_outcome(False, 0, status=status, reason=reason)
+            # 기존 증거 보관함에 남겨 재실행 없이 다음 요청에서 검수할 수 있다.
+            from model_result_view import evidence_store
+            from supervision_store import digest
+            store = evidence_store()
+            ref = store.evidence(response)
+            (store.directory / "review_status.json").write_text(json.dumps({
+                "status": status, "reason": reason, "original_goal": user_message,
+                "criteria": criteria, "response": {"hash": digest(response), **ref},
+                "learning": "deferred", "validator": "goal_eval",
+            }, ensure_ascii=False), encoding="utf-8")
+            return response + "\n\n[검수 미완료] " + reason
+
+        if max_rounds < 1:
+            return unreviewed("평가 라운드가 배정되지 않았습니다", status="NOT_RUN")
+
         # 도구 호출 trace를 직렬화 — 시퀀스 자체는 어떤 경우에도 보존됨.
         # tool_calls가 우선; 없으면 tool_results(legacy) 사용.
         trace_source: list = tool_calls if tool_calls else (tool_results or [])
@@ -596,7 +613,7 @@ class CognitiveEvalMixin:
         for round_num in range(1, max_rounds + 1):
             if cancel_check and cancel_check():
                 self._log("[GoalEval] 사용자 중단 — 현재 응답 반환")
-                set_goal_eval_outcome(False, 0)
+                set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="사용자 중단")
                 return response
 
             self._log(f"[GoalEval] 라운드 {round_num}/{max_rounds} 평가 시작")
@@ -607,19 +624,19 @@ class CognitiveEvalMixin:
             eval_start = _time.time()
 
             # 생성된 파일 수집 (tool_calls의 file_path를 우선 활용)
-            created_files = self._collect_created_files(response, tool_calls=_trace_dicts)
-            # 시각 산출물(이미지) 수집 — 평가자가 픽셀을 직접 보게 (G 루프 보편 백스톱)
-            visual_artifacts = self._collect_visual_artifacts(response, tool_calls=_trace_dicts)
-
-            # 달성 여부 평가 (criteria + action_ledger(실제 호출 사실) + capability_focus + 시각 산출물)
-            # execution_memory(해마)는 평가에 불필요해 미전달 (2026-06-28).
-            achieved, feedback, severity = self._evaluate_achievement(
-                user_message, criteria, response, created_files,
-                consciousness_output=consciousness_output,
-                tool_results_str=tool_results_str,
-                action_ledger=action_ledger,
-                visual_artifacts=visual_artifacts,
-            )
+            try:
+                created_files = self._collect_created_files(response, tool_calls=_trace_dicts)
+                # 시각 산출물은 픽셀까지 확인한다. 수집 실패도 성공으로 덮지 않는다.
+                visual_artifacts = self._collect_visual_artifacts(response, tool_calls=_trace_dicts)
+                achieved, feedback, severity = self._evaluate_achievement(
+                    user_message, criteria, response, created_files,
+                    consciousness_output=consciousness_output,
+                    tool_results_str=tool_results_str,
+                    action_ledger=action_ledger,
+                    visual_artifacts=visual_artifacts,
+                )
+            except Exception as exc:
+                achieved, feedback, severity = None, f"검수 준비 또는 평가 실패: {exc}", 0
 
             eval_time = _time.time() - eval_start
             severity_label = {0: "-", 1: "LOW", 2: "MED", 3: "HIGH"}.get(severity, "?")
@@ -634,6 +651,7 @@ class CognitiveEvalMixin:
                     "validator": "goal_eval",
                     "round": round_num,
                     "achieved": bool(achieved),
+                    "status": "UNKNOWN" if achieved is None else "ACHIEVED" if achieved else "NOT_ACHIEVED",
                     "severity": int(severity or 0),
                     "elapsed_ms": int(eval_time * 1000),
                     "criteria": (criteria or "")[:2000],
@@ -648,17 +666,19 @@ class CognitiveEvalMixin:
                 pass  # 검증 기록은 관측 — 평가 결과를 바꾸지 않는다
             self._log(
                 f"[GoalEval] 라운드 {round_num}: "
-                f"{'ACHIEVED' if achieved else 'NOT_ACHIEVED'} "
+                f"{'UNKNOWN' if achieved is None else 'ACHIEVED' if achieved else 'NOT_ACHIEVED'} "
                 f"(severity={severity_label}, {eval_time:.1f}초)"
             )
 
+            if achieved is None:
+                return unreviewed(feedback or "판정을 확보하지 못했습니다")
             if achieved:
-                set_goal_eval_outcome(True, 0)
+                set_goal_eval_outcome(True, 0, status="ACHIEVED", reason=feedback)
                 return response
 
             # 마지막 라운드면 그냥 반환 — 미달성으로 끝났음을 증류 게이트에 알린다.
             if round_num >= max_rounds:
-                set_goal_eval_outcome(False, severity)
+                set_goal_eval_outcome(False, severity, status="NOT_ACHIEVED", reason=feedback)
                 self._log(f"[GoalEval] 라운드 소진, 현재 응답 반환 (미달성 → 증류 제외)")
                 return response
 

@@ -14,6 +14,8 @@
 
 import os
 import sys
+import json
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401 — 층 디렉토리 등재
@@ -95,6 +97,62 @@ def test_achieved_한번에_통과하면_초안_그대로():
     # 평가 자체도 50~90초 블로킹이므로 들어가기 전에 상태를 흘려야 한다
     assert any(e.get("type") == "thinking" for e in events), \
         "평가 진입 전 진행 상태가 없다 — 유휴 타이머가 리셋되지 않는다"
+
+
+@pytest.mark.parametrize("reply,achieved,severity", [
+    ("**ACHIEVED**\n확인", True, 0),
+    ("먼저 설명합니다.\n## NOT_ACHIEVED\nSEVERITY: 3", False, 3),
+    ("판정하지 못했습니다", None, 0), ("", None, 0),
+])
+def test_verdict_parser_distinguishes_unknown(reply, achieved, severity):
+    from cognitive_eval import parse_eval_verdict
+    assert parse_eval_verdict(reply) == (achieved, severity)
+
+
+@pytest.mark.parametrize("reply", [None, "", "판정하지 못했습니다", RuntimeError("network failure")])
+def test_model_failure_is_unknown_and_never_causes_retry_or_success_learning(tmp_path, monkeypatch, reply):
+    from thread_context import get_goal_eval_outcome, clear_goal_eval_outcome
+    from supervision_store import TurnStore
+    import model_result_view
+    import consciousness_agent
+    store = TurnStore(tmp_path)
+    monkeypatch.setattr(model_result_view, "evidence_store", lambda: store)
+    def model(*args, **kwargs):
+        if isinstance(reply, Exception):
+            raise reply
+        return reply
+    monkeypatch.setattr(consciousness_agent, "system_ai_call", model)
+    runner = _Runner([])
+    # 실제 평가 입력·파서·루프를 지나고 네트워크 호출만 대체한다.
+    runner._evaluate_achievement = CognitiveEvalMixin._evaluate_achievement.__get__(runner)
+    events, result = _run(runner)
+    assert runner.ai.stream_calls == 0
+    assert result.startswith("초안") and "[검수 미완료]" in result
+    outcome = get_goal_eval_outcome()
+    assert outcome["status"] == "UNKNOWN" and not outcome["achieved"]
+    review = json.loads((tmp_path / "review_status.json").read_text())
+    assert review["status"] == "UNKNOWN" and review["learning"] == "deferred"
+    assert store.read_evidence(review["response"]["id"])["text"] == "초안"
+    # 기존 성공 경험 게이트가 UNKNOWN을 소비해 모델 증류 호출 전에 거절한다.
+    from ibl_usage_rag import distill_experience
+    assert distill_experience("unknown", [{"name": "execute_ibl", "result": "{}"}], 0) is False
+    clear_goal_eval_outcome()
+
+
+def test_evidence_collection_failure_is_unreviewed(tmp_path, monkeypatch):
+    import model_result_view
+    from supervision_store import TurnStore
+    from thread_context import get_goal_eval_outcome, clear_goal_eval_outcome
+    monkeypatch.setattr(model_result_view, "evidence_store", lambda: TurnStore(tmp_path))
+    runner = _Runner([])
+    def broken(*args, **kwargs):
+        raise OSError("artifact unavailable")
+    runner._collect_visual_artifacts = broken
+    _, result = _run(runner)
+    assert "검수 미완료" in result and "artifact unavailable" in result
+    assert get_goal_eval_outcome()["status"] == "UNKNOWN"
+    assert runner.ai.stream_calls == 0
+    clear_goal_eval_outcome()
 
 
 def test_재실행_구간이_침묵하지_않는다():

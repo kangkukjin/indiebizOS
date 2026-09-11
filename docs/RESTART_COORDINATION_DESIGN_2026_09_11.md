@@ -1,6 +1,6 @@
 # 재기동 제어 단일화와 조건부 blue/green 설계
 
-상태: **구현 전 인계 설계**. 기준: 정본 main `777430f9`, 2026-09-11.
+상태: **R0·R1 구현·검증 완료, 결과와 한계는 §9**. 설계 기준: 정본 main `777430f9`, 2026-09-11.
 관련: [단순화 수리 기록](SYSTEM_SIMPLIFICATION_PLAN.md), [실행 원장 조회 설계](EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md).
 
 ## 1. 결정
@@ -11,7 +11,7 @@
 
 `/health`가 초록이면 새 포트로 바꾸는 정도로는 충분하지 않다. 아래 사실 때문에 Fable의 “안전 9겹을 2겹으로 대체”라는 수량 목표는 채택하지 않는다. 기존 장치가 보장하던 기능은 새 소유자가 검증을 마친 것만 은퇴시킨다.
 
-## 2. 현재 코드에서 확인한 사실
+## 2. 구현 전 코드에서 확인한 사실
 
 | 근거 | 현재 동작 | 설계상 의미 |
 |---|---|---|
@@ -155,3 +155,109 @@ MCP의 agent/task/episode ID는 추적용이며 drain 통과 자격으로 신뢰
 R0 관측 구분: `/health`의 기존 list 필드는 호환 유지하고
 `live_turns_observation=known|unknown`을 추가했다. 관측 예외가 난 빈 목록은 리로드/RED
 프로브가 UNKNOWN으로 읽는다. R1의 `/runtime/status`만 실제 교체 준비를 판정한다.
+
+## 9. R1 구현 결과 (2026-09-11, R2·R3 미착수)
+
+정본 main에서 구현했다. `restart_controller`가 한 현역의 접수 차단·종료 대기·재기동·복구를
+소유한다. 두 현역 또는 준비 후보를 동시에 실행하지 않는다.
+구현 커밋: R0 `6c07cdbc`, R1 `b32e563a`(둘 다 정본 main). 최종 정본 제어 상태는
+ACTIVE/ready/known이고 실행 digest가 현재 코드 manifest와 일치함을 확인했다.
+
+### 구현과 기존 기능의 대응
+
+| 기존 기능 | R1 소유자·보존한 계약 |
+|---|---|
+| uvicorn WatchFiles / quiescent reload | `restart_controller`가 개발 코드 manifest 변경을 요청으로 기록. 워커는 `reload=False`. `quiescent_reload`는 진단/요청 호환 입구이며 중단 권한 없음 |
+| keeper 크래시 감시·부팅 유예 | `restart_process`의 PID+출생 신원으로 실제 사망 확인. 느린 HTTP는 UNKNOWN. STARTING 300초, 일반 drain 기본 600초 후 보류·접수 복구. keeper 셸은 같은 제어자의 실행 입구 |
+| 파일 관문 TTL | `runtime_work.WorkRegistry`의 동일 RLock 안에서 접수와 차단. 등록은 제출 전에, 해제는 실제 finally 뒤. 관리 워커는 TTL로 차단을 풀지 않음 |
+| GUI·HTTP·MCP 실행과 위임 | `chat_runs`, HTTP ASGI 수명, IBL/인지 실행, 위임 큐에서 예약. WS 분리·HTTP 타임아웃·취소 요청만으로 완료 처리하지 않음 |
+| 기존 작업의 MCP 재진입 | 살아 있는 실행 그룹에 연결된 임의 capability를 내부 헤더/stdio 환경으로 전달. 모델이 주는 task/episode ID는 접수 자격이 아님. 결과 조회·취소·steer는 drain 중 허용 |
+| 도구·최종 저장 | 실제 Thread/ThreadPool/async task/subprocess 종료와 증류 큐 finally 추적. 별도 서비스 루프는 제외하고 폴러가 작업을 접수하는 경계에서 등록. 도구 프로세스 영수증으로 워커 사망 뒤 발견했던 자손도 회수 |
+| RED 예약 적용·검증·복구 | `red_apply`가 예약 턴 종료를 기다린 뒤 요청. 제어자가 drain/종료 뒤 `restart_helper`에 실제 적용/검증을 맡김. 수행자 receipt 뒤 사망은 재적용하지 않고 검증된 백업만 복원. 이전 코드 digest 재대조 후 재부팅·검증 |
+| Electron·start.sh·전체 창 닫기 | 같은 `api.py start/shutdown --wait` 계약. 의도적 종료를 먼저 내구 기록하고 소유 프로세스만 종료. 종료와 즉시 재실행이 겹치면 이전 제어자 잠금 해제까지 대기 |
+| 기존 설치의 실행 중 리로더 | `runtime_legacy`가 마스터·실행 워커·직계 keeper의 출생 신원 영수증을 기록. 최초 제어자 시작이 이를 채택하고 기존 keeper만 종료한 뒤 같은 drain 절차로 이관 |
+
+`data/restart_control/`는 `data_ownership`에 선언한 로컬 제어 상태다. 상태/요청/결과/
+워커·도구·RED 수행자 영수증을 원자 교체+fsync로 기록하고 커널 파일 잠금으로 제어자와
+워커를 각각 단일화한다. private 디렉터리와 파일 권한을 사용하며 git에서 제외한다.
+제어자 재기동은 기존 generation/receipt/permit을 재채택한다. 동일 request_id를 재전달해도
+완료된 요청의 결과를 재사용하며 다른 코드·정책으로 같은 ID를 바꾸면 거절한다.
+
+`/runtime/status`는 세대·digest·실행 소유와 필수 boot/IBL/lifespan 준비를 별도로 보고한다.
+선택 부팅 실패는 degraded다. 로컬 소켓+비밀 인증을 요구하고 임의 forwarded 헤더를
+거절한다. 원장에 활성 에피소드가 있는데 등록된 실행 소유자가 없으면 UNKNOWN이다.
+관측 실패로 살아 있는 프로세스를 죽이지 않는다. 강제 정책은 명시 요청에만 있으며
+실제 종료 뒤 CUT/중단 소유자와 `effect_unknown`을 기록한다. 크래시 복구는 사용자
+작업을 재전송하지 않는다. `FAILED`에서는 자동 재기동을 반복하지 않고 명시 재시도를 받는다.
+
+운영 명령(저장소 루트의 고정 .venv):
+
+```bash
+.venv/bin/python3 backend/api.py start
+.venv/bin/python3 backend/api.py restart --wait
+.venv/bin/python3 backend/api.py status
+.venv/bin/python3 backend/api.py shutdown --wait
+```
+
+`start`는 제어자 수명 동안 실행된다. 앱과 start.sh가 프로세스 관리를 맡는다.
+재기동 취소는 `restart_protocol.request(..., operation="cancel", payload={"request_id": ...})`로
+drain 단계까지만 가능하다. 개발 파일 요청이 보류되면 같은 digest를 무한 재시도하지
+않는다. 작업 종료 후 명시적 restart 또는 새 코드 변경이 새 요청을 만든다.
+
+### 검증과 남은 조건
+
+장애 주입은 임시 코드/데이터, loopback HTTP, 로컬 효과 파일을 사용했다. 외부 송신을
+사용하지 않았다. 8개 상태의 저장 직전/직후 제어자 사망을 단위 시험과 실제 프로세스
+시험으로 검사했다. 동일 요청 재전달, 접수/drain 경쟁, 느린 현역·관측 불능, 실제 워커
+사망과 고아 도구 회수, 타임아웃 이후 도구 지속, 취소 전/후 실제 종료, PID 재사용,
+포트 점유, 오래된 generation, forwarded 위조, 문법 손상, manifest 변경, RED의
+부팅 실패→원래 코드 복원→재부팅을 검증한다. 강제 중단 원장 기록은 실제 사망 확인 뒤다.
+
+실제 Electron 바이너리와 `backend-process.js`로 숨은 창을 생성·전체 닫기·즉시 재실행을
+두 번 수행했다. 각 회차 약 3.3초, 종료 상태 STOPPED, 재실행 때 generation 변경을 확인했다.
+이 수치는 가벼운 시험 서버의 생명주기이며 운영 모델 콜드 로드나 사용자 체감 SLA가 아니다.
+검증 확정 기록:
+
+- `.venv/bin/python3 -m pytest backend/ -q -o addopts=''`: **3,859 passed, 1 skipped**,
+  248.89초. 기존 필수 회귀(quiescent/preflight/RED turn-cut/worker/chat/remote)를 포함한다.
+  `/tmp/restart-r1-full-backend-verified.log`에 원시 출력이 있다.
+- 실제 프로세스 장애 시험 `test_restart_process.py`: **20개 통과**. 단위 상태 저장
+  장애 주입과 실행 수명/취소/접수 경쟁 시험도 전체 회귀에 포함했다.
+- `scripts/verify_restart_electron.py`: 실제 Electron 전체 창 닫기·즉시 재시작 2회 통과,
+  최종 실행 3.375초/3.347초, 각 STOPPED 확인. `/tmp/restart-electron-verification.log`.
+- `npx tsc -p tsconfig.app.json`, `npm run build`: 통과. 기존 Node/Vite 버전 및 chunk 크기
+  경고는 남으며 빌드 실패는 없었다. `/tmp/restart-frontend-build-final.log`.
+- Android 번들 재생성/검사, `build_ibl_nodes.py --check`, 층·이벤트 루프·동시성·Windows
+  정적 검사·1500줄·은퇴 계약 검사 통과. 신규 git 추적 모듈을 반영하는 문서 마커도
+  빌더로 재생성했다.
+- 마지막 커밋 관문이 RED/repair staging의 안전 대상 목록 불일치를 검출했다. 새 제어
+  모듈을 양쪽에 동기화한 뒤 `red_safety_selftest.py` **30개 통과**, 관련 staging/제어자
+  회귀 **29개가 통과**했다. 관문을 우회하지 않았다.
+
+정본 운영 인계도 수행했다. 기존 keeper·리로더를 출생 신원으로 채택하여 종료하고 새 제어자와
+단일 현역으로 전환했다. 인계 전 `/runtime/status`는 ready/known, 에피소드 0개이나
+실행 root 1개였다. 인계 후 명시적인 일반 재기동을 한 번 측정했다(강제 정책 없음).
+요청 후 CHECKING 0.158초, DRAINING 1.537초, STOPPING 19.870초, STARTING 24.740초,
+새 ACTIVE 27.461초를 관측했다. 최종 결과 `restarted`, generation 변경, ready/known,
+`effect_unknown=false`였다. drain 상태에서 실제 작업이 끝나기까지 약 18.3초를 기다렸다.
+이는 50ms 간격의 제어 상태 관측이며 HTTP 클라이언트의 정확한 접수 불가 시간 측정은 아니다.
+새 세대의 유한 부팅 작업은 별도 finalizer로 계속 관측한다. 원시 계측은 로컬
+`outputs/restart_r1_live_verification.json`이며 제어 비밀은 포함하지 않는다.
+
+R2 후보 부작용 시험과 후보 설정 손상 시험은 후보 자체를 만들지 않았으므로 이번 범위에서
+제외한다. 대신 R1 새 현역의 문법 손상·부팅 실패·RED 복구를 시험했다. 가변 checkout의
+manifest를 여러 전이 경계에서 검사하지만 불변 코드 산출물/이전 버전 보관은 R2다.
+따라서 일반 파일 편집의 부팅 실패는 호환 백업이 없으면 FAILED로 남긴다. RED 백업도
+제3자 편집이 끼었거나 전체 이전 digest와 다르면 자동 복구하지 않는다. 코드 복원은 이미
+발생한 DB/외부 효과의 롤백을 뜻하지 않는다.
+
+짧게 생성되어 추적 전에 부모에서 분리된 임의 외부 프로세스까지 완전한 OS 격리를
+보장하지 않는다. 실제 발견한 도구 신원은 보존하지만 OS job/container 수준 격리는 남은 조건이다.
+Windows·패키징 배포·실제 폰은 이번 맥에서 실행 시험하지 않았다. OS 정적 검사와 Android
+번들 재생성을 수행하며 폰에는 데스크탑 제어 모듈을 넣지 않는다. R2/R3 및 안정 앞단,
+두 세대 DB 동시 쓰기, 후보 메모리 한도는 구현하지 않았다.
+
+제어자 자체가 사망하면 다음 앱 시작 또는 `api.py start`가 영속 상태를 재채택한다.
+OS 자동 시작 서비스는 이번에 추가하지 않았다. 워커 교체는 제어자 프로세스의 이미
+import한 코드를 갱신하지 않으므로, 제어자 코드 자체를 바꾼 뒤에는 전체 앱 종료·재실행이
+필요하다. R1은 이 제한을 별도의 경쟁 keeper로 숨기지 않는다.

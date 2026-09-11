@@ -61,6 +61,19 @@ def test_small_results_are_untouched(tmp_path, task):
     assert "_preview" not in out and len(out.get("items") or _fr(out)["items"]) == 3
 
 
+def test_filtered_paragraphs_reach_model_without_another_read(tmp_path, task):
+    from ibl_result_transport import provider_tool_result
+    rows = [{"type": "paragraph", "text": f"본문 {i}: " + "확인된 내용 " * 6} for i in range(50)]
+    items = json.dumps(rows, ensure_ascii=False)
+    out = _run(f'$본문 = [table:take]{{items: {items}, n: 50}}\n'
+               '$본문 >> [table:filter]{where: "type == paragraph"} >> [table:take]{n: 50}',
+               tmp_path, task)
+    assert out["success"], out
+    assert 4000 < len(json.dumps(_fr(out), ensure_ascii=False)) < 6000
+    delivered = json.loads(provider_tool_result(json.dumps(out, ensure_ascii=False)))
+    assert _fr(delivered)["items"] == rows and "_preview" not in _fr(delivered)
+
+
 def test_single_step_large_result_is_previewed(tmp_path, task):
     out = _run(f'[table:take]{{items: {ITEMS}, n: 60}}', tmp_path, task)
     items = out.get("items")
@@ -87,7 +100,7 @@ def test_policy_is_data_and_core_reads_no_file():
     from ibl_envelope import PREVIEW_DEFAULT
     from ibl_retyping import load_policy_block
     pol = load_policy_block("envelope_preview", PREVIEW_DEFAULT)
-    assert pol["rows"] == 8 and pol["min_chars"] == 3000 and pol["prose_chars"] == 12000
+    assert pol["rows"] == 8 and pol["min_chars"] == 6000 and pol["prose_chars"] == 12000
     src = (pathlib.Path(__file__).parent / "ibl" / "ibl_envelope.py").read_text(encoding="utf-8")
     assert "from boot_paths" not in src and "import yaml" not in src     # 순수 코어는 숙주·정책 파일을 모른다(주석 제외)
 

@@ -286,7 +286,7 @@ def diet_envelope(result: Any, verbose: bool = False, *, _fn_depth: int = 0) -> 
 # `$이름 >> [table:take]/[table:select]/[table:filter]` 로 좁힌다. 앱·원격 표면(호출 통로 "app")은 렌더를 위해
 # 전체를 받는다(이 미리보기는 모델 경계에만). 임계는 data/lifecycle_policy.yaml `envelope_preview:` 데이터.
 
-PREVIEW_DEFAULT = {"rows": 8, "min_chars": 3000, "prose_chars": 12000}
+PREVIEW_DEFAULT = {"rows": 8, "min_chars": 6000, "prose_chars": 12000}
 # ★순수 코어(문법·통화 계약)는 숙주를 몰라야 한다(층 관문 boot_paths ← ibl_envelope 적발) — 정책 파일은 여기서
 #   읽지 않는다. 호출자(execute_ibl 표면)가 lifecycle_policy 의 `envelope_preview:` 를 읽어 policy 인자로 넘긴다.
 

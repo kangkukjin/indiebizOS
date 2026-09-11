@@ -8,6 +8,7 @@
 실행: .venv/bin/python -m pytest -q backend/test_distill_queue.py
 """
 import sqlite3
+import json
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -72,6 +73,59 @@ def test_retry_then_success_keeps_ledger(dq):
     q.enqueue(r, {"user_message": "u", "response": "a"}, ident=IDENT)
     assert q.drain(timeout=5)["drained"]
     assert len(r.calls) == 2 and _rows(dq) == []
+
+
+def test_failed_attempt_cost_survives_job_recreation_and_is_not_counted_twice(dq, tmp_path, monkeypatch):
+    spent, events = [100], []
+    monkeypatch.setattr('providers.base.read_turn_tokens', lambda: spent[0])
+    monkeypatch.setattr('episode_logger.record_trajectory_event', lambda kind, data: events.append((kind, data)))
+
+    class Runner(_Runner):
+        def _after_response(self, *args, **kwargs):
+            spent[0] += 40
+            return super()._after_response(*args, **kwargs)
+
+    payload = {'user_message': 'u', 'response': 'a',
+               'turn_cost': {'events_path': str(tmp_path / 'events.jsonl')}}
+    first = dq._Job(42, Runner(fail_times=1), payload, IDENT, attempts=1)
+    with pytest.raises(RuntimeError):
+        dq.DistillQueue._execute(first)
+    path = tmp_path / 'postprocess.json'
+    failed = json.loads(path.read_text())
+    assert failed['tokens'] == 40 and not failed['succeeded']
+    # 메모리 누계에 기대지 않고 새 Job이 기존 파일을 이어 읽는다.
+    resumed = dq._Job(42, Runner(), payload, IDENT, attempts=2)
+    dq.DistillQueue._execute(resumed)
+    total = json.loads(path.read_text())
+    assert total['tokens'] == 80 and total['attempts'] == 2 and total['succeeded']
+    assert total['elapsed_s'] >= failed['elapsed_s'] and not total['incomplete']
+    assert [(e['attempt'], e['tokens'], e['succeeded']) for _, e in events] == [(1, 40, False), (2, 40, True)]
+    saved = path.read_text()
+    dq.DistillQueue._record_cost(resumed, dq.time.monotonic(), spent[0], True)
+    assert path.read_text() == saved and len(events) == 2
+
+
+@pytest.mark.parametrize('before,attempt', [(None, 1), (100, 2)])
+def test_missing_cost_is_not_reported_as_complete(dq, tmp_path, monkeypatch, before, attempt):
+    monkeypatch.setattr('providers.base.read_turn_tokens', lambda: 200)
+    monkeypatch.setattr('episode_logger.record_trajectory_event', lambda *args: None)
+    payload = {'turn_cost': {'events_path': str(tmp_path / 'events.jsonl')}}
+    job = dq._Job(43, _Runner(), payload, IDENT, attempts=attempt)
+    dq.DistillQueue._record_cost(job, dq.time.monotonic(), before, True)
+    cost = json.loads((tmp_path / 'postprocess.json').read_text())
+    assert cost['incomplete'] and cost['tokens'] is None
+
+
+def test_cost_write_failure_does_not_repeat_successful_memory_write(dq, tmp_path, monkeypatch):
+    def fail(*args):
+        raise OSError('계측 파일 쓰기 실패')
+
+    monkeypatch.setattr(dq.DistillQueue, '_record_cost', fail)
+    q, runner = dq.DistillQueue.get(), _Runner()
+    q.enqueue(runner, {'user_message': 'u', 'response': 'a',
+                      'turn_cost': {'events_path': str(tmp_path / 'events.jsonl')}}, ident=IDENT)
+    assert q.drain(timeout=5)['drained']
+    assert len(runner.calls) == 1 and _rows(dq) == []
 
 
 def test_failed_after_max_attempts(dq):

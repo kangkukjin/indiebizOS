@@ -33,7 +33,15 @@ def _validate_answer(obj, kind):
         from pursuit_ledger import validate
         if not obj or set(obj) - SUMMARY_FIELDS:
             raise ValueError("요약에는 progress/next/open_questions/artifacts만 허용됩니다")
-        validate(obj)
+        # 요약 필드는 독립적이다. 정본 검증기로 위반 필드를 모두 알려 재요청을 한 번에 한다.
+        errors = []
+        for key, value in obj.items():
+            try:
+                validate({key: value})
+            except ValueError as exc:
+                errors.append(str(exc))
+        if errors:
+            raise ValueError("\n".join(errors))
 
 
 def ask_json(prompt, *, kind="object"):
@@ -352,7 +360,12 @@ def run_consciousness(runner, message, history, memory, repair=False):
                    "achievement_criteria": review.get("criteria", ""), "history_summary": ""}
             if action == "amend":
                 out["_amend_count"] = meta.get("_amend_count", 0) + 1
+            # 장기 규정은 먼저 보존한다. 이번 턴 기준으로 과제 framing을 덮어쓰지 않는다.
             accept_output(out)
+            for key in ("imagined_ibl", "expert_choice", "capability_focus"):
+                out.pop(key, None)
+            out["task_framing"] = out["achievement_criteria"]
+            out["approach"] = ""  # 이전 턴의 실행 방법도 현재 지시로 재사용하지 않는다.
             return out
     out = runner._run_consciousness(message, history, memory, **({"repair": True} if repair else {}))
     if b:

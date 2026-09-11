@@ -198,33 +198,62 @@ class DistillQueue:
 
         def _call():
             from providers.base import read_turn_tokens
-            import time
             started = time.monotonic()
             before_tokens = read_turn_tokens()
-            if p.get("pursuit"):
-                from pursuit_bind import distill
-                distill(p["pursuit"])
-            job.runner._after_response(
-                p.get("user_message", ""), p.get("response", ""),
-                tool_calls=p.get("tool_calls"), hippo_score=p.get("hippo_score"),
-                top_code=p.get("top_code"), guides_used=p.get("guides_used"),
-                turn_tokens=p.get("turn_tokens"),
-                **({"turn_cost": p["turn_cost"]} if p.get("turn_cost") else {}),
-            )
-            if p.get("turn_cost"):
-                from pathlib import Path
-                from episode_logger import record_trajectory_event
-                after_tokens = read_turn_tokens()
-                cost = {"elapsed_s": round(time.monotonic() - started, 3),
-                        "tokens": after_tokens - (before_tokens or 0) if after_tokens is not None else None,
-                        "scope": "응답 이후 기억 후처리; 사용자 턴 비용과 별도"}
-                path = Path(p["turn_cost"]["events_path"]).with_name("postprocess.json")
-                path.write_text(json.dumps(cost, ensure_ascii=False), encoding="utf-8")
-                record_trajectory_event("distillation.cost", cost)
+            succeeded = False
+            try:
+                if p.get("pursuit"):
+                    from pursuit_bind import distill
+                    distill(p["pursuit"])
+                job.runner._after_response(
+                    p.get("user_message", ""), p.get("response", ""),
+                    tool_calls=p.get("tool_calls"), hippo_score=p.get("hippo_score"),
+                    top_code=p.get("top_code"), guides_used=p.get("guides_used"),
+                    turn_tokens=p.get("turn_tokens"),
+                    **({"turn_cost": p["turn_cost"]} if p.get("turn_cost") else {}),
+                )
+                succeeded = True
+            finally:
+                if p.get("turn_cost"):
+                    try:
+                        DistillQueue._record_cost(job, started, before_tokens, succeeded)
+                    except Exception as exc:
+                        # 계측 실패 때문에 이미 반영된 기억을 다시 실행하지 않는다.
+                        print(f"[증류큐] #{job.row_id} 비용 기록 실패: {type(exc).__name__}: {exc}")
         if job.ctx is not None:
             job.ctx.run(_call)
         else:
             _call()
+
+    @staticmethod
+    def _record_cost(job, started, before_tokens, succeeded):
+        """기존 비용 파일에 시도별 비용을 누적한다. 단일 큐 워커가 쓰며 재개 때도 이어 읽는다."""
+        from pathlib import Path
+        from providers.base import read_turn_tokens
+        from episode_logger import record_trajectory_event
+        after_tokens = read_turn_tokens()
+        tokens = (after_tokens - before_tokens if before_tokens is not None
+                  and after_tokens is not None and after_tokens >= before_tokens else None)
+        path = Path(job.payload["turn_cost"]["events_path"]).with_name("postprocess.json")
+        prior = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+        if prior.get("queue_id") != job.row_id:
+            prior = {"attempts": 0, "elapsed_s": 0, "tokens": 0}
+        if prior["attempts"] >= job.attempts:
+            return  # 같은 시도의 재집계는 비용을 중복 가산하지 않는다.
+        incomplete = prior.get("incomplete", False) or job.attempts != prior["attempts"] + 1
+        elapsed = round(time.monotonic() - started, 3)
+        scope = "후처리 큐 시도 실행 합; 전경·대기/backoff 제외, 토큰은 캐시 포함"
+        total = {"queue_id": job.row_id, "attempts": job.attempts,
+                 "elapsed_s": round(prior["elapsed_s"] + elapsed, 3),
+                 "tokens": prior["tokens"] + tokens if not incomplete
+                           and prior["tokens"] is not None and tokens is not None else None,
+                 "incomplete": incomplete or tokens is None, "succeeded": succeeded, "scope": scope}
+        temp = path.with_suffix(".tmp")
+        temp.write_text(json.dumps(total, ensure_ascii=False), encoding="utf-8")
+        temp.replace(path)
+        record_trajectory_event("distillation.cost", {
+            "queue_id": job.row_id, "attempt": job.attempts, "elapsed_s": elapsed,
+            "tokens": tokens, "succeeded": succeeded, "scope": "이번 시도; 누계는 postprocess.json"})
 
     # ---------- 원장 ----------
 

@@ -29,8 +29,10 @@ def drive(tmp_path):
 
 
 def test_amend_updates_framing_and_preserves_goal(drive):
-    out, row, calls = drive()
-    assert row['framing'] == out['task_framing'] and out['_amend_count'] == 1
+    amended = '새 범위를 반영해 충분히 길게 다시 작성한 규정 전문입니다'
+    out, row, calls = drive(amended=amended)
+    assert row['framing'] == amended and row['framing_meta']['_amend_count'] == out['_amend_count'] == 1
+    assert out['task_framing'] == '이번 턴 기준'
     assert row['goal_criteria'] == '전체 목표' and out['achievement_criteria'] == '이번 턴 기준'
     assert not calls
 

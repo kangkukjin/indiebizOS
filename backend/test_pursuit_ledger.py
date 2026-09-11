@@ -90,6 +90,35 @@ def test_s2_choose_old_pursuit_after_other_work(bound, row, monkeypatch):
     assert '<pending>' not in memory  # 자기 running 턴을 미처리 과거로 오인하지 않는다
 
 
+@pytest.mark.parametrize('action', ['keep', 'amend'])
+def test_reused_framing_keeps_goal_and_guides_but_uses_current_question(bound, row, monkeypatch, action):
+    meta = {'guide_files': ['stay.md'], 'imagined_ibl': '옛 경로 계산',
+            'expert_choice': '옛 식당 조언', 'capability_focus': {'hint': '옛 경로 검색'}}
+    bound.ledger.apply(row['id'], 'seed', row['version'],
+                       {'framing_meta': meta, 'approach': '옛 경유시간을 합산한다'}, 'seed', 0)
+    amended = '여행 전체의 경유시간과 호텔 객실 선택을 함께 검토한다.'
+    criteria = '현재 예약에 맞는 호텔 동을 추천한다'
+    reviews = []
+
+    def review(prompt, **kwargs):
+        reviews.append(prompt)
+        return {'action': action, 'criteria': criteria, 'amended_framing': amended}
+
+    monkeypatch.setattr(pb, 'ask_json', review)
+    bound.runner._run_consciousness = lambda *a, **k: pytest.fail('불필요한 의식 재호출')
+    bound.message = row['id'] + ' 호텔은 어느 동이 좋을까?'
+    memory, _ = pb.prepare('')
+    out = pb.run_consciousness(bound.runner, bound.message, [], memory)
+    assert len(reviews) == 1 and out['task_framing'] == out['achievement_criteria'] == criteria
+    assert out['guide_files'] == ['stay.md'] and not out['approach']
+    assert not {'imagined_ibl', 'expert_choice', 'capability_focus'} & out.keys()
+    assert bound.output == out
+    saved = bound.ledger.get(row['id'])
+    assert saved['goal_criteria'] == row['goal_criteria']
+    assert saved['framing'] == (amended if action == 'amend' else row['framing'])
+    assert saved['framing_meta']['imagined_ibl'] == meta['imagined_ibl']
+
+
 def test_ambiguous_selection_is_unbound(bound, monkeypatch):
     monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'id': None})
     _, needs_review = pb.prepare('')
@@ -122,6 +151,42 @@ def test_s3_pending_read_catches_up_before_execution(bound, row, monkeypatch):
     memory, _ = pb.prepare('')
     assert '보고서 생성 완료' in memory and bound.row['next'] == 'PDF 검증'
     assert next(t for t in bound.ledger.turns(row['id']) if t['task_id'] == 'a')['state'] == 'applied'
+
+
+@pytest.mark.parametrize('recovers', [True, False])
+def test_pending_summary_reports_all_bad_fields_before_foreground_continues(ledger, row, monkeypatch, recovers):
+    ledger.begin_turn(row['id'], 'previous', '자료를 정리해')
+    ledger.finish_turn(row['id'], 'previous', '정리한 원문', [])
+    calls = []
+    invalid = {'progress': '가' * 3001, 'next': '나' * 601}
+
+    def model(prompt, **kwargs):
+        calls.append(prompt)
+        if len(calls) == 1:
+            return json.dumps(invalid, ensure_ascii=False)
+        if len(calls) == 2:
+            assert 'progress: 3000자' in prompt and 'next: 600자' in prompt
+            assert ledger.get(row['id'])['progress'] == row['progress']
+            return json.dumps({'progress': '정리 완료', 'next': '현재 질문 검토'} if recovers else invalid)
+        return '{"action": "keep", "criteria": "현재 질문에 답하기"}'
+
+    monkeypatch.setattr('consciousness_agent.oneshot_ai_call', model)
+    b = pb.Binding(SimpleNamespace(), ledger, 'agent', 'current', row['id'], [])
+    token = pb._current.set(b)
+    try:
+        if recovers:
+            pb.prepare('')
+            assert len(calls) == 3 and b.row['next'] == '현재 질문 검토'
+        else:
+            with pytest.raises(ValueError, match='진행 갱신'):
+                pb.prepare('')
+            assert len(calls) == 2 and b.row is None
+    finally:
+        pb._current.reset(token)
+    previous = next(t for t in ledger.turns(row['id']) if t['task_id'] == 'previous')
+    assert previous['response'] == '정리한 원문'
+    assert (previous['state'] == 'applied') == recovers
+    assert bool(previous['error']) != recovers
 
 
 def test_pending_failure_stops_execution_and_retains_raw(bound, row, monkeypatch):

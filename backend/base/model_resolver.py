@@ -208,39 +208,140 @@ def _tier_file_map(gear: dict) -> dict:
     return gear.get("tiers", _DEFAULT_GEAR["tiers"])
 
 
+def default_model_config(tier: str) -> dict:
+    provider, model = {
+        "경량": ("google", "gemini-2.5-flash-lite"),
+        "중급": ("google", "gemini-2.5-flash"),
+        "고급": ("anthropic", "claude-sonnet-4-20250514"),
+    }[tier]
+    return {"enabled": True, "provider": provider, "model": model, "apiKey": ""}
+
+
+def read_model_config(path, defaults=None, *, fallback_path=None, strict=False) -> dict:
+    """설정 원문 조회. 부재 때만 옛 파일을 읽으며, 조회는 이전/쓰기 부작용이 없다.
+
+    실행 해소는 손상 시 기본값, 설정 편집 API는 strict로 오류를 알려 원문 덮어쓰기를 막는다.
+    """
+    path = Path(path)
+    if not path.exists() and fallback_path is not None:
+        path = Path(fallback_path)
+    if path.exists():
+        try:
+            config = json.loads(path.read_text(encoding="utf-8"))
+            if not isinstance(config, dict):
+                raise ValueError("모델 설정은 객체여야 합니다")
+            return config
+        except (OSError, ValueError) as exc:
+            if strict:
+                raise
+            logger.warning("[model_resolver] 설정 로드 실패 (%s): %s", path.name, type(exc).__name__)
+    return dict(defaults or {})
+
+
+def describe_model_config(config: dict, *, default_provider="anthropic", default_model="", source="") -> dict:
+    """원문 → 실행 모델. 키 우선순위와 키 불요 제공자 판정을 모든 진입점이 공유한다."""
+    provider = str(config.get("provider") or default_provider).strip()
+    key = ""
+    if provider_needs_api_key(provider):
+        key = env_key_for_provider(provider)
+        if not key:
+            key = str(config.get("apiKey") or config.get("api_key") or "").strip()
+            if key:
+                logger.warning("[model_resolver] %s 레거시 키 사용 — %s로 이전 필요",
+                               source or "설정", env_var_for_provider(provider) or "ENV")
+    result = {"provider": provider, "model": str(config.get("model") or default_model).strip(), "api_key": key}
+    if isinstance(config.get("input_modalities"), list):
+        result["input_modalities"] = config["input_modalities"]
+    return result
+
+
+def stash_model_key(config: dict) -> str:
+    """명시한 키만 .env에 저장한다. 실패하면 설정 파일에서 키를 지우기 전에 중단한다."""
+    provider = config.get("provider") or ""
+    key = str(config.get("apiKey") or config.get("api_key") or "").strip()
+    if key and provider_needs_api_key(provider) and not set_env_key(provider, key):
+        raise OSError(f"{provider} 자격증명을 저장하지 못했습니다")
+    return ""
+
+
+def merge_model_config(config: dict, existing: dict, defaults: dict, *, with_role=False) -> dict:
+    """티어 편집/옛 설정의 명시적 이전. 제공자별 모델 기억은 유지하고 키는 환경에만 쓴다."""
+    provider = config.get("provider") or defaults["provider"]
+    model = config.get("model") or defaults["model"]
+    models = dict(existing.get("providerModels") or {})
+    old_provider, old_model = existing.get("provider"), existing.get("model")
+    if old_provider and old_model:
+        models.setdefault(old_provider, old_model)
+    models.update(config.get("providerModels") or {})
+    if model:
+        models[provider] = model
+    for key_provider, key in (config.get("providerApiKeys") or {}).items():
+        if key_provider != provider and str(key or "").strip():
+            stash_model_key({"provider": key_provider, "apiKey": key})
+    stash_model_key({**config, "provider": provider})
+    # 비밀을 숨긴 UI의 빈 입력으로 저장해도 옛 키가 사라지지 않는다. 새/기존 환경 키가 우선.
+    if old_provider and (existing.get("apiKey") or existing.get("api_key")) and not env_key_for_provider(old_provider):
+        stash_model_key(existing)
+    out = {"enabled": config.get("enabled", True), "provider": provider, "model": model,
+           "apiKey": "", "providerModels": models}
+    if with_role:
+        out["role"] = config.get("role", existing.get("role", ""))
+    return out
+
+
+def write_model_config(path, config: dict) -> None:
+    """키 이관 성공 뒤 설정을 원자적으로 교체한다. 읽기는 원본을 바꾸지 않는다."""
+    import tempfile
+    saved = dict(config)
+    for provider, key in saved.pop("providerApiKeys", {}).items():
+        stash_model_key({"provider": provider, "apiKey": key})
+    saved["apiKey"] = stash_model_key(saved)
+    saved.pop("api_key", None)
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=path.parent)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(saved, stream, ensure_ascii=False, indent=2)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+    clear_provider_cache()
+
+
+def resolve_compat_model(kind: str) -> dict | None:
+    """옛 getter의 기본값/활성 조건을 보존하되 자격증명 해소는 정본 계약을 사용한다."""
+    path, fallback, model = {
+        "lightweight": (LIGHTWEIGHT_AI_CONFIG_PATH, UNCONSCIOUS_AI_CONFIG_PATH, "gemini-2.5-flash-lite"),
+        "midtier": (MIDTIER_AI_CONFIG_PATH, None, "gemini-2.5-flash"),
+        "system": (SYSTEM_AI_CONFIG_PATH, None, ""),
+    }[kind]
+    if not path.exists() and not (fallback and fallback.exists()):
+        return None
+    cfg = read_model_config(path, fallback_path=fallback, strict=True)
+    if kind == "midtier" and not cfg.get("enabled", True):
+        return None
+    d = describe_model_config(cfg, default_provider="google", default_model=model, source=path.name)
+    if not d["api_key"] and provider_needs_api_key(d["provider"]):
+        if kind == "midtier":
+            system = read_model_config(SYSTEM_AI_CONFIG_PATH, strict=True)
+            if str(system.get("provider") or "").strip() == d["provider"]:
+                d["api_key"] = describe_model_config(system, source=SYSTEM_AI_CONFIG_PATH.name)["api_key"]
+        if not d["api_key"]:
+            return None
+    return d
+
+
 def _load_tier_config(tier: str, gear: dict) -> dict:
     """티어(경량/중급/고급) → {provider, model, api_key, tier}.
 
     키는 `.env` 의 프로바이더별 변수에서 온다(티어 json 은 provider/model 만 나른다)."""
     tiers = _tier_file_map(gear)
     fname = tiers.get(tier) or tiers.get("고급", "system_ai_config.json")
-    cfg = {}
-    p = _data_path() / fname
-    if p.exists():
-        try:
-            cfg = json.loads(p.read_text(encoding="utf-8"))
-        except Exception as e:
-            logger.warning(f"[model_resolver] 티어 설정 로드 실패 ({fname}): {e}")
-    provider = (cfg.get("provider") or "anthropic").strip()
-    model = (cfg.get("model") or "").strip()
-
-    # ★키는 `.env` 가 정본 — 프로바이더별 변수에서 읽는다(위 _PROVIDER_ENV 절 참조).
-    # 티어 json 에 남은 apiKey 는 이관 전 레거시일 뿐이라 폴백으로만 본다.
-    # ★옛 폴백("키 없으면 고급 티어 키를 빌려온다")은 제거했다 — 그게 claude_code
-    #   티어의 Gemini 키가 엉뚱한 프로바이더로 실려 나가던 경로다. 프로바이더가 다르면
-    #   키도 다르다. 빌려주지 않는다.
-    api_key = env_key_for_provider(provider)
-    if not api_key and provider.lower() not in _NO_KEY_PROVIDERS:
-        legacy = (cfg.get("apiKey") or cfg.get("api_key") or "").strip()
-        if legacy:
-            logger.warning(
-                f"[model_resolver] {fname} 에 남은 레거시 키를 사용합니다 — "
-                f"{env_var_for_provider(provider) or 'ENV'} 로 옮기세요(.env 가 정본).")
-            api_key = legacy
-    result = {"provider": provider, "model": model, "api_key": api_key, "tier": tier}
-    if isinstance(cfg.get("input_modalities"), list):
-        result["input_modalities"] = cfg["input_modalities"]
-    return result
+    fallback = _data_path() / "unconscious_ai_config.json" if fname == "lightweight_ai_config.json" else None
+    cfg = read_model_config(_data_path() / fname, fallback_path=fallback)
+    return {**describe_model_config(cfg, source=fname), "tier": tier}
 
 
 def resolve(role: str, agent_id: Optional[str] = None) -> dict:
@@ -349,21 +450,17 @@ def api_key_for_provider(provider: str) -> str:
 
     에이전트 yaml 이 provider/model 만 핀하고 키를 생략했을 때 채운다 — 에이전트가 키를
     직접 들고 다니지 않아도 기어 티어에서 상속받게(개별 설정 불요). 없으면 빈 문자열."""
-    if not provider:
+    if not provider or not provider_needs_api_key(provider):
         return ""
-    gear = _load_gear()
-    for fname in _tier_file_map(gear).values():
-        p = _data_path() / fname
-        if not p.exists():
-            continue
-        try:
-            c = json.loads(p.read_text(encoding="utf-8"))
-        except Exception:
-            continue
-        if (c.get("provider") or "").lower() == provider.lower():  # vj-ok: 프로바이더 설정 식별자 대조
-            k = (c.get("apiKey") or c.get("api_key") or "").strip()
-            if k:
-                return k
+    key = env_key_for_provider(provider)
+    if key:
+        return key
+    for fname in _tier_file_map(_load_gear()).values():
+        config = read_model_config(_data_path() / fname)
+        if str(config.get("provider") or "").strip().lower() == provider.strip().lower():  # vj-ok: 제공자 식별자
+            key = describe_model_config(config, source=fname)["api_key"]
+            if key:
+                return key
     return ""
 
 
@@ -517,25 +614,9 @@ def resolve_vision() -> dict:
     if not fname:
         return {"provider": "", "model": "", "api_key": "",
                 "tier": "(modality)", "axis": "(vision)", "source": "modality.image 미설정"}
-    cfg = {}
-    p = _data_path() / fname
-    if p.exists():
-        try:
-            cfg = json.loads(p.read_text(encoding="utf-8"))
-        except Exception as e:
-            logger.warning(f"[model_resolver] 비전 설정 로드 실패 ({fname}): {e}")
-    provider = (cfg.get("provider") or "").strip()
-    model = (cfg.get("model") or "").strip()
-    api_key = env_key_for_provider(provider)
-    if not api_key and provider.lower() not in _NO_KEY_PROVIDERS:
-        legacy = (cfg.get("apiKey") or cfg.get("api_key") or "").strip()
-        if legacy:
-            api_key = legacy
-    d = {"provider": provider, "model": model, "api_key": api_key,
-         "tier": "(modality)", "axis": "(vision)", "source": f"modality.image→{fname}"}
-    if isinstance(cfg.get("input_modalities"), list):
-        d["input_modalities"] = cfg["input_modalities"]
-    return d
+    cfg = read_model_config(_data_path() / fname)
+    return {**describe_model_config(cfg, default_provider="", source=fname),
+            "tier": "(modality)", "axis": "(vision)", "source": f"modality.image→{fname}"}
 
 
 def get_vision_provider(oneshot: bool = True) -> Tuple[Any, dict]:

@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: model_compat_cross_provider_key
+    retired: 2026-09-11
+    reason: 호환 getter가 환경 키를 놓치고 제공자 확인 없이 다른 티어 키를 전달할 수 있었다. 키 저장 실패도 성공 응답으로 숨겨졌다.
+    instead: 모델 설정 읽기·키 해소·명시적 이전은 model_resolver. 환경 키 우선, 같은 제공자만 대체 가능, 저장 실패는 오류로 알려 기존 설정을 보존한다.
+    phrases:
+      - 'API 키 없으면 시스템 AI 키 사용.'
+      - '.env 키 저장 실패(무시)'
   - id: api_registry_query_owner
     retired: 2026-09-11
     reason: 사전 조회 소비자가 실행 엔진을 경유했다. 등록 조회와 리로드는 사전 로더와 같은 소유자로 옮겼다.

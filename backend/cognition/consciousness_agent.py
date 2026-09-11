@@ -646,26 +646,11 @@ def _get_lightweight_provider():
 
     _lightweight_provider_initialized = True
     try:
-        from model_resolver import LIGHTWEIGHT_AI_CONFIG_PATH, UNCONSCIOUS_AI_CONFIG_PATH
-        import json as _json
-
-        # 하위호환: lightweight 없으면 unconscious 폴백
-        config_path = LIGHTWEIGHT_AI_CONFIG_PATH if LIGHTWEIGHT_AI_CONFIG_PATH.exists() else UNCONSCIOUS_AI_CONFIG_PATH
-        if not config_path.exists():
+        from model_resolver import resolve_compat_model
+        config = resolve_compat_model("lightweight")
+        if config is None:
             return None
-
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = _json.load(f)
-
-        api_key = config.get("apiKey", "").strip()
-        provider_name = config.get("provider", "google").strip()
-        model_name = config.get("model", "gemini-2.5-flash-lite").strip()
-
-        # ★provider 를 보고 판정 — 기어 프리셋이 이 축에 claude_code/ollama 를 올리면
-        #   키가 없는 게 정상이다. 여기서 키를 요구하면 경량 축이 조용히 죽는다.
-        from model_resolver import provider_needs_api_key
-        if not api_key and provider_needs_api_key(provider_name):
-            return None
+        provider_name, model_name, api_key = config["provider"], config["model"], config["api_key"]
 
         from providers import create_initialized_provider
         _lightweight_provider = create_initialized_provider(
@@ -708,40 +693,18 @@ def _get_midtier_provider():
 
 
 def _get_midtier_provider_legacy():
-    """옛 경로: midtier_ai_config 직접 로드(리졸버 폴백). 3단계서 제거 예정."""
+    """호환 경로: 옛 중급 활성/기본값 계약을 model_resolver에서 해소한다."""
     global _midtier_provider, _midtier_provider_initialized
     if _midtier_provider_initialized:
         return _midtier_provider
 
     _midtier_provider_initialized = True
     try:
-        from model_resolver import MIDTIER_AI_CONFIG_PATH
-        import json as _json
-
-        if not MIDTIER_AI_CONFIG_PATH.exists():
+        from model_resolver import resolve_compat_model
+        config = resolve_compat_model("midtier")
+        if config is None:
             return None
-
-        with open(MIDTIER_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            config = _json.load(f)
-
-        if not config.get("enabled", True):
-            return None
-
-        provider_name = config.get("provider", "google").strip()
-        model_name = config.get("model", "gemini-2.5-flash").strip()
-
-        # API 키 없으면 시스템 AI 키 사용. 단 claude_code/ollama는 자체 인증 경로(OAuth/로컬)가
-        # 있으므로 api_key 요구를 건너뛴다.
-        api_key = config.get("apiKey", "").strip()
-        from model_resolver import provider_needs_api_key
-        if not api_key and provider_needs_api_key(provider_name):
-            from model_resolver import SYSTEM_AI_CONFIG_PATH
-            if SYSTEM_AI_CONFIG_PATH.exists():
-                with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                    sys_config = _json.load(f)
-                api_key = sys_config.get("apiKey", "").strip()
-            if not api_key:
-                return None
+        provider_name, model_name, api_key = config["provider"], config["model"], config["api_key"]
 
         from providers import create_initialized_provider
         _midtier_provider = create_initialized_provider(
@@ -905,20 +868,11 @@ def _get_system_oneshot_provider():
 
     _system_oneshot_provider_initialized = True
     try:
-        from model_resolver import SYSTEM_AI_CONFIG_PATH
-        import json as _json
-        if not SYSTEM_AI_CONFIG_PATH.exists():
+        from model_resolver import resolve_compat_model
+        config = resolve_compat_model("system")
+        if config is None:
             return None
-        with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            config = _json.load(f)
-
-        provider_name = config.get("provider", "google").strip()
-        model_name = config.get("model", "").strip()
-        api_key = config.get("apiKey", "").strip()
-        # claude_code/ollama 는 자체 인증(OAuth/로컬)이라 api_key 불요 (판정 정본=model_resolver)
-        from model_resolver import provider_needs_api_key
-        if not api_key and provider_needs_api_key(provider_name):
-            return None
+        provider_name, model_name, api_key = config["provider"], config["model"], config["api_key"]
 
         from providers import create_initialized_provider
         _system_oneshot_provider = create_initialized_provider(

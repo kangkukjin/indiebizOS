@@ -9,7 +9,6 @@ api_config.py 에서 분리 (2026-08-17, 1500줄 규칙). 세 티어의 조회·
 ★자격증명: 저장으로 들어온 apiKey 는 티어 json 이 아니라 `.env` 로 간다
 (model_resolver.set_env_key). 보관소는 하나다 — 도구·데이터 키가 이미 전부 거기 산다.
 """
-import json
 import logging
 
 from fastapi import APIRouter, HTTPException
@@ -20,7 +19,8 @@ from model_resolver import (
     LIGHTWEIGHT_AI_CONFIG_PATH,
     MIDTIER_AI_CONFIG_PATH,
     UNCONSCIOUS_AI_CONFIG_PATH,
-    env_key_for_provider,
+    env_key_for_provider, default_model_config, read_model_config,
+    write_model_config, merge_model_config,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,28 +31,11 @@ _MODEL_PROVIDERS = ("google", "anthropic", "openai", "openrouter", "deepseek",
 
 # ============ 시스템 AI 설정 API ============
 
-def _stash_key_to_env(config: dict) -> str:
-    """설정 저장 시 들어온 apiKey 를 `.env` 로 옮기고, json 에는 빈 값을 남긴다.
-
-    ★왜: API 키의 보관소는 `.env` 하나다(도구·데이터 키가 이미 전부 거기 산다).
-    모델 키만 티어 json 에 따로 살면 같은 키가 여러 파일로 복사되고, 티어의 provider 를
-    바꿔도 옛 키가 남아 엉뚱한 벤더로 실려 간다(실측). UI 는 그대로 두고 착지점만 바꾼다.
-    빈 값이면 아무것도 안 한다 — 사용자가 키 칸을 비우고 저장해도 기존 .env 를 지우지
-    않는다(설정 저장이 자격증명을 지우는 건 놀라운 부작용이다)."""
-    key = (config.get("apiKey") or "").strip()
-    if not key:
-        return ""
-    try:
-        from model_resolver import set_env_key
-        set_env_key(config.get("provider", ""), key)
-    except Exception as e:
-        print(f"[api_config] .env 키 저장 실패(무시): {e}")
-    return ""
-
-
 def _with_provider_memory(config: dict) -> dict:
     """비밀은 숨기고, provider별 모델 기억과 키 존재 여부만 UI에 투영한다."""
     out = dict(config)
+    out.pop("api_key", None)
+    out.pop("providerApiKeys", None)
     models = dict(out.get("providerModels") or {})
     provider, model = out.get("provider", ""), out.get("model", "")
     if provider and model:
@@ -62,48 +45,15 @@ def _with_provider_memory(config: dict) -> dict:
     return out
 
 
-def _saved_config(config: dict, existing: dict, defaults: dict, *, with_role=False) -> dict:
-    """활성 설정 + provider별 모델 이력을 병합한다. 키는 종전처럼 .env에만 저장."""
-    provider = config.get("provider") or defaults["provider"]
-    model = config.get("model") or defaults["model"]
-    models = dict(existing.get("providerModels") or {})
-    old_provider, old_model = existing.get("provider"), existing.get("model")
-    if old_provider and old_model:
-        models.setdefault(old_provider, old_model)
-    models.update(config.get("providerModels") or {})
-    if model:
-        models[provider] = model
-    # 한 번의 편집 중 여러 provider 키를 바꾼 경우도 모두 착지시킨다. 응답/JSON에는 안 남긴다.
-    for key_provider, key in (config.get("providerApiKeys") or {}).items():
-        if key_provider != provider and str(key or "").strip():
-            _stash_key_to_env({"provider": key_provider, "apiKey": key})
-    out = {"enabled": config.get("enabled", True), "provider": provider, "model": model,
-           "apiKey": _stash_key_to_env(config), "providerModels": models}
-    if with_role:
-        out["role"] = config.get("role", existing.get("role", ""))
-    return out
-
-
 def get_default_system_ai_config() -> dict:
-    """기본 시스템 AI 설정"""
-    return {
-        "enabled": True,
-        "provider": "anthropic",
-        "model": "claude-sonnet-4-20250514",
-        "apiKey": "",
-        "role": ""
-    }
+    return {**default_model_config("고급"), "role": ""}
 
 
 @router.get("/system-ai")
 async def get_system_ai_config():
     """전역 시스템 AI 설정 조회"""
     try:
-        if SYSTEM_AI_CONFIG_PATH.exists():
-            with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-        else:
-            config = get_default_system_ai_config()
+        config = read_model_config(SYSTEM_AI_CONFIG_PATH, get_default_system_ai_config(), strict=True)
         return {"config": _with_provider_memory(config)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -113,11 +63,9 @@ async def get_system_ai_config():
 async def update_system_ai_config(config: Dict[str, Any]):
     """전역 시스템 AI 설정 저장"""
     try:
-        existing = json.loads(SYSTEM_AI_CONFIG_PATH.read_text(encoding="utf-8")) \
-            if SYSTEM_AI_CONFIG_PATH.exists() else {}
-        config_dict = _saved_config(config, existing, get_default_system_ai_config(), with_role=True)
-        with open(SYSTEM_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
-            json.dump(config_dict, f, ensure_ascii=False, indent=2)
+        existing = read_model_config(SYSTEM_AI_CONFIG_PATH, strict=True)
+        config_dict = merge_model_config(config, existing, get_default_system_ai_config(), with_role=True)
+        write_model_config(SYSTEM_AI_CONFIG_PATH, config_dict)
         # 수동모드 번역용 본격 원샷 프로바이더 캐시 무효화 (모델 변경 즉시 반영)
         try:
             from consciousness_agent import reset_system_oneshot_provider
@@ -132,44 +80,35 @@ async def update_system_ai_config(config: Dict[str, Any]):
 # ============ 경량 AI 설정 API ============
 
 def get_default_lightweight_ai_config() -> dict:
-    """기본 경량 AI 설정"""
-    return {
-        "enabled": True,
-        "provider": "google",
-        "model": "gemini-2.5-flash-lite",
-        "apiKey": ""
-    }
+    return {**default_model_config("경량")}
 
 
 def _load_lightweight_config() -> dict:
     """경량 AI 설정 로드 (하위호환: unconscious_ai_config.json 폴백)"""
-    if LIGHTWEIGHT_AI_CONFIG_PATH.exists():
-        with open(LIGHTWEIGHT_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    elif UNCONSCIOUS_AI_CONFIG_PATH.exists():
-        with open(UNCONSCIOUS_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return get_default_lightweight_ai_config()
+    return read_model_config(LIGHTWEIGHT_AI_CONFIG_PATH, get_default_lightweight_ai_config(),
+                             fallback_path=UNCONSCIOUS_AI_CONFIG_PATH, strict=True)
 
 
 @router.get("/lightweight-ai")
 async def get_lightweight_ai_config():
     """경량 AI 설정 조회"""
     try:
-        config = _load_lightweight_config()
-        return {"config": _with_provider_memory(config)}
+        return {"config": _with_provider_memory(_load_lightweight_config())}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.put("/lightweight-ai")
 async def update_lightweight_ai_config(config: Dict[str, Any]):
-    """경량 AI 설정 저장"""
+    """경량 설정 저장. 옛 파일은 남기고 새 경량 파일을 정본으로 쓴다."""
     try:
-        existing = _load_lightweight_config()
-        config_dict = _saved_config(config, existing, get_default_lightweight_ai_config())
-        with open(LIGHTWEIGHT_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
-            json.dump(config_dict, f, ensure_ascii=False, indent=2)
+        config_dict = merge_model_config(config, _load_lightweight_config(), get_default_lightweight_ai_config())
+        write_model_config(LIGHTWEIGHT_AI_CONFIG_PATH, config_dict)
+        try:
+            from consciousness_agent import reset_lightweight_provider
+            reset_lightweight_provider()
+        except Exception as cache_err:
+            logger.warning("경량 provider 캐시 초기화 실패: %s", cache_err)
         return {"status": "saved", "config": _with_provider_memory(config_dict)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -191,24 +130,14 @@ async def update_unconscious_ai_config_compat(config: Dict[str, Any]):
 # ============ 중급 AI 설정 API ============
 
 def get_default_midtier_ai_config() -> dict:
-    """기본 중급 AI 설정"""
-    return {
-        "enabled": True,
-        "provider": "google",
-        "model": "gemini-2.5-flash",
-        "apiKey": ""
-    }
+    return {**default_model_config("중급")}
 
 
 @router.get("/midtier-ai")
 async def get_midtier_ai_config():
     """중급 AI 설정 조회"""
     try:
-        if MIDTIER_AI_CONFIG_PATH.exists():
-            with open(MIDTIER_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-                config = json.load(f)
-        else:
-            config = get_default_midtier_ai_config()
+        config = read_model_config(MIDTIER_AI_CONFIG_PATH, get_default_midtier_ai_config(), strict=True)
         return {"config": _with_provider_memory(config)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -218,11 +147,9 @@ async def get_midtier_ai_config():
 async def update_midtier_ai_config(config: Dict[str, Any]):
     """중급 AI 설정 저장. 저장 후 provider 캐시 무효화하여 즉시 반영."""
     try:
-        existing = json.loads(MIDTIER_AI_CONFIG_PATH.read_text(encoding="utf-8")) \
-            if MIDTIER_AI_CONFIG_PATH.exists() else {}
-        config_dict = _saved_config(config, existing, get_default_midtier_ai_config())
-        with open(MIDTIER_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
-            json.dump(config_dict, f, ensure_ascii=False, indent=2)
+        existing = read_model_config(MIDTIER_AI_CONFIG_PATH, strict=True)
+        config_dict = merge_model_config(config, existing, get_default_midtier_ai_config())
+        write_model_config(MIDTIER_AI_CONFIG_PATH, config_dict)
 
         # 캐시 무효화 — 다음 호출 시 새 config로 provider 재생성
         try:

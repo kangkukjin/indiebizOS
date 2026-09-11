@@ -13,7 +13,6 @@ IndieBiz OS Core
 api_system_ai.py에서 분리된 코어 함수들로 구성됩니다.
 """
 
-import json
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
@@ -34,28 +33,20 @@ import history_checkpoint  # noqa: F401
 BACKEND_PATH = Path(__file__).parent.parent
 from runtime_utils import get_base_path as _get_base_path
 DATA_PATH = _get_base_path() / "data"
-SYSTEM_AI_CONFIG_PATH = DATA_PATH / "system_ai_config.json"
+from model_resolver import (SYSTEM_AI_CONFIG_PATH, read_model_config, write_model_config,
+                            default_model_config, describe_model_config)
 
 
 # ============ 설정 및 캐시 ============
 
 def load_system_ai_config() -> dict:
     """시스템 AI 설정 로드"""
-    if SYSTEM_AI_CONFIG_PATH.exists():
-        with open(SYSTEM_AI_CONFIG_PATH, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    return {
-        "enabled": True,
-        "provider": "anthropic",
-        "model": "claude-sonnet-4-20250514",
-        "apiKey": ""
-    }
+    return read_model_config(SYSTEM_AI_CONFIG_PATH, default_model_config("고급"), strict=True)
 
 
 def save_system_ai_config(config: dict):
     """시스템 AI 설정 저장"""
-    with open(SYSTEM_AI_CONFIG_PATH, 'w', encoding='utf-8') as f:
-        json.dump(config, f, ensure_ascii=False, indent=2)
+    write_model_config(SYSTEM_AI_CONFIG_PATH, config)
 
 
 # 도구 관련 — system_ai_tools.py에서 가져옴
@@ -87,9 +78,7 @@ def _resolve_system_ai_config() -> dict:
         print(f"[시스템AI] 기어 해소 실패(옛 config 폴백): {e}")
     config = load_system_ai_config()
     return {
-        "provider": config.get("provider", "anthropic"),
-        "model": config.get("model", "claude-sonnet-4-20250514"),
-        "api_key": config.get("apiKey", ""),
+        **describe_model_config(config, default_model=default_model_config("고급")["model"]),
         "_source": "system_ai_config(fallback)",
     }
 
@@ -109,7 +98,8 @@ def get_system_ai_runner():
         # 기어/설정 변경 시 재생성 (해소된 provider/model 변경 감지)
         current_ai = _system_ai_runner.config.get("ai", {})
         if (current_ai.get("provider") != resolved["provider"] or
-            current_ai.get("model") != resolved["model"]):
+            current_ai.get("model") != resolved["model"] or
+            current_ai.get("api_key") != resolved["api_key"]):
             _system_ai_runner = None
         else:
             return _system_ai_runner

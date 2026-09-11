@@ -8,6 +8,7 @@ backend/api_business.py 의 sync 엔드포인트 동형 미러. 실제 머지는
 데이터 엔드포인트라 public 화이트리스트(is_public_remote_path)에 넣지 않는다 →
 외부는 반드시 로그인 후 접근.
 """
+from sync_exchange import InvalidSyncPayload, export_snapshot, merge_snapshot
 from fastapi import APIRouter, HTTPException, Body
 
 router = APIRouter(prefix="/health")
@@ -18,7 +19,7 @@ async def health_sync_export():
     """이 기기의 health_records.db 동기화 스냅샷(5테이블 + 문서 이미지 base64, tombstone 포함)."""
     try:
         from health_sync import export_health_db
-        return {"success": True, "data": export_health_db()}
+        return export_snapshot(export_health_db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -30,11 +31,9 @@ async def health_sync_merge(payload: dict = Body(...)):
     payload = {"data": {table: [rows], "images": {...}}} 또는 직접."""
     try:
         from health_sync import export_health_db, merge_health_db
-        remote = payload.get("data") if isinstance(payload, dict) and "data" in payload else payload
-        if not isinstance(remote, dict):
-            raise HTTPException(status_code=400, detail="sync 페이로드 형식 오류(dict 필요)")
-        stats = merge_health_db(remote)
-        return {"success": True, "stats": stats, "data": export_health_db()}
+        return merge_snapshot(payload, merge_health_db, export_health_db)
+    except InvalidSyncPayload as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:

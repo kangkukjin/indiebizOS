@@ -221,6 +221,7 @@
     "services/phone_notifications",
     "services/report_html",
     "services/scheduler",
+    "services/sync_exchange",
     "services/warehouse_adapters",
     "services/warehouse_feed",
     "surface/api_agents",
@@ -309,8 +310,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 298,
-    "engine": 279,
+    "total": 299,
+    "engine": 280,
     "blocklist": 19
   }
 }

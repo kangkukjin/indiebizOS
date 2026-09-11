@@ -10,6 +10,7 @@ finance_ledger_sync.py (LWW + tombstone + owner_uuid 재해소).
 (localhost=데스크탑·USB 포워드는 통과). 재무 원장 전체를 노출하는 데이터 엔드포인트라
 public 화이트리스트에 넣지 않는다 → 외부는 반드시 로그인 후 접근.
 """
+from sync_exchange import InvalidSyncPayload, export_snapshot, merge_snapshot
 from fastapi import APIRouter, HTTPException, Body
 
 router = APIRouter(prefix="/finance")
@@ -20,7 +21,7 @@ async def finance_sync_export():
     """이 몸의 finance_records.db 동기화 스냅샷(owners·transactions·holdings, tombstone 포함)."""
     try:
         from finance_ledger_sync import export_finance_db
-        return {"success": True, "data": export_finance_db()}
+        return export_snapshot(export_finance_db)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -32,11 +33,9 @@ async def finance_sync_merge(payload: dict = Body(...)):
     payload = {"data": {table: [rows]}} 또는 직접."""
     try:
         from finance_ledger_sync import export_finance_db, merge_finance_db
-        remote = payload.get("data") if isinstance(payload, dict) and "data" in payload else payload
-        if not isinstance(remote, dict):
-            raise HTTPException(status_code=400, detail="sync 페이로드 형식 오류(dict 필요)")
-        stats = merge_finance_db(remote)
-        return {"success": True, "stats": stats, "data": export_finance_db()}
+        return merge_snapshot(payload, merge_finance_db, export_finance_db)
+    except InvalidSyncPayload as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:

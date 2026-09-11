@@ -10,6 +10,7 @@ import logging
 from pathlib import Path
 from datetime import datetime
 
+from sync_exchange import InvalidSyncPayload, export_snapshot, merge_snapshot
 from fastapi import APIRouter, HTTPException, Query, Body
 from pydantic import BaseModel
 from typing import Optional, List
@@ -149,7 +150,7 @@ async def business_sync_export():
     """이 기기의 business.db 동기화 스냅샷(삭제 tombstone 포함)을 내보냄."""
     try:
         from business_sync import export_business_db
-        return {"success": True, "data": export_business_db(business_manager)}
+        return export_snapshot(lambda: export_business_db(business_manager))
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -161,11 +162,11 @@ async def business_sync_merge(payload: dict = Body(...)):
     payload = {"data": {table: [rows]}} 또는 {table: [rows]} 직접."""
     try:
         from business_sync import export_business_db, merge_business_db
-        remote = payload.get("data") if isinstance(payload, dict) and "data" in payload else payload
-        if not isinstance(remote, dict):
-            raise HTTPException(status_code=400, detail="sync 페이로드 형식 오류(dict 필요)")
-        stats = merge_business_db(business_manager, remote)
-        return {"success": True, "stats": stats, "data": export_business_db(business_manager)}
+        return merge_snapshot(
+            payload, lambda remote: merge_business_db(business_manager, remote),
+            lambda: export_business_db(business_manager))
+    except InvalidSyncPayload as e:
+        raise HTTPException(status_code=400, detail=str(e))
     except HTTPException:
         raise
     except Exception as e:

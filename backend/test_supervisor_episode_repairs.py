@@ -43,9 +43,10 @@ def memory_harness(tmp_path, monkeypatch):
     return SimpleNamespace(runner=runner, state=state, updates=updates, prompts=prompts, saved=saved)
 
 
-def test_memory_merges_same_target_once_and_stores_only_novel_content(memory_harness, monkeypatch):
+def test_memory_supplement_keeps_separate_source_without_mixing_old_content(memory_harness, monkeypatch):
     h = memory_harness
-    facts = [{"source_ids": [2], "keywords": "a"}, {"source_ids": [3], "keywords": "b"}]
+    facts = [{"source_ids": [1], "keywords": "a", "retention": "user_fact"},
+             {"source_ids": [2], "keywords": "b", "retention": "user_fact"}]
 
     def model(prompt, **kw):
         h.prompts.append(prompt)
@@ -58,9 +59,11 @@ def test_memory_merges_same_target_once_and_stores_only_novel_content(memory_har
 
     monkeypatch.setattr("consciousness_agent.oneshot_ai_call", model)
     before = h.state["content"]
-    h.runner._distill_deep_memory("작업", "추가 사실 A\n\n추가 사실 B")
-    assert len(h.updates) == 1 and not h.saved
-    assert h.state["content"] == before + "\n[보충] 추가 사실 A\n추가 사실 B"
+    h.runner._distill_deep_memory("추가 사실 A\n\n추가 사실 B", "알겠습니다")
+    assert not h.updates and len(h.saved) == 1
+    assert h.state["content"] == before
+    assert h.saved[0]["content"] == "추가 사실 A\n추가 사실 B"
+    assert json.loads(h.saved[0]["source_ref"])["related_memory_id"] == 22
 
 
 def test_already_contained_memory_needs_no_comparison_model_or_write(memory_harness, monkeypatch):
@@ -69,10 +72,10 @@ def test_already_contained_memory_needs_no_comparison_model_or_write(memory_harn
 
     def model(**kw):
         calls.append(kw)
-        return json.dumps([{"source_ids": [2], "keywords": "k"}])
+        return json.dumps([{"source_ids": [1], "keywords": "k", "retention": "user_fact"}])
 
     monkeypatch.setattr("consciousness_agent.oneshot_ai_call", model)
-    h.runner._distill_deep_memory("작업", "뒤쪽에 이미 기록한 중요한 사실")
+    h.runner._distill_deep_memory("뒤쪽에 이미 기록한 중요한 사실", "알겠습니다")
     assert len(calls) == 1 and not h.updates and not h.saved
 
 

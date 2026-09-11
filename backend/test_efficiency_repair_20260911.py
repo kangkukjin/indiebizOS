@@ -216,7 +216,8 @@ def test_bounded_repair_preserves_owner_provider_and_task_resources(supervisor):
     supervisor.store.put_response("stored")
     with repair_execution(supervisor, {"repair_scope": "local", "instruction": "문장 수정"}, [{"content": "old"}]) as (ai, history, state):
         assert ai is not supervisor.runner.ai and ai._provider is not provider
-        assert ai._provider.tools == ["tool"] and not ai._provider.no_tools
+        assert [t["name"] for t in ai._provider.tools] == ["supervision"] and not ai._provider.no_tools
+        assert provider.tools == ["tool"] and ai._provider.restricted_response_repair
         assert ai._provider.disable_session_persistence and history == []
         assert state["goal"] == supervisor.message and state["response"]["hash"] == digest("stored")
     assert not provider.disable_session_persistence

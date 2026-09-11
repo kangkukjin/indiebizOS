@@ -39,7 +39,7 @@ def _store(tool_input: dict) -> str:
 
 
 def _op_recall(tool_input: dict, context) -> str:
-    """한 가지(node)를 연다 — 문서 전문 + 그 가지의 기억 + 하위 가지. node 없음 = 지도(목차) 전체.
+    """한 가지(node)를 연다 — 문서 소개 + 출처를 가진 기억 한 벌 + 하위 가지. node 없음 = 지도.
     store:"실행" 이면 실행기억(해마 용례) 주제 트리(backend hippo_tree)를 연다."""
     import memory_db, memory_tree
     if _store(tool_input) == "실행":
@@ -137,6 +137,18 @@ def _memory_save(db, tool_input, project_path, agent_id):
     _given = str(tool_input.get("category") or "").strip()
     _used = db.normalize_category(_given)
     _node = str(tool_input.get("node") or "").strip()
+    from datetime import datetime
+    from supervision_bus import current
+    from thread_context import get_current_task_id
+    controller = current()
+    role = "user" if controller and content in controller.message else "assistant"
+    source = {"role": role, "task": get_current_task_id(),
+              "recorded_at": datetime.now().isoformat(), "retention": "tool_record"}
+    if controller:
+        source["utterance"] = controller.message
+        source["evidence"] = [{"role": role, "text": content}]
+    if controller and role != "user":
+        _used = "작업기록"
     memory_id = db.save(
         project_path=project_path,
         agent_id=agent_id,
@@ -144,16 +156,20 @@ def _memory_save(db, tool_input, project_path, agent_id):
         keywords=tool_input.get("keywords", ""),
         category=_used,
         node=_node,
+        source_ref=json.dumps(source, ensure_ascii=False),
     )
 
     out = {
         "memory_id": memory_id,
         "node": _node,
+        "source_role": role,
         "message": f"메모리 저장 완료 (ID: {memory_id}, 가지: {_node or '뿌리'})",
     }
     if not _node:
         out["hint"] = "node 를 비우면 뿌리(미배치)에 놓인다 — 지도(memory_map)의 가지 이름을 붙이면 그 문서에 실린다."
-    if _given and _used != _given:
+    if role != "user":
+        out["provenance_notice"] = f"AI가 작성한 내용은 '{_used}' 분류·assistant 출처로 저장했다. 사용자 확정 발화와 구분한다."
+    if _given and db.normalize_category(_given) != _given:
         _valid = sorted(db.VALID_CATEGORIES)
         out["category_normalized"] = {"given": _given, "used": _used, "valid": _valid}
         out["warning"] = (f"category '{_given}' 은(는) 유효 분류가 아니라 '{_used}' 로 저장했습니다 "
@@ -244,6 +260,12 @@ def _memories_to_records(memories: list) -> list:
         # memory_id (search 결과의 id)"인데 카드 투영이 id 를 접어 사슬이 끊겨 있었다.
         if m.get("id") is not None:
             rec["memory_id"] = m["id"]
+        for key in ("provenance", "preview_truncated", "preview_offset", "content_chars", "node"):
+            if key in m:
+                rec[key] = m[key]
+        if m.get("source") == "conversation":
+            rec["provenance"] = {"status": "conversation", "speaker": m.get("from_agent"),
+                                 "recorded_at": m.get("created_at")}
         records.append(rec)
     return records
 
@@ -296,7 +318,9 @@ def _memory_read(db, tool_input, project_path, agent_id):
     if not memory:
         return json.dumps({"success": False, "error": f"ID {memory_id} 메모리 없음"}, ensure_ascii=False)
 
-    parts = [memory['content']]
+    from memory_provenance import source_summary
+    parts = ["[출처·적용 범위] " + json.dumps(source_summary(memory.get("source_ref")), ensure_ascii=False),
+             memory['content']]
     meta = []
     if memory.get('created_at'):
         meta.append(f"작성: {memory['created_at']}")

@@ -39,7 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
-        "audit_lifecycle", "execution_workers", "runtime_work", "trace_read", "episode_trace_reader",
+        "audit_lifecycle", "execution_workers", "runtime_work", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "episode_logger", "model_call_context", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
@@ -86,7 +86,7 @@ LAYERS = {
         "cognitive_eval", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
         "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "ibl_idiom", "ibl_distill_gates",
-        "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "prompt_builder", "repair_verdict_distill",
+        "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "prompt_builder", "repair_verdict_distill", "turn_scope",
         "pursuit_bind", "pursuit_tools", "pursuit_maintenance", "reframe", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",
         "system_ai_tools", "system_hooks", "system_tools",

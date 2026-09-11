@@ -467,14 +467,23 @@ class ClaudeCodeProvider(CliSubprocessProvider):
             "--permission-mode", "bypassPermissions",
         ]
         supervisor_role = getattr(self, "agent_role", "execution") == "consciousness"
-        if supervisor_role:
+        response_repair = getattr(self, "restricted_response_repair", False)
+        context_update = getattr(self, "context_update_only", False)
+        if context_update and not response_repair:
+            names = [t for t in self.EAGER_TOOLS if t.startswith("mcp__indiebizos__")]
+            cmd += ["--tools", "", "--allowed-tools", ",".join(names),
+                    "--disallowed-tools", ",".join(t for t in self.EAGER_TOOLS if t not in names)]
+        elif response_repair:
+            cmd += ["--tools", "", "--allowed-tools", "mcp__indiebizos__supervision",
+                    "--disallowed-tools", ",".join(t for t in self.EAGER_TOOLS if t != "mcp__indiebizos__supervision")]
+        elif supervisor_role:
             cmd += ["--tools", "Read", "--allowed-tools", "Read,mcp__indiebizos__supervision",
                     "--disallowed-tools", ",".join(t for t in self.EAGER_TOOLS if t != "mcp__indiebizos__supervision")]
         elif tools_mode == "none":
             cmd += ["--tools", ""]                  # 원샷: 도구 스키마 0
         elif tools_mode == "read":
             cmd += ["--tools", "Read"]              # 원샷+이미지: 파일 읽기만
-        if tools_mode or supervisor_role:
+        if tools_mode or supervisor_role or response_repair or context_update:
             # 원샷은 CLAUDE.md·settings 도 안 읽는다(모델·권한은 인자로 명시됨) — cwd 의
             # 프로젝트 지침 ~3.4K 가 "2문장 요약해" 에 따라붙던 것(실측 8.5K→5.1K).
             cmd += ["--setting-sources", ""]

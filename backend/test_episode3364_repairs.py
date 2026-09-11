@@ -149,8 +149,8 @@ def test_deep_memory_keeps_full_utterance_and_supplement_source(monkeypatch, tmp
     import sys
     import cognitive_distill as mod
     import consciousness_agent
-    utterance = "이 작업의 요청 " * 60 + "마지막 조건도 보존"
-    fact = {"source_ids": [2], "content": "이번 영상은 오분", "keywords": "영상", "category": "작업기록", "node": "영상"}
+    utterance = "지난 영상 설명 " * 60 + "마지막 조건도 보존.\n\n이번 영상은 오분으로 정했다."
+    fact = {"source_ids": [2], "content": "이번 영상은 오분", "keywords": "영상", "category": "의사결정", "retention": "user_decision", "node": "영상"}
     replies = iter([json.dumps([fact], ensure_ascii=False),
                     json.dumps({"verdicts": [{"action": "UPDATE", "content": fact["content"]}]})])
     monkeypatch.setattr(consciousness_agent, "oneshot_ai_call", lambda **kw: next(replies))
@@ -158,6 +158,7 @@ def test_deep_memory_keeps_full_utterance_and_supplement_source(monkeypatch, tmp
     saved = []
     fake = SimpleNamespace(_get_db_path=lambda *a: "fixture", search=lambda **kw: [old],
                            read=lambda *a: old, update=lambda *a, **kw: saved.append(kw),
+                           save=lambda *a, **kw: saved.append(kw),
                            body_noun_leak=lambda *a: None)
     monkeypatch.setitem(sys.modules, "memory_db", fake)
     monkeypatch.setitem(sys.modules, "memory_tree", SimpleNamespace(map_text=lambda *a: "영상", norm_node=lambda x: x))
@@ -166,11 +167,11 @@ def test_deep_memory_keeps_full_utterance_and_supplement_source(monkeypatch, tmp
     with tc.actor_context(agent_id="worker", task_id="task_3364"):
         runner._distill_deep_memory(utterance, "이번 영상 완성")
     assert len(saved) == 1
-    assert saved[0]["content"] == "이전 작업\n[보충] 이번 영상 완성"
+    assert saved[0]["content"] == "이번 영상은 오분으로 정했다."
     provenance = json.loads(saved[0]["source_ref"])
-    assert provenance["previous"] == "이전 출처"
-    assert provenance["supplement"]["utterance"] == utterance
-    assert provenance["supplement"]["task"] == "task_3364"
+    assert provenance["related_memory_id"] == 123
+    assert provenance["utterance"] == utterance
+    assert provenance["task"] == "task_3364"
 
 
 def test_source_notes_material_and_length_share_one_input(tmp_path, monkeypatch):

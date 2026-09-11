@@ -13,6 +13,22 @@
 import re
 
 
+def empty_final_items(result):
+    """정상 종료한 빈 조회를 해결 절차의 성공 증거로 학습하지 않는다."""
+    import json
+    for _ in range(8):
+        if isinstance(result, str):
+            try:
+                result = json.loads(result)
+            except (ValueError, TypeError):
+                return False
+        elif isinstance(result, dict) and "final_result" in result:
+            result = result["final_result"]
+        else:
+            break
+    return isinstance(result, dict) and result.get("items") == []
+
+
 # ── 합성 접지 게이트 (2026-08-16) ─────────────────────────────────────────
 # 프롬프트 규칙 3("데이터가 흐를 때만 합성")을 경량 반성기가 어기고, 모델이
 # 매개한 별개 호출들을 >> 로 이어 붙인 실사례가 나왔다(구 용례 3805·3806 —

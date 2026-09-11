@@ -377,7 +377,9 @@ class IBLUsageDB:
             try:
                 from sentence_transformers import SentenceTransformer
                 print(f"[IBL Usage DB] 백그라운드 임베딩 모델 로딩 시작: {_model_dir}")
-                cls._model = SentenceTransformer(_model_dir)
+                from runtime_work import service_scope
+                with service_scope():  # 모델 로더 자체는 소유; tqdm 등 상주 관리 스레드는 서비스
+                    cls._model = SentenceTransformer(_model_dir)
                 print("[IBL Usage DB] 임베딩 모델 로딩 완료")
             except ImportError:
                 logger.warning("[IBL Usage DB] sentence-transformers 미설치 → FTS5 검색만 사용")
@@ -399,7 +401,9 @@ class IBLUsageDB:
             from sentence_transformers import SentenceTransformer
             _model_dir = cls._resolve_model_dir()
             logger.info(f"[IBL Usage DB] 동기 모델 로딩: {_model_dir}")
-            cls._model = SentenceTransformer(_model_dir)
+            from runtime_work import service_scope
+            with service_scope():
+                cls._model = SentenceTransformer(_model_dir)
             cls._model_load_attempted = True
             cls._model_loading = False
             logger.info("[IBL Usage DB] 동기 모델 로딩 완료")

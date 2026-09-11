@@ -1,5 +1,6 @@
 """의식도 실행자와 같은 AIAgent를 쓴다. 재귀 인지 파이프라인 없이 역할 호출만 한다."""
 import json
+import re
 import time
 
 from supervision_bus import TOOL_SCHEMA
@@ -24,6 +25,9 @@ state 재조회는 변경분이다. evidence의 파일 쓰기 성공 영수증�
 실제 액션의 인자·설명은 evidence id='ibl:node:action'으로, 도구 스키마는 'tool:도구이름'으로 읽는다.
 본문을 다시 출력하지 마라. 수정은 patch로 version, patches[{id,hash,old_string,new_string}]으로 유일한 문자열만 교체한다. 전체 블록 교체 text는 필요할 때만 쓴다.
 수정한 부분은 다시 읽어라. 승인한 후보의 정확한 version/hash를 답에 넣어라.
+합계·차이·단위 환산은 calculate(input:{expression,values,unit}) 또는 기존 table 계산으로 확인한다.
+quantity_checks는 코드가 환산한 시·분 표와 명시적 합산 오류다. REWORK의 수정 예문도 같은 산식을
+만족해야 한다. 주행·체류·여유 같은 서로 다른 양을 섞지 말고 가정은 가정으로 유지한다.
 사용자 필수 조건과 당신이 세운 조사 목표를 구분하라. 사용자 원문 인용으로 확인되지 않은
 수량·사례 수 등은 잠정 목표다. 근거가 부족하면 범위를 정직하게 줄이고 미충족을 밝힌다.
 원문의 측정량·대상·기간을 다른 지표로 대체한 것은 한계를 밝혀도 원래 목표 달성이 아니다.
@@ -33,7 +37,8 @@ state 재조회는 변경분이다. evidence의 파일 쓰기 성공 영수증�
 수정 범위가 기존 파일·응답의 국소 변경이면 repair_scope="local", 새 조사면 "research"로 지정한다.
 재검수는 수정한 주장과 그에 의존하는 요약·개수·유일성·출처·인과 표현을 함께 확인한다.
 판정은 JSON 하나: {"status":"APPROVED|REWORK|UNKNOWN|CONTINUE", "reason":"짧은 근거",
-"instruction":"필요할 때만 다음 실행 지시", "evidence_ids":["직접 확인한 근거 ID"],
+"instruction":"필요할 때만 다음 실행 지시", "repair_scope":"local|research", "repair_block_ids":[],
+"evidence_ids":["직접 확인한 근거 ID"],
 "response_version":0,"response_hash":"", "pursuit_status":"APPROVED|UNKNOWN"}.
 APPROVED는 최종 검수에서만, CONTINUE는 중간 점검에서만 쓴다. 근거 부족/오류는 UNKNOWN이다.
 CONTINUE일 때 instruction은 빈 문자열이다. 실제 행동 변경이 필요할 때만 REWORK와 최소 지시를 쓴다.
@@ -55,6 +60,9 @@ FINAL_REVIEW_PROMPT = """최종 검수는 파일 생성 영수증이나 실행�
 고용 증가만으로 AI의 부정적 효과가 없다고 결론내릴 수 없다. 고용률 고정 인구 분해는
 산술적 시나리오이며 인과 기여율이 아니다. 반사실 비교 없는 인과 단정은 보완 대상으로 묶는다. 장기 최저 같은 최상급에는
 같은 시계열의 근거가 필요하다. 본문의 미확인·표본 한계를 요약과 결론에서도 보존하라.
+검색 요약·본문 열람·해당 날짜의 직접 확인을 구분한다. 일반 운영 패턴만으로 특정 날짜의
+운영을 확정하거나 경로 원문에 없는 방향·접근성을 덧붙이면 REWORK다.
+후속 확인·알림을 맡았다는 표현은 실제 등록 영수증과 대조한다. 권고를 예약으로 표현하지 않는다.
 재현 가능한 절차가 기준이면 구체적인 조작·설정·예문 없는 원칙을 팁에서 분리하라.
 자막만 읽었으면 영상 화면을, 로그만 읽었으면 산출물 내용을 직접 확인했다고 서술할 수 없다.
 부분 중단은 성공 수·실패 수·미처리 수와 복구 증거를 확인하라. 근거 부족은 REWORK로 돌려라.
@@ -97,6 +105,16 @@ def parse_decision(raw):
         return {"status": "UNKNOWN", "reason": "의식 판정에 근거가 없습니다"}
     if value["status"] == "CONTINUE":
         value["instruction"] = ""
+    if value["status"] == "REWORK":
+        scope = value.get("repair_scope")
+        if scope is None:
+            legacy = re.match(r'\s*repair_scope\s*=\s*["\'](local|research)["\']', value.get("instruction", ""))
+            value["repair_scope"] = legacy[1] if legacy else "research"
+        elif scope not in {"local", "research"}:
+            return {"status": "UNKNOWN", "reason": "repair_scope는 local 또는 research여야 합니다"}
+        ids = value.get("repair_block_ids", [])
+        if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids):
+            return {"status": "UNKNOWN", "reason": "repair_block_ids는 블록 ID 문자열 배열이어야 합니다"}
     return value
 
 

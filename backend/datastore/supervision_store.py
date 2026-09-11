@@ -206,12 +206,17 @@ class TurnStore:
             return {"version": self.version, "hash": digest(self.text), "chars": len(self.text),
                     "blocks": [{"id": b["id"], "hash": b["hash"], "chars": len(b["text"])} for b in self.blocks]}
 
-    def read_response(self, offset=0, limit=12000, *, mark=False):
+    def read_response(self, offset=0, limit=12000, *, mark=False, block_id=None):
         requested = limit
         limit = min(limit, RESPONSE_PAGE_LIMIT)
         with self.lock:
             page, count = [], 0
-            for b in self.blocks[offset:]:
+            candidates = self.blocks[offset:]
+            if block_id is not None:
+                candidates = [b for b in self.blocks if b["id"] == str(block_id)]
+                if not candidates:
+                    raise ValueError("없는 응답 블록 ID")
+            for b in candidates:
                 encoded_size = len(json.dumps(b, ensure_ascii=False))
                 if page and count + encoded_size > limit:
                     break
@@ -221,7 +226,7 @@ class TurnStore:
                     self.coverage.add((b["id"], b["hash"]))
             return {"version": self.version, "hash": digest(self.text), "blocks": page,
                     "requested": requested, "limit": limit, "clamped": requested != limit,
-                    "next_offset": offset + len(page) if offset + len(page) < len(self.blocks) else None}
+                    "next_offset": (offset + len(page) if block_id is None and offset + len(page) < len(self.blocks) else None)}
 
     def fully_read(self):
         return all((b["id"], b["hash"]) in self.coverage for b in self.blocks)
@@ -240,6 +245,10 @@ class TurnStore:
                 replacement = patch_text(block["text"], p)
                 if not isinstance(replacement, str):
                     raise ValueError("교체 본문은 문자열이어야 합니다")
+                from quantity_checks import arithmetic_issues
+                issues = arithmetic_issues(replacement)
+                if issues:
+                    raise ValueError("시간 합산 오류 — 패치 미적용: " + json.dumps(issues, ensure_ascii=False))
                 if len(json.dumps(replacement, ensure_ascii=False)) > 12000:
                     raise ValueError("한 변경 블록이 너무 큽니다. 기존 블록 여러 개에 나눠 patch 하세요")
                 block.update(text=replacement, hash=digest(replacement))

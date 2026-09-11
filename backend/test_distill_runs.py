@@ -21,7 +21,7 @@ import boot_paths  # noqa: E402,F401
 def _arm(monkeypatch, reply):
     import ibl_usage_db as mod
     import thread_context
-    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: None)
+    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: {"achieved": True, "severity": 0})
     monkeypatch.setattr(thread_context, "clear_goal_eval_outcome", lambda: None)
     monkeypatch.setattr(mod.IBLUsageDB, "hippo_disabled", classmethod(lambda cls: False))
     fake = types.ModuleType("consciousness_agent")

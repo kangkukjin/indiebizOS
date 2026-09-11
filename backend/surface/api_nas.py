@@ -515,7 +515,7 @@ async def check_auth(request: Request):
 # ============ 파일 API ============
 
 @router.get("/files")
-async def list_files(
+def list_files(
     request: Request,
     path: str = Query(default="", description="디렉토리 경로"),
     show_hidden: bool = Query(default=False, description="숨김 파일 표시"),

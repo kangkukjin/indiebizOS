@@ -342,11 +342,14 @@ class CognitivePipelineMixin:
         # 상주 러너의 바탕 모델 교체이므로 턴 사본에 적으면 안 된다. reflex/force_role
         # 스왑보다 먼저라는 순서는 그대로다(복원도 새 기어로 돌아온다).
 
-        # 1. 연상 — 해마+심층+포식+디스크골격 (검색 1회로 점수/코드까지 확보)
+        # 1. 연상 — 실행기억/심층 목차 (사용자 디스크 탐색은 도구 실행에서만)
         # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 필터버블 드리프트 방지.
         execution_memory, hippo_score, top_code = self._build_execution_memory(
             message, action_hint=action_hint, include_related=(force_role != "forage")
         )
+        if cancel_check and cancel_check():
+            yield {"type": "error", "content": "작업이 취소되었습니다."}
+            return
 
         # 2. 분류 — 명시 태그(#think/#execute) → Reflex(해마 고확신) → 무의식 분류
         if force_role:
@@ -371,11 +374,17 @@ class CognitivePipelineMixin:
         execution_memory, _p_review = _p_prepare(execution_memory)
         if _p_review and request_type != "REPAIR":
             request_type, reflex_hint = "THINK", None
+        context_update = request_type == "CONTEXT_UPDATE"
+        if context_update:
+            from turn_scope import CONTEXT_UPDATE
+            execution_memory += "\n" + CONTEXT_UPDATE
+            request_type = "EXECUTE"
 
         # 3. 의식(THINK) / reflex·force_role 모델 스왑
         from episode_logger import record_trajectory_event
         record_trajectory_event("cognition.route", {
             "request_type": request_type, "reflex": bool(reflex_hint), "force_role": force_role,
+            "intent": "context_update" if context_update else "task",
         })
         # 스왑 헬퍼는 runner-제네릭(시스템AI 전용 아님) — system_ai_core에 기거할 뿐.
         from system_ai_core import _switch_to_midtier, _switch_to_role, _restore_provider
@@ -700,6 +709,7 @@ class CognitivePipelineMixin:
             from supervision_bus import current as _supervisor_current
             _supervisor = _supervisor_current()
             if _supervisor:
+                _supervisor.request_intent = "context_update" if context_update else "task"
                 _supervisor.configure(consciousness_output, repair=(_repair_granted_task is not None))
             for event in self.ai.process_message_stream(
                 message_content=augmented_message,

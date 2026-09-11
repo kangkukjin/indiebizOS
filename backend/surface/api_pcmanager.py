@@ -76,13 +76,13 @@ def get_drives() -> list:
 
 
 @router.get("/drives")
-async def list_drives():
+def list_drives():
     """드라이브/볼륨 목록"""
     return {"drives": get_drives()}
 
 
 @router.get("/list")
-async def list_directory(path: Optional[str] = Query(None)):
+def list_directory(path: Optional[str] = Query(None)):
     """디렉토리 내용 목록"""
 
     # 경로가 없으면 홈 디렉토리
@@ -140,7 +140,7 @@ async def list_directory(path: Optional[str] = Query(None)):
 
 
 @router.get("/info")
-async def get_path_info(path: str = Query(...)):
+def get_path_info(path: str = Query(...)):
     """경로 정보 조회"""
     target_path = Path(path)
 

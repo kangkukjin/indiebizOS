@@ -344,6 +344,8 @@ class CognitiveConsciousnessMixin:
                 return "SESSION_RESET"
             if "REPAIR" in result:
                 return "REPAIR"
+            if result == "CONTEXT_UPDATE":
+                return "CONTEXT_UPDATE"
             return "EXECUTE" if "EXECUTE" in result else "THINK"
 
         except Exception as e:

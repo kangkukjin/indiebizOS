@@ -105,9 +105,10 @@ def rows_of(db_path: str, node: str) -> List[Dict[str, Any]]:
     conn = _conn(db_path)
     try:
         rows = conn.execute(
-            "SELECT id, category, keywords, content, created_at, used_at, node FROM memories "
+            "SELECT id, category, keywords, content, created_at, used_at, node, source_ref FROM memories "
             "WHERE COALESCE(node,'') = ? ORDER BY created_at, id", (norm_node(node),)).fetchall()
-        return [dict(r) for r in rows]
+        from memory_provenance import source_summary
+        return [{**dict(r), "provenance": source_summary(r["source_ref"])} for r in rows]
     finally:
         conn.close()
 
@@ -384,7 +385,7 @@ def map_text(db_path: str) -> str:
 
 
 def recall(db_path: str, node: str) -> Dict[str, Any]:
-    """한 가지를 연다: 문서 전문 + 그 노드의 행 + 하위 노드 목록. 문서가 고쳐졌으면 먼저 색인에 반영."""
+    """한 가지의 소개·자유 산문 + 출처가 붙은 기억 본문 한 벌 + 하위 노드. 문서 편집은 먼저 색인에 반영."""
     node = norm_node(node)
     sync_node(db_path, node)
     path = doc_path(db_path, node)
@@ -395,8 +396,13 @@ def recall(db_path: str, node: str) -> Dict[str, Any]:
         refresh_node(db_path, node)
     rows = rows_of(db_path, node)
     counts = node_counts(db_path)
-    return {"success": True, "node": node, "doc": path, "text": open(path, encoding="utf-8").read(),
-            "items": rows, "count": len(rows),
+    text = open(path, encoding="utf-8").read()
+    head, _, tail = _split_section(text)
+    # 각 기억 원문은 items 한 벌로. 문서의 자유 산문은 보존하고 파생 갱신 장부는 경로로 읽는다.
+    return {"success": True, "node": node, "doc": path, "text": (head + tail.split(LEDGER, 1)[0]).strip(),
+            "items": [{k: v for k, v in row.items() if k != "source_ref"} for row in rows], "count": len(rows),
+            "scope": "이 가지의 기록만 조회했다. 다른 가지·미리보기의 빈 결과는 전체 기록 부재가 아니다.",
+            "provenance_policy": "사용자 발화·AI 작업기록·출처 미확인을 구분하고 대상·사건·시점을 대조한다.",
             "children": [{"node": c, "count": counts.get(c, 0), "gist": gist_of(doc_path(db_path, c))} for c in children_of(db_path, node)],
             "parent": parent_of(node)}
 

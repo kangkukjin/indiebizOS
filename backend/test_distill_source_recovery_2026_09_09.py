@@ -117,7 +117,7 @@ def _arm(monkeypatch, tmp_path, replies):
             return 1
 
     monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", DB)
-    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: None)
+    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: {"achieved": True, "severity": 0})
     monkeypatch.setattr(thread_context, "clear_goal_eval_outcome", lambda: None)
     monkeypatch.setattr(hippo_tree, "map_text", lambda: "- 시험 (3)")
     monkeypatch.setattr(hippo_tree, "settle_topic", lambda topic: (topic, ""))

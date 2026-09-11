@@ -4,7 +4,7 @@ IndieBiz OS Core
 
 agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 사용자 명령이 오면
 가장 먼저 도는 연상 경로 — 실행기억(해마)+관련기억(심층 메모리)+포식기억(냄새지도)+
-디스크 골격을 합성한다. 회상(읽기) 전용 — 증류(쓰기)는 cognitive_distill.py 가 짝.
+목차를 합성한다. 사용자 디스크 탐색은 명시적 도구 실행에서만 시작한다.
 _FORAGE_CUES(포식 의도 게이트)는 여기 정의하고 증류 쪽도 self 로 공유한다.
 """
 
@@ -12,7 +12,15 @@ from typing import Optional
 
 
 class CognitiveRecallMixin:
-    """0단계 연상 — 해마·심층·포식·디스크골격 회상 메서드 모음."""
+    """0단계 연상 — 실행기억과 심층 기억의 목차 회상."""
+
+    @staticmethod
+    def _recall_step(name, call):
+        from contextlib import nullcontext
+        from supervision_bus import current
+        controller = current()
+        with controller.preparation(name) if controller else nullcontext():
+            return call()
 
     def _build_execution_memory(self, user_message: str, action_hint: Optional[str] = None,
                                 include_related: bool = True) -> tuple:
@@ -49,20 +57,21 @@ class CognitiveRecallMixin:
                 if allowed_nodes:
                     from ibl_access import resolve_allowed_nodes
                     allowed_set = resolve_allowed_nodes(allowed_nodes)
-                exec_xml, top_score, top_code = build_execution_memory(user_message, allowed_set)
+                exec_xml, top_score, top_code = self._recall_step(
+                    "execution_memory", lambda: build_execution_memory(user_message, allowed_set))
 
             # 심층 기억의 지도(목차) → 연상기억 합성 (내용 자동 주입 아님 — 2026-09-03).
             #   ★include_related=False(포식 등): 무상태 검색을 개인 사실(심층 메모리)이 하이재킹하지
             #   않도록 관련기억 주입을 끈다 — 포식은 이미 심층 메모리에 *쓰지 않으며*(무상태), 정당한
             #   개인화는 포식기억(owner_model 웹 관습)이 담당한다. 넓은 질의가 최근 관심사로 좁혀지는
             #   필터버블 드리프트 방지. (실행기억[해마]·포식기억·디스크골격은 그대로 유지.)
-            related = self._memory_map_scent() if include_related else ""
+            related = self._recall_step("memory_map", self._memory_map_scent) if include_related else ""
             result = exec_xml
             if related:
                 result = (result + "\n" + related) if result else related
 
             # 실행기억 지도(주제 가지 목차, hippo_tree) — 해마 Top-5 는 그대로 두고 축 하나를 얹는다(2026-09-03).
-            exec_map = self._execution_map_scent()
+            exec_map = self._recall_step("execution_map", self._execution_map_scent)
             if exec_map:
                 result = (result + "\n" + exec_map) if result else exec_map
 
@@ -75,7 +84,7 @@ class CognitiveRecallMixin:
             #   손발 별칭(p0 등)=사용자가 지은 런타임 상태라 어휘·해마가 원리적으로 모른다
             #   (ep840: "p0 시스템 상태"에 회상이 sense:self_check 로 오도 → others:agents/
             #   self:limb 탐색 우회 98초). owner 냄새와 같은 상시-노출 원리, 없으면 0토큰.
-            limbs_scent = self._limb_presence_scent()
+            limbs_scent = self._recall_step("limb_presence", self._limb_presence_scent)
             if limbs_scent:
                 result = (result + "\n" + limbs_scent) if result else limbs_scent
 
@@ -83,7 +92,7 @@ class CognitiveRecallMixin:
             #   backend 수리는 자기 턴이 죽은 뒤 워치독이 판정한다 → 그 판정을 말할 입이
             #   없어 성공과 멎음이 구별되지 않았다. 미보고 판정을 주워 다음 턴이 닫는다.
             #   파일 읽기뿐(LLM 0)·없으면 빈 문자열(0토큰)·한 번만 말한다(보고 표식).
-            repair = self._pending_repair_scent()
+            repair = self._recall_step("pending_repair", self._pending_repair_scent)
             if repair:
                 result = (result + "\n" + repair) if result else repair
 
@@ -92,17 +101,13 @@ class CognitiveRecallMixin:
             #   모르고 재제안 — 사용자 메시지엔 '스코핑'이 없었다) 키워드 게이트만으로는 못
             #   잡는다 → 활성 판정 한 줄 다이제스트는 owner 냄새처럼 상시 노출(수백 자),
             #   사유·출처 상세만 질의 게이트. 원장이 비면 0토큰.
-            decisions = self._decision_scent(user_message)
+            decisions = self._recall_step("decisions", lambda: self._decision_scent(user_message))
             if decisions:
                 result = (result + "\n" + decisions) if result else decisions
 
-            # 거친 디스크 골격(어디에) — ★포식 의도일 때만(상시-on 폐기, 웹랜드마크와 같은 게이트).
-            #   집중 관심 폴더 아래 거친 디렉토리 트리(맥/윈도우/리눅스 각자 자기 루트). ~5천 자라
-            #   파일·디스크 질의에만 값을 하고 그 외엔 무관 → _FORAGE_CUES 없으면 빈 결과(메서드 내 게이트).
-            #   깊은 상세·큐레이션은 위 forager 냄새가 관련시 페이징. focus_map.py(헌법1조).
-            skeleton = self._build_disk_skeleton(user_message)
-            if skeleton:
-                result = (result + "\n" + skeleton) if result else skeleton
+            # ep3510: 일반 '어디'가 외장 볼륨 os.walk를 켜 모델 호출 전 멎었다.
+            # 회상에는 사전/기억 목차만 둔다. 실제 디스크 탐색은 선택된 도구의
+            # 실행·취소·관측 경계에서 수행하며 선택적 선행/백그라운드 walk를 만들지 않는다.
 
             # ★웹 랜드마크(참고지도)는 여기서 bespoke 주입하던 것을 폐기 —
             #   data/guides/web_search.md(웹 검색 가이드) 안으로 접었다. 일반 에이전트는
@@ -123,8 +128,6 @@ class CognitiveRecallMixin:
                     parts.append("손발")
                 if "decision_ledger" in result:
                     parts.append("결정원장")
-                if "disk_skeleton" in result:
-                    parts.append("디스크골격")
                 print(f"[연상] {'+'.join(parts)}: \"{user_message[:40]}\"")
             else:
                 print(f"[연상] 빈 결과: \"{user_message[:40]}\"")
@@ -276,40 +279,4 @@ class CognitiveRecallMixin:
             return xml
         except Exception as e:
             print(f"[연상:기억지도] 실패 (무시): {e}")
-            return ""
-
-    def _build_disk_skeleton(self, user_message: str = "") -> str:
-        """거친 디스크 골격 회상 — 데스크탑(맥/윈도우/리눅스), *포식 의도일 때만*(웹랜드마크와 같은 게이트).
-
-        집중 관심 폴더 아래 거친 디렉토리 트리("어디에"). focus 루트는 focus_map 이 몸별 해소 —
-        focus 폴더(어휘)는 몸 독립, 생성기 바인딩만 몸별(헌법1조). 캐시(TTL)라 매 메시지 walk 없음.
-        깊은 상세·큐레이션은 forager 냄새 몫. 실패는 무시(파이프라인 불변).
-
-        ★게이트(상시-on 폐기): 디스크 골격은 ~5천 자인데 *파일·디스크 질의*에만 값을 한다 — 아키텍처
-        ·대화·버그 질의엔 무관 폴더 목록을 매번 깔던 낭비(측정). _FORAGE_CUES(찾기·파일·폴더·디스크…)
-        없으면 빈 결과. 웹랜드마크가 "웹 의도일 때만"인 것과 같은 의도 게이트.
-
-        ★폰 제외(의도): 안드로이드 스코프드 스토리지라 os.walk 가 공유 스토리지에 안 먹히고
-        (파일 접근은 MediaStore 경유), 폰에선 거친 디스크 지도 실익이 작다(사용자 결정). 빈 결과로
-        '지원하는 척' 안 한다(폰 게이트).
-        """
-        # 포식 의도 게이트 — 비포식(아키텍처·대화·버그) 질의엔 골격을 넣지 않는다.
-        if not any(cue in (user_message or "").lower() for cue in self._FORAGE_CUES):  # vj-ok: 내부 큐 탐지 — 코드 소유 어휘
-            return ""
-        try:
-            import sys, os
-            bk = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            if bk not in sys.path:
-                sys.path.insert(0, bk)
-            try:
-                from runtime_utils import detect_body
-                profile = detect_body().get("profile") or "pc"
-            except Exception:
-                profile = "pc"
-            if profile == "phone":
-                return ""  # 폰 미지원(스코프드 스토리지·실익 작음)
-            import focus_map
-            return focus_map.build_coarse_map_xml(profile=profile)
-        except Exception as e:
-            print(f"[디스크골격] 생성 실패 (무시): {e}")
             return ""

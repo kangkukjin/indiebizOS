@@ -34,8 +34,20 @@ def alive(ident):
 def tree(ident):
     if not alive(ident):
         return []
-    p = psutil.Process(ident["pid"])
-    return [identity(c.pid) for c in p.children(recursive=True)] + [ident]
+    try:
+        p = psutil.Process(ident["pid"])
+        if p.create_time() != ident["born"]:
+            return []
+        children = p.children(recursive=True)
+    except psutil.NoSuchProcess:
+        return []  # alive 확인과 자손 열람 사이의 정상 종료
+    members = []
+    for child in children:
+        try:
+            members.append({"pid": child.pid, "born": child.create_time()})
+        except psutil.NoSuchProcess:
+            continue  # 이미 끝난 자손은 UNKNOWN 실행이 아니다.
+    return members + [ident]
 
 
 def signal_owned(ident, force=False):

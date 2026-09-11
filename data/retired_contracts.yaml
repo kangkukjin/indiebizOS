@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: foreground_disk_and_duplicate_memory_recall
+    retired: 2026-09-11
+    reason: 위치 질문의 전경 디스크 순회가 외장 볼륨에서 멈췄고 기억 문서와 행을 중복 전송했다.
+    instead: 전경 디스크 자동 회상을 제거한다. 기억은 문서 소개와 출처가 붙은 본문 한 벌로 회상한다.
+    phrases:
+      - 'always-on 거친 디스크 지도'
+      - '문서 전문 + 그 노드의 행'
   - id: independent_restart_force_on_unknown
     retired: 2026-09-11
     reason: 리로더·keeper·RED의 독자 타이머가 관측 불능을 작업 없음으로 읽고 승인된 작업을 잘랐다.

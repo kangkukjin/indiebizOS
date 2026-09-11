@@ -15,10 +15,12 @@
     "base/korean_utils",
     "base/limb_keys",
     "base/logging_utils",
+    "base/memory_provenance",
     "base/mime_compat",
     "base/model_call_context",
     "base/model_resolver",
     "base/phone_jobs",
+    "base/quantity_checks",
     "base/quiescent_reload",
     "base/r2_client",
     "base/reload_gate",
@@ -95,6 +97,7 @@
     "cognition/system_tools",
     "cognition/system_tools_delegate",
     "cognition/system_tools_ibl",
+    "cognition/turn_scope",
     "cognition/vocab_crystallization",
     "cognition/vocab_overlap_audit",
     "cognition/weekly_audits",
@@ -327,8 +330,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 316,
-    "engine": 290,
+    "total": 319,
+    "engine": 293,
     "blocklist": 26
   }
 }

@@ -109,7 +109,7 @@ def _resolve(slug: str, fid: str, rel: str, secret_header: str):
 
 
 @router.get("/list/{slug}")
-async def list_dir(slug: str, path: str = Query(default=""), x_showcase_secret: str = Header(default="")):
+def list_dir(slug: str, path: str = Query(default=""), x_showcase_secret: str = Header(default="")):
     """바스켓의 한 디렉토리를 즉석에서 훑어 목록 반환. path 는 '<fid>/<하위경로>'.
     빈 path = 바스켓 루트(담긴 폴더들 나열)."""
     _check_secret(x_showcase_secret)

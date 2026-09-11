@@ -248,7 +248,7 @@ def test_distill_passes_cost_and_missed_to_note_run(monkeypatch, tmp_path):
     monkeypatch.setattr(hippo_tree, "DOC_DIR", str(tmp_path / "tree"))
     os.makedirs(tmp_path / "tree" / "보고서" / "X")
     (tmp_path / "tree" / "보고서" / "X" / hippo_tree.DOC_NAME).write_text("# 보고서/X\n", encoding="utf-8")
-    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: None)
+    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: {"achieved": True, "severity": 0})
     monkeypatch.setattr(thread_context, "clear_goal_eval_outcome", lambda: None)
     monkeypatch.setattr(mod.IBLUsageDB, "hippo_disabled", classmethod(lambda cls: False))
     fake = types.ModuleType("consciousness_agent")

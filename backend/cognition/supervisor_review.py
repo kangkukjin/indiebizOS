@@ -3,6 +3,34 @@ import difflib
 import json
 
 
+def response_review_page(controller, limit=12000):
+    """같은 기준·원천의 재검수는 실제 변경 바이트만 전송한다. 의미 승인을 재사용하지 않는다."""
+    from supervision_store import digest
+    store = controller.store
+    basis = digest(json.dumps({"goal": controller.message, "framing": controller.framing,
+                               "evidence": store.tool_index(), "artifacts": controller.content_artifacts},
+                              ensure_ascii=False, sort_keys=True, default=str))
+    if getattr(controller, "_response_review_basis", None) != basis:
+        store.coverage.clear()
+        controller._response_review_basis = basis
+        return {"mode": "full_read_required", **store.read_response(0, limit, mark=True)}
+    unread = [b for b in store.blocks if (b["id"], b["hash"]) not in store.coverage]
+    result = {"mode": "changed_blocks", "version": store.version, "hash": store.manifest()["hash"],
+              "blocks": [], "previously_read_unchanged": len(store.blocks) - len(unread),
+              "dependent_claims": "변경된 수치·주장의 합계·시간표·요약·한계를 함께 대조한다. 필요한 기존 블록은 response id로 읽는다.",
+              "remaining_ids": []}
+    used = 0
+    for b in unread:
+        size = len(json.dumps(b, ensure_ascii=False))
+        if result["blocks"] and used + size > limit:
+            result["remaining_ids"].append(b["id"])
+            continue
+        result["blocks"].append(dict(b))
+        store.coverage.add((b["id"], b["hash"]))
+        used += size
+    return result
+
+
 def content_changes(controller):
     """Transfer only previously read identical spans; show changed bytes explicitly."""
     store = controller.store

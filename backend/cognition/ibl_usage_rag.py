@@ -923,6 +923,10 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             continue  # 검사 통과는 실행 성공이 아니다 — 접지·주행 기록에서도 제외
         code = inputs.get("code", "")
         if code:
+            from ibl_distill_gates import empty_final_items
+            if _ge is None and empty_final_items(tc.get("result")):
+                print("[경험증류] 문맥 회상/빈 조회 — 새 해결 절차 학습 생략")
+                continue
             if completion_evidence(tc.get("result")):
                 print(f"[경험증류] 미완료 행을 가진 호출 제외: {code[:100]}")
                 continue
@@ -940,7 +944,8 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 fb = tc.get("quality_feedback")
                 retry_notes.append(f"  - {code[:200]}" + (f" — 첫 미달 사유: {fb}" if fb else ""))
 
-    if not ibl_calls:
+    from turn_scope import context_program
+    if not ibl_calls or (_ge is None and all(context_program(code) for code in ibl_calls)):
         return False
 
     # 점수 게이트: 임계 이상이면 원칙적으로 "이미 아는 패턴"이라 스킵. 단 그 판정은
@@ -1014,7 +1019,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             print(f"[경험증류] JSON 추출 실패: {result.strip()[:100]}")
             return False
         intent = distilled.get("intent", "").strip()
-        component = distilled.get("scope") == "component"
+        component = distilled.get("scope") == "component" or _ge is None
         if "source_ids" in distilled:
             code, selection_note = select_distill_source({"call_ids": distilled["source_ids"]}, source_calls)
             code = code or ""

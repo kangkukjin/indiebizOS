@@ -100,7 +100,10 @@ class AgentRunner(AgentCognitiveMixin, AgentCommunicationMixin, AgentGoalsMixin,
 
         # 백그라운드 스레드 시작 (내부 메시지 폴링)
         self.thread = threading.Thread(target=self._run_loop, daemon=True)
-        self.thread.start()
+        # 상주 우편함은 시작을 요청한 대화의 자식 작업이 아니다.
+        # 실제 위임 메시지는 WorkMessages/message_stream이 별도로 소유한다.
+        with runtime_work.service_scope():
+            self.thread.start()
 
         print(f"[AgentRunner] {self.config.get('name')} 시작됨")
 

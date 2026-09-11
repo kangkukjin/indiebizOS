@@ -75,7 +75,8 @@ class Controller:
         self.save(phase="STARTING", generation=secrets.token_hex(16),
                   code_digest=manifest["digest"], manifest=manifest, worker=None,
                   control_token=secrets.token_hex(32), deadline=self.clock() + 300,
-                  spawn_after=self.clock(), stop_tree=[], process_tree=[], resume_pending=False, recovery_stopping=False)
+                  spawn_after=self.clock(), stop_tree=[], process_tree=[], resume_pending=False, recovery_stopping=False,
+                  legacy=False, serving_worker=None, legacy_keeper=None)
         self.spawn_attempted = 0
 
     def observe(self):

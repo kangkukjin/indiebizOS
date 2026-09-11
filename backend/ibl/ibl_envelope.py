@@ -351,7 +351,8 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
         remaining = cap
         clips = []
         from ibl_honesty import HONESTY_KEYS
-        preserve = set(HONESTY_KEYS) | {"url", "path", "type", "id", "source_ref",
+        preserve = set(HONESTY_KEYS) | {"url", "path", "type", "id", "source_ref", "provenance",
+                                       "preview_truncated", "preview_offset", "content_chars",
                                        "error", "_error", "warning", "reason", "traceback"}
 
         def clip(value, path):

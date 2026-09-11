@@ -509,8 +509,7 @@ def _search_like(db_path: str, query: str, category: str = None,
 
         first = f"%{words[0]}%"
         sql = f"""
-            SELECT id, category, keywords,
-                   SUBSTR(content, 1, 100) as preview,
+            SELECT id, category, keywords, content, source_ref,
                    created_at, used_at, COALESCE(node,'') AS node
             FROM memories
             WHERE {where}
@@ -521,7 +520,8 @@ def _search_like(db_path: str, query: str, category: str = None,
         """
         params.extend([first, limit])
         rows = conn.execute(sql, params).fetchall()
-        return [dict(r) for r in rows]
+        from memory_provenance import search_view
+        return [search_view(dict(r), query) for r in rows]
     finally:
         conn.close()
 
@@ -587,14 +587,15 @@ def search(project_path: str, agent_id: str,
         ph = ",".join("?" * len(sorted_ids))
         rows = conn.execute(
             f"SELECT id, category, keywords, "
-            f"SUBSTR(content,1,100) as preview, created_at, used_at, COALESCE(node,'') AS node "
+            f"content, source_ref, created_at, used_at, COALESCE(node,'') AS node "
             f"FROM memories WHERE id IN ({ph})",
             sorted_ids
         ).fetchall()
     finally:
         conn.close()
 
-    by_id = {r["id"]: dict(r) for r in rows}
+    from memory_provenance import search_view
+    by_id = {r["id"]: search_view(dict(r), query) for r in rows}
     return [by_id[mid] for mid in sorted_ids if mid in by_id]
 
 

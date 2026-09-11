@@ -1,12 +1,13 @@
 node: self
 actions:
   memory:
+    context_update_ops: [search, read, recall, save]
     returns: items
     side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:memory]{op: "search", query: "test"}'
     description: 심층 메모리 관리 (op 분기). 장기 기억을 **주제 가지(node) 트리**에 둔다 — 프롬프트의 <memory_map>(목차)에서 가지를 고른 뒤 recall 로 연다. 자아별 사적 기억(폰·맥 각자 로컬). 최근 대화 로그는 recent/agents 별도.
     group: memory
-    target_description: save — content 필수(+node 가지 경로 권장 — 예 "가족/어머니"; 비우면 뿌리(미배치) — +category/keywords 옵션, 둘 다 생략 시 자동 추출·분류). recall — node 의 가지를 연다(문서 전문 + 그 가지의 기억 + 하위 가지; node 생략 = 지도 전체); store:"실행" 이면 실행기억(IBL 용례) 주제 트리(<execution_map>)를 연다 — **이름 먼저**(2026-09-05) — 부를 수 있는 함수의 서명(`[fn:이름]{슬롯}` 한 줄)·한 문장 용례·여러 문장 용례의 문장 수·주행 건수만 돌려준다. 본문은 expand 로만 — expand:"이름"(함수 정의 `[def:]`, 고쳐 쓸 때) · expand:"#id"(용례 한 건) · expand:"주행"(주행 절) · expand:"all"(문서 전문). 이름이 있으면 부르고, 없거나 안 맞을 때만 연다. move — memory_id 를 node 가지로 옮김(store 동일). category 유효값 = 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 그 밖의 값은 '기타' 로 저장되며 봉투가 category_normalized 로 신고한다. search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션(유효값 밖이면 0건이 아니라 명시 거절). read/delete — memory_id (search 결과 items 의 memory_id). 워크플로 — save 누적 → search → preview 잘렸으면 read로 전문, 잘못 저장은 delete.
+    target_description: save — content 필수(+node 가지 경로 권장 — 예 "가족/어머니"; 비우면 뿌리(미배치) — +category/keywords 옵션, 미지정 분류는 기타; AI가 작성한 사실은 작업기록·assistant 출처로 구분). recall — node 의 가지를 연다(문서 소개 + 출처·적용 시점을 가진 기억 한 벌 + 하위 가지; node 생략 = 지도 전체); store:"실행" 이면 실행기억(IBL 용례) 주제 트리(<execution_map>)를 연다 — **이름 먼저**(2026-09-05) — 부를 수 있는 함수의 서명(`[fn:이름]{슬롯}` 한 줄)·한 문장 용례·여러 문장 용례의 문장 수·주행 건수만 돌려준다. 본문은 expand 로만 — expand:"이름"(함수 정의 `[def:]`, 고쳐 쓸 때) · expand:"#id"(용례 한 건) · expand:"주행"(주행 절) · expand:"all"(문서 전문). 이름이 있으면 부르고, 없거나 안 맞을 때만 연다. move — memory_id 를 node 가지로 옮김(store 동일). category 유효값 = 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 그 밖의 값은 '기타' 로 저장되며 봉투가 category_normalized 로 신고한다. search — query 필수(키워드·자연어, FTS+시맨틱 통합) + category 필터 옵션(유효값 밖이면 0건이 아니라 명시 거절). read/delete — memory_id (search 결과 items 의 memory_id). 검색은 일치어 주변 발췌·preview_truncated·content_chars·provenance를 반환한다. 사용자 발화·AI 권고·출처 미확인을 구분하고 현재 대상·날짜와 대조한다. 워크플로 — save 누적 → search → preview_truncated이면 read로 전문·출처를 확인, 잘못 저장은 delete.
     target_key: op
     router: handler
     params:
@@ -59,7 +60,7 @@ tool_json:
     description: '심층 메모리 통합 도구 (op 분기). save/search/read/delete/recall/move — 기억은 주제 가지(node) 트리, <memory_map> 목차에서 가지를 골라 recall.
 
 
-      - op=save: content 필수(+keywords, category 옵션, 둘 다 생략 시 자동 추출·분류)
+      - op=save: content 필수(+keywords, category 옵션, 미지정 분류는 기타; AI가 작성한 사실은 작업기록·assistant 출처로 구분)
 
       - op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션
 
@@ -68,7 +69,7 @@ tool_json:
       - op=delete: memory_id 필수
 
 
-      워크플로: save로 누적 → search로 자연어 검색 → preview 잘렸으면 read로 전문 → 잘못 저장은 delete.'
+      워크플로: save로 누적 → search로 자연어 검색 → preview_truncated이면 read로 전문·출처를 확인 → 잘못 저장은 delete.'
     input_schema:
       type: object
       properties:

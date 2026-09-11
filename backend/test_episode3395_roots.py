@@ -36,15 +36,15 @@ def test_dedup_model_cannot_rewrite_source(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "memory_db", SimpleNamespace(
         _get_db_path=lambda *a: "fixture", body_noun_leak=lambda *a: None,
         search=lambda **k: [old], read=lambda *a: old,
-        update=lambda *a, **kw: stored.append(kw)))
+        update=lambda *a, **kw: stored.append(kw), save=lambda **kw: stored.append(kw)))
     monkeypatch.setitem(sys.modules, "memory_tree", SimpleNamespace(map_text=lambda *a: "보고서", norm_node=lambda x: x))
-    replies = iter(['[{"source_ids":[2],"keywords":"전망","category":"작업기록"}]',
+    replies = iter(['[{"source_ids":[1],"retention":"user_fact","keywords":"전망","category":"사용자정보"}]',
                     '{"verdicts":[{"action":"UPDATE","content":"한은이 모델을 발표함"}]}'])
     monkeypatch.setattr(consciousness_agent, "oneshot_ai_call", lambda **kw: next(replies))
     runner = CognitiveDistillMixin()
     runner.project_path, runner.agent_id = tmp_path, "worker"
-    runner._distill_deep_memory("보고서 작성", "한은은 투자 증가율 둔화를 전망했다.")
-    assert stored[0]["content"] == "이전 작업\n[보충] 한은은 투자 증가율 둔화를 전망했다."
+    runner._distill_deep_memory("한은은 투자 증가율 둔화를 전망했다.", "알겠습니다")
+    assert stored[0]["content"] == "한은은 투자 증가율 둔화를 전망했다."
 
 
 def test_consolidation_selects_original_and_keeps_relative_time(monkeypatch):

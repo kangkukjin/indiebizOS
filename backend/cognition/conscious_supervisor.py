@@ -5,6 +5,7 @@ import time
 import uuid
 import contextvars
 from collections import deque
+from contextlib import contextmanager
 from pathlib import Path
 
 from supervision_bus import current, register, unregister
@@ -18,7 +19,7 @@ DEFAULTS = {"enabled": True, "max_reviews": 2, "review_interval_s": 240,
             "max_input_tokens": 300000, "max_output_tokens": 16000,
             "final_input_reserve": 80000, "final_output_reserve": 4000,
             "budget_mode": "soft", "review_input_reserve": 60000, "review_output_reserve": 2000,
-            "repair_context_chars": 32000}
+            "repair_context_chars": 32000, "preparation_stall_s": 10}
 
 
 def open_supervisor(runner, message, history, cancel_check=None):
@@ -69,6 +70,8 @@ class Supervisor:
         self.trigger = ""
         self.pending = None
         self.phase = "plan"
+        self.preparing = None
+        self.request_intent = "task"
         self.call_deadline = 0
         self.finalizing = False
         self.done_request = None
@@ -127,12 +130,33 @@ class Supervisor:
 
     def close(self):
         self.stopped.set()
+        state = getattr(self, "_scope_provider_state", None)
+        if state:
+            provider, previous = state
+            provider.context_update_only = previous
         unregister(self)
         self.log("turn.closed", role="harness", reviews=self.reviews, tools=self.tools_used)
         # 모델/원격 도구를 기다리느라 사용자 턴 종료를 붙잡지 않는다. 늦은 판정은 폐기된다.
 
     def cancelled(self):
         return self.stopped.is_set() or bool(self.cancel_check and self.cancel_check())
+
+    @contextmanager
+    def preparation(self, name):
+        """모델 이전 회상의 실제 대기 대상을 기록한다. 감시가 새 AI를 부르지 않는다."""
+        if self.cancelled():
+            raise RuntimeError("회상 시작 전에 작업이 취소되었습니다")
+        started, previous = time.monotonic(), self.phase
+        self.phase = "recall"
+        self.preparing = {"stage": name, "started": started, "reported": False}
+        self.log("recall.started", role="harness", stage=name)
+        try:
+            yield
+        finally:
+            self.log("recall.finished", role="harness", stage=name,
+                     elapsed_ms=round((time.monotonic() - started) * 1000))
+            self.preparing = None
+            self.phase = previous
 
     def call_cancelled(self):
         from providers.base import turn_limit_reason
@@ -226,6 +250,10 @@ class Supervisor:
         self.enabled = bool(framing) or self.enabled
         self.phase = "execute"
         self.executor_paused = False
+        provider = getattr(self.runner.ai, "_provider", None)
+        if provider and self.request_intent == "context_update":
+            self._scope_provider_state = (provider, getattr(provider, "context_update_only", False))
+            provider.context_update_only = True
         self.context = __import__("thread_context").snapshot()
         from pursuit_bind import current as pursuit_current
         binding = pursuit_current()
@@ -267,6 +295,9 @@ class Supervisor:
             state = {"original_goal": self.message, "framing": self.framing,
                     "conversation_evidence": {k: self.history_ref[k] for k in ("id", "chars")},
                     "phase": self.phase, "executor_paused": self.executor_paused, "checkpoint": self.checkpoint, "elapsed_s": round(now - self.started),
+                    "preparation": ({"stage": self.preparing["stage"],
+                                     "elapsed_s": round(now - self.preparing["started"])}
+                                    if self.preparing else None),
                     "active": [{**{k: x for k, x in v.items() if not k.startswith("_")},
                                 "elapsed_s": round(now - v["started"])} for v in self.active.values()],
                     "events": events,
@@ -362,6 +393,12 @@ class Supervisor:
         if notice:
             # 아직 실행하지 않았다. 새 지시를 읽은 모델이 다시 선택한 호출만 실행한다.
             return json.dumps({"success": False, "not_executed": True, "supervisor_instruction": notice}, ensure_ascii=False)
+        if self.request_intent == "context_update":
+            from turn_scope import allows_context_tool
+            if not allows_context_tool(name, payload):
+                self.log("scope.blocked", role="harness", name=name, request_intent=self.request_intent)
+                return json.dumps({"success": False, "not_executed": True,
+                                   "error": "이번 턴은 새 사실의 통보입니다. 관련 기억 확인·갱신만 하고 새 조사는 시작하지 마세요."}, ensure_ascii=False)
         # 모델 관찰 잠금은 실행을 막지 않는다. 지시 전달과 실제 작업 등록만 원자적으로 한다.
         with self.lock:
             if self.pending:
@@ -450,6 +487,14 @@ class Supervisor:
 
     def tick(self, now=None):
         now = time.monotonic() if now is None else now
+        preparing = self.preparing
+        if preparing:
+            elapsed = now - preparing["started"]
+            if not preparing["reported"] and elapsed >= self.config["preparation_stall_s"]:
+                preparing["reported"] = True
+                self.log("recall.stalled", role="harness", stage=preparing["stage"],
+                         elapsed_s=round(elapsed), waiting_for="local_preparation", model_started=False)
+            return
         if self.finalizing or self.phase in {"plan", "reframe"} or self.cancelled():
             return
         with self.lock:
@@ -533,7 +578,7 @@ class Supervisor:
                     raise ValueError("이번 단계의 추가 탐색 배분을 소진했습니다. 현재 근거로 판정을 마치고 미해결은 실행자에게 위임하세요")
                 self.call_tools += 1
                 self.tools_used += 1
-            elif op not in {"state", "response", "evidence", "patch", "keep"}:
+            elif op not in {"state", "response", "evidence", "patch", "keep", "calculate"}:
                 raise ValueError("실행자는 자신의 기존 도구를 직접 사용하세요")
             offset, limit = int(payload.get("offset", 0)), int(payload.get("limit", 12000))
             if offset < 0 or not 1 <= limit <= 24000:
@@ -550,17 +595,28 @@ class Supervisor:
                 else:
                     result = self.catalog[key[5:]] if key.startswith("tool:") else self.store.read_evidence(key, offset, limit, mark=is_manager)
             elif op == "response":
-                result = self.store.read_response(offset, limit, mark=is_manager)
+                result = self.store.read_response(offset, limit, mark=is_manager, block_id=payload.get("id") or None)
+            elif op == "calculate":
+                from quantity_checks import calculate
+                args = payload.get("input") or {}
+                result = calculate(args.get("expression"), args.get("values"), args.get("unit", ""))
             elif op in {"patch", "keep"}:
                 if not self.finalizing or (not is_manager and self.phase != "repair"):
                     raise ValueError("응답 패치는 검수·보완 단계에만 가능합니다")
                 if op == "patch":
+                    before_blocks = {b["id"]: b["hash"] for b in self.store.blocks}
                     result = self.store.patch(payload.get("version"), payload.get("patches", []))
+                    result["blocks"] = [b for b in result["blocks"] if before_blocks.get(b["id"]) != b["hash"]]
+                    result["scope"] = "changed_blocks_only"
                 else:
                     self.repair_kept = True
                     result = self.store.manifest()
             elif op == "execute":
                 name, args = payload.get("name"), payload.get("input", {})
+                if self.request_intent == "context_update":
+                    from turn_scope import allows_context_tool
+                    if not allows_context_tool(name, args):
+                        raise ValueError("사실 통보 턴에서는 관련 기억 확인·갱신만 실행합니다")
                 if name not in self.catalog or name in {"reframe", "pursuit", "supervision"}:
                     raise ValueError("실행자에게 부여된 실제 작업 도구만 사용할 수 있습니다")
                 # 도구는 임의 코드/워크플로우를 품을 수 있다. 이름 추측으로 read-only 판정하지 않고
@@ -633,18 +689,20 @@ class Supervisor:
                 if self.cancelled():
                     break
                 yield {"type": "thinking", "content": "의식이 목표 달성 근거와 저장된 응답을 검수하고 있습니다."}
-                self.store.coverage.clear()
                 from supervisor_content import discover, validate
                 self.content_artifacts = discover(self, self.store.text, tool_calls)
                 if hasattr(self.runner, "_collect_visual_artifacts"):
                     artifacts = self.runner._collect_visual_artifacts(self.store.text, tool_calls=tool_calls or []) or []
                     self.final_images, self.visual_review = self.verifications.visual_input(artifacts,
                         digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)), self.store)
-                from supervisor_review import final_state, recover_citations
+                from supervisor_review import final_state, recover_citations, response_review_page
                 prompt = json.dumps({"phase": "final", **final_state(self)}, ensure_ascii=False)
                 # 짧은 후보는 첫 호출에 그대로 제공. 장문은 범위 도구로 끝까지 읽는다.
-                page = self.store.read_response(0, 12000, mark=True)
+                page = response_review_page(self)
                 prompt += "\nresponse_first_page=" + json.dumps(page, ensure_ascii=False)
+                from quantity_checks import duration_table, arithmetic_issues
+                prompt += "\nquantity_checks=" + json.dumps({"durations": duration_table(self.store.text),
+                    "issues": arithmetic_issues(self.store.text)}, ensure_ascii=False)
                 try:
                     raw = invoke(self, prompt, phase="final")
                     decision = ({"status": "UNKNOWN", **self.call_stop} if self.call_stop
@@ -665,6 +723,10 @@ class Supervisor:
                 if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
                     decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
                 content_error = validate(self, decision)
+                numeric_errors = arithmetic_issues(self.store.text)
+                if numeric_errors and decision["status"] == "APPROVED":
+                    decision = {"status": "REWORK", "reason": "응답의 명시적 시간 합산 불일치",
+                                "repair_scope": "local", "instruction": json.dumps(numeric_errors, ensure_ascii=False)}
                 if content_error:
                     decision = recover_citations(self, decision, content_error)
                     content_error = validate(self, decision)

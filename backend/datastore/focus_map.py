@@ -1,6 +1,7 @@
 """집중 관심 폴더(focus folders) — 몸 독립 개념, 몸별 바인딩.
 
-always-on 거친 디스크 지도("어디에")의 *범위*를 정한다. system_structure.md 가 indiebizOS
+명시적으로 요청한 거친 디스크 지도의 *범위*를 정한다. 대화 전경 회상에서는 호출하지 않는다.
+system_structure.md 가 indiebizOS
 한 폴더의 큐레이션된 자기상이듯, 이건 사용자 콘텐츠 루트(들) 아래의 거친 골격이다. 모든
 하드웨어(맥/윈도우/리눅스/폰)가 *같은 어휘*로 *자기* focus 루트 아래를 돈다 — 개념·생성기는
 몸 독립(상부구조), focus 루트·잡음만 몸별(하부구조). 헌법1조 substrate/superstructure 이음매.
@@ -12,7 +13,7 @@ always-on 거친 디스크 지도("어디에")의 *범위*를 정한다. system_
   - territory 제안: 자주 되돌아온 루트(forage territory 승격)를 발견해 *보탠다*.
 
 깊은 상세·큐레이션(어느 가지가 죽었나·내 것인가·관습)은 forager(territory/owner/map) 몫.
-골격은 거칠게·짧게 — 상시 주입이라 길어지면 분업이 깨진다.
+골격은 거칠게·짧게. 외장 볼륨 순회는 OS에서 멈출 수 있어 자동 대화 준비에 넣지 않는다.
 """
 import os
 import time
@@ -25,10 +26,10 @@ from runtime_utils import get_base_path
 _MAXDEPTH = 3              # 선언 루트 거친 깊이(측정: Desktop depth3 ≈ 1.3k tok)
 _TERRITORY_DEPTH = 1      # territory 제안 루트는 얕게(루트+직속 = "여기도 자주 감" 포인터)
 _BUDGET_CHARS = 6000     # 전역 상한(백스톱) — 큰 territory 가 상시 예산을 날리지 않게.
-_CACHE_TTL = 600.0        # 골격 캐시 수명(초). walk 는 ~15ms 라 비용은 무시 가능, 신선도용.
+_CACHE_TTL = 600.0        # 골격 캐시 수명(초). 볼륨 응답 시간의 상한을 보장하지 않는다.
 _CONFIG_NAME = "focus_folders.json"
 
-# 모듈 캐시 — 상시-on 이라 매 메시지 walk 를 피한다(TTL 내 재사용).
+# 모듈 캐시 — 명시적인 반복 열람에서 TTL 내 재사용한다.
 _cache = {"text": None, "at": 0.0, "key": None}
 
 

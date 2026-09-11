@@ -239,9 +239,12 @@ class CognitiveDistillMixin:
                  "episode_id": getattr(episode, "episode_id", None),
                  "recorded_at": __import__("datetime").datetime.now().isoformat()}, ensure_ascii=False)
 
-            from memory_evidence import source_units, grounded_fact
-            memory_response = "" if ai_response.startswith("검수 미완료(성공 판정으로 저장하지 말 것)") else ai_response
-            units = source_units(user_message, memory_response)
+            from memory_evidence import durable_source_units, grounded_fact
+            units = durable_source_units(user_message)
+            if not any(u["eligible"] for u in units):
+                from episode_logger import record_trajectory_event
+                record_trajectory_event("memory.distill.skipped", {"reason": "no_user_fact_candidate"})
+                return
 
             # 1단계: 대화에서 기억할 정보 조각 추출
             # 날짜 앵커 — 없으면 경량 모델이 연도를 자기 추측으로 채워 오염된다
@@ -249,9 +252,13 @@ class CognitiveDistillMixin:
             from datetime import datetime as _dt
             today = _dt.now().strftime("%Y-%m-%d")
             extract_prompt = f"""오늘은 {today}이다.
-다음 대화 원문 단위 중 나중에 기억해둘 만한 정보를 선택하라.
+다음 사용자 원문 단위 중 나중에 기억해둘 만한 정보를 선택하라.
 content를 재작성하지 마라. 원문 단위의 source_ids만 고르면 본문은 코드가 그대로 저장한다.
-(이름, 중요한 날짜, 사용자 선호, 결정사항, 작업 결과 등)
+(이름, 중요한 날짜, 사용자 선호, 사용자가 확정한 결정사항)
+eligible=false인 질문·요청과 안내문 상투구는 선택하지 않는다. AI의 답변·권고·도구 관측은
+에피소드와 산출물에 남아 있으므로 여기서 사용자 사실로 복제하지 않는다.
+retention은 user_fact|user_preference|user_decision 중 하나이며 확신 없으면 선택하지 않는다.
+과거 사건의 인원·장소·조건을 이번 사건의 사실이나 지속적 선호로 확장하지 않는다.
 일시적 데이터(주가, 날씨, 환율, 시세 등)와 추론/감상은 제외.
 연도를 추측하거나 상대 날짜를 재작성하지 말고 원문 그대로 선택하라. 해석 기준 시점은 source_ref.recorded_at에 별도로 남는다.
 
@@ -275,10 +282,10 @@ content를 재작성하지 마라. 원문 단위의 source_ids만 고르면 본�
 {tree_map or "(아직 가지 없음 — 첫 가지를 만들어라)"}
 
 JSON 배열로만 응답.
-[{{"source_ids": [1], "keywords": "k1,k2", "category": "사용자선호|사용자정보|작업기록|의사결정|중요날짜", "node": "가지/경로"}}]
+[{{"source_ids": [1], "retention": "user_fact", "keywords": "k1,k2", "category": "사용자선호|사용자정보|의사결정|중요날짜", "node": "가지/경로"}}]
 정보가 없으면 빈 배열 [] 반환.
 
-원문 단위(JSON, role=user/assistant):
+사용자 원문 단위(JSON):
 {json.dumps(units, ensure_ascii=False)}"""
 
             result = oneshot_ai_call(
@@ -303,7 +310,7 @@ JSON 배열로만 응답.
             #   - 유사 항목 있음 → (신규, 기존 후보) 쌍으로 모아 다음 단계에서 '한 번에' 판정
             pending = []   # [(fact, top)] — 배치 dedup 대상
             for candidate in facts[:5]:  # 최대 5개 조각
-                fact = grounded_fact(candidate, units, source_ref)
+                fact = grounded_fact(candidate, units, source_ref, durable_only=True)
                 if not fact:
                     continue
                 content = fact.get("content", "").strip()
@@ -359,7 +366,8 @@ JSON 배열로만 응답.
             verdicts = []
             if pending:
                 pairs_text = "\n".join(
-                    f'{i+1}. 기존: {top["content"]}\n   신규 후보: {fact["content"]}'
+                    f'{i+1}. 기존: {top["content"]}\n   기존 출처: {top.get("source_ref") or "미확인"}'
+                    f'\n   신규 후보: {fact["content"]}\n   신규 출처: {fact["source_ref"]}'
                     for i, (fact, top) in enumerate(pending)
                 )
                 batch_prompt = (
@@ -370,6 +378,7 @@ JSON 배열로만 응답.
                     f"{pairs_text}\n\n"
                     '본문을 다시 쓰지 마라. 신규 후보 원문 전체를 저장한다. 새 사실이 없으면 SAME. '
                     'REPLACE는 사용자가 명시적으로 기존 사실을 정정한 경우만 선택한다. '
+                    '같은 주제라도 다른 사건·날짜·대상이면 NEW이며 과거 기록을 고치지 않는다. '
                     '쌍 순서대로 JSON: {"verdicts": [{"action":"SAME|UPDATE|REPLACE|NEW"}, ...]}'
                 )
                 resp = oneshot_ai_call(
@@ -398,11 +407,13 @@ JSON 배열로만 응답.
                         continue
                     if fact["category"] == "작업기록":
                         continue  # 작업 응답이 사용자 사실을 정정할 권한은 없다.
-                    # 정정 → 기존을 새 정보로 덮어쓰기 (옛/틀린 정보 폐기, 출처도 새 발화로 교체)
+                    # 정정 이력은 보존하되 현재 발화자의 증거와 섞어 현재 사실로 취급하지 않는다.
+                    replacement_source = json.loads(fact_source)
+                    replacement_source["superseded"] = {"content": top["content"], "source_ref": top.get("source_ref")}
                     merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
                     applied = memory_db.update(project_path, agent_id, top["id"],
                                      content=addition or content, keywords=merged_kw,
-                                     source_ref=fact_source, expected_content=top["content"])
+                                     source_ref=json.dumps(replacement_source, ensure_ascii=False), expected_content=top["content"])
                     if applied is False:
                         continue
                     updated_count += 1
@@ -411,21 +422,14 @@ JSON 배열로만 응답.
                     if not addition or addition in top["content"]:
                         print("[심층메모리] 추가 사실 없는 UPDATE 생략")
                         continue
-                    latest = memory_db.read(project_path, agent_id, top["id"])
-                    if not latest or latest["content"] != top["content"]:
-                        print("[심층메모리] 판정 중 원문 변경 — 덮어쓰기 생략")
-                        continue
-                    merged = f"{latest['content']}\n[보충] {addition}"
-                    merged_kw = _merge_keywords(top.get("keywords", ""), keywords)
-                    applied = memory_db.update(project_path, agent_id, top["id"],
-                                     content=merged, keywords=merged_kw,
-                                     source_ref=json.dumps({"previous": top.get("source_ref"),
-                                                            "supplement": json.loads(fact_source)},
-                                                           ensure_ascii=False), expected_content=top["content"])
-                    if applied is False:
-                        continue
-                    updated_count += 1
-                    print(f"[심층메모리] UPDATE: \"{content[:50]}\" → 기존 ID {top['id']}")
+                    source = json.loads(fact_source)
+                    source["related_memory_id"] = top["id"]
+                    memory_db.save(project_path=project_path, agent_id=agent_id,
+                                   content=addition, keywords=keywords, category=category,
+                                   source_ref=json.dumps(source, ensure_ascii=False),
+                                   node=fact.get("node") or top.get("node", ""))
+                    saved_count += 1
+                    print(f"[심층메모리] UPDATE: 기존 ID {top['id']}에 연결한 새 사실로 분리 저장")
                 elif j == "NEW":
                     memory_db.save(project_path=project_path, agent_id=agent_id,
                                    content=addition or content, keywords=keywords, category=category,
@@ -645,7 +649,7 @@ AI 답변: {ai_response[:1400]}
         from thread_context import get_goal_eval_outcome
         evaluation = get_goal_eval_outcome()  # 경험 증류가 소비하기 전에 기억용 상태를 보존한다.
         # 1) 경험 증류(해마) — 도구 실행이 있었을 때만. + Reflex top-1 성공률 피드백.
-        if write_experience and tool_calls:
+        if write_experience and tool_calls and (turn_cost or {}).get("request_intent") != "context_update":
             try:
                 from ibl_usage_rag import distill_experience, record_recall_outcome
                 distill_experience(user_message, tool_calls, hippo_score, top_code=top_code,
@@ -742,6 +746,7 @@ AI 답변: {ai_response[:1400]}
         if supervisor:
             import time
             payload["turn_cost"] = supervisor.store.cost_summary(time.monotonic() - supervisor.started)
+            payload["turn_cost"]["request_intent"] = supervisor.request_intent
             supervisor.log("cost.summary", role="harness", cost=payload["turn_cost"])
             print("[감독비용] " + json.dumps(payload["turn_cost"], ensure_ascii=False))
         ctx = contextvars.copy_context()

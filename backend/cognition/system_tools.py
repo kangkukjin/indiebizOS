@@ -16,7 +16,8 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from tool_loader import load_tool_handler, get_all_tool_names
-from api_engine import is_registry_tool, execute_tool as registry_execute_tool
+from api_engine import execute_tool as registry_execute_tool
+from ibl_registry import is_registry_tool
 
 # 액션 서킷 브레이커·IBL 로그 상태는 system_tools_ibl.py 로 이동 (2026-07-18 모듈화) —
 # 가변 전역(_action_fail_counter 가 reset 시 rebind)이라 hot-path(_execute_ibl_unified)와

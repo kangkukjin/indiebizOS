@@ -123,7 +123,8 @@ def _route_api_engine(action: str, params: dict, project_path: str,
     이를 통해 노드 액션(informant:search 등)이 handler.py 없이
     api_registry.yaml + api_engine.py transform으로 직접 동작합니다.
     """
-    from api_engine import execute_tool as api_execute, is_registry_tool
+    from api_engine import execute_tool as api_execute
+    from ibl_registry import is_registry_tool
 
     # 노드 액션에서 직접 매핑된 api_registry 도구 실행.
     # (범용 self:call / self:list_api 액션은 2026-06-04 은퇴 — 모든 등록 도구가

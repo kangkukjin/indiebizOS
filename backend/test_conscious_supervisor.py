@@ -285,7 +285,7 @@ def test_real_aiagent_role_uses_same_tools_but_separate_identity(supervisor, mon
             yield {"type": "tool_result", "name": "supervision", "result": result}
             yield {"type": "final", "content": '{"task_framing":"확인한 사실로 계획"}'}
 
-    monkeypatch.setattr("ai_agent.get_provider", lambda name, **kw: Provider(**kw))
+    monkeypatch.setattr("providers.get_provider", lambda name, **kw: Provider(**kw))
     monkeypatch.setattr("model_resolver.resolve", lambda role: {"provider": "openai", "model": "fake", "api_key": ""})
     supervisor.executor_paused = True
     answer = invoke(supervisor, "기존 inspect 도구로 확인", phase="plan")

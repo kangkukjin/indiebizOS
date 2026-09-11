@@ -110,16 +110,15 @@ def get_agent_definitions() -> Dict[str, dict]:
 
 def create_provider(config: dict, system_prompt: str):
     """프로바이더 생성 + 초기화"""
-    from providers import get_provider
+    from providers import create_initialized_provider
 
-    provider = get_provider(
+    provider = create_initialized_provider(
         config.get("provider", "anthropic"),
         api_key=config.get("apiKey", ""),
         model=config.get("model", ""),
         system_prompt=system_prompt,
         tools=[],
     )
-    provider.init_client()
     return provider
 
 

@@ -20,7 +20,7 @@ from typing import Optional, List, Dict, Generator, Any, Callable
 # 모듈 임포트
 from tool_loader import load_agent_tools, load_installed_tools
 from system_tools import SYSTEM_TOOLS, execute_tool
-from providers import get_provider
+from providers import create_initialized_provider
 
 # 미완료 약속 감지 — 도구 호출 없이 "하겠습니다"만 하고 끝나는 응답 방지
 FORCE_EXECUTE_PROMPT = "계획을 설명하지 말고 지금 바로 도구를 사용해서 작업을 실행하세요."
@@ -112,7 +112,7 @@ class AIAgent:
         """프로바이더 초기화"""
         try:
             thinking_budget = self.config.get("thinkingBudget", 0)
-            self._provider = get_provider(
+            self._provider = create_initialized_provider(
                 self.provider_name,
                 api_key=self.api_key,
                 model=self.model,
@@ -123,7 +123,6 @@ class AIAgent:
                 agent_id=self.agent_id,
                 thinking_budget=thinking_budget
             )
-            self._provider.init_client()
             self._provider.agent_role = self.role
             if self.role == "consciousness":
                 self._provider.max_role_rounds = 12

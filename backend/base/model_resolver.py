@@ -486,19 +486,11 @@ def _provider_from_desc(d: dict, system_prompt: str = "", tools=None,
     prov = _provider_cache.get(cache_key)
     if prov is None:
         try:
-            from providers import get_provider
-            prov = get_provider(d["provider"], api_key=d["api_key"], model=d["model"],
-                                system_prompt=system_prompt, tools=tools or [])
-            prov.init_client()
-            # 원샷은 메인 에이전트와 session_key 충돌 방지(no-op on providers without the attr)
-            if oneshot and hasattr(prov, "disable_session_persistence"):
-                prov.disable_session_persistence = True
-            # 원샷 계약(분류·평가·증류·번역)=짧은 JSON 응답 — 하이브리드 thinking 차단.
-            # 지원 프로바이더(DeepSeek 등)만 해석, 나머진 무시(base 기본 False 속성).
-            if oneshot:
-                prov.disable_thinking = True
-                # 원샷은 도구를 쓰지 않는다(execute_tool=None) — 도구 스키마 적재 생략(비용 7배 차).
-                prov.no_tools = True
+            from providers import create_initialized_provider
+            prov = create_initialized_provider(
+                d["provider"], api_key=d["api_key"], model=d["model"],
+                system_prompt=system_prompt, tools=tools or [],
+                isolated_session=oneshot, no_tools=oneshot, disable_thinking=oneshot)
             _provider_cache[cache_key] = prov
         except Exception as e:
             logger.warning(f"[model_resolver] provider 생성 실패 ({d['provider']}/{d['model']}): {e}")

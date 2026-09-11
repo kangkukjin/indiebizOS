@@ -45,7 +45,7 @@ class ConsciousnessAgent:
         의식과 실행을 다른 티어로 가를 수 있음). 키/모델 비면 비활성(기존 동작 보존)."""
         try:
             from model_resolver import resolve, provider_needs_api_key
-            from providers import get_provider
+            from providers import create_initialized_provider
 
             d = resolve("consciousness")
             provider_name = d.get("provider") or "anthropic"
@@ -59,18 +59,14 @@ class ConsciousnessAgent:
                 logger.warning(f"[ConsciousnessAgent] 모델/키 없음 — 비활성 (source={d.get('source')})")
                 return
 
-            self._provider = get_provider(
+            self._provider = create_initialized_provider(
                 provider_name,
                 api_key=api_key,
                 model=model,
+                isolated_session=True,
                 system_prompt="",  # 호출 시마다 설정
                 tools=[],
             )
-            self._provider.init_client()
-            # 메타 역할 provider는 메인 에이전트와 session_key가 충돌하므로
-            # claude_code provider의 세션 연속성 비활성화 (no-op on other providers)
-            if hasattr(self._provider, "disable_session_persistence"):
-                self._provider.disable_session_persistence = True
             print(f"[ConsciousnessAgent] 초기화 완료 ({provider_name}/{model}, {d.get('source')})")
         except Exception as e:
             print(f"[ConsciousnessAgent] 초기화 실패: {e}")
@@ -671,21 +667,17 @@ def _get_lightweight_provider():
         if not api_key and provider_needs_api_key(provider_name):
             return None
 
-        from providers import get_provider
-        _lightweight_provider = get_provider(
-            provider_name,
+        from providers import create_initialized_provider
+        _lightweight_provider = create_initialized_provider(
+            provider_name, isolated_session=True, disable_thinking=True,
             api_key=api_key,
             model=model_name,
             system_prompt="",
             tools=[],
         )
-        _lightweight_provider.init_client()
         # 분류·평가·증류용 — 메인 에이전트와 session_key 충돌 방지를 위해 세션 비활성
         if hasattr(_lightweight_provider, "disable_session_persistence"):
-            _lightweight_provider.disable_session_persistence = True
             _lightweight_provider.no_tools = True  # 원샷=도구 없음(claude_code 도구 스키마 생략)
-        # 원샷 계약 — 하이브리드 thinking 차단(model_resolver oneshot 버킷과 대칭)
-        _lightweight_provider.disable_thinking = True
         print(f"[LightweightAI] 초기화 완료 ({provider_name}/{model_name})")
         return _lightweight_provider
     except Exception as e:
@@ -751,15 +743,14 @@ def _get_midtier_provider_legacy():
             if not api_key:
                 return None
 
-        from providers import get_provider
-        _midtier_provider = get_provider(
+        from providers import create_initialized_provider
+        _midtier_provider = create_initialized_provider(
             provider_name,
             api_key=api_key,
             model=model_name,
             system_prompt="",
             tools=[],
         )
-        _midtier_provider.init_client()
         print(f"[MidtierAI] 초기화 완료 ({provider_name}/{model_name})")
         return _midtier_provider
     except Exception as e:
@@ -929,17 +920,15 @@ def _get_system_oneshot_provider():
         if not api_key and provider_needs_api_key(provider_name):
             return None
 
-        from providers import get_provider
-        _system_oneshot_provider = get_provider(
-            provider_name,
+        from providers import create_initialized_provider
+        _system_oneshot_provider = create_initialized_provider(
+            provider_name, isolated_session=True,
             api_key=api_key,
             model=model_name,
             system_prompt="",
             tools=[],
         )
-        _system_oneshot_provider.init_client()
         if hasattr(_system_oneshot_provider, "disable_session_persistence"):
-            _system_oneshot_provider.disable_session_persistence = True
             _system_oneshot_provider.no_tools = True  # 원샷=도구 없음(claude_code 도구 스키마 생략)
         print(f"[SystemAI oneshot] 초기화 완료 ({provider_name}/{model_name})")
         return _system_oneshot_provider

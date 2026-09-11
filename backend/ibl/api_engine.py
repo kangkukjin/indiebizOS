@@ -5,7 +5,8 @@ IBL Phase 1의 핵심.
 api_registry.yaml을 읽고, 도구 이름으로 API를 자동 호출합니다.
 
 사용법:
-    from api_engine import execute_tool, is_registry_tool, list_registry_tools
+    from api_engine import execute_tool
+    from ibl_registry import is_registry_tool, list_registry_tools
 
     # 도구 실행 (project_path는 필수)
     result = execute_tool("search_laws", {"query": "임대차"}, project_path="/abs/project/path")
@@ -31,34 +32,10 @@ from common.auth_manager import get_api_key, get_api_headers, get_auth_query_par
 # === 레지스트리 로딩 ===
 # api_registry.yaml 로더는 ibl_registry(사전층)로 이동 — 사전 병합(_merge_api_registry_actions)
 # 이 실행 엔진을 import 하지 않게 (2026-08-05 감사 ⑦). 이 모듈은 실행만 담당한다.
-from ibl_registry import _load_registry, reload_registry  # noqa: F401
+from ibl_registry import _load_registry
 
 
 # === 공개 API ===
-
-def is_registry_tool(tool_name: str) -> bool:
-    """도구가 레지스트리에 등록되어 있는지 확인"""
-    reg = _load_registry()
-    return tool_name in reg.get("tools", {})
-
-
-def list_registry_tools() -> List[str]:
-    """레지스트리에 등록된 모든 도구 이름"""
-    reg = _load_registry()
-    return list(reg.get("tools", {}).keys())
-
-
-def get_tool_config(tool_name: str) -> Optional[Dict]:
-    """도구 설정 조회"""
-    reg = _load_registry()
-    return reg.get("tools", {}).get(tool_name)
-
-
-def get_service_config(service_name: str) -> Optional[Dict]:
-    """서비스 설정 조회"""
-    reg = _load_registry()
-    return reg.get("services", {}).get(service_name)
-
 
 def execute_tool(tool_name: str, tool_input: dict, project_path: str) -> Any:
     """

@@ -281,3 +281,12 @@ blue/green을 “9겹에서 2겹”으로 계산하는 데는 반대한다. [api
 - WebSocket의 명시적 contextvars 전달은 외부에서 주입하는 executor도 받는 경계 계약으로 유지했다. 풀 합류로 사용자 취소·후속 지시의 수명이나 예산 정책을 바꾸지 않았다.
 - 소스 문자열을 확인하던 문맥 시험 둘을 미래 thread-local 칸/ContextVar 전달, 예외 후 복원, 제출 시점의 작업 A/B 격리와 중첩 단일 워커 풀의 완주를 확인하는 행동 시험으로 바꿨다. 관련 **76 passed**.
 - 전체 backend **3,658 passed, 1 skipped**. 로그: `outputs/system_simplification/stage6c-tests.log`. 층 가드·폰 번들·IBL 파생 검사 통과.
+
+
+### 6d — 제공자 초기화와 API 사전 조회 소유권
+
+- `providers.create_initialized_provider`에 생성·클라이언트 초기화·세션 격리/도구/추론 옵션을 모았다. 의식·실행·리졸버·호환 getter·벤치마크가 같은 생성 절차를 사용한다. 제공자 지원·별칭·프롬프트·역할별 옵션은 유지한다.
+- 생성기는 객체를 공유하지 않는다. `model_resolver`가 원샷과 변이 가능한 세션 캐시를 별도로 소유한다. 초기화의 False/is_ready 계약과 예외 전파는 유지한다. 온보딩은 초기화 소요 시간·실패 종류를 직접 판정하므로 원시 생성 진입점을 유지한다.
+- API 사전의 등록 여부·목록·설정 조회를 로더(`ibl_registry`)로 옮기고 소비자는 직접 import한다. `api_engine`의 등록 도구 직접 실행과 `api_pipeline`의 선언 실행을 유지했다. IBL 바인딩 없는 가짜 등록 도구를 두 진입점으로 실행하는 시험으로 연결을 확인했다.
+- 새 사례는 기존 모델/감독 주제 시험과 API 사전 주제 시험에 담았다. 관련 **63 passed**.
+- 새 시험 파일의 직접 실행도 pytest로 위임하도록 저장소 관문에 맞췄다. 최종 전체 backend **3,663 passed, 1 skipped**. 로그: `outputs/system_simplification/stage6d-tests.log`. 층 가드·폰 번들·IBL 파생·은퇴 계약 검사 통과.

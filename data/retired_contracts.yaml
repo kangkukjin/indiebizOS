@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: api_registry_query_owner
+    retired: 2026-09-11
+    reason: 사전 조회 소비자가 실행 엔진을 경유했다. 등록 조회와 리로드는 사전 로더와 같은 소유자로 옮겼다.
+    instead: API 실행은 api_engine, is_registry_tool/list_registry_tools/get_tool_config/get_service_config/reload_registry는 ibl_registry에서 가져온다.
+    phrases:
+      - 'from api_engine import is_registry_tool'
+      - 'from api_engine import list_registry_tools'
+      - 'from api_engine import reload_registry'
   - id: workflow_helper_facade
     retired: 2026-09-11
     reason: 바인딩·실패 판정·저장을 읽는 내부 소비자가 실행 엔진을 경유해 순환 의존을 만들었다.

@@ -31,6 +31,8 @@ from .deepseek_http import DeepSeekHTTPProvider  # SDK 없는 DeepSeek REST (폰
 
 __all__ = [
     'BaseProvider',
+    'get_provider',
+    'create_initialized_provider',
     'CliSubprocessProvider',
     'AnthropicProvider',
     'OpenAIProvider',
@@ -74,6 +76,24 @@ def get_provider(provider_name: str, **kwargs):
         raise ValueError(f"지원하지 않는 프로바이더: {provider_name}")
 
     return provider_class(**kwargs)
+
+
+def create_initialized_provider(provider_name: str, *, isolated_session=False,
+                                no_tools=False, disable_thinking=False, **kwargs):
+    """새 제공자 생성·초기화와 호출 역할의 공통 옵션. 객체 캐시는 호출자가 소유한다.
+
+    get_provider는 초기화 여부·시간을 직접 검사하는 온보딩 등의 원시 생성 계약으로
+    유지한다. init_client의 False 반환은 종전처럼 is_ready로 관측하며 예외는 전파한다.
+    """
+    provider = get_provider(provider_name, **kwargs)
+    provider.init_client()
+    if isolated_session and hasattr(provider, "disable_session_persistence"):
+        provider.disable_session_persistence = True
+    if no_tools:
+        provider.no_tools = True
+    if disable_thinking:
+        provider.disable_thinking = True
+    return provider
 
 
 def clear_cli_sessions_for_agent(session_key: str):

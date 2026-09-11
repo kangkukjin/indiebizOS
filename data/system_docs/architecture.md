@@ -148,6 +148,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 ### 프롬프트 XML 구조 / AI 프로바이더
 모든 프롬프트의 XML 태그 구조와 지원 AI 프로바이더 목록은 **technical.md** 참조.
 프로바이더는 모두 실시간 스트리밍 지원 (`process_message_stream()`, 이벤트: `text`/`tool_start`/`tool_result`/`thinking`/`final`/`error`).
+생성·클라이언트 초기화·역할 옵션은 `providers.create_initialized_provider`가 맡고, 모델 선택과 원샷/변이형 세션의 캐시 분리는 `model_resolver`가 소유한다. 온보딩은 초기화 성공 여부·소요 시간을 검사하므로 원시 `get_provider`를 사용한다.
 
 ### 위임 체인 시스템 (Delegation Chain)
 에이전트 간 협업을 위한 핵심 메커니즘. 두 가지 위임 방식이 있고, 그 위에 **행위자 봉투**가 흐른다(상세=communication.md):
@@ -192,6 +193,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 - **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 164): handler 136 · system 18 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
   - handler: 패키지 `handler.py` / system: 백엔드 내부 함수 직접 / channel_engine·driver: 채널·프로토콜 추상화 / workflow·trigger: 오케스트레이션 엔진
   - (`api_engine` 은 `api_registry.yaml` 실행 엔진 — 라우터 축이 아니라 별도 경로다.)
+  - API 등록 여부·설정 조회·리로드는 `ibl_registry`가 소유한다. `system_tools`의 직접 등록 도구 호출과 `api_pipeline`의 YAML 선언 실행은 살아 있으며 `api_engine`이 실행한다.
 - `api_registry.yaml`에 `node` 필드 추가 시 자동으로 노드 액션에 병합 — `ibl_nodes.yaml` 편집 불필요
 - 에이전트별 접근 제어: `allowed_nodes`로 노드 필터링
 - 인프라 노드(`self`, `others`, `table`)는 모든 에이전트에 자동 허용 — 노드 yaml의 `always_on: true` 플래그가 단일 소스 (`ibl_access._always_allowed()`가 레지스트리에서 읽음)

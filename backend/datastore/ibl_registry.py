@@ -66,6 +66,30 @@ def reload_registry():
     _load_registry()
 
 
+def is_registry_tool(tool_name: str) -> bool:
+    """도구가 레지스트리에 등록되어 있는지 확인"""
+    reg = _load_registry()
+    return tool_name in reg.get("tools", {})
+
+
+def list_registry_tools() -> List[str]:
+    """레지스트리에 등록된 모든 도구 이름"""
+    reg = _load_registry()
+    return list(reg.get("tools", {}).keys())
+
+
+def get_tool_config(tool_name: str) -> Optional[Dict]:
+    """도구 설정 조회"""
+    reg = _load_registry()
+    return reg.get("tools", {}).get(tool_name)
+
+
+def get_service_config(service_name: str) -> Optional[Dict]:
+    """서비스 설정 조회"""
+    reg = _load_registry()
+    return reg.get("services", {}).get(service_name)
+
+
 def _get_nodes_path() -> Path:
     """ibl_nodes.yaml 경로 — 앵커는 runtime_utils.get_base_path 하나(2026-08-24)."""
     global _nodes_path

@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: conscious_final_evaluation
+    retired: 2026-09-11
+    reason: 최종평가의 도구 왕복과 과도한 보완을 줄이도록 중간관리 의식과 평가자를 분리했다.
+    instead: 의식은 도구로 계획·중간관리를 수행하고 최종평가는 제공된 실행 증거·결과를 도구 없이 대조한다.
+    phrases:
+      - '이후의 감독·최종 검수도 의식 역할이 맡으며'
+      - '의식은 계획·감독·최종 승인을 맡고'
   - id: foreground_disk_and_duplicate_memory_recall
     retired: 2026-09-11
     reason: 위치 질문의 전경 디스크 순회가 외장 볼륨에서 멈췄고 기억 문서와 행을 중복 전송했다.

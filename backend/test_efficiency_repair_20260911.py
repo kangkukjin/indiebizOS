@@ -37,7 +37,7 @@ def test_hard_quota_does_not_start_repair_without_recheck(supervisor, monkeypatc
     supervisor.config["budget_mode"] = "hard"
     supervisor.usage["input"] = 290000
     supervisor.final_usage["input"] = 70000
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="fix"))
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="fix"))
     supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("재검수 없는 보완")
     finish(supervisor, "candidate")
     assert "repair.skipped" in (supervisor.store.directory / "events.jsonl").read_text()
@@ -423,7 +423,7 @@ def test_large_handoff_remains_bounded_and_full_evidence_is_recoverable(supervis
 
 def test_global_quota_protects_recheck_even_in_soft_supervisor_mode(supervisor, monkeypatch):
     from providers.base import turn_token_scope
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="fix"))
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c, "REWORK", instruction="fix"))
     supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("전체 한도 밖 보완")
     with turn_token_scope("test", "repair-quota", hard_token_limit=50000):
         finish(supervisor, "candidate")

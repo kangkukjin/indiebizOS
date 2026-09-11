@@ -76,7 +76,7 @@ def test_unknown_preserves_cause_and_defers_learning(supervisor, monkeypatch, ca
     def invoke(c, *a, **kw):
         c.call_stop = {"kind": "budget", "reason": "의식 호출 토큰 예산을 소진했습니다"}
         return ""
-    monkeypatch.setattr("supervisor_runtime.invoke", invoke)
+    monkeypatch.setattr("final_evaluator.invoke", invoke)
     result = finish(supervisor, "파일은 생성됨")[-1]["content"]
     assert "토큰 예산" in result and "JSON" not in result and "사용자 취소" not in result
     outcome = tc.get_goal_eval_outcome()

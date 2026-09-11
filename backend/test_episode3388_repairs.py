@@ -96,6 +96,7 @@ def install_judge(monkeypatch, phases):
                            'reason': '시험 근거 확인', 'response_version': c.store.version,
                            'response_hash': digest(c.store.text)})
     monkeypatch.setattr('supervisor_runtime.invoke', invoke)
+    monkeypatch.setattr('final_evaluator.invoke', invoke)
 
 
 def test_http_command_without_task_runs_plan_review_final_and_mcp(tmp_path, monkeypatch, isolated):

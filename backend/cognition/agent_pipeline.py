@@ -745,7 +745,7 @@ class CognitivePipelineMixin:
                 _supervisor.enabled = should_self_reflect(eval_tool_calls, min_tool_calls=3)[0]
             if _supervisor and _supervisor.enabled and final_content:
                 _eval_ran = True
-                record_trajectory_event("cognition.evaluation", {"path": "supervisor"})
+                record_trajectory_event("cognition.evaluation", {"path": "goal_eval", "supervised": True})
                 final_content = yield from _supervisor.finalize(final_content, history, _collect, cancel_check,
                                                                 tool_calls=eval_tool_calls)
             elif consciousness_output and final_content:

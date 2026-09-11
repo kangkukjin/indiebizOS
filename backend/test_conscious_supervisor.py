@@ -15,7 +15,8 @@ from supervision_watch import JobWatch
 
 
 @pytest.fixture
-def supervisor(tmp_path):
+def supervisor(tmp_path, monkeypatch):
+    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: pytest.fail("시험의 실제 모델 호출 금지"))
     previous = tc.snapshot()
     tc.set_current_agent_id("worker")
     tc.set_current_task_id("task-supervision-test")
@@ -56,7 +57,7 @@ def manager_tool(controller, payload):
 
 
 def test_approval_delivers_exact_bytes_without_executor_call(supervisor, monkeypatch):
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c))
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
     original = "  시작\n\n```py\nx = 1\n```\n\n끝  \n"
     events = finish(supervisor, original)
     assert events[-1] == {"type": "final", "content": original}
@@ -68,28 +69,30 @@ def test_approval_delivers_exact_bytes_without_executor_call(supervisor, monkeyp
 @pytest.mark.parametrize("raw", ["", "{}", "```json\n{\"achieved\":true}\n```", "모델 오류", "[]",
                                   '{"status":"CONTINUE","reason":"더 진행"}'])
 def test_empty_or_malformed_judgment_never_passes(supervisor, monkeypatch, raw):
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: raw)
+    monkeypatch.setattr("final_evaluator.invoke", lambda *a, **kw: raw)
     events = finish(supervisor, "원래 결과")
     assert "검수 미승인" in events[-1]["content"]
     assert events[-1]["content"].startswith("원래 결과")
     assert tc.get_goal_eval_outcome()["achieved"] is False
 
 
-def test_unread_tail_cannot_be_approved(supervisor, monkeypatch):
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c))
+def test_unread_tail_is_supplied_and_its_defect_can_fail_evaluation(supervisor, monkeypatch):
+    def evaluate(prompt, **kwargs):
+        assert "뒤쪽 중요한 오류" in prompt
+        return "NOT_ACHIEVED\nSEVERITY: 2\n뒤쪽 중요한 오류를 고쳐라"
+    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
+    supervisor.config["max_repairs"] = 0
     events = finish(supervisor, "x" * 24000 + "뒤쪽 중요한 오류")
-    assert "검수 범위" in events[-1]["content"]
+    assert "미승인" in events[-1]["content"]
     assert tc.get_goal_eval_outcome()["achieved"] is False
 
 
-def test_long_response_can_be_read_to_end_and_approved(supervisor, monkeypatch):
-    def invoke(c, *args, **kwargs):
-        offset = len(c.store.coverage)
-        while offset is not None:
-            page = manager_tool(c, {"op": "response", "offset": offset})["result"]
-            offset = page["next_offset"]
-        return verdict(c)
-    monkeypatch.setattr("supervisor_runtime.invoke", invoke)
+def test_long_response_is_evaluated_without_page_read_tools(supervisor, monkeypatch):
+    def evaluate(prompt, **kwargs):
+        assert "끝</block>" in prompt
+        assert kwargs["role"] == "evaluate"
+        return "ACHIEVED"
+    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
     text = "원문" * 21000 + "끝"
     assert finish(supervisor, text)[-1]["content"] == text
 
@@ -116,7 +119,7 @@ def test_repair_sends_only_changed_block_and_keeps_rest(supervisor, monkeypatch)
         yield {"type": "final", "content": "PATCH_DONE"}
 
     supervisor.runner.ai.process_message_stream = stream
-    monkeypatch.setattr("supervisor_runtime.invoke", invoke)
+    monkeypatch.setattr("final_evaluator.invoke", invoke)
     events = finish(supervisor, original)
     assert events[-1]["content"] == original[:2000] + "수정됨"
     assert "PATCH_DONE" not in str(events)
@@ -234,7 +237,7 @@ def test_pursuit_done_is_request_until_final_overall_approval(supervisor, monkey
     result = supervisor.request_done(binding, "영상 완성")
     assert result["status"] == "completion_requested" and not writes
     monkeypatch.setattr("pursuit_bind.resolve_session", lambda *a: binding)
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c, pursuit_status="APPROVED"))
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c, pursuit_status="APPROVED"))
     finish(supervisor, "완성한 영상")
     assert writes[0][0][0] == {"status": "done"}
 
@@ -242,7 +245,7 @@ def test_pursuit_done_is_request_until_final_overall_approval(supervisor, monkey
 def test_turn_approval_alone_cannot_close_whole_pursuit(supervisor, monkeypatch):
     binding = SimpleNamespace(row={"id": "p", "version": 1, "goal_criteria": "전체 목표"})
     supervisor.request_done(binding, "이번 단계 완료")
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: verdict(c))
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: verdict(c))
     assert "전체 과제의 목표 달성" in finish(supervisor, "응답")[-1]["content"]
     assert tc.get_goal_eval_outcome()["achieved"] is False
 
@@ -254,7 +257,7 @@ def test_stale_response_approval_is_unknown(supervisor, monkeypatch):
         c.store.patch(1, [{"id": "0", "hash": block["hash"], "text": "changed"}])
         c.store.read_response(mark=True)
         return old
-    monkeypatch.setattr("supervisor_runtime.invoke", invoke)
+    monkeypatch.setattr("final_evaluator.invoke", invoke)
     assert "검수 미승인" in finish(supervisor, "original")[-1]["content"]
 
 
@@ -328,13 +331,14 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     monkeypatch.setattr("pursuit_bind.prepare", lambda mem: (mem, False))
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **kw: calls.append(1) or verdict(c))
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: calls.append(1) or verdict(c))
     supervisor.enabled = False
     events = list(runner._cognitive_stream_body("질문", []))
     assert not [e for e in events if e["type"] == "error"], events
     assert [e["content"] for e in events if e["type"] == "text"] == ["사용자 응답"]
     assert len(calls) == (1 if lane == "THINK" else 0)
-    assert ("cognition.evaluation", {"path": "supervisor" if lane == "THINK" else "none"}) in trace
+    expected = {"path": "goal_eval", "supervised": True} if lane == "THINK" else {"path": "none"}
+    assert ("cognition.evaluation", expected) in trace
 
 
 @pytest.mark.parametrize("enabled,task,agent,reason", [

@@ -26,8 +26,8 @@ from cognitive_trace import (
 # ACHIEVED / NOT_ACHIEVED 로 *시작*하는 줄을 찾는다. NOT 변형(NOT ACHIEVED,
 # NOT-ACHIEVED)도 흡수. 대안 순서상 NOT 쪽을 먼저 둬야 ACHIEVED 부분매칭에 안 먹힌다.
 _VERDICT_LINE_RE = re.compile(
-    r"^[\s*_#>\"'`\[\(-]*(NOT[\s_-]?ACHIEVED|ACHIEVED)\b", re.IGNORECASE)
-_VERDICT_WORD_RE = re.compile(r"\bNOT[\s_-]?ACHIEVED\b|\bACHIEVED\b", re.IGNORECASE)
+    r"^[\s*_#>\"'`\[\(-]*(NOT[\s_-]?ACHIEVED|ACHIEVED|UNKNOWN)\b", re.IGNORECASE)
+_VERDICT_WORD_RE = re.compile(r"\bNOT[\s_-]?ACHIEVED\b|\bACHIEVED\b|\bUNKNOWN\b", re.IGNORECASE)
 _SEVERITY_RE = re.compile(r"SEVERITY\s*[:：]\s*([123])", re.IGNORECASE)
 
 
@@ -44,15 +44,16 @@ def parse_eval_verdict(text: str) -> tuple:
       3차: 판정 토큰 부재 → None(검수 미완료). 실패로 단정해 재실행하지도 않는다.
     severity 는 NOT_ACHIEVED 일 때 본문 전체에서 SEVERITY: n 탐색 (미표기=2).
     """
-    achieved = None
+    verdict = None
     for line in text.strip().split('\n'):
         m = _VERDICT_LINE_RE.match(line.strip())
         if m:
-            achieved = not m.group(1).upper().startswith("NOT")
+            verdict = m.group(1).upper()
             break
-    if achieved is None:
+    if verdict is None:
         m = _VERDICT_WORD_RE.search(text)
-        achieved = None if m is None else not m.group(0).upper().startswith("NOT")
+        verdict = m.group(0).upper() if m else None
+    achieved = None if verdict in {None, "UNKNOWN"} else not verdict.startswith("NOT")
 
     severity = 0
     if achieved is False:
@@ -103,7 +104,8 @@ class CognitiveEvalMixin:
         return None
 
     def _collect_created_files(self, response: str,
-                                tool_calls: Optional[List[Dict[str, Any]]] = None) -> str:
+                                tool_calls: Optional[List[Dict[str, Any]]] = None, *,
+                                exclude_paths=(), snapshots=None, full_content=False) -> str:
         """생성/수정된 파일 경로를 찾아 내용을 읽는다.
 
         1차: tool_calls(있으면)에서 Write/Edit/MultiEdit/NotebookEdit 같은 파일 변경 도구의
@@ -121,7 +123,7 @@ class CognitiveEvalMixin:
         seen_set: set = set()
 
         def _add(path: str):
-            if path and path not in seen_set and path.startswith("/"):
+            if path and path not in seen_set and path not in exclude_paths and path.startswith("/"):
                 seen_set.add(path)
                 paths_seen.append(path)
 
@@ -162,7 +164,10 @@ class CognitiveEvalMixin:
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
                         content = f.read()
-                    if len(content) > 10000:
+                    if snapshots is not None:
+                        from supervision_store import digest
+                        snapshots[path] = digest(content)
+                    if not full_content and len(content) > 10000:
                         content = content[:10000] + "\n\n... (10000자 초과, 생략됨)"
                     files_content.append(f"### {os.path.basename(path)} ({path})\n```\n{content}\n```")
                 except Exception:
@@ -377,7 +382,9 @@ class CognitiveEvalMixin:
                                tool_results_str: str = "",
                                action_ledger: str = "",
                                execution_memory: str = "",
-                               visual_artifacts: list = None) -> tuple:
+                               visual_artifacts: list = None,
+                               evaluation_context: str = "", evaluation_policy: str = "",
+                               full_response: bool = False) -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
 
         의식 에이전트의 출력(task_framing, capability_focus)과 action_ledger
@@ -389,6 +396,8 @@ class CognitiveEvalMixin:
             severity: 0=N/A(achieved), 1=경미, 2=중대, 3=치명
         """
         evaluator_system_prompt = self._load_evaluator_prompt()
+        if evaluation_policy:
+            evaluator_system_prompt += "\n\n" + evaluation_policy
 
         # 메시지에는 평가 대상 데이터만
         prompt = (
@@ -445,7 +454,9 @@ class CognitiveEvalMixin:
         if tool_results_str:
             prompt += f"## 도구 실행 결과\n{tool_results_str}\n\n"
 
-        prompt += f"## 에이전트 응답\n{response[:8000]}\n\n"
+        prompt += f"## 에이전트 응답\n{response if full_response else response[:8000]}\n\n"
+        if evaluation_context:
+            prompt += f"## 하네스가 수집한 평가 맥락\n{evaluation_context}\n\n"
 
         if created_files:
             prompt += f"## 생성된 파일 내용\n{created_files}\n\n"

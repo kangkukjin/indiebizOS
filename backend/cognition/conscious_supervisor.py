@@ -1,4 +1,4 @@
-"""계획·조건부 관찰·최종 검수 한 역할. 시계/원장/작업 소유권은 코드가 책임진다."""
+"""의식의 계획·조건부 감독과 도구 없는 최종 평가를 연결하는 턴 제어기."""
 import json
 import threading
 import time
@@ -15,7 +15,7 @@ from supervision_watch import JobWatch
 DEFAULTS = {"enabled": True, "max_reviews": 2, "review_interval_s": 240,
             "stall_s": 180, "long_task_s": 480, "tick_s": 5,
             "call_timeout_s": 180, "max_tools_per_call": 10, "max_tools_total": 40,
-            "final_tool_reserve": 12, "max_repairs": 2,
+            "final_tool_reserve": 12, "max_repairs": 1,
             "max_input_tokens": 300000, "max_output_tokens": 16000,
             "final_input_reserve": 80000, "final_output_reserve": 4000,
             "budget_mode": "soft", "review_input_reserve": 60000, "review_output_reserve": 2000,
@@ -673,10 +673,11 @@ class Supervisor:
         if self.original_pursuit and self.original_pursuit["id"] == binding.row["id"]:
             self.done_request["original_goal_criteria"] = self.original_pursuit["goal_criteria"]
         self.log("pursuit.completion_requested", evidence=self.store.evidence(self.done_request))
-        return {"status": "completion_requested", "message": "전체 목표 달성 근거를 의식이 최종 검수한 뒤 완료 처리합니다"}
+        return {"status": "completion_requested", "message": "전체 목표 달성 근거를 평가자가 검수한 뒤 완료 처리합니다"}
 
     def finalize(self, response, history, collect, cancel_check=None, tool_calls=None):
-        from supervisor_runtime import invoke, parse_decision, repair_message
+        from supervisor_runtime import parse_decision, repair_message
+        from final_evaluator import invoke, prepare, snapshot_error
         from thread_context import set_goal_eval_outcome
         set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="검수 진행 중")
         self.finalizing = True
@@ -685,26 +686,17 @@ class Supervisor:
         decision = {"status": "UNKNOWN", "reason": "검수가 완료되지 않았습니다"}
         with self.review_lock:
             self.executor_paused = True
-            for attempt in range(self.config["max_repairs"] + 1):
+            # 예전 설정에 2 이상이 남아 있어도 최종 보완은 한 번으로 제한한다.
+            max_repairs = min(1, max(0, self.config["max_repairs"]))
+            for attempt in range(max_repairs + 1):
                 if self.cancelled():
                     break
-                yield {"type": "thinking", "content": "의식이 목표 달성 근거와 저장된 응답을 검수하고 있습니다."}
-                from supervisor_content import discover, validate
-                self.content_artifacts = discover(self, self.store.text, tool_calls)
-                if hasattr(self.runner, "_collect_visual_artifacts"):
-                    artifacts = self.runner._collect_visual_artifacts(self.store.text, tool_calls=tool_calls or []) or []
-                    self.final_images, self.visual_review = self.verifications.visual_input(artifacts,
-                        digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)), self.store)
-                from supervisor_review import final_state, recover_citations, response_review_page
-                prompt = json.dumps({"phase": "final", **final_state(self)}, ensure_ascii=False)
-                # 짧은 후보는 첫 호출에 그대로 제공. 장문은 범위 도구로 끝까지 읽는다.
-                page = response_review_page(self)
-                prompt += "\nresponse_first_page=" + json.dumps(page, ensure_ascii=False)
-                from quantity_checks import duration_table, arithmetic_issues
-                prompt += "\nquantity_checks=" + json.dumps({"durations": duration_table(self.store.text),
-                    "issues": arithmetic_issues(self.store.text)}, ensure_ascii=False)
+                self.phase = "final"
+                self.call_stop = None
+                yield {"type": "thinking", "content": "평가자가 목표·실행 기록·결과의 일치 여부를 확인하고 있습니다."}
                 try:
-                    raw = invoke(self, prompt, phase="final")
+                    prepare(self, tool_calls)
+                    raw = invoke(self, "", phase="final")
                     decision = ({"status": "UNKNOWN", **self.call_stop} if self.call_stop
                                 else parse_decision(raw))
                 except Exception as exc:
@@ -713,44 +705,34 @@ class Supervisor:
                     decision = {"status": "UNKNOWN", "reason": "최종 검수에서 완료 판정 대신 계속 진행 신호를 받았습니다"}
                 manifest = self.store.manifest()
                 if decision["status"] == "APPROVED" and (
-                    not self.store.fully_read() or decision.get("response_version") != manifest["version"]
+                    decision.get("response_version") != manifest["version"]
                     or decision.get("response_hash") != manifest["hash"] or self.cancelled()
                 ):
-                    decision = {"status": "UNKNOWN", "reason": "본문 검수 범위 또는 승인 버전·지문이 일치하지 않습니다"}
+                    decision = {"status": "UNKNOWN", "reason": "평가한 응답의 버전·지문이 일치하지 않거나 작업이 취소됐습니다"}
+                if decision["status"] == "APPROVED":
+                    changed = snapshot_error(self)
+                    if changed:
+                        decision = {"status": "UNKNOWN", "reason": changed}
                 if decision["status"] == "APPROVED" and self.done_request and decision.get("pursuit_status") != "APPROVED":
                     decision = {"status": "UNKNOWN", "reason": "이번 턴과 별개인 전체 과제의 목표 달성이 승인되지 않았습니다"}
                 delivery = self.delivery.manifest()
                 if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
                     decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
-                content_error = validate(self, decision)
+                from quantity_checks import arithmetic_issues
                 numeric_errors = arithmetic_issues(self.store.text)
                 if numeric_errors and decision["status"] == "APPROVED":
                     decision = {"status": "REWORK", "reason": "응답의 명시적 시간 합산 불일치",
                                 "repair_scope": "local", "instruction": json.dumps(numeric_errors, ensure_ascii=False)}
-                if content_error:
-                    decision = recover_citations(self, decision, content_error)
-                    content_error = validate(self, decision)
-                    if decision["status"] == "APPROVED" and (
-                        self.store.manifest() != manifest or self.cancelled()
-                        or self.delivery.manifest() != delivery
-                    ):
-                        decision = {"status": "UNKNOWN", "reason": "출처 재확인 중 승인 대상이 변경됐습니다"}
-                        content_error = None
-                if content_error:
-                    decision = {"status": "REWORK", "reason": content_error,
-                                "instruction": "산출물 본문·출처·최종 집계를 검증하고 content_checks 근거를 준비하세요. " + content_error,
-                                "repair_scope": "local"}
-                self.verifications.remember(decision.get("checks", []),
-                    digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)), self.store)
-                self.log("decision", role="consciousness", decision=decision, response=manifest)
+                self.log("decision", role="evaluate", validator="goal_eval", decision=decision, response=manifest)
                 from episode_logger import record_trajectory_event
                 record_trajectory_event("validation.completed", {
-                    "validator": "conscious_supervisor", "round": attempt + 1,
-                    "status": decision["status"], "achieved": decision["status"] == "APPROVED",
+                    "validator": "goal_eval", "round": attempt + 1,
+                    "status": {"APPROVED": "ACHIEVED", "REWORK": "NOT_ACHIEVED"}.get(decision["status"], "UNKNOWN"),
+                    "achieved": decision["status"] == "APPROVED",
                     "feedback_text": decision.get("reason", ""), "response_hash": manifest["hash"],
                     "response_version": manifest["version"], "store": str(self.store.directory),
                 })
-                if decision["status"] != "REWORK" or attempt >= self.config["max_repairs"]:
+                if decision["status"] != "REWORK" or attempt >= max_repairs:
                     break
                 expected = max(self.config["final_input_reserve"],
                                self.phase_usage.get("final", {}).get("last_input", 0))
@@ -781,7 +763,7 @@ class Supervisor:
                         self.observe_native(event)
                         if event.get("type") not in {"text", "final"}:
                             yield event
-                self.log("ownership.handoff", role="harness", to="consciousness")
+                self.log("ownership.handoff", role="harness", to="evaluate")
                 self.executor_paused = True
                 if self.store.version == before_version and not self.repair_kept:
                     decision = {"status": "UNKNOWN", "reason": "실행자의 보완 결과가 patch/keep로 확정되지 않았습니다"}
@@ -808,11 +790,11 @@ class Supervisor:
                 approved = False
                 decision = {"status": "UNKNOWN", "reason": f"검수한 산출물·알림을 전달하지 못했습니다: {exc}"}
                 record_trajectory_event("validation.completed", {
-                    "validator": "conscious_supervisor", "status": "UNKNOWN", "achieved": False,
+                    "validator": "goal_eval", "status": "UNKNOWN", "achieved": False,
                     "feedback_text": decision["reason"], "stage": "delivery"})
         if approved and self.done_request and decision.get("pursuit_status") == "APPROVED":
             try:
-                completion_binding.write({"status": "done"}, kind="supervisor.approved",
+                completion_binding.write({"status": "done"}, kind="evaluator.approved",
                                          why=decision["reason"], key=self.turn_id)
             except Exception as exc:
                 self.log("pursuit.approval_conflict", role="harness", error=str(exc))
@@ -826,12 +808,13 @@ class Supervisor:
             "status": status, "reason": decision.get("reason", ""),
             "stop_kind": decision.get("kind"), "response": self.store.manifest(),
             "original_goal": self.message, "episode_id": self.episode_id,
+            "validator": "goal_eval",
             "learning": "eligible" if approved else "deferred" if status == "UNKNOWN" else "rejected",
         }, ensure_ascii=False), encoding="utf-8")
-        print(f"[ConsciousSupervisor] 최종 판정: {decision['status']}")
+        print(f"[GoalEval] 최종 판정: {status}")
         final = self.store.text
         if not approved:
-            final += "\n\n[의식 검수 미승인] " + str(decision.get("reason", "검수 미완료"))
+            final += "\n\n[평가 검수 미승인] " + str(decision.get("reason", "검수 미완료"))
         self.log("response.delivered", role="harness", status=decision["status"], response=self.store.manifest())
         yield {"type": "text", "content": final}
         yield {"type": "final", "content": final}

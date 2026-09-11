@@ -76,7 +76,7 @@ def repair_execution(controller, decision, history):
     eligible = (decision.get("repair_scope") == "local" and provider is not None and not controller.active
              and not any(j.phase != "complete" for j in controller.jobs.values())
              and len(encoded) <= controller.config["repair_context_chars"])
-    response_only = eligible and not controller.content_artifacts
+    response_only = eligible and not controller.content_artifacts and not controller.delivery.manifest()
     local = response_only or eligible and resume > cold * 1.2
     if local:
         ai = copy.copy(ai)

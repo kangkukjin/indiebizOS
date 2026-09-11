@@ -255,7 +255,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
      · EXECUTE / THINK     → 본격 모델 유지 (무의식 EXECUTE 오분류여도 품질 방어)
      · 도구: execute_ibl + run_command + read_guide + 인지도구(4) — Python/Node.js는 [self:write]→run_command 패턴
    ↓
-[4] 의식 감독·검수   — 사건에 따른 중간 점검, 저장된 응답 승인 또는 변경 블록 보완
+[4] 의식 중간관리 + 별도 최종평가 — 의식은 도구로 진단, 평가자는 제공된 목표·실행 증거·결과로 판정
    ↓
 [5] 증류             — 해마 경험 증류 + 심층메모리 증류 (자동)
 ```
@@ -287,18 +287,19 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 - **과제 선택·규정 재사용** — `pursuit_bind.py`와 `_run_consciousness_or_reuse()`
   - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE/Reflex도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.
   - 진행은 원문 턴을 먼저 저장하고 비동기 갱신한다. 다음 턴은 미반영 진행을 먼저 따라잡는다. 상세: architecture.md와 memory.md.
-- **의식의 감독·검수** — `conscious_supervisor.py` + `supervisor_runtime.py`
-  - 의식과 실행은 같은 AIAgent 기반, 역할·신원·세션·예산은 분리. 의식도 공유 작업대에서 기존 도구로 확인·작은 수정을 수행한다.
-  - 하네스가 실제 도구·로그 증분·진척 정체를 관찰한다. 실행자의 별도 보고나 매 스텝 모델 반성은 없다. 짧은 정상 조회는 추가 의식 호출 없이 끝난다.
-  - 검수한 후보의 버전·해시·전체 읽기 범위가 맞으면 원문 그대로 전달한다. 보완은 patch로 변경 블록만 제출한다. UNKNOWN은 미승인이다.
-  - `pursuit done`은 전체 목표 검수를 요청한다. 이번 턴 승인과 전체 과제 완료 승인은 별개이며 원장 버전도 대조한다.
-  - 감독을 끄거나 신원이 없는 호출의 `cognitive_eval`/SelfReflect는 호환 경로다. 실제 개입 경계·기본 한도는 architecture.md와 감독 설계 문서의 구현 기록을 참조한다.
+- **의식의 중간관리** — `conscious_supervisor.py` + `supervisor_runtime.py`
+  - 계획·재규정·조건부 중간 점검은 도구를 가진 의식 역할이 맡는다. 진단 뒤 본작업은 실행자에게 인계한다.
+- **도구 없는 최종평가** — `final_evaluator.py` + `cognitive_eval.py`
+  - 하네스가 사용자 목표·전체 응답·실제 호출 원장·결과 발췌·산출물을 모아 평가 축 원샷에 전달한다.
+  - 평가자는 직접 조사·수정하지 않는다. 결함을 한 번에 넘기며 실행자의 보완은 최대 한 번, 재평가는 갱신된 증거로 수행한다.
+  - 응답·파일·공개 대기열 지문을 대조해 승인된 결과를 전달하고 전체 과제 기준을 확인한 완료 요청만 반영한다.
+  - 모델이 응답 페이지나 인용 영수증을 다시 읽어야 하는 조건은 없다. 감독 비활성 경로의 GoalEval/SelfReflect는 유지한다.
 - **공통 원칙**
   - 시스템 AI와 프로젝트 에이전트 모두 동일한 AgentRunner 인지 메서드 사용 (`_is_system_ai` 플래그로 DB·도구만 분리)
   - 모델·API 키는 모두 모델 기어가 해소한 티어에서 상속 (에이전트별 키 설정 폐지). 티어 슬롯의 키가 비면 고급(시스템 AI) 키로 폴백
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 164 액션(sense 43·self 50·limbs 14·others 17·engines 18·table 22)·42 도구 패키지 + 5 extensions·backend .py 371(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 164 액션(sense 43·self 50·limbs 14·others 17·engines 18·table 22)·42 도구 패키지 + 5 extensions·backend .py 372(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-08-22): system_docs 목록 13문서(harness_haerye 누락분)·유령 파일(my_profile.txt) 제거·자가점검 카덴스 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

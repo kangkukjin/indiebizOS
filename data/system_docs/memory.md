@@ -98,7 +98,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 - **저장** (`episode_logger.py`): 사용자 명령 1건 = 1 에피소드. stdout 전체를 가로채 종료 시 저장.
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **10,000건** 롤링 — `episode_logger.MAX_EPISODES`, 2026-09-07 1000→10000. 실측 1행 ≒ 37KB(로그 21KB + 궤적 15KB)·하루 약 24주행이라 창 = 약 400일치 ≒ 370MB 대)
   - `ibl_code_corpus` (2026-09-06 부활, 사용자 판정 "필요한 정보가 지워지고 있다"): 몸이 실제로 쓴 **IBL 문장 원문 전량**. 전 IBL 표면의 초크포인트(`system_tools_ibl._execute_ibl_unified`)가 매 실행 `episode_logger.record_ibl_code` 로 upsert — 키=원문 sha256(궤적 `ibl.started.code_sha256` 과 같아 한 DB 안에서 조인), 같은 문장은 한 행에 seen/success/fail 누계·마지막 실패 사유·last_agent/origin, 본문은 `mask_secrets` 를 거치고 바뀌었으면 `masked=1`(해시는 원문 기준). 롤링 없이 영구(중복 제거 뒤 월 수 MB 미만). ibl_usage.db 가 아닌 world_pulse.db 인 이유 = 해마 DB 는 hippocampus.zip 으로 릴리스에 실려 사용자 원문을 담을 수 없다. `source` 는 B18-2(실사용이 한 번 밟은 행은 `usage` 유지). 파인튜닝 코퍼스·조합률 실측(`scripts/vocab_composition_metrics.py`, 아직 미독)의 정본 자리.
-  - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 판정(ACHIEVED/NOT_ACHIEVED/**UNKNOWN**/**NULL**) (**영구 보존**). 의식 감독이 최종 승인을 소유하며 `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 최종 `[ConsciousSupervisor]` 마커를 우선하고, 감독 없는 호환 경로의 `[GoalEval]` 마지막 라운드를 뒤이어 읽는다. 산문 응답에서 성공을 추측하지 않는다.
+  - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 판정(ACHIEVED/NOT_ACHIEVED/**UNKNOWN**/**NULL**) (**영구 보존**). 도구 없는 평가자가 최종 판정을 소유하며 `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 새 `[GoalEval] 최종 판정` 마커를 우선하고, 과거 `[ConsciousSupervisor]` 및 기존 `[GoalEval]` 라운드 마커도 읽는다. 산문 응답에서 성공을 추측하지 않는다.
   - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 롤링 창에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
 - **조인(2026-08-21)**: 에피소드에 `task_id` 가 실려 **쓰기 관문 원장(`write_ledger`) ↔ episode ↔ tasks** 3중 조인이 닫혔다 — "이 파일이 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오른다(`[self:body]{op:"writes"}`).
@@ -410,7 +410,7 @@ World Pulse(수집·가이드·진단리포트·action_health)는 건강하나, 
 
 ## 개요
 
-사용자 명령이 들어오면 **파이프라인 최상단(단계 0)에서 연상기억을 1회 생성**하고 무의식·의식의 계획·실행에 공유한다. 의식의 중간 감독과 최종 검수에는 원래 목표·규정·실제 도구 증거를 전달하며, 기억 전문을 반복 복사하지 않는다.
+사용자 명령이 들어오면 **파이프라인 최상단(단계 0)에서 연상기억을 1회 생성**하고 무의식·의식의 계획·실행에 공유한다. 의식의 중간 감독과 별도 평가자의 최종평가에는 원래 목표·규정·실제 도구 증거를 전달하며, 기억 전문을 반복 복사하지 않는다.
 
 연상기억은 두 종류의 기억으로 구성된다:
 
@@ -467,7 +467,7 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
     모델은 모델 기어가 결정(역할→축→기어→티어): Reflex='reflex' 축, EXECUTE·THINK='execute'/'consciousness' 축 (균형 기어 기본=중급/중급)
     ↓
 [4a] 의식 감독: 실제 도구·진척 정체·긴 작업 사건을 보고 필요할 때만 판단
-[4b] 의식 검수: 원래 목표·규정·증거·저장된 후보 대조, 승인 또는 부분 보완
+[4b] 도구 없는 최종 평가: 원래 목표·규정·실행 증거·후보 대조, 승인 또는 1회 부분 보완
     ↓
 [5] 증류
     ├─ 해마: top_score < 0.7(또는 ≥0.7이나 회상 미사용) + 도구 호출 성공 → distill_experience()
@@ -794,7 +794,7 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 | **연합피질** | **심층메모리 (memory_db)** | **사용자·세계에 대한 장기 사실 인출** |
 | 전전두엽 | 의식 에이전트 (본격 AI) | 자기 참조적 문제 구성 + 달성 기준 |
 | 운동피질 | 실행 에이전트 (중급/본격 AI) | IBL 코드 생성 및 실행 |
-| 전대상피질 | 의식의 검수 역할 | 실제 증거·달성 기준 대비 검증, 승인·보완 판단 |
+| 전대상피질 | 별도 평가자 | 실제 증거·달성 기준 대비 검증, 승인·보완 판단 |
 | 소뇌 | distill_experience + _distill_deep_memory | 경험 증류 — 성공 패턴을 해마/심층메모리에 저장 |
 
 ---

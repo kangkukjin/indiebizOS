@@ -38,7 +38,7 @@ def test_final_approval_publishes_exact_artifact_and_latest_notice_once(supervis
         assert Path(manifest["artifacts"][0]["staged"]).read_bytes() == b"new reviewed bytes"
         assert target.read_text() == "old" and not sent
         return verdict(c, delivery_hash=manifest["hash"])
-    monkeypatch.setattr("supervisor_runtime.invoke", approve)
+    monkeypatch.setattr("final_evaluator.invoke", approve)
     assert finish(supervisor, "The report is ready.")[-1]["content"] == "The report is ready."
     assert target.read_bytes() == Path(artifact["staged"]).read_bytes()
     assert len(sent) == 1 and sent[0]["body"] == "14 tips"
@@ -50,7 +50,7 @@ def test_final_approval_publishes_exact_artifact_and_latest_notice_once(supervis
 def test_unapproved_draft_never_publishes_or_notifies(supervisor, tmp_path, monkeypatch, status):
     target, _, sent = prepare(supervisor, tmp_path, monkeypatch)
     supervisor.config["max_repairs"] = 0
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **k: verdict(c, status))
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **k: verdict(c, status))
     assert "미승인" in finish(supervisor, "draft")[-1]["content"]
     assert target.read_text() == "old" and not sent
 
@@ -62,7 +62,7 @@ def test_changed_artifact_invalidates_approval(supervisor, tmp_path, monkeypatch
         fingerprint = c.delivery.manifest()["hash"]
         Path(artifact["staged"]).write_bytes(b"changed after review")
         return verdict(c, delivery_hash=fingerprint)
-    monkeypatch.setattr("supervisor_runtime.invoke", approve)
+    monkeypatch.setattr("final_evaluator.invoke", approve)
     assert "미승인" in finish(supervisor, "draft")[-1]["content"]
     assert target.read_text() == "old" and not sent
 
@@ -70,7 +70,7 @@ def test_changed_artifact_invalidates_approval(supervisor, tmp_path, monkeypatch
 def test_publication_failure_is_not_achieved_and_does_not_notify(supervisor, tmp_path, monkeypatch):
     import thread_context as tc
     target, _, sent = prepare(supervisor, tmp_path, monkeypatch)
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **k:
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **k:
                         verdict(c, delivery_hash=c.delivery.manifest()["hash"]))
     target.unlink()
     target.mkdir()  # cannot replace a directory with the approved file
@@ -90,7 +90,7 @@ def test_changed_goal_does_not_publish_approved_draft(supervisor, tmp_path, monk
     target, _, sent = prepare(supervisor, tmp_path, monkeypatch)
     supervisor.done_request = {"id": "goal", "version": 1}
     monkeypatch.setattr("pursuit_bind.resolve_session", lambda *a: SimpleNamespace(row={"id": "goal", "version": 2}))
-    monkeypatch.setattr("supervisor_runtime.invoke", lambda c, *a, **k:
+    monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **k:
                         verdict(c, delivery_hash=c.delivery.manifest()["hash"], pursuit_status="APPROVED"))
     assert "미승인" in finish(supervisor, "draft")[-1]["content"]
     assert target.read_text() == "old" and not sent

@@ -43,38 +43,26 @@ def setup_report(controller, tmp_path):
     return path
 
 
-@pytest.mark.parametrize("confirmation,approved", [("APPROVED", True), ("REWORK", False), ("UNKNOWN", False), ("MUTATED", False), ("ERROR", False)])
-def test_receipt_gap_gets_one_source_only_confirmation(supervisor, tmp_path, monkeypatch, confirmation, approved):
+@pytest.mark.parametrize("confirmation,approved", [("ACHIEVED", True), ("NOT_ACHIEVED", False), ("UNKNOWN", False), ("MUTATED", False), ("ERROR", False)])
+def test_evaluator_receives_body_without_extra_receipt_round(supervisor, tmp_path, monkeypatch, confirmation, approved):
     path = setup_report(supervisor, tmp_path)
     supervisor.config["max_repairs"] = 0
-    source = supervisor.store.evidence("다른 요인도 고용에 영향을 준다.")
-    phases = []
+    calls = []
 
-    def invoke(c, prompt, **kw):
-        phases.append(kw["phase"])
-        if kw["phase"] == "receipt":
-            assert "source_pages" in prompt and "다른 요인" in prompt
-            assert c._citation_review
-            assert not manager_tool(c, {"op": "patch", "version": c.store.version, "patches": []})["success"]
-            assert not manager_tool(c, {"op": "execute", "name": "inspect"})["success"]
-            if confirmation == "MUTATED":
-                path.write_text("검수 뒤 바뀐 다른 주장")
-                return verdict(c)
-            if confirmation == "ERROR":
-                raise RuntimeError("출처 재확인 실패")
-            return verdict(c, confirmation)
-        art = c.content_artifacts[0]
-        c.store.read_evidence(art["evidence_id"], mark=True)
-        na = {"status": "not_applicable", "reason": "집계 없음"}
-        return verdict(c, content_checks=[{"path": str(path), "hash": art["hash"], "counts": na,
-            "meaning": {"status": "passed", "reason": "인과 한계 보존",
-                        "evidence": [{"id": art["evidence_id"], "quote": path.read_text()}]},
-            "sources": {"status": "passed", "reason": "원천도 다른 요인을 명시",
-                        "evidence": [{"id": source["id"], "quote": "다른 요인도 고용에 영향을 준다."}]}}])
+    def evaluate(prompt, **kwargs):
+        calls.append(kwargs["role"])
+        assert path.read_text() in prompt
+        if confirmation == "MUTATED":
+            path.write_text("평가 뒤 바뀐 다른 주장")
+            return "ACHIEVED"
+        if confirmation == "ERROR":
+            raise RuntimeError("평가 모델 실패")
+        return confirmation + "\n자료에 근거한 판정"
 
-    monkeypatch.setattr("supervisor_runtime.invoke", invoke)
+    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
+    monkeypatch.setattr("supervisor_runtime.invoke", lambda *a, **kw: pytest.fail("최종평가에 의식 호출"))
     events = finish(supervisor, str(path))
-    assert phases == ["final", "receipt"]
+    assert calls == ["evaluate"]
     assert ("검수 미승인" not in events[-1]["content"]) is approved
     assert not supervisor.calls
 

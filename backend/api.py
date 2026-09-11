@@ -652,16 +652,18 @@ async def health_check():
     #   잘못 닫힘) 물어볼 곳이 없어 10초 뒤 써버렸고 리로드가 그 턴을 끊었다.
     #   기록이 아니라 **프로세스 자신**에게 묻는 두 번째 출처다. id 만 싣는다(내용 없음).
     live_turns = []
+    live_turns_observation = "known"
     try:
         from episode_logger import live_episode_ids
         live_turns = live_episode_ids()
     except Exception:
-        pass
+        live_turns_observation = "unknown"
     return {
         "status": "healthy",
         "timestamp": datetime.now().isoformat(),
         "base_path": str(BASE_PATH),
         "live_turns": live_turns,
+        "live_turns_observation": live_turns_observation,
     }
 
 

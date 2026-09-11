@@ -119,3 +119,39 @@ R0/R1은 기존 동작 회귀(`test_quiescent_reload`, `test_preflight_restart`,
 ## 7. 다른 세션에 넘길 요청
 
 > 정본 `/Users/kangkukjin/Desktop/AI/indiebizOS`의 AGENTS.md와 이 문서를 읽고 R0→R1을 구현하라. 현재 코드를 재확인하고 단일 현역 재기동의 소유권부터 모아라. R2는 R1 검증 뒤 진행하고, R3의 동시 실행 blue/green은 측정과 선행조건 없이 구현하지 마라. 기존 승인된 작업·취소·재개·의도적 종료 의미를 보존하고, 실제 외부 송신 없는 장애 주입으로 검증하라. 새 브랜치/clone 없이 정본 main에 검토 가능한 묶음별로 커밋하고 이 문서에 결과를 기록하라.
+
+
+## 8. R0 조사 결과 (2026-09-11)
+
+정본 main에서 조사했다. 17:19 KST 단회 실측: `/health` 200, 0.010초,
+`live_turns=[]`. 리로더 PID 571/RSS 103.3 MiB, 실행 워커 PID 584/RSS 633.3 MiB,
+keeper PID 65566/RSS 2.0 MiB. 이는 **에피소드 0의 관측**이며 실제 실행·저장 작업
+0의 증거가 아니다. 기존 계약에는 그 전수를 답하는 경계가 없었다. 과거 중단 비용은
+이 표본에서 추정하지 않는다. R1 시험에서 제어 시간·접수 중단·복구 시간을 별도 측정한다.
+
+### 입구와 수명 지도
+
+| 입구 | 현재 소유/경쟁 | R1 귀속 |
+|---|---|---|
+| `backend/api.py` 직접 실행, Electron 개발/패키지 Python spawn | uvicorn 마스터/워커, 개발 WatchFiles | import 부작용 전에 외부 제어자로 합류; 워커는 reload 없이 1개 |
+| `start.sh` | 시작 때 포트/이름 kill, 별도 keeper spawn, EXIT trap 소탕 | 같은 제어자 시작·의도적 종료 요청 |
+| `scripts/backend_keeper.sh` | health 3회+유예 후 포트/이름 kill | 같은 제어자의 호환 실행 입구; 별도 감시 루프 폐지 |
+| `quiescent_reload` | live episode 관측→TTL 관문, cap/unknown 강행 | 파일 변경 요청만 발급; 검사·drain·교체는 제어자 |
+| `red_apply` | 예약 턴/증류 기다림, 독자 관문, 적용 | 예약 턴 저장 계약 유지, 실제 drain·적용 직렬화는 제어자 |
+| `red_watchdog`, repair prepare/finalize | 백업 검증/복원, keeper pause 표식 | 백업/검증 기능 유지, 제어자가 사망 뒤 복구 소유 |
+| Electron 모든 창 닫기 / start.sh INT·TERM·EXIT | 의도 표식 후 그룹·포트·이름 kill | 의도 표식/요청을 먼저 영속화, 소유 신원을 검증한 프로세스 트리만 종료 |
+| `scripts/preflight_restart.py` | episode DB+미예약 repair staging, UNKNOWN=2 | 사전검사 기능 유지; 실행 소유 관측을 대체하지 않음 |
+| `scripts/restart_electron.sh`, 앱 런처 | Electron 재시작 | Electron 동일 시작/종료 경유 |
+| 폰 `phone_api` | 별도 몸의 부팅/종료 | R1 데스크탑 제어자 밖; 기존 계약 보존 |
+
+실행 경계: `ChatRuns.begin/invoke`(WS 분리 후에도 수명 유지),
+`api_ibl.execute_ibl_code`(HTTP 대기 종료 뒤 실제 to_thread 계속), `cognitive_stream`
+(프로젝트·시스템 AI·위임·채널 공통), `calendar_manager._execute_task`,
+채널 수신/발송·내부 위임 큐, `execution_workers`(submit에서 문맥 인수, 실제 finally),
+도구의 스레드/프로세스와 `cognitive_distill`/`distill_queue` 저장이다.
+취소 플래그, WS active map, episode ended_at 어느 하나도 완료 카운터로 쓰지 않는다.
+MCP의 agent/task/episode ID는 추적용이며 drain 통과 자격으로 신뢰하지 않는다.
+
+R0 관측 구분: `/health`의 기존 list 필드는 호환 유지하고
+`live_turns_observation=known|unknown`을 추가했다. 관측 예외가 난 빈 목록은 리로드/RED
+프로브가 UNKNOWN으로 읽는다. R1의 `/runtime/status`만 실제 교체 준비를 판정한다.

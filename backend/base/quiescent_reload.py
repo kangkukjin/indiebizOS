@@ -44,7 +44,8 @@ def probe_live_turns(health_url: str, timeout: float = 3.0):
             data = json.loads(r.read().decode("utf-8", "replace"))
     except Exception:
         return False, None
-    if not isinstance(data, dict) or "live_turns" not in data:
+    if (not isinstance(data, dict) or "live_turns" not in data
+            or data.get("live_turns_observation") == "unknown"):
         return True, None
     ids = data.get("live_turns")
     return True, (list(ids) if isinstance(ids, list) else None)

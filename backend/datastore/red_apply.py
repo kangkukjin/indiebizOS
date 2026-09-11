@@ -87,7 +87,8 @@ def _probe_live_turns(url: str = None):
             data = json.loads(r.read().decode("utf-8", "replace"))
     except Exception:
         return False, None      # 몸이 없다(또는 못 물었다)
-    if not isinstance(data, dict) or "live_turns" not in data:
+    if (not isinstance(data, dict) or "live_turns" not in data
+            or data.get("live_turns_observation") == "unknown"):
         return True, None
     ids = data.get("live_turns")
     return True, [int(i) for i in ids] if isinstance(ids, list) else None

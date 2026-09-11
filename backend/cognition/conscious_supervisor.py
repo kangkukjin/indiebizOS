@@ -169,7 +169,7 @@ class Supervisor:
         """입장 심사와 진행 중 취소를 분리한다. 기본 배분은 소프트 한도다."""
         if self.config["budget_mode"] == "hard":
             return self.model_budget_available()
-        if phase == "final":
+        if phase in {"final", "receipt"}:
             return True  # max_repairs가 재검수 횟수를 제한. 판정 없는 보완을 만들지 않는다.
         bucket = "review" if phase == "review" else "plan"
         spent = self.phase_usage.get(bucket, {})
@@ -518,11 +518,13 @@ class Supervisor:
             if self.cancelled():
                 raise ValueError("이 감독 턴은 닫혔습니다")
             if is_manager:
+                if getattr(self, "_citation_review", False) and (op not in {"evidence", "response"} or self.call_tools >= 2):
+                    raise ValueError("출처 재확인은 evidence/response 읽기만 가능합니다. 내용 수정은 실행자에게 넘기세요")
                 reserve = 0 if self.finalizing else self.config["final_tool_reserve"]
                 if (self.call_cancelled() or self.call_tools >= self.config["max_tools_per_call"]
                         or self.tools_used >= self.config["max_tools_total"] - reserve):
                     raise ValueError("감독 도구 예산 소진. 가능한 근거만으로 UNKNOWN/실행 위임을 판정하세요")
-                if self.phase != "final" and op in {"execute", "evidence"} and not self.model_admitted(self.phase):
+                if self.phase not in {"final", "receipt"} and op in {"execute", "evidence"} and not self.model_admitted(self.phase):
                     raise ValueError("이번 단계의 추가 탐색 배분을 소진했습니다. 현재 근거로 판정을 마치고 미해결은 실행자에게 위임하세요")
                 self.call_tools += 1
                 self.tools_used += 1
@@ -585,19 +587,17 @@ class Supervisor:
             self.log("tool.supervisor" if is_manager else "response.operation", role="consciousness" if is_manager else "execution",
                      operation=op, input=self.store.evidence(payload), result=self.store.evidence(result),
                      is_error=_failed(result) or (isinstance(result, dict) and bool(result.get("requires_approval"))))
-            if is_manager and op == "execute":
-                # 원문은 작업대에 보존하고 모델에는 필요한 범위만 보낸다.
-                # 크롤·기억의 중첩 JSON 전문이 매 라운드 재독되던 ep3364 수리.
-                ref = self.store.evidence(result)
-                if ref["chars"] > 12000:
-                    failed = _failed(result)
-                    approval = isinstance(result, dict) and result.get("requires_approval")
-                    result = {"success": not failed, "requires_approval": bool(approval), "evidence": {k: ref[k] for k in ("id", "chars")},
-                              "page": self.store.read_evidence(ref["id"], 0, 12000, mark=is_manager),
-                              "hint": "나머지 원문은 evidence id와 offset=12000으로 읽으세요"}
             if multimedia and isinstance(result, dict) and result.get("images"):
-                return {"content": json.dumps({"success": True, "result": result.get("content", "")}, ensure_ascii=False),
+                visible = self.store.present_evidence(result.get("content", "")) if is_manager else result.get("content", "")
+                return {"content": json.dumps({"success": not _failed(result), "result": visible}, ensure_ascii=False),
                         "images": result["images"], "details": result.get("details")}
+            if is_manager and op == "execute":
+                # Short results need the same receipt as long ones; unseen tails remain unread.
+                failed = _failed(result)
+                approval = isinstance(result, dict) and result.get("requires_approval")
+                result = {"success": not failed, "requires_approval": bool(approval),
+                          **self.store.present_evidence(result),
+                          "hint": "추가 원문은 evidence.id와 page.offset + len(page.text)로 읽으세요"}
             # 문자열 JSON을 다시 문자열 안에 감싸지 않는다. 실제 거절/오류도 바깥에 전파한다.
             blocked = isinstance(result, dict) and bool(result.get("requires_approval"))
             return json.dumps({"success": not (_failed(result) or blocked), "result": result}, ensure_ascii=False, default=str)
@@ -635,7 +635,8 @@ class Supervisor:
                     artifacts = self.runner._collect_visual_artifacts(self.store.text, tool_calls=tool_calls or []) or []
                     self.final_images, self.visual_review = self.verifications.visual_input(artifacts,
                         digest(json.dumps(self.framing, sort_keys=True, ensure_ascii=False)), self.store)
-                prompt = json.dumps({"phase": "final", **self.state()}, ensure_ascii=False)
+                from supervisor_review import final_state, recover_citations
+                prompt = json.dumps({"phase": "final", **final_state(self)}, ensure_ascii=False)
                 # 짧은 후보는 첫 호출에 그대로 제공. 장문은 범위 도구로 끝까지 읽는다.
                 page = self.store.read_response(0, 12000, mark=True)
                 prompt += "\nresponse_first_page=" + json.dumps(page, ensure_ascii=False)
@@ -659,6 +660,15 @@ class Supervisor:
                 if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
                     decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
                 content_error = validate(self, decision)
+                if content_error:
+                    decision = recover_citations(self, decision, content_error)
+                    content_error = validate(self, decision)
+                    if decision["status"] == "APPROVED" and (
+                        self.store.manifest() != manifest or self.cancelled()
+                        or self.delivery.manifest() != delivery
+                    ):
+                        decision = {"status": "UNKNOWN", "reason": "출처 재확인 중 승인 대상이 변경됐습니다"}
+                        content_error = None
                 if content_error:
                     decision = {"status": "REWORK", "reason": content_error,
                                 "instruction": "산출물 본문·출처·최종 집계를 검증하고 content_checks 근거를 준비하세요. " + content_error,

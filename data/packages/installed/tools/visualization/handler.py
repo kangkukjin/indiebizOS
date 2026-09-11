@@ -295,6 +295,14 @@ _RENDERERS = {
 def execute(tool_input: dict, context):
     """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
+    tool_input = dict(tool_input)
+    suffix = Path(tool_input.get("output_path") or "").suffix.lower()
+    explicit_format = tool_input.get("output_format")
+    inferred = "html" if suffix in {".html", ".htm"} else "png"
+    if explicit_format and suffix in {".html", ".htm", ".png"} and explicit_format != inferred:
+        return json.dumps({"success": False, "error":
+            f"output_format={explicit_format}와 output_path 확장자 {suffix}가 다릅니다. 두 형식을 맞추세요."}, ensure_ascii=False)
+    tool_input["output_format"] = explicit_format or inferred
 
     # data_file 경로 해석
     data_file = _resolve_data_file(tool_input.get("data_file"), context)

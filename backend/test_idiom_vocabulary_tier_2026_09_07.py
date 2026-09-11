@@ -45,8 +45,8 @@ def test_map_serves_only_the_vocabulary_tier():
 
 def test_map_entry_says_when_and_how():
     """지도는 뜻이 아니라 **부를 조건**을 싣는다 — 이름만으로는 이번 일과 맞는지 판정할 자리가 없다."""
-    from ibl_access import _idioms_block
-    text = _idioms_block(None)
+    from ibl_access import idioms_map
+    text = idioms_map(None)
     if not text:
         pytest.skip("상시 관용구 0건")
     for line in text.splitlines():
@@ -93,7 +93,7 @@ def test_scoped_map_keeps_control_words_but_filters_real_nodes(tmp_path, monkeyp
     monkeypatch.setattr(access, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
     for allowed in ({"self", "others", "table"},
                     {"self", "others", "table", "sense", "limbs", "engines"}):
-        block = access._idioms_block(allowed)
+        block = access.idioms_map(allowed)
         assert "[fn:제어문시험]" in block
         assert ("[fn:금지노드시험]" in block) == ("sense" in allowed)
 

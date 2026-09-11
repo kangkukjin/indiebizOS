@@ -146,7 +146,7 @@ def test_all_six_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, mon
     env = ibl_access.build_environment()
     assert env.count('↳ 관용구') == 6
     for e in entries:
-        assert f"[fn:{e['name']}]" in ibl_access._idioms_block(None)
+        assert f"[fn:{e['name']}]" in ibl_access.idioms_map(None)
     core = ibl_access.build_environment(allowed_nodes=['self', 'others', 'table'])
     assert '[fn:주소마다읽기]' not in core and '[fn:묶어순위내기]' in core
     hidden = ibl_access.build_environment(expose_idioms=False)

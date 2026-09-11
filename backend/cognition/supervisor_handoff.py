@@ -17,15 +17,19 @@ def criteria_contract(message, framing):
         rows.append({"text": framing["achievement_criteria"], "source": "proposed",
                      "user_quote": "", "fallback": "사용자 원문을 우선하고 불충분한 증거를 명시"})
     return {"user_goal": message, "criteria": rows,
-            "policy": "사용자 원문이 필수. proposed 수량·조사 목표는 근거에 따라 조정하며 새 의무로 승격하지 않는다."}
+            "policy": "사용자 원문의 대상·측정량·기간은 필수이며 fallback으로 충족 처리하지 않는다. proposed 수량·조사 목표만 근거에 따라 조정하며 새 의무로 승격하지 않는다."}
 
 
 def handoff_state(controller, decision):
     return {"goal": controller.message, "criteria": criteria_contract(controller.message, controller.framing),
             "repair": decision, "response": controller.store.manifest(),
             "jobs": list(controller.job_states.values()), "active": list(controller.active.values()),
-            "evidence": {"history": controller.history_ref["id"], "events": "events"},
-            "turn_vars": "기존 $변수·초안·작업 ID는 같은 task 저장소에 남아 있다. state/evidence로 회수한다."}
+            "artifacts": controller.content_artifacts,
+            "evidence": {"history": controller.history_ref["id"], "events": "events",
+                         "tool_index": controller.store.tool_index()},
+            "turn_vars": "기존 $변수·초안·작업 ID는 같은 task 저장소에 남아 있다. "
+                         "tool_index의 입력에서 기존 URL·경로를 찾고 result.id를 evidence로 읽는다. "
+                         "이미 확보한 출처를 찾으려고 파일시스템 전체를 검색하거나 새로 크롤하지 않는다."}
 
 
 def bounded_handoff(controller, state):

@@ -73,7 +73,7 @@
               "png",
               "html"
             ],
-            "description": "기본값 png"
+            "description": "미지정 시 output_path가 .html/.htm이면 html, 그 외 png. 명시 형식과 파일 확장자는 일치해야 함."
           },
           "output_path": {
             "type": "string",

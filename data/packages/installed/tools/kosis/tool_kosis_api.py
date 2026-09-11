@@ -189,8 +189,8 @@ def get_statistics_data(
     tbl_id: str,
     itm_id: str = "ALL",
     obj_l1: str = "ALL",
-    obj_l2: str = "ALL",
-    obj_l3: str = "ALL",
+    obj_l2: Optional[str] = None,
+    obj_l3: Optional[str] = None,
     prd_se: str = "Y",
     start_prd_de: Optional[str] = None,
     end_prd_de: Optional[str] = None
@@ -202,7 +202,8 @@ def get_statistics_data(
         org_id: 기관 ID
         tbl_id: 통계표 ID
         itm_id: 항목 ID (기본: ALL)
-        obj_l1~l3: 분류 ID (기본: ALL)
+        obj_l1: 분류1 ID (기본 ALL)
+        obj_l2~l3: 추가 분류 ID (기본 생략, 명시한 ALL은 전체 분류로 전달)
         prd_se: 수록주기 (Y/H/Q/M/D)
         start_prd_de: 시작 시점
         end_prd_de: 종료 시점
@@ -230,10 +231,10 @@ def get_statistics_data(
         "jsonVD": "Y"
     }
 
-    # 분류2, 분류3은 ALL이 아닌 경우에만 추가 (일부 통계표는 분류가 1개만 있음)
-    if obj_l2 and obj_l2 != "ALL":
+    # 없는 차원은 생략하되 명시한 ALL을 삭제하지 않는다.
+    if obj_l2:
         params["objL2"] = obj_l2
-    if obj_l3 and obj_l3 != "ALL":
+    if obj_l3:
         params["objL3"] = obj_l3
 
     result = _make_request("statistics_data", params)
@@ -245,6 +246,13 @@ def get_statistics_data(
             result["success"] = False
             result["error"] = data.get("errMsg", "알 수 없는 오류")
             result["data"] = None
+            result["error_code"] = data["err"]
+            if "objl" in str(result["error"]).lower():
+                result["classification_request"] = {k: params[k] for k in ("objL1", "objL2", "objL3") if k in params}
+                result["hint"] = ("분류 코드를 바꾸기 전에 통계표의 차원과 코드를 확인하세요. "
+                                  "분류2·3은 미지정 시 생략되며, 존재하는 차원 전체는 obj_l2/obj_l3: ALL을 명시합니다. "
+                                  "같은 요청을 반복하지 마세요. 표의 URL 생성 화면에서도 분류를 확인할 수 있습니다.")
+                result["error"] += " " + result["hint"]
         elif isinstance(data, list):
             items = []
             for item in data:
@@ -457,8 +465,8 @@ def get_tool_definitions() -> List[Dict[str, Any]]:
                     "tbl_id": {"type": "string", "description": "통계표 ID"},
                     "itm_id": {"type": "string", "default": "ALL"},
                     "obj_l1": {"type": "string", "default": "ALL"},
-                    "obj_l2": {"type": "string", "default": "ALL"},
-                    "obj_l3": {"type": "string", "default": "ALL"},
+                    "obj_l2": {"type": "string", "description": "미지정 시 생략, ALL 명시 시 분류2 전체"},
+                    "obj_l3": {"type": "string", "description": "미지정 시 생략, ALL 명시 시 분류3 전체"},
                     "prd_se": {"type": "string", "default": "Y"},
                     "start_prd_de": {"type": "string"},
                     "end_prd_de": {"type": "string"}

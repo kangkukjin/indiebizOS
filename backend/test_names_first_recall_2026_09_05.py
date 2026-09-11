@@ -101,10 +101,10 @@ def test_expand_opens_one_body(env):
     assert HT.recall(t, db, expand="all")["text"].startswith("<!-- hippo-topic")
 
 
-def test_idioms_block_has_no_def_bodies():
+def test_idioms_map_has_no_def_bodies():
     import ibl_access
     ibl_access._idioms_cache.update({"t": 0.0, "text": "", "key": "x"})   # 캐시 무효화
-    text = ibl_access._idioms_block(None)
+    text = ibl_access.idioms_map(None)
     if not text:
         pytest.skip("관용구 원장이 비어 있음")
     assert not any(l.startswith("  [def:") or l.startswith("    [") for l in text.splitlines()), "본문 블록이 실려 있다"

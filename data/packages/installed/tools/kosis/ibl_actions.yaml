@@ -68,10 +68,10 @@ tool_json:
           description: KOSIS 분류1 코드 (기본 ALL)
         obj_l2:
           type: string
-          description: KOSIS 분류2 코드 (기본 ALL)
+          description: KOSIS 분류2 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)
         obj_l3:
           type: string
-          description: KOSIS 분류3 코드 (기본 ALL)
+          description: KOSIS 분류3 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)
         prd_se:
           type: string
           description: 수록 주기 (Y=년 기본, Q=분기, M=월, D=일)

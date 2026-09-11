@@ -419,7 +419,7 @@ if __name__ == "__main__":
 
 
 # ---------------------------------------------------------------- P7 교재 상시 블록
-def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
+def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     """상시 블록은 **어휘 층**만 싣는다 — `always_on=1` (2026-09-07 사용자 판정).
 
     옛 판은 이름 붙은 것 전부를 사용 횟수 순으로 실었다. 그 결과가 사흘에 38건·34건 실행 0 이었다.
@@ -445,7 +445,7 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     os.replace(db, str(tmp_path / "data" / "ibl_usage.db"))
     monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
-    block = A._idioms_block(None)
+    block = A.idioms_map(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
     assert "[개발]" in block
     # 항목 = 호출 · 언제 · 골격 (뜻 한 줄이 아니라 **부를 조건**)
@@ -458,7 +458,7 @@ def test_p7_always_on_idioms_block(tmp_path, monkeypatch):
     # 본문은 싣지 않는다 — recall{expand:"이름"} 으로만(베끼기 방지)
     assert "  [def: 찾아고치기]{" not in block and PHRASE[0] not in block and "expand" in block
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
-    assert "찾아고치기" not in A._idioms_block({"others"})        # 허용 노드 밖 어휘가 든 이름은 빠진다
+    assert "찾아고치기" not in A.idioms_map({"others"})        # 허용 노드 밖 어휘가 든 이름은 빠진다
 
 
 # ── 2026-09-06 속편: 이름은 경제로 판정 · 이름의 뜻이 intent ─────────────────────────────────────

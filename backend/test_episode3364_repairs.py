@@ -23,7 +23,7 @@ def test_supervisor_executes_with_resource_owner_and_restores_manager(supervisor
     with tc.actor_context(agent_id=supervisor.supervisor_id):
         supervisor.call_deadline = time.monotonic() + 60
         result = json.loads(supervisor.tool({"op": "execute", "name": "inspect", "input": {}}))
-        assert result["success"] and result["result"]["memory_owner"] == supervisor.owner
+        assert result["success"] and json.loads(result["result"]["page"]["text"])["memory_owner"] == supervisor.owner
         assert tc.get_current_agent_id() == supervisor.supervisor_id
 
 

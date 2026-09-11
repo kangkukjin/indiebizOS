@@ -94,8 +94,45 @@ class TurnStore:
         except (ValueError, OSError, TypeError):
             return False
         escaped = json.dumps(quote, ensure_ascii=False)[1:-1]
-        return any(quote in text[a:b] or escaped in text[a:b]
-                   for a, b in self.evidence_coverage.get(key, []))
+        spans = []
+        for start, end in sorted(self.evidence_coverage.get(key, [])):
+            if spans and start <= spans[-1][1]:
+                spans[-1][1] = max(spans[-1][1], end)
+            else:
+                spans.append([start, end])
+        return any(quote in text[a:b] or escaped in text[a:b] for a, b in spans)
+
+    def present_evidence(self, value, limit=12000):
+        """Return the exact visible page and its citation ID; hidden tails stay unread."""
+        ref = self.evidence(value)
+        page = self.read_evidence(ref["id"], 0, limit, mark=True)
+        return {"evidence": {k: ref[k] for k in ("id", "chars")}, "page": page}
+
+    def tool_index(self, limit=40):
+        """Small, chronological handles for repair. Does not claim the manager read them."""
+        pending, rows = {}, []
+        path = self.directory / "events.jsonl"
+        if not path.exists():
+            return rows
+        with self.lock:
+            lines = path.read_text(encoding="utf-8").splitlines()
+        for line in lines:
+            event = json.loads(line)
+            if event["kind"] == "tool.started":
+                pending[event.get("id")] = event
+            elif event["kind"] in {"tool.finished", "tool.supervisor"}:
+                if event["kind"] == "tool.supervisor" and event.get("operation") != "execute":
+                    continue
+                start = pending.pop(event.get("id"), event)
+                inp = start.get("input", {})
+                result = event.get("result") or event.get("evidence", {})
+                if not result.get("id"):
+                    continue
+                rows.append({"seq": event["seq"], "name": start.get("name", event.get("operation", "")),
+                             "input": {"id": inp.get("id"), "excerpt": inp.get("excerpt", "")[:240]},
+                             "result": {"id": result["id"], "chars": result.get("chars")},
+                             "is_error": bool(event.get("is_error"))})
+        return rows[-limit:]
 
     def log(self, kind, **fields):
         with self.lock:

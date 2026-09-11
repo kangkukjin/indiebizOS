@@ -8536,7 +8536,7 @@ nodes:
         group: chart
         router: handler
         tool: chart
-        implementation: chart_type 파라미터로 분기하여 Plotly 기반 차트 HTML 생성. 기본값 line. matplotlib 폴백 내장.
+        implementation: chart_type으로 Plotly 차트 생성(기본 line). output_format 미지정 시 .html/.htm 경로는 HTML, 그 외 PNG. 명시 형식과 확장자 충돌은 오류. matplotlib 폴백 내장.
         target_key: title
         keywords:
         - 차트

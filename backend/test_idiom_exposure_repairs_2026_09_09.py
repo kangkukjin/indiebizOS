@@ -163,7 +163,7 @@ def test_current_block_body_keeps_teaching_in_actual_introduction(
     monkeypatch.setattr(
         ibl_access, "_idioms_cache", {"text": None, "t": 0, "key": None}
     )
-    block = ibl_access._idioms_block(None)
+    block = ibl_access.idioms_map(None)
     assert lesson["inputs"] in block and lesson["example"] in block
 
 

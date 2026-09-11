@@ -50,10 +50,10 @@ def compact(names):
 def prepare():
     if (OUT / 'manifest.json').exists():
         raise ValueError('기존 실험은 덮어쓰지 않습니다. --out으로 새 경로를 지정하세요')
-    from ibl_access import build_environment, _idioms_block
+    from ibl_access import build_environment, idioms_map
     from model_resolver import resolve
     full = build_environment()
-    current = _idioms_block(None)
+    current = idioms_map(None)
     assert current and current in full
     base = full.replace(current, '')
     header = ('IBL 프로그램 작성 실험이다. 다음 사용자 과제를 수행하는 JSON {"code":"IBL 코드"}만 출력하라. '

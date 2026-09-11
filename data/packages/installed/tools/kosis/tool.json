@@ -37,11 +37,11 @@
           },
           "obj_l2": {
             "type": "string",
-            "description": "KOSIS 분류2 코드 (기본 ALL)"
+            "description": "KOSIS 분류2 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)"
           },
           "obj_l3": {
             "type": "string",
-            "description": "KOSIS 분류3 코드 (기본 ALL)"
+            "description": "KOSIS 분류3 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)"
           },
           "prd_se": {
             "type": "string",

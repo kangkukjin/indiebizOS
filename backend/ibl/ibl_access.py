@@ -563,7 +563,7 @@ def build_environment(
     # 그래서 ①`always_on=1` 인 것만 선다 ②그 표는 자동 증류가 아니라 사람이 부정기로 고른다
     # (scripts/register_idiom.py). `always_on=0` 인 등록 관용구는 이름으로 부를 수는 있으나 소개되지
     # 않는다 — 앱 버튼 같은 명시 호출의 자리다.
-    idioms = _idioms_block(allowed) if expose_idioms else ""
+    idioms = idioms_map(allowed) if expose_idioms else ""
     if idioms:
         parts.append(idioms)
 
@@ -609,7 +609,7 @@ def _spread_by_topic(rows: list, top: int) -> list:
     return out
 
 
-def _idioms_block(allowed: Optional[Set[str]]) -> str:
+def idioms_map(allowed: Optional[Set[str]]) -> str:
     """부를 수 있는 이름의 **지도** — 가벼운 sqlite 읽기(모델·벡터 무접촉), 5분 캐시.
 
     2026-09-06 속편(사용자 판정 뒤 근본 집행): 옛 판은 6개만 보였다 — "관련성은 회상 채널 몫" 이라 했지만 회상은
@@ -702,7 +702,7 @@ def _idioms_block(allowed: Optional[Set[str]]) -> str:
 
 def _idiom_anchors(allowed: Optional[Set[str]]) -> dict:
     """어휘 목록 병기용 — `node:action` → 그 잎 액션 줄 아래 설 관용구 한 줄들. 상시 블록과 같은 행·같은 캐시."""
-    _idioms_block(allowed)
+    idioms_map(allowed)
     return dict(_idioms_cache.get("anchors") or {})
 
 

@@ -43,7 +43,7 @@ def sha(path):
 def prepare(out):
     if (out / "manifest.json").exists():
         raise ValueError("Existing experiment is immutable; use another --out")
-    from ibl_access import build_environment, _idioms_block
+    from ibl_access import build_environment, idioms_map
     from model_resolver import resolve
     from providers.claude_code import find_claude_binary
 
@@ -62,7 +62,7 @@ def prepare(out):
     }
     # v3 (2026-09-09 지렛대 4): 관용구는 상시 블록만이 아니라 어휘 목록의 잎 액션 줄 아래에도 병기된다.
     # 비노출 조건은 둘 다 없는 환경(expose_idioms=False) — 부를 수 있는 능력은 두 조건이 같다.
-    current = _idioms_block(None)
+    current = idioms_map(None)
     full = build_environment()
     hidden_env = build_environment(expose_idioms=False)
     assert current in full and "↳ 관용구" in full

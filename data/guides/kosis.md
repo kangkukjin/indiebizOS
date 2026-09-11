@@ -67,7 +67,8 @@ KOSIS가 큐레이션한 거시지표 빠른 조회. **지표 목록부터 보�
 | `tbl_id` | 통계표 ID (`DT_xxx`) |
 | `info` | true면 메타데이터(변수·차원 정의)만 반환 |
 | `itm_id` | 항목 ID (기본 `ALL`) |
-| `obj_l1` / `obj_l2` / `obj_l3` | 분류 1·2·3차원 (기본 `ALL`) |
+| `obj_l1` | 분류1 (기본 `ALL`) |
+| `obj_l2` / `obj_l3` | 추가 분류 (기본 생략). 존재하는 차원 전체를 조회하려면 `ALL` 명시 |
 | `prd_se` | 주기 (`Y`/`Q`/`M`. 기본 `Y` 연간) |
 | `start_prd_de` / `end_prd_de` | 기간 |
 
@@ -140,3 +141,10 @@ KOSIS가 큐레이션한 거시지표 빠른 조회. **지표 목록부터 보�
 - `data/packages/installed/tools/kosis/` — 패키지
 - 차트화: `[table:chart]{chart_type:"line"|"bar"|"pie"|"scatter"|"heatmap"|"candlestick"|"multi"}` (기본 line — 옛 `chart_line`·`chart_bar` 는 이 하나로 통합)
 - 정기 모니터링: `self:trigger` schedule 타입
+
+### 분류 오류 복구
+
+`objL` 오류는 같은 호출을 반복하지 말고 해당 통계표의 차원·코드를 먼저 확인한다.
+분류2가 있는 표는 `obj_l2:"ALL"` 또는 확인한 코드를 전달한다. 명시한 `ALL`은 API 요청에
+그대로 실리며, 없는 차원은 생략한다. 넓은 표는 필요한 항목·분류로 좁힌다.
+요청 규격: [KOSIS 공식 개발가이드](https://kosis.kr/openapi/devGuide/devGuide_0201List.do).

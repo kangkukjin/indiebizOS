@@ -10,7 +10,8 @@ ROLE_PROMPT = """당신은 실행자와 같은 목표를 책임지는 의식 감
 supervision 도구(CLI에서는 mcp__indiebizos__supervision)를 사용한다.
 state는 현재 상태와 사용 가능한 기존 도구의 목록, execute는 name/input으로 그 도구를
 호출한다. 필요한 스키마는 evidence id='tool:도구이름'으로 읽는다.
-조사·검증과 범위가 명확한 작은 수정은 직접 해도 된다. 실행 중 작업과 동시에 쓰지 마라.
+필요한 근거 읽기·검증은 직접 한다. 최종 검수에서 산출물 수정이나 새 조사가 필요하면
+기존 증거 ID·경로와 모든 결함을 묶어 REWORK로 실행자에게 넘긴다. 검수자가 제작을 이어가지 마라.
 탐색·대량 제작으로 커지는 일은 instruction에 구체적인 다음 행동을 적어 실행자에게 넘겨라.
 계획에서는 핵심 불확실성만 1~2번 조회하고 계획 JSON을 확정한다. 지난 작업 전체를 재탐색하지 마라.
 외부 작업을 중복 시작하지 마라. heartbeat는 진척이 아니다. 정체만으로 실패라고 단정하지 마라.
@@ -25,6 +26,8 @@ state 재조회는 변경분이다. evidence의 파일 쓰기 성공 영수증�
 수정한 부분은 다시 읽어라. 승인한 후보의 정확한 version/hash를 답에 넣어라.
 사용자 필수 조건과 당신이 세운 조사 목표를 구분하라. 사용자 원문 인용으로 확인되지 않은
 수량·사례 수 등은 잠정 목표다. 근거가 부족하면 범위를 정직하게 줄이고 미충족을 밝힌다.
+원문의 측정량·대상·기간을 다른 지표로 대체한 것은 한계를 밝혀도 원래 목표 달성이 아니다.
+예를 들어 고용 규모(재고)는 신규 채용(유입)을 대신하지 못한다.
 잠정 목표 미달만으로 반복 보완을 요구하지 마라. REWORK에는 발견한 모든 결함을 한 번에
 묶어 instruction에 담고, 각각의 완료 증거·허용되는 대안·중단 조건을 적어라.
 수정 범위가 기존 파일·응답의 국소 변경이면 repair_scope="local", 새 조사면 "research"로 지정한다.
@@ -48,7 +51,9 @@ FINAL_REVIEW_PROMPT = """최종 검수는 파일 생성 영수증이나 실행�
 원문에서 추출한 사실과 편집자가 덧붙인 해석을 구분하라. 서로 다른 범위·층위의 설명은
 동시에 성립할 수 있다. 동일 대상·조건의 양립 불가능한 주장인지 확인하기 전에는 대립으로 단정하지 마라.
 출처의 정의에 없는 조건을 덧붙이지 마라. 전체 추세·하위 집단·인과를 구분하고,
-수치 비교는 단위·분모·기간·조사 계열이 같은지 확인하라. 장기 최저 같은 최상급에는
+수치 비교는 단위·분모·기간·조사 계열이 같은지 확인하라. 고용 수준과 신규 채용을 혼동하지 마라.
+고용 증가만으로 AI의 부정적 효과가 없다고 결론내릴 수 없다. 고용률 고정 인구 분해는
+산술적 시나리오이며 인과 기여율이 아니다. 반사실 비교 없는 인과 단정은 보완 대상으로 묶는다. 장기 최저 같은 최상급에는
 같은 시계열의 근거가 필요하다. 본문의 미확인·표본 한계를 요약과 결론에서도 보존하라.
 재현 가능한 절차가 기준이면 구체적인 조작·설정·예문 없는 원칙을 팁에서 분리하라.
 자막만 읽었으면 영상 화면을, 로그만 읽었으면 산출물 내용을 직접 확인했다고 서술할 수 없다.
@@ -66,6 +71,15 @@ reusable_checks는 파일·의존 입력·기준의 지문이 일치하는 지�
 승인된 바이트의 공개와 알림 전송은 하네스가 맡는다. 직접 공개하거나 같은 본문을 다시 생성하지 마라.
 축약물은 원문의 중심 논지·대안·적용 대상의 단서가 보존됐는지 확인한다. 전사 일치만으로
 발음·문장 끝·음질을 통과시키지 말고 오디오 검수 근거와 관측 범위를 구분한다.
+"""
+
+
+RECEIPT_PROMPT = """앞선 내용 검수는 승인했지만 일부 인용 구간의 읽기 기록이 누락됐다.
+이번에는 제공된 source_pages의 실제 문맥이 해당 claim과 meaning을 뒷받침하는지만 확인한다.
+제목만으로 본문·인과·기간을 확인했다고 할 수 없다. 발췌 존재만으로 승인하지 마라.
+필요하면 supervision op=evidence로 인접 구간을 읽는다. 다른 조사·제작·수정은 하지 않는다.
+충분히 뒷받침하면 {"status":"APPROVED","reason":"확인한 내용"}, 불일치·불충분이면
+{"status":"REWORK","reason":"문제","instruction":"실행자가 고칠 구체 내용"} JSON 하나만 낸다.
 """
 
 
@@ -94,15 +108,22 @@ def action_schema(qualified):
     return {"action": qualified, "definition": config}
 
 
-def tool_context(controller):
+def tool_context(controller, *, include_idioms=False):
     from ibl_access import load_nodes_raw
     nodes = load_nodes_raw().get("nodes", {})
     names = [f"{node}:{action}" for node, spec in nodes.items() for action in spec.get("actions", {})]
     focus = ((controller.framing or {}).get("capability_focus") or {}).get("highlight_actions", [])
-    return {"available_actions": names, "focused_actions": [action_schema(n) for n in dict.fromkeys(focus) if n in names],
+    context = {"available_actions": names, "focused_actions": [action_schema(n) for n in dict.fromkeys(focus) if n in names],
             "tools": [{"name": name, "description": spec.get("description", "")[:200]}
                       for name, spec in controller.catalog.items() if name not in {"pursuit", "reframe", "supervision"}],
             "schema_hint": "전체 스키마는 evidence id=tool:이름으로 조회. pursuit/reframe은 실행자가 직접 호출한다."}
+    if include_idioms:
+        from ibl_access import idioms_map
+        context["available_idioms"] = idioms_map(set(nodes))
+        context["idiom_hint"] = ("반복 읽기·필터·누적이 있으면 지도에서 맞는 관용구를 검토하고 "
+                                "capability_focus.hint에 실제 이름과 쓸 위치를 적는다. "
+                                "단일 작업이나 서명이 맞지 않는 경우 억지로 사용하지 않는다.")
+    return context
 
 
 class UsageSnapshots:
@@ -148,7 +169,8 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
     purpose_token = set_purpose(phase)
     previous = snapshot()
     started = time.monotonic()
-    controller.call_deadline = started + controller.config["call_timeout_s"]
+    timeout = controller.config["call_timeout_s"]
+    controller.call_deadline = started + (min(timeout, 60) if phase == "receipt" else timeout)
     controller.call_tools = 0
     controller.call_usage = {}
     controller.call_stop = None
@@ -161,7 +183,9 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         restore(controller.context)
         set_current_agent_id(controller.supervisor_id)
         set_step_role("consciousness")
-        prompt += "\ntool_context=" + json.dumps(tool_context(controller), ensure_ascii=False)
+        if phase != "receipt":
+            prompt += "\ntool_context=" + json.dumps(
+                tool_context(controller, include_idioms=phase in {"plan", "reframe"}), ensure_ascii=False)
         # 별도 프로바이더 객체/세션: 실행자의 resume 기록과 singleton provider를 건드리지 않는다.
         config = resolve("consciousness")
         if phase == "final" and (controller.final_images or getattr(controller, "visual_review", {}).get("reused")):
@@ -169,7 +193,7 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
             vision, descriptor = get_vision_provider(oneshot=False)
             if vision is not None:
                 config = descriptor  # 역할은 의식 그대로, 이미지 모달리티의 기존 모델 설정을 사용한다.
-        role_prompt = planning_prompt or ROLE_PROMPT
+        role_prompt = RECEIPT_PROMPT if phase == "receipt" else planning_prompt or ROLE_PROMPT
         if phase == "final":
             from supervisor_content import CONTRACT
             role_prompt += "\n" + FINAL_REVIEW_PROMPT
@@ -219,7 +243,7 @@ def invoke(controller, prompt, *, planning_prompt="", phase="review"):
         if controller.call_metrics:
             if "snapshots" in locals():
                 snapshots.reconcile(controller.call_metrics, (time.monotonic() - started) * 1000)
-            bucket = "plan" if phase == "reframe" else phase
+            bucket = "plan" if phase == "reframe" else "final" if phase == "receipt" else phase
             spent = controller.phase_usage.setdefault(bucket, {"input": 0, "output": 0})
             spent["input"] += controller.call_metrics.total_input_tokens
             spent["output"] += controller.call_metrics.total_output_tokens

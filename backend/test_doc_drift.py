@@ -4,6 +4,9 @@
 """
 import os
 import sys
+from pathlib import Path
+import shutil
+import pytest
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
@@ -15,6 +18,94 @@ from doc_drift import (  # noqa: E402
 )
 
 FACTS = {"node_count": 6, "total": 149, "tools_n": 41, "exts_n": 5}
+
+
+@pytest.fixture
+def generated_docs(tmp_path, monkeypatch):
+    root = Path(__file__).resolve().parents[1]
+    monkeypatch.syspath_prepend(str(root / "scripts"))
+    import iblbuild_docs as build
+    import yaml
+    shutil.copytree(root / "docs/generated_templates", tmp_path / "docs/generated_templates")
+    for rel, *_ in build.DOC_TARGETS:
+        dest = tmp_path / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(root / rel, dest)
+    facts = build.collect_doc_facts(root, yaml.safe_load((root / "data/ibl_nodes.yaml").read_text()))
+    return build, facts, tmp_path
+
+
+def test_generated_markers_replace_arbitrary_old_prose_but_preserve_surroundings(generated_docs):
+    build, facts, root = generated_docs
+    for rel in dict.fromkeys(t[0] for t in build.DOC_TARGETS):
+        expected, issues = build._render_doc(root, rel, facts)
+        assert not issues
+        original = (root / rel).read_text()
+        for path, start, end, _ in build.DOC_TARGETS:
+            if path == rel:
+                pre, rest = original.split(start)
+                _, post = rest.split(end)
+                original = pre + start + "\n문장 형식도 숫자도 없는 오래된 구간\n" + end + post
+        (root / rel).write_text(original)
+        rendered, issues = build._render_doc(root, rel, facts)
+        assert not issues and rendered == expected
+        (root / rel).write_text(rendered)
+        assert build._render_doc(root, rel, facts) == (rendered, [])
+
+
+def test_generated_tables_follow_registry_sets_and_keep_curated_descriptions(generated_docs):
+    build, facts, root = generated_docs
+    facts["nodes"]["newnode"] = 9
+    facts["node_descriptions"]["newnode"] = "새 노드 | 설명"
+    facts["packages"] = [("newpkg", "New", "새 설명 | 전체"), ("radio", "ignored", "ignored")]
+    readme, issues = build._render_doc(root, "README.md", facts)
+    assert not issues and "| **newnode** | 9 | 새 노드 \\| 설명 |" in readme
+    packages, issues = build._render_doc(root, "data/system_docs/packages.md", facts)
+    assert not issues
+    assert "| newpkg | New | 새 설명 \\| 전체 |" in packages
+    assert "| radio | Radio | 인터넷 라디오 검색 및 재생 |" in packages
+    assert "| android |" not in packages
+
+
+def test_grammar_examples_parse_and_surfaces_share_operator_contracts(generated_docs):
+    import json
+    from ibl_parser import parse
+    build, facts, root = generated_docs
+    operators = json.loads((root / "docs/generated_templates/ibl_grammar.json").read_text())["operators"]
+    assert {o["symbol"] for o in operators} == {">>", "&", "??", ";"}
+    for entry in operators:
+        assert parse(entry["example"])
+    for rel in ("data/system_docs/ibl.md", "data/common_prompts/fragments/12_ibl_only.md",
+                "data/common_prompts/fragments/12_ibl_compact.md"):
+        rendered, issues = build._render_doc(root, rel, facts)
+        assert not issues
+        span = rendered.split("<!-- GRAMMAR_OPERATORS:START -->")[1].split("<!-- GRAMMAR_OPERATORS:END -->")[0]
+        assert all(f"`{o['symbol']}`" in span for o in operators)
+        assert "0건" in span  # 빈 결과 폴백을 실패 전용으로 축약하지 않는다.
+
+
+@pytest.mark.parametrize("damage", ["missing", "duplicate", "reversed", "unknown_slot", "missing_template"])
+def test_generated_docs_fail_honestly_on_broken_source(generated_docs, damage):
+    build, facts, root = generated_docs
+    rel = "README.md"
+    path = root / rel
+    text = path.read_text()
+    start, end = build.IBL_STATS_START, build.IBL_STATS_END
+    template = root / "docs/generated_templates/readme_en.md"
+    if damage == "missing":
+        text = text.replace(end, "")
+    elif damage == "duplicate":
+        text += end
+    elif damage == "reversed":
+        text = text.replace(start, "TEMP").replace(end, start).replace("TEMP", end)
+    elif damage == "unknown_slot":
+        template.write_text("{{unknown_fact}}")
+    else:
+        template.unlink()
+    path.write_text(text)
+    _, issues = build._render_doc(root, rel, facts)
+    assert issues
+    assert path.read_text() == text
 
 
 def test_unchecked_document_is_not_reported_as_success(tmp_path, monkeypatch):

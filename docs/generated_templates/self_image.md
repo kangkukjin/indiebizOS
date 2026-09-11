@@ -1,0 +1,1 @@
+**현 상태 = {{node_count}}노드 {{total}} 액션({{nodes_compact}})·{{tools_n}} 도구 패키지 + {{exts_n}} extensions·backend .py {{backend_py}}(test 제외)**

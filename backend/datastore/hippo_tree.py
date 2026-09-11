@@ -22,6 +22,7 @@ hippo_tree.py — 실행기억(해마 용례)의 **주제 가지 트리 문서**
 """
 import json
 import os
+from pathlib import Path
 import re
 import sqlite3
 from datetime import datetime
@@ -119,17 +120,35 @@ def _guide_seed_index() -> Dict[str, str]:
         return {}
     key = (p, mt)
     if _seed_cache[0] != key:
-        idx: Dict[str, List[str]] = {}
-        try:
-            with open(p, encoding="utf-8") as f:
-                for g in (json.load(f).get("guides") or []):
-                    t = norm_topic(g.get("topic"))
-                    if t and g.get("file"):
-                        idx.setdefault(t, []).append(str(g["file"]))
-        except (OSError, ValueError):
-            idx = {}
-        _seed_cache = (key, {t: ", ".join(v) for t, v in idx.items()})
+        _seed_cache = (key, _read_guide_seeds(p))
     return _seed_cache[1]
+
+
+def _read_guide_seeds(path: str) -> Dict[str, str]:
+    idx: Dict[str, List[str]] = {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            for g in (json.load(f).get("guides") or []):
+                t = norm_topic(g.get("topic"))
+                if t and g.get("file"):
+                    idx.setdefault(t, []).append(str(g["file"]))
+    except (OSError, ValueError):
+        return {}
+    return {t: ", ".join(v) for t, v in idx.items()}
+
+
+def guide_links(tree_dir=None, index_path=None) -> Dict[str, Dict[str, str]]:
+    """실행 지도와 생명주기가 공유하는 유효 가이드 링크. 명시 가지가 씨앗을 대체한다."""
+    seeds = _guide_seed_index() if index_path is None else _read_guide_seeds(str(index_path))
+    links = {t: {"guide": guide, "source": "tree-seed"} for t, guide in seeds.items()}
+    root = Path(tree_dir or doc_dir())
+    if root.is_dir():
+        for path in sorted(root.rglob(DOC_NAME)):
+            guide = guide_of(str(path))
+            if guide:
+                topic = norm_topic(str(path.parent.relative_to(root)))
+                links[topic] = {"guide": guide, "source": "tree"}
+    return links
 
 
 def doc_dir() -> str:
@@ -938,14 +957,14 @@ def map_lines(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
     counts = topic_counts(db_path)
     pcounts = phrase_counts(db_path)
     out = []
-    seeds = _guide_seed_index()
-    topics = set(all_topics(db_path)) | set(seeds)
+    links = guide_links()
+    topics = set(all_topics(db_path)) | set(links)
     for t in sorted(topics, key=lambda s: (s.count("/"), s)):
         p = doc_path(t)
         ex = os.path.exists(p)
         out.append({"topic": t, "count": counts.get(t, 0), "phrases": pcounts.get(t, 0), "runs": runs_of(p) if ex else 0,
                     "gist": gist_of(p) if ex else "",
-                    "guide": (guide_of(p) if ex else "") or seeds.get(t, ""), "doc": p if ex else None})
+                    "guide": links.get(t, {}).get("guide", ""), "doc": p if ex else None})
     return out
 
 

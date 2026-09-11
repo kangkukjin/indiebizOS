@@ -486,7 +486,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 ## 시스템 통계
 
-> 아래 마커 구간의 수치는 `scripts/build_ibl_nodes.py`가 레지스트리 실측으로 재생성한다(손 수정 금지). 마커 밖 항목(프로젝트·해마 등 런타임 수치)은 날짜를 달아 손으로 갱신.
+> 아래 마커 구간은 `scripts/build_ibl_nodes.py`가 레지스트리 실측과 `docs/generated_templates/`의 편집 원문으로 통째 재생성한다(손 수정 금지). 설명을 바꾸려면 템플릿·설명 원문을 편집한 뒤 빌드한다. 마커 밖 항목(프로젝트·해마 등 런타임 수치)은 날짜를 달아 손으로 갱신.
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)

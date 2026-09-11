@@ -50,6 +50,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(CL, "VERDICTS_PATH", root / "outputs" / "imagination_training" / "PENDING_VERDICTS.md")
     monkeypatch.setattr(CL, "GUIDES_DIR", data / "guides")
     monkeypatch.setattr(CL, "GUIDE_INDEX_PATH", data / "guide_db.json")
+    monkeypatch.setattr(CL, "HIPPO_TREE_DIR", data / "hippocampus_tree")
     monkeypatch.setattr(CL, "WORKFLOWS_DIR", data / "workflows")
     monkeypatch.setattr(CL, "SCRIPTS_DIR", data / "scripts")
     monkeypatch.setattr(CL, "SCRIPTS_STATE_PATH", data / "scripts.json")
@@ -185,7 +186,8 @@ def test_candidate_revives_on_signal_and_mark_is_removed(env):
     assert any(r["key"] == "guide:g.md" and r["by"].startswith("signal:") for r in r2["revived"])
     assert not p.read_text(encoding="utf-8").startswith("<!--"), "표식 해제"
     st = json.loads(CL.STATE_PATH.read_text())
-    assert st["revivals"] and st["revivals"][0]["key"] == "guide:g.md"
+    assert any(r["key"] == "guide:g.md" for r in st["revivals"])
+    assert any(r["key"] == "action:self:foo" for r in st["revivals"]), "살아난 가이드의 의존도 같은 회차에 복귀"
 
 
 def test_revival_by_reference_records_referrer(env):
@@ -224,6 +226,57 @@ def test_mutual_references_between_candidates_are_not_support(env):
     res = CL.compute_transitions(today=TODAY)
     assert {"guide:a.md", "guide:b.md"} <= _candidates(res)
     assert not res["revived"]
+
+
+def test_unrooted_cycle_becomes_candidate_without_being_prelabelled(env):
+    _guide(env, "a.md", "다음은 b.md")
+    _guide(env, "b.md", "이전은 a.md")
+    _seed_state(env)
+    result = CL.compute_transitions(today=TODAY, apply=False)
+    assert {"guide:a.md", "guide:b.md"} <= _candidates(result)
+    # 실제 진입점 하나가 생기면 참조 사슬 전체가 지지된다.
+    (env.data / "event_triggers.json").write_text(json.dumps({
+        "triggers": [{"id": "root", "enabled": True, "pipeline": "a.md"}]}))
+    result = CL.compute_transitions(today=TODAY, apply=False)
+    assert not {"guide:a.md", "guide:b.md"} & _candidates(result)
+
+
+def test_tree_override_and_lifecycle_count_the_same_effective_guide(env, monkeypatch):
+    import hippo_tree
+    _guide(env, "seed.md", "씨앗")
+    _guide(env, "override.md", "직접 선택")
+    index = json.loads(CL.GUIDE_INDEX_PATH.read_text())
+    index["guides"][0]["topic"] = "한 가지"
+    CL.GUIDE_INDEX_PATH.write_text(json.dumps(index))
+    doc = CL.HIPPO_TREE_DIR / "한 가지" / "memory.md"
+    doc.parent.mkdir(parents=True)
+    doc.write_text("guide: override.md\n")
+    monkeypatch.setattr(hippo_tree, "DOC_DIR", str(CL.HIPPO_TREE_DIR))
+    monkeypatch.setattr(hippo_tree, "GUIDE_DB_PATH", str(CL.GUIDE_INDEX_PATH))
+    monkeypatch.setattr(hippo_tree, "topic_counts", lambda *_: {})
+    monkeypatch.setattr(hippo_tree, "phrase_counts", lambda *_: {})
+    rows = hippo_tree.map_lines()
+    assert next(r for r in rows if r["topic"] == "한 가지")["guide"] == "override.md"
+    _seed_state(env)
+    result = CL.compute_transitions(today=TODAY, apply=False, include_details=True)
+    observed = result["observations"]
+    assert observed["guide:override.md"]["live_references"] == ["tree:한 가지"]
+    assert observed["guide:seed.md"]["live_references"] == []
+    assert "guide:seed.md" in _candidates(result)
+    doc.unlink()
+    refs = CL.collect_references(CL.collect_inventory())
+    assert refs["guide:seed.md"] == {"tree-seed:한 가지"}
+
+
+def test_dry_run_does_not_advance_candidates_or_write_any_file(env):
+    _guide(env, "old.md", "보존할 내용")
+    _seed_state(env, candidates={"guide:old.md": {
+        "since": _d(100), "evidence": "무참조", "kind": "guide"}})
+    before = {p: p.read_bytes() for p in env.root.rglob("*") if p.is_file()}
+    result = CL.compute_transitions(today=TODAY, apply=False, include_details=True)
+    after = {p: p.read_bytes() for p in env.root.rglob("*") if p.is_file()}
+    assert before == after and not env.commits
+    assert {"key": "guide:old.md", "dry": True} in result["retired"]
 
 
 # ── 은퇴 집행 (가역 층) ──────────────────────────────────────────────────────────

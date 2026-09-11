@@ -218,25 +218,11 @@ def collect_references(inv: Dict[str, Dict]) -> Dict[str, Set[str]]:
             for t in _refs_in_text(text, inv):
                 _add(t, k)
 
-    # 실행기억 가지 문서의 `guide:` 줄 → 가이드 (지도가 가이드의 입구다, 2026-09-03).
-    #   가지는 항상 지도(<execution_map>)에 실리는 상위 구조라 의사 참조자 tree:<가지> 로 센다.
-    #   이 줄이 없으면 지도로만 닿는 가이드가 '참조 0' 으로 읽혀 오살된다.
-    if HIPPO_TREE_DIR.is_dir():
-        for doc in sorted(HIPPO_TREE_DIR.rglob("memory.md")):
-            topic = str(doc.parent.relative_to(HIPPO_TREE_DIR))
-            m = re.search(r"(?m)^guide:\s*(.+?)\s*$", _read(doc))
-            if not m:
-                continue
-            for g in m.group(1).split(","):
-                _add(f"guide:{Path(g.strip().strip('`')).name}", f"tree:{topic}")
-
-    # guide_db.json 의 topic 씨앗 → 가이드 (가지 문서가 없는 빈 몸에서도 지도에 실린다)
-    try:
-        for g in (json.loads(_read(GUIDE_INDEX_PATH) or "{}").get("guides") or []):
-            if g.get("topic") and g.get("file"):
-                _add(f"guide:{Path(str(g['file'])).name}", f"tree-seed:{g['topic']}")
-    except (ValueError, TypeError):
-        pass
+    # 지도에 실제로 노출되는 링크만 지지다. 가지에서 교체된 옛 씨앗을 중복 계수하지 않는다.
+    from hippo_tree import guide_links
+    for topic, link in guide_links(HIPPO_TREE_DIR, GUIDE_INDEX_PATH).items():
+        for guide in link["guide"].split(","):
+            _add(f"guide:{Path(guide.strip().strip('`')).name}", f"{link['source']}:{topic}")
 
     # 어휘 카탈로그의 guides: 목록 → 가이드 (낱말이 교재를 지목한다)
     nodes = _load_yaml(NODES_PATH) or {}
@@ -541,7 +527,8 @@ def queue_verdict(key: str, text: str) -> bool:
 
 # ---------------------------------------------------------------- 전이
 
-def compute_transitions(today: Optional[str] = None, apply: bool = True) -> Dict:
+def compute_transitions(today: Optional[str] = None, apply: bool = True,
+                        include_details: bool = False) -> Dict:
     """전 인벤토리의 상태를 계산하고(apply=True 면 표식·은퇴·큐까지 집행) 요약을 돌려준다."""
     pol = load_policy()
     today = today or date.today().isoformat()
@@ -549,16 +536,33 @@ def compute_transitions(today: Optional[str] = None, apply: bool = True) -> Dict
     inv = collect_inventory()
     refs = collect_references(inv)
 
-    # 살아 있는 참조자 = 인벤토리 중 (이전 상태에서) candidate 가 아닌 것 + 의사 참조자 전부
-    prev_candidates = set(st["candidates"].keys())
+    signals = {key: last_signal(meta) for key, meta in inv.items()}
+    recent = {key for key, sig in signals.items()
+              if sig and _days_between(sig, today) <= pol["candidate_after_days"]}
+    grace = {key for key in inv
+             if _days_between(st["first_seen"].setdefault(key, today), today) < pol["grace_days"]}
+    # 지지의 뿌리 = 실제 실행/유예/상위 구조. 무근거 순환끼리 서로를 살리는 고아 섬은 제외한다.
+    external = {key for key, sources in refs.items() if any(r not in inv for r in sources)}
+    live = recent | grace | external
+    dependents = {key: set() for key in inv}
+    for target, sources in refs.items():
+        for source in sources:
+            if source in dependents:
+                dependents[source].add(target)
+    pending = list(live)
+    while pending:
+        for target in dependents[pending.pop()] - live:
+            live.add(target)
+            pending.append(target)
 
     def _supported(key: str) -> Tuple[bool, List[str]]:
-        live = [r for r in refs.get(key, ()) if (":" in r and r.split(":")[0] not in
-                ("action", "guide", "workflow", "script")) or r not in prev_candidates]
-        return bool(live), sorted(live)[:5]
+        by = sorted(r for r in refs.get(key, ()) if r not in inv or r in live)
+        return bool(by), by
 
     out = {"today": today, "total": len(inv), "alive": 0, "grace": 0, "candidates": [],
            "revived": [], "retired": [], "verdicts": [], "errors": []}
+    if include_details:
+        out["observations"] = {}
     changed_paths: List[str] = []
     commit_notes: List[str] = []
 
@@ -568,12 +572,19 @@ def compute_transitions(today: Optional[str] = None, apply: bool = True) -> Dict
             st["candidates"].pop(k, None)
 
     for key, meta in inv.items():
-        first = st["first_seen"].setdefault(key, today)
-        sig = last_signal(meta)
+        first = st["first_seen"][key]
+        sig = signals[key]
         supported, by = _supported(key)
-        signal_recent = bool(sig) and _days_between(sig, today) <= pol["candidate_after_days"]
-        in_grace = _days_between(first, today) < pol["grace_days"]
+        signal_recent = key in recent
+        in_grace = key in grace
         cand = st["candidates"].get(key)
+        if include_details:
+            out["observations"][key] = {
+                "first_seen": first, "last_signal": sig, "signal_recent": signal_recent,
+                "in_grace": in_grace, "live_references": by, "references": sorted(refs.get(key, ())),
+                "decision": "alive" if supported or signal_recent else "grace" if in_grace else "candidate",
+                "candidate_since": cand.get("since") if cand else None,
+            }
 
         if supported or signal_recent or in_grace:
             if cand:
@@ -581,7 +592,7 @@ def compute_transitions(today: Optional[str] = None, apply: bool = True) -> Dict
                 st["candidates"].pop(key, None)
                 rec = {"key": key, "candidate_since": cand.get("since"), "revived_on": today,
                        "days": _days_between(cand.get("since", today), today),
-                       "by": ("reference:" + ",".join(by)) if supported else f"signal:{sig}"}
+                       "by": ("reference:" + ",".join(by[:5])) if supported else f"signal:{sig}"}
                 st["revivals"].append(rec)
                 out["revived"].append(rec)
                 if apply:
@@ -649,8 +660,9 @@ def compute_transitions(today: Optional[str] = None, apply: bool = True) -> Dict
         except Exception as e:
             out["errors"].append(f"{key}: 은퇴 집행 실패 {e}")
 
-    st["last_run"] = datetime.now().isoformat()
-    _save_state(st)
+    if apply:
+        st["last_run"] = datetime.now().isoformat()
+        _save_state(st)
 
     if apply and changed_paths:
         uniq = list(dict.fromkeys(changed_paths))

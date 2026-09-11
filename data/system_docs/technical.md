@@ -337,7 +337,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/installed/tools/`: 설치된 도구 패키지 (**42개** — op 분기 **30개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/installed/extensions/`: 백엔드 코어 모듈 (**5개**)
-- `data/api_registry.yaml`: API 도구 정의 — 45개 도구 중 37개가 `node: sense` 로 바인딩돼 로드 시 노드 액션에 자동 병합(`ibl_engine._merge_api_registry_actions`, 2026-08-22 실측)
+- `data/api_registry.yaml`: API 도구 정의 — 45개 도구 중 37개가 `node`로 바인딩돼 로드 시 노드 액션에 자동 병합(`ibl_engine._merge_api_registry_actions`, 2026-08-22 실측)
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)

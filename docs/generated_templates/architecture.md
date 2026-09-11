@@ -1,0 +1,4 @@
+
+- 도구 패키지: **{{tools_n}}개** (+ 백엔드 extensions **{{exts_n}}개**), IBL: **{{node_count}}노드 {{total}} 액션** ({{nodes_compact}})
+- backend **.py {{backend_py}}개**(test 제외, git 추적 기준) — 층 디렉토리 `base {{layers_base}} · datastore {{layers_datastore}} · ibl {{layers_ibl}} · cognition {{layers_cognition}} · services {{layers_services}} · surface {{layers_surface}}`(+ common {{layers_common}}·providers {{layers_providers}}·channels {{layers_channels}}·drivers {{layers_drivers}}). 가이드 **{{guides_n}}개**(guide_db 등록 **{{guide_db_n}}**)
+- op 분기 액션 **{{ops_actions}}개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**{{op_pkgs}}개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true {{side_effect_true}}·false {{side_effect_false}}·미선언 {{side_effect_none}})

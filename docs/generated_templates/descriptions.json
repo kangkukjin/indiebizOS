@@ -1,0 +1,204 @@
+{
+  "nodes": {
+    "sense": {
+      "en": "Retrieval — web/news search (one verb, `source`-branched), any RSS/Atom feed, finance, real estate (official prices + live listings), accommodation, second-hand markets, freelance marketplaces, legal, statistics, classic literature, performances, academic papers/dissertations/researchers, entity resolution (Wikidata), AI grants & contests — plus the *indexical* senses each body answers its own way (notifications, location, mic, camera; no hardware → an honest `no_hardware`, never a guess)",
+      "ko": "검색 — 웹·뉴스 통합 검색(동사 하나, `source` 분기)·어떤 RSS/Atom 피드든·금융·부동산(실거래가+직방/네이버 호가)·숙박/한달살기·중고 매물·프리랜서/외주·법률·통계·고전 원문·공연·학술 논문/학위논문/연구자(국회도서관)·개체 해소(Wikidata)·AI 창업지원/공모전 — 와 몸마다 자기 방식으로 답하는 *지표어* 감각(알림·위치·마이크·카메라. 하드웨어가 없으면 추측 대신 정직하게 \"없다\"고 답합니다)",
+      "short_ko": "지각"
+    },
+    "self": {
+      "en": "System management, workflows, triggers, goals, files (read/write/edit/fill, plus surgical edits to a live spreadsheet), deep + forager memory, **ledgers** (business catalog, personal/company finance, health records), grounded Q&A over your own document piles, registered scripts, phone sync, my music library, USB-limb issuance, the web-app registry, slides & decks, library install (approval-gated)",
+      "ko": "시스템 관리·워크플로우·트리거·목표·파일(읽기/쓰기/편집/양식 채우기, 살아있는 엑셀 장부의 부분 편집까지)·심층+포식 기억·**원장**(사업 카탈로그, 개인/회사 재무, 건강 기록)·내 문서 더미에 근거를 고정한 질의·등록 스크립트·폰 동기화·내 음악 라이브러리·USB 손발 발급·웹앱 등기부·슬라이드/덱·라이브러리 설치(승인 게이트)",
+      "short_ko": "내 자원"
+    },
+    "limbs": {
+      "en": "UI automation (browser, Android, desktop screen), phone-native actions, a guest PC reached by USB limb, media playback (YouTube, radio), window opening, maps",
+      "ko": "UI 자동화(브라우저·안드로이드·데스크탑 화면)·폰 네이티브 동작·USB로 닿는 게스트 PC·미디어 재생(유튜브·라디오)·창 열기·지도",
+      "short_ko": "장치·신체"
+    },
+    "others": {
+      "en": "Collaboration, delegation, **asking another body in plain language**, messaging (DM/feed/board/Nostr NIP-17), neighbor CRM (contacts are ops on a neighbor — a warehouse address is just another contact type), auto-response — and the public-web surfaces others can reach: personal portals, family newspaper, login-free bulletin boards, public file shares",
+      "ko": "협업·위임·**다른 몸에게 자연어로 부탁하기**·메시징(DM/피드/보드/Nostr NIP-17)·이웃 CRM(연락처는 이웃의 op — 이웃의 창고 주소도 연락처 종류 하나)·자동응답 — 그리고 남이 닿는 공개 웹 표면: 개인 포털·가족신문·로그인 없는 게시판·공개 파일 공유",
+      "short_ko": "소통"
+    },
+    "engines": {
+      "en": "Pure media generation — images (generate + vision read/critique), icons, the morning newspaper, websites, web components, TTS. Slides and video moved to `self` in the 2026-08 consolidation",
+      "ko": "순수 미디어 생성 — 이미지(생성 + 비전 읽기/채점)·아이콘·아침 신문·웹사이트·웹 컴포넌트·TTS. 슬라이드와 영상은 2026-08 통합에서 `self`로 이사했습니다",
+      "short_ko": "생성"
+    },
+    "table": {
+      "en": "Currency algebra — transformers (filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten), the higher-order **`each`**, and emitters (chart/spreadsheet/document/structure). Split out of `engines` so the grammar survives even when heavy media generation is off",
+      "ko": "통화 대수 — 변환자(filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten)와 고차 동사 **`each`**, emitter(chart/spreadsheet/document/structure). `engines`에서 분리돼, 무거운 미디어 생성을 꺼도 문법이 살아남습니다",
+      "short_ko": "통화 변환 문법"
+    }
+  },
+  "packages": {
+    "ai-ops": {
+      "name": "AI Ops (원샷 낱말)",
+      "description": "원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→items 구조화 · 중간 table:ai=items→items 의미 "
+    },
+    "android": {
+      "name": "Android",
+      "description": "안드로이드 폰 화면 조작 — `[limbs:android]{op}` 단일 센터피스 (snapshot/tap/type/swipe/key/long_press/open_app). 집 PC=ADB+uiautomator(USB) / 폰 자신=네이티브 AccessibilityService(USB 불필요) — 핸들러가 프로파일로 분기. 폰 온디맨드 감각(`sense:here`/`listen`/`see`/`phone`) 핸들러도 이 패키지"
+    },
+    "blog": {
+      "name": "Blog",
+      "description": "블로그 RAG 검색 및 인사이트 분석 (진실 소스=Obsidian vault, DB는 파생 검색 인덱스)"
+    },
+    "browser-action": {
+      "name": "Browser Action",
+      "description": "Playwright 기반 브라우저 자동화 v5.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe, 동적 콘텐츠 대기, 다단계 폴백 추출, CDP 타임아웃)"
+    },
+    "bulletin": {
+      "name": "Bulletin",
+      "description": "로그인 없는 자유게시판 `[others:bulletin]` — 게시판마다 공개 주소 `/b/<5자>`, 주소 아는 사람이 로그인 없이 글·사진 게시"
+    },
+    "business": {
+      "name": "Business",
+      "description": "비즈니스 관계 및 연락처(이웃) 관리"
+    },
+    "cctv": {
+      "name": "CCTV",
+      "description": "CCTV/웹캠 관련 도구"
+    },
+    "cloudflare": {
+      "name": "Cloudflare",
+      "description": "Cloudflare 서비스 통합 (Pages, Workers, R2, D1, Tunnel)"
+    },
+    "community-portal": {
+      "name": "Community Portal",
+      "description": "개인 포털 `[others:portal]` — `/h/<5자>/` 다중 포털, 회원=이웃 CRM 레벨 0~4, 진열 다이얼·회원 실행 게이트·감사 로그"
+    },
+    "computer-use": {
+      "name": "Computer Use",
+      "description": "컴퓨터 사용 자동화"
+    },
+    "contest": {
+      "name": "Contest",
+      "description": "AI 공모전·경진대회 검색 (Kaggle, `sense:contest`)"
+    },
+    "context7": {
+      "name": "Context7",
+      "description": "Context7 라이브러리 문서 검색"
+    },
+    "culture": {
+      "name": "Culture",
+      "description": "공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회"
+    },
+    "data-ops": {
+      "name": "Data Ops",
+      "description": "통화 변환자 9동사 (filter/sort/take/select/dedup/groupby/join/union/merge) — 순수 변환. `group: transform`, `scope: workspace`, `runs_on: anywhere`. 파이프(`>>`·`&`)와 같은 닫힌 계급. + 표준 코어 문서 emitter `table:structure`·`table:document` (2026-07-03 media_producer서 이관)"
+    },
+    "family-news": {
+      "name": "Family News",
+      "description": "가족신문 `[others:family_news]` — 폰(USB) 사진으로 판 조판→`/n/<5자>` 누적 발행, 방명록·가족 사진 업로드"
+    },
+    "finance-record": {
+      "name": "Finance Record",
+      "description": "재무 원장 `[self:finance]{op}` — 소비(지출·수입 거래)와 소유(자산·부채)를 **주체(owner) 축**(개인/회사)으로 한 원장에. 폰 결제 알림 수거(`op:sync`)·다형 입력 적재(`ingest_engine` 공용). 2026-08-14 `[self:spend]` 흡수"
+    },
+    "guest-helper": {
+      "name": "Guest Helper",
+      "description": "USB 손발 — 발급 `[self:limb]{op}`(USB 페이로드 생성·승인·폐기) + 조작 `[limbs:guestpc]{op}`(셸/파일). 헬퍼=Go 단일파일, 허브로 아웃바운드(그 PC 방화벽 무설정). 눈 없음(셸·파일만)"
+    },
+    "health-record": {
+      "name": "Health Record Manager",
+      "description": "건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약)"
+    },
+    "house-designer": {
+      "name": "House Designer",
+      "description": "대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중 지붕, 필로티, 건물 프로파일, 계단(직선/L자/U턴/나선형/Winder"
+    },
+    "ibl-core": {
+      "name": "IBL Core",
+      "description": "IBL 핵심 도구"
+    },
+    "investment": {
+      "name": "Investment",
+      "description": "한국/미국 주가, 재무제표, 공시, 뉴스, 암호화폐 분석"
+    },
+    "kosis": {
+      "name": "KOSIS",
+      "description": "통계청 KOSIS API 국가통계 조회"
+    },
+    "lecture_workspace": {
+      "name": "Lecture Workspace",
+      "description": "강의 워크스페이스 (강의/슬라이드/재료/데크 op 분기)"
+    },
+    "legal": {
+      "name": "Legal",
+      "description": "대한민국 법률 정보 검색 (법령, 판례, 행정규칙, 자치법규 등)"
+    },
+    "location-services": {
+      "name": "Location Services",
+      "description": "위치 기반 서비스 (날씨, 맛집, 길찾기, 여행 정보, 숙박·한달살기 `sense:stay`)"
+    },
+    "media_producer": {
+      "name": "Media Producer",
+      "description": "홍보용 슬라이드, HTML 기반 MP4 동영상, AI 이미지·아이콘 생성(`engines:icon` 폰-로컬)"
+    },
+    "memory": {
+      "name": "Memory",
+      "description": "심층 메모리 (자동 시스템: 연상기억 검색 + 경험 증류)"
+    },
+    "music-player": {
+      "name": "Music Player",
+      "description": "내 음악 라이브러리 `[self:music]`(op 14) — 폴더 스캔·태그·앨범아트, **폴더 단위** 탐색·연속재생·검색·플레이리스트·정지. 재생=표면의 `<audio>` + `/music/stream`. ★2026-07-28 정리: AI 추천·관련곡 그래프·앨범/아티스트 뷰 은퇴(되살리지 말 것 — 남긴 축은 폴더)"
+    },
+    "notebook": {
+      "name": "Notebook",
+      "description": "근거 고정 질의 `[self:notebook]{op}` — 문서 더미(PDF·텍스트·유튜브 자막·웹 URL)에 이름 붙여 두고 **소스 안에서만** 답하며 인용을 단다(NotebookLM 로컬판). 인용은 코드가 원문에서 추출=환각 차단, 근거 없으면 `not_in_sources` 정직 반환. 색인=ko-sroberta+sqlite-vec+FTS5(★해마 모델 아님), `pc_only`"
+    },
+    "pc-manager": {
+      "name": "PC Manager",
+      "description": "PC 파일 탐색, 외장하드 관리, 저장소 스캔"
+    },
+    "photo-manager": {
+      "name": "Photo Manager",
+      "description": "사진/동영상 메타데이터 수집, 갤러리, 중복 탐지"
+    },
+    "public-files": {
+      "name": "Public Files",
+      "description": "공개 파일 `[others:showcase]` — `/s/<5자>/` 로 디스크의 폴더를 그대로 공개(EXIF 제거·동영상 스트리밍 트랜스코드·자막)"
+    },
+    "radio": {
+      "name": "Radio",
+      "description": "인터넷 라디오 검색 및 재생"
+    },
+    "real-estate": {
+      "name": "Real Estate",
+      "description": "부동산 시세·매물 — 국토부 실거래가 + 직방·네이버부동산 현재 매물 (`sense:realty{source}`)"
+    },
+    "shopping-assistant": {
+      "name": "Shopping Assistant",
+      "description": "새 상품 가격비교 `[sense:search_shopping]`(다나와 — used/all·naver 축은 2026-08-04 은퇴) + 중고 매물 `[sense:used]{source: bunjang/danggeun/joongna/naver}` + 프리랜서·외주 `[sense:freelance]`(크몽)"
+    },
+    "startup": {
+      "name": "Startup",
+      "description": "창업지원 사업공고 검색 (K-Startup, 중소벤처기업부)"
+    },
+    "study": {
+      "name": "Study Helper",
+      "description": "학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata)"
+    },
+    "system_essentials": {
+      "name": "System Essentials",
+      "description": "파일 읽기/쓰기/검색(rg 고속 경로+인코딩 폴백), todo, 계획 모드, 이웃 조회, 웹앱 등기부 `[self:webapp]{op}`(파생 우선 — 진실 소스 7곳 재계산 + 전 함대 생존 실측)"
+    },
+    "visualization": {
+      "name": "Visualization",
+      "description": "범용 데이터 시각화 (차트/그래프 PNG/HTML)"
+    },
+    "web": {
+      "name": "Web Tools",
+      "description": "통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, RSS 피드, **신문 발행 `[engines:newspaper]`**(2026-08-15 스위치화 — prompt_hidden, 신문 계기 발행 버튼 전용). 2026-08-28 검색 통화 계약 둘: ①모든 소스가 **발행일 `date`(ISO 8601)** 를 싣는다(gnews=RFC2822 파싱·naver=news pubDate/blog postdate — 파싱 불능이면 필드를 달지 않는다, 모르는 날짜 미주장) → 신선도를 `[table:filter]` 술어로 세울 수 있다 ②`queries` 파라미터 선언이 `[string, array]` 유니온(핸들러가 이미 하던 배치 팬아웃을 문장 안에서 쓸 수 있게 — 선언이 능력보다 좁아 정직 거절되던 비대칭 수리). 가드 `backend/test_search_date_field.py` D1~D6"
+    },
+    "web-builder": {
+      "name": "Web Builder",
+      "description": "홈페이지 제작/관리/배포 통합 도구"
+    },
+    "youtube": {
+      "name": "Youtube",
+      "description": "YouTube 영상 정보, 자막 추출, 다운로드"
+    }
+  }
+}

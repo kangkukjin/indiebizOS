@@ -19,6 +19,8 @@ import yaml
 from runtime_utils import get_base_path as _get_base_path
 
 router = APIRouter()
+from api_execution_trace import router as execution_trace_router
+router.include_router(execution_trace_router)
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent.parent

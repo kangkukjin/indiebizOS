@@ -39,7 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
-        "audit_lifecycle", "execution_workers", "runtime_work",
+        "audit_lifecycle", "execution_workers", "runtime_work", "trace_read", "episode_trace_reader",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "episode_logger", "model_call_context", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
@@ -99,7 +99,7 @@ LAYERS = {
         "calendar_actions", "calendar_html", "cdn_provision",
         "channel_poller", "ffmpeg_provision", "gen_newspaper",
         "generate_newspaper", "hippocampus_provision", "indienet", "model_settings_view",
-        "ingest_engine",
+        "ingest_engine", "execution_trace", "execution_trace_scope",
         "indienet_common", "indienet_publish", "indienet_relay",
         "indienet_social", "multi_chat_manager", "nas_music", "nas_subtitle",
         "nas_webapp", "nostr_phone_bridge", "oneshot_facade",

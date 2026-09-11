@@ -272,3 +272,79 @@ class TurnStore:
         temp = manifest.with_suffix(".json.tmp")
         temp.write_text(json.dumps(self.manifest(), ensure_ascii=False), encoding="utf-8")
         temp.replace(manifest)
+
+
+def trace_directory(root, store_id):
+    from trace_read import ReadFault, safe_child
+    if not re.fullmatch(r"[0-9a-f]{32}", store_id or ""):
+        raise ReadFault("forbidden", "access_denied")
+    return safe_child(root, store_id)
+
+
+def read_trace_events(root, store_id, cursor=None, limit=50):
+    from trace_read import guarded, jsonl_page, safe_child
+    return guarded("supervision", lambda: jsonl_page(
+        "supervision", safe_child(trace_directory(root, store_id), "events.jsonl"), cursor, limit))
+
+
+def read_trace_document(root, store_id, name, offset=0, limit=12000, expected=None):
+    """Inspection only: no TurnStore construction, coverage, patch, adopt or delivery."""
+    from trace_read import ReadFault, fingerprint, guarded, result, safe_child
+    def read():
+        directory = trace_directory(root, store_id)
+        if not (re.fullmatch(r"[0-9a-f]{64}\.txt", name or "")
+                or re.fullmatch(r"response-v[1-9][0-9]*\.txt", name or "")):
+            raise ReadFault("forbidden", "access_denied")
+        path = safe_child(directory, name)
+        st = path.stat()
+        if st.st_size > 4 * 1024 * 1024:
+            raise ReadFault("partial", "document_size_budget")
+        # Evidence is content addressed; responses additionally require approved bytes.
+        text = path.read_text(encoding="utf-8")
+        actual_hash = digest(text)
+        if name.startswith("response-v"):
+            review_path = safe_child(directory, "review_status.json")
+            if review_path.stat().st_size > 128 * 1024:
+                raise ReadFault("malformed", "invalid_review")
+            review = json.loads(review_path.read_text(encoding="utf-8"))
+            response = review.get("response") or {}
+            manifest_path = safe_child(directory, "response.json")
+            if manifest_path.stat().st_size > 128 * 1024:
+                raise ReadFault("malformed", "invalid_response_manifest")
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if manifest != response:
+                raise ReadFault("forbidden", "response_not_approved")
+            if (review.get("status") != "ACHIEVED" or response.get("hash") != actual_hash
+                    or name != f"response-v{response.get('version')}.txt"):
+                raise ReadFault("forbidden", "response_not_approved")
+        elif actual_hash != name[:-4]:
+            raise ReadFault("malformed", "evidence_hash_mismatch")
+        water = fingerprint([st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size, actual_hash])
+        if expected and water != expected:
+            raise ReadFault("partial", "cursor_expired")
+        return result("supervision", [{"text": text[offset:offset + limit], "chars": len(text)}],
+                      high_water=water)
+    return guarded("supervision", read)
+
+
+def inspect_trace_document(root, store_id, name):
+    """Small availability metadata, without reading evidence bytes or filling coverage."""
+    from trace_read import ReadFault, guarded, result, safe_child
+    def read():
+        directory = trace_directory(root, store_id)
+        if not (re.fullmatch(r"[0-9a-f]{64}\.txt", name or "")
+                or re.fullmatch(r"response-v[1-9][0-9]*\.txt", name or "")):
+            raise ReadFault("forbidden", "access_denied")
+        path = safe_child(directory, name)
+        size = path.stat().st_size
+        if size > 4 * 1024 * 1024:
+            raise ReadFault("partial", "document_size_budget")
+        if name.startswith("response-v"):
+            review_path = safe_child(directory, "review_status.json")
+            if review_path.stat().st_size > 128 * 1024:
+                raise ReadFault("malformed", "invalid_review")
+            review = json.loads(review_path.read_text(encoding="utf-8"))
+            if review.get("status") != "ACHIEVED":
+                raise ReadFault("forbidden", "response_not_approved")
+        return result("supervision", status="ok", bytes=size)
+    return guarded("supervision", read)

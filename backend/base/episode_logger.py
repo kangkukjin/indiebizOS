@@ -1421,3 +1421,8 @@ def get_cognitive_trends(days: int = 7) -> dict:
         "previous": previous,
         "trends": trends,
     }
+
+# Strict read-only owner API, split to respect the 1500-line module limit.
+from episode_trace_reader import (  # noqa: E402,F401
+    read_episode_identity, read_trajectory_page, read_episode_text, read_trace_store_links,
+)

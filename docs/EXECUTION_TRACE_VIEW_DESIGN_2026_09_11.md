@@ -151,3 +151,15 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 - `EpisodeJournal.tsx`의 기존 상세 펼치기를 소비처로 사용한다. 기존 `/world-pulse/episodes/{id}/trajectory`는 호환을 유지하고 같은 주행 아래 통합 조회/원문 페이지를 추가한다. 기존 전역 `remote_access_guard`의 로컬 또는 원격 런처 세션 계약을 따르며 공개 경로에는 추가하지 않는다. 새 IBL 낱말은 없다.
 - 읽기 전용 실측: trajectory 77,990행/20,136 run, 최대 run 872행, data 최대 4,105자. 쓰기 JSONL 5,792,300바이트(회전 파일 없음). 등록 프로젝트 24개. supervision 62개, 사건 파일 중앙값 1,832/최대 202,464바이트. 본문·키·메시지는 표본 출력하지 않았다.
 - 합성 입력: `backend/fixtures/execution_trace_cases.json`. 여러 provider round+부모/자식 비용 정답은 input=350/output=35이며 누적 snapshot/호출 종료를 더하면 시험이 실패해야 한다. 실패·누락·충돌·페이지/권한 불변식도 이 fixture를 바탕으로 시험한다.
+
+## 12. L1 — 구현 및 검증
+
+- 읽기 서비스: `backend/services/execution_trace.py`, 등록 범위 해소: `execution_trace_scope.py`. 기존 소유자의 strict reader를 사용한다. episode reader는 1500줄 규칙 때문에 `base/episode_trace_reader.py`로 분리하고 `episode_logger`에서 재수출했다. 공통 읽기 원시 연산은 `base/trace_read.py`다. 기존 호환 reader와 writer/CAS/복구 동작은 유지했다.
+- SQLite `mode=ro`/`query_only`/읽기 트랜잭션, 100ms 잠금 대기와 SQL 350ms 예산을 적용한다. 페이지는 출처당 1~100행(기본 50). append 원장은 rowid 상한/범위 count/파일 신원으로 보존 범위 변화를 감지한다. JSONL은 최초 파일 신원·상한·앞뒤 지문을 고정하고 요청당 출처별 1MiB를 스캔한다. 64KiB 초과 행은 나머지를 새 사건으로 파싱하지 않는다.
+- 등록 프로젝트는 최대 64개/메타데이터 256KiB, 신원 후보 200개, 명시 작업대 32개/연결 사건 2000개로 제한한다. 이 한도 초과는 부분성을 반환한다. 전 디스크 탐색·상주 수집·새 DB·캐시/색인은 없다.
+- HMAC 커서는 질의/접근 범위/원장별 상한·위치를 묶는다. 유효기간 15분, 서비스 프로세스가 바뀌면 만료한다. 작업 상태/과제 version 변경, 원장 회전·삭제·보존 범위 변경은 새 스냅샷을 요구한다. 커서 없는 재조회가 새 사건을 본다. 모든 DB가 동시에 관측됐다는 원자성은 주장하지 않는다.
+- 개요에는 원문/도구 excerpt를 복제하지 않는다. 증거·episode log·task result·pursuit input/response는 서버 발행 참조의 별도 페이지다. 일반 원문 1M자/증거 4MiB 상한, 응답 페이지 12000자. 증거 내용 주소와 응답의 승인·현재 manifest 지문을 확인하며 coverage/patch/adopt/publish는 실행하지 않는다.
+- 직접 task/run 질의는 등록 project+owner 범위를 요구한다. 과제 episode FK가 없으면 scoped task 상태만 보여주며 전역 run을 추정 조인하지 않는다. messages에 task FK가 없는 현재 스키마는 `missing/no_task_foreign_key`로 드러낸다.
+- 같은 페이지의 trajectory/write 명시 연결은 observations로 묶고 두 원본 ID를 남긴다. 페이지를 넘는 대응은 observation_of 참조로 남긴다. 작업대 반복 seq는 파일 위치별로 보존하고 ambiguous로 표시한다. 여러 실제 usage는 모두 합산하며 `complete=false`는 best-effort 기록만으로 전체 청구의 완전성을 증명할 수 없다는 뜻이다. `recorded_events_complete`는 기록된 청구 사건의 페이지 읽기 완료만 뜻한다.
+- L1 합성 회귀 **14개 통과**: 비용 정답/반복 쓰기/같은 task 다른 프로젝트/같은 자아 다른 task/잠금·빈 결과·부재·손상/회전·삭제/증거 접근·해시·검수/CAS/늦은 완료·상태 충돌/페이지 중 삽입/원본 무변경/본문 변경 커서 만료/예산 진행. 기존 trajectory/write/pursuit/task binding/concurrency/delivery 시험 **65개 통과**. 층 검사 통과, Android 번들 재생성 완료.
+- 실사용 최근 episode 읽기 표본: **42ms**, 명시 자아 범위 해소 성공, 104개 개요 사건, 다음 커서 있음. 원래 4KB에서 잘린 작업대 trajectory 데이터는 `malformed_store_link`로 표시됐고 실제 원장을 손대지 않았다. 전체 backend 회귀는 L2 완료 후 결과를 아래에 기록한다.

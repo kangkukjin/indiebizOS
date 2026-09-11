@@ -150,3 +150,10 @@ def read_rows(days: int = 7):
             continue
     rows.sort(key=lambda r: r.get("ts") or "", reverse=True)
     return rows
+
+
+def read_trace_page(episode_ids, cursor=None, limit=50, path=None):
+    """Only explicit episode joins are scoped. Legacy task/run strings are insufficient."""
+    from trace_read import jsonl_page
+    return jsonl_page("writes", path or _LEDGER_PATH, cursor, limit,
+                      predicate=lambda row: row.get("episode_id") in episode_ids)

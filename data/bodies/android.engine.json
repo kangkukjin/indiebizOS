@@ -10,6 +10,7 @@
     "base/document_converter",
     "base/episode_logger",
     "base/episode_orphans",
+    "base/episode_trace_reader",
     "base/execution_workers",
     "base/korean_utils",
     "base/limb_keys",
@@ -35,6 +36,7 @@
     "base/supervision_watch",
     "base/thread_context",
     "base/thumbnails",
+    "base/trace_read",
     "base/window_requests",
     "base/write_ledger",
     "boot_common",
@@ -207,6 +209,8 @@
     "services/calendar_html",
     "services/chat_runs",
     "services/chat_streams",
+    "services/execution_trace",
+    "services/execution_trace_scope",
     "services/gen_newspaper",
     "services/generate_newspaper",
     "services/hippocampus_provision",
@@ -233,6 +237,7 @@
     "surface/api_business",
     "surface/api_config_tiers",
     "surface/api_conversations",
+    "surface/api_execution_trace",
     "surface/api_family_news",
     "surface/api_finance",
     "surface/api_gmail",
@@ -322,8 +327,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 311,
-    "engine": 285,
+    "total": 316,
+    "engine": 290,
     "blocklist": 26
   }
 }

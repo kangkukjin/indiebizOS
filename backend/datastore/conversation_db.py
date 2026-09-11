@@ -1142,3 +1142,33 @@ class ConversationDB:
             if self.get_consecutive_failures(task_id, cat) >= threshold:
                 failed.append(cat)
         return failed
+
+
+def read_task_trace(db_path, task_id):
+    """No constructor/pool/migration. Same task schema is also used by system AI."""
+    from trace_read import bounded_rows, guarded, readonly, result
+    def read():
+        with readonly(db_path) as conn:
+            columns = {r[1] for r in conn.execute("PRAGMA table_info(tasks)")}
+            fields = [k for k in ("task_id", "status", "parent_task_id", "run_id", "parent_run_id",
+                                  "pending_delegations", "created_at", "completed_at") if k in columns]
+            rows = bounded_rows(conn, "SELECT " + ",".join(fields)
+                                + " FROM tasks WHERE task_id=? OR parent_task_id=? ORDER BY task_id",
+                                (task_id, task_id))
+            return result("tasks", rows)
+    return guarded("tasks", read)
+
+
+def read_task_result(db_path, task_id, offset, limit):
+    from trace_read import ReadFault, fingerprint, guarded, readonly, result
+    def read():
+        with readonly(db_path) as conn:
+            row = conn.execute("SELECT length(result) AS chars FROM tasks WHERE task_id=?", (task_id,)).fetchone()
+            if row is None:
+                return result("tasks", status="missing", reason="task_missing")
+            if (row["chars"] or 0) > 1024 * 1024:
+                raise ReadFault("partial", "document_size_budget")
+            text = conn.execute("SELECT result FROM tasks WHERE task_id=?", (task_id,)).fetchone()[0] or ""
+            return result("tasks", [{"chars": len(text), "text": text[offset:offset + limit]}],
+                          high_water=fingerprint(text))
+    return guarded("tasks", read)

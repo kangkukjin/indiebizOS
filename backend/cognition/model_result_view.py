@@ -3,6 +3,16 @@ import json
 from hashlib import sha256
 
 
+def display_policy():
+    from ibl_envelope import PREVIEW_DEFAULT
+    from ibl_retyping import load_policy_block
+    defaults = {**PREVIEW_DEFAULT, "metadata_chars": 3000, "step_rows": 40,
+                "step_chars": 1000, "issues_chars": 2000}
+    configured = load_policy_block("envelope_preview", defaults)
+    return {key: configured[key] if type(configured[key]) is int and configured[key] > 0 else value
+            for key, value in defaults.items()}
+
+
 def evidence_store():
     from supervision_bus import current
     controller = current()
@@ -60,7 +70,7 @@ def _decode_json(value):
     return value
 
 
-def _compact_currency(value):
+def _compact_currency(value, metadata_chars):
     """items와 함께 온 큰 보조 원자료는 표시 사본에서만 참조로 접는다."""
     from ibl_honesty import HONESTY_KEYS
     if not isinstance(value, dict) or not isinstance(value.get("items"), list):
@@ -73,7 +83,7 @@ def _compact_currency(value):
         if key in preserve or not isinstance(item, (dict, list, str)):
             continue
         size = len(json.dumps(item, ensure_ascii=False, default=str))
-        if size > 3000:
+        if size > metadata_chars:
             omitted[key] = {"chars": size, "type": type(item).__name__}
             if isinstance(item, list):
                 omitted[key]["count"] = len(item)
@@ -85,7 +95,19 @@ def _compact_currency(value):
 
 def _bound(value, cap=1000):
     raw = json.dumps(value, ensure_ascii=False)
-    return value if len(raw) <= cap else {"excerpt": raw[:cap], "total_chars": len(raw), "truncated": True}
+    if len(raw) <= cap:
+        return value
+    # step/type/error와 정직 표지의 키·스칼라를 문자열 excerpt 속에 묻지 않는다.
+    # 구조 비용은 전송 경계가 다루며 여기서는 진단 문자열만 표시 사본에서 접는다.
+    def clip(item):
+        if isinstance(item, str) and len(item) > cap:
+            return item[:cap] + f"…(전체 {len(item)}자, result_ref 참조)"
+        if isinstance(item, list):
+            return [clip(v) for v in item]
+        if isinstance(item, dict):
+            return {k: clip(v) for k, v in item.items()}
+        return item
+    return clip(value)
 
 
 def project_result(result, verbose=False):
@@ -95,32 +117,33 @@ def project_result(result, verbose=False):
     store = evidence_store()
     raw = json.dumps(result, ensure_ascii=False, indent=2, default=str)
     ref = store.evidence(raw)
+    policy = display_policy()
     out = diet_envelope(result, verbose=False)
     # 오류 본문도 크롤 전문을 품을 수 있다. 상태·오류 위치를 남기고 전문은 증거로 읽는다.
     if out.get("_results_summarized") and isinstance(out.get("results"), list):
         out = dict(out)
         rows = out["results"]
-        out["results"] = [_bound(row) for row in rows[:40]]
-        if len(rows) > 40:
-            out["steps_omitted"] = len(rows) - 40
+        out["results"] = [_bound(row, policy["step_chars"]) for row in rows[:policy["step_rows"]]]
+        if len(rows) > policy["step_rows"]:
+            out["steps_omitted"] = len(rows) - policy["step_rows"]
         from ibl_honesty import completion_evidence
         errors = completion_evidence(result)
         if errors:
-            out["completion_issues"] = _bound(errors, 2000)
+            out["completion_issues"] = _bound(errors, policy["issues_chars"])
     # verbose는 새 실행의 중간 본문을 복제하는 스위치가 아니다. 전체는 read_result로 회수한다.
     # 파이프 결과의 JSON 문자열을 한 번 해제해 items 밖 data까지 같은 표시 정책에 넣는다.
     # 기존 final_result의 문자열/객체 타입과 작은 원문 바이트는 보존한다.
     if "final_result" in out:
         final = out["final_result"]
         value = _decode_json(final)
-        compact = _compact_currency(value)
+        compact = _compact_currency(value, policy["metadata_chars"])
         if compact != value:
             out = {**out, "final_result": json.dumps(compact, ensure_ascii=False, default=str)
                    if isinstance(final, str) else compact}
     else:
-        out = _compact_currency(out)
-    out = preview_envelope(out, verbose=False)
-    if out == result and len(raw) < 3000:
+        out = _compact_currency(out, policy["metadata_chars"])
+    out = preview_envelope(out, verbose=False, policy=policy)
+    if out == result and len(raw) < policy["min_chars"]:
         return out
     out = dict(out)
     out["result_ref"] = {k: ref[k] for k in ("id", "chars")}

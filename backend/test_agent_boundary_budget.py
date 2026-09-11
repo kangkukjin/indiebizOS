@@ -209,3 +209,61 @@ def test_b5_session_key_carries_tool_policy_fingerprint(monkeypatch, tmp_path):
 if __name__ == "__main__":
     import pytest as _pytest
     raise SystemExit(_pytest.main([__file__, "-q"]))
+
+
+@pytest.mark.parametrize("provider", ["anthropic", "openai", "ollama"])
+def test_provider_large_error_preserves_json_state_and_original_bytes(tmp_path, monkeypatch, provider):
+    import importlib
+    from hashlib import sha256
+    from common import spill
+    module = importlib.import_module("providers." + provider)
+    cls = getattr(module, {"anthropic": "AnthropicProvider", "openai": "OpenAIProvider",
+                           "ollama": "OllamaProvider"}[provider])
+    monkeypatch.setattr(spill, "_root", lambda: str(tmp_path))
+    env = {"success": False, "error": "실패 상세" * 10000, "error_count": 5, "halted": True,
+           "steps_completed": 1, "steps_total": 2,
+           "resume": {"from_step": 2, "vars_ref": "/tmp/live.json"},
+           "result_ref": {"id": "original", "read": "read_result"}}
+    raw = json.dumps(env, ensure_ascii=False, indent=2)
+    text = cls._truncate_tool_result(object.__new__(cls), raw)
+    out = json.loads(text)
+    assert len(text) <= module.MAX_TOOL_RESULT_LENGTH
+    assert out["success"] is False and out["error"] and out["halted"]
+    assert out["error_count"] == 5 and out["resume"] == env["resume"]
+    assert out["result_ref"] == env["result_ref"]
+    assert "error" in out["_transport_omitted"]
+    body, error = spill.read_ref(out["ref"])
+    assert error is None and sha256(body.encode()).digest() == sha256(raw.encode()).digest()
+
+
+def test_transport_condensation_retains_original_reference_and_nested_failures(tmp_path, monkeypatch):
+    from common import spill
+    from ibl_result_transport import fit_tool_result
+    monkeypatch.setattr(spill, "_root", lambda: str(tmp_path))
+    rows = [{"text": "보고서" * 300} for _ in range(50)]
+    inner = {"items": rows, "error_count": 3, "rows_unprocessed": 2, "halted": True}
+    env = {"success": True, "final_result": json.dumps(inner, ensure_ascii=False),
+           "result_ref": {"id": "execution-original"}}
+    raw = json.dumps(env, ensure_ascii=False)
+    out = json.loads(fit_tool_result(raw, 16000))
+    assert out["result_ref"] == env["result_ref"]
+    shown = json.loads(out["final_result"])
+    assert shown["error_count"] == 3 and shown["rows_unprocessed"] == 2 and shown["halted"]
+    assert shown["_omitted_items"] > 0
+    assert spill.read_ref(out["transport_ref"])[0] == raw
+    # 행 축소로도 안 맞는 중첩 병렬 산문: 미완료 증거는 참조 봉투에서도 보인다.
+    env["final_result"] = json.dumps([{"items": [{"text": "큰 산문" * 20000}],
+                                       "error_count": 3, "rows_unprocessed": 2}], ensure_ascii=False)
+    out = json.loads(fit_tool_result(json.dumps(env, ensure_ascii=False), 16000))
+    assert out["completion_issues"][0]["error_count"] == 3
+
+
+def test_plain_text_overflow_is_recoverable_and_body_action_count_is_not_metadata(tmp_path, monkeypatch):
+    from common import spill
+    from ibl_result_transport import provider_tool_result
+    monkeypatch.setattr(spill, "_root", lambda: str(tmp_path))
+    raw = '"_action_count": 99999\n' + "plain text\n" * 5000
+    text = provider_tool_result(raw)
+    assert len(text) <= 16000
+    out = json.loads(text)
+    assert spill.read_ref(out["ref"])[0] == raw

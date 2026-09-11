@@ -248,26 +248,9 @@ class OllamaProvider(BaseProvider):
         return openai_tools
 
     def _truncate_tool_result(self, result: str, max_length: int = MAX_TOOL_RESULT_LENGTH) -> str:
-        """도구 결과 길이 제한 (컨텍스트 관리)
-        파이프라인 결과인 경우 액션 수 × 기본 한도 적용 (개별 실행과 동등한 정보량 보장)
-        """
-        # 파이프라인 결과 감지: _action_count(병렬 포함 실제 액션 수)로 한도 확장
-        import re as _re
-        action_match = _re.search(r'"_action_count"\s*:\s*(\d+)', result)
-        if action_match:
-            actions = int(action_match.group(1))
-            if actions > 1:
-                max_length = max_length * actions
-
-        from ibl_envelope import display_delivery_budget
-        max_length = display_delivery_budget(result, max_length)
-        if len(result) <= max_length:
-            return result
-
-        # 앞뒤 일부를 유지하고 중간 생략
-        keep_start = max_length * 2 // 3
-        keep_end = max_length // 3 - 50
-        return result[:keep_start] + f"\n\n... (중략: {len(result) - max_length}자 생략) ...\n\n" + result[-keep_end:]
+        """원문 참조와 JSON을 보존하는 공통 전송 경계."""
+        from ibl_result_transport import provider_tool_result
+        return provider_tool_result(result, max_length)
 
     def _simple_stream(
         self,

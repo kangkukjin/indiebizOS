@@ -83,29 +83,14 @@ def _http_trajectory(ctx):
 
 def _trim_for_agent(raw: str, actions: int = 1) -> str:
     """최종 반환값을 보존하며 전달 예산에 맞춘다. 초과하면 중간 실행 기록부터 접는다."""
-    original_raw = raw
-    try:
-        data = json.loads(raw)
-    except Exception:
-        return raw
     budget = _agent_budget_chars(actions)
     from ibl_envelope import display_delivery_budget
+    from ibl_result_transport import fit_tool_result
     display_budget = display_delivery_budget(raw, budget)
     if display_budget > budget:
         from common.spill import DISPLAY_MCP_OUTPUT_TOKENS
         budget = min(display_budget, _host_cap_chars(DISPLAY_MCP_OUTPUT_TOKENS))
-    if len(raw) > budget and isinstance(data, dict):
-        # ep3219: verbose의 final_result를 지운 뒤 꼬리를 자르면 원장 10행만 남고
-        # take가 낸 마지막 4행은 사라졌다. 값 대신 실행 기록을 공용 요약기로 접는다.
-        from ibl_envelope import diet_envelope
-        slim = diet_envelope(data)
-        if slim is not data:
-            slim["_trimmed"] = "전달 한도로 중간 결과 원문을 표시에서 생략했습니다. 최종 반환값은 final_result입니다."
-            slim["_hint"] = "results[]는 단계 요약입니다. 중간 값은 저장된 변수·파일에서 필요한 부분만 읽으세요."
-            data = slim
-            raw = json.dumps(data, ensure_ascii=False)
-    return _budget_for_agent(raw, data if isinstance(data, dict) else None,
-                             budget=budget, original_raw=original_raw)
+    return fit_tool_result(raw, budget)
 
 
 # 에이전트에게 줄 응답의 크기 예산(문자) — 2026-09-04 개정: 고정 24,000자 → **프로바이더 규칙과
@@ -115,7 +100,7 @@ def _trim_for_agent(raw: str, actions: int = 1) -> str:
 # 그 뒤 에이전트는 큰 문장을 쓰면 벌 받는다는 걸 학습해 1액션 문장 60~75% 로 굳었다.
 # 상한은 호스트 CLI 자체 한도(MAX_MCP_OUTPUT_TOKENS, 기본 25,000토큰 — 2.1.258 바이너리 실측) ×
 # 실봉투 1.6자/토큰(실측 31,715자=19,425토큰). 호스트가 자기 한도로 구조 무지 절단을 하기 *전에*
-# 여기서 구조 보존 축약(items cap → 꼬리)을 하는 것이 이 경계의 남은 역할이다 — 더 좁게 조이지 않는다.
+# 여기서 원문 참조를 보존하는 구조 축약을 하는 것이 이 경계의 남은 역할이다 — 더 좁게 조이지 않는다.
 # 큰 데이터를 줄이는 일은 언어(table:take/select/brief 등 원샷 낱말)의 몫이지 경계의 몫이 아니다.
 _PER_ACTION_CHARS = 16_000          # = providers.*.MAX_TOOL_RESULT_LENGTH (test_agent_boundary_budget 이 동율 고정)
 _HOST_MCP_TOKENS_DEFAULT = 25_000   # claude CLI MAX_MCP_OUTPUT_TOKENS 기본값
@@ -147,87 +132,6 @@ def _count_actions(code: str) -> int:
     return max(1, len(_ACTION_HEAD_RE.findall(code or "")))
 
 
-def _condense_items(obj, cap: int):
-    """재귀 축약: 중첩 JSON 문자열을 관통(파싱→축약→compact 재직렬화)하며
-    items 배열을 cap 개로 줄인다(_omitted_items 로 생략 수 노출, total 필드는 보존).
-
-    병렬(&) 결과는 'JSON문자열-in-리스트-in-문자열'로 겹치고(지도 수확과 같은 지형),
-    각 겹이 indent 직렬화라 compact 재직렬화만으로도 크게 준다.
-    """
-    if isinstance(obj, str):
-        s = obj.lstrip()
-        if s[:1] in ("[", "{"):
-            try:
-                parsed = json.loads(obj)
-            except Exception:
-                return obj
-            return json.dumps(_condense_items(parsed, cap), ensure_ascii=False)
-        return obj
-    if isinstance(obj, list):
-        return [_condense_items(x, cap) for x in obj]
-    if isinstance(obj, dict):
-        out = {}
-        for k, v in obj.items():
-            if k == "items" and isinstance(v, list) and len(v) > cap:
-                out[k] = [_condense_items(x, cap) for x in v[:cap]]
-                out["_omitted_items"] = len(v) - cap
-            else:
-                out[k] = _condense_items(v, cap)
-        return out
-    return obj
-
-
-def _budget_for_agent(raw: str, parsed=None, budget: int = None, original_raw: str = None) -> str:
-    """예산 초과 응답을 단계 축약. 층 선택 원칙: 여기는 '에이전트 경계' —
-    REST/프론트/웹소켓이 받는 원본 계약은 건드리지 않는다."""
-    if budget is None:
-        budget = _agent_budget_chars(1)
-    if len(raw) <= budget:
-        return raw
-    if parsed is None:
-        try:
-            parsed = json.loads(raw)
-        except Exception:
-            parsed = None
-    if parsed is not None:
-        for cap in (10, 5, 3, 1):
-            slim = _condense_items(parsed, cap)
-            if isinstance(slim, dict):
-                slim["_trimmed"] = (f"전달 한도로 items 표시를 소스당 최대 {cap}개로 줄였습니다"
-                                    " — 전체 개수는 count/total/_omitted_items 참조. "
-                                    "전체 값은 저장된 변수·파일에서 필요한 부분만 읽으세요.")
-            out = json.dumps(slim, ensure_ascii=False)
-            if len(out) <= budget:
-                return out
-        # JSON을 문자 단위로 자르면 최종 값·오류·정직 표지가 사라지고 JSON도 깨진다.
-        # 큰 값은 원형으로 보관하고 참조를 반환한다. 실행을 다시 요구하지 않는다.
-        from common.spill import spill_write
-        from ibl_envelope import summarize_result
-        saved = spill_write(original_raw if original_raw is not None else raw, tag="mcp_result")
-        saved["_trimmed"] = "전달 한도로 본문 표시를 생략했습니다. ref.path의 저장된 결과를 읽으세요(재실행 불필요)."
-        if isinstance(parsed, dict):
-            if "success" in parsed:
-                saved["success"] = parsed["success"]
-            if "final_result" in parsed:
-                summary = summarize_result(parsed["final_result"])
-                if len(json.dumps({**saved, "final_result_summary": summary}, ensure_ascii=False)) <= budget:
-                    saved["final_result_summary"] = summary
-        return json.dumps(saved, ensure_ascii=False)
-    # 구조 축약으로도 안 줄면(거대 텍스트 등) 꼬리 절단 — 파일덤프보다 낫다. 꼬리 안내까지 예산 안에.
-    tail_note = f" …[{{n}}자 생략 — {_truncated_next_step()}]"
-    head = raw[:max(0, budget - len(tail_note))]
-    return head + tail_note.replace("{n}", str(len(raw) - len(head)))
-
-
-def _truncated_next_step() -> str:
-    """절단 뒤의 다음 걸음 한 줄 — 정본은 ibl_honesty.TRUNCATED_NEXT_STEP."""
-    try:
-        from ibl_honesty import TRUNCATED_NEXT_STEP
-        return TRUNCATED_NEXT_STEP
-    except Exception:
-        return "같은 낱말의 limit·범위 param 을 좁히거나 >> [table:take]/[table:select] 로 줄여 다시 실행할 것(셸로 갈아타지 말 것)"
-
-
 # ── 이미지 봉투 승격 (2026-08-14, 클로드 코드 경로 대칭) ──────────────────────
 # 인프로세스 경로는 수확 관문(system_tools._harvest_images)이 image_data 봉투를
 # 진짜 이미지 블록으로 승격하지만, 이 MCP 경로는 /ibl/execute 직행이라 봉투가
@@ -235,7 +139,7 @@ def _truncated_next_step() -> str:
 # 쓰레기를 본다(445,625자 사건의 CC판). 여기(에이전트 경계)서 같은 계약으로
 # 수확해 MCP ImageContent 로 승격한다. 봉투 계약·상한은 system_tools 와 동일
 # 유지 의무 — {"image_data": {"b64", "media_type", ...메타}}, 상한 4장, 본문엔
-# b64 뺀 메타를 `image` 키로 남김. ★예산(_budget_for_agent)보다 먼저 돌 것.
+# b64 뺀 메타를 `image` 키로 남김. ★전송 예산 적용보다 먼저 돌 것.
 # (이미지 수확의 공용 코어 추출은 직결 경로 정리 때.)
 
 _IMAGE_ENVELOPE_KEY = "image_data"

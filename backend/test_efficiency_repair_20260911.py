@@ -130,6 +130,26 @@ def test_action_discovery_checks_permissions_and_keeps_listen():
     assert denied["actions"][0].get("error")
 
 
+def test_display_policy_controls_model_copy_and_keeps_structured_diagnostics(tmp_path, monkeypatch):
+    import model_result_view as view
+    import ibl_retyping
+    store = TurnStore(tmp_path / "evidence")
+    monkeypatch.setattr(view, "evidence_store", lambda: store)
+    policy = tmp_path / "lifecycle.yaml"
+    policy.write_text("envelope_preview:\n  rows: 2\n  min_chars: 10\n  prose_chars: 80\n  step_chars: 20\n")
+    monkeypatch.setattr(ibl_retyping, "_POLICY_PATH", str(policy))
+    monkeypatch.setattr(ibl_retyping, "_block_cache", {})
+    original = {"success": False, "results": [{"step": 7, "type": "action", "error": "오류" * 500}],
+                "final_result": {"items": [{"text": "긴 산문" * 50} for _ in range(5)]}}
+    out = view.project_result(original)
+    assert len(out["final_result"]["items"]) == 2
+    assert out["final_result"]["_preview"]["total"] == 5
+    assert out["results"][0]["step"] == 7 and out["results"][0]["type"] == "action"
+    assert "result_ref" in out["results"][0]["error"]
+    assert store.read_evidence(out["result_ref"]["id"], 0, None)["text"] == json.dumps(
+        original, ensure_ascii=False, indent=2)
+
+
 def test_compact_environment_preserves_available_capabilities():
     from ibl_access import build_environment
     full = build_environment(expose_idioms=False)

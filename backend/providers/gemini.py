@@ -447,17 +447,8 @@ class GeminiProvider(BaseProvider):
                 yield event
 
                 # 도구 응답 추가 (AI에게는 content만)
-                # 파이프라인 결과인 경우 _action_count(병렬 포함 실제 액션 수) × 16KB 허용
-                import re as _re
-                _max_len = 16000
-                _action_match = _re.search(r'"_action_count"\s*:\s*(\d+)', tool_output)
-                if _action_match:
-                    _actions = int(_action_match.group(1))
-                    if _actions > 1:
-                        _max_len = _max_len * _actions
-                from ibl_envelope import display_delivery_budget
-                _max_len = display_delivery_budget(tool_output, _max_len)
-                truncated_output = tool_output[:_max_len] if len(tool_output) > _max_len else tool_output
+                from ibl_result_transport import provider_tool_result
+                truncated_output = provider_tool_result(tool_output)
                 function_response_parts.append(self._function_response_part(fc, truncated_output))
 
                 # [images] 이미지가 있으면 inline_data Part로 추가 (AI가 볼 수 있도록)

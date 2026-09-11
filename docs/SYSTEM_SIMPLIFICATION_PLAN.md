@@ -1,6 +1,6 @@
 # 시스템 단순화 검토와 수리 계획
 
-상태: 계획 수립. 구현·설정·운영 데이터 변경 없음.
+상태: 순차 집행 중. 아래 집행 기록에 완료 범위와 검증을 갱신한다.
 작성: 2026-09-11. 검토 기준: 정본 main `05468cbd`.
 대상: [Fable의 전체 반성](SYSTEM_REFLECTION_2026_09_11.md), 조사 기준 커밋 `9c1dfc8c`.
 
@@ -193,3 +193,13 @@ blue/green을 “9겹에서 2겹”으로 계산하는 데는 반대한다. [api
 실제 backend 구현 변경 시에는 해당 행동 시험 후 저장소 규약의 전체 backend 회귀를 실행한다. 어휘/문서 파생 변경은 `python3 scripts/build_ibl_nodes.py` 및 `--check`, backend 변경은 `python3 scripts/build_body_bundle.py android`, frontend 변경은 `npx tsc -p tsconfig.app.json`을 적용한다. 새 backend 모듈은 층 배정·1500줄 규칙을 따른다.
 
 집행 이력은 별도 사건 문서를 계속 추가하지 않고 이 계획의 상태·근거와 git 커밋으로 갱신한다. 실제 계약이 바뀌면 해당 `system_docs` 정본과 도움말·은퇴 계약까지 함께 수정한다.
+
+## 5. 집행 기록
+
+### 0단계 — 경로·입력·조회 계측
+
+- 기존 `model.usage`를 입출력·캐시 사용량의 원천으로 유지한다. `model.input`은 같은 call_id에 텍스트 크기와 이미지 개수만 기록하며, 원문·이미지 데이터·추정 토큰을 저장하지 않는다. process_message→stream 중첩도 논리 호출당 한 번이다.
+- `cognition.supervisor_selected`가 available/disabled/no_task/no_agent/force_role을 기록한다. `cognition.route`는 THINK/EXECUTE/REPAIR와 반사 여부, `cognition.evaluation`은 supervisor/goal_eval/self_reflect/none을 구분한다. `context.result_read`는 원문 조회 페이지의 크기·이어서 읽기 여부를 기록한다.
+- 공통 진입점은 사용자 표면·위임·스케줄의 기존 `cognitive_stream`이며, 직접 IBL은 모델 표시/앱 원형 분기를 유지한다. 강제 역할은 감독을 열지 않고, 정상 EXECUTE는 조건부 감독이며, 감독 없는 THINK는 기존 GoalEval을 유지한다.
+- 변경 전 완료된 실사용 20건을 읽기 전용으로 조회했다. `compatibility_plan`의 실제 사용 기록 1건이 있어 호환 경로 은퇴 조건은 아직 충족되지 않는다. 기존 기록에는 route/result_read 계측이 없으므로 0건을 실제 미사용으로 해석하지 않는다. 원문 없는 집계는 `outputs/system_simplification/stage0-baseline.json`에 저장했다.
+- 완료: 인지 경로·감독·계측·제공자 사용량 89개와 전체 backend 회귀 통과(종료 코드 0). 폰 번들 재생성·IBL 파생 일치 검사 통과. 전체 로그는 `outputs/system_simplification/stage0-tests.log`에 보관했다.

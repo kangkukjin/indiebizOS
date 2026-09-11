@@ -1,6 +1,7 @@
 """모델 호출의 부모·역할·목적. 같은 응답의 관측과 청구는 별개로 기록한다."""
 import contextvars
 import inspect
+import json
 import time
 import threading
 import uuid
@@ -63,6 +64,34 @@ def fields(*, next_round=False):
     if next_round:
         value["round_index"] += 1
     return {k: v for k, v in value.items() if not k.startswith("_")}
+
+
+def observe_input(provider, arguments):
+    """호출별 텍스트 크기만 기록한다. 이미지·본문·캐시 비용을 추정해 원장에 넣지 않는다."""
+    value = _call.get()
+    if value is None or value.get("_input_observed"):
+        return
+    value["_input_observed"] = True
+    arguments = {**arguments, **arguments.get("kwargs", {})}
+
+    def text_chars(content):
+        if isinstance(content, str):
+            return len(content)
+        if isinstance(content, list):
+            return sum(text_chars(part) for part in content)
+        if isinstance(content, dict):
+            return text_chars(content.get("content", content.get("text", "")))
+        return 0
+
+    from episode_logger import record_trajectory_event
+    record_trajectory_event("model.input", {
+        **fields(), "accounting": "input_shape_only",
+        "system_chars": text_chars(getattr(provider, "system_prompt", "")),
+        "message_chars": text_chars(arguments.get("message", arguments.get("message_content", ""))),
+        "history_chars": text_chars(arguments.get("history") or []),
+        "tool_schema_chars": len(json.dumps(getattr(provider, "tools", None) or [], ensure_ascii=False, default=str)),
+        "images": len(arguments.get("images") or []),
+    })
 
 
 @contextmanager
@@ -138,11 +167,13 @@ def trace_provider_method(method):
                 bound.arguments["cancel_check"] = cancelled
                 args, kwargs = bound.args[1:], bound.kwargs
             with call_scope(self):
+                observe_input(self, inspect.signature(method).bind_partial(self, *args, **kwargs).arguments)
                 yield from method(self, *args, **kwargs)
         return stream
     @wraps(method)
     def call(self, *args, **kwargs):
         with call_scope(self):
+            observe_input(self, inspect.signature(method).bind_partial(self, *args, **kwargs).arguments)
             return method(self, *args, **kwargs)
     return call
 

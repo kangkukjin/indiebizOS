@@ -43,6 +43,11 @@ def read_result(request):
         page.update(source_chars=page["chars"], chars=len(text), path=path,
                     offset=offset, text=text[offset:offset + limit])
     page["next_offset"] = offset + len(page["text"]) if offset + len(page["text"]) < page["chars"] else None
+    from episode_logger import record_trajectory_event
+    record_trajectory_event("context.result_read", {
+        "evidence_id": request.get("id"), "offset": offset, "chars": len(page["text"]),
+        "selected_path": path is not None, "has_more": page["next_offset"] is not None,
+    })
     return page
 
 

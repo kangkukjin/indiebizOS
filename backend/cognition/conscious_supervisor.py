@@ -28,7 +28,10 @@ def open_supervisor(runner, message, history, cancel_check=None):
     task = get_current_task_id()
     agent = get_current_agent_id() or getattr(runner.ai, "agent_id", None)
     # 내부 원샷 역할·신원 없는 호출은 사용자 턴 감독에 참여하지 않는다.
-    if not config["enabled"] or not task or not agent:
+    reason = "disabled" if not config["enabled"] else "no_task" if not task else "no_agent" if not agent else "available"
+    from episode_logger import record_trajectory_event
+    record_trajectory_event("cognition.supervisor_selected", {"reason": reason, "enabled": reason == "available"})
+    if reason != "available":
         return None
     return Supervisor(runner, message, history, agent, task, config, cancel_check)
 

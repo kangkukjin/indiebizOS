@@ -210,6 +210,35 @@ def test_oneshot_contract_is_explicit_and_parent_accounting_is_separate(monkeypa
     assert len(roles) == 2 and roles[1]["parent_call_id"] == roles[0]["call_id"]
     assert roles[1]["role"] == "oneshot:slide" and provider.no_tools is False
     assert len([e for e in events if e[0] == "model.usage"]) == 2
+    inputs = [data for kind, data in events if kind == "model.input"]
+    assert len(inputs) == 2 and {row["message_chars"] for row in inputs} == {5, 6}
+    assert {row["call_id"] for row in inputs} == {row["call_id"] for row in roles}
+
+
+def test_input_shape_counts_once_and_does_not_copy_image_or_message(monkeypatch):
+    from providers.base import BaseProvider
+    import episode_logger as el
+    events = []
+    monkeypatch.setattr(el, "record_trajectory_event", lambda kind, data: events.append((kind, data)))
+
+    class Fake(BaseProvider):
+        def init_client(self):
+            return True
+
+        def process_message(self, message, **kwargs):
+            return list(self.process_message_stream(message, **kwargs))
+
+        def process_message_stream(self, message, **kwargs):
+            yield {"type": "final", "content": "ok"}
+
+    provider = Fake("", "test", "system", [])
+    provider.process_message("private-message", history=[{"content": [
+        {"type": "text", "text": "abc"}, {"type": "image", "source": {"data": "secret-image"}},
+    ]}], images=["secret-image"])
+    inputs = [data for kind, data in events if kind == "model.input"]
+    assert len(inputs) == 1 and inputs[0]["history_chars"] == 3 and inputs[0]["images"] == 1
+    assert inputs[0]["system_chars"] == 6 and inputs[0]["message_chars"] == 15
+    assert "secret-image" not in json.dumps(events) and "private-message" not in json.dumps(events)
 
 
 def test_template_reuses_outer_html_and_escapes_only_text():

@@ -300,6 +300,8 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     from agent_pipeline import CognitivePipelineMixin
     from pathlib import Path
     calls = []
+    trace = []
+    monkeypatch.setattr("episode_logger.record_trajectory_event", lambda kind, data: trace.append((kind, data)))
 
     class Runner(CognitivePipelineMixin):
         config = {"name": "worker"}
@@ -332,6 +334,24 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     assert not [e for e in events if e["type"] == "error"], events
     assert [e["content"] for e in events if e["type"] == "text"] == ["사용자 응답"]
     assert len(calls) == (1 if lane == "THINK" else 0)
+    assert ("cognition.evaluation", {"path": "supervisor" if lane == "THINK" else "none"}) in trace
+
+
+@pytest.mark.parametrize("enabled,task,agent,reason", [
+    (False, "t", "a", "disabled"), (True, "", "a", "no_task"),
+    (True, "t", "", "no_agent"), (True, "t", "a", "available"),
+])
+def test_supervisor_selection_reports_reason_without_creating_fallback_identity(monkeypatch, enabled, task, agent, reason):
+    import conscious_supervisor as module
+    events = []
+    monkeypatch.setattr("world_pulse._load_config", lambda: {"conscious_supervisor": {"enabled": enabled}})
+    monkeypatch.setattr(tc, "get_current_agent_id", lambda: agent)
+    monkeypatch.setattr(tc, "get_current_task_id", lambda: task)
+    monkeypatch.setattr(module, "Supervisor", lambda *a: "controller")
+    monkeypatch.setattr("episode_logger.record_trajectory_event", lambda kind, data: events.append((kind, data)))
+    result = module.open_supervisor(SimpleNamespace(ai=SimpleNamespace(agent_id=agent)), "private", [])
+    assert result == ("controller" if reason == "available" else None)
+    assert events == [("cognition.supervisor_selected", {"reason": reason, "enabled": reason == "available"})]
 
 
 def test_same_poll_with_elapsed_numbers_is_not_progress(supervisor):

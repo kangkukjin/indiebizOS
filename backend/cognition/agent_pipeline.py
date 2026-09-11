@@ -292,6 +292,9 @@ class CognitivePipelineMixin:
             try:
                 if not kwargs.get("force_role"):
                     _supervisor = open_supervisor(self, message, history, kwargs.get("cancel_check"))
+                else:
+                    from episode_logger import record_trajectory_event
+                    record_trajectory_event("cognition.supervisor_selected", {"reason": "force_role", "enabled": False})
                 for event in self._cognitive_stream_body(message, history, **kwargs):
                     observe(event)
                     yield event
@@ -362,6 +365,10 @@ class CognitivePipelineMixin:
             request_type, reflex_hint = "THINK", None
 
         # 3. 의식(THINK) / reflex·force_role 모델 스왑
+        from episode_logger import record_trajectory_event
+        record_trajectory_event("cognition.route", {
+            "request_type": request_type, "reflex": bool(reflex_hint), "force_role": force_role,
+        })
         # 스왑 헬퍼는 runner-제네릭(시스템AI 전용 아님) — system_ai_core에 기거할 뿐.
         from system_ai_core import _switch_to_midtier, _switch_to_role, _restore_provider
         consciousness_output = None
@@ -713,11 +720,13 @@ class CognitivePipelineMixin:
 
             # 7. 평가 루프 (THINK 경로) — 달성 기준이 있으면 평가 후 재시도
             _eval_ran = False  # 평가 루프가 실제로 돌았는지 — 8번(반성)의 게이트
+            _reflect_ran = False
             if _supervisor and final_content and not _supervisor.enabled and eval_tool_calls and not reflex_hint:
                 from cognitive_trace import should_self_reflect
                 _supervisor.enabled = should_self_reflect(eval_tool_calls, min_tool_calls=3)[0]
             if _supervisor and _supervisor.enabled and final_content:
                 _eval_ran = True
+                record_trajectory_event("cognition.evaluation", {"path": "supervisor"})
                 final_content = yield from _supervisor.finalize(final_content, history, _collect, cancel_check,
                                                                 tool_calls=eval_tool_calls)
             elif consciousness_output and final_content:
@@ -727,6 +736,7 @@ class CognitivePipelineMixin:
                     _goal_cfg = _load_wp_config().get("goal_eval", {})
                     if _goal_cfg.get("enabled", True):
                         _eval_ran = True
+                        record_trajectory_event("cognition.evaluation", {"path": "goal_eval"})
                         print(f"[GoalEval] 달성 기준 감지: {criteria[:80]}")
                         # ★yield from — 평가·재실행 구간의 이벤트를 그대로 흘린다.
                         # 옛 판은 이 호출이 블로킹 함수라 평가(50~90초)+전면 재실행
@@ -779,6 +789,8 @@ class CognitivePipelineMixin:
                 if _refl_cfg.get("enabled", True) and not _do_reflect:
                     print(f"[SelfReflect] 스킵 — {_refl_reason}")
                 elif _refl_cfg.get("enabled", True):
+                    _reflect_ran = True
+                    record_trajectory_event("cognition.evaluation", {"path": "self_reflect"})
                     from agent_cognitive import build_reflection_message
                     _refl_msg = build_reflection_message(final_content, eval_tool_calls)
                     print(f"[SelfReflect] 자기반성 턴 시작 — {_refl_reason} (도구 {len(eval_tool_calls)}회)")
@@ -819,6 +831,9 @@ class CognitivePipelineMixin:
                             yield {"type": "final", "content": _refl_final}
                         final_content = _refl_final
                         print(f"[SelfReflect] 반성 후 최종 응답 갱신 ({len(_refl_final)}자)")
+
+            if not _eval_ran and not _reflect_ran:
+                record_trajectory_event("cognition.evaluation", {"path": "none"})
 
         except GeneratorExit:
             # 소비자 조기 종료(취소·타임아웃) — finally에서 뒷정리만 하고 전파

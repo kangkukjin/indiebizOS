@@ -662,25 +662,19 @@ def _parse_try_block(code: str) -> Optional[Dict]:
 
 
 def _split_top_commas(text: str) -> List[str]:
-    parts, cur, depth, in_s, q = [], [], 0, False, ''
-    for c in text:
-        if in_s:
-            cur.append(c)
-            if c == q:
-                in_s = False
-            continue
-        if c in '"\'':
-            in_s, q = True, c
-        elif c in '{[(':
+    """반복 헤더 쉼표는 모든 괄호·인용 문자열 밖에서만 옵션을 나눈다."""
+    parts, depth, start = [], 0, 0
+    for i, char in QuoteState().outside(text):
+        if char in '{[(':
             depth += 1
-        elif c in '}])':
+        elif char in '}])':
             depth -= 1
-        if c == ',' and depth == 0:
-            parts.append(''.join(cur).strip()); cur = []
-        else:
-            cur.append(c)
-    if ''.join(cur).strip():
-        parts.append(''.join(cur).strip())
+        if char == ',' and depth == 0:
+            parts.append(text[start:i].strip())
+            start = i + 1
+    tail = text[start:].strip()
+    if tail:
+        parts.append(tail)
     return parts
 
 

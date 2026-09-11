@@ -70,5 +70,27 @@ def test_json_fallback_and_capture_bypass_do_not_depend_on_optional_json5(monkey
     assert calls == ['"$item"']
 
 
+@pytest.mark.parametrize('mode,count', [('until', 1), ('while', 2)])
+@pytest.mark.parametrize('literal', [r'"a\",b"', r"'a\',b'"])
+def test_repeat_header_preserves_escaped_quote_and_comma(mode, count, literal):
+    from ibl_parser import parse
+    from ibl_code_ir import compile_code
+    from ibl_parser_blocks import _repeat_options
+    header = f'{mode} {literal} == {literal}, max: 2, collect: true'
+    options = _repeat_options(header)
+    assert options['condition'] == f'{literal} == {literal}'
+    assert options['max'] == 2 and options['collect'] is True
+    code = '[repeat: ' + header + ']{[table:take]{items:[{n:1}],n:1}}'
+    assert parse(code)[0]['condition'] == options['condition']
+    assert compile_code(code).tree[0]['condition'] == options['condition']
+    # 실제 제어 흐름까지 확인하되 도구는 외부 통신 없는 table:take만 사용한다.
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
+    from ibl_boundary_probe import probe
+    result = probe(dict(id='repeat_escaped_quote', code=code, expected=[{'n': 1}] * count,
+                        error=False, contains=None))
+    assert result['ok'], (result.get('actual'), result.get('error_text'))
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

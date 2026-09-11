@@ -55,32 +55,14 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
         각 branch 결과를 입력 순서대로 합친 리스트
     """
     from ibl_engine import execute_ibl
-    from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
+    from concurrent.futures import wait, FIRST_COMPLETED
+    from execution_workers import create_executor
     from workflow_binding import _inject_prev_result, _auto_inject_prev, _to_prev_currency
     from workflow_verdict import is_error_result
-    import contextvars
     import threading
     import time
 
-    # 부모 스레드의 thread_context 를 **통째로** 떠서 자식 스레드에 승계한다.
-    #
-    # ★손으로 칸을 열거하지 않는다. 옛 코드는 5칸(task_id·agent_id·agent_name·
-    #   project_id·allowed_nodes)만 골라 날랐고, 뒤에 추가된 `task_origin`
-    #   (= in_rehearsal() 이 읽는 칸)이 그 목록에 없어서 **병렬 가지에서만**
-    #   리허설 표식이 사라졌다 — 훈련이 일부러 밟은 실패가 `source='usage'` 로
-    #   라이브 건강 원장에 쌓였다(실측 2026-08-23: 훈련 창 44행이 usage 로 기록,
-    #   그중 실패 5건). 단일 액션·`??` 폴백·`[table:each]`·`[try]` 는 같은 스레드라
-    #   멀쩡했고 병렬만 샜다 — threading.local 은 스레드를 안 건넌다.
-    #
-    # ★같은 저장소의 다른 스레드 경계 둘은 이미 이 관용을 쓴다:
-    #   ibl_engine._run_router_safely · ibl_routing 의 워커(“snapshot/restore 로
-    #   워커 스레드에 승계한다”). 이탈은 여기 하나뿐이었으므로 여기로 맞춘다.
-    #
-    # ★열거 대신 통째 승계인 이유: 열거 목록은 반드시 뒤처진다. 새 컨텍스트 칸이
-    #   생길 때마다 이 파일을 고쳐야 하는 구조 자체가 결함의 원인이었다.
-    import thread_context as _tc
-    _parent_ctx = _tc.snapshot()
-
+    # 실행 문맥 전체의 승계·복원은 제출 경계(execution_workers)가 소유한다.
     branch_results = [None] * len(branches)
     budgets = [_branch_budget(b) for b in branches]
     states = [
@@ -100,8 +82,6 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
             state.update({"step": step_no, "steps": steps, "node": node, "action": action})
 
     def _run_branch(idx: int, branch: dict):
-        _tc.restore(_parent_ctx)   # 부모 컨텍스트 승계 (origin 포함 — 열거 없음)
-
         # 괄호 분기 파이프 (G13-1, 2026-08-19 상상훈련 13회차): (A >> B >> C) —
         # 분기 안을 순차 실행해 마지막 결과를 이 분기의 출력으로 낸다. 분기별
         # 전처리(교차 소스 rename 등)의 표현력. 중간 이음매는 항상 _raw(통화 보존).
@@ -186,14 +166,14 @@ def _execute_parallel(branches: list, project_path: str, prev_result: str, raw: 
     # 8개씩 명시적으로 시작한다. 옛 단일 executor는 9번째 이후 future도 제출 시점부터
     # 전역 90초를 소비해, 실행을 시작하기 전에 이미 타임아웃될 수 있었다. 배치는 워커
     # 상한을 지키면서도 각 가지의 시계를 실제 시작점에 건다. 시간 초과 스레드는 파이썬이
-    # 강제 종료할 수 없어 daemon으로 완주하지만, 다음 배치는 새 executor라 굶지 않는다.
+    # 강제 종료할 수 없어 배경에서 완주하지만, 다음 배치는 새 executor라 굶지 않는다.
     for batch_start in range(0, len(branches), PARALLEL_MAX_WORKERS):
         indices = list(range(batch_start,
                              min(batch_start + PARALLEL_MAX_WORKERS, len(branches))))
-        executor = ThreadPoolExecutor(max_workers=len(indices))
+        executor = create_executor("ibl-parallel", max_workers=len(indices))
         try:
             future_to_idx = {
-                executor.submit(contextvars.copy_context().run, _run_branch, idx, branches[idx]): idx
+                executor.submit(_run_branch, idx, branches[idx]): idx
                 for idx in indices
             }
             pending = set(future_to_idx)

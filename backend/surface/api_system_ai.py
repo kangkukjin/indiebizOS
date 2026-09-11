@@ -770,9 +770,9 @@ def forage_enrich(req: ForageEnrichReq):
             else:
                 missing.append(u)
         if missing:
-            from concurrent.futures import ThreadPoolExecutor
+            from execution_workers import create_executor
             now = datetime.now().isoformat(timespec="seconds")
-            with ThreadPoolExecutor(max_workers=8) as ex:
+            with create_executor("forage-images", max_workers=8) as ex:
                 results = list(ex.map(_fetch_og_image, missing))
             for u, img in zip(missing, results):
                 out[u] = img

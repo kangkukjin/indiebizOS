@@ -556,8 +556,8 @@ def _community_feed(params: dict) -> dict:
     author_futures = None
     try:
         if author:
-            import concurrent.futures
-            _ex = concurrent.futures.ThreadPoolExecutor(max_workers=2)
+            from execution_workers import create_executor
+            _ex = create_executor("channel-author", max_workers=2)
             f_posts = _ex.submit(indienet.fetch_author_posts, pubkey=author, limit=limit)
             f_profile = _ex.submit(indienet.fetch_author_profile, author)
             author_futures = (_ex, f_profile)

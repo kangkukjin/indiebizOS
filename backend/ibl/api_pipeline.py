@@ -61,7 +61,8 @@ import os
 import re
 import requests
 from typing import Any, Dict, List, Optional, Union
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import as_completed
+from execution_workers import create_executor
 
 
 def execute_pipeline(
@@ -106,7 +107,7 @@ def _execute_parallel(
     """병렬로 모든 단계 실행"""
     results = {}
 
-    with ThreadPoolExecutor(max_workers=min(len(steps), 5)) as executor:
+    with create_executor("api-pipeline", max_workers=min(len(steps), 5)) as executor:
         futures = {}
         for step in steps:
             step_id = step.get("id", f"step_{len(futures)}")

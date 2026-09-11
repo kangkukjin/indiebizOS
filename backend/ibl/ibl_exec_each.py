@@ -540,18 +540,13 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     pre_results: dict = {}
     _ready = [i for i, p_ in enumerate(preps[:budget_cut]) if p_["kind"] == "ready"]
     if parallel > 1 and len(_ready) > 1:
-        import thread_context as _tc
-        import contextvars
-        from concurrent.futures import ThreadPoolExecutor
-        _snap = _tc.snapshot()
+        from execution_workers import create_executor
 
         def _worker(i: int):
-            _tc.restore(_snap)
             return i, _execute(i, preps[i])
 
-        with ThreadPoolExecutor(max_workers=min(parallel, len(_ready)),
-                                thread_name_prefix="ibl-each") as _ex:
-            futures = [_ex.submit(contextvars.copy_context().run, _worker, i) for i in _ready]
+        with create_executor("ibl-each", max_workers=min(parallel, len(_ready))) as _ex:
+            futures = [_ex.submit(_worker, i) for i in _ready]
             for _i, _res in (future.result() for future in futures):
                 pre_results[_i] = _res
     parallel_discarded = 0

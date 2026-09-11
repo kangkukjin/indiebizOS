@@ -7,7 +7,7 @@ import re
 import uuid
 import asyncio
 import contextvars
-from concurrent.futures import ThreadPoolExecutor
+from execution_workers import create_executor
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 import yaml
@@ -21,7 +21,7 @@ router = APIRouter()
 project_manager = None
 
 # 스트리밍을 위한 스레드 풀
-executor = ThreadPoolExecutor(max_workers=4)
+executor = create_executor("chat-stream", max_workers=4)
 
 # 스트림 태스크 레지스트리 (2026-08-15 조향) — client_id 별 실행 중 스트림(시스템AI·에이전트 공용).
 # 실행 중 같은 클라이언트의 새 메시지 = 조향 접수 판정에 쓴다. 연결 해제 시 정리.

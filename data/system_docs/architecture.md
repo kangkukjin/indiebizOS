@@ -164,7 +164,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 - `calendar_manager.py`가 실행 시 소유 에이전트의 컨텍스트로 파이프라인 실행
 
 **행위자 3칸 봉투 (2026-08-21)** — 위임은 사람이 아니라 다른 실행 주체가 몸을 쓰는 자리라, 누가·무슨 과제로·어디서 왔는지가 따라다녀야 한다.
-- `thread_context` 가 `agent` / `task` / `origin` 세 칸을 스레드 경계 너머로 전파하고, `/ibl/execute` 는 요청 봉투(env·헤더)에서 이를 받는다(포털 경유는 `origin='portal'`).
+- `thread_context`는 실행 신원을 소유한다. `execution_workers`는 매 제출 때 thread-local 전체와 contextvars(비용 원장·궤적 포함)를 함께 캡처하고 종료/예외 때 워커의 이전 문맥을 복원한다. 각 역할의 풀 크기·수명은 호출자가 유지하며 중첩 each/parallel 풀을 하나로 합치지 않는다. 동기 핸들러 타임아웃은 별도 데몬 스레드에 같은 승계를 적용한다. `/ibl/execute`는 요청 봉투(env·헤더)에서 신원을 받는다(포털 경유는 `origin='portal'`).
 - 무태스크 위임(스케줄러 하달·앱 버튼의 `[others:delegate]{scope:"system"}`)에는 러너가 태스크를 발급한다 — 그래야 그 런의 쓰기가 **3중 조인**(`write_ledger` → `episode_log` → `tasks`)에 닫힌다.
 - 회상 어휘는 `[self:body]{op:"writes"}`(쓰기 관문 원장) + `{op:"changes"|"log"|"file"}`(git 원장).
 
@@ -491,7 +491,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **42개** (+ 백엔드 extensions **5개**), IBL: **6노드 164 액션** (sense 43·self 50·limbs 14·others 17·engines 18·table 22)
-- backend **.py 348개**(test 제외, git 추적 기준) — 층 디렉토리 `base 35 · datastore 48 · ibl 49 · cognition 62 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **75개**(guide_db 등록 **74**)
+- backend **.py 349개**(test 제외, git 추적 기준) — 층 디렉토리 `base 36 · datastore 48 · ibl 49 · cognition 62 · services 29 · surface 64`(+ common 19·providers 13·channels 4·drivers 3). 가이드 **75개**(guide_db 등록 **74**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**30개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

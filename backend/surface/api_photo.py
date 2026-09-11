@@ -514,7 +514,7 @@ async def get_usb_video(path: str = Query(...), request: Request = None):
 async def get_duplicates(path: str = Query(...)):
     """중복 파일 조회 (MD5 해시 기반) - 비동기 실행"""
     import asyncio
-    from concurrent.futures import ThreadPoolExecutor
+    from execution_workers import create_executor
 
     photo_db, _ = _get_photo_modules()
 
@@ -523,7 +523,7 @@ async def get_duplicates(path: str = Query(...)):
 
     # 스레드풀에서 실행하여 이벤트 루프 블로킹 방지
     loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor() as executor:
+    with create_executor("photo-query") as executor:
         result = await loop.run_in_executor(executor, photo_db.get_duplicates, path)
 
     return result
@@ -535,7 +535,7 @@ async def get_duplicates(path: str = Query(...)):
 async def get_stats(path: str = Query(...)):
     """통계 조회 - 비동기 실행"""
     import asyncio
-    from concurrent.futures import ThreadPoolExecutor
+    from execution_workers import create_executor
 
     photo_db, _ = _get_photo_modules()
 
@@ -544,7 +544,7 @@ async def get_stats(path: str = Query(...)):
 
     # 스레드풀에서 실행하여 이벤트 루프 블로킹 방지
     loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor() as executor:
+    with create_executor("photo-query") as executor:
         result = await loop.run_in_executor(executor, photo_db.get_stats, path)
 
     return result
@@ -554,7 +554,7 @@ async def get_stats(path: str = Query(...)):
 async def get_timeline(path: str = Query(...)):
     """타임라인 (월별 촬영 통계) - 비동기 실행"""
     import asyncio
-    from concurrent.futures import ThreadPoolExecutor
+    from execution_workers import create_executor
 
     photo_db, _ = _get_photo_modules()
 
@@ -563,7 +563,7 @@ async def get_timeline(path: str = Query(...)):
 
     # 스레드풀에서 실행하여 이벤트 루프 블로킹 방지
     loop = asyncio.get_event_loop()
-    with ThreadPoolExecutor() as executor:
+    with create_executor("photo-query") as executor:
         result = await loop.run_in_executor(executor, photo_db.get_timeline, path)
 
     return result

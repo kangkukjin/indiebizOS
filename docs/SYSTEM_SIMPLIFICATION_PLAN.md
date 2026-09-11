@@ -272,3 +272,12 @@ blue/green을 “9겹에서 2겹”으로 계산하는 데는 반대한다. [api
 - 이 비용에 AST·통화·변수 타입·사전 버전의 캐시와 무효화 상태를 추가하는 것은 단순화 목적에 맞지 않아 일반 캐시는 도입하지 않았다. 통합 실행 입구의 T1을 직접 실행 분기로 옮겨, 파이프 실행 직전의 불필요한 세 번째 호출을 제거했다.
 - `check:true` 탐침과 직접/중첩/재개 실행기의 검사는 각 진입 계약으로 유지한다. 전체 검사기의 `abstained`를 통과 증명으로 사용하지 않는다. 단일 변환자·머리 변환자·통화 없는 이음매 모두 부작용 전에 거절하는 시험을 추가했다.
 - 관련 **14 passed**, 전체 backend **3,655 passed, 1 skipped**. 로그: `outputs/system_simplification/stage6b-tests.log`. 폰 번들·IBL 파생 검사 통과.
+
+
+### 6c — 실행 풀 생성·문맥 승계 공통화
+
+- `execution_workers.create_executor`로 backend의 명시적 ThreadPoolExecutor 생성점을 모았다. 풀은 호출마다 별개이며 기존 최대 워커 수·with/상주 수명·대기/취소 동작을 유지한다. 중첩 each/parallel을 단일 풀로 몰지 않는다.
+- 매 submit 시점의 thread-local 전체와 contextvars를 함께 캡처하고, 결과/예외 뒤 워커의 이전 상태로 복원한다. 기존 오프로드 풀에서 빠졌던 비용 문맥도 건너간다. 동기 라우터의 호출별 데몬 스레드는 같은 경계 함수로 승계하며 강제 종료할 수 없는 핸들러의 기존 타임아웃 의미를 유지한다.
+- WebSocket의 명시적 contextvars 전달은 외부에서 주입하는 executor도 받는 경계 계약으로 유지했다. 풀 합류로 사용자 취소·후속 지시의 수명이나 예산 정책을 바꾸지 않았다.
+- 소스 문자열을 확인하던 문맥 시험 둘을 미래 thread-local 칸/ContextVar 전달, 예외 후 복원, 제출 시점의 작업 A/B 격리와 중첩 단일 워커 풀의 완주를 확인하는 행동 시험으로 바꿨다. 관련 **76 passed**.
+- 전체 backend **3,658 passed, 1 skipped**. 로그: `outputs/system_simplification/stage6c-tests.log`. 층 가드·폰 번들·IBL 파생 검사 통과.

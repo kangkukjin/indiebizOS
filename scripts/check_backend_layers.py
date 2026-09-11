@@ -39,7 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
-        "audit_lifecycle",
+        "audit_lifecycle", "execution_workers",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "episode_logger", "model_call_context", "episode_orphans", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",

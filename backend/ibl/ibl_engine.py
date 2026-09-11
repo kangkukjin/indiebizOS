@@ -554,10 +554,8 @@ def _get_offload_pool():
     """핸들러 오프로드용 스레드풀 (지연 생성)."""
     global _offload_pool
     if _offload_pool is None:
-        import concurrent.futures
-        _offload_pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=8, thread_name_prefix="ibl_offload"
-        )
+        from execution_workers import create_executor
+        _offload_pool = create_executor("ibl_offload", max_workers=8)
     return _offload_pool
 
 
@@ -572,15 +570,8 @@ def _run_router_safely(fn, *args, **kwargs):
     except RuntimeError:
         return fn(*args, **kwargs)  # 루프 없음 → 인라인 (변화 없음)
 
-    # 실행 중인 루프 위 → 워커 스레드로 오프로드 (+ thread_context 전파)
-    import thread_context as _tc
-    snap = _tc.snapshot()
-
-    def _worker():
-        _tc.restore(snap)
-        return fn(*args, **kwargs)
-
-    return _get_offload_pool().submit(_worker).result()
+    # 루프 없는 워커로 옮기며 작업 신원·비용 contextvars도 함께 승계한다.
+    return _get_offload_pool().submit(fn, *args, **kwargs).result()
 
 
 def _attach_param_warning(result: Any, warning: Optional[dict]) -> Any:

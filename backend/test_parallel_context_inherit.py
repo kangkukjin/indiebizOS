@@ -31,6 +31,19 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401
 
 
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def restore_parent_context():
+    import thread_context
+    snap = thread_context.snapshot()
+    try:
+        yield
+    finally:
+        thread_context.restore(snap)
+
+
 def _branches():
     return [{"node": "sense", "action": "probe_a"}, {"node": "sense", "action": "probe_b"}]
 
@@ -89,23 +102,106 @@ def test_R3_옛_5칸도_여전히_건너간다(monkeypatch):
         assert row["project_id"] == "부동산", f"기존에 나르던 칸이 유실됐다: {row}"
 
 
-def test_R4_경계는_열거가_아니라_통째_승계여야_한다():
-    """손 열거로 되돌아가면 다음 칸이 또 조용히 빠진다 — 그 회귀를 막는다."""
-    src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                            "ibl", "workflow_parallel.py"), encoding="utf-8").read()
-    assert "_tc.snapshot()" in src and "_tc.restore(" in src, \
-        "병렬 경계가 snapshot/restore 관용을 쓰지 않는다"
-    for setter in ("set_current_task_id(", "set_current_agent_name(", "set_allowed_nodes("):
-        assert setter not in src, f"손 열거 복원이 되살아났다: {setter}"
+@pytest.mark.parametrize("boundary", ["parallel", "offload", "timeout"])
+def test_R4_경계는_열거가_아니라_통째_승계여야_한다(monkeypatch, boundary):
+    """새 thread-local 칸과 새 ContextVar도 소비자 수정 없이 건너가야 한다."""
+    import asyncio
+    import contextvars
+    import thread_context as tc
+    import ibl_engine
+    from ibl_routing import _run_sync_with_timeout
+    from workflow_parallel import _execute_parallel
+    from execution_workers import create_executor
+
+    marker = contextvars.ContextVar("future_worker_marker", default=None)
+    marker.set("parent-ledger")
+    tc.restore({**tc.snapshot(), "future_task_field": "parent-task"})
+
+    def observe(*args, **kwargs):
+        return {"items": [{"task": tc.snapshot().get("future_task_field"),
+                            "ledger": marker.get()}]}
+
+    expected = observe()
+    if boundary == "parallel":
+        monkeypatch.setattr(ibl_engine, "execute_ibl", observe)
+        result = _execute_parallel(_branches(), None, "")
+        assert len(result) == 2
+        assert all(row["items"] == expected["items"] for row in result)
+    elif boundary == "timeout":
+        assert _run_sync_with_timeout(observe, (), 2, "probe") == expected
+    else:
+        with create_executor("test-offload", max_workers=1) as pool:
+            monkeypatch.setattr(ibl_engine, "_offload_pool", pool)
+
+            async def on_loop():
+                return ibl_engine._run_router_safely(observe)
+
+            assert asyncio.run(on_loop()) == expected
 
 
-def test_R5_형제_경계들과_같은_관용이다():
-    """IBL 의 스레드 경계 셋이 한 관용을 쓴다(이탈이 결함이었으므로)."""
-    here = os.path.dirname(os.path.abspath(__file__))
-    for rel in (("ibl", "ibl_engine.py"), ("ibl", "ibl_routing.py"),
-                ("ibl", "workflow_parallel.py")):
-        src = open(os.path.join(here, *rel), encoding="utf-8").read()
-        assert ".snapshot()" in src and ".restore(" in src, f"{rel} 이 관용에서 이탈했다"
+def test_R5_예외_뒤에도_워커_문맥을_복원한다():
+    """생성자와 무관한 경계 함수도 worker의 이전 상태를 복원해야 한다."""
+    import contextvars
+    import thread_context as tc
+    from concurrent.futures import ThreadPoolExecutor
+    from execution_workers import bind_context
+
+    marker = contextvars.ContextVar("worker_restore_marker", default="empty")
+    marker.set("parent")
+    tc.restore({**tc.snapshot(), "future_task_field": "parent"})
+
+    def fail():
+        assert marker.get() == "parent"
+        assert tc.snapshot()["future_task_field"] == "parent"
+        marker.set("leaked")
+        tc.restore({"future_task_field": "leaked", "new_worker_field": True})
+        raise ValueError("worker failure")
+
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        pool.submit(tc.restore, {"future_task_field": "worker-before"}).result()
+        with pytest.raises(ValueError, match="worker failure"):
+            pool.submit(bind_context(fail)).result()
+        state = pool.submit(tc.snapshot).result()
+        assert state["future_task_field"] == "worker-before"
+        assert "new_worker_field" not in state
+        assert pool.submit(marker.get).result() == "empty"
+    assert tc.snapshot()["future_task_field"] == "parent"
+    assert marker.get() == "parent"
+
+
+def test_pool_captures_each_submission_and_separates_nested_pools():
+    import contextvars
+    import threading
+    import thread_context as tc
+    from execution_workers import create_executor
+
+    marker = contextvars.ContextVar("submission_marker", default="empty")
+    release = threading.Event()
+
+    def observe():
+        return tc.get_current_task_id(), marker.get()
+
+    with create_executor("parent", max_workers=1) as pool:
+        blocked = pool.submit(release.wait, 3)
+        try:
+            tc.set_current_task_id("task-a")
+            marker.set("ledger-a")
+            a = pool.submit(observe)
+            tc.set_current_task_id("task-b")
+            marker.set("ledger-b")
+            b = pool.submit(observe)
+        finally:
+            release.set()
+        blocked.result(timeout=2)
+        assert a.result(timeout=2) == ("task-a", "ledger-a")
+        assert b.result(timeout=2) == ("task-b", "ledger-b")
+
+        def nested():
+            with create_executor("child", max_workers=1) as child:
+                assert child is not pool
+                return child.submit(observe).result(timeout=2)
+
+        assert pool.submit(nested).result(timeout=3) == ("task-b", "ledger-b")
 
 
 if __name__ == "__main__":                      # 러너는 하나 — pytest (2026-08-23)

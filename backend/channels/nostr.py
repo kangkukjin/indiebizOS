@@ -568,7 +568,8 @@ class NostrChannel(Channel):
             import json
             import uuid
             import threading
-            from concurrent.futures import ThreadPoolExecutor, as_completed
+            from concurrent.futures import as_completed
+            from execution_workers import create_executor
 
             # author가 npub 형식이면 hex로 변환
             author_hex = None
@@ -693,7 +694,7 @@ class NostrChannel(Channel):
             print(f"✓ Nostr: {len(relays_to_use)}개 릴레이에서 병렬 검색 시작 (language={language}, query={query})")
 
             # 병렬 실행
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with create_executor("nostr-relays", max_workers=5) as executor:
                 futures = {executor.submit(fetch_from_relay, relay): relay for relay in relays_to_use}
 
                 for future in as_completed(futures, timeout=10):
@@ -1045,7 +1046,8 @@ class NostrChannel(Channel):
             import json
             import uuid
             import threading
-            from concurrent.futures import ThreadPoolExecutor, as_completed
+            from concurrent.futures import as_completed
+            from execution_workers import create_executor
 
             all_events = []
             events_lock = threading.Lock()
@@ -1141,7 +1143,7 @@ class NostrChannel(Channel):
 
             print(f"✓ Nostr: {len(relays_to_use)}개 릴레이에서 패키지 검색 (hashtag={hashtag}, query={query})")
 
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            with create_executor("nostr-relays", max_workers=5) as executor:
                 futures = {executor.submit(fetch_from_relay, relay): relay for relay in relays_to_use}
                 for future in as_completed(futures, timeout=10):
                     relay = futures[future]

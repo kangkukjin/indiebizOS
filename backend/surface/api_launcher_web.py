@@ -823,9 +823,8 @@ async def logout(request: Request, response: Response):
 
 @router.get("/app", response_class=HTMLResponse)
 async def get_webapp():
-    """공통 React 셸. 미빌드/구버전 설치에서는 기존 원격 화면을 유지한다."""
-    from launcher_react import react_shell
-    return HTMLResponse(react_shell() or get_launcher_webapp_html(), headers={"Cache-Control": "no-store"})
+    """간결한 원격 전용 런처. 데스크톱 빌드 유무와 무관하게 같은 화면을 제공한다."""
+    return HTMLResponse(get_launcher_webapp_html(), headers={"Cache-Control": "no-store"})
 
 
 @router.get("/auth/session")

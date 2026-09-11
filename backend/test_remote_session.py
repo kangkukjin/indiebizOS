@@ -127,12 +127,16 @@ def test_shared_stream_tool_event_preserves_failure_and_call_identity():
         "type": "tool_start", "agent": "agent", "name": "unknown", "id": "b", "input": {"code": "test"}}
 
 
-def test_react_shell_public_assets_and_session_cookie_flow(web_client):
+def test_classic_launcher_with_desktop_bundle_keeps_session_cookie_flow(web_client):
     client, _ = web_client
     shell = client.get("/launcher/app")
     assert shell.status_code == 200
-    assert 'data-indiebiz-surface="remote"' in shell.text
-    assert '<base href="/launcher/ui/">' in shell.text
+    assert 'id="apBrowse"' in shell.text
+    for mode in ("autopilot", "manual", "app", "warehouse"):
+        assert f'id="t-{mode}"' in shell.text
+    assert 'data-indiebiz-surface="remote"' not in shell.text
+    assert '<base href="/launcher/ui/">' not in shell.text
+    assert 'href="/launcher/lite"' not in shell.text
     assert shell.headers["cache-control"] == "no-store"
     assert client.get("/launcher/ui/assets/app.js").status_code == 200
     assert client.get("/launcher/ui/assets/app.css").headers["content-type"].startswith("text/css")
@@ -167,6 +171,7 @@ def test_missing_old_or_partial_bundle_retains_legacy_and_portal_helper(web_clie
     client, root = web_client
     monkeypatch.setattr(auth, "_launcher_surface_html", lambda: "legacy-shared-phone-portal")
     assert auth.get_launcher_webapp_html() == "legacy-shared-phone-portal"
+    assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
     (root / "assets/app.js").unlink()
     assert client.get("/launcher/app").text == "legacy-shared-phone-portal"
     (root / "index.html").write_text("old desktop bundle")

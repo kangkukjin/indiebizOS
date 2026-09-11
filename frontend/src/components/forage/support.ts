@@ -5,9 +5,10 @@
  * 인라인 번역 JS 조각·사냥판 타입(PoolItem/Hunt)·후보 파서·탭 타입·
  * 비밀번호 금고 IPC·목적지 추출. GenericInstrument 의 generic/manifest.ts 대응물.
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import type * as React from 'react';
 
-export const API = 'http://127.0.0.1:8765';
+export const API = BACKEND_ORIGIN;
 
 // <webview> 는 표준 JSX 엘리먼트가 아니다(Electron 전용 escape-hatch).
 export const WebView = 'webview' as unknown as React.FC<Record<string, unknown>>;
@@ -44,7 +45,6 @@ export const RESTORE_JS = `(function(){
   for(var i=0;i<ns.length&&i<o.length;i++){if(ns[i])ns[i].nodeValue=o[i];}
   return ns.length;
 })()`;
-
 
 export interface Destination { label: string; meta?: string; url: string }
 

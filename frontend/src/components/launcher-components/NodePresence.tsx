@@ -8,10 +8,11 @@
  *
  * "지금 믿고 맡길까"를 판단하려면 연락할 몸이 살아있는지부터 보여야 한다.
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { useEffect, useState } from 'react';
 import { Smartphone } from 'lucide-react';
 
-const API_BASE = 'http://127.0.0.1:8765';
+const API_BASE = BACKEND_ORIGIN;
 const POLL_MS = 20000;
 
 interface PeerStatus {

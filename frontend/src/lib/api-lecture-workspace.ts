@@ -2,6 +2,7 @@
  * api-lecture-workspace.ts - 강의 만들기 워크스페이스 API
  * APIClient mixin: 강의 CRUD, 데크 조작, 재료 관리, 누적 메모.
  */
+import { BACKEND_ORIGIN } from './backend-origin';
 
 import type { APIClientCore } from './api-types';
 
@@ -275,7 +276,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       files: File[],
       insertAt?: number,
     ): Promise<{ success: boolean; count: number; created: SlideMeta[]; skipped: string[] }> {
-      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/upload-images`;
+      const url = `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/slides/upload-images`;
       const formData = new FormData();
       for (const f of files) formData.append('files', f);
       if (insertAt !== undefined) formData.append('insert_at', String(insertAt));
@@ -291,7 +292,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
      * 슬라이드의 현재 spec을 가져옴 (직접 편집 모달용).
      */
     async getSlideSpec(lectureId: string, slideId: string) {
-      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/spec`;
+      const url = `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/spec`;
       const response = await fetch(url);
       if (!response.ok) {
         const err = await response.json().catch(() => ({ detail: response.statusText }));
@@ -457,7 +458,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
 
     /** 내보낸 파일의 다운로드 URL (브라우저에서 a[href]로 사용). */
     exportFileUrl(lectureId: string, filename: string): string {
-      return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/export/file?filename=${encodeURIComponent(filename)}`;
+      return `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/export/file?filename=${encodeURIComponent(filename)}`;
     },
 
     /** 저장된 실강 녹음 상태 — '동영상 렌더링'이 실녹음/TTS 어느 경로로 갈지의 근거. */
@@ -465,7 +466,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       exists: boolean; duration_sec?: number; created_at?: string; bytes?: number;
       marks?: { slide_id: string; t: number }[];
     }> {
-      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
+      const url = `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
       const r = await fetch(url);
       if (!r.ok) throw new Error(`녹음 상태 조회 실패 (${r.status})`);
       return r.json();
@@ -478,7 +479,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
      * v = created_at 캐시버스터 — 다시 녹음하면 같은 URL 의 내용만 바뀌기 때문.
      */
     narrationAudioUrl(lectureId: string, v?: string): string {
-      const base = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording/audio`;
+      const base = `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/narration-recording/audio`;
       return v ? `${base}?v=${encodeURIComponent(v)}` : base;
     },
 
@@ -491,7 +492,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
       audio: Blob,
       timeline: { duration_sec: number; marks: { slide_id: string; t: number }[] },
     ): Promise<{ exists: boolean; duration_sec?: number; bytes?: number }> {
-      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
+      const url = `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
       const fd = new FormData();
       // 확장자는 백엔드가 content-type 으로 정한다 — 이 파일명은 표식일 뿐.
       fd.append('audio', audio, 'recording.webm');
@@ -506,7 +507,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
 
     /** 녹음 폐기 — 다음 렌더는 다시 스피커 노트 TTS 경로로 간다. */
     async deleteNarrationRecording(lectureId: string): Promise<void> {
-      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
+      const url = `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/narration-recording`;
       const r = await fetch(url, { method: 'DELETE' });
       if (!r.ok) throw new Error(`녹음 삭제 실패 (${r.status})`);
     },
@@ -531,17 +532,17 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
 
     /** 슬라이드 PNG의 HTTP URL — <img src>에 직접 사용. file://보다 안정. */
     slidePngUrl(lectureId: string, slideId: string): string {
-      return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/png`;
+      return `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/png`;
     },
 
     /** '글자 얹기' 이전 원본 PNG URL — 배치 편집기의 배경 (얹은 글자 없으면 현재 판). */
     slideBasePngUrl(lectureId: string, slideId: string): string {
-      return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/png?base=true`;
+      return `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/slides/${encodeURIComponent(slideId)}/png?base=true`;
     },
 
     /** 재료 파일의 HTTP URL. */
     materialFileUrl(lectureId: string, filename: string): string {
-      return `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/materials/${encodeURIComponent(filename)}/file`;
+      return `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/materials/${encodeURIComponent(filename)}/file`;
     },
 
     // ============ 재료 관리 ============
@@ -562,7 +563,7 @@ export function applyLectureWorkspaceMethods<T extends APIClientCore>(client: T)
 
     async uploadMaterial(lectureId: string, file: File): Promise<MaterialEntry> {
       // multipart 업로드는 request<T> 표준 헬퍼를 쓰지 않고 직접 fetch
-      const url = `http://127.0.0.1:8765/lectures/${encodeURIComponent(lectureId)}/materials/upload`;
+      const url = `${BACKEND_ORIGIN}/lectures/${encodeURIComponent(lectureId)}/materials/upload`;
       const formData = new FormData();
       formData.append('file', file);
       const response = await fetch(url, { method: 'POST', body: formData });

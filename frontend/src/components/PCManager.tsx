@@ -1,6 +1,7 @@
 /**
  * PCManager - AI 파일 탐색기
  */
+import { getBackendOrigin as getApiUrl } from '../lib/backend-origin';
 
 import { useCallback, useEffect, useState } from 'react';
 import type React from 'react';
@@ -25,13 +26,6 @@ import type { AppInstrument } from './generic/manifest';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
 // API 포트 가져오기
-const getApiUrl = async () => {
-  if (window.electron?.getApiPort) {
-    const port = await window.electron.getApiPort();
-    return `http://127.0.0.1:${port}`;
-  }
-  return 'http://127.0.0.1:8765';
-};
 
 interface FileItem {
   name: string;

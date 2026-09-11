@@ -1,12 +1,13 @@
 /**
  * PhotoManager 유틸리티 함수
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 
 import L from 'leaflet';
 import type { MediaItem } from './types';
 
 // 백엔드 기본 주소 — 풍부창은 Electron 로컬 창이라 포트가 고정(런타임 조회는 getApiUrl).
-const API = 'http://127.0.0.1:8765';
+const API = BACKEND_ORIGIN;
 
 // USB 로 붙은 폰의 파일은 로컬 디스크에 없다 → 전용 엔드포인트(요청 시 adb 로 당겨 온다).
 // 썸네일·원본 URL 이 갈리는 유일한 지점 — 뷰들이 각자 문자열을 짜지 않게 여기로 모은다.
@@ -83,17 +84,4 @@ export const createClusterCustomIcon = (cluster: any) => {
     className: 'custom-cluster-icon',
     iconSize: L.point(dimension, dimension),
   });
-};
-
-// API URL 가져오기
-export const getApiUrl = async (): Promise<string> => {
-  try {
-    if (window.electron) {
-      const port = await window.electron.getApiPort();
-      return `http://127.0.0.1:${port}`;
-    }
-    return 'http://127.0.0.1:8765';
-  } catch {
-    return 'http://127.0.0.1:8765';
-  }
 };

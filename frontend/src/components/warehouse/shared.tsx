@@ -2,10 +2,11 @@
  * warehouse/shared — 공유창고 창의 세 패널(내 창고·이웃·이웃찾기)이 함께 쓰는
  * 타입·포맷터·아이콘 매핑. WarehouseView 가 1500줄 규칙에 걸려 분리(2026-07-20).
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import type { DragEvent as ReactDragEvent } from 'react';
 import { File as FileIcon, FileText, Film, Music, Archive, Link2 } from 'lucide-react';
 
-export const API = 'http://127.0.0.1:8765';
+export const API = BACKEND_ORIGIN;
 
 export interface WhFile {
   name: string; bytes: number; path: string; mtime: string;

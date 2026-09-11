@@ -1,6 +1,7 @@
 /**
  * SettingsRemoteTab - 원격 접속 관련 설정 탭 (NAS, 런처, 터널)
  */
+import { BACKEND_ORIGIN } from '../../../lib/backend-origin';
 
 import { useCallback, useState } from 'react';
 import { Save, HardDrive, FolderOpen, Plus, Trash2, Monitor, CheckCircle, AlertCircle, Globe, Package } from 'lucide-react';
@@ -93,7 +94,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const loadNasConfig = useCallback(async () => {
     setIsLoadingNas(true);
     try {
-      const response = await fetch('http://127.0.0.1:8765/nas/config');
+      const response = await fetch(`${BACKEND_ORIGIN}/nas/config`);
       if (response.ok) {
         const data = await response.json();
         setNasEnabled(data.enabled || false);
@@ -117,7 +118,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
         body.password = nasPassword;
       }
 
-      const response = await fetch('http://127.0.0.1:8765/nas/config', {
+      const response = await fetch(`${BACKEND_ORIGIN}/nas/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -161,7 +162,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const loadLauncherConfig = useCallback(async () => {
     setIsLoadingLauncher(true);
     try {
-      const response = await fetch('http://127.0.0.1:8765/launcher/config');
+      const response = await fetch(`${BACKEND_ORIGIN}/launcher/config`);
       if (response.ok) {
         const data = await response.json();
         setLauncherEnabled(data.enabled || false);
@@ -183,7 +184,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
         body.password = launcherPassword;
       }
 
-      const response = await fetch('http://127.0.0.1:8765/launcher/config', {
+      const response = await fetch(`${BACKEND_ORIGIN}/launcher/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -206,7 +207,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const loadTunnelConfig = useCallback(async () => {
     setIsLoadingTunnel(true);
     try {
-      const response = await fetch('http://127.0.0.1:8765/tunnel/config');
+      const response = await fetch(`${BACKEND_ORIGIN}/tunnel/config`);
       if (response.ok) {
         const data = await response.json();
         setTunnelRunning(data.running || false);
@@ -223,7 +224,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   const saveTunnelConfig = async () => {
     try {
       setTunnelSaveResult(null);
-      const response = await fetch('http://127.0.0.1:8765/tunnel/config', {
+      const response = await fetch(`${BACKEND_ORIGIN}/tunnel/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -251,7 +252,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       setTunnelSaveResult(null);
 
       const endpoint = tunnelRunning ? '/tunnel/stop' : '/tunnel/start';
-      const response = await fetch(`http://127.0.0.1:8765${endpoint}`, {
+      const response = await fetch(`${BACKEND_ORIGIN}${endpoint}`, {
         method: 'POST',
       });
 
@@ -279,14 +280,14 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
   // ── 창고 신원 자동 발급 (새 몸 = 새 주소) ──────────────────────────────────
 
   const loadProvision = useCallback(async () => {
-    const r = await fetch('http://127.0.0.1:8765/tunnel/provision/status');
+    const r = await fetch(`${BACKEND_ORIGIN}/tunnel/provision/status`);
     if (!r.ok) return;
     const d = await r.json();
     setProvStatus(d);
     setProvSub(prev => prev || d.machine_slug || '');
     if (d.cloudflare?.api_token_present) {
       try {
-        const zr = await fetch('http://127.0.0.1:8765/tunnel/provision/zones');
+        const zr = await fetch(`${BACKEND_ORIGIN}/tunnel/provision/zones`);
         if (zr.ok) {
           const zd = await zr.json();
           if (zd.success) {
@@ -309,7 +310,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       setProvBusy('ts');
       setProvResult(null);
       setProvSteps([]);
-      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/tailscale', {
+      const r = await fetch(`${BACKEND_ORIGIN}/tunnel/provision/tailscale`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -330,7 +331,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
     try {
       setProvBusy(provider === 'tailscale' ? 'ts' : 'cf');
       setProvResult(null);
-      const r = await fetch(`http://127.0.0.1:8765/tunnel/provision/${action}`, {
+      const r = await fetch(`${BACKEND_ORIGIN}/tunnel/provision/${action}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ provider }),
@@ -355,7 +356,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
       setProvBusy('cf');
       setProvResult(null);
       setProvSteps([]);
-      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/cloudflare', {
+      const r = await fetch(`${BACKEND_ORIGIN}/tunnel/provision/cloudflare`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ domain: provDomain, subdomain: provSub.trim() }),
@@ -376,7 +377,7 @@ export function SettingsRemoteTab({ activeTab, show, finderHostname, launcherHos
     try {
       setProvBusy('cdn');
       setProvResult(null);
-      const r = await fetch('http://127.0.0.1:8765/tunnel/provision/cdn', {
+      const r = await fetch(`${BACKEND_ORIGIN}/tunnel/provision/cdn`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),

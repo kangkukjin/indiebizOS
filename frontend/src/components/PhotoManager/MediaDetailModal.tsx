@@ -1,6 +1,7 @@
 /**
  * MediaDetailModal - 미디어 상세 모달 (풀스크린, 이전/다음 네비게이션)
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 
 import { useState, useEffect } from 'react';
 import { Image, X, ChevronLeft, ChevronRight } from 'lucide-react';
@@ -34,7 +35,7 @@ export function MediaDetailModal({
 
   const openInExternalPlayer = async () => {
     try {
-      await fetch(`http://127.0.0.1:8765/photo/open-external?path=${encodeURIComponent(item.path)}`, {
+      await fetch(`${BACKEND_ORIGIN}/photo/open-external?path=${encodeURIComponent(item.path)}`, {
         method: 'POST'
       });
     } catch (e) {

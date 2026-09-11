@@ -1,6 +1,7 @@
 /**
  * 도구 실행 히스토리 패널 (Claude Desktop 스타일)
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import type { ToolActivity } from './types';
 import { parseImagePaths } from './chatUtils';
@@ -99,10 +100,10 @@ export function ToolHistoryPanel({ toolHistory, variant = 'warm' }: ToolHistoryP
                     {parsed.images.map((imgPath, imgIdx) => (
                       <img
                         key={imgIdx}
-                        src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+                        src={`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(imgPath)}`}
                         alt={`도구 결과 이미지 ${imgIdx + 1}`}
                         className={`max-w-full max-h-80 rounded border ${styles.imgBorder} cursor-pointer hover:opacity-90 transition-opacity`}
-                        onClick={() => window.open(`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`, '_blank')}
+                        onClick={() => window.open(`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(imgPath)}`, '_blank')}
                         onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                       />
                     ))}

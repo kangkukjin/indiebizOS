@@ -5,12 +5,13 @@
  * 값은 서버에서 마스킹되어 내려오며(비밀키는 끝 4자만), 전체 값은 클라이언트에 절대 오지 않는다.
  * 입력창에 새 값을 넣고 저장하면 해당 줄만 교체된다 (write-only).
  */
+import { BACKEND_ORIGIN } from '../../../lib/backend-origin';
 
 import { useCallback, useState } from 'react';
 import { KeyRound, ExternalLink, Eye, EyeOff, Save, CheckCircle, AlertCircle, FlaskConical, Loader2, RefreshCw, Plus } from 'lucide-react';
 import { useRetryingLoad } from '../../../lib/use-retrying-load';
 
-const API = 'http://127.0.0.1:8765';
+const API = BACKEND_ORIGIN;
 
 // data.go.kr 계열: 인증키는 하나인데 권한은 데이터셋마다 따로 열린다 —
 // 그래서 '키 발급' 링크 하나로는 403 을 만난 사람을 못 돕는다 (정본: common/datagokr_catalog.py).

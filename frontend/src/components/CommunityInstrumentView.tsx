@@ -6,11 +6,12 @@
  * GenericInstrument 로 그대로 렌더한다. 단일 진실 소스: /launcher/instruments 매니페스트.
  * 표면(자율주행/수동/앱)과 무관하게 커뮤니티 서비스로 바로 진입하는 통로.
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useState, useCallback } from 'react';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
-const IBL_INSTRUMENTS = 'http://127.0.0.1:8765/launcher/instruments';
+const IBL_INSTRUMENTS = `${BACKEND_ORIGIN}/launcher/instruments`;
 
 export function CommunityInstrumentView() {
   const [inst, setInst] = useState<AppInstrument | null>(null);

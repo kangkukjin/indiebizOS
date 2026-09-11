@@ -9,11 +9,12 @@
  * 4탭: 비즈니스(목록+상세 — 정보 form·아이템) / 공개문서 / 근무지침 / 자동응답.
  * 단일 진실 소스: /launcher/instruments 매니페스트. 메신저·커뮤니티와 같은 패턴.
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useState, useCallback } from 'react';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
-const IBL_INSTRUMENTS = 'http://127.0.0.1:8765/launcher/instruments';
+const IBL_INSTRUMENTS = `${BACKEND_ORIGIN}/launcher/instruments`;
 
 export function BusinessInstrumentView() {
   const [inst, setInst] = useState<AppInstrument | null>(null);

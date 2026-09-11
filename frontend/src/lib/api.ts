@@ -7,6 +7,7 @@
  *   api-business.ts   - 비즈니스 (관리, 이웃, 메시지, 자동응답, 통신채널)
  *   api-multi-chat.ts - 다중채팅 (방, 참가자, 메시지)
  */
+import { BACKEND_ORIGIN, WEBSOCKET_ORIGIN } from './backend-origin';
 
 import type { Project, Switch, Agent, Tool, SchedulerTask, SchedulerAction, AppLayout } from '../types';
 import { applySystemAIMethods } from './api-system-ai';
@@ -16,7 +17,7 @@ import { applyMultiChatMethods } from './api-multi-chat';
 import { applyLectureWorkspaceMethods } from './api-lecture-workspace';
 import { applyIblMethods } from './api-ibl';
 
-const API_BASE = 'http://127.0.0.1:8765';
+const API_BASE = BACKEND_ORIGIN;
 
 class APIClientBase {
   private baseUrl: string;
@@ -676,7 +677,7 @@ export function createChatWebSocket(clientId: string, onReconnect?: () => void) 
   const reconnectDelay = 2000; // 2초
 
   function connect(): WebSocket {
-    ws = new WebSocket(`ws://127.0.0.1:8765/ws/chat/${clientId}`);
+    ws = new WebSocket(`${WEBSOCKET_ORIGIN}/ws/chat/${clientId}`);
 
     ws.onclose = (event) => {
       console.log(`[WS] 연결 종료 (code: ${event.code})`);

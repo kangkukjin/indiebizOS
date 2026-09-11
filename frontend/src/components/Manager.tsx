@@ -2,6 +2,7 @@
  * 매니저 - 프로젝트 내 에이전트 관리
  * 원본 manager.py의 기능을 React로 구현
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import {
@@ -143,7 +144,6 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
     allowedNodes: [],
   });
   const [defaultTools, setDefaultTools] = useState<string[]>([]);
-
 
   // ============ useEffect 훅들 ============
 
@@ -330,7 +330,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
 
   const loadAllChatAgents = useCallback(async () => {
     if (!currentProject) return;
-    const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}`);
+    const res = await fetch(`${BACKEND_ORIGIN}/conversations/${currentProject.id}`);
     const data = await res.json();
     const agentList = data.conversations || [];
     const sortedAgents = [...agentList].sort((a: ChatAgent, b: ChatAgent) => {
@@ -344,7 +344,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
 
   const loadChatPartners = useCallback(async () => {
     if (!currentProject || !selectedChatAgent) return;
-    const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}/${selectedChatAgent}/partners`);
+    const res = await fetch(`${BACKEND_ORIGIN}/conversations/${currentProject.id}/${selectedChatAgent}/partners`);
     const data = await res.json();
     setChatPartners(data.partners || []);
   }, [currentProject, selectedChatAgent]);
@@ -354,7 +354,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
     if (!currentProject || !selectedChatAgent || !selectedPartner) return;
     setTeamChatLoading(true);
     try {
-      const res = await fetch(`http://localhost:8765/conversations/${currentProject.id}/between/${selectedChatAgent}/${selectedPartner}?limit=200`);
+      const res = await fetch(`${BACKEND_ORIGIN}/conversations/${currentProject.id}/between/${selectedChatAgent}/${selectedPartner}?limit=200`);
       const data = await res.json();
       setTeamChatMessages(data.messages || []);
     } finally {

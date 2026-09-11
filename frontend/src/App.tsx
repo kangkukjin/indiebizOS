@@ -1,6 +1,7 @@
 /**
  * IndieBiz 메인 앱
  */
+import { BACKEND_ORIGIN } from './lib/backend-origin';
 
 import { useCallback, useEffect, useState } from 'react';
 import { useAppStore } from './stores/appStore';
@@ -125,7 +126,7 @@ function App() {
   // 하트비트 중단으로 TTL 만료 → 사라짐. stop_all 같은 별도 close 신호에 의존하지 않아 재발 없음.
   useEffect(() => {
     if (!projectId) return;
-    const url = `http://127.0.0.1:8765/projects/${encodeURIComponent(projectId)}/presence`;
+    const url = `${BACKEND_ORIGIN}/projects/${encodeURIComponent(projectId)}/presence`;
     const ping = (open: boolean) => {
       try {
         fetch(url, {
@@ -187,7 +188,6 @@ function App() {
     const interval = setInterval(checkConnection, 10000);
     return () => clearInterval(interval);
   }, [setIsConnected, setError]);
-
 
   // 시스템 AI 창인 경우
   if (isSystemAI) {

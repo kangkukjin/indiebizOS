@@ -7,6 +7,7 @@
  *
  * 디자인 원칙: 기능 메뉴가 아니라 마법사의 책장. 사용자 인지를 보완한다.
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { useCallback, useEffect, useState } from 'react';
 import { BookOpen, X } from 'lucide-react';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
@@ -111,7 +112,7 @@ export function ActionGrimoire({ open, onClose, onSelect }: ActionGrimoireProps)
     setLoading(true);
     setError(null);
     try {
-      const r = await fetch('http://127.0.0.1:8765/ibl/actions/catalog');
+      const r = await fetch(`${BACKEND_ORIGIN}/ibl/actions/catalog`);
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       setCatalog((await r.json()) as CatalogResponse);
     } catch (err) {

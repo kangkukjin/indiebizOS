@@ -9,9 +9,10 @@
  *
  * 스키마 출처: data/ibl_nodes_src/sense.yaml(search_youtube), limbs.yaml(music), youtube/handler.py
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useEffect, useState, useCallback, useRef } from 'react';
 
-const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
+const IBL_ENDPOINT = `${BACKEND_ORIGIN}/ibl/execute`;
 const PROJECT_ID = '앱모드';
 
 type Tab = 'play' | 'save';

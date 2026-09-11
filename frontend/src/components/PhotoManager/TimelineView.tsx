@@ -1,6 +1,7 @@
 /**
  * TimelineView - 타임라인 뷰 (줌 가능)
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 
 import { useState, useCallback } from 'react';
 import { Camera, Video, RefreshCw, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
@@ -301,7 +302,7 @@ export function TimelineView({
                 >
                   {file.media_type === 'photo' ? (
                     <img
-                      src={`http://127.0.0.1:8765/photo/thumbnail?path=${encodeURIComponent(file.path)}&size=150`}
+                      src={`${BACKEND_ORIGIN}/photo/thumbnail?path=${encodeURIComponent(file.path)}&size=150`}
                       alt={file.filename}
                       className="w-full h-full object-cover"
                       loading="lazy"

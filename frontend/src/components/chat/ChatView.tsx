@@ -4,6 +4,7 @@
  * 프로젝트 에이전트 대화와 시스템 AI 대화를 하나의 컴포넌트로 처리합니다.
  * layout과 chatTarget props로 동작을 구성합니다.
  */
+import { WEBSOCKET_ORIGIN } from '../../lib/backend-origin';
 
 import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { Bot, User, Loader2, X, RefreshCw, History, RotateCw, BookOpen, Zap, Brain, Gauge, Target, Copy, Check } from 'lucide-react';
@@ -85,7 +86,6 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [ws, setWs] = useState<WebSocket | null>(null);
-
 
   // 스트리밍
   const [streamingContent, setStreamingContent] = useState('');
@@ -224,7 +224,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       : `system_ai_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // createChatWebSocket 대신 직접 생성 (내부 핸들러 충돌 방지)
-    const websocket = new WebSocket(`ws://127.0.0.1:8765/ws/chat/${clientId}`);
+    const websocket = new WebSocket(`${WEBSOCKET_ORIGIN}/ws/chat/${clientId}`);
 
     websocket.onopen = () => {
       if (isRetry) console.log('WebSocket 재연결 성공');

@@ -298,3 +298,11 @@ blue/green을 “9겹에서 2겹”으로 계산하는 데는 반대한다. [api
 - 접속 전과 각 후속 메시지에서 검사한다. 로그아웃·검증 실패 뒤 새 명령을 실행하지 않고 1008로 닫는다. 프록시가 Host를 localhost로 바꿔도 외부로 판정한다. 로컬 데스크톱의 무인증 연결과 이미 승인된 작업의 배경 완주 계약은 유지한다.
 - 미인증 접속, 쿠키/헤더 인증, 세션 회수 뒤 실행 차단, 로컬 연결, 판정자 예외를 실제 ASGI WebSocket으로 확인했다. 관련 **54 passed**. UI 통합·React 전환 자체는 다음 묶음에서 집행한다.
 - 전체 backend **3,671 passed, 1 skipped**. 로그: `outputs/system_simplification/stage6e1-tests.log`. 폰 번들·IBL 파생 검사 통과.
+
+
+### 6e.2 — React 접속 주소·포트 해소 공통화
+
+- React 35개 파일의 고정 HTTP/WS 주소 표현 75곳을 `backend-origin`으로 모았다. 원격 셸이 명시한 표면에서만 문서를 서빙한 origin을 사용하고 HTTPS면 WSS로 연결한다. Electron·개발 서버·Vite preview는 기존 로컬 접속을 유지한다.
+- 여섯 파일에 흩어진 런타임 포트 조회를 공통 함수로 옮겼다. 실제 소비자가 없는 사진 유틸의 포트 조회 export는 제거했다. 데스크톱의 브리지 조회·기본 포트 복구 계약을 보존한다.
+- PC/사진 창 요청 큐는 해당 네이티브 창을 열 수 있는 소비자만 폴링한다. 원격 브라우저가 데스크톱의 요청을 먼저 비워 버릴 수 없게 했다.
+- 접속 주소/실시간 포트/HTTPS 소켓/preview 격리 시험 **4 passed**, `tsconfig.app.json` TypeScript 검사와 Vite production 빌드 통과. 산출 로그: `outputs/system_simplification/stage6e2-tsc.log`, `stage6e2-vite.log`. 이 묶음은 연결 준비이며 원격 기본 화면 전환은 다음 묶음이다.

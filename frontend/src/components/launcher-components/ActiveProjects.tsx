@@ -10,9 +10,10 @@
  *   시스템 AI → openSystemAIWindow() / 프로젝트 → openProjectWindow(id, name).
  * dark cockpit: 당직도 작업도 없으면 흐린 '없음' 한 단어만.
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { useEffect, useState } from 'react';
 
-const API_BASE = 'http://127.0.0.1:8765';
+const API_BASE = BACKEND_ORIGIN;
 const POLL_MS = 3000;
 
 interface ActiveWorkItem {

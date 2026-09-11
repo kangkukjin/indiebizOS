@@ -5,6 +5,7 @@
  *   SettingsChannelsTab.tsx - 통신채널 설정
  *   SettingsRemoteTab.tsx   - 원격 Finder / 원격 런처 / Cloudflare 터널
  */
+import { BACKEND_ORIGIN } from '../../../lib/backend-origin';
 
 import { useCallback, useState, useRef } from 'react';
 import { X, Settings, Brain, Eye, EyeOff, Save, Radio, Package, CheckCircle, AlertCircle, HardDrive, Download, Upload, Monitor, Cloud, FileText, Edit3, Globe, RefreshCw, KeyRound } from 'lucide-react';
@@ -127,7 +128,7 @@ export function SettingsDialog({
   // 터널 설정 로드 (다이얼로그가 열릴 때 항상 로드 - 외부 URL 표시를 위해)
   // 실패는 throw 되어 useRetryingLoad 가 백오프 재시도한다.
   const loadTunnelHostnames = useCallback(async () => {
-    const response = await fetch('http://127.0.0.1:8765/tunnel/config');
+    const response = await fetch(`${BACKEND_ORIGIN}/tunnel/config`);
     if (response.ok) {
       const data = await response.json();
       setFinderHostname(data.finder_hostname || '');
@@ -144,7 +145,7 @@ export function SettingsDialog({
   const loadWorldConfig = useCallback(async () => {
     setIsLoadingWorld(true);
     try {
-      const response = await fetch('http://127.0.0.1:8765/world-pulse/config');
+      const response = await fetch(`${BACKEND_ORIGIN}/world-pulse/config`);
       if (response.ok) {
         const data = await response.json();
         setWorldConfig(data);
@@ -159,7 +160,7 @@ export function SettingsDialog({
     if (!worldConfig) return;
     try {
       setIsSavingWorld(true);
-      const response = await fetch('http://127.0.0.1:8765/world-pulse/config', {
+      const response = await fetch(`${BACKEND_ORIGIN}/world-pulse/config`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(worldConfig),
@@ -180,7 +181,7 @@ export function SettingsDialog({
   const refreshWorldPulse = async () => {
     try {
       setIsRefreshingWorld(true);
-      const response = await fetch('http://127.0.0.1:8765/world-pulse/refresh', { method: 'POST' });
+      const response = await fetch(`${BACKEND_ORIGIN}/world-pulse/refresh`, { method: 'POST' });
       if (response.ok) {
         setWorldSaveResult({ success: true, message: '세계 상태가 새로 수집되었습니다.' });
       }
@@ -703,7 +704,7 @@ export function SettingsDialog({
                     try {
                       setIsExporting(true);
                       setExportResult(null);
-                      const response = await fetch('http://127.0.0.1:8765/config/export', { method: 'POST' });
+                      const response = await fetch(`${BACKEND_ORIGIN}/config/export`, { method: 'POST' });
                       if (!response.ok) throw new Error('내보내기 실패');
 
                       const blob = await response.blob();
@@ -768,7 +769,7 @@ export function SettingsDialog({
                       const formData = new FormData();
                       formData.append('file', file);
 
-                      const response = await fetch('http://127.0.0.1:8765/config/import', {
+                      const response = await fetch(`${BACKEND_ORIGIN}/config/import`, {
                         method: 'POST',
                         body: formData,
                       });

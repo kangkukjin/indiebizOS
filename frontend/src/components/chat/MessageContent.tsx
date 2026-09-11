@@ -1,6 +1,7 @@
 /**
  * 메시지 콘텐츠 렌더링 (이미지, 지도, 도구 결과, 마크다운)
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { memo } from 'react';
 import { FileText, CheckCircle2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -81,7 +82,7 @@ export const MessageContent = memo(function MessageContent({ content, role, imag
                   {parsed.images.map((imgPath, imgIdx) => (
                     <img
                       key={imgIdx}
-                      src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+                      src={`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(imgPath)}`}
                       alt={`결과 이미지 ${imgIdx + 1}`}
                       className={`max-w-full max-h-60 rounded border ${imgBorder} cursor-pointer hover:opacity-90 transition-opacity`}
                       onClick={() => window.electron?.openExternal(`file://${imgPath}`)}
@@ -101,7 +102,7 @@ export const MessageContent = memo(function MessageContent({ content, role, imag
           {parsedContent.images.map((imgPath, index) => (
             <img
               key={index}
-              src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+              src={`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(imgPath)}`}
               alt={`생성된 이미지 ${index + 1}`}
               className="max-w-full max-h-[300px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => window.electron?.openExternal(`file://${imgPath}`)}

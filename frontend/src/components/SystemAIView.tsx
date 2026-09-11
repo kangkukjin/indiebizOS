@@ -6,10 +6,11 @@
  * 그 지난 주행의 분석 요청 프롬프트를 백엔드에서 받아 첫 메시지로 자동 전송한다.
  * (메인 프로세스를 안 거쳐서 Electron 재시작 없이 작동)
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useEffect, useState } from 'react';
 import { ChatView } from './chat/ChatView';
 
-const API_BASE = 'http://127.0.0.1:8765';
+const API_BASE = BACKEND_ORIGIN;
 const PENDING_KEY = 'indiebiz_analyze_episode';
 const FRESH_MS = 15000;  // 이 시간 안의 요청만 처리(옛 값으로 재발동 방지)
 

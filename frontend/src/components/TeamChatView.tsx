@@ -6,6 +6,7 @@
  * (2026-09-02 사용자 판정). 데이터는 프로젝트 창과 공유하지 않고 여기서 직접 읽는다
  * (독립 창 = 독립 렌더러).
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 
 import { useCallback, useState } from 'react';
 import { RefreshCw, Users } from 'lucide-react';
@@ -13,7 +14,7 @@ import { useRetryingLoad } from '../lib/use-retrying-load';
 import { TeamChatPanes } from './manager-dialogs/dialogs/TeamChatPanes';
 import type { ChatAgent, ChatPartner, TeamChatMessage } from './manager-dialogs';
 
-const API_BASE = 'http://127.0.0.1:8765';
+const API_BASE = BACKEND_ORIGIN;
 
 interface TeamChatViewProps {
   projectId: string;

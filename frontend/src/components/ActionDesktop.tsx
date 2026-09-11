@@ -13,6 +13,7 @@
  * 카탈로그(무엇이 존재하나)와 레이아웃(어떻게 배치했나)의 분리 — 새 app: 블록은
  * 홈에 자동 등장(기존 불변식 보존), 사용자는 그 위에서 배치/정리/제거.
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useState, useEffect, useMemo, useCallback, useRef, type ReactNode } from 'react';
 import { Plus, Package, LayoutGrid, Trash2, ArrowUpFromLine, ArrowDownFromLine, Wand2 } from 'lucide-react';
 import { MapInstrument } from './MapInstrument';
@@ -162,7 +163,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
   const folderRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const loadManifest = useCallback(() => {
-    return fetch('http://127.0.0.1:8765/launcher/instruments')
+    return fetch(`${BACKEND_ORIGIN}/launcher/instruments`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       // ★window focus 마다 재조회하지만(새 앱 반영), 내용이 같으면 *같은 배열 참조를 유지*한다.
       //  새 배열로 갈아끼우면 APPS(useMemo dep) → 계기 el → GenericInstrument → ModePane 이

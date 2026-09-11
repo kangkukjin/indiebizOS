@@ -1,6 +1,7 @@
 /**
  * PhotoManager - 사진/동영상 관리 컴포넌트
  */
+import { getBackendOrigin as getApiUrl } from '../../lib/backend-origin';
 
 import { useState, useEffect, useCallback } from 'react';
 import {
@@ -58,18 +59,6 @@ export function PhotoManager({ initialPath }: PhotoManagerProps) {
 
   // Stats data
   const [stats, setStats] = useState<any>(null);
-
-  const getApiUrl = useCallback(async () => {
-    try {
-      if (window.electron) {
-        const port = await window.electron.getApiPort();
-        return `http://127.0.0.1:${port}`;
-      }
-      return 'http://127.0.0.1:8765';
-    } catch {
-      return 'http://127.0.0.1:8765';
-    }
-  }, []);
 
   // API URL 초기화
   useEffect(() => {

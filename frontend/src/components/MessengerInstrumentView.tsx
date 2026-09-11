@@ -7,11 +7,12 @@
  * 단일 진실 소스: /launcher/instruments 매니페스트. 표면(자율주행/수동/앱)과 무관하게
  * 메신저(=이웃관리 CRM)로 바로 진입하는 통로. CommunityInstrumentView 와 같은 패턴.
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 import { useState, useEffect, useCallback } from 'react';
 import { GenericInstrument, type AppInstrument } from './GenericInstrument';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
-const IBL_INSTRUMENTS = 'http://127.0.0.1:8765/launcher/instruments';
+const IBL_INSTRUMENTS = `${BACKEND_ORIGIN}/launcher/instruments`;
 
 // DM 딥링크 핸드오프 — 다른 창(이웃찾기 등)이 이 키에 이웃 id 를 넣고 메신저 창을 연다.
 // 같은 오리진의 창들이 localStorage 를 공유하므로 main.js(재시작 필요) 손대지 않고 전달 가능.

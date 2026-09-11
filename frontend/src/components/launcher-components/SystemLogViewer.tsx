@@ -6,10 +6,11 @@
  * 에이전트 런만 담으므로 이 뷰어가 그 사각을 메운다. 백엔드 /config/system-logs
  * (화이트리스트 tail)를 읽는다. 시스템 컨트롤(모델 기어·손발 스위치)과 같은 자리.
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { useCallback, useEffect, useState } from 'react';
 import { ScrollText, Loader2, RotateCw, ChevronDown, ChevronRight } from 'lucide-react';
 
-const API_BASE = 'http://127.0.0.1:8765';
+const API_BASE = BACKEND_ORIGIN;
 
 const FILES: { key: string; label: string }[] = [
   { key: 'runtime', label: '백엔드' },

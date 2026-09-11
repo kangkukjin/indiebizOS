@@ -1,6 +1,7 @@
 /**
  * MessageContent - 메시지 내용 컴포넌트 (이미지 표시 포함)
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 
 // 이미지 경로 파싱 함수
 export function parseImagePaths(content: string): { text: string; images: string[] } {
@@ -58,7 +59,7 @@ export function MessageContent({ content }: { content: string }) {
           {parsed.images.map((imgPath, index) => (
             <img
               key={index}
-              src={`http://127.0.0.1:8765/image?path=${encodeURIComponent(imgPath)}`}
+              src={`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(imgPath)}`}
               alt={`이미지 ${index + 1}`}
               className="max-w-[200px] max-h-[200px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
               onClick={() => window.electron?.openExternal(`file://${imgPath}`)}

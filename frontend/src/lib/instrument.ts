@@ -8,8 +8,9 @@
  * raw fetch + 절대 API base 를 쓰는 이유: 계기는 Electron(file://)·원격 등 다양한
  * 오리진에서 뜨는데, 상대경로 api 클라이언트는 백엔드에 안 닿을 수 있다(기존 계기 관습).
  */
+import { BACKEND_ORIGIN } from './backend-origin';
 
-const API = 'http://127.0.0.1:8765';
+const API = BACKEND_ORIGIN;
 
 /** 앱 모드 시스템 프로젝트 컨텍스트 — 앱 모드엔 활성 프로젝트가 없어 `[self:*]` 상대경로가
  *  풀리지 않는다. 상대경로는 이 컨텍스트에서 `projects/앱모드/<경로>` 로 해소된다. */

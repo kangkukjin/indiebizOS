@@ -5,20 +5,12 @@
  * 각 행의 "분석" 스위치 → 시스템 AI 창이 그 주행의 전체 로그를 받아 분석하고,
  * 거기서 곧바로 고칠 것을 명령할 수 있다(수동적 상태판 → 능동적 수리대).
  */
+import { getBackendOrigin as getApiUrl } from '../lib/backend-origin';
 import { useState, useCallback } from 'react';
 import { Activity, RotateCw, Loader2, Check, AlertTriangle, Zap, Brain, Gauge, Microscope, ChevronDown, ChevronRight } from 'lucide-react';
 import { useRetryingLoad } from '../lib/use-retrying-load';
 
-// API 포트 가져오기 — PCManager·PhotoManager 와 같은 이디엄(window.electron.getApiPort).
-// 지금 API_PORT 는 electron/main.js 의 상수 8765 라 동작 차이는 없다. 포트가 상수를 벗어나는
-// 날 이 패널만 홀로 깨지지 않게 해 두는 것이 이 함수의 몫이다.
-const getApiUrl = async () => {
-  if (window.electron?.getApiPort) {
-    const port = await window.electron.getApiPort();
-    return `http://127.0.0.1:${port}`;
-  }
-  return 'http://127.0.0.1:8765';
-};
+// API 접속 주소·런타임 포트는 backend-origin에서 해소한다.
 
 interface EpisodeRow {
   id: number;

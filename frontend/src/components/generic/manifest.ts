@@ -13,6 +13,7 @@
  * JSX 프리미티브는 prims-basic/prims-edit/prims-map-calendar.tsx, 디스패처·본체는
  * GenericInstrument.tsx.
  */
+import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import {
   jget, applyFilter, tplWith, buildAction, rowAction, viewList,
   emptyText, trendUp, statusGlyph, unwrapFinalResult,
@@ -36,7 +37,7 @@ export {
   RECURRENCE_OPTS, dateInputType,
 };
 
-export const IBL_ENDPOINT = 'http://127.0.0.1:8765/ibl/execute';
+export const IBL_ENDPOINT = `${BACKEND_ORIGIN}/ibl/execute`;
 
 // ===== 매니페스트 타입 (느슨하게 — 서버 파생 JSON이 진실) =====
 

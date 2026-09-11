@@ -2,6 +2,7 @@
  * PCManagerAnalyze - 스토리지 분석 시각화 컴포넌트
  * 트리맵, 타임라인, 확장자 차트, 폴더맵, 산점도 5가지 시각화 제공
  */
+import { BACKEND_ORIGIN, getBackendOrigin as getApiUrl } from '../lib/backend-origin';
 
 import { useCallback, useEffect, useState } from 'react';
 import {
@@ -23,13 +24,6 @@ import { useRetryingLoad } from '../lib/use-retrying-load';
 type ViewMode = 'treemap' | 'timeline' | 'extensions' | 'folders' | 'scatter';
 
 // API URL 가져오기
-const getApiUrl = async () => {
-  if (window.electron?.getApiPort) {
-    const port = await window.electron.getApiPort();
-    return `http://127.0.0.1:${port}`;
-  }
-  return 'http://127.0.0.1:8765';
-};
 
 // 색상 팔레트
 const COLORS = [
@@ -49,7 +43,7 @@ interface VolumeInfo {
 }
 
 export function PCManagerAnalyze() {
-  const [apiUrl, setApiUrl] = useState('http://127.0.0.1:8765');
+  const [apiUrl, setApiUrl] = useState(BACKEND_ORIGIN);
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [volumes, setVolumes] = useState<VolumeInfo[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('treemap');

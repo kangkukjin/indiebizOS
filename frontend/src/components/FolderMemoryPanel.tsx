@@ -9,16 +9,13 @@
  *   사진        = /photo/scan/check — 사진 관리 스캔이 이 폴더를 덮으면 그 사실
  * 능력은 전부 어휘, 이 컴포넌트는 표현만(철칙 0).
  */
+import { getBackendOrigin as getApiUrl } from '../lib/backend-origin';
 import { useCallback, useEffect, useState } from 'react';
 import { iblExecuteApp } from '../lib/instrument';
 
 type PhotoScan = { exists: boolean; photo_count?: number; video_count?: number; last_scan?: string | null };
 type Recall = { doc?: string | null; docs_below?: string[]; map_count?: number; root_missing?: boolean } | null;
 
-const getApiUrl = async () => {
-  if (window.electron?.getApiPort) return `http://127.0.0.1:${await window.electron.getApiPort()}`;
-  return 'http://127.0.0.1:8765';
-};
 const q = (s: string) => JSON.stringify(s);
 const baseName = (p: string) => p.replace(/[\\/]+$/, '').split(/[\\/]/).pop() || p;
 const relDoc = (p: string) => p.replace(/^.*forage_surveys\//, '');

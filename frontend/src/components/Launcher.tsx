@@ -1,6 +1,7 @@
 /**
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
+import { BACKEND_ORIGIN } from '../lib/backend-origin';
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
@@ -81,7 +82,7 @@ export function Launcher() {
     // 두 조회는 독립 실행 — 실패는 throw 해서 useRetryingLoad 가 백오프 재시도
     await Promise.all([
       api.getAppLayout().then((layout) => setPromotedIds(layout.promoted || [])),
-      fetch('http://127.0.0.1:8765/launcher/instruments').then(async (r) => {
+      fetch(`${BACKEND_ORIGIN}/launcher/instruments`).then(async (r) => {
         if (!r.ok) return;
         const d = await r.json();
         const map: Record<string, { icon: string; label: string }> = {};
@@ -210,7 +211,7 @@ export function Launcher() {
       // ★사전 물리 분리 후 맥 엔진엔 limbs:phone 이 없으므로 /ibl/execute 가 아니라
       // 전용 라우트로 — 백엔드가 폰 사전의 고정 봉투를 직결(Wi-Fi) 또는 heartbeat
       // 롱폴 푸시 큐(LTE)로 전달한다(api_launcher_web.clip_to_phone).
-      const r = await fetch('http://127.0.0.1:8765/launcher/clip-to-phone', {
+      const r = await fetch(`${BACKEND_ORIGIN}/launcher/clip-to-phone`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text }),
@@ -322,9 +323,10 @@ export function Launcher() {
 
   // PC Manager 창 열기 요청 폴링
   useEffect(() => {
+    if (!window.electron?.openPCManagerWindow) return;
     const pollPendingWindows = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8765/pcmanager/pending-windows');
+        const response = await fetch(`${BACKEND_ORIGIN}/pcmanager/pending-windows`);
         if (response.ok) {
           const data = await response.json();
           for (const req of data.requests || []) {
@@ -344,9 +346,10 @@ export function Launcher() {
 
   // Photo Manager 창 열기 요청 폴링
   useEffect(() => {
+    if (!window.electron?.openPhotoManagerWindow) return;
     const pollPhotoWindows = async () => {
       try {
-        const response = await fetch('http://127.0.0.1:8765/photo/pending-windows');
+        const response = await fetch(`${BACKEND_ORIGIN}/photo/pending-windows`);
         if (response.ok) {
           const data = await response.json();
           for (const req of data.requests || []) {
@@ -702,7 +705,7 @@ export function Launcher() {
               onClick={() => {
                 // 외부 브라우저 대신 검색 브라우저(포식) 오버레이의 한 탭으로 X-Ray 대시보드를 연다.
                 setBrowserOpen(true);
-                setPendingBrowserUrl('http://127.0.0.1:8765/xray/app');
+                setPendingBrowserUrl(`${BACKEND_ORIGIN}/xray/app`);
               }}
               className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg hover:bg-[#EAE4DA] active:bg-[#E0D9CC] transition-colors text-[#6B5B4F]"
               title="System X-Ray - 시스템 상태를 검색 브라우저 탭으로 연다"

@@ -7,6 +7,7 @@ ibl_parser.py 에서 verbatim 이동: {params} 파싱(_parse_params/_parse_relax
 """
 import json
 import re
+from ibl_scanner import QuoteState, quoted_end
 from ibl_code_ir import CAPTURE, SourceText
 from typing import Dict, Optional, Tuple
 
@@ -14,6 +15,33 @@ from typing import Dict, Optional, Tuple
 class IBLSyntaxError(Exception):
     """IBL 문법 오류"""
     pass
+
+
+_JSON_MISSING = object()
+
+
+def _try_json_like(text, *, object_only=False):
+    """JSON5 → JSON 공통 해석. 미해석과 JSON null을 서로 다른 값으로 반환한다.
+
+    CAPTURE·비표준 escape 우회와 중첩 제어문자 재시도는 값 문법의 소유자가 결정한다.
+    """
+    try:
+        import pyjson5
+        value = pyjson5.loads(text)
+        if not object_only or isinstance(value, dict):
+            return value
+    except Exception:
+        pass
+    try:
+        value = json.loads(text)
+        if not object_only or isinstance(value, dict):
+            return value
+    except ValueError as exc:
+        # 최상위 params의 기존 계약: JSON 구문 오류만 폴백한다.
+        # 중첩 값은 JSON 수치 해석 실패도 relaxed 값 파서가 처리한다.
+        if object_only and not isinstance(exc, json.JSONDecodeError):
+            raise
+    return _JSON_MISSING
 
 
 def _parse_params(text: str) -> dict:
@@ -37,22 +65,9 @@ def _parse_params(text: str) -> dict:
     # `[self:grep]{pattern: "\d+"}` 같은 정규식 param 이 조용히 다른 패턴으로 바뀌어
     # 0건을 돌려줬다(침묵 실패). 두 파서가 같은 입력에 다른 답을 내면 안 된다.
     if not CAPTURE.get() and not _has_nonstandard_escape(text):
-        # 1. JSON5 시도 — unquoted keys, 양쪽 따옴표, trailing comma 등 모두 처리
-        try:
-            import pyjson5
-            result = pyjson5.loads(text)
-            if isinstance(result, dict):
-                return result
-        except Exception:
-            pass
-
-        # 2. 표준 JSON (JSON5 라이브러리 부재 또는 파싱 실패 시 보험)
-        try:
-            result = json.loads(text)
-            if isinstance(result, dict):
-                return result
-        except json.JSONDecodeError:
-            pass
+        value = _try_json_like(text, object_only=True)
+        if value is not _JSON_MISSING:
+            return value
 
     # 3. 최후 폴백: 간단한 key: value 파싱
     return _parse_relaxed_params(text)
@@ -418,30 +433,15 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
                 raw = text[pos:i + 1]
                 # 표준 밖 이스케이프(`\d` 등)는 JSON5 가 백슬래시째 먹으므로 우회 (위 주석 참조)
                 if not CAPTURE.get() and not _has_nonstandard_escape(raw):
-                    # 1. JSON5 시도 — 모든 JSON-like 입력의 표준 해석기
-                    try:
-                        import pyjson5
-                        return pyjson5.loads(raw), i + 1
-                    except Exception:
-                        pass
-                    # 2. 표준 JSON (JSON5 부재 시 보험)
-                    try:
-                        return json.loads(raw), i + 1
-                    except (json.JSONDecodeError, ValueError):
-                        pass
-                    # 3. 값 안의 진짜 개행·탭만 이스케이프해 한 번 더 — 실패=원본 문자열 폴백은
-                    #    소비자에게 통화 아닌 str 을 조용히 넘긴다(침묵). 살릴 수 있으면 살린다.
-                    _esc = _escape_control_in_strings(raw)
-                    if _esc != raw:
-                        try:
-                            import pyjson5
-                            return pyjson5.loads(_esc), i + 1
-                        except Exception:
-                            pass
-                        try:
-                            return json.loads(_esc), i + 1
-                        except (json.JSONDecodeError, ValueError):
-                            pass
+                    value = _try_json_like(raw)
+                    if value is not _JSON_MISSING:
+                        return value, i + 1
+                    # 중첩 값의 실제 개행·탭만 복구하는 기존 재시도. 실패는 relaxed로.
+                    escaped = _escape_control_in_strings(raw)
+                    if escaped != raw:
+                        value = _try_json_like(escaped)
+                        if value is not _JSON_MISSING:
+                            return value, i + 1
                 # 3. 중첩 객체면 재귀적 relaxed 파싱
                 if open_br == '{':
                     return _parse_relaxed_params(raw), i + 1
@@ -465,13 +465,9 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
                         cursor += 1
                 return values, i + 1
         elif ch in '"\'':
-            # 문자열 리터럴 내부 건너뛰기
-            quote = ch
-            i += 1
-            while i < len(text) and text[i] != quote:
-                if text[i] == '\\':
-                    i += 1
-                i += 1
+            # 값 디코딩은 여기서 하지 않는다. 다른 스캐너와 같은 문자열 경계만 쓴다.
+            end, _ = quoted_end(text, i + 1, ch)
+            i = end - 1
         i += 1
     # 닫히지 않은 구조를 문자열로 저장하면 뒤 인자까지 item 안으로 삼켜 원장이 오염된다.
     raise IBLSyntaxError(f"닫히지 않은 {open_br}{close_br} 구조입니다 — 닫는 '{close_br}'가 필요합니다. "
@@ -554,51 +550,19 @@ def _var_emit_step(text: str, variables: Optional[Dict], where: str,
 
 
 def _scan_line_state(text: str, in_string: bool, string_char: Optional[str]):
-    """한 줄을 스캔해 (중괄호 깊이 변화량, 끝 시점 문자열 상태)를 반환.
-
-    문자열 리터럴 내부의 중괄호는 세지 않고, 문자열 열림/닫힘 상태를 줄 경계
-    너머로 승계할 수 있게 시작 상태를 인자로 받는다. (D3 — _preprocess 전용)
-    """
-    depth = 0
-    i = 0
-    while i < len(text):
-        ch = text[i]
-        if in_string:
-            if ch == '\\':
-                i += 1  # 이스케이프 건너뛰기
-            elif ch == string_char:  # vj-ok: 렉서 문자 비교
-                in_string = False
-                string_char = None
-        else:
-            if ch == '#':
-                end = text.find('\n', i)
-                i = len(text) if end < 0 else end
-                continue
-            if ch == '"' or ch == "'":
-                in_string = True
-                string_char = ch
-            elif ch == '{':
-                depth += 1
-            elif ch == '}':
-                depth -= 1
-        i += 1
-    return depth, in_string, string_char
+    """한 줄의 중괄호 깊이 변화량과 줄 경계를 넘는 문자열 상태."""
+    state, depth = QuoteState(in_string, string_char), 0
+    for _, char in state.outside(text, hash_comments=True):
+        if char == '{':
+            depth += 1
+        elif char == '}':
+            depth -= 1
+    return depth, state.in_string, state.quote
 
 
 def _strip_line_comment(text: str, in_string: bool, quote: Optional[str]) -> str:
-    """한 물리 줄의 문자열 밖 # 이후를 제거. 열린 문자열 상태는 앞줄에서 승계한다."""
-    i = 0
-    while i < len(text):
-        char = text[i]
-        if in_string:
-            if char == "\\":
-                i += 2
-                continue
-            if char == quote:  # vj-ok: 렉서 문자 비교
-                in_string, quote = False, None
-        elif char == '#':
+    """한 물리 줄의 문자열 밖 # 이후를 제거. 나머지 원문은 다시 쓰지 않는다."""
+    for i, char in QuoteState(in_string, quote).outside(text):
+        if char == '#':
             return text[:i].rstrip()
-        elif char in "\"'":
-            in_string, quote = True, char
-        i += 1
     return text

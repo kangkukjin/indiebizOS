@@ -967,6 +967,7 @@ self:
 | `backend/ibl/ibl_engine.py` | IBL 실행 엔진, 동사 해석, 라우팅, 자동 발견 |
 | `backend/ibl/api_engine.py` | API 레지스트리 실행 엔진, transform 후처리 |
 | `backend/ibl/ibl_parser.py` | IBL 문법 파서 (`>>`, `&`, `??`) |
+| `backend/ibl/ibl_scanner.py` | 인용·이스케이프·주석의 원문 경계와 연산자 분리. 문법별 괄호 규칙·값 디코딩은 소비자가 소유 |
 | `backend/ibl/ibl_access.py` | 에이전트별 노드 접근 제어, 환경 프롬프트(`render_action_line` — op 자식 노출) |
 | `backend/ibl/workflow_engine.py` | 파이프라인 실행, 워크플로우 관리 |
 | `backend/ibl/trigger_engine.py` | 이벤트/트리거 기반 실행 엔진 |

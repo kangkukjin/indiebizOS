@@ -63,6 +63,7 @@ IBL 코드 텍스트를 파싱하여 실행 가능한 step 리스트로 변환�
 
 import re
 import json
+from ibl_scanner import split_operator
 from ibl_parser_scope import scoped_block, emitted_names, take_do_body
 from typing import List, Dict, Optional, Any, Tuple
 
@@ -564,73 +565,8 @@ def _extract_statements(lines: List[str]) -> Tuple[List[str], List[Optional[str]
 
 
 def _split_pipeline(text: str) -> List[tuple]:
-    """
-    >> 연산자로 파이프라인 분리
-
-    '[a:b]{} >> [c:d]{}'  → [('[a:b]{}', '>>'), ('[c:d]{}', None)]
-    '[a:b]{} >> [c:d]{} >> [e:f]{}' → [('[a:b]{}', '>>'), ('[c:d]{}', '>>'), ('[e:f]{}', None)]
-
-    각 튜플: (세그먼트 텍스트, 이 세그먼트 뒤에 오는 연산자)
-    중괄호 {} 내부의 >>는 무시 (JSON 문자열 안)
-    """
-    segments = []  # [(text, operator)]
-    current = []
-    depth = 0  # { } 깊이 추적
-    paren = 0  # ( ) 깊이 — 괄호 분기 파이프 안의 >> 는 분기 소유 (G13-1, 2026-08-19)
-
-    i = 0
-    chars = text
-    while i < len(chars):
-        ch = chars[i]
-
-        if ch == '{':
-            depth += 1
-            current.append(ch)
-        elif ch == '}':
-            depth -= 1
-            current.append(ch)
-        elif ch == '(' and depth == 0:
-            paren += 1
-            current.append(ch)
-        elif ch == ')' and depth == 0:
-            paren = max(0, paren - 1)   # 홀로 남은 ')' 가 이후 전체를 잠그지 않게
-            current.append(ch)
-        elif (ch == '>' and i + 1 < len(chars) and chars[i + 1] == '>'
-              and depth == 0 and paren == 0):
-            # >> 발견 (중괄호 밖) — 기계적 파이프
-            seg = ''.join(current).strip()
-            if seg:
-                segments.append((seg, '>>'))
-            current = []
-            i += 2  # >> 건너뛰기
-            continue
-        elif ch == '"' or ch == "'":
-            # 문자열 리터럴 건너뛰기
-            quote = ch
-            current.append(ch)
-            i += 1
-            while i < len(chars) and chars[i] != quote:  # vj-ok: 렉서 문자 비교
-                if chars[i] == '\\':
-                    current.append(chars[i])
-                    i += 1
-                    if i < len(chars):
-                        current.append(chars[i])
-                else:
-                    current.append(chars[i])
-                i += 1
-            if i < len(chars):
-                current.append(chars[i])  # 닫는 따옴표
-        else:
-            current.append(ch)
-
-        i += 1
-
-    # 마지막 세그먼트 (뒤에 연산자 없음)
-    seg = ''.join(current).strip()
-    if seg:
-        segments.append((seg, None))
-
-    return segments
+    """>>로 나눠 (본문, 뒤 연산자)를 반환한다. 문자열·괄호 분기는 보존한다."""
+    return split_operator(text, '>>')
 
 
 def _parse_group(text: str, variables: Optional[Dict] = None,
@@ -821,82 +757,8 @@ def _parse_paren_branch(text: str, variables: Optional[Dict] = None,
 
 
 def _split_by_operator(text: str, operator: str) -> List[str]:
-    """
-    연산자(&, ??)로 텍스트 분리.
-    문자열 리터럴과 중괄호 내부의 연산자는 무시.
-
-    Args:
-        text: 파싱할 텍스트
-        operator: 분리할 연산자 ('&' 또는 '??')
-    """
-    segments = []
-    current = []
-    depth = 0        # { } 깊이
-    paren = 0        # ( ) 깊이 — 괄호 분기 안의 연산자는 분기 소유 (G13-1, 2026-08-19)
-    in_string = False
-    string_char = None
-    op_len = len(operator)
-
-    i = 0
-    chars = text
-    while i < len(chars):
-        ch = chars[i]
-
-        # 문자열 리터럴 추적
-        if not in_string and (ch == '"' or ch == "'"):
-            in_string = True
-            string_char = ch
-            current.append(ch)
-            i += 1
-            continue
-        elif in_string:
-            if ch == '\\' and i + 1 < len(chars):
-                current.append(ch)
-                current.append(chars[i + 1])
-                i += 2
-                continue
-            elif ch == string_char:  # vj-ok: 렉서 문자 비교
-                in_string = False
-            current.append(ch)
-            i += 1
-            continue
-
-        # 중괄호 깊이 추적
-        if ch == '{':
-            depth += 1
-            current.append(ch)
-        elif ch == '}':
-            depth -= 1
-            current.append(ch)
-        elif ch == '(' and depth == 0:
-            paren += 1
-            current.append(ch)
-        elif ch == ')' and depth == 0:
-            paren = max(0, paren - 1)
-            current.append(ch)
-        elif depth == 0 and paren == 0 and chars[i:i+op_len] == operator:  # vj-ok: 렉서 연산자 경계 비교
-            # 연산자 발견 (중괄호/문자열 밖)
-            # & 의 경우: && 가 아닌지 확인 (미래 확장 대비)
-            if operator == '&' and i + 1 < len(chars) and chars[i + 1] == '&':
-                current.append(ch)
-            else:
-                seg = ''.join(current).strip()
-                if seg:
-                    segments.append(seg)
-                current = []
-                i += op_len
-                continue
-        else:
-            current.append(ch)
-
-        i += 1
-
-    # 마지막 세그먼트
-    seg = ''.join(current).strip()
-    if seg:
-        segments.append(seg)
-
-    return segments
+    """문자열·괄호 밖 연산자로 분리한다. 파이프라인과 같은 스캔 경계를 쓴다."""
+    return [part for part, _ in split_operator(text, operator)]
 
 
 # ───────────────────── 파이프 문법 설탕 (단항 변환자 desugar) ─────────────────────

@@ -177,6 +177,7 @@
     "ibl/ibl_retyping",
     "ibl/ibl_routing",
     "ibl/ibl_safety",
+    "ibl/ibl_scanner",
     "ibl/ibl_traceback",
     "ibl/ibl_translate",
     "ibl/ibl_turn_vars",
@@ -312,8 +313,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 301,
-    "engine": 282,
+    "total": 302,
+    "engine": 283,
     "blocklist": 19
   }
 }

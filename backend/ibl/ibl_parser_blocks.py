@@ -6,6 +6,7 @@ register_parse() 로 주입(의존 역전). 이 모듈은 ibl_parser 를 모른�
 ★파이프 설탕(_pipe_block)은 본체 잔류 — 표준-코어 가드가 ibl_parser.py 경로를 스캔.
 """
 import re
+from ibl_scanner import QuoteState
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from ibl_parser_values import IBLSyntaxError, _parse_params
@@ -57,33 +58,17 @@ _ELSE_IF_PREFIX = re.compile(r'^\s*\[else\s+if:\s*')
 
 
 def _block_header(text: str, prefix: "re.Pattern") -> Optional[Tuple[str, int]]:
-    """`[키워드: 헤더]{` 를 깊이 인식으로 읽어 (헤더 본문, '{' 위치) — 모양이 아니면 None.
-
-    헤더 안의 `[`·`{`·문자열은 깊이로 건너뛰고, 깊이 0 의 첫 `]` 가 헤더의 끝이다."""
+    """`[키워드: 헤더]{`를 읽어 (헤더 본문, '{' 위치). 괄호 규칙은 블록 소유다."""
     m = prefix.match(text)
     if not m:
         return None
-    start = m.end()
-    depth = 0
-    in_s = False
-    q = ''
-    i, n = start, len(text)
-    while i < n:
-        c = text[i]
-        if in_s:
-            if c == '\\':
-                i += 2
-                continue
-            if c == q:
-                in_s = False
-        elif c in '"\'':
-            in_s = True
-            q = c
-        elif c in '[{':
+    start, depth, n = m.end(), 0, len(text)
+    for i, char in QuoteState().outside(text, start):
+        if char in '[{':
             depth += 1
-        elif c == '}':
+        elif char == '}':
             depth -= 1
-        elif c == ']':
+        elif char == ']':
             if depth == 0:
                 j = i + 1
                 while j < n and text[j] in ' \t\r\n':
@@ -92,7 +77,6 @@ def _block_header(text: str, prefix: "re.Pattern") -> Optional[Tuple[str, int]]:
                     return text[start:i].strip(), j
                 return None
             depth -= 1
-        i += 1
     return None
 
 # case문 패턴: [case: sense:field]{...}
@@ -118,28 +102,12 @@ _GOAL_META_KEYS = {'success_condition', 'resources', 'report_to', 'strategy'}
 
 
 def _find_top_level_key(body: str, key: str) -> Optional[Tuple[int, int]]:
-    """중괄호/대괄호/문자열 *밖*(깊이 0)에서 `key :` 를 찾아 (키 시작, 값 시작) 반환.
-
-    정규식으로 찾으면 문자열 값 속 같은 글자(예: success_condition: "strategy: [x]")에
-    오탐한다 — 파라미터 경계는 깊이·문자열 상태를 알아야 정확하다."""
-    depth = 0
-    in_s = False
-    q = ''
-    i, n = 0, len(body)
-    while i < n:
-        c = body[i]
-        if in_s:
-            if c == '\\':
-                i += 2
-                continue
-            if c == q:
-                in_s = False
-        elif c in '"\'':
-            in_s = True
-            q = c
-        elif c in '{[':
+    """문자열·중괄호·대괄호 밖의 `key :`를 찾아 (키 시작, 값 시작)를 반환한다."""
+    depth, n = 0, len(body)
+    for i, char in QuoteState().outside(body):
+        if char in '{[':
             depth += 1
-        elif c in '}]':
+        elif char in '}]':
             depth -= 1
         elif depth == 0 and body.startswith(key, i) and (
                 i == 0 or not (body[i - 1].isalnum() or body[i - 1] == '_')):
@@ -150,8 +118,7 @@ def _find_top_level_key(body: str, key: str) -> Optional[Tuple[int, int]]:
                 j += 1
                 while j < n and body[j] in ' \t\n\r':
                     j += 1
-                return (i, j)
-        i += 1
+                return i, j
     return None
 
 
@@ -513,44 +480,18 @@ def _parse_block_body(body: str) -> Optional[Dict]:
 
 def _extract_bracket_raw(text: str, start: int,
                          open_ch: str, close_ch: str) -> Tuple[Optional[str], int]:
-    """
-    text[start] 위치의 여는 괄호부터 닫는 괄호까지 내용 추출 (문자열·주석 인식)
-
-    Returns:
-        (내부 내용 문자열, 닫는 괄호 위치) 또는 (None, -1)
-    """
+    """문자열·# 주석을 보존해 (괄호 내부 원문, 닫는 괄호 위치). 미닫힘은 (None, -1)."""
     if start >= len(text) or text[start] != open_ch:
-        return (None, -1)
-
+        return None, -1
     depth = 0
-    in_string = False
-    string_char = None
-    i = start
-
-    while i < len(text):
-        ch = text[i]
-        if not in_string:
-            if ch == '#':
-                end = text.find('\n', i)
-                i = len(text) if end < 0 else end
-                continue
-            if ch == '"' or ch == "'":
-                in_string = True
-                string_char = ch
-            elif ch == open_ch:
-                depth += 1
-            elif ch == close_ch:
-                depth -= 1
-                if depth == 0:
-                    return (text[start + 1:i], i)
-        else:
-            if ch == '\\' and i + 1 < len(text):
-                i += 1
-            elif ch == string_char:
-                in_string = False
-        i += 1
-
-    return (None, -1)
+    for i, char in QuoteState().outside(text, start, hash_comments=True):
+        if char == open_ch:
+            depth += 1
+        elif char == close_ch:
+            depth -= 1
+            if depth == 0:
+                return text[start + 1:i], i
+    return None, -1
 
 
 def parse_range_expression(expr: str) -> Optional[Dict]:

@@ -1,0 +1,1133 @@
+[
+  {
+    "function": "_split_pipeline",
+    "args": [
+      "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "[self:read]{path:\"a>>b&c\"}",
+          ">>"
+        ],
+        [
+          "([self:read]{path:\"x\"} & [self:read]{path:\"y\"})",
+          null
+        ]
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})",
+      ">>"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "[self:read]{path:\"a>>b&c\"}",
+        "([self:read]{path:\"x\"} & [self:read]{path:\"y\"})"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})",
+      "&"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})",
+      "??"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})",
+      ";"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})",
+      "|"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "[self:read]{path:\"a>>b&c\"} >> ([self:read]{path:\"x\"} & [self:read]{path:\"y\"})"
+      ]
+    }
+  },
+  {
+    "function": "_split_pipeline",
+    "args": [
+      "\"a\\\";b\" >> tail >>"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "\"a\\\";b\"",
+          ">>"
+        ],
+        [
+          "tail",
+          ">>"
+        ]
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"a\\\";b\" >> tail >>",
+      ">>"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"a\\\";b\"",
+        "tail"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"a\\\";b\" >> tail >>",
+      "&"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"a\\\";b\" >> tail >>"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"a\\\";b\" >> tail >>",
+      "??"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"a\\\";b\" >> tail >>"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"a\\\";b\" >> tail >>",
+      ";"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"a\\\";b\" >> tail >>"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"a\\\";b\" >> tail >>",
+      "|"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"a\\\";b\" >> tail >>"
+      ]
+    }
+  },
+  {
+    "function": "_split_pipeline",
+    "args": [
+      ") left && right ?? fallback"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          ") left && right ?? fallback",
+          null
+        ]
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      ") left && right ?? fallback",
+      ">>"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        ") left && right ?? fallback"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      ") left && right ?? fallback",
+      "&"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        ") left &",
+        "right ?? fallback"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      ") left && right ?? fallback",
+      "??"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        ") left && right",
+        "fallback"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      ") left && right ?? fallback",
+      ";"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        ") left && right ?? fallback"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      ") left && right ?? fallback",
+      "|"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        ") left && right ?? fallback"
+      ]
+    }
+  },
+  {
+    "function": "_split_pipeline",
+    "args": [
+      "{broken >> tail"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "{broken >> tail",
+          null
+        ]
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "{broken >> tail",
+      ">>"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "{broken >> tail"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "{broken >> tail",
+      "&"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "{broken >> tail"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "{broken >> tail",
+      "??"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "{broken >> tail"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "{broken >> tail",
+      ";"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "{broken >> tail"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "{broken >> tail",
+      "|"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "{broken >> tail"
+      ]
+    }
+  },
+  {
+    "function": "_split_pipeline",
+    "args": [
+      "\"trailing\\"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "\"trailing\\",
+          null
+        ]
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"trailing\\",
+      ">>"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"trailing\\"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"trailing\\",
+      "&"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"trailing\\"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"trailing\\",
+      "??"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"trailing\\"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"trailing\\",
+      ";"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"trailing\\"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "\"trailing\\",
+      "|"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "\"trailing\\"
+      ]
+    }
+  },
+  {
+    "function": "_split_pipeline",
+    "args": [
+      "a;\n b | take: 2"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "a;\n b | take: 2",
+          null
+        ]
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "a;\n b | take: 2",
+      ">>"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "a;\n b | take: 2"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "a;\n b | take: 2",
+      "&"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "a;\n b | take: 2"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "a;\n b | take: 2",
+      "??"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "a;\n b | take: 2"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "a;\n b | take: 2",
+      ";"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "a",
+        "b | take: 2"
+      ]
+    }
+  },
+  {
+    "function": "_split_by_operator",
+    "args": [
+      "a;\n b | take: 2",
+      "|"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "a;\n b",
+        "take: 2"
+      ]
+    }
+  },
+  {
+    "function": "_block_header",
+    "args": [
+      "[if: [table:brief]{text:\"x]y\"} == \"yes\"] {body}",
+      "^\\s*\\[if:\\s*"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "[table:brief]{text:\"x]y\"} == \"yes\"",
+        41
+      ]
+    }
+  },
+  {
+    "function": "_block_header",
+    "args": [
+      "[if: x] tail",
+      "^\\s*\\[if:\\s*"
+    ],
+    "capture": false,
+    "expected": {
+      "value": null
+    }
+  },
+  {
+    "function": "_block_header",
+    "args": [
+      "[if: [broken] {",
+      "^\\s*\\[if:\\s*"
+    ],
+    "capture": false,
+    "expected": {
+      "value": null
+    }
+  },
+  {
+    "function": "_find_top_level_key",
+    "args": [
+      "note:\"strategy: false\", strategy: [self:read]{}",
+      "strategy"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        24,
+        34
+      ]
+    }
+  },
+  {
+    "function": "_find_top_level_key",
+    "args": [
+      "nested:{strategy: 1}, strategy : 2",
+      "strategy"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        22,
+        33
+      ]
+    }
+  },
+  {
+    "function": "_find_top_level_key",
+    "args": [
+      "xstrategy: 1",
+      "strategy"
+    ],
+    "capture": false,
+    "expected": {
+      "value": null
+    }
+  },
+  {
+    "function": "_find_top_level_key",
+    "args": [
+      "text:'escaped\\' strategy: x', strategy: 3",
+      "strategy"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        30,
+        40
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket_raw",
+    "args": [
+      "{x:\"}\\\"\", nested:{a:1}} tail",
+      0,
+      "{",
+      "}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "x:\"}\\\"\", nested:{a:1}",
+        22
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket_raw",
+    "args": [
+      "{# } ignored\nx:1} tail",
+      0,
+      "{",
+      "}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        "# } ignored\nx:1",
+        16
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket_raw",
+    "args": [
+      "{broken",
+      0,
+      "{",
+      "}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        null,
+        -1
+      ]
+    }
+  },
+  {
+    "function": "_scan_line_state",
+    "args": [
+      "x: \"# {\" # comment}",
+      false,
+      null
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        0,
+        false,
+        null
+      ]
+    }
+  },
+  {
+    "function": "_strip_line_comment",
+    "args": [
+      "x: \"# {\" # comment}",
+      false,
+      null
+    ],
+    "capture": false,
+    "expected": {
+      "value": "x: \"# {\""
+    }
+  },
+  {
+    "function": "_scan_line_state",
+    "args": [
+      "continued\\\" }\" # comment}",
+      true,
+      "\""
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        0,
+        false,
+        null
+      ]
+    }
+  },
+  {
+    "function": "_strip_line_comment",
+    "args": [
+      "continued\\\" }\" # comment}",
+      true,
+      "\""
+    ],
+    "capture": false,
+    "expected": {
+      "value": "continued\\\" }\""
+    }
+  },
+  {
+    "function": "_scan_line_state",
+    "args": [
+      "\"not closed {",
+      false,
+      null
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        0,
+        true,
+        "\""
+      ]
+    }
+  },
+  {
+    "function": "_strip_line_comment",
+    "args": [
+      "\"not closed {",
+      false,
+      null
+    ],
+    "capture": false,
+    "expected": {
+      "value": "\"not closed {"
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{plain: 1, trailing: true,}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": {
+        "plain": 1,
+        "trailing": true
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{plain: 1, trailing: true,}"
+    ],
+    "capture": true,
+    "expected": {
+      "value": {
+        "plain": 1,
+        "trailing": true
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{pattern:\"\\d+\", text:\"\\uAC00\\n\"}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": {
+        "pattern": "\\d+",
+        "text": "가\n"
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{pattern:\"\\d+\", text:\"\\uAC00\\n\"}"
+    ],
+    "capture": true,
+    "expected": {
+      "value": {
+        "pattern": {
+          "source": "\\d+",
+          "quoted": true
+        },
+        "text": {
+          "source": "가\n",
+          "quoted": true
+        }
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{data:[{value:$it.v}], literal:\"$it.v\"}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": {
+        "data": [
+          {
+            "value": "$it.v"
+          }
+        ],
+        "literal": "$it.v"
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{data:[{value:$it.v}], literal:\"$it.v\"}"
+    ],
+    "capture": true,
+    "expected": {
+      "value": {
+        "data": [
+          {
+            "value": {
+              "source": "$it.v",
+              "quoted": false
+            }
+          }
+        ],
+        "literal": {
+          "source": "$it.v",
+          "quoted": true
+        }
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{a:1 /* comment */, b:2}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{a:1 /* comment */, b:2}"
+    ],
+    "capture": true,
+    "expected": {
+      "value": {
+        "a": 1,
+        "b": 2
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{text:\"raw\nline\", nested:[\"raw\nline\"]}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": {
+        "text": "raw\nline",
+        "nested": [
+          "raw\nline"
+        ]
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{text:\"raw\nline\", nested:[\"raw\nline\"]}"
+    ],
+    "capture": true,
+    "expected": {
+      "value": {
+        "text": {
+          "source": "raw\nline",
+          "quoted": true
+        },
+        "nested": [
+          {
+            "source": "raw\nline",
+            "quoted": true
+          }
+        ]
+      }
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{a:1, broken = 2}"
+    ],
+    "capture": false,
+    "expected": {
+      "error": "IBLSyntaxError",
+      "message": "파라미터를 끝까지 읽지 못했습니다. 해석된 키: [a] / 남은 조각: 'broken = 2'\n→ 키와 값 사이 구분자는 `=` 가 아니라 `:` 입니다: `broken: 값`."
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{a:1, broken = 2}"
+    ],
+    "capture": true,
+    "expected": {
+      "error": "IBLSyntaxError",
+      "message": "파라미터를 끝까지 읽지 못했습니다. 해석된 키: [a] / 남은 조각: 'broken = 2'\n→ 키와 값 사이 구분자는 `=` 가 아니라 `:` 입니다: `broken: 값`."
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{a:[1,2}"
+    ],
+    "capture": false,
+    "expected": {
+      "error": "IBLSyntaxError",
+      "message": "닫히지 않은 [] 구조입니다 — 닫는 ']'가 필요합니다. 객체·배열은 문자열로 대신 해석하지 않습니다."
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{a:[1,2}"
+    ],
+    "capture": true,
+    "expected": {
+      "error": "IBLSyntaxError",
+      "message": "닫히지 않은 [] 구조입니다 — 닫는 ']'가 필요합니다. 객체·배열은 문자열로 대신 해석하지 않습니다."
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{}"
+    ],
+    "capture": false,
+    "expected": {
+      "value": {}
+    }
+  },
+  {
+    "function": "_parse_params",
+    "args": [
+      "{}"
+    ],
+    "capture": true,
+    "expected": {
+      "value": {}
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[{a:1}, null, true]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          {
+            "a": 1
+          },
+          null,
+          true
+        ],
+        19
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[{a:1}, null, true]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": true,
+    "expected": {
+      "value": [
+        [
+          {
+            "a": 1
+          },
+          null,
+          true
+        ],
+        19
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[\"\\d+\", \"\\x41\"]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "\\d+",
+          "A"
+        ],
+        15
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[\"\\d+\", \"\\x41\"]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": true,
+    "expected": {
+      "value": [
+        [
+          {
+            "source": "\\d+",
+            "quoted": true
+          },
+          {
+            "source": "A",
+            "quoted": true
+          }
+        ],
+        15
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[\"raw\nline\"]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "raw\nline"
+        ],
+        12
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[\"raw\nline\"]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": true,
+    "expected": {
+      "value": [
+        [
+          {
+            "source": "raw\nline",
+            "quoted": true
+          }
+        ],
+        12
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[/* ] */ 1, 2]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": false,
+    "expected": {
+      "value": [
+        [
+          "/*"
+        ],
+        5
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[/* ] */ 1, 2]",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": true,
+    "expected": {
+      "value": [
+        [
+          1,
+          2
+        ],
+        14
+      ]
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[1,2",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": false,
+    "expected": {
+      "error": "IBLSyntaxError",
+      "message": "닫히지 않은 [] 구조입니다 — 닫는 ']'가 필요합니다. 객체·배열은 문자열로 대신 해석하지 않습니다."
+    }
+  },
+  {
+    "function": "_extract_bracket",
+    "args": [
+      "[1,2",
+      0,
+      "[",
+      "]"
+    ],
+    "capture": true,
+    "expected": {
+      "error": "IBLSyntaxError",
+      "message": "닫히지 않은 [] 구조입니다 — 닫는 ']'가 필요합니다. 객체·배열은 문자열로 대신 해석하지 않습니다."
+    }
+  }
+]

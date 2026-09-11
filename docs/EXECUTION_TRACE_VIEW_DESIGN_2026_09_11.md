@@ -1,6 +1,6 @@
 # 실행 기록의 통합 조회 설계와 원장 물리 통합 판단
 
-상태: **L0→L1→L2 구현, 최종 회귀 확인 중**. 설계 기준: 정본 main `777430f9`, 2026-09-11. 구현·검증 기록은 11~13절.
+상태: **L0→L1→L2 구현·검증 완료**. 설계 기준: 정본 main `777430f9`, 2026-09-11. 구현·검증 기록은 11~14절.
 관련: [단순화 수리 기록](SYSTEM_SIMPLIFICATION_PLAN.md), [재기동 제어 설계](RESTART_COORDINATION_DESIGN_2026_09_11.md).
 
 ## 1. 결정
@@ -177,3 +177,22 @@ trajectory와 write JSONL의 명시적 run/event_seq가 같으면 한 사건의 
 - 전체 backend 첫 실행의 실패 2건(새 시험의 `__main__` 누락, SQLite 오류 문구의 사설 소문자 비교)을 수정했다. 재실행은 **3,876 passed / 1 skipped / 116 warnings**(249.75초). 최종 보강 후 전체 결과는 아래에 추가한다.
 
 남는 경계: 메시지 FK 없는 과거 대화, 범위를 증명하지 못하는 episode 없는 옛 run/write, 이미 정리된 원문은 복원하지 않는다. 이는 명시적 missing/ambiguous/partial이다. SQLite 사건 원장은 기존 append-only 계약, JSONL은 기존 append/회전 계약에 의존한다. 한도 초과 신원 후보/작업대/원문은 partial로 반환하며 한도를 우회해 전체 디스크를 스캔하지 않는다. 원장 물리 통합·새 이벤트 DB·L3 캐시/색인은 도입하지 않았다.
+
+
+## 14. 최종 검증 결과 (2026-09-11)
+
+정본 `/Users/kangkukjin/Desktop/AI/indiebizOS` main 반영:
+
+| 묶음 | 확인한 커밋 | 결과 |
+|---|---|---|
+| L0 | `e24e4ab4` | 소유권·신원·실패 지도, 합성 fixture |
+| L1 | `ed59d00b` | strict reader·조합 서비스·인증된 조회 API |
+| L2 | `b927e2d7` | 주행기록 상세·원문 페이지·보강 회귀 |
+
+- 최종 코드 전체 backend: `.venv/bin/python3 -m pytest backend/ -q -o addopts=''` → **3,878 passed / 1 skipped / 116 warnings**, **248.76초**, 종료코드 0. 추가한 통합/HTTP 시험 19개를 포함한다. 기존 trajectory/write/pursuit, 모델·원문 보존(`test_conscious_supervisor`, `test_model_provider_memory`, `test_supervision_delivery`), 동시 실행·MCP(`test_parallel_context_inherit`, `test_parallel_branch_budget`, `test_mcp_boundary`)도 이 전체 실행에서 통과했다.
+- 1개 skip은 `test_narration_injection.py:17`의 기존 로컬 전용 스크립트가 pytest 수집 시 명시적으로 건너뛰는 계약이다. 이번 구현의 시험 누락/실패가 아니다. 기존 Pydantic 및 의존 라이브러리 deprecation 경고 116개는 유지된다.
+- 최종 프런트: TypeScript, 변경 컴포넌트 ESLint **경고 0/오류 0**, `npm run build` **성공**(Vite 2.59초). 기존 bundle chunk 크기 경고만 남는다. 브라우저에서 주행기록 펼치기·사건 다음 페이지·원문 두 페이지·재조회를 실검증했다.
+- 최신 실사용 주행의 **전체 12페이지 / 785개 관측**, **총 189.4ms / 최대 페이지 40.1ms**. 최종 측정 비용이 같은 episode의 원본 SQL `model.usage/accounting=billable_usage` 합계와 모든 토큰 필드에서 일치했다. 이 표본 검증은 개요만 읽었고 원문을 출력하거나 외부로 송신하지 않았다. 관측 중복은 원본 위치별로 남고 청구량에 더해지지 않는다.
+- `build_ibl_nodes.py`/Android 몸 번들을 재생성했고, 커밋 관문의 파생물·층·1500줄·모듈 그림자·이벤트 루프·동시성·단일 시험 러너·값 의미론 검사가 전부 통과했다. `git diff --check`도 통과했다.
+- 기존 IBL `[self:body]{op:"trajectory"}`의 `items/total/truncated` 및 앞뒤 사건 추출 계약을 확인했다(`system_essentials/body_ops.py:324`). 이 호환 표면을 유지하고, scope·cursor·원문 권한을 받는 새 읽기 계약은 같은 주행기록의 HTTP 하위 경로로 제공한다. 새 IBL 낱말/파라미터를 추가하지 않았다.
+- 복제본·새 브랜치를 만들지 않았고 원장 스키마/물리 저장 구조를 바꾸지 않았다. 기존 다른 작업의 `docs/SYSTEM_REFLECTION_2026_09_11.md` 미추적 파일은 건드리지 않았다.

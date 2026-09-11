@@ -17,6 +17,7 @@ import { Wand2, Play, Check, AlertTriangle, Loader2, BookOpen, Eye, ShieldAlert,
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
+import { IS_WEB_SURFACE } from '../lib/backend-origin';
 import { NodePresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
 import { EpisodeJournal } from './EpisodeJournal';
 import { PursuitLedger } from './launcher-components/PursuitLedger';
@@ -124,6 +125,7 @@ const NODE_GLOSS: Record<string, string> = {
 };
 
 export default function ManualMode() {
+  const [mobileMonitorOpen, setMobileMonitorOpen] = useState(false);
   // 'indiebizOS의 구조' — 버튼 밑 인라인 박스(anatomy 문서). 첫 펼칠 때 원본 마크다운을 당겨 캐시.
   const [structOpen, setStructOpen] = useState(false);
   const [structDoc, setStructDoc] = useState<string | null>(null);
@@ -418,8 +420,8 @@ export default function ManualMode() {
     (!needsConfirm || confirmSideEffect);
 
   return (
-    <div className="h-full overflow-y-auto bg-[#F5F1EB]">
-      <div className="max-w-2xl mx-auto px-5 py-6 space-y-4">
+    <div className="cockpit h-full overflow-y-auto bg-[#F5F1EB]">
+      <div className="cockpit-content max-w-2xl mx-auto px-5 py-6 space-y-4">
 
         {/* 액티브 프로젝트 — 지금 일하고 있는 에이전트들의 프로젝트. 클릭=대화창 맨앞으로 (조종실 맨 윗줄) */}
         <ActiveProjects />
@@ -427,6 +429,11 @@ export default function ManualMode() {
         {/* 모델 기어 — 계기판 변속 레버(절약/균형/최대) + 헤더에 'indiebizOS의 구조' 버튼(설정 옆).
             검색 브라우저 진입점은 조종실에서 제거(2026-07-06). */}
         <ModelGearLever onToggleStruct={toggleStruct} structOpen={structOpen} />
+
+        {IS_WEB_SURFACE && <button className="remote-mobile-only mobile-monitor-toggle" onClick={() => setMobileMonitorOpen(v => !v)} aria-expanded={mobileMonitorOpen} aria-controls="cockpit-monitor">
+          <Stethoscope size={18} /> 시스템 상태·기록
+          <ChevronDown size={16} className={`ml-auto ${mobileMonitorOpen ? 'rotate-180' : ''}`} />
+        </button>}
 
         {/* indiebizOS의 구조 — 기어박스 헤더 '구조' 버튼을 누르면 기어박스 바로 아래에서 anatomy 문서를 펼친다 */}
         {structOpen && (
@@ -446,6 +453,7 @@ export default function ManualMode() {
         )}
 
         {/* 시스템 상태 — 접이식 한 줄(dark cockpit): 요약 배지만 상시, 펼치면 상세+지금 점검 */}
+        <div id="cockpit-monitor" className={`cockpit-monitor ${mobileMonitorOpen ? 'mobile-monitor-open' : ''}`}>
         <div className="rounded-xl border border-stone-200 bg-white/70">
           <button
             onClick={() => setStatusOpen((v) => {
@@ -575,6 +583,7 @@ export default function ManualMode() {
 
         {/* 주행기록계 — 지난 주행 목록 + 분석 스위치 */}
         <EpisodeJournal />
+        </div>
 
         {/* 조종실 타이틀 + IBL 사전 / IBL이란? — 번역기 바로 위(2026-07-03 헤더에서 이동). 열리는 패널이 이 줄과 번역기 사이에 뜬다. */}
         <div className="flex items-center justify-between gap-2 text-stone-500">

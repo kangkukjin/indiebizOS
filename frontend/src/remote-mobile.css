@@ -1,0 +1,235 @@
+/* 공통 React 기능 위의 원격 폰 배치. Electron·넓은 원격 창에는 적용하지 않는다. */
+.remote-mobile-only { display: none; }
+.remote-shell { height: var(--remote-viewport-height, 100dvh); }
+.cockpit-monitor { display: contents; }
+.cockpit-monitor > * { margin-block-start: 1rem; }
+
+@media (max-width: 767px) {
+  .remote-shell {
+    padding-top: env(safe-area-inset-top);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .remote-shell .remote-mobile-only { display: flex; }
+  .remote-shell button:not([role="switch"]), .remote-shell summary, .remote-shell select {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+  .remote-shell button { flex-shrink: 0; }
+  .remote-shell input:not([type="checkbox"]):not([type="radio"]),
+  .remote-shell textarea, .remote-shell select {
+    font-size: 16px;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .remote-shell .remote-session-bar {
+    gap: 12px;
+    padding: 0 12px;
+    font-size: 12px;
+  }
+  .remote-shell .remote-session-menu { align-items: center; }
+  .remote-shell .remote-session-menu a { padding: 12px 0; }
+  .remote-shell .remote-content > .h-screen { padding: 0; }
+  .remote-shell .remote-content > .h-screen > div {
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .remote-shell .mobile-launcher-heading {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    flex-shrink: 0;
+    font-size: 13px;
+    border-bottom: 1px solid #e5dfd5;
+  }
+  .remote-shell .mobile-launcher-heading > span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .remote-shell .launcher-toolbar { display: none; }
+  .remote-shell .launcher-toolbar.mobile-tools-open {
+    display: flex;
+    padding: 8px 12px;
+    justify-content: flex-start;
+  }
+  .remote-shell .launcher-toolbar > div { justify-content: flex-start; }
+  .remote-shell .launcher-toolbar div[aria-hidden="true"] { display: none; }
+  .remote-shell .launcher-toolbar .absolute {
+    position: fixed;
+    left: 12px;
+    right: 12px;
+    top: 112px;
+    max-height: calc(100dvh - 190px);
+    overflow-y: auto;
+  }
+  .remote-shell .mobile-mode-nav {
+    flex-shrink: 0;
+    border-top: 1px solid #e5dfd5;
+    background: #fffdf9;
+    padding: 4px 6px;
+    gap: 4px;
+  }
+  .remote-shell .mobile-mode-nav button {
+    flex: 1 1 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 3px;
+    min-height: 56px;
+    border-radius: 12px;
+    color: #78716c;
+    font-size: 12px;
+  }
+  .remote-shell .mobile-mode-nav button[aria-current="page"] {
+    color: #92400e;
+    background: #fef3c7;
+    font-weight: 600;
+  }
+  .remote-shell .launcher-root .grid > button { padding: 10px 4px; }
+  .remote-shell .launcher-root .grid > button span:last-child { font-size: 14px; }
+  .remote-shell .app-maker-button {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+  }
+
+  /* 프로젝트는 목록 또는 대화가 한 화면을 차지한다. 연결된 채팅은 마운트 유지. */
+  .remote-shell .project-header {
+    height: auto;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 6px 12px;
+  }
+  .remote-shell .project-header > div:first-child { flex: 1; min-width: 0; }
+  .remote-shell .project-header > div:first-child > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .remote-shell .project-actions { display: none; }
+  .remote-shell .project-actions.mobile-actions-open {
+    display: flex;
+    flex-wrap: wrap;
+    flex-basis: 100%;
+    padding-bottom: 6px;
+  }
+  .remote-shell .mobile-agent-toggle, .remote-shell .mobile-monitor-toggle {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: white;
+    border-bottom: 1px solid #e5dfd5;
+    font-size: 14px;
+    text-align: left;
+  }
+  .remote-shell .project-agents { display: none; }
+  .remote-shell .project-agents.mobile-agents-open {
+    display: flex;
+    width: 100%;
+    min-width: 0;
+  }
+  .remote-shell .project-agents.mobile-agents-open + * { display: none; }
+  .remote-shell .chat-header {
+    height: auto;
+    min-height: 60px;
+    padding: 6px 12px;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .remote-shell .chat-header > div { min-width: 0; gap: 6px; }
+  .remote-shell .chat-header > div:first-child { flex: 1; }
+  .remote-shell .chat-header > div:first-child > div:last-child { min-width: 0; }
+  .remote-shell .chat-header > div:first-child > div:last-child > div {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .remote-shell .chat-header button { min-width: 44px; display: grid; place-items: center; }
+  .remote-shell .chat-input-area { padding: 8px 12px; flex-shrink: 0; }
+  .remote-shell .chat-composer { display: grid; grid-template-columns: 44px 44px 1fr 48px; gap: 6px; }
+  .remote-shell .chat-composer textarea {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    width: 100%;
+    min-height: 66px;
+    max-height: 25dvh;
+    padding: 10px 12px;
+  }
+  .remote-shell .chat-composer button { padding: 10px; display: grid; place-items: center; }
+  .remote-shell .chat-composer button:last-child { grid-column: 4; }
+  .remote-shell .chat-keyboard-help { display: none; }
+  .remote-shell .chat-bubble { max-width: calc(100% - 44px); padding: 12px; }
+  .remote-shell .chat-bubble-neutral { max-width: 94%; }
+  .remote-shell .chat-dialog {
+    width: 100% !important;
+    height: 100dvh !important;
+    max-height: 100dvh;
+    left: 0 !important;
+    top: 0 !important;
+    border-radius: 0;
+    padding-block: env(safe-area-inset-top) env(safe-area-inset-bottom);
+  }
+  .remote-shell .opacity-0.group-hover\:opacity-100 { opacity: 1; }
+  .remote-shell .cockpit-content { padding: 12px; }
+  .remote-shell .mobile-monitor-toggle { width: 100%; border: 1px solid #e5dfd5; border-radius: 12px; }
+  .remote-shell .cockpit-monitor { display: none; }
+  .remote-shell .cockpit-monitor.mobile-monitor-open { display: block; }
+  .remote-shell .cockpit-monitor > :first-child { margin-top: 0; }
+  .remote-shell .instrument-inputs { flex-wrap: wrap; }
+  .remote-shell .instrument-inputs > input { flex-basis: 100%; }
+
+  /* 창고 레벨은 가로 탐색, 파일 목록은 아래 전체 폭. */
+  .remote-shell .warehouse-header { flex-wrap: wrap; padding: 8px 12px; gap: 6px; }
+  .remote-shell .warehouse-public-url { width: 44px; justify-content: center; }
+  .remote-shell .warehouse-public-url > span { display: none; }
+  .remote-shell .warehouse-public-url > svg { width: 16px; height: 16px; }
+  .remote-shell .warehouse-header > span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .remote-shell .warehouse-header > .flex-1 { display: none; }
+  .remote-shell .warehouse-tabs { order: 2; width: 100%; margin-left: 0; }
+  .remote-shell .warehouse-tabs button { flex: 1; justify-content: center; padding: 6px 4px; gap: 4px; }
+  .remote-shell .warehouse-mine { flex-direction: column; }
+  .remote-shell .warehouse-levels {
+    width: 100%;
+    flex-direction: row;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 6px 8px;
+  }
+  .remote-shell .warehouse-levels > button { white-space: nowrap; }
+  .remote-shell .warehouse-levels > div, .remote-shell .warehouse-levels > button.font-mono { display: none; }
+  .remote-shell .warehouse-file-toolbar { flex-wrap: wrap; padding: 6px 10px; }
+  .remote-shell .warehouse-file-toolbar > div:first-child { flex-basis: 100%; }
+  .remote-shell .warehouse-entry-menu {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 44px;
+    align-items: center;
+    justify-content: center;
+    color: #78716c;
+  }
+  .remote-shell .warehouse-grid-entry { padding-top: 38px; }
+  .remote-shell .warehouse-grid-entry > span { font-size: 13px; }
+  .remote-shell .warehouse-list-entry, .remote-shell .warehouse-trash-entry {
+    grid-template-columns: minmax(0, 1fr) auto;
+    padding: 10px 44px 10px 4px;
+    min-height: 64px;
+  }
+  .remote-shell .warehouse-list-entry > span:last-of-type,
+  .remote-shell .warehouse-trash-entry > span:last-of-type { grid-column: 1 / -1; }
+  .remote-shell .warehouse-list-heading { display: flex; justify-content: space-between; }
+  .remote-shell .warehouse-context-menu {
+    left: 12px !important;
+    right: 12px;
+    top: auto !important;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    max-height: 60dvh;
+    overflow-y: auto;
+  }
+}

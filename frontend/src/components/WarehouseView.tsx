@@ -19,6 +19,7 @@ import { MinePane } from './warehouse/MinePane';
 import { NeighborsPane } from './warehouse/NeighborsPane';
 import { DiscoverPane } from './warehouse/DiscoverPane';
 import { BusinessInstrumentView } from './BusinessInstrumentView';
+import { openExternalLink } from '../lib/surface-navigation';
 
 export function WarehouseView() {
   const [tab, setTab] = useState<'mine' | 'neighbors' | 'discover' | 'business'>(() => {
@@ -54,21 +55,22 @@ export function WarehouseView() {
   return (
     <div className="h-full w-full flex flex-col bg-stone-50">
       {/* 헤더 */}
-      <div className="flex items-center gap-2 px-5 py-3 border-b border-stone-200 bg-white shrink-0">
+      <div className="warehouse-header flex items-center gap-2 px-5 py-3 border-b border-stone-200 bg-white shrink-0">
         <Package className="w-5 h-5 text-[#D97706]" />
         <span className="font-semibold text-stone-800">{meta?.title || '공유창고'}</span>
         {meta?.public_url && (
           <button
-            className="flex items-center gap-1 text-xs text-stone-400 hover:text-[#D97706] ml-1"
+            className="warehouse-public-url flex items-center gap-1 text-xs text-stone-400 hover:text-[#D97706] ml-1"
             title="공개 주소 열기"
-            onClick={() => (window as any).electron?.openExternal?.(meta.public_url)}
+            aria-label="공개 창고 열기"
+            onClick={() => openExternalLink(meta.public_url)}
           >
-            {meta.public_url.replace(/^https?:\/\//, '')}
+            <span>{meta.public_url.replace(/^https?:\/\//, '')}</span>
             <ExternalLink className="w-3 h-3" />
           </button>
         )}
         {/* 탭 — 내 창고(발신) / 이웃(수신·피드) / 이웃찾기 / 비즈니스 */}
-        <div className="flex items-center gap-1 ml-3 p-0.5 rounded-lg bg-stone-100">
+        <div className="warehouse-tabs flex items-center gap-1 ml-3 p-0.5 rounded-lg bg-stone-100">
           {([['mine', '내 창고', Package], ['neighbors', '이웃', Users], ['discover', '이웃찾기', Search], ['business', '비즈니스', Building2]] as const).map(([key, label, TabIcon]) => (
             <button
               key={key}

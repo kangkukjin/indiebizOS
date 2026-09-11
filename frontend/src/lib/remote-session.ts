@@ -2,6 +2,11 @@ import { IS_WEB_SURFACE } from './backend-origin';
 
 export const SESSION_EXPIRED = 'indiebiz:session-expired';
 
+/** remote-mobile.css와 같은 경계. 이벤트 시점의 폭을 읽어 회전에도 대응한다. */
+export function isRemotePhoneLayout() {
+  return IS_WEB_SURFACE && window.matchMedia('(max-width: 767px)').matches;
+}
+
 export function checkRemoteSession(status: number) {
   if (IS_WEB_SURFACE && (status === 401 || status === 1008)) {
     window.dispatchEvent(new Event(SESSION_EXPIRED));

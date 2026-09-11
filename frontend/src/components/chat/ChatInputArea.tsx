@@ -132,7 +132,7 @@ export function ChatInputArea({
 
   return (
     <div
-      className={`p-4 border-t ${styles.containerBorder} ${styles.containerBg} ${variant === 'neutral' ? 'shrink-0' : ''} ${isDragging ? `ring-2 ${styles.ring} ring-inset` : ''}`}
+      className={`chat-input-area p-4 border-t ${styles.containerBorder} ${styles.containerBg} ${variant === 'neutral' ? 'shrink-0' : ''} ${isDragging ? `ring-2 ${styles.ring} ring-inset` : ''}`}
       onDragOver={onDragOver}
       onDragLeave={onDragLeave}
       onDrop={onDrop}
@@ -229,7 +229,7 @@ export function ChatInputArea({
         </div>
       )}
 
-      <div className={`flex items-end ${styles.gap}`}>
+      <div className={`chat-composer flex items-end ${styles.gap}`}>
         {/* 파일 선택 버튼 */}
         <input
           ref={fileInputRef}
@@ -280,6 +280,7 @@ export function ChatInputArea({
         ) : (
           <button
             onClick={onSend}
+            aria-label="메시지 전송"
             disabled={!hasContent}
             className={`${styles.sendPadding} ${styles.sendBg} rounded-xl ${styles.sendHover} disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-white`}
           >
@@ -288,7 +289,7 @@ export function ChatInputArea({
         )}
       </div>
       {showHelpText && (
-        <p className="text-xs text-gray-400 mt-2 text-center">Enter로 전송 · Shift+Enter로 줄바꿈 · 파일 드래그 또는 붙여넣기</p>
+        <p className="chat-keyboard-help text-xs text-gray-400 mt-2 text-center">Enter로 전송 · Shift+Enter로 줄바꿈 · 파일 드래그 또는 붙여넣기</p>
       )}
     </div>
   );

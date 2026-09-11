@@ -1,4 +1,4 @@
-import { checkRemoteSession } from '../../lib/remote-session';
+import { checkRemoteSession, isRemotePhoneLayout } from '../../lib/remote-session';
 /**
  * ChatView - 통합 채팅 컴포넌트
  *
@@ -876,6 +876,8 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.nativeEvent.isComposing) return;
+    // 폰 키보드의 Enter는 줄바꿈. 전송은 명시적인 전송 버튼으로 한다.
+    if (isRemotePhoneLayout()) return;
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -897,10 +899,10 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
     <>
       {/* 헤더 (다이얼로그 모드에서는 드래그 핸들) */}
       <div
-        className={isDialog
+        className={'chat-header ' + (isDialog
           ? 'flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-amber-50 to-orange-50 shrink-0 select-none'
           : 'h-14 px-4 flex items-center justify-between border-b border-[#E5DFD5] bg-[#EAE4DA] shrink-0 drag'
-        }
+        )}
         style={isDialog ? { cursor: isDragging ? 'grabbing' : 'grab' } : undefined}
         onMouseDown={isDialog ? handleDragStart : undefined}
       >
@@ -1131,7 +1133,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       >
         <div
           ref={dialogRef}
-          className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden relative"
+          className="chat-dialog bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden relative"
           style={dialogStyle}
         >
           {/* 리사이즈 핸들 */}
@@ -1241,7 +1243,7 @@ const MessageBubble = memo(function MessageBubble({ message, variant = 'warm' }:
   if (variant === 'neutral') {
     return (
       <div className={`group flex ${isUser ? 'justify-end' : 'justify-start'}`}>
-        <div className={`max-w-[80%] min-w-0 break-words rounded-2xl px-4 py-2.5 ${
+        <div className={`chat-bubble chat-bubble-neutral max-w-[80%] min-w-0 break-words rounded-2xl px-4 py-2.5 ${
           isUser
             ? 'bg-amber-500 text-white rounded-br-md'
             : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
@@ -1271,7 +1273,7 @@ const MessageBubble = memo(function MessageBubble({ message, variant = 'warm' }:
       }`}>
         {isUser ? <User size={16} /> : <Bot size={16} />}
       </div>
-      <div className={`max-w-[70%] min-w-0 break-words px-4 py-3 rounded-2xl ${
+      <div className={`chat-bubble max-w-[70%] min-w-0 break-words px-4 py-3 rounded-2xl ${
         isUser
           ? 'bg-[#3B82F6] text-white rounded-tr-sm'
           : 'bg-[#E5DFD5] text-[#4A4035] rounded-tl-sm'

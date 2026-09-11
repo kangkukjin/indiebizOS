@@ -469,7 +469,7 @@ export function ActionDesktop({ openAppId, openNonce }: { openAppId?: string | n
       <button
         onClick={(e) => { e.stopPropagation(); setMakerOpen(true); }}
         title="앱메이커 — 내 앱을 만들고 고치는 AI"
-        className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-stone-900 text-white shadow-lg hover:bg-black active:translate-y-[0.5px] transition-all"
+        className="app-maker-button fixed bottom-6 right-6 z-40 flex items-center gap-2 px-4 py-3 rounded-full bg-stone-900 text-white shadow-lg hover:bg-black active:translate-y-[0.5px] transition-all"
       >
         <Wand2 size={18} />
         <span className="text-sm font-semibold">앱메이커</span>

@@ -864,7 +864,7 @@ function ModePane({ mode, openNeighborId, onDeepLinkDone }: {
       )}
 
       {inputs.length > 0 && (
-        <div className="flex gap-2 mb-2">
+        <div className="instrument-inputs flex gap-2 mb-2">
           {inputs.map((inp) =>
             inp.type === 'select' ? (
               <SelectInput key={inp.key} inp={inp} values={values}

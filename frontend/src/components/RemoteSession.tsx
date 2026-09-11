@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState, type ReactNode, type FormEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode, type FormEvent } from 'react';
 import { useAppStore } from '../stores/appStore';
 import { SESSION_EXPIRED } from '../lib/remote-session';
 import { iblExecuteApp } from '../lib/instrument';
+import { ArrowLeft, Home, MoreHorizontal } from 'lucide-react';
+import '../remote-mobile.css';
 
 /** 원격 소유자 셸. 인증되기 전에는 데이터/소켓을 여는 App 자체를 마운트하지 않는다. */
 export function RemoteSession({ children }: { children: ReactNode }) {
@@ -11,6 +13,8 @@ export function RemoteSession({ children }: { children: ReactNode }) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [clipboard, setClipboard] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const shellRef = useRef<HTMLDivElement>(null);
   const check = useCallback(async () => {
     try {
       const res = await fetch('/launcher/auth/session', { cache: 'no-store' });
@@ -35,6 +39,19 @@ export function RemoteSession({ children }: { children: ReactNode }) {
     const timer = window.setInterval(() => void check(), 30000);
     return () => window.clearInterval(timer);
   }, [state, external, check]);
+
+  // iOS는 키보드가 떠도 레이아웃 뷰포트를 줄이지 않는다. 실제 보이는 높이에 맞춘다.
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const shell = shellRef.current;
+    if (state !== 'ready' || !viewport || !shell) return;
+    const resize = () => {
+      if (viewport.scale === 1) shell.style.setProperty('--remote-viewport-height', `${viewport.height}px`);
+    };
+    resize();
+    viewport.addEventListener('resize', resize);
+    return () => viewport.removeEventListener('resize', resize);
+  }, [state]);
 
   async function login(event: FormEvent) {
     event.preventDefault(); setBusy(true); setMessage('');
@@ -88,14 +105,17 @@ export function RemoteSession({ children }: { children: ReactNode }) {
     </main>
   );
 
-  return <div className="h-dvh flex flex-col overflow-hidden bg-[#F5F1EB]">
-    <header className="shrink-0 flex flex-wrap gap-3 items-center border-b px-3 py-2 text-sm bg-white">
-      <button onClick={() => { useAppStore.getState().setCurrentView('launcher'); window.location.hash = '/'; }} className="font-semibold">IndieBiz 홈</button>
-      <button onClick={() => window.history.back()}>뒤로</button>
-      <button onClick={() => { setClipboard(''); setMessage(''); }}>PC로 보내기</button>
-      <a href="/launcher/lite" className="text-stone-500">경량 화면</a>
-      {external && <button disabled={busy} onClick={() => void logout()} className="ml-auto">로그아웃</button>}
+  return <div ref={shellRef} className="remote-shell h-dvh flex flex-col overflow-hidden bg-[#F5F1EB]">
+    <header className="remote-session-bar shrink-0 flex gap-3 items-center border-b px-3 py-2 text-sm bg-white">
+      <button onClick={() => { useAppStore.getState().setCurrentView('launcher'); window.location.hash = '/'; }} className="font-semibold flex items-center gap-2"><Home size={17} /> IndieBiz 홈</button>
+      <button onClick={() => window.history.back()} className="flex items-center gap-1"><ArrowLeft size={17} /> 뒤로</button>
+      <button onClick={() => setMenuOpen(v => !v)} aria-expanded={menuOpen} aria-controls="remote-session-menu" className="ml-auto flex items-center gap-1"><MoreHorizontal size={20} /> 접속 메뉴</button>
     </header>
+    {menuOpen && <div id="remote-session-menu" className="remote-session-menu shrink-0 flex flex-wrap gap-3 px-3 py-2 bg-white border-b text-sm">
+      <button onClick={() => { setClipboard(''); setMessage(''); setMenuOpen(false); }}>PC로 보내기</button>
+      <a href="/launcher/lite" className="text-stone-500">구형 기기용 경량 화면</a>
+      {external && <button disabled={busy} onClick={() => void logout()}>로그아웃</button>}
+    </div>}
     {message && <p role="status" className="px-3 py-1 text-sm">{message}</p>}
     {clipboard !== null && <div className="shrink-0 p-3 bg-white space-y-2">
       <label className="text-sm block">PC 클립보드로 보낼 내용

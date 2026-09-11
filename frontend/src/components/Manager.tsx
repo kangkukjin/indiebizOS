@@ -2,7 +2,7 @@
  * 매니저 - 프로젝트 내 에이전트 관리
  * 원본 manager.py의 기능을 React로 구현
  */
-import { BACKEND_ORIGIN } from '../lib/backend-origin';
+import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
 
 import { useCallback, useEffect, useState, useRef } from 'react';
 import {
@@ -85,6 +85,8 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
 
   // 상태
   const [connectedAgentId, setConnectedAgentId] = useState<string | null>(null);
+  const [mobileAgentsOpen, setMobileAgentsOpen] = useState(!initialAgent);
+  const [mobileActionsOpen, setMobileActionsOpen] = useState(false);
   const [runningAgents, setRunningAgents] = useState<Set<string>>(new Set());
   const [ollamaRunning, setOllamaRunning] = useState(false);
   const [logs, setLogs] = useState<string[]>([]);
@@ -447,6 +449,7 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
       addLog(`[연결 해제] ${agent.name}`);
     } else {
       setConnectedAgentId(agent.id);
+      setMobileAgentsOpen(false);
       addLog(`[연결됨] ${agent.name}`);
     }
   };
@@ -804,14 +807,15 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
   );
 
   return (
-    <div className="h-full flex flex-col bg-[#F5F1EB]">
+    <div className="project-manager h-full flex flex-col bg-[#F5F1EB]">
       {/* 헤더 */}
-      <div className="h-12 flex items-center justify-between px-4 bg-[#EAE4DA] border-b border-[#E5DFD5] drag">
+      <div className="project-header h-12 flex items-center justify-between px-4 bg-[#EAE4DA] border-b border-[#E5DFD5] drag">
         <div className="flex items-center gap-2 no-drag">
           <span className="font-semibold text-[#4A4035]">{currentProject.name}</span>
         </div>
 
-        <div className="flex items-center gap-1 no-drag">
+        {IS_WEB_SURFACE && <button className="remote-mobile-only px-3 rounded-lg border border-stone-300" onClick={() => setMobileActionsOpen(v => !v)} aria-expanded={mobileActionsOpen} aria-controls="project-actions">프로젝트 관리</button>}
+        <div id="project-actions" className={`project-actions ${mobileActionsOpen ? 'mobile-actions-open' : ''} flex items-center gap-1 no-drag`}>
           <button
             onClick={() => setShowSettingsDialog(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-[#DDD5C8] transition-colors text-[#6B5B4F]"
@@ -870,10 +874,13 @@ export function Manager({ initialAgent }: ManagerProps = {}) {
         </div>
       </div>
 
+      {IS_WEB_SURFACE && <button className="remote-mobile-only mobile-agent-toggle" onClick={() => setMobileAgentsOpen(v => !v)} aria-expanded={mobileAgentsOpen} aria-controls="project-agents">
+        <Users size={18} /> {mobileAgentsOpen ? (connectedAgent ? '대화로 돌아가기' : '실행 로그 보기') : connectedAgent ? `${connectedAgent.name} · 에이전트 변경` : '에이전트 목록'}
+      </button>}
       {/* 메인 영역 */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="project-body flex-1 min-h-0 flex overflow-hidden">
         {/* 사이드바 - 에이전트 목록 */}
-        <div className="w-72 bg-[#EAE4DA] border-r border-[#E5DFD5] flex flex-col">
+        <div id="project-agents" className={`project-agents ${mobileAgentsOpen ? 'mobile-agents-open' : ''} w-72 bg-[#EAE4DA] border-r border-[#E5DFD5] flex flex-col`}>
           <div className="p-3 border-b border-[#E5DFD5]">
             <h3 className="text-sm font-semibold text-[#6B5B4F]">에이전트 목록</h3>
           </div>

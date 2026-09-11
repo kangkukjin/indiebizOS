@@ -12,11 +12,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Package, RefreshCw, FilePlus, FolderPlus, Trash2, Download, Folder,
-  ChevronRight, LayoutGrid, List, RotateCcw, ExternalLink,
+  ChevronRight, LayoutGrid, List, RotateCcw, ExternalLink, MoreHorizontal,
 } from 'lucide-react';
 import { API, IMG_EXT, WH_DRAG, fmtBytes, fileIcon, openExternalUrl, dragOutLocalPaths } from './shared';
 import type { WhFile, WhData, TrashItem } from './shared';
 import { useRetryingLoad } from '../../lib/use-retrying-load';
+import { isRemotePhoneLayout } from '../../lib/remote-session';
+import { IS_WEB_SURFACE } from '../../lib/backend-origin';
 
 /* ── 폴더 트리 — 서버는 평면 목록(files + dirs)을 준다. 빈 폴더는 dirs 로만 온다. ── */
 interface WhNode { dirs: Record<string, WhNode>; files: WhFile[]; path: string }
@@ -512,6 +514,14 @@ export function MinePane() {
     />
   );
 
+  const entryMenuButton = (en: Entry) => IS_WEB_SURFACE && (
+    <button className="remote-mobile-only warehouse-entry-menu" aria-label={`${en.label} 메뉴`}
+      onClick={e => {
+        e.stopPropagation(); setSel([en.path]);
+        setCtx({ x: e.clientX, y: e.clientY, kind: 'entry', entry: en });
+      }}><MoreHorizontal size={18} /></button>
+  );
+
   const gridCell = (en: Entry, idx: number) => {
     const selected = sel.includes(en.path);
     const isOver = dropTarget === `dir:${en.path}`;
@@ -525,20 +535,21 @@ export function MinePane() {
         onDragOver={en.kind === 'dir' ? (e) => acceptDrag(e, `dir:${en.path}`) : undefined}
         onDragLeave={en.kind === 'dir' ? () => setDropTarget((t) => (t === `dir:${en.path}` ? null : t)) : undefined}
         onDrop={en.kind === 'dir' ? (e) => dropInto(e, en.path) : undefined}
-        onClick={(e) => clickEntry(e, idx)}
+        onClick={(e) => { if (isRemotePhoneLayout()) { e.stopPropagation(); openEntry(en); } else clickEntry(e, idx); }}
         onDoubleClick={() => openEntry(en)}
         onContextMenu={(e) => {
           e.preventDefault(); e.stopPropagation();
           if (!sel.includes(en.path)) { setSel([en.path]); anchor.current = idx; }
           setCtx({ x: e.clientX, y: e.clientY, kind: 'entry', entry: en });
         }}
-        className={`flex flex-col items-center gap-1 p-2 rounded-xl cursor-default select-none min-w-0 ${
+        className={`warehouse-grid-entry relative flex flex-col items-center gap-1 p-2 rounded-xl cursor-default select-none min-w-0 ${
           isOver ? 'bg-amber-100 ring-2 ring-[#D97706]'
             : selected ? 'bg-amber-100/80'
             : 'hover:bg-stone-100'
         }`}
         title={`${en.label}\n${en.kind === 'dir' ? `${en.count}개 · ` : ''}${fmtBytes(en.bytes)} · ${en.mtime.replace('T', ' ')}\n끌어서 바탕화면·폴더에 저장 (⌥ 누르고 끌면 창고 안에서 옮기기)`}
       >
+        {entryMenuButton(en)}
         {isImg ? (
           <img
             src={fileUrl(en.path)}
@@ -571,14 +582,14 @@ export function MinePane() {
         onDragOver={en.kind === 'dir' ? (e) => acceptDrag(e, `dir:${en.path}`) : undefined}
         onDragLeave={en.kind === 'dir' ? () => setDropTarget((t) => (t === `dir:${en.path}` ? null : t)) : undefined}
         onDrop={en.kind === 'dir' ? (e) => dropInto(e, en.path) : undefined}
-        onClick={(e) => clickEntry(e, idx)}
+        onClick={(e) => { if (isRemotePhoneLayout()) { e.stopPropagation(); openEntry(en); } else clickEntry(e, idx); }}
         onDoubleClick={() => openEntry(en)}
         onContextMenu={(e) => {
           e.preventDefault(); e.stopPropagation();
           if (!sel.includes(en.path)) { setSel([en.path]); anchor.current = idx; }
           setCtx({ x: e.clientX, y: e.clientY, kind: 'entry', entry: en });
         }}
-        className={`grid grid-cols-[minmax(0,1fr)_90px_150px] items-center gap-2 px-3 py-1.5 rounded-lg cursor-default select-none text-sm ${
+        className={`warehouse-list-entry relative grid grid-cols-[minmax(0,1fr)_90px_150px] items-center gap-2 px-3 py-1.5 rounded-lg cursor-default select-none text-sm ${
           isOver ? 'bg-amber-100 ring-2 ring-[#D97706]'
             : selected ? 'bg-amber-100/80'
             : 'hover:bg-stone-100'
@@ -594,6 +605,7 @@ export function MinePane() {
           {en.kind === 'dir' ? `${en.count}개` : fmtBytes(en.bytes)}
         </span>
         <span className="text-[11px] text-stone-400 tabular-nums">{en.mtime.replace('T', ' ')}</span>
+        {entryMenuButton(en)}
       </li>
     );
   };
@@ -623,9 +635,9 @@ export function MinePane() {
 
   /* ── 본체 ── */
   return (
-    <div className="flex-1 min-h-0 flex">
+    <div className="warehouse-mine flex-1 min-h-0 flex">
       {/* 사이드바 — 레벨 0~4 + 휴지통. 레벨에 드롭 = 공개 범위 변경. */}
-      <div className="w-44 shrink-0 border-r border-stone-200 bg-white/60 flex flex-col py-2 px-2 gap-0.5">
+      <div className="warehouse-levels w-44 shrink-0 border-r border-stone-200 bg-white/60 flex flex-col py-2 px-2 gap-0.5">
         {[0, 1, 2, 3, 4].map((lv) => {
           const active = !inTrash && lv === level;
           const isOver = dropTarget === `level:${lv}`;
@@ -677,9 +689,9 @@ export function MinePane() {
       </div>
 
       {/* 오른쪽 — 툴바 + 내용 */}
-      <div className="flex-1 min-h-0 flex flex-col">
+      <div className="flex-1 min-w-0 min-h-0 flex flex-col">
         {/* 툴바: 경로 바(드롭 대상) + 보기 전환 + 동작 버튼 */}
-        <div className="flex items-center gap-1 px-4 py-2 border-b border-stone-200 bg-white/60 shrink-0 min-w-0">
+        <div className="warehouse-file-toolbar flex items-center gap-1 px-4 py-2 border-b border-stone-200 bg-white/60 shrink-0 min-w-0">
           {inTrash ? (
             <span className="text-xs font-medium text-stone-700 flex items-center gap-1.5">
               <Trash2 className="w-3.5 h-3.5 text-stone-400" /> 휴지통
@@ -794,7 +806,7 @@ export function MinePane() {
                 {trash.map((it) => (
                   <li
                     key={`${it.level}:${it.name}`}
-                    className="grid grid-cols-[minmax(0,1fr)_60px_90px_150px] items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-stone-100 text-sm select-none"
+                    className="warehouse-trash-entry relative grid grid-cols-[minmax(0,1fr)_60px_90px_150px] items-center gap-2 px-3 py-1.5 rounded-lg hover:bg-stone-100 text-sm select-none"
                     onContextMenu={(e) => {
                       e.preventDefault(); e.stopPropagation();
                       setCtx({ x: e.clientX, y: e.clientY, kind: 'trash', trash: it });
@@ -811,6 +823,8 @@ export function MinePane() {
                       {it.is_dir ? `${it.count}개` : fmtBytes(it.bytes)}
                     </span>
                     <span className="text-[11px] text-stone-400 tabular-nums">{it.mtime.replace('T', ' ')}</span>
+                    {IS_WEB_SURFACE && <button className="remote-mobile-only warehouse-entry-menu" aria-label={`${it.name} 메뉴`}
+                      onClick={e => { e.stopPropagation(); setCtx({ x: e.clientX, y: e.clientY, kind: 'trash', trash: it }); }}><MoreHorizontal size={18} /></button>}
                   </li>
                 ))}
               </ul>
@@ -855,7 +869,7 @@ export function MinePane() {
               </ul>
             ) : (
               <div className="px-4 py-2">
-                <div className="grid grid-cols-[minmax(0,1fr)_90px_150px] gap-2 px-3 pb-1 border-b border-stone-200">
+                <div className="warehouse-list-heading grid grid-cols-[minmax(0,1fr)_90px_150px] gap-2 px-3 pb-1 border-b border-stone-200">
                   {sortHeader('name', '이름')}
                   {sortHeader('bytes', '크기', 'text-right')}
                   {sortHeader('mtime', '수정일')}
@@ -872,7 +886,7 @@ export function MinePane() {
       {/* 컨텍스트 메뉴 */}
       {ctx && (
         <div
-          className="fixed bg-white rounded-lg shadow-xl border border-stone-200 py-1 z-50 min-w-[170px]"
+          className="warehouse-context-menu fixed bg-white rounded-lg shadow-xl border border-stone-200 py-1 z-50 min-w-[170px]"
           style={{
             left: Math.min(ctx.x, window.innerWidth - 190),
             top: Math.min(ctx.y, window.innerHeight - 200),

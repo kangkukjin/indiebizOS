@@ -105,6 +105,8 @@ export function Launcher() {
   // 검색 브라우저 오버레이 — 모드가 아니라 현재 표면 위를 덮는다(닫으면 그 표면 그대로).
   const [browserOpen, setBrowserOpen] = useState(false);
   const [showModeMenu, setShowModeMenu] = useState(false);
+  const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  const [projectQuery, setProjectQuery] = useState('');
   const modeMenuRef = useRef<HTMLDivElement>(null);
   // 검색 브라우저를 특정 URL로 열도록 넘기는 신호(예: X-Ray). ForageBrowser가 소비 후 null 복귀.
   const [pendingBrowserUrl, setPendingBrowserUrl] = useState<string | null>(null);
@@ -628,9 +630,14 @@ export function Launcher() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-[#F5F1EB]">
+    <div className="launcher-root h-full flex flex-col bg-[#F5F1EB]">
+      {IS_WEB_SURFACE && <div className="remote-mobile-only mobile-launcher-heading">
+        <span className="font-semibold text-stone-800">{showingApp ? activeMeta!.label : MODE_META[launcherTab].label}</span>
+        <button onClick={openSystemAI} className="ml-auto rounded-xl bg-amber-600 text-white px-3 flex items-center gap-2"><Bot size={18} /> 시스템 AI</button>
+        <button onClick={() => setMobileToolsOpen(v => !v)} aria-expanded={mobileToolsOpen} aria-controls="launcher-tools" className="rounded-xl border border-stone-300 px-3">{mobileToolsOpen ? '접기' : '더보기'}</button>
+      </div>}
       {/* 상단 툴바 */}
-      <div className="launcher-toolbar min-h-11 shrink-0 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]">
+      <div id="launcher-tools" className={`launcher-toolbar ${mobileToolsOpen ? 'mobile-tools-open' : ''} min-h-11 shrink-0 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]`}>
         <div className="flex flex-wrap justify-end items-center gap-1.5 no-drag whitespace-nowrap">
           {/* 모드 선택기 — 네 표면(자율주행/조종실/앱/공유창고)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
@@ -802,6 +809,12 @@ export function Launcher() {
 
             {showMainMenu && (
               <div className="absolute right-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-stone-200 py-1.5 min-w-[200px] z-50 overflow-hidden">
+                {IS_WEB_SURFACE && <>
+                  <button onClick={() => { setShowNewProjectDialog(true); setShowMainMenu(false); }} className="block w-full px-4 py-2.5 text-left text-sm hover:bg-amber-50">새 프로젝트</button>
+                  <button onClick={() => { setShowNewFolderDialog(true); setShowMainMenu(false); }} className="block w-full px-4 py-2.5 text-left text-sm hover:bg-amber-50">새 폴더</button>
+                  <button onClick={() => { setShowNewMultiChatDialog(true); setShowMainMenu(false); }} className="block w-full px-4 py-2.5 text-left text-sm hover:bg-amber-50">새 다중채팅방</button>
+                  <div className="border-t border-stone-100 my-1" />
+                </>}
                 <button
                   onClick={() => {
                     handleOpenScheduler();
@@ -903,17 +916,21 @@ export function Launcher() {
           </div>
         ) : IS_WEB_SURFACE ? (
           <div className="h-full overflow-auto p-4">
+            <label className="block mb-4">
+              <span className="sr-only">프로젝트·스위치·대화 찾기</span>
+              <input type="search" value={projectQuery} onChange={e => setProjectQuery(e.target.value)} placeholder="프로젝트·스위치·대화 찾기" className="w-full rounded-xl border border-stone-200 bg-white px-3 py-3 text-sm" />
+            </label>
             <div className="grid grid-cols-3 sm:grid-cols-5 lg:grid-cols-8 gap-4">
-              {displayProjects.map(project => <button key={project.id} onClick={() => handleOpenProject(project)}
+              {displayProjects.filter(p => p.name.toLocaleLowerCase().includes(projectQuery.trim().toLocaleLowerCase())).map(project => <button key={project.id} onClick={() => handleOpenProject(project)}
                 className="p-3 rounded-xl hover:bg-white flex flex-col items-center gap-2 min-w-0">
                 <span className="text-3xl">{project.type === 'folder' ? '📂' : '📁'}</span>
                 <span className="text-xs break-all">{project.name}</span>
               </button>)}
-              {displaySwitches.map(sw => <button key={sw.id} onClick={() => handleExecuteSwitch(sw)}
+              {displaySwitches.filter(sw => sw.name.toLocaleLowerCase().includes(projectQuery.trim().toLocaleLowerCase())).map(sw => <button key={sw.id} onClick={() => handleExecuteSwitch(sw)}
                 className="p-3 rounded-xl hover:bg-white flex flex-col items-center gap-2 min-w-0">
                 <span className="text-3xl">⚡</span><span className="text-xs break-all">{sw.name}</span>
               </button>)}
-              {multiChatRooms.map(room => <button key={room.id} onClick={() => handleOpenMultiChatRoom(room)}
+              {multiChatRooms.filter(room => room.name.toLocaleLowerCase().includes(projectQuery.trim().toLocaleLowerCase())).map(room => <button key={room.id} onClick={() => handleOpenMultiChatRoom(room)}
                 className="p-3 rounded-xl hover:bg-white flex flex-col items-center gap-2 min-w-0">
                 <span className="text-3xl">💬</span><span className="text-xs break-all">{room.name}</span>
               </button>)}
@@ -1065,6 +1082,16 @@ export function Launcher() {
           onUrlConsumed={() => setPendingBrowserUrl(null)}
         />
       </div>
+
+      {IS_WEB_SURFACE && <nav aria-label="런처 모드" className="remote-mobile-only mobile-mode-nav">
+        {(['autopilot', 'manual', 'app', 'warehouse'] as const).map(mode => {
+          const Icon = MODE_META[mode].icon;
+          return <button key={mode} aria-current={launcherTab === mode ? 'page' : undefined}
+            onClick={() => { selectMode(mode); setMobileToolsOpen(false); setBrowserOpen(false); }}>
+            <Icon size={21} /><span>{MODE_META[mode].label}</span>
+          </button>;
+        })}
+      </nav>}
 
       {/* 컨텍스트 메뉴 */}
       <ContextMenu

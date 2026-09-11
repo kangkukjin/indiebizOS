@@ -54,6 +54,7 @@ IndieBiz OS의 원격 접근 시스템입니다. Cloudflare Tunnel을 통해 외
 
 - `/launcher/app`은 데스크톱과 같은 React 빌드를 읽는다. 소스 설치의 `frontend/dist`, asar:false 배포의 `Resources/app/dist`를 찾으며, 새 인증 셸 표식이 없거나 번들이 없으면 기존 `launcher_surface_remote.py` 화면을 제공한다. `/launcher/lite`는 계속 독립 경량 화면이다.
 - 원격 셸만 `data-indiebiz-surface="remote"`를 선언한다. HTTP/WS는 그 문서의 origin을 사용하며, 로그인 전에는 데이터·소켓을 여는 React App을 마운트하지 않는다. HttpOnly 세션 쿠키, 후속 HTTP/WS 거절, 주기적 세션 확인과 로그아웃을 사용한다. 정적 파일 라우트 `/launcher/ui/`는 번들 안의 허용 파일 형식만 제공한다.
+- 폰 폭(768px 미만)의 `/launcher/app`은 같은 React 기능을 모바일 배치로 제공한다(`frontend/src/remote-mobile.css`). 하단 네 모드 탭, 접이식 도구·접속 메뉴, 프로젝트 검색, 에이전트 목록/대화 전환을 사용한다. 조종실의 상태·기록은 접어서 접근하고, 창고는 가로 레벨 탐색·한 번 눌러 열기·항목 메뉴를 제공한다. 대화 입력은 전체 폭이며 Enter는 줄바꿈, 전송은 버튼이다. `visualViewport`로 키보드가 차지하는 높이를 반영한다. `/launcher/lite`는 구형 기기 호환용으로 유지한다. 소스 설치에서는 `frontend/`의 타입 검사 후 `vite build`하고 원격 페이지를 새로고침하면 반영된다.
 - 설정·메시지·에피소드/시스템 로그는 공통 React 컴포넌트다. 원격의 프로젝트·앱은 터치 가능한 타일이고, 새 창은 같은 창의 hash 라우트로 이동한다. 검색 브라우저는 iframe 허용 여부와 새 탭 열기를 제공하며 네이티브 페이지 DOM 조작은 Electron에만 있다. 데스크톱의 저장된 아이콘 좌표는 원격 타일 배치로 바꾸지 않는다.
 - 폰 `launcher_surface_phone.py`와 포털 회원용 `get_launcher_webapp_html()`은 기존 HTML 조립 계약을 유지한다. 기질은 `backend/surface/launcher_app_{common,warehouse,autopilot,manual,appmode}.py`와 셸 조각이다. 회원용 실행 권한을 소유자 React 셸로 우회하지 않는다.
 - 폰 조종실은 **로컬 완결**(`/ibl/translate`·`validate`·`distill`·`actions/catalog`) — 옛 '리모컨' 프록시는 은퇴했다. 폰은 자기 어휘(자기 사전)만 컴파일한다.

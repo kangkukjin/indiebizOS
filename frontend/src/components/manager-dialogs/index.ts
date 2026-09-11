@@ -4,5 +4,5 @@
 
 export * from './types';
 export { AgentCard } from './AgentCard';
-export { MessageContent, parseImagePaths } from './MessageContent';
+export { MessageContent } from './MessageContent';
 export * from './dialogs';

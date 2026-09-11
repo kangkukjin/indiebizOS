@@ -1,3 +1,4 @@
+import { SettingsFrame } from '../../SettingsFrame';
 /**
  * SettingsDialog - 설정 다이얼로그
  * Phase 16: 도구 탭 → 노드 탭 (프로젝트 기본 노드)
@@ -5,7 +6,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  X,
   Bot,
   Radio,
   Settings,
@@ -77,30 +77,12 @@ export function SettingsDialog({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div
-        className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
-        style={{
-          width: 'min(900px, 95vw)',
-          height: 'min(700px, 90vh)',
-          minWidth: '600px',
-          minHeight: '500px',
-          resize: 'both',
-        }}
-      >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 shrink-0">
-          <h2 className="text-xl font-bold text-gray-800">설정</h2>
-          <button onClick={onClose} className="p-1.5 hover:bg-gray-200 rounded-lg">
-            <X size={20} className="text-gray-500" />
-          </button>
-        </div>
-
+    <SettingsFrame onClose={onClose} width={900} height={700} minWidth={600} minHeight={500} resizable>
         {/* 탭 + 내용 */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex flex-col sm:flex-row overflow-hidden">
           {/* 탭 사이드바 */}
-          <div className="w-48 bg-gray-100 border-r border-gray-200 shrink-0">
-            <nav className="p-2 space-y-1">
+          <div className="sm:w-48 bg-gray-100 border-r border-gray-200 shrink-0">
+            <nav className="p-2 flex sm:block sm:space-y-1">
               <button
                 onClick={() => setSettingsTab('agents')}
                 className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg text-left text-sm transition-colors ${
@@ -132,7 +114,7 @@ export function SettingsDialog({
           </div>
 
           {/* 탭 내용 */}
-          <div className="flex-1 overflow-auto p-6">
+          <div className="flex-1 min-w-0 overflow-auto p-4 sm:p-6">
             {/* 채널 탭 */}
             {settingsTab === 'channels' && (
               <div className="space-y-6">
@@ -364,7 +346,6 @@ export function SettingsDialog({
             닫기
           </button>
         </div>
-      </div>
-    </div>
+    </SettingsFrame>
   );
 }

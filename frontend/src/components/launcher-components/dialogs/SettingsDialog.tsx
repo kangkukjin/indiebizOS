@@ -1,3 +1,4 @@
+import { SettingsFrame } from '../../SettingsFrame';
 /**
  * SettingsDialog - 시스템 설정 다이얼로그
  *
@@ -248,32 +249,9 @@ export function SettingsDialog({
   if (!show) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div
-        className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
-        style={{
-          width: 'min(750px, 90vw)',
-          height: 'min(650px, 88vh)',
-          minWidth: '400px',
-          minHeight: '450px',
-        }}
-      >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 shrink-0">
-          <div className="flex items-center gap-3">
-            <Settings size={24} className="text-gray-600" />
-            <h2 className="text-xl font-bold text-gray-800">설정</h2>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 hover:bg-gray-200 rounded-lg transition-colors"
-          >
-            <X size={20} className="text-gray-500" />
-          </button>
-        </div>
-
+    <SettingsFrame onClose={onClose} icon={<Settings size={24} className="text-gray-600" />}>
         {/* 탭 */}
-        <div className="flex border-b border-gray-200 bg-gray-50 shrink-0">
+        <div className="flex overflow-x-auto border-b border-gray-200 bg-gray-50 shrink-0">
           {([
             { key: 'models', icon: Brain, label: '모델 설정' },
             { key: 'apikeys', icon: KeyRound, label: 'API 키' },
@@ -288,7 +266,7 @@ export function SettingsDialog({
             <button
               key={tab.key}
               onClick={() => setActiveTab(tab.key)}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 shrink-0 min-w-max px-2 py-3 text-sm font-medium transition-colors ${
                 activeTab === tab.key
                   ? 'text-[#D97706] border-b-2 border-[#D97706] bg-white'
                   : 'text-gray-600 hover:text-gray-900'
@@ -1049,7 +1027,6 @@ export function SettingsDialog({
             </button>
           )}
         </div>
-      </div>
-    </div>
+    </SettingsFrame>
   );
 }

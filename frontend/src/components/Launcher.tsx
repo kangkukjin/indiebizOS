@@ -1,3 +1,4 @@
+import { openSystemAI } from '../lib/surface-navigation';
 /**
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
@@ -773,7 +774,7 @@ export function Launcher() {
               </span>
             </button>
             <button
-              onClick={() => { window.electron?.openSystemAIWindow?.(); }}
+              onClick={openSystemAI}
               className="ml-1 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-white shadow-sm hover:shadow-md hover:from-amber-600 hover:to-amber-700 active:translate-y-[0.5px] transition-all"
               title="시스템 AI와 대화"
             >

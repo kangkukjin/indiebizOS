@@ -4,7 +4,7 @@
 import { BACKEND_ORIGIN } from '../../lib/backend-origin';
 import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import type { ToolActivity } from './types';
-import { parseImagePaths } from './chatUtils';
+import { parseImagePaths } from '../../lib/message-images';
 
 interface ToolHistoryPanelProps {
   toolHistory: ToolActivity[];

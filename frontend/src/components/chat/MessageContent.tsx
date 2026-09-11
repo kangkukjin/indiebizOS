@@ -1,3 +1,4 @@
+import { openExternalLink, openResultImage } from '../../lib/surface-navigation';
 /**
  * 메시지 콘텐츠 렌더링 (이미지, 지도, 도구 결과, 마크다운)
  */
@@ -6,7 +7,8 @@ import { memo } from 'react';
 import { FileText, CheckCircle2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { parseImagePaths, parseMapData, parseStreamData } from './chatUtils';
+import { parseMapData, parseStreamData } from './chatUtils';
+import { parseImagePaths } from '../../lib/message-images';
 import type { ToolActivity } from './types';
 import { RouteMap } from '../RouteMap';
 import { LocationMap } from '../LocationMap';
@@ -19,16 +21,18 @@ interface MessageContentProps {
   textFiles?: { name: string; content: string }[];
   toolActivities?: ToolActivity[];
   variant?: 'warm' | 'neutral';
+  presentation?: 'rich' | 'plain';
 }
 
 // memo: 타이핑·스트리밍마다 부모가 리렌더되어도 내용이 같으면 마크다운 재파싱을 막는다
-export const MessageContent = memo(function MessageContent({ content, role, images, textFiles, toolActivities, variant = 'warm' }: MessageContentProps) {
+export const MessageContent = memo(function MessageContent({ content, role, images, textFiles, toolActivities, variant = 'warm', presentation = 'rich' }: MessageContentProps) {
   const isUser = role === 'user';
+  const rich = presentation === 'rich';
 
   // AI 응답에서 이미지, 지도, 스트림 데이터 파싱
   const parsedContent = !isUser ? parseImagePaths(content) : { text: content, images: [] };
-  const parsedStreams = !isUser ? parseStreamData(parsedContent.text) : { text: parsedContent.text, streams: [] };
-  const parsedMaps = !isUser ? parseMapData(parsedStreams.text) : { text: parsedStreams.text, routeMaps: [], locationMaps: [] };
+  const parsedStreams = !isUser && rich ? parseStreamData(parsedContent.text) : { text: parsedContent.text, streams: [] };
+  const parsedMaps = !isUser && rich ? parseMapData(parsedStreams.text) : { text: parsedStreams.text, routeMaps: [], locationMaps: [] };
   const finalText = !isUser ? parsedMaps.text : content;
 
   const userBgClass = variant === 'warm' ? 'bg-blue-400/30' : 'bg-amber-400/30';
@@ -85,7 +89,7 @@ export const MessageContent = memo(function MessageContent({ content, role, imag
                       src={`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(imgPath)}`}
                       alt={`결과 이미지 ${imgIdx + 1}`}
                       className={`max-w-full max-h-60 rounded border ${imgBorder} cursor-pointer hover:opacity-90 transition-opacity`}
-                      onClick={() => window.electron?.openExternal(`file://${imgPath}`)}
+                      onClick={() => openResultImage(imgPath)}
                       onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
                     />
                   ))}
@@ -104,8 +108,8 @@ export const MessageContent = memo(function MessageContent({ content, role, imag
               key={index}
               src={`${BACKEND_ORIGIN}/image?path=${encodeURIComponent(imgPath)}`}
               alt={`생성된 이미지 ${index + 1}`}
-              className="max-w-full max-h-[300px] rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => window.electron?.openExternal(`file://${imgPath}`)}
+              className={`${rich ? "max-w-full max-h-[300px]" : "max-w-[200px] max-h-[200px]"} rounded-lg object-cover cursor-pointer hover:opacity-90 transition-opacity`}
+              onClick={() => openResultImage(imgPath)}
               onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
               title="클릭하여 원본 보기"
             />
@@ -141,7 +145,7 @@ export const MessageContent = memo(function MessageContent({ content, role, imag
       )}
 
       {/* 텍스트 내용 */}
-      {finalText && (
+      {finalText && (rich ? (
         <div className={variant === 'warm' ? 'chat-markdown' : 'prose prose-sm max-w-none prose-p:my-1 prose-headings:my-2'}>
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
@@ -152,7 +156,7 @@ export const MessageContent = memo(function MessageContent({ content, role, imag
                   onClick={(e) => {
                     e.preventDefault();
                     if (href) {
-                      window.electron?.openExternal(href);
+                      openExternalLink(href);
                     }
                   }}
                   className="text-blue-500 hover:underline cursor-pointer"
@@ -165,7 +169,7 @@ export const MessageContent = memo(function MessageContent({ content, role, imag
             {finalText}
           </ReactMarkdown>
         </div>
-      )}
+      ) : <p className="text-sm whitespace-pre-wrap break-words">{finalText}</p>)}
     </>
   );
 });

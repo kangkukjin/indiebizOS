@@ -1,3 +1,4 @@
+import { openSystemAI } from '../lib/surface-navigation';
 /**
  * EpisodeJournal — 주행기록계 (계기판)
  *
@@ -55,12 +56,14 @@ function DecisionBadge({ d }: { d: string | null }) {
 function EvalBadge({ r }: { r: string | null }) {
   if (!r) return null;
   const achieved = r === 'ACHIEVED';
+  const failed = r === 'NOT_ACHIEVED';
+  const label = achieved ? '달성' : failed ? '미달' : r === 'UNKNOWN' ? '검수 미완료' : r === 'NOT_RUN' ? '미검수' : r;
   return (
     <span className={`inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded ${
-      achieved ? 'text-emerald-700 bg-emerald-50' : 'text-red-700 bg-red-50'
+      achieved ? 'text-emerald-700 bg-emerald-50' : failed ? 'text-red-700 bg-red-50' : 'text-stone-600 bg-stone-100'
     }`}>
       {achieved ? <Check size={10} /> : <AlertTriangle size={10} />}
-      {achieved ? '달성' : '미달'}
+      {label}
     </span>
   );
 }
@@ -101,14 +104,14 @@ export function EpisodeJournal() {
   // 펼칠 때 첫 1회만 조회(지연 로드) — 접혀 있을 땐 호출 안 함
   const { retry: reload } = useRetryingLoad(load, { enabled: open && rows === null });
 
-  const canAnalyze = typeof window !== 'undefined' && !!window.electron?.openSystemAIWindow;
+  const canAnalyze = typeof window !== 'undefined';
   const analyze = (id: number) => {
     // 렌더러끼리 localStorage로 전달 — 시스템 AI 창(SystemAIView)이 읽어 자동 분석.
     // 메인 프로세스를 안 거쳐서 Electron 재시작 없이 HMR로 바로 작동한다.
     try {
       localStorage.setItem('indiebiz_analyze_episode', JSON.stringify({ id, ts: Date.now() }));
     } catch { /* noop */ }
-    window.electron?.openSystemAIWindow?.();
+    openSystemAI();
   };
 
   return (

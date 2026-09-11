@@ -1,3 +1,4 @@
+import { openSystemAI, openProject } from '../../lib/surface-navigation';
 /**
  * ActiveProjects — 조종실 맨 윗줄 "액티브 프로젝트" 계기.
  *
@@ -52,8 +53,8 @@ export function ActiveProjects() {
   }, []);
 
   const open = (it: ActiveWorkItem) => {
-    if (it.kind === 'system_ai') window.electron?.openSystemAIWindow?.();
-    else window.electron?.openProjectWindow?.(it.project_id, it.project_name);
+    if (it.kind === 'system_ai') openSystemAI();
+    else openProject(it.project_id, it.project_name);
   };
 
   return (

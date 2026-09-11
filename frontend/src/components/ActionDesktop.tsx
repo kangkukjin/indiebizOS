@@ -1,3 +1,4 @@
+import { openPhoto, openPCManager, openLecture, openExternalLink } from '../lib/surface-navigation';
 /**
  * ActionDesktop — 런처의 "앱" 표면 (앱모드)
  *
@@ -54,7 +55,7 @@ const STATIC_DOMAINS: Domain[] = [
     ],
   },
   { id: 'obsidian', icon: '💎', label: '블로그(Obsidian)',
-    onOpen: () => window.electron?.openExternal?.('obsidian://open?vault=iRepublic-Vault'), instruments: [] },
+    onOpen: () => openExternalLink('obsidian://open?vault=iRepublic-Vault'), instruments: [] },
   {
     id: 'newspaper', icon: '📰', label: '신문',
     instruments: [
@@ -64,11 +65,11 @@ const STATIC_DOMAINS: Domain[] = [
   {
     id: 'device', icon: '🖥️', label: '내 기기',
     instruments: [
-      { id: 'photo', icon: '📷', label: '사진', onOpen: () => window.electron?.openPhotoManagerWindow?.(null) },
-      { id: 'files', icon: '🖥️', label: '시스템', onOpen: () => window.electron?.openPCManagerWindow?.(null) },  // 2026-09-03 파일→시스템(탐색·분석·시스템·기억 판 한 창). id 는 저장된 배치 보존을 위해 유지
+      { id: 'photo', icon: '📷', label: '사진', onOpen: () => openPhoto() },
+      { id: 'files', icon: '🖥️', label: '시스템', onOpen: () => openPCManager() },  // 2026-09-03 파일→시스템(탐색·분석·시스템·기억 판 한 창). id 는 저장된 배치 보존을 위해 유지
     ],
   },
-  { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => window.electron?.openLectureWorkspaceWindow?.(null), instruments: [] },
+  { id: 'lecture', icon: '🎓', label: '강의 만들기', onOpen: () => openLecture(), instruments: [] },
   {
     id: 'binnote', icon: '📝', label: '빈노트',
     instruments: [

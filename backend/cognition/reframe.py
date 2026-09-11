@@ -16,18 +16,18 @@
 
 두-경로 대칭(read_guide·조향과 같다): 인프로세스 프로바이더는 system_tools 디스패치,
 Claude Code 는 mcp_server.reframe → /ibl/reframe 로 같은 execute_reframe 에 닿는다.
-채널은 키(agent_id)별 — 같은 에이전트의 동시 턴은 마지막에 연 턴이 받는다(조향 인박스와
-같은 한계, 정직하게 적어 둔다).
+채널은 (agent_id, task_id)별이다. 별칭·조회·종료는 같은 작업만 가리킨다.
 """
 import json
 import threading
 import time
 from typing import Dict, Optional
+from thread_context import execution_key, snapshot, restore
 
 MAX_REVISIONS = 2
 _TTL_SECONDS = 3600 * 3   # 턴이 닫히지 않고 죽은 채널의 유령 방지
 
-_channels: Dict[str, "TurnChannel"] = {}
+_channels: Dict[tuple, "TurnChannel"] = {}
 _lock = threading.Lock()
 
 TOOL_SCHEMA = {
@@ -71,6 +71,9 @@ class TurnChannel:
     def __init__(self, key: str, runner, message: str, history: list, execution_memory: str,
                  consciousness_output: dict, repair: bool, registry_key: str):
         self.key = key
+        self.task_id = execution_key()[1]
+        self.context = snapshot()
+        self.lock = threading.RLock()
         self.runner = runner
         self.message = message
         self.history = list(history or [])
@@ -110,7 +113,7 @@ def turn_key_for(runner, fallback: str = "") -> str:
 
 
 def open_turn(key: str, runner, message: str, history: list, execution_memory: str,
-              consciousness_output: dict, repair: bool = False, aliases=()) -> Optional[TurnChannel]:
+              consciousness_output: dict, repair: bool = False, aliases=(), task_id=None) -> Optional[TurnChannel]:
     """턴 시작 — 의식 산출물이 있을 때만 통로를 연다(규정이 없으면 재규정도 없다)."""
     if not key or not consciousness_output:
         return None
@@ -120,27 +123,33 @@ def open_turn(key: str, runner, message: str, history: list, execution_memory: s
     except Exception:
         rk = "default"
     ch = TurnChannel(key, runner, message, history, execution_memory, consciousness_output, repair, rk)
+    ch.task_id = execution_key(key, task_id)[1]
+    ch.context.update(agent_id=key, task_id=ch.task_id)
+    keys = {execution_key(agent, ch.task_id) for agent in (key, *(aliases or ())) if agent}
     with _lock:
-        _channels[key] = ch
-        for a in aliases or ():
-            if a and a != key:
-                _channels[a] = ch
+        if any(k in _channels for k in keys):
+            raise RuntimeError("이미 열린 작업의 재규정 통로입니다")
+        for k in keys:
+            _channels[k] = ch
     return ch
 
 
-def current(key: str) -> Optional[TurnChannel]:
+def current(key: str, task_id=None) -> Optional[TurnChannel]:
     with _lock:
-        ch = _channels.get(key or "")
+        ch = _channels.get(execution_key(key or "", task_id))
     if ch and time.time() - ch.opened_at > _TTL_SECONDS:
-        close_turn(key)
+        close_turn(key, task_id, expected=ch)
         return None
     return ch
 
 
-def close_turn(key: str) -> Optional[TurnChannel]:
+def close_turn(key: str, task_id=None, *, expected=None) -> Optional[TurnChannel]:
     """턴 종료 — 통로를 걷고 그 통로를 돌려준다(파이프라인이 갱신 규정을 회수)."""
     with _lock:
-        ch = _channels.pop(key or "", None)
+        channel_key = execution_key(key or "", task_id)
+        ch = _channels.get(channel_key)
+        if expected is not None and ch is not expected:
+            return None
         if ch is not None:
             for k in [k for k, v in _channels.items() if v is ch]:
                 _channels.pop(k, None)
@@ -150,6 +159,18 @@ def close_turn(key: str) -> Optional[TurnChannel]:
 # ── 핵심: 의식 재호출 ─────────────────────────────────────────────────────────
 
 def _revise(ch: TurnChannel, trigger: str, broken: str, evidence: str, progress: str, kind: str) -> dict:
+    """재진입 워커도 원래 작업의 신원·궤적·비용을 쓰며 호출자 문맥을 복원한다."""
+    from providers.base import adopt_turn_token_ledger
+    previous = snapshot()
+    try:
+        restore(ch.context)
+        with ch.lock, adopt_turn_token_ledger(ch.key, ch.task_id):
+            return _revise_in_context(ch, trigger, broken, evidence, progress, kind)
+    finally:
+        restore(previous)
+
+
+def _revise_in_context(ch: TurnChannel, trigger: str, broken: str, evidence: str, progress: str, kind: str) -> dict:
     """의식을 다시 깨워 규정을 갱신. 반환 = 결과 봉투(dict). 상한·실패는 봉투로 정직하게."""
     if ch.revisions >= MAX_REVISIONS:
         return {"revised": False, "reason": f"이 턴의 재규정 상한({MAX_REVISIONS}회)에 닿았다",
@@ -261,7 +282,7 @@ def execute_reframe(tool_input: dict, agent_id: str, task_id: str = None) -> str
     supervisor = supervisor_current(agent_id, task_id)
     if supervisor:
         return supervisor.reframe(tool_input)
-    ch = current(agent_id or "")
+    ch = current(agent_id or "", task_id)
     if ch is None:
         return json.dumps({"revised": False,
                            "reason": "이 턴에는 재규정 통로가 없다(의식 규정 없이 시작한 턴이거나 이미 닫힘)",

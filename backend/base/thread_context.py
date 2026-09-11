@@ -402,6 +402,17 @@ def get_current_task_id() -> str:
     return getattr(_thread_local, 'task_id', None)
 
 
+def execution_key(agent_id=None, task_id=None):
+    """실행 통로의 공통 신원. None은 문맥 승계, 빈 문자열은 명시적 무신원이다.
+
+    agent는 소유자/등록 별칭, task는 사용자 작업 수명이다. run은 IBL 실행 사건,
+    supervisor turn은 검수 작업대 수명으로 이 키와 혼용하지 않는다.
+    HTTP/MCP 경계는 전달받은 task를 명시하고, 새 작업은 입구에서 ID를 만든다.
+    """
+    return (get_current_agent_id() or "" if agent_id is None else agent_id,
+            get_current_task_id() or "" if task_id is None else task_id)
+
+
 def clear_current_task_id():
     """현재 스레드의 task_id 초기화 + sysai 활성작업 등록 해제(대칭).
 

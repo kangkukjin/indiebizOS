@@ -280,7 +280,11 @@ class CognitivePipelineMixin:
         resource_limits = _load_config().get("agent_resource_limits", {})
         agent_id = get_current_agent_id() or getattr(self.ai, "agent_id", None)
         task_id = episode_task_id() or get_current_task_id() or f"task_{uuid4().hex}"
+        from steer_inbox import task_scope
+        steer_agents = (agent_id, getattr(self.ai, "agent_id", None),
+                        getattr(getattr(self.ai, "_provider", None), "agent_id", None), kwargs.get("agent_name"))
         with self.turn_ai_scope(), actor_context(agent_id=agent_id, task_id=task_id), \
+                task_scope(steer_agents, task_id), \
                 turn_token_scope(agent_id, task_id, (getattr(self.ai, "agent_id", None),),
                                  hard_token_limit=resource_limits.get("hard_token_limit"),
                                  deadline_s=resource_limits.get("deadline_s")):
@@ -373,6 +377,7 @@ class CognitivePipelineMixin:
         from system_ai_core import _switch_to_midtier, _switch_to_role, _restore_provider
         consciousness_output = None
         original_provider = None
+        _reframe_channel = None
         _repair_granted_task = None  # 이 런이 발급한 RED 그랜트의 task_id (finally 회수용)
         _repair_grant_agent = None   # 무태스크 발급분의 agent 슬롯 회수용 (2026-09-01 다중 슬롯)
         if force_role:
@@ -681,7 +686,7 @@ class CognitivePipelineMixin:
                     from reframe import open_turn as _rf_open, turn_key_for as _rf_key
                     from thread_context import get_current_agent_id as _rf_cur
                     _reframe_key = _rf_key(self, fallback=agent_name)
-                    _rf_open(_reframe_key, self, message, history, execution_memory,
+                    _reframe_channel = _rf_open(_reframe_key, self, message, history, execution_memory,
                              consciousness_output, repair=(_repair_granted_task is not None),
                              aliases=[a for a in (_rf_cur() or "", agent_name or "") if a])
                 except Exception as _rfe:
@@ -875,20 +880,12 @@ class CognitivePipelineMixin:
                 pass
             # 중급/역할 모델 사용 후 원래 provider 복원
             _restore_provider(self, original_provider)
-            # 조향(steer) 미배달분 폐기 — 도구 호출 전에 턴이 끝난 조향이 다음 턴의
-            # 첫 도구 결과로 새는 것(stale 조향) 방지. 폐기는 로그로 정직하게 남긴다.
-            try:
-                from steer_inbox import clear as _steer_clear
-                _skey = getattr(self.ai._provider, "agent_id", "") or agent_name
-                _left = _steer_clear(_skey) if _skey else 0
-                if _left:
-                    print(f"[조향] 미배달 {_left}건 폐기 — 도구 호출 없이 턴 종료")
-            except Exception:
-                pass
+            # 조향 별칭·미배달분은 바깥 task_scope가 같은 작업만 정리한다.
             # 재규정 통로 닫기 — 열려 있었으면 걷는다(평가 루프의 기계 방아쇠까지 다 지난 뒤)
             try:
-                from reframe import close_turn as _rf_close, turn_key_for as _rf_key2
-                _rf_close(_rf_key2(self, fallback=agent_name))
+                from reframe import close_turn as _rf_close
+                if _reframe_channel is not None:
+                    _rf_close(_reframe_channel.key, _reframe_channel.task_id, expected=_reframe_channel)
             except Exception:
                 pass
             # thread_context의 node/action/ms 이력 합류 (X-Ray·증류용)

@@ -411,9 +411,9 @@ class Supervisor:
 
     def _take_pending(self):
         notice, self.pending = self.pending, None
-        if notice and (("conditions" in notice and not self.conditions_valid(notice["conditions"]))
-                       or ("conditions" not in notice and notice.get("revision", self.exec_revision) != self.exec_revision)):
-            self.log("decision.stale", role="harness", reviewed_revision=notice["revision"], current_revision=self.exec_revision)
+        # 생산자는 모두 조건 지문을 낸다. revision만 있는 지시는 유효성을 증명하지 못한다.
+        if notice and ("conditions" not in notice or not self.conditions_valid(notice["conditions"])):
+            self.log("decision.stale", role="harness", reviewed_revision=notice.get("revision"), current_revision=self.exec_revision)
             return None
         if notice:
             self.log("instruction.delivered", role="harness", instruction=notice)
@@ -504,6 +504,8 @@ class Supervisor:
                         self.log("decision.stale", role="harness", reviewed_revision=revision, current_revision=self.exec_revision)
                         return  # 관찰 중 실제로 회복한 작업에는 옛 정체 지시를 주지 않는다.
                     self.pending = {"id": uuid.uuid4().hex, "reason": decision["reason"],
+                                    "source": "supervisor", "target": {"agent": self.owner, "task": self.task},
+                                    "sequence": self.store.sequence, "expires_at": None,
                                     "instruction": decision["instruction"], "review": self.reviews, "revision": revision,
                                     "conditions": conditions}
         except Exception as exc:

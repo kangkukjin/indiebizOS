@@ -7,8 +7,8 @@ _channels = {}
 
 
 def identity():
-    from thread_context import get_current_agent_id, get_current_task_id
-    return get_current_agent_id() or "", get_current_task_id() or ""
+    from thread_context import execution_key
+    return execution_key()
 
 
 def register(controller, agents):
@@ -30,9 +30,9 @@ def unregister(controller):
 
 
 def current(agent_id=None, task_id=None):
-    agent, task = identity()
+    from thread_context import execution_key
     with _lock:
-        return _channels.get((agent_id or agent, task_id or task))
+        return _channels.get(execution_key(agent_id, task_id))
 
 
 def wrap(execute):

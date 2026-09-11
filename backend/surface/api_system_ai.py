@@ -131,17 +131,22 @@ class SteerMessage(BaseModel):
     """턴 중 조향 — 돌고 있는 작업에 멈추지 않고 지시를 밀어 넣는다 (steer_inbox 참조)."""
     message: str
     agent_id: str = "system_ai"
+    task_id: Optional[str] = None
 
 
 @router.post("/system-ai/steer")
 async def steer(req: SteerMessage):
     """조향 접수. 다음 도구 결과에 부록으로 배달된다 — 도구를 더 부르지 않는 턴이면
     미배달 폐기(턴 종료 시). 접수 즉시 반환하므로 실행 중에도 호출 가능(HTTP 동시성)."""
-    from steer_inbox import post
-    pending = post(req.agent_id or "system_ai", req.message)
+    from steer_inbox import post, resolve_task
+    try:
+        task_id = resolve_task(req.agent_id or "system_ai", req.task_id)
+        pending = post(req.agent_id or "system_ai", req.message, task_id, require_active=True)
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if pending == 0:
         raise HTTPException(status_code=400, detail="빈 조향 메시지")
-    return {"accepted": True, "pending": pending,
+    return {"accepted": True, "pending": pending, "task_id": task_id,
             "note": "다음 도구 호출 완료 시 반영됩니다. 도구 호출 없이 턴이 끝나면 폐기됩니다."}
 
 

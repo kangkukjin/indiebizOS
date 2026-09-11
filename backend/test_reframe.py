@@ -49,6 +49,58 @@ def test_no_channel_without_framing():
     assert out["revised"] is False and r.calls == []
 
 
+def test_same_agent_tasks_reentry_context_and_cleanup_are_isolated():
+    from thread_context import actor_context, execution_key
+    runners = {key: _Runner([dict(_NEW, task_framing=key)]) for key in ("a", "b")}
+    channels = {}
+    for task, runner in runners.items():
+        with actor_context(agent_id="agent_x", task_id=task):
+            channels[task] = reframe.open_turn("agent_x", runner, task, [], "", _BASE, aliases=["alias"])
+    with actor_context(agent_id="worker", task_id="unrelated"):
+        original = runners["a"]._run_consciousness
+        seen = []
+        def observe(*args, **kwargs):
+            seen.append(execution_key())
+            return original(*args, **kwargs)
+        runners["a"]._run_consciousness = observe
+        reply = reframe.execute_reframe({"broken_assumption": "broken", "evidence": "actual"}, "alias", "a")
+        assert json.loads(reply)["revised"] and seen == [("agent_x", "a")]
+        assert execution_key() == ("worker", "unrelated")
+        assert channels["a"].revised and not channels["b"].revised
+        assert reframe.close_turn("alias", "a", expected=channels["b"]) is None
+        assert reframe.close_turn("alias", "a", expected=channels["a"]) is channels["a"]
+        assert reframe.current("agent_x", "b") is channels["b"]
+        assert reframe.current("agent_x", "a") is None
+        assert reframe.current("agent_x", "") is None
+
+
+def test_duplicate_task_cannot_replace_a_live_reframe_channel():
+    runner = _Runner([_NEW])
+    first = reframe.open_turn("agent_x", runner, "a", [], "", _BASE, task_id="same")
+    with pytest.raises(RuntimeError):
+        reframe.open_turn("agent_x", runner, "b", [], "", _BASE, task_id="same")
+    assert reframe.current("agent_x", "same") is first
+
+
+def test_reentry_charges_the_target_task_and_restores_worker_ledger():
+    from thread_context import actor_context
+    from providers.base import turn_token_scope, ProviderMetrics
+    metrics = ProviderMetrics()
+    runner = _Runner([_NEW])
+    original = runner._run_consciousness
+    def charged(*args, **kwargs):
+        metrics.record_request(1, input_tokens=12, output_tokens=3)
+        return original(*args, **kwargs)
+    runner._run_consciousness = charged
+    with actor_context(agent_id="agent_x", task_id="a"), turn_token_scope("agent_x", "a") as first:
+        reframe.open_turn("agent_x", runner, "a", [], "", _BASE)
+        with actor_context(agent_id="agent_x", task_id="b"), turn_token_scope("agent_x", "b") as other:
+            reframe.execute_reframe({"broken_assumption": "a", "evidence": "b"}, "agent_x", "a")
+            assert first["input"] == 12 and first["output"] == 3 and other["input"] == 0
+            metrics.record_request(1, input_tokens=7)
+            assert other["input"] == 7 and first["input"] == 12
+
+
 def test_executor_reframe_revises_and_updates_channel():
     r = _Runner([_NEW])
     ch = reframe.open_turn("agent_x", r, "보고서 써줘", [{"role": "user", "content": "이전"}], "mem", _BASE,

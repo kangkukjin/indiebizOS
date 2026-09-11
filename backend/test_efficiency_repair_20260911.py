@@ -70,6 +70,30 @@ def test_actual_recovery_invalidates_failure_guidance(supervisor, monkeypatch):
     assert supervisor.boundary() is None
 
 
+def test_revision_alone_cannot_validate_a_supervisor_directive(supervisor):
+    supervisor.pending = {"instruction": "old", "revision": supervisor.exec_revision}
+    assert supervisor._take_pending() is None
+
+
+def test_evidence_namespace_uses_unambiguous_task_identity(tmp_path, monkeypatch):
+    import model_result_view as view
+    from thread_context import actor_context
+    monkeypatch.setattr("runtime_utils.get_base_path", lambda: tmp_path)
+    with actor_context(agent_id="a:b", task_id="c"):
+        first = view.evidence_store()
+        ref = first.evidence("private A")
+    with actor_context(agent_id="a", task_id="b:c"):
+        second = view.evidence_store()
+        assert first.directory != second.directory
+        with pytest.raises(FileNotFoundError):
+            second.read_evidence(ref["id"])
+    with actor_context(agent_id="old", task_id="old_task"):
+        legacy = tmp_path / "data/spill/tool_evidence" / digest("old:old_task")
+        legacy.mkdir(parents=True)
+        old = TurnStore(legacy).evidence("old evidence")
+        assert view.evidence_store().read_evidence(old["id"])["text"] == "old evidence"
+
+
 def test_execution_phase_is_not_changed_by_concurrent_observation(supervisor):
     supervisor.phase = "review"
     row = supervisor.log("tool.started", role="execution")

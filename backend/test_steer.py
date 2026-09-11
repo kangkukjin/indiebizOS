@@ -13,6 +13,8 @@
 import json
 import os
 import sys
+import asyncio
+import pytest
 
 sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
@@ -35,6 +37,60 @@ def test_inbox_core():
     r = SI.render(["a", "b"])
     assert "[사용자 조향]" in r and "- a" in r and SI.render([]) == ""
     print("OK 인박스 코어 (post/drain/clear/render/상한)")
+
+
+def test_same_agent_tasks_alias_delivery_and_cleanup_are_isolated():
+    import steer_inbox as si
+    from api_ibl import _attach_steer
+    from thread_context import actor_context
+    with si.task_scope(["same", "별칭"], "b"):
+        with si.task_scope(["same", "별칭"], "a"):
+            si.post("별칭", "A 지시", "a", require_active=True)
+            si.post("same", "B 지시", "b", require_active=True)
+            with actor_context(agent_id="same", task_id="b"):
+                # MCP 응답 어댑터는 이벤트 루프의 다른 task를 상속하지 않는다.
+                assert "A 지시" in _attach_steer({}, "same", "a")["steer_notice"]
+                assert si.drain("same", "a") == []
+            si.post("same", "A 미배달", "a", require_active=True)
+        assert si.drain("same", "a") == []
+        assert si.drain("별칭", "b") == ["B 지시"]
+        with pytest.raises(ValueError):
+            si.post("same", "종료 뒤", "a", require_active=True)
+
+
+def test_http_steer_requires_unambiguous_active_target():
+    import steer_inbox as si
+    from api_system_ai import steer, SteerMessage
+    from fastapi import HTTPException
+    with si.task_scope(["same"], "a"), si.task_scope(["same"], "b"):
+        with pytest.raises(HTTPException) as exc:
+            asyncio.run(steer(SteerMessage(message="어디로?", agent_id="same")))
+        assert exc.value.status_code == 409
+        accepted = asyncio.run(steer(SteerMessage(message="B만", agent_id="same", task_id="b")))
+        assert accepted["task_id"] == "b" and si.drain("same", "a") == []
+        assert si.drain("same", "b") == ["B만"]
+    with si.task_scope(["same"], "only"):
+        assert asyncio.run(steer(SteerMessage(message="하나", agent_id="same")))["task_id"] == "only"
+
+
+def test_websocket_two_windows_target_their_own_tasks(monkeypatch):
+    import api_websocket as ws
+    import steer_inbox as si
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+    send = AsyncMock()
+    monkeypatch.setattr(ws, "manager", SimpleNamespace(send_message=send))
+    monkeypatch.setattr(ws, "_stream_agent_keys", {
+        "window-a": ("system_ai", "system_ai", "a"),
+        "window-b": ("system_ai", "system_ai", "b"),
+    })
+    with si.task_scope(["system_ai"], "a"), si.task_scope(["system_ai"], "b"):
+        asyncio.run(ws._accept_stream_steer("window-a", {"message": "A만"}, "system_ai"))
+        asyncio.run(ws._accept_stream_steer("window-b", {"message": "B만"}, "system_ai"))
+        asyncio.run(ws._accept_stream_steer("window-a", {"message": "다른 에이전트"}, "other"))
+        assert si.drain("system_ai", "a") == ["A만"]
+        assert si.drain("system_ai", "b") == ["B만"]
+        assert "⚠" in send.call_args.args[1]["message"]
 
 
 def test_direct_delivery_via_execute_tool():

@@ -253,7 +253,7 @@ async def execute_ibl_code(req: IBLRequest):
         # (req.agent_id 명시 = 에이전트 신원이 실린 호출). 앱/수동 모드는 req.agent_id 가
         # 비어 있어(위에서 system_ai 로 채워지기 *전* 값 기준) 결정론 결과가 오염되지 않는다.
         from common.value_semantics import public_result
-        envelope = _attach_steer(derive_items(result), req.agent_id)
+        envelope = _attach_steer(derive_items(result), req.agent_id, req.task_id or "")
         out = public_result(envelope, producer="POST /ibl/execute")
         if req.ticket:
             # 표면(HTTP 클라이언트)이 이미 끊겼어도 이 핸들러는 완주한다 — 봉투는 여기 남는다.
@@ -293,14 +293,14 @@ async def recover_ibl_result(req: RecoverRequest):
     return await asyncio.to_thread(ticket_wait, req.ticket, req.wait)
 
 
-def _attach_steer(envelope, explicit_agent_id: str):
+def _attach_steer(envelope, explicit_agent_id: str, task_id=None):
     """MCP(에이전트) 호출의 응답 봉투에 대기 조향을 부록 키로 동봉. 직결 경로의
     execute_tool 부록과 같은 의미 — 이 경로는 execute_tool 미경유라 여기서 배달한다."""
     if not explicit_agent_id or not isinstance(envelope, dict):
         return envelope
     try:
         from steer_inbox import drain, render
-        text = render(drain(explicit_agent_id))
+        text = render(drain(explicit_agent_id, task_id))
         if text:
             envelope["steer_notice"] = text.strip()
             print(f"[조향] {explicit_agent_id}: MCP 응답에 조향 지시 배달")
@@ -334,7 +334,7 @@ async def reframe_bridge(req: ReframeRequest):
         from reframe import execute_reframe
         payload = {"broken_assumption": req.broken_assumption, "evidence": req.evidence,
                    "progress": req.progress, "kind": req.kind}
-        raw = await asyncio.to_thread(execute_reframe, payload, req.agent_id or "system_ai", req.task_id)
+        raw = await asyncio.to_thread(execute_reframe, payload, req.agent_id or "system_ai", req.task_id or "")
         try:
             return json.loads(raw)
         except Exception:

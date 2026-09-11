@@ -113,8 +113,8 @@ def call_scope(provider):
              "provider": type(provider).__name__.removesuffix("Provider"),
              "model": getattr(provider, "model", ""), "round_index": 0,
              "_provider": id(provider)}
-    from thread_context import get_current_agent_id, get_current_task_id
-    key = (get_current_agent_id(), get_current_task_id())
+    from thread_context import execution_key
+    key = execution_key()
     with _lock:
         if all(key):
             _registry.setdefault(key, []).append(value)

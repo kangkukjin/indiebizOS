@@ -19,12 +19,17 @@ def evidence_store():
     if controller:
         return controller.store
     from runtime_utils import get_base_path
-    from thread_context import get_current_agent_id, get_current_task_id
+    from thread_context import execution_key
     from supervision_store import TurnStore
     # 턴 밖 직접 호출도 다른 사용자의 증거와 섞이지 않는 독립 네임스페이스다.
-    identity = f"{get_current_agent_id()}:{get_current_task_id()}"
-    key = sha256(identity.encode()).hexdigest()
-    return TurnStore(get_base_path() / "data" / "spill" / "tool_evidence" / key)
+    agent, task = execution_key()
+    root = get_base_path() / "data" / "spill" / "tool_evidence"
+    # 구분자를 포함한 신원도 충돌하지 않는다. 구분이 명백한 기존 작업의 참조는 유지한다.
+    legacy = root / sha256(f"{agent or None}:{task or None}".encode()).hexdigest()
+    if ":" not in agent and ":" not in task and legacy.is_dir():
+        return TurnStore(legacy)
+    key = sha256(json.dumps([agent, task], ensure_ascii=False).encode()).hexdigest()
+    return TurnStore(root / key)
 
 
 def read_result(request):

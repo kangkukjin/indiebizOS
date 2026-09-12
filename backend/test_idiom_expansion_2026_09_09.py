@@ -126,7 +126,8 @@ def test_crawl_handler_converts_raw_paragraphs_without_model_call(tmp_path, monk
                                {'type': 'paragraph', 'text': '첫 문단'}, {'type': 'paragraph', 'text': '둘째 문단'}]
 
 
-def test_all_six_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, monkeypatch):
+@pytest.mark.parametrize('compact', [False, True])
+def test_all_six_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, monkeypatch, compact):
     import ibl_access
     import runtime_utils
     from ibl_usage_db import _signature_of
@@ -143,10 +144,12 @@ def test_all_six_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, mon
     monkeypatch.setattr(runtime_utils, 'get_base_path', lambda: tmp_path)
     monkeypatch.setattr(ibl_access, '_get_nodes_path', lambda: ROOT / 'data/ibl_nodes.yaml')
     monkeypatch.setattr(ibl_access, '_idioms_cache', {'text': None, 't': 0, 'key': None, 'anchors': {}})
-    env = ibl_access.build_environment()
+    env = ibl_access.build_environment(compact=compact)
     assert env.count('↳ 관용구') == 6
     for e in entries:
         assert f"[fn:{e['name']}]" in ibl_access.idioms_map(None)
+    for name in ('원장에누적', '위치마다읽기'):
+        assert f'[fn:{name}]' not in env
     core = ibl_access.build_environment(allowed_nodes=['self', 'others', 'table'])
     assert '[fn:주소마다읽기]' not in core and '[fn:묶어순위내기]' in core
     hidden = ibl_access.build_environment(expose_idioms=False)

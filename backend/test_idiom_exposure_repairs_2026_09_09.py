@@ -134,10 +134,12 @@ def test_current_block_body_keeps_teaching_in_actual_introduction(
         con.row_factory = sqlite3.Row
         row = dict(con.execute(
             "SELECT intent, ibl_code, alias, returns, signature FROM ibl_examples "
-            "WHERE alias='위치마다읽기' AND always_on=1").fetchone())
+            "WHERE alias='위치마다읽기'").fetchone())
     assert (
         lesson["body"] == row["ibl_code"]
     )  # 운영 몸을 옛 교재로 되돌리지 않는다
+    # 노출 선정과 몸/교재 일치는 별개다. 명시 호출용으로 강등된 정의도
+    # 아래 격리 원장에서 다시 소개하면 현재 블록 본문의 교재가 살아야 한다.
     (tmp_path / "data/idioms").mkdir(parents=True)
     (tmp_path / "data/idioms/curated.json").write_text(json.dumps(catalog))
     with sqlite3.connect(tmp_path / "data/ibl_usage.db") as con:

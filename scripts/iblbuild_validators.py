@@ -1461,6 +1461,15 @@ def validate_flow_coverage(data: dict, root: Path) -> list[str]:
                     or len(set(expr_slots)) != len(expr_slots)):
                 issues.append(f"{node_name}:{action_name}: flow.scalar_expr_params 는 중복 없는 식 슬롯 목록이어야 한다")
             direct = flow.get("input_params")
+            alternatives = flow.get("input_alternatives", [])
+            if (not isinstance(alternatives, list) or any(
+                    not isinstance(group, list) or len(group) < 2 or
+                    any(not isinstance(p, str) or not p for p in group) or
+                    len(set(group)) != len(group) for group in alternatives)):
+                issues.append(f"{node_name}:{action_name}: flow.input_alternatives 는 입력 슬롯 묶음 목록이어야 한다")
+            bundle_param = flow.get("input_bundle_param")
+            if bundle_param is not None and (not isinstance(bundle_param, str) or not bundle_param):
+                issues.append(f"{node_name}:{action_name}: flow.input_bundle_param 은 분기 목록 슬롯 이름이어야 한다")
             if direct is not None and (not isinstance(direct, list) or not direct
                     or any(not isinstance(p, str) or not p for p in direct)
                     or len(set(direct)) != len(direct)

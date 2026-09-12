@@ -157,13 +157,13 @@ def test_unified_pipeline_has_no_extra_head_check(monkeypatch, tmp_path):
     import ibl_pipe_types
     import ibl_engine
     calls = []
-    original = ibl_pipe_types.head_transform_error
+    original = ibl_pipe_types.head_transform_issue
 
     def counted(*args, **kwargs):
         calls.append(kwargs)
         return original(*args, **kwargs)
 
-    monkeypatch.setattr(ibl_pipe_types, "head_transform_error", counted)
+    monkeypatch.setattr(ibl_pipe_types, "head_transform_issue", counted)
     monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *a, **kw: {"items": [{"a": 1}]})
     result = _unified(monkeypatch, tmp_path,
                       '[sense:search]{query:"sample"} >> [table:take]{n:1}')
@@ -187,6 +187,51 @@ def test_unified_abstained_checker_keeps_execution_guards(monkeypatch, tmp_path)
         assert result.get("success") is False
         assert result["traceback"]["error_type"] == "binding"
     assert executed == [], "검사기가 기권해도 부작용 전 거절해야 한다"
+
+
+def test_every_independent_head_is_checked_before_any_execution(monkeypatch, tmp_path):
+    import ibl_engine
+    from ibl_typecheck import typecheck_code
+    from workflow_engine import execute_pipeline
+    executed = []
+    monkeypatch.setattr(ibl_engine, "execute_ibl", lambda *a, **k: executed.append(a))
+    code = '$a = [sense:search]{query:"x"}\n[table:union]{}'
+    checked = typecheck_code(code)
+    assert not checked["ok"] and not checked.get("abstained"), checked
+    issue = next(i for i in checked["issues"] if i["severity"] == "error")
+    assert issue["statement"] == 2 and issue["step"] == 2
+    assert "$a & $b" in issue["message"]
+    out = execute_pipeline(parse(code), str(tmp_path))
+    assert not out["success"] and out["steps_completed"] == 0
+    assert out["traceback"]["frames"][-1]["step"] == 2
+    assert executed == []
+
+
+def test_incoming_currency_does_not_cross_an_independent_boundary():
+    from ibl_pipe_types import head_transform_issue
+    code = '[table:take]{n:1}\n[table:union]{}'
+    issue = head_transform_issue(parse(code), has_incoming=True)
+    assert issue and issue[0] == 1 and "$a & $b" in issue[1]
+    assert head_transform_issue(parse('[table:take]{n:1}'), has_incoming=True) is None
+
+
+def test_unified_rejects_single_input_union_before_running_searches(monkeypatch, tmp_path):
+    import ibl_engine
+    executed = []
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', lambda *a, **k: executed.append(a))
+    code = ('$a = [sense:search]{query:"a"}\n$b = [sense:search]{query:"b"}\n'
+            '$a >> [table:union]{with:$b}')
+    out = _unified(monkeypatch, tmp_path, code)
+    assert not out['success'] and '$a & $b' in str(out), out
+    assert executed == []
+
+
+def test_nested_independent_head_and_valid_block_passthrough():
+    from ibl_typecheck import typecheck_code
+    bad = typecheck_code('[if: true]{ $a = [sense:search]{query:"x"}; [table:union]{} }')
+    assert not bad['ok'] and not bad.get('abstained'), bad
+    good = typecheck_code('[sense:search]{query:"x"} >> [if: true]{ [table:take]{n:1} }')
+    assert good['ok'] and not good.get('abstained'), good
 
 
 if __name__ == "__main__":

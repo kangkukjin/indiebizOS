@@ -133,20 +133,51 @@ def step_currency(step: Any) -> Optional[str]:
 
 def explicit_input_params(action_def: Dict[str, Any], params: Dict[str, Any]) -> List[str]:
     """사전에 선언된 직접 통화 입력. 여러 슬롯은 모두 공급돼야 한 묶음이다."""
-    names = (action_def.get("flow") or {}).get("input_params")
-    if (isinstance(names, list) and names
-            and all(isinstance(n, str) and params.get(n) is not None for n in names)):
-        return names
+    flow = action_def.get("flow") or {}
+    for names in [flow.get("input_params"), *flow.get("input_alternatives", [])]:
+        if (isinstance(names, list) and names
+                and all(isinstance(n, str) and params.get(n) is not None for n in names)):
+            return names
+    bundle = flow.get("input_bundle_param")
+    if bundle and params.get(bundle) is not None:
+        return [bundle]
     return []
+
+
+def transform_input_hint(node: str, action: str) -> str:
+    """입력 계약에 맞는 처방. 이항 연산에 단항 파이프를 가르치지 않는다."""
+    flow = (_action_def(node, action) or {}).get("flow") or {}
+    at = f"[{node}:{action}]"
+    if flow.get("accepts") in ("same-kind", "pair"):
+        return f"두 입력을 `$a & $b >> {at}{{…}}` 로 공급하세요."
+    return (f"앞에 생산자를 두거나([생산자] >> {at}), "
+            f"items 로 대상을 직접 실으세요({at}{{items: [...], …}}). "
+            f"저장된 $변수라면 `$이름 >> {at}` 로 방출하세요.")
 
 
 def head_transform_error(steps: List[Dict[str, Any]],
                          has_incoming: bool = False,
                          each_do: bool = False) -> Optional[str]:
-    """T1 위반이면 안내 문장을, 아니면 None. 판정 불능은 전부 None(보수적)."""
-    if has_incoming or not steps:
-        return None
-    head = steps[0]
+    """T1 호환 API. 위치가 필요하면 head_transform_issue를 사용한다."""
+    issue = head_transform_issue(steps, has_incoming, each_do)
+    return issue[1] if issue else None
+
+
+def head_transform_issue(steps: List[Dict[str, Any]], has_incoming: bool = False,
+                         each_do: bool = False) -> Optional[Tuple[int, str]]:
+    """독립 문장마다 입력 기아를 검사한다. 바깥 입력은 첫 문장에만 흐른다."""
+    for i, head in enumerate(steps or []):
+        if i and not (isinstance(head, dict) and head.get("_seq_boundary")):
+            continue
+        if i == 0 and has_incoming:
+            continue
+        error = _head_transform_error(head, each_do)
+        if error:
+            return i, error
+    return None
+
+
+def _head_transform_error(head, each_do=False):
     if not isinstance(head, dict):
         return None
     # 통화를 스스로 만들거나 자기 규약이 따로 있는 머리 — 검사 대상 아님
@@ -166,20 +197,18 @@ def head_transform_error(steps: List[Dict[str, Any]],
         return None  # 변환 대상을 직접 실었다(언어 개정 ③)
     if isinstance(params, dict) and explicit_input_params(_action_def(node, action) or {}, params):
         return None  # 직접 공급한 통화도 파이프 입력과 같은 검사 대상으로 넘긴다
+    hint = transform_input_hint(node, action)
     if each_do:
         # do 하위 파이프에는 통화가 흐르지 않는다(행은 $it 치환뿐) — 일반 처방
         # ("앞에 생산자")는 do 안에서 오도다. 행 전체 변환은 each 의 일이 아니라
         # 바깥 파이프의 일이다(실측 2026-08-30: items:"$it" 류 우회는 작동하지 않는다).
         return (f"[{node}:{action}] 는 변환자(returns: transform)인데 변환할 통화가 없습니다 — "
                 f"each 의 do 안에는 직전 통화가 흐르지 않고 행은 $it 치환으로만 들어옵니다. "
-                f"표 전체를 변환하려면 each 를 빼고 바깥 파이프에 두세요"
-                f"([생산자] >> [{node}:{action}]). do 안에서는 행 필드를 "
+                f"표 전체를 변환하려면 each 를 빼고 바깥 파이프에 두세요. {hint} do 안에서는 행 필드를 "
                 f"$it.필드 로 참조하는 액션을 쓰세요.")
     return (f"[{node}:{action}] 는 변환자(returns: transform)인데 변환할 통화가 없습니다 — "
             f"파이프 머리에 서 있고 items 도 받지 않았습니다. "
-            f"앞에 생산자를 두거나([생산자] >> [{node}:{action}]), "
-            f"items 로 대상을 직접 실으세요([{node}:{action}]{{items: [...], …}}). "
-            f"저장된 $변수라면 `$이름 >> [{node}:{action}]` 로 방출하세요.")
+            f"{hint}")
 
 
 def seam_starvation_error(steps: List[Dict[str, Any]]) -> Optional[Tuple[int, str]]:
@@ -217,7 +246,5 @@ def seam_starvation_error(steps: List[Dict[str, Any]]) -> Optional[Tuple[int, st
         a_label = f"[{a_node}:{a_action}]" + (f'{{op: "{_op}"}}' if isinstance(_op, str) else "")
         return (i, f"{a_label} 는 통화를 내지 않는 effect 인데 뒤의 [{b_node}:{b_action}] 는 "
                    f"변환자(returns: transform)입니다 — 이 이음매에서 변환할 items 가 굶습니다. "
-                   f"사이에 생산자를 두거나([{a_node}:{a_action}] 뒤에 [생산자] >> [{b_node}:{b_action}]), "
-                   f"[{b_node}:{b_action}]{{items: [...], …}} 로 대상을 직접 실으세요. "
-                   f"저장해 둔 $변수라면 `$이름 >> [{b_node}:{b_action}]` 로 방출하세요.")
+                   f"{transform_input_hint(b_node, b_action)}")
     return None

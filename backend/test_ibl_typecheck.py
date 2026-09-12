@@ -4,7 +4,7 @@
   T1  낱말: returns 선언 + fixture 실측 카탈로그로 items⟨열⟩ · scalar · effect 를 안다.
   T2  흐름: keep(filter/sort/take) · subset(select=확정 열) · add(compute) · reset(groupby) 가 열을 옮긴다.
   T3  union: prose 가지 = error, scalar 가지 = warning(승격 가능 — 데이터 의존이라 확답 불가), effect 가지 = 통과(1행 규약).
-  T4  join/merge: prose·effect 가지 = error, 병렬 아닌 단일 입력 = 통과(미상).
+  T4  join/merge: prose·effect 가지와 확정된 단일 표 입력 = error, 미상 입력은 기권.
   T5  변수 경로: prose 에 .items = error · .count = scalar · .message = prose.
   T6  분기 몸에서만 태어난 변수를 밖에서 읽으면 warning(실행의 '아직 값을 기록하지 않았습니다' 를 앞당김).
   T7  함수 반환: 같은 프로그램 [def:] · 등록된 외부 소스(관용구/워크플로) 두 길 모두 `[fn:]` 의 반환을 안다.
@@ -91,7 +91,7 @@ def test_t4_join_pair():
     assert not r["ok"] and _errors(r)[0]["at"] == "table:join"
     r = _tc('[self:write]{path: "a.md", content: "x"} & ' + SEARCH + ' >> [table:merge]{by: "title"}')
     assert not r["ok"]
-    assert _tc(SEARCH + ' >> [table:join]{on: "title"}')["ok"]     # 단일 입력 — 판정 불능(미상) → 통과
+    assert not _tc(SEARCH + ' >> [table:join]{on: "title"}')["ok"]
 
 
 # ---------------------------------------------------------------- T5 변수 경로

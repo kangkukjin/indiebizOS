@@ -113,5 +113,81 @@ def test_registered_nesting_script_paths_and_no_partial_write(monkeypatch, tmp_p
     assert r.returncode == 2 and '경로' in json.loads(r.stdout)['error']
 
 
+@pytest.mark.parametrize('action,extra', [('union', ''), ('join', ',on:"id"'), ('merge', ',by:"id"')])
+@pytest.mark.parametrize('supplied', [
+    'left:{items:[{id:1,x:10}]},right:{items:[{id:1,y:20}]}',
+    'table1:{items:[{id:1,x:10}]},table2:{items:[{id:1,y:20}]}',
+    'a:{items:[{id:1,x:10}]},b:{items:[{id:1,y:20}]}',
+    'inputs:[{items:[{id:1,x:10}]},{items:[{id:1,y:20}]}]',
+])
+def test_multiple_input_forms_agree_with_runtime(action, extra, supplied):
+    from tool_context import ToolContext
+    spec = importlib.util.spec_from_file_location('_multi_input_dataops', ROOT / 'data/packages/installed/tools/data-ops/handler.py')
+    dataops = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dataops)
+    code = f'[table:{action}]{{{supplied}{extra}}}'
+    checked = typecheck_code(code)
+    assert checked['ok'] and not checked.get('abstained'), checked
+    params = parse(code)[0]['params']
+    out = dataops.execute(params, ToolContext(str(ROOT), 'data_' + action))
+    assert out['success'] and out['items'], out
+
+
+def test_single_table_rejected_but_variable_bundles_and_empty_branches_work():
+    from ibl_parser import parse_with_vars, RESUME_SLOT_BASE
+    from ibl_typecheck import typecheck
+    from ibl_value_types import infer_value
+    steps, variables = parse_with_vars('$a >> [table:union]{with:$b}',
+                                      preset_vars={'a': RESUME_SLOT_BASE, 'b': RESUME_SLOT_BASE + 1})
+    given = {n: infer_value({'items': [{'id': 1}]}) for n in ('a', 'b')}
+    bad = typecheck(steps, variables, given=given)
+    assert not bad['ok'] and not bad.get('abstained')
+    assert any('$a & $b' in i.get('hint', '') for i in bad['issues'])
+    good, names = parse_with_vars('$a & $b >> [table:union]{}',
+                                 preset_vars={'a': RESUME_SLOT_BASE, 'b': RESUME_SLOT_BASE + 1})
+    assert typecheck(good, names, given=given)['ok']
+    for body in ('[{items:[]},{items:[{id:1}]}]',
+                 '[{table:{columns:["id"],rows:[]}},{table:{columns:["id"],rows:[[1]]}}]'):
+        result = typecheck_code(f'$bundle = {body}\n$bundle >> [table:union]{{}}')
+        assert not result['ok'] and not result.get('abstained'), result
+        result = typecheck_code(f'[table:union]{{inputs:{body}}}')
+        assert result['ok'] and not result.get('abstained'), result
+    assert not typecheck_code('[table:union]{inputs:[]}')['ok']
+    assert not typecheck_code('[table:union]{inputs:[{items:[]}]}')['ok']
+    assert typecheck_code('[table:union]{inputs:[{items:[]},{items:[]}]}')['ok']
+    assert typecheck_code('[self:read]{path:"unknown.json"} >> [table:union]{}')['ok']
+
+
+@pytest.mark.parametrize('body', [
+    '[{items:[]},{items:[{id:1}]}]',
+    '[{table:{columns:["id"],rows:[]}},{table:{columns:["id"],rows:[[1]]}}]',
+])
+def test_literal_list_pipe_and_explicit_bundle_follow_runtime(monkeypatch, tmp_path, body):
+    import ibl_engine
+    from workflow_engine import execute_pipeline
+    from tool_context import ToolContext
+    spec = importlib.util.spec_from_file_location('_literal_bundle_dataops', ROOT / 'data/packages/installed/tools/data-ops/handler.py')
+    dataops = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dataops)
+    original_execute = ibl_engine._execute_ibl_impl
+
+    def leaf(ti, project, agent=None):
+        if ti.get('_node') == 'table':
+            return dataops.execute(ti['params'], ToolContext(project, 'data_' + ti['action']))
+        return original_execute(ti, project, agent)
+
+    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
+    for code, valid in ((f'$bundle = {body}\n$bundle >> [table:union]{{}}', False),
+                        (f'[table:union]{{inputs:{body}}}', True)):
+        checked = typecheck_code(code)
+        assert checked['ok'] == valid and not checked.get('abstained'), checked
+        out = execute_pipeline(parse(code), str(tmp_path))
+        assert bool(out['success'] and not out.get('statements_failed')) == valid, out
+        if valid:
+            result = out['final_result']
+            result = json.loads(result) if isinstance(result, str) else result
+            assert result['items'] == [{'id': 1}]
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__, '-q']))

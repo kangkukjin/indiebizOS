@@ -80,5 +80,78 @@ def test_D6_gnews_single_item_builder(web_handler):
     assert joins == 1, f"gnews 행 조립이 {joins}곳 — _gnews_item 한 벌이어야 한다"
 
 
+def test_gnews_valid_empty_feed_is_successful_currency(monkeypatch, web_handler):
+    import json
+    from types import SimpleNamespace
+    parser = pytest.importorskip('feedparser')
+    empty = parser.parse(b'<rss version="2.0"><channel><title>Search</title></channel></rss>')
+    assert empty.version == 'rss20' and not empty.bozo
+    monkeypatch.setattr(web_handler.feedparser, 'parse', lambda _: empty)
+    for args in ({'query': 'no-match'}, {'headlines': True}, {'queries': ['a', 'b']}):
+        result = json.loads(web_handler.execute(args, SimpleNamespace(tool_name='search_gnews', project_path='.')))
+        assert result['success'] and result['items'] == [] and result['count'] == 0
+        assert 'error' not in result
+
+
+@pytest.mark.parametrize('changes', [
+    {'status': 503}, {'status': 404},
+    {'bozo': 1, 'bozo_exception': OSError('offline')},
+    {'status': 200, 'bozo': 1, 'bozo_exception': ValueError('invalid XML')},
+    {'status': 200, 'version': ''},
+])
+def test_gnews_failures_are_not_empty_success(monkeypatch, web_handler, changes):
+    parser = pytest.importorskip('feedparser')
+    feed = parser.FeedParserDict(entries=[], version='rss20', bozo=0)
+    feed.update(changes)
+    monkeypatch.setattr(web_handler.feedparser, 'parse', lambda _: feed)
+    result = web_handler.search_gnews('test')
+    assert not result['success'] and result['error'] and result['items'] == []
+
+
+def test_batch_preserves_successful_results_and_reports_failed_queries(monkeypatch, web_handler):
+    import json
+    from types import SimpleNamespace
+    def search(query='', **kwargs):
+        if query == 'bad':
+            return {'success': False, 'error': 'HTTP 503', 'results': [], 'items': []}
+        return {'success': True, 'results': [{'title': query, 'url': 'https://example.com'}]}
+    monkeypatch.setattr(web_handler, 'search_gnews', search)
+    out = json.loads(web_handler.execute({'queries': ['good', 'bad']},
+                     SimpleNamespace(tool_name='search_gnews', project_path='.')))
+    assert not out['success'] and out['count'] == 1
+    assert out['items'][0]['title'] == 'good'
+    assert out['errors'] == [{'query': 'bad', 'error': 'HTTP 503'}]
+
+
+def test_valid_empty_search_can_be_assigned_filtered_and_combined(monkeypatch, tmp_path, web_handler):
+    import json
+    import ibl_engine
+    from ibl_parser import parse
+    from workflow_engine import execute_pipeline
+    from tool_context import ToolContext
+    parser = pytest.importorskip('feedparser')
+    feed = parser.parse(b'<rss version="2.0"><channel><title>Search</title></channel></rss>')
+    monkeypatch.setattr(web_handler.feedparser, 'parse', lambda _: feed)
+    spec = importlib.util.spec_from_file_location('_empty_news_dataops', _WEB.parent / 'data-ops/handler.py')
+    dataops = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(dataops)
+    original_execute = ibl_engine._execute_ibl_impl
+    def leaf(ti, project, agent=None):
+        if not ti.get('_node'):
+            return original_execute(ti, project, agent)
+        if ti['_node'] == 'sense':
+            return web_handler.search_gnews('empty')
+        return dataops.execute(ti['params'], ToolContext(project, 'data_' + ti['action']))
+    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
+    code = ('$empty = [sense:search]{source:"gnews",query:"empty"}\n'
+            '$other = [{title:"kept"}]\n'
+            '$empty & $other >> [table:union]{} >> [table:filter]{where:"title == kept"}')
+    out = execute_pipeline(parse(code), str(tmp_path))
+    assert out['success'] and not out.get('statements_failed'), out
+    result = out['final_result']
+    result = json.loads(result) if isinstance(result, str) else result
+    assert result['items'] == [{'title': 'kept'}]
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

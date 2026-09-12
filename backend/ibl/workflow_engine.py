@@ -175,15 +175,16 @@ def execute_pipeline(steps: list, project_path: str = ".",
     # 통화가 안 들어온다(행은 $it 치환뿐, 2026-08-30 정정) — 검사는 적용되고, 처방만
     # do 문맥(_each_do)에 맞춘다. 거절도 실패 봉투다 — 트레이스백 경계 규약(frames 에
     # pipeline 경로, 예외 없음)을 지킨다.
-    from ibl_pipe_types import head_transform_error, seam_starvation_error
-    _type_err = head_transform_error(steps, has_incoming=bool(prev_result),
-                                     each_do=bool((context or {}).get("_each_do")))
-    if _type_err:
-        _h = steps[0] if isinstance(steps[0], dict) else {}
+    from ibl_pipe_types import head_transform_issue, seam_starvation_error
+    _head_issue = head_transform_issue(steps, has_incoming=bool(prev_result),
+                                      each_do=bool((context or {}).get("_each_do")))
+    if _head_issue:
+        _hi, _type_err = _head_issue
+        _h = steps[_hi] if isinstance(steps[_hi], dict) else {}
         return {"success": False, "error": _type_err,
                 "steps_completed": 0, "steps_total": len(steps),
                 "traceback": build_tb(_type_err, "binding",
-                                      frame={"kind": "pipeline", "step": 1,
+                                      frame={"kind": "pipeline", "step": _hi + 1,
                                              "of": len(steps),
                                              "node": _h.get("_node") or _h.get("node", "?"),
                                              "action": _h.get("action", "?")})}

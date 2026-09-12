@@ -1354,6 +1354,8 @@ def execute(tool_input: dict, context):
             elif params.get("table") is not None:
                 prev = {"table": params["table"]}
     if prev is None:
+        if fn in (_op_union, _op_merge, _op_join):  # vj-ok: 사용자 값 비교가 아닌 핸들러 함수 디스패치
+            return fn(prev, params)  # 이항 연산 자신의 두 입력 안내를 사용한다.
         return {"success": False, "error": (
             f"{tool_name}: 입력 통화가 없습니다. 변환자는 >> 파이프로 앞 액션의 "
             "items 통화(표형은 table)를 받습니다. 예: [sense:search]{...} >> [table:filter]{where:...}"

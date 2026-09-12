@@ -181,7 +181,19 @@ class _Checker:
         self.issues.append(d)
 
     # ── 진입 ──
+    def _check_heads(self, steps, prev, local_statements=True):
+        from ibl_pipe_types import head_transform_issue
+        issue = head_transform_issue(steps, has_incoming=prev is not None)
+        if issue:
+            idx, message = issue
+            self._issue("error", idx, "pipeline", message)
+            if local_statements:
+                self.issues[-1]["statement"] = 1 + sum(
+                    bool(s.get("_seq_boundary")) and not steps[j - 1].get("_def")
+                    for j, s in enumerate(steps[:idx + 1]) if j and isinstance(s, dict))
+
     def run(self, steps: List[Any], prev: Optional[T] = None) -> T:
+        self._check_heads(steps, prev)
         last: Optional[T] = None
         stmt_last_name: Optional[str] = None
         self.stmt = 1 if steps else 0
@@ -314,6 +326,7 @@ class _Checker:
 
     def _type_sub(self, steps: List[Any], prev: Optional[T]) -> T:
         """안쪽 파이프 — 바깥 env 를 공유(변수는 보이고), 신고도 같은 목록에."""
+        self._check_heads(steps, prev, local_statements=False)
         p = prev
         last: Optional[T] = None
         for j, s in enumerate(steps):
@@ -595,6 +608,15 @@ class _Checker:
         from ibl_pipe_types import explicit_input_params
         names = explicit_input_params({"flow": flow or {}}, params)
         if names:
+            if names == [(flow or {}).get("input_bundle_param")]:
+                value = params[names[0]]
+                if isinstance(value, list):
+                    return T("bundle", branches=[self._input_for({"items": v}, None)[0]
+                                                  for v in value]), "direct bundle"
+                # 같은 목록도 pipe에서는 단일 items, 이 슬롯에서는 분기 목록이다.
+                # 변수의 items 형에는 원소별 형·개수가 없으므로 여기서는 기권한다.
+                bound = self._param_ref_type(value)
+                return bound if bound and bound.kind == "bundle" else unknown(), "direct bundle"
             inputs = [self._input_for({"items": params[n]}, None)[0] for n in names]
             return (inputs[0] if len(inputs) == 1 else T("bundle", branches=inputs)), "direct params"
         if "items" in params:
@@ -771,7 +793,16 @@ class _Checker:
                 closed = False                       # 효과 행(path·size·message …)이 섞인다
         return T("items", cols or None, closed=closed and bool(cols))
 
+    def _check_multiple_inputs(self, inp: T, idx: int, at: str) -> None:
+        # scalar/unknown은 실행 시 분기 목록으로 해소될 수 있으므로 기권한다.
+        if inp.kind == "items" or (inp.kind == "bundle" and len(inp.branches) < 2):
+            from ibl_pipe_types import transform_input_hint
+            node, action = at.split(":", 1)
+            self._issue("error", idx, at, f"[{at}] 는 두 개 이상의 입력 묶음이 필요한데 단일 표 또는 부족한 분기가 전달됐습니다.",
+                        hint=transform_input_hint(node, action), expected="bundle[2+]", got=describe(inp))
+
     def _check_same_kind(self, inp: T, idx: int, at: str) -> None:
+        self._check_multiple_inputs(inp, idx, at)
         if inp.kind != "bundle":
             if inp.kind == "prose":
                 self._issue("error", idx, at, f"[{at}] 는 통화(items)를 합치는 변환자인데 앞 통화가 산문(prose)입니다.",
@@ -792,6 +823,7 @@ class _Checker:
                         expected="same-kind(items)", got=kinds)
 
     def _check_pair(self, inp: T, idx: int, at: str) -> None:
+        self._check_multiple_inputs(inp, idx, at)
         if inp.kind != "bundle":
             if inp.kind in ("prose", "effect"):
                 self._issue("error", idx, at, f"[{at}] 는 두 통화를 받는 이항 변환자인데 앞이 {inp.kind} 하나입니다.",
@@ -953,11 +985,8 @@ def typecheck(steps: List[Any], variables: Optional[Dict[str, int]] = None,
         #   **초록을 주고 실행이 죽는** 자리가 있었다 — `[self:write] >> [table:select]`
         #   실측. check 의 약속이 "초록이면 실행하라"이므로 거짓 초록은 약속 위반이다.
         #   판정은 ibl_pipe_types 한 벌이 소유한다(두 자리가 같은 답을 내도록).
-        from ibl_pipe_types import head_transform_error, seam_starvation_error
+        from ibl_pipe_types import seam_starvation_error
         _steps = steps or []
-        _head_err = head_transform_error(_steps)
-        if _head_err:
-            c._issue("error", 0, "pipeline", _head_err)
         _seam = seam_starvation_error(_steps)
         if _seam:
             _si, _seam_err = _seam

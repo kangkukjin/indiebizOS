@@ -117,6 +117,8 @@ flow:
 
 `returns: items|scalar|effect` 인 생산자(낱말)는 선언이 이미 충분하다 — 열은 카탈로그에서.
 
+**2026-09-12 입력 경계 정합 보완**: 3576의 입력 없는 독립 `union`과 단일 표에 `with`를 붙인 호출은 기존 검사에서 모두 초록이었다. T1은 독립 문장마다 검사하며 런타임 오류 프레임도 해당 step을 가리킨다. `same-kind`·`pair`는 확정된 단일 표 또는 2개 미만의 분기를 거절하고, 미상·스칼라의 동적 해소는 기권한다. 기본 직접 입력 `flow.input_params`와 기존 대체 입력 `input_alternatives`, 분기 목록 `input_bundle_param`을 동일하게 검사한다. 값 구성 목록의 파이프 방출은 단일 items이며, 명시적인 분기 목록 슬롯과 구별한다. 공통 오류 안내도 이항 입력에는 `$a & $b`를 가르친다. 언어 문법·어휘 수는 바꾸지 않는다.
+
 **2026-09-09 후보 지도 정합 보완**: `columns: rename`의 `columns_param`은 같은 출력 이름별 후보 집합으로 검사한다. `reads_fields`에서 지도 키를 개별 필수 열로 중복 검사하지 않는다. 예를 들어 `[{파일:"a.txt"}] >> [table:rename]{map:{파일:"file",path:"file"}}`은 `items⟨file⟩`이며 경고도 없다. 후보 0개·2개 이상, 단일 옛 이름 부재·기존 열 충돌은 닫힌 열에서 error, 카탈로그 관측 열에서 warning이다. 열 미상·동적 지도는 기권한다. 직접 items의 열은 첫 행이 아니라 모든 dict 행의 합집합이며, 관측 열 없는 빈 items는 부재를 단정하지 않는다. 런타임의 판정 범위도 입력 전체다(행별 후보 대체 없음). 액션 이름 분기는 추가하지 않는다. 회귀는 `backend/test_ibl_typecheck.py`와 `backend/test_language_limits_2026_09_09.py`의 검수·실행 조합을 함께 본다.
 
 ### 2-3. 추론기 `backend/ibl/ibl_typecheck.py` (ibl 층, `check_backend_layers.LAYERS` 등록)

@@ -25,6 +25,12 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: gnews_empty_is_failure
+    retired: 2026-09-12
+    reason: 정상적인 검색 0건을 실행 오류로 반환해 독립 문장의 변수 할당과 후속 결합을 실패시켰다.
+    instead: 유효한 빈 RSS는 성공한 0행 통화이며 HTTP·수신·파싱 오류는 실패로 구분한다.
+    phrases:
+      - '뉴스를 찾을 수 없습니다'
   - id: universal_bundle_unary_warning
     retired: 2026-09-12
     reason: 단항 변환자가 병렬 봉투의 바깥 필드를 읽는 정상 경로까지 불가하다고 안내하고 내부 행의 열로 잘못 검사했다.

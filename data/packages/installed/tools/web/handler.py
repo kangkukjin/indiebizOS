@@ -135,7 +135,7 @@ def _gnews_item(r: dict, tag: str) -> dict:
 
 
 def search_gnews(query: str = "", count: int = 10, language: str = "ko", region: str = None, headlines: bool = False) -> dict:
-    """Google News RSS 검색
+    """Google News RSS 검색. 정상 빈 RSS는 성공 0행, HTTP·파싱 실패는 오류다.
 
     Args:
         language: "ko" (한국어) 또는 "en" (영어) 등
@@ -163,13 +163,22 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
             rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl={language}&gl={region}&ceid={region}:{language}"
 
         feed = feedparser.parse(rss_url)
-
-        if not feed.entries:
+        status = feed.get("status")
+        problem = None
+        if isinstance(status, int) and status >= 400:
+            problem = f"뉴스 RSS HTTP 오류: {status}"
+        elif not feed.entries:
+            if feed.get("bozo"):
+                exc = feed.get("bozo_exception")
+                problem = f"뉴스 RSS 수신·파싱 오류: {type(exc).__name__}: {exc}"
+            elif not feed.get("version"):
+                problem = "뉴스 RSS 형식을 확인할 수 없습니다"
+        if problem:
             return {
                 "success": False,
-                "error": "뉴스를 찾을 수 없습니다",
+                "error": problem,
                 "query": query,
-                "results": []
+                "results": [], "items": [], "count": 0,
             }
 
         results = []
@@ -797,17 +806,20 @@ def execute(tool_input: dict, context):
             # 직렬 (RSS+AI)×N 루프가 신문 조립을 느리게 하던 것을 해소(2026-07-11).
             def _to_items(res, tag):
                 # 행 조립은 단일 생성자 _gnews_item 한 벌 (date 포함, 2026-08-28)
-                return [_gnews_item(r, tag) for r in (res.get("results") or [])]
+                section = {"items": [_gnews_item(r, tag) for r in (res.get("results") or [])]}
+                if not res.get("success"):
+                    section["error"] = res.get("error") or "뉴스 검색 실패"
+                return section
 
             _sources = str(tool_input.get("sources") or "gnews,guardian")
 
             def _fetch_section_items(q):
                 lang = _dl(q)
-                items = _to_items(search_gnews(query=q, count=_fetch, language=lang), q)
+                section = _to_items(search_gnews(query=q, count=_fetch, language=lang), q)
                 # 가디언 합류: curate(신문 편성) + 영어 키워드일 때만 — 한국어 질의는 가디언 코퍼스에 없음
                 if _curate and "guardian" in _sources and lang == "en":
-                    items += [{**g, "query": q} for g in _guardian_items(q, 30)]
-                return items
+                    section["items"] += [{**g, "query": q} for g in _guardian_items(q, 30)]
+                return section
 
             jobs = []  # (섹션명, items thunk) — 오늘의 핫토픽은 맨 앞 섹션(원격/폰 신문 파리티)
             if tool_input.get("headlines") in (True, "true", "True", 1, "1"):
@@ -818,7 +830,7 @@ def execute(tool_input: dict, context):
             from concurrent.futures import ThreadPoolExecutor
             with ThreadPoolExecutor(max_workers=min(8, len(jobs))) as ex:
                 fetched = list(ex.map(lambda j: j[1](), jobs))
-            secs = [{"topic": jobs[i][0], "items": fetched[i]} for i in range(len(jobs))]
+            secs = [{"topic": jobs[i][0], **fetched[i]} for i in range(len(jobs))]
             curated = _curate_sections_batch(secs, _curate) if _curate else None
 
             all_items, pool_rest, sections = [], [], []
@@ -830,6 +842,9 @@ def execute(tool_input: dict, context):
                 sections.append({"query": jobs[i][0], "count": len(items)})
             resp = {"success": True, "queries": _queries, "count": len(all_items),
                     "sections": sections, "items": all_items}
+            errors = [{"query": sec["topic"], "error": sec["error"]} for sec in secs if sec.get("error")]
+            if errors:
+                resp.update(success=False, errors=errors, error=f"뉴스 검색 {len(errors)}개 실패; 다른 검색 결과는 items에 보존")
             if curated:
                 resp["pool"] = pool_rest   # 편집장이 안 뽑은 나머지(query 태그로 섹션 구분) — 편집신문 대체 후보
                 resp["perspective"] = bool(_load_perspective_core())  # 관점 코어 반영 여부 — silent 폴백을 UI에 노출

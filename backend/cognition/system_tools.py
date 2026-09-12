@@ -47,14 +47,17 @@ def _get_async_loop() -> asyncio.AbstractEventLoop:
                 daemon=True,
                 name="tool-async-loop"
             )
-            _async_thread.start()
+            from runtime_work import service_scope
+            with service_scope():
+                _async_thread.start()
     return _async_loop
 
 
 def _run_coroutine(coro, timeout=120):
     """coroutine을 영구 이벤트 루프에서 실행하고 결과를 동기적으로 반환"""
+    from runtime_work import submit_coroutine_threadsafe
     loop = _get_async_loop()
-    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    future = submit_coroutine_threadsafe(coro, loop)
     return future.result(timeout=timeout)
 
 

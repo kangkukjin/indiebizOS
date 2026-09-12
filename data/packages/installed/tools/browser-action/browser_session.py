@@ -17,6 +17,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional, Any
 from urllib.parse import urlparse
+from runtime_work import AdmissionClosed, scope, service_scope
 
 # ─────────────────────────────────────────────
 # 상수
@@ -189,9 +190,10 @@ class BrowserSession:
         self._close_generation += 1
         try:
             loop = asyncio.get_event_loop()
-            self._cleanup_task = loop.create_task(
-                self._auto_close(self._close_generation)
-            )
+            with service_scope():
+                self._cleanup_task = loop.create_task(
+                    self._auto_close(self._close_generation)
+                )
         except RuntimeError:
             pass
 
@@ -201,7 +203,11 @@ class BrowserSession:
             return
         if time.time() - self._last_activity >= self._timeout_seconds:
             print(f"[브라우저] {self._timeout_seconds}초 비활성 — 자동 종료")
-            await self._close_internal()
+            try:
+                with scope("browser-auto-close", kind="finalizer"):
+                    await self._close_internal()
+            except AdmissionClosed:
+                return  # 재기동 관문이 닫혔으면 새 저장/종료 작업을 시작하지 않는다.
 
     async def ensure_browser(self, headless=True):
         """브라우저가 실행 중인지 확인하고, 없으면 생성. Page 반환."""
@@ -225,7 +231,10 @@ class BrowserSession:
         async_playwright = _get_playwright()
 
         if self._playwright is None:
-            self._playwright = await async_playwright().start()
+            # 호출의 await는 계속 보호한다. 상주 transport/드라이버만 작업에서
+            # 분리하며 프로세스 영수증은 워커 종료·크래시 때 회수하도록 남긴다.
+            with service_scope(own_processes=True):
+                self._playwright = await async_playwright().start()
 
         self._browser = await self._playwright.chromium.launch(
             headless=headless,
@@ -491,9 +500,10 @@ class BrowserSession:
         await self._close_internal()
 
     async def _close_internal(self):
-        if self._cleanup_task and not self._cleanup_task.done():
-            self._cleanup_task.cancel()
-            self._cleanup_task = None
+        cleanup = self._cleanup_task
+        self._cleanup_task = None
+        if cleanup and cleanup is not asyncio.current_task() and not cleanup.done():
+            cleanup.cancel()
         # 닫기 전에 로그인 상태 저장 (headful 로그인 → 자동 종료 경로에서도 세션이 남도록)
         await self.save_storage_state()
         for tab_id, page in list(self._pages.items()):

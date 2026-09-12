@@ -44,6 +44,12 @@ async def tool_process():
     return {"pid": child.pid}
 @app.get("/health")
 async def health(): return {"status": "healthy", "live_turns": []}
+@app.post("/resident")
+def resident():
+    import subprocess, sys
+    with runtime_work.service_scope(own_processes=True):
+        child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    return {"pid": child.pid}
 import uvicorn
 uvicorn.run(app, host="127.0.0.1", port=int(os.environ["INDIEBIZ_API_PORT"]),
             log_level="error", proxy_headers=False)
@@ -133,6 +139,19 @@ def http(port, path, *, token=None, parent=None, payload=None, timeout=3, extra=
     opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     with opener.open(req, timeout=timeout) as response:
         return json.load(response)
+
+
+def test_idle_anyio_and_resident_process_allow_restart_and_are_reaped(runtime):
+    base, port, _, state = runtime
+    initial = state()
+    child = identity(http(port, "/resident", payload={})["pid"])
+    snap = ProcessAdapter(base, base, port).status(initial)
+    assert snap["active_roots"] == snap["active_children"] == snap["pending_finalizers"] == 0
+    assert alive(child)
+    request(base, "idle-resident-test", request_id="resident", policy={"drain_timeout_s": 2, "force": False})
+    eventually(lambda: state().get("phase") == "ACTIVE" and state()["generation"] != initial["generation"])
+    assert not alive(child)
+    assert read_json(control_dir(base) / "results/resident.json")["outcome"] == "restarted"
 
 
 @pytest.mark.parametrize("clock_shift", [-2, 2])

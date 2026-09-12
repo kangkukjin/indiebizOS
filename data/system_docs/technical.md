@@ -330,7 +330,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(45) → `datastore`(49) → `ibl`(51) → `cognition`(64) → `services`(36) → `surface`(67). `.py` 총 373개(test 제외).
+  `base`(46) → `datastore`(49) → `ibl`(51) → `cognition`(64) → `services`(36) → `surface`(67). `.py` 총 374개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(19) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -396,6 +396,11 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 비밀 인증을 포함하므로 공유/커밋 대상이 아니다. 운영은 `.venv/bin/python3 backend/api.py
 restart --wait`와 `status`, `shutdown --wait`를 사용한다. 수동 keeper 표식·포트 소탕은
 필요 없다. 기존 승인 작업·취소·MCP 결과 회수는 drain 중에도 유지한다.
+상주 실행 루프·진행률 모니터·AnyIO 풀의 대기 스레드는 미완료 작업으로 세지 않는다.
+AnyIO는 각 함수 제출을 실제 종료까지 추적하고, 다른 루프로 보내는 도구 호출은
+루프가 접수하기 전부터 예약한다. 브라우저 드라이버는 작업 카운터와 분리하되 프로세스
+영수증을 남겨 재기동 때 회수한다. 자동 종료 타이머의 대기는 제외하고 실제 저장·종료는
+finalizer로 보호한다. [상주 수명 분리와 검증](../../docs/RUNTIME_SERVICE_LIFETIME_2026_09_12.md).
 macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시계 보정의 영향을 받는
 `psutil.Process.create_time()` 표시값으로 사망을 판정하면 살아 있는 워커가 종료 대상에서
 누락될 수 있다. [2026-09-12 장애와 재현](../../docs/RESTART_CLOCK_IDENTITY_2026_09_12.md).

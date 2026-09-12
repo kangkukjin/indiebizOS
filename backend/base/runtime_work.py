@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from functools import wraps
 
 _current = contextvars.ContextVar("runtime_parent", default=None)
+_service_processes = contextvars.ContextVar("runtime_service_processes", default=False)
 _registry = None
 NOTICE = "재기동을 위해 새 작업 접수를 잠시 중단했습니다. 이 작업은 실행되지 않았습니다. 잠시 후 다시 요청해 주세요."
 
@@ -138,12 +139,18 @@ def scope(label, *, parent=None, kind=None):
 
 
 @contextmanager
-def service_scope():
-    """상주 서비스/외부 재기동 수행자는 요청 작업의 자식 수명을 갖지 않는다."""
+def service_scope(*, own_processes=False):
+    """상주 수명을 요청과 분리한다. 몸에 속한 프로세스는 종료 영수증을 유지한다.
+
+    own_processes는 브라우저 드라이버처럼 워커와 함께 회수할 서비스에만 사용한다.
+    재기동 수행자처럼 워커 사망 뒤에도 살아야 하는 서비스에는 지정하지 않는다.
+    """
     token = _current.set(None)
+    process_token = _service_processes.set(own_processes or _service_processes.get())
     try:
         yield
     finally:
+        _service_processes.reset(process_token)
         _current.reset(token)
 
 
@@ -197,6 +204,50 @@ def bind_lease(fn, label="worker", kind=None):
     return bound
 
 
+def submit_coroutine_threadsafe(coro, loop):
+    """다른 루프가 접수하기 전부터 소유한다. 타임아웃은 예약을 지우지 않는다."""
+    if not parent_token() or not asyncio.iscoroutine(coro):
+        return asyncio.run_coroutine_threadsafe(coro, loop)
+    lease = reserve("tool-coroutine")
+    lock = threading.Lock()
+    state = "pending"
+
+    def cancel_pending():
+        nonlocal state
+        with lock:
+            if state == "pending":
+                state = "cancelled"
+                coro.close()
+                lease.close()
+
+    async def invoke():
+        nonlocal state
+        with lock:
+            if state != "pending":
+                return None
+            state = "running"
+        try:
+            with lease.activate():
+                return await coro
+        finally:
+            with lock:
+                state = "done"
+                lease.close()
+
+    wrapped = invoke()
+    try:
+        # 위 예약이 제출·실행 수명을 소유한다. 루프의 create_task가 중복 예약하거나
+        # 이미 끝난 호출자의 부모 자격을 뒤늦게 찾지 않게 한다.
+        with service_scope():
+            future = asyncio.run_coroutine_threadsafe(wrapped, loop)
+    except BaseException:
+        wrapped.close()
+        cancel_pending()
+        raise
+    future.add_done_callback(lambda f: cancel_pending() if f.cancelled() else None)
+    return future
+
+
 def install_worker_tracking():
     """요청에서 파생된 stdlib 실행 경계. 설치는 워커 조립점에서 한 번만.
 
@@ -239,27 +290,31 @@ def install_worker_tracking():
             raise
 
     def popen(proc, *a, **kw):
-        if not parent_token():
+        parent = parent_token()
+        if not parent and not (_registry and _service_processes.get()):
             return original_popen(proc, *a, **kw)
-        lease = reserve("process")
+        lease = reserve("process") if parent else None
+        owner = lease.registry if lease else _registry
         try:
             original_popen(proc, *a, **kw)
         except BaseException:
-            lease.close()
+            if lease:
+                lease.close()
             raise
-        with lease.registry.lock:
-            lease.registry.entries[lease.key]["pid"] = proc.pid
+        if lease:
+            with owner.lock:
+                owner.entries[lease.key]["pid"] = proc.pid
         receipt = None
         import os
         if os.environ.get("INDIEBIZ_BASE_PATH"):
             try:
                 from restart_process import tool_process_receipt
-                receipt = tool_process_receipt(proc, os.environ["INDIEBIZ_BASE_PATH"], lease.registry.generation)
+                receipt = tool_process_receipt(proc, os.environ["INDIEBIZ_BASE_PATH"], owner.generation)
             except Exception as exc:
                 # 등록 직후 아주 짧게 끝난 자식은 이미 완료. 살아 있는데 신원이 없으면 UNKNOWN.
                 if proc.poll() is None:
-                    with lease.registry.lock:
-                        lease.registry.errors.append("process receipt: " + str(exc))
+                    with owner.lock:
+                        owner.errors.append("process receipt: " + str(exc))
         def reap():
             try:
                 if receipt:
@@ -268,10 +323,11 @@ def install_worker_tracking():
                 else:
                     proc.wait()
             except Exception as exc:
-                with lease.registry.lock:
-                    lease.registry.errors.append("process observation: " + str(exc))
+                with owner.lock:
+                    owner.errors.append("process observation: " + str(exc))
             finally:
-                lease.close()
+                if lease:
+                    lease.close()
         watcher = threading.Thread(target=reap, daemon=True, name="runtime-process-reap")
         original_start(watcher)
 
@@ -305,6 +361,8 @@ def install_worker_tracking():
     concurrent.futures.ThreadPoolExecutor.submit = submit
     threading.Thread.start = start
     subprocess.Popen.__init__ = popen
+    from runtime_worker_adapters import install_library_tracking
+    install_library_tracking()
 
 
 class WorkMessages(list):

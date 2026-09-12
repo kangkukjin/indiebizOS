@@ -28,6 +28,7 @@
     "base/restart_protocol",
     "base/runtime_utils",
     "base/runtime_work",
+    "base/runtime_worker_adapters",
     "base/safe_store",
     "base/seam_metrics",
     "base/selfbuild_gate",
@@ -332,8 +333,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 321,
-    "engine": 295,
+    "total": 322,
+    "engine": 296,
     "blocklist": 26
   }
 }

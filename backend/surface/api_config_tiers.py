@@ -31,6 +31,13 @@ _MODEL_PROVIDERS = ("google", "anthropic", "openai", "openrouter", "deepseek",
 
 # ============ 시스템 AI 설정 API ============
 
+@router.get("/codex/models")
+async def get_codex_models():
+    """설치된 Codex가 공개한 모델 목록. 캐시가 없어도 직접 입력은 가능하다."""
+    from providers.codex import list_available_models
+    return {"items": list_available_models()}
+
+
 def _with_provider_memory(config: dict) -> dict:
     """비밀은 숨기고, provider별 모델 기억과 키 존재 여부만 UI에 투영한다."""
     out = dict(config)

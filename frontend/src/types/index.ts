@@ -16,7 +16,7 @@ export function isCliProvider(provider?: string | null): boolean {
 // 받는다 — claude_code 는 별칭(`opus`), codex 는 슬러그(+선택적 `:추론강도`).
 // ★모델 목록을 여기 나열하지 않는다(은퇴하면 낡는다) — 예시 하나만 둔다.
 export function modelPlaceholder(provider?: string | null, fallback = ''): string {
-  if (provider === 'codex') return 'gpt-5.6-sol:high';
+  if (provider === 'codex') return 'gpt-6-astra:high';
   if (provider === 'claude_code') return 'opus';
   return fallback;
 }

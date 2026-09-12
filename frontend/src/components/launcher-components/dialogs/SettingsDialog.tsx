@@ -1,3 +1,4 @@
+import { CodexModelPicker } from '../../CodexModelPicker';
 import { SettingsFrame } from '../../SettingsFrame';
 /**
  * SettingsDialog - 시스템 설정 다이얼로그
@@ -320,6 +321,8 @@ export function SettingsDialog({
                     placeholder={modelPlaceholder(settings.provider, 'gemini-2.0-flash-exp')}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
+                  <CodexModelPicker provider={settings.provider} value={settings.model}
+                    onChange={(model) => onSettingsChange(changeModel(settings, model))} />
                   {modelFieldHint(settings.provider) && (
                     <p className="text-xs text-gray-500 mt-1">{modelFieldHint(settings.provider)}</p>
                   )}
@@ -435,6 +438,8 @@ export function SettingsDialog({
                     placeholder={modelPlaceholder(lightweightSettings.provider, 'gemini-2.5-flash-lite')}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
+                  <CodexModelPicker provider={lightweightSettings.provider} value={lightweightSettings.model}
+                    onChange={(model) => onLightweightSettingsChange(changeModel(lightweightSettings, model))} />
                   {modelFieldHint(lightweightSettings.provider) && (
                     <p className="text-xs text-gray-500 mt-1">{modelFieldHint(lightweightSettings.provider)}</p>
                   )}
@@ -512,6 +517,8 @@ export function SettingsDialog({
                     placeholder={modelPlaceholder(midtierSettings.provider, 'gemini-2.5-flash')}
                     className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:border-[#D97706] focus:outline-none text-gray-900 placeholder:text-gray-500"
                   />
+                  <CodexModelPicker provider={midtierSettings.provider} value={midtierSettings.model}
+                    onChange={(model) => onMidtierSettingsChange(changeModel(midtierSettings, model))} />
                   {modelFieldHint(midtierSettings.provider) && (
                     <p className="text-xs text-gray-500 mt-1">{modelFieldHint(midtierSettings.provider)}</p>
                   )}

@@ -60,6 +60,33 @@ def _codex_home() -> Path:
     return Path(os.environ.get("CODEX_HOME") or (Path.home() / ".codex"))
 
 
+def list_available_models() -> list[dict]:
+    """Codex 캐시의 공개 모델·지원 강도만 설정 화면에 제공한다."""
+    try:
+        cache = json.loads((_codex_home() / "models_cache.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return []
+    entries = cache.get("models", []) if isinstance(cache, dict) else []
+    if not isinstance(entries, list):
+        return []
+    models = []
+    for entry in entries:
+        if not isinstance(entry, dict) or entry.get("visibility") != "list":
+            continue
+        slug = entry.get("slug")
+        if not isinstance(slug, str) or not slug:
+            continue
+        levels = entry.get("supported_reasoning_levels") or []
+        efforts = [level["effort"] for level in levels if isinstance(level, dict)
+                   and level.get("effort") in CodexProvider.REASONING_EFFORTS] if isinstance(levels, list) else []
+        models.append({
+            "slug": slug,
+            "display_name": entry.get("display_name") or slug,
+            "reasoning_efforts": efforts,
+        })
+    return models
+
+
 # 롤아웃 꼬리를 몇 바이트나 읽을지 — 마지막 token_count 는 파일 끝에서 1KB 안쪽에 있다
 # (실측 2026-08-31: 77MB 파일에서 EOF−787B). 256KB 면 여유가 크다.
 _ROLLOUT_TAIL_BYTES = 256 * 1024

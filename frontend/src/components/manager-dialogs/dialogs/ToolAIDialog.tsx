@@ -1,3 +1,4 @@
+import { CodexModelPicker } from '../../CodexModelPicker';
 /**
  * ToolAIDialog - 도구 AI 설정 다이얼로그
  */
@@ -67,6 +68,8 @@ export function ToolAIDialog({
               placeholder={modelPlaceholder(toolAIForm.provider, 'gemini-2.0-flash')}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:border-cyan-500 focus:outline-none text-gray-900"
             />
+            <CodexModelPicker provider={toolAIForm.provider} value={toolAIForm.model}
+              onChange={(model) => setToolAIForm({ ...toolAIForm, model })} />
             {modelFieldHint(toolAIForm.provider) && (
               <p className="text-xs text-gray-500 mt-1">{modelFieldHint(toolAIForm.provider)}</p>
             )}

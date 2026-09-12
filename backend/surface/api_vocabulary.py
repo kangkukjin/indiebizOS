@@ -50,3 +50,39 @@ def set_activation(package_id: str, selection: ActivationRequest, request: Reque
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.get("/vocabulary/{package_id}/export")
+def export_vocabulary(package_id: str):
+    from fastapi.responses import Response
+    from vocabulary_archive import export_package
+    try:
+        content = export_package(package_id)
+        return Response(content, media_type="application/octet-stream",
+                        headers={"Content-Disposition": f'attachment; filename="{package_id}.iblpack"'})
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/vocabulary/import")
+async def import_vocabulary(request: Request):
+    import asyncio
+    from vocabulary_archive import MAX_ARCHIVE
+    from vocabulary_import import import_package
+    from package_manager import decode_package_bytes
+    human_authority(request)
+    chunks, size = [], 0
+    async for chunk in request.stream():
+        size += len(chunk)
+        if size > MAX_ARCHIVE:
+            raise HTTPException(status_code=413, detail="어휘 파일은 최대 20MB입니다")
+        chunks.append(chunk)
+    def receive():
+        content = decode_package_bytes(b''.join(chunks))
+        return import_package(content)
+    try:
+        return await asyncio.to_thread(receive)
+    except (ValueError, OSError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))

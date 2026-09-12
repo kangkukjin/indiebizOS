@@ -202,6 +202,8 @@
     "ibl/tool_loader",
     "ibl/tool_selector",
     "ibl/trigger_engine",
+    "ibl/vocabulary_archive",
+    "ibl/vocabulary_import",
     "ibl/vocabulary_lifecycle",
     "ibl/workflow_binding",
     "ibl/workflow_contract",
@@ -339,8 +341,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 328,
-    "engine": 302,
+    "total": 330,
+    "engine": 304,
     "blocklist": 26
   }
 }

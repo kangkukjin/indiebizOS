@@ -4,7 +4,7 @@ IndieBiz OS Core
 
 설계 원칙:
 - 도구 패키지만 관리 (extensions 개념 폐기)
-- 폴더 구조가 유일한 진실의 원천 (Single Source of Truth)
+- 보유 = 두 폴더의 합집합, 활성 = 몸별 원장 한 곳
 - AI가 폴더를 분석하여 유효성 판별 및 README 자동 생성
 
 packages/
@@ -15,8 +15,8 @@ packages/
 └── dev/tools/            # 개발 중인 도구 패키지
 
 available = not_installed + installed (논리적 합집합)
-설치: not_installed → installed로 이동
-삭제: installed → not_installed로 이동
+활성 선택: data/vocabulary/activation.json (이 몸의 원장)
+깨움/잠재움은 폴더와 기억을 보존한다. 폴더 위치는 최초 이관 때만 읽는다.
 """
 
 import json
@@ -692,37 +692,11 @@ README 존재: {basic_analysis['has_readme']}
         if not folder.exists() or not folder.is_dir():
             raise ValueError("유효한 폴더가 아닙니다")
 
-        pkg_id = folder.name
-        dst_path = NOT_INSTALLED_PATH / "tools" / pkg_id
-
-        if dst_path.exists():
-            raise ValueError(f"이미 등록된 패키지입니다: {pkg_id}")
-
-        # 복사
-        shutil.copytree(folder, dst_path)
-
-        # README 생성/업데이트
-        readme_path = dst_path / "README.md"
-        if readme_content:
-            # AI가 생성한 README 사용
-            readme_path.write_text(readme_content, encoding='utf-8')
-        elif name or description:
-            # 수동 입력
-            pkg_name = name or pkg_id.replace('-', ' ').replace('_', ' ').title()
-            content = f"# {pkg_name}\n\n{description or ''}\n"
-            readme_path.write_text(content, encoding='utf-8')
-
-        # inventory.md 업데이트
-        self._update_inventory()
-
-        metadata = self._scan_package(dst_path)
-        return {
-            "status": "registered",
-            "package_id": pkg_id,
-            "package_type": "tools",
-            "metadata": metadata,
-            "message": f"'{metadata['name']}' 패키지가 등록되었습니다."
-        }
+        from vocabulary_archive import export_directory
+        from vocabulary_import import import_package
+        result = import_package(export_directory(folder, folder.name))
+        return {**result, "status": "registered", "package_type": "tools",
+                "metadata": self.get_package_info(result["package_id"])}
 
     def remove_package(self, package_id: str, package_type: str = None,
                        *, authority=None) -> Dict[str, Any]:
@@ -791,260 +765,42 @@ README 존재: {basic_analysis['has_readme']}
 # ============ 패키지 인코더/디코더 (Nostr 공유용) ============
 
 def encode_package(package_id: str, include_description: bool = True) -> str:
-    """
-    패키지를 Nostr 메시지용 텍스트로 인코딩
-
-    Args:
-        package_id: 패키지 ID
-        include_description: AI 설명 포함 여부
-
-    Returns:
-        인코딩된 텍스트 (구분자로 파일 경계 표시)
-
-    포맷:
-        ===PACKAGE_START===
-        id: package_id
-        name: Package Name
-        description: 패키지 설명
-
-        ===FILE:filename.ext===
-        파일 내용
-
-        ===FILE:another.py===
-        파일 내용
-
-        ===PACKAGE_END===
-    """
-    # 패키지 경로 찾기
-    pkg_path = INSTALLED_PATH / "tools" / package_id
-    if not pkg_path.exists():
-        pkg_path = NOT_INSTALLED_PATH / "tools" / package_id
-    if not pkg_path.exists():
-        raise ValueError(f"패키지를 찾을 수 없습니다: {package_id}")
-
-    lines = [
-        "===PACKAGE_START===",
-        "[IndieBiz OS Package Format v1]",
-        "[이 코드를 참조하여 사용자 환경에 맞게 설치하세요]",
-        ""
-    ]
-
-    # 메타데이터
-    lines.append(f"id: {package_id}")
-
-    # tool.json에서 이름과 설명 추출
-    tool_json_path = pkg_path / "tool.json"
-    pkg_name = package_id
-    pkg_desc = ""
-
-    if tool_json_path.exists():
-        try:
-            tool_data = json.loads(tool_json_path.read_text(encoding='utf-8'))
-            if isinstance(tool_data, dict):
-                pkg_name = tool_data.get("name", package_id)
-                pkg_desc = tool_data.get("description", "")
-            elif isinstance(tool_data, list) and tool_data:
-                pkg_name = tool_data[0].get("name", package_id)
-                pkg_desc = tool_data[0].get("description", "")
-        except:
-            pass
-
-    lines.append(f"name: {pkg_name}")
-    if pkg_desc:
-        lines.append(f"description: {pkg_desc}")
-    lines.append("")
-
-    # 파일들 추가
-    # 우선순위: tool.json, handler.py, 기타 .py, requirements.txt, 기타
-    priority_files = ["tool.json", "handler.py"]
-    other_py = []
-    other_files = []
-
-    for f in pkg_path.iterdir():
-        if f.is_file() and not f.name.startswith('.'):
-            if f.name in priority_files:
-                continue
-            elif f.suffix == '.py':
-                other_py.append(f.name)
-            elif f.name in ['requirements.txt', 'package.json']:
-                other_files.insert(0, f.name)  # 앞에 추가
-            elif f.suffix in ['.md', '.txt', '.json', '.yaml', '.yml']:
-                other_files.append(f.name)
-
-    # 파일 순서 결정
-    file_order = []
-    for pf in priority_files:
-        if (pkg_path / pf).exists():
-            file_order.append(pf)
-    file_order.extend(sorted(other_py))
-    file_order.extend(other_files)
-
-    # 파일 내용 추가
-    for filename in file_order:
-        file_path = pkg_path / filename
-        if file_path.exists():
-            try:
-                content = file_path.read_text(encoding='utf-8')
-                lines.append(f"===FILE:{filename}===")
-                lines.append(content)
-                lines.append("")  # 파일 간 구분
-            except:
-                pass  # 바이너리 파일 등은 스킵
-
-    lines.append("===PACKAGE_END===")
-
-    return "\n".join(lines)
+    """Nostr 운반 봉투. 내용은 내보내기와 같은 .iblpack 바이트 한 벌이다."""
+    import base64
+    from vocabulary_archive import export_package
+    return "IBLPACK/1\n" + base64.b64encode(export_package(package_id)).decode("ascii")
 
 
-def decode_package(encoded_text: str, target_dir: Path = None) -> Dict[str, Any]:
-    """
-    인코딩된 텍스트를 패키지 폴더로 디코딩
-
-    Args:
-        encoded_text: encode_package()로 생성된 텍스트
-        target_dir: 저장할 디렉토리 (기본: not_installed/tools/)
-
-    Returns:
-        {
-            "success": True/False,
-            "package_id": "id",
-            "package_path": "/path/to/package",
-            "files_created": ["file1.py", "file2.json"],
-            "error": "에러 메시지 (실패 시)"
-        }
-    """
-    if target_dir is None:
-        target_dir = NOT_INSTALLED_PATH / "tools"
-
-    result = {
-        "success": False,
-        "package_id": None,
-        "package_path": None,
-        "files_created": [],
-        "error": None
-    }
-
-    # 유효성 검사
-    if "===PACKAGE_START===" not in encoded_text or "===PACKAGE_END===" not in encoded_text:
-        result["error"] = "유효하지 않은 패키지 형식입니다"
-        return result
-
-    # 패키지 부분만 추출
-    start_idx = encoded_text.find("===PACKAGE_START===")
-    end_idx = encoded_text.find("===PACKAGE_END===")
-    if start_idx == -1 or end_idx == -1:
-        result["error"] = "패키지 경계를 찾을 수 없습니다"
-        return result
-
-    package_content = encoded_text[start_idx:end_idx + len("===PACKAGE_END===")]
-
-    # 메타데이터 파싱
-    lines = package_content.split("\n")
-    package_id = None
-    package_name = None
-    package_desc = None
-
-    i = 1  # ===PACKAGE_START=== 다음 줄부터
-    while i < len(lines):
-        line = lines[i].strip()
-        if line.startswith("===FILE:"):
-            break
-        if line.startswith("id:"):
-            package_id = line[3:].strip()
-        elif line.startswith("name:"):
-            package_name = line[5:].strip()
-        elif line.startswith("description:"):
-            package_desc = line[12:].strip()
-        i += 1
-
-    if not package_id:
-        result["error"] = "패키지 ID를 찾을 수 없습니다"
-        return result
-
-    result["package_id"] = package_id
-
-    # 패키지 폴더 생성
-    pkg_path = target_dir / package_id
-    if pkg_path.exists():
-        result["error"] = f"이미 존재하는 패키지입니다: {package_id}"
-        return result
-
-    try:
-        pkg_path.mkdir(parents=True, exist_ok=True)
-
-        # 파일 파싱 및 저장
-        current_file = None
-        current_content = []
-
-        for line in lines[i:]:
-            if line.startswith("===FILE:") and line.endswith("==="):
-                # 이전 파일 저장
-                if current_file:
-                    file_content = "\n".join(current_content).strip()
-                    file_path = pkg_path / current_file
-                    file_path.write_text(file_content, encoding='utf-8')
-                    result["files_created"].append(current_file)
-                    _log_pkg_file_write(file_path)
-
-                # 새 파일 시작
-                current_file = line[8:-3]  # ===FILE: 과 === 제거
-                current_content = []
-            elif line == "===PACKAGE_END===":
-                # 마지막 파일 저장
-                if current_file:
-                    file_content = "\n".join(current_content).strip()
-                    file_path = pkg_path / current_file
-                    file_path.write_text(file_content, encoding='utf-8')
-                    result["files_created"].append(current_file)
-                    _log_pkg_file_write(file_path)
-                break
-            else:
-                if current_file:
-                    current_content.append(line)
-
-        result["success"] = True
-        result["package_path"] = str(pkg_path)
-
-    except Exception as e:
-        # 실패 시 정리
-        if pkg_path.exists():
-            shutil.rmtree(pkg_path)
-        result["error"] = f"패키지 생성 실패: {str(e)}"
-
+def decode_package_bytes(content: bytes) -> bytes:
+    """ZIP 또는 운반 봉투, 옛 텍스트를 같은 파일로 정규화한다. 파일을 쓰지 않는다."""
+    import base64
+    from vocabulary_archive import convert_legacy, unpack
+    if content.startswith(b"PK"):
+        result = content
+    elif content.startswith(b"IBLPACK/1\n"):
+        result = base64.b64decode(content.split(b"\n", 1)[1].strip(), validate=True)
+    else:
+        result = convert_legacy(content.decode("utf-8"))
+    unpack(result)
     return result
 
 
+def decode_package(encoded_text: str, target_dir: Path = None) -> Dict[str, Any]:
+    """옛 디코더는 변환/검사만 한다. 등록은 공통 가져오기 API를 사용한다."""
+    from vocabulary_archive import unpack
+    manifest, files, _ = unpack(decode_package_bytes(encoded_text.encode()))
+    return {"success": True, "package_id": manifest["id"], "format": "iblpack",
+            "files": list(files), "message": "변환 검사 완료. 내 어휘에서 파일을 가져와 주세요."}
+
+
 def get_package_for_sharing(package_id: str) -> str:
-    """
-    Nostr에 공유할 패키지 텍스트 생성 (encode_package의 래퍼)
-    """
     return encode_package(package_id)
 
 
 def install_package_from_text(encoded_text: str) -> Dict[str, Any]:
-    """
-    인코딩된 텍스트에서 패키지 설치 (decode_package + 검증)
-    """
-    # 디코딩
-    decode_result = decode_package(encoded_text)
-
-    if not decode_result["success"]:
-        return decode_result
-
-    package_id = decode_result["package_id"]
-    pkg_path = Path(decode_result["package_path"])
-
-    # 검증
-    validation = validate_tool_package(pkg_path)
-
-    decode_result["validation"] = validation
-
-    if not validation["valid"]:
-        decode_result["warnings"] = validation.get("errors", [])
-    elif validation.get("warnings"):
-        decode_result["warnings"] = validation["warnings"]
-
-    return decode_result
+    """옛 운반 입력도 변환 뒤 새 가져오기 절차로 수렴한다. 활성화하지 않는다."""
+    from vocabulary_import import import_package
+    return import_package(decode_package_bytes(encoded_text.encode()))
 
 
 # 전역 인스턴스

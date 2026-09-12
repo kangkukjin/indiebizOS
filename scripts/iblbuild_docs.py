@@ -15,7 +15,7 @@ check_self_image(iblbuild_guards)는 SELF_IMAGE 한 줄을 *검사만* 했다 �
 backend .py·가이드 수는 디스크가 아니라 `git ls-files` 로 센다: 로컬의 미추적
 스크래치 파일이 수치에 섞이면 신선 clone CI 의 --check 가 영구 빨간불이 된다
 (2026-07-26 신선 clone 게이트와 같은 부류). 패키지 수는 기존 자기상 가드와 같은
-디렉토리 실측 유지(설치 상태가 곧 진실).
+보유 디렉토리 두 곳의 합집합을 실측한다(활성 선택은 로컬 원장).
 
 대상 문서·마커는 DOC_TARGETS 가 단일 진실 — 새 문서에 파생 구간을 만들면 여기 등재.
 """
@@ -107,10 +107,12 @@ def collect_doc_facts(root: Path, data: dict | None) -> dict | None:
             ro = a.get("runs_on") or "anywhere"
             runs_on[ro] = runs_on.get(ro, 0) + 1
 
-    tools_dir = root / "data/packages/installed/tools"
+    tools_dirs = [root / "data/packages" / loc / "tools" for loc in ("installed", "not_installed")]
     op_packages = []
     packages = []  # (id, name, desc) — packages.md 표 재발행용
-    if tools_dir.is_dir():
+    for tools_dir in tools_dirs:
+        if not tools_dir.is_dir():
+            continue
         for p in sorted(tools_dir.iterdir()):
             if not p.is_dir() or p.name.startswith("__"):
                 continue
@@ -137,8 +139,8 @@ def collect_doc_facts(root: Path, data: dict | None) -> dict | None:
         "nodes": per,
         "node_count": len(per),
         "total": sum(per.values()),
-        "tools_n": _count_pkg_dirs(root, "data/packages/installed/tools"),
-        "exts_n": _count_pkg_dirs(root, "data/packages/installed/extensions"),
+        "tools_n": sum(_count_pkg_dirs(root, f"data/packages/{loc}/tools") for loc in ("installed", "not_installed")),
+        "exts_n": sum(_count_pkg_dirs(root, f"data/packages/{loc}/extensions") for loc in ("installed", "not_installed")),
         "backend_py": len(py_files),
         "layers": layers,
         "guides_n": guides_n,

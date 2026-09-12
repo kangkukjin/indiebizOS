@@ -381,8 +381,8 @@ async def get_actions_catalog():
     전체 IBL 액션 목록을 반환한다. 프론트의 액션 사전 모달이
     이 데이터로 책장을 그린다.
     """
-    from ibl_access import load_nodes_raw
-    data = load_nodes_raw()
+    from ibl_registry import load_nodes_installed
+    data = load_nodes_installed()
     if not data:
         raise HTTPException(status_code=500, detail="ibl_nodes.yaml 로드 실패")
 

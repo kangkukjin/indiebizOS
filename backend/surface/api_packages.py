@@ -300,8 +300,10 @@ async def analyze_folder_with_ai(request: AnalyzeFolderWithAIRequest):
 
 
 @router.post("/packages/register")
-async def register_folder(request: RegisterFolderRequest):
-    """폴더를 도구 패키지로 등록"""
+def register_folder(request: RegisterFolderRequest, http_request: Request):
+    """제작 폴더도 .iblpack 검사·등록 경로로 수렴한다."""
+    from api_vocabulary import human_authority
+    human_authority(http_request)
     try:
         result = package_manager.register_folder(
             request.folder_path,
@@ -328,7 +330,7 @@ def remove_package(package_id: str, http_request: Request, request: RemovePackag
 # ============ 패키지 공개/검색 API (Nostr 기반) ============
 
 @router.post("/packages/{package_id}/publish")
-async def publish_package_to_nostr(package_id: str, request: PublishPackageRequest = None):
+def publish_package_to_nostr(package_id: str, request: PublishPackageRequest = None):
     """
     패키지를 Nostr에 공개 발행
     - 패키지 정보를 #indiebizOS-package 해시태그와 함께 발행
@@ -366,10 +368,12 @@ async def publish_package_to_nostr(package_id: str, request: PublishPackageReque
             'name': info.get('name', package_id),
             'description': final_description,
             'version': info.get('version', '1.0.0'),
-            'install': request.install_instructions if request and request.install_instructions else f"indiebizOS 도구 관리에서 '{info.get('name', package_id)}' 검색 후 설치",
+            'install': encode_package(package_id),
             'signature': request.signature if request and request.signature else None
         }
 
+        if len(package_info["install"].encode()) > 50000:
+            raise HTTPException(status_code=400, detail="Nostr 게시 크기를 넘습니다. .iblpack 파일로 내보내 보내 주세요.")
         # 발행
         success = nostr.publish_package(package_info)
 
@@ -423,7 +427,7 @@ async def search_packages_on_nostr_post(request: SearchPackagesRequest):
 
 
 @router.get("/packages/{package_id}/generate-install")
-async def generate_install_instructions(package_id: str):
+def generate_install_instructions(package_id: str):
     """
     패키지를 Nostr 공유용 텍스트로 인코딩
     코드 파일 전체가 포함되어 다른 IndieBiz OS에서 바로 디코딩 가능
@@ -432,7 +436,7 @@ async def generate_install_instructions(package_id: str):
         encoded = encode_package(package_id)
         return {
             "instructions": encoded,
-            "format": "encoded_package",
+            "format": "iblpack",
             "package_id": package_id,
             "length": len(encoded)
         }
@@ -444,7 +448,7 @@ async def generate_install_instructions(package_id: str):
 
 # ============ 도구 API (에이전트용) ============
 
-def _load_tool_definitions(tools_path: Path):
+def _load_tool_definitions(tools_path: Path, *, active_only=False):
     """도구 패키지에서 tool.json을 읽어 도구 정의 목록과 패키지 메타 정보 반환"""
     tools: List[Dict[str, Any]] = []
     packages_info: List[Dict[str, Any]] = []
@@ -456,6 +460,10 @@ def _load_tool_definitions(tools_path: Path):
         if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
             continue
 
+        if active_only:
+            from vocabulary_state import is_active
+            if not is_active(pkg_dir.name):
+                continue
         tool_json = pkg_dir / "tool.json"
         if not tool_json.exists():
             continue
@@ -546,7 +554,11 @@ async def get_tools():
         ]
 
         # 설치된 도구 패키지에서 tool.json 로드
-        installed_tools, packages_info = _load_tool_definitions(INSTALLED_PATH / "tools")
+        installed_tools, packages_info = [], []
+        for location in (INSTALLED_PATH, NOT_INSTALLED_PATH):
+            definitions, info = _load_tool_definitions(location / "tools", active_only=True)
+            installed_tools.extend(definitions)
+            packages_info.extend(info)
 
         # 시스템 기본 도구 이름 목록
         base_tools = [t["name"] for t in system_tools]
@@ -574,9 +586,9 @@ async def get_available_tools():
 
         # 설치 여부 표시
         for tool in not_installed_tools:
-            tool["installed"] = False
+            tool["installed"] = __import__("vocabulary_state").is_active(tool["_package_id"])
         for tool in installed_tools:
-            tool["installed"] = True
+            tool["installed"] = __import__("vocabulary_state").is_active(tool["_package_id"])
 
         all_tools = installed_tools + not_installed_tools
 
@@ -647,12 +659,12 @@ async def get_ibl_nodes():
 # ============ 패키지 인코더/디코더 API (Nostr 공유용) ============
 
 @router.post("/packages/encode")
-async def encode_package_api(request: EncodePackageRequest):
+def encode_package_api(request: EncodePackageRequest):
     """
     패키지를 Nostr 공유용 텍스트로 인코딩
 
     인코딩된 텍스트는 다른 IndieBiz OS 인스턴스에서
-    decode API로 패키지 폴더로 복원할 수 있습니다.
+    decode API로 검사한 뒤 공통 가져오기 API로 등록합니다.
     """
     try:
         encoded = encode_package(request.package_id)
@@ -670,7 +682,7 @@ async def encode_package_api(request: EncodePackageRequest):
 
 
 @router.get("/packages/{package_id}/encode")
-async def encode_package_get(package_id: str):
+def encode_package_get(package_id: str):
     """패키지 인코딩 (GET 방식)"""
     try:
         encoded = encode_package(package_id)
@@ -687,58 +699,21 @@ async def encode_package_get(package_id: str):
 
 
 @router.post("/packages/decode")
-def decode_package_api(request: DecodePackageRequest):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
-    """
-    인코딩된 텍스트를 패키지 폴더로 디코딩
-
-    Nostr에서 받은 패키지 텍스트를 not_installed/tools/ 폴더에
-    패키지로 저장합니다.
-    """
+def decode_package_api(request: DecodePackageRequest):
     try:
-        result = decode_package(request.encoded_text)
-
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["error"])
-
-        return {
-            "success": True,
-            "package_id": result["package_id"],
-            "package_path": result["package_path"],
-            "files_created": result["files_created"],
-            "message": f"'{result['package_id']}' 패키지가 생성되었습니다. 설치하려면 install API를 사용하세요."
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return decode_package(request.encoded_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/packages/install-from-text")
-def install_from_text_api(request: DecodePackageRequest):  # 동기 def=스레드풀: 블로킹 작업이 이벤트 루프를 막지 않게(check_event_loop)
-    """
-    인코딩된 텍스트에서 패키지 디코딩 + 검증
-
-    Nostr에서 받은 패키지를 바로 설치 준비 상태로 만듭니다.
-    """
+def install_from_encoded_text(request: DecodePackageRequest, http_request: Request):
+    from api_vocabulary import human_authority
+    human_authority(http_request)
     try:
-        result = install_package_from_text(request.encoded_text)
-
-        if not result["success"]:
-            raise HTTPException(status_code=400, detail=result["error"])
-
-        return {
-            "success": True,
-            "package_id": result["package_id"],
-            "package_path": result["package_path"],
-            "files_created": result["files_created"],
-            "validation": result.get("validation"),
-            "warnings": result.get("warnings", []),
-            "message": f"'{result['package_id']}' 패키지가 준비되었습니다."
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return install_package_from_text(request.encoded_text)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # ── [self:install_lib] 승인-전-차단 게이트: 사람 전용 승인 채널 ──

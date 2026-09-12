@@ -331,13 +331,13 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(48) → `datastore`(51) → `ibl`(52) → `cognition`(64) → `services`(36) → `surface`(68). `.py` 총 381개(test 제외).
+  `base`(48) → `datastore`(51) → `ibl`(54) → `cognition`(64) → `services`(36) → `surface`(68). `.py` 총 384개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
-  - 층 밖 공용: `backend/common/`(19) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
+  - 층 밖 공용: `backend/common/`(20) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
 - `data/`: 시스템 설정 및 데이터
-- `data/packages/installed/tools/`: 설치된 도구 패키지 (**42개** — op 분기 **30개**가 `_OP_DISPATCHERS` 표준)
-- `data/packages/installed/extensions/`: 백엔드 코어 모듈 (**5개**)
+- `data/packages/{installed,not_installed}/tools/`: 보유 도구 패키지 (**46개** — op 분기 **31개**가 `_OP_DISPATCHERS` 표준)
+- `data/packages/{installed,not_installed}/extensions/`: 백엔드 코어 모듈 (**5개**)
 - `data/api_registry.yaml`: API 도구 정의 — 45개 도구 중 37개가 `node`로 바인딩돼 로드 시 노드 액션에 자동 병합(`ibl_engine._merge_api_registry_actions`, 2026-08-22 실측)
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)

@@ -1,43 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-scripts/apply_edition.py — 설치 에디션 + 로케일에 맞춰 도구 패키지를
-installed ↔ not_installed 로 분할한다 (능력 자기완결화 계획 Phase 5).
+"""에디션/로케일에 맞춰 이 몸의 활성 원장을 공통 생명주기 함수로 갱신한다.
 
-능력 자기완결화(Phase 0~4)로 각 패키지가 "코드 + 어휘"를 원자적으로 담은 능력이
-됐으므로, 이제 "무엇을 기본 설치할지"를 결정적 필터 하나로 고를 수 있다. 이 스크립트가
-그 필터를 적용한다 — 새 매니페스트를 만들지 않고 data/package_meta.json 세 축을 그대로 쓴다.
-
-에디션(능력 폭):
-  standard = 외부 키 불요(needs_key 비어있음) ∧ 가벼움(weight=light)  — "그냥 켜진다"
-  full     = 전부(키 요구·무거운 팩 포함)
-
-로케일(지역 관련성):
-  universal = universal 로케일 팩만
-  kr        = universal + kr 팩
-  all       = 로케일 무시(전부)
-
-설치 집합 = in_edition(edition) ∧ in_locale(locale).
-탈락한 도구 패키지는 not_installed/tools 로 이동한다 — 지우는 게 아니라 "available"로
-남겨 카탈로그가 on-demand 재설치를 제안할 수 있게 한다(3-상태의 available 상태).
-그 아래 두 상태는 이미 구현돼 있다: installed-dormant(키 대기, ibl_access 의 dormant 속성),
-live(키까지 있음).
-
-절대 건드리지 않는 것:
-  - extensions/(백엔드 코어 모듈: ai-agent, gmail, scheduler …) — 몸의 일부.
-  - _PROTECTED 도구(ibl-core, system_essentials) — 표준 필터를 통과하지만 방어적으로 고정.
-  - 중앙 backend-native 어휘(ibl_nodes_src).
-
-이동 후 build_ibl_nodes.py 를 재실행해 ibl_nodes.yaml / phone_manifest.json /
-package_meta.json 을 동기화한다(부재-패키지 관용 덕에 --check 는 계속 초록).
-
-사용:
-  python3 scripts/apply_edition.py --list                         # 각 에디션 멤버십만 출력
-  python3 scripts/apply_edition.py --dry-run --edition standard --locale universal
-  python3 scripts/apply_edition.py --edition full --locale kr
-
-무인 설치(installer): 인자 대신 환경변수 INDIEBIZ_EDITION / INDIEBIZ_LOCALE 사용 가능.
-재실행 가능 — 에디션을 바꿔 다시 돌리면 팩이 양방향으로 이동한다.
+보유 파일과 사전집은 유지한다. 필수 묶음은 vocabulary_policy.yaml로 보호한다.
+--list 또는 --dry-run은 변경 없이 선택 결과만 출력한다.
+사용: python3 scripts/apply_edition.py --edition standard --locale universal
 """
 
 import argparse

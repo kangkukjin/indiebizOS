@@ -368,7 +368,8 @@ def _phrase_used(phrase_code: str, ibl_calls: list) -> bool:
 
 
 _FN_NAME_RE = re.compile(r'^[\w\uac00-\ud7a3][\w\uac00-\ud7a3.-]*$')
-_FN_NAME_RESERVED = {"if", "else", "case", "goal", "repeat", "try", "catch", "finally", "on_error", "def", "fn"}
+from common.ibl_language_tokens import CONTROL_NODES
+_FN_NAME_RESERVED = CONTROL_NODES
 
 
 def same_program(code: str, phrase: list) -> bool:

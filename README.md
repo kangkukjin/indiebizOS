@@ -356,7 +356,7 @@ You define *who* an agent is, not *which model* runs it — model and API key ar
 | **engines** | 19 | Pure media generation — images (generate + vision read/critique), icons, the morning newspaper, websites, web components, TTS. Slides and video moved to `self` in the 2026-08 consolidation |
 | **table** | 22 | Currency algebra — transformers (filter/sort/take/select/dedup/groupby/join/union/merge/rename/flatten), the higher-order **`each`**, and emitters (chart/spreadsheet/document/structure). Split out of `engines` so the grammar survives even when heavy media generation is off |
 
-IBL's definition lives in a single source of truth (`data/ibl_nodes_src/`, built to `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), and a commit-time check matches source ↔ tool schema ↔ handler three ways. Tool **packages** (42 installed, plus 5 backend core modules) are folders — drop one in and it's recognized, independent of the language; an AI agent can build, install, or modify them for you. Per-agent `allowed_nodes` restricts what each agent can reach.
+IBL's definition lives in a single source of truth (`data/ibl_nodes_src/`, built to `data/ibl_nodes.yaml` via `scripts/build_ibl_nodes.py`), and a commit-time check matches source ↔ tool schema ↔ handler three ways. Tool **packages** (46 installed, plus 5 backend core modules) are folders — drop one in and it's recognized, independent of the language; an AI agent can build, install, or modify them for you. Per-agent `allowed_nodes` restricts what each agent can reach.
 <!-- IBL_STATS:END -->
 (The numbers in this section are regenerated from the registry by `scripts/build_ibl_nodes.py` — don't edit them by hand.)
 

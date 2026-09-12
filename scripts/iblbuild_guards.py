@@ -307,15 +307,14 @@ def check_self_image(root: Path, data: dict | None) -> list[str]:
     for node in sorted(set(doc_per) - set(real_per)):
         issues.append(f"{_SELF_IMAGE_DOC}: 자기상 줄의 노드 '{node}' 는 레지스트리에 없음")
 
-    # 패키지·extensions 수 (설치 디렉토리 실측)
+    # 패키지·extensions 수 (보유 두 폴더 실측; 활성 수는 로컬 원장)
     pm = _re.search(r"(\d+)\s*도구 패키지\s*\+\s*(\d+)\s*extensions", seg)
     if pm:
-        for label, rel, doc_n in (("도구 패키지", "data/packages/installed/tools", int(pm.group(1))),
-                                  ("extensions", "data/packages/installed/extensions", int(pm.group(2)))):
-            d = root / rel
-            if not d.is_dir():
-                continue
-            real_n = len([p for p in d.iterdir() if p.is_dir() and not p.name.startswith("__")])
+        for label, kind, doc_n in (("도구 패키지", "tools", int(pm.group(1))),
+                                   ("extensions", "extensions", int(pm.group(2)))):
+            dirs = [root / "data/packages" / loc / kind for loc in ("installed", "not_installed")]
+            real_n = sum(1 for d in dirs if d.is_dir() for p in d.iterdir()
+                         if p.is_dir() and not p.name.startswith("__"))
             if doc_n != real_n:
                 issues.append(f"{_SELF_IMAGE_DOC}: {label} {doc_n} ≠ 실제 {real_n}")
     return issues

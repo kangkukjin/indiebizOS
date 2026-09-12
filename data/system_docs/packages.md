@@ -2,7 +2,7 @@
 title: 도구 패키지 시스템
 scope: 패키지 구조(handler/tool.json), 설치 절차, 설치 패키지 목록(수·표=빌드 파생). IBL 어휘는 코어 `ibl_nodes_src`와 패키지 `ibl_actions.yaml`이 소유권별 정본이며, op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택.
 owner_code: package_manager.py, tool_loader.py
-last_updated: 2026-08-28
+last_updated: 2026-09-13
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -21,8 +21,8 @@ see_also: [architecture.md, ibl.md]
 - **백엔드 코어 모듈 (extensions/)**: 에이전트가 호출하는 도구가 아니라 백엔드 시스템 내부에서 사용되는 코어 모듈 (에이전트 실행, 대화 관리, Gmail, 스케줄러 등). `tool.json`/`handler.py` 없이 백엔드에서 직접 import.
 
 ### 폴더 구조
-- **not_installed/tools/**: 설치 가능한 도구 패키지 (아직 설치 안 됨)
-- **installed/tools/**: 설치 완료된 도구 패키지 (에이전트가 사용 가능)
+- **not_installed/tools/**: 보유 묶음 보관 위치. 최초 이관 시 잠듦으로 시작
+- **installed/tools/**: 보유 묶음 보관 위치. 최초 이관 시 활성으로 시작
 - **installed/extensions/**: 백엔드 코어 모듈
 - **dev/tools/**: 개발 중인 패키지
 
@@ -37,6 +37,18 @@ HTTP·조종실·self:package는 `vocabulary_lifecycle.set_package_active` 한 �
 사람이 깨우거나 잠재우면 원장과 캐시만 바뀐다. 폴더 이동·전체 빌드·코퍼스 삭제는 없다.
 IBL 호출은 사람에게 변경을 제안하며 직접 활성 선택을 바꿀 수 없다. 과거 삭제 진입점도
 기억과 파일을 보존하는 잠재우기로 수렴한다.
+
+### 파일로 주고받기
+
+조종실 → **내 어휘** → **파일 가져오기**로 `.iblpack`을 넣는다. 받은 묶음은
+검증·용례 시딩 후 잠든 상태로 보관하며 사람이 깨운다. **내보내기**는 공개 소스와
+배포 용례를 한 파일로 만든다. manifest가 없는 옛 묶음은 공개 fixture를 용례로 쓰며,
+추가 자원은 제작자의 manifest 선언이 필요하다. 개인 기억·설정을 자동 동봉하지 않는다.
+형식·변환·등록 경계의 정본은 `docs/IBLPACK_FORMAT.md`다.
+
+새 파일 등록에는 사전집 갱신이 필요하지만 깨우기/잠재우기에는 빌드가 없다.
+형제 모듈 교체는 기존 재시작 제약을 따른다. 상주 자원 정지·메모리 회수는 1판 밖이다.
+옛 텍스트는 새 파일로 변환만 하며 Nostr도 같은 ZIP의 운반 경로를 쓴다.
 
 ## 필수 파일 형식
 
@@ -268,11 +280,11 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 ---
 
 <!-- IBL_STATS:START -->
-## 현재 설치된 도구 패키지 (42개 — 빌드 파생)
+## 현재 보유한 도구 패키지 (46개 — 빌드 파생)
 
-**op 분기 30 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · study · system_essentials · web · web-builder · youtube. (전체 op 분기 액션은 **74개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 31 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **74개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
-> 목록은 현재 `_OP_DISPATCHERS`를 가진 설치 패키지에서 파생한다. 새 op를 추가하거나 은퇴시키면 빌드가 목록과 수를 함께 갱신한다.
+> 목록은 현재 `_OP_DISPATCHERS`를 가진 보유 패키지에서 파생한다. 새 op를 추가하거나 은퇴시키면 빌드가 목록과 수를 함께 갱신한다.
 <!-- IBL_STATS:END -->
 
 > 아래 표의 **행 집합은 빌드가 관리**한다(은퇴 행 자동 삭제·신설 행 자동 추가 — tool.json 설명으로). 설명 산문은 문서 소유라 풍부하게 고쳐도 보존된다.
@@ -322,9 +334,13 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 | web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, RSS 피드, **신문 발행 `[engines:newspaper]`**(2026-08-15 스위치화 — prompt_hidden, 신문 계기 발행 버튼 전용). 2026-08-28 검색 통화 계약 둘: ①모든 소스가 **발행일 `date`(ISO 8601)** 를 싣는다(gnews=RFC2822 파싱·naver=news pubDate/blog postdate — 파싱 불능이면 필드를 달지 않는다, 모르는 날짜 미주장) → 신선도를 `[table:filter]` 술어로 세울 수 있다 ②`queries` 파라미터 선언이 `[string, array]` 유니온(핸들러가 이미 하던 배치 팬아웃을 문장 안에서 쓸 수 있게 — 선언이 능력보다 좁아 정직 거절되던 비대칭 수리). 가드 `backend/test_search_date_field.py` D1~D6 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
+| nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동기 작업, npm 패키지 활용, 프론트엔드 로직 검증에 사용합니다. fs, path, crypto 등 내장 모듈과 설치된 npm 패키지 사용 가능. |
+| publishing | Publishing Project Manager | 출판 프로젝트(책) 관리 도구. 원고 관리, 구조 기획, 조각글 수집 등.  사용 가이드: data/guides/book_publishing.md 참조 |
+| python-exec | Python Executor | Python 코드 실행 환경. 수학 계산, 데이터 처리, 파일 파싱(JSON/CSV/XML), 날짜 계산, 차트 생성(matplotlib) 등에 사용합니다. pandas, numpy, requests 등 주요 라이브러리 사용 가능. |
+| remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프레임워크를 사용하여 React/TSX 컴포넌트를 MP4 동영상으로 렌더링합니다. |
 <!-- PACKAGES_TABLE:END -->
 
-**미설치 대기(`not_installed/`)**: house-designer · music-composer · nodejs · publishing · python-exec · remotion-video(2026-08-05 은퇴 — 영상 정본=`[self:deck]{op:"video"}`) · spending(2026-08-14 은퇴 — 재무 정본=`[self:finance]`) — 전체 카탈로그는 배포되되 큐레이션된 소수만 기본 활성(코어/사용자 경계는 `data/core_manifest.json`).
+현재 잠든 목록은 폴더명에서 추측하지 않고 조종실 **내 어휘** 또는 `self:package` 목록에서 확인한다.
 
 **삭제된 패키지(디렉토리째 없음, 되살리지 말 것)**: `web-collector`(2026-08-15 — `sense:collect` 은퇴, `sense:crawl` 이 상위호환) · `local-info`(2026-08-15 — 지역정보 3형제 은퇴, `[sense:search]{source:"naver", type:"cafe"}` 가 승계. ★`area` 기본값 "오송" 하드코딩 = 세계의 명사가 코드에 박힌 헌법 위반이라 패키지와 함께 소멸) · `web-kr`(2026-08-05 — 네이버 검색이 `[sense:search]{source}` 로 흡수). 백업=`data/_backups/2026-08-15_*`.
 

@@ -166,13 +166,8 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         print(f"[build_ibl_nodes] 소스 디렉토리 없음: {src_dir}", file=sys.stderr)
         return 2
 
-    header = (
-        "# GENERATED — DO NOT EDIT\n"
-        "# Source : data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml\n"
-        "# Rebuild: python3 scripts/build_ibl_nodes.py\n"
-        "# Check  : python3 scripts/build_ibl_nodes.py --check\n"
-        "\n"
-    )
+    from iblbuild_common import CATALOG_HEADER
+    header = CATALOG_HEADER
     parts: list[str] = [header]
 
     meta_path = src_dir / "meta.yaml"

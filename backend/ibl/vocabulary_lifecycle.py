@@ -29,7 +29,7 @@ def check_ready(package_id: str) -> list:
     for key in manifest.get("requires_env", []):
         if not os.environ.get(key):
             issues.append(f"연결 설정 필요: {key}")
-    dependencies = manifest.get("dependencies", {})
+    dependencies = manifest.get("dependencies", {}) if manifest.get("format") == "iblpack" else {}
     if not isinstance(dependencies, dict):
         return issues + ["dependencies는 묶음 ID와 버전 조건의 객체여야 합니다"]
     for dep, spec in dependencies.items():
@@ -65,7 +65,8 @@ def set_package_active(package_id: str, active: bool, *, authority=None) -> dict
                 raise ValueError("; ".join(issues))
         else:
             dependents = [pid for pid, cfg in inventory()["packages"].items()
-                          if is_active(pid) and package_id in cfg["manifest"].get("dependencies", {})]
+                          if is_active(pid) and cfg["manifest"].get("format") == "iblpack"
+                          and package_id in cfg["manifest"].get("dependencies", {})]
             if dependents:
                 raise ValueError("먼저 잠재울 의존 묶음: " + ", ".join(dependents))
         from ibl_routing import invalidate_runtime_caches

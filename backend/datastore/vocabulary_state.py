@@ -8,7 +8,9 @@ from pathlib import Path
 
 import yaml
 
-from runtime_utils import get_base_path
+def get_base_path():
+    from runtime_utils import get_base_path as resolve
+    return resolve()
 from vocabulary_policy import required_packages
 
 LOCK = threading.RLock()

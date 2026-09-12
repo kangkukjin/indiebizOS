@@ -589,7 +589,7 @@ class IBLUsageDB:
         from ibl_name_search import phrase_aliases as _f
         return _f(self, limit)
 
-    def add_examples_batch(self, examples: List[Dict]) -> int:
+    def add_examples_batch(self, examples: List[Dict], *, owned_vocabulary: bool = False) -> int:
         """배치 추가 (임베딩 배치 생성)
 
         Args:
@@ -613,7 +613,10 @@ class IBLUsageDB:
             if not examples:
                 return 0
 
-        dropped = [ex['ibl_code'] for ex in examples if self._is_foreign_vocab(ex['ibl_code'])]
+        from ibl_registry import code_is_owned
+        dropped = [ex['ibl_code'] for ex in examples
+                   if (not code_is_owned(ex['ibl_code']) if owned_vocabulary
+                       else self._is_foreign_vocab(ex['ibl_code']))]
         if dropped:
             logger.warning(
                 f"[IBL Usage DB] 남의 어휘 용례 {len(dropped)}건 거부(입구 소유-게이트): "

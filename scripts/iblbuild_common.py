@@ -249,3 +249,12 @@ def atomic_write_text(path: Path, text: str, encoding: str = "utf-8") -> None:
         except OSError:
             pass
         raise
+
+
+CATALOG_HEADER = (
+    "# GENERATED — DO NOT EDIT\n"
+    "# Source : data/ibl_nodes_src/{meta,sense,self,limbs,others,engines,table}.yaml\n"
+    "# Rebuild: python3 scripts/build_ibl_nodes.py\n"
+    "# Check  : python3 scripts/build_ibl_nodes.py --check\n"
+    "\n"
+)

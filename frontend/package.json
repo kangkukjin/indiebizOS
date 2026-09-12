@@ -104,6 +104,13 @@
         ]
       },
       {
+        "from": "../scripts",
+        "to": "scripts",
+        "filter": [
+          "iblbuild*.py"
+        ]
+      },
+      {
         "from": ".dist_stage/data",
         "to": "data",
         "filter": [

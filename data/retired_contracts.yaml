@@ -457,3 +457,11 @@ retired:
       - "## 평가의 두 축"
       - "## 닫힌 문제와 열린 문제 — 노력선도 본다"
       - "감독이 활성인 턴은 별도 기준이 비어 있어도"
+
+  - id: vocabulary_text_v1_direct_install
+    retired: 2026-09-13
+    reason: 공유 계약을 용례가 동봉된 iblpack으로 통일했다. 옛 텍스트는 변환만 허용한다.
+    instead: 내 어휘에서 파일을 등록하고 사람이 깨운다. Nostr도 같은 ZIP을 운반한다.
+    phrases:
+      - "시스템 AI가 패키지를 검토하고 설치를 진행합니다."
+      - "decode API로 패키지 폴더로 복원할 수 있습니다."

@@ -113,11 +113,11 @@ def test_s4_broken_tool_json_raises():
     """S4: 깨진 tool.json 은 None(=그런 도구 없음)이 아니라 오류."""
     import tool_loader
 
-    _o1, _o2 = tool_loader.get_tools_path, tool_loader.build_tool_package_map
+    _o1, _o2 = tool_loader.package_path, tool_loader.build_tool_package_map
     try:
         _run_s4(tool_loader)
     finally:
-        tool_loader.get_tools_path = _o1
+        tool_loader.package_path = _o1
         tool_loader.build_tool_package_map = _o2
 
 
@@ -126,7 +126,7 @@ def _run_s4(tool_loader):
         pkg = Path(td) / "가짜패키지"
         pkg.mkdir()
         (pkg / "tool.json").write_text(BROKEN_JSON, encoding="utf-8")
-        tool_loader.get_tools_path = lambda: Path(td)                       # noqa: E731
+        tool_loader.package_path = lambda pid: Path(td) / pid                       # noqa: E731
         tool_loader.build_tool_package_map = lambda: {"가짜도구": "가짜패키지"}  # noqa: E731
         try:
             tool_loader.load_tool_schema("가짜도구")

@@ -98,7 +98,7 @@
 
 <!-- IBL_STATS:START -->
 **6노드 165 액션** — sense 43 · self 50 · limbs 14 · others 17 · engines 19 · table 22
-(op 분기 액션 74개 / op 분기 패키지 30개, 나머지 op 액션은 backend-native 라우팅)
+(op 분기 액션 74개 / op 분기 패키지 31개, 나머지 op 액션은 backend-native 라우팅)
 <!-- IBL_STATS:END -->
 (위 수치는 빌드가 재생성 — 손 수정 금지)
 

@@ -73,7 +73,7 @@ LAYERS = {
         "ibl_progress",
         "ibl_predicates",
         "ibl_parser", "ibl_scanner", "ibl_parser_blocks", "ibl_parser_values", "ibl_parser_scope", "ibl_routing", "ibl_turn_vars", "ibl_retyping",
-        "ibl_safety", "ibl_translate", "package_manager", "vocabulary_lifecycle", "tool_context",
+        "ibl_safety", "ibl_translate", "package_manager", "vocabulary_lifecycle", "vocabulary_archive", "vocabulary_import", "tool_context",
         "tool_loader", "tool_selector", "trigger_engine", "workflow_engine",
         "workflow_parallel", "workflow_fallback", "workflow_contract",
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",

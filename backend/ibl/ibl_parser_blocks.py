@@ -581,7 +581,8 @@ def _take_brace_body(text: str, prefix: "re.Pattern") -> Optional[Tuple[Any, str
 
 
 _DEF_PREFIX = re.compile(r'^\s*\[def:\s*([^\]\s]+)\s*\]\s*\{')
-_FN_RESERVED_NAMES = {"if", "else", "case", "goal", "repeat", "try", "catch", "finally", "on_error", "def", "fn"}
+from common.ibl_language_tokens import CONTROL_NODES
+_FN_RESERVED_NAMES = CONTROL_NODES
 
 
 def _parse_def_block(code: str) -> Optional[Dict]:

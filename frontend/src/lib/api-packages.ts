@@ -15,8 +15,44 @@ export interface InstallApprovalEntry {
   approved_at?: string;
 }
 
+
+export interface VocabularyPackage {
+  id: string;
+  name: string;
+  description: string;
+  version?: string;
+  installed: boolean;
+  required?: boolean;
+  preparation: string[];
+  tools?: Array<{ name: string; description: string }>;
+}
+
+export interface VocabularyResult {
+  success: boolean;
+  status: string;
+  message?: string;
+  package_id: string;
+  seeded?: number;
+}
+
 export function applyPackagesMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
+
+    async getVocabulary() {
+      return client.request<{ packages: VocabularyPackage[]; revision: number }>('/vocabulary');
+    },
+
+    async setVocabularyActive(id: string, active: boolean) {
+      return client.request<VocabularyResult>(`/vocabulary/${encodeURIComponent(id)}/activation`, {
+        method: 'POST', body: JSON.stringify({ active }),
+      });
+    },
+
+    async importVocabulary(file: Blob) {
+      return client.request<VocabularyResult>('/vocabulary/import', {
+        method: 'POST', body: file, headers: { 'Content-Type': 'application/octet-stream' },
+      });
+    },
 
     // ============ 도구 패키지 ============
 

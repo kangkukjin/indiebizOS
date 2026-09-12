@@ -56,9 +56,11 @@ def invalidate_node_cache():
     스냅샷을 계속 봤다. 무효화의 단일 진입점인 ibl_access.invalidate_nodes_cache()
     가 이제 여기로 위임한다.
     """
-    global _node_cache, _typed_node_cache
+    global _node_cache, _typed_node_cache, _TOOL_NODE_REVERSE_MAP, _agent_node_cache
     _node_cache = None
     _typed_node_cache = None
+    _TOOL_NODE_REVERSE_MAP = None
+    _agent_node_cache = None
 
 
 # 하위 호환 별칭 (공개화 전 이름 — 원래 호출자가 0이라 깨질 곳은 없다)
@@ -184,8 +186,8 @@ def _get_tool_node_map() -> dict:
     path = _get_nodes_path()
     if not path.exists():
         return {}
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    from ibl_registry import load_nodes_installed
+    data = load_nodes_installed()
     mapping = {}
     for node_name, node_cfg in data.get("nodes", {}).items():
         for action_cfg in node_cfg.get("actions", {}).values():
@@ -324,8 +326,8 @@ def _load_node_typed_descriptors() -> List[Dict]:
     if not path.exists():
         return []
 
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    from ibl_registry import load_nodes_installed
+    data = load_nodes_installed()
 
     nodes_config = data.get("nodes", {})
     descriptors = []
@@ -389,8 +391,8 @@ def _load_flat_nodes() -> List[Dict]:
     if not path.exists():
         return []
 
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
+    from ibl_registry import load_nodes_installed
+    data = load_nodes_installed()
 
     flat_nodes = data.get("nodes", {})
     nodes = []

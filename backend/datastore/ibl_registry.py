@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 import yaml
+from common.ibl_language_tokens import CONTROL_NODES
 
 _nodes: Optional[Dict] = None
 _nodes_path: Optional[Path] = None
@@ -289,12 +290,12 @@ def foreign_actions(code: str) -> List[str]:
     ★미지 액션도 남의 어휘로 친다: 설치 필터(물리 분리, `_prune_foreign_vocabulary`)
     후 남의 몸 어휘는 이 몸의 레지스트리에 아예 없어 '미지'로 나타난다(맥의
     limbs:phone 실측). 사전에 없는 것 = 이 몸이 실행할 수 없는 것(폐어휘 포함).
-    예외는 삼키지 않는다 — fail-open 이 필요한 호출자는 code_is_own 을 쓸 것.
+    예외는 삼키지 않는다 — 불리언 판정 호출자는 fail-closed인 code_is_own을 쓸 것.
     """
     nodes = load_nodes_installed().get("nodes") or {}
     bad: List[str] = []
     for node, action in _ACT_RE.findall(code or ""):
-        if node == "fn":
+        if node in CONTROL_NODES:
             continue                        # 함수 호출(언어 개정 2026-09-05) — 어휘가 아니다
         cfg = (nodes.get(node, {}).get("actions") or {}).get(action)
         if cfg is None or not self_can_run(node, action, cfg):
@@ -317,3 +318,24 @@ def code_is_own(code: str) -> bool:
         return False  # 판정 불능 용례는 자동 실행 후보가 아니다
 
 
+
+
+def code_is_owned(code: str) -> bool:
+    """배포 용례 시딩의 소유 판정. 잠든 보유도 허용하되 미지/다른 몸 어휘는 거절."""
+    with open(_get_nodes_path(), encoding="utf-8") as stream:
+        data = yaml.safe_load(stream) or {}
+    nodes = data.get("nodes", {})
+    _merge_api_registry_actions(nodes)
+    from runtime_utils import detect_body
+    profile = detect_body().get("profile")
+    for node, action in _ACT_RE.findall(code or ""):
+        if node in CONTROL_NODES:
+            continue
+        cfg = nodes.get(node, {}).get("actions", {}).get(action)
+        if not cfg or cfg.get("router") == "stub":
+            return False
+        if profile == "phone" and not _phone_runnable(node, action):
+            return False
+        if profile != "phone" and cfg.get("runs_on") == "phone_only":
+            return False
+    return True

@@ -1,1018 +1,130 @@
-/**
- * ToolboxDialog - 도구 패키지 관리
- *
- * 기능:
- * - 도구 패키지 설치/제거
- * - AI로 폴더 분석하여 패키지 등록
- * - 등록된 패키지 삭제
- */
-
-import { useState, useEffect } from 'react';
-import { X, Package, Download, Trash2, Check, AlertCircle, FolderOpen, ChevronDown, ChevronRight, FolderPlus, XCircle, Sparkles, Loader2, Search, Globe } from 'lucide-react';
+/** 내 어휘: 보유와 사용을 나누는 사람 전용 레고박스. */
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Boxes, X, Upload, Download, LockKeyhole, Moon, Search, Loader2, Settings2 } from 'lucide-react';
 import { api } from '../../../lib/api';
-import type { InstallApprovalEntry } from '../../../lib/api-packages';
+import { getBackendOrigin } from '../../../lib/backend-origin';
+import type { VocabularyPackage } from '../../../lib/api-packages';
+import { PackageDeveloperDialog } from './PackageDeveloperDialog';
 import { ToolSearchDialog } from './ToolSearchDialog';
 
-interface PackageInfo {
-  id: string;
-  name: string;
-  description: string;
-  version?: string;
-  author?: string;
-  type?: 'tools';
-  icon?: string;
-  installed: boolean;
-  required?: boolean;
-  package_type?: string;
-  files?: string[];
-  tools?: Array<{ name: string; description: string }>;
-  // 능력 자기완결화 메타 (package_meta.json 파생, /packages 응답에 포함)
-  locale?: 'universal' | 'kr' | string;
-  weight?: 'light' | 'heavy' | string;
-  needs_key?: string[];
-  missing_keys?: string[];
-  dormant?: boolean;   // 설치됐지만 키 누락 → 대기 상태
-}
-
-// 도구 관리 상위 4개 카테고리. 각 섹션은 열리고 닫히며, 안에 설치됨 + 미설치를 함께 보여준다.
-// 멤버십은 IBL 헌법 '언어의 경계'(ibl.md)를 따른다:
-//   표준 = 언어가 성립하려면 모든 인스턴스가 공유해야 하는 패키지 — 기능어 코어(self/others/table)
-//          어휘와 언어 인프라의 소유자. 명시 선언(STANDARD_PACKAGES)이며 낙수 버킷이 아니다.
-//   그 외 = 전부 개인 사전(내용어). 실용 관심사로 하위 분류: 한국 전용(locale) / 키 필요.
-type Category = 'standard' | 'kr' | 'needs_key' | 'personal';
-const CATEGORY_ORDER: Category[] = ['standard', 'kr', 'needs_key', 'personal'];
-const CATEGORY_LABEL: Record<Category, string> = {
-  standard: '⭐ 표준 — 언어 코어',
-  kr: '🇰🇷 한국 전용',
-  needs_key: '🔑 키 필요',
-  personal: '👤 개인어휘',
-};
-
-function categoryOf(pkg: PackageInfo): Category {
-  if (pkg.required) return 'standard';
-  if (pkg.locale === 'kr') return 'kr';
-  if ((pkg.needs_key?.length ?? 0) > 0) return 'needs_key';
-  return 'personal'; // 기본 = 개인 사전 (표준이 아니면 내용어)
-}
-
-interface ToolboxDialogProps {
-  show: boolean;
-  onClose: () => void;
-}
-
-interface AIAnalysisResult {
-  valid: boolean | null;
-  folder_name?: string;
-  folder_path?: string;
-  files?: string[];
-  error?: string;
-  reason?: string;
-  package_name?: string;
-  package_description?: string;
-  tools?: Array<{ name: string; description: string }>;
-  readme_content?: string;
-  can_auto_generate?: boolean;
-}
-
-interface RegisterDialogState {
-  show: boolean;
-  folderPath: string;
-  step: 'input' | 'analyzing' | 'result';
-  analysis: AIAnalysisResult | null;
-  name: string;
-  description: string;
-  readmeContent: string;
-}
-
-export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
-  const [packages, setPackages] = useState<PackageInfo[]>([]);
-  const [selectedPackage, setSelectedPackage] = useState<PackageInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
-  // 카테고리별 열림 상태 (기본 전부 닫힘)
-  const [expandedCats, setExpandedCats] = useState<Set<string>>(() => new Set<string>());
-  const toggleCat = (c: string) => setExpandedCats((prev) => {
-    const next = new Set(prev);
-    next.has(c) ? next.delete(c) : next.add(c);
-    return next;
-  });
-
-  // 폴더 등록 다이얼로그 상태
-  const [registerDialog, setRegisterDialog] = useState<RegisterDialogState>({
-    show: false,
-    folderPath: '',
-    step: 'input',
-    analysis: null,
-    name: '',
-    description: '',
-    readmeContent: '',
-  });
-
-  // 도구 검색 다이얼로그 상태
-  const [showSearchDialog, setShowSearchDialog] = useState(false);
-
-  // 패키지 공개 로딩 상태
-  const [publishLoading, setPublishLoading] = useState<string | null>(null);
-
-  // [self:install_lib] 승인 대기 — AI 는 승인을 요청만 하고, 사람이 여기서 누른다(자동 설치 없음).
-  const [installApprovals, setInstallApprovals] = useState<InstallApprovalEntry[]>([]);
-  const [approvalLoading, setApprovalLoading] = useState<string | null>(null);
-
-  // 패키지 공개 다이얼로그 상태
-  const [publishDialog, setPublishDialog] = useState<{
-    show: boolean;
-    package: PackageInfo | null;
-    installInstructions: string;
-    signature: string;
-    isGenerating: boolean;
-  }>({
-    show: false,
-    package: null,
-    installInstructions: '',
-    signature: '',
-    isGenerating: false,
-  });
-
-  useEffect(() => {
-    if (show) {
-      loadPackages();
-    }
-  }, [show]);
-
-  const loadInstallApprovals = async () => {
-    try {
-      const r = await api.getInstallApprovals();
-      setInstallApprovals(Object.values(r.pending || {}));
-    } catch {
-      /* 승인 판은 부가 표면 — 실패해도 도구 관리 창은 산다 */
-    }
-  };
-
+export function ToolboxDialog({ show, onClose }: { show: boolean; onClose: () => void }) {
+  const [packages, setPackages] = useState<VocabularyPackage[]>([]);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<'all' | 'active' | 'sleeping'>('all');
+  const [advanced, setAdvanced] = useState(false);
+  const [search, setSearch] = useState(false);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  const reload = useCallback(async () => {
+    setLoading(true);
+    try { setPackages((await api.getVocabulary()).packages); }
+    catch (e) { setError(e instanceof Error ? e.message : '어휘를 불러오지 못했습니다.'); }
+    finally { setLoading(false); }
+  }, []);
   useEffect(() => {
     if (!show) return;
-    loadInstallApprovals();
-    const t = setInterval(loadInstallApprovals, 10000);
-    return () => clearInterval(t);
-  }, [show]);
-
-  const handleInstallApproval = async (pkg: string, decision: 'approve' | 'reject') => {
-    setApprovalLoading(pkg);
-    try {
-      if (decision === 'approve') {
-        const r = await api.approveInstall(pkg);
-        setMessage({ type: 'success', text: r.message || `'${pkg}' 설치를 승인했습니다. AI가 다음 호출에서 설치합니다.` });
-      } else {
-        await api.rejectInstall(pkg);
-        setMessage({ type: 'success', text: `'${pkg}' 설치 요청을 거부했습니다.` });
-      }
-      await loadInstallApprovals();
-    } catch (e) {
-      setMessage({ type: 'error', text: `처리 실패: ${e instanceof Error ? e.message : String(e)}` });
-    } finally {
-      setApprovalLoading(null);
-    }
+    setError(''); setMessage(''); void reload();
+    const previous = document.activeElement as HTMLElement | null;
+    closeButton.current?.focus();
+    return () => previous?.focus();
+  }, [show, reload]);
+  const run = async (id: string, action: () => Promise<void>) => {
+    if (busy) return;
+    setBusy(id); setError(''); setMessage('');
+    try { await action(); }
+    catch (e) { setError(e instanceof Error ? e.message : '처리하지 못했습니다.'); }
+    finally { setBusy(null); }
   };
-
-  const loadPackages = async () => {
-    setIsLoading(true);
-    try {
-      const response = await api.getPackages();
-      const allPackages = [...response.available];
-      setPackages(allPackages);
-    } catch (error) {
-      console.error('패키지 로드 실패:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleInstall = async (pkg: PackageInfo) => {
-    setActionLoading(pkg.id);
-    setMessage(null);
-    try {
-      await api.installPackage(pkg.id);
-      setMessage({ type: 'success', text: `'${pkg.name}' 설치 완료` });
-      await loadPackages();
-      if (selectedPackage?.id === pkg.id) {
-        setSelectedPackage({ ...selectedPackage, installed: true });
-      }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '설치 실패' });
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  const handleUninstall = async (pkg: PackageInfo) => {
-    setActionLoading(pkg.id);
-    setMessage(null);
-    try {
-      await api.uninstallPackage(pkg.id);
-      setMessage({ type: 'success', text: `'${pkg.name}' 제거 완료` });
-      await loadPackages();
-      if (selectedPackage?.id === pkg.id) {
-        setSelectedPackage({ ...selectedPackage, installed: false });
-      }
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '제거 실패' });
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // 패키지 삭제 (목록에서 완전히 제거)
-  const handleRemovePackage = async (pkg: PackageInfo) => {
-    if (!confirm(`'${pkg.name}' 패키지를 목록에서 완전히 삭제하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.`)) {
-      return;
-    }
-
-    setActionLoading(pkg.id);
-    setMessage(null);
-    try {
-      await api.removePackage(pkg.id);
-      setMessage({ type: 'success', text: `'${pkg.name}' 패키지가 삭제되었습니다` });
-      setSelectedPackage(null);
-      await loadPackages();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '삭제 실패' });
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
-  // 폴더 등록 다이얼로그 열기
-  const openRegisterDialog = () => {
-    setRegisterDialog({
-      show: true,
-      folderPath: '',
-      step: 'input',
-      analysis: null,
-      name: '',
-      description: '',
-      readmeContent: '',
+  const receive = (file?: File) => {
+    if (!file) return;
+    void run('import', async () => {
+      if (file.size > 20 * 1024 * 1024) throw new Error('어휘 파일은 최대 20MB입니다.');
+      const result = await api.importVocabulary(file);
+      if (!result.success) throw new Error(result.message || '가져오기 실패');
+      setMessage(result.status === 'already_owned' ? '이미 레고박스에 있는 묶음입니다.' : `${result.package_id}를 넣었습니다. 사용할 때 깨워 주세요.`);
+      await reload();
+      window.dispatchEvent(new Event('vocabulary-changed'));
     });
   };
-
-  // 패키지 공개 다이얼로그 열기
-  const openPublishDialog = async (pkg: PackageInfo) => {
-    setPublishDialog({
-      show: true,
-      package: pkg,
-      installInstructions: '',
-      signature: '',
-      isGenerating: true,
-    });
-
-    // AI로 설치 방법 자동 생성
-    try {
-      const result = await api.generateInstallInstructions(pkg.id);
-      setPublishDialog(prev => ({
-        ...prev,
-        installInstructions: result.instructions,
-        isGenerating: false,
-      }));
-    } catch (error) {
-      // 실패 시 기본 텍스트
-      setPublishDialog(prev => ({
-        ...prev,
-        installInstructions: `indiebizOS 도구 관리에서 '${pkg.name}' 검색 후 설치`,
-        isGenerating: false,
-      }));
+  const download = (pkg: VocabularyPackage) => void run(pkg.id, async () => {
+    const response = await fetch(`${await getBackendOrigin()}/vocabulary/${encodeURIComponent(pkg.id)}/export`);
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body.detail || '파일을 만들지 못했습니다.');
     }
-  };
-
-  // 패키지 공개 실행 (Nostr)
-  const handlePublishPackage = async () => {
-    const pkg = publishDialog.package;
-    if (!pkg) return;
-
-    setPublishLoading(pkg.id);
-    setMessage(null);
-
-    try {
-      const result = await api.publishPackageToNostr(
-        pkg.id,
-        publishDialog.installInstructions || undefined,
-        publishDialog.signature || undefined
-      );
-      setMessage({ type: 'success', text: result.message });
-      setPublishDialog({ show: false, package: null, installInstructions: '', signature: '', isGenerating: false });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '공개 실패' });
-    } finally {
-      setPublishLoading(null);
-    }
-  };
-
-  // AI로 폴더 분석
-  const analyzeWithAI = async () => {
-    if (!registerDialog.folderPath.trim()) return;
-
-    setRegisterDialog(prev => ({ ...prev, step: 'analyzing' }));
-
-    try {
-      const result = await api.analyzeFolderWithAI(registerDialog.folderPath);
-      setRegisterDialog(prev => ({
-        ...prev,
-        step: 'result',
-        analysis: result,
-        name: result.package_name || result.folder_name || '',
-        description: result.package_description || '',
-        readmeContent: result.readme_content || '',
-      }));
-    } catch (error: any) {
-      setRegisterDialog(prev => ({
-        ...prev,
-        step: 'result',
-        analysis: { valid: false, error: error.message || '분석 실패' },
-      }));
-    }
-  };
-
-  // 폴더 등록 실행
-  const handleRegisterFolder = async () => {
-    const { folderPath, name, description, readmeContent } = registerDialog;
-
-    setActionLoading('register');
-    try {
-      await api.registerFolder(folderPath, name, description, readmeContent);
-      setMessage({ type: 'success', text: `'${name}' 패키지가 등록되었습니다` });
-      setRegisterDialog(prev => ({ ...prev, show: false }));
-      await loadPackages();
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message || '등록 실패' });
-    } finally {
-      setActionLoading(null);
-    }
-  };
-
+    const url = URL.createObjectURL(await response.blob());
+    const link = document.createElement('a');
+    link.href = url; link.download = `${pkg.id}.iblpack`; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setMessage(`${pkg.name} 파일을 만들었습니다.`);
+  });
   if (!show) return null;
-
-  // 카테고리별 패키지 — 설치됨 먼저, 그 다음 미설치(각 그룹 내 이름순)
-  const packagesInCategory = (cat: Category) =>
-    packages
-      .filter((p) => categoryOf(p) === cat)
-      .sort((a, b) => (Number(b.installed) - Number(a.installed)) || a.name.localeCompare(b.name));
-
-  const renderPackageItem = (pkg: PackageInfo) => (
-    <div
-      key={pkg.id}
-      onClick={() => setSelectedPackage(pkg)}
-      className={`p-3 rounded-lg cursor-pointer transition-all ${
-        selectedPackage?.id === pkg.id
-          ? 'bg-indigo-50 border-2 border-indigo-300'
-          : 'bg-white border border-gray-200 hover:border-gray-300 hover:shadow-sm'
-      }`}
-    >
-      <div className="flex items-center gap-3">
-        <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-          pkg.installed
-            ? 'bg-green-100 text-green-600'
-            : 'bg-gray-100 text-gray-500'
-        }`}>
-          <Package size={20} />
+  if (advanced) return <PackageDeveloperDialog show onClose={() => { setAdvanced(false); void reload(); }} />;
+  const activeCount = packages.filter(p => p.installed).length;
+  const shown = packages.filter(p => (filter === 'all' || (filter === 'active') === p.installed)
+    && `${p.name} ${p.description} ${p.id}`.toLowerCase().includes(query.toLowerCase()));
+  const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-stone-200 px-3 py-2 text-sm hover:bg-stone-100 disabled:opacity-40';
+  return <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-6" onKeyDown={e => {
+    if (search) return;
+    if (e.key === 'Escape' && !busy) onClose();
+    if (e.key === 'Tab') {
+      const nodes = dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex="0"]');
+      if (!nodes?.length) return;
+      const first = nodes[0], last = nodes[nodes.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }}>
+    <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="vocabulary-title" className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-[#faf8f4] shadow-xl text-stone-800" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); receive(e.dataTransfer.files[0]); }}>
+      <div className="p-5 border-b border-stone-200">
+        <div className="flex items-start justify-between gap-4">
+          <div><h2 id="vocabulary-title" className="text-xl font-semibold flex items-center gap-2"><Boxes size={23} /> 내 어휘</h2>
+            <p className="text-sm text-stone-500 mt-1">내 레고박스에서 이 몸이 쓸 어휘를 골라 주세요.</p></div>
+          <button ref={closeButton} className={button} disabled={!!busy} onClick={onClose} aria-label="내 어휘 닫기"><X size={18} /></button>
         </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-medium text-gray-800 text-sm truncate">{pkg.name}</h3>
-          <p className="text-xs text-gray-500 truncate">{pkg.description || '설명 없음'}</p>
-          {/* 능력 메타 배지 */}
-          {(pkg.dormant || (pkg.needs_key && pkg.needs_key.length > 0) || pkg.weight === 'heavy') && (
-            <div className="flex items-center gap-1 mt-1 flex-wrap">
-              {pkg.dormant ? (
-                <span className="text-[10px] px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded" title={`키 대기: ${(pkg.missing_keys || []).join(', ')}`}>🔑 키 대기</span>
-              ) : (pkg.needs_key && pkg.needs_key.length > 0) ? (
-                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded" title={pkg.needs_key.join(', ')}>🔑 키 필요</span>
-              ) : null}
-              {pkg.weight === 'heavy' && (
-                <span className="text-[10px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded">무거움</span>
-              )}
-            </div>
-          )}
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <span className="text-sm mr-auto">보유 {packages.length} · 사용 중 {activeCount} · 잠듦 {packages.length - activeCount}</span>
+          <input ref={fileInput} type="file" accept=".iblpack,.txt" className="hidden" onChange={e => { receive(e.target.files?.[0]); e.target.value = ''; }} />
+          <button className={button} disabled={!!busy} onClick={() => fileInput.current?.click()}><Upload size={16} /> 파일 가져오기</button>
+          <button className={button} disabled={!!busy} onClick={() => setSearch(true)}><Search size={16} /> 공유 어휘 찾기</button>
+          <button className={button} disabled={!!busy} onClick={() => setAdvanced(true)} aria-label="제작 및 라이브러리 관리"><Settings2 size={16} /></button>
         </div>
-        {/* 빠른 액션 버튼 */}
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            pkg.installed ? handleUninstall(pkg) : handleInstall(pkg);
-          }}
-          disabled={actionLoading === pkg.id}
-          className={`p-1.5 rounded-lg shrink-0 transition-colors ${
-            pkg.installed
-              ? 'text-red-500 hover:bg-red-50'
-              : 'text-green-500 hover:bg-green-50'
-          } ${actionLoading === pkg.id ? 'opacity-50' : ''}`}
-          title={pkg.installed ? '제거' : '설치'}
-        >
-          {actionLoading === pkg.id ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : pkg.installed ? (
-            <Trash2 size={16} />
-          ) : (
-            <Download size={16} />
-          )}
-        </button>
+        <p className="mt-3 text-xs text-stone-500">잠재우면 AI의 어휘 소개·실행용 회상·새 호출에서 빠집니다. 파일과 기억은 남습니다.</p>
       </div>
+      <div className="px-5 pt-4 space-y-3">
+        {error && <p role="alert" className="p-3 rounded-lg bg-red-50 text-red-700 text-sm break-words">{error}</p>}
+        {message && <p role="status" className="p-3 rounded-lg bg-emerald-50 text-emerald-800 text-sm">{message}</p>}
+        <div className="flex flex-wrap gap-2">
+          <input aria-label="내 어휘 검색" placeholder="이름이나 하는 일로 찾기" value={query} onChange={e => setQuery(e.target.value)} className="min-w-0 flex-1 rounded-lg border border-stone-200 bg-white px-3 py-2 text-sm" />
+          {(['all', 'active', 'sleeping'] as const).map((key, i) => <button key={key} aria-pressed={filter === key} className={`${button} ${filter === key ? 'bg-stone-200 font-medium' : ''}`} onClick={() => setFilter(key)}>{['전체', '사용 중', '잠듦'][i]}</button>)}
+        </div>
+      </div>
+      <div className="overflow-y-auto p-5 grid sm:grid-cols-2 gap-3" aria-busy={loading || !!busy}>
+        {loading && packages.length === 0 && <p className="text-sm flex gap-2"><Loader2 className="animate-spin" size={16} /> 어휘를 불러오는 중</p>}
+        {!loading && !shown.length && <p className="text-sm text-stone-500">해당하는 어휘가 없습니다. 파일을 끌어 놓아 레고박스에 넣을 수 있습니다.</p>}
+        {shown.map(pkg => <article key={pkg.id} className={`rounded-xl border p-4 flex flex-col gap-3 ${pkg.installed ? 'bg-white border-emerald-200' : 'bg-stone-100/60 border-stone-200'}`}>
+          <div className="flex items-start gap-2 justify-between"><div className="min-w-0"><h3 className="font-medium break-words">{pkg.name}</h3><span className="text-xs text-stone-500">{pkg.version || pkg.id}</span></div>
+            <span className="shrink-0 text-xs flex items-center gap-1">{pkg.required ? <><LockKeyhole size={13} /> 필수</> : pkg.installed ? '● 사용 중' : <><Moon size={13} /> 잠듦</>}</span></div>
+          <p className="text-sm text-stone-600 flex-1 break-words line-clamp-3" title={pkg.description}>{pkg.description.split("##")[0]}</p>
+          {pkg.preparation?.length > 0 && <p className="text-xs text-amber-800">{pkg.preparation.join(' · ')}</p>}
+          <div className="flex items-center justify-between gap-2">
+            <button className={button} disabled={!!busy || pkg.required} onClick={() => download(pkg)} aria-label={`${pkg.name} 파일 내보내기`}><Download size={15} /> 내보내기</button>
+            <button role="switch" aria-checked={pkg.installed} aria-label={`${pkg.name} 사용`} disabled={!!busy || pkg.required || (!pkg.installed && !!pkg.preparation?.length)} className={`${button} ${pkg.installed ? 'text-emerald-800 border-emerald-300' : ''}`} onClick={() => void run(pkg.id, async () => {
+              const result = await api.setVocabularyActive(pkg.id, !pkg.installed);
+              if (!result.success) throw new Error(result.message || '선택 변경 실패');
+              setMessage(`${pkg.name}: ${result.message || '변경했습니다.'}`);
+              await reload(); window.dispatchEvent(new Event('vocabulary-changed'));
+            })}>{busy === pkg.id ? <Loader2 className="animate-spin" size={15} /> : pkg.required ? '항상 사용' : pkg.installed ? '잠재우기' : '깨우기'}</button>
+          </div>
+        </article>)}
+      </div>
+      <div className="px-5 py-3 border-t border-stone-200 text-xs text-stone-500">받은 어휘는 잠든 상태로 들어옵니다. 선택은 이 몸에만 적용됩니다. 실행 중인 작업은 계속됩니다.</div>
     </div>
-  );
-
-  // 카테고리 섹션 — 열리고 닫히며, 안에 설치됨 + 미설치를 함께 보여줌
-  const renderCategorySection = (cat: Category) => {
-    const items = packagesInCategory(cat);
-    const installedCount = items.filter((p) => p.installed).length;
-    const open = expandedCats.has(cat);
-    return (
-      <div key={cat}>
-        <button
-          onClick={() => toggleCat(cat)}
-          className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2 hover:text-gray-900 w-full"
-        >
-          {open ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-          <span className="flex items-center gap-2">
-            {CATEGORY_LABEL[cat]}
-            <span className="text-xs px-1.5 py-0.5 bg-gray-100 text-gray-600 rounded">
-              설치 {installedCount} · 가능 {items.length - installedCount}
-            </span>
-          </span>
-        </button>
-        {open && (
-          <div className="space-y-2 ml-1">
-            {items.length === 0 ? (
-              <p className="text-xs text-gray-400 py-2">해당 패키지가 없습니다</p>
-            ) : (
-              items.map(renderPackageItem)
-            )}
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50">
-      <div
-        className="bg-white rounded-xl shadow-2xl flex flex-col overflow-hidden"
-        style={{
-          width: 'min(850px, 90vw)',
-          height: 'min(650px, 85vh)',
-        }}
-      >
-        {/* 헤더 */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50 shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <Package size={22} className="text-white" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold text-gray-800">도구 관리</h2>
-              <p className="text-xs text-gray-500">패키지 설치 및 관리</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowSearchDialog(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
-              title="Nostr에서 도구 검색"
-            >
-              <Search size={16} />
-              <span>도구 검색</span>
-            </button>
-            <button
-              onClick={openRegisterDialog}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 transition-colors"
-              title="폴더에서 패키지 등록"
-            >
-              <FolderPlus size={16} />
-              <span>등록</span>
-            </button>
-            <button
-              onClick={onClose}
-              className="p-2 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <X size={20} className="text-gray-500" />
-            </button>
-          </div>
-        </div>
-
-        {/* 메시지 */}
-        {message && (
-          <div className={`mx-4 mt-3 p-2.5 rounded-lg flex items-center gap-2 ${
-            message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'
-          }`}>
-            {message.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
-            <span className="text-sm">{message.text}</span>
-          </div>
-        )}
-
-        {/* 라이브러리 설치 승인 — AI 가 요청한 pip 패키지, 사람만 승인/거부 */}
-        {installApprovals.length > 0 && (
-          <div className="mx-4 mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 space-y-2">
-            <div className="flex items-center gap-2 text-amber-800 text-sm font-medium">
-              <AlertCircle size={16} />
-              <span>라이브러리 설치 승인 대기 ({installApprovals.length})</span>
-              <span className="text-xs font-normal text-amber-700">AI가 요청했습니다. 승인해야 설치됩니다 — 자동 설치는 없습니다.</span>
-            </div>
-            {installApprovals.map((e) => (
-              <div key={e.package} className="flex items-center gap-3 bg-white rounded-md px-3 py-2 border border-amber-100">
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-mono text-gray-800 truncate">{e.spec || e.package}</div>
-                  <div className="text-xs text-gray-500 truncate">
-                    {e.reason ? e.reason : '(사유 없음)'}
-                    {e.requested_at ? ` · ${e.requested_at.replace('T', ' ')}` : ''}
-                  </div>
-                </div>
-                <button
-                  onClick={() => handleInstallApproval(e.package, 'approve')}
-                  disabled={approvalLoading === e.package}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50"
-                >
-                  {approvalLoading === e.package ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}
-                  승인
-                </button>
-                <button
-                  onClick={() => handleInstallApproval(e.package, 'reject')}
-                  disabled={approvalLoading === e.package}
-                  className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300 disabled:opacity-50"
-                >
-                  <XCircle size={12} />
-                  거부
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* 컨텐츠 */}
-        <div className="flex-1 flex overflow-hidden">
-          {/* 패키지 목록 */}
-          <div className="w-1/2 border-r border-gray-200 overflow-y-auto p-4 bg-gray-50">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                <Loader2 size={24} className="animate-spin mr-2" />
-                로딩 중...
-              </div>
-            ) : packages.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                <Package size={48} className="mb-3 opacity-50" />
-                <p className="text-sm">패키지가 없습니다</p>
-                <button
-                  onClick={openRegisterDialog}
-                  className="mt-3 text-sm text-indigo-500 hover:text-indigo-600"
-                >
-                  폴더에서 등록하기
-                </button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {/* 4개 카테고리 섹션 — 각각 열림/닫힘, 안에 설치됨+미설치 함께 */}
-                {CATEGORY_ORDER.map(renderCategorySection)}
-              </div>
-            )}
-          </div>
-
-          {/* 패키지 상세 */}
-          <div className="w-1/2 overflow-y-auto p-4">
-            {selectedPackage ? (
-              <div className="space-y-4">
-                {/* 헤더 */}
-                <div className="flex items-start gap-4">
-                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${
-                    selectedPackage.installed
-                      ? 'bg-green-100 text-green-600'
-                      : 'bg-indigo-100 text-indigo-600'
-                  }`}>
-                    <Package size={28} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-xl font-bold text-gray-800">{selectedPackage.name}</h3>
-                      {selectedPackage.installed && (
-                        <span className="text-xs px-2 py-0.5 bg-green-100 text-green-600 rounded-full">
-                          설치됨
-                        </span>
-                      )}
-                    </div>
-                    {selectedPackage.version && (
-                      <p className="text-sm text-gray-500">v{selectedPackage.version}</p>
-                    )}
-                  </div>
-                </div>
-
-                {/* 설명 */}
-                <p className="text-sm text-gray-700 leading-relaxed">
-                  {selectedPackage.description || '설명이 없습니다.'}
-                </p>
-
-                {/* 파일 목록 */}
-                {selectedPackage.files && selectedPackage.files.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">포함된 파일</h4>
-                    <div className="flex flex-wrap gap-1.5">
-                      {selectedPackage.files.slice(0, 10).map((file, idx) => (
-                        <span key={idx} className="text-xs px-2 py-0.5 bg-gray-100 text-gray-600 rounded">
-                          {file}
-                        </span>
-                      ))}
-                      {selectedPackage.files.length > 10 && (
-                        <span className="text-xs px-2 py-0.5 bg-gray-100 text-gray-500 rounded">
-                          +{selectedPackage.files.length - 10}개
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* 도구 목록 */}
-                {selectedPackage.tools && selectedPackage.tools.length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">제공하는 도구</h4>
-                    <ul className="space-y-1.5">
-                      {selectedPackage.tools.map((tool, idx) => (
-                        <li key={idx} className="text-sm text-gray-600 flex items-start gap-2">
-                          <span className="text-indigo-500 mt-1">•</span>
-                          <div>
-                            <span className="font-medium">{tool.name}</span>
-                            <span className="text-gray-400"> - {tool.description}</span>
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-
-                {/* 액션 버튼 */}
-                <div className="pt-4 border-t border-gray-200 space-y-2">
-                  {selectedPackage.installed ? (
-                    <button
-                      onClick={() => handleUninstall(selectedPackage)}
-                      disabled={selectedPackage.required || actionLoading === selectedPackage.id}
-                      className="w-full px-4 py-2.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors font-medium"
-                    >
-                      {actionLoading === selectedPackage.id ? (
-                        <Loader2 size={18} className="animate-spin" />
-                      ) : (
-                        <Trash2 size={18} />
-                      )}
-                      {actionLoading === selectedPackage.id ? '제거 중...' : selectedPackage.required ? '기본 제공' : '제거하기'}
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleInstall(selectedPackage)}
-                      disabled={selectedPackage.required || actionLoading === selectedPackage.id}
-                      className="w-full px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors font-medium"
-                    >
-                      {actionLoading === selectedPackage.id ? (
-                        <Loader2 size={18} className="animate-spin" />
-                      ) : (
-                        <Download size={18} />
-                      )}
-                      {actionLoading === selectedPackage.id ? '설치 중...' : '설치하기'}
-                    </button>
-                  )}
-
-                  {/* 패키지 공개 버튼 (설치된 패키지만) */}
-                  {selectedPackage.installed && (
-                    <button
-                      onClick={() => openPublishDialog(selectedPackage)}
-                      className="w-full px-4 py-2 bg-purple-100 text-purple-600 rounded-lg hover:bg-purple-200 flex items-center justify-center gap-2 transition-colors text-sm font-medium"
-                    >
-                      <Globe size={16} />
-                      Nostr에 공개
-                    </button>
-                  )}
-
-                  {/* 패키지 삭제 버튼 */}
-                  <button
-                    onClick={() => handleRemovePackage(selectedPackage)}
-                    disabled={selectedPackage.required || actionLoading === selectedPackage.id}
-                    className="w-full px-4 py-2 text-gray-500 rounded-lg hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors text-sm"
-                  >
-                    <XCircle size={16} />
-                    목록에서 삭제
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full text-gray-400">
-                <Package size={48} className="mb-3 opacity-50" />
-                <p className="text-sm">패키지를 선택하세요</p>
-                <p className="text-xs mt-1 text-center">
-                  에이전트가 사용할 도구를 관리합니다
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* 폴더 등록 다이얼로그 */}
-      {registerDialog.show && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-60">
-          <div className="bg-white rounded-xl shadow-2xl w-[550px] max-w-[90vw]">
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div className="flex items-center gap-2">
-                <Sparkles size={20} className="text-indigo-500" />
-                <h3 className="font-bold text-gray-800">AI로 도구 패키지 등록</h3>
-              </div>
-              <button
-                onClick={() => setRegisterDialog(prev => ({ ...prev, show: false }))}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <X size={18} className="text-gray-500" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              {/* Step 1: 폴더 경로 입력 */}
-              {registerDialog.step === 'input' && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      폴더 경로
-                    </label>
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={registerDialog.folderPath}
-                        onChange={(e) => setRegisterDialog(prev => ({ ...prev, folderPath: e.target.value }))}
-                        placeholder="/path/to/tool/folder"
-                        className="flex-1 px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                      />
-                      <button
-                        onClick={async () => {
-                          if (window.electron?.selectFolder) {
-                            const folderPath = await window.electron.selectFolder();
-                            if (folderPath) {
-                              setRegisterDialog(prev => ({ ...prev, folderPath }));
-                            }
-                          }
-                        }}
-                        className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors flex items-center gap-1.5 text-gray-700 shrink-0"
-                        title="폴더 선택"
-                      >
-                        <FolderOpen size={18} />
-                        <span className="text-sm">찾아보기</span>
-                      </button>
-                    </div>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    AI가 폴더 내용을 분석하여 도구 패키지로 등록 가능한지 판별하고, README를 자동 생성합니다.
-                  </p>
-                </>
-              )}
-
-              {/* Step 2: 분석 중 */}
-              {registerDialog.step === 'analyzing' && (
-                <div className="flex flex-col items-center py-8">
-                  <Loader2 size={40} className="animate-spin text-indigo-500 mb-4" />
-                  <p className="text-gray-700 font-medium">AI가 폴더를 분석하고 있습니다...</p>
-                  <p className="text-sm text-gray-500 mt-1">잠시만 기다려 주세요</p>
-                </div>
-              )}
-
-              {/* Step 3: 분석 결과 */}
-              {registerDialog.step === 'result' && registerDialog.analysis && (
-                <>
-                  {registerDialog.analysis.valid === false ? (
-                    <div className="p-4 bg-red-50 rounded-lg">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle size={20} className="text-red-500 shrink-0 mt-0.5" />
-                        <div>
-                          <p className="text-red-700 font-medium">등록할 수 없는 폴더입니다</p>
-                          <p className="text-sm text-red-600 mt-1">
-                            {registerDialog.analysis.error || registerDialog.analysis.reason}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="p-4 bg-green-50 rounded-lg">
-                        <div className="flex items-start gap-3">
-                          <Check size={20} className="text-green-500 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="text-green-700 font-medium">등록 가능한 패키지입니다</p>
-                            <p className="text-sm text-green-600 mt-1">
-                              {registerDialog.analysis.reason}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          패키지 이름
-                        </label>
-                        <input
-                          type="text"
-                          value={registerDialog.name}
-                          onChange={(e) => setRegisterDialog(prev => ({ ...prev, name: e.target.value }))}
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          설명
-                        </label>
-                        <input
-                          type="text"
-                          value={registerDialog.description}
-                          onChange={(e) => setRegisterDialog(prev => ({ ...prev, description: e.target.value }))}
-                          className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                        />
-                      </div>
-
-                      {registerDialog.analysis.tools && registerDialog.analysis.tools.length > 0 && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            발견된 도구
-                          </label>
-                          <ul className="space-y-1">
-                            {registerDialog.analysis.tools.map((tool, idx) => (
-                              <li key={idx} className="text-sm text-gray-600 flex items-center gap-2">
-                                <span className="text-indigo-500">•</span>
-                                <span className="font-medium">{tool.name}</span>
-                                <span className="text-gray-400">- {tool.description}</span>
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-
-                      {registerDialog.readmeContent && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">
-                            README (AI 생성)
-                          </label>
-                          <textarea
-                            value={registerDialog.readmeContent}
-                            onChange={(e) => setRegisterDialog(prev => ({ ...prev, readmeContent: e.target.value }))}
-                            rows={5}
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 resize-none font-mono text-xs"
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-2 px-5 py-4 border-t bg-gray-50">
-              {registerDialog.step === 'input' && (
-                <>
-                  <button
-                    onClick={() => setRegisterDialog(prev => ({ ...prev, show: false }))}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
-                  >
-                    취소
-                  </button>
-                  <button
-                    onClick={analyzeWithAI}
-                    disabled={!registerDialog.folderPath.trim()}
-                    className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                  >
-                    <Sparkles size={16} />
-                    AI로 분석
-                  </button>
-                </>
-              )}
-
-              {registerDialog.step === 'result' && (
-                <>
-                  <button
-                    onClick={() => setRegisterDialog(prev => ({ ...prev, step: 'input', analysis: null }))}
-                    className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
-                  >
-                    다시 선택
-                  </button>
-                  {registerDialog.analysis?.valid !== false && (
-                    <button
-                      onClick={handleRegisterFolder}
-                      disabled={actionLoading === 'register' || !registerDialog.name}
-                      className="px-4 py-2 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-                    >
-                      {actionLoading === 'register' ? (
-                        <>
-                          <Loader2 size={16} className="animate-spin" />
-                          등록 중...
-                        </>
-                      ) : (
-                        <>
-                          <FolderPlus size={16} />
-                          등록
-                        </>
-                      )}
-                    </button>
-                  )}
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 도구 검색 다이얼로그 */}
-      <ToolSearchDialog
-        show={showSearchDialog}
-        onClose={() => setShowSearchDialog(false)}
-      />
-
-      {/* 패키지 공개 다이얼로그 */}
-      {publishDialog.show && publishDialog.package && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-60">
-          <div className="bg-white rounded-xl shadow-2xl w-[500px] max-w-[90vw]">
-            <div className="flex items-center justify-between px-5 py-4 border-b">
-              <div className="flex items-center gap-2">
-                <Globe size={20} className="text-purple-500" />
-                <h3 className="font-bold text-gray-800">Nostr에 공개</h3>
-              </div>
-              <button
-                onClick={() => setPublishDialog({ show: false, package: null, installInstructions: '', signature: '', isGenerating: false })}
-                className="p-1 hover:bg-gray-100 rounded"
-              >
-                <X size={18} className="text-gray-500" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              <div className="p-4 bg-purple-50 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Package size={24} className="text-purple-500" />
-                  <div>
-                    <p className="font-medium text-gray-800">{publishDialog.package.name}</p>
-                    <p className="text-sm text-gray-600">{publishDialog.package.description || '설명 없음'}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  설치 방법
-                </label>
-                {publishDialog.isGenerating ? (
-                  <div className="w-full px-3 py-4 border rounded-lg bg-gray-50 flex items-center justify-center gap-2 text-gray-600">
-                    <Loader2 size={16} className="animate-spin" />
-                    <span className="text-sm font-medium">AI가 설치 방법을 생성하고 있습니다...</span>
-                  </div>
-                ) : (
-                  <textarea
-                    value={publishDialog.installInstructions}
-                    onChange={(e) => setPublishDialog(prev => ({ ...prev, installInstructions: e.target.value }))}
-                    placeholder="AI가 설치 방법을 자동으로 생성합니다. 필요하면 편집하세요."
-                    rows={4}
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 resize-none text-sm text-gray-800 placeholder:text-gray-400"
-                  />
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  사인 <span className="text-gray-500 font-normal">(선택사항)</span>
-                </label>
-                <input
-                  type="text"
-                  value={publishDialog.signature}
-                  onChange={(e) => setPublishDialog(prev => ({ ...prev, signature: e.target.value }))}
-                  placeholder="예: Made by 홍길동"
-                  className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm text-gray-800 placeholder:text-gray-400"
-                />
-              </div>
-
-              <p className="text-xs text-gray-500">
-                이 패키지 정보가 Nostr 네트워크에 공개됩니다. 다른 indiebizOS 사용자들이 이 패키지를 검색하고 설치할 수 있게 됩니다.
-              </p>
-            </div>
-
-            <div className="flex justify-end gap-2 px-5 py-4 border-t bg-gray-50">
-              <button
-                onClick={() => setPublishDialog({ show: false, package: null, installInstructions: '', signature: '', isGenerating: false })}
-                className="px-4 py-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
-              >
-                취소
-              </button>
-              <button
-                onClick={handlePublishPackage}
-                disabled={publishLoading === publishDialog.package.id}
-                className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 disabled:opacity-50 transition-colors flex items-center gap-2"
-              >
-                {publishLoading === publishDialog.package.id ? (
-                  <>
-                    <Loader2 size={16} className="animate-spin" />
-                    공개 중...
-                  </>
-                ) : (
-                  <>
-                    <Globe size={16} />
-                    공개하기
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
+    <ToolSearchDialog show={search} onClose={() => { setSearch(false); void reload(); }} />
+  </div>;
 }

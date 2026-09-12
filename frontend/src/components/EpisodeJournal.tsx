@@ -23,6 +23,7 @@ interface EpisodeRow {
   hippocampus_score: number | null;
   unconscious_decision: string | null;
   execution_rounds: number | null;
+  ibl_calls: number | null;
   evaluation_result: string | null;
 }
 
@@ -158,9 +159,10 @@ export function EpisodeJournal() {
                   {ep.hippocampus_score != null && (
                     <span title="해마 연상 확신도">· 확신 {Math.round(ep.hippocampus_score * 100)}%</span>
                   )}
-                  {ep.execution_rounds != null && ep.execution_rounds > 1 && (
-                    <span>· {ep.execution_rounds}라운드</span>
-                  )}
+                  <span>· {ep.execution_rounds != null ? `${ep.execution_rounds}라운드` : '라운드 미측정'}</span>
+                  <span title="IBL 호출 시도 수. 한 호출에 여러 액션이 포함될 수 있습니다.">
+                    · {ep.ibl_calls != null ? `IBL ${ep.ibl_calls}회` : 'IBL 미측정'}
+                  </span>
                   {ep.total_ms != null && <span>· {(ep.total_ms / 1000).toFixed(1)}초</span>}
                   <DecisionBadge d={ep.unconscious_decision} />
                   <EvalBadge r={ep.evaluation_result} />

@@ -1238,8 +1238,23 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
                ORDER BY e.id DESC LIMIT ?""",
             (limit,)
         ).fetchall()
+        items = [dict(r) for r in rows]
+        if items:
+            marks = ",".join("?" for _ in items)
+            calls = conn.execute(
+                f"""SELECT episode_id,
+                    SUM(CASE WHEN kind='supervision.tool.started'
+                        AND json_extract(data, '$.name')='execute_ibl' THEN 1 ELSE 0 END) attempts,
+                    SUM(CASE WHEN kind='ibl.started'
+                        AND COALESCE(json_extract(data, '$.nested'), 0)=0 THEN 1 ELSE 0 END) starts
+                    FROM trajectory_event WHERE episode_id IN ({marks})
+                    {'' if include_test else "AND COALESCE(source, 'usage') <> 'test'"}
+                    GROUP BY episode_id""", [item["id"] for item in items]).fetchall()
+            counts = {r["episode_id"]: max(r["attempts"], r["starts"]) for r in calls}
+            for item in items:
+                item["ibl_calls"] = counts.get(item["id"])
         conn.close()
-        return [dict(r) for r in rows]
+        return items
     except Exception:
         return []
 

@@ -598,7 +598,7 @@ class CliSubprocessProvider(BaseProvider):
 
         라운드 경계는 벤더 어휘라 서브클래스가 판정해 부른다. Claude Code는 같은 응답 ID가
         thinking·text·tool_use 블록으로 반복되므로 ID별 한 번만 부른다. Codex exec JSONL 은
-        turn/item 단위만 노출해 API 응답 경계가 없다 — 그 어댑터는 경계가 생기면 여기를 부른다.
+        turn/item 단위만 노출하므로 롤아웃의 응답 ID 원장을 대조해 여기를 부른다.
         budget 은 CLI 가 자기 루프 상한을 노출하지 않아 0(=상한 미상)으로 둔다.
         """
         self._model_rounds = int(getattr(self, "_model_rounds", 0) or 0) + 1

@@ -4,6 +4,7 @@
   "engine_modules": [
     "base/ai_candidates",
     "base/audit_lifecycle",
+    "base/codex_rollout",
     "base/desktop_notify",
     "base/device_registry",
     "base/doc_ir",
@@ -333,8 +334,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 322,
-    "engine": 296,
+    "total": 323,
+    "engine": 297,
     "blocklist": 26
   }
 }

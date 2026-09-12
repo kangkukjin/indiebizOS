@@ -1,0 +1,43 @@
+# Codex 전환 후 주행기록 라운드 누락
+
+2026-09-12 연구 에이전트를 Claude Code에서 Codex로 바꾼 뒤 실행 라운드가
+`NULL`로 저장됐다. AgentOS 조사 에피소드 3620은 186.9초 동안 모델 응답 10개,
+IBL 호출 27회(성공 25, 문법 오류 2), 별도 `read_guide` 1회를 실행했다.
+전체 도구 28회를 IBL 횟수로 세면 안 된다.
+
+## 원인과 수리
+
+- Codex `exec --json`은 turn/item만 내보내므로 어댑터가 `_note_model_round`를
+  호출하지 않았다. item 하나를 라운드로 세는 것도 잘못이다. 같은 응답에 여러
+  도구 호출이 포함된다. 로컬 롤아웃 `token_usage_record.response_id`를 증분 조회하고,
+  CLI 시작 시각·`task_started.turn_id`로 현재 호출을 격리해 응답별 한 번만 기록한다.
+  원본이 없거나 응답 ID를 제공하지 않는 구버전에서는 미측정을 유지한다.
+- React와 웹 런처가 `NULL`과 1라운드를 모두 숨겼다. 이제 1라운드도 표시하고
+  미측정은 문자로 밝힌다. IBL 호출 시도는 `supervision.tool.started`와
+  엔진 `ibl.started`를 중복 합산하지 않고 표시한다. 중첩 실행은 별도 호출에서 제외한다.
+- 현재 CLI의 `token_count.total_token_usage`와 `turn.completed.usage`는 턴 누계다.
+  옛 스레드 누계 가정을 적용해 전 턴 사용량을 빼면 과소계상된다. 명시적인
+  `turn_token_usage`를 관측하면 그 값을 사용한다. 이 변경은 이후 실행부터 적용한다.
+
+## 과거 기록 복원
+
+`backend/migrate_codex_episode_rounds.py`는 기본 dry-run이다. 지정한 롤아웃에서
+에피소드 시간대·사용자 요청·단일 Codex 실행 호출이 유일하게 일치하는 경우만 복원한다.
+적용 전 SQLite backup API로 백업하고, 요약의 라운드·steps를 갱신한다.
+사건 원장에는 응답 ID·원본 시각·파일 경로를 포함한 복원 사건을 덧붙인다.
+기존 사건과 원문 로그, 당시의 토큰 기록은 덮어쓰지 않는다. 이미 복원한 요약은 건너뛴다.
+
+실측 복원: 3612, 3613, 3616–3626의 13건. 3620은 10라운드, 나머지는 각 1라운드.
+실행에 실패해 모델 응답이 없는 3609·3610은 복원 대상이 아니다.
+백업: `data/_backups/2026-09-12_211806_codex_journal/world_pulse.db`.
+AgentOS 당시 토큰 원장 입력은 990,204지만 원본 턴 입력은 1,067,015이다.
+과거 토큰 원장의 정정은 이 라운드 복원에 포함하지 않았다.
+
+## 검증
+
+`test_codex_journal_2026_09_12.py`: resume 격리·응답 중복·부분 JSONL·다중 item·
+실제 steps 기록·새 턴 토큰 범위·엔진 진입 전 거절된 IBL 집계·미측정 구분.
+기존 Codex 비용·CLI 라운드·에피소드 출처 회귀와 frontend TypeScript 검사 통과.
+backend 전체 회귀에서 새 시험의 직접 실행 진입점 누락 한 건을 발견해 수정했고,
+실패한 단일 러너 관문과 새 시험을 재실행해 통과했다. Vite 화면 빌드 완료.
+실행 중인 `/world-pulse/episodes` API에서도 3620의 10라운드·IBL 27회를 확인했다.

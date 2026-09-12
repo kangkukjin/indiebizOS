@@ -110,12 +110,14 @@ def read_thread_usage(thread_id: str) -> Optional[Dict[str, int]]:
     세션 크기로 오인하면 멀쩡한 세션이 매번 끊긴다(ep2442~2485 에서 19턴 중 7턴 오리셋).
     진짜 값은 롤아웃의 `token_count` 이벤트에 `last_token_usage` 로 들어 있다.
 
-    Returns: {"context": 마지막 라운드 입력, "total": 스레드 누적 입력,
-              "total_cached": 스레드 누적 캐시 적중 입력, "total_output": 스레드 누적 출력,
+    Returns: {"context": 마지막 라운드 입력, "total": CLI 누적 입력,
+              "total_cached": CLI 누적 캐시 적중 입력, "total_output": CLI 누적 출력,
               "window": 모델 컨텍스트 창} — 못 읽으면 None (추정하지 않는다).
-    누적 셋은 전부 턴 비용의 **기준선**이다(2026-09-06 실측: 롤아웃 대조에서 입력·캐시·출력이
+    누적 셋은 구버전 CLI에서 턴 비용의 **기준선**이다(2026-09-06 실측: 롤아웃 대조에서 입력·캐시·출력이
     모두 턴을 넘어 단조 증가 — 출력 14→212→305). 입력만 빼고 출력·캐시를 누적 그대로 적으면
     작은 resume 턴이 in=0 out=235 처럼 지난 턴 출력을 제 몫으로 신고한다.
+    2026-09-12 실측 CLI는 턴 누계를 보고한다. 새 형식은 CodexResponseLedger의
+    명시적인 turn_token_usage를 사용하며 이 함수의 값은 컨텍스트 측정에만 쓴다.
     """
     if not thread_id:
         return None
@@ -308,6 +310,7 @@ class CodexProvider(CliSubprocessProvider):
         self._turn_base_output: int = 0
         # 롤아웃에서 읽은 모델 컨텍스트 창 (리셋 임계의 근거)
         self._observed_window: int = 0
+        self._response_ledger = None
 
     # ================= 인증·바이너리 =================
 
@@ -349,6 +352,7 @@ class CodexProvider(CliSubprocessProvider):
 
     def _reset_turn_state(self) -> None:
         self._started_items.clear()
+        self._response_ledger = None
         self._turn_base_total = 0
         self._turn_base_cached = 0
         self._turn_base_output = 0
@@ -719,6 +723,23 @@ class CodexProvider(CliSubprocessProvider):
         out: List[tuple] = []
         etype = event.get("type")
 
+        # exec의 item은 응답 경계가 아니다. 같은 응답의 병렬 도구·본문을 중복 세지
+        # 않도록 Codex 자체 롤아웃의 token_usage_record.response_id를 사용한다.
+        if etype == "thread.started":
+            from codex_rollout import CodexResponseLedger
+            self._response_ledger = CodexResponseLedger(
+                _codex_home(), event.get("thread_id"), start_time)
+        if self._response_ledger is not None:
+            for response in self._response_ledger.poll():
+                self._note_model_round()
+                from episode_logger import record_trajectory_event
+                from model_call_context import fields
+                record_trajectory_event("model.response_observed", {
+                    **fields(), "response_id": response["response_id"],
+                    "turn_id": response["turn_id"], "observed_at": response["timestamp"],
+                    "accounting": "response_boundary_only", "source": "codex_rollout",
+                })
+
         if etype == "item.started":
             item = event.get("item") or {}
             itype = item.get("type")
@@ -811,17 +832,25 @@ class CodexProvider(CliSubprocessProvider):
             turn_input = max(0, input_tokens - self._turn_base_total)
             turn_cached = max(0, cached - self._turn_base_cached)
             turn_output = max(0, output_tokens - self._turn_base_output)
+            # 새 CLI의 total_token_usage/turn.completed는 턴 누적으로 바뀌었다.
+            # 명시적인 turn_token_usage가 있으면 지난 턴 기준선을 빼지 않는다.
+            observed_usage = (self._response_ledger.turn_usage
+                              if self._response_ledger is not None else None)
+            if observed_usage is not None:
+                turn_input = int(observed_usage.get("input_tokens") or 0)
+                turn_cached = int(observed_usage.get("cached_input_tokens") or 0)
+                turn_output = int(observed_usage.get("output_tokens") or 0)
             # 턴 몫으로 환산한 뒤 벤더 모양(Codex exec: input 은 cached 포함) 그대로 초크포인트에.
             self.metrics.record_usage(latency_ms, {"input_tokens": turn_input, "output_tokens": turn_output,
                                                    "cached_input_tokens": turn_cached})
-            # 누적 수치(input_tokens·cached·cache_write·output)는 전부 **스레드 생애 합계**다 —
-            # 턴 몫과 섞어 적으면 다시 오독을 부르므로 괄호 안에 따로 묶는다.
+            # CLI 원시 수치의 누적 범위는 버전에 따라 다르다. 정규화한 턴 사용량과
+            # 섞어 적지 않고 괄호 안에 CLI보고 값으로 묶는다.
             cache_info = (f" cached={cached} cache_write={cache_write}"
                           if (cached or cache_write) else "")
             self._log(
                 f"turn.completed {latency_ms:.0f}ms "
                 f"in={turn_input} out={turn_output} cache_read={turn_cached} "
-                f"(스레드누적 in={input_tokens} out={output_tokens}{cache_info})"
+                f"(CLI보고 in={input_tokens} out={output_tokens}{cache_info})"
             )
             out.append((
                 {"type": "final", "content": self._finalize_text(accumulated_text.strip())},

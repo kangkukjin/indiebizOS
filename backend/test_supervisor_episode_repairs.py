@@ -45,8 +45,8 @@ def memory_harness(tmp_path, monkeypatch):
 
 def test_memory_supplement_keeps_separate_source_without_mixing_old_content(memory_harness, monkeypatch):
     h = memory_harness
-    facts = [{"source_ids": [1], "keywords": "a", "retention": "user_fact"},
-             {"source_ids": [2], "keywords": "b", "retention": "user_fact"}]
+    facts = [{"source_ids": [1], "keywords": "a", "retention": "user_fact", "future_use": "향후 사용자 상황에 맞춘 계획"},
+             {"source_ids": [2], "keywords": "b", "retention": "user_fact", "future_use": "향후 사용자 상황에 맞춘 계획"}]
 
     def model(prompt, **kw):
         h.prompts.append(prompt)
@@ -72,7 +72,7 @@ def test_already_contained_memory_needs_no_comparison_model_or_write(memory_harn
 
     def model(**kw):
         calls.append(kw)
-        return json.dumps([{"source_ids": [1], "keywords": "k", "retention": "user_fact"}])
+        return json.dumps([{"source_ids": [1], "keywords": "k", "retention": "user_fact", "future_use": "향후 사용자 상황에 맞춘 계획"}])
 
     monkeypatch.setattr("consciousness_agent.oneshot_ai_call", model)
     h.runner._distill_deep_memory("뒤쪽에 이미 기록한 중요한 사실", "알겠습니다")

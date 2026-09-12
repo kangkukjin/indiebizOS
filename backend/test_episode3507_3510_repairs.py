@@ -75,7 +75,7 @@ def test_questions_do_not_call_memory_extractor(memory_harness, monkeypatch):
 def test_user_correction_can_be_retained_but_question_and_assistant_cannot():
     from memory_evidence import durable_source_units, grounded_fact, source_units
     units = durable_source_units("이번 여행은 나와 두 형님 그리고 어머니가 가. 점심은 어디서 먹을까?")
-    fact = {"source_ids": [1], "retention": "user_fact"}
+    fact = {"source_ids": [1], "retention": "user_fact", "future_use": "향후 사용자 상황에 맞춘 계획"}
     assert grounded_fact(fact, units, "{}", durable_only=True)["content"] == units[0]["text"]
     assert grounded_fact({**fact, "source_ids": [2]}, units, "{}", durable_only=True) is None
     mixed = source_units("기억하나?", "아내와 어머니가 간다")

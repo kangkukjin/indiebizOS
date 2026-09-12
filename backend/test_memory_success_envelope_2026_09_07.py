@@ -47,26 +47,31 @@ def ctx(tmp_path):
 
 
 def _once(mem, ctx, **ti):
-    """execute 는 **한 번만** 부른다 — 두 번 부르면 save 가 두 행을 만든다(이 사고의 모양)."""
+    """execute 봉투를 한 번 읽는다. save는 저장 없이 정책을 안내한다."""
     raw = mem.execute(ti, ctx)
     return json.loads(raw) if raw.lstrip().startswith("{") else raw
 
 
-def test_save_says_success_and_says_it_first(mem, ctx):
+def _seed(ctx, content):
+    import memory_db
+    return memory_db.save(ctx.project_path, ctx.agent_id, content, category="기타")
+
+
+def test_save_reports_not_saved_and_says_success_first(mem, ctx):
     r = _once(mem, ctx, op="save", content="성공 키 확인", keywords=["a", "b"], category="기타")
     assert r["success"] is True, r
     assert list(r)[0] == "success", list(r)      # 첫 줄에서 결과가 보이도록
-    assert isinstance(r["memory_id"], int)
+    assert r["saved"] is False and "memory_id" not in r
 
 
 def test_search_says_success(mem, ctx):
-    _once(mem, ctx, op="save", content="검색 대상 문장", category="기타")
+    _seed(ctx, "검색 대상 문장")
     r = _once(mem, ctx, op="search", query="검색")
     assert r["success"] is True and r["count"] >= 1, r
 
 
 def test_recall_keeps_its_own_success(mem, ctx):
-    _once(mem, ctx, op="save", content="지도에 실릴 기억", category="기타")
+    _seed(ctx, "지도에 실릴 기억")
     r = _once(mem, ctx, op="recall")
     assert r["success"] is True, r
     # ★한 번도 안 쓴 저장소의 recall 은 "no such table: memories" 를 그대로 흘린다 —
@@ -75,15 +80,14 @@ def test_recall_keeps_its_own_success(mem, ctx):
 
 def test_read_stays_prose_not_wrapped(mem, ctx):
     """산문 통화를 봉투로 감싸면 하류(브리핑·문서)가 받는 모양이 바뀐다."""
-    saved = _once(mem, ctx, op="save", content="산문으로 돌아와야 하는 본문", category="기타")
-    raw = mem.execute({"op": "read", "memory_id": saved["memory_id"]}, ctx)
+    mid = _seed(ctx, "산문으로 돌아와야 하는 본문")
+    raw = mem.execute({"op": "read", "memory_id": mid}, ctx)
     assert isinstance(raw, str) and not raw.lstrip().startswith("{"), raw[:80]
     assert "산문으로 돌아와야 하는 본문" in raw
 
 
 def test_delete_reports_truthfully(mem, ctx):
-    saved = _once(mem, ctx, op="save", content="지울 것", category="기타")
-    mid = saved["memory_id"]
+    mid = _seed(ctx, "지울 것")
     ok = _once(mem, ctx, op="delete", memory_id=mid)
     assert ok["success"] is True and ok["deleted"] is True, ok
     again = _once(mem, ctx, op="delete", memory_id=mid)

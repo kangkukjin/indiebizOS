@@ -272,7 +272,7 @@ class CognitiveRecallMixin:
             xml = (
                 '<memory_map note="이 자아의 심층 기억 지도(목차) — 가지 (건수) — 요약. 내용은 실리지 않는다. '
                 '사용자만 아는 사실(내 ~, 지난번 ~, 선호·결정·사람·물건)이 필요하고 관련 가지가 보이면 '
-                '답하기 전에 [self:memory]{op:\"recall\", node:\"<가지>\"} 로 연다. 새로 안 사실은 save 에 node 를 붙인다.">\n'
+                '답하기 전에 [self:memory]{op:\"recall\", node:\"<가지>\"} 로 연다. 지속 가치가 있는 사용자 사실은 최종 응답 후 자동 선별된다. save 호출은 필요 없다.">\n'
                 + text + "\n</memory_map>"
             )
             print(f"[연상:기억지도] {text.count(chr(10)) + 1}가지")

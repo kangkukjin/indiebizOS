@@ -404,3 +404,12 @@ retired:
       - "self:discover"
       - "discover부터"
       - "discover에서"
+
+  - id: memory_save_before_final_report
+    retired: 2026-09-12
+    reason: 실행자의 검수 전 분석·시세가 장기 기억에 먼저 저장되어 최종 응답의 정정이 반영되지 않았다.
+    instead: save 본문은 저장하지 않고 최종 응답 후 기존 증류가 지속 가치가 있는 사용자 원문만 선별한다. saved:false는 저장 완료가 아니다.
+    phrases:
+      - "AI가 작성한 사실은 작업기록·assistant 출처로 구분"
+      - "새로 안 사실은 save 에 node 를 붙인다"
+      - "워크플로: save로 누적"

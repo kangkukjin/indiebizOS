@@ -48,6 +48,7 @@
     "self:manage_events": "[self:manage_events]{op: \"list\"}",
     "self:memory": "[self:memory]{op: \"search\", query: \"test\"}",
     "self:memory#recall": "[self:memory]{op: \"recall\"}",
+    "self:memory#save": "[self:memory]{op: \"save\", content: \"자동 선별 정책 확인\"}",
     "self:music": "[self:music]{op: \"sources\"}",
     "self:music#folders": "[self:music]{op: \"folders\"}",
     "self:music#library": "[self:music]{op: \"library\", limit: 5}",

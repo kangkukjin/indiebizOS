@@ -1,0 +1,12 @@
+{
+  "date": "2026-09-12",
+  "db": "projects/구매/memory_001.db",
+  "removed_id": 27,
+  "content_sha256": "4d99a7632d67c7ccacdd102f55a23330952ac39efa126efc4b132614a6395ea7",
+  "source_ref_sha256": "b3670bbda346ec2a9f11f0a3bd9aa89a2e89d6884b8326391452fa7ed3424b0f",
+  "reason": "검수에서 기각된 분석과 일회성 시세가 포함된 실행자 작성 기록",
+  "backup": "data/_backups/2026-09-12_memory_final_retention",
+  "other_rows_unchanged": true,
+  "document_resync_verified": true,
+  "remaining_rows": 25
+}

@@ -127,54 +127,27 @@ def execute(tool_input: dict, context) -> str:
 # ============ 에이전트 메모리 도구 ============
 
 def _memory_save(db, tool_input, project_path, agent_id):
+    """실행자가 만든 본문을 저장하지 않는다. 턴 종료의 원문 선별이 유일한 AI 쓰기 경로다."""
     content = tool_input.get("content", "")
-    if not content.strip():
+    if not isinstance(content, str) or not content.strip():
         return json.dumps({"success": False, "error": "content가 필요합니다."}, ensure_ascii=False)
-
-    # ★B53-5 (53회차 상상훈련, 2026-09-02): 유효집합 밖 category 는 저장소가 '기타' 로
-    #   정규화하는데 종전엔 **말없이** 그랬다 — 같은 값으로 검색하면 영원히 0건(침묵 강등).
-    #   정규화 자체는 저장소의 계약(normalize_category 한 벌)이고, 여기서는 그 사실을 신고한다.
-    _given = str(tool_input.get("category") or "").strip()
-    _used = db.normalize_category(_given)
-    _node = str(tool_input.get("node") or "").strip()
-    from datetime import datetime
     from supervision_bus import current
-    from thread_context import get_current_task_id
     controller = current()
-    role = "user" if controller and content in controller.message else "assistant"
-    source = {"role": role, "task": get_current_task_id(),
-              "recorded_at": datetime.now().isoformat(), "retention": "tool_record"}
-    if controller:
-        source["utterance"] = controller.message
-        source["evidence"] = [{"role": role, "text": content}]
-    if controller and role != "user":
-        _used = "작업기록"
-    memory_id = db.save(
-        project_path=project_path,
-        agent_id=agent_id,
-        content=content,
-        keywords=tool_input.get("keywords", ""),
-        category=_used,
-        node=_node,
-        source_ref=json.dumps(source, ensure_ascii=False),
-    )
-
-    out = {
-        "memory_id": memory_id,
-        "node": _node,
-        "source_role": role,
-        "message": f"메모리 저장 완료 (ID: {memory_id}, 가지: {_node or '뿌리'})",
-    }
-    if not _node:
-        out["hint"] = "node 를 비우면 뿌리(미배치)에 놓인다 — 지도(memory_map)의 가지 이름을 붙이면 그 문서에 실린다."
-    if role != "user":
-        out["provenance_notice"] = f"AI가 작성한 내용은 '{_used}' 분류·assistant 출처로 저장했다. 사용자 확정 발화와 구분한다."
-    if _given and db.normalize_category(_given) != _given:
-        _valid = sorted(db.VALID_CATEGORIES)
-        out["category_normalized"] = {"given": _given, "used": _used, "valid": _valid}
-        out["warning"] = (f"category '{_given}' 은(는) 유효 분류가 아니라 '{_used}' 로 저장했습니다 "
-                          f"— 유효: {_valid}. 같은 값으로 검색하면 0건이 됩니다(search 는 이 값을 거절합니다).")
-    return json.dumps(out, ensure_ascii=False, indent=2)
+    # content/category/node/keywords를 대기열에도 넣지 않는다. 검수 전 초안의
+    # 지연 저장은 똑같은 오염이다. 원 사용자 발화는 기존 distill_queue가 운반한다.
+    return json.dumps({
+        "success": True, "saved": False,
+        "status": "automatic_selection" if controller else "not_saved",
+        "message": (
+            "이 호출의 본문은 저장하지 않았습니다. 최종 검수·응답 후 기존 자동 선별이 "
+            "사용자 원문에서 지속적으로 쓸 가치가 있는 사실·선호·확정 결정만 골라 저장합니다. "
+            "추가 save 호출은 필요 없고 저장 완료라고 보고하면 안 됩니다. "
+            "AI 분석·권고·조사 결과와 일회성 정보는 장기 기억으로 복제하지 않습니다."
+            if controller else
+            "저장하지 않았습니다. 사용자 원문과 최종 응답이 있는 대화의 자동 선별에서만 "
+            "장기 기억을 씁니다. 직접 도구 호출의 본문은 저장 대상이 아닙니다."
+        ),
+    }, ensure_ascii=False, indent=2)
 
 
 def _memory_search(db, tool_input, project_path, agent_id):
@@ -195,7 +168,7 @@ def _memory_search(db, tool_input, project_path, agent_id):
         return json.dumps({
             "success": False, "items": [],
             "error": (f"category '{_cat}' 은(는) 유효 분류가 아닙니다 — 유효: {sorted(db.VALID_CATEGORIES)}. "
-                      f"(save 는 이 값을 '기타' 로 정규화해 저장합니다 — 그 기억은 category 없이 query 로 찾으세요)"),
+                      "기존 기억은 category 없이 query 로도 찾을 수 있습니다."),
         }, ensure_ascii=False)
 
     # 1) 심층 메모리 검색

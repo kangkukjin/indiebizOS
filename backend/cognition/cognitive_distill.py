@@ -194,11 +194,7 @@ class CognitiveDistillMixin:
         return f"{body}/{slug}", False
 
     def _distill_deep_memory(self, user_message: str, ai_response: str):
-        """대화 후 심층 메모리 자동 저장.
-
-        경량 AI로 대화에서 기억할 정보 조각을 추출하고,
-        기존 심층 메모리와 비교하여 추가/업데이트한다.
-        """
+        """최종 응답 후 사용자 원문의 지속 가치 선별·중복 비교. 도구 초안은 입력이 아니다."""
         try:
             if not user_message or not ai_response:
                 return
@@ -237,7 +233,9 @@ class CognitiveDistillMixin:
                 {"utterance": user_message,
                  "task": get_current_task_id() or getattr(episode, "task_id", ""),
                  "episode_id": getattr(episode, "episode_id", None),
-                 "recorded_at": __import__("datetime").datetime.now().isoformat()}, ensure_ascii=False)
+                 "recorded_at": __import__("datetime").datetime.now().isoformat(),
+                 "final_response_sha256": __import__("hashlib").sha256(ai_response.encode()).hexdigest()},
+                ensure_ascii=False)
 
             from memory_evidence import durable_source_units, grounded_fact
             units = durable_source_units(user_message)
@@ -253,6 +251,11 @@ class CognitiveDistillMixin:
             today = _dt.now().strftime("%Y-%m-%d")
             extract_prompt = f"""오늘은 {today}이다.
 다음 사용자 원문 단위 중 나중에 기억해둘 만한 정보를 선택하라.
+사실이라는 이유만으로 저장하지 않는다. 이번 대화 밖의 향후 협업에서 어떤 판단·행동에
+계속 필요한지 future_use에 구체적으로 설명할 수 있는 정보만 선택하라.
+사소한 사실·작업 진행 내역·한 번의 조사 결과는 제외한다. 저장할 정보가 0건인 것이 정상이다.
+사용자의 의견은 세계의 객관적 사실이 아니다. 앞으로도 적용할 지속 선호나 확정 결정일 때만
+그 사용자가 그렇게 선호·결정했다는 원문으로 남긴다. 근거 없는 분석·평가는 선택하지 않는다.
 content를 재작성하지 마라. 원문 단위의 source_ids만 고르면 본문은 코드가 그대로 저장한다.
 (이름, 중요한 날짜, 사용자 선호, 사용자가 확정한 결정사항)
 eligible=false인 질문·요청과 안내문 상투구는 선택하지 않는다. AI의 답변·권고·도구 관측은
@@ -269,10 +272,10 @@ retention은 user_fact|user_preference|user_decision 중 하나이며 확신 없
 ★사용자선호 = *지속적* 성향·취향·환경만(예: "중고는 안 삼", "존댓말 선호", "라벨 프린터는 Netum POS9260 보유").
 이번 한 번의 요청·지시("~찾아줘", "~해줘")나 이번 검색의 일회성 조건(용량·가격대·수량)은
 선호가 아니다 → 저장하지 마라. 일회성 요청문은 선택하지 마라.
-(나쁜 예: "4T나 5T 제품을 찾아줘" → 이건 그 순간의 요청이지 선호가 아님 — 제외.
-좋은 예: "중고는 필요없어" 라고 말했다면 → "중고 제품은 원하지 않음" 은 선호.)
+(나쁜 예: "4T나 5T 제품을 찾아줘", "이번에는 중고가 필요없어" → 이번 요청의 조건 — 제외.
+좋은 예: "나는 앞으로도 중고 제품은 사지 않을 거야" → 명시적인 지속 선호의 원문.)
 영상 한 편의 길이·목소리·시점·전달 위치도 이번 작업의 조건이다. 향후에도 적용하라는
-근거 없이 "항상 선호한다"로 일반화하지 마라. 결과에 꼭 필요하면 해당 작업기록에 한정한다.
+근거 없이 "항상 선호한다"로 일반화하지 마라. 해당 에피소드·산출물에 이미 기록되므로 복제하지 않는다.
 
 ★각 조각에 **node(주제 가지)** 를 적어라 — 이 자아의 기억 지도(아래)에서 가장 알맞은 가지를 고른다.
 기존 가지를 우선하고, 정말 새 주제면 새 경로("상위/하위" 꼴, 최대 3단, 한국어 명사)를 만든다.
@@ -282,7 +285,7 @@ retention은 user_fact|user_preference|user_decision 중 하나이며 확신 없
 {tree_map or "(아직 가지 없음 — 첫 가지를 만들어라)"}
 
 JSON 배열로만 응답.
-[{{"source_ids": [1], "retention": "user_fact", "keywords": "k1,k2", "category": "사용자선호|사용자정보|의사결정|중요날짜", "node": "가지/경로"}}]
+[{{"source_ids": [1], "retention": "user_fact", "future_use": "향후 어떤 판단·행동에 계속 필요한가", "keywords": "k1,k2", "category": "사용자선호|사용자정보|의사결정|중요날짜", "node": "가지/경로"}}]
 정보가 없으면 빈 배열 [] 반환.
 
 사용자 원문 단위(JSON):
@@ -659,15 +662,17 @@ AI 답변: {ai_response[:1400]}
             except Exception as e:
                 log(f"[경험증류] 오류 (무시): {e}")
         # 2) 심층/의미 메모리 증류.
-        if write_deep:
+        memory_approved = not evaluation or (
+            evaluation.get("status") not in {"UNKNOWN", "NOT_ACHIEVED"}
+            and evaluation.get("achieved", True)
+        )
+        if write_deep and memory_approved:
             try:
-                memory_response = response
-                if evaluation and (evaluation.get("status") == "UNKNOWN" or not evaluation.get("achieved", True)):
-                    memory_response = ("검수 미완료(성공 판정으로 저장하지 말 것): "
-                                       + evaluation.get("reason", "") + "\n" + response)
-                self._distill_deep_memory(user_message, memory_response)
+                self._distill_deep_memory(user_message, response)
             except Exception as e:
                 log(f"[심층메모리] 오류 (무시): {e}")
+        elif write_deep:
+            log("[심층메모리] 검수 미완료 — 장기 기억 저장 생략")
         # 3) 포식 기억 증류(냄새지도·주인모델).
         if write_forage:
             try:

@@ -128,7 +128,7 @@ def test_distill_queue_preserves_unknown_reason_and_task():
         tc.restore(original)
 
 
-def test_deep_memory_receives_unknown_before_experience_consumes_outcome(monkeypatch):
+def test_deep_memory_rejects_unknown_before_experience_consumes_outcome(monkeypatch):
     import ibl_usage_rag
     from cognitive_distill import CognitiveDistillMixin
     original = tc.snapshot()
@@ -140,7 +140,7 @@ def test_deep_memory_receives_unknown_before_experience_consumes_outcome(monkeyp
     try:
         tc.set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="예산 중단")
         runner._after_response("영상", "완성했습니다", tool_calls=[{}], write_forage=False, guides_used=[])
-        assert seen == ["검수 미완료(성공 판정으로 저장하지 말 것): 예산 중단\n완성했습니다"]
+        assert seen == []
     finally:
         tc.restore(original)
 
@@ -149,8 +149,8 @@ def test_deep_memory_keeps_full_utterance_and_supplement_source(monkeypatch, tmp
     import sys
     import cognitive_distill as mod
     import consciousness_agent
-    utterance = "지난 영상 설명 " * 60 + "마지막 조건도 보존.\n\n이번 영상은 오분으로 정했다."
-    fact = {"source_ids": [2], "content": "이번 영상은 오분", "keywords": "영상", "category": "의사결정", "retention": "user_decision", "node": "영상"}
+    utterance = "지난 영상 설명 " * 60 + "마지막 조건도 보존.\n\n앞으로 모든 영상은 오분으로 정했다."
+    fact = {"source_ids": [2], "content": "이번 영상은 오분", "keywords": "영상", "category": "의사결정", "retention": "user_decision", "future_use": "향후 영상 길이의 기본값", "node": "영상"}
     replies = iter([json.dumps([fact], ensure_ascii=False),
                     json.dumps({"verdicts": [{"action": "UPDATE", "content": fact["content"]}]})])
     monkeypatch.setattr(consciousness_agent, "oneshot_ai_call", lambda **kw: next(replies))
@@ -167,7 +167,7 @@ def test_deep_memory_keeps_full_utterance_and_supplement_source(monkeypatch, tmp
     with tc.actor_context(agent_id="worker", task_id="task_3364"):
         runner._distill_deep_memory(utterance, "이번 영상 완성")
     assert len(saved) == 1
-    assert saved[0]["content"] == "이번 영상은 오분으로 정했다."
+    assert saved[0]["content"] == "앞으로 모든 영상은 오분으로 정했다."
     provenance = json.loads(saved[0]["source_ref"])
     assert provenance["related_memory_id"] == 123
     assert provenance["utterance"] == utterance

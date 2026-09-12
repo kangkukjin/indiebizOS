@@ -254,12 +254,11 @@ def test_V53_1_catalog_and_textbook_teach_format_json():
 
 # ─────────────────────────── B53-5 · memory category ───────────────────────────
 
-def test_B53_5_memory_category_normalization_is_reported_and_search_rejects():
+def test_B53_5_memory_save_does_not_write_and_search_rejects_invalid_category():
     with tempfile.TemporaryDirectory() as td:
         r = _dj(_mem.execute({"op": "save", "content": "IT53 시험 기억", "category": "상상훈련_스크래치"},
                              _Ctx("memory_op", td)))
-        assert r.get("memory_id") and r.get("category_normalized", {}).get("used") == "기타", r
-        assert "warning" in r
+        assert r["saved"] is False and "memory_id" not in r, r
         s = _dj(_mem.execute({"op": "search", "query": "IT53", "category": "상상훈련_스크래치"}, _Ctx("memory_op", td)))
         assert s.get("success") is False and "유효" in s["error"], s
         ok = _dj(_mem.execute({"op": "save", "content": "정상 분류", "category": "작업기록"}, _Ctx("memory_op", td)))

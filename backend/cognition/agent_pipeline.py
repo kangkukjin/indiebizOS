@@ -576,6 +576,7 @@ class CognitivePipelineMixin:
 
         # 5~8. 실행 → 평가(THINK) → 반성(EXECUTE) — 궤적을 수집하며 이벤트 yield
         final_content = ""
+        _response_completed = False
         eval_tool_calls: List[Dict] = []   # 평가/반성용 trace ({name,input,result,is_error})
         tool_results_log: List[str] = []   # legacy — 결과 문자열만
         tool_calls_log: List[Dict] = []    # 경험 증류·X-Ray용 구조화 이력
@@ -853,6 +854,7 @@ class CognitivePipelineMixin:
 
             if not _eval_ran and not _reflect_ran:
                 record_trajectory_event("cognition.evaluation", {"path": "none"})
+            _response_completed = not (cancel_check and cancel_check())
 
         except GeneratorExit:
             # 소비자 조기 종료(취소·타임아웃) — finally에서 뒷정리만 하고 전파
@@ -944,12 +946,13 @@ class CognitivePipelineMixin:
             # (ep889: 증류 꼬리 6분이 턴을 물고 있었다). 컨텍스트 동반은 래퍼가 처리.
             if not force_role:
                 from pursuit_bind import finish as _p_finish
-                _packet = _p_finish(final_content, tool_calls_log, interrupted=not bool(final_content) or bool(_error_text))
-                self._after_response_async(
-                    message, final_content,
-                    tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
-                    turn_tokens=turn_tokens, **({"pursuit_packet": _packet} if _packet else {}),
-                )
+                _packet = _p_finish(final_content, tool_calls_log, interrupted=not _response_completed or not bool(final_content))
+                if _response_completed:
+                    self._after_response_async(
+                        message, final_content,
+                        tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
+                        turn_tokens=turn_tokens, **({"pursuit_packet": _packet} if _packet else {}),
+                    )
 
         if _error_text is not None:
             yield {"type": "error", "content": _error_text}

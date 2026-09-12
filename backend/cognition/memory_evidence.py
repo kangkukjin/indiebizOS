@@ -42,6 +42,8 @@ def grounded_fact(fact, units, source_ref, *, durable_only=False):
     if not selected:
         return None
     if durable_only and (fact.get("retention") not in {"user_fact", "user_preference", "user_decision"}
+                         or not isinstance(fact.get("future_use"), str)
+                         or not fact["future_use"].strip()
                          or any(u["role"] != "user" or not u.get("eligible", True) for u in selected)):
         return None
     category = str(fact.get("category") or "작업기록")

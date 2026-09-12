@@ -2,12 +2,12 @@
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "memory",
   "name": "Memory",
-  "description": "에이전트 심층 메모리. 연상기억에서 자동으로 검색·저장되며, IBL [self:memory]{op} 통합 액션으로 직접 호출 가능. 옛 4개 도구(memory_search/save/read/delete)는 직접 호출 호환용으로 유지.",
-  "version": "2.2.0",
+  "description": "에이전트 심층 메모리. 최종 응답 후 사용자 원문의 지속 가치만 자동 선별하며 IBL [self:memory]{op}로 조회·삭제·이동한다. save는 저장 없이 자동 선별 정책을 안내한다.",
+  "version": "2.3.0",
   "tools": [
     {
       "name": "memory_op",
-      "description": "심층 메모리 통합 도구 (op 분기). save/search/read/delete/recall/move — 기억은 주제 가지(node) 트리, <memory_map> 목차에서 가지를 골라 recall.\n\n- op=save: content 필수(+keywords, category 옵션, 미지정 분류는 기타; AI가 작성한 사실은 작업기록·assistant 출처로 구분)\n- op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션\n- op=read: memory_id 필수\n- op=delete: memory_id 필수\n\n워크플로: save로 누적 → search로 자연어 검색 → preview_truncated이면 read로 전문·출처를 확인 → 잘못 저장은 delete.",
+      "description": "심층 메모리 통합 도구 (op 분기). save/search/read/delete/recall/move — 기억은 주제 가지(node) 트리, <memory_map> 목차에서 가지를 골라 recall.\n\n- op=save: content 필수. saved:false, 본문은 저장·대기하지 않는다. 최종 검수·응답 후 사용자 원문에서 지속 가치가 있는 사실·선호·결정만 자동 선별한다. 호출 자체가 불필요하며 저장 완료로 보고하지 않는다. 대화 밖은 not_saved.\n- op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션\n- op=read: memory_id 필수\n- op=delete: memory_id 필수\n\n워크플로: 최종 응답 후 자동 선별 → search로 검색 → preview_truncated이면 read로 전문·출처 확인 → 잘못 저장은 delete. AI 분석·조사 결과·일회성 조건·사소한 사실은 장기 기억으로 복제하지 않는다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -25,10 +25,10 @@
           },
           "content": {
             "type": "string",
-            "description": "save 필수 — 저장 내용"
+            "description": "save 필수 — 정책 안내 대상 본문(저장되지 않음)"
           },
           "keywords": {
-            "description": "save 옵션 — 검색 키워드(쉼표 구분 문자열 또는 배열 — 배열은 쉼표로 합쳐 저장, 2026-09-05)",
+            "description": "호환 입력(문자열 또는 배열). save는 사용하지 않으며 자동 선별이 검색 키워드를 결정한다.",
             "type": [
               "string",
               "array"
@@ -36,7 +36,7 @@
           },
           "category": {
             "type": "string",
-            "description": "save 옵션 또는 search 필터 — 분류 (유효값 사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타 — 밖의 값은 save 가 '기타' 로 정규화·신고, search 는 거절)"
+            "description": "search 분류 필터(사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타; 그 밖은 거절). save는 사용하지 않는다."
           },
           "query": {
             "type": "string",
@@ -52,7 +52,7 @@
           },
           "node": {
             "type": "string",
-            "description": "주제 가지 경로(\"가족/어머니\" 꼴). save 권장(비우면 뿌리) · recall 대상(생략=지도 전체) · move 목적지 · search 필터"
+            "description": "주제 가지 경로(\"가족/어머니\" 꼴). save는 사용하지 않음 · recall 대상(생략=지도 전체) · move 목적지 · search 필터"
           },
           "store": {
             "type": "string",

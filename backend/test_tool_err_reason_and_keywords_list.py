@@ -37,28 +37,11 @@ def test_memory_db_normalizes_keywords_list():
     assert md.normalize_keywords(("x", 3)) == "x, 3"
 
 
-def test_memory_handler_passes_list_keywords_to_store():
-    """핸들러 → 저장소 경계: 배열이 그대로 저장소에 닿고(합치는 것은 저장소 계약), 응답은 성공."""
+def test_memory_handler_accepts_keywords_but_does_not_write():
     h = _load("_t_kw_memory_handler", os.path.join(_PKG, "memory", "handler.py"))
-    seen = {}
-
-    class _Db:
-        @staticmethod
-        def normalize_category(c):
-            return c or "기타"
-
-        @staticmethod
-        def save(**kw):
-            seen.update(kw)
-            return 7
-
-        @staticmethod
-        def body_noun_leak(text):
-            return None
-
-    out = json.loads(h._memory_save(_Db, {"content": "c", "node": "보고서", "keywords": ["a", "b"]}, "/p", "tester"))
-    assert out.get("success") is not False and out.get("memory_id") == 7, out
-    assert seen["keywords"] == ["a", "b"]
+    out = json.loads(h._memory_save(None, {"content": "c", "keywords": ["a", "b"]}, "/p", "tester"))
+    assert out["success"] is True and out["saved"] is False
+    assert "memory_id" not in out
 
 
 # ── ② ERR 사유 ──

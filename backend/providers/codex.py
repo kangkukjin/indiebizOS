@@ -87,6 +87,15 @@ def list_available_models() -> list[dict]:
     return models
 
 
+def canonical_model_slug(value: str) -> str:
+    """표시명·대소문자 변형을 Codex 카탈로그의 실제 ID로 해소한다."""
+    value = value.strip()
+    for model in list_available_models():
+        if value.casefold() in (model["slug"].casefold(), model["display_name"].casefold()):  # vj-ok: Codex 모델 식별자·표시명 해소
+            return model["slug"]
+    return value  # 사용자 지정 ID는 카탈로그에 없다는 이유로 바꾸지 않는다.
+
+
 # 롤아웃 꼬리를 몇 바이트나 읽을지 — 마지막 token_count 는 파일 끝에서 1KB 안쪽에 있다
 # (실측 2026-08-31: 77MB 파일에서 EOF−787B). 256KB 면 여유가 크다.
 _ROLLOUT_TAIL_BYTES = 256 * 1024
@@ -472,7 +481,7 @@ class CodexProvider(CliSubprocessProvider):
         """
         raw = (self.model or "").strip()
         if ":" not in raw:
-            return raw, None
+            return canonical_model_slug(raw), None
         slug, _, effort = raw.rpartition(":")
         slug, effort = slug.strip(), effort.strip().lower()
         if effort not in self.REASONING_EFFORTS:
@@ -481,7 +490,7 @@ class CodexProvider(CliSubprocessProvider):
                 f"{', '.join(self.REASONING_EFFORTS)} (모델 설정 '{raw}')"
             )
             return raw, None
-        return slug, effort
+        return canonical_model_slug(slug), effort
 
     # ================= 명령 조립 =================
 

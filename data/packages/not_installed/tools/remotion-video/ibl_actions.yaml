@@ -16,7 +16,8 @@ actions:
     group: media_produce
     router: handler
     tool: remotion
-    implementation: op로 분기. render_inline은 React TSX 컴포지션을 생성하고 Remotion CLI(npx remotion render)로 MP4 렌더링. render_file은 저장된 TSX 파일로 렌더링. status는 which/npm list로 설치 상태 확인.
+    implementation: op로 분기. render_inline은 React TSX 컴포지션을 생성하고 Remotion CLI(npx remotion render)로 MP4 렌더링. render_file은 저장된 TSX 파일로 렌더링. status는 which/npm
+      list로 설치 상태 확인.
     target_key: composition_code
     keywords:
     - 영상
@@ -26,9 +27,19 @@ actions:
     - MP4
     - 렌더링
     - 상태
-
-# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
-# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+    params:
+      action: string
+      bgm_path: string
+      composition_file: string
+      output_filename: string
+      voice: string
+      duration_in_frames: integer
+      fps: integer
+      height: integer
+      width: integer
+      asset_paths: array
+      narration_texts: array
+      props: object
 tool_json:
   header:
     id: remotion-video
@@ -37,8 +48,7 @@ tool_json:
     version: 1.0.0
   tools:
   - name: remotion
-    description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status
-      (기본 render_inline).
+    description: 'Remotion(React TSX) MP4 영상. op: render_inline(composition_code) / render_file(composition_file) / status (기본 render_inline).
 
 
       파라미터: op로 분기 (기본 render_inline).

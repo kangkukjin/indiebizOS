@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 
 from result_read_contract import read_result_schema
+from vocabulary_state import active_paths, package_path, require_tool_active
 
 
 # 도구 핸들러 캐시 (도구 이름 -> 핸들러 모듈)
@@ -62,7 +63,7 @@ def _scan_tool_json_mtimes() -> Dict[str, float]:
     out: Dict[str, float] = {}
     if not tools_path.exists():
         return out
-    for pkg_dir in tools_path.iterdir():
+    for pkg_dir in active_paths(get_base_path()):
         if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
             continue
         tj = pkg_dir / "tool.json"
@@ -101,7 +102,7 @@ def build_tool_package_map(force: bool = False) -> Dict[str, str]:
 
     _tool_to_package_map.clear()
 
-    for pkg_dir in tools_path.iterdir():
+    for pkg_dir in active_paths(get_base_path()):
         if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
             continue
 
@@ -263,7 +264,7 @@ def load_tool_schema(tool_name: str) -> Optional[dict]:
     if not pkg_name:
         return None
 
-    tool_json_path = get_tools_path() / pkg_name / "tool.json"
+    tool_json_path = package_path(pkg_name) / "tool.json"
     if not tool_json_path.exists():
         return None
 
@@ -292,7 +293,7 @@ def _invalidate_stale_handler(package_id: str) -> bool:
 
     비교 실패(파일 소실 등)는 무효화하지 않는다 — 로드된 모듈이 마지막 진실이다."""
     try:
-        mtime = (get_tools_path() / package_id / "handler.py").stat().st_mtime
+        mtime = (package_path(package_id) / "handler.py").stat().st_mtime
     except OSError:
         return False
     if _package_handler_mtimes.get(package_id) == mtime:
@@ -323,6 +324,7 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         핸들러 모듈 또는 None
     """
     global _tool_handlers_cache, _package_handlers_cache
+    require_tool_active(tool_name)
 
     # 도구 이름 캐시에 있으면 반환 — 단 handler.py 가 디스크에서 바뀌었으면 낡은 모듈이다
     if tool_name in _tool_handlers_cache:
@@ -347,7 +349,7 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         return module
 
     # handler.py 경로
-    handler_path = get_tools_path() / package_id / "handler.py"
+    handler_path = package_path(package_id) / "handler.py"
 
     if not handler_path.exists():
         print(f"[도구 핸들러 없음] {tool_name} -> {handler_path}")
@@ -405,7 +407,7 @@ def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
         all_tools = []
 
         if tools_path.exists():
-            for pkg_dir in tools_path.iterdir():
+            for pkg_dir in active_paths(get_base_path()):
                 if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
                     continue
                 tool_json_path = pkg_dir / "tool.json"
@@ -423,6 +425,10 @@ def load_agent_tools(project_path: str, agent_id: str = None) -> List[Dict]:
         _all_tools_cache = all_tools.copy()
         _all_tools_cache_time = time.time()
         _all_tools_cache_mtimes = _scan_tool_json_mtimes()
+
+    from vocabulary_state import inventory, is_active
+    owners = inventory()["tools"]
+    all_tools = [t for t in all_tools if not owners.get(t.get("name")) or is_active(owners[t["name"]])]
 
     # agents.yaml에서 에이전트별 allowed_tools 확인
     if agent_id and project_path:
@@ -479,7 +485,7 @@ def _build_tool_guide_map():
         _tool_guide_map_built = True
         return
 
-    for pkg_dir in tools_path.iterdir():
+    for pkg_dir in active_paths(get_base_path()):
         if not pkg_dir.is_dir() or pkg_dir.name.startswith('.'):
             continue
 
@@ -614,7 +620,7 @@ def load_installed_tools(base_path: str = None) -> List[Dict]:
     extra_tools = []
 
     if tools_path.exists():
-        for tool_dir in tools_path.iterdir():
+        for tool_dir in active_paths(Path(base_path) if base_path else get_base_path()):
             if tool_dir.is_dir():
                 tool_json = tool_dir / "tool.json"
                 if tool_json.exists():

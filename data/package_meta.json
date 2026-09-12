@@ -185,6 +185,11 @@
       "weight": "light",
       "locale": "universal"
     },
+    "nodejs": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "notebook": {
       "needs_key": [],
       "weight": "light",
@@ -205,6 +210,16 @@
       "weight": "light",
       "locale": "universal"
     },
+    "publishing": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "python-exec": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "radio": {
       "needs_key": [],
       "weight": "light",
@@ -218,6 +233,11 @@
       ],
       "weight": "light",
       "locale": "kr"
+    },
+    "remotion-video": {
+      "needs_key": [],
+      "weight": "heavy",
+      "locale": "universal"
     },
     "shopping-assistant": {
       "needs_key": [
@@ -290,6 +310,7 @@
     "engines:image_gemini": "media_producer",
     "engines:image_read": "media_producer",
     "engines:newspaper": "web",
+    "engines:remotion": "remotion-video",
     "engines:render": "media_producer",
     "engines:tts": "media_producer",
     "engines:web": "web-builder",

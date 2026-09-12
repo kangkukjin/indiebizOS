@@ -15,6 +15,7 @@ import yaml
 
 _nodes: Optional[Dict] = None
 _nodes_path: Optional[Path] = None
+_nodes_revision = None
 
 
 # === api_registry.yaml 로더 — api_engine 에서 이동 (같은 절단의 일부) ===
@@ -172,8 +173,10 @@ def load_nodes_installed() -> Dict:
     ibl 층이 소비하는 공개 표면: load_nodes_installed · invalidate_nodes · pruned_reason ·
     self_can_run · foreign_actions · code_is_own · _load_registry/reload_registry.
     """
-    global _nodes
-    if _nodes is not None:
+    global _nodes, _nodes_revision
+    from vocabulary_state import revision
+    current_revision = revision()
+    if _nodes is not None and _nodes_revision == current_revision:
         return _nodes
 
     path = _get_nodes_path()
@@ -201,6 +204,7 @@ def load_nodes_installed() -> Dict:
     # 만 안다. 남의 몸 능력은 명함(냄새)으로 알고 [others:ask] 로 부탁한다.
     # 코어(항상-on) 어휘는 양 몸 공통이라 @alias 크로스바디 포워딩이 그대로 산다.
     _prune_foreign_vocabulary(_nodes)
+    _nodes_revision = current_revision
 
     return _nodes
 
@@ -216,6 +220,7 @@ def _prune_foreign_vocabulary(nodes_cfg: Dict) -> None:
     except Exception:
         profile = ""
     _pruned_foreign.clear()
+    from vocabulary_state import action_reason
     for node_name, node_cfg in (nodes_cfg.get("nodes") or {}).items():
         actions = (node_cfg or {}).get("actions") or {}
         if profile == "phone":
@@ -228,6 +233,11 @@ def _prune_foreign_vocabulary(nodes_cfg: Dict) -> None:
         for a in drop:
             _pruned_foreign[f"{node_name}:{a}"] = reason
             del actions[a]
+        for a, cfg in list(actions.items()):
+            why = action_reason(node_name, a, cfg)
+            if why:
+                _pruned_foreign[f"{node_name}:{a}"] = why
+                del actions[a]
 
 
 def pruned_reason(node: str, action: str) -> Optional[str]:
@@ -252,6 +262,9 @@ def invalidate_nodes() -> None:
 
 def self_can_run(node: str, action: str, cfg: dict) -> bool:
     """이 몸이 이 액션을 실제 실행할 수 있는가 (명함=자기 능력만)."""
+    from vocabulary_state import action_reason
+    if action_reason(node, action, cfg):
+        return False
     if cfg.get("router") == "stub":
         return False
     if cfg.get("prompt_hidden"):

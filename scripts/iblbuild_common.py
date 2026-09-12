@@ -36,6 +36,8 @@ NODE_ORDER = ["sense", "self", "limbs", "others", "engines", "table"]
 PACKAGE_DIRS = [
     "data/packages/installed/tools",
     "data/packages/installed/extensions",
+    "data/packages/not_installed/tools",
+    "data/packages/not_installed/extensions",
 ]
 
 # not_installed 미러 — 부재-패키지 관용(Phase 4)에서 "철거됐을 뿐 실존하는 패키지"와

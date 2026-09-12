@@ -824,9 +824,8 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
         from ibl_registry import pruned_reason
         why = pruned_reason(node, action)
         if why:
-            return {"error": f"[{node}:{action}] 은 {why} 어휘라 이 몸의 사전에 없습니다 — "
-                             f"그 몸에 자연어로 부탁하세요: [others:ask]{{to: \"<몸 이름>\", message: \"...\"}}",
-                    "available_actions": available}
+            return {"error": f"[{node}:{action}] 사용 불가: {why}",
+                    "unavailable_reason": why, "available_actions": available}
         return {"error": f"노드 '{node}'에 '{action}' 액션이 없습니다.",
                 "available_actions": available}
 

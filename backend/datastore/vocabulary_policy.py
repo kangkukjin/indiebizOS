@@ -1,5 +1,6 @@
 """필수어휘 보호 선언 — UI·에디션·패키지 관리가 공유하는 데이터 계약."""
 from pathlib import Path
+from functools import lru_cache
 
 import yaml
 
@@ -9,6 +10,12 @@ def load_policy(root: Path = None) -> dict:
         from runtime_utils import get_base_path
         root = get_base_path()
     path = Path(root) / "data" / "vocabulary_policy.yaml"
+    return _read_policy(str(path), path.stat().st_mtime_ns)
+
+
+@lru_cache(maxsize=16)
+def _read_policy(filename: str, stamp: int) -> dict:
+    path = Path(filename)
     data = yaml.safe_load(path.read_text(encoding="utf-8"))
     if (not isinstance(data, dict) or data.get("version") != 1
             or not isinstance(data.get("required_packages"), dict)

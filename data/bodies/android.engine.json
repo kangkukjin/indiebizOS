@@ -152,6 +152,7 @@
     "datastore/system_docs",
     "datastore/verification_cache",
     "datastore/vocabulary_policy",
+    "datastore/vocabulary_state",
     "datastore/warehouse_catalog",
     "datastore/warehouse_directory",
     "datastore/warehouse_items",
@@ -336,8 +337,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 325,
-    "engine": 299,
+    "total": 326,
+    "engine": 300,
     "blocklist": 26
   }
 }

@@ -1,4 +1,5 @@
 {
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "publishing",
   "name": "Publishing Project Manager",
   "description": "출판 프로젝트(책) 관리 도구. 원고 관리, 구조 기획, 조각글 수집 등.\n\n사용 가이드: data/guides/book_publishing.md 참조",
@@ -27,6 +28,38 @@
           "book_id": {
             "type": "string",
             "description": "[status] 프로젝트 ID(list 반환)"
+          },
+          "action": {
+            "type": "string",
+            "description": "action"
+          },
+          "author": {
+            "type": "string",
+            "description": "author"
+          },
+          "description": {
+            "type": "string",
+            "description": "description"
+          },
+          "genre": {
+            "type": "string",
+            "description": "genre"
+          },
+          "id": {
+            "type": "string",
+            "description": "id"
+          },
+          "style_reference": {
+            "type": "string",
+            "description": "style_reference"
+          },
+          "subtitle": {
+            "type": "string",
+            "description": "subtitle"
+          },
+          "target_length": {
+            "type": "integer",
+            "description": "target_length"
           }
         },
         "required": []

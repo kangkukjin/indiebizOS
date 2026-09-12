@@ -14,6 +14,58 @@
           "op": {
             "type": "string",
             "description": "동작 분기 — target_description 참조"
+          },
+          "composition_code": {
+            "type": "string",
+            "description": "engines:remotion 의 주 파라미터"
+          },
+          "action": {
+            "type": "string",
+            "description": "engines:remotion 파라미터"
+          },
+          "bgm_path": {
+            "type": "string",
+            "description": "engines:remotion 파라미터"
+          },
+          "composition_file": {
+            "type": "string",
+            "description": "engines:remotion 파라미터"
+          },
+          "output_filename": {
+            "type": "string",
+            "description": "engines:remotion 파라미터"
+          },
+          "voice": {
+            "type": "string",
+            "description": "engines:remotion 파라미터"
+          },
+          "duration_in_frames": {
+            "type": "integer",
+            "description": "engines:remotion 파라미터"
+          },
+          "fps": {
+            "type": "integer",
+            "description": "engines:remotion 파라미터"
+          },
+          "height": {
+            "type": "integer",
+            "description": "engines:remotion 파라미터"
+          },
+          "width": {
+            "type": "integer",
+            "description": "engines:remotion 파라미터"
+          },
+          "asset_paths": {
+            "type": "array",
+            "description": "engines:remotion 파라미터"
+          },
+          "narration_texts": {
+            "type": "array",
+            "description": "engines:remotion 파라미터"
+          },
+          "props": {
+            "type": "object",
+            "description": "engines:remotion 파라미터"
           }
         },
         "additionalProperties": true

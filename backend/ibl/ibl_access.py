@@ -458,7 +458,7 @@ def build_environment(
                 if not self_can_run(node_name, action_name, action_config):
                     continue
             except Exception:
-                pass
+                raise
             key = action_config.get("group")
             if key:
                 grouped.setdefault(key, []).append((action_name, action_config))

@@ -1,13 +1,13 @@
 /** 내 어휘: 보유와 사용을 나누는 사람 전용 레고박스. */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Boxes, X, Upload, Download, LockKeyhole, Moon, Search, Loader2, Settings2 } from 'lucide-react';
-import { api } from '../../../lib/api';
-import { getBackendOrigin } from '../../../lib/backend-origin';
-import type { VocabularyPackage } from '../../../lib/api-packages';
-import { PackageDeveloperDialog } from './PackageDeveloperDialog';
-import { ToolSearchDialog } from './ToolSearchDialog';
+import { Boxes, Upload, Download, LockKeyhole, Moon, Search, Loader2, Settings2 } from 'lucide-react';
+import { api } from '../lib/api';
+import { getBackendOrigin } from '../lib/backend-origin';
+import type { VocabularyPackage } from '../lib/api-packages';
+import { PackageDeveloperDialog } from './launcher-components/dialogs/PackageDeveloperDialog';
+import { ToolSearchDialog } from './launcher-components/dialogs/ToolSearchDialog';
 
-export function ToolboxDialog({ show, onClose }: { show: boolean; onClose: () => void }) {
+export function VocabularyView() {
   const [packages, setPackages] = useState<VocabularyPackage[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -18,21 +18,13 @@ export function ToolboxDialog({ show, onClose }: { show: boolean; onClose: () =>
   const [advanced, setAdvanced] = useState(false);
   const [search, setSearch] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const closeButton = useRef<HTMLButtonElement>(null);
-  const dialog = useRef<HTMLDivElement>(null);
   const reload = useCallback(async () => {
     setLoading(true);
     try { setPackages((await api.getVocabulary()).packages); }
     catch (e) { setError(e instanceof Error ? e.message : '어휘를 불러오지 못했습니다.'); }
     finally { setLoading(false); }
   }, []);
-  useEffect(() => {
-    if (!show) return;
-    setError(''); setMessage(''); void reload();
-    const previous = document.activeElement as HTMLElement | null;
-    closeButton.current?.focus();
-    return () => previous?.focus();
-  }, [show, reload]);
+  useEffect(() => { void reload(); }, [reload]);
   const run = async (id: string, action: () => Promise<void>) => {
     if (busy) return;
     setBusy(id); setError(''); setMessage('');
@@ -63,29 +55,16 @@ export function ToolboxDialog({ show, onClose }: { show: boolean; onClose: () =>
     setTimeout(() => URL.revokeObjectURL(url), 1000);
     setMessage(`${pkg.name} 파일을 만들었습니다.`);
   });
-  if (!show) return null;
-  if (advanced) return <PackageDeveloperDialog show onClose={() => { setAdvanced(false); void reload(); }} />;
   const activeCount = packages.filter(p => p.installed).length;
   const shown = packages.filter(p => (filter === 'all' || (filter === 'active') === p.installed)
     && `${p.name} ${p.description} ${p.id}`.toLowerCase().includes(query.toLowerCase()));
   const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-stone-200 px-3 py-2 text-sm hover:bg-stone-100 disabled:opacity-40';
-  return <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-3 sm:p-6" onKeyDown={e => {
-    if (search) return;
-    if (e.key === 'Escape' && !busy) onClose();
-    if (e.key === 'Tab') {
-      const nodes = dialog.current?.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]), [tabindex="0"]');
-      if (!nodes?.length) return;
-      const first = nodes[0], last = nodes[nodes.length - 1];
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
-    }
-  }}>
-    <div ref={dialog} role="dialog" aria-modal="true" aria-labelledby="vocabulary-title" className="w-full max-w-4xl max-h-[90vh] flex flex-col rounded-2xl bg-[#faf8f4] shadow-xl text-stone-800" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); receive(e.dataTransfer.files[0]); }}>
+  return <section aria-labelledby="vocabulary-title" className="h-full overflow-y-auto bg-[#faf8f4] text-stone-800" onDragOver={e => e.preventDefault()} onDrop={e => { e.preventDefault(); receive(e.dataTransfer.files[0]); }}>
+    <div className="w-full max-w-6xl min-h-full mx-auto flex flex-col">
       <div className="p-5 border-b border-stone-200">
         <div className="flex items-start justify-between gap-4">
           <div><h2 id="vocabulary-title" className="text-xl font-semibold flex items-center gap-2"><Boxes size={23} /> 내 어휘</h2>
             <p className="text-sm text-stone-500 mt-1">내 레고박스에서 이 몸이 쓸 어휘를 골라 주세요.</p></div>
-          <button ref={closeButton} className={button} disabled={!!busy} onClick={onClose} aria-label="내 어휘 닫기"><X size={18} /></button>
         </div>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <span className="text-sm mr-auto">보유 {packages.length} · 사용 중 {activeCount} · 잠듦 {packages.length - activeCount}</span>
@@ -104,7 +83,7 @@ export function ToolboxDialog({ show, onClose }: { show: boolean; onClose: () =>
           {(['all', 'active', 'sleeping'] as const).map((key, i) => <button key={key} aria-pressed={filter === key} className={`${button} ${filter === key ? 'bg-stone-200 font-medium' : ''}`} onClick={() => setFilter(key)}>{['전체', '사용 중', '잠듦'][i]}</button>)}
         </div>
       </div>
-      <div className="overflow-y-auto p-5 grid sm:grid-cols-2 gap-3" aria-busy={loading || !!busy}>
+      <div className="p-5 grid sm:grid-cols-2 xl:grid-cols-3 gap-3" aria-busy={loading || !!busy}>
         {loading && packages.length === 0 && <p className="text-sm flex gap-2"><Loader2 className="animate-spin" size={16} /> 어휘를 불러오는 중</p>}
         {!loading && !shown.length && <p className="text-sm text-stone-500">해당하는 어휘가 없습니다. 파일을 끌어 놓아 레고박스에 넣을 수 있습니다.</p>}
         {shown.map(pkg => <article key={pkg.id} className={`rounded-xl border p-4 flex flex-col gap-3 ${pkg.installed ? 'bg-white border-emerald-200' : 'bg-stone-100/60 border-stone-200'}`}>
@@ -123,8 +102,9 @@ export function ToolboxDialog({ show, onClose }: { show: boolean; onClose: () =>
           </div>
         </article>)}
       </div>
-      <div className="px-5 py-3 border-t border-stone-200 text-xs text-stone-500">받은 어휘는 잠든 상태로 들어옵니다. 선택은 이 몸에만 적용됩니다. 실행 중인 작업은 계속됩니다.</div>
+      <div className="mt-auto px-5 py-3 border-t border-stone-200 text-xs text-stone-500">받은 어휘는 잠든 상태로 들어옵니다. 선택은 이 몸에만 적용됩니다. 실행 중인 작업은 계속됩니다.</div>
     </div>
+    <PackageDeveloperDialog show={advanced} onClose={() => { setAdvanced(false); void reload(); }} />
     <ToolSearchDialog show={search} onClose={() => { setSearch(false); void reload(); }} />
-  </div>;
+  </section>;
 }

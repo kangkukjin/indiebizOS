@@ -1,4 +1,4 @@
-"""조종실의 어휘 선택. 인증된 원격 사용자 또는 로컬 앱의 사용자 요청만 허용."""
+"""런처 내 어휘의 선택. 인증된 원격 사용자 또는 로컬 앱의 사용자 요청만 허용."""
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, HTTPException, Request
@@ -24,7 +24,7 @@ def human_authority(request: Request):
         app_origin = origin in {"app://.", "file://", "null"}
         if (not (local_origin or app_origin)
                 or request.headers.get("sec-fetch-mode") not in {"cors", "same-origin"}):
-            raise HTTPException(status_code=403, detail="조종실에서 어휘 선택을 변경해 주세요")
+            raise HTTPException(status_code=403, detail="런처의 내 어휘에서 선택을 변경해 주세요")
     return HUMAN_AUTHORITY
 
 

@@ -19,7 +19,6 @@ import remarkGfm from 'remark-gfm';
 import { api } from '../lib/api';
 import { IS_WEB_SURFACE } from '../lib/backend-origin';
 import { NodePresence, ModelGearLever, ActiveProjects, LimbSwitch, SystemLogViewer, BodyLedger } from './launcher-components';
-import { ToolboxDialog } from './launcher-components/dialogs/ToolboxDialog';
 import { EpisodeJournal } from './EpisodeJournal';
 import { PursuitLedger } from './launcher-components/PursuitLedger';
 import type { IblValidateResult, IblSafety, IblCatalog, DashboardStatus, RecallPreviewResult } from '../lib/api-ibl';
@@ -126,7 +125,6 @@ const NODE_GLOSS: Record<string, string> = {
 };
 
 export default function ManualMode() {
-  const [vocabularyOpen, setVocabularyOpen] = useState(false);
   const [mobileMonitorOpen, setMobileMonitorOpen] = useState(false);
   // 'indiebizOS의 구조' — 버튼 밑 인라인 박스(anatomy 문서). 첫 펼칠 때 원본 마크다운을 당겨 캐시.
   const [structOpen, setStructOpen] = useState(false);
@@ -433,10 +431,6 @@ export default function ManualMode() {
 
         {/* 액티브 프로젝트 — 지금 일하고 있는 에이전트들의 프로젝트. 클릭=대화창 맨앞으로 (조종실 맨 윗줄) */}
         <ActiveProjects />
-        <button onClick={() => setVocabularyOpen(true)} className="w-full flex items-center gap-3 rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-700 hover:bg-stone-50">
-          <Boxes size={20} /><span className="font-medium">내 어휘</span><span className="ml-auto text-xs text-stone-500">레고박스 · 깨우기와 잠재우기</span>
-        </button>
-        <ToolboxDialog show={vocabularyOpen} onClose={() => setVocabularyOpen(false)} />
 
         {/* 모델 기어 — 계기판 변속 레버(절약/균형/최대) + 헤더에 'indiebizOS의 구조' 버튼(설정 옆).
             검색 브라우저 진입점은 조종실에서 제거(2026-07-06). */}

@@ -49,7 +49,7 @@ def set_package_active(package_id: str, active: bool, *, authority=None) -> dict
     """보유 파일·기억을 보존하고 선택만 바꾼다. 이미 진행 중인 호출은 취소하지 않는다."""
     if authority is not HUMAN_AUTHORITY:
         return {"success": False, "status": "human_required", "package_id": package_id,
-                "message": "어휘 선택은 사람이 합니다. 조종실의 내 어휘에서 변경해 주세요."}
+                "message": "어휘 선택은 사람이 합니다. 런처의 내 어휘에서 변경해 주세요."}
     if type(active) is not bool:
         raise ValueError("active는 참/거짓이어야 합니다")
     with LOCK:

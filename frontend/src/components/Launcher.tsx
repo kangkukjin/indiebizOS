@@ -5,7 +5,7 @@ import { openSystemAI } from '../lib/surface-navigation';
 import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Zap, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
+import { Zap, Boxes, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -20,7 +20,6 @@ import {
   SettingsDialog,
   TrashDialog,
   SchedulerDialog,
-  ToolboxDialog,
   SwitchEditDialog,
 } from './launcher-components';
 import { GuideDialog } from './GuideDialog';
@@ -28,6 +27,7 @@ import { OnboardingDialog } from './OnboardingDialog';
 import { UserManualDialog } from './UserManualDialog';
 import { ActionDesktop, STATIC_APP_META } from './ActionDesktop';
 import ManualMode from './ManualMode';
+import { VocabularyView } from './VocabularyView';
 import { ForageBrowser } from './ForageBrowser';
 import { WarehouseView } from './WarehouseView';
 import { useLauncherDesktop } from './launcher-components/useLauncherDesktop';
@@ -37,16 +37,17 @@ import type {
   MidtierAISettings,
 } from './launcher-components';
 
-// 런처 상단 모드 선택기의 네 표면 (순서 = 드롭다운 표시 순서 — 공유창고가 맨 위: 목적 우선).
+// 런처 상단 모드 선택기의 다섯 표면 (순서 = 드롭다운 표시 순서 — 공유창고가 맨 위: 목적 우선).
 // 검색 브라우저는 모드가 아니라 앱모드의 앱(ActionDesktop 'forage' 타일) — 오버레이로 뜬다.
 // 비즈니스는 모드가 아니라 공유창고의 탭(2026-07-19 이동) — 창고를 채우는 관리 기능이라서.
-const LAUNCHER_MODES = ['warehouse', 'autopilot', 'manual', 'app'] as const;
+const LAUNCHER_MODES = ['warehouse', 'autopilot', 'manual', 'app', 'vocabulary'] as const;
 type LauncherMode = typeof LAUNCHER_MODES[number];
 const MODE_META: Record<LauncherMode, { label: string; icon: typeof Search }> = {
   warehouse: { label: '공유창고', icon: Package },
   autopilot: { label: '자율주행', icon: Compass },
   manual: { label: '조종실', icon: Gauge },
   app: { label: '앱', icon: LayoutGrid },
+  vocabulary: { label: '내 어휘', icon: Boxes },
 };
 
 export function Launcher() {
@@ -61,6 +62,7 @@ export function Launcher() {
   // 런처는 하나의 모드 전환 버튼(상단 X-Ray 앞)으로 오가는 표면들이다:
   //   autopilot(자율주행) = 데스크탑 아이콘  ·  manual(조종실) = IBL 번역·검수·실행
   //   app(앱) = 아이콘 GUI 계기  ·  warehouse(공유창고 — 비즈니스 관리는 이 안의 탭)
+  //   vocabulary(내 어휘) = 보유한 어휘 선택·파일 교환
   // 검색 브라우저(공동 포식 크로미움)는 모드에서 빠져 앱모드의 앱 — browserOpen 오버레이로 뜬다.
   // (옛 3토글 자율주행/조종실/앱은 이 단일 모드 선택기로 대체됨)
   const [launcherTab, setLauncherTab] = useState<LauncherMode>(() => {
@@ -114,7 +116,6 @@ export function Launcher() {
   const [showNewFolderDialog, setShowNewFolderDialog] = useState(false);
   const [showNewMultiChatDialog, setShowNewMultiChatDialog] = useState(false);
   const [showSchedulerDialog, setShowSchedulerDialog] = useState(false);
-  const [showToolboxDialog, setShowToolboxDialog] = useState(false);
   const [showSwitchEditDialog, setShowSwitchEditDialog] = useState(false);
   const [showGuideDialog, setShowGuideDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
@@ -639,7 +640,7 @@ export function Launcher() {
       {/* 상단 툴바 */}
       <div id="launcher-tools" className={`launcher-toolbar ${mobileToolsOpen ? 'mobile-tools-open' : ''} min-h-11 shrink-0 flex items-center justify-end px-4 drag bg-gradient-to-b from-[#F7F3ED] to-[#F5F1EB] border-b border-[#E5DFD5]`}>
         <div className="flex flex-wrap justify-end items-center gap-1.5 no-drag whitespace-nowrap">
-          {/* 모드 선택기 — 네 표면(자율주행/조종실/앱/공유창고)을 오간다. X-Ray 앞. */}
+          {/* 모드 선택기 — 다섯 표면(자율주행/조종실/앱/공유창고/내 어휘)을 오간다. X-Ray 앞. */}
           <div className="relative" ref={modeMenuRef}>
             <button
               onClick={() => setShowModeMenu((v) => { if (!v) loadPromoted().catch(() => {}); return !v; })}
@@ -828,13 +829,13 @@ export function Launcher() {
                 <div className="border-t border-stone-100 my-1" />
                 <button
                   onClick={() => {
-                    setShowToolboxDialog(true);
+                    selectMode('vocabulary');
                     setShowMainMenu(false);
                   }}
                   className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
                 >
-                  <Package size={16} className="text-amber-600" />
-                  <span className="text-sm">도구 상점</span>
+                  <Boxes size={16} className="text-amber-600" />
+                  <span className="text-sm">내 어휘</span>
                 </button>
                 <button
                   onClick={() => {
@@ -898,6 +899,8 @@ export function Launcher() {
           <ActionDesktop key={`app:${activeAppId || ''}`} openAppId={activeAppId} openNonce={appOpenNonce} />
         ) : launcherTab === 'warehouse' ? (
           <WarehouseView />
+        ) : launcherTab === 'vocabulary' ? (
+          <VocabularyView />
         ) : launcherTab === 'manual' ? (
           <ManualMode />
         ) : isLoading ? (
@@ -1084,7 +1087,7 @@ export function Launcher() {
       </div>
 
       {IS_WEB_SURFACE && <nav aria-label="런처 모드" className="remote-mobile-only mobile-mode-nav">
-        {(['autopilot', 'manual', 'app', 'warehouse'] as const).map(mode => {
+        {(['autopilot', 'manual', 'app', 'warehouse', 'vocabulary'] as const).map(mode => {
           const Icon = MODE_META[mode].icon;
           return <button key={mode} aria-current={launcherTab === mode ? 'page' : undefined}
             onClick={() => { selectMode(mode); setMobileToolsOpen(false); setBrowserOpen(false); }}>
@@ -1205,12 +1208,6 @@ export function Launcher() {
         formatLastRun={formatLastRun}
         onClose={() => setShowSchedulerDialog(false)}
         onOpenCalendar={handleOpenCalendar}
-      />
-
-      {/* 도구함 다이얼로그 */}
-      <ToolboxDialog
-        show={showToolboxDialog}
-        onClose={() => setShowToolboxDialog(false)}
       />
 
       {/* 스위치 편집 다이얼로그 */}

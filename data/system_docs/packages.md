@@ -40,7 +40,7 @@ IBL 호출은 사람에게 변경을 제안하며 직접 활성 선택을 바꿀
 
 ### 파일로 주고받기
 
-조종실 → **내 어휘** → **파일 가져오기**로 `.iblpack`을 넣는다. 받은 묶음은
+런처 → **내 어휘** → **파일 가져오기**로 `.iblpack`을 넣는다. 받은 묶음은
 검증·용례 시딩 후 잠든 상태로 보관하며 사람이 깨운다. **내보내기**는 공개 소스와
 배포 용례를 한 파일로 만든다. manifest가 없는 옛 묶음은 공개 fixture를 용례로 쓰며,
 추가 자원은 제작자의 manifest 선언이 필요하다. 개인 기억·설정을 자동 동봉하지 않는다.
@@ -340,7 +340,7 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 | remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프레임워크를 사용하여 React/TSX 컴포넌트를 MP4 동영상으로 렌더링합니다. |
 <!-- PACKAGES_TABLE:END -->
 
-현재 잠든 목록은 폴더명에서 추측하지 않고 조종실 **내 어휘** 또는 `self:package` 목록에서 확인한다.
+현재 잠든 목록은 폴더명에서 추측하지 않고 런처 **내 어휘** 또는 `self:package` 목록에서 확인한다.
 
 **삭제된 패키지(디렉토리째 없음, 되살리지 말 것)**: `web-collector`(2026-08-15 — `sense:collect` 은퇴, `sense:crawl` 이 상위호환) · `local-info`(2026-08-15 — 지역정보 3형제 은퇴, `[sense:search]{source:"naver", type:"cafe"}` 가 승계. ★`area` 기본값 "오송" 하드코딩 = 세계의 명사가 코드에 박힌 헌법 위반이라 패키지와 함께 소멸) · `web-kr`(2026-08-05 — 네이버 검색이 `[sense:search]{source}` 로 흡수). 백업=`data/_backups/2026-08-15_*`.
 

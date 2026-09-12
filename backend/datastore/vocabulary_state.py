@@ -139,7 +139,7 @@ def action_owner(node: str, action: str, cfg: dict = None, root: Path = None):
 
 def sleeping_reason(package_id: str, root: Path = None):
     if package_id and not is_active(package_id, root):
-        return f"'{package_id}' 묶음의 낱말은 잠들어 있습니다. 조종실에서 깨워 주세요"
+        return f"'{package_id}' 묶음의 낱말은 잠들어 있습니다. 런처의 내 어휘에서 깨워 주세요"
     return None
 
 

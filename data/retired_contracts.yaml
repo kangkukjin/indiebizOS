@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: vocabulary_cockpit_entry
+    retired: 2026-09-13
+    reason: 내 어휘를 조종실의 대화상자에서 런처의 독립 화면으로 옮겼다.
+    instead: 런처의 내 어휘에서 깨우기와 잠재우기 및 파일 교환을 한다.
+    phrases:
+      - '조종실에서 깨워 주세요'
+      - '조종실의 내 어휘에서 변경해 주세요'
+      - '조종실에서 어휘 선택을 변경해 주세요'
   - id: package_switch_rebuild
     retired: 2026-09-13
     reason: 어휘 선택은 보유 정의 변경과 분리하며 코퍼스를 삭제하지 않는다.

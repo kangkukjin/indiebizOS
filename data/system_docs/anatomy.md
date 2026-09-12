@@ -40,6 +40,8 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 **생애주기**: 새 일은 자율주행이 탐색 → IBL 흔적이 조종실 초안으로 → 검증된 고빈도 워크플로가 앱으로 결정화. *굳히는 건 증명된 것만.* 이 빈도-결정화가 "언제 시야를, 언제 한 번의 실행을"의 자동 규율이다.
 → 상세: [architecture.md](architecture.md) "사용자 표면 — 런처의 세 모드"
 
+런처 선택기에는 **공유창고**와 **내 어휘**도 독립 메뉴로 놓인다. 내 어휘는 보유한 묶음을 고르고, 깨우거나 잠재우며, 파일로 주고받는 관리 공간이다. 조종실에 들어가지 않고 직접 연다. → [packages.md](packages.md)
+
 ---
 
 ## 2. 표면 아래의 언어 — IBL (신경계)

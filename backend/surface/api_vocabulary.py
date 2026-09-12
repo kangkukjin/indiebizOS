@@ -86,3 +86,40 @@ async def import_vocabulary(request: Request):
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:
         raise HTTPException(status_code=503, detail=str(exc))
+
+
+class DesktopEdit(BaseModel):
+    op: str
+    item: str | None = None
+    parent: str = "desktop"
+    name: str | None = None
+    x: float = 24
+    y: float = 24
+    columns: int = 5
+
+
+@router.get("/vocabulary/desktop")
+def read_desktop():
+    from vocabulary_desktop import get_desktop
+    return get_desktop()
+
+
+@router.post("/vocabulary/desktop")
+def update_desktop(edit: DesktopEdit, request: Request):
+    from vocabulary_desktop import edit_desktop
+    authority = human_authority(request)
+    try:
+        return edit_desktop(**edit.model_dump(), authority=authority)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except (RuntimeError, OSError) as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
+
+
+@router.get("/vocabulary/{package_id}/words")
+def list_words(package_id: str):
+    from vocabulary_desktop import package_words
+    try:
+        return {"words": package_words(package_id)}
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))

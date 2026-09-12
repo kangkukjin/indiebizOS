@@ -1,0 +1,6 @@
+.vocabulary-icon:hover { background: #eae4daaa; }
+.vocabulary-icon[data-vocab-hover] { background: #bbf7d0; box-shadow: 0 0 0 2px #22c55e; }
+.vocabulary-folder { left: 160px; top: 150px; width: min(660px, calc(100% - 180px)); height: calc(100% - 174px); min-height: 180px; }
+@media (max-width: 640px) {
+  .vocabulary-folder { left: 12px; top: 154px; width: calc(100% - 24px); height: calc(100% - 166px); }
+}

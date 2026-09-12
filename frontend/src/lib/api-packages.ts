@@ -3,6 +3,7 @@
  * APIClient mixin: 패키지 CRUD, 분석, 등록, Nostr 공유
  */
 
+import type { VocabularyDesktop, DesktopEdit, Word } from '../components/vocabulary/types';
 import type { APIClientCore } from './api-types';
 
 /** [self:install_lib] 승인 대기/승인 항목 (backend/datastore/install_approvals.py) */
@@ -38,6 +39,17 @@ export interface VocabularyResult {
 export function applyPackagesMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
 
+    async getVocabularyDesktop() {
+      return client.request<VocabularyDesktop>('/vocabulary/desktop');
+    },
+    async editVocabularyDesktop(edit: DesktopEdit) {
+      return client.request<VocabularyDesktop>('/vocabulary/desktop', {
+        method: 'POST', body: JSON.stringify(edit),
+      });
+    },
+    async getVocabularyWords(id: string) {
+      return client.request<{ words: Word[] }>(`/vocabulary/${encodeURIComponent(id)}/words`);
+    },
     async getVocabulary() {
       return client.request<{ packages: VocabularyPackage[]; revision: number }>('/vocabulary');
     },

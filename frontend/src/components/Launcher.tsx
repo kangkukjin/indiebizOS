@@ -829,16 +829,6 @@ export function Launcher() {
                 <div className="border-t border-stone-100 my-1" />
                 <button
                   onClick={() => {
-                    selectMode('vocabulary');
-                    setShowMainMenu(false);
-                  }}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
-                >
-                  <Boxes size={16} className="text-amber-600" />
-                  <span className="text-sm">내 어휘</span>
-                </button>
-                <button
-                  onClick={() => {
                     handleOpenSettings();
                     setShowMainMenu(false);
                   }}

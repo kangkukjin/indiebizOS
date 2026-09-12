@@ -38,9 +38,12 @@ def test_required_and_special_folders_protected_server_side(box):
         with pytest.raises(ValueError, match="필수"):
             edit("move", item="base", parent=destination)
     for item in (CORE, STORE, TRASH):
-        for op in ("move", "remove_folder", "rename"):
-            with pytest.raises(ValueError, match="고정"):
+        for op in ("remove_folder", "rename"):
+            with pytest.raises(ValueError, match="특수"):
                 edit(op, item=item, name="renamed")
+    for item in (CORE, STORE):
+        with pytest.raises(ValueError, match="고정"):
+            edit("move", item=item, parent=ROOT)
     with pytest.raises(ValueError):
         edit("move", item="awake", parent=CORE)
     with pytest.raises(ValueError, match="화면"):
@@ -105,6 +108,22 @@ def test_arrange_leaves_special_folders_fixed_and_rejects_bad_position(box):
     assert all(before["folders"][key] == after["folders"][key] for key in (CORE, STORE, TRASH))
     with pytest.raises(ValueError, match="위치"):
         edit("move", item="awake", parent=ROOT, x=float('nan'))
+
+
+def test_trash_moves_on_desktop_preserving_contents_and_sleep(box):
+    edit("move", item="awake", parent=TRASH)
+    layout = edit("move", item=TRASH, parent=ROOT, x=820, y=480)
+    assert get_desktop()["folders"][TRASH] == layout["folders"][TRASH]
+    assert layout["folders"][TRASH]["x"] == 820
+    assert layout["folders"][TRASH]["y"] == 480
+    assert layout["placements"]["awake"]["parent"] == TRASH
+    assert not state.is_active("awake")
+    assert edit("arrange")["folders"][TRASH] == layout["folders"][TRASH]
+    for parent in (CORE, STORE, TRASH):
+        with pytest.raises(ValueError, match="바탕"):
+            edit("move", item=TRASH, parent=parent)
+    edit("restore", item="awake")
+    assert state.is_active("awake")
 
 
 if __name__ == "__main__":

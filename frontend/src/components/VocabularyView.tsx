@@ -5,6 +5,7 @@ import { ArrowLeft, Boxes, Folder, Archive, Trash2, LockKeyhole, X } from 'lucid
 import { api } from '../lib/api';
 import { getBackendOrigin } from '../lib/backend-origin';
 import type { VocabularyPackage } from '../lib/api-packages';
+import { useFolderWindowMotion } from './vocabulary/useFolderWindowMotion';
 import { VocabularyIcon } from './vocabulary/VocabularyIcon';
 import { VocabularyOverlay } from './vocabulary/VocabularyOverlay';
 import { ROOT, STORE, CORE, TRASH, SPECIAL } from './vocabulary/types';
@@ -24,6 +25,7 @@ export function VocabularyView() {
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
   const [openFolder, setOpenFolder] = useState<string | null>(null);
+  const folderMotion = useFolderWindowMotion(openFolder);
   const [selected, setSelected] = useState<string | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -128,7 +130,7 @@ export function VocabularyView() {
       className="relative min-w-full min-h-full" style={{ width, height }} onContextMenu={e => context(e, parent)}>
       {entries.map(entry => <VocabularyIcon key={entry.id} id={entry.id} name={entry.name} placement={entry.placement}
         icon={entry.id === STORE ? <Archive size={38} /> : entry.id === TRASH ? <Trash2 size={29} /> : entry.id === CORE ? <LockKeyhole size={27} /> : entry.folder ? <Folder size={29} /> : <Boxes size={27} />}
-        destination={entry.folder ? entry.id : undefined} fixed={SPECIAL.has(entry.id)} large={entry.id === STORE}
+        destination={entry.folder ? entry.id : undefined} fixed={SPECIAL.has(entry.id) && entry.id !== TRASH} large={entry.id === STORE}
         protectedIcon={entry.required} selected={selected === entry.id} disabled={busy}
         onSelect={() => setSelected(entry.id)} onMenu={e => context(e, parent, entry.id)}
         onOpen={() => entry.folder ? setOpenFolder(entry.id) : describe(packages.find(p => p.id === entry.id)!, 'description')}
@@ -150,8 +152,8 @@ export function VocabularyView() {
       {error && !desktop && <button onClick={() => void run(reload)}>다시 시도</button>}
       {!busy && <button aria-label="알림 닫기" onClick={() => { setError(''); setMessage(''); }}><X size={16} /></button>}
     </div>}
-    {openFolder && openName && <div className="vocabulary-folder absolute z-30 flex flex-col rounded-2xl border border-stone-300 bg-[#faf8f4] shadow-xl overflow-hidden" role="region" aria-label={openName}>
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-stone-200 shrink-0" onContextMenu={e => context(e, openFolder, openFolder)}>
+    {openFolder && openName && <div ref={folderMotion.windowRef} style={folderMotion.style} className="vocabulary-folder absolute z-30 flex flex-col rounded-2xl border border-stone-300 bg-[#faf8f4] shadow-xl overflow-hidden" role="region" aria-label={openName}>
+      <div {...folderMotion.headerEvents} tabIndex={0} aria-label={`${openName} 창 이동`} style={{ touchAction: 'none', cursor: folderMotion.dragging ? 'grabbing' : 'grab' }} className="no-drag select-none flex items-center gap-2 px-3 py-2 border-b border-stone-200 shrink-0" onContextMenu={e => context(e, openFolder, openFolder)}>
         <button aria-label="상위 폴더" title="상위 폴더" data-vocab-destination={desktop!.folders[openFolder].parent}
           onClick={() => setOpenFolder(desktop!.folders[openFolder].parent === ROOT ? null : desktop!.folders[openFolder].parent)} className="p-2 hover:bg-stone-200 rounded"><ArrowLeft size={17} /></button>
         <span className="font-medium text-sm flex-1">{openName}</span>

@@ -127,7 +127,7 @@ def edit_desktop(op, *, item=None, parent=ROOT, name=None, x=24, y=24, columns=5
             folders["folder-" + uuid.uuid4().hex] = {"name": name.strip(), "parent": parent, **position}
         elif op in ("rename", "remove_folder"):
             if item not in folders or item in SPECIAL:
-                raise ValueError("고정 폴더는 변경하거나 삭제할 수 없습니다")
+                raise ValueError("특수 폴더는 이름을 바꾸거나 삭제할 수 없습니다")
             if op == "rename":
                 if not isinstance(name, str) or not name.strip() or len(name) > 80:
                     raise ValueError("폴더 이름은 1~80자로 적어 주세요")
@@ -153,8 +153,10 @@ def edit_desktop(op, *, item=None, parent=ROOT, name=None, x=24, y=24, columns=5
                 entry.update(x=24 + index % columns * 116, y=24 + index // columns * 116)
                 index += 1
         elif op in ("move", "restore"):
-            if item in SPECIAL:
+            if item in (CORE, STORE):
                 raise ValueError("고정 폴더는 이동할 수 없습니다")
+            if item == TRASH and (op != "move" or parent != ROOT):
+                raise ValueError("쓰레기통은 바탕 안에서만 옮길 수 있습니다")
             if item in folders:
                 if op == "restore" or not _normal(desktop, parent):
                     raise ValueError("일반 폴더는 바탕이나 일반 폴더로 옮겨 주세요")

@@ -151,6 +151,7 @@
     "datastore/system_ai_memory",
     "datastore/system_docs",
     "datastore/verification_cache",
+    "datastore/vocabulary_policy",
     "datastore/warehouse_catalog",
     "datastore/warehouse_directory",
     "datastore/warehouse_items",
@@ -335,8 +336,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 324,
-    "engine": 298,
+    "total": 325,
+    "engine": 299,
     "blocklist": 26
   }
 }

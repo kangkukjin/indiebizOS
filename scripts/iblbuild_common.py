@@ -126,6 +126,7 @@ CORPUS_FILES = [
 #
 # 형식: git ls-files 스타일 상대경로에 대한 POSIX ERE (전체 매칭, ^…$ 는 훅이 씌움).
 GUARD_INPUT_PATTERNS = [
+    r"data/vocabulary_policy\.yaml",
     # ── 어휘 정의 (기존 트리거) ──
     r"data/ibl_nodes_src/.*\.yaml",
     r"data/packages/(installed|not_installed)/.*/ibl_actions\.yaml",

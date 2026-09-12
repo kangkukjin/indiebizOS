@@ -22,6 +22,7 @@ interface PackageInfo {
   type?: 'tools';
   icon?: string;
   installed: boolean;
+  required?: boolean;
   package_type?: string;
   files?: string[];
   tools?: Array<{ name: string; description: string }>;
@@ -47,17 +48,8 @@ const CATEGORY_LABEL: Record<Category, string> = {
   personal: '👤 개인어휘',
 };
 
-// IBL 표준 패키지: 기능어 코어 어휘 + 언어 인프라 소유자.
-// 여기 추가/제거는 표준 변경 = 언어 개정 — ibl.md '언어의 경계' 조항과 함께 의식적으로.
-const STANDARD_PACKAGES = new Set<string>([
-  'ibl-core',           // IBL 핵심 인프라
-  'system_essentials',  // self 파일 문법(read/write/grep/…) + table:spreadsheet emitter
-  'data-ops',           // table 관계대수 9종(filter/sort/…/merge) + document/structure emitter — 파이프 설탕의 desugar 타깃
-  'visualization',      // table:chart emitter
-]);
-
 function categoryOf(pkg: PackageInfo): Category {
-  if (STANDARD_PACKAGES.has(pkg.id)) return 'standard';
+  if (pkg.required) return 'standard';
   if (pkg.locale === 'kr') return 'kr';
   if ((pkg.needs_key?.length ?? 0) > 0) return 'needs_key';
   return 'personal'; // 기본 = 개인 사전 (표준이 아니면 내용어)
@@ -653,7 +645,7 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
                   {selectedPackage.installed ? (
                     <button
                       onClick={() => handleUninstall(selectedPackage)}
-                      disabled={actionLoading === selectedPackage.id}
+                      disabled={selectedPackage.required || actionLoading === selectedPackage.id}
                       className="w-full px-4 py-2.5 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors font-medium"
                     >
                       {actionLoading === selectedPackage.id ? (
@@ -661,12 +653,12 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
                       ) : (
                         <Trash2 size={18} />
                       )}
-                      {actionLoading === selectedPackage.id ? '제거 중...' : '제거하기'}
+                      {actionLoading === selectedPackage.id ? '제거 중...' : selectedPackage.required ? '기본 제공' : '제거하기'}
                     </button>
                   ) : (
                     <button
                       onClick={() => handleInstall(selectedPackage)}
-                      disabled={actionLoading === selectedPackage.id}
+                      disabled={selectedPackage.required || actionLoading === selectedPackage.id}
                       className="w-full px-4 py-2.5 bg-indigo-500 text-white rounded-lg hover:bg-indigo-600 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors font-medium"
                     >
                       {actionLoading === selectedPackage.id ? (
@@ -692,7 +684,7 @@ export function ToolboxDialog({ show, onClose }: ToolboxDialogProps) {
                   {/* 패키지 삭제 버튼 */}
                   <button
                     onClick={() => handleRemovePackage(selectedPackage)}
-                    disabled={actionLoading === selectedPackage.id}
+                    disabled={selectedPackage.required || actionLoading === selectedPackage.id}
                     className="w-full px-4 py-2 text-gray-500 rounded-lg hover:bg-gray-100 disabled:opacity-50 flex items-center justify-center gap-2 transition-colors text-sm"
                   >
                     <XCircle size={16} />

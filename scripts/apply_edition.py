@@ -59,7 +59,11 @@ _PARK_MARKER = ".edition_parked"
 
 # 표준 필터를 통과하더라도 절대 not_installed 로 내보내지 않는 코어 도구.
 # (현재는 둘 다 keyless∧light 라 표준에 포함되지만, 더 마른 에디션이 생겨도 안전하게.)
-_PROTECTED = {"ibl-core", "system_essentials"}
+sys.path.insert(0, str(ROOT / "backend"))
+import boot_paths  # noqa: E402,F401
+from vocabulary_policy import required_packages  # noqa: E402
+
+_PROTECTED = required_packages(ROOT)
 
 EDITIONS = ("standard", "full")
 

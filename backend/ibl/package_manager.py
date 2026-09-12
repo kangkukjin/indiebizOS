@@ -312,6 +312,8 @@ class PackageManager:
 
         # origin: 표준 코어(배포 동봉) vs 사용자 추가
         metadata["origin"] = resolve_package_origin(pkg_id)
+        from vocabulary_policy import required_packages
+        metadata["required"] = pkg_id in required_packages()
 
         return metadata
 
@@ -652,6 +654,8 @@ class PackageManager:
 
     def uninstall_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
         """도구 패키지 제거 (installed → not_installed로 이동)"""
+        from vocabulary_policy import require_optional
+        require_optional(package_id)
         src_path = INSTALLED_PATH / "tools" / package_id
         dst_path = NOT_INSTALLED_PATH / "tools" / package_id
 
@@ -1048,6 +1052,8 @@ README 존재: {basic_analysis['has_readme']}
 
     def remove_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
         """패키지 제거 (available에서 삭제)"""
+        from vocabulary_policy import require_optional
+        require_optional(package_id)
         available_path = NOT_INSTALLED_PATH / "tools" / package_id
         installed_path = INSTALLED_PATH / "tools" / package_id
 

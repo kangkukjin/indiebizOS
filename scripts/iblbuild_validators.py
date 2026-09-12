@@ -1103,7 +1103,9 @@ def validate_node_guides(data: dict, root: Path) -> list[str]:
 # 내용어(그 외 노드의 액션)는 개인 사전: yaml+패키지 데이터만으로 추가·제거되어야 하고
 # 파서·엔진 코드에 이름이 박히면 안 된다 (별칭·always_on 데이터화로 확립된 불변식).
 # 2026-09-09 값 표기·여러 줄·each 반환 정리: 기존 코어 안의 개정, 노드 추가 없음.
-STANDARD_CORE_NODES = {"self", "others", "table"}
+from vocabulary_policy import load_policy
+
+STANDARD_CORE_NODES = set(load_policy()["standard_nodes"])
 
 
 def validate_standard_core(data: dict, root: Path) -> list[str]:

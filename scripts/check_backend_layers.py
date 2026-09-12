@@ -49,7 +49,7 @@ LAYERS = {
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
     "data": {
-        "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
+        "vocabulary_policy", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
         "forage_memory", "forage_doc", "hippo_tree", "guide_registry", "health_sync", "finance_ledger_sync", "ibl_registry",
         "ibl_signature_slot", "ibl_name_search", "ibl_usage_db",

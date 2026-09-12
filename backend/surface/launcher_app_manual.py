@@ -137,7 +137,7 @@ function seedAction(seed){
    접근에 열리지 않는다는 뜻이고, 새 인증 경계를 만들지 않았다는 뜻이기도 하다.
    데스크탑은 Electron 창을 열어 분석하지만 여기엔 창이 없으므로, 같은 프롬프트를
    자율주행 탭의 시스템 AI 입력칸에 실어 준다(보내기는 사용자가 누른다). */
-let jOpen=false, jRows=null, jExpanded=null, jLogs={};
+let jOpen=false, jRows=null, jExpanded=null, jLogs={}, jTimer=null;
 function jRel(iso){
   if(!iso) return '';
   const t=Date.parse(iso); if(isNaN(t)) return '';
@@ -150,9 +150,10 @@ function jRel(iso){
 function jMeta(ep){
   const m=[];
   const rel=jRel(ep.started_at); if(rel) m.push(rel);
+  if(ep.is_running) m.push('진행 중');
   if(ep.agent) m.push(String(ep.agent));
   if(ep.hippocampus_score!=null) m.push('확신 '+Math.round(ep.hippocampus_score*100)+'%');
-  m.push(ep.execution_rounds!=null?ep.execution_rounds+'라운드':'라운드 미측정');
+  m.push(ep.execution_rounds!=null?ep.execution_rounds+'라운드':ep.is_running?'라운드 집계 대기':'라운드 미측정');
   m.push(ep.ibl_calls!=null?'IBL '+ep.ibl_calls+'회':'IBL 미측정');
   if(ep.total_ms!=null) m.push((ep.total_ms/1000).toFixed(1)+'초');
   const d=ep.unconscious_decision;
@@ -186,26 +187,30 @@ function jRender(){
   });
   b.innerHTML=h;
 }
-async function jLoad(){
-  jRows=null; jRender();
+async function jLoad(background=false){
+  clearTimeout(jTimer);
+  if(!background){ jRows=null; jRender(); }
   try{
     const r=await jfetch('/world-pulse/episodes?limit=20');
     if(!r.ok) throw new Error('HTTP '+r.status);
     const d=await r.json();
     jRows=d.episodes||[];
   }catch(e){
+    if(background){ if(jOpen) jTimer=setTimeout(()=>jLoad(true),5000); return; }
     jRows=[];
     const b=document.getElementById('jBody');
     if(b) b.innerHTML='<p class="muted">주행기록을 불러오지 못했습니다 — '+esc(e.message)+'</p>';
     return;
   }
   jRender();
+  if(jOpen&&jRows.some(ep=>ep.is_running)) jTimer=setTimeout(()=>jLoad(true),5000);
 }
 function jToggle(){
   jOpen=!jOpen;
+  if(!jOpen) clearTimeout(jTimer);
   const b=document.getElementById('jBody'); if(b) b.style.display=jOpen?'block':'none';
   const rb=document.getElementById('jReloadBtn'); if(rb) rb.style.display=jOpen?'block':'none';
-  if(jOpen&&jRows===null) jLoad();
+  if(jOpen) jLoad(jRows!==null);
 }
 async function jToggleLog(id){
   const willOpen=(jExpanded!==id);

@@ -7,7 +7,7 @@ import { openSystemAI } from '../lib/surface-navigation';
  * 거기서 곧바로 고칠 것을 명령할 수 있다(수동적 상태판 → 능동적 수리대).
  */
 import { getBackendOrigin as getApiUrl } from '../lib/backend-origin';
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { ExecutionTraceDetail } from './ExecutionTraceDetail';
 import { Activity, RotateCw, Loader2, Check, AlertTriangle, Zap, Brain, Gauge, Microscope, ChevronDown, ChevronRight } from 'lucide-react';
 import { useRetryingLoad } from '../lib/use-retrying-load';
@@ -17,6 +17,7 @@ import { useRetryingLoad } from '../lib/use-retrying-load';
 interface EpisodeRow {
   id: number;
   started_at: string;
+  is_running: boolean;
   agent: string | null;
   user_message: string | null;
   total_ms: number | null;
@@ -84,6 +85,7 @@ export function EpisodeJournal() {
     setLoading(true);
     try {
       const res = await fetch(`${await getApiUrl()}/world-pulse/episodes?limit=20`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       setRows(data.episodes || []);
     } finally {
@@ -93,6 +95,11 @@ export function EpisodeJournal() {
 
   // 펼칠 때 첫 1회만 조회(지연 로드) — 접혀 있을 땐 호출 안 함
   const { retry: reload } = useRetryingLoad(load, { enabled: open && rows === null });
+  useEffect(() => {
+    if (!open || loading || !rows?.some(ep => ep.is_running)) return;
+    const timer = setTimeout(() => { void load().catch(() => {}); }, 5000);
+    return () => clearTimeout(timer);
+  }, [open, loading, rows, load]);
 
   const canAnalyze = typeof window !== 'undefined';
   const analyze = (id: number) => {
@@ -155,11 +162,12 @@ export function EpisodeJournal() {
                 </button>
                 <div className="flex flex-wrap items-center gap-1.5 mt-1 pl-4 text-[10px] text-stone-400">
                   <span>{relTime(ep.started_at)}</span>
+                  {ep.is_running && <span className="text-amber-700">· 진행 중</span>}
                   {ep.agent && <span>· {ep.agent}</span>}
                   {ep.hippocampus_score != null && (
                     <span title="해마 연상 확신도">· 확신 {Math.round(ep.hippocampus_score * 100)}%</span>
                   )}
-                  <span>· {ep.execution_rounds != null ? `${ep.execution_rounds}라운드` : '라운드 미측정'}</span>
+                  <span>· {ep.execution_rounds != null ? `${ep.execution_rounds}라운드` : ep.is_running ? '라운드 집계 대기' : '라운드 미측정'}</span>
                   <span title="IBL 호출 시도 수. 한 호출에 여러 액션이 포함될 수 있습니다.">
                     · {ep.ibl_calls != null ? `IBL ${ep.ibl_calls}회` : 'IBL 미측정'}
                   </span>

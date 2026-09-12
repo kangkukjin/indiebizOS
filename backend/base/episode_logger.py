@@ -1227,7 +1227,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
     try:
         conn = _get_db()
         rows = conn.execute(
-            f"""SELECT e.id, e.run_id, e.started_at, e.agent,
+            f"""SELECT e.id, e.run_id, e.started_at, e.ended_at, e.agent,
                       SUBSTR(e.user_message, 1, 120) as user_message,
                       e.total_ms,
                       s.hippocampus_score, s.unconscious_decision,
@@ -1240,6 +1240,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
         ).fetchall()
         items = [dict(r) for r in rows]
         if items:
+            from model_call_context import count_execution_rounds
             marks = ",".join("?" for _ in items)
             calls = conn.execute(
                 f"""SELECT episode_id,
@@ -1251,8 +1252,21 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
                     {'' if include_test else "AND COALESCE(source, 'usage') <> 'test'"}
                     GROUP BY episode_id""", [item["id"] for item in items]).fetchall()
             counts = {r["episode_id"]: max(r["attempts"], r["starts"]) for r in calls}
+            rounds = {}
+            for row in conn.execute(
+                f"SELECT episode_id,data FROM trajectory_event WHERE episode_id IN ({marks}) "
+                "AND kind='model.round' "
+                + ("" if include_test else "AND COALESCE(source,'usage') <> 'test' ")
+                + "ORDER BY rowid", [item["id"] for item in items]):
+                step = json.loads(row["data"])
+                rounds.setdefault(row["episode_id"], []).append({**step, "event": "round"})
             for item in items:
+                item["is_running"] = item["ended_at"] is None
                 item["ibl_calls"] = counts.get(item["id"])
+                observed = count_execution_rounds(rounds.get(item["id"], []))
+                if observed:
+                    # 진행 중에는 요약이 없다. 완료분도 실제 원장이 있으면 누락된 요약을 보완한다.
+                    item["execution_rounds"] = max(item["execution_rounds"] or 0, observed)
         conn.close()
         return items
     except Exception:

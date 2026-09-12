@@ -87,7 +87,7 @@ def test_missing_rollout_does_not_turn_items_into_rounds(tmp_path, monkeypatch):
     assert rounds == []
 
 
-def test_journal_counts_rejected_ibl_attempt_without_double_count(tmp_path, monkeypatch):
+def _journal_db(tmp_path, monkeypatch):
     import episode_logger as el
     path = tmp_path / "episodes.db"
     def db():
@@ -96,6 +96,12 @@ def test_journal_counts_rejected_ibl_attempt_without_double_count(tmp_path, monk
         return conn
     monkeypatch.setattr(el, "_get_db", db)
     el._ensure_episode_tables()
+    return db
+
+
+def test_journal_counts_rejected_ibl_attempt_without_double_count(tmp_path, monkeypatch):
+    import episode_logger as el
+    db = _journal_db(tmp_path, monkeypatch)
     with db() as conn:
         for eid in (1, 2):
             conn.execute("INSERT INTO episode_log (id, started_at, source) VALUES (?, 'now', 'usage')", (eid,))
@@ -110,6 +116,31 @@ def test_journal_counts_rejected_ibl_attempt_without_double_count(tmp_path, monk
     assert rows[1]["ibl_calls"] == 2
     assert rows[1]["execution_rounds"] is None
     assert rows[2]["ibl_calls"] is None
+
+
+def test_live_journal_counts_system_ai_before_summary_and_after_finish(tmp_path, monkeypatch):
+    import episode_logger as el
+    from datetime import datetime
+    db = _journal_db(tmp_path, monkeypatch)
+    with db() as conn:
+        conn.execute("INSERT INTO episode_log (id,started_at,agent,source) "
+                     "VALUES (1,'2026-09-12T21:44:54','system_ai','usage')")
+        steps = [{"event": "round", "role": role, "call_id": call, "round_index": n, "round": n}
+                 for role, call, n in [("system_ai", "main", 1), ("system_ai", "main", 2),
+                                       ("system_ai", "main", 2), ("oneshot:evaluate", "eval", 1)]]
+        for seq, step in enumerate(steps):
+            conn.execute("INSERT INTO trajectory_event (run_id,event_seq,episode_id,ts,kind,data,source) "
+                         "VALUES ('run',?,1,'now','model.round',?,'usage')", (seq, json.dumps(step)))
+    row = el.get_episode_journal()[0]
+    assert row["is_running"] and row["execution_rounds"] == 2
+    # 실제 종료 요약 생산자도 같은 역할을 세야 한다.
+    el._extract_and_save_summary(1, datetime.now(), "system_ai", "request", "", 100, steps=steps)
+    with db() as conn:
+        assert conn.execute("SELECT execution_rounds FROM episode_summary").fetchone()[0] == 2
+        conn.execute("UPDATE episode_log SET ended_at='2026-09-12T21:50:00' WHERE id=1")
+        conn.execute("UPDATE episode_summary SET execution_rounds=0")  # 구버전의 잘못된 요약
+    row = el.get_episode_journal()[0]
+    assert not row["is_running"] and row["execution_rounds"] == 2
 
 
 if __name__ == "__main__":

@@ -565,7 +565,8 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
     """이번 주행의 IBL 호출 경제 — 손에 있는 tool_calls 만으로 센다(궤적 DB 를 다시 읽지 않는다).
 
     두 궤적 모양을 다 받는다: 평가/반성용 `{name, input, result, is_error}` 와 증류용
-    `{tool_name, input, success}`. 액션 수는 code 의 대괄호 머리 수(`[node:` 계수)다.
+    `{tool_name, input, success}`. 머리는 문자열·주석을 제외한 작성 구문으로 센다.
+    fn_calls는 호환 키이며 실행 횟수가 아니다(분기·반복·지연 본문은 실행 원장 소관).
     반환: calls(execute_ibl 호출 수)·single(액션 1개 호출)·failed·typed_chars(code 자수 합).
     """
     calls = single = failed = typed = 0
@@ -593,9 +594,11 @@ def ibl_call_cost(tool_calls: list) -> Dict[str, int]:
         if isinstance(inp, dict):
             for _f in (inp.get("files") or []):          # files 첨부도 모델이 친 글자다
                 typed += len(_f) if isinstance(_f, str) else 0
-        if len(_IBL_HEAD_RE.findall(code)) <= 1:
+        from ibl_scanner import source_heads
+        heads = source_heads(code)
+        if len(heads) <= 1:
             single += 1
-        fn_calls += code.count("[fn:")
+        fn_calls += sum(node == "fn" for node, _ in heads)
         ok = tc.get("success") if "success" in tc else (not tc.get("is_error", False))
         if ok is False:
             failed += 1
@@ -636,7 +639,7 @@ def run_cost_line(tool_calls: list) -> str:
         return ""
     line = (f"이번 주행: execute_ibl {c['calls']}회(액션 1개 호출 {c['single']}회) · 실패 {c['failed']} · "
             f"타이핑 {_fmt_chars(c['typed_chars'])} · 되받아쓰기 {_fmt_chars(c['retyped_chars'])}"
-            f"({c['retyped_warns']}회 경고) · 가리킴 {c['pointed']}회 · [fn:] {c['fn_calls']}회")
+            f"({c['retyped_warns']}회 경고) · 가리킴 {c['pointed']}회 · [fn:] {c['fn_calls']}회(작성 구문)")
     if c["other_calls"]:
         line += f" · IBL 밖 도구 {c['other_calls']}회 {_fmt_chars(c['other_typed_chars'])}"
     return line

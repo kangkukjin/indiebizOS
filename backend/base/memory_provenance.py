@@ -15,7 +15,9 @@ def source_summary(source_ref):
             for item in value:
                 visit(item)
         elif isinstance(value, dict):
-            if value.get("role") in {"user", "assistant", "tool"}:
+            if value.get("attribution") in {"quoted", "unresolved"}:
+                roles.add("external")
+            elif value.get("role") in {"user", "assistant", "tool", "external"}:
                 roles.add(value["role"])
             scope = {k: value[k] for k in ("episode_id", "task", "recorded_at", "retention") if value.get(k)}
             if scope and scope not in scopes:
@@ -26,10 +28,11 @@ def source_summary(source_ref):
 
     visit(source_ref)
     status = ("user_statement" if roles == {"user"} else
+              "external_record" if roles == {"external"} else
               "assistant_record" if roles == {"assistant"} else "mixed" if roles else "unattributed")
     return {"status": status, "roles": sorted(roles), "scopes": scopes,
             "policy": "해당 발화·사건의 기록이다. 현재 대상·시점과 일치하는지 대조한다. "
-                      "assistant_record는 사용자 확정 사실이 아니며 unattributed는 출처 미확인이다."}
+                      "assistant_record·external_record는 사용자 확정 사실이 아니며 unattributed는 출처 미확인이다."}
 
 
 def search_view(row, query, limit=240):

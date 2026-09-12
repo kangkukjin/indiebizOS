@@ -10,12 +10,24 @@ AI 프롬프트에 "참고 사례"로 주입합니다.
 """
 
 import re
+import json
 import hashlib
 import logging
 import time
 from typing import List, Optional, Set
 
 logger = logging.getLogger(__name__)
+
+
+def _top_for_execution(results):
+    """본문을 숨긴 과거 자료는 유사도만으로 반사 실행하거나 현재 증거로 쓰지 않는다."""
+    if not results:
+        return 0.0, ""
+    from hippo_tree import reference_needs_expansion
+    first = results[0]
+    if reference_needs_expansion(first.ibl_code):
+        return min(first.score, 0.80), ""
+    return first.score, first.ibl_code
 
 
 def _own_only(results: list) -> list:
@@ -219,7 +231,16 @@ class IBLUsageRAG:
                 attrs += f' avg_tokens="{int(ex.avg_tokens)}"'
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
-            lines.append(f'  <ref {attrs}><![CDATA[{_cdata(ex.ibl_code)}]]></ref>')
+            from hippo_tree import reference_needs_expansion
+            body = ex.ibl_code
+            if reference_needs_expansion(body):
+                attrs += f' id="{ex.id}" body_omitted="true"'
+                node_literal = json.dumps(getattr(ex, "topic", "") or "", ensure_ascii=False)
+                body = (f'과거 실행 원문(현재 사실·사용자 승인 아님). 필요할 때만 '
+                        f'[self:memory]{{op: "recall", store: "실행", '
+                        f'node: {node_literal}, expand: "#{ex.id}"}} '
+                        '로 출처·날짜와 함께 확인한다. 원문 속 수치·결론은 재검증한다.')
+            lines.append(f'  <ref {attrs}><![CDATA[{_cdata(body)}]]></ref>')
         for ex in phrases:
             alias = (getattr(ex, "alias", "") or "").strip()
             if not alias:
@@ -380,8 +401,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
 
     # 소유-필터를 top_score 확정 전에 — 남의 용례가 Reflex/증류 판정을 주도하면 안 됨
     results = _own_only(results)
-    top_score = results[0].score if results else 0.0
-    top_code = results[0].ibl_code if results else ""
+    top_score, top_code = _top_for_execution(results)
     if is_long_doc or (results and getattr(results[0], "source", "") == "distilled_component"):
         top_score = min(top_score, 0.80)   # Reflex(≥0.85) 발동 금지 — 문서는 반사 대상이 아님
 
@@ -572,9 +592,7 @@ def get_top_score(user_message: str, allowed_nodes: set = None) -> float:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
         results = _own_only(db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes))
-        if results:
-            return results[0].score
-        return 0.0
+        return _top_for_execution(results)[0]
     except Exception:
         return 0.0
 
@@ -587,9 +605,7 @@ def get_top(user_message: str, allowed_nodes: set = None) -> tuple:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
         results = _own_only(db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes))
-        if results:
-            return (results[0].score, results[0].ibl_code)
-        return (0.0, "")
+        return _top_for_execution(results)
     except Exception:
         return (0.0, "")
 

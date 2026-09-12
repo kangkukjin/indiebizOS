@@ -24,15 +24,45 @@ def select_units(ids, units):
 
 
 def durable_source_units(user):
-    """관계 기억 후보는 사용자 발화만. AI 결과는 에피소드/산출물에 이미 남는다."""
+    """전달자는 저자가 아니다. 명시 인용과 출처 미상 답변형 문서는 개인 사실 후보에서 뺀다.
+
+    표지 없는 붙여넣기의 저자를 완벽히 판별하지는 못한다. 여기서는 명시적 인용과
+    긴 답변형 문서를 보수적으로 보류하고, 나머지도 추출 모델이 저자를 확인한다.
+    """
+    text = user or ""
+    paragraphs = re.split(r"\n\s*\n", text)
+    framed_document = bool(re.search(
+        r"(?:이건|이것은|다음은|아래는|이 글은).{0,80}(?:답변|의견|보고서|쓴 글|한 말)", text))
+    answer_document = (len(text) >= 600 and bool(re.match(
+        r"\s*(?:맞습니다|좋습니다|결론부터|동의합니다|좋은 .{0,20}입니다)[.!]", text))
+        and ("**" in text or re.search(r"(?m)^#{1,6}\s", text)))
     units = []
-    for part in re.split(r"\n\s*\n|(?<=[.?!。！？])\s+", user or ""):
-        part = part.strip()
-        if part:
-            request = bool(re.search(r"[?？]|(?:해줘|해주세요|해\s*주세요|알려줘|봐줘|할까|있나|되나)[.!]?$", part))
-            units.append({"id": len(units) + 1, "role": "user", "text": part,
-                          "eligible": not request})
+    fenced = False
+    for paragraph in paragraphs:
+        quoted_lines = []
+        for line in paragraph.splitlines():
+            fence = bool(re.match(r"\s*(?:```|~~~)", line))
+            quoted_lines.append(fenced or fence or line.lstrip().startswith(">"))
+            if fence:
+                fenced = not fenced
+        quoted = any(quoted_lines)
+        # 출처 표지 없는 문서의 저자를 사용자라고 확정하지 않는다. 짧은 독립 채택 선언은
+        # 문서 밖 자기 발화로 남길 수 있지만, 인용문 속 '나는'에는 이 예외가 적용되지 않는다.
+        adoption = (len(paragraph) < 250 and bool(re.match(
+            r"\s*(?:나는|내가|앞으로(?:는)?|이 의견을|이 제안을)", paragraph)))
+        uncertain = bool(answer_document or (framed_document and not adoption))
+        for part in re.split(r"(?<=[.?!。！？])\s+", paragraph):
+            _append_durable_unit(units, part, quoted, uncertain)
     return units
+
+
+def _append_durable_unit(units, part, quoted, uncertain):
+    part = part.strip()
+    if part:
+        request = bool(re.search(r"[?？]|(?:해줘|해주세요|해\s*주세요|알려줘|봐줘|할까|있나|되나)[.!]?$", part))
+        units.append({"id": len(units) + 1, "role": "user", "text": part,
+                      "attribution": "quoted" if quoted else "unresolved" if uncertain else "user_candidate",
+                      "eligible": not (request or quoted or uncertain)})
 
 
 def grounded_fact(fact, units, source_ref, *, durable_only=False):

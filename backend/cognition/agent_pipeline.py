@@ -854,7 +854,7 @@ class CognitivePipelineMixin:
                 _oc = _ibl_cost(tool_calls_log)
                 if _oc["calls"] or _oc["other_calls"]:
                     print(f"[출력해부] calls={_oc['calls']} typed={_oc['typed_chars']} retyped={_oc['retyped_chars']}"
-                          f"({_oc['retyped_warns']}) pointed={_oc['pointed']} fn={_oc['fn_calls']}"
+                          f"({_oc['retyped_warns']}) pointed={_oc['pointed']} fn_sites={_oc['fn_calls']}"
                           f" outside={_oc['other_calls']}/{_oc['other_typed_chars']}")
             except Exception:
                 pass

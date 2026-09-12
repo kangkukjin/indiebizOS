@@ -176,7 +176,7 @@ nodes:
             cwd_default: true
         returns: items
         fixture: '[self:file_find]{pattern: "*.md", path: "."}'
-        description: 파일 검색 — pattern(glob) 또는 메타(search_term 이름·extension·kind·min_size_mb, OS 색인 직접·선스캔 불요·항상 최신). path로 검색 루트 지정(생략 시 glob=프로젝트, 메타=홈). 내용 검색은 grep.
+        description: 파일 검색 — pattern(glob) 또는 OS 메타 색인(search_term/extension/kind/min_size_mb). path로 루트 지정. items 필드 name/path/size/mtime/dir/is_dir(title/meta/url 병기); 수정시각은 mtime. 내용 검색은 grep.
         group: file
         target_description: 'pattern(glob, 예 ''*.md'', ''**/*.tsx'' — **나 / 없으면 자동 재귀) 또는 메타 검색: search_term(이름 부분일치)·extension(확장자)·kind(image/video/audio/pdf/any)·min_size_mb·sort(mtime/size)·limit(기본 100). path 옵션으로 검색 루트. 메타 결과 items + 표형 table={columns,rows} 키.'
         keywords:

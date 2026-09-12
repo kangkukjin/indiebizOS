@@ -257,6 +257,10 @@ class CognitiveDistillMixin:
 사용자의 의견은 세계의 객관적 사실이 아니다. 앞으로도 적용할 지속 선호나 확정 결정일 때만
 그 사용자가 그렇게 선호·결정했다는 원문으로 남긴다. 근거 없는 분석·평가는 선택하지 않는다.
 content를 재작성하지 마라. 원문 단위의 source_ids만 고르면 본문은 코드가 그대로 저장한다.
+사용자 메시지는 전달 경로이지 저자 증명이 아니다. 붙여 넣은 AI 답변·보고서·타인 의견을
+사용자 선호로 저장하지 마라. attribution=user_candidate도 저자 확정이 아니다.
+문맥에서 사용자가 직접 말한 개인 사실·선호·확정 결정임이 분명할 때만 고른다.
+타인의 제안을 사용자가 명시적으로 채택했다면 사용자의 채택 선언만 선택한다.
 (이름, 중요한 날짜, 사용자 선호, 사용자가 확정한 결정사항)
 eligible=false인 질문·요청과 안내문 상투구는 선택하지 않는다. AI의 답변·권고·도구 관측은
 에피소드와 산출물에 남아 있으므로 여기서 사용자 사실로 복제하지 않는다.
@@ -474,6 +478,10 @@ JSON 배열로만 응답.
             msg = user_message.lower()
             if not assume_forage and not any(cue in msg for cue in self._FORAGE_CUES):
                 return  # 비forage 대화 — 증류 없음 (포식 표면은 assume_forage 로 우회)
+            from memory_evidence import durable_source_units, select_units
+            owner_units = durable_source_units(user_message)
+            if owner_units and all(u["attribution"] != "user_candidate" for u in owner_units):
+                return  # 전달된 문서 평가만으로 탐색 관습·주인 정체를 추론해 저장하지 않는다.
             import sys, os, json
             bk = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             if bk not in sys.path:
@@ -528,6 +536,12 @@ JSON 배열로만 응답.
 - ★간결히: map 최대 6건·owner 최대 4건, 각 claim/value 는 한 문장. 그보다 많으면 출력이
   잘려(max_tokens) 전부 유실된다 — 가장 일반화 가능한 것만 골라라. 설명·서론 없이 JSON 만.
 - 확실치 않으면 비워라. JSON 으로만 응답.
+- owner는 사용자 자신의 진술로 확인되는 것만. 전달된 AI 답변·보고서나 아래 AI 답변의
+  평가는 주인의 성향이 아니다. owner.source_ids에 eligible=true인 사용자 근거 번호를
+  넣어라. 저장 value는 선택한 원문으로 고정된다. 근거가 없으면 owner는 빈 배열이다.
+
+주인 진술 후보(인용·출처미상은 선택 금지):
+{json.dumps(owner_units, ensure_ascii=False)}
 
 이미 아는 지도(전 공간):
 {known_text[:1500]}
@@ -538,7 +552,7 @@ AI 답변: {ai_response[:1400]}
 응답 형식(빈 배열 허용):
 {{"space":"mac|code:<repo>|web|book:<title>|disk:<label>",
  "map":[{{"locus":"위치(파일시스템이면 절대경로, 웹이면 URL host/path — 주제 이름이 아니라 자리)","kind":"identity|convention|dead_branch|substrate","claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면)","generalizes":true}}],
- "owner":[{{"facet":"domain|identity|...","value":"...","prior_class":"semantic"}}],
+ "owner":[{{"facet":"domain|identity|...","value":"...","source_ids":[1],"prior_class":"semantic"}}],
  "surface":[{{"locus":"(있으면)","value":"(owner면)","why":"..."}}]}}"""
 
             resp = oneshot_ai_call(
@@ -587,6 +601,10 @@ AI 답변: {ai_response[:1400]}
                 facet, value = o.get("facet"), o.get("value")
                 if not facet or not value:
                     continue
+                evidence = select_units(o.get("source_ids"), owner_units)
+                if not evidence or any(not u["eligible"] for u in evidence):
+                    continue
+                value = "\n\n".join(u["text"] for u in evidence)
                 # Fix 2: 주인모델도 인지 기계장치 서술은 드롭(정체성 "인지 외골격 구축자"
                 #   같은 값은 마커에 없어 통과 — 기계장치 고유명 서술만 차단).
                 if self._is_self_narration(value):
@@ -595,7 +613,7 @@ AI 답변: {ai_response[:1400]}
                 r = forage_memory.note_owner(
                     facet=facet, value=value,
                     prior_class=o.get("prior_class") or "semantic",
-                    confidence=0.65, provenance=dict(prov))
+                    confidence=0.65, provenance={**prov, "evidence": evidence})
                 if r.get("success"):
                     noted += 1
                     # 첫 관측은 임시(질의 필터) — 다른 포식에서 재확인돼야 상시 냄새로 결정화된다.

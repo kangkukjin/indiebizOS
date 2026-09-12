@@ -77,3 +77,16 @@ def split_operator(text, operator):
     if segment:
         segments.append((segment, None))
     return segments
+
+
+def source_heads(text):
+    """문자열·주석 밖의 호출 머리. 실행 횟수가 아닌 작성된 구문을 센다.
+
+    SQL/보고서 속 [fn:] 예시와 인자 객체의 데이터는 호출이 아니다. 지연 do 문자열도
+    이 지표에는 포함하지 않는다. 실제 분기·반복 횟수는 실행 원장에서 읽어야 한다.
+    """
+    import re
+    visible = [' '] * len(text)
+    for pos, char in QuoteState().outside(text, hash_comments=True):
+        visible[pos] = char
+    return re.findall(r'\[([a-z_]+):\s*([^\]\s]+)\]', ''.join(visible))

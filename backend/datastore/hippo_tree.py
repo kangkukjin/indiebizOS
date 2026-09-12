@@ -1054,12 +1054,12 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     if not named:
         lines.append("- (이 범위에 이름 붙은 함수가 없다. 자동 작명은 중단됐으며 검증 후 수동 등록한다.)")
     lines.append("")
-    lines.append("## 용례 — 한 문장은 그대로 쓴다. 여러 문장짜리는 이름이 붙기 전까지 expand:\"#id\" 로 연다")
+    lines.append("## 용례 — 짧은 한 문장은 그대로 쓴다. 긴 본문·여러 문장은 expand:\"#id\" 로 연다")
     for r in words:
         if (r.get("alias") or "").strip():
             continue                                    # 위 '부를 수 있는 함수' 절에 이미 실렸다
         n = len(split_sentences(r.get("ibl_code") or ""))
-        if n <= 1:
+        if not reference_needs_expansion(r.get("ibl_code") or ""):
             lines.append(render_line(r))
         else:
             s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
@@ -1079,8 +1079,17 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     return "\n".join(lines) + "\n"
 
 
+def reference_needs_expansion(code: str) -> bool:
+    """무명 여러 문장과 긴 본문은 원문을 명시적으로 열 때만 준다.
+
+    1200자는 의미 판정이 아니라 자동 노출 상한이다. 한 문장의 write에도 보고서
+    전체가 실릴 수 있다. 원장 내용·실행 가능성은 바꾸지 않는다.
+    """
+    return len(code) > 1200 or len(split_sentences(code)) > 1
+
+
 def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
-    """JSON 봉투의 용례 행 — 여러 문장 무명 용례·관용구의 본문은 감추고 부를 수 있는 것만 싣는다."""
+    """JSON 봉투: 긴 본문·여러 문장·이름 있는 함수의 정의는 명시 expand로만 연다."""
     out = dict(r)
     code = r.get("ibl_code") or ""
     n = len(split_sentences(code))
@@ -1089,7 +1098,7 @@ def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
         out["call"] = phrase_call_line(alias, code, (r.get('returns') or '').strip() if isinstance(r, dict) else "",
                                        r.get("signature") if isinstance(r, dict) else None)
         out["ibl_code"] = f"(문장 {n} — expand:\"{alias}\")"
-    elif n > 1:
+    elif reference_needs_expansion(code):
         out["ibl_code"] = f"(문장 {n}, 이름 없음 — expand:\"#{r.get('id')}\")"
     return out
 

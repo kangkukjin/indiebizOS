@@ -163,6 +163,10 @@ def _explicit_table(obj) -> bool:
     union·select·rename·groupby 는 items 를 표로 바꿔 냈고 2차 union 의 0행 가지(승격 불가)에서 죽었다."""
     if not isinstance(obj, dict):
         return False
+    # items가 정본 통화다. 생산자의 table은 표시용 번역 거울일 수 있다(file_find 등).
+    # 둘이 함께 오면 표시 열로 분기하지 않는다. 빈 items도 동일한 계약을 가진다.
+    if isinstance(obj.get("items"), list):
+        return False
     t = obj.get("table")
     if isinstance(t, dict) and isinstance(t.get("rows"), list):
         return True

@@ -77,8 +77,6 @@ class Supervisor:
         self.done_request = None
         self.repair_kept = False
         self.exec_revision = 0
-        self.completed_calls = 0
-        self.unknown_calls = 0
         self.review_cursor = 0
         self.original_pursuit = None
         self.pursuit = None
@@ -247,7 +245,8 @@ class Supervisor:
 
     def configure(self, framing, repair=False):
         self.framing = framing
-        self.enabled = bool(framing) or self.enabled
+        # 의식이 규정한 턴만 감독·평가한다. 관찰/도구 실패가 이 선택을 바꾸지 않는다.
+        self.enabled = bool(framing)
         self.phase = "execute"
         self.executor_paused = False
         provider = getattr(self.runner.ai, "_provider", None)
@@ -261,7 +260,8 @@ class Supervisor:
         self.repair_granted = repair
         if binding and binding.row:
             self.original_pursuit = {k: binding.row[k] for k in ("id", "version", "goal_criteria")}
-        self.log("framing", role="consciousness", evidence=self.store.evidence(framing or {}))
+        self.log("framing", role="consciousness" if self.enabled else "harness",
+                 evaluation_enabled=self.enabled, evidence=self.store.evidence(framing or {}))
 
     def reframe(self, payload):
         from reframe import TurnChannel, _revise, render_for_executor
@@ -352,14 +352,6 @@ class Supervisor:
     def _finish(self, key, result, error=False):
         with self.lock:
             call = self.active.pop(key, {})
-            self.completed_calls += 1
-            from cognitive_trace import should_self_reflect, _classify_call, _ibl_safety_map, _ibl_op_safety_map
-            trace = {"name": call.get("name", ""), "input": call.get("_payload", {}), "result": result, "is_error": error}
-            kind, _ = _classify_call(trace, _ibl_safety_map(), _ibl_op_safety_map())
-            self.unknown_calls += int(kind == "unknown")
-            # 응답을 쓰기 전에 승격한다. 빠른 읽기 경로는 모델 호출 0회 그대로다.
-            if should_self_reflect([trace], min_tool_calls=3)[0] or (self.unknown_calls and self.completed_calls >= 3):
-                self.enabled = True
             ref = self.store.evidence(result)
             job_observation = _job_observation(result)
             result_signature = digest(json.dumps(job_observation, sort_keys=True, ensure_ascii=False)) if job_observation else ref["id"]
@@ -495,7 +487,7 @@ class Supervisor:
                 self.log("recall.stalled", role="harness", stage=preparing["stage"],
                          elapsed_s=round(elapsed), waiting_for="local_preparation", model_started=False)
             return
-        if self.finalizing or self.phase in {"plan", "reframe"} or self.cancelled():
+        if not self.enabled or self.finalizing or self.phase in {"plan", "reframe"} or self.cancelled():
             return
         with self.lock:
             for job in self.jobs.values():
@@ -522,6 +514,8 @@ class Supervisor:
 
     def review(self, reason, paused=False):
         from supervisor_runtime import invoke, parse_decision
+        if not self.enabled:
+            return
         if not self.review_lock.acquire(blocking=False):
             return
         try:
@@ -534,7 +528,6 @@ class Supervisor:
             self.executor_paused = paused  # 의미 이정표에서만 실행자가 정지해 읽기 검증을 허용한다.
             self.last_review = now
             self.trigger = ""
-            self.enabled = True  # 긴 EXECUTE도 이상 신호가 있으면 의식 감독으로 승격한다.
             revision = self.exec_revision
             conditions = self.review_conditions(reason)
             cursor = self.store.sequence
@@ -667,7 +660,8 @@ class Supervisor:
             return json.dumps({"success": False, "error": str(exc)}, ensure_ascii=False)
 
     def request_done(self, binding, why):
-        self.enabled = True
+        if not self.enabled:
+            raise ValueError("의식 없는 턴은 평가 대기 없이 과제 원장에 완료를 기록합니다")
         self.done_request = {"id": binding.row["id"], "version": binding.row["version"],
                              "goal_criteria": binding.row["goal_criteria"], "why": why}
         if self.original_pursuit and self.original_pursuit["id"] == binding.row["id"]:
@@ -676,6 +670,8 @@ class Supervisor:
         return {"status": "completion_requested", "message": "전체 목표 달성 근거를 평가자가 검수한 뒤 완료 처리합니다"}
 
     def finalize(self, response, history, collect, cancel_check=None, tool_calls=None):
+        if not self.enabled:
+            return response
         from supervisor_runtime import parse_decision, repair_message
         from final_evaluator import invoke, prepare, snapshot_error
         from thread_context import set_goal_eval_outcome

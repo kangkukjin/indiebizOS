@@ -709,9 +709,11 @@ class CognitivePipelineMixin:
             # 6. 실행
             from supervision_bus import current as _supervisor_current
             _supervisor = _supervisor_current()
+            _evaluation_enabled = bool(consciousness_output) and not reflex_hint and not force_role
             if _supervisor:
                 _supervisor.request_intent = "context_update" if context_update else "task"
-                _supervisor.configure(consciousness_output, repair=(_repair_granted_task is not None))
+                _supervisor.configure(consciousness_output if _evaluation_enabled else None,
+                                      repair=(_repair_granted_task is not None))
             for event in self.ai.process_message_stream(
                 message_content=augmented_message,
                 history=history,
@@ -741,15 +743,12 @@ class CognitivePipelineMixin:
             # 7. 평가 루프 (THINK 경로) — 달성 기준이 있으면 평가 후 재시도
             _eval_ran = False  # 평가 루프가 실제로 돌았는지 — 8번(반성)의 게이트
             _reflect_ran = False
-            if _supervisor and final_content and not _supervisor.enabled and eval_tool_calls and not reflex_hint:
-                from cognitive_trace import should_self_reflect
-                _supervisor.enabled = should_self_reflect(eval_tool_calls, min_tool_calls=3)[0]
-            if _supervisor and _supervisor.enabled and final_content:
+            if _evaluation_enabled and _supervisor and _supervisor.enabled and final_content:
                 _eval_ran = True
                 record_trajectory_event("cognition.evaluation", {"path": "goal_eval", "supervised": True})
                 final_content = yield from _supervisor.finalize(final_content, history, _collect, cancel_check,
                                                                 tool_calls=eval_tool_calls)
-            elif consciousness_output and final_content:
+            elif _evaluation_enabled and final_content:
                 criteria = self._extract_achievement_criteria(consciousness_output)
                 if criteria:
                     from world_pulse import _load_config as _load_wp_config
@@ -784,14 +783,12 @@ class CognitivePipelineMixin:
                             yield {"type": "final", "content": evaluated}
                             print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
 
-            # 8. 자기반성 턴 — 평가가 안 돈 턴의 바닥. 의식이 없으면 평가가 안 돌아
-            # 실패 인식이 통째로 빠진다(에피소드 727/728). 의식이 돌았어도 달성 기준이
-            # 비면(조회성 THINK) 마찬가지다 — 옛 elif는 이 경우 두 그물 사이로 빠져
-            # 8~10분짜리 THINK 턴이 평가도 반성도 못 받았다(2026-08-15 독립 조건화).
+            # 8. 의식이 작동한 턴의 호환 자기반성. 의식 없는 EXECUTE·반사는
+            # 실패·쓰기·호출 수와 무관하게 이 경로도 건너뛴다.
             # 실행 에이전트 *자신*이 같은 세션(resume)을 이어받아 자기 궤적을 입력으로
             # 받고 스스로 반성·재행동한다(판정자 아님).
             # 도구를 실제로 부른 턴만 · reflex/force_role 제외 · 1회(반성의 반성 없음).
-            if not _eval_ran and final_content and eval_tool_calls and not reflex_hint and not force_role:
+            if _evaluation_enabled and not _eval_ran and final_content and eval_tool_calls:
                 try:
                     from world_pulse import _load_config as _load_wp_config
                     _refl_cfg = _load_wp_config().get("execution_reflection", {})

@@ -233,10 +233,10 @@ function renderGear(){
     const on=g.consciousness_enabled!==false;
     h+='<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">';
     h+='<span style="font-size:11px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><b style="color:'+(on?'var(--txt)':'var(--dim)')+'">🧠 최초 숙고 '+(on?'켜짐':'꺼짐')+'</b> <span style="color:var(--dim)">'+(on?'— 복잡한 일은 계획부터':'— 바로 실행부터')+'</span></span>';
-    h+='<button data-act="mind" role="switch" aria-checked="'+on+'" title="최초 THINK 숙고를 끕니다. 중간 감독·최종 검수는 작업 조건에 따라 계속 적용됩니다." style="position:relative;flex-shrink:0;width:40px;height:20px;border-radius:9999px;border:none;cursor:pointer;background:'+(on?'var(--acc)':'var(--line)')+'">';
+    h+='<button data-act="mind" role="switch" aria-checked="'+on+'" title="의식 없는 바로 실행·반사 경로는 감독·평가를 생략합니다." style="position:relative;flex-shrink:0;width:40px;height:20px;border-radius:9999px;border:none;cursor:pointer;background:'+(on?'var(--acc)':'var(--line)')+'">';
     h+='<span style="position:absolute;top:2px;left:'+(on?'22px':'2px')+';width:16px;height:16px;border-radius:9999px;background:#fff;transition:left .15s"></span></button></div>';
   }
-  h+='<p style="font-size:10px;color:var(--dim);margin-top:6px">중간 감독·최종 검수는 작업 조건에 따라 적용됩니다.</p>';
+  h+='<p style="font-size:10px;color:var(--dim);margin-top:6px">의식이 작동한 턴만 감독·평가합니다. 바로 실행·반사는 평가하지 않습니다.</p>';
   if(gearOpen) h+=renderGearSettings();
   el.innerHTML=h;
 }

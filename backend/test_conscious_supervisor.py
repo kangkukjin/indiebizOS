@@ -298,8 +298,10 @@ def test_real_aiagent_role_uses_same_tools_but_separate_identity(supervisor, mon
     assert tc.get_current_agent_id() == supervisor.owner
 
 
-@pytest.mark.parametrize("lane", ["THINK", "EXECUTE"])
-def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(supervisor, monkeypatch, lane):
+@pytest.mark.parametrize("lane", ["THINK", "EXECUTE", "REFLEX", "NO_FRAMING", "CONTEXT_UPDATE"])
+@pytest.mark.parametrize("signal", ["read", "write", "failed", "unknown"])
+@pytest.mark.parametrize("supervised", [False, True])
+def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(supervisor, monkeypatch, lane, signal, supervised):
     from agent_pipeline import CognitivePipelineMixin
     from pathlib import Path
     calls = []
@@ -310,16 +312,26 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
         config = {"name": "worker"}
         project_path = Path(supervisor.project_path)
         _build_execution_memory = lambda *a, **kw: ("", 0, "")
-        _decide_request_type = lambda *a: (lane, None)
-        _run_consciousness_or_reuse = lambda *a: {"task_framing": "문제", "achievement_criteria": "기준"}
+        _decide_request_type = lambda *a: ("EXECUTE" if lane == "REFLEX" else "THINK" if lane == "NO_FRAMING" else lane,
+                                          "[self:time]" if lane == "REFLEX" else None)
+        _run_consciousness_or_reuse = lambda *a: None if lane == "NO_FRAMING" else {"task_framing": "문제", "achievement_criteria": "기준"}
         _consciousness_needs_repair = lambda *a: False
         _consciousness_clarification = lambda *a: None
         _extract_achievement_criteria = lambda *a: "기준"
+        _run_goal_evaluation_stream = lambda self, **kw: calls.append(1) or iter(())
         _build_system_prompt_split = lambda *a: ("stable", "")
         _apply_consciousness_to_history = lambda self, history, co: history
         _after_response_async = lambda *a, **kw: None
 
     def stream(**kwargs):
+        code = '[self:write]{path:"fixture.txt",content:"fixture"}' if signal == "write" else '[self:time]'
+        name = "native_fixture" if signal == "unknown" else "mcp__indiebizos__execute_ibl"
+        result = json.dumps({"success": signal != "failed", **({"error": "fixture failure"} if signal == "failed" else {})})
+        for i in range(3):
+            yield {"type": "tool_start", "id": str(i), "name": name, "input": {"code": code}}
+            if signal != "unknown":
+                supervisor.run_tool(name, {"code": code}, lambda: result)
+            yield {"type": "tool_result", "id": str(i), "name": name, "result": result, "is_error": signal == "failed"}
         yield {"type": "text", "content": "사용자 응답"}
         yield {"type": "final", "content": "사용자 응답"}
 
@@ -331,13 +343,16 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     monkeypatch.setattr("pursuit_bind.prepare", lambda mem: (mem, False))
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
+    monkeypatch.setattr("system_ai_core._switch_to_midtier", lambda *a: None)
+    if not supervised:
+        monkeypatch.setattr("supervision_bus.current", lambda *a, **kw: None)
     monkeypatch.setattr("final_evaluator.invoke", lambda c, *a, **kw: calls.append(1) or verdict(c))
     supervisor.enabled = False
     events = list(runner._cognitive_stream_body("질문", []))
     assert not [e for e in events if e["type"] == "error"], events
     assert [e["content"] for e in events if e["type"] == "text"] == ["사용자 응답"]
     assert len(calls) == (1 if lane == "THINK" else 0)
-    expected = {"path": "goal_eval", "supervised": True} if lane == "THINK" else {"path": "none"}
+    expected = {"path": "goal_eval", **({"supervised": True} if supervised else {})} if lane == "THINK" else {"path": "none"}
     assert ("cognition.evaluation", expected) in trace
 
 

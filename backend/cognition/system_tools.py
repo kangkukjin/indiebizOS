@@ -465,8 +465,7 @@ def execute_send_notification(tool_input: dict, project_path: str) -> str:
     try:
         from supervision_bus import current
         supervisor = current()
-        if supervisor:
-            supervisor.enabled = True
+        if supervisor and supervisor.enabled:
             supervisor.delivery.notify(title, message, noti_type)
             return json.dumps({"success": True, "queued_for_review": True, "delivered_to_launcher": False,
                                "message": "의식의 최종 승인 후 하네스가 알림을 전달합니다. 재호출할 필요 없습니다."},

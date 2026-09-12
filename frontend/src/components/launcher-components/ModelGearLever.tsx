@@ -205,7 +205,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           disabled={togglingMind || !gear}
           role="switch"
           aria-checked={conscious}
-          title="최초 THINK 숙고를 끕니다. 중간 감독·최종 검수는 작업 조건에 따라 계속 적용됩니다. #think 로 한 건만 숙고할 수 있습니다."
+          title="의식 없는 바로 실행·반사 경로는 감독·평가를 생략합니다. #think 로 한 건만 숙고할 수 있습니다."
           className={`relative shrink-0 w-10 h-5 rounded-full transition-colors disabled:opacity-50 ${
             conscious ? 'bg-stone-800' : 'bg-stone-300'
           }`}
@@ -217,7 +217,7 @@ export function ModelGearLever({ onToggleStruct, structOpen }: {
           />
         </button>
       </div>
-      <p className="text-[10.5px] text-stone-400">중간 감독·최종 검수는 작업 조건에 따라 적용됩니다.</p>
+      <p className="text-[10.5px] text-stone-400">의식이 작동한 턴만 감독·평가합니다. 바로 실행·반사는 평가하지 않습니다.</p>
 
       {/* ⚙ 설정 패널 — 프리셋 편집 + 에이전트 핀 */}
       {showSettings && (

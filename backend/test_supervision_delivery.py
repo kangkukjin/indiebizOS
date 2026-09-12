@@ -149,7 +149,8 @@ def test_supervisor_mcp_tools_rejoin_episode_and_cost(monkeypatch):
 
 
 @pytest.mark.parametrize("background", [False, True])
-def test_script_runner_passes_private_workbench_to_child_process(supervisor, tmp_path, monkeypatch, background):
+@pytest.mark.parametrize("conscious", [False, True])
+def test_script_runner_passes_private_workbench_to_child_process(supervisor, tmp_path, monkeypatch, background, conscious):
     from test_script_args_coercion import S
     from types import SimpleNamespace
     target = tmp_path / "script.py"
@@ -161,14 +162,15 @@ def test_script_runner_passes_private_workbench_to_child_process(supervisor, tmp
     monkeypatch.setattr(S, "_RUN_DIR", tmp_path / "runs")
     monkeypatch.setattr(S, "_JOB_DIR", tmp_path / "runs/jobs")
     observed = []
+    supervisor.configure({"task_framing": "의식 규정"} if conscious else None)
 
     def child(*args, **kwargs):
-        observed.append(kwargs["env"][STAGING_ENV])
+        observed.append((kwargs.get("env") or {}).get(STAGING_ENV))
         return SimpleNamespace(returncode=0, stdout='{"items": []}', stderr="", pid=123)
     monkeypatch.setattr(S.subprocess, "run", child)
     monkeypatch.setattr(S.platform_utils, "spawn_detached", child)
     assert S.op_run({"id": "fixture", "background": background})["success"]
-    assert observed == [str(supervisor.delivery.directory)]
+    assert observed == [str(supervisor.delivery.directory) if conscious else None]
 
 
 if __name__ == "__main__":

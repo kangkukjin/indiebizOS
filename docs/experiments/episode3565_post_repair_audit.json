@@ -1,0 +1,142 @@
+{
+  "episode_id": 3565,
+  "code_reference": "43e4c5c8",
+  "run_id": "run_a3eb4e755d12303995d5",
+  "agent": "투자컨설팅",
+  "started_at": "2026-09-12T11:01:36.491971",
+  "ended_at": "2026-09-12T11:06:22.466467",
+  "user_request": "지난 금요일의 미국 주식 시장에 대해서 조사하고 보고해줘. 시장을 지배한 소식들이 뭐가 있는지도 소개해주고.",
+  "scope": "Saved execution evidence and delivered response; not an independent market-data refresh or a controlled before/after benchmark.",
+  "route": {
+    "request_type": "EXECUTE",
+    "consciousness_off_explicit": true,
+    "framing": {},
+    "evaluation_enabled": false,
+    "evaluation_path": "none",
+    "evaluation_result": null,
+    "consciousness_model_calls": 0,
+    "evaluation_model_calls": 0,
+    "evaluation_repairs": 0
+  },
+  "timing": {
+    "episode_seconds": 285.974,
+    "model_responses": 21,
+    "ibl_surface_calls": 20,
+    "execute_attempts": 19,
+    "describe_calls": 1,
+    "tool_seconds_sum": 20.304,
+    "last_tool_to_episode_end_seconds": 87.757,
+    "recovery_windows": [
+      {
+        "start_call": 2,
+        "recovered_call": 3,
+        "seconds": 4.04
+      },
+      {
+        "start_call": 10,
+        "recovered_call": 13,
+        "seconds": 36.027
+      },
+      {
+        "start_call": 15,
+        "recovered_call": 17,
+        "seconds": 10.541
+      },
+      {
+        "start_call": 19,
+        "recovered_call": 20,
+        "seconds": 5.67
+      }
+    ],
+    "recovery_window_sum_seconds": 56.278,
+    "recovery_note": "Intervals include useful computation/planning. They are not measured avoidable savings.",
+    "provider_latency_ms": 284944
+  },
+  "failures": {
+    "hard_failed_call_numbers": [
+      2,
+      10,
+      11,
+      15,
+      16,
+      19
+    ],
+    "partial_failure_flag_calls": [
+      7,
+      8
+    ],
+    "partial_note": "One Reuters login failure and its propagated marker; not two independent failed crawls."
+  },
+  "usage": {
+    "model": "opus",
+    "provider": "ClaudeCode",
+    "input": 2397546,
+    "output": 15638,
+    "cache_read": 2250547,
+    "cache_create": 146957,
+    "reasoning": 7706
+  },
+  "background": {
+    "model_calls": 2,
+    "first_call_started": "2026-09-12T11:06:22.483905",
+    "elapsed_seconds": 1.846,
+    "tokens": 6245,
+    "deep_memory_new_rows": 0,
+    "memory_database_last_insert": "2026-09-06T23:43:32.720761",
+    "procedure_run_sentences": 13,
+    "reusable_pattern_registered": false,
+    "rejection_reason": "Selected code depended on $뉴스 without its producer."
+  },
+  "numeric_checks": [
+    {
+      "symbol": "^GSPC",
+      "baseline": 7718.6,
+      "close": 7656.98,
+      "weekly_percent": -0.8
+    },
+    {
+      "symbol": "^IXIC",
+      "baseline": 26506.99,
+      "close": 26333.04,
+      "weekly_percent": -0.66
+    },
+    {
+      "symbol": "^DJI",
+      "baseline": 53414.25,
+      "close": 52573.29,
+      "weekly_percent": -1.57
+    },
+    {
+      "symbol": "^RUT",
+      "baseline": 2975.65,
+      "close": 2903.94,
+      "weekly_percent": -2.41
+    },
+    {
+      "symbol": "^TNX",
+      "baseline": 4.78,
+      "close": 4.97,
+      "weekly_percent": 3.97
+    }
+  ],
+  "evidence": {
+    "database": "data/world_pulse.db",
+    "trajectory_events": 274,
+    "supervision_store": "data/spill/supervision/550bc05667194bb08710681632598a62",
+    "delivered_response": {
+      "database": "projects/투자/conversations.db",
+      "message_id": 1011,
+      "timestamp_utc": "2026-09-12 02:06:22"
+    },
+    "memories": [
+      "projects/투자/memory_001.db",
+      "projects/투자/memory_None.db"
+    ]
+  },
+  "limits": [
+    "This EXECUTE episode cannot verify the revised evaluator behavior when consciousness is active.",
+    "Single different task: no claim of a quality-preserving percentage cost reduction.",
+    "Numeric checks verify agreement with the evidence delivered to the agent, not independent market truth.",
+    "No exact currency cost is derived from cache-inclusive token totals."
+  ]
+}

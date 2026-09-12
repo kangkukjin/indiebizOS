@@ -190,6 +190,7 @@
     "ibl/ibl_translate",
     "ibl/ibl_turn_vars",
     "ibl/ibl_typecheck",
+    "ibl/ibl_value_types",
     "ibl/package_manager",
     "ibl/pipeline_state",
     "ibl/tool_context",
@@ -331,8 +332,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 320,
-    "engine": 294,
+    "total": 321,
+    "engine": 295,
     "blocklist": 26
   }
 }

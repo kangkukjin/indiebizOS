@@ -109,6 +109,7 @@ actions:
       emits: items
       columns: subset
       columns_param: columns
+      columns_param_aliases: [cols, fields]  # handler의 columns or cols or fields 순서
       reads_fields: [columns]
       projection_params: [columns, cols, fields]
     runs_on: anywhere
@@ -133,6 +134,8 @@ actions:
       emits: items
       columns: add
       columns_param: set
+      columns_param_aliases: [columns, expr]
+      scalar_expr_hint: '파생 열은 set:{새열:"식"}으로 지정하세요. expr에 대입문을 넣지 마세요. 특수문자 열은 col("열 이름")으로 참조합니다.'
       scalar_expr_params: [set, columns, expr]  # 첫 비어 있지 않은 슬롯, 런타임과 같은 우선순위
     runs_on: anywhere
     scope: workspace
@@ -182,12 +185,13 @@ actions:
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
       emits: items
-      columns: reset
+      columns: flatten
+      columns_param: field
       reads_fields: [field]
     runs_on: anywhere
     scope: workspace
     description: "통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
-    target_description: 'field(펼칠 중첩 목록 경로, 필수에 가까움. 점 표기 "payload.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. [table:each] 는 결과 통화를 그대로 내므로 flatten 없이 바로 다음 변환자로 잇는다. 예: 중첩 tags 열을 펴려면 ... >> [table:flatten]{field: "tags", keep: ["title"]}.'
+    target_description: 'field(펼칠 중첩 목록 경로, 필수에 가까움. 점 표기 "payload.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드/점 경로] 배열 — 예 ["data.symbol"], 같은 경로 이름의 열로 승계하며 필요하면 rename. 기존 점 포함 리터럴 키 우선, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. [table:each] 는 결과 통화를 그대로 내므로 flatten 없이 바로 다음 변환자로 잇는다. 예: 중첩 tags 열을 펴려면 ... >> [table:flatten]{field: "tags", keep: ["title"]}.'
     group: transform
     router: handler
     tool: data_flatten
@@ -535,7 +539,7 @@ tool_json:
       required:
       - map
   - name: data_flatten
-    description: 'records → 행 속 중첩 목록 펼치기(unnest). field(중첩 목록 경로), keep(각 행에 승계할 부모 필드 배열). each 출력은 이미 평탄하므로 flatten 없이 잇는다. >> 앞 통화를 받음.'
+    description: 'records → 행 속 중첩 목록 펼치기(unnest). field(중첩 목록 경로), keep(각 행에 같은 이름으로 승계할 부모 필드/점 경로 배열, 예 ["data.symbol"]). each 출력은 이미 평탄하므로 flatten 없이 잇는다. >> 앞 통화를 받음.'
     input_schema:
       type: object
       properties:

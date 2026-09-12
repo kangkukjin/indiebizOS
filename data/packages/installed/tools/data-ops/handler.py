@@ -1052,7 +1052,7 @@ def _op_flatten(prev, params):
     """행 속 중첩 목록 필드를 펼쳐(unnest) 행들로.
 
     field 경로의 값이 목록이면 그 원소들이 새 행이 되고, {items: [...]} 봉투면
-    items 로 자동 승격. keep=[부모 필드]는 각 새 행에 승계(충돌 시 _2 접미 —
+    items 로 자동 승격. keep=[부모 필드/점 경로]는 같은 이름으로 각 새 행에 승계(충돌 시 _2 접미 —
     침묵 오선택 방지). 목록 아닌 행은 건너뛰되 skipped_rows 로 신고한다.
     ★기본값 "_result" 는 은퇴한 옛 each 계약의 잔영이다 — 지금은 그 자리로 온
     옛 문장에게 "flatten 을 빼라"는 참인 처방을 돌려주는 이행 진단용으로만 남는다.
@@ -1070,6 +1070,11 @@ def _op_flatten(prev, params):
     if not isinstance(keep, list):
         keep = [keep]
     keep = [str(k) for k in keep]
+    from common.field_path import MISSING, walk_path
+
+    def _keep_value(row, path):
+        # 기존 점 포함 리터럴 열 이름을 먼저 찾고, 없을 때 정본 점 경로로 걷는다.
+        return row[path] if path in row else walk_path(row, path)
 
     # ★F14-2 (2026-08-20 14회차): keep 미실존 필드의 침묵 무시 차단 — dedup 규율 이식.
     # 전무(어느 행에도 없음)가 keep 전체면 이름 오타 확정 → 정직 오류.
@@ -1077,7 +1082,7 @@ def _op_flatten(prev, params):
     keep_missing = []
     if keep and recs:
         keep_missing = [k for k in keep
-                        if not any(isinstance(r, dict) and k in r for r in recs)]
+                        if not any(isinstance(r, dict) and _keep_value(r, k) is not MISSING for r in recs)]
         if keep_missing and len(keep_missing) == len(keep):
             sample = sorted({kk for r in recs[:20] if isinstance(r, dict) for kk in r.keys()})[:12]
             return {"success": False,
@@ -1121,7 +1126,7 @@ def _op_flatten(prev, params):
         if not isinstance(v, list):
             skipped += 1
             continue
-        carry = {k: r.get(k) for k in keep if k in r}
+        carry = {k: value for k in keep if (value := _keep_value(r, k)) is not MISSING}
         for sub in v:
             base = dict(sub) if isinstance(sub, dict) else {"value": sub}
             if carry:

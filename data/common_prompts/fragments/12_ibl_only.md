@@ -205,7 +205,7 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 - 누적은 `[table:reduce]{init: 0, step: "acc + 보증금", as: "총보증금"}` — **식 한 줄**만(acc·i·열 이름).
 - **문법으로 만들지 않은 것(script 의 자리)**: dict 상태 누적·파서·상태기계, 외부 라이브러리 계산, 템플릿 언어, 타입. 이런 게 필요하면 `[self:script]` 에 얼리고 IBL 은 그것을 한 단어로 부른다(함수는 문법이다 — `[def:]`/`[fn:]`).
 - 긴 문장이 도중에 죽으면 봉투에 `resume: {from_step, prev_ref}` 가 실린다 — 코드를 고친 뒤 `execute_ibl(code, resume=그 값)` 으로 그 step 부터(앞 단 재실행 없음, 24h 유효).
-- **있는 것은 치지 말고 가리켜라.** `$이름 = …` 로 할당한 변수는 같은 턴의 다음 호출에서 그대로 `$이름` 으로 보인다(봉투 `turn_vars`) — 앞 결과의 JSON·행·본문을 다시 치지 말고 `$이름 >> …`·`content: "$이름"` 으로 가리킨다. 파일은 짧은 앵커 edit·`files_from`, 배관은 `[fn:이름]`.
+- **있는 것은 치지 말고 가리켜라.** `$이름 = …`은 같은 턴의 다음 호출에도 보존된다. `turn_vars.types`의 행 열·봉투·중첩 구조로 다음 연산을 고른다. JSON·행·본문은 `$이름 >> …`·`content: "$이름"`, 파일은 짧은 앵커 edit·`files_from`, 배관은 `[fn:이름]`으로 참조한다.
 - **파일 산출물이면 최종 응답은 경로 + 요지 3줄** — 본문·표·수치를 채팅에 옮겨 적지 않는다. 봉투의 `retyped` 경고는 그 자리에서 가리킴으로 바꾸라는 뜻이다.
 
 ★**`success:true`도 아래 정직 표지를 보고 전에 확인하라.**
@@ -241,7 +241,7 @@ $avg = $total.value / 10
 ### 봉투 읽는 법
 - MCP: `_trimmed`=축약, 최종값=`final_result`. `_spilled`는 `ref.path` 읽기(재실행 금지).
 - **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "…"}` 는 '통화 0행'이지 실패가 아니다). `final_result` 는 파이프·병렬 봉투에만 있다.
-- 파이프의 `results[]`는 단계 상태, `final_result`는 최종 미리보기다(큰 표 앞 8행, 산문 12,000자). 단일 결과는 객체 자체다. `_model_omitted`는 큰 보조 원자료의 표시 생략이다. 원본은 보존된다. `$변수 >> [table:select]{columns:[…]}`로 재사용하거나 `code:"", read_result:{id:result_ref.id,offset,limit,path:["final_result","items"]}`로 저장된 값만 읽는다. path는 키/인덱스 배열이며 생략하면 원 봉투, 페이지는 문자 단위다. **조회 때문에 재실행하지 마라.** `_results_summarized`·`steps_total`·`final_result`로 파이프 봉투를 구별한다. 블록 표식은 `_caught`·`_untransformed`다.
+- 파이프의 `results[]`는 단계 상태, `final_result`는 최종 미리보기다(큰 표 앞 8행, 산문 12,000자). 단일 결과는 객체다. `_model_omitted`(큰 원자료)·`_model_shared`(중복값)는 표시만 생략하며 원본은 보존된다. `$변수 >> [table:select]{columns:[…]}`로 재사용하거나 `code:"", read_result:{id:result_ref.id,offset,limit,path:["final_result","items"]}`로 저장된 값만 읽는다. path는 키/인덱스 배열이며 생략하면 원 봉투, 페이지는 문자 단위다. **조회 때문에 재실행하지 마라.** `_results_summarized`·`steps_total`·`final_result`로 파이프 봉투를 구별한다. 블록 표식은 `_caught`·`_untransformed`다.
 - ★여러 문장(`$변수 = …` 줄들)은 **execute_ibl 한 번에 여러 줄로** 보내라 — 중간 통화는 엔진 안에 머물고 모델에겐 마지막 결과와 step 요약만 온다(따로 부르면 중간 결과가 매번 컨텍스트에 들어온다). 병렬 수집은 파이프 안에서 `[table:ai]`/`[table:brief]` 로 줄인 뒤 받는다.
 - **셸과 IBL 사이에서 데이터는 컨텍스트가 아니라 파일로 건넨다.** 셸로 되는 일은 셸로 해도 된다 — 문제는 두 쪽이 한 사슬에서 만나는 자리다. 셸이 낸 값(id 목록·경로·수치)을 IBL 문장에 손으로 되찍지 말고 셸이 JSON 으로 쓰게 한 뒤 `[self:ledger]{op: "select"}`·`[sense:sqlite]`·`[self:read]` 로 읽고, IBL 결과를 셸에 줄 땐 `[self:write]{path, spill: true}` 로 내려놓은 파일을 셸이 읽는다. 값이 모델을 거치는 이음매마다 왕복과 오타가 생긴다.
 - 긴 프로그램은 먼저 execute_ibl{code, check: true} 로 실행 없이 문장별 통화·열(types)과 문제(issues)를 보고, 초록이면 같은 code 를 한 번에 실행한다. 문법을 시험하려고 query: "a" 같은 탐침을 돌리지 않는다 — check 가 그 자리다.

@@ -1393,7 +1393,36 @@ from iblbuild_guide_wiring import (  # noqa: E402,F401
 # ---------------------------------------------------------------------------
 _FLOW_ACCEPTS = {"items", "prose", "any", "same-kind", "pair", "prose|items", "items|prose"}
 _FLOW_EMITS = {"same", "items", "prose", "scalar", "effect"}
-_FLOW_COLUMNS = {"keep", "subset", "rename", "add", "reset", "open", "union"}
+_FLOW_COLUMNS = {"keep", "subset", "rename", "add", "reset", "open", "union", "flatten"}
+
+
+def _result_shape_errors(action):
+    """보장된 출력 선언의 오타를 런타임의 확정 판단으로 보내지 않는다."""
+    errors = []
+    def visit(shape):
+        if not isinstance(shape, dict) or shape.get("kind") not in ("items", "scalar", "effect", "prose", "bundle", "unknown"):
+            errors.append("result_shape.kind 가 올바른 통화 종류여야 한다")
+            return
+        cols = shape.get("cols")
+        if cols is not None and (not isinstance(cols, list) or any(not isinstance(c, str) for c in cols)):
+            errors.append("result_shape.cols 는 문자열 배열이어야 한다")
+        if "closed" in shape and type(shape["closed"]) is not bool:
+            errors.append("result_shape.closed 는 불리언이어야 한다")
+        if shape.get("closed") and cols is None:
+            errors.append("닫힌 result_shape 는 전체 cols 선언이 필요하다")
+        for child in shape.get("fields", {}).values():
+            visit(child)
+        for child in shape.get("branches", []):
+            visit(child)
+        if shape.get("envelope"):
+            visit(shape["envelope"])
+    shapes = list(action.get("result_shape_variants", {}).values())
+    if action.get("result_shape"):
+        shapes.append(action["result_shape"])
+    shapes.extend(rule.get("shape") for rule in action.get("result_shape_rules", []))
+    for shape in shapes:
+        visit(shape)
+    return errors
 
 
 def validate_flow_coverage(data: dict, root: Path) -> list[str]:
@@ -1410,6 +1439,7 @@ def validate_flow_coverage(data: dict, root: Path) -> list[str]:
         for action_name, action in (node.get("actions", {}) or {}).items():
             if not isinstance(action, dict):
                 continue
+            issues.extend(f"{node_name}:{action_name}: {e}" for e in _result_shape_errors(action))
             flow = action.get("flow")
             if action.get("returns") == "transform" and not isinstance(flow, dict):
                 issues.append(f"{node_name}:{action_name}: returns: transform 인데 flow 선언이 없다 "
@@ -1419,6 +1449,9 @@ def validate_flow_coverage(data: dict, root: Path) -> list[str]:
                 continue
             acc, em, col = flow.get("accepts"), flow.get("emits"), flow.get("columns")
             reads = flow.get("reads_fields")
+            aliases = flow.get("columns_param_aliases")
+            if aliases is not None and (not isinstance(aliases, list) or any(not isinstance(a, str) for a in aliases)):
+                issues.append(f"{node_name}:{action_name}: flow.columns_param_aliases 는 문자열 배열이어야 한다")
             if reads is not None and (not isinstance(reads, list)
                     or any(not isinstance(p, str) or not p for p in reads)):
                 issues.append(f"{node_name}:{action_name}: flow.reads_fields 는 문자열 슬롯 목록이어야 한다(on은 따옴표 필수)")
@@ -1439,6 +1472,6 @@ def validate_flow_coverage(data: dict, root: Path) -> list[str]:
                 issues.append(f"{node_name}:{action_name}: flow.emits={em!r} 는 허용값이 아니다 {sorted(_FLOW_EMITS)}")
             if col is not None and col not in _FLOW_COLUMNS:
                 issues.append(f"{node_name}:{action_name}: flow.columns={col!r} 는 허용값이 아니다 {sorted(_FLOW_COLUMNS)}")
-            if col in ("subset", "rename", "add", "open") and not flow.get("columns_param") and col != "open":
+            if col in ("subset", "rename", "add", "open", "flatten") and not flow.get("columns_param") and col != "open":
                 issues.append(f"{node_name}:{action_name}: flow.columns={col} 는 columns_param(읽을 param 이름)이 필요하다")
     return issues

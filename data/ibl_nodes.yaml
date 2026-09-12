@@ -912,6 +912,20 @@ nodes:
         target_key: op
         router: handler
         tool: stock_op
+        result_shape_variants:
+          op=history:
+            kind: items
+            cols:
+            - date
+            - open
+            - high
+            - low
+            - close
+            - volume
+            - vwap
+            - change
+            - change_percent
+            closed: true
         ops:
           default: quote
           returns:
@@ -2478,6 +2492,39 @@ nodes:
           headlines:
           - front_page
         returns: items
+        result_shape_variants:
+          source=gnews:
+            kind: items
+            cols:
+            - title
+            - meta
+            - summary
+            - url
+            - link_label
+            - query
+            - date
+            - sources
+            - hot
+            - reason
+            closed: false
+        result_shape_rules:
+        - when:
+            source: gnews
+            queries:
+              nonempty: true
+            curate:
+              present: false
+          shape:
+            kind: items
+            cols:
+            - title
+            - meta
+            - summary
+            - url
+            - link_label
+            - query
+            - date
+            closed: true
         side_effect: false
         fixture: '[sense:search]{query: "climate policy"}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.
@@ -8156,6 +8203,9 @@ nodes:
           emits: items
           columns: subset
           columns_param: columns
+          columns_param_aliases:
+          - cols
+          - fields
           reads_fields:
           - columns
           projection_params:
@@ -8184,6 +8234,10 @@ nodes:
           emits: items
           columns: add
           columns_param: set
+          columns_param_aliases:
+          - columns
+          - expr
+          scalar_expr_hint: 파생 열은 set:{새열:"식"}으로 지정하세요. expr에 대입문을 넣지 마세요. 특수문자 열은 col("열 이름")으로 참조합니다.
           scalar_expr_params:
           - set
           - columns
@@ -8237,13 +8291,14 @@ nodes:
         flow:
           accepts: items
           emits: items
-          columns: reset
+          columns: flatten
+          columns_param: field
           reads_fields:
           - field
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — 행 속 중첩 목록 필드를 펼쳐(unnest) 행들로. each 는 이미 평탄한 통화를 내므로 그 뒤에는 쓰지 않는다. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.'
-        target_description: 'field(펼칠 중첩 목록 경로, 필수에 가까움. 점 표기 "payload.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드] 배열 — 각 펼친 행에 승계, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. [table:each] 는 결과 통화를 그대로 내므로 flatten 없이 바로 다음 변환자로 잇는다. 예: 중첩 tags 열을 펴려면 ... >> [table:flatten]{field: "tags", keep: ["title"]}.'
+        target_description: 'field(펼칠 중첩 목록 경로, 필수에 가까움. 점 표기 "payload.items" 가능, 값이 {items: [...]} 봉투면 자동 승격) · keep([부모 필드/점 경로] 배열 — 예 ["data.symbol"], 같은 경로 이름의 열로 승계하며 필요하면 rename. 기존 점 포함 리터럴 키 우선, 충돌 시 _2 접미). 목록 아닌 행은 건너뛰고 skipped_rows 로 신고. [table:each] 는 결과 통화를 그대로 내므로 flatten 없이 바로 다음 변환자로 잇는다. 예: 중첩 tags 열을 펴려면 ... >> [table:flatten]{field: "tags", keep: ["title"]}.'
         group: transform
         router: handler
         tool: data_flatten

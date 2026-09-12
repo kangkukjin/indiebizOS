@@ -20,6 +20,11 @@ actions:
     target_key: op
     router: handler
     tool: stock_op
+    result_shape_variants:
+      op=history:
+        kind: items
+        cols: [date, open, high, low, close, volume, vwap, change, change_percent]
+        closed: true  # Yahoo/FMP/KRX 이력 행; 종목 신원은 바깥 data.symbol
     ops:
       default: quote
       returns:

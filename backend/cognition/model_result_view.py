@@ -98,6 +98,35 @@ def _compact_currency(value, metadata_chars):
     return out
 
 
+def _project_currency(value, metadata_chars, depth=0):
+    """모델 사본에서만 병렬 봉투 직렬화를 풀고 동일 필드를 한 벌로 보인다."""
+    if depth > 8:
+        return value
+    if isinstance(value, list):
+        decoded = [_decode_json(v) for v in value]
+        # 일반 텍스트 행을 임의로 JSON으로 해석하지 않는다. 통화 봉투 묶음만 푼다.
+        if decoded and all(isinstance(v, (dict, list)) for v in decoded):
+            return [_project_currency(v, metadata_chars, depth + 1) for v in decoded]
+        return value
+    if not isinstance(value, dict):
+        return value
+    out = dict(value)
+    items = value.get("items")
+    data = value.get("data")
+    if isinstance(items, list) and len(items) == 1 and isinstance(items[0], dict) and isinstance(data, dict):
+        from ibl_honesty import HONESTY_KEYS
+        from common.value_semantics import structural_equal
+        protected = set(HONESTY_KEYS) | {"source", "warning", "error", "traceback"}
+        shared = [k for k, v in data.items() if k in items[0] and k not in protected and
+                  structural_equal(v, items[0][k], lambda a, b: type(a) is type(b) and a == b)]
+        if shared:
+            candidate = {**out, "data": {k: v for k, v in data.items() if k not in shared},
+                         "_model_shared": {"data": {"same_as": "items[0]", "fields": shared}}}
+            if len(json.dumps(candidate, ensure_ascii=False)) < len(json.dumps(out, ensure_ascii=False)):
+                out = candidate
+    return _compact_currency(out, metadata_chars)
+
+
 def _bound(value, cap=1000):
     raw = json.dumps(value, ensure_ascii=False)
     if len(raw) <= cap:
@@ -141,12 +170,12 @@ def project_result(result, verbose=False):
     if "final_result" in out:
         final = out["final_result"]
         value = _decode_json(final)
-        compact = _compact_currency(value, policy["metadata_chars"])
+        compact = _project_currency(value, policy["metadata_chars"])
         if compact != value:
-            out = {**out, "final_result": json.dumps(compact, ensure_ascii=False, default=str)
-                   if isinstance(final, str) else compact}
+            # 작은 기존 객체/문자열은 그대로. 바뀐 사본은 객체로 보내 이중 escaping을 없앤다.
+            out = {**out, "final_result": compact}
     else:
-        out = _compact_currency(out, policy["metadata_chars"])
+        out = _project_currency(out, policy["metadata_chars"])
     out = preview_envelope(out, verbose=False, policy=policy)
     if out == result and len(raw) < policy["min_chars"]:
         return out

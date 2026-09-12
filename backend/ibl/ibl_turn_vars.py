@@ -49,7 +49,7 @@ def store_path(key: str) -> str:
     return os.path.join(spill_dir(), f"turn_vars_{key}.json")
 
 
-def load(key: Optional[str]) -> Dict[str, str]:
+def _record(key):
     if not key:
         return {}
     p = store_path(key)
@@ -58,36 +58,61 @@ def load(key: Optional[str]) -> Dict[str, str]:
     try:
         with open(p, encoding="utf-8") as f:
             obj = json.load(f)
-        return obj if isinstance(obj, dict) else {}
+        if not isinstance(obj, dict):
+            return {}
+        if obj.get("_format") == "ibl-turn-values-v2":
+            return obj
+        return {"values": obj, "types": {}}  # 기존 턴/명시 재개의 값 계약 유지
     except Exception:
         return {}
+
+
+def load(key: Optional[str]) -> Dict[str, str]:
+    return _record(key).get("values", {})
+
+
+def types_for(values, key=None):
+    """값과 같은 원자적 기록의 형만 재사용한다. 명시 resume·구형 저장은 실제 값에서 복원한다."""
+    from ibl_value_types import T, infer_value
+    record = _record(key)
+    saved, types = record.get("values", {}), record.get("types", {})
+    return {name: T.from_data(types[name]) if name in types and saved.get(name) == value
+            else infer_value(value) for name, value in values.items()}
 
 
 def save(key: Optional[str], live: Dict[str, object]) -> Tuple[List[str], List[str]]:
     """산 변수를 턴 저장소에 합친다 → (실린 이름, 크기로 뺀 이름). 재할당은 맨 뒤로(최근 순서 보존)."""
     if not key or not live:
         return [], []
-    store = load(key)
+    from ibl_value_types import infer_value
+    record = _record(key)
+    store = record.get("values", {})
+    types = record.get("types", {})
     kept: List[str] = []
     skipped: List[str] = []
     for n, v in live.items():
         n = str(n)
         s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)
         if len(s) > MAX_VALUE_CHARS:
+            store.pop(n, None)
+            types.pop(n, None)
             skipped.append(n)
             continue
         store.pop(n, None)
         store[n] = s
+        types[n] = infer_value(s).to_data()
         kept.append(n)
     while sum(len(v) for v in store.values()) > MAX_STORE_CHARS:
         old = next((n for n in store if n not in kept), None)
         if old is None:
             break
         store.pop(old)
+        types.pop(old, None)
     p = store_path(key)
     tmp = p + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(store, f, ensure_ascii=False)
+        json.dump({"_format": "ibl-turn-values-v2", "values": store,
+                   "types": types}, f, ensure_ascii=False)
     os.replace(tmp, p)
     return sorted(kept), sorted(skipped)
 

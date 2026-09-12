@@ -25,6 +25,12 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: universal_bundle_unary_warning
+    retired: 2026-09-12
+    reason: 단항 변환자가 병렬 봉투의 바깥 필드를 읽는 정상 경로까지 불가하다고 안내하고 내부 행의 열로 잘못 검사했다.
+    instead: 실제 봉투 열과 내부 행 열을 구별하고 펼치기·합치기 뒤에만 내부 열을 노출한다. 확정된 열 부재만 차단한다.
+    phrases:
+      - '병렬(&) 결과는 이항 변환자(union/merge/join)가 먼저 받아야 합니다'
   - id: conscious_final_evaluation
     retired: 2026-09-11
     reason: 최종평가의 도구 왕복과 과도한 보완을 줄이도록 중간관리 의식과 평가자를 분리했다.

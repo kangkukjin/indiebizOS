@@ -473,6 +473,11 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
         tv["injected"] = list(injected)
     if kept:
         tv["live"] = kept
+    from ibl_turn_vars import load as _load_values, types_for as _types_for
+    from ibl_value_types import display_type
+    _values = _load_values(key)
+    tv["types"] = {name: display_type(t) for name, t in _types_for(
+        {name: _values[name] for name in sorted(set(kept + injected)) if name in _values}, key).items()}
     if skipped:
         tv["too_large"] = skipped
     tv["note"] = ("같은 턴의 다음 execute_ibl 에서 $이름 으로 그대로 참조됩니다 — 값을 다시 치지 말 것. "
@@ -652,7 +657,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         #   check:true = 실행 없이 문장별 통화·열(types)과 문제(issues)만 돌려준다(모델의 탐침 자리, 0토큰·부작용 0).
         #   그 외 = 확정 error 가 있으면 **실행 전에** 거절(부수효과 0·앞 단 재실행 0). warning 은 막지 않는다(미상은 초록).
         from ibl_typecheck import typecheck as _typecheck, format_issues as _fmt_issues
-        _tc = _typecheck(parsed, _tc_vars)
+        from ibl_turn_vars import types_for as _types_for
+        _tc = _typecheck(parsed, _tc_vars, given=_types_for(_live, _tkey))
         if tool_input.get("check"):
             _tc.update({"mode": "check", "executed": False,
                         "note": ("실행하지 않았습니다. types = 문장별 마지막 통화(items⟨열⟩·prose·scalar·effect·?=미상), "

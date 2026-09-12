@@ -986,10 +986,7 @@ def validate_code(code: str) -> dict:
                 _walk(st["strategy"], depth + 1, group="goal")
             return
 
-    # F13-2 (2026-08-19 상상훈련 13회차): 병렬(&) 결과는 이항 변환자(union/merge/join)가
-    # 먼저 받아야 한다 — 다른 table 변환자를 바로 물리면 검수 초록 뒤 실행에서 굶는
-    # 사각이었다. 소프트 경고(실행기의 정직 거절이 최종 심판).
-    _BINARY_AFTER_PARALLEL = {"union", "merge", "join"}
+    # 봉투/내부 행의 구별은 아래 typecheck 응답 한 벌이 소유한다.
     # T1 (2026-08-29): 머리 변환자가 변환할 통화 없이 서 있으면 검수에서 미리 경고 —
     # 실행기(execute_pipeline·단일 step 경로)의 정직 거절과 같은 판정(ibl_pipe_types 한 벌).
     try:
@@ -1005,14 +1002,6 @@ def validate_code(code: str) -> dict:
         _pw = _head_warn if _pi == 0 else None
         if _seam and _pi == _seam[0]:
             _pw = _seam[1]
-        if (_pi > 0 and isinstance(parsed[_pi - 1], dict) and parsed[_pi - 1].get("_parallel")
-                and isinstance(st, dict) and not st.get("_seq_boundary")
-                and st.get("_node") == "table"
-                and st.get("action") not in _BINARY_AFTER_PARALLEL):
-            _pw = ("병렬(&) 결과는 이항 변환자(union/merge/join)가 먼저 받아야 합니다 — "
-                   f"'{st.get('action')}' 은(는) 병렬 봉투를 소비하지 못해 실행에서 거절됩니다. "
-                   "분기 하나에만 전처리를 붙이려면 괄호 분기: "
-                   "[A] & ([B] >> [table:rename]{…}) >> [table:merge]")
         _walk(st, warn=_pw)
 
     return {

@@ -7,6 +7,17 @@ nodes:
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
           headlines: [front_page]   # HN 원어 관습어는 별칭으로 수용
         returns: items
+        result_shape_variants:
+          source=gnews:
+            kind: items
+            cols: [title, meta, summary, url, link_label, query, date, sources, hot, reason]
+            closed: false  # 원문 행 복구·편집장 부가 필드를 열어 둔다
+        result_shape_rules:
+          - when: {source: gnews, queries: {nonempty: true}, curate: {present: false}}
+            shape:  # 비편집 배치의 단일 생성자 _gnews_item이 보장하는 전체 열
+              kind: items
+              cols: [title, meta, summary, url, link_label, query, date]
+              closed: true
         side_effect: false   # 브라우저 프로필·사이트 설정 캐시만 쓴다(부작용-정직성 관문 2026-09-06)
         fixture: '[sense:search]{query: "climate policy"}'
         description: 웹·뉴스 통합 검색 — source 로 엔진 선택. ddg(기본, 글로벌 웹)/naver(한국어 콘텐츠 — 한국어 질의는 이쪽)/gnews(구글 뉴스)/hn(Hacker News 기술)/guardian(가디언 아카이브, 영어). 유튜브·논문·지역·쇼핑은 각 도메인 검색 액션.

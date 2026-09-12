@@ -26,7 +26,8 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
-KINDS = ("items", "prose", "scalar", "effect", "bundle", "unknown")
+from ibl_value_types import (T, unknown, describe, infer_value, bundle_rows,
+                             field_type, flattened_type, declared_type, replace_rows)
 MAX_FN_DEPTH = 3
 
 # {{_step_N_result[.path]}} 자리표 — 파서(_resolve_variables)가 남기는 모양 그대로(workflow_binding 과 한 벌)
@@ -45,50 +46,6 @@ FN_CODE_SOURCES: List[Any] = []
 def register_fn_code_source(fn) -> None:
     if fn not in FN_CODE_SOURCES:
         FN_CODE_SOURCES.append(fn)
-
-
-# ───────────────────────────── 타입 값 ─────────────────────────────
-
-class T:
-    """통화 타입 하나. cols=None 이면 열 미상, closed=True 면 문장 안에서 확정된 열(밖의 참조는 error)."""
-    __slots__ = ("kind", "cols", "closed", "branches", "conditional")
-
-    def __init__(self, kind: str = "unknown", cols: Optional[List[str]] = None, closed: bool = False,
-                 branches: Optional[List["T"]] = None, conditional: bool = False):
-        self.kind = kind if kind in KINDS else "unknown"
-        self.cols = list(dict.fromkeys(cols)) if cols else None
-        self.closed = bool(closed) if cols else False
-        self.branches = list(branches or [])
-        self.conditional = conditional
-
-    def copy(self, **kw) -> "T":
-        t = T(self.kind, self.cols, self.closed, self.branches, self.conditional)
-        for k, v in kw.items():
-            setattr(t, k, v)
-        return t
-
-    def __repr__(self) -> str:
-        return describe(self)
-
-
-def unknown() -> T:
-    return T("unknown")
-
-
-def describe(t: Optional[T]) -> str:
-    """사람·모델이 읽는 한 낱말: items⟨a·b⟩ · items⟨a·b·…⟩(open) · items⟨열 미상⟩ · prose · scalar · effect · bundle[…] · ?"""
-    if t is None:
-        return "?"
-    if t.kind == "items":
-        if t.cols:
-            body = "·".join(t.cols[:10]) + ("·…" if len(t.cols) > 10 or not t.closed else "")
-            return f"items⟨{body}⟩"
-        return "items⟨열 미상⟩"
-    if t.kind == "bundle":
-        return "bundle[" + ", ".join(describe(b) for b in t.branches) + "]"
-    if t.kind == "unknown":
-        return "?"
-    return t.kind
 
 
 def join(ts: List[T]) -> T:
@@ -371,7 +328,7 @@ class _Checker:
 
     # ── 변수 ──
     def _lookup(self, idx: int) -> Optional[T]:
-        return self.env.get(idx)
+        return self.env.get(idx, self.given.get(self.names.get(idx)))
 
     def _apply_path(self, t: T, path: str, idx: int, at: str) -> T:
         """`$x` 의 경로 — .items → 같은 열의 items · .count → scalar · .message → prose · .items.*.열 / .items.N.열 → 열 검사."""
@@ -474,15 +431,24 @@ class _Checker:
 
     # ── 열 ──
     def _check_field(self, t: T, field: str, idx: int, at: str) -> None:
-        if t.kind != "items" or t.cols is None or not field or not _IDENT_RE.match(field):
+        if t.kind != "items" or t.empty or t.cols is None or not field or not _IDENT_RE.match(field):
             return
         if field in t.cols:
             return
+        if t.envelope is not None:
+            # 일부 변환자는 축약 items에 없는 열을 원천 행에서 복구한다.
+            # 그 가능성이 남은 필드는 확정 부재로 차단하지 않는다.
+            from ibl_value_types import may_have_source_field
+            if may_have_source_field(t.envelope, field):
+                return
         if field.startswith("_"):
             return                                   # _error 같은 정직 표지 열
         if t.closed:
+            hint = "실제 행의 열 가운데 고르세요. 보존된 값의 구조는 turn_vars.types에 있습니다."
+            if t.fields.get("items") is not None and t.fields["items"].kind == "items":
+                hint += ' 봉투 안 행을 펼치려면 [table:flatten]{field:"items"}, 행을 합치려면 [table:union]을 쓰세요.'
             self._issue("error", idx, at, f"'{field}' 열이 없습니다 — 앞 문장이 열을 {describe(t)} 로 확정했습니다.",
-                        hint="앞의 select/rename/compute/ai(fields) 가 남긴 열 이름 가운데 고르거나 그 문장에 열을 더하세요.",
+                        hint=hint,
                         expected=t.cols, got=field)
         else:
             self._issue("warning", idx, at, f"'{field}' 은(는) 관측된 열 {describe(t)} 에 없습니다 — 실행에서 빈 결과나 열 오류가 날 수 있습니다.",
@@ -491,7 +457,7 @@ class _Checker:
 
     def _type_rename(self, mapping: Any, inp: T, idx: int, at: str) -> T:
         """columns:rename 선언의 후보 지도. 확정 열만 오류, 관측 열은 경고, 미상은 기권."""
-        if (not isinstance(mapping, dict) or inp.cols is None
+        if (not isinstance(mapping, dict) or not inp.cols
                 or any(_dynamic(k) or _dynamic(v) for k, v in mapping.items())):
             return T("items")
         mapping = {str(k): str(v) for k, v in mapping.items()}
@@ -565,7 +531,8 @@ class _Checker:
                     compile_expr(expr)
                 except (SyntaxError, ValueError, TypeError) as exc:
                     self._issue("error", idx, at, f"'{column}' 식 오류 — {exc}",
-                                hint="한 줄 식·객체·목록 구성 구문을 확인하세요. 임의 실행문은 등록된 [self:script]로 처리합니다.",
+                                hint=(flow.get("scalar_expr_hint") or
+                                      '한 줄 식만 사용하세요. 특수문자가 든 열은 col("열 이름")으로 참조합니다.'),
                                 expected="scalar expression")
             return
 
@@ -584,11 +551,22 @@ class _Checker:
             returns = ad.get("returns")
         flow = ad.get("flow") if isinstance(ad.get("flow"), dict) else None
         self._check_scalar_exprs(flow, params, idx, at)
+        if flow and flow.get("columns_param_aliases"):
+            params = dict(params)
+            canonical = flow.get("columns_param")
+            if canonical and not params.get(canonical):
+                for alias in flow["columns_param_aliases"]:
+                    if params.get(alias):
+                        params[canonical] = params[alias]
+                        break
         if returns == "transform" or (flow and flow.get("emits") and returns != "effect"):
             if flow:
                 return self._type_transform(st, node, action, params, flow, prev, idx, at)
             return unknown()                             # flow 미선언 변환자 — 빌더 관문이 막는다; 여기선 미상
         if returns == "items":
+            shape = declared_type(ad, params)
+            if shape is not None:
+                return shape
             f = params.get("fields")
             if isinstance(f, list) and f and all(isinstance(c, str) and not _dynamic(c) for c in f):
                 return T("items", [str(c) for c in f], closed=True)      # fields 리터럴 = 이 호출이 확정한 열(ledger select 등)
@@ -633,7 +611,7 @@ class _Checker:
             if isinstance(v, list):
                 # 후보 열의 존재는 첫 행이 아니라 입력 전체에서 본다(런타임 rename과 같은 범위).
                 cols = list(dict.fromkeys(k for row in v if isinstance(row, dict) for k in row))
-                return T("items", cols, closed=bool(cols) and all(isinstance(row, dict) for row in v)), "items literal"
+                return infer_value({"items": v}), "items literal"
             return unknown(), "items param"
         return prev, "pipe"
 
@@ -671,10 +649,6 @@ class _Checker:
                     self._issue("error", idx, at, f"[{at}] 는 items 를 받는 변환자인데 앞 통화가 산문(prose)입니다.",
                                 hint="산문은 [self:write]{path} 로 저장하거나 [others:notify]로 보내는 종착이고, 표가 필요하면 산문 대신 [table:ai]{fields: […]} 로 만드세요.",
                                 expected="items", got="prose")
-                elif inp.kind == "bundle":
-                    self._issue("warning", idx, at, f"병렬(&) 결과는 이항 변환자(union/merge/join)가 먼저 받아야 합니다 — [{at}] 는 병렬 봉투를 소비하지 못합니다.",
-                                hint="[A] & [B] >> [table:union] >> [" + at + "]{…} 순으로 두거나, 분기 하나에만 전처리를 붙이려면 괄호 분기.",
-                                expected="items", got=describe(inp))
                 # effect 는 T2(이음매 기아)가 이미 같은 판정을 한다 — 중복 신고 없음
             elif accepts in ("prose|items", "items|prose"):
                 if inp.kind in ("effect",):
@@ -684,7 +658,8 @@ class _Checker:
         # ── reads_fields (열 참조) ──
         base_for_fields = inp
         if base_for_fields is not None and base_for_fields.kind == "bundle":
-            base_for_fields = self._bundle_union(base_for_fields)
+            base_for_fields = (self._bundle_union(base_for_fields) if accepts in ("same-kind", "pair")
+                               else bundle_rows(base_for_fields))
         for pname in (flow.get("reads_fields") or []):
             if pname in flow.get('projection_params', []) and isinstance(params.get(pname), dict):
                 continue
@@ -706,15 +681,24 @@ class _Checker:
         in_cols, in_closed = (None, False)
         if inp is not None:
             if inp.kind == "bundle":
-                u = self._bundle_union(inp)
+                u = (self._bundle_union(inp) if accepts in ("same-kind", "pair") else bundle_rows(inp))
                 in_cols, in_closed = u.cols, u.closed
             elif inp.kind == "items":
                 in_cols, in_closed = inp.cols, inp.closed
         lit = params.get(cparam) if cparam else None
+        row_input = base_for_fields or T("items", in_cols, in_closed)
         if columns == 'left':
             return inp.branches[0].copy() if inp is not None and inp.branches else T('items')
         if columns in (None, "keep"):
-            return T("items", in_cols, in_closed)
+            return (bundle_rows(inp).copy(kind="items") if inp is not None
+                    else T("items", in_cols, in_closed))
+        if columns == "flatten":
+            row = bundle_rows(inp) if inp is not None else T("items")
+            path = params.get(flow.get("columns_param"))
+            keep = params.get("keep") or []
+            if isinstance(path, str) and not _dynamic(path) and isinstance(keep, list):
+                return replace_rows(row, flattened_type(row, path, keep))
+            return T("items")
         if columns == "reset":
             return T("items")
         if columns == "union":
@@ -733,21 +717,24 @@ class _Checker:
                 try:
                     refs = projection_fields(compile_projection(lit))
                     for field in refs:
-                        self._check_field(T('items', in_cols, in_closed), field, idx, at)
+                        self._check_field(row_input, field, idx, at)
                 except (SyntaxError, ValueError, TypeError):
                     pass  # 식 관문이 이미 오류를 신고했다.
-                return T('items', list(lit), closed=True)
+                return replace_rows(row_input, T('items', list(lit), closed=True, empty=row_input.empty))
             if isinstance(lit, list) and lit and all(isinstance(c, str) and not _dynamic(c) for c in lit):
-                base = T("items", in_cols, in_closed)
+                base = row_input
                 for c in lit:
                     self._check_field(base, c, idx, at)
-                return T("items", [str(c) for c in lit], closed=True)
+                return replace_rows(base, T("items", [str(c) for c in lit], closed=True,
+                         fields={c: base.fields[c] for c in lit if c in base.fields},
+                         empty=base.empty))
             return T("items")                                # 동적 columns — 미상
         if columns == "rename":
-            return self._type_rename(lit, T("items", in_cols, in_closed), idx, at)
+            return replace_rows(row_input, self._type_rename(lit, row_input, idx, at).copy(empty=row_input.empty))
         if columns == "add":
             if isinstance(lit, dict) and in_cols is not None:
-                return T("items", list(in_cols) + [str(k) for k in lit.keys()], closed=in_closed)
+                return replace_rows(row_input, T("items", list(in_cols) + [str(k) for k in lit.keys()],
+                                    closed=in_closed, empty=row_input.empty))
             return T("items", in_cols, False) if in_cols else T("items")
         if columns == "open":
             declared = self._schema_columns(flow, params, idx, at)
@@ -951,14 +938,15 @@ def _parse_desc(s: str) -> T:
 
 # ───────────────────────────── 공개 표면 ─────────────────────────────
 
-def typecheck(steps: List[Any], variables: Optional[Dict[str, int]] = None) -> Dict[str, Any]:
+def typecheck(steps: List[Any], variables: Optional[Dict[str, int]] = None,
+              given: Optional[Dict[str, T]] = None) -> Dict[str, Any]:
     """파싱된 step 리스트의 정적 통화 검사.
 
     반환: {"ok": error 없음, "issues": [{severity, statement, step, at, message, hint?, expected?, got?}],
            "types": ["$이름: items⟨…⟩", "(2) prose", …], "fn_returns": {이름: "items⟨…⟩"}}
     예외는 삼킨다(검사기가 실행을 죽이면 안 된다) — 그때는 ok=True·issues 빈 목록·`abstained` 표지."""
     try:
-        c = _Checker(variables)
+        c = _Checker(variables, given=given)
         c.run(steps or [])
         # ★실행 경로가 이미 갖고 있던 두 규칙(T1 머리 변환자·T2 이음매 기아)을 여기서도 본다
         #   (2026-09-07). 이 둘은 workflow_engine 에만 배선돼 있어서 `check: true` 가

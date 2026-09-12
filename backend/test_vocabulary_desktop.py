@@ -126,5 +126,54 @@ def test_trash_moves_on_desktop_preserving_contents_and_sleep(box):
     assert state.is_active("awake")
 
 
+def test_arrange_snaps_near_current_position_instead_of_packing_by_id(box):
+    # 같은 폴더에서 왼쪽 아래/오른쪽 위의 배치 의미와 빈 공간을 유지한다.
+    layout = edit("create_folder", name="공간")
+    parent = next(k for k, f in layout["folders"].items() if f["name"] == "공간")
+    edit("create_folder", name="아래", parent=parent, x=35, y=380)
+    edit("move", item="awake", parent=parent, x=370, y=30)
+    before_active = copy.deepcopy(state.read_state()["active"])
+    after = edit("arrange", parent=parent, columns=4)
+    lower = next(f for f in after["folders"].values() if f["name"] == "아래")
+    assert (lower["x"], lower["y"]) == (24, 372)
+    assert after["placements"]["awake"] == {"parent": parent, "x": 372, "y": 24}
+    assert edit("arrange", parent=parent, columns=4) == after
+    assert get_desktop() == after
+    assert state.read_state()["active"] == before_active
+
+
+def test_arrange_preserves_occupied_grid_and_avoids_off_grid_trash(box):
+    layout = edit("create_folder", name="공간")
+    parent = next(k for k, f in layout["folders"].items() if f["name"] == "공간")
+    edit("create_folder", name="제자리", parent=parent, x=140, y=140)
+    edit("move", item="awake", parent=parent, x=139, y=139)
+    layout = edit("arrange", parent=parent, columns=3)
+    fixed = next(f for f in layout["folders"].values() if f["name"] == "제자리")
+    pos = layout["placements"]["awake"]
+    assert (fixed["x"], fixed["y"]) == (140, 140)
+    assert (pos["x"], pos["y"]) != (140, 140)
+    assert (pos["x"] - 24) % 116 == (pos["y"] - 24) % 116 == 0
+
+    edit("move", item=TRASH, x=600, y=485)
+    edit("move", item="awake", x=604, y=487)
+    layout = edit("arrange", columns=8)
+    trash, pos = layout["folders"][TRASH], layout["placements"]["awake"]
+    assert (trash["x"], trash["y"]) == (600, 485)
+    assert abs(trash["x"] - pos["x"]) >= 116 or abs(trash["y"] - pos["y"]) >= 116
+    assert edit("arrange", columns=8) == layout
+
+
+def test_arrange_narrow_folder_keeps_rows_and_resolves_collisions(box):
+    edit("move", item="base", parent=CORE, x=900, y=374)
+    layout = edit("arrange", parent=CORE, columns=1)
+    assert layout["placements"]["base"] == {"parent": CORE, "x": 24, "y": 372}
+    # 저장고 바로 아래 칸은 큰 아이콘·두 줄 이름과 겹치므로 비워 둔다.
+    edit("move", item="awake", x=24, y=140)
+    layout = edit("arrange", columns=4)
+    pos = layout["placements"]["awake"]
+    assert (pos["x"], pos["y"]) != (24, 140)
+    assert (pos["x"] - 24) % 116 == (pos["y"] - 24) % 116 == 0
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

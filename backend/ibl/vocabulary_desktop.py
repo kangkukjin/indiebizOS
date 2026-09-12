@@ -111,6 +111,42 @@ def _coordinates(x, y):
     return {"x": round(x), "y": round(y)}
 
 
+def _arrange_nearby(desktop, parent, columns):
+    """현재 배치를 가까운 격자로 맞춘다. 고정 영역과 먼저 자리 잡은 아이콘은 피한다."""
+    entries = [(key, entry) for key, entry in
+               {**desktop["folders"], **desktop["placements"]}.items()
+               if entry["parent"] == parent]
+    # 버튼 영역(이름 포함): 폭 112, 보통 높이 최대 112, 큰 저장고는 최대 136.
+    occupied = [(entry["x"], entry["y"], 112, 136 if key == STORE else 112)
+                for key, entry in entries if key in SPECIAL]
+
+    def nearest(entry):
+        col = min(columns - 1, max(0, math.floor((entry["x"] - 24) / 116 + 0.5)))
+        row = max(0, math.floor((entry["y"] - 24) / 116 + 0.5))
+        return 24 + col * 116, 24 + row * 116
+
+    def distance(point, entry):
+        return (point[0] - entry["x"]) ** 2 + (point[1] - entry["y"]) ** 2
+
+    # 이미 격자에 있는 아이콘의 자리를 먼저 보존한다. ID는 동률일 때만 쓴다.
+    movable = sorted(((key, entry) for key, entry in entries if key not in SPECIAL),
+                     key=lambda pair: (distance(nearest(pair[1]), pair[1]),
+                                       pair[1]["y"], pair[1]["x"], pair[0]))
+    for _, entry in movable:
+        row = (nearest(entry)[1] - 24) // 116
+        radius = len(entries) + 2  # 모든 이웃이 차 있어도 빈 행까지 탐색한다.
+        candidates = ((24 + col * 116, 24 + r * 116)
+                      for r in range(max(0, row - radius), min((100000 - 24) // 116, row + radius) + 1)
+                      for col in range(columns))
+        free = (point for point in candidates if not any(
+            point[0] < x + w + 4 and point[0] + 116 > x
+            and point[1] < y + h + 4 and point[1] + 116 > y
+            for x, y, w, h in occupied))
+        x, y = min(free, key=lambda point: (distance(point, entry), point[1], point[0]))
+        entry.update(x=x, y=y)
+        occupied.append((x, y, 112, 112))
+
+
 def edit_desktop(op, *, item=None, parent=ROOT, name=None, x=24, y=24, columns=5, authority=None):
     if authority is not HUMAN_AUTHORITY:
         raise ValueError("어휘 배치는 내 어휘 화면에서 변경해 주세요")
@@ -143,15 +179,7 @@ def edit_desktop(op, *, item=None, parent=ROOT, name=None, x=24, y=24, columns=5
                 raise ValueError("폴더가 없습니다")
             if type(columns) is not int or not 1 <= columns <= 30:
                 raise ValueError("정렬 열 수가 올바르지 않습니다")
-            entries = sorted([(key, val) for key, val in {**folders, **placements}.items()
-                              if val["parent"] == parent and key not in SPECIAL])
-            occupied = {(f["x"], f["y"]) for key, f in folders.items() if key in SPECIAL and f["parent"] == parent}
-            index = 0
-            for _, entry in entries:
-                while (24 + index % columns * 116, 24 + index // columns * 116) in occupied:
-                    index += 1
-                entry.update(x=24 + index % columns * 116, y=24 + index // columns * 116)
-                index += 1
+            _arrange_nearby(desktop, parent, columns)
         elif op in ("move", "restore"):
             if item in (CORE, STORE):
                 raise ValueError("고정 폴더는 이동할 수 없습니다")

@@ -35,7 +35,8 @@ export function VocabularyView() {
   const [advanced, setAdvanced] = useState(false);
   const [search, setSearch] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
-  const surface = useRef<HTMLDivElement>(null);
+  const rootViewport = useRef<HTMLDivElement>(null);
+  const folderViewport = useRef<HTMLDivElement>(null);
   const mounted = useRef(true);
   const reload = useCallback(async () => {
     const [inventory, layout] = await Promise.all([api.getVocabulary(), api.getVocabularyDesktop()]);
@@ -71,9 +72,14 @@ export function VocabularyView() {
     }
     if (change.op === 'remove_folder' && openFolder === change.item) setOpenFolder(null);
   });
+  const columnsFor = (parent: string) => {
+    const viewport = parent === ROOT ? rootViewport.current : folderViewport.current;
+    // 실제 스크롤 영역 폭, 양쪽 여백 24px, 버튼 폭 112px + 칸 사이 4px.
+    return Math.max(1, Math.min(30, Math.floor(((viewport?.clientWidth || 460) - 44) / 116)));
+  };
   const slot = (parent: string): { x: number; y: number } => {
     const used = [...Object.values(desktop?.folders || {}), ...Object.values(desktop?.placements || {})].filter(p => p.parent === parent);
-    const columns = Math.max(1, Math.floor((parent === ROOT ? surface.current?.clientWidth || 600 : 460) / 116));
+    const columns = columnsFor(parent);
     let i = 0;
     while (used.some(p => Math.abs(p.x - (24 + i % columns * 116)) < 100 && Math.abs(p.y - (24 + Math.floor(i / columns) * 116)) < 100)) i++;
     return { x: 24 + i % columns * 116, y: 24 + Math.floor(i / columns) * 116 };
@@ -116,8 +122,7 @@ export function VocabularyView() {
       item, parent, canvasX: Math.max(0, e.clientX - (rect?.left || 0)), canvasY: Math.max(0, e.clientY - (rect?.top || 0)) });
   };
   const arrange = (parent: string) => {
-    const width = parent === ROOT ? surface.current?.clientWidth || 600 : Math.min(660, window.innerWidth - 180);
-    void edit({ op: 'arrange', parent, columns: Math.max(1, Math.floor((width - 24) / 116)) });
+    void edit({ op: 'arrange', parent, columns: columnsFor(parent) });
   };
   const canvas = (parent: string) => {
     const entries = desktop ? [
@@ -142,9 +147,9 @@ export function VocabularyView() {
   const menuButton = (label: string, onClick: () => void, disabled = false) => <button role="menuitem" disabled={busy || disabled}
     className="block w-full px-4 py-2 text-left text-sm hover:bg-amber-50 focus:bg-amber-50 outline-none disabled:opacity-40" onClick={onClick}>{label}</button>;
   const openName = openFolder && desktop?.folders[openFolder]?.name;
-  return <div ref={surface} className="vocabulary-desktop relative h-full bg-[#F5F1EB] text-stone-700" aria-label="내 어휘" aria-busy={busy}
+  return <div className="vocabulary-desktop relative h-full bg-[#F5F1EB] text-stone-700" aria-label="내 어휘" aria-busy={busy}
     onKeyDown={e => { if (e.key === 'Escape') { setMenu(null); setSelected(null); } }}>
-    <div className="h-full overflow-auto">{canvas(ROOT)}</div>
+    <div ref={rootViewport} className="h-full overflow-auto">{canvas(ROOT)}</div>
     <input ref={fileInput} type="file" accept=".iblpack,.txt" className="hidden" onChange={e => { receive(e.target.files?.[0]); e.target.value = ''; }} />
     {!desktop && !error && <div role="status" className="absolute bottom-4 left-4 text-sm">불러오는 중…</div>}
     {(error || message || busy) && <div role={error ? 'alert' : 'status'} className={`absolute bottom-4 left-4 right-4 z-[90] flex items-center gap-3 rounded-lg p-3 text-sm shadow max-w-xl ${error ? 'bg-red-50 text-red-800' : 'bg-white text-stone-700'}`}>
@@ -159,7 +164,7 @@ export function VocabularyView() {
         <span className="font-medium text-sm flex-1">{openName}</span>
         <button aria-label="폴더 닫기" onClick={() => setOpenFolder(null)} className="p-2 hover:bg-stone-200 rounded"><X size={17} /></button>
       </div>
-      <div className="overflow-auto flex-1 min-h-0">{canvas(openFolder)}</div>
+      <div ref={folderViewport} className="overflow-auto flex-1 min-h-0">{canvas(openFolder)}</div>
     </div>}
     {menu && <div ref={menuRef} role="menu" aria-label="어휘 메뉴" className="fixed z-[210] w-56 py-1 rounded-xl border border-stone-200 bg-white shadow-xl max-h-[85vh] overflow-y-auto" style={{ left: Math.max(8, menu.x), top: menu.y }}
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }} onKeyDown={e => {

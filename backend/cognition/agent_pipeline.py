@@ -741,11 +741,11 @@ class CognitivePipelineMixin:
                     pass
 
             # 7. 평가 루프 (THINK 경로) — 달성 기준이 있으면 평가 후 재시도
-            _eval_ran = False  # 평가 루프가 실제로 돌았는지 — 8번(반성)의 게이트
-            _reflect_ran = False
+            _eval_ran = False  # 기준 없는 생략을 평가 실행으로 기록하지 않는다.
             if _evaluation_enabled and _supervisor and _supervisor.enabled and final_content:
-                _eval_ran = True
-                record_trajectory_event("cognition.evaluation", {"path": "goal_eval", "supervised": True})
+                _eval_ran = _supervisor.evaluation_enabled
+                if _eval_ran:
+                    record_trajectory_event("cognition.evaluation", {"path": "goal_eval", "supervised": True})
                 final_content = yield from _supervisor.finalize(final_content, history, _collect, cancel_check,
                                                                 tool_calls=eval_tool_calls)
             elif _evaluation_enabled and final_content:
@@ -783,73 +783,7 @@ class CognitivePipelineMixin:
                             yield {"type": "final", "content": evaluated}
                             print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
 
-            # 8. 의식이 작동한 턴의 호환 자기반성. 의식 없는 EXECUTE·반사는
-            # 실패·쓰기·호출 수와 무관하게 이 경로도 건너뛴다.
-            # 실행 에이전트 *자신*이 같은 세션(resume)을 이어받아 자기 궤적을 입력으로
-            # 받고 스스로 반성·재행동한다(판정자 아님).
-            # 도구를 실제로 부른 턴만 · reflex/force_role 제외 · 1회(반성의 반성 없음).
-            if _evaluation_enabled and not _eval_ran and final_content and eval_tool_calls:
-                try:
-                    from world_pulse import _load_config as _load_wp_config
-                    _refl_cfg = _load_wp_config().get("execution_reflection", {})
-                except Exception:
-                    _refl_cfg = {}
-                # 게이트 (2026-07-21, 2026-09-02 개정): 읽기만 한 궤적은 길어도 반성하지 않는다
-                # — 반성이 값을 내는 실패 오해·표류·세계 변경 검증이 읽기 궤적엔 없다(git 상태
-                # 읽기 9회에 반성 5라운드 +60s 실측). 실패 신호·세계 변경·분류 불가 호출이 섞인
-                # 긴 궤적만 반성 — 판정·사유는 cognitive_trace.should_self_reflect.
-                from cognitive_trace import should_self_reflect
-                _do_reflect, _refl_reason = should_self_reflect(
-                    eval_tool_calls,
-                    min_tool_calls=_refl_cfg.get("min_tool_calls", 3),
-                )
-                if _refl_cfg.get("enabled", True) and not _do_reflect:
-                    print(f"[SelfReflect] 스킵 — {_refl_reason}")
-                elif _refl_cfg.get("enabled", True):
-                    _reflect_ran = True
-                    record_trajectory_event("cognition.evaluation", {"path": "self_reflect"})
-                    from agent_cognitive import build_reflection_message
-                    _refl_msg = build_reflection_message(final_content, eval_tool_calls)
-                    print(f"[SelfReflect] 자기반성 턴 시작 — {_refl_reason} (도구 {len(eval_tool_calls)}회)")
-                    yield {"type": "text", "content": "\n\n---\n[자기반성]\n\n"}
-                    _refl_final = ""
-                    # 같은 에이전트·같은 세션(resume) 이어서 — 실행 부분만 재호출(파이프라인
-                    # 재진입 아님). 자기 도구를 그대로 들고 스스로 판단·재행동.
-                    for ev in self.ai.process_message_stream(
-                        message_content=_refl_msg,
-                        history=history,
-                        images=None,
-                        cancel_check=cancel_check,
-                    ):
-                        _collect(ev)
-                        if ev.get("type") == "final":
-                            _refl_final = ev.get("content", "")
-                        yield ev
-                    # 출력 계약 (에피소드 875·876): 반성 턴 출력은 초안을 *대체*하므로
-                    # "수정 없음"은 NO_REVISION 신호로 받는다 — 약한 모델이 초안을 다시
-                    # 베끼는 대신 반성문("확인 완료…")을 내놓아 답이 통째로 사라지던 부류.
-                    _refl_first_line = (_refl_final or "").strip().splitlines()[0].strip() \
-                        if (_refl_final or "").strip() else ""
-                    if _refl_first_line.startswith("NO_REVISION"):
-                        # 초안 유지 — 반성 턴이 흘린 final(신호 텍스트)을 초안으로 되덮는다
-                        # (전송 계층(WS)은 마지막 final 이벤트를 저장·전송한다).
-                        print("[SelfReflect] NO_REVISION — 초안 유지")
-                        yield {"type": "final", "content": final_content}
-                    elif _refl_final and _refl_final.strip():
-                        # 원 응답 끝의 [MAP:] 지도 태그(프로바이더가 도구 결과에서 수확해
-                        # 재주입한 표시 봉투)는 반성 턴 출력에 없으므로 이월한다 —
-                        # 교체가 지도를 삼키던 유실 지점(에피소드 767). 전송 계층(WS)은
-                        # *final 이벤트*의 content 를 저장·전송하므로 갱신 final 을 다시 흘린다.
-                        _lost_maps = [t for t in _extract_map_tag_texts(final_content)
-                                      if t not in _refl_final]
-                        if _lost_maps:
-                            _refl_final = _refl_final.rstrip() + "\n\n" + "\n".join(_lost_maps)
-                            print(f"[SelfReflect] 지도 태그 {len(_lost_maps)}건 이월")
-                            yield {"type": "final", "content": _refl_final}
-                        final_content = _refl_final
-                        print(f"[SelfReflect] 반성 후 최종 응답 갱신 ({len(_refl_final)}자)")
-
-            if not _eval_ran and not _reflect_ran:
+            if not _eval_ran:
                 record_trajectory_event("cognition.evaluation", {"path": "none"})
             _response_completed = not (cancel_check and cancel_check())
 

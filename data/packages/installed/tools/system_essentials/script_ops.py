@@ -64,7 +64,7 @@ def _review_environment():
     """등록 스크립트에 턴의 비공개 검수 작업대를 전달한다(스크립트 이름과 무관한 계약)."""
     from supervision_bus import current
     supervisor = current()
-    return supervisor.delivery.environment() if supervisor and supervisor.enabled else None
+    return supervisor.delivery.environment() if supervisor and supervisor.evaluation_enabled else None
 
 
 def _coerce_args(args):

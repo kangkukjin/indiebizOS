@@ -298,7 +298,7 @@ def test_real_aiagent_role_uses_same_tools_but_separate_identity(supervisor, mon
     assert tc.get_current_agent_id() == supervisor.owner
 
 
-@pytest.mark.parametrize("lane", ["THINK", "EXECUTE", "REFLEX", "NO_FRAMING", "CONTEXT_UPDATE"])
+@pytest.mark.parametrize("lane", ["THINK", "EXECUTE", "REFLEX", "NO_FRAMING", "NO_CRITERIA", "CONTEXT_UPDATE"])
 @pytest.mark.parametrize("signal", ["read", "write", "failed", "unknown"])
 @pytest.mark.parametrize("supervised", [False, True])
 def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(supervisor, monkeypatch, lane, signal, supervised):
@@ -312,12 +312,12 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
         config = {"name": "worker"}
         project_path = Path(supervisor.project_path)
         _build_execution_memory = lambda *a, **kw: ("", 0, "")
-        _decide_request_type = lambda *a: ("EXECUTE" if lane == "REFLEX" else "THINK" if lane == "NO_FRAMING" else lane,
+        _decide_request_type = lambda *a: ("EXECUTE" if lane == "REFLEX" else "THINK" if lane in {"NO_FRAMING", "NO_CRITERIA"} else lane,
                                           "[self:time]" if lane == "REFLEX" else None)
-        _run_consciousness_or_reuse = lambda *a: None if lane == "NO_FRAMING" else {"task_framing": "문제", "achievement_criteria": "기준"}
+        _run_consciousness_or_reuse = lambda *a: None if lane == "NO_FRAMING" else {"task_framing": "문제", "achievement_criteria": "" if lane == "NO_CRITERIA" else "기준"}
         _consciousness_needs_repair = lambda *a: False
         _consciousness_clarification = lambda *a: None
-        _extract_achievement_criteria = lambda *a: "기준"
+        _extract_achievement_criteria = lambda *a: "" if lane == "NO_CRITERIA" else "기준"
         _run_goal_evaluation_stream = lambda self, **kw: calls.append(1) or iter(())
         _build_system_prompt_split = lambda *a: ("stable", "")
         _apply_consciousness_to_history = lambda self, history, co: history

@@ -188,7 +188,7 @@ def test_compact_environment_preserves_available_capabilities():
 def test_research_quota_requires_user_provenance():
     from supervisor_handoff import criteria_contract
     result = criteria_contract("적용 사례를 찾아줘", {"criteria": [{"text": "3개 직업", "user_quote": "3개 직업"}]})
-    assert result["criteria"][0]["source"] == "proposed"
+    assert result["criteria"][0]["source"] == "consciousness"
     result = criteria_contract("3개 직업의 사례를 찾아줘", {"criteria": [{"text": "3개 직업", "user_quote": "3개 직업"}]})
     assert result["criteria"][0]["source"] == "user"
 

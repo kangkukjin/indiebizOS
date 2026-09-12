@@ -68,7 +68,7 @@ def execute_pursuit(payload, agent_id, task_id=None):
             if op == "done":
                 from supervision_bus import current
                 supervisor = current(agent_id, task_id)
-                if supervisor and supervisor.enabled:
+                if supervisor and supervisor.evaluation_enabled:
                     if not why.strip():
                         raise ValueError("완료 요청에는 달성 근거 why가 필요합니다")
                     result = supervisor.request_done(b, why)

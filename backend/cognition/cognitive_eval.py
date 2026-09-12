@@ -62,6 +62,23 @@ def parse_eval_verdict(text: str) -> tuple:
     return achieved, severity
 
 
+def parse_criterion_defects(feedback, contract):
+    """새 기준·근거 없는 지적은 자동 보완으로 넘기지 않는다. 의미 판정은 기존 평가자가 맡는다."""
+    match = re.search(r"(?mi)^DEFECTS:\s*(\[.*\])\s*$", feedback)
+    try:
+        defects = json.loads(match[1]) if match else None
+    except ValueError:
+        return None
+    ids = {row["id"] for row in contract["criteria"]}
+    if not isinstance(defects, list) or not 1 <= len(defects) <= 5:
+        return None
+    if any(not isinstance(row, dict) or not isinstance(row.get("criterion_id"), str) or row["criterion_id"] not in ids
+           or any(not isinstance(row.get(key), str) or not row[key].strip()
+                  for key in ("evidence", "repair")) for row in defects):
+        return None
+    return [{key: row[key] for key in ("criterion_id", "evidence", "repair")} for row in defects]
+
+
 class CognitiveEvalMixin:
     """Goal 평가 루프 — 의식 에이전트의 달성 기준 기반 자동 평가 메서드 모음."""
 
@@ -69,37 +86,22 @@ class CognitiveEvalMixin:
                                        tool_results_str: str = "") -> Optional[str]:
         """의식 에이전트 출력에서 달성 기준을 추출한다.
 
-        1차: achievement_criteria 필드 (별도 필드)
+        1차: criteria/achievement_criteria 필드 (별도 필드)
         2차: task_framing에서 "달성 기준:" 이후 텍스트 (하위 호환)
-        3차: 도구 실행 결과에 박힌 [ACHIEVEMENT_CRITERIA:node:action] ... [/ACHIEVEMENT_CRITERIA]
-             마커 — 액션 메타데이터 자동 보강 (ibl_actions.yaml의 achievement_criteria 필드)
+        도구 메타데이터는 의식이 채택하지 않은 새 평가 기준으로 승격하지 않는다.
         """
         # 1차: consciousness_output의 별도 필드
         if consciousness_output:
-            criteria = consciousness_output.get("achievement_criteria", "")
-            if isinstance(criteria, list):
-                criteria = ", ".join(str(c) for c in criteria if c)
-            if criteria and isinstance(criteria, str) and criteria.strip():
-                return criteria.strip()
-
+            from supervisor_handoff import criteria_contract
+            contract = criteria_contract("", consciousness_output)
+            if contract["criteria"]:
+                return "\n".join(row["text"] for row in contract["criteria"])
             # 2차: task_framing에서 추출 (하위 호환)
             task_framing = consciousness_output.get("task_framing", "")
             if "달성 기준:" in task_framing:
                 return task_framing.split("달성 기준:")[-1].strip().rstrip(".")
             if "달성기준:" in task_framing:
                 return task_framing.split("달성기준:")[-1].strip().rstrip(".")
-
-        # 3차: 도구 실행 결과에 박힌 액션 메타 마커 (achievement_criteria 마커 등)
-        if tool_results_str:
-            marker_pat = re.compile(
-                r"\[ACHIEVEMENT_CRITERIA:([^\]]+)\]\s*(.+?)\s*\[/ACHIEVEMENT_CRITERIA\]",
-                re.DOTALL,
-            )
-            matches = marker_pat.findall(tool_results_str)
-            if matches:
-                # 여러 액션이 연달아 실행되면 모든 criteria를 묶음
-                parts = [f"[{action}] {body.strip()}" for action, body in matches]
-                return "\n".join(parts)
 
         return None
 
@@ -354,26 +356,14 @@ class CognitiveEvalMixin:
 
     @classmethod
     def _load_evaluator_prompt(cls) -> str:
-        """평가 에이전트 프롬프트 파일을 로드한다 (캐시). 시스템 구조 문서 포함."""
+        """기준 판정에 필요한 역할 프롬프트만 로드한다 (캐시)."""
         if not cls._evaluator_prompt_cache:
             base = Path(__file__).parent.parent.parent / "data"
             prompt_path = base / "common_prompts" / "evaluator_prompt.md"
             try:
                 cls._evaluator_prompt_cache = prompt_path.read_text(encoding='utf-8')
             except FileNotFoundError:
-                cls._evaluator_prompt_cache = "달성 기준의 모든 항목을 엄격히 평가하라."
-            # 시스템 구조 문서(정체성 코어)만 항상 주입 — 디렉토리/파일 트리는
-            # codebase_map 가이드로 분리(get_system_structure_core)
-            try:
-                from prompt_builder import get_system_structure_core
-                structure = get_system_structure_core()
-            except Exception:
-                structure = ""
-            if structure:
-                cls._evaluator_prompt_cache += f"\n\n<system_structure>\n{structure}\n</system_structure>"
-            # IBL 카탈로그(12_ibl_only, ~15K) 주입 폐지 (2026-06-28) — 평가는 IBL 체계 전문이
-            # 아니라 criteria + action_ledger(실제 호출 사실) + capability_focus(추천 도구)로 판정한다.
-            # evaluator_prompt.md 어디도 IBL 카탈로그를 참조하지 않아 dead weight 였다.
+                cls._evaluator_prompt_cache = "제공된 달성 기준만 평가하라. 새 요구를 만들지 않는다. 판정 불가면 UNKNOWN."
         return cls._evaluator_prompt_cache
 
     def _evaluate_achievement(self, user_message: str, criteria: str,
@@ -387,14 +377,22 @@ class CognitiveEvalMixin:
                                full_response: bool = False) -> tuple:
         """평가 AI로 달성 기준 충족 여부를 판단한다.
 
-        의식 에이전트의 출력(task_framing, capability_focus)과 action_ledger
-        (실제 호출된 액션의 사실 기록)를 활용하여 결과물뿐 아니라
-        도구 활용의 적절성까지 평가한다.
+        의식의 명시적 기준만 판정한다. 실행 원장·결과는 증거이며 별도 평가 축이 아니다.
 
         Returns:
             (achieved: bool|None, feedback: str, severity: int). None은 검수 미완료.
             severity: 0=N/A(achieved), 1=경미, 2=중대, 3=치명
         """
+        try:
+            contract = json.loads(criteria)
+        except (TypeError, ValueError):
+            contract = None
+        if not isinstance(contract, dict) or "criteria" not in contract:
+            from supervisor_handoff import criteria_contract
+            contract = criteria_contract(user_message, {"achievement_criteria": criteria})
+        if not contract["criteria"]:
+            return None, "의식의 달성 기준이 없어 평가하지 않았습니다", 0
+        criteria = json.dumps(contract, ensure_ascii=False)
         evaluator_system_prompt = self._load_evaluator_prompt()
         if evaluation_policy:
             evaluator_system_prompt += "\n\n" + evaluation_policy
@@ -422,34 +420,9 @@ class CognitiveEvalMixin:
                 f"{action_ledger}\n\n"
             )
 
-        # 의식 에이전트의 메타 판단을 평가 맥락으로 제공
-        if consciousness_output:
-            task_framing = consciousness_output.get("task_framing", "")
-            if task_framing:
-                prompt += f"## 문제 정의 (의식 에이전트 판단)\n{task_framing}\n\n"
-
-            history_summary = consciousness_output.get("history_summary", "")
-            if history_summary:
-                prompt += f"## 이전 대화 맥락\n{history_summary}\n\n"
-
-            # self_awareness 출력 필드 폐지 (2026-06-28) — task_framing 으로 흡수.
-            cap_focus = consciousness_output.get("capability_focus", {})
-            if isinstance(cap_focus, dict):
-                hint = cap_focus.get("hint", "")
-                actions = cap_focus.get("highlight_actions", [])
-                if hint or actions:
-                    prompt += "## 도구 활용 맥락\n"
-                    if actions:
-                        prompt += f"- 추천된 도구: {', '.join(actions)}\n"
-                    if hint:
-                        prompt += f"- 접근 방향: {hint}\n"
-                    prompt += "\n"
-
-            # world_state 출력 필드 폐지 (2026-06-28) — task_framing 으로 흡수.
-
-        # 연상기억(execution_memory=해마 IBL 레퍼런스) 주입 폐지 (2026-06-28) — 평가는
-        # action_ledger(실제 호출 사실)와 capability_focus(추천 도구)로 도구 적절성을 판정한다.
-        # 과거 코드 사례 블록은 "기준 충족 여부" 판단에 불필요했다.
+        # 대화 맥락은 기준의 의미를 복원하는 데만 쓴다. 추천 도구·포부는 넣지 않는다.
+        if consciousness_output and consciousness_output.get("history_summary"):
+            prompt += f"## 기준 해석용 이전 대화\n{consciousness_output['history_summary']}\n\n"
 
         if tool_results_str:
             prompt += f"## 도구 실행 결과\n{tool_results_str}\n\n"
@@ -467,11 +440,10 @@ class CognitiveEvalMixin:
             prompt += (
                 f"## 시각 산출물 검수 ({len(visual_artifacts)}개 첨부: {names})\n"
                 "아래에 **실제 생성된 이미지**가 첨부되어 있다. 텍스트 설명이 아니라 이미지를 "
-                "직접 보고 달성 기준 충족을 판단하라 — 레이아웃·가독성·의도 표현·잘림/깨짐/빈 영역 등 "
-                "실제 시각 품질을 확인할 것.\n\n"
+                "직접 보고 명시된 달성 기준에 해당하는 부분만 판단하라. 일반적인 미적 개선을 새 조건으로 만들지 않는다.\n\n"
             )
 
-        prompt += "위 정보를 바탕으로 평가하세요. 도구 실행 결과가 있으면 실제로 작업이 수행되었는지 확인하세요."
+        prompt += "위 증거로 명시된 기준의 충족 여부만 판정하세요."
 
         # 평가 입력 가시화 — 평가자에게 충분한 컨텍스트가 전달되는지 진단.
         # 어제 208번 같은 오판(도구 결과가 평가자에 부족하게 전달되어 "상상 보고" 판정) 검출용.
@@ -486,11 +458,7 @@ class CognitiveEvalMixin:
         )
 
         try:
-            # 평가기 = 의식 모델과 동일(system_ai_config). 평가 프롬프트의 정교한 루브릭(원장
-            # 교차검증·열린문제 노력선·표면 vs 실질)을 경량 flash-lite 가 실행하지 못해 거짓합격을
-            # 달성 기준 평가는 모델 기어 '평가' 축(role=evaluate)으로 해소된다 —
-            # 기어 프리셋상 평가 축은 경량 티어(과거 opus 고정 → 경량 개선). system_ai_call 은
-            # role 만 다를 뿐 oneshot_ai_call 과 같은 계약(prompt/system_prompt/images).
+            # 기존 평가 축의 도구 없는 원샷. 별도 모델 호출을 추가하지 않는다.
             from consciousness_agent import system_ai_call
 
             eval_images = None
@@ -509,6 +477,14 @@ class CognitiveEvalMixin:
             achieved, severity = parse_eval_verdict(eval_response)
             if achieved is None:
                 return None, "평가 응답에 달성 여부 판정이 없습니다: " + eval_response, 0
+            if achieved is False:
+                defects = parse_criterion_defects(eval_response, contract)
+                if not defects:
+                    return None, "기존 달성 기준과 구체적 증거에 연결되지 않은 평가여서 보완하지 않았습니다", 0
+                # 자유 산문에 섞인 추가 요구는 실행자에게 전달하지 않는다.
+                routing = re.findall(r"(?mi)^(?:REPAIR_SCOPE:\s*(?:local|research)|REPAIR_BLOCK_IDS:\s*\[.*\])\s*$", eval_response)
+                eval_response = (f"NOT_ACHIEVED\nSEVERITY: {severity}\n" + "\n".join(routing)
+                                 + "\nDEFECTS: " + json.dumps(defects, ensure_ascii=False))
             return achieved, eval_response, severity
 
         except Exception as e:

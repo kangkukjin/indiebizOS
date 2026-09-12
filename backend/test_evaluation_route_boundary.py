@@ -28,26 +28,28 @@ def test_no_consciousness_cannot_be_promoted_by_failure_stall_or_milestone(super
     assert not (supervisor.store.directory / "review_status.json").exists()
 
 
-def test_notification_without_consciousness_is_delivered_without_review(supervisor, monkeypatch):
+@pytest.mark.parametrize("framing", [None, {"task_framing": "단순 확인", "achievement_criteria": ""}])
+def test_notification_without_consciousness_is_delivered_without_review(supervisor, monkeypatch, framing):
     from system_tools import execute_send_notification
     sent = []
-    supervisor.configure(None)
+    supervisor.configure(framing)
     monkeypatch.setattr("notify_dispatch.notify_user", lambda **kw: sent.append(kw) or True)
     result = json.loads(execute_send_notification({"title": "완료", "message": "결과"}, "."))
     assert result["success"] and result["delivered_to_launcher"]
     assert not result.get("queued_for_review") and len(sent) == 1
-    assert not supervisor.enabled and not supervisor.delivery.manifest()
+    assert not supervisor.evaluation_enabled and not supervisor.delivery.manifest()
 
 
-def test_pursuit_done_without_consciousness_uses_existing_execution_path(supervisor, bound, row, monkeypatch):
+@pytest.mark.parametrize("framing", [None, {"task_framing": "단순 확인", "achievement_criteria": ""}])
+def test_pursuit_done_without_consciousness_uses_existing_execution_path(supervisor, bound, row, monkeypatch, framing):
     from pursuit_tools import execute_pursuit
     bound.bind(row)
     bound.aliases = {"agent"}
-    supervisor.configure(None)
+    supervisor.configure(framing)
     monkeypatch.setattr("supervision_bus.current", lambda *a, **kw: supervisor)
     result = json.loads(execute_pursuit({"op": "done", "why": "전체 산출물 확인"}, "agent", bound.task))
     assert result["success"] and result["result"]["status"] == "done"
-    assert not supervisor.enabled and supervisor.done_request is None
+    assert not supervisor.evaluation_enabled and supervisor.done_request is None
 
 
 if __name__ == "__main__":

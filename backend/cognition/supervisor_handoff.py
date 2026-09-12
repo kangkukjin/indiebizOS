@@ -15,19 +15,27 @@ patch는 해당 version/hash와 정확한 old_string/new_string을 쓴다. 구�
 
 
 def criteria_contract(message, framing):
+    """의식이 확정한 달성 기준. 추천 수단·규정 산문에서 새 기준을 만들지 않는다."""
     rows = []
     for row in (framing or {}).get("criteria", []):
         if not isinstance(row, dict) or not row.get("text"):
             continue
         quote = row.get("user_quote", "")
         mandatory = isinstance(quote, str) and bool(quote.strip()) and quote in message
-        rows.append({"text": str(row["text"]), "source": "user" if mandatory else "proposed",
-                     "user_quote": quote if mandatory else "", "fallback": row.get("fallback", "한계를 명시")})
+        rows.append({"text": str(row["text"]).strip(), "source": "user" if mandatory else "consciousness",
+                     "user_quote": quote if mandatory else "", "fallback": row.get("fallback", "")})
     if not rows and (framing or {}).get("achievement_criteria"):
-        rows.append({"text": framing["achievement_criteria"], "source": "proposed",
-                     "user_quote": "", "fallback": "사용자 원문을 우선하고 불충분한 증거를 명시"})
-    return {"user_goal": message, "criteria": rows,
-            "policy": "사용자 원문의 대상·측정량·기간은 필수이며 fallback으로 충족 처리하지 않는다. proposed 수량·조사 목표만 근거에 따라 조정하며 새 의무로 승격하지 않는다."}
+        values = framing["achievement_criteria"]
+        for value in values if isinstance(values, list) else [values]:
+            if isinstance(value, str) and value.strip():
+                rows.append({"text": value.strip(), "source": "consciousness", "user_quote": "", "fallback": ""})
+    rows = [row for row in rows if row["text"]]
+    for i, row in enumerate(rows, 1):
+        row["id"] = f"C{i}"
+    return {"user_goal": message, "owner": "consciousness", "criteria": rows,
+            "policy": "평가는 이 criteria의 달성 여부만 판정한다. 사용자 원문은 기준의 뜻과 권한을 해석하는 맥락이다. "
+                      "기준 추가·강화·면제는 평가자의 권한이 아니다. 의식이 정한 fallback만 적용하며 사용자 명시 조건을 대체하지 않는다. "
+                      "추천 도구·잠정 조사량·task_framing의 포부를 별도 합격 조건으로 만들지 않는다."}
 
 
 def handoff_state(controller, decision):
@@ -38,7 +46,8 @@ def handoff_state(controller, decision):
         ids = dict.fromkeys(i for i in ids if isinstance(i, str)) if isinstance(ids, list) else {}
         blocks = {b["id"]: b for b in controller.store.blocks}
         targets = [dict(blocks[i]) for i in ids if i in blocks]
-    return {"goal": controller.message, "criteria": criteria_contract(controller.message, controller.framing),
+    return {"goal": controller.message, "criteria": copy.deepcopy(getattr(controller, "_final_criteria_contract", None)
+            or criteria_contract(controller.message, controller.framing)),
             "repair": decision, "response": response,
             "target_blocks": {"version": response["version"], "blocks": targets},
             "jobs": list(controller.job_states.values()), "active": list(controller.active.values()),

@@ -80,7 +80,7 @@ def test_executor_can_apply_the_prompt_batch_example_without_response_reads(supe
         evaluations.append(prompt)
         if len(evaluations) == 1:
             return ('NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: ' + scope
-                    + '\nREPAIR_BLOCK_IDS: ["0", "1"]\n두 문단을 수정하라')
+                    + '\nREPAIR_BLOCK_IDS: ["0", "1"]\nDEFECTS: [{"criterion_id":"C1","evidence":"시간과 영업 확정이 확보한 근거와 다름","repair":"두 문단을 수정하라"}]')
         assert "체류 80분" in prompt and "영업 여부 미확인" in prompt and "수정 문구" in prompt
         return "ACHIEVED"
 
@@ -157,7 +157,7 @@ def test_rework_uses_updated_evidence_and_stops_after_one_repair(supervisor, mon
         evaluations.append(prompt)
         if len(evaluations) == 2:
             assert "보완으로 확보한 출처" in prompt and "수정한 답변" in prompt
-        return 'NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: ["0"]\n핵심 근거를 반영하라'
+        return 'NOT_ACHIEVED\nSEVERITY: 1\nREPAIR_SCOPE: local\nREPAIR_BLOCK_IDS: ["0"]\nDEFECTS: [{"criterion_id":"C1","evidence":"핵심 근거 미반영","repair":"근거를 반영하라"}]'
 
     def repair(prompt, **kwargs):
         repairs.append(prompt)
@@ -191,6 +191,7 @@ def test_staged_body_and_notice_are_supplied_before_publication(supervisor, tmp_
 
 def test_whole_pursuit_criteria_are_included_before_done(supervisor, monkeypatch):
     writes = []
+    supervisor.original_pursuit = {"id": "goal", "goal_criteria": "정정 전 목표"}
     binding = SimpleNamespace(row={"id": "goal", "version": 3, "goal_criteria": "전체 보고서 세 편 완성"},
                               write=lambda *a, **kw: writes.append((a, kw)))
     supervisor.request_done(binding, "모두 완성")
@@ -198,6 +199,9 @@ def test_whole_pursuit_criteria_are_included_before_done(supervisor, monkeypatch
 
     def evaluate(prompt, **kwargs):
         assert "전체 보고서 세 편 완성" in prompt and not writes
+        contract = json.loads(prompt.split("## 달성 기준\n", 1)[1].split("\n\n", 1)[0])
+        assert any(row["text"] == "전체 보고서 세 편 완성" for row in contract["criteria"])
+        assert all(row["text"] != "정정 전 목표" for row in contract["criteria"])
         return "ACHIEVED"
 
     monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
@@ -237,6 +241,86 @@ def test_tool_capable_supervisor_rejects_final_phase(supervisor):
     with pytest.raises(ValueError, match="도구 없는"):
         invoke(supervisor, "평가", phase="final")
 
+
+
+@pytest.mark.parametrize("feedback", [
+    'NOT_ACHIEVED\nSEVERITY: 2\n더 깊게 조사하라',
+    'NOT_ACHIEVED\nDEFECTS: [{"criterion_id":"C99","evidence":"더 할 수 있다","repair":"추가 조사"}]',
+    'NOT_ACHIEVED\nDEFECTS: [{"criterion_id":"C1","evidence":"","repair":"추가 조사"}]',
+    'NOT_ACHIEVED\nDEFECTS: []',
+])
+def test_unlinked_feedback_never_launches_repair(supervisor, monkeypatch, feedback):
+    calls = []
+    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: calls.append(1) or feedback)
+    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("기준 없는 재작업")
+    result = finish(supervisor, "기존 응답")[-1]["content"]
+    assert result.startswith("기존 응답") and len(calls) == 1
+    assert tc.get_goal_eval_outcome()["status"] == "UNKNOWN"
+
+
+def test_eval_input_does_not_promote_planning_advice_to_requirements(supervisor, monkeypatch):
+    supervisor.configure({"task_framing": "깊이 더 조사하라", "achievement_criteria": "입력 가격 두 개를 비교",
+                          "capability_focus": {"highlight_actions": ["추천도구"], "hint": "일곱 곳 검색"}})
+    def evaluate(prompt, **kwargs):
+        assert "입력 가격 두 개를 비교" in prompt and '"id": "C1"' in prompt
+        assert "깊이 더 조사하라" not in prompt and "추천도구" not in prompt and "일곱 곳 검색" not in prompt
+        assert "<system_structure>" not in kwargs["system_prompt"]
+        return "ACHIEVED"
+    monkeypatch.setattr("consciousness_agent.system_ai_call", evaluate)
+    assert finish(supervisor, "첫 가격이 두 번째보다 낮습니다")[-1]["content"] == "첫 가격이 두 번째보다 낮습니다"
+
+
+def test_criteria_are_fixed_across_repair_and_handoff(supervisor):
+    from final_evaluator import prepare
+    from supervisor_handoff import handoff_state
+    supervisor.store.put_response("초안")
+    original = prepare(supervisor)["criteria"]
+    supervisor.framing["achievement_criteria"] = "나중에 추가한 목표"
+    block = supervisor.store.blocks[0]
+    supervisor.store.patch(supervisor.store.version, [{"id": block["id"], "hash": block["hash"], "text": "수정본"}])
+    assert prepare(supervisor)["criteria"] == original
+    assert json.dumps(handoff_state(supervisor, {})["criteria"], ensure_ascii=False) == original
+
+
+def test_arithmetic_observation_does_not_override_criterion_approval(supervisor, monkeypatch):
+    import quantity_checks
+    calls = []
+    monkeypatch.setattr(quantity_checks, "arithmetic_issues", lambda _: [{"issue": "별도 시간 합산"}])
+    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: calls.append(1) or "ACHIEVED")
+    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail("기준 외 자동 재작업")
+    assert finish(supervisor, "기준을 충족한 응답")[-1]["content"] == "기준을 충족한 응답"
+    assert len(calls) == 1
+
+
+def test_empty_criteria_have_no_evaluation_or_pending_delivery(supervisor, tmp_path, monkeypatch):
+    target, artifact, sent = stage(supervisor, tmp_path, monkeypatch)
+    # 실행 중 의식이 최종 평가 기준을 거둬도 앞서 등록된 전달을 방치하지 않는다.
+    supervisor.framing = {"task_framing": "단순 확인", "achievement_criteria": ""}
+    tc.clear_goal_eval_outcome()
+    monkeypatch.setattr("final_evaluator.invoke", lambda *a, **kw: pytest.fail("기준 없는 평가"))
+    assert finish(supervisor, "확인 완료")[-1]["content"] == "확인 완료"
+    assert target.read_text() == "new reviewed bytes" and len(sent) == 1
+    assert tc.get_goal_eval_outcome() is None
+    assert not (supervisor.store.directory / "review_status.json").exists()
+
+
+def test_tool_metadata_cannot_supply_missing_consciousness_criteria():
+    from cognitive_eval import CognitiveEvalMixin
+    marker = "[ACHIEVEMENT_CRITERIA:self:write]내용 검수[/ACHIEVEMENT_CRITERIA]"
+    assert CognitiveEvalMixin()._extract_achievement_criteria({}, marker) is None
+
+
+def test_unlinked_free_prose_is_not_passed_as_repair_instructions(supervisor, monkeypatch):
+    from final_evaluator import invoke, prepare
+    supervisor.store.put_response("보고서")
+    prepare(supervisor)
+    feedback = ('NOT_ACHIEVED\nSEVERITY: 2\nREPAIR_SCOPE: local\n'
+                'DEFECTS: [{"criterion_id":"C1","evidence":"원문 수치와 다름","repair":"원문 수치로 수정"}]'
+                '\n추가로 미래 전망도 조사하라')
+    monkeypatch.setattr("consciousness_agent.system_ai_call", lambda *a, **kw: feedback)
+    decision = json.loads(invoke(supervisor))
+    assert decision["status"] == "REWORK"
+    assert "원문 수치로 수정" in decision["instruction"] and "미래 전망" not in decision["instruction"]
 
 if __name__ == "__main__":
     import sys

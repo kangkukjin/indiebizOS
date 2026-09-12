@@ -7,7 +7,7 @@
 
   D1 의식 교리 — 뿌리에서 고치라는 지시가 있고, 옛 '보고만' 조항은 은퇴했다
   D2 의식 교리 — '명령 밖'을 사슬 밖으로 정의하고, 되묻기를 두 종류로 한정한다
-  D3 평가 관문 — 사슬 위의 원인을 보고만 하고 끝낸 수리 턴은 미달로 잡는다
+  D3 기준 소유권 — 의식이 수리 기준을 정하고 평가자는 그 기준을 판정한다
   D4 프롬프트 mtime — 교리를 고치면 재기동 없이 다음 턴부터 새 본문이 주입된다
   D5 소비처 주입 — 그랜트가 살아 있는 턴에만 fragments/13_repair.md 가 실행자 turn_context 에 실린다
   D6 실행자 base 프롬프트 — 옛 "요청하지 않은 개선 금지"가 사슬 경계 판본으로 바뀌었다
@@ -49,14 +49,13 @@ def test_d2_scope_is_the_chain_and_asking_is_bounded():
     assert "되묻기는 두 종류뿐" in t
 
 
-def test_d3_evaluator_fails_symptom_only_repair():
-    """D3 — 평가자가 증상 가리기 수리를 미달로 잡는다."""
-    t = _read("evaluator_prompt.md")
-    assert "증상 가리기" in t
-    # 미달의 정의가 '뿌리를 안 고친 것'이지 '뿌리를 말한 것'이 아니어야 한다 —
-    # 관문이 정직성에 벌점을 주면 가르치는 것은 "뿌리를 언급하지 마라"가 된다.
-    assert "뿌리를 안 고친 것" in t
-    assert "뿌리를 말한 것" in t
+def test_d3_consciousness_owns_repair_criteria():
+    """D3 — 수리 기준은 의식에서 생성하며 평가자의 독립 심사 항목이 아니다."""
+    framing = _read("fragments/14_consciousness_repair.md")
+    assert "achievement_criteria" in framing and "뿌리에서 고치" in framing
+    evaluator = _read("evaluator_prompt.md")
+    assert "의식이 정한 달성 기준" in evaluator
+    assert "기준을 만들거나 강화하거나 면제하지 않는다" in evaluator
 
 
 def test_d4_prompt_reloads_on_mtime_change(tmp_path):

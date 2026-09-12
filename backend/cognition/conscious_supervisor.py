@@ -245,6 +245,7 @@ class Supervisor:
 
     def configure(self, framing, repair=False):
         self.framing = framing
+        self._final_criteria_contract = None
         # 의식이 규정한 턴만 감독·평가한다. 관찰/도구 실패가 이 선택을 바꾸지 않는다.
         self.enabled = bool(framing)
         self.phase = "execute"
@@ -261,7 +262,15 @@ class Supervisor:
         if binding and binding.row:
             self.original_pursuit = {k: binding.row[k] for k in ("id", "version", "goal_criteria")}
         self.log("framing", role="consciousness" if self.enabled else "harness",
-                 evaluation_enabled=self.enabled, evidence=self.store.evidence(framing or {}))
+                 evaluation_enabled=self.evaluation_enabled, evidence=self.store.evidence(framing or {}))
+
+    @property
+    def evaluation_enabled(self):
+        from supervisor_handoff import criteria_contract
+        criteria = getattr(self, "_final_criteria_contract", None)
+        if criteria is None:
+            criteria = criteria_contract(self.message, self.framing)
+        return self.enabled and bool(criteria["criteria"])
 
     def reframe(self, payload):
         from reframe import TurnChannel, _revise, render_for_executor
@@ -660,8 +669,8 @@ class Supervisor:
             return json.dumps({"success": False, "error": str(exc)}, ensure_ascii=False)
 
     def request_done(self, binding, why):
-        if not self.enabled:
-            raise ValueError("의식 없는 턴은 평가 대기 없이 과제 원장에 완료를 기록합니다")
+        if not self.evaluation_enabled:
+            raise ValueError("의식의 달성 기준이 없는 턴은 평가 대기 없이 과제 원장에 완료를 기록합니다")
         self.done_request = {"id": binding.row["id"], "version": binding.row["version"],
                              "goal_criteria": binding.row["goal_criteria"], "why": why}
         if self.original_pursuit and self.original_pursuit["id"] == binding.row["id"]:
@@ -675,9 +684,23 @@ class Supervisor:
         from supervisor_runtime import parse_decision, repair_message
         from final_evaluator import invoke, prepare, snapshot_error
         from thread_context import set_goal_eval_outcome
+        if not self.evaluation_enabled:
+            # 의식이 실행 중 기준을 거둔 경우에도 이미 대기 중인 전달을 남겨 두지 않는다.
+            if not self.cancelled():
+                try:
+                    delivery = self.delivery.manifest()
+                    self.delivery.deliver(delivery["hash"] if delivery else None, self.cancelled)
+                except Exception as exc:
+                    reason = f"산출물·알림을 전달하지 못했습니다: {exc}"
+                    set_goal_eval_outcome(False, 0, status="UNKNOWN", reason=reason)
+                    response += "\n\n" + reason
+            self.log("evaluation.skipped", role="harness", reason="의식의 달성 기준 없음")
+            yield {"type": "text", "content": response}
+            yield {"type": "final", "content": response}
+            return response
         set_goal_eval_outcome(False, 0, status="UNKNOWN", reason="검수 진행 중")
         self.finalizing = True
-        self.review_cursor = 0  # 최종 검수는 이번 턴 전체 궤적과 원래 전체 목표를 다시 대조한다.
+        self.review_cursor = 0  # 증거는 턴 전체에서 수집하되 평가는 의식이 정한 기준으로 한정한다.
         self.store.put_response(response)
         decision = {"status": "UNKNOWN", "reason": "검수가 완료되지 않았습니다"}
         with self.review_lock:
@@ -689,7 +712,7 @@ class Supervisor:
                     break
                 self.phase = "final"
                 self.call_stop = None
-                yield {"type": "thinking", "content": "평가자가 목표·실행 기록·결과의 일치 여부를 확인하고 있습니다."}
+                yield {"type": "thinking", "content": "평가자가 의식이 정한 달성 기준의 충족 여부를 확인하고 있습니다."}
                 try:
                     prepare(self, tool_calls)
                     raw = invoke(self, "", phase="final")
@@ -714,11 +737,6 @@ class Supervisor:
                 delivery = self.delivery.manifest()
                 if decision["status"] == "APPROVED" and delivery and decision.get("delivery_hash") != delivery["hash"]:
                     decision = {"status": "UNKNOWN", "reason": "공개 산출물·알림의 승인 지문이 현재 초안과 다릅니다"}
-                from quantity_checks import arithmetic_issues
-                numeric_errors = arithmetic_issues(self.store.text)
-                if numeric_errors and decision["status"] == "APPROVED":
-                    decision = {"status": "REWORK", "reason": "응답의 명시적 시간 합산 불일치",
-                                "repair_scope": "local", "instruction": json.dumps(numeric_errors, ensure_ascii=False)}
                 self.log("decision", role="evaluate", validator="goal_eval", decision=decision, response=manifest)
                 from episode_logger import record_trajectory_event
                 record_trajectory_event("validation.completed", {

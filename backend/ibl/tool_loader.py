@@ -155,12 +155,8 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
     if not yaml_path.exists():
         return None
 
-    try:
-        with open(yaml_path, 'r', encoding='utf-8') as f:
-            data = yaml.safe_load(f)
-    except Exception as e:
-        print(f"[tool_loader] ibl_nodes.yaml 파싱 실패: {e}")
-        return None
+    from ibl_registry import load_nodes_installed
+    data = load_nodes_installed()
 
     all_nodes = data.get("nodes", {})
 

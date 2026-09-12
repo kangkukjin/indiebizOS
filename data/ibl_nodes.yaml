@@ -3128,7 +3128,7 @@ nodes:
         returns: items
         side_effect: true
         fixture: '[self:package]{op: "list"}'
-        description: 도구 패키지 생애주기 관리 (op 분기). list=설치됨/설치가능 목록, info=상세, install/remove=폴더 이동+IBL 어휘 재빌드+캐시 초기화, reload=런타임 캐시만 초기화(handler.py·어휘 선언 편집 뒤, POST /packages/reload 의 낱말 자리).
+        description: 도구 패키지 생애주기 관리 (op 분기). list=사용 중/잠든 보유 묶음, info=상세, install/remove=사람에게 깨우기/잠재우기 제안, reload=런타임 캐시만 초기화(handler.py·어휘 선언 편집 뒤, POST /packages/reload 의 낱말 자리).
         target_description: list/reload — (파라미터 없음). info/install/remove — package_id(필수). reload 는 되살린 범위(reloaded)와 못 되살린 범위(not_reloaded — tool_*.py·backend 는 재기동)를 봉투로 말한다.
         group: system
         target_key: op
@@ -3158,12 +3158,12 @@ nodes:
           fixture:
             info: '[self:package]{op: "info", package_id: "web"}'
           values:
-            list: 설치됨/설치가능 패키지 목록 (package_id, 어휘 액션 수 포함)
+            list: 사용 중/잠든 보유 묶음 목록 (package_id, 어휘 액션 수 포함)
             info: 패키지 상세 정보 (package_id)
-            install: not_installed→installed 이동 + IBL 어휘 재빌드 + 캐시 초기화 (package_id)
-            remove: installed→not_installed 이동 + IBL 어휘 재빌드 + 캐시 초기화 (package_id)
+            install: 깨우기 제안 — 실제 선택은 조종실에서 사람이 수행 (package_id)
+            remove: 잠재우기 제안 — 파일과 기억 보존, 사람이 선택 (package_id)
             reload: 런타임 캐시만 초기화 — 카탈로그·api_registry·실행기·의식·handler.py (POST /packages/reload 동형)
-        implementation: package_manager.PackageManager 래핑. install/remove 후 build_ibl_nodes.py 서브프로세스 재빌드 + ibl_routing.invalidate_runtime_caches(POST /packages/reload·reload op 과 한 절차).
+        implementation: vocabulary_lifecycle.set_package_active 공통 진입점. IBL에는 사람 권한을 전달하지 않아 변경 제안만 반환. 조종실은 원장 변경과 공통 캐시 초기화까지 완료한다.
         keywords:
         - 패키지
         - 도구

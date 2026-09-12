@@ -314,6 +314,6 @@ def code_is_own(code: str) -> bool:
     try:
         return not foreign_actions(code)
     except Exception:
-        return True  # 판정 불가(레지스트리 로드 실패 등) 시 열어둠 — 소유-필터가 회상을 깨서는 안 됨
+        return False  # 판정 불능 용례는 자동 실행 후보가 아니다
 
 

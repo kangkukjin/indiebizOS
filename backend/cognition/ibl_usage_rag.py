@@ -41,7 +41,24 @@ def _own_only(results: list) -> list:
         from ibl_registry import code_is_own
         return [r for r in results if code_is_own(r.ibl_code)]
     except Exception:
-        return results
+        return []
+
+
+def _search_active(db, **kwargs):
+    """비활성 상위 결과가 하위의 유효 후보를 가리지 않도록 검색 폭을 늘린다."""
+    wanted = kwargs.pop("top_k", 5)
+    count = max(wanted, 8)
+    previous = None
+    while True:
+        raw = db.search_hybrid(top_k=count, **kwargs) or []
+        selected = _own_only(raw)
+        if len(selected) >= wanted or len(raw) < count:
+            return selected[:wanted]
+        signature = tuple(r.id for r in raw)
+        if signature == previous:
+            return selected[:wanted]
+        previous = signature
+        count *= 2
 
 
 def _xml_attr(s: str) -> str:
@@ -129,9 +146,11 @@ class IBLUsageRAG:
             k = self.DEFAULT_K
         k = min(k, self.MAX_REFERENCES)
 
-        # 캐시 확인
+        # 회상 캐시는 활성 선택 변경과 함께 세대가 바뀐다.
+        from vocabulary_state import revision
+        active_revision = revision()
         cache_key = hashlib.md5(
-            f"{user_query}_{k}_{allowed_nodes}".encode()
+            f"{user_query}_{k}_{allowed_nodes}_{active_revision}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:
@@ -141,7 +160,7 @@ class IBLUsageRAG:
         try:
             from ibl_usage_db import IBLUsageDB
             db = IBLUsageDB()
-            results = db.search_hybrid(
+            results = _search_active(db,
                 query=user_query,
                 top_k=k,
                 allowed_nodes=allowed_nodes,
@@ -168,7 +187,7 @@ class IBLUsageRAG:
         """이름 채널 — 이름(alias) 붙은 다문장 프로그램 Top-PHRASE_K, PHRASE_MIN_SCORE 이상. 본문 없이 서명만 실린다."""
         try:
             from ibl_usage_db import IBLUsageDB
-            res = IBLUsageDB().search_hybrid(
+            res = _search_active(IBLUsageDB(),
                 query=user_query, top_k=self.PHRASE_K, allowed_nodes=allowed_nodes,
                 aliased_only=True)
         except Exception as e:
@@ -389,7 +408,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
-        results = db.search_hybrid(
+        results = _search_active(db,
             query=query,
             top_k=rag.DEFAULT_K,
             allowed_nodes=allowed_nodes,
@@ -591,7 +610,7 @@ def get_top_score(user_message: str, allowed_nodes: set = None) -> float:
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
-        results = _own_only(db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes))
+        results = _own_only(_search_active(db, query=user_message, top_k=1, allowed_nodes=allowed_nodes))
         return _top_for_execution(results)[0]
     except Exception:
         return 0.0
@@ -604,7 +623,7 @@ def get_top(user_message: str, allowed_nodes: set = None) -> tuple:
     try:
         from ibl_usage_db import IBLUsageDB
         db = IBLUsageDB()
-        results = _own_only(db.search_hybrid(query=user_message, top_k=1, allowed_nodes=allowed_nodes))
+        results = _own_only(_search_active(db, query=user_message, top_k=1, allowed_nodes=allowed_nodes))
         return _top_for_execution(results)
     except Exception:
         return (0.0, "")

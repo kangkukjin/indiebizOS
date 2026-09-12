@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: package_switch_rebuild
+    retired: 2026-09-13
+    reason: 어휘 선택은 보유 정의 변경과 분리하며 코퍼스를 삭제하지 않는다.
+    instead: 몸별 활성 원장과 공통 캐시만 변경하고 IBL에서는 사람에게 변경을 제안한다.
+    phrases:
+      - 'install/remove 후 build_ibl_nodes.py 서브프로세스 재빌드'
+      - 'not_installed→installed 이동 + IBL 어휘 재빌드'
+      - 'installed→not_installed 이동 + IBL 어휘 재빌드'
   - id: result_read_small_page
     retired: 2026-09-12
     reason: 원문 조회의 작은 기본 페이지와 24K 상한이 불필요한 모델 왕복을 만들고 전달 단계의 16K 재축약으로 페이지를 잃었다.

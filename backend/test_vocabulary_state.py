@@ -17,6 +17,8 @@ def box(tmp_path, monkeypatch):
         (p / "tool.json").write_text(json.dumps({"tools": [{"name": pid}]}))
         (p / "ibl_actions.yaml").write_text(f'node: sense\nactions:\n  {pid}: {{tool: {pid}, router: handler}}\n')
         (p / "handler.py").write_text('raise AssertionError("잠든 핸들러를 import하면 안 됨")\n')
+    import runtime_utils
+    monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
     monkeypatch.setattr(state, "get_base_path", lambda: tmp_path)
     state.invalidate_inventory()
     yield tmp_path

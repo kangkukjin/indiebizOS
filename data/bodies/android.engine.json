@@ -202,6 +202,7 @@
     "ibl/tool_loader",
     "ibl/tool_selector",
     "ibl/trigger_engine",
+    "ibl/vocabulary_lifecycle",
     "ibl/workflow_binding",
     "ibl/workflow_contract",
     "ibl/workflow_engine",
@@ -276,6 +277,7 @@
     "surface/api_switches",
     "surface/api_system_ai",
     "surface/api_tunnel",
+    "surface/api_vocabulary",
     "surface/api_warehouse_feed",
     "surface/api_websocket",
     "surface/api_xray",
@@ -337,8 +339,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 326,
-    "engine": 300,
+    "total": 328,
+    "engine": 302,
     "blocklist": 26
   }
 }

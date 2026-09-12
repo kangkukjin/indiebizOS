@@ -827,34 +827,6 @@ def _install_lib(params: dict) -> dict:
     return result
 
 
-def _rebuild_ibl_vocab() -> Optional[str]:
-    """build_ibl_nodes.py 재실행 + 런타임 캐시 초기화 (POST /packages/reload와 동형).
-
-    패키지 install/remove로 ibl_actions.yaml fragment 구성이 바뀐 뒤 호출한다.
-    성공하면 None, 실패하면 에러 메시지를 반환한다(호출부가 install/remove 결과에 경고로 얹음).
-    """
-    import subprocess
-    import sys
-
-    root = Path(__file__).resolve().parent.parent.parent
-    script = root / "scripts" / "build_ibl_nodes.py"
-    try:
-        proc = subprocess.run(
-            [sys.executable, str(script)],
-            cwd=str(root), capture_output=True, text=True, timeout=60,
-        )
-        if proc.returncode != 0:
-            return f"어휘 재빌드 실패: {proc.stderr.strip()[-500:]}"
-    except Exception as e:  # noqa: BLE001
-        return f"어휘 재빌드 예외: {e}"
-
-    failed = invalidate_runtime_caches()
-    if failed:
-        return ("어휘는 재빌드했으나 런타임 캐시 초기화 실패 — 스테일 사전일 수 있습니다"
-                f"(백엔드 재기동 권장): {', '.join(failed)}")
-    return None
-
-
 #: 런타임 캐시 초기화가 되살리는 범위 / 못 되살리는 범위 — 몸이 말한다(2026-09-05 ep2836).
 #  POST /packages/reload 와 [self:package]{op:"reload"} 가 같은 문장을 낸다(한 절차, 한 진실).
 RELOAD_COVERS = ["어휘 카탈로그(ibl_nodes.yaml 재독)", "api_registry", "실행기 노드 표", "의식 캐시",
@@ -902,7 +874,7 @@ def invalidate_runtime_caches() -> list:
 
 
 def _package_op(params: dict) -> dict:
-    """[self:package]{op} — list/info/install/remove/reload. package_manager 래핑 + 어휘 재빌드 + 캐시 초기화."""
+    """[self:package]{op} — list/info/install/remove/reload. 보유 조회·사용자 선택 제안·공통 캐시 초기화."""
     from package_manager import package_manager
 
     op = (params.get("op") or "list").strip()
@@ -950,27 +922,9 @@ def _package_op(params: dict) -> dict:
             return {"success": False, "error": f"패키지를 찾을 수 없습니다: {package_id}"}
         return {"success": True, "package": info}
 
-    if op == "install":
-        try:
-            result = package_manager.install_package(package_id, skip_validation=False)
-        except ValueError as e:
-            return {"success": False, "error": str(e)}
-        warn = _rebuild_ibl_vocab()
-        if warn:
-            result.setdefault("warnings", []).append(warn)
-        result["success"] = True
-        return result
-
-    if op == "remove":
-        try:
-            result = package_manager.uninstall_package(package_id)
-        except ValueError as e:
-            return {"success": False, "error": str(e)}
-        warn = _rebuild_ibl_vocab()
-        if warn:
-            result.setdefault("warnings", []).append(warn)
-        result["success"] = True
-        return result
+    if op in ("install", "remove"):
+        from vocabulary_lifecycle import set_package_active
+        return set_package_active(package_id, op == "install")
 
     return {"success": False, "error": "op 파라미터가 필요합니다. (list|info|install|remove|reload)"}
 

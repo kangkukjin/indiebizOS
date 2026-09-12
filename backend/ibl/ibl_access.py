@@ -653,6 +653,9 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
             kept = []
             for r in rows:
                 code = r[1] or ""
+                from ibl_registry import code_is_own
+                if not code_is_own(code):
+                    continue
                 # 제어문은 노드가 아니다. 파서의 예약어를 공유해야 if/repeat/def가
                 # 있는 관용구도 노드 제한 환경에서 소개된다(전체 6노드 허용도 동일).
                 nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - _FN_RESERVED_NAMES
@@ -850,7 +853,7 @@ def invalidate_nodes_cache():
         from node_registry import invalidate_node_cache
         invalidate_node_cache()
     except Exception as e:
-        print(f"[ibl_access] node_registry 캐시 무효화 실패(무시): {e}")
+        raise RuntimeError(f"node_registry 캐시 무효화 실패: {e}") from e
 
 
 def load_package_meta() -> dict:

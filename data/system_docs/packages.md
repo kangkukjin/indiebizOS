@@ -26,11 +26,17 @@ see_also: [architecture.md, ibl.md]
 - **installed/extensions/**: 백엔드 코어 모듈
 - **dev/tools/**: 개발 중인 패키지
 
-### 설치/제거 원리
-- **설치**: `not_installed/tools/` → `installed/tools/`로 폴더 이동
-- **제거**: `installed/tools/` → `not_installed/tools/`로 폴더 이동
+### 보유와 활성 (어휘 레고박스 1판)
 
----
+보유는 installed/tools와 not_installed/tools의 합집합이다. 두 폴더는 보관 위치이며
+최초 이관 이후 켜짐/꺼짐을 뜻하지 않는다. 사전집은 보유 전체, 실행 사전은 몸별
+`data/vocabulary/activation.json`으로 로드 시 거른다. 필수 공급자는
+`data/vocabulary_policy.yaml` 한 선언으로 보호한다.
+
+HTTP·조종실·self:package는 `vocabulary_lifecycle.set_package_active` 한 함수를 쓴다.
+사람이 깨우거나 잠재우면 원장과 캐시만 바뀐다. 폴더 이동·전체 빌드·코퍼스 삭제는 없다.
+IBL 호출은 사람에게 변경을 제안하며 직접 활성 선택을 바꿀 수 없다. 과거 삭제 진입점도
+기억과 파일을 보존하는 잠재우기로 수렴한다.
 
 ## 필수 파일 형식
 
@@ -210,14 +216,10 @@ search:
 
 ## 패키지 설치 — 완전한 등록 절차
 
-### UI를 통한 설치 (일반적인 경우)
-`POST /packages/{id}/install` API 또는 UI 도구 상자에서 설치하면 `package_manager.py`가 자동으로:
-1. 패키지 폴더를 `not_installed/` → `installed/`로 이동
-2. tool.json, handler.py 검증
-3. inventory.md 자동 업데이트
-4. (선택) `ibl_usage_generator`로 새 도구의 기본 용례를 RAG에 추가
+### 조종실에서 선택
 
-**설치가 어휘를 런타임에 자동 등록하지는 않는다 — 빌드가 등록한다.** 패키지가 자기 폴더에 `ibl_actions.yaml` 을 갖고 있으면(설치 패키지 대부분) `python3 scripts/build_ibl_nodes.py` 가 그 fragment 를 흡수해 `data/ibl_nodes.yaml`·`tool.json` 을 다시 만든다. 패키지에 묶이지 않는 낱말만 `data/ibl_nodes_src/<node>.yaml` 에 넣는다. 빌드 없이는 어휘가 살아나지 않고, `--check` 가 커밋 시점에 그 사실을 알려준다.
+보유 묶음의 스위치를 켜거나 끈다. 준비된 묶음의 선택에는 빌드·재시작이 없다.
+새 묶음 등록이나 정의 변경은 보유 사전집 갱신이 필요한 별개의 동작이다.
 
 ### 수동 설치 (패키지 폴더를 직접 생성한 경우)
 패키지 폴더를 `installed/tools/`에 직접 만들면 된다.
@@ -252,8 +254,11 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 - 패키지 레벨: tool.json에 `"guide_file": "가이드파일명.md"` 필드 추가
 - 시스템 레벨: `data/guide_db.json`에 항목 추가 + `data/guides/`에 파일 작성
 
-### 패키지 제거
-`POST /packages/{id}/uninstall`이 패키지 폴더를 `not_installed/`로 이동한다. 패키지 소유 어휘는 다음 빌드에서 설치 fragment 집합에서 빠져 중앙 레지스트리에서도 제거된다. 패키지 능력을 코어 `ibl_nodes_src`에 잘못 중복 등록했다면 그 줄은 자동으로 사라지지 않으므로 직접 정리한다. 해마 용례·건강 기록의 제거/후계어 이관은 `data/guides/action_removal.md`를 따른다.
+### 잠재우기
+
+POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공통 생명주기로
+활성 선택을 해제한다. 소개·실행용 회상·호출을 차단하고 파일·설정·용례·벡터를 보존한다.
+코드 업데이트 후 형제 모듈을 교체하는 경우의 기존 재시작 제약은 그대로다.
 
 ### 주의사항
 - **노드 추가 금지**: 기존 6개 노드(sense, self, limbs, others, engines, table)만 사용. 새 노드는 `data/ibl_nodes_src/meta.yaml`/`scripts/build_ibl_nodes.py`(NODE_ORDER) 변경 + 라우팅 코드 합의 후 별건 작업.

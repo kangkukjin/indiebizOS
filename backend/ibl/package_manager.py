@@ -235,7 +235,7 @@ class PackageManager:
             from tool_loader import clear_cache as _clear_tool_loader_cache
             _clear_tool_loader_cache()
         except Exception as e:
-            print(f"[PackageManager] tool_loader 캐시 무효화 실패 (무시): {e}")
+            raise RuntimeError(f"tool_loader 캐시 무효화 실패: {e}") from e
 
     # ============ 핵심: 폴더 스캔 ============
 
@@ -318,79 +318,20 @@ class PackageManager:
         return metadata
 
     def _scan_all_packages(self, use_cache: bool = True) -> List[Dict[str, Any]]:
-        """모든 도구 패키지 폴더 스캔 (not_installed + installed)
-
-        Args:
-            use_cache: 캐시 사용 여부 (기본 True)
-        """
-        import time
-
-        # 캐시가 유효하면 캐시 반환
-        if use_cache and self._is_cache_valid():
-            return PackageManager._packages_cache
-
+        """보유 전체. installed는 호환 필드이며 폴더 대신 활성 선택을 뜻한다."""
+        from vocabulary_state import inventory, is_active
         packages = []
-
-        # installed 폴더 스캔
-        installed_path = INSTALLED_PATH / "tools"
-        if installed_path.exists():
-            for pkg_dir in installed_path.iterdir():
-                if pkg_dir.is_dir() and not pkg_dir.name.startswith('.'):
-                    pkg_info = self._scan_package(pkg_dir)
-                    pkg_info["installed"] = True
-                    pkg_info["package_type"] = "tools"
-                    packages.append(pkg_info)
-
-        # not_installed 폴더 스캔
-        not_installed_path = NOT_INSTALLED_PATH / "tools"
-        if not_installed_path.exists():
-            for pkg_dir in not_installed_path.iterdir():
-                if pkg_dir.is_dir() and not pkg_dir.name.startswith('.'):
-                    pkg_info = self._scan_package(pkg_dir)
-                    pkg_info["installed"] = False
-                    pkg_info["package_type"] = "tools"
-                    packages.append(pkg_info)
-
-        # 캐시 업데이트
-        PackageManager._packages_cache = packages
-        PackageManager._cache_time = time.time()
-
+        for pid, entry in inventory().get("packages", {}).items():
+            info = self._scan_package(entry["path"])
+            info.update(installed=is_active(pid), active=is_active(pid), package_type="tools")
+            packages.append(info)
         return packages
 
-    # ============ 패키지 목록 API ============
-
     def list_available(self, package_type: str = None) -> List[Dict[str, Any]]:
-        """설치 가능한 도구 패키지 목록"""
-        # package_type 파라미터는 하위 호환성을 위해 무시
         return self._scan_all_packages()
 
     def list_installed(self, package_type: str = None) -> List[Dict[str, Any]]:
-        """설치된 도구 패키지 목록"""
-        packages = []
-        tools_path = INSTALLED_PATH / "tools"
-
-        if not tools_path.exists():
-            return packages
-
-        for pkg_dir in tools_path.iterdir():
-            if pkg_dir.is_dir() and not pkg_dir.name.startswith('.'):
-                pkg_info = self._scan_package(pkg_dir)
-                pkg_info["installed"] = True
-                pkg_info["package_type"] = "tools"
-
-                # 설치 정보 로드
-                install_info_path = pkg_dir / ".install_info.json"
-                if install_info_path.exists():
-                    try:
-                        with open(install_info_path, 'r', encoding='utf-8') as f:
-                            install_info = json.load(f)
-                            pkg_info["installed_at"] = install_info.get("installed_at")
-                    except:
-                        pass
-
-                packages.append(pkg_info)
-
-        return packages
+        return [p for p in self._scan_all_packages() if p["active"]]
 
     def get_package_info(self, package_id: str, package_type: str = None) -> Optional[Dict[str, Any]]:
         """패키지 정보 조회"""
@@ -400,14 +341,16 @@ class PackageManager:
         # 설치된 패키지
         if installed_path.exists():
             pkg_info = self._scan_package(installed_path)
-            pkg_info["installed"] = True
+            from vocabulary_state import is_active
+            pkg_info["installed"] = is_active(package_id)
             pkg_info["package_type"] = "tools"
             pkg_info["path"] = str(installed_path)
             return pkg_info
         # 미설치 패키지
         elif not_installed_path.exists():
             pkg_info = self._scan_package(not_installed_path)
-            pkg_info["installed"] = False
+            from vocabulary_state import is_active
+            pkg_info["installed"] = is_active(package_id)
             pkg_info["package_type"] = "tools"
             pkg_info["path"] = str(not_installed_path)
             return pkg_info
@@ -415,293 +358,24 @@ class PackageManager:
 
     # ============ 패키지 설치/제거 ============
 
-    def install_package(self, package_id: str, package_type: str = None, skip_validation: bool = False) -> Dict[str, Any]:
-        """도구 패키지 설치 (not_installed → installed로 이동)"""
-        src_path = NOT_INSTALLED_PATH / "tools" / package_id
-        dst_path = INSTALLED_PATH / "tools" / package_id
+    def install_package(self, package_id: str, package_type: str = None,
+                        skip_validation: bool = False, *, authority=None) -> Dict[str, Any]:
+        """보유 묶음을 깨우는 호환 진입점. 파일 이동·AI 설치·코퍼스 재생성 없음."""
+        from vocabulary_lifecycle import set_package_active
+        return set_package_active(package_id, True, authority=authority)
 
-        if not src_path.exists():
-            raise ValueError(f"패키지를 찾을 수 없습니다: {package_id}")
+    async def install_package_with_ai(self, package_id: str, api_key: str,
+                                      provider: str = "google", model: str = None):
+        """옛 자동 설치는 사람의 어휘 선택을 대신하지 않는다."""
+        return self.install_package(package_id)
 
-        if dst_path.exists():
-            raise ValueError(f"이미 설치된 패키지입니다: {package_id}")
-
-        # 설치 전 검증
-        validation = None
-        if not skip_validation:
-            validation = validate_tool_package(src_path)
-            if not validation["valid"]:
-                raise ValueError(f"패키지 검증 실패: {'; '.join(validation['errors'])}")
-
-        # 이동 (복사가 아닌 이동)
-        shutil.move(str(src_path), str(dst_path))
-
-        # 설치 기록 (검증 결과 포함)
-        install_info = {
-            "installed_at": datetime.now().isoformat(),
-            "ai_installed": False,
-            "validation": validation
-        }
-        with open(dst_path / ".install_info.json", 'w', encoding='utf-8') as f:
-            json.dump(install_info, f, ensure_ascii=False, indent=2)
-        # 쓰기 관문 원장 — 패키지 설치 사건(관측, 실패 무해)
-        try:
-            from write_ledger import log_write
-            log_write(dst_path / ".install_info.json", event="install", gate="package_manager")
-        except Exception:
-            pass
-
-        # 캐시 무효화
-        self.invalidate_cache()
-
-        # IBL 용례 자동 생성 (새 액션의 기본 용례를 RAG 사전에 추가)
-        try:
-            from ibl_usage_generator import generate_for_package
-            generate_for_package(package_id)
-        except Exception as e:
-            print(f"[PackageManager] IBL 용례 생성 실패 (무시): {e}")
-
-        # inventory.md 자동 업데이트
-        self._update_inventory()
-
-        pkg_info = self._scan_package(dst_path)
-        result = {
-            "status": "installed",
-            "package": pkg_info,
-            "message": f"'{pkg_info.get('name', package_id)}' 패키지가 설치되었습니다."
-        }
-
-        # 경고가 있으면 추가
-        if validation and validation.get("warnings"):
-            result["warnings"] = validation["warnings"]
-
-        return result
-
-    async def install_package_with_ai(self, package_id: str, api_key: str, provider: str = "google", model: str = None) -> Dict[str, Any]:
-        """
-        AI 기반 도구 패키지 설치
-
-        1. README.md 분석하여 설치 요구사항 파악
-        2. 필요한 라이브러리 설치 (pip install, npm install 등)
-        3. handler.py가 없으면 AI가 생성
-        4. tool.json이 없으면 AI가 생성
-        5. 설치 완료 후 검증
-        """
-        import subprocess
-
-        src_path = NOT_INSTALLED_PATH / "tools" / package_id
-        dst_path = INSTALLED_PATH / "tools" / package_id
-
-        if not src_path.exists():
-            raise ValueError(f"패키지를 찾을 수 없습니다: {package_id}")
-
-        if dst_path.exists():
-            raise ValueError(f"이미 설치된 패키지입니다: {package_id}")
-
-        # 1. 패키지 정보 수집
-        readme_content = ""
-        readme_path = src_path / "README.md"
-        if readme_path.exists():
-            readme_content = readme_path.read_text(encoding='utf-8')
-
-        tool_json_exists = (src_path / "tool.json").exists()
-        handler_exists = (src_path / "handler.py").exists()
-
-        files_info = {}
-        for f in src_path.iterdir():
-            if f.is_file() and not f.name.startswith('.'):
-                try:
-                    content = f.read_text(encoding='utf-8')
-                    if len(content) > 3000:
-                        content = content[:3000] + "\n... (truncated)"
-                    files_info[f.name] = content
-                except:
-                    files_info[f.name] = "(binary file)"
-
-        # 2. AI에게 설치 계획 요청
-        install_prompt = f"""IndieBiz OS 도구 패키지 '{package_id}'를 설치하려고 합니다.
-
-패키지 정보:
-- README.md: {readme_content or '(없음)'}
-- tool.json 존재: {tool_json_exists}
-- handler.py 존재: {handler_exists}
-
-파일 내용:
-{chr(10).join([f'=== {fname} ==={chr(10)}{content}' for fname, content in files_info.items()])}
-
----
-
-이 패키지를 완전히 작동하도록 설치하려면 무엇이 필요한지 분석해주세요.
-
-다음 JSON 형식으로 응답해주세요:
-{{
-    "analysis": "패키지 분석 결과",
-    "pip_packages": ["설치할 pip 패키지 목록"],
-    "npm_packages": ["설치할 npm 패키지 목록"],
-    "system_requirements": ["필요한 시스템 요구사항 (예: node.js 설치 필요)"],
-    "generate_handler": true/false,
-    "handler_code": "handler.py가 없으면 생성할 코드 (execute 함수 포함)",
-    "generate_tool_json": true/false,
-    "tool_json": {{"name": "...", "description": "...", "input_schema": {{...}}}},
-    "installation_steps": ["설치 단계 설명"],
-    "warnings": ["주의사항"]
-}}"""
-
-        try:
-            if provider in ["google", "gemini"]:
-                ai_response = await self._analyze_with_gemini(install_prompt, api_key, model)
-            elif provider == "anthropic":
-                ai_response = await self._analyze_with_anthropic(install_prompt, api_key, model)
-            elif provider in ["openai", "gpt"]:
-                ai_response = await self._analyze_with_openai(install_prompt, api_key, model)
-            else:
-                raise ValueError(f"지원하지 않는 AI 프로바이더: {provider}")
-
-            # JSON 파싱
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', ai_response)
-            if not json_match:
-                raise ValueError("AI 응답을 파싱할 수 없습니다")
-
-            install_plan = json.loads(json_match.group())
-
-        except Exception as e:
-            raise ValueError(f"AI 분석 실패: {str(e)}")
-
-        # 3. 파일 복사
-        await asyncio.to_thread(shutil.copytree, src_path, dst_path)  # 패키지 복사 — 루프 밖에서
-
-        installation_log = []
-
-        # 4. pip 패키지 설치 (번들된 Python 사용)
-        pip_packages = install_plan.get("pip_packages", [])
-        if pip_packages:
-            installation_log.append(f"pip 패키지 설치: {', '.join(pip_packages)}")
-            try:
-                import asyncio
-                python_cmd = get_python_cmd()
-                # ★스레드로 내린다 — pip install 은 timeout 120 이라, 이벤트 루프에서
-                # 직접 돌리면 최대 2분간 서버 전체가 선다(이 프로세스가 API·스케줄러·
-                # 폴러를 다 이고 있고, 자기 자신을 부르는 경로도 있어 자기교착까지 난다).
-                await asyncio.to_thread(
-                    lambda: subprocess.run(
-                        [python_cmd, "-m", "pip", "install"] + pip_packages,
-                        capture_output=True,
-                        text=True,
-                        timeout=120
-                    )
-                )
-            except Exception as e:
-                installation_log.append(f"pip 설치 경고: {str(e)}")
-
-        # 5. handler.py 생성 (필요시)
-        if install_plan.get("generate_handler") and install_plan.get("handler_code"):
-            handler_path = dst_path / "handler.py"
-            if not handler_path.exists():
-                handler_path.write_text(install_plan["handler_code"], encoding='utf-8')
-                installation_log.append("handler.py 생성됨")
-
-        # 6. tool.json 생성 (필요시)
-        if install_plan.get("generate_tool_json") and install_plan.get("tool_json"):
-            tool_json_path = dst_path / "tool.json"
-            if not tool_json_path.exists():
-                with open(tool_json_path, 'w', encoding='utf-8') as f:
-                    json.dump(install_plan["tool_json"], f, ensure_ascii=False, indent=2)
-                installation_log.append("tool.json 생성됨")
-
-        # 7. 설치 후 검증
-        validation = validate_tool_package(dst_path)
-        if not validation["valid"]:
-            # 검증 실패 시 설치 롤백
-            await asyncio.to_thread(shutil.rmtree, dst_path)
-            raise ValueError(f"패키지 검증 실패 (롤백됨): {'; '.join(validation['errors'])}")
-
-        if validation.get("warnings"):
-            installation_log.extend([f"경고: {w}" for w in validation["warnings"]])
-
-        # 8. 설치 기록 저장
-        install_info = {
-            "installed_at": datetime.now().isoformat(),
-            "from": str(src_path),
-            "ai_installed": True,
-            "provider": provider,
-            "pip_packages": pip_packages,
-            "installation_log": installation_log,
-            "ai_analysis": install_plan.get("analysis", ""),
-            "validation": validation
-        }
-        with open(dst_path / ".install_info.json", 'w', encoding='utf-8') as f:
-            json.dump(install_info, f, ensure_ascii=False, indent=2)
-        # 쓰기 관문 원장 — AI 패키지 설치 사건(관측, 실패 무해)
-        try:
-            from write_ledger import log_write
-            log_write(dst_path / ".install_info.json", event="install", gate="package_manager")
-        except Exception:
-            pass
-
-        # inventory.md 업데이트
-        self._update_inventory()
-
-        pkg_info = self._scan_package(dst_path)
-        return {
-            "status": "installed",
-            "package": pkg_info,
-            "ai_installed": True,
-            "installation_log": installation_log,
-            "warnings": install_plan.get("warnings", []) + validation.get("warnings", []),
-            "message": f"'{pkg_info.get('name', package_id)}' 패키지가 AI에 의해 설치되었습니다."
-        }
-
-    def uninstall_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
-        """도구 패키지 제거 (installed → not_installed로 이동)"""
+    def uninstall_package(self, package_id: str, package_type: str = None,
+                          *, authority=None) -> Dict[str, Any]:
+        """잠재우기. 파일·설정·용례·벡터와 건강 기록을 보존한다."""
         from vocabulary_policy import require_optional
         require_optional(package_id)
-        src_path = INSTALLED_PATH / "tools" / package_id
-        dst_path = NOT_INSTALLED_PATH / "tools" / package_id
-
-        if not src_path.exists():
-            raise ValueError(f"설치되지 않은 패키지입니다: {package_id}")
-
-        # 이름 먼저 가져오기
-        pkg_info = self._scan_package(src_path)
-        pkg_name = pkg_info.get("name", package_id)
-
-        # 설치 정보 파일 제거
-        install_info_path = src_path / ".install_info.json"
-        if install_info_path.exists():
-            install_info_path.unlink()
-
-        # 이동 (삭제가 아닌 이동)
-        shutil.move(str(src_path), str(dst_path))
-
-        # 캐시 무효화
-        self.invalidate_cache()
-
-        # 어휘 대칭 정리 (install_package 의 generate_for_package 대칭):
-        # 설치가 심은 해마 용례를 회수(RAG 유령 방지)하고 world_pulse 건강기록의
-        # 유령을 지운다. 폴더는 방금 not_installed 로 이동했으므로 거기서 액션을 읽는다.
-        cleanup = {}
-        try:
-            from ibl_usage_generator import remove_for_package
-            hip = remove_for_package(package_id)
-            bare = [k.split(":", 1)[-1] for k in hip.get("actions", [])]
-            from pulse_db import purge_action_records
-            health = purge_action_records(bare)
-            cleanup = {"hippocampus": hip.get("removed", 0), "health_records": health}
-        except Exception as e:
-            print(f"[PackageManager] 어휘 대칭 정리 실패 (무시): {e}")
-
-        # inventory.md 자동 업데이트
-        self._update_inventory()
-
-        return {
-            "status": "uninstalled",
-            "package_id": package_id,
-            "cleanup": cleanup,
-            "message": f"'{pkg_name}' 패키지가 제거되었습니다."
-        }
-
-    # ============ inventory.md 자동 생성 ============
+        from vocabulary_lifecycle import set_package_active
+        return set_package_active(package_id, False, authority=authority)
 
     def _update_inventory(self):
         """inventory.md 전체 재생성"""
@@ -1050,50 +724,10 @@ README 존재: {basic_analysis['has_readme']}
             "message": f"'{metadata['name']}' 패키지가 등록되었습니다."
         }
 
-    def remove_package(self, package_id: str, package_type: str = None) -> Dict[str, Any]:
-        """패키지 제거 (available에서 삭제)"""
-        from vocabulary_policy import require_optional
-        require_optional(package_id)
-        available_path = NOT_INSTALLED_PATH / "tools" / package_id
-        installed_path = INSTALLED_PATH / "tools" / package_id
-
-        if not available_path.exists():
-            raise ValueError(f"등록되지 않은 패키지입니다: {package_id}")
-
-        pkg_info = self._scan_package(available_path)
-        pkg_name = pkg_info.get("name", package_id)
-
-        # 어휘 대칭 정리 — rmtree 전에 (ibl_actions.yaml 을 읽어야 하므로).
-        # 하드 삭제라 되돌릴 수 없으니 해마 용례·건강기록도 함께 회수한다.
-        cleanup = {}
-        try:
-            from ibl_usage_generator import remove_for_package
-            hip = remove_for_package(package_id)
-            bare = [k.split(":", 1)[-1] for k in hip.get("actions", [])]
-            from pulse_db import purge_action_records
-            health = purge_action_records(bare)
-            cleanup = {"hippocampus": hip.get("removed", 0), "health_records": health}
-        except Exception as e:
-            print(f"[PackageManager] 어휘 대칭 정리 실패 (무시): {e}")
-
-        # 설치된 상태면 먼저 제거
-        if installed_path.exists():
-            shutil.rmtree(installed_path)
-
-        # available에서 삭제
-        shutil.rmtree(available_path)
-
-        # inventory.md 업데이트
-        self._update_inventory()
-
-        return {
-            "status": "removed",
-            "package_id": package_id,
-            "cleanup": cleanup,
-            "message": f"'{pkg_name}' 패키지가 목록에서 제거되었습니다."
-        }
-
-    # ============ 기타 유틸리티 ============
+    def remove_package(self, package_id: str, package_type: str = None,
+                       *, authority=None) -> Dict[str, Any]:
+        """옛 삭제 진입점도 잠재우기로 수렴한다. 개인 자료의 삭제는 별도 작업이다."""
+        return self.uninstall_package(package_id, authority=authority)
 
     def get_package_files(self, package_id: str, package_type: str = None) -> List[str]:
         """패키지 내 파일 목록"""

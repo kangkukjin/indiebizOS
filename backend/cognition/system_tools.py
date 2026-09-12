@@ -964,6 +964,8 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
     except Exception:
         pass
     try:
+        from vocabulary_state import require_tool_active
+        require_tool_active(tool_name)
         # 승인 요청 도구 (가장 먼저 처리)
         if tool_name == "request_user_approval":
             return execute_request_user_approval(tool_input, project_path)

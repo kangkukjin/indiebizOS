@@ -8,7 +8,7 @@ AI 기반 폴더 분석 및 README 자동 생성 지원
 
 import json
 from pathlib import Path
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 
@@ -237,58 +237,21 @@ class AIInstallRequest(BaseModel):
 
 
 @router.post("/packages/{package_id}/install")
-async def install_package(package_id: str, request: AIInstallRequest = None):
-    """
-    도구 패키지 설치
-
-    - use_ai=True (기본값): AI가 README 분석, 필요한 라이브러리 설치, handler.py/tool.json 자동 생성
-    - use_ai=False: 단순 파일 복사만
-    """
+def install_package(package_id: str, http_request: Request, request: AIInstallRequest = None):
+    from api_vocabulary import human_authority
     try:
-        use_ai = request.use_ai if request else True
-
-        if use_ai:
-            # AI 기반 설치
-            from api_system_ai import load_system_ai_config
-            config = load_system_ai_config()
-
-            if not config.get("enabled", True):
-                # AI 비활성화면 단순 설치
-                result = package_manager.install_package(package_id)
-            else:
-                api_key = config.get("apiKey", "")
-                provider = config.get("provider", "google")
-                # ★키 불요 프로바이더(claude_code·ollama)는 키가 없어도 AI 설치가 가능하다.
-                from model_resolver import provider_needs_api_key
-                if not api_key and provider_needs_api_key(provider):
-                    # API 키 없으면 단순 설치
-                    result = package_manager.install_package(package_id)
-                else:
-                    model = config.get("model")
-                    result = await package_manager.install_package_with_ai(
-                        package_id, api_key, provider, model
-                    )
-        else:
-            # 단순 복사
-            result = package_manager.install_package(package_id)
-
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return package_manager.install_package(package_id, authority=human_authority(http_request))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/packages/{package_id}/uninstall")
-async def uninstall_package(package_id: str, request: InstallRequest = None):
-    """도구 패키지 제거"""
+def uninstall_package(package_id: str, http_request: Request, request: InstallRequest = None):
+    from api_vocabulary import human_authority
     try:
-        result = package_manager.uninstall_package(package_id)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return package_manager.uninstall_package(package_id, authority=human_authority(http_request))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # ============ 폴더 분석 및 패키지 등록 API ============
@@ -354,15 +317,12 @@ async def register_folder(request: RegisterFolderRequest):
 
 
 @router.delete("/packages/{package_id}/remove")
-async def remove_package(package_id: str, request: RemovePackageRequest = None):
-    """패키지를 목록에서 제거 (available에서 삭제)"""
+def remove_package(package_id: str, http_request: Request, request: RemovePackageRequest = None):
+    from api_vocabulary import human_authority
     try:
-        result = package_manager.remove_package(package_id)
-        return result
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        return package_manager.remove_package(package_id, authority=human_authority(http_request))
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 # ============ 패키지 공개/검색 API (Nostr 기반) ============
@@ -816,3 +776,7 @@ async def reject_install(request: LibApprovalRequest):
     if entry is None:
         raise HTTPException(status_code=404, detail=f"'{request.package}' 는 대기열·승인 목록에 없습니다.")
     return {"success": True, "removed": entry}
+
+
+from api_vocabulary import router as vocabulary_router
+router.include_router(vocabulary_router)

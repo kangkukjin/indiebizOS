@@ -49,6 +49,8 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str) -> Any:
     Returns:
         API 응답 (dict, list, str 등)
     """
+    from vocabulary_state import require_tool_active
+    require_tool_active(tool_name)
     reg = _load_registry()
     tool_config = reg.get("tools", {}).get(tool_name)
     if not tool_config:

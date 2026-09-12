@@ -106,10 +106,9 @@ def in_locale(m: dict, locale: str) -> bool:
 
 def _tool_location(pkg: str):
     """pkg 가 현재 installed / not_installed / 없음 중 어디인지."""
-    if (ROOT / INSTALLED_TOOLS / pkg).is_dir():
-        return "installed"
-    if (ROOT / NOT_INSTALLED_TOOLS / pkg).is_dir():
-        return "not_installed"
+    from vocabulary_state import inventory, is_active
+    if pkg in inventory(ROOT)["packages"]:
+        return "installed" if is_active(pkg, ROOT) else "not_installed"
     return None
 
 
@@ -124,7 +123,7 @@ def plan_moves(meta: dict, edition: str, locale: str):
         if pkg in _PROTECTED:
             desired = True  # 코어 도구는 항상 설치 유지
         parked_by_us = (ROOT / NOT_INSTALLED_TOOLS / pkg / _PARK_MARKER).exists()
-        if desired and loc == "not_installed" and parked_by_us:
+        if desired and loc == "not_installed":
             # 우리가 내보낸 팩만 되돌린다(출하 not_installed 큐레이션은 보존).
             to_install.append(pkg)
         elif not desired and loc == "installed":
@@ -135,27 +134,18 @@ def plan_moves(meta: dict, edition: str, locale: str):
 
 
 def _move(pkg: str, src_root: str, dst_root: str, park: bool):
-    src = ROOT / src_root / pkg
-    dst = ROOT / dst_root / pkg
-    dst.parent.mkdir(parents=True, exist_ok=True)
-    shutil.move(str(src), str(dst))
-    marker = dst / _PARK_MARKER
-    if park:
-        marker.write_text("moved to not_installed by apply_edition\n", encoding="utf-8")
-    elif marker.exists():
-        marker.unlink()  # 되돌릴 때 마커 제거
+    """호환 진입점: 폴더를 옮기지 않고 공통 생명주기로 선택을 바꾼다."""
+    from boot_common import wire_local_subsystems
+    from vocabulary_lifecycle import set_package_active, HUMAN_AUTHORITY
+    wire_local_subsystems()
+    result = set_package_active(pkg, not park, authority=HUMAN_AUTHORITY)
+    if not result.get("success"):
+        raise RuntimeError(result.get("message", "어휘 선택 변경 실패"))
 
 
 def rebuild():
-    """build_ibl_nodes.py 재실행 — 생성물 동기화. 실패 시 예외."""
-    proc = subprocess.run(
-        [sys.executable, "scripts/build_ibl_nodes.py"],
-        cwd=str(ROOT), capture_output=True, text=True,
-    )
-    sys.stdout.write(proc.stdout)
-    if proc.returncode != 0:
-        sys.stderr.write(proc.stderr)
-        raise SystemExit("build_ibl_nodes.py 재빌드 실패 (exit=%d)" % proc.returncode)
+    """스위치는 빌드하지 않는다. 공통 생명주기가 캐시까지 갱신했다."""
+    return None
 
 
 def cmd_list(meta: dict):

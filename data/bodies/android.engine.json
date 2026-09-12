@@ -27,6 +27,7 @@
     "base/reload_gate",
     "base/repeat_guard",
     "base/restart_protocol",
+    "base/result_read_contract",
     "base/runtime_utils",
     "base/runtime_work",
     "base/runtime_worker_adapters",
@@ -334,8 +335,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 323,
-    "engine": 297,
+    "total": 324,
+    "engine": 298,
     "blocklist": 26
   }
 }

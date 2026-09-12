@@ -2,6 +2,8 @@
 import json
 from hashlib import sha256
 
+from result_read_contract import DEFAULT_LIMIT, MAX_LIMIT, MAX_PATH_DEPTH
+
 
 def display_policy():
     from ibl_envelope import PREVIEW_DEFAULT
@@ -33,14 +35,14 @@ def evidence_store():
 
 
 def read_result(request):
-    offset, limit = int(request.get("offset", 0)), int(request.get("limit", 12000))
-    if offset < 0 or not 1 <= limit <= 24000:
-        raise ValueError("offset >= 0, limit 1~24000이 필요합니다")
+    offset, limit = int(request.get("offset", 0)), int(request.get("limit", DEFAULT_LIMIT))
+    if offset < 0 or not 1 <= limit <= MAX_LIMIT:
+        raise ValueError(f"offset >= 0, limit 1~{MAX_LIMIT}이 필요합니다")
     path = request.get("path")
     if path is None:
         page = evidence_store().read_evidence(request.get("id"), offset, limit)
     else:
-        if (not isinstance(path, list) or len(path) > 16 or
+        if (not isinstance(path, list) or len(path) > MAX_PATH_DEPTH or
                 any(type(p) not in (str, int) for p in path)):
             raise ValueError("path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 16단계)")
         page = evidence_store().read_evidence(request.get("id"), 0, None)
@@ -58,6 +60,9 @@ def read_result(request):
         page.update(source_chars=page["chars"], chars=len(text), path=path,
                     offset=offset, text=text[offset:offset + limit])
     page["next_offset"] = offset + len(page["text"]) if offset + len(page["text"]) < page["chars"] else None
+    page["next_read"] = ({"id": request.get("id"), "offset": page["next_offset"],
+                          "limit": limit, **({"path": path} if path is not None else {})}
+                         if page["next_offset"] is not None else None)
     from episode_logger import record_trajectory_event
     record_trajectory_event("context.result_read", {
         "evidence_id": request.get("id"), "offset": offset, "chars": len(page["text"]),
@@ -73,6 +78,29 @@ def _decode_json(value):
         except ValueError:
             pass
     return value
+
+
+def _read_reference(ref, result):
+    """표시 사본이 아닌 원 봉투에서 조회 가능한 큰 필드를 찾는다(최대 6개)."""
+    prefix = ["final_result"] if "final_result" in result else []
+    value = _decode_json(result["final_result"] if prefix else result)
+    paths = []
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if isinstance(item, (str, list, dict)):
+                chars = len(json.dumps(_decode_json(item), ensure_ascii=False, indent=2, default=str))
+                if chars >= 400:
+                    paths.append({"path": prefix + [key], "chars": chars})
+    paths.sort(key=lambda entry: entry["chars"], reverse=True)
+    paths = paths[:6]
+    return {
+        **{k: ref[k] for k in ("id", "chars")},
+        "max_limit": MAX_LIMIT,
+        "paths": paths,
+        "read_args": {"id": ref["id"], "offset": 0, "limit": DEFAULT_LIMIT,
+                      "path": paths[0]["path"] if paths else prefix},
+        "read": 'execute_ibl(code="", read_result=result_ref.read_args); 다음 페이지는 next_read 그대로. 원래 code를 재실행하지 마세요',
+    }
 
 
 def _compact_currency(value, metadata_chars):
@@ -180,10 +208,9 @@ def project_result(result, verbose=False):
     if out == result and len(raw) < policy["min_chars"]:
         return out
     out = dict(out)
-    out["result_ref"] = {k: ref[k] for k in ("id", "chars")}
-    out["result_ref"]["read"] = 'execute_ibl(code="", read_result={id,offset,limit,path?}); 원래 code를 재실행하지 마세요'
+    out["result_ref"] = _read_reference(ref, result)
     out["_hint"] = ('파이프 최종 값은 final_result, 단일 결과는 이 객체입니다. 생략된 값은 result_ref로 조회. '
-                    'path:["final_result","items"] 또는 ["items"]로 해당 값만 읽을 수 있습니다. '
+                    'result_ref.paths는 실제 원문 경로이며 read_args로 바로 읽을 수 있습니다. '
                     '같은 턴 $변수는 원자료를 보존하므로 선택·필터에 재사용하세요.')
     # 문자열 JSON 속 중복도 정규화한 최종 값은 미리보기기가 소유한다.
     from episode_logger import record_trajectory_event

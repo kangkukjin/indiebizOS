@@ -153,7 +153,8 @@ def _src_from_envelope(prev, label="파이프 본문"):
         # 원문 파일이 없으면 실패한다. preview를 전문처럼 보내면 품질 유실이 숨는다.
         try:
             from ingest_engine import extract_source
-            _fsrc = extract_source(path=str(prev["file_path"]), text=None)
+            from runtime_utils import expand_body_path
+            _fsrc = extract_source(path=expand_body_path(prev["file_path"]), text=None)
         except Exception:
             _fsrc = {"ok": False}
         if not _fsrc.get("ok"):
@@ -280,7 +281,8 @@ def _struct(tool_input: dict) -> str:
     except ValueError as exc:
         return _fail(str(exc))
 
-    file_path = str(tool_input.get("file") or "").strip()
+    from runtime_utils import expand_body_path
+    file_path = expand_body_path(str(tool_input.get("file") or "").strip())
     text = str(tool_input.get("text") or "").strip()
     # known(이미 있는 기록 — 같은 것은 뽑지 않는다)·instruction(추가 지시): 2026-09-06 사용자 판정 "필요한 것은 없애지
     # 않는다" — 후보 재현율은 두고, 아는 것을 다시 뽑는 출력만 줄인다(ep2897: 기존 팁 520건이 있는데 72건을 뽑아 28건 남김).

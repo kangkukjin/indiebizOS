@@ -8,13 +8,17 @@ import os
 import re
 import sys
 import urllib.request
-from typing import Optional, List
+from typing import Annotated, Optional, List
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "backend"))
 import boot_paths  # noqa: E402,F401
 
 import anyio
 from mcp.server.fastmcp import FastMCP, Context
+from pydantic import Field
+from result_read_contract import read_result_schema
+
+ResultRead = Annotated[dict, Field(json_schema_extra=read_result_schema())]
 
 mcp = FastMCP("indiebiz")
 BASE = os.environ.get("INDIEBIZOS_BACKEND_URL", "http://localhost:8765")
@@ -279,7 +283,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       wait: float = 0,
                       check: bool = False,
                       describe: Optional[List[str]] = None,
-                      read_result: Optional[dict] = None,
+                      read_result: Optional[ResultRead] = None,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
@@ -305,7 +309,9 @@ async def execute_ibl(code: str, project_path: str = "",
         files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: 먼저 임시 파일에
         쓰고 여기에 경로만 싣는다.
     describe: code를 비우고 ["node:action"]으로 계약 조회(1~6개, 실행 없음).
-    read_result: code를 비우고 {id,offset,limit,path?}로 기존 원문 회수. path는 키/인덱스 배열(예 ["final_result","items"]), 중첩 JSON을 해제한 값의 문자 페이지. 생략하면 원 봉투(재실행 없음).
+    read_result: code를 비우고 result_ref.read_args를 그대로 넣어 기존 원문 회수.
+        limit는 문자 수 1~24000(기본 12000), offset은 0 이상. 다음 페이지는 next_read 그대로.
+        result_ref.paths에 실제 본문 경로가 있다. path 생략은 원 봉투 전체(재실행 없음).
     recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
         (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
         기록 없음이면 만료(24h)/미탑재를 정직하게 알린다(F51-1: 표면 대기가 끊겨도

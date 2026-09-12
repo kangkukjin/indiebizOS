@@ -645,7 +645,11 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
 표시를 바꾸지 않던 verbose 옵션을 노출하지 않으며, 옛 원격 호출의 추가 인자는 무시한다. 전문은 같은 턴의 `result_ref.id`를
 `execute_ibl(code:"", read_result:{id,offset,limit,path?})`로 읽는다. path는 키/배열 인덱스의
 목록(예 `["final_result","items"]`)이며 중첩 JSON 문자열을 해제한 값에 문자 페이지를 적용한다.
-생략하면 원 봉투 그대로다. `_model_omitted`는 items 옆 큰 보조 원자료를 모델 표시에서만 생략했다는 표식이다. 입력 계약은
+생략하면 원 봉투 그대로다. `result_ref.read_args`를 그대로 넣으면 실제 큰 본문 필드부터
+읽으며, `result_ref.paths`는 원문에서 확인한 큰 직접 필드 경로(최대 6개)다. `limit`는
+문자 수 1~24000(기본 12000), `offset`은 0 이상이다. 다음 페이지는 응답의 `next_read`를
+그대로 넣는다(마지막은 null, 기존 `next_offset`도 유지). 본문 키를 추측하거나 같은 코드를
+재실행할 필요가 없다. `_model_omitted`는 items 옆 큰 보조 원자료를 모델 표시에서만 생략했다는 표식이다. 입력 계약은
 `execute_ibl(code:"", describe:["node:action"])`으로 조회한다. 둘 다 새 실행을 만들지 않는다.
 앱·프로그램은 원 계약을 받으며, 전체 데이터와 턴 변수는 표시 축약과 별도로 보존한다.
 최종 값까지 너무 크면 JSON을 잘라 보내지 않고 `_spilled/ref`로 저장 결과를

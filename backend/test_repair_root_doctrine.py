@@ -69,6 +69,8 @@ def test_d4_prompt_reloads_on_mtime_change(tmp_path):
     agent._prompt = role.read_text(encoding="utf-8")
     agent._prompt_path = role
     agent._prompt_mtime = ConsciousnessAgent._file_mtime(role)
+    from vocabulary_state import revision
+    agent._vocabulary_revision = revision()
 
     agent._reload_prompt_if_changed()
     assert agent._prompt == "옛 교리"            # 무변경이면 다시 읽지 않는다

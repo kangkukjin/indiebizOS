@@ -165,6 +165,47 @@ class CognitivePipelineMixin:
     차이는 self.config['_is_system_ai'] 플래그와 파라미터로 흡수한다(별도 집 없음).
     """
 
+    def _refresh_execution_prompt(
+        self, message, consciousness_output=None, execution_memory="", reflex_hint=None,
+        *, extra_role=None, allowed_set=None,
+    ):
+        """상주 러너의 초기 사전을 재사용하지 않고 이 턴의 활성 사전을 모델에 전달한다.
+
+        안정/가변 분리는 유지한다. 같은 활성 집합이면 같은 prefix이며, 저장고 이동은
+        다음 턴부터 소개 분량을 줄인다. 턴 사유 AI/provider만 갱신해 진행 중인 턴은 보존한다.
+        """
+        if self.config.get("_is_system_ai"):
+            role = self._load_role()
+            memory = execution_memory
+            if reflex_hint:
+                memory = (f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}"
+                          if execution_memory else f"[Reflex 매칭] {reflex_hint}")
+            stable, dynamic = self._build_system_ai_prompt_split(
+                role, consciousness_output, memory,
+                extra_role=extra_role, allowed_set=allowed_set,
+            )
+        else:
+            name = self.config.get("name", "에이전트")
+            role_file = self.project_path / f"agent_{name}_role.txt"
+            role = role_file.read_text(encoding="utf-8") if role_file.exists() else ""
+            memory = execution_memory or ""
+            if reflex_hint and not consciousness_output:
+                memory += (
+                    '\n\n<reflex_hint note="고확신 매칭된 IBL 패턴입니다. '
+                    '이 코드를 우선적으로 사용하세요.">'
+                    f"\n{reflex_hint}\n</reflex_hint>"
+                )
+            stable, dynamic = self._build_system_prompt_split(
+                role, consciousness_output, memory,
+            )
+        self.ai.system_prompt = stable
+        if self.ai._provider:
+            self.ai._provider.system_prompt = stable
+        if consciousness_output:
+            from prompt_builder import compile_user_command
+            message = compile_user_command(message, consciousness_output)
+        return f"{dynamic}\n\n{message}" if dynamic else message
+
     # ── 턴 사유 AI 뷰 (2026-08-31) ────────────────────────────────────────────
     # ★러너는 상주 객체다. 시스템 AI 러너는 **싱글턴**이라 채팅 턴·위임 턴·스케줄러
     # 턴이 같은 self.ai / self.ai._provider 를 공유한다. 그런데 파이프라인은 그 공유
@@ -508,58 +549,11 @@ class CognitivePipelineMixin:
         except Exception as _ce:
             print(f"[인지] 작업전 공개(cognition) 생성 실패 (무시): {_ce}")
 
-        # 4. 프롬프트 갱신 — 안정/가변 분리 (캐시 prefix 보존) + 사용자 명령 융합
-        augmented_message = message
-        if is_system_ai:
-            role = self._load_role()
-            if consciousness_output or execution_memory or reflex_hint or extra_role:
-                _exec_mem = execution_memory
-                if reflex_hint:
-                    _exec_mem = (f"{execution_memory}\n\n[Reflex 매칭] {reflex_hint}"
-                                 if execution_memory else f"[Reflex 매칭] {reflex_hint}")
-                stable_prompt, dynamic_context = self._build_system_ai_prompt_split(
-                    role, consciousness_output, _exec_mem,
-                    extra_role=extra_role, allowed_set=allowed_set
-                )
-                self.ai.system_prompt = stable_prompt
-                if self.ai._provider:
-                    self.ai._provider.system_prompt = stable_prompt
-                if consciousness_output:
-                    from prompt_builder import compile_user_command
-                    _fused = compile_user_command(message, consciousness_output)
-                    augmented_message = f"{dynamic_context}\n\n{_fused}" if dynamic_context else _fused
-                elif dynamic_context:
-                    augmented_message = f"{dynamic_context}\n\n{message}"
-        else:
-            if consciousness_output:
-                role_file = self.project_path / f"agent_{agent_name}_role.txt"
-                role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                stable_prompt, dynamic_context = self._build_system_prompt_split(
-                    role, consciousness_output, execution_memory
-                )
-                self.ai.system_prompt = stable_prompt
-                if self.ai._provider:
-                    self.ai._provider.system_prompt = stable_prompt
-                from prompt_builder import compile_user_command
-                fused_command = compile_user_command(message, consciousness_output)
-                augmented_message = f"{dynamic_context}\n\n{fused_command}" if dynamic_context else fused_command
-            elif execution_memory or reflex_hint:
-                # EXECUTE 경로: 실행기억(+reflex 힌트)만 가변 컨텍스트로 반영
-                _exec_mem = execution_memory or ""
-                if reflex_hint:
-                    _exec_mem += (
-                        f"\n\n<reflex_hint note=\"고확신 매칭된 IBL 패턴입니다. "
-                        f"이 코드를 우선적으로 사용하세요.\">"
-                        f"\n{reflex_hint}\n</reflex_hint>"
-                    )
-                role_file = self.project_path / f"agent_{agent_name}_role.txt"
-                role = role_file.read_text(encoding='utf-8') if role_file.exists() else ""
-                stable_prompt, dynamic_context = self._build_system_prompt_split(role, None, _exec_mem)
-                self.ai.system_prompt = stable_prompt
-                if self.ai._provider:
-                    self.ai._provider.system_prompt = stable_prompt
-                if dynamic_context:
-                    augmented_message = f"{dynamic_context}\n\n{message}"
+        # 4. 매 요청마다 현재 활성 어휘로 조립한다. 기억이 없는 EXECUTE도 예외가 아니다.
+        augmented_message = self._refresh_execution_prompt(
+            message, consciousness_output, execution_memory, reflex_hint,
+            extra_role=extra_role, allowed_set=allowed_set,
+        )
 
         # 시스템 AI·프로젝트 에이전트 모두 동일한 초안 인계. 이전에는 시스템 분기에만
         # 저장이 있어 프로젝트 실행자는 정상 task가 있어도 $초안을 회수하지 못했다.

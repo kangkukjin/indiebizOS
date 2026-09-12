@@ -349,6 +349,15 @@ class SystemAIRunner:
                             # 자가점검 프로브 — 인지 파이프라인 밖(에피소드·태스크 원장에서
                             # 빼는 것과 같은 근거). 12시간 전수 순찰마다 연상·분류·평가를
                             # 돌리면 프로브가 실사용 코퍼스를 밀어낸다.
+                            # 인지 경로를 건너뛰는 순찰도 저장고 이동 이후의 사전을 쓴다.
+                            prompt = build_system_ai_prompt(
+                                user_profile=load_user_profile(),
+                                git_enabled=(self.data_path / ".git").exists(),
+                                model_name=self.ai.model,
+                            )
+                            self.ai.system_prompt = prompt
+                            if self.ai._provider:
+                                self.ai._provider.system_prompt = prompt
                             response = self.ai.process_message_with_history(
                                 message_content=ai_message,
                                 from_email=f"{from_agent}@internal",

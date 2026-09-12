@@ -622,7 +622,8 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
     import sqlite3
     import time
     from ibl_parser_blocks import _FN_RESERVED_NAMES
-    key = tuple(sorted(allowed)) if allowed is not None else None
+    from vocabulary_state import revision
+    key = (tuple(sorted(allowed)) if allowed is not None else None, revision())
     if _idioms_cache["text"] is not None and time.time() - _idioms_cache["t"] < 300 and _idioms_cache["key"] == key:
         return _idioms_cache["text"]
     text = ""

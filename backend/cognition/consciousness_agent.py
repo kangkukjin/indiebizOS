@@ -87,15 +87,17 @@ class ConsciousnessAgent:
             return None
 
     def _reload_prompt_if_changed(self):
-        """역할 프롬프트 파일이 바뀌었으면 다시 읽는다(구조·IBL 환경도 함께 재조립)."""
+        """역할 파일 또는 활성 어휘가 바뀌면 구조·IBL 환경을 함께 재조립한다."""
+        from vocabulary_state import revision
         if not self._prompt_path:
             return
         mtime = self._file_mtime(self._prompt_path)
-        if mtime is None or mtime == self._prompt_mtime:
+        if (mtime == self._prompt_mtime
+                and revision() == getattr(self, "_vocabulary_revision", None)):
             return
         try:
             self._load_prompt()
-            print("[ConsciousnessAgent] 역할 프롬프트 변경 감지 — 재적재")
+            print("[ConsciousnessAgent] 역할·활성 어휘 변경 감지 — 재적재")
         except Exception as e:
             logger.warning(f"[ConsciousnessAgent] 프롬프트 재적재 실패(옛 본문 유지): {e}")
 
@@ -103,6 +105,8 @@ class ConsciousnessAgent:
         """의식 프롬프트 로드. 감독 경로는 도구로 계약을 읽고, 도구 없는 호환 경로는 사전을 주입한다."""
         from runtime_utils import get_base_path
 
+        from vocabulary_state import revision
+        self._vocabulary_revision = revision()
         base_path = get_base_path()
         role_path = base_path / "data" / "common_prompts" / "consciousness_prompt.md"
         self._prompt_path = role_path

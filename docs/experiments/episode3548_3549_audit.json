@@ -1,0 +1,332 @@
+{
+  "schema": 1,
+  "reviewed_at": "2026-09-12T09:56:54.470853",
+  "code_commit": "d91d94501354e16ab55a63b4d9a5524f1c7de1d5",
+  "scope": "Historical episode evidence and current memory rows; no live tool or model replay",
+  "episodes": [
+    {
+      "id": 3548,
+      "run_id": "run_1cae583af85f4e37662b",
+      "date": "2026-09-12T09:42:22.487714",
+      "request": "요즘 노트북 컴퓨터의 가격이 어느 정도나 하지?",
+      "total_ms": 152095,
+      "log_sha256": "4f33b8c27abf1d2f1ad1d974c0105838eed136758db994fd363acd6289a8c541",
+      "trajectory_events": 144,
+      "last_event_seq": 144,
+      "route": {
+        "force_role": "",
+        "intent": "task",
+        "reflex": false,
+        "request_type": "EXECUTE"
+      },
+      "initial_consciousness_model_calls": 0,
+      "summary_execution_rounds": 9,
+      "counter_function_replay": 9,
+      "roles": {
+        "execution / execute": {
+          "rounds": 9,
+          "usage_events": 1,
+          "input": 703018,
+          "output": 5022,
+          "cache_read": 611170,
+          "cache_create": 91830,
+          "reasoning": 2164,
+          "reasoning_observed": true,
+          "usage_latency_ms_sum": 127778,
+          "call_elapsed_ms_sum": 127976
+        },
+        "oneshot:evaluate / evaluate": {
+          "rounds": 1,
+          "usage_events": 1,
+          "input": 32398,
+          "output": 1443,
+          "cache_read": 0,
+          "cache_create": 32396,
+          "reasoning": 1434,
+          "reasoning_observed": true,
+          "usage_latency_ms_sum": 22520,
+          "call_elapsed_ms_sum": 22801
+        },
+        "oneshot:background / background": {
+          "rounds": 1,
+          "usage_events": 1,
+          "input": 3332,
+          "output": 86,
+          "cache_read": 0,
+          "cache_create": 0,
+          "reasoning": 0,
+          "reasoning_observed": false,
+          "usage_latency_ms_sum": 1737,
+          "call_elapsed_ms_sum": 1741
+        }
+      },
+      "evaluation_elapsed_s": 22.878,
+      "decisions": [
+        {
+          "event_seq": 132,
+          "status": "APPROVED",
+          "response_version": 1
+        }
+      ],
+      "checks": [
+        {
+          "call": 1,
+          "trajectory_seq": 36,
+          "is_error": false,
+          "input_hash": "bcbec741945d456d083ea82a6dbecc30feed873ddb04e0c03c6810dfb0ee6a13",
+          "result_hash": "49fb59039de0fb6336f78e9b9da400ffce4bfc24ad91ec877f7e805c69a61155",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 2,
+          "trajectory_seq": 49,
+          "is_error": true,
+          "input_hash": "ae6432271618f8192ae0f41ba6c54219a5bdd5b509e09dfcb0cc303b4339900c",
+          "result_hash": "d4019524c1c3697a0af4c038d4faa38d8e3eb5075bde9ae3acc053f21729d56c",
+          "trigger_replay": true,
+          "trigger_reason": "도구 오류 (execute_ibl)"
+        },
+        {
+          "call": 3,
+          "trajectory_seq": 60,
+          "is_error": false,
+          "input_hash": "6e10a5262bb7923b6e025c5737ef4e746702fde2f4b3c72013ccca8aa2c9fa88",
+          "result_hash": "4f3d303587890550beb018e93a059070f3fec0133e0c2dea05ee235c32fa444e",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 4,
+          "trajectory_seq": 68,
+          "is_error": false,
+          "input_hash": "1617a8f1226f8ef9e1fd5913bde7650c25d3fd5ab062822149b7ed19db4c5be7",
+          "result_hash": "e2dc3b64cc4082d608ee9f6dd9db8e31282ba819919c5240b91ad3d4e6981452",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 5,
+          "trajectory_seq": 80,
+          "is_error": false,
+          "input_hash": "634dc09374a31dabaa972caeb08f41224182b70aeaed0f8027e16ffe629ba234",
+          "result_hash": "4cd021928bc80557589dbc0211402a42d7e783d6537b433df4d4e9334c3269f6",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 6,
+          "trajectory_seq": 92,
+          "is_error": false,
+          "input_hash": "476c27477574d7975f4c62767faa1ab7cf75eac050741c9ce9502dfe0596a433",
+          "result_hash": "81696a042ae7d22dd535f566fffce6dcff3daa528721213fbdbd8e06375d0cff",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 7,
+          "trajectory_seq": 103,
+          "is_error": true,
+          "input_hash": "b80191a6d43e04646c547198c9d0eb2837ffe2d4353fd7488d86894ea325d54d",
+          "result_hash": "19f4f364107cba146eb3d78720e0497ace1026c3f192817d707f86248146e294",
+          "trigger_replay": true,
+          "trigger_reason": "도구 오류 (execute_ibl)"
+        },
+        {
+          "call": 8,
+          "trajectory_seq": 116,
+          "is_error": false,
+          "input_hash": "2af3fff7c963ed721819f809daa2045fb7fe052e96625043fd1992bd60f4b90b",
+          "result_hash": "168bf7374e87317c875e43b81ef956d5d6e85db5e111053682d36b3aa1c8ceaa",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        }
+      ],
+      "response_files_sha256": {
+        "response-v1.txt": "3139a7f76b3491a3b1e34aa26b939b60bda45265a0b7ce279d6a5a59da1fdbc7"
+      },
+      "response_store": "data/spill/supervision/27a79182b458479699d894ddddbaedfe",
+      "postprocess": {
+        "queue_id": 270,
+        "attempts": 1,
+        "elapsed_s": 2.14,
+        "tokens": 3418,
+        "incomplete": false,
+        "succeeded": true,
+        "scope": "후처리 큐 시도 실행 합; 전경·대기/backoff 제외, 토큰은 캐시 포함"
+      }
+    },
+    {
+      "id": 3549,
+      "run_id": "run_a9c2cd97688826eb3b9c",
+      "date": "2026-09-12T09:46:18.194596",
+      "request": "맥미니 M4의 중고가는 얼마인데?",
+      "total_ms": 96937,
+      "log_sha256": "0cd905ec0333099b7af502d8efe5c289f5bddabb921d778bdc0c8b41f686421f",
+      "trajectory_events": 138,
+      "last_event_seq": 138,
+      "route": {
+        "force_role": "",
+        "intent": "task",
+        "reflex": true,
+        "request_type": "EXECUTE"
+      },
+      "initial_consciousness_model_calls": 0,
+      "summary_execution_rounds": 0,
+      "counter_function_replay": 0,
+      "roles": {
+        "reflex-midtier / reflex-midtier": {
+          "rounds": 8,
+          "usage_events": 8,
+          "input": 356547,
+          "output": 4378,
+          "cache_read": 307072,
+          "cache_create": 0,
+          "reasoning": 2444,
+          "reasoning_observed": true,
+          "usage_latency_ms_sum": 30308,
+          "call_elapsed_ms_sum": 34742
+        },
+        "oneshot:evaluate / evaluate": {
+          "rounds": 2,
+          "usage_events": 2,
+          "input": 62144,
+          "output": 3367,
+          "cache_read": 32804,
+          "cache_create": 29336,
+          "reasoning": 2943,
+          "reasoning_observed": true,
+          "usage_latency_ms_sum": 53255,
+          "call_elapsed_ms_sum": 54048
+        },
+        "reflex-midtier / repair": {
+          "rounds": 2,
+          "usage_events": 2,
+          "input": 12208,
+          "output": 1609,
+          "cache_read": 6784,
+          "cache_create": 0,
+          "reasoning": 1220,
+          "reasoning_observed": true,
+          "usage_latency_ms_sum": 7406,
+          "call_elapsed_ms_sum": 7415
+        }
+      },
+      "evaluation_elapsed_s": 54.111999999999995,
+      "decisions": [
+        {
+          "event_seq": 108,
+          "status": "REWORK",
+          "response_version": 1
+        },
+        {
+          "event_seq": 131,
+          "status": "APPROVED",
+          "response_version": 2
+        }
+      ],
+      "checks": [
+        {
+          "call": 1,
+          "trajectory_seq": 32,
+          "is_error": false,
+          "input_hash": "99eba2b359b61b3b5e2de5ebc0fc1ea4a5d44828ce6fbebc716306889e43e959",
+          "result_hash": "332c96c73e36f40058fb9de0c2b673c5de7fc9e9915d68ec1104d2c381c8ade5",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 2,
+          "trajectory_seq": 42,
+          "is_error": false,
+          "input_hash": "4a4a5e9bdf9fd137bc6df8f447e7aa6ac084b50f229b7b05588cae329f1ee51a",
+          "result_hash": "989cb977a406e87c37b266fd0f75d158da2ad5477333847f3c51d9e8fb208672",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 3,
+          "trajectory_seq": 54,
+          "is_error": false,
+          "input_hash": "97af147d81d4b3a35ddc8e2b498bc7fdcb054ee72b0a19f033ad4528af4ebaf3",
+          "result_hash": "78e481dce55082e7c9ff864ca3cf186a8cb5010b6af54cdb1a64797f2fe008bb",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 4,
+          "trajectory_seq": 67,
+          "is_error": false,
+          "input_hash": "9cc32dfdbe6bc9b46a074c9878de0345d7d502564dc8e067e2cd353b3ecabe5f",
+          "result_hash": "20e931468b8b1aa05c6fddf67d82202f963ec01d5726ddde202d7834c958e84e",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 5,
+          "trajectory_seq": 78,
+          "is_error": false,
+          "input_hash": "9f1c41e894560dc9d354b18ce139cdd3335e5e002387cfddd7a923741210f132",
+          "result_hash": "093fe10dc6e32b65cc6cf8ef6e235be8fe15a16d416efaca3643d63c0260e1b1",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 6,
+          "trajectory_seq": 88,
+          "is_error": false,
+          "input_hash": "d7f99cece55c3be6fb5d035cf8aacc7e8727ab6f8e023d19ad33a00acb1e013a",
+          "result_hash": "1c651c69f61fbbbebc8769a5d4051a070bc2703c48a12e8f5694ef26b57e9695",
+          "trigger_replay": false,
+          "trigger_reason": "읽기만 한 궤적 (도구 1회, 실패·변경 없음)"
+        },
+        {
+          "call": 7,
+          "trajectory_seq": 94,
+          "is_error": false,
+          "input_hash": "7d385214675b92fdded1bbad51799a70ad01aa0089c03d51333b933ce85dbcb6",
+          "result_hash": "8b6738cc637374a5453467c55e14f9e53ca355702f480ed7eb91517613cb30e1",
+          "trigger_replay": true,
+          "trigger_reason": "부작용 액션 ([self:memory]{op: \"save\"})"
+        }
+      ],
+      "response_files_sha256": {
+        "response-v1.txt": "bedfd3d39359b1f1ffc384a46c1bcb6f5214f7ce992b3c4b0116be89478c5f71",
+        "response-v2.txt": "7ae5e2cf0a3ac36d46e560b732d1693e90b6dbc77689291b645ab6e08e4d9ae0"
+      },
+      "response_store": "data/spill/supervision/f596b4f37123417ab44c044c308182e2",
+      "postprocess": {
+        "queue_id": 271,
+        "attempts": 1,
+        "elapsed_s": 0.01,
+        "tokens": 0,
+        "incomplete": false,
+        "succeeded": true,
+        "scope": "후처리 큐 시도 실행 합; 전경·대기/backoff 제외, 토큰은 캐시 포함"
+      }
+    }
+  ],
+  "memory_check": {
+    "db": "projects/구매/memory_001.db",
+    "id": 27,
+    "content_sha256": "4d99a7632d67c7ccacdd102f55a23330952ac39efa126efc4b132614a6395ea7",
+    "source_ref_sha256": "b3670bbda346ec2a9f11f0a3bd9aa89a2e89d6884b8326391452fa7ed3424b0f",
+    "source_role": "assistant",
+    "category": "작업기록",
+    "rejected_price_trend_still_present": true,
+    "rejected_trend_absent_from_delivered_response": true,
+    "prior_release_date_record": {
+      "id": 24,
+      "content_sha256": "f72e79d95243f456867c5bc0318ad660d47dd8367fe7074454bd2d7cdb6dea9d",
+      "source_ref_sha256": "0ea930430b42dc0c2f298ec0a96d86b86a03cabfac61222b4ac5ff9696b4891f",
+      "retrieval_provenance_status": "unattributed"
+    }
+  },
+  "limitations": [
+    "Reasoning is a subset of output, not additive.",
+    "Call, tool, and usage latency overlap; do not sum them.",
+    "Different requests and execution models; not an ON/OFF causal comparison.",
+    "Tool prices were checked against stored evidence, not revalidated as live market prices.",
+    "No private reasoning text or complete memory content exported."
+  ]
+}

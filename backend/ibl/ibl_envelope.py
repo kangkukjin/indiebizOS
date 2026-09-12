@@ -298,7 +298,7 @@ PREVIEW_FULL_HINT = ("미리보기입니다 — 전체는 result_ref를 read_res
 def display_delivery_budget(raw: str, default: int) -> int:
     """생산자가 선언한 미리보기를 전달 단계의 옛 16K 제한으로 다시 자르지 않는다.
 
-    execute_ibl에서 표시 예산을 적용한 결과용이다. JSON 구조·출처·진단도 함께
+    execute_ibl에서 표시 예산을 적용한 결과·명시적으로 조회한 원문 페이지용이다. JSON 구조·출처·진단도 함께
     전달하되, 전체 전송은 기존 자동 스필 임계 아래로 제한한다. 액션 이름은 모른다.
     """
     if len(raw) <= default or "_display" not in raw:

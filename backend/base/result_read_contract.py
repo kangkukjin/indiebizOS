@@ -1,7 +1,7 @@
 """저장 결과 조회의 문자 페이지 계약 — 모델 도구와 MCP가 같은 한도를 알린다."""
 
-DEFAULT_LIMIT = 12000
-MAX_LIMIT = 24000
+DEFAULT_LIMIT = 60000
+MAX_LIMIT = 60000
 MAX_PATH_DEPTH = 16
 
 

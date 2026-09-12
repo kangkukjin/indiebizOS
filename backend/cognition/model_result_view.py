@@ -63,6 +63,9 @@ def read_result(request):
     page["next_read"] = ({"id": request.get("id"), "offset": page["next_offset"],
                           "limit": limit, **({"path": path} if path is not None else {})}
                          if page["next_offset"] is not None else None)
+    # 조회자가 고른 페이지를 MCP/프로바이더의 액션당 16K 한도로 다시 접지 않는다.
+    # 문서와 같은 표시 계약을 사용해 JSON escaping·다음 조회 인자까지 함께 전달한다.
+    page["_display"] = {"max_chars": limit}
     from episode_logger import record_trajectory_event
     record_trajectory_event("context.result_read", {
         "evidence_id": request.get("id"), "offset": offset, "chars": len(page["text"]),

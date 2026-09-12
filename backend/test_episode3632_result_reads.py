@@ -1,5 +1,6 @@
 """ep3632: ~workspace struct 실패와 조회 한도/본문 키 추측 왕복의 회귀."""
 import asyncio
+import importlib
 import json
 
 import boot_paths  # noqa: F401
@@ -53,12 +54,13 @@ def test_advertised_path_and_next_read_restore_actual_body(result_view, pipeline
     assert ref["read_args"]["path"] == expected_path
     assert ref["paths"] == [{"path": expected_path,
                               "chars": len(json.dumps(body, ensure_ascii=False, indent=2))}]
-    assert ref["max_limit"] == 24000
+    assert ref["max_limit"] == 60000
+    assert ref["read_args"]["limit"] == 60000
     request, chunks = ref["read_args"], []
     while request is not None:
         assert request["path"] == expected_path
         page = result_view.read_result(request)
-        assert len(page["text"]) <= 12000
+        assert len(page["text"]) <= 60000
         chunks.append(page["text"])
         request = page["next_read"]
     assert json.loads("".join(chunks)) == body
@@ -76,7 +78,7 @@ def test_root_pagination_and_limits(result_view):
         chunks.append(page["text"])
         request = page["next_read"]
     assert json.loads("".join(chunks)) == raw
-    for args in ({"limit": 25000}, {"limit": 0}, {"offset": -1}, {"path": ["transcript"]}):
+    for args in ({"limit": 60001}, {"limit": 0}, {"offset": -1}, {"path": ["transcript"]}):
         with pytest.raises(ValueError):
             result_view.read_result({"id": ref["id"], **args})
 
@@ -90,8 +92,64 @@ def test_mcp_and_native_advertise_the_same_read_contract():
                   if option.get("type") == "object")
     assert remote["properties"] == native["properties"]
     assert remote["required"] == native["required"] == ["id"]
-    assert remote["properties"]["limit"]["maximum"] == 24000
+    assert remote["properties"]["limit"]["maximum"] == 60000
+    assert remote["properties"]["limit"]["default"] == 60000
     assert remote["properties"]["offset"]["minimum"] == 0
+
+
+@pytest.mark.parametrize("body", ["한" * 59000, ('한글🍀\n"\\' * 14000)])
+def test_default_page_survives_real_mcp_and_provider_boundaries(result_view, body, monkeypatch):
+    """원문 조회→프로바이더→MCP 실물 함수. 재스필 없이 모든 페이지가 이어진다."""
+    import mcp_server
+    from ibl_result_transport import provider_tool_result
+    source = {"final_result": json.dumps({"text": body}, ensure_ascii=False)}
+    ref = result_view.project_result(source)["result_ref"]
+    calls = []
+
+    def backend_read(path, payload, timeout):
+        assert path == "/ibl/execute" and payload["code"] == ""
+        calls.append(payload["read_result"])
+        page = result_view.read_result(payload["read_result"])
+        raw = json.dumps(page, ensure_ascii=False)
+        assert provider_tool_result(raw) == raw
+        for module, name in [("anthropic", "AnthropicProvider"), ("openai", "OpenAIProvider"),
+                             ("ollama", "OllamaProvider")]:
+            cls = getattr(importlib.import_module(f"providers.{module}"), name)
+            assert cls._truncate_tool_result(object.__new__(cls), raw) == raw
+        return raw
+
+    monkeypatch.setattr(mcp_server, "_post_backend", backend_read)
+    monkeypatch.setattr(mcp_server, "_repeat_advisory", lambda *a: "")
+    monkeypatch.delenv("MAX_MCP_OUTPUT_TOKENS", raising=False)
+    # limit 자체를 생략해도 60K가 기본값이어야 한다.
+    request = {"id": ref["id"], "path": ["final_result", "text"]}
+    chunks = []
+    while request is not None:
+        page = json.loads(asyncio.run(mcp_server.execute_ibl(code="", read_result=request)))
+        assert "_trimmed" not in page and "ref" not in page
+        assert page["offset"] == sum(map(len, chunks))
+        chunks.append(page["text"])
+        request = page["next_read"]
+        if request is not None:
+            assert len(page["text"]) == 60000 and request["limit"] == 60000
+    assert json.loads("".join(chunks)) == body
+    serialized_length = len(json.dumps(body, ensure_ascii=False))
+    assert len(calls) == (serialized_length + 59999) // 60000
+    if len(body) == 59000:
+        assert len(calls) == 1
+
+
+def test_explicit_smaller_page_and_host_limit_still_apply(result_view, monkeypatch, tmp_path):
+    import mcp_server
+    ref = result_view.project_result({"text": "원문" * 50000})["result_ref"]
+    page = result_view.read_result({"id": ref["id"], "path": ["text"], "limit": 25000})
+    assert len(page["text"]) == 25000 and page["next_read"]["limit"] == 25000
+    raw = json.dumps(page, ensure_ascii=False)
+    monkeypatch.setenv("MAX_MCP_OUTPUT_TOKENS", "10000")
+    monkeypatch.setattr("common.spill.spill_dir", lambda: str(tmp_path))
+    clipped = mcp_server._trim_for_agent(raw)
+    assert len(clipped) <= 16000
+    assert json.loads(clipped)["ref"]
 
 
 if __name__ == "__main__":

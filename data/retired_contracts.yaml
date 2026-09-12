@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: result_read_small_page
+    retired: 2026-09-12
+    reason: 원문 조회의 작은 기본 페이지와 24K 상한이 불필요한 모델 왕복을 만들고 전달 단계의 16K 재축약으로 페이지를 잃었다.
+    instead: read_result 기본·상한은 60000자. 조회 페이지도 표시 예산을 선언해 JSON과 next_read를 함께 전달한다.
+    phrases:
+      - 'limit는 문자 수 1~24000'
+      - '문자 수 1~24000(기본 12000)'
   - id: gnews_empty_is_failure
     retired: 2026-09-12
     reason: 정상적인 검색 0건을 실행 오류로 반환해 독립 문장의 변수 할당과 후속 결합을 실패시켰다.

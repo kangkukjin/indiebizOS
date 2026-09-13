@@ -259,6 +259,30 @@ def test_codex_oneshot_does_not_drop_user_config():
     )
 
 
+def test_codex_native_web_search_is_disabled_under_both_config_keys():
+    """네이티브 web_search 차단 키를 **두 벌** 보낸다 — 버전 경계에서 조용히 풀리기 때문이다.
+
+    2026-09-13 실측: ChatGPT.app 동봉 codex 0.153.4 는 옛 키 `tools.web_search=false` 를
+    --strict-config 에서도 말없이 무시하고(web_search 항목 2건 발생), 최상위
+    `web_search="disabled"` 만 읽는다(NO_WEB_SEARCH). 옛 버전은 그 반대. 모르는 키는 양쪽 다
+    무시하므로 둘을 함께 보내야 어느 버전에서도 IBL `[sense:search]` 로 강제된다.
+    """
+    from providers import get_provider
+
+    for tools_mode in (None, "none"):
+        p = get_provider("codex", api_key="", model="gpt-5.6-sol", system_prompt="")
+        p._binary_path = "/fake/codex"
+        if tools_mode:
+            p.no_tools = True
+        c = p._build_command(stream=True, tools_mode=tools_mode)
+        pairs = {(c[i], c[i + 1]) for i in range(len(c) - 1) if c[i] == "-c"}
+        assert ("-c", "tools.web_search=false") in pairs, f"옛 키가 빠졌다(tools_mode={tools_mode}): {c}"
+        assert ("-c", 'web_search="disabled"') in pairs, (
+            f"새 키(최상위 web_search)가 빠졌다 — codex 0.153.4 에서 네이티브 검색이 되살아난다"
+            f"(tools_mode={tools_mode}): {c}"
+        )
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 로 위임한다(두 번째 러너는 드리프트한다).
     import sys

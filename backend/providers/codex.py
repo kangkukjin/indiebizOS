@@ -561,7 +561,11 @@ class CodexProvider(CliSubprocessProvider):
         # 튀어나오면 안 된다 — 우리 서브프로세스에서만 끈다(사용자 파일은 안 건드림).
         cmd += ["-c", "notify=[]"]
         # web_search 는 IBL [sense:search] 와 1:1 중복 → 끄고 IBL 로 강제 (TOOL_POLICY 참조)
-        cmd += ["-c", "tools.web_search=false"]
+        # ★키가 두 벌이다(2026-09-13 실측): 옛 codex 는 `tools.web_search`, 0.153.4(ChatGPT.app 동봉,
+        #   09-09 갱신)는 최상위 `web_search="disabled"` 만 읽고 옛 키는 --strict-config 에서도 말없이
+        #   무시한다 — 그래서 09-12~13 네 에피소드에서 네이티브 web_search 가 되살아났다. 모르는 키는
+        #   양쪽 버전 다 무시하므로 두 벌을 함께 보낸다. 그래도 새면 아래 _warn_if_blocked_native 가 운다.
+        cmd += ["-c", "tools.web_search=false", "-c", 'web_search="disabled"']
 
         # 원샷은 도구 브리지를 안 세운다(프로세스 기동 비용) — 그 외 다이어트 수단은 없다.
         if not tools_mode:
@@ -627,6 +631,19 @@ class CodexProvider(CliSubprocessProvider):
             # 이벤트 필드에는 `mcp__` 접두가 없다 — 모델이 실제로 보는 실명으로 되돌린다.
             return f"mcp__{server}__{tool}" if server else str(tool)
         return CodexProvider._TOOL_ITEM_NAMES.get(itype, itype)
+
+    _BLOCKED_NATIVE = {"web_search"}
+
+    def _warn_if_blocked_native(self, itype: str) -> None:
+        """설정으로 끈 네이티브 도구가 그래도 나타나면 그 자리에서 운다.
+
+        2026-09-13: codex 설정 키가 `tools.web_search` → 최상위 `web_search` 로 옮겨 가며 차단이
+        말없이 풀렸고, 4 에피소드가 지나서야 로그 판독으로 발견됐다. 차단은 조용히 풀리므로
+        관측은 도구 항목이 도착하는 이 자리에 둔다(카운터가 아니라 실패 지점의 경보).
+        """
+        if itype in self._BLOCKED_NATIVE:
+            self._log(f"⚠ 네이티브 {itype} 관측 — 설정 차단이 무시됐다. codex 버전의 설정 키 이동 의심"
+                      f"(_build_command 의 web_search 주석 참조)")
 
     @staticmethod
     def _tool_input(item: Dict) -> Any:
@@ -750,6 +767,7 @@ class CodexProvider(CliSubprocessProvider):
                     self._started_items.add(iid)
                 name = self._tool_name(item)
                 tinput = self._tool_input(item)
+                self._warn_if_blocked_native(str(itype))
                 self._log_tool_use(name, tinput)
                 out.append((
                     {"type": "tool_start", "id": iid, "name": name, "input": tinput},
@@ -796,6 +814,7 @@ class CodexProvider(CliSubprocessProvider):
                 # 안 그러면 process_message 의 start↔result 페어링이 한 칸씩 밀린다.
                 if iid not in self._started_items:
                     tinput = self._tool_input(item)
+                    self._warn_if_blocked_native(str(itype))
                     self._log_tool_use(name, tinput)
                     out.append((
                         {"type": "tool_start", "id": iid, "name": name, "input": tinput},

@@ -118,6 +118,14 @@ def apply_git_upgrade(aged: Path, tag: str) -> dict:
             shutil.copy2(src, dst); copied += 1
         elif dst.is_file():          # 상류에서 지워진(또는 작업 트리에서 지운) 추적 파일
             dst.unlink(); removed += 1
+            # git처럼 비어 버린 옛 경로도 정리한다. 사용자 파일이 남으면 멈춘다.
+            parent = dst.parent
+            while parent != aged:
+                try:
+                    parent.rmdir()
+                except OSError:
+                    break
+                parent = parent.parent
     return {"copied": copied, "removed": removed}
 
 

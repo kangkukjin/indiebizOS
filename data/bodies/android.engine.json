@@ -256,6 +256,7 @@
     "surface/api_family_news",
     "surface/api_finance",
     "surface/api_gmail",
+    "surface/api_guides",
     "surface/api_health",
     "surface/api_ibl",
     "surface/api_launcher_web",
@@ -344,8 +345,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 333,
-    "engine": 307,
+    "total": 334,
+    "engine": 308,
     "blocklist": 26
   }
 }

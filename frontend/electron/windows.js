@@ -28,6 +28,7 @@ let pcManagerWindow = null; // PC Manager 창
 let photoManagerWindow = null; // Photo Manager 창
 let systemAIWindow = null; // 시스템 AI 창
 let lectureWorkspaceWindow = null; // 강의 만들기 워크스페이스 창
+let toolWindows = new Map(); // 안경 메뉴 도구 창(프롬프트 구성·가이드 파일) — kind 별 싱글턴
 
 /**
  * 이미 열린 창을 화면 맨앞으로 — focus()만으론 macOS에서 뒤에 깔린/최소화된 창이
@@ -567,6 +568,57 @@ function createLectureWorkspaceWindow(lectureId = null) {
 }
 
 /**
+ * 안경 메뉴 도구 창 — 프롬프트 구성·가이드 파일처럼 런처 안 모달로는 좁은 관리 표면을
+ * 독립 창(크기 조절·OS 제목줄)으로 연다. kind 별 하나만, 다시 열면 포커스.
+ */
+const TOOL_WINDOWS = {
+  'prompt-composition': { title: '프롬프트 구성', width: 1180, height: 860 },
+  'guides': { title: '가이드 파일', width: 1280, height: 860 },
+};
+
+function createToolWindow(kind) {
+  const spec = TOOL_WINDOWS[kind];
+  if (!spec) return null;
+  const existing = toolWindows.get(kind);
+  if (existing && !existing.isDestroyed()) {
+    raiseWindow(existing);
+    return existing;
+  }
+  const win = new BrowserWindow({
+    width: spec.width,
+    height: spec.height,
+    minWidth: 720,
+    minHeight: 480,
+    title: spec.title,
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js')
+    }
+  });
+  const hashPath = `/${kind}`;
+  if (isDev) {
+    win.loadURL(`http://localhost:5173/#${hashPath}`);
+  } else {
+    win.loadFile(path.join(__dirname, '..', 'dist', 'index.html'), { hash: hashPath });
+  }
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+  win.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('http://localhost:') && !url.startsWith('file://')) {
+      event.preventDefault();
+      shell.openExternal(url);
+    }
+  });
+  win.on('closed', () => { toolWindows.delete(kind); });
+  toolWindows.set(kind, win);
+  setupContextMenu(win);
+  return win;
+}
+
+/**
  * 다중채팅방 창 생성
  */
 function createMultiChatWindow(roomId, roomName) {
@@ -705,4 +757,5 @@ export { folderWindows };
 export { raiseWindow, createProjectWindow, createFolderWindow, createSystemAIWindow,
          createBusinessWindow, createCommunityWindow, createMessengerWindow,
          createPCManagerWindow, createPhotoManagerWindow,
-         createLectureWorkspaceWindow, createMultiChatWindow, createProjectPanelWindow };
+         createLectureWorkspaceWindow, createMultiChatWindow, createProjectPanelWindow,
+         createToolWindow };

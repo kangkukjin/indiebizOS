@@ -1941,3 +1941,5 @@
 [2026-09-12] 평가 역할 경계 복원: 의식의 명시적 달성 기준·멈춤선만 판정. 일반 노력선/도구/품질 심사와 빈 기준 자기반성 제거. 기준 ID·증거 없는 지적은 재작업 금지, 보완·재평가 기준 고정, 독립 시간합산 veto 제거. docs/EVALUATOR_CRITERIA_OWNERSHIP_2026_09_12.md 참조.
 
 [2026-09-13] 프롬프트 구성 표면 신설(런처 안경 메뉴 → 프롬프트 구성): 시스템 AI·프로젝트 에이전트·포식/앱메이커 변형·의식·의식 감독·무의식·최종 평가자·경험 증류·심층기억 추출·대화 이력 압축·가이드 순찰 3종·IBL 번역기·자동응답 14종의 프롬프트를 A+B+C 조각(층·출처·조건·분량·본문)으로 보인다. 실행기억·IBL 환경·프로젝트 포식 기억 같은 가변 조각은 샘플 메시지 한 건으로 정본 빌더를 그대로 돌려 조립(LLM 0). backend/cognition/prompt_composition.py + surface/api_prompt_composition.py(/prompt-composition/agents·assemble, 로컬 전용), 프론트 PromptCompositionDialog. docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md 참조.
+
+[2026-09-13] 안경 메뉴 도구 창 독립화 + 가이드 파일 표면: 프롬프트 구성을 런처 안 모달에서 Electron 독립 창(createToolWindow, 크기 조절 자유·kind 별 싱글턴, 웹은 #/prompt-composition 라우트)으로 옮기고, 같은 틀로 '가이드 파일' 창 신설(#/guides). data/guides/*.md 77개를 등록·신선도·예산·정리 후보 표식과 함께 목록으로 보이고 본문 렌더/원문/편집·저장. 백엔드 /guides (guide_registry.guide_catalog·resolve_guide), 관문 test_guides_surface.py. docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md 갱신.

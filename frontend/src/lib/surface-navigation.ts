@@ -33,6 +33,15 @@ export function openLecture(id: string | null = null) {
     window.electron?.openLectureWorkspaceWindow?.bind(window.electron, id));
 }
 
+/** 안경 메뉴 도구 창 — 런처 안 모달이 아니라 독립 창(크기 조절). 웹 표면은 같은 창의 라우트. */
+export function openPromptComposition() {
+  openPage('/prompt-composition', window.electron?.openToolWindow?.bind(window.electron, 'prompt-composition'));
+}
+
+export function openGuides() {
+  openPage('/guides', window.electron?.openToolWindow?.bind(window.electron, 'guides'));
+}
+
 export function openExternalLink(href: string) {
   let url: URL;
   try { url = new URL(href, window.location.href); } catch { return; }

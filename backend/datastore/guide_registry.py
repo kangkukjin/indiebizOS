@@ -423,3 +423,91 @@ def all_freshness() -> List[Dict]:
     # 오래됐고 안 쓰인 것이 앞으로 — 순찰 우선순위
     out.sort(key=lambda r: (r["clean_uses"], -(r["age_days"] or 0)))
     return out
+
+
+# ---------------------------------------------------------------- 가이드 파일 표면 (런처 안경 메뉴 → 가이드 파일, 2026-09-13)
+
+_LIFECYCLE_MARK_RE = re.compile(r"<!-- lifecycle: candidate since (\d{4}-\d{2}-\d{2})[^\n]*-->")
+
+
+def resolve_guide(name: str) -> Optional[Path]:
+    """'photo' / 'photo.md' → data/guides/photo.md (경로 탈출 차단). 없으면 None."""
+    safe = Path(name or "").name
+    if not safe:
+        return None
+    if not safe.endswith(".md"):
+        safe += ".md"
+    p = GUIDES_DIR / safe
+    try:
+        p.relative_to(GUIDES_DIR)
+    except ValueError:
+        return None
+    return p
+
+
+def guide_budget_bytes() -> int:
+    """data/lifecycle_policy.yaml 의 guide_budget_bytes (check_file_size·guide_downscale 와 같은 정본)."""
+    try:
+        import yaml
+        pol = yaml.safe_load((DATA_PATH / "lifecycle_policy.yaml").read_text(encoding="utf-8")) or {}
+        return int(pol.get("guide_budget_bytes") or 36000)
+    except Exception:
+        return 36000
+
+
+def guide_catalog() -> Dict:
+    """전 가이드 목록 — 파일 실재(폴더) × 등록(guide_db.json) × 신선도(이 원장) × 표식.
+
+    폴더가 정본이다: guide_db 에만 있고 파일이 없으면 'missing', 파일만 있고 등록이 없으면
+    registered=False 로 드러낸다(둘 다 부패 신호 — 숨기지 않는다).
+    """
+    db_entries: Dict[str, Dict] = {}
+    try:
+        raw = json.loads((DATA_PATH / "guide_db.json").read_text(encoding="utf-8"))
+        for g in raw.get("guides", []):
+            f = g.get("file") or (g.get("id", "") + ".md")
+            db_entries[f] = g
+    except Exception as e:
+        logger.debug(f"[guide_registry] guide_db 읽기 실패 (무시): {e}")
+
+    fresh = {r["guide"]: r for r in all_freshness()}
+    budget = guide_budget_bytes()
+    items: List[Dict] = []
+    files = sorted(f.name for f in GUIDES_DIR.glob("*.md")) if GUIDES_DIR.is_dir() else []
+    for f in files:
+        p = GUIDES_DIR / f
+        try:
+            head = p.read_text(encoding="utf-8")[:4000]
+        except OSError:
+            head = ""
+        m = _LIFECYCLE_MARK_RE.search(head)
+        entry = db_entries.get(f, {})
+        fr = fresh.get(f, {})
+        size = p.stat().st_size
+        items.append({
+            "file": f,
+            "id": entry.get("id") or f[:-3],
+            "name": entry.get("name") or f[:-3],
+            "description": entry.get("description") or "",
+            "topic": entry.get("topic") or "",
+            "keywords": entry.get("keywords") or [],
+            "registered": f in db_entries,
+            "bytes": size,
+            "over_budget": size > budget,
+            "born": fr.get("born"),
+            "updated": fr.get("updated"),
+            "age_days": fr.get("age_days"),
+            "clean_uses": fr.get("clean_uses", 0),
+            "last_use": fr.get("last_use"),
+            "last_review": last_review(f),
+            "lifecycle_candidate_since": m.group(1) if m else None,
+        })
+    missing = [{"file": f, "id": g.get("id"), "name": g.get("name")} for f, g in db_entries.items()
+               if f not in set(files)]
+    return {
+        "guides": items,
+        "missing_files": missing,
+        "budget_bytes": budget,
+        "total_bytes": sum(i["bytes"] for i in items),
+        "dir": str(GUIDES_DIR),
+    }

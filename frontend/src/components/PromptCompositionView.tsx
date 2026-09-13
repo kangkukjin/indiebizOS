@@ -1,22 +1,18 @@
 /**
- * PromptCompositionDialog — 프롬프트 구성 (안경 메뉴)
+ * PromptCompositionView — 프롬프트 구성 (안경 메뉴 → 독립 창, 웹은 #/prompt-composition)
  *
  * 에이전트(시스템 AI·프로젝트 에이전트·의식·무의식·평가자 …)를 고르면 그 프롬프트가
  * 어떤 조각으로 조립되는지 A + B + C 식으로 보이고, 조각을 클릭하면 본문이 열린다.
  * 파일로 고정된 조각은 본문 그대로, 실행기억처럼 턴마다 다른 조각은 샘플 메시지 한 건으로
  * 실제 조립한 결과(분량 포함)를 보인다. 백엔드 /prompt-composition/* (LLM 호출 0).
+ * 런처 안 모달이 아니라 OS 창(크기 조절 자유) — 2026-09-13 사용자 요청.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Layers, RefreshCw, FileText, Cpu, Brain, History, Hash, Zap, MessageSquare, ChevronRight } from 'lucide-react';
-import { SettingsFrame } from '../../SettingsFrame';
-import { api } from '../../../lib/api';
-import { useRetryingLoad } from '../../../lib/use-retrying-load';
-import type { PromptCompositionCatalog, PromptCompositionResult, PromptSection } from '../../../lib/api-system-ai';
-
-interface Props {
-  show: boolean;
-  onClose: () => void;
-}
+import { ToolWindowFrame } from './ToolWindowFrame';
+import { api } from '../lib/api';
+import { useRetryingLoad } from '../lib/use-retrying-load';
+import type { PromptCompositionCatalog, PromptCompositionResult, PromptSection } from '../lib/api-system-ai';
 
 const LAYER_META: Record<PromptSection['layer'], { title: string; hint: string }> = {
   system: { title: '시스템 프롬프트', hint: '매 호출 동일 — 프롬프트 캐시 prefix' },
@@ -36,7 +32,8 @@ const KIND_META: Record<PromptSection['kind'], { label: string; cls: string; ico
 
 const fmt = (n: number) => n.toLocaleString();
 
-export function PromptCompositionDialog({ show, onClose }: Props) {
+export function PromptCompositionView() {
+  const show = true;
   const [catalog, setCatalog] = useState<PromptCompositionCatalog | null>(null);
   const [agentId, setAgentId] = useState<string>('system_ai');
   const [projectId, setProjectId] = useState<string>('');
@@ -88,11 +85,8 @@ export function PromptCompositionDialog({ show, onClose }: Props) {
   const current = catalog?.agents.find((a) => a.id === agentId);
   const selected = result?.sections.find((s) => s.key === selectedKey) || null;
 
-  if (!show) return null;
-
   return (
-    <SettingsFrame onClose={onClose} title="프롬프트 구성" width={1040} height={760}
-      icon={<Layers className="text-amber-600" size={22} />} resizable>
+    <ToolWindowFrame title="프롬프트 구성" icon={<Layers className="text-amber-600" size={20} />}>
       <div className="flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4 bg-[#FAF8F4]">
         <p className="text-sm text-stone-600">
           에이전트마다 프롬프트가 다르게 조립됩니다. 에이전트를 고르면 조립 순서가 <b>A + B + C</b> 로 보이고,
@@ -286,6 +280,6 @@ export function PromptCompositionDialog({ show, onClose }: Props) {
           </div>
         )}
       </div>
-    </SettingsFrame>
+    </ToolWindowFrame>
   );
 }

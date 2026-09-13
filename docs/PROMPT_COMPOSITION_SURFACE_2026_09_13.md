@@ -34,3 +34,14 @@ IBL 번역기·자동응답 등 여러 종류의 LLM 에이전트가 있고, 프
 - 부작용 있는 로더는 피했다: 가이드 주입 기록(`_guide_block`)·해마 쓰기 없음. 해마 회상은 조종실
   '기억 회상 검증'(`/system-ai/recall-preview`)과 같은 읽기 경로.
 - 의료 프로젝트의 라이브 환자 차트는 `# Notes` 조건 문장으로만 적고 표면에서 조립하지 않는다(민감).
+
+## 속편 (같은 날) — 독립 창 + 가이드 파일
+- 런처 안 모달은 바깥 창 크기에 갇혀 좁았다(사용자). `frontend/electron/windows.js` 의 `createToolWindow(kind)`
+  가 안경 메뉴 도구 창(`prompt-composition` · `guides`)을 OS 창으로 연다 — kind 별 싱글턴, 크기 조절 자유,
+  IPC `open-tool-window`. 웹 표면은 같은 창의 해시 라우트(`#/prompt-composition`, `#/guides`)와 '‹ 뒤로'.
+  공통 틀 `ToolWindowFrame`.
+- **가이드 파일**(`GuidesView`): `data/guides/*.md` 전체를 등록(guide_db.json)·신선도(guide_registry)·
+  예산(lifecycle_policy `guide_budget_bytes`)·정리 후보 표식과 함께 목록으로 보이고, 본문을 렌더/원문으로 읽고
+  고쳐 저장한다. 폴더가 정본이라 '등록만 있고 파일 없음'·'파일만 있고 미등록'을 숨기지 않는다.
+  백엔드 `GET/PUT /guides/{name}` — 기존 파일만 저장(새 가이드 등록은 guide_registration.md 절차),
+  예산 초과는 막지 않고 알린다(정책=압축·분할, 삭제 금지 — check_file_size 가 커밋에서 집행).

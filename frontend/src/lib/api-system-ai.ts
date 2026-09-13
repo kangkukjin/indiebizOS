@@ -64,6 +64,33 @@ export interface PromptCompositionResult {
   error?: string;
 }
 
+export interface GuideEntry {
+  file: string;
+  id: string;
+  name: string;
+  description: string;
+  topic: string;
+  keywords: string[];
+  registered: boolean;
+  bytes: number;
+  over_budget: boolean;
+  born: string | null;
+  updated: string | null;
+  age_days: number | null;
+  clean_uses: number;
+  last_use: string | null;
+  last_review: string | null;
+  lifecycle_candidate_since: string | null;
+}
+
+export interface GuideCatalog {
+  guides: GuideEntry[];
+  missing_files: Array<{ file: string; id: string | null; name: string | null }>;
+  budget_bytes: number;
+  total_bytes: number;
+  dir: string;
+}
+
 export function applySystemAIMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
 
@@ -333,6 +360,25 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
         method: 'POST',
         body: JSON.stringify(body),
       });
+    },
+
+    // ============ 가이드 파일 (안경 메뉴 > 가이드 파일) ============
+
+    async getGuides() {
+      return client.request<GuideCatalog>('/guides');
+    },
+
+    async getGuide(file: string) {
+      return client.request<{ file: string; content: string; bytes: number; budget_bytes: number }>(
+        `/guides/${encodeURIComponent(file)}`
+      );
+    },
+
+    async saveGuide(file: string, content: string) {
+      return client.request<{ ok: boolean; file: string; bytes: number; budget_bytes: number; over_budget: boolean }>(
+        `/guides/${encodeURIComponent(file)}`,
+        { method: 'PUT', body: JSON.stringify({ content }) }
+      );
     },
 
     // ============ 시스템 AI 대화 히스토리 ============

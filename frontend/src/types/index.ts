@@ -249,6 +249,7 @@ export interface ElectronAPI {
   openPCManagerWindow: (initialPath?: string | null) => Promise<void>;
   openPhotoManagerWindow: (initialPath?: string | null) => Promise<void>;
   openLectureWorkspaceWindow: (lectureId?: string | null) => Promise<void>;
+  openToolWindow?: (kind: 'prompt-composition' | 'guides') => Promise<void>;
   onLectureWorkspaceSelect?: (callback: (lectureId: string) => void) => void;
   removeLectureWorkspaceSelectListener?: () => void;
   openPath: (path: string) => Promise<void>;

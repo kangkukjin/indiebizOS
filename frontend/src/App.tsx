@@ -17,6 +17,8 @@ import { PhotoManager } from './components/PhotoManager';
 import { SystemAIView } from './components/SystemAIView';
 import { ProjectPanelView } from './components/ProjectPanelView';
 import { LectureWorkspace } from './components/LectureWorkspace';
+import { PromptCompositionView } from './components/PromptCompositionView';
+import { GuidesView } from './components/GuidesView';
 import { api } from './lib/api';
 import { useRetryingLoad } from './lib/use-retrying-load';
 
@@ -40,6 +42,8 @@ interface HashRoute {
   isSystemAI: boolean;
   isLectureWorkspace: boolean;
   lectureId: string | null;
+  isPromptComposition: boolean;
+  isGuides: boolean;
 }
 
 const EMPTY_ROUTE: HashRoute = {
@@ -49,6 +53,7 @@ const EMPTY_ROUTE: HashRoute = {
   isPCManager: false, pcManagerPath: null,
   isPhotoManager: false, photoManagerPath: null,
   isSystemAI: false, isLectureWorkspace: false, lectureId: null,
+  isPromptComposition: false, isGuides: false,
 };
 
 function parseHash(hash: string): HashRoute {
@@ -63,6 +68,9 @@ function parseHash(hash: string): HashRoute {
   if (hash === '#/messenger') return { ...EMPTY_ROUTE, isMessenger: true };
   // 시스템 AI
   if (hash === '#/system-ai') return { ...EMPTY_ROUTE, isSystemAI: true };
+  // 안경 메뉴 도구 창 — 프롬프트 구성 · 가이드 파일
+  if (hash === '#/prompt-composition') return { ...EMPTY_ROUTE, isPromptComposition: true };
+  if (hash === '#/guides') return { ...EMPTY_ROUTE, isGuides: true };
   // 강의 만들기 워크스페이스
   if (hash.startsWith('#/lecture-workspace'))
     return { ...EMPTY_ROUTE, isLectureWorkspace: true, lectureId: param('lecture_id') };
@@ -112,6 +120,7 @@ function App() {
     isCommunity, isMessenger, isBusiness,
     isPCManager, pcManagerPath, isPhotoManager, photoManagerPath,
     isSystemAI, isLectureWorkspace, lectureId,
+    isPromptComposition, isGuides,
   } = route;
 
   // 해시 변경 추적 (초기값은 위에서 이미 동기로 읽음)
@@ -199,6 +208,10 @@ function App() {
       </div>
     );
   }
+
+  // 안경 메뉴 도구 창 — 프롬프트 구성 / 가이드 파일 (Electron 독립 창 · 웹은 같은 창 라우트)
+  if (isPromptComposition) return <PromptCompositionView />;
+  if (isGuides) return <GuidesView />;
 
   // 강의 만들기 워크스페이스 창인 경우
   if (isLectureWorkspace) {

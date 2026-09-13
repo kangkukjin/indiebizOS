@@ -147,8 +147,9 @@ jobs:
       - name: 코어 의존성 + pytest 설치
         # openpyxl·xlrd: [self:sheet] 및 test_episode3388_repairs의 xls 읽기 실의존 —
         # requirements-tools.txt 소속이라 core 만으로는 빠진다.
+        # numpy·markdown·tqdm: 각각 어휘 감사·보고서 전달·상주 모니터 회귀의 실의존.
         # tools 전체 설치는 CI 무게상 배제 — 테스트가 새 tool 의존을 얻으면 여기서 시끄럽게 죽는다(침묵 아님).
-        run: pip install -r backend/requirements-core.txt pytest openpyxl xlrd
+        run: pip install -r backend/requirements-core.txt pytest openpyxl xlrd numpy markdown tqdm
       - name: pytest (backend/test_*.py, 로컬 데이터 필요분 제외)
         run: python -m pytest -m "not local"
 

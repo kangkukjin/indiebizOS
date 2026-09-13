@@ -219,6 +219,7 @@ def test_browser_idle_timer_cannot_start_storage_during_drain(work, browser):
 
 
 def test_real_browser_transport_idle_and_process_receipt(work, browser, monkeypatch, tmp_path):
+    pytest.importorskip("playwright.async_api", reason="실 브라우저 검증은 portability의 playwright-render에서 실행")
     from runtime_utils import setup_playwright_browsers_path
     setup_playwright_browsers_path()
     monkeypatch.setenv("INDIEBIZ_BASE_PATH", str(tmp_path))

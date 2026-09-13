@@ -224,6 +224,7 @@ def test_freelance_keeps_real_provider_adapter_contract(monkeypatch):
             "totalItemCount": 1, "gigs": [{"gigId": 123, "title": "로고 제작", "price": 50000,
                                             "seller": {"nickname": "designer"}, "review": {}}]}))
     monkeypatch.setattr(http, "chrome_get", get)
+    monkeypatch.setattr(http, "has_curl_cffi", lambda: True)  # HTTP 대역과 가용성 판정을 함께 격리
     mod = load_handler("freelance-services")
     result = json.loads(mod.execute({"query": "로고", "limit": 1}, SimpleNamespace(tool_name="freelance_search")))
     assert result["items"][0]["title"] == "로고 제작"

@@ -187,3 +187,9 @@ jobs:
             -p no:cacheprovider -rs --no-header \
             -k "console_and_pageerror or clean_page or blank_page" | tee /tmp/pw.log
           grep -q "3 passed" /tmp/pw.log || { echo "✗ 브라우저 있는 몸에서 3칸이 안 돌았다(스킵=침묵)"; exit 1; }
+      - name: 상주 브라우저의 작업 수명과 프로세스 소유권 (스킵 시 실패)
+        run: |
+          .venv/bin/python3 -m pytest backend/test_runtime_services.py \
+            -p no:cacheprovider -rs --no-header \
+            -k "real_browser_transport_idle_and_process_receipt" | tee /tmp/pw-runtime.log
+          grep -q "1 passed" /tmp/pw-runtime.log || { echo "✗ 실 브라우저 수명 검증이 실행되지 않았다"; exit 1; }

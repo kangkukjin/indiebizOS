@@ -170,9 +170,18 @@ class PromptBuilder:
 
         표식은 실패해도 본문 주입을 막지 않는다(신선도는 부가 정보지 전제가 아니다).
         """
-        content = self._load_guide_file(guide_filename)
-        if not content:
+        try:
+            content = self._load_guide_file(guide_filename)
+        except OSError as e:
+            logger.warning("[prompt_builder] 가이드 본문 미제공: %s (%s)", guide_filename, e)
             return ""
+        if not content.strip():
+            return ""
+        # 전문 주입도 지도 확인이다. 재열람 생략 때문에 자작 관문이 다시 서지 않게 한다.
+        if guide_filename in {"world_tools.md", "world_tools_local.md"}:
+            from selfbuild_gate import note_consult
+            from thread_context import get_current_agent_id
+            note_consult(get_current_agent_id() or "", f"injected:{guide_filename}")
         note = ""
         try:
             from guide_registry import freshness_note, record_use, mark_injected
@@ -181,8 +190,9 @@ class PromptBuilder:
             mark_injected(guide_filename)   # 턴 종료 후 증류 4단계가 회수해 되돌려 쓴다
         except Exception as e:
             logger.debug(f"[prompt_builder] 가이드 신선도 생략 (무시): {e}")
-        head = f"# 가이드: {guide_filename}"
-        return f"{head}\n{note}\n{content}" if note else f"{head}\n{content}"
+        head = f"# 가이드: {guide_filename} (전문 제공)"
+        body = f"{head}\n{note}\n{content}" if note else f"{head}\n{content}"
+        return f"{body}\n# 가이드 전문 끝: {guide_filename}"
 
     def _load_world_pulse(self) -> str:
         """World Pulse 로드 — 오늘의 세계 상태 요약
@@ -633,10 +643,16 @@ def _build_dynamic_context(
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
 
         guide_files = consciousness_output.get("guide_files", [])
-        for guide in guide_files:
+        missing_guides = []
+        for guide in dict.fromkeys(guide_files):
             block = builder._guide_block(guide)
             if block:
                 parts.append(block)
+            else:
+                missing_guides.append(guide)
+        if missing_guides:
+            parts.append("# 가이드 본문 미제공\n" + ", ".join(missing_guides)
+                         + "\nread_guide로 확인하라. 읽지 못하면 미확인 사실과 작업 영향을 밝혀라.")
     else:
         if model_name:
             parts.append(f"# 자기 인식\n- AI 모델: {model_name}")
@@ -852,8 +868,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     guide_files = co.get("guide_files") or []
     if guide_files:
         aug.append(
-            "참고할 가이드: " + ", ".join(guide_files)
-            + " (위 turn_context에 본문 포함) — 그 지침대로 수행할 것."
+            "참고할 가이드: " + ", ".join(dict.fromkeys(guide_files))
+            + " — 현재 컨텍스트에 전문이 있으면 그 본문을 따르고, 없거나 잘림·요약됐으면 read_guide로 열어 따르라."
         )
 
     achievement_criteria = (co.get("achievement_criteria") or "").strip()

@@ -84,5 +84,65 @@ def test_assumptions_fused_into_user_command():
     assert "이 계획의 전제" not in prompt_builder.compile_user_command("x", {"task_framing": "y", "assumptions": 3})
 
 
+def test_guide_delivery_handles_missing_empty_and_duplicate_files(tmp_path, monkeypatch):
+    import prompt_builder as pb
+    import guide_registry
+
+    (tmp_path / "data/guides").mkdir(parents=True)
+    guide = tmp_path / "data/guides/ready.md"
+    guide.write_text("고유한 필수 절차")
+    (guide.parent / "empty.md").write_text("  \n")
+    monkeypatch.setattr(pb, "get_base_path", lambda: tmp_path)
+    builder = pb.PromptBuilder(tmp_path)
+    monkeypatch.setattr(pb, "get_prompt_builder", lambda: builder)
+    monkeypatch.setattr(pb, "_repair_turn_block", lambda _: "")
+    injected = []
+    monkeypatch.setattr(guide_registry, "freshness_note", lambda _: "")
+    monkeypatch.setattr(guide_registry, "record_use", lambda *a: None)
+    monkeypatch.setattr(guide_registry, "mark_injected", injected.append)
+    co = {"guide_files": ["ready.md", "missing.md", "empty.md", "ready.md"]}
+    text = pb._build_dynamic_context(co)
+    assert text.count("고유한 필수 절차") == 1
+    assert "# 가이드 전문 끝: ready.md" in text
+    assert "# 가이드 본문 미제공\nmissing.md, empty.md" in text
+    assert injected == ["ready.md"]
+    cmd = pb.compile_user_command("작업", co)
+    assert cmd.count("ready.md") == 1
+    assert "위 turn_context에 본문 포함" not in cmd
+    assert "없거나 잘림·요약됐으면 read_guide" in cmd
+    # 이전에 읽힌 가이드가 삭제돼도 캐시된 전문을 제공했다고 표시하지 않는다.
+    guide.unlink()
+    assert "# 가이드 본문 미제공\nready.md" in pb._build_dynamic_context(co)
+    monkeypatch.setattr(builder, "_load_guide_file", lambda _: (_ for _ in ()).throw(PermissionError()))
+    assert builder._guide_block("unreadable.md") == ""
+
+
+def test_injected_world_guide_preserves_consultation_gate(tmp_path, monkeypatch):
+    import prompt_builder as pb
+    import guide_registry
+    import selfbuild_gate
+    import thread_context
+
+    agent_id = "test-injected-world-guide"
+    selfbuild_gate.reset(agent_id)
+    monkeypatch.setattr(thread_context, "get_current_agent_id", lambda: agent_id)
+    monkeypatch.setattr(guide_registry, "freshness_note", lambda _: "")
+    monkeypatch.setattr(guide_registry, "record_use", lambda *a: None)
+    monkeypatch.setattr(guide_registry, "mark_injected", lambda _: None)
+    builder = pb.PromptBuilder(tmp_path)
+    try:
+        monkeypatch.setattr(builder, "_load_guide_file", lambda _: "")
+        assert not builder._guide_block("world_tools.md")
+        assert not selfbuild_gate.state(agent_id)["consulted"]
+        monkeypatch.setattr(builder, "_load_guide_file", lambda _: "전문")
+        assert builder._guide_block("world_tools.md")
+        # 같은 본문을 read_guide로 다시 가져오지 않아도 기존 관문을 통과한다.
+        assert selfbuild_gate.note_code_write(agent_id, str(tmp_path / "outputs/app.py"),
+                                             "custom_line = 1\n" * 160, root=str(tmp_path)) is None
+        assert selfbuild_gate.state(agent_id)["consulted"] == "injected:world_tools.md"
+    finally:
+        selfbuild_gate.reset(agent_id)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

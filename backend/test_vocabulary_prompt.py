@@ -126,5 +126,30 @@ def test_held_consciousness_instance_refreshes_without_role_file_change(prompt_b
     assert agent._prompt == before
 
 
+def test_supervisor_catalog_and_contract_follow_activation(prompt_box, monkeypatch):
+    from supervisor_runtime import tool_context, action_schema
+    from vocabulary_lifecycle import set_package_active
+    import thread_context
+
+    monkeypatch.setattr(thread_context, "get_allowed_nodes", lambda: None)
+    controller = SimpleNamespace(framing={"capability_focus": {
+        "highlight_actions": ["sense:awake", "sense:asleep"]}}, catalog={})
+    initial = tool_context(controller)
+    assert "sense:awake" in initial["available_actions"]
+    assert "sense:asleep" not in initial["available_actions"]
+    assert [v["action"] for v in initial["focused_actions"]] == ["sense:awake"]
+    set_package_active("awake", False, authority=HUMAN_AUTHORITY)
+    assert "sense:awake" not in tool_context(controller)["available_actions"]
+    with pytest.raises(ValueError, match="사용할 수 없는"):
+        action_schema("sense:awake")
+    set_package_active("awake", True, authority=HUMAN_AUTHORITY)
+    assert tool_context(controller) == initial
+    assert action_schema("sense:awake")["definition"]
+    monkeypatch.setattr(thread_context, "get_allowed_nodes", lambda: {"self"})
+    assert tool_context(controller)["available_actions"] == []
+    with pytest.raises(ValueError, match="사용할 수 없는"):
+        action_schema("sense:awake")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

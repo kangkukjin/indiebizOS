@@ -232,15 +232,14 @@ class Supervisor:
         return True
 
     def plan(self, prompt, system_prompt, revision=None):
-        from supervisor_runtime import invoke, ROLE_PROMPT
+        from supervisor_runtime import invoke, PLANNING_TOOL_PROMPT
         with self.review_lock:
             if revision:
                 if self.reviews >= self.config["max_reviews"]:
                     return ""
                 self.reviews += 1
             self.enabled = True
-            return invoke(self, prompt, planning_prompt=system_prompt + "\n\n" + ROLE_PROMPT.split("판정은 JSON 하나:")[0]
-                          + "\n이번 계획 호출은 앞에서 지정한 계획 JSON 형식으로 답하라.",
+            return invoke(self, prompt, planning_prompt=system_prompt + "\n\n" + PLANNING_TOOL_PROMPT,
                           phase="reframe" if revision else "plan")
 
     def configure(self, framing, repair=False):

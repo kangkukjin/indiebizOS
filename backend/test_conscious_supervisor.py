@@ -609,5 +609,23 @@ def test_supervisor_action_contract_comes_from_registry():
     assert schema["definition"]
 
 
+@pytest.mark.parametrize("revision", [None, {"broken_assumption": "파일 없음"}])
+def test_plan_and_reframe_use_planning_contract_without_review_fields(supervisor, monkeypatch, revision):
+    import supervisor_runtime as runtime
+
+    calls = []
+    monkeypatch.setattr(runtime, "invoke", lambda *a, **kw: calls.append(kw) or "{}")
+    # 중간 감독 문구가 바뀌어도 계획 호출에 섞이지 않는다.
+    monkeypatch.setattr(runtime, "ROLE_PROMPT", "감독 전용 규칙 REWORK repair_scope instruction")
+    assert supervisor.plan("사용자 입력", "계획 JSON 계약", revision) == "{}"
+    prompt = calls[0]["planning_prompt"]
+    assert prompt.startswith("계획 JSON 계약")
+    assert "tool:도구이름" in prompt and "ibl:node:action" in prompt
+    assert "계획 JSON 형식" in prompt
+    assert "REWORK" not in prompt and "repair_scope" not in prompt
+    assert "감독 전용 규칙" not in prompt
+    assert calls[0]["phase"] == ("reframe" if revision else "plan")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

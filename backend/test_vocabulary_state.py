@@ -60,5 +60,50 @@ def test_cached_handler_is_also_blocked(box, monkeypatch):
         tool_loader.load_tool_handler("asleep")
 
 
+def test_concurrent_registry_load_publishes_only_filtered_dictionary(box, monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    import ibl_registry as registry
+    import yaml
+
+    path = box / "data/ibl_nodes.yaml"
+    path.write_text(yaml.safe_dump({"nodes": {"sense": {"actions": {
+        name: {"tool": name, "router": "handler"} for name in ("awake", "asleep")}}}}))
+    monkeypatch.setattr(registry, "_nodes_path", path)
+    monkeypatch.setattr(registry, "_nodes", None)
+    monkeypatch.setattr(registry, "_nodes_revision", None)
+    monkeypatch.setattr(registry, "_pruned_foreign", {})
+    monkeypatch.setattr(registry, "_merge_api_registry_actions", lambda nodes: None)
+    state.read_state(box)
+    entered, release, second_started = (threading.Event() for _ in range(3))
+    original = registry._prune_foreign_vocabulary
+    calls = []
+
+    def prune(nodes):
+        calls.append(nodes)
+        entered.set()
+        assert release.wait(3)
+        original(nodes)
+
+    def second_load():
+        second_started.set()
+        return registry.load_nodes_installed()
+
+    monkeypatch.setattr(registry, "_prune_foreign_vocabulary", prune)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first = pool.submit(registry.load_nodes_installed)
+        try:
+            assert entered.wait(3)
+            second = pool.submit(second_load)
+            assert second_started.wait(3)
+            assert registry._nodes is None, "필터 중인 사전을 공용 캐시에 노출하면 안 된다"
+        finally:
+            release.set()
+        a, b = first.result(timeout=3), second.result(timeout=3)
+    assert a is b and len(calls) == 1
+    assert set(a["nodes"]["sense"]["actions"]) == {"awake"}
+    assert "잠들어" in registry.pruned_reason("sense", "asleep")
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

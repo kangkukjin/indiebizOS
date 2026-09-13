@@ -157,7 +157,7 @@ def test_idle_anyio_and_resident_process_allow_restart_and_are_reaped(runtime):
 @pytest.mark.parametrize("clock_shift", [-2, 2])
 def test_clock_correction_preserves_worker_and_child_ownership(runtime, monkeypatch, clock_shift):
     """실제 시계는 건드리지 않고 장수 제어자가 보는 NTP 보정만 주입한다."""
-    _psosx = pytest.importorskip("psutil._psosx")
+    _psosx = pytest.importorskip("psutil._psosx", exc_type=ImportError)
     if not hasattr(_psosx, "INIT_BOOT_TIME"):
         pytest.skip("시계 보정 전 psutil 버전")
 

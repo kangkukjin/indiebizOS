@@ -144,6 +144,8 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: '3.11'
+      - name: 파일 오디오 회귀의 시스템 의존성 설치
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
       - name: 코어 의존성 + pytest 설치
         # openpyxl·xlrd: [self:sheet] 및 test_episode3388_repairs의 xls 읽기 실의존 —
         # requirements-tools.txt 소속이라 core 만으로는 빠진다.

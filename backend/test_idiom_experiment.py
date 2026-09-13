@@ -30,7 +30,11 @@ def test_oracle_rejects_successful_but_discarded_read(capsys):
     repaired = run_trial(code, 'snippets')
     assert repaired['quality_ok']
     rows = decoded(repaired['result']['final_result'])['items']
-    assert [row['파일'] for row in rows] == [f'notes/{i:02d}.txt' for i in range(3)]
+    # grep의 파일 탐색 순서는 파일시스템에 달린다. 선택된 세 위치와 읽은 본문을 대조한다.
+    assert len(rows) == len({row['파일'] for row in rows}) == 3
+    for row in rows:
+        assert row['파일'] in {f'notes/{i:02d}.txt' for i in range(9)}
+        assert f"evidence-{int(Path(row['파일']).stem)}" in row['value']
     assert all(row['줄번호'] == 1 and row['value'].count('context') == 29 for row in rows)
 
 

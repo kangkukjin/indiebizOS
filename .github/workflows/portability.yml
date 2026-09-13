@@ -107,6 +107,8 @@ jobs:
           .venv/bin/python3 -m pip install --quiet -r backend/requirements-core.txt -r backend/requirements-tools.txt
       - name: import 커버리지 감사 (scripts/check_import_coverage.py)
         run: python3 scripts/check_import_coverage.py --allow-ml-missing
+      - name: macOS 시계 보정 뒤 프로세스 소유권 회귀
+        run: .venv/bin/python3 -m pytest backend/test_restart_process.py -k clock_correction
 
   boot-smoke:
     # 정본 경로 부팅 증명 — README 의 레시피 *그대로*: clone → bootstrap.py → 부팅 → /health 200.

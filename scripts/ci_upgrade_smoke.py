@@ -108,7 +108,7 @@ def materialize_resources(out: Path) -> Path:
 def apply_git_upgrade(aged: Path, tag: str) -> dict:
     """git pull 등가 — 상류(태그→지금 트리)가 **바꾼 파일만** 갱신·삭제한다. 사용자가 옮기거나
     지운 뒤 상류가 손대지 않은 파일은 그대로 둔다(pull 의 의미). 미커밋 변경도 실린다."""
-    changed = [f for f in fx.sh(["git", "diff", "--name-only", "-z", tag]).split("\0") if f]
+    changed = [f for f in fx.sh(["git", "diff", "--no-renames", "--name-only", "-z", tag]).split("\0") if f]
     untracked = [f for f in fx.sh(["git", "ls-files", "--others", "--exclude-standard", "-z"]).split("\0") if f]
     copied = removed = 0
     for rel in sorted(set(changed) | set(untracked)):

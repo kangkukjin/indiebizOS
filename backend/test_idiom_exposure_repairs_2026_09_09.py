@@ -117,12 +117,8 @@ def test_saved_workflow_called_as_function_uses_same_value_gate(monkeypatch):
     assert out["fn_source"] == "workflow" and out["results"]
 
 
-def test_current_block_body_keeps_teaching_in_actual_introduction(
-    tmp_path, monkeypatch
-):
-    import ibl_access
-    import runtime_utils
-
+@pytest.mark.local
+def test_current_lesson_matches_operational_registry():
     catalog = json.loads((ROOT / "data/idioms/curated.json").read_text())
     lesson = next(e for e in catalog["idioms"] if e["name"] == "위치마다읽기")
     # 불변식은 교재 몸 == **운영 원장의 현재 몸**(다르면 소개기가 교재를 버린다). v1 스냅샷은 09-09 서명 개정
@@ -138,6 +134,17 @@ def test_current_block_body_keeps_teaching_in_actual_introduction(
     assert (
         lesson["body"] == row["ibl_code"]
     )  # 운영 몸을 옛 교재로 되돌리지 않는다
+
+
+def test_current_block_body_keeps_teaching_in_actual_introduction(tmp_path, monkeypatch):
+    import ibl_access
+    import runtime_utils
+    from workflow_contract import call_signature
+
+    catalog = json.loads((ROOT / "data/idioms/curated.json").read_text())
+    lesson = next(e for e in catalog["idioms"] if e["name"] == "위치마다읽기")
+    row = {"intent": lesson["when"], "ibl_code": lesson["body"], "alias": lesson["name"],
+           "returns": "items", "signature": " ".join(call_signature(lesson["body"]))}
     # 노출 선정과 몸/교재 일치는 별개다. 명시 호출용으로 강등된 정의도
     # 아래 격리 원장에서 다시 소개하면 현재 블록 본문의 교재가 살아야 한다.
     (tmp_path / "data/idioms").mkdir(parents=True)

@@ -165,6 +165,13 @@ def _phone_runnable(node: str, action: str) -> bool:
 
 
 def load_nodes_installed() -> Dict:
+    # 활성 원장과 같은 잠금을 사용해 로드·필터·무효화의 순서를 보장한다.
+    from vocabulary_state import LOCK
+    with LOCK:
+        return _load_nodes_installed()
+
+
+def _load_nodes_installed() -> Dict:
     """**이 몸에 설치된** 사전 로드 (캐싱).
 
     사전 이음매(2026-08-24 계약화). 같은 ibl_nodes.yaml 을 읽는 로더가 둘인데 의미가 다르다:
@@ -187,7 +194,7 @@ def load_nodes_installed() -> Dict:
 
     try:
         with open(path, "r", encoding="utf-8") as f:
-            _nodes = yaml.safe_load(f) or {"nodes": {}}
+            nodes = yaml.safe_load(f) or {"nodes": {}}
     except Exception as e:
         # 부재≠파손 — ibl_access.load_nodes_raw 와 같은 방침. 깨진 원장을 {"nodes":{}} 로
         # 눙치면 이 몸의 설치 어휘가 통째로 0이 된 채 조용히 돈다.
@@ -198,13 +205,14 @@ def load_nodes_installed() -> Dict:
         ) from e
 
     # api_registry에서 node 바인딩된 액션 자동 병합
-    _merge_api_registry_actions(_nodes.get("nodes", {}))
+    _merge_api_registry_actions(nodes.get("nodes", {}))
 
     # 몸-사전 설치 필터(몸 독립 2단계): 배포물(yaml)=전체 사전집이지만, 이 몸의
     # 런타임에 설치되는 어휘는 자기 것만 — PC는 phone_only 를 모르고, 폰은 runnable
     # 만 안다. 남의 몸 능력은 명함(냄새)으로 알고 [others:ask] 로 부탁한다.
     # 코어(항상-on) 어휘는 양 몸 공통이라 @alias 크로스바디 포워딩이 그대로 산다.
-    _prune_foreign_vocabulary(_nodes)
+    _prune_foreign_vocabulary(nodes)
+    _nodes = nodes  # 필터가 끝난 사전만 다른 소비자에게 공개한다.
     _nodes_revision = current_revision
 
     return _nodes
@@ -254,7 +262,9 @@ def invalidate_nodes() -> None:
     """사전 캐시 무효화 — 다음 load_nodes_installed() 가 디스크에서 다시 읽는다.
     (ibl_engine.reload_nodes 의 캐시 리셋 부분이 여기로 위임)"""
     global _nodes
-    _nodes = None
+    from vocabulary_state import LOCK
+    with LOCK:
+        _nodes = None
 
 
 # === 사전 소유 판정 — capability_card 에서 이동 (2026-08-05 ⑦) ===

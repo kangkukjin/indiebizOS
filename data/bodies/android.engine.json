@@ -83,6 +83,7 @@
     "cognition/memory_evidence",
     "cognition/model_result_view",
     "cognition/prompt_builder",
+    "cognition/prompt_composition",
     "cognition/pursuit_bind",
     "cognition/pursuit_maintenance",
     "cognition/pursuit_tools",
@@ -273,6 +274,7 @@
     "surface/api_photo",
     "surface/api_portal",
     "surface/api_projects",
+    "surface/api_prompt_composition",
     "surface/api_pursuits",
     "surface/api_report",
     "surface/api_scheduler",
@@ -342,8 +344,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 331,
-    "engine": 305,
+    "total": 333,
+    "engine": 307,
     "blocklist": 26
   }
 }

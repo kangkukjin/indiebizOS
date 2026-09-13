@@ -5,7 +5,7 @@ import { openSystemAI } from '../lib/surface-navigation';
 import { BACKEND_ORIGIN, IS_WEB_SURFACE } from '../lib/backend-origin';
 
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
-import { Zap, Boxes, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone } from 'lucide-react';
+import { Zap, Boxes, Settings, Clock, Folder, Globe, Bot, Package, Users, Contact, HelpCircle, Info, ChevronDown, BookOpen, ScanLine, Search, Gauge, LayoutGrid, Compass, X, Smartphone, Layers } from 'lucide-react';
 import logoImage from '../assets/logo-indiebiz.png';
 import { useAppStore } from '../stores/appStore';
 import { api } from '../lib/api';
@@ -21,6 +21,7 @@ import {
   TrashDialog,
   SchedulerDialog,
   SwitchEditDialog,
+  PromptCompositionDialog,
 } from './launcher-components';
 import { GuideDialog } from './GuideDialog';
 import { OnboardingDialog } from './OnboardingDialog';
@@ -120,6 +121,7 @@ export function Launcher() {
   const [showGuideDialog, setShowGuideDialog] = useState(false);
   const [showOnboardingDialog, setShowOnboardingDialog] = useState(false);
   const [showUserManualDialog, setShowUserManualDialog] = useState(false);
+  const [showPromptCompositionDialog, setShowPromptCompositionDialog] = useState(false);
   const [showMainMenu, setShowMainMenu] = useState(false);
   const mainMenuRef = useRef<HTMLDivElement>(null);
   const [newProjectName, setNewProjectName] = useState('');
@@ -837,6 +839,16 @@ export function Launcher() {
                   <Settings size={16} className="text-stone-500" />
                   <span className="text-sm">설정</span>
                 </button>
+                <button
+                  onClick={() => {
+                    setShowPromptCompositionDialog(true);
+                    setShowMainMenu(false);
+                  }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
+                >
+                  <Layers size={16} className="text-stone-500" />
+                  <span className="text-sm">프롬프트 구성</span>
+                </button>
                 <div className="border-t border-stone-100 my-1" />
                 <button
                   onClick={() => {
@@ -1229,6 +1241,12 @@ export function Launcher() {
       <UserManualDialog
         show={showUserManualDialog}
         onClose={() => setShowUserManualDialog(false)}
+      />
+
+      {/* 프롬프트 구성 — 에이전트별 프롬프트 조립 표면 */}
+      <PromptCompositionDialog
+        show={showPromptCompositionDialog}
+        onClose={() => setShowPromptCompositionDialog(false)}
       />
     </div>
   );

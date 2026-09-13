@@ -20,6 +20,50 @@ export interface ModelGearState {
   }>;
 }
 
+export interface PromptCompositionAgent {
+  id: string;
+  label: string;
+  group: string;
+  role: string;
+  summary: string;
+  needs_project?: boolean;
+}
+
+export interface PromptCompositionCatalog {
+  agents: PromptCompositionAgent[];
+  no_prompt_jobs: string[];
+  projects: Array<{ id: string; name: string; agents: string[] }>;
+  default_sample: string;
+}
+
+export interface PromptSection {
+  key: string;
+  label: string;
+  layer: 'system' | 'turn' | 'user';
+  kind: 'file' | 'dynamic' | 'memory' | 'history' | 'constant' | 'turn' | 'input';
+  source: string;
+  condition: string | null;
+  included: boolean;
+  chars: number;
+  tokens: number;
+  content: string;
+  note: string;
+  ref_agent?: string;
+}
+
+export interface PromptCompositionResult {
+  agent: PromptCompositionAgent;
+  sample: string;
+  model: { role?: string; provider?: string; model?: string; tier?: string; axis?: string; source?: string; error?: string; note?: string };
+  sections: PromptSection[];
+  assembled: { stable_chars?: number; dynamic_chars?: number; stable_tokens?: number; dynamic_tokens?: number; error?: string };
+  totals: Record<'system' | 'turn' | 'user', { chars: number; tokens: number; count: number }>;
+  entry?: string;
+  output_keys?: string[];
+  context?: { project?: string; agent?: string; agent_count?: number; allowed_nodes?: string[] | null };
+  error?: string;
+}
+
 export function applySystemAIMethods<T extends APIClientCore>(client: T) {
   return Object.assign(client, {
 
@@ -276,6 +320,19 @@ export function applySystemAIMethods<T extends APIClientCore>(client: T) {
         estimated_tokens: number;
         config: { selected_template: string };
       }>('/system-ai/prompts/preview');
+    },
+
+    // ============ 프롬프트 구성 (안경 메뉴 > 프롬프트 구성) ============
+
+    async getPromptCompositionAgents() {
+      return client.request<PromptCompositionCatalog>('/prompt-composition/agents');
+    },
+
+    async assemblePromptComposition(body: { agent_id: string; sample_message?: string; project_id?: string }) {
+      return client.request<PromptCompositionResult>('/prompt-composition/assemble', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      });
     },
 
     // ============ 시스템 AI 대화 히스토리 ============

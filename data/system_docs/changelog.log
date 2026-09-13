@@ -1939,3 +1939,5 @@
 [2026-09-12] 의식 없는 실행·반사의 평가 생략(사용자 판정): 실패·쓰기·반복·지연·알림·스크립트 공개·과제 완료의 감독 승격 제거. 실제 의식 규정이 있는 턴만 중간 감독·최종평가·SelfReflect 허용. 평가 없는 경로는 알림/산출물 직접 전달·실행자 과제 완료, 최종 응답 후 기억 선별 유지. 데스크탑/원격 조종실·정본 문서 정렬. docs/EVALUATION_ROUTE_BOUNDARY_2026_09_12.md 참조.
 
 [2026-09-12] 평가 역할 경계 복원: 의식의 명시적 달성 기준·멈춤선만 판정. 일반 노력선/도구/품질 심사와 빈 기준 자기반성 제거. 기준 ID·증거 없는 지적은 재작업 금지, 보완·재평가 기준 고정, 독립 시간합산 veto 제거. docs/EVALUATOR_CRITERIA_OWNERSHIP_2026_09_12.md 참조.
+
+[2026-09-13] 프롬프트 구성 표면 신설(런처 안경 메뉴 → 프롬프트 구성): 시스템 AI·프로젝트 에이전트·포식/앱메이커 변형·의식·의식 감독·무의식·최종 평가자·경험 증류·심층기억 추출·대화 이력 압축·가이드 순찰 3종·IBL 번역기·자동응답 14종의 프롬프트를 A+B+C 조각(층·출처·조건·분량·본문)으로 보인다. 실행기억·IBL 환경·프로젝트 포식 기억 같은 가변 조각은 샘플 메시지 한 건으로 정본 빌더를 그대로 돌려 조립(LLM 0). backend/cognition/prompt_composition.py + surface/api_prompt_composition.py(/prompt-composition/agents·assemble, 로컬 전용), 프론트 PromptCompositionDialog. docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md 참조.

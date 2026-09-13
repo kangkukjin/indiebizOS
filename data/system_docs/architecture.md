@@ -114,36 +114,13 @@ base → datastore → ibl → cognition → services → surface
 IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md** 참조.
 
 ### 프롬프트 빌더 (prompt_builder.py)
-시스템 AI와 프로젝트 에이전트 모두 동일한 프롬프트 구조 사용:
+시스템 AI와 프로젝트 에이전트는 같은 빌더로 조립되며, 프롬프트 캐시 prefix 를 지키기 위해 두 층으로 나뉜다:
 
-```
-┌─────────────────────────────────────────┐
-│     공통 설정 (base_prompt_v2.md)        │
-│   - AI 행동 원칙, 도구 사용 가이드       │
-├─────────────────────────────────────────┤
-│      IBL 환경 (ibl_access.py)           │
-│   - 사용 가능한 노드/액션 목록           │
-│   - IBL 문법 가이드                     │
-│   - 시스템 AI: 6개 노드 전체            │
-│   - 에이전트: 허용된 노드만             │
-├─────────────────────────────────────────┤
-│       조건부 프래그먼트 (fragments/)     │
-│   - 06_git.md: git_enabled=true일 때    │
-│   - 09_delegation.md: 에이전트 2개+     │
-│   - 10_system_ai_delegation.md          │
-├─────────────────────────────────────────┤
-│            개별 역할 프롬프트            │
-│   - 시스템 AI: system_ai_role.txt       │
-│   - 에이전트: agents.yaml의 role        │
-├─────────────────────────────────────────┤
-│         IBL 용례 RAG 참조 (동적 주입)    │
-│   - 유사 과거 용례 XML 블록              │
-│   - 사용자 메시지 수신 시 1회 주입        │
-├─────────────────────────────────────────┤
-│           컨텍스트 (동적 주입)           │
-│   - 사용자 프로필, 시스템 상태 등        │
-└─────────────────────────────────────────┘
-```
+- **안정부(system_prompt)** — 현재 날짜(일 단위) → `base_prompt_v6.md` → `<system_structure>` 정체성 코어 → 조건부 프래그먼트(`06_git`·`09_delegation`·`10_system_ai_delegation`) → IBL 환경(`ibl_access.build_environment`: 압축 문법서 + 허용 노드의 액션 카탈로그 + 상시 관용구) → 프로젝트 에이전트만 `<project_memory>`(폴더 포식 문서) → `# Role`(`system_ai_role.txt` / `agent_<이름>_role.txt`) → `# Notes` / `# 시스템 메모`.
+- **가변부(`<turn_context>`, 사용자 메시지 앞)** — 분 단위 시각 → 실행기억(해마 회상 + 심층·실행 지도) → 모델명 → 의식이 고른 가이드 본문 → 수리 턴 교리(RED 그랜트 때만).
+- **사용자 명령** — `compile_user_command` 가 원문에 의식의 보강(문제 규정·기준 출처·전문가의 선택·전제·액션·수행 절차·실행 초안·가이드·충족 기준)을 당위 앵커로 이어 붙인다(THINK 경로).
+
+의식·의식 감독·무의식·최종 평가자·경험 증류·가이드 순찰·IBL 번역·자동응답은 각자 다른 조립을 갖는다. **어느 에이전트가 무엇을 어떤 순서로 읽는지는 런처 안경 메뉴 → 프롬프트 구성** 표면이 정본 빌더를 그대로 불러 조각별 분량과 본문으로 보여준다(`backend/cognition/prompt_composition.py`, `/prompt-composition/*`). 문서의 조립 순서 서술이 표면과 어긋나면 표면이 맞다.
 
 ### 프롬프트 XML 구조 / AI 프로바이더
 모든 프롬프트의 XML 태그 구조와 지원 AI 프로바이더 목록은 **technical.md** 참조.
@@ -497,7 +474,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **50개** (+ 백엔드 extensions **5개**), IBL: **6노드 165 액션** (sense 43·self 50·limbs 14·others 17·engines 19·table 22)
-- backend **.py 385개**(test 제외, git 추적 기준) — 층 디렉토리 `base 48 · datastore 51 · ibl 55 · cognition 64 · services 36 · surface 68`(+ common 20·providers 13·channels 4·drivers 3). 가이드 **75개**(guide_db 등록 **74**)
+- backend **.py 387개**(test 제외, git 추적 기준) — 층 디렉토리 `base 48 · datastore 51 · ibl 55 · cognition 65 · services 36 · surface 69`(+ common 20·providers 13·channels 4·drivers 3). 가이드 **75개**(guide_db 등록 **74**)
 - op 분기 액션 **74개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**33개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 44·false 23·미선언 98)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

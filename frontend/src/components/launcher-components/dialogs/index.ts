@@ -10,3 +10,4 @@ export { SchedulerDialog } from './SchedulerDialog';
 export { TaskEditDialog } from './TaskEditDialog';
 export { SystemAIChatDialog } from './SystemAIChatDialog';
 export { SwitchEditDialog } from './SwitchEditDialog';
+export { PromptCompositionDialog } from './PromptCompositionDialog';

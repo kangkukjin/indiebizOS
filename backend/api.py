@@ -595,6 +595,7 @@ from api_ibl import router as ibl_router
 from api_nodes import router as nodes_router
 from api_limb import router as limb_router
 from api_xray import router as xray_router
+from api_prompt_composition import router as prompt_composition_router
 from api_lecture_workspace import router as lecture_workspace_router
 
 # 매니저 주입
@@ -659,6 +660,7 @@ app.include_router(ibl_router, tags=["ibl"])
 app.include_router(nodes_router, tags=["nodes"])
 app.include_router(limb_router, tags=["limb"])  # /limb/* 는 자체 limb key 인증 (is_public_remote_path 등록)
 app.include_router(xray_router, tags=["xray"])
+app.include_router(prompt_composition_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (프롬프트·기억 본문)
 app.include_router(lecture_workspace_router, tags=["lecture-workspace"])
 
 from api_phone import router as phone_router

@@ -50,6 +50,7 @@ see_also: [architecture.md, ibl.md]
 - `PUT /system-ai/prompts/config` - 프롬프트 설정 업데이트 (역할 프롬프트 토글)
 - `GET /system-ai/prompts/role` - 역할 프롬프트 조회
 - `PUT /system-ai/prompts/role` - 역할 프롬프트 업데이트
+- `GET /prompt-composition/agents` · `POST /prompt-composition/assemble` - **프롬프트 구성** 표면(런처 안경 메뉴). 에이전트 종류(시스템 AI·프로젝트 에이전트·포식/앱메이커 변형·의식·의식 감독·무의식·최종 평가자·경험 증류·심층기억·이력 압축·가이드 순찰·IBL 번역·자동응답)마다 프롬프트 조각을 순서·출처·조건·분량과 함께 돌려준다. 실행기억 같은 가변 조각은 샘플 메시지 한 건으로 실제 조립(LLM 0). 정본=`backend/cognition/prompt_composition.py`, 로컬 전용(프롬프트·기억 본문 노출)
 - `GET /system-ai/status` - 준비 판정. `ready` 는 provider 를 본다(무키 프로바이더 claude_code·codex·ollama 는 키 없이 ready — `provider_needs_api_key` 정본, 2026-09-02 수리)
 - `GET /system-ai/candidates` - 이 기계가 이미 가진 AI 후보 `{items:[{provider, model, source, kind, login?}]}` — 환경변수 키 · 설치된 CLI · 로컬 모델 서버 (`backend/base/ai_candidates.py`, 카탈로그=`data/ai_provider_catalog.yaml`)
 - `POST /system-ai/probe` - `{provider, model, api_key?}` 실응답 1턴 검증. 실패는 원인별 kind(no_key/auth/model/cli_login/local_down/timeout…). 저장 안 함 — 검증 → 저장 순서 (첫 성공 온보딩, `api_onboarding.py`, 로컬 전용)
@@ -331,7 +332,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(48) → `datastore`(51) → `ibl`(55) → `cognition`(64) → `services`(36) → `surface`(68). `.py` 총 385개(test 제외).
+  `base`(48) → `datastore`(51) → `ibl`(55) → `cognition`(65) → `services`(36) → `surface`(69). `.py` 총 387개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(20) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

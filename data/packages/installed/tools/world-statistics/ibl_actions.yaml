@@ -1,0 +1,77 @@
+node: sense
+actions:
+  world_bank:
+    returns: items
+    fixture: '[sense:world_bank]{indicator: "GDP", country: "한국"}'
+    description: 세계은행 경제·사회 지표 시계열. 국가별 GDP·인구·교육 등 장기 비교 분석용. items 통화(연도+지표값 필드) 반환.
+    group: world
+    target_description: 지표명 또는 코드 (예 "GDP"/"인구"/"실업률" 자연어 가능, NY.GDP.MKTP.CD 코드도). country는 국가명(한국/미국) 또는 ISO 코드. 반환에 table={columns:[연도,지표],rows:[[연도,값],...]} 포함 — 그대로 table:chart{table:...}/spreadsheet{table:...}로 흘려보내 reshape 없이 시각화/표.
+    router: handler
+    tool: fetch_world_bank_data
+    implementation: 세계은행 공개 API로 국가별 경제/사회 지표 시계열 조회
+    target_key: indicator
+# tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
+# op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
+
+tool_json:
+  header:
+    id: world-statistics
+    name: 세계은행 통계
+    description: 세계은행의 국가별 경제·사회 지표 시계열을 조회합니다.
+    version: 1.0.0
+  tools:
+  - name: fetch_world_bank_data
+    description: 'World Bank API를 사용하여 국가별 경제 및 사회 지표 데이터를 가져옵니다.
+
+
+      ## World Bank API란?
+
+      - 전 세계 국가의 경제 성장, 인구, 빈곤, 교육 등 수천 개의 지표 제공
+
+      - 시계열 데이터(연도별) 분석에 최적화
+
+
+      ## 주요 지표 코드 (Indicator Codes)
+
+      - NY.GDP.MKTP.CD: GDP (현재 US$)
+
+      - SP.POP.TOTL: 총 인구
+
+      - FP.CPI.TOTL.ZG: 인플레이션 (소비자 물가, 연간 %)
+
+      - SL.UEM.TOTL.ZS: 실업률 (총 노동력의 %)
+
+      - NY.GDP.PCAP.CD: 1인당 GDP (현재 US$)
+
+
+      ## 사용 시점
+
+      - 국가별 경제 성장 트렌드 분석
+
+      - 인구 통계 및 사회적 지표 확인
+
+      - 보고서에 객관적인 통계 수치 삽입
+
+
+      ## 반환 정보
+
+      - 연도별 지표 값, 국가명, 지표명'
+    input_schema:
+      type: object
+      properties:
+        indicator:
+          type: string
+          description: '지표 코드 (예: ''NY.GDP.MKTP.CD'')'
+        country:
+          type: string
+          description: '국가 코드 (ISO 3자리, 예: ''KOR'', ''USA'', ''all'')'
+          default: all
+        date:
+          type: string
+          description: '날짜 범위 (예: ''2010:2022'')'
+        per_page:
+          type: integer
+          description: 페이지당 결과 수 (기본 50)
+          default: 50
+      required:
+      - indicator

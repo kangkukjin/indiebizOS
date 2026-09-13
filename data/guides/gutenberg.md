@@ -8,7 +8,7 @@
 [sense:classic]{op: "western", query: "검색어", ...옵션}
 ```
 
-서양 고전 통합 액션 `[sense:classic]` 의 `op:"western"` 분기다 (op 생략 시 western이 기본). 한국 고전은 `[sense:classic]{op:"korean"}`(한국고전종합DB). 핸들러: `culture` 패키지의 `classic_op` → `gutenberg_search`. (옛 `[sense:gutenberg_books]` 는 2026-06-03 폐지 — `[sense:classic]{op:"western"}` 사용.)
+서양 고전 통합 액션 `[sense:classic]` 의 `op:"western"` 분기다 (op 생략 시 western이 기본). 한국 고전은 `[sense:classic]{op:"korean"}`(한국고전종합DB). 핸들러: `books` 패키지의 `classic_op` → `gutenberg_search`. (옛 `[sense:gutenberg_books]` 는 2026-06-03 폐지 — `[sense:classic]{op:"western"}` 사용.)
 
 ## 파라미터
 

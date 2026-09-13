@@ -48,6 +48,12 @@ IBL 호출은 사람에게 변경을 제안하며 직접 활성 선택을 바꿀
 형식·변환·등록 경계의 정본은 `docs/IBLPACK_FORMAT.md`다.
 
 새 파일 등록에는 사전집 갱신이 필요하지만 깨우기/잠재우기에는 빌드가 없다.
+정본 배포에서 기존 묶음을 나누는 경우에는 `vocabulary_policy.yaml`의 `bundle_splits`가
+소유권 이동을 확인한 뒤 기존 활성 선택·분류·쓰레기통 복원 위치를 새 묶음에 한 번만
+이어 준다. 새 묶음에 이미 선택 기록이 있으면 덮어쓰지 않는다. 학술은 논문·연구자 /
+개체 식별 / 세계은행 통계, 문화는 공연·전시 / 책·고전, 쇼핑은 상품·중고 / 외주
+서비스로 분리했다. 낱말 이름·호출 계약·기존 기억은 유지한다.
+[분리 구현·검증 기록](../../docs/VOCAB_BUNDLE_SPLIT_2026_09_13.md).
 형제 모듈 교체는 기존 재시작 제약을 따른다. 상주 자원 정지·메모리 회수는 1판 밖이다.
 옛 텍스트는 새 파일로 변환만 하며 Nostr도 같은 ZIP의 운반 경로를 쓴다.
 
@@ -281,9 +287,9 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 ---
 
 <!-- IBL_STATS:START -->
-## 현재 보유한 도구 패키지 (46개 — 빌드 파생)
+## 현재 보유한 도구 패키지 (50개 — 빌드 파생)
 
-**op 분기 31 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **74개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 33 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · books · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · entity-lookup · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **74개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
 > 목록은 현재 `_OP_DISPATCHERS`를 가진 보유 패키지에서 파생한다. 새 op를 추가하거나 은퇴시키면 빌드가 목록과 수를 함께 갱신한다.
 <!-- IBL_STATS:END -->
@@ -296,6 +302,7 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 | ai-ops | AI Ops (원샷 낱말) | 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→items 구조화 · 중간 table:ai=items→items 의미  |
 | android | Android | 안드로이드 폰 화면 조작 — `[limbs:android]{op}` 단일 센터피스 (snapshot/tap/type/swipe/key/long_press/open_app). 집 PC=ADB+uiautomator(USB) / 폰 자신=네이티브 AccessibilityService(USB 불필요) — 핸들러가 프로파일로 분기. 폰 온디맨드 감각(`sense:here`/`listen`/`see`/`phone`) 핸들러도 이 패키지 |
 | blog | Blog | 블로그 RAG 검색 및 인사이트 분석 (진실 소스=Obsidian vault, DB는 파생 검색 인덱스) |
+| books | 책·고전 | 도서 검색·대출 통계·추천과 서양·한국 고전을 조회합니다. |
 | browser-action | Browser Action | Playwright 기반 브라우저 자동화 v5.0 (36개 도구: ref/CSS selector, stealth, 쿠키 동의 자동처리, 네트워크 캡처, vision 모드, 다중 탭/iframe, 동적 콘텐츠 대기, 다단계 폴백 추출, CDP 타임아웃) |
 | bulletin | Bulletin | 로그인 없는 자유게시판 `[others:bulletin]` — 게시판마다 공개 주소 `/b/<5자>`, 주소 아는 사람이 로그인 없이 글·사진 게시 |
 | business | Business | 비즈니스 관계 및 연락처(이웃) 관리 |
@@ -305,10 +312,12 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 | computer-use | Computer Use | 컴퓨터 사용 자동화 |
 | contest | Contest | AI 공모전·경진대회 검색 (Kaggle, `sense:contest`) |
 | context7 | Context7 | Context7 라이브러리 문서 검색 |
-| culture | Culture | 공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회 |
+| culture | 공연·전시 | KOPIS 공연·공연장과 KCISA 전시·문화행사를 조회합니다. |
 | data-ops | Data Ops | 통화 변환자 9동사 (filter/sort/take/select/dedup/groupby/join/union/merge) — 순수 변환. `group: transform`, `scope: workspace`, `runs_on: anywhere`. 파이프(`>>`·`&`)와 같은 닫힌 계급. + 표준 코어 문서 emitter `table:structure`·`table:document` (2026-07-03 media_producer서 이관) |
+| entity-lookup | 개체 식별 | Wikidata에서 동명이인·동음이의를 식별하고 개체의 사실을 조회합니다. |
 | family-news | Family News | 가족신문 `[others:family_news]` — 폰(USB) 사진으로 판 조판→`/n/<5자>` 누적 발행, 방명록·가족 사진 업로드 |
 | finance-record | Finance Record | 재무 원장 `[self:finance]{op}` — 소비(지출·수입 거래)와 소유(자산·부채)를 **주체(owner) 축**(개인/회사)으로 한 원장에. 폰 결제 알림 수거(`op:sync`)·다형 입력 적재(`ingest_engine` 공용). 2026-08-14 `[self:spend]` 흡수 |
+| freelance-services | 외주 서비스 | 외주 서비스 상품과 프리랜서 전문가를 검색합니다. |
 | guest-helper | Guest Helper | USB 손발 — 발급 `[self:limb]{op}`(USB 페이로드 생성·승인·폐기) + 조작 `[limbs:guestpc]{op}`(셸/파일). 헬퍼=Go 단일파일, 허브로 아웃바운드(그 PC 방화벽 무설정). 눈 없음(셸·파일만) |
 | health-record | Health Record Manager | 건강 정보 기록/관리 (혈압, 혈당, 체중, 증상, 투약) |
 | house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중 지붕, 필로티, 건물 프로파일, 계단(직선/L자/U턴/나선형/Winder |
@@ -327,13 +336,14 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 | public-files | Public Files | 공개 파일 `[others:showcase]` — `/s/<5자>/` 로 디스크의 폴더를 그대로 공개(EXIF 제거·동영상 스트리밍 트랜스코드·자막) |
 | radio | Radio | 인터넷 라디오 검색 및 재생 |
 | real-estate | Real Estate | 부동산 시세·매물 — 국토부 실거래가 + 직방·네이버부동산 현재 매물 (`sense:realty{source}`) |
-| shopping-assistant | Shopping Assistant | 새 상품 가격비교 `[sense:search_shopping]`(다나와 — used/all·naver 축은 2026-08-04 은퇴) + 중고 매물 `[sense:used]{source: bunjang/danggeun/joongna/naver}` + 프리랜서·외주 `[sense:freelance]`(크몽) |
+| shopping-assistant | 상품·중고 | 새 상품 가격비교와 중고 거래 매물을 검색합니다. |
 | startup | Startup | 창업지원 사업공고 검색 (K-Startup, 중소벤처기업부) |
-| study | Study Helper | 학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata) |
+| study | 논문·연구자 | 학술 논문 검색·다운로드와 연구자·공저자 조회. |
 | system_essentials | System Essentials | 파일 읽기/쓰기/검색(rg 고속 경로+인코딩 폴백), todo, 계획 모드, 이웃 조회, 웹앱 등기부 `[self:webapp]{op}`(파생 우선 — 진실 소스 7곳 재계산 + 전 함대 생존 실측) |
 | visualization | Visualization | 범용 데이터 시각화 (차트/그래프 PNG/HTML) |
 | web | Web Tools | 통합 검색 `[sense:search]{source: ddg/naver/gnews/hn/guardian}`(2026-08-05 어휘 압축 — 구 web-kr 네이버·study 가디언 흡수), 크롤링, RSS 피드, **신문 발행 `[engines:newspaper]`**(2026-08-15 스위치화 — prompt_hidden, 신문 계기 발행 버튼 전용). 2026-08-28 검색 통화 계약 둘: ①모든 소스가 **발행일 `date`(ISO 8601)** 를 싣는다(gnews=RFC2822 파싱·naver=news pubDate/blog postdate — 파싱 불능이면 필드를 달지 않는다, 모르는 날짜 미주장) → 신선도를 `[table:filter]` 술어로 세울 수 있다 ②`queries` 파라미터 선언이 `[string, array]` 유니온(핸들러가 이미 하던 배치 팬아웃을 문장 안에서 쓸 수 있게 — 선언이 능력보다 좁아 정직 거절되던 비대칭 수리). 가드 `backend/test_search_date_field.py` D1~D6 |
 | web-builder | Web Builder | 홈페이지 제작/관리/배포 통합 도구 |
+| world-statistics | 세계은행 통계 | 세계은행의 국가별 경제·사회 지표 시계열을 조회합니다. |
 | youtube | Youtube | YouTube 영상 정보, 자막 추출, 다운로드 |
 | nodejs | Node.js Executor | Node.js/JavaScript 코드 실행 환경. JSON 처리, 비동기 작업, npm 패키지 활용, 프론트엔드 로직 검증에 사용합니다. fs, path, crypto 등 내장 모듈과 설치된 npm 패키지 사용 가능. |
 | publishing | Publishing Project Manager | 출판 프로젝트(책) 관리 도구. 원고 관리, 구조 기획, 조각글 수집 등.  사용 가이드: data/guides/book_publishing.md 참조 |

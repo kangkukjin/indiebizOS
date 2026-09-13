@@ -90,6 +90,8 @@ PHONE_VERIFIED_PACKAGES = {
 
     "contest",          # AI 경진대회 검색(sense:contest, Kaggle API HTTP + stdlib). KAGGLE_API_TOKEN 폰 프로비저닝 전제.
     "study",            # 연구 검색(HTTP + stdlib; study:paper 만 arxiv 3p — A36서 안 되면 그 액션 pc_only)
+    # 기존 폰 지원 구현의 소유권 분리(2026-09-13). 동작·의존·어휘 이름은 유지한다.
+    "entity-lookup", "world-statistics", "books", "freelance-services",
     # python-exec 은퇴(2026-07-02 d4408c6): pre-IBL 화석 → not_installed. 어휘 미배선이라
     #   execute_ibl 단일도구로 도달 불가 → 폰 번들에서도 제외(맥·폰 대칭). 부활 시 installed 복귀 + 재등재.
     "data-ops",  # 통화→통화 변환자(filter/sort/take/select/dedup/groupby/join/union/merge) + 표준 코어 문서 emitter(table:structure/document — 2026-07-03 media_producer서 이관). 순수 superstructure(IBL 문법, 몸 무관), 모듈레벨 stdlib만(json/re, 서드파티 0 — 문서 emitter의 playwright/docx/pptx/typst는 함수 안 지연 import, html 렌더=문자열이라 폰서도 동작). 폰-로컬 통화(sense:here 등)는 폰서 거르고 정렬해야 맞음 → anywhere 가 정직.

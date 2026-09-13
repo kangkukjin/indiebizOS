@@ -11,10 +11,9 @@ from typing import Optional
 # 2026-06-03 학술 논문 어휘 통합 — search_openalex/arxiv/pubmed/semantic + download_arxiv/pubmed
 # → [sense:paper]{op: search|download, source}. op 키만 _OP_DISPATCHERS(소스는 파라미터).
 # 2026-06-22 국회도서관 국가학술정보(nanet) — paper source:nanet(학위논문·국내학술) + researcher(연구자·공저자)
-# 2026-07-11 Wikidata 개체 해소 — [sense:entity]{op: resolve|detail, source: wikidata}.
-#   resolve=동명이인/동음이의를 QID로 못박음, detail=QID→구조화된 사실(records). source는 파라미터.
+# 개체 식별·세계은행 통계는 독립 묶음으로 이관(2026-09-13).
 # op 분기 = 파일 끝 _OP_DISPATCHERS 진짜 함수 테이블 (--check 가 AST 로 키 정확 비교).
-_OP_DEFAULTS = {"paper_op": "search", "researcher_op": "find", "entity_op": "resolve"}
+_OP_DEFAULTS = {"paper_op": "search", "researcher_op": "find"}
 
 # arXiv 예의(politeness) 규약 — export API 는 과부하·과속 요청에 **503** 을 돌려준다.
 # 우리는 그동안 UA 도 안 밝히고(기본 python-requests) 재시도도 없이 단발 호출 후
@@ -368,220 +367,15 @@ def _search_nanet(tool_input: dict) -> str:
             "truncated": isinstance(total, int) and total > len(records)}
 
 
-# ─── Wikidata 개체 해소(entity resolution) — 지식 그래프 ────────────────
-# www.wikidata.org/w/api.php — wbsearchentities(검색)·wbgetentities(상세).
-# 무API키(공개), 순수 requests(맥·폰 공통). Wikimedia는 서술적 User-Agent 요구.
-_WD_API = "https://www.wikidata.org/w/api.php"
-_WD_HEADERS = {"User-Agent": "IndieBizOS/1.0 (entity resolution" + (f"; contact {_CONTACT}" if _CONTACT else "") + ")"}
-
-
-def _wd_get(params: dict) -> dict:
-    """Wikidata Action API GET (format=json 고정)."""
-    r = requests.get(_WD_API, params={**params, "format": "json"},
-                     headers=_WD_HEADERS, timeout=20)
-    r.raise_for_status()
-    return r.json()
-
-
-def _wd_search(query: str, lang: str, limit: int) -> list:
-    """wbsearchentities — lang 라벨 없으면 en 폴백."""
-    data = _wd_get({"action": "wbsearchentities", "search": query,
-                    "language": lang, "uselang": lang, "type": "item", "limit": limit})
-    hits = data.get("search") or []
-    if not hits and lang != "en":
-        data = _wd_get({"action": "wbsearchentities", "search": query,
-                        "language": "en", "uselang": "en", "type": "item", "limit": limit})
-        hits = data.get("search") or []
-    return hits
-
-
-def _wd_labels(ids: list, lang: str) -> dict:
-    """P-id/Q-id 라벨 배치 해소 (wbgetentities props=labels, 50개씩)."""
-    out, ids = {}, [i for i in dict.fromkeys(ids) if i]
-    for i in range(0, len(ids), 50):
-        chunk = ids[i:i + 50]
-        try:
-            d = _wd_get({"action": "wbgetentities", "ids": "|".join(chunk),
-                         "props": "labels", "languages": f"{lang}|en"})
-        except Exception:
-            continue
-        for k, v in (d.get("entities") or {}).items():
-            labs = v.get("labels") or {}
-            out[k] = (labs.get(lang) or labs.get("en") or {}).get("value") or k
-    return out
-
-
-def _wd_snak_value(snak: dict, label_map: dict):
-    """mainsnak → 사람이 읽는 값 문자열 (개체는 라벨 해소, 시간·수량 포맷)."""
-    if snak.get("snaktype") != "value":
-        return None
-    dv = snak.get("datavalue") or {}
-    t, v = dv.get("type"), dv.get("value")
-    if t == "wikibase-entityid":
-        return label_map.get(v.get("id"), v.get("id"))
-    if t == "string":
-        return v
-    if t == "monolingualtext":
-        return (v or {}).get("text")
-    if t == "time":
-        tv = (v or {}).get("time") or ""    # 예: +1946-08-04T00:00:00Z
-        m = re.match(r"[+-](\d+)-(\d\d)-(\d\d)", tv)
-        if m:
-            y, mo, d = m.groups()
-            if mo == "00":
-                return y
-            if d == "00":
-                return f"{y}-{mo}"
-            return f"{y}-{mo}-{d}"
-        return tv
-    if t == "quantity":
-        return ((v or {}).get("amount") or "").lstrip("+")
-    if t == "globecoordinate":
-        return f"{(v or {}).get('latitude')}, {(v or {}).get('longitude')}"
-    return None
-
-
-def _wikidata_resolve(tool_input: dict) -> str:
-    """개체 후보 검색 — 동명이인/동음이의를 QID·설명으로 분리."""
-    query = tool_input.get("query") or tool_input.get("q") or tool_input.get("name")
-    if not query:
-        return {"success": False, "error": "검색어(query)가 필요합니다. 예: [sense:entity]{query: \"이순신\"}", "items": []}
-    lang = (tool_input.get("lang") or "ko").strip()
-    limit = int(tool_input.get("limit") or tool_input.get("max_results") or 7)
-    try:
-        hits = _wd_search(query, lang, limit)
-    except Exception as e:
-        return {"success": False, "error": f"Wikidata 검색 오류: {e}", "items": []}
-    if not hits:
-        return {"items": [], "message": f"'{query}'에 해당하는 Wikidata 개체를 찾지 못했습니다."}
-    lines = [f"Wikidata 개체 후보 '{query}' — {len(hits)}건 (QID로 동명이인/동음이의 해소):"]
-    records = []
-    for h in hits:
-        qid = h.get("id")
-        label = h.get("label") or query
-        desc = h.get("description") or ""
-        lines.append(f"- {label} ({qid})" + (f" — {desc}" if desc else ""))
-        records.append({  # 레코드 통화 — 개체 후보를 QID·설명으로 식별
-            "title": label,
-            "meta": " · ".join(x for x in [qid, desc] if x),
-            "summary": desc,
-            "url": f"https://www.wikidata.org/wiki/{qid}",
-            "qid": qid,
-        })
-    lines.append("→ QID를 [sense:entity]{op:\"detail\", id:\"<QID>\"}에 넣어 구조화된 사실 조회.")
-    return {"success": True, "message": "\n".join(lines), "items": records, "count": len(records)}
-
-
-def _wikidata_detail(tool_input: dict) -> str:
-    """QID(또는 query) → 구조화된 속성·사실 (P-속성명: 값, records 통화)."""
-    lang = (tool_input.get("lang") or "ko").strip()
-    qid = tool_input.get("id") or tool_input.get("qid")
-    if not qid:
-        query = tool_input.get("query") or tool_input.get("q") or tool_input.get("name")
-        if not query:
-            return {"success": False, "error": "id(QID) 또는 query가 필요합니다. 예: [sense:entity]{op:\"detail\", id:\"Q42\"}", "items": []}
-        try:
-            hits = _wd_search(query, lang, 1)
-        except Exception as e:
-            return {"success": False, "error": f"Wikidata 조회 오류: {e}", "items": []}
-        if not hits:
-            return {"items": [], "message": f"'{query}'에 해당하는 Wikidata 개체를 찾지 못했습니다."}
-        qid = hits[0].get("id")
-    qid = str(qid).strip().upper()
-    if not re.match(r"^Q\d+$", qid):
-        return {"success": False, "error": f"올바른 QID가 아닙니다: {qid} (예: Q42). 이름으로 찾으려면 op:resolve 사용.", "items": []}
-    try:
-        data = _wd_get({"action": "wbgetentities", "ids": qid,
-                        "props": "labels|descriptions|claims", "languages": f"{lang}|en"})
-    except Exception as e:
-        return {"success": False, "error": f"Wikidata 상세 오류: {e}", "items": []}
-    ent = (data.get("entities") or {}).get(qid)
-    if not ent or ent.get("missing") is not None and "missing" in ent:
-        return {"items": [], "message": f"{qid} 개체 정보가 없습니다."}
-
-    def _pick(obj):    # labels/descriptions dict → lang→en 폴백
-        d = obj or {}
-        for L in (lang, "en"):
-            if d.get(L):
-                return d[L].get("value")
-        return None
-
-    label = _pick(ent.get("labels")) or qid
-    desc = _pick(ent.get("descriptions")) or ""
-    claims = ent.get("claims") or {}
-    prop_ids = list(claims.keys())
-    truncated = len(prop_ids) > 30
-    prop_ids = prop_ids[:30]
-    # 라벨 해소 대상(속성 P-id + 값이 개체인 Q-id) 수집 → 한 번에 배치 조회
-    value_qids = []
-    for pid in prop_ids:
-        for st in (claims[pid] or [])[:3]:
-            dv = (((st.get("mainsnak") or {}).get("datavalue")) or {}).get("value")
-            if isinstance(dv, dict) and dv.get("entity-type") == "item" and dv.get("id"):
-                value_qids.append(dv["id"])
-    label_map = _wd_labels(prop_ids + value_qids, lang)
-    lines = [f"[{label}] ({qid})" + (f" — {desc}" if desc else ""),
-             f"https://www.wikidata.org/wiki/{qid}", ""]
-    records = []
-    for pid in prop_ids:
-        plabel = label_map.get(pid, pid)
-        vals = []
-        for st in (claims[pid] or [])[:3]:
-            val = _wd_snak_value(st.get("mainsnak") or {}, label_map)
-            if val:
-                vals.append(str(val))
-        if not vals:
-            continue
-        valstr = ", ".join(vals)
-        lines.append(f"- {plabel}: {valstr}")
-        records.append({  # 레코드 통화 — 사실 1건 = 속성:값
-            "title": plabel,
-            "meta": pid,
-            "summary": valstr,
-            "url": None,
-        })
-    if truncated:
-        lines.append(f"… (속성 {len(claims)}개 중 30개만 표시)")
-    return {"success": True, "message": "\n".join(lines), "items": records,
-            "count": len(records), "qid": qid, "label": label}
-
-
-def _entity_source_err(tool_input: dict):
-    """[sense:entity] 공용 source 게이트 — 지원 밖 source 면 에러 dict, 아니면 None."""
-    source = (tool_input.get("source") or "wikidata").strip().lower()
-    if source not in ("wikidata", "wd", "wikimedia"):
-        return {"success": False, "error": f"현재 source는 wikidata만 지원합니다 (요청: {source})."}
-    return None
-
-
-def _entity_resolve(tool_input: dict, context) -> str:
-    """[sense:entity]{op:resolve} — 개체 후보 검색 (Wikidata)."""
-    return _entity_source_err(tool_input) or _wikidata_resolve(tool_input)
-
-
-def _entity_detail(tool_input: dict, context) -> str:
-    """[sense:entity]{op:detail} — QID → 구조화된 사실 (Wikidata)."""
-    return _entity_source_err(tool_input) or _wikidata_detail(tool_input)
-
-
-def execute(tool_input: dict, context) -> str:
-    """ToolContext 기반 신규 시그니처. op 도구 분기 = 파일 끝 _OP_DISPATCHERS 함수 테이블."""
+def execute(tool_input: dict, context):
     tool_name = context.tool_name
-
     if tool_name in _OP_DISPATCHERS:
         op = (tool_input.get("op") or _OP_DEFAULTS.get(tool_name, "")).strip()
         fn = _OP_DISPATCHERS[tool_name].get(op)
         if fn is None:
             return {"success": False, "error": f"알 수 없는 op '{op}'. 사용: {'|'.join(_OP_DISPATCHERS[tool_name])}"}
         return fn(tool_input, context)
-
-    # fetch_pew_research 는 2026-08-15 은퇴 — web 패키지 [sense:feed]{url:"https://www.pewresearch.org/feed/"} 로 일반화.
-
-    elif tool_name == "fetch_world_bank_data":
-        return _fetch_world_bank_data(tool_input)
-
-    else:
-        return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
+    return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
 
 def _search_semantic_scholar(tool_input: dict) -> str:
@@ -1092,146 +886,7 @@ def _reconstruct_abstract(inverted_index: dict) -> str:
 # _search_guardian 은 2026-08-05 어휘 압축 (2)에서 web 패키지 [sense:search]{source:"guardian"} 로 이주.
 
 
-# ── 내부 해소 테이블 (자연어 지표·국가명 → World Bank 코드) ────────────
-# 흔한 케이스만 큐레이션. 미등록 입력은 원시 코드로 간주하고 그대로 통과.
-_WB_INDICATORS = {
-    "gdp": "NY.GDP.MKTP.CD", "국내총생산": "NY.GDP.MKTP.CD",
-    "1인당gdp": "NY.GDP.PCAP.CD", "인당gdp": "NY.GDP.PCAP.CD",
-    "gdppercapita": "NY.GDP.PCAP.CD",
-    "gdp성장률": "NY.GDP.MKTP.KD.ZG", "경제성장률": "NY.GDP.MKTP.KD.ZG",
-    "gdpgrowth": "NY.GDP.MKTP.KD.ZG", "성장률": "NY.GDP.MKTP.KD.ZG",
-    "인구": "SP.POP.TOTL", "population": "SP.POP.TOTL", "총인구": "SP.POP.TOTL",
-    "인구증가율": "SP.POP.GROW", "populationgrowth": "SP.POP.GROW",
-    "인플레이션": "FP.CPI.TOTL.ZG", "물가": "FP.CPI.TOTL.ZG",
-    "물가상승률": "FP.CPI.TOTL.ZG", "inflation": "FP.CPI.TOTL.ZG",
-    "실업률": "SL.UEM.TOTL.ZS", "unemployment": "SL.UEM.TOTL.ZS",
-    "기대수명": "SP.DYN.LE00.IN", "lifeexpectancy": "SP.DYN.LE00.IN",
-    "수출": "NE.EXP.GNFS.CD", "exports": "NE.EXP.GNFS.CD",
-    "수입": "NE.IMP.GNFS.CD", "imports": "NE.IMP.GNFS.CD",
-    "1인당소득": "NY.GNP.PCAP.CD", "gnipercapita": "NY.GNP.PCAP.CD",
-    "출산율": "SP.DYN.TFRT.IN", "fertility": "SP.DYN.TFRT.IN",
-    "도시인구비율": "SP.URB.TOTL.IN.ZS", "urban": "SP.URB.TOTL.IN.ZS",
-    "정부부채": "GC.DOD.TOTL.GD.ZS", "governmentdebt": "GC.DOD.TOTL.GD.ZS",
-    "co2": "EN.ATM.CO2E.PC", "이산화탄소": "EN.ATM.CO2E.PC", "탄소배출": "EN.ATM.CO2E.PC",
-}
-_WB_COUNTRIES = {
-    "한국": "KOR", "대한민국": "KOR", "korea": "KOR", "southkorea": "KOR", "rok": "KOR",
-    "북한": "PRK", "northkorea": "PRK",
-    "미국": "USA", "usa": "USA", "us": "USA", "unitedstates": "USA", "america": "USA",
-    "일본": "JPN", "japan": "JPN",
-    "중국": "CHN", "china": "CHN",
-    "독일": "DEU", "germany": "DEU",
-    "영국": "GBR", "uk": "GBR", "unitedkingdom": "GBR", "britain": "GBR",
-    "프랑스": "FRA", "france": "FRA",
-    "인도": "IND", "india": "IND",
-    "러시아": "RUS", "russia": "RUS",
-    "캐나다": "CAN", "canada": "CAN",
-    "호주": "AUS", "australia": "AUS",
-    "브라질": "BRA", "brazil": "BRA",
-    "이탈리아": "ITA", "italy": "ITA",
-    "스페인": "ESP", "spain": "ESP",
-    "멕시코": "MEX", "mexico": "MEX",
-    "인도네시아": "IDN", "indonesia": "IDN",
-    "베트남": "VNM", "vietnam": "VNM",
-    "대만": "TWN", "taiwan": "TWN",
-    "싱가포르": "SGP", "singapore": "SGP",
-    "태국": "THA", "thailand": "THA",
-}
-
-
-def _norm_wb_key(s: str) -> str:
-    return "".join(str(s).lower().split())
-
-
-def _resolve_wb_indicator(indicator: str) -> str:
-    """지표명(자연어)→World Bank 코드. 이미 코드(점 포함)면 그대로."""
-    if not indicator:
-        return indicator
-    if "." in indicator:  # NY.GDP.MKTP.CD 같은 원시 코드
-        return indicator
-    return _WB_INDICATORS.get(_norm_wb_key(indicator), indicator)
-
-
-def _resolve_wb_country(country: str) -> str:
-    """국가명(자연어)→ISO3. 'all'/2~3자 코드/숫자는 그대로."""
-    if not country or country == "all":
-        return country or "all"
-    key = _norm_wb_key(country)
-    if key in _WB_COUNTRIES:
-        return _WB_COUNTRIES[key]
-    # ISO2/ISO3/숫자 코드로 보이면 대문자로 통과
-    if country.isalpha() and len(country) in (2, 3):
-        return country.upper()
-    return country
-
-
-def _fetch_world_bank_data(tool_input: dict) -> str:
-    """World Bank API를 사용하여 국가별 지표 데이터를 가져옵니다."""
-    indicator = _resolve_wb_indicator(tool_input.get("indicator"))
-    country = _resolve_wb_country(tool_input.get("country", "all"))
-    date = tool_input.get("date")
-    per_page = tool_input.get("per_page", 50)
-    
-    # API URL 구성
-    # 예: http://api.worldbank.org/v2/country/KOR/indicator/NY.GDP.MKTP.CD?format=json&date=2010:2022
-    url = f"http://api.worldbank.org/v2/country/{country}/indicator/{indicator}"
-    params = {
-        "format": "json",
-        "per_page": per_page
-    }
-    if date:
-        params["date"] = date
-        
-    try:
-        response = requests.get(url, params=params, timeout=15)
-        response.raise_for_status()
-        data = response.json()
-        
-        # World Bank API 응답 구조: [metadata, data_list]
-        if not data or len(data) < 2 or not data[1]:
-            return json.dumps({"success": False,
-                               "error": f"지표 '{indicator}'(국가: {country})에 대한 데이터를 찾을 수 없습니다."},
-                              ensure_ascii=False)
-            
-        data_list = data[1]
-
-        indicator_name = data_list[0].get("indicator", {}).get("value", indicator)
-        country_name = (data_list[0].get("country", {}) or {}).get("value", country)
-
-        # 표준 테이블 통화 + 사람용 요약을 함께 산출
-        rows = []
-        summary = [f"### World Bank 데이터: {indicator_name} ({country_name})\n"]
-        for entry in data_list:
-            year = entry.get("date")
-            value = entry.get("value")
-            if value is not None:
-                rows.append([year, value])
-                if isinstance(value, (int, float)):
-                    fv = f"{value:,.2f}".rstrip('0').rstrip('.')
-                else:
-                    fv = str(value)
-                summary.append(f"- {year}: {fv}")
-            else:
-                summary.append(f"- {year}: 데이터 없음")
-
-        # 연도 오름차순 (차트/표에 자연스러운 시간 순서; WB는 보통 내림차순 반환)
-        rows.sort(key=lambda r: str(r[0]))
-
-        return json.dumps({
-            "success": True,
-            "indicator": indicator_name,
-            "country": country_name,
-            # 단일 통화 items(행 dict) — 첫 키=연도(x축 라벨), 둘째=지표값(수치 시리즈).
-            # 소비자(chart/spreadsheet)가 items→table 재구성(키 순서=열). §3 table 흡수.
-            "items": [{"연도": r[0], indicator_name: r[1]} for r in rows],
-            "summary": "\n".join(summary),
-        }, ensure_ascii=False)
-
-    except Exception as e:
-        return json.dumps({"success": False, "error": f"World Bank API 요청 오류: {str(e)}"}, ensure_ascii=False)
-
-
-# _search_books 는 2026-08-05 어휘 압축 (6)-2b 에서 culture 패키지 [sense:book]{source:"google"} 로 이주(tool_gbooks.py).
+# _search_books 는 2026-08-05 어휘 압축 (6)-2b 에서 books 패키지 [sense:book]{source:"google"} 로 이주(tool_gbooks.py).
 
 
 # ── 디스패치 테이블 — 진짜 함수 참조 (--check 가 AST 로 키 정확 비교) ──
@@ -1239,5 +894,4 @@ def _fetch_world_bank_data(tool_input: dict) -> str:
 _OP_DISPATCHERS = {
     "paper_op": {"search": _paper_search, "download": _paper_download},
     "researcher_op": {"find": _nanet_author_find, "coauthor": _nanet_coauthor},
-    "entity_op": {"resolve": _entity_resolve, "detail": _entity_detail},
 }

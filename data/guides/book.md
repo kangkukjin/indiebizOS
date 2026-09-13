@@ -133,5 +133,5 @@
 ## 관련
 
 - `sense:classic`{op:"western"} — Project Gutenberg 영문 고전 원문
-- `culture` 패키지 한국고전종합DB — 한문 고전
+- `books` 패키지 한국고전종합DB — 한문 고전
 - `[sense:book]{source: "google"}` — 글로벌 도서 일반 검색

@@ -81,8 +81,8 @@
       "description": "Context7 라이브러리 문서 검색"
     },
     "culture": {
-      "name": "Culture",
-      "description": "공연(KOPIS), 도서(도서관 정보나루), Project Gutenberg 고전 원문, 한국고전종합DB 등 문화예술 정보 조회"
+      "name": "공연·전시",
+      "description": "KOPIS 공연·공연장과 KCISA 전시·문화행사를 조회합니다."
     },
     "data-ops": {
       "name": "Data Ops",
@@ -169,16 +169,16 @@
       "description": "부동산 시세·매물 — 국토부 실거래가 + 직방·네이버부동산 현재 매물 (`sense:realty{source}`)"
     },
     "shopping-assistant": {
-      "name": "Shopping Assistant",
-      "description": "새 상품 가격비교 `[sense:search_shopping]`(다나와 — used/all·naver 축은 2026-08-04 은퇴) + 중고 매물 `[sense:used]{source: bunjang/danggeun/joongna/naver}` + 프리랜서·외주 `[sense:freelance]`(크몽)"
+      "name": "상품·중고",
+      "description": "새 상품 가격비교와 중고 거래 매물을 검색합니다."
     },
     "startup": {
       "name": "Startup",
       "description": "창업지원 사업공고 검색 (K-Startup, 중소벤처기업부)"
     },
     "study": {
-      "name": "Study Helper",
-      "description": "학술 논문 검색/다운로드 (OpenAlex, arXiv, Semantic Scholar 등) + 국회도서관 국가학술정보 인물/학위논문(`sense:researcher`·`sense:paper source:nanet`) + 개체 해소(`sense:entity` Wikidata)"
+      "name": "논문·연구자",
+      "description": "학술 논문 검색·다운로드와 연구자·공저자 조회."
     },
     "system_essentials": {
       "name": "System Essentials",
@@ -199,6 +199,22 @@
     "youtube": {
       "name": "Youtube",
       "description": "YouTube 영상 정보, 자막 추출, 다운로드"
+    },
+    "entity-lookup": {
+      "name": "개체 식별",
+      "description": "Wikidata에서 동명이인·동음이의를 식별하고 개체의 사실을 조회합니다."
+    },
+    "world-statistics": {
+      "name": "세계은행 통계",
+      "description": "세계은행의 국가별 경제·사회 지표 시계열을 조회합니다."
+    },
+    "books": {
+      "name": "책·고전",
+      "description": "도서 검색·대출 통계·추천과 서양·한국 고전을 조회합니다."
+    },
+    "freelance-services": {
+      "name": "외주 서비스",
+      "description": "외주 서비스 상품과 프리랜서 전문가를 검색합니다."
     }
   }
 }

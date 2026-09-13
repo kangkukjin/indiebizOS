@@ -1,0 +1,531 @@
+node: sense
+actions:
+  book:
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      query: [keyword]
+      base_date: [date]        # trending 기준일 관습어
+      rows: [max_results]      # Google Books 원어 관습어
+    # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
+    #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
+    #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
+    params:
+      query: string
+      page: integer  # 기존 도서 검색·인기대출 페이지 인자(옛 공연 선언에 가려져 있던 타입).
+    returns: items
+    side_effect: false    # 전 op 읽기 전용
+    fixture: '[sense:book]{query: "역사"}'
+    description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic. items(loan_count·publication_year 포함) — table 파이프로 대출순·연도 선별.
+    group: culture
+    target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계·이용분석·소장도서관[region 필수]). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). source="google"=글로벌·원서(Google Books — search 전용, 대출 통계 op 는 정보나루만). "제목이 X인 책"은 title:"X". popular — 인기대출도서(start_date/end_date 기본 최근 7일, gender=남성/여성, age=40 → 40~49세, region=지역명/코드, kdc=주제분류). trending — 대출 급상승(base_date 기본 어제). recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
+    target_key: op
+    router: handler
+    tool: book_op
+    ops:
+      default: search
+      returns:
+        codes: scalar
+      fixture:
+        popular: '[sense:book]{op: "popular"}'
+        trending: '[sense:book]{op: "trending"}'
+        recommended: '[sense:book]{op: "recommended", isbn13: "9788934972464"}'
+        codes: '[sense:book]{op: "codes", code_type: "kdc"}'
+      values:
+        search: 도서 검색·조회 (필드분기·ISBN·대출통계·이용분석, 기본)
+        popular: 인기대출도서 (기간·성별·연령·지역·주제 필터)
+        trending: 대출 급상승 도서 (기준일)
+        recommended: 추천도서 (마니아·다독자 패턴)
+        codes: 분류 코드 목록 (kdc/지역)
+    implementation: 도서관정보나루 API op 분기(+source 축 — nl=tool_nl, google=tool_gbooks[구 study search_books 흡수]). search=library_book 필드분기, recommended=get_recommended_books, codes=get_kdc_list|get_region_list(code_type).
+    keywords:
+    - 도서
+    - 책
+    - ISBN
+    - 도서관
+    app:
+      icon: 📚
+      name: 도서
+      order: 1
+      modes:
+      - name: 정보나루
+        inputs:
+        - key: q
+          type: text
+          placeholder: 제목·저자·키워드
+          required: true
+        - key: region
+          type: select
+          label: 지역 (소장 도서관 조회용)
+          options:
+          - {value: '', label: 지역 선택 안 함}
+          - {value: '11', label: 서울}
+          - {value: '26', label: 부산}
+          - {value: '27', label: 대구}
+          - {value: '28', label: 인천}
+          - {value: '29', label: 광주}
+          - {value: '30', label: 대전}
+          - {value: '31', label: 울산}
+          - {value: '36', label: 세종}
+          - {value: '41', label: 경기}
+          - {value: '42', label: 강원}
+          - {value: '43', label: 충북}
+          - {value: '44', label: 충남}
+          - {value: '45', label: 전북}
+          - {value: '46', label: 전남}
+          - {value: '47', label: 경북}
+          - {value: '48', label: 경남}
+          - {value: '50', label: 제주}
+        action: '[sense:book]{keyword: "$q"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          item_click:
+            action: '[sense:book]{isbn: "{isbn13}", detail: true, region: "$region"}'
+            tabs:
+            - name: 개요
+              view:
+              - type: kv
+                title: 서지
+                rows:
+                - k: 저자
+                  v: '{book.authors}'
+                - k: 출판
+                  v: '{book.publisher} · {book.publication_year}'
+                - k: 분류
+                  v: '{book.class_nm|opt:}'
+                - k: ISBN
+                  v: '{book.isbn13}'
+                - k: 책소개
+                  v: '{book.description|opt:}'
+              - type: metric
+                label: 전국 누적 대출
+                big: '{book.loan_stats.total|num}'
+                unit: 회
+              - type: kv_list
+                title: 연령별 대출
+                from: book.loan_stats.by_age
+                k: '{name}'
+                v: '{loanCnt|num}'
+              - type: kv_list
+                title: 성별 대출
+                from: book.loan_stats.by_gender
+                k: '{name}'
+                v: '{loanCnt|num}'
+            - name: 추이·키워드
+              view:
+              - type: kv_list
+                title: 월별 대출 (전국 랭킹)
+                from: usage.monthly
+                k: '{month}'
+                v: '{loanCnt|num}회 · {ranking}위'
+              - type: kv_list
+                title: 대출자 키워드
+                from: usage.keywords
+                k: '{word}'
+                v: '{weight}'
+            - name: 함께 빌린 책
+              view:
+              - type: card_list
+                title: 함께 빌린 책
+                from: usage.co_loan
+                card:
+                  title: '{bookname}'
+                  lines:
+                  - '{authors}'
+                  - '{publisher} · {publication_year}'
+              - type: kv_list
+                title: 마니아 추천
+                from: usage.mania_rec
+                k: '{bookname}'
+                v: '{authors}'
+              - type: kv_list
+                title: 다독자 추천
+                from: usage.reader_rec
+                k: '{bookname}'
+                v: '{authors}'
+            - name: 소장 도서관
+              view:
+              - type: kv_list
+                title: '이 책을 소장한 도서관 (상위 30)'
+                from: libraries
+                empty_from: libraries_note
+                k: '{libName}'
+                v: '{address|opt:}'
+          card:
+            image: '{bookImageURL}'
+            title: '{bookname}'
+            lines:
+            - '{authors}'
+            - '{publisher} · {publication_year}{loan_count|opt: · 대출 ,회}'
+            link:
+              href: '{bookDtlUrl}'
+              label: 상세 →
+      - name: 인기
+        auto_run: true
+        note: 전국 공공도서관 인기대출도서 (최근 7일). 지역·연령·성별로 좁힐 수 있습니다.
+        inputs:
+        - key: region
+          type: select
+          label: 전국
+          options:
+          - {value: '', label: 전국}
+          - {value: '11', label: 서울}
+          - {value: '26', label: 부산}
+          - {value: '27', label: 대구}
+          - {value: '28', label: 인천}
+          - {value: '29', label: 광주}
+          - {value: '30', label: 대전}
+          - {value: '31', label: 울산}
+          - {value: '36', label: 세종}
+          - {value: '41', label: 경기}
+          - {value: '42', label: 강원}
+          - {value: '43', label: 충북}
+          - {value: '44', label: 충남}
+          - {value: '45', label: 전북}
+          - {value: '46', label: 전남}
+          - {value: '47', label: 경북}
+          - {value: '48', label: 경남}
+          - {value: '50', label: 제주}
+        - key: age
+          type: select
+          label: 전 연령
+          options:
+          - {value: '', label: 전 연령}
+          - {value: '10', label: 10대}
+          - {value: '20', label: 20대}
+          - {value: '30', label: 30대}
+          - {value: '40', label: 40대}
+          - {value: '50', label: 50대}
+          - {value: '60', label: 60대}
+        - key: gender
+          type: select
+          label: 성별 전체
+          options:
+          - {value: '', label: 성별 전체}
+          - {value: '여성', label: 여성}
+          - {value: '남성', label: 남성}
+        action: '[sense:book]{op: "popular", region: "$region", age: "$age", gender: "$gender"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          item_click:
+            action: '[sense:book]{isbn: "{isbn13}", detail: true, region: "$region"}'
+            tabs:
+            - name: 개요
+              view:
+              - type: kv
+                title: 서지
+                rows:
+                - k: 저자
+                  v: '{book.authors}'
+                - k: 출판
+                  v: '{book.publisher} · {book.publication_year}'
+                - k: 책소개
+                  v: '{book.description|opt:}'
+              - type: metric
+                label: 전국 누적 대출
+                big: '{book.loan_stats.total|num}'
+                unit: 회
+            - name: 추이·키워드
+              view:
+              - type: kv_list
+                title: 월별 대출 (전국 랭킹)
+                from: usage.monthly
+                k: '{month}'
+                v: '{loanCnt|num}회 · {ranking}위'
+              - type: kv_list
+                title: 대출자 키워드
+                from: usage.keywords
+                k: '{word}'
+                v: '{weight}'
+            - name: 함께 빌린 책
+              view:
+              - type: card_list
+                title: 함께 빌린 책
+                from: usage.co_loan
+                card:
+                  title: '{bookname}'
+                  lines:
+                  - '{authors}'
+                  - '{publisher} · {publication_year}'
+            - name: 소장 도서관
+              view:
+              - type: kv_list
+                title: '이 책을 소장한 도서관 (상위 30)'
+                from: libraries
+                empty_from: libraries_note
+                k: '{libName}'
+                v: '{address|opt:}'
+          card:
+            image: '{bookImageURL}'
+            title: '{ranking|opt:,. }{bookname}'
+            lines:
+            - '{authors}'
+            - '{publisher} · {publication_year}{loan_count|opt: · 대출 ,회}'
+      - name: 급상승
+        auto_run: true
+        note: 어제 기준 대출이 급상승한 책들입니다.
+        action: '[sense:book]{op: "trending"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          item_click:
+            action: '[sense:book]{isbn: "{isbn13}", detail: true}'
+            tabs:
+            - name: 개요
+              view:
+              - type: kv
+                title: 서지
+                rows:
+                - k: 저자
+                  v: '{book.authors}'
+                - k: 출판
+                  v: '{book.publisher} · {book.publication_year}'
+                - k: 책소개
+                  v: '{book.description|opt:}'
+              - type: metric
+                label: 전국 누적 대출
+                big: '{book.loan_stats.total|num}'
+                unit: 회
+            - name: 추이·키워드
+              view:
+              - type: kv_list
+                title: 월별 대출 (전국 랭킹)
+                from: usage.monthly
+                k: '{month}'
+                v: '{loanCnt|num}회 · {ranking}위'
+              - type: kv_list
+                title: 대출자 키워드
+                from: usage.keywords
+                k: '{word}'
+                v: '{weight}'
+            - name: 함께 빌린 책
+              view:
+              - type: card_list
+                title: 함께 빌린 책
+                from: usage.co_loan
+                card:
+                  title: '{bookname}'
+                  lines:
+                  - '{authors}'
+                  - '{publisher} · {publication_year}'
+          card:
+            image: '{bookImageURL}'
+            title: '{ranking|opt:,. }{bookname}'
+            lines:
+            - '{authors}'
+            - '{publisher} · {publication_year}{loan_count|opt: · 대출 ,회}'
+      - name: 국립도서관
+        inputs:
+        - key: q
+          type: text
+          placeholder: 납본 전수 — 신간·소부수도  예) 하네스
+          required: true
+        action: '[sense:book]{keyword: "$q", source: "nl"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          card:
+            title: '{title}'
+            lines:
+            - '{meta}'
+            - '{summary}'
+            link:
+              href: '{url}'
+              label: 국립중앙도서관 →
+      - name: 글로벌
+        inputs:
+        - key: q
+          type: text
+          placeholder: 국내외 도서·원서  예) sapiens, 한강
+          required: true
+        action: '[sense:book]{source: "google", keyword: "$q"}'
+        view:
+        - type: card_list
+          from: items
+          empty_from: message
+          card:
+            image: '{bookImageURL}'
+            title: '{bookname}'
+            lines:
+            - '{authors}'
+            - '{categories|opt:,}{page_count|opt: · ,쪽}'
+            link:
+              href: '{infoLink}'
+              label: Google Books →
+      - name: 고전
+        inputs:
+        - key: q
+          type: text
+          placeholder: 서양 고전  예) sherlock, austen
+          required: true
+        action: '[sense:classic]{op: "western", query: "$q"}'
+        view:
+        - type: card_list
+          from: items
+          card:
+            image: '{cover_url}'
+            title: '{title}'
+            lines:
+            - '{authors}'
+            - 내려받기 {download_count|num}회
+            link:
+              href: '{html_url}'
+              label: 원문 읽기 →
+  classic:
+    returns: items
+    side_effect: false    # 전 op 읽기 전용
+    fixture: '[sense:classic]{op: "western", query: "plato"}'
+    description: 고전 원문 검색 (op 분기). western=서양 고전(Gutenberg), korean=한국 고전(한국고전종합DB).
+    group: culture
+    target_description: query=검색어. western — Gutenberg(저작권 만료 7만+권), languages·topic·author_year 옵션. korean — 한국고전종합DB(이황·이이 등 원문·번역).
+    target_key: op
+    router: handler
+    tool: classic_op
+    ops:
+      default: western
+      fixture:
+        korean: '[sense:classic]{op: "korean", query: "이황"}'
+      values:
+        western: 서양 고전 원문 (Project Gutenberg)
+        korean: 한국 고전 (한국고전종합DB)
+    implementation: op 분기. western=tool_gutenberg.search_gutenberg, korean=tool_korean_classics.search_korean_classics.
+    keywords:
+    - 고전
+    - 원문
+    - Gutenberg
+    - 한국고전
+
+tool_json:
+  header:
+    id: books
+    name: 책·고전
+    description: 도서 검색·대출 통계·추천과 서양·한국 고전을 조회합니다.
+    version: 1.0.0
+  tools:
+  - name: book_op
+    description: '도서 조회 (op 분기) — [sense:book]. 기본=도서관정보나루, source="nl"=국립중앙도서관, source="google"=글로벌·원서(Google Books). 고전 원문은 classic_op.
+
+      - op=search (기본): 도서 검색·조회. title/author/publisher(필드 전용)·keyword(광역)·isbn(+detail=true면 대출통계). source="nl"이면 국립중앙도서관 납본 소장 검색(정보나루에 없는 신간·소부수 출판까지 — "이 책이 존재하나"의 정본).
+
+      - op=recommended: 추천도서 (마니아·다독자 패턴). isbn13·rec_type.
+
+      - op=codes: 분류 코드 목록. code_type=kdc(주제분류) 또는 region(도서관 지역).'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: search=도서검색(기본), recommended=추천도서, codes=분류코드목록
+        title:
+          type: string
+          description: '[search] 제목 전용 검색'
+        author:
+          type: string
+          description: '[search] 저자 전용 검색'
+        publisher:
+          type: string
+          description: '[search] 출판사 전용 검색'
+        query:
+          type: string
+          description: '[search] 광역 검색 (제목+저자+출판사)'
+        source:
+          type: string
+          description: '[search] "nl"=국립중앙도서관 납본 소장 검색 (기본=도서관정보나루 공공도서관 대출분석)'
+          enum:
+          - nl
+        category:
+          type: string
+          description: '[search, source=nl] 자료 구분 (기본 도서. 학위논문/기사 등, 빈 문자열=전체)'
+        region:
+          type: string
+          description: '[search detail·popular] 지역명 또는 코드 (예 "충북", "11"=서울) — detail 의 소장 도서관 조회는 필수'
+        gender:
+          type: string
+          description: '[popular] 성별 필터 ("남성"/"여성")'
+        age:
+          type: string
+          description: '[popular] 연령대 (예 "40" 또는 "40대" → 40~49세)'
+        kdc:
+          type: string
+          description: '[popular] KDC 주제분류 (예 8=문학)'
+        start_date:
+          type: string
+          description: '[popular] 시작일 YYYY-MM-DD (기본 7일 전)'
+        end_date:
+          type: string
+          description: '[popular] 종료일 YYYY-MM-DD (기본 어제)'
+        base_date:
+          type: string
+          description: '[trending] 기준일 YYYY-MM-DD (기본 어제)'
+        from_age:
+          type: integer
+          description: '[popular] 연령 시작(세, 예 30)'
+        to_age:
+          type: integer
+          description: '[popular] 연령 끝(세, 예 39)'
+        loan_info:
+          type: boolean
+          description: '[search, isbn+detail] 대출 통계 포함 여부 (기본 true)'
+        order_by:
+          type: string
+          description: '[search, source=google] 정렬 (기본 relevance, newest=최신순)'
+        isbn:
+          type: string
+          description: '[search] ISBN 조회'
+        detail:
+          type: boolean
+          description: '[search] isbn과 함께 true면 상세·대출통계'
+        isbn13:
+          type: string
+          description: '[recommended] 기준 도서 ISBN13'
+        rec_type:
+          type: string
+          enum:
+          - mania
+          - reader
+          description: '[recommended] mania(기본)/reader'
+        code_type:
+          type: string
+          enum:
+          - kdc
+          - region
+          description: '[codes] kdc 또는 region'
+        rows:
+          type: integer
+          description: 결과 수
+      required: []
+  - name: classic_op
+    description: '고전 원문 검색 (op 분기) — [sense:classic].
+
+      - op=western (기본): 서양 고전 원문 (Project Gutenberg, 저작권 만료 7만+권). query·languages·topic·author_year_start/end.
+
+      - op=korean: 한국 고전 (한국고전종합DB, 이황·이이 등 원문·번역). query·rows.'
+    input_schema:
+      type: object
+      properties:
+        op:
+          type: string
+          description: western=Gutenberg 서양고전(기본), korean=한국고전종합DB
+        query:
+          type: string
+          description: 검색어 (제목·저자·주제)
+        languages:
+          type: string
+          description: '[western] 언어 (기본 en)'
+        topic:
+          type: string
+          description: '[western] 주제'
+        author_year_start:
+          type: integer
+          description: '[western] 저자 생존연도 시작'
+        author_year_end:
+          type: integer
+          description: '[western] 저자 생존연도 끝'
+        rows:
+          type: integer
+          description: '[korean] 결과 수 (기본 10)'
+      required: []

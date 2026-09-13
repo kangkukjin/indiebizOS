@@ -1,0 +1,181 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "books",
+  "name": "책·고전",
+  "description": "도서 검색·대출 통계·추천과 서양·한국 고전을 조회합니다.",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "book_op",
+      "description": "도서 조회 (op 분기) — [sense:book]. 기본=도서관정보나루, source=\"nl\"=국립중앙도서관, source=\"google\"=글로벌·원서(Google Books). 고전 원문은 classic_op.\n- op=search (기본): 도서 검색·조회. title/author/publisher(필드 전용)·keyword(광역)·isbn(+detail=true면 대출통계). source=\"nl\"이면 국립중앙도서관 납본 소장 검색(정보나루에 없는 신간·소부수 출판까지 — \"이 책이 존재하나\"의 정본).\n- op=recommended: 추천도서 (마니아·다독자 패턴). isbn13·rec_type.\n- op=codes: 분류 코드 목록. code_type=kdc(주제분류) 또는 region(도서관 지역).",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "search=도서검색(기본), recommended=추천도서, codes=분류코드목록",
+            "enum": [
+              "search",
+              "popular",
+              "trending",
+              "recommended",
+              "codes"
+            ],
+            "default": "search"
+          },
+          "title": {
+            "type": "string",
+            "description": "[search] 제목 전용 검색"
+          },
+          "author": {
+            "type": "string",
+            "description": "[search] 저자 전용 검색"
+          },
+          "publisher": {
+            "type": "string",
+            "description": "[search] 출판사 전용 검색"
+          },
+          "query": {
+            "type": "string",
+            "description": "[search] 광역 검색 (제목+저자+출판사)"
+          },
+          "source": {
+            "type": "string",
+            "description": "[search] \"nl\"=국립중앙도서관 납본 소장 검색 (기본=도서관정보나루 공공도서관 대출분석)",
+            "enum": [
+              "nl"
+            ]
+          },
+          "category": {
+            "type": "string",
+            "description": "[search, source=nl] 자료 구분 (기본 도서. 학위논문/기사 등, 빈 문자열=전체)"
+          },
+          "region": {
+            "type": "string",
+            "description": "[search detail·popular] 지역명 또는 코드 (예 \"충북\", \"11\"=서울) — detail 의 소장 도서관 조회는 필수"
+          },
+          "gender": {
+            "type": "string",
+            "description": "[popular] 성별 필터 (\"남성\"/\"여성\")"
+          },
+          "age": {
+            "type": "string",
+            "description": "[popular] 연령대 (예 \"40\" 또는 \"40대\" → 40~49세)"
+          },
+          "kdc": {
+            "type": "string",
+            "description": "[popular] KDC 주제분류 (예 8=문학)"
+          },
+          "start_date": {
+            "type": "string",
+            "description": "[popular] 시작일 YYYY-MM-DD (기본 7일 전)"
+          },
+          "end_date": {
+            "type": "string",
+            "description": "[popular] 종료일 YYYY-MM-DD (기본 어제)"
+          },
+          "base_date": {
+            "type": "string",
+            "description": "[trending] 기준일 YYYY-MM-DD (기본 어제)"
+          },
+          "from_age": {
+            "type": "integer",
+            "description": "[popular] 연령 시작(세, 예 30)"
+          },
+          "to_age": {
+            "type": "integer",
+            "description": "[popular] 연령 끝(세, 예 39)"
+          },
+          "loan_info": {
+            "type": "boolean",
+            "description": "[search, isbn+detail] 대출 통계 포함 여부 (기본 true)"
+          },
+          "order_by": {
+            "type": "string",
+            "description": "[search, source=google] 정렬 (기본 relevance, newest=최신순)"
+          },
+          "isbn": {
+            "type": "string",
+            "description": "[search] ISBN 조회"
+          },
+          "detail": {
+            "type": "boolean",
+            "description": "[search] isbn과 함께 true면 상세·대출통계"
+          },
+          "isbn13": {
+            "type": "string",
+            "description": "[recommended] 기준 도서 ISBN13"
+          },
+          "rec_type": {
+            "type": "string",
+            "enum": [
+              "mania",
+              "reader"
+            ],
+            "description": "[recommended] mania(기본)/reader"
+          },
+          "code_type": {
+            "type": "string",
+            "enum": [
+              "kdc",
+              "region"
+            ],
+            "description": "[codes] kdc 또는 region"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "결과 수"
+          },
+          "page": {
+            "type": "integer",
+            "description": "sense:book 파라미터"
+          }
+        },
+        "required": []
+      }
+    },
+    {
+      "name": "classic_op",
+      "description": "고전 원문 검색 (op 분기) — [sense:classic].\n- op=western (기본): 서양 고전 원문 (Project Gutenberg, 저작권 만료 7만+권). query·languages·topic·author_year_start/end.\n- op=korean: 한국 고전 (한국고전종합DB, 이황·이이 등 원문·번역). query·rows.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "western=Gutenberg 서양고전(기본), korean=한국고전종합DB",
+            "enum": [
+              "western",
+              "korean"
+            ],
+            "default": "western"
+          },
+          "query": {
+            "type": "string",
+            "description": "검색어 (제목·저자·주제)"
+          },
+          "languages": {
+            "type": "string",
+            "description": "[western] 언어 (기본 en)"
+          },
+          "topic": {
+            "type": "string",
+            "description": "[western] 주제"
+          },
+          "author_year_start": {
+            "type": "integer",
+            "description": "[western] 저자 생존연도 시작"
+          },
+          "author_year_end": {
+            "type": "integer",
+            "description": "[western] 저자 생존연도 끝"
+          },
+          "rows": {
+            "type": "integer",
+            "description": "[korean] 결과 수 (기본 10)"
+          }
+        },
+        "required": []
+      }
+    }
+  ]
+}

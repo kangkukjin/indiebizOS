@@ -14,7 +14,9 @@ response_formatter.py - 응답 포맷 표준화
     from common.response_formatter import success_response, error_response, format_json
 """
 
+import html
 import json
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Optional
@@ -185,3 +187,26 @@ def get_error_message(response: Any) -> Optional[str]:
     if isinstance(response, str) and is_error(response):
         return response
     return None
+
+
+# 기존 문화 API 표시 계약을 책·행사 묶음이 같은 구현으로 유지한다.
+_DATE8 = re.compile(r"^\d{8}$")
+
+
+def normalize_api_display(obj):
+    """문화 API 응답 정규화 (서버에서 한 번만): HTML 엔티티(&#39; 등) 디코드 +
+    날짜 필드의 YYYYMMDD → YYYY.MM.DD 통일. 호출자(앱/LLM)가 매번 재가공하지 않도록."""
+    if isinstance(obj, dict):
+        out = {}
+        for k, v in obj.items():
+            if isinstance(v, str):
+                s = html.unescape(v)
+                if 'date' in k.lower() and _DATE8.match(s):
+                    s = f"{s[:4]}.{s[4:6]}.{s[6:8]}"
+                out[k] = s
+            else:
+                out[k] = normalize_api_display(v)
+        return out
+    if isinstance(obj, list):
+        return [normalize_api_display(x) for x in obj]
+    return obj

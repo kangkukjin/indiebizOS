@@ -15,6 +15,14 @@
       "weight": "light",
       "locale": "universal"
     },
+    "books": {
+      "needs_key": [
+        "DATA4LIBRARY_API_KEY",
+        "GOOGLE_BOOKS_API_KEY"
+      ],
+      "weight": "light",
+      "locale": "kr"
+    },
     "browser-action": {
       "needs_key": [],
       "weight": "heavy",
@@ -79,9 +87,7 @@
     },
     "culture": {
       "needs_key": [
-        "DATA4LIBRARY_API_KEY",
         "DATA_GO_KR_API_KEY",
-        "GOOGLE_BOOKS_API_KEY",
         "KOPIS_API_KEY"
       ],
       "weight": "light",
@@ -92,12 +98,22 @@
       "weight": "heavy",
       "locale": "universal"
     },
+    "entity-lookup": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "family-news": {
       "needs_key": [],
       "weight": "light",
       "locale": "universal"
     },
     "finance-record": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
+    "freelance-services": {
       "needs_key": [],
       "weight": "light",
       "locale": "universal"
@@ -290,6 +306,11 @@
       "weight": "light",
       "locale": "universal"
     },
+    "world-statistics": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "youtube": {
       "needs_key": [],
       "weight": "light",
@@ -373,19 +394,19 @@
     "self:time": "system_essentials",
     "self:webapp": "system_essentials",
     "self:write": "system_essentials",
-    "sense:book": "culture",
+    "sense:book": "books",
     "sense:cctv": "cctv",
-    "sense:classic": "culture",
+    "sense:classic": "books",
     "sense:commercial": "real-estate",
     "sense:company": "investment",
     "sense:contest": "contest",
     "sense:crawl": "web",
     "sense:crypto": "investment",
     "sense:devdocs": "context7",
-    "sense:entity": "study",
+    "sense:entity": "entity-lookup",
     "sense:exhibit": "culture",
     "sense:feed": "web",
-    "sense:freelance": "shopping-assistant",
+    "sense:freelance": "freelance-services",
     "sense:here": "android",
     "sense:host": "pc-manager",
     "sense:http": "web",
@@ -413,7 +434,7 @@
     "sense:used": "shopping-assistant",
     "sense:video": "youtube",
     "sense:weather": "location-services",
-    "sense:world_bank": "study",
+    "sense:world_bank": "world-statistics",
     "table:ai": "ai-ops",
     "table:brief": "ai-ops",
     "table:chart": "visualization",

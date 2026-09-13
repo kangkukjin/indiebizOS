@@ -1,9 +1,9 @@
 {
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "shopping-assistant",
-  "name": "Shopping Assistant",
-  "description": "다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가 찾기, 상품 정보 조회에 활용합니다.",
-  "version": "1.2.0",
+  "name": "상품·중고",
+  "description": "새 상품 가격비교와 중고 거래 매물을 검색합니다.",
+  "version": "1.3.0",
   "tools": [
     {
       "name": "search_shopping",
@@ -64,57 +64,6 @@
             "type": "integer",
             "description": "결과 개수 (기본 15)",
             "default": 15
-          }
-        },
-        "required": [
-          "query"
-        ]
-      }
-    },
-    {
-      "name": "freelance_search",
-      "description": "프리랜서·외주 서비스 검색 (크몽 내부 API). type=gigs(서비스 상품 — 제목·가격·평점·판매자) / type=experts(전문가 프로필 — 등급·경력·응답시간·주문수·전문분야). 통화: {items: [{title, meta, summary, url, image, price}], total, source, type}.",
-      "input_schema": {
-        "type": "object",
-        "properties": {
-          "query": {
-            "type": "string",
-            "description": "검색어 (예 \"로고디자인\", \"번역\", \"영상편집\")"
-          },
-          "type": {
-            "type": "string",
-            "description": "gigs=서비스 상품(기본) / experts=전문가(프리랜서 사람 찾기)",
-            "enum": [
-              "gigs",
-              "experts"
-            ],
-            "default": "gigs"
-          },
-          "source": {
-            "type": "string",
-            "description": "플랫폼 (현재 kmong 만)",
-            "enum": [
-              "kmong"
-            ],
-            "default": "kmong"
-          },
-          "sort": {
-            "type": "string",
-            "description": "ranking=인기순(기본) / score=연관도순",
-            "enum": [
-              "ranking",
-              "score"
-            ],
-            "default": "ranking"
-          },
-          "max_price": {
-            "type": "integer",
-            "description": "가격 상한 (원, gigs 전용 후필터)"
-          },
-          "limit": {
-            "type": "integer",
-            "description": "결과 개수 (기본 20)",
-            "default": 20
           }
         },
         "required": [

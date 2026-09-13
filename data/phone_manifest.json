@@ -3,6 +3,7 @@
   "packages": [
     "ai-ops",
     "android",
+    "books",
     "business",
     "cctv",
     "cloudflare",
@@ -10,7 +11,9 @@
     "context7",
     "culture",
     "data-ops",
+    "entity-lookup",
     "finance-record",
+    "freelance-services",
     "health-record",
     "investment",
     "kosis",
@@ -26,7 +29,8 @@
     "startup",
     "study",
     "system_essentials",
-    "web"
+    "web",
+    "world-statistics"
   ],
   "runnable_actions": [
     "engines:image_gemini",

@@ -39,6 +39,7 @@
 | ai-ops | AI Ops (원샷 낱말) | 원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형 | 설치됨 |
 | android | Android Phone Control | ADB(uiautomator)로 안드로이드 폰 화면을 독해·터치·입력하는 | 설치됨 |
 | blog | Blog Tools | 개인 블로그(K의 생각) RAG 검색 및 분석 도구. 티스토리 블로그 글 | 설치됨 |
+| books | 책·고전 | 도서 검색·대출 통계·추천과 서양·한국 고전을 조회합니다. | 설치됨 |
 | browser-action | Browser Action | Playwright + Chrome MCP 듀얼 드라이버 브라우저 자동화 | 설치됨 |
 | bulletin | Bulletin | 로그인 없는 자유게시판. 게시판마다 공개 주소(/b/<5자>)가 하나씩  | 설치됨 |
 | business | Business & Contacts | 비즈니스 관계 및 연락처(이웃) 관리 도구. 이웃 목록 조회, 상세 정보 | 설치됨 |
@@ -48,10 +49,12 @@
 | computer-use | Computer Use | macOS 데스크톱 자동화. AI가 화면을 직접 보고 마우스/키보드를 조 | 설치됨 |
 | contest | AI Contest Search | Kaggle 국제 AI/데이터 경진대회 검색 도구. 키워드·정렬·카테고리 | 설치됨 |
 | context7 | Context7 Docs | 라이브러리/프레임워크 최신 공식 문서 검색. 코드 생성 시 최신 API와 | 설치됨 |
-| culture | Culture & Arts | 공연, 도서, 전시 등 문화 예술 정보 조회 도구. KOPIS API로  | 설치됨 |
+| culture | 공연·전시 | KOPIS 공연·공연장과 KCISA 전시·문화행사를 조회합니다. | 설치됨 |
 | data-ops | Data Ops (통화 변환자) | 통화→통화 변환 동사(currency algebra). 생산자가 내는 공 | 설치됨 |
+| entity-lookup | 개체 식별 | Wikidata에서 동명이인·동음이의를 식별하고 개체의 사실을 조회합니다. | 설치됨 |
 | family-news | Family News | 가족신문 — 폰(USB) 사진으로 신문 판을 조판해 공개 주소에 누적 발 | 설치됨 |
 | finance-record | Finance Record | 재무 기록 및 조회 도구. 지출·수입 거래와 자산·부채 소유 현황을 저장 | 설치됨 |
+| freelance-services | 외주 서비스 | 외주 서비스 상품과 프리랜서 전문가를 검색합니다. | 설치됨 |
 | guest-helper | Guest PC Helper (USB 손발) | USB 로 낯선 PC 에 꽂는 얇은 손발(헬퍼) — 허브가 셸/파일 명령 | 설치됨 |
 | health-record | Health Record | 건강 정보 기록 및 조회 도구. 혈압, 혈당, 체중 측정값과 증상, 투약 | 설치됨 |
 | house-designer | House Designer | 대화형 집 설계 도구. 다각형 방, 재질, 구조 요소(기둥/보), 다중  | 설치됨 |
@@ -74,13 +77,14 @@
 | radio | Radio Tools | 인터넷 라디오 검색 및 재생 도구. Radio Browser API로 전 | 설치됨 |
 | real-estate | Real Estate | 국토교통부 부동산 실거래가 API 도구. 아파트/주택의 매매·전월세 실거 | 설치됨 |
 | remotion-video | Remotion Video | React 기반 프로그래밍 방식의 동영상 생성 도구. Remotion 프 | 미설치 |
-| shopping-assistant | Shopping Assistant | 다나와 및 중고 거래 사이트에서 상품 가격 비교 및 검색 도구. 최저가  | 설치됨 |
+| shopping-assistant | 상품·중고 | 새 상품 가격비교와 중고 거래 매물을 검색합니다. | 설치됨 |
 | startup | Startup Support | 정부 창업지원 사업공고 검색 도구. K-Startup(창업진흥원)과 중소 | 설치됨 |
-| study | Academic Research | 학술 논문·연구자 검색, 여론 조사, 글로벌 경제 지표 접근 도구 (Op | 설치됨 |
+| study | 논문·연구자 | 학술 논문 검색·다운로드와 연구자·공저자 조회. | 설치됨 |
 | system_essentials | System Essentials Kit | 에이전트 기본 도구 모음. 파일 읽기/쓰기/검색, 작업 목록(todo)  | 설치됨 |
 | visualization | Visualization Tools | 데이터 시각화 도구. 라인차트, 막대차트, 파이차트, 산점도, 히트맵,  | 설치됨 |
 | web | Web Tools | 웹 검색 및 크롤링 도구. 통합 검색(DuckDuckGo/네이버/Goog | 설치됨 |
 | web-builder | Web Builder & Homepage Manager | 홈페이지 제작과 관리를 위한 통합 도구 패키지.  ## 두 가지 시나리오 | 설치됨 |
+| world-statistics | 세계은행 통계 | 세계은행의 국가별 경제·사회 지표 시계열을 조회합니다. | 설치됨 |
 | youtube | YouTube Tools | YouTube 영상 도구. 영상 정보 조회, 자막 추출 및 요약, MP3 | 설치됨 |
 
 ## 백엔드 코어 모듈 (Extensions) - 5개
@@ -98,7 +102,7 @@
 
 <!-- IBL_STATS:START -->
 **6노드 165 액션** — sense 43 · self 50 · limbs 14 · others 17 · engines 19 · table 22
-(op 분기 액션 74개 / op 분기 패키지 31개, 나머지 op 액션은 backend-native 라우팅)
+(op 분기 액션 74개 / op 분기 패키지 33개, 나머지 op 액션은 backend-native 라우팅)
 <!-- IBL_STATS:END -->
 (위 수치는 빌드가 재생성 — 손 수정 금지)
 

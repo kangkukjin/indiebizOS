@@ -7,6 +7,7 @@
         "ai-ops",
         "android",
         "blog",
+        "books",
         "browser-action",
         "bulletin",
         "business",
@@ -18,8 +19,10 @@
         "context7",
         "culture",
         "data-ops",
+        "entity-lookup",
         "family-news",
         "finance-record",
+        "freelance-services",
         "guest-helper",
         "health-record",
         "house-designer",
@@ -49,6 +52,7 @@
         "visualization",
         "web",
         "web-builder",
+        "world-statistics",
         "youtube"
       ],
       "extensions": [

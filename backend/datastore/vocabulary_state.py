@@ -1,4 +1,5 @@
 """보유 전체의 경로·소유권과 몸별 활성 선택. 폴더 위치는 최초 이관에만 쓴다."""
+import copy
 import json
 import os
 import re
@@ -11,7 +12,7 @@ import yaml
 def get_base_path():
     from runtime_utils import get_base_path as resolve
     return resolve()
-from vocabulary_policy import required_packages
+from vocabulary_policy import load_policy, required_packages
 
 LOCK = threading.RLock()
 _inventory_cache = {}
@@ -98,20 +99,83 @@ def read_state(root: Path = None) -> dict:
         if not path.exists():
             state = {"version": 1, "revision": 0,
                      "active": {pid: p["initial_active"] for pid, p in inventory(root)["packages"].items()}}
+            # 최초 설치에서도 원본이 잠든 위치라면 분리된 자식만 깨어나지 않는다.
+            for pid, spec in _split_policy(root).items():
+                if spec["source"] in state["active"]:
+                    state["active"].pop(pid, None)
+            state = _inherit_split_selections(state, root)
             write_state(state, root)
         stamp = (path.stat().st_mtime_ns, path.stat().st_size)
         cached = _state_cache.get(str(path))
         if cached and cached[0] == stamp:
-            return cached[1]
-        try:
-            state = json.loads(path.read_text())
-            assert state["version"] == 1 and type(state["revision"]) is int
-            assert isinstance(state["active"], dict)
-            assert all(type(v) is bool for v in state["active"].values())
-        except (ValueError, KeyError, AssertionError, TypeError) as exc:
-            raise ValueError("활성 원장이 손상되었습니다. 이전 원장을 복구해 주세요") from exc
+            state = cached[1]
+        else:
+            try:
+                state = json.loads(path.read_text())
+                assert state["version"] == 1 and type(state["revision"]) is int
+                assert isinstance(state["active"], dict)
+                assert all(type(v) is bool for v in state["active"].values())
+            except (ValueError, KeyError, AssertionError, TypeError) as exc:
+                raise ValueError("활성 원장이 손상되었습니다. 이전 원장을 복구해 주세요") from exc
+        inherited = _inherit_split_selections(state, root)
+        if inherited is not state:
+            state = inherited
+            write_state(state, root)
+            stamp = (path.stat().st_mtime_ns, path.stat().st_size)
         _state_cache[str(path)] = (stamp, state)
         return state
+
+
+def _split_policy(root: Path = None) -> dict:
+    try:
+        return load_policy(root).get("bundle_splits", {})
+    except FileNotFoundError:
+        # 이관 선언이 없는 독립 사전에서도 기존 활성 원장은 읽을 수 있다.
+        # 필수어휘 보호의 정책 로딩은 완화하지 않는다.
+        return {}
+
+
+def _inherit_split_selections(state: dict, root: Path = None) -> dict:
+    """이미 선택한 기능의 패키지 경계만 바뀐 배포를 등가 상태로 한 번 이관한다.
+
+    정본 정책에 있는 분리만 적용한다. 외부 manifest의 자기 선언으로 활성화하지
+    않으며, 새 ID에 사람의 선택이 있으면 잠듦/쓰레기통을 포함해 덮어쓰지 않는다.
+    캐시 적중 때도 확인해 뒤늦게 도착한 패키지 파일을 놓치지 않는다.
+    """
+    splits = _split_policy(root)
+    pending = {pid: spec for pid, spec in splits.items()
+               if pid not in state["active"] and spec["source"] in state["active"]}
+    if not pending:
+        return state
+    inv = inventory(root)
+    result = state
+    for pid, spec in pending.items():
+        source = spec["source"]
+        if source not in inv["packages"] or pid not in inv["packages"]:
+            continue
+        # 소유권이 실제로 옮겨진 완성본만 이관한다(불완전 복사/다른 묶음 제외).
+        if not spec["actions"] or any(inv["actions"].get(a) != pid for a in spec["actions"]):
+            continue
+        if result is state:
+            result = copy.deepcopy(state)
+        result["active"][pid] = state["active"][source]
+        desktop = result.get("desktop") or {}
+        placements = desktop.get("placements", {})
+        origin = placements.get(source)
+        if origin:
+            pos = copy.deepcopy(origin)  # 분류와 쓰레기통의 복원 목적지를 유지한다.
+            occupied = [p for p in [*placements.values(), *desktop.get("folders", {}).values()]
+                        if p.get("parent") == pos["parent"]]
+            for index in range(len(occupied) * 25 + 1):
+                x, y = 24 + index % 5 * 116, 24 + index // 5 * 116
+                if all(not (x < p["x"] + 116 and x + 116 > p["x"]
+                            and y < p["y"] + 136 and y + 136 > p["y"]) for p in occupied):
+                    pos.update(x=x, y=y)
+                    break
+            placements[pid] = pos
+    if result is not state:
+        result["revision"] += 1
+    return result
 
 
 def revision(root: Path = None) -> int:

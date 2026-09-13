@@ -789,8 +789,8 @@ _ENUM_VALUE_ALIASES: dict[tuple[str, str], set[str]] = {
         "pmc",                                     # → pubmed 경로
         "semantic_scholar", "s2",                  # → semantic
         "kr", "dissertation",                      # → nanet
-        "wd", "wikimedia",                         # → wikidata
     },
+    ("entity-lookup", "source"): {"wd", "wikimedia"},  # → wikidata
 }
 
 

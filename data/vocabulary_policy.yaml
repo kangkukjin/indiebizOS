@@ -6,3 +6,18 @@ required_packages:
   system_essentials: 파일·스크립트·자기관리와 기본 표 출력
   data-ops: 파이프 문법이 사용하는 통화 변환
   visualization: 표준 차트 출력
+# 정본 배포의 일회성 분리 이관. 외부 묶음의 자기 선언은 읽지 않는다.
+# 새 ID를 이미 선택했으면 보존하고, 이전 소유자가 넘긴 어휘만 계승한다.
+bundle_splits:
+  entity-lookup:
+    source: study
+    actions: [sense:entity]
+  world-statistics:
+    source: study
+    actions: [sense:world_bank]
+  books:
+    source: culture
+    actions: [sense:book, sense:classic]
+  freelance-services:
+    source: shopping-assistant
+    actions: [sense:freelance]

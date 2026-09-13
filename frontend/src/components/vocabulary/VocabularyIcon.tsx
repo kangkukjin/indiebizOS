@@ -1,8 +1,9 @@
 import { useRef, useState } from 'react';
 import type { ReactNode, MouseEvent } from 'react';
 import type { Placement } from './types';
+import { VOCAB_DRAG_TYPE } from './types';
 
-/** 자율주행과 같은 타일·이름. 포인터 캡처로 폴더 창 밖으로도 끌어낼 수 있다. */
+/** 마우스는 OS 창 사이 HTML 드래그, 터치는 같은 화면 안 포인터 드래그. */
 export function VocabularyIcon({ id, name, icon, placement, destination, fixed, large, protectedIcon, disabled,
   selected, onSelect, onOpen, onMenu, onMove }: {
   id: string; name: string; icon: ReactNode; placement: Placement; destination?: string;
@@ -15,6 +16,14 @@ export function VocabularyIcon({ id, name, icon, placement, destination, fixed, 
   const hover = useRef<HTMLElement | null>(null);
   const resetHover = () => { hover.current?.removeAttribute('data-vocab-hover'); hover.current = null; };
   return <button type="button" data-vocab-icon={id} data-vocab-destination={destination}
+    draggable={!fixed && !disabled}
+    onDragStart={e => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData(VOCAB_DRAG_TYPE, JSON.stringify({ id, offsetX: e.clientX - rect.left, offsetY: e.clientY - rect.top }));
+      onSelect();
+    }}
+    onDragEnd={resetHover}
     aria-label={name} aria-pressed={selected} title={name}
     className="vocabulary-icon absolute w-28 flex flex-col items-center gap-1.5 p-2 rounded-xl select-none text-stone-700"
     style={{ left: drag?.x ?? placement.x, top: drag?.y ?? placement.y,
@@ -31,7 +40,7 @@ export function VocabularyIcon({ id, name, icon, placement, destination, fixed, 
     onPointerDown={e => {
       if (e.button !== 0 || disabled) return;
       onSelect();
-      if (fixed) return;
+      if (fixed || e.pointerType === 'mouse') return;
       const rect = e.currentTarget.getBoundingClientRect();
       start.current = { x: e.clientX, y: e.clientY, left: rect.left, top: rect.top };
       e.currentTarget.setPointerCapture(e.pointerId);

@@ -5,7 +5,7 @@
  * 각 창의 참조(Map·싱글턴 변수)가 곧 상태라 생성기와 같은 모듈에 산다.
  * 메인 창(createWindow)은 main.js 잔류 — 앱 생명주기·트레이·런처 WS 가 직접 다룬다.
  */
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -569,17 +569,20 @@ function createLectureWorkspaceWindow(lectureId = null) {
 
 /**
  * 안경 메뉴 도구 창 — 프롬프트 구성·가이드 파일처럼 런처 안 모달로는 좁은 관리 표면을
- * 독립 창(크기 조절·OS 제목줄)으로 연다. kind 별 하나만, 다시 열면 포커스.
+ * 독립 창(크기 조절·OS 제목줄)으로 연다. 도구별(어휘는 폴더별) 하나만, 다시 열면 포커스.
  */
 const TOOL_WINDOWS = {
   'prompt-composition': { title: '프롬프트 구성', width: 1180, height: 860 },
   'guides': { title: '가이드 파일', width: 1280, height: 860 },
+  'vocabulary': { title: '내 어휘', width: 1000, height: 760, minWidth: 360, minHeight: 300 },
 };
 
-function createToolWindow(kind) {
+function createToolWindow(kind, folderId = 'desktop') {
   const spec = TOOL_WINDOWS[kind];
   if (!spec) return null;
-  const existing = toolWindows.get(kind);
+  if (kind === 'vocabulary' && (typeof folderId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(folderId))) return null;
+  const key = kind === 'vocabulary' ? `${kind}:${folderId}` : kind;
+  const existing = toolWindows.get(key);
   if (existing && !existing.isDestroyed()) {
     raiseWindow(existing);
     return existing;
@@ -587,8 +590,9 @@ function createToolWindow(kind) {
   const win = new BrowserWindow({
     width: spec.width,
     height: spec.height,
-    minWidth: 720,
-    minHeight: 480,
+    minWidth: spec.minWidth || 720,
+    minHeight: spec.minHeight || 480,
+    resizable: true,
     title: spec.title,
     webPreferences: {
       nodeIntegration: false,
@@ -596,7 +600,7 @@ function createToolWindow(kind) {
       preload: path.join(__dirname, 'preload.js')
     }
   });
-  const hashPath = `/${kind}`;
+  const hashPath = kind === 'vocabulary' ? `/vocabulary/${encodeURIComponent(folderId)}` : `/${kind}`;
   if (isDev) {
     win.loadURL(`http://localhost:5173/#${hashPath}`);
   } else {
@@ -612,10 +616,21 @@ function createToolWindow(kind) {
       shell.openExternal(url);
     }
   });
-  win.on('closed', () => { toolWindows.delete(kind); });
-  toolWindows.set(kind, win);
-  setupContextMenu(win);
+  win.on('closed', () => { toolWindows.delete(key); });
+  toolWindows.set(key, win);
+  if (kind !== 'vocabulary') setupContextMenu(win); // 어휘는 폴더·묶음의 자체 우클릭 메뉴
   return win;
+}
+
+function registerToolWindowIPC() {
+  ipcMain.handle('open-tool-window', (_, kind, folderId) => {
+    createToolWindow(String(kind || ''), folderId);
+  });
+  ipcMain.on('vocabulary-changed', (event) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed() && win.webContents !== event.sender) win.webContents.send('vocabulary-changed');
+    }
+  });
 }
 
 /**
@@ -758,4 +773,4 @@ export { raiseWindow, createProjectWindow, createFolderWindow, createSystemAIWin
          createBusinessWindow, createCommunityWindow, createMessengerWindow,
          createPCManagerWindow, createPhotoManagerWindow,
          createLectureWorkspaceWindow, createMultiChatWindow, createProjectPanelWindow,
-         createToolWindow };
+         createToolWindow, registerToolWindowIPC };

@@ -85,9 +85,15 @@ contextBridge.exposeInMainWorld('electron', {
   openPhotoManagerWindow: (initialPath) =>
     ipcRenderer.invoke('open-photo-manager-window', initialPath),
 
-  // 안경 메뉴 도구 창 열기 (prompt-composition | guides)
-  openToolWindow: (kind) =>
-    ipcRenderer.invoke('open-tool-window', kind),
+  // 안경 메뉴 도구 창 열기 (prompt-composition | guides | vocabulary)
+  openToolWindow: (kind, folderId) =>
+    ipcRenderer.invoke('open-tool-window', kind, folderId),
+  notifyVocabularyChanged: () => ipcRenderer.send('vocabulary-changed'),
+  onVocabularyChanged: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on('vocabulary-changed', listener);
+    return () => ipcRenderer.removeListener('vocabulary-changed', listener);
+  },
 
   // 강의 만들기 워크스페이스 창 열기
   openLectureWorkspaceWindow: (lectureId) =>

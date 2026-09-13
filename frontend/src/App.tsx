@@ -19,6 +19,8 @@ import { ProjectPanelView } from './components/ProjectPanelView';
 import { LectureWorkspace } from './components/LectureWorkspace';
 import { PromptCompositionView } from './components/PromptCompositionView';
 import { GuidesView } from './components/GuidesView';
+import { VocabularyView } from './components/VocabularyView';
+import { installVocabularySync } from './components/vocabulary/window-sync';
 import { api } from './lib/api';
 import { useRetryingLoad } from './lib/use-retrying-load';
 
@@ -44,6 +46,7 @@ interface HashRoute {
   lectureId: string | null;
   isPromptComposition: boolean;
   isGuides: boolean;
+  vocabularyFolder: string | null;
 }
 
 const EMPTY_ROUTE: HashRoute = {
@@ -54,6 +57,7 @@ const EMPTY_ROUTE: HashRoute = {
   isPhotoManager: false, photoManagerPath: null,
   isSystemAI: false, isLectureWorkspace: false, lectureId: null,
   isPromptComposition: false, isGuides: false,
+  vocabularyFolder: null,
 };
 
 function parseHash(hash: string): HashRoute {
@@ -71,6 +75,8 @@ function parseHash(hash: string): HashRoute {
   // 안경 메뉴 도구 창 — 프롬프트 구성 · 가이드 파일
   if (hash === '#/prompt-composition') return { ...EMPTY_ROUTE, isPromptComposition: true };
   if (hash === '#/guides') return { ...EMPTY_ROUTE, isGuides: true };
+  const vocabularyMatch = hash.match(/^#\/vocabulary(?:\/([A-Za-z0-9_-]{1,128}))?$/);
+  if (vocabularyMatch) return { ...EMPTY_ROUTE, vocabularyFolder: vocabularyMatch[1] || 'desktop' };
   // 강의 만들기 워크스페이스
   if (hash.startsWith('#/lecture-workspace'))
     return { ...EMPTY_ROUTE, isLectureWorkspace: true, lectureId: param('lecture_id') };
@@ -120,8 +126,10 @@ function App() {
     isCommunity, isMessenger, isBusiness,
     isPCManager, pcManagerPath, isPhotoManager, photoManagerPath,
     isSystemAI, isLectureWorkspace, lectureId,
-    isPromptComposition, isGuides,
+    isPromptComposition, isGuides, vocabularyFolder,
   } = route;
+
+  useEffect(installVocabularySync, []);
 
   // 해시 변경 추적 (초기값은 위에서 이미 동기로 읽음)
   useEffect(() => {
@@ -212,6 +220,7 @@ function App() {
   // 안경 메뉴 도구 창 — 프롬프트 구성 / 가이드 파일 (Electron 독립 창 · 웹은 같은 창 라우트)
   if (isPromptComposition) return <PromptCompositionView />;
   if (isGuides) return <GuidesView />;
+  if (vocabularyFolder) return <VocabularyView key={vocabularyFolder} folderId={vocabularyFolder} />;
 
   // 강의 만들기 워크스페이스 창인 경우
   if (isLectureWorkspace) {

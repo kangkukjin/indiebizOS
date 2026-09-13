@@ -5,7 +5,9 @@ import { ArrowLeft, Boxes, Folder, Archive, Trash2, LockKeyhole, X } from 'lucid
 import { api } from '../lib/api';
 import { getBackendOrigin } from '../lib/backend-origin';
 import type { VocabularyPackage } from '../lib/api-packages';
-import { useFolderWindowMotion } from './vocabulary/useFolderWindowMotion';
+import { openVocabulary } from '../lib/surface-navigation';
+import { ToolWindowFrame } from './ToolWindowFrame';
+import { VOCAB_DRAG_TYPE } from './vocabulary/types';
 import { VocabularyIcon } from './vocabulary/VocabularyIcon';
 import { VocabularyOverlay } from './vocabulary/VocabularyOverlay';
 import { ROOT, STORE, CORE, TRASH, SPECIAL } from './vocabulary/types';
@@ -17,15 +19,13 @@ import './vocabulary/desktop.css';
 interface Menu { x: number; y: number; item?: string; parent: string; canvasX: number; canvasY: number }
 interface Detail { pkg: VocabularyPackage; kind: 'description' | 'words'; words?: Word[] }
 
-export function VocabularyView() {
+export function VocabularyView({ folderId = ROOT }: { folderId?: string }) {
   const [packages, setPackages] = useState<VocabularyPackage[]>([]);
   const [desktop, setDesktop] = useState<VocabularyDesktop | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [openFolder, setOpenFolder] = useState<string | null>(null);
-  const folderMotion = useFolderWindowMotion(openFolder);
   const [selected, setSelected] = useState<string | null>(null);
   const [menu, setMenu] = useState<Menu | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -36,16 +36,22 @@ export function VocabularyView() {
   const [search, setSearch] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
   const rootViewport = useRef<HTMLDivElement>(null);
-  const folderViewport = useRef<HTMLDivElement>(null);
+  const dropHover = useRef<HTMLElement | null>(null);
   const mounted = useRef(true);
+  const pendingRefresh = useRef(false);
+  const reloadRequest = useRef(0);
   const reload = useCallback(async () => {
+    const request = ++reloadRequest.current;
     const [inventory, layout] = await Promise.all([api.getVocabulary(), api.getVocabularyDesktop()]);
-    if (mounted.current) { setPackages(inventory.packages); setDesktop(layout); setError(''); }
+    if (mounted.current && request === reloadRequest.current) { setPackages(inventory.packages); setDesktop(layout); setError(''); }
   }, []);
   useEffect(() => {
     mounted.current = true;
     void reload().catch(e => setError(e instanceof Error ? e.message : '어휘를 불러오지 못했습니다.'));
-    const refresh = () => { if (!busyRef.current) void reload().catch(() => {}); };
+    const refresh = () => {
+      if (busyRef.current) pendingRefresh.current = true;
+      else void reload().catch(() => {});
+    };
     window.addEventListener('vocabulary-changed', refresh);
     window.addEventListener('focus', refresh);
     return () => { mounted.current = false; window.removeEventListener('vocabulary-changed', refresh); window.removeEventListener('focus', refresh); };
@@ -62,18 +68,23 @@ export function VocabularyView() {
     busyRef.current = true; setBusy(true); setError(''); setMessage(''); setMenu(null);
     try { await work(); }
     catch (e) { setError(e instanceof Error ? e.message : '처리하지 못했습니다.'); }
-    finally { busyRef.current = false; if (mounted.current) setBusy(false); }
+    finally {
+      busyRef.current = false;
+      if (mounted.current) {
+        setBusy(false);
+        if (pendingRefresh.current) { pendingRefresh.current = false; void reload().catch(() => {}); }
+      }
+    }
   };
   const edit = (change: DesktopEdit) => run(async () => {
     setDesktop(await api.editVocabularyDesktop(change));
     if (change.op === 'move' || change.op === 'restore') {
       setPackages((await api.getVocabulary()).packages);
-      window.dispatchEvent(new Event('vocabulary-changed'));
     }
-    if (change.op === 'remove_folder' && openFolder === change.item) setOpenFolder(null);
+    window.dispatchEvent(new Event('vocabulary-changed'));
   });
   const columnsFor = (parent: string) => {
-    const viewport = parent === ROOT ? rootViewport.current : folderViewport.current;
+    const viewport = parent === folderId ? rootViewport.current : null;
     // 실제 스크롤 영역 폭, 양쪽 여백 24px, 버튼 폭 112px + 칸 사이 4px.
     return Math.max(1, Math.min(30, Math.floor(((viewport?.clientWidth || 460) - 44) / 116)));
   };
@@ -94,7 +105,7 @@ export function VocabularyView() {
       if (file.size > 20 * 1024 * 1024) throw new Error('어휘 파일은 최대 20MB입니다.');
       const result = await api.importVocabulary(file);
       if (!result.success) throw new Error(result.message || '가져오기 실패');
-      await reload(); setOpenFolder(STORE);
+      await reload(); openVocabulary(STORE);
       setMessage(result.status === 'already_owned' ? '이미 보유한 묶음입니다.' : '저장고에 넣었습니다. 밖으로 꺼내면 사용할 수 있습니다.');
       window.dispatchEvent(new Event('vocabulary-changed'));
     });
@@ -138,7 +149,7 @@ export function VocabularyView() {
         destination={entry.folder ? entry.id : undefined} fixed={SPECIAL.has(entry.id) && entry.id !== TRASH} large={entry.id === STORE}
         protectedIcon={entry.required} selected={selected === entry.id} disabled={busy}
         onSelect={() => setSelected(entry.id)} onMenu={e => context(e, parent, entry.id)}
-        onOpen={() => entry.folder ? setOpenFolder(entry.id) : describe(packages.find(p => p.id === entry.id)!, 'description')}
+        onOpen={() => entry.folder ? openVocabulary(entry.id) : describe(packages.find(p => p.id === entry.id)!, 'description')}
         onMove={(target, x, y) => move(entry.id, target, x, y)} />)}
     </div>;
   };
@@ -146,25 +157,50 @@ export function VocabularyView() {
   const folder = menu?.item ? desktop?.folders[menu.item] : undefined;
   const menuButton = (label: string, onClick: () => void, disabled = false) => <button role="menuitem" disabled={busy || disabled}
     className="block w-full px-4 py-2 text-left text-sm hover:bg-amber-50 focus:bg-amber-50 outline-none disabled:opacity-40" onClick={onClick}>{label}</button>;
-  const openName = openFolder && desktop?.folders[openFolder]?.name;
-  return <div className="vocabulary-desktop relative h-full bg-[#F5F1EB] text-stone-700" aria-label="내 어휘" aria-busy={busy}
-    onKeyDown={e => { if (e.key === 'Escape') { setMenu(null); setSelected(null); } }}>
-    <div ref={rootViewport} className="h-full overflow-auto">{canvas(ROOT)}</div>
+  const openName = folderId === ROOT ? '내 어휘' : desktop?.folders[folderId]?.name || '어휘 폴더';
+  const parent = desktop?.folders[folderId]?.parent || ROOT;
+  const missingFolder = desktop && folderId !== ROOT && !desktop.folders[folderId];
+  useEffect(() => { document.title = openName; }, [openName]);
+  const clearDropHover = () => { dropHover.current?.removeAttribute('data-vocab-hover'); dropHover.current = null; };
+  return <ToolWindowFrame title={openName} icon={folderId === ROOT ? <Boxes size={20} /> : <Folder size={20} />}
+    onContextMenu={folderId !== ROOT && !missingFolder ? e => context(e, parent, folderId) : undefined}
+    actions={folderId !== ROOT && <button onClick={() => openVocabulary(parent)} title="상위 폴더" aria-label="상위 폴더"
+      className="flex items-center gap-1 rounded-lg px-3 py-1 text-sm hover:bg-stone-200"><ArrowLeft size={17} /> 상위 폴더</button>}>
+    <div className="vocabulary-desktop relative flex-1 min-h-0 bg-[#F5F1EB] text-stone-700" aria-label="내 어휘" aria-busy={busy}
+    onKeyDown={e => { if (e.key === 'Escape') { setMenu(null); setSelected(null); } }}
+    onDragOver={e => {
+      if (busy || !e.dataTransfer.types.includes(VOCAB_DRAG_TYPE)) return;
+      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-vocab-destination]');
+      if (!target) return;
+      e.preventDefault(); e.dataTransfer.dropEffect = 'move'; clearDropHover();
+      dropHover.current = target; target.setAttribute('data-vocab-hover', 'true');
+    }}
+    onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) clearDropHover(); }}
+    onDrop={e => {
+      clearDropHover();
+      if (busy || !e.dataTransfer.types.includes(VOCAB_DRAG_TYPE)) return;
+      e.preventDefault();
+      const target = (e.target as HTMLElement).closest<HTMLElement>('[data-vocab-destination]');
+      if (!target) return;
+      try {
+        const data = JSON.parse(e.dataTransfer.getData(VOCAB_DRAG_TYPE));
+        if (typeof data.id !== 'string' || target.dataset.vocabIcon === data.id ||
+            (!packages.some(p => p.id === data.id) && !desktop?.folders[data.id])) return;
+        const rect = target.getBoundingClientRect();
+        const isCanvas = target.hasAttribute('data-vocab-canvas');
+        move(data.id, target.dataset.vocabDestination!,
+          isCanvas ? Math.max(0, e.clientX - rect.left - (Number(data.offsetX) || 0)) : -1,
+          isCanvas ? Math.max(0, e.clientY - rect.top - (Number(data.offsetY) || 0)) : -1);
+      } catch { setError('옮길 어휘 정보를 읽지 못했습니다.'); }
+    }}>
+    {missingFolder ? <p role="status" className="p-6 text-sm">이 폴더는 없어졌습니다. 상위 폴더에서 내용을 확인하세요.</p>
+      : <div ref={rootViewport} className="h-full overflow-auto">{canvas(folderId)}</div>}
     <input ref={fileInput} type="file" accept=".iblpack,.txt" className="hidden" onChange={e => { receive(e.target.files?.[0]); e.target.value = ''; }} />
     {!desktop && !error && <div role="status" className="absolute bottom-4 left-4 text-sm">불러오는 중…</div>}
     {(error || message || busy) && <div role={error ? 'alert' : 'status'} className={`absolute bottom-4 left-4 right-4 z-[90] flex items-center gap-3 rounded-lg p-3 text-sm shadow max-w-xl ${error ? 'bg-red-50 text-red-800' : 'bg-white text-stone-700'}`}>
       <span className="flex-1 break-words">{error || (busy ? '처리 중…' : message)}</span>
       {error && !desktop && <button onClick={() => void run(reload)}>다시 시도</button>}
       {!busy && <button aria-label="알림 닫기" onClick={() => { setError(''); setMessage(''); }}><X size={16} /></button>}
-    </div>}
-    {openFolder && openName && <div ref={folderMotion.windowRef} style={folderMotion.style} className="vocabulary-folder absolute z-30 flex flex-col rounded-2xl border border-stone-300 bg-[#faf8f4] shadow-xl overflow-hidden" role="region" aria-label={openName}>
-      <div {...folderMotion.headerEvents} tabIndex={0} aria-label={`${openName} 창 이동`} style={{ touchAction: 'none', cursor: folderMotion.dragging ? 'grabbing' : 'grab' }} className="no-drag select-none flex items-center gap-2 px-3 py-2 border-b border-stone-200 shrink-0" onContextMenu={e => context(e, openFolder, openFolder)}>
-        <button aria-label="상위 폴더" title="상위 폴더" data-vocab-destination={desktop!.folders[openFolder].parent}
-          onClick={() => setOpenFolder(desktop!.folders[openFolder].parent === ROOT ? null : desktop!.folders[openFolder].parent)} className="p-2 hover:bg-stone-200 rounded"><ArrowLeft size={17} /></button>
-        <span className="font-medium text-sm flex-1">{openName}</span>
-        <button aria-label="폴더 닫기" onClick={() => setOpenFolder(null)} className="p-2 hover:bg-stone-200 rounded"><X size={17} /></button>
-      </div>
-      <div ref={folderViewport} className="overflow-auto flex-1 min-h-0">{canvas(openFolder)}</div>
     </div>}
     {menu && <div ref={menuRef} role="menu" aria-label="어휘 메뉴" className="fixed z-[210] w-56 py-1 rounded-xl border border-stone-200 bg-white shadow-xl max-h-[85vh] overflow-y-auto" style={{ left: Math.max(8, menu.x), top: menu.y }}
       onContextMenu={e => { e.preventDefault(); e.stopPropagation(); }} onKeyDown={e => {
@@ -184,7 +220,7 @@ export function VocabularyView() {
         </>)}
       </>}
       {folder && <>
-        {menuButton('열기', () => { setOpenFolder(menu.item!); setMenu(null); })}
+        {menuButton('열기', () => { openVocabulary(menu.item!); setMenu(null); })}
         {menu.item === STORE && <>
           {menuButton('파일 가져오기', () => { setMenu(null); fileInput.current?.click(); })}
           {menuButton('공유 어휘 찾기', () => { setMenu(null); setSearch(true); })}
@@ -223,5 +259,6 @@ export function VocabularyView() {
     </VocabularyOverlay>}
     <PackageDeveloperDialog show={advanced} onClose={() => { setAdvanced(false); void reload().catch(e => setError(String(e))); }} />
     <ToolSearchDialog show={search} onClose={() => { setSearch(false); void reload().catch(e => setError(String(e))); }} />
-  </div>;
+    </div>
+  </ToolWindowFrame>;
 }

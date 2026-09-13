@@ -1,4 +1,5 @@
 export const ROOT = 'desktop';
+export const VOCAB_DRAG_TYPE = 'application/x-indiebiz-vocabulary';
 export const STORE = 'store';
 export const CORE = 'required';
 export const TRASH = 'trash';

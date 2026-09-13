@@ -80,3 +80,21 @@ def test_P7_단어_문자로_시작하지_않는_키도_맨몸으로_받는다()
 
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__]))
+
+
+def test_P6_병렬_뒤_할당은_원인과_처방을_말한다():
+    """ep3688(2026-09-13): `$a = […] & $b = […]` — 같은 거절이 처방 없이 두 번 반복됐다."""
+    from ibl_parser import _parse_step
+    with pytest.raises(IBLSyntaxError) as e:
+        _parse_step('$leaks = [sense:crawl]{url: "https://example.org"}')
+    msg = str(e.value)
+    assert "해석되지 않은 텍스트" in msg and "$leaks =" in msg      # 사실은 그대로
+    assert "할당" in msg and "`&`" in msg and "제 줄" in msg          # 원인과 처방
+
+
+def test_P7_할당이_아닌_잔여는_처방을_붙이지_않는다():
+    """오진단 금지 — 잔여가 할당 머리가 아니면 옛 문구 그대로."""
+    from ibl_parser import _parse_step
+    with pytest.raises(IBLSyntaxError) as e:
+        _parse_step('그리고 [sense:crawl]{url: "https://example.org"}')
+    assert "할당" not in str(e.value)

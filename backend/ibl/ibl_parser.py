@@ -888,10 +888,15 @@ def _parse_step(text: str) -> Optional[Dict]:
     #   명시 에러. 예전엔 search() 가 중간 매치를 잡아 앞부분을 조용히 버렸다.
     lead = text[:m.start()].strip()
     if lead:
-        raise IBLSyntaxError(
-            f"스텝 앞에 해석되지 않은 텍스트가 있습니다: '{lead[:80]}'\n"
-            f"  전체: {text[:160]}"
-        )
+        msg = (f"스텝 앞에 해석되지 않은 텍스트가 있습니다: '{lead[:80]}'\n"
+               f"  전체: {text[:160]}")
+        # ★진단(2026-09-13 ep3688, 같은 오류 2회 반복): 남은 조각이 `$이름 =` 이면 원인은 할당문을
+        #   `&`/`>>` 뒤에 이은 것이다. 처방 없는 거절은 같은 문장을 다시 부르게 한다.
+        if re.fullmatch(r"\$[\w가-힣]+\s*=", lead):
+            msg += ("\n→ 원인: 할당(`$이름 = …`)은 문장 머리에만 올 수 있고 `&`·`>>` 뒤에는 못 옵니다. "
+                    "할당은 각각 제 줄(또는 `;`)에 두고 이름만 묶으세요: "
+                    "`$a = […]` ↵ `$b = […]` ↵ `$a & $b >> …`")
+        raise IBLSyntaxError(msg)
 
     node = m.group(1)
     action = m.group(2)

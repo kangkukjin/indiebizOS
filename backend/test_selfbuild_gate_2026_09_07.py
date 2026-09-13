@@ -16,6 +16,7 @@
 import sys
 from pathlib import Path
 
+import os
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -49,6 +50,12 @@ def test_threshold_refuses_and_returns_next_step():
     assert r and "자작 관문" in r
     assert "world_tools.md" in r and "check: true" in r     # 다음 한 걸음을 돌려준다
     assert "다시 보내라" in r                                # 저장되지 않았음을 말한다
+    # ep3688(2026-09-13): 처방의 지도 경로는 절대경로여야 한다 — 프로젝트 에이전트의 [self:read] 는
+    # 상대경로를 프로젝트 폴더 기준으로 풀어 ENOENT 를 돌려줬다. 되돌림 문장은 실제로 열려야 한다.
+    import re as _re
+    m = _re.search(r'\[self:read\]\{path: "([^"]+)"\}', r)
+    assert m and os.path.isabs(m.group(1)) and os.path.isfile(m.group(1)), \
+        f"처방의 지도 경로가 열리지 않는다: {m.group(1) if m else r}"
 
 
 @pytest.mark.parametrize("source", ["install_lib(trimesh)", "지도 열람", "read_guide(world_tools)"])

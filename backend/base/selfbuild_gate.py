@@ -254,7 +254,10 @@ def _refusal(e: "_TurnLedger") -> str:
         f"세상의 도구를 한 번도 확인하지 않았다. 이 일을 업으로 하는 사람이 쓰는 도구가 이미 있다면 "
         f"지금이 갈림길이다 — 표준 라이브러리로 다시 짠 것은 대개 장난감이 된다.\n"
         f"다음 한 걸음(둘 중 하나면 관문이 걷힌다):\n"
-        f'  [self:read]{{path: "data/guides/world_tools.md"}}   # 이 일을 잘하는 도구가 표에 있나\n'
+        # ★절대경로로 준다(2026-09-13 ep3688): 프로젝트 에이전트의 [self:read] 는 상대경로를
+        #   프로젝트 폴더 기준으로 풀어 `projects/<p>/data/guides/…` ENOENT 가 났다 — 관문의
+        #   되돌림 문장은 돌려봐야 안다(gate-prescription-untested 부류).
+        f'  [self:read]{{path: "{os.path.join(_ROOT, MAP_REL)}"}}   # 이 일을 잘하는 도구가 표에 있나\n'
         f'  [self:install_lib]{{package: "<후보>", check: true}}  # 부작용 0 — 여러 개 물어도 된다\n'
         f"확인하고도 마땅한 도구가 없거나 이미 쓰고 있으면 그대로 이어서 써라 — 관문은 답이 아니라 "
         f"확인을 요구한다. 방금 쓰려던 내용은 저장되지 않았으니 확인 뒤 같은 쓰기를 다시 보내라."

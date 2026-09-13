@@ -424,8 +424,9 @@ def _op_sort(prev, params):
     miss = [k for k in keys if not any(k in r for r in _rows)] if _rows else list(keys)
     if avail:
         miss = [k for k in keys if k not in avail] or miss
+    missing_fields = "', '".join(miss)
     return {"success": False,
-            "error": f"sort: '{"', '".join(miss)}' 필드가 어느 행에도 없습니다.{hint}"}
+            "error": f"sort: '{missing_fields}' 필드가 어느 행에도 없습니다.{hint}"}
 
 
 # [table:chunk] 는 형제 모듈 chunk_ops.py (2026-09-05 어휘 개정, 1500줄 규칙 분리) — 형제 로더로만 불러온다(패키지 폴더는 sys.path 에 없다)
@@ -622,8 +623,9 @@ def _op_dedup(prev, params):
         missing = [k for k in keys if k not in cols]
         if missing:
             # 잘못된 by 를 조용히 첫 열로 폴백하면 엉뚱한 키로 중복 제거된다(⑧′)
+            missing_fields = "', '".join(missing)
             return {"success": False,
-                    "error": f"dedup: '{"', '".join(missing)}' 열이 없습니다. 실제 열: {cols}"}
+                    "error": f"dedup: '{missing_fields}' 열이 없습니다. 실제 열: {cols}"}
         idx = [cols.index(k) for k in keys] if keys else [0]
         seen, rows = set(), []
         for r in table.get("rows") or []:

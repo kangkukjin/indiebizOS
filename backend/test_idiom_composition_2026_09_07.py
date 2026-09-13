@@ -117,7 +117,8 @@ def test_two_idioms_then_word_preserve_currency_and_errors(run):
     assert [r['title'] for r in result['items']] == ['첫째', '실패']
     assert result['items'][0]['summary'] == '요약 결과'
     assert '_error' in result['items'][1]
-    assert run.observed['crawl'] == ['https://x/one', 'https://x/bad']
+    # each의 호출 시작 순서는 병렬 스케줄링에 달린다. 결과 행 순서는 위에서 검증한다.
+    assert sorted(run.observed['crawl']) == ['https://x/bad', 'https://x/one']
 
 
 def test_chunk_idiom_processes_more_than_old_eight_chunks(run):

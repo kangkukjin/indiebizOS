@@ -139,8 +139,9 @@ def inner_join(prev, params, h):
                 continue
             _missing = [k for k in keys if not any(k in r for r in _dicts)]
             if _missing:
+                missing_fields = "', '".join(_missing)
                 return {"success": False,
-                        "error": f"join: 키 '{"', '".join(_missing)}' 이(가) {_side}측 items 의 "
+                        "error": f"join: 키 '{missing_fields}' 이(가) {_side}측 items 의 "
                                  f"어느 행에도 없습니다. 실제 필드: {list(_dicts[0].keys())}"}
         index = {}
         for r in rb:
@@ -173,8 +174,9 @@ def inner_join(prev, params, h):
     cb = [str(c) for c in (tb.get("columns") or [])]
     missing = [k for k in keys if k not in ca or k not in cb]
     if missing:
+        missing_fields = "', '".join(missing)
         return {"success": False,
-                "error": f"join: 키 '{"', '".join(missing)}'이(가) 양쪽 table 열에 "
+                "error": f"join: 키 '{missing_fields}'이(가) 양쪽 table 열에 "
                          f"모두 있어야 합니다(좌:{ca} 우:{cb})."}
     lki = [ca.index(k) for k in keys]
     rki = [cb.index(k) for k in keys]

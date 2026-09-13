@@ -58,6 +58,7 @@ MIN_PUBLIC_ROUTES = 40
 ANONYMOUS_ALLOW = {
     ("GET",  "/ping"):                           "생존 핑 — 민감정보 없음, 다른 몸이 무인증으로 연결상태 확인",
     ("GET",  "/launcher/app"):                   "런처 셸 — 로그인 화면 자체(로그인 전에 받아야 함)",
+    ("GET",  "/launcher/ui/{path:path}"):        "정적 앱 번들 — serve_asset이 번들 내부 JS·CSS·이미지·폰트만 허용(설정·소스맵·경로 탈출 차단), 데이터 API는 세션 필요",
     ("GET",  "/launcher/lite"):                  "구형 기기 경량 런처 셸 — /launcher/app 과 같은 부류(셸은 정적, 데이터 API 는 세션 게이트 뒤)",
     ("GET",  "/launcher/config"):                "런처 부트 설정 — 로그인 전에 읽히는 공개 상수",
     ("POST", "/launcher/auth/login"):            "로그인 엔드포인트 — 인증을 만드는 곳",

@@ -46,11 +46,27 @@ def tail(path, lines=120):
         return f"(로그 읽기 실패: {e})"
 
 
+def controller_state(base):
+    try:
+        with open(os.path.join(base, "data/restart_control/state.json"), encoding="utf-8") as f:
+            state = json.load(f)
+        # 제어 토큰·전체 설정은 진단 출력에 싣지 않는다.
+        return {key: state.get(key) for key in ("phase", "controller", "worker", "last_result")}
+    except (OSError, ValueError):
+        return {}
+
+
+def boot_diagnostics(base, log_path):
+    return (tail(log_path) + "\n[controller] " + json.dumps(controller_state(base), ensure_ascii=False)
+            + "\n[worker]\n" + tail(os.path.join(base, "data/backend_runtime.log")))
+
+
 def main() -> int:
     env = dict(os.environ)
     env["INDIEBIZ_PRODUCTION"] = "1"   # reload/파일감시 없음 = 자식 1프로세스, terminate 로 깨끗이 죽음
     env["INDIEBIZ_API_PORT"] = str(PORT)
     env["PYTHONUTF8"] = "1"            # 윈도우 러너 cp1252 콘솔에서 한글 로그 죽지 않게
+    base = env.get("INDIEBIZ_BASE_PATH", ROOT)
 
     py = _python()
     log_fd, log_path = tempfile.mkstemp(prefix="boot_smoke_", suffix=".log")
@@ -69,7 +85,12 @@ def main() -> int:
             while time.monotonic() - t0 < DEADLINE_S:
                 if proc.poll() is not None:
                     print(f"[boot-smoke] FAILED — 서버 프로세스가 부팅 중 죽음 (exit {proc.returncode})", flush=True)
-                    print(tail(log_path), flush=True)
+                    print(boot_diagnostics(base, log_path), flush=True)
+                    return 1
+                state = controller_state(base)
+                if state.get("phase") == "FAILED" and (state.get("controller") or {}).get("pid") == proc.pid:
+                    print("[boot-smoke] FAILED — 제어자가 부팅 실패를 확정함", flush=True)
+                    print(boot_diagnostics(base, log_path), flush=True)
                     return 1
                 try:
                     with urllib.request.urlopen(HEALTH, timeout=3) as r:
@@ -80,7 +101,7 @@ def main() -> int:
 
             if payload is None:
                 print(f"[boot-smoke] FAILED — {DEADLINE_S}s 안에 /health 응답 없음", flush=True)
-                print(tail(log_path), flush=True)
+                print(boot_diagnostics(base, log_path), flush=True)
                 return 1
             if payload.get("status") != "healthy":
                 print(f"[boot-smoke] FAILED — /health 페이로드 비정상: {payload}", flush=True)

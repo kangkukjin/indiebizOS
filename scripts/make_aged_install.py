@@ -26,6 +26,7 @@ import tempfile
 import time
 import urllib.request
 from pathlib import Path
+from ci_boot_smoke import boot_diagnostics, controller_state
 
 ROOT = Path(__file__).resolve().parent.parent
 DEADLINE_S = int(os.environ.get("BOOT_SMOKE_DEADLINE", "240"))
@@ -88,7 +89,10 @@ def boot(tree: Path, base_path: Path, python: str, label: str, deadline_s: int =
             payload = None
             while time.monotonic() - t0 < deadline_s:
                 if proc.poll() is not None:
-                    raise RuntimeError(f"[{label}] 부팅 중 죽음 exit={proc.returncode}\n{_tail(log_path)}")
+                    raise RuntimeError(f"[{label}] 부팅 중 죽음 exit={proc.returncode}\n{boot_diagnostics(base_path, log_path)}")
+                state = controller_state(base_path)
+                if state.get("phase") == "FAILED" and (state.get("controller") or {}).get("pid") == proc.pid:
+                    raise RuntimeError(f"[{label}] 제어자가 부팅 실패를 확정함\n{boot_diagnostics(base_path, log_path)}")
                 try:
                     with urllib.request.urlopen(health, timeout=3) as r:
                         payload = json.loads(r.read().decode("utf-8"))
@@ -96,7 +100,7 @@ def boot(tree: Path, base_path: Path, python: str, label: str, deadline_s: int =
                 except Exception:
                     time.sleep(2)
             if payload is None:
-                raise RuntimeError(f"[{label}] {deadline_s}s 안에 /health 없음\n{_tail(log_path)}")
+                raise RuntimeError(f"[{label}] {deadline_s}s 안에 /health 없음\n{boot_diagnostics(base_path, log_path)}")
             if payload.get("status") != "healthy":
                 raise RuntimeError(f"[{label}] /health 비정상: {payload}\n{_tail(log_path)}")
             took = time.monotonic() - t0
@@ -165,13 +169,16 @@ def personalize(tree: Path, tag: str) -> dict:
     dst.parent.mkdir(parents=True, exist_ok=True)
     shutil.move(str(src), str(dst))
     print(f"[fixture] 사용자가 끈 코어 패키지 = {disabled} (상류 변경 {'있음 — 어려운 경우' if upstream_changed else '없음'})", flush=True)
-    # 2) 사용자 패키지 (코어 패키지를 복제해 이름만 바꾼 미추적 패키지 — 비활성 자리에 둔다)
+    # 2) 독립 사용자 패키지 — 코어의 도구/어휘 이름을 복제하면 보유 사전과 충돌한다.
     upk = pk / "not_installed" / "tools" / USER_PKG
-    shutil.copytree(dst, upk, ignore=shutil.ignore_patterns("__pycache__"))
-    tj = json.loads((upk / "tool.json").read_text(encoding="utf-8"))
-    tj["id"] = USER_PKG
-    tj["name"] = "사용자 자작 패키지 (픽스처)"
+    upk.mkdir(parents=True)
+    tj = {"id": USER_PKG, "name": "사용자 자작 패키지 (픽스처)", "tools": [
+        {"name": "user_probe", "description": "사용자 데이터 보존 확인",
+         "input_schema": {"type": "object", "properties": {}}}]}
     (upk / "tool.json").write_text(json.dumps(tj, ensure_ascii=False, indent=2), encoding="utf-8")
+    (upk / "handler.py").write_text(
+        'def execute(tool_input, context):\n    return {"success": True, "items": [{"user_probe": True}]}\n',
+        encoding="utf-8")
     (upk / ".origin").write_text("user\n", encoding="utf-8")
     # 3) 사용자 파일·설정
     (tree / USER_NOTE).write_text("이 파일은 사용자 것 — 업그레이드가 건드리면 안 된다\n", encoding="utf-8")

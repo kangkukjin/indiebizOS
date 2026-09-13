@@ -69,9 +69,18 @@ def test_validate_catalog_runs_every_producer_example_through_the_gate():
     entry = next(e for e in catalog["idioms"] if e["name"] == "위치마다읽기")
     assert entry["examples"], "생산자가 다른 용례가 선정집에 있어야 한다(지렛대 3)"
     assert "grep" not in entry["when"].split("(")[0]          # '언제'는 생산자가 아니라 입력 모양으로 시작한다(지렛대 2)
-    bad = copy.deepcopy(catalog)
-    next(e for e in bad["idioms"] if e["name"] == "위치마다읽기")["examples"].append(
-        {"intent": "틀린 호출", "code": '[self:read]{path:"a.json"} >> [fn:위치마다읽기]{개수:3,줄수:5}'})
+    piped = copy.deepcopy(catalog)
+    next(e for e in piped["idioms"] if e["name"] == "위치마다읽기")["examples"].append(
+        {"intent": "파이프로 위치 전달", "code": '[self:read]{path:"a.json"} >> [fn:위치마다읽기]{개수:3,줄수:5}'})
+    curate_idioms.validate_catalog(piped)
+    bad = copy.deepcopy(piped)
+    next(e for e in bad["idioms"] if e["name"] == "위치마다읽기")["examples"][-1]["code"] = (
+        '[self:read]{path:"a.json"} >> [fn:위치마다읽기]{개수:3}')
+    with pytest.raises(ValueError, match="인자"):
+        curate_idioms.validate_catalog(bad)
+    bad = copy.deepcopy(piped)
+    next(e for e in bad["idioms"] if e["name"] == "위치마다읽기")["examples"][-1]["code"] = (
+        '[fn:위치마다읽기]{개수:3,줄수:5}')
     with pytest.raises(ValueError, match="인자"):
         curate_idioms.validate_catalog(bad)
 

@@ -729,7 +729,19 @@ def _anchor_line(r) -> str:
     call = phrase_call_line(alias, code, returns, signature)
     when = (intent or "").strip()
     first = when.split(". ")[0].rstrip(".")[:130]     # 실험 v3 는 90자 절단으로 돌았다(evidence exposure_delta.txt) — 문장이 잘려 130 으로
-    return f"    ↳ 관용구 {call} :: {first} (교재: ibl_idioms)"
+    pipe = _pipe_input_note(code)
+    return f"    ↳ 관용구 {call} :: {first}" + (f" · {pipe}" if pipe else "") + " (교재: ibl_idioms)"
+
+
+def _pipe_input_note(code: str) -> str:
+    """실행기와 같은 몸 판정으로 파이프 대체 가능 인자만 안내한다."""
+    from ibl_parser import IBLSyntaxError, parse_function_body
+    from workflow_contract import pipe_input_param
+    try:
+        name = pipe_input_param(parse_function_body(code))
+    except IBLSyntaxError:
+        return ""  # 한 저장본의 구문 부패로 다른 관용구의 지도까지 잃지 않는다.
+    return f"앞 통화 → {name} (명시 인자 우선)" if name else ""
 
 
 def _idiom_lines(r, lesson=None) -> List[str]:
@@ -750,6 +762,9 @@ def _idiom_lines(r, lesson=None) -> List[str]:
     if _n:
         call += f"  · 사용 {_n}회"
     out = [call, f"  언제: {(intent or '').strip()[:150]}"]
+    pipe = _pipe_input_note(code)
+    if pipe:
+        out.append(f"  연결: {pipe}. 파이프가 있으면 이 인자만 생략 가능.")
     skel = _skeleton(code)
     if skel:
         out.append(f"  골격: {skel}")

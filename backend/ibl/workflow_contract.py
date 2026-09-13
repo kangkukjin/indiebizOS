@@ -175,6 +175,24 @@ def _free_vars(steps) -> List[str]:
     return found
 
 
+def pipe_input_param(steps) -> str | None:
+    """함수 몸 첫 파이프의 맨몸 자유 변수만 앞 통화를 받을 수 있다.
+
+    `$목록 >> …`는 목록 입력 자리다. 병렬·조건·경로 참조·후속 문장의
+    누락 인자는 추측하지 않는다. 명시 인자와 무입력 호출의 필수 서명은 그대로다.
+    """
+    if not isinstance(steps, list) or len(steps) < 2:
+        return None
+    head, following = steps[:2]
+    if (isinstance(head, dict) and head.get('_var_emit') and head.get('_free')
+            and not head.get('path') and isinstance(following, dict)
+            and not following.get('_seq_boundary')):
+        name = head.get('name')
+        if name in _free_vars(steps):
+            return name
+    return None
+
+
 def call_signature(ibl_code: str) -> List[str]:
     """IBL 원문의 **호출 서명** — 바깥에서 줘야 하는 `$이름` 목록. 층 밖의 공개 계약(2026-09-06).
 

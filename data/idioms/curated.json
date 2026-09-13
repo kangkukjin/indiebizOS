@@ -180,8 +180,8 @@
       "when": "url 열이 있는 목록에서 중복 URL을 빼고 앞 개수개 페이지의 원문 문단을 모을 때. 출처와 실패를 보존하며 요약·평가·AI 호출은 하지 않는다.",
       "topic": "수집",
       "body": "$고유 = $목록 >> [table:dedup]{by: \"url\"}\n$대상 = $고유 >> [table:take]{n: \"${개수}\"}\n$return = $대상 >> [table:each]{keep: [\"title\", \"url\"], limit: \"${개수}\", collect: true, on_error: \"keep\"} {\n  [sense:crawl]{url: \"$it.url\"}\n}",
-      "inputs": "목록: url 열이 있는 items 또는 JSON 행 목록(변수 자체 전달), title은 선택. 검색 결과가 link 열이면 먼저 rename으로 url에 맞춘다. 개수: 읽을 고유 URL 수(0 이상). 성공은 문단 단위 items(type·text 등)에 url·원래 title을 붙이고, 실패는 _error 행으로 남긴다. 같은 URL은 첫 행을 보존한다. 개수는 페이지 수이며 반환 문단 수는 더 많을 수 있다. 원문은 전문 보관하고 큰 결과는 모델에만 미리보기로 보인다. 저장 변수에서 더 읽으며 같은 URL은 캐시를 재사용한다. 접근 제한·원문 추출 한계는 그대로다.",
-      "example": "$주소=[sense:search]{query:\"도서관 소식\"}; [fn:주소마다읽기]{목록:$주소,개수:3}",
+      "inputs": "앞 통화 또는 목록: url 열이 있는 items 또는 JSON 행 목록(변수 자체 전달), title은 선택. 파이프가 있으면 목록 인자만 생략할 수 있다. 둘 다 주면 명시한 목록이 우선하며 빈 목록도 그대로 보존한다. 둘 다 없으면 입력 누락 오류다. 검색 결과가 link 열이면 먼저 rename으로 url에 맞춘다. 개수: 읽을 고유 URL 수(0 이상). 성공은 문단 단위 items(type·text 등)에 url·원래 title을 붙이고, 실패는 _error 행으로 남긴다. 같은 URL은 첫 행을 보존한다. 개수는 페이지 수이며 반환 문단 수는 더 많을 수 있다. 원문은 전문 보관하고 큰 결과는 모델에만 미리보기로 보인다. 저장 변수에서 더 읽으며 같은 URL은 캐시를 재사용한다. 접근 제한·원문 추출 한계는 그대로다.",
+      "example": "[sense:search]{query:\"도서관 소식\"} >> [fn:주소마다읽기]{개수:3}",
       "examples": [
         {
           "intent": "학습 자료의 URL 목록에서 중복을 빼고 앞 5개 원문과 출처를 JSON으로 모아줘",
@@ -189,7 +189,7 @@
         },
         {
           "intent": "검토 목록에서 승인한 페이지의 원문만 출처와 함께 모아줘",
-          "code": "$승인=[self:read]{path:\"검토목록.json\"} >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}}; [fn:주소마다읽기]{목록:$승인,개수:4}"
+          "code": "$목록=[self:read]{path:\"검토목록.json\"}; $목록 >> [table:filter]{where:{field:\"approved\",op:\"eq\",value:true}} >> [fn:주소마다읽기]{개수:4}"
         }
       ]
     },

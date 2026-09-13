@@ -22,8 +22,8 @@ DEFAULT = ROOT / "data" / "idioms" / "curated.json"
 
 
 def validate_catalog(catalog):
-    from ibl_parser import parse
-    from workflow_contract import call_signature
+    from ibl_parser import parse, parse_function_body
+    from workflow_contract import call_signature, pipe_input_param
     from ibl_typecheck import typecheck_code
     from ibl_usage_rag import _validate_ibl_actions
     from ibl_param_vocab import check_code_params
@@ -47,27 +47,31 @@ def validate_catalog(catalog):
                 raise ValueError(f"{e['name']}: 존재하지 않는 어휘 또는 인자 — {check_code_params(code)}")
             steps = parse(code)
             calls = []
-            def walk(obj):
+            def walk(obj, has_prev=False):
                 if isinstance(obj, dict):
                     if obj.get("_def"):
                         return
                     if obj.get("_node") == "fn":
-                        calls.append(obj)
+                        calls.append((obj, has_prev))
                     for v in obj.values():
                         walk(v)
                 elif isinstance(obj, list):
-                    for v in obj:
-                        walk(v)
+                    for i, v in enumerate(obj):
+                        linked = (i > 0 and isinstance(v, dict) and not v.get('_seq_boundary')
+                                  and isinstance(obj[i - 1], dict) and not obj[i - 1].get('_def'))
+                        walk(v, linked)
             walk(steps)
-            if not any(c.get("action") == e["name"] for c in calls):
+            if not any(c.get("action") == e["name"] for c, _ in calls):
                 raise ValueError(f"{e['name']}: 용례가 자신의 이름을 부르지 않는다")
-            for call in calls:
+            for call, has_prev in calls:
                 target = next((x for x in entries if x["name"] == call["action"]), None)
                 if target is None:
                     raise ValueError(f"선정집 밖 호출: {call['action']}")
                 required = set(call_signature(target["body"]))
                 supplied = {k for k in call.get("params", {}) if not k.startswith("_")}
-                if required != supplied:
+                pipe = pipe_input_param(parse_function_body(target["body"])) if has_prev else None
+                missing = required - supplied - ({pipe} if pipe else set())
+                if missing or supplied - required:
                     raise ValueError(f"{e['name']}: {call['action']} 인자 {supplied} != {required}")
             tc = typecheck_code(code)
             errors = [i for i in tc.get("issues", []) if i.get("severity", i.get("level")) == "error"]

@@ -228,13 +228,14 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
     """[fn:이름]{인자} — 같은 프로그램의 [def: 이름] 몸통을 닫힌 스코프로 실행. 정의가 없으면 저장 워크플로(원장)의
     같은 이름을 부른다(두 길이 하나로). 규약은 워크플로 run 과 같다: 시그니처(미할당 $이름) 누락은 정직 거절,
     인자는 파스 후 값 층에 주입, 반환은 `$return` 이 있으면 그 문장 아니면 마지막 통화, 앞 통화(>>)는 몸의 첫 문장에
-    흐른다. 재귀·상호 호출은 깊이 MAX_FN_DEPTH 에서 끊는다(무한 재귀 방지, 반복은 [repeat:]/[table:each] 로)."""
+    흐른다. 첫 파이프가 맨몸 자유 변수로 시작하면 앞 통화는 그 인자를 채운다(명시 인자 우선).
+    재귀·상호 호출은 깊이 MAX_FN_DEPTH 에서 끊는다(무한 재귀 방지, 반복은 [repeat:]/[table:each] 로)."""
     import copy as _c
     from ibl_traceback import push_frame
     name = tool_input.get("action") or ""
     _p = tool_input.get("params") or {}
     caller = {k: v for k, v in _p.items() if not str(k).startswith("_")}     # 배관 키(_raw·_prev_result)는 인자가 아니다
-    prev = _p.get("_prev_result") or tool_input.get("_prev_result")         # 파이프 속 호출은 params 로 앞 통화를 받는다
+    prev = _p.get("_prev_result", tool_input.get("_prev_result"))
     depth = int(tool_input.get("_fn_depth") or 0)
     if depth >= MAX_FN_DEPTH:
         return {"success": False, "fn": name,
@@ -287,6 +288,11 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
     if fdef.get("todo"):
         return {"success": False, "fn": name,
                 "error": f"[fn:{name}] 은 이름만 걸어 둔 함수입니다([def: {name}]{{todo}}) — 몸통을 채우세요."}
+    from workflow_contract import pipe_input_param
+    from common.currency import coerce_json_param
+    pipe_param = pipe_input_param(fdef.get("body"))
+    if pipe_param and pipe_param not in caller and prev is not None:
+        caller[pipe_param] = coerce_json_param(prev)
     required = list(fdef.get("params") or [])
     missing = [n for n in required if n not in caller]
     if missing:
@@ -313,7 +319,7 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
         if isinstance(st2, dict):
             st2["_fn_depth"] = depth + 1
         nested.append(st2)
-    context = {"_prev_result": prev} if prev else None
+    context = {"_prev_result": prev} if prev is not None else None
     started = _time.monotonic()
     try:
         env = execute_pipeline(nested, project_path, context=context, agent_id=agent_id)

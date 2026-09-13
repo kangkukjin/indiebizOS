@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-08-28
+last_updated: 2026-09-14
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -120,7 +120,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 - **가변부(`<turn_context>`, 사용자 메시지 앞)** — 분 단위 시각 → 실행기억(해마 회상 + 심층·실행 지도) → 모델명 → 의식이 고른 가이드 본문 → 수리 턴 교리(RED 그랜트 때만).
 - **사용자 명령** — `compile_user_command` 가 원문에 의식의 보강(문제 규정·기준 출처·전문가의 선택·전제·액션·수행 절차·실행 초안·가이드·충족 기준)을 당위 앵커로 이어 붙인다(THINK 경로).
 
-의식·의식 감독·무의식·최종 평가자·경험 증류·가이드 순찰·IBL 번역·자동응답은 각자 다른 조립을 갖는다. **어느 에이전트가 무엇을 어떤 순서로 읽는지는 런처 안경 메뉴 → 프롬프트 구성** 표면이 정본 빌더를 그대로 불러 조각별 분량과 본문으로 보여준다(`backend/cognition/prompt_composition.py`, `/prompt-composition/*`). 문서의 조립 순서 서술이 표면과 어긋나면 표면이 맞다.
+의식·의식 감독·무의식·최종 평가자·경험 증류·가이드 순찰·IBL 번역·자동응답은 각자 다른 조립을 갖는다. **어느 에이전트가 무엇을 어떤 순서로 읽는지는 런처 안경 메뉴 → 프롬프트 구성** 표면이 정본 빌더를 그대로 불러 조각별 분량과 본문으로 보여준다(`backend/cognition/prompt_composition.py`, `/prompt-composition/*`). 문서의 조립 순서 서술이 표면과 어긋나면 표면이 맞다. 안경 메뉴의 도구 창(프롬프트 구성·가이드 파일·내 어휘)은 Electron 에서 런처 안 모달이 아니라 **독립 OS 창**이다(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별; IPC `open-tool-window`), 웹 표면은 같은 창의 해시 라우트(`#/prompt-composition`·`#/guides`·`#/vocabulary`). 가이드 파일 창은 `data/guides/*.md` 를 등록(guide_db)·신선도·예산과 함께 보여 주고 본문을 고쳐 저장한다(`/guides`, `guide_registry.guide_catalog` — 폴더가 정본이라 '등록만 있고 파일 없음'·'파일만 있고 미등록'을 숨기지 않는다). 정본 `docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md`.
 
 ### 프롬프트 XML 구조 / AI 프로바이더
 모든 프롬프트의 XML 태그 구조와 지원 AI 프로바이더 목록은 **technical.md** 참조.
@@ -167,6 +167,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
   - **실패는 위치를 갖는다**(2026-08-27): 모든 실패 봉투에 `traceback`(frames 바깥→안쪽·`error_type`·실패 지점 입력 통화 요약·예외 꼬리)이 붙고 — each 행·병렬 가지 같은 부분 실패도 예외 없다 — AI step 의 품질 미달은 `criteria` 품질 계약이 `error_type:"quality"` 로 **위치 있는 실패**로 만든다(판정 불능=통과+`unjudged`, 재시도 통과=`_criteria_retried` 정직 표지). 둘 다 봉투 다이어트 밖. 정본 = `docs/IBL_TRACEBACK_HANDOFF.md` · `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
   - 명세·예약어는 **ibl.md**, 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 개정 이력은 `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
+- **어휘 스캔 한 벌**(2026-09-11 `c96e6481`): 따옴표 경계·연산자 분할·소스 머리 인식은 `backend/ibl/ibl_scanner.py` 하나를 파서 셋(`ibl_parser`·`ibl_parser_blocks`·`ibl_parser_values`)이 공유하고, JSON5→JSON 복호는 `ibl_parser_values._try_json_like` 한 곳이다 — 골든 경계 코퍼스 `backend/testdata/ibl_parser_boundaries.json`.
 - **값 의미론 단일 코어**(2026-08-25): `common/value_semantics.py`가 값 분류(null/bool/number/**datetime**/text/structure/other — datetime 은 2026-08-27 신설), JSON 구조 순회(dict=무순서 쌍·list=순서 열), 조건 동등성, 4상태 순서(작음/같음/큼/판정불능), 숫자 관측, 정렬 버킷(숫자→날짜→문자열→결측), groupby 엄격 식별자와 join/merge/dedup 관계 식별자를 한 벌로 소유한다. `table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`·집계·관계 연산은 의미를 재구현하지 않고 공통 결과를 자기 오류 봉투로 번역만 한다. `test_value_semantics_single_owner.py`가 대칭·추이·동등/순서/정렬 일치와 사적 정책 함수 재도입 금지를 지킨다.
 - **프롬프트 가독성**: 액션에 category 태그 부여 → `<action-categories>`로 그룹 표시 (순수 표시용)
 - **액션 라우팅**<!-- ROUTERS:START -->(액션 단위 실측, 합 165): handler 137 · system 18 · channel_engine 7 · driver 1 · workflow_engine 1 · trigger_engine 1<!-- ROUTERS:END -->
@@ -220,6 +221,7 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(심층메모리)을 단계 0에서 1회 검색해 모든 에이전트에 self-describing XML로 주입.
 - 해마: 로컬 M4 Pro 재학습(세대·측정표 정본=memory.md), 런타임 검색 ~99% — 자동 경험 증류 (점수 < 0.7, 또는 ≥0.7이어도 회상이 실제로 안 쓰였으면)
 - 심층메모리: 같은 모델 공유로 시맨틱 검색 (2026-05-16 도입)
+- **장기 기억의 쓰기 입구는 하나**(2026-09-12): 최종 응답이 전달된 뒤 `distill_queue` → `cognitive_distill._after_response` 가 **사용자 원문**만 선별해 저장한다(이번 대화 밖의 지속 용도 `future_use` 를 대지 못하면 제외, 0건 저장이 정상, 출처에 최종 응답 SHA-256). `[self:memory]{op:"save"}` 는 저장도 대기열 적재도 하지 않고 `success:true, saved:false` 정책 안내(대화 중 `automatic_selection`)를 돌려주며, 사전에서 `side_effect:false` 라 이 호출만으로 최종 평가가 발동하지 않는다. 정본 `docs/MEMORY_FINAL_RETENTION_2026_09_12.md`.
 - 상세 (단계별 흐름·증류 조건·DB 스키마·학습 절차): **memory.md**
 
 ### 몸 원장 (Body Ledger, 2026-08-21)
@@ -232,6 +234,14 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 
 ### 도구 패키지 시스템 (노드 구현체)
 도구 패키지들이 IBL 노드의 실제 구현체로 동작(수는 아래 '시스템 통계'·목록은 packages.md — 둘 다 빌드 파생). 폴더 기반 탐지 + 동적 로딩. op 분기 패키지는 `_OP_DISPATCHERS` 표준 채택(2026-05-28~) — `build_ibl_nodes.py --check`가 AST 정확 비교로 src↔tool.json↔handler 일치 검증. 패키지 구조·설치·생성 절차는 **packages.md** 참조.
+
+**보유 전체 사전집 vs 몸별 활성 원장 (어휘 레고박스, 2026-09-13)** — 사전집(`ibl_nodes.yaml`)은 `installed`·`not_installed` 양쪽 폴더의 **보유 전체**에서 빌드되고, 어느 묶음이 이 몸에서 깨어 있는지는 몸별 로컬 원장 `data/vocabulary/activation.json`(`backend/datastore/vocabulary_state.py`)이 유일한 정본이다 — 최초 이관 때 installed=활성·not_installed=잠듦으로 한 번 기록되고, 그 뒤 폴더 이름은 활성 의미를 갖지 않는다(PC·폰 선택은 동기화하지 않는다).
+- **스위치는 빌드가 아니다**: 깨우기/잠재우기(`vocabulary_lifecycle.set_package_active` 하나)는 폴더를 옮기지도 파생물을 쓰지도 않고 원장 `revision` + 런타임 캐시(`ibl_routing.invalidate_runtime_caches`)만 바꾼다. 잠재우기는 파일·설정·용례·벡터를 **보존**한다 — 회상(`ibl_usage_rag`)·관용구·카탈로그 캐시가 `revision` 으로 활성 집합만 거른다. 새 묶음 등록·정의 변경은 보유 집합 변경이라 빌드가 따르며(가져오기 절차가 자동 수행) 둘을 구분한다.
+- **호출 관문 두 층**: 잠든 묶음의 낱말은 로드 시 prune 되어 카탈로그·회상에서 빠지고(`ibl_registry` 의 `action_reason`), 직접 도구 호출도 `vocabulary_state.require_tool_active` 가 `tool_loader`·`api_engine`·`system_tools` 에서 거절한다("잠들어 있습니다 — 내 어휘에서 깨워 주세요").
+- **필수어휘 보호는 선언 한 곳**: `data/vocabulary_policy.yaml`(`standard_nodes` + `required_packages`)을 잠재우기·제거·파일 가져오기·데스크톱 이동·`apply_edition`·빌드 검증이 전부 같은 곳에서 읽는다. 기능어 노드의 `always_on` 과 그 아래 사용자 묶음의 보호를 혼동하지 않는다. 사람 권한 게이트(`api_vocabulary.human_authority`) 밖의 AI 호출(`[self:package]{op}`)은 제안만 한다.
+- **교환 단위 `.iblpack`**(ZIP: `manifest.json`+`ibl_actions.yaml`+`handler.py`+`examples.json`, `vocabulary_archive`/`vocabulary_import`): 가져온 묶음은 잠든 채 등록되고 용례는 해마에 시딩되며(`source=iblpack:<id>:<지문>`), 가져오기 중 핸들러를 import 하지 않는다 — 깨우기가 곧 코드 실행 허용이다. 옛 `===PACKAGE_START===` 텍스트 형식은 변환 입구로만 남았다. 정본 `docs/IBLPACK_FORMAT.md`.
+- **저장고가 바뀌면 상주 AI 도 안다**(`18a5a1bc`): `agent_pipeline._refresh_execution_prompt` 가 매 턴 활성 사전으로 안정부를 다시 조립하고(같은 활성 집합이면 같은 prefix), 의식·순찰 경로도 `revision` 을 대조한다.
+- **묶음 경계 = 실제 배포·활성 선택 단위**: 넓은 분류(학술·문화·쇼핑) 안에 함께 있던 독립 기능을 갈랐고(`docs/VOCAB_BUNDLE_SPLIT_2026_09_13.md`), 분리된 묶음은 정책의 `bundle_splits` 로 원본의 선택·배치를 한 번만 계승한다. 설계·구현 기록 `docs/VOCAB_LEGO_PLAN_2026_09_13.md`.
 
 ### 자동응답 서비스 V3
 - Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
@@ -261,6 +271,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
   - 의식의 명시적 criteria/achievement_criteria만 판정한다. 목표·품질·멈춤선을 새로 정하지 않는다. 기준이 비면 평가도 없다.
   - 미달은 기존 기준 ID·증거·최소 보완을 연결한 DEFECTS로 전달한다. 기준 외 산문이나 연결 없는 지적은 재작업시키지 않는다. 최종 보완·재평가는 고정된 기준으로 최대 한 번이다. 수치 검사는 증거이며 별도 자동 탈락 조건이 아니다.
   - 감독 없는 GoalEval은 같은 평가 프롬프트·기준 연결 검증을 쓰는 호환 경로다.
+  - **평가 경로의 경계**(2026-09-12): 감독·평가 여부는 실행 *전에* '의식 규정이 있는가'로 확정한다(`agent_pipeline` 의 `_evaluation_enabled` = 의식 출력 있음 ∧ 반사 아님 ∧ 강제 역할 아님). 실행 중 도구 실패·쓰기·미분류 호출·긴 작업·알림·과제 완료 요청은 `Supervisor.enabled` 를 켜지 못한다(`configure` 가 규정 유무로만 정한다). 평가 미실행은 `episode_summary.evaluation_result` NULL 이며 실패가 아니다. **기준의 주인은 의식**이다 — `supervisor_handoff.criteria_contract` 가 의식이 정한 항목에 ID 를 주고 하네스는 fallback 기준을 만들지 않으며, `final_evaluator` 는 최종평가 시작 시 기준을 고정해 보완·재평가에도 같은 계약을 준다(공통 평가 프롬프트에서 도구 적절성·노력선·'더 할 수 있었던 일'·시각 품질 심사를 걷어냈다). 정본 `docs/FINAL_EVALUATOR_SEPARATION_2026_09_11.md` · `EVALUATOR_CRITERIA_OWNERSHIP_2026_09_12.md` · `EVALUATION_ROUTE_BOUNDARY_2026_09_12.md`.
   - **스트림 안**에서 돈다: 평가 진행 표지와 재실행 에이전트의 이벤트가 그대로 흐른다. 블로킹 함수였던 옛 판은 재실행(실측 10분)이 통째로 화면 밖이라 WS 유휴 타임아웃(600초)을 구조적으로 넘겼다(2026-08-22 수리)
   - 프롬프트: `data/common_prompts/evaluator_prompt.md`
 
@@ -300,6 +311,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - `episode_summary` 테이블: 인지 품질 지표 영구 보존 (해마 점수, 무의식 판정, 의식 소요시간, 실행 라운드, 평가 결과)
 - 파일: `backend/base/episode_logger.py`, DB: `data/world_pulse.db`
 - API: `/xray/episodes`, `/xray/episodes/{id}`, `/xray/episode-summaries`
+- **실행 통합 조회**(2026-09-11, L0→L2 `e24e4ab4`·`ed59d00b`·`b927e2d7`): 흩어진 원장(episode/trajectory·쓰기 관문 JSONL·프로젝트/시스템 대화 DB·과제 원장·검수 작업대·런타임 관측)을 **물리 통합하지 않고** 읽기 시점에 합성한다. 각 원장의 주인이 strict 읽기 함수를 소유하고(`base/episode_trace_reader.py`·`write_ledger.read_trace_page`·`conversation_db`·`pursuit_ledger`·`supervision_store`, 공통 원시 연산 `base/trace_read.py` — SQLite `mode=ro`/`query_only`·예산·페이지), `services/execution_trace.py` 가 신원 범위(`execution_trace_scope`)·HMAC 커서·부분성(`missing`/`ambiguous`/`partial`)·비용(`model.usage` 중 `billable_usage` 만 합산)을 조합한다. ★신원 지도가 먼저였다(L0): `episode_log.owner` 는 자아가 아니라 프로세스 신원, `agent`·`delegated_to` 는 표시 이름, 메시지에는 task FK 가 없다 — 그래서 시간·이름으로 추정 조인하지 않고 `pursuit_turn.episode_id`·`pursuit.agent_key` 같은 명시 연결만 쓴다. 소비처는 조종실 주행기록의 행 펼치기(`ExecutionTraceDetail.tsx`), 원문은 명시적으로 여는 별도 페이지. 라우트·인증은 technical.md, 정본 `docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md`.
 
 **서버 시작 시**: 최근 1시간 내 펄스가 없으면 즉시 수집, 있으면 건너뜀
 
@@ -406,18 +418,20 @@ Cloudflare Tunnel을 통해 외부에서 IndieBiz OS를 제어합니다:
 - **한도 ①사람 명령**: `thread_context.task_origin == 'user'` 인 태스크에서만(WS 채팅·`/system-ai/chat`·에이전트 명령 HTTP 4곳만 세팅). 스케줄러·자가점검·위임 사슬·외부 채널은 **미세팅 = fail-closed** → 자율 태스크는 종전대로 `[self:patch]` 제안만. **새 진입점을 만들면 `set_task_origin("user")` 를 붙일 것** — 그리고 그 표면이 `cognitive_stream` 에 닿는지는 관문(`backend/test_user_surface_pipeline.py`)이 묻는다. 묻는 것은 **누가 명령했나** 하나뿐이다. 시스템 AI 냐 프로젝트 에이전트냐(=누가 실행하나)는 한도가 아니다.
 - **한도 ②최고 모델 고정**: 기어가 절약이어도 REPAIR 실행 모델은 고급으로 승격(`model_resolver`, reflex→경량 고정의 역방향).
 - **한도 ③의식 각성**: 의식 토글 OFF 여도 REPAIR 는 THINK(의식 framing) 경로를 강제.
-- **기계 안전판**: 사전 구문검증(`compile` — 깨진 `.py` 는 라이브에 닿기 전 거부) → 원본 백업(파일당 최초 1회) → backend `.py` 면 **분리 워치독**(`red_watchdog.py`, `start_new_session` — 서버가 죽어도 생존)이 리로드 후 `/health` 확인, 죽어 있으면 백업 복원 + 재기동 + OS 알림으로 **자동 롤백**.
+- **기계 안전판**: 사전 구문검증(`compile` — 깨진 `.py` 는 라이브에 닿기 전 거부) → 원본 백업(파일당 최초 1회) → backend `.py` 면 **분리 워치독**(`red_watchdog.py`, `start_new_session` — 서버가 죽어도 생존)이 리로드 후 `/health` 확인, 죽어 있으면 백업 복원 + 재기동 + OS 알림으로 **자동 롤백**. **2026-09-11 R1 이후 재기동 자체는 재기동 제어자의 몫**이다 — 분리 수행자 `red_apply` 는 예약 턴의 종료·증류를 기다린 뒤 `restart_controller` 에 `red_apply` 요청을 넘길 뿐 스스로 게이트·drain·적용을 하지 않고, 제어자가 접수 차단→종료 대기→종료 뒤 `restart_red`(적용·부팅 후 검증·실패 시 검증된 백업 복원·재부팅)를 돌린다. 워치독은 백업·헬스 확인·안전 셀프테스트를, `red_report` 는 결말 회수를 그대로 맡는다(아래 원칙 1·3 의 2026-09-11 주석).
 
 ### ★일반 원칙 둘 (이 경로가 가르쳐 준 것)
 
 1. **자기 죽음 이후에 실행돼야 하는 단계는, 죽음을 넘는 프로세스가 소유한다.**
    옛 keeper 규약("작업 전 표식 세우고, 작업 후 지운다")은 자기수리에서 **원리적으로 완주 불가**였다 — backend 를 고치는 시스템 AI 는 그 backend 안에서 살아서, 편집이 부른 리로드가 회수 단계를 실행할 턴을 죽인다(실측: 표식이 남아 감시가 몇 시간 멎음). 2026-08-17 개정에서 표식은 **기계 소유**가 됐다: 쓰기 직전 자동으로 서고(내용이 소유자 표시이자 심장박동), 회수는 워치독이 어느 결말에서든 하고, 놓쳐도 keeper 가 `PAUSE_TTL` 900초 만료로 감시를 재개한다. → 평범한 `backend/*.py` 편집엔 **이제 아무 의례도 필요 없다**.
+   **2026-09-11 R0/R1(`6c07cdbc`·`b32e563a`) — 죽음을 넘는 프로세스가 하나로 모였다.** keeper 의 감시 루프·부팅 유예·`PAUSE_TTL` 은 은퇴했고(`scripts/backend_keeper.sh` 는 `api.py serve` 를 exec 하는 호환 입구일 뿐 아무것도 이를 띄우지 않는다), uvicorn 자동 리로드도 껐다(`reload=False`). 접수 차단·종료 대기·preflight·재기동·RED 복구를 **한 현역 제어자**(`backend/services/restart_controller.py`)가 소유하고, 진입점(`backend/api.py` CLI `start|serve|restart|shutdown|status|wait` · `start.sh` · Electron `backend-process.js` · keeper 셸)은 전부 같은 계약으로 합류한다. 실제 일의 접수·해제는 `runtime_work.WorkRegistry` 한 RLock 안에서 이루어지고(파일 표식 TTL 이 차단을 풀지 않는다), 사망 판정은 `restart_process` 의 **PID+출생 신원**으로만 한다 — macOS 는 NTP 보정 전 커널 출생값을 써야 한다, `psutil` 표시값으로 판정하면 시계 보정 뒤 살아 있는 워커가 종료 대상에서 빠진다(`8bdab5b2`, `docs/RESTART_CLOCK_IDENTITY_2026_09_12.md`). 상주 서비스(AnyIO 풀·tqdm 모니터·Playwright 드라이버·자동 종료 타이머의 대기)는 미완료 작업으로 세지 않되 프로세스 영수증은 남긴다(`dc23d304`, `docs/RUNTIME_SERVICE_LIFETIME_2026_09_12.md`). 제어 상태는 `data/restart_control/`(원자 교체+fsync·커널 파일 잠금·비밀 포함이라 git 제외). 정본 `docs/RESTART_COORDINATION_DESIGN_2026_09_11.md` §9, 진입점 지도·운영 명령은 technical.md.
 2. **죽음을 넘긴 판정은 다음 턴의 입이 닫는다.**
    수리의 성패는 자기 턴이 죽은 뒤에 난다 — 워치독이 `result.json` 에 적지만 읽는 쪽이 없어서 "성공한 수리"와 "그냥 멎은 수리"가 사용자 자리에서 구별되지 않았다. `red_report.py` 가 미보고 판정을 회수해 다음 턴 0단계 연상에 `<repair_outcome>` 으로 얹는다(없으면 0토큰·한 번만). **누구의 입이 닫는가 = 수리한 그 에이전트**(2026-08-25 사용자 확정) — 주인 열쇠(`red_report.owner_key`, 시스템 AI 는 예약 id 하나로 접는다)를 쓰기 시점에 원장(manifest·session)에 박고 회상이 자기 것만 줍는다. 회수는 한 번뿐이라, 남이 먼저 주우면 표식만 찍히고 명령한 창에서는 영영 안 보인다.
 3. **'누가 도는가'는 원장 한 벌에만 묻지 않는다 — 그 한 벌은 지워질 수 있다.**
    지연 적용은 "열린 주행기록(`ended_at IS NULL`)이 곧 도는 턴"이라는 표식 하나에 기대고 있었다. 그런데 그 표식을 세우는 고아 회수가 *시간 순서*로 판정했다 — "나보다 먼저 시작된 미종료 행은 죽은 턴". 그 전제는 서버 진입점에서만 참이라, 살아 있는 몸 곁에서 뜬 임시 프로세스(라이브 데이터 경로를 물려받은 프로브·스크립트)가 같은 배선을 부르자 **도는 턴의 표식을 지웠고**, 적용은 "열린 턴 없음"으로 읽고 그 턴 위에 썼다 — 리로드가 그 턴을 끊었다.
    ⇒ ①회수 판정을 추정(시간)에서 실측(**행의 주인이 살아 있는가**, `episode_log.owner`=pid:시작시각)으로 옮기고, ②적용은 원장이 침묵할 때 **몸에게 직접 묻는다**(`/health` 의 `live_turns` — 그 워커가 지금 열어 둔 턴). ③되돌릴 수 없는 부팅 부작용(완료 task 정리)은 **부팅 주체만** 한다(이미 도는 백엔드가 있으면 건너뛰고, 건너뛴 사실을 말한다).
    판정 불능은 어느 층에서도 '없음'으로 뭉개지 않는다 — 도장을 못 읽으면 살아 있다고 보고, 몸이 `live_turns` 를 모르면 다시 묻는다. **틀린 대기가 틀린 쓰기보다 언제나 싸다.**
+   R0(`6c07cdbc`)가 여기에 **관측 불능**을 값으로 새겼다: `/health` 의 `live_turns` 곁에 `live_turns_observation=known|unknown` 을 더해, 관측 예외로 비어 버린 목록을 '턴 없음'으로 못 읽게 했다(리로드·RED 프로브는 unknown 을 UNKNOWN 으로 읽고 보류). R1 의 `/runtime/status` 는 원장에 활성 에피소드가 있는데 등록된 실행 소유자가 없으면 UNKNOWN 이고, 관측 실패로 산 프로세스를 죽이지 않으며 강제 정책은 명시 요청에만 있다 — 이 원칙의 기계 집행.
 
 4. **선언에 없는 조건은 조건이 아니다 — 그리고 표면이 하나 갈라지면 선언 전체가 그 표면에서 무효다.**
    헌법은 한도를 셋으로 선언했는데(사람 명령·최고 모델·의식 각성) 같은 커밋의 코드는 넷을 걸었다 — `is_system_ai and origin == 'user'`. 넷째는 어디에도 선언된 적이 없고, 하필 헌법이 **정당한 진입점으로 이름 붙인** "에이전트 명령 HTTP"(폰 원격런처 → 프로젝트 에이전트)를 배제했다. 사람이 명령했느냐(`origin`)와 누가 실행하느냐(`is_system_ai`)는 다른 축인데 코드만 축을 하나 더 갖고 있었다.
@@ -442,8 +456,8 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 두 불변식:
 
-- **설치가 다 깔지 않는다.** 많은 패키지가 자기 API 키를 요구해, 다 활성화하면 못 쓰는 것에 파묻힌다. 전체 카탈로그는 배포되되(`not_installed/`에 대기) **큐레이션된 소수만 기본 활성**. 각 패키지는 `origin`(core/user)을 갖고, 설치 파일 패키징(`build_dist_filter.py`)이 매니페스트 주도라 사용자의 커밋한 개인 앱·파일은 배포로 새지 않는다. 개인 패키지를 커밋해도 코어에서 빼려면 opt-out(`.origin`=`user`).
-- **업데이트가 사용자 것을 안 덮는다.** 재설치·업데이트는 코어 소유 파일만 갱신한다(`main.js` `initUserData`). 사용자의 **설치 상태**(어떤 패키지를 켜고/껐는지=폴더 배치), 저술한 어휘·앱, 설정, 대화 이력은 그대로 살아남는다 — 업데이터가 번들 기본 배치를 다시 강요하지 않고 사용자가 고른 폴더 위치를 존중(`syncPackagesPreservingState`). 코어 어휘 산출물만 매니페스트 기준 강제 갱신.
+- **설치가 다 깔지 않는다.** 많은 패키지가 자기 API 키를 요구해, 다 활성화하면 못 쓰는 것에 파묻힌다. 전체 카탈로그는 배포되되 **큐레이션된 소수만 기본 활성**(2026-09-13 부터 활성 여부의 정본은 폴더가 아니라 몸별 원장 `data/vocabulary/activation.json` — 최초 이관 때 `installed`=활성·`not_installed`=잠듦으로 한 번 기록되고, 그 뒤 폴더 이름은 활성 의미를 갖지 않는다. 위 '도구 패키지 시스템'). 각 패키지는 `origin`(core/user)을 갖고, 설치 파일 패키징(`build_dist_filter.py`)이 매니페스트 주도라 사용자의 커밋한 개인 앱·파일은 배포로 새지 않는다. 개인 패키지를 커밋해도 코어에서 빼려면 opt-out(`.origin`=`user`).
+- **업데이트가 사용자 것을 안 덮는다.** 재설치·업데이트는 코어 소유 파일만 갱신한다(`main.js` `initUserData`). 사용자의 **설치 상태**(어떤 묶음을 깨우고/재웠는지 — 활성 원장과 폴더 배치), 저술한 어휘·앱, 설정, 대화 이력은 그대로 살아남는다 — 업데이터가 번들 기본 배치를 다시 강요하지 않고 사용자가 고른 폴더 위치를 존중(`syncPackagesPreservingState`). 코어 어휘 산출물만 매니페스트 기준 강제 갱신.
 
 헌법적으로 이건 하부/상부 이음매(substrate/superstructure)와 표준-코어(기능어 self/others/table=표준 vs 내용어=사전) 원칙을 **패키지·앱·설치·업데이트 층까지 밀어낸 것**이다. 상세: technical.md '설정 파일 위치'.
 

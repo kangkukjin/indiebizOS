@@ -33,7 +33,7 @@ see_also: [architecture.md, ibl.md]
 `data/vocabulary/activation.json`으로 로드 시 거른다. 필수 공급자는
 `data/vocabulary_policy.yaml` 한 선언으로 보호한다.
 
-HTTP·조종실·self:package는 `vocabulary_lifecycle.set_package_active` 한 함수를 쓴다.
+HTTP·런처 **내 어휘**·self:package는 `vocabulary_lifecycle.set_package_active` 한 함수를 쓴다.
 사람이 깨우거나 잠재우면 원장과 캐시만 바뀐다. 폴더 이동·전체 빌드·코퍼스 삭제는 없다.
 저장고 이동은 다음 AI 요청의 프롬프트에서 묶음의 자동 소개와 관련 관용구를 빼서 모델 입력을 줄인다. 상주 시스템 AI·프로젝트 에이전트도 기억 없는 요청까지 현재 활성 집합으로 다시 조립한다. 과거 대화와 코퍼스는 보존하며, 실행 차단만으로 잠재우기 완료로 보지 않는다.
 IBL 호출은 사람에게 변경을 제안하며 직접 활성 선택을 바꿀 수 없다. 과거 삭제 진입점도
@@ -155,14 +155,14 @@ api_engine 라우팅 액션들이 이 방식을 사용합니다.
 
 ### 3. IBL 노드 액션 등록 — 어휘가 사는 두 자리
 
-어휘의 단일 진실 소스는 **둘로 갈린다**(2026-08 현재, 설치 패키지 40개가 자기 fragment 를 갖고 있다):
+어휘의 단일 진실 소스는 **둘로 갈린다**(보유 묶음 각각이 자기 fragment 를 갖는다 — 수·표는 아래 PACKAGES_TABLE 빌드 구간이 정본):
 
 | 어디에 | 무엇 |
 |--------|------|
 | `data/ibl_nodes_src/<node>.yaml` | **코어 어휘** — 기능어(`self`·`others`·`table`)와 패키지에 묶이지 않는 액션 |
 | `<패키지>/ibl_actions.yaml` | **패키지 어휘** — 그 패키지가 가져오는 낱말. 능력 자기완결화: 설치하면 어휘가 따라 들어오고 제거하면 따라 나간다 |
 
-빌드가 둘을 합쳐 `data/ibl_nodes.yaml`(런타임 캐시)과 각 `tool.json` 을 만든다. 패키지 fragment 는 두 형식을 받는다 — 단일 노드 `{node: <이름>, actions: {...}}`, 다중 노드 `{nodes: {<노드>: {actions: {...}}}}`. 템플릿은 `data/packages/not_installed/tools/house-designer/ibl_actions.yaml`.
+빌드가 둘을 합쳐 `data/ibl_nodes.yaml`(런타임 캐시)과 각 `tool.json` 을 만든다. 패키지 fragment 는 두 형식을 받는다 — 단일 노드 `{node: <이름>, actions: {...}}`, 다중 노드 `{nodes: {<노드>: {actions: {...}}}}`. 템플릿은 `data/packages/installed/tools/house-designer/ibl_actions.yaml`.
 
 > 옛 판(2026-05-28)은 "패키지 폴더에 `ibl_actions.yaml` 을 두지 않는다"고 적고 있었다 — 그 규약은 능력 자기완결화로 뒤집혔다. 지금 코어 src 에 넣어야 하는 것은 *패키지가 없어도 존재해야 하는 낱말*뿐이다.
 
@@ -225,19 +225,19 @@ search:
 - 에이전트가 이 패키지의 도구를 처음 호출할 때 자동으로 가이드 내용이 주입됨
 - 파일 위치: 패키지 폴더 내 (예: `data/packages/installed/tools/bulletin/guide.md`)
 
-#### (B) 시스템 레벨 가이드 (search_guide로 검색 가능)
+#### (B) 시스템 레벨 가이드 (`read_guide` 도구로 검색 가능)
 - `data/guides/` 폴더에 마크다운 파일 작성
 - `data/guide_db.json`에 항목 추가 (id, name, description, keywords, file)
-- 에이전트가 `search_guide("키워드")`로 검색하여 참조
+- 에이전트가 `read_guide` 도구(내부 `ibl_routing.search_guide`)로 검색하여 참조
 - 여러 패키지에 걸친 워크플로우 설명에 적합
 
 ---
 
 ## 패키지 설치 — 완전한 등록 절차
 
-### 조종실에서 선택
+### 내 어휘에서 선택
 
-보유 묶음의 스위치를 켜거나 끈다. 준비된 묶음의 선택에는 빌드·재시작이 없다.
+런처 안경 메뉴 → 설정 아래 **내 어휘**(아이콘 데스크톱 — 필수 단어묶음·단어묶음 저장고는 고정 폴더, 쓰레기통은 위치를 옮길 수 있는 보호 폴더, 나머지는 일반 폴더로 자유 분류; 바탕과 각 폴더는 독립 OS 창)에서 묶음을 **저장고에 넣기**(잠재우기)·**바탕으로 꺼내기**(깨우기)로 고른다(`POST /vocabulary/{id}/activation`). 준비된 묶음의 선택에는 빌드·재시작이 없다. 창 구조의 정본은 `docs/VOCABULARY_WINDOWS_2026_09_13.md`.
 새 묶음 등록이나 정의 변경은 보유 사전집 갱신이 필요한 별개의 동작이다.
 
 ### 수동 설치 (패키지 폴더를 직접 생성한 경우)
@@ -275,7 +275,7 @@ python3 scripts/build_ibl_nodes.py --check  # 삼각 검증 + 파생물 신선�
 
 ### 잠재우기
 
-POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공통 생명주기로
+POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_authority` — 브라우저 출처, 원격은 런처 세션 인증; 로컬 무인 HTTP·IBL 은 사람 선택으로 보지 않는다)을 검사한 뒤 공통 생명주기로
 활성 선택을 해제한다. 소개·실행용 회상·호출을 차단하고 파일·설정·용례·벡터를 보존한다.
 코드 업데이트 후 형제 모듈을 교체하는 경우의 기존 재시작 제약은 그대로다.
 
@@ -387,33 +387,35 @@ POST /packages/{id}/uninstall은 사람의 조종실 요청을 검사한 뒤 공
 내가 만든 도구 패키지를 다른 IndieBiz 사용자들과 공유할 수 있습니다.
 
 ### 패키지 공개하기
-1. 도구 상자에서 설치된 패키지의 "Nostr에 공개" 버튼 클릭
-2. 설치 방법이 AI에 의해 자동 생성됨 (수정 가능)
-   - AI가 패키지 전체(tool.json, handler.py, requirements.txt 등)를 분석
-   - 다른 AI 개발자가 같은 기능을 구현할 수 있는 정보 생성
+1. **내 어휘** 바탕 우클릭 → **제작 및 라이브러리 관리**에서 묶음의 "Nostr에 공개" 클릭
+2. 게시 본문은 같은 `.iblpack` ZIP 을 `IBLPACK/1` + Base64 텍스트로 실은 것(`GET /packages/{id}/generate-install` = `encode_package`) — AI 가 설치 설명을 짓지 않는다(수정 가능)
 3. 선택적으로 사인(서명) 추가
-4. 공개 버튼 클릭
+4. 공개 버튼 클릭 — 게시 API 50,000자 한도를 넘으면 파일 전달을 안내한다
 
 공개된 패키지는 `#indiebizOS-package` 해시태그로 Nostr 네트워크에 게시됩니다.
 
 ### 다른 사용자의 패키지 검색/설치
-1. 도구 상자에서 "도구 검색" 버튼 클릭
+1. **내 어휘** 바탕 우클릭 → **공유 어휘 찾기**
 2. Nostr 네트워크에서 공개된 패키지 검색
-3. 패키지 선택하여 상세 정보 확인
-4. "설치" 클릭 시 시스템 AI가 보안/품질/호환성 검토 후 설치
+3. 받으면 `POST /packages/install-from-text` 가 옛 텍스트도 변환해 같은 `.iblpack` 등록 관문(`vocabulary_import.import_package`)으로 보낸다 — 검증·용례 시딩 뒤 **잠든 상태**로 보관되며 필수 묶음은 외부 파일로 교체할 수 없다
+4. 시스템 AI 가 검토·설치하는 단계는 없다 — 깨우기는 코드 실행을 허용하는 사람의 선택이다
 
 ---
 
 ## API 엔드포인트
 - `GET /packages` - 전체 패키지 목록
-- `GET /packages/installed` - 설치된 패키지
-- `GET /packages/available` - 설치 가능한 패키지
-- `POST /packages/{id}/install` - 설치
-- `POST /packages/{id}/uninstall` - 제거
+- `GET /packages/installed` - 활성 묶음
+- `GET /packages/available` - 보유 묶음
+- `POST /packages/{id}/install` · `POST /packages/{id}/uninstall` - 깨우기·잠재우기(사람 권한 검사, 공통 생명주기)
+- `POST /packages/reload` - 런타임 캐시 초기화(`[self:package]{op:"reload"}` 와 같은 몸통)
 - `GET /tools` - 활성 도구 목록
-- `POST /packages/{id}/generate-install-instructions` - AI 기반 설치 방법 생성
-- `POST /packages/publish-to-nostr` - Nostr에 패키지 공개
-- `GET /packages/search-nostr` - Nostr에서 패키지 검색
+- `GET /vocabulary` · `POST /vocabulary/{id}/activation` · `GET /vocabulary/{id}/words` - 레고박스 목록·활성 선택·낱말
+- `POST /vocabulary/import` · `GET /vocabulary/{id}/export` - `.iblpack` 가져오기·내보내기
+- `GET|POST /vocabulary/desktop` - 내 어휘 아이콘 배치
+- `GET /packages/{id}/generate-install` - Nostr 공유용 `IBLPACK/1` 텍스트 인코딩
+- `POST /packages/{id}/publish` - Nostr에 패키지 공개
+- `GET|POST /packages/nostr/search` - Nostr에서 패키지 검색
+- `POST /packages/install-from-text` - 공유 텍스트(옛 형식 포함)를 `.iblpack` 등록 관문으로
 
 ---
 *최근 변경(2026-08-28): web 패키지 검색 통화 계약 둘(발행일 `date` ISO 8601 · `queries` 유니온 선언) 반영. 패키지 표의 행 집합은 빌드가, 설명 산문은 문서가 소유한다. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

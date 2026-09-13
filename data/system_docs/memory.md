@@ -5,8 +5,9 @@ owner_code: >
   ibl_usage_db.py, ibl_usage_rag.py, memory_db.py, agent_cognitive.py,
   episode_logger.py, world_pulse.py, world_pulse_health.py,
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
-  workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py
-last_updated: 2026-09-09
+  workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
+  final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py
+last_updated: 2026-09-14
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -106,9 +107,11 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **10,000건** 롤링 — `episode_logger.MAX_EPISODES`, 2026-09-07 1000→10000. 실측 1행 ≒ 37KB(로그 21KB + 궤적 15KB)·하루 약 24주행이라 창 = 약 400일치 ≒ 370MB 대)
   - `ibl_code_corpus` (2026-09-06 부활, 사용자 판정 "필요한 정보가 지워지고 있다"): 몸이 실제로 쓴 **IBL 문장 원문 전량**. 전 IBL 표면의 초크포인트(`system_tools_ibl._execute_ibl_unified`)가 매 실행 `episode_logger.record_ibl_code` 로 upsert — 키=원문 sha256(궤적 `ibl.started.code_sha256` 과 같아 한 DB 안에서 조인), 같은 문장은 한 행에 seen/success/fail 누계·마지막 실패 사유·last_agent/origin, 본문은 `mask_secrets` 를 거치고 바뀌었으면 `masked=1`(해시는 원문 기준). 롤링 없이 영구(중복 제거 뒤 월 수 MB 미만). ibl_usage.db 가 아닌 world_pulse.db 인 이유 = 해마 DB 는 hippocampus.zip 으로 릴리스에 실려 사용자 원문을 담을 수 없다. `source` 는 B18-2(실사용이 한 번 밟은 행은 `usage` 유지). 파인튜닝 코퍼스·조합률 실측(`scripts/vocab_composition_metrics.py`, 아직 미독)의 정본 자리.
   - `episode_summary`: 로그에서 추출한 **인지 품질 지표** — 해마 점수, EXECUTE/THINK 분류, 의식 지연, 실행 라운드 수, 최종 판정(ACHIEVED/NOT_ACHIEVED/**UNKNOWN**/**NULL**) (**영구 보존**). 도구 없는 평가자가 최종 판정을 소유하며 `UNKNOWN`은 검수 불명, `NULL`은 검수 미실행이다. 새 `[GoalEval] 최종 판정` 마커를 우선하고, 과거 `[ConsciousSupervisor]` 및 기존 `[GoalEval]` 라운드 마커도 읽는다. 산문 응답에서 성공을 추측하지 않는다.
+    - **실행 라운드·IBL 횟수의 정본(2026-09-12, `docs/CODEX_JOURNAL_2026_09_12.md`)**: 라운드 = 모델 응답 수. Claude Code 는 응답 ID, Codex 는 `exec --json` 이 turn/item 만 내보내므로 로컬 롤아웃의 `token_usage_record.response_id` 를 증분 조회해(`backend/base/codex_rollout.py`) 응답별 한 번만 `model.round` 를 적는다 — item 하나를 라운드로 세지 않는다(한 응답에 도구 호출 여럿). 응답 ID 를 주지 않는 구버전 CLI 는 미측정. 주행 목록(`episode_logger` 조회)은 `ended_at` 없는 **진행 중** 주행도 돌려주고, 종료 요약이 없거나 옛 0/NULL 요약이어도 `model.round` 원장에서 같은 집계 함수로 현재까지의 라운드를 보완한다 — 실행 역할 `system_ai` 는 포함, 배경 원샷·평가는 제외. IBL 호출 시도는 `supervision.tool.started` 와 엔진 `ibl.started` 를 중복 합산하지 않고 중첩 실행은 뺀다(전체 도구 수 ≠ IBL 횟수). 과거 요약 복원은 `backend/migrate_codex_episode_rounds.py`(기본 dry-run, 원 사건·토큰 기록은 덮어쓰지 않음).
   - `source` 칸 (2026-08-22): `usage`(실사용) / `test`(시험 프로세스). **시험이 남긴 주행은 몸의 삶이 아니다** — 지우지 않고 표식만 붙이고, 읽는 쪽이 기본값으로 거른다(NULL=칸 신설 전 행=실사용). 판정은 픽스처 이름 규약이 아니라 **프로세스 정체**(`runtime_utils.in_test_process` — `action_health` 와 같은 한 벌). 롤링 창에서도 시험분이 먼저 버려져 실사용 주행이 창에 오래 남는다.
 - **사용**: `get_cognitive_trends()` → 진단 리포트(`diagnostic_report.md`)의 추이 분석.
 - **조인(2026-08-21)**: 에피소드에 `task_id` 가 실려 **쓰기 관문 원장(`write_ledger`) ↔ episode ↔ tasks** 3중 조인이 닫혔다 — "이 파일이 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오른다(`[self:body]{op:"writes"}`).
+- **실행 통합 조회(2026-09-11, `docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md` §11–14)**: 에피소드·궤적·쓰기 원장·과제 원장·감독 작업대를 **읽기 전용**으로 한 페이지에 합쳐 보는 통로 — 원장 물리 통합이 아니라 소유자별 strict reader 의 조합이다(`backend/services/execution_trace.py`, 범위 해소 `execution_trace_scope.py`, 읽기 원시 `base/trace_read.py`·`base/episode_trace_reader.py`). HTTP `GET/POST /world-pulse/episodes/{id}/trace`·`/document`, task/run 은 `POST /world-pulse/execution-trace`(`backend/surface/api_execution_trace.py`); 소비처는 조종실 주행기록의 요청 행 펼치기. 로컬/원격 런처 인증 뒤이며 공개 경로가 아니다. 개요에는 원문을 싣지 않고 서버 발행 참조의 별도 페이지로 열며, 비용은 `model.usage` 의 `accounting=billable_usage` 만 합산한다(snapshot·boundary·cost.json 미합산). 범위를 증명 못하는 옛 run/write·FK 없는 옛 메시지는 `ambiguous`/`missing`/`partial` 로 드러내고 추정 조인하지 않는다. 새 IBL 낱말 없음(`[self:body]{op:"trajectory"}` 호환 유지).
 - **태스크 명시 바인딩(2026-09-06 ep2905)**: 이벤트 루프 *한 스레드*에서 여러 턴이 동시에 열리므로 thread-local task_id 를 시작 시점에 상속하면 *이웃 턴의* 태스크를 물려받는다(시스템 AI 턴이 설계 에이전트의 진행 중 task 를 받아 run 공유·조기 종료, 30일 12건). WebSocket 스트림 핸들러는 `start_episode(…, task_id=)` 로 자기 태스크를 먼저 정해 넘기고, None 일 때만 상속(동기 워커 진입점). 관문 `test_episode_task_binding_2026_09_06.py`.
 - **한계**: 현재 *집계 통계*로만 소비. 개별 일화를 회상해 행동을 교정하는 루프는 미완. → 다듬을 자리 ②.
   - (단, 프로젝트 에이전트에는 `attempt_log` 테이블에 라운드별 시도·교훈을 적는 더 미세한 메커니즘이 별도로 존재.)
@@ -303,7 +306,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 
 **시간·토큰 선택압 (2026-08-30)**: 시간·토큰이 좌표/총계로만 있고 **비용**으로는 없어 같은 목표를 싸고 빠르게 이루는 표현에 유인이 없던 공백(사용자 판정 2건: "더 빨리 하는 것에 인센티브가 없어" → "토큰 소모를 상관없어하는 태도도 문제. 단 품질을 깎아 아끼는 것은 금물")을 ①의 같은 배선에 비용 축 둘로 추가. 두 축은 **다른 낭비**를 잰다 — `avg_ms`=IBL 실행의 빠르기(`agent_pipeline._collect`가 tool_start→tool_result 이음매에서 `elapsed_ms` 도장), `avg_tokens`=그 표현을 두른 턴의 모델 소요(불필요한 서치·재시도가 찍히는 자리 — `providers.base` **턴 토큰 원장**: contextvar 에 record_request 단일 길목이 겹쳐 적어 프로바이더 스왑·평가/반성 oneshot 까지 한 턴으로 합산, `[턴비용] tokens=` 로그). `record_recall_outcome`이 **성공 실행만** EWMA(α=0.3, -1=미측정)로 귀속, 증류는 출생 실측을 심음. 소비 2곳 — 회상 XML `avg_ms`·`avg_tokens` 속성(표시로 AI가 판단, note 에 "품질을 깎아 아끼는 것은 금물" 계약 명기) + 근접중복 정리 생존키(`_dedup_quality`: 성공률→시도수→**빠르기**→**토큰 검약**→최신 — 비용은 신뢰를 넘지 못하고, 실측이 미측정을 이긴다). 훈계 0 — 전부 이음매. 폰 렌트 인덱스도 동반(export_hippo_index). 관문=`test_time_selection.py` T1~T9.
 
-**비용 관측 경계(2026-09-08)**: 출력 토큰은 추론을 포함한다. `model.usage.reasoning`은 공급자가 제공할 때만 기록하는 부분집합이며 더하지 않는다. Claude 라운드는 assistant 블록 수가 아니라 응답 ID 수다. `model.response_snapshot`은 응답 ID별 누적 관측(본문 없음)이라 같은 ID의 필드별 최댓값을 읽고 usage 총계와 합산하지 않는다. MCP 재진입은 `_Episode` 없이 trajectory만 복원돼도 하위 AI의 round/usage를 기록한다. 프로세스별 메모리 토큰 합계는 재진입 전체 비용과 다를 수 있으므로 전체 감사는 연결된 usage를 확인한다. 중첩 실행 시간은 더하지 않는다. 과거 기록 정정·관측 한계: `docs/IBL_EPISODE3176_COST_DIAGNOSIS.md`.
+**비용 관측 경계(2026-09-08)**: 출력 토큰은 추론을 포함한다. `model.usage.reasoning`은 공급자가 제공할 때만 기록하는 부분집합이며 더하지 않는다. Claude 라운드는 assistant 블록 수가 아니라 응답 ID 수이고, Codex 라운드는 롤아웃 응답 원장의 `response_id` 수다(§3). `model.response_snapshot`은 응답 ID별 누적 관측(본문 없음)이라 같은 ID의 필드별 최댓값을 읽고 usage 총계와 합산하지 않는다. MCP 재진입은 `_Episode` 없이 trajectory만 복원돼도 하위 AI의 round/usage를 기록한다. 프로세스별 메모리 토큰 합계는 재진입 전체 비용과 다를 수 있으므로 전체 감사는 연결된 usage를 확인한다. 중첩 실행 시간은 더하지 않는다. 과거 기록 정정·관측 한계: `docs/IBL_EPISODE3176_COST_DIAGNOSIS.md`.
 
 **검증(2026-05-31)**: 고점수+성공→success_count, 고점수+실패→fail_count, 저점수(THINK)·비IBL→무시, 표시 가드(tried 0.5/0.0 표시·untried 숨김), 환각 액션(sense:teleport 등) 폐기 모두 확인.
 
@@ -453,7 +456,7 @@ result = (exec_xml + "\n" + related) if related else exec_xml
 return (result, top_score, top_code)   # 한 번의 검색으로 점수/코드까지 확보
 ```
 
-호출 측(`agent_communication`, `api_websocket`, `system_ai_core`)이 top_score를 받아 직접 Reflex 분기를 결정한다 — 무의식 모델을 거치지 않는다.
+호출 측이 top_score를 받아 직접 Reflex 분기를 결정한다(`agent_pipeline._decide_request_type` — GUI/WS 는 `services/chat_streams.py` 실행 서비스, 채널은 `agent_communication`, 시스템 AI 는 `system_ai_core` 가 같은 파이프라인을 탄다) — 무의식 모델을 거치지 않는다.
 
 ---
 
@@ -476,7 +479,9 @@ THINK → 의식 에이전트 ← 연상기억 (문제 정의 + 달성 기준)
     모델은 모델 기어가 결정(역할→축→기어→티어): Reflex='reflex' 축, EXECUTE·THINK='execute'/'consciousness' 축 (균형 기어 기본=중급/중급)
     ↓
 [4a] 의식 감독(의식이 규정한 턴만): 실제 도구·진척 정체·긴 작업 사건을 보고 판단
-[4b] 도구 없는 최종 평가(의식이 규정한 턴만): 목표·규정·증거·후보 대조, 승인 또는 1회 보완
+[4b] 도구 없는 최종 평가(의식이 규정한 턴만): 의식의 명시적 달성 기준(`criteria_contract` ID)·멈춤선만 증거와 대조, 승인 또는 1회 보완
+     기준이 비면 최종 평가·자기반성도 없다. NOT_ACHIEVED 는 기준 ID·미달 증거·최소 보완의 DEFECTS 를 요구하고,
+     기준 밖·근거 없는 지적은 UNKNOWN 으로 끝나 자동 보완이 없다. 최종평가 시작 시 기준을 고정한다(2026-09-12).
      의식 없는 EXECUTE·Reflex는 [4a/4b]를 건너뛰고 최종 응답 후 [5]로 간다.
     ↓
 [5] 증류
@@ -538,18 +543,22 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 
 뇌의 해마처럼 fine-tuned 임베딩 모델이 밀리초 내에 관련 IBL 코드 사례를 인출한다.
 
-### 현재 라이브 모델 (2026-08-21 재학습 — 몸 원장 어휘 세대, 코퍼스 **3,448**, epoch 3·검증 0.886)
+### 현재 라이브 모델 (2026-09-04 재학습 — `[self:ledger]`/`[self:business]` 언어 개정 세대, 코퍼스 **3,716**·학습쌍 4,872, epoch 4·검증 0.882)
+
+로컬 MPS(seed42·batch8·seq64), 조기 종료 7. A/B(같은 분할, A=08-28 백업): **code T1/3/5 57.1/79.6/87.3 → 62.0/84.7/91.7(+4.9/+5.1/+4.4p)** · desc T1/5 71.1/92.6 → 70.1/93.8(T1 −1.0p) · 프로브 51/53 동점으로 채택. 라이브 recall-preview 에서 `[self:ledger]` 세 질의 0.72~0.83 직행, `[self:business]` 0.88(재학습 전 범용 임베딩에선 무관 문장). 백업=`data/models/ibl_embedding.bak.20260904_111200`. 프로그램급 IBL M1~M6 시드(08-22 대기열)는 이 세대에 흡수됐다. ★사고: 사전점검이 도는 턴을 알렸는데 스크립트가 멈추지 않고 재기동을 강행해 그 턴이 절단됨 — 절차에 '사전점검 비0이면 중단' 관문(changelog 2026-09-04 12:10, 정본 절차 `data/guides/hippocampus_retraining.md`).
+
+#### 직전 세대 (2026-08-21 재학습 — 몸 원장 어휘 세대, 코퍼스 3,448, epoch 3·검증 0.886)
 
 `[self:body]` 3 op 시드 16 + `writes` 시드 5 + 증류분(+35)을 흡수한 세대 — 게이트(1,245쌍·607패턴)에서 **code Top-5 +3.1p(88.3→91.4)**·desc T5 +0.7p, T1 −0.7/−0.9p(노이즈)로 채택. 백업=`data/models/ibl_embedding.bak.20260821_114913`. 몸 원장 어휘가 연상 직행하고, ★08-20 세대의 관찰 항목이던 "네이버 블로그 후기" 경계가 대조 시드 흡수로 잡혔다(라이브 translate 실증: `source:naver`·`type:blog` 정확). 신어휘 프로브 40/45 — 잔여 실패 5(`table:since`·`table:ai`·`table:brief`)는 코퍼스 희소가 원인이라 다음 시드 후보. 직전 세대 2026-08-20(epoch 7·0.864) · 2026-08-17(epoch 4·0.878).
 
-**재학습 대기열(2026-08-22 기준)**: 프로그램급 IBL M1~M6 시드 36건이 아직 코퍼스에만 있고 모델에는 안 들어갔다 — 새 문법(술어·try/catch·repeat·식 할당·블록-인-파이프)의 연상은 당분간 FTS·문법 교재에 기댄다.
+**재학습 대기열(2026-08-22 당시)**: 프로그램급 IBL M1~M6 시드 36건이 코퍼스에만 있고 모델에는 없던 시기 — 새 문법(술어·try/catch·repeat·식 할당·블록-인-파이프)의 연상은 FTS·문법 교재에 기댔다. 09-04 세대가 흡수했으므로 지금은 해당 없음.
 
 > ★**채택 판단에서 회귀 프로브를 액면 그대로 믿지 말 것**(이번 세대의 교훈): 자동 비교는 "보류"를 권고했는데
 > 실측하니 회귀로 보인 항목이 **desc-공간 인공물**이었다(같은 문장을 코퍼스에서 인출하는 정확도는 1.000).
 > 정작 중요한 *조합 문장* 인출은 새 모델이 우세였고, 라이브 일반화(새 상품명·임계값·요일 변주)도 정확했다.
 > 그래서 권고를 뒤집어 채택했다. **비교표가 아니라 라이브 인출을 봐야 한다.**
 >
-> 직전 세대: 2026-08-16(epoch 6·검증 0.877 — 블록·`table:rename`/`flatten` 어휘 흡수) · 2026-08-04(epoch 5·검증 0.882).
+> 세대 연쇄(최근순): 2026-09-04(현행) · 08-28(백업 `ibl_embedding.bak.20260828_081327` 만 남음, 09-04 A/B 의 A) · 08-23 ×2(코퍼스 3,582·epoch 4·0.868 채택 → 트레이너 수리(파이프 꼬리 낱말 desc 쌍) 뒤 재채택) · 08-22(기각·백업 복구) · 08-21(위) · 08-16(epoch 6·0.877 — 블록·`table:rename`/`flatten` 어휘 흡수) · 08-04(epoch 5·0.882). 회차별 원문은 changelog.log 의 `[hippo]`/재학습 항목.
 
 아래는 2026-08-04 세대의 측정표 — **세대-비교 방법론의 본보기**로 남긴다(163 액션 어휘, 2,988 코퍼스, batch=8).
 ★**직전 라이브 모델과 같은 seed42 분할**에서 잰 값이다 — baseline(범용 ko-sroberta) 대비
@@ -617,7 +626,7 @@ UNKNOWN으로 기록한다. 원 응답은 검수 미완료 표시와 함께 반�
 |---|---|
 | **DB 위치** | 시스템 AI: `data/system_ai_state/memory_system_ai.db`<br>프로젝트 에이전트: `projects/{id}/memory_{agent}.db`<br>귀속 관문(2026-09-02): project_path 가 몸(저장소 루트·`data/`)이거나 agent 가 `system_ai` 면 시스템 DB, agent 가 비면 `MemoryOwnerError` 로 거부 — 이름 없는 호출이 `memory_None.db` 를 만들던 경로 봉쇄. 자동 회상·증류는 스레드 신원이 없으면 `self.agent_id` 로 폴백 |
 | **격리** | 에이전트별 분리 (설계 의도 — 각 에이전트가 자기 도메인 지식만 유지) |
-| **현재 규모** | 28개 DB / 622건 |
+| **현재 규모** | 문서에 고정하지 않는다 — 에이전트별 DB 의 `SELECT count(*) FROM memories` 가 정본(빠르게 변함) |
 | **검색** | **시맨틱 우선 + LIKE 폴백** (해마와 동일 패턴) |
 | **인덱스** | vec0 가상 테이블 (`memories_vec`) — fine-tuned 모델 임베딩 768d |
 | **자동 동기** | save / update / delete 시 vec 인덱스 자동 갱신 |
@@ -707,7 +716,7 @@ IBLUsageDB.add_example() → DB 저장 + 임베딩 즉시 생성 (~8ms)
 
 | 경로 | 수집 방식 |
 |---|---|
-| WebSocket (GUI 대화) | `tool_start` 이벤트에서 `tool_calls_log`에 직접 수집 |
+| WebSocket (GUI 대화) | `services/chat_streams.py` 가 스트림 이벤트(`_turn_meta` 의 `tool_calls`)에서 `tool_calls_log` 로 수집 (2026-09-11 라우터 `api_websocket` 에서 실행 서비스 분리) |
 | 채널 (Gmail/Nostr) | `system_tools._log_ibl()` → `thread_context.append_tool_call()` |
 
 ---

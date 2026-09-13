@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-08-31
+last_updated: 2026-09-14
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -51,7 +51,7 @@ see_also: [architecture.md, ibl.md]
 - `GET /system-ai/prompts/role` - 역할 프롬프트 조회
 - `PUT /system-ai/prompts/role` - 역할 프롬프트 업데이트
 - `GET /prompt-composition/agents` · `POST /prompt-composition/assemble` - **프롬프트 구성** 표면(런처 안경 메뉴). 에이전트 종류(시스템 AI·프로젝트 에이전트·포식/앱메이커 변형·의식·의식 감독·무의식·최종 평가자·경험 증류·심층기억·이력 압축·가이드 순찰·IBL 번역·자동응답)마다 프롬프트 조각을 순서·출처·조건·분량과 함께 돌려준다. 실행기억 같은 가변 조각은 샘플 메시지 한 건으로 실제 조립(LLM 0). 정본=`backend/cognition/prompt_composition.py`, 로컬 전용(프롬프트·기억 본문 노출)
-- `GET /guides` · `GET /guides/{name}` · `PUT /guides/{name}` - **가이드 파일** 표면(런처 안경 메뉴). `data/guides/*.md` 전체를 등록(guide_db.json)·신선도(guide_registry: 작성·최종수정·무수정 사용·마지막 검토)·예산(lifecycle_policy)·정리 후보 표식과 함께 목록으로 주고, 본문 읽기·저장(기존 파일만, 예산 초과는 알림). 정본=`backend/datastore/guide_registry.guide_catalog`, 로컬 전용
+- `GET /guides` · `GET /guides/{name}` · `PUT /guides/{name}` - **가이드 파일** 표면(런처 안경 메뉴). `data/guides/*.md` 전체를 등록(guide_db.json)·신선도(guide_registry: 작성·최종수정·무수정 사용·마지막 검토)·예산(lifecycle_policy)·정리 후보 표식과 함께 목록으로 주고, 본문 읽기·저장(기존 파일만, 예산 초과는 알림). 정본=`backend/datastore/guide_registry.guide_catalog`, 로컬 전용. 프롬프트 구성·가이드 파일·내 어휘 셋은 Electron 에서 독립 OS 창(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별 키), 웹 표면은 해시 라우트 `#/prompt-composition`·`#/guides`·`#/vocabulary`(`ab0ed494`)
 - `GET /system-ai/status` - 준비 판정. `ready` 는 provider 를 본다(무키 프로바이더 claude_code·codex·ollama 는 키 없이 ready — `provider_needs_api_key` 정본, 2026-09-02 수리)
 - `GET /system-ai/candidates` - 이 기계가 이미 가진 AI 후보 `{items:[{provider, model, source, kind, login?}]}` — 환경변수 키 · 설치된 CLI · 로컬 모델 서버 (`backend/base/ai_candidates.py`, 카탈로그=`data/ai_provider_catalog.yaml`)
 - `POST /system-ai/probe` - `{provider, model, api_key?}` 실응답 1턴 검증. 실패는 원인별 kind(no_key/auth/model/cli_login/local_down/timeout…). 저장 안 함 — 검증 → 저장 순서 (첫 성공 온보딩, `api_onboarding.py`, 로컬 전용)
@@ -68,6 +68,7 @@ see_also: [architecture.md, ibl.md]
 - `POST /packages/analyze-folder` - 폴더 분석
 - `POST /packages/analyze-folder-ai` - AI 폴더 분석
 - `POST /packages/register` - 외부 도구 등록
+- **어휘 레고박스 (`/vocabulary`, `api_vocabulary.py` — `/packages` 라우터에 합류, 2026-09-13)**: `GET /vocabulary`(보유 묶음 전체 + 활성·준비 상태 + `revision`) · `POST /vocabulary/{package_id}/activation`(`{active}` — 깨우기/잠재우기. 폴더 이동·빌드 없음, `vocabulary_lifecycle.set_package_active`) · `GET /vocabulary/{package_id}/export`(`.iblpack`) · `POST /vocabulary/import`(잠든 채 등록 + 용례 해마 시딩, 실패 시 전체 롤백) · `GET|POST /vocabulary/desktop`(내 어휘 아이콘 데스크톱 — 폴더·저장고·필수·휴지통 배치, `vocabulary_desktop.py`) · `GET /vocabulary/{package_id}/words`. `POST /packages/{id}/install|uninstall`·`DELETE /packages/{id}/remove`·`POST /packages/register` 도 같은 생명주기 함수로 흘러든다. **사람 권한 게이트** `human_authority`(외부=런처 세션, 로컬=브라우저 Origin+Fetch Metadata) — AI 의 `[self:package]{op}` 는 권한 없이 불러 제안만 한다(`human_required`). 필수어휘(`data/vocabulary_policy.yaml` `required_packages`)는 잠재우기·제거·파일 덮어쓰기·필수 폴더 밖 이동이 모든 경로에서 거절된다. 형식 정본 `docs/IBLPACK_FORMAT.md`, 설계·구현 기록 `docs/VOCAB_LEGO_PLAN_2026_09_13.md`.
 
 ### 도구 관리
 - `GET /tools` - 활성 도구 목록
@@ -117,6 +118,7 @@ see_also: [architecture.md, ibl.md]
 - `POST /business/sync/merge` - 다른 기기 export를 합집합 머지(LWW+tombstone) 후 최신 스냅샷 반환
 - 주소록 메타데이터(이웃·연락처·사업·아이템·문서·지침)만 대상. 메시지/글 내용은 릴레이/Gmail 수렴이라 제외.
 - 인증: `remote_access_guard`가 외부(터널) 요청에 launcher 세션 강제, localhost(데스크탑) 통과.
+- 스냅샷 교환의 공통 골격(봉투/직접 페이로드 판별, merge→export 순서, `InvalidSyncPayload`)은 `backend/services/sync_exchange.py`(2026-09-11 `be8bf2b6`) — 도메인 LWW·tombstone·이미지 규칙은 `api_business`·`api_finance`·`api_health` 각자 소유.
 - 트리거: `[self:phone_sync]` IBL 액션(맥 주도 USB adb) 또는 폰 `phone_api` 직접 호출.
 - ※ IndieNet 전용 REST(`/indienet/*`)는 제거됨 — 커뮤니티/메신저는 IBL 계기(others:feed/board/messages/nostr)로만 접근.
 
@@ -145,6 +147,8 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - **요청 봉투 = 행위자 3칸 + 표면**(2026-08-21): `agent_id`(발신 신원 — 없으면 `system_ai`, 이 표면은 전부 소유자 게이트 뒤다) · `task_id`(위임 체인 — 아웃오브프로세스 재진입이 부모 태스크를 복원하는 통로) · `origin`(출처. `user`=사람의 직접 명령, 포털 경유는 `portal`. 없으면 무출처로 원장에 남는다) · `surface`(`web`=원격런처/포털/폰 WebView — "소리가 어디서 나야 하는가"의 판정 축. 데스크탑은 보내지 않는다) · `project_id`/`project_path`.
 - **응답 봉투 = 다이어트**(2026-08-22 M1): `results[]` 는 step 요약(shape·count·bytes·columns·preview, 실패 step 은 오류문 원형), `final_result` 만 원형. 옛 모양은 `verbose: true`. 실패 시 `resume:{from_step, prev_ref}` 가 실리고 `execute_ibl(code, resume)` 로 앞 단 재실행 0으로 이어붙인다.
 - **자동 스필**: 이음매 통화가 200K자를 넘으면 `data/spill/` 참조 봉투로 바뀐다(소비자 투명 해소, cache 계급 24h GC). `[self:write]{spill: true}` 는 명시적 싱크.
+- **형 보존 턴 변수**(2026-09-12 `8f943a61`): `execute_ibl` 경로의 정적 검사는 `typecheck(given=…)` 로 앞 호출이 남긴 턴 변수의 형(`ibl_turn_vars.types_for`, `turn_vars.live` 의 `types`)을 이어받아 검사하고, 구조 추론은 `ibl_value_types` 가 소유한다(행의 열·바깥 봉투·중첩 필드·병렬 분기·빈 결과 구별, 예산 초과는 미상). `/ibl/validate` 의 `typecheck_code` 는 코드만 보므로 이 문맥이 없다. 실행기가 읽는 열 인자 별칭(select 의 columns/cols/fields, compute 의 columns/expr)은 사전의 `flow.columns_param_aliases` 로 선언해 검사기가 같은 우선순위를 본다 — 검사기 코드에 액션 이름을 넣지 않는다. 정본 `docs/IBL_SHAPE_HANDOFF_2026_09_12.md`.
+- **원문 조회 계약**(2026-09-12 ep3632, `db1e14aa`·`310d7aad`): 큰 결과의 표시 참조 `result_ref` 는 실제 큰 필드 `paths`·`max_limit`·바로 쓸 `read_args` 를 싣고, `execute_ibl(code:"", read_result:…)` 조회 응답의 `next_read` 는 같은 ID·경로·페이지 크기에 다음 offset 을 보존한다(마지막 페이지 null, 옛 `next_offset` 유지). 문자 한도·스키마는 `backend/base/result_read_contract.py` 가 소유해 네이티브 도구와 FastMCP 가 같은 스키마를 내며, 기본·상한은 60,000자 — 응답이 `_display.max_chars` 로 페이지 예산을 선언해 액션당 16K 전송 접힘에 본문·`next_read` 가 잘리지 않는다. 파일 입구의 `~workspace/…` 는 `runtime_utils.expand_body_path` 로 해소한다(`self:struct` 의 `file`, 봉투의 `saved_to_file.file_path`). 정본 `docs/EPISODE3632_READ_CONTRACT_2026_09_12.md`.
 - **표면 티켓 회수 규약**(2026-08-27 F51-1): 표면(MCP 등)이 `ticket`(hex 12자, 전송 계층 필드)을 실어 보내면 백엔드가 시작·결말 봉투를 `data/spill/` 에 남긴다(24h GC 동승). 표면의 HTTP 대기가 먼저 끊겨도 그것은 "실행이 죽었다"가 아니라 **"기다림이 끝났다"** 이므로, 정직한 봉투(ticket + 회수법)를 돌려주고 결과는 `execute_ibl{recover}` → `POST /ibl/recover` 로 회수한다. 상태 셋(`done`/`running`/`unknown`)을 뭉개지 않는다. **유한 대기**(2026-09-01): 회수에 `wait` 초(≤240, `[self:script]{op:"status", wait}` 와 같은 계약)를 주면 결말이 날 때까지 기다렸다 돌려준다 — 대기가 먼저 끝나면 `waited` 와 함께 진행 상태를 준다(기다림이 끝난 것이지 실행이 죽은 것이 아니다). 이 통로가 없던 동안 부르는 쪽은 셸 `sleep` 으로 대기를 흉내 내다 몇 초 간격 폴링으로 무너졌다(09-01 실측: 한 주행의 도구 호출 45건 중 16건이 기다림). ★타임아웃 연장은 임시방편이다 — 어떤 한도든 더 긴 문장에 진다. 유한 대기의 반복이라야 어떤 길이의 실행도 덮는다. 티켓 검증은 hex 만 통과(네트워크 값이 파일명이 되는 자리 — 경로 탈출 차단). 가드 `backend/test_surface_ticket_recovery.py` T1~T15. **2026-09-05**: `execute_ibl` 의 `wait` 는 처음 실행에도 통한다 — 넘길 것을 아는 호출이 표면 대기를 늘려 타임아웃 봉투→회수 왕복을 없앤다(ep2829 세 번).
 
   **2026-09-07 개정 — 벽은 하나가 아니라 짝이다.** 위 "연장은 임시방편" 은 그대로 옳다(한도는 늘 더 긴 문장에 진다). 고친 것은 한도의 *크기*가 아니라 **누가 그 수를 아는가**였다. 옛 240 은 그 위에 있는 MCP 클라이언트의 hard wall-clock 을 *모르는 채로* 그 아래 어딘가에 있으라고 고른 수였다 — 클라이언트 기본값을 우리가 어디에도 안 적었으니 미지수다. 이제 그 벽을 **우리가 config 에 못박고**(`providers` 의 MCP config `timeout`, HTTP·stdio 양쪽) 표면 상한을 그 아래로 **파생**한다(`common/spill.py` 의 `SURFACE_CLIENT_WALL_S` → `TICKET_MAX_WAIT_S`, 여유 60초). 짝을 깨면 우리의 정직한 티켓 봉투 대신 클라이언트의 구조 없는 오류가 와서 회수 통로 자체가 모델에게 안 보인다. 진행 알림은 이 벽을 못 늘린다(CLI 문서 명시).
@@ -187,9 +191,11 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - `GET /world-pulse/consciousness` - 최근 의식 펄스 조회 (hours 파라미터로 시간 범위 지정)
 - `GET /world-pulse/self-checks` - 최근 자가점검 결과 (hours 파라미터로 시간 범위 지정)
 - `GET /world-pulse/health` - 시스템 건강 요약 (서비스 상태, 액션 성공률, 최근 펄스)
+- **실행 통합 조회**(`api_execution_trace.py`, `api_config` 라우터에 합류, 2026-09-11): `GET|POST /world-pulse/episodes/{episode_id}/trace`(개요 페이지 — 사건·현재 DB 상태·런타임 관측·측정 토큰·부모/자식·출처별 상태, HMAC 커서 15분·프로세스 교체 시 만료) · `POST …/trace/document`(원문 페이지 — 명시적으로 열 때만, 서버 발행 참조) · `POST /world-pulse/execution-trace`(project/owner + `task_id` 또는 `run_id` 직접 질의) · `POST /world-pulse/execution-trace/document`. POST 는 읽기 전용(긴 커서를 URL 에 싣지 않음, 부작용 0). `missing`→404 · `forbidden`→403 · 인증 미확인→401/503 · 읽기 실패→503 · 형식 오류→422, 일부 출처 실패는 200 안의 출처 상태/`partial`. 전역 `remote_access_guard` 에 더해 라우터 자신의 의존성 `launcher_access` 가 fail-closed 로 재확인하며 공개 경로에 등록하지 않는다(회귀 `test_execution_trace_api`). 기존 `/world-pulse/episodes/{id}/trajectory` 는 호환 유지.
 
 ### WebSocket (실시간 스트리밍)
 - `ws://127.0.0.1:8765/ws/chat/{client_id}` - 실시간 채팅 (스트리밍)
+- 라우트(`api_websocket.py`)는 인증·수신·명령 분배만 남고, 인지 실행·대화/과제 기록·스트림 전달은 `backend/services/chat_streams.py`(실행 서비스, 2026-09-11 `fc62497f`)가, 런별 취소 이벤트·조종 대상·연결 소유는 `services/chat_runs.py`(`a21cf016` — 취소와 연결 교체를 분리)가 소유한다. 원격(터널) 접속은 연결 시와 후속 명령 모두 런처 세션 인증을 받는다(`a79aeab0`).
 
 ## 스트리밍 이벤트 타입
 | 타입 | 설명 |
@@ -233,7 +239,7 @@ execute_ibl(code='[sense:search]{query: "AI"} >> [table:each]{as: "row", do: "[s
 execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_user]{message: "CPU 과부하"}}')
 ```
 
-문법 정본은 교재 `data/common_prompts/fragments/12_ibl_only.md`(에이전트 + 조종실 번역기 공용, **캐시 없음 = 수정 즉시 라이브**)와 **ibl.md**.
+문법 정본은 교재 `data/common_prompts/fragments/12_ibl_only.md`(에이전트 + 조종실 번역기 공용, **캐시 없음 = 수정 즉시 라이브**)와 **ibl.md**. 낱말 스캔(따옴표 경계·연산자 분할·소스 머리)은 `backend/ibl/ibl_scanner.py` 한 벌을 파서 셋이 공유하고 JSON5 복호는 `ibl_parser_values._try_json_like` 한 곳이다(2026-09-11, 골든 코퍼스 `backend/testdata/ibl_parser_boundaries.json`).
 
 **자동 발견**: `ibl_engine._merge_api_registry_actions()`가 로드 시 `api_registry.yaml`의 node 바인딩 도구를 노드 액션에 자동 병합.
 
@@ -254,7 +260,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **프로젝트 에이전트 심층메모리**: `projects/{id}/memory_{agent}.db` (SQLite, 시맨틱 검색)
 - **World Pulse DB**: `data/world_pulse.db` (SQLite — pulse_log, self_checks, action_health, episode_log, episode_summary, trajectory_event, ibl_code_corpus[IBL 문장 원문·성공/실패 누계, 2026-09-06])
 - **대화 이력**: `projects/{id}/conversations.db` (SQLite)
-- **도구 패키지**: `data/packages/installed/tools/`
+- **도구 패키지(보유 전체)**: `data/packages/{installed,not_installed}/tools/` — 두 폴더의 합집합이 보유이고 사전집 `ibl_nodes.yaml` 은 보유 전체로 빌드된다. **몸별 활성 원장**: `data/vocabulary/activation.json`(`vocabulary_state.py`, `{revision, active:{묶음:bool}, desktop}` — 활성 선택의 유일한 정본, 최초 이관 뒤 폴더명은 활성 의미 없음, PC·폰 비동기화, 2026-09-13). **어휘 보호 선언**: `data/vocabulary_policy.yaml`(`standard_nodes`·`required_packages`·`bundle_splits` — 분리된 묶음이 원본의 선택·배치를 한 번 계승)
 - **비즈니스 DB**: `data/business.db` (SQLite)
 - **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)
 - **해마 임베딩 모델**: `data/models/ibl_embedding/` (fine-tuned `jhgan/ko-sroberta-multitask`, 422MB. 해마 + 심층메모리 공유)
@@ -284,10 +290,11 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
   - ★**어휘 누수 방어가 서로 다르다**: claude_code 는 `--disallowed-tools` 로 Read·Grep·WebSearch 를 하드 차단하고, 남은 구멍(Bash 의 grep·sed·cat·rm·리다이렉션, 파일을 쓰는 인라인 파이썬, 네이티브 Write/Edit)은 **셸 그림자 관문**(2026-09-05)이 막는다 — 낱말 yaml 의 `shell_shadow:` 블록을 빌드가 `data/shell_shadow.json` 으로 파생하고, `backend/base/shell_shadow_gate.py` 가 PreToolUse 훅(`--settings` 인라인 JSON)과 in-process `run_command` 두 자리에서 같은 판정으로 거절하며 **그 명령을 옮긴 IBL 문장**을 돌려준다(임시 폴더·파이프 안의 필터·git 등은 셸의 몫). codex 의 파일 접근은 전부 shell 하나로 들어와 끌 수 없다(끄면 아무 일도 못 한다). codex 에서 설정으로 막는 건 web_search 뿐이고(차단 키는 **두 벌** — 옛 `tools.web_search=false` + 0.153.4 이후 최상위 `web_search="disabled"`; 2026-09-13 ChatGPT.app 갱신으로 옛 키가 말없이 무시돼 네이티브 검색이 되살아났던 실사고, 재발 시 `[Codex] ⚠ 네이티브 web_search 관측` 로그가 운다) 나머지는 프롬프트가 감당한다 — 즉 **codex 쪽 누수 위험이 구조적으로 크다**. 누수가 의심되면 프롬프트를 덧대지 말고 `episode_log` 로 실측한 뒤 판정할 것.
   - ★**자작 관문**(2026-09-07, `backend/base/selfbuild_gate.py`): 셸 그림자가 *어휘 우회*를, `fn_recognizer` 가 *관용구 우회*를 막는 것과 같은 자리에서 **"세상에 이미 있는 걸 자작하는 것"** 을 막는다. 지도(`data/guides/world_tools.md`)와 의식 규정의 '세상의 방식'·'전문가의 선택'은 둘 다 *규정 순간*에 서지만 실측된 실패는 늘 *행동 순간*이었다. 판정은 도메인이 아니라 **행동** — 한 턴에 새 구현 코드가 누적 `THRESHOLD_LINES` 줄(파일별 최대치의 합)을 넘었는데 ①세상을 한 번도 확인하지 않았고 ②쓴 코드가 지도의 도구를 하나도 쓰지 않으면 쓰기 싱크(`sink_ops.write_sink`)가 거절하고 다음 한 걸음(지도 열람·`install_lib{check:true}`)을 돌려준다. 확인은 `ibl_routing` 한 자리에서 감지한다(`_route_handler` 의 params 가 지도를 가리키면·`search_guide`·`_install_lib` — 낱말 이름을 코드에 적지 않아 어느 길로 열어도 같게 걷힌다). 몸의 코드(RED·등록 스크립트·패키지)와 데이터·문서는 관할 밖이고, 파이프로 흘러든 본문은 자작이 아니다(모델이 직접 친 `content` 만 센다). 지도는 사람·AI 가 고치는 가이드라 빌드 파생표를 두지 않고 mtime 캐시로 읽는다.
   - **Codex 모델 선택**: AI 설정의 고급·중급·경량과 도구 AI 설정은 `/codex/models`로 설치된 Codex 캐시의 공개 모델과 지원 추론 강도를 읽어 선택 상자를 표시한다. 새 모델은 캐시 갱신으로 반영되며, 캐시가 없을 때도 모델명을 직접 입력할 수 있다. 선택 결과는 기존 `model` 문자열에 저장한다. 직접 입력한 표시명이나 대소문자 변형은 실행 직전에 같은 카탈로그의 정식 슬러그로 해소한다(미등록 사용자 ID는 보존).
+  - **응답 원장으로 라운드를 센다**(2026-09-12 `231328d0`·`cf3f1d98`): 도구 item 수로 모델 왕복을 추정하지 않고 `backend/base/codex_rollout.py` `CodexResponseLedger` 가 `~/.codex/sessions/**/rollout-*.jsonl` 의 `response_id` 를 이번 CLI 호출 이후분만 증분 조회해 `model.round`(trajectory_event) 로 기록한다. 주행기록은 `episode_summary.execution_rounds` 가 비어도 `model.round` 원장에서 같은 집계(`model_call_context.count_execution_rounds` — `execution`·`system_ai` 역할만, 배경 원샷·평가 제외)로 현재까지의 라운드와 IBL 호출 수(`ibl_calls`)를 계산하고, 진행 중 주행은 '진행 중'·'집계 대기'로 표시해 5초마다 재조회한다(데스크탑 `EpisodeJournal.tsx`·원격 `launcher_app_manual.py` 동일). 정본 `docs/CODEX_JOURNAL_2026_09_12.md`.
   - **codex 의 모델 표기 = `슬러그` 또는 `슬러그:추론강도`**(예: `gpt-5.6-sol:high`). Codex 는 모델과 추론강도가 **별개 축**이라(`-m` 과 `-c model_reasoning_effort`), 티어 설정의 `model` 한 칸이 둘을 함께 싣는다. ★별도 설정 칸이 아닌 이유는 편의가 아니라 캐시 정합이다 — 프로바이더 캐시 키가 `bucket|provider|model|keyhash` 라, 강도가 그 문자열 밖에 있으면 같은 슬러그를 쓰는 두 티어(고급=`sol:max` · 중급=`sol:low`)가 **캐시에서 충돌해 에러 없이 강도가 뒤바뀐다**. 강도를 안 적으면 사용자의 `~/.codex/config.toml` 을 따른다(ChatGPT 데스크톱 앱이 바꾸는 값이므로, 재현 가능한 비용·품질을 원하면 티어에 적을 것). 철자가 틀리면 경고 후 무시한다. **모델 슬러그·지원 강도의 정본은 우리가 아니라 `~/.codex/models_cache.json`**(원격 갱신 캐시) — 목록을 문서에 베끼지 않는다(모델명 하드코딩은 은퇴로 죽는다).
   - `--ignore-user-config` 를 원샷 다이어트에 **쓰지 않는다**(2026-08-31 실측 기각): 같은 질문에서 17,222→16,270 토큰(5.5%)만 아끼면서 사용자의 `model_reasoning_effort` 를 빼앗아 원샷만 모델 기본 강도로 떨어뜨린다 — 경로마다 강도가 다르면 비용도 품질도 재현되지 않는다. 남는 16K 는 Codex 자신의 기본 지침·AGENTS.md·작업공간 맥락이라 이 플래그로는 못 깎는다.
   - ★**codex 는 시스템 프롬프트를 붙일 플래그가 없다**(`--append-system-prompt` 등가물 부재). fresh 턴 프롬프트 머리에 싣고 resume 턴엔 생략하므로, 프롬프트가 바뀌면 세션 키(`키#프롬프트해시`)가 바뀌어 자동으로 fresh 로 끊긴다. '새 대화' 리셋은 `providers.clear_cli_sessions_for_agent` 가 접두 스윕으로 파생 키까지 지운다.
-- 모델·API 키는 **모델 기어**가 해소한 티어에서 상속(에이전트별 설정 폐지). 구체 모델 ID 는 `data/*_ai_config.json` 슬롯이 보유 — 이 문서는 목록만 유지(모델명은 빨리 낡는다).
+- 모델·API 키는 **모델 기어**가 해소한 티어에서 상속(에이전트별 설정 폐지). 구체 모델 ID 는 `data/*_ai_config.json` 슬롯이 보유 — 이 문서는 목록만 유지(모델명은 빨리 낡는다). **API 키의 자리는 `.env`** 가 우선이다(`model_resolver.env_var_for_provider`/`set_env_key`, 2026-09-11 `5bb6aa43` — 저장 시 키를 먼저 `.env` 로 옮긴 뒤 설정 파일을 원자 교체하고, 옛 슬롯 파일 안의 키는 이행용 대체값, 조회는 파일을 이전하지 않는다. 설정 읽기·기본값·디스크립터·저장 전부 `model_resolver` 소유).
 - ★함정: Gemini `flash-latest` 별칭은 `thinkingConfig.thinkingBudget:0` 을 400 으로 거부 — 버전 명시(`gemini-2.5-flash`) 필요.
 
 ### Tool Result 절삭
@@ -305,7 +312,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 ### IBL 액션 단일 진실 소스 (2026-05-28~)
 - 어휘 소스는 소유권에 따라 둘이다: `data/ibl_nodes_src/` 7개 yaml(meta + 6개 노드)은 패키지와 무관한 코어 어휘, 설치 패키지의 `ibl_actions.yaml`은 그 능력과 함께 설치·제거되는 패키지 어휘다
 - `python3 scripts/build_ibl_nodes.py`로 `data/ibl_nodes.yaml` 빌드 (명시적, 자동 등록 없음)
-- 빌드는 설치된 package fragment만 합쳐 `ibl_nodes.yaml`·`tool.json`·fixture·문서 마커를 파생한다. 패키지 폴더 이동만 하고 빌드하지 않으면 런타임 레지스트리는 바뀌지 않는다
+- 빌드는 **보유 전체**(`installed`·`not_installed` 양쪽)의 package fragment 를 합쳐 `ibl_nodes.yaml`·`tool.json`·fixture·문서 마커를 파생한다(2026-09-13 — 활성 여부는 사전집이 아니라 몸별 원장 `data/vocabulary/activation.json` 이 로드 시 prune 한다). 새 묶음 등록·정의 변경은 보유 집합 변경이라 빌드가 필요하고(가져오기 절차가 자동 수행), 깨우기/잠재우기는 빌드 없이 원장+런타임 캐시만 바꾼다
 - **삼각 검증** (`--check`): src ↔ tool.json ↔ handler.py `_OP_DISPATCHERS` 3중 일치 AST 정확 비교
   - 등록: src.tool ↔ tool.json.name
   - op enum: src.ops.values 키 ↔ tool.json input_schema.properties.op.enum
@@ -408,3 +415,20 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 `psutil.Process.create_time()` 표시값으로 사망을 판정하면 살아 있는 워커가 종료 대상에서
 누락될 수 있다. [2026-09-12 장애와 재현](../../docs/RESTART_CLOCK_IDENTITY_2026_09_12.md).
 정본 설계·장애 시험·복구 한계: [재기동 제어 §9](../../docs/RESTART_COORDINATION_DESIGN_2026_09_11.md).
+
+**진입점 지도(R0 `6c07cdbc` · R1 `b32e563a`)**: `backend/api.py` 는 `__main__` 이면 관리 워커가 아닌 한 곧장
+`restart_controller.main` 으로 넘어간다(`start | serve | restart | shutdown | status | wait`,
+`--wait --request-id --force --drain-timeout`(기본 600초)). `start.sh` 는 `api.py start` 뒤 `api.py wait` 로
+막고 EXIT 트랩에서 `shutdown --wait`; Electron `backend-process.js` 는 같은 명령으로 띄우고
+`data/restart_control/state.json` 을 읽으며 의도적 종료를 `data/.intentional_shutdown` 에 남긴다;
+`scripts/backend_keeper.sh` 는 `api.py serve` 를 exec 하는 호환 입구다 — 감시 루프·부팅 유예·`PAUSE_TTL` 은
+은퇴했고 아무것도 이를 띄우지 않는다. 이미 돌던 옛 uvicorn·keeper 는 `runtime_legacy` 가 출생 신원 영수증으로
+채택한 뒤 같은 drain 절차로 이관한다. 접수 차단은 `GET /runtime/status` · `POST /runtime/{drain|activate}`
+(`api_runtime.py`, 로컬 소켓+`X-Runtime-Control` 비밀, forwarded 계열 헤더 거절)와 `RuntimeAdmission` ASGI
+미들웨어가 집행한다(닫히면 503 `executed:false`; 제어·읽기·취소·steer·기존 작업의 MCP 재진입은 예외).
+**관측 구분**: `/health` 의 `live_turns_observation=known|unknown`(R0) — unknown 은 '턴 없음'이 아니라
+판정 불능이며 리로드·RED 프로브가 보류한다; `/runtime/status` 는 원장에 활성 에피소드가 있는데 등록된
+실행 소유자가 없으면 UNKNOWN 이다. **RED 경로**: `red_apply`(분리 수행자, `system_essentials/repair_staging.py`
+가 띄움)는 예약 턴의 종료·증류를 기다린 뒤 `restart_protocol.request(operation="red_apply")` 로 인계만 하고,
+적용·부팅 후 검증·검증된 백업 복원·재부팅은 제어자가 `restart_red`·`restart_helper` 로 수행한다.
+`quiescent_reload`·`reload_gate` 는 진단·호환 입구로만 남아 중단 권한이 없다(uvicorn `reload=False`).

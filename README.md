@@ -261,7 +261,7 @@ The seam keeps them apart. `runs_on` tags mark each action honestly — `anywher
 
 ### → Bodies with separate dictionaries, talking by calling card
 
-The seam cuts one layer deeper than "which machine runs it": **each installed body owns only its own vocabulary.** The distribution ships the whole dictionary; an install keeps what it actually has, and both the action catalog and the hippocampus filter for ownership — *you don't learn someone else's words.*
+The seam cuts one layer deeper than "which machine runs it": **each installed body owns only its own vocabulary.** The distribution ships the whole dictionary; an install keeps what it actually has, and both the action catalog and the hippocampus filter for ownership — *you don't learn someone else's words.* (What a body "has" is not a folder but a per-body activation ledger over the full dictionary it holds — see [What's core vs what's yours](#whats-core-vs-whats-yours).)
 
 So how does one body get another to do something? Not with a privileged pipe. Each body serves a **calling card** (`GET /nodes/card`) — a description-only projection of what it can do, exchanged automatically when bodies register each other, ~70 tokens of scent. Then one body simply **asks in plain language** (`[others:ask]`): the receiving body compiles the request *with its own dictionary*, runs it, and returns the result — or honestly declines if the words aren't in its vocabulary. Nothing imitates the other side's action names, so neither body has to know the other's dictionary.
 
@@ -307,7 +307,7 @@ Three model tiers serve this cheaply — **lightweight**, **midtier**, **full** 
 
 Several memories learn from you automatically and keep themselves clean:
 
-- **Hippocampus (procedural)** — a fine-tuned 768-dim embedding model maps your natural language to past IBL code (~92.2% code / 94.2% description Top-5; retrained locally on Apple Silicon, ~3,000-example corpus). Successful runs distill into reusable examples, so the system gets faster at *your* recurring tasks. A closed loop records whether a recalled example actually worked, so proven patterns rise and bad ones sink.
+- **Hippocampus (procedural)** — a fine-tuned 768-dim embedding model maps your natural language to past IBL code (retrained locally on Apple Silicon whenever the corpus grows; the current generation's Top-5 scores and corpus size live in the hippocampus table of `data/system_docs/memory.md`). Successful runs distill into reusable examples, so the system gets faster at *your* recurring tasks. A closed loop records whether a recalled example actually worked, so proven patterns rise and bad ones sink.
 - **Deep memory (relational)** — after each conversation a lightweight pass extracts durable facts about you (preferences, decisions, key dates) and recalls them, with their last-seen date, when relevant.
 - **Forager memory (spatial)** — every time the AI *forages* the disk, web, or codebase, it accumulates what it learned about that space across sessions: folder identities, search conventions, dead ends, and an owner-model of whose files live where. A model built foraging the disk disambiguates a web search, and vice versa — a compounding loop. It borrows the vocabulary of Information Foraging Theory; what's new is treating it as the *persistent* faculty a stateless model lacks, and adding only that memory — no controller, no stopping-formula. (`[self:forage]`, the Mac self.)
 
@@ -321,6 +321,7 @@ A periodic consolidation pass (part of the immune patrol below) merges near-dupl
 - **Self-Check** — once a day, a deterministic sweep: static consistency, a currency probe over every action's fixture, and a set of golden pipelines (**no model calls** — the AI patrol it replaced was retired). On `/self-inspect`, the system AI retries failures to classify them transient vs reproducible and rate fix difficulty (easy / medium / hard).
 - **Commit-time guards** — the checks that hold the vocabulary together (a three-way match between source, tool schema, and handler) were extended to the *seams* — the things that aren't actions: an auth gate that fails **closed** rather than open, a check that every publicly-exposed route really has its own gate (the oracle is the live route table, not a re-parsed list), a scan for blocking calls inside async code (this server calls itself often enough that a blocked loop is a self-deadlock), a Unix-only-import scan for Windows portability, and a **fresh-clone CI** — because `main` once passed only on the machine that wrote it.
 - **Boot observability** — the subsystems a server may start without are wrapped in "log it and carry on" blocks, which is correct; the problem is that three days later the answer to "why did nothing get scheduled?" is somewhere off the top of a terminal. Every one of those blocks is now instrumented, and a failed boot step shows up in the health endpoint.
+- **Prompt composition** — the system runs many kinds of LLM agent (system AI, project agents, consciousness and its supervisor, the unconscious classifier, the evaluator, the experience distiller, the IBL translator …) and each assembles its prompt differently. A **Prompt composition** window in the launcher's glasses (logo) menu shows, per agent, the assembly as layers — system prompt / turn context / user message — piece by piece with source, condition and size; the variable pieces (execution memory, IBL environment, project memory, world state) are produced by running the real builders on one sample message, so the sizes are actual (embedding search only, no model call). Its sibling **Guide files** window lists every guide in `data/guides/` with its registration, freshness and budget marks, and lets you read and edit them in place.
 
 ---
 
@@ -377,7 +378,7 @@ The easiest way to install IndieBiz OS is through **Claude Desktop**.
 
 > **Why Claude Desktop?** IndieBiz OS is a living system, not a static `npm install`. The agent that installs it becomes the blacksmith who keeps forging it to fit you.
 
-**You'll provide:** an LLM API key (Anthropic, Google, or OpenAI); answers to a few questions about what you want; external API keys only as you actually use those features. To also turn on the public surfaces — Shared Warehouse, remote access — you'll additionally need a **Cloudflare account + your own domain**; the full setup map is in the [Getting Started guide](GUIDE_EN.md#1-getting-started).
+**You'll provide:** an LLM API key (Anthropic, Google, or OpenAI) — or a Claude Code / Codex subscription login, which needs no key; answers to a few questions about what you want; external API keys only as you actually use those features. To also turn on the public surfaces — Shared Warehouse, remote access — you'll additionally need a **Cloudflare account + your own domain**; the full setup map is in the [Getting Started guide](GUIDE_EN.md#1-getting-started).
 
 <details>
 <summary><strong>Alternative: download the desktop app (no Claude Desktop)</strong></summary>
@@ -428,7 +429,7 @@ IndieBiz OS ships a **standard core** — the IBL grammar, the function-word nod
 
 Two guarantees follow:
 
-- **Install doesn't dump everything on you.** Many packages need their own API keys; installing them all would bury you in things you can't use. The whole catalog ships, but only a curated set is *active* by default — the rest sit available, ready to switch on when you want them. Every package carries an `origin` (core / user), and the desktop-app packaging is built from the manifest, so your own committed apps and personal files never leak into a distribution. (Committing a personal package for backup? Mark it `origin: user` and it stays out of the core.)
+- **Install doesn't dump everything on you.** Many packages need their own API keys; installing them all would bury you in things you can't use. The whole catalog ships, but only a curated set is *active* by default — the rest sit available, ready to switch on when you want them. Since 2026-09 that switch is a **per-body activation ledger** over the full dictionary you hold: waking or putting a word bundle to sleep changes the ledger and the prompt cache, never a folder or a rebuild, and a sleeping bundle keeps its files, settings, examples and vectors. You do it in **My vocabulary** (launcher glasses menu, right under Settings) — an icon desktop where bundles sit in folders, a storage vault, and a trash — and a bundle travels as a single `.iblpack` file: import through the vault, export from the bundle's own menu; an imported bundle arrives asleep and runs only once you wake it (format: `docs/IBLPACK_FORMAT.md`). Every package carries an `origin` (core / user), and the desktop-app packaging is built from the manifest, so your own committed apps and personal files never leak into a distribution. (Committing a personal package for backup? Mark it `origin: user` and it stays out of the core.)
 - **Updates never overwrite what's yours.** A reinstall or update refreshes only core-owned files. Which packages you've turned on or off, the vocabulary and apps you authored, your settings, and your conversation history all survive untouched — the updater respects the folder placement *you* chose rather than re-imposing the bundle's defaults.
 
 This is the same substrate/superstructure seam that separates the standard grammar from your personal dictionary — pushed all the way out to packages, apps, install, and update.
@@ -439,7 +440,7 @@ This is the same substrate/superstructure seam that separates the standard gramm
 
 - **Backend**: Python FastAPI (port 8765)
 - **Frontend**: Electron + React (TypeScript)
-- **AI Providers**: Anthropic (Claude), Google (Gemini), OpenAI (GPT), Ollama (Local)
+- **AI Providers**: Anthropic (Claude), Google (Gemini), OpenAI (GPT), DeepSeek, OpenRouter, Ollama (local) — plus two subscription-login CLI harnesses, **Claude Code** and **Codex**, that need no API key (Codex's model and reasoning effort are picked from the installed Codex's own model catalog, so new models appear without a code change)
 - **Database**: SQLite
 - **Deployment**: Local-first, optional Cloudflare Tunnel for remote access
 
@@ -455,6 +456,8 @@ This is the same substrate/superstructure seam that separates the standard gramm
 cd backend && python3 api.py        # Backend (port 8765)
 cd frontend && npm run electron:dev  # Frontend (Electron)
 ```
+
+`start.sh` runs the backend through the repo's `.venv` only (create it with `python3 scripts/bootstrap.py`; there is no silent fallback to system Python). `backend/api.py` is the restart controller: `start` is the default action, and `status` / `restart --wait` / `shutdown --wait` are the operating verbs.
 
 ---
 

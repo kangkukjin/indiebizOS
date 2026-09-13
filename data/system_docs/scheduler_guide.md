@@ -2,8 +2,8 @@
 title: 스케줄러 가이드
 scope: 정기 작업 스케줄, 트리거 엔진, 워크플로우, 캘린더 연동
 owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, workflow_contract.py, calendar_actions.py, calendar_manager.py
-last_updated: 2026-08-22
-see_also: [architecture.md, communication.md]
+last_updated: 2026-09-14
+see_also: [architecture.md, communication.md, memory.md]
 ---
 
 # 스케줄러 사용 가이드
@@ -51,6 +51,10 @@ see_also: [architecture.md, communication.md]
 **실행 이벤트의 `do`**: `[self:manage_events]{op:"create", do:"<IBL 문장>"}` 는 `action: run_pipeline` + `action_params.pipeline` 으로 저장되고, 호출한 프로젝트(`owner_project_id`)에서 발화한다. 등록되지 않은 액션 이름(`launch_x` 등)은 create 에서 거절되고, `run_now` 는 실행 이벤트가 아니거나 액션이 미등록이면 "즉시 실행 시작" 대신 사유를 돌려준다.
 
 **동시 발화**: 같은 분에 due 인 작업은 전부 각자 스레드에서 돈다(설정 저장은 잠금 + 스레드별 임시 파일 — 54회차 B54-4 전엔 하나만 돌았다).
+
+**재기동 중 보류(2026-09-11 R1)**: 발화(`calendar_manager._execute_task`)는 `runtime_work.tracked("schedule", defer=True)` 로 재기동 제어자의 실작업으로 등록된다 — 접수가 닫힌(drain 중) 틱에는 실행하지 않고 `last_run` 도 찍지 않아 다음 틱(60초)에 다시 시도한다. 스케줄러 루프 자체는 작업이 아니다.
+
+**평가 경계(2026-09-12)**: 발화된 `run_pipeline`/위임 턴은 채팅과 같은 인지 경로(WS 주입)를 타므로 의식 규정이 없는 EXECUTE/반사 실행에는 중간 감독·최종 평가·자기반성이 없고 최종 판정은 NULL, 알림은 직접 전달된다. 예약 시각엔 사람이 없으므로 검수가 필요한 정기 작업은 의식이 달성 기준을 규정하는 턴(THINK)이어야 평가가 붙는다(memory.md '파이프라인 흐름').
 
 ### 3. 요일 코드 (weekdays)
 weekly 타입에서 사용합니다. 리스트로 여러 요일 지정 가능:

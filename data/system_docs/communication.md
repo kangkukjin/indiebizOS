@@ -1,9 +1,9 @@
 ---
 title: 통신·연동
 scope: 채널 추상화, Gmail/Nostr, 자동응답 V3, 에이전트 위임 체인(구 delegation.md)
-owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py
-last_updated: 2026-08-22
-see_also: [architecture.md, scheduler_guide.md]
+owner_code: channel_engine.py, channel_poller.py, auto_response.py, indienet.py, gmail.py, agent_communication.py, agent_runner.py, calendar_manager.py, chat_streams.py, chat_runs.py, execution_workers.py, vocabulary_state.py, vocabulary_lifecycle.py
+last_updated: 2026-09-14
+see_also: [architecture.md, scheduler_guide.md, technical.md]
 ---
 
 # 통신 채널 시스템 (Communication Channels)
@@ -100,7 +100,7 @@ Nostr 키는 IndieNet identity와 연동 가능:
   전용 창(`#/community`, CommunityInstrumentView)으로 IBL 커뮤니티 계기를 그대로 띄운다 — 진입 통로는
   보존하고 내용만 단일 진실 소스(/launcher/instruments)로 교체. (비즈니스 창은 IBL 미커버라 유지.)
 - 렌더 어휘 확장: `thread`(좌/우 버블) view 프리미티브 + `compose`(하단 작성바) — 데스크탑
-  `GenericInstrument.tsx`와 원격 `api_launcher_web.py` HTML이 같은 선언을 해석.
+  `GenericInstrument.tsx`와 원격 런처 HTML 의 렌더 조각 `launcher_web_render.py` 가 같은 선언을 해석.
 - 발신 신원: 앱/수동 표면(`앱모드`/`수동모드` 프로젝트)의 IBL 실행은 `agent_id=system_ai`로
   기본 설정(소유자=시스템 운영자) → 작성바 전송·게시가 자기 계정으로 동작.
 
@@ -117,7 +117,8 @@ Nostr 키는 IndieNet identity와 연동 가능:
   유튜브뮤직 등 외부망 재생은 **포털별 오디오 프록시**(`/h/<슬러그>/tune/<vid>`)로 집 IP 중계. 회원 실행
   게이트=계기 `app:` 블록 템플릿의 *인스턴스*만 허용(범용 execute 금지)+일일 한도(손님/회원/전역).
 - **공개 파일** `[others:showcase]` — `/s/<5자>/`. 주소별 폴더를 맥 디스크에서 즉석 walk+썸네일로 서빙
-  (인덱싱 없음, EXIF 제거·영상 트랜스코드).
+  (인덱싱 없음, EXIF 제거·영상 트랜스코드). 폴더 읽기 실패(권한·저장장치 분리)는 빈 폴더로 숨기지 않고
+  503 으로 드러낸다(2026-09-11 `api_showcase.py`, 제6원리).
 - **가족신문** `[others:family_news]` — `/n/<5자>/`. USB 폰 사진(DCIM)을 지난 발행 이후 구간으로 모아
   조판→누적 발행, 방명록·가족 사진 업로드(쓰기 방향 개통).
 - **자유게시판** `[others:bulletin]` — `/b/<5자>/`. 로그인 없이 주소만 알면 글·사진 게시(family-news 방명록
@@ -172,8 +173,13 @@ Nostr 키는 IndieNet identity와 연동 가능:
 | 상대 능력 파악 | 사전을 통째로 공유 | **명함** `GET /nodes/card`(desc-프로젝션, ~70토큰/몸, 등록 시 상호 자동 교환) |
 | 특별한 관계 | 전용 배관(특권) | **이웃 등급**(`body_trust`) — 폰-맥도 "최고 레벨 이웃"일 뿐 |
 
-- **사전 물리 분리**: 배포물은 전체 사전집이되 설치된 몸은 자기 어휘만 싣는다. 카탈로그와 해마 회상이
-  소유-필터를 지나 **"남의 어휘를 학습하지 않는다"**(미지 어휘=남의 것).
+- **보유 전체 사전집 + 몸별 활성 원장**(2026-09-13 개정 — 옛 '설치본은 자기 어휘만 싣는다'를 대체): 보유 정본은
+  `data/packages/{installed,not_installed}/tools/` 두 보관 폴더이고(`vocabulary_state.inventory`), 어느 묶음을 깨울지는
+  몸별 활성 선택이다. 켜고 끄는 유일한 경로는 `vocabulary_lifecycle.set_package_active`(HTTP `/vocabulary/*`·IBL·조종실
+  공통, 사람 권한 `HUMAN_AUTHORITY` 필수 — IBL 인자로 위조 불가)이며 보유 파일·해마 기억은 보존하고 선택만 바꾼다
+  (진행 중 호출은 취소하지 않음, 필수 묶음은 `vocabulary_policy` 가 보호). 활성 어휘가 바뀌면 `vocabulary_state.revision()`
+  이 올라 상주 시스템 AI 의 프롬프트·IBL 환경이 재조립되고(인지 경로를 건너뛰는 순찰도 이동 이후 사전 사용) 회상
+  캐시 세대가 바뀐다. 카탈로그와 해마 회상이 활성-필터를 지나 **"잠든(남의) 어휘를 학습하지 않는다"**(미지 어휘=남의 것).
 - **컴파일러 능력 축은 해마 유무**: 용례가 있으면 조종실 경로로, 없으면 사전-동봉 경량 모델로 컴파일한다.
 - **`delegate` 와의 구별**: `[others:delegate]`=**인격**(에이전트)에게 일을 맡김 / `[others:ask]`=**몸**에게 능력을 부탁함.
 - **표면 분리**: 원격 런처(=PC 의 일부, 5탭)와 폰 네이티브(=독립 시스템, 3탭)를 조립 모듈로 갈랐다
@@ -271,6 +277,11 @@ OWNER_NOSTR_PUBKEYS=npub1xxx...,npub1yyy...
 - **Anthropic** (Claude)
 - **OpenAI** (GPT)
 - **Google** (Gemini)
+
+자동응답은 도구 호출 SDK 직접호출이 필요하므로 시스템 AI 가 CLI 프로바이더(claude_code·codex)면 실제 키가 있는
+경량/중급 설정으로 폴백한다(`auto_response._SDK_PROVIDERS`, 없으면 로그 후 미응답). 프로바이더 전체 목록·모델 기어·
+Codex 모델 표기(`슬러그[:추론강도]`, 표시명→슬러그 해소, 네이티브 web_search 차단 키 두 벌 + 도착 지점 경보,
+2026-09-12~13)는 technical.md '모델 프로바이더' 절이 정본이다.
 
 ### 처리 흐름
 
@@ -462,6 +473,10 @@ agents:
 }
 ```
 
+설정의 해석·기본값·저장은 `backend/base/model_resolver.py` 가 단일 소유한다(2026-09-11) — `.env` 의 제공자 키가
+우선이고 파일의 옛 `apiKey` 는 이행용 대체값이며, 키 불요 제공자(claude_code·codex·ollama)에는 전달하지 않는다
+(`provider_needs_api_key`). 제공자 객체 생성은 `providers.create_initialized_provider` 공통 입구.
+
 ### 근무지침 / 비즈니스 문서
 - `data/work_guideline.txt`: 자동응답 시 참조할 근무지침
 - `data/business_doc.txt`: 비즈니스 전체 소개 문서
@@ -550,7 +565,7 @@ agents:
 | `task` | 태스크 컨텍스트(위임 체인의 마디) | `[others:delegate]{scope:"cross"}` 가 "현재 태스크 ID 없음"으로 실패한다 |
 | `origin` | 출처. `user`=사람의 직접 명령, `portal`=공개 포털 경유 | 그 런의 쓰기가 **무출처**로 원장에 남는다 |
 
-- 전파는 `thread_context`(스레드-로컬)가 맡고, 프로세스 밖 프로바이더(claude_code)는 `/ibl/execute` **요청 봉투**로 같은 세 칸을 복원한다. 병렬 branch 는 스레드를 건너므로 값이 명시 스탬프로 실려 내려간다.
+- 전파는 `thread_context`(스레드-로컬)가 맡고, 프로세스 밖 프로바이더(claude_code)는 `/ibl/execute` **요청 봉투**로 같은 세 칸을 복원한다. 병렬 branch·역할별 실행 풀은 스레드를 건너므로 `base/execution_workers.py`(2026-09-11) 가 **제출 시점**의 thread-local 신원과 contextvars(비용 원장·궤적)를 함께 승계하고 끝나면 워커의 이전 문맥을 복원한다 — 풀은 역할별로 새로 만들어 전역 공유하지 않는다.
 - **무태스크 위임에는 태스크를 발급한다**: 스케줄러 하달·앱 버튼이 낸 `[others:delegate]{scope:"system"}` 은 task 없이 도착해, 그 런의 쓰기가 원장에 무작업으로 남고 조인이 끊겼다. 이제 러너가 `task_sysai_*` 를 발급한다(자가점검은 제외 — 순찰의 쓰기가 태스크 원장을 오염시키지 않도록).
 - 결과: **`write_ledger` → `episode_log` → `tasks`** 3중 조인이 닫힌다. "이 파일 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오르는 통로가 `[self:body]{op:"writes"}`.
 - 공개 표면(게시판·가족신문)에서는 **행위자가 빈 값인 것이 곧 "외부 방문자"** 신호다.
@@ -835,7 +850,10 @@ else:
     result_summary = response  # 전체 응답
 ```
 
-**위치**: `agent_runner.py` → `_auto_report_to_chain()`
+**위치**: `agent_communication.py` → `_auto_report_to_chain()`
+
+위는 하네스의 전달 규칙이다. 모델 자신의 규칙은 별개로, **파일 산출물은 사용자가 명시적으로 요청했을 때만** 만들고
+만들었으면 본문을 채팅에 중복하지 않고 링크(절대경로)와 짧은 답만 전달한다(공통 프롬프트 `base_prompt_v6.md`, 2026-09-12).
 
 ### 파일 경로 원칙
 
@@ -982,7 +1000,11 @@ task_sysai_001 삭제
 
 ### SystemAIRunner 클래스
 
-상주 프로세스로 동작하는 시스템 AI 실행기:
+상주 프로세스로 동작하는 시스템 AI 실행기. **상주 루프 자체는 서비스이고 실제 작업은 큐에서 꺼내는 경계에서
+재기동 제어자에 등록된다**(`runtime_work.WorkMessages`·`message_stream`, 2026-09-11 R1). 채널 폴러의 수신·발송
+핸들러도 `runtime_work.tracked(..., defer=True)` 로 접수가 닫히면 다음 틱으로 미룬다. 영구 루프·풀 워커·공유
+드라이버는 `service_scope` 로 작업 카운터 밖에 둔다 — 스레드가 있다는 사실이 일하고 있다는 증거가 아니다
+(`docs/RUNTIME_SERVICE_LIFETIME_2026_09_12.md`):
 
 ```python
 class SystemAIRunner:

@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-08-28
+last_updated: 2026-09-14
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -40,7 +40,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 **생애주기**: 새 일은 자율주행이 탐색 → IBL 흔적이 조종실 초안으로 → 검증된 고빈도 워크플로가 앱으로 결정화. *굳히는 건 증명된 것만.* 이 빈도-결정화가 "언제 시야를, 언제 한 번의 실행을"의 자동 규율이다.
 → 상세: [architecture.md](architecture.md) "사용자 표면 — 런처의 세 모드"
 
-런처 선택기에는 **공유창고**도 놓인다. **내 어휘**는 안경 아이콘 메뉴의 **설정 바로 아래**에서 독립 창으로 연다. 보유한 묶음을 고르고, 깨우거나 잠재우며, 파일로 주고받는 관리 공간이다. 어휘 폴더들도 각각 독립 창으로 열린다. → [packages.md](packages.md)
+런처 선택기에는 **공유창고**도 놓인다. **내 어휘**는 안경 아이콘 메뉴의 **설정 바로 아래**에서 독립 창으로 연다. 보유한 묶음을 고르고, 깨우거나 잠재우며, `.iblpack` 파일로 주고받는 관리 공간이다(잠든 묶음은 소개·회상·실행에서 빠지되 파일·용례·기록은 보존). 어휘 폴더들도 각각 독립 창으로 열린다. 같은 안경 메뉴에 **프롬프트 구성**(에이전트별 프롬프트 조립을 정본 빌더로 층·조각·분량까지 보여주는 표면)과 **가이드 파일**(`data/guides` 목록·본문 편집) 도구 창이 있다. → [packages.md](packages.md) '보유와 활성' · [technical.md](technical.md) · 설계: [어휘 레고박스](../../docs/VOCAB_LEGO_PLAN_2026_09_13.md) · [.iblpack 계약](../../docs/IBLPACK_FORMAT.md) · [프롬프트 구성 표면](../../docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md)
 
 ---
 
@@ -80,7 +80,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
   ↓ [3] 실행   IBL 엔진 → 도구 실행
   ↔ [4a] 의식 감독   하네스가 실패 반복·진척 정체·장시간 작업을 관찰, 필요한 때만 의식 호출
   ↓ [4b] 최종 평가   의식이 달성 기준을 정한 턴만 승인 또는 1회 부분 보완 (EXECUTE·Reflex는 4a/4b 생략)
-  ↓ [5] 증류   성공 경험을 해마·심층메모리에 저장 (다음엔 더 빠르게)
+  ↓ [5] 증류   성공 경험을 해마에 저장, 장기 기억은 최종 응답 뒤 사용자 원문에서 선별 (다음엔 더 빠르게)
 ```
 
 **감독과 평가값**: `conscious_supervisor`는 의식의 계획·재규정·중간관리를 유지한다. 의식과 실행은 같은 `AIAgent`를 쓰며 신원·세션·예산은 분리한다. 최종평가는 `final_evaluator`가 기존 `CognitiveEvalMixin`의 도구 없는 `role="evaluate"` 원샷을 사용한다. 하네스가 사용자 목표·전체 응답·실제 호출 원장·결과 발췌·산출물 내용을 제공한다. 짧고 정상적인 조회의 경로는 유지한다. `evaluation_result`의 `ACHIEVED`는 승인, `NOT_ACHIEVED`는 보완 미완료, `UNKNOWN`은 평가 불명, `NULL`은 평가 미실행이다.
@@ -89,11 +89,11 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 
 **턴 연결과 비용**: 공통 인지 진입점이 실행 신원을 보충하고 턴 동안 유지한다. MCP 재진입·병렬 행의 모델 호출도 같은 활성 턴의 비용·에피소드에 합산한다. 각 행의 예산 중단과 중간 단계의 부분 실패는 감독 사건에 전달한다. 원샷 AI는 호출별 프롬프트·계측을 분리하고 제공자당 최대 4개를 실행한다.
 
-**경로 관측**: 기존 사건 원장의 `cognition.supervisor_selected`·`cognition.route`·`cognition.evaluation`이 감독 선택 사유·실행 차선·실제 검수 경로를 구분한다. `model.input`은 호출별 텍스트 크기만, `model.usage`는 실제 토큰·캐시 사용량을 기록한다. `context.result_read`는 저장된 원문 조회의 왕복을 계수한다. 미측정 과거 기록은 미사용으로 간주하지 않는다.
+**경로 관측**: 기존 사건 원장의 `cognition.supervisor_selected`·`cognition.route`·`cognition.evaluation`이 감독 선택 사유·실행 차선·실제 검수 경로를 구분한다. `model.input`은 호출별 텍스트 크기만, `model.usage`는 실제 토큰·캐시 사용량을 기록한다. `context.result_read`는 저장된 원문 조회의 왕복을 계수한다. 미측정 과거 기록은 미사용으로 간주하지 않는다. 한 작업의 기록은 여러 원장(에피소드·궤적 사건·쓰기 원장·검수 저장소·과제 원장·대화 DB)에 나뉘어 있고, 물리 통합 대신 읽기 전용 **실행 통합 조회**(`services/execution_trace.py`, `/world-pulse/episodes/{id}/trace`)가 한 응답으로 연결해 미관측·누락·충돌을 드러낸다 — 주행기록 상세 화면이 소비자다. [실행 통합 조회 설계](../../docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md).
 
 주행기록의 라운드와 IBL 호출 횟수는 별개다. Codex는 로컬 롤아웃의 응답 ID로 라운드를 관측하고, 한 응답에 포함된 여러 도구를 라운드로 중복 집계하지 않는다. 1라운드도 표시하며 원본을 못 읽은 경우는 미측정으로 남긴다. [Codex 주행기록 수리](../../docs/CODEX_JOURNAL_2026_09_12.md).
 
-**내용과 기억의 근거**: 최종 텍스트 산출물은 하네스가 본문과 지문을 수집해 평가 입력에 포함하고, 실행자가 남긴 의미·출처·계수 근거와 대조한다. 계수는 최종 행의 필터·사건 식별자로 다시 계산하며, 행 변환 뒤 옛 criteria와 행수는 상류 근거로 분리한다. 자동 기억·기억 정리·경험 학습은 원문 선택을 우선한다. 부분 실행 용례는 전체 목표의 자동 반사 후보로 쓰지 않는다. [결과물 검증 규약](../guides/result_quality.md), [수리와 검증](../../docs/EPISODE_3395_ROOT_REPAIRS_2026_09_11.md).
+**내용과 기억의 근거**: 최종 텍스트 산출물은 하네스가 본문과 지문을 수집해 평가 입력에 포함하고, 실행자가 남긴 의미·출처·계수 근거와 대조한다. 계수는 최종 행의 필터·사건 식별자로 다시 계산하며, 행 변환 뒤 옛 criteria와 행수는 상류 근거로 분리한다. 자동 기억·기억 정리·경험 학습은 원문 선택을 우선한다. 장기 기억은 최종 응답이 전달된 뒤 사용자 원문 가운데 지속 가치가 있는 것만 선별해 쓰며, `[self:memory]{op:"save"}`는 즉시 저장하지 않고 정책 안내(`saved:false`)를 돌려준다 — [최종 응답 후 기억 선별](../../docs/MEMORY_FINAL_RETENTION_2026_09_12.md). 부분 실행 용례는 전체 목표의 자동 반사 후보로 쓰지 않는다. [결과물 검증 규약](../guides/result_quality.md), [수리와 검증](../../docs/EPISODE_3395_ROOT_REPAIRS_2026_09_11.md).
 
 **검수 후 전달**: 감독 턴에서 등록 스크립트의 환경에 비공개 작업대가 전달된다. `보고서HTML`은 공유창고 출력을 이곳의 초안으로 만들고 공개 대상 경로를 선언한다. 에이전트의 알림도 같은 검수 대기열에 보관한다(시스템 서비스 알림은 별도). 평가자가 제공받은 초안·알림을 승인하고 하네스가 평가 전후 manifest 지문 일치를 확인하면 하네스가 그 바이트를 원자적으로 공개하고 알림을 전달한다. 미승인·취소·지문 변경이면 대기물을 보존하며, 공개 실패는 목표 달성으로 기록하지 않는다. 임의 셸/쓰기의 모든 외부 부작용을 가로채는 보편 트랜잭션은 아니다. 구현 계약은 `supervision_delivery.py`, 수리 근거는 `docs/EPISODE_3352_REPAIRS_2026_09_10.md`.
 
@@ -143,9 +143,10 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 
 - **소유**: 네 PC에서 도는 개인 소유 프로그램. 하드웨어도 정보도 네 통제 아래. (중앙 SaaS 아님.)
 - **능력**: IBL 노드의 실제 구현체 = **도구 패키지**(폴더 기반 동적 로딩). 설치/철거가 코드+어휘를 원자적으로 넣고 뺀다. → [packages.md](packages.md)
-- **여러 몸**: PC(허브)와 폰이 각각 독립 자아(폰=온디바이스 두뇌)이고, 낯선 PC 도 USB 손발로 잠깐 몸이 된다. 사용자 세계-데이터(연락처·일정·비즈니스)는 CRDT로 공유·동기화, 각 자아의 주관적 기억(대화·해마)은 사적. **사전도 몸마다 다르다** — 설치된 몸은 자기 어휘만 갖는다. → [architecture.md](architecture.md) · [communication.md](communication.md)
+- **여러 몸**: PC(허브)와 폰이 각각 독립 자아(폰=온디바이스 두뇌)이고, 낯선 PC 도 USB 손발로 잠깐 몸이 된다. 사용자 세계-데이터(연락처·일정·비즈니스)는 CRDT로 공유·동기화, 각 자아의 주관적 기억(대화·해마)은 사적. **사전도 몸마다 다르다** — 몸은 보유 사전집 가운데 자기 활성 원장(`data/vocabulary/activation.json`)이 깨운 묶음만 소개·회상·실행하고, 필수 공급자는 정책이 보호한다. → [architecture.md](architecture.md) · [communication.md](communication.md) · [packages.md](packages.md) '보유와 활성'
 - **몸끼리**: 특권 배관 대신 **명함**(`/nodes/card`)과 **자연어 부탁**(`[others:ask]`) — 받는 몸이 자기 사전으로 컴파일해 실행한다. 특별함은 배관이 아니라 **이웃 등급**이다.
 - **소통**: Gmail·Nostr(NIP-17 DM) + 탈중앙 망 **IndieNet**. AI와, 이웃과, 에이전트끼리 소통. → [communication.md](communication.md)
+- **몸의 재기동**: 재기동은 백엔드 밖의 단일 제어자(`restart_controller`, 입구 `backend/api.py start|restart|status|shutdown --wait`)가 새 작업 접수 차단 → 진행 작업 종료 대기 → 코드 사전검사 → 재기동 → 복구를 소유한다. 워커의 자동 리로더는 없고, 상주 서비스(실행 루프·브라우저 드라이버·풀 스레드)의 수명은 작업 수명과 분리해 세며, 프로세스 생존은 PID+출생 신원으로 판정한다(시계 보정에 흔들리지 않게). RED 자기수정의 적용·검증·복구도 이 제어자가 죽음을 넘어 맡는다. → [technical.md](technical.md) '데스크탑 재기동 제어' · 설계 [재기동 제어](../../docs/RESTART_COORDINATION_DESIGN_2026_09_11.md) · [상주 수명 분리](../../docs/RUNTIME_SERVICE_LIFETIME_2026_09_12.md) · [시계 보정과 신원](../../docs/RESTART_CLOCK_IDENTITY_2026_09_12.md)
 - **자기 몸의 변화를 기억한다**(몸 원장, 2026-08-21): git(추적 파일의 사건) + 쓰기 관문 원장(런타임 쓰기)을 `[self:body]{op}` 어휘로 회상한다. 몸이 바뀌면 몸에 대한 가정이 깨지므로, 변화 자체가 연상 가능한 기억이어야 한다 — 실제로 층 구조 개편이 회상 불가능해 낡은 가정이 6주 잠복한 사건이 계기였다. 행위자(누가·무슨 과제로·어디서)가 실려 "이 파일 왜 바뀌었나"가 한 호출에 닫힌다. → [architecture.md](architecture.md) '몸 원장'
 
 ---
@@ -170,4 +171,4 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 → 더 깊이: [vision.md](vision.md) (인지 외골격의 4문제의식·모양·기반 철학)
 
 ---
-*최근 변경(2026-08-28): 2장 IBL — '언어의 한계는 진짜 프로그램이 적발한다'(08-27~28 개정 여덟·세 보고서 완성 프로그램)와 '실패가 위치를 갖는다'(트레이스백·criteria) 추가. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-09-14): 1장 안경 메뉴 도구 창(내 어휘·프롬프트 구성·가이드 파일) 포인터, 3장 실행 통합 조회·최종 응답 후 기억 선별, 6장 활성 원장·재기동 제어 포인터. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

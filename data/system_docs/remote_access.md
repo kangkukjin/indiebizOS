@@ -1,8 +1,8 @@
 ---
 title: 원격 접속
 scope: Cloudflare Tunnel, 원격 Finder/런처, 세션 인증, NAS 연동
-owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_react.py, nas_*.py
-last_updated: 2026-09-11
+owner_code: api_tunnel.py, api_nas.py, api_launcher_web.py, launcher_surface_remote.py, launcher_react.py, nas_*.py
+last_updated: 2026-09-14
 see_also: [architecture.md, technical.md, ibl.md]
 ---
 
@@ -179,7 +179,10 @@ Cloudflare 발급(`cdn_provision`)은 터널뿐 아니라 R2 캐시 Worker 까�
 | `/launcher/config` | GET/POST | - | 설정 조회/저장 |
 | `/launcher/auth/login` | POST | - | 로그인 → 세션 발급 |
 | `/launcher/auth/logout` | POST | ✓ | 로그아웃 |
-| `/launcher/app` | GET | - | 웹 앱 HTML (3표면) |
+| `/launcher/app` | GET | - | 웹 앱 HTML (`launcher_surface_remote.py` 조립, no-store) |
+| `/launcher/auth/session` | GET | - | 이 요청이 외부인지·세션이 유효한지 판정만 반환 |
+| `/launcher/lite` | GET | - | 구형 기기용 경량 셸(ES5+XHR) — 데이터 API 는 세션 뒤 |
+| `/launcher/ui/{path}` | GET | - | React 번들 정적 자산(허용 형식만) — 기본 런처는 쓰지 않음 |
 | `/ibl/translate`·`/ibl/validate`·`/ibl/execute`·`/ibl/distill` | POST | ✓(외부만) | 조종실 — 자연어→IBL 번역·dry-run 검수·실행·증류 |
 | `/warehouse-feed/*` | GET/POST | ✓ | 공유창고 이웃 탭(피드·검색·리트윗) |
 | `/launcher/instruments` | GET | ✓(외부만) | 앱 계기 매니페스트 — ibl_nodes.yaml의 `app:` 블록에서 자동 파생. 데스크탑(localhost)은 무인증, 터널 경유는 launcher 세션 필요 |
@@ -196,12 +199,12 @@ WebSocket `/ws/chat/{client_id}`·`/ws/launcher`도 같은 원격 판정과 런�
 }
 ```
 
-### 웹 앱 기능 (5탭)
+### 웹 앱 기능 (표면 탭 4 + 앱 타일)
 - **자율주행**: 시스템 AI/프로젝트 에이전트 채팅, 스위치 실행
-- **조종실**: 자연어→IBL 번역 → dry-run 검수 → 실행 (+ 시스템 상태·모델 기어·주행기록·손발 스위치·설명 감사 재실행)
+- **조종실**: 자연어→IBL 번역 → dry-run 검수 → 실행 (+ 시스템 상태·모델 기어·주행기록·손발 스위치·설명 감사 재실행). 주행기록은 진행 중 주행도 보이며(펼쳐 두면 5초마다 재조회) 라운드·IBL 횟수를 표시하고 미측정은 글자로 밝힌다(2026-09-12, memory.md §3)
 - **앱**: `app:` 블록에서 파생된 계기를 데스크탑과 같은 어휘로 렌더 (0토큰)
 - **공유창고**: 내 창고 파인더(업로드·이동) + 이웃 탭(피드 카드·검색·리트윗·DM·인앱 파인더) + 이웃찾기 두 갈래(소개글 / 둘러보기)·📣 공개 추천 — 2026-07-29 데스크탑과 **파리티**(같은 API·같은 계약, 백엔드 신규 0)
-- **포식**: 파일/디스크 포식 브라우저
+- **포식(검색 브라우저)**: 표면 탭이 아니라 앱 표면의 홈 타일로 진입
 - 다크 테마 UI · 모바일 반응형 · 홈 화면 설치(웹 앱 매니페스트, 캐시 없음)
 
 ---
@@ -355,7 +358,7 @@ CLOUDFLARE_ACCOUNT_ID: 1234567890abcdef
 환경변수가 적용되도록 IndieBiz OS를 재시작합니다.
 
 - 런처 창을 닫고 다시 실행
-- 또는 터미널에서 백엔드 재시작
+- 또는 터미널에서 백엔드 재시작 — 공식 경로는 재기동 제어자 `.venv/bin/python3 backend/api.py restart --wait`(2026-09-11 R1: 활성 작업의 종료를 기다린 뒤 한 현역만 교체, `docs/RESTART_COORDINATION_DESIGN_2026_09_11.md` §9)
 
 ### 11단계: 터널 설정
 

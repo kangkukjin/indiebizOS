@@ -558,7 +558,7 @@ IBL 액션을 연산자로 연결하면 파이프라인이 된다.
 - 가장 흔한 관습은 카드 `{title, meta, summary, url, image?}`(검색·매물·뉴스) — 단 `title`조차 보장 아닌 **열린 항목**.
 - 같은 items가 통계/시세는 **수치 칸을 담은 행 dict**(첫 키=x축)로, 문서는 **문단 항목**(type·text)으로 흐른다 — *받는 쪽(소비자)이 필요한 view로 재구성*한다.
 - 액션은 `returns:` 로 자기 역할을 선언한다: **items**(생성=통화 냄) · **transform**(변환=통화→통화) · **scalar**(단일값·통화 아님) · **effect**(행동·종착).
-- **변환자는 `flow:` 로 흐름 규칙을 선언한다**(2026-09-05, 정본 `docs/IBL_STATIC_TYPECHECK_HANDOFF.md`): `accepts`(items·prose·same-kind·pair…) · `emits`(same·items·prose·scalar·effect) · `columns`(keep·subset·rename·add·reset·open·union) · `columns_param`·`reads_fields`. `returns: transform` 인데 flow 가 없으면 빌드 `--check` 가 막는다. 열이 데이터(파일·원장)가 정하는 액션은 `columns_from: data`. 이 선언과 fixture 실측 열 카탈로그를 읽는 **정적 통화 검사기**(`backend/ibl/ibl_typecheck.py`)가 실행 전에 문장별 통화·열을 계산한다 — 확정된 위반(산문 뒤 items 변환자·확정 열 밖 필드·prose 에 .items)만 error 로 실행 전에 거절하고, 미상(unknown)은 절대 빨강이 아니다(`scripts/check_validate_parity.py --typecheck` 가 '실행되는 문장에 error 0' 을 집행). 창구 셋 = 실행 관문(`execute_ibl`) · `execute_ibl{check: true}`(실행 없이 types·issues — 모델의 탐침 자리) · `/ibl/validate`. 함수·관용구·워크플로의 서명은 반환 모양을 함께 말한다: `[fn:이름]{슬롯} → items⟨title·url⟩`. ★흐름 규칙은 코드가 아니라 사전 데이터다 — 검사기 코드에 액션 이름이 없다(언어의 경계).
+- **변환자는 `flow:` 로 흐름 규칙을 선언한다**(2026-09-05, 정본 `docs/IBL_STATIC_TYPECHECK_HANDOFF.md`): `accepts`(items·prose·same-kind·pair…) · `emits`(same·items·prose·scalar·effect) · `columns`(keep·subset·rename·add·reset·open·union) · `columns_param`·`columns_param_aliases`(실행기가 같은 우선순위로 읽는 대체 슬롯 — select 의 cols/fields, compute 의 columns/expr; 2026-09-12 검사기가 columns 만 보던 불일치의 수리) · `reads_fields`, 계산식 진단의 처방도 사전이 든다(`scalar_expr_params`·`scalar_expr_hint` — set 형태·`col("특수문자 열")` 안내). `returns: transform` 인데 flow 가 없으면 빌드 `--check` 가 막는다. 열이 데이터(파일·원장)가 정하는 액션은 `columns_from: data`. 이 선언과 fixture 실측 열 카탈로그를 읽는 **정적 통화 검사기**(`backend/ibl/ibl_typecheck.py`)가 실행 전에 문장별 통화·열을 계산한다 — 확정된 위반(산문 뒤 items 변환자·확정 열 밖 필드·prose 에 .items)만 error 로 실행 전에 거절하고, 미상(unknown)은 절대 빨강이 아니다(`scripts/check_validate_parity.py --typecheck` 가 '실행되는 문장에 error 0' 을 집행). 창구 셋 = 실행 관문(`execute_ibl`) · `execute_ibl{check: true}`(실행 없이 types·issues — 모델의 탐침 자리) · `/ibl/validate`. 함수·관용구·워크플로의 서명은 반환 모양을 함께 말한다: `[fn:이름]{슬롯} → items⟨title·url⟩`. ★흐름 규칙은 코드가 아니라 사전 데이터다 — 검사기 코드에 액션 이름이 없다(언어의 경계).
 
 **괄호 분기의 변수와 산문 수집 (2026-09-08)**: 병렬 분기의 `($기술 >> [table:take]{n:-6}) & $사례`는 파이프 머리·맨몸 분기와 같은 변수 방출기를 쓴다. `${이름.경로}`와 함수 슬롯도 같은 규약이다. 미할당은 실행 전 오류이며, 폴백은 여전히 값 대신 시도를 받는다. `each` 안의 do가 산문으로 끝나면 `collect:true`로 결과를 모은다(문자열은 `value` 열, 객체는 결과 키). 생략 시 원 행만 흐르며, 정적 검사는 확정된 산문 유실을 경고하고 런타임은 수집 방법을 안내한다.
 
@@ -651,7 +651,7 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
 `execute_ibl(code:"", read_result:{id,offset,limit,path?})`로 읽는다. path는 키/배열 인덱스의
 목록(예 `["final_result","items"]`)이며 중첩 JSON 문자열을 해제한 값에 문자 페이지를 적용한다.
 생략하면 원 봉투 그대로다. `result_ref.read_args`를 그대로 넣으면 실제 큰 본문 필드부터
-읽으며, `result_ref.paths`는 원문에서 확인한 큰 직접 필드 경로(최대 6개)다. `limit`는
+읽으며, `result_ref.paths`는 원문에서 확인한 큰 직접 필드 경로(최대 6개, 완전한 스키마가 아니다)이고 `result_ref.max_limit`가 상한을 말한다. 문자 한도와 조회 스키마의 소유자는 `backend/base/result_read_contract.py`(네이티브 도구·FastMCP 가 같은 스키마를 내보내며, 잘못된 경로·한도를 자동 보정하지 않는다). `limit`는
 문자 수 1~60000(기본 60000), `offset`은 0 이상이다. 조회 페이지도 `_display.max_chars`로
 전달 예산을 선언하므로 MCP·프로바이더의 액션당 16K 제한으로 다시 접지 않는다.
 JSON 직렬화 여유는 기존 문서 전달 예산을 쓰고, 명시적인 호스트 제한은 유지한다. 다음 페이지는 응답의 `next_read`를
@@ -694,6 +694,7 @@ $result = [sense:search]{query: "AI 뉴스"}
 - `$변수명` 또는 `$변수명.필드.경로`로 이전 결과를 참조
 - 파이프라인(`>>`) 없이도 중간 결과를 명시적으로 전달 가능
 - 변수명 경계는 정규식 `\w` — 영문·숫자·밑줄 **그리고 한글**(유니코드 낱말 문자)
+- **할당은 문장 머리에만** 온다(파서 `_extract_statements` 가 줄 머리의 `$이름 =` 만 할당으로 읽는다). `$a = […] & $b = […]` 처럼 `&`·`>>` 뒤에 이은 할당은 파싱 오류이며, 잔여가 `$이름 =` 꼴이면 거절문에 원인과 처방(할당은 각각 제 줄 또는 `;` 로 두고 `$a & $b >> …` 로 이름만 묶기)을 붙인다 — 할당이 아닌 잔여에는 붙이지 않는다(2026-09-13, ep3688 같은 거절 2회 반복의 수리)
 
 ### 치환 의미론 — 통짜 경로 참조는 원형 (언어 개정 2026-08-27, 사용자 판정)
 
@@ -860,6 +861,7 @@ steps:
 - **한글 조사·단위 함정**: 변수 이름 경계가 `\w` 라 `"$n건"` 은 변수 `n건` 으로 읽힌다 → 괄호형 `"${n}건"` 으로 끊는다.
 - **재귀·순환 가드**(`backend/ibl/workflow_contract.py`): 같은 id 재진입은 경로를 보여주며 즉시 거절(직접·상호 모두), 중첩 깊이 상한은 5. 반복은 `[repeat:]` / `[table:each]` 로 쓴다. ★중첩 실행 깊이(`MAX_NEST_DEPTH`)는 몸통에서 0으로 재시작한다 — "긴 절차는 워크플로우에 저장해 id 로 부르라"는 탈출구 안내를 지키려면 그래야 하고, 그래서 워크플로우 호출 자체를 세는 별도 스택(`_wf_stack`)이 있다.
 - **합성**: `run` 은 몸통 마지막 문장의 items 를 통화로 내므로 `[self:workflow]{op:"run", …} >> [table:*]` 로 이어 쓸 수 있다(effect 로 끝나는 몸통이면 통화 없음).
+- **첫 입력 슬롯의 파이프 연결**(2026-09-13 언어 개정, 정본 `docs/IBL_FN_PIPE_INPUT_2026_09_13.md`): `[def:]` 함수와 이름 붙은 관용구의 몸 첫 파이프가 맨몸 자유 변수(`$목록 >> …`)로 시작하면 그 변수가 입력 슬롯이다 — `[생산자] >> [fn:이름]{나머지 인자}` 의 앞 통화가 그 한 인자를 채우고, 명시 인자(빈 목록 포함)가 있으면 명시값이 이긴다. 판정은 `workflow_contract.pipe_input_param` 한 벌(실행기 `_execute_fn`·모델 지도 `ibl_access`·선정집 `curate_idioms` 가 공유). 경로 참조·병렬·조건·후속 문장의 미할당은 추측하지 않고, 앞 통화가 없거나 다른 필수 인자가 빠지면 종전대로 거절한다. ★`[self:workflow]{op:"run"}` 과 `[fn:]` 이 저장 워크플로(원장)를 부르는 길은 이 규칙 밖 — `params`/`params_default` 규약 그대로다.
 
 ---
 
@@ -963,7 +965,7 @@ self:
 
 에이전트가 `[sense:search]{query: "AI"}`을 호출하면:
 
-1. **액션 매칭**: `sense.actions.web_search`가 있는가? → 있으면 실행
+1. **액션 매칭**: `sense.actions.search`가 있는가? → 있으면 실행
 2. **에러**: 없으면 사용 가능한 액션 목록 반환
 
 ---

@@ -723,10 +723,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     else:
         out["success"] = True
         if err_n:
-            # ★부분 실패가 통화에서 안 보이게 됐으므로(성공만 흐른다) 봉투가 더 크게 말해야
-            #   한다 — 침묵 금지. 소비자가 warning 하나만 봐도 부분성을 안다.
-            out["warning"] = (f"[each] {err_n}/{processed}행 실패 (성공 {ok_n}) — 통화에는 성공분만 "
-                              f"흐릅니다. 실패한 원 행과 사유는 봉투의 errors 를 보세요.")
+            # warning만 읽어도 실패 행이 통화에 포함되는지 정확히 알 수 있어야 한다.
+            flow_note = ("실패 행도 _error 표식과 함께 통화에 포함됩니다."
+                         if on_error == "keep" else "통화에는 성공분만 흐릅니다.")
+            out["warning"] = (f"[each] {err_n}/{processed}행 실패 (성공 {ok_n}) — {flow_note} "
+                              "실패한 원 행과 사유는 봉투의 errors 를 보세요.")
             notes.append(f"{err_n}/{processed}건 실패 (성공 {ok_n}) — errors 참조")
     if notes:
         out["message"] = " / ".join(notes)

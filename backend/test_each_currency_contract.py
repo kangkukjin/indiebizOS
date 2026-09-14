@@ -112,6 +112,42 @@ def test_C4_부분_실패는_통화에_없고_봉투에_있다():
     assert "고장" in out["errors"][0]["_error"]
     # ★침묵 금지 — 통화만 보면 부분성이 안 보이므로 봉투가 크게 말해야 한다
     assert "warning" in out and "errors" in out["warning"], out
+    assert "통화에는 성공분만 흐릅니다" in out["warning"]
+
+
+@pytest.mark.parametrize("parallel", [1, 3])
+@pytest.mark.parametrize("failure_kind", ["execution", "binding"])
+@pytest.mark.parametrize("all_failed", [False, True])
+def test_keep_warning_matches_failed_rows_in_items(
+        monkeypatch, parallel, failure_kind, all_failed):
+    """keep의 부분·전량 실패 안내가 실제 통화의 실패 행과 일치해야 한다."""
+    import workflow_engine
+
+    rows = [dict(row) for row in PARENTS]
+    if failure_kind == "binding":
+        for row in rows:
+            if all_failed or row["city"] == "용인":
+                row.pop("city")
+
+    def child(steps, *args, **kwargs):
+        if failure_kind == "execution" and (
+                all_failed or steps[0]["params"]["city"] == "용인"):
+            return dict(FAIL)
+        return {"success": True, "final_result": dict(CURRENCY)}
+
+    monkeypatch.setattr(workflow_engine, "execute_pipeline", child)
+    out = _execute_table_each({
+        "items": rows, "do": "[sense:weather]{city: $it.city}",
+        "on_error": "keep", "parallel": parallel,
+    }, ".")
+
+    failed_rows = [row for row in out["items"] if "_error" in row]
+    assert out["success"] is True
+    assert len(failed_rows) == out["error_count"] == (2 if all_failed else 1)
+    assert out["ok_count"] == (0 if all_failed else 1)
+    assert "실패 행도 _error 표식과 함께 통화에 포함됩니다" in out["warning"]
+    assert "성공분만" not in out["warning"]
+    assert "errors" in out["warning"]
 
 
 def test_C5_전_행_실패는_상위로_전파한다():

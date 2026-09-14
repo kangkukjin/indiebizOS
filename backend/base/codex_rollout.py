@@ -16,6 +16,7 @@ class CodexResponseLedger:
         self.turn_id = None
         self.seen = set()
         self.turn_usage = None
+        self.final_text = None
 
     def poll(self):
         if not re.fullmatch(r"[a-zA-Z0-9-]+", self.thread_id or ""):
@@ -37,7 +38,8 @@ class CodexResponseLedger:
                     if not line.endswith(b"\n"):
                         break
                     self.offset = stream.tell()
-                    if b'"token_usage_record"' not in line and b'"task_started"' not in line:
+                    if not any(marker in line for marker in
+                               (b'"token_usage_record"', b'"task_started"', b'"response_item"')):
                         continue
                     try:
                         row = json.loads(line)
@@ -51,6 +53,14 @@ class CodexResponseLedger:
                         continue
                     if row.get("type") == "event_msg" and payload.get("type") == "task_started":
                         self.turn_id = payload.get("turn_id")
+                        self.final_text = None
+                    elif (self.turn_id and row.get("type") == "response_item"
+                          and payload.get("type") == "message"
+                          and payload.get("role") == "assistant"
+                          and payload.get("phase") == "final_answer"):
+                        self.final_text = "".join(
+                            part.get("text", "") for part in payload.get("content", [])
+                            if isinstance(part, dict) and part.get("type") == "output_text")
                     elif row.get("type") == "token_usage_record":
                         response_id = payload.get("response_id")
                         if (not self.turn_id or payload.get("turn_id") != self.turn_id

@@ -311,6 +311,7 @@ class CodexProvider(CliSubprocessProvider):
         # 롤아웃에서 읽은 모델 컨텍스트 창 (리셋 임계의 근거)
         self._observed_window: int = 0
         self._response_ledger = None
+        self._last_agent_message = None
 
     # ================= 인증·바이너리 =================
 
@@ -353,6 +354,7 @@ class CodexProvider(CliSubprocessProvider):
     def _reset_turn_state(self) -> None:
         self._started_items.clear()
         self._response_ledger = None
+        self._last_agent_message = None
         self._turn_base_total = 0
         self._turn_base_cached = 0
         self._turn_base_output = 0
@@ -789,6 +791,7 @@ class CodexProvider(CliSubprocessProvider):
             if itype == "agent_message":
                 text = item.get("text") or ""
                 if text:
+                    self._last_agent_message = text
                     # ★문단 구분자를 우리가 넣는다(실측 2026-08-30 연기시험): claude_code 는
                     # 텍스트가 토큰 단위로 흘러 자연히 이어지지만, Codex 는 **완결된 메시지**가
                     # 통짜로 온다. 그냥 이으면 앞 메시지의 마침표에 다음 메시지가 달라붙어
@@ -878,8 +881,17 @@ class CodexProvider(CliSubprocessProvider):
                 f"in={turn_input} out={turn_output} cache_read={turn_cached} "
                 f"(CLI보고 in={input_tokens} out={output_tokens}{cache_info})"
             )
+            # 진행 설명은 스트림에 유지하되 최종 전달/JSON 소비자에 합치지 않는다.
+            # exec item에는 phase가 없어 원장의 명시적 final_answer를 우선한다.
+            # 원장 없는 구버전도 완결된 마지막 agent_message를 사용한다.
+            final_text = (self._response_ledger.final_text
+                          if self._response_ledger is not None else None)
+            if final_text is None:
+                final_text = self._last_agent_message
+            if final_text is None:
+                final_text = accumulated_text
             out.append((
-                {"type": "final", "content": self._finalize_text(accumulated_text.strip())},
+                {"type": "final", "content": self._finalize_text(final_text.strip())},
                 None,
             ))
 

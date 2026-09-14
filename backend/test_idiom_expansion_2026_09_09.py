@@ -33,7 +33,7 @@ def test_new_bodies_are_closed_non_ai_procedures():
     for e in CATALOG['idioms']:
         if e['name'] not in NEW:
             continue
-        assert e.get('always_on') is True
+        # 본문 계약은 상시 노출 선정과 독립적이다. 내려간 관용구도 호출 가능하다.
         parse_function_body(e['body'])
         actions = set(re.findall(r'\[([a-z_]+:[a-z_]+)', e['body']))
         assert actions and actions <= LEAVES
@@ -148,10 +148,12 @@ def test_all_six_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, mon
     assert env.count('↳ 관용구') == 6
     for e in entries:
         assert f"[fn:{e['name']}]" in ibl_access.idioms_map(None)
-    for name in ('원장에누적', '위치마다읽기'):
+    for name in ('원장에누적', '위치마다읽기', '최신범위읽기', '묶어순위내기'):
         assert f'[fn:{name}]' not in env
+    for name in ('좁혀서읽기', '고치고확인하기'):
+        assert f'[fn:{name}]' in env
     core = ibl_access.build_environment(allowed_nodes=['self', 'others', 'table'])
-    assert '[fn:주소마다읽기]' not in core and '[fn:묶어순위내기]' in core
+    assert '[fn:주소마다읽기]' not in core and '[fn:미처리만고르기]' in core
     hidden = ibl_access.build_environment(expose_idioms=False)
     assert '↳ 관용구' not in hidden and '<ibl_idioms' not in hidden
 

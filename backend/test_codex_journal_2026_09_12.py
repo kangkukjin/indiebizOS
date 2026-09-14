@@ -87,6 +87,48 @@ def test_missing_rollout_does_not_turn_items_into_rounds(tmp_path, monkeypatch):
     assert rounds == []
 
 
+def test_final_answer_ledger_ignores_commentary_and_old_turn(tmp_path):
+    def message(text, phase, second=1):
+        return _row("response_item", {"type": "message", "role": "assistant",
+            "phase": phase, "content": [{"type": "output_text", "text": text}]}, second)
+    path = _file(tmp_path, message("old", "final_answer", 0)
+                 + _row("event_msg", {"type": "task_started", "turn_id": "new"})
+                 + message("checking", "commentary")
+                 + message('{"status":"CONTINUE","reason":"recovered"}', "final_answer")
+                 + message("late progress", "commentary"))
+    ledger = CodexResponseLedger(tmp_path, "thread", 0)
+    ledger.poll()
+    assert json.loads(ledger.final_text)["status"] == "CONTINUE"
+    with path.open("a") as stream:
+        stream.write(_row("event_msg", {"type": "task_started", "turn_id": "next"}, 2))
+    ledger.poll()
+    assert ledger.final_text is None
+
+
+def test_provider_streams_progress_but_delivers_only_final(tmp_path, monkeypatch):
+    from providers import get_provider
+    from supervisor_runtime import parse_decision
+    monkeypatch.setenv("CODEX_HOME", str(tmp_path))
+    provider = get_provider("codex", api_key="", model="m", system_prompt="")
+    accumulated = ""
+    decision = '{"status":"CONTINUE","reason":"recovered"}'
+    streamed = []
+    for text in ["실패 기록을 확인하겠습니다.", decision]:
+        for event, updated in provider._translate_stream_event({"type": "item.completed",
+                "item": {"type": "agent_message", "text": text}}, accumulated, 0):
+            streamed.append(event)
+            if updated is not None:
+                accumulated = updated
+    assert "확인하겠습니다" in accumulated
+    result = provider._translate_stream_event({"type": "turn.completed", "usage": {}}, accumulated, 0)
+    final = next(event["content"] for event, _ in result if event["type"] == "final")
+    assert final == decision
+    assert parse_decision(final)["status"] == "CONTINUE"
+    assert len(streamed) == 2
+    provider._reset_turn_state()
+    assert provider._last_agent_message is None
+
+
 def _journal_db(tmp_path, monkeypatch):
     import episode_logger as el
     path = tmp_path / "episodes.db"

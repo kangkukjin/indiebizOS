@@ -62,9 +62,21 @@ def run(envelope, resolved, *, name='', body_session='', on_event=None, manager=
             if old['state'] == 'running':
                 return {'success': False, 'error': 'request_in_progress'}
             return copy.deepcopy(old['result'])
+        previous = None
+        if envelope.get('reply_to'):
+            previous = RECORDS.get((*key[:2], envelope['reply_to']))
+            if (not previous or previous['body_session'] != body_session
+                    or previous.get('conversation_id') != envelope['conversation_id']
+                    or not previous.get('result', {}).get('input_required')
+                    or previous.get('continued_by')):
+                return {'success': False, 'error': '답변할 작업이 만료됐습니다. 새 작업으로 요청해 주세요.'}
+            resolved = {**previous['resolved'], 'workflow': None, 'code': None,
+                        'message': resolved.get('message', '')}
         if len(RECORDS) >= MAX_RECORDS or sum(r.get('bytes', 0) for r in RECORDS.values()) >= MAX_TOTAL_BYTES - MAX_RESULT_BYTES:
             return {'success': False, 'error': 'client_request_capacity'}
-        RECORDS[key] = {'digest': digest, 'state': 'running', 'bytes': MAX_RESULT_BYTES, 'updated': time.monotonic(), 'body_session': body_session}
+        if previous is not None:
+            previous['continued_by'] = envelope['request_id']
+        RECORDS[key] = {'resolved': copy.deepcopy(resolved), 'conversation_id': envelope['conversation_id'], 'digest': digest, 'state': 'running', 'bytes': MAX_RESULT_BYTES, 'updated': time.monotonic(), 'body_session': body_session}
     def emit(kind, **data):
         if on_event:
             on_event({'type': kind, 'version': VERSION, 'request_id': envelope['request_id'],
@@ -93,7 +105,7 @@ def run(envelope, resolved, *, name='', body_session='', on_event=None, manager=
         elif result.get('success'):
             result['delivery'] = 'delivered' if result.get('files') else 'response_ready'
         else:
-            result['delivery'] = 'error'
+            result['delivery'] = 'cancelled' if result.get('error_type') == 'cancelled' else 'error'
         emit(result['delivery'], question=result.get('input_required'), artifacts=[{k: v for k, v in a.items() if k != 'data'} for a in result.get('artifacts', [])])
     except Exception:
         result = {'success': False, 'error': '클라이언트 요청을 완료하지 못했습니다',

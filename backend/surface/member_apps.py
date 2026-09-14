@@ -8,7 +8,7 @@ from member_profile import visible
 from ibl_registry import load_nodes_installed
 
 
-def catalogue():
+def catalogue(local_apps=None):
     from api_launcher_web import _derive_instruments
     from runtime_utils import get_base_path
     import principal
@@ -27,6 +27,21 @@ def catalogue():
     candidates = [i for i in _derive_instruments(include_standalone=False)['instruments'] if i['id'] in source_ids]
     path = Path(get_base_path()) / 'data' / 'member_apps.yaml'
     candidates += yaml.safe_load(path.read_text()) if path.exists() else []
+    if local_apps:
+        import json
+        if not isinstance(local_apps, list) or len(json.dumps(local_apps)) > 256000 or len(local_apps) > 30:
+            raise ValueError('내 앱 파일의 크기 또는 앱 수를 확인하세요')
+        for local in local_apps:
+            if not isinstance(local, dict) or not re.fullmatch(r'[A-Za-z0-9_-]{1,60}', str(local.get('id', ''))):
+                raise ValueError('내 앱 이름을 확인하세요')
+            # 로컬 앱은 회원 IBL 선언만 제공. 서버 조사 절차/프롬프트를 등록하지 않는다.
+            def requests(value):
+                if isinstance(value, dict):
+                    return 'request' in value or any(requests(v) for v in value.values())
+                return isinstance(value, list) and any(requests(v) for v in value)
+            if requests(local):
+                raise ValueError('내 앱은 공개 기능의 앱 동작으로 작성하세요')
+            candidates.append({**local, 'id': 'local_' + local['id']})
     def clean(obj):
         if isinstance(obj, list):
             return [v for x in obj if (v := clean(x)) is not None]
@@ -37,13 +52,13 @@ def catalogue():
         if obj.get('renderer', '').startswith('custom:'):
             return None
         for key, value in obj.items():
-            if key in ('action', 'options_action') and isinstance(value, str):
+            if (key == 'action' or key.endswith('_action')) and isinstance(value, str):
                 refs = re.findall(r'\[([a-z_]+:[a-z_]+)\]', value)
                 if not refs or any(q not in allowed for q in refs):
                     return None
             if isinstance(value, str) and ('%BASE%' in value or '~workspace' in value
                     or re.search(r'/(Users|home)/|[A-Z]:\\', value)
-                    or (key in ('action', 'options_action') and re.search(r'@\w+', value))):
+                    or ((key == 'action' or key.endswith('_action')) and re.search(r'@\w+', value))):
                 return None
         result = {k: v for k, x in obj.items() if (v := clean(x)) is not None}
         # 비공개 버튼을 지운 뒤 빈 탭/앱을 남기지 않는다.
@@ -53,6 +68,7 @@ def catalogue():
             return None
         return result
     instruments = []
+    candidates = list({app['id']: app for app in candidates}.values())
     for source in candidates:
         app = clean(copy.deepcopy(source))
         if app and (app.get('modes') or app.get('action') or app.get('request')):
@@ -67,39 +83,15 @@ def catalogue():
     return {'success': True, 'instruments': instruments, 'open_words': sorted(allowed)}
 
 
-def resolve_request(action_id, args):
-    """현재 공개 카탈로그에서만 앱 요청을 해소한다. 클라이언트 코드/프롬프트를 신뢰하지 않는다."""
-    import json
-    if not isinstance(args, dict) or len(json.dumps(args, ensure_ascii=False)) > 64000:
-        raise ValueError('앱 입력 제한 초과')
-    for app in catalogue()['instruments']:
-        for mode in app.get('modes', []):
-            candidates = [(f"{app['id']}:{mode.get('id', 'main')}", mode)]
-            candidates += [(f"{app['id']}:{mode.get('id', 'main')}:button:{i}", b) for i, b in enumerate(mode.get('buttons', []))]
-            for identity, spec in candidates:
-                if identity != action_id:
-                    continue
-                allowed = {i['key']: i for i in mode.get('inputs', [])}
-                if set(args) - set(allowed):
-                    raise ValueError('선언되지 않은 앱 입력')
-                values = {k: args.get(k, v.get('default', '')) for k, v in allowed.items()}
-                if any(not isinstance(v, (str, int, float, bool)) for v in values.values()):
-                    raise ValueError('앱 입력은 단일 값이어야 합니다')
-                if spec.get('request'):
-                    request = spec['request']
-                    fill = lambda text: re.sub(r'\$([A-Za-z_][A-Za-z_0-9]*)', lambda m: str(values.get(m[1], '')), text)
-                    return {'message': fill(request['message']), 'workflow': request.get('workflow'),
-                            'output': request.get('output')}
-                code = spec.get('action')
-                if not code:
-                    raise ValueError('실행할 앱 동작 없음')
-                # 값은 JSON 문자열 리터럴 내부만 치환. 따옴표를 닫아 새 IBL을 삽입할 수 없다.
-                def literal(match):
-                    text = json.loads(match[0])
-                    text = re.sub(r'\$([A-Za-z_][A-Za-z_0-9]*)', lambda m: str(values.get(m[1], '')), text)
-                    return json.dumps(text, ensure_ascii=False)
-                code = re.sub(r'"(?:\\.|[^"\\])*"', literal, code)
-                if re.search(r'\$[A-Za-z_]', re.sub(r'"(?:\\.|[^"\\])*"', '', code)):
-                    raise ValueError('지원하지 않는 앱 입력 위치')
-                return {'message': '앱 실행', 'code': code}
-    raise ValueError('현재 공개되지 않은 앱 동작입니다')
+def web_catalogue(local_apps=None):
+    from member_app_actions import compile_apps
+    result = catalogue(local_apps) if local_apps else catalogue()
+    result['instruments'], _ = compile_apps(result['instruments'])
+    return result
+
+
+def resolve_request(action_id, args, local_apps=None):
+    from member_app_actions import compile_apps, resolve
+    result = catalogue(local_apps) if local_apps else catalogue()
+    _, registry = compile_apps(result['instruments'])
+    return resolve(registry, action_id, args)

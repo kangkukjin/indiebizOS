@@ -315,6 +315,7 @@
     "surface/launcher_web_app",
     "surface/launcher_web_render",
     "surface/launcher_web_shell",
+    "surface/member_app_actions",
     "surface/member_app_frame",
     "surface/member_apps",
     "surface/member_browser",
@@ -364,8 +365,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 353,
-    "engine": 327,
+    "total": 354,
+    "engine": 328,
     "blocklist": 26
   }
 }

@@ -330,7 +330,9 @@ class MemberSessionManager:
                 s.history.append({"role": "assistant", "content": response})
                 s.turns += 1
                 s.last_turn_at = time.time()
-                return {"success": success, "response": response, "error": result.get("error"), "memory_saved": saved,
+                return {"success": success, "response": response,
+                        "error_type": "cancelled" if s.cancel.is_set() else result.get("error_type"),
+                        "error": "작업을 중단했습니다" if s.cancel.is_set() else result.get("error"), "memory_saved": saved,
                         "session": s.id, "task_id": task_id, "tokens": tokens, "app_result": result.get("app_result"),
                         "files": mr.current().get("delivered_files", []), "input_required": mr.current().get("input_required"), "sources": mr.current().get("research_sources", []), "turns_today": self.turns_today(nid)}
         except ClientWorkflowError as exc:

@@ -1,6 +1,6 @@
 # 외부사용자 웹앱과 클라이언트 담당 에이전트 개선안
 
-상태: 첫 구현 완료(공통 요청·실제 조사/전달·단일 초대). 실제 구현 범위·계약·후속 항목은 `CLIENT_AGENT_WEBAPP_IMPLEMENTATION_2026_09_15.md`를 참조한다. 아래의 현황 비교는 설계 당시 기준이다.
+상태: 공통 요청·실제 조사/전달·단일 초대에 이어 4단계 공통 표면과 지원 앱 전환 반영. 앱별 전환/미전환 판정은 `CLIENT_WEBAPP_APP_AUDIT_2026_09_15.md` 참조. 실제 구현 범위·계약·후속 항목은 `CLIENT_AGENT_WEBAPP_IMPLEMENTATION_2026_09_15.md`를 참조한다. 아래의 현황 비교는 설계 당시 기준이다.
 기준: 2026-09-15 정본 코드와 사용자 논의. 관련: EXTERNAL_SERVICE_APP_HANDOFF.md, MEMBER_WEB_DEFAULTS_2026_09_14.md, data/system_docs/communication.md.
 
 ## 1. 중심 개념

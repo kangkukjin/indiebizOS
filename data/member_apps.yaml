@@ -60,3 +60,65 @@
     inputs: [{key: id, placeholder: 등록된 프로그램 이름}]
     action: '[self:script]{op:"run",id:"$id"}'
     view: [{type: kv, rows: [{k: 실행 결과, v: '{stdout}'}]}]
+- id: member_documents
+  name: 문서
+  icon: 📄
+  web_only: true
+  modes:
+  - id: read
+    name: 읽기
+    note: 이 기기에서 선택한 문서만 읽습니다. PDF·Word·Excel·텍스트를 지원합니다.
+    inputs: [{key: path, type: file, placeholder: 문서 선택, required: true}]
+    action: '[self:read]{path:"$path",blocks:true}'
+    view: [{type: blocks, from: items}]
+  - id: fields
+    name: 양식 확인
+    note: PDF 또는 Word 양식에서 채울 수 있는 항목을 확인합니다.
+    inputs: [{key: path, type: file, placeholder: 양식 선택, required: true}]
+    action: '[self:fill]{path:"$path"}'
+    view: [{type: list_action, from: items, title: '{name}', sub: '{type}'}]
+  - id: fill
+    name: 양식 채우기
+    note: 선택한 파일을 임시로 처리한 뒤 완성된 문서를 이 기기로 돌려줍니다.
+    run_label: 문서 만들기
+    inputs:
+    - {key: path, type: file, placeholder: 양식 선택, required: true}
+    - key: field
+      type: select
+      label: 채울 항목 선택
+      required: true
+      options_action: '[self:fill]{path:"$path"}'
+      options_from: items
+      option_value: name
+      option_label: name
+    - {key: value, placeholder: 넣을 내용, required: true}
+    action: '[self:fill]{path:"$path",data:{"$field":"$value"}}'
+    view: [{type: kv, rows: [{k: 완성된 문서, v: '{path}'}]}]
+- id: member_search
+  name: 공개 웹 검색
+  icon: 🔎
+  web_only: true
+  modes:
+  - id: search
+    name: 검색
+    inputs: [{key: query, placeholder: 검색할 내용, required: true}]
+    action: '[sense:search]{query:"$query",source:"ddg"}'
+    view:
+    - type: card_list
+      from: items
+      card: {title: '{title}', lines: ['{url}', '{summary}']}
+      item_click:
+        action: '[sense:crawl]{url:"{url}"}'
+        view: [{type: blocks, from: items}]
+- id: member_location
+  name: 내 위치
+  icon: 📍
+  web_only: true
+  modes:
+  - id: locate
+    name: 현재 위치
+    note: 이 기기의 브라우저가 위치를 확인합니다. 위치 사용을 묻는 창이 나오면 선택하세요.
+    buttons: [{label: 현재 위치 확인, action: '[sense:here]{}'}]
+    action: '[sense:here]{}'
+    run_label: 현재 위치 확인
+    view: [{type: kv, rows: [{k: 위도, v: '{latitude}'}, {k: 경도, v: '{longitude}'}, {k: '정확도(m)', v: '{accuracy}'}]}]

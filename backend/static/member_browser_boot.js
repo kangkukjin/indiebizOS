@@ -4,7 +4,7 @@ function showMemberArtifacts(result){
   for(const file of result?.files||[]){
     if(file.on!=='body'||!file.saved||typeof file.path!=='string')continue;
     const row=document.createElement('p'),label=document.createElement('span'),button=document.createElement('button');
-    label.textContent='결과 파일이 이 기기에 저장됐습니다. ';label.title=file.path;
+    label.textContent=file.path.split('/').pop()+' · 이 기기에 저장됨 ';label.title=file.path;
     button.textContent='내려받기';button.onclick=async()=>{try{await memberBrowser.files.download(file.path)}catch(e){document.getElementById('status').textContent=e.message}};
     row.append(label,button);box.append(row);
   }
@@ -51,3 +51,11 @@ addEventListener('beforeunload',()=>{
   if(!memberBrowser?.running)return;
   fetch('/m/session/close',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:memberBrowser.key,body_session:memberBrowser.session}),keepalive:true}).catch(()=>{});
 });
+
+async function refreshMemberResults(){
+ try{const rows=await memberRequest('results');const box=document.getElementById('results');box.replaceChildren();for(const row of rows||[]){
+  if(['memory_recall','memory_save','result_query'].includes(row.command?.op))continue;
+  const p=document.createElement('p');const names={read:'파일 읽기',write:'파일 저장',list:'파일 목록',media:'재생',location:'현재 위치',javascript:'자료 처리',script:'내 프로그램'};
+  p.textContent=(names[row.command?.op]||'작업')+' · '+(row.state==='unknown'?'결과 확인 필요':row.result?.success===false?'완료하지 못함':'완료')+(row.result?.path?' · '+row.result.path:'');box.append(p);
+ }}catch(e){}
+}

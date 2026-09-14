@@ -21,7 +21,7 @@ class MemberBrowserRuntime {
   async approve(command){
     // 회원이 시작한 작업의 브라우저 내부 저장·계산은 기능마다 재승인하지 않는다.
     // run()의 작업/세션 검사와 프로그램 sandbox는 그대로 적용된다.
-    if(['read','list','info','memory_recall','result_query','write','mkdir','file_move','memory_save','javascript','script'].includes(command.op))return true;
+    if(['read','list','info','memory_recall','result_query','write','mkdir','file_move','memory_save','javascript','script','media','location'].includes(command.op))return true;
     if(command.op==='media'&&command.action==='status')return true;
     return new Promise(resolve=>{const timer=setTimeout(()=>answer(false),110000);const answer=allow=>{clearTimeout(timer);this.approvals.delete(command.request_key);resolve(allow)};this.approvals.set(command.request_key,{key:command.request_key,command,answer});memberApprovals()});
   }
@@ -78,7 +78,7 @@ class MemberBrowserRuntime {
     }
     if(c.op==='media'){
       const audio=document.getElementById('memberAudio');const action=c.action||'play';
-      if(action==='play'){const url=new URL(c.url);if(!['https:','http:'].includes(url.protocol))throw Error('스트림 주소 오류');audio.hidden=false;audio.src=url.href;await Promise.race([audio.play(),new Promise((_,reject)=>setTimeout(()=>reject(Error('재생 응답 시간 초과')),15000))])}
+      if(action==='play'){const url=new URL(c.url);if(!['https:','http:'].includes(url.protocol))throw Error('스트림 주소 오류');audio.hidden=false;audio.src=url.href;await this.playAudio(audio)}
       else if(action==='stop'){audio.pause();audio.removeAttribute('src');audio.load();audio.hidden=true}
       else if(!['status','volume'].includes(action))throw Error('지원하지 않는 재생 동작');
       if(c.volume!==undefined){if(c.volume<0||c.volume>100)throw Error('음량 범위 오류');audio.volume=c.volume/100}
@@ -87,6 +87,18 @@ class MemberBrowserRuntime {
     if(c.op==='location')return new Promise((resolve,reject)=>{if(!navigator.geolocation)return reject(Error('이 브라우저에서 위치를 지원하지 않습니다'));navigator.geolocation.getCurrentPosition(p=>resolve({success:true,latitude:p.coords.latitude,longitude:p.coords.longitude,accuracy:p.coords.accuracy}),e=>reject(Error(e.message)),{timeout:15000,maximumAge:0})});
     if(c.op==='info')return {success:true,os:'browser',workspace:'브라우저의 내 작업 공간'};
     return {success:false,error:'이 기능은 설치 없는 웹앱에서 지원하지 않습니다. 허브 기기에서 대신 실행하지 않습니다.'};
+  }
+  async playAudio(audio){
+    this.mediaAbort=new AbortController();const signal=this.mediaAbort.signal;
+    try{await new Promise((resolve,reject)=>{
+      let timer;
+      const finish=error=>{clearTimeout(timer);audio.removeEventListener('playing',played);audio.removeEventListener('error',failed);signal.removeEventListener('abort',cancel);if(error){audio.pause();reject(error)}else resolve()};
+      const played=()=>finish(),failed=()=>finish(Error('이 브라우저에서 방송을 재생하지 못했습니다. 다른 방송을 선택하세요.'));
+      const cancel=()=>finish(Error('재생 요청을 중단했습니다'));
+      audio.addEventListener('playing',played,{once:true});audio.addEventListener('error',failed,{once:true});signal.addEventListener('abort',cancel,{once:true});
+      timer=setTimeout(()=>finish(Error('재생을 확인하지 못했습니다. 방송과 인터넷 연결을 확인하세요.')),30000);
+      audio.play().then(played).catch(e=>{if(e.name==='NotAllowedError')document.getElementById('status').textContent='위 재생 버튼을 누르면 이 기기에서 방송이 시작됩니다';else failed()});
+    })}finally{this.mediaAbort=null}
   }
   async program(code,input){this.programAbort=new AbortController();try{return await memberJavascript(code,input,this.programAbort.signal)}finally{this.programAbort=null}}
   async start(body){
@@ -98,22 +110,23 @@ class MemberBrowserRuntime {
     const message=String(body.message||'').trim();if(!message&&!body.code&&!body.action_id)throw Error('요청을 입력하세요');
     const title=typeof body.title==='string'?body.title.slice(0,100):'';
     if(!task)task={id:crypto.randomUUID(),title:title||message.slice(0,60)||'앱 실행',workspace:'브라우저의 내 작업 공간',events:[],created:Date.now()};
+    if(task.state==='input_required'&&!body.action_id)body={...body,reply_to:task.request_id};
     task.state='running';task.updated=Date.now();task.events.push({kind:'user',value:title||message});this.running=task.id;this.stopped.delete(task.id);
     try{await this.store.put('tasks',task.id,task)}catch(e){this.running='';throw e}
-    body={...body,request_id:crypto.randomUUID()};await this.store.change('tasks',task.id,t=>({...t,request_id:body.request_id}));
+    body={...body,request_id:crypto.randomUUID()};await this.store.change('tasks',task.id,t=>({...t,request_id:body.request_id,origin:body.app_id||t.origin}));
     this.runTask(task.id,body);return {success:true,task_id:task.id,queued:true};
   }
   async event(id,kind,value){return this.store.change('tasks',id,t=>({...t,events:[...t.events,{kind,value}].slice(-500)}))}
   async runTask(id,body){
     this.abort=new AbortController();let result={success:false,error:'연결이 끊겼습니다. 결과를 확인하세요.'},state='unknown';
     try{
-      const {output,title,...request}=body;request.version=1;request.epoch=this.epoch||'';request.request_id=request.request_id||crypto.randomUUID();request.capabilities={files:true,javascript:true};
+      const {output,title,app_id,...request}=body;request.version=1;request.epoch=this.epoch||'';request.request_id=request.request_id||crypto.randomUUID();request.capabilities={files:true,javascript:true};if(request.action_id?.startsWith('local_'))request.local_apps=this.localApps||[];
       const r=await fetch('/m/run',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify({...request,key:this.key,task_id:id,body_session:this.session}),signal:this.abort.signal});
       if(!r.ok)throw Error('허브 응답 '+r.status);
       if(!r.headers.get('content-type')?.includes('ndjson')){result=await r.json();state='failed'}
       else{
         const reader=r.body.getReader(),decoder=new TextDecoder();let pending='';
-        const receive=async line=>{if(!line.trim())return;const e=JSON.parse(line);if(e.type==='event')await this.event(id,'progress',e.event);if(e.type==='result'){result=e.result;state=result.input_required?'input_required':result.success?'completed':'failed'}};
+        const receive=async line=>{if(!line.trim())return;const e=JSON.parse(line);if(e.type==='event')await this.event(id,'progress',e.event);if(e.type==='result'){result=e.result;state=result.error_type==='cancelled'?'cancelled':result.input_required?'input_required':result.success?'completed':'failed'}};
         for(;;){const {value,done}=await reader.read();if(done){pending+=decoder.decode();if(pending.trim())await receive(pending);break}pending+=decoder.decode(value,{stream:true});if(pending.length>48*1024*1024)throw Error('응답 크기 제한');let n;while((n=pending.indexOf('\n'))>=0){await receive(pending.slice(0,n));pending=pending.slice(n+1)}}
       }
     }catch(e){if(state==='unknown')result={success:false,error:e.name==='AbortError'?'작업을 중단했습니다. 이미 실행된 결과는 최근 작업 결과에서 확인하세요.':e.message}}
@@ -136,18 +149,20 @@ class MemberBrowserRuntime {
         result={...result,saved:true,delivery:'delivered'};await this.event(id,'progress',{type:'delivered'});
       }catch(e){state='failed';result={...result,success:false,saved:false,error:e.message}}
     }
+    if(this.stopped.has(id)){state='cancelled';result={...result,success:false,error_type:'cancelled',error:'작업을 중단했습니다. 이미 저장한 파일은 아래에서 받을 수 있습니다.'}}
     try{
-      const files=new Map((result.files||[]).map(f=>[f.path,f]));
+      const prior=await this.store.get('tasks',id);
+      const files=new Map([...(prior?.result?.files||[]),...(result.files||[])].map(f=>[f.path,f]));
       for(const job of await this.store.all('jobs')){
         if(job.command?.task_id===id&&job.command.op==='write'&&job.state==='completed'&&job.result?.success&&job.result?.saved)
           files.set(job.result.path,{...(files.get(job.result.path)||{}),path:job.result.path,on:'body',saved:true,sha256:job.result.sha256});
       }
       result.files=[...files.values()];
-      await this.event(id,'assistant',result.success===false?result.error:result.response||'결과를 확인하세요');await this.store.change('tasks',id,t=>({...t,state,result,updated:Date.now()}))}
+      await this.event(id,'assistant',result.success===false?result.error:result.input_required||(body.action_id&&!result.artifacts?.length?'요청을 처리했습니다. 앱에서 결과를 확인하세요.':result.response)||'결과를 확인하세요');await this.store.change('tasks',id,t=>({...t,state,result,updated:Date.now()}))}
     catch(e){document.getElementById('status').textContent='작업 기록을 저장하지 못했습니다: '+e.message}
     finally{this.running='';this.abort=null}
   }
-  async stop(){if(this.running)this.stopped.add(this.running);for(const a of this.approvals.values())a.answer(false);this.abort?.abort();this.programAbort?.abort();return this.http('/m/session/close',{body_session:this.session}).catch(()=>({success:false,error:'허브 연결 끊김'}))}
+  async stop(){if(!this.running)return {success:true};if(this.running)this.stopped.add(this.running);for(const a of this.approvals.values())a.answer(false);this.abort?.abort();this.programAbort?.abort();this.mediaAbort?.abort();return this.http('/m/session/close',{body_session:this.session}).catch(()=>({success:false,error:'허브 연결 끊김'}))}
   async request(path,body={}){
     if(path==='workspace')return {success:true,fixed:true,workspace:'브라우저의 내 작업 공간'};
     if(path==='profile')return this.http('/m/profile');
@@ -161,9 +176,11 @@ class MemberBrowserRuntime {
     if(path==='close')return this.stop();
     if(path==='export'){memberDownload(new Blob([JSON.stringify(await this.store.backup())],{type:'application/json'}),'indiebiz-member-backup.json');return {success:true,path:'브라우저에 백업 다운로드 요청'}}
     if(path==='apps'){
-      const remote=await this.http('/m/apps');
+      let local=[];
       const file=await this.store.get('files','apps.json');
-      if(file)try{const local=JSON.parse(new TextDecoder().decode(memberBytes(file.data)));if(!Array.isArray(local))throw Error();remote.instruments=[...(remote.instruments||[]),...local.filter(a=>a&&a.id&&a.name&&!a.renderer)]}catch(e){remote.local_error='apps.json 형식을 확인하세요'}
+      if(file)try{local=JSON.parse(new TextDecoder().decode(memberBytes(file.data)));if(!Array.isArray(local))throw Error()}catch(e){return {...await this.http('/m/apps'),local_error:'apps.json 형식을 확인하세요'}}
+      const remote=await this.http('/m/apps',{local_apps:local});
+      if(remote.success)this.localApps=local;
       return remote;
     }
     throw Error('지원하지 않는 웹 작업 요청입니다');

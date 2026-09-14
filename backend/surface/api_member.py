@@ -190,11 +190,13 @@ class MemberRun(MemberChat):
     code: Optional[str] = None
     version: int = 1
     request_id: str = ""
+    reply_to: str = ""
     epoch: str = ""
     action_id: str = ""
     args: dict = Field(default_factory=dict)
     capabilities: dict = Field(default_factory=dict)
     attachments: list = Field(default_factory=list)
+    local_apps: list = Field(default_factory=list)
 
 
 @router.post('/m/requests')
@@ -237,7 +239,7 @@ async def member_run(req: MemberRun):
         try:
             if req.action_id:
                 from member_apps import resolve_request
-                resolved = await asyncio.to_thread(resolve_request, req.action_id, req.args)
+                resolved = await asyncio.to_thread(resolve_request, req.action_id, req.args, req.local_apps) if req.local_apps else await asyncio.to_thread(resolve_request, req.action_id, req.args)
             else:
                 resolved = {'message': req.message, 'code': req.code}
         except ValueError as exc:
@@ -255,9 +257,9 @@ async def member_run(req: MemberRun):
         if resolved is not None:
             from client_agent import run
             envelope = {'version': req.version, 'epoch': req.epoch, 'request_id': req.request_id,
-                        'conversation_id': req.task_id, 'message': req.message, 'code': req.code,
+                        'conversation_id': req.task_id, 'reply_to': req.reply_to, 'message': req.message, 'code': req.code,
                         'action_id': req.action_id, 'args': req.args, 'capabilities': req.capabilities,
-                        'attachments': req.attachments}
+                        'attachments': req.attachments, 'local_apps': req.local_apps}
             work = asyncio.create_task(asyncio.to_thread(run, envelope, resolved,
                 name=rec.get('alias', ''), body_session=req.body_session, on_event=emit, manager=mgr))
         else:
@@ -286,16 +288,23 @@ async def member_run(req: MemberRun):
     return StreamingResponse(stream(), media_type='application/x-ndjson', headers={'Cache-Control': 'no-store'})
 
 
+class MemberAppsRequest(MemberKey):
+    local_apps: list = Field(default_factory=list)
+
+
 @router.post('/m/apps')
-def member_apps(req: MemberKey):
+def member_apps(req: MemberAppsRequest):
     ident, err = _member_of(req.key)
     if err:
         return err
     rec, nid, level = ident
     if _principal_for(rec, nid, level) is None:
         return {'success': False, 'error': 'principal_mismatch'}
-    from member_apps import catalogue
-    return catalogue()
+    from member_apps import catalogue, web_catalogue
+    try:
+        return web_catalogue(req.local_apps) if (rec.get('env') or {}).get('client') == 'web' else catalogue()
+    except ValueError as exc:
+        return {'success': False, 'error': str(exc)}
 
 
 class MemberBootstrap(MemberKey):

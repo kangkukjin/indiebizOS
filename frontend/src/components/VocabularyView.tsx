@@ -252,7 +252,7 @@ export function VocabularyView({ folderId = ROOT }: { folderId?: string }) {
               await api.setVocabularyActive(pkg.id, active, 'member');
               setDetail(current => current ? { ...current, pkg: { ...current.pkg, member_active: active } } : null);
               await reload(); window.dispatchEvent(new Event('vocabulary-changed'));
-            }); }} />회원에게 공개</label>
+            }); }} />외부사용자에게 제공 (기본 켜짐)</label>
           <p className="mt-2 text-xs text-stone-500">회원 기기에서 사용할 수 있는 단어: {detail.pkg.member_words.join(', ')}</p>
         </div>}
         <p>{detail.pkg.required ? '필수 단어묶음 · 항상 사용' : detail.pkg.installed ? '사용 중' : '잠든 상태'}{detail.pkg.version ? ` · ${detail.pkg.version}` : ''}</p>

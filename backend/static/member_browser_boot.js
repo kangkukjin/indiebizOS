@@ -1,4 +1,14 @@
 let memberBrowser=null,memberBrowserRelease=null,memberBrowserReady=false;
+function showMemberArtifacts(result){
+  const box=document.getElementById('memberArtifacts');box.replaceChildren();
+  for(const file of result?.files||[]){
+    if(file.on!=='body'||!file.saved||typeof file.path!=='string')continue;
+    const row=document.createElement('p'),label=document.createElement('span'),button=document.createElement('button');
+    label.textContent='결과 파일이 이 기기에 저장됐습니다. ';label.title=file.path;
+    button.textContent='내려받기';button.onclick=async()=>{try{await memberBrowser.files.download(file.path)}catch(e){document.getElementById('status').textContent=e.message}};
+    row.append(label,button);box.append(row);
+  }
+}
 async function memberRequest(path,body){if(!memberBrowser)throw Error('회원 키로 먼저 연결하세요');return memberBrowser.request(path,body)}
 // The browser runtime controls its audio directly. The helper-only media poll is unused.
 async function memberMedia(){}

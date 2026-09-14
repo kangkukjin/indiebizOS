@@ -436,6 +436,8 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 
 ### 회원 앱 배관 (2026-09-14)
 
+웹앱의 기본 표면은 자율주행(회원 전용 에이전트)·앱이며 내 파일은 앱의 보조 도구다. 회원 지원 기능은 기본 제공하고 주인 설정·시스템 AI는 제외한다. 정기보고의 회원용 작성 결과는 브라우저 저장 완료 뒤 내려받기를 제공한다. 제공 자료 기반 작성과 기존 주인용 자동 조사는 구별한다. 계약·검증: `docs/MEMBER_WEB_DEFAULTS_2026_09_14.md`.
+
 backend/base/{principal,member_runtime}, cognition/{member_runner,member_session}, ibl/{member_profile,member_bridge},
 surface/{api_member,member_shell}가 회원 경로다. helper/member*.go는 회원 모드, phone-companion/member는 Python 없는
 Android 모듈이다. data/member_manifest.json은 어휘 빌드 파생물이다.

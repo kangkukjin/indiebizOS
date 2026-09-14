@@ -1,3 +1,47 @@
+- id: report
+  name: 정기보고
+  icon: 📑
+  web_only: true
+  modes:
+  - id: create
+    name: 작성
+    note: 내 자료를 바탕으로 회원 전용 에이전트가 작성합니다. 결과는 이 기기에 저장됩니다. 현재 자동 웹 조사는 지원하지 않습니다.
+    run_label: 보고서 만들기
+    inputs:
+    - key: topic
+      type: select
+      label: 보고서 종류
+      default: AI 동향
+      options:
+      - {value: AI 동향, label: AI 동향}
+      - {value: AI 창업·응모 정보, label: AI 창업·응모 정보}
+      - {value: 부동산 발굴, label: 부동산 발굴}
+      - {value: 유튜브 AI 팁, label: 유튜브 AI 팁}
+    - {key: sources, placeholder: '자료 내용 또는 내 파일로 가져온 자료의 경로'}
+    - {key: focus, placeholder: '관심 주제·지역·기간 등'}
+    request:
+      title: '$topic 보고서 작성'
+      message: >-
+        내 자료를 바탕으로 $topic 보고서를 작성해 주세요. 관심 범위: $focus.
+        제공 자료: $sources.
+        내 작업 공간의 자료 경로가 있으면 읽고, 핵심 내용·근거·출처·확인 한계를 정리해 주세요.
+        제공 자료가 없으면 자료 부족을 밝히고 작성 양식과 필요한 자료를 제시해 주세요.
+        실제 검색하지 않은 최신 정보·링크·수치를 만들지 마세요.
+        응답 전체를 하나의 Markdown 문서로 작성해 주세요. 앱이 이 응답을 내 기기에 저장합니다.
+        별도 파일 작성이나 시스템 AI 위임은 하지 마세요.
+      output: reports/report.md
+  - id: list
+    name: 내 보고서
+    auto_run: true
+    action: '[self:list]{path:"reports"}'
+    view:
+    - type: card_list
+      from: items
+      empty: 아직 이 기기에 작성한 보고서가 없습니다.
+      card: {title: '{name}', lines: ['{path}']}
+      item_click:
+        action: '[self:read]{path:"{path}",blocks:true}'
+        view: [{type: blocks, from: items}]
 - id: member_files
   name: 내 파일
   icon: 📁

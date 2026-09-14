@@ -186,16 +186,20 @@ MEMBER_PROFILE = "member"
 
 
 def profile_active_map(profile: str, root: Path = None) -> dict:
-    """프로파일별 활성 선택(owner 활성 ∩ 프로파일 허용). 없는 프로파일=빈 선택(fail-closed)."""
+    """회원은 기본 사용 가능. 명시적으로 끈 묶음과 주인이 잠재운 묶음만 제외한다.
+
+    액션의 회원 지원 여부·실행 위치·감사 지문은 member_profile이 별도로 집행한다.
+    알 수 없는 프로파일은 계속 기본 비활성이다.
+    """
     state = read_state(root)
     prof = (state.get("profiles") or {}).get(profile) or {}
     allow = prof.get("active") or {}
-    return {pid: bool(state["active"].get(pid, False) and allow.get(pid, False)) for pid in state["active"]}
+    default = profile == MEMBER_PROFILE
+    return {pid: bool(state["active"].get(pid, False) and allow.get(pid, default)) for pid in state["active"]}
 
 
 def is_active(package_id: str, root: Path = None, profile: str = None) -> bool:
-    """profile=None|'owner' 는 주인 선택. 그 외 프로파일(예: member)은 주인 활성 ∩ 프로파일 허용 —
-    주인이 명시로 열어준 묶음만(기본 False). 외부 서비스 앱 부재 층의 정본(2026-09-14)."""
+    """주인 활성 ∩ 프로파일 선택. 회원 선택의 기본은 True, 나머지는 False."""
     if profile and profile != "owner":
         return profile_active_map(profile, root).get(package_id, False)
     return _is_active_owner(package_id, root)

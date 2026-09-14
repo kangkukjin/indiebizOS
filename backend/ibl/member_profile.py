@@ -91,6 +91,20 @@ def _package_open(e: dict, node: str, action: str, cfg: dict, root: Path = None)
     return is_active(pkg, root, profile=PROFILE)
 
 
+def _body_supported(e: dict) -> bool:
+    """브라우저는 구현한 작업만 소개한다. 변환기는 별도 감사 뒤 읽기/쓰기로 전달된다."""
+    if e.get("lands_on") != "body" or e.get("member_transform"):
+        return True
+    import principal
+    import limb_keys
+    rec = limb_keys.get_by_device(principal.current().device_id) or {}
+    if (rec.get("env") or {}).get("client") != "web":
+        return True
+    return (e.get("limb_op") or {}).get("op") in {
+        "read", "write", "list", "mkdir", "file_move", "script", "media", "location", "info",
+    }
+
+
 def visible(node: str, action: str, cfg: dict, root: Path = None) -> bool:
     """부재 층 — 회원 주체가 아니면 항상 True(무영향)."""
     if not is_member_principal():
@@ -99,6 +113,8 @@ def visible(node: str, action: str, cfg: dict, root: Path = None) -> bool:
     if not e:
         return False
     if not _package_open(e, node, action, cfg or {}, root):
+        return False
+    if not _body_supported(e):
         return False
     if (e.get("lands_on") == "hub" or e.get("member_transform")) and not fingerprint_ok(e, root):
         return False
@@ -113,10 +129,12 @@ def gate(node: str, action: str, cfg: dict, root: Path = None) -> Optional[dict]
     e = entry(node, action, root)
     if not e:
         return {"success": False, "error_type": "permission",
-                "error": f"[{q}] 은(는) 회원 세션에 없는 낱말입니다(주인이 개방하지 않음)."}
+                "error": f"[{q}] 은(는) 외부사용자용으로 지원되지 않는 기능입니다."}
     if not _package_open(e, node, action, cfg or {}, root):
         return {"success": False, "error_type": "permission",
-                "error": f"[{q}] 의 묶음이 회원 프로파일에 잠들어 있습니다."}
+                    "error": f"[{q}] 의 묶음이 회원 프로파일에 잠들어 있습니다."}
+    if not _body_supported(e):
+        return {"success": False, "error_type": "capability", "error": "이 기기의 웹앱에서 지원하지 않는 기능입니다"}
     if e.get("lands_on") == "hub" or e.get("member_transform"):
         if not fingerprint_ok(e, root):
             return {"success": False, "error_type": "permission",

@@ -15,10 +15,28 @@ function memberBoot(){parent.postMessage({memberFrame:'ready'},'*')}
 window.addEventListener('message',e=>{if(e.source!==parent)return;const m=e.data||{};if(m.memberFrame==='apps'){INSTRUMENTS=m.instruments||[];renderAppHome()}if(m.memberFrame==='result'){const p=pending.get(m.id);if(p){pending.delete(m.id);m.error?p.reject(Error(m.error)):p.resolve(memberAppResult(m.result))}}});
 function memberAppResult(value){const v=unwrapFinalResult(value);return typeof v==='string'?{text:v}:v&&v.message&&!v.text?{...v,text:v.message}:v}
 function ibl(code){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({memberFrame:'execute',id,code},'*')})}
+// 자연어 제작 버튼도 시스템 AI 위임 없이 같은 회원 작업으로 보낸다.
+function memberAppRequest(spec){
+ const inputs=gatherInputs();
+ const fill=text=>String(text||'').replace(/\$([A-Za-z_][A-Za-z_0-9]*)/g,(_,key)=>String(inputs[key]||''));
+ const message=fill(spec.message),title=fill(spec.title)||'앱에서 작성';
+ return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({memberFrame:'request',id,message,title,output:spec.output},'*')});
+}
+const memberIblRunMode=runMode,memberIblFireButton=fireButton;
+runMode=async function(){
+ if(!CUR.mode.request)return memberIblRunMode();
+ const box=document.getElementById('instOut');box.textContent='회원 전용 에이전트가 작성 중입니다…';
+ try{const r=await memberAppRequest(CUR.mode.request);box.innerHTML=mdChat(r.response||r.error||'작업이 끝났습니다')}catch(e){box.textContent=e.message}
+};
+fireButton=async function(i,button){
+ const spec=(CUR.mode.buttons||[])[i]?.request;if(!spec)return memberIblFireButton(i,button);
+ button.disabled=true;const box=document.getElementById('instOut');box.textContent='회원 전용 에이전트가 작성 중입니다…';
+ try{const r=await memberAppRequest(spec);box.innerHTML=mdChat(r.response||r.error||'작업이 끝났습니다')}catch(e){box.textContent=e.message}finally{button.disabled=false}
+};
 function jfetch(){return Promise.reject(Error('회원 앱에서 이 네트워크 경로는 사용할 수 없습니다'))}
 async function loadInstruments(){}
 function renderAppHome(){document.getElementById('appInst').style.display='none';const h=document.getElementById('appHome');h.style.display='block';h.innerHTML='<div class="grid">'+INSTRUMENTS.map((i,n)=>'<button class="tile" onclick="openInstrument('+n+')"><span class="em">'+esc(i.icon||'◻')+'</span><span>'+esc(i.name)+'</span></button>').join('')+'</div>'}
-function _upFileObj(){alert('자율주행의 내 파일 화면에서 파일을 가져오고 그 경로를 입력하세요')}
+function _upFileObj(){alert('앱의 내 파일에서 파일을 가져오고 그 경로를 입력하세요')}
 window.addEventListener('popstate',appBackHome);
 '''
     return head + LAUNCHER_COMMON_JS + LAUNCHER_CORE_JS + LAUNCHER_APPMODE_HEAD_JS + LAUNCHER_APPMODE_REST_JS + LAUNCHER_RENDER_JS.split('</script>')[0] + bridge + '</script></html>'

@@ -159,7 +159,7 @@ export function ExternalUsersView() {
           </section>
 
           <section className={panel}>
-            <div><h2 className="font-semibold">공개할 기능 묶음</h2><p className="mt-1 text-sm text-stone-500">모든 외부사용자에게 공통으로 적용됩니다. 회원용으로 준비된 기능만 공개됩니다.</p></div>
+            <div><h2 className="font-semibold">외부사용자 기능</h2><p className="mt-1 text-sm text-stone-500">외부사용자가 쓸 수 있는 기능은 기본으로 모두 제공됩니다. 사람마다 허가할 필요가 없습니다. 아래 설정은 모든 외부사용자에게 공통으로 적용됩니다.</p></div>
             {!packages.length ? <p className="text-sm text-stone-500">회원에게 공개할 수 있는 묶음이 없습니다.</p> : <div className="grid gap-3 sm:grid-cols-2">{packages.map(pkg => <label key={pkg.id} className="flex gap-3 rounded-lg border border-stone-200 p-3">
               <input type="checkbox" aria-label={`${pkg.name} 공개`} className="mt-1" checked={!!pkg.member_active} disabled={busy || !pkg.installed} onChange={e => {
                 const active = e.target.checked;

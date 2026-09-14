@@ -80,8 +80,11 @@ def test_profile_axis_is_owner_intersect_member(monkeypatch):
     monkeypatch.setattr(vs, "read_state", lambda root=None: state)
     assert vs.is_active("a") and vs.is_active("b") and not vs.is_active("c")
     assert vs.is_active("a", profile="member")
-    assert not vs.is_active("b", profile="member")      # 주인 활성이지만 회원에 안 열림(기본 False)
+    assert vs.is_active("b", profile="member")          # 회원 지원 기능은 별도 공개 없이 기본 허용
     assert not vs.is_active("c", profile="member")      # 회원 허용이어도 주인이 잠재움
+    state["profiles"]["member"]["active"]["b"] = False
+    assert not vs.is_active("b", profile="member")      # 공통 예외 설정은 유지
+    assert not vs.is_active("a", profile="unknown")
 
 
 # ── 부재·권한 ─────────────────────────────────────────────────────────────

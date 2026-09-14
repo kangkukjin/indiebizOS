@@ -19,10 +19,10 @@ class MemberBrowserRuntime {
     }
   }catch(e){if(this.active)await new Promise(r=>setTimeout(r,2000))}}}
   async approve(command){
-    if(['read','list','info','memory_recall','result_query'].includes(command.op))return true;
+    // 회원이 시작한 작업의 브라우저 내부 저장·계산은 기능마다 재승인하지 않는다.
+    // run()의 작업/세션 검사와 프로그램 sandbox는 그대로 적용된다.
+    if(['read','list','info','memory_recall','result_query','write','mkdir','file_move','memory_save','javascript','script'].includes(command.op))return true;
     if(command.op==='media'&&command.action==='status')return true;
-    if(command.op==='script'&&['','list'].includes(command.action||''))return true;
-    if(command.op==='memory_save'&&typeof command.record?.user==='string')return true;
     return new Promise(resolve=>{const timer=setTimeout(()=>answer(false),110000);const answer=allow=>{clearTimeout(timer);this.approvals.delete(command.request_key);resolve(allow)};this.approvals.set(command.request_key,{key:command.request_key,command,answer});memberApprovals()});
   }
   async run(c){
@@ -86,11 +86,14 @@ class MemberBrowserRuntime {
   async program(code,input){this.programAbort=new AbortController();try{return await memberJavascript(code,input,this.programAbort.signal)}finally{this.programAbort=null}}
   async start(body){
     if(!this.active)throw Error('허브에 다시 연결하세요');if(this.running)throw Error('진행 중인 작업을 완료하거나 중단하세요');
+    // 산출물 경로는 기기에서만 해소한다. 허브 요청에는 보내지 않는다.
+    if(body.output){const output=memberPath(body.output);if(output==='.')throw Error('산출물 파일 이름이 필요합니다');body={...body,output};}
     let task=body.task_id?await this.store.get('tasks',body.task_id):null;
     if(body.task_id&&!task)throw Error('작업이 없습니다');
     const message=String(body.message||'').trim();if(!message&&!body.code)throw Error('요청을 입력하세요');
-    if(!task)task={id:crypto.randomUUID(),title:message.slice(0,60)||'앱 실행',workspace:'브라우저의 내 작업 공간',events:[],created:Date.now()};
-    task.state='running';task.updated=Date.now();task.events.push({kind:'user',value:message});this.running=task.id;this.stopped.delete(task.id);
+    const title=typeof body.title==='string'?body.title.slice(0,100):'';
+    if(!task)task={id:crypto.randomUUID(),title:title||message.slice(0,60)||'앱 실행',workspace:'브라우저의 내 작업 공간',events:[],created:Date.now()};
+    task.state='running';task.updated=Date.now();task.events.push({kind:'user',value:title||message});this.running=task.id;this.stopped.delete(task.id);
     try{await this.store.put('tasks',task.id,task)}catch(e){this.running='';throw e}
     this.runTask(task.id,body);return {success:true,task_id:task.id,queued:true};
   }
@@ -98,7 +101,8 @@ class MemberBrowserRuntime {
   async runTask(id,body){
     this.abort=new AbortController();let result={success:false,error:'연결이 끊겼습니다. 결과를 확인하세요.'},state='unknown';
     try{
-      const r=await fetch('/m/run',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,key:this.key,task_id:id,body_session:this.session}),signal:this.abort.signal});
+      const {output,title,...request}=body;
+      const r=await fetch('/m/run',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify({...request,key:this.key,task_id:id,body_session:this.session}),signal:this.abort.signal});
       if(!r.ok)throw Error('허브 응답 '+r.status);
       if(!r.headers.get('content-type')?.includes('ndjson')){result=await r.json();state='failed'}
       else{
@@ -107,7 +111,24 @@ class MemberBrowserRuntime {
         for(;;){const {value,done}=await reader.read();if(done){pending+=decoder.decode();if(pending.trim())await receive(pending);break}pending+=decoder.decode(value,{stream:true});if(pending.length>48*1024*1024)throw Error('응답 크기 제한');let n;while((n=pending.indexOf('\n'))>=0){await receive(pending.slice(0,n));pending=pending.slice(n+1)}}
       }
     }catch(e){if(state==='unknown')result={success:false,error:e.name==='AbortError'?'작업을 중단했습니다. 이미 실행된 결과는 최근 작업 결과에서 확인하세요.':e.message}}
-    try{await this.event(id,'assistant',result.response||result.error||'결과를 확인하세요');await this.store.change('tasks',id,t=>({...t,state,result,updated:Date.now()}))}
+    if(body.output&&state==='completed'&&result.success){
+      try{
+        if(this.stopped.has(id)||!this.active)throw Error('작업이 중단되어 산출물을 저장하지 않았습니다');
+        if(typeof result.response!=='string'||!result.response.trim())throw Error('저장할 산출물 본문이 없습니다');
+        const path=body.output.replace(/(\.[^/.]+)?$/,`-${id}$1`);
+        const receipt=await this.files.execute({op:'write',path,content:result.response,mime:'text/markdown'});
+        if(!receipt.success||!receipt.saved)throw Error('이 기기의 산출물 저장을 확인하지 못했습니다');
+        result={...result,files:[{path:receipt.path,on:'body',saved:true}],saved:true};
+      }catch(e){state='failed';result={...result,success:false,saved:false,error:e.message}}
+    }
+    try{
+      const files=new Map((result.files||[]).map(f=>[f.path,f]));
+      for(const job of await this.store.all('jobs')){
+        if(job.command?.task_id===id&&job.command.op==='write'&&job.state==='completed'&&job.result?.success&&job.result?.saved)
+          files.set(job.result.path,{path:job.result.path,on:'body',saved:true});
+      }
+      result.files=[...files.values()];
+      await this.event(id,'assistant',result.success===false?result.error:result.response||'결과를 확인하세요');await this.store.change('tasks',id,t=>({...t,state,result,updated:Date.now()}))}
     catch(e){document.getElementById('status').textContent='작업 기록을 저장하지 못했습니다: '+e.message}
     finally{this.running='';this.abort=null}
   }

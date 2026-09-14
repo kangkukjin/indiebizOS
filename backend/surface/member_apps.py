@@ -11,6 +11,10 @@ from ibl_registry import load_nodes_installed
 def catalogue():
     from api_launcher_web import _derive_instruments
     from runtime_utils import get_base_path
+    import principal
+    import limb_keys
+    device = limb_keys.get_by_device(principal.current().device_id) or {}
+    browser = (device.get('env') or {}).get('client') == 'web'
     nodes = load_nodes_installed().get('nodes', {})
     allowed = {f'{n}:{a}' for n, nc in nodes.items() for a, ac in nc.get('actions', {}).items() if visible(n, a, ac)}
     source_ids = set()
@@ -28,6 +32,8 @@ def catalogue():
             return [v for x in obj if (v := clean(x)) is not None]
         if not isinstance(obj, dict):
             return obj
+        if obj.get('web_only') and not browser:
+            return None
         if obj.get('renderer', '').startswith('custom:'):
             return None
         for key, value in obj.items():
@@ -35,12 +41,20 @@ def catalogue():
                 refs = re.findall(r'\[([a-z_]+:[a-z_]+)\]', value)
                 if not refs or any(q not in allowed for q in refs):
                     return None
-            if isinstance(value, str) and ('%BASE%' in value or re.search(r'/(Users|home)/|[A-Z]:\\', value)):
+            if isinstance(value, str) and ('%BASE%' in value or '~workspace' in value
+                    or re.search(r'/(Users|home)/|[A-Z]:\\', value)
+                    or (key in ('action', 'options_action') and re.search(r'@\w+', value))):
                 return None
-        return {k: clean(v) for k, v in obj.items()}
+        result = {k: v for k, x in obj.items() if (v := clean(x)) is not None}
+        # 비공개 버튼을 지운 뒤 빈 탭/앱을 남기지 않는다.
+        if 'modes' in obj and not result.get('modes'):
+            return None
+        if 'buttons' in obj and not result.get('buttons') and not result.get('action') and not result.get('request'):
+            return None
+        return result
     instruments = []
     for source in candidates:
         app = clean(copy.deepcopy(source))
-        if app and (app.get('modes') or app.get('action')):
+        if app and (app.get('modes') or app.get('action') or app.get('request')):
             instruments.append(app)
     return {'success': True, 'instruments': instruments, 'open_words': sorted(allowed)}

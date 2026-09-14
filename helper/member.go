@@ -24,6 +24,9 @@ type Approval struct {
 	answer  chan bool
 }
 type MemberRuntime struct {
+	activeCancel context.CancelFunc
+	taskMu       sync.Mutex
+	runningTask  string
 	mediaPending *MemberMedia
 	localURL     string
 	server       *http.Server
@@ -53,11 +56,14 @@ func startMember(cfg *Config) error {
 		return err
 	}
 	memberRuntime = &MemberRuntime{store: store, cfg: cfg, dir: dir, approvals: map[string]*Approval{}, token: randomToken()}
+	if err := memberRuntime.initTasks(); err != nil {
+		return err
+	}
 	return memberRuntime.serve()
 }
 func memberEffect(op string) bool {
 	switch op {
-	case "read", "list", "info", "memory_recall", "script_list", "result_query":
+	case "file_find", "grep", "read", "list", "info", "memory_recall", "script_list", "result_query":
 		return false
 	default:
 		return true
@@ -101,6 +107,11 @@ func (m *MemberRuntime) run(j Job) map[string]interface{} {
 	if c.Op == "result_query" {
 		return m.store.query(c.QueryKey)
 	}
+	scoped, scopeErr := m.scopeCommand(c)
+	if scopeErr != nil {
+		return errResult("workspace", scopeErr.Error())
+	}
+	c = scoped
 	b, _ := json.Marshal(c)
 	sum := sha256.Sum256(b)
 	fp := hex.EncodeToString(sum[:])
@@ -121,7 +132,16 @@ func (m *MemberRuntime) run(j Job) map[string]interface{} {
 		if err = m.store.running(c.RequestKey); err != nil {
 			return errResult("storage", err.Error())
 		}
+		ctx, cancel := context.WithCancel(context.Background())
+		m.mu.Lock()
+		m.activeCancel = cancel
+		m.mu.Unlock()
+		c.ctx = ctx
 		result = m.execute(c)
+		cancel()
+		m.mu.Lock()
+		m.activeCancel = nil
+		m.mu.Unlock()
 	}
 	result["request_key"] = c.RequestKey
 	if err = m.store.complete(c.RequestKey, result); err != nil {
@@ -131,10 +151,18 @@ func (m *MemberRuntime) run(j Job) map[string]interface{} {
 }
 func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 	switch c.Op {
+	case "file_edit":
+		return m.editFile(c)
+	case "file_find", "grep":
+		return m.findFiles(c)
 	case "memory_save":
-		return m.store.save(c.Record)
+		result := m.store.save(c.Record)
+		if c.TaskID != "" && result["success"] == true {
+			_, _ = m.store.db.Exec("UPDATE conversations SET task_id=? WHERE id=?", c.TaskID, c.Record["id"])
+		}
+		return result
 	case "memory_recall":
-		return m.store.recall(c.Query, c.Limit)
+		return m.recallTask(c)
 	case "script":
 		switch c.Action {
 		case "", "list":
@@ -201,7 +229,9 @@ func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 	case "list":
 		return doList(c)
 	case "shell":
-		return doShell(c)
+		result := doShell(c)
+		result["success"] = result["exit"] == 0 && result["timeout"] != true && result["error"] == nil
+		return result
 	case "info":
 		return doInfo()
 	case "screen":
@@ -265,13 +295,20 @@ func memberOpen(c Command) map[string]interface{} {
 	return map[string]interface{}{"success": true, "op": c.Op}
 }
 func runMemberProgram(path, interpreter string, args map[string]interface{}, timeout int) map[string]interface{} {
+	return runMemberProgramContext(context.Background(), path, interpreter, args, timeout)
+}
+func runMemberProgramContext(parent context.Context, path, interpreter string, args map[string]interface{}, timeout int) map[string]interface{} {
+	if parent == nil {
+		parent = context.Background()
+	}
 	if timeout <= 0 || timeout > 300 {
 		timeout = 120
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(parent, time.Duration(timeout)*time.Second)
 	defer cancel()
 	raw, _ := json.Marshal(args)
 	cmd := exec.CommandContext(ctx, interpreter, path)
+	configureMemberProcess(cmd)
 	cmd.Dir = filepath.Dir(path)
 	cmd.Stdin = bytes.NewReader(raw)
 	out, err := cmd.CombinedOutput()
@@ -280,4 +317,18 @@ func runMemberProgram(path, interpreter string, args map[string]interface{}, tim
 		result["error"] = fmt.Sprint(err)
 	}
 	return result
+}
+
+func (m *MemberRuntime) stopLocalWork() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if m.activeCancel != nil {
+		m.activeCancel()
+	}
+	for _, approval := range m.approvals {
+		select {
+		case approval.answer <- false:
+		default:
+		}
+	}
 }

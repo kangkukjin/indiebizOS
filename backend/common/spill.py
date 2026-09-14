@@ -120,6 +120,14 @@ def is_ref(obj: Any) -> bool:
 def read_ref(ref: Dict[str, Any]) -> Tuple[Optional[str], Optional[str]]:
     """(본문, 오류문). 만료·부재는 정직한 오류."""
     path = ref.get("path")
+    if _spill_root.get() is not None and path:
+        # 회원 턴에서 전달된 참조로 주인의 파일을 읽지 않는다. symlink도 정규화한다.
+        root = os.path.realpath(_spill_root.get())
+        try:
+            if os.path.commonpath([root, os.path.realpath(path)]) != root:
+                return None, "현재 작업 밖의 스필 참조입니다"
+        except (ValueError, TypeError):
+            return None, "올바르지 않은 스필 참조입니다"
     if not path or not os.path.isfile(path):
         return None, (f"스필 참조가 가리키는 파일이 없습니다: {path} — 스필은 {SPILL_TTL_S // 3600}h 뒤 "
                       "삭제됩니다(캐시). 문장을 다시 실행하세요.")

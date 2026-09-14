@@ -19,7 +19,7 @@ set -euo pipefail
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 
 # 로컬 승인 화면은 원격 HTML이 아닌 공통 소스의 빌드 번들이다. 사본 드리프트를 차단한다.
-if echo "$staged" | grep -qE '^(backend/surface/(member_shell|launcher_app_common)\.py|helper/member_app\.html|scripts/build_member_shell\.py)$'; then
+if echo "$staged" | grep -qE '^(backend/surface/(member_shell|member_workspace_ui|member_app_frame|launcher_app_common|launcher_app_appmode|launcher_render_core|launcher_web_render)\.py|backend/static/app_render_core\.js|helper/member_app\.html|scripts/build_member_shell\.py)$'; then
   python3 "$(git rev-parse --show-toplevel)/scripts/build_member_shell.py" --check
 fi
 

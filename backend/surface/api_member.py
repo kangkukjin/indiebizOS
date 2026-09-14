@@ -112,8 +112,8 @@ def member_profile(req: MemberKey):
 
 @router.get("/m/app", response_class=HTMLResponse)
 def member_app():
-    from member_shell import member_html
-    return HTMLResponse(member_html(), headers={"Cache-Control": "no-store"})
+    from member_entry import entry_html
+    return HTMLResponse(entry_html(), headers={"Cache-Control": "no-store"})
 
 
 @router.websocket("/m/chat")
@@ -177,3 +177,112 @@ async def member_socket(ws: WebSocket):
         if task:
             await task
         principal.reset_transport(token)
+
+
+class MemberRun(MemberChat):
+    task_id: str
+    code: Optional[str] = None
+
+
+@router.post('/m/run')
+async def member_run(req: MemberRun):
+    """로컬 작업 원장으로 보내는 NDJSON 이벤트. 허브에 작업 기록을 저장하지 않는다."""
+    import json
+    import queue
+    import re
+    import threading
+    import time
+    from fastapi.responses import StreamingResponse
+    if not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}', req.task_id):
+        return {'success': False, 'error': 'invalid_task_id'}
+    ident, err = _member_of(req.key)
+    if err:
+        return err
+    rec, nid, level = ident
+    if _principal_for(rec, nid, level) is None:
+        return {'success': False, 'error': 'principal_mismatch'}
+    from member_session import MemberSessionManager
+    mgr = MemberSessionManager.instance()
+    events = queue.Queue(maxsize=128)
+    stopped = threading.Event()
+    def emit(value):
+        while not stopped.is_set():
+            try:
+                events.put(value, timeout=.25)
+                return
+            except queue.Full:
+                pass
+    async def stream():
+        work = asyncio.create_task(asyncio.to_thread(mgr.turn, nid, rec['device_id'], level,
+            rec.get('alias', ''), req.message or '앱 실행', local_task_id=req.task_id, code=req.code, on_event=emit))
+        last_sent = time.monotonic()
+        try:
+            while not work.done() or not events.empty():
+                try:
+                    event = events.get_nowait()
+                    yield json.dumps({'type': 'event', 'event': event}, ensure_ascii=False, default=str) + '\n'
+                except queue.Empty:
+                    if time.monotonic() - last_sent >= 10:
+                        yield '{"type":"heartbeat"}\n'
+                        last_sent = time.monotonic()
+                    await asyncio.wait({work}, timeout=.1)
+            yield json.dumps({'type': 'result', 'result': await work}, ensure_ascii=False, default=str) + '\n'
+        finally:
+            stopped.set()
+            if not work.done():
+                mgr.close(nid, rec['device_id'])
+                try:
+                    await asyncio.shield(work)
+                except asyncio.CancelledError:
+                    pass
+    return StreamingResponse(stream(), media_type='application/x-ndjson', headers={'Cache-Control': 'no-store'})
+
+
+@router.post('/m/apps')
+def member_apps(req: MemberKey):
+    ident, err = _member_of(req.key)
+    if err:
+        return err
+    rec, nid, level = ident
+    if _principal_for(rec, nid, level) is None:
+        return {'success': False, 'error': 'principal_mismatch'}
+    from member_apps import catalogue
+    return catalogue()
+
+
+class MemberBootstrap(MemberKey):
+    platform: str
+    base: str
+
+
+@router.post('/m/bootstrap')
+def member_bootstrap(req: MemberBootstrap):
+    import io
+    import json
+    import zipfile
+    from pathlib import Path
+    from urllib.parse import urlsplit
+    from fastapi import HTTPException
+    from fastapi.responses import Response
+    from runtime_utils import get_base_path
+    ident, err = _member_of(req.key)
+    if err:
+        raise HTTPException(403, err['error'])
+    targets = {'mac-arm64': 'indiebiz-helper-mac-arm64', 'mac-amd64': 'indiebiz-helper-mac-amd64',
+               'win': 'indiebiz-helper-win.exe', 'linux': 'indiebiz-helper-linux'}
+    if req.platform not in targets:
+        raise HTTPException(400, '지원하지 않는 플랫폼')
+    url = urlsplit(req.base)
+    if url.scheme != 'https' or not url.hostname or url.username or url.password or url.query or url.fragment or url.path not in ('', '/'):
+        raise HTTPException(400, 'HTTPS 허브 주소가 필요합니다')
+    binary = Path(get_base_path()) / 'helper' / 'dist' / targets[req.platform]
+    if not binary.is_file():
+        raise HTTPException(503, '연결 프로그램 배포 파일이 없습니다')
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w', zipfile.ZIP_DEFLATED) as z:
+        info = zipfile.ZipInfo(binary.name)
+        info.external_attr = 0o100755 << 16
+        z.writestr(info, binary.read_bytes())
+        z.writestr('indiebiz-helper.json', json.dumps({'mode':'member','base':req.base.rstrip('/'),'key':req.key,'alias':ident[0].get('alias','회원')}, ensure_ascii=False))
+        z.writestr('시작하기.txt', '실행파일과 설정파일을 같은 폴더에 두고 실행파일을 여세요. 브라우저의 회원 작업 공간에서 작업 폴더를 선택하세요. 설정파일에는 회원 키가 있으므로 다른 사람에게 보내지 마세요.')
+    return Response(buf.getvalue(), media_type='application/zip', headers={'Cache-Control':'no-store','Content-Disposition':'attachment; filename="indiebiz-member.zip"'})

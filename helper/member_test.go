@@ -59,7 +59,11 @@ func testMember(t *testing.T) *MemberRuntime {
 		t.Fatal(e)
 	}
 	t.Cleanup(func() { s.db.Close() })
-	return &MemberRuntime{store: s, dir: dir, cfg: &Config{AutoAllow: []string{"write", "file_move"}}, approvals: map[string]*Approval{}}
+	m := &MemberRuntime{store: s, dir: dir, cfg: &Config{AutoAllow: []string{"write", "file_move"}}, approvals: map[string]*Approval{}}
+	if err := m.initTasks(); err != nil {
+		t.Fatal(err)
+	}
+	return m
 }
 func job(c Command) Job { b, _ := json.Marshal(c); return Job{ID: "test", Code: string(b)} }
 func TestMemberRetryAndConflict(t *testing.T) {

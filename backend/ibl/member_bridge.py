@@ -28,7 +28,7 @@ def request(command, timeout=None):
             return {"success": False, "error_type": "limit", "error": "이 턴의 기기 작업 한도에 닿았습니다"}
         state["step"] += 1
         key = f'{p.key()}:{state["task_id"]}:{state["step"]}'
-    envelope = {**command, "request_key": key, "member": True}
+    envelope = {**command, "request_key": key, "member": True, "task_id": state.get("local_task_id", "")}
     job = phone_jobs.enqueue(p.device_id, json.dumps(envelope, ensure_ascii=False), p.key())
     state["jobs"].add(job)
     deadline = min(state["deadline"], time.monotonic() + float(timeout or state["policy"].get("command_timeout_s", 120)))

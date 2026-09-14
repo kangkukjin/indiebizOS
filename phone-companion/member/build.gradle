@@ -25,7 +25,7 @@ tasks.register('copyAccessibility', Copy) {
     into layout.buildDirectory.dir('generated/shared')
 }
 tasks.register('bundleMemberShell', Exec) {
-    inputs.files('../../backend/surface/member_shell.py','../../backend/surface/launcher_app_common.py')
+    inputs.files(fileTree('../../backend/surface') { include 'member*.py'; include 'launcher*.py' },'../../backend/static/app_render_core.js')
     outputs.file(layout.buildDirectory.file('generated/memberAssets/member_app.html'))
     commandLine 'python3', '../../scripts/build_member_shell.py', '--output',
         layout.buildDirectory.file('generated/memberAssets/member_app.html').get().asFile.absolutePath

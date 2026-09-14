@@ -309,11 +309,18 @@ func doShell(c Command) map[string]interface{} {
 		startDir = getSessionCwd()
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(to)*time.Second)
+	parent := c.ctx
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, time.Duration(to)*time.Second)
 	defer cancel()
 
 	bin, args := shellFor(c.Shell, wrapScript(c.Shell, c.Cmd, startDir, getSessionEnv()))
 	cmd := exec.CommandContext(ctx, bin, args...)
+	if c.ctx != nil {
+		configureMemberProcess(cmd)
+	}
 	var stdout, stderr bytes.Buffer
 	// 진행 중계 — 긴 명령이 끝날 때까지 깜깜하지 않게 주기적으로 꼬리를 허브에 올린다.
 	prog := newProgressReporter(c.JobID)

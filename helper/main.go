@@ -16,6 +16,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -46,6 +47,12 @@ type Job struct {
 }
 
 type Command struct {
+	ctx          context.Context
+	TaskID       string                 `json:"task_id,omitempty"`
+	OldString    string                 `json:"old_string,omitempty"`
+	NewString    string                 `json:"new_string,omitempty"`
+	Pattern      string                 `json:"pattern,omitempty"`
+	ReplaceAll   bool                   `json:"replace_all,omitempty"`
 	Volume       *float64               `json:"volume,omitempty"`
 	Resources    []string               `json:"resources,omitempty"`
 	Dependencies []string               `json:"dependencies,omitempty"`

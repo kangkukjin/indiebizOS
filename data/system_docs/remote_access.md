@@ -659,4 +659,7 @@ PC는 loopback 셸과 한시 토큰, Android는 WebView 네이티브 다리를 �
 발급·설정과 현재 제한은 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11, guides/member_start.md 참조.
 
 회원 승인 화면은 접속한 허브에서 받아 실행하지 않는다. scripts/build_member_shell.py가 공통 member_shell/launcher_app_common을
-PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 별도 웹 폴백이다. `build_member_shell.py --check`로 번들 드리프트를 검사한다.
+PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 회원 키를 확인하고 PC 연결 프로그램을 내려주는 HTTPS 진입점이다. 실행 화면은 기기의 로컬 번들이다. `build_member_shell.py --check`로 번들 드리프트를 검사한다.
+
+
+회원 작업 공간은 자율주행·앱·내 파일 표면을 제공한다. `/m/run`의 진행/결과는 회원 기기의 tasks/task_events 원장에만 영속한다. PC 작업의 run_command는 회원 기기의 승인된 셸 실행이며 허브 셸 폴백이 없다. 파일 API는 선택 폴더에 경로를 가두지만 셸 자체는 OS 샌드박스가 아니다. `/m/apps`는 공개된 선언형 앱이고, 회원의 apps.json은 기기에서만 읽어 합친다. Android는 같은 UI·로컬 작업 기록을 사용하되 작업 폴더 고정·셸 미제공이다. 상세: docs/EXTERNAL_SERVICE_APP_HANDOFF.md §12.

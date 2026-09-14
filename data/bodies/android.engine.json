@@ -310,7 +310,11 @@
     "surface/launcher_web_app",
     "surface/launcher_web_render",
     "surface/launcher_web_shell",
+    "surface/member_app_frame",
+    "surface/member_apps",
+    "surface/member_entry",
     "surface/member_shell",
+    "surface/member_workspace_ui",
     "surface/portal_admin",
     "surface/portal_auth",
     "surface/portal_base",
@@ -354,8 +358,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 343,
-    "engine": 317,
+    "total": 347,
+    "engine": 321,
     "blocklist": 26
   }
 }

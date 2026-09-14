@@ -31,7 +31,7 @@ _DEFAULT_POLICY = {
     "history_turns": 20,
     "allowed_nodes": ["sense", "table", "self", "limbs", "engines"],
     "notice": "",
-    "hard_token_limit": 32000, "deadline_s": 180, "max_model_calls": 12,
+    "hard_token_limit": 64000, "deadline_s": 1800, "max_model_calls": 80,
     "command_timeout_s": 120, "max_message_chars": 64000,
 }
 TMP_DIRNAME = "_member_tmp"
@@ -188,7 +188,7 @@ class MemberSessionManager:
             s.close()
         return bool(s)
 
-    def turn(self, neighbor_id, device_id, level, name, message: str) -> dict:
+    def turn(self, neighbor_id, device_id, level, name, message: str, *, local_task_id="", code=None, on_event=None) -> dict:
         """회원 한 턴. 접수는 회원별 원자 예약, 내용은 턴 임시 경로와 손발에만 둔다."""
         import principal
         import thread_context as tc
@@ -232,19 +232,44 @@ class MemberSessionManager:
                     raise PermissionError("전송 관문의 회원 신원 불일치")
                 if s.closed or s.cancel.is_set():
                     return {"success": False, "error_type": "cancelled", "error": "회원 작업이 중단됐습니다"}
-                s._ensure_runner()
+                mr.current()["local_task_id"] = local_task_id
                 online = connected(device_id)
+                if local_task_id and not online:
+                    return {"success": False, "error": "회원 기기가 연결되어 있지 않습니다"}
+                recalled = {}
                 if online:
                     recalled = request({"op": "memory_recall", "query": message, "limit": 40})
                     if recalled.get("success") is False:
                         return recalled
+                mr.current()["shell_available"] = bool(local_task_id and recalled.get("shell_available"))
+                if code is None:
+                    s._ensure_runner()
+                else:
+                    # 선언형 앱은 모델을 초기화하거나 호출하지 않는다. 같은 IBL 도구 관문만 사용한다.
+                    from member_runner import MemberRunner
+                    s.dir.mkdir(parents=True, exist_ok=True)
+                    s.runner = MemberRunner.__new__(MemberRunner)
+                    s.runner.project_path = s.dir
+                    s.runner.config = {}
+                if online:
                     s.history.clear()
                     s.history.extend(recalled.get("history", []))
                     s.runner.config["_member_memory"] = json.dumps({"memories": recalled.get("memories", []), "recent_results": recalled.get("recent_results", [])}, ensure_ascii=False)
+                    s.runner.config["_member_memory"] += "\n회원 작업 폴더: " + str(recalled.get("workspace", ""))
                     s.runner.config["_member_sentences"] = "\n".join(str(x.get("code", "")) for x in recalled.get("sentences", []))
                 from agent_pipeline import drain_stream
-                result = drain_stream(s.runner.cognitive_stream(message, list(s.history),
-                    agent_name="회원도우미", cancel_check=s.cancel.is_set))
+                if code is not None:
+                    raw = s.runner._member_tool("execute_ibl", {"code": code})
+                    value = json.loads(raw) if isinstance(raw, str) else raw
+                    result = {"final": json.dumps(value, ensure_ascii=False), "app_result": value,
+                              "error": (value.get("error") or ("앱 실행 실패" if value.get("success") is False else None)) if isinstance(value, dict) else None}
+                else:
+                    def events():
+                        for event in s.runner.cognitive_stream(message, list(s.history), agent_name="회원도우미", cancel_check=s.cancel.is_set):
+                            if on_event and event.get("type") in ("text", "tool_call", "tool_result", "tool_start", "status", "error"):
+                                on_event(event)
+                            yield event
+                    result = drain_stream(events())
                 response = result.get("final") or result.get("error") or ""
                 tokens = result.get("turn_tokens")
                 success = not bool(result.get("error")) and not s.cancel.is_set()
@@ -255,7 +280,7 @@ class MemberSessionManager:
                         "episode": {"task": task_id, "success": success,
                                     "tool_calls": result.get("tool_calls", [])}}})
                     saved = receipt.get("success") is True and receipt.get("saved") is True
-                    if saved and success:
+                    if saved and success and code is None:
                         # 선별도 같은 회원 예산 안에서 끝낸다. 저장은 회원 기기의 승인 판을 지난다.
                         from providers.base import turn_token_scope, read_turn_tokens
                         remaining = max(1, int(self.policy["hard_token_limit"]) - int(tokens or 0))
@@ -270,8 +295,8 @@ class MemberSessionManager:
                 s.history.append({"role": "assistant", "content": response})
                 s.turns += 1
                 s.last_turn_at = time.time()
-                return {"success": success, "response": response, "memory_saved": saved,
-                        "session": s.id, "task_id": task_id, "tokens": tokens,
+                return {"success": success, "response": response, "error": result.get("error"), "memory_saved": saved,
+                        "session": s.id, "task_id": task_id, "tokens": tokens, "app_result": result.get("app_result"),
                         "turns_today": self.turns_today(nid)}
         except Exception as exc:
             # 예외 문자열은 경로·요청·모델 원문을 포함할 수 있으므로 허브 로그에 기록하지 않는다.

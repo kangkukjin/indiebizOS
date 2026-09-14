@@ -65,7 +65,7 @@ class MemberStore(context: Context) {
         try {
             if (r.has("content")) db.execSQL("INSERT OR REPLACE INTO memories VALUES(?,?)",arrayOf(id,r.getString("content")))
             else {
-                db.execSQL("INSERT OR IGNORE INTO conversations VALUES(?,?,?,?)",arrayOf(id,r.optString("user"),r.optString("assistant"),System.currentTimeMillis()/1000))
+                db.execSQL("INSERT OR IGNORE INTO conversations(id,user,assistant,created) VALUES(?,?,?,?)",arrayOf(id,r.optString("user"),r.optString("assistant"),System.currentTimeMillis()/1000))
                 db.execSQL("INSERT OR IGNORE INTO episodes VALUES(?,?)",arrayOf(id,r.optJSONObject("episode")?.toString() ?: "{}"))
             }
             db.setTransactionSuccessful()
@@ -97,7 +97,7 @@ class MemberStore(context: Context) {
         try {
             ZipOutputStream(file.outputStream()).use { z ->
                 val tables = JSONObject()
-                for(t in listOf("conversations","episodes","memories","scripts","sentences","hippocampus_examples","forage")) {
+                for(t in listOf("conversations","episodes","memories","scripts","sentences","hippocampus_examples","forage","tasks","task_events")) {
                     val rows = JSONArray()
                     db.rawQuery("SELECT * FROM "+t,null).use { c ->
                         while(c.moveToNext()) {

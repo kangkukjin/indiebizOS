@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -56,8 +57,35 @@ func (m *MemberRuntime) serve() error {
 			http.Error(w, "unauthorized", 403)
 			return
 		}
+		if r.Method == "POST" && r.URL.Path == "/member/upload" {
+			name := filepath.Base(r.URL.Query().Get("name"))
+			if name == "." || name == "" || strings.ContainsAny(name, "/\\") {
+				http.Error(w, "filename", 400)
+				return
+			}
+			data, err := io.ReadAll(io.LimitReader(r.Body, 32*1024*1024+1))
+			if err != nil || len(data) > 32*1024*1024 {
+				http.Error(w, "size", 413)
+				return
+			}
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(m.localFile(map[string]interface{}{"op": "write", "path": filepath.Join("uploads", name), "content": string(data), "task_id": r.URL.Query().Get("task_id")}))
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		if r.Method == "GET" && r.URL.Path == "/member/tasks" {
+			json.NewEncoder(w).Encode(m.tasks())
+			return
+		}
+		if r.Method == "GET" && r.URL.Path == "/member/task" {
+			json.NewEncoder(w).Encode(m.task(r.URL.Query().Get("id")))
+			return
+		}
+		if r.Method == "GET" && r.URL.Path == "/member/workspace" {
+			json.NewEncoder(w).Encode(map[string]interface{}{"success": true, "workspace": m.workspace()})
+			return
+		}
 		if r.Method == "GET" && r.URL.Path == "/member/media" {
 			m.mu.Lock()
 			pending := []map[string]string{}
@@ -107,6 +135,13 @@ func (m *MemberRuntime) serve() error {
 				return
 			}
 			json.NewEncoder(w).Encode(map[string]bool{"success": true})
+		case "/member/file":
+			json.NewEncoder(w).Encode(m.localFile(body))
+		case "/member/task/start":
+			json.NewEncoder(w).Encode(m.startTask(body))
+		case "/member/workspace":
+			raw, _ := body["path"].(string)
+			json.NewEncoder(w).Encode(m.setWorkspace(raw))
 		case "/member/approve":
 			key, _ := body["key"].(string)
 			ok, _ := body["allow"].(bool)
@@ -122,8 +157,11 @@ func (m *MemberRuntime) serve() error {
 			default:
 			}
 			json.NewEncoder(w).Encode(map[string]bool{"success": true})
-		case "/member/chat", "/member/close", "/member/profile":
-			target := map[string]string{"/member/chat": "/m/chat", "/member/close": "/m/session/close", "/member/profile": "/m/profile"}[r.URL.Path]
+		case "/member/chat", "/member/close", "/member/profile", "/member/apps":
+			if r.URL.Path == "/member/close" {
+				m.stopLocalWork()
+			}
+			target := map[string]string{"/member/chat": "/m/chat", "/member/close": "/m/session/close", "/member/profile": "/m/profile", "/member/apps": "/m/apps"}[r.URL.Path]
 			// 키와 신원은 로컬 설정만 소유한다. 브라우저 입력은 메시지뿐이다.
 			request := map[string]interface{}{"key": m.cfg.Key}
 			if target == "/m/chat" {
@@ -143,6 +181,10 @@ func (m *MemberRuntime) serve() error {
 			defer resp.Body.Close()
 			if err = json.NewDecoder(io.LimitReader(resp.Body, 2*1024*1024)).Decode(&out); err != nil {
 				out = errResult("protocol", "응답 파싱 실패")
+			}
+			if target == "/m/apps" {
+				id, _ := body["task_id"].(string)
+				out = m.localApps(out, id)
 			}
 			json.NewEncoder(w).Encode(out)
 		case "/member/export":

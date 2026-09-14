@@ -53,8 +53,10 @@ class MemberActivity:Activity() {
             override fun shouldOverrideUrlLoading(view:WebView?,request:WebResourceRequest?):Boolean=true
         }
         val gen=generation.incrementAndGet()
+        val bridgeToken=java.util.UUID.randomUUID().toString()
         v.addJavascriptInterface(object {
-            @JavascriptInterface fun request(id:String,path:String,raw:String) {
+            @JavascriptInterface fun request(id:String,path:String,raw:String,token:String) {
+                if(token!=bridgeToken)return
                 if(id.length>64 || raw.length>1024*1024)return
                 runtime.workers.execute {
                     val out=try { runtime.local(path,JSONObject(raw)) } catch(e:Exception) { MemberStore.error("연결/요청 실패") }
@@ -71,7 +73,7 @@ class MemberActivity:Activity() {
         },"MemberBridge")
         layout.addView(v,LinearLayout.LayoutParams(-1,0,1f));setContentView(layout)
         runtime.workers.execute {
-            try { val html=runtime.html();runOnUiThread { if(generation.get()==gen)v.loadDataWithBaseURL("https://member.local/",html,"text/html","UTF-8",null) } }
+            try { val html=runtime.html().replaceFirst("<script>window.__MEMBER", "<script>window.__NATIVE_TOKEN="+JSONObject.quote(bridgeToken)+";window.__MEMBER");runOnUiThread { if(generation.get()==gen)v.loadDataWithBaseURL("https://member.local/",html,"text/html","UTF-8",null) } }
             catch(e:Exception) { runOnUiThread { Toast.makeText(this,"화면을 불러올 수 없습니다. 연결을 확인하세요.",Toast.LENGTH_LONG).show() } }
         }
     }

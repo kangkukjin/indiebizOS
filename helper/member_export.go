@@ -35,7 +35,7 @@ func (m *MemberRuntime) export(path string) map[string]interface{} {
 	defer tx.Rollback()
 	manifest := map[string]interface{}{"version": 1, "format": "indiebiz-member", "tables": map[string]interface{}{}}
 	tables := manifest["tables"].(map[string]interface{})
-	for _, table := range []string{"conversations", "episodes", "memories", "scripts", "sentences", "hippocampus_examples", "forage"} {
+	for _, table := range []string{"conversations", "episodes", "memories", "scripts", "sentences", "hippocampus_examples", "forage", "tasks", "task_events", "member_settings"} {
 		rows, e := tx.Query("SELECT * FROM " + table)
 		if e != nil {
 			return errResult("export", e.Error())

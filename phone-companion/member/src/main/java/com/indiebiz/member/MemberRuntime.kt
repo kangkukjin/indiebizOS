@@ -23,6 +23,7 @@ class MemberRuntime(val context: Context) {
     val store = MemberStore(context)
     val prefs = context.getSharedPreferences("member",Context.MODE_PRIVATE)
     val workers = Executors.newFixedThreadPool(4)
+    val tasks = MemberTasks(this)
     val approvals = ConcurrentHashMap<String,Pair<JSONObject,CompletableFuture<Boolean>>>()
     val client = OkHttpClient.Builder().readTimeout(240,TimeUnit.SECONDS).build()
     @Volatile var active = false
@@ -93,8 +94,8 @@ class MemberRuntime(val context: Context) {
     }
     fun execute(c:JSONObject):JSONObject {
         return when(c.optString("op")) {
-            "memory_save" -> store.save(c.getJSONObject("record"))
-            "memory_recall" -> store.recall(c.optString("query"))
+            "memory_save" -> tasks.save(c)
+            "memory_recall" -> tasks.recall(c)
             "read" -> { val f=store.path(c.getString("path")); require(f.length()<=32*1024*1024)
                 JSONObject().put("success",true).put("content",if(c.optString("encoding")=="base64") Base64.encodeToString(f.readBytes(),Base64.NO_WRAP) else f.readText()) }
             "write" -> { val f=store.path(c.getString("path")); f.parentFile!!.mkdirs()
@@ -170,7 +171,28 @@ class MemberRuntime(val context: Context) {
         "key" -> PhoneAccessibilityService.pressKey(c.getString("key"))
         else -> """{"success":false,"error":"unsupported_action"}"""
     })
-    fun local(path:String,body:JSONObject):Any = when(path) {
+    fun local(path:String,body:JSONObject):Any = when {
+        path.startsWith("task?") -> tasks.get(Uri.parse("https://member.local/"+path).getQueryParameter("id") ?: "")
+        path=="close" -> { approvals.values.forEach { it.second.complete(false) };post("/m/session/close",JSONObject().put("key",key())) }
+        path=="tasks" -> tasks.list()
+        path=="task/start" -> tasks.start(body)
+        path=="workspace" -> tasks.workspace()
+        path=="file" -> { require(body.optString("op") in listOf("read","write","list")); execute(body) }
+        path=="apps" -> localApps()
+        else -> legacyLocal(path,body)
+    }
+    private fun localApps():JSONObject {
+        val remote=post("/m/apps",JSONObject().put("key",key()))
+        val file=store.path("apps.json")
+        if(!file.isFile) return remote
+        if(file.length()>512*1024) return remote.put("local_error","apps.json은 512KB 이하 파일이어야 합니다")
+        return try {
+            val local=JSONArray(file.readText());val apps=remote.optJSONArray("instruments") ?: JSONArray()
+            for(i in 0 until local.length()) { val app=local.getJSONObject(i);if(app.has("id") && app.has("name") && !app.has("renderer"))apps.put(app) }
+            remote.put("instruments",apps)
+        } catch(e:Exception) { remote.put("local_error","apps.json 형식을 확인하세요") }
+    }
+    private fun legacyLocal(path:String,body:JSONObject):Any = when(path) {
         "history" -> store.recall("")
         "results" -> store.results()
         "approvals" -> JSONArray(approvals.map { (k,v) -> JSONObject().put("key",k).put("command",v.first) })

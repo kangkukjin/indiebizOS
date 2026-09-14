@@ -120,7 +120,7 @@ func (s *MemberStore) save(record map[string]interface{}) map[string]interface{}
 	if content, ok := record["content"].(string); ok {
 		_, err = tx.Exec("INSERT OR REPLACE INTO memories VALUES(?,?)", id, content)
 	} else {
-		_, err = tx.Exec("INSERT OR IGNORE INTO conversations VALUES(?,?,?,?)", id, record["user"], record["assistant"], time.Now().Unix())
+		_, err = tx.Exec("INSERT OR IGNORE INTO conversations(id,user,assistant,created) VALUES(?,?,?,?)", id, record["user"], record["assistant"], time.Now().Unix())
 		if err == nil {
 			var b []byte
 			b, err = json.Marshal(record["episode"])
@@ -258,5 +258,5 @@ func (s *MemberStore) script(c Command) map[string]interface{} {
 	if err := s.db.QueryRow("SELECT path,interpreter FROM scripts WHERE id=?", c.ScriptID).Scan(&path, &interpreter); err != nil {
 		return errResult("script_missing", fmt.Sprint(err))
 	}
-	return runMemberProgram(path, interpreter, c.Args, c.Timeout)
+	return runMemberProgramContext(c.ctx, path, interpreter, c.Args, c.Timeout)
 }

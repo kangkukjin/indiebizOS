@@ -21,10 +21,16 @@ class MemberRunner(AgentRunner):
 
     def _build_ibl_tools(self):
         tool = self._build_execute_ibl_tool()
-        return [tool] if tool else []
+        tools = [tool] if tool else []
+        import member_runtime
+        if (member_runtime.current() or {}).get("shell_available", False):
+            tools.append({"name": "run_command", "description": "회원의 선택한 PC 작업 폴더에서 명령 실행. 로컬 승인 필요. 허브에서는 실행하지 않는다.",
+                      "input_schema": {"type": "object", "properties": {"command": {"type": "string"}, "timeout": {"type": "integer"}}, "required": ["command"]}})
+        return tools
 
     def _get_available_tools(self):
-        return ["execute_ibl"]
+        import member_runtime
+        return ["execute_ibl"] + (["run_command"] if (member_runtime.current() or {}).get("shell_available", False) else [])
 
     def _build_agent_prompt_split(self, role, consciousness_output=None, execution_memory=""):
         from ibl_access import build_environment
@@ -50,6 +56,15 @@ class MemberRunner(AgentRunner):
             self.ai._provider.agent_id = self.ai.agent_id
 
     def _member_tool(self, tool_name, tool_input, work_dir=None, agent_id=None, **kwargs):
+        if tool_name == "run_command":
+            from member_bridge import request
+            import member_runtime
+            state = member_runtime.current() or {}
+            if not state.get("local_task_id") or not state.get("shell_available"):
+                return json.dumps({"success": False, "error_type": "permission", "error": "PC 작업 공간이 연결된 작업에서만 명령을 실행합니다"})
+            timeout = min(300, max(1, int(tool_input.get("timeout") or 120)))
+            return json.dumps(request({"op": "shell", "cmd": str(tool_input.get("command", "")),
+                                       "timeout": timeout}, timeout=timeout + 125), ensure_ascii=False)
         if tool_name != "execute_ibl":
             return json.dumps({"success": False, "error_type": "permission",
                                "error": "회원에게 발행되지 않은 도구입니다"}, ensure_ascii=False)
@@ -92,7 +107,7 @@ class MemberRunner(AgentRunner):
         agent._supervisor_prompt = agent._prompt
         return agent.process(user_message=user_message, history=history,
             associative_memory=execution_memory, world_pulse="", agent_name="회원도우미",
-            agent_role=self._load_role(), agent_notes="", available_tools=["execute_ibl"],
+            agent_role=self._load_role(), agent_notes="", available_tools=self._get_available_tools(),
             repair=False, revision=revision)
 
     def _build_execution_memory(self, message, **kwargs):

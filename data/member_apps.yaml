@@ -1,0 +1,33 @@
+- id: member_files
+  name: 내 파일
+  icon: 📁
+  modes:
+  - id: list
+    name: 목록
+    inputs: [{key: path, placeholder: 폴더 경로, default: '.'}]
+    action: '[self:list]{path:"$path"}'
+    view: [{type: list_action, from: items, title: '{name}', sub: '{type} · {path}'}]
+  - id: read
+    name: 읽기
+    inputs: [{key: path, placeholder: 읽을 파일 경로}]
+    action: '[self:read]{path:"$path"}'
+    view: [{type: kv, rows: [{k: 내용, v: '{text}'}]}]
+  - id: write
+    name: 저장
+    inputs: [{key: path, placeholder: 저장할 파일 경로}, {key: content, placeholder: 내용}]
+    action: '[self:write]{path:"$path",content:"$content"}'
+    view: [{type: kv, rows: [{k: 저장 경로, v: '{path}'}]}]
+- id: member_programs
+  name: 내 프로그램
+  icon: ⚙️
+  modes:
+  - id: list
+    name: 목록
+    auto_run: true
+    action: '[self:script]{op:"list"}'
+    view: [{type: list_action, from: items, title: '{id}', sub: '{description}'}]
+  - id: run
+    name: 실행
+    inputs: [{key: id, placeholder: 등록된 프로그램 이름}]
+    action: '[self:script]{op:"run",id:"$id"}'
+    view: [{type: kv, rows: [{k: 실행 결과, v: '{stdout}'}]}]

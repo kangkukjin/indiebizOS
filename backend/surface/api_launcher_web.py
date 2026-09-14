@@ -245,7 +245,7 @@ def _phone_runnable_actions():
     return _phone_runnable_cache["set"]
 
 
-def _derive_instruments() -> dict:
+def _derive_instruments(include_standalone=True) -> dict:
     """ibl_nodes.yaml 의 app: 블록 → 원격 앱 표면 계기 매니페스트 합성.
 
     - app.instrument 가 같은 액션들은 한 계기의 modes(탭)로 병합 (mode_order 정렬)
@@ -281,7 +281,7 @@ def _derive_instruments() -> dict:
             groups[gid].append((action_name, app))
 
     # (신규) 어휘 없는 순수 앱 — data/instruments/*.yaml. 노드 app: 블록과 동일 처리.
-    for gid, app in _load_standalone_instruments():
+    for gid, app in (_load_standalone_instruments() if include_standalone else []):
         if runnable is not None and app.get("phone_render") is False:
             continue
         if gid not in groups:
@@ -530,7 +530,8 @@ def is_public_remote_path(method: str, path: str) -> bool:
         return True
     # 외부 서비스 앱 회원 표면(/m/*) — 회원 열쇠(limb key) 자체 인증. 주체는 라우트가 세운다(principal.authenticate).
     if (method, path) in {("POST", "/m/chat"), ("POST", "/m/session/close"),
-                           ("POST", "/m/profile"), ("GET", "/m/app")}:
+                           ("POST", "/m/profile"), ("GET", "/m/app"),
+                           ("POST", "/m/run"), ("POST", "/m/apps"), ("POST", "/m/bootstrap")}:
         return True
     # 공개파일 라이브 서빙(/showcase/*: list·thumb·media·origin)은 자체 X-Showcase-Secret 게이트 보유
     if method == "GET" and path.startswith("/showcase/"):

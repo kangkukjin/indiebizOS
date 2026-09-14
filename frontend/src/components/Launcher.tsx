@@ -1,4 +1,4 @@
-import { openSystemAI, openPromptComposition, openGuides, openVocabulary } from '../lib/surface-navigation';
+import { openSystemAI, openPromptComposition, openGuides, openVocabulary, openExternalUsers } from '../lib/surface-navigation';
 /**
  * 런처 - 데스크탑 스타일 프로젝트/폴더/스위치 관리
  */
@@ -834,6 +834,13 @@ export function Launcher() {
                 >
                   <Settings size={16} className="text-stone-500" />
                   <span className="text-sm">설정</span>
+                </button>
+                <button
+                  onClick={() => { openExternalUsers(); setShowMainMenu(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-amber-50 text-left text-[#4A4035] transition-colors"
+                >
+                  <Users size={16} className="text-stone-500" />
+                  <span className="text-sm">외부사용자 관리</span>
                 </button>
                 <button
                   onClick={() => { openVocabulary(); setShowMainMenu(false); }}

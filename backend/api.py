@@ -671,6 +671,8 @@ app.include_router(face_provision_router, tags=["tunnel-provision"])  # 로컬 �
 app.include_router(ibl_router, tags=["ibl"])
 app.include_router(nodes_router, tags=["nodes"])
 app.include_router(limb_router, tags=["limb"])  # /limb/* 는 자체 limb key 인증 (is_public_remote_path 등록)
+from api_external_users import router as external_users_router
+app.include_router(external_users_router)  # 주인 전용 관리창 — 공개 경로 등록 금지
 from api_member import router as member_router
 app.include_router(member_router, tags=["member"])  # /m/* 외부 서비스 앱 — 자체 limb key(회원 열쇠) 인증
 app.include_router(xray_router, tags=["xray"])

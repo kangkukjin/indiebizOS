@@ -42,6 +42,10 @@ export function openGuides() {
   openPage('/guides', window.electron?.openToolWindow?.bind(window.electron, 'guides'));
 }
 
+export function openExternalUsers() {
+  openPage('/external-users', window.electron?.openToolWindow?.bind(window.electron, 'external-users'));
+}
+
 export function openVocabulary(folderId = 'desktop') {
   openPage(`/vocabulary/${encodeURIComponent(folderId)}`,
     window.electron?.openToolWindow?.bind(window.electron, 'vocabulary', folderId));

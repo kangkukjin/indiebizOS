@@ -262,6 +262,7 @@
     "surface/api_config_tiers",
     "surface/api_conversations",
     "surface/api_execution_trace",
+    "surface/api_external_users",
     "surface/api_family_news",
     "surface/api_finance",
     "surface/api_gmail",
@@ -361,8 +362,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 350,
-    "engine": 324,
+    "total": 351,
+    "engine": 325,
     "blocklist": 26
   }
 }

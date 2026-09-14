@@ -58,6 +58,7 @@ class PollRequest(BaseModel):
 
 class ResultRequest(BaseModel):
     key: str
+    session: str = ""
     job_id: str
     result: Optional[dict] = None
 
@@ -194,6 +195,8 @@ async def limb_result(req: ResultRequest):
     rec = limb_keys.validate(req.key)
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
+    if req.session and req.session != rec.get("session"):
+        return {"success": False, "error": "stale_browser_session"}
     if not _job_owned(req.job_id, rec):
         return {"success": False, "error": "job_not_owned"}
     phone_jobs.set_result(req.job_id, req.result)

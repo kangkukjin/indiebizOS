@@ -188,7 +188,7 @@ class MemberSessionManager:
             s.close()
         return bool(s)
 
-    def turn(self, neighbor_id, device_id, level, name, message: str, *, local_task_id="", code=None, on_event=None) -> dict:
+    def turn(self, neighbor_id, device_id, level, name, message: str, *, local_task_id="", code=None, on_event=None, body_session="") -> dict:
         """회원 한 턴. 접수는 회원별 원자 예약, 내용은 턴 임시 경로와 손발에만 둔다."""
         import principal
         import thread_context as tc
@@ -233,6 +233,7 @@ class MemberSessionManager:
                 if s.closed or s.cancel.is_set():
                     return {"success": False, "error_type": "cancelled", "error": "회원 작업이 중단됐습니다"}
                 mr.current()["local_task_id"] = local_task_id
+                mr.current()["body_session"] = body_session
                 online = connected(device_id)
                 if local_task_id and not online:
                     return {"success": False, "error": "회원 기기가 연결되어 있지 않습니다"}
@@ -242,6 +243,7 @@ class MemberSessionManager:
                     if recalled.get("success") is False:
                         return recalled
                 mr.current()["shell_available"] = bool(local_task_id and recalled.get("shell_available"))
+                mr.current()["javascript_available"] = bool(local_task_id and recalled.get("javascript_available"))
                 if code is None:
                     s._ensure_runner()
                 else:

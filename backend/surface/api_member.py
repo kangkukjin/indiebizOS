@@ -25,6 +25,7 @@ class MemberChat(BaseModel):
 
 class MemberKey(BaseModel):
     key: str
+    body_session: str = ""
 
 
 def _member_of(key: str):
@@ -81,6 +82,8 @@ def member_close(req: MemberKey):
     if err:
         return err
     rec, nid, level = ident
+    if req.body_session and req.body_session != rec.get("session"):
+        return {"success": False, "error": "stale_browser_session"}
     from member_session import MemberSessionManager
     return {"success": True, "closed": MemberSessionManager.instance().close(nid, rec["device_id"])}
 
@@ -180,6 +183,7 @@ async def member_socket(ws: WebSocket):
 
 
 class MemberRun(MemberChat):
+    body_session: str = ""
     task_id: str
     code: Optional[str] = None
 
@@ -199,6 +203,8 @@ async def member_run(req: MemberRun):
     if err:
         return err
     rec, nid, level = ident
+    if req.body_session and req.body_session != rec.get("session"):
+        return {"success": False, "error": "stale_browser_session"}
     if _principal_for(rec, nid, level) is None:
         return {'success': False, 'error': 'principal_mismatch'}
     from member_session import MemberSessionManager
@@ -214,7 +220,7 @@ async def member_run(req: MemberRun):
                 pass
     async def stream():
         work = asyncio.create_task(asyncio.to_thread(mgr.turn, nid, rec['device_id'], level,
-            rec.get('alias', ''), req.message or '앱 실행', local_task_id=req.task_id, code=req.code, on_event=emit))
+            rec.get('alias', ''), req.message or '앱 실행', local_task_id=req.task_id, code=req.code, on_event=emit, body_session=req.body_session))
         last_sent = time.monotonic()
         try:
             while not work.done() or not events.empty():

@@ -21,6 +21,10 @@ def request(command, timeout=None):
     p, state = principal.current(), member_runtime.current()
     if p.kind != principal.KIND_MEMBER or not state or state["device_id"] != p.device_id:
         return {"success": False, "error_type": "permission", "error": "회원 기기 바인딩 없음"}
+    if state.get("body_session"):
+        import limb_keys
+        if (limb_keys.get_by_device(p.device_id) or {}).get("session") != state["body_session"]:
+            return {"success": False, "error_type": "no_body", "error": "브라우저 연결이 변경됐습니다"}
     if state["cancel"].is_set() or time.monotonic() >= state["deadline"] or not connected(p.device_id):
         return {"success": False, "error_type": "no_body", "error": "회원 기기가 연결되어 있지 않습니다"}
     with state["lock"]:
@@ -28,7 +32,7 @@ def request(command, timeout=None):
             return {"success": False, "error_type": "limit", "error": "이 턴의 기기 작업 한도에 닿았습니다"}
         state["step"] += 1
         key = f'{p.key()}:{state["task_id"]}:{state["step"]}'
-    envelope = {**command, "request_key": key, "member": True, "task_id": state.get("local_task_id", "")}
+    envelope = {**command, "request_key": key, "member": True, "task_id": state.get("local_task_id", ""), "body_session": state.get("body_session", "")}
     job = phone_jobs.enqueue(p.device_id, json.dumps(envelope, ensure_ascii=False), p.key())
     state["jobs"].add(job)
     deadline = min(state["deadline"], time.monotonic() + float(timeout or state["policy"].get("command_timeout_s", 120)))

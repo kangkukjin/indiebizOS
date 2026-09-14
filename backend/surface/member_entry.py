@@ -1,10 +1,5 @@
-"""외부 회원의 HTTPS 진입점. 실행·승인은 설치된 로컬 앱으로 이어진다."""
+"""회원의 기본 진입점은 설치 없는 브라우저 작업 공간이다."""
 
 def entry_html():
-    return '''<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>IndieBiz · 내 작업 공간 연결</title><style>body{background:#f4f5f2;color:#233830;font:16px system-ui;margin:0}main{max-width:600px;margin:10vh auto;padding:30px}h1{font-size:34px}p{line-height:1.8}input,select,button{box-sizing:border-box;width:100%;padding:15px;margin:8px 0;border:1px solid #b7c9c0;border-radius:10px;font:inherit}button{background:#235b49;color:white;cursor:pointer}small{color:#54685f}</style>
-<main><small>INDIEBIZ · MEMBER WORKSPACE</small><h1>두뇌는 연결하고,<br>작업은 내 컴퓨터에서.</h1><p>허락받은 AI와 앱을 이용해 내 폴더에서 일합니다. 대화와 작업 기록은 이 컴퓨터에 보관합니다.</p>
-<form id="connect"><label>초대받은 회원 키<input id="key" type="password" autocomplete="off" required></label>
-<label>사용할 컴퓨터<select id="platform"><option value="mac-arm64">Mac · Apple Silicon</option><option value="mac-amd64">Mac · Intel</option><option value="win">Windows</option><option value="linux">Linux</option></select></label><button>회원 작업 공간 다운로드</button></form>
-<p id="status" role="status"></p><p>다운로드한 ZIP을 풀고 실행파일을 여세요. 내 컴퓨터의 파일과 명령을 처리하는 연결 프로그램이 웹 작업 공간을 엽니다. 이후에는 이 프로그램을 실행하면 됩니다.</p><small>AI 요청은 허브와 모델 제공자를 거칩니다. 허브의 설정과 시스템 개조 기능은 제공되지 않습니다.</small></main>
-<script>document.getElementById('connect').onsubmit=async e=>{e.preventDefault();const status=document.getElementById('status');status.textContent='초대 확인 중…';try{const r=await fetch('/m/bootstrap',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({key:document.getElementById('key').value,platform:document.getElementById('platform').value,base:location.origin})});if(!r.ok){const d=await r.json();throw Error(d.detail||d.error||'초대를 확인하세요')}const blob=await r.blob(),u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download='indiebiz-member.zip';a.click();setTimeout(()=>URL.revokeObjectURL(u),30000);document.getElementById('key').value='';status.textContent='다운로드 완료 · 압축을 풀고 실행파일을 여세요.'}catch(e){status.textContent=e.message}};</script></html>'''
+    from member_browser import browser_html
+    return browser_html()

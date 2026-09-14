@@ -651,15 +651,16 @@ cloudflared tunnel login
 |---|---|---|---|
 | 원격 런처 | owner 세션 | 허브 주인 | 기존 런처 |
 | 폰 네이티브 | 독립 몸 | 폰의 자아 | 기존 :app |
-| 외부 서비스 회원 | member:<이웃 ID> | 회원 기기 | helper mode:member / Android :member, /m/app·/m/chat |
+| 외부 서비스 회원 | member:<이웃 ID> | 회원 기기 | 웹앱 /m/app (기본), helper mode:member / Android :member (선택) |
 
 회원 키는 limb 원장의 neighbor_id와 이웃 명부의 기기 결합을 함께 확인한다. /m/chat은 HTTP/WS 자체 인증,
 /m/profile·/m/session/close는 POST다. 회원 키는 런처 세션을 만들지 않으며 프로젝트·설정 API 인증에 통하지 않는다.
 PC는 loopback 셸과 한시 토큰, Android는 WebView 네이티브 다리를 쓴다. 대화 HTTP 연결 종료는 회원 턴을 취소한다.
 발급·설정과 현재 제한은 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11, guides/member_start.md 참조.
 
-회원 승인 화면은 접속한 허브에서 받아 실행하지 않는다. scripts/build_member_shell.py가 공통 member_shell/launcher_app_common을
-PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 회원 키를 확인하고 PC 연결 프로그램을 내려주는 HTTPS 진입점이다. 실행 화면은 기기의 로컬 번들이다. `build_member_shell.py --check`로 번들 드리프트를 검사한다.
+`/m/app`은 PC·폰 공통의 설치 없는 HTTPS 웹앱이다. 로그인·자율주행·앱·파일·승인 화면을 허브가 제공하며 재접속/새로고침으로 업데이트된다. 작업·파일·기억·결과 원장은 회원 브라우저 IndexedDB에 저장한다. 파일은 선택하여 가져온 사본을 편집하고 내려받는다. 임의 OS 경로나 셸에는 접근하지 않는다. 격리된 JavaScript Worker의 계산 결과만 허브에 반환한다. 회원별 저장소와 탭 잠금, 연결 세대 검사로 중복 실행과 이전 연결의 명령을 차단한다. 탭 종료나 폰 백그라운드에서 계속 실행된다는 보장은 없다. 백업 JSON 내보내기/복원과 지속 보관 요청을 제공한다.
+
+기존 네이티브 연결 프로그램의 승인 화면만 `build_member_shell.py`가 파생하는 로컬 번들이다. 웹앱은 허브에서 배포한 코드를 신뢰한다. `/m/bootstrap`은 PC 연결 프로그램을 위한 선택 API로 남아 있으며 웹앱 사용에 필요하지 않다. 웹앱의 기기별 제한과 검증 범위는 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §13 참조.
 
 
-회원 작업 공간은 자율주행·앱·내 파일 표면을 제공한다. `/m/run`의 진행/결과는 회원 기기의 tasks/task_events 원장에만 영속한다. PC 작업의 run_command는 회원 기기의 승인된 셸 실행이며 허브 셸 폴백이 없다. 파일 API는 선택 폴더에 경로를 가두지만 셸 자체는 OS 샌드박스가 아니다. `/m/apps`는 공개된 선언형 앱이고, 회원의 apps.json은 기기에서만 읽어 합친다. Android는 같은 UI·로컬 작업 기록을 사용하되 작업 폴더 고정·셸 미제공이다. 상세: docs/EXTERNAL_SERVICE_APP_HANDOFF.md §12.
+회원 작업 공간은 자율주행·앱·내 파일 표면을 제공한다. `/m/run`의 진행/결과는 회원 기기의 원장(웹 IndexedDB, 네이티브 SQLite)에만 영속한다. PC 작업의 run_command는 회원 기기의 승인된 셸 실행이며 허브 셸 폴백이 없다. 파일 API는 선택 폴더에 경로를 가두지만 셸 자체는 OS 샌드박스가 아니다. `/m/apps`는 공개된 선언형 앱이고, 회원의 apps.json은 기기에서만 읽어 합친다. Android는 같은 UI·로컬 작업 기록을 사용하되 작업 폴더 고정·셸 미제공이다. 상세: docs/EXTERNAL_SERVICE_APP_HANDOFF.md §12.

@@ -26,11 +26,14 @@ class MemberRunner(AgentRunner):
         if (member_runtime.current() or {}).get("shell_available", False):
             tools.append({"name": "run_command", "description": "회원의 선택한 PC 작업 폴더에서 명령 실행. 로컬 승인 필요. 허브에서는 실행하지 않는다.",
                       "input_schema": {"type": "object", "properties": {"command": {"type": "string"}, "timeout": {"type": "integer"}}, "required": ["command"]}})
+        if (member_runtime.current() or {}).get("javascript_available", False):
+            tools.append({"name": "run_javascript", "description": "회원 브라우저에서 JavaScript를 실행해 입력 데이터를 계산/변환한다. input 인자, return 값. 네트워크·DOM·OS 파일 접근 없음. 파일은 IBL로 읽고 결과를 IBL로 저장한다. 회원 승인 필요.",
+                          "input_schema": {"type": "object", "properties": {"code": {"type": "string"}, "input": {}}, "required": ["code"]}})
         return tools
 
     def _get_available_tools(self):
         import member_runtime
-        return ["execute_ibl"] + (["run_command"] if (member_runtime.current() or {}).get("shell_available", False) else [])
+        return ["execute_ibl"] + (["run_command"] if (member_runtime.current() or {}).get("shell_available", False) else []) + (["run_javascript"] if (member_runtime.current() or {}).get("javascript_available", False) else [])
 
     def _build_agent_prompt_split(self, role, consciousness_output=None, execution_memory=""):
         from ibl_access import build_environment
@@ -56,6 +59,13 @@ class MemberRunner(AgentRunner):
             self.ai._provider.agent_id = self.ai.agent_id
 
     def _member_tool(self, tool_name, tool_input, work_dir=None, agent_id=None, **kwargs):
+        if tool_name == "run_javascript":
+            import member_runtime
+            from member_bridge import request
+            state = member_runtime.current() or {}
+            if not state.get("local_task_id") or not state.get("javascript_available"):
+                return json.dumps({"success": False, "error_type": "permission", "error": "브라우저 작업 공간이 필요합니다"})
+            return json.dumps(request({"op": "javascript", "code": str(tool_input.get("code", "")), "input": tool_input.get("input")}, timeout=130), ensure_ascii=False)
         if tool_name == "run_command":
             from member_bridge import request
             import member_runtime

@@ -153,6 +153,7 @@ class BrowserSession:
         self._cleanup_task = None
         self._close_generation = 0
         self._headless = True
+        self._ensure_lock = asyncio.Lock()
 
         # 탭 관리
         self._pages: Dict[str, Any] = {}
@@ -211,6 +212,13 @@ class BrowserSession:
 
     async def ensure_browser(self, headless=True):
         """브라우저가 실행 중인지 확인하고, 없으면 생성. Page 반환."""
+        async with self._ensure_lock:
+            # 크롤러의 None은 기존 headful/headless 모드를 그대로 유지한다.
+            if headless is None:
+                headless = self._headless if self.is_active else True
+            return await self._ensure_browser_locked(headless)
+
+    async def _ensure_browser_locked(self, headless):
         self._last_activity = time.time()
         self._close_generation += 1
 
@@ -269,19 +277,17 @@ class BrowserSession:
 
         # 첫 번째 페이지 생성
         page = await self._context.new_page()
-        self._tab_counter = 1
-        tab_id = "t1"
-        self._pages[tab_id] = page
-        self._active_tab_id = tab_id
+        tab_id = next((key for key, value in self._pages.items() if value is page), None)
+        if tab_id is None:
+            self._on_new_page(page)
         self._active_frame = None
 
         # Stealth + 쿠키 동의 팝업 자동 처리
         await page.add_init_script(STEALTH_INIT_SCRIPT)
 
-        # 콘솔/네트워크/Dialog 설정
+        # 콘솔/네트워크/Dialog 훅은 페이지 등록 시 한 번만 설치한다.
         self._console_logs = deque(maxlen=MAX_CONSOLE_LOGS)
         self._network_logs = deque(maxlen=MAX_NETWORK_LOGS)
-        self._setup_page_hooks(page)
 
         # ref 맵 초기화
         self._ref_map = {}
@@ -296,7 +302,9 @@ class BrowserSession:
         page.on("response", self._on_response)
 
     def _on_new_page(self, page):
-        """새 탭/팝업 자동 감지 핸들러"""
+        """새 탭/팝업 자동 감지 핸들러 — 직접 생성과 이벤트의 중복 등록을 막는다."""
+        if any(existing is page for existing in self._pages.values()):
+            return
         self._tab_counter += 1
         tab_id = f"t{self._tab_counter}"
         self._pages[tab_id] = page
@@ -398,28 +406,26 @@ class BrowserSession:
         if not self._context:
             return ""
         page = await self._context.new_page()
-        self._tab_counter += 1
-        tab_id = f"t{self._tab_counter}"
-        self._pages[tab_id] = page
-        self._active_tab_id = tab_id
-        self._active_frame = None
-        self._setup_page_hooks(page)
-
-        # Stealth + 쿠키 동의 팝업 자동 처리
-        await page.add_init_script(STEALTH_INIT_SCRIPT)
-
-        self.clear_refs()
-
-        if url:
-            url_lower = url.lower().strip()
-            for scheme in BLOCKED_URL_SCHEMES:
-                if url_lower.startswith(scheme):
-                    return tab_id
-            if not url.startswith(('http://', 'https://')):
-                url = 'https://' + url
-            await page.goto(url, wait_until="domcontentloaded", timeout=NAVIGATE_TIMEOUT)
-
-        return tab_id
+        tab_id = next((key for key, value in self._pages.items() if value is page), None)
+        if tab_id is None:
+            self._on_new_page(page)
+            tab_id = self._active_tab_id
+        try:
+            await page.add_init_script(STEALTH_INIT_SCRIPT)
+            self.clear_refs()
+            if url:
+                url_lower = url.lower().strip()
+                for scheme in BLOCKED_URL_SCHEMES:
+                    if url_lower.startswith(scheme):
+                        return tab_id
+                if not url.startswith(('http://', 'https://')):
+                    url = 'https://' + url
+                await page.goto(url, wait_until="domcontentloaded", timeout=NAVIGATE_TIMEOUT)
+            return tab_id
+        except BaseException:
+            # 호출자가 tab_id를 받기 전에 취소·탐색 실패해도 생성한 탭을 회수한다.
+            await self.close_tab(tab_id)
+            raise
 
     def switch_tab(self, tab_id: str) -> bool:
         if tab_id not in self._pages:

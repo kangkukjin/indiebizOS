@@ -271,7 +271,11 @@ def test_browser_extraction_preserves_long_text(crawl, monkeypatch):
     class Driver:
         _tab_id = 'fixture'
         async def call_tool(self, name, params):
-            return {'text': TEXT if name == 'get_page_text' else '시험 제목'}
+            if name == 'tabs_create_mcp':
+                return {'tabId': 'crawl-fixture'}
+            if name == 'javascript_tool':
+                return {'text': json.dumps({'title': '시험 제목', 'url': URL, 'status': 200})}
+            return {'text': TEXT if name == 'get_page_text' else ''}
     async def no_sleep(*a):
         pass
     monkeypatch.setattr(crawler.asyncio, 'sleep', no_sleep)

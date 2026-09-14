@@ -40,7 +40,7 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None):
     """
     from common.spill import spill_dir, spill_write
     ttl = max(0, int(_policy()["reuse_seconds"]))
-    key = hashlib.sha256(f"v1|{_scope(project_path)}|{url}".encode()).hexdigest()
+    key = hashlib.sha256(f"v2|{_scope(project_path)}|{url}".encode()).hexdigest()
     index = os.path.join(spill_dir(), f"crawl_cache_{key}.json")
     with _LOCKS[int(key[:8], 16) % len(_LOCKS)]:
         now = time.time()

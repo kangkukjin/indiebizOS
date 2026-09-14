@@ -41,6 +41,14 @@ def load_module(module_name):
     return load_sibling(__file__, module_name)
 
 
+def _read_feed(url):
+    return load_module("web_search_io").read_feed(url, feedparser)
+
+
+def _fetch_sections(jobs):
+    return load_module("web_search_io").fetch_sections(jobs)
+
+
 # ============== 뉴스 검색 관련 함수 ==============
 # clean_html은 common.html_utils에서 임포트
 
@@ -55,7 +63,7 @@ def _fetch_feed(tool_input: dict) -> dict:
         return {"success": False, "error": "url 파라미터에 피드 주소(http/https)가 필요합니다.", "items": []}
     limit = int(tool_input.get("limit") or 10)
     try:
-        feed = feedparser.parse(url)
+        feed = _read_feed(url)
         source_name = (getattr(feed, "feed", {}) or {}).get("title") or url
         if not feed.entries:
             # ★B4 (2026-08-16 상상훈련 7회차): feedparser 는 DNS 죽음·네트워크 오류에도
@@ -162,7 +170,7 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
             encoded_query = quote_plus(query)
             rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl={language}&gl={region}&ceid={region}:{language}"
 
-        feed = feedparser.parse(rss_url)
+        feed = _read_feed(rss_url)
         status = feed.get("status")
         problem = None
         if isinstance(status, int) and status >= 400:
@@ -216,6 +224,7 @@ def search_gnews(query: str = "", count: int = 10, language: str = "ko", region:
         return {
             "success": False,
             "error": str(e),
+            "items": [], "count": 0,
             "query": query,
             "results": []
         }
@@ -253,6 +262,17 @@ def _heuristic_dedup(items: list, threshold: float = 0.86) -> list:
     return kept
 
 
+def _iso_date_field(value):
+    """유효한 timezone-aware ISO 게시일만 통화에 보존한다."""
+    try:
+        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+        if parsed.tzinfo is not None:
+            return {"date": parsed.isoformat()}
+    except (ValueError, TypeError):
+        pass
+    return {}
+
+
 def _search_guardian(tool_input: dict) -> dict:
     """The Guardian Open Platform 검색 — [sense:search]{source:"guardian"}.
     구 study 패키지 search_guardian 을 2026-08-05 어휘 압축 (2)에서 흡수(능력·구현 동거)."""
@@ -286,7 +306,7 @@ def _search_guardian(tool_input: dict) -> dict:
 
         results_list = data.get("results", [])
         if not results_list:
-            return {"items": [], "message": f"'{query}'에 대한 가디언 기사를 찾을 수 없습니다."}
+            return {"success": True, "items": [], "count": 0, "message": f"'{query}'에 대한 가디언 기사를 찾을 수 없습니다."}
 
         total = data.get("total", 0)
         output = [f"### The Guardian 검색 결과: '{query}' (총 {total:,}건 중 {len(results_list)}건 표시)\n"]
@@ -300,7 +320,8 @@ def _search_guardian(tool_input: dict) -> dict:
             trail_text = _html.unescape(trail_text).strip()
 
             a_url = article.get("webUrl", "")
-            date = article.get("webPublicationDate", "")[:10]
+            published = article.get("webPublicationDate", "")
+            date = published[:10]
             section = article.get("sectionName", "")
 
             output.append(
@@ -315,6 +336,7 @@ def _search_guardian(tool_input: dict) -> dict:
                 "meta": " · ".join(x for x in [date, section] if x),
                 "summary": trail_text if trail_text != "요약 없음" else "",
                 "url": a_url,
+                **_iso_date_field(published),
             })
 
         return {"success": True, "message": "\n".join(output), "items": records, "count": len(records)}
@@ -334,6 +356,7 @@ def _guardian_items(query: str, count: int = 30) -> list:
                 "meta": " · ".join(x for x in ["The Guardian", r.get("meta", "")] if x),
                 "summary": r.get("summary", ""),
                 "url": r.get("url", ""), "link_label": "기사 보기",
+                **_iso_date_field(r.get("date")),
             } for r in res["items"]]
     except Exception as e:
         print(f"[_guardian_items] 가디언 검색 생략: {e}", file=sys.stderr)
@@ -342,12 +365,12 @@ def _guardian_items(query: str, count: int = 30) -> list:
 
 def _hn_items(query: str = "", count: int = 30, front_page: bool = False, days: int = 0) -> list:
     """Hacker News(Algolia API) → 신문 items 통화. 키 불요. points=주목도(편집장 hot 신호).
-    front_page=현재 프론트페이지(핫토픽 analog), 아니면 story 키워드 검색. 실패 시 [] (신문 무손상).
+    front_page=현재 프론트페이지(핫토픽 analog), 아니면 story 키워드 검색. 수신 실패는 예외로 전달.
     url=외부 기사 우선(없으면 HN 토론), hn_url=HN 토론(댓글)은 항상 보존.
     date=게시일(ISO8601) — Algolia 가 주는 created_at 을 그대로 통과시킨다. 2026-08-20 신설:
     이 필드가 없어서 HN 결과에 신선도 하드룰을 적용할 방법이 아예 없었다(AI 동향 보고서
     2026-08-20 호가 15건을 통째로 버린 원인). days>0 이면 최근 N일로 서버측 제한."""
-    import urllib.request as _u, urllib.parse as _p
+    import urllib.parse as _p
     try:
         n = min(max(count, 1), 50)  # clamp-ok: Guardian Open Platform page-size 상한 50
         # days>0 → Algolia created_at_i 필터. 미지정(0)=옛 동작 그대로(전체 기간 인기순).
@@ -360,18 +383,19 @@ def _hn_items(query: str = "", count: int = 30, front_page: bool = False, days: 
             import time as _t
             _since = f"created_at_i>{int(_t.time()) - _d * 86400}"
         if front_page:
-            url = f"http://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage={n}"
+            url = f"https://hn.algolia.com/api/v1/search?tags=front_page&hitsPerPage={n}"
             if _since:
                 url += "&numericFilters=" + _p.quote(_since)
         else:
             _nf = _p.quote(_since + ",points>5" if _since else "points>5")
-            url = (f"http://hn.algolia.com/api/v1/search?query={_p.quote(query or '')}"
+            url = (f"https://hn.algolia.com/api/v1/search?query={_p.quote(query or '')}"
                    f"&tags=story&hitsPerPage={n}&numericFilters={_nf}")
-        with _u.urlopen(url, timeout=12) as r:
-            hits = json.loads(r.read()).get("hits", [])
+        data = load_module("web_search_io").read_json(url)
+        hits = data["hits"]
+        if not isinstance(hits, list) or any(not isinstance(hit, dict) for hit in hits):
+            raise ValueError("HN 응답 hits 형식 오류")
     except Exception as e:
-        print(f"[_hn_items] HN 검색 생략: {e}", file=sys.stderr)
-        return []
+        raise RuntimeError(f"HN 검색 실패: {e}") from e
     items = []
     for h in hits:
         oid = h.get("objectID", "")
@@ -397,6 +421,13 @@ def _hn_items(query: str = "", count: int = 30, front_page: bool = False, days: 
             "points": pts,           # 편집장 hot 신호(gnews 의 ×N매체 대응)
         })
     return items
+
+
+def _hn_section(query="", count=30, front_page=False, days=0):
+    try:
+        return {"items": _hn_items(query, count, front_page=front_page, days=days)}
+    except Exception as exc:
+        return {"items": [], "error": str(exc)}
 
 
 _PERSPECTIVE_CACHE: dict = {}
@@ -831,9 +862,7 @@ def execute(tool_input: dict, context):
                     count=_fetch, language=(_lang if _lang != "auto" else "ko"), headlines=True), "오늘의 핫토픽")))
             for q in _queries:
                 jobs.append((q, (lambda qq: (lambda: _fetch_section_items(qq)))(q)))
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=min(8, len(jobs))) as ex:
-                fetched = list(ex.map(lambda j: j[1](), jobs))
+            fetched = _fetch_sections(jobs)
             secs = [{"topic": jobs[i][0], **fetched[i]} for i in range(len(jobs))]
             curated = _curate_sections_batch(secs, _curate) if _curate else None
 
@@ -918,14 +947,13 @@ def execute(tool_input: dict, context):
                 return format_json({"success": False, "error": "검색어(queries)가 비었습니다."})
             jobs = []  # (섹션명, fetch thunk) — front_page 는 맨 앞(핫토픽 analog)
             if _front:
-                jobs.append(("HN 프론트페이지", lambda: _hn_items(count=_fetch, front_page=True, days=_days)))
+                jobs.append(("HN 프론트페이지", lambda: _hn_section(count=_fetch, front_page=True, days=_days)))
             for q in _queries:
-                jobs.append((q, (lambda qq: (lambda: _hn_items(qq, _fetch, days=_days)))(q)))
-            from concurrent.futures import ThreadPoolExecutor
-            with ThreadPoolExecutor(max_workers=min(8, len(jobs))) as ex:
-                fetched = list(ex.map(lambda j: j[1](), jobs))
+                jobs.append((q, (lambda qq: (lambda: _hn_section(qq, _fetch, days=_days)))(q)))
+            fetched = _fetch_sections(jobs)
             secs = [{"topic": jobs[i][0],
-                     "items": [{**it, "query": jobs[i][0]} for it in fetched[i]]} for i in range(len(jobs))]
+                     **fetched[i],
+                     "items": [{**it, "query": jobs[i][0]} for it in fetched[i]["items"]]} for i in range(len(jobs))]
             curated = _curate_sections_batch(secs, _curate) if _curate else None
             all_items, pool_rest, sections = [], [], []
             for i in range(len(secs)):
@@ -936,6 +964,11 @@ def execute(tool_input: dict, context):
                 sections.append({"query": jobs[i][0], "count": len(items)})
             resp = {"success": True, "queries": _queries, "count": len(all_items),
                     "sections": sections, "items": all_items}
+            errors = [{"query": sec["topic"], "error": sec["error"]}
+                      for sec in secs if sec.get("error")]
+            if errors:
+                resp.update(success=False, errors=errors,
+                            error=f"HN 검색 {len(errors)}개 실패; 다른 검색 결과는 items에 보존")
             if curated:
                 resp["pool"] = pool_rest
                 resp["perspective"] = bool(_load_perspective_core())
@@ -944,7 +977,11 @@ def execute(tool_input: dict, context):
         topic = "HN 프론트페이지" if _front else tool_input.get("query", "")
         if not _front and not topic:
             return format_json({"success": False, "error": "검색어(query/queries) 또는 headlines 가 필요합니다."})
-        items = [{**it, "query": topic} for it in _hn_items("" if _front else topic, _fetch, front_page=_front, days=_days)]
+        section = _hn_section("" if _front else topic, _fetch, front_page=_front, days=_days)
+        if section.get("error"):
+            return format_json({"success": False, "query": topic, "count": 0,
+                                "items": [], "error": section["error"]})
+        items = [{**it, "query": topic} for it in section["items"]]
         resp = {"success": True, "query": topic, "count": len(items), "items": items}
         if _curate:
             cr = _curate_sections_batch([{"topic": topic, "items": items}], _curate)[0]

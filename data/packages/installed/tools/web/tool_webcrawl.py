@@ -29,7 +29,7 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Comment, NavigableString
 
 # TLS 지문 위장 단일 소스 (감사 ⑥) — 미설치 환경이면 requests 로 폴백.
 from common.http_fetch import CHROME_UA, chrome_get, has_curl_cffi
@@ -108,6 +108,8 @@ def _diagnose(status: int, final_url: str, requested_url: str, text: str,
         return "bot_blocked"
     if status == 401:
         return "login_required"
+    if isinstance(status, int) and status >= 400:
+        return "http_error"
     # 로그인 페이지로 리다이렉트됨 (요청 자체가 로그인 URL이었던 경우 제외)
     if final_url and _LOGIN_URL_RE.search(final_url) and not _LOGIN_URL_RE.search(requested_url or ''):
         return "login_required"
@@ -139,48 +141,62 @@ def _parse_html(html: str, url: str) -> tuple[str, str]:
     soup = BeautifulSoup(html, 'html.parser')
     title = soup.title.string.strip() if soup.title and soup.title.string else ""
 
-    # 불필요한 요소 제거
-    for el in soup(['script', 'style', 'nav', 'footer', 'header', 'aside',
-                    'noscript', 'iframe', 'form', 'button', 'svg', 'figure', 'figcaption']):
+    # 문서 본문에 속한 머리말·그림 설명은 보존한다. UI/실행 요소만 제거.
+    for el in soup(['script', 'style', 'nav', 'footer', 'aside', 'noscript',
+                    'iframe', 'form', 'button', 'svg']):
         el.decompose()
 
-    # 광고/관련기사/댓글 등 노이즈 제거 (class/id 기반)
-    noise_patterns = ['comment', 'advert', 'sidebar', 'related', 'recommend',
-                      'share', 'social', 'newsletter', 'popup', 'banner', 'cookie']
+    # 부분 문자열이 아닌 명시적인 UI 클래스/ID만 제거한다.
+    # shareholder-letter, recommendations 등 본문 이름을 share/recommend로 오인하지 않는다.
+    noise = {'advert', 'advertisement', 'ads', 'sidebar', 'social-share',
+             'share-buttons', 'sharing-buttons', 'cookie-banner', 'cookie-consent',
+             'newsletter-signup', 'related-posts', 'related-articles', 'comments',
+             'comment-list', 'comment-form'}
     for el in list(soup.find_all(True)):
-        try:
-            classes = ' '.join(el.get('class', []))
-            el_id = el.get('id', '')
-            combined = (classes + ' ' + el_id).lower()
-            if any(p in combined for p in noise_patterns):
-                el.decompose()
-        except Exception:
+        if el.attrs is None:
             continue
+        labels = [*el.get('class', []), el.get('id', '')]
+        if any(str(label).lower() in noise for label in labels):  # vj-ok: HTML UI class/id 식별자 규칙, 통화 값 비교 아님
+            el.decompose()
 
-    # 본문 추출: <article> → <main> → <body>
     container = soup.find('article') or soup.find('main') or soup.find('body') or soup
+    block_tags = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote',
+                  'pre', 'td', 'th', 'dt', 'dd', 'div', 'section', 'article',
+                  'main', 'ul', 'ol', 'dl', 'table', 'tr', 'figure', 'figcaption',
+                  'header', 'hr'}
+    paragraphs, pending = [], []
 
-    # 블록 요소(잎) 단위 추출 — 문단 경계를 DOM 에서 직접 얻는다 (2026-08-29 ⑦).
-    # 종전 get_text('\n') + 빈 줄 제거는 문단 경계를 안 남겨, handler._text_to_blocks 의
-    # \n\n 분리가 통짜 1문단을 냈다(카탈로그의 "items=문단 단위" 약속 위반).
-    # 중첩 블록(li 안의 p 등)은 잎만 취해 중복을 막는다.
-    _BLOCK_TAGS = ['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote',
-                   'pre', 'td', 'th', 'dt', 'dd']
-    paras = []
-    for el in container.find_all(_BLOCK_TAGS):
-        if el.find(_BLOCK_TAGS):
-            continue                      # 자기 안에 다른 블록이 있으면 잎이 아니다
-        t = el.get_text(separator=' ', strip=True)
-        if t:
-            paras.append(t)
-    if paras:
-        text = '\n\n'.join(paras)
-    else:
-        # 블록 요소가 없는 페이지(div/span 만) — 종전 평문 추출로 폴백하되 빈 줄은 보존
-        text = container.get_text(separator='\n')
-        lines = [line.strip() for line in text.splitlines()]
-        text = re.sub(r'\n{3,}', '\n\n', '\n'.join(lines)).strip()
-    return title, text
+    def flush():
+        text = re.sub(r'\s+', ' ', ''.join(pending)).strip()
+        pending.clear()
+        if text:
+            paragraphs.append(text)
+
+    # 여닫는 경계를 순회해 부모의 직접 텍스트와 자식 블록을 순서대로 한 번씩 읽는다.
+    # 명시적 스택이라 깊은 HTML에서도 Python 재귀 상한에 의존하지 않는다.
+    stack = [(container, False)]
+    while stack:
+        node, closing = stack.pop()
+        if isinstance(node, Comment):
+            continue
+        if isinstance(node, NavigableString):
+            pending.append(str(node))
+            continue
+        if closing:
+            flush()
+            continue
+        if node.name in block_tags or node.name == 'br':
+            flush()
+        if node.name == 'pre':
+            text = node.get_text().strip('\n')
+            if text:
+                paragraphs.append(text)
+            continue
+        if node.name in block_tags:
+            stack.append((node, True))
+        stack.extend((child, False) for child in reversed(list(node.children)))
+    flush()
+    return title, '\n\n'.join(paragraphs)
 
 
 def _truncate(text: str, max_length: int | None) -> tuple[str, int, bool]:
@@ -422,6 +438,8 @@ def _crawl_static(url: str, max_length: int) -> dict:
         result = {
             "success": status < 400,
             "url": url,
+            "resolved_url": final_url,
+            "http_status": status,
             "title": title,
             "text": text,
             "length": original_length,
@@ -449,6 +467,11 @@ def _crawl_static(url: str, max_length: int) -> dict:
 
 def _get_chrome_driver():
     """browser-action 패키지의 ChromeMCPDriver 싱글톤을 가져온다. 실패 시 None."""
+    loaded = sys.modules.get("browser_chrome")
+    if loaded is not None and hasattr(loaded, "ChromeMCPDriver"):
+        driver = loaded.ChromeMCPDriver.get_instance()
+        if driver.is_connected():
+            return driver
     try:
         chrome_path = os.path.join(
             os.path.dirname(__file__), "..", "browser-action", "browser_chrome.py"
@@ -489,9 +512,9 @@ def _get_browser_session():
         bs_path = os.path.join(
             os.path.dirname(__file__), "..", "browser-action", "browser_session.py"
         )
-        spec = importlib.util.spec_from_file_location("webcrawl_browser_session", bs_path)
-        mod = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(mod)
+        from common.pkg_utils import load_singleton
+        # handler가 tool_webcrawl을 재로드해도 전용 브라우저는 프로세스에서 한 번만 생성한다.
+        mod = load_singleton(bs_path, "browser_session", module_key="webcrawl_browser_session")
         _browser_session = mod.BrowserSession.get_instance()
         return _browser_session
     except Exception:
@@ -507,20 +530,23 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
     - 크롤 후 로그인 상태를 자동 저장(storage_state) — 세션 신선도 유지.
     """
     opened_tab = None
-    status = 200  # new_tab 경로는 응답 객체가 없음 — 200 가정, goto 경로는 실상태
+    status = None
     try:
-        if session.is_active:
-            opened_tab = await session.new_tab(url)
-            page = session.raw_page
-        else:
-            await session.ensure_browser(headless=True)
-            page = session.raw_page
-            if page is not None:
-                resp = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
-                if resp is not None:
-                    status = resp.status
+        # 초기화는 세션 잠금으로 직렬화하고, 읽기는 요청별 독립 탭에서 진행한다.
+        await session.ensure_browser(headless=None)
+        opened_tab = await session.new_tab()
+        page = session.get_tab_page(opened_tab)
         if page is None:
             return {"success": False, "error": "Playwright 페이지 생성 실패", "url": url, "method": "playwright"}
+
+        resp = await page.goto(url, wait_until="domcontentloaded", timeout=20000)
+        if resp is not None:
+            status = resp.status
+        if status is None or status >= 400:
+            reason = _diagnose(status, page.url, url, "", "") if status else "http_status_unverified"
+            return {"success": False, "error": f"Playwright HTTP 상태: {status}",
+                    "url": url, "resolved_url": page.url, "http_status": status,
+                    "reason": reason, "method": "playwright"}
 
         # 동적 콘텐츠 대기 (SPA 렌더링) — networkidle 우선, 실패해도 진행
         try:
@@ -567,6 +593,8 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
             "length": original_length,
             "truncated": truncated,
             "method": "playwright",
+            "http_status": status,
+            "resolved_url": final_url,
         }
         if reason:
             result["reason"] = reason
@@ -582,52 +610,65 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
 
 
 async def _crawl_chrome_async(driver, url: str, max_length: int) -> dict:
-    """Chrome MCP를 사용하여 실제 브라우저로 페이지 텍스트를 가져온다."""
+    """Chrome MCP도 요청별 탭·최종 URL·실제 HTTP 상태를 확인한다."""
+    tab_id = None
     try:
-        # 페이지 이동
-        await driver.call_tool("navigate", {"url": url, "tabId": driver._tab_id})
-
-        # JS 렌더링 대기 (페이지 로드 완료)
+        created = await driver.call_tool("tabs_create_mcp", {})
+        tab_id = created.get("tabId") or created.get("id")
+        if tab_id is None:
+            raise RuntimeError("Chrome 수집 탭을 생성하지 못했습니다")
+        await driver.call_tool("navigate", {"url": url, "tabId": tab_id})
         await asyncio.sleep(2)
-
-        # 텍스트 추출
-        result = await driver.call_tool("get_page_text", {"tabId": driver._tab_id})
-        text = result.get("text", "") if isinstance(result, dict) else str(result)
-
-        if not text or len(text) < _MIN_CONTENT_LENGTH:
-            return {"success": False, "error": "Chrome MCP에서도 콘텐츠를 추출하지 못함", "url": url, "method": "chrome_mcp"}
-
-        # 제목 추출 시도
-        title_result = await driver.call_tool("javascript_tool", {
+        # Navigation Timing의 responseStatus를 지원하지 않는 Chrome이면 상태 미확인으로
+        # Playwright에 넘긴다. 200이라고 추측해 오류 페이지를 원문 캐시에 넣지 않는다.
+        metadata = await driver.call_tool("javascript_tool", {
             "action": "javascript_exec",
-            "text": "document.title",
-            "tabId": driver._tab_id
+            "text": 'JSON.stringify({title:document.title,url:location.href,'
+                    'status:performance.getEntriesByType("navigation")[0]?.responseStatus})',
+            "tabId": tab_id,
         })
-        title = ""
-        if isinstance(title_result, dict):
-            title = title_result.get("text", title_result.get("result", ""))
-
-        # 정리 및 자르기
-        lines = [line.strip() for line in text.splitlines() if line.strip()]
-        text = '\n'.join(lines)
-        text = re.sub(r'\n{3,}', '\n\n', text)
-        reason = _diagnose(200, url, url, text, title)
+        if isinstance(metadata, dict) and "url" not in metadata:
+            metadata = metadata.get("result", metadata.get("text", {}))
+        if isinstance(metadata, str):
+            try:
+                metadata = json.loads(metadata)
+            except ValueError:
+                metadata = {}
+        if not isinstance(metadata, dict):
+            metadata = {}
+        status = metadata.get("status")
+        final_url = metadata.get("url") or ""
+        title = metadata.get("title") or ""
+        if not isinstance(status, int) or isinstance(status, bool) or status < 100 or not final_url:
+            return {"success": False, "url": url, "method": "chrome_mcp",
+                    "reason": "http_status_unverified", "error": "Chrome HTTP 상태·최종 URL 확인 불가"}
+        if status >= 400:
+            return {"success": False, "url": url, "resolved_url": final_url,
+                    "method": "chrome_mcp", "http_status": status,
+                    "reason": _diagnose(status, final_url, url, "", title),
+                    "error": f"Chrome HTTP 에러: {status}"}
+        content = await driver.call_tool("get_page_text", {"tabId": tab_id})
+        text = content.get("text", "") if isinstance(content, dict) else ""
+        reason = _diagnose(status, final_url, url, text, title)
+        if not text or len(text) < _MIN_CONTENT_LENGTH:
+            return {"success": False, "url": url, "method": "chrome_mcp",
+                    "reason": reason, "error": "Chrome MCP에서도 콘텐츠를 추출하지 못함"}
+        text = re.sub(r'\n{3,}', '\n\n', '\n'.join(line.strip() for line in text.splitlines())).strip()
         text, original_length, truncated = _truncate(text, max_length)
-
-        result = {
-            "success": True,
-            "url": url,
-            "title": title,
-            "text": text,
-            "length": original_length,
-            "truncated": truncated,
-            "method": "chrome_mcp"
-        }
+        result = {"success": True, "url": url, "resolved_url": final_url,
+                  "http_status": status, "title": title, "text": text,
+                  "length": original_length, "truncated": truncated, "method": "chrome_mcp"}
         if reason:
             result["reason"] = reason
         return result
     except Exception as e:
         return {"success": False, "error": f"Chrome MCP 크롤링 실패: {e}", "url": url, "method": "chrome_mcp"}
+    finally:
+        if tab_id is not None:
+            try:
+                await driver.call_tool("tabs_close_mcp", {"tabId": tab_id})
+            except Exception:
+                pass
 
 
 def _run_async(coro):
@@ -636,10 +677,14 @@ def _run_async(coro):
         from system_tools import _get_async_loop
         loop = _get_async_loop()
         future = asyncio.run_coroutine_threadsafe(coro, loop)
-        return future.result(timeout=30)
+        try:
+            return future.result(timeout=30)
+        except TimeoutError:
+            future.cancel()
+            raise
     except ImportError:
         # system_tools를 임포트할 수 없으면 직접 실행
-        return asyncio.run(coro)
+        return asyncio.run(asyncio.wait_for(coro, timeout=30))
 
 
 # ─── Google News 리다이렉트 래퍼 해소 (2026-08-10, ep1008) ───
@@ -702,6 +747,8 @@ def _resolve_google_news(url: str) -> str | None:
 
 # 최종 실패 시 모델에게 전달할 사유별 안내 (정확한 보고 + 다음 행동 힌트)
 _REASON_HINTS = {
+    "http_error": "서버가 HTTP 오류를 반환했습니다.",
+    "http_status_unverified": "브라우저에서 HTTP 상태를 확인하지 못했습니다.",
     "login_required": (
         "로그인이 필요한 페이지입니다. browser_navigate를 headless:false로 열어 사람이 한 번 "
         "로그인해 두면 세션이 자동 저장되어(data/browser_cookies/_auto_state.json) 이후 크롤이 "
@@ -792,13 +839,16 @@ def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
     if driver is None:
         _note("Chrome MCP", False, "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)")
     else:
-        chrome_result = _run_async(_crawl_chrome_async(driver, url, max_length))
-        attempts.append(chrome_result)
-        _note("Chrome MCP", True,
-              chrome_result.get("error") or chrome_result.get("reason")
-              or f"본문 {chrome_result.get('length', 0)}자")
-        if chrome_result.get("success") and not chrome_result.get("reason"):
-            return chrome_result
+        try:
+            chrome_result = _run_async(_crawl_chrome_async(driver, url, max_length))
+            attempts.append(chrome_result)
+            _note("Chrome MCP", True,
+                  chrome_result.get("error") or chrome_result.get("reason")
+                  or f"본문 {chrome_result.get('length', 0)}자")
+            if chrome_result.get("success") and not chrome_result.get("reason"):
+                return chrome_result
+        except Exception as e:
+            _note("Chrome MCP", False, f"실행 중 죽음: {type(e).__name__}: {e}")
 
     # 3단계: Playwright — 자동 복원된 로그인 세션 + 전 프레임 수집
     session = _get_browser_session()

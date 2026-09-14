@@ -86,7 +86,7 @@ def test_gnews_valid_empty_feed_is_successful_currency(monkeypatch, web_handler)
     parser = pytest.importorskip('feedparser')
     empty = parser.parse(b'<rss version="2.0"><channel><title>Search</title></channel></rss>')
     assert empty.version == 'rss20' and not empty.bozo
-    monkeypatch.setattr(web_handler.feedparser, 'parse', lambda _: empty)
+    monkeypatch.setattr(web_handler, '_read_feed', lambda _: empty)
     for args in ({'query': 'no-match'}, {'headlines': True}, {'queries': ['a', 'b']}):
         result = json.loads(web_handler.execute(args, SimpleNamespace(tool_name='search_gnews', project_path='.')))
         assert result['success'] and result['items'] == [] and result['count'] == 0
@@ -103,7 +103,7 @@ def test_gnews_failures_are_not_empty_success(monkeypatch, web_handler, changes)
     parser = pytest.importorskip('feedparser')
     feed = parser.FeedParserDict(entries=[], version='rss20', bozo=0)
     feed.update(changes)
-    monkeypatch.setattr(web_handler.feedparser, 'parse', lambda _: feed)
+    monkeypatch.setattr(web_handler, '_read_feed', lambda _: feed)
     result = web_handler.search_gnews('test')
     assert not result['success'] and result['error'] and result['items'] == []
 
@@ -131,7 +131,7 @@ def test_valid_empty_search_can_be_assigned_filtered_and_combined(monkeypatch, t
     from tool_context import ToolContext
     parser = pytest.importorskip('feedparser')
     feed = parser.parse(b'<rss version="2.0"><channel><title>Search</title></channel></rss>')
-    monkeypatch.setattr(web_handler.feedparser, 'parse', lambda _: feed)
+    monkeypatch.setattr(web_handler, '_read_feed', lambda _: feed)
     spec = importlib.util.spec_from_file_location('_empty_news_dataops', _WEB.parent / 'data-ops/handler.py')
     dataops = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dataops)

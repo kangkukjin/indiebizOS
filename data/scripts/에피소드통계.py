@@ -27,7 +27,9 @@ args (stdin JSON):
     폴백이고, 둘 다 있으면 어긋남을 상태에 신고한다(`로그계수 N≠궤적 M`). 뿌리: 로거가 여러 문장
     code 를 개행째 힌트에 실어 화살표 줄이 쪼개졌고(ep2951 을 IBL 7 로 읽음 — 로거는 같은 날
     고쳤다), 로그는 잘리지만 궤적·코퍼스는 온전하다. `실패` = ibl.finished success=false,
-    `fn` = `[fn:이름]` 호출 수(관용구 재사용의 실측 — 0 이면 결정화가 통로 없이 잠든 것).
+    `fn` = 원문에 쓴 `[fn:이름]` 머리 수(실행 성공·분기·반복 횟수와 다름).
+    문자열·주석 속 예시는 제외한다. 구판 한글 누락은 코퍼스로 복원하고, 원문도 없으면
+    `fn=null`·`fn미측정`으로 알린다. actions의 100개 미리보기 상한과 무관하게 센다.
   · **문법오류는 턴 변수 문맥 안에서 판정한다** (2026-09-07). 한 턴의 호출들은 앞 호출의
     `$변수` 를 이어 쓰므로 격리 파싱하면 "변수 $x 이(가) 앞에서 할당되지 않았습니다" 가 쏟아진다
     (ep2951: 55건 중 20건 '문법오류', 실제 런타임 실패 4건 — 16건 오탐). 코드를 실행 순서대로
@@ -300,13 +302,15 @@ def _measure_prefix(code, parse, variables=None):
 UNASSIGNED_RE = re.compile(r"앞에서 할당되지 않았습니다")
 
 
-def _pair_trajectory(events):
+def _pair_trajectory(events, corpus=None):
     """한 주행의 궤적 사건(event_seq 순) → {"IBL", "실패", "fn", "중첩", "shas"}.
 
     ibl.started 는 execute_ibl 한 번(조종실이 부른 호출 수와 같다 — nested 도 모델의 호출), ibl.finished 는
-    직전에 열린 started 에 짝지어 success 를 귀속한다(스택). `fn` = actions 머리가 `fn:` 인 것 = `[fn:이름]` 호출.
+    직전에 열린 started 에 짝지어 success 를 귀속한다(스택). fn_count는 원문에 쓴 fn 머리 수다.
+    구판 actions는 한글을 누락했으므로 코퍼스로 재계수한다. 원문도 없으면 미측정(None).
     shas = started 순서의 코드 해시(코퍼스에서 원문을 찾는 열쇠)."""
-    out = {"IBL": 0, "실패": 0, "fn": 0, "중첩": 0, "shas": []}
+    from ibl_scanner import source_heads
+    out = {"IBL": 0, "실패": 0, "fn": 0, "fn미측정": 0, "중첩": 0, "shas": []}
     stack = []
     for kind, data in events:
         try:
@@ -317,7 +321,17 @@ def _pair_trajectory(events):
             out["IBL"] += 1
             if d.get("nested"):
                 out["중첩"] += 1
-            out["fn"] += sum(1 for a in (d.get("actions") or []) if str(a).startswith("fn:"))
+            fn_count = d.get("fn_count")
+            if not isinstance(fn_count, int) or isinstance(fn_count, bool) or fn_count < 0:
+                code = (corpus or {}).get(d.get("code_sha256"))
+                if code is not None:
+                    fn_count = sum(n == "fn" for n, _ in source_heads(code))
+                elif d.get("code_chars") == 0:
+                    fn_count = 0
+                else:
+                    fn_count = 0
+                    out["fn미측정"] += 1
+            out["fn"] += fn_count
             out["shas"].append(d.get("code_sha256") or "")
             stack.append(d)
         elif kind == "ibl.finished":
@@ -325,6 +339,8 @@ def _pair_trajectory(events):
                 stack.pop()
             if d.get("success") is False:
                 out["실패"] += 1
+    if out["fn미측정"]:
+        out["fn"] = None
     return out
 
 
@@ -335,7 +351,7 @@ def _scan(log, parse, trunc_re=None, traj=None, corpus=None):
     corpus = {sha: code} — 궤적의 해시가 전부 풀리면 코드 소스는 코퍼스(온전·순서 보존), 아니면 로그.
     """
     acc = {"IBL": 0, "Bash": 0, "기타도구": 0, "파싱실패": 0, "절단": 0, "절단불가": 0, "문법오류": 0,
-           "문맥불명": 0, "회수": 0, "실패": None, "fn": None, "중첩": 0,
+           "문맥불명": 0, "회수": 0, "실패": None, "fn": None, "fn미측정": 0, "중첩": 0,
            "문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
     counts, log_codes, tool_lines, rchars, rchars_lower = _collect(log, trunc_re)
     acc.update(counts)
@@ -349,6 +365,7 @@ def _scan(log, parse, trunc_re=None, traj=None, corpus=None):
         acc["IBL"] = traj["IBL"]
         acc["실패"] = traj["실패"]
         acc["fn"] = traj["fn"]
+        acc["fn미측정"] = traj.get("fn미측정", 0)
         acc["중첩"] = traj["중첩"]
         shas = [h for h in traj["shas"] if h]
         if shas and corpus and all(h in corpus for h in shas):
@@ -427,7 +444,7 @@ def _load_trajectory(conn, ids):
                 corpus[h] = code
     except sqlite3.Error:
         corpus = {}
-    return traj, corpus
+    return {ep: _pair_trajectory(ev, corpus) for ep, ev in by_ep.items()}, corpus
 
 
 def _pct(a, b):
@@ -537,6 +554,7 @@ def main():
             "라운드": r["execution_rounds"],
             "총초": round(r["total_ms"] / 1000) if r["total_ms"] else None,
             "IBL": a["IBL"], "실패": a["실패"], "fn": a["fn"],
+            "fn미측정": a["fn미측정"],
             "회수": a["회수"], "Bash": a["Bash"], "기타도구": a["기타도구"],
             "IBL비중": _pct(a["IBL"], tools),
             # 모델이 도구 결과로 읽은 문자수(천 단위) — 절단 표식의 숨긴 글자수까지 복원한
@@ -556,7 +574,11 @@ def main():
             g["주행"] += 1
             for k in ("IBL", "실패", "fn", "회수", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록",
                       "each", "결과천자"):
-                g[k] = round(g.get(k, 0) + (it[k] or 0), 1)
+                if k == "fn" and (it[k] is None or (k in g and g[k] is None)):
+                    g[k] = None
+                else:
+                    g[k] = round(g.get(k, 0) + (it[k] or 0), 1)
+            g["fn미측정"] = g.get("fn미측정", 0) + it["fn미측정"]
             g["최대단계"] = max(g.get("최대단계") or 0, it["최대단계"] or 0)
         for g in groups.values():
             g["IBL비중"] = _pct(g["IBL"], g["IBL"] + g["Bash"] + g["기타도구"])
@@ -565,6 +587,8 @@ def main():
 
     rlow = sum(1 for it in items if it.get("결과천자하한"))
     msg = f"주행 {len(rows)}건 집계"
+    if any(it.get("fn미측정") for it in items):
+        msg += " · fn미측정: 구판 호출 목록에서 한글 이름이 누락됐고 원문도 없어 fn=null(0 아님)"
     if rlow:
         msg += (f" · 결과천자 {rlow}건은 옛 절단 행(숨긴 글자수 미기록)이라 **하한**입니다 "
                 "— 현행 표식 행(2026-08-22 이후)의 정확값과 나란히 비교하지 말 것")

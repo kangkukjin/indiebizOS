@@ -8,3 +8,25 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: E402,F401
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def isolated_episode_store(tmp_path, monkeypatch):
+    """모든 회귀의 기본 주행·코퍼스 저장소를 격리한다. 개별 DB 대역은 계속 허용한다."""
+    import sqlite3
+    import episode_logger
+
+    # 테스트 대상 폴더의 파일 목록·산출물 수에 DB가 섞이지 않도록 형제 저장소에 둔다.
+    path = tmp_path.parent / "_episode_stores" / (tmp_path.name + ".db")
+    path.parent.mkdir(exist_ok=True)
+
+    def connect():
+        conn = sqlite3.connect(str(path), timeout=10)
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    monkeypatch.setattr(episode_logger, "_get_db", connect)
+    episode_logger._ensure_episode_tables()
+    return path

@@ -149,6 +149,11 @@ def test_named_idiom_records_its_own_result_once(run, monkeypatch, tmp_path, bod
     out = run(program)
     assert out["success"] is False
     assert [(c, ok) for c, ok, _ in hits] == [(body, not body_fails)]
+    import episode_logger
+    with episode_logger._get_db() as conn:
+        recorded = [json.loads(r[0]) for r in conn.execute(
+            "SELECT data FROM trajectory_event WHERE kind='ibl.started'")]
+    assert any(r["fn_count"] == 1 and "fn:직전보고서찾아읽기" in r["actions"] for r in recorded)
     if not body_fails:
         assert hits[0][2]["elapsed_ms"] > 0
     rag.record_recall_outcome(body, 0.95, [{

@@ -985,7 +985,8 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
     from episode_logger import trajectory_scope, record_trajectory_event, record_ibl_code
 
     code = str((tool_input or {}).get("code") or (tool_input or {}).get("pipeline") or "")
-    actions = [f"{n}:{a}" for n, a in re.findall(r"\[([a-z_]+):([a-z_]+)\]", code)]
+    from ibl_scanner import source_heads
+    actions = [f"{n}:{a}" for n, a in source_heads(code)]
     # 조합 모양의 **관측**(판정 아님) — 여기가 전 IBL 표면의 유일한 초크포인트라
     # 편향 없는 모집단이다. 조합률 지표(scripts/vocab_composition_metrics.py)는
     # 그동안 해마 코퍼스의 `distilled` 행만 볼 수 있었는데, 그건 '새로운 실행'만
@@ -1020,6 +1021,7 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                 "code_chars": len(code),
                 "actions": actions[:100],
                 "action_count": len(actions),
+                "fn_count": sum(a.startswith("fn:") for a in actions),
                 "pipes": _pipes,
                 "nested": _nested,
                 "agent": agent_id or "",

@@ -97,13 +97,14 @@ def variant_of(code: str) -> Optional[Dict[str, object]]:
 
 
 def corpus_stats(code: str) -> Optional[Dict[str, int]]:
-    """원문 코퍼스(ibl_code_corpus)의 누계 — 없으면 None."""
+    """실사용 원문 코퍼스의 누계 — 시험 전용 행은 반복 사용 근거가 아니다."""
     try:
-        from boot_paths import get_base_path
+        from runtime_utils import get_base_path
         sha = hashlib.sha256((code or "").encode("utf-8", "replace")).hexdigest()
         con = sqlite3.connect(str(get_base_path() / "data" / "world_pulse.db"), timeout=2)
         try:
-            row = con.execute("SELECT seen_count, success_count FROM ibl_code_corpus WHERE code_sha256=?",
+            row = con.execute("SELECT seen_count, success_count FROM ibl_code_corpus "
+                              "WHERE code_sha256=? AND COALESCE(source, 'usage') <> 'test'",
                               (sha,)).fetchone()
         finally:
             con.close()

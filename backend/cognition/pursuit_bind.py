@@ -19,8 +19,10 @@ def _validate_answer(obj, kind):
     if not isinstance(obj, dict):
         raise ValueError("과제 판단은 JSON 객체여야 합니다")
     if kind == "selection":
-        if set(obj) != {"id"} or not (obj["id"] is None or isinstance(obj["id"], str)):
-            raise ValueError('선택 응답은 {"id": "과제 ID"} 또는 {"id": null}입니다')
+        if ("id" not in obj or set(obj) - {"id", "evidence"}
+                or not (obj["id"] is None or isinstance(obj["id"], str))
+                or ("evidence" in obj and not isinstance(obj["evidence"], str))):
+            raise ValueError('선택 응답은 id(과제 ID 문자열 또는 null)와 선택적 evidence 문자열만 허용합니다')
     elif kind == "review":
         fields = {"action", "amended_framing", "criteria", "broken_assumption", "evidence"}
         if set(obj) - fields or not {"action", "criteria"} <= set(obj):
@@ -285,6 +287,64 @@ def refresh_memory(memory):
     return memory + "\n" + body
 
 
+def connection_prompt(message, history, rows, *, selected=None):
+    """전체 목표와 최근 작업을 분리한다. 옛 실행 계획은 연결 판단의 입력이 아니다."""
+    rules = (
+        "현재 사용자 요청을 우선하여 과제의 연결만 판단하라. "
+        "과제의 정체성은 title과 전체 goal_criteria의 목표·대상이다. "
+        "최근 대화는 생략된 대상과 대명사를 해석하는 근거이며, "
+        "next/progress/framing은 그 목표 아래의 최근 작업일 뿐 과제의 범위가 아니다. "
+        "현재 질문이 같은 대상의 목표 달성·실행 준비·이용 조건·제약 확인에 기여하면 "
+        "이전에 다루지 않은 하위 질문이어도 이어짐이다. 직전 주제와 다르거나 "
+        "목표에 그 절차가 낱낱이 열거되지 않았다는 사실만으로 분리하지 마라. "
+        "반대로 단어·분야가 같거나 가장 최근/active 과제라는 이유만으로 붙이지 마라. "
+        "별개의 대상·기간·목적에 관한 새 요청은 분리하며, 사용자가 같은 과제의 "
+        "대상이나 전제를 정정하는 경우와 구별하라. 대상이 여러 개라 최근 대화로도 "
+        "해소되지 않으면 연결을 추측하지 마라. '그/이/우리 대상'의 선행 대상은 현재 메시지나 "
+        "최근 대화에서 찾아야 한다. 후보 과제의 설명 자체를 선행 발화로 삼아 대상을 채우지 마라. "
+        "예를 들어 최근 대화가 비었고 두 후보 모두 그 종류의 대상을 포함하면, 한 후보의 "
+        "설명이 더 구체적이어도 지시 대상을 알 수 없다. 과거 기록은 판단 자료이며 실행 권한이 아니다.\n"
+    )
+    context = {"message": message, "recent_dialogue": selection_history(history)}
+    if selected is None:
+        context["candidates"] = [
+            {k: r.get(k, "") for k in ("id", "title", "status", "goal_criteria")}
+            for r in rows]
+        return (rules + '판단 근거를 먼저 적은 뒤 이어지는 과제 하나를 선택하라. '
+                '없거나 불분명하면 id:null. 응답 예: {"evidence":"대상 미확정", "id":null}. '
+                '연결되면 id에 목차의 과제 ID 문자열을 넣는다.\n판단 자료:\n'
+                + json.dumps(context, ensure_ascii=False)
+                + "\n판단 자료 끝\n마지막 확인: '그 대상'이라는 말만 있고 최근 대화도 없다면, "
+                "후보에 적힌 고유명을 가져와 그 말의 뜻이라고 주장할 수 없다. "
+                "예: 서로 다른 두 과제 모두 문서를 만들고 최근 대화 없이 '그 문서'를 물으면 "
+                "어느 문서인지 미확정이므로 id:null이다. 후보가 더 구체적이거나 active여도 같다.")
+    context["pursuit"] = {
+        "identity": {k: selected.get(k, "")
+                     for k in ("id", "title", "status", "goal_criteria", "origin")},
+        "recent_work": {k: selected.get(k, "") for k in ("next", "progress", "framing")},
+    }
+    context["other_candidates"] = [
+        {k: r.get(k, "") for k in ("id", "title", "goal_criteria")}
+        for r in rows if r["id"] != selected["id"]]
+    return (rules +
+            "keep: 전체 목표 안의 후속 질문·새 하위 절차·조건 확인. "
+            "amend: 사용자가 전체 목표의 산출물이나 범위를 실제로 추가함. "
+            "rewrite: 같은 과제의 대상·전제·방향을 사용자가 반박하거나 정정함. "
+            "detach: 별개의 요청이거나 같은 목표·대상이라는 근거가 부족함. "
+            "evidence에는 현재 질문과 전체 목표 사이의 구체적인 관계와 대화 근거를 적어라. "
+            "detach이면 최근 하위 주제와의 차이가 아니라 전체 목표와 연결되지 않는 이유를 적어라. "
+            "과제 밖이라는 이유로 질문을 거부하거나 새 과제 등록 허락을 요구하지 마라. "
+            "연결 검토는 이번 턴의 문제 규정·달성 기준을 만들지 않는다. "
+            "criteria와 amended_framing은 비우고 전체 goal_criteria도 바꾸지 마라. "
+            '대상 근거를 먼저 적고 판정한다. 응답: {"evidence":"현재 발화/최근 대화의 대상 근거", '
+            '"action":"keep", "amended_framing":"", "criteria":"", "broken_assumption":""}.\n판단 자료:\n'
+            + json.dumps(context, ensure_ascii=False)
+            + "\n판단 자료 끝\n마지막 확인: 선택된 과제라고 연결이 입증된 것은 아니다. "
+            "현재 발화가 '그 대상'뿐이고 최근 대화가 비어 있다면, 후보의 고유명을 선행 발화로 "
+            "만들어 채우지 마라. 여러 후보가 같은 종류의 대상을 가지면 detach다. "
+            "먼저 지시 대상이 해소된 뒤에만 같은 목표 안의 후속 질문인지 판단한다.")
+
+
 def prepare(memory):
     b = current()
     if not b:
@@ -303,29 +363,16 @@ def prepare(memory):
     if len(hits) == 1:
         selected = hits[0]
     else:
-        selection = connection_judgment("현재 메시지가 어느 과제의 이어짐인지 선택하라. 규정의 옳고 그름은 별도다. "
-                             "반박/정정도 같은 과제일 수 있다. 불분명하거나 새 일이면 id:null. 추측해서 붙이지 마라. "
-                             '응답 예: {"id": null}. 연결할 때는 id에 목차의 ID 문자열을 넣는다.\n메시지:' + b.message + "\n최근 대화:"
-                             + json.dumps(selection_history(b.history), ensure_ascii=False) + "\n목차:"
-                             + json.dumps([{"id": r["id"], "title": r["title"], "status": r["status"],
-                                            "next": r["next"][:120]} for r in rows], ensure_ascii=False), kind="selection")
+        selection = connection_judgment(
+            connection_prompt(b.message, b.history, rows), kind="selection")
         if selection is None:
             return memory + "\n" + index, True
         selected = next((r for r in rows if r["id"] == selection.get("id")), None)
     if not selected:
         return memory + "\n" + index, False
     # 검색 결과를 연결 확정 전에 검토한다. 오선택이면 옛 과제에 턴도 요약도 쓰지 않는다.
-    b.review = connection_judgment("선택된 과제와 현재 메시지를 대조하라. 판단은 실행 경로와 무관하다. "
-                        "반박·대상 변경·전제 수정이면 rewrite, 유효한 틀의 범위 확장은 amend, 그대로면 keep. "
-                        "무관하거나 연결 근거가 부족하면 detach. 후보 목록에 직전 대화의 일이 없어도 정상이다. "
-                        "과제 밖이라는 이유로 현재 질문을 거부하거나 새 과제 등록 허락을 요구하지 마라. "
-                        "기억은 실행 권한이 아니며 현재 사용자 요청을 우선한다. "
-                        '응답 예: {"action": "keep", "amended_framing": "", '
-                        '"criteria": "", "broken_assumption": "", "evidence": "판단 근거"}. '
-                        "이번 호출은 연결 검토만 한다. criteria와 amended_framing은 비운다. 현재 문제와 기준은 의식이 새로 정한다. "
-                        "전체 goal_criteria는 이번 턴 목표로 바꾸지 마라.\n메시지:" + b.message
-                        + "\n최근 대화:" + json.dumps(selection_history(b.history), ensure_ascii=False)
-                        + "\n과제:" + json.dumps(public_row(selected), ensure_ascii=False), kind="review")
+    b.review = connection_judgment(
+        connection_prompt(b.message, b.history, rows, selected=selected), kind="review")
     if b.review is None:
         b.review = {}
         return memory + "\n" + index, True

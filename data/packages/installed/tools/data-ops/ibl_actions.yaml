@@ -213,12 +213,14 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: "통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교). 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
-    target_description: by(중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
+    target_description: by(별칭 key; 중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
     group: transform
     router: handler
     params:
       by: ["string", "array"]   # 키 자리 = 속성 집합(복합키)
     tool: data_dedup
+    aliases:
+      by: [key]
     implementation: data-ops handler.py — by 키 정규화 후 첫 항목만 유지. 비파괴.
     target_key: by
     keywords:

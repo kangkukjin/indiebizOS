@@ -579,7 +579,7 @@ IBL 액션을 연산자로 연결하면 파이프라인이 된다.
 6. 표시용 문자열(meta)은 자유 — 규약은 *수치·날짜·좌표의 병기*이지 표시의 통제가 아니다. 카드 4칸만 내는 생산자(수치 없는 뉴스 등)는 해당 없음.
 
 `engines`의 **변환자**(returns:transform)는 통화를 받아 *같은 통화*를 내므로(closure) `>>`로 임의 깊이 조합된다(도메인 무관):
-- **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `dedup{by}` · `groupby{by, agg}` — 단항은 `|` 단축 문법 지원
+- **단항**(앞 결과 1개): `filter{where}` · `sort{by, desc}` · `take{n}` · `select{columns}` · `dedup{by}` · `groupby{by, agg}` — 단항은 `|` 단축 문법 지원. `dedup`의 `key`는 `by`의 별칭이며 단일·복합키 모두 같은 정규화 경로를 쓴다.
 - **이항**(`&` 두 입력): `join{on}` · `union` · `merge` — **형태 보존**(2026-09-06 언어 개정): items 가지끼리는 items 로 잇고, 표형은 명시 표형 가지가 하나라도 있을 때만(그때 빈 items 가지는 0행 표로 승격). 옛 `union` 은 늘 표를 내 2차 `union` 의 0행 가지에서 죽었다(ep2882) — **효과 봉투 1행 규약**(2026-09-05 언어 개정, 사용자 판정 "남긴 것도 고쳐"): `union` 은 items/table 없는 success 봉투(write·notify 같은 부수효과 결과)를 분기당 1행으로 받아 `effect_rows` 로 신고한다 — `[self:write] & [self:write] >> [table:union]` 이 "통화 종류가 같아야" 로 죽던 자리(ep2827). 부수효과만 병렬로 돌릴 땐 맨몸 `[A] & [B]` 로 문장을 끝내도 된다(결과=분기 봉투 목록; 이항 변환자 강제는 *통화를 소비할 때*의 규칙이다) — **죽은 분기 규약**(2026-08-30 언어 개정, 사용자 판정): 병렬 분기가 실패해 통화 없는 에러 봉투를 내면 union/merge 는 기본으로 그 분기를 **건너뛰고 신고**한다(`branches_skipped` + warning — items:[] 실은 실패 봉투를 0행+경고로 흘리던 B24-1c 의미론과 한 벌로 통일; 옛날엔 items 없는 실패 봉투가 "통화 불일치" **오진**으로 전체를 죽였다, ep2355 실측). `on_error: "stop"` 이면 전부-아니면-실패. 전 분기 실패=정직 에러. 산 분기끼리의 진짜 통화 혼합은 여전히 에러이며 분기별 통화를 이름 대 준다.
 
 통화는 산출물 emitter로 흐른다: `document`(html/pdf/docx/pptx/typst) · `chart` · `spreadsheet`. 패턴: **[검색/조회] → [변환자 체인] → [산출물]**. 명제="언어는 명사에 산다" — 명사(통화)가 coverage를, 변환자가 depth를 곱한다. (data-ops 패키지, 2026-06-15)

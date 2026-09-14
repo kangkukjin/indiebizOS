@@ -116,6 +116,16 @@ def test_dedup_composite_key_with_empty_part_is_kept():
     assert len(r["items"]) == 2, r      # 빈 부분이 있는 행은 중복 판정 밖(단일 키 규약의 확장)
 
 
+def test_dedup_key_alias_uses_requested_fields_instead_of_default_title():
+    from ibl_routing import _normalize_param_aliases
+    for key, expected in [("아파트명", 2), (["아파트명", "계약유형"], 3)]:
+        params = _normalize_param_aliases("table", "dedup", {"key": key})
+        assert len(H._op_dedup(ITEMS, params)["items"]) == expected
+    # 같은 호출에 정규 인자도 있으면 공용 별칭 계약대로 by가 우선한다.
+    params = _normalize_param_aliases("table", "dedup", {"key": "없는열", "by": "아파트명"})
+    assert len(H._op_dedup(ITEMS, params)["items"]) == 2
+
+
 def test_merge_composite_key():
     a = json.dumps({"success": True, "items": [{"n": "A", "t": "전세"}, {"n": "A", "t": "매매"}]}, ensure_ascii=False)
     b = json.dumps({"success": True, "items": [{"n": "A", "t": "전세"}, {"n": "B", "t": "전세"}]}, ensure_ascii=False)

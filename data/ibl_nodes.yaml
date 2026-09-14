@@ -4204,10 +4204,12 @@ nodes:
         fixture: '[self:memory]{op: "search", query: "test"}'
         description: 심층 메모리 관리 (op 분기). 장기 기억을 **주제 가지(node) 트리**에 둔다 — 프롬프트의 <memory_map>(목차)에서 가지를 고른 뒤 recall 로 연다. 자아별 사적 기억(폰·맥 각자 로컬). 최근 대화 로그는 recent/agents 별도.
         group: memory
-        target_description: save — content 필수. 즉시 저장하지 않으며 입력 본문도 저장 대기열에 넣지 않는다. saved:false와 자동 선별 안내를 반환하므로 저장 완료로 보고하지 않는다. 최종 검수·응답 후 기존 자동 선별이 사용자 원문의 지속 사실·선호·확정 결정만 보존한다. 조사 결과·AI 분석·사소한 사실·일회성 조건은 제외하고 0건 저장도 정상이다. 별도 save 호출은 필요 없다. 대화 밖 직접 호출은 not_saved. recall — node 가지를 연다(소개·출처·기억·하위 가지; 생략=지도). store:"실행" 이면 실행기억의 함수 서명·용례 이름을 먼저 반환한다. 본문은 expand:"이름"(함수 정의), "#id"(용례 한 건), "주행", "all"로 연다. move — memory_id를 node로 이동(store 동일). search — query 필수(FTS+시맨틱), category 필터(사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타; 그 밖은 명시 거절), node 필터 옵션. read/delete — memory_id(search 결과 items의 memory_id). 검색의 preview_truncated이면 read로 전문·출처를 확인한다. 기존 기억의 사용자 발화·AI 기록·출처 미확인을 구분하고 현재 대상·날짜와 대조한다. 잘못된 기억은 delete.
+        target_description: save — content 필수. 즉시 저장하지 않으며 입력 본문도 저장 대기열에 넣지 않는다. saved:false와 자동 선별 안내를 반환하므로 저장 완료로 보고하지 않는다. 최종 검수·응답 후 기존 자동 선별이 사용자 원문의 지속 사실·선호·확정 결정만 보존한다. 조사 결과·AI 분석·사소한 사실·일회성 조건은 제외하고 0건 저장도 정상이다. 별도 save 호출은 필요 없다. 대화 밖 직접 호출은 not_saved. recall — node 가지를 연다(소개·출처·기억·하위 가지; 생략=지도). store:"실행" 이면 실행기억의 함수 서명·용례 이름을 먼저 반환한다. 본문은 expand:"이름"(함수 정의), "#id"(용례 한 건), "주행", "all"로 연다. move — memory_id를 node로 이동(store 동일). search — query 필수(FTS+시맨틱), category 필터(사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타; 그 밖은 명시 거절), node 필터 옵션. read/delete — 장기기억 결과의 memory_id만 사용. 대화 결과는 conversation_id이며 read/delete/move에 사용할 수 없다. node/category 필터가 있으면 해당 범위의 장기기억 안에서 top_k개를 검색한다. 검색의 preview_truncated이면 read로 전문·출처를 확인한다. 기존 기억의 사용자 발화·AI 기록·출처 미확인을 구분하고 현재 대상·날짜와 대조한다. 잘못된 기억은 delete.
         target_key: op
         router: handler
         params:
+          conversation_id: integer
+          source: string
           keywords:
           - string
           - array
@@ -4229,7 +4231,7 @@ nodes:
             save: '[self:memory]{op: "save", content: "자동 선별 정책 확인"}'
             recall: '[self:memory]{op: "recall"}'
           exempt:
-            read: memory_id 필요(search 결과의 id) — 고정 fixture 부적합
+            read: memory_id 필요(search 장기기억 결과의 memory_id) — 고정 fixture 부적합
             move: memory_id 필요(search/recall 결과의 id) — 고정 fixture 부적합
           values:
             save: 자동 선별 안내 (content 필수, saved:false; 본문 저장 없음, 최종 응답 후 사용자 원문에서 선별)
@@ -4987,7 +4989,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx/xls) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용; offset은 0 이상, limit은 0 이상 정수이며 0은 빈 본문, 생략은 전체 읽기) 또는 start_line/end_line(1-기반 양끝 포함, 역전·비정수·충돌 범위는 오류) 또는 tail(끝에서 N줄, 1 이상 정수; offset/start/start_line/end/end_line/limit와 동시 지정은 오류). blocks=true는 선택한 범위를 문단 items로 변환하며 같은 물리 줄번호를 사용한다. 빈 문단 범위의 start_line/end_line은 null이다. pdf — pages 옵션 (예 '1-5'), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). JSON 배열을 변수에 받으면 변수 자체가 목록($목록)이며 .items 필드가 있는 봉투가 아니다. 스캔 PDF는 별도 OCR 필요.
+        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx/xls) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용; offset은 0 이상, limit은 0 이상 정수이며 0은 빈 본문, 생략은 전체 읽기) 또는 start_line/end_line(1-기반 양끝 포함, 역전·비정수·충돌 범위는 오류) 또는 tail(끝에서 N줄, 1 이상 정수; offset/start/start_line/end/end_line/limit와 동시 지정은 오류). blocks=true는 선택한 범위를 문단 items로 변환하며 같은 물리 줄번호를 사용한다. 빈 문단 범위의 start_line/end_line은 null이다. pdf — pages는 1-기반 양끝 포함 범위(예 '2', '1-5,8'; 잘못된 범위는 오류), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). JSON 배열을 변수에 받으면 변수 자체가 목록($목록)이며 .items 필드가 있는 봉투가 아니다. 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
@@ -4997,8 +4999,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-09-14'
-          impl: 2e1282da97b65bd0
+          at: '2026-09-15'
+          impl: daccd9a5f2a37d3b
         target_key: path
         aliases:
           offset:
@@ -5010,8 +5012,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-09-14'
-          impl: 2e1282da97b65bd0
+          at: '2026-09-15'
+          impl: daccd9a5f2a37d3b
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)

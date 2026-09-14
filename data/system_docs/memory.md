@@ -903,3 +903,7 @@ saved:true 영수증을 받은 경우에만 memory_saved를 보고한다. 지속
 회원 ZIP 가져오기는 scripts/import_member_archive.py. 대화는 system_ai_memory.db, 지속 기억은
 system_ai_state/memory_system_ai.db, 프로그램은 scripts/registry.yaml에 붙는다. 원본 에피소드·해마·포식·IBL
 문장과 의존성 정보는 data/member_imports/<archive digest>에 보존한다. 가져오기 중 코드를 실행하거나 패키지를 설치하지 않는다.
+
+### 검색 결과 식별자와 범위 (2026-09-15)
+
+`[self:memory]{op:"search"}`의 장기기억 항목은 `memory_id`, 대화 항목은 `conversation_id`를 반환한다. `read/delete/move`에는 장기기억의 `memory_id`만 전달한다. 대화 ID는 장기기억 ID와 별개의 공간이다. `node/category`를 지정하면 대화는 섞지 않고 조건에 맞는 장기기억 후보 안에서 `top_k`를 적용한다. 벡터 검색과 키워드 검색이 같은 가지 경계를 사용한다.

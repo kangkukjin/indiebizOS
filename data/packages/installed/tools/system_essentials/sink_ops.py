@@ -6,6 +6,13 @@
 """
 import json
 import os
+import importlib.util
+from pathlib import Path
+
+_spec = importlib.util.spec_from_file_location(
+    "essentials_file_io", Path(__file__).with_name("essentials_file_io.py"))
+_file_io = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_file_io)
 
 
 def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool, *,
@@ -139,14 +146,13 @@ def write_sink(tool_input: dict, path: str, _live_target: str, redirected: bool,
             content = {"items": content, "count": len(content)}
     if not isinstance(content, str):
         content = json.dumps(content, ensure_ascii=False, indent=2) if isinstance(content, (dict, list)) else str(content)
-    _red_err = _red_write_prepare(path, content)  # 그랜트된 RED 쓰기 안전판(구문검증+백업)
-    if _red_err:
-        return _red_err
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(content)
-    byte_size = len(content.encode("utf-8"))
-    _red_write_finalize(path)  # backend .py 면 워치독(헬스체크·자동 롤백) 보장
+    with _file_io.file_lock(path):
+        _red_err = _red_write_prepare(path, content)  # 그랜트된 RED 쓰기 안전판(구문검증+백업)
+        if _red_err:
+            return _red_err
+        _file_io.atomic_write_text(path, content)
+        byte_size = len(content.encode("utf-8"))
+        _red_write_finalize(path)  # backend .py 면 워치독(헬스체크·자동 롤백) 보장
     # 쓰기 관문 원장 — 행위자 동반 사건 기록(관측일 뿐, 실패해도 본 쓰기 무영향)
     try:
         from write_ledger import log_write

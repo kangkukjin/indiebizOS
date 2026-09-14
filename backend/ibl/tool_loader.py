@@ -323,10 +323,13 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
     require_tool_active(tool_name)
 
     # 도구 이름 캐시에 있으면 반환 — 단 handler.py 가 디스크에서 바뀌었으면 낡은 모듈이다
-    if tool_name in _tool_handlers_cache:
+    # 로컬 참조를 잡는다. 병렬 호출의 무효화/clear_cache가 dict 항목을 지워도
+    # 이미 시작한 호출은 유효한 모듈 스냅샷으로 완료하고 다음 호출이 새 버전을 받는다.
+    cached = _tool_handlers_cache.get(tool_name)
+    if cached is not None:
         _pkg = _tool_to_package_map.get(tool_name)
         if not (_pkg and _invalidate_stale_handler(_pkg)):
-            return _tool_handlers_cache[tool_name]
+            return cached
         # 낡음 — 캐시가 비워졌으니 아래 재로드 경로로 계속
 
     # 매핑 구축
@@ -338,8 +341,8 @@ def load_tool_handler(tool_name: str) -> Optional[Any]:
         return None
 
     # 같은 패키지의 다른 도구가 이미 로드했으면 그 모듈 인스턴스를 재사용
-    if package_id in _package_handlers_cache and not _invalidate_stale_handler(package_id):
-        module = _package_handlers_cache[package_id]
+    module = _package_handlers_cache.get(package_id)
+    if module is not None and not _invalidate_stale_handler(package_id):
         _tool_handlers_cache[tool_name] = module
         print(f"[도구 핸들러 재사용] {tool_name} <- {package_id} (공유 모듈)")
         return module

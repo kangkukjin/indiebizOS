@@ -202,7 +202,7 @@
     "self:lecture#load": "lecture_id 필요 — 고정 fixture 부적합",
     "self:material#list": "lecture_id 필요 — 고정 fixture 부적합",
     "self:memory#move": "memory_id 필요(search/recall 결과의 id) — 고정 fixture 부적합",
-    "self:memory#read": "memory_id 필요(search 결과의 id) — 고정 fixture 부적합",
+    "self:memory#read": "memory_id 필요(search 장기기억 결과의 memory_id) — 고정 fixture 부적합",
     "self:music#playlist": "플레이리스트 name 필요 — 고정 fixture 부적합",
     "self:music#track": "곡 path 필요 — 고정 fixture 부적합",
     "self:notebook#add": "소스 색인을 만든다 — 부작용",

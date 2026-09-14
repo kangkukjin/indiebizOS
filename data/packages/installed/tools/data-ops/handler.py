@@ -334,7 +334,9 @@ def _op_filter_impl(prev, params):
     # 파고들기는 입구(_get_items_for_fields)가 담당 — R5 개별 구현을 F6 에서 입구로 접음.
     recs, env = _get_items_for_fields(prev, _where_fields(where))
     if recs is not None:
-        dict_recs = [r for r in recs if isinstance(r, dict)]
+        if any(not isinstance(r, dict) for r in recs):
+            return {"success": False, "error": "객체가 아닌 items 행이 있습니다. 행을 객체로 변환한 뒤 다시 실행하세요."}
+        dict_recs = recs
         if dict_recs:
             missing = [f for f in _where_fields(where) if not any(f in r for r in dict_recs)]
             if missing:
@@ -488,7 +490,9 @@ def _op_select(prev, params):
         return _emit_table(env, {"columns": new_cols, "rows": new_rows})
     recs, env = _get_items_for_fields(prev, cols_keep)
     if recs is not None:
-        dict_recs = [r for r in recs if isinstance(r, dict)]
+        if any(not isinstance(r, dict) for r in recs):
+            return {"success": False, "error": "객체가 아닌 items 행이 있습니다. 행을 객체로 변환한 뒤 다시 실행하세요."}
+        dict_recs = recs
         if dict_recs:
             missing = [k for k in cols_keep if not any(k in r for r in dict_recs)]
             if missing:

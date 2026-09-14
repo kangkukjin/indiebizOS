@@ -7,7 +7,6 @@
 import base64
 import importlib.util
 import json
-import re
 import zipfile
 from pathlib import Path
 
@@ -69,17 +68,6 @@ def read_document(params, command, exchange, workspace):
         raise ValueError('지원하지 않는 형식')
     if fmt in ('pdf', 'docx', 'xlsx', 'xls', 'xlsm'):
         p.update(path=str(path), extract_images=False)
-        if fmt == 'pdf' and isinstance(p.get('pages'), str):
-            pages = []
-            for part in p['pages'].split(','):
-                match = re.fullmatch(r'\s*(\d+)(?:-(\d+))?\s*', part)
-                if not match:
-                    raise ValueError('페이지 범위 오류')
-                start, end = int(match[1]), int(match[2] or match[1])
-                if start < 1 or end < start or end - start > 10000:
-                    raise ValueError('페이지 범위 오류')
-                pages.extend(range(start - 1, end))
-            p['pages'] = pages
         office = _sibling('office_ops')
         fn = office.read_pdf if fmt == 'pdf' else office.read_docx if fmt == 'docx' else office.read_xlsx
         result = json.loads(fn(p, str(workspace)))

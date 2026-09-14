@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "memory_op",
-      "description": "심층 메모리 통합 도구 (op 분기). save/search/read/delete/recall/move — 기억은 주제 가지(node) 트리, <memory_map> 목차에서 가지를 골라 recall.\n\n- op=save: content 필수. saved:false, 본문은 저장·대기하지 않는다. 최종 검수·응답 후 사용자 원문에서 지속 가치가 있는 사실·선호·결정만 자동 선별한다. 호출 자체가 불필요하며 저장 완료로 보고하지 않는다. 대화 밖은 not_saved.\n- op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션\n- op=read: memory_id 필수\n- op=delete: memory_id 필수\n\n워크플로: 최종 응답 후 자동 선별 → search로 검색 → preview_truncated이면 read로 전문·출처 확인 → 잘못 저장은 delete. AI 분석·조사 결과·일회성 조건·사소한 사실은 장기 기억으로 복제하지 않는다.",
+      "description": "심층 메모리 통합 도구 (op 분기). save/search/read/delete/recall/move — 기억은 주제 가지(node) 트리, <memory_map> 목차에서 가지를 골라 recall.\n\n- op=save: content 필수. saved:false, 본문은 저장·대기하지 않는다. 최종 검수·응답 후 사용자 원문에서 지속 가치가 있는 사실·선호·결정만 자동 선별한다. 호출 자체가 불필요하며 저장 완료로 보고하지 않는다. 대화 밖은 not_saved.\n- op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션\n- op=read: 장기기억 memory_id 필수(대화 conversation_id 사용 불가)\n- op=delete: 장기기억 memory_id 필수(대화 conversation_id 사용 불가)\n\n워크플로: 최종 응답 후 자동 선별 → search로 검색 → preview_truncated이면 read로 전문·출처 확인 → 잘못 저장은 delete. AI 분석·조사 결과·일회성 조건·사소한 사실은 장기 기억으로 복제하지 않는다.",
       "input_schema": {
         "type": "object",
         "properties": {
@@ -46,9 +46,17 @@
             "type": "integer",
             "description": "search 옵션 — 반환 개수(기본 10)"
           },
+          "conversation_id": {
+            "description": "대화 검색 결과의 ID. read/delete/move에 전달하면 장기기억 조작을 거절한다.",
+            "type": "integer"
+          },
+          "source": {
+            "description": "검색 결과 출처. conversation은 read/delete/move 대상이 아니다.",
+            "type": "string"
+          },
           "memory_id": {
             "type": "integer",
-            "description": "read/delete/move 필수 — 메모리 ID"
+            "description": "read/delete/move 필수 — 장기기억 memory_id. 대화 conversation_id는 사용할 수 없음"
           },
           "node": {
             "type": "string",

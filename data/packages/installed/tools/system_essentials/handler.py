@@ -24,6 +24,7 @@ def _load_sibling(module_name):
 
 
 # 파일 찾기 하부는 형제 모듈이 안다 — handler 에는 분기와 봉투만 (2026-08-29 분리).
+_file_io = _load_sibling("essentials_file_io")
 _fs_find = _load_sibling("fs_find")
 _FIND_DEADLINE_S = _fs_find.FIND_DEADLINE_S
 _bounded_find = _fs_find.bounded_find
@@ -770,57 +771,28 @@ def execute(tool_input: dict, context) -> str:
             # 가 heading/list/quote/table/code/divider 를 살려 blocks 뷰·render_document 가
             # 그대로 소비. docx·pdf 읽기의 자체 IR 방출과 같은 통화로 3경로 정렬.
             # 원문은 message 로도 보존. 어느 파일이든 쓰는 일반 표시 옵션.
+            file_size = os.path.getsize(path)
+            content, total, start, end, ranged, truncated = _file_io.read_text_window(
+                path, tool_input, _text_read_bounds)
             if tool_input.get("blocks"):
                 from doc_ir import markdown_to_blocks
-                with open(path, 'r', encoding='utf-8') as f:
-                    _lines = f.readlines()
-                _txt = ''.join(_lines)
-                # blocks 도 줄 범위(offset/limit·start_line/end_line)를 존중한다(2026-09-05, 관용구 '찾아서각각읽기' 리허설
-                # 실측: grep 줄번호 주변을 문단으로 받으려 했는데 파일 머리부터 나왔다) — 범위를 먼저 자르고 문단으로 나눈다.
-                _b_off, _b_end, _ranged = _text_read_bounds(tool_input, len(_lines))
-                _b_range = None
-                if _ranged:
-                    _txt = "".join(_lines[_b_off:_b_end])
-                    _b_range = {"start_line": _b_off + 1 if _txt else None,
-                                "end_line": _b_end if _txt else None, "total_lines": len(_lines)}
-                _parts = markdown_to_blocks(_txt)
-                _env = {"success": True, "items": _parts, "message": _txt, "path": path, "count": len(_parts)}
-                if _b_range:
-                    _env.update(_b_range)
-                return json.dumps(_env, ensure_ascii=False)
-            file_size = os.path.getsize(path)
-
-            with open(path, 'r', encoding='utf-8') as f:
-                lines = f.readlines()
-
-            total_lines = len(lines)
-
-            offset, end, ranged = _text_read_bounds(tool_input, total_lines)
-            # numbered:true — 각 줄 앞에 줄번호(cat -n 의 자리). grep 줄번호·edit start_line 과 같은 자.
-            _numbered = bool(tool_input.get("numbered"))
-
-            def _join(seq, first_no):
-                if not _numbered:
-                    return ''.join(seq)
-                return ''.join(f"{n}\t{l}" for n, l in enumerate(seq, start=first_no))
-
-            # offset/limit 적용
+                parts = markdown_to_blocks(content)
+                env = {"success": True, "items": parts, "message": content,
+                       "path": path, "count": len(parts)}
+                if ranged:
+                    env.update(start_line=start + 1 if content else None,
+                               end_line=end if content else None, total_lines=total)
+                if truncated:
+                    env.update(truncated=True, total_lines=total,
+                               warning="처음 1MB만 표시했습니다. offset/limit으로 부분 읽기를 사용하세요.")
+                return json.dumps(env, ensure_ascii=False)
             if ranged:
-                selected = lines[offset:end]
-                content = _join(selected, offset + 1)
-                # 표시는 1-기반 양끝 포함 — grep 줄번호·start_line/end_line 과 같은 자로 읽힌다
-                # (옛 표기는 0-기반 범위를 "줄"이라 찍어 1씩 어긋났다).
-                span = f"{offset + 1}-{min(end, total_lines)}" if selected else "없음"
-                header = f"[줄 {span} / 전체 {total_lines}줄, {file_size:,}바이트]\n"
-                return header + content
-            else:
-                # 전체 읽기 — 대용량 파일 방어 (1MB 제한)
-                MAX_READ_SIZE = 1_000_000
-                content = _join(lines, 1)
-                if len(content) > MAX_READ_SIZE:
-                    content = content[:MAX_READ_SIZE]
-                    content += f"\n\n... (파일이 {file_size // 1000}KB로 큽니다. 처음 1MB만 표시. offset/limit으로 부분 읽기를 사용하세요. 전체 {total_lines}줄)"
-                return content
+                span = f"{start + 1}-{end}" if content else "없음"
+                return f"[줄 {span} / 전체 {total}줄, {file_size:,}바이트]\n" + content
+            if truncated:
+                content += (f"\n\n... (파일이 {file_size // 1000}KB로 큽니다. 처음 1MB만 표시. "
+                            f"offset/limit으로 부분 읽기를 사용하세요. 전체 {total}줄)")
+            return content
 
         elif tool_name == "write_file":
             raw_path = _get_path(tool_input)
@@ -1026,66 +998,71 @@ def execute(tool_input: dict, context) -> str:
             if new_string is None:
                 new_string = ""
 
-            # 파일 읽기
-            if not os.path.exists(file_path):
-                return f"Error: 파일이 존재하지 않습니다: {_get_path(tool_input)}"
+            with _file_io.file_lock(file_path):
+                # 파일 읽기
+                if not os.path.exists(file_path):
+                    return f"Error: 파일이 존재하지 않습니다: {_get_path(tool_input)}"
 
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                with open(file_path, 'r', encoding='utf-8', newline='') as f:
+                    content = f.read()
+                # read는 LF로 보여 준다. 균일 CRLF 파일은 그 읽기 결과로 편집해도 원래 개행을 유지한다.
+                if "\r\n" in content and "\n" not in content.replace("\r\n", ""):
+                    if isinstance(old_string, str):
+                        old_string = old_string.replace("\r\n", "\n").replace("\n", "\r\n")
+                    new_string = new_string.replace("\r\n", "\n").replace("\n", "\r\n")
 
-            if tool_input.get("start_line") is not None:
-                # 줄 범위 편집(2026-09-05 그림자 관문): [start_line, end_line] 을 new_string 으로 교체(""=삭제).
-                # ep2862 실측 — 127줄 블록을 old_string 으로 되타이핑할 수 없어 /tmp 파이썬 스크립트로 갔던 자리.
-                _rng = _load_sibling("fs_edit").replace_line_range(
-                    content, tool_input.get("start_line"), tool_input.get("end_line"), new_string, old_string)
-                if _rng.get("error"):
-                    return "Error: " + _rng["error"]
-                new_content = _rng["content"]
-                _replaced_n = 1
-                _range_note = _rng["note"]
-            else:
-                _range_note = ""
-                if old_string is None:
-                    return "Error: old_string 또는 start_line(줄 범위) 중 하나는 필요합니다."
-                # old_string이 파일에 있는지 확인
-                count = content.count(old_string)
-                if count == 0:
-                    # 왜 안 맞았는지 말한다 (2026-08-22). 실측한 실패 둘(ep1395·ep1393)이
-                    # 전부 *근접 실패*였다 — 내용은 맞는데 들여쓰기·공백이 달랐다. 옛 신고는
-                    # "파일 내용을 다시 확인하세요" 뿐이라 매번 grep 한 번을 더 쓰게 했다.
-                    # 구현=fs_edit.py 형제 모듈 (1500줄 규칙 — handler 는 부채 파일)
-                    return "Error: " + _load_sibling("fs_edit").miss_diagnosis(
-                        content, old_string, new_string)
-                replace_all = bool(tool_input.get("replace_all", False))   # 2026-09-05(ep2836): 모델이 이미 쓰던 인자 — 선언·구현
-                if count > 1 and not replace_all:
-                    return (f"Error: 교체할 문자열이 {count}번 발견되었습니다. 더 구체적인 문자열을 지정하거나, "
-                            f"전부 바꾸려면 replace_all: true 를 주세요.")
+                if tool_input.get("start_line") is not None:
+                    # 줄 범위 편집(2026-09-05 그림자 관문): [start_line, end_line] 을 new_string 으로 교체(""=삭제).
+                    # ep2862 실측 — 127줄 블록을 old_string 으로 되타이핑할 수 없어 /tmp 파이썬 스크립트로 갔던 자리.
+                    _rng = _load_sibling("fs_edit").replace_line_range(
+                        content, tool_input.get("start_line"), tool_input.get("end_line"), new_string, old_string)
+                    if _rng.get("error"):
+                        return "Error: " + _rng["error"]
+                    new_content = _rng["content"]
+                    _replaced_n = 1
+                    _range_note = _rng["note"]
+                else:
+                    _range_note = ""
+                    if old_string is None:
+                        return "Error: old_string 또는 start_line(줄 범위) 중 하나는 필요합니다."
+                    # old_string이 파일에 있는지 확인
+                    count = content.count(old_string)
+                    if count == 0:
+                        # 왜 안 맞았는지 말한다 (2026-08-22). 실측한 실패 둘(ep1395·ep1393)이
+                        # 전부 *근접 실패*였다 — 내용은 맞는데 들여쓰기·공백이 달랐다. 옛 신고는
+                        # "파일 내용을 다시 확인하세요" 뿐이라 매번 grep 한 번을 더 쓰게 했다.
+                        # 구현=fs_edit.py 형제 모듈 (1500줄 규칙 — handler 는 부채 파일)
+                        return "Error: " + _load_sibling("fs_edit").miss_diagnosis(
+                            content, old_string, new_string)
+                    replace_all = bool(tool_input.get("replace_all", False))   # 2026-09-05(ep2836): 모델이 이미 쓰던 인자 — 선언·구현
+                    if count > 1 and not replace_all:
+                        return (f"Error: 교체할 문자열이 {count}번 발견되었습니다. 더 구체적인 문자열을 지정하거나, "
+                                f"전부 바꾸려면 replace_all: true 를 주세요.")
 
-                # 교체 수행 — replace_all 이면 전부, 아니면(고유) 첫 하나
-                new_content = content.replace(old_string, new_string) if replace_all else content.replace(old_string, new_string, 1)
-                _replaced_n = count if replace_all else 1
+                    # 교체 수행 — replace_all 이면 전부, 아니면(고유) 첫 하나
+                    new_content = content.replace(old_string, new_string) if replace_all else content.replace(old_string, new_string, 1)
+                    _replaced_n = count if replace_all else 1
 
-            _red_err = _red_write_prepare(file_path, new_content)  # RED 안전판(구문검증+백업)
-            if _red_err:
-                return _red_err
+                _red_err = _red_write_prepare(file_path, new_content)  # RED 안전판(구문검증+백업)
+                if _red_err:
+                    return _red_err
 
-            with open(file_path, 'w', encoding='utf-8') as f:
-                f.write(new_content)
+                _file_io.atomic_write_text(file_path, new_content)
 
-            _red_write_finalize(file_path)  # backend .py 면 워치독 보장
+                _red_write_finalize(file_path)  # backend .py 면 워치독 보장
 
-            # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
-            if file_path != _live_target:
-                return json.dumps({
-                    "success": True, "staged": True,
-                    "path": os.path.abspath(file_path),
-                    "live_path": os.path.abspath(_live_target),
-                    "message": f"격리 사본을 수정했습니다({_range_note or f'{_replaced_n}곳 교체'}). {_STAGED_NOTE}"}, ensure_ascii=False)
-            _vg = _vocab_enforce(file_path)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
-            return (f"Successfully edited {os.path.abspath(file_path)}"
-                    + (f" ({_range_note})" if _range_note else (f" ({_replaced_n}곳 교체)" if _replaced_n > 1 else ""))
-                    + " — " + live_effect_note(os.path.abspath(file_path))
-                    + (_vocab_gate_mod().note(_vg) if _vg else ""))
+                # 절대 경로로 반환 (에이전트 간 경로 혼동 방지)
+                if file_path != _live_target:
+                    return json.dumps({
+                        "success": True, "staged": True,
+                        "path": os.path.abspath(file_path),
+                        "live_path": os.path.abspath(_live_target),
+                        "message": f"격리 사본을 수정했습니다({_range_note or f'{_replaced_n}곳 교체'}). {_STAGED_NOTE}"}, ensure_ascii=False)
+                _vg = _vocab_enforce(file_path)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
+                return (f"Successfully edited {os.path.abspath(file_path)}"
+                        + (f" ({_range_note})" if _range_note else (f" ({_replaced_n}곳 교체)" if _replaced_n > 1 else ""))
+                        + " — " + live_effect_note(os.path.abspath(file_path))
+                        + (_vocab_gate_mod().note(_vg) if _vg else ""))
 
         elif tool_name == "run_command":
             command = tool_input.get("command", "").strip()

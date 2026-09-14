@@ -68,6 +68,8 @@ def _op_recall(tool_input: dict, context) -> str:
 def _op_move(tool_input: dict, context) -> str:
     """기억 하나를 다른 가지로 옮긴다(memory_id + node)."""
     import memory_db, memory_tree
+    if tool_input.get("conversation_id") is not None or tool_input.get("source") == "conversation":
+        return json.dumps({"success": False, "error": "대화 ID는 장기기억의 memory_id가 아닙니다."}, ensure_ascii=False)
     memory_id = tool_input.get("memory_id")
     if memory_id is None:
         return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)
@@ -188,13 +190,9 @@ def _memory_search(db, tool_input, project_path, agent_id):
         agent_id=agent_id,
         query=query,
         category=_cat,
-        limit=limit
+        limit=limit,
+        **({"node": str(tool_input["node"]).strip().strip("/")} if tool_input.get("node") else {})
     )
-    # node 필터(옵션): 그 가지와 그 아래만
-    _node = str(tool_input.get("node") or "").strip().strip("/")
-    if _node:
-        deep_results = [r for r in deep_results
-                        if (r.get("node") or "") == _node or (r.get("node") or "").startswith(_node + "/")]
     for r in deep_results:
         r["source"] = "deep_memory"
     results.extend(deep_results)
@@ -202,11 +200,13 @@ def _memory_search(db, tool_input, project_path, agent_id):
     # 2) 대화 이력 검색
     # ★침묵 클램프 청산(2026-08-24 #repair B6): 깎았으면 깎았다고 말한다.
     _conv_req, _conv_lim = limit, min(limit, 5)
-    conv_results = _search_conversations(project_path, query, limit=_conv_lim)
+    # 대화에는 심층 분류·가지가 없다. 필터가 있으면 그 범위의 심층 기억만 반환한다.
+    conv_results = ([] if _cat or tool_input.get("node") else
+                    _search_conversations(project_path, query, limit=_conv_lim))
     results.extend(conv_results)
     _clamp = ({"clamped": True, "requested": _conv_req,
                "message": f"대화 이력은 상한 {_conv_lim}건까지만 함께 봅니다(요청 {_conv_req})."}
-              if _conv_req > _conv_lim else {})
+              if _conv_req > _conv_lim and not (_cat or tool_input.get("node")) else {})
 
     # 레코드 통화 부착(비파괴) — memories 목록을 records로. >> [table:document/spreadsheet] 파이프용.
     return json.dumps({
@@ -240,9 +240,10 @@ def _memories_to_records(memories: list) -> list:
             "summary": "" if preview == title else preview,
             "url": "",
         }
-        # memory_id 병기 (2026-08-16 상상훈련 6회차 B2): desc 계약이 "read/delete —
-        # memory_id (search 결과의 id)"인데 카드 투영이 id 를 접어 사슬이 끊겨 있었다.
-        if m.get("id") is not None:
+        # 장기기억만 memory_id로 투영한다. 대화 ID와 충돌하면 read/delete의 대상이 바뀐다.
+        if source == "conversation":
+            rec["conversation_id"] = m.get("conversation_id", m.get("id"))
+        elif m.get("id") is not None:
             rec["memory_id"] = m["id"]
         for key in ("provenance", "preview_truncated", "preview_offset", "content_chars", "node"):
             if key in m:
@@ -281,7 +282,7 @@ def _search_conversations(project_path, query, limit=5):
         results = []
         for r in rows:
             results.append({
-                "id": r["id"],
+                "conversation_id": r["id"],
                 "preview": r["preview"],
                 "from_agent": r["from_agent"],
                 "to_agent": r["to_agent"],
@@ -294,6 +295,8 @@ def _search_conversations(project_path, query, limit=5):
 
 
 def _memory_read(db, tool_input, project_path, agent_id):
+    if tool_input.get("conversation_id") is not None or tool_input.get("source") == "conversation":
+        return json.dumps({"success": False, "error": "대화 ID는 장기기억의 memory_id가 아닙니다."}, ensure_ascii=False)
     memory_id = tool_input.get("memory_id")
     if not memory_id:
         return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)
@@ -321,6 +324,8 @@ def _memory_read(db, tool_input, project_path, agent_id):
 
 
 def _memory_delete(db, tool_input, project_path, agent_id):
+    if tool_input.get("conversation_id") is not None or tool_input.get("source") == "conversation":
+        return json.dumps({"success": False, "error": "대화 ID는 장기기억의 memory_id가 아닙니다."}, ensure_ascii=False)
     memory_id = tool_input.get("memory_id")
     if not memory_id:
         return json.dumps({"success": False, "error": "memory_id가 필요합니다."}, ensure_ascii=False)

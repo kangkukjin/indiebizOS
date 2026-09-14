@@ -135,8 +135,11 @@ def replace_line_range(content: str, start_line, end_line, new_string: str, old_
             first = first[:200] + "…"
         return {"error": f"old_string 이 {s}~{e}행 안에 없습니다 — {s}행의 실제 내용: {first!r}. 줄번호가 옛 읽기의 것이면 다시 읽고 고치세요."}
     new = new_string or ""
+    newline = "\r\n" if "\r\n" in block else "\n"
+    if newline == "\r\n":
+        new = new.replace("\r\n", "\n").replace("\n", newline)
     if new and not new.endswith("\n") and (e < total or block.endswith("\n")):
-        new += "\n"
+        new += newline
     out = "".join(lines[:s - 1]) + new + "".join(lines[e:])
     n_new = new.count("\n") if new else 0
     note = f"줄 {s}~{e}({e - s + 1}줄) {'삭제' if not new else f'→ {n_new}줄로 교체'}"

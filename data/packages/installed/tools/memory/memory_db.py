@@ -201,7 +201,8 @@ def _delete_vec(db_path: str, mem_id: int):
         conn.close()
 
 
-def _search_semantic(db_path: str, query: str, top_k: int = 10) -> List[Tuple[int, float]]:
+def _search_semantic(db_path: str, query: str, top_k: int = 10,
+                     category: str = None, node: str = None) -> List[Tuple[int, float]]:
     """시맨틱 검색 — (memory_id, similarity) 리스트.
     similarity는 코사인 유사도 (1=일치, 0=무관).
     normalize_embeddings=True를 가정하므로 vec0의 distance(L2제곱)는
@@ -215,10 +216,13 @@ def _search_semantic(db_path: str, query: str, top_k: int = 10) -> List[Tuple[in
     try:
         q_vec = model.encode(query, normalize_embeddings=True, convert_to_numpy=True)
         q_blob = struct.pack(f"{EMBEDDING_DIM}f", *q_vec.tolist())
+        scope, scope_args = _search_scope(category, node)
+        # vec0 rowid IN 서브쿼리는 KNN 후보 자체를 제한한다. top_k 이후 필터는 누락을 만든다.
+        eligible = f" AND rowid IN (SELECT id FROM memories WHERE {scope})" if scope else ""
         rows = conn.execute(
             "SELECT rowid, distance FROM memories_vec "
-            "WHERE embedding MATCH ? ORDER BY distance LIMIT ?",
-            (q_blob, top_k)
+            f"WHERE embedding MATCH ?{eligible} ORDER BY distance LIMIT ?",
+            [q_blob, *scope_args, top_k]
         ).fetchall()
         return [(int(r["rowid"]), 1.0 - float(r["distance"]) / 2.0) for r in rows]
     except Exception as e:
@@ -485,8 +489,22 @@ def save(project_path: str, agent_id: str,
     return mem_id
 
 
+def _search_scope(category=None, node=None):
+    """SQL 후보 범위 — LIKE 와 벡터 검색이 동일한 가지 경계를 쓴다."""
+    clauses, args = [], []
+    if category:
+        clauses.append("category = ?")
+        args.append(category)
+    node = str(node or "").strip().strip("/")
+    if node:
+        # LIKE의 %/_ 와 무관한 리터럴 가지 이름 + '/' 경계.
+        clauses.append("(node = ? OR substr(node, 1, length(?) + 1) = ? || '/')")
+        args.extend([node, node, node])
+    return " AND ".join(clauses), args
+
+
 def _search_like(db_path: str, query: str, category: str = None,
-                 limit: int = 20) -> List[Dict]:
+                 limit: int = 20, node: str = None) -> List[Dict]:
     """기존 LIKE 키워드 검색"""
     conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
@@ -503,9 +521,10 @@ def _search_like(db_path: str, query: str, category: str = None,
             conditions.append("(keywords LIKE ? OR content LIKE ?)")
             params.extend([w, w])
         where = " OR ".join(conditions)
-        if category:
-            where = f"({where}) AND category = ?"
-            params.append(category)
+        scope, scope_args = _search_scope(category, node)
+        if scope:
+            where = f"({where}) AND {scope}"
+            params.extend(scope_args)
 
         first = f"%{words[0]}%"
         sql = f"""
@@ -528,7 +547,8 @@ def _search_like(db_path: str, query: str, category: str = None,
 
 def search(project_path: str, agent_id: str,
            query: str, category: str = None, limit: int = 10,
-           semantic_only: bool = False, min_score: float = 0.0) -> List[Dict]:
+           semantic_only: bool = False, min_score: float = 0.0,
+           node: str = None) -> List[Dict]:
     """시맨틱 우선 + LIKE 폴백 검색 (해마와 동일 패턴).
 
     1) 시맨틱(fine-tuned 임베딩) 검색을 먼저 시도. SEMANTIC_THRESHOLD 통과 항목이 있으면 그것만 반환.
@@ -547,7 +567,8 @@ def search(project_path: str, agent_id: str,
     eff_threshold = max(SEMANTIC_THRESHOLD, min_score)
 
     # 1. 시맨틱 우선
-    sem_pairs = _search_semantic(db_path, query, top_k=limit * 2)
+    filters = {k: v for k, v in {"category": category, "node": node}.items() if v}
+    sem_pairs = _search_semantic(db_path, query, top_k=limit * 2, **filters)
     sem_pairs = [(mid, s) for mid, s in sem_pairs if s >= eff_threshold]
 
     if sem_pairs:
@@ -557,28 +578,13 @@ def search(project_path: str, agent_id: str,
         return []
     else:
         # 2. 시맨틱 미준비/매칭 0 → LIKE 폴백
-        like_results = _search_like(db_path, query, category, limit=limit)
+        like_results = _search_like(db_path, query, category, limit=limit, **({"node": node} if node else {}))
         if not like_results:
             return []
         sorted_ids = [r["id"] for r in like_results]
 
     if not sorted_ids:
         return []
-
-    # 카테고리 필터 (시맨틱 경로에서도 적용)
-    if category and sem_pairs:
-        conn = sqlite3.connect(db_path, timeout=10)
-        try:
-            ph = ",".join("?" * len(sorted_ids))
-            allowed = {r[0] for r in conn.execute(
-                f"SELECT id FROM memories WHERE id IN ({ph}) AND category = ?",
-                sorted_ids + [category]
-            )}
-            sorted_ids = [mid for mid in sorted_ids if mid in allowed]
-        finally:
-            conn.close()
-        if not sorted_ids:
-            return []
 
     # 메타 로드
     conn = sqlite3.connect(db_path, timeout=10)

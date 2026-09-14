@@ -56,3 +56,30 @@ def text_read_bounds(params, total_lines):
     limit = params.get('limit')
     end = min(offset + limit, total_lines) if limit is not None else total_lines
     return offset, end, offset > 0 or limit is not None
+
+
+def pdf_page_indices(pages, total_pages):
+    """공개 pages 문자열은 1-기반 양끝 포함. 내부 구형 list는 0-기반을 유지한다."""
+    if pages is None:
+        return list(range(total_pages))
+    if isinstance(pages, list):
+        if not pages or any(type(p) is not int or p < 0 or p >= total_pages for p in pages):
+            raise ValueError("pages 목록은 파일 안의 0-기반 정수 페이지여야 합니다.")
+        return list(dict.fromkeys(pages))
+    if not isinstance(pages, str) or not pages.strip():
+        raise ValueError("pages는 '2' 또는 '1-5,8' 형식이어야 합니다.")
+    result = []
+    seen = set()
+    for part in pages.split(','):
+        match = re.fullmatch(r'\s*(\d+)\s*(?:-\s*(\d+)\s*)?', part)
+        if not match:
+            raise ValueError("pages는 '2' 또는 '1-5,8' 형식이어야 합니다.")
+        start = int(match[1])
+        end = int(match[2]) if match[2] else start
+        if start < 1 or end < start or end > total_pages:
+            raise ValueError(f"pages 범위가 잘못됐습니다: {part!r} (전체 {total_pages}쪽).")
+        for page in range(start - 1, end):
+            if page not in seen:
+                seen.add(page)
+                result.append(page)
+    return result

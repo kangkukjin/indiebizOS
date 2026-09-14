@@ -7,10 +7,12 @@ actions:
     fixture: '[self:memory]{op: "search", query: "test"}'
     description: 심층 메모리 관리 (op 분기). 장기 기억을 **주제 가지(node) 트리**에 둔다 — 프롬프트의 <memory_map>(목차)에서 가지를 고른 뒤 recall 로 연다. 자아별 사적 기억(폰·맥 각자 로컬). 최근 대화 로그는 recent/agents 별도.
     group: memory
-    target_description: save — content 필수. 즉시 저장하지 않으며 입력 본문도 저장 대기열에 넣지 않는다. saved:false와 자동 선별 안내를 반환하므로 저장 완료로 보고하지 않는다. 최종 검수·응답 후 기존 자동 선별이 사용자 원문의 지속 사실·선호·확정 결정만 보존한다. 조사 결과·AI 분석·사소한 사실·일회성 조건은 제외하고 0건 저장도 정상이다. 별도 save 호출은 필요 없다. 대화 밖 직접 호출은 not_saved. recall — node 가지를 연다(소개·출처·기억·하위 가지; 생략=지도). store:"실행" 이면 실행기억의 함수 서명·용례 이름을 먼저 반환한다. 본문은 expand:"이름"(함수 정의), "#id"(용례 한 건), "주행", "all"로 연다. move — memory_id를 node로 이동(store 동일). search — query 필수(FTS+시맨틱), category 필터(사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타; 그 밖은 명시 거절), node 필터 옵션. read/delete — memory_id(search 결과 items의 memory_id). 검색의 preview_truncated이면 read로 전문·출처를 확인한다. 기존 기억의 사용자 발화·AI 기록·출처 미확인을 구분하고 현재 대상·날짜와 대조한다. 잘못된 기억은 delete.
+    target_description: save — content 필수. 즉시 저장하지 않으며 입력 본문도 저장 대기열에 넣지 않는다. saved:false와 자동 선별 안내를 반환하므로 저장 완료로 보고하지 않는다. 최종 검수·응답 후 기존 자동 선별이 사용자 원문의 지속 사실·선호·확정 결정만 보존한다. 조사 결과·AI 분석·사소한 사실·일회성 조건은 제외하고 0건 저장도 정상이다. 별도 save 호출은 필요 없다. 대화 밖 직접 호출은 not_saved. recall — node 가지를 연다(소개·출처·기억·하위 가지; 생략=지도). store:"실행" 이면 실행기억의 함수 서명·용례 이름을 먼저 반환한다. 본문은 expand:"이름"(함수 정의), "#id"(용례 한 건), "주행", "all"로 연다. move — memory_id를 node로 이동(store 동일). search — query 필수(FTS+시맨틱), category 필터(사용자선호/사용자정보/작업기록/의사결정/중요날짜/기타; 그 밖은 명시 거절), node 필터 옵션. read/delete — 장기기억 결과의 memory_id만 사용. 대화 결과는 conversation_id이며 read/delete/move에 사용할 수 없다. node/category 필터가 있으면 해당 범위의 장기기억 안에서 top_k개를 검색한다. 검색의 preview_truncated이면 read로 전문·출처를 확인한다. 기존 기억의 사용자 발화·AI 기록·출처 미확인을 구분하고 현재 대상·날짜와 대조한다. 잘못된 기억은 delete.
     target_key: op
     router: handler
     params:
+      conversation_id: integer  # 대화 검색 행 전달 시 장기기억 조작을 거절하는 식별자
+      source: string            # 구형 대화 결과(source:conversation)의 잘못된 ID 전달도 거절
       keywords: ["string", "array"]   # 키워드는 본성상 목록 — 저장소가 두 표기를 다 받는다(normalize_keywords, 2026-09-05)
     tool: memory_op
     aliases:
@@ -29,7 +31,7 @@ actions:
         save: '[self:memory]{op: "save", content: "자동 선별 정책 확인"}'
         recall: '[self:memory]{op: "recall"}'
       exempt:
-        read: 'memory_id 필요(search 결과의 id) — 고정 fixture 부적합'
+        read: 'memory_id 필요(search 장기기억 결과의 memory_id) — 고정 fixture 부적합'
         move: 'memory_id 필요(search/recall 결과의 id) — 고정 fixture 부적합'
       values:
         save: 자동 선별 안내 (content 필수, saved:false; 본문 저장 없음, 최종 응답 후 사용자 원문에서 선별)
@@ -65,9 +67,9 @@ tool_json:
 
       - op=search: query 필수(자연어/키워드, FTS+시맨틱 통합) + category 필터 옵션, top_k 옵션
 
-      - op=read: memory_id 필수
+      - op=read: 장기기억 memory_id 필수(대화 conversation_id 사용 불가)
 
-      - op=delete: memory_id 필수
+      - op=delete: 장기기억 memory_id 필수(대화 conversation_id 사용 불가)
 
 
       워크플로: 최종 응답 후 자동 선별 → search로 검색 → preview_truncated이면 read로 전문·출처 확인 → 잘못 저장은 delete. AI 분석·조사 결과·일회성 조건·사소한 사실은 장기 기억으로 복제하지 않는다.'
@@ -92,9 +94,13 @@ tool_json:
         top_k:
           type: integer
           description: search 옵션 — 반환 개수(기본 10)
+        conversation_id:
+          description: 대화 검색 결과의 ID. read/delete/move에 전달하면 장기기억 조작을 거절한다.
+        source:
+          description: 검색 결과 출처. conversation은 read/delete/move 대상이 아니다.
         memory_id:
           type: integer
-          description: read/delete/move 필수 — 메모리 ID
+          description: read/delete/move 필수 — 장기기억 memory_id. 대화 conversation_id는 사용할 수 없음
         node:
           type: string
           description: 주제 가지 경로("가족/어머니" 꼴). save는 사용하지 않음 · recall 대상(생략=지도 전체) · move 목적지 · search 필터

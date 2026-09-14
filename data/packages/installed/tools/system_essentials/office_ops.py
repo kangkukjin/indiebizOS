@@ -198,15 +198,17 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
     if not path.exists():
         return json.dumps({"success": False, "error": f"파일을 찾을 수 없습니다: {path}"}, ensure_ascii=False)
 
+    doc = None
     try:
         doc = fitz.open(str(path))
         metadata = doc.metadata
         total_pages = doc.page_count
 
-        if pages is not None and isinstance(pages, list):
-            target_pages = [p for p in pages if 0 <= p < total_pages]
-        else:
-            target_pages = range(total_pages)
+        from importlib.util import spec_from_file_location, module_from_spec
+        spec = spec_from_file_location("fs_read_range", Path(__file__).with_name("fs_read_range.py"))
+        ranges = module_from_spec(spec)
+        spec.loader.exec_module(ranges)
+        target_pages = ranges.pdf_page_indices(pages, total_pages)
 
         extracted_text = ""
         for pno in target_pages:
@@ -262,6 +264,9 @@ def read_pdf(tool_input: dict, project_path: str) -> str:
 
     except Exception as e:
         return json.dumps({"success": False, "error": f"PDF를 읽는 중 문제가 발생했습니다: {str(e)}"}, ensure_ascii=False)
+    finally:
+        if doc is not None and not doc.is_closed:
+            doc.close()
 
 
 def read_docx(tool_input: dict, project_path: str) -> str:

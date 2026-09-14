@@ -18,6 +18,7 @@ import logging
 import re
 from pathlib import Path
 from typing import Dict, List, Optional
+from history_excerpt import history_excerpt, CONSCIOUSNESS_HISTORY_CHARS
 
 logger = logging.getLogger(__name__)
 
@@ -313,9 +314,8 @@ class ConsciousnessAgent:
                 role = turn.get("role", "unknown")
                 content = turn.get("content", "")
                 has_images = bool(turn.get("images"))
-                # 긴 내용은 앞부분만 전달 (의식 에이전트는 판단만 하므로)
-                if len(content) > 500:
-                    content = content[:500] + f"... ({len(content)}자)"
+                # DB의 본문 발췌·체크포인트를 다시 앞부분으로 잘라 결과를 잃지 않는다.
+                content = history_excerpt(content, CONSCIOUSNESS_HISTORY_CHARS)
                 img_attr = ' has_images="true"' if has_images else ''
                 parts.append(f"<turn index=\"{i}\" role=\"{role}\"{img_attr}>{content}</turn>")
             parts.append("</history>")

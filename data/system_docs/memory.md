@@ -59,8 +59,13 @@ see_also: [architecture.md, ibl.md]
 - **저장**: 시스템 AI는 `system_ai_memory.db:conversations`, 프로젝트 에이전트는 각자 `conversations.db`로 **격리**.
 - **사용**: `get_history_for_ai(limit=7)` — **Observation Masking** 적용
   - 최근 2턴: 원본 유지 (이미지도 최근 턴만 로드)
-  - 그 이전 + 500자 초과: `[이전 대화: {첫줄}… ({길이}자)]`로 축약
+  - 그 이전: 6,000자 이하는 본문 보존. 초과하면 앞 1/4·뒤 3/4의 원문 발췌와 생략량을 전달.
+    의식 입구는 12,000자까지 수용하여 DB 발췌와 최대 4,000자 체크포인트를 재절단하지 않는다.
+    길이 규칙은 `base/history_excerpt.py` 한 벌이며, 관련성 판단은 의식의 별도 책임이다.
+    [결과 본문 보존 수리](../../docs/HISTORY_CONTENT_RETENTION_2026_09_14.md).
 - **요약 체크포인트** (2026-08-14, `history_checkpoint.py`): 창 밖으로 밀려난 턴은 경량 AI가 **재귀 요약**해 `history_checkpoints` 테이블(시스템 AI 는 `system_ai_memory.db`, 프로젝트/위임 쌍은 그 `conversations.db`)에 보존하고 히스토리 머리에 주입한다. 저장 깔때기(`save_conversation`/`save_message`)가 SQL 선판정 후 백그라운드로 갱신, 키별 동시 1개.
+  요약 입력은 행당 최대 6,000자·배치 본문 30,000자 안에서 같은 앞·뒤 발췌를 사용한다.
+  진행 예고보다 결과·정정·수치와 시점·근거·산출물 경로를 보존하도록 지시한다.
 - **현재 의도에 따른 선별**: 의식은 현재 지시를 먼저 읽고 필요한 과거만 채택한다. 문자열
   `history_summary`가 원본을 대체하며 빈 문자열은 실행 히스토리를 비운다. 의식 미실행·필드
   누락·비문자열만 판단 부재로 원본을 유지한다. CLI도 교체본의 하네스 표식

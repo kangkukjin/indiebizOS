@@ -489,3 +489,12 @@ retired:
     phrases:
       - '요약이 비어있으면 원본 히스토리를 그대로 반환합니다.'
       - '히스토리 편집 (의식 요약 있으면 대체, 없으면 원본 유지)'
+
+  - id: history_result_lost_to_prefix_masking
+    retired: 2026-09-14
+    reason: 첫줄 100자와 의식 입구 500자 절단으로 이전 답변의 결과 대신 조사 예고만 전달됐다.
+    instead: 공통 history_excerpt가 보통 답변 본문과 긴 답변의 앞·뒤를 보존하며 의식은 DB 발췌와 체크포인트를 수용한다.
+    phrases:
+      - 'return f"[이전 응답: {first_line}... ({len(content)}자)]"'
+      - 'content = f"[이전 대화: {first_line}... ({len(content)}자)]"'
+      - 'content = content[:500] + f"... ({len(content)}자)"'

@@ -17,13 +17,14 @@ from pathlib import Path
 from datetime import datetime
 from contextlib import contextmanager
 from typing import Optional, List, Dict
+from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
 
 
 # ============ 히스토리 설정 ============
 HISTORY_LIMIT_USER = 5       # 사용자 ↔ 에이전트 대화 히스토리
 HISTORY_LIMIT_AGENT = 4      # 에이전트 ↔ 에이전트 내부 메시지 히스토리
 RECENT_TURNS_RAW = 2         # 최근 N턴은 원본 유지 (마스킹 안 함)
-MASK_THRESHOLD = 500         # 이 길이 이상이면 마스킹
+MASK_THRESHOLD = HISTORY_TEXT_CHARS  # 보통 답변은 본문 보존, 초과하면 앞·뒤 발췌
 
 # ============ 연결 풀 설정 ============
 _connection_pools: Dict[str, List[sqlite3.Connection]] = {}  # db_path -> [connections]
@@ -483,7 +484,7 @@ class ConversationDB:
     def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None) -> list:
         """AI용 대화 히스토리 (최신 순, Observation Masking 적용)
 
-        JetBrains Research 기반: 최근 N턴은 원본 유지, 오래된 턴은 긴 내용 마스킹
+        최근 N턴은 원본 유지, 오래된 긴 턴은 결과 쪽을 더 넓게 남기는 원문 발췌
         최근 턴의 이미지는 파일에서 로드하여 포함
         user 메시지에는 절대 시각 프리픽스([YYYY-MM-DD HH:MM])를 붙여 시간 접지
         """
@@ -542,10 +543,8 @@ class ConversationDB:
         return history
 
     def _mask_long_content(self, content: str) -> str:
-        """긴 콘텐츠를 플레이스홀더로 마스킹 (도구 결과 등)"""
-        lines = content.split('\n')
-        first_line = lines[0][:100] if lines else ""
-        return f"[이전 응답: {first_line}... ({len(content)}자)]"
+        """호환 진입점. 진행 안내 첫줄 대신 본문 또는 생략을 표시한 앞·뒤 발췌."""
+        return history_excerpt(content)
 
     # ============ Task 관리 (위임 체인 지원) ============
 

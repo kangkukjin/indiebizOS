@@ -13,6 +13,7 @@
     "base/episode_orphans",
     "base/episode_trace_reader",
     "base/execution_workers",
+    "base/history_excerpt",
     "base/korean_utils",
     "base/limb_keys",
     "base/logging_utils",
@@ -359,8 +360,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 348,
-    "engine": 322,
+    "total": 349,
+    "engine": 323,
     "blocklist": 26
   }
 }

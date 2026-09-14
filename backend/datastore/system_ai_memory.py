@@ -15,6 +15,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional
 from contextlib import contextmanager
+from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
 
 # 경로 설정
 BACKEND_PATH = Path(__file__).parent.parent
@@ -407,7 +408,7 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
         [{"role": "user"|"assistant", "content": "...", "images": [...]}] 형식의 리스트
     """
     RECENT_TURNS_RAW = 2    # 최근 2턴은 원본 유지
-    MASK_THRESHOLD = 500    # 500자 이상이면 마스킹
+    MASK_THRESHOLD = HISTORY_TEXT_CHARS
 
     init_memory_db()
 
@@ -435,10 +436,9 @@ def get_history_for_ai(limit: int = 7, thread: str = "system_ai") -> List[Dict[s
         content = row[3]
         images_json = row[6]
 
-        # Observation Masking: 최근 2턴은 원본, 오래된 것은 500자 이상이면 축약
+        # 최근 2턴은 원본, 오래된 긴 본문은 결과 쪽을 더 넓게 남기는 원문 발췌
         if idx < len(rows) - RECENT_TURNS_RAW and len(content) > MASK_THRESHOLD:
-            first_line = content.split('\n')[0][:100]
-            content = f"[이전 대화: {first_line}... ({len(content)}자)]"
+            content = history_excerpt(content)
 
         # user 메시지만 절대 시각 프리픽스 — 시간 접지 (conversation_db._time_prefix 와
         # 같은 규약: 절대 시각=캐시 안정, assistant 미부착=모방 방지)

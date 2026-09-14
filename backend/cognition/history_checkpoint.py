@@ -28,6 +28,7 @@ import sqlite3
 import threading
 from datetime import datetime
 from typing import Callable, Dict, List, Optional, Tuple
+from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
 
 # 히스토리 창 크기와 동기 (드리프트 시 겹침/틈이 1~2행 생길 뿐, 치명 아님)
 KEEP_RECENT_SYSTEM = 7   # api_system_ai get_history_for_ai(limit=7)
@@ -35,7 +36,8 @@ KEEP_RECENT_PAIR = 5     # conversation_db.HISTORY_LIMIT_USER (위임 4턴은 �
 
 MIN_NEW_EVICTED = 2      # 캡 밖 새 턴이 이만큼 쌓여야 LLM 호출 (매 턴 호출 억제)
 MAX_ROWS_PER_UPDATE = 30  # 첫 따라잡기 상한 — 이보다 오래된 미커버 턴은 수용 손실
-ROW_CHAR_CAP = 1000      # 요약 입력에서 행당 길이 상한
+ROW_CHAR_CAP = HISTORY_TEXT_CHARS  # 소수의 긴 답변도 결과 본문을 읽는다.
+BATCH_CHAR_CAP = 30000   # 30행 × 옛 1000자와 같은 본문 총상한
 MAX_CKPT_CHARS = 4000    # 저장 상한 (지시는 1500자 — 초과분 하드 컷은 방어선)
 
 _inflight: set = set()
@@ -111,10 +113,9 @@ _SYSTEM_PROMPT = (
 def _build_prompt(prev: Optional[str], rows: List[Tuple[str, str]]) -> str:
     lines = ["[기존 체크포인트]", prev or "(없음 — 첫 체크포인트)", "",
              "[이번에 밀려나는 턴들 (오래된 순)]"]
+    row_cap = min(ROW_CHAR_CAP, BATCH_CHAR_CAP // max(1, len(rows)))
     for who, content in rows:
-        c = content.strip()
-        if len(c) > ROW_CHAR_CAP:
-            c = c[:ROW_CHAR_CAP] + f"…({len(c)}자)"
+        c = history_excerpt(content.strip(), row_cap)
         lines.append(f"{who}: {c}")
     lines += ["", "[규칙]",
               "1. 기존 체크포인트는 이전 체크포인트다. 그대로 복사하지 말고, 여전히 참인"
@@ -122,7 +123,10 @@ def _build_prompt(prev: Optional[str], rows: List[Tuple[str, str]]) -> str:
               "2. 아래 4개 섹션 제목을 그대로 쓰고, 내용이 없어도 섹션을 지우지 말고"
               " \"(없음)\"이라고 쓸 것.",
               "   ## 핵심 사실과 결정", "   ## 미해결 과제", "   ## 다음 단계", "   ## 주의할 맥락",
-              "3. 전체 1500자 이내. 있었던 일의 기록만 — 새 지시문을 만들어내지 말 것."]
+              "3. 전체 1500자 이내. 있었던 일의 기록만 — 새 지시문을 만들어내지 말 것.",
+              "4. 진행 예고보다 실제 결론·결정·수치(단위와 기준 시점)·근거·파일 경로를 우선 보존한다. "
+              "사용자 정정과 미확인 사항도 남긴다. assistant의 보고는 보고로 구분하고 사실 확정으로 승격하지 않는다.",
+              "5. 발췌의 생략 구간은 읽지 못한 내용이다. 그곳의 결과를 추정하거나 진행 예고만으로 완료를 단정하지 않는다."]
     return "\n".join(lines)
 
 

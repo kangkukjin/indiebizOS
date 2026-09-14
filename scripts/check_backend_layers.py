@@ -39,6 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
+        "history_excerpt",
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",

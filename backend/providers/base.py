@@ -481,6 +481,14 @@ class BaseProvider(ABC):
         (2026-08-14) execution_rounds 관측이 `[Gemini] 라운드` 정규식에 결박돼 프로바이더
         전환만으로 조용히 끊겼던 결함의 수리 — 모든 프로바이더 루프가 이 한 줄을 부른다.
         episode_logger 부재(비정상 환경)면 print 폴백으로 강등(라운드 표시는 항상 남음)."""
+        from member_runtime import current as member_turn
+        mt = member_turn()
+        if mt:
+            with mt["lock"]:
+                count = mt.get("model_calls", 0)
+                if count >= int(mt["policy"].get("max_model_calls", 12)) or mt["cancel"].is_set() or __import__("time").monotonic() >= mt["deadline"]:
+                    raise RuntimeError("회원 턴의 모델 호출 한도 또는 취소에 도달했습니다")
+                mt["model_calls"] = count + 1
         hard_limit = turn_limit_reason()
         if hard_limit:
             raise RuntimeError(hard_limit["reason"])

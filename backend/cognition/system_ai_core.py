@@ -181,6 +181,9 @@ def _record_switch(role: str, provider):
 
 def _switch_to_midtier(runner):
     """reflex(해마 고확신) 경로에서 중급 모델로 provider 전환. 전환 성공 시 원래 provider 반환."""
+    from member_runtime import is_member
+    if is_member():
+        return None
     try:
         from consciousness_agent import _get_midtier_provider
         midtier = _get_midtier_provider()
@@ -225,6 +228,9 @@ def _switch_to_role(runner, role, agent_id: str = None):
     agent_id: 역할보다 우선하는 구체 핀(model_gear.overrides 의 키). 위임 경로가
     'system_ai_delegation' 핀을 파이프라인 바깥에서 걸 때 쓴다 — 파이프라인 안쪽의
     THINK/REPAIR 스왑은 진입 시점 provider 로 복원하므로 바깥 핀과 겹쳐도 안전하다."""
+    from member_runtime import is_member
+    if is_member():
+        return None
     try:
         from model_resolver import get_provider_for
         prov, d = get_provider_for(role, agent_id=agent_id, oneshot=False)

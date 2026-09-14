@@ -246,6 +246,15 @@ export function VocabularyView({ folderId = ROOT }: { folderId?: string }) {
     {detail && <VocabularyOverlay title={`${detail.pkg.name} · ${detail.kind === 'words' ? '단어소개' : '기본설명'}`} onClose={() => { detailRequest.current++; setDetail(null); }}>
       {detail.kind === 'description' ? <div className="space-y-4 text-sm">
         <p className="whitespace-pre-wrap break-words">{detail.pkg.description}</p>
+        {!!detail.pkg.member_words?.length && <div className="rounded-xl border border-stone-200 p-3">
+          <label className="flex items-center gap-2"><input type="checkbox" checked={!!detail.pkg.member_active} disabled={busy || !detail.pkg.installed}
+            onChange={e => { const active = e.target.checked; const pkg = detail.pkg; void run(async () => {
+              await api.setVocabularyActive(pkg.id, active, 'member');
+              setDetail(current => current ? { ...current, pkg: { ...current.pkg, member_active: active } } : null);
+              await reload(); window.dispatchEvent(new Event('vocabulary-changed'));
+            }); }} />회원에게 공개</label>
+          <p className="mt-2 text-xs text-stone-500">회원 기기에서 사용할 수 있는 단어: {detail.pkg.member_words.join(', ')}</p>
+        </div>}
         <p>{detail.pkg.required ? '필수 단어묶음 · 항상 사용' : detail.pkg.installed ? '사용 중' : '잠든 상태'}{detail.pkg.version ? ` · ${detail.pkg.version}` : ''}</p>
         {!!detail.pkg.preparation?.length && <p className="text-amber-800">{detail.pkg.preparation.join(' · ')}</p>}
         <button className="rounded border border-stone-300 px-3 py-2" onClick={() => describe(detail.pkg, 'words')}>단어소개</button>

@@ -18,6 +18,11 @@ set -euo pipefail
 # 스테이징된 파일 목록.
 staged=$(git diff --cached --name-only --diff-filter=ACMR)
 
+# 로컬 승인 화면은 원격 HTML이 아닌 공통 소스의 빌드 번들이다. 사본 드리프트를 차단한다.
+if echo "$staged" | grep -qE '^(backend/surface/(member_shell|launcher_app_common)\.py|helper/member_app\.html|scripts/build_member_shell\.py)$'; then
+  python3 "$(git rev-parse --show-toplevel)/scripts/build_member_shell.py" --check
+fi
+
 # 검사 트리거 — ★빌더에게 물어본다(2026-07-25).
 #
 # 옛 구현은 이 정규식을 훅 안에 하드코딩했고, 그 목록이 가드가 *실제로 읽는 파일*과

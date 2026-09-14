@@ -113,12 +113,13 @@ def _public(rec: Dict, now: Optional[float] = None) -> Dict:
         # 접속 때 헬퍼가 올린 환경 프로브 — 그 PC 가 어떤 기계인지 왕복 없이 보이게.
         # (키 원문과 달리 민감하지 않고, 이게 없으면 프로브를 저장해둔 뜻이 없다.)
         "env": rec.get("env"),
+        "neighbor_id": rec.get("neighbor_id"),
     }
 
 
 # === 발급 / 폐기 ===
 
-def mint(alias: str = "", ttl_days: float = DEFAULT_TTL_DAYS) -> Dict:
+def mint(alias: str = "", ttl_days: float = DEFAULT_TTL_DAYS, neighbor_id=None) -> Dict:
     """새 손발 키 발급. 반환 = {key, device_id, alias, expires_at} (key 는 이때만 원문 노출).
 
     key 는 USB 페이로드에 박혀 나가고, 원장엔 같은 값이 남아 검증·폐기에 쓰인다.
@@ -138,6 +139,8 @@ def mint(alias: str = "", ttl_days: float = DEFAULT_TTL_DAYS) -> Dict:
         "approved": False,
         "last_used": None,
         "last_host": None,
+        # 회원 열쇠(2026-09-14): 기존 이웃에 결합된 손발 — /m/chat 의 주체·레벨이 이 사람에게서 온다.
+        "neighbor_id": neighbor_id,
     }
     with _lock:
         data = _load()

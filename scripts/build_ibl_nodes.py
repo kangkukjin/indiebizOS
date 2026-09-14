@@ -88,6 +88,7 @@ from iblbuild_guards import (  # noqa: E402,F401
 from iblbuild_derive import (  # noqa: E402,F401
     build_tool_index,
     derive_phone_manifest,
+    derive_member_manifest,
     derive_fixtures,
     derive_shell_shadow,
     collect_package_fragments,
@@ -599,6 +600,12 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         manifest = derive_phone_manifest(data, root)
         manifest_text = json.dumps(manifest, ensure_ascii=False, indent=2) + "\n"
 
+    # 회원 매니페스트 파생 (lands_on 선언 액션 — 외부 서비스 앱 부재 층의 정본). data 파싱 성공 시에만.
+    member_manifest_path = root / "data" / "member_manifest.json"
+    member_manifest_text = None
+    if data is not None:
+        member_manifest_text = json.dumps(derive_member_manifest(data, root), ensure_ascii=False, indent=2) + "\n"
+
     # 능력 메타 파생 (Phase 4, needs_key/weight/locale — 코드 스캔, 손수 유지 아님).
     pkg_meta_path = root / "data" / "package_meta.json"
     pkg_meta_text = json.dumps(derive_package_meta(root), ensure_ascii=False, indent=2) + "\n"
@@ -723,6 +730,16 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                 _print_derived_diff("phone_manifest.json", on_disk, manifest_text)
             else:
                 print("[build_ibl_nodes] check: phone_manifest.json 일치 ✓")
+        # 회원 매니페스트 정합 (드리프트 방지)
+        if member_manifest_text is not None:
+            on_disk = member_manifest_path.read_text(encoding="utf-8") if member_manifest_path.is_file() else None
+            if on_disk != member_manifest_text:
+                manifest_ok = False
+                print("[build_ibl_nodes] check: member_manifest.json 불일치 — "
+                      "`python3 scripts/build_ibl_nodes.py` 로 재생성 필요", file=sys.stderr)
+                _print_derived_diff("member_manifest.json", on_disk, member_manifest_text)
+            else:
+                print("[build_ibl_nodes] check: member_manifest.json 일치 ✓")
         # 능력 메타 정합 (드리프트 방지 — needs_key/weight/locale 은 코드가 유일한 소스)
         pkg_meta_on_disk = pkg_meta_path.read_text(encoding="utf-8") if pkg_meta_path.is_file() else None
         pkg_meta_ok = pkg_meta_on_disk == pkg_meta_text
@@ -883,6 +900,9 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         atomic_write_text(manifest_path, manifest_text)
         print(f"[build_ibl_nodes] 작성: {manifest_path} "
               f"(폰 패키지 {len(PHONE_VERIFIED_PACKAGES)}, runnable {manifest_text.count(':')})")
+    if member_manifest_text is not None:
+        atomic_write_text(member_manifest_path, member_manifest_text)
+        print(f"[build_ibl_nodes] 작성: {member_manifest_path}")
     atomic_write_text(pkg_meta_path, pkg_meta_text)
     print(f"[build_ibl_nodes] 작성: {pkg_meta_path}")
     if fixtures_text is not None:

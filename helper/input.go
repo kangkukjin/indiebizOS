@@ -8,9 +8,11 @@
 // 좌표: AI 는 자기가 본 그림 위의 좌표를 그대로 말한다(screen.go 의 mapPoint 가 환산).
 //
 // 얇은 바이너리 원칙(screen.go 와 동일): CGo 없이 OS 기본 도구로 셸아웃한다.
-//   · macOS  : cliclick 이 있으면 그것(전 기능), 없으면 osascript/System Events(클릭·타이핑)
-//   · Windows: PowerShell + user32.dll (SetCursorPos/mouse_event/keybd_event) — 기본 탑재
-//   · Linux  : xdotool(X11) / ydotool(Wayland) 중 있는 것
+//
+//	· macOS  : cliclick 이 있으면 그것(전 기능), 없으면 osascript/System Events(클릭·타이핑)
+//	· Windows: PowerShell + user32.dll (SetCursorPos/mouse_event/keybd_event) — 기본 탑재
+//	· Linux  : xdotool(X11) / ydotool(Wayland) 중 있는 것
+//
 // 맥에서 System Events 는 **손쉬운 사용(접근성) 권한**을 요구한다. 이 마찰은 버그가 아니라
 // 그 PC 주인이 보는 동의 지점이라 안내만 정확히 한다(inputPermissionHint).
 package main

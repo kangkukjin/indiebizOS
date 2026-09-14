@@ -26,7 +26,7 @@ function mdChat(t){
   s=s.replace(/^#{1,6}\\s+(.+)$/gm,'<span class="mdh">$1</span>');
   s=s.replace(/^&gt; ?(.+)$/gm,'<span class="mdq">▏ $1</span>');
   s=s.replace(/^(\\s*)[-*]\\s+/gm,'$1• ');
-  s=s.replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s]+)\\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s=s.replace(/\\[([^\\]]+)\\]\\((https?:[^)\\s"']+)\\)/g,'<a href="$2" target="_blank" rel="noopener">$1</a>');
   s=s.replace(/(^|[^"'>=\\]])(https?:\\/\\/[^\\s<>"']+)/g,'$1<a href="$2" target="_blank" rel="noopener">$2</a>');
   s=s.replace(/\\u0000F(\\d+)\\u0000/g,function(_m,i){ return '<pre>'+fences[+i]+'</pre>'; });
   return s;
@@ -53,6 +53,7 @@ async function ibl(code){
 
 /* ===== 로그인 ===== */
 document.addEventListener('DOMContentLoaded',()=>{
+  if(window.__MEMBER){ memberBoot(); return; }
   if(window.__PORTAL){ portalBoot(); return; }
   document.getElementById('pw').addEventListener('keydown',e=>{ if(e.key==='Enter')doLogin(); });
   checkSession();

@@ -51,9 +51,12 @@ class Supervisor:
         self.context = snapshot()
         from episode_logger import EpisodeLogger
         self.episode_id = getattr(EpisodeLogger.current(), "episode_id", None)
+        from member_runtime import is_member, private_path
+        if is_member():
+            directory = private_path("supervision/" + self.turn_id)
         self.store = TurnStore(directory or (get_base_path() / "data" / "spill" / "supervision" / self.turn_id))
         from supervision_delivery import DeliveryQueue
-        self.delivery = DeliveryQueue(self.store.directory / "delivery", get_base_path() / "공유창고", self.log)
+        self.delivery = DeliveryQueue(self.store.directory / "delivery", (self.store.directory / "published") if is_member() else get_base_path() / "공유창고", self.log)
         self.history_ref = self.store.evidence(self.history)
         self.lock = threading.RLock()
         self.review_lock = threading.Lock()

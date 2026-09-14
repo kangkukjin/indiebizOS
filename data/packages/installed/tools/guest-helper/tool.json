@@ -176,6 +176,10 @@
             "type": "string",
             "description": "헬퍼 실행파일 동봉 대상 win/mac/linux (op=issue, 생략 시 빌드된 전 OS 동봉)"
           },
+          "neighbor_id": {
+            "type": "integer",
+            "description": "기존 회원(이웃)에 이 손발을 결합 (op=issue — 외부 서비스 앱 회원 열쇠. 새 이웃을 만들지 않고 그 이웃의 body 연락처로 추가, 레벨은 그 사람 것을 상속)"
+          },
           "target": {
             "type": "string",
             "description": "대상 키·device_id·별칭 (op=revoke/approve)"

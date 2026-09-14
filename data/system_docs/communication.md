@@ -569,6 +569,12 @@ agents:
 - **무태스크 위임에는 태스크를 발급한다**: 스케줄러 하달·앱 버튼이 낸 `[others:delegate]{scope:"system"}` 은 task 없이 도착해, 그 런의 쓰기가 원장에 무작업으로 남고 조인이 끊겼다. 이제 러너가 `task_sysai_*` 를 발급한다(자가점검은 제외 — 순찰의 쓰기가 태스크 원장을 오염시키지 않도록).
 - 결과: **`write_ledger` → `episode_log` → `tasks`** 3중 조인이 닫힌다. "이 파일 왜 바뀌었나"를 요청 원문까지 한 호출로 거슬러 오르는 통로가 `[self:body]{op:"writes"}`.
 - 공개 표면(게시판·가족신문)에서는 **행위자가 빈 값인 것이 곧 "외부 방문자"** 신호다.
+- **요청 주체(principal, 2026-09-14)** — 세 칸과 별도로 **전송 관문이 한 번 세우는 정본 판정 축**(`base/principal.py`).
+  localhost·런처 세션=`owner`, 외부 공개 경로=`anonymous`, `/nodes/ask` 의 신뢰 판정 뒤 `body:<이웃id>`, 포털 게이트는
+  `portal:<이웃id>`/`anonymous` 로 **좁힌다**. 주체는 좁힐 수만 있고 넓힐 수 없다(본문의 device_id·origin 은 주장이지
+  증거가 아니다). 실행 에이전트 이름은 판정 축이 아니다 — 부탁 수신은 `agent_id="system_ai"` 로 돈다. 주체가 owner 가
+  아니면 회상(해마·연상기억·심층메모리·포식)이 주인 것을 내지 않고, 증류를 쓰지 않으며, RED 그랜트가 발급·조회되지
+  않는다(origin=='user' 와 별개의 한도). 설계 정본 `docs/EXTERNAL_SERVICE_APP_HANDOFF.md` §3-3·§4.
 
 ## 태스크 (Task)
 
@@ -1213,3 +1219,13 @@ IndieBiz OS의 위임은 두 가지 레이어로 구성:
 > - 작업계획서 작성: `work_plan_writing.md`
 
 *최근 변경(2026-08-22): 행위자 봉투(agent·task·origin) 절 신설 — 무태스크 위임 태스크 발급·3중 조인. 모듈 경로를 층 구조로. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+
+
+### 회원 손발 실행 연결 (2026-09-14 후속 구현)
+
+회원 키로 /limb/connect하려면 mode:member가 필요하다. 일반 limb는 기존 모드 그대로다.
+회원 실행은 member_bridge가 인증된 device_id에만 봉투를 넣고 허브 실행으로 폴백하지 않는다.
+로컬 작업 원장은 received/running/completed/unknown을 보존한다. 접수 키 충돌은 거절하고,
+재시작의 running은 unknown으로 바꿔 자동 반복을 막는다. 재조회·최근 결과·승인 판의 정본은 로컬 SQLite다.
+주인은 내 어휘의 패키지 기본설명에서 회원 공개를 선택한다(주인 활성과 회원 선택의 교집합).
+회원 기기에 붙는 인증과 몸 신뢰 레벨은 계속 별개의 축이다. 이웃 변경·키 폐기 이후에는 새 회원 요청을 받지 않는다.

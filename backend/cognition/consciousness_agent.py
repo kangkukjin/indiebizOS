@@ -833,6 +833,10 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
 
 def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, role="execution", step_role=None):
     """선택된 모델을 유지하며 원샷 계약·동시성·계측을 한 경로에서 적용한다."""
+    from member_runtime import is_member
+    from providers.cli_provider import CliSubprocessProvider
+    if is_member() and isinstance(provider, CliSubprocessProvider):
+        raise PermissionError("회원 턴에는 네이티브 CLI 모델을 쓸 수 없습니다")
     from episode_logger import _current_role
     from model_call_context import set_purpose, reset_purpose
     with _oneshot_lock_for(provider).held(background=is_oneshot_background()):

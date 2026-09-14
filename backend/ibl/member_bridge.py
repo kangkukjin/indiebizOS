@@ -1,0 +1,78 @@
+"""인증된 회원 턴에서 자신의 손발로만 봉투를 보낸다. 허브 실행 폴백 없음."""
+import json
+import time
+
+import principal
+import member_runtime
+import phone_jobs
+
+
+def connected(device_id):
+    import limb_keys
+    rec = limb_keys.get_by_device(device_id)
+    if not rec or rec.get("revoked") or (rec.get("expires_at") and time.time() >= rec["expires_at"]) or not rec.get("approved"):
+        return False
+    import device_registry
+    entry = next((e for e in device_registry.list_live() if e.get("device_id") == device_id), None)
+    return bool(entry) and (rec.get("env") or {}).get("mode") == "member"
+
+
+def request(command, timeout=None):
+    p, state = principal.current(), member_runtime.current()
+    if p.kind != principal.KIND_MEMBER or not state or state["device_id"] != p.device_id:
+        return {"success": False, "error_type": "permission", "error": "회원 기기 바인딩 없음"}
+    if state["cancel"].is_set() or time.monotonic() >= state["deadline"] or not connected(p.device_id):
+        return {"success": False, "error_type": "no_body", "error": "회원 기기가 연결되어 있지 않습니다"}
+    with state["lock"]:
+        if state["step"] >= int(state["policy"].get("max_jobs_per_turn", 64)):
+            return {"success": False, "error_type": "limit", "error": "이 턴의 기기 작업 한도에 닿았습니다"}
+        state["step"] += 1
+        key = f'{p.key()}:{state["task_id"]}:{state["step"]}'
+    envelope = {**command, "request_key": key, "member": True}
+    job = phone_jobs.enqueue(p.device_id, json.dumps(envelope, ensure_ascii=False), p.key())
+    state["jobs"].add(job)
+    deadline = min(state["deadline"], time.monotonic() + float(timeout or state["policy"].get("command_timeout_s", 120)))
+    result = None
+    while time.monotonic() < deadline and not state["cancel"].is_set():
+        result = phone_jobs.wait_result(job, timeout=min(1, max(0, deadline-time.monotonic())))
+        if result is not None:
+            break
+    if result is None:
+        phone_jobs.cancel_pending(job)
+        return {"success": False, "error_type": "result_unknown", "request_key": key,
+                "error": "결과를 아직 확인하지 못했습니다. 같은 작업을 다시 실행하지 말고 결과를 조회하세요."}
+    if not isinstance(result, dict):
+        return {"success": False, "error_type": "protocol", "error": "잘못된 손발 결과"}
+    if result.get("error") or result.get("state") in ("unknown", "running"):
+        result["success"] = False
+    return result
+
+
+def translate(mapping, params):
+    """값 치환만 한다. eval·액션 이름 분기 없음."""
+    if isinstance(mapping, str) and mapping.startswith("$"):
+        return params.get(mapping[1:])
+    if isinstance(mapping, dict):
+        return {k: value for k, v in mapping.items() if (value := translate(v, params)) is not None}
+    if isinstance(mapping, list):
+        return [translate(v, params) for v in mapping]
+    return mapping
+
+
+def execute(entry, params):
+    command = translate(entry["limb_op"], params)
+    if command["op"] == "write" and "content" not in command:
+        content = params.get("_prev_result")
+        if content is None:
+            return {"success": False, "error_type": "input", "error": "content 또는 직전 파이프 결과가 필요합니다"}
+        command["content"] = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
+    if command["op"] == "read" and any(k in params for k in ("pages", "blocks", "tables", "offset", "limit", "tail", "start_line", "end_line")):
+        return {"success": False, "error_type": "unsupported", "error": "회원 파일 읽기는 현재 UTF-8 텍스트 전체 읽기를 지원합니다"}
+    result = request(command)
+    if result.get("success") is False:
+        return result
+    if command["op"] == "read" and "content" in result:
+        return result["content"]
+    if command["op"] == "list":
+        return {"items": result.get("items", result.get("files", []))}
+    return result

@@ -340,7 +340,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(48) → `datastore`(51) → `ibl`(55) → `cognition`(65) → `services`(36) → `surface`(70). `.py` 총 388개(test 제외).
+  `base`(50) → `datastore`(51) → `ibl`(57) → `cognition`(67) → `services`(36) → `surface`(72). `.py` 총 396개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(20) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -351,7 +351,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `data/scripts/`: **등록 스크립트**(`registry.yaml` + `<이름>.py`) — `[self:script]{op: run}` 이 id 로만 실행. 어휘가 아니라 *절차*의 거처
 - `data/private_nouns.txt`: **개인 명사 관문 목록**(gitignore, 로컬 전용) — `scripts/check_private_nouns.py`(pre-commit, 모든 스테이지 파일)가 가족·개인 이름·목소리 키가 몸(코드·어휘·가이드·문서)에 박히는 것을 막는다. 한 줄=정규식, `allow: <glob>`=면제(저자 서명·연구 기록). 이름 자체가 저장소에 들어오지 않는 구조(2026-09-02)
 - `data/instruments/`: standalone 앱 매니페스트 (어휘 없는 계기 — report·newspaper)
-- `data/guides/`: 가이드 75개 (guide_db 등록 74). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
+- `data/guides/`: 가이드 77개 (guide_db 등록 76). `codebase_map.md` 는 system_structure.md 에서 **자동 파생**이므로 직접 편집 금지
 <!-- IBL_STATS:END -->
 - `projects/`: 사용자 프로젝트 데이터 (24개 — 시스템 프로젝트 수동모드·앱모드 포함)
 - `data/_backups/YYYY-MM-DD_<이름>/`: **일회성 백업의 유일한 주소**(2026-08-14 규약). 작업 폴더·`data/` 루트에 `*_backup*` 사본 금지. **git 추적 대상이 아니다** — 규약 정본 `README.md` 하나만 `!` 예외
@@ -432,3 +432,13 @@ macOS의 PID 출생 신원은 NTP 보정 전 커널 값으로 비교한다. 시�
 가 띄움)는 예약 턴의 종료·증류를 기다린 뒤 `restart_protocol.request(operation="red_apply")` 로 인계만 하고,
 적용·부팅 후 검증·검증된 백업 복원·재부팅은 제어자가 `restart_red`·`restart_helper` 로 수행한다.
 `quiescent_reload`·`reload_gate` 는 진단·호환 입구로만 남아 중단 권한이 없다(uvicorn `reload=False`).
+
+
+### 회원 앱 배관 (2026-09-14)
+
+backend/base/{principal,member_runtime}, cognition/{member_runner,member_session}, ibl/{member_profile,member_bridge},
+surface/{api_member,member_shell}가 회원 경로다. helper/member*.go는 회원 모드, phone-companion/member는 Python 없는
+Android 모듈이다. data/member_manifest.json은 어휘 빌드 파생물이다.
+member_policy.json의 일일·레벨별·전역 한도와 턴 토큰/모델 호출/봉투 수/시간 상한은 member_usage.json에 원자 예약한다.
+정책·사용량·_member_tmp·member_imports는 개인 런타임 데이터로 Git에서 제외한다. 새 회원 키나 실제 공개 선택은
+배포와 별도로 사용자가 발급/선택한다. 가입 UI·공개 Worker 라우팅은 이번 변경에 추가하지 않았다.

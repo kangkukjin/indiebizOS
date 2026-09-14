@@ -16,11 +16,13 @@
     "base/korean_utils",
     "base/limb_keys",
     "base/logging_utils",
+    "base/member_runtime",
     "base/memory_provenance",
     "base/mime_compat",
     "base/model_call_context",
     "base/model_resolver",
     "base/phone_jobs",
+    "base/principal",
     "base/quantity_checks",
     "base/quiescent_reload",
     "base/r2_client",
@@ -79,6 +81,8 @@
     "cognition/ibl_idiom",
     "cognition/ibl_usage_generator",
     "cognition/ibl_usage_rag",
+    "cognition/member_runner",
+    "cognition/member_session",
     "cognition/memory_consolidation",
     "cognition/memory_evidence",
     "cognition/model_result_view",
@@ -197,6 +201,8 @@
     "ibl/ibl_turn_vars",
     "ibl/ibl_typecheck",
     "ibl/ibl_value_types",
+    "ibl/member_bridge",
+    "ibl/member_profile",
     "ibl/package_manager",
     "ibl/pipeline_state",
     "ibl/tool_context",
@@ -261,6 +267,7 @@
     "surface/api_ibl",
     "surface/api_launcher_web",
     "surface/api_limb",
+    "surface/api_member",
     "surface/api_models",
     "surface/api_multi_chat",
     "surface/api_music",
@@ -302,6 +309,7 @@
     "surface/launcher_web_app",
     "surface/launcher_web_render",
     "surface/launcher_web_shell",
+    "surface/member_shell",
     "surface/portal_admin",
     "surface/portal_auth",
     "surface/portal_base",
@@ -345,8 +353,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 334,
-    "engine": 308,
+    "total": 342,
+    "engine": 316,
     "blocklist": 26
   }
 }

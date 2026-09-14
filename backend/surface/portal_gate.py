@@ -101,23 +101,32 @@ async def tool_gate(slug: str, iid: str, request: Request,
         return JSONResponse({"error": e.msg}, status_code=e.status)
 
     # ③ 실행 — 앱 모드와 같은 경로(/ibl/execute 내부 재사용: 프로젝트 해소 + 단일 통화 정규화)
+    # 요청 주체 좁힘(2026-09-14): 회원=portal:<id>, 손님=anonymous — 회상·그랜트가 주인 것을 열지 않는다.
+    import principal as _principal
     try:
-        from api_ibl import execute_ibl_code, IBLRequest
-        # surface='web': 회원은 브라우저로 보고 있다 — 소리·저장이 맥이 아니라 회원 기기에서
-        # 나야 한다(운영자 집에서 소리가 나면 안 된다). 게이트가 서버측에서 붙인다.
-        # origin='portal': /ibl/execute 는 무신원 직접 호출을 origin='user'(소유자의 직접
-        # 명령)로 기본하는데, 포털 회원·손님은 소유자가 아니다 — 명시해서 그 기본을 막는다
-        # (origin=='user' 는 자기수정 그랜트의 게이트 축, fail-closed 유지).
-        result = await execute_ibl_code(IBLRequest(code=code, project_id="앱모드",
-                                                   surface="web", origin="portal"))
-        # 유튜브뮤직 등 클라이언트 재생: googlevideo URL 은 맥 IP 에 잠겨 외부망 회원은 403.
-        # 오디오 프록시(/h/<slug>/tune/<vid>)로 바꿔치기 — 맥이 집 IP 로 받아 중계한다.
-        if (isinstance(result, dict) and result.get("play_in_client")
-                and result.get("stream_url") and result.get("video_id")):
-            _tune_cache_put(str(result["video_id"]), str(result["stream_url"]))
-            result["stream_url"] = f"/h/{slug}/tune/{result['video_id']}"
-        core.audit_log(auth.get("who", "?"), iid, code, True, portal=slug)
-        return result
+        _viewer_rec = core.find_member(None, key=member_key) if member_key else None
+    except Exception:
+        _viewer_rec = None
+    _pp = (_principal.portal(_viewer_rec.get("id"), _viewer_rec.get("level")) if _viewer_rec
+           else _principal.ANONYMOUS)
+    try:
+        with _principal.narrow(_pp, "portal/tool"):
+            from api_ibl import execute_ibl_code, IBLRequest
+            # surface='web': 회원은 브라우저로 보고 있다 — 소리·저장이 맥이 아니라 회원 기기에서
+            # 나야 한다(운영자 집에서 소리가 나면 안 된다). 게이트가 서버측에서 붙인다.
+            # origin='portal': /ibl/execute 는 무신원 직접 호출을 origin='user'(소유자의 직접
+            # 명령)로 기본하는데, 포털 회원·손님은 소유자가 아니다 — 명시해서 그 기본을 막는다
+            # (origin=='user' 는 자기수정 그랜트의 게이트 축, fail-closed 유지).
+            result = await execute_ibl_code(IBLRequest(code=code, project_id="앱모드",
+                                                       surface="web", origin="portal"))
+            # 유튜브뮤직 등 클라이언트 재생: googlevideo URL 은 맥 IP 에 잠겨 외부망 회원은 403.
+            # 오디오 프록시(/h/<slug>/tune/<vid>)로 바꿔치기 — 맥이 집 IP 로 받아 중계한다.
+            if (isinstance(result, dict) and result.get("play_in_client")
+                    and result.get("stream_url") and result.get("video_id")):
+                _tune_cache_put(str(result["video_id"]), str(result["stream_url"]))
+                result["stream_url"] = f"/h/{slug}/tune/{result['video_id']}"
+            core.audit_log(auth.get("who", "?"), iid, code, True, portal=slug)
+            return result
     except HTTPException as e:
         core.audit_log(auth.get("who", "?"), iid, code, False, note=str(e.detail)[:100], portal=slug)
         return JSONResponse({"error": "실행 중 문제가 생겼어요 — 잠시 후 다시 시도해 주세요"},

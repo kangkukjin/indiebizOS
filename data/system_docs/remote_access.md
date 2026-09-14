@@ -643,3 +643,20 @@ cloudflared tunnel login
 ---
 
 *최근 변경(2026-08-22): 모듈 경로를 층 구조·실경로로 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+
+
+### 회원 앱 표면 (2026-09-14)
+
+| 표면 | 신원 | 실행·기억의 주인 | 접속 |
+|---|---|---|---|
+| 원격 런처 | owner 세션 | 허브 주인 | 기존 런처 |
+| 폰 네이티브 | 독립 몸 | 폰의 자아 | 기존 :app |
+| 외부 서비스 회원 | member:<이웃 ID> | 회원 기기 | helper mode:member / Android :member, /m/app·/m/chat |
+
+회원 키는 limb 원장의 neighbor_id와 이웃 명부의 기기 결합을 함께 확인한다. /m/chat은 HTTP/WS 자체 인증,
+/m/profile·/m/session/close는 POST다. 회원 키는 런처 세션을 만들지 않으며 프로젝트·설정 API 인증에 통하지 않는다.
+PC는 loopback 셸과 한시 토큰, Android는 WebView 네이티브 다리를 쓴다. 대화 HTTP 연결 종료는 회원 턴을 취소한다.
+발급·설정과 현재 제한은 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11, guides/member_start.md 참조.
+
+회원 승인 화면은 접속한 허브에서 받아 실행하지 않는다. scripts/build_member_shell.py가 공통 member_shell/launcher_app_common을
+PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 별도 웹 폴백이다. `build_member_shell.py --check`로 번들 드리프트를 검사한다.

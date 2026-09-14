@@ -43,6 +43,14 @@ class CognitiveRecallMixin:
             - top_code: 해마 최고 점수 항목의 ibl_code (action_hint 적용 시 "[node:action]")
         """
         try:
+            # 요청 주체 관문(2026-09-14): 연상기억 전부(해마·기억지도·실행지도·결정원장·손발)는 주인의 것 —
+            # 주체가 owner 가 아니면 아무것도 싣지 않는다. 회원 자기 기억은 손발 회상(1단계)이 맡는다.
+            try:
+                import principal
+                if not principal.recall_allowed("associative"):
+                    return ("", 0.0, "")
+            except ImportError:
+                pass
             exec_xml, top_score, top_code = ("", 0.0, "")
             if action_hint:
                 from ibl_usage_rag import build_execution_memory_from_hint

@@ -459,6 +459,14 @@ def build_environment(
                     continue
             except Exception:
                 raise
+            # 회원 프로파일 부재 층(2026-09-14): 회원 주체에서는 lands_on 을 선언하고 회원 프로파일에
+            # 열린 묶음의 액션만 카탈로그에 선다 — 나머지는 거절이 아니라 부재. 집행은 ibl_engine 의 관문.
+            try:
+                from member_profile import visible as _member_visible
+                if not _member_visible(node_name, action_name, action_config):
+                    continue
+            except ImportError:
+                pass
             key = action_config.get("group")
             if key:
                 grouped.setdefault(key, []).append((action_name, action_config))

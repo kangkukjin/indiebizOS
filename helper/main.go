@@ -31,9 +31,12 @@ import (
 
 // 옆에 놓인 설정 파일 — 발급기([self:limb]{op:issue})가 USB 에 써 넣는다.
 type Config struct {
-	Base  string `json:"base"`  // 내 몸(허브)의 공개 주소, 예 https://mac.tailxxxx.ts.net
-	Key   string `json:"key"`   // limb key (허브 비밀번호가 아니다)
-	Alias string `json:"alias"` // 표시용 이름
+	Mode      string   `json:"mode"`
+	DataDir   string   `json:"data_dir"`
+	AutoAllow []string `json:"auto_allow"`
+	Base      string   `json:"base"`  // 내 몸(허브)의 공개 주소, 예 https://mac.tailxxxx.ts.net
+	Key       string   `json:"key"`   // limb key (허브 비밀번호가 아니다)
+	Alias     string   `json:"alias"` // 표시용 이름
 }
 
 // 허브가 큐(job.code)에 싣는 셸 봉투. 헬퍼가 자기 코드로 해석한다.
@@ -43,6 +46,22 @@ type Job struct {
 }
 
 type Command struct {
+	Resources    []string               `json:"resources,omitempty"`
+	Dependencies []string               `json:"dependencies,omitempty"`
+	Dest         string                 `json:"dest,omitempty"`
+	Action       string                 `json:"action,omitempty"`
+	Member       bool                   `json:"member,omitempty"`
+	RequestKey   string                 `json:"request_key,omitempty"`
+	QueryKey     string                 `json:"query_key,omitempty"`
+	Record       map[string]interface{} `json:"record,omitempty"`
+	Query        string                 `json:"query,omitempty"`
+	Limit        int                    `json:"limit,omitempty"`
+	Encoding     string                 `json:"encoding,omitempty"`
+	URL          string                 `json:"url,omitempty"`
+	ScriptID     string                 `json:"id,omitempty"`
+	Interpreter  string                 `json:"interpreter,omitempty"`
+	Args         map[string]interface{} `json:"args,omitempty"`
+
 	Op      string `json:"op"`             // shell | read | write | list | info | screen | note
 	Cmd     string `json:"cmd,omitempty"`  // shell
 	Path    string `json:"path,omitempty"` // read | write | list
@@ -52,7 +71,7 @@ type Command struct {
 	Stdin   string `json:"stdin,omitempty"` // shell 표준입력 — 프롬프트를 기다리는 명령용
 	Reset   bool   `json:"reset,omitempty"` // shell 실행 전 세션(디렉토리·환경) 초기화
 	Timeout int    `json:"timeout,omitempty"`
-	JobID   string `json:"-"` // 봉투엔 없다 — 진행 중계용으로 runJob 이 채운다
+	JobID   string `json:"-"`              // 봉투엔 없다 — 진행 중계용으로 runJob 이 채운다
 	Text    string `json:"text,omitempty"` // note — 허브(AI)가 이 창에 찍는 서사 한 줄
 
 	// screen — 화면 캡처(눈). 전부 선택.
@@ -95,17 +114,27 @@ func main() {
 	}
 	cfg.Base = strings.TrimRight(cfg.Base, "/")
 	hubCfg = cfg
+	if cfg.Mode != "" && cfg.Mode != "limb" && cfg.Mode != "member" {
+		fmt.Fprintln(os.Stderr, "잘못된 mode")
+		os.Exit(1)
+	}
+	if cfg.Mode == "member" {
+		if err := startMember(cfg); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+	}
 
 	host := hostLabel()
 	fmt.Printf("indiebiz 손발 — %s 로서 %s 에 붙는 중…\n", cfg.Alias, cfg.Base)
 
 	// USB 더블클릭 직후 네트워크가 잠깐 흔들려도 바로 죽지 않게 — 짧은 재시도.
 	var connErr error
-	for attempt := 1; attempt <= 5; attempt++ {
+	for attempt := 1; attempt <= 5 || cfg.Mode == "member"; attempt++ {
 		if connErr = connect(cfg, host); connErr == nil {
 			break
 		}
-		if attempt < 5 {
+		if attempt < 5 || cfg.Mode == "member" {
 			fmt.Printf("접속 재시도 %d/5: %v\n", attempt, connErr)
 			time.Sleep(3 * time.Second)
 		}
@@ -118,7 +147,7 @@ func main() {
 
 	fmt.Println("붙었습니다. 명령을 기다립니다. (창을 닫으면 손발이 떨어집니다.)")
 	loop(cfg)
-	fmt.Println("허브가 이 손발을 해제했습니다. 이 PC 에는 아무것도 남지 않습니다.")
+	fmt.Println("허브가 이 손발을 해제했습니다. 회원 모드의 기억은 이 기기에 보존됩니다.")
 	waitKey()
 }
 
@@ -158,7 +187,7 @@ var hubCfg *Config
 func connect(cfg *Config, host string) error {
 	// ★환경 프로브를 **접속 때 함께** 올린다 — 허브가 왕복 없이 그 PC 신상을 갖게 해서,
 	// AI 가 낯선 PC 에서 명령 문법·패키지매니저를 추측하다 실패하는 왕복을 없앤다.
-	body := map[string]interface{}{"key": cfg.Key, "host": host, "env": doInfo()}
+	body := map[string]interface{}{"key": cfg.Key, "host": host, "env": doInfo(), "mode": cfg.Mode}
 	var resp struct {
 		Success  bool   `json:"success"`
 		Error    string `json:"error"`
@@ -193,7 +222,10 @@ func loop(cfg *Config) {
 			return
 		}
 		if err != nil {
-			// 네트워크 흔들림 — 백오프 후 재시도(허브가 잠깐 꺼져도 되살아나면 재개).
+			// 네트워크 흔들림 — 회원은 재접속해 허브 재시작 뒤 프레즌스도 다시 세운다.
+			if cfg.Mode == "member" {
+				_ = connect(cfg, hostLabel())
+			}
 			time.Sleep(backoff)
 			if backoff < 30*time.Second {
 				backoff *= 2
@@ -260,13 +292,25 @@ func poll(cfg *Config) ([]Job, bool, error) {
 
 func postResult(cfg *Config, jobID string, result map[string]interface{}) error {
 	body := map[string]interface{}{"key": cfg.Key, "job_id": jobID, "result": result}
-	return postJSON(cfg.Base+"/limb/result", body, nil)
+	var reply struct {
+		Success bool `json:"success"`
+	}
+	if err := postJSON(cfg.Base+"/limb/result", body, &reply); err != nil {
+		return err
+	}
+	if !reply.Success {
+		return fmt.Errorf("result rejected")
+	}
+	return nil
 }
 
 // runJob — 셸 봉투를 이 PC 에서 실행하고 결과 통화를 만든다.
 // 실행하는 일을 이 창에 생중계한다(에피소드 로그처럼): AI 가 이 PC 에 뭘 시키는지
 // 헬퍼 창만 보고도 알 수 있게 — ◀ 명령 수신 / └ 결과 상태 / ※ 허브(AI) 서사(note).
 func runJob(j Job) map[string]interface{} {
+	if memberRuntime != nil {
+		return memberRuntime.run(j)
+	}
 	var c Command
 	if err := json.Unmarshal([]byte(j.Code), &c); err != nil {
 		return errResult("bad_command", err.Error())
@@ -424,7 +468,7 @@ func doList(c Command) map[string]interface{} {
 			mtime = info.ModTime().Format(time.RFC3339)
 		}
 		files = append(files, map[string]interface{}{
-			"name": e.Name(), "dir": e.IsDir(), "bytes": size, "mtime": mtime,
+			"name": e.Name(), "path": filepath.Join(dir, e.Name()), "dir": e.IsDir(), "bytes": size, "mtime": mtime,
 		})
 	}
 	return map[string]interface{}{"op": "list", "path": dir, "files": files}

@@ -45,6 +45,37 @@ def get_body_level(device_id: str) -> Optional[int]:
         return None  # 원장 미가용 = 낯선 몸 취급 (fail-closed)
 
 
+def get_body_neighbor_id(device_id: str):
+    """몸-신원(device_id) → 이웃 id. 원장에 없으면 None(요청 주체 키 계산용, 2026-09-14)."""
+    if not device_id:
+        return None
+    try:
+        from business_manager import BusinessManager
+        n = BusinessManager().get_neighbor_by_contact(_CONTACT_TYPE, str(device_id))
+        return n.get("id") if n else None
+    except Exception:
+        return None
+
+
+def link_body(device_id: str, neighbor_id) -> Dict[str, Any]:
+    """기존 이웃(회원)에 기기를 결합 — 새 이웃을 만들지 않는다(기기≠사람, 2026-09-14).
+    레벨은 그 사람의 것을 상속한다. 이미 결합돼 있으면 무변경."""
+    if not device_id or neighbor_id in (None, ""):
+        return {"linked": False, "error": "device_id/neighbor_id 없음"}
+    from business_manager import BusinessManager
+    bm = BusinessManager()
+    n = bm.get_neighbor(int(neighbor_id))
+    if not n:
+        return {"linked": False, "error": f"이웃 {neighbor_id} 없음"}
+    existing = bm.get_neighbor_by_contact(_CONTACT_TYPE, str(device_id))
+    if existing and int(existing.get("id")) != int(neighbor_id):
+        return {"linked": False, "error": f"이 기기는 이미 다른 이웃({existing.get('id')})에 결합돼 있습니다"}
+    if not existing:
+        bm.add_contact(int(neighbor_id), _CONTACT_TYPE, str(device_id))
+    return {"linked": True, "neighbor_id": int(neighbor_id), "name": n.get("name"),
+            "level": int(n.get("info_level") or 0)}
+
+
 def grant_body(device_id: str, name: str, level: int = 4,
                granted_by: str = "provision") -> Dict[str, Any]:
     """부여식 — 몸-신원을 이웃 명부에 레벨과 함께 기록(멱등: 이미 있으면 무변경).

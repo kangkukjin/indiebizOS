@@ -18,6 +18,8 @@ export interface InstallApprovalEntry {
 
 
 export interface VocabularyPackage {
+  member_active?: boolean;
+  member_words?: string[];
   id: string;
   name: string;
   description: string;
@@ -54,9 +56,9 @@ export function applyPackagesMethods<T extends APIClientCore>(client: T) {
       return client.request<{ packages: VocabularyPackage[]; revision: number }>('/vocabulary');
     },
 
-    async setVocabularyActive(id: string, active: boolean) {
+    async setVocabularyActive(id: string, active: boolean, profile: 'owner' | 'member' = 'owner') {
       return client.request<VocabularyResult>(`/vocabulary/${encodeURIComponent(id)}/activation`, {
-        method: 'POST', body: JSON.stringify({ active }),
+        method: 'POST', body: JSON.stringify({ active, profile }),
       });
     },
 

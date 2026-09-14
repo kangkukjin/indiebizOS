@@ -198,6 +198,19 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 
 ---
 
+## 회상의 주체 관문 (2026-09-14)
+
+**회원 세션의 기억(외부 서비스 앱 1단계, 2026-09-14)**: 회원 주체(`member:<id>`)의 턴은 주인 저장소에 쓰지 않는다 —
+`cognitive_distill._after_response`/`_after_response_async` 가 주체가 owner 가 아니면 해마·심층·포식·가이드 증류를
+통째로 건너뛴다. 회원 대화 이력은 회원 세션 러너의 RAM 히스토리(상한)에만, 사용량은 메타 원장 `member_usage.json`
+(주체·날짜·턴·토큰 — 내용 없음)에만 남는다. 회원 로컬 영속(대화·기억)은 2단계(손발)에서. 정본
+`docs/EXTERNAL_SERVICE_APP_HANDOFF.md` §3-0·§6.
+
+모든 회상 공급원(해마 `_search_active`·연상기억 `_build_execution_memory`·심층메모리 검색·포식 `recall`)과 해마 캐시 키가
+**요청 주체(principal)** 축을 본다. 주체가 `owner` 가 아니면(이웃 부탁·포털·회원·무인증) 주인의 기억을 내지 않고 증류도
+쓰지 않는다 — 실행 에이전트 이름이 아니라 전송 관문이 세운 주체가 축이다(`base/principal.py`, communication.md "행위자
+봉투"). 회원 자기 기억의 회상은 외부 서비스 앱 1단계(손발 회상)에서 연다. 시험 `backend/test_principal_isolation_2026_09_14.py`.
+
 ## 요청 1건에서 7종 메모리가 협력하는 흐름
 
 ```
@@ -855,3 +868,17 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 ### 실행 회상의 본문 노출 경계 (2026-09-12)
 
 자동 용례는 짧은 한 문장만 인라인으로 보여 준다. 무명 여러 문장 또는 1200자 초과 원문은 ID·주제·명시 `recall{store:"실행",node,expand:"#id"}` 입구만 노출한다. 원장은 그대로 보존하며 출처·날짜를 대조한 뒤 열 수 있다. 숨긴 원문은 유사도만으로 반사 실행하지 않는다. 이름 있는 함수는 기존처럼 호출 서명으로 보여 준다. 길이 상한은 의미 분류가 아닌 노출 예산이다. `ibl_call_cost.fn_calls`는 호환 키로 남지만 문자열·주석 밖 `[fn:]` 작성 구문 수다. 분기·반복·지연 문자열의 실제 실행 횟수는 이 값으로 추정하지 않는다.
+
+
+### 회원 로컬 기억 구현 (2026-09-14)
+
+member:<id>는 주인 회상·증류·직접 실행 도구에 접근하지 않는다. MemberRunner는 공통 인지 파이프라인을 사용하되
+발행된 역할·어휘와 자신의 로컬 회상만 공급한다. 매 턴 대화/에피소드를 memory_save 봉투로 로컬 SQLite에 보내고
+saved:true 영수증을 받은 경우에만 memory_saved를 보고한다. 지속 기억은 memory_evidence의 원문 단위 중
+회원용 모델이 고른 부분만 회원 승인 아래 로컬에 보존한다. 허브 증류 큐에 넣지 않는다.
+
+허브의 내용 로그·IBL 원문 코퍼스는 회원 문맥에서 기록하지 않는다. 스필·도구 증거·감독 중간 파일은 턴 경로에
+모으고, 생성기가 끝난 뒤 지운다. thread_context는 주체뿐 아니라 이 경로·취소·예산도 워커에 전달한다.
+회원 ZIP 가져오기는 scripts/import_member_archive.py. 대화는 system_ai_memory.db, 지속 기억은
+system_ai_state/memory_system_ai.db, 프로그램은 scripts/registry.yaml에 붙는다. 원본 에피소드·해마·포식·IBL
+문장과 의존성 정보는 data/member_imports/<archive digest>에 보존한다. 가져오기 중 코드를 실행하거나 패키지를 설치하지 않는다.

@@ -42,9 +42,9 @@ LAYERS = {
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
-        "episode_logger", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
+        "member_runtime", "episode_logger", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
-        "phone_jobs", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
+        "phone_jobs", "principal", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "selfbuild_gate", "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
@@ -62,6 +62,7 @@ LAYERS = {
         "websocket_manager", "xray_stream",
     },
     "ibl": {
+        "member_bridge", "member_profile",
         # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
         # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
         # 명시 배정이 우선한다. 디렉토리화 때 개명 후보.
@@ -79,6 +80,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
     },
     "cognition": {
+        "member_runner", "member_session",
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
         "weekly_audits",
         "agent_pipeline", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view",
@@ -108,7 +110,7 @@ LAYERS = {
     },
     # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한
     # portal_warehouse 와의 상호 순환도 같은 층 안이 맞다)
-    "surface": {"public_face", "face_provision", "warehouse_likes", "launcher_react"},
+    "surface": {"member_shell", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
 }
 SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common"}

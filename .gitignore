@@ -421,3 +421,9 @@ data/render_assets/
 
 # 외부 재기동 제어 상태/로컬 소유 인증 토큰
 data/restart_control/
+
+# 회원의 임시 내용·개인 정책·사용량·졸업 원본은 런타임 사유 데이터
+data/_member_tmp/
+data/member_policy.json
+data/member_usage.json
+data/member_imports/

@@ -75,6 +75,9 @@ def get_provider(provider_name: str, **kwargs):
     if not provider_class:
         raise ValueError(f"지원하지 않는 프로바이더: {provider_name}")
 
+    from member_runtime import is_member
+    if is_member() and issubclass(provider_class, CliSubprocessProvider):
+        raise PermissionError("회원 세션은 로컬 도구·영속 로그를 갖는 CLI 제공자를 사용할 수 없습니다. API 모델을 지정하세요.")
     return provider_class(**kwargs)
 
 

@@ -214,6 +214,9 @@ def record_trajectory_event(kind: str, data: dict = None):
     tr = _current_trace()
     if tr is None or not kind:
         return None
+    from member_runtime import is_member
+    if is_member():
+        return None
     try:
         with tr.lock:
             safe = data if isinstance(data, dict) else {}
@@ -581,6 +584,9 @@ class _TeeWriter:
         self._original = original
 
     def write(self, text):
+        from member_runtime import is_member
+        if is_member():
+            return len(text)
         if text:
             self._original.write(text)   # 터미널엔 전문(라이브 디버깅 손실 방지)
             ep = _current_episode.get(None)
@@ -624,6 +630,9 @@ class _TeeWriter:
 
 def _get_db():
     """world_pulse.db 연결"""
+    from member_runtime import is_member
+    if is_member():
+        raise PermissionError("회원은 주인 에피소드 DB에 접근할 수 없습니다")
     db_path = get_base_path() / "data" / "world_pulse.db"
     db_path.parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path), timeout=10)
@@ -720,6 +729,9 @@ def record_ibl_code(code: str, success: bool, elapsed_ms=None, error="",
     """IBL 문장 원문 한 건을 코퍼스에 누적(upsert). 관측 훅 — 실패해도 실행을 깨지 않는다.
 
     반환 True=기록됨, False=빈 코드이거나 기록 실패(호출자는 무시해도 된다)."""
+    from member_runtime import is_member
+    if is_member():
+        return False
     code = code if isinstance(code, str) else str(code or "")
     if not code.strip():
         return False

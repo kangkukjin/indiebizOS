@@ -37,6 +37,7 @@ MAX_POLL_WAIT = 50.0
 
 class ConnectRequest(BaseModel):
     key: str
+    mode: str = "limb"
     host: str = ""            # 헬퍼가 자기소개하는 호스트명/OS (표시·감사용)
     env: Optional[dict] = None  # 접속 시 환경 프로브(os·권한·셸·패키지매니저·GUI 가능여부)
 
@@ -98,12 +99,16 @@ async def limb_connect(req: ConnectRequest):
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
 
+    if rec.get("neighbor_id") not in (None, "") and req.mode != "member":
+        return {"success": False, "error": "member_mode_required"}
+    env = {**(req.env or {}), "mode": req.mode}
+
     # 자동승인 — 붙는 즉시 승인(approve_if_pending). 방어는 명령 시 이름 명시로(위 모듈 주석).
     prev_host = rec.get("last_host")
     host_changed = bool(req.host and prev_host and req.host != prev_host)
     was_pending = not rec.get("approved")
     rec = limb_keys.touch(req.key, host=req.host, approve_if_pending=True,
-                          new_session=True, env=req.env) or rec
+                          new_session=True, env=env) or rec
 
     # 손발을 프레즌스 레지스트리에 등록 — url="" (인바운드 주소 없음, 폰 푸시 모델과 동일).
     # auth="limb_key" 로 표식해 ibl_engine 이 이 노드에 인바운드 포워드를 시도하지 않게 한다.
@@ -115,7 +120,7 @@ async def limb_connect(req: ConnectRequest):
     elif host_changed:
         _notify_host_change(rec, prev_host, req.host)   # 이미 승인된 것이 다른 PC 로 — 통지만
 
-    return {
+    out = {
         "success": True,
         "device_id": rec["device_id"],
         "alias": rec["alias"],
@@ -123,6 +128,15 @@ async def limb_connect(req: ConnectRequest):
         "session": rec.get("session", ""),
         "poll_wait": MAX_POLL_WAIT,
     }
+    # 회원 열쇠(neighbor_id 결합)면 회원 프로파일을 동봉 — 헬퍼 mode:member 가 /m/chat 을 연다.
+    if rec.get("neighbor_id") is not None:
+        try:
+            from body_trust import get_body_level
+            out["member"] = {"neighbor_id": rec.get("neighbor_id"),
+                             "level": get_body_level(rec["device_id"])}
+        except Exception:
+            out["member"] = {"neighbor_id": rec.get("neighbor_id"), "level": None}
+    return out
 
 
 @router.post("/limb/poll")
@@ -142,7 +156,7 @@ async def limb_poll(req: PollRequest):
     # 어느 PC 에서 도는지 비결정적이 된다(실측: 헬퍼 4개가 명령을 번갈아 집어감).
     # heartbeat 도 찍지 않는다 — 낡은 세션이 프레즌스를 살려두면 안 된다.
     current = rec.get("session") or ""
-    if current and req.session and req.session != current:
+    if current and (req.session or rec.get("neighbor_id") not in (None, "")) and req.session != current:
         return {"success": True, "approved": True, "jobs": [], "stale": True,
                 "message": "이 손발이 다른 곳에서 다시 연결됐습니다."}
 
@@ -167,6 +181,8 @@ async def limb_progress(req: ProgressRequest):
     rec = limb_keys.validate(req.key)
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
+    if not _job_owned(req.job_id, rec):
+        return {"success": False, "error": "job_not_owned"}
     phone_jobs.set_partial(req.job_id, {
         "tail": req.tail, "bytes": req.bytes, "running": req.running})
     return {"success": True}
@@ -178,5 +194,14 @@ async def limb_result(req: ResultRequest):
     rec = limb_keys.validate(req.key)
     if not rec:
         return {"success": False, "error": "invalid_or_expired_key"}
+    if not _job_owned(req.job_id, rec):
+        return {"success": False, "error": "job_not_owned"}
     phone_jobs.set_result(req.job_id, req.result)
     return {"success": True}
+
+
+def _job_owned(job_id: str, rec: dict) -> bool:
+    """회신 귀속(2026-09-14, docs/EXTERNAL_SERVICE_APP_HANDOFF.md §3-3): 그 키의 기기에 발급된 작업만 회신할
+    수 있다 — 회원 B 의 헬퍼가 회원 A 의 결과를 덮어쓰지 못한다. 모르는 작업도 거절(귀속 불명=거절)."""
+    owner = phone_jobs.owner_of(job_id)
+    return bool(owner) and owner == rec.get("device_id")

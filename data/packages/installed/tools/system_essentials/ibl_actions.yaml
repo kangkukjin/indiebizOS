@@ -73,6 +73,10 @@ nodes:
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx에 위임.
+        # 회원 개방(외부 서비스 앱, 2026-09-14 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §3-4): 회원 세션에서는
+        # 회원 기기(손발)에서 돈다 — 번역표는 데이터(limb_op). 주인 세션에는 영향 없음.
+        lands_on: body
+        limb_op: {op: read, path: $path}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -134,8 +138,12 @@ nodes:
         router: handler
         tool: write_file
         implementation: Python 파일 I/O로 로컬 파일 쓰기. content 미지정 시 _prev_result(파이프 주입) 폴백 — RED 쓰기 안전판 경유(output op:file 은 이 안전판을 우회했었다).
+        lands_on: body   # 회원 개방 — 회원 기기의 파일에 쓴다(§3-4). 번역표는 데이터.
+        limb_op: {op: write, path: $path, content: $content}
         target_key: path
       list:
+        lands_on: body
+        limb_op: {op: list, path: $path}
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
         #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -267,6 +275,8 @@ nodes:
         implementation: shutil.copy/copytree로 파일/폴더 복사. src 생략 시 _copy_piped_items — _prev_result의 items를 dest 폴더로(usb 항목은 file_index.usb_pull). 통화 되읽기=common.currency 정본, 통화 없음/0행/비-레코드 3갈래 분간(F20-3 계약)
         target_key: source
       move:
+        lands_on: body
+        limb_op: {op: file_move, path: $src, dest: $dest}
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
         #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -300,6 +310,8 @@ nodes:
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       mkdir:
+        lands_on: body
+        limb_op: {op: mkdir, path: $path}
         shell_shadow:
           heads: [mkdir]
           argmap:
@@ -541,6 +553,8 @@ nodes:
         guides:
         - sheet.md
       script:
+        lands_on: body
+        limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
         returns: items
         columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         # register/run/remove 가 원장·세상을 쓴다 — op 하나라도 쓰기면 true (webapp 선례).

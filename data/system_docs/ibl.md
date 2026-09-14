@@ -1346,3 +1346,14 @@ IBL은 Phase 0(원시 도구 호출)에서 시작하여, 드라이버 기반 프
 ### ledger와 filter의 조건 언어 통일 (2026-09-07)
 
 `[self:ledger]{op:"select",where}`는 `[table:filter]`와 같은 조건 언어를 쓴다: `{field,op,value}`, `{필드:값}` 등치 단축형, 문자열 비교(and/or), 조건 배열(AND). 해석 정본은 `backend/common/row_conditions.py`이며 data-ops의 `where_dsl.py`는 호환 입구다. ledger의 필드 조회·투영은 기존 점 경로를 유지한다. 단축형도 공통 값 의미론을 따른다(숫자 표기·공백·대소문자·ISO 날짜). 모르는 연산자와 깨진 정규식은 성공 0건이 아닌 실패로 반환한다.
+
+
+### 회원 실행 선언 (2026-09-14)
+
+어휘의 lands_on:body는 limb_op 데이터로 회원 기기 봉투에 번역한다. lands_on:hub는
+path_audited:{at,impl} 지문이 현재 패키지 실행 Python 소스와 같을 때만 공개 후보가 된다. 현재 출하된
+회원 액션은 body뿐이다. side_effect는 부작용 분류, lands_on은 위치, principal은 권한으로 서로 대체하지 않는다.
+회원에게 묶음을 열어도 선언 없는 액션은 카탈로그와 잎 실행 관문 모두에서 닫힌다.
+fn 전개는 회원 주체로 각 잎을 다시 검사하며, 회원이 허브 주인의 저장 함수/해마 별칭을 조회하지 못한다.
+로컬 .ibl 등록 문장은 정의만 호출 앞에 결합한다. 임의 최상위 동작이 들어간 파일을 자동 실행하지 않는다.
+회원 문법·현재 파일/프로그램 계약은 guides/member_start.md, 설계·제약은 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11.

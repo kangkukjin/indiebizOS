@@ -13,4 +13,6 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "PhoneAgent"
-include ':app'
+// memberOnly 빌드는 기존 앱의 Chaquopy/BaseBundle 구성까지 제외한다.
+if (!gradle.startParameter.projectProperties.containsKey('memberOnly')) include ':app'
+include ':member'

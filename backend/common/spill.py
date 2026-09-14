@@ -11,6 +11,10 @@
 파생물이라 기계 삭제가 맞다(2026-08-22 판정): 쓸 때마다 24h 지난 파일을 기회주의적으로 거둔다.
 """
 import json
+import contextvars
+
+_spill_root = contextvars.ContextVar("spill_root", default=None)
+
 import os
 import time
 import uuid
@@ -45,6 +49,8 @@ ENVELOPE_KEEP_MAX = 16_000
 
 
 def _root() -> str:
+    if _spill_root.get() is not None:
+        return _spill_root.get()
     here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     return os.path.join(here, "data", "spill")
 

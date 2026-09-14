@@ -540,14 +540,26 @@ def _issue(tool_input: dict) -> dict:
     alias = (tool_input.get("alias") or "").strip()
     ttl = tool_input.get("ttl_days")
     ttl = float(ttl) if ttl is not None else limb_keys.DEFAULT_TTL_DAYS
-    minted = limb_keys.mint(alias, ttl_days=ttl)
+    # 회원 열쇠(2026-09-14): neighbor_id 가 오면 기존 이웃에 기기를 결합(새 이웃 생성 금지).
+    neighbor_id = tool_input.get("neighbor_id")
+    link = None
+    if neighbor_id not in (None, ""):
+        from body_trust import link_body
+        minted = limb_keys.mint(alias, ttl_days=ttl, neighbor_id=int(neighbor_id))
+        link = link_body(minted["device_id"], int(neighbor_id))
+        if not link.get("linked"):
+            limb_keys.revoke(minted["device_id"])
+            return {"success": False, "op": "issue", "error": link.get("error")}
+    else:
+        minted = limb_keys.mint(alias, ttl_days=ttl)
 
     # USB 페이로드 폴더 — <루트>/outputs/limb_issue/<alias>/
     root = _issue_root()
     payload_dir = _payload_dir_for(minted["alias"], minted["device_id"])
     os.makedirs(payload_dir, exist_ok=True)
 
-    cfg = {"base": base, "key": minted["key"], "alias": minted["alias"]}
+    cfg = {"base": base, "key": minted["key"], "alias": minted["alias"],
+           "mode": "member" if neighbor_id not in (None, "") else "limb"}
     with open(os.path.join(payload_dir, "indiebiz-helper.json"), "w", encoding="utf-8") as f:
         json.dump(cfg, f, ensure_ascii=False, indent=2)
 
@@ -588,7 +600,10 @@ def _issue(tool_input: dict) -> dict:
         "expires_at": minted["expires_at"],
         "payload_dir": payload_dir,
         "binary_included": copied,
-        "note": "이 폴더를 USB 에 복사 → 그 PC 에서 헬퍼 실행. 첫 접속 후 [self:limb]{op:approve}로 승인하세요.",
+        "member": link,
+        "note": ("회원 열쇠 — 이 폴더를 그 사람에게 주면 헬퍼가 /m/chat 을 그 사람 주체·레벨로 엽니다."
+                 if link else
+                 "이 폴더를 USB 에 복사 → 그 PC 에서 헬퍼 실행. 첫 접속 후 [self:limb]{op:approve}로 승인하세요."),
         "warning": addr_warn or (None if copied else
                                  "helper/dist 에 빌드된 실행파일이 없어 키·안내문만 동봉했습니다. helper/build.sh 로 빌드하세요."),
     }

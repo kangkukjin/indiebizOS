@@ -514,11 +514,13 @@ async def remote_access_guard(request: Request, call_next):
                 status_code=503,
             )
 
+        session_ok = False
         if external:
             path = request.url.path
             # ② 세션 검증 — 예외는 '미인증'으로 친다(fail-closed)
             try:
-                allowed = is_public_remote_path(request.method, path) or verify_session(request)
+                session_ok = bool(verify_session(request))
+                allowed = session_ok or is_public_remote_path(request.method, path)
             except Exception as e:
                 print(f"[AuthGate] 세션 검증 실패 → 미인증 처리 ({request.method} {path}): {e}")
                 allowed = False
@@ -527,6 +529,15 @@ async def remote_access_guard(request: Request, call_next):
                     {"detail": "인증이 필요합니다. 원격 런처에 로그인하세요."},
                     status_code=401,
                 )
+        # ③ 요청 주체(principal) — 전송 관문이 한 번 세운다. 이후 경로는 좁힐 수만 있다
+        #    (docs/EXTERNAL_SERVICE_APP_HANDOFF.md §3-3). 외부 공개 경로(세션 없음)=anonymous,
+        #    로컬·세션 검증=owner. 자체 인증 경로(limb/포털/nas)는 자기 관문에서 더 좁힌다.
+        try:
+            import principal as _principal
+            _principal.set_transport(_principal.transport_principal(external, session_ok))
+        except Exception as e:
+            print(f"[AuthGate] 주체 설정 실패 → 거절 ({request.method} {request.url.path}): {e}")
+            return JSONResponse({"detail": "인증 게이트 오류로 요청을 거절했습니다."}, status_code=503)
     return await call_next(request)
 
 
@@ -660,6 +671,8 @@ app.include_router(face_provision_router, tags=["tunnel-provision"])  # 로컬 �
 app.include_router(ibl_router, tags=["ibl"])
 app.include_router(nodes_router, tags=["nodes"])
 app.include_router(limb_router, tags=["limb"])  # /limb/* 는 자체 limb key 인증 (is_public_remote_path 등록)
+from api_member import router as member_router
+app.include_router(member_router, tags=["member"])  # /m/* 외부 서비스 앱 — 자체 limb key(회원 열쇠) 인증
 app.include_router(xray_router, tags=["xray"])
 app.include_router(prompt_composition_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (프롬프트·기억 본문)
 app.include_router(guides_router)  # 로컬 전용 — is_public_remote_path 등록 금지 (가이드 본문·편집)

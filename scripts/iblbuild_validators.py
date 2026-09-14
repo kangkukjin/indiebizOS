@@ -1282,6 +1282,8 @@ def validate(data: dict, root: Path) -> list[str]:
     issues.extend(validate_standalone_instruments(data))
     issues.extend(validate_runs_on(data))
     issues.extend(validate_transform_contract(data))
+    from iblbuild_lands_on import validate_lands_on
+    issues.extend(validate_lands_on(data, root))
     issues.extend(validate_phone_reachability(data, root))
     issues.extend(validate_node_guides(data, root))
     issues.extend(validate_always_on(data))

@@ -45,13 +45,36 @@ def check_ready(package_id: str) -> list:
     return issues
 
 
-def set_package_active(package_id: str, active: bool, *, authority=None) -> dict:
-    """보유 파일·기억을 보존하고 선택만 바꾼다. 이미 진행 중인 호출은 취소하지 않는다."""
+def set_package_active(package_id: str, active: bool, *, authority=None, profile: str = None) -> dict:
+    """보유 파일·기억을 보존하고 선택만 바꾼다. 이미 진행 중인 호출은 취소하지 않는다.
+
+    profile='member' 면 주인 선택은 두고 **회원 프로파일의 허용**만 바꾼다(주인 활성 ∩ 회원 허용).
+    주인이 잠재운 묶음은 회원에게 열 수 없다. 같은 사람 권한(HUMAN_AUTHORITY)·같은 revision 축."""
     if authority is not HUMAN_AUTHORITY:
         return {"success": False, "status": "human_required", "package_id": package_id,
                 "message": "어휘 선택은 사람이 합니다. 런처의 내 어휘에서 변경해 주세요."}
     if type(active) is not bool:
         raise ValueError("active는 참/거짓이어야 합니다")
+    if profile and profile != "owner":
+        with LOCK:
+            package_path(package_id)
+            if active and not is_active(package_id):
+                raise ValueError(f"'{package_id}' 은(는) 주인 선택에서 잠들어 있어 {profile} 프로파일에 열 수 없습니다")
+            before = read_state()
+            after = copy.deepcopy(before)
+            prof = after.setdefault("profiles", {}).setdefault(profile, {}).setdefault("active", {})
+            if prof.get(package_id, False) == active:
+                return {"success": True, "status": "active" if active else "sleeping", "package_id": package_id,
+                        "profile": profile, "active": active, "changed": False}
+            prof[package_id] = active
+            after["revision"] += 1
+            write_state(after)
+            from ibl_routing import invalidate_runtime_caches
+            failures = invalidate_runtime_caches()
+            if failures:
+                raise RuntimeError("캐시 갱신 실패: " + ", ".join(failures))
+            return {"success": True, "status": "active" if active else "sleeping", "package_id": package_id,
+                    "profile": profile, "active": active, "changed": True, "revision": after["revision"]}
     with LOCK:
         package_path(package_id)
         if not active:

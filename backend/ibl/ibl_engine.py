@@ -830,9 +830,18 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
                 "available_actions": available}
 
     router = action_config.get("router")
+    # 실행 직전 권한 관문(2026-09-14, 외부 서비스 앱 §3-4): 회원 주체에서는 선언(lands_on·회원 프로파일
+    # 활성·감사 지문)이 완전한 액션만 지나간다 — 직접 친 IBL·저장 문장·중첩·fn 전개 전부 이 잎에서.
+    # 선언 없음=거절(fail-closed). 주인 주체에는 None(무영향).
+    try:
+        from member_profile import gate as _member_gate
+        _deny = _member_gate(node, action, action_config)
+    except ImportError:
+        raise  # 회원 관문을 불러올 수 없으면 실행하지 않는다
+    if _deny:
+        return _deny
     from ibl_code_ir import receive_params
     params = receive_params(tool_input.get("params", {}))
-
     # 중첩 깊이를 params 에 실어 라우터가 볼 수 있게 한다 (_prev_result 와 같은 관습 —
     # '_' 접두 키는 파라미터 어휘 가드에서 제외된다). [table:each] 가 하위 문장에 깊이를
     # 이어 붙이는 데 쓴다.
@@ -851,6 +860,13 @@ def _execute_ibl_impl(tool_input: dict, project_path: str, agent_id: str = None)
     # _route_by_config 에서 한 번 더 적용되나 정규 키 우선이라 멱등. (예: self:trigger 의 id→trigger_id)
     from ibl_routing import _normalize_param_aliases
     params = _normalize_param_aliases(node, action, params, action_config)
+
+    from member_profile import is_member_principal, entry as member_entry
+    if is_member_principal():
+        from member_bridge import execute as member_execute
+        declaration = member_entry(node, action)
+        if declaration and declaration.get("lands_on") == "body":
+            return member_execute(declaration, params)
 
     # 인자 층 침묵 제거 (2026-07-03): 핸들러가 읽지 않는 키는 .get() 기본값으로 조용히
     # 흡수돼 "성공처럼 보이는 오동작"이 된다. 거부하지 않고 결과에 경고를 실어

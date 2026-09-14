@@ -113,6 +113,7 @@ def drain_stream(gen) -> Dict[str, Any]:
     tool_calls: List[Dict] = []
     clarify = False
     session_reset = False
+    turn_tokens = None
     for ev in gen:
         et = ev.get("type")
         if et == "final":
@@ -120,11 +121,12 @@ def drain_stream(gen) -> Dict[str, Any]:
         elif et == "error":
             error = ev.get("content", "")
         elif et == "_turn_meta":
+            turn_tokens = ev.get("turn_tokens")
             tool_calls.extend(ev.get("tool_calls") or [])
             clarify = bool(ev.get("clarify"))
             session_reset = bool(ev.get("session_reset"))
     return {"final": final, "error": error, "tool_calls": tool_calls,
-            "clarify": clarify, "session_reset": session_reset}
+            "clarify": clarify, "session_reset": session_reset, "turn_tokens": turn_tokens}
 
 
 def per_turn_provider_view(provider):
@@ -323,6 +325,8 @@ class CognitivePipelineMixin:
         from providers.base import turn_token_scope
         from world_pulse import _load_config
         resource_limits = _load_config().get("agent_resource_limits", {})
+        if getattr(self, "config", {}).get("_member"):
+            resource_limits = self.config["_member"]["limits"]
         agent_id = get_current_agent_id() or getattr(self.ai, "agent_id", None)
         task_id = episode_task_id() or get_current_task_id() or f"task_{uuid4().hex}"
         from steer_inbox import task_scope

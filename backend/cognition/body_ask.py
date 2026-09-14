@@ -409,6 +409,29 @@ def handle_ask(message: str, dry_run: bool = False, from_body: str = "",
             return {"success": False, "trust": trust_level,
                     "error": f"신뢰 레벨({trust_level})이 부탁 수신 최소({ASK_MIN_LEVEL}) 미만입니다."}
 
+    # 요청 주체 좁힘(2026-09-14): 신원 있는 부탁은 body:<이웃id> 로 좁혀 컴파일·실행한다 —
+    # 회상(해마·기억지도)이 주인 용례를 내지 않고, RED 그랜트가 열리지 않는다. 좁힘은 전송
+    # 관문이 세운 주체(런처 세션=owner) 안에서만 가능하고 넓힐 수 없다. 신원 없는 호출은
+    # 소유주 표면이라 그대로 둔다(전송층 인증 통과 = 주인).
+    import principal as _principal
+    _scope = (_principal.narrow(_principal.body(_neighbor_id_of(device_id), trust_level, device_id), "nodes/ask")
+              if device_id else _principal.narrow(_principal.current(), "nodes/ask"))
+    with _scope:
+        return _handle_ask_scoped(message, dry_run, from_body, device_id, payload, t0)
+
+
+def _neighbor_id_of(device_id: str) -> str:
+    """몸-신원 → 이웃 id(신뢰 원장). 못 찾으면 device_id 자체를 쓴다(주체 키는 안정적이기만 하면 된다)."""
+    try:
+        from body_trust import get_body_neighbor_id
+        nid = get_body_neighbor_id(device_id)
+        return str(nid) if nid is not None else str(device_id)
+    except Exception:
+        return str(device_id)
+
+
+def _handle_ask_scoped(message: str, dry_run: bool, from_body: str, device_id: str,
+                       payload, t0: float) -> Dict[str, Any]:
     # 소유-가드: 부탁받은 몸은 **자기 사전**으로만 컴파일한다. 남의 어휘(예: 맥이
     # phone_only 를 컴파일)로 번역되면 관문 자동위임으로 남의 몸에 되튕겨 나간다 —
     # 특권 배관을 ask 가 도로 여는 꼴. 1회 교정 재컴파일, 그래도 남의 어휘면 정직 거절.

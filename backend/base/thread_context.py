@@ -572,9 +572,17 @@ def snapshot() -> dict:
     (핸들러 타임아웃 스레드·오프로드풀·병렬 분기)이 이 한 벌로 척추를 잇는다.
     """
     snap = dict(_thread_local.__dict__)
+    import member_runtime
+    snap["_member_turn"] = member_runtime.current()
     try:
         from episode_logger import capture_trace
         snap["_trajectory_trace"] = capture_trace()
+    except Exception:
+        pass
+    # 요청 주체(principal, contextvars) — 손 스레드 이동도 주체를 잃지 않는다(2026-09-14).
+    try:
+        import principal as _principal
+        snap[_principal.SNAPSHOT_KEY] = _principal.export_for_snapshot()
     except Exception:
         pass
     return snap
@@ -583,10 +591,17 @@ def snapshot() -> dict:
 def restore(snap: dict):
     """snapshot()으로 떠둔 컨텍스트를 현재 스레드의 thread-local에 복원."""
     snap = dict(snap or {})
+    import member_runtime
+    member_runtime.adopt(snap.pop("_member_turn", None))
     trace = snap.pop("_trajectory_trace", None)
     try:
         from episode_logger import adopt_trace
         adopt_trace(trace)   # None 포함 set — 풀 스레드 재사용의 잔류 trace 청소
+    except Exception:
+        pass
+    try:
+        import principal as _principal
+        _principal.import_from_snapshot(snap.pop(_principal.SNAPSHOT_KEY, None))  # None 포함 — 잔류 주체 청소
     except Exception:
         pass
     # 복원은 *상태 전체*의 복원이다 — 스냅샷 이후 새로 생긴 키(예: 시험이 세운

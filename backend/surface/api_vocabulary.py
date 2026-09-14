@@ -30,14 +30,20 @@ def human_authority(request: Request):
 
 class ActivationRequest(BaseModel):
     active: bool
+    profile: str = "owner"
 
 
 @router.get("/vocabulary")
 def list_vocabulary():
     from package_manager import package_manager
     packages = package_manager.list_available()
+    from member_profile import manifest
+    from vocabulary_state import is_active
+    declarations = manifest().get("actions", {})
     for package in packages:
         package["preparation"] = check_ready(package["id"])
+        package["member_active"] = is_active(package["id"], profile="member")
+        package["member_words"] = sorted(k for k, v in declarations.items() if v.get("package") == package["id"])
     return {"packages": packages, "revision": read_state()["revision"]}
 
 
@@ -45,7 +51,9 @@ def list_vocabulary():
 def set_activation(package_id: str, selection: ActivationRequest, request: Request):
     authority = human_authority(request)
     try:
-        return set_package_active(package_id, selection.active, authority=authority)
+        if selection.profile not in ("owner", "member"):
+            raise ValueError("지원하지 않는 프로파일")
+        return set_package_active(package_id, selection.active, authority=authority, profile=selection.profile)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except RuntimeError as exc:

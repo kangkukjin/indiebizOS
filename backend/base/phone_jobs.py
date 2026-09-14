@@ -21,6 +21,7 @@ _JOB_EVENTS: Dict[str, threading.Event] = {}  # device_id -> 작업 도착 신�
 _RESULTS: Dict[str, dict] = {}                # job_id -> {result, ts}
 _RESULT_EVENTS: Dict[str, threading.Event] = {}
 _PARTIALS: Dict[str, dict] = {}               # job_id -> {partial, ts} — 실행 중 경과
+_OWNERS: Dict[str, tuple] = {}                # job_id -> (device_id, ts) — 회신 귀속 검사(2026-09-14)
 
 JOB_TTL = 600.0     # 폰이 이 시간 안에 안 당겨가면 작업 폐기(낡은 클립보드 밀어넣기 방지)
 RESULT_TTL = 300.0  # 대기자가 이미 떠난 결과의 보존 시간
@@ -52,6 +53,9 @@ def enqueue(device_id: str, code: str, agent_id: Optional[str] = None) -> str:
     with _LOCK:
         _gc_locked(job["ts"])
         _QUEUES.setdefault(device_id, []).append(job)
+        _OWNERS[job["id"]] = (device_id, job["ts"])
+        for k in [k for k, (_, ts) in _OWNERS.items() if job["ts"] - ts > JOB_TTL + RESULT_TTL]:
+            _OWNERS.pop(k, None)
     _job_event(device_id).set()
     return job["id"]
 
@@ -74,6 +78,13 @@ def pull_blocking(device_id: str, wait: float = 0.0) -> List[dict]:
         if fresh or now >= deadline:
             return fresh
         ev.wait(timeout=max(0.05, deadline - time.time()))
+
+
+def owner_of(job_id: str) -> Optional[str]:
+    """이 작업을 발급받은 기기(device_id). 모르는 작업이면 None — 회신 귀속 검사는 None 도 거절한다."""
+    with _LOCK:
+        entry = _OWNERS.get(job_id)
+        return entry[0] if entry else None
 
 
 def set_result(job_id: str, result: Any) -> None:
@@ -118,3 +129,14 @@ def wait_result(job_id: str, timeout: float = 20.0) -> Any:
         _RESULT_EVENTS.pop(job_id, None)
         entry = _RESULTS.pop(job_id, None)
     return entry.get("result") if (hit and entry) else None
+
+
+def cancel_pending(job_id: str) -> bool:
+    """아직 기기가 가져가지 않은 작업만 취소. 실행된 것으로 추정하지 않는다."""
+    with _LOCK:
+        for device, queue in _QUEUES.items():
+            remaining = [j for j in queue if j["id"] != job_id]
+            if len(remaining) != len(queue):
+                _QUEUES[device] = remaining
+                return True
+    return False

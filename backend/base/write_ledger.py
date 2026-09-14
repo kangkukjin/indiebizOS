@@ -75,6 +75,9 @@ def _rel(path) -> str:
 def log_write(path, event: str = "write", gate: str = "", size=None) -> None:
     """관문 훅 — 성공한 쓰기 직후 한 줄. 어떤 예외도 밖으로 내지 않는다."""
     try:
+        from member_runtime import is_member
+        if is_member():
+            return  # 회원 원장은 손발 로컬에 기록한다
         rel = _rel(path)
         # 자기 자신(원장·로테이션)의 쓰기는 기록하지 않는다 — 자기지시 루프 차단
         # (경로 비교가 어긋나도 파일명으로 이중 차단 — 상대화 실패 시 안전판)

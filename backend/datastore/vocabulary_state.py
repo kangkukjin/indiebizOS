@@ -182,7 +182,26 @@ def revision(root: Path = None) -> int:
     return read_state(root)["revision"]
 
 
-def is_active(package_id: str, root: Path = None) -> bool:
+MEMBER_PROFILE = "member"
+
+
+def profile_active_map(profile: str, root: Path = None) -> dict:
+    """프로파일별 활성 선택(owner 활성 ∩ 프로파일 허용). 없는 프로파일=빈 선택(fail-closed)."""
+    state = read_state(root)
+    prof = (state.get("profiles") or {}).get(profile) or {}
+    allow = prof.get("active") or {}
+    return {pid: bool(state["active"].get(pid, False) and allow.get(pid, False)) for pid in state["active"]}
+
+
+def is_active(package_id: str, root: Path = None, profile: str = None) -> bool:
+    """profile=None|'owner' 는 주인 선택. 그 외 프로파일(예: member)은 주인 활성 ∩ 프로파일 허용 —
+    주인이 명시로 열어준 묶음만(기본 False). 외부 서비스 앱 부재 층의 정본(2026-09-14)."""
+    if profile and profile != "owner":
+        return profile_active_map(profile, root).get(package_id, False)
+    return _is_active_owner(package_id, root)
+
+
+def _is_active_owner(package_id: str, root: Path = None) -> bool:
     with LOCK:
         if package_id in required_packages(root):
             return True

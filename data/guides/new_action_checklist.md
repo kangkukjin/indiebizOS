@@ -384,3 +384,6 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 > 실행 에이전트가 턴 종료 후 덧붙인다.
 - 2026-08-24 실측: op 분기 액션(`target_key: op`)은 액션 `params:` 에 타입을 넣어도 op 수준 파라미터(`read.path` 등)가 미선언으로 남는다 — `--check` ✗ 유지(34건).
+
+
+회원 공개 선언·격리 시험은 [회원 액션 계약](member_contract.md)을 따른다.

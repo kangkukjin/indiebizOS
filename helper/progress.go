@@ -17,9 +17,9 @@ import (
 )
 
 const (
-	progressFirstDelay = 6 * time.Second  // 이보다 짧게 끝나는 명령은 중계 안 함
-	progressInterval   = 6 * time.Second  // 이후 중계 주기
-	progressTailBytes  = 3 * 1024         // 한 번에 올리는 꼬리 크기
+	progressFirstDelay = 6 * time.Second // 이보다 짧게 끝나는 명령은 중계 안 함
+	progressInterval   = 6 * time.Second // 이후 중계 주기
+	progressTailBytes  = 3 * 1024        // 한 번에 올리는 꼬리 크기
 )
 
 type progressReporter struct {

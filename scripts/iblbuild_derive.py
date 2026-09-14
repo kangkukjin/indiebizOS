@@ -116,6 +116,56 @@ def derive_phone_manifest(data: dict, root: Path) -> dict:
     }
 
 
+def handler_fingerprint(pkg_dir: Path) -> str:
+    """패키지 실행 소스의 지문 — 회원 개방(`path_audited.impl`) 재검증용.
+
+    패키지 루트의 `_` 접두 아닌 *.py 전부(handler·tool_*·*_ops)를 경로순으로 이어 sha256, 앞 16자.
+    backend/ibl/member_profile.py 가 같은 계산을 런타임에 한다(시험이 두 구현의 일치를 고정).
+    """
+    import hashlib
+    h = hashlib.sha256()
+    for p in sorted(Path(pkg_dir).rglob("*.py")):
+        if "__pycache__" in p.parts or p.name.startswith("test_"):
+            continue
+        h.update(p.relative_to(pkg_dir).as_posix().encode()); h.update(b"\0"); h.update(p.read_bytes()); h.update(b"\0")
+    return h.hexdigest()[:16]
+
+
+def declared_side_effect(action: dict) -> bool:
+    """선언에서 읽는 부작용 여부 — backend/ibl/ibl_safety.is_side_effect 와 같은 축(returns==effect·side_effect·ops.side_effect)."""
+    if action.get("returns") == "effect" or action.get("side_effect") is True:
+        return True
+    per_op = ((action.get("ops") or {}).get("side_effect")) or {}
+    return any(v is True for v in per_op.values()) if isinstance(per_op, dict) else False
+
+
+def derive_member_manifest(data: dict, root: Path) -> dict:
+    """회원 프로파일 매니페스트 — `lands_on` 을 선언한 액션만(부재 층의 정본).
+
+    선언 없는 액션은 회원에게 존재하지 않는다(docs/EXTERNAL_SERVICE_APP_HANDOFF.md §3-4).
+    hub 액션은 감사 지문(path_audited.impl)을 함께 실어 런타임이 현재 지문과 대조한다.
+    """
+    tool_index = build_tool_index(root)
+    actions: dict = {}
+    nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
+    for node_name, node in nodes.items():
+        if not isinstance(node, dict):
+            continue
+        for action_name, action in (node.get("actions") or {}).items():
+            if not isinstance(action, dict) or not action.get("lands_on"):
+                continue
+            tool = action.get("tool")
+            pkg_dir = tool_index[tool][0] if tool and tool in tool_index else None
+            entry = {"lands_on": action["lands_on"], "package": pkg_dir.name if pkg_dir else None,
+                     "side_effect": declared_side_effect(action)}
+            if action.get("limb_op") is not None:
+                entry["limb_op"] = action["limb_op"]
+            if action.get("path_audited") is not None:
+                entry["path_audited"] = action["path_audited"]
+            actions[f"{node_name}:{action_name}"] = entry
+    return {"version": 1, "actions": dict(sorted(actions.items()))}
+
+
 def derive_fixtures(data: dict) -> dict:
     """병합된 data 에서 액션별 fixture/exempt 필드를 모아 ibl_fixtures.json 을 파생.
 

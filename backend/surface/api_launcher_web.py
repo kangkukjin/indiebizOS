@@ -528,6 +528,10 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # USB 엔 맥 비밀번호가 아니라 limb key 가 실리므로 런처 세션을 요구하지 않는다.
     if method == "POST" and path.startswith("/limb/"):
         return True
+    # 외부 서비스 앱 회원 표면(/m/*) — 회원 열쇠(limb key) 자체 인증. 주체는 라우트가 세운다(principal.authenticate).
+    if (method, path) in {("POST", "/m/chat"), ("POST", "/m/session/close"),
+                           ("POST", "/m/profile"), ("GET", "/m/app")}:
+        return True
     # 공개파일 라이브 서빙(/showcase/*: list·thumb·media·origin)은 자체 X-Showcase-Secret 게이트 보유
     if method == "GET" and path.startswith("/showcase/"):
         return True

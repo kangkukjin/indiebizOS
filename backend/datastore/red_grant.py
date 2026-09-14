@@ -47,6 +47,17 @@ _grants: dict = {}
 _IDLE_TTL_SEC = 30 * 60
 
 
+def _principal_is_owner() -> bool:
+    """RED 그랜트의 네 번째 한도(2026-09-14): 전송 관문이 세운 요청 주체가 owner 일 것.
+    origin=='user' 는 사람의 직접 명령이라는 뜻이지 *누구의* 명령인지가 아니다 — 회원·이웃 몸 주체에서
+    origin 이 잘못 복원돼도 여기서 닫힌다(docs/EXTERNAL_SERVICE_APP_HANDOFF.md §3-3 불변조건)."""
+    try:
+        import principal
+        return principal.is_owner()
+    except Exception:
+        return False
+
+
 def _issuer_episode_ids() -> set:
     """발급 턴을 가리키는 에피소드 id — 만료를 시계가 아니라 **몸에게** 묻기 위한 손잡이.
 
@@ -105,6 +116,8 @@ def issue_grant(agent_id: str, task_id: str, reason: str = "") -> dict:
 
     자기 슬롯(task_id)에만 쓴다 — 병행 REPAIR 런의 그랜트를 덮어쓰지 않는다
     (2026-09-01 개정 — 모듈 docstring의 ep2519/ep2520 사건)."""
+    if not _principal_is_owner():
+        return {}   # 주체 관문 — origin 과 별개로, 주인이 아니면 RED 그랜트는 없다(2026-09-14)
     with _lock:
         _now = time.time()
         # 시체 청소는 발급이 넘칠 때만 — denial_note 의 만료 정직 신고를 위해 남겨둔다.
@@ -146,6 +159,8 @@ def active_grant(task_id: str = None, agent_id: str = None):
     - 호출측 task_id 가 비어 있으면(신원 유실 심) agent_id 일치로만 폴백한다.
     - 둘 다 없으면 허용하지 않는다(fail-closed).
     """
+    if not _principal_is_owner():
+        return None   # 주체 관문 — 발급 뒤 주체가 좁혀져도 조회는 닫힌다
     with _lock:
         candidates = []
         if task_id and task_id in _grants:

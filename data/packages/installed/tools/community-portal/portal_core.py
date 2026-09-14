@@ -883,6 +883,16 @@ def audit_log(who: str, instrument: str, code: str, ok: bool, note: str = "",
         if _AUDIT_PATH.exists() and _AUDIT_PATH.stat().st_size > _AUDIT_MAX_BYTES:
             lines = _AUDIT_PATH.read_text(encoding="utf-8").splitlines()[-2000:]
             _AUDIT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        # 회원·손님 주체의 코드는 골격만(슬롯 값 제거) — 감사로그는 메타 저장소다(2026-09-14 §6-1).
+        try:
+            import principal as _principal
+            if not _principal.is_owner():
+                from member_profile import skeletonize as _skel
+                code = _skel(code or "")
+                note = ""  # 오류 원문도 회원 입력/경로를 포함할 수 있다
+                who = _principal.current().key()
+        except Exception:
+            code = ""
         entry = {"at": _now(), "who": who, "instrument": instrument,
                  "code": (code or "")[:300], "ok": bool(ok)}
         if portal:

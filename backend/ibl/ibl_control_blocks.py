@@ -249,6 +249,9 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             return {"success": False, "fn": name,
                     "error": f"[fn:{name}] 의 정의 표를 찾지 못했습니다(프로그램 정의 표가 밀려남) — 프로그램을 다시 실행하세요."}
     if not fdef:
+        from member_runtime import is_member
+        if is_member():
+            return {"success": False, "error_type": "permission", "error": "회원 기기에서 동봉한 함수 정의만 실행할 수 있습니다"}
         # 둘째 길: 저장 워크플로(원장) · 셋째 길: 이름 붙은 관용구(해마, 2026-09-05 — 관용구는 이름 붙은 함수)
         from workflow_engine import execute_workflow
         from workflow_store import get_workflow

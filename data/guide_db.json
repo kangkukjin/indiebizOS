@@ -1731,6 +1731,33 @@
       ],
       "file": "result_quality.md",
       "topic": "시스템/검증"
+    },
+    {
+      "id": "member_start",
+      "name": "회원 앱 시작",
+      "description": "회원 기기의 파일·프로그램·기억 졸업 시작 문장 열 개.",
+      "keywords": [
+        "회원",
+        "member",
+        "졸업",
+        "손발",
+        "로컬 승인"
+      ],
+      "file": "member_start.md",
+      "topic": "시스템"
+    },
+    {
+      "id": "member_contract",
+      "name": "회원 액션 공개 계약",
+      "description": "lands_on·limb_op·감사 지문과 회원 격리 시험 체크리스트.",
+      "keywords": [
+        "회원 공개",
+        "lands_on",
+        "member",
+        "limb_op"
+      ],
+      "file": "member_contract.md",
+      "topic": "시스템"
     }
   ]
 }

@@ -39,6 +39,15 @@ def _home_body() -> str:
         return "pc"
 
 
+def _principal_owner() -> bool:
+    """턴의 요청 주체가 주인인가 — 기억 쓰기 초크포인트의 관문(docs/EXTERNAL_SERVICE_APP_HANDOFF.md §6-1)."""
+    try:
+        import principal
+        return principal.is_owner()
+    except Exception:
+        return False
+
+
 class CognitiveDistillMixin:
     """턴 종료 후 메모리 쓰기(증류) 메서드 모음."""
 
@@ -648,7 +657,7 @@ AI 답변: {ai_response[:1400]}
         except Exception as e:
             print(f"[포식기억] 증류 실패 (무시): {e}")
 
-    def _after_response(self, user_message: str, response: str, *,
+    def _after_response(self, user_message: str, response: str, *,  # noqa: C901
                         tool_calls=None, hippo_score: float = None, top_code: str = None,
                         write_experience: bool = True, write_deep: bool = True,
                         write_forage: bool = True, assume_forage: bool = False,
@@ -667,6 +676,9 @@ AI 답변: {ai_response[:1400]}
         if not response:
             return
         log = getattr(self, "_log", None) or print
+        if not _principal_owner():
+            log("[기억] 회원·이웃 주체의 턴 — 주인 저장소(해마·심층·포식·가이드)에 쓰지 않음(회원 로컬 회상은 2단계)")
+            return
         from thread_context import get_goal_eval_outcome
         evaluation = get_goal_eval_outcome()  # 경험 증류가 소비하기 전에 기억용 상태를 보존한다.
         # 1) 경험 증류(해마) — 도구 실행이 있었을 때만. + Reflex top-1 성공률 피드백.
@@ -741,6 +753,11 @@ AI 답변: {ai_response[:1400]}
             get_current_task_id,
         )
         from episode_logger import EpisodeLogger
+        if not _principal_owner():
+            # 영속 큐 워커는 주체를 복원하지 못한다(payload 에 없음) — 적재 자체를 막는다.
+            clear_goal_eval_outcome()
+            (getattr(self, "_log", None) or print)("[기억] 회원·이웃 주체의 턴 — 증류 큐에 적재하지 않음")
+            return
 
         ident = {
             "registry_key": get_current_registry_key(),

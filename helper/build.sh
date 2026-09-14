@@ -4,6 +4,7 @@
 set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p dist
+python3 ../scripts/build_member_shell.py
 
 echo "▶ windows/amd64"
 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/indiebiz-helper-win.exe .

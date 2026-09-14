@@ -161,6 +161,17 @@ def _memory_search(db, tool_input, project_path, agent_id):
     limit = tool_input.get("top_k", tool_input.get("limit", 10))
     results = []
 
+    # 요청 주체 관문(2026-09-14, 외부 서비스 앱 0단계): 심층메모리·대화 이력은 주인의 것 —
+    # 주체가 owner 가 아니면(이웃 부탁·포털·회원) 빈 결과. 회원 자기 기억은 손발 회상(1단계).
+    try:
+        import principal as _principal
+        if not _principal.recall_allowed("deep_memory"):
+            return json.dumps({"count": 0, "memories": [], "items": [],
+                               "closed": "principal", "note": "주인의 기억은 주인 주체에서만 회상됩니다."},
+                              ensure_ascii=False)
+    except ImportError:
+        pass
+
     # ★B53-5: 저장이 '기타' 로 정규화하는 값을 검색이 원문 그대로 대조하면 영원히 0건 —
     #   유효집합 밖 category 는 0건(침묵) 대신 명시 거절(유효 값 동반). 대칭이 서야 왕복이 산다.
     _cat = str(tool_input.get("category") or "").strip() or None

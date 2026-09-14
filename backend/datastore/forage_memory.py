@@ -538,9 +538,20 @@ def _fair_by_body(rows: List) -> List:
     return out
 
 
+def _principal_allows_recall() -> bool:
+    """요청 주체 관문(2026-09-14): 냄새지도·주인모델은 주인의 것 — 주체가 owner 가 아니면 닫는다."""
+    try:
+        import principal
+        return principal.recall_allowed("forage")
+    except Exception:
+        return False
+
+
 def recall(*, body: Optional[str] = None, query: Optional[str] = None,
            limit: int = 20, filter_owner: bool = True, locus: Optional[str] = None) -> Dict[str, Any]:
     """포식 회상 — 몸별 지도(body 일치, query 필터) + 주인모델.
+
+    ★주체 관문: 주체가 owner 가 아니면 빈 회상(closed="principal") — 회원 자기 포식은 손발 회상(1단계).
 
     body=None 이면 전 공간(모든 몸) — 주입 경로(cognitive_recall)와 같은 축이다.
     이때 map/territory 는 몸별 공정 인터리브(_fair_by_body)로 채워, 항목 수가 많은
@@ -556,6 +567,9 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     상한을 둬 프롬프트가 무한정 늘지 않게 한다(상위 confidence 만 노출). 'dead' 는 장소 속성이
     아니라 (장소×의도) 관계이므로 영토 정체만 띄우고 배제는 AI 가 판단한다.
     """
+    if not _principal_allows_recall():
+        return {"success": True, "map": [], "owner": [], "territory": [], "closed": "principal",
+                "map_count": 0, "owner_count": 0, "territory_count": 0}
     terms, grams = _query_terms(query)
     loc = _norm_locus(os.path.expanduser(locus)) if locus else None
     if loc:

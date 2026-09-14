@@ -8,9 +8,10 @@
 // 얇은 바이너리 원칙: Go 표준 라이브러리엔 화면 캡처가 없고, 외부 캡처 라이브러리는
 // 대개 CGo 를 끌어와 크로스컴파일(단일 실행파일·런타임 0)을 깨뜨린다. 그래서 **각 OS 에
 // 원래 있는 도구로 셸아웃**해 PNG 파일을 얻고, 축소·인코딩만 stdlib(image/*)로 한다.
-//   · macOS  : screencapture (OS 기본 탑재)
-//   · Windows: PowerShell + .NET System.Drawing (OS 기본 탑재)
-//   · Linux  : grim/scrot/import/gnome-screenshot 중 있는 것 (없을 수 있음 → 정직한 실패)
+//
+//	· macOS  : screencapture (OS 기본 탑재)
+//	· Windows: PowerShell + .NET System.Drawing (OS 기본 탑재)
+//	· Linux  : grim/scrot/import/gnome-screenshot 중 있는 것 (없을 수 있음 → 정직한 실패)
 package main
 
 import (
@@ -45,8 +46,10 @@ const (
 //
 // 정확한 클릭의 급소가 여기다. AI 는 축소된 이미지(예 1280px)를 보고 "여기를 눌러"라고
 // 말하는데, 실제 입력은 그 PC 의 좌표계에서 일어난다. 그 사이엔 배율이 둘이나 낀다:
-//   ① 축소 배율 : 캡처 원본(1920px) → 전송 이미지(1280px)
-//   ② 픽셀↔포인트: 레티나 맥은 캡처가 픽셀(3024)인데 클릭은 논리 포인트(1512)로 받는다
+//
+//	① 축소 배율 : 캡처 원본(1920px) → 전송 이미지(1280px)
+//	② 픽셀↔포인트: 레티나 맥은 캡처가 픽셀(3024)인데 클릭은 논리 포인트(1512)로 받는다
+//
 // 이 환산을 AI 에게 시키면 반드시 틀린다(그리고 왜 빗나갔는지 알 수도 없다). 그래서
 // 캡처할 때마다 배율을 여기 적어두고, 입력 op 가 이미지 좌표를 자동으로 옮긴다.
 type shotFrame struct {

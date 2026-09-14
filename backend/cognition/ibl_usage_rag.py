@@ -44,8 +44,30 @@ def _own_only(results: list) -> list:
         return []
 
 
+def _principal_allows_recall() -> bool:
+    """요청 주체 관문(2026-09-14, 외부 서비스 앱 0단계): 해마 용례는 주인의 문장 원문을 싣는다 —
+    주체가 owner 가 아니면(이웃 부탁·포털·회원·무인증) 주인 용례를 내지 않는다. 판정 축은
+    실행 에이전트 이름이 아니라 전송 관문이 세운 주체다(body_ask 는 system_ai 이름으로 돈다)."""
+    try:
+        import principal
+        return principal.recall_allowed("hippocampus")
+    except Exception:
+        return False
+
+
+def _principal_key() -> str:
+    try:
+        import principal
+        return principal.cache_key()
+    except Exception:
+        return "?"
+
+
 def _search_active(db, **kwargs):
-    """비활성 상위 결과가 하위의 유효 후보를 가리지 않도록 검색 폭을 늘린다."""
+    """비활성 상위 결과가 하위의 유효 후보를 가리지 않도록 검색 폭을 늘린다.
+    ★모든 해마 검색이 이 한 자리를 지난다 — 주체 관문도 여기 한 번."""
+    if not _principal_allows_recall():
+        return []
     wanted = kwargs.pop("top_k", 5)
     count = max(wanted, 8)
     previous = None
@@ -149,8 +171,9 @@ class IBLUsageRAG:
         # 회상 캐시는 활성 선택 변경과 함께 세대가 바뀐다.
         from vocabulary_state import revision
         active_revision = revision()
+        # 캐시 키에 요청 주체 — 주인이 데운 캐시를 다른 주체가 받지 않는다(2026-09-14).
         cache_key = hashlib.md5(
-            f"{user_query}_{k}_{allowed_nodes}_{active_revision}".encode()
+            f"{user_query}_{k}_{allowed_nodes}_{active_revision}_{_principal_key()}".encode()
         ).hexdigest()
         cached = self._get_cached(cache_key)
         if cached is not None:
@@ -395,6 +418,8 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
 
     if not user_message or not rag._is_ibl_relevant(user_message):
         return ("", 0.0, "")
+    if not _principal_allows_recall():
+        return ("", 0.0, "")   # 주체 관문 — 주인 용례·구현 힌트 모두 닫힘
 
     # ★긴 붙여넣기 문서(에세이·기사·계약서 등)는 명령이 아니라 *내용*이다 — 본문 한가운데의
     #   표면 단어(예: 에세이 속 '도로교통법')가 무관 용례를 고신뢰(0.69)로 끌어온다(에피소드
@@ -910,6 +935,8 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     Returns:
         증류 성공 여부
     """
+    if not _principal_allows_recall():
+        return False   # 주체 관문 — 주인 해마에 남의 경험을 쓰지 않는다(쓰기 격리, 2026-09-14)
     # 목표 평가 게이트: 평가가 NOT_ACHIEVED로 끝난 실행(=목표 미달성)은 학습하지 않는다.
     # 실패한 실행의 IBL 패턴이 해마에 누적되면 시간이 갈수록 추천 품질을 깎는다(복리 출혈).
     # 판정은 메시지당 1회만 소비 — 읽고 즉시 비워 평가 없는 다음 메시지로 새지 않게 한다.

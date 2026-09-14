@@ -58,6 +58,7 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
 ```
 
 - **연상기억**: 파이프라인 최상단에서 1회 생성. 해마(과거 IBL 사례)와 심층메모리(사용자 사실)를 합친 self-describing XML 묶음 (`<execution_memory>` + `<related_memory>`)
+- **분류 실패 경계**: 분류 응답은 허용된 단일 토큰만 채택한다. API 오류·빈 응답·잘못된 출력은 실패로 기록하고 기존 기본 경로 `EXECUTE`로 간다. OpenAI SDK 계열 동기 호출은 스트림 오류와 부분 응답을 성공 텍스트로 반환하지 않는다. [ep3796 오류 전달 수리](../../docs/EPISODE_3796_CLASSIFICATION_FAILURE_2026_09_15.md).
 - **단일 검색**: 검색 1회로 top_score까지 확보 (이전 3회 중복 호출 제거, 2026-05-17)
 - **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. **실제 런타임 검색 ~99%** (라이브 세대·측정표는 memory.md '현재 라이브 모델' — 재학습은 **로컬 M4 Pro**가 정본 경로, 클라우드는 옛 맥에어 OOM 한정이었다). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건. 절차·함정은 `data/guides/hippocampus_retraining.md`.
 - **심층메모리**: 같은 fine-tuned 모델로 시맨틱 검색 (2026-05-16 도입)

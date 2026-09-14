@@ -341,18 +341,18 @@ class CognitiveConsciousnessMixin:
             system_prompt = get_unconscious_prompt()
             response = oneshot_ai_call(user_message, system_prompt=system_prompt)
 
-            if response is None:
-                return "EXECUTE"  # AI 미준비 시 기본값 — 판정이 아니라 고장이므로 값싼 경로(09-06 개정에서도 유지)
+            if not isinstance(response, str) or not response.strip():
+                self._log("[무의식] 분류 실패: 응답 없음 — EXECUTE 기본 경로")
+                return "EXECUTE"  # 고장은 값싼 경로로(09-06 정책 유지).
 
             result = response.strip().upper()
-            # SESSION_RESET 우선 검사 (EXECUTE 키워드가 들어있는 경우와 충돌 방지)
-            if "SESSION_RESET" in result or "RESET" == result:
+            if result == "RESET":  # 기존 단일 토큰 별칭
                 return "SESSION_RESET"
-            if "REPAIR" in result:
-                return "REPAIR"
-            if result == "CONTEXT_UPDATE":
-                return "CONTEXT_UPDATE"
-            return "EXECUTE" if "EXECUTE" in result else "THINK"
+            if result in {"SESSION_RESET", "CONTEXT_UPDATE", "EXECUTE", "THINK", "REPAIR"}:
+                return result
+            # 오류 문구·부분 토큰·설명문은 분류가 아니다. 포함 문자열로 경로를 추측하지 않는다.
+            self._log("[무의식] 분류 실패: 허용된 단일 분류값이 아님 — EXECUTE 기본 경로")
+            return "EXECUTE"
 
         except Exception as e:
             self._log(f"[무의식] 분류 실패: {e}")

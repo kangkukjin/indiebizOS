@@ -93,9 +93,11 @@ class OpenAIProvider(BaseProvider):
         images: List[Dict] = None,
         execute_tool: Callable = None
     ) -> str:
-        """GPT로 메시지 처리 (동기 모드 - 기존 호환성 유지)"""
+        """동기 응답. 스트림 오류·빈 응답은 예외로 전달해 부분 출력을 성공으로 쓰지 않는다."""
+        self.last_failure_kind = None
         if not self._client:
-            return "AI가 초기화되지 않았습니다. API 키를 확인해주세요."
+            self.last_failure_kind = "unavailable"
+            raise RuntimeError("AI가 초기화되지 않았습니다. API 키를 확인해주세요.")
 
         # 스트리밍 제너레이터를 실행하고 최종 결과만 반환
         final_text = ""
@@ -104,7 +106,13 @@ class OpenAIProvider(BaseProvider):
                 final_text += event["content"]
             elif event["type"] == "final":
                 final_text = event["content"]
+            elif event["type"] == "error":
+                self.last_failure_kind = "provider_error"
+                raise RuntimeError(event.get("content") or "AI 호출 실패")
 
+        if not final_text.strip():
+            self.last_failure_kind = "empty_response"
+            raise RuntimeError("AI 응답이 비어 있습니다.")
         return final_text
 
     def process_message_stream(

@@ -260,6 +260,9 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
   - 출력: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
+  - 현재 지시를 해석할 때 필요한 과거만 채택한 뒤 규정한다. 명시적 빈 history_summary는
+    실행 히스토리를 비우고, 비어 있지 않은 선별 요약도 CLI 세션 재개로 우회하지 않는다.
+    의식 미실행·누락·잘못된 타입은 빈 결정과 구분한다. 계약: `docs/HISTORY_RELEVANCE_REPAIR_2026_09_14.md`.
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
 - **과제 선택·현재 문제 규정** — `pursuit_bind.py`, `pursuit_ledger.py`
   - task_id는 한 턴, pursuit는 여러 턴의 일이다. 전체 goal_criteria와 이번 턴 achievement_criteria는 별개이며 과제는 대화 삭제·재시작과 독립이다.

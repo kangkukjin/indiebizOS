@@ -61,6 +61,11 @@ see_also: [architecture.md, ibl.md]
   - 최근 2턴: 원본 유지 (이미지도 최근 턴만 로드)
   - 그 이전 + 500자 초과: `[이전 대화: {첫줄}… ({길이}자)]`로 축약
 - **요약 체크포인트** (2026-08-14, `history_checkpoint.py`): 창 밖으로 밀려난 턴은 경량 AI가 **재귀 요약**해 `history_checkpoints` 테이블(시스템 AI 는 `system_ai_memory.db`, 프로젝트/위임 쌍은 그 `conversations.db`)에 보존하고 히스토리 머리에 주입한다. 저장 깔때기(`save_conversation`/`save_message`)가 SQL 선판정 후 백그라운드로 갱신, 키별 동시 1개.
+- **현재 의도에 따른 선별**: 의식은 현재 지시를 먼저 읽고 필요한 과거만 채택한다. 문자열
+  `history_summary`가 원본을 대체하며 빈 문자열은 실행 히스토리를 비운다. 의식 미실행·필드
+  누락·비문자열만 판단 부재로 원본을 유지한다. CLI도 교체본의 하네스 표식
+  `_history_replacement:true`를 받으면 새 세션에 선별 맥락을 싣는다. 대화 DB·체크포인트를
+  삭제하는 동작은 아니다. [수리와 검증](../../docs/HISTORY_RELEVANCE_REPAIR_2026_09_14.md).
 - **삭제 의미** (2026-09-02): 대화 삭제 = 원문 + 체크포인트 **한 트랜잭션** + 대화 이미지 파일(`system_ai_images/`) (`system_ai_memory.clear_conversations`). 요약만 남기면 지운 대화가 다음 대화 머리에 되살아난다. 체크포인트 갱신 스레드는 요약(LLM) 뒤 **IMMEDIATE 잠금 안에서 요약한 행이 아직 있는지 재확인**하고 저장한다 — 요약 도중 삭제가 끼면 버린다(`stale:deleted`).
 
 ### 과제 영속층 (2026-09-09)

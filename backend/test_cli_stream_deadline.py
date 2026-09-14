@@ -130,6 +130,40 @@ def test_말하는_자식은_안_죽인다():
     assert not any(e.get("type") == "error" for e in events)
 
 
+def test_replaced_history_starts_fresh_but_ordinary_followup_resumes(monkeypatch):
+    """교체본이 비어 있지 않아도 옛 CLI 대화로 우회하지 않는다. 실제 spawn 경로 검사."""
+    from types import SimpleNamespace
+    from cognitive_consciousness import CognitiveConsciousnessMixin
+
+    class ImmediateCli(_FakeCli):
+        CHILD_CODE = "import json,sys; print(json.dumps({'type':'text','content':sys.stdin.read()}))"
+
+        def _build_command(self, **kwargs):
+            self.invocation = kwargs
+            return super()._build_command(**kwargs)
+
+    ordinary = [{"role": "user", "content": "이전 작업을 이어간다"}]
+    selected = CognitiveConsciousnessMixin()._apply_consciousness_to_history(
+        ordinary, {"history_summary": "제주 비교 기간은 2025년이다."})
+    for history, expected_resume in [(ordinary, "old-session"), (selected, None), ([], None)]:
+        cleared = []
+        store = SimpleNamespace(
+            load_map=lambda: {"worker": "old-session"}, load_sizes=lambda: {},
+            clear_agent=lambda key: cleared.append(key), clear_size=lambda key: None,
+            record_size=lambda *a: None, save_map=lambda *a: None)
+        p = _make(ImmediateCli, disable_session_persistence=False)
+        p.SESSION_STORE = store
+        monkeypatch.setattr(p, '_get_session_key', lambda: 'worker')
+        events = list(p.process_message_stream("현재 요청", history=history))
+        assert not [e for e in events if e['type'] == 'error'], events
+        assert p.invocation['resume_session_id'] == expected_resume
+        if history is selected:
+            sent = ''.join(e.get('content', '') for e in events if e['type'] == 'text')
+            assert '제주 비교 기간은 2025년이다.' in sent
+            assert '이전 작업을 이어간다' not in sent
+        assert cleared == ([] if expected_resume else ['worker'])
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__]))

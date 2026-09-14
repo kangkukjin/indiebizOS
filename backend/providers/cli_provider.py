@@ -769,7 +769,8 @@ class CliSubprocessProvider(BaseProvider):
             system_prompt_file = self._write_system_prompt_file()
 
             # 3) 세션 연속성 결정 (--resume)
-            # 정책: history가 비어있으면 새 대화로 간주하여 fresh session, 아니면 저장된 id로 resume.
+            # 빈 history 또는 의식이 선별한 교체본이면 fresh. 그 밖에는 저장된 id로 resume.
+            # 산문을 파싱하지 않고 하네스의 구조 표식만 읽는다. resume은 교체본을 무시한다.
             # 단, disable_session_persistence가 True면 (의식·평가 등 메타 역할) 항상 fresh.
             if self.disable_session_persistence:
                 session_key_val = None
@@ -780,10 +781,12 @@ class CliSubprocessProvider(BaseProvider):
                 session_key_val = self._get_session_key()
                 session_map = self._store.load_map()
                 stored_session_id = session_map.get(session_key_val)
-                resume_session_id = stored_session_id if (history and stored_session_id) else None
-                # history 없으면 (= 새 대화) 기존 매핑 무효화
-                if not history and stored_session_id:
+                replace_history = any(h.get("_history_replacement") is True for h in (history or []))
+                resume_session_id = stored_session_id if history and not replace_history else None
+                # 교체 전 세션의 대화·크기를 다음 실행으로 되살리지 않는다.
+                if (not history or replace_history) and stored_session_id:
                     self._store.clear_agent(session_key_val)
+                    self._store.clear_size(session_key_val)
                     stored_session_id = None
                 # 크기 기반 리셋: 직전 턴 컨텍스트가 임계 초과면 fresh 로 끊는다.
                 # fresh 경로는 _build_prompt_with_history 로 트림된 히스토리를 재시드하므로

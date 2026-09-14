@@ -189,7 +189,7 @@ class ConsciousnessAgent:
         Returns:
             의식 에이전트 출력 dict 또는 None (실패 시)
             {
-                "history_summary": str,    # 히스토리 맥락 요약 (원본 대체)
+                "history_summary": str,    # 관련 맥락으로 원본 대체. 빈 문자열이면 실행 이력 비움
                 "task_framing": str,       # 지금 풀어야 할 문제 정의
                 "achievement_criteria": str, # 달성 기준 (비어있으면 평가 루프 안 탐)
                 "expert_choice": str,      # 전문가의 선택 — 실행자 명령의 제 이름 섹션(한 문장)
@@ -306,7 +306,9 @@ class ConsciousnessAgent:
 
         # 히스토리
         if history:
-            parts.append("<history>")
+            parts.append('<history note="현재 지시의 해석에 필요한 과거만 채택한다. '
+                         '무관한 이전 목표·제약은 이어받지 않으며, 관련 맥락이 없으면 '
+                         'history_summary를 빈 문자열로 낸다.">')
             for i, turn in enumerate(history):
                 role = turn.get("role", "unknown")
                 content = turn.get("content", "")

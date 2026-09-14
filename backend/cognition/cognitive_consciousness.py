@@ -162,18 +162,24 @@ class CognitiveConsciousnessMixin:
     def _apply_consciousness_to_history(self, history: list, consciousness_output: dict) -> list:
         """의식 에이전트의 판단에 따라 히스토리를 편집합니다.
 
-        history_summary가 있으면 원본 히스토리를 요약으로 대체합니다.
-        요약이 비어있으면 원본 히스토리를 그대로 반환합니다.
+        문자열 history_summary는 교체 결정이다. 빈 문자열은 관련 과거 없음이다.
+        의식 미실행·필드 누락·잘못된 타입만 판단 부재로 보아 원본을 유지한다.
+        비어 있지 않은 교체본의 내부 표식은 CLI가 옛 세션을 재개하지 않게 한다.
         """
         if not consciousness_output:
             return history
 
-        history_summary = consciousness_output.get("history_summary", "")
-        if not history_summary:
+        history_summary = consciousness_output.get("history_summary")
+        if not isinstance(history_summary, str):
             return history
 
+        history_summary = history_summary.strip()
+        if not history_summary:
+            return []
+
         # 원본 히스토리를 의식 에이전트의 요약으로 대체
-        return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]"}]
+        return [{"role": "user", "content": f"[이전 대화 요약: {history_summary}]",
+                 "_history_replacement": True}]
 
     # ============================================================
     # Reflex 임계값 — 단계 0 결과의 top_score가 이 값 이상이면

@@ -481,3 +481,11 @@ retired:
     phrases:
       - 'out["task_framing"] = out["achievement_criteria"]'
       - 'THINK의 keep/amend는 기존 규정을 재사용'
+
+  - id: empty_history_selection_restores_original
+    retired: 2026-09-14
+    reason: 관련 과거가 없다는 의식의 빈 요약을 판단 부재로 취급하여 원본 대화를 실행자에게 되살렸다.
+    instead: 문자열 요약은 명시적 교체 결정이며 빈 문자열은 빈 실행 맥락이다. CLI도 교체본으로 새 세션을 시작한다.
+    phrases:
+      - '요약이 비어있으면 원본 히스토리를 그대로 반환합니다.'
+      - '히스토리 편집 (의식 요약 있으면 대체, 없으면 원본 유지)'

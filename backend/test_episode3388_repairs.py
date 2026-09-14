@@ -99,6 +99,41 @@ def install_judge(monkeypatch, phases):
     monkeypatch.setattr('final_evaluator.invoke', invoke)
 
 
+@pytest.mark.parametrize('summary', ['', '제주 관광 비교 기간을 2025년으로 정정했다.'])
+def test_history_selection_reaches_executor_through_real_pipeline(tmp_path, monkeypatch, isolated, summary):
+    history = [{'role': 'user', 'content': '블루칼라 보고서는 표만 작성해'},
+               {'role': 'user', 'content': '제주 관광을 2024년 기준으로 비교해'},
+               {'role': 'user', 'content': '그 기간은 2025년으로 고쳐'}]
+    message = '제주 관광을 왜 계속 유치하는지 설명해' if not summary else '그 비교를 계속해'
+    plan_inputs, executor_inputs = [], []
+
+    def process(**kwargs):
+        plan_inputs.append(kwargs)
+        return {'task_framing': '현재 제주 관광 질문에 답한다', 'history_summary': summary,
+                'achievement_criteria': ''}
+
+    def stream(**kwargs):
+        executor_inputs.append(kwargs)
+        yield {'type': 'final', 'content': '제주 관광 질문에 대한 답변'}
+
+    monkeypatch.setattr('consciousness_agent.get_consciousness_agent',
+                        lambda: SimpleNamespace(is_ready=True, process=process))
+    monkeypatch.setattr('consciousness_agent.get_world_pulse_text', lambda: '')
+    events = list(Runner(tmp_path, stream).cognitive_stream(message, history))
+    assert not [e for e in events if e['type'] == 'error'], events
+    assert plan_inputs[0]['history'] == history  # 의식에는 관련성을 판단할 원문이 있다.
+    assert plan_inputs[0]['user_message'] == message
+    actual = executor_inputs[0]['history']
+    if summary:
+        assert len(actual) == 1 and summary in actual[0]['content']
+        assert actual[0]['_history_replacement'] is True
+        assert '블루칼라' not in actual[0]['content'] and '2024' not in actual[0]['content']
+    else:
+        assert actual == []
+    assert message in executor_inputs[0]['message_content']
+    assert len(history) == 3
+
+
 def test_http_command_without_task_runs_plan_review_final_and_mcp(tmp_path, monkeypatch, isolated):
     import api_agents
     from api_ibl import execute_ibl_code, IBLRequest

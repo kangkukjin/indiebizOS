@@ -569,7 +569,7 @@ class CognitivePipelineMixin:
                 if not save_draft(_d0):
                     raise RuntimeError("의식 초안을 턴에 저장하지 못했습니다")
 
-        # 히스토리 편집 (의식 요약 있으면 대체, 없으면 원본 유지)
+        # 히스토리 편집 (명시적 빈 요약은 비움, 판단 부재만 원본 유지)
         history = self._apply_consciousness_to_history(history, consciousness_output)
 
         # 5~8. 실행 → 평가(THINK) → 반성(EXECUTE) — 궤적을 수집하며 이벤트 yield

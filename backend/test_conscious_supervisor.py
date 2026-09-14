@@ -428,9 +428,30 @@ def test_cli_profiles_limit_manager_and_install_execution_boundary():
     codex = CodexProvider(api_key="", model="test", system_prompt="supervision")
     codex._binary_path = "codex"
     codex.agent_role = "consciousness"
-    cmd = codex._build_command()
+    cmd = codex._build_command(mcp_config_path="http")
     assert "--dangerously-bypass-approvals-and-sandbox" not in cmd
     assert cmd[cmd.index("--sandbox") + 1] == "read-only"
+    assert 'approval_policy="never"' in cmd
+    assert 'mcp_servers.indiebizos.enabled_tools=["supervision"]' in cmd
+    assert 'mcp_servers.indiebizos.tools.supervision.approval_mode="approve"' in cmd
+
+
+def test_codex_workbench_permission_is_role_and_transport_scoped(monkeypatch):
+    from providers.codex import CodexProvider
+    monkeypatch.setattr("providers.codex._stdio_bridge_command", lambda: ["python", "mcp_server.py"])
+    codex = CodexProvider(api_key="", model="test", system_prompt="supervision")
+    codex._binary_path = "codex"
+    approval = 'mcp_servers.indiebizos.tools.supervision.approval_mode="approve"'
+    for transport in ("http", "stdio"):
+        codex.agent_role = "consciousness"
+        assert approval in codex._build_command(mcp_config_path=transport, resume_session_id="session")
+        assert approval not in codex._build_command(mcp_config_path=transport, tools_mode="none")
+        codex.agent_role = "execution"
+        command = codex._build_command(mcp_config_path=transport)
+        assert approval not in command
+        assert not any("enabled_tools" in part for part in command)
+    codex.agent_role = "consciousness"
+    assert approval not in codex._build_command()
 
 
 def test_observation_does_not_hold_native_or_api_boundary(supervisor, monkeypatch):

@@ -430,6 +430,13 @@ class CodexProvider(CliSubprocessProvider):
         # IBL 한 호출이 파이프라인 전체일 수 있어 기본 타임아웃으로는 짧다.
         args += ["-c", f"{ns}.startup_timeout_sec=30"]
         args += ["-c", f"{ns}.tool_timeout_sec={self.DEFAULT_TIMEOUT_SEC}"]
+        if getattr(self, "agent_role", "execution") == "consciousness":
+            # supervision은 조회와 execute/patch를 함께 품어 readOnlyHint를 붙일 수 없다.
+            # read-only + approval_policy=never만 주면 조회도 승인 필요로 거절된다.
+            # 이 호출의 작업대만 허용하고 신원·단계·소유권·예산 검사는 Supervisor에 맡긴다.
+            # 네이티브 셸의 read-only 샌드박스와 다른 MCP 도구의 승인 정책은 유지한다.
+            args += ["-c", f'{ns}.enabled_tools=["supervision"]']
+            args += ["-c", f'{ns}.tools.supervision.approval_mode="approve"']
         return args
 
     def _image_prompt_prefix(self, image_paths: List[str]) -> str:

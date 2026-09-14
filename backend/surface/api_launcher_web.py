@@ -531,7 +531,7 @@ def is_public_remote_path(method: str, path: str) -> bool:
     # 외부 서비스 앱 회원 표면(/m/*) — 회원 열쇠(limb key) 자체 인증. 주체는 라우트가 세운다(principal.authenticate).
     if (method, path) in {("POST", "/m/chat"), ("POST", "/m/session/close"),
                            ("POST", "/m/profile"), ("GET", "/m/app"),
-                           ("POST", "/m/run"), ("POST", "/m/apps"), ("POST", "/m/bootstrap")}:
+                           ("POST", "/m/run"), ("POST", "/m/requests"), ("POST", "/m/receipts"), ("POST", "/m/apps"), ("POST", "/m/bootstrap")}:
         return True
     # 공개파일 라이브 서빙(/showcase/*: list·thumb·media·origin)은 자체 X-Showcase-Secret 게이트 보유
     if method == "GET" and path.startswith("/showcase/"):

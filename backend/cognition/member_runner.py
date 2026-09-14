@@ -21,7 +21,14 @@ class MemberRunner(AgentRunner):
 
     def _build_ibl_tools(self):
         tool = self._build_execute_ibl_tool()
+        if tool:
+            properties = tool['input_schema']['properties']
+            tool['input_schema']['properties'] = {k: v for k, v in properties.items() if k in {'code', 'files', 'describe', 'read_result'}}
+            properties['code']['description'] = '현재 회원 카탈로그에 있는 액션만 실행한다. 예: [sense:search]{source:"ddg",query:"AI news",limit:5}. 액션 계약 조회는 code를 비우고 describe를 사용한다.'
+            properties['files']['description'] = '긴 본문을 인라인 문자열 목록으로 전달한다. code의 content:"$file:0"에서 참조한다. 파일은 회원 기기에 self:write로 저장한다.'
         tools = [tool] if tool else []
+        tools.append({"name": "ask_user_question", "description": "작업에 필요한 정보가 빠졌을 때 클라이언트에게 질문하고 현재 턴을 끝낸다. 다음 답변은 같은 작업에서 이어진다.",
+                      "input_schema": {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"]}})
         import member_runtime
         if (member_runtime.current() or {}).get("shell_available", False):
             tools.append({"name": "run_command", "description": "회원의 선택한 PC 작업 폴더에서 명령 실행. 로컬 승인 필요. 허브에서는 실행하지 않는다.",
@@ -33,12 +40,14 @@ class MemberRunner(AgentRunner):
 
     def _get_available_tools(self):
         import member_runtime
-        return ["execute_ibl"] + (["run_command"] if (member_runtime.current() or {}).get("shell_available", False) else []) + (["run_javascript"] if (member_runtime.current() or {}).get("javascript_available", False) else [])
+        return ["execute_ibl", "ask_user_question"] + (["run_command"] if (member_runtime.current() or {}).get("shell_available", False) else []) + (["run_javascript"] if (member_runtime.current() or {}).get("javascript_available", False) else [])
 
     def _build_agent_prompt_split(self, role, consciousness_output=None, execution_memory=""):
         from ibl_access import build_environment
-        stable = role + "\n\n" + build_environment(
-            allowed_nodes=self.config.get("allowed_nodes"), expose_idioms=False)
+        environment = build_environment(allowed_nodes=self.config.get("allowed_nodes"), expose_idioms=False, compact=True)
+        # 주인용 교재의 미공개 낱말·허브 경로 예제를 회원에게 실행 예제로 소개하지 않는다.
+        catalogue = '<ibl_actions>' + environment.split('<ibl_actions>', 1)[1] if '<ibl_actions>' in environment else ''
+        stable = role + "\n\n" + catalogue
         dynamic = execution_memory
         definitions = self.config.get("_member_sentences", "")
         if definitions:
@@ -59,6 +68,13 @@ class MemberRunner(AgentRunner):
             self.ai._provider.agent_id = self.ai.agent_id
 
     def _member_tool(self, tool_name, tool_input, work_dir=None, agent_id=None, **kwargs):
+        if tool_name == "ask_user_question":
+            import member_runtime
+            question = str(tool_input.get("question") or "").strip()
+            if not question or len(question) > 4000:
+                return json.dumps({"success": False, "error": "질문은 1~4000자여야 합니다"})
+            member_runtime.current()["input_required"] = question
+            return json.dumps({"success": True, "input_required": question}, ensure_ascii=False)
         if tool_name == "run_javascript":
             import member_runtime
             from member_bridge import request
@@ -81,6 +97,29 @@ class MemberRunner(AgentRunner):
         from system_tools_ibl import _execute_ibl_unified
         import principal
         import member_runtime
+        if tool_input.get('read_result') is not None or tool_input.get('describe') is not None:
+            if tool_input.get('code') or (tool_input.get('read_result') is not None and tool_input.get('describe') is not None):
+                return json.dumps({'success': False, 'error': '조회에는 code를 비우고 describe/read_result 중 하나만 사용하세요'})
+            try:
+                from model_result_view import read_result, describe_actions
+                if tool_input.get('read_result') is not None:
+                    value = read_result(tool_input['read_result'])
+                else:
+                    from member_profile import visible
+                    from ibl_registry import load_nodes_installed
+                    names = tool_input['describe']
+                    if not isinstance(names, list) or not 1 <= len(names) <= 6:
+                        raise ValueError('액션 1~6개를 조회하세요')
+                    nodes = load_nodes_installed().get('nodes', {})
+                    for name in names:
+                        node, action = name.split(':', 1)
+                        cfg = nodes.get(node, {}).get('actions', {}).get(action, {})
+                        if not visible(node, action, cfg):
+                            raise ValueError('외부사용자에게 공개되지 않은 액션입니다')
+                    value = describe_actions(names, self.config.get('allowed_nodes'))
+                return json.dumps(value, ensure_ascii=False)
+            except (ValueError, KeyError, TypeError, OSError):
+                return json.dumps({'success': False, 'error': '현재 회원 턴에서 해당 계약/결과를 조회할 수 없습니다'}, ensure_ascii=False)
         # files 인라인 본문만 받는다. files_from·resume·행위자 인자는 허브 경로/신원 주입이라 받지 않는다.
         definitions = getattr(self, "config", {}).get("_member_sentences", "")
         if definitions.strip():

@@ -24,7 +24,7 @@ class MemberBrowserFiles {
       if(rows.some(f=>!f.directory&&path.startsWith(f.id+'/')))throw Error('상위 경로가 파일입니다');
       if(c.op==='write'&&rows.some(f=>f.id.startsWith(path+'/')))throw Error('폴더에 파일을 덮어쓸 수 없습니다');
       await this.store.change('files',path,old=>{if(old&&Boolean(old.directory)!==(c.op==='mkdir'))throw Error('파일과 폴더를 서로 덮어쓸 수 없습니다');return {id:path,data:memberBase64(bytes),size:bytes.length,directory:c.op==='mkdir',mime:c.mime||'application/octet-stream'}});
-      return {success:true,saved:true,path};
+      return {success:true,saved:true,path,size:bytes.length,sha256:await memberHashBytes(bytes)};
     }
     if(c.op==='file_move'){
       const dest=memberPath(c.dest),file=await this.store.get('files',path);

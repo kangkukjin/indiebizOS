@@ -168,7 +168,13 @@ async def limb_poll(req: PollRequest):
         return {"success": True, "approved": False, "jobs": []}
 
     wait = min(max(0.0, float(req.wait)), MAX_POLL_WAIT)
-    jobs = await anyio.to_thread.run_sync(phone_jobs.pull_blocking, device_id, wait)
+    if rec.get('neighbor_id') not in (None, '') and (rec.get('env') or {}).get('client') == 'web':
+        jobs = await anyio.to_thread.run_sync(phone_jobs.pull_blocking, device_id, wait, req.session)
+        latest = limb_keys.validate(req.key)
+        if not latest or latest.get('session') != req.session:
+            return {"success": True, "approved": True, "jobs": [], "stale": True}
+    else:
+        jobs = await anyio.to_thread.run_sync(phone_jobs.pull_blocking, device_id, wait)
     dr.heartbeat(device_id)
     return {"success": True, "approved": True, "jobs": jobs}
 

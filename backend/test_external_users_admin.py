@@ -45,6 +45,7 @@ def test_owner_gate_covers_reads_and_mutations(client):
         ("GET", "/external-users", None),
         ("POST", "/external-users/keys", {"neighbor_id": 1}),
         ("POST", "/external-users/people", {"name": "test"}),
+        ("POST", "/external-users/invite", {"name": "test"}),
         ("DELETE", "/external-users/keys/missing", None),
     ]:
         assert client.request(method, path, json=body).status_code == 403
@@ -105,6 +106,25 @@ def test_address_does_not_mistake_cdn_for_member_host(monkeypatch):
     monkeypatch.setattr(face_config, 'load_config', lambda: {
         "public_base": "https://hub.example:9443", "direct_hosts": ["hub.example:9443"]})
     assert admin.member_address()['url'] == 'https://hub.example:9443/m/app'
+
+
+def test_one_step_invite_and_failed_issue_rolls_back_new_person(client, monkeypatch):
+    import api_member
+    import business_manager
+    import body_trust
+    issued = client.post('/external-users/invite', headers=HEADERS, json={'name': '새 사용자'})
+    assert issued.status_code == 200
+    key = issued.json()
+    assert api_member._member_of(key['key'])[1] is None
+    people = business_manager.BusinessManager().get_neighbors()
+    assert len(people) == 1 and people[0]['name'] == '새 사용자'
+    existing = client.post('/external-users/invite', headers=HEADERS, json={'neighbor_id': people[0]['id'], 'alias': '다른 기기'})
+    assert existing.status_code == 200
+    assert len(business_manager.BusinessManager().get_neighbors()) == 1
+    assert client.post('/external-users/invite', headers=HEADERS, json={'name': ' ', 'neighbor_id': None}).status_code == 400
+    monkeypatch.setattr(body_trust, 'link_body', lambda *a: {'linked': False, 'error': 'failed'})
+    assert client.post('/external-users/invite', headers=HEADERS, json={'name': '실패한 초대'}).status_code == 409
+    assert len(business_manager.BusinessManager().get_neighbors()) == 1
 
 
 if __name__ == '__main__':

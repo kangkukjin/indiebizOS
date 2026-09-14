@@ -33,6 +33,9 @@ def request(command, timeout=None):
         state["step"] += 1
         key = f'{p.key()}:{state["task_id"]}:{state["step"]}'
     envelope = {**command, "request_key": key, "member": True, "task_id": state.get("local_task_id", ""), "body_session": state.get("body_session", "")}
+    emit = state.get("on_event")
+    if emit and command.get("op") not in {"memory_recall", "memory_save"}:
+        emit({"type": "client_action_required", "op": command.get("op"), "request_key": key})
     job = phone_jobs.enqueue(p.device_id, json.dumps(envelope, ensure_ascii=False), p.key())
     state["jobs"].add(job)
     deadline = min(state["deadline"], time.monotonic() + float(timeout or state["policy"].get("command_timeout_s", 120)))
@@ -49,6 +52,22 @@ def request(command, timeout=None):
         return {"success": False, "error_type": "protocol", "error": "잘못된 손발 결과"}
     if result.get("error") or result.get("state") in ("unknown", "running"):
         result["success"] = False
+    if command.get("op") == "write" and result.get("success") is not False and result.get("saved"):
+        import hashlib
+        import base64
+        context = state.get("client_context", {})
+        if context.get("capabilities", {}).get("files"):
+            try:
+                content = base64.b64decode(command.get("content", ""), validate=True) if command.get("encoding") == "base64" else str(command.get("content", "")).encode()
+                digest = hashlib.sha256(content).hexdigest()
+                if result.get("sha256") != digest or result.get("size") != len(content):
+                    return {"success": False, "error_type": "integrity", "error": "기기 저장 영수증이 산출물과 다릅니다"}
+            except (ValueError, TypeError):
+                return {"success": False, "error_type": "integrity", "error": "기기 저장 영수증 형식 오류"}
+        state.setdefault("delivered_files", []).append({"path": result.get("path"), "on": "body", "saved": True,
+                                                       "sha256": result.get("sha256"), "request_key": key})
+        if emit:
+            emit({"type": "delivered", "request_key": key, "path": result.get("path")})
     return result
 
 

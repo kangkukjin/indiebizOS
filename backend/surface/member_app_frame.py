@@ -17,21 +17,19 @@ function memberAppResult(value){const v=unwrapFinalResult(value);return typeof v
 function ibl(code){return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({memberFrame:'execute',id,code},'*')})}
 // 자연어 제작 버튼도 시스템 AI 위임 없이 같은 회원 작업으로 보낸다.
 function memberAppRequest(spec){
- const inputs=gatherInputs();
- const fill=text=>String(text||'').replace(/\$([A-Za-z_][A-Za-z_0-9]*)/g,(_,key)=>String(inputs[key]||''));
- const message=fill(spec.message),title=fill(spec.title)||'앱에서 작성';
- return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({memberFrame:'request',id,message,title,output:spec.output},'*')});
+ const args=gatherInputs();
+ return new Promise((resolve,reject)=>{const id=++seq;pending.set(id,{resolve,reject});parent.postMessage({memberFrame:'request',id,action_id:spec.client_action_id,args,title:spec.name||CUR.inst.name},'*')});
 }
 const memberIblRunMode=runMode,memberIblFireButton=fireButton;
 runMode=async function(){
- if(!CUR.mode.request)return memberIblRunMode();
- const box=document.getElementById('instOut');box.textContent='회원 전용 에이전트가 작성 중입니다…';
- try{const r=await memberAppRequest(CUR.mode.request);box.innerHTML=mdChat(r.response||r.error||'작업이 끝났습니다')}catch(e){box.textContent=e.message}
+ if(!CUR.mode.client_action_id)return memberIblRunMode();
+ const box=document.getElementById('instOut');box.textContent='클라이언트 담당 에이전트가 처리 중입니다…';
+ try{const r=await memberAppRequest(CUR.mode);box.innerHTML=CUR.mode.request?mdChat(r.response||r.error||'작업이 끝났습니다'):(VIEW_CTX={view:CUR.mode.view,data:r,compose:CUR.mode.compose,refresh:'mode'},renderModeBody(CUR.mode,r))}catch(e){box.textContent=e.message}
 };
 fireButton=async function(i,button){
- const spec=(CUR.mode.buttons||[])[i]?.request;if(!spec)return memberIblFireButton(i,button);
- button.disabled=true;const box=document.getElementById('instOut');box.textContent='회원 전용 에이전트가 작성 중입니다…';
- try{const r=await memberAppRequest(spec);box.innerHTML=mdChat(r.response||r.error||'작업이 끝났습니다')}catch(e){box.textContent=e.message}finally{button.disabled=false}
+ const spec=(CUR.mode.buttons||[])[i];if(!spec?.client_action_id)return memberIblFireButton(i,button);
+ button.disabled=true;const box=document.getElementById('instOut');box.textContent='클라이언트 담당 에이전트가 처리 중입니다…';
+ try{const r=await memberAppRequest(spec);if(spec.refresh)await runMode();else box.innerHTML=mdChat(r.response||r.error||r.message||JSON.stringify(r))}catch(e){box.textContent=e.message}finally{button.disabled=false}
 };
 function jfetch(){return Promise.reject(Error('회원 앱에서 이 네트워크 경로는 사용할 수 없습니다'))}
 async function loadInstruments(){}

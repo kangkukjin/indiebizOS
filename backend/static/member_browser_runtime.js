@@ -8,7 +8,7 @@ class MemberBrowserRuntime {
     const profile=await this.http('/m/profile');if(!profile.success)throw Error(profile.message||profile.error);
     const hello=await this.http('/limb/connect',{mode:'member',host:'회원 웹 브라우저',env:{mode:'member',os:'browser',client:'web'}});
     if(!hello.success||!hello.approved)throw Error(hello.error||'기기 승인을 확인하세요');
-    this.session=hello.session;this.active=true;this.poll();return profile;
+    this.epoch=profile.client_protocol?.epoch||'';this.session=hello.session;this.active=true;this.poll();return profile;
   }
   async poll(){while(this.active){try{
     const r=await this.http('/limb/poll',{session:this.session,wait:25});
@@ -48,8 +48,13 @@ class MemberBrowserRuntime {
   async execute(c){
     if(['read','write','list','mkdir','file_move'].includes(c.op))return this.files.execute(c);
     if(c.op==='memory_recall'){
-      const history=(await this.store.all('conversations')).filter(r=>r.task_id===c.task_id).sort((a,b)=>a.created-b.created).slice(-40).flatMap(r=>[{role:'user',content:r.user},{role:'assistant',content:r.assistant}]);
-      return {success:true,history,memories:(await this.store.all('memories')).slice(-40),sentences:await this.store.all('sentences'),recent_results:(await this.store.all('jobs')).slice(-20),workspace:'브라우저의 내 작업 공간',shell_available:false,javascript_available:true};
+      const allHistory=(await this.store.all('conversations')).filter(r=>r.task_id===c.task_id).sort((a,b)=>a.created-b.created).slice(-40).flatMap(r=>[{role:'user',content:r.user},{role:'assistant',content:r.assistant}]);
+      // 회상 결과 자체/바이너리 파일/이전 회상 봉투를 다시 회상하면 대화마다 본문이 증폭된다.
+      let remaining=32000,truncated=false;
+      const bounded=rows=>{const kept=[];for(const row of [...rows].reverse()){const size=JSON.stringify(row).length;if(size>remaining){truncated=true;continue}remaining-=size;kept.unshift(row)}return kept};
+      const history=bounded(allHistory),memories=bounded((await this.store.all('memories')).slice(-40));
+      const recent_results=(await this.store.all('jobs')).filter(r=>r.command?.task_id===c.task_id&&!['memory_recall','memory_save'].includes(r.command.op)).slice(-20).map(r=>({op:r.command.op,state:r.state,path:r.result?.path,success:r.result?.success,error:r.result?.error,size:r.result?.size,sha256:r.result?.sha256}));
+      return {success:true,history,memories,sentences:await this.store.all('sentences'),recent_results,context_truncated:truncated,workspace:'브라우저의 내 작업 공간',shell_available:false,javascript_available:true};
     }
     if(c.op==='memory_save'){
       const r=c.record;if(!r?.id)throw Error('기억 ID가 없습니다');
@@ -90,42 +95,52 @@ class MemberBrowserRuntime {
     if(body.output){const output=memberPath(body.output);if(output==='.')throw Error('산출물 파일 이름이 필요합니다');body={...body,output};}
     let task=body.task_id?await this.store.get('tasks',body.task_id):null;
     if(body.task_id&&!task)throw Error('작업이 없습니다');
-    const message=String(body.message||'').trim();if(!message&&!body.code)throw Error('요청을 입력하세요');
+    const message=String(body.message||'').trim();if(!message&&!body.code&&!body.action_id)throw Error('요청을 입력하세요');
     const title=typeof body.title==='string'?body.title.slice(0,100):'';
     if(!task)task={id:crypto.randomUUID(),title:title||message.slice(0,60)||'앱 실행',workspace:'브라우저의 내 작업 공간',events:[],created:Date.now()};
     task.state='running';task.updated=Date.now();task.events.push({kind:'user',value:title||message});this.running=task.id;this.stopped.delete(task.id);
     try{await this.store.put('tasks',task.id,task)}catch(e){this.running='';throw e}
+    body={...body,request_id:crypto.randomUUID()};await this.store.change('tasks',task.id,t=>({...t,request_id:body.request_id}));
     this.runTask(task.id,body);return {success:true,task_id:task.id,queued:true};
   }
   async event(id,kind,value){return this.store.change('tasks',id,t=>({...t,events:[...t.events,{kind,value}].slice(-500)}))}
   async runTask(id,body){
     this.abort=new AbortController();let result={success:false,error:'연결이 끊겼습니다. 결과를 확인하세요.'},state='unknown';
     try{
-      const {output,title,...request}=body;
+      const {output,title,...request}=body;request.version=1;request.epoch=this.epoch||'';request.request_id=request.request_id||crypto.randomUUID();request.capabilities={files:true,javascript:true};
       const r=await fetch('/m/run',{method:'POST',credentials:'omit',headers:{'Content-Type':'application/json'},body:JSON.stringify({...request,key:this.key,task_id:id,body_session:this.session}),signal:this.abort.signal});
       if(!r.ok)throw Error('허브 응답 '+r.status);
       if(!r.headers.get('content-type')?.includes('ndjson')){result=await r.json();state='failed'}
       else{
         const reader=r.body.getReader(),decoder=new TextDecoder();let pending='';
-        const receive=async line=>{if(!line.trim())return;const e=JSON.parse(line);if(e.type==='event')await this.event(id,'progress',e.event);if(e.type==='result'){result=e.result;state=result.success?'completed':'failed'}};
+        const receive=async line=>{if(!line.trim())return;const e=JSON.parse(line);if(e.type==='event')await this.event(id,'progress',e.event);if(e.type==='result'){result=e.result;state=result.input_required?'input_required':result.success?'completed':'failed'}};
         for(;;){const {value,done}=await reader.read();if(done){pending+=decoder.decode();if(pending.trim())await receive(pending);break}pending+=decoder.decode(value,{stream:true});if(pending.length>48*1024*1024)throw Error('응답 크기 제한');let n;while((n=pending.indexOf('\n'))>=0){await receive(pending.slice(0,n));pending=pending.slice(n+1)}}
       }
     }catch(e){if(state==='unknown')result={success:false,error:e.name==='AbortError'?'작업을 중단했습니다. 이미 실행된 결과는 최근 작업 결과에서 확인하세요.':e.message}}
-    if(body.output&&state==='completed'&&result.success){
+    if(state==='completed'&&result.success&&result.artifacts?.length){
       try{
         if(this.stopped.has(id)||!this.active)throw Error('작업이 중단되어 산출물을 저장하지 않았습니다');
-        if(typeof result.response!=='string'||!result.response.trim())throw Error('저장할 산출물 본문이 없습니다');
-        const path=body.output.replace(/(\.[^/.]+)?$/,`-${id}$1`);
-        const receipt=await this.files.execute({op:'write',path,content:result.response,mime:'text/markdown'});
-        if(!receipt.success||!receipt.saved)throw Error('이 기기의 산출물 저장을 확인하지 못했습니다');
-        result={...result,files:[{path:receipt.path,on:'body',saved:true}],saved:true};
+        result.files=[];
+        for(const artifact of result.artifacts){
+          const bytes=memberBytes(artifact.data);
+          const hash=await memberHashBytes(bytes);
+          if(hash!==artifact.sha256||bytes.length!==artifact.size||!/^[a-f0-9]{32}$/.test(artifact.id))throw Error('산출물 무결성 확인 실패');
+          const path='reports/'+artifact.id+'-'+memberPath(artifact.name);
+          const receipt=await this.files.execute({op:'write',path,encoding:'base64',content:artifact.data,mime:artifact.mime});
+          const stored=await this.files.execute({op:'read',path,encoding:'base64'});
+          if(!receipt.success||!receipt.saved||stored.content!==artifact.data)throw Error('이 기기의 산출물 저장을 확인하지 못했습니다');
+          result.files.push({path,on:'body',saved:true,sha256:hash});
+          const ack=await this.http('/m/receipts',{request_id:result.request_id,artifact_id:artifact.id,sha256:hash,size:bytes.length,body_session:this.session,epoch:result.epoch});
+          if(!ack.success)throw Error('기기에는 저장했지만 허브의 수신 확인이 완료되지 않았습니다');
+        }
+        result={...result,saved:true,delivery:'delivered'};await this.event(id,'progress',{type:'delivered'});
       }catch(e){state='failed';result={...result,success:false,saved:false,error:e.message}}
     }
     try{
       const files=new Map((result.files||[]).map(f=>[f.path,f]));
       for(const job of await this.store.all('jobs')){
         if(job.command?.task_id===id&&job.command.op==='write'&&job.state==='completed'&&job.result?.success&&job.result?.saved)
-          files.set(job.result.path,{path:job.result.path,on:'body',saved:true});
+          files.set(job.result.path,{...(files.get(job.result.path)||{}),path:job.result.path,on:'body',saved:true,sha256:job.result.sha256});
       }
       result.files=[...files.values()];
       await this.event(id,'assistant',result.success===false?result.error:result.response||'결과를 확인하세요');await this.store.change('tasks',id,t=>({...t,state,result,updated:Date.now()}))}

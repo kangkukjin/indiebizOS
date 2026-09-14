@@ -2482,6 +2482,10 @@ nodes:
         - SQL
         - 테이블
       search:
+        lands_on: hub
+        path_audited:
+          at: '2026-09-15'
+          impl: 7cb4665122bae383
         aliases:
           limit:
           - count
@@ -2534,6 +2538,10 @@ nodes:
         implementation: source 분기 단일 도구 — ddg=DuckDuckGo ddgs 라이브러리(키 불요), naver=네이버 개발자센터 API(NAVER_CLIENT_ID/SECRET — 구 web-kr 패키지 흡수), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
         target_key: query
       crawl:
+        lands_on: hub
+        path_audited:
+          at: '2026-09-15'
+          impl: 7cb4665122bae383
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'

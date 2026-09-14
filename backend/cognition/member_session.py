@@ -22,6 +22,7 @@ import uuid
 from collections import deque
 from pathlib import Path
 from typing import Dict, Optional
+from client_workflows import ClientWorkflowError
 
 _DEFAULT_POLICY = {
     "max_sessions_per_member": 2,
@@ -69,6 +70,8 @@ class MemberSession:
         self.turns = 0
         self.cancel = threading.Event()
         self.closed = False
+        self.conversation_id = ""
+        self.conversations = {}
 
     # ── 러너(회원 주체 안에서 초기화 — 카탈로그·프롬프트가 회원 필터를 지난다) ──
     def _ensure_runner(self):
@@ -76,7 +79,7 @@ class MemberSession:
             return
         self.dir.mkdir(parents=True, exist_ok=True)
         role_src = Path(_base()) / "data" / "member_role.md"
-        agent_name = "회원도우미"
+        agent_name = "클라이언트 담당 에이전트"
         role_text = role_src.read_text(encoding="utf-8") if role_src.exists() else "회원의 기기와 기억으로 일하는 회원도우미입니다."
         notice = self.policy.get("notice") or ""
         if notice:
@@ -93,6 +96,7 @@ class MemberSession:
     def close(self):
         self.cancel.set()
         self.closed = True
+        self.conversations.clear()
         if not self.lock.acquire(blocking=False):
             return
         try:
@@ -188,7 +192,7 @@ class MemberSessionManager:
             s.close()
         return bool(s)
 
-    def turn(self, neighbor_id, device_id, level, name, message: str, *, local_task_id="", code=None, on_event=None, body_session="") -> dict:
+    def turn(self, neighbor_id, device_id, level, name, message: str, *, local_task_id="", code=None, on_event=None, body_session="", client_context=None) -> dict:
         """회원 한 턴. 접수는 회원별 원자 예약, 내용은 턴 임시 경로와 손발에만 둔다."""
         import principal
         import thread_context as tc
@@ -234,9 +238,16 @@ class MemberSessionManager:
                     return {"success": False, "error_type": "cancelled", "error": "회원 작업이 중단됐습니다"}
                 mr.current()["local_task_id"] = local_task_id
                 mr.current()["body_session"] = body_session
+                mr.current()["on_event"] = on_event
                 online = connected(device_id)
-                if local_task_id and not online:
-                    return {"success": False, "error": "회원 기기가 연결되어 있지 않습니다"}
+                mr.current()["client_context"] = client_context or {}
+                if s.conversation_id != local_task_id:
+                    s.conversations[s.conversation_id] = list(s.history)
+                    s.history.clear()
+                    s.history.extend(s.conversations.pop(local_task_id, []))
+                    s.conversation_id = local_task_id
+                    while len(s.conversations) > 20:
+                        s.conversations.pop(next(iter(s.conversations)))
                 recalled = {}
                 if online:
                     recalled = request({"op": "memory_recall", "query": message, "limit": 40})
@@ -257,8 +268,17 @@ class MemberSessionManager:
                     s.history.clear()
                     s.history.extend(recalled.get("history", []))
                     s.runner.config["_member_memory"] = json.dumps({"memories": recalled.get("memories", []), "recent_results": recalled.get("recent_results", [])}, ensure_ascii=False)
+                    if recalled.get("context_truncated"):
+                        s.runner.config["_member_memory"] += "\n기기 회상 용량 제한으로 일부 이전 맥락이 생략됐습니다. 필요한 자료는 직접 읽거나 질문하세요."
                     s.runner.config["_member_memory"] += "\n회원 작업 폴더: " + str(recalled.get("workspace", ""))
                     s.runner.config["_member_sentences"] = "\n".join(str(x.get("code", "")) for x in recalled.get("sentences", []))
+                model_message = message
+                if (client_context or {}).get("workflow"):
+                    from client_workflows import prepare
+                    model_message = prepare(s.runner, client_context["workflow"], message, on_event)
+                attachments = (client_context or {}).get("attachments", [])
+                if attachments:
+                    model_message += "\n<client_attachments>" + json.dumps(attachments, ensure_ascii=False) + "</client_attachments>"
                 from agent_pipeline import drain_stream
                 if code is not None:
                     raw = s.runner._member_tool("execute_ibl", {"code": code})
@@ -267,10 +287,23 @@ class MemberSessionManager:
                               "error": (value.get("error") or ("앱 실행 실패" if value.get("success") is False else None)) if isinstance(value, dict) else None}
                 else:
                     def events():
-                        for event in s.runner.cognitive_stream(message, list(s.history), agent_name="회원도우미", cancel_check=s.cancel.is_set):
-                            if on_event and event.get("type") in ("text", "tool_call", "tool_result", "tool_start", "status", "error"):
-                                on_event(event)
-                            yield event
+                        from contextlib import closing
+                        stream = s.runner.cognitive_stream(model_message, list(s.history), agent_name="클라이언트 담당 에이전트", cancel_check=s.cancel.is_set)
+                        with closing(stream):
+                            for event in stream:
+                                from providers.base import turn_limit_reason
+                                limited = turn_limit_reason()
+                                if limited and event.get('type') == 'final' and not mr.current().get('delivered_files'):
+                                    yield {"type": "error", "content": limited['reason']}
+                                question = mr.current().get("input_required")
+                                if question:
+                                    from providers.base import read_turn_tokens
+                                    yield {"type": "_turn_meta", "turn_tokens": read_turn_tokens(), "clarify": True}
+                                    yield {"type": "final", "content": question}
+                                    return
+                                if on_event and event.get("type") in ("text", "tool_call", "tool_result", "tool_start", "status", "error"):
+                                    on_event(event)
+                                yield event
                     result = drain_stream(events())
                 response = result.get("final") or result.get("error") or ""
                 tokens = result.get("turn_tokens")
@@ -299,7 +332,9 @@ class MemberSessionManager:
                 s.last_turn_at = time.time()
                 return {"success": success, "response": response, "error": result.get("error"), "memory_saved": saved,
                         "session": s.id, "task_id": task_id, "tokens": tokens, "app_result": result.get("app_result"),
-                        "turns_today": self.turns_today(nid)}
+                        "files": mr.current().get("delivered_files", []), "input_required": mr.current().get("input_required"), "sources": mr.current().get("research_sources", []), "turns_today": self.turns_today(nid)}
+        except ClientWorkflowError as exc:
+            return {"success": False, "error_type": "input", "error": str(exc)}
         except Exception as exc:
             # 예외 문자열은 경로·요청·모델 원문을 포함할 수 있으므로 허브 로그에 기록하지 않는다.
             return {"success": False, "error_type": type(exc).__name__,

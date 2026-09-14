@@ -43,7 +43,8 @@ def test_report_has_member_request_and_no_owner_paths(monkeypatch):
     report = next(i for i in member_apps.catalogue()['instruments'] if i['id'] == 'report')
     create = report['modes'][0]
     assert create['request']['output'] == 'reports/report.md'
-    assert '시스템 AI 위임' in create['request']['message']
+    assert create['request']['workflow'] == 'research_report'
+    assert create['client_action_id'] == 'report:create'
     serialized = json.dumps(report)
     for forbidden in ['others:delegate', '@hub', '~workspace', '/Users/', '/switches/']:
         assert forbidden not in serialized
@@ -127,8 +128,9 @@ class Store {
 (async()=>{
  const store=new Store(),r=new MemberBrowserRuntime('test-only',store);r.active=true;r.session='epoch';
  let sent;
- globalThis.fetch=async(url,options)=>{assert.equal(url,'/m/run');sent=JSON.parse(options.body);
-   return new Response(JSON.stringify({type:'result',result:{success:true,response:'# 내 보고서\n자료에 근거한 본문'}})+'\n',
+ const content='# 내 보고서\n자료에 근거한 본문',artifact={id:'a'.repeat(32),name:'report.md',mime:'text/markdown',size:new TextEncoder().encode(content).length,sha256:await memberDigest(content),data:memberBase64(new TextEncoder().encode(content))};
+ globalThis.fetch=async(url,options)=>{if(url==='/m/receipts')return new Response(JSON.stringify({success:true,type:'delivered'}));assert.equal(url,'/m/run');sent=JSON.parse(options.body);
+   return new Response(JSON.stringify({type:'result',result:{success:true,request_id:'request-a',epoch:'epoch',response:content,artifacts:[artifact]}})+'\n',
      {headers:{'content-type':'application/x-ndjson'}})};
  await store.put('tasks','a',{id:'a',events:[],state:'running'});
  const write=r.files.execute.bind(r.files);let checked=false;
@@ -136,17 +138,20 @@ class Store {
  await r.runTask('a',{message:'보고서 작성',output:'reports/report.md'});
  const task=await store.get('tasks','a');assert.equal(task.state,'completed');assert.equal(task.result.saved,true);assert(checked);
  assert.equal(sent.output,undefined);assert.equal(sent.code,undefined);assert.equal(sent.message,'보고서 작성');
- assert.equal(task.result.files[0].on,'body');assert.equal(task.result.files[0].path,'reports/report-a.md');
+ assert.equal(task.result.files[0].on,'body');assert.equal(task.result.files[0].path,'reports/'+artifact.id+'-report.md');
  const reopened=new MemberBrowserRuntime('test-only',store);
  assert.equal((await reopened.files.execute({op:'read',path:task.result.files[0].path})).content,'# 내 보고서\n자료에 근거한 본문');
  const other=new MemberBrowserFiles(new Store());await assert.rejects(other.execute({op:'read',path:task.result.files[0].path}));
  await assert.rejects(r.start({message:'bad',output:'/Users/owner/report.md'}));
  await store.put('tasks','b',{id:'b',events:[],state:'running'});
- r.files.execute=async()=>{throw Error('storage full')};
+ artifact.id='b'.repeat(32);r.files.execute=async()=>{throw Error('storage full')};
  await r.runTask('b',{message:'보고서 작성',output:'reports/report.md'});
  const failed=await store.get('tasks','b');assert.equal(failed.state,'failed');assert.equal(failed.result.success,false);assert.equal(failed.result.saved,false);
- assert.equal(await store.get('files','reports/report-b.md'),undefined);
+ assert.equal(await store.get('files','reports/'+artifact.id+'-report.md'),undefined);
  for(const op of ['write','mkdir','file_move','javascript','memory_save','script'])assert.equal(await r.approve({op}),true);
+ await store.put('jobs','echo',{id:'echo',command:{op:'memory_recall',task_id:'a'},result:{history:'PRIVATE_ECHO'.repeat(10000)}});
+ await store.put('jobs','binary',{id:'binary',command:{op:'read',task_id:'a'},result:{content:'BINARY_CONTENT'.repeat(10000),success:true}});
+ const recall=await r.execute({op:'memory_recall',task_id:'a'});assert(JSON.stringify(recall).length<3000);assert(!JSON.stringify(recall).includes('PRIVATE_ECHO'));assert(!JSON.stringify(recall).includes('BINARY_CONTENT'));
  console.log('member artifact delivery passed');
 })().catch(e=>{console.error(e);process.exitCode=1});
 '''

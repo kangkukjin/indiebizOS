@@ -10,7 +10,7 @@ from typing import Optional
 import asyncio
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 import limb_keys
 
@@ -107,7 +107,8 @@ def member_profile(req: MemberKey):
             if isinstance(cfg, dict) and mp.visible(node, action, cfg):
                 open_words.append(f"{node}:{action}")
     mgr = MemberSessionManager.instance()
-    return {"success": True, "neighbor_id": nid, "level": level, "device_id": rec["device_id"],
+    from client_agent import EPOCH, TTL, VERSION
+    return {"success": True, "client_protocol": {"version": VERSION, "epoch": EPOCH, "retry_window_s": TTL}, "neighbor_id": nid, "level": level, "device_id": rec["device_id"],
             "open_words": sorted(open_words), "turns_today": mgr.turns_today(nid),
             "policy": {k: load_policy().get(k) for k in ("daily_turns", "max_sessions_per_member")},
             "notice": load_policy().get("notice", "")}
@@ -183,11 +184,20 @@ async def member_socket(ws: WebSocket):
 
 
 class MemberRun(MemberChat):
+    message: str = ""
     body_session: str = ""
     task_id: str
     code: Optional[str] = None
+    version: int = 1
+    request_id: str = ""
+    epoch: str = ""
+    action_id: str = ""
+    args: dict = Field(default_factory=dict)
+    capabilities: dict = Field(default_factory=dict)
+    attachments: list = Field(default_factory=list)
 
 
+@router.post('/m/requests')
 @router.post('/m/run')
 async def member_run(req: MemberRun):
     """로컬 작업 원장으로 보내는 NDJSON 이벤트. 허브에 작업 기록을 저장하지 않는다."""
@@ -209,6 +219,29 @@ async def member_run(req: MemberRun):
         return {'success': False, 'error': 'principal_mismatch'}
     from member_session import MemberSessionManager
     mgr = MemberSessionManager.instance()
+    resolved = None
+    if req.request_id:
+        import hashlib
+        if not re.fullmatch(r'[a-zA-Z0-9_-]{1,80}', req.request_id):
+            return {'success': False, 'error': 'invalid_request_id'}
+        if req.action_id and (req.code or req.message.strip()):
+            return {'success': False, 'error': 'ambiguous_client_request'}
+        if len(req.attachments) > 5:
+            return {'success': False, 'error': 'attachment_limit'}
+        for attachment in req.attachments:
+            if not isinstance(attachment, dict) or set(attachment) - {'id', 'name', 'text', 'sha256'}:
+                return {'success': False, 'error': 'invalid_attachment'}
+            content = attachment.get('text', '')
+            if not isinstance(content, str) or len(content.encode()) > 256000 or hashlib.sha256(content.encode()).hexdigest() != attachment.get('sha256'):
+                return {'success': False, 'error': 'attachment_integrity'}
+        try:
+            if req.action_id:
+                from member_apps import resolve_request
+                resolved = await asyncio.to_thread(resolve_request, req.action_id, req.args)
+            else:
+                resolved = {'message': req.message, 'code': req.code}
+        except ValueError as exc:
+            return {'success': False, 'error': str(exc)}
     events = queue.Queue(maxsize=128)
     stopped = threading.Event()
     def emit(value):
@@ -219,8 +252,17 @@ async def member_run(req: MemberRun):
             except queue.Full:
                 pass
     async def stream():
-        work = asyncio.create_task(asyncio.to_thread(mgr.turn, nid, rec['device_id'], level,
-            rec.get('alias', ''), req.message or '앱 실행', local_task_id=req.task_id, code=req.code, on_event=emit, body_session=req.body_session))
+        if resolved is not None:
+            from client_agent import run
+            envelope = {'version': req.version, 'epoch': req.epoch, 'request_id': req.request_id,
+                        'conversation_id': req.task_id, 'message': req.message, 'code': req.code,
+                        'action_id': req.action_id, 'args': req.args, 'capabilities': req.capabilities,
+                        'attachments': req.attachments}
+            work = asyncio.create_task(asyncio.to_thread(run, envelope, resolved,
+                name=rec.get('alias', ''), body_session=req.body_session, on_event=emit, manager=mgr))
+        else:
+            work = asyncio.create_task(asyncio.to_thread(mgr.turn, nid, rec['device_id'], level,
+                rec.get('alias', ''), req.message or '앱 실행', local_task_id=req.task_id, code=req.code, on_event=emit, body_session=req.body_session))
         last_sent = time.monotonic()
         try:
             while not work.done() or not events.empty():
@@ -292,3 +334,29 @@ def member_bootstrap(req: MemberBootstrap):
         z.writestr('indiebiz-helper.json', json.dumps({'mode':'member','base':req.base.rstrip('/'),'key':req.key,'alias':ident[0].get('alias','회원')}, ensure_ascii=False))
         z.writestr('시작하기.txt', '실행파일과 설정파일을 같은 폴더에 두고 실행파일을 여세요. 브라우저의 회원 작업 공간에서 작업 폴더를 선택하세요. 설정파일에는 회원 키가 있으므로 다른 사람에게 보내지 마세요.')
     return Response(buf.getvalue(), media_type='application/zip', headers={'Cache-Control':'no-store','Content-Disposition':'attachment; filename="indiebiz-member.zip"'})
+
+
+class ArtifactReceipt(MemberKey):
+    request_id: str
+    artifact_id: str
+    sha256: str
+    size: int
+    epoch: str
+
+
+@router.post('/m/receipts')
+def member_receipt(req: ArtifactReceipt):
+    ident, error = _member_of(req.key)
+    if error:
+        return error
+    rec, nid, level = ident
+    if req.body_session and req.body_session != rec.get('session'):
+        return {'success': False, 'error': 'stale_browser_session'}
+    if _principal_for(rec, nid, level) is None:
+        return {'success': False, 'error': 'principal_mismatch'}
+    from client_agent import receipt
+    try:
+        return receipt(req.request_id, req.artifact_id, req.sha256, req.size,
+                       body_session=req.body_session, epoch=req.epoch)
+    except (ValueError, PermissionError):
+        return {'success': False, 'error': 'invalid_receipt'}

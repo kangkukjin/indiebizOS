@@ -39,7 +39,6 @@ export function ExternalUsersView() {
   const [busy, setBusy] = useState(false);
   const [personId, setPersonId] = useState('');
   const [name, setName] = useState('');
-  const [level, setLevel] = useState(0);
   const [alias, setAlias] = useState('');
   const [ttl, setTtl] = useState('0');
   const [invitation, setInvitation] = useState<Invitation | null>(null);
@@ -75,18 +74,11 @@ export function ExternalUsersView() {
   };
   const issue = async () => {
     setInvitation(null); setShowKey(false);
-    const result = await api.request<Invitation>('/external-users/keys', {
-      method: 'POST', body: JSON.stringify({ neighbor_id: Number(personId), alias, ttl_days: Number(ttl) }),
+    const result = await api.request<Invitation>('/external-users/invite', {
+      method: 'POST', body: JSON.stringify({ ...(personId ? { neighbor_id: Number(personId) } : { name: name.trim() }), alias, ttl_days: Number(ttl) }),
     });
     setInvitation(result);
     await load();
-  };
-  const addPerson = async () => {
-    const person = await api.request<Person>('/external-users/people', {
-      method: 'POST', body: JSON.stringify({ name: name.trim(), level }),
-    });
-    setPersonId(String(person.id)); setName('');
-    await load(); setMessage('이웃 명부에 등록했습니다. 아래에서 초대 키를 발급하세요.');
   };
   const rows = data?.keys.filter(row => showInactive || (!row.revoked && !row.expired)) || [];
 
@@ -109,22 +101,15 @@ export function ExternalUsersView() {
           </section>
 
           <section className={panel}>
-            <div><h2 className="font-semibold">사용자 초대</h2><p className="mt-1 text-sm text-stone-500">사용자는 이웃 명부에서 선택합니다. 한 사람에게 여러 키를 발급할 수 있습니다.</p></div>
-            <details><summary className="cursor-pointer text-sm">새 사용자 등록</summary>
-              <form className="mt-3 flex flex-wrap items-end gap-2" onSubmit={e => { e.preventDefault(); void run(addPerson); }}>
-                <label className="grid gap-1 text-xs">이름<input className={input} required maxLength={100} value={name} onChange={e => setName(e.target.value)} /></label>
-                <label className="grid gap-1 text-xs">이웃 등급<select className={input} value={level} onChange={e => setLevel(Number(e.target.value))}>{[0, 1, 2, 3, 4].map(n => <option key={n} value={n}>{n}</option>)}</select></label>
-                <button className={button} disabled={busy || !name.trim()}>사용자 등록</button>
-                <p className="w-full text-xs text-stone-500">이웃 명부와 같은 등급을 사용합니다. 회원의 주인 데이터 접근 권한은 부여하지 않습니다.</p>
-              </form>
-            </details>
+            <div><h2 className="font-semibold">사용자 초대</h2><p className="mt-1 text-sm text-stone-500">이름을 입력하고 키를 발급하면 바로 초대할 수 있습니다. 기능별 허가는 필요하지 않습니다.</p></div>
             <form className="flex flex-wrap items-end gap-3" onSubmit={e => { e.preventDefault(); void run(issue); }}>
-              <label className="grid w-full sm:flex-1 gap-1 text-xs">사용자<select className={input} required value={personId} onChange={e => setPersonId(e.target.value)}>
-                <option value="">사용자를 선택하세요</option>{data.people.map(p => <option key={p.id} value={p.id}>{p.name} · 등급 {p.level} · #{p.id}</option>)}
+              <label className="grid w-full sm:flex-1 gap-1 text-xs">사용자<select className={input} value={personId} onChange={e => setPersonId(e.target.value)}>
+                <option value="">새 사용자 초대</option>{data.people.map(p => <option key={p.id} value={p.id}>{p.name} · #{p.id}</option>)}
               </select></label>
+              {!personId && <label className="grid w-full sm:flex-1 gap-1 text-xs">이름<input className={input} required maxLength={100} value={name} onChange={e => setName(e.target.value)} placeholder="초대할 사람의 이름" /></label>}
               <label className="grid w-full sm:flex-1 gap-1 text-xs">키 이름 (선택)<input className={input} value={alias} maxLength={100} placeholder="예: 민수 노트북" onChange={e => setAlias(e.target.value)} /></label>
               <label className="grid gap-1 text-xs">유효기간<select className={input} value={ttl} onChange={e => setTtl(e.target.value)}><option value="0">무기한</option><option value="7">7일</option><option value="30">30일</option><option value="90">90일</option><option value="365">1년</option></select></label>
-              <button className={`${button} !bg-stone-800 !text-white`} disabled={busy || !personId}>초대 키 발급</button>
+              <button className={`${button} !bg-stone-800 !text-white`} disabled={busy || (!personId && !name.trim())}>초대 키 발급</button>
             </form>
             {invitation && <div className="space-y-3 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
               <p className="font-medium">{invitation.name} · {invitation.alias} 키 발급 완료</p>

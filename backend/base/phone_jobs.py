@@ -10,6 +10,7 @@
 anyio.to_thread 로 워커 스레드에서 pull_blocking 을 hold 한다(이벤트 루프 비차단).
 큐는 인메모리 — 백엔드 재시작 시 유실되지만 푸시 op(클립보드·알림)는 재시도가 싸다.
 """
+import json
 import threading
 import time
 import uuid
@@ -60,7 +61,7 @@ def enqueue(device_id: str, code: str, agent_id: Optional[str] = None) -> str:
     return job["id"]
 
 
-def pull_blocking(device_id: str, wait: float = 0.0) -> List[dict]:
+def pull_blocking(device_id: str, wait: float = 0.0, member_session=None) -> List[dict]:
     """대기 작업 전량 회수. wait>0 이면 작업 도착까지 최대 wait초 hold(롱폴).
 
     신호 유실 방지: 이벤트를 먼저 clear 한 뒤 큐를 확인한다 — 확인 후 도착한
@@ -73,8 +74,21 @@ def pull_blocking(device_id: str, wait: float = 0.0) -> List[dict]:
         now = time.time()
         with _LOCK:
             q = _QUEUES.get(device_id) or []
-            fresh = [j for j in q if now - j.get("ts", 0) <= JOB_TTL]
-            _QUEUES[device_id] = []
+            alive = [j for j in q if now - j.get("ts", 0) <= JOB_TTL]
+            if member_session is None:
+                fresh = alive
+                _QUEUES[device_id] = []
+            else:
+                # 새로고침 전 롱폴은 새 세대 명령을 집어가지 않는다. 선택과 제거를 같은 잠금에서 수행.
+                def belongs(job):
+                    try:
+                        command = json.loads(job.get("code", ""))
+                        return isinstance(command, dict) and command.get("member") is True and command.get("body_session") == member_session
+                    except (ValueError, TypeError):
+                        return False
+                fresh = [j for j in alive if belongs(j)]
+                selected = {j['id'] for j in fresh}
+                _QUEUES[device_id] = [j for j in alive if j['id'] not in selected]
         if fresh or now >= deadline:
             return fresh
         ev.wait(timeout=max(0.05, deadline - time.time()))

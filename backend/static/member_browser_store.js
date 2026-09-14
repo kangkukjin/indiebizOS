@@ -44,7 +44,8 @@ class MemberBrowserStore {
     });return {success:true,added,skipped};
   }
 }
-async function memberDigest(text){const bytes=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(text));return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('')}
+async function memberHashBytes(data){const bytes=await crypto.subtle.digest('SHA-256',data);return Array.from(new Uint8Array(bytes),v=>v.toString(16).padStart(2,'0')).join('')}
+async function memberDigest(text){return memberHashBytes(new TextEncoder().encode(text))}
 function memberDownload(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000)}
 function memberPath(raw){
   const path=String(raw||'.').replaceAll('\\','/');

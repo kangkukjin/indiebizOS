@@ -81,7 +81,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
     },
     "cognition": {
-        "member_runner", "member_session",
+        "member_runner", "member_session", "client_workflows",
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
         "weekly_audits",
         "agent_pipeline", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view",
@@ -98,6 +98,7 @@ LAYERS = {
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {
+        "client_agent",
         "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper",
         "calendar_actions", "calendar_html", "cdn_provision",
         "channel_poller", "ffmpeg_provision", "gen_newspaper",

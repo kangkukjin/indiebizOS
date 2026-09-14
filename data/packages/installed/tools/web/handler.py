@@ -697,6 +697,10 @@ def execute(tool_input: dict, context):
     tool_name = context.tool_name
     project_path = context.project_path
 
+    import principal
+    if principal.current().kind == principal.KIND_MEMBER:
+        return format_json(load_module("member_web").execute(tool_name, tool_input))
+
     # 통합 검색 [sense:search]{source} — 2026-08-05 어휘 압축 (2): 검색 5액션(search_ddg/
     # search_naver/search_gnews/search_hn/search_guardian) → source 축 하나. 아래 소스별
     # 갈래(ddgs_search 등)는 내부 구현 — tool.json 에는 search 하나만 노출된다.

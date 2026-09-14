@@ -57,6 +57,7 @@
     "cognition/agent_runner",
     "cognition/ai_agent",
     "cognition/body_ask",
+    "cognition/client_workflows",
     "cognition/cognitive_consciousness",
     "cognition/cognitive_distill",
     "cognition/cognitive_eval",
@@ -233,6 +234,7 @@
     "services/calendar_html",
     "services/chat_runs",
     "services/chat_streams",
+    "services/client_agent",
     "services/execution_trace",
     "services/execution_trace_scope",
     "services/gen_newspaper",
@@ -362,8 +364,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 351,
-    "engine": 325,
+    "total": 353,
+    "engine": 327,
     "blocklist": 26
   }
 }

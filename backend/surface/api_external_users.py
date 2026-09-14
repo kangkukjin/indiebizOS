@@ -119,3 +119,32 @@ def revoke_key(device_id: str):
         raise HTTPException(404, "외부사용자 키를 찾을 수 없습니다")
     limb_keys.revoke(device_id)
     return {"success": True}
+
+
+class InviteRequest(BaseModel):
+    name: str = Field(default="", max_length=100)
+    neighbor_id: int | None = Field(default=None, gt=0)
+    alias: str = Field(default="", max_length=100)
+    ttl_days: int = Field(default=0, ge=0, le=3650)
+
+
+@router.post("/invite")
+def invite(data: InviteRequest):
+    """이름 입력부터 회원 키/기기 결합/승인까지 한 동작. 이웃은 내부 식별자로만 재사용한다."""
+    from business_manager import BusinessManager
+    name = data.name.strip()
+    if bool(name) == bool(data.neighbor_id):
+        raise HTTPException(400, "새 사용자 이름 또는 기존 사용자를 선택하세요")
+    bm = BusinessManager()
+    created = None
+    if data.neighbor_id:
+        neighbor_id = data.neighbor_id
+    else:
+        created = bm.create_neighbor(name=name, info_level=0)
+        neighbor_id = created['id']
+    try:
+        return issue_key(IssueRequest(neighbor_id=neighbor_id, alias=data.alias, ttl_days=data.ttl_days))
+    except Exception:
+        if created:
+            bm.delete_neighbor(created['id'])
+        raise

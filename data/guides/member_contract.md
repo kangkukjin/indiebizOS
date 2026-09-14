@@ -11,3 +11,23 @@
 - build_ibl_nodes.py로 파생하고 --check, backend 층·파일 크기 검사, 해당 플랫폼 봉투 검사를 통과시킨다.
 
 설계와 단계별 잔여 검증: docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11. 회원 시작 예시: member_start.md.
+
+## 문서·미디어 어댑터
+
+`lands_on:body`의 영속 결과는 회원 기기에 남는다. `member_transform:모듈:함수`는 패키지 안의
+감사된 처리기를 지정하며 `path_audited:{at,impl}`가 필수다. hub 액션과 같은 지문 관문을 통과해야 한다.
+현재 문서 어댑터는 명시된 회원 path를 base64로 받고, 턴 임시 폴더의 생성된 경로만 라이브러리에 전달한다.
+PDF/DOCX/XLSX/XLS·텍스트 범위를 읽고, PDF/DOCX 양식을 채워 기기의 write 영수증까지 기다린다.
+파일당 32MB, Office ZIP 해제 합계 128MB/1만 항목 한도. 외부 자원 relationship은 거절하고
+DOCX 이미지 파일 추출은 끈다. 오류·본문에서 경로를 추측해 읽거나 쓰지 않는다.
+
+출력 `files`는 확인된 기기 파일의 path/bytes/on/ref 목록이다. `ref`의 `member-file:…` 값은
+그 턴 안의 path/src/dest/output 슬롯에만 다시 쓸 수 있다. 다른 턴·회원의 참조는 실패한다.
+이것은 IBL 문법 추가가 아닌 어댑터의 불투명 값이다. 기존 `files:[인라인 문자열]`/`$file:0` 첨부
+문법도 그대로 사용할 수 있다(합계 4MB). `files_from`으로 허브 파일을 읽는 경로는 회원에게 전달하지 않는다.
+
+sense:radio의 검색은 감사된 허브 읽기다. limbs:radio의 station_id 해소 뒤 재생/정지/상태/볼륨은
+회원 자신의 기기로 간다. PC는 설치된 로컬 셸의 브라우저 오디오, Android는 MediaPlayer를 쓴다.
+브라우저·기기가 지원하지 않는 스트림 형식이나 자동재생 거절은 성공으로 기록하지 않는다.
+PC 재생 화면은 켜 두어야 한다. Android의 sense:here는 위치 허용 버튼에서 OS 권한을 준 뒤
+측정하고, limbs:android는 공통 접근성 서비스로 연결한다. PC helper는 Android 봉투를 실행하지 않는다.

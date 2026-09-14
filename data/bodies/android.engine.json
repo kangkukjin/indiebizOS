@@ -202,6 +202,7 @@
     "ibl/ibl_typecheck",
     "ibl/ibl_value_types",
     "ibl/member_bridge",
+    "ibl/member_files",
     "ibl/member_profile",
     "ibl/package_manager",
     "ibl/pipeline_state",
@@ -353,8 +354,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 342,
-    "engine": 316,
+    "total": 343,
+    "engine": 317,
     "blocklist": 26
   }
 }

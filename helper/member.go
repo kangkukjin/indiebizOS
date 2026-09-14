@@ -24,15 +24,16 @@ type Approval struct {
 	answer  chan bool
 }
 type MemberRuntime struct {
-	localURL  string
-	server    *http.Server
-	store     *MemberStore
-	cfg       *Config
-	dir       string
-	execMu    sync.Mutex
-	mu        sync.Mutex
-	approvals map[string]*Approval
-	token     string
+	mediaPending *MemberMedia
+	localURL     string
+	server       *http.Server
+	store        *MemberStore
+	cfg          *Config
+	dir          string
+	execMu       sync.Mutex
+	mu           sync.Mutex
+	approvals    map[string]*Approval
+	token        string
 }
 
 var memberRuntime *MemberRuntime
@@ -63,7 +64,7 @@ func memberEffect(op string) bool {
 	}
 }
 func (m *MemberRuntime) approve(c Command) bool {
-	if !memberEffect(c.Op) || (c.Op == "script" && (c.Action == "list" || c.Action == "")) {
+	if (c.Op == "media" && c.Action == "status") || !memberEffect(c.Op) || (c.Op == "script" && (c.Action == "list" || c.Action == "")) {
 		return true
 	}
 	// 대화의 로컬 보존은 회원이 채팅을 보내는 행위에 포함된다.
@@ -171,6 +172,13 @@ func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 		return m.export(c.Path)
 	case "read":
 		if c.Encoding == "base64" {
+			info, err := os.Stat(c.Path)
+			if err != nil || !info.Mode().IsRegular() {
+				return errResult("read_failed", "일반 파일을 읽을 수 없습니다")
+			}
+			if info.Size() > 32*1024*1024 {
+				return errResult("size_limit", "파일이 32MB를 넘습니다")
+			}
 			b, err := os.ReadFile(c.Path)
 			if err != nil {
 				return errResult("read_failed", err.Error())
@@ -198,6 +206,8 @@ func (m *MemberRuntime) execute(c Command) map[string]interface{} {
 		return doInfo()
 	case "screen":
 		return doScreen(c)
+	case "media":
+		return m.media(c)
 	case "play", "open":
 		return memberOpen(c)
 	default:

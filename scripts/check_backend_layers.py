@@ -62,7 +62,7 @@ LAYERS = {
         "websocket_manager", "xray_stream",
     },
     "ibl": {
-        "member_bridge", "member_profile",
+        "member_bridge", "member_profile", "member_files",
         # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
         # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
         # 명시 배정이 우선한다. 디렉토리화 때 개명 후보.

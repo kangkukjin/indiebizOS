@@ -58,6 +58,16 @@ func (m *MemberRuntime) serve() error {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("Cache-Control", "no-store")
+		if r.Method == "GET" && r.URL.Path == "/member/media" {
+			m.mu.Lock()
+			pending := []map[string]string{}
+			if m.mediaPending != nil && !m.mediaPending.Claimed {
+				pending = append(pending, map[string]string{"key": m.mediaPending.Command.RequestKey})
+			}
+			m.mu.Unlock()
+			json.NewEncoder(w).Encode(pending)
+			return
+		}
 		if r.Method == "GET" && r.URL.Path == "/member/approvals" {
 			m.mu.Lock()
 			items := []*Approval{}
@@ -86,6 +96,17 @@ func (m *MemberRuntime) serve() error {
 			return
 		}
 		switch r.URL.Path {
+		case "/member/media-claim":
+			key, _ := body["key"].(string)
+			json.NewEncoder(w).Encode(m.claimMedia(key))
+		case "/member/media-result":
+			key, _ := body["key"].(string)
+			result, _ := body["result"].(map[string]interface{})
+			if result == nil || m.mediaResult(key, result) != nil {
+				http.Error(w, "종료된 재생 명령", 409)
+				return
+			}
+			json.NewEncoder(w).Encode(map[string]bool{"success": true})
 		case "/member/approve":
 			key, _ := body["key"].(string)
 			ok, _ := body["allow"].(bool)

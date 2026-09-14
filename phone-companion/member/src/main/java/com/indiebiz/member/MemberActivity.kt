@@ -38,8 +38,13 @@ class MemberActivity:Activity() {
         val layout=LinearLayout(this).apply { orientation=LinearLayout.VERTICAL }
         val bar=LinearLayout(this)
         bar.addView(Button(this).apply { text="파일 가져오기"; setOnClickListener { startActivityForResult(Intent(Intent.ACTION_OPEN_DOCUMENT).setType("*/*").addCategory(Intent.CATEGORY_OPENABLE),2) } })
+        bar.addView(Button(this).apply { text="파일 내보내기"; setOnClickListener { exportFile() } })
         bar.addView(Button(this).apply { text="접근성 설정"; setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) } })
-        layout.addView(bar)
+        bar.addView(Button(this).apply { text="위치 허용"; setOnClickListener {
+            requestPermissions(arrayOf(android.Manifest.permission.ACCESS_FINE_LOCATION,android.Manifest.permission.ACCESS_COARSE_LOCATION),4)
+        } })
+        val scroller=HorizontalScrollView(this).apply { addView(bar) }
+        layout.addView(scroller)
         val v=WebView(this);web=v
         v.settings.javaScriptEnabled=true
         v.settings.allowFileAccess=false;v.settings.allowContentAccess=false
@@ -70,6 +75,17 @@ class MemberActivity:Activity() {
             catch(e:Exception) { runOnUiThread { Toast.makeText(this,"화면을 불러올 수 없습니다. 연결을 확인하세요.",Toast.LENGTH_LONG).show() } }
         }
     }
+    private fun exportFile() {
+        val files=runtime.store.path("").walkTopDown().filter { it.isFile }.take(200).toList()
+        if(files.isEmpty()) { Toast.makeText(this,"저장된 파일이 없습니다",Toast.LENGTH_LONG).show(); return }
+        android.app.AlertDialog.Builder(this).setTitle("내보낼 파일 선택")
+            .setItems(files.map { it.relativeTo(runtime.store.path("")).path }.toTypedArray()) { _,index ->
+                pendingExport=runtime.store.path(files[index].path)
+                val mime=MimeTypeMap.getSingleton().getMimeTypeFromExtension(files[index].extension.lowercase()) ?: "application/octet-stream"
+                startActivityForResult(Intent(Intent.ACTION_CREATE_DOCUMENT).setType(mime).addCategory(Intent.CATEGORY_OPENABLE)
+                    .putExtra(Intent.EXTRA_TITLE,files[index].name),3)
+            }.setNegativeButton("취소",null).show()
+    }
     @Deprecated("Legacy Android result supported by minSdk")
     override fun onActivityResult(request:Int,result:Int,data:Intent?) {
         super.onActivityResult(request,result,data)
@@ -82,8 +98,19 @@ class MemberActivity:Activity() {
         }
         if(request==2 && result==RESULT_OK) data?.data?.let { uri ->
             runtime.workers.execute {
-                try { val name="가져온파일-"+System.currentTimeMillis()
-                    contentResolver.openInputStream(uri)!!.use { input -> runtime.store.path(name).outputStream().use { output -> input.copyTo(output) } }
+                try {
+                    var display="file"
+                    contentResolver.query(uri,arrayOf(android.provider.OpenableColumns.DISPLAY_NAME),null,null,null)?.use { cursor ->
+                        if(cursor.moveToFirst())display=cursor.getString(0) ?: "file"
+                    }
+                    val safe=display.replace(Regex("[^가-힣A-Za-z0-9._ -]"),"_").takeLast(160)
+                    val name="가져온파일-"+System.currentTimeMillis()+"-"+safe
+                    val target=runtime.store.path(name)
+                    try { contentResolver.openInputStream(uri)!!.use { input -> target.outputStream().use { output ->
+                        val buffer=ByteArray(8192); var total=0
+                        while(true) { val count=input.read(buffer); if(count<0)break; total+=count
+                            require(total<=32*1024*1024) { "파일은 32MB까지 가져올 수 있습니다" }; output.write(buffer,0,count) }
+                    } } } catch(e:Exception) { target.delete(); throw e }
                     runOnUiThread { Toast.makeText(this,"저장됨: "+name,Toast.LENGTH_LONG).show() }
                 } catch(e:Exception) { runOnUiThread { Toast.makeText(this,"파일 가져오기 실패",Toast.LENGTH_LONG).show() } }
             }

@@ -1984,3 +1984,5 @@
 
 2026-09-14 | 외부 회원 앱: Claude 0·1단계 인수·격리 보강, PC helper 승인/SQLite/멱등/로컬 셸, 회원 프로그램·졸업 가져오기, Android member APK 기반. 전체 backend 4252 passed/1 skipped, Go race·4종 빌드·tsc·Android lint. 미디어 어휘 개방·hub 파일 변환·폰 실기는 후속(docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11).
 2026-09-14 | 회원 승인 신뢰 경계: 공통 셸을 Go/APK에 빌드 번들, 원격 HTML 실행 배제·빌드 드리프트 훅, Markdown 링크 속성 주입 차단, 새로고침/오프라인 로컬 기억 접근 보강. 추가 회원 검사 40 passed, Go race 8건, Android APK 빌드(실기 미연결).
+
+[2026-09-14] 회원 앱 잔여 구현: 감사된 문서 임시 변환·PDF/DOCX 양식의 회원 저장 영수증·files 인라인 첨부; 라디오 검색/자기 기기 재생, Android 위치·접근성 개방. 실제 문서/PC 브라우저 검증, 폰 APK·lint. 연결 기기 부재로 폰 실기 검증은 미완료. 상세 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11.

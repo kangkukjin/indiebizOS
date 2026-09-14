@@ -101,6 +101,9 @@ nodes:
         - 연락
         - 카톡
       here:
+        lands_on: body
+        limb_op:
+          op: location
         returns: scalar
         side_effect: true
         exempt: 위치 측정(폰=GPS 센서) — 자동 점검 실행 금지
@@ -1884,6 +1887,10 @@ nodes:
                 - '{meta}'
                 - '{path}'
       radio:
+        lands_on: hub
+        path_audited:
+          at: '2026-09-14'
+          impl: d9e0699a96d19e7e
         params:
           query: string
         returns: items
@@ -4980,11 +4987,23 @@ nodes:
         limb_op:
           op: read
           path: $path
+        member_transform: member_documents:read_document
+        path_audited:
+          at: '2026-09-14'
+          impl: 2e1282da97b65bd0
         target_key: path
         aliases:
           offset:
           - start
       fill:
+        lands_on: body
+        limb_op:
+          op: document_fill
+          path: $path
+        member_transform: member_documents:fill_document
+        path_audited:
+          at: '2026-09-14'
+          impl: 2e1282da97b65bd0
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5675,6 +5694,22 @@ nodes:
         - 사진창
         - 폴더
       android:
+        lands_on: body
+        limb_op:
+          op: accessibility
+          action: $op
+          query: $query
+          x: $x
+          y: $y
+          x1: $x1
+          y1: $y1
+          x2: $x2
+          y2: $y2
+          text: $text
+          key: $key
+          direction: $direction
+          duration: $duration
+          package_name: $package_name
         aliases:
           key:
           - keycode
@@ -6013,6 +6048,16 @@ nodes:
         implementation: Kakao Map API로 좌표 기반 지도 HTML 생성 (프론트엔드 렌더링용)
         target_key: query
       radio:
+        lands_on: body
+        limb_op:
+          op: media
+          action: $op
+          url: $stream_url
+          volume: $volume
+        member_transform: radio_member:control
+        path_audited:
+          at: '2026-09-14'
+          impl: d9e0699a96d19e7e
         returns: effect
         description: 인터넷 라디오 재생 제어 (op 분기). play/stop/status/volume. 방송국 검색은 [sense:radio].
         target_description: play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서) / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC). stop — 파라미터 없음. status — 파라미터 없음, 재생 중 채널·경과 시간. volume — volume(0~100). ★status·volume 은 재생 중일 때만 의미가 있다(라디오 전용).

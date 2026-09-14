@@ -84,6 +84,7 @@ class MemberRuntime(val context: Context) {
     }
     fun approve(c:JSONObject):Boolean {
         val op=c.optString("op")
+        if(op=="media" && c.optString("action")=="status") return true
         if(op in listOf("read","list","info","memory_recall","script_list")) return true
         if(op=="memory_save" && c.optJSONObject("record")?.has("user")==true) return true
         val key=c.getString("request_key"); val answer=CompletableFuture<Boolean>()
@@ -108,6 +109,8 @@ class MemberRuntime(val context: Context) {
             "export" -> store.export()
             "script_list" -> JSONObject().put("success",true).put("items",JSONArray())
             "script" -> if(c.optString("action") in listOf("","list")) JSONObject().put("success",true).put("items",JSONArray()) else MemberStore.error("폰 회원 모드에는 프로그램 인터프리터가 없습니다")
+            "location" -> MemberDevice.location(context)
+            "media" -> media(c)
             "play" -> play(c.optString("url",c.optString("path")))
             "open" -> { val u=Uri.parse(c.getString("url")); require(u.scheme in listOf("http","https")); context.startActivity(Intent(Intent.ACTION_VIEW,u).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); JSONObject().put("success",true) }
             "sensor" -> sensor()
@@ -115,12 +118,29 @@ class MemberRuntime(val context: Context) {
             else -> MemberStore.error("unsupported_op")
         }
     }
+    @Synchronized fun media(c:JSONObject):JSONObject {
+        val action=c.optString("action","play")
+        if(c.has("volume"))require(c.getDouble("volume") in 0.0..100.0)
+        when(action) {
+            "play" -> { val url=c.getString("url"); require(Uri.parse(url).scheme in listOf("http","https")); play(url) }
+            "stop" -> { player?.release(); player=null }
+            "volume" -> require(player!=null) { "재생 중인 스트림이 없습니다" }
+            "status" -> {}
+            else -> return MemberStore.error("unsupported_action")
+        }
+        if(c.has("volume")) { val volume=c.getDouble("volume").toFloat()/100f; player?.setVolume(volume,volume) }
+        return JSONObject().put("success",true).put("playing",player?.isPlaying ?: false)
+    }
     fun play(url:String):JSONObject {
         val uri=Uri.parse(url)
         val p=MediaPlayer()
         if(uri.scheme in listOf("http","https")) p.setDataSource(url) else p.setDataSource(store.path(url).path)
         player?.release(); player=p
-        p.prepare(); p.start()
+        val ready=CompletableFuture<Boolean>()
+        p.setOnPreparedListener { ready.complete(true) }
+        p.setOnErrorListener { _,_,_ -> ready.complete(false); true }
+        try { p.prepareAsync(); check(ready.get(20,TimeUnit.SECONDS)) { "스트림 재생 실패" }; p.start() }
+        catch(e:Exception) { p.release(); if(player===p)player=null; throw e }
         return JSONObject().put("success",true).put("playing",true)
     }
     fun sensor():JSONObject {
@@ -136,11 +156,17 @@ class MemberRuntime(val context: Context) {
         finally { manager.unregisterListener(listener) }
         return JSONObject().put("success",true).put("type","accelerometer").put("values",JSONArray(values.toList()))
     }
-    fun accessibility(c:JSONObject):JSONObject = JSONObject(when(c.optString("action")) {
+    fun accessibility(c:JSONObject):JSONObject = JSONObject(when(c.optString("action","snapshot")) {
         "snapshot" -> PhoneAccessibilityService.snapshot()
-        "tap" -> PhoneAccessibilityService.tap(c.getInt("x"),c.getInt("y"))
+        "tap" -> if(c.optString("query").isNotEmpty()) PhoneAccessibilityService.tapByText(c.getString("query"),0)
+            else PhoneAccessibilityService.tap(c.getInt("x"),c.getInt("y"))
+        "long_press" -> PhoneAccessibilityService.longPress(c.getInt("x"),c.getInt("y"),c.optInt("duration",800))
+        "open_app" -> { val launch=context.packageManager.getLaunchIntentForPackage(c.getString("package_name"))
+            if(launch==null) """{"success":false,"error":"앱을 찾을 수 없습니다"}""" else {
+                context.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); """{"success":true}""" } }
         "type" -> PhoneAccessibilityService.typeText(c.getString("text"))
-        "swipe" -> PhoneAccessibilityService.swipeDir(c.getString("direction"))
+        "swipe" -> if(c.has("direction"))PhoneAccessibilityService.swipeDir(c.getString("direction")) else
+            PhoneAccessibilityService.swipe(c.getInt("x1"),c.getInt("y1"),c.getInt("x2"),c.getInt("y2"),c.optInt("duration",400))
         "key" -> PhoneAccessibilityService.pressKey(c.getString("key"))
         else -> """{"success":false,"error":"unsupported_action"}"""
     })

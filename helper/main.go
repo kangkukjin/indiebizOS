@@ -46,6 +46,7 @@ type Job struct {
 }
 
 type Command struct {
+	Volume       *float64               `json:"volume,omitempty"`
 	Resources    []string               `json:"resources,omitempty"`
 	Dependencies []string               `json:"dependencies,omitempty"`
 	Dest         string                 `json:"dest,omitempty"`

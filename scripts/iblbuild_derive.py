@@ -158,6 +158,8 @@ def derive_member_manifest(data: dict, root: Path) -> dict:
             pkg_dir = tool_index[tool][0] if tool and tool in tool_index else None
             entry = {"lands_on": action["lands_on"], "package": pkg_dir.name if pkg_dir else None,
                      "side_effect": declared_side_effect(action)}
+            if action.get("member_transform") is not None:
+                entry["member_transform"] = action["member_transform"]
             if action.get("limb_op") is not None:
                 entry["limb_op"] = action["limb_op"]
             if action.get("path_audited") is not None:

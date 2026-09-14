@@ -100,7 +100,7 @@ def visible(node: str, action: str, cfg: dict, root: Path = None) -> bool:
         return False
     if not _package_open(e, node, action, cfg or {}, root):
         return False
-    if e.get("lands_on") == "hub" and not fingerprint_ok(e, root):
+    if (e.get("lands_on") == "hub" or e.get("member_transform")) and not fingerprint_ok(e, root):
         return False
     return True
 
@@ -117,11 +117,12 @@ def gate(node: str, action: str, cfg: dict, root: Path = None) -> Optional[dict]
     if not _package_open(e, node, action, cfg or {}, root):
         return {"success": False, "error_type": "permission",
                 "error": f"[{q}] 의 묶음이 회원 프로파일에 잠들어 있습니다."}
-    if e.get("lands_on") == "hub":
+    if e.get("lands_on") == "hub" or e.get("member_transform"):
         if not fingerprint_ok(e, root):
             return {"success": False, "error_type": "permission",
                     "error": f"[{q}] 의 감사 표식이 현재 구현과 다릅니다 — 재감사 전에는 열리지 않습니다."}
-        return None
+        if e.get("lands_on") == "hub":
+            return None
     import principal
     if e.get("lands_on") != "body" or not e.get("limb_op"):
         return {"success": False, "error_type": "permission", "error": "회원 실행 선언 불완전"}

@@ -56,7 +56,7 @@ class MemberRunner(AgentRunner):
         from system_tools_ibl import _execute_ibl_unified
         import principal
         import member_runtime
-        # 파일·resume·행위자 인자는 모델이 허브 경로/신원을 주입하는 경로가 되므로 받지 않는다.
+        # files 인라인 본문만 받는다. files_from·resume·행위자 인자는 허브 경로/신원 주입이라 받지 않는다.
         definitions = getattr(self, "config", {}).get("_member_sentences", "")
         if definitions.strip():
             from ibl_parser import parse
@@ -66,7 +66,10 @@ class MemberRunner(AgentRunner):
                     definitions = ""
             except Exception:
                 definitions = ""
-        return _execute_ibl_unified({"code": definitions + "\n" + str(tool_input.get("code", ""))},
+        files = tool_input.get("files") or []
+        if not isinstance(files, list) or any(not isinstance(f, str) for f in files) or sum(len(f.encode("utf-8")) for f in files) > 4*1024*1024:
+            return json.dumps({"success": False, "error": "files는 합계 4MB 이하의 인라인 문자열 목록이어야 합니다"}, ensure_ascii=False)
+        return _execute_ibl_unified({"code": definitions + "\n" + str(tool_input.get("code", "")), "files": files},
             str(self.project_path), agent_id=principal.current().key(),
             cancel_check=member_runtime.current()["cancel"].is_set)
 

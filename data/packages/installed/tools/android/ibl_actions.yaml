@@ -22,6 +22,8 @@ nodes:
         - 연락
         - 카톡
       here:
+        lands_on: body
+        limb_op: {op: location}
         returns: scalar
         # 통화 모양(scalar)과 부작용이 어긋나는 자리 — 폰에선 GPS 를 실제로 켠다.
         # dry-run 이 "부작용 없음"으로 표시하면 안 되고, 자동 점검이 함부로 실행해서도 안 된다.
@@ -112,6 +114,8 @@ nodes:
   limbs:
     actions:
       android:
+        lands_on: body
+        limb_op: {op: accessibility, action: $op, query: $query, x: $x, y: $y, x1: $x1, y1: $y1, x2: $x2, y2: $y2, text: $text, key: $key, direction: $direction, duration: $duration, package_name: $package_name}
         aliases:   # ★정본(check_param_canon) — 핸들러의 이중 읽기를 데이터화 (2026-08-29 구현-읽기 감사)
           key: [keycode]
           package_name: [package]

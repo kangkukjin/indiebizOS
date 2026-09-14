@@ -189,3 +189,60 @@ func TestMemberApprovalShellIsBundled(t *testing.T) {
 		}
 	}
 }
+
+func TestMemberMediaRequiresApprovalAndSingleClaim(t *testing.T) {
+	m := testMember(t)
+	command := Command{Op: "media", Action: "play", URL: "https://example.test/audio.mp3", Member: true, RequestKey: "media-one"}
+	out := make(chan map[string]interface{}, 1)
+	go func() { out <- m.run(job(command)) }()
+	var approval *Approval
+	for i := 0; i < 1000; i++ {
+		m.mu.Lock()
+		approval = m.approvals[command.RequestKey]
+		pending := m.mediaPending
+		m.mu.Unlock()
+		if pending != nil {
+			t.Fatal("media dispatched before approval")
+		}
+		if approval != nil {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if approval == nil {
+		t.Fatal("no media approval")
+	}
+	approval.answer <- true
+	for i := 0; i < 1000; i++ {
+		m.mu.Lock()
+		pending := m.mediaPending
+		m.mu.Unlock()
+		if pending != nil {
+			break
+		}
+		time.Sleep(time.Millisecond)
+	}
+	if result := m.claimMedia(command.RequestKey).(map[string]interface{}); result["success"] != true {
+		t.Fatal(result)
+	}
+	if result := m.claimMedia(command.RequestKey).(map[string]interface{}); result["success"] == true {
+		t.Fatal("duplicate media claim")
+	}
+	if err := m.mediaResult(command.RequestKey, map[string]interface{}{"success": false, "error": "unsupported_codec"}); err != nil {
+		t.Fatal(err)
+	}
+	if result := <-out; result["success"] != false {
+		t.Fatal("false playback success", result)
+	}
+	if result := m.run(job(command)); result["error"] != "unsupported_codec" {
+		t.Fatal("replayed media", result)
+	}
+}
+
+func TestMemberMediaRejectsFileScheme(t *testing.T) {
+	m := testMember(t)
+	result := m.media(Command{Action: "play", URL: "file:///owner/key"})
+	if result["error"] != "url" {
+		t.Fatal(result)
+	}
+}

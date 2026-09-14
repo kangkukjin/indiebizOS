@@ -60,14 +60,20 @@ def translate(mapping, params):
 
 
 def execute(entry, params):
+    from member_files import resolve_references
+    try:
+        params = resolve_references(params)
+    except ValueError as exc:
+        return {"success": False, "error_type": "input", "error": str(exc)}
     command = translate(entry["limb_op"], params)
+    if entry.get("member_transform"):
+        from member_files import transform
+        return transform(entry, params, command, request)
     if command["op"] == "write" and "content" not in command:
         content = params.get("_prev_result")
         if content is None:
             return {"success": False, "error_type": "input", "error": "content 또는 직전 파이프 결과가 필요합니다"}
         command["content"] = content if isinstance(content, str) else json.dumps(content, ensure_ascii=False)
-    if command["op"] == "read" and any(k in params for k in ("pages", "blocks", "tables", "offset", "limit", "tail", "start_line", "end_line")):
-        return {"success": False, "error_type": "unsupported", "error": "회원 파일 읽기는 현재 UTF-8 텍스트 전체 읽기를 지원합니다"}
     result = request(command)
     if result.get("success") is False:
         return result

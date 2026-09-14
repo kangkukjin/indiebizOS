@@ -83,7 +83,7 @@ class MemberStore(context: Context) {
         db.rawQuery("SELECT id,code FROM sentences ORDER BY id LIMIT 100",null).use {
             while(it.moveToNext()) sentences.put(JSONObject().put("id",it.getString(0)).put("code",it.getString(1)))
         }
-        return JSONObject().put("success",true).put("history",history).put("memories",memories).put("sentences",sentences)
+        return JSONObject().put("success",true).put("history",history).put("memories",memories).put("sentences",sentences).put("recent_results",results())
     }
     fun path(raw: String): File {
         val files = File(root,"files").apply { mkdirs() }.canonicalFile

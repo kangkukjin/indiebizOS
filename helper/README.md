@@ -58,7 +58,10 @@ resources는 프로그램 폴더 안의 자원 상대경로, dependencies는 필
 독립 설치본에서 `.venv/bin/python3 scripts/import_member_archive.py member-export.zip`로 가져온다.
 
 검사: `go test -race ./...`, 배포 파일: `bash build.sh` (Windows amd64, macOS arm64/amd64, Linux amd64).
-현재 IBL 공개 묶음은 파일 기본 작업과 등록 프로그램이다. play/open 봉투 구현을 모든 미디어 어휘 공개와 혼동하지 않는다.
+회원 공개 후보는 파일/문서/등록 프로그램과 라디오다. 문서의 임시 변환은 허브에서, 원본·결과는 회원 기기에 둔다.
+라디오 media 봉투는 로컬 번들의 브라우저 오디오로 실행하고 실제 재생/중지/상태/볼륨 응답을 받는다.
+별도 플레이어 설치는 필요 없다. 화면을 켜 두어야 하며 브라우저가 지원하는 스트림 형식에 한한다.
+전달받은 media 명령은 한 번만 획득한다. 새로고침·연결 종료로 결과를 잃어도 자동 재생하지 않는다.
 
 회원 승인 화면은 접속한 허브에서 받아 실행하지 않는다. scripts/build_member_shell.py가 공통 member_shell/launcher_app_common을
 PC 바이너리와 APK의 정적 자산으로 파생한다. /m/app은 별도 웹 폴백이다. `build_member_shell.py --check`로 번들 드리프트를 검사한다.

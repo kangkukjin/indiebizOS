@@ -1,4 +1,4 @@
-"""영속 과제의 재검토: amend 길이/사슬 상한과 턴 기준 분리를 고정한다."""
+"""과거 keep/amend 어느 경로에서도 경량 기준이 현재 의식을 대신하지 않는다."""
 import boot_paths  # noqa: F401
 from types import SimpleNamespace
 import pytest
@@ -31,10 +31,9 @@ def drive(tmp_path):
 def test_amend_updates_framing_and_preserves_goal(drive):
     amended = '새 범위를 반영해 충분히 길게 다시 작성한 규정 전문입니다'
     out, row, calls = drive(amended=amended)
-    assert row['framing'] == amended and row['framing_meta']['_amend_count'] == out['_amend_count'] == 1
-    assert out['task_framing'] == '이번 턴 기준'
-    assert row['goal_criteria'] == '전체 목표' and out['achievement_criteria'] == '이번 턴 기준'
-    assert not calls
+    assert row['framing'] == out['task_framing'] == '의식이 새로 쓴 규정'
+    assert row['goal_criteria'] == '전체 목표' and out['achievement_criteria'] == '새 턴 기준'
+    assert calls and out['_framing_source'] == 'fresh_consciousness'
 
 
 def test_short_amend_reawakens_instead_of_using_stale_map(drive):
@@ -47,10 +46,10 @@ def test_amend_chain_cap_reawakens(drive):
     assert calls and not row['framing_meta'].get('_amend_count')
 
 
-def test_keep_reuses_with_new_turn_criteria(drive):
+def test_keep_does_not_reuse_background_criteria(drive):
     out, row, calls = drive(action='keep')
-    assert not calls and row['framing'] == '이전 규정'
-    assert out['achievement_criteria'] == '이번 턴 기준'
+    assert calls and row['framing'] == '의식이 새로 쓴 규정'
+    assert out['achievement_criteria'] == '새 턴 기준'
 
 
 if __name__ == '__main__':

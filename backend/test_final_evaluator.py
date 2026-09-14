@@ -270,6 +270,21 @@ def test_eval_input_does_not_promote_planning_advice_to_requirements(supervisor,
     assert finish(supervisor, "첫 가격이 두 번째보다 낮습니다")[-1]["content"] == "첫 가격이 두 번째보다 낮습니다"
 
 
+def test_request_criteria_conflict_is_deferred_not_learned_as_success(supervisor, monkeypatch):
+    supervisor.message = '제주 유입 정책이 지속되는 이유를 설명해줘'
+    supervisor.configure({'task_framing': '무관한 과제 범위',
+                          'achievement_criteria': '과제 범위 밖이므로 답하지 않는다'})
+    def evaluate(prompt, **kwargs):
+        assert supervisor.message in prompt
+        assert '기준이 현재 사용자 요청과 명백히 충돌하면 UNKNOWN' in kwargs['system_prompt']
+        return 'UNKNOWN\nC1은 원문 설명 요청을 무관한 과제 범위로 거부하게 만들어 충돌한다.'
+    monkeypatch.setattr('consciousness_agent.system_ai_call', evaluate)
+    supervisor.runner.ai.process_message_stream = lambda *a, **kw: pytest.fail('새 목표로 자동 재작업')
+    finish(supervisor, '범위 밖이라 답하지 않았습니다')
+    status = json.loads((supervisor.store.directory / 'review_status.json').read_text())
+    assert status['status'] == 'UNKNOWN' and status['learning'] == 'deferred'
+
+
 def test_criteria_are_fixed_across_repair_and_handoff(supervisor):
     from final_evaluator import prepare
     from supervisor_handoff import handoff_state

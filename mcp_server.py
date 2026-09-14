@@ -514,6 +514,7 @@ async def pursuit(op: str, id: str = "", section: str = "", title: str = "",
     note는 progress/next/open_questions/artifacts를 고쳐 씁니다. wait는 조건 저장만.
     done은 전체 goal_criteria를 충족한 뒤 why와 함께 호출합니다.
     park/abandon/resume/goal은 상태·전체 목표 변경이며 why가 필요합니다.
+    detach는 why와 함께 현재 턴의 오연결만 해제합니다. 과거 과제·기록은 보존하고 현재 질문을 계속 처리합니다.
     기억은 실행 권한이 아니며 현재 사용자 정정이 우선합니다.
     """
     h_agent, _, h_task, _ = _http_identity(ctx)

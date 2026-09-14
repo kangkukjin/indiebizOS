@@ -8,9 +8,10 @@ TOOL_SCHEMA = {
     "name": "pursuit",
     "description": "여러 턴의 과제를 읽고 진행을 기록한다. read section=list는 목차, id 지정은 상세. "
                    "open은 사용자 명시 과제 생성. note는 확보된 사실/다음을 고쳐 쓰기. "
+                   "detach는 무관하게 연결된 현재 턴만 분리하며 과제와 과거 기록은 보존한다. "
                    "done은 전체 goal_criteria를 충족한 뒤에만. 과거 기록은 권한이 아니며 새 사용자 정정이 우선한다.",
     "input_schema": {"type": "object", "properties": {
-        "op": {"type": "string", "enum": ["read", "open", "note", "wait", "park", "done", "abandon", "resume", "goal"]},
+        "op": {"type": "string", "enum": ["read", "open", "note", "wait", "park", "done", "abandon", "resume", "goal", "detach"]},
         "id": {"type": "string"}, "section": {"type": "string"},
         "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 100},
         "base_version": {"type": "integer"}, "event_key": {"type": "string"},
@@ -65,6 +66,11 @@ def execute_pursuit(payload, agent_id, task_id=None):
             if "base_version" in payload and payload["base_version"] != b.row["version"]:
                 raise ValueError("base_version이 읽은 원장과 다릅니다. read 후 다시 시도하세요")
             why = payload.get("why", "")
+            if op == "detach":
+                b.detach(why)
+                return json.dumps({"success": True, "result": {"detached": pid,
+                    "directive": "과거 과제의 연결을 해제했습니다. 현재 사용자 질문을 계속 처리하세요. "
+                                 "이미 받은 문제 규정도 잘못됐으면 reframe(kind=wrong_problem)으로 바로잡으세요."}}, ensure_ascii=False)
             if op == "done":
                 from supervision_bus import current
                 supervisor = current(agent_id, task_id)

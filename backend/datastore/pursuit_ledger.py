@@ -158,6 +158,11 @@ class PursuitLedger:
         pid = "pursuit_" + uuid.uuid5(uuid.NAMESPACE_URL, self.agent_key + ":" + task_id).hex
         now = time.time()
         with self.connect(True) as c:
+            # 같은 턴 안에서 오연결을 분리하고 새 과제를 만들 때 옛 객체를 되살리지 않는다.
+            while c.execute("SELECT 1 FROM pursuit_turn WHERE pursuit_id=? AND task_id=? "
+                            "AND state='detached'", (pid, task_id)).fetchone():
+                pid = "pursuit_" + uuid.uuid5(uuid.NAMESPACE_URL,
+                    self.agent_key + ":" + task_id + ":after:" + pid).hex
             if c.execute("SELECT 1 FROM pursuit WHERE id=?", (pid,)).fetchone():
                 return self._get(c, pid)
             state = {"title": title, "goal_criteria": goal_criteria, "framing": "", "approach": "",
@@ -211,9 +216,27 @@ class PursuitLedger:
             self._get(c, pid)
             sql = "SELECT * FROM pursuit_turn WHERE pursuit_id=?"
             if pending_only:
-                sql += " AND state != 'applied'"
+                sql += " AND state NOT IN ('applied','detached')"
             return [dict(r) | {"tools": json.loads(r["tools"])}
                     for r in c.execute(sql + " ORDER BY source_order", (pid,))]
+
+    def detach_turn(self, pid, task_id, why):
+        """현재 연결만 회수한다. 원문과 사건은 보존하며 늦은 증류의 재합류도 막는다."""
+        if not isinstance(why, str) or not why.strip():
+            raise ValueError("과제 연결 해제에는 why가 필요합니다")
+        with self.connect(True) as c:
+            self._get(c, pid)
+            turn = c.execute("SELECT state FROM pursuit_turn WHERE pursuit_id=? AND task_id=?",
+                             (pid, task_id)).fetchone()
+            if turn is None:
+                raise ValueError("분리할 과제 턴이 없습니다")
+            self._event(c, pid, "detach:" + task_id, task_id, "turn.detached", {"why": why})
+            c.execute("UPDATE pursuit_turn SET state='detached',updated_at=? WHERE pursuit_id=? AND task_id=?",
+                      (time.time(), pid, task_id))
+            # 잘못 붙은 턴으로 옛 과제가 최신 과제처럼 떠오르지 않게 한다.
+            c.execute("UPDATE pursuit SET last_turn_at=COALESCE((SELECT max(e.created_at) "
+                      "FROM pursuit_turn t JOIN pursuit_event e ON e.id=t.source_order "
+                      "WHERE t.pursuit_id=? AND t.state!='detached'),created_at) WHERE id=?", (pid, pid))
 
     def events(self, pid, offset=0, limit=50):
         offset, limit = page_bounds(offset, limit)
@@ -232,6 +255,9 @@ class PursuitLedger:
             raise ValueError("턴 요약은 진행 필드만 갱신할 수 있습니다")
         with self.connect(True) as c:
             row = self._get(c, pid)
+            if summary and c.execute("SELECT 1 FROM pursuit_turn WHERE pursuit_id=? AND task_id=? "
+                                     "AND state='detached'", (pid, task_id)).fetchone():
+                return row  # 분리 전에 출발한 요약도 현재 과제에 다시 붙지 못한다.
             if c.execute("SELECT 1 FROM pursuit_event WHERE pursuit_id=? AND event_key=?",
                          (pid, event_key)).fetchone():
                 return row  # 재시도 — 적용과 사건 적재가 같은 트랜잭션

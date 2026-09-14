@@ -261,12 +261,13 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
   - 출력: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
-- **과제 선택·규정 재검토 (2026-09-09)** — `pursuit_bind.py`, `pursuit_ledger.py`
-  - 여러 턴의 과제를 자아별 대화 DB에 영속화한다. task_id는 한 턴, pursuit는 여러 턴의 일이다.
-  - 선택(같은 과제인가)과 재검토(규정이 유효한가)를 분리한다. 반박은 연결을 끊지 않고 규정을 다시 쓴다. EXECUTE/Reflex도 연결·진행 갱신에 참여하고, 정정이면 의식을 거친다.
-  - 과제 goal_criteria와 턴 achievement_criteria는 별개. 규정 재사용은 과제에 연결된 턴만 가능하며 30분 캐시는 폐지했다. 수리 권한은 기억으로 상속하지 않는다.
-  - 턴 원문을 먼저 저장하고 비동기 요약한다. 다음 턴은 미반영 요약을 먼저 따라잡는다. 버전 검사·멱등 사건·필드별 출처 순서로 늦은 요약이 후속 정정을 덮지 못한다.
-  - 대화 삭제·재시작과 과제는 독립. 상세 계약: `docs/PURSUIT_LEDGER_HANDOFF_2026_09_09.md`, 기억 지도: memory.md 작업 기억 절.
+- **과제 선택·현재 문제 규정** — `pursuit_bind.py`, `pursuit_ledger.py`
+  - task_id는 한 턴, pursuit는 여러 턴의 일이다. 전체 goal_criteria와 이번 턴 achievement_criteria는 별개이며 과제는 대화 삭제·재시작과 독립이다.
+  - 자아별 영속 과제는 관련성 후보다. 최근 대화를 함께 본 경량 검토가 무관한 후보를 detach로 배제하며, 오연결 회수는 원문·과제 보존과 양립한다.
+  - THINK/REPAIR는 현재 의식이 문제·기준을 새로 정한다. 경량 검토의 기준을 프레임으로 승격하지 않는다. 의식과 실행자가 연결을 해제할 수 있다.
+  - `pursuit.judgment`는 선택·검토 결과, `framing_source`는 새 판단 출처를 남긴다. 분리된 턴은 요약·재합류에서 제외한다.
+  - 정본 계약: `docs/CURRENT_INTENT_PURSUIT_REPAIR_2026_09_14.md`.
+
 - **평가 에이전트 (경량 AI)** — `final_evaluator` → `cognitive_eval._evaluate_achievement()`
   - 의식의 명시적 criteria/achievement_criteria만 판정한다. 목표·품질·멈춤선을 새로 정하지 않는다. 기준이 비면 평가도 없다.
   - 미달은 기존 기준 ID·증거·최소 보완을 연결한 DEFECTS로 전달한다. 기준 외 산문이나 연결 없는 지적은 재작업시키지 않는다. 최종 보완·재평가는 고정된 기준으로 최대 한 번이다. 수치 검사는 증거이며 별도 자동 탈락 조건이 아니다.

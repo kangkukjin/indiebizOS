@@ -35,6 +35,7 @@ def criteria_contract(message, framing):
     return {"user_goal": message, "owner": "consciousness", "criteria": rows,
             "policy": "평가는 이 criteria의 달성 여부만 판정한다. 사용자 원문은 기준의 뜻과 권한을 해석하는 맥락이다. "
                       "기준 추가·강화·면제는 평가자의 권한이 아니다. 의식이 정한 fallback만 적용하며 사용자 명시 조건을 대체하지 않는다. "
+                      "기준이 사용자 원문과 명백히 충돌하면 UNKNOWN으로 보고하며 승인하거나 대신 수정하지 않는다. "
                       "추천 도구·잠정 조사량·task_framing의 포부를 별도 합격 조건으로 만들지 않는다."}
 
 

@@ -116,9 +116,14 @@ def test_every_prompt_key_reaches_a_consumer(tmp_path):
         assert binding.row is not None
         assert binding.row["title"] == _sentinel("title")
         assert binding.row["goal_criteria"] == _sentinel("goal_criteria")
+        pid = binding.row["id"]
+        accept_output({**co, "scope": "turn", "detach_pursuit": True})
+        assert binding.row is None
+        assert ledger.get(pid)["title"] == _sentinel("title")
+        assert ledger.turns(pid)[0]["state"] == "detached"
     finally:
         _current.reset(token)
-    keys -= {"scope", "title", "goal_criteria"}
+    keys -= {"scope", "title", "goal_criteria", "detach_pursuit"}
     text = _assembled_text(co)
     probes = _bool_probes()
 

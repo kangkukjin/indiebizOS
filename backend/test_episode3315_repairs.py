@@ -36,7 +36,6 @@ def model_answers(monkeypatch, answers):
     '{"action":"keep","criteria":null}',
     '{"action":[],"criteria":"원고 작성"}',
     '{"action":"unknown","criteria":"원고 작성"}',
-    '{"action":"keep","criteria":""}',
     '{"action":"keep","criteria":"원고 작성","status":"done"}',
     '[]', '', None,
 ])
@@ -100,14 +99,20 @@ def test_real_prepare_preserves_pursuit_and_episode_link(tmp_path, monkeypatch, 
             memory, changed = pb.prepare("")
             assert changed and row["id"] in memory and binding.review == REVIEW
         else:
-            with pytest.raises(ValueError, match="2회 실패"):
-                pb.prepare("")
+            memory, changed = pb.prepare("")
+            assert changed and binding.row is None  # 기억 연결 실패는 새 의식으로 넘긴다.
         assert len(calls) == 3
         assert ledger.get(row["id"])["framing"] == "기존 규정"
-        assert ledger.turns(row["id"])[0]["episode_id"] == "3315"
+        if recover:
+            assert ledger.turns(row["id"])[0]["episode_id"] == "3315"
+        else:
+            assert not ledger.turns(row["id"])  # 검토 전에는 오염될 연결을 쓰지 않는다.
     finally:
         pb.leave(token)
-    assert ledger.turns(row["id"])[0]["state"] == "interrupted"
+    if recover:
+        assert ledger.turns(row["id"])[0]["state"] == "interrupted"
+    else:
+        assert not ledger.turns(row["id"])
 
 
 @pytest.fixture

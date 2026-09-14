@@ -264,7 +264,9 @@ class Supervisor:
         if binding and binding.row:
             self.original_pursuit = {k: binding.row[k] for k in ("id", "version", "goal_criteria")}
         self.log("framing", role="consciousness" if self.enabled else "harness",
-                 evaluation_enabled=self.evaluation_enabled, evidence=self.store.evidence(framing or {}))
+                 evaluation_enabled=self.evaluation_enabled,
+                 framing_source=(framing or {}).get("_framing_source", "unobserved"),
+                 evidence=self.store.evidence(framing or {}))
 
     @property
     def evaluation_enabled(self):

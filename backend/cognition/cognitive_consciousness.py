@@ -48,7 +48,7 @@ class CognitiveConsciousnessMixin:
     def _run_consciousness_or_reuse(self, user_message: str, history: list,
                                     execution_memory: str = "",
                                     repair: bool = False) -> Optional[dict]:
-        """영속 과제의 규정을 검토·재사용한다. 연결 없는 턴은 의식을 새로 깨운다."""
+        """호환 진입점. 영속 기억을 참고하되 THINK/REPAIR는 현재 문제를 새로 규정한다."""
         from pursuit_bind import run_consciousness
         return run_consciousness(self, user_message, history, execution_memory, repair)
 

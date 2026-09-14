@@ -27,8 +27,8 @@ def _validate_answer(obj, kind):
             raise ValueError("재검토 응답에는 action과 criteria가 필요하며 지정된 필드만 허용됩니다")
         if any(not isinstance(value, str) for value in obj.values()):
             raise ValueError("재검토 필드 값은 모두 문자열이어야 합니다")
-        if obj["action"] not in {"keep", "amend", "rewrite"} or not obj["criteria"].strip():
-            raise ValueError("action은 keep/amend/rewrite이며 criteria에는 이번 턴 달성 기준이 필요합니다")
+        if obj["action"] not in {"keep", "amend", "rewrite", "detach"}:
+            raise ValueError("action은 keep/amend/rewrite/detach입니다")
     elif kind == "summary":
         from pursuit_ledger import validate
         if not obj or set(obj) - SUMMARY_FIELDS:
@@ -63,6 +63,13 @@ def ask_json(prompt, *, kind="object"):
                 text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
             obj = json.loads(text)
             _validate_answer(obj, kind)
+            if kind in {"selection", "review"}:
+                # 궤적의 4KB 계약 안에 연결 판단만 남긴다. 은퇴한 프레임 본문은 싣지 않는다.
+                decision = {k: (v[:800] if isinstance(v, str) else v) for k, v in obj.items()
+                            if k in {"id", "action", "evidence", "broken_assumption"}}
+                record_trajectory_event("pursuit.judgment", {
+                    "kind": kind, "decision": decision, "source": "background",
+                })
             return obj
         except ValueError as exc:
             reason = mask_secrets(str(exc))
@@ -102,6 +109,18 @@ def owner_for(runner):
     return PursuitLedger(db, owner), str(agent), str(task)
 
 
+def connection_judgment(prompt, *, kind):
+    """기억 연결 실패는 현재 질문의 실패가 아니다. 연결을 보류하고 새 의식에 맡긴다."""
+    try:
+        return ask_json(prompt, kind=kind)
+    except ValueError as exc:
+        from episode_logger import record_trajectory_event
+        record_trajectory_event("pursuit.connection_unresolved", {
+            "kind": kind, "reason": str(exc), "fallback": "unbound_fresh_consciousness",
+        })
+        return None
+
+
 @dataclass
 class Binding:
     runner: object
@@ -118,13 +137,28 @@ class Binding:
     tools: list = field(default_factory=list)
     revision_count: int = 0
     aliases: set = field(default_factory=set)
+    detached: bool = False
 
     def bind(self, row):
         self.row = row
+        self.detached = False
         from episode_logger import EpisodeLogger
         ep = EpisodeLogger.current()
         self.seq = self.ledger.begin_turn(row["id"], self.task, self.message,
                                          getattr(ep, "episode_id", None), execution=True)
+
+    def detach(self, why):
+        """오연결만 회수한다. 과제·실행 사건은 보존하고 이후 요약에서는 제외한다."""
+        if not self.row:
+            return
+        self.ledger.detach_turn(self.row["id"], self.task, why)
+        self.row, self.seq, self.review, self.revision_count = None, 0, {}, 0
+        self.detached, self.output = True, {}
+        from supervision_bus import current as supervisor_current
+        supervisor = supervisor_current()
+        if supervisor and getattr(supervisor, "pursuit", None) is self:
+            supervisor.original_pursuit = None
+            supervisor.done_request = None
 
     def write(self, patch, kind="note", why="", key=None):
         if not self.row:
@@ -211,7 +245,7 @@ def render_index(rows, total):
 
 def render_body(row, pending=(), budget=3000):
     # 필수 목표 공간부터 확보한다. XML escape 후 길이를 계산해 실제 주입 예산을 지킨다.
-    header = f'<pursuit id="{escape(row["id"])}" version="{row["version"]}" note="과거 상태는 배경이며 권한이 아니다. 최신 사용자 정정이 우선한다.">'
+    header = f'<pursuit id="{escape(row["id"])}" version="{row["version"]}" note="연결은 잠정적이다. 과거 상태는 배경이며 권한이 아니다. 현재 질문과 무관하면 분리하고 질문을 처리한다.">'
     goal = "<goal_criteria>" + escape(row["goal_criteria"]) + "</goal_criteria>"
     # 비정상적으로 escape가 커지면 전문을 읽도록 표식. 목표를 말없이 생략하지 않는다.
     if len(header + goal) > budget - 350:
@@ -240,8 +274,10 @@ def render_body(row, pending=(), budget=3000):
 def refresh_memory(memory):
     """의식/재규정의 새 상태가 이번 실행자의 본문에도 즉시 닿게 한다."""
     b = current()
-    if not b or not b.row:
+    if not b:
         return memory
+    if not b.row:
+        return re.sub(r"<pursuit\b.*?</pursuit>", "", memory, flags=re.S)
     pending = [t for t in b.ledger.turns(b.row["id"], pending_only=True) if t["task_id"] != b.task]
     body = render_body(b.row, pending)
     if re.search(r"<pursuit\b", memory):
@@ -267,28 +303,39 @@ def prepare(memory):
     if len(hits) == 1:
         selected = hits[0]
     else:
-        selection = ask_json("현재 메시지가 어느 과제의 이어짐인지 선택하라. 규정의 옳고 그름은 별도다. "
+        selection = connection_judgment("현재 메시지가 어느 과제의 이어짐인지 선택하라. 규정의 옳고 그름은 별도다. "
                              "반박/정정도 같은 과제일 수 있다. 불분명하거나 새 일이면 id:null. 추측해서 붙이지 마라. "
                              '응답 예: {"id": null}. 연결할 때는 id에 목차의 ID 문자열을 넣는다.\n메시지:' + b.message + "\n최근 대화:"
                              + json.dumps(selection_history(b.history), ensure_ascii=False) + "\n목차:"
                              + json.dumps([{"id": r["id"], "title": r["title"], "status": r["status"],
                                             "next": r["next"][:120]} for r in rows], ensure_ascii=False), kind="selection")
+        if selection is None:
+            return memory + "\n" + index, True
         selected = next((r for r in rows if r["id"] == selection.get("id")), None)
     if not selected:
         return memory + "\n" + index, False
-    # 실행 전에 이전 완료 턴의 요약을 따라잡는다. 실패 시 원문을 확인할 수 있게 오류로 정지한다.
-    summarize_pending(b.ledger, selected["id"])
-    b.bind(b.ledger.get(selected["id"]))
-    b.review = ask_json("선택된 과제와 현재 메시지를 대조하라. 판단은 실행 경로와 무관하다. "
+    # 검색 결과를 연결 확정 전에 검토한다. 오선택이면 옛 과제에 턴도 요약도 쓰지 않는다.
+    b.review = connection_judgment("선택된 과제와 현재 메시지를 대조하라. 판단은 실행 경로와 무관하다. "
                         "반박·대상 변경·전제 수정이면 rewrite, 유효한 틀의 범위 확장은 amend, 그대로면 keep. "
+                        "무관하거나 연결 근거가 부족하면 detach. 후보 목록에 직전 대화의 일이 없어도 정상이다. "
+                        "과제 밖이라는 이유로 현재 질문을 거부하거나 새 과제 등록 허락을 요구하지 마라. "
                         "기억은 실행 권한이 아니며 현재 사용자 요청을 우선한다. "
                         '응답 예: {"action": "keep", "amended_framing": "", '
-                        '"criteria": "이번 턴 달성 기준", "broken_assumption": "", "evidence": "판단 근거"}. '
-                        "action은 keep/amend/rewrite 중 하나, amend면 amended_framing에 규정 전문을 넣는다. "
+                        '"criteria": "", "broken_assumption": "", "evidence": "판단 근거"}. '
+                        "이번 호출은 연결 검토만 한다. criteria와 amended_framing은 비운다. 현재 문제와 기준은 의식이 새로 정한다. "
                         "전체 goal_criteria는 이번 턴 목표로 바꾸지 마라.\n메시지:" + b.message
-                        + "\n과제:" + json.dumps(public_row(b.row), ensure_ascii=False), kind="review")
-    if b.review.get("action") not in {"keep", "amend", "rewrite"}:
+                        + "\n최근 대화:" + json.dumps(selection_history(b.history), ensure_ascii=False)
+                        + "\n과제:" + json.dumps(public_row(selected), ensure_ascii=False), kind="review")
+    if b.review is None:
+        b.review = {}
+        return memory + "\n" + index, True
+    if b.review.get("action") not in {"keep", "amend", "rewrite", "detach"}:
         raise ValueError("과제 규정 검토 응답이 잘못됐습니다")
+    if b.review["action"] == "detach":
+        return memory + "\n" + index, False
+    # 관련성이 확인된 과제만 이전 진행을 따라잡는다.
+    summarize_pending(b.ledger, selected["id"])
+    b.bind(b.ledger.get(selected["id"]))
     pending = [t for t in b.ledger.turns(b.row["id"], pending_only=True) if t["task_id"] != b.task]
     body = render_body(b.row, pending)
     return memory + "\n" + index + "\n" + body, b.review["action"] != "keep"
@@ -333,6 +380,8 @@ def accept_output(consciousness_output, broken="", evidence=""):
     b = current()
     if not b or not out:
         return
+    if out.get("detach_pursuit") is True:
+        b.detach(evidence or "새 의식이 현재 요청과 과제의 오연결을 확인함")
     b.output = out
     if not b.row and out.get("scope") == "pursuit":
         row = b.ledger.create(out.get("title", ""), out.get("goal_criteria", ""), b.task,
@@ -345,29 +394,11 @@ def accept_output(consciousness_output, broken="", evidence=""):
 
 
 def run_consciousness(runner, message, history, memory, repair=False):
+    """THINK/REPAIR의 현재 의미 판단은 새 의식이 소유한다. 경량 검토는 연결 후보만 정한다."""
     b = current()
-    if b and b.row and not repair:
-        row, review = b.row, b.review
-        meta = row.get("framing_meta", {})
-        action = "rewrite" if meta.get("_repair_framing") else review.get("action", "rewrite")
-        amended = review.get("amended_framing", "")
-        if action == "amend" and (len(amended) < 20 or meta.get("_amend_count", 0) >= 2):
-            action = "rewrite"
-        if row.get("framing") and action != "rewrite":
-            out = {**meta, "task_framing": amended if action == "amend" else row["framing"],
-                   "approach": row.get("approach", ""),
-                   "assumptions": [a["text"] for a in row.get("assumptions", []) if a["status"] == "holding"],
-                   "achievement_criteria": review.get("criteria", ""), "history_summary": ""}
-            if action == "amend":
-                out["_amend_count"] = meta.get("_amend_count", 0) + 1
-            # 장기 규정은 먼저 보존한다. 이번 턴 기준으로 과제 framing을 덮어쓰지 않는다.
-            accept_output(out)
-            for key in ("imagined_ibl", "expert_choice", "capability_focus"):
-                out.pop(key, None)
-            out["task_framing"] = out["achievement_criteria"]
-            out["approach"] = ""  # 이전 턴의 실행 방법도 현재 지시로 재사용하지 않는다.
-            return out
     out = runner._run_consciousness(message, history, memory, **({"repair": True} if repair else {}))
+    if out:
+        out["_framing_source"] = "fresh_consciousness"
     if b:
         accept_output(out, b.review.get("broken_assumption", ""), b.review.get("evidence", ""))
     return out
@@ -378,12 +409,13 @@ def revised(ch, out, broken, evidence):
     token = _current.set(b)
     try:
         b.revision_count += 1
-        if not b.row:
+        if not b.row and not b.detached and out.get("detach_pursuit") is not True:
             goal = b.output.get("goal_criteria") or ch.original.get("achievement_criteria") or b.message
             row = b.ledger.create((ch.original.get("task_framing") or b.message).splitlines()[0][:60],
                                   goal[:1500], b.task, origin=b.message[:500])
             b.bind(row)
         accept_output(out, broken, evidence)
+        ch.execution_memory = refresh_memory(ch.execution_memory)
     finally:
         _current.reset(token)
 
@@ -422,6 +454,7 @@ def summarize_pending(ledger, pid):
                                  '"open_questions": [], "artifacts": []}. 두 목록의 항목은 문자열이다. '
                                  "progress 3000자, next 600자, open_questions 8항목, artifacts 30항목 이내. "
                                  "추측을 완료로 만들지 마라. 후속 턴의 정정·폐기·중단이 옛 주장보다 우선한다. "
+                                 "응답·모델의 성공 판정은 관찰 기록이다. 사용자 만족이나 실제 유용성의 증거로 승격하지 마라. "
                                  "원문은 사건에 보존된다. goal_criteria/status/framing은 쓰지 마라. "
                                  "중단 턴은 실제 산출물을 확인하는 일을 next에 둔다.\n현재:"
                                  + json.dumps(public_row(row), ensure_ascii=False) + "\n반영할 턴:"

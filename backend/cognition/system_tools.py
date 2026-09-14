@@ -720,73 +720,13 @@ def _merge_map_envelopes(envelopes):
     return out
 
 
-# ============ 이미지 봉투 수확 (단일 관문) ============
-# IBL 경로에는 이미지 통과 배관이 없었다: _execute_ibl_unified 가 결과를 json.dumps 로
-# 문자열화하므로, 핸들러가 실어 보낸 base64 가 **텍스트로 박제**돼 모델에 그림이 아니라
-# 수십만 자의 쓰레기로 도착한다(200KB 이미지 ≈ 27만 자 ≈ 7만 토큰). 프로바이더
-# (anthropic/openai/gemini)는 이미 `{content, images, details}` dict 계약을 소비하는데,
-# execute_ibl 만 그 계약에 못 닿아 있던 것 — 그 이음매를 여기 한 곳에서 잇는다.
-#
-# 지도 봉투(_pluck_map_envelopes)와 같은 원리·같은 자리: 핸들러가 봉투를 어디에 두든
-# (단독 최상위 / 파이프 step 내부 / 병렬 브랜치 = JSON-문자열-in-리스트-in-문자열)
-# 재귀로 수확하고, 본문에서는 **base64 를 들어낸다**(텍스트 오염 방지).
-
-_IMAGE_ENVELOPE_KEY = "image_data"
-# 한 번의 도구 결과가 모델에 실어 보낼 이미지 상한 — 화면 캡처 연타로 컨텍스트가
-# 통째로 잠기는 걸 막는다(초과분은 본문의 경로로만 남는다).
-_MAX_TOOL_IMAGES = 4
-
-
-def _pluck_image_envelopes(node, found, depth=0):
-    """결과 트리에서 image_data 봉투를 pop 으로 뽑아 수집(변이). 중첩 JSON 문자열도
-    파고들어, 뽑힌 층만 재직렬화해 되돌린다. 반환값 = base64 가 제거된 노드.
-
-    봉투 계약: {"b64": str, "media_type": "image/png"|"image/jpeg", ...메타}
-    본문에는 base64 를 뺀 나머지 메타(크기·경로 등)를 `image` 키로 남겨, 이미지를 못 보는
-    경로(claude_code 등)에서도 '무엇이 찍혔는지·어디 저장됐는지'는 읽을 수 있게 한다."""
-    if depth > 16:   # 지도 관문과 동일 상한 — 래핑 한두 겹 더 감싸져도 유실 없게
-        return node
-    if isinstance(node, dict):
-        env = node.pop(_IMAGE_ENVELOPE_KEY, None)
-        if isinstance(env, dict) and env.get("b64"):
-            found.append(env)
-            node["image"] = {k: v for k, v in env.items() if k != "b64"}
-        for k in list(node.keys()):
-            node[k] = _pluck_image_envelopes(node[k], found, depth + 1)
-        return node
-    if isinstance(node, list):
-        return [_pluck_image_envelopes(v, found, depth + 1) for v in node]
-    if isinstance(node, str) and _IMAGE_ENVELOPE_KEY in node:
-        try:
-            inner = json.loads(node)
-        except (json.JSONDecodeError, TypeError):
-            return node
-        n_before = len(found)
-        inner = _pluck_image_envelopes(inner, found, depth + 1)
-        if len(found) > n_before:
-            return json.dumps(inner, ensure_ascii=False, indent=2)
-        return node
-    return node
-
+# ============ 이미지 봉투 수확 (모델 미리보기·MCP와 공용 계약) ============
 
 def _harvest_images(result):
-    """문자열 결과에서 이미지 봉투를 수확 → (정리된 결과, [{base64, media_type}]).
-    봉투가 없으면 원본을 그대로 돌려준다(비용 0)."""
-    if not isinstance(result, str) or _IMAGE_ENVELOPE_KEY not in result:
-        return result, []
-    try:
-        tree = json.loads(result)
-    except (json.JSONDecodeError, TypeError):
-        return result, []
-    found = []
-    tree = _pluck_image_envelopes(tree, found)
-    if not found:
-        return result, []
-    images = [{"base64": e["b64"], "media_type": e.get("media_type", "image/png")}
-              for e in found[:_MAX_TOOL_IMAGES]]
-    if len(found) > _MAX_TOOL_IMAGES:
-        print(f"[system_tools] 이미지 {len(found)}장 중 {_MAX_TOOL_IMAGES}장만 모델에 전달")
-    return json.dumps(tree, ensure_ascii=False, indent=2), images
+    from image_envelopes import harvest_images
+    cleaned, found = harvest_images(result)
+    return cleaned, [{"base64": e["b64"], "media_type": e.get("media_type", "image/png")}
+                     for e in found]
 
 
 # ============ 도구 중단 지원 ============
@@ -828,7 +768,11 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
     try:
         from repeat_guard import advise as _repeat_advise
         _sig = tool_name + "|" + json.dumps(tool_input or {}, sort_keys=True, ensure_ascii=False)
-        _advisory = _repeat_advise(agent_id or "anon", _sig)
+        observing = tool_name == "execute_ibl" and any(
+            (tool_input or {}).get(key) is not None and (tool_input or {}).get(key) is not False
+            for key in ("read_result", "describe", "recover", "check"))
+        if not observing:
+            _advisory = _repeat_advise(agent_id or "anon", _sig)
     except Exception:
         pass
 
@@ -901,7 +845,8 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
         _appendix = _advisory + _steer_text
         if _appendix:
             if isinstance(result, str):
-                result += _appendix
+                from repeat_guard import append_advisory
+                result = append_advisory(result, _appendix)
             elif isinstance(result, dict) and isinstance(result.get("content"), str):
                 result["content"] += _appendix
         if _harvested:

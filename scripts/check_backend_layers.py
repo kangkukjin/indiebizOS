@@ -41,7 +41,7 @@ LAYERS = {
     "base": {
         "history_excerpt",
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
-        "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract",
+        "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
         "member_runtime", "episode_logger", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",

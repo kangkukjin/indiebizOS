@@ -13,6 +13,7 @@
 오면 어차피 리셋되며, 조언-전용이라 오탐 비용이 낮다(사용자가 턴마다 같은 호출을
 정확히 3회 요구하는 드문 경우만 조언 한 줄).
 """
+import json
 import threading
 
 THRESHOLDS = (3, 5, 8)
@@ -47,3 +48,17 @@ def reset_all():
     """테스트 전용 — 체인 전체 초기화."""
     with _lock:
         _chains.clear()
+
+
+def append_advisory(raw, advisory):
+    """Keep machine-readable JSON valid when adding model-facing guidance."""
+    if not advisory:
+        return raw
+    try:
+        obj = json.loads(raw)
+    except (ValueError, TypeError):
+        return raw + advisory
+    if isinstance(obj, dict):
+        obj["_model_advisory"] = str(obj.get("_model_advisory", "")) + advisory
+        return json.dumps(obj, ensure_ascii=False)
+    return raw + advisory

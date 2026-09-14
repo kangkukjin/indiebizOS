@@ -531,6 +531,9 @@ tool_json:
         set:
           type: object
           description: '{새열: "식"} — 예 {전세가율: "round(보증금 / 매매가 * 100, 1)"}'
+        columns:
+          type: [object, string]
+          description: '기존 호환 입력. set과 같은 파생 열 객체, 또는 as와 함께 쓰는 단일 식. 새 문장은 set 객체를 권장한다.'
       required:
       - set
   - name: data_rename

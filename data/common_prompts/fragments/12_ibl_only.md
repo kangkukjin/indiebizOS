@@ -1,22 +1,22 @@
 <ibl_executor>
 # IBL (IndieBiz Logic) — Programming Language
 
-IBL은 외부 행위의 언어다. `execute_ibl`로 실행하며, 응답에 쓴 코드는 실행되지 않는다.
+IBL은 외부 행위 언어다. `execute_ibl`로 실행한다(응답 속 코드는 실행 안 됨).
 
 너의 도구는 3개다:
 1. `execute_ibl` — IBL 코드 실행 (검색, 데이터 조회, 파일 읽기/쓰기, 기기 제어, 통신 등 모든 외부 행위)
 2. `run_command` — 쉘 실행 (git·npm·pytest·Python/Node 스크립트 등)
 3. `read_guide` — 가이드 파일 읽기 (복잡한 작업 전에 매뉴얼 확인)
 
-`execute_ibl`이 주 도구다. 파일 읽기/쓰기·todo·알림도 별도 도구 없이 IBL로 실행한다.
+파일 읽기/쓰기·todo·알림도 주 도구 `execute_ibl`로 실행한다.
 
 ## Python / Node.js 실행
 
-여러 줄 코드는 `[self:write]{path,content}`로 `/tmp/`에 쓰고 `run_command`로 실행한다. 별도 실행 도구는 없다. 한 줄은 `run_command(cmd:"python3 -c 'print(2+2)'")`를 쓴다. 임시 스크립트는 작업 폴더 밖에 둔다.
+여러 줄 코드는 `[self:write]{path,content}`로 `/tmp/`에 쓰고 `run_command`로 실행한다(별도 실행 도구 없음). 한 줄은 `run_command(cmd:"python3 -c 'print(2+2)'")`. 임시 스크립트는 작업 폴더 밖에 둔다.
 
 ## 6 Nodes — 노드 선택 기준
 
-어떤 작업이든 먼저 "이 행위의 성격이 무엇인가"로 노드를 고른다:
+행위의 성격으로 노드를 고른다:
 
 | Node | 한 줄 정의 | 선택 기준 |
 |------|-----------|----------|
@@ -31,7 +31,7 @@ IBL은 외부 행위의 언어다. `execute_ibl`로 실행하며, 응답에 쓴 
 
 ## How to Use
 
-`execute_ibl`의 `code`에 실행할 IBL을 넣는다:
+`code`에 IBL을 넣는다:
 
 ```
 execute_ibl(code='[node:action]{params}')
@@ -41,6 +41,8 @@ execute_ibl(code='[node:action]{param: "value"}')
 `_raw: true` 는 잠자는 플래그(compress 선언 액션 0개) — 붙이지 말 것.
 
 ## Common Mistakes — NEVER do these
+
+큰따옴표 검색은 `{query:'"구절" 추가어'}`. 호스트·IBL 문자열 이스케이프는 별개다.
 
 ```
 WRONG: [self:get]{type: "time"}           # get은 액션이 아님. [self:time]을 써야 함
@@ -53,7 +55,7 @@ RIGHT: # 1단계: 검색                      # 주석은 `#` 하나뿐 (줄머�
 
 ## 액션과 op
 
-같은 도메인의 도구는 하나의 액션 아래 `op`로 구분한다. 카탈로그의 들여쓴 `.op이름`에서 고른다. `*`는 생략 시 적용되는 기본 op다. 기본값이 없으면 op를 반드시 적는다. 없는 op를 만들거나 이름을 바꾸지 않는다.
+같은 도메인의 도구는 액션 아래 `op`로 구분한다. 카탈로그의 `.op이름`에서 고른다. `*`는 기본 op이며, 기본값이 없으면 명시한다. op 창작·개명 금지.
 
 ```
 [limbs:browser]                              # 기본 snapshot: 접근성 트리·ref 조회
@@ -61,7 +63,7 @@ RIGHT: # 1단계: 검색                      # 주석은 `#` 하나뿐 (줄머�
 [limbs:browser]{op:"type",ref:"abc",text:"값"} # 조회한 ref에 입력
 ```
 
-카탈로그의 `노드:액션`을 그대로 대괄호에 넣고 나머지는 named parameter로 쓴다.
+카탈로그의 `노드:액션`을 대괄호에 넣고 named parameter를 쓴다.
 
 ## Pipeline Operators
 
@@ -75,6 +77,7 @@ RIGHT: # 1단계: 검색                      # 주석은 `#` 하나뿐 (줄머�
 <!-- GRAMMAR_OPERATORS:END -->
 
 **조합 규칙 (파서가 강제한다):**
+- 할당은 즉시 실행: `$a=A; $b=B; $a & $b`는 순차 실행 후 값 결합. 실행 병렬화는 `A & B`.
 - 한 세그먼트에 `&`와 `??` 혼용 금지(명시 에러) — `>>`로 단계를 나누거나 문장을 분리.
 - `&`·`??` 의 가지는 **괄호로 파이프를 묶을 수 있다**: `[A] & ([B] >> [table:rename]{map: {title: "name"}}) >> [table:merge]{by: "name"}`(분기 하나에만 전처리 — 교차 소스 키 정합) · `[A] ?? ([B] >> [table:take]{n: 2})`(둘째 가지가 통째 실행). 괄호 없는 가지는 단일 액션.
 - 괄호 안은 일반 step 을 `>>` 로 이은 파이프만 — 중첩 병렬·폴백·블록은 명시 에러. 더 복잡한 묶음은 ①변수(`$a = A >> B` 후 참조) ②함수(`[def: 이름]{…}` 로 떼어 가지엔 `[fn:이름]{…}`) ③행별 반복이면 `[table:each]`.
@@ -240,8 +243,8 @@ $avg = $total.value / 10
 
 ### 봉투 읽는 법
 - MCP: `_trimmed`=축약, 최종값=`final_result`. `_spilled`는 `ref.path` 읽기(재실행 금지).
-- **단일 액션**의 결과는 핸들러 원문 그대로다: `final_result` 키가 **없는 게 정상**이고 빈 봉투가 아니다(`{"items": [], "message": "…"}` 는 '통화 0행'이지 실패가 아니다). `final_result` 는 파이프·병렬 봉투에만 있다.
-- 파이프의 `results[]`는 단계 상태, `final_result`는 최종 미리보기다(큰 표 앞 8행, 산문 12,000자). 단일 결과는 객체다. `_model_omitted`(큰 원자료)·`_model_shared`(중복값)는 표시만 생략하며 원본은 보존된다. `$변수 >> [table:select]{columns:[…]}`로 재사용하거나 `code:"", read_result:{id:result_ref.id,offset,limit,path:["final_result","items"]}`로 저장된 값만 읽는다. path는 키/인덱스 배열이며 생략하면 원 봉투, 페이지는 문자 단위다. **조회 때문에 재실행하지 마라.** `_results_summarized`·`steps_total`·`final_result`로 파이프 봉투를 구별한다. 블록 표식은 `_caught`·`_untransformed`다.
+- **단일 액션**은 핸들러 원문: `final_result` 없음이 정상이다. `{"items": [], "message": "…"}`는 통화 0행이며 실패가 아니다. `final_result`는 파이프·병렬에만 있다.
+- 파이프의 `results[]`는 단계 상태, `final_result`는 최종 미리보기다(큰 표 앞 8행, 산문 12,000자). 단일 결과는 객체다. `_model_omitted`(큰 원자료)·`_model_shared`(중복값)는 표시만 생략하며 원본은 보존된다. `$변수 >> [table:select]{columns:[…]}`로 재사용하거나 `code:"", read_result:{id:result_ref.id,offset,limit,path:["final_result","items"]}`로 저장된 값만 읽는다. path는 키/인덱스 배열이며 생략하면 원 봉투, 페이지는 문자 단위다. **조회 때문에 재실행하지 마라.** 이미지는 호스트 이미지 출력으로 전달(base64 분할 조회·텍스트 직렬화 금지). `_results_summarized`·`steps_total`·`final_result`로 파이프 봉투를 구별한다. 블록 표식은 `_caught`·`_untransformed`다.
 - ★여러 문장(`$변수 = …` 줄들)은 **execute_ibl 한 번에 여러 줄로** 보내라 — 중간 통화는 엔진 안에 머물고 모델에겐 마지막 결과와 step 요약만 온다(따로 부르면 중간 결과가 매번 컨텍스트에 들어온다). 병렬 수집은 파이프 안에서 `[table:ai]`/`[table:brief]` 로 줄인 뒤 받는다.
 - **셸과 IBL 사이에서 데이터는 컨텍스트가 아니라 파일로 건넨다.** 셸로 되는 일은 셸로 해도 된다 — 문제는 두 쪽이 한 사슬에서 만나는 자리다. 셸이 낸 값(id 목록·경로·수치)을 IBL 문장에 손으로 되찍지 말고 셸이 JSON 으로 쓰게 한 뒤 `[self:ledger]{op: "select"}`·`[sense:sqlite]`·`[self:read]` 로 읽고, IBL 결과를 셸에 줄 땐 `[self:write]{path, spill: true}` 로 내려놓은 파일을 셸이 읽는다. 값이 모델을 거치는 이음매마다 왕복과 오타가 생긴다.
 - 긴 프로그램은 먼저 execute_ibl{code, check: true} 로 실행 없이 문장별 통화·열(types)과 문제(issues)를 보고, 초록이면 같은 code 를 한 번에 실행한다. 문법을 시험하려고 query: "a" 같은 탐침을 돌리지 않는다 — check 가 그 자리다.

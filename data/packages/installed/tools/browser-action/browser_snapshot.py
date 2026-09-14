@@ -221,13 +221,16 @@ def _extract_elements(ax_nodes: list, session, selectors: dict = None) -> list:
 
     for ax_node in ax_nodes:
         role_obj = ax_node.get("role", {})
-        role = role_obj.get("value", "") if isinstance(role_obj, dict) else str(role_obj)
+        role = str(role_obj.get("value") or "") if isinstance(role_obj, dict) else str(role_obj or "")
 
         name_obj = ax_node.get("name", {})
-        name = name_obj.get("value", "") if isinstance(name_obj, dict) else str(name_obj)
+        name = str(name_obj.get("value") or "") if isinstance(name_obj, dict) else str(name_obj or "")
 
         value_obj = ax_node.get("value", {})
-        value = value_obj.get("value", "") if isinstance(value_obj, dict) else str(value_obj)
+        value = value_obj.get("value", "") if isinstance(value_obj, dict) else value_obj
+        # AX slider/progress values are numbers (YouTube's seek position included).
+        # Keep zero and false visible, and only slice their display string.
+        value = "" if value is None else str(value)
 
         role_lower = role.lower()
 

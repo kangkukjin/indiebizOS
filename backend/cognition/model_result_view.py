@@ -185,6 +185,12 @@ def project_result(result, verbose=False):
     ref = store.evidence(raw)
     policy = display_policy()
     out = diet_envelope(result, verbose=False)
+    # Preserve image bytes before text previewing can fold them into a result_ref.
+    # Work on a serialized copy; raw evidence and live IBL variables stay intact.
+    from image_envelopes import harvest_images
+    cleaned, images = harvest_images(json.dumps(out, ensure_ascii=False, default=str))
+    if images:
+        out = json.loads(cleaned)
     # 오류 본문도 크롤 전문을 품을 수 있다. 상태·오류 위치를 남기고 전문은 증거로 읽는다.
     if out.get("_results_summarized") and isinstance(out.get("results"), list):
         out = dict(out)
@@ -209,17 +215,24 @@ def project_result(result, verbose=False):
     else:
         out = _project_currency(out, policy["metadata_chars"])
     out = preview_envelope(out, verbose=False, policy=policy)
-    if out == result and len(raw) < policy["min_chars"]:
+    if not images and out == result and len(raw) < policy["min_chars"]:
         return out
     out = dict(out)
     out["result_ref"] = _read_reference(ref, result)
     out["_hint"] = ('파이프 최종 값은 final_result, 단일 결과는 이 객체입니다. 생략된 값은 result_ref로 조회. '
                     'result_ref.paths는 실제 원문 경로이며 read_args로 바로 읽을 수 있습니다. '
                     '같은 턴 $변수는 원자료를 보존하므로 선택·필터에 재사용하세요.')
+    if images:
+        out["images"] = [{"base64": e["b64"], "media_type": e.get("media_type", "image/png")}
+                         for e in images]
+        out["_hint"] += ' 이미지는 별도 이미지 블록으로 첨부됩니다. base64 원문을 분할 조회하지 마세요.'
     # 문자열 JSON 속 중복도 정규화한 최종 값은 미리보기기가 소유한다.
     from episode_logger import record_trajectory_event
+    text_view = ({**out, "images": [{"media_type": e.get("media_type", "image/png")} for e in images]}
+                 if images else out)
     record_trajectory_event("context.result_projected", {"raw_chars": len(raw),
-                            "model_chars": len(json.dumps(out, ensure_ascii=False)),
+                            "model_chars": len(json.dumps(text_view, ensure_ascii=False)),
+                            "image_count": len(images),
                             "evidence_id": ref["id"], "verbose_requested": verbose})
     return out
 

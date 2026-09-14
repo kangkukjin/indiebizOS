@@ -370,6 +370,10 @@ class Supervisor:
             result_signature = digest(json.dumps(job_observation, sort_keys=True, ensure_ascii=False)) if job_observation else ref["id"]
             self.recent.append(self.log("tool.finished", id=key, name=call.get("name"), evidence=ref,
                                         is_error=error, elapsed_s=round(time.monotonic() - call.get("started", time.monotonic()), 3)))
+            payload = call.get("_payload") or {}
+            if (not error and str(call.get("name", "")).endswith("execute_ibl") and not payload.get("code")
+                    and (payload.get("read_result") is not None or payload.get("describe") is not None)):
+                return  # Evidence paging neither repairs an execution failure nor repeats execution.
             sig = call.get("name", "") + call.get("input", {}).get("id", "")
             self.repeats = self.repeats + 1 if sig == self.last_signature and result_signature == self.last_result else 1
             self.last_signature, self.last_result = sig, result_signature
@@ -387,6 +391,10 @@ class Supervisor:
                     self.trigger = ""
             if self.failures >= 2 or self.repeats >= 3:
                 self.trigger = "repeated_failure" if self.failures >= 2 else "unchanged_repeat"
+            elif self.trigger in {"repeated_failure", "unchanged_repeat"}:
+                self.log("review.trigger_retired", role="harness", trigger=self.trigger,
+                         reason="execution_no_longer_repeating")
+                self.trigger = ""
             self._discover_jobs(result)
 
     def run_tool(self, name, payload, execute):
@@ -533,6 +541,15 @@ class Supervisor:
             return
         try:
             now = time.monotonic()
+            with self.lock:
+                # tick may have captured a trigger just before the executor recovered.
+                # Keep unresolved failures in the evidence ledger; do not call a model
+                # solely to confirm that the consecutive-failure condition has ended.
+                if ((reason == "repeated_failure" and self.failures < 2)
+                        or (reason == "unchanged_repeat" and self.repeats < 3)):
+                    self.log("review.skipped", role="harness", trigger=reason,
+                             reason="execution_no_longer_repeating")
+                    return
             if (self.finalizing or self.cancelled() or self.reviews >= self.config["max_reviews"]
                     or not self.model_admitted("review")
                     or (self.reviews and now - self.last_review < self.config["review_interval_s"])):

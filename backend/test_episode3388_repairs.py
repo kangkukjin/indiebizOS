@@ -159,6 +159,11 @@ def test_http_command_without_task_runs_plan_review_final_and_mcp(tmp_path, monk
         assert first.get('success') is True and first['turn_vars']['live'] == ['자료'], first
         second = bridge('$자료 >> [table:take]{n:1}')
         assert second.get('success') is True and '자료' in second['turn_vars']['injected'], second
+        # The supervisor now revalidates stale reasons before paying for a model.
+        # Exercise an actual unresolved failure chain rather than injecting a label.
+        for _ in range(2):
+            failed = bridge('$자료 >> [table:select]{columns:["없는열"]}')
+            assert failed.get('success') is False, failed
         controller.review('repeated_failure')
         yield {'type': 'text', 'content': original}
         yield {'type': 'final', 'content': original}

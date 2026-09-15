@@ -66,7 +66,8 @@ wind_speed_unit 기본값은 kmh이고 ms를 지정할 수 있다.
 - 신규 회귀는 최종 55개다. 전체 `pytest backend/ -o addopts='' -q`: **4565 passed, 1 failed, 1 skipped**, 451.60초. 유일한 실패는 새 subject_contains 비교를 공통 함수로 위임하지 않았다는 값 판정 관문이었다.
 - 이를 `common.value_semantics.text_match`로 교체한 뒤 신규 55개·값 판정 관문·트리거 기존 회귀를 함께 재실행: **82 passed**, 6.16초. 이 한 줄 수정 후 전체 스위트를 다시 실행하지는 않았다.
 - 어휘 빌드 및 `--check`, Android 몸 번들 재생성, backend 층 검사, 은퇴 계약 검사를 통과했다.
-- 실행 중 백엔드는 변경 감지 제어자가 자동으로 재기동한다. 마지막 상태 확인은 커밋 후 기록한다.
+- 실행 중 백엔드는 변경 감지 제어자가 자동 재기동했다. 최종 확인: phase=ACTIVE, /health=healthy, 실행 코드 지문=디스크 지문, 활성 턴 0개.
+- 정본 main 구현 커밋: `6a2f6dd5545f3e3ac58de8136b846a4278f713e9`. 커밋 전 필수 검사 전부 통과(자기수정 안전장치 30개 포함).
 
 ## 회원 파일 경로 재감사
 

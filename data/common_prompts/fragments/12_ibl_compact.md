@@ -19,6 +19,7 @@ IBL은 정보 흐름 언어다. 도구 execute_ibl(CLI: mcp__indiebizos__execute
 
 파이프 최종 값은 final_result, results는 단계 상태다. 단일 결과는 객체 자체다. _preview·partial·오류·실패 개수를 함께 확인한다.
 result_ref가 있으면 code="", read_result={id,offset,limit,path?}로 저장된 원문을 읽는다.
+문서·스킬은 이미 읽은 구간을 재조회하지 말고 필요한 미열람 구간만 읽는다. 파일의 줄 번호와 read_result의 문자 offset을 구분하고, 반환된 전체 줄 수·has_more에서 끝내라. 비교에 필요한 필드·문단을 먼저 선택하고 큰 검색·크롤 결과 전체를 여러 페이지로 옮기지 않는다. 전체 열람이 필수인 문서는 겹치지 않는 페이지로 끝까지 읽는다.
 path:["final_result","items"] 또는 ["items",0]은 해당 값만 JSON을 해제해 읽는다(문자 단위 페이지).
 _model_omitted는 items 옆의 큰 보조 원자료를 표시에서만 생략했다는 뜻이다. 원본·$변수는 보존된다.
 상세를 보기 위해 크롤·생성·쓰기·업로드를 다시 실행하지 않는다. 다음 페이지는 next_read 그대로. 이미지 블록은 호스트의 이미지 출력으로 전달하고 base64 분할 조회·텍스트 직렬화를 하지 않는다.

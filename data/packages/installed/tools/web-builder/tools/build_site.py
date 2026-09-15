@@ -23,7 +23,7 @@ TOOL_PARAMETERS = {
 }
 
 
-def run_command(cmd: list, cwd: str = None, timeout: int = 300) -> dict:
+def run_command(cmd: list, cwd: str = None, timeout: int = 300, env=None) -> dict:
     """명령어 실행"""
     try:
         result = subprocess.run(
@@ -31,7 +31,8 @@ def run_command(cmd: list, cwd: str = None, timeout: int = 300) -> dict:
             cwd=cwd,
             capture_output=True,
             text=True,
-            timeout=timeout
+            timeout=timeout,
+            env=env
         )
         return {
             "success": result.returncode == 0,
@@ -44,28 +45,39 @@ def run_command(cmd: list, cwd: str = None, timeout: int = 300) -> dict:
         return {"success": False, "error": str(e)}
 
 
-def get_build_stats(project_path: str) -> dict:
-    """빌드 결과 통계"""
-    out_dir = os.path.join(project_path, ".next")
-    stats = {
-        "output_dir": out_dir,
-        "exists": os.path.exists(out_dir)
-    }
+def _artifact_snapshot(project_path):
+    """관례 경로는 후보일 뿐이다. 실제 빌드에서 바뀐 파일로 출력 경로를 확인한다."""
+    snapshots = {}
+    for name in (".next", "dist", "out", "build", ".output"):
+        directory = os.path.join(project_path, name)
+        if not os.path.isdir(directory):
+            continue
+        files = []
+        for root, dirs, names in os.walk(directory, followlinks=False):
+            dirs[:] = [d for d in dirs if not os.path.islink(os.path.join(root, d))]
+            for filename in sorted(names):
+                path = os.path.join(root, filename)
+                if os.path.islink(path):
+                    continue
+                stat = os.stat(path)
+                files.append((os.path.relpath(path, directory), stat.st_size, stat.st_mtime_ns))
+        snapshots[name] = sorted(files)
+    return snapshots
 
-    if stats["exists"]:
-        # 디렉토리 크기 계산
-        total_size = 0
-        file_count = 0
-        for dirpath, dirnames, filenames in os.walk(out_dir):
-            for f in filenames:
-                fp = os.path.join(dirpath, f)
-                total_size += os.path.getsize(fp)
-                file_count += 1
 
-        stats["total_size_mb"] = round(total_size / (1024 * 1024), 2)
-        stats["file_count"] = file_count
-
-    return stats
+def get_build_stats(project_path: str, before=None) -> dict:
+    """빌드가 갱신한 후보가 하나일 때만 출력 경로를 확정한다."""
+    after = _artifact_snapshot(project_path)
+    candidates = [name for name, files in after.items()
+                  if files and (before is None or files != before.get(name))]
+    outputs = [{"output_dir": os.path.join(project_path, name), "exists": True,
+                "total_size_mb": round(sum(f[1] for f in after[name]) / (1024 * 1024), 2),
+                "file_count": len(after[name])} for name in candidates]
+    if len(outputs) == 1:
+        return {**outputs[0], "outputs": outputs}
+    return {"output_dir": None, "exists": False, "outputs": outputs,
+            "message": "빌드 출력 경로가 여러 개입니다." if outputs else
+                       "관례 경로에서 갱신된 산출물을 확인하지 못했습니다. 프로젝트 빌드 설정을 확인하세요."}
 
 
 def run(project_path: str, analyze: bool = False) -> dict:
@@ -87,27 +99,25 @@ def run(project_path: str, analyze: bool = False) -> dict:
     if not os.path.exists(package_json):
         return {"success": False, "error": "package.json을 찾을 수 없습니다"}
 
+    try:
+        with open(package_json, encoding="utf-8") as source:
+            package = json.load(source)
+    except (OSError, ValueError) as exc:
+        return {"success": False, "error": f"package.json 읽기 실패: {exc}"}
+    scripts = package.get("scripts", {})
+    if not scripts.get("build"):
+        return {"success": False, "error": "package.json에 build 스크립트가 없습니다."}
     results = []
-
-    # 1. 린트 검사 (선택적)
-    results.append("1. 코드 검사 중...")
-    lint_result = run_command(["npm", "run", "lint"], cwd=project_path, timeout=60)
-    if lint_result["success"]:
-        results.append("   ✓ 린트 검사 통과")
+    if scripts.get("lint"):
+        lint_result = run_command(["npm", "run", "lint"], cwd=project_path, timeout=60)
+        results.append("린트 검사 통과" if lint_result["success"] else "린트 검사 실패 (빌드 계속 진행)")
     else:
-        results.append("   ⚠ 린트 경고가 있습니다 (빌드 계속 진행)")
+        results.append("lint 스크립트 없음 — 검사 생략")
 
-    # 2. 빌드 실행
-    results.append("2. 프로덕션 빌드 중...")
-    build_cmd = ["npm", "run", "build"]
-
-    if analyze:
-        # 번들 분석 환경변수 설정
-        env = os.environ.copy()
-        env["ANALYZE"] = "true"
-        build_result = run_command(build_cmd, cwd=project_path, timeout=300)
-    else:
-        build_result = run_command(build_cmd, cwd=project_path, timeout=300)
+    before = _artifact_snapshot(project_path)
+    results.append("프로덕션 빌드 중...")
+    env = {**os.environ, "ANALYZE": "true"} if analyze else None
+    build_result = run_command(["npm", "run", "build"], cwd=project_path, timeout=300, env=env)
 
     if not build_result["success"]:
         error_msg = build_result.get("stderr", build_result.get("error", "알 수 없는 오류"))
@@ -120,9 +130,9 @@ def run(project_path: str, analyze: bool = False) -> dict:
     results.append("   ✓ 빌드 완료")
 
     # 3. 빌드 통계
-    stats = get_build_stats(project_path)
+    stats = get_build_stats(project_path, before)
     results.append(f"3. 빌드 결과:")
-    results.append(f"   - 출력 디렉토리: .next/")
+    results.append(f"   - 출력 디렉토리: {stats['output_dir'] or '미확정'}")
     results.append(f"   - 총 크기: {stats.get('total_size_mb', 'N/A')} MB")
     results.append(f"   - 파일 수: {stats.get('file_count', 'N/A')}개")
 
@@ -137,13 +147,12 @@ def run(project_path: str, analyze: bool = False) -> dict:
     return {
         "success": True,
         "project_path": project_path,
-        "output_dir": os.path.join(project_path, ".next"),
+        "output_dir": stats["output_dir"],
         "stats": stats,
         "logs": results,
         "next_steps": [
-            "preview_site로 빌드 결과 확인",
-            "deploy_vercel로 Vercel에 배포",
-            "또는 .next 폴더를 다른 호스팅에 업로드"
+            "프로젝트의 기존 미리보기 절차로 실제 산출물을 확인",
+            "등록된 배포처와 프로젝트 배포 설정에 따라 검증한 산출물을 배포"
         ]
     }
 

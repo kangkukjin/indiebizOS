@@ -371,7 +371,7 @@ async def execute_ibl(code: str, project_path: str = "",
 
 
 @mcp.tool()
-async def read_guide(query: str, read: bool = True) -> str:
+async def read_guide(query: str, read: bool = True, ctx: Context = None) -> str:
     """작업 가이드(워크플로우·레시피)를 가이드 DB에서 검색해 읽습니다.
 
     복잡한 정기 작업(동향 보고서·작업계획서·출판·배포 등) 전에 관련 가이드를 먼저 확인하세요.
@@ -384,8 +384,11 @@ async def read_guide(query: str, read: bool = True) -> str:
     ※ in-process 프로바이더(Gemini 등)는 이 도구를 자기 프로세스에서 직접 갖는다.
       이 MCP 노출은 아웃오브프로세스인 Claude Code 가 같은 능력을 갖게 하는 통로다.
     """
+    header_agent, _, header_task, _ = _http_identity(ctx)
+    agent_id, task_id = header_agent or DEFAULT_AGENT_ID, header_task or DEFAULT_TASK_ID
     return await anyio.to_thread.run_sync(
-        lambda: _post_backend("/ibl/read_guide", {"query": query, "read": read}, 30)
+        lambda: _post_backend("/ibl/read_guide", {"query": query, "read": read,
+                                               "agent_id": agent_id, "task_id": task_id}, 30)
     )
 
 

@@ -461,7 +461,17 @@ class CognitivePipelineMixin:
                                                                     repair=True)
             from thread_context import get_task_origin, get_current_task_id, get_current_agent_id
             _origin = get_task_origin()
-            if _origin == "user":
+            if (isinstance(consciousness_output, dict)
+                    and consciousness_output.get("needs_repair") is False
+                    and self._tag_override(message) != "REPAIR"):
+                request_type = "THINK"
+                record_trajectory_event("cognition.route", {
+                    "request_type": "THINK", "previous_request_type": "REPAIR",
+                    "reason": "consciousness_rejected_core_repair", "reflex": False,
+                    "force_role": "", "intent": "task",
+                })
+                print("[수리] 의식이 코어 수정 불필요로 정정 — RED 그랜트 없이 THINK 실행")
+            elif _origin == "user":
                 original_provider = _switch_to_role(self, "system_repair")
                 from red_grant import issue_grant
                 _g_task = get_current_task_id() or ""

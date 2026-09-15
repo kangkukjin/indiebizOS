@@ -244,9 +244,10 @@ $avg = $total.value / 10
 ### 봉투 읽는 법
 - MCP: `_trimmed`=축약, 최종값=`final_result`. `_spilled`는 `ref.path` 읽기(재실행 금지).
 - **단일 액션**은 핸들러 원문: `final_result` 없음이 정상이다. `{"items": [], "message": "…"}`는 통화 0행이며 실패가 아니다. `final_result`는 파이프·병렬에만 있다.
+- **문서 읽기**: 미열람 범위만 읽고 EOF에서 멈춘다(줄 번호≠문자 offset). 원본·spill 중복 조회 금지. 필수 전문은 겹치지 않게 끝까지 읽는다.
 - 파이프의 `results[]`는 단계 상태, `final_result`는 최종 미리보기다(큰 표 앞 8행, 산문 12,000자). 단일 결과는 객체다. `_model_omitted`(큰 원자료)·`_model_shared`(중복값)는 표시만 생략하며 원본은 보존된다. `$변수 >> [table:select]{columns:[…]}`로 재사용하거나 `code:"", read_result:{id:result_ref.id,offset,limit,path:["final_result","items"]}`로 저장된 값만 읽는다. path는 키/인덱스 배열이며 생략하면 원 봉투, 페이지는 문자 단위다. **조회 때문에 재실행하지 마라.** 이미지는 호스트 이미지 출력으로 전달(base64 분할 조회·텍스트 직렬화 금지). `_results_summarized`·`steps_total`·`final_result`로 파이프 봉투를 구별한다. 블록 표식은 `_caught`·`_untransformed`다.
 - ★여러 문장(`$변수 = …` 줄들)은 **execute_ibl 한 번에 여러 줄로** 보내라 — 중간 통화는 엔진 안에 머물고 모델에겐 마지막 결과와 step 요약만 온다(따로 부르면 중간 결과가 매번 컨텍스트에 들어온다). 병렬 수집은 파이프 안에서 `[table:ai]`/`[table:brief]` 로 줄인 뒤 받는다.
-- **셸과 IBL 사이에서 데이터는 컨텍스트가 아니라 파일로 건넨다.** 셸로 되는 일은 셸로 해도 된다 — 문제는 두 쪽이 한 사슬에서 만나는 자리다. 셸이 낸 값(id 목록·경로·수치)을 IBL 문장에 손으로 되찍지 말고 셸이 JSON 으로 쓰게 한 뒤 `[self:ledger]{op: "select"}`·`[sense:sqlite]`·`[self:read]` 로 읽고, IBL 결과를 셸에 줄 땐 `[self:write]{path, spill: true}` 로 내려놓은 파일을 셸이 읽는다. 값이 모델을 거치는 이음매마다 왕복과 오타가 생긴다.
+- **셸↔IBL 데이터는 파일로 전달한다.** 셸 사용은 허용하되 결과(id·경로·수치)를 모델이 재타이핑하지 않는다. 셸이 쓴 JSON은 `[self:ledger]{op:"select"}`·`[sense:sqlite]`·`[self:read]`로 읽고, IBL 결과는 `[self:write]{path,spill:true}` 파일을 셸이 읽는다. 컨텍스트를 거치는 왕복·오타를 줄인다.
 - 긴 프로그램은 먼저 execute_ibl{code, check: true} 로 실행 없이 문장별 통화·열(types)과 문제(issues)를 보고, 초록이면 같은 code 를 한 번에 실행한다. 문법을 시험하려고 query: "a" 같은 탐침을 돌리지 않는다 — check 가 그 자리다.
 - 실행 관문은 확정된 통화 불일치(예: 산문 뒤 [table:union], 확정 열 밖 필드)를 실행 전에 error_type:"typecheck" 로 거절한다 — issues 의 statement·step·hint 를 읽고 그 문장만 고친다. 미상(unknown)은 거절하지 않는다.
 - 한 AI 낱말의 입력 상한(6만 자)을 넘는 긴 문자열·자막은 `[table:chunk]{size}` 로 덩이 items 를 만들어 `[table:each]{do: "[table:brief]{items: [$it], …}"}` 로 덩이마다 줄이고 `[table:brief]` 로 종합한다(자르기→각각→종합).

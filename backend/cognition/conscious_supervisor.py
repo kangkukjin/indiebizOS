@@ -366,10 +366,14 @@ class Supervisor:
         with self.lock:
             call = self.active.pop(key, {})
             ref = self.store.evidence(result)
+            from supervisor_review import missing_read_observation
+            observation = error and missing_read_observation(call.get("name", ""),
+                                                             call.get("_payload") or {}, result)
             job_observation = _job_observation(result)
             result_signature = digest(json.dumps(job_observation, sort_keys=True, ensure_ascii=False)) if job_observation else ref["id"]
             self.recent.append(self.log("tool.finished", id=key, name=call.get("name"), evidence=ref,
-                                        is_error=error, elapsed_s=round(time.monotonic() - call.get("started", time.monotonic()), 3)))
+                                        is_error=error, observation="missing_read" if observation else "",
+                                        elapsed_s=round(time.monotonic() - call.get("started", time.monotonic()), 3)))
             payload = call.get("_payload") or {}
             if (not error and str(call.get("name", "")).endswith("execute_ibl") and not payload.get("code")
                     and (payload.get("read_result") is not None or payload.get("describe") is not None)):
@@ -377,11 +381,12 @@ class Supervisor:
             sig = call.get("name", "") + call.get("input", {}).get("id", "")
             self.repeats = self.repeats + 1 if sig == self.last_signature and result_signature == self.last_result else 1
             self.last_signature, self.last_result = sig, result_signature
-            self.failures = self.failures + 1 if error else 0
-            if error or self.repeats >= 3:
+            if not observation:
+                self.failures = self.failures + 1 if error else 0
+            if (error and not observation) or self.repeats >= 3:
                 prior = self.issues.get(sig, {})
                 self.issues[sig] = {"open": True, "generation": prior.get("generation", 0),
-                                    "kind": "failure" if error else "repeat"}
+                                    "kind": "failure" if error and not observation else "repeat"}
             elif sig in self.issues and self.issues[sig]["open"]:
                 self.issues[sig] = {"open": False, "generation": self.issues[sig]["generation"] + 1}
             if self.repeats == 1 and not error and not job_observation:

@@ -179,14 +179,14 @@ def trace_provider_method(method):
 
 
 def count_execution_rounds(rows):
-    """사용자 실행(execution·system_ai)의 왕복. 배경 원샷·평가 등은 제외한다.
+    """사용자 실행(execution·system_ai·system_repair)의 왕복. 배경·평가는 제외한다.
 
     새 원장은 호출 내 사건 번호, 옛 원장은 라운드 리셋별 최댓값을 합산한다.
     system_ai는 시스템 AI 진입점이 실행 모델을 선택할 때 붙이는 역할이다.
     """
     observed, legacy_total, previous = set(), 0, 0
     for row in rows:
-        if row.get("event") != "round" or (row.get("role") or "execution") not in ("execution", "system_ai"):
+        if row.get("event") != "round" or (row.get("role") or "execution") not in ("execution", "system_ai", "system_repair"):
             continue
         n = int(row.get("round") or 0)
         if row.get("call_id") and row.get("round_index"):

@@ -1010,7 +1010,7 @@ def _execute_launcher_command(action: str, params: dict) -> dict:
         return {"success": False, "error": f"Launcher 명령 오류: {str(e)}"}
 
 
-def search_guide(query: str, params: dict) -> Any:
+def _search_guide(query: str, params: dict) -> Any:
     """가이드 DB 검색 — 복잡한 작업 전에 워크플로우/레시피 확인
 
     DB(guide_db.json)에서 키워드 매칭 후 data/guides/ 폴더에서 파일 읽기.
@@ -1019,15 +1019,6 @@ def search_guide(query: str, params: dict) -> Any:
     """
     import json as _json
     from pathlib import Path as _Path
-
-    # 자작 관문의 '확인' — read_guide 로 지도를 열어도 같다(2026-09-07).
-    try:
-        if "world_tools" in str(query):
-            from thread_context import get_current_agent_id
-            from selfbuild_gate import note_consult
-            note_consult(get_current_agent_id() or "", "read_guide(world_tools)")
-    except Exception:
-        pass
 
     data_dir = _Path(__file__).parent.parent.parent / "data"
     guide_db_path = data_dir / "guide_db.json"
@@ -1139,10 +1130,23 @@ def search_guide(query: str, params: dict) -> Any:
                 try:
                     response["guide_content"] = guide_path.read_text(encoding='utf-8')
                     response["guide_name"] = best["name"]
+                    response["file"] = guide_file
                 except Exception:
                     pass
 
     return response
+
+
+def search_guide(query: str, params: dict) -> Any:
+    """실제로 반환한 가이드 본문을 현재 행위자의 열람으로 기록한다."""
+    result = _search_guide(query, params)
+    if (params.get("read", True) and isinstance(result, dict)
+            and (result.get("content") or result.get("guide_content"))
+            and result.get("file") in {"world_tools.md", "world_tools_local.md"}):
+        from thread_context import get_current_agent_id
+        from selfbuild_gate import note_consult
+        note_consult(get_current_agent_id() or "", f"read_guide({result['file']})")
+    return result
 
 
 # 위임 기계(_delegate_unified·_delegate_workflow·_agent_ask_sync·_agent_info)는

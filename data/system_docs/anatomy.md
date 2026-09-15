@@ -93,6 +93,8 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 
 **과제 기억과 현재 의도**: 영속 과제의 연결은 잠정적이다. 경량 검토는 최근 대화로 관련성을 검토하고 무관한 후보를 분리한다. THINK/REPAIR의 프레임은 현재 의식이 새로 작성하며, 옛 과제 범위를 현재 질문의 거부 사유로 삼지 않는다. 의식·실행자가 오연결을 해제하면 원문은 보존하고 과제 요약에는 합류시키지 않는다. [수리와 검증](../../docs/CURRENT_INTENT_PURSUIT_REPAIR_2026_09_14.md).
 
+**자기수리 후보 정정과 관측**: 의식이 코어 수정 불필요(`needs_repair:false`)로 판단하면 일반 THINK 실행으로 돌아간다(명시적 `#repair`는 유지). 순수 파일 조회의 부재는 실행 실패와 구분하고, 자기수리 실행 라운드도 주행 집계에 포함한다. [에피소드 수리 기록](../../docs/EPISODE_3803_3807_REPAIRS_2026_09_15.md).
+
 **턴 연결과 비용**: 공통 인지 진입점이 실행 신원을 보충하고 턴 동안 유지한다. MCP 재진입·병렬 행의 모델 호출도 같은 활성 턴의 비용·에피소드에 합산한다. 각 행의 예산 중단과 중간 단계의 부분 실패는 감독 사건에 전달한다. 원샷 AI는 호출별 프롬프트·계측을 분리하고 제공자당 최대 4개를 실행한다.
 
 **경로 관측**: 기존 사건 원장의 `cognition.supervisor_selected`·`cognition.route`·`cognition.evaluation`이 감독 선택 사유·실행 차선·실제 검수 경로를 구분한다. `model.input`은 호출별 텍스트 크기만, `model.usage`는 실제 토큰·캐시 사용량을 기록한다. `context.result_read`는 저장된 원문 조회의 왕복을 계수한다. 미측정 과거 기록은 미사용으로 간주하지 않는다. 한 작업의 기록은 여러 원장(에피소드·궤적 사건·쓰기 원장·검수 저장소·과제 원장·대화 DB)에 나뉘어 있고, 물리 통합 대신 읽기 전용 **실행 통합 조회**(`services/execution_trace.py`, `/world-pulse/episodes/{id}/trace`)가 한 응답으로 연결해 미관측·누락·충돌을 드러낸다 — 주행기록 상세 화면이 소비자다. [실행 통합 조회 설계](../../docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md).

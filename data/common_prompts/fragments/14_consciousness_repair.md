@@ -1,6 +1,6 @@
 # 수리 턴의 규정 규칙
 
-이 턴은 시스템 자체 코드(`backend/`·`frontend/`·`scripts/`)를 바꿀 수 있는 수리 턴이다. task_framing 과 achievement_criteria 를 아래 규칙으로 쓴다.
+분류기가 이 턴을 시스템 자기수리 후보로 보냈다. 먼저 현재 요청의 대상이 IndieBiz OS 자체 코드인지 판단하라. 사이트·문서·사용자 프로젝트 같은 산출물의 변경이나 방향 논의라면 `needs_repair:false`를 명시하고 그 작업의 범위만 규정한다. 실제 시스템 자체 코드(`backend/`·`frontend/`·`scripts/`) 변경이 필요하면 `needs_repair:true`를 명시하고 task_framing 과 achievement_criteria 를 아래 규칙으로 쓴다. 분류기의 후보 판정만으로 코어 수리를 전제하지 않는다.
 
 ## 메타 인지 가드
 

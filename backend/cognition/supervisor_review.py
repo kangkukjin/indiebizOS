@@ -3,6 +3,49 @@ import difflib
 import json
 
 
+def missing_read_observation(name, payload, result):
+    """순수 파일 조회의 ENOENT만 탐색 결과로 취급한다. 쓰기·권한·네트워크 실패는 제외."""
+    if (not str(name or "").endswith("execute_ibl") or not isinstance(payload, dict)
+            or not isinstance(payload.get("code"), str)):
+        return False
+    from ibl_parser import parse
+
+    def reads_only(step):
+        if not isinstance(step, dict):
+            return False
+        if step.get("_parallel"):
+            return bool(step.get("branches")) and all(reads_only(s) for s in step["branches"])
+        return (step.get("_node") == "self" and step.get("action") == "read"
+                and not any(k.startswith("_") and k != "_node" for k in step))
+
+    try:
+        program = parse(payload["code"])
+        if not program or not all(reads_only(s) for s in program):
+            return False
+    except Exception:
+        return False
+
+    def errors(value):
+        if isinstance(value, str):
+            try:
+                return errors(json.loads(value))
+            except (ValueError, TypeError):
+                return [value] if value.startswith("Error:") else []
+        if isinstance(value, list):
+            return [e for item in value for e in errors(item)]
+        if isinstance(value, dict):
+            found = [str(value["error"])] if value.get("error") else []
+            for key in ("results", "result", "final_result", "branches"):
+                if key in value:
+                    found.extend(errors(value[key]))
+            return found
+        return []
+
+    failures = errors(result)
+    return bool(failures) and all("[Errno 2]" in e and "No such file or directory" in e
+                                  and "[Errno 13]" not in e for e in failures)
+
+
 def response_review_page(controller, limit=12000):
     """같은 기준·원천의 재검수는 실제 변경 바이트만 전송한다. 의미 승인을 재사용하지 않는다."""
     from supervision_store import digest

@@ -594,7 +594,7 @@ async def find_locator(page, element_info: dict, input_mode: bool = False, retry
     3. role + name (접근성 트리)
     4. text 매칭
     5. label/placeholder (입력 필드)
-    6. role만
+    6. 이름·selector가 원래 없을 때만 유일한 role 후보
 
     retry=True이면 첫 시도 실패 시 0.5초 대기 후 한 번 더 시도.
     """
@@ -613,76 +613,38 @@ async def find_locator(page, element_info: dict, input_mode: bool = False, retry
 
 
 async def _find_locator_once(page, element_info: dict, input_mode: bool = False):
-    """단일 시도 locator 탐색"""
+    """원래 신원을 유지하는 유일 후보만 선택한다. 부재·중복은 새 snapshot이 필요하다."""
     role = element_info.get("role", "")
     name = element_info.get("name", "")
     selector = element_info.get("selector", "")
     xpath = element_info.get("xpath", "")
-
-    # 1. CSS selector (가장 정확, 스냅샷에서 생성 가능)
+    candidates = []
+    # 이름/역할을 알면 CSS 후보도 같은 접근성 신원으로 교차 검증한다.
+    named = page.get_by_role(role, name=name, exact=True) if role and name else None
     if selector:
-        try:
-            locator = page.locator(selector).first
-            await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
-            return locator
-        except Exception:
-            pass
-
-    # 2. XPath
+        loc = page.locator(selector)
+        candidates.append(loc.and_(named) if named is not None else loc)
     if xpath:
-        try:
-            locator = page.locator(f"xpath={xpath}").first
-            await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
-            return locator
-        except Exception:
-            pass
-
-    # 3. role + name (접근성 기반 — 기본 전략)
-    if role and name:
-        try:
-            locator = page.get_by_role(role, name=name).first
-            await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
-            return locator
-        except Exception:
-            pass
-
-    # 4. 입력 필드 전용: role만으로 시도
-    if input_mode and role in ("textbox", "searchbox", "combobox", "spinbutton"):
-        try:
-            locator = page.get_by_role(role).first
-            await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
-            return locator
-        except Exception:
-            pass
-
-    # 5. 텍스트로 시도
-    if name:
-        try:
-            locator = page.get_by_text(name, exact=False).first
-            await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
-            return locator
-        except Exception:
-            pass
-
-    # 6. 입력 필드 전용: label, placeholder
+        loc = page.locator(f"xpath={xpath}")
+        candidates.append(loc.and_(named) if named is not None else loc)
+    if named is not None:
+        candidates.append(named)
+    elif name:
+        candidates.append(page.get_by_text(name, exact=True))
     if input_mode and name:
-        for getter in (page.get_by_label, page.get_by_placeholder):
-            try:
-                locator = getter(name).first
-                await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
-                return locator
-            except Exception:
-                pass
-
-    # 7. 역할만으로 시도 (비입력 모드)
-    if not input_mode and role:
+        candidates.extend([page.get_by_label(name, exact=True),
+                           page.get_by_placeholder(name, exact=True)])
+    # 원래 이름도 selector도 없던 요소에만 역할 자체가 신원이다.
+    if role and not (name or selector or xpath):
+        candidates.append(page.get_by_role(role))
+    for locator in candidates:
         try:
-            locator = page.get_by_role(role).first
+            if await locator.count() != 1:
+                continue
             await locator.wait_for(state="visible", timeout=LOCATOR_TIMEOUT)
             return locator
         except Exception:
-            pass
-
+            continue
     return None
 
 

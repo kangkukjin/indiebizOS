@@ -76,10 +76,11 @@ def _book_search(ti: dict):
         result = get_book_by_isbn(isbn=isbn)
     elif title or author or publisher:
         from tool_library import search_books
-        result = search_books(title=title, author=author, publisher=publisher, page_size=rows)
+        result = search_books(title=title, author=author, publisher=publisher,
+                              page=ti.get("page", 1), page_size=rows)
     elif keyword:
         from tool_library import quick_search
-        result = quick_search(keyword=keyword, rows=rows)
+        result = quick_search(keyword=keyword, rows=rows, page=ti.get("page", 1))
     else:
         return {"success": False, "error": "title/author/keyword/isbn 중 하나가 필요합니다."}
     # 레코드 통화 부착(비파괴) — data 목록이 있으면 records로. 앱은 data, >> 파이프는 records.

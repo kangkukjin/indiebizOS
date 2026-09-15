@@ -610,7 +610,9 @@ def _op_dedup(prev, params):
     # 파고들기는 입구가 담당 (F6). 기본(title)은 관례라 파고들지 않는다.
     recs, env = _get_items_for_fields(prev, keys or None)
     if recs is not None:
-        dict_recs = [r for r in recs if isinstance(r, dict)]
+        if any(not isinstance(r, dict) for r in recs):
+            return {"success": False, "error": "dedup: 입력은 객체 행이어야 합니다. 행을 삭제하지 않았습니다."}
+        dict_recs = recs
         # 명시 by 가 어느 행에도 없으면 무동작이 success 로 위장된다(⑧′). 기본(title)은 관례라 관대.
         if keys and dict_recs:
             missing = [k for k in keys if not any(k in r for r in dict_recs)]
@@ -721,7 +723,24 @@ def _op_groupby(prev, params):
         return kerr
     if not keys:
         return {"success": False, "error": "groupby: by(그룹 키 열)가 필요합니다."}
+    recs, _ = _get_items(prev)
+    if recs is not None and any(not isinstance(r, dict) for r in recs):
+        return {"success": False, "error": "groupby: 입력은 객체 행이어야 합니다. 행을 삭제하지 않았습니다."}
     dicts = _rows_for_field(prev, keys)
+    if not dicts and _explicit_table(prev):
+        table, env = _get_table(prev)
+        cols = table.get("columns") or []
+        missing = [k for k in keys if k not in cols]
+        if missing:
+            return _field_missing_error("groupby", missing, [dict.fromkeys(cols)])
+        specs, _, err = _agg_spec.normalize_agg(
+            params.get("agg"), [dict.fromkeys(cols)], _field_missing_error)
+        if err:
+            return err
+        names = keys + [spec[0] for spec in specs]
+        if len(set(names)) != len(names):
+            return {"success": False, "error": "groupby: 그룹 키와 집계 열의 이름이 겹칩니다."}
+        return _emit_table(env, {"columns": names, "rows": []}, population=True)
     if not dicts:
         # F16-2 (2026-08-20 상상훈련 16회차): _rows_for_field 는 빈 리스트를 후보에서
         # 제외하므로 items:[] (통화 실존·0행)와 통화 부재가 여기서 접힌다. 빈손은

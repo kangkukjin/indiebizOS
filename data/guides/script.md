@@ -16,7 +16,7 @@
 ## 몸의 되풀이 명령은 등록돼 있다 (2026-09-05)
 관문 배터리·시험 실행처럼 매 수리 주행이 같은 명령을 치는 일은 이미 등록 스크립트다 — 셸로 다시 치지 말고 `[self:script]{op: "list"}` 로 id 를 보고 `run` 한다. 고치기 뒤 검증이 같은 프로그램에 든다: `[self:edit]{…}` ⏎ `[self:script]{op: "run", id: "<시험 스크립트>", args: {files: ["<시험 파일>"]}} >> [table:select]{columns: ["file", "passed", "failed", "failures"]}`. 결과가 items 라 실패 목록으로 바로 흐른다.
 
-## op 4종
+## op 5종
 
 ```
 [self:script]{}                                                          ← list: 목록+마지막 실행 상태
@@ -43,7 +43,7 @@
 | 본문 | `data/scripts/<파일>` | ✅ |
 | 정의(파일·인터프리터·설명·타임아웃) | `data/scripts/registry.yaml` | ✅ |
 | 실행 상태(last_run·last_error) | `data/scripts.json` | ✗ (무시) |
-| 실행 로그 | `data/script_runs/<id>.log` (매 실행 덮어씀) | ✗ |
+| 실행 로그 | `data/script_runs/<id>-<실행 UUID>.log` (실행별 보존) | ✗ |
 
 - 옛날엔 본문이 `outputs/` 아래라 **.gitignore 에 걸려 버전 관리 밖**이었다 — 백업도 없고 다른
   기기에 따라가지도 않았다. 어휘는 `ibl_nodes_src/*.yaml` 로 추적되는데 그 아래 칸만 방치돼 있었다.
@@ -60,6 +60,8 @@
 [self:script]{op: "run", id: "수집"} >> [table:sort]{by: "mb"} >> [table:take]{n: 5}
 [self:script]{op: "run", id: "수집"} >> [self:sheet]{op: "append", path: "장부.xlsx"}
 ```
+
+각 실행의 로그와 백그라운드 job_id는 고유하다. 종료 코드가 0이어도 JSON의 `success:false` 또는 `error`는 실행 실패로 기록한다. `status{job_id}`도 해당 작업이 실패하면 `success:false`와 `error`를 반환한다. `status{job_id}`에서 성공·실패의 JSON 결과는 `result`로 확인한다.
 
 JSON 이 아니면 stdout 꼬리(8KB)가 그대로 담긴다. args 는 stdin 으로 온다:
 ```python

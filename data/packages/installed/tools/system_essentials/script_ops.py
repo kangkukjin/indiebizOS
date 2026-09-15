@@ -22,7 +22,7 @@
   실행 시점에 그 몸이 해소한다 — 원장은 3 OS 로 클론되므로 경로를 얼리면 원리적으로 부서진다.
   옛 형식(경로가 박힌) 원장은 런타임이 자가치유하고, CI(check_win_portability)가 재발을 막는다.
 
-로그: data/script_runs/<id>.log.
+로그: data/script_runs/<id>-<실행 UUID>.log (실행별 보존).
 
 긴 작업 핸들(2026-08-21): `run{background:true}` 는 즉시 job_id 를 돌려주고 별도 프로세스
 (`_bg_runner.py`, 백엔드 리로드와 무관하게 생존)가 실행·기록한다. `status{job_id|id, wait}` 가
@@ -37,9 +37,13 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 from pathlib import Path
 
 import yaml
+
+from common.pkg_utils import load_singleton
+_runtime = load_singleton(__file__, "script_runtime")
 
 from common import platform_utils  # OS 이식성 단일 소스(분리 실행·생존 판정)
 from runtime_utils import WORKSPACE_TOKEN, expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
@@ -168,11 +172,7 @@ def _expand_args_body_paths(obj):
 
 
 def _atomic_write(path, text):
-    """무-flock 원자쓰기 (limb_keys 선례)."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_name(path.name + ".tmp~")
-    tmp.write_text(text, encoding="utf-8")
-    os.replace(tmp, path)
+    _runtime.atomic_write(path, text)
 
 
 def _read_registry():
@@ -197,6 +197,13 @@ def _read_state():
 
 def _write_state(d):
     _atomic_write(_STATE, json.dumps(d, ensure_ascii=False, indent=1))
+
+
+def _update_state(sid, **values):
+    with _runtime.STATE_LOCK:
+        state = _read_state()
+        state.setdefault(sid, {}).update(values)
+        _write_state(state)
 
 
 def _script_path(entry):
@@ -397,9 +404,10 @@ def op_remove(tool_input):
                 "error": f"등록되지 않은 id: {sid or '(비어 있음)'} — op:list 로 확인. 등록: {', '.join(sorted(registry)) or '없음'}"}
     registry.pop(sid)
     _write_registry(registry)
-    state = _read_state()
-    if state.pop(sid, None) is not None:
-        _write_state(state)
+    with _runtime.STATE_LOCK:
+        state = _read_state()
+        if state.pop(sid, None) is not None:
+            _write_state(state)
     return {"success": True, "id": sid, "message": "등록 해제 (파일은 보존)."}
 
 
@@ -415,11 +423,9 @@ def op_run(tool_input):
     p = _script_path(entry)
     if not p.is_file():
         # pre-flight 실패도 상태에 남긴다(⑱) — 안 남기면 list/이력이 이 실패를 영영 모른다
-        state = _read_state()
-        state.setdefault(sid, {})["last_error"] = {
+        _update_state(sid, last_error={
             "at": time.strftime("%Y-%m-%dT%H:%M:%S"), "exit_code": None,
-            "preflight": "file_missing", "stderr_tail": f"등록된 파일이 사라짐: {p}"}
-        _write_state(state)
+            "preflight": "file_missing", "stderr_tail": f"등록된 파일이 사라짐: {p}"})
         return {"success": False,
                 "error": f"등록된 파일이 사라졌습니다: {p} — 파일 복구 후 재등록하거나 op:remove."}
 
@@ -434,7 +440,7 @@ def op_run(tool_input):
         timeout = _DEFAULT_TIMEOUT
 
     _RUN_DIR.mkdir(parents=True, exist_ok=True)
-    log_path = _RUN_DIR / f"{sid}.log"
+    log_path = _RUN_DIR / f"{sid}-{uuid.uuid4().hex}.log"
     interp, interp_note = _resolve_interpreter(entry.get("interpreter"), p.suffix)
     if tool_input.get("background"):
         return _run_background(sid, entry, p, stdin_data, timeout, interp, interp_note)
@@ -464,21 +470,22 @@ def op_run(tool_input):
     except OSError:
         pass
 
-    ok = (exit_code == 0) and not timed_out
-    state = _read_state()
-    st = state.setdefault(sid, {})
-    st["last_run"] = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "ok": ok,
-                      "exit_code": exit_code, "duration_ms": duration_ms}
+    parsed, result_error = _runtime.parse_output(stdout)
+    ok = (exit_code == 0) and not timed_out and not result_error
+    last_run = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "ok": ok,
+                "exit_code": exit_code, "duration_ms": duration_ms}
+    changes = {"last_run": last_run}
     if not ok:
-        st["last_error"] = {"at": st["last_run"]["at"], "exit_code": exit_code,
-                            "stderr_tail": stderr[-_STDERR_TAIL:]}
-    _write_state(state)
+        changes["last_error"] = {"at": last_run["at"], "exit_code": exit_code,
+                                 "stderr_tail": stderr[-_STDERR_TAIL:], "error": result_error}
+    _update_state(sid, **changes)
 
     if not ok:
         return {"success": False, "id": sid, "exit_code": exit_code, "duration_ms": duration_ms,
                 **({"timed_out": True, "error": f"타임아웃 {timeout}초 초과 — 스크립트 중단."} if timed_out
-                   else {"error": f"스크립트 실패 (exit {exit_code}) — 로그를 보고 도구층(run_command)에서 고친 뒤 재등록."}),
+                   else {"error": result_error or f"스크립트 실패 (exit {exit_code}) — 로그를 보고 도구층(run_command)에서 고친 뒤 재등록."}),
                 "stderr_tail": stderr[-_STDERR_TAIL:], "log": str(log_path),
+                **({"result": parsed} if parsed is not None else {}),
                 **({"interpreter_note": interp_note} if interp_note else {})}
 
     res = {"success": True, "id": sid, "exit_code": 0, "duration_ms": duration_ms, "log": str(log_path)}
@@ -490,11 +497,6 @@ def op_run(tool_input):
         res["args_file"] = _args_src
         res["args_bytes"] = len(stdin_data or "")
     # stdout 이 JSON 이고 items/table 을 실으면 통화로 승격 — 파이프로 흐른다.
-    parsed = None
-    try:
-        parsed = json.loads(stdout)
-    except (ValueError, TypeError):
-        pass
     if isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)):
         for k, v in parsed.items():
             res.setdefault(k, v)
@@ -537,11 +539,11 @@ def _progress_tail(log_path, n=_PROGRESS_LINES):
 def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp_note=None):
     """별도 프로세스로 실행 — 즉시 job_id 반환. 상태는 data/script_runs/jobs/<job_id>.json."""
     _JOB_DIR.mkdir(parents=True, exist_ok=True)
-    job_id = f"{sid}-{time.strftime('%Y%m%d_%H%M%S')}"
+    job_id = f"{sid}-{time.strftime('%Y%m%d_%H%M%S')}-{uuid.uuid4().hex}"
     job_path = _JOB_DIR / f"{job_id}.json"
     log_path = _RUN_DIR / f"{job_id}.log"
     job = {"job_id": job_id, "id": sid, "status": "starting", "started_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-           "timeout": timeout, "log": str(log_path), "interpreter": interp,
+           "created_epoch": time.time(), "timeout": timeout, "log": str(log_path), "interpreter": interp,
            "script": str(script_path), "stdin": stdin_data}
     _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
     # 러너는 부모(백엔드)의 죽음·리로드를 넘어 살아야 한다 — 분리 방식은 OS 마다 다르므로
@@ -557,11 +559,8 @@ def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp
         job["status"] = "failed"; job["error"] = f"러너 기동 실패: {e}"
         _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
         return {"success": False, "job_id": job_id, "error": job["error"]}
-    job["runner_pid"] = runner.pid
-    _atomic_write(job_path, json.dumps(job, ensure_ascii=False))
-    state = _read_state()
-    state.setdefault(sid, {})["last_job"] = job_id
-    _write_state(state)
+    # 이후 상태 파일의 유일한 작성자는 러너다. 빠른 완료를 부모의 starting으로 덮지 않는다.
+    _update_state(sid, last_job=job_id)
     return {"success": True, "job_id": job_id, "id": sid, "status": "running", "log": str(log_path),
             **({"interpreter_note": interp_note} if interp_note else {}),
             "message": f"백그라운드 시작 — [self:script]{{op: \"status\", job_id: \"{job_id}\", wait: 60}} 로 확인(폴링 대신 wait)."}
@@ -573,11 +572,12 @@ def op_status(tool_input):
     job_id = str(tool_input.get("job_id") or "").strip()
     sid = _sanitize_id(tool_input.get("id") or "") if tool_input.get("id") else ""
     try:
-        wait = min(int(tool_input.get("wait") or 0), _MAX_WAIT)
+        requested_wait = int(tool_input.get("wait") or 0)
+        wait = max(0, min(requested_wait, _MAX_WAIT))
     except (TypeError, ValueError):
-        wait = 0
+        requested_wait = wait = 0
     notes = []
-    if tool_input.get("wait") and int(tool_input.get("wait")) > _MAX_WAIT:
+    if requested_wait > _MAX_WAIT:
         notes.append(f"wait 상한 {_MAX_WAIT}초로 줄임")
 
     def _collect():
@@ -591,10 +591,11 @@ def op_status(tool_input):
             if sid and j.get("id") != sid:
                 continue
             # "running" 은 살아 있다는 뜻이어야 한다 — 러너 pid 가 죽었는데 종료 기록이 없으면 lost
-            if j.get("status") in ("starting", "running") and not _pid_alive(j.get("runner_pid")):
+            starting = j.get("status") == "starting" and time.time() - j.get("created_epoch", 0) < 30
+            if not starting and j.get("status") in ("starting", "running") and not _pid_alive(j.get("runner_pid") or j.get("pid")):
                 j["status"] = "lost"
                 j["error"] = "러너 프로세스가 종료 기록 없이 사라짐(강제 종료·재부팅?) — 로그 확인"
-                _atomic_write(jp, json.dumps(j, ensure_ascii=False))
+                # 조회는 러너가 방금 완료한 상태를 덮어쓰지 않는다.
             rows.append(j)
         return rows
 
@@ -612,7 +613,7 @@ def op_status(tool_input):
         row = {k: j.get(k) for k in ("job_id", "id", "status", "started_at", "ended_at", "exit_code", "duration_ms", "log")}
         if j.get("error"):
             row["error"] = j["error"]
-        if j.get("status") == "done" and j.get("result") is not None:
+        if j.get("status") in ("done", "failed") and j.get("result") is not None:
             row["result"] = j["result"]
         if j.get("status") in ("starting", "running"):
             # 러너가 stderr 를 로그에 실시간으로 흘리므로(2026-09-10) '어디까지'를 같이 말한다 —
@@ -628,7 +629,11 @@ def op_status(tool_input):
     res = {"success": True, "items": items, "count": len(items), "running": still, "text": text}
     if job_id and len(items) == 1:
         res["status"] = items[0]["status"]
+        if items[0]["status"] in ("failed", "lost"):
+            res["success"] = False
+            res["error"] = items[0].get("error") or "스크립트 작업 실패"
         if items[0].get("result") is not None:
+            res["result"] = items[0]["result"]
             r = items[0]["result"]
             if isinstance(r, dict):
                 for k in ("items", "table", "stdout"):

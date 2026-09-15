@@ -213,7 +213,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: "통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교). 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
-    target_description: by(별칭 key; 중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
+    target_description: by(별칭 key; 중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 객체가 아닌 행이 섞이면 삭제하지 않고 오류를 반환한다. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
     group: transform
     router: handler
     params:
@@ -267,13 +267,13 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: "통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 \"count\")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null."
-    target_description: "by(그룹 키 열, 필수 — 목록이면 교차집계: [\"아파트명\", \"계약유형\"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:\"count\" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:[\"count\"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 'op_원본열'(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 그룹 키와 집계 출력 열 이름이 겹치면 오류이므로 다른 출력 이름을 지정한다. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
+    target_description: "by(그룹 키 열, 필수 — 목록이면 교차집계: [\"아파트명\", \"계약유형\"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:\"count\" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:[\"count\"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 'op_원본열'(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 객체가 아닌 행이 섞이면 삭제하지 않고 오류를 반환한다. 빈 표형 입력도 스키마를 가진 0행 결과로 처리한다. 그룹 키와 집계 출력 열 이름이 겹치면 오류이므로 다른 출력 이름을 지정한다. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
     group: transform
     router: handler
     params:
       by: ["string", "array"]   # 키 자리 = 속성 집합(교차집계)
     tool: data_groupby
-    implementation: data-ops handler.py — table을 by로 그룹핑 후 agg 명세대로 집계(입력 순서 보존). 표형 전용.
+    implementation: data-ops handler.py — items/table을 by로 그룹핑 후 agg 명세대로 집계(입력 순서·형태 보존).
     target_key: by
     keywords:
     - 그룹

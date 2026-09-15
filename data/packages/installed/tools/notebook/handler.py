@@ -382,6 +382,33 @@ def _answer_from_map(question: str, note: str, map_text: str, cards: list) -> tu
 _DOC_CITE_RE = re.compile(r"\[#(\d+)([^\]]*)\]")
 
 
+def _verify_document_citations(core, answer, docs):
+    """읽힌 원문과 실제 위치만 인용한다. 잘못된 출처가 있으면 답을 공개하지 않는다."""
+    evidence = {}
+    for doc in docs:
+        for chunk in _source_chunks(core, doc["id"]):
+            loc = str(chunk.get("loc") or "").strip()
+            raw = str(chunk.get("text") or "")
+            marker = f"[{loc}] "
+            start = doc["body"].find(marker + raw[:min(40, len(raw))]) if raw else -1
+            if start < 0:
+                continue
+            quote = doc["body"][start + len(marker):start + len(marker) + min(QUOTE_CHARS, len(raw))]
+            evidence[(doc["id"], loc.strip("[]"))] = {
+                "source_id": doc["id"], "source": doc["title"],
+                "loc": loc.strip("[]"), "quote": quote,
+            }
+    citations, seen, invalid = [], set(), []
+    for match in _DOC_CITE_RE.finditer(answer):
+        key = (int(match.group(1)), match.group(2).strip().strip("[]"))
+        if key not in evidence:
+            invalid.append(match.group(0))
+        elif key not in seen:
+            seen.add(key)
+            citations.append(evidence[key])
+    return citations, invalid
+
+
 def _ask_by_cards(core, name: str, question: str, m: dict) -> str:
     """문서 단위 ask (2026-09-04 사용자 판정): 지도 → 문서 선택 → 통째로 읽기 → 근거 답."""
     note = m.get("note") or ""
@@ -400,6 +427,10 @@ def _ask_by_cards(core, name: str, question: str, m: dict) -> str:
         answer, err = _answer_from_map(question, note, m["text"], cards)
         if err:
             return _json({"success": False, "error": f"지도 답 생성 실패: {err}", "items": m["items"], "message": "지도는 items 로 반환합니다."})
+        invalid = [x.group(0) for x in _DOC_CITE_RE.finditer(answer) if int(x.group(1)) not in by_id]
+        if invalid:
+            return _json({"success": False, "error": "지도에 없는 소스를 인용했습니다.",
+                          "answer": "", "items": [], "invalid_citations": invalid})
         return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "map", "not_in_sources": False,
                       "answer": answer, "blocks": [{"type": "paragraph", "text": answer}], "citations": [], "items": [],
                       "selection": sel, "map_sources": len(m["items"])})
@@ -425,18 +456,18 @@ def _ask_by_cards(core, name: str, question: str, m: dict) -> str:
                       "answer": "", "citations": [], "items": [], "blocks": [{"type": "paragraph", "text": msg}], "message": msg,
                       "read": [d["id"] for d in docs], "selection": sel})
     answer = _strip_mark(answer)
-    read_ids = {d["id"] for d in docs}
-    cites, seen = [], set()
-    for mm in _DOC_CITE_RE.finditer(answer):
-        sid = int(mm.group(1)); loc = mm.group(2).strip()
-        if sid in read_ids and (sid, loc) not in seen:
-            seen.add((sid, loc)); cites.append({"source_id": sid, "source": by_id[sid].get("title"), "loc": loc})
+    cites, invalid = _verify_document_citations(core, answer, docs)
+    if invalid or not cites:
+        return _json({"success": False, "notebook": m["notebook"], "mode": "read",
+                      "error": "문서 답변의 인용을 원문에서 검증하지 못했습니다. 소스 번호와 실제 위치를 확인해야 합니다.",
+                      "answer": "", "citations": [], "items": [],
+                      "citation_dropped": len(invalid), "invalid_citations": invalid})
     blocks = [{"type": "paragraph", "text": answer}]
     if degraded:
         blocks.append({"type": "paragraph", "text": "⚠ 예산으로 앞부분만 읽은 문서: " + ", ".join(f"#{i}" for i in degraded)})
     return _json({"success": True, "notebook": m["notebook"], "question": question, "mode": "read", "not_in_sources": False,
                   "answer": answer, "blocks": blocks, "citations": cites,
-                  "items": [{"title": c["source"], "meta": f"#{c['source_id']} · {c['loc']}", "summary": "", "source_id": c["source_id"]} for c in cites],
+                  "items": [{"title": c["source"], "meta": f"#{c['source_id']} · {c['loc']}", "summary": c["quote"], "source_id": c["source_id"]} for c in cites],
                   "read": [{"source_id": d["id"], "title": d["title"], "chars": d["chars"], "truncated": d["truncated"]} for d in docs],
                   "selection": sel})
 

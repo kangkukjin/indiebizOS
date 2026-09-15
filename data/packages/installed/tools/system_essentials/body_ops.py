@@ -478,31 +478,40 @@ def op_diff(tool_input):
     else:
         rng, label = ["HEAD"], "미커밋 작업분"
     tail = ["--", scope] if scope else []
-    stdout, gerr = _git(root, ["diff", "--numstat", "-M"] + rng + tail)
+    stdout, gerr = _git(root, ["diff", "--numstat", "-z", "-M"] + rng + tail)
     if gerr:
         return {"success": False, "message": gerr}
     files = []
-    for line in stdout.splitlines():
-        parts = line.split("\t")
-        if len(parts) < 3:
+    fields = iter(stdout.split("\0"))
+    for field in fields:
+        if not field:
             continue
-        add, dele, fp = parts[0], parts[1], parts[2]
-        if " => " in fp:  # 이름변경 표기 "a/{old => new}.py" 는 새 경로만
-            fp = fp.replace("{", "").replace("}", "")
-            fp = fp.split(" => ")[-1] if "/" not in fp.split(" => ")[0] else fp
-        files.append((fp, add, dele))
+        parts = field.split("\t", 2)
+        if len(parts) != 3:
+            return {"success": False, "message": "git numstat 출력 형식을 해석하지 못했습니다."}
+        add, dele, fp = parts
+        old_path = None
+        if not fp:  # -z rename: add<TAB>del<TAB><NUL>old<NUL>new<NUL>
+            old_path = next(fields, None)
+            fp = next(fields, None)
+            if old_path is None or fp is None:
+                return {"success": False, "message": "git 이름변경 경로가 불완전합니다."}
+        files.append((fp, add, dele, old_path))
     total = len(files)
     truncated = total > limit
     files = files[:limit]
     rows = []
-    for fp, add, dele in files:
-        body, derr = _git(root, ["diff", "-M"] + rng + ["--", fp])
+    for fp, add, dele, old_path in files:
+        paths = [old_path, fp] if old_path else [fp]
+        body, derr = _git(root, ["diff", "-M"] + rng + ["--"] + paths)
         body_lines = (body or "").splitlines() if not derr else [f"(diff 실패: {derr})"]
         cut = len(body_lines) > lines
         row = {"파일": fp, "영역": _area_of(fp),
                "추가": int(add) if add.isdigit() else None,
                "삭제": int(dele) if dele.isdigit() else None,
                "diff": "\n".join(body_lines[:lines])}
+        if old_path:
+            row["이전경로"] = old_path
         if cut:
             row["diff_잘림"] = f"{len(body_lines)}줄 중 {lines}줄 — lines 를 올리거나 path 로 좁히세요"
         rows.append(row)

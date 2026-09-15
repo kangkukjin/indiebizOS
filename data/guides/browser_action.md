@@ -361,3 +361,7 @@ Chrome MCP는 사용자의 실제 Chrome 브라우저를 WebSocket으로 원격 
 | `[limbs:browser]{op: "chrome", mode: "connect", url?}` | `[limbs:browser]{op: "chrome", mode: "connect", url?}` |
 | `[limbs:browser]{op: "chrome", mode: "disconnect"}` | `[limbs:browser]{op: "chrome", mode: "disconnect"}` |
 | `[limbs:browser]{op: "chrome", mode: "status"}` | `[limbs:browser]{op: "chrome", mode: "status"}` |
+
+## 대상이 사라졌을 때
+
+Playwright는 ref의 이름·역할을 유지하는 유일한 요소만 조작한다. 같은 역할의 첫 버튼·입력칸으로 대체하지 않는다. 대상 부재·중복 오류가 나면 snapshot을 다시 읽어 현재 ref로 호출한다.

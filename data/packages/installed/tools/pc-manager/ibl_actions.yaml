@@ -7,7 +7,7 @@ nodes:
         fixture: '[sense:host]{op: "status"}'
         description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
         group: device
-        target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에. apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
+        target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에. apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). CPU는 전체 프로세스를 0.2초 간격으로 두 번 측정하며 측정 불가는 null. resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
         target_key: op
         router: handler
         tool: host_op

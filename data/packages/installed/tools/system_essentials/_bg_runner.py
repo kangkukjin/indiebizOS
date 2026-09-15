@@ -3,15 +3,14 @@
 인자: job json 경로. 스크립트를 돌리고 로그·종료코드·stdout 통화를 job json 에 기록한다."""
 import json, os, subprocess, sys, time
 from pathlib import Path
+from script_runtime import atomic_write, parse_output
 
 STDOUT_TAIL = 8000
 STDERR_TAIL = 2000
 
 
 def _write(path, d):
-    tmp = path.with_name(path.name + ".tmp~")
-    tmp.write_text(json.dumps(d, ensure_ascii=False), encoding="utf-8")
-    os.replace(tmp, path)
+    atomic_write(path, json.dumps(d, ensure_ascii=False))
 
 
 LIVE_MARK = "--- stderr (진행, 실시간) ---\n"
@@ -20,7 +19,7 @@ LIVE_MARK = "--- stderr (진행, 실시간) ---\n"
 def main():
     job_path = Path(sys.argv[1])
     job = json.loads(job_path.read_text(encoding="utf-8"))
-    job["status"] = "running"; job["pid"] = os.getpid()
+    job["status"] = "running"; job["pid"] = job["runner_pid"] = os.getpid()
     _write(job_path, job)
     started = time.time()
     timed_out = False
@@ -60,17 +59,15 @@ def main():
         log_path.write_text(f"# {job['job_id']} exit={code} {dur}ms\n--- stdout ---\n{out}\n--- stderr ---\n{err}", encoding="utf-8")
     except OSError:
         pass
-    ok = code == 0 and not timed_out
+    parsed, result_error = parse_output(out)
+    ok = code == 0 and not timed_out and not result_error
     job.update({"status": "done" if ok else "failed", "exit_code": code, "duration_ms": dur,
                 "ended_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
     if not ok:
-        job["error"] = ("타임아웃" if timed_out else f"exit {code}") + " — " + err[-STDERR_TAIL:]
+        job["error"] = ("타임아웃" if timed_out else result_error or f"exit {code}") + " — " + err[-STDERR_TAIL:]
+        if parsed is not None:
+            job["result"] = parsed
     else:
-        parsed = None
-        try:
-            parsed = json.loads(out)
-        except (ValueError, TypeError):
-            pass
         if isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)):
             job["result"] = parsed
         else:

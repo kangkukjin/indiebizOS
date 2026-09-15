@@ -169,7 +169,7 @@ def _index_one(db_path: str, mem_id: int, content: str,
     명시적 DELETE 후 INSERT 패턴을 사용해 업데이트 의미를 보장한다."""
     conn = _get_vec_conn(db_path)
     if conn is None:
-        return
+        return False
     try:
         _ensure_vec_table(conn)
         text = _prepare_text(content, keywords, category)
@@ -181,8 +181,11 @@ def _index_one(db_path: str, mem_id: int, content: str,
                 (mem_id, emb)
             )
             conn.commit()
+            return True
+        return False
     except Exception as e:
         print(f"[memory_db] 인덱싱 실패 (id={mem_id}): {e}")
+        return False
     finally:
         conn.close()
 
@@ -191,12 +194,14 @@ def _delete_vec(db_path: str, mem_id: int):
     """vec 인덱스에서 항목 삭제"""
     conn = _get_vec_conn(db_path)
     if conn is None:
-        return
+        return False
     try:
+        _ensure_vec_table(conn)
         conn.execute("DELETE FROM memories_vec WHERE rowid = ?", (mem_id,))
         conn.commit()
+        return True
     except Exception:
-        pass
+        return False
     finally:
         conn.close()
 

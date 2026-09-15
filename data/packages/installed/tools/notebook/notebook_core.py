@@ -767,33 +767,32 @@ def list_sources(name: str) -> Dict[str, Any]:
 # 검색 (노트북 스코프 하이브리드)
 # =============================================================================
 
-def _search_semantic(notebook_id: int, query: str, top_k: int) -> List[Tuple[int, float]]:
+def _search_semantic(notebook_id: int, query: str, top_k: int, source_ids=None) -> List[Tuple[int, float]]:
     emb = _embed_one(query)
     if emb is None:
         return []
     conn = _connect(with_vec=True)
     try:
-        # vec0 MATCH는 전역 이웃 → 오버페치 후 노트북 필터 (설계 §4-2, 파티션 키 버전 의존 회피)
-        k = min(1000, max(top_k * 12, 120))  # clamp-ok: 사용자 요청량이 아니라 top_k 에서 파생된 내부 후보 폭(안전 난간)
+        # 노트북/소스를 KNN 후보 집합 자체에 적용한다. 상위 결과 뒤 필터링은 누락을 만든다.
+        scope = "notebook_id=?"
+        args = [notebook_id]
+        if source_ids is not None:
+            if not source_ids:
+                return []
+            scope += " AND source_id IN (" + ",".join("?" for _ in source_ids) + ")"
+            args.extend(source_ids)
         try:
             rows = conn.execute(
-                "SELECT rowid, distance FROM chunks_vec WHERE embedding MATCH ? AND k=? ORDER BY distance",
-                (emb, k)).fetchall()
+                "SELECT rowid, distance FROM chunks_vec WHERE embedding MATCH ? "
+                f"AND rowid IN (SELECT id FROM chunks WHERE {scope}) ORDER BY distance LIMIT ?",
+                [emb, *args, top_k]).fetchall()
         except sqlite3.OperationalError:
             return []
-        if not rows:
-            return []
-        ids = [int(r["rowid"]) for r in rows]
-        placeholders = ",".join("?" * len(ids))
-        mine = {r["id"] for r in conn.execute(
-            f"SELECT id FROM chunks WHERE id IN ({placeholders}) AND notebook_id=?",
-            ids + [notebook_id]).fetchall()}
         out = []
         for r in rows:
             rid = int(r["rowid"])
-            if rid in mine:
-                dist = float(r["distance"])
-                out.append((rid, max(0.0, 1.0 - (dist * dist / 2.0))))  # L2정규화 → cos 근사
+            dist = float(r["distance"])
+            out.append((rid, max(0.0, 1.0 - (dist * dist / 2.0))))  # L2정규화 → cos 근사
             if len(out) >= top_k:
                 break
         return out
@@ -801,7 +800,7 @@ def _search_semantic(notebook_id: int, query: str, top_k: int) -> List[Tuple[int
         conn.close()
 
 
-def _search_fts(notebook_id: int, query: str, top_k: int) -> List[Tuple[int, float]]:
+def _search_fts(notebook_id: int, query: str, top_k: int, source_ids=None) -> List[Tuple[int, float]]:
     conn = _connect()
     try:
         safe = re.sub(r"[^\w\s가-힣]", " ", query)
@@ -809,13 +808,20 @@ def _search_fts(notebook_id: int, query: str, top_k: int) -> List[Tuple[int, flo
         if not tokens:
             return []
         fts_query = " OR ".join(tokens)
+        scope = ""
+        args = [fts_query, notebook_id]
+        if source_ids is not None:
+            if not source_ids:
+                return []
+            scope = " AND c.source_id IN (" + ",".join("?" for _ in source_ids) + ")"
+            args.extend(source_ids)
         try:
             rows = conn.execute(f"""
                 SELECT c.id, bm25(chunks_fts) AS score
                 FROM chunks_fts f JOIN chunks c ON c.id = f.rowid
-                WHERE chunks_fts MATCH ? AND c.notebook_id = ?
+                WHERE chunks_fts MATCH ? AND c.notebook_id = ?{scope}
                 ORDER BY score LIMIT ?
-            """, (fts_query, notebook_id, top_k)).fetchall()
+            """, [*args, top_k]).fetchall()
         except sqlite3.OperationalError:
             return []
         return [(int(r["id"]), -float(r["score"])) for r in rows]  # bm25는 음수(작을수록 관련)
@@ -845,9 +851,21 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
     if not query:
         return {"success": False, "error": "q(질문/검색어)가 필요합니다.", "results": []}
 
-    over = max(top_k * (6 if source else 2), 12)
-    sem = _search_semantic(nb["id"], query, over) if alpha > 0 else []
-    fts = _search_fts(nb["id"], query, over)
+    _src = str(source).strip() if source not in (None, "") else ""
+    filters = {}
+    if _src:
+        from common.value_semantics import text_match, values_equal
+        conn = _connect()
+        try:
+            sources = conn.execute("SELECT id,title FROM sources WHERE notebook_id=?", (nb["id"],)).fetchall()
+        finally:
+            conn.close()
+        source_ids = [r["id"] for r in sources
+                      if values_equal(str(r["id"]), _src) or text_match("contains", r["title"], _src)]
+        filters["source_ids"] = source_ids
+    over = max(top_k * 2, 12)
+    sem = _search_semantic(nb["id"], query, over, **filters) if alpha > 0 else []
+    fts = _search_fts(nb["id"], query, over, **filters)
     if not sem and not fts:
         return {"success": True, "notebook": nb["name"], "results": [],
                 "search_type": "hybrid" if semantic_available() else "fts5"}
@@ -875,13 +893,6 @@ def search_chunks(name: str, query: str, top_k: int = 8, alpha: float = DEFAULT_
         r = rows.get(cid)
         if not r:
             continue
-        if _src:
-            try:
-                from value_semantics import text_match, values_equal   # 값 판정은 한 벌로(사설 정규화 금지)
-            except ImportError:
-                from common.value_semantics import text_match, values_equal
-            if not (values_equal(str(r.get("source_id")), _src) or text_match("contains", str(r.get("source") or ""), _src)):
-                continue
         r["score"] = round(float(score), 4)
         results.append(r)
         if len(results) >= top_k:

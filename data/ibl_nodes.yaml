@@ -206,7 +206,7 @@ nodes:
         fixture: '[sense:book]{query: "역사"}'
         description: 도서 조회 (op 분기). 기본=한국 도서관정보나루, source="nl"=국립중앙도서관 납본, source="google"=글로벌·원서(Google Books). 고전 원문은 classic. items(loan_count·publication_year 포함) — table 파이프로 대출순·연도 선별.
         group: culture
-        target_description: search(기본) — title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계·이용분석·소장도서관[region 필수]). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). source="google"=글로벌·원서(Google Books — search 전용, 대출 통계 op 는 정보나루만). "제목이 X인 책"은 title:"X". popular — 인기대출도서(start_date/end_date 기본 최근 7일, gender=남성/여성, age=40 → 40~49세, region=지역명/코드, kdc=주제분류). trending — 대출 급상승(base_date 기본 어제). recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
+        target_description: search(기본) — 정보나루·nl 검색은 page(기본 1)로 페이지 지정. nl 결과 페이지 해석 실패는 자료 없음과 구분해 오류로 반환. title=제목전용/author=저자전용/publisher=출판사전용/keyword=광역/isbn=ISBN조회(+detail=true면 대출통계·이용분석·소장도서관[region 필수]). source="nl"=국립중앙도서관 납본 소장(정보나루=공공도서관 대출 렌즈라 도서관이 안 산 신간·소부수 출판은 없음 — 존재 확인·서지는 nl 이 정본). source="google"=글로벌·원서(Google Books — search 전용, 대출 통계 op 는 정보나루만). "제목이 X인 책"은 title:"X". popular — 인기대출도서(start_date/end_date 기본 최근 7일, gender=남성/여성, age=40 → 40~49세, region=지역명/코드, kdc=주제분류). trending — 대출 급상승(base_date 기본 어제). recommended — isbn13(기준도서)·rec_type(mania 기본/reader). codes — code_type=kdc(주제분류) 또는 region(도서관 지역).
         target_key: op
         router: handler
         tool: book_op
@@ -1758,7 +1758,7 @@ nodes:
         fixture: '[sense:host]{op: "status"}'
         description: 이 기계(나의 몸) 자신의 운영 상태를 구조화 데이터로 직접 내성 (op 분기). 화면을 보는 게 아니라 기계를 직접 느끼는 자기수용감각. status(상태 한눈에)/apps(자원 점유 프로세스)/resources(상세 지표).
         group: device
-        target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에. apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
+        target_description: 'op=status(기본): 전면 앱·CPU·메모리·디스크·배터리·가동시간·로드평균·프로세스 수 한 눈에. apps: 메모리 점유 상위 프로세스(limit 옵션, 기본 12). CPU는 전체 프로세스를 0.2초 간격으로 두 번 측정하며 측정 불가는 null. resources: per-core CPU·스왑·디스크 파티션별·네트워크 상세.'
         target_key: op
         router: handler
         tool: host_op
@@ -4240,7 +4240,7 @@ nodes:
             delete: 삭제 (memory_id)
             recall: 가지 열기 (node — 문서 전문+기억+하위 가지; 생략=지도; store 실행=IBL 함수 서명·용례, 본문은 expand)
             move: 가지 이동 (memory_id + node; store 실행=용례)
-        implementation: handler.py가 op로 분기. save는 정책 안내만 반환하며 쓰기는 최종 응답 후 cognitive_distill이 담당. recall/move는 memory_tree.
+        implementation: handler.py가 op로 분기. save는 정책 안내만 반환하며 쓰기는 최종 응답 후 cognitive_distill이 담당. recall/move는 memory_tree. 문서 동기화는 본문 commit 뒤 벡터를 갱신하고 실패 ID를 index_pending으로 보존해 다음 recall에서 재시도한다.
         keywords:
         - 메모리
         - 기억
@@ -4509,7 +4509,7 @@ nodes:
         fixture: '[self:notebook]{op: "list"}'
         runs_on: pc_only
         description: 근거 고정 질의(op 분기) — 문서 더미(PDF·텍스트)에 이름을 붙여 두고, 물으면 그 소스 안에서만 답하며 출처 인용을 단다. 이미 가진 문서를 심문할 때 — 문자열 찾기는 [self:grep], 의미 질의는 이것. 소스에 없으면 not_in_sources 정직 반환.
-        target_description: 'op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
+        target_description: 'op 별 입력: create(name 필수 + note 노트북 목적 — ask 때 렌즈로 쓰임) / add(name + path 또는 text 붙여넣기, title 옵션 — path=파일 경로[상대 경로=프로젝트 기준, 없으면 저장소 루트 폴백]·웹 URL·유튜브 URL[자막을 타임스탬프 loc으로 색인, 자막 없으면 정직 거부]. 같은 path 재add=재색인, 15만자 초과는 백그라운드 색인) / ask(name + query 질문, top_k 발췌 수 기본 12, source 옵션=후보 검색 전 소스 좁히기) — 답+citations[{n,source,loc,quote}]+items; 문서 단위 답변은 실제로 읽은 소스·loc를 검증하고 quote를 원문에서 추출하며, 무효 인용 또는 인용 부재면 success:false로 답을 보류한다. 노트북 포식 기억 문서가 있으면 답 생성의 지도로 함께 읽힌다 / search(name + query, top_k 기본 8) — 생성 없이 발췌만(LLM 0, 싼 경로) / sources(name) — 소스 목록·색인 상태·stale(원본 변경/소실) / remove(name + source_id) / list·delete(name). 결과 items 구조 필드 → table 파이프 직결.'
         target_key: op
         group: notebook
         router: handler
@@ -4575,7 +4575,7 @@ nodes:
             remove: 소스 빼기 (source_id)
             list: 노트북 목록
             delete: 노트북 삭제 (소스·색인 포함)
-        implementation: notebook 패키지 notebook_op — 저장·색인·검색=notebook_core.py(data/notebook/notebooks.db sqlite WAL, 청크 650자 문단 경계, 하이브리드=ko-sroberta 768d+sqlite-vec+FTS5 BM25, 미설치 시 FTS 폴백 — ★해마 임베딩 모델 아님). ask=handler가 발췌 top-K를 경량 AI 제약 생성(발췌만·[n] 인용 의무·모름=NOT_IN_SOURCES)에 넣고, 인용을 결정론 후검증(무효 [n] 제거·quote는 청크 원문에서 코드가 추출=인용 환각 차단). 원본=경로 참조+mtime(사본 없음), 변경은 sources op가 stale로 노출. 스캔(이미지) PDF=OCR 없음 정직 거부. 설계 정본=docs/NOTEBOOK_GROUNDED_QUERY_DESIGN.md
+        implementation: notebook 패키지 notebook_op — 저장·색인·검색=notebook_core.py(data/notebook/notebooks.db sqlite WAL, 청크 650자 문단 경계, 하이브리드=ko-sroberta 768d+sqlite-vec+FTS5 BM25, 미설치 시 FTS 폴백 — ★해마 임베딩 모델 아님). ask=문서 지도·본문 경로 또는 청크 검색 경로. 본문 인용은 실제 제공한 source/loc로 검증하고 유효 인용 없으면 실패. 청크 경로는 handler가 발췌 top-K를 경량 AI 제약 생성(발췌만·[n] 인용 의무·모름=NOT_IN_SOURCES)에 넣고, 인용을 결정론 후검증(무효 [n] 제거·quote는 청크 원문에서 코드가 추출=인용 환각 차단). 원본=경로 참조+mtime(사본 없음), 변경은 sources op가 stale로 노출. 스캔(이미지) PDF=OCR 없음 정직 거부. 설계 정본=docs/NOTEBOOK_GROUNDED_QUERY_DESIGN.md
         app:
           instrument: notebook
           icon: 📚
@@ -5000,7 +5000,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-15'
-          impl: b15a6c6f34760c8c
+          impl: ef4a2c288ee04ce5
         target_key: path
         aliases:
           offset:
@@ -5013,7 +5013,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-15'
-          impl: b15a6c6f34760c8c
+          impl: ef4a2c288ee04ce5
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5561,7 +5561,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 즉시 job_id 반환(긴 작업 — 타임아웃·폴링 대신) / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done 이면 result(stdout 통화)가 실림 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
         implementation: system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).
@@ -5819,7 +5819,7 @@ nodes:
         returns: effect
         runs_on: pc_only
         description: 브라우저(웹) 조작 — DOM ref 기반 (op 분기). Playwright/Chrome MCP. 화면 좌표 조작은 limbs:screen, 파일은 self.
-        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).
+        target_description: op로 동작 선택. 흐름 — navigate(이동)→snapshot(요소 ref 획득)→click/type. Playwright는 이름·역할을 유지하는 유일 후보만 선택하며 대상이 없거나 중복이면 새 snapshot이 필요하다. 복합 동작은 mode 2차 선택 — click(single|double|right), navigate(goto|back|forward), content(text|html), tab(list|new|switch|close), logs(console|network), cookies(save|load), iframe(list|switch|reset), chrome(connect|disconnect|status). 주요 파라미터 — ref(요소), text(입력), url(이동), expression(JS), query(자연어검색), path(저장).
         group: browser
         target_key: op
         router: handler
@@ -8449,7 +8449,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: '통화 변환자 — items에서 중복 제거(첫 항목 유지, 정규화 비교). 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.'
-        target_description: by(별칭 key; 중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
+        target_description: by(별칭 key; 중복 판정 키 필드/열 — 목록이면 그 열들의 조합이 같은 행을 중복으로 본다(복합키의 부분이 비면 그 행은 중복 판정 밖); 미지정 시 items=title, 표형 table 입력=첫 열). 공백·대소문자 정규화 후 동등 비교. 객체가 아닌 행이 섞이면 삭제하지 않고 오류를 반환한다. 여러 검색 합친 뒤 중복 제거에. (옛 newspaper 내부 dedup을 전 생산자 공용으로 끌어올림.)
         group: transform
         router: handler
         params:
@@ -8506,7 +8506,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
-        target_description: 'by(그룹 키 열, 필수 — 목록이면 교차집계: ["아파트명", "계약유형"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:["count"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 그룹 키와 집계 출력 열 이름이 겹치면 오류이므로 다른 출력 이름을 지정한다. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.'
+        target_description: 'by(그룹 키 열, 필수 — 목록이면 교차집계: ["아파트명", "계약유형"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:["count"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 객체가 아닌 행이 섞이면 삭제하지 않고 오류를 반환한다. 빈 표형 입력도 스키마를 가진 0행 결과로 처리한다. 그룹 키와 집계 출력 열 이름이 겹치면 오류이므로 다른 출력 이름을 지정한다. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.'
         group: transform
         router: handler
         params:
@@ -8514,7 +8514,7 @@ nodes:
           - string
           - array
         tool: data_groupby
-        implementation: data-ops handler.py — table을 by로 그룹핑 후 agg 명세대로 집계(입력 순서 보존). 표형 전용.
+        implementation: data-ops handler.py — items/table을 by로 그룹핑 후 agg 명세대로 집계(입력 순서·형태 보존).
         target_key: by
         keywords:
         - 그룹

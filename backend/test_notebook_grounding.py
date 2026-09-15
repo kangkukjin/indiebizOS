@@ -171,7 +171,8 @@ def test_n9_ask_reads_selected_docs_whole_and_cites(monkeypatch, tmp_path):
     monkeypatch.setitem(sys.modules, "consciousness_agent", fake_mod)
     out = json.loads(H._op_ask({"name": "nb", "query": "삼성 주가는?"}, None))
     assert out["success"] and out["mode"] == "read" and out["read"][0]["source_id"] == 2
-    assert out["citations"] == [{"source_id": 2, "source": "B보고서", "loc": "1절"}]
+    assert [{k: c[k] for k in ('source_id', 'source', 'loc')} for c in out['citations']] == [{"source_id": 2, "source": "B보고서", "loc": "1절"}]
+    assert out['citations'][0]['quote']
     assert calls[0][0] == "classify" and calls[-1][0] == "evaluate"
     # 지도 물음
     def fake2(prompt, system_prompt="", role="classify"):

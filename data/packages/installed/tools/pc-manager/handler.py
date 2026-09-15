@@ -351,20 +351,33 @@ def _host_status(tool_input: dict) -> str:
 def _host_apps(tool_input: dict) -> str:
     """[sense:host]{op:apps} — 자원을 많이 쓰는 프로세스 상위 N (몸을 점유하는 것)."""
     import psutil
+    import time
     limit = int(tool_input.get("limit") or 12)
     try:
-        procs = []
-        for p in psutil.process_iter(["pid", "name", "memory_percent", "cpu_percent"]):
+        samples = []
+        for p in psutil.process_iter(["pid", "name", "memory_percent"]):
             try:
-                procs.append(p.info)
-            except Exception:
+                p.cpu_percent(None)
+                samples.append((p, dict(p.info)))
+            except (psutil.Error, OSError):
                 continue
+        time.sleep(0.2)  # 전체 프로세스의 두 표본 사이 한 번만 기다린다.
+        procs = []
+        for p, info in samples:
+            try:
+                info["cpu_percent"] = p.cpu_percent(None)
+                procs.append(info)
+            except (psutil.NoSuchProcess, psutil.ZombieProcess):
+                continue
+            except (psutil.AccessDenied, OSError):
+                info["cpu_percent"] = None
+                procs.append(info)
         procs.sort(key=lambda x: (x.get("memory_percent") or 0), reverse=True)
         top = [{
-            "pid": x.get("pid"),
-            "name": x.get("name"),
+            "pid": x.get("pid"), "name": x.get("name"),
             "mem_percent": round(x.get("memory_percent") or 0, 1),
-            "cpu_percent": round(x.get("cpu_percent") or 0, 1),
+            "cpu_percent": (round(x["cpu_percent"], 1)
+                            if x.get("cpu_percent") is not None else None),
         } for x in procs[:limit]]
         # 통화 병기 (V13-1 스윕, 2026-08-19): top=주 페이로드 목록 — items 병기로
         # table 변환자 접속 개통(title=칸 규약, 원 필드·top 키 보존).

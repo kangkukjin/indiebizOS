@@ -570,7 +570,7 @@ def search_libraries_by_book(isbn13, region=None, page=1, page_size=10):
 
 # ==================== 편의 함수 ====================
 
-def quick_search(keyword, rows=10):
+def quick_search(keyword, rows=10, page=1):
     """
     빠른 도서 검색 (편의 함수)
 
@@ -580,7 +580,7 @@ def quick_search(keyword, rows=10):
         keyword: 검색 키워드
         rows: 결과 수
     """
-    return search_books(keyword=keyword, page_size=rows)
+    return search_books(keyword=keyword, page=page, page_size=rows)
 
 
 def get_book_by_isbn(isbn):

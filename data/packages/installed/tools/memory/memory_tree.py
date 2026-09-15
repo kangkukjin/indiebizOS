@@ -16,6 +16,7 @@ memory_tree.py — 심층 기억의 **주제 트리 문서**(정본) + 목차(�
   이 모듈은 분류기를 두지 않는다 — 파일 위치·문서 렌더·문서→색인 동기화(사람이 고친 줄)만 한다.
 """
 import os
+import json
 import re
 import sqlite3
 from datetime import datetime
@@ -287,6 +288,26 @@ def parse_section(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
     return known, fresh
 
 
+def _flush_index_pending(db_path, node):
+    """본문 commit 후 색인한다. 실패 ID는 다음 recall에서도 재시도하도록 보존한다."""
+    import memory_db
+    key = "tree_index_pending:" + node
+    pending = json.loads(memory_db.get_meta(db_path, key) or "[]")
+    remaining = []
+    for mid in pending:
+        row = memory_db.get_by_id(db_path, mid)
+        if row is None:
+            ok = memory_db._delete_vec(db_path, mid)
+        else:
+            ok = memory_db._index_one(db_path, mid, row["content"],
+                                      row.get("keywords") or "", row.get("category") or "")
+        if ok is not True:
+            remaining.append(mid)
+    if pending:
+        memory_db.set_meta(db_path, key, json.dumps(remaining))
+    return remaining
+
+
 def sync_node(db_path: str, node: str) -> Dict[str, Any]:
     """문서가 마지막 렌더보다 새로우면 절을 읽어 색인에 반영: 고친 줄=UPDATE · 지운 줄=DELETE · 새 줄=INSERT.
     반영 뒤 다시 그려(새 줄에 #id 부여) 도장을 찍는다."""
@@ -301,12 +322,15 @@ def sync_node(db_path: str, node: str) -> Dict[str, Any]:
     except Exception:
         mtime, stamp = 1.0, 0.0
     if mtime <= stamp + 1e-6:
-        return {"synced": False, "reason": "fresh"}
+        return {"synced": False, "reason": "fresh",
+                "index_pending": _flush_index_pending(db_path, node)}
     text = open(path, encoding="utf-8").read()
     known, fresh = parse_section(text)
     existing = {r["id"]: r for r in rows_of(db_path, node)}
     updated = deleted = inserted = 0
     rejected: List[str] = []
+    pending_key = "tree_index_pending:" + node
+    pending = set(json.loads(memory_db.get_meta(db_path, pending_key) or "[]"))
     conn = sqlite3.connect(db_path, timeout=10)
     try:
         now = datetime.now().isoformat()
@@ -322,11 +346,11 @@ def sync_node(db_path: str, node: str) -> Dict[str, Any]:
                 conn.execute("UPDATE memories SET content=?, category=?, used_at=? WHERE id=?",
                              (memory_db.mask_secrets(k["content"]), cat, now, k["id"]))
                 updated += 1
-                memory_db._index_one(db_path, k["id"], k["content"], r.get("keywords") or "", cat)
+                pending.add(k["id"])
         for mid in set(existing) - seen:
             conn.execute("DELETE FROM memories WHERE id=?", (mid,))
             deleted += 1
-            memory_db._delete_vec(db_path, mid)
+            pending.add(mid)
         for f in fresh:
             try:
                 memory_db._reject_body_noun(f["content"])
@@ -338,12 +362,17 @@ def sync_node(db_path: str, node: str) -> Dict[str, Any]:
                 "INSERT INTO memories (category, keywords, content, created_at, source_ref, node) VALUES (?,?,?,?,?,?)",
                 (cat, "", memory_db.mask_secrets(f["content"]), now, '{"utterance": "문서에서 직접 적음"}', node))
             inserted += 1
-            memory_db._index_one(db_path, cur.lastrowid, f["content"], "", cat)
+            pending.add(cur.lastrowid)
+        memory_db._ensure_meta(conn)
+        conn.execute("INSERT OR REPLACE INTO _meta(key,value) VALUES (?,?)",
+                     (pending_key, json.dumps(sorted(pending))))
         conn.commit()
     finally:
         conn.close()
+    index_pending = _flush_index_pending(db_path, node)
     refresh_node(db_path, node)
-    out = {"synced": True, "updated": updated, "deleted": deleted, "inserted": inserted}
+    out = {"synced": True, "updated": updated, "deleted": deleted, "inserted": inserted,
+           "index_pending": index_pending}
     if rejected:
         out["rejected"] = rejected
     return out
@@ -387,7 +416,7 @@ def map_text(db_path: str) -> str:
 def recall(db_path: str, node: str) -> Dict[str, Any]:
     """한 가지의 소개·자유 산문 + 출처가 붙은 기억 본문 한 벌 + 하위 노드. 문서 편집은 먼저 색인에 반영."""
     node = norm_node(node)
-    sync_node(db_path, node)
+    sync = sync_node(db_path, node)
     path = doc_path(db_path, node)
     if not os.path.exists(path) and node not in all_nodes(db_path):
         return {"success": False, "node": node, "error": f"없는 가지: '{node}' — 지도(목차)의 이름을 쓰거나 save 에 node 를 붙여 새 가지를 만든다.",
@@ -399,7 +428,8 @@ def recall(db_path: str, node: str) -> Dict[str, Any]:
     text = open(path, encoding="utf-8").read()
     head, _, tail = _split_section(text)
     # 각 기억 원문은 items 한 벌로. 문서의 자유 산문은 보존하고 파생 갱신 장부는 경로로 읽는다.
-    return {"success": True, "node": node, "doc": path, "text": (head + tail.split(LEDGER, 1)[0]).strip(),
+    return {"success": True, "node": node, "doc": path,
+            "index_pending": sync.get("index_pending", []), "text": (head + tail.split(LEDGER, 1)[0]).strip(),
             "items": [{k: v for k, v in row.items() if k != "source_ref"} for row in rows], "count": len(rows),
             "scope": "이 가지의 기록만 조회했다. 다른 가지·미리보기의 빈 결과는 전체 기록 부재가 아니다.",
             "provenance_policy": "사용자 발화·AI 작업기록·출처 미확인을 구분하고 대상·사건·시점을 대조한다.",

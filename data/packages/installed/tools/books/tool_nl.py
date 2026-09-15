@@ -84,7 +84,10 @@ def search_nl(keyword, category="도서", page=1, page_size=20):
         items.append(rec)
 
     if not items:
-        return {"items": [],
+        if total != 0:
+            return {"success": False, "items": [], "total": total,
+                    "error": "국립중앙도서관 결과 페이지를 해석하지 못했습니다. 소장 자료 없음으로 판단할 수 없습니다."}
+        return {"success": True, "items": [], "total": 0,
                 "message": f"'{keyword}'에 대한 국립중앙도서관 소장 자료가 없습니다"
                            + (f" (category={category})." if category else ".")}
     head = f"국립중앙도서관 '{keyword}' — {len(items)}건"

@@ -40,7 +40,7 @@ actions:
         delete: 삭제 (memory_id)
         recall: 가지 열기 (node — 문서 전문+기억+하위 가지; 생략=지도; store 실행=IBL 함수 서명·용례, 본문은 expand)
         move: 가지 이동 (memory_id + node; store 실행=용례)
-    implementation: handler.py가 op로 분기. save는 정책 안내만 반환하며 쓰기는 최종 응답 후 cognitive_distill이 담당. recall/move는 memory_tree.
+    implementation: handler.py가 op로 분기. save는 정책 안내만 반환하며 쓰기는 최종 응답 후 cognitive_distill이 담당. recall/move는 memory_tree. 문서 동기화는 본문 commit 뒤 벡터를 갱신하고 실패 ID를 index_pending으로 보존해 다음 recall에서 재시도한다.
     keywords:
     - 메모리
     - 기억

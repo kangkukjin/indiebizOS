@@ -1778,6 +1778,37 @@
       ],
       "file": "member_contract.md",
       "topic": "시스템"
+    },
+    {
+      "id": "document_edit",
+      "name": "Word 기존 문서 편집·변경 추적·주석",
+      "description": "self:document inspect/edit — DOCX 문단 조회 후 해시와 문구로 편집. 원본 보존, Word 변경 추적과 주석.",
+      "keywords": [
+        "Word",
+        "DOCX",
+        "워드",
+        "문서 편집",
+        "변경 추적",
+        "주석",
+        "document"
+      ],
+      "file": "document_edit.md",
+      "topic": "파일·문서"
+    },
+    {
+      "id": "transit_route",
+      "name": "버스·지하철 대중교통 길찾기",
+      "description": "navigate_route mode=transit — ODsay 도시내 경로·환승·도보·요금. 도시간 연결 미완결 명시.",
+      "keywords": [
+        "대중교통",
+        "버스",
+        "지하철",
+        "환승",
+        "transit",
+        "ODsay"
+      ],
+      "file": "transit_route.md",
+      "topic": "여행·숙소·맛집"
     }
   ]
 }

@@ -78,7 +78,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-09-15", impl: "de338721c19029f2"}
+        path_audited: {at: "2026-09-15", impl: "d744cd2051059786"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -90,7 +90,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-09-15", impl: "de338721c19029f2"}
+        path_audited: {at: "2026-09-15", impl: "d744cd2051059786"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -521,6 +521,36 @@ nodes:
         - history
         guides:
         - body.md
+      document:
+        description: 기존 DOCX 문단·표·머리말 조회·교체. Word 변경 추적·주석, 원본 보존. 새 문서 생성은 table:document.
+        target_description: 'inspect: path·offset·limit → 문단 items(block_id/text/editable), 파일 sha256. edit: path·expected_sha256(조회 해시)·edits 배열([{block_id,old_string,new_string,comment?}])·output(새 docx 경로). track_changes 기본 true, author 기본 IndieBizOS. 한 문단당 한 교체, old_string 고유 일치 필수. 복합 필드·링크·기존 변경/주석 문단은 editable=false로 보호. 문서 생성은 table:document, 양식 채우기는 self:fill.'
+        returns: items
+        side_effect: true
+        exempt: 실제 DOCX 경로 필요 — 임시 문서 회귀로 검증
+        group: file
+        router: handler
+        tool: document_op
+        target_key: op
+        runs_on: pc_only
+        implementation: docx_edit_ops.py — OOXML 문단 교체·w:ins/w:del·comments 배선, 비대상 ZIP 파트 보존
+        params:
+          path: string
+          output: string
+          expected_sha256: string
+          edits: array
+          track_changes: boolean
+          author: string
+          offset: integer
+          limit: integer
+        ops:
+          default: inspect
+          returns: {edit: effect}
+          side_effect: {inspect: false}
+          values:
+            inspect: DOCX 문단·표·머리말·꼬리말 텍스트와 편집 가능 여부 조회
+            edit: 선택 문구 일괄 교체·변경 추적·주석을 새 파일에 저장
+        keywords: [워드, 문서수정, DOCX, 변경추적, 주석, 제안서, document]
+        guides: [document_edit.md]
       sheet:
         returns: items
         columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
@@ -528,12 +558,19 @@ nodes:
         side_effect: true
         # find(기본 op)는 실존 파일 경로 인자에 의존 — self:read 선례.
         exempt: 실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)
-        description: 엑셀 장부 부분 편집 — 기존 xlsx/xlsm 에 행 추가·셀 수정·행 검색. 수식·서식·다른 시트 보존(통째 재작성 아님).
+        description: 엑셀 장부 행·범위 편집과 재계산. find/append/update, range/range_write, calculate(계산값 반환·원본 보존).
         group: file
-        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★차트·이미지는 저장 시 유실(openpyxl), .xlsm 매크로는 보존.'
+        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(새 경로), 비대상 ZIP 파트 보존. calculate: path(xlsx)·output(새 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인.'
         router: handler
         tool: sheet_op
-        implementation: system_essentials/sheet_ops.py — openpyxl 부분 편집 + 원자 교체 저장. 헤더 행→열 매핑, 숫자 동치 매칭(3500=="3,500").
+        params:
+          range: string
+          values: array
+          format: object
+          output: string
+          expected_sha256: string
+          timeout: number
+        implementation: sheet_ops.py — 헤더 기반 openpyxl 행 편집. sheet_range_ops.py — ZIP 파트 보존 범위/서식 편집 및 LibreOffice 계산 캐시 이식.
         target_key: op
         runs_on: pc_only
         ops:
@@ -541,12 +578,18 @@ nodes:
           returns:
             append: effect
             update: effect
+            range_write: effect
+            calculate: effect
           side_effect:
             find: false
+            range: false
           values:
             find: 조건으로 행 검색 — where 생략 시 전체, _row 포함
             append: 행 추가 — 기존 수식·서식 보존, "=수식" 문자열 지원
             update: where 로 찾은 행의 set 셀 수정 — where 필수
+            range: 셀 범위 조회(range A1:C10, sheet) — 셀별 값·수식·파일 sha256
+            range_write: 범위 값·서식을 새 파일에 적용 — expected_sha256 필수
+            calculate: xlsx를 LibreOffice로 재계산한 셀 캐시만 새 output 파일에 보존 — 오류와 items 계산값 반환
         aliases:
           path:
           - file_path
@@ -1545,14 +1588,20 @@ tool_json:
         limit:
           type: integer
           description: 최대 행 수. 기본 200, 상한 1000 (초과 요청은 신고 후 상한 적용)
+  - name: document_op
+    description: 기존 DOCX inspect/edit — 문단 id·해시 조회 후 선택 교체, 변경 추적·주석, 원본 보존.
+    input_schema:
+      type: object
+      properties:
+        op: {type: string, description: inspect/edit}
   - name: sheet_op
-    description: 엑셀 장부 부분 편집 — 행 검색(find)/행 추가(append)/셀 수정(update). 기존 수식·서식·다른 시트 보존.
+    description: 엑셀 장부 행/범위 편집·재계산. range_write/calculate는 새 결과 파일에 저장하며 원본을 보존.
     input_schema:
       type: object
       properties:
         op:
           type: string
-          description: find(기본)/append/update
+          description: find(기본)/append/update/range/range_write/calculate
         path:
           type: string
           description: 대상 xlsx/xlsm 파일 경로

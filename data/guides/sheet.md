@@ -13,7 +13,7 @@
 | **PDF 표 추출** | `[self:read]{tables: true}` | table{columns,rows} 통화로 |
 | **장부 눈으로 확인** | `[engines:render]{op:"xlsx"}` | 수식 **재계산**+페이지별 PNG, pdf_path 동봉 |
 
-## [self:sheet] — op 3종
+## 헤더 기반 행 작업 — find·append·update
 
 ```
 [self:sheet]{op: "find", path: "재고장.xlsx", where: {"품목": "B형 부품"}}
@@ -69,7 +69,7 @@ LibreOffice 가 없으면 설치 안내와 함께 정직 실패(맥 `brew instal
 
 ## 함정
 
-1. **차트·이미지는 저장 시 유실** (openpyxl 한계). 차트가 든 장부는 데이터 시트와 차트 파일을
+1. **기존 append/update는 복잡한 차트·이미지의 저장 보존을 보장하지 않는다** (openpyxl 한계). 차트가 든 장부는 데이터 시트와 차트 파일을
    분리해 두는 것이 안전. 로고 박힌 견적서 템플릿 편집엔 부적합. (렌더 지각 자체는 차트를
    보지만, sheet 로 **저장한** 파일은 이미 유실 후일 수 있다.)
 2. **PDF 표 추출은 실선 표 기준** (PyMuPDF find_tables). 선 없는 표·스캔 이미지 PDF(OCR 필요)는
@@ -78,3 +78,45 @@ LibreOffice 가 없으면 설치 안내와 함께 정직 실패(맥 `brew instal
    숫자화하거나, 장부 쪽 수식이 계산하게 하라.
 4. items 의 열 이름이 시트 헤더와 다르면 **실행 거부 + 실제 열 목록 반환** (조용한 오배치 방지).
 5. 헤더가 1행이 아닌 장부(제목 행이 위에 있는 양식)는 `header_row` 를 지정.
+
+## A1 범위·서식 편집 — range / range_write
+
+```ibl
+[self:sheet]{op:"range", path:"장부.xlsx", sheet:"매출", range:"A2:C5"}
+```
+
+`items`는 셀별 `cell`, `value`, `formula`, `formula_type`, `style_id`, 바깥 `sha256`은 파일 버전이다.
+value는 저장된 캐시이므로 최신값이 필요하면 calculate를 실행한다.
+범위는 A1 또는 A1:C10, 최대 10,000셀. sheet 생략 시 활성 시트.
+
+```ibl
+[self:sheet]{op:"range_write", path:"장부.xlsx", expected_sha256:"range에서 읽은 해시", range:"A2:B3", values:[[110,5],[220,6]], format:{bold:true,number_format:"#,##0"}, output:"장부_수정.xlsx"}
+```
+
+values는 범위와 정확히 같은 크기의 2차원 배열이다. 숫자·문자열·불리언·null(비움),
+`=`로 시작하는 수식을 쓴다. format만 지정해 서식만 바꿀 수도 있다.
+format은 bold와 Excel number_format만 지원한다. 원본과 별개의 파일을 만들며
+기존 결과는 덮어쓰지 않는다. `.xlsx`·`.xlsm` 지원, 매크로 실행 없음.
+선택한 셀·관련 서식·계산 캐시 외 ZIP 데이터를 보존하므로 차트·다른 시트의 데이터를
+유지한다. 값을 바꾼 뒤에는 전체 수식 캐시를 비우고 재계산 필요로 표시한다.
+병합 범위에 걸치는 편집, 보호된 시트, 공유·배열·데이터표 수식이 든 시트는 거절한다.
+
+## 실제 계산값을 XLSX에 저장 — calculate
+
+```ibl
+[self:sheet]{op:"calculate", path:"장부_수정.xlsx", output:"장부_계산.xlsx", timeout:60}
+[self:sheet]{op:"range", path:"장부_계산.xlsx", range:"C2:C5"}
+```
+
+LibreOffice가 임시 사본에서 실제로 계산하고 **계산 캐시만 원래 구조에 옮긴** 결과 XLSX를
+저장한다. 원본 수식·차트·그림 등은 보존한다. 차트 자체에 내장된 표시 캐시는 갱신하지
+않으므로 차트 화면 갱신은 문서 편집기에서 확인한다. Excel 전용 수식은 엔진에 따라
+차이가 있을 수 있으며 오류 셀은 숨기지 않는다.
+
+- LibreOffice 필요: 시스템 설치/PATH 또는 `SOFFICE_PATH`. 없으면 dependency_missing.
+- timeout 1~120초(기본 60). `.xlsx`만 지원. 외부 링크·매크로·공유/배열/데이터표·외부 자원
+  수식은 거절한다. 임시 독립 프로필에서 매크로를 차단한다.
+- 성공 결과의 `items`는 수식 셀의 계산값이다. 계산 오류가 있으면 결과 파일은 남기되
+  `success:false`, `recalculated:true`, `errors`로 셀별 오류를 알린다.
+- 출력 생략 시 `<원본명>_calculated.xlsx`. 이 기능이 저장한 파일을 range/read로 읽어야
+  갱신된 캐시를 본다. PNG/PDF 화면 검수는 기존 engines:render가 담당한다.

@@ -193,6 +193,7 @@
     "self:business#remove_image": "item_id + 경로 필요 — 고정 fixture 부적합",
     "self:business#save": "생성/수정 대상 필요 — 고정 fixture 부적합",
     "self:cctv": "기기 의존(카메라 연결)",
+    "self:document": "실제 DOCX 경로 필요 — 임시 문서 회귀로 검증",
     "self:fill": "템플릿 문서 경로 인자 필요(고정 fixture 부적합)",
     "self:finance#ingest": "AI 구조화 호출(비용·편차) + 원장 쓰기 — 정기 실행 부적합",
     "self:goal#attempts": "task_id 필요 — 고정 fixture 부적합",

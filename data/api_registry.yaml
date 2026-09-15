@@ -9,6 +9,14 @@
 
 services:
 
+  odsay:
+    base_url: "https://api.odsay.com"
+    auth:
+      type: query_param
+      key_name: apiKey
+      env_var: ODSAY_API_KEY
+    timeout: 20
+
   # === 법률 ===
   law:
     base_url: "http://www.law.go.kr/DRF"

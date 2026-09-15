@@ -779,18 +779,71 @@
       }
     },
     {
-      "name": "sheet_op",
-      "description": "엑셀 장부 부분 편집 — 행 검색(find)/행 추가(append)/셀 수정(update). 기존 수식·서식·다른 시트 보존.",
+      "name": "document_op",
+      "description": "기존 DOCX inspect/edit — 문단 id·해시 조회 후 선택 교체, 변경 추적·주석, 원본 보존.",
       "input_schema": {
         "type": "object",
         "properties": {
           "op": {
             "type": "string",
-            "description": "find(기본)/append/update",
+            "description": "inspect/edit",
+            "enum": [
+              "inspect",
+              "edit"
+            ],
+            "default": "inspect"
+          },
+          "path": {
+            "type": "string",
+            "description": "self:document 파라미터"
+          },
+          "output": {
+            "type": "string",
+            "description": "self:document 파라미터"
+          },
+          "expected_sha256": {
+            "type": "string",
+            "description": "self:document 파라미터"
+          },
+          "edits": {
+            "type": "array",
+            "description": "self:document 파라미터"
+          },
+          "track_changes": {
+            "type": "boolean",
+            "description": "self:document 파라미터"
+          },
+          "author": {
+            "type": "string",
+            "description": "self:document 파라미터"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "self:document 파라미터"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "self:document 파라미터"
+          }
+        }
+      }
+    },
+    {
+      "name": "sheet_op",
+      "description": "엑셀 장부 행/범위 편집·재계산. range_write/calculate는 새 결과 파일에 저장하며 원본을 보존.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "find(기본)/append/update/range/range_write/calculate",
             "enum": [
               "find",
               "append",
-              "update"
+              "update",
+              "range",
+              "range_write",
+              "calculate"
             ],
             "default": "find"
           },
@@ -821,6 +874,30 @@
           "limit": {
             "type": "number",
             "description": "find 결과 상한 (기본 50)"
+          },
+          "range": {
+            "type": "string",
+            "description": "self:sheet 파라미터"
+          },
+          "values": {
+            "type": "array",
+            "description": "self:sheet 파라미터"
+          },
+          "format": {
+            "type": "object",
+            "description": "self:sheet 파라미터"
+          },
+          "output": {
+            "type": "string",
+            "description": "self:sheet 파라미터"
+          },
+          "expected_sha256": {
+            "type": "string",
+            "description": "self:sheet 파라미터"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "self:sheet 파라미터"
           }
         }
       }

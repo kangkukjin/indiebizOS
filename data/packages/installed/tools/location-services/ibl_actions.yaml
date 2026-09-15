@@ -265,19 +265,27 @@ nodes:
           origin: [from]
           destination: [to]
         returns: scalar
+        returns_variants:
+          mode=transit: items
+        side_effect: false
         exempt: '출발/도착 좌표 쌍 필요'
-        description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
-        target_description: 목적지 (장소명 또는 '경도,위도'). origin 옵션으로 출발지 지정.
+        description: 길찾기 — mode=driving(기본 카카오 자동차)/transit(ODsay 도시내 대중교통). 환승·도보·시간 비교는 transit items를 table로.
+        target_description: "origin/destination=장소명 또는 '경도,위도'. mode=driving 기존 자동차 경로 / transit 도시내 대중교통 items(duration_min,walking_distance_m,fare_krw,transfer_count,segments). ODSAY_API_KEY 필요, 장소명 해소에는 KAKAO_REST_API_KEY도 필요. transit은 실시간 도착·시각 지정·도시간 완전 경로 미지원(부분 경로 신고). 자동차 옵션 waypoints/avoid/priority는 transit에서 거절."
+        params:
+          mode: string
         group: places
         router: handler
         tool: kakao_navigation
-        implementation: Kakao Map API로 자동차 경로 탐색 (거리/시간/톨비)
+        implementation: handler.py 자동차 경로 또는 transit_routes.py ODsay v1.8 도시내 경로. 도시간 응답은 incomplete_route.
         target_key: destination
         keywords:
         - 길찾기
         - 내비
         - 경로
         - 네비게이션
+        - 대중교통
+        - 환승
+        guides: [transit_route.md]
       reverse_geocode:
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           lng: [lon]
@@ -546,7 +554,7 @@ tool_json:
           type: string
           description: detail 전용 — 카카오 place id(검색 결과의 id, 동명 판별)
   - name: kakao_navigation
-    description: '카카오모빌리티 API로 자동차 길찾기를 수행합니다.
+    description: 'mode=driving(기본)은 카카오모빌리티 자동차 길찾기, mode=transit은 ODsay 도시내 대중교통 경로입니다. transit은 소요시간·요금·환승·도보·구간 items를 반환하며 ODSAY_API_KEY가 필요합니다. 도시간은 미완결 경로로 표시합니다. 아래 경로 옵션은 자동차 전용입니다.
 
 
       ## 반환 정보

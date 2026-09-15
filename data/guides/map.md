@@ -12,7 +12,7 @@
 | 맛집 추천(후기순) | `[sense:restaurant]{query: "<지역 음식>"}` — 음식점만, 블로그 근거 정렬. 업종 무관 검색은 place |
 | 좌표 → 주소 | `[sense:reverse_geocode]{lat, lng}` |
 | 내 위치 | `[sense:here]{}` (데스크탑=선언 위치, 폰=GPS) |
-| 길찾기 | `[sense:navigate_route]{origin: "<장소명 또는 경도,위도>", destination: "<…>"}` |
+| 자동차 길찾기(기본) | `[sense:navigate_route]{origin: "<장소명 또는 경도,위도>", destination: "<…>"}` |
 | 경로 주변 CCTV | `[sense:cctv]{op: "nearby", lat, lng, radius_km: <km>}` |
 
 검색 결과 항목: `id·name·category·cat·address·phone·url(place.map.kakao.com/<id>)·lat·lng·distance(m, 좌표 준 검색만)`. 사진·영업시간·리뷰·평점은 공개 API 가 주지 않는다 — 앱은 `url` 의 카카오 장소 페이지를 안(webview)에 띄워 보여주고, 대화에서는 `url` 을 그대로 건넨다.
@@ -32,3 +32,6 @@
 ## 앱 동작 요약 (표현 — `frontend/src/components/MapInstrument.tsx` + `map/`)
 
 검색창(Enter/검색) → 번호 핀 + 결과 목록 · 카테고리 칩 = 현 화면 반경 주변 검색 · 지도를 움직이면 "이 지역에서 재검색" · 항목/핀 클릭 = 상세(정보 탭 / 카카오 상세 탭) · ☆ 저장 → 폴더·메모 · ⭐ 패널 = 저장 목록(폴더 칩) · 지도 빈 곳 클릭 = 주소 카드(출발/도착/주변 음식점/저장) · 🛣️ 길찾기 패널(출발·도착·우리집·CCTV) · 📍 내 위치. 우리집 주소는 브라우저 localStorage(`directions.instrument.home`).
+
+대중교통은 `[sense:navigate_route]{mode:"transit", origin:"서울역", destination:"강남역"}`.
+설정·반환·도시간 제한은 [transit_route.md](transit_route.md) 참조. 현재 지도 앱의 자동차 UI와 별개의 IBL 호출 옵션이다.

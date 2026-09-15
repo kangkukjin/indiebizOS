@@ -606,6 +606,13 @@ _OP_DISPATCHERS = {
         "find": _sib_op("sheet_ops", "op_find"),
         "append": _sib_op("sheet_ops", "op_append"),
         "update": _sib_op("sheet_ops", "op_update"),
+        "range": _sib_op("sheet_range_ops", "op_range"),
+        "range_write": _sib_op("sheet_range_ops", "op_range_write"),
+        "calculate": _sib_op("sheet_range_ops", "op_calculate"),
+    },
+    "document_op": {
+        "inspect": _sib_op("docx_edit_ops", "op_inspect"),
+        "edit": _sib_op("docx_edit_ops", "op_edit"),
     },
     # JSON 원장 — 등록 스크립트에서 승격(2026-09-04, 사용자 판정 언어 개정). 관문 넷은 ledger_ops 머리말.
     "ledger_op": {
@@ -648,7 +655,7 @@ _OP_DISPATCHERS = {
     },
 }
 _OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "ledger_op": "select", "sqlite_op": "query",
-                "patch_op": "propose", "body_op": "changes"}
+                "patch_op": "propose", "body_op": "changes", "document_op": "inspect"}
 
 
 _file_views = _fs_find.file_views

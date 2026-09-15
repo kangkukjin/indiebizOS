@@ -112,6 +112,9 @@ ENV_CATALOG: Dict[str, Dict[str, list]] = {
     "portals": {
         "label": "포털 · 지도",
         "entries": [
+            {"name": "ODSAY_API_KEY", "label": "ODsay 대중교통 API 키",
+             "desc": "버스·지하철 도시내 길찾기. ODsay LAB에서 앱을 등록하고 API 키 발급.",
+             "signup_url": "https://lab.odsay.com/"},
             {"name": "KAKAO_REST_API_KEY", "label": "카카오 REST API 키",
              "desc": "지도·역지오코딩·장소검색. developers.kakao.com → 앱 만들기 → REST API 키.",
              "signup_url": "https://developers.kakao.com/",

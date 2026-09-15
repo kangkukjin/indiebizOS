@@ -1136,6 +1136,9 @@ def execute(tool_input: dict, context) -> str:
         return json.dumps(result, ensure_ascii=False, indent=2)
 
     elif tool_name == "kakao_navigation":
+        mode = tool_input.get("mode", "driving")
+        if mode not in ("driving", "transit"):
+            return json.dumps({"success": False, "error": "mode는 driving 또는 transit입니다."}, ensure_ascii=False)
         origin = tool_input.get("from") or tool_input.get("origin", "")  # from/to 우선(자연어), origin/destination 별칭
         destination = tool_input.get("to") or tool_input.get("destination", "")
 
@@ -1169,6 +1172,13 @@ def execute(tool_input: dict, context) -> str:
             return json.dumps({"success": False, "error": "목적지(destination 또는 to)가 필요합니다. 장소명 또는 '경도,위도' 형식."}, ensure_ascii=False)
         if not origin:
             return json.dumps({"success": False, "error": "출발지(origin)가 필요합니다 — 이 몸의 선언 위치(data/body_location.json)도 없어 기본값을 만들 수 없었습니다."}, ensure_ascii=False)
+
+        if mode == "transit":
+            import importlib.util as _ilu
+            _spec = _ilu.spec_from_file_location("transit_routes", os.path.join(os.path.dirname(__file__), "transit_routes.py"))
+            _mod = _ilu.module_from_spec(_spec)
+            _spec.loader.exec_module(_mod)
+            return json.dumps(_mod.route({**tool_input, "origin": origin, "destination": destination}, _geocode_place), ensure_ascii=False)
 
         result = kakao_navigation(
             origin=origin,

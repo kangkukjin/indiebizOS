@@ -53,6 +53,8 @@ openpyxl
 xlrd
 # system_essentials office_ops·data-ops·lecture_workspace — 워드 문서
 python-docx
+# DOCX/XLSX 선택적 OOXML 수정 (비대상 ZIP 파트 보존)
+lxml
 # computer-use 패키지 — 마우스/키보드/화면(pyautogui) + macOS 캡처·OCR(Quartz/AS/Vision)
 pyautogui
 pyobjc-framework-Quartz; sys_platform == "darwin"

@@ -27,6 +27,7 @@ from typing import Optional, Dict
 # 알려진 API 서비스별 인증 설정
 # 새 API를 추가할 때 여기에 등록하면 get_api_headers()로 자동 생성
 _AUTH_REGISTRY: Dict[str, dict] = {
+    "odsay": {"type": "query_param", "key_name": "apiKey", "env_var": "ODSAY_API_KEY"},
     "kakao": {
         "type": "header",
         "header_name": "Authorization",

@@ -179,7 +179,8 @@
         "DATA_GO_KR_API_KEY",
         "KAKAO_REST_API_KEY",
         "NAVER_CLIENT_ID",
-        "NAVER_CLIENT_SECRET"
+        "NAVER_CLIENT_SECRET",
+        "ODSAY_API_KEY"
       ],
       "weight": "light",
       "locale": "kr"
@@ -364,6 +365,7 @@
     "self:copy": "system_essentials",
     "self:deck": "lecture_workspace",
     "self:delete": "system_essentials",
+    "self:document": "system_essentials",
     "self:edit": "system_essentials",
     "self:file_find": "system_essentials",
     "self:fill": "system_essentials",

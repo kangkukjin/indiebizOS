@@ -21,6 +21,7 @@ from .auth_manager import get_api_headers, get_auth_query_params, check_api_key
 
 # 서비스별 기본 URL 레지스트리
 _BASE_URLS: Dict[str, str] = {
+    "odsay": "https://api.odsay.com",
     "kakao": "https://dapi.kakao.com",
     "kakao-navi": "https://apis-navi.kakaomobility.com",
     "naver": "https://openapi.naver.com",

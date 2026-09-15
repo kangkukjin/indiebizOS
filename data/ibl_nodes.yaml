@@ -1614,19 +1614,28 @@ nodes:
           destination:
           - to
         returns: scalar
+        returns_variants:
+          mode=transit: items
+        side_effect: false
         exempt: 출발/도착 좌표 쌍 필요
-        description: 카카오 내비 자동차 길찾기. 거리·시간·톨비 반환. 지도 표시는 map.
-        target_description: 목적지 (장소명 또는 '경도,위도'). origin 옵션으로 출발지 지정.
+        description: 길찾기 — mode=driving(기본 카카오 자동차)/transit(ODsay 도시내 대중교통). 환승·도보·시간 비교는 transit items를 table로.
+        target_description: origin/destination=장소명 또는 '경도,위도'. mode=driving 기존 자동차 경로 / transit 도시내 대중교통 items(duration_min,walking_distance_m,fare_krw,transfer_count,segments). ODSAY_API_KEY 필요, 장소명 해소에는 KAKAO_REST_API_KEY도 필요. transit은 실시간 도착·시각 지정·도시간 완전 경로 미지원(부분 경로 신고). 자동차 옵션 waypoints/avoid/priority는 transit에서 거절.
+        params:
+          mode: string
         group: places
         router: handler
         tool: kakao_navigation
-        implementation: Kakao Map API로 자동차 경로 탐색 (거리/시간/톨비)
+        implementation: handler.py 자동차 경로 또는 transit_routes.py ODsay v1.8 도시내 경로. 도시간 응답은 incomplete_route.
         target_key: destination
         keywords:
         - 길찾기
         - 내비
         - 경로
         - 네비게이션
+        - 대중교통
+        - 환승
+        guides:
+        - transit_route.md
       reverse_geocode:
         aliases:
           lng:
@@ -5005,7 +5014,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-15'
-          impl: de338721c19029f2
+          impl: d744cd2051059786
         target_key: path
         aliases:
           offset:
@@ -5018,7 +5027,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-15'
-          impl: de338721c19029f2
+          impl: d744cd2051059786
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5512,17 +5521,64 @@ nodes:
         - history
         guides:
         - body.md
+      document:
+        description: 기존 DOCX 문단·표·머리말 조회·교체. Word 변경 추적·주석, 원본 보존. 새 문서 생성은 table:document.
+        target_description: 'inspect: path·offset·limit → 문단 items(block_id/text/editable), 파일 sha256. edit: path·expected_sha256(조회 해시)·edits 배열([{block_id,old_string,new_string,comment?}])·output(새 docx 경로). track_changes 기본 true, author 기본 IndieBizOS. 한 문단당 한 교체, old_string 고유 일치 필수. 복합 필드·링크·기존 변경/주석 문단은 editable=false로 보호. 문서 생성은 table:document, 양식 채우기는 self:fill.'
+        returns: items
+        side_effect: true
+        exempt: 실제 DOCX 경로 필요 — 임시 문서 회귀로 검증
+        group: file
+        router: handler
+        tool: document_op
+        target_key: op
+        runs_on: pc_only
+        implementation: docx_edit_ops.py — OOXML 문단 교체·w:ins/w:del·comments 배선, 비대상 ZIP 파트 보존
+        params:
+          path: string
+          output: string
+          expected_sha256: string
+          edits: array
+          track_changes: boolean
+          author: string
+          offset: integer
+          limit: integer
+        ops:
+          default: inspect
+          returns:
+            edit: effect
+          side_effect:
+            inspect: false
+          values:
+            inspect: DOCX 문단·표·머리말·꼬리말 텍스트와 편집 가능 여부 조회
+            edit: 선택 문구 일괄 교체·변경 추적·주석을 새 파일에 저장
+        keywords:
+        - 워드
+        - 문서수정
+        - DOCX
+        - 변경추적
+        - 주석
+        - 제안서
+        - document
+        guides:
+        - document_edit.md
       sheet:
         returns: items
         columns_from: data
         side_effect: true
         exempt: 실존 xlsx 파일 경로 인자 필요(고정 fixture 부적합)
-        description: 엑셀 장부 부분 편집 — 기존 xlsx/xlsm 에 행 추가·셀 수정·행 검색. 수식·서식·다른 시트 보존(통째 재작성 아님).
+        description: 엑셀 장부 행·범위 편집과 재계산. find/append/update, range/range_write, calculate(계산값 반환·원본 보존).
         group: file
-        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★차트·이미지는 저장 시 유실(openpyxl), .xlsm 매크로는 보존.'
+        target_description: 'path — 대상 xlsx/xlsm. sheet — 시트명(생략 시 활성 시트). header_row — 헤더 행 번호(기본 1). find: where({열: 값} 전부 일치, 생략 시 전체)·limit(기본 50), items 에 _row(행 번호) 포함 / append: items([{열: 값}, …])를 마지막 데이터 행 뒤에 추가(파이프 직전 step 의 items/table 자동 사용) — "=SUM(A2:A9)" 문자열은 수식으로 들어감 / update: where(필수 — 전행 갱신 방지)로 찾은 행들의 set({열: 값}) 셀 수정. 새 파일 생성은 [table:spreadsheet], 전체 읽기는 [self:read]. ★append/update는 openpyxl의 보존 한계가 있으며 .xlsm 매크로는 보존. range: range(A1:C10)·sheet → 셀별 값/수식·sha256. range_write: expected_sha256·range·values(같은 크기 2차원 배열)·format(number_format/bold)·output(새 경로), 비대상 ZIP 파트 보존. calculate: path(xlsx)·output(새 경로)·timeout(1~120초), LibreOffice/SOFFICE_PATH 필요, 원래 수식/비대상 파트에 셀 계산 캐시만 반영. 공유/배열/외부 수식·매크로 재계산은 거절, errors와 recalculated 확인.'
         router: handler
         tool: sheet_op
-        implementation: system_essentials/sheet_ops.py — openpyxl 부분 편집 + 원자 교체 저장. 헤더 행→열 매핑, 숫자 동치 매칭(3500=="3,500").
+        params:
+          range: string
+          values: array
+          format: object
+          output: string
+          expected_sha256: string
+          timeout: number
+        implementation: sheet_ops.py — 헤더 기반 openpyxl 행 편집. sheet_range_ops.py — ZIP 파트 보존 범위/서식 편집 및 LibreOffice 계산 캐시 이식.
         target_key: op
         runs_on: pc_only
         ops:
@@ -5530,12 +5586,18 @@ nodes:
           returns:
             append: effect
             update: effect
+            range_write: effect
+            calculate: effect
           side_effect:
             find: false
+            range: false
           values:
             find: 조건으로 행 검색 — where 생략 시 전체, _row 포함
             append: 행 추가 — 기존 수식·서식 보존, "=수식" 문자열 지원
             update: where 로 찾은 행의 set 셀 수정 — where 필수
+            range: 셀 범위 조회(range A1:C10, sheet) — 셀별 값·수식·파일 sha256
+            range_write: 범위 값·서식을 새 파일에 적용 — expected_sha256 필수
+            calculate: xlsx를 LibreOffice로 재계산한 셀 캐시만 새 output 파일에 보존 — 오류와 items 계산값 반환
         aliases:
           path:
           - file_path
@@ -8667,7 +8729,7 @@ nodes:
         aliases:
           filename:
           - path
-        description: blocks(문서 구조 배열)·items(단일 통화)·markdown(이미 쓰인 글)을 산출물로 렌더 — 같은 입력을 html/pdf/png/docx/pptx/typst/markdown emitter로. 보고서·문서·페이지·발행글 산출의 단일 진실 소스.
+        description: blocks·items·markdown을 html/pdf/png/docx/pptx/typst/markdown 산출물로 렌더. 기존 DOCX의 선택 편집은 self:document.
         target_description: 'blocks·items·markdown 중 하나 — blocks(문서 IR 블록 배열) / items(단일 통화 [{title,meta,summary,url}] — 자동으로 cards/table 블록화, group_by 지정 시 그 필드로 섹션 heading 분할; **as**(언어 개정 2026-09-06): "images" 면 행마다 image 블록 — 도면·사진·차트 N장을 그림으로(행 수가 변수여도), src_field(그림 경로 칸, 미지정=src·path·image·file·url 순 자동)·caption_field(캡션 칸, 미지정=caption·title·name·label 순). 빈 칸 행은 건너뛰고 images_skipped 로 신고. "cards"/"table" 은 자동 판별 강제. 예: [engines:arch_elevation]{…} & [engines:arch_elevation]{…} >> [table:union] >> [table:document]{as: "images", src_field: "path", title: "입면도"}) / markdown(이미 마크다운으로 쓰인 글을 기계 변환, LLM 0·내용 안 고침 — [self:read] 결과를 >> 로 받으면 자동). 각 블록은 {type, ...}:
 
           - heading{level(1~6), text} · paragraph{text} · list{ordered?, items[]}

@@ -57,3 +57,9 @@
 - 회귀 = `.venv/bin/python3 -m pytest backend/ -q` (정본 맥 기준; 샌드박스는
   가능한 부분 집합만 돌리고 못 돈 것을 보고서에 명시).
 - 백업은 `data/_backups/YYYY-MM-DD_이름/` 에만. 작업 폴더에 `*_backup*` 흩뿌리지 말 것.
+
+## 5. 훈련 요청
+
+- **상상행동 / 상상행동훈련** 요청은 `data/guides/imagination_action.md`를 먼저 읽는다.
+  자연어 사용자 요구를 상상·수집해 실제 수행하고 어휘·문법의 공백을 찾는 훈련이다.
+  기존 IBL 조합 중심 상상훈련(`imagination_training.md`)과 구분한다.

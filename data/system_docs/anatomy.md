@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-09-14
+last_updated: 2026-09-15
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -64,6 +64,10 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
   - **어휘는 작아지면서 세졌다**: 2026-08-05~17 압축으로 163→**144**. 복합어를 지우고 보편어를 세우는 것(`pew_research`→`[sense:feed]`)·같은 개념의 낱말을 `op`/`source` 축으로 접는 것(사업 4형제→`[self:ledger]{store, op}`)이 표준 수술이다. 반대 방향의 압력은 `[self:script]`(등록 스크립트)가 받는다 — "새 낱말 만들까?"의 기본 답은 "스크립트로 얼려라".
   - **언어의 한계는 진짜 프로그램이 적발한다 (2026-08-27~28)**: 매일 손으로 돌리던 세 일간 보고서를 *한 문장 프로그램*으로 다시 쓰는 실험이 표현 공백 여덟 자리를 드러냈고(확장 경로 `${x.items.*.f}`·옵셔널 `?`·`[table:each]{on_error:"keep"}`·파이프 속 `if` 불일치=직전 통화 통과 등) 일괄 개정으로 닫혔다 — 팁 23문장·동향 24문장·부동산 21문장이 전부 품질 기준을 충족했다. 같은 시기 **실패가 위치를 갖게** 됐다: 모든 실패 봉투의 `traceback`, AI step 품질 미달을 `error_type:"quality"` 로 만드는 `criteria` 계약.
 처음 작성할 때는 [값·반복·원문 저장 가이드](../../docs/IBL_LEARNABILITY_2026_09_09.md)의 작은 예제부터 읽는다.
+언어를 발전시키는 **상상행동훈련**은 사람이 AI에게 부탁할 자연어 과제를 상상·수집해
+실제 수행하고, 경험에서 능력·표현의 공백을 찾아 어휘·문법·구현을 개선하는 훈련이다.
+“상상행동훈련을 하자”는 요청은 [상상행동 가이드](../guides/imagination_action.md)를 따른다.
+기존 미조합 어휘·문형 중심의 상상훈련과 출발점을 구분한다.
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 ---

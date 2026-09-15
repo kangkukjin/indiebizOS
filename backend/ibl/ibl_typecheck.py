@@ -96,8 +96,15 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
     shapes = {k: v for k, v in shapes.items()
               if isinstance(v, dict) and v.get("kind") in (None, "items", "table")}
     q = f"{node}:{action}"
+    op = params.get("op")
     if (_action_def(node, action) or {}).get("columns_from") == "data":
-        return None                                  # 열은 데이터가 정한다(ledger·read·script) — fixture 열은 그 fixture 의 것
+        # 열은 데이터가 정한다(ledger·read·script) — fixture 열은 그 fixture 의 것. 단 그 op 를 부른 fixture 가
+        # 따로 관측돼 있으면(`self:script#list` 처럼 목록 op 의 열은 코드가 정한다) 그 열은 안다(2026-09-16 ep3816).
+        if isinstance(op, str) and not _dynamic(op):
+            ent = shapes.get(f"{q}#{op}")
+            if ent and ent.get("keys"):
+                return list(ent["keys"])
+        return None
     # 변이 축(F20-1): param 리터럴이 변이 키와 맞으면 그 열이 정본
     for k, v in shapes.items():
         if not k.startswith(q + "@"):
@@ -109,7 +116,6 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
         val = params.get(p)
         if val is not None and not _dynamic(val) and str(val) == want and (v or {}).get("keys"):
             return list(v["keys"])
-    op = params.get("op")
     if isinstance(op, str) and not _dynamic(op):
         ent = shapes.get(f"{q}#{op}")
         if ent and ent.get("keys"):
@@ -178,7 +184,8 @@ class _Checker:
             d["expected"] = expected
         if got is not None:
             d["got"] = got
-        self.issues.append(d)
+        if d not in self.issues:          # 같은 자리·같은 문구는 한 번만(별칭 경로 중복 신고)
+            self.issues.append(d)
 
     # ── 진입 ──
     def _check_heads(self, steps, prev, local_statements=True):

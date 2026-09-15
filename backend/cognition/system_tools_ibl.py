@@ -436,6 +436,23 @@ def _preview_boundary(result, tool_input: dict):
         return result
 
 
+def _attach_precheck(result, tc) -> None:
+    """실행 전 통화 검사의 warning 을 실행 봉투에 싣는다(2026-09-16 ep3816).
+
+    error 는 실행 전에 거절하지만 warning(관측 열 밖 참조 등)은 실행을 막지 않는다 — 그 경고가 실행에서
+    '필드가 어느 행에도 없습니다' 로 되살아나면 모델은 검사기가 미리 알았다는 걸 봐야 다음엔 열을 확인한다.
+    성공 봉투에도 싣는다(빈 결과로 조용히 지나가는 자리). 최대 4건, 판정 문구만."""
+    if not isinstance(result, dict) or not isinstance(tc, dict):
+        return
+    warns = [i for i in (tc.get("issues") or []) if isinstance(i, dict) and i.get("severity") == "warning"]
+    if not warns:
+        return
+    result["precheck_warnings"] = [{k: i[k] for k in ("statement", "step", "at", "message", "hint") if k in i}
+                                   for i in warns[:4]]
+    if not result.get("success", True):
+        result["precheck_note"] = "실행 전 검사가 위 경고를 냈습니다 — 앞 단 결과의 columns/preview 로 열 이름을 확인하고 그 문장만 고치세요."
+
+
 def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint=None) -> None:
     """턴 범위 변수(언어 개정 2026-09-06) — 실행 결과의 산 `$변수` 를 턴 저장소에 합치고 봉투에 정직하게 말한다.
 
@@ -741,6 +758,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 if _explicit_names:
                     result["resumed_vars"] = _explicit_names
                 _attach_turn_vars(result, parsed, _tkey, sorted(_turn_injected), _retyped, _fn_hint)
+                _attach_precheck(result, _tc)
             result = _preview_boundary(result, tool_input)   # 봉투 기본값 반전 — 미리보기(2026-09-06)
             return dumps_public_result(result, producer="execute_ibl:resume_vars" if _explicit_names else "execute_ibl",
                                        ensure_ascii=False, indent=2) if isinstance(result, dict) else str(result)
@@ -861,6 +879,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 pass
         # 턴 범위 변수 — 산 `$변수` 를 턴 저장소에 합치고 봉투가 말한다(2026-09-06 언어 개정)
         _attach_turn_vars(result, parsed, _tkey, [], _retyped, _fn_hint)
+        _attach_precheck(result, _tc)
 
         # (map_data → [MAP:] 변환은 execute_tool 래퍼의 재귀 수확 단일 관문에서 처리 —
         #  단독/파이프/병렬 모양별 승격 분기는 병렬(&) 중첩에서 지도를 유실해 폐기. 2026-07-13)

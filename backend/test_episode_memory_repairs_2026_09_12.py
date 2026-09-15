@@ -114,3 +114,34 @@ def test_forage_owner_requires_user_evidence(monkeypatch):
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+# ── 2026-09-16 ep3813: 전달문 귀속 — 주인에게 말을 거는 글은 저자가 누구든 주인의 자기 진술이 아니다 ──
+_EP3813_HEAD = ('직접 보고 말씀드리겠습니다. 사이트를 열어 보겠습니다.\n\n'
+                '전부 열어 봤습니다. 홈, 뉴스, 학교, 커뮤니티까지 확인했습니다.\n\n'
+                '먼저 결론입니다. content-shop 에서 스스로 짚으신 문제를 정확히 뒤집었습니다. '
+                '출처와 발행일을 모르면 미확인이라고 적는 정직함도 좋습니다.')
+
+
+def test_addressed_document_is_conveyed_not_owner_evidence():
+    units = durable_source_units(_EP3813_HEAD)
+    assert units and not any(u["eligible"] for u in units)
+    assert {u["attribution"] for u in units} == {"conveyed"}
+    assert {u["basis"] for u in units} == {"addressed_to_owner"}
+    # 전달문 뒤에 붙인 짧은 채택 선언만 주인의 목소리로 남는다.
+    mixed = durable_source_units(_EP3813_HEAD + '\n\n나는 이 평가에 동의해. 앞으로 책 카드는 빼겠어.')
+    assert [u["text"] for u in mixed if u["eligible"]] == ['나는 이 평가에 동의해.', '앞으로 책 카드는 빼겠어.']
+    assert all(u["basis"] == "user_statement" for u in mixed if u["eligible"])
+    assert source_summary({"evidence": [{"role": "user", "attribution": "conveyed"}]})["status"] == 'external_record'
+
+
+def test_long_formal_document_is_unresolved_but_short_own_words_stay():
+    doc = ('사이트 구조를 살펴본 결과입니다.\n\n'
+           + '첫째 축은 질문입니다. 둘째 축은 매체입니다. 셋째로 저자 이름은 바이라인으로 내려갑니다. ' * 12
+           + '\n\n결론은 재구성이 필요하다는 것입니다.')
+    assert len(doc) >= 600
+    units = durable_source_units(doc)
+    assert units and not any(u["eligible"] for u in units)
+    assert {u["basis"] for u in units} == {"formal_document"}
+    own = durable_source_units('컨텐츠도 필요하지만 사이트를 잘 만드는 것도 필요하지. 지금은 일단 사이트 개발이 첫째라고 봐.')
+    assert all(u["eligible"] and u["basis"] == "user_statement" for u in own)

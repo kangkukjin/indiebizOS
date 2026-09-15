@@ -5682,6 +5682,7 @@ nodes:
             list: false
             status: false
           fixture:
+            list: '[self:script]{op: "list"}'
             status: '[self:script]{op: "status"}'
           values:
             list: 등록 목록 + 마지막 실행 상태

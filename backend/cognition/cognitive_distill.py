@@ -490,7 +490,10 @@ JSON 배열로만 응답.
             from memory_evidence import durable_source_units, select_units
             owner_units = durable_source_units(user_message)
             if owner_units and all(u["attribution"] != "user_candidate" for u in owner_units):
-                return  # 전달된 문서 평가만으로 탐색 관습·주인 정체를 추론해 저장하지 않는다.
+                # 전달된 문서·경어 수신문·인용만으로 탐색 관습·주인 정체를 추론해 저장하지 않는다.
+                _bases = sorted({u.get("basis", "") for u in owner_units} - {""})
+                print(f"[포식기억] 주인 귀속 보류 — 사용자 자기 진술 없음(basis={','.join(_bases)})")
+                return
             import sys, os, json
             bk = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             if bk not in sys.path:

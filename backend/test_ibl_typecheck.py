@@ -214,3 +214,44 @@ def test_rename_output_columns_still_catch_downstream_typo():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+# ── 2026-09-16 ep3816: 관측 열 경고의 중복 신고·columns_from 낱말의 op 별 fixture 열·경고의 봉투 탑승 ──
+def test_observed_column_warning_is_reported_once_and_script_list_columns_are_known(monkeypatch):
+    import ibl_access
+    cat = dict(ibl_access._return_shapes())
+    cat["sense:video"] = {"kind": "items", "keys": ["title", "duration", "uploader", "view_count", "upload_date", "video_id", "url"]}
+    cat["sense:search_youtube"] = {"kind": "items", "keys": ["index", "id", "title", "channel", "duration", "url"]}
+    cat["self:script"] = {"kind": "items", "keys": ["title", "meta", "summary", "registered_at", "last_status"]}
+    cat["self:script#list"] = cat["self:script"]
+    monkeypatch.setattr(ibl_access, "_return_shapes", lambda: cat)
+    prog = ('$후보 = [sense:search_youtube]{queries:["a"], count:12} >> [table:dedup]{by:"video_id"} '
+            '>> [table:rename]{map:{video_id:"id"}}\n'
+            '$날짜 = $후보 >> [table:each]{limit:80, do:"[sense:video]{op:\\"info\\", video_id:$it.id}"}\n'
+            '$날짜 >> [table:select]{fields:["id","title"]}')
+    issues = TC.typecheck_code(prog)["issues"]
+    hits = [i for i in issues if "'id'" in i["message"]]
+    assert len(hits) == 1 and hits[0]["severity"] == "warning"
+    # columns_from: data 인 self:script 도 `#list` fixture 가 관측한 열은 안다(run 은 여전히 미상)
+    assert TC._catalog_cols("self", "script", {"op": "list"})[:3] == ["title", "meta", "summary"]
+    assert TC._catalog_cols("self", "script", {"op": "run", "id": "x"}) is None
+    r = TC.typecheck_code('[self:script]{op:"list"} >> [table:filter]{where:"id contains 보고서"}')
+    assert any(i["severity"] == "warning" and "'id'" in i["message"] for i in r["issues"])
+
+
+def test_precheck_warnings_ride_the_execution_envelope():
+    from system_tools_ibl import _attach_precheck
+    tc = {"ok": True, "issues": [{"severity": "warning", "statement": 3, "step": 7, "at": "table:select",
+                                  "message": "'id' 은(는) 관측된 열에 없습니다", "hint": "columns 를 보라"},
+                                 {"severity": "error", "message": "x"}]}
+    ok = {"success": True}
+    _attach_precheck(ok, tc)
+    assert ok["precheck_warnings"] == [{"statement": 3, "step": 7, "at": "table:select",
+                                        "message": "'id' 은(는) 관측된 열에 없습니다", "hint": "columns 를 보라"}]
+    assert "precheck_note" not in ok
+    failed = {"success": False, "error": "Step 7 에러"}
+    _attach_precheck(failed, tc)
+    assert failed["precheck_warnings"] and "precheck_note" in failed
+    clean = {"success": True}
+    _attach_precheck(clean, {"ok": True, "issues": []})
+    assert "precheck_warnings" not in clean

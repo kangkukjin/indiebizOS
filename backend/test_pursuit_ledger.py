@@ -538,3 +538,26 @@ def test_new_assumptions_over_limit_are_rejected_not_cut(ledger, row):
 if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__] + sys.argv[1:]))
+
+
+def test_turns_read_is_brief_by_default_and_full_on_detail(ledger, row, bound):
+    """2026-09-16 ep3814: 턴 2건 읽기에 3만 자가 들어오던 자리 — 기본은 요약, 전문은 detail=true 로 고른 턴만."""
+    long_response = '응답 본문 ' * 300
+    tools = [{'tool_name': 'execute_ibl', 'input': {'code': '[self:time]{}'}, 'success': True},
+             {'tool_name': 'execute_ibl', 'input': {'code': '[sense:search]{query:"x"}'}, 'success': False}]
+    ledger.begin_turn(row['id'], 'old_turn', '수원에서 속초 가는 길 ' * 30)
+    ledger.finish_turn(row['id'], 'old_turn', long_response, tools)
+    bound.bind(row); bound.aliases = {'agent'}
+    read = lambda **extra: json.loads(execute_pursuit({'op': 'read', 'id': row['id'], 'section': 'turns', **extra},
+                                                       'agent', bound.task))['result']
+    brief = read()
+    item = [t for t in brief['items'] if t['task_id'] == 'old_turn'][0]
+    assert brief['detail'] is False and item['tools'] == {'count': 2, 'failed': 1, 'names': ['execute_ibl']}
+    assert item['response'].endswith('자)') and len(item['response']) < 450 and len(item['input']) < 260
+    assert item['full_chars'] > len(json.dumps(item, ensure_ascii=False))
+    full = read(detail=True, task_id='old_turn')
+    assert full['detail'] is True and len(full['items']) == 1 and full['items'][0]['tools'] == tools
+    assert full['items'][0]['response'] == long_response
+    # 기본 read 의 pending_turns 도 요약이다
+    default = json.loads(execute_pursuit({'op': 'read', 'id': row['id']}, 'agent', bound.task))['result']
+    assert all('full_chars' in t and isinstance(t['tools'], dict) for t in default['pending_turns'])

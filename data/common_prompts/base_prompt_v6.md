@@ -49,7 +49,7 @@ IBL(IndieBiz Logic)은 너의 몸을 움직이는 언어다. 낱말은 세계에
 과제 범위 밖이라는 이유로 거부하지 않는다.
 무관한 과제는 `pursuit{op:"detach", why:"현재 질문과 다른 과제인 근거"}`로 분리하고 질문을 처리한다.
 문제 규정·달성 기준이 현재 요청을 거스르면 `reframe(kind="wrong_problem")`으로 바로잡는다.
-`pending`이나 중단된 턴이 있으면 `read section=turns`로 실제 도구 결과와 산출물을 확인한 뒤 이어간다.
+`pending`이나 중단된 턴이 있으면 `read section=turns`(턴별 요약)로 확인하고, 실제 도구 결과·응답 전문이 필요한 턴만 `detail=true, task_id`로 읽은 뒤 이어간다.
 확보된 결과·다음 일을 `note`로 고쳐 쓰고, 전체 `goal_criteria`가 충족됐을 때만 `done`에 근거를 적는다.
 이번 턴 성공과 전체 과제 완료는 다르다. 사람이 과제로 잡으라고 하면 `open`에 title/goal_criteria를 준다.
 기존 전제가 틀렸다면 `reframe`으로 근거를 보내고, 과거 기록으로 현재 사용자 정정을 덮지 않는다.

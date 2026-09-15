@@ -15,7 +15,7 @@ def source_summary(source_ref):
             for item in value:
                 visit(item)
         elif isinstance(value, dict):
-            if value.get("attribution") in {"quoted", "unresolved"}:
+            if value.get("attribution") in {"quoted", "unresolved", "conveyed"}:
                 roles.add("external")
             elif value.get("role") in {"user", "assistant", "tool", "external"}:
                 roles.add(value["role"])

@@ -91,6 +91,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
   // 스트리밍
   const [streamingContent, setStreamingContent] = useState('');
   const streamingContentRef = useRef('');
+  const interimMessageIdsRef = useRef(new Set<string>());
   const [toolHistory, setToolHistory] = useState<ToolActivity[]>([]);
   const [thinkingText, setThinkingText] = useState('');
   const [currentToolLabel, setCurrentToolLabel] = useState<string | null>(null);
@@ -239,6 +240,7 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
       switch (data.type) {
         case 'start':
           setLoading(true);
+          interimMessageIdsRef.current.clear();
           resetStreamingState();
           break;
 
@@ -251,11 +253,13 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
           break;
 
         case 'tool_start': {
-          // 중간 텍스트가 있으면 메시지로 보존 (도구 실행 시 사라지지 않게)
+          // 도구 실행 중에는 초안을 보이되, 이번 턴의 최종 채택 본문이 오면 대체한다.
           const pendingText = streamingContentRef.current.trim();
           if (pendingText) {
+            const interimId = `interim-${Date.now()}-${interimMessageIdsRef.current.size}`;
+            interimMessageIdsRef.current.add(interimId);
             setMessages(prev => [...prev, {
-              id: `interim-${Date.now()}`,
+              id: interimId,
               role: 'assistant',
               content: pendingText,
               timestamp: new Date(),
@@ -319,10 +323,14 @@ export function ChatView({ chatTarget, layout = 'fullpage', show = true, onClose
         case 'auto_report': {
           const savedTools = toolHistoryRef.current.length > 0 ? [...toolHistoryRef.current] : undefined;
           const newMsgId = data.message_id ? String(data.message_id) : Date.now().toString();
+          const interimIds = new Set(interimMessageIdsRef.current);
+          if (data.type === 'response') interimMessageIdsRef.current.clear();
           setMessages(prev => {
+            // 자동 보고는 진행 중인 사용자 턴의 초안을 지우지 않는다.
+            const adopted = data.type === 'response' ? prev.filter(m => !interimIds.has(m.id)) : prev;
             // id 기반 중복 방지 (이력 로드 후 동일 메시지가 WS로 다시 올 수 있음)
-            if (data.message_id && prev.some(m => m.id === newMsgId)) return prev;
-            return [...prev, {
+            if (data.message_id && adopted.some(m => m.id === newMsgId)) return adopted;
+            return [...adopted, {
               id: newMsgId,
               role: 'assistant',
               content: data.content,

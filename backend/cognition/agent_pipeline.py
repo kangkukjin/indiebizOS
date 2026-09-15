@@ -536,16 +536,7 @@ class CognitivePipelineMixin:
         except Exception as _re:
             print(f"[추론예산] 적용 실패(기본 유지): {_re}")
         _clarify_text = self._consciousness_clarification(consciousness_output) if consciousness_output else None
-        if _clarify_text:
-            print(f"[의식] clarification fast-path: 실행 에이전트 스킵")
-            _restore_provider(self, original_provider)
-            from pursuit_bind import finish as _p_finish
-            _packet = _p_finish(_clarify_text, clarification=True)
-            self._after_response_async(message, _clarify_text, tool_calls=[], **({"pursuit_packet": _packet} if _packet else {}))
-            yield {"type": "text", "content": _clarify_text}
-            yield {"type": "final", "content": _clarify_text}
-            yield {"type": "_turn_meta", "tool_calls": [], "clarify": True}
-            return
+        # 되묻기도 같은 채택/기록 경계를 지난다. 최초 실행 모델 호출만 건너뛴다.
 
         # 작업전 공개(계기판) — 실행 직전 "무슨 판단·얼마나 확신·무슨 연상"을 노출
         try:
@@ -589,6 +580,8 @@ class CognitivePipelineMixin:
         tool_results_log: List[str] = []   # legacy — 결과 문자열만
         tool_calls_log: List[Dict] = []    # 경험 증류·X-Ray용 구조화 이력
         _error_text = None
+        from capability_guard import CapabilityGuard, adopt_response, defer_final
+        _capability_guard = CapabilityGuard()
 
         _pair_cursor = 0  # id 없는 결과의 도착 순서 페어링 커서 (n번째 결과 = n번째 호출)
 
@@ -717,25 +710,34 @@ class CognitivePipelineMixin:
             # 6. 실행
             from supervision_bus import current as _supervisor_current
             _supervisor = _supervisor_current()
-            _evaluation_enabled = bool(consciousness_output) and not reflex_hint and not force_role
+            _evaluation_enabled = (bool(consciousness_output) and not reflex_hint
+                                   and not force_role and not _clarify_text)
             if _supervisor:
                 _supervisor.request_intent = "context_update" if context_update else "task"
                 _supervisor.configure(consciousness_output if _evaluation_enabled else None,
                                       repair=(_repair_granted_task is not None))
-            for event in self.ai.process_message_stream(
-                message_content=augmented_message,
-                history=history,
-                images=images,
-                cancel_check=cancel_check,
-            ):
+            if _clarify_text:
+                _initial_stream = iter([{"type": "final", "content": _clarify_text}])
+            else:
+                _initial_stream = self.ai.process_message_stream(
+                    message_content=augmented_message, history=history,
+                    images=images, cancel_check=cancel_check)
+            for event in _initial_stream:
                 _collect(event)
                 if _supervisor:
                     _supervisor.observe_native(event)
                 if event.get("type") == "final":
                     final_content = event.get("content", "")
+                    continue  # 초안은 흘리되 최종 채택 전에는 완료를 방출하지 않는다.
                 if _supervisor and _supervisor.enabled and event.get("type") in {"text", "final"}:
                     continue  # 저장된 후보만 검수 후 한 번 전달한다.
                 yield event
+
+            if final_content:
+                final_content = yield from adopt_response(
+                    _capability_guard, self, message, final_content, eval_tool_calls, history,
+                    collect=_collect, images=images, supervisor=_supervisor,
+                    allowed_set=allowed_set, cancel_check=cancel_check)
 
             # 6.5 실행 중 재규정이 있었으면 이후 단계(평가 기준·증류)는 갱신 규정을 본다
             if _reframe_key:
@@ -754,8 +756,8 @@ class CognitivePipelineMixin:
                 _eval_ran = _supervisor.evaluation_enabled
                 if _eval_ran:
                     record_trajectory_event("cognition.evaluation", {"path": "goal_eval", "supervised": True})
-                final_content = yield from _supervisor.finalize(final_content, history, _collect, cancel_check,
-                                                                tool_calls=eval_tool_calls)
+                final_content = yield from defer_final(_supervisor.finalize(
+                    final_content, history, _collect, cancel_check, tool_calls=eval_tool_calls))
             elif _evaluation_enabled and final_content:
                 criteria = self._extract_achievement_criteria(consciousness_output)
                 if criteria:
@@ -772,7 +774,7 @@ class CognitivePipelineMixin:
                         # 그 비대칭이 화면의 "멈춤"이었고, 침묵이 WS 유휴 타임아웃
                         # (600초)보다 길어 긴 턴은 재실행에 들어가는 순간 타임아웃이
                         # 확정이었다(2026-08-22 상상훈련 22회차 턴, ep total 24분41초).
-                        evaluated = yield from self._run_goal_evaluation_stream(
+                        evaluated = yield from defer_final(self._run_goal_evaluation_stream(
                             user_message=message,
                             criteria=criteria,
                             initial_response=final_content,
@@ -783,17 +785,23 @@ class CognitivePipelineMixin:
                             tool_calls=eval_tool_calls,
                             execution_memory=execution_memory,
                             cancel_check=cancel_check,
-                        )
+                        ))
                         if evaluated and evaluated.strip() and evaluated != final_content:
                             final_content = evaluated
-                            # 본문은 재실행이 이미 실시간으로 흘렸다 — 여기선 최종
-                            # 채택만 알린다(옛 판의 전문 재출력은 중복이 된다).
-                            yield {"type": "final", "content": evaluated}
-                            print(f"[GoalEval] 재실행 결과 전송 완료 ({len(evaluated)}자)")
+                            print(f"[GoalEval] 재실행 결과 채택 대기 ({len(evaluated)}자)")
 
             if not _eval_ran:
                 record_trajectory_event("cognition.evaluation", {"path": "none"})
             _response_completed = not (cancel_check and cancel_check())
+            if final_content and _response_completed:
+                # 평가 보완으로 본문이 달라졌으면 같은 턴 예산으로 채택한다. 승인 후 새 실행은 금지.
+                final_content = yield from adopt_response(
+                    _capability_guard, self, message, final_content, eval_tool_calls, history,
+                    collect=_collect, images=images, supervisor=_supervisor,
+                    allowed_set=allowed_set, cancel_check=cancel_check, allow_resume=False)
+                _response_completed = not (cancel_check and cancel_check())
+                if _response_completed:
+                    yield {"type": "final", "content": final_content}
 
         except GeneratorExit:
             # 소비자 조기 종료(취소·타임아웃) — finally에서 뒷정리만 하고 전파
@@ -885,7 +893,9 @@ class CognitivePipelineMixin:
             # (ep889: 증류 꼬리 6분이 턴을 물고 있었다). 컨텍스트 동반은 래퍼가 처리.
             if not force_role:
                 from pursuit_bind import finish as _p_finish
-                _packet = _p_finish(final_content, tool_calls_log, interrupted=not _response_completed or not bool(final_content))
+                _packet = _p_finish(final_content, tool_calls_log,
+                                    interrupted=not _response_completed or not bool(final_content),
+                                    clarification=bool(_clarify_text and not _capability_guard.resumes))
                 if _response_completed:
                     self._after_response_async(
                         message, final_content,
@@ -898,4 +908,5 @@ class CognitivePipelineMixin:
         # 턴 예산(토큰·캐시 적중)을 메타에 동봉 — WS 가 end 이벤트에 실어 고정물(scripts/
         # probe_turn_budget.py)이 로그 긁기 없이 읽는다.
         yield {"type": "_turn_meta", "tool_calls": list(tool_calls_log),
-               "turn_tokens": turn_tokens, "turn_cache_read": turn_cache_read}
+               "turn_tokens": turn_tokens, "turn_cache_read": turn_cache_read,
+               "clarify": bool(_clarify_text and not _capability_guard.resumes)}

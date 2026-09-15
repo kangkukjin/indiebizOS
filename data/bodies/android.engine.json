@@ -57,6 +57,8 @@
     "cognition/agent_runner",
     "cognition/ai_agent",
     "cognition/body_ask",
+    "cognition/capability_guard",
+    "cognition/capability_guard_runtime",
     "cognition/client_workflows",
     "cognition/cognitive_consciousness",
     "cognition/cognitive_distill",
@@ -365,8 +367,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 354,
-    "engine": 328,
+    "total": 356,
+    "engine": 330,
     "blocklist": 26
   }
 }

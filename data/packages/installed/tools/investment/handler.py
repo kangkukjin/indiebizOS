@@ -706,7 +706,10 @@ def execute(tool_input: dict, context):
             tool = load_module("tool_yfinance")
             # F8: 스냅샷 1행 items 병기(stock quote 선례 동형) — 없으면 & 병렬 결합이 막힌다.
             return _attach_quote_items(tool.get_crypto_price(
-                coin_id=tool_input.get("coin") or tool_input.get("coin_id") or "bitcoin",  # coin 우선(코퍼스/자연어), coin_id 별칭
+                # 정본 coin(라우터가 symbol·coin_id·ticker 별칭을 여기로 정규화). 직접 호출(라우터 밖)을 위해
+                # 별칭도 읽는다 — 2026-09-15 전엔 symbol 을 안 읽어 {symbol:"ETH"} 가 비트코인을 냈다.
+                coin_id=(tool_input.get("coin") or tool_input.get("symbol") or tool_input.get("coin_id")
+                         or tool_input.get("ticker") or "bitcoin"),
                 days=tool_input.get("days", 0),
                 max_points=tool_input.get("max_points", 400),
             ))

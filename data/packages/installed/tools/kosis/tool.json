@@ -25,7 +25,7 @@
           },
           "info": {
             "type": "boolean",
-            "description": "true 면 org_id+tbl_id 통계표의 메타정보 조회 (기본 false=데이터)"
+            "description": "true 면 org_id+tbl_id 통계표의 메타 조회 — items 한 줄 = 분류 차원(objL1..N)·항목(ITEM)과 그 코드 목록 (기본 false=데이터)"
           },
           "itm_id": {
             "type": "string",
@@ -37,11 +37,11 @@
           },
           "obj_l2": {
             "type": "string",
-            "description": "KOSIS 분류2 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)"
+            "description": "KOSIS 분류2 코드 (미지정이면 표 메타의 차원 수만큼 ALL 로 자동 보충 — 응답 classification_filled 로 신고. 좁히려면 코드 명시)"
           },
           "obj_l3": {
             "type": "string",
-            "description": "KOSIS 분류3 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)"
+            "description": "KOSIS 분류3 코드 (미지정 시 자동 보충 규칙은 obj_l2 와 같다. 분류4 이상은 obj_l4..obj_l8)"
           },
           "prd_se": {
             "type": "string",

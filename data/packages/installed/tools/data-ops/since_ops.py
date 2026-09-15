@@ -13,6 +13,9 @@ import json
 
 # 변화 판정도 공통 값 의미론에 직접 위임한다.
 from common import value_semantics as _wdsl
+from common.pkg_utils import load_sibling as _load_sibling
+# 키 자리 문법(스칼라 | 복합키 목록)은 형제 group_keys 가 한 벌로 소유한다 — since 의 by 도 관계 키 자리다.
+_key_names = _load_sibling(__file__, "group_keys").key_names
 
 
 _SINCE_CAP = 5000                     # 스트림당 기준선 키 상한 — 초과분은 오래 안 보인 것부터 정리
@@ -58,19 +61,31 @@ def op_since(prev, params, get_items, emit_items,
         return no_currency_error("since", prev)
     rows = [r for r in recs if isinstance(r, dict)]
 
-    by = params.get("by")
-    if by:
-        by = str(by)
-        if rows and not any(by in r for r in rows):
-            return field_missing_error("since", [by], rows)
+    # by = 행 식별 키 자리 — 언어 개정 2026-09-07(키 자리는 속성 집합)의 같은 규약: 목록이면
+    # 복합키다(예 groupby{by:["a","b"]} 결과를 검침할 때 by:["a","b"]). 61~70위 감사(09-15)에서
+    # 목록이 str() 로 접혀 "'['a', 'b']' 필드가 없습니다" 로 죽던 자리.
+    keys, kerr = _key_names(params.get("by"), "since", "by")
+    if kerr:
+        return kerr
+    if keys:
+        if rows:
+            missing = [k for k in keys if not any(k in r for r in rows)]
+            if missing:
+                return field_missing_error("since", missing, rows)
     else:
-        by = next((c for c in _SINCE_ID_CANDIDATES
-                   if rows and all(r.get(c) not in (None, "") for r in rows)), None)
-        if rows and not by:
+        auto = next((c for c in _SINCE_ID_CANDIDATES
+                     if rows and all(r.get(c) not in (None, "") for r in rows)), None)
+        if rows and not auto:
             avail = sorted({f for r in rows for f in r.keys()})
             return {"success": False, "error": (
                 "since: 행 식별 필드를 못 골랐습니다(후보 url/id/link/title 이 모든 행에 없음). "
-                f"by 로 지정하세요. 사용 가능한 필드: {avail[:12]}")}
+                f"by 로 지정하세요(복합키면 목록). 사용 가능한 필드: {avail[:12]}")}
+        keys = [auto] if auto else []
+    by = keys[0] if len(keys) == 1 else (list(keys) if keys else None)
+
+    def _row_key_value(r):
+        """단일 키는 그 값(옛 원장 키와 호환), 복합키는 값 목록(순서=키 순서 → 정본 JSON 키)."""
+        return r.get(keys[0]) if len(keys) == 1 else [r.get(k) for k in keys]
 
     watch = params.get("watch") or []
     if isinstance(watch, str):
@@ -96,7 +111,7 @@ def op_since(prev, params, get_items, emit_items,
         out, n_new, n_changed = [], 0, 0
         _missing = object()
         for r in rows:
-            rk, legacy_rk = value_semantics.persistent_keys(r.get(by))
+            rk, legacy_rk = value_semantics.persistent_keys(_row_key_value(r))
             previous = seen.get(rk, _missing)
             if previous is _missing and legacy_rk != rk:  # vj-ok: 정본 키 비교
                 previous = seen.get(legacy_rk, _missing)  # 옛 str(dict) 원장 호환
@@ -118,7 +133,7 @@ def op_since(prev, params, get_items, emit_items,
                     n_changed += 1
         if not peek:
             for r in rows:
-                rk, legacy_rk = value_semantics.persistent_keys(r.get(by))
+                rk, legacy_rk = value_semantics.persistent_keys(_row_key_value(r))
                 wjson = (json.dumps({w: r.get(w) for w in watch},
                                     ensure_ascii=False, sort_keys=True)
                          if watch else None)

@@ -339,7 +339,7 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
           order: 6                    # 홈 그리드 정렬
           inputs:
           - { key: coin, type: text, default: BTC, required: true }
-          action: '[sense:crypto]{coin_id: "$coin"}'    # $key=입력 치환
+          action: '[sense:crypto]{coin: "$coin"}'    # $key=입력 치환
           view:
           - { type: metric, big: '{data.current_price_krw|num}' }
 ```

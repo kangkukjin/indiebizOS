@@ -263,8 +263,11 @@
             "description": "검침 스트림 이름(감시 파이프마다 고유, 필수)."
           },
           "by": {
-            "type": "string",
-            "description": "행 식별 필드(생략=url/id/link/title 자동 선택)."
+            "description": "행 식별 필드(목록이면 복합키, 생략=url/id/link/title 자동 선택).",
+            "type": [
+              "string",
+              "array"
+            ]
           },
           "watch": {
             "type": "array",

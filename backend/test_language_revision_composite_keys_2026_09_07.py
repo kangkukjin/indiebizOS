@@ -165,12 +165,51 @@ def test_join_missing_composite_key_named():
     assert r.get("success") is False and "'b'" in r["error"] and "우측" in r["error"], r
 
 
+# ── since(검침) — 원장을 쥔 변환자도 같은 키 자리(2026-09-15, 61~70위 어휘 감사) ──────
+def _since_with_temp_ledger(tmp_path, monkeypatch):
+    """since 원장을 임시 DB 로 — 시험이 실물 data/table_since.db 에 쓰지 않게(★시험이 실물에 쓰는 부류)."""
+    import sqlite3
+
+    def _conn():
+        c = sqlite3.connect(str(tmp_path / "since.db"))
+        c.execute("CREATE TABLE IF NOT EXISTS since_seen (stream TEXT NOT NULL, k TEXT NOT NULL, watched TEXT,"
+                  " first_seen TEXT NOT NULL, last_seen TEXT NOT NULL, PRIMARY KEY (stream, k))")
+        return c
+    monkeypatch.setattr(H, "_since_conn", _conn)
+
+
+def test_since_composite_key_identifies_rows(tmp_path, monkeypatch):
+    """groupby{by:[a,b]} 결과처럼 url/id/title 이 없는 행을 복합키로 검침한다 — 09-07 코퍼스 실패 문장."""
+    _since_with_temp_ledger(tmp_path, monkeypatch)
+    rows = [{"a": "x", "b": 1, "count": 2}, {"a": "y", "b": 2, "count": 1}]
+    first = H._op_since({"items": rows}, {"key": "복합키검침", "by": ["a", "b"]})
+    assert first.get("success") is not False and first.get("seeded") is True, first
+    assert first["since_by"] == ["a", "b"], first
+    # 같은 실체(a,b 같음) + 새 실체 하나 → 새 것 1행만
+    second = H._op_since({"items": rows + [{"a": "x", "b": 2, "count": 9}]},
+                         {"key": "복합키검침", "by": ["a", "b"]})
+    new = [r for r in second["items"] if r.get("_since") == "new"]
+    assert [(r["a"], r["b"]) for r in new] == [("x", 2)], second
+
+
+def test_since_composite_key_missing_part_named(tmp_path, monkeypatch):
+    _since_with_temp_ledger(tmp_path, monkeypatch)
+    r = H._op_since({"items": [{"a": "x", "count": 1}]}, {"key": "복합키검침2", "by": ["a", "zz"]})
+    assert r.get("success") is False and "zz" in r["error"], r
+
+
+def test_since_single_key_unchanged(tmp_path, monkeypatch):
+    _since_with_temp_ledger(tmp_path, monkeypatch)
+    r = H._op_since({"items": [{"id": 1}, {"id": 2}]}, {"key": "단일키검침", "by": "id"})
+    assert r.get("seeded") is True and r["since_by"] == "id", r
+
+
 # ── 선언(단일 소스) — 관문이 목록을 통과시키는 근거는 tool.json 이다 ──────
 def test_key_slots_declared_as_string_or_array():
     tj = json.loads((_PKG / "data-ops" / "tool.json").read_text(encoding="utf-8"))
     props = {t["name"]: (t.get("input_schema") or {}).get("properties", {}) for t in tj["tools"]}
     for tool, slot in (("data_sort", "by"), ("data_dedup", "by"), ("data_groupby", "by"),
-                       ("data_merge", "by"), ("data_join", "on")):
+                       ("data_merge", "by"), ("data_join", "on"), ("data_since", "by")):
         assert props[tool][slot].get("type") == ["string", "array"], (tool, slot, props[tool].get(slot))
     # ★join 의 target_key 가 YAML 1.1 의 on→True 로 접혀 만들어지던 유령 param
     assert "true" not in props["data_join"], props["data_join"]

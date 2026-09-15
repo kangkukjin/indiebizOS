@@ -195,25 +195,17 @@
       "input_schema": {
         "type": "object",
         "properties": {
-          "coin_id": {
+          "coin": {
             "type": "string",
-            "description": "코인 ID 또는 심볼 (bitcoin, BTC 등)"
+            "description": "코인 심볼 또는 CoinGecko ID (BTC, ETH, bitcoin 등 — symbol·coin_id 별칭 허용)"
           },
           "days": {
             "type": "integer",
             "description": "일별 시세 이력 일수 (기본 0=현재가만)"
-          },
-          "coin": {
-            "type": "string",
-            "description": "sense:crypto 파라미터"
-          },
-          "symbol": {
-            "type": "string",
-            "description": "sense:crypto 파라미터"
           }
         },
         "required": [
-          "coin_id"
+          "coin"
         ]
       }
     }

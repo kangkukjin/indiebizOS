@@ -246,17 +246,22 @@ actions:
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
       coin: string
-      symbol: string
+      days: integer
+    # ★2026-09-15 (61~70위 감사): 한 개념에 이름 셋(coin·symbol·coin_id)이 params·target_key·
+    #   schema 에 갈라져 있었고 핸들러는 coin/coin_id 만 읽어 `{symbol: "ETH"}` 가 **비트코인**을
+    #   success 로 냈다(침묵 오답). 정본 coin 하나, 나머지는 별칭(라우터가 정규화).
+    aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
+      coin: [symbol, coin_id, ticker]
     # 실측 items 1행 스냅샷 병기 (stock quote 와 같은 관례 — 2026-08-19 드리프트 스윕 동기화).
     returns: items
-    fixture: '[sense:crypto]{symbol: "BTC"}'
+    fixture: '[sense:crypto]{coin: "BTC"}'
     description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
     group: finance
-    target_description: 코인 심볼 (BTC, ETH, SOL 등)
+    target_description: coin — 코인 심볼(BTC, ETH, SOL …) 또는 CoinGecko ID(bitcoin, ethereum …). days>0 이면 일별 시세 이력(data.prices)도.
     router: handler
     tool: crypto_price
     implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
-    target_key: coin_id
+    target_key: coin
 
 # tool.json 파생 원본 (2026-07-03 이관) — 빌드가 이 블록과 위 actions 의 ops 로 tool.json 을 생성한다.
 # op-bearing 도구의 op enum/default 는 여기 저장하지 않는다 (actions 의 ops 가 단일 소스).
@@ -449,11 +454,11 @@ tool_json:
     input_schema:
       type: object
       properties:
-        coin_id:
+        coin:
           type: string
-          description: 코인 ID 또는 심볼 (bitcoin, BTC 등)
+          description: 코인 심볼 또는 CoinGecko ID (BTC, ETH, bitcoin 등 — symbol·coin_id 별칭 허용)
         days:
           type: integer
           description: 일별 시세 이력 일수 (기본 0=현재가만)
       required:
-      - coin_id
+      - coin

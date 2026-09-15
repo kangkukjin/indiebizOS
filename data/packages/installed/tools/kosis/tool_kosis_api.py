@@ -32,7 +32,10 @@ ENDPOINTS = {
     "statistics_data": "/Param/statisticsParameterData.do",
     "statistics_info": "/statisticsInfo.do",
     "integrated_search": "/statisticsSearch.do",  # 구 /search/search.do 폐지(404) → 통합검색 엔드포인트 이전(2026-06-17 확인)
-    "indicators": "/indicator/indicator.do"
+    "indicators": "/indicator/indicator.do",
+    # 통계표 메타(표 이름·항목·분류 차원·수록 주기) — statisticsInfo.do 는 KOSIS 에 없는 자원(전 표 404,
+    # 2026-09-15 실측). 메타의 정본은 statisticsData.do?method=getMeta&type=TBL|ITM|PRD 다.
+    "statistics_meta": "/statisticsData.do",
 }
 
 def _to_table_currency(items: list) -> Optional[dict]:
@@ -193,6 +196,28 @@ def search_statistics(
     return result
 
 
+def _obj_level_params(obj_l1, obj_l2, obj_l3, obj_levels):
+    """objL1..objLN 요청 인자 — 명시한 값만 싣는다(없는 차원은 생략, 명시한 ALL 은 유지)."""
+    levels = {1: obj_l1}
+    if obj_l2:
+        levels[2] = obj_l2
+    if obj_l3:
+        levels[3] = obj_l3
+    for n, v in (obj_levels or {}).items():
+        try:
+            n = int(n)
+        except (TypeError, ValueError):
+            continue
+        if v and 1 <= n <= 8:
+            levels[n] = v
+    return {f"objL{n}": v for n, v in sorted(levels.items()) if v}
+
+
+def _dimension_ids_from_meta(meta: Dict[str, Any]) -> List[str]:
+    """표 메타의 분류 차원(objL 순서) ID 목록 — 항목(ITEM)은 차원이 아니다."""
+    return [c["obj_id"] for c in (meta.get("classifications") or []) if c.get("obj_id")]
+
+
 def get_statistics_data(
     org_id: str,
     tbl_id: str,
@@ -202,7 +227,8 @@ def get_statistics_data(
     obj_l3: Optional[str] = None,
     prd_se: str = "Y",
     start_prd_de: Optional[str] = None,
-    end_prd_de: Optional[str] = None
+    end_prd_de: Optional[str] = None,
+    obj_levels: Optional[Dict[int, str]] = None,
 ) -> Dict[str, Any]:
     """
     KOSIS 통계자료(데이터) 조회
@@ -216,6 +242,13 @@ def get_statistics_data(
         prd_se: 수록주기 (Y/H/Q/M/D)
         start_prd_de: 시작 시점
         end_prd_de: 종료 시점
+        obj_levels: {4: "ALL", ...} — 분류4 이상(KOSIS 는 objL8 까지)
+
+    분류 차원 자동 보충(2026-09-15): 요청이 표의 차원 수보다 적으면 KOSIS 는
+    "필수요청변수값이 누락되었습니다. (objL)" 를 낸다. 차원 수는 표 메타(getMeta ITM)가
+    정본이라, 그 오류를 받으면 메타에서 차원을 읽어 미지정 차원을 ALL 로 채우고 **한 번**
+    다시 묻는다(호출자가 표마다 차원 수를 외울 필요가 없다 — 세계의 명사는 데이터에서).
+    보충한 차원은 응답 `classification_filled` 로 정직하게 신고한다.
 
     Returns:
         통계 데이터
@@ -227,26 +260,42 @@ def get_statistics_data(
     if not start_prd_de:
         start_prd_de = str(current_year - 4)
 
-    params = {
+    base_params = {
         "method": "getList",
         "orgId": org_id,
         "tblId": tbl_id,
         "itmId": itm_id,
-        "objL1": obj_l1,
         "prdSe": prd_se,
         "startPrdDe": start_prd_de,
         "endPrdDe": end_prd_de,
         "format": "json",
         "jsonVD": "Y"
     }
+    requested = _obj_level_params(obj_l1, obj_l2, obj_l3, obj_levels)
+    result = _make_request("statistics_data", {**base_params, **requested})
 
-    # 없는 차원은 생략하되 명시한 ALL을 삭제하지 않는다.
-    if obj_l2:
-        params["objL2"] = obj_l2
-    if obj_l3:
-        params["objL3"] = obj_l3
-
-    result = _make_request("statistics_data", params)
+    filled = None
+    if not result.get("success") and "objl" in str(result.get("error", "")).lower():
+        # 차원 수 부족 — 메타의 차원 목록으로 빈 자리를 ALL 로 채워 한 번 재시도.
+        meta = get_table_meta(org_id, tbl_id)
+        dims = _dimension_ids_from_meta(meta.get("data") or {}) if meta.get("success") else []
+        if dims and len(dims) > len(requested):
+            merged = dict(requested)
+            for n in range(1, len(dims) + 1):
+                merged.setdefault(f"objL{n}", "ALL")
+            retry = _make_request("statistics_data", {**base_params, **merged})
+            if retry.get("success"):
+                result = retry
+                filled = {k: "ALL" for k in merged if k not in requested}
+                requested = merged
+            else:
+                retry["classification_request"] = merged
+                retry["dimensions"] = [{"obj_id": c["obj_id"], "name": c.get("name"), "level": c.get("level")}
+                                       for c in (meta["data"].get("classifications") or [])]
+                return retry
+        elif meta.get("success"):
+            result["dimensions"] = [{"obj_id": c["obj_id"], "name": c.get("name"), "level": c.get("level")}
+                                    for c in (meta["data"].get("classifications") or [])]
 
     if result["success"] and result.get("data"):
         data = result["data"]
@@ -257,10 +306,9 @@ def get_statistics_data(
             result["data"] = None
             result["error_code"] = data["err"]
             if "objl" in str(result["error"]).lower():
-                result["classification_request"] = {k: params[k] for k in ("objL1", "objL2", "objL3") if k in params}
-                result["hint"] = ("분류 코드를 바꾸기 전에 통계표의 차원과 코드를 확인하세요. "
-                                  "분류2·3은 미지정 시 생략되며, 존재하는 차원 전체는 obj_l2/obj_l3: ALL을 명시합니다. "
-                                  "같은 요청을 반복하지 마세요. 표의 URL 생성 화면에서도 분류를 확인할 수 있습니다.")
+                result["classification_request"] = requested
+                result["hint"] = ("분류 코드를 바꾸기 전에 통계표의 차원과 코드를 확인하세요(info: true). "
+                                  "같은 요청을 반복하지 마세요.")
                 result["error"] += " " + result["hint"]
         elif isinstance(data, list):
             items = []
@@ -293,10 +341,63 @@ def get_statistics_data(
             result["query"] = {
                 "org_id": org_id,
                 "tbl_id": tbl_id,
-                "period": f"{start_prd_de} ~ {end_prd_de}"
+                "period": f"{start_prd_de} ~ {end_prd_de}",
+                "classification": requested,
             }
+            if filled:
+                result["classification_filled"] = filled
+                result["note"] = ("표의 분류 차원이 요청보다 많아 미지정 차원을 ALL 로 보충했습니다: "
+                                  + ", ".join(sorted(filled)) + ". 좁히려면 info: true 로 코드를 확인하세요.")
 
     return result
+
+
+def get_table_meta(org_id: str, tbl_id: str) -> Dict[str, Any]:
+    """통계표 메타 — 표 이름(TBL)·항목과 분류 차원·코드(ITM)·수록 주기(PRD) 세 조회의 합성.
+
+    data = {org_id, tbl_id, tbl_name, tbl_name_eng, periods:[{prd_se,start,end}],
+            items:[{id,name,unit}], classifications:[{obj_id,name,level,codes:[{id,name}]}]}
+    classifications 의 순서가 곧 objL1..objLN 이다(OBJ_ID_SN).
+    """
+    common = {"method": "getMeta", "orgId": org_id, "tblId": tbl_id, "format": "json", "jsonVD": "Y"}
+    tbl = _make_request("statistics_meta", {**common, "type": "TBL"})
+    if not tbl.get("success"):
+        return tbl
+    itm = _make_request("statistics_meta", {**common, "type": "ITM"})
+    if not itm.get("success"):
+        return itm
+    prd = _make_request("statistics_meta", {**common, "type": "PRD"})
+
+    head = (tbl.get("data") or [{}])[0] if isinstance(tbl.get("data"), list) else {}
+    items, dims = [], {}
+    for row in itm.get("data") or []:
+        obj_id = row.get("OBJ_ID", "")
+        if obj_id == "ITEM":
+            items.append({"id": row.get("ITM_ID", ""), "name": row.get("ITM_NM", ""),
+                          "unit": row.get("UNIT_NM", "")})
+            continue
+        d = dims.setdefault(obj_id, {"obj_id": obj_id, "name": row.get("OBJ_NM", ""),
+                                     "order": row.get("OBJ_ID_SN") or "", "codes": []})
+        d["codes"].append({"id": row.get("ITM_ID", ""), "name": row.get("ITM_NM", "")})
+
+    def _sn(d):
+        try:
+            return int(d["order"])
+        except (TypeError, ValueError):
+            return 10 ** 6
+    classifications = sorted(dims.values(), key=_sn)
+    for i, c in enumerate(classifications, 1):
+        c["level"] = f"objL{i}"
+        c["n_codes"] = len(c["codes"])
+        c.pop("order", None)
+
+    periods = [{"prd_se": r.get("PRD_SE", ""), "start": r.get("STRT_PRD_DE", ""), "end": r.get("END_PRD_DE", "")}
+               for r in (prd.get("data") or []) if isinstance(r, dict)] if prd.get("success") else []
+    return {"success": True, "data": {
+        "org_id": org_id, "tbl_id": tbl_id,
+        "tbl_name": head.get("TBL_NM", ""), "tbl_name_eng": head.get("TBL_NM_ENG", ""),
+        "periods": periods, "items": items, "classifications": classifications,
+    }}
 
 
 def get_statistics_info(
@@ -304,42 +405,36 @@ def get_statistics_info(
     tbl_id: str
 ) -> Dict[str, Any]:
     """
-    통계표 상세 정보(메타데이터) 조회
+    통계표 상세 정보(메타데이터) 조회 — 항목·분류 차원(코드 포함)·수록 주기.
 
-    Args:
-        org_id: 기관 ID
-        tbl_id: 통계표 ID
+    ★2026-09-15: 종전 엔드포인트 statisticsInfo.do 는 KOSIS 에 존재하지 않아 모든 표에서
+    404 였다(action_health 실측 — info: true 호출 전량 실패). 정본 메타는
+    statisticsData.do?method=getMeta 라 get_table_meta 의 합성으로 대체.
 
     Returns:
-        통계표 메타데이터
+        data = 표 메타(get_table_meta), items = 차원 한 줄씩(level·obj_id·name·n_codes·codes)
+        + 항목(level "ITEM") 한 줄 — 데이터 조회의 obj_lN / itm_id 자리에 무엇을 줄지 이 표로 안다.
     """
-    params = {
-        "method": "getList",
-        "orgId": org_id,
-        "tblId": tbl_id,
-        "format": "json",
-        "jsonVD": "Y"
-    }
-
-    result = _make_request("statistics_info", params)
-
-    if result["success"] and result.get("data"):
-        data = result["data"]
-        # 메타데이터 가공
-        if isinstance(data, dict):
-            result["data"] = {
-                "org_id": org_id,
-                "org_name": data.get("ORG_NM", ""),
-                "tbl_id": tbl_id,
-                "tbl_name": data.get("TBL_NM", ""),
-                "stat_name": data.get("STAT_NM", ""),
-                "period_type": data.get("PRD_SE", ""),
-                "start_period": data.get("START_PRD", ""),
-                "end_period": data.get("END_PRD", ""),
-                "items": data.get("ITM_ID", []),
-                "classifications": data.get("OBJ_VAR_ID", [])
-            }
-
+    result = get_table_meta(org_id, tbl_id)
+    if not result.get("success"):
+        return result
+    meta = result["data"]
+    rows = [{"level": c["level"], "obj_id": c["obj_id"], "name": c["name"],
+             "n_codes": c["n_codes"], "codes": c["codes"],
+             "title": f"{c['level']} · {c['name']}", "summary": ", ".join(x["name"] for x in c["codes"][:8])
+             + (" …" if len(c["codes"]) > 8 else "")}
+            for c in meta["classifications"]]
+    rows.append({"level": "ITEM", "obj_id": "ITEM", "name": "항목", "n_codes": len(meta["items"]),
+                 "codes": [{"id": i["id"], "name": i["name"]} for i in meta["items"]],
+                 "title": "ITEM · 항목",
+                 "summary": ", ".join(f"{i['name']}({i['unit']})" if i.get("unit") else i["name"]
+                                      for i in meta["items"][:8]) + (" …" if len(meta["items"]) > 8 else "")})
+    result["items"] = rows
+    result["count"] = len(rows)
+    dims_txt = (": " + " × ".join(c["name"] for c in meta["classifications"])) if meta["classifications"] else ""
+    prd_txt = ("/".join(p["prd_se"] for p in meta["periods"]) or "미상") if meta["periods"] else "미상"
+    result["message"] = (f"{meta['tbl_name']} — 분류 차원 {len(meta['classifications'])}개{dims_txt}, "
+                         f"항목 {len(meta['items'])}개, 주기 {prd_txt}")
     return result
 
 

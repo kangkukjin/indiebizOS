@@ -215,12 +215,12 @@
           },
           "lng": {
             "type": "number",
-            "description": "경도 (longitude)"
+            "description": "경도 (longitude — lon 별칭 허용)"
           }
         },
         "required": [
           "lat",
-          "lon"
+          "lng"
         ]
       }
     },

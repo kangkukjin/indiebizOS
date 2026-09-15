@@ -1229,7 +1229,8 @@ def execute(tool_input: dict, context) -> str:
                    if not isinstance(v, (dict, list)) and k != "success"}
             if row:
                 row.setdefault("lat", float(lat))
-                row.setdefault("lon", float(lon))
+                row.setdefault("lng", float(lon))   # 정본 칸(place·stay·cctv 와 같은 lat/lng)
+                row.setdefault("lon", float(lon))   # 옛 소비자·코퍼스 호환 병기
                 result = {**result, "items": [row], "count": 1}
         return json.dumps(result, ensure_ascii=False, indent=2)
 

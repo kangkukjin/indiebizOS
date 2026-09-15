@@ -84,9 +84,9 @@
 
 ## [sense:crypto] — 암호화폐
 ```
-[sense:crypto]{coin_id: "bitcoin"}     # CoinGecko ID
-[sense:crypto]{coin_id: "BTC"}         # 심볼 → 자동 변환
-[sense:crypto]{coin_id: "ETH", days: 30, max_points: 400}  # 30일 이력 차트
+[sense:crypto]{coin: "bitcoin"}     # CoinGecko ID
+[sense:crypto]{coin: "BTC"}         # 심볼 → 자동 변환 (symbol·coin_id 별칭도 통과)
+[sense:crypto]{coin: "ETH", days: 30, max_points: 400}  # 30일 이력 차트
 ```
 | 심볼 | ID | | 심볼 | ID |
 |------|----|----|------|----|

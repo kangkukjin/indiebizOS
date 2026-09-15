@@ -17,7 +17,7 @@ actions:
     target_description: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 items를 기간 축으로 피벗해 반환(행=period, 필드=지표·분류 조합) → >> [table:chart/spreadsheet] / [table:document](table 블록). ⚠️다차원 통계표는 items 필드가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
     router: handler
     tool: kosis_lookup
-    implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.
+    implementation: KOSIS API 통합 — org_id+tbl_id면 get_statistics_data(objL 오류 시 getMeta 차원으로 ALL 보충 1회 재시도), info=true면 get_statistics_info(statisticsData.do getMeta TBL·ITM·PRD 합성 — 옛 statisticsInfo.do 는 404), indicator면 get_indicators, query면 integrated_search.
     target_key: query
     keywords:
     - 통계
@@ -59,7 +59,7 @@ tool_json:
           description: 통계표 ID (org_id 와 함께 데이터 조회)
         info:
           type: boolean
-          description: true 면 org_id+tbl_id 통계표의 메타정보 조회 (기본 false=데이터)
+          description: true 면 org_id+tbl_id 통계표의 메타 조회 — items 한 줄 = 분류 차원(objL1..N)·항목(ITEM)과 그 코드 목록 (기본 false=데이터)
         itm_id:
           type: string
           description: KOSIS 항목 ID (기본 ALL)
@@ -68,10 +68,10 @@ tool_json:
           description: KOSIS 분류1 코드 (기본 ALL)
         obj_l2:
           type: string
-          description: KOSIS 분류2 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)
+          description: KOSIS 분류2 코드 (미지정이면 표 메타의 차원 수만큼 ALL 로 자동 보충 — 응답 classification_filled 로 신고. 좁히려면 코드 명시)
         obj_l3:
           type: string
-          description: KOSIS 분류3 코드 (기본 생략. 존재하는 차원 전체는 ALL 명시)
+          description: KOSIS 분류3 코드 (미지정 시 자동 보충 규칙은 obj_l2 와 같다. 분류4 이상은 obj_l4..obj_l8)
         prd_se:
           type: string
           description: 수록 주기 (Y=년 기본, Q=분기, M=월, D=일)

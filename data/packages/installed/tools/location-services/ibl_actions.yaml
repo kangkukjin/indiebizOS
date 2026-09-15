@@ -282,7 +282,7 @@ nodes:
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           lng: [lon]
         returns: items   # 1행 스냅샷 — 주소 레코드는 표의 한 줄 (2026-08-24 B36-2)
-        fixture: '[sense:reverse_geocode]{lat: 37.5665, lon: 126.978}'
+        fixture: '[sense:reverse_geocode]{lat: 37.5665, lng: 126.978}'
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
         group: places
         target_description: 위도(lat)와 경도(lng) 두 파라미터. 결과는 시/도/구/동까지 분해.
@@ -670,10 +670,10 @@ tool_json:
           description: 위도 (latitude)
         lng:
           type: number
-          description: 경도 (longitude)
+          description: 경도 (longitude — lon 별칭 허용)
       required:
       - lat
-      - lon
+      - lng
   - name: search_stay
     description: '국내 숙박·단기임대 검색 (source 분기). 통합 통화 items[{title,meta,summary,url,image,lat,lng}] 반환.
 

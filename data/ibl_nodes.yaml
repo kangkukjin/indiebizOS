@@ -1274,16 +1274,21 @@ nodes:
       crypto:
         params:
           coin: string
-          symbol: string
+          days: integer
+        aliases:
+          coin:
+          - symbol
+          - coin_id
+          - ticker
         returns: items
-        fixture: '[sense:crypto]{symbol: "BTC"}'
+        fixture: '[sense:crypto]{coin: "BTC"}'
         description: '암호화폐 시세 (CoinGecko: BTC, ETH, XRP 등 USD/KRW)'
         group: finance
-        target_description: 코인 심볼 (BTC, ETH, SOL 등)
+        target_description: coin — 코인 심볼(BTC, ETH, SOL …) 또는 CoinGecko ID(bitcoin, ethereum …). days>0 이면 일별 시세 이력(data.prices)도.
         router: handler
         tool: crypto_price
         implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
-        target_key: coin_id
+        target_key: coin
       kosis:
         params:
           indicator: string
@@ -1301,7 +1306,7 @@ nodes:
         target_description: query(검색어) 또는 indicator(주요지표 ID, 빈 문자열이면 전체 목록) 또는 org_id+tbl_id(특정 통계표 데이터). 통계표는 query로 먼저 검색해 org_id/tbl_id 확인 후 조회. 데이터 조회 시 items를 기간 축으로 피벗해 반환(행=period, 필드=지표·분류 조합) → >> [table:chart/spreadsheet] / [table:document](table 블록). ⚠️다차원 통계표는 items 필드가 넓어짐(전 분류×항목) — 차트로 쓰려면 itm_id/obj_l1로 좁힐 것.
         router: handler
         tool: kosis_lookup
-        implementation: KOSIS API 통합 — org_id+tbl_id면 get_data(또는 info=true시 get_statistics_info), indicator면 get_indicators, query면 integrated_search.
+        implementation: KOSIS API 통합 — org_id+tbl_id면 get_statistics_data(objL 오류 시 getMeta 차원으로 ALL 보충 1회 재시도), info=true면 get_statistics_info(statisticsData.do getMeta TBL·ITM·PRD 합성 — 옛 statisticsInfo.do 는 404), indicator면 get_indicators, query면 integrated_search.
         target_key: query
         keywords:
         - 통계
@@ -1627,7 +1632,7 @@ nodes:
           lng:
           - lon
         returns: items
-        fixture: '[sense:reverse_geocode]{lat: 37.5665, lon: 126.978}'
+        fixture: '[sense:reverse_geocode]{lat: 37.5665, lng: 126.978}'
         description: GPS 좌표를 행정구역 주소로 변환 (카카오 API, 위도+경도 → 시/도/구/동)
         group: places
         target_description: 위도(lat)와 경도(lng) 두 파라미터. 결과는 시/도/구/동까지 분해.
@@ -5359,6 +5364,7 @@ nodes:
       webapp:
         returns: items
         side_effect: true
+        scope: workspace
         fixture: '[self:webapp]{}'
         description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register. status items 의 alive 필드 — table:filter 로 죽은 것만 추출.
         group: system
@@ -7232,6 +7238,7 @@ nodes:
         side_effect: true
         fixture: '[others:family_news]{op: "status"}'
         runs_on: pc_only
+        scope: workspace
         description: 가족신문 (op 분기) — USB 폰 사진(지난 발행 이후)으로 신문 판을 조판해 공개 주소(/n/<5자>)에 누적 발행하는 가족용 정기간행물. 공개 페이지에 방명록·가족 사진 업로드(다음 판 재료)가 달린다. showcase(폴더 진열)와 달리 날짜·장소로 조판된 "판"을 발행.
         target_description: op:status(기본 — 판 목록·초안/발행 구분·공개 주소·제작 진행 상황) / create(폰 사진으로 새 판 초안 제작. 백그라운드 조판 — photo_limit 사진 수 상한, days 며칠치[비우면 지난 발행 이후]. 미발행 초안이 있으면 갈아엎음. 사진 EXIF GPS→행정동 장소명 표기, 웹판 사진 자체는 EXIF 제거) / photos(초안 사진 목록 — 편집용, 각 사진의 날짜·시간·장소·썸네일과 남은 후보 수) / remove_photo(초안에서 file 사진 1장 빼기 — 안 뽑혔던 후보에서 자동 보충[폰 USB 연결 시], 발행 전에만) / publish(edition_id 판을 공개 주소로 발행 — 첫 발행 때 5자 코드 주소 생성) / detail(edition_id 판 상세) / delete(edition_id 판 삭제, 발행판은 force:true 필요) / comments(방명록 — edition_id 필터 가능) / uploads(가족이 보낸 사진 목록) / config(title 제호, photo_limit, public_base).
         target_key: op
@@ -8479,8 +8486,12 @@ nodes:
         side_effect: true
         runs_on: anywhere
         scope: workspace
+        params:
+          by:
+          - string
+          - array
         description: '통화 변환자(검침) — 지난 호출 이후 새로 나타난 행만 통과. 모든 items 생산자 × since = 감시자("새 것 있으면 알려줘"), 트리거와 조합하면 정기 감시가 한 문장. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.'
-        target_description: 'key(검침 스트림 이름, 필수 — 감시 파이프마다 고유하게) · by(행 식별 필드, 생략=url/id/link/title 자동 선택) · watch(값 변화도 보고할 필드 배열, 예 ["price"] — 변화 행은 _since:"changed"+_since_prev 동반) · peek(true=기준선 안 올리고 미리보기). 첫 실행=기준선만 저장하고 빈 items+note(스팸 방지). 예: [sense:feed]{url:...} >> [table:since]{key:"하다뉴스"}.'
+        target_description: 'key(검침 스트림 이름, 필수 — 감시 파이프마다 고유하게) · by(행 식별 필드 — 목록이면 복합키, 생략=url/id/link/title 자동 선택) · watch(값 변화도 보고할 필드 배열, 예 ["price"] — 변화 행은 _since:"changed"+_since_prev 동반) · peek(true=기준선 안 올리고 미리보기). 첫 실행=기준선만 저장하고 빈 items+note(스팸 방지). 예: [sense:feed]{url:...} >> [table:since]{key:"하다뉴스"}.'
         group: transform
         router: handler
         tool: data_since

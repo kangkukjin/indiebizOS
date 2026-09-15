@@ -49,6 +49,9 @@ def execute(tool_input: dict, context):
                 prd_se=tool_input.get("prd_se", "Y"),
                 start_prd_de=tool_input.get("start_prd_de"),
                 end_prd_de=tool_input.get("end_prd_de"),
+                # 분류4 이상(KOSIS objL8 까지) — obj_l4..obj_l8 키를 그대로 넘긴다.
+                obj_levels={int(k[5:]): v for k, v in tool_input.items()
+                            if isinstance(k, str) and k.startswith("obj_l") and k[5:].isdigit() and int(k[5:]) >= 4},
             )
         elif "indicator" in tool_input or "indicator_id" in tool_input:
             return kosis_api.get_indicators(

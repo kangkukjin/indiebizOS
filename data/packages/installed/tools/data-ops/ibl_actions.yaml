@@ -241,8 +241,10 @@ actions:
     side_effect: true
     runs_on: anywhere
     scope: workspace
+    params:
+      by: ["string", "array"]   # 키 자리 = 속성 집합(복합키) — 언어 개정 2026-09-07 과 한 벌
     description: "통화 변환자(검침) — 지난 호출 이후 새로 나타난 행만 통과. 모든 items 생산자 × since = 감시자(\"새 것 있으면 알려줘\"), 트리거와 조합하면 정기 감시가 한 문장. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
-    target_description: 'key(검침 스트림 이름, 필수 — 감시 파이프마다 고유하게) · by(행 식별 필드, 생략=url/id/link/title 자동 선택) · watch(값 변화도 보고할 필드 배열, 예 ["price"] — 변화 행은 _since:"changed"+_since_prev 동반) · peek(true=기준선 안 올리고 미리보기). 첫 실행=기준선만 저장하고 빈 items+note(스팸 방지). 예: [sense:feed]{url:...} >> [table:since]{key:"하다뉴스"}.'
+    target_description: 'key(검침 스트림 이름, 필수 — 감시 파이프마다 고유하게) · by(행 식별 필드 — 목록이면 복합키, 생략=url/id/link/title 자동 선택) · watch(값 변화도 보고할 필드 배열, 예 ["price"] — 변화 행은 _since:"changed"+_since_prev 동반) · peek(true=기준선 안 올리고 미리보기). 첫 실행=기준선만 저장하고 빈 items+note(스팸 방지). 예: [sense:feed]{url:...} >> [table:since]{key:"하다뉴스"}.'
     group: transform
     router: handler
     tool: data_since
@@ -590,8 +592,8 @@ tool_json:
           type: string
           description: 검침 스트림 이름(감시 파이프마다 고유, 필수).
         by:
-          type: string
-          description: 행 식별 필드(생략=url/id/link/title 자동 선택).
+          # type 은 액션 params 블록이 단일 소스(string|array — 복합키 목록)
+          description: 행 식별 필드(목록이면 복합키, 생략=url/id/link/title 자동 선택).
         watch:
           type: array
           description: 값 변화도 보고할 필드 이름 배열(예 ["price"]).

@@ -129,7 +129,7 @@ nodes:
           values:
             search: 키워드/카테고리로 장소 검색 (기본)
             detail: 한 곳 상세 — name(+id·lat·lng) → 카카오 기본 + 네이버 설명 + 블로그 언급
-        # ── 원격 런처·폰 표면의 '지도' 계기(선언형 3탭). 데스크탑은 같은 id 의 커스텀 계기(MapInstrument)가 덮는다.
+        # ── 원격 런처·폰 표면의 '지도' 계기(선언형 4탭). 데스크탑은 같은 id 의 커스텀 계기(MapInstrument)가 덮는다.
         #    저장 원장은 PC 의 outputs/map/places.json 한 곳 — 폰에서도 @hub 로 같은 원장을 읽고 쓴다(정기보고 선례).
         #    ★첫 저장은 원장 파일이 있어야 한다(데스크탑 지도 앱의 첫 ☆ 저장이 만든다) — 없는 몸에선 읽기가 실패한다.
         app:
@@ -258,6 +258,29 @@ nodes:
               title: 주요 안내
               k: '{name}'
               v: '{guidance}'
+          - name: 대중교통
+            inputs:
+            - key: origin
+              type: text
+              label: 출발
+              placeholder: 출발지 장소명
+              required: true
+            - key: destination
+              type: text
+              label: 도착
+              placeholder: 도착지 장소명
+              required: true
+            action: '[sense:navigate_route]{mode: "transit", origin: "$origin", destination: "$destination"}@hub'
+            view:
+            - type: card_list
+              from: items
+              empty: 검색된 도시내 대중교통 경로가 없습니다
+              card:
+                title: '{duration_min}분 · 환승 {transfer_count}회'
+                lines:
+                - '{provider_info.firstStartStation} → {provider_info.lastEndStation}'
+                - '예상 요금 {fare_krw}원 · 도보 {walking_distance_m}m'
+                - 'ODsay 도시내 경로 · 실시간 도착 정보 미포함'
       navigate_route:
         # 핸들러(handler.py:992-993)가 from/to 를 먼저 읽고 origin/destination 을 별칭으로
         # 받는다 — 그 사실을 데이터로 옮긴다(2026-08-23). 관측 destination 97 / to 18.

@@ -46,7 +46,11 @@ export interface RouteMapData {
   summary: { distance_km: number; duration_min: number; toll: number; fare?: { toll?: number } };
 }
 export interface RouteInfo { summary?: RouteSummary; key_guides?: KeyGuide[] }
-export interface RouteResult { summary?: RouteSummary; key_guides?: KeyGuide[]; routes?: RouteInfo[]; map_data?: RouteMapData; message?: string; error?: string }
+export interface RouteResult {
+  mode?: RouteMode; success?: boolean; partial?: boolean; error_type?: string;
+  items?: TransitRoute[]; observed_at?: string;
+  origin?: LatLng & { name?: string }; destination?: LatLng & { name?: string };
+  summary?: RouteSummary; key_guides?: KeyGuide[]; routes?: RouteInfo[]; map_data?: RouteMapData; message?: string; error?: string }
 
 export interface Cctv { name?: string; url?: string; lat?: number; lng?: number; road_type?: string; format?: string; distance_km?: number; source?: string; playable?: boolean }
 
@@ -66,3 +70,20 @@ export const DEFAULT_CENTER: LatLng = { lat: 37.4979, lng: 127.0276 }; // 강남
 export const fmtDistance = (m?: number | null) =>
   m == null ? '' : m >= 1000 ? `${(m / 1000).toFixed(1)}km` : `${m}m`;
 export const fmtCoord = (ll: LatLng) => `${ll.lat.toFixed(5)}, ${ll.lng.toFixed(5)}`;
+
+export type RouteMode = 'driving' | 'transit';
+export interface TransitSegment {
+  trafficType: 1 | 2 | 3;
+  sectionTime: number;
+  distance?: number;
+  stationCount?: number;
+  startName?: string; endName?: string; way?: string;
+  startX?: number; startY?: number; endX?: number; endY?: number;
+  lane?: { name?: string; busNo?: string }[];
+  passStopList?: { stations?: { stationName?: string; x?: string | number; y?: string | number }[] };
+}
+export interface TransitRoute {
+  route_index: number; complete: boolean;
+  duration_min: number; walking_distance_m: number; fare_krw: number; transfer_count: number;
+  segments: TransitSegment[];
+}

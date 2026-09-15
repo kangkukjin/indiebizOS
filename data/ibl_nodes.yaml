@@ -1607,6 +1607,29 @@ nodes:
               title: 주요 안내
               k: '{name}'
               v: '{guidance}'
+          - name: 대중교통
+            inputs:
+            - key: origin
+              type: text
+              label: 출발
+              placeholder: 출발지 장소명
+              required: true
+            - key: destination
+              type: text
+              label: 도착
+              placeholder: 도착지 장소명
+              required: true
+            action: '[sense:navigate_route]{mode: "transit", origin: "$origin", destination: "$destination"}@hub'
+            view:
+            - type: card_list
+              from: items
+              empty: 검색된 도시내 대중교통 경로가 없습니다
+              card:
+                title: '{duration_min}분 · 환승 {transfer_count}회'
+                lines:
+                - '{provider_info.firstStartStation} → {provider_info.lastEndStation}'
+                - 예상 요금 {fare_krw}원 · 도보 {walking_distance_m}m
+                - ODsay 도시내 경로 · 실시간 도착 정보 미포함
       navigate_route:
         aliases:
           origin:

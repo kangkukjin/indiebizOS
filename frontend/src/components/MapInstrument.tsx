@@ -16,7 +16,7 @@ import 'leaflet/dist/leaflet.css';
 import { StreamPlayer } from './StreamPlayer';
 import type { StreamData } from './chat/chatUtils';
 import { useRetryingLoad } from '../lib/use-retrying-load';
-import type { Cctv, LatLng, Place, Point, RouteResult, SavedPlace } from './map/types';
+import type { Cctv, LatLng, Place, Point, RouteMode, RouteResult, SavedPlace } from './map/types';
 import { CATEGORY_CHIPS, DEFAULT_CENTER, DEFAULT_TAG, fmtCoord, fmtDistance } from './map/types';
 import { cctvNearby, loadSaved, placeDetail, reverseGeocode, runRoute, searchPlaces, whereAmI, writeSaved } from './map/api';
 import type { Here, SearchOpts } from './map/api';
@@ -24,11 +24,12 @@ import { CCTV_ICON, dotIcon, hereIcon, pinIcon, spotIcon, starIcon } from './map
 import { PlaceDetail } from './map/PlaceDetail';
 import { SavedPanel } from './map/SavedPanel';
 import { RoutePanel } from './map/RoutePanel';
+import { sortTransit, transitRoutes, transitStops } from './map/transit';
 
 const CACHE_KEY = 'directions.instrument.last';   // 마지막 출발·도착(구 길찾기 계기와 호환)
 type Panel = 'none' | 'results' | 'detail' | 'saved' | 'route';
 
-interface RouteCache { origin: Point; destination: Point }
+interface RouteCache { origin: Point; destination: Point; mode?: RouteMode }
 function loadRouteCache(): RouteCache {
   try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c?.origin && c?.destination) return c; } catch { /* ignore */ }
   return { origin: { text: '', coord: null }, destination: { text: '', coord: null } };
@@ -64,8 +65,12 @@ export function MapInstrument() {
 
   /* ── 길찾기 · CCTV ── */
   const routeInit = useMemo(loadRouteCache, []);
-  const [origin, setOrigin] = useState<Point>(routeInit.origin);
-  const [destination, setDestination] = useState<Point>(routeInit.destination);
+  const [origin, setOriginState] = useState<Point>(routeInit.origin);
+  const [destination, setDestinationState] = useState<Point>(routeInit.destination);
+  const [routeMode, setRouteMode] = useState<RouteMode>(routeInit.mode === 'transit' ? 'transit' : 'driving');
+  const [selectedTransit, setSelectedTransit] = useState<number | null>(null);
+  const routeRequest = useRef(0);
+  const routeEdited = useRef(false);
   const [pick, setPick] = useState<'origin' | 'destination'>('origin');
   const [routeResult, setRouteResult] = useState<RouteResult | null>(null);
   const [routeLoading, setRouteLoading] = useState(false);
@@ -89,6 +94,21 @@ export function MapInstrument() {
   const panelRef = useRef(panel); panelRef.current = panel;
   const pickRef = useRef(pick); pickRef.current = pick;
   const cctvOnRef = useRef(cctvOn); cctvOnRef.current = cctvOn;
+
+  // 입력·교통수단 변경·초기화 뒤 늦은 응답이 새 화면을 덮어쓰지 않게 한다.
+  const invalidateRoute = () => {
+    routeEdited.current = true;
+    routeRequest.current += 1;
+    setRouteResult(null); setRouteError(null); setRouteLoading(false); setSelectedTransit(null);
+    routeLayer.current?.clearLayers();
+  };
+  const setOrigin = (point: Point) => { invalidateRoute(); setOriginState(point); };
+  const setDestination = (point: Point) => { invalidateRoute(); setDestinationState(point); };
+  const changeMode = (mode: RouteMode) => {
+    if (mode === routeMode) return;
+    invalidateRoute(); setRouteMode(mode); setCctvOn(false); setCctvs([]); setSelectedCctv(null);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ origin, destination, mode }));
+  };
 
   const flash = (msg: string) => { setToast(msg); window.setTimeout(() => setToast(null), 3500); };
   const center = (): LatLng | null => { const m = mapRef.current; if (!m) return null; const c = m.getCenter(); return { lat: c.lat, lng: c.lng }; };
@@ -188,29 +208,39 @@ export function MapInstrument() {
     setCctvLoading(true); setCctvs(await cctvNearby(c, 5.5, 12)); setCctvLoading(false);
   }, []);
 
-  const doRoute = useCallback(async (o: Point, d: Point) => {
+  const doRoute = useCallback(async (o: Point, d: Point, mode: RouteMode = 'driving') => {
     const os = o.coord ? `${o.coord.lng},${o.coord.lat}` : o.text.trim();
     const ds = d.coord ? `${d.coord.lng},${d.coord.lat}` : d.text.trim();
     if (!os || !ds) return;
-    setRouteLoading(true); setRouteError(null);
+    const request = ++routeRequest.current;
+    setRouteLoading(true); setRouteError(null); setRouteResult(null); setSelectedTransit(null);
     let r: RouteResult;
-    try { r = await runRoute(os, ds); }
-    catch (e) { setRouteLoading(false); setRouteError('서버에 연결할 수 없습니다.'); throw e; }
-    setRouteLoading(false);
-    if (r.error) { setRouteError(r.error); setRouteResult(null); return; }
-    setRouteResult(r);
-    if (r.map_data) {
-      const no: Point = { text: r.map_data.origin.name || o.text, coord: { lat: r.map_data.origin.lat, lng: r.map_data.origin.lng } };
-      const nd: Point = { text: r.map_data.destination.name || d.text, coord: { lat: r.map_data.destination.lat, lng: r.map_data.destination.lng } };
-      setOrigin(no); setDestination(nd);
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ origin: no, destination: nd }));
-      if (cctvOnRef.current) loadCctvAlongRoute(r.map_data.path);
+    try { r = await runRoute(os, ds, mode); }
+    catch (e) {
+      if (request === routeRequest.current) { setRouteLoading(false); setRouteError('서버에 연결할 수 없습니다.'); }
+      throw e;
     }
+    if (request !== routeRequest.current) return;
+    setRouteLoading(false);
+    if (r.error || r.success === false) {
+      setRouteError(r.error || r.message || '경로를 찾지 못했습니다.'); return;
+    }
+    const choices = transitRoutes(r);
+    if (mode === 'transit' && !choices.length) { setRouteError('검색된 대중교통 경로가 없습니다.'); return; }
+    setRouteResult(r);
+    setSelectedTransit(sortTransit(choices, 'duration_min')[0]?.route_index ?? null);
+    const start = r.map_data?.origin || r.origin;
+    const end = r.map_data?.destination || r.destination;
+    const no: Point = start ? { text: o.text || start.name || '출발', coord: { lat: start.lat, lng: start.lng } } : o;
+    const nd: Point = end ? { text: d.text || end.name || '도착', coord: { lat: end.lat, lng: end.lng } } : d;
+    setOriginState(no); setDestinationState(nd);
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ origin: no, destination: nd, mode }));
+    if (mode === 'driving' && r.map_data && cctvOnRef.current) loadCctvAlongRoute(r.map_data.path);
   }, [loadCctvAlongRoute]);
-  const routeNow = (o: Point, d: Point) => { doRoute(o, d).catch(() => {}); };
+  const routeNow = (o: Point, d: Point) => { routeEdited.current = true; doRoute(o, d, routeMode).catch(() => {}); };
   const resetRoute = () => {
-    setOrigin({ text: '', coord: null }); setDestination({ text: '', coord: null });
-    setRouteResult(null); setRouteError(null); setPick('origin'); routeLayer.current?.clearLayers();
+    invalidateRoute(); setOriginState({ text: '', coord: null }); setDestinationState({ text: '', coord: null });
+    setPick('origin'); setCctvOn(false); setCctvs([]); localStorage.removeItem(CACHE_KEY);
   };
   const toggleCctv = () => {
     const next = !cctvOn; setCctvOn(next);
@@ -268,13 +298,13 @@ export function MapInstrument() {
       if (lastSearchRef.current) setMoved(true);
     });
     setTimeout(() => map.invalidateSize(), 120);
-    return () => { map.remove(); mapRef.current = null; };
+    return () => { routeRequest.current += 1; map.remove(); mapRef.current = null; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // 캐시 복원분 자동 길찾기 — 마운트 1회(백엔드가 아직 안 떠 있으면 훅이 백오프 재시도).
   const hasRouteCache = !!((routeInit.origin.text || routeInit.origin.coord) && (routeInit.destination.text || routeInit.destination.coord));
-  useRetryingLoad(useCallback(() => doRoute(routeInit.origin, routeInit.destination), [routeInit, doRoute]), { enabled: hasRouteCache });
+  useRetryingLoad(useCallback(() => routeEdited.current ? Promise.resolve() : doRoute(routeInit.origin, routeInit.destination, routeInit.mode === 'transit' ? 'transit' : 'driving'), [routeInit, doRoute]), { enabled: hasRouteCache });
 
   /* ══ 레이어 반영 ══ */
   // 검색 결과 번호 핀
@@ -335,12 +365,29 @@ export function MapInstrument() {
   useEffect(() => {
     const layer = routeLayer.current; const m = mapRef.current; if (!layer || !m) return;
     layer.clearLayers();
+    if (routeResult?.mode === 'transit') {
+      const selected = transitRoutes(routeResult).find((r) => r.route_index === selectedTransit);
+      const stops = transitStops(selected);
+      for (const stop of stops) {
+        const label = document.createElement('span'); label.textContent = stop.name;
+        L.circleMarker([stop.lat, stop.lng], { radius: 5, color: stop.type === 1 ? '#2563EB' : '#16A34A', fillOpacity: 0.8 })
+          .bindTooltip(label).addTo(layer);
+      }
+      const points: LatLng[] = [...stops];
+      if (routeResult.origin) points.push(routeResult.origin);
+      if (routeResult.destination) points.push(routeResult.destination);
+      if (points.length) {
+        programmaticMove.current = true;
+        m.fitBounds(L.latLngBounds(points.map((p) => [p.lat, p.lng])), { maxZoom: 16, padding: [40, 40], paddingTopLeft: [400, 40] });
+      }
+      return;
+    }
     const path = routeResult?.map_data?.path;
     if (path?.length) {
       const pl = L.polyline(path as L.LatLngExpression[], { color: '#3B82F6', weight: 5, opacity: 0.85 }).addTo(layer);
       programmaticMove.current = true; m.fitBounds(pl.getBounds(), { padding: [40, 40], paddingTopLeft: [400, 40] });
     }
-  }, [routeResult]);
+  }, [routeResult, selectedTransit]);
   useEffect(() => {
     const layer = cctvLayer.current; if (!layer) return;
     layer.clearLayers();
@@ -442,6 +489,7 @@ export function MapInstrument() {
               <RoutePanel origin={origin} destination={destination} setOrigin={setOrigin} setDestination={setDestination}
                 pick={pick} setPick={setPick} onSearch={() => routeNow(origin, destination)} onReset={resetRoute}
                 loading={routeLoading} error={routeError} result={routeResult}
+                mode={routeMode} onModeChange={changeMode} selectedTransit={selectedTransit} onSelectTransit={setSelectedTransit}
                 cctvOn={cctvOn} cctvs={cctvs} cctvLoading={cctvLoading} onToggleCctv={toggleCctv}
                 onSelectCctv={(c) => setSelectedCctv({ url: c.url || '', name: c.name, source: c.source, lat: c.lat, lng: c.lng, playable: c.playable })}
                 onBack={() => setPanel('none')} />
@@ -453,7 +501,7 @@ export function MapInstrument() {
       {/* 지도 위 오른쪽 컨트롤: 내 위치 · CCTV(경로 패널 밖에서도) */}
       <div className="absolute z-[500] right-3 top-3 flex flex-col gap-1.5">
         <button onClick={goHere} title="내 위치" className={iconBtn(false)}>📍</button>
-        <button onClick={toggleCctv} title="주변 도로 CCTV" className={`${iconBtn(cctvOn)} ${cctvOn ? '!bg-red-500 !border-red-500' : ''} text-sm`}>📹{cctvLoading ? '…' : cctvOn && cctvs.length ? <span className="text-[10px] ml-0.5">{cctvs.length}</span> : ''}</button>
+        {routeMode === 'driving' && <button onClick={toggleCctv} title="주변 도로 CCTV" className={`${iconBtn(cctvOn)} ${cctvOn ? '!bg-red-500 !border-red-500' : ''} text-sm`}>📹{cctvLoading ? '…' : cctvOn && cctvs.length ? <span className="text-[10px] ml-0.5">{cctvs.length}</span> : ''}</button>}
       </div>
 
       {/* 이 지역 재검색 */}

@@ -12,7 +12,7 @@
  * (이중 인용 \" 경로는 라이브 프로브로 왕복 확인됨 — 2026-09-03).
  */
 import { iblExecuteApp } from '../../lib/instrument';
-import type { Cctv, LatLng, Place, RouteResult, SavedPlace } from './types';
+import type { Cctv, LatLng, Place, RouteMode, RouteResult, SavedPlace } from './types';
 import { DEFAULT_TAG, SAVED_PATH } from './types';
 
 const s = (v: string) => `"${v.replace(/["\\]/g, '').trim()}"`;
@@ -95,8 +95,8 @@ export async function writeSaved(list: SavedPlace[]): Promise<boolean> {
 
 /* ── 길찾기 · CCTV ────────────────────────────────── */
 // 연결 실패는 throw — 호출부가 에러 표시·재시도를 다룬다.
-export async function runRoute(origin: string, destination: string): Promise<RouteResult> {
-  const r = await iblExecuteApp(`[sense:navigate_route]{origin: ${s(origin)}, destination: ${s(destination)}}`);
+export async function runRoute(origin: string, destination: string, mode: RouteMode = 'driving'): Promise<RouteResult> {
+  const r = await iblExecuteApp(`[sense:navigate_route]{origin: ${s(origin)}, destination: ${s(destination)}, mode: "${mode}"}`);
   return asObj(r) as unknown as RouteResult;
 }
 

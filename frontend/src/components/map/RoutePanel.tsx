@@ -4,7 +4,9 @@
  * 능력: [sense:navigate_route] · [sense:cctv]{op:nearby} (부모의 api.ts 경유).
  */
 import { useState } from 'react';
-import type { Cctv, KeyGuide, Point, RouteResult, RouteSummary } from './types';
+import type { Cctv, KeyGuide, Point, RouteMode, RouteResult, RouteSummary } from './types';
+
+import { TransitRoutes } from './TransitRoutes';
 
 const HOME_KEY = 'directions.instrument.home';
 
@@ -14,13 +16,15 @@ interface Props {
   pick: 'origin' | 'destination'; setPick: (p: 'origin' | 'destination') => void;
   onSearch: () => void; onReset: () => void; loading: boolean; error: string | null;
   result: RouteResult | null;
+  mode: RouteMode; onModeChange: (mode: RouteMode) => void;
+  selectedTransit: number | null; onSelectTransit: (id: number) => void;
   cctvOn: boolean; cctvs: Cctv[]; cctvLoading: boolean; onToggleCctv: () => void; onSelectCctv: (c: Cctv) => void;
   onBack: () => void;
 }
 
 export function RoutePanel(p: Props) {
   const { origin, destination, setOrigin, setDestination, pick, setPick, onSearch, onReset, loading, error, result,
-    cctvOn, cctvs, cctvLoading, onToggleCctv, onSelectCctv, onBack } = p;
+    cctvOn, cctvs, cctvLoading, onToggleCctv, onSelectCctv, onBack, mode, onModeChange, selectedTransit, onSelectTransit } = p;
   const [home, setHome] = useState<string>(() => localStorage.getItem(HOME_KEY) || '');
   const [editHome, setEditHome] = useState(false);
   const [homeDraft, setHomeDraft] = useState(home);
@@ -52,6 +56,12 @@ export function RoutePanel(p: Props) {
           <h2 className="text-sm font-semibold text-stone-800">🛣️ 길찾기</h2>
           <span className="ml-auto text-[11px] text-stone-400">지도를 눌러 <b className={pick === 'origin' ? 'text-green-600' : 'text-rose-600'}>{pick === 'origin' ? '출발지' : '도착지'}</b> 찍기</span>
         </div>
+        <div role="group" aria-label="교통수단" className="flex gap-1 rounded-xl bg-stone-100 p-1">
+          {(['driving', 'transit'] as const).map((m) => <button key={m} aria-pressed={mode === m}
+            onClick={() => onModeChange(m)} className={`flex-1 rounded-lg py-1.5 text-sm ${mode === m ? 'bg-white shadow-sm text-blue-700 font-semibold' : 'text-stone-500'}`}>
+            {m === 'driving' ? '🚗 자동차' : '🚌 대중교통'}
+          </button>)}
+        </div>
         <div className="flex items-center gap-1.5">
           <button onClick={() => setPick('origin')} title="다음 지도 클릭 → 출발지"
             className={`w-8 shrink-0 text-sm rounded-lg py-1.5 border ${pick === 'origin' ? 'bg-green-50 border-green-300' : 'bg-white border-stone-200'}`}>📍</button>
@@ -80,18 +90,19 @@ export function RoutePanel(p: Props) {
         <div className="flex gap-1.5">
           <button onClick={onSearch} disabled={loading || !canSearch}
             className="flex-1 px-4 py-2 rounded-xl bg-stone-800 text-white text-sm hover:bg-stone-700 disabled:opacity-40">{loading ? '경로 찾는 중…' : '길찾기'}</button>
-          <button onClick={onToggleCctv} title="경로 주변 도로 CCTV"
+          {mode === 'driving' && <button onClick={onToggleCctv} title="경로 주변 도로 CCTV"
             className={`px-3 py-2 rounded-xl text-sm border ${cctvOn ? 'bg-red-500 text-white border-red-500' : 'bg-white border-stone-200 text-stone-600 hover:bg-stone-50'}`}>
             📹{cctvLoading ? '…' : cctvOn && cctvs.length ? ` ${cctvs.length}` : ''}
-          </button>
+          </button>}
           <button onClick={() => { setEditHome((v) => !v); setHomeDraft(home); }} title="집 주소 설정" className="px-2.5 py-2 rounded-xl text-sm border bg-white border-stone-200 text-stone-500 hover:bg-stone-50">⚙</button>
           <button onClick={onReset} title="초기화" className="px-2.5 py-2 rounded-xl text-sm border bg-white border-stone-200 text-stone-500 hover:bg-stone-50">↺</button>
         </div>
-        {error && <div className="px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">{error}</div>}
+        {error && <div role="alert" className="px-3 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-xs">{error}</div>}
       </div>
 
       <div className="flex-1 min-h-0 overflow-auto px-4 py-2.5 space-y-3">
-        {summary && (
+        {mode === 'transit' && result && <TransitRoutes result={result} selected={selectedTransit} onSelect={onSelectTransit} />}
+        {mode === 'driving' && summary && (
           <div className="flex flex-wrap gap-1.5">
             {summary.distance_km != null && <span className="px-3 py-1.5 rounded-full bg-white border border-stone-200 text-sm">🚗 {summary.distance_km}km</span>}
             {summary.duration_min != null && <span className="px-3 py-1.5 rounded-full bg-white border border-stone-200 text-sm">⏱ {summary.duration_min}분</span>}
@@ -127,7 +138,7 @@ export function RoutePanel(p: Props) {
             </div>
           </div>
         )}
-        {!summary && !error && <div className="text-xs text-stone-400">출발지와 도착지를 입력하거나 지도를 눌러 찍고 <b>길찾기</b>를 누르세요. 가게 상세의 <b>출발/도착</b> 버튼으로도 채워집니다.</div>}
+        {!result && !error && !loading && <div className="text-xs text-stone-400">출발지와 도착지를 입력하거나 지도를 눌러 찍고 <b>길찾기</b>를 누르세요. 가게 상세의 <b>출발/도착</b> 버튼으로도 채워집니다.</div>}
       </div>
     </div>
   );

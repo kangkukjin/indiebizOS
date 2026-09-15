@@ -17,7 +17,7 @@ nodes:
 
           - channel: 채널 핸들(@name)·채널 URL·channel_id를 채널 ID로 해석하고 최신 영상을 조회. handle/url/channel_id 중 하나, limit 옵션.
 
-          - summarize: 자막 추출 + AI 요약 + HTML 보고서 + 브라우저 열기. summary_length 옵션.
+          - summarize: 자막 추출 + AI 요약 + HTML 보고서 + 브라우저 열기. summary_length 옵션. 긴 자막은 전체를 구간별로 요약한 뒤 통합한다(원문 절단 없음).
 
 
 
@@ -145,7 +145,7 @@ nodes:
         runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].
         group: media
-        target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음.
+        target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음. skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
         target_key: op
         router: handler
         tool: music_op
@@ -263,7 +263,7 @@ tool_json:
 
       - op=channel: 채널 핸들(@name)·URL·channel_id 해석 + 최신 영상. handle/url/channel_id 중 하나.
 
-      - op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션.
+      - op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션. 긴 자막은 전체를 구간별로 요약한 뒤 통합한다(원문 절단 없음).
 
 '
     input_schema:

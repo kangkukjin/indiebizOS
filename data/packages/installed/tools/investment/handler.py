@@ -480,6 +480,8 @@ def _stock_history(ti: dict):
             symbol=ticker,
             period=ti.get("period", "1mo"),
             interval=ti.get("interval", "1d"),
+            start_date=ti.get("start_date"),
+            end_date=ti.get("end_date"),
             max_points=ti.get("max_points", 10),
         )
         return _attach_price_table(_res)
@@ -507,6 +509,8 @@ def _stock_history(ti: dict):
                 symbol=ticker,
                 period=ti.get("period", "1mo"),
                 interval=ti.get("interval", "1d"),
+                start_date=ti.get("start_date"),
+                end_date=ti.get("end_date"),
                 max_points=ti.get("max_points", 10),
             )
             if isinstance(_res, dict) and _res.get("success"):

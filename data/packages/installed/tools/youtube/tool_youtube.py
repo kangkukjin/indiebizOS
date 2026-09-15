@@ -836,7 +836,7 @@ def skip_youtube() -> dict:
     global _player_process, _player_video_id, _player_title
 
     with _player_lock:
-        if not _player_video_id and not _player_process:
+        if not _player_video_id and not _player_process and not _player_queue:
             return {'success': True, 'message': '재생 중인 항목이 없습니다.'}
         skipped_id = _player_video_id
 
@@ -873,10 +873,11 @@ def skip_youtube() -> dict:
             else:
                 _player_video_id = None
                 _player_title = None
-                _player_queue.clear()
                 return {
-                    'success': True,
-                    'message': '건너뛰었으나 다음 곡 재생에 실패했습니다. 재생 종료.',
+                    'success': False,
+                    'error': '다음 곡 재생에 실패했습니다. 나머지 대기열은 보존했습니다.',
+                    'failed_video_id': next_item['video_id'],
+                    'queue_remaining': len(_player_queue),
                     'skipped_video_id': skipped_id,
                 }
         else:

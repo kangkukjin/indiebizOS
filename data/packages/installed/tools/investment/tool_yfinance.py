@@ -181,7 +181,7 @@ def _normalize_symbol(symbol: str) -> str:
 
 
 def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
-                 meta_sink: dict = None) -> list:
+                 meta_sink: dict = None, start_date=None, end_date=None) -> list:
     """Yahoo Finance chart API 직접 호출(requests) → 일별 바 리스트.
 
     yfinance 라이브러리는 Yahoo 봇차단에 막히고(최신판은 curl_cffi 네이티브 의존),
@@ -192,7 +192,12 @@ def _yahoo_chart(symbol: str, period: str = "5d", interval: str = "1d",
     *권위 있는* 메타데이터가 여기 있다(심볼 접미사 추측 금지)."""
     url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
     headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
-    r = requests.get(url, params={"range": period, "interval": interval},
+    params = {"range": period, "interval": interval}
+    if start_date or end_date:
+        start, end = _history_bounds(start_date, end_date, period)
+        params = {"period1": int(start.timestamp()),
+                  "period2": int((end + timedelta(days=1)).timestamp()), "interval": interval}
+    r = requests.get(url, params=params,
                      headers=headers, timeout=15)
     res = ((r.json().get("chart") or {}).get("result")) or []
     if not res:
@@ -326,7 +331,18 @@ _PERIOD_DAYS = {"1d": 5, "5d": 10, "1mo": 31, "3mo": 93, "6mo": 186,
                 "1y": 366, "2y": 731, "5y": 1827, "10y": 3653, "ytd": 366, "max": 3653}
 
 
-def _naver_index_daily(symbol: str, period: str = "5d") -> list:
+def _history_bounds(start_date, end_date, period):
+    """절대 날짜 범위는 양끝 포함. end만 있으면 그 날을 기준으로 period를 적용."""
+    end = (datetime.strptime(end_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+           if end_date else datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0))
+    start = (datetime.strptime(start_date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+             if start_date else end - timedelta(days=_PERIOD_DAYS.get(str(period).lower(), 31)))
+    if start > end:
+        raise ValueError("start_date는 end_date보다 늦을 수 없습니다")
+    return start, end
+
+
+def _naver_index_daily(symbol: str, period: str = "5d", start_date=None, end_date=None) -> list:
     """한국 지수의 일봉 시계열(네이버). 비대상·실패=[] → 호출자가 Yahoo 로 폴백.
 
     응답은 JSON 이 아니라 파이썬 리터럴에 가까운 텍스트(작은따옴표 헤더)라 눈으로 파싱한다.
@@ -335,9 +351,7 @@ def _naver_index_daily(symbol: str, period: str = "5d") -> list:
     code = _NAVER_INDEX_DAILY.get((symbol or "").upper())
     if not code:
         return []
-    days = _PERIOD_DAYS.get(str(period or "5d").lower(), 31)
-    end = datetime.now()
-    start = end - timedelta(days=days)
+    start, end = _history_bounds(start_date, end_date, period)
     try:
         r = requests.get(_NAVER_SISE, params={
             "symbol": code, "requestType": 1, "timeframe": "day",
@@ -359,7 +373,8 @@ def _naver_index_daily(symbol: str, period: str = "5d") -> list:
         return []
 
 
-def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10) -> dict:
+def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_points: int = 10,
+                    start_date=None, end_date=None) -> dict:
     """
     Yahoo Finance를 통해 주식/ETF/원자재(선물) 가격 조회
     (한국 종목·지수의 현재가 스냅샷은 네이버 실시간이 덮는다 — _naver_realtime)
@@ -372,7 +387,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
     crypto_symbols = ["BTC", "ETH", "XRP", "DOGE", "ADA", "SOL", "DOT", "MATIC", "AVAX",
                       "LINK", "UNI", "ATOM", "LTC", "BCH", "BNB", "SHIB"]
     symbol_upper = symbol.upper().replace("-USD", "").replace("-KRW", "")
-    if symbol_upper in crypto_symbols or "-USD" in symbol.upper() or "-KRW" in symbol.upper():
+    if not (start_date or end_date) and (symbol_upper in crypto_symbols or "-USD" in symbol.upper() or "-KRW" in symbol.upper()):
         return get_crypto_price(symbol)
 
     # 심볼 자동 보정 (KOSPI → ^KS11, 005930 → 005930.KS 등)
@@ -383,17 +398,25 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
 
     try:
         # yfinance 라이브러리(봇차단) 대신 Yahoo chart API 직접(requests) — 폰·데스크탑 공통.
+        date_args = {}
+        if start_date or end_date:
+            start, end = _history_bounds(start_date, end_date, period)
+            date_args = {"start_date": start.strftime("%Y-%m-%d"),
+                         "end_date": end.strftime("%Y-%m-%d")}
         chart_meta: dict = {}
         series_source = None
         all_history = []
         if str(interval or "1d").lower() in ("1d", "1day", "d"):
             # 한국 지수는 네이버 일봉이 먼저 (Yahoo 는 거래일을 통째 빠뜨린다)
-            all_history = _naver_index_daily(symbol, period)
+            all_history = _naver_index_daily(symbol, period, **date_args)
             if all_history:
                 series_source = "naver_daily"
                 chart_meta["currency"] = "KRW"
         if not all_history:
-            all_history = _yahoo_chart(symbol, period, interval, meta_sink=chart_meta)
+            all_history = _yahoo_chart(symbol, period, interval, meta_sink=chart_meta, **date_args)
+        if date_args:
+            all_history = [row for row in all_history
+                           if date_args["start_date"] <= row["date"] <= date_args["end_date"]]
         if not all_history:
             return {"success": False, "error": f"'{symbol}' 종목을 찾을 수 없거나 데이터가 없습니다."}
 
@@ -418,7 +441,7 @@ def get_stock_price(symbol: str, period: str = "5d", interval: str = "1d", max_p
         #   마지막 행(as_of)과 먼저 대조한다. 장전·휴장에는 네이버가 '아직 시작 안 한 오늘'
         #   기준 등락(=0)을 주는데 가격은 전 장 종가라, 옛 역산(prev_close = price - change)은
         #   전일종가를 그 장 종가 자신으로 만들어 history 의 마지막 행과 어긋났다.
-        realtime = _naver_realtime(symbol)
+        realtime = None if date_args else _naver_realtime(symbol)
         quote_lag = None                             # 일봉과 스냅샷이 다른 장을 가리킬 때의 정직 표지
         if realtime:
             rt_day = (realtime["quote_time"] or "")[:10] or datetime.now().strftime("%Y-%m-%d")

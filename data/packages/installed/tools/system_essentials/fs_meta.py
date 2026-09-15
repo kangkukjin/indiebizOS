@@ -5,19 +5,23 @@ handler.py 에서 2026-08-05 분리 (1500줄 규칙). 구 pc-manager query_stora
 """
 import os
 import json
+import re
 from datetime import datetime
+from common.pkg_utils import load_sibling
+
+_fs_find = load_sibling(__file__, "fs_find")
 
 
 _META_KEYS = ("search_term", "q", "query", "name", "extension", "kind",
               "min_size_mb", "sort", "path", "root_path")
 
 
-def meta_query_or_error(tool_input: dict) -> str:
+def meta_query_or_error(tool_input: dict, project_path: str) -> str:
     """pattern 없는 glob_files 호출의 처리 — 메타 파라미터(path/sort 만도 유효:
     {path:"~/Desktop", sort:"mtime"}=그 폴더 최근 파일, 구 fs_query 실사용 형태)면
     색인 질의, 아무것도 없으면 안내 오류."""
     if any(tool_input.get(k) for k in _META_KEYS):
-        return _fs_meta_query(tool_input)
+        return _fs_meta_query(tool_input, project_path)
     return json.dumps({"success": False,
                        "error": "pattern(glob) 또는 메타 파라미터(search_term/extension/kind/min_size_mb/path)가 필요합니다."},
                       ensure_ascii=False)
@@ -44,7 +48,7 @@ def _fs_epoch_to_iso(mtime) -> str:
         return ""
 
 
-def _fs_meta_query(tool_input: dict) -> str:
+def _fs_meta_query(tool_input: dict, project_path: str) -> str:
     """[self:file_find] 메타 검색 모드 — OS 색인(backend/file_index) 직접. 선스캔 불요·항상 최신.
 
     구 pc-manager _query_storage 이식 (2026-08-05 어휘 압축: fs_query 흡수 —
@@ -68,7 +72,7 @@ def _fs_meta_query(tool_input: dict) -> str:
         kind=tool_input.get("kind") or "any",
         q=search_term,
         ext=tool_input.get("extension"),
-        path=tool_input.get("root_path") or tool_input.get("path") or tool_input.get("volume_name"),
+        path=_fs_find.resolve_root(tool_input, project_path),
         min_size=min_size_bytes,
         limit=limit,
         sort=tool_input.get("sort") or "mtime",
@@ -84,17 +88,10 @@ def _fs_meta_query(tool_input: dict) -> str:
         size_mb = round(size / 1048576, 2)
         mtime = _fs_epoch_to_iso(it.get("mtime"))
         meta_bits = [f"{size_mb} MB", it.get("kind") or "", mtime]
-        records.append({
-            "title": it.get("name") or os.path.basename(path),
-            "meta": " · ".join(b for b in meta_bits if b),
-            "summary": "", "url": path,
-            "path": path, "size": size, "size_mb": size_mb,
-            # dir=부모 디렉토리(2026-08-08) — 파일의 자연 속성(ext·kind 동급). 이게 없으면
-            # "디렉토리별 합계" 같은 rollup 이 어휘로 표현 불가였다(실험 3 — 변환자에
-            # 문자열 자르기를 넣는 대신 생산자 명사를 풍부화하는 쪽이 헌법 정합).
-            "dir": os.path.dirname(path),
-            "mtime": mtime, "kind": it.get("kind"), "ext": it.get("ext"),
-        })
+        record, _ = _fs_find.file_views(path, metadata=it)
+        record.update(meta=" · ".join(b for b in meta_bits if b), size_mb=size_mb,
+                      kind=it.get("kind"), ext=it.get("ext"))
+        records.append(record)
         rows.append([it.get("name") or "", size, size_mb, path, mtime])
 
     out = {
@@ -108,6 +105,9 @@ def _fs_meta_query(tool_input: dict) -> str:
         # 합계·정렬용 정밀값이 절단되는 items 에만 남아 모델이 계산할 재료를 잃는다.
         "table": {"columns": ["이름", "크기(B)", "크기(MB)", "경로", "수정일"], "rows": rows},
     }
+    for key in ("total", "truncated", "warning", "index_error"):
+        if key in res:
+            out[key] = res[key]
     if res.get("fallback"):
         out["fallback"] = res["fallback"]
     return json.dumps(out, ensure_ascii=False)

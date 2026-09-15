@@ -1043,7 +1043,7 @@ nodes:
         fixture: '[sense:stock]{query: "삼성전자"}'
         description: 주식 시세·거래 데이터 조회 (op 분기). 기업 펀더멘털은 company, 암호화폐는 crypto.
         group: finance
-        target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). 코스피는 "코스피"·KOSPI·KS11·^KS11, 코스닥은 "코스닥"·KOSDAQ·KQ11·^KQ11을 모두 수용한다. search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
+        target_description: ticker=종목코드/티커 또는 회사명·ETF명(예 "삼성전자"·"TIGER 200", 내부에서 코드로 자동 해소). 코스피는 "코스피"·KOSPI·KS11·^KS11, 코스닥은 "코스닥"·KOSDAQ·KQ11·^KQ11을 모두 수용한다. search는 query=회사명. investors는 ticker 있으면 개별종목·없으면 전체시장(market=STK/KSQ/ALL). market="kr"/"us"로 시장 강제 지정 가능. "현재가/얼마/시세"=quote(기본), "차트/추이/이력"=history. history/news/earnings는 기간 지정 — period(상대기간 1mo/3mo/6mo/1y/ytd, 미지정 시 자동계산) 또는 start_date·end_date(명시 우선). quote/history/info는 단일 통화 items를 방출(quote=1행 스냅샷·history=시세 행 전 필드·info=지표/값) — >> 파이프·& 병렬 결합([table:union/merge]) 가능. history의 명시 날짜는 지수·미국 FMP 실패 폴백에서도 양끝 포함으로 유지하고 범위 내 데이터만 표본 추출한다. 과거 범위에 현재가를 덮어쓰지 않는다. history는 차트용 table={columns:[날짜,종가]}도 함께 반환 — 그대로 table:chart/spreadsheet로.
         target_key: op
         router: handler
         tool: stock_op
@@ -1082,7 +1082,7 @@ nodes:
             investors: 투자자별 매매동향 (한국 전용)
             news: 종목 관련 뉴스 (Finnhub→Yahoo)
             earnings: 실적발표 일정 (예상 vs 실적)
-        implementation: market 자동판별(6자리/한글=kr, 그외=us) + 시장지수 별칭(KOSPI·KS11·코스피→^KS11, KOSDAQ·KQ11·코스닥→^KQ11) 정규화 후 op 분기. quote(현재가)=yfinance 스냅샷에 한국 종목·코스피/코스닥 지수는 네이버 폴링 API 실시간 오버레이(Yahoo KRX ~20분 지연 해소, 실패 시 Yahoo 폴백 — 2026-08-01), info/search=yfinance, history(이력)=krx|fmp, investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
+        implementation: market 자동판별(6자리/한글=kr, 그외=us) + 시장지수 별칭(KOSPI·KS11·코스피→^KS11, KOSDAQ·KQ11·코스닥→^KQ11) 정규화 후 op 분기. quote(현재가)=yfinance 스냅샷에 한국 종목·코스피/코스닥 지수는 네이버 폴링 API 실시간 오버레이(Yahoo KRX ~20분 지연 해소, 실패 시 Yahoo 폴백 — 2026-08-01), info/search=yfinance, history(이력)=krx|fmp(지수·FMP HTTP 402는 Yahoo/네이버 일봉으로 날짜 범위 유지 폴백), investors=krx, news=finnhub→yfinance, earnings=finnhub. (개명 이력 — 2026-06-04 quote→price·price→history, 2026-06-15 현재가 op를 quote로 복원, 업계 표준어 정합)
         keywords:
         - 주가
         - 주식
@@ -2674,7 +2674,7 @@ nodes:
 
           - channel: 채널 핸들(@name)·채널 URL·channel_id를 채널 ID로 해석하고 최신 영상을 조회. handle/url/channel_id 중 하나, limit 옵션.
 
-          - summarize: 자막 추출 + AI 요약 + HTML 보고서 + 브라우저 열기. summary_length 옵션.
+          - summarize: 자막 추출 + AI 요약 + HTML 보고서 + 브라우저 열기. summary_length 옵션. 긴 자막은 전체를 구간별로 요약한 뒤 통합한다(원문 절단 없음).
 
 
 
@@ -5000,7 +5000,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-15'
-          impl: daccd9a5f2a37d3b
+          impl: b15a6c6f34760c8c
         target_key: path
         aliases:
           offset:
@@ -5013,7 +5013,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-15'
-          impl: daccd9a5f2a37d3b
+          impl: b15a6c6f34760c8c
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5086,7 +5086,7 @@ nodes:
         fixture: '[self:list]{path: "."}'
         description: 디렉토리 안의 파일·하위 폴더 목록 조회 (ls 동등).
         group: file
-        target_description: 조회할 디렉토리 경로. pattern으로 이름 선별. items 필드는 file_find와 같은 name/path/size/mtime/dir/is_dir이며 title/meta/url도 유지한다. 하위 폴더까지 찾으려면 file_find를 쓴다.
+        target_description: 조회할 디렉토리 경로. pattern으로 이름 선별(한글 NFC/NFD 정규화·대소문자 무시, 원래 경로 보존). items 필드는 file_find와 같은 name/path/size/mtime/dir/is_dir이며 title/meta/url도 유지한다. 하위 폴더까지 찾으려면 file_find를 쓴다.
         router: handler
         tool: list_directory
         implementation: os.listdir/pathlib로 디렉토리 내용 조회
@@ -5129,7 +5129,7 @@ nodes:
         fixture: '[self:file_find]{pattern: "*.md", path: "."}'
         description: 파일 검색 — pattern(glob) 또는 OS 메타 색인(search_term/extension/kind/min_size_mb). path로 루트 지정. items 필드 name/path/size/mtime/dir/is_dir(title/meta/url 병기); 수정시각은 mtime. 내용 검색은 grep.
         group: file
-        target_description: 'pattern(glob, 예 ''*.md'', ''**/*.tsx'' — **나 / 없으면 자동 재귀) 또는 메타 검색: search_term(이름 부분일치)·extension(확장자)·kind(image/video/audio/pdf/any)·min_size_mb·sort(mtime/size)·limit(기본 100). path 옵션으로 검색 루트. 메타 결과 items + 표형 table={columns,rows} 키.'
+        target_description: 'pattern(glob, 예 ''*.md'', ''**/*.tsx'' — **나 / 없으면 자동 재귀) 또는 메타 검색: search_term(이름 부분일치)·extension(확장자)·kind(image/video/audio/pdf/any)·min_size_mb·sort(mtime/size)·limit(기본 100). 상대 path는 프로젝트 기준. 메타 검색은 폴백에서도 이름·확장자·종류·크기 조건을 보존하고 정렬 후 limit을 적용한다. 색인/순회 후보 상한 도달 시 warning으로 부분 검색을 알린다. 메타 결과 items + 표형 table={columns,rows} 키.'
         keywords:
         - 파일
         - 찾기
@@ -6172,7 +6172,7 @@ nodes:
         runs_on: pc_only
         description: 유튜브 음악 재생·큐 관리·중간 점프·MP3 다운로드·맥 경유 릴레이 (op 분기). play/add/skip/seek/queue/stop/download/relay. 내 파일 라이브러리는 [self:music].
         group: media
-        target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음.
+        target_description: play/add — query 파라미터로 검색어 또는 URL. seek — position 파라미터로 이동할 위치(초). download — url 파라미터로 MP3 추출(output_path 옵션). relay — query(검색어/URL)+media(audio|video), 원격·폰 표면이 유튜브 직접 접속 없이 맥 경유로 재생할 스트림 목록 반환. skip/queue/stop — 파라미터 없음. skip은 다음 곡 재생 실패 시 success=false·failed_video_id를 반환하며 아직 시도하지 않은 대기열을 보존한다. 다시 skip하면 남은 다음 곡을 시도한다.
         target_key: op
         router: handler
         tool: music_op
@@ -8258,7 +8258,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
-        target_description: 'by(정렬 기준 필드/열명, 필수 — 목록이면 다단계 정렬: 앞 키 우선, 동점을 뒤 키가 가른다) · desc(내림차순 bool, 기본 false — 전 키에 같이 걸린다. 방향을 섞으려면 덜 중요한 키부터 sort 를 두 번). 숫자는 수치로, ISO 8601 날짜는 시각으로(시간대 정합), 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
+        target_description: 'by(정렬 기준 필드/열명, 필수 — 목록이면 다단계 정렬: 앞 키 우선, 동점을 뒤 키가 가른다) · desc(내림차순 bool, 기본 false — 전 키에 같이 걸린다. 방향을 섞으려면 덜 중요한 키부터 sort 를 두 번). items에 객체 아닌 행이 있으면 삭제하지 않고 오류를 반환한다. 숫자는 수치로, ISO 8601 날짜는 시각으로(시간대 정합), 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
         group: transform
         router: handler
         params:
@@ -8506,7 +8506,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 "count")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null.
-        target_description: 'by(그룹 키 열, 필수 — 목록이면 교차집계: ["아파트명", "계약유형"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:["count"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.'
+        target_description: 'by(그룹 키 열, 필수 — 목록이면 교차집계: ["아파트명", "계약유형"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:"count" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:["count"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 ''op_원본열''(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 그룹 키와 집계 출력 열 이름이 겹치면 오류이므로 다른 출력 이름을 지정한다. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다.'
         group: transform
         router: handler
         params:
@@ -8583,7 +8583,7 @@ nodes:
         params:
           on_error: string
         description: 두 개 이상의 입력을 행 결합. 저장된 표는 $a & $b >> [table:union]{} 로 공급. 줄바꿈은 입력을 넘기지 않으며 with 인자는 미지원. 중복 제거는 뒤에 >> dedup. 효과 봉투는 1행(effect_rows 신고). items 끼리는 items, 명시 표형 분기가 있으면 표형 반환.
-        target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge. 효과 봉투(items/table 없는 success 봉투 — write·notify 결과)는 분기당 1행(그 봉투의 필드)으로 받고 effect_rows 에 분기 번호를 신고한다(2026-09-05) — 병렬 부수효과 문장을 union 으로 닫아도 된다. 부수효과만이면 맨몸 [A] & [B] 로 끝내도 되며(결과=분기 봉투 목록) union 은 그것을 표로 만든다.'
+        target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge. 효과 봉투(items/table 없는 success 봉투 — write·notify 결과)는 분기당 1행(그 봉투의 필드)으로 받고 effect_rows 에 원래 입력의 분기 번호를 신고한다(실패 분기를 제외해도 번호 유지)(2026-09-05) — 병렬 부수효과 문장을 union 으로 닫아도 된다. 부수효과만이면 맨몸 [A] & [B] 로 끝내도 되며(결과=분기 봉투 목록) union 은 그것을 표로 만든다.'
         group: transform
         router: handler
         tool: data_union

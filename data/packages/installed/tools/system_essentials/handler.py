@@ -1,7 +1,6 @@
 import os
 import sys
 import glob
-import fnmatch
 import re
 import time
 import subprocess
@@ -652,25 +651,7 @@ _OP_DEFAULTS = {"webapp_op": "list", "sheet_op": "find", "script_op": "list", "l
                 "patch_op": "propose", "body_op": "changes"}
 
 
-def _file_views(path):
-    """list/file_find가 공유하는 파일 통화와 표시용 표 행. 필드는 두 입구에서 같다."""
-    path = os.path.abspath(path)
-    name = os.path.basename(path)
-    try:
-        stat = os.stat(path)
-        is_dir = os.path.isdir(path)
-        size = None if is_dir else stat.st_size
-        mtime = datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M")
-    except OSError:
-        is_dir, size, mtime = False, None, ""
-    record = {
-        "title": name + ("/" if is_dir else ""),
-        "meta": " · ".join(x for x in [
-            "디렉터리" if is_dir else (f"{size:,}B" if size is not None else None), mtime or None] if x),
-        "summary": "", "url": path, "name": name, "size": size,
-        "mtime": mtime, "path": path, "dir": os.path.dirname(path), "is_dir": is_dir,
-    }
-    return record, [name, size if size is not None else "", mtime, path]
+_file_views = _fs_find.file_views
 
 
 def execute(tool_input: dict, context) -> str:
@@ -835,7 +816,7 @@ def execute(tool_input: dict, context) -> str:
             pattern = tool_input.get("pattern")
             total_before = len(items)
             if pattern:
-                items = [n for n in items if fnmatch.fnmatch(n, pattern)]
+                items = [n for n in items if _fs_find.match_basename(n, pattern)]
             text = "\n".join(items)
             # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
             # 파일 목록 → [이름, 크기, 수정일, 경로]. 디렉터리는 크기 "".
@@ -897,19 +878,14 @@ def execute(tool_input: dict, context) -> str:
         elif tool_name == "glob_files":
             pattern = tool_input.get("pattern")
             if not pattern:  # 메타 검색 모드(구 fs_query 흡수 2026-08-05) — fs_meta.py 분리
-                return _load_sibling("fs_meta").meta_query_or_error(tool_input)
+                return _load_sibling("fs_meta").meta_query_or_error(tool_input, project_path)
 
             # 검색 루트 결정 (우선순위: path > root_path > project_path)
             # - 절대경로(/...): 그대로 사용 → 컴퓨터 어디든 검색 가능
             # - ~ 시작: 홈 디렉토리로 확장
             # - 상대경로: project_path 기준
             # - 미지정: project_path
-            raw_root = tool_input.get("path") or tool_input.get("root_path") or "."
-            expanded = expand_body_path(raw_root)
-            if os.path.isabs(expanded):
-                root = expanded
-            else:
-                root = os.path.join(project_path, expanded)
+            root = _fs_find.resolve_root(tool_input, project_path)
 
             try:
                 max_results = int(tool_input.get("limit", tool_input.get("max_results", 200)))

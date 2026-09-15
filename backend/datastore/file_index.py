@@ -196,8 +196,10 @@ def _run_mdfind(query: str, onlyin: Optional[str]) -> List[str]:
     cmd.append(query)
     try:
         out = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
-    except (subprocess.TimeoutExpired, OSError):
-        return []
+    except (subprocess.TimeoutExpired, OSError) as exc:
+        raise RuntimeError(f"Spotlight 실행 실패: {exc}") from exc
+    if out.returncode != 0:
+        raise RuntimeError(f"Spotlight 실행 실패 (exit {out.returncode})")
     paths = []
     for line in out.stdout.splitlines():
         p = line.strip()
@@ -259,44 +261,64 @@ def _item_from_meta(path: str, facets: Sequence[str]) -> Dict[str, Any]:
 def _spotlight_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, min_size=None):
     onlyin = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
     query = _build_mdfind_query(kind, q, start, end, has_gps, ext, min_size)
-    paths = _drop_pseudo_media(_run_mdfind(query, onlyin), kind)
+    failure = None
+    try:
+        paths = _drop_pseudo_media(_run_mdfind(query, onlyin), kind)
+    except RuntimeError as exc:
+        paths, failure = [], str(exc)
 
     if not paths and path and os.path.isdir(onlyin):
-        return _walk_fallback(onlyin, kind, limit, sort, facets)
+        result = _walk_fallback(onlyin, kind, limit, sort, facets,
+                                q=q, start=start, end=end, has_gps=has_gps,
+                                ext=ext, min_size=min_size)
+        if failure:
+            result["index_error"] = failure
+        return result
+    if failure:
+        return {"success": False, "error": failure, "items": []}
 
     total = len(paths)
-    # 후보가 많으면 mtime(stat, 무subprocess)으로 창을 좁힌 뒤 그 창만 mdls →
-    # mdls 호출을 limit 개로 제한 (보편 질의의 비용 절약).
-    paths = paths[:_MAX_CANDIDATES]
-    paths.sort(key=lambda p: _safe_stat(p, mtime=True), reverse=True)
-    window = paths[:limit]
-    items = [_item_from_meta(p, facets) for p in window]
-    _sort_items(items, sort)
-    return {"success": True, "count": total, "shown": len(items),
-            "scope": onlyin, "items": items}
+    items = _ranked_items(paths[:_MAX_CANDIDATES], sort, limit, facets)
+    result = {"success": True, "count": total, "total": total, "shown": len(items),
+              "truncated": total > len(items), "scope": onlyin, "items": items}
+    if total > _MAX_CANDIDATES:
+        result["warning"] = "색인 후보 상한에 도달해 일부 후보 안에서 정렬했습니다. path/조건을 좁혀 재조회하세요."
+    _note_date_window(result, sort, limit)
+    return result
 
 
-def _walk_fallback(root, kind, limit, sort, facets):
-    """비색인 경로(Spotlight off/외장) 폴백 — 그 폴더만 라이브 순회(무영속)."""
-    want = None
-    if kind and kind.lower() not in ("any", "media"):
-        want = {kind.lower()}
-    elif (kind or "").lower() == "media":
-        want = {"image", "video"}
-    found = []
-    for dp, dirs, files in os.walk(root):
-        dirs[:] = [d for d in dirs if not d.startswith(".")]
-        for name in files:
-            ek = _EXT_KIND.get(os.path.splitext(name)[1].lower())
-            if ek and (want is None or ek in want):
-                found.append(os.path.join(dp, name))
-        if len(found) > _MAX_CANDIDATES:
-            break
-    found.sort(key=lambda p: _safe_stat(p, mtime=True), reverse=True)
-    items = [_item_from_meta(p, facets) for p in found[:limit]]
+def _walk_fallback(root, kind, limit, sort, facets, *, q=None, start=None,
+                   end=None, has_gps=False, ext=None, min_size=None):
+    """색인 0건/실패를 파일 시스템에서 검증하되 질의 조건을 절대 풀지 않는다."""
+    if start or end or has_gps:
+        return {"success": False, "items": [], "error":
+                "Spotlight 결과가 없으며 파일 순회로 촬영/생성 날짜·GPS 조건을 검증할 수 없습니다. "
+                "색인 상태를 확인하세요. 해당 조건을 제거해 재검색하지 않았습니다."}
+    result = _walk_query(kind, q, None, None, False, ext, root, limit, sort,
+                         facets, min_size)
+    result["fallback"] = "walk (색인 결과 없음 — 동일 검색 조건으로 검증)"
+    return result
+
+
+def _ranked_items(paths, sort, limit, facets, *, from_walk=False):
+    """파일 필드로 먼저 정렬한다. 무거운 mdls는 limit개만 — 사진 조회의 비용 상한 유지."""
+    candidates = [{"path": p, "name": os.path.basename(p),
+                   "size": _safe_stat(p, mtime=False), "mtime": _safe_stat(p)}
+                  for p in paths]
+    # 사진 date 모드는 기존처럼 최근 수정 후보 안에서 촬영일 정렬한다. 이 창은 별도 신고.
+    _sort_items(candidates, "mtime" if sort == "date" else sort)
+    items = [_item_from_meta(r["path"], facets) for r in candidates[:limit]]
     _sort_items(items, sort)
-    return {"success": True, "count": len(found), "shown": len(items),
-            "scope": root, "fallback": "walk (비색인 경로)", "items": items}
+    if from_walk:
+        for item in items:
+            item["kind"] = _EXT_KIND.get(os.path.splitext(item["path"])[1].lower(), "file")
+    return items
+
+
+def _note_date_window(result, sort, limit):
+    if sort == "date" and result.get("total", 0) > limit:
+        note = "촬영일 정렬은 최근 수정된 limit개 후보 안에서 적용됩니다. 전체 촬영일 순위가 아닙니다."
+        result["warning"] = " / ".join(filter(None, (result.get("warning"), note)))
 
 
 def _sort_items(items: List[Dict[str, Any]], sort: str) -> None:
@@ -768,10 +790,12 @@ def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, mi
       q=파일명 부분일치 / kind·ext=확장자 / 시간=mtime 창 / min_size=바이트.
     한계: has_gps·EXIF facet(taken_at/lat/lng)은 색인이 없어 미지원(기본 파일 검색만).
     """
+    if has_gps:
+        return {"success": False, "items": [], "error": "파일 순회는 GPS 조건을 지원하지 않습니다."}
     root = os.path.abspath(os.path.expanduser(path)) if path else os.path.expanduser("~")
     want = None
     if kind and kind.lower() not in ("any", "media"):
-        want = {kind.lower()}
+        want = {"image" if kind.lower() == "photo" else kind.lower()}
     elif (kind or "").lower() == "media":
         want = {"image", "video"}
     q_low = (q or "").strip().lower() or None
@@ -808,16 +832,15 @@ def _walk_query(kind, q, start, end, has_gps, ext, path, limit, sort, facets, mi
             if len(found) > _MAX_CANDIDATES:
                 break
 
-    found.sort(key=lambda t: _safe_stat(t[0], mtime=True) or 0, reverse=True)
-    items = []
-    for fp, ek in found[:limit]:
-        it = _item_from_meta(fp, facets)
-        if ek:  # 윈도우엔 mdls 없어 kind 가 generic → 확장자 기반으로 교정
-            it["kind"] = ek
-        items.append(it)
-    _sort_items(items, sort)
-    return {"success": True, "count": len(found), "shown": len(items),
-            "scope": root, "engine": "walk", "items": items}
+    items = _ranked_items([p for p, _ in found[:_MAX_CANDIDATES]], sort, limit,
+                          facets, from_walk=True)
+    result = {"success": True, "count": len(found), "total": len(found),
+              "shown": len(items), "truncated": len(found) > len(items),
+              "scope": root, "engine": "walk", "items": items}
+    if len(found) > _MAX_CANDIDATES:
+        result["warning"] = "파일 순회 후보 상한에 도달했습니다. total은 발견한 수이며 전체 수가 아닙니다."
+    _note_date_window(result, sort, limit)
+    return result
 
 
 def query(*, kind: str = "any", q: Optional[str] = None,

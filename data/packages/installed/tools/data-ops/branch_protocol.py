@@ -51,10 +51,17 @@ def handle_dead_branches(op_name, objs, params, get_items, get_table):
     return live, dead, None
 
 
-def currency_kinds(objs, get_items, get_table):
+def live_branch_numbers(total, dead):
+    """걸러진 목록도 원래 분기 좌표를 유지한다."""
+    skipped = {row["branch"] for row in dead}
+    return [i for i in range(1, total + 1) if i not in skipped]
+
+
+def currency_kinds(objs, get_items, get_table, branch_numbers=None):
     """분기별 통화 이름표 — 진짜 혼합 에러의 자가교정 단서 ("1=table, 2=없음(스칼라/평문)")."""
     kinds = []
-    for i, o in enumerate(objs, 1):
+    numbers = branch_numbers if branch_numbers is not None else range(1, len(objs) + 1)
+    for i, o in zip(numbers, objs):
         has_t = get_table(o)[0] is not None
         has_i = get_items(o)[0] is not None
         k = ("table+items" if has_t and has_i else

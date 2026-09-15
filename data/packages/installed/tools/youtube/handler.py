@@ -137,8 +137,11 @@ def _op_languages(tool_input, yt):
 
 
 def _op_summarize(tool_input, yt):
+    url = _resolve_video_url(tool_input)
+    if not url:
+        return {"success": False, "error": "url 또는 video_id 파라미터가 필요합니다."}
     return yt.summarize_youtube(
-        url=tool_input['url'],
+        url=url,
         summary_length=tool_input.get('summary_length', 3000),
         languages=_resolve_languages(tool_input, None))  # None=자동 선택
 

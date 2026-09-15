@@ -38,7 +38,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: 통화 변환자 — items를 기준 필드(by)로 정렬(수치 인식, desc 옵션).
-    target_description: 'by(정렬 기준 필드/열명, 필수 — 목록이면 다단계 정렬: 앞 키 우선, 동점을 뒤 키가 가른다) · desc(내림차순 bool, 기본 false — 전 키에 같이 걸린다. 방향을 섞으려면 덜 중요한 키부터 sort 를 두 번). 숫자는 수치로, ISO 8601 날짜는 시각으로(시간대 정합), 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
+    target_description: 'by(정렬 기준 필드/열명, 필수 — 목록이면 다단계 정렬: 앞 키 우선, 동점을 뒤 키가 가른다) · desc(내림차순 bool, 기본 false — 전 키에 같이 걸린다. 방향을 섞으려면 덜 중요한 키부터 sort 를 두 번). items에 객체 아닌 행이 있으면 삭제하지 않고 오류를 반환한다. 숫자는 수치로, ISO 8601 날짜는 시각으로(시간대 정합), 아니면 문자열로 비교. 예: [...] >> [table:sort]{by: price, desc: true}.'
     group: transform
     router: handler
     params:
@@ -267,7 +267,7 @@ actions:
     runs_on: anywhere
     scope: workspace
     description: "통화 변환자 — items를 키 필드로 그룹지어 집계(형태 보존 — 그룹 행도 items). agg=dict({새열:[op,원본열]}), op=count/sum/avg/min/max. 생략(또는 \"count\")은 그룹 행수, 명시 count(원본열)는 non-null 관측 수. 숫자 집계는 결측·null·비수치를 제외하며 숫자 관측이 없으면 null."
-    target_description: "by(그룹 키 열, 필수 — 목록이면 교차집계: [\"아파트명\", \"계약유형\"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:\"count\" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:[\"count\"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 'op_원본열'(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
+    target_description: "by(그룹 키 열, 필수 — 목록이면 교차집계: [\"아파트명\", \"계약유형\"] 은 단지×유형을 한 문장으로. 키마다 제 열로 나와 하류 filter/sort 가 그 열을 그대로 쓴다) · agg({새열:[op,원본열]} 또는 {원본열:op}, op=count/sum/avg/min/max; 미지정 또는 agg:\"count\" = 그룹별 행수, 명시 count(원본열) = 필드의 non-null 관측 수. 행수를 새열 이름으로 내려면 {건수:[\"count\"]} — 1원소 리스트 형). sum/avg/min/max는 결측·null·비수치를 제외하고 숫자 관측이 없으면 null. ★{원본열:op} 형태의 집계열 이름은 자동 명명 'op_원본열'(예: {name: count}→count_name) — 하류 sort/select 는 그 이름을 써야 한다. 직접 정하려면 {새열명:[op,원본열]}. 그룹 키와 집계 출력 열 이름이 겹치면 오류이므로 다른 출력 이름을 지정한다. 반환 = [by열들, 집계열들]. 예: [...] >> [table:groupby]{by: 지역, agg: {평균가: [avg, 가격]}}. 집합 재정의: 기존 total은 결과 행수로 갱신하고 상류의 실제 truncated만 보존한다."
     group: transform
     router: handler
     params:
@@ -325,7 +325,7 @@ actions:
     params:
       on_error: string
     description: 두 개 이상의 입력을 행 결합. 저장된 표는 $a & $b >> [table:union]{} 로 공급. 줄바꿈은 입력을 넘기지 않으며 with 인자는 미지원. 중복 제거는 뒤에 >> dedup. 효과 봉투는 1행(effect_rows 신고). items 끼리는 items, 명시 표형 분기가 있으면 표형 반환.
-    target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge. 효과 봉투(items/table 없는 success 봉투 — write·notify 결과)는 분기당 1행(그 봉투의 필드)으로 받고 effect_rows 에 분기 번호를 신고한다(2026-09-05) — 병렬 부수효과 문장을 union 으로 닫아도 된다. 부수효과만이면 맨몸 [A] & [B] 로 끝내도 되며(결과=분기 봉투 목록) union 은 그것을 표로 만든다.'
+    target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge. 효과 봉투(items/table 없는 success 봉투 — write·notify 결과)는 분기당 1행(그 봉투의 필드)으로 받고 effect_rows 에 원래 입력의 분기 번호를 신고한다(실패 분기를 제외해도 번호 유지)(2026-09-05) — 병렬 부수효과 문장을 union 으로 닫아도 된다. 부수효과만이면 맨몸 [A] & [B] 로 끝내도 되며(결과=분기 봉투 목록) union 은 그것을 표로 만든다.'
     group: transform
     router: handler
     tool: data_union

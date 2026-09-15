@@ -9,6 +9,8 @@ import os
 import re
 import time
 import unicodedata
+from datetime import datetime
+from runtime_utils import expand_body_path
 
 # 무경계 재귀 glob 방지 — 매 호출 홈 전체(node_modules·캐시)를 색인 없이 stat 하던 게
 # 타임아웃 원인. 절대-dead 가지치기 + 시간 예산으로 바운드.
@@ -56,8 +58,6 @@ def bounded_find(root, basename_pat, max_results):
     deadline = time.time() + FIND_DEADLINE_S
     # macOS 한글 파일명=NFD(자모분해), 패턴은 보통 NFC → fnmatch 바이트비교가 침묵 누락.
     # 양쪽을 NFC 로 정규화해 비교(mdfind 는 정규화하지만 fnmatch 는 안 함. forage_map #33).
-    pat = unicodedata.normalize("NFC", basename_pat)
-    pat_lower = pat.lower()
     matches, partial = [], False
     for dirpath, dirs, files in os.walk(root, topdown=True):
         if time.time() > deadline:
@@ -70,9 +70,42 @@ def bounded_find(root, basename_pat, max_results):
         # 매칭: 파일 + 디렉토리 둘 다 (glob.glob 은 둘 다 매칭했음 — 예: .epub 번들·iCloud 책은 디렉토리).
         # macOS 파일시스템은 대소문자 무시 → 소문자 비교로 맞춤.
         for name in files + dirs:
-            nfc = unicodedata.normalize("NFC", name)
-            if fnmatch.fnmatch(nfc.lower(), pat_lower):
+            if match_basename(name, basename_pat):
                 matches.append(os.path.join(dirpath, name))
                 if len(matches) >= max_results:
                     return matches, True
     return matches, partial
+
+
+def resolve_root(params, project_path):
+    """glob과 메타 검색의 상대 경로는 같은 프로젝트를 기준으로 한다."""
+    raw = params.get("path") or params.get("root_path") or "."
+    return os.path.abspath(os.path.join(project_path, expand_body_path(raw)))
+
+
+def match_basename(name, pattern):
+    """파일명 표기만 정규화해 비교하고 원래 경로는 보존한다."""
+    return fnmatch.fnmatchcase(unicodedata.normalize("NFC", name).lower(),
+                              unicodedata.normalize("NFC", pattern).lower())
+
+
+def file_views(path, metadata=None):
+    """list/file_find가 공유하는 파일 통화와 표시용 표 행. 필드는 두 입구에서 같다."""
+    path = os.path.abspath(path)
+    name = os.path.basename(path)
+    try:
+        stat = os.stat(path) if metadata is None else None
+        is_dir = os.path.isdir(path) if metadata is None else bool(metadata.get("is_dir", os.path.isdir(path)))
+        size = None if is_dir else (stat.st_size if stat else metadata.get("size"))
+        epoch = stat.st_mtime if stat else metadata.get("mtime")
+        mtime = datetime.fromtimestamp(epoch).strftime("%Y-%m-%d %H:%M") if epoch is not None else ""
+    except OSError:
+        is_dir, size, mtime = False, None, ""
+    record = {
+        "title": name + ("/" if is_dir else ""),
+        "meta": " · ".join(x for x in [
+            "디렉터리" if is_dir else (f"{size:,}B" if size is not None else None), mtime or None] if x),
+        "summary": "", "url": path, "name": name, "size": size,
+        "mtime": mtime, "path": path, "dir": os.path.dirname(path), "is_dir": is_dir,
+    }
+    return record, [name, size if size is not None else "", mtime, path]

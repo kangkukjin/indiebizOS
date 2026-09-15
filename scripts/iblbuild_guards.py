@@ -106,6 +106,7 @@ OS_SEAM_ALLOWLIST = {
     "backend/ibl/ibl_exec_output.py",   # 파일 열기·클립보드·탐색기(Darwin/Windows/Linux 3분기)
     "backend/surface/api_pcmanager.py",   # 드라이브/볼륨 열거·열기(3 OS)
     "backend/datastore/file_index.py",      # 파일 검색(맥=Spotlight mdfind/mdls·폰=MediaStore)
+    "backend/test_ibl_rank_12_20_repairs.py",  # 파일 색인 이음매 회귀 — mdfind를 대역으로 교체해 3개 검색 경로 검증
     "backend/surface/api_nas.py",         # ffmpeg/ffprobe 경로 해석
     "backend/api.py",             # 부팅: Windows stdout 인코딩 + PATH 보강
     "backend/services/calendar_html.py",   # 브라우저 열기(open/start)

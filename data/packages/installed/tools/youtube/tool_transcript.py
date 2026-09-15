@@ -560,6 +560,45 @@ def get_summary_ai_client():
     return provider
 
 
+def _summarize_complete_transcript(transcript, final_prompt, call_model):
+    """모든 자막 구간을 읽고 요약을 병합한다. 모델 실패·과대 응답은 잘라내지 않고 거절."""
+    chunk_size = 50000
+    chunks = [transcript[i:i + chunk_size] for i in range(0, len(transcript), chunk_size)]
+    if not chunks:
+        raise ValueError("요약할 자막이 비어 있습니다")
+    calls = 0
+
+    def ask(prompt, intermediate=False):
+        nonlocal calls
+        result = call_model(prompt)
+        calls += 1
+        if not isinstance(result, str) or not result.strip():
+            raise RuntimeError("요약 모델이 빈 응답을 냈습니다")
+        if intermediate and len(result) > 20000:
+            raise RuntimeError("중간 요약이 20,000자를 초과했습니다. 내용을 자르지 않고 중단합니다")
+        return result
+
+    source = transcript
+    if len(chunks) > 1:
+        summaries = [ask(
+            f"영상 자막 {i}/{len(chunks)} 구간입니다. 이 구간의 핵심 주장·근거·결론을 "
+            f"빠뜨리지 않고 3,000자 내외로 요약하세요. 다른 구간을 추측하지 마세요.\n\n{chunk}",
+            intermediate=True) for i, chunk in enumerate(chunks, 1)]
+        # 두 개씩 병합하면 매 단계가 줄어든다. 길이를 강제 절단하는 경로는 없다.
+        while sum(map(len, summaries)) + 2 * len(summaries) > chunk_size:
+            reduced = []
+            for i in range(0, len(summaries), 2):
+                pair = summaries[i:i + 2]
+                reduced.append(pair[0] if len(pair) == 1 else ask(
+                    "영상의 연속 구간 요약들입니다. 양쪽의 핵심 주장·근거·결론을 보존하며 "
+                    "3,000자 내외로 통합하세요.\n\n" + "\n\n".join(pair), intermediate=True))
+            summaries = reduced
+        source = "아래는 전체 자막을 순서대로 처리한 구간 요약입니다.\n\n" + "\n\n".join(summaries)
+    content = ask(final_prompt + "\n" + source)
+    return content, {"transcript_chars": len(transcript), "transcript_chunks": len(chunks),
+                     "summary_calls": calls}
+
+
 def summarize_youtube(
     url: str,
     summary_length: int = 3000,
@@ -631,7 +670,6 @@ def summarize_youtube(
 길이: {duration // 60}분 {duration % 60}초
 
 === 자막 내용 ===
-{transcript[:50000]}
 """
 
     try:
@@ -639,7 +677,9 @@ def summarize_youtube(
         # 치면 새 프로바이더가 생길 때마다 이 파일이 뒤처진다(그게 옛 결함이었다).
         ai = get_summary_ai_client()
         from consciousness_agent import call_oneshot_provider
-        summary_content = call_oneshot_provider(ai, summary_prompt, role="youtube_summary")
+        summary_content, coverage = _summarize_complete_transcript(
+            transcript, summary_prompt,
+            lambda prompt: call_oneshot_provider(ai, prompt, role="youtube_summary"))
 
         if not (summary_content or "").strip():
             raise RuntimeError("요약 모델이 빈 응답을 냈습니다")
@@ -711,5 +751,6 @@ def summarize_youtube(
         'title': title,
         'duration': duration,
         'summary_length': len(summary_content),
+        **coverage,
         'message': f'YouTube 영상 요약이 완료되었습니다. 브라우저에서 열었습니다. 파일: {abs_path}'
     }

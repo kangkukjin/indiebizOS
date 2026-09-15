@@ -374,6 +374,10 @@ def _op_sort(prev, params):
     거슬러 찾고, 그래도 없으면 에러(2026-08-07 — 옛 침묵 no-op 은 원순서를 success 로
     돌려줘 하류 전체가 조용히 틀렸다. filter 의 '침묵 부분일치 금지' 원칙과 동일).
     """
+    input_rows, _ = _get_items(prev)
+    if input_rows is not None and any(not isinstance(r, dict) for r in input_rows):
+        return {"success": False, "error": "sort: 객체가 아닌 items 행이 있습니다. "
+                "행을 객체로 변환한 뒤 정렬하세요. 입력 행은 삭제하지 않았습니다."}
     by_raw = params.get("by")
     desc = bool(params.get("desc", False))
     # F13-3 (2026-08-19 상상훈련 13회차): 자연 동의어 order:"desc"/"asc" 값-해석 —
@@ -738,6 +742,10 @@ def _op_groupby(prev, params):
         params.get("agg"), dicts, _field_missing_error)
     if _agg_err:
         return _agg_err
+    output_names = list(keys) + [s[0] for s in specs]
+    if len(set(output_names)) != len(output_names):
+        return {"success": False, "error": "groupby: 그룹 키와 집계 열의 이름이 겹칩니다. "
+                "agg의 출력 열을 다른 이름으로 지정하세요 (예: {건수: [count]})."}
     # 그룹핑 (입력 순서 보존). 표시값은 엄격 JSON — NaN/Infinity 키가 통화에 실려
     # 직렬화를 깨지 않게 하되, 강제한 수를 group_key_coercions 로 자백한다.
     groups, labels, order = {}, {}, []
@@ -907,6 +915,7 @@ def _op_union(prev, params):
     objs, _dead, _err = _handle_dead_branches("union", objs, params)
     if _err:
         return _err
+    branch_numbers = _branch_proto.live_branch_numbers(_total, _dead)
     # ★형태 보존(언어 개정 2026-09-06): 표 경로는 명시 표형 분기가 있을 때만 — items 끼리는 items(선언
     #   emits:items 와 한 벌). 옛 판은 표를 내고 `& 0행 items >> union` 에서 '1=table, 2=items' 로 죽었다(ep2882).
     tables = ([_table_or_empty(o) for o in objs]
@@ -932,7 +941,7 @@ def _op_union(prev, params):
         env = _emit_table({**_carry_flags(objs), "table": {}}, {"columns": cols, "rows": all_rows})
         col_sets = [{str(c) for c in (t.get("columns") or [])} for t in tables if t.get("columns")]
         return _branch_proto.attach_dead_note(
-            _attach_branch_warning(_attach_shape_warning(env, col_sets), objs), _dead, _total)
+            _attach_branch_warning(_attach_shape_warning(env, col_sets), objs, branch_numbers), _dead, _total)
     item_lists = [_get_items(o)[0] for o in objs]
     if all(il is not None for il in item_lists):
         out = []
@@ -950,12 +959,12 @@ def _op_union(prev, params):
             if ks:
                 key_sets.append(ks)
         return _branch_proto.attach_dead_note(
-            _attach_branch_warning(_attach_shape_warning(env, key_sets), objs), _dead, _total)
+            _attach_branch_warning(_attach_shape_warning(env, key_sets), objs, branch_numbers), _dead, _total)
     # 효과 봉투(write·notify 같은 부수효과 결과 — items/table 없는 success 봉투)는 **1행 통화**로
     # 받는다(2026-09-05 언어 개정, ep2827): 병렬 부수효과 문장 `[self:write] & [self:write] >>
     # [table:union]` 이 "통화 종류가 같아야" 로 죽던 자리. 결과 = 효과 행(분기당 1행) + items 행,
     # effect_rows 로 어느 분기가 효과였는지 신고. table 과의 혼합은 종전대로 정직 거절.
-    eff_idx = [i for i, o in enumerate(objs, 1) if _is_effect_env(o)]
+    eff_idx = [i for i, o in zip(branch_numbers, objs) if _is_effect_env(o)]
     if eff_idx and all(il is not None or _is_effect_env(o) for il, o in zip(item_lists, objs)):
         out = []
         for il, o in zip(item_lists, objs):
@@ -964,10 +973,10 @@ def _op_union(prev, params):
         env["effect_rows"] = eff_idx
         env["note"] = (f"분기 {eff_idx} 은(는) 효과 봉투(부수효과 결과)라 1행씩 실었습니다 — "
                        "행 = 그 봉투의 필드(path·size·message …).")
-        return _branch_proto.attach_dead_note(_attach_branch_warning(env, objs), _dead, _total)
+        return _branch_proto.attach_dead_note(_attach_branch_warning(env, objs, branch_numbers), _dead, _total)
     return {"success": False,  # 죽은 분기는 걸러진 뒤 = 진짜 통화 혼합 — 분기별 통화를 이름 대 준다
             "error": "union: 모든 입력의 통화 종류가 같아야 합니다(전부 table 또는 전부 items). "
-                     f"분기별 통화: {_branch_proto.currency_kinds(objs, _get_items, _get_table)}."}
+                     f"분기별 통화: {_branch_proto.currency_kinds(objs, _get_items, _get_table, branch_numbers)}."}
 
 
 def _is_effect_env(o) -> bool:
@@ -981,13 +990,14 @@ def _effect_row(o: dict) -> dict:  # 효과 봉투→1행. 정본=common.currenc
     return effect_row(o)
 
 
-def _attach_branch_warning(env, objs):
+def _attach_branch_warning(env, objs, branch_numbers=None):
     """★B24-1(c) 24회차 상상훈련: 병렬 가지가 죽어도 이항 변환자가 **조용히 삼켰다**.
     죽은 가지의 봉투는 items:[] 라 union/merge/join 이 0행으로 흘려보내고, 사용자는
     "두 소스를 합쳤다" 로 읽는다(실측: 살아있는 3행만 나오고 경고 0). 결합은 정직하게
     하되 무엇이 빠졌는지 말한다 — _attach_shape_warning(공유 칸 0)과 같은 배관."""
     bad = []
-    for i, o in enumerate(objs or [], 1):
+    numbers = branch_numbers if branch_numbers is not None else range(1, len(objs or []) + 1)
+    for i, o in zip(numbers, objs or []):
         if isinstance(o, dict) and (o.get("success") is False
                                     or (o.get("error") and o.get("success") is not True)):
             bad.append(i)
@@ -1030,9 +1040,10 @@ def _op_merge(prev, params):
     objs, _dead, _err = _handle_dead_branches("merge", objs, params)
     if _err:
         return _err
+    branch_numbers = _branch_proto.live_branch_numbers(_total, _dead)
     item_lists = [_get_items(o)[0] for o in objs]
     if any(il is None for il in item_lists):
-        _no = [str(i) for i, il in enumerate(item_lists, 1) if il is None]  # 죽은 분기는 걸러진 뒤 — 남은 건 table 전용 산 분기
+        _no = [str(i) for i, il in zip(branch_numbers, item_lists) if il is None]  # 죽은 분기는 걸러진 뒤 — 남은 건 table 전용 산 분기
         return {"success": False,
                 "error": f"merge: 분기 {', '.join(_no)} 에 items 통화가 없습니다(표형 table 만 실림) — "
                          f"표형 결합은 table:union."}
@@ -1055,7 +1066,7 @@ def _op_merge(prev, params):
             dd.append(r)
         out = dd
     return _branch_proto.attach_dead_note(
-        _attach_branch_warning(_emit_items(_carry_flags(objs), out, population=bool(keys or params.get("dedup"))), objs), _dead, _total)
+        _attach_branch_warning(_emit_items(_carry_flags(objs), out, population=bool(keys or params.get("dedup"))), objs, branch_numbers), _dead, _total)
 
 
 def _op_flatten(prev, params):

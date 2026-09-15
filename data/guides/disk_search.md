@@ -19,7 +19,7 @@
 | **파일명·확장자·크기·종류** | `[self:file_find]{search_term·extension·kind·min_size_mb·path}` | **1순위.** OS 색인(맥 Spotlight) 직접 — 선스캔 불요·항상 최신 (메타 모드, 구 fs_query 흡수) |
 | **glob 패턴** (`*.md`, `**/*.tsx`) | `[self:file_find]{pattern·path}` | 같은 액션의 glob 모드 — 이름 패턴·재귀. path로 검색 루트(절대/`~`/상대) |
 | **파일 *내용*** (텍스트·코드) | `[self:grep]{pattern·path·include}` | 기본 정규식(`a\|b` OR 됨), `regex:false`면 리터럴 |
-| **파일 읽기** | `[self:read]{path·format·pages·offset·limit}` | 텍스트/PDF/DOCX/XLSX 통합 |
+| **파일 읽기** | `[self:read]{path·format·pages·offset·limit}` | 텍스트/PDF/DOCX/XLSX/HWP·HWPX/PPTX/EPUB 통합 |
 | **디스크 용량** | `[self:storage]{op: scan→summary}` · 여유공간=`[sense:host]` | 폴더·확장자별 롤업은 scan 선행 |
 
 - **파일 찾기는 `file_find` 하나** — 메타(search_term/kind/크기)든 glob 패턴이든. 내용은 `grep`. 헷갈리면: "무슨 파일인지"는 file_find, "그 안에 무슨 말이 있는지"는 grep.

@@ -553,6 +553,8 @@ def is_dangerous_command(command: str) -> bool:
 # _get_path/_truthy/_fill_pdf/_fill_docx 는 office_ops.py 로 이동 (2026-07-18 모듈화).
 # _get_path 는 다른 분기(read/write/edit/make_directory/propose_patch)도 쓰므로 별칭 유지.
 _office = _load_sibling("office_ops")
+_read_extra = _load_sibling("doc_read_extra")   # hwp/hwpx/pptx/epub 읽기 (2026-09-15)
+_EXTRA_READ_FORMATS = ("hwp", "hwpx", "pptx", "epub")
 _get_path = _office._get_path
 
 
@@ -710,6 +712,8 @@ def execute(tool_input: dict, context) -> str:
                 fmt = "docx"
             elif ext in ("xlsx", "xlsm", "xls"):
                 fmt = "xlsx"
+            elif ext in _EXTRA_READ_FORMATS:   # hwp/hwpx/pptx/epub (2026-09-15 확장)
+                fmt = ext
             else:
                 fmt = "text"
         # 분기 후 tool_name 재할당해 기존 코드로 위임
@@ -719,6 +723,8 @@ def execute(tool_input: dict, context) -> str:
             tool_name = "read_docx"
         elif fmt in ("xlsx", "xlsm", "xls"):
             tool_name = "read_xlsx"
+        elif fmt in _EXTRA_READ_FORMATS:
+            tool_name = f"read_{fmt}"
         else:
             tool_name = "read_file"
 
@@ -1305,6 +1311,10 @@ def execute(tool_input: dict, context) -> str:
 
         elif tool_name == "read_xlsx":
             return _office.read_xlsx(tool_input, project_path)
+
+        elif tool_name in ("read_hwp", "read_hwpx", "read_pptx", "read_epub"):
+            # 확장 형식은 형제 모듈이 안다 — 봉투는 read_docx 와 같다(text+blocks).
+            return getattr(_read_extra, tool_name)(tool_input, project_path)
 
         elif tool_name == "spreadsheet":
             # [table:spreadsheet] — office_ops 로 이동. 경로 가드는 handler 소유라 주입.

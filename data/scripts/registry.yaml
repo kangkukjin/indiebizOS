@@ -100,6 +100,16 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-09-05T13:46:00'
   timeout: 900
+압축:
+  description: 'zip 묶기·풀기·목록 — args: op(pack|unpack|list). pack: paths(또는 path/items)·output(생략=첫
+    대상 옆 <이름>.zip)·include/exclude(글로브, 기본 .DS_Store·__pycache__ 제외)·base. unpack:
+    path(zip/tar.gz)·out_dir(생략=옆 <이름>/)·include·overwrite(false=기존 파일 건너뜀). 경로 탈출(../)
+    항목 거절, 암호 zip 거절. list: 항목 items(name·size·compressed·modified). 2026-09-15 어휘
+    후보 10번을 스크립트로 먼저 얼림'
+  file: 압축.py
+  interpreter: python
+  registered_at: '2026-09-15T14:21:29'
+  timeout: 300
 에피소드통계:
   description: '주행기록(에피소드) 집계 — args: last(기본10)·ids·agent·include_test·mode(episodes|totals).
     IBL 계수·실패·fn([fn:] 호출 수)은 궤적(trajectory_event)이 정본, 코드 원문은 코퍼스(2026-09-07 — 로그
@@ -137,6 +147,16 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-20T00:52:17'
   timeout: 1800
+이미지변환:
+  description: '결정론 이미지 변환(모델 호출 없음) — args: paths(또는 path/items 봉투)·op(convert 기본|info)·format(jpg/png/webp,
+    heic→jpg 자동)·max_side·width/height/scale·max_kb(목표 용량, 품질↓→단계 축소)·quality·crop[l,t,r,b]/aspect("3:4"
+    가운데)·strip_exif(제출·공개용 true)·out_dir(생략=원본 옆 <이름>_변환)·overwrite. 원본은 덮어쓰지 않음.
+    items(src·out·format·width·height·bytes·exif_stripped·steps)+errors. 2026-09-15
+    어휘 후보 9번을 스크립트로 먼저 얼림(승격 판정은 호출 빈도)'
+  file: 이미지변환.py
+  interpreter: python
+  registered_at: '2026-09-15T14:21:29'
+  timeout: 300
 인사말붙이기:
   description: '본문 wav의 음량을 정적 게인으로 정렬하고 첫·끝 장에 실음성 인사말을 접합 — args: lecture_id(필수),
     raw_dir(본문 wav 폴더, 기본 강의폴더/narration_raw), out_dir(결과 폴더, 기본 강의폴더/narration),

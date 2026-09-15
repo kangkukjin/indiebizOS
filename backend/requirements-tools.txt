@@ -69,3 +69,7 @@ Unidecode
 # location-services 여기어때 등이 직접 import) — 지금까지 yfinance 의 전이 의존으로만
 # 깔려 있었다(감사에서 발견). yfinance 가 떨구면 세 패키지가 같이 죽는 구조라 명시 선언.
 curl_cffi
+
+# [self:read] 확장 형식 (2026-09-15): hwp v5 컨테이너 · HEIC 읽기(이미지변환 스크립트)
+olefile
+pillow-heif

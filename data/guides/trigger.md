@@ -191,3 +191,8 @@ $t = [self:trigger]{op:"create", name:"morning_news", cron:"0 8 * * *", do:"…"
 
 > 실행 에이전트가 턴 종료 후 덧붙인다.
 - 2026-09-09 실측: `[self:trigger]{op:"disable"}`는 미러 캘린더 이벤트(`[IBL] <name>`)의 `enabled`도 함께 false로 내린다 — 재조회로 확인. 가이드는 update·delete 의 이벤트 동기화만 적고 enable/disable 은 언급이 없다.
+
+
+## 관련 어휘 동작 확인
+
+시간 config 정규화는 schedule에만 적용한다. schedule을 다른 타입으로 바꾸면 이전 캘린더 타이머를 제거한다. 채널 발화도 등록 프로젝트를 사용하고 실행·구문 실패를 이력에 남긴다. subject_contains는 제목에만 적용한다. history의 limit:0은 빈 목록이다.

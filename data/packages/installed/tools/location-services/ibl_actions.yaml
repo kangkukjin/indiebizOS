@@ -9,7 +9,7 @@ nodes:
         fixture: '[sense:weather]{city: "서울"}'
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
         group: places
-        target_description: 도시명 또는 좌표
+        target_description: 도시명 또는 좌표 풍속은 m/s 단위로 요청·반환하며 current.wind_speed_unit에 단위를 명시한다. 경도 0도 유효한 좌표다.
         router: handler
         tool: get_weather
         implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)

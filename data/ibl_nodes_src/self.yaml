@@ -232,7 +232,7 @@
         side_effect: true
         fixture: '[self:trigger]{op: "list"}'
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
-        target_description: 'create는 name + do(실행할 IBL 문장) 필수, schedule이면 cron("0 9 * * *" 매일 · "0 9 * * 1-5" 평일 · "0 */2 * * *" 2시간마다 — 표준 cron, 요일은 숫자·범위·콤마·mon-fri; 간격형은 분 0만) 또는 config({repeat, time, weekdays(0=월..6=일 또는 mon..sun), date, interval_hours} — 검증·정규화됨, 1회는 none). 등록한 프로젝트가 트리거에 실려 발화도 그 프로젝트에서 돈다(do 에 project_id 불필요). ★do 속 $변수는 등록 시점 값으로 굳는다 — 발화 시점 값이 필요하면 조회를 do 안에 넣어라. 반복형은 오늘 예정 시각이 이미 지났으면 다음 예정 시각에 첫 발화(등록 즉시 안 돈다). 긴 절차는 [self:workflow]에 저장해 두고 do에 그 실행 문장만 참조. get/update/delete/enable/disable/history는 id 필요(history 행에 success·error·count 동반 — `>> [table:filter]{where:"success == false"}` 가능). list/status는 파라미터 없음.'
+        target_description: 'create는 name + do(실행할 IBL 문장) 필수, schedule이면 cron("0 9 * * *" 매일 · "0 9 * * 1-5" 평일 · "0 */2 * * *" 2시간마다 — 표준 cron, 요일은 숫자·범위·콤마·mon-fri; 간격형은 분 0만) 또는 config({repeat, time, weekdays(0=월..6=일 또는 mon..sun), date, interval_hours} — 검증·정규화됨, 1회는 none). 등록한 프로젝트가 트리거에 실려 발화도 그 프로젝트에서 돈다(do 에 project_id 불필요). ★do 속 $변수는 등록 시점 값으로 굳는다 — 발화 시점 값이 필요하면 조회를 do 안에 넣어라. 반복형은 오늘 예정 시각이 이미 지났으면 다음 예정 시각에 첫 발화(등록 즉시 안 돈다). 긴 절차는 [self:workflow]에 저장해 두고 do에 그 실행 문장만 참조. detail/update/delete/enable/disable/history는 id 필요(history 행에 success·error·count 동반 — `>> [table:filter]{where:"success == false"}` 가능). list/status는 파라미터 없음. config의 시간 정규화는 schedule에만 적용한다. 다른 타입 설정은 보존하며, schedule에서 다른 타입으로 바꿀 때 기존 타이머를 제거한다. history의 limit:0은 빈 목록이다. 채널 발화도 등록 프로젝트에서 실행하고 실제 성공·실패와 구문 오류를 이력에 남긴다.'
         group: schedule
         target_key: op
         router: trigger_engine

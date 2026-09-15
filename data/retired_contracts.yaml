@@ -498,3 +498,11 @@ retired:
       - 'return f"[이전 응답: {first_line}... ({len(content)}자)]"'
       - 'content = f"[이전 대화: {first_line}... ({len(content)}자)]"'
       - 'content = content[:500] + f"... ({len(content)}자)"'
+
+  - id: rank31-40-stale-operation-help
+    retired: 2026-09-15
+    reason: 포털 삭제와 트리거 상세 설명에 이전 op 이름이 남아 실제 디스패처와 어긋났다.
+    instead: 포털 엔티티 삭제는 delete, 트리거 상세 조회는 detail을 쓴다.
+    phrases:
+      - '/ remove(포털 삭제:'
+      - 'get/update/delete/enable/disable/history는 id 필요'

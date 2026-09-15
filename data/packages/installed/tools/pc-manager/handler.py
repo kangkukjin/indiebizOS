@@ -194,10 +194,23 @@ def _forage_recall(tool_input: dict) -> str:
     return json.dumps(res, ensure_ascii=False)
 
 
+def _forage_flag(raw, default=False):
+    """쓰기 옵션: 문자열 false를 파이썬 truthiness로 켜지 않는다."""
+    if raw is None:
+        return default
+    if isinstance(raw, bool):
+        return raw
+    if isinstance(raw, str) and raw.strip().lower() in ("true", "false"):
+        return raw.strip().lower() == "true"
+    raise ValueError("포식 쓰기 옵션은 true 또는 false여야 합니다.")
+
+
 def _forage_note(tool_input: dict) -> str:
     """[self:forage]{op:note} — 지도(map)/주인모델(owner) 항목 누적."""
     import forage_memory as FM
     layer = (tool_input.get("layer") or "map").strip().lower()
+    if layer not in ("map", "owner"):
+        return json.dumps({"success": False, "error": "layer 는 map 또는 owner"}, ensure_ascii=False)
     prior = tool_input.get("prior_class")
     conf = tool_input.get("confidence")
     prov = tool_input.get("provenance")
@@ -230,9 +243,9 @@ def _forage_note(tool_input: dict) -> str:
                     confidence=conf if conf is not None else 0.7,
                     provenance=prov,
                     prune_reason=tool_input.get("prune_reason"),
-                    generalizes=bool(tool_input.get("generalizes")),
-                    surface_flag=bool(tool_input.get("surface_flag")),
-                    territory=bool(tool_input.get("territory")))  # 조사 루트 앵커(2026-09-03)
+                    generalizes=_forage_flag(tool_input.get("generalizes")),
+                    surface_flag=_forage_flag(tool_input.get("surface_flag")),
+                    territory=_forage_flag(tool_input.get("territory")))  # 조사 루트 앵커(2026-09-03)
     return json.dumps(r, ensure_ascii=False)
 
 
@@ -250,7 +263,7 @@ def _forage_reconcile(tool_input: dict) -> str:
     import forage_doc
     apply = tool_input.get("apply")
     return json.dumps(forage_doc.reconcile(tool_input.get("body") or None, tool_input.get("locus") or tool_input.get("path") or None,
-                                           apply=(True if apply is None else bool(apply))), ensure_ascii=False)
+                                           apply=_forage_flag(apply, default=True)), ensure_ascii=False)
 
 
 def _forage_forget(tool_input: dict) -> str:

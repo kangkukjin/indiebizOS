@@ -78,7 +78,7 @@ nodes:
         - 영상검색
         - 동영상검색
         - video search
-        target_description: 검색어
+        target_description: 검색어 queries는 문자열 배열 또는 쉼표/개행 문자열이다. 배치 일부 실패도 success:false이며 errors/sections에 검색어별 실패를 싣고, 이미 얻은 items는 partial:true로 보존한다. 검색 상한 조정은 sections에도 표시한다.
         router: handler
         tool: search_youtube
         implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출

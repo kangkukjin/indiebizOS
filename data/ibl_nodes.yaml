@@ -811,7 +811,7 @@ nodes:
         fixture: '[sense:performance]{}'
         description: 공연·공연장 조회 (op 분기, KOPIS). 전시는 exhibit, 도서는 book. items 통화 — table:take·table:document 파이프로 추리고 문서화.
         group: culture
-        target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록).
+        target_description: search — query(공연명/키워드)·genre·region·status·date_from/date_to(날짜 범위, 둘 함께 입력)·days(날짜 생략 시 오늘부터 N일) 옵션. venue — query(공연장명, 예 '예술의전당')·region. genres/regions — 파라미터 없음(필터 코드 목록). KOPIS 오류 XML이나 점검 HTML은 검색 0건으로 취급하지 않고 명시적 오류로 반환한다.
         target_key: op
         router: handler
         tool: performance_op
@@ -1343,7 +1343,7 @@ nodes:
         fixture: '[sense:weather]{city: "서울"}'
         description: '날씨 조회 (Open-Meteo 무료). [sense:weather]{city: "수원"} 또는 {lat: 37.26, lon: 127.03}. 도시명(한/영) 직접 사용 가능'
         group: places
-        target_description: 도시명 또는 좌표
+        target_description: 도시명 또는 좌표 풍속은 m/s 단위로 요청·반환하며 current.wind_speed_unit에 단위를 명시한다. 경도 0도 유효한 좌표다.
         router: handler
         tool: get_weather
         implementation: Open-Meteo 무료 API로 날씨 조회 (API키 불필요)
@@ -2735,7 +2735,7 @@ nodes:
         - 영상검색
         - 동영상검색
         - video search
-        target_description: 검색어
+        target_description: 검색어 queries는 문자열 배열 또는 쉼표/개행 문자열이다. 배치 일부 실패도 success:false이며 errors/sections에 검색어별 실패를 싣고, 이미 얻은 items는 partial:true로 보존한다. 검색 상한 조정은 sections에도 표시한다.
         router: handler
         tool: search_youtube
         implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
@@ -3063,7 +3063,7 @@ nodes:
         side_effect: true
         fixture: '[self:trigger]{op: "list"}'
         description: 트리거 관리 (op 분기). schedule/channel/webhook/file 타입 통합 — 등록/조회/수정/삭제/활성화/이력.
-        target_description: create는 name + do(실행할 IBL 문장) 필수, schedule이면 cron("0 9 * * *" 매일 · "0 9 * * 1-5" 평일 · "0 */2 * * *" 2시간마다 — 표준 cron, 요일은 숫자·범위·콤마·mon-fri; 간격형은 분 0만) 또는 config({repeat, time, weekdays(0=월..6=일 또는 mon..sun), date, interval_hours} — 검증·정규화됨, 1회는 none). 등록한 프로젝트가 트리거에 실려 발화도 그 프로젝트에서 돈다(do 에 project_id 불필요). ★do 속 $변수는 등록 시점 값으로 굳는다 — 발화 시점 값이 필요하면 조회를 do 안에 넣어라. 반복형은 오늘 예정 시각이 이미 지났으면 다음 예정 시각에 첫 발화(등록 즉시 안 돈다). 긴 절차는 [self:workflow]에 저장해 두고 do에 그 실행 문장만 참조. get/update/delete/enable/disable/history는 id 필요(history 행에 success·error·count 동반 — `>> [table:filter]{where:"success == false"}` 가능). list/status는 파라미터 없음.
+        target_description: create는 name + do(실행할 IBL 문장) 필수, schedule이면 cron("0 9 * * *" 매일 · "0 9 * * 1-5" 평일 · "0 */2 * * *" 2시간마다 — 표준 cron, 요일은 숫자·범위·콤마·mon-fri; 간격형은 분 0만) 또는 config({repeat, time, weekdays(0=월..6=일 또는 mon..sun), date, interval_hours} — 검증·정규화됨, 1회는 none). 등록한 프로젝트가 트리거에 실려 발화도 그 프로젝트에서 돈다(do 에 project_id 불필요). ★do 속 $변수는 등록 시점 값으로 굳는다 — 발화 시점 값이 필요하면 조회를 do 안에 넣어라. 반복형은 오늘 예정 시각이 이미 지났으면 다음 예정 시각에 첫 발화(등록 즉시 안 돈다). 긴 절차는 [self:workflow]에 저장해 두고 do에 그 실행 문장만 참조. detail/update/delete/enable/disable/history는 id 필요(history 행에 success·error·count 동반 — `>> [table:filter]{where:"success == false"}` 가능). list/status는 파라미터 없음. config의 시간 정규화는 schedule에만 적용한다. 다른 타입 설정은 보존하며, schedule에서 다른 타입으로 바꿀 때 기존 타이머를 제거한다. history의 limit:0은 빈 목록이다. 채널 발화도 등록 프로젝트에서 실행하고 실제 성공·실패와 구문 오류를 이력에 남긴다.
         group: schedule
         target_key: op
         router: trigger_engine
@@ -3240,7 +3240,7 @@ nodes:
 
           - posts: 글 목록. category(폴더 필터)/count 옵션.
 
-          - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit + category(폴더 필터 — 전체 경로·잎 이름·상위 그룹, 값 또는 목록). content는 post_id 또는 title. 결과에 category 가 실린다.
+          - search: RAG 검색. query(필수) + mode(hybrid 기본/semantic/content) + limit + category(폴더 필터 — 전체 경로·잎 이름·상위 그룹, 값 또는 목록). content는 post_id 또는 title(또는 query로 제목 검색). 알 수 없는 op는 오류로 반환한다. 결과에 category 가 실린다.
 
           - check_new: 마지막 조회 이후 새로 추가된 글 확인.
 
@@ -4795,7 +4795,7 @@ nodes:
         fixture: '[self:forage]{op: "recall", query: "test"}'
         description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기. ★응답=3층(map/owner/territory) 인지 기억 — items 통화 밖이라 table 파이프 대상 아님(판정 2026-08-17).
         group: file
-        target_description: 'recall(기본)·note·forget·sync(문서→색인, locus) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model).'
+        target_description: 'recall(기본)·note·forget·sync(문서→색인, locus) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model). note의 layer는 map/owner만 허용한다. reconcile의 apply:false는 대조만 수행하며 문자열 false도 거짓으로 해석한다. generalizes/surface_flag/territory도 같은 불리언 규칙이다.'
         target_key: op
         router: handler
         tool: forage_op
@@ -5000,7 +5000,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-15'
-          impl: ef4a2c288ee04ce5
+          impl: 150cb214785b9dd3
         target_key: path
         aliases:
           offset:
@@ -5013,7 +5013,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-15'
-          impl: ef4a2c288ee04ce5
+          impl: 150cb214785b9dd3
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5337,7 +5337,7 @@ nodes:
             apply: 격리 변경을 검증 후 통과분만 라이브 적용. proposal_id 로 제안 적용. backend 는 턴 종료 후 적용
             status: 스테이징 세션 + 적용 대기 제안 현황 — 무엇이 격리에 쌓여 있고 아직 라이브에 안 갔나
             discard: 격리 사본 폐기 (proposal_id 로 제안도 폐기). 라이브는 원래 무변경이라 되돌릴 것이 없다
-        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 적용 후 확인 명령은 verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경.'
+        target_description: 'op — propose(기본): RED 변경을 격리 사본에 제안+검증만(라이브 무변경, 자율 태스크용. path + content 또는 old_string+new_string, reason 필수 — 남긴 제안은 나중에 apply{proposal_id} 로 집어갈 수 있다) / apply: 격리 변경을 검증(구문·import 스모크·IBL 삼각·안전장치 스모크) 후 통과분만 라이브 일괄 적용 — 리로드는 이때 한 번, 실패하면 라이브 무변경. proposal_id 를 주면 이 세션 대신 그 제안을 적용(재작업 불필요) — backend 가 끼면 라이브 쓰기는 이 턴이 닫힌 뒤 분리 수행자가 하므로(scheduled 응답) 기다리지 말고 턴을 닫을 것, 적용 후 확인 명령은 verify_cmd 로 위탁 / status: 스테이징 세션 + 적용 대기 제안 목록 / discard: 격리 사본 폐기(proposal_id 로 제안도). 라이브는 원래 무변경. 적용 후 파생물 검증 실패는 applied:true와 success:false·verified:false로 구분한다. 동시 제안은 각각 고유한 proposal_id를 가진다.'
         aliases:
           old_string:
           - old
@@ -5362,7 +5362,7 @@ nodes:
         fixture: '[self:webapp]{}'
         description: 내 웹앱 등기부 — 몸 공개면(런처·NAS·포털·게시판·가족신문·공개파일·보고서)과 외부 배포(web-builder 사이트·Worker)를 한 목록으로 보고 생존을 실측한다. 목록은 진실 소스에서 파생(등록 불필요), 파생 밖 수제 배포만 register. status items 의 alive 필드 — table:filter 로 죽은 것만 추출.
         group: system
-        target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url 또는 name — register 가 준 이름 그대로. 파생 항목은 각자의 진실 소스에서 지운다).'
+        target_description: 'op — list(기본): 전체 목록(파생+수동) / status: 전 웹앱 HTTP 생존 실측(timeout 기본 5초) / register: 수동 등록(name+url 필수, kind·memo 선택 — 몸 공개면·web-builder 사이트는 자동 파생이라 거부) / remove: 수동 등록 제거(url 또는 name — register 가 준 이름 그대로. 파생 항목은 각자의 진실 소스에서 지운다). 수동 등록·삭제는 같은 파일의 갱신을 직렬화한다. status의 alive는 2xx/3xx 또는 인증 요구 401/403이면 true이며, 404/410/5xx 등은 false다.'
         target_key: op
         router: handler
         tool: webapp_op
@@ -5601,7 +5601,7 @@ nodes:
         fixture: '[self:ledger]{op: "select", path: "data/guide_db.json", target: "guides", fields: ["id"], limit: 3}'
         description: JSON 원장 원자 갱신·조회 (op 분기) — 반복 작업의 상태(커버리지·순회 큐·판정)를 스키마 관문과 함께 지키는 {items} 통화의 저장 반쪽. 등록 스크립트에서 승격(2026-09-04 언어 개정).
         group: system
-        target_description: 'append/upsert 입력은 객체 행만 허용한다. item 문자열·items 안의 비객체는 쓰기 전 거절하고, 저장된 비객체 행도 select에서 조용히 누락하지 않고 손상 위치를 신고한다. items_file 은 맨 배열 파일 또는 [self:write]{format:"json"} 이 낸 {items,count} 봉투 파일(그 목록으로 받음, 2026-09-05). path(저장소 안·~workspace/ 가능) 필수. path와 items_file의 상대경로는 저장소 루트 기준이며 self:write의 프로젝트 기준과 다르다. 공유 파일은 양쪽에 ~workspace/ 접두 또는 쓰기 결과의 절대경로를 사용한다. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(table:filter와 같은 조건: {field,op,value}·{필드:값}·문자열·AND 배열, 필드 점 경로 지원)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절.'
+        target_description: 'append/upsert 입력은 객체 행만 허용한다. item 문자열·items 안의 비객체는 쓰기 전 거절하고, 저장된 비객체 행도 select에서 조용히 누락하지 않고 손상 위치를 신고한다. items_file 은 맨 배열 파일 또는 [self:write]{format:"json"} 이 낸 {items,count} 봉투 파일(그 목록으로 받음, 2026-09-05). path(저장소 안·~workspace/ 가능) 필수. path와 items_file의 상대경로는 저장소 루트 기준이며 self:write의 프로젝트 기준과 다르다. 공유 파일은 양쪽에 ~workspace/ 접두 또는 쓰기 결과의 절대경로를 사용한다. op=select(기본): target(배열 자리, 점 경로)·fields(열 선택)·where(table:filter와 같은 조건: {field,op,value}·{필드:값}·문자열·AND 배열, 필드 점 경로 지원)·limit → items 통화(total=모집단, limit 으로 덜 내면 truncated) / append: item|items|items_file(큰 payload 는 [self:write] 로 파일에 고정한 뒤 가리킨다)·max_items(배열 상한 롤링) / upsert: key(기본 id)로 갱신·삽입 / set: target 필수 — target 없는 set 은 파일 전체를 갈아치우므로 거절, 정말 루트를 바꿀 때만 replace_root:true, set 에 key 를 주면 거절(target 오타). 쓰기 관문: enum_fields{필드:[허용값]}·list_limits{필드:{max_items,max_item_len}} — 넘으면 쓰지 않고 실패한다. 저장소 밖 쓰기 거절. 동일 경로 쓰기는 읽기부터 저장까지 직렬화한다. upsert 키는 IBL 공통 동등성(대소문자·유니코드 정규화, bool과 숫자 구분)을 따르며 병합된 최종 행도 관문으로 검증한다.'
         router: handler
         tool: ledger_op
         implementation: system_essentials/ledger_ops.py — 원자 쓰기(tmp+fsync+replace), 관문 넷(set target 필수·key 거절·enum_fields·list_limits) 전부 실사고 유래. 옛 등록 스크립트(2026-09-04 은퇴) 이식.
@@ -6987,7 +6987,7 @@ nodes:
         fixture: '[others:portal]{op: "status"}'
         runs_on: pc_only
         description: 개인 포털(커뮤니티 홈, op 분기) — 대상별 공개 주소(/h/<5자>)를 여러 개 만들어 이웃을 모으고, 주소마다 첫페이지 진열(콘텐츠·계기)을 따로 고른다. 회원=메신저 이웃과 같은 책·레벨 0~4 같은 눈금, 레벨에 따라 계기를 원격 브라우저로 빌려 쓴다. 사적/몸/발신 계기는 진열 불가. 개인 링크=운영자 발급 즉시 로그인 열쇠.
-        target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / remove(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1. 레벨은 전역 이웃등급) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+set_level="off"/"0"~"4"=끔 또는 그 레벨부터 켬(드롭다운 한 방). toggle/min_level/enabled 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록) / config(title 이름·intro 소개·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
+        target_description: '대부분 op 는 portal 파라미터(슬러그/이름)로 대상 포털 지정 — 비우면 첫 포털. op:status(기본 — 포털 주소·회원 수·오늘 사용량) / portals(포털 목록) / create(새 포털: title) / delete(포털 삭제: portal, 회원 있으면 force:true) / members(이웃 목록·개인 링크) / join(이웃 직접 등록: name 필수 — 링크 전용 회원, 개인 링크 반환) / promote(member_id 레벨 승급 — level 지정 또는 +1, down:true 면 -1. 레벨은 전역 이웃등급) / issue(member_id 개인 링크 재발급 — 옛 링크·세션 무효) / revoke(member_id 회수 — 링크·로그인 차단) / display(진열 다이얼 — key 없으면 목록. key+set_level="off"/"0"~"4"=끔 또는 그 레벨부터 켬(드롭다운 한 방). toggle/min_level/enabled 직접 지정도 가능. 손님/회원/전체 사용 횟수 캡은 계기별이 아니라 포털 단위라 config 로 정한다) / audit(사용 기록 — portal 지정 시 그 포털로 먼저 좁히고 limit 적용, 생략하면 전체) / config(title 이름·intro 소개(빈 문자열로 삭제)·portal 일일 한도 guest_daily·member_daily·global_daily — 그 포털 전 계기에 적용).'
         target_key: op
         group: portal
         router: handler

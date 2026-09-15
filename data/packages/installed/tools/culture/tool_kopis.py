@@ -156,6 +156,10 @@ def call_kopis_api(endpoint, params):
     try:
         root = ET.fromstring(response_text.encode("utf-8") if isinstance(response_text, str) else response_text)
 
+        # 정상 목록의 빈 <dbs/>만 0건이다. 오류 XML/HTML을 빈 성공으로 바꾸지 않는다.
+        if root.tag != "dbs":
+            return {"success": False, "error": f"KOPIS 응답 형식 오류: 예상 dbs, 수신 {root.tag}"}
+
         # 목록형 데이터 (db 태그가 여러개인 경우)
         if endpoint.split("/")[0] in ["pblprfr", "prfsts", "prfplc", "boxoffice", "prffest"]:
             results = []

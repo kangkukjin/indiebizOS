@@ -367,14 +367,21 @@ def _fn_display(params: dict) -> str:
 
 def _fn_audit(params: dict) -> str:
     core = _core()
-    limit = int(params.get("limit") or 100)
+    limit = int(params.get("limit", 100))
+    pref = (params.get("portal") or "").strip()
+    slug = ""
+    if pref:
+        portal = core.portal_by_ref(core.load_state(), pref)
+        if not portal:
+            return _fail(f"포털을 찾을 수 없습니다: {pref}")
+        slug = portal["slug"]
     rows = [{
         "title": f"{e.get('who', '?')} · {e.get('instrument', '')}"
                  + ("" if e.get("ok") else " · ❌ 거부"),
         "meta": e.get("at", "") + (f" · 포털 {e.get('portal')}" if e.get("portal") else "")
                 + (f" · {e.get('note')}" if e.get("note") else ""),
         "summary": e.get("code", ""),
-    } for e in core.audit_tail(limit)]
+    } for e in core.audit_tail(limit, portal=slug)]
     return _ok(rows, message="" if rows else "아직 기록이 없습니다.")
 
 
@@ -389,7 +396,7 @@ def _fn_config(params: dict) -> str:
         if (params.get("title") or "").strip():
             p["title"] = params["title"].strip()[:40]
             changed.append("이름")
-        if params.get("intro") is not None and str(params.get("intro")).strip() != "":
+        if params.get("intro") is not None:
             p["intro"] = str(params["intro"]).strip()[:500]
             changed.append("소개")
         if (params.get("public_base") or "").strip():

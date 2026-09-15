@@ -907,17 +907,24 @@ def audit_log(who: str, instrument: str, code: str, ok: bool, note: str = "",
         pass
 
 
-def audit_tail(limit: int = 100) -> list:
+def audit_tail(limit: int = 100, portal: str = "") -> list:
+    """포털 범위를 먼저 적용하고 최신 limit개를 낸다."""
+    limit = int(limit)
+    if limit <= 0:
+        return []
     try:
-        lines = _AUDIT_PATH.read_text(encoding="utf-8").splitlines()[-limit:]
-        out = []
-        for ln in reversed(lines):
-            try:
-                out.append(json.loads(ln))
-            except Exception:
-                continue
-        return out
-    except Exception:
+        from collections import deque
+        out = deque(maxlen=limit)
+        with _AUDIT_PATH.open(encoding="utf-8") as stream:
+            for line in stream:
+                try:
+                    entry = json.loads(line)
+                except (ValueError, TypeError):
+                    continue
+                if isinstance(entry, dict) and (not portal or entry.get("portal") == portal):
+                    out.append(entry)
+        return list(reversed(out))
+    except OSError:
         return []
 
 

@@ -130,6 +130,12 @@ def verify_after_boot(base, state):
     if req.get("operation") == "red_apply":
         from red_apply import _run_post_verify, _load_handler
         job = inspect_job(base, req["payload"]["job_path"])
+        applied = job.get("controller_apply") or {}
+        if applied.get("verified") is False and not state.get("rollback_attempted"):
+            atomic_json(path.with_name("result.json"), dict(
+                result, outcome="verification_failed", recovered=False,
+                error=applied.get("error"), checks=applied.get("checks", [])))
+            return False
         cmd = job.get("verify_cmd", "").strip()
         post = _run_post_verify(str(base), cmd) if cmd and not state.get("rollback_attempted") else None
         staging = _load_handler(job)._staging_mod()

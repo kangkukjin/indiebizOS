@@ -57,6 +57,7 @@ import shutil
 import subprocess
 import sys
 import time
+import uuid
 from datetime import datetime, timedelta
 
 # ── 형제 모듈: 검증 관문·라이브 파생물 신선도 (2026-09-01 분리, 1500줄 규칙) ──
@@ -765,7 +766,10 @@ def perform_scheduled_apply(repo: str, key: str, prepare=None, finalize=None):
     rels = [r.get("rel") for r in (sess.get("files") or {}).values()]
     st = sess.get("status")
     if st == "applied":
-        return {"success": True, "applied": True, "note": "이미 적용됨(중복 수행 무시)"}
+        verified = sess.get("verified", True)
+        return {"success": verified, "applied": True, "verified": verified,
+                "checks": sess.get("checks", []), "note": "이미 적용됨(중복 수행 무시)",
+                **({"error": "이전 적용 후 검증에 실패했습니다."} if not verified else {})}
     if st != "apply_scheduled":
         # 예약 뒤 같은 세션에 쓰기가 이어지면 ensure_session 이 staging 으로 재개봉한다
         # — 그 예약 스냅샷은 낡았으므로 취소가 맞다(세션은 <repair_staged> 로 계속 보인다).
@@ -955,7 +959,7 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
                 os.remove(live_abs)
             removed.append(rec["rel"])
         except OSError as e:
-            removed.append(f"{rec['rel']} (삭제 실패: {e})")
+            raise OSError(f"{rec['rel']} 삭제 실패: {e}") from e
     if finalize:
         for live_abs in list(staged_contents) + list(to_delete):
             finalize(live_abs)             # backend .py 면 워치독(헬스체크·자동 롤백)
@@ -969,12 +973,16 @@ def _perform_apply(repo: str, sess: dict, checks: list, prepare, finalize):
 
     sess["status"] = "applied"
     sess["applied_at"] = datetime.now().isoformat()
+    verified = all(c.get("passed", True) for c in checks)
+    sess["verified"] = verified
     sess["checks"] = checks
     _save_session(repo, sess)      # 제안이든 수리 세션이든 원장이 하나다
     _cleanup_old(repo)
     _n = len(written) + len(removed)
     return {
-        "success": True, "applied": True, "verified": True,
+        "success": verified, "applied": True, "verified": verified,
+        **({"error": "파일은 적용됐지만 적용 후 파생물 검증에 실패했습니다. checks를 확인하세요."}
+           if not verified else {}),
         "files": written, "removed": removed,
         "checks": [{"gate": c["gate"], "passed": c.get("passed", True)} for c in checks],
         "message": (f"검증 통과 후 라이브 적용 {_n}건(쓰기 {len(written)}·삭제 {len(removed)}). "
@@ -1183,12 +1191,8 @@ def op_propose(ti):
         return {"success": False, "error": "git 저장소가 아니라 격리(worktree)를 만들 수 없습니다."}
 
     # 같은 초에 두 번 부르면 키가 겹친다 — 옛 구현은 worktree 생성 실패로 떨어졌고,
-    # 세션을 재사용하면 두 제안이 조용히 한 세션에 합쳐진다. 접미사로 가른다.
-    ts = datetime.now().strftime("%Y%m%d_%H%M%S")
-    base_ts, n = ts, 1
-    while read_session(repo, proposal_key(ts)) is not None:   # 닫힌 세션도 자리를 차지한다
-        n += 1
-        ts = f"{base_ts}_{n}"
+    # 존재 검사와 생성 사이의 경쟁도 피하도록 UUID로 가른다.
+    ts = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex
     key = proposal_key(ts)
 
     st_abs = stage_file(repo, key, abs_target)

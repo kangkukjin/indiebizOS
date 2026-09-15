@@ -14,6 +14,9 @@ import os
 import tempfile
 from pathlib import Path
 
+from common.pkg_utils import load_sibling
+file_lock = load_sibling(__file__, "essentials_file_io").file_lock
+from common.value_semantics import values_equal
 from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from common.row_conditions import _match, _WhereError
 from common.field_path import MISSING, parse_path, walk_path  # 점 경로 해석 단일 코어
@@ -215,38 +218,42 @@ def _write_rows(tool_input, op):
         args = tool_input or {}
         path = _target_path(args.get("path"))
         target = _parts(args.get("target"))
-        root = _load_root(path, target, op)
-        array = _get_target(root, target, create_list=True)
-        if not isinstance(array, list):
-            raise ValueError("append/upsert target은 JSON 배열이어야 합니다.")
-        _require_object_rows(array, "저장된")
-        incoming = _incoming(args)
-        for item in incoming:
-            _check_list_limits(item, args.get("list_limits"))
-            _check_enum_fields(item, args.get("enum_fields"))
-        changed = []
-        if op == "append":
-            array.extend(incoming)
-            changed = list(incoming)
-        else:
-            key = str(args.get("key") or "id")
+        with file_lock(path):
+            root = _load_root(path, target, op)
+            array = _get_target(root, target, create_list=True)
+            if not isinstance(array, list):
+                raise ValueError("append/upsert target은 JSON 배열이어야 합니다.")
+            _require_object_rows(array, "저장된")
+            incoming = _incoming(args)
             for item in incoming:
-                if not isinstance(item, dict) or _key_value(item, key) is None:
-                    raise ValueError(f"upsert 항목마다 key '{key}'가 필요합니다.")
-                value = _key_value(item, key)
-                index = next((i for i, row in enumerate(array)
-                              if isinstance(row, dict) and _key_value(row, key) == value), None)
-                old = array.pop(index) if index is not None else None
-                # 갱신된 행도 이번 관측의 최신 행 — 끝으로 보내야 max_items 롤링이 방금 갱신한 항목을 안 자른다
-                array.append({**old, **item} if isinstance(old, dict) else item)
-                changed.append(item)
-        max_items = args.get("max_items")
-        if max_items not in (None, ""):
-            keep = max(0, int(max_items))
-            if len(array) > keep:
-                del array[:len(array) - keep]
-        _atomic_json(path, root)
-        return {"success": True, "op": op, "path": str(path), "count": len(array), "items": changed}
+                _check_list_limits(item, args.get("list_limits"))
+                _check_enum_fields(item, args.get("enum_fields"))
+            changed = []
+            if op == "append":
+                array.extend(incoming)
+                changed = list(incoming)
+            else:
+                key = str(args.get("key") or "id")
+                for item in incoming:
+                    if not isinstance(item, dict) or _key_value(item, key) is None:
+                        raise ValueError(f"upsert 항목마다 key '{key}'가 필요합니다.")
+                    value = _key_value(item, key)
+                    index = next((i for i, row in enumerate(array)
+                                  if isinstance(row, dict) and values_equal(_key_value(row, key), value)), None)
+                    old = array.pop(index) if index is not None else None
+                    # 갱신된 행도 이번 관측의 최신 행 — 끝으로 보내야 max_items 롤링이 방금 갱신한 항목을 안 자른다
+                    merged = {**old, **item} if isinstance(old, dict) else item
+                    _check_list_limits(merged, args.get("list_limits"))
+                    _check_enum_fields(merged, args.get("enum_fields"))
+                    array.append(merged)
+                    changed.append(item)
+            max_items = args.get("max_items")
+            if max_items not in (None, ""):
+                keep = max(0, int(max_items))
+                if len(array) > keep:
+                    del array[:len(array) - keep]
+            _atomic_json(path, root)
+            return {"success": True, "op": op, "path": str(path), "count": len(array), "items": changed}
     except (OSError, ValueError, TypeError) as exc:
         return _fail(exc)
 
@@ -264,26 +271,27 @@ def op_set(tool_input):
         args = tool_input or {}
         path = _target_path(args.get("path"))
         target = _parts(args.get("target"))
-        root = _load_root(path, target, "set")
-        # 키 부재와 명시적 null 은 다르다 — value 를 빠뜨린 호출이 대상을 조용히 null 로 덮지 않게.
-        if "value" not in args:
-            raise ValueError("set 에는 value 키가 필요합니다 (item/items 는 append/upsert 전용).")
-        if "key" in args:
-            raise ValueError(f"set 은 key 를 받지 않습니다 — target: \"{args['key']}\" 을 뜻했습니까? "
-                             "(set 은 target 의 값을 바꾸는 연산, key 는 upsert 의 식별 필드)")
-        value = args["value"]
-        if not target:
-            if args.get("replace_root") is not True:
-                raise ValueError("target 없는 set 은 파일 전체를 value 로 갈아치웁니다 — 거절합니다. "
-                                 "특정 키를 바꾸려면 target 을 주고, 정말 루트를 교체하려면 replace_root: true 를 명시하세요.")
-            root = value
-        else:
-            parent, key = _slot(root, target, create=True)
-            if not isinstance(parent, dict):
-                raise ValueError("set target의 부모가 객체가 아닙니다.")
-            parent[key] = value
-        _atomic_json(path, root)
-        return {"success": True, "op": "set", "path": str(path), "count": 1,
-                "items": [{"target": ".".join(target) or "/", "value": value}]}
+        with file_lock(path):
+            root = _load_root(path, target, "set")
+            # 키 부재와 명시적 null 은 다르다 — value 를 빠뜨린 호출이 대상을 조용히 null 로 덮지 않게.
+            if "value" not in args:
+                raise ValueError("set 에는 value 키가 필요합니다 (item/items 는 append/upsert 전용).")
+            if "key" in args:
+                raise ValueError(f"set 은 key 를 받지 않습니다 — target: \"{args['key']}\" 을 뜻했습니까? "
+                                 "(set 은 target 의 값을 바꾸는 연산, key 는 upsert 의 식별 필드)")
+            value = args["value"]
+            if not target:
+                if args.get("replace_root") is not True:
+                    raise ValueError("target 없는 set 은 파일 전체를 value 로 갈아치웁니다 — 거절합니다. "
+                                     "특정 키를 바꾸려면 target 을 주고, 정말 루트를 교체하려면 replace_root: true 를 명시하세요.")
+                root = value
+            else:
+                parent, key = _slot(root, target, create=True)
+                if not isinstance(parent, dict):
+                    raise ValueError("set target의 부모가 객체가 아닙니다.")
+                parent[key] = value
+            _atomic_json(path, root)
+            return {"success": True, "op": "set", "path": str(path), "count": 1,
+                    "items": [{"target": ".".join(target) or "/", "value": value}]}
     except (OSError, ValueError, TypeError) as exc:
         return _fail(exc)

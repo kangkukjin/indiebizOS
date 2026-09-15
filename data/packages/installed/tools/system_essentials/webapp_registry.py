@@ -8,7 +8,7 @@
 status = 전 함대 HTTP 생존 실측(병렬, 기본 5초) — "웹앱이 몇 개고 돌아가는지 모른다"의 해소.
 World Pulse Self-Check 합류는 보류(2026-08-01 사용자 결정) — 필요해지면 op_status 재사용.
 
-저장 = limb_keys 식 무-flock 원자쓰기(윈도우 안전). 가이드 = data/guides/webapp.md.
+저장 = 경로 잠금으로 읽기·수정·저장을 직렬화하고 원자 교체(윈도우 지원). 가이드 = data/guides/webapp.md.
 """
 import json
 import os
@@ -21,6 +21,9 @@ _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
 _BACKEND = str(_ROOT / "backend")
 if _BACKEND not in sys.path:
     sys.path.insert(0, _BACKEND)
+from common.pkg_utils import load_sibling
+_file_io = load_sibling(__file__, "essentials_file_io")
+file_lock, atomic_write_text = _file_io.file_lock, _file_io.atomic_write_text
 from common.currency import items  # IBL 단일 통화 생성자
 from common.value_semantics import values_equal
 
@@ -151,10 +154,7 @@ def _load_manual() -> list:
 
 def _save_manual(entries: list) -> None:
     with _lock:
-        tmp = _MANUAL_PATH.with_suffix(".json.tmp")
-        with open(tmp, "w", encoding="utf-8") as f:
-            json.dump({"webapps": entries}, f, ensure_ascii=False, indent=2)
-        os.replace(tmp, _MANUAL_PATH)
+        atomic_write_text(_MANUAL_PATH, json.dumps({"webapps": entries}, ensure_ascii=False, indent=2))
         # 쓰기 관문 원장 — 등기부 수동 보충 사건(관측, 실패 무해)
         try:
             from write_ledger import log_write
@@ -208,7 +208,8 @@ def op_status(tool_input: dict):
                              headers={"User-Agent": "indiebizOS-webapp-status"})
             ms = int((time.time() - t0) * 1000)
             r.close()
-            ok = r.status_code < 500
+            # 인증이 필요한 앱도 존재하지만 404/410 등은 살아 있는 앱이 아니다.
+            ok = 200 <= r.status_code < 400 or r.status_code in (401, 403)
             results[i] = {**e, "alive": ok, "http": r.status_code, "ms": ms,
                           "status_line": f"{'🟢' if ok else '🔴'} HTTP {r.status_code} · {ms}ms"}
         except Exception as ex:
@@ -235,10 +236,11 @@ def op_register(tool_input: dict):
         return items([], success=False, message="name 과 url 이 필요합니다 (몸 공개면·web-builder 사이트는 자동 파생이라 등록 불필요)")
     if any(e.get("url") == url for e in _derived()):
         return items([], success=False, message="이미 자동 파생되는 주소입니다 — 등록 불필요")
-    manual = [m for m in _load_manual() if (m.get("url") or "") != url]
-    manual.append({"title": name, "url": url, "kind": (tool_input.get("kind") or "수동").strip(),
-                   "memo": (tool_input.get("memo") or "").strip(), "created_at": time.time()})
-    _save_manual(manual)
+    with file_lock(_MANUAL_PATH):
+        manual = [m for m in _load_manual() if (m.get("url") or "") != url]
+        manual.append({"title": name, "url": url, "kind": (tool_input.get("kind") or "수동").strip(),
+                       "memo": (tool_input.get("memo") or "").strip(), "created_at": time.time()})
+        _save_manual(manual)
     return op_list(tool_input)
 
 
@@ -253,22 +255,23 @@ def op_remove(tool_input: dict):
     if not url and not name:
         return items([], success=False, message="지울 url 또는 name 이 필요합니다")
 
-    manual = _load_manual()
-    if url:
-        kept = [m for m in manual if (m.get("url") or "") != url]
-        miss = "수동 등록에 없는 주소입니다"
-    else:
-        hit = [m for m in manual if (m.get("title") or "").strip() == name]
-        if not hit:  # 대소문자 무시 재시도
-            hit = [m for m in manual if values_equal(m.get("title"), name)]
-        if len(hit) > 1:
-            return items(hit, success=False,
-                         message=f"같은 이름의 등록이 {len(hit)}건입니다 — url 로 지목해 주세요")
-        hit_urls = {(m.get("url") or "") for m in hit}
-        kept = [m for m in manual if (m.get("url") or "") not in hit_urls] if hit else manual
-        miss = "수동 등록에 없는 이름입니다"
+    with file_lock(_MANUAL_PATH):
+        manual = _load_manual()
+        if url:
+            kept = [m for m in manual if (m.get("url") or "") != url]
+            miss = "수동 등록에 없는 주소입니다"
+        else:
+            hit = [m for m in manual if (m.get("title") or "").strip() == name]
+            if not hit:  # 대소문자 무시 재시도
+                hit = [m for m in manual if values_equal(m.get("title"), name)]
+            if len(hit) > 1:
+                return items(hit, success=False,
+                             message=f"같은 이름의 등록이 {len(hit)}건입니다 — url 로 지목해 주세요")
+            hit_urls = {(m.get("url") or "") for m in hit}
+            kept = [m for m in manual if (m.get("url") or "") not in hit_urls] if hit else manual
+            miss = "수동 등록에 없는 이름입니다"
 
-    if len(kept) == len(manual):
-        return items([], success=False, message=miss + " (파생 항목은 각자의 진실 소스에서 지워야 합니다 — 포털/게시판/사이트 등)")
-    _save_manual(kept)
+        if len(kept) == len(manual):
+            return items([], success=False, message=miss + " (파생 항목은 각자의 진실 소스에서 지워야 합니다 — 포털/게시판/사이트 등)")
+        _save_manual(kept)
     return op_list(tool_input)

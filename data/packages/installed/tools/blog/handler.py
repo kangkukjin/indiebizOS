@@ -202,10 +202,10 @@ def _op_search(tool_input: dict, context) -> str:
         )
     elif mode == "content":
         # post_id 없이 query만 온 호출은 query를 제목 검색어로 폴백
-        target = tool_input.get("post_id") or tool_input.get("query")
+        target = tool_input.get("post_id") or tool_input.get("title") or tool_input.get("query")
         if not target or not str(target).strip():
             result = {"success": False,
-                      "message": 'post_id 또는 query(제목 검색어)가 필요합니다. mode:"content"는 특정 포스트 하나를 여는 모드입니다.'}
+                      "message": 'post_id 또는 title/query(제목 검색어)가 필요합니다. mode:"content"는 특정 포스트 하나를 여는 모드입니다.'}
         else:
             from tool_blog_rag import get_post_content
             result = get_post_content(post_id=str(target).strip())
@@ -299,8 +299,9 @@ def execute(tool_input: dict, context) -> str:
     # 2026-06-03 어휘 정리: [self:blog]{op} 단일 액션 → 디스패처 테이블로 분기.
     if tool_name in _OP_DISPATCHERS:
         op = (tool_input.get("op") or _OP_DEFAULTS[tool_name]).strip()
-        # 옛 체인의 `.get(op, "blog_get_posts")` 폴백 유지 — 알 수 없는 op 은 posts.
-        fn = _OP_DISPATCHERS[tool_name].get(op) or _op_posts
+        fn = _OP_DISPATCHERS[tool_name].get(op)
+        if fn is None:
+            return format_json({"success": False, "error": f"알 수 없는 op: {op}"})
     else:
         fn = _TOOL_FNS.get(tool_name)
     try:

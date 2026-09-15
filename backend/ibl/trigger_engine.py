@@ -247,6 +247,28 @@ def _resolve_schedule_config(params: dict) -> dict:
     return {"config": {}}
 
 
+def resolve_trigger_config(params: dict, trigger_type: str = None) -> dict:
+    """시간 규칙은 schedule에만 적용한다. 채널·파일·웹훅 설정은 원형 보존."""
+    if trigger_type is None:
+        trigger_type = params.get("type")
+        if trigger_type is None and params.get("op") == "update":
+            target = params.get("trigger_id") or params.get("id")
+            if target:
+                existing = _get_trigger(target).get("trigger") or {}
+                trigger_type = existing.get("type")
+        trigger_type = trigger_type or "schedule"
+    if trigger_type not in ("schedule", "channel", "file", "webhook"):
+        return {"error": f"지원하지 않는 트리거 타입: {trigger_type}"}
+    if trigger_type == "schedule":
+        return _resolve_schedule_config(params)
+    if params.get("cron"):
+        return {"error": "cron은 schedule 트리거에서만 사용할 수 있습니다."}
+    config = params.get("config", {})
+    if not isinstance(config, dict):
+        return {"error": "config 는 객체여야 합니다."}
+    return {"config": dict(config)}
+
+
 def load_triggers() -> dict:
     """트리거 파일 로드 (손상 시 빈 설정으로 덮어쓰기 방지 — safe_store)"""
     from safe_store import safe_load_json
@@ -458,7 +480,7 @@ def _create_trigger(target: str, params: dict, project_path: str = None) -> dict
         return {"error": "pipeline이 필요합니다. 실행할 IBL 코드를 지정하세요."}
 
     # config 산출 — cron 문자열을 calendar config 로 내부 해소(없으면 config 직접 사용)
-    cfg = _resolve_schedule_config(params)
+    cfg = resolve_trigger_config(params, trigger_type)
     if "error" in cfg:
         return {"error": cfg["error"]}
     config = cfg["config"]
@@ -507,32 +529,34 @@ def _update_trigger_locked(target: str, params: dict) -> dict:
     data = load_triggers()
     for t in data.get("triggers", []):
         if t["id"] == target or t.get("name") == target:
-            # 수정 가능 필드
-            for key in ("name", "pipeline", "enabled", "type"):
-                if key in params:
-                    t[key] = params[key]
-            if params.get("config"):
-                norm = normalize_schedule_config(params["config"])
-                if "error" in norm:
-                    return {"error": norm["error"]}
-                t["config"] = norm["config"]
-
-            # cron 문자열로 스케줄 수정 시 calendar config 로 내부 해소
-            if params.get("cron") and not params.get("config"):
-                parsed = _cron_to_config(params["cron"])
-                if "error" in parsed:
-                    return {"error": parsed["error"]}
-                t["config"] = parsed
-
+            old = dict(t)
+            updated = {**t, **{k: params[k] for k in ("name", "pipeline", "enabled", "type")
+                              if k in params}}
+            if not updated.get("name") or not updated.get("pipeline"):
+                return {"error": "name과 pipeline은 비어 있을 수 없습니다."}
+            cfg_params = dict(params)
+            if "config" not in params and not params.get("cron"):
+                cfg_params["config"] = (t.get("config", {}) if old["type"] == updated["type"] else {})
+            cfg = resolve_trigger_config(cfg_params, updated["type"])
+            if "error" in cfg:
+                return {"error": cfg["error"]}
+            updated["config"] = cfg["config"]
+            t.update(updated)
             _save_triggers(data)
 
-            # schedule 타입이면 calendar_manager도 동기화
+            # 이전 타입으로 삭제하고 새 타입으로 등록한다. schedule→channel도 옛 타이머를 회수.
+            warnings = []
+            actions = []
+            if old["type"] == "schedule":
+                actions.append((old, "delete"))
             if t["type"] == "schedule":
-                # 기존 삭제 후 재등록
-                _sync_schedule_trigger(t, "delete")
-                _sync_schedule_trigger(t, "add")
-
-            return {"trigger": t, "message": "트리거 수정 완료"}
+                actions.append((t, "add"))
+            for trigger, action in actions:
+                result = _sync_schedule_trigger(trigger, action)
+                if isinstance(result, dict) and result.get("error"):
+                    warnings.append(result["error"])
+            return {"trigger": t, "message": "트리거 수정 완료",
+                    **({"warning": "; ".join(warnings)} if warnings else {})}
 
     return {"error": f"트리거를 찾을 수 없습니다: {target}"}
 
@@ -655,8 +679,13 @@ def _trigger_history(target: str, params: dict) -> dict:
         # 특정 트리거의 이력
         history = [h for h in history if h.get("trigger_id") == target]
 
-    limit = params.get("limit", 20)
-    history = history[-limit:]
+    try:
+        limit = int(params.get("limit", 20))
+        if limit < 0:
+            raise ValueError
+    except (TypeError, ValueError):
+        return {"error": "limit은 0 이상 정수여야 합니다."}
+    history = history[-limit:] if limit else []
     history.reverse()  # 최신 순
 
     # list 와 같은 이유의 items 병행 방출(history op 도 목록이다).

@@ -209,17 +209,25 @@ def _direct_search(tool_input, yt):
     # `query: [a, b, c]` 로 줄이려 했던 자리. [sense:search]{source:"gnews"} 의 queries 와 같은 통화 —
     # 검색어마다 돌려 query 태그를 붙이고 video_id 로 중복을 걷어 한 목록(items)+sections 로.
     _queries = tool_input.get('queries')
-    if _queries:
+    if _queries is not None:
         import re as _re
         if isinstance(_queries, str):
             _queries = _re.split(r"[,\n]", _queries)
-        _queries = [str(q).strip() for q in _queries if str(q).strip()]
+        if not isinstance(_queries, list) or any(not isinstance(q, str) for q in _queries):
+            return {"success": False, "error": "queries는 검색어 문자열 배열 또는 쉼표 문자열이어야 합니다."}
+        _queries = [q.strip() for q in _queries if q.strip()]
         if not _queries:
             return {"success": False, "error": "검색어(queries)가 비었습니다."}
         count = tool_input.get('limit', tool_input.get('count', 5))
-        items, seen, sections = [], set(), []
+        items, seen, sections, errors = [], set(), [], []
         for q in _queries:
+            from workflow_verdict import is_error_result
             r = yt.search_youtube(query=q, count=count)
+            if not isinstance(r, dict) or is_error_result(r):
+                error = (r.get("error") or r.get("message") or "검색 실패") if isinstance(r, dict) else "검색 응답 형식 오류"
+                errors.append({"query": q, "error": error})
+                sections.append({"query": q, "count": 0, "success": False, "error": error})
+                continue
             rows = r.get('results') if isinstance(r, dict) else None
             rows = rows if isinstance(rows, list) else (r.get('items') if isinstance(r, dict) and isinstance(r.get('items'), list) else [])
             n = 0
@@ -231,8 +239,12 @@ def _direct_search(tool_input, yt):
                     seen.add(vid)
                 items.append({**row, "query": q} if isinstance(row, dict) else row)
                 n += 1
-            sections.append({"query": q, "count": n})
-        return {"success": True, "queries": _queries, "count": len(items), "sections": sections, "items": items}
+            sections.append({"query": q, "count": n,
+                             **{k: r[k] for k in ("clamped", "requested", "message") if k in r}})
+        return {"success": not errors, "queries": _queries, "count": len(items),
+                "sections": sections, "items": items,
+                **({"partial": bool(items), "errors": errors,
+                    "error": f"{len(_queries)}개 검색 중 {len(errors)}개 실패"} if errors else {})}
     result = yt.search_youtube(
         query=tool_input.get('query', ''),
         count=tool_input.get('limit', tool_input.get('count', 5)))

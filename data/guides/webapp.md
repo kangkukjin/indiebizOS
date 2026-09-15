@@ -58,3 +58,8 @@
 - 2026-08-20 실측(서비스워커 함정): **Cloudflare 정적자산은 `/index.html` 을 307 로 `/` 에 넘긴다.** 이걸 모르고 precache 목록에 `/index.html` 을 넣으면 *리다이렉트된 응답*이 캐시에 들어가고, navigate 요청(redirect mode=manual)에 그걸 돌려주는 순간 브라우저가 network error 를 내 **오프라인에서 앱이 안 뜬다**. 앱 껍데기는 `/` 하나로만 다루고, 배경 갱신 때도 `res.redirected` 를 확인해 넣을 것. 검증은 `caches.match('/')` 의 `redirected === false`.
 - 2026-08-20 실측(오프라인 검증법): 헤드리스 브라우저 IBL 액션엔 네트워크 차단 op 이 없다 — **Playwright 를 직접 몰아 `context.set_offline(True)` 후 reload** 하면 진짜 비행기 모드 등가 검증이 된다(`.venv/bin/python` + `PLAYWRIGHT_BROWSERS_PATH=ms-playwright`). 설치 가능 여부는 CDP `Page.getAppManifest` 로 브라우저에게 직접 물어 `errors` 가 빈 배열인지 본다(육안 추정 금지).
 - 2026-08-20 실측(연락처): 안드로이드 폰 연락처 직접 읽기는 **Contact Picker API**(`navigator.contacts.select`, 안드 Chrome 전용·사용자 제스처 필요)로 가능하다 — 다만 기능 감지 후 **.vcf 임포트 폴백 필수**. 폰이 내보내는 .vcf 는 대개 **vCard 2.1 + QUOTED-PRINTABLE** 이라 QP 디코드(소프트 줄바꿈 `=` 이어붙이기 포함) 없이는 한글 이름이 전부 깨진다.
+
+
+## 관련 어휘 동작 확인
+
+수동 등록·삭제는 동일 경로의 읽기·수정·저장을 직렬화한다. status의 alive는 2xx/3xx 및 인증 요구 401/403에서 true, 404/410/5xx 등에서 false다. HTTP 생존 검사이므로 앱 기능 전체의 정상 여부를 보장하지 않는다.

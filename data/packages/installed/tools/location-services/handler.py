@@ -944,6 +944,7 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
                 "current": "temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m",
                 "daily": "temperature_2m_max,temperature_2m_min,weather_code,precipitation_sum,sunrise,sunset",
                 "timezone": "auto",
+                "wind_speed_unit": "ms",
                 "forecast_days": min(days, 7),
             },
             timeout=10
@@ -966,6 +967,7 @@ def get_weather_openmeteo(city: str = None, lat: float = None, lon: float = None
                 "feels_like": current.get("apparent_temperature"),
                 "humidity": current.get("relative_humidity_2m"),
                 "wind_speed": current.get("wind_speed_10m"),
+                "wind_speed_unit": "m/s",
                 "condition": _WMO_CODES.get(current.get("weather_code", -1), "알 수 없음"),
             },
             "items": []
@@ -1030,7 +1032,7 @@ def execute(tool_input: dict, context) -> str:
             # 코드베이스 관용(from/origin·lon/lng)과 동일.
             city=tool_input.get("city") or tool_input.get("location") or tool_input.get("place"),
             lat=tool_input.get("lat"),
-            lon=tool_input.get("lon") or tool_input.get("lng"),
+            lon=(tool_input["lon"] if tool_input.get("lon") is not None else tool_input.get("lng")),
             days=tool_input.get("days", 3)
         )
         return json.dumps(result, ensure_ascii=False, indent=2)

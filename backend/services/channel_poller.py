@@ -814,6 +814,10 @@ class ChannelPoller:
             kw = (cfg.get("keyword") or "").strip().lower()
             if kw and kw not in haystack:
                 continue
+            from common.value_semantics import text_match
+            subject_contains = (cfg.get("subject_contains") or "").strip()
+            if subject_contains and not text_match("contains", subject or "", subject_contains):
+                continue
             # 같은 메시지로 같은 트리거 재발화 방지 (external_id 우선, 없으면 본문 일부)
             fire_key = f"{t.get('id')}:{external_id or haystack[:48]}"
             if fire_key in self._fired_channel_triggers:
@@ -835,25 +839,31 @@ class ChannelPoller:
             try:
                 from ibl_parser import parse as ibl_parse, IBLSyntaxError
                 from workflow_engine import execute_pipeline
-                try:
-                    steps = ibl_parse(pipeline)
-                except IBLSyntaxError as e:
-                    self._log(f"채널 트리거 IBL 문법 오류: {e}")
-                    return
+                steps = ibl_parse(pipeline)  # 구문 실패도 바깥 except에서 실패 이력으로 남긴다.
                 msg_ctx = f"[{contact_type}] {contact_value}: {subject or ''} {content or ''}".strip()
                 self._log(f"채널 트리거 발화: {trigger.get('name')} ← {contact_type} 메시지")
-                result = execute_pipeline(steps, ".", context={"_prev_result": msg_ctx},
+                from calendar_actions import CalendarActionsMixin
+                from workflow_verdict import is_error_result, err_reason_of
+                run_path = CalendarActionsMixin._owner_run_path(trigger.get("project_id"))
+                result = execute_pipeline(steps, run_path, context={"_prev_result": msg_ctx},
                                           agent_id="system_ai")
+                success = not is_error_result(result)
+                final = result.get("final_result", result) if isinstance(result, dict) else result
+                rows = final.get("items") if isinstance(final, dict) else None
+                error = err_reason_of(result) if not success else None
                 try:
                     from trigger_engine import add_history
-                    add_history(trigger.get("id"), trigger.get("name", ""), True, str(result)[:200])
+                    add_history(trigger.get("id"), trigger.get("name", ""), success, str(result)[:500],
+                                error=error or ("파이프라인 실행 실패" if not success else None),
+                                count=len(rows) if isinstance(rows, list) else None,
+                                shape="items" if isinstance(rows, list) else None)
                 except Exception:
                     pass
             except Exception as e:
                 self._log(f"채널 트리거 실행 실패: {e}")
                 try:
                     from trigger_engine import add_history
-                    add_history(trigger.get("id"), trigger.get("name", ""), False, str(e)[:200])
+                    add_history(trigger.get("id"), trigger.get("name", ""), False, str(e)[:200], error=str(e))
                 except Exception:
                     pass
 

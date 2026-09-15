@@ -3,7 +3,7 @@ nodes:
     actions:
       search:
         lands_on: hub
-        path_audited: {at: "2026-09-15", impl: "bdc9d886a725ddb9"}
+        path_audited: {at: "2026-09-15", impl: "541b8789aa537342"}
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -31,17 +31,31 @@ nodes:
         target_key: query
       crawl:
         lands_on: hub
-        path_audited: {at: "2026-09-15", impl: "bdc9d886a725ddb9"}
+        path_audited: {at: "2026-09-15", impl: "541b8789aa537342"}
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'
-        description: 웹페이지 원문 읽기 (URL 필요). 전문을 보관하고 items=문단 단위로 전달. 첫 표시는 문단 수와 무관하게 6만자까지, 추가 읽기는 저장 변수·source_ref 사용. 같은 URL은 캐시 재사용, 새 내용은 refresh:true.
+        description: 웹페이지 수집 — op:content(기본)=본문 문단, links=링크 문구·실제 주소, metadata=제목·대표주소·발행일·수정일·작성자의 원문 근거. 본문에서 대목 찾기는 [fn:본문에서찾기]. 동일 URL 스냅샷을 재사용하고 새 내용은 refresh:true.
         group: research
-        target_description: 읽을 페이지 URL (http/https). max_length는 모델 표시 글자 예산(기본 60000)이며 원문·IBL 후속 처리량을 자르지 않는다. 새 내용 갱신은 refresh:true, 더 읽기는 저장 변수·source_ref.path.
+        target_description: 'url 필수(http/https). op=content(기본): 전문·문단 items(url·paragraph_index), 제목은 봉투 title(주소마다읽기는 각 문단에 title도 보존). links: items(text·url·href·source_url·title·rel·link_index), 상대 링크를 해소하며 HTTP(S)만 수집한다. metadata: 관측별 items(field·value·raw·source·source_url·url·title), 날짜 normalized는 ISO 파싱 가능할 때만, 없으면 null. 서로 다른 발행일은 각각 보존하고 일반 time은 date로 남겨 발행일로 추정하지 않는다. 구조가 없는 PDF는 links/metadata 실패. 부분 구조 수집은 structure_errors로 알린다. max_length는 모델 표시 예산(기본 60000)이며 원문·후속 처리량을 자르지 않는다. 캐시 만료·미완성 또는 refresh:true면 재수집, 더 읽기는 저장 변수·source_ref.path. 본문 대목 발췌: >> [fn:본문에서찾기]{패턴:"수영|사우나",문맥:1,개수:5}.'
         router: handler
         tool: crawl_website
         implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.
-        target_key: url
+        target_key: op
+        params:
+          url: string
+          max_length: integer
+          refresh: boolean
+        ops:
+          default: content
+          values:
+            content: 본문 읽기 — 전문·출처·문단 위치 보존
+            links: 링크 찾기 — 문구·실제 주소·출처 페이지
+            metadata: 페이지 정보 확인 — 발행일·수정일·작성자·대표주소의 원문 근거
+          fixture:
+            content: '[sense:crawl]{op:"content",url:"https://example.com"}'
+            links: '[sense:crawl]{op:"links",url:"https://example.com"}'
+            metadata: '[sense:crawl]{op:"metadata",url:"https://example.com"}'
         # 뉴스(구 search_gnews)·HN(구 search_hn)·네이버(구 web-kr search_naver)·가디언(구 study
         # search_guardian)은 2026-08-05 어휘 압축 (2)에서 source 축으로 흡수 — 검색 5액션 → search 하나.
         # 신문 계기(NewspaperInstrument.tsx)는 [sense:search]{source: gnews|hn} 배치 경로를 쓴다.
@@ -333,7 +347,7 @@ tool_json:
           description: guardian 전용 — 종료일 (YYYY-MM-DD)
       required: []
   - name: crawl_website
-    description: '웹페이지의 텍스트 내용을 추출합니다.
+    description: '웹페이지를 op로 구분해 수집합니다. content(기본)=본문 문단, links=링크 문구와 실제 주소, metadata=발행일·수정일·작성자·제목·대표주소의 관측 근거. 링크·메타정보는 별도 AI 호출 없이 추출하며 값이 충돌하면 모두 남깁니다. PDF의 구조 조회는 지원하지 않습니다.
 
 
       ## 반환값
@@ -371,6 +385,9 @@ tool_json:
     input_schema:
       type: object
       properties:
+        op:
+          type: string
+          description: content=본문 읽기 / links=링크 찾기 / metadata=페이지 정보 확인. 더 읽기는 저장 변수, 본문 대목은 fn:본문에서찾기.
         url:
           type: string
           description: 크롤링할 URL

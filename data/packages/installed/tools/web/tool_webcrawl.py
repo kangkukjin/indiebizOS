@@ -33,6 +33,11 @@ from bs4 import BeautifulSoup, Comment, NavigableString
 
 # TLS 지문 위장 단일 소스 (감사 ⑥) — 미설치 환경이면 requests 로 폴백.
 from common.http_fetch import CHROME_UA, chrome_get, has_curl_cffi
+from common.pkg_utils import load_sibling
+
+
+def _structure():
+    return load_sibling(__file__, "webcrawl_structure")
 
 # User-Agent 설정 (requests 폴백용 — curl_cffi는 impersonate가 헤더 일체를 관리)
 HEADERS = {
@@ -404,7 +409,7 @@ def _extract_pdf_response(response, requested_url: str, pdf_url: str,
                 pass
 
 
-def _crawl_static(url: str, max_length: int) -> dict:
+def _crawl_static(url: str, max_length: int, *, op="content") -> dict:
     """정적 크롤링. curl_cffi(TLS 크롬 위장)가 있으면 그것으로, 없으면 requests."""
     try:
         response = _http_get(url)
@@ -421,7 +426,7 @@ def _crawl_static(url: str, max_length: int) -> dict:
 
         # 얇은 전자책 뷰어 — iframe/embed/object의 실제 PDF를 한 번 해소한다.
         pdf_url, viewer_title = _pdf_target_from_viewer(html, final_url)
-        if status < 400 and pdf_url:
+        if status < 400 and pdf_url and op == "content":
             pdf_response = _http_get(pdf_url)
             if pdf_response.status_code < 400 and _is_pdf_response(pdf_response):
                 resolved_pdf = str(getattr(pdf_response, "url", "") or pdf_url)
@@ -431,6 +436,8 @@ def _crawl_static(url: str, max_length: int) -> dict:
         # 에러 페이지도 파싱한다 — 봇차단/로그인 벽 진단에 본문이 필요
         title, text = _parse_html(html, url)
         reason = _diagnose(status, final_url, url, text, title)
+        if op != "content" and reason == "insufficient_content":
+            reason = None  # 짧은 링크 목록/메타정보만 있는 HTML도 정상 수집이다.
         if reason is None and _needs_render(url):
             reason = "insufficient_content"  # iframe 전용 호스트 — 정적 텍스트는 본문이 아님
 
@@ -445,6 +452,7 @@ def _crawl_static(url: str, max_length: int) -> dict:
             "length": original_length,
             "truncated": truncated,
             "method": method,
+            "_page_structure": _structure().extract(html, final_url),
         }
         if status >= 400:
             result["error"] = f"HTTP 에러: {status}"
@@ -521,7 +529,7 @@ def _get_browser_session():
         return None
 
 
-async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
+async def _crawl_playwright_async(session, url: str, max_length: int, *, op="content") -> dict:
     """Playwright(Chromium)로 JS 렌더링 후 본문 텍스트 추출.
 
     - 이미 떠 있는 브라우저(로그인 세션·headful 창 포함)가 있으면 새 탭으로 재사용 —
@@ -555,8 +563,12 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
             await asyncio.sleep(2)
 
         # 모든 프레임의 텍스트 수집 (메인 프레임 먼저) — iframe 본문 사이트 대응
-        texts = []
+        texts, structures, structure_errors = [], [], []
         for frame in page.frames:
+            try:
+                structures.append(_structure().extract(await frame.content(), frame.url))
+            except Exception as exc:
+                structure_errors.append({"source_url": getattr(frame, "url", page.url), "error": str(exc)})
             try:
                 t = await frame.inner_text("body")
             except Exception:
@@ -571,7 +583,7 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
         if hasattr(session, "save_storage_state"):
             await session.save_storage_state()
 
-        if not text or len(text) < _MIN_CONTENT_LENGTH:
+        if op == "content" and (not text or len(text) < _MIN_CONTENT_LENGTH):
             result = {"success": False, "error": "Playwright에서도 콘텐츠 부족", "url": url, "method": "playwright"}
             reason = _diagnose(status, final_url, url, text, title)
             if reason:
@@ -584,6 +596,8 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
         lines = [ln.strip() for ln in text.splitlines()]
         text = re.sub(r"\n{3,}", "\n\n", "\n".join(lines)).strip()
         reason = _diagnose(status, final_url, url, text, title)
+        if op != "content" and reason == "insufficient_content":
+            reason = None
         text, original_length, truncated = _truncate(text, max_length)
         result = {
             "success": True,
@@ -595,6 +609,7 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
             "method": "playwright",
             "http_status": status,
             "resolved_url": final_url,
+            "_page_structure": _structure().combine(structures, structure_errors),
         }
         if reason:
             result["reason"] = reason
@@ -609,7 +624,7 @@ async def _crawl_playwright_async(session, url: str, max_length: int) -> dict:
                 pass
 
 
-async def _crawl_chrome_async(driver, url: str, max_length: int) -> dict:
+async def _crawl_chrome_async(driver, url: str, max_length: int, *, op="content") -> dict:
     """Chrome MCP도 요청별 탭·최종 URL·실제 HTTP 상태를 확인한다."""
     tab_id = None
     try:
@@ -650,14 +665,37 @@ async def _crawl_chrome_async(driver, url: str, max_length: int) -> dict:
         content = await driver.call_tool("get_page_text", {"tabId": tab_id})
         text = content.get("text", "") if isinstance(content, dict) else ""
         reason = _diagnose(status, final_url, url, text, title)
-        if not text or len(text) < _MIN_CONTENT_LENGTH:
+        if op == "content" and (not text or len(text) < _MIN_CONTENT_LENGTH):
             return {"success": False, "url": url, "method": "chrome_mcp",
                     "reason": reason, "error": "Chrome MCP에서도 콘텐츠를 추출하지 못함"}
+        structures, structure_errors = [], []
+        try:
+            html_result = await driver.call_tool("javascript_tool", {
+                "action": "javascript_exec", "tabId": tab_id,
+                "text": 'JSON.stringify({html:document.documentElement.outerHTML,frames:document.querySelectorAll("iframe").length})',
+            })
+            if isinstance(html_result, dict) and "html" not in html_result:
+                html_result = html_result.get("result", html_result.get("text"))
+            if isinstance(html_result, str):
+                html_result = json.loads(html_result)
+            if not isinstance(html_result, dict) or not isinstance(html_result.get("html"), str):
+                raise ValueError("Chrome DOM 구조를 읽지 못했습니다")
+            structures.append(_structure().extract(html_result["html"], final_url))
+            if html_result.get("frames"):
+                structure_errors.append({"source_url": final_url, "error": "Chrome 구조 정보는 메인 문서만 수집합니다. iframe 구조 미수집."})
+        except Exception as exc:
+            structure_errors.append({"source_url": final_url, "error": str(exc)})
+        if op != "content" and not structures:
+            return {"success": False, "url": url, "reason": "structure_unavailable",
+                    "error": "Chrome DOM 구조 수집 실패", "method": "chrome_mcp"}
+        if op != "content" and reason == "insufficient_content":
+            reason = None
         text = re.sub(r'\n{3,}', '\n\n', '\n'.join(line.strip() for line in text.splitlines())).strip()
         text, original_length, truncated = _truncate(text, max_length)
         result = {"success": True, "url": url, "resolved_url": final_url,
                   "http_status": status, "title": title, "text": text,
-                  "length": original_length, "truncated": truncated, "method": "chrome_mcp"}
+                  "length": original_length, "truncated": truncated, "method": "chrome_mcp",
+                  "_page_structure": _structure().combine(structures, structure_errors)}
         if reason:
             result["reason"] = reason
         return result
@@ -766,12 +804,14 @@ _REASON_HINTS = {
 
 
 def crawl_website(url: str, max_length: int = 60000, *, refresh: bool = False,
-                  project_path: str = None) -> dict:
+                  project_path: str = None, op: str = "content") -> dict:
     """원문은 전문 보관·통화로 반환하고 max_length는 모델 표시 예산만 선언한다.
 
     동일 URL의 읽기는 캐시를 재사용한다. 새 내용 확인은 refresh=True로 명시한다.
     원문 파일(source_ref)은 표시량·갱신 호출과 독립된 스냅샷이다.
     """
+    if op not in ("content", "links", "metadata"):
+        return {"success": False, "items": [], "error": "op은 content/links/metadata 중 하나여야 합니다."}
     if not isinstance(max_length, int) or isinstance(max_length, bool) or max_length < 1:
         return {"success": False, "error": "max_length는 양의 정수(모델 표시량)여야 합니다."}
     if not isinstance(refresh, bool):
@@ -784,18 +824,20 @@ def crawl_website(url: str, max_length: int = 60000, *, refresh: bool = False,
     from common.pkg_utils import load_singleton
     store = load_singleton(__file__, "webcrawl_store")
     try:
-        result = store.fetch_once(url, lambda: _crawl_website_impl(url, None),
-                                  refresh=refresh, project_path=project_path)
+        fetch = (lambda: _crawl_website_impl(url, None)) if op == "content" else (
+            lambda: _crawl_website_impl(url, None, op=op))
+        result = store.fetch_once(url, fetch, refresh=refresh, project_path=project_path, op=op)
     except OSError as exc:
         return {"success": False, "url": url, "error": f"원문 보관 실패: {exc}",
                 "reason": "source_storage_failed"}
+    result = _structure().project(result, op)
     if result.get("success"):
         result["_display"] = {"max_chars": max_length, "mirror_fields": ["text"],
                               "limit_rows": False}
     return result
 
 
-def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
+def _crawl_website_impl(url: str, max_length: int | None = None, *, op="content") -> dict:
     """
     웹사이트를 크롤링하여 텍스트 내용을 추출한다.
     1단계: curl_cffi 정적 (TLS 크롬 위장, ~1초)
@@ -811,7 +853,7 @@ def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
     # gnews 래퍼면 실제 기사 URL 로 해소 후 정상 사다리 (해소 실패 시 원 URL 로 진행)
     resolved = _resolve_google_news(url)
     if resolved and not _GNEWS_ARTICLE_RE.match(resolved):  # 재귀 루프 가드
-        result = _crawl_website_impl(resolved, max_length)  # 수집만 재귀 — 보관·표시는 바깥 경계 한 번
+        result = _crawl_website_impl(resolved, max_length, op=op)  # 수집만 재귀 — 보관·표시는 바깥 경계 한 번
         result["resolved_from"] = url
         return result
 
@@ -826,7 +868,8 @@ def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
         stages.append({"stage": stage, "ran": ran, "detail": detail})
 
     # 1단계: 정적 크롤링 — 깨끗하면 바로 반환
-    static = _crawl_static(url, max_length)
+    options = {} if op == "content" else {"op": op}
+    static = _crawl_static(url, max_length, **options)
     attempts.append(static)
     _note("정적(curl_cffi)", True,
           static.get("error") or static.get("reason") or f"본문 {static.get('length', 0)}자")
@@ -840,7 +883,7 @@ def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
         _note("Chrome MCP", False, "건너뜀 — 크롬이 연결돼 있지 않음(자동 연결하지 않는다)")
     else:
         try:
-            chrome_result = _run_async(_crawl_chrome_async(driver, url, max_length))
+            chrome_result = _run_async(_crawl_chrome_async(driver, url, max_length, **options))
             attempts.append(chrome_result)
             _note("Chrome MCP", True,
                   chrome_result.get("error") or chrome_result.get("reason")
@@ -856,7 +899,7 @@ def _crawl_website_impl(url: str, max_length: int | None = None) -> dict:
         _note("Playwright", False, "건너뜀 — 브라우저 세션을 얻지 못함")
     else:
         try:
-            pw_result = _run_async(_crawl_playwright_async(session, url, max_length))
+            pw_result = _run_async(_crawl_playwright_async(session, url, max_length, **options))
             attempts.append(pw_result)
             _note("Playwright", True,
                   pw_result.get("error") or pw_result.get("reason")
@@ -919,4 +962,5 @@ def use_tool(tool_input: dict) -> dict:
     """도구 인터페이스"""
     url = tool_input.get('url', '')
     max_length = tool_input.get('max_length', 60000)
-    return crawl_website(url, max_length, refresh=tool_input.get('refresh', False))
+    return crawl_website(url, max_length, refresh=tool_input.get('refresh', False),
+                         op=tool_input.get('op', 'content'))

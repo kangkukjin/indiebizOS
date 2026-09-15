@@ -145,7 +145,7 @@ def test_all_six_exposed_in_map_and_leaf_actions_with_scope_filter(tmp_path, mon
     monkeypatch.setattr(ibl_access, '_get_nodes_path', lambda: ROOT / 'data/ibl_nodes.yaml')
     monkeypatch.setattr(ibl_access, '_idioms_cache', {'text': None, 't': 0, 'key': None, 'anchors': {}})
     env = ibl_access.build_environment(compact=compact)
-    assert env.count('↳ 관용구') == 6
+    assert env.count('↳ 관용구') == len(entries)
     for e in entries:
         assert f"[fn:{e['name']}]" in ibl_access.idioms_map(None)
     for name in ('원장에누적', '위치마다읽기', '최신범위읽기', '묶어순위내기'):

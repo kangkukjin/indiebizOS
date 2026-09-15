@@ -1,0 +1,42 @@
+[
+  {
+    "intent": "페이지 본문을 문단 단위로 읽어줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"content\"}"
+  },
+  {
+    "intent": "웹페이지의 실제 링크 주소와 링크 문구를 수집해줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"links\"}"
+  },
+  {
+    "intent": "Collect publication date evidence and authors from the page",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"metadata\"}"
+  },
+  {
+    "intent": "페이지에서 관측한 게시일만 근거와 함께 골라줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"metadata\"} >> [table:filter]{where:{field:\"field\",op:\"eq\",value:\"published_at\"}}"
+  },
+  {
+    "intent": "페이지의 대표 주소 후보를 찾아줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"metadata\"} >> [table:filter]{where:{field:\"field\",op:\"eq\",value:\"canonical_url\"}}"
+  },
+  {
+    "intent": "같은 링크가 여러 번 나오면 하나로 모아줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"links\"} >> [table:dedup]{by:\"url\"}"
+  },
+  {
+    "intent": "페이지 링크 중 More라고 적힌 링크를 찾아줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"links\"} >> [table:filter]{where:{field:\"text\",op:\"matches\",value:\"More\"}}"
+  },
+  {
+    "intent": "캐시를 갱신해서 최신 메타정보를 읽어줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",op:\"metadata\",refresh:true}"
+  },
+  {
+    "intent": "본문을 300자 미리보기로 읽되 전체 문단을 남겨줘",
+    "ibl_code": "[sense:crawl]{url:\"https://example.com\",max_length:300}"
+  },
+  {
+    "intent": "Find matching paragraphs with adjacent context from the same URL",
+    "ibl_code": "[{url:\"https://example.com\",text:\"before\"},{url:\"https://example.com\",text:\"match\"}] >> [table:filter]{where:{field:\"text\",op:\"matches\",value:\"match\"},context:{before:1,after:1,by:\"url\",limit:5}}"
+  }
+]

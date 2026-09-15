@@ -32,7 +32,7 @@ def text_to_blocks(title, text):
     return blocks or [{"type": "paragraph", "text": str(text or "")}]
 
 
-def fetch_once(url, fetch, *, refresh=False, project_path=None):
+def fetch_once(url, fetch, *, refresh=False, project_path=None, op="content"):
     """같은 소유 범위·URL은 짧게 재사용, 원문 파일은 spill의 24h 수명을 따른다.
 
     스냅샷은 불변 파일이다. refresh는 새 파일을 만들므로 이전 ref를 덮지 않는다.
@@ -40,7 +40,7 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None):
     """
     from common.spill import spill_dir, spill_write
     ttl = max(0, int(_policy()["reuse_seconds"]))
-    key = hashlib.sha256(f"v2|{_scope(project_path)}|{url}".encode()).hexdigest()
+    key = hashlib.sha256(f"v3|{_scope(project_path)}|{url}".encode()).hexdigest()
     index = os.path.join(spill_dir(), f"crawl_cache_{key}.json")
     with _LOCKS[int(key[:8], 16) % len(_LOCKS)]:
         now = time.time()
@@ -54,6 +54,10 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None):
                     if not isinstance(result, dict) or not result.get("success") \
                             or not isinstance(result.get("text"), str) or not isinstance(result.get("items"), list):
                         raise ValueError("크롤 원문 캐시 형식 손상")
+                    if op == "content" and result.get("_structure_only"):
+                        raise ValueError("구조 전용 수집은 본문 완전성을 보장하지 않습니다")
+                    if op != "content" and result.get("_page_structure", {}).get("errors"):
+                        raise ValueError("불완전한 구조 정보는 다시 수집합니다")
                     return _decorate(result, saved, True, ttl)
             except (OSError, ValueError, KeyError, TypeError):
                 pass  # 만료·소실 캐시만 재수집 — 원문을 미리보기로 대체하지 않는다
@@ -62,6 +66,12 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None):
             return result
         result = dict(result)
         result["items"] = text_to_blocks(result.get("title"), result.get("text"))
+        # 문단 위치와 출처는 여러 URL을 합쳐도 살아 있어야 한다.
+        for paragraph_index, row in enumerate(result["items"], 1):
+            row.update(url=result.get("resolved_url") or url,
+                       paragraph_index=paragraph_index)
+        if op != "content" and result.get("length", 0) < 200:
+            result["_structure_only"] = True
         ref = spill_write(json.dumps(result, ensure_ascii=False), tag="crawl_source")["ref"]
         saved = {"fetched_at": time.time(), "ref": ref}
         if not result.get("reason") and not result.get("truncated"):

@@ -625,7 +625,8 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
     양쪽 모두에서 비어 있었다. 이제 이 블록은 *지도* 다(심층기억 원칙 "지도가 있으면 단서는 지도에서 온다"):
     가지별로 모든 이름을 뜻 한 줄과 서명으로 싣고, 무엇을 부를지는 모델이 이번 일과 맞춰 본다.
     예산(IDIOMS_MAP_CHARS)을 넘으면 쓰인 것 → 가지별 라운드로빈 순으로 자른다(_spread_by_topic).
-    허용 노드 밖 어휘가 든 것·한 문장짜리는 뺀다. 서명은 원장 문에서 계산해 저장한 것만 가르친다(미상이면 미상이라 말한다)."""
+    허용 노드 밖 어휘는 뺀다. 한 문장짜리는 수동 선정집의 always_on 본문과 일치할 때만 노출한다.
+    서명은 원장 문에서 계산해 저장한 것만 가르친다(미상이면 미상이라 말한다)."""
     import re as _re
     import sqlite3
     import time
@@ -670,8 +671,11 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                 nodes = set(_re.findall(r"\[([a-z_-]+):", code)) - _FN_RESERVED_NAMES
                 if allowed is not None and not nodes <= set(allowed):
                     continue
-                if len(_split_sentences(code)) < 2:
-                    continue                       # 한 문장은 낱말 — 이름으로 부를 것이 없다
+                lesson = teaching.get(r[5], {})
+                authored = (lesson.get("always_on") is True
+                            and lesson.get("body", "").strip() == code.strip())
+                if len(_split_sentences(code)) < 2 and not authored:
+                    continue  # 자동 단문 별칭은 제외. 사람이 선정한 인자 특화 관용구는 허용.
                 kept.append(r)
             # 예산 안에서 고른다: 쓰인 것 먼저, 남은 자리는 가지별 하나씩 — 그 뒤 가지별로 모아 그린다.
             chosen, budget = [], IDIOMS_MAP_CHARS

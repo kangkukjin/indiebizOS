@@ -726,8 +726,34 @@ def _http_body(tool_input):
     return load_module("tool_http").probe({**tool_input, "op": "body"})
 
 
-_OP_DISPATCHERS = {"http_probe": {"head": _http_head, "body": _http_body}}
-_OP_DEFAULTS = {"http_probe": "head"}
+def _crawl_content(tool_input, context):
+    return _crawl_mode(tool_input, context, "content")
+
+
+def _crawl_links(tool_input, context):
+    return _crawl_mode(tool_input, context, "links")
+
+
+def _crawl_metadata(tool_input, context):
+    return _crawl_mode(tool_input, context, "metadata")
+
+
+def _crawl_mode(tool_input, context, op):
+    url = tool_input.get("url")
+    if not url:
+        return {"success": False, "items": [], "error": "URL이 제공되지 않았습니다."}
+    result = load_module("tool_webcrawl").crawl_website(
+        url, tool_input.get("max_length", 60000), op=op,
+        refresh=tool_input.get("refresh", False), project_path=context.project_path)
+    if op == "content" and result.get("success") and result.get("text") and "items" not in result:
+        result["items"] = _text_to_blocks(result.get("title"), result.get("text"))
+    return result
+
+
+_OP_DISPATCHERS = {"http_probe": {"head": _http_head, "body": _http_body},
+                   "crawl_website": {"content": _crawl_content, "links": _crawl_links,
+                                     "metadata": _crawl_metadata}}
+_OP_DEFAULTS = {"http_probe": "head", "crawl_website": "content"}
 
 
 def execute(tool_input: dict, context):
@@ -779,21 +805,11 @@ def execute(tool_input: dict, context):
 
     # 웹페이지 크롤링
     elif tool_name == "crawl_website":
-        url = tool_input.get("url")
-        max_length = tool_input.get("max_length", 60000)
-
-        if not url:
-            return format_json({"success": False, "error": "URL이 제공되지 않았습니다."})
-
+        op = tool_input.get("op", _OP_DEFAULTS["crawl_website"])
+        if not isinstance(op, str) or op not in _OP_DISPATCHERS["crawl_website"]:
+            return format_json({"success": False, "items": [], "error": "op은 content/links/metadata 중 하나여야 합니다."})
         try:
-            tool_webcrawl = load_module("tool_webcrawl")
-            result = tool_webcrawl.crawl_website(url, max_length,
-                                                refresh=tool_input.get("refresh", False),
-                                                project_path=getattr(context, "project_path", None))
-            # 단일 통화 items = 문서 IR(type+text 항목) — 크롤한 페이지 텍스트를 문단 블록으로. crawl(url) >> document{pdf}.
-            if isinstance(result, dict) and result.get("success") and result.get("text") and "items" not in result:
-                result["items"] = _text_to_blocks(result.get("title"), result.get("text"))
-            return format_json(result)
+            return format_json(_OP_DISPATCHERS["crawl_website"][op](tool_input, context))
         except Exception as e:
             return format_json({"success": False, "error": str(e)})
 

@@ -11,6 +11,10 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "context": {
+            "type": "object",
+            "description": "명시할 때만 문맥 선택. before/after=앞뒤 입력 행수(기본 0), by=그룹 열 이름/목록(결측 키·실패 행·다른 그룹은 문맥 경계), limit=선택할 일치 수(기본 전체, 0 허용). 입력 순서·열 보존, 겹친 문맥은 한 번만. _error 행은 상한 밖에서도 보존. match_info의 1기반 input_indices는 반환 행과 대응, match_indices는 모든 일치, selected_indices는 선택한 일치. 상류 실패·절단을 보존하며 생략은 selection으로 신고한다."
+          },
           "items": {
             "type": "array",
             "description": "변환할 행 배열(앞 통화 대신 직접 줄 때 — `$변수` 원형 주입 포함, 언어 개정 2026-08-27)."

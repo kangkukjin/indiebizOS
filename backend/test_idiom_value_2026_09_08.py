@@ -54,7 +54,7 @@ def test_pruned_catalog_keeps_only_intended_recommendations():
     validate_catalog(catalog)
     active = {e['name'] for e in catalog['idioms'] if e.get('always_on', True)}
     assert active == {'열추려보기', '정렬해추리기', '좁혀서읽기',
-                      '미처리만고르기', '고치고확인하기', '주소마다읽기'}
+                      '미처리만고르기', '고치고확인하기', '주소마다읽기', '본문에서찾기'}
     # 호환 항목을 명시 강등하면서도 선정집을 멱등 재적용할 수 있다.
     assert not active.intersection(catalog['demote'])
 

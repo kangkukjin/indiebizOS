@@ -1,3 +1,9 @@
+AI시대뉴스동기화:
+  description: 완료된 AI 동향 보고서의 공개 출처 준비·제목 번역용 메타 정규화·뉴스 전송
+  file: ai_era_news.py
+  interpreter: python
+  registered_at: '2026-09-15T21:09:05'
+  timeout: 120
 Cloudflare사용량:
   description: 'Cloudflare 사용량 vs 무료 한도 — args: days(기본 30)·account_id(기본 환경변수→/accounts)·sections(all|r2|workers).
     items 통화(section 열): r2_storage 버킷별 최근 저장 GB·객체·pct_of_free(10GB), r2_ops 이달 Class

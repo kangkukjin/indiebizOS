@@ -27,6 +27,7 @@ LOCATOR_TIMEOUT = 5000
 ACTION_TIMEOUT = 10000
 WAIT_DEFAULT_TIMEOUT = 10000
 AUTO_CLOSE_SECONDS = 180
+CLOSE_STEP_TIMEOUT_SECONDS = 5
 MAX_CONSOLE_LOGS = 1000
 MAX_NETWORK_LOGS = 500
 BLOCKED_URL_SCHEMES = {"javascript:", "data:", "file:", "vbscript:"}
@@ -200,15 +201,16 @@ class BrowserSession:
 
     async def _auto_close(self, generation: int):
         await asyncio.sleep(self._timeout_seconds)
-        if generation != self._close_generation:
-            return
-        if time.time() - self._last_activity >= self._timeout_seconds:
-            print(f"[브라우저] {self._timeout_seconds}초 비활성 — 자동 종료")
-            try:
-                with scope("browser-auto-close", kind="finalizer"):
-                    await self._close_internal()
-            except AdmissionClosed:
-                return  # 재기동 관문이 닫혔으면 새 저장/종료 작업을 시작하지 않는다.
+        async with self._ensure_lock:
+            if generation != self._close_generation:
+                return
+            if time.time() - self._last_activity >= self._timeout_seconds:
+                print(f"[브라우저] {self._timeout_seconds}초 비활성 — 자동 종료")
+                try:
+                    with scope("browser-auto-close", kind="finalizer"):
+                        await self._close_internal()
+                except AdmissionClosed:
+                    return  # 재기동 관문이 닫혔으면 새 저장/종료 작업을 시작하지 않는다.
 
     async def ensure_browser(self, headless=True):
         """브라우저가 실행 중인지 확인하고, 없으면 생성. Page 반환."""
@@ -503,37 +505,41 @@ class BrowserSession:
     # ── 종료 ──
 
     async def close(self):
-        await self._close_internal()
+        async with self._ensure_lock:
+            await self._close_internal()
+
+    async def _close_step(self, label, operation):
+        try:
+            await asyncio.wait_for(operation(), CLOSE_STEP_TIMEOUT_SECONDS)
+        except Exception as exc:
+            print(f"[브라우저] 종료 단계 {label}: {type(exc).__name__}")
 
     async def _close_internal(self):
         cleanup = self._cleanup_task
         self._cleanup_task = None
         if cleanup and cleanup is not asyncio.current_task() and not cleanup.done():
             cleanup.cancel()
-        # 닫기 전에 로그인 상태 저장 (headful 로그인 → 자동 종료 경로에서도 세션이 남도록)
-        await self.save_storage_state()
-        for tab_id, page in list(self._pages.items()):
+        # 응답하지 않는 브라우저가 finalizer를 영구 점유하지 않도록 단계별 제한.
+        # context.close가 모든 탭을 닫으므로 탭 수만큼 대기하지 않는다.
+        try:
+            await self._close_step("storage", self.save_storage_state)
+        finally:
             try:
-                if not page.is_closed():
-                    await page.close()
-            except Exception:
-                pass
+                try:
+                    if self._context:
+                        await self._close_step("context", self._context.close)
+                finally:
+                    try:
+                        if self._browser:
+                            await self._close_step("browser", self._browser.close)
+                    finally:
+                        if self._playwright:
+                            await self._close_step("driver", self._playwright.stop)
+            finally:
+                self._clear_closed_state()
+
+    def _clear_closed_state(self):
         self._pages.clear()
-        try:
-            if self._context:
-                await self._context.close()
-        except Exception:
-            pass
-        try:
-            if self._browser:
-                await self._browser.close()
-        except Exception:
-            pass
-        try:
-            if self._playwright:
-                await self._playwright.stop()
-        except Exception:
-            pass
         self._context = None
         self._browser = None
         self._playwright = None

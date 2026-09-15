@@ -4,6 +4,7 @@ import asyncio
 import importlib.util
 import threading
 from pathlib import Path
+from types import SimpleNamespace
 
 import anyio
 import pytest
@@ -214,6 +215,85 @@ def test_browser_idle_timer_cannot_start_storage_during_drain(work, browser):
             session._reset_timer()
         work.gate("DRAINING")
         await session._cleanup_task
+        assert calls == [] and count(work) == 0
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize("stalled", ["storage", "context", "browser", "driver"])
+def test_browser_stalled_close_releases_finalizer(work, browser, monkeypatch, stalled):
+    monkeypatch.setattr(browser, "CLOSE_STEP_TIMEOUT_SECONDS", 0.01)
+
+    async def run():
+        session = browser.BrowserSession()
+        session._timeout_seconds = 0
+        calls, cancelled = [], []
+
+        def operation(label):
+            async def close():
+                calls.append(label)
+                if label == stalled:
+                    try:
+                        await asyncio.Event().wait()
+                    finally:
+                        cancelled.append(label)
+            return close
+
+        session.save_storage_state = operation("storage")
+        session._context = SimpleNamespace(close=operation("context"))
+        session._browser = SimpleNamespace(close=operation("browser"))
+        session._playwright = SimpleNamespace(stop=operation("driver"))
+        session._pages = {"old": object()}
+        await asyncio.wait_for(session._auto_close(0), 1)
+        assert calls == ["storage", "context", "browser", "driver"]
+        assert cancelled == [stalled]
+        assert session._context is session._browser is session._playwright is None
+        assert session._pages == {} and count(work) == 0
+    asyncio.run(run())
+
+
+def test_browser_cancelled_storage_still_closes_driver(work, browser):
+    async def run():
+        session = browser.BrowserSession()
+        entered = asyncio.Event()
+        closed = []
+
+        async def save():
+            entered.set()
+            await asyncio.Event().wait()
+
+        async def stop():
+            closed.append(True)
+
+        session.save_storage_state = save
+        session._playwright = SimpleNamespace(stop=stop)
+        session._timeout_seconds = 0
+        task = asyncio.create_task(session._auto_close(0))
+        await entered.wait()
+        task.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await task
+        assert closed == [True] and session._playwright is None
+        assert count(work) == 0
+    asyncio.run(run())
+
+
+def test_browser_idle_close_rechecks_generation_after_lock(work, browser):
+    async def run():
+        session = browser.BrowserSession()
+        session._timeout_seconds = 0
+        calls = []
+
+        async def save():
+            calls.append(True)
+
+        session.save_storage_state = save
+        async with session._ensure_lock:
+            task = asyncio.create_task(session._auto_close(0))
+            await asyncio.sleep(0)
+            await asyncio.sleep(0)
+            assert calls == []
+            session._close_generation += 1  # 잠금 중 새 주행이 세션을 사용했다.
+        await task
         assert calls == [] and count(work) == 0
     asyncio.run(run())
 

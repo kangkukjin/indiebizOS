@@ -30,7 +30,7 @@
 
 2026-09-08 반복 실험 수리: 식 할당 `$경로 = "${최신.items.0.path}"`는 따옴표 안에서 실제 경로를 보간한다. 내부 식 바인딩 이름 `_v0`를 문자열로 저장하던 오류를 고쳤다. 따옴표 밖 참조는 종전의 값 바인딩이며, 보간 값의 따옴표·백슬래시·제어 문자는 이스케이프한다. 가드 `test_assign_string_refs.py`.
 
-모델 반환 경계는 `final_result` 안의 fn 봉투도 실행 기록만 요약한다. 반환 데이터·오류·정의·경고는 유지하며, `verbose:true`와 실행 중 값은 원형이다. 가드 `test_nested_fn_envelope.py`, 실측은 `IBL_IDIOM_EXPERIMENT_ROUND2_2026_09_08.md`.
+모델 반환 경계는 `final_result` 안의 fn 봉투도 실행 기록만 요약한다. 2026-09-15에는 병렬 반환 목록 안의 fn 봉투에도 같은 규칙을 적용하도록 누락을 수리했다. 목록과 함수 반환 경로만 따라가며 업무 객체의 items/rows 내부는 순회하지 않는다. 반환 데이터·오류·정의·경고·재개 정보와 실행 중 값은 유지한다. 내부 요약기의 `verbose=True`는 원형 보존용이며, 모델의 전체 원문 조회는 `result_ref`와 `read_result`를 쓴다. 가드 `test_nested_fn_envelope.py`, 앞선 실측은 `IBL_IDIOM_EXPERIMENT_ROUND2_2026_09_08.md`, 병렬 수리는 [반환 경계 수리 기록](PARALLEL_FN_ENVELOPE_REPAIR_2026_09_15.md).
 
 - 파서 `ibl_parser_blocks._parse_def_block` · `ibl_parser._bind_fn_defs`(정의 표 `_FN_TABLES[tid]` + 호출 step 에 `_fn_ref{table,name,params,todo}`,
   정의 문장 앞당김 후 문장 경계 재표기). ★몸통을 호출 step 에 박지 않는다 — 재귀 정의가 자기 자신을 품는 순환 구조가 되어

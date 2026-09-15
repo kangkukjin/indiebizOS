@@ -6,7 +6,8 @@
 
 여기서는 **에이전트 경계**(`_execute_ibl_unified` — 인프로세스 도구·MCP 재진입·/ibl/execute 공통)
 에서 `results[]` 를 step 별 *요약*(shape·count·bytes·preview)으로 접는다. `final_result`의
-실제 반환 데이터는 원형이며, 그 값이 fn 실행 봉투면 내부 results[]에도 같은 규칙을 적용한다.
+실제 반환 데이터는 원형이며, 그 값이나 병렬 반환 목록 안의 fn 실행 봉투에는
+내부 results[]에도 같은 규칙을 적용한다. 업무 items/rows 안은 순회하지 않는다.
   - 실패 step 은 원형 오류문을 그대로 싣는다(어디서 왜 — 진단 정보는 다이어트 대상이 아님).
   - 내부 요약 함수의 verbose 인자는 원형 보존용이다. 모델 도구의 표시 옵션이 아니다.
   - 표면(조종실·앱·폰·웹소켓)은 이미 final_result 만 읽는다 → 무영향.
@@ -22,7 +23,7 @@ KEYS_MAX = 12
 
 _HINT = "results는 단계 요약, 최종 값은 final_result. 원문은 result_ref를 read_result로 조회. 재실행 금지."
 
-_FN_SUMMARY_DEPTH = 8  # 실행기의 함수 깊이보다 여유 있게; 비정상 봉투는 더 내려가지 않는다.
+_FN_SUMMARY_DEPTH = 8  # 함수·병렬 반환의 중첩 상한; 비정상 봉투는 더 내려가지 않는다.
 
 
 def _clamp_names(names, out: Dict[str, Any], field: str) -> list:
@@ -225,10 +226,17 @@ def summarize_step(entry: Any) -> Any:
 
 
 def _diet_fn_result(raw: Any, depth: int) -> Any:
-    """반환값 위치의 엔진 소유 fn 봉투만 방문한다. 업무 rows/items는 순회하지 않는다."""
+    """반환 목록을 따라 엔진 소유 fn 봉투만 접는다. 업무 객체 내부는 순회하지 않는다."""
     if depth >= _FN_SUMMARY_DEPTH:
         return raw
     obj = _parse_obj(raw)
+    if isinstance(obj, list):
+        # &는 분기 반환값의 목록이다. 객체/JSON 문자열 어느 표현이든 함수 봉투만
+        # 접고 일반 값은 원형으로 둔다. 변경 없는 JSON 문자열의 공백·직렬화도 보존한다.
+        thin = [_diet_fn_result(branch, depth + 1) for branch in obj]
+        if all(after is before for before, after in zip(obj, thin)):
+            return raw
+        return json.dumps(thin, ensure_ascii=False) if isinstance(raw, str) else thin
     if not (isinstance(obj, dict)
             and obj.get('fn_source') in ('idiom', 'def', 'workflow')
             and isinstance(obj.get('fn'), str)

@@ -109,11 +109,24 @@ def run_ibl_health_check() -> List[Dict]:
 
     if not _script.exists():
         return _runner_fail("scripts/ibl_health_check.py 없음")
+    # ★부모 자격 전달(2026-09-15): 이 러너는 스케줄러 잡(tracked 루트) 또는 조종실 요청(미들웨어
+    # 루트) 안에서 돈다. 자식 스크립트의 /ibl/execute 호출이 그 자격을 X-Runtime-Parent 로 실어야
+    # 재기동 drain 중에도 접수된다(cli_provider._subprocess_env 와 같은 통로). 없던 동안 drain 이
+    # 이 잡을 기다리면서 잡의 호출은 전부 503 거절 → 골든파이프 0/5·연산자 0/7 가짜 RED
+    # (09-15 09:29, development_files 재기동 요청과 겹침).
+    import os as _os
+    _env = dict(_os.environ)
+    try:
+        from runtime_work import parent_token
+        if parent_token():
+            _env["INDIEBIZ_RUNTIME_PARENT"] = parent_token()
+    except Exception:
+        pass
     try:
         proc = subprocess.run(
             [sys.executable, str(_script)],
             cwd=str(_root), capture_output=True, text=True,
-            timeout=IBL_HEALTH_CHECK_TIMEOUT_S,
+            timeout=IBL_HEALTH_CHECK_TIMEOUT_S, env=_env,
         )
     except subprocess.TimeoutExpired:
         return _runner_fail(f"ibl_health_check 제한시간 초과 ({IBL_HEALTH_CHECK_TIMEOUT_S}초) — "
@@ -135,6 +148,13 @@ def run_ibl_health_check() -> List[Dict]:
         s = _json.loads(marker)
     except Exception as e:
         return _runner_fail(f"요약 JSON 파싱 실패: {str(e)[:120]}")
+    if s.get("aborted"):
+        # 실행 접수 중단으로 스크립트가 스스로 점검을 멈춤 — 결함이 아니라 **미완**.
+        # 섹션별 RED 를 만들지 않고 한 항목으로만 남긴다(대시보드는 audit_incomplete 로 읽는다).
+        return [{"node": "__ibl_health__", "action": "ibl_health_check", "success": False,
+                 "response_ms": 0, "data_quality": "audit_incomplete",
+                 "error_message": (f"점검 미완 — 실행 접수 중단({s.get('aborted')}): "
+                                   f"{str(s.get('detail') or '')[:150]}")}]
 
     out = []
     # §1A 정적 정합성
@@ -1100,7 +1120,7 @@ def run_daily_health_check() -> Dict:
     if not _load_config().get("self_check", {}).get("enabled", True):
         return {"status": "disabled"}
 
-    reds = []
+    reds, incomplete = [], []
     # 파생물 신선도 — 검사들보다 **먼저** 집행한다(재생성 뒤의 정적 검사가 참 신선도를 본다)
     try:
         from derived_freshness import enforce_derived_freshness
@@ -1113,11 +1133,26 @@ def run_daily_health_check() -> Dict:
     try:
         for ev in run_ibl_health_check():
             save_self_check(ev)
-            if not ev.get("success"):
-                reds.append(f"[{ev['node']}:{ev['action']}] {ev.get('error_message') or ''}".strip())
+            if ev.get("success"):
+                continue
+            line = f"[{ev['node']}:{ev['action']}] {ev.get('error_message') or ''}".strip()
+            # 미완(접수 중단)은 결함 목록에 섞지 않는다 — '구조/통화/흐름 결함' 알림이 되면 거짓.
+            (incomplete if ev.get("data_quality") == "audit_incomplete" else reds).append(line)
     except Exception as e:
         logger.warning(f"[HealthCheck] ibl_health_check 실행 실패: {e}")
 
+    if not reds and incomplete:
+        logger.warning(f"[HealthCheck] IBL 점검 미완: {' / '.join(incomplete)[:300]}")
+        try:
+            from notification_manager import get_notification_manager
+            get_notification_manager().create(
+                title="IBL 건강 점검 미완",
+                message="점검이 끝까지 돌지 못했습니다(재기동 접수 중단): " + " / ".join(incomplete)[:400],
+                type="warning",
+                source="ibl_health",
+            )
+        except Exception as e:
+            logger.warning(f"[HealthCheck] 알림 발송 실패: {e}")
     if reds:
         logger.warning(f"[HealthCheck] IBL 건강 RED {len(reds)}건: {' / '.join(reds)[:300]}")
         try:

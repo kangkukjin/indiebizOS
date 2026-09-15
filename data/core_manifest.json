@@ -69,6 +69,7 @@
     ],
     "scripts": [
       "Cloudflare사용량.py",
+      "ai_era_news.py",
       "arch_render_cli.py",
       "arxiv최신피드.py",
       "github저장소메타.py",

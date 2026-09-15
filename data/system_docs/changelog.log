@@ -2009,3 +2009,5 @@
 [2026-09-15] 에피소드 기반 웹 수집 구분 구현: sense:crawl op:content/links/metadata와 공통 스냅샷, 상대 링크·날짜/저자 원문 근거·충돌·부분 실패 보존. table:filter context로 출처별 앞뒤 문맥·실패·일치 계수 보존, fn:본문에서찾기 수동 등록·지도 노출·용례 13건 시딩. 실제 IBL 호출·스냅샷 재사용·모드별 반환 형태 검증. 상세 docs/WEB_COLLECTION_RESOLUTION_2026_09_15.md.
 
 [2026-09-15] 능력 부정 주장 교정: 일반 실행·의식 되묻기·평가 경로의 공통 응답 채택, 후보만 경량 판정(턴당 최대 2회)·현재 기능 읽기 1회·기존 권한으로 원작업 재개 1회. 제한/미확인/메타 보존, 반복 무근거 단정 문장 교체, 최종 본문·기록 일치와 ChatView 초안 교체. 새 IBL 어휘/문법 없음. 실제 분류 모델·격리 Chromium·회귀 검증. 상세 docs/CAPABILITY_CLAIM_GUARD_2026_09_15.md.
+
+[2026-09-15] 조종실 '파이프 흐름 0/5' 가짜 RED 뿌리 수리: 재기동 drain 이 기다리는 건강체크 잡의 자식 스크립트가 부모 자격 없이 /ibl/execute 를 불러 전부 503 → 러너가 INDIEBIZ_RUNTIME_PARENT 전달·스크립트가 X-Runtime-Parent 로 실음, 503 executed:false 는 '점검 중단(audit_incomplete)'으로 정직 종료. 연산자 5/7 고정(정적 통화 검사가 옛 프로브 2건을 실행 전 거절)은 런타임 실패 프로브로 교체. core_manifest.json 재생성. 수동 트리거 스레드도 runtime_work.scope 루트 보유.

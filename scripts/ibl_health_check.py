@@ -1,9 +1,22 @@
 #!/usr/bin/env python3
 """IBL 건강 점검 — 매뉴얼 §1 절차를 그대로 실행(외부 도구 의존 없이 /ibl/execute + 레지스트리만)."""
-import json, time, urllib.request, subprocess, sys, os
+import json, time, urllib.request, urllib.error, subprocess, sys, os
 
 BASE = "http://localhost:8765"
 PID = "하드웨어"
+
+def _abort_admission(detail):
+    """실행 접수가 닫혀 호출이 거절됐다(재기동 drain·세대 불일치) — 거절은 어휘 결함이 아니다.
+
+    남은 절을 계속 돌리면 모든 항목이 즉시 503 으로 실패해 '골든파이프 0/5·연산자 0/7' 가짜 RED 가
+    된다(2026-09-15 09:29 실측 — 09:28:26 development_files 재기동 요청의 drain 과 겹침). 여기서
+    점검을 **중단**하고 러너에게 '미완'을 알린다(러너는 audit_incomplete 로 적는다). 부모 자격을
+    물려받은 정상 경로(execute 의 X-Runtime-Parent)에선 오지 않는 길 — 자격 없는 수동 실행이
+    drain 과 겹쳤을 때의 정직한 종료."""
+    print(f"\n‼ 점검 중단 — 실행 접수가 닫혀 있음(재기동 대기): {detail}")
+    print("@@HEALTH_JSON@@ " + json.dumps({"aborted": "admission_closed", "detail": detail},
+                                          ensure_ascii=False))
+    sys.exit(0)
 
 def execute(code, pid=PID):
     # agent_id=__self_check__ — 이 점검의 실행이 action_health 에 source='self_check' 로
@@ -11,11 +24,28 @@ def execute(code, pid=PID):
     # channel_read 97% 거짓 시그널의 진범). postprocess(AI 압축)도 함께 스킵돼 점검 AI 0.
     body = json.dumps({"code": code, "project_id": pid,
                        "agent_id": "__self_check__"}).encode()
-    req = urllib.request.Request(BASE + "/ibl/execute", data=body,
-                                 headers={"Content-Type": "application/json"})
+    headers = {"Content-Type": "application/json"}
+    # ★부모 자격 동반(2026-09-15) — 러너(스케줄러 잡·조종실 요청)가 쥔 실행 자격을 환경변수로
+    # 물려받아 X-Runtime-Parent 로 싣는다(cli_provider._identity_headers / mcp_server 와 같은
+    # 통로). 이게 없던 동안 재기동 drain(접수 중단) 중엔 이 점검의 호출이 '새 작업'으로 보여
+    # 전부 503 즉시 거절됐다 — drain 은 이 잡이 끝나길 기다리면서 잡의 호출은 거절하는 셈.
+    # 자식으로 실리면 drain 동안에도 접수된다(runtime_work.WorkRegistry.reserve: parent∈groups).
+    _parent = os.environ.get("INDIEBIZ_RUNTIME_PARENT")
+    if _parent:
+        headers["X-Runtime-Parent"] = _parent
+    req = urllib.request.Request(BASE + "/ibl/execute", data=body, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=45) as r:
             out = json.loads(r.read().decode())
+    except urllib.error.HTTPError as e:
+        raw = e.read().decode(errors="replace")
+        try:
+            payload = json.loads(raw)
+        except Exception:
+            payload = {}
+        if e.code == 503 and isinstance(payload, dict) and payload.get("executed") is False:
+            _abort_admission(str(payload.get("detail") or raw)[:160])
+        return {"_transport_error": f"HTTP {e.code}: {raw[:80]}"}
     except Exception as e:
         return {"_transport_error": str(e)}
     d = out.get("result", out)
@@ -477,10 +507,12 @@ def _op_seq_continues(d):
 
 def _op_seq_boundary_isolates(d):
     """`;` 경계=독립 — 앞 문장이 **성공**해도 그 결과가 뒤 문장으로 넘어가면 안 된다.
-    프로브: 성공하는 검색 ; 빈 입력의 take. 누수면 take 가 앞 문장의 items 를 받아
-    성공해 버리고(2/2 success=True), 단절돼 있으면 take 가 입력 통화 없음으로 실패한다
-    (1/2 success=False — 실패가 정답인 단언). _op_seq_continues 는 실패 경로만 보므로
-    이 사각(성공 경로 누수)은 이 케이스만 잡는다(2026-07-19 실측으로 발견된 회귀 가드)."""
+    프로브(2026-09-15 개정): 성공하는 검색 ; 빈 입력의 chart. 누수면 chart 가 앞 문장의 items 를
+    받아 성공해 버리고(2/2 success=True), 단절돼 있으면 chart 가 '데이터가 비어있습니다'로 실패한다
+    (1/2 success=False — 실패가 정답인 단언). 옛 프로브의 `; [table:take]` 는 09-05 정적 통화
+    검사가 머리 변환자로 실행 전에 거절해 실행기 층을 못 봤다 — chart 는 입력 없이도 형태가 옳아
+    관문을 지난다. _op_seq_continues 는 실패 경로만 보므로 이 사각(성공 경로 누수)은 이 케이스만
+    잡는다(2026-07-19 실측으로 발견된 회귀 가드)."""
     if not isinstance(d, dict):
         return False, f"파이프 결과 아님: {str(d)[:60]}"
     done, tot = d.get("steps_completed"), d.get("steps_total")
@@ -497,17 +529,19 @@ def _op_pipe_still_stops(d):
 def _op_json_string_failure(d):
     """handler 도구의 실패는 `format_json` 때문에 **JSON 문자열**로 온다 — 그것도 실패로 봐야 한다.
     이 판정이 없던 동안 handler 실패가 전부 성공으로 샜다(2026-07-18 블로그 파이프에서 실측).
-    `[table:document]` 에 입력 통화를 안 주면 `{"success": false, "message": …}` 문자열을 낸다
-    (error 키가 아니라 message 라, 옛 판정은 이 실패를 볼 방법이 아예 없었다)."""
+    프로브(2026-09-15 개정): 빈 query 의 `[sense:search]` — 형태는 옳아 정적 통화 검사를 지나고,
+    핸들러가 `{"success": false, "error": "검색어(query)가 필요합니다."}` 문자열을 낸다. 옛 프로브
+    `[table:document]{} >> take` 는 09-05 정적 검사가 '굶는 변환자'로 실행 전에 거절해 이 실행기
+    층 판정에 닿지 못했다(steps=None → 5/7 고정)."""
     if not isinstance(d, dict):
         return False, f"파이프 결과 아님: {str(d)[:60]}"
     return (d.get("success") is False and d.get("steps_completed") == 0,
             f"steps={d.get('steps_completed')}/{d.get('steps_total')} success={d.get('success')}")
 
 OPERATORS = [
-  ("JSON문자열 실패감지", '[table:document]{} >> [table:take]{n: 1}', _op_json_string_failure),
+  ("JSON문자열 실패감지", '[sense:search]{source: "naver", query: ""} >> [table:take]{n: 1}', _op_json_string_failure),
   ("; 실패해도 다음문장", '[self:read]{path: "__없는파일__.md"} ; [sense:search]{source: "naver", query: "AI"}', _op_seq_continues),
-  ("; 경계=prev 단절",    '[sense:search]{source: "naver", query: "AI"} ; [table:take]{n: 3}', _op_seq_boundary_isolates),
+  ("; 경계=prev 단절",    '[sense:search]{source: "naver", query: "AI"} ; [table:chart]{chart_type: "line"}', _op_seq_boundary_isolates),
   (">> 실패시 중단(회귀)", '[self:read]{path: "__없는파일__.md"} >> [table:take]{n: 1}', _op_pipe_still_stops),
   ("?? 문자열에러→폴백", '[self:read]{path: "__없는파일__.md"} ?? [sense:search]{source: "naver", query: "AI"}', _op_fallback_string_err),
   ("?? 성공→단축평가",   '[sense:search]{source: "naver", query: "AI"} ?? [self:read]{path: "__없는파일__.md"}', _op_fallback_shortcut),

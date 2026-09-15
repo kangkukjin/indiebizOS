@@ -1309,11 +1309,19 @@ async def get_diagnostic_report(format: str = "json"):
 async def trigger_self_check():
     """IBL 건강 점검 수동 트리거 (백그라운드) — 정적+fixture+골든 1회 (AI 0)"""
     import threading
+    import runtime_work
     from world_pulse import run_daily_health_check
 
     def _run():
+        # ★루트 자격 보유(2026-09-15): 요청 스레드 밖 daemon 스레드는 미들웨어 lease 를 잇지 못해
+        # parent_token() 이 비고, 자식 점검 스크립트의 /ibl/execute 가 재기동 drain 중 503 으로
+        # 전멸했다(스케줄러 잡은 tracked 루트라 무사). scope 로 루트를 쥐면 자식 호출이 접수되고
+        # drain 은 이 점검을 기다린다; 접수가 이미 닫혔으면 시작하지 않고 로그만 남긴다.
         try:
-            run_daily_health_check()
+            with runtime_work.scope("manual-health-check"):
+                run_daily_health_check()
+        except runtime_work.AdmissionClosed as e:
+            logger.warning(f"[WorldPulse] 수동 건강 점검 보류(접수 중단): {e}")
         except Exception as e:
             logger.error(f"[WorldPulse] 수동 건강 점검 실패: {e}")
 

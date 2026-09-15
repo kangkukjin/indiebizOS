@@ -158,7 +158,7 @@ def _execute_call_project_agent(tool_input: dict) -> str:
     import uuid
     import yaml
     from agent_runner import AgentRunner
-    from thread_context import get_current_task_id, set_called_agent
+    from thread_context import get_current_task_id, get_call_channel, set_called_agent
     from system_ai_memory import get_task, update_task_delegation
 
     project_id = tool_input.get("project_id", "")
@@ -167,6 +167,11 @@ def _execute_call_project_agent(tool_input: dict) -> str:
 
     if not project_id or not agent_id or not message:
         return "오류: project_id, agent_id, message가 모두 필요합니다."
+
+    # 스케줄의 직접 실행에는 대화 부모가 없다. cross 위임기가 자기 DB에
+    # 부모를 발급한다 — 같은 프로젝트 위임의 conversations.db와 섞지 않는다.
+    if not get_current_task_id() and get_call_channel() == "scheduler":
+        return _execute_scheduled_project_agent(tool_input)
 
     # 대상 에이전트 찾기 (실행 중인지 확인)
     # agent_id는 id 또는 name일 수 있음 → 먼저 id로, 없으면 name으로 검색
@@ -349,6 +354,40 @@ def _execute_call_project_agent(tool_input: dict) -> str:
     print(f"[시스템 AI] 위임: 시스템 AI → {agent_name} (task: {child_task_id})")
 
     return f"'{agent_name}'에게 작업을 위임했습니다. 결과를 기다리세요."
+
+
+def _execute_scheduled_project_agent(tool_input: dict) -> str:
+    """대화 없는 스케줄 위임의 부모 생성·실패 정리. 완료 보고는 기존 러너로 회수."""
+    import uuid
+    import thread_context as tc
+    from system_ai_memory import create_task, get_task, complete_task, clear_delegation_context
+
+    task_id = f"task_schedule_{uuid.uuid4().hex}"
+    create_task(task_id=task_id, requester="scheduler", requester_channel="scheduler",
+                original_request=tool_input["message"])
+    with tc.actor_context(agent_id="system_ai", task_id=task_id, origin="scheduler"):
+        reply = None
+        queued = False
+        dispatched = False
+        try:
+            reply = _execute_call_project_agent(tool_input)
+            dispatched = True
+        except Exception as exc:
+            reply = f"오류: {exc}"
+            raise
+        finally:
+            parent = get_task(task_id) or {}
+            delegation = json.loads(parent.get("delegation_context") or "{}")
+            # 자식 응답이 먼저 와 pending==0이어도 기존 러너의 최종 보고를 기다린다.
+            queued = dispatched and bool(delegation.get("delegations"))
+            if not queued and parent.get("status") != "completed":
+                if delegation:
+                    clear_delegation_context(task_id)
+                complete_task(task_id, reply)
+        if queued:
+            return json.dumps({"success": True, "queued": True, "task_id": task_id,
+                               "message": reply}, ensure_ascii=False)
+        return reply
 
 
 def _looks_like_ibl(text) -> bool:

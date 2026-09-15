@@ -1,5 +1,8 @@
 AI시대뉴스동기화:
-  description: 완료된 AI 동향 보고서의 공개 출처 준비·제목 번역용 메타 정규화·뉴스 전송
+  description: '완료된 AI 동향 보고서의 공개 출처 준비·제목 번역용 메타 정규화·뉴스 전송 — args: op(prepare 기본값|normalize|publish|retry|status)·data(normalize/publish에서
+    필수인 행 목록 또는 items 봉투)·keys(retry에서 필수인 후보 키 목록). prepare는 미처리 출처를 반환하고, normalize는
+    key를 보존한 크롤 메타데이터를 원제·매체·날짜로 정규화한다. publish는 정규화 결과에 title_ko를 추가한 행을 전송하며 원문
+    식별정보 변경을 거부한다. retry는 지정 키의 완료 표시를 지우고, status는 미처리 수와 오류를 조회한다.'
   file: ai_era_news.py
   interpreter: python
   registered_at: '2026-09-15T21:09:05'

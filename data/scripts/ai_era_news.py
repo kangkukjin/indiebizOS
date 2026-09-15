@@ -168,13 +168,20 @@ def normalize(data):
             if not titles:
                 errors.append({"key": key, "reason": "원문 제목 확인 실패"})
                 continue
-            title = str(titles[0]["value"]).strip()
+            # 한국어 제목 중간의 말줄임표는 흔한 구두점이다. 끝이 잘린
+            # 메타 제목만 제외하고, 같은 페이지의 완전한 다른 제목을 찾는다.
+            complete = [r for r in titles
+                        if 3 <= len(str(r["value"]).strip()) <= 500
+                        and not str(r["value"]).strip().endswith(("…", "..."))]
+            if not complete:
+                errors.append({"key": key, "reason": "제목 잘림"})
+                continue
+            selected = complete[0]
+            title = str(selected["value"]).strip()
             try:
-                url = safe_url(titles[0].get("source_url") or titles[0]["url"])
+                url = safe_url(selected.get("source_url") or selected["url"])
                 if urlsplit(url).hostname == "news.google.com":
                     raise ValueError("원문 주소 미해소")
-                if len(title) > 500 or len(title) < 3 or "…" in title:
-                    raise ValueError("제목 잘림")
             except ValueError as exc:
                 errors.append({"key": key, "reason": str(exc)})
                 continue

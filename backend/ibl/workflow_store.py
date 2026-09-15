@@ -9,6 +9,7 @@ workflow_store.py - 워크플로 원장(data/workflows/*.yaml)의 저장·조회
 import os
 import re
 import yaml
+import tempfile
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -34,7 +35,11 @@ def list_workflows() -> List[Dict]:
     workflows = []
     for f in sorted(wf_path.glob("*.yaml")):
         try:
-            data = yaml.safe_load(f.read_text(encoding="utf-8")) or {}
+            if f.is_symlink():
+                raise ValueError("워크플로 파일은 심볼릭 링크일 수 없습니다")
+            data = yaml.safe_load(f.read_text(encoding="utf-8"))
+            if not isinstance(data, dict):
+                raise ValueError("워크플로 파일이 매핑이 아닙니다")
         except Exception as e:
             # ★깨진 원장 항목을 조용히 감추지 않는다 — 목록에서 사라지면 "없는 것"이 된다.
             workflows.append({
@@ -95,9 +100,24 @@ def _resolve_workflow_id(name: str) -> str:
     return name
 
 
+def _workflow_path(workflow_id: str) -> Path:
+    """원장의 id는 단일 파일 이름이며 외부 경로나 심볼릭 링크가 아니다."""
+    if (not isinstance(workflow_id, str) or not workflow_id.strip()
+            or workflow_id in (".", "..")
+            or any(c in workflow_id for c in ("/", "\\", "\0"))):
+        raise ValueError("workflow_id는 경로가 아닌 파일 이름이어야 합니다")
+    path = _get_workflows_path() / f"{workflow_id}.yaml"
+    if path.is_symlink():
+        raise ValueError("워크플로 파일은 심볼릭 링크일 수 없습니다")
+    return path
+
+
 def get_workflow(workflow_id: str) -> Optional[Dict]:
     """워크플로우 조회"""
-    wf_path = _get_workflows_path() / f"{workflow_id}.yaml"
+    try:
+        wf_path = _workflow_path(workflow_id)
+    except ValueError as exc:
+        return {"id": workflow_id, "runnable": False, "problem": str(exc)}
     if not wf_path.exists():
         return None
     try:
@@ -186,22 +206,34 @@ def save_workflow(workflow: dict) -> str:
         워크플로우 ID
     """
     wf_id = workflow.get("id") or _slugify(workflow.get("name", "workflow"))
-    wf_path = _get_workflows_path() / f"{wf_id}.yaml"
+    wf_path = _workflow_path(wf_id)
 
     # id 필드는 YAML에 저장하지 않음 (파일명이 ID)
     save_data = {k: v for k, v in workflow.items() if k != "id"}
     save_data["updated"] = datetime.now().isoformat()
 
-    wf_path.write_text(
-        yaml.dump(save_data, allow_unicode=True, default_flow_style=False),
-        encoding="utf-8",
-    )
+    # 고유 임시 파일을 완성한 뒤 교체하여 읽는 쪽에 반쪽 YAML을 노출하지 않는다.
+    temp = None
+    try:
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=wf_path.parent,
+                                         prefix=".workflow-", suffix=".tmp", delete=False) as stream:
+            temp = Path(stream.name)
+            stream.write(yaml.dump(save_data, allow_unicode=True, default_flow_style=False))
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(temp, wf_path)
+    finally:
+        if temp is not None:
+            temp.unlink(missing_ok=True)
     return wf_id
 
 
 def delete_workflow(workflow_id: str) -> bool:
     """워크플로우 삭제"""
-    wf_path = _get_workflows_path() / f"{workflow_id}.yaml"
+    try:
+        wf_path = _workflow_path(workflow_id)
+    except ValueError:
+        return False
     if wf_path.exists():
         wf_path.unlink()
         return True

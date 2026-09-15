@@ -61,9 +61,16 @@ def _fetch_feed(tool_input: dict) -> dict:
     url = (tool_input.get("url") or "").strip()
     if not url.startswith(("http://", "https://")):
         return {"success": False, "error": "url 파라미터에 피드 주소(http/https)가 필요합니다.", "items": []}
-    limit = int(tool_input.get("limit") or 10)
+    try:
+        limit = int(tool_input.get("limit", 10))
+        if limit < 0:
+            raise ValueError("음수")
+    except (TypeError, ValueError):
+        return {"success": False, "items": [], "error": "limit은 0 이상의 정수여야 합니다."}
     try:
         feed = _read_feed(url)
+        if not feed.get("version"):
+            return {"success": False, "items": [], "error": "RSS/Atom 피드 형식이 아닙니다."}
         source_name = (getattr(feed, "feed", {}) or {}).get("title") or url
         if not feed.entries:
             # ★B4 (2026-08-16 상상훈련 7회차): feedparser 는 DNS 죽음·네트워크 오류에도

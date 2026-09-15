@@ -3,7 +3,7 @@ nodes:
     actions:
       search:
         lands_on: hub
-        path_audited: {at: "2026-09-15", impl: "fe4e1fd3581221bf"}
+        path_audited: {at: "2026-09-15", impl: "bdc9d886a725ddb9"}
         aliases:
           limit: [count, display, page_size, max_results]
           # ★max_results 는 정본이 아니다(check_param_canon) — 이 액션의 기존 정본 count 로 흡수
@@ -31,7 +31,7 @@ nodes:
         target_key: query
       crawl:
         lands_on: hub
-        path_audited: {at: "2026-09-15", impl: "fe4e1fd3581221bf"}
+        path_audited: {at: "2026-09-15", impl: "bdc9d886a725ddb9"}
         returns: items
         side_effect: false   # 세션 상태·원문 캐시·임시 PDF만 쓴다
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -109,7 +109,7 @@ nodes:
         fixture: '[sense:feed]{url: "https://www.pewresearch.org/feed/", limit: 3}'
         description: RSS/Atom 피드 읽기 — 어떤 사이트든 피드 URL 하나로 최신 글 목록을 items(제목·날짜·링크·요약)로. 블로그·뉴스·연구기관 새 글 확인용. crawl 은 피드 항목 구조를 뭉개므로 피드 URL 은 이쪽. 이웃·커뮤니티 타임라인은 others:feed.
         group: research
-        target_description: 피드 URL (…/feed/, …/rss.xml, atom.xml 등). limit 로 항목 수 제한(기본 10). 특정 기관 예시 — Pew Research는 https://www.pewresearch.org/feed/ (구 sense:pew_research 액션의 일반화, 2026-08-15).
+        target_description: 피드 URL (…/feed/, …/rss.xml, atom.xml 등). limit 로 항목 수 제한(기본 10, 0은 빈 결과). HTML 등 피드가 아닌 응답은 오류다. 특정 기관 예시 — Pew Research는 https://www.pewresearch.org/feed/ (구 sense:pew_research 액션의 일반화, 2026-08-15).
         router: handler
         tool: fetch_feed
         implementation: feedparser 로 RSS/Atom 파싱 — 제목·게시일·링크·요약(HTML 제거)을 레코드 통화 {title, meta, summary, url} 로. 피드 제목을 source 로 자동 사용.

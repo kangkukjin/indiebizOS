@@ -78,7 +78,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-09-15", impl: "150cb214785b9dd3"}
+        path_audited: {at: "2026-09-15", impl: "de338721c19029f2"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -90,7 +90,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-09-15", impl: "150cb214785b9dd3"}
+        path_audited: {at: "2026-09-15", impl: "de338721c19029f2"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -659,10 +659,10 @@ nodes:
         fixture: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
         description: SQLite 파일 읽기 전용 조회 (op 분기) — query(SELECT → 행 items)·tables(표 목록·행 수)·schema(열 목록). 몸의 원장(.db)을 셸 sqlite3 대신 문장으로 본다. 쓰기는 거절.
         group: system
-        target_description: 'op=query(기본): path(SQLite 파일 — ~workspace/·절대·저장소 상대)·query(SELECT/WITH/PRAGMA/EXPLAIN 만 — INSERT·UPDATE·DELETE·DDL 은 거절)·params(? 자리 값 목록)·limit(기본 200, 상한 2000 — 넘으면 truncated) → items(행 dict)+columns / tables: path → items(name·rows) / schema: path·table → items(cid·name·type·notnull·pk). 표·열 이름을 모르면 tables→schema→query 순. 결과는 >> [table:filter]/[table:groupby] 로 흐른다.'
+        target_description: 'op=query(기본): path(SQLite 파일 — ~workspace/·절대·저장소 상대)·query(SELECT/WITH/PRAGMA/EXPLAIN 만 — INSERT·UPDATE·DELETE·DDL 은 거절)·params(? 자리 값 목록)·limit(기본 200, 상한 2000 — 넘으면 truncated) → items(행 dict)+columns / tables: path → items(name·rows) / schema: path·table → items(cid·name·type·notnull·pk). 중복 열 이름은 AS로 구별해야 하며 설정 변경 PRAGMA는 거절한다. 표·열 이름을 모르면 tables→schema→query 순. 결과는 >> [table:filter]/[table:groupby] 로 흐른다.'
         router: handler
         tool: sqlite_op
-        implementation: system_essentials/sqlite_ops.py — sqlite3 mode=ro URI 연결, 문장 머리 정규식 관문(쓰기 낱말 거절), fetchmany(limit+1) 로 절단 신고. 열 이름은 데이터(세계의 명사).
+        implementation: system_essentials/sqlite_ops.py — sqlite3 mode=ro URI 연결, 문장 머리 관문 + SQLite authorizer(실제 쓰기 연산·설정 PRAGMA 거절), fetchmany(limit+1) 로 절단 신고. 열 이름은 데이터(세계의 명사).
         target_key: op
         params:
           path: string

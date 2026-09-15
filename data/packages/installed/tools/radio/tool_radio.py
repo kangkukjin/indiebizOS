@@ -242,7 +242,12 @@ def search_radio(name=None, tag=None, country=None, state=None, language=None, o
     if isinstance(data, dict) and "error" in data:
         return json.dumps({"success": False, "error": data["error"]}, ensure_ascii=False)
     if isinstance(data, str):
-        data = json.loads(data)
+        try:
+            data = json.loads(data)
+        except ValueError:
+            return json.dumps({"success": False, "error": "라디오 검색 응답 JSON 오류"}, ensure_ascii=False)
+    if not isinstance(data, list) or any(not isinstance(s, dict) for s in data):
+        return json.dumps({"success": False, "error": "라디오 검색 응답 형식 오류"}, ensure_ascii=False)
 
     results = []
     for s in data:

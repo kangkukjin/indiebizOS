@@ -9,6 +9,7 @@ import os
 import sys
 import urllib.request
 import urllib.parse
+import re
 import json
 import zipfile
 import io
@@ -111,6 +112,18 @@ def _find_corp_code(corp_name: str):
     corps = _load_corp_codes()
     q = str(corp_name or "").strip()
     if not q:
+        return None, None, None
+
+    # 종목코드와 DART 고유번호는 별개다. 등록된 stock_code로 정확히 해소한다.
+    stock_code = q.upper().removesuffix(".KS").removesuffix(".KQ")
+    if re.fullmatch(r"\d{6}", stock_code):
+        matches = [(name, info) for name, info in corps.items()
+                   if info.get("stock_code") == stock_code]
+        if len(matches) == 1:
+            name, info = matches[0]
+            return info["corp_code"], name, None
+        if len(matches) > 1:
+            return None, None, _corp_ambiguous(q, [name for name, _ in matches])
         return None, None, None
 
     if q in corps:

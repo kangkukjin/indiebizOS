@@ -497,10 +497,22 @@ def kakao_navigation(origin: str, destination: str, waypoints: str = None,
         if not routes:
             return {"success": False, "error": "경로를 찾을 수 없습니다.", "raw": data}
 
+        failures = [r for r in routes if r.get("result_code") != 0]
+        valid_routes = [r for r in routes if r.get("result_code") == 0 and r.get("summary")]
+        if not valid_routes:
+            return {"success": False, "error": "경로 탐색 실패: " + "; ".join(
+                str(r.get("result_msg") or r.get("result_code")) for r in routes),
+                "routes": routes}
+        routes = valid_routes
         result = {
+            "success": True,
             "trans_id": data.get("trans_id"),
             "routes": []
         }
+
+        if failures:
+            result["warning"] = "일부 대안 경로 탐색 실패"
+            result["failed_routes"] = failures
 
         # 경로 좌표 수집 (지도 생성용)
         all_path_coords = []

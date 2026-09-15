@@ -112,10 +112,8 @@ _OP_DISPATCHERS = {
 }
 _OP_DEFAULTS = {"radio_op": "play", "radio_search_op": "search"}
 
-# 알 수 없는 op — 옛 체인 동작 그대로:
-#  - radio_search_op 는 korean 외 전부 search 로 흘렀다(fallthrough) → search 폴백 유지.
-#  - radio_op / radio_favorite_op 는 기존 오류 메시지 그대로.
-_OP_FALLBACKS = {"radio_search_op": "search"}
+# 알 수 없는 op는 검색으로 바꾸지 않고 거절한다.
+_OP_FALLBACKS = {}
 _OP_USAGE = {"radio_op": "play/stop/status/volume", "radio_favorite_op": "list/add/remove"}
 
 
@@ -134,7 +132,7 @@ def execute(tool_input: dict, context):
             if fallback:
                 fn = _OP_DISPATCHERS[tool_name][fallback]
             else:
-                return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {_OP_USAGE[tool_name]}"}
+                return {"success": False, "error": f"알 수 없는 op '{op}'. 사용 가능: {sorted(_OP_DISPATCHERS[tool_name])}"}
         return fn(tool_input, context)
     elif tool_name == "radio_status":
         return radio.radio_status()

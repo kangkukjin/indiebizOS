@@ -1069,7 +1069,10 @@ def execute_workflow_action(action: str, params: dict,
             wf_data["params_required"] = signature
         else:
             wf_data.pop("params_required", None)
-        wf_id = save_workflow(wf_data)
+        try:
+            wf_id = save_workflow(wf_data)
+        except (ValueError, OSError) as exc:
+            return {"success": False, "error": f"워크플로 저장 실패: {exc}"}
         out = {"success": True, "workflow_id": wf_id,
                "message": f"워크플로우 '{wf_id}' 저장 완료"}
         if signature:

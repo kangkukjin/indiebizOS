@@ -532,6 +532,11 @@ def _cctv_query(op: str = None, **kwargs) -> str:
         return json.dumps({"success": False,
                            "error": f"알 수 없는 op '{op}'. 사용 가능: ['search', 'nearby', 'webcam']"},
                           ensure_ascii=False)
+    # IBL은 count 별칭을 limit으로 정규화한다. 공급자 count로 되돌린다.
+    if op in ("nearby", "webcam") and "limit" in kwargs:
+        kwargs["count"] = kwargs.pop("limit")
+    if op == "nearby" and "lng" not in kwargs and "lon" in kwargs:
+        kwargs["lng"] = kwargs.pop("lon")
     valid = {k: v for k, v in kwargs.items() if k in inspect.signature(func).parameters}
     return func(**valid)
 

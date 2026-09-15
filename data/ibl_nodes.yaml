@@ -1889,8 +1889,8 @@ nodes:
       radio:
         lands_on: hub
         path_audited:
-          at: '2026-09-14'
-          impl: d9e0699a96d19e7e
+          at: '2026-09-15'
+          impl: 5e75393fac9cd838
         params:
           query: string
         returns: items
@@ -2441,10 +2441,10 @@ nodes:
         fixture: '[sense:sqlite]{op: "tables", path: "~workspace/data/ibl_usage.db"}'
         description: SQLite 파일 읽기 전용 조회 (op 분기) — query(SELECT → 행 items)·tables(표 목록·행 수)·schema(열 목록). 몸의 원장(.db)을 셸 sqlite3 대신 문장으로 본다. 쓰기는 거절.
         group: system
-        target_description: 'op=query(기본): path(SQLite 파일 — ~workspace/·절대·저장소 상대)·query(SELECT/WITH/PRAGMA/EXPLAIN 만 — INSERT·UPDATE·DELETE·DDL 은 거절)·params(? 자리 값 목록)·limit(기본 200, 상한 2000 — 넘으면 truncated) → items(행 dict)+columns / tables: path → items(name·rows) / schema: path·table → items(cid·name·type·notnull·pk). 표·열 이름을 모르면 tables→schema→query 순. 결과는 >> [table:filter]/[table:groupby] 로 흐른다.'
+        target_description: 'op=query(기본): path(SQLite 파일 — ~workspace/·절대·저장소 상대)·query(SELECT/WITH/PRAGMA/EXPLAIN 만 — INSERT·UPDATE·DELETE·DDL 은 거절)·params(? 자리 값 목록)·limit(기본 200, 상한 2000 — 넘으면 truncated) → items(행 dict)+columns / tables: path → items(name·rows) / schema: path·table → items(cid·name·type·notnull·pk). 중복 열 이름은 AS로 구별해야 하며 설정 변경 PRAGMA는 거절한다. 표·열 이름을 모르면 tables→schema→query 순. 결과는 >> [table:filter]/[table:groupby] 로 흐른다.'
         router: handler
         tool: sqlite_op
-        implementation: system_essentials/sqlite_ops.py — sqlite3 mode=ro URI 연결, 문장 머리 정규식 관문(쓰기 낱말 거절), fetchmany(limit+1) 로 절단 신고. 열 이름은 데이터(세계의 명사).
+        implementation: system_essentials/sqlite_ops.py — sqlite3 mode=ro URI 연결, 문장 머리 관문 + SQLite authorizer(실제 쓰기 연산·설정 PRAGMA 거절), fetchmany(limit+1) 로 절단 신고. 열 이름은 데이터(세계의 명사).
         target_key: op
         params:
           path: string
@@ -2485,7 +2485,7 @@ nodes:
         lands_on: hub
         path_audited:
           at: '2026-09-15'
-          impl: fe4e1fd3581221bf
+          impl: bdc9d886a725ddb9
         aliases:
           limit:
           - count
@@ -2541,7 +2541,7 @@ nodes:
         lands_on: hub
         path_audited:
           at: '2026-09-15'
-          impl: fe4e1fd3581221bf
+          impl: bdc9d886a725ddb9
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -2638,7 +2638,7 @@ nodes:
         fixture: '[sense:feed]{url: "https://www.pewresearch.org/feed/", limit: 3}'
         description: RSS/Atom 피드 읽기 — 어떤 사이트든 피드 URL 하나로 최신 글 목록을 items(제목·날짜·링크·요약)로. 블로그·뉴스·연구기관 새 글 확인용. crawl 은 피드 항목 구조를 뭉개므로 피드 URL 은 이쪽. 이웃·커뮤니티 타임라인은 others:feed.
         group: research
-        target_description: 피드 URL (…/feed/, …/rss.xml, atom.xml 등). limit 로 항목 수 제한(기본 10). 특정 기관 예시 — Pew Research는 https://www.pewresearch.org/feed/ (구 sense:pew_research 액션의 일반화, 2026-08-15).
+        target_description: 피드 URL (…/feed/, …/rss.xml, atom.xml 등). limit 로 항목 수 제한(기본 10, 0은 빈 결과). HTML 등 피드가 아닌 응답은 오류다. 특정 기관 예시 — Pew Research는 https://www.pewresearch.org/feed/ (구 sense:pew_research 액션의 일반화, 2026-08-15).
         router: handler
         tool: fetch_feed
         implementation: feedparser 로 RSS/Atom 파싱 — 제목·게시일·링크·요약(HTML 제거)을 레코드 통화 {title, meta, summary, url} 로. 피드 제목을 source 로 자동 사용.
@@ -5000,7 +5000,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-15'
-          impl: 150cb214785b9dd3
+          impl: de338721c19029f2
         target_key: path
         aliases:
           offset:
@@ -5013,7 +5013,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-15'
-          impl: 150cb214785b9dd3
+          impl: de338721c19029f2
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6066,8 +6066,8 @@ nodes:
           volume: $volume
         member_transform: radio_member:control
         path_audited:
-          at: '2026-09-14'
-          impl: d9e0699a96d19e7e
+          at: '2026-09-15'
+          impl: 5e75393fac9cd838
         returns: effect
         description: 인터넷 라디오 재생 제어 (op 분기). play/stop/status/volume. 방송국 검색은 [sense:radio].
         target_description: play — station_id(get_korean_radio 결과) 또는 stream_url(search_radio 결과) 중 하나. volume 옵션. mode 옵션으로 출력지 지정 — client(보고 있는 기기에서) / host(이 PC 스피커에서). 생략하면 표면이 정한다(원격런처·포털·폰=그 기기, 데스크탑=이 PC). stop — 파라미터 없음. status — 파라미터 없음, 재생 중 채널·경과 시간. volume — volume(0~100). ★status·volume 은 재생 중일 때만 의미가 있다(라디오 전용).

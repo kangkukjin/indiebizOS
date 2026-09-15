@@ -275,9 +275,18 @@ def critique_image(tool_input, output_base):
         verdict = _json.loads(text)
     except Exception:
         return json.dumps({"success": False, "error": "VLM 응답 파싱 실패", "raw": text[:500]}, ensure_ascii=False)
-    if isinstance(verdict, dict):
-        verdict.setdefault("tier", "vision")  # 0층(prescreen) 단락과 판정 출처를 구분
-        verdict.setdefault("rubric", rubric)  # 어느 기준표로 심사했는가 — 침묵 기본값 방지
+    if (not isinstance(verdict, dict)
+            or type(verdict.get("passed")) is not bool
+            or type(verdict.get("score")) not in (int, float)
+            or not 0 <= verdict["score"] <= 10
+            or not isinstance(verdict.get("issues"), list)
+            or any(not isinstance(issue, str) for issue in verdict["issues"])
+            or not isinstance(verdict.get("notes", ""), str)):
+        return json.dumps({"success": False, "error": "VLM 채점 응답 형식 오류",
+                           "raw": text[:500]}, ensure_ascii=False)
+    # 모델이 자체 표식을 꾸며도 실제 호출 경로·적용 기준이 정본이다.
+    verdict["tier"] = "vision"
+    verdict["rubric"] = rubric
 
     summary_lines = [
         f"이미지 평가: {image_path}",

@@ -614,7 +614,7 @@ def _stock_earnings(ti: dict):
 def _company_common(ti: dict):
     """[sense:company] 공용 전처리 (옛 _company_op 앞부분 그대로) — (ticker, market) 반환."""
     ticker = _arg(ti, "ticker", "corp_name", "symbol", "query", "company")  # query/company 추가(코퍼스가 기업명에 사용)
-    market = _detect_market(ticker, ti.get("market"))
+    market = _detect_market(ticker, ti.get("market") or ("kr" if ti.get("corp_code") else None))
     return ticker, market
 
 

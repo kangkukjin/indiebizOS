@@ -49,6 +49,12 @@ def _search_arxiv(tool_input: dict) -> str:
     r = _arxiv_get(url)
     r.raise_for_status()
     feed = feedparser.parse(r.text)
+    if feed.get("bozo") or not feed.get("version"):
+        return {"success": False, "items": [], "error": "arXiv 피드 파싱 실패"}
+    errors = [e for e in feed.entries if "/api/errors" in e.get("id", "")]
+    if errors:
+        return {"success": False, "items": [],
+                "error": "arXiv 검색 오류: " + str(errors[0].get("summary", "잘못된 검색 요청"))}
     lines, items = [], []
     for e in feed.entries:
         aid = (e.get("id", "") or "").split("/")[-1]
@@ -119,7 +125,9 @@ def _paper_search(tool_input: dict, context) -> str:
         return _search_semantic_scholar(tool_input)
     if source in ("nanet", "kr", "dissertation", "국회도서관"):
         return _search_nanet(tool_input)  # 국내 학술논문·학위논문(국회도서관)
-    return _search_openalex(tool_input)  # openalex = 기본(범용)
+    if source == "openalex":
+        return _search_openalex(tool_input)
+    return {"success": False, "items": [], "error": f"지원하지 않는 논문 source: {source}"}
 
 
 def _paper_download(tool_input: dict, context) -> str:
@@ -772,7 +780,9 @@ def _search_openalex(tool_input: dict) -> str:
         response.raise_for_status()
         data = response.json()
 
-        works = data.get("results", [])
+        if not isinstance(data, dict) or not isinstance(data.get("results"), list):
+            return {"success": False, "items": [], "error": "OpenAlex 검색 응답 형식 오류"}
+        works = data["results"]
         total_count = data.get("meta", {}).get("count", 0)
 
         if not works:

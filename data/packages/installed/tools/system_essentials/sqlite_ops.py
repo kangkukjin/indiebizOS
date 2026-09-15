@@ -5,7 +5,7 @@ IBL 밖으로 나갔다. Bash 로 나간 조회는 해마·타입 검사·관용
 이 낱말은 *접근*(sqlite 파일 열기·SQL 실행·행 dict 통화)을 캡슐화한다. 분석 관습은 어휘에 넣지 않는다.
 
 계약(읽기 전용, 파괴 불가):
-  · 연결은 `mode=ro` URI — 쓰기 SQL 은 엔진이 거절하고, 그 전에 문장 머리 관문이 SELECT/WITH/PRAGMA/EXPLAIN 만 통과시킨다.
+  · 연결은 `mode=ro` URI — 쓰기 SQL 은 엔진이 거절하고, 그 전에 문장 머리 관문과 SQLite authorizer가 조회 연산·읽기 PRAGMA만 허용한다.
   · op=query(기본): path·query(·params 목록·limit 기본 200, 상한 2000) → items(행 dict) + columns + truncated(limit 에 걸렸을 때).
   · op=tables: path → items(name·rows) — 표 목록과 행 수(빠른 지도).
   · op=schema: path·table → items(cid·name·type·notnull·pk) — 열 목록(PRAGMA table_info).
@@ -20,7 +20,6 @@ from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~w
 
 _ROOT = Path(__file__).resolve().parents[5]  # indiebizOS/
 _READ_HEAD = re.compile(r"^\s*(select|with|pragma|explain)\b", re.IGNORECASE)
-_FORBIDDEN = re.compile(r"\b(insert|update|delete|drop|alter|create|replace|attach|detach|vacuum|reindex)\b", re.IGNORECASE)
 LIMIT_DEFAULT = 200
 LIMIT_MAX = 2000
 
@@ -39,8 +38,35 @@ def _db_path(tool_input):
     return p, None
 
 
+_READ_PRAGMAS = {
+    "table_info", "table_xinfo", "table_list", "index_info", "index_xinfo", "index_list",
+    "foreign_key_list", "database_list", "compile_options", "pragma_list",
+    "function_list", "module_list", "collation_list", "integrity_check", "quick_check",
+    "foreign_key_check",
+}
+_VALUE_PRAGMAS = {"user_version", "schema_version", "application_id", "page_count",
+                  "page_size", "freelist_count", "encoding", "journal_mode", "query_only", "data_version"}
+
+
+def _read_authorizer(action, arg1, arg2, database, trigger):
+    if action == sqlite3.SQLITE_PRAGMA:
+        name = (arg1 or "").lower()
+        ok = name in _READ_PRAGMAS or (name in _VALUE_PRAGMAS and arg2 is None)
+        return sqlite3.SQLITE_OK if ok else sqlite3.SQLITE_DENY
+    if action in (sqlite3.SQLITE_SELECT, sqlite3.SQLITE_READ, sqlite3.SQLITE_FUNCTION,
+                  sqlite3.SQLITE_RECURSIVE):
+        return sqlite3.SQLITE_OK
+    return sqlite3.SQLITE_DENY
+
+
+def _identifier(name):
+    return '"' + name.replace('"', '""') + '"'
+
+
 def _connect(p: Path):
-    conn = sqlite3.connect(f"file:{p}?mode=ro", uri=True, timeout=5)
+    conn = sqlite3.connect(p.resolve().as_uri() + "?mode=ro", uri=True, timeout=5)
+    conn.execute("PRAGMA query_only=ON")
+    conn.set_authorizer(_read_authorizer)
     conn.row_factory = sqlite3.Row
     return conn
 
@@ -60,7 +86,7 @@ def op_query(tool_input):
     q = str(tool_input.get("query") or "").strip().rstrip(";")
     if not q:
         return {"success": False, "items": [], "error": "query 가 필요합니다 — SELECT 문(읽기 전용)."}
-    if not _READ_HEAD.match(q) or _FORBIDDEN.search(q):
+    if not _READ_HEAD.match(q):
         return {"success": False, "items": [],
                 "error": "읽기 전용 낱말입니다 — SELECT/WITH/PRAGMA/EXPLAIN 만 실행합니다(INSERT·UPDATE·DELETE·DDL 거절).",
                 "hint": "원장을 고쳐야 하면 그 원장의 낱말([self:ledger]·[self:business] 등)이나 등록 스크립트를 쓰세요."}
@@ -75,11 +101,14 @@ def op_query(tool_input):
         try:
             cur = conn.execute(q, tuple(params))
             cols = [d[0] for d in (cur.description or [])]
+            if len(set(cols)) != len(cols):
+                return {"success": False, "items": [],
+                        "error": "중복 열 이름이 있습니다. AS로 서로 다른 이름을 지정하세요."}
             rows = cur.fetchmany(limit + 1)
         finally:
             conn.close()
     except sqlite3.Error as e:
-        return {"success": False, "items": [], "error": f"SQL 오류: {e}", "path": str(p),
+        return {"success": False, "items": [], "error": f"읽기 전용 SQL 오류: {e}", "path": str(p),
                 "hint": "표·열 이름이 불확실하면 op:\"tables\" / op:\"schema\" 로 먼저 보세요."}
     truncated = len(rows) > limit
     rows = rows[:limit]
@@ -103,7 +132,7 @@ def op_tables(tool_input):
             items = []
             for n in names:
                 try:
-                    cnt = conn.execute(f'SELECT COUNT(*) FROM "{n}"').fetchone()[0]
+                    cnt = conn.execute(f'SELECT COUNT(*) FROM {_identifier(n)}').fetchone()[0]
                 except sqlite3.Error:
                     cnt = None
                 items.append({"name": n, "rows": cnt})
@@ -119,12 +148,12 @@ def op_schema(tool_input):
     if err:
         return err
     table = str(tool_input.get("table") or "").strip()
-    if not table or not re.match(r"^[\w가-힣]+$", table):
+    if not table or "\0" in table:
         return {"success": False, "items": [], "error": "table 이 필요합니다(표 이름 하나) — 목록은 op:\"tables\"."}
     try:
         conn = _connect(p)
         try:
-            rows = conn.execute(f'PRAGMA table_info("{table}")').fetchall()
+            rows = conn.execute(f'PRAGMA table_info({_identifier(table)})').fetchall()
         finally:
             conn.close()
     except sqlite3.Error as e:

@@ -43,10 +43,16 @@ def _load_state() -> dict:
     if _STATE_PATH.exists():
         try:
             st = json.loads(_STATE_PATH.read_text(encoding="utf-8"))
-        except Exception:
-            st = {}
+        except (OSError, ValueError) as exc:
+            raise ValueError(f"공개파일 상태를 읽을 수 없습니다. 원본을 보존합니다: {exc}") from exc
     else:
         st = {}
+    if (not isinstance(st, dict)
+            or not isinstance(st.get("settings", {}), dict)
+            or not isinstance(st.get("folders", []), list)
+            or not isinstance(st.get("baskets", []), list)
+            or any(not isinstance(row, dict) for row in st.get("folders", []) + st.get("baskets", []))):
+        raise ValueError("공개파일 상태 형식 오류. 원본을 보존합니다.")
     settings = {**_DEFAULT_SETTINGS, **(st.get("settings") or {})}
     return {
         "settings": settings,
@@ -186,7 +192,7 @@ def _sc_status(params: dict) -> str:
     rows = [_folder_row(state, f) for f in state["folders"]]
     path = params.get("path")
     if path:
-        rows = [r for r in rows if r["path"] == path]
+        rows = [r for r in rows if r["path"] == _canon(path)]
     return json.dumps(
         items(rows, settings=settings, public_base=settings.get("public_base", "")),
         ensure_ascii=False,

@@ -474,7 +474,7 @@ def _transform(tool_input: dict) -> str:
         return _ok({"items": [], "rows_in": 0, "rows_out": 0,
                     "note": "입력 0행 — AI 호출 생략(비용 0)."})
     fields = tool_input.get("fields")
-    if fields is not None and not isinstance(fields, list):
+    if fields is not None and (not isinstance(fields, list) or any(not isinstance(f, str) for f in fields)):
         return _fail("fields 는 문자열 배열이어야 합니다.")
     if fields and declared and set(declared) - set(fields):
         return _fail("fields가 schema에 선언한 필드를 제거합니다.")
@@ -487,7 +487,7 @@ def _transform(tool_input: dict) -> str:
     #   병합한다(값 보존·순서 = 반환 순서·뺀 _i = 제거·_i 없는 행 = 신규). 모델이 계약을 어기고
     #   _i 없이 전 행을 돌려주면 옛 계약(전체 행)으로 정직 폴백하고 `_merge: "full"` 로 신고한다.
     dict_items = [r if isinstance(r, dict) else {"value": r} for r in items]
-    payload, perr = _items_payload([{"_i": i, **r} for i, r in enumerate(dict_items)])
+    payload, perr = _items_payload([{**r, "_i": i} for i, r in enumerate(dict_items)])
     if perr:
         return _fail(perr)
 
@@ -512,7 +512,10 @@ def _transform(tool_input: dict) -> str:
     out, gerr = records_gate(parsed)
     if gerr:
         return _fail(f"변환 실패: {gerr}")
-    out, merge_mode, bad_idx = _merge_by_index(dict_items, out)
+    try:
+        out, merge_mode, bad_idx = _merge_by_index(dict_items, out)
+    except ValueError as exc:
+        return _fail(f"변환 실패: {exc}")
     schema_error = records_schema_error(out, schema)
     if schema_error:
         return _fail(schema_error, error_type="schema", fields=declared)
@@ -544,12 +547,14 @@ def _merge_by_index(src: list, out: list):
             continue
         r = dict(r)
         i = r.pop("_i", None)
-        try:
-            i = int(i) if i is not None else None
-        except (TypeError, ValueError):
-            i = None
+        if i is not None:
+            if isinstance(i, str) and re.fullmatch(r"[+-]?\d+", i.strip()):
+                i = int(i)
+            elif type(i) is not int:
+                raise ValueError("_i는 정수 색인이어야 합니다.")
         if i is not None and 0 <= i < len(src):
             base = dict(src[i])
+            base.pop("_i", None)
             base.update(r)
             rows.append(base)
         else:

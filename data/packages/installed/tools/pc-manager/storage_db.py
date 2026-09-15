@@ -9,6 +9,7 @@ import json
 import sqlite3
 import subprocess
 import threading
+import tempfile
 import unicodedata
 from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
 from datetime import datetime
@@ -25,7 +26,7 @@ SCANS_DIR = os.path.join(
 SCANS_JSON = os.path.join(SCANS_DIR, "scans.json")
 
 # 스캔 목록 접근 락
-_scans_lock = threading.Lock()
+_scans_lock = threading.RLock()
 
 # 스캔 제외 폴더
 EXCLUDE_DIRS = {
@@ -51,20 +52,34 @@ def _ensure_scans_dir():
 def _load_scans_json() -> List[Dict]:
     """스캔 목록 JSON 로드"""
     _ensure_scans_dir()
-    if os.path.exists(SCANS_JSON):
-        try:
-            with open(SCANS_JSON, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return []
-    return []
+    if not os.path.exists(SCANS_JSON):
+        return []
+    try:
+        with open(SCANS_JSON, encoding='utf-8') as f:
+            scans = json.load(f)
+    except (ValueError, OSError) as exc:
+        raise ValueError(f"스캔 원장 읽기 실패 — 원본을 보존합니다: {exc}") from exc
+    if not isinstance(scans, list) or any(
+            not isinstance(row, dict) or type(row.get('id')) is not int
+            or not isinstance(row.get('root_path'), str)
+            or not isinstance(row.get('name'), str) for row in scans):
+        raise ValueError("스캔 원장 형식 오류 — 원본을 보존합니다.")
+    return scans
 
 
 def _save_scans_json(scans: List[Dict]):
-    """스캔 목록 JSON 저장"""
+    """완성된 JSON만 원자 교체해 동시 읽기·중간 실패로 원장이 깨지지 않게 한다."""
     _ensure_scans_dir()
-    with open(SCANS_JSON, 'w', encoding='utf-8') as f:
-        json.dump(scans, f, ensure_ascii=False, indent=2)
+    fd, temp = tempfile.mkstemp(dir=SCANS_DIR, suffix='.json')
+    try:
+        with os.fdopen(fd, 'w', encoding='utf-8') as f:
+            json.dump(scans, f, ensure_ascii=False, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temp, SCANS_JSON)
+    finally:
+        if os.path.exists(temp):
+            os.unlink(temp)
 
 
 def _get_db_path(scan_id: int) -> str:
@@ -178,8 +193,8 @@ def create_scan(root_path: str, name: Optional[str] = None) -> Dict:
     root_path = os.path.abspath(root_path)
     root_path = _normalize_path(root_path)
 
-    if not os.path.exists(root_path):
-        return {"success": False, "error": f"경로가 존재하지 않습니다: {root_path}"}
+    if not os.path.isdir(root_path):
+        return {"success": False, "error": f"디렉토리가 아닙니다: {root_path}"}
 
     # 이름 자동 생성
     if not name:
@@ -214,11 +229,10 @@ def create_scan(root_path: str, name: Optional[str] = None) -> Dict:
             "file_count": 0,
             "total_size": 0
         }
+        # 완성된 DB가 있을 때만 원장에 공개한다.
+        _init_scan_db(scan_id)
         scans.append(new_scan)
         _save_scans_json(scans)
-
-    # DB 초기화
-    _init_scan_db(scan_id)
 
     return {"success": True, "scan_id": scan_id, "name": name, "exists": False}
 
@@ -251,19 +265,21 @@ def delete_scan(scan_id: int) -> Dict:
 
 
 def clear_scan_data(scan_id: int):
-    """스캔 데이터 초기화 (재스캔용)"""
-    db_path = _get_db_path(scan_id)
-    if os.path.exists(db_path):
-        os.remove(db_path)
-    _init_scan_db(scan_id)
+    """파일 색인만 지운다. 폴더 주석은 재스캔 이후에도 보존한다."""
+    conn = _get_connection(scan_id)
+    try:
+        with conn:
+            conn.execute("DELETE FROM files")
+    finally:
+        conn.close()
 
 
-def save_file_batch(scan_id: int, file_list: List[Dict]):
+def save_file_batch(scan_id: int, file_list: List[Dict], connection=None):
     """파일 배치 저장"""
     if not file_list:
         return
 
-    conn = _get_connection(scan_id)
+    conn = connection or _get_connection(scan_id)
     cursor = conn.cursor()
 
     cursor.executemany("""
@@ -278,8 +294,9 @@ def save_file_batch(scan_id: int, file_list: List[Dict]):
         f.get('mtime')
     ) for f in file_list])
 
-    conn.commit()
-    conn.close()
+    if connection is None:
+        conn.commit()
+        conn.close()
 
 
 def update_scan_stats(scan_id: int, file_count: int, total_size: int):
@@ -296,82 +313,62 @@ def update_scan_stats(scan_id: int, file_count: int, total_size: int):
 
 
 def scan_directory(path: str, scan_name: Optional[str] = None, progress_callback=None) -> Dict:
-    """디렉토리 스캔하여 파일 메타데이터 수집"""
-    path = expand_body_path(path)
-    path = os.path.abspath(path)
-    path = _normalize_path(path)
+    """스캔과 원장 갱신을 직렬화해 뒤늦은 통계가 새 색인을 덮지 않게 한다."""
+    with _scans_lock:
+        return _scan_directory(path, scan_name, progress_callback)
 
-    if not os.path.exists(path):
-        return {"success": False, "error": f"경로가 존재하지 않습니다: {path}"}
 
-    # 스캔 생성 또는 기존 스캔 찾기
+def _scan_directory(path: str, scan_name: Optional[str] = None, progress_callback=None) -> Dict:
+    """전체 순회가 성공한 파일 색인만 교체한다. 주석과 실패 전 색인은 보존한다."""
+    path = _normalize_path(os.path.abspath(expand_body_path(path)))
+    if not os.path.isdir(path):
+        return {"success": False, "error": f"디렉토리가 아닙니다: {path}"}
     result = create_scan(path, scan_name)
     if not result['success']:
         return result
-
     scan_id = result['scan_id']
-
-    # 기존 데이터 삭제 (재스캔)
-    clear_scan_data(scan_id)
-
-    # 스캔 시작
-    file_count = 0
-    total_size = 0
-    error_count = 0
+    file_count = total_size = 0
     batch = []
-    BATCH_SIZE = 5000
+    conn = _get_connection(scan_id)
 
-    for root, dirs, files in os.walk(path):
-        # 제외 폴더 필터링
-        dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS and not d.startswith('.')]
+    def walk_error(exc):
+        raise exc
 
-        for filename in files:
-            if filename in EXCLUDE_FILES or filename.startswith('.'):
-                continue
-
-            filepath = os.path.join(root, filename)
-            try:
-                stat = os.stat(filepath)
-                ext = os.path.splitext(filename)[1].lower().lstrip('.')
-                mtime = datetime.fromtimestamp(stat.st_mtime).isoformat()
-
-                batch.append({
-                    'path': filepath,
-                    'filename': filename,
-                    'extension': ext,
-                    'size': stat.st_size,
-                    'mtime': mtime
-                })
-                file_count += 1
-                total_size += stat.st_size
-
-                # 배치 저장
-                if len(batch) >= BATCH_SIZE:
-                    save_file_batch(scan_id, batch)
-                    batch = []
-
-                # 진행 콜백
-                if progress_callback and file_count % 1000 == 0:
-                    progress_callback(file_count)
-
-            except (OSError, PermissionError):
-                error_count += 1
-
-    # 남은 배치 처리
-    if batch:
-        save_file_batch(scan_id, batch)
-
-    # 통계 업데이트
+    try:
+        # 삭제·배치 적재 전체가 한 트랜잭션. 독자는 직전 완성본을 본다.
+        with conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("DELETE FROM files")
+            for root, dirs, files in os.walk(path, onerror=walk_error):
+                dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS and not d.startswith('.')]
+                for filename in files:
+                    if filename in EXCLUDE_FILES or filename.startswith('.'):
+                        continue
+                    filepath = os.path.join(root, filename)
+                    stat = os.stat(filepath)
+                    batch.append({
+                        'path': filepath, 'filename': filename,
+                        'extension': os.path.splitext(filename)[1].lower().lstrip('.'),
+                        'size': stat.st_size,
+                        'mtime': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    })
+                    file_count += 1
+                    total_size += stat.st_size
+                    if len(batch) >= 5000:
+                        save_file_batch(scan_id, batch, connection=conn)
+                        batch = []
+                    if progress_callback and file_count % 1000 == 0:
+                        progress_callback(file_count)
+            save_file_batch(scan_id, batch, connection=conn)
+    except Exception as exc:
+        return {"success": False, "error": f"스캔 실패 — 이전 색인·주석 보존: {exc}",
+                "scan_id": scan_id}
+    finally:
+        conn.close()
     update_scan_stats(scan_id, file_count, total_size)
-
-    return {
-        "success": True,
-        "scan_id": scan_id,
-        "name": result.get('name'),
-        "file_count": file_count,
-        "total_size_mb": round(total_size / (1024 * 1024), 2),
-        "error_count": error_count
-    }
+    return {"success": True, "scan_id": scan_id, "name": result.get('name'),
+            "file_count": file_count, "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "error_count": 0}
 
 
 def get_summary_all() -> Dict:
@@ -462,7 +459,9 @@ def get_summary(root_path: str) -> Dict:
         "last_scan": scan.get('last_scan'),
         "file_count": scan.get('file_count', 0),
         "total_size_mb": round(scan.get('total_size', 0) / (1024 * 1024), 2),
-        "top_extensions": ext_stats
+        "top_extensions": ext_stats,
+        "items": ext_stats,
+        "count": len(ext_stats)
     }
 
 

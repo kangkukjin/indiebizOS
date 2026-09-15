@@ -74,8 +74,8 @@ def _actual_to_virtual(x, y):
 
 def _validate_coords(x, y):
     """좌표 범위 검증"""
-    if not (0 <= x <= VIRTUAL_WIDTH and 0 <= y <= VIRTUAL_HEIGHT):
-        raise ValueError(f"좌표 ({x},{y})가 범위를 벗어났습니다 (0~{VIRTUAL_WIDTH}, 0~{VIRTUAL_HEIGHT})")
+    if not (0 <= x < VIRTUAL_WIDTH and 0 <= y < VIRTUAL_HEIGHT):
+        raise ValueError(f"좌표 ({x},{y})가 범위를 벗어났습니다 (0~{VIRTUAL_WIDTH - 1}, 0~{VIRTUAL_HEIGHT - 1})")
 
 
 # ── 스크린샷 캡처 ──
@@ -87,7 +87,8 @@ def _capture_screenshot(region=None):
         dict: {"base64": str, "media_type": "image/png"}
     """
     Image = _get_pil_image()
-    tmp_path = os.path.join(tempfile.gettempdir(), "indiebiz_cu_screenshot.png")
+    fd, tmp_path = tempfile.mkstemp(prefix="indiebiz_cu_", suffix=".png")
+    os.close(fd)
 
     try:
         if platform.system() == "Darwin":
@@ -106,7 +107,7 @@ def _capture_screenshot(region=None):
                     capture_output=True, timeout=5
                 )
 
-            if not os.path.exists(tmp_path) or os.path.getsize(tmp_path) < 100:
+            if r.returncode != 0 or not os.path.exists(tmp_path) or os.path.getsize(tmp_path) < 100:
                 raise PermissionError(
                     "스크린샷 캡처 실패. 시스템 환경설정 > 개인정보 보호 > 화면 기록에서 "
                     "Python(또는 터미널 앱)에 권한을 부여하세요."
@@ -116,6 +117,12 @@ def _capture_screenshot(region=None):
             # Windows/Linux
             from PIL import ImageGrab
             img = ImageGrab.grab()
+            if region:
+                left = int(region["x"] * img.width / VIRTUAL_WIDTH)
+                top = int(region["y"] * img.height / VIRTUAL_HEIGHT)
+                right = int((region["x"] + region["width"]) * img.width / VIRTUAL_WIDTH)
+                bottom = int((region["y"] + region["height"]) * img.height / VIRTUAL_HEIGHT)
+                img = img.crop((left, top, right, bottom))
 
         # 1280x800으로 리사이즈
         img_resized = img.resize((VIRTUAL_WIDTH, VIRTUAL_HEIGHT), Image.LANCZOS)
@@ -159,6 +166,17 @@ def _make_image_result(text, img_data, extra_details=None):
 def _do_screenshot(tool_input):
     """computer_screenshot: 화면 캡처"""
     region = tool_input.get("region")
+    if region is None and any(k in tool_input for k in ("x", "y", "width", "height")):
+        region = {k: tool_input.get(k) for k in ("x", "y", "width", "height")}
+    if region is not None:
+        if not isinstance(region, dict) or any(
+                type(region.get(k)) not in (int, float) for k in ("x", "y", "width", "height")):
+            raise ValueError("영역은 x,y,width,height 숫자가 모두 필요합니다.")
+        _validate_coords(region["x"], region["y"])
+        if not (region["width"] > 0 and region["height"] > 0
+                and region["x"] + region["width"] <= VIRTUAL_WIDTH
+                and region["y"] + region["height"] <= VIRTUAL_HEIGHT):
+            raise ValueError("캡처 영역이 화면을 벗어났거나 크기가 0 이하입니다.")
     img_data = _capture_screenshot(region)
 
     text = f"현재 화면 스크린샷입니다 ({VIRTUAL_WIDTH}x{VIRTUAL_HEIGHT}). 이미지를 분석하여 UI 요소의 위치를 파악하세요."
@@ -243,6 +261,8 @@ def _do_type(tool_input):
     ref = (tool_input.get("ref") or "").strip()
     if ref:
         info = _AX_SESSION.get(ref)
+        if not info:
+            return json.dumps({"success": False, "error": f"알 수 없는 ref: {ref}. snapshot으로 다시 읽으세요."}, ensure_ascii=False)
         if info:
             if _ax_set_value(info["el"], tool_input.get("text", "")):
                 return json.dumps({"success": True, "action": "type", "ref": ref,
@@ -251,6 +271,8 @@ def _do_type(tool_input):
             # 폴백: 요소를 눌러 포커스 후 키 입력
             if info.get("center"):
                 _do_click({"x": info["center"][0], "y": info["center"][1], "screenshot_after": False})
+            else:
+                return json.dumps({"success": False, "error": f"ref {ref} 입력 실패: 요소에 값을 쓰거나 포커스를 옮길 수 없습니다."}, ensure_ascii=False)
         tool_input = dict(tool_input)
         tool_input.pop("ref", None)
     pag = _get_pyautogui()

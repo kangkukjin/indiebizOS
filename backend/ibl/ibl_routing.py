@@ -887,8 +887,17 @@ def _package_op(params: dict) -> dict:
             p for p in package_manager.list_available(package_type="tools")
             if not p.get("installed")
         ]
-        inst = [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in installed]
-        avail = [{"package_id": p.get("id") or p.get("name"), "name": p.get("name")} for p in not_installed]
+        from collections import Counter
+        from vocabulary_state import inventory
+        counts = Counter(inventory()["actions"].values())
+
+        def row(p, active):
+            pid = p.get("id") or p.get("name")
+            return {"package_id": pid, "name": p.get("name"), "active": active,
+                    "action_count": counts[pid]}
+
+        inst = [row(p, True) for p in installed]
+        avail = [row(p, False) for p in not_installed]
         return {
             "success": True,
             "installed": inst,

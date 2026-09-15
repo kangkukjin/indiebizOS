@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 
 from common.currency import items  # IBL 단일 통화 생성자
-from common.value_semantics import text_match
+from common.value_semantics import text_match, values_equal
 
 
 # === messages_op: 메신저 (op 분기 — build --check 삼각 검증 대상) ===
@@ -219,8 +219,18 @@ def _msg_thread(bm, tool_input: dict) -> str:
     contacts = []  # 이웃 연락처 목록 — 정보 탭 editable_list용
 
     if has_neighbor:
+        if isinstance(neighbor_id, str) and not neighbor_id.strip().isdigit():
+            matches = [n for n in bm.get_neighbors()
+                       if values_equal(n.get("name"), neighbor_id.strip())]
+            if len(matches) != 1:
+                return _err("이웃 이름이 없거나 여러 명입니다. inbox에서 neighbor_id를 확인하세요.")
+            neighbor_id = matches[0]["id"]
+        elif type(neighbor_id) not in (int, str):
+            return _err("neighbor_id는 정수 ID 또는 이웃 이름이어야 합니다.")
         neighbor_id = int(neighbor_id)
         nb = bm.get_neighbor(neighbor_id) or {}
+        if not nb:
+            return _err(f"이웃을 찾을 수 없습니다: {neighbor_id}")
         name = nb.get("name", "")
         channel = _primary_channel(bm, neighbor_id)
         contacts = [{"id": c.get("id"), "contact_type": c.get("contact_type", ""),

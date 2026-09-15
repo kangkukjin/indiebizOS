@@ -27,8 +27,14 @@ def execute(tool_input: dict, context):
         query = tool_input.get("query") or tool_input.get("keyword")
         org_id = tool_input.get("org_id")
         tbl_id = tool_input.get("tbl_id")
-        indicator = tool_input.get("indicator") or tool_input.get("indicator_id")
+        indicator = tool_input.get("indicator", tool_input.get("indicator_id"))
         info = tool_input.get("info", False)
+        if isinstance(info, str) and info.lower() in ("true", "false"):
+            info = info.lower() == "true"
+        if type(info) is not bool:
+            return {"success": False, "error": "info는 true/false여야 합니다."}
+        if bool(org_id) != bool(tbl_id):
+            return {"success": False, "error": "org_id와 tbl_id를 함께 지정하세요."}
 
         if org_id and tbl_id:
             if info:
@@ -53,7 +59,7 @@ def execute(tool_input: dict, context):
         elif query:
             return kosis_api.integrated_search(
                 keyword=query,
-                count=tool_input.get("limit") or tool_input.get("count") or 10,
+                count=tool_input.get("limit", tool_input.get("count", 10)),
             )
         else:
             return {"success": False, "error": "query / indicator / (org_id + tbl_id) 중 하나가 필요합니다."}

@@ -65,6 +65,7 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
     restaurants = []
     total = 0
     page = 1
+    page_error = None
     # 페이지 크기는 15 고정 (페이지마다 size가 바뀌면 오프셋이 어긋남) — 마지막에 잘라냄
     while len(restaurants) < size and page <= 3:
         params = {
@@ -74,18 +75,21 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
             "sort": sort,
             "page": page,
         }
-        if x and y:
+        if x is not None and y is not None:
             params["x"] = x
             params["y"] = y
             params["radius"] = min(radius, 20000)
 
         data = api_call("kakao", "/v2/local/search/keyword.json", params=params, timeout=10)
-        if isinstance(data, dict) and "error" in data:
-            if page == 1:
-                return data
+        if (not isinstance(data, dict) or not isinstance(data.get("documents"), list)
+                or any(not isinstance(row, dict) for row in data.get("documents", []))):
+            page_error = data.get("error", "카카오 응답 형식 오류") if isinstance(data, dict) else "카카오 응답 형식 오류"
+            break
+        if data.get("error") or data.get("success") is False:
+            page_error = data.get("error") or "카카오 검색 실패"
             break
 
-        total = data.get("meta", {}).get("total_count", total)
+        total = (data.get("meta") or {}).get("total_count", total)
         for doc in data.get("documents", []):
             # 카카오: x=경도, y=위도 (문자열) → 표준 {lat,lng} float
             coords = _normalize_coords(doc.get("y"), doc.get("x")) or {"lat": None, "lng": None}
@@ -108,6 +112,7 @@ def search_kakao_restaurants(query: str, x: str = None, y: str = None,
     restaurants = restaurants[:size]
     return {
         "total": total,
+        **({"success": False, "error": page_error, "partial": bool(restaurants)} if page_error else {}),
         "restaurants": restaurants,
         "message": f"'{query}' 검색 결과 {len(restaurants)}개의 맛집을 찾았습니다."
     }
@@ -136,7 +141,10 @@ def search_naver_local(query: str, display: int = 5, sort: str = "random"):
     if isinstance(data, dict) and "error" in data:
         return data
 
-    items = data.get("items", [])
+    if (not isinstance(data, dict) or not isinstance(data.get("items"), list)
+            or any(not isinstance(row, dict) for row in data.get("items", []))):
+        return {"success": False, "error": "네이버 응답 형식 오류"}
+    items = data["items"]
 
     # HTML 태그 제거 함수
     def clean_html(text):
@@ -243,6 +251,8 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
         naver_sort: 네이버 정렬 (random/comment)
         enrich: True면 상위 가게에 블로그 언급 수·후기 제목 부착
     """
+    if kakao_size == 0:
+        return {"success": True, "items": [], "count": 0, "query": query}
     results = {
         "query": query,
         "kakao": {"restaurants": [], "total": 0},
@@ -253,7 +263,7 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
 
     # 카카오 검색
     kakao_result = search_kakao_restaurants(query, x, y, radius, kakao_size, "accuracy")
-    if "error" not in kakao_result:
+    if kakao_result.get("restaurants") or "error" not in kakao_result:
         results["kakao"] = {
             "restaurants": kakao_result.get("restaurants", []),
             "total": kakao_result.get("total", 0)
@@ -264,14 +274,20 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
 
     # 네이버 검색 — 같은 가게는 카카오 항목에 병합(설명만 취함), 새 가게만 추가
     naver_result = search_naver_local(query, naver_size, naver_sort)
-    if "error" not in naver_result:
+    if naver_result.get("restaurants") or "error" not in naver_result:
         results["naver"] = {
             "restaurants": naver_result.get("restaurants", []),
             "total": naver_result.get("total", 0)
         }
-        by_name = {_norm_name(r["name"]): r for r in results["combined"]}
+        # 지점명 괄호가 같아져도 주소가 다르면 별개 가게다.
+        def place_key(r):
+            address = re.sub(r"\s+", "", r.get("address") or "").casefold()
+            location = address or (r.get("lat"), r.get("lng"))
+            return _norm_name(r.get("name", "")), location
+
+        by_name = {place_key(r): r for r in results["combined"]}
         for r in naver_result.get("restaurants", []):
-            k = _norm_name(r.get("name", ""))
+            k = place_key(r)
             dup = by_name.get(k)
             if dup:
                 dup["source"] = "kakao+naver"
@@ -283,6 +299,15 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
                 if k:
                     by_name[k] = r
 
+    errors = [{"source": source, "error": r.get("error") or "검색 실패"}
+              for source, r in (("kakao", kakao_result), ("naver", naver_result))
+              if r.get("error") or r.get("success") is False]
+    results["success"] = not errors
+    if errors:
+        results["errors"] = errors
+        results["error"] = "일부 검색 실패" if len(errors) == 1 else "모든 검색 실패"
+        results["partial"] = bool(results["combined"])
+
     # 추천 근거: 네이버 블로그 검색 — 언급 수(blog_count) + 후기 제목(reason)
     if enrich and results["combined"]:
         region = query.split()[0] if query.split() else ""
@@ -290,6 +315,8 @@ def search_restaurants_combined(query: str, x: str = None, y: str = None,
         # 블로그 언급 많은 순으로 정렬 (안정 정렬 — 동률은 API 정확도순 유지)
         results["combined"].sort(key=lambda r: -(r.get("blog_count") or 0))
 
+    results["combined"] = [r for r in results["combined"]
+                           if r.get("lat") is not None and r.get("lng") is not None][:min(kakao_size, 45)]
     kakao_count = len(results["kakao"]["restaurants"])
     naver_count = len(results["naver"]["restaurants"])
     results["message"] = (f"'{query}' 검색 결과 {len(results['combined'])}개 "
@@ -1090,9 +1117,12 @@ def execute(tool_input: dict, context) -> str:
 
         # 카카오 + 네이버 병합 검색 (+블로그 후기 추천 근거)
         try:
-            limit = int(tool_input.get("limit") or 30)
+            raw_limit = tool_input.get("limit", 30)
+            if type(raw_limit) is bool or not re.fullmatch(r"\d+", str(raw_limit).strip()):
+                raise ValueError("limit")
+            limit = int(raw_limit)
         except (TypeError, ValueError):
-            limit = 30
+            return json.dumps({"success": False, "error": "limit은 0 이상의 정수여야 합니다."}, ensure_ascii=False)
         enrich = tool_input.get("enrich")
         enrich = True if enrich is None else str(enrich).lower() not in ("false", "0", "no")
         result = search_restaurants_combined(

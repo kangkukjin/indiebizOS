@@ -119,7 +119,15 @@ def _get_storage_summary(tool_input: dict) -> str:
     """볼륨 요약"""
     import storage_db
 
-    root_path = tool_input.get("volume_name") or tool_input.get("root_path")
+    root_path = tool_input.get("root_path")
+    volume_name = tool_input.get("volume_name")
+    if not root_path and volume_name:
+        from common.value_semantics import values_equal
+        scans = storage_db.list_scans().get("scans", [])
+        matches = [s for s in scans if values_equal(s.get("name"), volume_name)]
+        if len(matches) > 1:
+            return json.dumps({"success": False, "error": "같은 이름의 볼륨이 여러 개입니다. root_path를 지정하세요."}, ensure_ascii=False)
+        root_path = matches[0]["root_path"] if matches else volume_name
 
     # root_path 생략 시 스캔된 전체 볼륨 통합 요약.
     if not root_path:

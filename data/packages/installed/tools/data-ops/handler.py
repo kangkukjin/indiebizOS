@@ -1284,7 +1284,9 @@ def _op_compute(prev, params):
             recs, env = _row_dicts(table), tenv
     if recs is None:
         return _no_currency_error("compute", prev)
-    dict_recs = [r for r in recs if isinstance(r, dict)]
+    if any(not isinstance(r, dict) for r in recs):
+        return {"success": False, "error": "compute: 모든 행은 열을 가진 객체여야 합니다. 스칼라 행을 객체로 구조화하세요."}
+    dict_recs = recs
     if not dict_recs:
         return _emit_items(env, [])
     missing = [k for k in sorted(need_names | need_cols) if not any(k in r for r in dict_recs)]

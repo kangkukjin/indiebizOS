@@ -12,6 +12,7 @@ https://kosis.kr/openapi/
 import os
 import sys
 import json
+import re
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 
@@ -21,14 +22,9 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
 from common.api_client import api_call
+from common.auth_manager import check_api_key
 
-# KOSIS API 인증키 (하드코딩)
-# TODO: KOSIS_API_KEY 환경변수로 전환 필요. auth_manager.py에 이미 등록됨.
-_HARDCODED_API_KEY = "NjcyYjY5ODFkMTU2MzU2MDM4YzcwNTA5NDNhMjhlMWE="
-
-# 환경변수가 없으면 하드코딩 키를 fallback으로 설정
-if not os.environ.get("KOSIS_API_KEY"):
-    os.environ["KOSIS_API_KEY"] = _HARDCODED_API_KEY
+# 인증은 common.auth_manager의 KOSIS_API_KEY 설정을 사용한다.
 
 # KOSIS API 엔드포인트 (api_client의 BASE_URL: "https://kosis.kr/openapi")
 ENDPOINTS = {
@@ -99,6 +95,9 @@ VIEW_CODES = {
 def _make_request(endpoint_key: str, params: Dict[str, Any]) -> Dict[str, Any]:
     """API 요청 공통 함수 - common.api_client 사용"""
     try:
+        key_ok, key_error = check_api_key("kosis")
+        if not key_ok:
+            return {"success": False, "error": key_error}
         endpoint = ENDPOINTS.get(endpoint_key, endpoint_key)
         result = api_call("kosis", endpoint, params=params, timeout=30)
 
@@ -113,10 +112,19 @@ def _make_request(endpoint_key: str, params: Dict[str, Any]) -> Dict[str, Any]:
                 text = text[1:-1]
             result = json.loads(text)
 
-        return {
-            "success": True,
-            "data": result
-        }
+        if isinstance(result, dict) and (result.get("err") or result.get("error")):
+            failure = {"success": False, "error": result.get("errMsg") or result.get("error") or "KOSIS 오류",
+                       "error_code": result.get("err")}
+            if endpoint_key == "statistics_data" and "objl" in str(failure["error"]).lower():
+                failure["classification_request"] = {k: params[k] for k in ("objL1", "objL2", "objL3") if k in params}
+                failure["hint"] = "통계표의 분류 차원과 코드를 확인하세요. 미지정 차원은 생략되고 명시한 ALL은 유지됩니다."
+                failure["error"] += " " + failure["hint"]
+            return failure
+        if endpoint_key != "statistics_info" and (
+                not isinstance(result, list) or any(not isinstance(row, dict) for row in result)):
+            return {"success": False, "error": "KOSIS 응답이 레코드 배열이 아닙니다."}
+        return {"success": True, "data": result,
+                **({"items": [], "count": 0} if result == [] else {})}
     except Exception as e:
         return {"success": False, "error": f"오류 발생: {str(e)}"}
 
@@ -175,6 +183,7 @@ def search_statistics(
             result["view_name"] = VIEW_CODES.get(vw_cd, vw_cd)
             # 단일 통화 items(records-관습 카드 shape) — 통계표 목록 >> 파이프. 실제 수치는 get_statistics_data(table).
             result["items"] = [{
+                **it,
                 "title": it.get("tbl_name") or it.get("stat_name") or it.get("list_name") or "",
                 "meta": " · ".join(x for x in [it.get("org_name"), it.get("tbl_id")] if x),
                 "summary": it.get("stat_name", "") if it.get("stat_name") != it.get("tbl_name") else "",
@@ -279,8 +288,8 @@ def get_statistics_data(
             result["count"] = len(items)
             # 단일 통화 items(행 dict) — 기간×시리즈 피벗을 행 dict로(소비자가 table 재구성). raw long-format은 data에 잔류.
             _tbl = _to_table_currency(items)
-            if _tbl and _tbl.get("rows"):
-                result["items"] = [dict(zip(_tbl["columns"], r)) for r in _tbl["rows"]]
+            result["items"] = ([dict(zip(_tbl["columns"], r)) for r in _tbl["rows"]]
+                               if _tbl and _tbl.get("rows") else items)
             result["query"] = {
                 "org_id": org_id,
                 "tbl_id": tbl_id,
@@ -348,6 +357,11 @@ def integrated_search(
     Returns:
         통합검색 결과
     """
+    if type(count) is bool or not re.fullmatch(r"\d+", str(count).strip()):
+        return {"success": False, "error": "limit은 0 이상의 정수여야 합니다."}
+    count = int(count)
+    if count == 0:
+        return {"success": True, "items": [], "data": [], "count": 0}
     params = {
         "method": "getList",
         "searchNm": keyword,
@@ -377,6 +391,7 @@ def integrated_search(
             result["keyword"] = keyword
             # 단일 통화 items(records-관습 카드 shape) — 통합검색 결과 목록 >> 파이프.
             result["items"] = [{
+                **it,
                 "title": it.get("tbl_name") or it.get("stat_name") or "",
                 "meta": " · ".join(x for x in [it.get("org_name"), it.get("tbl_id"), it.get("type")] if x),
                 "summary": it.get("description", ""),
@@ -434,8 +449,8 @@ def get_indicators(
             result["count"] = len(items)
             # 단일 통화 items(행 dict) — 기간×시리즈 피벗을 행 dict로(소비자가 table 재구성). raw long-format은 data에 잔류.
             _tbl = _to_table_currency(items)
-            if _tbl and _tbl.get("rows"):
-                result["items"] = [dict(zip(_tbl["columns"], r)) for r in _tbl["rows"]]
+            result["items"] = ([dict(zip(_tbl["columns"], r)) for r in _tbl["rows"]]
+                               if _tbl and _tbl.get("rows") else items)
 
     return result
 

@@ -558,12 +558,14 @@ def _render_document(tool_input, output_base=".", context=None):
                     except Exception:
                         po = None
                     # JSON 이 아닌 앞 단계 문자열 = 글 그대로(예: [self:read] 가 읽은 .md)
-                    if not isinstance(po, dict):
+                    if not isinstance(po, (dict, list)):
                         _fm = {}
                         _b = _markdown_to_blocks(pr, meta_out=_fm)
                         _apply_frontmatter(_fm, tool_input)
                         blocks = _lift_doc_title(_b, tool_input)
                         po = None
+                if isinstance(po, list):
+                    po = {"items": po}
                 if isinstance(po, dict):
                     if isinstance(po.get("items"), list):
                         _arrived_rows = len(po["items"])

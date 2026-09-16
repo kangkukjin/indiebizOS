@@ -145,7 +145,7 @@ def test_render_budget_and_xml():
     snippet, ids, omitted = recall.render(entries)
     assert len(snippet) <= 600 and 0 < len(ids) <= 4
     assert "&lt;" in snippet and ElementTree.fromstring(snippet).tag == "method_map"
-    assert all("설명" * 48 in line for line in snippet.splitlines() if line.startswith("-"))
+    assert "설명" not in snippet
     assert omitted
     assert recall.render(entries, max_chars=20)[0] == ""
 

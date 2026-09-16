@@ -12,7 +12,7 @@ import boot_paths  # noqa: F401
 import catalog_recall as recall
 import knowledge_catalog as catalog
 from knowledge_graph import bundle
-from world_context import assemble, estimate_tokens
+from world_context import assemble, estimate_tokens, render_context
 from test_knowledge_catalog import world, enabled, ROOT  # noqa: F401
 
 
@@ -126,19 +126,50 @@ def test_escaping_and_policy_does_not_force_alternatives():
     root = ElementTree.fromstring(text)
     assert root.find("command") is None
     assert root.find("world_data").text.count("<command>") == 1
-    assert "이미 적절한 접근은 그대로" in text
-    assert "학습을 위한 직접 구현" in text
+    assert "참고 어휘" in text
+    assert "대안 제시" not in text
 
 
 def test_automatic_excerpt_keeps_vocabulary_and_leaves_evidence_for_open():
     s = catalog.load_snapshot(ROOT)
     seed = next(e for e in s.entries if e.id == "blender")
     c, text = assemble(s, [(seed, 20)])
-    assert "Blender" in text and "implements" in text and "requires" in text
+    assert "Blender" in text and "구현=" in text and "필요=" in text
     assert c["evidence_refs"] and all(e["evidence_ids"] for e in c["edges"])
     assert all(e["path"] not in text for e in c["evidence_refs"])
     assert catalog.lookup(ROOT, op="open", id="blender")["items"][0]["evidence"]
-    assert "현재 충족 여부 미확인" in text
+    assert all(e["condition_state"] == "unknown" for e in c["edges"]
+               if e["predicate"] == "requires")
+    assert c["digest"] not in text and c["revision"] not in text
+    assert "blender" not in text and "전체 열람" not in text
+    assert len(text) < 250
+    assert all(n["name"] in text for n in c["nodes"])
+    assert all(n["hint"] not in text for n in c["nodes"])
+
+
+
+def test_compact_relations_preserve_direction_and_explicit_limits():
+    s = catalog.load_snapshot(ROOT)
+    seed = next(e for e in s.entries if e.id == "problem.staff_schedule")
+    c, text = assemble(s, [(seed, 1)])
+    assert "OR-Tools: 구현=CP-SAT 제약 최적화" in text
+    edge = next(e for e in c["edges"] if e["condition"])
+    assert edge["condition"] in text
+    c["edges"] = [dict(edge, predicate="unsuitable_when")]
+    assert "부적합조건=" in render_context(c)
+    assert "적합조건=" not in render_context(c).replace("부적합조건=", "")
+
+
+def test_compact_names_do_not_merge_distinct_concepts():
+    s = catalog.load_snapshot(ROOT)
+    seed = next(e for e in s.entries if e.id == "blender")
+    c, _ = assemble(s, [(seed, 1)])
+    for node in c["nodes"]:
+        node.update(name="동명이의어", path=("같은분야",))
+    text = render_context(c)
+    assert all(f'[{node["id"]}]' in text for node in c["nodes"])
+    c["edges"] = []
+    assert all(f'[{node["id"]}]' in render_context(c) for node in c["nodes"])
 
 
 def test_unrelated_catalog_growth_does_not_grow_injected_excerpt():
@@ -185,7 +216,7 @@ def test_structured_turn_enabled_and_names_rollback(enabled, world):
     path = world / "data/world_pulse_config.json"
     path.write_text(json.dumps({"knowledge_catalog": {"enabled": True, "mode": "structure"}}))
     text = recall.recall_for_turn(runner, "집을 3차원 렌더링으로 표현해줘", [], request_type="THINK")
-    assert "Blender" in text and "implements" in text and "addresses" in text
+    assert "Blender" in text and "구현=" in text and "용도=" in text
     assert events[-1]["context_digest"] and events[-1]["edge_ids"]
     assert events[-1]["token_estimate"] <= 1800
     assert events[-1]["effective_budget"] == {"items": 4, "chars": 6000, "tokens": 1800}

@@ -514,3 +514,10 @@ retired:
     phrases:
       - '/ remove(포털 삭제:'
       - 'get/update/delete/enable/disable/history는 id 필요'
+
+  - id: world_map_explanatory_injection
+    retired: 2026-09-17
+    reason: 세계 어휘에서 회상할 지식을 매번 설명하고 검증 메타데이터를 모델에 반복하던 형식을 폐기했다.
+    instead: 이름과 관계를 짧게 전달하고 상세 설명·근거·해시는 내부 기록과 조회에 보존한다.
+    phrases:
+      - '등재는 설치·권한·최신 계약·현재 조건 충족의 증명이 아닙니다.'

@@ -9,8 +9,7 @@ from knowledge_catalog import load_snapshot, search
 from runtime_utils import get_base_path
 from world_context import assemble, estimate_tokens
 
-_OPEN = ("<method_map>\n세계의 지도: 관련 지식을 회상·검색할 개념·방법·도구의 이름입니다. 적합한 것만 활용하세요. "
-         "도구의 설치·사용 가능 여부는 별도 확인이 필요합니다.")
+_OPEN = "<method_map>\n세계 지도 · 참고 어휘"
 _CLOSE = "\n</method_map>"
 _FOLLOWUP = re.compile(r"^(?:그걸|그것|그 방법|그대로|이어서|계속|이걸|이 방법)")
 MAX_ITEMS = 4
@@ -51,7 +50,7 @@ def previous_query(message, history):
 def render(candidates, max_items=MAX_ITEMS, max_chars=MAX_CHARS):
     lines, ids, omitted = [], [], []
     for entry, _score in candidates:
-        line = f"\n- {escape(entry.path[-1])} / {escape(entry.name)} — {escape(entry.hint)}"
+        line = f"\n- {escape(entry.path[-1])} / {escape(entry.name)}"
         if len(ids) >= max_items:
             omitted.append({"id": entry.id, "reason": "item_budget"})
         elif len(_OPEN + "".join(lines) + line + _CLOSE) > max_chars:

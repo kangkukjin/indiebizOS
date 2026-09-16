@@ -1,0 +1,896 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.education.interleaving
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 교차학습
+  hint: 다른 유형을 섞어 연습
+  aliases: [Interleaving]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.elaborative_interrogation
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 정교화 질문
+  hint: 왜 그런지 묻고 연결을 설명
+  aliases: [Elaborative interrogation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.dual_coding
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 이중부호화
+  hint: 언어와 시각 표현을 함께 활용
+  aliases: [Dual coding]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.concept_mapping
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 개념도
+  hint: 개념 사이의 명명된 관계 표시
+  aliases: [Concept mapping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.mastery_learning
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 완전학습
+  hint: 목표 도달을 확인하며 다음 단계 진행
+  aliases: [Mastery learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.formative_assessment
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 형성평가
+  hint: 학습 중 피드백을 위한 평가
+  aliases: [Formative assessment, 학습 중 피드백]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.summative_assessment
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 총괄평가
+  hint: 학습 종료 시 성취 평가
+  aliases: [Summative assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.rubric
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 평가 루브릭
+  hint: 수준별 수행 기준을 명시
+  aliases: [Rubric, 루브릭]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.backward_design
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 백워드 설계
+  hint: 목표와 증거에서 학습 활동 역설계
+  aliases: [Backward design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.bloom_taxonomy
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 블룸 교육목표 분류
+  hint: 인지적 학습 목표의 수준 구분
+  aliases: [Bloom taxonomy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.scaffolding
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 비계 설정
+  hint: 숙달에 따라 지원을 조절
+  aliases: [Scaffolding]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.zone_of_proximal_development
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 근접발달영역
+  hint: 도움을 받아 수행할 수 있는 범위
+  aliases: [Zone of proximal development]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.problem_based_learning
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 문제중심학습
+  hint: 복합 문제 해결을 통해 학습
+  aliases: [Problem based learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.project_based_learning
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 프로젝트학습
+  hint: 지속적 탐구로 산출물 제작
+  aliases: [Project based learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.inquiry_based_learning
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 탐구학습
+  hint: 질문과 증거를 통해 이해 형성
+  aliases: [Inquiry based learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.peer_instruction
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 동료교수법
+  hint: 설명과 토론으로 개념 이해 점검
+  aliases: [Peer instruction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.flipped_classroom
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 거꾸로 교실
+  hint: 사전 학습과 교실 적용 활동 배치
+  aliases: [Flipped classroom]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.universal_design_for_learning
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 보편적 학습설계
+  hint: 다양한 참여 표현 접근 경로 제공
+  aliases: [Universal design for learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.learning_analytics
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 학습분석
+  hint: 학습 자료로 과정과 지원 요구 파악
+  aliases: [Learning analytics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.education.item_response_theory
+  kind: method
+  path: [학습, 교수와 평가]
+  name: 문항반응이론
+  hint: 능력과 문항 특성으로 응답 모형화
+  aliases: [Item response theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: education
+- id: atlas.linguistics.morphological_analysis
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 형태소 분석
+  hint: 단어의 의미 단위 분해
+  aliases: [Morphological analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.syntactic_parsing
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 구문 분석
+  hint: 문장 구성 요소의 관계 해석
+  aliases: [Syntactic parsing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.dependency_parsing
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 의존구문 분석
+  hint: 단어 사이의 의존 관계 분석
+  aliases: [Dependency parsing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.semantic_role_labeling
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 의미역 분석
+  hint: 사건 참여자의 역할 식별
+  aliases: [Semantic role labeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.named_entity_recognition
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 개체명 인식
+  hint: 사람 조직 장소 등 명명 대상 식별
+  aliases: [Named entity recognition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.coreference_resolution
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 상호참조 해소
+  hint: 같은 대상을 가리키는 표현 연결
+  aliases: [Coreference resolution]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.word_sense_disambiguation
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 어의 중의성 해소
+  hint: 문맥에 맞는 단어 의미 선택
+  aliases: [Word sense disambiguation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.corpus_linguistics
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 말뭉치 언어학
+  hint: 실제 언어 자료의 용법 연구
+  aliases: [Corpus linguistics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.distributional_semantics
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 분포 의미론
+  hint: 사용 문맥 분포로 의미 표현
+  aliases: [Distributional semantics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.pragmatics
+  kind: concept
+  path: [언어, 분석과 번역]
+  name: 화용론
+  hint: 상황과 의도에 따른 언어 의미
+  aliases: [Pragmatics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.speech_act
+  kind: concept
+  path: [언어, 분석과 번역]
+  name: 화행
+  hint: 발화로 수행하는 사회적 행위
+  aliases: [Speech act]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.presupposition
+  kind: concept
+  path: [언어, 분석과 번역]
+  name: 전제
+  hint: 발화가 배경으로 가정하는 내용
+  aliases: [Presupposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.implicature
+  kind: concept
+  path: [언어, 분석과 번역]
+  name: 함축
+  hint: 직접 말하지 않았지만 전달되는 의미
+  aliases: [Implicature]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.register
+  kind: concept
+  path: [언어, 분석과 번역]
+  name: 언어 사용역
+  hint: 상황과 관계에 따른 표현 양식
+  aliases: [Register]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.contrastive_analysis
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 대조분석
+  hint: 언어 간 구조와 사용 차이 비교
+  aliases: [Contrastive analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.back_translation
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 역번역
+  hint: 번역을 원언어로 되돌려 차이 검토
+  aliases: [Back translation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.terminology_management
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 용어 관리
+  hint: 전문용어의 대응과 사용 일관성 관리
+  aliases: [Terminology management]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.translation_memory
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 번역 메모리
+  hint: 이전 번역 단위를 저장해 재사용
+  aliases: [Translation memory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.localization
+  kind: method
+  path: [언어, 분석과 번역]
+  name: 현지화
+  hint: 지역 언어와 사용 맥락에 맞춰 조정
+  aliases: [Localization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.linguistics.phonemic_awareness
+  kind: concept
+  path: [언어, 분석과 번역]
+  name: 음소 인식
+  hint: 말소리의 최소 단위를 구별
+  aliases: [Phonemic awareness]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: linguistics
+- id: atlas.history.source_criticism
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 사료비판
+  hint: 자료의 기원 신뢰성과 맥락 검토
+  aliases: [Source criticism]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.textual_criticism
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 본문비평
+  hint: 판본의 차이로 텍스트 전승 검토
+  aliases: [Textual criticism]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.historiography
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 역사서술 연구
+  hint: 역사를 쓰는 관점과 방법 분석
+  aliases: [Historiography]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.periodization
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 시대구분
+  hint: 변화의 특징에 따라 시기 나눔
+  aliases: [Periodization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.comparative_history
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 비교사
+  hint: 여러 사회의 역사 과정 비교
+  aliases: [Comparative history]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.microhistory
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 미시사
+  hint: 작은 사례에서 사회적 맥락 탐구
+  aliases: [Microhistory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.prosopography
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 집단전기 연구
+  hint: 집단 구성원의 이력을 함께 분석
+  aliases: [Prosopography]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.genealogical_method
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 계보학적 방법
+  hint: 개념과 제도의 형성 과정 추적
+  aliases: [Genealogical method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.archival_research
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 문서보관소 조사
+  hint: 보존 기록의 체계적 탐색
+  aliases: [Archival research]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.paleography
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 고문서학
+  hint: 옛 필체와 문서 형식 판독
+  aliases: [Paleography]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.diplomatics
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 문서형식학
+  hint: 기록의 형식과 진정성 분석
+  aliases: [Diplomatics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.stratigraphy
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 층서 분석
+  hint: 쌓인 층의 순서와 관계 해석
+  aliases: [Stratigraphy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.seriation
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 순서배열법
+  hint: 유물 유형의 변화로 상대 순서 구성
+  aliases: [Seriation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.radiocarbon_dating
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 방사성탄소 연대측정
+  hint: 탄소 동위원소로 유기물 시기 추정
+  aliases: [Radiocarbon dating]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.dendrochronology
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 연륜연대학
+  hint: 나이테의 패턴으로 연대 대조
+  aliases: [Dendrochronology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.archaeological_survey
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 고고학 지표조사
+  hint: 유적의 분포와 표면 흔적 조사
+  aliases: [Archaeological survey]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.experimental_archaeology
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 실험고고학
+  hint: 옛 제작과 사용 과정을 재현
+  aliases: [Experimental archaeology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.material_culture_analysis
+  kind: method
+  path: [인문, 역사와 고고학]
+  name: 물질문화 분석
+  hint: 물건의 제작 사용 의미 해석
+  aliases: [Material culture analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.historical_context
+  kind: concept
+  path: [인문, 역사와 고고학]
+  name: 역사적 맥락
+  hint: 사건과 자료를 둘러싼 시대 조건
+  aliases: [Historical context]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.history.anachronism
+  kind: concept
+  path: [인문, 역사와 고고학]
+  name: 시대착오
+  hint: 다른 시대의 관념을 소급 적용
+  aliases: [Anachronism]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: history
+- id: atlas.philosophy.conceptual_analysis
+  kind: method
+  path: [인문, 철학과 윤리]
+  name: 개념분석
+  hint: 개념의 조건과 경계 검토
+  aliases: [Conceptual analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.hermeneutics
+  kind: method
+  path: [인문, 철학과 윤리]
+  name: 해석학
+  hint: 텍스트와 경험의 이해 조건 탐구
+  aliases: [Hermeneutics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.phenomenology
+  kind: method
+  path: [인문, 철학과 윤리]
+  name: 현상학
+  hint: 경험에 드러나는 의미 구조 탐구
+  aliases: [Phenomenology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.dialectic
+  kind: method
+  path: [인문, 철학과 윤리]
+  name: 변증법
+  hint: 대립과 긴장을 통해 개념 전개
+  aliases: [Dialectic]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.reflective_equilibrium
+  kind: method
+  path: [인문, 철학과 윤리]
+  name: 반성적 평형
+  hint: 원칙과 개별 판단을 상호 조정
+  aliases: [Reflective equilibrium]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.fallibilism
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 오류가능주의
+  hint: 믿음과 지식이 수정될 수 있음
+  aliases: [Fallibilism]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.falsifiability
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 반증가능성
+  hint: 경험적 반례로 틀림을 보일 수 있음
+  aliases: [Falsifiability]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.underdetermination
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 과소결정
+  hint: 같은 증거가 여러 이론과 양립
+  aliases: [Underdetermination]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.paradigm
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 패러다임
+  hint: 학문 공동체의 문제와 해법 틀
+  aliases: [Paradigm]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.utilitarianism
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 공리주의
+  hint: 결과의 총효용으로 행위 평가
+  aliases: [Utilitarianism]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.deontology
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 의무론
+  hint: 의무와 규칙에 근거한 윤리 판단
+  aliases: [Deontology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.virtue_ethics
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 덕윤리
+  hint: 성품과 좋은 삶을 중심으로 판단
+  aliases: [Virtue ethics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.care_ethics
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 돌봄윤리
+  hint: 의존과 관계의 책임에 주목
+  aliases: [Care ethics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.capabilities_approach
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 역량 접근
+  hint: 실질적으로 할 수 있는 삶의 가능성
+  aliases: [Capabilities approach]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.veil_of_ignorance
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 무지의 베일
+  hint: 자신의 지위를 모른 채 원칙 선택
+  aliases: [Veil of ignorance]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.double_effect
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 이중효과 원칙
+  hint: 의도한 결과와 부수 결과의 구별
+  aliases: [Double effect]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.moral_uncertainty
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 도덕적 불확실성
+  hint: 어떤 윤리 기준이 옳은지의 불확실성
+  aliases: [Moral uncertainty]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.epistemic_injustice
+  kind: concept
+  path: [인문, 철학과 윤리]
+  name: 인식적 부정의
+  hint: 지식 주체로 인정받는 데 생기는 부당함
+  aliases: [Epistemic injustice]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.philosophy.ethical_deliberation
+  kind: method
+  path: [인문, 철학과 윤리]
+  name: 윤리적 숙의
+  hint: 가치 충돌의 이유와 대안 검토
+  aliases: [Ethical deliberation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: philosophy
+- id: atlas.writing.freewriting
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 자유쓰기
+  hint: 검열을 줄여 생각을 연속 기록
+  aliases: [Freewriting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.outlining
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 개요 작성
+  hint: 글의 주장과 전개 순서 구성
+  aliases: [Outlining]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.rhetorical_analysis
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 수사 분석
+  hint: 대상 목적 설득 방식 분석
+  aliases: [Rhetorical analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.thesis_statement
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 논제문
+  hint: 글의 중심 주장을 명시
+  aliases: [Thesis statement]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.topic_sentence
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 주제문
+  hint: 문단의 핵심 내용을 제시
+  aliases: [Topic sentence]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.coherence
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 일관성
+  hint: 글 전체 의미의 연결
+  aliases: [Coherence]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.cohesion
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 응집성
+  hint: 문장 사이의 언어적 연결
+  aliases: [Cohesion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.developmental_editing
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 구조 편집
+  hint: 주장 구성과 전개를 큰 단위로 수정
+  aliases: [Developmental editing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.line_editing
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 문장 편집
+  hint: 표현 리듬과 문장 흐름 개선
+  aliases: [Line editing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.copyediting
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 교열
+  hint: 표기 문법 일관성 점검
+  aliases: [Copyediting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.proofreading
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 교정
+  hint: 최종 조판의 오류 확인
+  aliases: [Proofreading]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.fact_checking
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 사실 확인
+  hint: 주장과 출처의 대응 검사
+  aliases: [Fact checking]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.audience_analysis
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 독자 분석
+  hint: 독자의 지식 기대와 상황 파악
+  aliases: [Audience analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.show_dont_tell
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 보여주기
+  hint: 구체적 장면으로 의미 전달
+  aliases: [Show dont tell]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.point_of_view
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 서술 시점
+  hint: 이야기를 지각하고 전달하는 위치
+  aliases: [Point of view]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.unreliable_narrator
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 신뢰할 수 없는 화자
+  hint: 서술과 사건 해석 사이의 간극
+  aliases: [Unreliable narrator]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.dramatic_irony
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 극적 아이러니
+  hint: 관객과 인물 사이의 정보 차이
+  aliases: [Dramatic irony]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.foreshadowing
+  kind: concept
+  path: [인문, 글쓰기와 편집]
+  name: 복선
+  hint: 후속 사건을 미리 암시
+  aliases: [Foreshadowing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.story_structure
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 서사 구조
+  hint: 사건과 갈등의 전개 조직
+  aliases: [Story structure]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing
+- id: atlas.writing.peer_review
+  kind: method
+  path: [인문, 글쓰기와 편집]
+  name: 동료평가
+  hint: 다른 전문가가 근거와 논증 검토
+  aliases: [Peer review]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: writing

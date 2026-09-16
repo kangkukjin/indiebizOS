@@ -51,6 +51,34 @@ version 2의 fragments에 관계와 추가 노드를 분리하고, 종류 미검
 자동 주입은 이름과 핵심 연결이며 설명과 상세 근거는 open에서 연다.
 상세 구조·추출 상한·회귀 기록은 [구조 구현 계약](../../docs/WORLD_MAP_STRUCTURE_PLAN_2026_09_17.md)에 있다.
 
+## 넓은 어휘와 갱신
+
+`atlas/*.yaml`은 인문·사회·예술·생활·자연과학·공학을 포함하는 분야별 편집 어휘다.
+AI 일반 지식에서 작성한 편집 초안이며 모든 항목을 외부 문헌으로 개별 검증했다고 주장하지 않는다.
+`source`의 [편집 원천](../../docs/world_map/I_atlas_editorial_2026_09_17.md)과
+[관계 검토](../../docs/world_map/J_atlas_relations_2026_09_17.md)가 확인 범위를 구별한다.
+분류는 모든 어휘를 찾는 구조이고, 명시 관계는 추가 검토한 연결만 갖는다.
+
+1. 기존 한국어·영어 표제를 먼저 찾는다. 같은 개념의 번역·약어는 aliases로 더하고 ID를 유지한다.
+2. 없는 개념이면 맞는 atlas 파일에 이름·종류·분류·짧은 검색 힌트·별칭·편집 출처를 추가한다.
+   새 파일은 world.yaml의 fragments에 등록한다. 도구는 통용 방법의 분야에 배치한다.
+3. 관련성이 없는 분야 단어를 별칭으로 늘리지 않는다. 검색 실패는 등재 공백과 표현 불일치로 나눈다.
+4. 의미 관계는 별도 검토한다. 외부 확인과 편집상 연관을 구별하고, 근거 변경 시 재검토한다.
+5. 색인을 다시 빌드하고 아래 진단 및 분야 탐색 검사를 실행한다. 폰 번들은 참조 자료까지 자동 파생한다.
+
+```bash
+.venv/bin/python3 scripts/build_knowledge_catalog.py
+.venv/bin/python3 scripts/build_knowledge_catalog.py --check
+.venv/bin/python3 scripts/audit_method_map.py --cases data/knowledge_catalog/atlas_audit_cases.json --presentation structure --output outputs/world_map/atlas_audit.json
+.venv/bin/python3 scripts/build_body_bundle.py android
+.venv/bin/python3 -m pytest backend/test_world_map_atlas.py backend/test_world_map_browse.py -q
+```
+
+고정 진단 질문에 맞춰 별칭을 사후 보강한 경우에는 그 질문을 독립 평가로 세지 않는다.
+이번 확장에는 예약 갱신이나 무검토 외부 어휘 수입을 추가하지 않았다.
+캐시는 파일 내용이 같은 경우만 재사용하므로 편집은 다음 조회부터 반영된다.
+확장 결과와 검색 공백은 [확장 보고서](../../docs/WORLD_MAP_ATLAS_EXPANSION_2026_09_17.md)에 기록했다.
+
 ## 충실도 감사
 
 [과제별 감사](../../docs/METHOD_MAP_AUDIT_2026_09_16.md)는 등재 공백과 검색 공백을 나눠 기록한다.

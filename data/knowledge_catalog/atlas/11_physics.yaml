@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.physics.conservation_law
+  kind: concept
+  path: [과학, 물리]
+  name: 보존법칙
+  hint: 계의 변화 속에서 유지되는 물리량
+  aliases: [Conservation law]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.symmetry
+  kind: concept
+  path: [과학, 물리]
+  name: 대칭성
+  hint: 변환에도 바뀌지 않는 성질
+  aliases: [Symmetry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.noether_theorem
+  kind: concept
+  path: [과학, 물리]
+  name: 뇌터 정리
+  hint: 연속 대칭과 보존량의 연결
+  aliases: [Noether theorem]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.dimensional_similarity
+  kind: concept
+  path: [과학, 물리]
+  name: 차원적 상사
+  hint: 무차원 조건이 같은 계의 대응
+  aliases: [Dimensional similarity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.superposition_principle
+  kind: concept
+  path: [과학, 물리]
+  name: 중첩 원리
+  hint: 선형계의 응답을 합으로 구성
+  aliases: [Superposition principle]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.perturbation_theory
+  kind: method
+  path: [과학, 물리]
+  name: 섭동이론
+  hint: 작은 변화로 기준 해를 보정
+  aliases: [Perturbation theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.variational_method
+  kind: method
+  path: [과학, 물리]
+  name: 변분법
+  hint: 함수의 변화로 극값 조건 탐색
+  aliases: [Variational method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.lagrangian_mechanics
+  kind: method
+  path: [과학, 물리]
+  name: 라그랑주 역학
+  hint: 작용과 일반화 좌표로 운동 기술
+  aliases: [Lagrangian mechanics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.hamiltonian_mechanics
+  kind: method
+  path: [과학, 물리]
+  name: 해밀턴 역학
+  hint: 좌표와 운동량의 변화로 운동 기술
+  aliases: [Hamiltonian mechanics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.statistical_mechanics
+  kind: method
+  path: [과학, 물리]
+  name: 통계역학
+  hint: 미시 상태에서 거시 성질 유도
+  aliases: [Statistical mechanics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.ensemble
+  kind: concept
+  path: [과학, 물리]
+  name: 앙상블
+  hint: 같은 거시 조건의 미시 상태 집합
+  aliases: [Ensemble]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.entropy
+  kind: concept
+  path: [과학, 물리]
+  name: 엔트로피
+  hint: 상태의 통계적 다양성과 열역학적 성질
+  aliases: [Entropy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.phase_transition
+  kind: concept
+  path: [과학, 물리]
+  name: 상전이
+  hint: 조건 변화에 따른 물질 상태 변화
+  aliases: [Phase transition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.renormalization_group
+  kind: method
+  path: [과학, 물리]
+  name: 재규격화군
+  hint: 관측 척도에 따른 이론의 변화 분석
+  aliases: [Renormalization group]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.scattering_theory
+  kind: method
+  path: [과학, 물리]
+  name: 산란이론
+  hint: 입사 대상과 상호작용의 결과 분석
+  aliases: [Scattering theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.interferometry
+  kind: method
+  path: [과학, 물리]
+  name: 간섭계측
+  hint: 파동의 위상 차이로 정밀 측정
+  aliases: [Interferometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.lock_in_detection
+  kind: method
+  path: [과학, 물리]
+  name: 록인 검출
+  hint: 기준 주파수에 동기화해 약한 신호 추출
+  aliases: [Lock in detection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.error_propagation
+  kind: method
+  path: [과학, 물리]
+  name: 오차 전파
+  hint: 입력 불확실성이 계산 결과에 주는 영향
+  aliases: [Error propagation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.inverse_problem
+  kind: method
+  path: [과학, 물리]
+  name: 역문제 해법
+  hint: 관측 결과에서 원인과 매개변수 추정
+  aliases: [Inverse problem]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.physics.quantum_entanglement
+  kind: concept
+  path: [과학, 물리]
+  name: 양자얽힘
+  hint: 부분별로 분리되지 않는 양자 상태
+  aliases: [Quantum entanglement]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: physics
+- id: atlas.astronomy.astrometry
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 위치천문학
+  hint: 천체의 위치와 고유운동 측정
+  aliases: [Astrometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.photometry
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 측광
+  hint: 천체의 밝기와 변화 측정
+  aliases: [Photometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.astronomical_spectroscopy
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 천체 분광
+  hint: 스펙트럼으로 천체의 물리 상태 분석
+  aliases: [Astronomical spectroscopy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.transit_photometry
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 통과 측광
+  hint: 천체 가림에 따른 밝기 감소 측정
+  aliases: [Transit photometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.radial_velocity_method
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 시선속도법
+  hint: 도플러 변화로 천체의 운동 추정
+  aliases: [Radial velocity method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.gravitational_lensing
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 중력렌즈 분석
+  hint: 중력에 의해 휘어진 빛의 형상 분석
+  aliases: [Gravitational lensing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.adaptive_optics
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 적응광학
+  hint: 관측 왜곡에 맞춰 광학계를 보정
+  aliases: [Adaptive optics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.aperture_synthesis
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 개구합성
+  hint: 여러 관측기의 신호로 해상력 구성
+  aliases: [Aperture synthesis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.orbit_determination
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 궤도 결정
+  hint: 관측에서 천체의 운동 궤도 추정
+  aliases: [Orbit determination]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.n_body_simulation
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 다체 시뮬레이션
+  hint: 여러 물체의 상호작용 운동 계산
+  aliases: [N body simulation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.redshift_measurement
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 적색편이 측정
+  hint: 기준 파장과 관측 파장 비교
+  aliases: [Redshift measurement]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.spectral_energy_distribution_fitting
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 분광에너지분포 적합
+  hint: 파장별 방출 분포를 모형과 비교
+  aliases: [Spectral energy distribution fitting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.light_curve_analysis
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 광도곡선 분석
+  hint: 시간에 따른 천체 밝기 변화 분석
+  aliases: [Light curve analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.standard_candle
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 표준촛불
+  hint: 알려진 광도와 관측 밝기로 거리 추정
+  aliases: [Standard candle]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.parallax_measurement
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 시차 측정
+  hint: 관측 위치 변화의 각도 차이로 거리 계산
+  aliases: [Parallax measurement]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.period_search
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 주기 탐색
+  hint: 관측열에서 반복 변화의 시간척도 추정
+  aliases: [Period search]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.image_stacking
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 영상 적층
+  hint: 여러 관측 이미지를 정렬해 합성
+  aliases: [Image stacking]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.dark_frame_subtraction
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 다크프레임 감산
+  hint: 센서의 암신호를 보정
+  aliases: [Dark frame subtraction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.flat_field_correction
+  kind: method
+  path: [과학, 천문과 우주]
+  name: 플랫필드 보정
+  hint: 화소와 광학계 감도 차이 보정
+  aliases: [Flat field correction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.astronomy.celestial_coordinate_system
+  kind: concept
+  path: [과학, 천문과 우주]
+  name: 천구좌표계
+  hint: 하늘의 위치를 나타내는 기준 체계
+  aliases: [Celestial coordinate system]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: astronomy
+- id: atlas.robotics.forward_kinematics
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 정기구학
+  hint: 관절 상태에서 말단 위치 계산
+  aliases: [Forward kinematics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.inverse_kinematics
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 역기구학
+  hint: 목표 말단 위치의 관절 상태 계산
+  aliases: [Inverse kinematics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.simultaneous_localization_and_mapping
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 동시적 위치추정과 지도작성
+  hint: 이동 중 자기 위치와 환경 지도를 함께 추정
+  aliases: [Simultaneous localization and mapping, SLAM, 로봇 위치와 지도]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.visual_odometry
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 시각 주행거리계
+  hint: 연속 영상으로 이동량 추정
+  aliases: [Visual odometry, visual odometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.sensor_fusion
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 센서 융합
+  hint: 서로 다른 관측의 오차를 보완
+  aliases: [Sensor fusion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.path_planning
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 경로계획
+  hint: 장애물과 목표를 고려한 이동 경로
+  aliases: [Path planning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.trajectory_optimization
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 궤적 최적화
+  hint: 시간과 동역학을 고려한 운동 최적화
+  aliases: [Trajectory optimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.rapidly_exploring_random_tree
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 급속탐색 무작위트리
+  hint: 공간을 무작위로 확장하며 경로 탐색
+  aliases: [Rapidly exploring random tree]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.probabilistic_roadmap
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 확률적 로드맵
+  hint: 표본 연결망으로 경로 탐색
+  aliases: [Probabilistic roadmap]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.occupancy_grid_mapping
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 점유격자 지도
+  hint: 격자별 장애물 존재 가능성 표현
+  aliases: [Occupancy grid mapping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.grasp_planning
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 파지 계획
+  hint: 대상의 형상에 맞는 잡기 동작 구성
+  aliases: [Grasp planning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.force_control
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 힘 제어
+  hint: 접촉 힘을 목표에 맞게 조절
+  aliases: [Force control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.impedance_control
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 임피던스 제어
+  hint: 접촉의 힘과 운동 관계 조절
+  aliases: [Impedance control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.visual_servoing
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 비주얼 서보
+  hint: 영상 오차로 로봇 운동 제어
+  aliases: [Visual servoing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.robot_calibration
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 로봇 보정
+  hint: 기구와 센서 모형의 매개변수 추정
+  aliases: [Robot calibration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.hand_eye_calibration
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 손눈 보정
+  hint: 카메라와 로봇 사이 좌표변환 추정
+  aliases: [Hand eye calibration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.behavior_tree
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 행동트리
+  hint: 조건과 행동을 계층적으로 조합
+  aliases: [Behavior tree]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.task_and_motion_planning
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 작업 운동 통합계획
+  hint: 기호적 작업과 실제 동작의 연결
+  aliases: [Task and motion planning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.digital_twin
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 디지털 트윈
+  hint: 실물 상태와 연결된 디지털 모형
+  aliases: [Digital twin]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.robotics.human_robot_interaction
+  kind: method
+  path: [공학, 로봇과 자동화]
+  name: 인간 로봇 상호작용
+  hint: 사람과 로봇의 협업 방식 연구
+  aliases: [Human robot interaction, HRI]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: robotics
+- id: atlas.organization.organizational_network_analysis
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 조직연결망 분석
+  hint: 공식 구조 밖 협업과 정보 흐름 분석
+  aliases: [Organizational network analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.psychological_safety
+  kind: concept
+  path: [운영, 조직과 협업]
+  name: 심리적 안전감
+  hint: 대인 위험을 감수해 말할 수 있다는 믿음
+  aliases: [Psychological safety]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.team_charter
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 팀 헌장
+  hint: 목적 역할 협업 규칙의 합의
+  aliases: [Team charter]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.raci_matrix
+  kind: method
+  path: [운영, 조직과 협업]
+  name: RACI 책임표
+  hint: 수행 책임 협의 공유 역할 구분
+  aliases: [RACI matrix]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.objectives_and_key_results
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 목표와 핵심결과
+  hint: 목표와 측정 가능한 결과 연결
+  aliases: [Objectives and key results, OKR]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.management_by_objectives
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 목표관리
+  hint: 합의한 목표를 중심으로 업무 관리
+  aliases: [Management by objectives]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.after_action_review
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 사후검토
+  hint: 의도와 실제 수행의 차이에서 학습
+  aliases: [After action review]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.retrospective
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 회고
+  hint: 작업 방식의 개선점을 함께 검토
+  aliases: [Retrospective]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.knowledge_transfer
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 지식 이전
+  hint: 경험과 수행 지식을 다른 사람에게 전달
+  aliases: [Knowledge transfer]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.communities_of_practice
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 실천공동체
+  hint: 공동 실천을 통해 지식을 형성
+  aliases: [Communities of practice]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.succession_planning
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 승계계획
+  hint: 핵심 역할의 지속 가능성 준비
+  aliases: [Succession planning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.job_analysis
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 직무분석
+  hint: 업무 활동과 요구 역량을 파악
+  aliases: [Job analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.structured_interview
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 구조화 면접
+  hint: 같은 질문과 기준으로 지원자 평가
+  aliases: [Structured interview]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.work_sample_test
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 작업표본 평가
+  hint: 실제 업무와 유사한 과제로 역량 평가
+  aliases: [Work sample test]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.competency_mapping
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 역량 매핑
+  hint: 역할과 필요한 능력을 대응
+  aliases: [Competency mapping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.360_degree_feedback
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 다면 피드백
+  hint: 여러 관계자의 관찰을 종합
+  aliases: [360 degree feedback]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.conflict_resolution
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 갈등 해결
+  hint: 이해와 요구 차이를 조정
+  aliases: [Conflict resolution]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.interest_based_bargaining
+  kind: method
+  path: [운영, 조직과 협업]
+  name: 이해관계 기반 교섭
+  hint: 표면 입장 뒤의 요구를 중심으로 협상
+  aliases: [Interest based bargaining]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.span_of_control
+  kind: concept
+  path: [운영, 조직과 협업]
+  name: 관리 범위
+  hint: 한 관리자가 직접 조정하는 인원 범위
+  aliases: [Span of control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.organization.organizational_ambidexterity
+  kind: concept
+  path: [운영, 조직과 협업]
+  name: 조직 양손잡이성
+  hint: 기존 활용과 새로운 탐색을 함께 수행
+  aliases: [Organizational ambidexterity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: organization
+- id: atlas.tools.r_statistical_computing
+  kind: tool
+  path: [계산, 통계]
+  name: R
+  hint: 통계 계산과 그래픽을 위한 언어
+  aliases: [R statistical computing, R 언어]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.jasp
+  kind: tool
+  path: [계산, 통계]
+  name: JASP
+  hint: 통계 분석을 위한 시각적 작업도구
+  aliases: [JASP]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.jamovi
+  kind: tool
+  path: [계산, 통계]
+  name: jamovi
+  hint: 표 기반 통계 분석 작업도구
+  aliases: [jamovi]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.stan
+  kind: tool
+  path: [계산, 통계]
+  name: Stan
+  hint: 확률 모형과 베이지안 추론 도구
+  aliases: [Stan]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.gnu_octave
+  kind: tool
+  path: [계산, 수학]
+  name: GNU Octave
+  hint: 수치 선형대수와 수치 계산 환경
+  aliases: [GNU Octave]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.sagemath
+  kind: tool
+  path: [계산, 수학]
+  name: SageMath
+  hint: 대수와 조합 등 수학 계산 환경
+  aliases: [SageMath]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.freecad
+  kind: tool
+  path: [제작, 기계설계]
+  name: FreeCAD
+  hint: 매개변수 기반 기계 설계 도구
+  aliases: [FreeCAD]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.inkscape
+  kind: tool
+  path: [표현, 벡터그래픽]
+  name: Inkscape
+  hint: 벡터 그래픽 편집 도구
+  aliases: [Inkscape]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.krita
+  kind: tool
+  path: [표현, 회화]
+  name: Krita
+  hint: 디지털 회화와 이미지 제작 도구
+  aliases: [Krita]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.gimp
+  kind: tool
+  path: [표현, 이미지]
+  name: GIMP
+  hint: 래스터 이미지 편집 도구
+  aliases: [GIMP]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.audacity
+  kind: tool
+  path: [미디어, 오디오]
+  name: Audacity
+  hint: 녹음과 파형 편집 도구
+  aliases: [Audacity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.ardour
+  kind: tool
+  path: [미디어, 오디오]
+  name: Ardour
+  hint: 멀티트랙 오디오 제작 환경
+  aliases: [Ardour]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.musescore_studio
+  kind: tool
+  path: [표현, 악보]
+  name: MuseScore Studio
+  hint: 악보 작성과 재생 도구
+  aliases: [MuseScore Studio]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.lilypond
+  kind: tool
+  path: [표현, 악보]
+  name: LilyPond
+  hint: 텍스트 기반 악보 조판 도구
+  aliases: [LilyPond]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.obs_studio
+  kind: tool
+  path: [미디어, 녹화]
+  name: OBS Studio
+  hint: 화면과 소리의 녹화 방송 도구
+  aliases: [OBS Studio]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.kdenlive
+  kind: tool
+  path: [미디어, 영상]
+  name: Kdenlive
+  hint: 비선형 영상 편집 도구
+  aliases: [Kdenlive]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.imagej
+  kind: tool
+  path: [과학, 이미지분석]
+  name: ImageJ
+  hint: 과학 이미지의 측정과 분석 도구
+  aliases: [ImageJ]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.cellprofiler
+  kind: tool
+  path: [과학, 이미지분석]
+  name: CellProfiler
+  hint: 세포 이미지의 자동 측정 파이프라인
+  aliases: [CellProfiler]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.openrefine
+  kind: tool
+  path: [데이터, 정리]
+  name: OpenRefine
+  hint: 표 자료의 정리와 값 군집화 도구
+  aliases: [OpenRefine]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools
+- id: atlas.tools.gephi
+  kind: tool
+  path: [계산, 네트워크]
+  name: Gephi
+  hint: 관계망의 탐색과 시각화 도구
+  aliases: [Gephi]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: tools

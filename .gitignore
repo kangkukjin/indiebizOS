@@ -433,3 +433,4 @@ data/member_imports/
 data/knowledge_catalog_index/
 # 방법 지도 감사의 고정 합성 질문 — 대화 원문·런타임 기록이 아닌 평가 소스.
 !data/knowledge_catalog/audit_cases.json
+!data/knowledge_catalog/atlas_audit_cases.json

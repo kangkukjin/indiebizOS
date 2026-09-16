@@ -33,7 +33,7 @@ def terms(text):
     return tuple(t for t in _WORDS.findall(normalize(text)) if len(t) > 1)
 
 
-@lru_cache(maxsize=4096)
+@lru_cache(maxsize=32768)
 def _phrase_pattern(phrase):
     parts = []
     for word in phrase.split():
@@ -95,13 +95,19 @@ def _text(value, limit):
     return value.strip()
 
 
+@lru_cache(maxsize=32)
+def _document(raw):
+    """내용 바이트로만 재사용한다. 경로·시각 캐시와 달리 변경/원복도 즉시 반영한다."""
+    import yaml
+    return yaml.safe_load(raw)
+
+
 @lru_cache(maxsize=8)
 def _parse(root, raw, fragments=(), evidence_hashes=()):
-    import yaml
-    doc = yaml.safe_load(raw)
+    doc = _document(raw)
     if not isinstance(doc, dict) or doc.get("version") not in {1, 2} or not isinstance(doc.get("entries"), list):
         raise ValueError("unsupported catalog schema")
-    documents = [doc] + [yaml.safe_load(content) for _, content in fragments]
+    documents = [doc] + [_document(content) for _, content in fragments]
     if any(not isinstance(d, dict) or not isinstance(d.get("entries", []), list) for d in documents):
         raise ValueError("invalid catalog fragment")
     entries, seen = [], set()
@@ -134,10 +140,9 @@ def _parse(root, raw, fragments=(), evidence_hashes=()):
 
 
 def load_snapshot(root):
-    import yaml
     root = Path(root).resolve()
     raw = (root / CATALOG_PATH).read_bytes()
-    doc = yaml.safe_load(raw)
+    doc = _document(raw)
     if not isinstance(doc, dict):
         raise ValueError("invalid catalog")
     files = doc.get("fragments", [])
@@ -146,7 +151,7 @@ def load_snapshot(root):
     if files and doc.get("version") != 2:
         raise ValueError("fragments require version 2")
     fragments = tuple((local_path(root, f), (root / f).read_bytes()) for f in files)
-    documents = [doc] + [yaml.safe_load(content) for _, content in fragments]
+    documents = [doc] + [_document(content) for _, content in fragments]
     sources = {local_path(root, e["path"]) for d in documents for e in d.get("evidence", [])}
     hashes = tuple((p, hashlib.sha256((root / p).read_bytes()).hexdigest()) for p in sorted(sources))
     return _parse(str(root), raw, fragments, hashes)

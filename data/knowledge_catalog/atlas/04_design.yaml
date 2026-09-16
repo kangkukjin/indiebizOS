@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.design.contextual_inquiry
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 맥락적 탐구
+  hint: 사용 현장에서 행동과 맥락 관찰
+  aliases: [Contextual inquiry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.ethnographic_observation
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 민족지적 관찰
+  hint: 생활 맥락에서 실천 관찰
+  aliases: [Ethnographic observation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.participatory_design
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 참여설계
+  hint: 사용자가 설계 과정에 참여
+  aliases: [Participatory design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.co_design
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 공동설계
+  hint: 여러 이해관계자가 함께 설계
+  aliases: [Co design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.service_blueprint
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 서비스 블루프린트
+  hint: 접점과 후방 운영을 함께 도식화
+  aliases: [Service blueprint]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.persona
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 페르소나
+  hint: 사용자 특성의 근거 기반 대표 모형
+  aliases: [Persona]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.jobs_to_be_done
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: JTBD
+  hint: 상황에서 이루려는 진전 탐색
+  aliases: [Jobs to be done]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.task_analysis
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 과업 분석
+  hint: 목표 달성 행동과 요구 분해
+  aliases: [Task analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.heuristic_evaluation
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 휴리스틱 평가
+  hint: 사용성 원칙으로 접점 검토
+  aliases: [Heuristic evaluation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.cognitive_walkthrough
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 인지적 워크스루
+  hint: 새 사용자의 과업 수행을 단계별 검토
+  aliases: [Cognitive walkthrough]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.information_architecture
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 정보구조 설계
+  hint: 콘텐츠 분류와 탐색 체계 구성
+  aliases: [Information architecture]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.tree_testing
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 트리 테스트
+  hint: 분류 구조에서 찾기 능력 검사
+  aliases: [Tree testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.wizard_of_oz_prototyping
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 오즈의 마법사 프로토타입
+  hint: 사람이 기능을 대신하며 반응 시험
+  aliases: [Wizard of Oz prototyping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.paper_prototyping
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 종이 프로토타이핑
+  hint: 종이 화면으로 상호작용 시험
+  aliases: [Paper prototyping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.affordance
+  kind: concept
+  path: [설계, 사용자와 서비스]
+  name: 어포던스
+  hint: 환경과 행위자 사이의 행동 가능성
+  aliases: [Affordance]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.signifier
+  kind: concept
+  path: [설계, 사용자와 서비스]
+  name: 시그니파이어
+  hint: 사용 가능한 행동을 알리는 단서
+  aliases: [Signifier]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.progressive_disclosure
+  kind: concept
+  path: [설계, 사용자와 서비스]
+  name: 점진적 공개
+  hint: 필요 시점에 세부 선택 제공
+  aliases: [Progressive disclosure]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.design_system
+  kind: concept
+  path: [설계, 사용자와 서비스]
+  name: 디자인 시스템
+  hint: 재사용 가능한 표현과 상호작용 규칙
+  aliases: [Design system]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.inclusive_design
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 포용적 설계
+  hint: 다양한 능력과 맥락을 고려
+  aliases: [Inclusive design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.design.universal_design
+  kind: method
+  path: [설계, 사용자와 서비스]
+  name: 유니버설 디자인
+  hint: 넓은 사용자 범위의 이용 가능성 설계
+  aliases: [Universal design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: design
+- id: atlas.product.customer_discovery
+  kind: method
+  path: [사업, 제품 개발]
+  name: 고객 발견
+  hint: 문제와 수요를 인터뷰로 탐색
+  aliases: [Customer discovery]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.customer_development
+  kind: method
+  path: [사업, 제품 개발]
+  name: 고객 개발
+  hint: 사업 가설을 고객 반응으로 검증
+  aliases: [Customer development]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.minimum_viable_product
+  kind: method
+  path: [사업, 제품 개발]
+  name: 최소기능제품
+  hint: 핵심 가설을 시험할 최소 제품
+  aliases: [Minimum viable product, MVP]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.lean_startup
+  kind: method
+  path: [사업, 제품 개발]
+  name: 린 스타트업
+  hint: 만들기 측정 학습의 반복
+  aliases: [Lean startup]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.design_sprint
+  kind: method
+  path: [사업, 제품 개발]
+  name: 디자인 스프린트
+  hint: 짧은 기간에 문제와 해법 검증
+  aliases: [Design sprint]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.opportunity_solution_tree
+  kind: method
+  path: [사업, 제품 개발]
+  name: 기회 해결책 나무
+  hint: 성과 기회 해결책 실험 연결
+  aliases: [Opportunity solution tree]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.kano_model
+  kind: method
+  path: [사업, 제품 개발]
+  name: 카노 모형
+  hint: 품질 속성과 만족의 관계 구분
+  aliases: [Kano model]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.conjoint_analysis
+  kind: method
+  path: [사업, 제품 개발]
+  name: 컨조인트 분석
+  hint: 속성 조합에 대한 선호 추정
+  aliases: [Conjoint analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.maxdiff
+  kind: method
+  path: [사업, 제품 개발]
+  name: 최대차이 척도법
+  hint: 최선과 최악 선택으로 상대 선호 추정
+  aliases: [MaxDiff]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.van_westendorp_analysis
+  kind: method
+  path: [사업, 제품 개발]
+  name: 가격 민감도 조사
+  hint: 가격 인식의 범위 조사
+  aliases: [Van Westendorp analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.rice_prioritization
+  kind: method
+  path: [사업, 제품 개발]
+  name: RICE 우선순위
+  hint: 도달 영향 확신 노력으로 비교
+  aliases: [RICE prioritization, RICE]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.moscow_prioritization
+  kind: method
+  path: [사업, 제품 개발]
+  name: MoSCoW 우선순위
+  hint: 필수와 선택 요구 구분
+  aliases: [MoSCoW prioritization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.impact_mapping
+  kind: method
+  path: [사업, 제품 개발]
+  name: 영향 지도
+  hint: 사업 목표와 행동 변화 연결
+  aliases: [Impact mapping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.assumption_mapping
+  kind: method
+  path: [사업, 제품 개발]
+  name: 가정 지도
+  hint: 중요도와 근거에 따라 가정 분류
+  aliases: [Assumption mapping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.smoke_test
+  kind: method
+  path: [사업, 제품 개발]
+  name: 수요 탐색 실험
+  hint: 완성 전 제안에 대한 반응 확인
+  aliases: [Smoke test, 만들기 전 수요 확인]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.product_market_fit
+  kind: concept
+  path: [사업, 제품 개발]
+  name: 제품 시장 적합성
+  hint: 제품과 시장 수요의 부합
+  aliases: [Product market fit]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.north_star_metric
+  kind: concept
+  path: [사업, 제품 개발]
+  name: 북극성 지표
+  hint: 지속적으로 전달하는 핵심 가치 지표
+  aliases: [North star metric]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.cohort_analysis
+  kind: method
+  path: [사업, 제품 개발]
+  name: 코호트 분석
+  hint: 같은 시기에 들어온 집단의 변화 비교
+  aliases: [Cohort analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.funnel_analysis
+  kind: method
+  path: [사업, 제품 개발]
+  name: 퍼널 분석
+  hint: 단계별 진입과 이탈 분석
+  aliases: [Funnel analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.product.retention
+  kind: concept
+  path: [사업, 제품 개발]
+  name: 유지율
+  hint: 시간이 지나도 남아 이용하는 비율
+  aliases: [Retention]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: product
+- id: atlas.business.swot_analysis
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: SWOT 분석
+  hint: 강점 약점 기회 위협 정리
+  aliases: [SWOT analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.pestle_analysis
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: PESTLE 분석
+  hint: 거시 환경 요인을 분류해 검토
+  aliases: [PESTLE analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.five_forces
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 5가지 경쟁요인
+  hint: 산업의 경쟁 압력 분석
+  aliases: [Five forces]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.value_chain_analysis
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 가치사슬 분석
+  hint: 활동별 가치와 비용 파악
+  aliases: [Value chain analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.resource_based_view
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 자원기반 관점
+  hint: 조직의 자원과 역량으로 전략 해석
+  aliases: [Resource based view]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.vrio_analysis
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: VRIO 분석
+  hint: 자원의 가치 희소성 모방성과 조직 검토
+  aliases: [VRIO analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.business_model_canvas
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 비즈니스 모델 캔버스
+  hint: 사업의 가치 창출 구조 정리
+  aliases: [Business model canvas]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.value_proposition_canvas
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 가치제안 캔버스
+  hint: 고객 과업과 제품의 가치 연결
+  aliases: [Value proposition canvas]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.market_segmentation
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 시장 세분화
+  hint: 요구와 행동이 다른 고객군 구분
+  aliases: [Market segmentation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.positioning
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 포지셔닝
+  hint: 대상 고객에게 구별되는 위치 설정
+  aliases: [Positioning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.customer_lifetime_value
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 고객생애가치
+  hint: 고객 관계에서 발생할 가치 추정
+  aliases: [Customer lifetime value, CLV, LTV]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.customer_acquisition_cost
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 고객획득비용
+  hint: 고객 유치에 든 비용 계산
+  aliases: [Customer acquisition cost, CAC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.unit_economics
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 단위경제성
+  hint: 거래나 고객 단위의 수입과 비용
+  aliases: [Unit economics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.marketing_mix
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 마케팅 믹스
+  hint: 제품 가격 유통 촉진 조합
+  aliases: [Marketing mix]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.attribution_modeling
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 기여도 모형
+  hint: 접점의 전환 기여 추정
+  aliases: [Attribution modeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.marketing_mix_modeling
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 마케팅 믹스 모형
+  hint: 집계 자료로 채널 효과 추정
+  aliases: [Marketing mix modeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.brand_architecture
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 브랜드 구조
+  hint: 여러 브랜드의 관계 설계
+  aliases: [Brand architecture]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.diffusion_of_innovations
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 혁신 확산
+  hint: 새 방식의 채택 과정 분석
+  aliases: [Diffusion of innovations]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.blue_ocean_strategy
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 블루오션 전략
+  hint: 가치 요소를 재구성해 시장 탐색
+  aliases: [Blue ocean strategy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.business.balanced_scorecard
+  kind: method
+  path: [사업, 전략과 마케팅]
+  name: 균형성과표
+  hint: 여러 관점의 성과 지표 연결
+  aliases: [Balanced scorecard]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: business
+- id: atlas.operations.theory_of_constraints
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 제약이론
+  hint: 병목을 중심으로 전체 흐름 개선
+  aliases: [Theory of constraints]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.queueing_theory
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 대기행렬 이론
+  hint: 도착과 처리의 대기 현상 분석
+  aliases: [Queueing theory, 고객 대기시간, 줄 서는 시간]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.littles_law
+  kind: concept
+  path: [운영, 생산과 물류]
+  name: 리틀의 법칙
+  hint: 평균 재공과 처리율 체류시간의 관계
+  aliases: [Littles law, 재공과 처리시간]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.economic_order_quantity
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 경제적 주문량
+  hint: 주문과 보관 비용의 균형
+  aliases: [Economic order quantity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.newsvendor_model
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 뉴스벤더 모형
+  hint: 불확실 수요에서 일회성 주문 결정
+  aliases: [Newsvendor model]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.inventory_control
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 재고 관리
+  hint: 보충과 보관 수준 결정
+  aliases: [Inventory control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.safety_stock
+  kind: concept
+  path: [운영, 생산과 물류]
+  name: 안전재고
+  hint: 수요와 공급 불확실성의 완충
+  aliases: [Safety stock]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.abc_inventory_analysis
+  kind: method
+  path: [운영, 생산과 물류]
+  name: ABC 재고분석
+  hint: 품목 중요도별 관리 구분
+  aliases: [ABC inventory analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.material_requirements_planning
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 자재소요계획
+  hint: 생산 일정에서 자재 수요 계산
+  aliases: [Material requirements planning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.sales_and_operations_planning
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 판매생산계획
+  hint: 수요와 공급 계획의 조직 간 조정
+  aliases: [Sales and operations planning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.vehicle_routing
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 차량경로 계획
+  hint: 여러 목적지의 차량 운행 구성
+  aliases: [Vehicle routing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.facility_location
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 시설 입지 최적화
+  hint: 서비스와 비용을 고려한 위치 결정
+  aliases: [Facility location]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.bin_packing
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 상자 채우기
+  hint: 용량 제약 안에 물품 묶기
+  aliases: [Bin packing, 상자에 물품 배치]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.job_shop_scheduling
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 작업장 일정계획
+  hint: 기계와 공정 순서의 작업 배치
+  aliases: [Job shop scheduling, 공장 작업 순서]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.lean_manufacturing
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 린 생산
+  hint: 흐름의 낭비를 줄이는 생산 방식
+  aliases: [Lean manufacturing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.just_in_time
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 적시생산
+  hint: 필요한 시점과 수량에 맞춰 공급
+  aliases: [Just in time]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.kanban
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 칸반
+  hint: 작업 흐름과 재공 한도 시각화
+  aliases: [Kanban]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.heijunka
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 생산 평준화
+  hint: 품목과 수량의 생산 변동 완화
+  aliases: [Heijunka]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.smed
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 신속 교체
+  hint: 설비 준비와 교체 시간 단축
+  aliases: [SMED]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.operations.total_productive_maintenance
+  kind: method
+  path: [운영, 생산과 물류]
+  name: 전사적 생산보전
+  hint: 설비 손실을 함께 관리
+  aliases: [Total productive maintenance]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: operations
+- id: atlas.economics.marginal_analysis
+  kind: concept
+  path: [경제, 분석]
+  name: 한계분석
+  hint: 추가 선택의 편익과 비용 비교
+  aliases: [Marginal analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.elasticity
+  kind: concept
+  path: [경제, 분석]
+  name: 탄력성
+  hint: 한 변수 변화에 대한 반응 비율
+  aliases: [Elasticity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.consumer_surplus
+  kind: concept
+  path: [경제, 분석]
+  name: 소비자잉여
+  hint: 지불의사와 실제 지출 차이
+  aliases: [Consumer surplus]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.producer_surplus
+  kind: concept
+  path: [경제, 분석]
+  name: 생산자잉여
+  hint: 수입과 최소 공급 유인 차이
+  aliases: [Producer surplus]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.deadweight_loss
+  kind: concept
+  path: [경제, 분석]
+  name: 사중손실
+  hint: 거래 왜곡으로 사라진 총잉여
+  aliases: [Deadweight loss]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.public_goods
+  kind: concept
+  path: [경제, 분석]
+  name: 공공재
+  hint: 비경합성과 비배제성의 재화
+  aliases: [Public goods]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.common_pool_resource
+  kind: concept
+  path: [경제, 분석]
+  name: 공유자원
+  hint: 경합적이지만 배제가 어려운 자원
+  aliases: [Common pool resource]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.adverse_selection
+  kind: concept
+  path: [경제, 분석]
+  name: 역선택
+  hint: 거래 전 정보 비대칭의 선택 왜곡
+  aliases: [Adverse selection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.moral_hazard
+  kind: concept
+  path: [경제, 분석]
+  name: 도덕적 해이
+  hint: 관찰 어려운 행동에서 생기는 유인 문제
+  aliases: [Moral hazard]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.principal_agent_problem
+  kind: concept
+  path: [경제, 분석]
+  name: 주인 대리인 문제
+  hint: 위임자와 수행자의 정보와 유인 차이
+  aliases: [Principal agent problem]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.transaction_costs
+  kind: concept
+  path: [경제, 분석]
+  name: 거래비용
+  hint: 탐색 협상 집행에 드는 비용
+  aliases: [Transaction costs]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.network_effects
+  kind: concept
+  path: [경제, 분석]
+  name: 네트워크 효과
+  hint: 참여자 수에 따라 달라지는 가치
+  aliases: [Network effects]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.economies_of_scale
+  kind: concept
+  path: [경제, 분석]
+  name: 규모의 경제
+  hint: 생산 규모 증가에 따른 단위비용 감소
+  aliases: [Economies of scale]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.economies_of_scope
+  kind: concept
+  path: [경제, 분석]
+  name: 범위의 경제
+  hint: 여러 활동의 공동 수행으로 비용 절감
+  aliases: [Economies of scope]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.input_output_analysis
+  kind: method
+  path: [경제, 분석]
+  name: 산업연관 분석
+  hint: 산업 간 투입과 산출의 연결 분석
+  aliases: [Input output analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.cost_benefit_analysis
+  kind: method
+  path: [경제, 분석]
+  name: 비용편익 분석
+  hint: 대안의 사회적 편익과 비용 비교
+  aliases: [Cost benefit analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.cost_effectiveness_analysis
+  kind: method
+  path: [경제, 분석]
+  name: 비용효과 분석
+  hint: 동일 성과 단위의 비용 비교
+  aliases: [Cost effectiveness analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.game_theory
+  kind: method
+  path: [경제, 분석]
+  name: 게임이론
+  hint: 상호 의존하는 선택의 전략 분석
+  aliases: [Game theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.nash_equilibrium
+  kind: concept
+  path: [경제, 분석]
+  name: 내시균형
+  hint: 일방적 변경으로 이득이 없는 전략 조합
+  aliases: [Nash equilibrium]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics
+- id: atlas.economics.mechanism_design
+  kind: method
+  path: [경제, 분석]
+  name: 메커니즘 설계
+  hint: 원하는 결과를 유도할 규칙 설계
+  aliases: [Mechanism design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: economics

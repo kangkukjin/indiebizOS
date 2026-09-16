@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.finance.discounted_cash_flow
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 현금흐름 할인
+  hint: 미래 현금흐름을 현재 가치로 환산
+  aliases: [Discounted cash flow, DCF]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.net_present_value
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 순현재가치
+  hint: 투자 유출입의 현재 가치 차이
+  aliases: [Net present value, NPV]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.internal_rate_of_return
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 내부수익률
+  hint: 순현재가치를 영으로 만드는 할인율
+  aliases: [Internal rate of return, IRR]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.time_value_of_money
+  kind: concept
+  path: [경제, 재무와 회계]
+  name: 화폐의 시간가치
+  hint: 시점에 따른 금액의 가치 차이
+  aliases: [Time value of money]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.duration
+  kind: concept
+  path: [경제, 재무와 회계]
+  name: 듀레이션
+  hint: 채권 현금흐름의 시간과 금리 민감도
+  aliases: [Duration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.portfolio_diversification
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 포트폴리오 분산
+  hint: 상이한 위험 노출을 조합
+  aliases: [Portfolio diversification]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.mean_variance_optimization
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 평균분산 최적화
+  hint: 수익 기대와 분산으로 배분 계산
+  aliases: [Mean variance optimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.value_at_risk
+  kind: concept
+  path: [경제, 재무와 회계]
+  name: 위험가치
+  hint: 주어진 확률 수준의 손실 경계
+  aliases: [Value at risk, VaR]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.expected_shortfall
+  kind: concept
+  path: [경제, 재무와 회계]
+  name: 기대초과손실
+  hint: 꼬리 손실의 조건부 평균
+  aliases: [Expected shortfall]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.stress_testing
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 스트레스 테스트
+  hint: 불리한 시나리오에서 취약성 점검
+  aliases: [Stress testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.scenario_valuation
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 시나리오 가치평가
+  hint: 가정별 가치 차이 비교
+  aliases: [Scenario valuation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.working_capital
+  kind: concept
+  path: [경제, 재무와 회계]
+  name: 운전자본
+  hint: 일상 운영에 묶이는 순유동 자원
+  aliases: [Working capital]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.cash_flow_forecasting
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 현금흐름 예측
+  hint: 시점별 현금 유입과 유출 추정
+  aliases: [Cash flow forecasting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.double_entry_bookkeeping
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 복식부기
+  hint: 거래의 양면을 대차로 기록
+  aliases: [Double entry bookkeeping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.accrual_accounting
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 발생주의 회계
+  hint: 현금 시점과 구별해 수익 비용 인식
+  aliases: [Accrual accounting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.activity_based_costing
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 활동기준원가
+  hint: 활동 사용량으로 간접비 배분
+  aliases: [Activity based costing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.variance_analysis
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 차이분석
+  hint: 계획과 실제 원가의 차이 분해
+  aliases: [Variance analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.dupont_analysis
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 듀퐁 분석
+  hint: 자본수익률을 구성 요인으로 분해
+  aliases: [DuPont analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.financial_ratio_analysis
+  kind: method
+  path: [경제, 재무와 회계]
+  name: 재무비율 분석
+  hint: 재무제표 항목의 비율 비교
+  aliases: [Financial ratio analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.finance.liquidity
+  kind: concept
+  path: [경제, 재무와 회계]
+  name: 유동성
+  hint: 가치 손실 없이 현금화할 수 있는 정도
+  aliases: [Liquidity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: finance
+- id: atlas.policy.theory_of_change
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 변화이론
+  hint: 활동에서 성과로 이어지는 가정 구성
+  aliases: [Theory of change]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.logic_model
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 논리모형
+  hint: 투입 활동 산출 성과의 연결
+  aliases: [Logic model]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.policy_analysis
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 정책분석
+  hint: 공공 문제의 대안과 영향 비교
+  aliases: [Policy analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.stakeholder_analysis
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 이해관계자 분석
+  hint: 영향과 이해가 다른 주체 파악
+  aliases: [Stakeholder analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.regulatory_impact_assessment
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 규제영향평가
+  hint: 규제 대안의 비용과 영향 검토
+  aliases: [Regulatory impact assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.program_evaluation
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 프로그램 평가
+  hint: 사업의 수행과 성과 평가
+  aliases: [Program evaluation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.process_evaluation
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 과정평가
+  hint: 계획한 활동이 수행된 방식 검토
+  aliases: [Process evaluation, 사업이 계획대로 실행]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.impact_evaluation
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 영향평가
+  hint: 개입 때문에 생긴 결과 변화 추정
+  aliases: [Impact evaluation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.participatory_budgeting
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 참여예산
+  hint: 주민이 예산 배분 결정에 참여
+  aliases: [Participatory budgeting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.citizens_assembly
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 시민의회
+  hint: 추첨된 시민의 숙의적 정책 검토
+  aliases: [Citizens assembly]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.deliberative_polling
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 숙의조사
+  hint: 정보와 토론 전후 의견 조사
+  aliases: [Deliberative polling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.social_impact_assessment
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 사회영향평가
+  hint: 개발과 정책의 사회적 변화 검토
+  aliases: [Social impact assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.distributional_analysis
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 분배영향 분석
+  hint: 집단별 비용과 편익의 차이 검토
+  aliases: [Distributional analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.subsidiarity
+  kind: concept
+  path: [사회, 정책과 거버넌스]
+  name: 보충성 원칙
+  hint: 가까운 수준에서 가능한 일을 결정
+  aliases: [Subsidiarity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.accountability
+  kind: concept
+  path: [사회, 정책과 거버넌스]
+  name: 책무성
+  hint: 설명과 책임을 요구할 수 있는 관계
+  aliases: [Accountability]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.transparency
+  kind: concept
+  path: [사회, 정책과 거버넌스]
+  name: 투명성
+  hint: 결정과 집행의 근거를 볼 수 있음
+  aliases: [Transparency]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.collective_action
+  kind: concept
+  path: [사회, 정책과 거버넌스]
+  name: 집합행동
+  hint: 공동 목표를 위한 다수의 협력
+  aliases: [Collective action]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.polycentric_governance
+  kind: concept
+  path: [사회, 정책과 거버넌스]
+  name: 다중심 거버넌스
+  hint: 여러 자율적 결정 중심의 조정
+  aliases: [Polycentric governance]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.adaptive_management
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 적응적 관리
+  hint: 실행 결과를 학습하며 관리 수정
+  aliases: [Adaptive management]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.policy.horizon_scanning
+  kind: method
+  path: [사회, 정책과 거버넌스]
+  name: 미래 징후 탐색
+  hint: 변화의 초기 신호를 체계적으로 탐색
+  aliases: [Horizon scanning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: policy
+- id: atlas.law.doctrinal_legal_research
+  kind: method
+  path: [사회, 법과 제도]
+  name: 법해석학적 연구
+  hint: 법령과 판례의 규범 체계 분석
+  aliases: [Doctrinal legal research]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.comparative_law
+  kind: method
+  path: [사회, 법과 제도]
+  name: 비교법
+  hint: 법체계 간 규범과 제도 비교
+  aliases: [Comparative law]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.case_briefing
+  kind: method
+  path: [사회, 법과 제도]
+  name: 판례 요약
+  hint: 사실 쟁점 판단 근거를 분리
+  aliases: [Case briefing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.irac
+  kind: method
+  path: [사회, 법과 제도]
+  name: IRAC 법적 분석
+  hint: 쟁점 규칙 적용 결론으로 논증
+  aliases: [IRAC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.statutory_interpretation
+  kind: method
+  path: [사회, 법과 제도]
+  name: 법령 해석
+  hint: 문언 체계 목적에 따른 규범 해석
+  aliases: [Statutory interpretation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.precedent
+  kind: concept
+  path: [사회, 법과 제도]
+  name: 선례
+  hint: 앞선 판단이 이후 판단에 주는 기준
+  aliases: [Precedent]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.due_process
+  kind: concept
+  path: [사회, 법과 제도]
+  name: 적법절차
+  hint: 권리 제한에서 요구되는 공정한 절차
+  aliases: [Due process]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.proportionality_test
+  kind: method
+  path: [사회, 법과 제도]
+  name: 비례성 심사
+  hint: 목적과 권리 제한의 균형 검토
+  aliases: [Proportionality test]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.contract_review
+  kind: method
+  path: [사회, 법과 제도]
+  name: 계약 검토
+  hint: 권리 의무 조건과 위험 확인
+  aliases: [Contract review]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.legal_due_diligence
+  kind: method
+  path: [사회, 법과 제도]
+  name: 법률 실사
+  hint: 거래 전 법적 상태와 위험 조사
+  aliases: [Legal due diligence]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.compliance_mapping
+  kind: method
+  path: [사회, 법과 제도]
+  name: 준법 요구 매핑
+  hint: 의무와 내부 통제를 대응
+  aliases: [Compliance mapping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.alternative_dispute_resolution
+  kind: method
+  path: [사회, 법과 제도]
+  name: 대체적 분쟁해결
+  hint: 재판 외 절차로 분쟁 해결
+  aliases: [Alternative dispute resolution]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.mediation
+  kind: method
+  path: [사회, 법과 제도]
+  name: 조정
+  hint: 중립 제삼자가 합의를 지원
+  aliases: [Mediation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.arbitration
+  kind: method
+  path: [사회, 법과 제도]
+  name: 중재
+  hint: 당사자가 맡긴 판단으로 분쟁 해결
+  aliases: [Arbitration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.restorative_justice
+  kind: method
+  path: [사회, 법과 제도]
+  name: 회복적 정의
+  hint: 피해 책임과 관계 회복을 중심에 둠
+  aliases: [Restorative justice]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.informed_consent
+  kind: concept
+  path: [사회, 법과 제도]
+  name: 충분한 설명에 의한 동의
+  hint: 내용을 이해한 자발적 동의
+  aliases: [Informed consent]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.data_minimization
+  kind: concept
+  path: [사회, 법과 제도]
+  name: 개인정보 최소수집
+  hint: 목적에 필요한 정보만 처리
+  aliases: [Data minimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.privacy_impact_assessment
+  kind: method
+  path: [사회, 법과 제도]
+  name: 개인정보 영향평가
+  hint: 개인정보 처리의 위험 검토
+  aliases: [Privacy impact assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.intellectual_property
+  kind: concept
+  path: [사회, 법과 제도]
+  name: 지식재산
+  hint: 창작과 발명 등에 관한 권리 체계
+  aliases: [Intellectual property]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.law.open_licensing
+  kind: concept
+  path: [사회, 법과 제도]
+  name: 공개 라이선스
+  hint: 재사용 조건을 명시한 권리 허락
+  aliases: [Open licensing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: law
+- id: atlas.social.participant_observation
+  kind: method
+  path: [사회, 사회조사]
+  name: 참여관찰
+  hint: 활동에 참여하며 실천 관찰
+  aliases: [Participant observation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.grounded_theory
+  kind: method
+  path: [사회, 사회조사]
+  name: 근거이론
+  hint: 자료 비교를 통해 이론 구성
+  aliases: [Grounded theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.discourse_analysis
+  kind: method
+  path: [사회, 사회조사]
+  name: 담론분석
+  hint: 언어 사용과 권력 맥락 분석
+  aliases: [Discourse analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.content_analysis
+  kind: method
+  path: [사회, 사회조사]
+  name: 내용분석
+  hint: 텍스트와 매체의 범주별 내용 분석
+  aliases: [Content analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.conversation_analysis
+  kind: method
+  path: [사회, 사회조사]
+  name: 대화분석
+  hint: 발화 순서와 상호작용 조직 분석
+  aliases: [Conversation analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.narrative_inquiry
+  kind: method
+  path: [사회, 사회조사]
+  name: 내러티브 탐구
+  hint: 경험이 이야기로 구성되는 방식 탐구
+  aliases: [Narrative inquiry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.phenomenological_research
+  kind: method
+  path: [사회, 사회조사]
+  name: 현상학적 연구
+  hint: 경험의 의미와 구조 탐구
+  aliases: [Phenomenological research]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.action_research
+  kind: method
+  path: [사회, 사회조사]
+  name: 실행연구
+  hint: 현장 개선과 연구를 순환
+  aliases: [Action research]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.participatory_action_research
+  kind: method
+  path: [사회, 사회조사]
+  name: 참여적 실행연구
+  hint: 당사자와 함께 문제를 연구하고 변화
+  aliases: [Participatory action research]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.focus_group
+  kind: method
+  path: [사회, 사회조사]
+  name: 초점집단 면접
+  hint: 집단 상호작용을 통한 인식 탐색
+  aliases: [Focus group]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.semi_structured_interview
+  kind: method
+  path: [사회, 사회조사]
+  name: 반구조화 면접
+  hint: 질문 틀과 유연한 후속 질문 조합
+  aliases: [Semi structured interview, 인터뷰 질문 틀]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.life_history_interview
+  kind: method
+  path: [사회, 사회조사]
+  name: 생애사 면접
+  hint: 삶의 과정과 의미를 시간순 탐색
+  aliases: [Life history interview]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.social_network_analysis
+  kind: method
+  path: [사회, 사회조사]
+  name: 사회연결망 분석
+  hint: 사람과 집단의 관계 구조 분석
+  aliases: [Social network analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.social_capital
+  kind: concept
+  path: [사회, 사회조사]
+  name: 사회적 자본
+  hint: 관계망에서 얻는 자원과 신뢰
+  aliases: [Social capital]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.social_stratification
+  kind: concept
+  path: [사회, 사회조사]
+  name: 사회계층화
+  hint: 자원과 지위의 구조적 차이
+  aliases: [Social stratification]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.intersectionality
+  kind: concept
+  path: [사회, 사회조사]
+  name: 교차성
+  hint: 여러 불평등 구조의 교차 경험
+  aliases: [Intersectionality]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.reflexivity
+  kind: concept
+  path: [사회, 사회조사]
+  name: 성찰성
+  hint: 연구자의 위치가 해석에 주는 영향 검토
+  aliases: [Reflexivity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.member_checking
+  kind: method
+  path: [사회, 사회조사]
+  name: 참여자 검토
+  hint: 참여자가 해석에 의견을 제시
+  aliases: [Member checking]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.constant_comparison
+  kind: method
+  path: [사회, 사회조사]
+  name: 지속적 비교법
+  hint: 자료와 범주를 반복 비교
+  aliases: [Constant comparison]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.social.theoretical_saturation
+  kind: concept
+  path: [사회, 사회조사]
+  name: 이론적 포화
+  hint: 새 자료에서 범주의 새 성질이 줄어듦
+  aliases: [Theoretical saturation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: social
+- id: atlas.psychology.working_memory
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 작업기억
+  hint: 일시적으로 정보를 유지하고 조작
+  aliases: [Working memory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.cognitive_load
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 인지부하
+  hint: 과제가 요구하는 정신적 자원
+  aliases: [Cognitive load]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.metacognition
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 메타인지
+  hint: 자신의 이해와 사고를 점검
+  aliases: [Metacognition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.confirmation_bias
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 확증편향
+  hint: 기존 믿음에 맞는 정보에 치우침
+  aliases: [Confirmation bias]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.anchoring
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 정박효과
+  hint: 초기 정보가 뒤 판단을 끌어당김
+  aliases: [Anchoring]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.availability_heuristic
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 가용성 휴리스틱
+  hint: 떠오르기 쉬움으로 빈도 판단
+  aliases: [Availability heuristic]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.loss_aversion
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 손실회피
+  hint: 동일 크기 이득보다 손실을 크게 평가
+  aliases: [Loss aversion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.framing_effect
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 틀짜기 효과
+  hint: 같은 내용의 표현에 따라 판단 변화
+  aliases: [Framing effect]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.self_efficacy
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 자기효능감
+  hint: 과제를 수행할 수 있다는 믿음
+  aliases: [Self efficacy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.intrinsic_motivation
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 내재적 동기
+  hint: 활동 자체의 관심과 만족에 의한 동기
+  aliases: [Intrinsic motivation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.implementation_intentions
+  kind: method
+  path: [학습, 인지와 행동]
+  name: 실행 의도
+  hint: 특정 상황과 행동을 미리 연결
+  aliases: [Implementation intentions]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.habit_formation
+  kind: method
+  path: [학습, 인지와 행동]
+  name: 습관 형성
+  hint: 맥락과 반복 행동의 연결 강화
+  aliases: [Habit formation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.behavioral_activation
+  kind: method
+  path: [학습, 인지와 행동]
+  name: 행동활성화
+  hint: 가치 있는 활동 참여를 체계화
+  aliases: [Behavioral activation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.motivational_interviewing
+  kind: method
+  path: [학습, 인지와 행동]
+  name: 동기강화 면담
+  hint: 양가감정을 탐색하며 변화 동기 지원
+  aliases: [Motivational interviewing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.functional_behavior_assessment
+  kind: method
+  path: [학습, 인지와 행동]
+  name: 행동 기능 평가
+  hint: 행동의 선행 조건과 결과 조사
+  aliases: [Functional behavior assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.reinforcement
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 강화
+  hint: 결과가 이후 행동 가능성을 높임
+  aliases: [Reinforcement]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.extinction
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 소거
+  hint: 강화 중단 후 행동 반응 감소
+  aliases: [Extinction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.self_determination_theory
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 자기결정성이론
+  hint: 자율 유능 관계 욕구로 동기 설명
+  aliases: [Self determination theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.attribution_theory
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 귀인이론
+  hint: 행동의 원인을 해석하는 방식
+  aliases: [Attribution theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology
+- id: atlas.psychology.prospect_theory
+  kind: concept
+  path: [학습, 인지와 행동]
+  name: 전망이론
+  hint: 준거점과 확률 가중으로 선택 설명
+  aliases: [Prospect theory]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: psychology

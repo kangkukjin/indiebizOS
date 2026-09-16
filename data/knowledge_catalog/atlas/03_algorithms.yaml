@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.algorithms.divide_and_conquer
+  kind: method
+  path: [계산, 알고리즘]
+  name: 분할정복
+  hint: 하위 문제로 나누어 해 결합
+  aliases: [Divide and conquer]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.greedy_algorithm
+  kind: method
+  path: [계산, 알고리즘]
+  name: 탐욕 알고리즘
+  hint: 매 단계의 국소 선택으로 구성
+  aliases: [Greedy algorithm]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.backtracking
+  kind: method
+  path: [계산, 알고리즘]
+  name: 백트래킹
+  hint: 제약 위반 시 선택을 되돌려 탐색
+  aliases: [Backtracking]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.breadth_first_search
+  kind: method
+  path: [계산, 알고리즘]
+  name: 너비우선 탐색
+  hint: 시작점에서 가까운 깊이부터 탐색
+  aliases: [Breadth first search]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.depth_first_search
+  kind: method
+  path: [계산, 알고리즘]
+  name: 깊이우선 탐색
+  hint: 한 경로를 깊게 따라 탐색
+  aliases: [Depth first search]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.dijkstra_algorithm
+  kind: method
+  path: [계산, 알고리즘]
+  name: 다익스트라 알고리즘
+  hint: 비음수 가중 그래프의 최단경로
+  aliases: [Dijkstra algorithm]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.a_star_search
+  kind: method
+  path: [계산, 알고리즘]
+  name: A* 탐색
+  hint: 비용과 휴리스틱으로 경로 탐색
+  aliases: [A star search, 에이스타, A* search, A star]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.topological_sorting
+  kind: method
+  path: [계산, 알고리즘]
+  name: 위상정렬
+  hint: 의존 방향을 지키는 순서 구성
+  aliases: [Topological sorting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.maximum_flow
+  kind: method
+  path: [계산, 알고리즘]
+  name: 최대유량
+  hint: 용량 제약 안의 최대 흐름 계산
+  aliases: [Maximum flow]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.minimum_spanning_tree
+  kind: method
+  path: [계산, 알고리즘]
+  name: 최소신장트리
+  hint: 전체 정점을 최소 비용으로 연결
+  aliases: [Minimum spanning tree]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.bipartite_matching
+  kind: method
+  path: [계산, 알고리즘]
+  name: 이분 매칭
+  hint: 두 집합 원소의 짝 구성
+  aliases: [Bipartite matching]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.union_find
+  kind: method
+  path: [계산, 알고리즘]
+  name: 서로소 집합 자료구조
+  hint: 집합 병합과 소속 질의
+  aliases: [Union find]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.hashing
+  kind: method
+  path: [계산, 알고리즘]
+  name: 해싱
+  hint: 키를 제한된 주소 공간에 대응
+  aliases: [Hashing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.binary_search
+  kind: method
+  path: [계산, 알고리즘]
+  name: 이진탐색
+  hint: 정렬된 탐색 구간을 반씩 축소
+  aliases: [Binary search]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.memoization
+  kind: method
+  path: [계산, 알고리즘]
+  name: 메모이제이션
+  hint: 계산 결과를 인자별로 저장
+  aliases: [Memoization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.reservoir_sampling
+  kind: method
+  path: [계산, 알고리즘]
+  name: 저수지 표집
+  hint: 크기 미상의 흐름에서 표본 추출
+  aliases: [Reservoir sampling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.bloom_filter
+  kind: method
+  path: [계산, 알고리즘]
+  name: 블룸 필터
+  hint: 확률적으로 집합 포함 여부 검사
+  aliases: [Bloom filter]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.amortized_analysis
+  kind: concept
+  path: [계산, 알고리즘]
+  name: 분할상환 분석
+  hint: 연산열 전체의 평균 비용 분석
+  aliases: [Amortized analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.computational_complexity
+  kind: concept
+  path: [계산, 알고리즘]
+  name: 계산 복잡도
+  hint: 입력 크기에 따른 자원 증가
+  aliases: [Computational complexity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.algorithms.approximation_algorithm
+  kind: concept
+  path: [계산, 알고리즘]
+  name: 근사 알고리즘
+  hint: 최적해에 대한 보장 범위의 해
+  aliases: [Approximation algorithm]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: algorithms
+- id: atlas.machine_learning.supervised_learning
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 지도학습
+  hint: 입력과 정답 쌍에서 예측 학습
+  aliases: [Supervised learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.unsupervised_learning
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 비지도학습
+  hint: 정답 없이 자료의 구조 탐색
+  aliases: [Unsupervised learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.self_supervised_learning
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 자기지도학습
+  hint: 자료 자체에서 학습 신호 구성
+  aliases: [Self supervised learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.transfer_learning
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 전이학습
+  hint: 기존 학습 표현을 새 과제에 이용
+  aliases: [Transfer learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.active_learning
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 능동학습
+  hint: 학습 가치가 큰 자료의 표지 요청
+  aliases: [Active learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.reinforcement_learning
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 강화학습
+  hint: 보상 신호로 행동 정책 학습
+  aliases: [Reinforcement learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.cross_validation
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 교차검증
+  hint: 자료를 나누어 일반화 성능 추정
+  aliases: [Cross validation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.regularization
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 정규화 규제
+  hint: 모형 복잡도에 제약을 주어 학습
+  aliases: [Regularization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.feature_engineering
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 특성 공학
+  hint: 예측에 유용한 입력 표현 구성
+  aliases: [Feature engineering]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.feature_selection
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 특성 선택
+  hint: 유용한 변수의 부분집합 선택
+  aliases: [Feature selection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.principal_component_analysis
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 주성분분석
+  hint: 분산이 큰 직교 축으로 차원 축소
+  aliases: [Principal component analysis, PCA]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.factor_analysis
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 요인분석
+  hint: 관측 상관을 잠재 요인으로 설명
+  aliases: [Factor analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.clustering
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 군집분석
+  hint: 비슷한 관측을 묶어 집단 탐색
+  aliases: [Clustering]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.dimensionality_reduction
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 차원축소
+  hint: 고차원 자료를 낮은 차원으로 표현
+  aliases: [Dimensionality reduction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.random_forest
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 랜덤 포레스트
+  hint: 무작위화한 결정나무의 앙상블
+  aliases: [Random forest]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.gradient_boosting
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 그래디언트 부스팅
+  hint: 잔여 오차를 순차 보완하는 앙상블
+  aliases: [Gradient boosting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.support_vector_machine
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 서포트 벡터 머신
+  hint: 마진을 이용한 분류와 회귀
+  aliases: [Support vector machine]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.anomaly_detection
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 이상탐지
+  hint: 통상 패턴에서 벗어난 관측 탐색
+  aliases: [Anomaly detection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.probability_calibration
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 확률 보정
+  hint: 예측 확률과 실제 빈도의 대응
+  aliases: [Probability calibration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.machine_learning.model_interpretation
+  kind: method
+  path: [계산, 기계학습, 방법]
+  name: 모형 해석
+  hint: 예측에 기여한 요인 분석
+  aliases: [Model interpretation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: machine_learning
+- id: atlas.security.defense_in_depth
+  kind: method
+  path: [개발, 보안]
+  name: 심층방어
+  hint: 여러 방어 층으로 실패 보완
+  aliases: [Defense in depth]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.least_privilege
+  kind: concept
+  path: [개발, 보안]
+  name: 최소권한
+  hint: 업무에 필요한 최소 접근 허용
+  aliases: [Least privilege]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.zero_trust
+  kind: concept
+  path: [개발, 보안]
+  name: 제로 트러스트
+  hint: 접근을 지속 검증하는 보안 원칙
+  aliases: [Zero trust]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.attack_surface_analysis
+  kind: method
+  path: [개발, 보안]
+  name: 공격 표면 분석
+  hint: 침입 가능한 접점 식별
+  aliases: [Attack surface analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.penetration_testing
+  kind: method
+  path: [개발, 보안]
+  name: 침투시험
+  hint: 공격 시도로 방어의 취약점 검증
+  aliases: [Penetration testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.fuzz_testing
+  kind: method
+  path: [개발, 보안]
+  name: 퍼즈 테스트
+  hint: 비정상 입력으로 오류 탐색
+  aliases: [Fuzz testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.static_application_security_testing
+  kind: method
+  path: [개발, 보안]
+  name: 정적 보안 분석
+  hint: 코드를 실행하지 않고 취약점 탐색
+  aliases: [Static application security testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.dynamic_application_security_testing
+  kind: method
+  path: [개발, 보안]
+  name: 동적 보안 분석
+  hint: 실행 중인 시스템의 취약점 검사
+  aliases: [Dynamic application security testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.stride
+  kind: concept
+  path: [개발, 보안]
+  name: STRIDE
+  hint: 위협 유형별 모델링 분류
+  aliases: [STRIDE]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.security_boundary
+  kind: concept
+  path: [개발, 보안]
+  name: 보안 경계
+  hint: 권한과 신뢰가 달라지는 접점
+  aliases: [Security boundary]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.input_validation
+  kind: method
+  path: [개발, 보안]
+  name: 입력 검증
+  hint: 외부 입력의 허용 형식 검사
+  aliases: [Input validation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.output_encoding
+  kind: method
+  path: [개발, 보안]
+  name: 출력 인코딩
+  hint: 출력 문맥에 맞게 데이터 표현
+  aliases: [Output encoding]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.key_rotation
+  kind: method
+  path: [개발, 보안]
+  name: 키 교체
+  hint: 암호 키의 수명과 교체 관리
+  aliases: [Key rotation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.incident_response
+  kind: method
+  path: [개발, 보안]
+  name: 사고 대응
+  hint: 탐지 봉쇄 복구와 사후 분석
+  aliases: [Incident response]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.digital_forensics
+  kind: method
+  path: [개발, 보안]
+  name: 디지털 포렌식
+  hint: 전자 흔적의 보존과 분석
+  aliases: [Digital forensics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.public_key_cryptography
+  kind: concept
+  path: [개발, 보안]
+  name: 공개키 암호
+  hint: 서로 다른 암호화 검증 키 체계
+  aliases: [Public key cryptography]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.digital_signature
+  kind: concept
+  path: [개발, 보안]
+  name: 전자서명
+  hint: 작성 주체와 무결성 확인
+  aliases: [Digital signature]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.authenticated_encryption
+  kind: concept
+  path: [개발, 보안]
+  name: 인증 암호화
+  hint: 기밀성과 무결성을 함께 보호
+  aliases: [Authenticated encryption]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.differential_privacy
+  kind: concept
+  path: [개발, 보안]
+  name: 차등프라이버시
+  hint: 개인 포함 여부의 정보 노출 제한
+  aliases: [Differential privacy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.security.secure_multiparty_computation
+  kind: concept
+  path: [개발, 보안]
+  name: 안전한 다자간 계산
+  hint: 입력을 공개하지 않고 공동 계산
+  aliases: [Secure multiparty computation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: security
+- id: atlas.networks.consensus
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 합의 알고리즘
+  hint: 분산 노드가 상태에 동의
+  aliases: [Consensus]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.quorum
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 정족수
+  hint: 승인을 위해 필요한 응답 집합
+  aliases: [Quorum]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.eventual_consistency
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 최종적 일관성
+  hint: 갱신 전파 후 같은 상태로 수렴
+  aliases: [Eventual consistency]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.linearizability
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 선형화 가능성
+  hint: 연산이 단일 시점에 일어난 듯 관찰
+  aliases: [Linearizability]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.cap_theorem
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: CAP 정리
+  hint: 네트워크 분할 중 일관성과 가용성 제약
+  aliases: [CAP theorem]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.backpressure
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 역압력
+  hint: 처리 능력에 맞춰 유입 조절
+  aliases: [Backpressure]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.rate_limiting
+  kind: method
+  path: [연결, 분산 시스템]
+  name: 요청률 제한
+  hint: 시간 구간별 요청량 통제
+  aliases: [Rate limiting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.circuit_breaker
+  kind: method
+  path: [연결, 분산 시스템]
+  name: 서킷 브레이커
+  hint: 반복 실패 중 호출 차단
+  aliases: [Circuit breaker]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.exponential_backoff
+  kind: method
+  path: [연결, 분산 시스템]
+  name: 지수 백오프
+  hint: 재시도 간격을 점차 확대
+  aliases: [Exponential backoff]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.load_balancing
+  kind: method
+  path: [연결, 분산 시스템]
+  name: 부하분산
+  hint: 요청을 여러 처리자로 분배
+  aliases: [Load balancing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.consistent_hashing
+  kind: method
+  path: [연결, 분산 시스템]
+  name: 일관 해싱
+  hint: 노드 변경 시 재배치 범위 축소
+  aliases: [Consistent hashing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.distributed_tracing
+  kind: method
+  path: [연결, 분산 시스템]
+  name: 분산 추적
+  hint: 요청이 서비스 간 이동한 경로 추적
+  aliases: [Distributed tracing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.publish_subscribe
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 발행 구독
+  hint: 발신자와 수신자를 주제로 분리
+  aliases: [Publish subscribe]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.message_queue
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 메시지 큐
+  hint: 비동기 작업 메시지 저장과 전달
+  aliases: [Message queue]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.saga_pattern
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 사가 패턴
+  hint: 분산 작업과 보상 동작 조합
+  aliases: [Saga pattern]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.two_phase_commit
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 2단계 커밋
+  hint: 분산 트랜잭션의 준비와 확정
+  aliases: [Two phase commit]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.content_delivery_network
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 콘텐츠 전송망
+  hint: 사용자 가까운 위치에서 자료 전달
+  aliases: [Content delivery network]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.service_discovery
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 서비스 발견
+  hint: 실행 중인 서비스의 위치 조회
+  aliases: [Service discovery]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.websocket
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: 웹소켓
+  hint: 연결 위의 양방향 통신
+  aliases: [WebSocket]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.networks.webrtc
+  kind: concept
+  path: [연결, 분산 시스템]
+  name: WebRTC
+  hint: 브라우저의 실시간 미디어 통신
+  aliases: [WebRTC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: networks
+- id: atlas.software.test_driven_development
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 테스트 주도 개발
+  hint: 실패 테스트에서 구현을 시작
+  aliases: [Test driven development]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.behavior_driven_development
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 행동 주도 개발
+  hint: 사용 사례를 실행 가능한 명세로 작성
+  aliases: [Behavior driven development]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.contract_testing
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 계약 테스트
+  hint: 서비스 접점의 기대 계약 검사
+  aliases: [Contract testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.mutation_testing
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 변이 테스트
+  hint: 코드 변형을 테스트가 잡는지 확인
+  aliases: [Mutation testing, 테스트가 오류를 잡는지]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.metamorphic_testing
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 변형관계 테스트
+  hint: 입력 변환에 따른 결과 관계 검증
+  aliases: [Metamorphic testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.differential_testing
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 차등 테스트
+  hint: 같은 입력의 구현별 결과 비교
+  aliases: [Differential testing, 두 구현의 결과 비교]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.snapshot_testing
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 스냅샷 테스트
+  hint: 기준 출력과 새 출력 비교
+  aliases: [Snapshot testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.model_checking
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 모형검사
+  hint: 상태 공간에서 명세 위반 탐색
+  aliases: [Model checking]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.symbolic_execution
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 기호 실행
+  hint: 입력을 기호로 두고 경로 분석
+  aliases: [Symbolic execution]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.static_analysis
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 정적 분석
+  hint: 실행 없이 코드 성질 분석
+  aliases: [Static analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.refactoring
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 리팩터링
+  hint: 외부 동작을 유지하며 내부 구조 개선
+  aliases: [Refactoring]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.dependency_injection
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 의존성 주입
+  hint: 협력 객체를 외부에서 제공
+  aliases: [Dependency injection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.hexagonal_architecture
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 육각형 아키텍처
+  hint: 핵심 로직과 외부 접점 분리
+  aliases: [Hexagonal architecture]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.domain_driven_design
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 도메인 주도 설계
+  hint: 업무 언어와 경계에 맞춰 모형 구성
+  aliases: [Domain driven design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.bounded_context
+  kind: concept
+  path: [개발, 설계와 검증]
+  name: 경계 맥락
+  hint: 용어와 모형이 일관된 업무 범위
+  aliases: [Bounded context]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.separation_of_concerns
+  kind: concept
+  path: [개발, 설계와 검증]
+  name: 관심사 분리
+  hint: 서로 다른 책임을 분리
+  aliases: [Separation of concerns]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.design_by_contract
+  kind: concept
+  path: [개발, 설계와 검증]
+  name: 계약에 의한 설계
+  hint: 사전조건 사후조건 불변식 명시
+  aliases: [Design by contract]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.continuous_integration
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 지속적 통합
+  hint: 변경을 자주 통합하고 자동 검증
+  aliases: [Continuous integration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.canary_deployment
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 카나리 배포
+  hint: 일부 트래픽으로 변경 영향 확인
+  aliases: [Canary deployment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software
+- id: atlas.software.feature_flag
+  kind: method
+  path: [개발, 설계와 검증]
+  name: 기능 플래그
+  hint: 배포와 기능 활성화를 분리
+  aliases: [Feature flag]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: software

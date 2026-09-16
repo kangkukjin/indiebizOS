@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.biology.polymerase_chain_reaction
+  kind: method
+  path: [과학, 생명과학]
+  name: 중합효소 연쇄반응
+  hint: 특정 DNA 구간 증폭
+  aliases: [Polymerase chain reaction, PCR]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.quantitative_pcr
+  kind: method
+  path: [과학, 생명과학]
+  name: 정량 PCR
+  hint: 증폭 신호로 핵산량 추정
+  aliases: [Quantitative PCR, qPCR]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.dna_sequencing
+  kind: method
+  path: [과학, 생명과학]
+  name: DNA 염기서열 분석
+  hint: 핵산 염기의 배열 판독
+  aliases: [DNA sequencing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.rna_sequencing
+  kind: method
+  path: [과학, 생명과학]
+  name: RNA 시퀀싱
+  hint: 전사체의 서열과 발현량 분석
+  aliases: [RNA sequencing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.sequence_alignment
+  kind: method
+  path: [과학, 생명과학]
+  name: 서열 정렬
+  hint: 생물 서열의 대응 위치 비교
+  aliases: [Sequence alignment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.phylogenetic_inference
+  kind: method
+  path: [과학, 생명과학]
+  name: 계통 추론
+  hint: 진화적 관계의 모형 추정
+  aliases: [Phylogenetic inference]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.genome_assembly
+  kind: method
+  path: [과학, 생명과학]
+  name: 유전체 조립
+  hint: 서열 조각에서 긴 서열 복원
+  aliases: [Genome assembly]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.gene_annotation
+  kind: method
+  path: [과학, 생명과학]
+  name: 유전자 주석
+  hint: 유전체의 기능 요소 식별
+  aliases: [Gene annotation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.differential_expression_analysis
+  kind: method
+  path: [과학, 생명과학]
+  name: 차등발현 분석
+  hint: 조건 사이 유전자 발현 차이 추정
+  aliases: [Differential expression analysis, DE analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.gene_set_enrichment
+  kind: method
+  path: [과학, 생명과학]
+  name: 유전자집합 풍부도 분석
+  hint: 기능 집합의 변화 경향 검토
+  aliases: [Gene set enrichment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.flow_cytometry
+  kind: method
+  path: [과학, 생명과학]
+  name: 유세포분석
+  hint: 개별 세포의 광학 특성 측정
+  aliases: [Flow cytometry, flow cytometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.fluorescence_microscopy
+  kind: method
+  path: [과학, 생명과학]
+  name: 형광현미경법
+  hint: 형광 표지의 위치와 변화 관찰
+  aliases: [Fluorescence microscopy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.confocal_microscopy
+  kind: method
+  path: [과학, 생명과학]
+  name: 공초점현미경법
+  hint: 초점면 신호로 광학 절편 구성
+  aliases: [Confocal microscopy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.western_blot
+  kind: method
+  path: [과학, 생명과학]
+  name: 웨스턴 블롯
+  hint: 분리한 단백질을 항체로 검출
+  aliases: [Western blot]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.elisa
+  kind: method
+  path: [과학, 생명과학]
+  name: 효소결합 면역흡착 분석
+  hint: 효소 신호로 표적 물질 검출
+  aliases: [ELISA]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.proteomics
+  kind: method
+  path: [과학, 생명과학]
+  name: 단백질체 분석
+  hint: 단백질의 종류와 양을 함께 분석
+  aliases: [Proteomics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.metabolomics
+  kind: method
+  path: [과학, 생명과학]
+  name: 대사체 분석
+  hint: 저분자 대사산물의 구성 분석
+  aliases: [Metabolomics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.single_cell_analysis
+  kind: method
+  path: [과학, 생명과학]
+  name: 단일세포 분석
+  hint: 세포별 이질성을 분리해 측정
+  aliases: [Single cell analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.metagenomics
+  kind: method
+  path: [과학, 생명과학]
+  name: 메타유전체 분석
+  hint: 환경 시료의 여러 생물 유전정보 분석
+  aliases: [Metagenomics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.biology.systems_biology
+  kind: method
+  path: [과학, 생명과학]
+  name: 시스템 생물학
+  hint: 생물 구성요소의 상호작용 모형화
+  aliases: [Systems biology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: biology
+- id: atlas.health.epidemiology
+  kind: method
+  path: [건강, 보건 연구]
+  name: 역학
+  hint: 집단의 건강 사건 분포와 결정요인 연구
+  aliases: [Epidemiology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.case_control_study
+  kind: method
+  path: [건강, 보건 연구]
+  name: 환자대조군 연구
+  hint: 결과에 따라 뽑은 집단의 노출 비교
+  aliases: [Case control study]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.cohort_study
+  kind: method
+  path: [건강, 보건 연구]
+  name: 코호트 연구
+  hint: 노출에 따른 집단의 결과 추적
+  aliases: [Cohort study]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.diagnostic_accuracy_study
+  kind: method
+  path: [건강, 보건 연구]
+  name: 진단정확도 연구
+  hint: 검사 결과와 기준 결과 비교
+  aliases: [Diagnostic accuracy study]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.sensitivity_specificity
+  kind: concept
+  path: [건강, 보건 연구]
+  name: 민감도와 특이도
+  hint: 양성과 음성을 구별하는 검사 성질
+  aliases: [Sensitivity specificity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.positive_predictive_value
+  kind: concept
+  path: [건강, 보건 연구]
+  name: 양성예측도
+  hint: 양성 결과 중 실제 상태의 비율
+  aliases: [Positive predictive value]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.likelihood_ratio
+  kind: concept
+  path: [건강, 보건 연구]
+  name: 우도비
+  hint: 검사 결과가 상태별 나타날 상대 가능성
+  aliases: [Likelihood ratio]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.absolute_risk_reduction
+  kind: concept
+  path: [건강, 보건 연구]
+  name: 절대위험감소
+  hint: 두 집단 사건 위험의 차이
+  aliases: [Absolute risk reduction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.number_needed_to_treat
+  kind: concept
+  path: [건강, 보건 연구]
+  name: 치료필요수
+  hint: 추가 한 건의 효과에 필요한 대상 수
+  aliases: [Number needed to treat]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.incidence_prevalence
+  kind: concept
+  path: [건강, 보건 연구]
+  name: 발생률과 유병률
+  hint: 새 사건의 발생과 기존 상태의 빈도
+  aliases: [Incidence prevalence]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.standardization
+  kind: method
+  path: [건강, 보건 연구]
+  name: 역학적 표준화
+  hint: 집단 구성 차이를 보정해 비율 비교
+  aliases: [Standardization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.health_technology_assessment
+  kind: method
+  path: [건강, 보건 연구]
+  name: 보건의료기술평가
+  hint: 의료기술의 효과 비용 영향 종합 평가
+  aliases: [Health technology assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.patient_reported_outcomes
+  kind: method
+  path: [건강, 보건 연구]
+  name: 환자보고결과
+  hint: 당사자가 보고한 건강과 생활 결과
+  aliases: [Patient reported outcomes]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.clinical_practice_guideline_appraisal
+  kind: method
+  path: [건강, 보건 연구]
+  name: 진료지침 평가
+  hint: 지침의 개발 근거와 적용성 검토
+  aliases: [Clinical practice guideline appraisal]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.risk_communication
+  kind: method
+  path: [건강, 보건 연구]
+  name: 위험 소통
+  hint: 확률 불확실성과 대응 선택을 전달
+  aliases: [Risk communication]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.health_literacy_assessment
+  kind: method
+  path: [건강, 보건 연구]
+  name: 건강문해력 평가
+  hint: 건강 정보를 이해하고 이용하는 능력 조사
+  aliases: [Health literacy assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.outbreak_investigation
+  kind: method
+  path: [건강, 보건 연구]
+  name: 집단발생 조사
+  hint: 발생 사례의 연결과 공통 노출 탐색
+  aliases: [Outbreak investigation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.contact_tracing
+  kind: method
+  path: [건강, 보건 연구]
+  name: 접촉자 조사
+  hint: 감염 가능 접촉의 연결 추적
+  aliases: [Contact tracing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.disease_surveillance
+  kind: method
+  path: [건강, 보건 연구]
+  name: 질병 감시
+  hint: 건강 사건의 발생 추세를 지속 관찰
+  aliases: [Disease surveillance]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.health.implementation_science
+  kind: method
+  path: [건강, 보건 연구]
+  name: 실행과학
+  hint: 근거가 현장에서 쓰이는 조건 연구
+  aliases: [Implementation science]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: health
+- id: atlas.ecology.biodiversity_assessment
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 생물다양성 평가
+  hint: 생물 구성과 분포의 다양성 조사
+  aliases: [Biodiversity assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.species_distribution_modeling
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 종분포 모형
+  hint: 환경 조건에 따른 종의 분포 추정
+  aliases: [Species distribution modeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.capture_recapture
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 포획재포획
+  hint: 중복 관찰에서 개체군 크기 추정
+  aliases: [Capture recapture]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.occupancy_modeling
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 점유 모형
+  hint: 탐지 불완전성을 고려해 서식 여부 추정
+  aliases: [Occupancy modeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.population_viability_analysis
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 개체군 생존가능성 분석
+  hint: 미래 존속의 불확실성 모형화
+  aliases: [Population viability analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.habitat_suitability_analysis
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 서식지 적합성 분석
+  hint: 생물의 요구에 맞는 환경 평가
+  aliases: [Habitat suitability analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.ecological_network_analysis
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 생태망 분석
+  hint: 먹이와 이동 등 생태적 연결 분석
+  aliases: [Ecological network analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.trophic_cascade
+  kind: concept
+  path: [환경, 생태와 보전]
+  name: 영양단계 연쇄효과
+  hint: 먹이망을 따라 영향이 확산
+  aliases: [Trophic cascade]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.ecological_succession
+  kind: concept
+  path: [환경, 생태와 보전]
+  name: 생태 천이
+  hint: 시간에 따른 군집 구성 변화
+  aliases: [Ecological succession]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.carrying_capacity
+  kind: concept
+  path: [환경, 생태와 보전]
+  name: 환경수용력
+  hint: 조건 아래 지속 가능한 개체 수준
+  aliases: [Carrying capacity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.restoration_ecology
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 복원생태학
+  hint: 훼손된 생태계의 회복 과정 연구
+  aliases: [Restoration ecology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.environmental_dna
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 환경 DNA 분석
+  hint: 환경 시료의 유전 흔적으로 생물 탐지
+  aliases: [Environmental DNA]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.ecosystem_services_assessment
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 생태계서비스 평가
+  hint: 생태계가 제공하는 편익 분석
+  aliases: [Ecosystem services assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.material_flow_analysis
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 물질흐름 분석
+  hint: 시스템의 물질 투입 축적 배출 계산
+  aliases: [Material flow analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.environmental_impact_assessment
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 환경영향평가
+  hint: 사업이 환경에 주는 영향을 사전 검토
+  aliases: [Environmental impact assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.ecological_footprint
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 생태발자국
+  hint: 자원 수요를 생물생산 면적으로 표현
+  aliases: [Ecological footprint]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.circular_economy
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 순환경제
+  hint: 자원 사용과 회수의 고리 설계
+  aliases: [Circular economy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.industrial_symbiosis
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 산업공생
+  hint: 서로 다른 공정의 부산물과 자원 교환
+  aliases: [Industrial symbiosis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.waste_hierarchy
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 폐기물 관리 위계
+  hint: 예방 재사용 재활용 등 처리 우선순위
+  aliases: [Waste hierarchy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.ecology.water_footprint
+  kind: method
+  path: [환경, 생태와 보전]
+  name: 물발자국
+  hint: 생산과 소비의 물 사용 영향 계정
+  aliases: [Water footprint]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: ecology
+- id: atlas.earth.remote_sensing
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 원격탐사
+  hint: 떨어진 센서로 지표 특성 관측
+  aliases: [Remote sensing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.georeferencing
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 지리참조
+  hint: 자료를 공간 좌표에 대응
+  aliases: [Georeferencing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.map_projection
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 지도투영
+  hint: 곡면의 위치를 평면 좌표로 변환
+  aliases: [Map projection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.spatial_interpolation
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 공간보간
+  hint: 측정 지점 사이 공간 값을 추정
+  aliases: [Spatial interpolation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.kriging
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 크리깅
+  hint: 공간 공분산을 이용한 보간
+  aliases: [Kriging]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.spatial_autocorrelation
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 공간자기상관
+  hint: 인접 위치 값의 유사성 측정
+  aliases: [Spatial autocorrelation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.hot_spot_analysis
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 핫스폿 분석
+  hint: 높거나 낮은 값의 공간 군집 탐지
+  aliases: [Hot spot analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.network_accessibility_analysis
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 네트워크 접근성 분석
+  hint: 연결망을 통한 도달 시간과 범위
+  aliases: [Network accessibility analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.watershed_delineation
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 유역 구분
+  hint: 지형에서 물이 모이는 영역 식별
+  aliases: [Watershed delineation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.digital_elevation_model
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 수치표고모형
+  hint: 지표 고도를 격자로 표현
+  aliases: [Digital elevation model, DEM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.normalized_difference_vegetation_index
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 정규식생지수
+  hint: 파장 반사 차이로 식생 특성 표현
+  aliases: [Normalized difference vegetation index, NDVI]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.land_cover_classification
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 토지피복 분류
+  hint: 지표의 물리적 덮개 유형 구분
+  aliases: [Land cover classification]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.change_detection
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 변화탐지
+  hint: 시점 사이 지표 상태 변화 비교
+  aliases: [Change detection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.data_assimilation
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 자료동화
+  hint: 관측과 동적 모형을 결합
+  aliases: [Data assimilation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.climate_downscaling
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 기후 상세화
+  hint: 거친 기후 정보를 작은 공간에 추정
+  aliases: [Climate downscaling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.seismic_inversion
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 지진파 역산
+  hint: 관측 파형에서 내부 구조 추정
+  aliases: [Seismic inversion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.geophysical_surveying
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 지구물리 탐사
+  hint: 물리장 관측으로 지하 구조 탐색
+  aliases: [Geophysical surveying]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.geochronology
+  kind: method
+  path: [공간, 지구와 지리]
+  name: 지질연대학
+  hint: 지질 물질과 사건의 시기 추정
+  aliases: [Geochronology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.plate_tectonics
+  kind: concept
+  path: [공간, 지구와 지리]
+  name: 판구조론
+  hint: 판의 운동으로 지질 과정 설명
+  aliases: [Plate tectonics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.earth.geostatistics
+  kind: concept
+  path: [공간, 지구와 지리]
+  name: 지구통계학
+  hint: 공간 상관을 고려한 통계 추론
+  aliases: [Geostatistics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: earth
+- id: atlas.agriculture.crop_rotation
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 윤작
+  hint: 작물의 재배 순서를 바꾸어 관리
+  aliases: [Crop rotation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.intercropping
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 혼작
+  hint: 둘 이상의 작물을 함께 재배
+  aliases: [Intercropping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.cover_cropping
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 피복작물 재배
+  hint: 토양을 덮는 작물로 토양 관리
+  aliases: [Cover cropping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.integrated_pest_management
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 종합적 병해충 관리
+  hint: 관측과 여러 방제 수단의 조합
+  aliases: [Integrated pest management]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.soil_testing
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 토양검정
+  hint: 토양의 화학 물리 상태 측정
+  aliases: [Soil testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.nutrient_budgeting
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 양분수지
+  hint: 양분 투입과 반출의 균형 계산
+  aliases: [Nutrient budgeting, 비료 투입량, 토양 양분 균형]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.precision_agriculture
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 정밀농업
+  hint: 장소별 상태에 맞춰 투입 조절
+  aliases: [Precision agriculture]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.variable_rate_application
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 가변량 처방
+  hint: 구역별 요구에 따라 투입량 변경
+  aliases: [Variable rate application]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.drip_irrigation
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 점적관개
+  hint: 뿌리 부근에 물을 조금씩 공급
+  aliases: [Drip irrigation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.irrigation_scheduling
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 관개 일정계획
+  hint: 토양과 작물 요구에 맞춰 급수
+  aliases: [Irrigation scheduling, 물 주는 시기]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.hydroponics
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 수경재배
+  hint: 토양 대신 양액으로 작물 재배
+  aliases: [Hydroponics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.aquaponics
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 아쿠아포닉스
+  hint: 양식과 수경재배의 물질 흐름 연결
+  aliases: [Aquaponics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.composting
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 퇴비화
+  hint: 유기물을 생물학적으로 안정화
+  aliases: [Composting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.vermicomposting
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 지렁이 퇴비화
+  hint: 지렁이와 미생물로 유기물 처리
+  aliases: [Vermicomposting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.grafting
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 접목
+  hint: 식물 조직을 이어 생육
+  aliases: [Grafting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.pruning
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 전정
+  hint: 가지의 선택적 제거로 생육 조절
+  aliases: [Pruning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.plant_propagation
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 식물 번식
+  hint: 종자나 영양기관으로 개체 증식
+  aliases: [Plant propagation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.seed_saving
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 자가채종
+  hint: 재배에서 다음 세대 종자 확보
+  aliases: [Seed saving]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.agroforestry
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 혼농임업
+  hint: 나무와 농축산 활동을 함께 배치
+  aliases: [Agroforestry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture
+- id: atlas.agriculture.postharvest_handling
+  kind: method
+  path: [생활, 농업과 원예]
+  name: 수확후 관리
+  hint: 수확물의 품질과 손실 관리
+  aliases: [Postharvest handling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: agriculture

@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.food.maillard_reaction
+  kind: concept
+  path: [생활, 조리와 식품]
+  name: 마이야르 반응
+  hint: 가열 중 아미노 화합물과 당의 반응
+  aliases: [Maillard reaction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.caramelization
+  kind: concept
+  path: [생활, 조리와 식품]
+  name: 캐러멜화
+  hint: 당의 가열 분해와 갈변
+  aliases: [Caramelization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.emulsification
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 유화
+  hint: 섞이지 않는 액체를 작은 방울로 분산
+  aliases: [Emulsification]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.gelation
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 겔화
+  hint: 분자 망상 구조로 유동성 제한
+  aliases: [Gelation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.fermentation
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 발효
+  hint: 미생물의 대사로 식품 변화
+  aliases: [Fermentation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.brining
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 염지
+  hint: 소금 용액으로 식품 성질 조절
+  aliases: [Brining]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.pickling
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 절임
+  hint: 산이나 염으로 식품 보존과 풍미 변화
+  aliases: [Pickling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.dehydration
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 건조
+  hint: 수분 제거로 식품 상태 변화
+  aliases: [Dehydration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.freeze_drying
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 동결건조
+  hint: 동결 수분을 승화시켜 제거
+  aliases: [Freeze drying]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.pasteurization
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 저온살균
+  hint: 정해진 열처리로 미생물 부하 감소
+  aliases: [Pasteurization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.sous_vide
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 수비드
+  hint: 밀봉 식품을 제어된 온도에서 조리
+  aliases: [Sous vide]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.blanching
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 데치기
+  hint: 짧은 가열로 조직과 효소 상태 변화
+  aliases: [Blanching]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.braising
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 브레이징
+  hint: 소량 액체와 낮은 열로 천천히 조리
+  aliases: [Braising]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.roasting
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 로스팅
+  hint: 건열로 표면과 내부를 가열
+  aliases: [Roasting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.sensory_evaluation
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 관능평가
+  hint: 사람의 감각으로 식품 특성 평가
+  aliases: [Sensory evaluation, 맛을 비교하는 실험]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.triangle_test
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 삼점검사
+  hint: 세 시료 중 다른 하나로 차이 검정
+  aliases: [Triangle test, 세 시료 중 다른 맛]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.water_activity
+  kind: concept
+  path: [생활, 조리와 식품]
+  name: 수분활성
+  hint: 미생물이 이용할 수 있는 물의 정도
+  aliases: [Water activity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.haccp
+  kind: concept
+  path: [생활, 조리와 식품]
+  name: 위해요소 중점관리
+  hint: 공정의 위해와 중요 관리점 분석
+  aliases: [HACCP, 위해요소중점관리기준]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.cold_chain
+  kind: concept
+  path: [생활, 조리와 식품]
+  name: 콜드체인
+  hint: 유통 단계의 온도 조건 유지
+  aliases: [Cold chain]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.food.recipe_scaling
+  kind: method
+  path: [생활, 조리와 식품]
+  name: 레시피 배합 조정
+  hint: 생산량과 공정에 맞춰 배합 변경
+  aliases: [Recipe scaling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: food
+- id: atlas.movement.progressive_overload
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 점진적 과부하
+  hint: 적응에 맞춰 훈련 부하를 높임
+  aliases: [Progressive overload]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.training_periodization
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 훈련 주기화
+  hint: 시기별 목표와 부하의 구조화
+  aliases: [Training periodization, 운동 주기화]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.specificity_principle
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 특이성 원칙
+  hint: 연습 조건에 특화된 적응
+  aliases: [Specificity principle]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.recovery
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 회복
+  hint: 부하 이후 기능을 회복하는 과정
+  aliases: [Recovery]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.rate_of_perceived_exertion
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 자각운동강도
+  hint: 주관적으로 느끼는 운동 부하
+  aliases: [Rate of perceived exertion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.heart_rate_variability_analysis
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 심박변이도 분석
+  hint: 심박 간격의 변동 분석
+  aliases: [Heart rate variability analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.gait_analysis
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 보행 분석
+  hint: 걷기의 운동학과 힘 특성 분석
+  aliases: [Gait analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.motion_capture
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 동작 포착
+  hint: 신체 움직임의 좌표 기록
+  aliases: [Motion capture, 몸의 움직임 기록]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.biomechanical_analysis
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 생체역학 분석
+  hint: 몸의 움직임과 작용력 분석
+  aliases: [Biomechanical analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.ergonomic_assessment
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 인간공학 평가
+  hint: 작업과 신체 요구의 적합성 검토
+  aliases: [Ergonomic assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.anthropometry
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 인체측정
+  hint: 설계에 필요한 신체 치수 측정
+  aliases: [Anthropometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.task_load_assessment
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 작업부하 평가
+  hint: 업무의 신체적 정신적 요구 평가
+  aliases: [Task load assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.motor_learning
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 운동학습
+  hint: 연습을 통한 동작 능력의 지속 변화
+  aliases: [Motor learning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.external_focus_of_attention
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 외적 주의초점
+  hint: 동작의 환경적 효과에 주의
+  aliases: [External focus of attention]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.video_feedback
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 영상 피드백
+  hint: 수행 영상을 보며 동작 점검
+  aliases: [Video feedback]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.balance_training
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 균형 훈련
+  hint: 자세 안정성의 과제별 연습
+  aliases: [Balance training]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.mobility_training
+  kind: method
+  path: [건강, 운동과 인간공학]
+  name: 가동성 훈련
+  hint: 관절 움직임 범위와 제어 연습
+  aliases: [Mobility training]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.energy_availability
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 에너지 가용성
+  hint: 활동 후 생리 기능에 남는 에너지
+  aliases: [Energy availability]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.training_monotony
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 훈련 단조도
+  hint: 훈련 부하의 일간 변동이 적은 정도
+  aliases: [Training monotony]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.movement.skill_transfer
+  kind: concept
+  path: [건강, 운동과 인간공학]
+  name: 기술 전이
+  hint: 배운 동작이 다른 과제에 미치는 영향
+  aliases: [Skill transfer]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: movement
+- id: atlas.craft.joinery
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 짜맞춤
+  hint: 부재의 형태를 맞물려 결합
+  aliases: [Joinery]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.mortise_and_tenon
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 장부맞춤
+  hint: 돌출 장부와 구멍으로 결합
+  aliases: [Mortise and tenon]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.dovetail_joint
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 주먹장맞춤
+  hint: 벌어진 맞물림으로 인장 분리 억제
+  aliases: [Dovetail joint]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.wood_seasoning
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 목재 건조
+  hint: 목재 수분을 사용 조건에 조절
+  aliases: [Wood seasoning, 나무 수분 조절]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.steam_bending
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 증기 휨
+  hint: 가열 수분으로 목재를 굽힘
+  aliases: [Steam bending]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.sharpening
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 날 갈기
+  hint: 절삭 날의 형상과 예리함 복원
+  aliases: [Sharpening]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.pattern_making
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 패턴 제작
+  hint: 입체 형상을 평면 재단 조각으로 전개
+  aliases: [Pattern making]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.draping
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 입체재단
+  hint: 몸이나 모형 위에서 옷의 형태 구성
+  aliases: [Draping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.seam_finishing
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 시접 마감
+  hint: 재단 가장자리의 풀림과 두께 관리
+  aliases: [Seam finishing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.darning
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 짜깁기
+  hint: 실로 손상 부위의 조직 복원
+  aliases: [Darning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.natural_dyeing
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 천연염색
+  hint: 천연 유래 색소로 섬유 착색
+  aliases: [Natural dyeing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.weaving
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 직조
+  hint: 실의 교차로 직물 구성
+  aliases: [Weaving]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.knitting
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 편직
+  hint: 고리의 연결로 직물 구성
+  aliases: [Knitting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.wheel_throwing
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 물레성형
+  hint: 회전 위에서 점토의 형태 제작
+  aliases: [Wheel throwing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.slip_casting
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 이장주입 성형
+  hint: 석고틀에 점토 현탁액을 넣어 성형
+  aliases: [Slip casting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.glaze_formulation
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 유약 배합
+  hint: 소성 조건에 맞는 표면 조성 설계
+  aliases: [Glaze formulation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.lost_wax_casting
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 로스트왁스 주조
+  hint: 소실 모형으로 금형 공간 형성
+  aliases: [Lost wax casting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.soldering
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 납땜
+  hint: 모재보다 낮은 융점 재료로 접합
+  aliases: [Soldering]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.bookbinding
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 제본
+  hint: 낱장과 표지를 책으로 결합
+  aliases: [Bookbinding]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.craft.repairability_assessment
+  kind: method
+  path: [제작, 공예와 수선]
+  name: 수리용이성 평가
+  hint: 분해 진단 부품 교체의 가능성 검토
+  aliases: [Repairability assessment, 제품을 쉽게 수리]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: craft
+- id: atlas.information.controlled_vocabulary
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: 통제어휘
+  hint: 일관된 검색을 위한 용어 집합
+  aliases: [Controlled vocabulary]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.thesaurus
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: 시소러스
+  hint: 동의 상하 연관 관계를 가진 어휘 체계
+  aliases: [Thesaurus]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.taxonomy
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: 분류체계
+  hint: 항목을 구별해 배치하는 범주 체계
+  aliases: [Taxonomy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.ontology
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: 온톨로지
+  hint: 개체와 관계의 의미를 명시한 모형
+  aliases: [Ontology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.faceted_classification
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 패싯 분류
+  hint: 여러 독립 속성 축으로 분류
+  aliases: [Faceted classification, 여러 기준으로 분류]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.authority_control
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 전거 제어
+  hint: 이름의 여러 표기를 동일 주체로 연결
+  aliases: [Authority control, 같은 사람의 다른 이름]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.subject_indexing
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 주제 색인
+  hint: 자료의 주제를 검색 어휘로 표현
+  aliases: [Subject indexing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.metadata_schema
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 메타데이터 스키마
+  hint: 기술 항목과 표현 규칙 정의
+  aliases: [Metadata schema]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.persistent_identifier
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: 영구식별자
+  hint: 대상과 참조의 장기 식별
+  aliases: [Persistent identifier]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.skos
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: SKOS
+  hint: 어휘 체계의 개념 표지 관계 표현
+  aliases: [SKOS]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.dublin_core
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: 더블린 코어
+  hint: 자원을 기술하는 공통 메타데이터 용어
+  aliases: [Dublin Core]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.fair_principles
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: FAIR 원칙
+  hint: 찾기 접근 상호운용 재사용의 자료 원칙
+  aliases: [FAIR principles]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.boolean_search
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 불리언 검색
+  hint: 논리 연산으로 검색 조건 조합
+  aliases: [Boolean search]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.query_expansion
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 질의 확장
+  hint: 관련 표현을 더해 검색 범위 보완
+  aliases: [Query expansion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.relevance_feedback
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 적합성 피드백
+  hint: 검색 결과 평가로 질의와 순위 개선
+  aliases: [Relevance feedback]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.bibliometrics
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 계량서지학
+  hint: 출판과 인용 자료의 정량 분석
+  aliases: [Bibliometrics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.co_citation_analysis
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 동시인용 분석
+  hint: 함께 인용되는 자료의 관계 분석
+  aliases: [Co citation analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.bibliographic_coupling
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 서지결합
+  hint: 공통 참고문헌을 가진 자료의 연결
+  aliases: [Bibliographic coupling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.digital_preservation
+  kind: method
+  path: [지식, 조직과 탐색]
+  name: 디지털 보존
+  hint: 장기 접근과 무결성을 유지
+  aliases: [Digital preservation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.information.version_control
+  kind: concept
+  path: [지식, 조직과 탐색]
+  name: 버전 관리
+  hint: 변경과 분기 이력의 추적
+  aliases: [Version control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: information
+- id: atlas.quality.root_cause_analysis
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 근본원인 분석
+  hint: 문제의 발생 구조를 추적
+  aliases: [Root cause analysis, RCA, 반복 고장 원인]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.five_whys
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 5왜 분석
+  hint: 왜라는 질문으로 원인 연결 탐색
+  aliases: [Five whys]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.fishbone_diagram
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 특성요인도
+  hint: 문제의 가능한 원인을 범주별 정리
+  aliases: [Fishbone diagram]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.pareto_analysis
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 파레토 분석
+  hint: 기여가 큰 문제 항목에 주목
+  aliases: [Pareto analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.statistical_process_control
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 통계적 공정관리
+  hint: 시간별 변동으로 공정 상태 감시
+  aliases: [Statistical process control, SPC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.control_chart
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 관리도
+  hint: 관리 한계와 관측 변화를 비교
+  aliases: [Control chart]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.process_capability_analysis
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 공정능력 분석
+  hint: 공정 분포와 규격의 적합성 평가
+  aliases: [Process capability analysis, 공정 규격 충족]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.measurement_system_analysis
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 측정시스템 분석
+  hint: 측정 오차의 구성과 크기 평가
+  aliases: [Measurement system analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.gage_repeatability_reproducibility
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 게이지 반복재현성
+  hint: 측정자와 반복의 오차 분리
+  aliases: [Gage repeatability reproducibility]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.acceptance_sampling
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 계수형 인수검사
+  hint: 표본으로 로트 수락 여부 결정
+  aliases: [Acceptance sampling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.quality_function_deployment
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 품질기능전개
+  hint: 고객 요구를 설계 특성으로 연결
+  aliases: [Quality function deployment, QFD]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.taguchi_methods
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 다구치 기법
+  hint: 잡음에 강한 설계 조건 탐색
+  aliases: [Taguchi methods]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.response_surface_methodology
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 반응표면법
+  hint: 실험으로 입력과 반응 곡면 추정
+  aliases: [Response surface methodology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.dmaic
+  kind: method
+  path: [운영, 품질과 개선]
+  name: DMAIC
+  hint: 정의 측정 분석 개선 관리의 절차
+  aliases: [DMAIC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.pdca
+  kind: method
+  path: [운영, 품질과 개선]
+  name: PDCA
+  hint: 계획 실행 점검 개선의 순환
+  aliases: [PDCA]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.poka_yoke
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 실수방지
+  hint: 실수가 발생하기 어렵도록 설계
+  aliases: [Poka yoke]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.andon
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 안돈
+  hint: 이상 상태를 현장에 가시화
+  aliases: [Andon]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.standard_work
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 표준작업
+  hint: 작업 순서와 기준을 공유
+  aliases: [Standard work]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.hoshin_kanri
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 방침관리
+  hint: 장기 목표와 현장 개선의 정렬
+  aliases: [Hoshin kanri]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality
+- id: atlas.quality.corrective_preventive_action
+  kind: method
+  path: [운영, 품질과 개선]
+  name: 시정예방조치
+  hint: 원인 제거와 재발 방지의 관리
+  aliases: [Corrective preventive action]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: quality

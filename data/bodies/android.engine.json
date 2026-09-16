@@ -339,6 +339,18 @@
   ],
   "world_catalog_files": [
     "data/guides/world_tools.md",
+    "data/knowledge_catalog/atlas/01_reasoning.yaml",
+    "data/knowledge_catalog/atlas/02_mathematics.yaml",
+    "data/knowledge_catalog/atlas/03_algorithms.yaml",
+    "data/knowledge_catalog/atlas/04_design.yaml",
+    "data/knowledge_catalog/atlas/05_finance.yaml",
+    "data/knowledge_catalog/atlas/06_education.yaml",
+    "data/knowledge_catalog/atlas/07_visual_art.yaml",
+    "data/knowledge_catalog/atlas/08_civil.yaml",
+    "data/knowledge_catalog/atlas/09_biology.yaml",
+    "data/knowledge_catalog/atlas/10_food.yaml",
+    "data/knowledge_catalog/atlas/11_physics.yaml",
+    "data/knowledge_catalog/atlas/12_relations.yaml",
     "data/knowledge_catalog/bridge_relations.yaml",
     "data/knowledge_catalog/bridges.yaml",
     "data/knowledge_catalog/structure.yaml",
@@ -349,7 +361,9 @@
     "docs/world_map/D_science_engineering.md",
     "docs/world_map/F_methods_and_validation.md",
     "docs/world_map/G_structure_evidence.md",
-    "docs/world_map/H_catalog_bridges.md"
+    "docs/world_map/H_catalog_bridges.md",
+    "docs/world_map/I_atlas_editorial_2026_09_17.md",
+    "docs/world_map/J_atlas_relations_2026_09_17.md"
   ],
   "blocklist": {
     "api": "top-level import: dotenv",

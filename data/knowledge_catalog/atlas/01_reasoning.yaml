@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.reasoning.deduction
+  kind: concept
+  path: [사고, 추론]
+  name: 연역
+  hint: 일반 전제에서 결론 도출
+  aliases: [Deduction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.induction
+  kind: concept
+  path: [사고, 추론]
+  name: 귀납
+  hint: 사례에서 일반성 추정
+  aliases: [Induction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.abduction
+  kind: concept
+  path: [사고, 추론]
+  name: 가설추론
+  hint: 관찰을 설명할 가설 탐색
+  aliases: [Abduction, abductive reasoning, 최선의 설명으로의 추론, inference to best explanation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.counterexample
+  kind: concept
+  path: [사고, 추론]
+  name: 반례
+  hint: 일반 주장에 어긋나는 사례
+  aliases: [Counterexample]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.proof_by_contradiction
+  kind: method
+  path: [사고, 추론]
+  name: 귀류법
+  hint: 부정을 가정해 모순 도출
+  aliases: [Proof by contradiction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.mathematical_induction
+  kind: method
+  path: [사고, 추론]
+  name: 수학적 귀납법
+  hint: 기저와 계승 단계로 증명
+  aliases: [Mathematical induction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.proof_by_construction
+  kind: method
+  path: [사고, 추론]
+  name: 구성적 증명
+  hint: 대상을 직접 구성해 존재 증명
+  aliases: [Proof by construction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.case_analysis
+  kind: method
+  path: [사고, 추론]
+  name: 경우 분석
+  hint: 경우를 나누어 빠짐없이 검토
+  aliases: [Case analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.argument_mapping
+  kind: method
+  path: [사고, 추론]
+  name: 논증 지도
+  hint: 주장과 근거의 연결 표시
+  aliases: [Argument mapping, 주장과 근거 연결]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.logical_validity
+  kind: concept
+  path: [사고, 추론]
+  name: 논리적 타당성
+  hint: 전제와 결론의 추론 관계
+  aliases: [Logical validity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.soundness
+  kind: concept
+  path: [사고, 추론]
+  name: 논증의 건전성
+  hint: 참인 전제와 타당한 추론
+  aliases: [Soundness]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.necessary_condition
+  kind: concept
+  path: [사고, 추론]
+  name: 필요조건
+  hint: 성립에 반드시 필요한 조건
+  aliases: [Necessary condition, necessary condition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.sufficient_condition
+  kind: concept
+  path: [사고, 추론]
+  name: 충분조건
+  hint: 성립을 보장하는 조건
+  aliases: [Sufficient condition, sufficient condition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.contraposition
+  kind: concept
+  path: [사고, 추론]
+  name: 대우
+  hint: 명제의 동치 변환
+  aliases: [Contraposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.natural_deduction
+  kind: method
+  path: [사고, 추론]
+  name: 자연연역
+  hint: 추론 규칙을 적용해 증명 구성
+  aliases: [Natural deduction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.thought_experiment
+  kind: method
+  path: [사고, 추론]
+  name: 사고실험
+  hint: 가상 조건에서 개념 시험
+  aliases: [Thought experiment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.analogical_reasoning
+  kind: method
+  path: [사고, 추론]
+  name: 유추 추론
+  hint: 구조가 비슷한 사례로 추론
+  aliases: [Analogical reasoning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.steelman
+  kind: method
+  path: [사고, 추론]
+  name: 강철인간 논증
+  hint: 상대 주장의 가장 강한 형태 재구성
+  aliases: [Steelman]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.socratic_questioning
+  kind: method
+  path: [사고, 추론]
+  name: 소크라테스식 문답
+  hint: 질문으로 전제와 함의 점검
+  aliases: [Socratic questioning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.reasoning.burden_of_proof
+  kind: concept
+  path: [사고, 추론]
+  name: 입증 책임
+  hint: 주장을 정당화할 책임
+  aliases: [Burden of proof]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: reasoning
+- id: atlas.research.hypothesis_testing
+  kind: method
+  path: [조사, 연구 설계]
+  name: 가설검정
+  hint: 자료로 통계 가설 검토
+  aliases: [Hypothesis testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.operationalization
+  kind: method
+  path: [조사, 연구 설계]
+  name: 조작적 정의
+  hint: 추상 개념을 관측 기준으로 변환
+  aliases: [Operationalization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.construct_validity
+  kind: concept
+  path: [조사, 연구 설계]
+  name: 구성타당도
+  hint: 측정이 의도한 개념을 반영하는 정도
+  aliases: [Construct validity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.internal_validity
+  kind: concept
+  path: [조사, 연구 설계]
+  name: 내적 타당도
+  hint: 연구 내부 인과 해석의 정당성
+  aliases: [Internal validity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.external_validity
+  kind: concept
+  path: [조사, 연구 설계]
+  name: 외적 타당도
+  hint: 다른 조건으로 일반화할 수 있는 정도
+  aliases: [External validity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.preregistration
+  kind: method
+  path: [조사, 연구 설계]
+  name: 사전등록
+  hint: 자료 분석 전 계획 공개
+  aliases: [Preregistration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.registered_report
+  kind: method
+  path: [조사, 연구 설계]
+  name: 등록보고
+  hint: 결과 전 연구 계획 심사
+  aliases: [Registered report]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.replication
+  kind: method
+  path: [조사, 연구 설계]
+  name: 반복 검증
+  hint: 새 자료로 연구 결과 재검사
+  aliases: [Replication]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.reproducible_research
+  kind: method
+  path: [조사, 연구 설계]
+  name: 재현 가능한 연구
+  hint: 같은 자료와 코드로 결과 재생성
+  aliases: [Reproducible research]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.pilot_study
+  kind: method
+  path: [조사, 연구 설계]
+  name: 예비연구
+  hint: 본 조사 전 절차 시험
+  aliases: [Pilot study]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.power_analysis
+  kind: method
+  path: [조사, 연구 설계]
+  name: 검정력 분석
+  hint: 효과 탐지에 필요한 표본 추정
+  aliases: [Power analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.stratified_sampling
+  kind: method
+  path: [조사, 연구 설계]
+  name: 층화표집
+  hint: 부분집단별 표본 추출
+  aliases: [Stratified sampling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.cluster_sampling
+  kind: method
+  path: [조사, 연구 설계]
+  name: 군집표집
+  hint: 집단을 단위로 표본 추출
+  aliases: [Cluster sampling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.snowball_sampling
+  kind: method
+  path: [조사, 연구 설계]
+  name: 눈덩이표집
+  hint: 참여자의 연결로 표본 모집
+  aliases: [Snowball sampling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.purposive_sampling
+  kind: method
+  path: [조사, 연구 설계]
+  name: 목적표집
+  hint: 연구 목적에 맞는 사례 선정
+  aliases: [Purposive sampling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.mixed_methods
+  kind: method
+  path: [조사, 연구 설계]
+  name: 혼합연구
+  hint: 정량과 정성 자료 통합
+  aliases: [Mixed methods]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.triangulation
+  kind: method
+  path: [조사, 연구 설계]
+  name: 삼각검증
+  hint: 다른 자료와 방법으로 해석 대조
+  aliases: [Triangulation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.longitudinal_study
+  kind: method
+  path: [조사, 연구 설계]
+  name: 종단연구
+  hint: 같은 대상을 시간에 따라 관찰
+  aliases: [Longitudinal study]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.cross_sectional_study
+  kind: method
+  path: [조사, 연구 설계]
+  name: 횡단연구
+  hint: 한 시점에서 집단 비교
+  aliases: [Cross sectional study]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.research.case_study
+  kind: method
+  path: [조사, 연구 설계]
+  name: 사례연구
+  hint: 경계가 있는 사례의 맥락 분석
+  aliases: [Case study]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: research
+- id: atlas.statistics.exploratory_data_analysis
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 탐색적 자료분석
+  hint: 분포와 이상 패턴 탐색
+  aliases: [Exploratory data analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.descriptive_statistics
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 기술통계
+  hint: 자료의 중심과 산포 요약
+  aliases: [Descriptive statistics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.maximum_likelihood_estimation
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 최대우도 추정
+  hint: 관측 자료의 우도를 최대화
+  aliases: [Maximum likelihood estimation, MLE]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.bayesian_inference
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 베이지안 추론
+  hint: 사전분포를 자료로 갱신
+  aliases: [Bayesian inference, 베이즈 추론]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.confidence_interval
+  kind: concept
+  path: [계산, 통계, 추정]
+  name: 신뢰구간
+  hint: 반복 표집에 기반한 구간 추정
+  aliases: [Confidence interval]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.credible_interval
+  kind: concept
+  path: [계산, 통계, 추정]
+  name: 신용구간
+  hint: 사후분포에 기반한 구간
+  aliases: [Credible interval]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.effect_size
+  kind: concept
+  path: [계산, 통계, 추정]
+  name: 효과크기
+  hint: 차이와 관계의 크기 표현
+  aliases: [Effect size]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.statistical_power
+  kind: concept
+  path: [계산, 통계, 추정]
+  name: 통계적 검정력
+  hint: 실재 효과를 탐지할 확률
+  aliases: [Statistical power]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.permutation_test
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 순열검정
+  hint: 표지 재배열로 귀무분포 구성
+  aliases: [Permutation test]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.jackknife
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 잭나이프
+  hint: 관측값을 빼며 추정 변동 평가
+  aliases: [Jackknife]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.multiple_imputation
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 다중대치
+  hint: 결측값의 불확실성을 반영해 대치
+  aliases: [Multiple imputation, 빠진 설문 응답, 결측값 처리, 설문 결측]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.robust_statistics
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 강건통계
+  hint: 이상값에 덜 민감한 추정
+  aliases: [Robust statistics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.analysis_of_variance
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 분산분석
+  hint: 집단 간 평균 차이 분석
+  aliases: [Analysis of variance, ANOVA]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.linear_regression
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 선형회귀
+  hint: 설명변수와 결과의 선형 관계 추정
+  aliases: [Linear regression]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.logistic_regression
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 로지스틱 회귀
+  hint: 범주 결과의 확률 모형
+  aliases: [Logistic regression, logit regression]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.generalized_linear_model
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 일반화 선형모형
+  hint: 연결함수로 분포와 예측자 연결
+  aliases: [Generalized linear model]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.mixed_effects_model
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 혼합효과 모형
+  hint: 고정효과와 집단별 변이 통합
+  aliases: [Mixed effects model]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.quantile_regression
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 분위수 회귀
+  hint: 조건부 분포의 분위수 추정
+  aliases: [Quantile regression]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.false_discovery_rate
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 거짓발견률 제어
+  hint: 다중검정에서 오류 비중 관리
+  aliases: [False discovery rate]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.statistics.meta_analysis
+  kind: method
+  path: [계산, 통계, 추정]
+  name: 메타분석
+  hint: 여러 연구의 효과 추정 통합
+  aliases: [Meta analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: statistics
+- id: atlas.causality.counterfactual
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 반사실
+  hint: 실제로 일어나지 않은 조건의 결과
+  aliases: [Counterfactual]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.confounding
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 교란
+  hint: 노출과 결과에 함께 영향을 주는 요인
+  aliases: [Confounding]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.collider_bias
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 충돌변수 편향
+  hint: 공통 결과를 조건화해 생기는 편향
+  aliases: [Collider bias]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.selection_bias
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 선택편향
+  hint: 대상 선택 과정에서 생기는 왜곡
+  aliases: [Selection bias]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.simpsons_paradox
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 심프슨의 역설
+  hint: 집단 통합과 분리에서 관계 역전
+  aliases: [Simpsons paradox]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.instrumental_variables
+  kind: method
+  path: [조사, 인과 추론]
+  name: 도구변수법
+  hint: 외생 변동을 이용한 인과 추정
+  aliases: [Instrumental variables, 외생적 변동]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.regression_discontinuity
+  kind: method
+  path: [조사, 인과 추론]
+  name: 회귀불연속 설계
+  hint: 임계값 주변의 처치 효과 추정
+  aliases: [Regression discontinuity, 선발 점수 경계]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.interrupted_time_series
+  kind: method
+  path: [조사, 인과 추론]
+  name: 중단 시계열 분석
+  hint: 개입 전후 추세 변화 분석
+  aliases: [Interrupted time series]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.synthetic_control
+  kind: method
+  path: [조사, 인과 추론]
+  name: 합성통제법
+  hint: 비처치 대상의 조합으로 비교군 구성
+  aliases: [Synthetic control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.inverse_probability_weighting
+  kind: method
+  path: [조사, 인과 추론]
+  name: 역확률 가중
+  hint: 할당 확률의 역수로 표본 보정
+  aliases: [Inverse probability weighting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.g_computation
+  kind: method
+  path: [조사, 인과 추론]
+  name: G 계산
+  hint: 결과 모형으로 개입 효과 계산
+  aliases: [G computation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.doubly_robust_estimation
+  kind: method
+  path: [조사, 인과 추론]
+  name: 이중강건 추정
+  hint: 처치와 결과 모형을 결합한 추정
+  aliases: [Doubly robust estimation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.mediation_analysis
+  kind: method
+  path: [조사, 인과 추론]
+  name: 매개분석
+  hint: 효과의 전달 경로 분석
+  aliases: [Mediation analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.moderation_analysis
+  kind: method
+  path: [조사, 인과 추론]
+  name: 조절효과 분석
+  hint: 조건에 따른 효과 차이 분석
+  aliases: [Moderation analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.potential_outcomes
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 잠재결과
+  hint: 처치 선택별로 정의한 결과
+  aliases: [Potential outcomes]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.average_treatment_effect
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 평균처치효과
+  hint: 처치와 비처치 결과 차이의 평균
+  aliases: [Average treatment effect]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.natural_experiment
+  kind: method
+  path: [조사, 인과 추론]
+  name: 자연실험
+  hint: 외부 사건이 만든 할당 차이 이용
+  aliases: [Natural experiment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.negative_control
+  kind: method
+  path: [조사, 인과 추론]
+  name: 음성 대조
+  hint: 예상 효과 없는 비교로 편향 탐지
+  aliases: [Negative control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.sensitivity_analysis
+  kind: method
+  path: [조사, 인과 추론]
+  name: 민감도 분석
+  hint: 가정 변화에 따른 결론 변화 검토
+  aliases: [Sensitivity analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.causality.positivity
+  kind: concept
+  path: [조사, 인과 추론]
+  name: 양의 확률 가정
+  hint: 각 조건에서 처치 가능성이 존재
+  aliases: [Positivity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: causality
+- id: atlas.time_series.time_series_decomposition
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 시계열 분해
+  hint: 추세와 계절성 분리
+  aliases: [Time series decomposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.autocorrelation
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 자기상관 분석
+  hint: 시간차에 따른 자료의 상관
+  aliases: [Autocorrelation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.arima
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: ARIMA
+  hint: 차분과 자기회귀 이동평균 모형
+  aliases: [ARIMA]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.exponential_smoothing
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 지수평활
+  hint: 최근 관측에 가중한 예측
+  aliases: [Exponential smoothing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.state_space_model
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 상태공간 모형
+  hint: 숨은 상태와 관측 과정 연결
+  aliases: [State space model]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.kalman_filter
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 칼만 필터
+  hint: 동적 상태를 순차 추정
+  aliases: [Kalman filter]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.particle_filter
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 입자 필터
+  hint: 표본 집합으로 상태분포 근사
+  aliases: [Particle filter]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.change_point_detection
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 변화점 탐지
+  hint: 자료 생성 과정이 바뀐 시점 탐색
+  aliases: [Change point detection, changepoint detection, 추세가 바뀐 시점]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.seasonal_adjustment
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 계절조정
+  hint: 주기적 계절 효과 분리
+  aliases: [Seasonal adjustment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.cointegration
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 공적분 분석
+  hint: 비정상 시계열의 장기 균형 관계
+  aliases: [Cointegration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.vector_autoregression
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 벡터 자기회귀
+  hint: 여러 시계열의 상호 지연 관계
+  aliases: [Vector autoregression]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.granger_causality
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 그레인저 인과검정
+  hint: 과거 값의 추가 예측력 검정
+  aliases: [Granger causality]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.garch
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: GARCH
+  hint: 시간에 따라 변하는 조건부 변동성
+  aliases: [GARCH]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.dynamic_time_warping
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 동적 시간 정합
+  hint: 속도가 다른 시계열 정렬
+  aliases: [Dynamic time warping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.spectral_analysis
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 스펙트럼 분석
+  hint: 주파수별 변동 성분 분석
+  aliases: [Spectral analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.fourier_transform
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 푸리에 변환
+  hint: 신호를 주파수 성분으로 변환
+  aliases: [Fourier transform]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.wavelet_transform
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 웨이블릿 변환
+  hint: 시간과 주파수의 국소 성분 분석
+  aliases: [Wavelet transform]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.holt_winters_method
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 홀트윈터스법
+  hint: 추세와 계절성을 평활해 예측
+  aliases: [Holt Winters method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.forecast_reconciliation
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 계층 예측 조정
+  hint: 전체와 부분 예측의 합계 일치
+  aliases: [Forecast reconciliation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series
+- id: atlas.time_series.prediction_interval
+  kind: method
+  path: [계산, 통계, 시계열]
+  name: 예측구간
+  hint: 미래 관측의 불확실성 범위
+  aliases: [Prediction interval]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: time_series

@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.mathematics.ordinary_least_squares
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 최소제곱법
+  hint: 잔차 제곱합 최소화
+  aliases: [Ordinary least squares, OLS]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.singular_value_decomposition
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 특이값 분해
+  hint: 행렬을 직교 성분과 크기로 분해
+  aliases: [Singular value decomposition, SVD]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.eigenvalue_decomposition
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 고유값 분해
+  hint: 선형변환의 고유 방향 분석
+  aliases: [Eigenvalue decomposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.qr_decomposition
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: QR 분해
+  hint: 직교행렬과 삼각행렬로 분해
+  aliases: [QR decomposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.cholesky_decomposition
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 촐레스키 분해
+  hint: 양의 정부호 행렬의 삼각 분해
+  aliases: [Cholesky decomposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.newton_method
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 뉴턴법
+  hint: 미분 정보를 이용한 근 탐색
+  aliases: [Newton method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.bisection_method
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 이분법
+  hint: 부호 변화 구간을 반으로 축소
+  aliases: [Bisection method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.runge_kutta_methods
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 룽게쿠타법
+  hint: 미분방정식의 단계별 수치 적분
+  aliases: [Runge Kutta methods]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.finite_difference_method
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 유한차분법
+  hint: 미분을 격자 차분으로 근사
+  aliases: [Finite difference method, FDM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.finite_element_method
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 유한요소법
+  hint: 영역을 요소로 나누어 근사 해석
+  aliases: [Finite element method, FEM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.finite_volume_method
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 유한체적법
+  hint: 셀의 보존 법칙으로 수치 해석
+  aliases: [Finite volume method, FVM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.monte_carlo_integration
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 몬테카를로 적분
+  hint: 무작위 표본으로 적분 근사
+  aliases: [Monte Carlo integration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.importance_sampling
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 중요도 표집
+  hint: 중요 영역을 더 자주 표집해 추정
+  aliases: [Importance sampling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.gaussian_quadrature
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 가우스 구적법
+  hint: 선택된 절점과 가중치로 적분
+  aliases: [Gaussian quadrature]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.interpolation
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 보간
+  hint: 관측점 사이의 값을 추정
+  aliases: [Interpolation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.spline_interpolation
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 스플라인 보간
+  hint: 구간별 다항식을 부드럽게 연결
+  aliases: [Spline interpolation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.automatic_differentiation
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 자동미분
+  hint: 연산 그래프의 미분을 계산
+  aliases: [Automatic differentiation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.dimensional_analysis
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 차원해석
+  hint: 물리량의 차원으로 관계 점검
+  aliases: [Dimensional analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.condition_number
+  kind: concept
+  path: [계산, 수학, 계산 방법]
+  name: 조건수
+  hint: 입력 오차에 대한 해의 민감성
+  aliases: [Condition number]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.mathematics.interval_arithmetic
+  kind: method
+  path: [계산, 수학, 계산 방법]
+  name: 구간 연산
+  hint: 값의 범위를 보존하며 계산
+  aliases: [Interval arithmetic]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mathematics
+- id: atlas.optimization.linear_programming
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 선형계획법
+  hint: 선형 목적과 제약의 최적화
+  aliases: [Linear programming, LP]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.integer_programming
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 정수계획법
+  hint: 정수 결정변수의 최적화
+  aliases: [Integer programming]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.mixed_integer_programming
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 혼합정수계획법
+  hint: 연속변수와 정수변수 함께 최적화
+  aliases: [Mixed integer programming, MIP, MILP]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.convex_optimization
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 볼록 최적화
+  hint: 볼록 목적과 가능 영역의 최적화
+  aliases: [Convex optimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.quadratic_programming
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 이차계획법
+  hint: 이차 목적함수의 제약 최적화
+  aliases: [Quadratic programming]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.gradient_descent
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 경사하강법
+  hint: 기울기 반대 방향으로 갱신
+  aliases: [Gradient descent]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.stochastic_gradient_descent
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 확률적 경사하강법
+  hint: 표본 기반 기울기로 갱신
+  aliases: [Stochastic gradient descent]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.lagrange_multipliers
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 라그랑주 승수법
+  hint: 등식 제약을 목적식에 결합
+  aliases: [Lagrange multipliers]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.interior_point_method
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 내부점법
+  hint: 가능 영역 내부에서 최적점 탐색
+  aliases: [Interior point method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.branch_and_bound
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 분기한정법
+  hint: 부분 문제의 경계로 탐색 가지치기
+  aliases: [Branch and bound]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.constraint_programming
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 제약 프로그래밍
+  hint: 변수 영역과 제약 전파로 해 탐색
+  aliases: [Constraint programming]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.simulated_annealing
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 담금질 기법
+  hint: 확률적 이동으로 국소해 탈출
+  aliases: [Simulated annealing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.genetic_algorithm
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 유전 알고리즘
+  hint: 선택과 변이로 후보 해 진화
+  aliases: [Genetic algorithm]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.tabu_search
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 타부 탐색
+  hint: 최근 이동을 제한해 순환 방지
+  aliases: [Tabu search]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.column_generation
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 열 생성법
+  hint: 필요한 변수만 점진적으로 추가
+  aliases: [Column generation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.benders_decomposition
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 벤더스 분해
+  hint: 결정과 하위 문제를 분리해 최적화
+  aliases: [Benders decomposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.robust_optimization
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 강건 최적화
+  hint: 불확실성 집합에 견디는 해 탐색
+  aliases: [Robust optimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.stochastic_programming
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 확률계획법
+  hint: 시나리오 불확실성을 반영한 최적화
+  aliases: [Stochastic programming]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.optimal_control
+  kind: method
+  path: [계산, 최적화, 알고리즘]
+  name: 최적제어
+  hint: 시간에 따른 제어 입력 최적화
+  aliases: [Optimal control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.optimization.kkt_conditions
+  kind: concept
+  path: [계산, 최적화, 알고리즘]
+  name: KKT 조건
+  hint: 제약 최적점의 필요 조건 체계
+  aliases: [KKT conditions]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: optimization
+- id: atlas.decision.decision_tree_analysis
+  kind: method
+  path: [판단, 의사결정]
+  name: 의사결정 나무 분석
+  hint: 선택과 결과를 분기별 비교
+  aliases: [Decision tree analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.expected_utility
+  kind: method
+  path: [판단, 의사결정]
+  name: 기대효용 분석
+  hint: 확률과 선호를 결합해 대안 평가
+  aliases: [Expected utility]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.value_of_information
+  kind: method
+  path: [판단, 의사결정]
+  name: 정보가치 분석
+  hint: 추가 정보가 결정에 주는 가치
+  aliases: [Value of information]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.real_options_analysis
+  kind: method
+  path: [판단, 의사결정]
+  name: 실물옵션 분석
+  hint: 유보와 확장의 선택권 가치 평가
+  aliases: [Real options analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.minimax_regret
+  kind: method
+  path: [판단, 의사결정]
+  name: 최소최대 후회
+  hint: 최악의 기회 손실을 줄이는 선택
+  aliases: [Minimax regret]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.analytic_hierarchy_process
+  kind: method
+  path: [판단, 의사결정]
+  name: 계층분석법
+  hint: 쌍대 비교로 기준별 우선순위 도출
+  aliases: [Analytic hierarchy process]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.topsis
+  kind: method
+  path: [판단, 의사결정]
+  name: TOPSIS
+  hint: 이상점과의 거리로 대안 평가
+  aliases: [TOPSIS]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.electre
+  kind: method
+  path: [판단, 의사결정]
+  name: ELECTRE
+  hint: 기준별 우월 관계로 대안 비교
+  aliases: [ELECTRE]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.scenario_planning
+  kind: method
+  path: [판단, 의사결정]
+  name: 시나리오 플래닝
+  hint: 서로 다른 미래 조건을 준비
+  aliases: [Scenario planning, 서로 다른 미래 준비]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.premortem
+  kind: method
+  path: [판단, 의사결정]
+  name: 사전부검
+  hint: 실패를 가정하고 원인 탐색
+  aliases: [Premortem]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.backcasting
+  kind: method
+  path: [판단, 의사결정]
+  name: 백캐스팅
+  hint: 바라는 미래에서 현재 경로 역산
+  aliases: [Backcasting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.delphi_method
+  kind: method
+  path: [판단, 의사결정]
+  name: 델파이 기법
+  hint: 익명 반복 응답으로 전문가 판단 수렴
+  aliases: [Delphi method]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.nominal_group_technique
+  kind: method
+  path: [판단, 의사결정]
+  name: 명목집단법
+  hint: 독립 의견을 모아 우선순위 결정
+  aliases: [Nominal group technique]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.satisficing
+  kind: concept
+  path: [판단, 의사결정]
+  name: 만족화
+  hint: 기준을 충족하는 대안을 선택
+  aliases: [Satisficing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.bounded_rationality
+  kind: concept
+  path: [판단, 의사결정]
+  name: 제한된 합리성
+  hint: 정보와 계산 능력의 한계 속 선택
+  aliases: [Bounded rationality]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.decision_fatigue
+  kind: concept
+  path: [판단, 의사결정]
+  name: 결정 피로
+  hint: 반복 선택에서 생기는 부담
+  aliases: [Decision fatigue, 선택을 너무 많이]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.base_rate
+  kind: concept
+  path: [판단, 의사결정]
+  name: 기저율
+  hint: 집단에서 사건이 나타나는 비율
+  aliases: [Base rate]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.reference_class_forecasting
+  kind: method
+  path: [판단, 의사결정]
+  name: 참조집단 예측
+  hint: 유사 사례의 실제 분포로 예측
+  aliases: [Reference class forecasting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.reversibility
+  kind: concept
+  path: [판단, 의사결정]
+  name: 가역성
+  hint: 선택을 되돌릴 수 있는 정도
+  aliases: [Reversibility]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.decision.option_value
+  kind: concept
+  path: [판단, 의사결정]
+  name: 선택권 가치
+  hint: 미래 선택 가능성을 남기는 가치
+  aliases: [Option value]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: decision
+- id: atlas.systems.feedback_loop
+  kind: concept
+  path: [사고, 시스템]
+  name: 피드백 고리
+  hint: 결과가 다시 원인에 영향을 주는 구조
+  aliases: [Feedback loop]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.emergence
+  kind: concept
+  path: [사고, 시스템]
+  name: 창발
+  hint: 부분 상호작용에서 나타나는 전체 성질
+  aliases: [Emergence]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.leverage_point
+  kind: concept
+  path: [사고, 시스템]
+  name: 개입 지점
+  hint: 변화가 큰 영향을 줄 수 있는 위치
+  aliases: [Leverage point]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.delay
+  kind: concept
+  path: [사고, 시스템]
+  name: 시간 지연
+  hint: 원인과 반응 사이의 간격
+  aliases: [Delay]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.resilience
+  kind: concept
+  path: [사고, 시스템]
+  name: 회복탄력성
+  hint: 교란 후 기능을 유지하거나 회복
+  aliases: [Resilience]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.path_dependence
+  kind: concept
+  path: [사고, 시스템]
+  name: 경로의존성
+  hint: 과거 선택이 이후 가능성을 제약
+  aliases: [Path dependence]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.hysteresis
+  kind: concept
+  path: [사고, 시스템]
+  name: 이력현상
+  hint: 현재 상태가 변화 경로에 의존
+  aliases: [Hysteresis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.nonlinearity
+  kind: concept
+  path: [사고, 시스템]
+  name: 비선형성
+  hint: 입력과 출력이 비례하지 않는 관계
+  aliases: [Nonlinearity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.agent_based_modeling
+  kind: method
+  path: [사고, 시스템]
+  name: 행위자 기반 모형
+  hint: 개별 행위자의 상호작용 시뮬레이션
+  aliases: [Agent based modeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.network_analysis
+  kind: method
+  path: [사고, 시스템]
+  name: 네트워크 분석
+  hint: 연결 구조와 흐름 분석
+  aliases: [Network analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.centrality
+  kind: concept
+  path: [사고, 시스템]
+  name: 중심성
+  hint: 관계망에서 위치의 중요성
+  aliases: [Centrality]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.modularity
+  kind: concept
+  path: [사고, 시스템]
+  name: 모듈성
+  hint: 부분을 분리하고 조합하는 구조
+  aliases: [Modularity]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.coupling
+  kind: concept
+  path: [사고, 시스템]
+  name: 결합도
+  hint: 요소 사이의 의존 정도
+  aliases: [Coupling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.bottleneck
+  kind: concept
+  path: [사고, 시스템]
+  name: 병목
+  hint: 전체 처리량을 제한하는 부분
+  aliases: [Bottleneck]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.requisite_variety
+  kind: concept
+  path: [사고, 시스템]
+  name: 필요다양성
+  hint: 조절에 필요한 대응 다양성
+  aliases: [Requisite variety]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.soft_systems_methodology
+  kind: method
+  path: [사고, 시스템]
+  name: 소프트 시스템 방법론
+  hint: 다중 관점의 문제 상황 탐구
+  aliases: [Soft systems methodology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.viable_system_model
+  kind: method
+  path: [사고, 시스템]
+  name: 생존가능 시스템 모형
+  hint: 조직의 조절과 자율 구조 분석
+  aliases: [Viable system model]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.common_cause_failure
+  kind: concept
+  path: [사고, 시스템]
+  name: 공통원인 고장
+  hint: 한 원인이 여러 요소에 동시 영향
+  aliases: [Common cause failure]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.cascading_failure
+  kind: concept
+  path: [사고, 시스템]
+  name: 연쇄 고장
+  hint: 연결을 따라 고장이 확산
+  aliases: [Cascading failure]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.systems.suboptimization
+  kind: concept
+  path: [사고, 시스템]
+  name: 부분최적화
+  hint: 부분 최적과 전체 성과의 차이
+  aliases: [Suboptimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: systems
+- id: atlas.data.data_normalization
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 데이터 정규화
+  hint: 중복과 갱신 이상을 줄이는 관계 설계
+  aliases: [Data normalization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.entity_resolution
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 개체 식별 통합
+  hint: 다른 기록의 동일 대상을 연결
+  aliases: [Entity resolution, 중복 고객 기록]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.record_linkage
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 레코드 연결
+  hint: 자료 간 대응하는 기록 찾기
+  aliases: [Record linkage, 서로 다른 명부 연결]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.schema_matching
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 스키마 매칭
+  hint: 서로 다른 열과 구조의 대응
+  aliases: [Schema matching, 서로 다른 열 이름 대응]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.data_lineage
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 데이터 계보
+  hint: 자료의 생성과 변환 경로 추적
+  aliases: [Data lineage]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.data_profiling
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 데이터 프로파일링
+  hint: 열의 분포와 결측 등 특성 조사
+  aliases: [Data profiling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.data_validation
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 데이터 검증
+  hint: 형식과 의미 제약의 충족 검사
+  aliases: [Data validation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.etl
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: ETL
+  hint: 추출 변환 적재 파이프라인
+  aliases: [ETL]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.elt
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: ELT
+  hint: 적재한 자료를 저장소에서 변환
+  aliases: [ELT]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.change_data_capture
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 변경 데이터 캡처
+  hint: 원본의 변경분만 추적
+  aliases: [Change data capture]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.star_schema
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 스타 스키마
+  hint: 사실표와 차원표로 분석 구조화
+  aliases: [Star schema]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.slowly_changing_dimensions
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 완만하게 변하는 차원
+  hint: 차원 속성의 시간별 변경 관리
+  aliases: [Slowly changing dimensions]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.data_partitioning
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 데이터 파티셔닝
+  hint: 자료를 구간별로 나누어 저장
+  aliases: [Data partitioning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.database_indexing
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 데이터베이스 인덱싱
+  hint: 조회 경로를 위한 보조 구조
+  aliases: [Database indexing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.query_optimization
+  kind: method
+  path: [데이터, 정리와 저장]
+  name: 질의 최적화
+  hint: 동등한 질의 실행 계획 비교
+  aliases: [Query optimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.acid
+  kind: concept
+  path: [데이터, 정리와 저장]
+  name: ACID
+  hint: 트랜잭션의 일관된 처리 성질
+  aliases: [ACID]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.idempotency
+  kind: concept
+  path: [데이터, 정리와 저장]
+  name: 멱등성
+  hint: 반복 적용해도 결과가 같은 성질
+  aliases: [Idempotency]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.event_sourcing
+  kind: concept
+  path: [데이터, 정리와 저장]
+  name: 이벤트 소싱
+  hint: 상태 변화를 사건으로 기록
+  aliases: [Event sourcing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.materialized_view
+  kind: concept
+  path: [데이터, 정리와 저장]
+  name: 구체화 뷰
+  hint: 질의 결과를 저장해 재사용
+  aliases: [Materialized view]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data
+- id: atlas.data.data_provenance
+  kind: concept
+  path: [데이터, 정리와 저장]
+  name: 데이터 출처
+  hint: 자료의 기원과 책임 추적
+  aliases: [Data provenance]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: data

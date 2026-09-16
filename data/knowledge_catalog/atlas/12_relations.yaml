@@ -1,0 +1,948 @@
+evidence:
+- id: ev.atlas.editorial
+  path: docs/world_map/J_atlas_relations_2026_09_17.md
+  locator: editorial
+  claim: 이 표에 열거한 연관 관계의 편집 검토; 외부 실험 검증 아님
+  checked_at: '2026-09-17'
+  content_hash: 78c486f6010655e5b6547b3a0b1527b76e72c687927f71a6312b9f96fe0dd11b
+- id: ev.atlas.stan
+  path: docs/world_map/J_atlas_relations_2026_09_17.md
+  locator: stan
+  claim: 공식 소개의 Bayesian inference와 확률 모형 기능
+  checked_at: '2026-09-17'
+  content_hash: 78c486f6010655e5b6547b3a0b1527b76e72c687927f71a6312b9f96fe0dd11b
+  url: https://mc-stan.org/
+- id: ev.atlas.openrefine
+  path: docs/world_map/J_atlas_relations_2026_09_17.md
+  locator: openrefine
+  claim: 공식 소개의 reconciliation과 값 군집화 기능
+  checked_at: '2026-09-17'
+  content_hash: 78c486f6010655e5b6547b3a0b1527b76e72c687927f71a6312b9f96fe0dd11b
+  url: https://openrefine.org/
+- id: ev.atlas.gephi
+  path: docs/world_map/J_atlas_relations_2026_09_17.md
+  locator: gephi
+  claim: 공식 소개의 network analysis와 중심성·군집 기능
+  checked_at: '2026-09-17'
+  content_hash: 78c486f6010655e5b6547b3a0b1527b76e72c687927f71a6312b9f96fe0dd11b
+  url: https://gephi.org/
+- id: ev.atlas.audacity
+  path: docs/world_map/J_atlas_relations_2026_09_17.md
+  locator: audacity
+  claim: 공식 소개의 spectrogram과 오디오 분석 기능
+  checked_at: '2026-09-17'
+  content_hash: 78c486f6010655e5b6547b3a0b1527b76e72c687927f71a6312b9f96fe0dd11b
+  url: https://www.audacityteam.org/
+edges:
+- id: atlas.link.001
+  subject: atlas.reasoning.deduction
+  predicate: related
+  object: atlas.reasoning.induction
+  rationale: 일반 규칙과 개별 사례 사이 추론 방향의 대조
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.002
+  subject: atlas.reasoning.abduction
+  predicate: related
+  object: atlas.reasoning.counterexample
+  rationale: 설명 후보를 세우고 반례로 점검하는 서로 다른 추론 역할
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.003
+  subject: atlas.research.preregistration
+  predicate: related
+  object: atlas.research.registered_report
+  rationale: 결과를 보기 전 계획을 고정하는 연구 관행
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.004
+  subject: atlas.research.stratified_sampling
+  predicate: related
+  object: atlas.research.cluster_sampling
+  rationale: 집단 구조를 이용하는 서로 다른 표본 설계
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.005
+  subject: atlas.research.mixed_methods
+  predicate: related
+  object: atlas.research.triangulation
+  rationale: 다른 자료와 방법을 함께 해석하는 연구 구성
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.006
+  subject: atlas.statistics.maximum_likelihood_estimation
+  predicate: related
+  object: atlas.statistics.bayesian_inference
+  rationale: 자료와 모형에서 매개변수를 추론하는 서로 다른 틀
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.007
+  subject: atlas.statistics.confidence_interval
+  predicate: related
+  object: atlas.statistics.credible_interval
+  rationale: 빈도주의 구간과 사후확률 구간의 해석 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.008
+  subject: atlas.statistics.linear_regression
+  predicate: related
+  object: atlas.mathematics.ordinary_least_squares
+  rationale: 회귀 모형과 계수 추정 기준의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.009
+  subject: atlas.causality.instrumental_variables
+  predicate: related
+  object: atlas.causality.regression_discontinuity
+  rationale: 외생 변동과 할당 경계를 활용하는 서로 다른 인과 설계
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.010
+  subject: atlas.causality.mediation_analysis
+  predicate: related
+  object: atlas.causality.moderation_analysis
+  rationale: 효과의 전달 경로와 조건별 차이의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.011
+  subject: atlas.time_series.change_point_detection
+  predicate: related
+  object: atlas.time_series.time_series_decomposition
+  rationale: 시간 변동의 구조를 살피는 다른 관점
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.012
+  subject: atlas.time_series.fourier_transform
+  predicate: related
+  object: atlas.time_series.spectral_analysis
+  rationale: 주파수 표현과 주파수별 성분 분석의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.013
+  subject: atlas.time_series.kalman_filter
+  predicate: related
+  object: atlas.time_series.state_space_model
+  rationale: 동적 상태 모형과 순차 추정의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.014
+  subject: atlas.mathematics.singular_value_decomposition
+  predicate: related
+  object: atlas.machine_learning.principal_component_analysis
+  rationale: 직교 성분 분해와 분산 축 표현의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.015
+  subject: atlas.mathematics.automatic_differentiation
+  predicate: related
+  object: atlas.optimization.gradient_descent
+  rationale: 미분 계산과 기울기 기반 갱신의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.016
+  subject: atlas.optimization.robust_optimization
+  predicate: related
+  object: atlas.optimization.stochastic_programming
+  rationale: 불확실성을 집합과 확률로 다루는 차이
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.017
+  subject: atlas.decision.real_options_analysis
+  predicate: related
+  object: atlas.decision.option_value
+  rationale: 미래 결정의 유연성을 평가하는 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.018
+  subject: atlas.decision.expected_utility
+  predicate: related
+  object: atlas.decision.value_of_information
+  rationale: 추가 정보가 의사결정 성과에 미치는 가치
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.019
+  subject: causal_loop
+  predicate: related
+  object: atlas.systems.feedback_loop
+  rationale: 되먹임 구조의 개념과 표현
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.020
+  subject: atlas.systems.agent_based_modeling
+  predicate: related
+  object: atlas.systems.emergence
+  rationale: 개별 상호작용과 집단적 패턴의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.021
+  subject: atlas.data.entity_resolution
+  predicate: related
+  object: atlas.data.record_linkage
+  rationale: 동일 대상을 다른 기록에서 찾는 작업의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.022
+  subject: atlas.data.schema_matching
+  predicate: related
+  object: atlas.data.data_lineage
+  rationale: 구조 대응과 변환 경로를 구별해 추적
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.023
+  subject: atlas.algorithms.maximum_flow
+  predicate: related
+  object: atlas.algorithms.bipartite_matching
+  rationale: 흐름과 짝짓기 문제 사이의 알고리즘적 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.024
+  subject: atlas.algorithms.memoization
+  predicate: related
+  object: dynamic_programming
+  rationale: 중복 부분 문제의 결과를 재사용하는 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.025
+  subject: atlas.machine_learning.factor_analysis
+  predicate: related
+  object: atlas.machine_learning.principal_component_analysis
+  rationale: 잠재 공분산 모형과 분산 축 분해를 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.026
+  subject: atlas.machine_learning.cross_validation
+  predicate: related
+  object: atlas.machine_learning.probability_calibration
+  rationale: 일반화 평가와 예측 확률 신뢰성 점검
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.027
+  subject: atlas.security.least_privilege
+  predicate: related
+  object: atlas.security.security_boundary
+  rationale: 주체별 허용과 신뢰 접점 설계
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.028
+  subject: atlas.security.defense_in_depth
+  predicate: related
+  object: atlas.systems.common_cause_failure
+  rationale: 여러 방어 층의 공통 의존성 점검
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.029
+  subject: atlas.networks.backpressure
+  predicate: related
+  object: atlas.networks.rate_limiting
+  rationale: 유입량과 처리 능력을 맞추는 서로 다른 조절
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.030
+  subject: atlas.data.idempotency
+  predicate: related
+  object: atlas.networks.exponential_backoff
+  rationale: 재시도 시 중복 효과와 호출 간격의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.031
+  subject: atlas.software.mutation_testing
+  predicate: related
+  object: property_testing
+  rationale: 오류 주입과 성질 검증의 다른 테스트 관점
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.032
+  subject: atlas.software.model_checking
+  predicate: related
+  object: atlas.software.symbolic_execution
+  rationale: 상태와 실행 경로의 자동 검증
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.033
+  subject: atlas.design.service_blueprint
+  predicate: related
+  object: journey_mapping
+  rationale: 사용자 접점과 후방 운영의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.034
+  subject: atlas.design.information_architecture
+  predicate: related
+  object: atlas.design.tree_testing
+  rationale: 탐색 분류와 찾기 성능 검사
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.035
+  subject: atlas.product.minimum_viable_product
+  predicate: related
+  object: atlas.product.smoke_test
+  rationale: 적은 구현으로 가설을 시험하는 접근의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.036
+  subject: atlas.product.kano_model
+  predicate: related
+  object: atlas.product.conjoint_analysis
+  rationale: 속성 만족과 속성 간 선호의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.037
+  subject: atlas.business.market_segmentation
+  predicate: related
+  object: atlas.business.positioning
+  rationale: 고객군 구별과 가치 위치의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.038
+  subject: atlas.business.unit_economics
+  predicate: related
+  object: break_even
+  rationale: 거래 단위 수익성과 총비용 회수의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.039
+  subject: atlas.operations.queueing_theory
+  predicate: related
+  object: atlas.operations.littles_law
+  rationale: 대기 시스템의 흐름과 체류량 관계
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.040
+  subject: atlas.operations.theory_of_constraints
+  predicate: related
+  object: atlas.systems.bottleneck
+  rationale: 시스템 처리량을 제한하는 부분의 분석
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.041
+  subject: atlas.economics.adverse_selection
+  predicate: related
+  object: atlas.economics.moral_hazard
+  rationale: 거래 전 정보와 거래 후 행동 문제의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.042
+  subject: atlas.economics.game_theory
+  predicate: related
+  object: atlas.economics.nash_equilibrium
+  rationale: 전략적 상호작용과 균형 개념의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.043
+  subject: atlas.finance.net_present_value
+  predicate: related
+  object: atlas.finance.discounted_cash_flow
+  rationale: 시점별 현금흐름의 현재 가치 평가
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.044
+  subject: atlas.finance.value_at_risk
+  predicate: related
+  object: atlas.finance.expected_shortfall
+  rationale: 손실 경계와 꼬리 평균의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.045
+  subject: atlas.policy.theory_of_change
+  predicate: related
+  object: atlas.policy.logic_model
+  rationale: 개입의 가정과 활동 성과 연결의 표현
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.046
+  subject: atlas.policy.process_evaluation
+  predicate: related
+  object: atlas.policy.impact_evaluation
+  rationale: 실행 과정과 개입 효과의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.047
+  subject: atlas.law.mediation
+  predicate: related
+  object: atlas.law.arbitration
+  rationale: 합의 지원과 판단 위탁의 분쟁해결 차이
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.048
+  subject: atlas.law.statutory_interpretation
+  predicate: related
+  object: atlas.law.case_briefing
+  rationale: 규범과 구체 판단의 법적 독해
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.049
+  subject: atlas.social.grounded_theory
+  predicate: related
+  object: atlas.social.constant_comparison
+  rationale: 자료 비교를 통한 범주와 이론 형성
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.050
+  subject: atlas.social.participant_observation
+  predicate: related
+  object: atlas.social.reflexivity
+  rationale: 현장 참여와 연구자의 위치 검토
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.051
+  subject: atlas.psychology.working_memory
+  predicate: related
+  object: atlas.psychology.cognitive_load
+  rationale: 단기 처리 능력과 과제 요구의 관계
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.052
+  subject: atlas.psychology.implementation_intentions
+  predicate: related
+  object: atlas.psychology.habit_formation
+  rationale: 상황 단서와 행동 반복의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.053
+  subject: atlas.education.interleaving
+  predicate: related
+  object: spaced_repetition
+  rationale: 과제 유형 혼합과 시간 간격의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.054
+  subject: atlas.education.formative_assessment
+  predicate: related
+  object: atlas.education.rubric
+  rationale: 학습 피드백과 명시적 수행 기준
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.055
+  subject: atlas.linguistics.morphological_analysis
+  predicate: related
+  object: atlas.linguistics.syntactic_parsing
+  rationale: 단어 내부 구조와 문장 구조의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.056
+  subject: atlas.linguistics.terminology_management
+  predicate: related
+  object: atlas.information.authority_control
+  rationale: 표현의 일관성과 동일 대상 식별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.057
+  subject: atlas.history.source_criticism
+  predicate: related
+  object: atlas.history.archival_research
+  rationale: 기록 발견과 자료의 신뢰성 검토
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.058
+  subject: atlas.history.stratigraphy
+  predicate: related
+  object: atlas.history.radiocarbon_dating
+  rationale: 상대 순서와 수치 연대의 다른 근거
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.059
+  subject: atlas.philosophy.reflective_equilibrium
+  predicate: related
+  object: atlas.philosophy.ethical_deliberation
+  rationale: 원칙과 개별 판단의 조정
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.060
+  subject: atlas.philosophy.falsifiability
+  predicate: related
+  object: atlas.philosophy.fallibilism
+  rationale: 검증 가능한 반례와 지식의 수정 가능성
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.061
+  subject: atlas.writing.outlining
+  predicate: related
+  object: reverse_outline
+  rationale: 쓰기 전 구조와 쓴 뒤 구조의 대조
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.062
+  subject: atlas.writing.developmental_editing
+  predicate: related
+  object: atlas.writing.line_editing
+  rationale: 전체 전개와 개별 문장 수준의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.063
+  subject: atlas.visual_art.visual_hierarchy
+  predicate: related
+  object: atlas.visual_art.composition
+  rationale: 화면 배치와 시선의 중요도 구성
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.064
+  subject: atlas.visual_art.color_space
+  predicate: related
+  object: atlas.visual_art.color_management
+  rationale: 수치 색 표현과 장치 간 대응
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.065
+  subject: atlas.music.harmony
+  predicate: related
+  object: atlas.music.voice_leading
+  rationale: 동시 음의 관계와 시간에 따른 음 이동
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.066
+  subject: atlas.music.equalization
+  predicate: related
+  object: atlas.music.dynamic_range_compression
+  rationale: 주파수별 균형과 크기 변동 조절의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.067
+  subject: atlas.film.photogrammetry
+  predicate: related
+  object: atlas.film.structure_from_motion
+  rationale: 여러 영상에서 공간 정보를 복원
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.068
+  subject: atlas.film.motion_tracking
+  predicate: related
+  object: atlas.film.match_moving
+  rationale: 영상 속 움직임과 합성 카메라 정합
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.069
+  subject: atlas.architecture.passive_design
+  predicate: related
+  object: atlas.architecture.daylighting_analysis
+  rationale: 건물 형태와 자연광 성능의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.070
+  subject: atlas.architecture.post_occupancy_evaluation
+  predicate: related
+  object: atlas.architecture.participatory_planning
+  rationale: 사용 경험의 검토와 이용자 참여
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.071
+  subject: atlas.mechanical.design_for_manufacturing
+  predicate: related
+  object: atlas.mechanical.design_for_assembly
+  rationale: 가공과 조립을 고려하는 서로 다른 설계 관점
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.072
+  subject: atlas.mechanical.fatigue_analysis
+  predicate: related
+  object: atlas.mechanical.fracture_mechanics
+  rationale: 반복 하중과 균열 성장의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.073
+  subject: atlas.civil.hydrologic_modeling
+  predicate: related
+  object: atlas.civil.hydraulic_modeling
+  rationale: 강우 유출 과정과 물의 흐름 계산의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.074
+  subject: atlas.civil.asset_management
+  predicate: related
+  object: atlas.civil.life_cycle_costing
+  rationale: 시설 유지와 전체 수명 비용의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.075
+  subject: atlas.energy.system_identification
+  predicate: related
+  object: atlas.energy.model_predictive_control
+  rationale: 자료에서 얻은 동적 모형과 예측 기반 제어
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.076
+  subject: atlas.energy.observability
+  predicate: related
+  object: atlas.energy.controllability
+  rationale: 상태를 알아내는 것과 바꾸는 것의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.077
+  subject: atlas.electronics.nyquist_sampling_theorem
+  predicate: related
+  object: atlas.electronics.aliasing
+  rationale: 표본화 조건과 정보 혼동의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.078
+  subject: atlas.electronics.signal_integrity_analysis
+  predicate: related
+  object: atlas.electronics.electromagnetic_compatibility
+  rationale: 전송 신호와 주변 간섭의 설계 접점
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.079
+  subject: atlas.chemistry.chromatography
+  predicate: related
+  object: atlas.chemistry.mass_spectrometry
+  rationale: 혼합물 분리와 분리 성분의 질량 분석
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.080
+  subject: atlas.chemistry.reaction_kinetics
+  predicate: related
+  object: atlas.chemistry.retrosynthesis
+  rationale: 반응 진행 특성과 합성 경로 계획의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.081
+  subject: atlas.materials.heat_treatment
+  predicate: related
+  object: atlas.materials.phase_diagram
+  rationale: 온도에 따른 조직 조절과 안정 상의 관계
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.082
+  subject: atlas.materials.structure_property_relationship
+  predicate: related
+  object: atlas.materials.materials_selection
+  rationale: 성능 요구와 재료 구조의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.083
+  subject: atlas.biology.sequence_alignment
+  predicate: related
+  object: atlas.biology.phylogenetic_inference
+  rationale: 서열의 대응과 진화 관계 추정
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.084
+  subject: atlas.biology.differential_expression_analysis
+  predicate: related
+  object: atlas.biology.gene_set_enrichment
+  rationale: 유전자별 변화와 기능 집합의 해석
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.085
+  subject: atlas.health.case_control_study
+  predicate: related
+  object: atlas.health.cohort_study
+  rationale: 결과와 노출에서 출발하는 관찰 연구 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.086
+  subject: atlas.health.sensitivity_specificity
+  predicate: related
+  object: atlas.health.positive_predictive_value
+  rationale: 검사 성질과 집단에서의 결과 해석 차이
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.087
+  subject: atlas.ecology.species_distribution_modeling
+  predicate: related
+  object: atlas.ecology.habitat_suitability_analysis
+  rationale: 환경 조건과 생물 분포의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.088
+  subject: atlas.ecology.capture_recapture
+  predicate: related
+  object: atlas.ecology.occupancy_modeling
+  rationale: 불완전한 관측에서 개체수와 점유를 추정
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.089
+  subject: atlas.earth.remote_sensing
+  predicate: related
+  object: atlas.earth.land_cover_classification
+  rationale: 센서 관측과 지표 유형 해석
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.090
+  subject: atlas.earth.spatial_interpolation
+  predicate: related
+  object: atlas.earth.kriging
+  rationale: 미측정 위치 추정과 공간 공분산 활용
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.091
+  subject: atlas.agriculture.crop_rotation
+  predicate: related
+  object: atlas.agriculture.intercropping
+  rationale: 시간과 공간에 작물을 배치하는 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.092
+  subject: atlas.agriculture.soil_testing
+  predicate: related
+  object: atlas.agriculture.nutrient_budgeting
+  rationale: 상태 측정과 투입 반출 균형의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.093
+  subject: atlas.food.sensory_evaluation
+  predicate: related
+  object: atlas.food.triangle_test
+  rationale: 감각 특성 평가와 차이 식별 실험
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.094
+  subject: atlas.food.water_activity
+  predicate: related
+  object: atlas.food.dehydration
+  rationale: 이용 가능한 물과 수분 제거의 관계
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.095
+  subject: atlas.movement.progressive_overload
+  predicate: related
+  object: atlas.movement.training_periodization
+  rationale: 부하 증가와 시간별 배치의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.096
+  subject: atlas.movement.biomechanical_analysis
+  predicate: related
+  object: atlas.movement.gait_analysis
+  rationale: 힘과 운동 분석을 보행에 적용
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.097
+  subject: atlas.craft.joinery
+  predicate: related
+  object: atlas.craft.mortise_and_tenon
+  rationale: 목재 부재 결합과 구체 형식
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.098
+  subject: atlas.craft.pattern_making
+  predicate: related
+  object: atlas.craft.draping
+  rationale: 평면 전개와 입체 위 형태 구성
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.099
+  subject: atlas.information.controlled_vocabulary
+  predicate: related
+  object: atlas.information.thesaurus
+  rationale: 표제 통일과 어휘 간 관계 조직
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.100
+  subject: atlas.information.digital_preservation
+  predicate: related
+  object: atlas.data.data_provenance
+  rationale: 장기 접근과 기원 확인의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.101
+  subject: atlas.quality.root_cause_analysis
+  predicate: related
+  object: atlas.quality.five_whys
+  rationale: 발생 원인을 탐색하는 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.102
+  subject: atlas.quality.control_chart
+  predicate: related
+  object: atlas.quality.process_capability_analysis
+  rationale: 시간 변동 감시와 규격 적합성의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.103
+  subject: atlas.physics.conservation_law
+  predicate: related
+  object: atlas.physics.symmetry
+  rationale: 운동의 불변 성질과 변환 대칭의 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.104
+  subject: atlas.physics.inverse_problem
+  predicate: related
+  object: atlas.physics.error_propagation
+  rationale: 원인 추정과 관측 불확실성의 영향
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.105
+  subject: atlas.astronomy.astronomical_spectroscopy
+  predicate: related
+  object: atlas.astronomy.redshift_measurement
+  rationale: 파장 분포와 기준 파장의 비교
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.106
+  subject: atlas.astronomy.photometry
+  predicate: related
+  object: atlas.astronomy.light_curve_analysis
+  rationale: 밝기 측정과 시간 변화 해석
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.107
+  subject: atlas.robotics.forward_kinematics
+  predicate: related
+  object: atlas.robotics.inverse_kinematics
+  rationale: 관절과 말단 사이 계산 방향의 구별
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.108
+  subject: atlas.robotics.hand_eye_calibration
+  predicate: related
+  object: atlas.robotics.sensor_fusion
+  rationale: 좌표계 대응과 다중 관측의 결합
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.109
+  subject: atlas.organization.team_charter
+  predicate: related
+  object: atlas.organization.raci_matrix
+  rationale: 공동 규칙과 역할별 책임의 명시
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.link.110
+  subject: atlas.organization.after_action_review
+  predicate: related
+  object: atlas.organization.retrospective
+  rationale: 수행 결과에서 작업 방식의 개선을 찾는 연결
+  evidence_ids:
+  - ev.atlas.editorial
+  status: verified
+- id: atlas.tool.stan
+  subject: atlas.tools.stan
+  predicate: implements
+  object: atlas.statistics.bayesian_inference
+  rationale: 공식 소개의 Bayesian inference와 확률 모형 기능
+  evidence_ids:
+  - ev.atlas.stan
+  status: verified
+- id: atlas.tool.openrefine
+  subject: atlas.tools.openrefine
+  predicate: implements
+  object: atlas.data.entity_resolution
+  rationale: 공식 소개의 reconciliation과 값 군집화 기능
+  evidence_ids:
+  - ev.atlas.openrefine
+  status: verified
+- id: atlas.tool.gephi
+  subject: atlas.tools.gephi
+  predicate: implements
+  object: atlas.systems.network_analysis
+  rationale: 공식 소개의 network analysis와 중심성·군집 기능
+  evidence_ids:
+  - ev.atlas.gephi
+  status: verified
+- id: atlas.tool.audacity
+  subject: atlas.tools.audacity
+  predicate: implements
+  object: atlas.time_series.spectral_analysis
+  rationale: 공식 소개의 spectrogram과 오디오 분석 기능
+  evidence_ids:
+  - ev.atlas.audacity
+  status: verified

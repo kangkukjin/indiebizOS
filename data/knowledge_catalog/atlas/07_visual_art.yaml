@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.visual_art.composition
+  kind: concept
+  path: [표현, 시각예술]
+  name: 구도
+  hint: 화면 안 요소의 위치와 관계
+  aliases: [Composition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.visual_hierarchy
+  kind: concept
+  path: [표현, 시각예술]
+  name: 시각적 위계
+  hint: 중요도에 따른 시선 순서
+  aliases: [Visual hierarchy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.gestalt_principles
+  kind: concept
+  path: [표현, 시각예술]
+  name: 게슈탈트 원리
+  hint: 부분을 묶어 지각하는 경향
+  aliases: [Gestalt principles]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.figure_ground
+  kind: concept
+  path: [표현, 시각예술]
+  name: 도형과 배경
+  hint: 주목 대상과 배경의 구별
+  aliases: [Figure ground]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.negative_space
+  kind: concept
+  path: [표현, 시각예술]
+  name: 여백
+  hint: 요소 사이 비어 있는 공간의 역할
+  aliases: [Negative space]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.color_harmony
+  kind: concept
+  path: [표현, 시각예술]
+  name: 색채 조화
+  hint: 색들 사이의 대비와 통일
+  aliases: [Color harmony]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.color_space
+  kind: concept
+  path: [표현, 시각예술]
+  name: 색 공간
+  hint: 색을 수치로 표현하는 좌표 체계
+  aliases: [Color space]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.color_management
+  kind: method
+  path: [표현, 시각예술]
+  name: 색 관리
+  hint: 장치 간 색 표현의 대응
+  aliases: [Color management]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.perspective_drawing
+  kind: method
+  path: [표현, 시각예술]
+  name: 원근법
+  hint: 공간 깊이를 평면에 표현
+  aliases: [Perspective drawing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.orthographic_projection
+  kind: method
+  path: [표현, 시각예술]
+  name: 정투영
+  hint: 평행 투영으로 형태와 치수 표현
+  aliases: [Orthographic projection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.gesture_drawing
+  kind: method
+  path: [표현, 시각예술]
+  name: 제스처 드로잉
+  hint: 움직임과 흐름을 빠르게 포착
+  aliases: [Gesture drawing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.observational_drawing
+  kind: method
+  path: [표현, 시각예술]
+  name: 관찰 드로잉
+  hint: 실제 대상의 관계를 관찰해 표현
+  aliases: [Observational drawing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.chiaroscuro
+  kind: method
+  path: [표현, 시각예술]
+  name: 명암법
+  hint: 빛과 어둠으로 입체감 구성
+  aliases: [Chiaroscuro]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.linocut
+  kind: method
+  path: [표현, 시각예술]
+  name: 리노컷
+  hint: 판을 깎아 찍는 볼록판화
+  aliases: [Linocut]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.screen_printing
+  kind: method
+  path: [표현, 시각예술]
+  name: 실크스크린
+  hint: 망판의 열린 부분으로 잉크 전사
+  aliases: [Screen printing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.collage
+  kind: method
+  path: [표현, 시각예술]
+  name: 콜라주
+  hint: 서로 다른 재료를 조합해 표현
+  aliases: [Collage]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.photomontage
+  kind: method
+  path: [표현, 시각예술]
+  name: 포토몽타주
+  hint: 사진 조각의 결합으로 의미 구성
+  aliases: [Photomontage]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.generative_art
+  kind: method
+  path: [표현, 시각예술]
+  name: 생성예술
+  hint: 규칙과 과정으로 작품 생성
+  aliases: [Generative art]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.data_visualization
+  kind: method
+  path: [표현, 시각예술]
+  name: 데이터 시각화
+  hint: 자료의 관계를 시각 형태로 표현
+  aliases: [Data visualization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.visual_art.small_multiples
+  kind: concept
+  path: [표현, 시각예술]
+  name: 작은 다중 그래프
+  hint: 같은 형식의 여러 도표로 비교
+  aliases: [Small multiples]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: visual_art
+- id: atlas.music.harmony
+  kind: concept
+  path: [표현, 음악과 소리]
+  name: 화성
+  hint: 동시에 울리는 음들의 관계
+  aliases: [Harmony]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.counterpoint
+  kind: concept
+  path: [표현, 음악과 소리]
+  name: 대위법
+  hint: 독립 선율의 동시 진행
+  aliases: [Counterpoint]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.voice_leading
+  kind: concept
+  path: [표현, 음악과 소리]
+  name: 성부 진행
+  hint: 화음 사이 개별 음의 이동
+  aliases: [Voice leading]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.rhythm
+  kind: concept
+  path: [표현, 음악과 소리]
+  name: 리듬
+  hint: 시간 속 길이 강세와 반복
+  aliases: [Rhythm]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.meter
+  kind: concept
+  path: [표현, 음악과 소리]
+  name: 박자
+  hint: 박의 규칙적 묶음
+  aliases: [Meter]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.timbre
+  kind: concept
+  path: [표현, 음악과 소리]
+  name: 음색
+  hint: 음의 질감과 스펙트럼 특성
+  aliases: [Timbre]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.orchestration
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 관현악법
+  hint: 악기의 음색과 역할 배치
+  aliases: [Orchestration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.musical_arrangement
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 편곡
+  hint: 기존 곡의 악기와 구조 재구성
+  aliases: [Musical arrangement]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.ear_training
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 청음
+  hint: 듣고 음정 리듬 화성 구별
+  aliases: [Ear training]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.improvisation
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 즉흥연주
+  hint: 진행 중 음악적 선택 구성
+  aliases: [Improvisation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.motivic_development
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 동기 발전
+  hint: 짧은 음악 재료의 변형과 확장
+  aliases: [Motivic development]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.multitrack_recording
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 멀티트랙 녹음
+  hint: 소리를 분리 기록해 조합
+  aliases: [Multitrack recording]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.equalization
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 이퀄라이제이션
+  hint: 주파수별 크기 조정
+  aliases: [Equalization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.dynamic_range_compression
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 다이내믹 압축
+  hint: 신호 크기 차이 조절
+  aliases: [Dynamic range compression]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.sidechain_compression
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 사이드체인 압축
+  hint: 다른 신호로 압축 동작 제어
+  aliases: [Sidechain compression]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.convolution_reverb
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 컨볼루션 리버브
+  hint: 공간 응답으로 잔향 합성
+  aliases: [Convolution reverb]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.audio_mastering
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 오디오 마스터링
+  hint: 배포용 음원의 최종 균형과 규격 조정
+  aliases: [Audio mastering]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.loudness_normalization
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 음량 정규화
+  hint: 지각 음량 기준으로 크기 맞춤
+  aliases: [Loudness normalization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.spectral_subtraction
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 스펙트럼 감산
+  hint: 추정 잡음 성분을 빼서 신호 정리
+  aliases: [Spectral subtraction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.music.soundscape_analysis
+  kind: method
+  path: [표현, 음악과 소리]
+  name: 사운드스케이프 분석
+  hint: 장소의 소리와 지각 경험 분석
+  aliases: [Soundscape analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: music
+- id: atlas.film.exposure_triangle
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: 노출의 삼각관계
+  hint: 조리개 셔터 감도의 관계
+  aliases: [Exposure triangle]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.depth_of_field
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: 피사계심도
+  hint: 허용 선명도로 보이는 거리 범위
+  aliases: [Depth of field]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.dynamic_range
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: 다이내믹 레인지
+  hint: 구별 가능한 밝기 범위
+  aliases: [Dynamic range]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.white_balance
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 화이트밸런스
+  hint: 광원의 색을 고려해 중립색 조정
+  aliases: [White balance]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.high_dynamic_range_imaging
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: HDR 영상
+  hint: 여러 밝기 범위를 통합
+  aliases: [High dynamic range imaging]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.focus_stacking
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 초점 합성
+  hint: 서로 다른 초점의 이미지를 결합
+  aliases: [Focus stacking, 초점이 다른 사진 합치기]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.photogrammetry
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 사진측량
+  hint: 사진의 대응점으로 공간 형태 복원
+  aliases: [Photogrammetry, 사진으로 입체 복원]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.structure_from_motion
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 움직임 기반 구조복원
+  hint: 다중 영상에서 카메라와 구조 추정
+  aliases: [Structure from motion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.shot_reverse_shot
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: 숏 역숏
+  hint: 상대 방향 숏을 교차해 관계 표현
+  aliases: [Shot reverse shot]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.continuity_editing
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: 연속편집
+  hint: 시간과 공간의 연속감을 유지
+  aliases: [Continuity editing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.montage
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: 몽타주
+  hint: 숏의 결합으로 의미와 리듬 구성
+  aliases: [Montage]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.j_cut
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: J 컷
+  hint: 다음 장면의 소리를 먼저 연결
+  aliases: [J cut]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.l_cut
+  kind: concept
+  path: [미디어, 영상과 사진]
+  name: L 컷
+  hint: 이전 장면의 소리를 이어 연결
+  aliases: [L cut]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.color_grading
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 색보정 연출
+  hint: 색과 명암으로 영상의 인상 구성
+  aliases: [Color grading]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.chroma_key
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 크로마키
+  hint: 특정 색 영역을 분리해 합성
+  aliases: [Chroma key]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.rotoscoping
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 로토스코핑
+  hint: 프레임별 대상 윤곽 추적
+  aliases: [Rotoscoping]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.motion_tracking
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 모션 트래킹
+  hint: 영상 속 대상의 움직임 추적
+  aliases: [Motion tracking]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.match_moving
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 매치무빙
+  hint: 실사 카메라 움직임과 합성 장면 정합
+  aliases: [Match moving]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.foley
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 폴리
+  hint: 영상 동작에 맞춰 효과음 제작
+  aliases: [Foley]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.film.nonlinear_editing
+  kind: method
+  path: [미디어, 영상과 사진]
+  name: 비선형 편집
+  hint: 원본 순서와 독립적으로 영상 조합
+  aliases: [Nonlinear editing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: film
+- id: atlas.architecture.building_information_modeling
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 건축정보모델링
+  hint: 형상과 건물 속성의 통합 모형
+  aliases: [Building information modeling, BIM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.parametric_design
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 매개변수 설계
+  hint: 변수와 관계로 형상 생성
+  aliases: [Parametric design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.space_syntax
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 공간구문론
+  hint: 공간 연결 구조와 이용 관계 분석
+  aliases: [Space syntax]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.site_analysis
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 대지 분석
+  hint: 지형 기후 접근과 주변 맥락 조사
+  aliases: [Site analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.post_occupancy_evaluation
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 거주후평가
+  hint: 사용 중인 건물의 성능과 경험 평가
+  aliases: [Post occupancy evaluation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.daylighting_analysis
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 주광 분석
+  hint: 자연광의 분포와 이용 가능성 검토
+  aliases: [Daylighting analysis, 실내 자연광]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.solar_shading_analysis
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 일사 차폐 분석
+  hint: 태양 경로와 차양 효과 분석
+  aliases: [Solar shading analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.passive_design
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 패시브 설계
+  hint: 형태와 외피로 환경 부하 감소
+  aliases: [Passive design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.building_energy_simulation
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 건물 에너지 시뮬레이션
+  hint: 기후와 운영 조건의 에너지 성능 계산
+  aliases: [Building energy simulation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.acoustic_design
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 건축 음향설계
+  hint: 소리의 전달과 잔향 조절
+  aliases: [Acoustic design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.universal_accessibility
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 무장애 공간설계
+  hint: 이동과 이용의 물리적 장벽 감소
+  aliases: [Universal accessibility]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.adaptive_reuse
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 적응적 재사용
+  hint: 기존 건물을 새 용도로 전환
+  aliases: [Adaptive reuse]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.transit_oriented_development
+  kind: concept
+  path: [공간, 건축과 도시]
+  name: 대중교통 중심 개발
+  hint: 교통 거점에 토지이용 연계
+  aliases: [Transit oriented development]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.mixed_use_development
+  kind: concept
+  path: [공간, 건축과 도시]
+  name: 복합용도 개발
+  hint: 서로 다른 도시 기능을 함께 배치
+  aliases: [Mixed use development]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.participatory_planning
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 참여계획
+  hint: 지역 주체와 함께 공간 계획 수립
+  aliases: [Participatory planning]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.urban_morphology
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 도시형태 분석
+  hint: 필지 가로 건축의 형태 변화 분석
+  aliases: [Urban morphology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.walkability_assessment
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 보행성 평가
+  hint: 걷기 편의와 연결성 평가
+  aliases: [Walkability assessment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.placemaking
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 장소 만들기
+  hint: 이용과 의미를 바탕으로 공공장소 형성
+  aliases: [Placemaking]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.green_infrastructure
+  kind: concept
+  path: [공간, 건축과 도시]
+  name: 녹색 기반시설
+  hint: 자연 기능을 연결한 공간 체계
+  aliases: [Green infrastructure]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.architecture.viewshed_analysis
+  kind: method
+  path: [공간, 건축과 도시]
+  name: 가시권 분석
+  hint: 지형과 장애물에 따른 시야 계산
+  aliases: [Viewshed analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: architecture
+- id: atlas.mechanical.computer_aided_design
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 컴퓨터 지원 설계
+  hint: 치수와 형상으로 설계 모델 작성
+  aliases: [Computer aided design, CAD]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.computer_aided_manufacturing
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 컴퓨터 지원 제조
+  hint: 설계 모델에서 가공 경로 구성
+  aliases: [Computer aided manufacturing, CAM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.tolerance_analysis
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 공차 분석
+  hint: 부품 치수 오차의 조합 평가
+  aliases: [Tolerance analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.geometric_dimensioning_and_tolerancing
+  kind: concept
+  path: [공학, 기계와 제작]
+  name: 기하공차
+  hint: 형상 위치 자세의 허용 범위 표현
+  aliases: [Geometric dimensioning and tolerancing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.design_for_manufacturing
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 제조용이성 설계
+  hint: 가공 제약과 비용을 고려한 설계
+  aliases: [Design for manufacturing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.design_for_assembly
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 조립용이성 설계
+  hint: 부품 수와 조립 작업의 단순화
+  aliases: [Design for assembly]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.topology_optimization
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 위상최적화
+  hint: 하중 조건에 맞는 재료 배치 탐색
+  aliases: [Topology optimization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.modal_analysis
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 모드 해석
+  hint: 구조물의 고유 진동 형태 분석
+  aliases: [Modal analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.fatigue_analysis
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 피로 해석
+  hint: 반복 하중에 따른 수명 검토
+  aliases: [Fatigue analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.fracture_mechanics
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 파괴역학
+  hint: 균열의 성장과 파괴 조건 분석
+  aliases: [Fracture mechanics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.tribology
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 마찰마모학
+  hint: 접촉면의 마찰 윤활 마모 연구
+  aliases: [Tribology]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.kinematic_analysis
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 기구학 해석
+  hint: 힘과 구별해 운동 관계 분석
+  aliases: [Kinematic analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.multibody_dynamics
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 다물체 동역학
+  hint: 연결된 물체들의 운동 해석
+  aliases: [Multibody dynamics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.computational_fluid_dynamics
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 전산유체역학
+  hint: 유체 지배 방정식의 수치 해석
+  aliases: [Computational fluid dynamics, CFD]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.heat_transfer_analysis
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 열전달 해석
+  hint: 전도 대류 복사의 열 이동 계산
+  aliases: [Heat transfer analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.additive_manufacturing
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 적층제조
+  hint: 재료를 층별로 쌓아 제작
+  aliases: [Additive manufacturing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.subtractive_manufacturing
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 절삭제조
+  hint: 재료를 제거해 형상 제작
+  aliases: [Subtractive manufacturing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.injection_molding
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 사출성형
+  hint: 금형에 재료를 주입해 성형
+  aliases: [Injection molding]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.sheet_metal_forming
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 판금성형
+  hint: 금속판을 굽히거나 늘려 형상 제작
+  aliases: [Sheet metal forming]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical
+- id: atlas.mechanical.non_destructive_testing
+  kind: method
+  path: [공학, 기계와 제작]
+  name: 비파괴검사
+  hint: 대상을 파괴하지 않고 결함 검사
+  aliases: [Non destructive testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: mechanical

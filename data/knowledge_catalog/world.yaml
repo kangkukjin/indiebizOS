@@ -1,5 +1,20 @@
 version: 2
-fragments: [data/knowledge_catalog/structure.yaml, data/knowledge_catalog/bridges.yaml, data/knowledge_catalog/bridge_relations.yaml]
+fragments:
+  - data/knowledge_catalog/structure.yaml
+  - data/knowledge_catalog/bridges.yaml
+  - data/knowledge_catalog/bridge_relations.yaml
+  - data/knowledge_catalog/atlas/01_reasoning.yaml
+  - data/knowledge_catalog/atlas/02_mathematics.yaml
+  - data/knowledge_catalog/atlas/03_algorithms.yaml
+  - data/knowledge_catalog/atlas/04_design.yaml
+  - data/knowledge_catalog/atlas/05_finance.yaml
+  - data/knowledge_catalog/atlas/06_education.yaml
+  - data/knowledge_catalog/atlas/07_visual_art.yaml
+  - data/knowledge_catalog/atlas/08_civil.yaml
+  - data/knowledge_catalog/atlas/09_biology.yaml
+  - data/knowledge_catalog/atlas/10_food.yaml
+  - data/knowledge_catalog/atlas/11_physics.yaml
+  - data/knowledge_catalog/atlas/12_relations.yaml
 entries:
   - id: ortools
     kind: tool

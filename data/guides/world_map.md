@@ -46,10 +46,15 @@ names는 분류와 이름만 전달하는 모드로 선택할 수 있다.
 ## 갱신
 
 정본은 data/knowledge_catalog/world.yaml과 fragments다. kind 미검토 기존 항목은 term이다.
+전 분야의 확장 어휘는 `data/knowledge_catalog/atlas/*.yaml`에 분야별로 나뉜다.
+같은 개념의 번역·약어는 별칭으로 합치고, 새 개념만 새 ID를 부여한다.
+편집 초안과 외부 근거의 확인 범위는 각 항목의 source에서 확인한다.
 path는 편집 분류 경로, broader는 별도로 검토한 직접 일반화 관계다.
 근거와 확인일을 고치고 검토한 로컬 문서의 SHA-256을 evidence.content_hash에 기록한다.
 문서가 변경되면 관계는 stale로 자동 확장에서 빠지고 색인 재생성도 재검토 전 거부한다.
 외부 웹 변경을 자동 감지하는 기능은 없으므로 현재 계약은 사용 시 원문으로 확인한다.
+파일 내용 바이트로 파싱을 재사용하며 내용이 바뀌면 다시 읽는다. mtime이나 파일 크기만으로
+갱신을 판단하지 않는다. 검색어 정규식 캐시도 제한된 개수만 보관한다.
 
 ```bash
 .venv/bin/python3 scripts/build_knowledge_catalog.py

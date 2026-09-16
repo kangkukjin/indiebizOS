@@ -1,0 +1,905 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-17'
+  review: editorial; not individually source-verified
+entries:
+- id: atlas.civil.structural_analysis
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 구조해석
+  hint: 하중에 따른 변형과 부재력 계산
+  aliases: [Structural analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.limit_state_design
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 한계상태 설계
+  hint: 안전과 사용성 한계에 대한 설계
+  aliases: [Limit state design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.seismic_design
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 내진설계
+  hint: 지진 작용에 대한 구조 성능 설계
+  aliases: [Seismic design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.pushover_analysis
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 푸시오버 해석
+  hint: 횡하중 증가에 따른 비선형 구조 응답
+  aliases: [Pushover analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.soil_investigation
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 지반조사
+  hint: 지층과 토질 특성 조사
+  aliases: [Soil investigation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.slope_stability_analysis
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 사면안정 해석
+  hint: 미끄럼과 붕괴 가능성 평가
+  aliases: [Slope stability analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.consolidation_analysis
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 압밀 해석
+  hint: 배수에 따른 지반의 시간별 침하
+  aliases: [Consolidation analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.ground_improvement
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 지반개량
+  hint: 지반의 강도와 변형 특성 개선
+  aliases: [Ground improvement]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.hydrologic_modeling
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 수문 모형화
+  hint: 강수 유출 저장의 과정 모형
+  aliases: [Hydrologic modeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.hydraulic_modeling
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 수리 모형화
+  hint: 물의 흐름과 수위 계산
+  aliases: [Hydraulic modeling]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.flood_routing
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 홍수 추적
+  hint: 홍수파의 이동과 변형 계산
+  aliases: [Flood routing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.stormwater_management
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 우수 관리
+  hint: 강우 유출의 저류 침투 처리
+  aliases: [Stormwater management]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.pavement_design
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 포장설계
+  hint: 교통과 지반 조건에 맞는 도로 구조
+  aliases: [Pavement design]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.traffic_assignment
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 교통량 배정
+  hint: 도로망 경로별 수요 배분
+  aliases: [Traffic assignment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.origin_destination_analysis
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 기종점 분석
+  hint: 이동 출발지와 목적지 흐름 분석
+  aliases: [Origin destination analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.bridge_inspection
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 교량 점검
+  hint: 교량 상태와 손상 조사
+  aliases: [Bridge inspection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.asset_management
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 자산관리
+  hint: 시설 수명과 유지보수 우선순위 관리
+  aliases: [Asset management]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.life_cycle_costing
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 생애주기 비용
+  hint: 건설 운영 유지 폐기의 비용 합산
+  aliases: [Life cycle costing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.construction_sequencing
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 시공 순서 계획
+  hint: 공정 의존성과 현장 작업 배치
+  aliases: [Construction sequencing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.civil.geotechnical_instrumentation
+  kind: method
+  path: [공학, 토목과 인프라]
+  name: 지반 계측
+  hint: 지반과 구조의 변화를 관측
+  aliases: [Geotechnical instrumentation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: civil
+- id: atlas.energy.energy_audit
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 에너지 진단
+  hint: 사용 흐름과 절감 기회 조사
+  aliases: [Energy audit]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.exergy_analysis
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 엑서지 분석
+  hint: 에너지의 유효 일 능력과 손실 분석
+  aliases: [Exergy analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.pinch_analysis
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 핀치 분석
+  hint: 열 교환망의 회수 가능성 분석
+  aliases: [Pinch analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.thermodynamic_cycle_analysis
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 열역학 사이클 분석
+  hint: 상태 변화에 따른 열과 일 계산
+  aliases: [Thermodynamic cycle analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.load_forecasting
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 부하 예측
+  hint: 시간별 전력과 에너지 수요 예측
+  aliases: [Load forecasting]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.demand_response
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 수요반응
+  hint: 신호에 따라 에너지 사용 시점 조정
+  aliases: [Demand response]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.unit_commitment
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 발전기 기동정지 계획
+  hint: 수요에 맞는 발전기 운전 조합
+  aliases: [Unit commitment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.economic_dispatch
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 경제급전
+  hint: 운전 중 발전량의 비용 최적 배분
+  aliases: [Economic dispatch]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.power_flow_analysis
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 조류계산
+  hint: 전력망의 전압과 전력 흐름 계산
+  aliases: [Power flow analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.maximum_power_point_tracking
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 최대전력점 추종
+  hint: 발전 장치의 출력 최적점 추적
+  aliases: [Maximum power point tracking, MPPT]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.state_of_charge_estimation
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 충전상태 추정
+  hint: 배터리 잔여 전하 수준 추정
+  aliases: [State of charge estimation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.battery_management_system
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 배터리 관리시스템
+  hint: 전지의 상태와 보호 동작 관리
+  aliases: [Battery management system]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.pid_control
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: PID 제어
+  hint: 오차의 비례 적분 미분으로 제어
+  aliases: [PID control]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.model_predictive_control
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 모형예측제어
+  hint: 미래 모형을 반복 최적화해 제어
+  aliases: [Model predictive control, MPC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.system_identification
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 시스템 식별
+  hint: 입출력 자료에서 동적 모형 추정
+  aliases: [System identification]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.observability
+  kind: concept
+  path: [공학, 에너지와 제어]
+  name: 관측가능성
+  hint: 출력에서 내부 상태를 구별할 수 있음
+  aliases: [Observability]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.controllability
+  kind: concept
+  path: [공학, 에너지와 제어]
+  name: 제어가능성
+  hint: 입력으로 원하는 상태에 도달 가능
+  aliases: [Controllability]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.stability_margin
+  kind: concept
+  path: [공학, 에너지와 제어]
+  name: 안정여유
+  hint: 불안정에 이르기까지의 여유
+  aliases: [Stability margin]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.frequency_response_analysis
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 주파수 응답 분석
+  hint: 입력 주파수에 따른 출력 특성
+  aliases: [Frequency response analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.energy.root_locus
+  kind: method
+  path: [공학, 에너지와 제어]
+  name: 근궤적
+  hint: 매개변수 변화에 따른 극점 이동
+  aliases: [Root locus]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: energy
+- id: atlas.electronics.ohms_law
+  kind: concept
+  path: [공학, 전자와 통신]
+  name: 옴의 법칙
+  hint: 저항에서 전압 전류의 관계
+  aliases: [Ohms law]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.kirchhoffs_laws
+  kind: concept
+  path: [공학, 전자와 통신]
+  name: 키르히호프 법칙
+  hint: 회로의 전류와 전압 보존 관계
+  aliases: [Kirchhoffs laws]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.nodal_analysis
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 절점해석
+  hint: 절점 전압으로 회로 방정식 구성
+  aliases: [Nodal analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.mesh_analysis
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 망로해석
+  hint: 폐회로 전류로 회로 방정식 구성
+  aliases: [Mesh analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.thevenin_equivalent
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 테브난 등가
+  hint: 선형 회로를 전압원과 저항으로 단순화
+  aliases: [Thevenin equivalent]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.impedance_matching
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 임피던스 정합
+  hint: 신호 전달을 위한 입출력 임피던스 조절
+  aliases: [Impedance matching]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.signal_integrity_analysis
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 신호무결성 분석
+  hint: 전송 과정의 왜곡과 간섭 분석
+  aliases: [Signal integrity analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.power_integrity_analysis
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 전원무결성 분석
+  hint: 전원망의 전압 안정성과 잡음 분석
+  aliases: [Power integrity analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.electromagnetic_compatibility
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 전자파 적합성
+  hint: 장치 간 전자기 간섭 제어
+  aliases: [Electromagnetic compatibility, EMC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.nyquist_sampling_theorem
+  kind: concept
+  path: [공학, 전자와 통신]
+  name: 나이퀴스트 표본화 정리
+  hint: 대역 제한 신호의 표본화 조건
+  aliases: [Nyquist sampling theorem]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.aliasing
+  kind: concept
+  path: [공학, 전자와 통신]
+  name: 앨리어싱
+  hint: 표본화에서 다른 신호가 구별되지 않음
+  aliases: [Aliasing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.digital_filtering
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 디지털 필터링
+  hint: 수치 연산으로 신호 성분 선택
+  aliases: [Digital filtering]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.phase_locked_loop
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 위상고정루프
+  hint: 기준 신호의 위상에 추종
+  aliases: [Phase locked loop]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.pulse_width_modulation
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 펄스폭 변조
+  hint: 펄스 폭으로 평균 출력 조절
+  aliases: [Pulse width modulation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.analog_digital_conversion
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 아날로그 디지털 변환
+  hint: 연속 신호의 표본화와 양자화
+  aliases: [Analog digital conversion]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.error_correcting_codes
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 오류정정부호
+  hint: 중복 정보를 이용해 오류 복원
+  aliases: [Error correcting codes]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.modulation
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 변조
+  hint: 반송 신호에 정보를 부호화
+  aliases: [Modulation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.matched_filtering
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 정합 필터링
+  hint: 알려진 파형의 검출 특성 최적화
+  aliases: [Matched filtering]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.beamforming
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 빔포밍
+  hint: 배열 신호의 위상으로 방향 선택
+  aliases: [Beamforming]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.electronics.hardware_description_language
+  kind: method
+  path: [공학, 전자와 통신]
+  name: 하드웨어 기술언어
+  hint: 디지털 회로 동작과 구조 명세
+  aliases: [Hardware description language]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: electronics
+- id: atlas.chemistry.titration
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 적정
+  hint: 반응 당량으로 농도 결정
+  aliases: [Titration]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.chromatography
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 크로마토그래피
+  hint: 상 사이의 분배 차이로 성분 분리
+  aliases: [Chromatography]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.gas_chromatography
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 기체크로마토그래피
+  hint: 기체 이동상으로 성분 분리
+  aliases: [Gas chromatography, GC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.high_performance_liquid_chromatography
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 고성능 액체크로마토그래피
+  hint: 액체 이동상과 충전 컬럼으로 분리
+  aliases: [High performance liquid chromatography, HPLC]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.mass_spectrometry
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 질량분석
+  hint: 이온의 질량 대 전하 비 분석
+  aliases: [Mass spectrometry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.nuclear_magnetic_resonance
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 핵자기공명
+  hint: 핵스핀의 응답으로 분자 환경 분석
+  aliases: [Nuclear magnetic resonance, NMR]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.infrared_spectroscopy
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 적외선 분광법
+  hint: 분자 진동의 흡수 분석
+  aliases: [Infrared spectroscopy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.uv_visible_spectroscopy
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 자외가시광 분광법
+  hint: 전자 전이의 흡수 분석
+  aliases: [UV visible spectroscopy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.raman_spectroscopy
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 라만 분광법
+  hint: 비탄성 산란으로 진동 정보 분석
+  aliases: [Raman spectroscopy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.x_ray_diffraction
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: X선 회절
+  hint: 회절 패턴으로 결정 구조 분석
+  aliases: [X ray diffraction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.electrochemistry
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 전기화학 분석
+  hint: 전하 이동과 화학 변화의 관계
+  aliases: [Electrochemistry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.cyclic_voltammetry
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 순환전압전류법
+  hint: 전위를 순환해 산화환원 응답 측정
+  aliases: [Cyclic voltammetry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.calorimetry
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 열량측정
+  hint: 과정에서 주고받는 열 측정
+  aliases: [Calorimetry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.reaction_kinetics
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 반응속도론
+  hint: 반응 속도와 반응 경로 분석
+  aliases: [Reaction kinetics]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.retrosynthesis
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 역합성 분석
+  hint: 목표 분자에서 합성 경로 역추적
+  aliases: [Retrosynthesis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.green_chemistry
+  kind: concept
+  path: [과학, 화학, 분석과 합성]
+  name: 녹색화학
+  hint: 유해성과 자원 소모를 줄이는 화학 설계
+  aliases: [Green chemistry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.atom_economy
+  kind: concept
+  path: [과학, 화학, 분석과 합성]
+  name: 원자경제성
+  hint: 반응물 원자가 생성물에 남는 비율
+  aliases: [Atom economy]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.solvent_extraction
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 용매추출
+  hint: 용매 간 분배로 물질 분리
+  aliases: [Solvent extraction]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.distillation
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 증류
+  hint: 휘발성 차이로 혼합물 분리
+  aliases: [Distillation]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.chemistry.crystallization
+  kind: method
+  path: [과학, 화학, 분석과 합성]
+  name: 결정화
+  hint: 용액이나 용융물에서 결정 형성
+  aliases: [Crystallization]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: chemistry
+- id: atlas.materials.phase_diagram
+  kind: concept
+  path: [과학, 재료와 물성]
+  name: 상평형도
+  hint: 조건에 따른 안정한 상의 분포
+  aliases: [Phase diagram]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.structure_property_relationship
+  kind: concept
+  path: [과학, 재료와 물성]
+  name: 구조 물성 관계
+  hint: 재료 구조와 성질의 연결
+  aliases: [Structure property relationship]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.stress_strain_curve
+  kind: concept
+  path: [과학, 재료와 물성]
+  name: 응력 변형률 곡선
+  hint: 하중과 변형의 재료 응답
+  aliases: [Stress strain curve]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.tensile_testing
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 인장시험
+  hint: 당겨서 강도와 변형 특성 측정
+  aliases: [Tensile testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.hardness_testing
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 경도시험
+  hint: 눌림에 대한 저항 측정
+  aliases: [Hardness testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.scanning_electron_microscopy
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 주사전자현미경
+  hint: 전자빔으로 표면 미세구조 관찰
+  aliases: [Scanning electron microscopy, SEM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.transmission_electron_microscopy
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 투과전자현미경
+  hint: 얇은 시편의 전자 투과 구조 관찰
+  aliases: [Transmission electron microscopy, TEM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.atomic_force_microscopy
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 원자힘현미경
+  hint: 탐침과 표면의 힘으로 형상 관찰
+  aliases: [Atomic force microscopy, AFM]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.differential_scanning_calorimetry
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 시차주사열량법
+  hint: 온도 변화에 따른 열 흐름 차이 측정
+  aliases: [Differential scanning calorimetry]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.thermogravimetric_analysis
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 열중량 분석
+  hint: 온도에 따른 질량 변화 측정
+  aliases: [Thermogravimetric analysis]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.heat_treatment
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 열처리
+  hint: 온도 이력으로 재료 조직 조절
+  aliases: [Heat treatment]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.annealing
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 풀림
+  hint: 가열과 냉각으로 조직과 잔류응력 조절
+  aliases: [Annealing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.sintering
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 소결
+  hint: 분말을 결합해 치밀화
+  aliases: [Sintering]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.electroplating
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 전기도금
+  hint: 전기화학 반응으로 금속층 형성
+  aliases: [Electroplating]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.chemical_vapor_deposition
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 화학기상증착
+  hint: 기체 반응으로 표면 박막 형성
+  aliases: [Chemical vapor deposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.physical_vapor_deposition
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 물리기상증착
+  hint: 기화된 물질을 표면에 증착
+  aliases: [Physical vapor deposition]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.composite_layup
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 복합재 적층
+  hint: 보강재 방향과 층을 배치
+  aliases: [Composite layup]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.materials_selection
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 재료 선정
+  hint: 성능과 공정 제약에 맞는 재료 비교
+  aliases: [Materials selection]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.corrosion_testing
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 부식시험
+  hint: 환경에 따른 재료 열화 평가
+  aliases: [Corrosion testing]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials
+- id: atlas.materials.accelerated_aging
+  kind: method
+  path: [과학, 재료와 물성]
+  name: 가속노화 시험
+  hint: 강화된 조건으로 열화 과정 조사
+  aliases: [Accelerated aging, 가속 수명 시험]
+  source:
+    path: docs/world_map/I_atlas_editorial_2026_09_17.md
+    section: materials

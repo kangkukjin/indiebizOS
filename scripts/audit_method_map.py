@@ -17,9 +17,10 @@ import yaml
 
 from knowledge_catalog import CATALOG_PATH, _parse, build_index, search
 from catalog_recall import render
+from world_context import assemble
 
 
-def evaluate(raw, cases):
+def evaluate(raw, cases, presentation="names"):
     fragments = tuple((name, (ROOT / name).read_bytes())
                       for name in yaml.safe_load(raw).get("fragments", []))
     snapshot = _parse(str(ROOT.resolve()), raw, fragments)
@@ -39,7 +40,11 @@ def evaluate(raw, cases):
         rows = []
         for case in cases:
             candidates, mode = search(root, snapshot, case["query"])
-            snippet, ids, _ = render(candidates)
+            if presentation == "structure":
+                context, snippet = assemble(snapshot, candidates)
+                ids = [n["id"] for n in context["nodes"]]
+            else:
+                snippet, ids, _ = render(candidates)
             acceptable = set(case["any_of"])
             negative = case["split"] == "negative"
             chosen = set(ids)
@@ -86,8 +91,10 @@ def evaluate(raw, cases):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", required=True)
+    parser.add_argument("--cases", type=Path, default=ROOT / "data/knowledge_catalog/audit_cases.json")
+    parser.add_argument("--presentation", choices=("names", "structure"), default="names")
     args = parser.parse_args()
-    raw_cases = (ROOT / "data/knowledge_catalog/audit_cases.json").read_bytes()
+    raw_cases = args.cases.read_bytes()
     corpus = json.loads(raw_cases)
     baseline = subprocess.run(
         ["git", "show", f"{corpus['baseline_ref']}:{CATALOG_PATH}"],
@@ -97,8 +104,9 @@ def main():
         "protocol": corpus["protocol"],
         "baseline_ref": corpus["baseline_ref"],
         "cases_sha256": hashlib.sha256(raw_cases).hexdigest(),
-        "before": evaluate(baseline, corpus["cases"]),
-        "after": evaluate((ROOT / CATALOG_PATH).read_bytes(), corpus["cases"]),
+        "presentation": args.presentation,
+        "before": evaluate(baseline, corpus["cases"], args.presentation),
+        "after": evaluate((ROOT / CATALOG_PATH).read_bytes(), corpus["cases"], args.presentation),
     }
     destination = Path(args.output)
     destination.parent.mkdir(parents=True, exist_ok=True)

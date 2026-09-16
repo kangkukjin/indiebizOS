@@ -1,0 +1,222 @@
+{
+  "baseline_ref": "6ece720e",
+  "protocol": "확장 후 작성하여 고정한 진단 질문. 독립·맹검 평가가 아니며 이름 없는 질의의 검색 공백을 보고한다. 이 질문 결과에 맞춘 별칭 추가 없이 비교한다.",
+  "cases": [
+    {
+      "query": "도착하는 고객 수와 처리 속도로 대기시간을 계산해 보고 싶다",
+      "any_of": [
+        "atlas.operations.queueing_theory"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "서로 다른 명부 연결을 해서 한 사람을 중복 집계하지 않으려 한다",
+      "any_of": [
+        "atlas.data.record_linkage"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "옛 필체를 판독하는 데 어떤 연구 분야의 도움을 받으면 될까",
+      "any_of": [
+        "atlas.history.paleography"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "논문에서 만든 가설과 분석 계획을 결과가 나오기 전에 공개하려고 한다",
+      "any_of": [
+        "atlas.research.preregistration"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "사진으로 입체 복원을 해서 작은 조각상을 기록하고 싶다",
+      "any_of": [
+        "atlas.film.photogrammetry"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "주파수 성분으로 변환해서 소리의 특징을 살펴보자",
+      "any_of": [
+        "atlas.time_series.fourier_transform"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "여러 연구의 효과를 하나로 통합하고 싶다",
+      "any_of": [
+        "atlas.statistics.meta_analysis"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "학습 중 피드백을 주려면 평가를 어떻게 넣을까",
+      "any_of": [
+        "atlas.education.formative_assessment"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "같은 질문과 기준으로 지원자를 평가하려고 한다",
+      "any_of": [
+        "atlas.organization.structured_interview"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "비료 투입량과 수확으로 나가는 양을 함께 따져 보자",
+      "any_of": [
+        "atlas.agriculture.nutrient_budgeting"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "시간이 지나며 추세가 바뀐 시점을 찾고 싶다",
+      "any_of": [
+        "atlas.time_series.change_point_detection"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "같은 사람의 다른 이름 표기를 도서 목록에서 연결하고 싶다",
+      "any_of": [
+        "atlas.information.authority_control"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "상자를 적게 쓰면서 물건이 들어가는 배치를 찾고 싶다",
+      "any_of": [
+        "atlas.operations.bin_packing"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "커피 시료 세 개 중 다른 하나를 찾아내는 시음 실험을 하려고 한다",
+      "any_of": [
+        "atlas.food.triangle_test"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "회의 때 왜 반대 의견을 아무도 말하지 않는지 알고 싶다",
+      "any_of": [
+        "atlas.organization.psychological_safety"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "사진 여러 장의 초점을 합쳐서 작은 물건 전체를 선명하게 보이고 싶다",
+      "any_of": [
+        "atlas.film.focus_stacking"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "면접관마다 묻는 내용이 달라 지원자를 공정하게 비교하기 어렵다",
+      "any_of": [
+        "atlas.organization.structured_interview"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "오래된 기록이 진짜인지 작성 배경과 함께 따져 보려고 한다",
+      "any_of": [
+        "atlas.history.source_criticism"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "학교 복도에서 휠체어로 이동하기 어려운 곳을 찾아 고치고 싶다",
+      "any_of": [
+        "atlas.architecture.universal_accessibility"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "프로그램 둘에 같은 입력을 주고 결과가 달라지는지 확인하자",
+      "any_of": [
+        "atlas.software.differential_testing"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "센서 여러 개의 관측 오차를 서로 보완하고 싶다",
+      "any_of": [
+        "atlas.robotics.sensor_fusion"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "냉장 식품을 배송하는 전 과정의 온도가 유지되는지 살펴보자",
+      "any_of": [
+        "atlas.food.cold_chain"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "공장 장비가 자꾸 같은 이유로 멈추는 원인을 찾고 싶다",
+      "any_of": [
+        "atlas.quality.root_cause_analysis"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "아직 제품을 완성하지 않고 구매 의향이 있는지 확인하고 싶다",
+      "any_of": [
+        "atlas.product.smoke_test"
+      ],
+      "reject": [],
+      "split": "validation"
+    },
+    {
+      "query": "고마워",
+      "any_of": [],
+      "reject": [],
+      "split": "negative"
+    },
+    {
+      "query": "안녕",
+      "any_of": [],
+      "reject": [],
+      "split": "negative"
+    },
+    {
+      "query": "방금 말은 취소할게",
+      "any_of": [],
+      "reject": [],
+      "split": "negative"
+    },
+    {
+      "query": "오늘은 기분이 좋아",
+      "any_of": [],
+      "reject": [],
+      "split": "negative"
+    }
+  ]
+}

@@ -1,0 +1,585 @@
+{
+  "version": 1,
+  "baseline_ref": "781eefc7",
+  "protocol": "카탈로그 보완 전 고정한 작성자 평가. validation 문장에 맞춘 사후 별칭 보완 금지; 독립 블라인드 평가 아님.",
+  "cases": [
+    {
+      "id": "d01",
+      "family": "evidence",
+      "split": "development",
+      "query": "논문을 빠뜨리지 않고 포함 기준에 맞춰 근거를 종합하고 싶다",
+      "any_of": [
+        "systematic_review"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v01",
+      "family": "evidence",
+      "split": "validation",
+      "query": "좋아 보이는 논문만 고르지 않도록 검색식과 제외 사유를 남기자",
+      "any_of": [
+        "systematic_review"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d02",
+      "family": "evidence",
+      "split": "development",
+      "query": "핵심 논문의 참고문헌과 후속 인용에서 빠진 연구를 찾자",
+      "any_of": [
+        "citation_chaining",
+        "openalex"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v02",
+      "family": "evidence",
+      "split": "validation",
+      "query": "이미 확보한 논문에서 인용 관계를 따라 관련 연구를 확장해",
+      "any_of": [
+        "citation_chaining",
+        "openalex"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d03",
+      "family": "causal",
+      "split": "development",
+      "query": "개편한 지점과 그대로인 지점의 시행 전후 변화를 비교해 효과를 추정하자",
+      "any_of": [
+        "difference_in_differences"
+      ],
+      "reject": [
+        "randomized_experiment"
+      ]
+    },
+    {
+      "id": "v03",
+      "family": "causal",
+      "split": "validation",
+      "query": "정책을 시행한 지역과 미시행 지역의 변화 차이를 보고 싶다",
+      "any_of": [
+        "difference_in_differences"
+      ],
+      "reject": [
+        "randomized_experiment"
+      ]
+    },
+    {
+      "id": "d04",
+      "family": "causal",
+      "split": "development",
+      "query": "관찰자료에서 교란변수를 구분하고 어떤 변수를 통제할지 정하자",
+      "any_of": [
+        "causal_dag"
+      ],
+      "reject": [
+        "randomized_experiment"
+      ]
+    },
+    {
+      "id": "v04",
+      "family": "causal",
+      "split": "validation",
+      "query": "원인과 결과 사이의 인과관계를 가정으로 그려 분석하자",
+      "any_of": [
+        "causal_dag"
+      ],
+      "reject": [
+        "randomized_experiment"
+      ]
+    },
+    {
+      "id": "d05",
+      "family": "experiment",
+      "split": "development",
+      "query": "사용자를 무작위 배정해 두 화면의 전환율 차이를 검증하자",
+      "any_of": [
+        "randomized_experiment"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v05",
+      "family": "experiment",
+      "split": "validation",
+      "query": "기존 화면과 새 화면에 방문자를 임의 배정해서 구매율을 비교해",
+      "any_of": [
+        "randomized_experiment"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d06",
+      "family": "experiment",
+      "split": "development",
+      "query": "원래 표본을 재추출해 중앙값의 신뢰구간을 구하고 싶다",
+      "any_of": [
+        "bootstrap",
+        "scipy"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v06",
+      "family": "experiment",
+      "split": "validation",
+      "query": "평균의 오차 범위를 데이터 재표집으로 계산하자",
+      "any_of": [
+        "bootstrap",
+        "scipy"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d07",
+      "family": "decision",
+      "split": "development",
+      "query": "가격과 품질 등 여러 기준에 가중치를 주어 대안을 비교하자",
+      "any_of": [
+        "mcda"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v07",
+      "family": "decision",
+      "split": "validation",
+      "query": "납기 비용 품질을 함께 고려해 후보 업체의 우선순위를 정하자",
+      "any_of": [
+        "mcda",
+        "pareto_optimization"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d08",
+      "family": "decision",
+      "split": "development",
+      "query": "비용과 성능이 충돌할 때 한쪽도 일방적으로 나쁘지 않은 대안들을 보자",
+      "any_of": [
+        "pareto_optimization",
+        "mcda"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v08",
+      "family": "decision",
+      "split": "validation",
+      "query": "다목적 설계에서 비용을 줄이면 성능이 떨어지는 절충안을 찾아",
+      "any_of": [
+        "pareto_optimization",
+        "mcda"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d09",
+      "family": "operations",
+      "split": "development",
+      "query": "창구 수를 바꿀 때 대기열과 대기시간이 어떻게 변하는지 모의실험하자",
+      "any_of": [
+        "discrete_event_simulation"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v09",
+      "family": "operations",
+      "split": "validation",
+      "query": "고객 도착과 처리시간의 변동을 넣어 서비스 병목을 시뮬레이션해",
+      "any_of": [
+        "discrete_event_simulation",
+        "value_stream_mapping"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d10",
+      "family": "operations",
+      "split": "development",
+      "query": "선후관계가 있는 작업 중 전체 완료일을 늦추는 일정을 찾아줘",
+      "any_of": [
+        "critical_path",
+        "ortools",
+        "networkx"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v10",
+      "family": "operations",
+      "split": "validation",
+      "query": "프로젝트 납기를 결정하는 작업 경로와 여유시간을 계산해",
+      "any_of": [
+        "critical_path",
+        "networkx"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d11",
+      "family": "reliability",
+      "split": "development",
+      "query": "부품별 고장 형태와 영향을 나열해 예방 우선순위를 정하자",
+      "any_of": [
+        "fmea"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v11",
+      "family": "reliability",
+      "split": "validation",
+      "query": "각 부품이 고장났을 때 상위 시스템에 미치는 영향을 검토하자",
+      "any_of": [
+        "fmea"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d12",
+      "family": "reliability",
+      "split": "development",
+      "query": "서비스 중단이 발생하는 원인 조합을 AND와 OR로 거슬러 분석하자",
+      "any_of": [
+        "fault_tree"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v12",
+      "family": "reliability",
+      "split": "validation",
+      "query": "서버 전체 중단을 일으킬 수 있는 사건 조합을 추적하자",
+      "any_of": [
+        "fault_tree",
+        "fmea"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d13",
+      "family": "software",
+      "split": "development",
+      "query": "다양한 입력을 자동 생성해서 항상 만족해야 할 불변식을 검사하자",
+      "any_of": [
+        "property_testing"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v13",
+      "family": "software",
+      "split": "validation",
+      "query": "정렬 결과의 순서와 원소 보존이 어떤 입력에도 성립하는지 확인해",
+      "any_of": [
+        "property_testing"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d14",
+      "family": "software",
+      "split": "development",
+      "query": "실패를 재현하는 긴 입력을 최소 사례로 줄이고 싶다",
+      "any_of": [
+        "delta_debugging",
+        "property_testing"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v14",
+      "family": "software",
+      "split": "validation",
+      "query": "오류가 유지되는 가장 작은 재현 입력을 찾아줘",
+      "any_of": [
+        "delta_debugging",
+        "property_testing"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d15",
+      "family": "data_quality",
+      "split": "development",
+      "query": "공통 식별자 없이 이름과 주소로 두 고객 명부의 동일인을 연결하자",
+      "any_of": [
+        "splink"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v15",
+      "family": "data_quality",
+      "split": "validation",
+      "query": "서로 다른 명부에서 같은 사람을 확률적으로 매칭하자",
+      "any_of": [
+        "splink"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d16",
+      "family": "data_quality",
+      "split": "development",
+      "query": "들어오는 표의 결측과 범위와 유일성 규칙을 자동 검사하자",
+      "any_of": [
+        "great_expectations"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v16",
+      "family": "data_quality",
+      "split": "validation",
+      "query": "매일 받은 데이터가 스키마와 품질 규칙을 지키는지 검증하자",
+      "any_of": [
+        "great_expectations"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d17",
+      "family": "ux",
+      "split": "development",
+      "query": "사용자가 메뉴 항목을 어떻게 묶는지 보고 정보구조를 설계하자",
+      "any_of": [
+        "card_sorting"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v17",
+      "family": "ux",
+      "split": "validation",
+      "query": "방문자에게 콘텐츠를 분류하게 해서 자연스러운 메뉴 묶음을 찾자",
+      "any_of": [
+        "card_sorting"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d18",
+      "family": "ux",
+      "split": "development",
+      "query": "참가자가 실제 과업을 수행하는 모습을 관찰해 사용성 문제를 찾자",
+      "any_of": [
+        "usability_testing"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v18",
+      "family": "ux",
+      "split": "validation",
+      "query": "가입 과정에서 사람이 어디서 막히는지 화면을 보며 관찰하자",
+      "any_of": [
+        "usability_testing",
+        "journey_mapping"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d19",
+      "family": "learning",
+      "split": "development",
+      "query": "공부한 내용을 책을 덮고 인출하는 연습으로 기억을 확인하자",
+      "any_of": [
+        "retrieval_practice"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v19",
+      "family": "learning",
+      "split": "validation",
+      "query": "다시 읽기보다 답을 떠올리는 퀴즈로 학습을 점검하고 싶다",
+      "any_of": [
+        "retrieval_practice"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d20",
+      "family": "learning",
+      "split": "development",
+      "query": "망각에 맞춰 복습 간격을 조절해서 장기 기억을 강화하자",
+      "any_of": [
+        "spaced_repetition"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v20",
+      "family": "learning",
+      "split": "validation",
+      "query": "잘 아는 카드는 나중에, 잊은 카드는 더 빨리 복습하게 해줘",
+      "any_of": [
+        "spaced_repetition"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d21",
+      "family": "reasoning",
+      "split": "development",
+      "query": "글의 주장과 근거 사이에 빠진 논거와 반론을 점검하자",
+      "any_of": [
+        "toulmin"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v21",
+      "family": "reasoning",
+      "split": "validation",
+      "query": "주장을 뒷받침하는 자료와 숨은 전제를 구분해 설득력을 검토해",
+      "any_of": [
+        "toulmin"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d22",
+      "family": "reasoning",
+      "split": "development",
+      "query": "인터뷰 기록에서 반복되는 의미를 코딩해 주제를 도출하자",
+      "any_of": [
+        "thematic_analysis"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v22",
+      "family": "reasoning",
+      "split": "validation",
+      "query": "인터뷰 참여자들이 경험을 어떻게 해석하는지 주제별로 분석해",
+      "any_of": [
+        "thematic_analysis"
+      ],
+      "reject": []
+    },
+    {
+      "id": "d23",
+      "family": "documents",
+      "split": "development",
+      "query": "스캔 PDF에 검색 가능한 텍스트층을 붙이자",
+      "any_of": [
+        "ocrmypdf",
+        "paddleocr"
+      ],
+      "reject": [
+        "pikepdf",
+        "typst",
+        "quarto"
+      ]
+    },
+    {
+      "id": "v23",
+      "family": "documents",
+      "split": "validation",
+      "query": "이미지뿐인 PDF를 글자로 검색할 수 있게 만들어",
+      "any_of": [
+        "ocrmypdf",
+        "paddleocr",
+        "docling"
+      ],
+      "reject": [
+        "pikepdf",
+        "typst",
+        "quarto"
+      ]
+    },
+    {
+      "id": "d24",
+      "family": "documents",
+      "split": "development",
+      "query": "영상에서 음성 트랙만 추출해서 저장해줘",
+      "any_of": [
+        "ffmpeg"
+      ],
+      "reject": []
+    },
+    {
+      "id": "v24",
+      "family": "documents",
+      "split": "validation",
+      "query": "동영상 파일에서 소리를 분리해 오디오 파일로 바꿔",
+      "any_of": [
+        "ffmpeg"
+      ],
+      "reject": []
+    },
+    {
+      "id": "n1",
+      "family": "abstain",
+      "split": "negative",
+      "query": "안녕하세요",
+      "any_of": [],
+      "reject": []
+    },
+    {
+      "id": "n2",
+      "family": "abstain",
+      "split": "negative",
+      "query": "고마워",
+      "any_of": [],
+      "reject": []
+    },
+    {
+      "id": "n3",
+      "family": "abstain",
+      "split": "negative",
+      "query": "잠시 쉬자",
+      "any_of": [],
+      "reject": []
+    },
+    {
+      "id": "n4",
+      "family": "abstain",
+      "split": "negative",
+      "query": "지금 뭘 하고 있나",
+      "any_of": [],
+      "reject": []
+    },
+    {
+      "id": "n5",
+      "family": "abstain",
+      "split": "negative",
+      "query": "아까 말한 건 취소해",
+      "any_of": [],
+      "reject": []
+    },
+    {
+      "id": "n6",
+      "family": "abstain",
+      "split": "negative",
+      "query": "오늘은 마음이 복잡해",
+      "any_of": [],
+      "reject": []
+    },
+    {
+      "id": "n7",
+      "family": "abstain",
+      "split": "negative",
+      "query": "응 알겠어",
+      "any_of": [],
+      "reject": []
+    },
+    {
+      "id": "n8",
+      "family": "abstain",
+      "split": "negative",
+      "query": "세계의 지도가 충실한가",
+      "any_of": [],
+      "reject": []
+    }
+  ]
+}

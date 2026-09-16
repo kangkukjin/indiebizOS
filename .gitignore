@@ -431,3 +431,5 @@ data/member_imports/
 
 # 세계 지식 카탈로그의 로컬 파생 색인 (정본은 knowledge_catalog/world.yaml)
 data/knowledge_catalog_index/
+# 방법 지도 감사의 고정 합성 질문 — 대화 원문·런타임 기록이 아닌 평가 소스.
+!data/knowledge_catalog/audit_cases.json

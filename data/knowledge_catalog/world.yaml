@@ -228,7 +228,7 @@ entries:
     path: ["지식","문헌"]
     name: "Zotero"
     hint: "논문·도서의 서지·첨부 파일·인용문헌 관리"
-    aliases: ["참고문헌","인용문헌","서지","논문 관리","문헌 관리"]
+    aliases: ["참고문헌 관리","인용문헌 관리","서지 관리","논문 관리","문헌 관리"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: crossref
@@ -462,3 +462,387 @@ entries:
     aliases: ["로컬 이미지","생성 워크플로","이미지 생성","노드 그래프"]
     source:
       path: docs/world_map/B_media_docs_localai.md
+  - id: randomized_experiment
+    path: ["조사","실험 설계"]
+    name: "무작위 대조 실험 (A/B testing)"
+    hint: "무작위 배정이 가능할 때 두 처치의 결과 차이 비교; 사전 지표·표본 설계 필요"
+    aliases: ["a/b","ab test","무작위","무작위 배정","전환율 비교","대조군","구매율 비교"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: randomized_experiment
+  - id: factorial_design
+    path: ["조사","실험 설계"]
+    name: "요인 실험 설계 (Factorial design)"
+    hint: "여러 요인을 조합해 주효과·상호작용을 추정; 실험 횟수와 교락 고려"
+    aliases: ["요인 실험","상호작용","실험 조합","다중 요인","실험 횟수"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: factorial_design
+  - id: bootstrap
+    path: ["계산","불확실성 추정"]
+    name: "부트스트랩 (Bootstrap)"
+    hint: "표본을 재추출해 통계량의 신뢰구간 추정; 표본 대표성과 의존구조 고려"
+    aliases: ["재표집","재추출","신뢰구간","표본 불확실성","오차 범위","bootstrap"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: bootstrap
+  - id: sensitivity_analysis
+    path: ["계산","불확실성 추정"]
+    name: "Sobol 민감도 분석"
+    hint: "입력 범위를 변화시켜 출력 변동에 대한 변수별 기여와 상호작용 분석"
+    aliases: ["민감도","입력 불확실성","영향 변수","모수 영향","sobol"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: sensitivity_analysis
+  - id: causal_dag
+    path: ["조사","인과 추론"]
+    name: "인과 DAG (Causal diagram)"
+    hint: "인과 가정을 방향 그래프로 표현해 교란·매개·통제 변수와 식별 가능성 검토"
+    aliases: ["인과관계","교란변수","통제 변수","매개변수","인과 가정","causal diagram"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: causal_dag
+  - id: difference_in_differences
+    path: ["조사","인과 추론"]
+    name: "차분의 차분 (Difference-in-differences)"
+    hint: "처치·비교 집단의 전후 변화 차이로 효과 추정; 평행추세·선행반응 부재 가정 검토"
+    aliases: ["전후 변화","변화 차이","미시행","정책 효과","평행추세","did"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: difference_in_differences
+  - id: propensity_matching
+    path: ["조사","인과 추론"]
+    name: "성향점수 매칭 (Propensity score matching)"
+    hint: "관측 공변량으로 처치 확률이 비슷한 대상을 매칭; 미관측 교란은 해결하지 못함"
+    aliases: ["성향점수","관찰자료 매칭","집단 균형","처치 확률","비교집단 매칭"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: propensity_matching
+  - id: systematic_review
+    path: ["조사","근거 종합"]
+    name: "체계적 문헌고찰 (Systematic review)"
+    hint: "질문·검색식·포함 기준을 정해 연구를 선별하고 근거를 종합; 편향과 누락 점검"
+    aliases: ["문헌고찰","근거 종합","포함 기준","검색식","제외 사유","연구 종합"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: systematic_review
+  - id: citation_chaining
+    path: ["조사","근거 종합"]
+    name: "인용 추적 (Citation chaining)"
+    hint: "핵심 문헌의 참고문헌·후속 인용을 따라 관련 연구 확장; 검색식 기반 조사와 병행"
+    aliases: ["인용 추적","후속 인용","참고문헌 추적","눈덩이 검색","인용 관계"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: citation_chaining
+  - id: thematic_analysis
+    path: ["조사","질적 분석"]
+    name: "성찰적 주제분석 (Reflexive thematic analysis)"
+    hint: "인터뷰·관찰 기록을 반복 검토·코딩해 의미 패턴과 주제를 해석"
+    aliases: ["주제분석","질적 분석","인터뷰","의미 패턴","질적 코딩"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: thematic_analysis
+  - id: mcda
+    path: ["판단","대안 비교"]
+    name: "다기준 의사결정 분석 (MCDA)"
+    hint: "여러 평가 기준·가중치로 대안을 비교; 가중치 변화에 따른 순위 민감도 점검"
+    aliases: ["다기준","가중치","대안 비교","업체 선정","대안 우선순위","mcda"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: mcda
+  - id: pareto_optimization
+    path: ["판단","대안 비교"]
+    name: "파레토 다목적 최적화"
+    hint: "충돌하는 목적 사이에서 다른 대안에 일방적으로 열등하지 않은 절충 해 집합 탐색"
+    aliases: ["다목적","절충안","비용과 성능","파레토","목적 충돌"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: pareto_optimization
+  - id: discrete_event_simulation
+    path: ["운영","대기와 자원"]
+    name: "이산사건 시뮬레이션 (Discrete-event simulation)"
+    hint: "도착·처리·자원 점유 사건으로 대기열과 병목 모의실험; 입력 분포 검증 필요"
+    aliases: ["대기열","대기시간","모의실험","처리시간","자원 점유","창구 수"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: discrete_event_simulation
+  - id: critical_path
+    path: ["운영","일정 계획"]
+    name: "주공정법 (Critical Path Method)"
+    hint: "작업 기간·선후관계로 완료일을 결정하는 경로와 여유시간 계산"
+    aliases: ["선후관계","여유시간","주공정","프로젝트 납기","일정 지연","critical path"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: critical_path
+  - id: dynamic_programming
+    path: ["계산","최적화"]
+    name: "동적 계획법 (Dynamic programming)"
+    hint: "중복 부분문제의 답을 저장·재사용해 단계별 최적화; 상태·전이·최적부분구조 필요"
+    aliases: ["동적 계획","중복 계산","부분문제","메모이제이션","배낭 문제","점화식"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: dynamic_programming
+  - id: bayesian_optimization
+    path: ["계산","최적화"]
+    name: "베이지안 최적화 (Bayesian optimization)"
+    hint: "평가가 비싼 함수의 대리모형으로 다음 실험점 선택; 탐색·활용 균형 고려"
+    aliases: ["비싼 실험","대리모형","하이퍼파라미터","평가 비용","베이지안 최적화"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: bayesian_optimization
+  - id: property_testing
+    path: ["개발","검증"]
+    name: "속성 기반 테스트 (Property-based testing)"
+    hint: "다양한 입력을 생성해 불변식을 검사하고 실패 입력 축소; 정확한 속성 정의 필요"
+    aliases: ["불변식","입력 생성","경계값","속성 테스트","원소 보존","hypothesis"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: property_testing
+  - id: state_machine_testing
+    path: ["개발","검증"]
+    name: "상태 기반 테스트 (Stateful testing)"
+    hint: "조작 순서를 생성해 상태 전이와 불변식 검사; 참조 모델·사전조건 정의 필요"
+    aliases: ["상태 전이","조작 순서","상태 모델","순서 의존","stateful"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: state_machine_testing
+  - id: delta_debugging
+    path: ["개발","고장 진단"]
+    name: "델타 디버깅 (Delta debugging)"
+    hint: "실패 여부를 반복 시험하며 입력·변경을 줄여 최소 재현 사례 탐색"
+    aliases: ["재현 입력","최소 사례","최소 재현","실패 축소","입력 축소","ddmin"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: delta_debugging
+  - id: fmea
+    path: ["설계","신뢰성"]
+    name: "고장형태·영향분석 (FMEA)"
+    hint: "부품·기능별 고장 형태와 상위 영향을 검토하여 예방·검출 조치 정리"
+    aliases: ["고장 형태","부품 고장","고장 영향","예방 조치","fmea"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: fmea
+  - id: fault_tree
+    path: ["설계","신뢰성"]
+    name: "결함수 분석 (Fault Tree Analysis)"
+    hint: "상위 실패 사건에서 원인 조합을 AND·OR로 전개; 독립성·공통원인 가정 점검"
+    aliases: ["원인 조합","사건 조합","상위 실패","결함수","fault tree"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: fault_tree
+  - id: threat_modeling
+    path: ["설계","보안"]
+    name: "위협 모델링 (Threat modeling)"
+    hint: "자산·데이터 흐름·신뢰 경계에서 위협과 완화책 식별; 구조 변경 때 갱신"
+    aliases: ["위협 모델","신뢰 경계","보안 설계","공격 경로","stride"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: threat_modeling
+  - id: process_mining
+    path: ["운영","흐름 개선"]
+    name: "프로세스 마이닝 (Process mining)"
+    hint: "사례 ID·활동·시각이 있는 이벤트 로그로 실제 업무 흐름과 준수 여부 분석"
+    aliases: ["이벤트 로그","업무 흐름","프로세스 발견","준수 검사","프로세스 마이닝"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: process_mining
+  - id: value_stream_mapping
+    path: ["운영","흐름 개선"]
+    name: "가치흐름도 (Value Stream Mapping)"
+    hint: "공정의 작업·대기·재고·재작업을 그려 낭비와 개선 지점 파악"
+    aliases: ["가치흐름","재작업","공정 대기","낭비 제거","공정 개선"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: value_stream_mapping
+  - id: card_sorting
+    path: ["설계","사용자 경험"]
+    name: "카드 소팅 (Card sorting)"
+    hint: "사용자의 항목 묶음·명명 방식으로 정보구조 설계; 기존 탐색성 검증은 별도"
+    aliases: ["정보구조","메뉴 항목","콘텐츠 분류","메뉴 묶음","카드 소팅"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: card_sorting
+  - id: usability_testing
+    path: ["설계","사용자 경험"]
+    name: "사용성 테스트 (Usability testing)"
+    hint: "대표 사용자의 실제 과업 수행을 관찰해 막힘·오류 발견; 선호 설문과 구분"
+    aliases: ["사용성","과업 수행","사용자 관찰","가입 과정","화면 관찰"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: usability_testing
+  - id: journey_mapping
+    path: ["설계","사용자 경험"]
+    name: "사용자 여정 지도 (Journey mapping)"
+    hint: "목표 달성 과정의 단계·접점·행동·경험을 정리; 조사 근거로 불편 지점 확인"
+    aliases: ["고객 여정","사용자 여정","접점","서비스 경험","경험 흐름"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: journey_mapping
+  - id: retrieval_practice
+    path: ["학습","기억"]
+    name: "인출 연습 (Retrieval practice)"
+    hint: "답을 먼저 떠올리고 피드백으로 확인하는 학습; 단순 재독과 구분"
+    aliases: ["인출","퀴즈","능동 회상","자기 시험","책을 덮고"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: retrieval_practice
+  - id: spaced_repetition
+    path: ["학습","기억"]
+    name: "간격 반복 (Spaced repetition)"
+    hint: "기억 상태에 따라 복습 간격을 조절하여 장기 기억 유지"
+    aliases: ["복습 간격","망각","장기 기억","간격 반복","복습 일정"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: spaced_repetition
+  - id: toulmin
+    path: ["사고","논증"]
+    name: "툴민 논증 모형 (Toulmin model)"
+    hint: "주장·자료·논거·한정·반박을 구분해 논증의 연결과 빠진 전제 점검"
+    aliases: ["주장과 근거","논거","반론","숨은 전제","논증","설득력"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: toulmin
+  - id: time_series_cv
+    path: ["계산","예측 검증"]
+    name: "시계열 교차검증 (Rolling-origin validation)"
+    hint: "과거로 학습하고 이후 구간으로 예측 평가; 시간 순서·정보 누출 방지"
+    aliases: ["시계열 검증","정보 누출","미래 예측","시간 순서","과거 학습"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: time_series_cv
+  - id: survival_analysis
+    path: ["계산","시간 분석"]
+    name: "생존분석 (Survival analysis)"
+    hint: "사건이 일어날 때까지의 시간을 중도절단과 함께 분석; 관측 종료와 사건 구분"
+    aliases: ["중도절단","이탈 시점","고장 시간","생존분석","사건 시간"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: survival_analysis
+  - id: rapidfuzz
+    path: ["데이터","명칭 연결"]
+    name: "RapidFuzz"
+    hint: "문자열 유사도로 철자·표기 차이가 있는 이름 후보 검색; 동일 개체 확정과 구분"
+    aliases: ["철자 오류","문자열 유사도","표기 차이","유사 명칭","오타 매칭"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: rapidfuzz
+  - id: splink
+    path: ["데이터","개체 연결"]
+    name: "Splink"
+    hint: "공통 식별자 없는 명부를 여러 필드의 확률적 레코드 연결로 매칭"
+    aliases: ["동일인","명부","공통 식별자","레코드 연결","확률적 매칭"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: splink
+  - id: great_expectations
+    path: ["데이터","품질 검증"]
+    name: "Great Expectations"
+    hint: "표의 결측·범위·유일성·스키마 같은 품질 규칙을 선언해 검증"
+    aliases: ["품질 규칙","스키마","유일성","데이터 검증","품질 검사"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: great_expectations
+  - id: playwright
+    path: ["개발","브라우저 검증"]
+    name: "Playwright"
+    hint: "브라우저의 클릭·입력·탐색 자동화와 종단간 회귀 검증"
+    aliases: ["브라우저 자동화","e2e","웹 회귀","화면 검증","브라우저 테스트"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: playwright
+  - id: numpy
+    path: ["계산","수치 배열"]
+    name: "NumPy"
+    hint: "다차원 배열의 벡터 연산·선형대수·수치 계산"
+    aliases: ["다차원 배열","행렬 연산","벡터화","배열 계산"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: matplotlib
+    path: ["표현","과학 시각화"]
+    name: "Matplotlib"
+    hint: "축·범례·여러 패널을 갖춘 정적 그래프와 출판용 도표 작성"
+    aliases: ["출판용 그래프","과학 도표","서브플롯","오차 막대"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: pillow
+    path: ["미디어","이미지 처리"]
+    name: "Pillow"
+    hint: "래스터 그림의 자르기·크기 변경·합성·파일 형식 변환"
+    aliases: ["이미지 자르기","이미지 크기","사진 합성","래스터 변환"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: pdfplumber
+    path: ["문서","PDF 추출"]
+    name: "pdfplumber"
+    hint: "문자로 생성된 PDF의 글자 좌표·표 구조 추출"
+    aliases: ["PDF 표 추출","글자 좌표","PDF 테이블","문서 레이아웃 추출"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: pyarrow
+    path: ["데이터","열 기반 교환"]
+    name: "PyArrow"
+    hint: "Arrow 열 기반 메모리와 Parquet 파일 간 데이터 교환"
+    aliases: ["Arrow","열 기반 메모리","Parquet 교환","컬럼형 저장"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: trimesh
+    path: ["공학","메시 분석"]
+    name: "Trimesh"
+    hint: "삼각형 메시의 기하·부피·수밀성 분석과 가공"
+    aliases: ["삼각형 메시","STL 분석","OBJ 분석","수밀성","메시 부피"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: skyfield
+    path: ["과학","천체 위치"]
+    name: "Skyfield"
+    hint: "천체력으로 행성·별·인공위성의 위치와 좌표 계산"
+    aliases: ["천체력","행성 위치","위성 궤도","천체 좌표"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: qiskit
+    path: ["계산","양자 회로"]
+    name: "Qiskit"
+    hint: "양자 회로 구성·변환과 양자 계산 실험 설계"
+    aliases: ["양자 회로","큐비트","양자 게이트"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: gmsh
+    path: ["공학","격자 생성"]
+    name: "Gmsh"
+    hint: "유한요소 해석을 위한 기하 모델과 계산 격자 생성"
+    aliases: ["유한요소 격자","계산 격자","메시 생성","격자 생성"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: pyvista
+    path: ["표현","공학 시각화"]
+    name: "PyVista"
+    hint: "3차원 메시·체적 데이터의 과학 시각화와 후처리"
+    aliases: ["3차원 시각화","체적 데이터","해석 후처리","VTK"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: cantera
+    path: ["과학","반응 시뮬레이션"]
+    name: "Cantera"
+    hint: "화학 반응속도·열역학·수송과 반응기 모형 계산"
+    aliases: ["반응속도","열역학","연소","반응기"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools
+  - id: lean4
+    path: ["사고","형식 증명"]
+    name: "Lean 4"
+    hint: "형식 언어로 작성한 수학 정리와 증명을 기계로 검사"
+    aliases: ["형식 증명","정리 증명","증명 검사","증명 보조기"]
+    source:
+      path: docs/world_map/F_methods_and_validation.md
+      section: source_recovered_tools

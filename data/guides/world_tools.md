@@ -137,7 +137,21 @@ IBL의 어휘는 도구를 가리키고 문장은 그 도구를 조합해 일을
 | H3 · Graphviz · Manim · Quarto | 육각 지리 색인 · 그래프 배치(.dot) · 수학 애니메이션 · 과학 출판 | `pip:h3` · 🔧 `brew install graphviz`+`pip:graphviz` · `pip:manim` · 🔧 `brew install --cask quarto` | |
 | Kiwi (kiwipiepy) | 한국어 형태소·품사·문장 분리 | `pip:kiwipiepy` | Java 불요 — KoNLPy 대체 현 표준 |
 
-**연결(API·프로토콜·플랫폼)의 지도는 아직 이 문서에 없다** — 1차 조사 결과는 `docs/WORLD_MAP_CANDIDATES_2026-09-06.md`(1층 12개 구멍·2층 어휘 후보·쓰지 말 것). 형태는 사용자 판정 대기.
+연결(API·프로토콜·플랫폼)의 1차 조사 원본은 `docs/WORLD_MAP_CANDIDATES_2026-09-06.md`다.
+검토한 이름은 `data/knowledge_catalog/world.yaml`에 반영되어 있다. 분석·판단·검증·학습 방법의 적용 조건과
+공식 근거는 `docs/world_map/F_methods_and_validation.md`, 과제별 공백 감사는 `docs/METHOD_MAP_AUDIT_2026_09_16.md`를 본다.
+
+### 개체 연결·품질·브라우저 검증
+
+2026-09-16 공식 설치 문서에서 확인한 통로다. 이 몸에서 설치·실행을 확인했다는 뜻은 아니다.
+사용 전 §1의 확인·승인 경로를 따른다.
+
+| 도구 | 잘하는 일 | 통로 | 근거·조건 |
+|---|---|---|---|
+| RapidFuzz | 철자·표기 차이의 유사 후보 찾기 | `pip:rapidfuzz` | [공식 설치](https://rapidfuzz.github.io/RapidFuzz/Installation.html); 동일 개체 확정은 별도 |
+| Splink | 여러 필드의 확률적 레코드 연결 | `pip:splink` | [공식 설치](https://moj-analytical-services.github.io/splink/getting_started.html); 차단·비교 규칙 검토 |
+| Great Expectations | 표의 품질 규칙 선언·검증 | `pip:great_expectations` | [공식 설치](https://docs.greatexpectations.io/docs/core/set_up_a_gx_environment/install_gx/); 검증과 정제 구분 |
+| Playwright | 브라우저 자동화·종단간 회귀 검증 | `pip:playwright` | [공식 설치](https://playwright.dev/python/docs/intro); 브라우저 바이너리는 별도, 실제 사용성 평가는 별도 |
 
 ## 3. 지도 갱신 규약 — AI 가 쓰고 사람이 고친다
 

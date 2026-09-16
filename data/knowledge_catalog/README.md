@@ -41,3 +41,10 @@ IBL의 어휘는 도구를 가리키고, IBL 문장은 도구를 조합해 일�
 기존 설정·사건·파일 경로의 `knowledge_catalog`는 호환성을 위해 유지한다.
 정본을 편집한 뒤 `scripts/build_knowledge_catalog.py`로 색인을 만들고 `--check`로 검증한다.
 상세 구조·주입 예산·회귀 기록은 [구현 설계](../../docs/KNOWLEDGE_CATALOG_DESIGN_2026_09_16.md)에 있다.
+
+## 충실도 감사
+
+[과제별 감사](../../docs/METHOD_MAP_AUDIT_2026_09_16.md)는 등재 공백과 검색 공백을 나눠 기록한다.
+[고정 질문](audit_cases.json)과 `scripts/audit_method_map.py`로 기준판과 현재판을 다시 비교할 수 있다.
+추가 확인용 질문에 맞춰 별칭을 보완하지 않으며, 다음 개선에서는 새로운 질문으로 일반화를 확인한다.
+이름 선택의 성공과 실제 작업 결과의 개선은 별도로 판단한다.

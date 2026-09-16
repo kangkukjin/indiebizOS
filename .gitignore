@@ -428,3 +428,6 @@ data/_member_tmp/
 data/member_policy.json
 data/member_usage.json
 data/member_imports/
+
+# 세계 지식 카탈로그의 로컬 파생 색인 (정본은 knowledge_catalog/world.yaml)
+data/knowledge_catalog_index/

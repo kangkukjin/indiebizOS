@@ -425,6 +425,17 @@ class CognitivePipelineMixin:
             execution_memory += "\n" + CONTEXT_UPDATE
             request_type = "EXECUTE"
 
+        # 이름·짧은 설명은 한 턴에 한 번 선택해 의식과 실행자에 같은 조각을 전달한다.
+        from catalog_recall import recall_for_turn
+        catalog = recall_for_turn(self, message, history, request_type=request_type,
+                                  reflex_hint=reflex_hint, force_role=force_role,
+                                  context_update=context_update)
+        if cancel_check and cancel_check():
+            yield {"type": "error", "content": "작업이 취소되었습니다."}
+            return
+        if catalog:
+            execution_memory += "\n" + catalog
+
         # 3. 의식(THINK) / reflex·force_role 모델 스왑
         from episode_logger import record_trajectory_event
         record_trajectory_event("cognition.route", {

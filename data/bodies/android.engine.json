@@ -59,6 +59,7 @@
     "cognition/body_ask",
     "cognition/capability_guard",
     "cognition/capability_guard_runtime",
+    "cognition/catalog_recall",
     "cognition/client_workflows",
     "cognition/cognitive_consciousness",
     "cognition/cognitive_distill",
@@ -140,6 +141,7 @@
     "datastore/ibl_signature_slot",
     "datastore/ibl_usage_db",
     "datastore/install_approvals",
+    "datastore/knowledge_catalog",
     "datastore/multi_chat_db",
     "datastore/node_registry",
     "datastore/notification_manager",
@@ -367,8 +369,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 356,
-    "engine": 330,
+    "total": 358,
+    "engine": 332,
     "blocklist": 26
   }
 }

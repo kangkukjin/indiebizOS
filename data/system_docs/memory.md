@@ -54,6 +54,20 @@ see_also: [architecture.md, ibl.md]
   - 안정/가변 분리 설계 — 변하지 않는 지식은 prefix에 고정해 캐시 적중률 극대화
 - **성격**: 캐시 효율을 위해 의도적으로 정적. 자주 변하면 안 됨.
 
+### 세계 지식 카탈로그 — 이름을 떠올리는 단서
+
+`data/knowledge_catalog/world.yaml`의 이름·분류·짧은 설명·별칭은 세계의 지도를 선별한 데이터다.
+`catalog_recall`이 과제 연결 뒤, 의식 이전에 한 번 검색하여 최대 4항목·전체 600자 이내의
+`<knowledge_catalog>`를 `execution_memory`에 붙인다. 의식 입력과 실행자의 가변 문맥은 같은 조각을 받는다.
+개인 사실의 자동 회상과 구분하며 해마 점수·Reflex 판정에는 섞지 않는다.
+
+`world_pulse_config.json`의 `knowledge_catalog.enabled`로 켠다(미설정=꺼짐).
+`enabled_agents`는 `project_id:agent_id` 실행 키의 목록이며, 생략=주인 공통 범위, 빈 목록=모두 제외다.
+Reflex·강제 역할·문맥 갱신·외부 주체에는 주입하지 않는다. 설정 변경은 다음 턴에 반영된다.
+현재 검색은 로컬 키워드·별칭·FTS이고 모델 추가 호출은 없다. 정본이 잘못되면 생략하고,
+색인이 없거나 낡으면 정본의 어휘 검색을 쓴다. `knowledge_catalog.selected` 궤적에 선택·지연·상태를 남긴다.
+운영·검증: [지식 카탈로그 설계](../../docs/KNOWLEDGE_CATALOG_DESIGN_2026_09_16.md).
+
 ## 2. 작업 기억 — 대화 이력 (단기, 압축)
 
 - **저장**: 시스템 AI는 `system_ai_memory.db:conversations`, 프로젝트 에이전트는 각자 `conversations.db`로 **격리**.

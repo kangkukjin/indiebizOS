@@ -50,6 +50,7 @@ LAYERS = {
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
     "data": {
+        "knowledge_catalog",
         "vocabulary_policy", "vocabulary_state", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
         "forage_memory", "forage_doc", "hippo_tree", "guide_registry", "health_sync", "finance_ledger_sync", "ibl_registry",
@@ -81,6 +82,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
     },
     "cognition": {
+        "catalog_recall",
         "capability_guard", "capability_guard_runtime",
         "member_runner", "member_session", "client_workflows",
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",

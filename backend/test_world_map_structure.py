@@ -83,7 +83,9 @@ def test_evidence_drift_disables_edges_and_blocks_rebuild(world):
     path.write_text(path.read_text() + "\nChanged evidence.\n")
     new = catalog.load_snapshot(world)
     assert old.revision != new.revision
-    assert all(e.status == "stale" for e in new.graph.edges)
+    affected = {e.id for e in old.graph.evidence if e.path == old.graph.evidence[0].path}
+    assert all(e.status == ("stale" if affected.intersection(e.evidence_ids) else "verified")
+               for e in new.graph.edges)
     assert bundle(new.graph, "problem.arch_visual")[0] == {"problem.arch_visual"}
     with pytest.raises(ValueError, match="review"):
         catalog.build_index(world)

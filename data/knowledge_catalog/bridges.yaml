@@ -1,0 +1,592 @@
+entries:
+- id: primary_source_analysis
+  kind: method
+  name: 1차 자료 분석
+  hint: 작성자·시대·목적과 자료의 세부를 대조하여 해석
+  path:
+  - 인문
+  - 역사
+  - 자료 해석
+  aliases:
+  - 사료
+  - 옛 기록
+  - 역사 자료
+  - 당시 기록
+  - primary source analysis
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: history
+- id: oral_history
+  kind: method
+  name: 구술사 (Oral history)
+  hint: 경험자의 이야기를 인터뷰하고 맥락과 함께 보존
+  path:
+  - 인문
+  - 역사
+  - 기록
+  aliases:
+  - 구술사
+  - 생애사
+  - 어르신의 기억
+  - 가족의 역사
+  - 옛날 이야기 기록
+  - oral history
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: history
+- id: oral_history_archive
+  kind: method
+  name: 구술 기록 아카이빙
+  hint: 녹음·전사·설명·접근 약정을 함께 보존
+  path:
+  - 인문
+  - 역사
+  - 기록
+  aliases:
+  - 구술 기록 보존
+  - 인터뷰 보관
+  - 구술 아카이브
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: history
+- id: opportunity_cost
+  kind: concept
+  name: 기회비용 (Opportunity cost)
+  hint: 선택 때문에 포기한 최선의 다른 선택의 가치
+  path:
+  - 경제
+  - 선택
+  aliases:
+  - 기회비용
+  - 포기한 기회
+  - 시간의 가치
+  - opportunity cost
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: economics
+- id: comparative_advantage
+  kind: concept
+  name: 비교우위 (Comparative advantage)
+  hint: 상대적으로 작은 기회비용을 갖는 생산·분업의 기준
+  path:
+  - 경제
+  - 교환
+  aliases:
+  - 비교우위
+  - 분업
+  - comparative advantage
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: economics
+- id: externality
+  kind: concept
+  name: 외부효과 (Externality)
+  hint: 경제적 거래의 편익·책임에 반영되지 않은 제삼자의 손익
+  path:
+  - 경제
+  - 사회적 영향
+  aliases:
+  - 외부효과
+  - 외부성
+  - 제삼자 피해
+  - externality
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: economics
+- id: sunk_cost
+  kind: concept
+  name: 매몰비용 (Sunk cost)
+  hint: 이미 지출하여 앞으로의 선택으로 회수할 수 없는 비용
+  path:
+  - 경제
+  - 선택
+  aliases:
+  - 매몰비용
+  - 이미 쓴 돈
+  - 본전 생각
+  - sunk cost
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: economics
+- id: market_research
+  kind: method
+  name: 시장조사 (Market research)
+  hint: 수요·고객·시장 규모를 자료와 직접 조사로 파악
+  path:
+  - 사업
+  - 시장
+  aliases:
+  - 시장조사
+  - 수요 조사
+  - 고객 조사
+  - 누가 살지
+  - 팔릴지
+  - market research
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: business
+- id: competitive_analysis
+  kind: method
+  name: 경쟁분석 (Competitive analysis)
+  hint: 같은 고객의 문제를 해결하는 경쟁 수단을 비교
+  path:
+  - 사업
+  - 시장
+  aliases:
+  - 경쟁분석
+  - 경쟁사
+  - 경쟁 상품
+  - 비슷한 가게
+  - competitive analysis
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: business
+- id: break_even
+  kind: method
+  name: 손익분기 분석 (Break-even analysis)
+  hint: 매출과 비용이 같아지는 판매량·매출을 추정
+  path:
+  - 사업
+  - 수익 구조
+  aliases:
+  - 손익분기
+  - 얼마나 팔아야
+  - 몇 개 팔아야
+  - 적자를 면하려면
+  - break even
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: business
+- id: survey_research
+  kind: method
+  name: 설문조사 (Survey research)
+  hint: 일정한 질문으로 응답을 모아 집단의 특성을 조사
+  path:
+  - 조사
+  - 사회 조사
+  aliases:
+  - 설문조사
+  - 설문지
+  - 응답자
+  - survey research
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: business
+- id: batna
+  kind: concept
+  name: BATNA (협상 결렬 시 최선의 대안)
+  hint: 합의하지 못할 때 택할 수 있는 최선의 선택
+  path:
+  - 사회
+  - 협상
+  aliases:
+  - batna
+  - 협상 결렬
+  - 합의가 안 되면
+  - 거절할 기준
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: negotiation
+- id: zopa
+  kind: concept
+  name: ZOPA (합의 가능 영역)
+  hint: 당사자들이 받아들일 수 있는 조건의 겹치는 범위
+  path:
+  - 사회
+  - 협상
+  aliases:
+  - zopa
+  - 합의 가능
+  - 협상 범위
+  - 서로 받아들일
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: negotiation
+- id: integrative_negotiation
+  kind: method
+  name: 통합적 협상 (Integrative negotiation)
+  hint: 서로 다른 이해관계를 파악해 공동의 가치를 모색
+  path:
+  - 사회
+  - 협상
+  aliases:
+  - 이해관계 협상
+  - 통합적 협상
+  - 서로 원하는 것
+  - 협상 준비
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: negotiation
+- id: life_cycle_assessment
+  kind: method
+  name: 전과정평가 (Life cycle assessment)
+  hint: 원료·제조·사용·폐기의 환경 영향을 범위를 정해 평가
+  path:
+  - 환경
+  - 제품과 자원
+  aliases:
+  - 전과정평가
+  - lca
+  - 친환경 비교
+  - 환경 영향
+  - 제조부터 폐기
+  - life cycle assessment
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: environment
+- id: life_cycle_inventory
+  kind: method
+  name: 전과정 목록분석 (Life cycle inventory)
+  hint: 제품 과정에 들어오고 나가는 물질·에너지를 정리
+  path:
+  - 환경
+  - 제품과 자원
+  aliases:
+  - 전과정 목록
+  - lci
+  - 물질 투입
+  - 에너지 투입
+  - life cycle inventory
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: environment
+- id: carbon_footprint
+  kind: concept
+  name: 탄소발자국 (Carbon footprint)
+  hint: 정해진 범위의 활동과 관련된 온실가스 배출량
+  path:
+  - 환경
+  - 기후
+  aliases:
+  - 탄소발자국
+  - 온실가스 배출
+  - 탄소 배출
+  - carbon footprint
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: environment
+- id: grade
+  kind: method
+  name: GRADE 근거 확실성 평가
+  hint: 연구 결과 묶음을 얼마나 신뢰할지 체계적으로 평가
+  path:
+  - 건강
+  - 연구근거
+  aliases:
+  - grade
+  - 근거 확실성
+  - 연구를 믿어도
+  - 연구의 신뢰도
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: evidence
+- id: cochrane
+  kind: resource
+  name: Cochrane
+  hint: 건강 관련 체계적 문헌고찰과 쉬운 요약의 자료원
+  path:
+  - 건강
+  - 연구근거
+  aliases:
+  - cochrane
+  - 코크란
+  - 치료 연구 종합
+  - 건강 연구 종합
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: evidence
+- id: mesh
+  kind: resource
+  name: MeSH (의학 주제명)
+  hint: 의생명 주제를 표준 이름과 계층으로 찾는 어휘집
+  path:
+  - 건강
+  - 문헌 검색
+  aliases:
+  - mesh
+  - 의학 주제명
+  - 의학 검색어
+  - medical subject headings
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: evidence
+- id: kwic
+  kind: method
+  name: KWIC 용례 검색
+  hint: 여러 텍스트에서 특정 표현의 앞뒤 문맥을 모아 비교
+  path:
+  - 언어
+  - 말뭉치
+  aliases:
+  - kwic
+  - 용례
+  - 문맥 비교
+  - 실제 쓰임
+  - 앞뒤 문맥
+  - concordance
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: language
+- id: collocation
+  kind: method
+  name: 연어 분석 (Collocation analysis)
+  hint: 기준 단어 주변에 함께 나타나는 단어의 결합을 분석
+  path:
+  - 언어
+  - 말뭉치
+  aliases:
+  - 연어 분석
+  - 단어 조합
+  - 함께 쓰이는
+  - collocation
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: language
+- id: word_frequency
+  kind: method
+  name: 단어 빈도 분석
+  hint: 텍스트에서 낱말이 출현하는 횟수와 분포를 집계
+  path:
+  - 언어
+  - 말뭉치
+  aliases:
+  - 단어 빈도
+  - 자주 나오는 단어
+  - 어휘 빈도
+  - word frequency
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: language
+- id: antconc
+  kind: tool
+  name: AntConc
+  hint: 말뭉치의 용례·연어·단어 빈도를 탐색하는 도구
+  path:
+  - 언어
+  - 말뭉치
+  aliases:
+  - antconc
+  - 앤트콘크
+  - 말뭉치 도구
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: language
+- id: spatial_buffer
+  kind: method
+  name: 공간 버퍼 분석 (Spatial buffer)
+  hint: 지점·선·영역에서 일정 거리 안의 구역을 구성
+  path:
+  - 공간
+  - 지리 분석
+  aliases:
+  - 공간 버퍼
+  - 반경 안
+  - 반경 내
+  - 주변 시설
+  - 일정 거리 이내
+  - spatial buffer
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: spatial
+- id: spatial_join
+  kind: method
+  name: 공간 결합 (Spatial join)
+  hint: 포함·교차 같은 위치 관계로 지리 객체의 속성을 결합
+  path:
+  - 공간
+  - 지리 분석
+  aliases:
+  - 공간 결합
+  - 행정구역별
+  - 구역에 속하는
+  - 지역별 시설
+  - spatial join
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: spatial
+- id: qgis
+  kind: tool
+  name: QGIS
+  hint: 지도 레이어를 편집하고 공간 분석을 수행하는 GIS
+  path:
+  - 공간
+  - 지리 분석
+  aliases:
+  - qgis
+  - 큐지아이에스
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: spatial
+- id: user_interview
+  kind: method
+  name: 사용자 인터뷰 (User interview)
+  hint: 대화로 경험·목적·어려움의 맥락을 탐색
+  path:
+  - 설계
+  - 사용자 탐색
+  aliases:
+  - 사용자 인터뷰
+  - 고객 면담
+  - 사용자 면담
+  - user interview
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: design
+- id: rapid_prototype
+  kind: method
+  name: 신속 프로토타이핑 (Rapid prototyping)
+  hint: 아이디어의 핵심을 간단한 시제품으로 만들어 확인
+  path:
+  - 설계
+  - 시제품
+  aliases:
+  - 프로토타입
+  - 시제품
+  - 종이 모형
+  - 구현 전에 확인
+  - rapid prototyping
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: design
+- id: storyboard
+  kind: method
+  name: 스토리보드 (Storyboard)
+  hint: 연속 장면으로 개념·경험의 흐름을 표현
+  path:
+  - 표현
+  - 이야기
+  aliases:
+  - 스토리보드
+  - 콘티
+  - 장면 순서
+  - storyboard
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: design
+- id: worked_examples
+  kind: method
+  name: 풀이 예제 학습 (Worked examples)
+  hint: 풀이 과정을 읽고 독립 문제 풀이와 연결
+  path:
+  - 학습
+  - 연습 설계
+  aliases:
+  - 풀이 예제
+  - 풀이 과정
+  - 예제를 보고
+  - worked example
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: learning
+- id: self_explanation
+  kind: method
+  name: 자기 설명 (Self-explanation)
+  hint: 풀이의 이유와 개념의 연결을 스스로 설명
+  path:
+  - 학습
+  - 연습 설계
+  aliases:
+  - 자기 설명
+  - 왜 그렇게 푸는지
+  - 원리를 설명
+  - self explanation
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: learning
+- id: close_reading
+  kind: method
+  name: 정독 (Close reading)
+  hint: 텍스트의 표현·형식·세부에서 해석의 근거를 찾음
+  path:
+  - 인문
+  - 문학
+  - 읽기
+  aliases:
+  - 문학 분석
+  - 시를 읽고
+  - 소설 분석
+  - 표현의 의미
+  - close reading
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: writing
+- id: reverse_outline
+  kind: method
+  name: 역개요 (Reverse outline)
+  hint: 쓴 글의 문단별 요지와 역할을 추출하여 구성을 점검
+  path:
+  - 인문
+  - 글쓰기
+  - 퇴고
+  aliases:
+  - 글의 구조
+  - 문단 순서
+  - 논리 흐름
+  - 퇴고
+  - reverse outline
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: writing
+- id: system_dynamics
+  kind: method
+  name: 시스템 동역학 (System dynamics)
+  hint: 축적·흐름·피드백으로 시간에 따른 시스템 변화를 모형화
+  path:
+  - 사고
+  - 시스템
+  aliases:
+  - 시스템 동역학
+  - 악순환
+  - 선순환
+  - 시간 지연
+  - system dynamics
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: systems
+- id: stock_flow
+  kind: concept
+  name: 저량과 유량 (Stocks and flows)
+  hint: 축적된 양과 단위 시간당 변화량의 구별
+  path:
+  - 사고
+  - 시스템
+  aliases:
+  - 저량
+  - 유량
+  - 축적량
+  - 유입과 유출
+  - stocks and flows
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: systems
+- id: causal_loop
+  kind: method
+  name: 인과순환도 (Causal loop diagram)
+  hint: 강화·균형 피드백을 변수 간 영향의 고리로 표현
+  path:
+  - 사고
+  - 시스템
+  aliases:
+  - 인과순환도
+  - 피드백 고리
+  - 되먹임
+  - causal loop
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: systems
+- id: accessibility
+  kind: concept
+  name: 웹 접근성 (Web accessibility)
+  hint: 장애가 있는 사람도 웹의 정보와 기능을 이용할 수 있음
+  path:
+  - 설계
+  - 접근성
+  aliases:
+  - 웹 접근성
+  - 스크린리더
+  - 키보드만으로
+  - 장애인 접근
+  - web accessibility
+  source:
+    path: docs/world_map/H_catalog_bridges.md
+    section: accessibility

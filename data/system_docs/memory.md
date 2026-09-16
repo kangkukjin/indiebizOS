@@ -54,9 +54,9 @@ see_also: [architecture.md, ibl.md]
   - 안정/가변 분리 설계 — 변하지 않는 지식은 prefix에 고정해 캐시 적중률 극대화
 - **성격**: 캐시 효율을 위해 의도적으로 정적. 자주 변하면 안 됨.
 
-### 세계의 지도 — 현재 세계의 방법·도구와 접촉하는 구조적 어휘
+### 세계의 지도 — 지식으로 가는 구조적 어휘 카탈로그
 
-`data/knowledge_catalog/world.yaml`과 fragments는 방법·도구의 이름·분류·뜻·별칭과
+`data/knowledge_catalog/world.yaml`과 fragments는 개념·방법·도구·자료원의 이름·분류·뜻·별칭과
 검토된 문제–방법–도구 관계·근거를 담는다. 이름과 위치에서 전문지식을 회상하거나 검색하도록 돕는다.
 적절한 기존 접근을 유지하며 대안이나 관점 전환을 강제하지 않는다.
 `catalog_recall`이 과제 연결 뒤 의식 이전에 한 번 검색한다. names 모드는 종전 4항목·600자,
@@ -72,7 +72,9 @@ mode는 names/structure, 미설정은 names다. `enabled_agents`는 실행 키�
 근거 문서가 바뀐 관계는 stale로 자동 확장에서 제외한다. 필수 조건은 unknown으로 동봉하고
 담을 수 없으면 묶음을 생략한다. 정본 오류는 기록 후 생략하고 낡은 색인은 어휘 검색으로 폴백한다.
 선택·관계·생략·digest·추정 토큰·지연은 `knowledge_catalog.selected` 사건에 남는다.
-자동 생략과 별개로 등록 스크립트 `세계지도`에서 전체 search/open/neighbors/ancestors 조회가 가능하다.
+자동 생략과 별개로 등록 스크립트 `세계지도`에서 전체 search/browse/open/neighbors/ancestors 조회가 가능하다.
+이름을 모를 때는 browse의 빈 path에서 분야를 열고 하위 분류로 내려간다.
+어휘 일치가 없고 검색어 전체가 정확한 분류명일 때에는 그 분류의 항목을 반환한다.
 [구현 계약](../../docs/WORLD_MAP_STRUCTURE_PLAN_2026_09_17.md) · [사용법](../guides/world_map.md).
 
 ## 2. 작업 기억 — 대화 이력 (단기, 압축)

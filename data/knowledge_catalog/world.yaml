@@ -1,5 +1,5 @@
 version: 2
-fragments: [data/knowledge_catalog/structure.yaml]
+fragments: [data/knowledge_catalog/structure.yaml, data/knowledge_catalog/bridges.yaml, data/knowledge_catalog/bridge_relations.yaml]
 entries:
   - id: ortools
     kind: tool

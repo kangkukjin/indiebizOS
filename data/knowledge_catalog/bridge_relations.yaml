@@ -1,0 +1,334 @@
+evidence:
+- id: ev.catalog.history
+  path: docs/world_map/H_catalog_bridges.md
+  locator: history
+  claim: 역사·기록 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://oralhistory.org/best-practices/
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.economics
+  path: docs/world_map/H_catalog_bridges.md
+  locator: economics
+  claim: 경제·선택 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.core-econ.org/glossary/
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.business
+  path: docs/world_map/H_catalog_bridges.md
+  locator: business
+  claim: 사업·시장 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.sba.gov/counseling/plan-your-business/
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.negotiation
+  path: docs/world_map/H_catalog_bridges.md
+  locator: negotiation
+  claim: 사회·협상 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.pon.harvard.edu/browse-topics/
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.environment
+  path: docs/world_map/H_catalog_bridges.md
+  locator: environment
+  claim: 환경·영향 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.epa.gov/e3/e3-sustainability-tools
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.evidence
+  path: docs/world_map/H_catalog_bridges.md
+  locator: evidence
+  claim: 건강·연구근거 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.cochrane.org/evidence
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.language
+  path: docs/world_map/H_catalog_bridges.md
+  locator: language
+  claim: 언어·말뭉치 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.laurenceanthony.net/software/antconc/releases/AntConc312/help.pdf
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.spatial
+  path: docs/world_map/H_catalog_bridges.md
+  locator: spatial
+  claim: 공간·지리 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://doc.qgis.org/testing/en/docs/training_manual/forestry/updating_stands.html
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.design
+  path: docs/world_map/H_catalog_bridges.md
+  locator: design
+  claim: 설계·탐색 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.designkit.org/methods.html
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.learning
+  path: docs/world_map/H_catalog_bridges.md
+  locator: learning
+  claim: 학습·연습 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://ies.ed.gov/use-work/awards/transforming-algebra-assignments?ID=892
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.writing
+  path: docs/world_map/H_catalog_bridges.md
+  locator: writing
+  claim: 인문·읽기와 쓰기 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://writing.wisc.edu/handbook/academicwriting/closereading/
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.systems
+  path: docs/world_map/H_catalog_bridges.md
+  locator: systems
+  claim: 사고·복잡계 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://live.ocw.mit.edu/courses/esd-00-introduction-to-engineering-systems-spring-2011/pages/lecture-notes/
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+- id: ev.catalog.accessibility
+  path: docs/world_map/H_catalog_bridges.md
+  locator: accessibility
+  claim: 설계·접근성 어휘의 뜻과 연결 대조
+  checked_at: '2026-09-17'
+  url: https://www.w3.org/WAI/fundamentals/accessibility-usability-inclusion/
+  content_hash: 4c7116549577cecb88f7de40bb2617f6a1696d49230a071e8dee91bea56c0472
+edges:
+- id: bridge.oral_history.primary_source_analysis
+  subject: oral_history
+  predicate: related
+  object: primary_source_analysis
+  rationale: 구술 기록도 맥락과 다른 자료를 대조하며 해석한다
+  evidence_ids:
+  - ev.catalog.history
+  status: verified
+- id: bridge.oral_history.oral_history_archive
+  subject: oral_history
+  predicate: related
+  object: oral_history_archive
+  rationale: 인터뷰의 기록은 보존·접근 설계로 이어진다
+  evidence_ids:
+  - ev.catalog.history
+  status: verified
+- id: bridge.opportunity_cost.comparative_advantage
+  subject: opportunity_cost
+  predicate: related
+  object: comparative_advantage
+  rationale: 비교우위는 상대적인 기회비용으로 구별한다
+  evidence_ids:
+  - ev.catalog.economics
+  status: verified
+- id: bridge.opportunity_cost.sunk_cost
+  subject: opportunity_cost
+  predicate: related
+  object: sunk_cost
+  rationale: 포기할 미래 선택의 가치와 회수 불가 과거 지출을 구별한다
+  evidence_ids:
+  - ev.catalog.economics
+  status: verified
+- id: bridge.externality.life_cycle_assessment
+  subject: externality
+  predicate: related
+  object: life_cycle_assessment
+  rationale: 제삼자 환경 영향의 개념에서 제품 영향 평가 방법으로 연결한다
+  evidence_ids:
+  - ev.catalog.environment
+  - ev.catalog.economics
+  status: verified
+- id: bridge.market_research.competitive_analysis
+  subject: market_research
+  predicate: related
+  object: competitive_analysis
+  rationale: 수요와 경쟁 환경을 서로 구별하여 조사한다
+  evidence_ids:
+  - ev.catalog.business
+  status: verified
+- id: bridge.market_research.survey_research
+  subject: market_research
+  predicate: related
+  object: survey_research
+  rationale: 고객을 직접 조사하는 수단 중 하나가 설문이다
+  evidence_ids:
+  - ev.catalog.business
+  status: verified
+- id: bridge.market_research.break_even
+  subject: market_research
+  predicate: related
+  object: break_even
+  rationale: 수요가 있는지와 비용을 충당할 판매량은 다른 질문이다
+  evidence_ids:
+  - ev.catalog.business
+  status: verified
+- id: bridge.batna.zopa
+  subject: batna
+  predicate: related
+  object: zopa
+  rationale: 결렬 대안과 합의 가능한 조건 범위를 구별한다
+  evidence_ids:
+  - ev.catalog.negotiation
+  status: verified
+- id: bridge.integrative_negotiation.batna
+  subject: integrative_negotiation
+  predicate: related
+  object: batna
+  rationale: 이해관계 탐색과 결렬 대안은 협상 판단의 서로 다른 단서다
+  evidence_ids:
+  - ev.catalog.negotiation
+  status: verified
+- id: bridge.life_cycle_assessment.life_cycle_inventory
+  subject: life_cycle_assessment
+  predicate: related
+  object: life_cycle_inventory
+  rationale: 전과정의 투입·산출 목록은 영향 평가와 연결된다
+  evidence_ids:
+  - ev.catalog.environment
+  status: verified
+- id: bridge.life_cycle_assessment.carbon_footprint
+  subject: life_cycle_assessment
+  predicate: related
+  object: carbon_footprint
+  rationale: 전체 환경 영향과 온실가스만의 범위를 구별한다
+  evidence_ids:
+  - ev.catalog.environment
+  status: verified
+- id: bridge.grade.systematic_review
+  subject: grade
+  predicate: related
+  object: systematic_review
+  rationale: 문헌고찰로 모은 결과의 근거 확실성을 평가한다
+  evidence_ids:
+  - ev.catalog.evidence
+  status: verified
+- id: bridge.cochrane.systematic_review
+  subject: cochrane
+  predicate: related
+  object: systematic_review
+  rationale: 체계적 문헌고찰을 찾아갈 수 있는 자료원이다
+  evidence_ids:
+  - ev.catalog.evidence
+  status: verified
+- id: bridge.mesh.cochrane
+  subject: mesh
+  predicate: related
+  object: cochrane
+  rationale: 의생명 검색 어휘와 건강 연구 종합 자료를 연결한다
+  evidence_ids:
+  - ev.catalog.evidence
+  status: verified
+- id: bridge.kwic.collocation
+  subject: kwic
+  predicate: related
+  object: collocation
+  rationale: 문맥을 직접 읽는 방법과 단어 결합을 집계하는 방법을 구별한다
+  evidence_ids:
+  - ev.catalog.language
+  status: verified
+- id: bridge.user_interview.rapid_prototype
+  subject: user_interview
+  predicate: related
+  object: rapid_prototype
+  rationale: 경험을 듣는 조사에서 아이디어를 표현하는 수단으로 연결한다
+  evidence_ids:
+  - ev.catalog.design
+  status: verified
+- id: bridge.rapid_prototype.storyboard
+  subject: rapid_prototype
+  predicate: related
+  object: storyboard
+  rationale: 경험의 흐름은 장면으로 간단히 시제품화할 수 있다
+  evidence_ids:
+  - ev.catalog.design
+  status: verified
+- id: bridge.user_interview.journey_mapping
+  subject: user_interview
+  predicate: related
+  object: journey_mapping
+  rationale: 사용자의 경험에서 시간에 따른 여정 표현으로 연결한다
+  evidence_ids:
+  - ev.catalog.design
+  status: verified
+- id: bridge.worked_examples.self_explanation
+  subject: worked_examples
+  predicate: related
+  object: self_explanation
+  rationale: 풀이 예제에서 단계가 성립하는 이유를 설명한다
+  evidence_ids:
+  - ev.catalog.learning
+  status: verified
+- id: bridge.close_reading.reverse_outline
+  subject: close_reading
+  predicate: related
+  object: reverse_outline
+  rationale: 텍스트의 세부 해석과 작성한 글의 구성 점검을 구별한다
+  evidence_ids:
+  - ev.catalog.writing
+  status: verified
+- id: bridge.system_dynamics.stock_flow
+  subject: system_dynamics
+  predicate: related
+  object: stock_flow
+  rationale: 변화 모형의 축적과 흐름을 구별한다
+  evidence_ids:
+  - ev.catalog.systems
+  status: verified
+- id: bridge.system_dynamics.causal_loop
+  subject: system_dynamics
+  predicate: related
+  object: causal_loop
+  rationale: 피드백 구조를 인과 고리로 표현한다
+  evidence_ids:
+  - ev.catalog.systems
+  status: verified
+- id: bridge.causal_loop.causal_dag
+  subject: causal_loop
+  predicate: related
+  object: causal_dag
+  rationale: 피드백 고리와 비순환 인과 구조는 다른 표현이다
+  evidence_ids:
+  - ev.catalog.systems
+  status: verified
+- id: bridge.accessibility.usability_testing
+  subject: accessibility
+  predicate: related
+  object: usability_testing
+  rationale: 일반 사용성과 장애인의 접근을 함께 살피되 동일시하지 않는다
+  evidence_ids:
+  - ev.catalog.accessibility
+  status: verified
+- id: bridge.antconc.kwic
+  subject: antconc
+  predicate: implements
+  object: kwic
+  rationale: 공식 매뉴얼에 이 분석 기능이 명시되어 있다
+  evidence_ids:
+  - ev.catalog.language
+  status: verified
+- id: bridge.antconc.collocation
+  subject: antconc
+  predicate: implements
+  object: collocation
+  rationale: 공식 매뉴얼에 이 분석 기능이 명시되어 있다
+  evidence_ids:
+  - ev.catalog.language
+  status: verified
+- id: bridge.antconc.word_frequency
+  subject: antconc
+  predicate: implements
+  object: word_frequency
+  rationale: 공식 매뉴얼에 이 분석 기능이 명시되어 있다
+  evidence_ids:
+  - ev.catalog.language
+  status: verified
+- id: bridge.qgis.spatial_buffer
+  subject: qgis
+  predicate: implements
+  object: spatial_buffer
+  rationale: 공식 실습에서 이 공간 분석을 제공한다
+  evidence_ids:
+  - ev.catalog.spatial
+  status: verified
+- id: bridge.qgis.spatial_join
+  subject: qgis
+  predicate: implements
+  object: spatial_join
+  rationale: 공식 실습에서 이 공간 분석을 제공한다
+  evidence_ids:
+  - ev.catalog.spatial
+  status: verified

@@ -9,7 +9,7 @@ from knowledge_catalog import load_snapshot, search
 from runtime_utils import get_base_path
 from world_context import assemble, estimate_tokens
 
-_OPEN = ("<method_map>\n방법의 지도: 이번 일에 쓸 수 있는 도구·방법의 이름입니다. 적합한 것만 활용하세요. "
+_OPEN = ("<method_map>\n세계의 지도: 관련 지식을 회상·검색할 개념·방법·도구의 이름입니다. 적합한 것만 활용하세요. "
          "도구의 설치·사용 가능 여부는 별도 확인이 필요합니다.")
 _CLOSE = "\n</method_map>"
 _FOLLOWUP = re.compile(r"^(?:그걸|그것|그 방법|그대로|이어서|계속|이걸|이 방법)")

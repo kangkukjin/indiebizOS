@@ -87,9 +87,10 @@ github저장소메타:
   registered_at: '2026-09-05T13:46:00'
   timeout: 900
 세계지도:
-  description: '세계의 방법·도구·문제 어휘와 구조를 읽기 전용으로 조회. args: op(search 기본값|open|neighbors|ancestors),
-    query(search에서 생략하면 전체 목록), id(open/neighbors/ancestors), offset(0), limit(1..50,
-    기본 10), revision(후속 페이지의 스냅샷). items와 revision·status·truncated·omitted·next를
+  description: '지식으로 가는 세계의 카탈로그: 분야·개념·방법·도구 어휘를 읽기 전용으로 조회. 이름을 모르면 browse로 분야부터
+    탐색. args: op(search 기본값|browse|open|neighbors|ancestors), query(search에서 생략하면
+    전체 목록), id(open/neighbors/ancestors), offset(0), limit(1..50, 기본 10), path(browse의
+    분류 경로 배열, 생략/빈 배열은 최상위 분야), revision(후속 페이지의 스냅샷). items와 revision·status·truncated·omitted·next·browse를
     반환. 관계의 verified는 출처 대조이며 사용 가능성이나 현재 조건 충족을 뜻하지 않는다.'
   file: world_map_lookup.py
   interpreter: python

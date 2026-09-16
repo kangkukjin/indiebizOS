@@ -70,10 +70,10 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 기존 미조합 어휘·문형 중심의 상상훈련과 출발점을 구분한다.
 → 명세·설계 철학: [ibl.md](ibl.md)
 
-**세계의 지도**는 현재 세계의 방법·도구를 구조적으로 정리한 어휘 모음이다. 관련 이름·분류·문제–방법–도구
+**세계의 지도**는 AI가 가진 지식과 찾아볼 지식으로 가는 구조적 어휘 카탈로그다. 관련 이름·분류·문제–방법–도구
 관계와 근거를 접한 AI가 전문지식을 회상하거나 검색한다. 이미 적절한 접근을 그대로 돕고,
 관점 전환·대안을 강제하지 않는다. 정본은 `data/knowledge_catalog/world.yaml`과 그 fragments이며,
-전체 열람은 등록 스크립트 `세계지도`다. [지도 사용법](../guides/world_map.md) · [도구 실행 통로](../guides/world_tools.md).
+전체 열람은 등록 스크립트 `세계지도`다. 이름을 모르면 `browse`로 분야부터 탐색한다. [지도 사용법](../guides/world_map.md) · [도구 실행 통로](../guides/world_tools.md).
 
 ---
 

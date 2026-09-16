@@ -17,7 +17,7 @@ from pathlib import Path
 
 from knowledge_graph import GRAPH_VERSION, KINDS, Graph, local_path, parse_graph
 
-SEARCH_VERSION = "lexical-4-" + GRAPH_VERSION
+SEARCH_VERSION = "lexical-5-browse-" + GRAPH_VERSION
 CATALOG_PATH = "data/knowledge_catalog/world.yaml"
 INDEX_PATH = "data/knowledge_catalog_index/world.sqlite3"
 # 분야 어휘가 아닌 문법 조사. 앞 음절을 자르지 않고 질의의 어미만 허용한다.
@@ -252,25 +252,63 @@ def search(root, snapshot, query):
     # 분류명은 순위에만 보태며 설명의 같은 단어를 이중 계산해 문턱을 넘기지 않는다.
     if scored and scored[0][1] >= 6:
         scored = [pair for pair in scored if pair[1] >= 6]
+    if not scored:
+        # 분야 이름만 물으면 그 분류의 입구를 연다. 문장 중 일반 주제어는 확장하지 않는다.
+        category = query.strip()
+        scored = [(entry, 1) for entry in snapshot.entries
+                  if any(normalize(part) == category for part in entry.path)]
+        if scored:
+            mode = "category_exact"
+            scored.sort(key=lambda pair: (pair[0].path, pair[0].name, pair[0].id))
     return scored, mode
 
 
-def lookup(root, *, op="search", query="", id="", offset=0, limit=10, revision=""):
+def _browse_rows(snapshot, path):
+    """편집 분류의 한 단계를 열람. 분류를 의미론적 broader 관계로 주장하지 않는다."""
+    from dataclasses import asdict
+    categories, leaves = {}, []
+    prefix = tuple(path)
+    for entry in snapshot.entries:
+        if entry.path[:len(prefix)] != prefix:
+            continue
+        if len(entry.path) == len(prefix):
+            leaves.append(dict(asdict(entry), item_type="entry"))
+        else:
+            child = entry.path[:len(prefix) + 1]
+            categories[child] = categories.get(child, 0) + 1
+    rows = [dict(item_type="category", name=p[-1], path=list(p), entry_count=count,
+                 browse=dict(op="browse", path=list(p), revision=snapshot.revision))
+            for p, count in sorted(categories.items())]
+    return rows + sorted(leaves, key=lambda row: (row["name"], row["id"]))
+
+
+def lookup(root, *, op="search", query="", id="", offset=0, limit=10, revision="", path=None):
     """등록 스크립트의 읽기 전용 전체 지도 조회. snapshot이 다르면 페이지를 섞지 않는다."""
     from dataclasses import asdict
     snapshot = load_snapshot(root)
     if revision and revision != snapshot.revision:
         return {"items": [], "status": "stale_revision", "revision": snapshot.revision,
                 "truncated": False, "omitted": 0}
-    if op not in {"search", "open", "neighbors", "ancestors"}:
-        raise ValueError("op must be search/open/neighbors/ancestors")
+    if op not in {"search", "open", "neighbors", "ancestors", "browse"}:
+        raise ValueError("op must be search/open/neighbors/ancestors/browse")
     if not isinstance(query, str) or not isinstance(id, str):
         raise ValueError("query and id must be strings")
     if type(offset) is not int or type(limit) is not int or offset < 0 or not 1 <= limit <= 50:
         raise ValueError("offset >= 0 and limit 1..50 required")
+    if path is None:
+        path = []
+    if not isinstance(path, list) or len(path) > 5:
+        raise ValueError("path must be a list of up to 5 category names")
+    path = [_text(part, 40) for part in path]
+    if path and op != "browse":
+        raise ValueError("path is only supported for browse")
+    if op == "browse" and (query or id):
+        raise ValueError("browse uses path, not query or id")
     nodes = {e.id: e for e in snapshot.entries}
     mode = "snapshot"
-    if op == "search":
+    if op == "browse":
+        rows = _browse_rows(snapshot, path)
+    elif op == "search":
         if query.strip():
             found, mode = search(root, snapshot, query)
             rows = [dict(asdict(e), score=score) for e, score in found]
@@ -303,6 +341,9 @@ def lookup(root, *, op="search", query="", id="", offset=0, limit=10, revision="
     remaining = max(0, len(rows) - offset - len(page))
     next_args = dict(op=op, query=query, id=id, offset=offset + len(page), limit=limit,
                      revision=snapshot.revision) if remaining else None
+    if next_args is not None and op == "browse":
+        next_args["path"] = path
     return {"items": page, "status": "partial" if remaining else "ok" if rows else "no_match",
             "revision": snapshot.revision, "retrieval_mode": mode, "total": len(rows),
-            "truncated": bool(remaining), "omitted": remaining, "next": next_args}
+            "truncated": bool(remaining), "omitted": remaining, "next": next_args,
+            "browse": dict(op="browse", path=[], revision=snapshot.revision)}

@@ -1,12 +1,16 @@
-# 세계의 지도 — 방법과 도구의 구조적 어휘
+# 세계의 지도 — 지식으로 가는 카탈로그
 
-지도는 현재 세계의 방법·도구를 알고 작업하는 참고 자료다. 이미 적절한 접근을 돕는다.
+지도는 분야·개념·방법·도구의 이름과 연결에서 알고 있는 지식을 회상하거나 검색하는 입구다.
+지식 본문을 저장하는 백과사전이 아니다. 이미 적절한 접근을 돕는다.
 새로운 관점·대안 제시가 의무는 아니다. 학습·연구 목적의 직접 구현과 명시 제약을 존중한다.
 설치 상태·권한·현재 API는 지도 등재와 별개로 확인한다.
 
 ## 전체 어휘 조회
 
 ```ibl
+[self:script]{op:"run", id:"세계지도", args:{op:"browse"}}
+[self:script]{op:"run", id:"세계지도", args:{op:"browse", path:["인문"]}}
+[self:script]{op:"run", id:"세계지도", args:{op:"browse", path:["인문","글쓰기","퇴고"]}}
 [self:script]{op:"run", id:"세계지도", args:{op:"search", query:"3차원"}}
 [self:script]{op:"run", id:"세계지도", args:{op:"open", id:"blender"}}
 [self:script]{op:"run", id:"세계지도", args:{op:"neighbors", id:"problem.arch_visual"}}
@@ -14,6 +18,11 @@
 ```
 
 query를 생략한 search는 전체 목록이다. limit은 1..50(기본 10), offset은 0부터다.
+browse는 해당 경로 바로 아래의 분류와 그 경로에 놓인 어휘를 함께 반환한다.
+item_type=category는 하위 분류이며 entry_count는 그 아래 전체 어휘 수다. 그 행의 browse를
+다음 args로 사용한다. item_type=entry는 어휘다. path는 파일 경로가 아닌 정확한 분류명 배열이다.
+이름·검색어를 모르면 최상위부터 내려간다. search 0건에서도 응답의 browse로 탐색할 수 있다.
+정확한 분류명만 검색하고 어휘 일치가 없으면 그 분야 항목을 반환한다. 일반 문장의 주제어만으로 확장하지 않는다.
 응답의 next를 다음 args로 쓰면 revision이 고정된다. stale_revision이면 처음부터 다시 조회한다.
 open은 어휘·직접 관계·근거를, neighbors는 관계별 이웃과 방향·상태를 반환한다.
 ancestors는 검토된 일반화 관계의 상위 어휘·깊이·경유 경로를 반환한다.

@@ -312,6 +312,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
 
     task_id = f"task_{uuid4().hex}"
     db = None
+    user_id = target_agent_id = None
+    response_saved = False
     try:
         project_path = project_manager.get_project_path(project_id)
         agent_name = runner.config.get("name", agent_id)
@@ -369,6 +371,7 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
 
         # AI 응답 저장
         db.save_message(target_agent_id, user_id, response)
+        response_saved = True
         task = db.get_task(task_id) or {}
         if result.get("error") or result.get("cancelled"):
             with db.get_connection() as conn:
@@ -380,9 +383,18 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         return response
     except Exception as exc:
         if db is not None:
+            from logging_utils import mask_secrets
+            error = mask_secrets(str(exc))
             with db.get_connection() as conn:
                 conn.execute("UPDATE tasks SET status='failed', result=?, completed_at=CURRENT_TIMESTAMP WHERE task_id=?",
-                             (str(exc), task_id))
+                             (error, task_id))
+                # 백그라운드 명령의 호출자는 대화 폴링으로 응답을 받는다.
+                # 실패 상태와 사용자에게 보일 응답을 같은 트랜잭션에 남긴다.
+                if user_id is not None and target_agent_id is not None and not response_saved:
+                    conn.execute("INSERT INTO messages (from_agent_id, to_agent_id, content, contact_type) "
+                                 "VALUES (?, ?, ?, 'gui')",
+                                 (target_agent_id, user_id,
+                                  "요청 처리 중 오류가 발생해 작업이 중단되었습니다.\n" + error))
                 conn.commit()
         raise
     finally:

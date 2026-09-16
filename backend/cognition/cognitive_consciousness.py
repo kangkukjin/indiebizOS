@@ -12,6 +12,7 @@ agent_cognitive.py 에서 분리(2026-07-17, 1500줄 규칙 모듈화). 3단 인
 import json
 import re
 from typing import Optional, Dict, Any
+from consciousness_agent import FramingContractError
 
 
 # ============================================================
@@ -99,7 +100,10 @@ class CognitiveConsciousnessMixin:
                 available_tools = None
 
             from supervision_bus import current as _supervisor_current
+            from pursuit_bind import current as pursuit_current, validate_output
             _supervisor = _supervisor_current()
+            binding = pursuit_current()
+            row = binding.row if binding else None
             result = agent.process(
                 user_message=user_message,
                 history=history,
@@ -111,6 +115,8 @@ class CognitiveConsciousnessMixin:
                 available_tools=available_tools,
                 repair=repair,
                 revision=revision,
+                validate_framing=validate_output,
+                pursuit_state={"bound": bool(row), "id": row["id"] if row else None},
                 **({"supervisor": _supervisor} if _supervisor else {}),
             )
 
@@ -119,6 +125,8 @@ class CognitiveConsciousnessMixin:
                           f"{result.get('task_framing', '')[:60]}")
             return result
 
+        except FramingContractError:
+            raise
         except Exception as e:
             self._log(f"[의식] 실행 실패 (폴백): {e}")
             return None

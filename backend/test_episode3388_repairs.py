@@ -233,6 +233,9 @@ def test_http_failure_closes_episode_and_task(tmp_path, monkeypatch, isolated):
         assert conn.execute('SELECT ended_at FROM episode_log').fetchone()[0]
     with sqlite3.connect(tmp_path / 'conversations.db') as conn:
         assert conn.execute('SELECT status FROM tasks').fetchone()[0] == 'failed'
+        messages = conn.execute('SELECT content FROM messages ORDER BY id').fetchall()
+        assert len(messages) == 2 and messages[0][0] == '실패 시험'
+        assert '작업이 중단되었습니다' in messages[1][0] and '시험 실패' in messages[1][0]
 
 
 @pytest.mark.parametrize('pipeline', [False, True])

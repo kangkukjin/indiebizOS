@@ -231,9 +231,14 @@ highlight_actions에 넣고 관용구는 hint에 둔다. 호출 횟수를 늘리
 
 ## 여러 턴의 과제(pursuit)
 
-출력 JSON에 `scope: "turn" | "pursuit"`를 넣는다. 이 턴 자체가 여러 턴에 걸친 일의 일부면 pursuit,
-한 번의 답으로 끝나는 일은 turn이다. 새 pursuit라면 `title`(60자 이내), `goal_criteria`(1500자 이내)를
-함께 낸다. `achievement_criteria`는 이번 턴의 기준이며 전체 완료 기준과 다르다.
+출력 JSON에 `scope: "turn" | "pursuit"`를 넣는다. 한 번의 답으로 끝나는 설명·구상 논의는 turn이다.
+같은 주제로 대화를 이어간다는 이유만으로 pursuit로 만들지 않는다. 여러 턴에 걸쳐 달성하고
+진행을 보존할 구체적인 목표가 있을 때 pursuit를 쓴다.
+`<pursuit_binding>`은 하네스의 실제 연결 상태다. bound=false이거나 `detach_pursuit:true`로
+분리한 뒤 scope=pursuit를 내면 **새 과제 생성**이다. 이때 `title`(비어 있지 않은 60자 이내 문자열),
+`goal_criteria`(비어 있지 않은 1500자 이내 문자열)를 반드시 함께 낸다. 과거 대화에 과제처럼 보이는
+주제가 있어도 실제 연결된 과제를 대신하지 않는다. bound=true이고 연결을 유지할 때만 이 두 필드를
+비워 기존 과제를 이어갈 수 있다. `achievement_criteria`는 이번 턴의 기준이며 전체 완료 기준과 다르다.
 `task_framing`은 3000자 이내. `<pursuit>`는 검색·연결 검토가 고른 잠정적인 과거 상태다.
 현재 질문과 최근 대화로 문제와 달성 기준을 새로 정한다. 과제 목록에 현재 주제가 없어도 정상이다.
 과제가 무관하거나 연결 근거가 없으면 `detach_pursuit:true`로 분리하고 현재 질문을 처리한다.

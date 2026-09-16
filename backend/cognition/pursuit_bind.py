@@ -422,14 +422,40 @@ def selection_history(history):
     return result
 
 
+def validate_output(out):
+    """의식의 과제 쓰기 제안을 부작용 전에 정본 원장 계약으로 검증한다."""
+    from pursuit_ledger import validate
+    if not isinstance(out, dict):
+        raise ValueError("의식 출력은 JSON 객체여야 합니다")
+    if out.get("scope", "turn") not in ("turn", "pursuit"):
+        raise ValueError("scope는 turn 또는 pursuit입니다")
+    b = current()
+    row = b.row if b and out.get("detach_pursuit") is not True else None
+    if out.get("scope") == "pursuit" and not row:
+        patch = {"title": out.get("title", ""), "goal_criteria": out.get("goal_criteria", ""),
+                 **framing_patch(out, task=b.task if b else "")}
+    elif row:
+        patch = framing_patch(out, row, task=b.task)
+    else:
+        return
+    errors = []
+    for key, value in patch.items():
+        try:
+            validate({key: value})
+        except ValueError as exc:
+            errors.append(str(exc))
+    if errors:
+        raise ValueError("\n".join(errors))
+
+
 def accept_output(consciousness_output, broken="", evidence=""):
     out = consciousness_output
     b = current()
     if not b or not out:
         return
+    validate_output(out)
     if out.get("detach_pursuit") is True:
         b.detach(evidence or "새 의식이 현재 요청과 과제의 오연결을 확인함")
-    b.output = out
     if not b.row and out.get("scope") == "pursuit":
         row = b.ledger.create(out.get("title", ""), out.get("goal_criteria", ""), b.task,
                               origin=b.message[:500], **framing_patch(out, task=b.task))
@@ -437,6 +463,7 @@ def accept_output(consciousness_output, broken="", evidence=""):
     elif b.row:
         b.write(framing_patch(out, b.row, broken, evidence, b.task),
                 kind="framing.revised" if broken else "framing.reviewed", why=evidence)
+    b.output = out
     # 시작 시점의 예측으로 완료 처리하지 않는다. 실행자의 done이 전체 완료를 선언한다.
 
 
@@ -455,6 +482,7 @@ def revised(ch, out, broken, evidence):
     b = ch.pursuit
     token = _current.set(b)
     try:
+        validate_output(out)
         b.revision_count += 1
         if not b.row and not b.detached and out.get("detach_pursuit") is not True:
             goal = b.output.get("goal_criteria") or ch.original.get("achievement_criteria") or b.message

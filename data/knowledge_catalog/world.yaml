@@ -1,6 +1,8 @@
-version: 1
+version: 2
+fragments: [data/knowledge_catalog/structure.yaml]
 entries:
   - id: ortools
+    kind: tool
     path: ["계산","최적화"]
     name: "OR-Tools"
     hint: "인원·시간·순서 제약을 만족하는 배치·경로·일정 최적화"
@@ -71,6 +73,7 @@ entries:
     source:
       path: data/guides/world_tools.md
   - id: duckdb
+    kind: tool
     path: ["데이터","표 분석"]
     name: "DuckDB"
     hint: "CSV·Parquet 등 파일을 SQL로 직접 조회·집계"
@@ -106,6 +109,7 @@ entries:
     source:
       path: data/guides/world_tools.md
   - id: blender
+    kind: tool
     path: ["표현","3D"]
     name: "Blender"
     hint: "3D 모델링·렌더링·애니메이션을 스크립트로 구성"

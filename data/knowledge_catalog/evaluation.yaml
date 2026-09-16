@@ -1,0 +1,37 @@
+# 개발/회귀 사례. 모델 행동 품질을 평가한 결과가 아니다.
+cases:
+  - query: "집을 3차원으로 그려줘"
+    expected_nodes: [blender, method.scene_render]
+  - query: "3차원"
+    expected_nodes: [blender, threejs]
+  - query: "주택의 외관을 입체 이미지로 보고 싶다"
+    expected_nodes: [blender, method.scene_render]
+  - query: "집을 3차원 렌더링으로 그려보고 싶어"
+    expected_nodes: [blender, method.scene_render]
+  - query: "Blender에서 집 외관을 렌더링해 줘"
+    expected_nodes: [blender, method.scene_render]
+  - query: "집을 표현하려고 3차원 렌더링 엔진을 처음부터 만들까"
+    expected_nodes: [blender, method.scene_render]
+  - query: "3차원 렌더링의 원리를 배우려고 직접 구현할래"
+    expected_nodes: [blender, method.scene_render]
+    note: "이름 접촉만 검사한다. 직접 구현 목적을 모델이 존중하는지는 별도 행동 평가 대상."
+  - query: "웹에서 집을 돌려 보면서 확인하고 싶다"
+    expected_nodes: [threejs, method.interactive_3d]
+  - query: "Three.js로 모델을 회전해서 보자"
+    expected_nodes: [threejs, method.interactive_3d]
+  - query: "직원들 당직표를 짜야 하는데 제약이 많아"
+    expected_nodes: [ortools, method.cp_sat, condition.schedule]
+  - query: "OR-Tools로 근무표를 만들자"
+    expected_nodes: [ortools, method.cp_sat]
+  - query: "여러 CSV 파일을 매번 복사해서 합쳐야 해"
+    expected_nodes: [duckdb, method.file_sql]
+  - query: "DuckDB로 파일들을 조회해줘"
+    expected_nodes: [duckdb, method.file_sql]
+  - query: "회의 녹음을 자막으로 바꿔줘"
+    expected_nodes: [whisper]
+  - query: "고마워"
+    expected_nodes: []
+    empty: true
+  - query: "오늘은 기분이 좋아"
+    expected_nodes: []
+    empty: true

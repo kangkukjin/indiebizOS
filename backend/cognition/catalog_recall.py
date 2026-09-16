@@ -1,4 +1,4 @@
-"""방법의 지도: 이번 일에 쓸 도구·방법의 이름을 한 번 고른다. 추가 모델 호출은 없다."""
+"""세계의 지도: 관련 어휘와 구조를 한 번 전달한다. 추가 모델 호출은 없다."""
 import json
 import re
 import time
@@ -7,6 +7,7 @@ from html import escape
 
 from knowledge_catalog import load_snapshot, search
 from runtime_utils import get_base_path
+from world_context import assemble, estimate_tokens
 
 _OPEN = ("<method_map>\n방법의 지도: 이번 일에 쓸 수 있는 도구·방법의 이름입니다. 적합한 것만 활용하세요. "
          "도구의 설치·사용 가능 여부는 별도 확인이 필요합니다.")
@@ -96,11 +97,21 @@ def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
         if agents is not None and registry not in agents:
             event.update(status="agent_disabled")
             return finish()
+        presentation = config.get("mode", "names")
+        if presentation not in {"names", "structure"}:
+            raise ValueError("invalid catalog presentation mode")
+        structured = presentation == "structure"
         requested = {"items": int(config.get("max_items", MAX_ITEMS)),
                      "chars": int(config.get("max_chars", MAX_CHARS))}
         max_items = max(0, min(MAX_ITEMS, requested["items"]))
         max_chars = max(0, min(MAX_CHARS, requested["chars"]))
         effective = {"items": max_items, "chars": max_chars}
+        if structured:
+            requested["chars"] = int(config.get("structure_max_chars", 6000))
+            requested["tokens"] = int(config.get("max_tokens", 1800))
+            max_chars = max(0, min(12000, requested["chars"]))
+            max_tokens = max(0, min(6000, requested["tokens"]))
+            effective.update(chars=max_chars, tokens=max_tokens)
         event.update(requested_budget=requested, effective_budget=effective,
                      clamped=requested != effective)
     except Exception as exc:
@@ -117,8 +128,22 @@ def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
                 candidates, mode = search(root, snapshot, auxiliary)
                 candidates = [(e, score * 0.25) for e, score in candidates]
                 event["query_kind"] = "context"
-            snippet, ids, omitted = render(candidates, max_items, max_chars)
-            event.update(status="selected" if ids else "no_match" if not candidates else "budget_empty",
+            if structured:
+                context, snippet = assemble(
+                    snapshot, candidates, max_seeds=max_items,
+                    max_chars=max_chars, max_tokens=max_tokens,
+                    query_kind=event["query_kind"])
+                ids = [node["id"] for node in context["nodes"]]
+                omitted = context["omitted"]
+                event.update(context_digest=context["digest"], edge_ids=[e["id"] for e in context["edges"]],
+                             seeds=context["seeds"], token_estimate=estimate_tokens(snippet),
+                             token_estimator=context["token_estimator"], presentation="structure")
+            else:
+                snippet, ids, omitted = render(candidates, max_items, max_chars)
+            status = "selected" if ids else "no_match" if not candidates else "budget_empty"
+            if not ids and any(o["reason"] == "unreviewed_required_relation" for o in omitted):
+                status = "withheld"
+            event.update(status=status,
                          mode=mode, revision=snapshot.revision, ids=ids, count=len(ids),
                          chars=len(snippet), omitted=omitted,
                          semantic="unavailable" if config.get("semantic_enabled") else "disabled")

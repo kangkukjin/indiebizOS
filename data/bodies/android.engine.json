@@ -116,6 +116,7 @@
     "cognition/vocab_crystallization",
     "cognition/vocab_overlap_audit",
     "cognition/weekly_audits",
+    "cognition/world_context",
     "cognition/world_pulse",
     "cognition/world_pulse_collectors",
     "cognition/world_pulse_health",
@@ -142,6 +143,7 @@
     "datastore/ibl_usage_db",
     "datastore/install_approvals",
     "datastore/knowledge_catalog",
+    "datastore/knowledge_graph",
     "datastore/multi_chat_db",
     "datastore/node_registry",
     "datastore/notification_manager",
@@ -369,8 +371,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 358,
-    "engine": 332,
+    "total": 360,
+    "engine": 334,
     "blocklist": 26
   }
 }

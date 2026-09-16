@@ -48,5 +48,14 @@
   "goal_eval": {
     "enabled": true,
     "max_rounds": 3
+  },
+  "knowledge_catalog": {
+    "enabled": false,
+    "mode": "structure",
+    "max_items": 4,
+    "max_chars": 600,
+    "structure_max_chars": 6000,
+    "max_tokens": 1800,
+    "semantic_enabled": false
   }
 }

@@ -15,7 +15,9 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-SEARCH_VERSION = "lexical-3"
+from knowledge_graph import GRAPH_VERSION, KINDS, Graph, local_path, parse_graph
+
+SEARCH_VERSION = "lexical-4-" + GRAPH_VERSION
 CATALOG_PATH = "data/knowledge_catalog/world.yaml"
 INDEX_PATH = "data/knowledge_catalog_index/world.sqlite3"
 # 분야 어휘가 아닌 문법 조사. 앞 음절을 자르지 않고 질의의 어미만 허용한다.
@@ -74,12 +76,17 @@ class Entry:
     hint: str
     aliases: tuple
     source: str
+    kind: str = "term"
+    scope_note: str = ""
+    source_section: str = ""
 
 
 @dataclass(frozen=True)
 class Snapshot:
     revision: str
     entries: tuple
+    graph: Graph = Graph()
+    files: tuple = ()
 
 
 def _text(value, limit):
@@ -89,13 +96,16 @@ def _text(value, limit):
 
 
 @lru_cache(maxsize=8)
-def _parse(root, raw):
+def _parse(root, raw, fragments=(), evidence_hashes=()):
     import yaml
     doc = yaml.safe_load(raw)
-    if not isinstance(doc, dict) or doc.get("version") != 1 or not isinstance(doc.get("entries"), list):
+    if not isinstance(doc, dict) or doc.get("version") not in {1, 2} or not isinstance(doc.get("entries"), list):
         raise ValueError("unsupported catalog schema")
+    documents = [doc] + [yaml.safe_load(content) for _, content in fragments]
+    if any(not isinstance(d, dict) or not isinstance(d.get("entries", []), list) for d in documents):
+        raise ValueError("invalid catalog fragment")
     entries, seen = [], set()
-    for row in doc["entries"]:
+    for row in [row for d in documents for row in d.get("entries", [])]:
         eid = _text(row["id"], 80)
         if eid in seen or not re.fullmatch(r"[a-z0-9_.-]+", eid):
             raise ValueError("invalid or duplicate catalog id")
@@ -107,26 +117,51 @@ def _parse(root, raw):
         resolved = (Path(root) / source).resolve()
         if Path(source).is_absolute() or not resolved.is_relative_to(Path(root)) or not resolved.is_file():
             raise ValueError("catalog source must exist within repository")
+        kind = row.get("kind", "term")
+        if kind not in KINDS:
+            raise ValueError("invalid catalog kind")
+        scope = _text(row["scope_note"], 300) if row.get("scope_note") else ""
+        section = _text(row["source"]["section"], 120) if row["source"].get("section") else ""
         entries.append(Entry(eid, tuple(_text(p, 40) for p in path),
                              _text(row["name"], 60), _text(row["hint"], 100),
-                             tuple(_text(a, 60) for a in aliases), source))
-    revision = hashlib.sha256(SEARCH_VERSION.encode() + raw).hexdigest()
-    return Snapshot(revision, tuple(entries))
+                             tuple(_text(a, 60) for a in aliases), source, kind, scope, section))
+    graph = parse_graph(root, documents, entries)
+    digest = hashlib.sha256(SEARCH_VERSION.encode() + raw)
+    for name, content in fragments:
+        digest.update(name.encode() + b"\0" + content)
+    digest.update(json.dumps(evidence_hashes).encode())
+    return Snapshot(digest.hexdigest(), tuple(entries), graph, tuple(name for name, _ in fragments))
 
 
 def load_snapshot(root):
+    import yaml
     root = Path(root).resolve()
-    return _parse(str(root), (root / CATALOG_PATH).read_bytes())
+    raw = (root / CATALOG_PATH).read_bytes()
+    doc = yaml.safe_load(raw)
+    if not isinstance(doc, dict):
+        raise ValueError("invalid catalog")
+    files = doc.get("fragments", [])
+    if not isinstance(files, list) or len(files) != len(set(files)):
+        raise ValueError("invalid catalog fragments")
+    if files and doc.get("version") != 2:
+        raise ValueError("fragments require version 2")
+    fragments = tuple((local_path(root, f), (root / f).read_bytes()) for f in files)
+    documents = [doc] + [yaml.safe_load(content) for _, content in fragments]
+    sources = {local_path(root, e["path"]) for d in documents for e in d.get("evidence", [])}
+    hashes = tuple((p, hashlib.sha256((root / p).read_bytes()).hexdigest()) for p in sorted(sources))
+    return _parse(str(root), raw, fragments, hashes)
 
 
 def source_hashes(root, snapshot):
     return {s: hashlib.sha256((Path(root) / s).read_bytes()).hexdigest()
-            for s in sorted({e.source for e in snapshot.entries})}
+            for s in sorted({e.source for e in snapshot.entries} | {e.path for e in snapshot.graph.evidence})}
 
 
 def build_index(root):
     root = Path(root)
     snapshot = load_snapshot(root)
+    if any(not e.current for e in snapshot.graph.evidence):
+        raise ValueError("catalog evidence changed; review before rebuilding")
     destination = root / INDEX_PATH
     destination.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=".catalog-", dir=destination.parent)
@@ -142,6 +177,10 @@ def build_index(root):
             db.executemany("INSERT INTO catalog VALUES (?, ?, ?, ?, ?)",
                            [(e.id, e.name, " ".join(e.aliases), e.hint, " ".join(e.path))
                             for e in snapshot.entries])
+            db.execute("CREATE TABLE edges (id TEXT PRIMARY KEY, subject TEXT, predicate TEXT, object TEXT, record TEXT)")
+            db.execute("CREATE INDEX edge_subject ON edges(subject)")
+            db.execute("CREATE INDEX edge_object ON edges(object)")
+            db.executemany("INSERT INTO edges VALUES (?, ?, ?, ?, ?)", _edge_rows(snapshot))
         os.replace(temporary, destination)
     finally:
         if os.path.exists(temporary):
@@ -165,9 +204,17 @@ def check_index(root):
         expected = sorted((e.id, e.name, " ".join(e.aliases), e.hint, " ".join(e.path)) for e in snapshot.entries)
         if rows != expected:
             raise ValueError("catalog index content differs from snapshot")
+        if db.execute("SELECT * FROM edges ORDER BY id").fetchall() != sorted(_edge_rows(snapshot)):
+            raise ValueError("catalog edge index differs from snapshot")
         if db.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
             raise ValueError("catalog index integrity check failed")
     return snapshot
+
+
+def _edge_rows(snapshot):
+    from dataclasses import asdict
+    return [(e.id, e.subject, e.predicate, e.object, json.dumps(asdict(e), sort_keys=True))
+            for e in snapshot.graph.edges]
 
 
 def search(root, snapshot, query):
@@ -193,7 +240,7 @@ def search(root, snapshot, query):
     for entry in snapshot.entries:
         name = _mentions_normalized(normalize(entry.name), query)
         aliases = sum(_mentions_normalized(normalize(a), query) for a in entry.aliases)
-        hits = sum(_mentions_normalized(t, query) for t in set(terms(entry.hint)))
+        hits = sum(_mentions_normalized(t, query) for t in set(terms(entry.hint + " " + entry.scope_note)))
         path_hits = sum(_mentions_normalized(t, query) for t in set(terms(" ".join(entry.path))))
         # 일반 단어 하나(자료·변환·처리 등)만으로 연관 있다고 가장하지 않는다.
         if not name and not aliases and hits < 2:
@@ -206,3 +253,56 @@ def search(root, snapshot, query):
     if scored and scored[0][1] >= 6:
         scored = [pair for pair in scored if pair[1] >= 6]
     return scored, mode
+
+
+def lookup(root, *, op="search", query="", id="", offset=0, limit=10, revision=""):
+    """등록 스크립트의 읽기 전용 전체 지도 조회. snapshot이 다르면 페이지를 섞지 않는다."""
+    from dataclasses import asdict
+    snapshot = load_snapshot(root)
+    if revision and revision != snapshot.revision:
+        return {"items": [], "status": "stale_revision", "revision": snapshot.revision,
+                "truncated": False, "omitted": 0}
+    if op not in {"search", "open", "neighbors", "ancestors"}:
+        raise ValueError("op must be search/open/neighbors/ancestors")
+    if not isinstance(query, str) or not isinstance(id, str):
+        raise ValueError("query and id must be strings")
+    if type(offset) is not int or type(limit) is not int or offset < 0 or not 1 <= limit <= 50:
+        raise ValueError("offset >= 0 and limit 1..50 required")
+    nodes = {e.id: e for e in snapshot.entries}
+    mode = "snapshot"
+    if op == "search":
+        if query.strip():
+            found, mode = search(root, snapshot, query)
+            rows = [dict(asdict(e), score=score) for e, score in found]
+        else:
+            rows = [asdict(e) for e in snapshot.entries]
+    elif id not in nodes:
+        return {"items": [], "status": "not_found", "revision": snapshot.revision,
+                "truncated": False, "omitted": 0}
+    elif op == "open":
+        edges = [asdict(e) for e in snapshot.graph.edges if id in {e.subject, e.object}]
+        refs = {r for e in edges for r in e["evidence_ids"]}
+        rows = [dict(asdict(nodes[id]), edges=edges,
+                     evidence=[asdict(e) for e in snapshot.graph.evidence if e.id in refs])]
+    elif op == "neighbors":
+        rows = [dict(asdict(nodes[e.object if e.subject == id else e.subject]), edge=asdict(e))
+                for e in snapshot.graph.edges if id in {e.subject, e.object}]
+    else:
+        rows, frontier, seen = [], [(id, [id])], {id}
+        while frontier:
+            current, path = frontier.pop(0)
+            for edge in snapshot.graph.edges:
+                if edge.subject != current or edge.predicate != "broader" or edge.status != "verified":
+                    continue
+                rows.append(dict(asdict(nodes[edge.object]), depth=len(path),
+                                 via=path + [edge.object], edge=asdict(edge)))
+                if edge.object not in seen:
+                    seen.add(edge.object)
+                    frontier.append((edge.object, path + [edge.object]))
+    page = rows[offset:offset + limit]
+    remaining = max(0, len(rows) - offset - len(page))
+    next_args = dict(op=op, query=query, id=id, offset=offset + len(page), limit=limit,
+                     revision=snapshot.revision) if remaining else None
+    return {"items": page, "status": "partial" if remaining else "ok" if rows else "no_match",
+            "revision": snapshot.revision, "retrieval_mode": mode, "total": len(rows),
+            "truncated": bool(remaining), "omitted": remaining, "next": next_args}

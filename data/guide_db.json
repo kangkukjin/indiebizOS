@@ -1809,6 +1809,21 @@
       ],
       "file": "transit_route.md",
       "topic": "여행·숙소·맛집"
+    },
+    {
+      "id": "world_map",
+      "name": "세계의 지도 — 방법·도구의 구조적 어휘",
+      "description": "세계지도 등록 스크립트로 전체 어휘·관계·근거를 search/open/neighbors/ancestors 조회한다. 자동 주입은 적절한 기존 접근을 돕고 관점 전환을 강제하지 않는다.",
+      "keywords": [
+        "세계 지도",
+        "세계지도",
+        "방법의 지도",
+        "도구 지도",
+        "어휘 관계",
+        "knowledge_catalog"
+      ],
+      "file": "world_map.md",
+      "topic": "시스템·확장"
     }
   ]
 }

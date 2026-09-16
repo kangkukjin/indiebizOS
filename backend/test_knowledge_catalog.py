@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[1]
 @pytest.fixture
 def world(tmp_path):
     snapshot = catalog.load_snapshot(ROOT)
-    for source in {e.source for e in snapshot.entries} | {catalog.CATALOG_PATH}:
+    for source in {e.source for e in snapshot.entries} | {catalog.CATALOG_PATH} | set(snapshot.files) | {e.path for e in snapshot.graph.evidence}:
         target = tmp_path / source
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(ROOT / source, target)
@@ -215,7 +215,10 @@ def test_config_budget_cap_is_observable(enabled, world):
 
 
 @pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REPAIR"])
-def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, isolated, enabled, route):
+@pytest.mark.parametrize("presentation", ["names", "structure"])
+def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, isolated, enabled, world, route, presentation):
+    (world / "data/world_pulse_config.json").write_text(json.dumps({
+        "knowledge_catalog": {"enabled": True, "mode": presentation}}))
     plan_inputs, execution_inputs, searches, builds = [], [], [], []
     runner_info, _events = enabled
     real_search = recall.search
@@ -249,6 +252,7 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
     assert len(searches) == 1 and len(execution_inputs) == 1
     memory = builds[0]
     assert "original memory" in memory and memory.count("<method_map>") == 1
+    assert ("<world_data" in memory) == (presentation == "structure")
     if route != "EXECUTE":
         assert plan_inputs[0]["associative_memory"] == memory
     else:

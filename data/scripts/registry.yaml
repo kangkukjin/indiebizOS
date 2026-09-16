@@ -86,6 +86,15 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-09-05T13:46:00'
   timeout: 900
+세계지도:
+  description: '세계의 방법·도구·문제 어휘와 구조를 읽기 전용으로 조회. args: op(search 기본값|open|neighbors|ancestors),
+    query(search에서 생략하면 전체 목록), id(open/neighbors/ancestors), offset(0), limit(1..50,
+    기본 10), revision(후속 페이지의 스냅샷). items와 revision·status·truncated·omitted·next를
+    반환. 관계의 verified는 출처 대조이며 사용 가능성이나 현재 조건 충족을 뜻하지 않는다.'
+  file: world_map_lookup.py
+  interpreter: python
+  registered_at: '2026-09-17T00:00:00'
+  timeout: 30
 수리적용상태:
   description: '자기수리 변경의 라이브 적용 상태를 기계 대조(세션 원장+격리/라이브 바이트+git) — args: key(특정 세션만),
     commits(최근 N커밋 파일 포함, 기본 1), all(applied/discarded 세션도). 서술 아닌 관측만 적는다'

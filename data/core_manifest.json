@@ -75,6 +75,7 @@
       "github저장소메타.py",
       "nest_tip_rows.py",
       "tips_nest.py",
+      "world_map_lookup.py",
       "나레이션생성.py",
       "나레이션원고추출.py",
       "보고서HTML.py",

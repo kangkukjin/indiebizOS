@@ -70,9 +70,10 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 기존 미조합 어휘·문형 중심의 상상훈련과 출발점을 구분한다.
 → 명세·설계 철학: [ibl.md](ibl.md)
 
-**방법의 지도**는 IBL과 이어지는 바깥 도구·방법의 어휘다. IBL이 도구를 조합해 실행하는 문장을 제공하면,
-지도는 이번 일에 쓸 만한 이름을 제시해 선택할 수 있는 수단을 넓힌다. 이름에서 사용법을 떠올리고 상세 통로를
-확인해 실행으로 연결한다. 정본은 `data/knowledge_catalog/world.yaml`, 상세 통로는 [도구 지도](../guides/world_tools.md)다.
+**세계의 지도**는 현재 세계의 방법·도구를 구조적으로 정리한 어휘 모음이다. 관련 이름·분류·문제–방법–도구
+관계와 근거를 접한 AI가 전문지식을 회상하거나 검색한다. 이미 적절한 접근을 그대로 돕고,
+관점 전환·대안을 강제하지 않는다. 정본은 `data/knowledge_catalog/world.yaml`과 그 fragments이며,
+전체 열람은 등록 스크립트 `세계지도`다. [지도 사용법](../guides/world_map.md) · [도구 실행 통로](../guides/world_tools.md).
 
 ---
 
@@ -84,7 +85,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 사용자 메시지
   ↓ [0] 연상   해마(과거 IBL 사례) + 심층메모리(사용자 사실) 1회 검색
   ↓ [1] 반사   해마 점수 ≥ 0.85 → 곧장 실행(무의식 스킵) / 미만 → 경량 AI가 EXECUTE·THINK 분류
-  ↓ [1a] 방법 지도   켜진 에이전트는 이번 일에 쓸 도구·방법의 이름과 짧은 설명을 선택 (의식·실행 공유)
+  ↓ [1a] 세계 지도   켜진 에이전트는 관련 어휘의 이름·위치·관계·근거를 한 번 선택 (의식·실행 공유)
   ↓ [2] 의식   (THINK만) 본격 AI가 "지금 무슨 문제를 풀어야 하나" 규정 + 달성 기준
   ↓ [3] 실행   IBL 엔진 → 도구 실행
   ↔ [4a] 의식 감독   하네스가 실패 반복·진척 정체·장시간 작업을 관찰, 필요한 때만 의식 호출

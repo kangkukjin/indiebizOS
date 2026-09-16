@@ -1,0 +1,328 @@
+entries:
+- id: method.3d
+  kind: method
+  name: 3차원 장면 표현
+  hint: 공간의 형상과 시점을 장면으로 표현
+  path:
+  - 표현
+  - 3D
+  aliases:
+  - 3차원
+  - 삼차원
+  - 입체 표현
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: problem.arch_visual
+  kind: problem
+  name: 건축 공간 시각화
+  hint: 집·건축 공간의 형태와 외관을 입체 이미지로 확인
+  path:
+  - 표현
+  - 건축
+  aliases:
+  - 집 외관
+  - 건축 시각화
+  - 주택 외관
+  - 집을 입체로
+  - 건물 외관
+  - 집을 그려
+  - 집을 그려보고
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: method.scene_render
+  kind: method
+  name: 장면 기반 렌더링
+  hint: 형상·재질·조명·카메라로 장면 이미지를 생성
+  path:
+  - 표현
+  - 3D
+  - 렌더링
+  aliases:
+  - 외관 렌더
+  - 장면 렌더
+  - 입체 이미지
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: condition.scene
+  kind: condition
+  name: 렌더 장면 입력
+  hint: 형상·재질·조명·카메라를 제작 과정에서 정의
+  path:
+  - 표현
+  - 3D
+  - 입력
+  aliases: []
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: threejs
+  kind: tool
+  name: Three.js
+  hint: 브라우저에서 장면·카메라·렌더러로 3D 표현
+  path:
+  - 표현
+  - 웹 3D
+  aliases:
+  - three.js
+  - threejs
+  - 웹 3d
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: method.interactive_3d
+  kind: method
+  name: 대화형 3D 표시
+  hint: 브라우저에서 모델을 회전·확대하며 확인
+  path:
+  - 표현
+  - 3D
+  - 대화형
+  aliases:
+  - 3d 뷰어
+  - 모델 회전
+  - 입체 모형 회전
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: problem.model_inspection
+  kind: problem
+  name: 입체 모델 탐색
+  hint: 화면에서 모델의 여러 방향과 부분을 살펴봄
+  path:
+  - 표현
+  - 3D
+  - 탐색
+  aliases:
+  - 집을 돌려
+  - 집을 회전
+  - 모델을 돌려
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: problem.staff_schedule
+  kind: problem
+  name: 직원 교대 배치
+  hint: 기간·인원·근무 조건을 만족하는 직원 배정
+  path:
+  - 운영
+  - 일정
+  aliases:
+  - 직원 배치
+  - 인력 일정
+  - 당직표
+  - 근무표
+  - 교대표
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: method.cp_sat
+  kind: method
+  name: CP-SAT 제약 최적화
+  hint: 이산 변수·제약·목적으로 배치를 모델링
+  path:
+  - 계산
+  - 최적화
+  aliases:
+  - cp-sat
+  - 제약 기반 일정
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: condition.schedule
+  kind: condition
+  name: 근무 배치 입력
+  hint: 대상 기간·인원·가용일·강제 제약과 선호를 정의
+  path:
+  - 운영
+  - 일정
+  - 입력
+  aliases: []
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: criterion.schedule
+  kind: criterion
+  name: 근무 조건 충족
+  hint: 필수 인원과 강제 제약의 충족 여부를 검사
+  path:
+  - 운영
+  - 일정
+  - 판정
+  aliases: []
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: problem.multifile
+  kind: problem
+  name: 여러 표 파일의 통합 조회
+  hint: 흩어진 파일의 자료를 함께 검색·집계
+  path:
+  - 데이터
+  - 표 조회
+  aliases:
+  - 여러 파일
+  - 여러 csv
+  - 파일 백 개
+  - 파일들을 합쳐
+  - 파일을 합쳐
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: method.file_sql
+  kind: method
+  name: 파일 기반 SQL 조회
+  hint: 파일을 직접 읽어 필터·집계·결합
+  path:
+  - 데이터
+  - 표 조회
+  - SQL
+  aliases:
+  - 파일 sql
+  - 파일 직접 조회
+  source:
+    path: docs/world_map/G_structure_evidence.md
+- id: condition.file_schema
+  kind: condition
+  name: 파일 경로와 열 대응
+  hint: 접근 가능한 파일 경로·형식·스키마 대응 확인
+  path:
+  - 데이터
+  - 표 조회
+  - 입력
+  aliases: []
+  source:
+    path: docs/world_map/G_structure_evidence.md
+evidence:
+- id: ev.rendering
+  path: docs/world_map/G_structure_evidence.md
+  locator: rendering
+  claim: Blender의 모델링·렌더링 기능과 장면 입력의 관계
+  checked_at: '2026-09-17'
+  content_hash: 335a3a74b1c7b0c0b1fbed7c2349fe71e6c8a928939efe4ad3a62ff2f1ece445
+  url: https://www.blender.org/features/rendering/
+- id: ev.interactive
+  path: docs/world_map/G_structure_evidence.md
+  locator: interactive
+  claim: Three.js의 장면·카메라·렌더러와 브라우저 3D 표현
+  checked_at: '2026-09-17'
+  content_hash: 335a3a74b1c7b0c0b1fbed7c2349fe71e6c8a928939efe4ad3a62ff2f1ece445
+  url: https://threejs.org/manual/en/cameras.html
+- id: ev.scheduling
+  path: docs/world_map/G_structure_evidence.md
+  locator: scheduling
+  claim: CP-SAT으로 직원 교대 배치를 모델링하는 OR-Tools 예제
+  checked_at: '2026-09-17'
+  content_hash: 335a3a74b1c7b0c0b1fbed7c2349fe71e6c8a928939efe4ad3a62ff2f1ece445
+  url: https://developers.google.com/optimization/scheduling/employee_scheduling
+- id: ev.file_query
+  path: docs/world_map/G_structure_evidence.md
+  locator: file_query
+  claim: DuckDB의 glob·파일 목록 기반 여러 파일 조회
+  checked_at: '2026-09-17'
+  content_hash: 335a3a74b1c7b0c0b1fbed7c2349fe71e6c8a928939efe4ad3a62ff2f1ece445
+  url: https://duckdb.org/docs/current/data/multiple_files/overview
+edges:
+- id: render.parent
+  subject: method.scene_render
+  predicate: broader
+  object: method.3d
+  rationale: 장면 렌더링은 3차원 장면 표현 방법에 속한다
+  evidence_ids:
+  - ev.rendering
+  status: verified
+- id: render.tool
+  subject: blender
+  predicate: implements
+  object: method.scene_render
+  rationale: Blender가 장면 제작과 이미지 렌더링을 제공한다
+  evidence_ids:
+  - ev.rendering
+  status: verified
+- id: render.problem
+  subject: method.scene_render
+  predicate: addresses
+  object: problem.arch_visual
+  rationale: 건축 공간을 입체 이미지로 확인할 때 사용하는 방법
+  evidence_ids:
+  - ev.rendering
+  status: verified
+- id: render.input
+  subject: method.scene_render
+  predicate: requires
+  object: condition.scene
+  rationale: 장면 요소를 정의해 렌더한다; 사용자에게 모든 입력을 미리 요구하지 않는다
+  evidence_ids:
+  - ev.rendering
+  status: verified
+- id: interactive.parent
+  subject: method.interactive_3d
+  predicate: broader
+  object: method.3d
+  rationale: 대화형 표시는 3차원 장면 표현 방법에 속한다
+  evidence_ids:
+  - ev.interactive
+  status: verified
+- id: interactive.tool
+  subject: threejs
+  predicate: implements
+  object: method.interactive_3d
+  rationale: 브라우저에서 장면을 표시하는 라이브러리
+  evidence_ids:
+  - ev.interactive
+  status: verified
+- id: interactive.problem
+  subject: method.interactive_3d
+  predicate: addresses
+  object: problem.model_inspection
+  rationale: 회전·확대 등 시점 변화로 모델을 확인
+  evidence_ids:
+  - ev.interactive
+  status: verified
+- id: schedule.problem
+  subject: method.cp_sat
+  predicate: addresses
+  object: problem.staff_schedule
+  rationale: 근무 배치를 이산 제약 문제로 표현할 수 있을 때 검토
+  evidence_ids:
+  - ev.scheduling
+  status: verified
+  condition: 배치를 이산 변수와 제약으로 표현할 수 있음
+- id: schedule.tool
+  subject: ortools
+  predicate: implements
+  object: method.cp_sat
+  rationale: OR-Tools가 CP-SAT 모델링과 풀이를 제공한다
+  evidence_ids:
+  - ev.scheduling
+  status: verified
+- id: schedule.input
+  subject: method.cp_sat
+  predicate: requires
+  object: condition.schedule
+  rationale: 사용자 조건을 정의하고 모순 여부를 검토한다
+  evidence_ids:
+  - ev.scheduling
+  status: verified
+- id: schedule.check
+  subject: method.cp_sat
+  predicate: evaluated_by
+  object: criterion.schedule
+  rationale: 해의 제약 충족을 확인; 공평의 기준은 사용자와 정한다
+  evidence_ids:
+  - ev.scheduling
+  status: verified
+- id: files.problem
+  subject: method.file_sql
+  predicate: addresses
+  object: problem.multifile
+  rationale: 여러 파일의 조회·집계를 SQL로 표현
+  evidence_ids:
+  - ev.file_query
+  status: verified
+- id: files.tool
+  subject: duckdb
+  predicate: implements
+  object: method.file_sql
+  rationale: glob 또는 파일 목록으로 여러 파일을 읽는다
+  evidence_ids:
+  - ev.file_query
+  status: verified
+- id: files.input
+  subject: method.file_sql
+  predicate: requires
+  object: condition.file_schema
+  rationale: 파일 접근과 열 대응을 확인해야 한다
+  evidence_ids:
+  - ev.file_query
+  status: verified

@@ -1,0 +1,46 @@
+# 세계의 지도 — 방법과 도구의 구조적 어휘
+
+지도는 현재 세계의 방법·도구를 알고 작업하는 참고 자료다. 이미 적절한 접근을 돕는다.
+새로운 관점·대안 제시가 의무는 아니다. 학습·연구 목적의 직접 구현과 명시 제약을 존중한다.
+설치 상태·권한·현재 API는 지도 등재와 별개로 확인한다.
+
+## 전체 어휘 조회
+
+```ibl
+[self:script]{op:"run", id:"세계지도", args:{op:"search", query:"3차원"}}
+[self:script]{op:"run", id:"세계지도", args:{op:"open", id:"blender"}}
+[self:script]{op:"run", id:"세계지도", args:{op:"neighbors", id:"problem.arch_visual"}}
+[self:script]{op:"run", id:"세계지도", args:{op:"ancestors", id:"method.scene_render"}}
+```
+
+query를 생략한 search는 전체 목록이다. limit은 1..50(기본 10), offset은 0부터다.
+응답의 next를 다음 args로 쓰면 revision이 고정된다. stale_revision이면 처음부터 다시 조회한다.
+open은 어휘·직접 관계·근거를, neighbors는 관계별 이웃과 방향·상태를 반환한다.
+ancestors는 검토된 일반화 관계의 상위 어휘·깊이·경유 경로를 반환한다.
+원문은 반환된 source.path 또는 evidence.path를 self:read로 열고 공식 URL을 확인한다.
+
+## 자동 전달
+
+설정 knowledge_catalog.mode=structure에서 이름·전체 분류 경로·뜻·검토된 관계·근거를
+같은 revision/digest로 의식과 실행에 전달한다. names는 종전 이름·설명 모드다.
+허용된 owner/agent/route 범위는 기존 설정을 따른다. 자동 예산으로 생략돼도 전체 열람 가능하다.
+문제↔방법↔도구를 양방향 조회하며 조건은 현재 충족 여부 미확인이다.
+사용자의 말만으로 설치·적용 가능·권한을 단정하지 않는다.
+
+## 갱신
+
+정본은 data/knowledge_catalog/world.yaml과 fragments다. kind 미검토 기존 항목은 term이다.
+path는 편집 분류 경로, broader는 별도로 검토한 직접 일반화 관계다.
+근거와 확인일을 고치고 검토한 로컬 문서의 SHA-256을 evidence.content_hash에 기록한다.
+문서가 변경되면 관계는 stale로 자동 확장에서 빠지고 색인 재생성도 재검토 전 거부한다.
+외부 웹 변경을 자동 감지하는 기능은 없으므로 현재 계약은 사용 시 원문으로 확인한다.
+
+```bash
+.venv/bin/python3 scripts/build_knowledge_catalog.py
+.venv/bin/python3 scripts/build_knowledge_catalog.py --check
+.venv/bin/python3 scripts/evaluate_world_map.py
+```
+
+틀린 관계를 발견하면 해당 ID·근거·정정 내용을 데이터에 반영한다. 자동 주입 사건에는
+revision·context_digest·seed·관계 ID·생략 이유·추정 토큰·지연이 남는다.
+토큰은 UTF-8 바이트/2 추정이며 실제 모델 청구 토큰과 다르다.

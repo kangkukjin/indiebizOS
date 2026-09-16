@@ -13,24 +13,28 @@ import shutil
 import subprocess
 import tempfile
 from collections import Counter
+import yaml
 
 from knowledge_catalog import CATALOG_PATH, _parse, build_index, search
 from catalog_recall import render
 
 
 def evaluate(raw, cases):
-    snapshot = _parse(str(ROOT.resolve()), raw)
+    fragments = tuple((name, (ROOT / name).read_bytes())
+                      for name in yaml.safe_load(raw).get("fragments", []))
+    snapshot = _parse(str(ROOT.resolve()), raw, fragments)
     # 두 판 모두 자기 정본으로 FTS를 빌드한다. 낡은 색인 폴백과의 비교를 피한다.
     with tempfile.TemporaryDirectory(prefix="method-map-audit-") as folder:
         root = Path(folder)
-        for source in {e.source for e in snapshot.entries}:
+        for source in ({e.source for e in snapshot.entries} | set(snapshot.files)
+                       | {e.path for e in snapshot.graph.evidence}):
             dest = root / source
             dest.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(ROOT / source, dest)
         path = root / CATALOG_PATH
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(raw)
-        build_index(root)
+        snapshot = build_index(root)
         available = {e.id for e in snapshot.entries}
         rows = []
         for case in cases:

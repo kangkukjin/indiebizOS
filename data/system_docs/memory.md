@@ -54,20 +54,26 @@ see_also: [architecture.md, ibl.md]
   - 안정/가변 분리 설계 — 변하지 않는 지식은 prefix에 고정해 캐시 적중률 극대화
 - **성격**: 캐시 효율을 위해 의도적으로 정적. 자주 변하면 안 됨.
 
-### 방법의 지도 — 실행 수단을 넓히는 어휘
+### 세계의 지도 — 현재 세계의 방법·도구와 접촉하는 구조적 어휘
 
-`data/knowledge_catalog/world.yaml`은 이번 일을 할 도구·방법의 이름·분류·짧은 설명·별칭을 담는다.
-IBL 문장으로 조합할 수 있는 수단을 넓히도록 이름을 제시하고, 모델이 아는 사용법과 실제 실행 통로를 연결한다.
-`catalog_recall`이 과제 연결 뒤, 의식 이전에 한 번 검색하여 최대 4항목·전체 600자 이내의
-`<method_map>`을 `execution_memory`에 붙인다. 의식 입력과 실행자의 가변 문맥은 같은 조각을 받는다.
-개인 사실의 자동 회상과 구분하며 해마 점수·Reflex 판정에는 섞지 않는다.
+`data/knowledge_catalog/world.yaml`과 fragments는 방법·도구의 이름·분류·뜻·별칭과
+검토된 문제–방법–도구 관계·근거를 담는다. 이름과 위치에서 전문지식을 회상하거나 검색하도록 돕는다.
+적절한 기존 접근을 유지하며 대안이나 관점 전환을 강제하지 않는다.
+`catalog_recall`이 과제 연결 뒤 의식 이전에 한 번 검색한다. names 모드는 종전 4항목·600자,
+structure 모드는 seed 4·노드 16·관계 20 한도와 별도 문맥 예산을 사용한다.
+UTF-8 바이트/2 추정 1800토큰·6000문자가 구조 모드 기본값이며 모델 실측 토큰이 아니다.
+`<method_map>` 안의 동일 revision/digest 조각을 의식과 실행 가변 문맥에 전달한다.
+개인 사실의 회상·해마 점수·Reflex 판정에는 섞지 않는다.
 
 `world_pulse_config.json`의 `knowledge_catalog.enabled`로 켠다(미설정=꺼짐).
-`enabled_agents`는 `project_id:agent_id` 실행 키의 목록이며, 생략=주인 공통 범위, 빈 목록=모두 제외다.
-Reflex·강제 역할·문맥 갱신·외부 주체에는 주입하지 않는다. 설정 변경은 다음 턴에 반영된다.
-현재 검색은 로컬 키워드·별칭·FTS이고 모델 추가 호출은 없다. 정본이 잘못되면 생략하고,
-색인이 없거나 낡으면 정본의 어휘 검색을 쓴다. `knowledge_catalog.selected` 궤적에 선택·지연·상태를 남긴다.
-운영·검증: [방법의 지도 설계](../../docs/KNOWLEDGE_CATALOG_DESIGN_2026_09_16.md).
+mode는 names/structure, 미설정은 names다. `enabled_agents`는 실행 키의 목록이며,
+생략=주인 공통 범위, 빈 목록=모두 제외다. Reflex·강제 역할·문맥 갱신·외부 주체에는 주입하지 않는다.
+설정 변경은 다음 턴에 반영된다. 로컬 어휘·FTS 검색이며 추가 모델 호출은 없다.
+근거 문서가 바뀐 관계는 stale로 자동 확장에서 제외한다. 필수 조건은 unknown으로 동봉하고
+담을 수 없으면 묶음을 생략한다. 정본 오류는 기록 후 생략하고 낡은 색인은 어휘 검색으로 폴백한다.
+선택·관계·생략·digest·추정 토큰·지연은 `knowledge_catalog.selected` 사건에 남는다.
+자동 생략과 별개로 등록 스크립트 `세계지도`에서 전체 search/open/neighbors/ancestors 조회가 가능하다.
+[구현 계약](../../docs/WORLD_MAP_STRUCTURE_PLAN_2026_09_17.md) · [사용법](../guides/world_map.md).
 
 ## 2. 작업 기억 — 대화 이력 (단기, 압축)
 

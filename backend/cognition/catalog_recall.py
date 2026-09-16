@@ -1,4 +1,4 @@
-"""한 턴에 한 번 고르는 세계 지식 단서. 생성형 호출·모델 적재는 없다."""
+"""방법의 지도: 이번 일에 쓸 도구·방법의 이름을 한 번 고른다. 추가 모델 호출은 없다."""
 import json
 import re
 import time
@@ -8,9 +8,9 @@ from html import escape
 from knowledge_catalog import load_snapshot, search
 from runtime_utils import get_base_path
 
-_OPEN = ("<knowledge_catalog>\n검토할 지식의 단서입니다. 관련 있는 것만 활용하세요. "
+_OPEN = ("<method_map>\n방법의 지도: 이번 일에 쓸 수 있는 도구·방법의 이름입니다. 적합한 것만 활용하세요. "
          "도구의 설치·사용 가능 여부는 별도 확인이 필요합니다.")
-_CLOSE = "\n</knowledge_catalog>"
+_CLOSE = "\n</method_map>"
 _FOLLOWUP = re.compile(r"^(?:그걸|그것|그 방법|그대로|이어서|계속|이걸|이 방법)")
 MAX_ITEMS = 4
 MAX_CHARS = 600

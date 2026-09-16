@@ -1,4 +1,4 @@
-"""지식 이름 없이 검색·작은 주입·주체 경계·실제 의식/실행 전달 회귀."""
+"""방법 이름 없이 검색·작은 주입·주체 경계·실제 의식/실행 전달 회귀."""
 import json
 import shutil
 from contextlib import contextmanager
@@ -144,7 +144,7 @@ def test_render_budget_and_xml():
                for i in range(6)]
     snippet, ids, omitted = recall.render(entries)
     assert len(snippet) <= 600 and 0 < len(ids) <= 4
-    assert "&lt;" in snippet and ElementTree.fromstring(snippet).tag == "knowledge_catalog"
+    assert "&lt;" in snippet and ElementTree.fromstring(snippet).tag == "method_map"
     assert all("설명" * 48 in line for line in snippet.splitlines() if line.startswith("-"))
     assert omitted
     assert recall.render(entries, max_chars=20)[0] == ""
@@ -248,7 +248,7 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
     assert not [e for e in events if e["type"] == "error"], events
     assert len(searches) == 1 and len(execution_inputs) == 1
     memory = builds[0]
-    assert "original memory" in memory and memory.count("<knowledge_catalog>") == 1
+    assert "original memory" in memory and memory.count("<method_map>") == 1
     if route != "EXECUTE":
         assert plan_inputs[0]["associative_memory"] == memory
     else:
@@ -256,8 +256,8 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
     assert memory in execution_inputs[0]["message_content"]
     # 같은 조각으로 프롬프트를 재조립해도 다시 검색하거나 안정 prefix에 넣지 않는다.
     again = runner._refresh_execution_prompt("근무표", execution_memory=memory)
-    assert again.count("<knowledge_catalog>") == 1 and len(searches) == 1
-    assert "knowledge_catalog" not in runner.ai.system_prompt
+    assert again.count("<method_map>") == 1 and len(searches) == 1
+    assert "method_map" not in runner.ai.system_prompt
 
 
 def test_preparation_cancellation_is_not_hidden(enabled, monkeypatch):
@@ -276,7 +276,7 @@ def test_pipeline_cancel_after_catalog_stops_before_models(tmp_path, monkeypatch
     cancelled, calls = [False], []
     def recall_and_cancel(*a, **kw):
         cancelled[0] = True
-        return "<knowledge_catalog>단서</knowledge_catalog>"
+        return "<method_map>단서</method_map>"
     monkeypatch.setattr(recall, "recall_for_turn", recall_and_cancel)
     def stream(**kwargs):
         calls.append(kwargs)

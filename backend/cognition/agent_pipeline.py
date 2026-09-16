@@ -425,7 +425,7 @@ class CognitivePipelineMixin:
             execution_memory += "\n" + CONTEXT_UPDATE
             request_type = "EXECUTE"
 
-        # 이름·짧은 설명은 한 턴에 한 번 선택해 의식과 실행자에 같은 조각을 전달한다.
+        # 방법의 지도: 도구·방법의 이름을 한 번 선택해 의식과 실행자에 같은 조각을 전달한다.
         from catalog_recall import recall_for_turn
         catalog = recall_for_turn(self, message, history, request_type=request_type,
                                   reflex_hint=reflex_hint, force_role=force_role,

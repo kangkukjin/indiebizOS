@@ -130,6 +130,28 @@ def test_escaping_and_policy_does_not_force_alternatives():
     assert "학습을 위한 직접 구현" in text
 
 
+def test_automatic_excerpt_keeps_vocabulary_and_leaves_evidence_for_open():
+    s = catalog.load_snapshot(ROOT)
+    seed = next(e for e in s.entries if e.id == "blender")
+    c, text = assemble(s, [(seed, 20)])
+    assert "Blender" in text and "implements" in text and "requires" in text
+    assert c["evidence_refs"] and all(e["evidence_ids"] for e in c["edges"])
+    assert all(e["path"] not in text for e in c["evidence_refs"])
+    assert catalog.lookup(ROOT, op="open", id="blender")["items"][0]["evidence"]
+    assert "현재 충족 여부 미확인" in text
+
+
+def test_unrelated_catalog_growth_does_not_grow_injected_excerpt():
+    s = catalog.load_snapshot(ROOT)
+    unrelated = tuple(catalog.Entry(f"unrelated.{i}", ("무관분야",), f"다른표제{i}",
+                                     "별개의 개념", (), s.entries[0].source) for i in range(1000))
+    large = replace(s, entries=s.entries + unrelated, revision="f" * 64)
+    a, small_text = assemble(s, catalog.search(ROOT, s, "Blender")[0])
+    b, large_text = assemble(large, catalog.search(ROOT, large, "Blender")[0])
+    assert a["nodes"] == b["nodes"] and a["edges"] == b["edges"]
+    assert len(small_text) == len(large_text)
+
+
 def test_lookup_paging_revision_and_statuses(world):
     first = catalog.lookup(world, limit=2)
     assert first["status"] == "partial" and len(first["items"]) == 2

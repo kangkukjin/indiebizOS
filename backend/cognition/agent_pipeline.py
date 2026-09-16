@@ -425,7 +425,7 @@ class CognitivePipelineMixin:
             execution_memory += "\n" + CONTEXT_UPDATE
             request_type = "EXECUTE"
 
-        # 세계의 지도: 관련 방법·도구의 이름과 구조를 의식과 실행자에 같은 조각으로 전달한다.
+        # 세계의 지도: 모든 에이전트·역할에 관련 어휘의 작은 조각을 의식과 실행에 공유한다.
         from catalog_recall import recall_for_turn
         catalog = recall_for_turn(self, message, history, request_type=request_type,
                                   reflex_hint=reflex_hint, force_role=force_role,

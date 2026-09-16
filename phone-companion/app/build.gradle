@@ -91,7 +91,9 @@ def _engineManifest = file("${_ROOT}/data/bodies/android.engine.json")
 if (!_engineManifest.exists()) {
     throw new GradleException("android.engine.json 없음 — `python3 scripts/build_body_bundle.py android` 먼저.")
 }
-def _ENGINE_MODULES = new groovy.json.JsonSlurper().parse(_engineManifest).engine_modules
+def _engineBundle = new groovy.json.JsonSlurper().parse(_engineManifest)
+def _ENGINE_MODULES = _engineBundle.engine_modules
+def _WORLD_CATALOG_FILES = _engineBundle.world_catalog_files
 // 폰 번들 패키지 = data/phone_manifest.json 의 packages (runs_on 단일 진실 소스에서 파생).
 // 옛 하드코딩 리스트를 폐기 — build_ibl_nodes.py 의 PHONE_VERIFIED_PACKAGES 가 SSOT.
 def _phoneManifest = file("${_ROOT}/data/phone_manifest.json")
@@ -109,6 +111,7 @@ tasks.register('bundleIndiebizBase', Zip) {
     doFirst {
         def missing = []
         _ENGINE_MODULES.each { m -> if (!file("${_ROOT}/backend/${m}.py").exists()) missing << "backend/${m}.py" }
+        _WORLD_CATALOG_FILES.each { p -> if (!file("${_ROOT}/${p}").exists()) missing << p }
         if (!file("${_ROOT}/backend/boot_paths.py").exists()) missing << "backend/boot_paths.py"
         if (!file("${_ROOT}/backend/common").exists()) missing << "backend/common"
         if (!file("${_ROOT}/backend/providers").exists()) missing << "backend/providers"
@@ -161,6 +164,11 @@ tasks.register('bundleIndiebizBase', Zip) {
     }
     from("${_ROOT}/data/vocabulary_policy.yaml") { into 'data' }
     from("${_ROOT}/data/phone_manifest.json") { into 'data' }
+    // 세계 어휘·관계와 참조 자료: 카탈로그로부터 자동 파생, 개인 설정·기억은 포함하지 않는다.
+    _WORLD_CATALOG_FILES.each { p ->
+        def parent = p.contains('/') ? p.substring(0, p.lastIndexOf('/')) : ''
+        from("${_ROOT}/${p}") { into parent }
+    }
     // 어휘 없는 순수 앱(상부구조) — data/instruments/*.yaml (신문·정기보고 등). _derive_instruments 가
     // 폰서도 로드 → 폰 네이티브 앱에 이 계기들이 뜬다(파일은 @맥 으로 PC 에서 당겨옴).
     from("${_ROOT}/data/instruments") {

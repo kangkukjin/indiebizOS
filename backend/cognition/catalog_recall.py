@@ -69,9 +69,7 @@ def _record(event):
 
 def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
                     force_role=None, context_update=False):
-    import principal
     from supervision_bus import current
-    from thread_context import get_current_registry_key
 
     started = time.monotonic()
     event = {"status": "disabled", "mode": "none", "ids": [], "count": 0,
@@ -81,23 +79,21 @@ def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
         _record(event)
         return snippet
 
-    if (not principal.is_owner() or context_update or reflex_hint or force_role
-            or request_type not in {"THINK", "REPAIR", "EXECUTE"}):
+    # 세계 어휘는 개인 기억이 아니다. 주체·에이전트·실행 역할로 막지 않는다.
+    # 모델이 없는 세션 제어만 제외한다. 개인 기억의 권한 관문은 별도로 유지한다.
+    if request_type not in {"THINK", "REPAIR", "EXECUTE", "CONTEXT_UPDATE"}:
         event.update(status="excluded")
         return finish()
     root = get_base_path()
     try:
         config = load_config(root)
-        if config.get("enabled") is not True:
+        if config.get("enabled", True) is False:
             return finish()
-        agents = config.get("enabled_agents")
-        if agents is not None and (not isinstance(agents, list) or not all(isinstance(a, str) for a in agents)):
-            raise ValueError("enabled_agents must be a list")
-        registry = getattr(runner, "registry_key", None) or get_current_registry_key()
-        if agents is not None and registry not in agents:
-            event.update(status="agent_disabled")
-            return finish()
-        presentation = config.get("mode", "names")
+        if "enabled" in config and type(config["enabled"]) is not bool:
+            raise ValueError("enabled must be a boolean")
+        # 과거 실험용 허용 목록은 읽어도 선택에 사용하지 않는다. 이행은 사건으로 드러낸다.
+        event["ignored_config"] = [key for key in ("enabled_agents",) if key in config]
+        presentation = config.get("mode", "structure")
         if presentation not in {"names", "structure"}:
             raise ValueError("invalid catalog presentation mode")
         structured = presentation == "structure"

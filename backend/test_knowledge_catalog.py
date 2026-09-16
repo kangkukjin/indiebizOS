@@ -31,7 +31,7 @@ def world(tmp_path):
 @pytest.fixture
 def enabled(world, monkeypatch):
     (world / "data/world_pulse_config.json").write_text(json.dumps({
-        "knowledge_catalog": {"enabled": True, "enabled_agents": ["study:agent_001"]}
+        "knowledge_catalog": {"enabled": True, "mode": "names"}
     }), encoding="utf-8")
     monkeypatch.setattr(recall, "get_base_path", lambda: world)
     events = []
@@ -169,18 +169,19 @@ def test_whole_history_budget():
     assert recall.previous_query("새 주제", h) == ""
 
 
-def test_permissions_modes_and_live_toggle(enabled, world):
+def test_all_agents_roles_and_live_global_toggle(enabled, world):
     runner, events = enabled
     def run(**kwargs):
         return recall.recall_for_turn(runner, "근무표", [], request_type=kwargs.pop("request_type", "THINK"), **kwargs)
     assert "OR-Tools" in run()
     with principal.narrow(principal.ANONYMOUS):
-        assert run() == "" and events[-1]["status"] == "excluded"
+        assert "OR-Tools" in run()
     for kwargs in ({"force_role": "forage"}, {"reflex_hint": "code"}, {"context_update": True},
-                   {"request_type": "SESSION_RESET"}):
-        assert run(**kwargs) == ""
+                   {"request_type": "CONTEXT_UPDATE"}):
+        assert "OR-Tools" in run(**kwargs)
+    assert run(request_type="SESSION_RESET") == "" and events[-1]["status"] == "excluded"
     runner.registry_key = "another:agent_001"
-    assert run() == "" and events[-1]["status"] == "agent_disabled"
+    assert "OR-Tools" in run()
     runner.registry_key = "study:agent_001"
     config_path = world / "data/world_pulse_config.json"
     config_path.write_text('{"knowledge_catalog":{"enabled":false}}')
@@ -206,7 +207,7 @@ def test_concurrent_turns_do_not_share_selection(enabled):
 def test_config_budget_cap_is_observable(enabled, world):
     runner, events = enabled
     (world / "data/world_pulse_config.json").write_text(json.dumps({"knowledge_catalog": {
-        "enabled": True, "max_items": 99, "max_chars": 9999}}))
+        "enabled": True, "mode": "names", "max_items": 99, "max_chars": 9999}}))
     snippet = recall.recall_for_turn(runner, "CSV 보컬 근무표 미분 회로 백업", [], request_type="THINK")
     assert len(snippet) <= 600 and events[-1]["count"] == 4
     assert events[-1]["clamped"] is True
@@ -214,7 +215,7 @@ def test_config_budget_cap_is_observable(enabled, world):
     assert events[-1]["effective_budget"] == {"items": 4, "chars": 600}
 
 
-@pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REPAIR"])
+@pytest.mark.parametrize("route", ["THINK", "EXECUTE", "REPAIR", "REFLEX", "FORAGE", "CONTEXT_UPDATE"])
 @pytest.mark.parametrize("presentation", ["names", "structure"])
 def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, isolated, enabled, world, route, presentation):
     (world / "data/world_pulse_config.json").write_text(json.dumps({
@@ -241,19 +242,23 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
         return "stable fixture", _build_dynamic_context(consciousness, execution_memory=memory)
     runner = Runner(tmp_path, stream)
     runner.registry_key = runner_info.registry_key
-    runner._decide_request_type = lambda *args: (route, None)
+    runner._decide_request_type = lambda *args: (("EXECUTE", "fixture reflex") if route == "REFLEX"
+                                                else (route, None))
+    monkeypatch.setattr("system_ai_core._switch_to_midtier", lambda *a: None)
+    monkeypatch.setattr("system_ai_core._switch_to_role", lambda *a: None)
     runner._build_system_prompt_split = split
     runner._build_execution_memory = lambda *a, **kw: ("original memory", 0, "")
     if route == "REPAIR":
         import thread_context
         thread_context.set_task_origin("user")
-    events = list(runner.cognitive_stream("근무표를 짜줘", []))
+    events = list(runner.cognitive_stream("근무표를 짜줘", [],
+                                         force_role="forage" if route == "FORAGE" else ""))
     assert not [e for e in events if e["type"] == "error"], events
     assert len(searches) == 1 and len(execution_inputs) == 1
     memory = builds[0]
     assert "original memory" in memory and memory.count("<method_map>") == 1
     assert ("<world_data" in memory) == (presentation == "structure")
-    if route != "EXECUTE":
+    if route in {"THINK", "REPAIR"}:
         assert plan_inputs[0]["associative_memory"] == memory
     else:
         assert plan_inputs == []
@@ -262,6 +267,24 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
     again = runner._refresh_execution_prompt("근무표", execution_memory=memory)
     assert again.count("<method_map>") == 1 and len(searches) == 1
     assert "method_map" not in runner.ai.system_prompt
+
+
+@pytest.mark.parametrize("registry", ["system_ai", "study:agent_001", "other:agent_002", "member:fixture"])
+@pytest.mark.parametrize("legacy", [False, True])
+def test_default_shared_catalog_without_opt_in(world, monkeypatch, registry, legacy):
+    monkeypatch.setattr(recall, "get_base_path", lambda: world)
+    events = []
+    monkeypatch.setattr(recall, "_record", lambda e: events.append(e))
+    if legacy:
+        (world / "data/world_pulse_config.json").write_text(json.dumps({
+            "knowledge_catalog": {"enabled_agents": ["study:agent_001"]}}))
+    runner = SimpleNamespace(registry_key=registry)
+    with principal.narrow(principal.Principal(kind="member", id="fixture")):
+        text = recall.recall_for_turn(runner, "Blender", [], request_type="EXECUTE")
+        assert principal.current().kind == "member"  # 공유 어휘를 받아도 주인 권한으로 바뀌지 않는다.
+    assert "Blender" in text and "<world_data" in text
+    assert events[-1]["presentation"] == "structure"
+    assert events[-1]["ignored_config"] == (["enabled_agents"] if legacy else [])
 
 
 def test_preparation_cancellation_is_not_hidden(enabled, monkeypatch):

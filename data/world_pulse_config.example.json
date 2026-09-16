@@ -50,7 +50,7 @@
     "max_rounds": 3
   },
   "knowledge_catalog": {
-    "enabled": false,
+    "enabled": true,
     "mode": "structure",
     "max_items": 4,
     "max_chars": 600,

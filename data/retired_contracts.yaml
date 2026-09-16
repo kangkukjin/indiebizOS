@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: world_catalog_agent_allowlist
+    retired: 2026-09-17
+    reason: 세계 어휘를 실험 에이전트와 일부 역할로 제한하던 계약을 폐기했다.
+    instead: 설정 미지정이면 구조 모드로 모든 작업 에이전트에 관련 어휘를 전달한다. 개인 기억 권한은 별개다.
+    phrases:
+      - 'enabled_agents must be a list'
+      - 'agent_disabled'
+
   - id: vocabulary_cockpit_entry
     retired: 2026-09-13
     reason: 내 어휘를 조종실의 대화상자에서 런처의 독립 화면으로 옮겼다.

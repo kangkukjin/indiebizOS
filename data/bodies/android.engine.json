@@ -337,6 +337,20 @@
     "surface/public_face",
     "surface/warehouse_likes"
   ],
+  "world_catalog_files": [
+    "data/guides/world_tools.md",
+    "data/knowledge_catalog/bridge_relations.yaml",
+    "data/knowledge_catalog/bridges.yaml",
+    "data/knowledge_catalog/structure.yaml",
+    "data/knowledge_catalog/world.yaml",
+    "docs/world_map/A_knowledge_data.md",
+    "docs/world_map/B_media_docs_localai.md",
+    "docs/world_map/C_protocols_connections.md",
+    "docs/world_map/D_science_engineering.md",
+    "docs/world_map/F_methods_and_validation.md",
+    "docs/world_map/G_structure_evidence.md",
+    "docs/world_map/H_catalog_bridges.md"
+  ],
   "blocklist": {
     "api": "top-level import: dotenv",
     "api_bulletin": "force_exclude (프로파일 명시)",

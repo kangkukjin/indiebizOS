@@ -928,7 +928,6 @@ def forage_chat(chat: ForageMessage):
         images_data = [{"base64": img.base64, "media_type": img.media_type} for img in chat.images]
 
     # 사냥판 상태(보충 라운드)를 메시지에 접합 — 모델·에피소드·포식 증류가 *같은 텍스트*를 본다.
-    # 증류가 제외/삭제/담음 신호까지 먹으므로 owner_model 에 취향의 경계가 쌓인다(음성 신호가 주식).
     message_text = chat.message
     if chat.hunt:
         try:
@@ -972,7 +971,7 @@ def forage_chat(chat: ForageMessage):
     # 내부 인지 파이프라인이 찍는 [연상]·[무의식] 마커가 그대로 요약 지표로 자동 추출된다.
     # ★대화 저장·심층/의미 메모리 증류는 WS 핸들러 몫이라 여긴 없음 → 검색 노이즈로 의미기억을
     #   더럽히지 않는다(stateless 검색 성격 보존). 단 *포식 기억 증류*는 붙인다(아래 스레드) —
-    #   포식 브라우저가 웹 포식의 주 표면이라 owner_model·웹 관습이 여기서 쌓여야 하기 때문.
+    #   포식 브라우저가 웹 포식의 주 표면이라 웹 장소의 관습(host/path 단언)이 여기서 쌓여야 하기 때문.
     try:
         EpisodeLogger.start_episode("forage", message_text)
     except Exception:
@@ -985,8 +984,8 @@ def forage_chat(chat: ForageMessage):
             utterance_author="owner",  # 검색어 — force_role 표면이라 심층 증류는 어차피 돌지 않는다
         )
         complete_system_ai_task(task_id, response_text[:500])
-        # ★포식 기억 증류 — 포식 브라우저는 웹 포식의 *주 표면*이라 owner_model·웹 관습이 여기서
-        #   쌓여야 한다(주입은 이미 코어 _build_execution_memory 가 함). 검색 응답을 막지 않도록
+        # ★포식 기억 증류 — 포식 브라우저는 웹 포식의 *주 표면*이라 웹 장소의 관습이 여기서
+        #   쌓여야 한다(회상은 자동 주입이 아니라 `[self:forage]` 어휘로 — 2026-09-03). 검색 응답을 막지 않도록
         #   백그라운드 스레드로 돌리고(동기 REST), assume_forage 로 메시지 cue 게이트를 우회한다
         #   (정의상 항상 포식). 자기서술·locus 실존검증 게이트가 안전판. 심층/의미 메모리는
         #   여전히 안 건드림(검색 노이즈 격리) — 포식 기억 전용 증류만 붙인다.

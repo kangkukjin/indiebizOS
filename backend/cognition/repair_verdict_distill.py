@@ -17,14 +17,12 @@
   LLM 호출 없이 스킵
 - run_maintenance_bundle 합류, 상태=forage_meta("repair_verdict_last_commit")
   (커밋 하나 처리할 때마다 전진 — 중단돼도 다음 사이클이 이어받는다)
-- ★locus 는 레포 *상대경로*(절대경로 금지) — 판정은 파일 내용이 아니라 *사건에
-  대한 지식*이라 mtime 부패 모델이 안 맞는다(절대경로면 이후 편집마다 stale
-  노이즈). 상대경로는 freshness 면제(_stale_of)이면서 query 필터엔 그대로 걸린다.
-- ★★locus 에 판정 슬러그를 붙인다("경로#슬러그") — forage_map 의 upsert 키
-  (body,locus,kind)는 공간 지식(폴더당 정체 하나) 설계라, 한 파일에 같은 kind
-  판정이 여럿이면 서로를 *조용히 덮어쓴다*(실측: base.py substrate 판정 4건이
-  마지막 것만 남음). 슬러그가 키를 판정 단위로 가른다. 표현이 갈린 근접중복은
-  forage_consolidation 의 의미 병합이 청소한다(그게 그 기관의 일).
+- ★locus 는 그 파일의 **절대 경로**다(2026-09-18 개정). 옛 판은 상대경로#슬러그였는데, 그러면 그
+  파일·폴더를 열어도 교훈이 나오지 않고 낱말이 맞을 때만 걸렸다 — 포식 기억은 "장소를 주면 그 장소의
+  전부"다. 이후 편집으로 붙는 stale 표식은 감수한다("그 뒤 파일이 바뀌었다"는 교훈에도 참인 정보다).
+  슬러그는 없앴다 — upsert 키가 (body,locus,kind,claim) 이 된 뒤로 덮어쓰기 충돌이 없다.
+- ★파일에 못 붙는 일반 교훈은 포식 기억에 적지 않는다 — 장소가 없다. 가이드 제안 큐
+  (`guide_feedback._queue_proposal` → `guides/repair_lessons.md`)로 올려 사람·세션이 가이드에 반영한다.
 - 상한 초과분은 남긴 개수를 정직하게 보고(조용한 깎기 금지 — silent-clamp 규약).
 """
 import json
@@ -42,6 +40,8 @@ MAX_MSG_CHARS = 4000
 # 4 로는 밀도 높은 커밋(예: 수리 5절)에서 핵심 판정이 밀려난다(실측). 포식 증류의
 # map 상한(6)과 정합.
 MAX_ITEMS_PER_COMMIT = 6
+# 파일에 못 붙는 일반 교훈이 제안으로 올라가는 가이드
+_GENERAL_LESSON_GUIDE = "repair_lessons"
 
 _META_KEY = "repair_verdict_last_commit"
 
@@ -97,8 +97,12 @@ def _has_repair_cue(msg: str) -> bool:
 def _known_map_text(body: str) -> str:
     import forage_memory as FM
     lines = []
-    for m in FM.recall(body=body, limit=30).get("map", []):
-        lines.append(f'- [{m["kind"]}] {m["locus"]}: {m["claim"]}')
+    # 수리 판정은 파일의 절대 경로에 붙는다(몸 표기는 주소에서 정해진다) — 이 저장소 아래의 최근 단언으로 "이미 아는 것"을 만든다
+    root = (_repo_root() or "").rstrip("/")
+    rows = [m for m in FM.recall(limit=400).get("map", []) if root and str(m["locus"]).startswith(root + "/")]
+    rows.sort(key=lambda m: str(m.get("last_seen") or ""), reverse=True)
+    for m in rows[:30]:
+        lines.append(f'- [{m["kind"]}] {m["locus"][len(root) + 1:]}: {m["claim"]}')
     return "\n".join(lines) if lines else "(아직 없음)"
 
 
@@ -127,11 +131,8 @@ kind 는 이렇게 고른다:
 - identity: 모듈·파일의 정체가 새로 판명된 경우만(드물다).
 
 규칙:
-- locus 는 커밋이 만진 파일의 레포 상대경로(아래 목록에서 골라라). 특정 파일에 못
-  붙는 교훈이면 "__repair__" 를 써라. 절대경로 금지.
-- slug: 판정마다 짧은 식별 슬러그(한글·영문 2~4단어, 하이픈 연결 — 예
-  "고아-tool-400", "프루닝-압축-굶김"). 같은 판정을 다시 보면 같은 슬러그가
-  나오도록 내용을 요약하는 이름으로.
+- locus 는 커밋이 만진 파일의 레포 상대경로(아래 목록에서 골라라 — 목록 밖 경로 금지). 특정 파일에
+  못 붙는 일반 교훈이면 "__repair__" 를 써라(가이드 제안으로 간다).
 - 이미 아는 것과 같으면 내지 마라(새롭거나 교정된 판정만).
 - 새 기능 소개·변경 나열은 판정이 아니다 — 수리 판정이 없으면 빈 배열을 내라.
 - 시스템 철학·자기 서술 금지. 결함 부류와 진범과 고친 자리의 *사실*만.
@@ -152,7 +153,7 @@ kind 는 이렇게 고른다:
 {msg[:MAX_MSG_CHARS]}
 
 응답 형식(빈 배열 허용):
-{{"map":[{{"locus":"backend/…(상대경로)|__repair__","slug":"판정-슬러그","kind":"substrate|dead_branch|convention|identity",
+{{"map":[{{"locus":"backend/…(상대경로)|__repair__","kind":"substrate|dead_branch|convention|identity",
  "claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면 진범)"}}]}}"""
 
     resp = oneshot_ai_call(
@@ -171,16 +172,19 @@ kind 는 이렇게 고른다:
         locus, kind, claim = m.get("locus"), m.get("kind"), m.get("claim")
         if not locus or not kind or not claim:
             continue
-        # 절대경로로 왔으면 상대로 강등(레포 밖 경로는 __repair__ 로) — mtime 부패 면제 유지.
-        if str(locus).startswith(("/", "~")):
-            locus = "__repair__"
-        # ★키 분리: 경로#슬러그 — 같은 파일·같은 kind 의 서로 다른 판정이 upsert 키에서
-        # 충돌해 덮어쓰지 않게. 슬러그 없으면 claim 해시로(결정론 폴백).
-        slug = str(m.get("slug") or "").strip().replace(" ", "-")[:48]
-        if not slug:
-            import hashlib
-            slug = hashlib.sha1(str(claim).encode("utf-8")).hexdigest()[:8]
-        locus = f"{locus}#{slug}"
+        root = _repo_root()
+        rel = str(locus).split("#", 1)[0].strip()
+        full = os.path.join(root, rel) if root and not rel.startswith(("/", "~", "__")) else os.path.expanduser(rel)
+        if rel.startswith("__") or not os.path.exists(full):
+            # 장소 없는 일반 교훈 — 포식 기억이 아니라 가이드의 몫. 사람·세션이 반영한다.
+            try:
+                from guide_feedback import _queue_proposal
+                _queue_proposal(_GENERAL_LESSON_GUIDE, str(claim), evidence=f"commit {h[:10]} {title}")
+                print(f"[수리판정] 가이드 제안: \"{str(claim)[:60]}\"")
+            except Exception as e:
+                print(f"[수리판정] 가이드 제안 실패(무시): {e}")
+            continue
+        locus = os.path.abspath(full)
         r = FM.note_map(
             body=body, locus=str(locus), kind=str(kind), claim=str(claim),
             prior_class=m.get("prior_class") or "structural",

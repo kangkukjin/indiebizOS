@@ -92,23 +92,24 @@ def test_filter_expression_error_teaches_working_recovery():
     assert len(good['items']) == 1 and good['items'][0]['문자수'] == 201
 
 
-def test_forage_owner_requires_user_evidence(monkeypatch):
+def test_forage_distill_no_longer_writes_owner_model(monkeypatch):
+    """주인모델 은퇴(2026-09-18): 모델이 owner 를 내도 포식 증류는 적지 않는다 — 주인에 대한 사실은 심층기억의 일."""
     from cognitive_distill import CognitiveDistillMixin
     saved = []
     monkeypatch.setattr('runtime_utils.detect_body', lambda: {"profile": "pc"})
     monkeypatch.setitem(sys.modules, 'forage_memory', SimpleNamespace(
         recall=lambda **kw: {"map": [], "owner": []},
         note_owner=lambda **kw: saved.append(kw) or {"success": True, "action": "added"}))
-    monkeypatch.setattr('consciousness_agent.oneshot_ai_call', lambda **kw: json.dumps({
-        "space": "mac", "map": [], "owner": [
-            {"facet": "identity", "value": "검증을 중시하는 연구자"},
-            {"facet": "habit", "value": "모델이 재작성한 추측", "source_ids": [1]}]}))
+    prompts = []
+    monkeypatch.setattr('consciousness_agent.oneshot_ai_call', lambda **kw: prompts.append(kw['prompt']) or json.dumps({
+        "space": "mac", "map": [], "owner": [{"facet": "habit", "value": "모델이 낸 주인 습관", "source_ids": [1]}]}))
     own = '나는 자료를 연도별 폴더로 정리한다.'
     CognitiveDistillMixin()._distill_forage_memory(own, '/tmp/papers 폴더를 확인했습니다.', assume_forage=True)
-    assert len(saved) == 1 and saved[0]['value'] == own
-    assert saved[0]['provenance']['evidence'][0]['text'] == own
-    CognitiveDistillMixin()._distill_forage_memory('> ' + own, '/tmp/papers 폴더를 확인했습니다.', assume_forage=True)
-    assert len(saved) == 1
+    assert saved == [] and prompts and '"owner"' not in prompts[0]
+    import importlib
+    sys.modules.pop('forage_memory', None)
+    real = importlib.import_module('forage_memory')
+    assert not hasattr(real, 'note_owner') and 'owner' not in real.recall(query='x')
 
 
 if __name__ == "__main__":

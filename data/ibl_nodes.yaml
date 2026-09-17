@@ -4851,9 +4851,9 @@ nodes:
         returns: scalar
         side_effect: true
         fixture: '[self:forage]{op: "recall", query: "test"}'
-        description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·주인모델을 누적·회상. op 분기. ★응답=3층(map/owner/territory) 인지 기억 — items 통화 밖이라 table 파이프 대상 아님(판정 2026-08-17).
+        description: 포식 기억(냄새지도) — 과거 디스크·코드·웹 포식에서 배운 폴더/모듈 정체·관습·죽은가지·기질을 누적·회상. op 분기. ★응답=2층(map/territory) 인지 기억 — items 통화 밖이라 table 파이프 대상 아님(판정 2026-08-17).
         group: file
-        target_description: 'recall(기본)·note·forget·sync(문서→색인, locus) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(주제)·body(포식 공간: "mac"=홈디스크/"code:<repo>"=코드레포/"web"=웹/"book:<제목>"/"disk:<라벨>" 등 AI가 명명, 생략 시 전 공간 회상)로 회상. note — layer(map|owner) + map은 locus/kind(identity|convention|dead_branch|substrate)/claim, owner는 facet/value. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id + table(forage_map|owner_model). note의 layer는 map/owner만 허용한다. reconcile의 apply:false는 대조만 수행하며 문자열 false도 거짓으로 해석한다. generalizes/surface_flag/territory도 같은 불리언 규칙이다.'
+        target_description: 'recall(기본)·note·forget·sync(문서→색인, locus) — locus(폴더 경로 지명: 그 폴더의 단언 전부+조상에서 물려받는 관습·기질+자식 폴더 한 줄 골격+조사 원장(아이템 목록 통로) 통째. 폴더·파일 위치 질문이면 query 보다 이것)·query(장소를 모를 때 찾는 것을 말로 — 의미로 후보 장소를 짚어 places 에 주소로 준다, 맞는 주소를 locus 로 다시 부른다)·body(거의 쓸 일 없음 — 절대 경로·URL 단언의 몸은 주소에서 정해진다: "mac"/"web", 책·노트북만 "book:<제목>"·"notebook:<이름>")로 회상. note — locus(주소: 절대 경로·웹 host/path — 주제 이름은 거절)/kind(identity|convention|dead_branch|substrate)/claim. confidence·prior_class(structural|semantic)·prune_reason·generalizes 옵션. forget — id. reconcile의 apply:false는 대조만 수행하며 문자열 false도 거짓으로 해석한다. generalizes/surface_flag/territory도 같은 불리언 규칙이다.'
         target_key: op
         router: handler
         tool: forage_op
@@ -4868,16 +4868,15 @@ nodes:
           side_effect:
             recall: false
           values:
-            recall: 누적된 냄새지도 회상 (locus=폴더 지명 통째 / query·body 필터, 기본)
-            note: 지도/주인모델에 단언 누적 (layer=map/owner)
-            forget: 잘못된·낡은 항목 폐기 (id + table)
+            recall: 누적된 냄새지도 회상 (locus=장소 지명 → 그 장소의 전부 / query=장소를 모를 때 말로 찾기 → places 후보 주소, 기본)
+            note: 지도에 단언 누적 (locus 는 주소 — 절대 경로 또는 웹 host/path)
+            forget: 잘못된·낡은 항목 폐기 (id)
             sync: 문서(정본)의 단언 절을 색인에 맞춤 (locus) — 판·편집기에서 문서를 고친 뒤
             reconcile: 실제 트리와 기억 트리 대조 — 사라진 폴더의 기억을 _gone 으로 접음(일주일 뒤 삭제) (locus·body·apply)
         keywords:
         - 포식기억
         - 냄새지도
-        - 주인모델
-        implementation: forage_memory.recall/note_map/note_owner/forget op 분기 (pc-manager → backend/forage_memory)
+        implementation: forage_memory.recall/note_map/forget op 분기 (pc-manager → backend/forage_memory)
       photo:
         params:
           page: integer

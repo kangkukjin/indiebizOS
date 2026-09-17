@@ -88,33 +88,68 @@ JSON으로만 응답:
     return _parse_merges(resp, {it["id"] for it in items})
 
 
-def _merge_owner_llm(items: List[Dict], today: str) -> List[Dict]:
-    """주인모델 항목 중 근접중복(같은 facet의 같은 사실)을 병합 판정."""
-    from consciousness_agent import oneshot_ai_call
-    listing = "\n".join(
-        f'- id={it["id"]} [{it["facet"]}]: {(it.get("value") or "")[:200]}'
-        for it in items
-    )
-    prompt = f"""아래는 주인(사용자) 모델로 누적된 항목들이다. 오늘은 {today}.
-여러 포식에서 *같은 사실*이 약간 다른 표현으로 중복됐을 수 있다.
+_TRAIL_WINDOW_S = 900     # 같은 과제 안에서 "짚음 → 다른 곳을 엶" 으로 볼 시간 창
 
-{listing}
 
-'같은 facet 의 같은 사실'끼리만 병합하라(다른 분야·다른 사실·다른 facet 은 금지).
-병합 시 가장 정확·포괄적인 하나로 정규화(value). 애매하면 병합하지 마라.
+def fold_place_trail() -> Dict:
+    """장소 찾기의 되먹임 — 검색이 사전을 고친다.
 
-JSON으로만 응답:
-{{"merges":[{{"keep_id":<id>,"drop_ids":[<id들>],"value":"<정규본>","prior_class":"semantic|structural"}}]}}
-없으면 {{"merges":[]}}."""
-    resp = oneshot_ai_call(
-        prompt=prompt,
-        system_prompt="주인모델 병합 판정기. 같은 사실만 병합. JSON으로만.",
-        role="background")
-    return _parse_merges(resp, {it["id"] for it in items})
+    원장(forage_place_trail.jsonl)에서 "질의로 장소를 짚었는데(query) 같은 과제에서 곧 다른 곳을 지명해 열었다(open)"를
+    찾아, 그 질문을 **결국 연 장소의 문서** `## 갱신 기록` 에 `찾는 말 후보` 한 줄로 남긴다. 장소 찾기는 그 줄도 찾는 말로
+    읽으므로 다음 같은 질문은 그 장소를 짚는다. 재조사하는 AI 가 후보를 `찾는 말:` 줄로 다듬는다(guides/folder_survey.md).
+    세어 두기만 하지 않는다 — 빗나간 질문은 그 자리에서 사전의 재료가 된다."""
+    import forage_memory as FM
+    import forage_doc as FD
+    import tree_recall
+    path = os.path.join(tree_recall._index_dir(), "forage_place_trail.jsonl")
+    out = {"misses": 0, "noted": 0}
+    if not os.path.exists(path):
+        return out
+    start = int(FM.get_meta("place_trail_offset") or 0)
+    with open(path, encoding="utf-8") as f:
+        f.seek(start if start <= os.path.getsize(path) else 0)
+        lines = f.readlines()
+        end = f.tell()
+    last_query: Dict[str, Dict] = {}
+    for line in lines:
+        try:
+            ev = json.loads(line)
+        except ValueError:
+            continue
+        task = ev.get("task") or ""
+        if not task:
+            continue
+        if ev.get("kind") == "query":
+            last_query[task] = ev
+            continue
+        q = last_query.get(task)
+        loc = str(ev.get("locus") or "")
+        if ev.get("kind") != "open" or not q or not loc:
+            continue
+        try:
+            gap = (datetime.fromisoformat(ev["at"]) - datetime.fromisoformat(q["at"])).total_seconds()
+        except (KeyError, ValueError):
+            continue
+        near = any(loc == p or loc.startswith(p.rstrip("/") + "/") or p.startswith(loc.rstrip("/") + "/") for p in q.get("places") or [])
+        if gap < 0 or gap > _TRAIL_WINDOW_S or near:
+            continue
+        out["misses"] += 1
+        doc = FD.doc_path_for(FD.TREE_BODY, loc, create_default=False)
+        text = open(doc, encoding="utf-8").read() if doc and os.path.exists(doc) else ""
+        cue = (q.get("query") or "").replace('"', "'").strip()
+        if not text or not cue or f'"{cue}"' in text:
+            continue
+        line_out = f'- {ev["at"][:10]} 찾는 말 후보: "{cue}" — 장소 찾기는 다른 곳을 짚었고 결국 {loc} 를 열었다\n'
+        text = text.rstrip("\n") + "\n" + (line_out if "## 갱신 기록" in text else "\n## 갱신 기록\n" + line_out)
+        with open(doc, "w", encoding="utf-8") as f:
+            f.write(text)
+        out["noted"] += 1
+    FM.set_meta("place_trail_offset", str(end))
+    return out
 
 
 def run_forage_consolidation(force: bool = False) -> Dict:
-    """포식 기억 정리 — 카덴스 게이트 → 몸별 지도 병합 + 주인모델 병합 → LRU 가지치기.
+    """포식 기억 정리 — 카덴스 게이트 → 몸별 지도 병합 → LRU 가지치기.
 
     self-check(run_maintenance_bundle)에 합류. 24h 카덴스라 6h마다 호출돼도 하루 한 번만
     실제 정리. dirty 판단은 단순 카덴스(증류가 잦지 않아 충분)."""
@@ -122,8 +157,7 @@ def run_forage_consolidation(force: bool = False) -> Dict:
     if not _is_due(force):
         return {"skipped": "cadence"}
 
-    stats = {"bodies": 0, "map_merged": 0, "map_dropped": 0,
-             "owner_merged": 0, "owner_dropped": 0, "pruned_map": 0, "pruned_owner": 0}
+    stats = {"bodies": 0, "map_merged": 0, "map_dropped": 0, "pruned_map": 0}
     today = datetime.now().date().isoformat()
     bodies = FM.list_bodies()
 
@@ -156,43 +190,23 @@ def run_forage_consolidation(force: bool = False) -> Dict:
         try:
             pr = FM.prune_cap(body=body)
             stats["pruned_map"] += pr.get("map", 0)
-            stats["pruned_owner"] += pr.get("owner", 0)
         except Exception as e:
             print(f"[포식정리] 가지치기 실패 {body} (스킵): {e}")
         stats["bodies"] += 1
 
-    # 주인모델은 전역 — 한 번만 (몸 없어도 owner 만 있을 수 있음)
-    try:
-        owner_items = [o for o in FM.recall(body=None, limit=200).get("owner", [])
-                       if not o.get("surface_flag")]
-        if len(owner_items) >= MIN_ROWS_FOR_MERGE:
-            groups = _merge_owner_llm(owner_items, today)[:MAX_GROUPS]
-            for g in groups:
-                val = (g.get("value") or "").strip()
-                if not val:
-                    continue
-                fields = {"value": val}
-                if g.get("prior_class"):
-                    fields["prior_class"] = g["prior_class"]
-                r = FM.merge_entries(table="owner_model", keep_id=g["keep_id"],
-                                     drop_ids=g["drop_ids"], fields=fields)
-                if r.get("success"):
-                    stats["owner_merged"] += 1
-                    stats["owner_dropped"] += r["dropped"]
-    except Exception as e:
-        print(f"[포식정리] owner 병합 실패 (스킵): {e}")
-
     FM.set_meta("last_consolidated", datetime.now().isoformat())
-    if stats["map_merged"] or stats["owner_merged"] or stats["pruned_map"]:
+    if stats["map_merged"] or stats["pruned_map"]:
         print(f"[포식정리] map 병합 {stats['map_merged']}(삭제 {stats['map_dropped']}) / "
-              f"owner 병합 {stats['owner_merged']}(삭제 {stats['owner_dropped']}) / "
-              f"가지치기 map {stats['pruned_map']} owner {stats['pruned_owner']}")
+              f"가지치기 map {stats['pruned_map']}")
     # 정본=문서(2026-09-03): 병합·가지치기로 색인이 바뀌었으니 표식 있는 문서의 `## 단언` 절을 다시 그린다
     try:
         import forage_doc
         forage_doc.reconcile()          # 실제 트리 ↔ 기억 트리 대조(사라진 폴더 → _gone) — 주간
         forage_doc.purge_gone()         # _gone 은 일주일 지난 것 삭제(사용자 판정)
+        fold_place_trail()              # 장소 찾기가 빗나간 질문 → 결국 연 장소 문서의 찾는 말 후보
+        forage_doc.split_heavy_docs()   # 무거운 문서는 하위 폴더 문서로 가른다(장소의 "전부"가 한 문서에 쌓이지 않게)
         forage_doc.refresh_all_docs()
+        forage_doc.purge_dead_stamps()  # 사라진 문서의 동기화 표식
     except Exception as e:
         print(f"[포식정리] 문서 재렌더 실패(무시): {e}")
     return stats

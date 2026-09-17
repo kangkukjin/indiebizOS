@@ -21,9 +21,23 @@ ROOT = "/x/media"
 def env(monkeypatch, tmp_path):
     monkeypatch.setattr(FM, "_DB_PATH", str(tmp_path / "forage.db"))
     monkeypatch.setattr(FD, "DOC_DIR", str(tmp_path / "docs"))
+    monkeypatch.setattr(FM, "_place_order", lambda q: [])   # 장소 찾기(의미 채널)는 인코더를 올린다 — 글자·위치 조립 시험에서는 끈다(전용 시험이 따로 있다)
     monkeypatch.setattr(FD, "reconcile_lazy", lambda *a, **k: None)   # 시험의 가짜 경로는 실재하지 않는다 — 대조는 전용 시험에서만
     return tmp_path
 
+
+
+_REAL_PLACE_ORDER = FM._place_order
+
+
+def _legacy_note(**kw):
+    """입구 관문(2026-09-18, locus=주소) 이전에 쌓인 주소 없는 행 — 재고에 아직 남아 있으므로 문서 배치 규칙은 계속 지킨다."""
+    orig = FM.locus_is_address
+    FM.locus_is_address = lambda _b, _l: True
+    try:
+        return FM.note_map(**kw)
+    finally:
+        FM.locus_is_address = orig
 
 def test_note_renders_section_and_roundtrips(env):
     FM.note_map(body="disk:T", locus=ROOT, kind="identity", claim="미디어 폴더 — 축이 섞임", confidence=0.9, territory=True)
@@ -68,8 +82,8 @@ def test_forget_removes_line_from_doc(env):
 def test_migrate_groups_by_root_and_body(env):
     FM.note_map(body="mac", locus="/Users/u/Desktop/AI/x", kind="identity", claim="AI 하위", confidence=0.7)
     FM.note_map(body="mac", locus="/Users/u/Desktop", kind="identity", claim="바탕화면", confidence=0.7)
-    FM.note_map(body="web", locus="arXiv", kind="identity", claim="논문 출처", confidence=0.7)
-    FM.note_map(body="code:repo", locus="backend/x.py", kind="convention", claim="층 규칙", confidence=0.7)
+    _legacy_note(body="web", locus="arXiv", kind="identity", claim="논문 출처", confidence=0.7)
+    _legacy_note(body="code:repo", locus="backend/x.py", kind="convention", claim="층 규칙", confidence=0.7)
     out = FD.migrate_all()
     rel = sorted(os.path.relpath(os.path.join(FD.DOC_DIR, w["doc"]), FD.DOC_DIR) for w in out["written"])
     docs = sorted(os.path.relpath(p, FD.DOC_DIR) for p, _b, _r in FD._scan_docs())
@@ -106,7 +120,7 @@ def test_path_loci_share_one_tree_regardless_of_body(env):
     """절대 경로 단언은 몸 표기(code:*·disk:*)와 무관하게 mac 트리 문서 하나에 모인다(2026-09-03 사용자 판정)."""
     FM.note_map(body="mac", locus="/Users/u/Desktop/a", kind="identity", claim="맥 것", confidence=0.7)
     FM.note_map(body="code:Repo", locus="/Users/u/Desktop/a/backend", kind="identity", claim="증류가 코드 라벨을 붙인 경로", confidence=0.7)
-    FM.note_map(body="code:Repo", locus="module.x", kind="convention", claim="경로 없는 코드 관습", confidence=0.7)
+    _legacy_note(body="code:Repo", locus="module.x", kind="convention", claim="경로 없는 코드 관습", confidence=0.7)
     docs = {(b, r): p for p, b, r in FD._scan_docs()}
     assert set(docs) == {("mac", "/Users/u/Desktop"), ("code:Repo", "code:Repo")}, docs
     tree = open(docs[("mac", "/Users/u/Desktop")], encoding="utf-8").read()
@@ -135,7 +149,7 @@ def test_migrate_layout_moves_body_folder_path_docs_into_tree(env):
 
 def test_nonpath_root_doc_never_covers_path_loci(env):
     """재발 방지(2026-09-03 사고): 디스크 몸의 경로 없는 locus 문서(root=mac)가 경로 locus 를 덮으면 동기화가 경로 단언을 지운다."""
-    FM.note_map(body="mac", locus="__substrate__", kind="substrate", claim="EXIF 없음", confidence=0.7)
+    _legacy_note(body="mac", locus="__substrate__", kind="substrate", claim="EXIF 없음", confidence=0.7)
     FM.note_map(body="mac", locus="/Users/u/Desktop", kind="identity", claim="바탕화면", confidence=0.7)
     docs = {os.path.relpath(p, FD.DOC_DIR): (b, r) for p, b, r in FD._scan_docs()}
     assert "mac/memory.md" in docs and "mac/Users/u/Desktop/memory.md" in docs
@@ -218,7 +232,7 @@ def test_web_url_loci_land_in_host_path_tree_regardless_of_scheme_and_body(env):
     FM.note_map(body="web", locus="https://github.com/acme/harness", kind="identity", claim="하네스 저장소", confidence=0.9)
     FM.note_map(body="web", locus="github.com/acme/harness/docs", kind="convention", claim="문서는 docs/ 아래", confidence=0.8)
     FM.note_map(body="web:https://github.com/acme", locus="https://github.com/acme?tab=repos", kind="identity", claim="acme 조직", confidence=0.7)
-    FM.note_map(body="web", locus="Nature", kind="identity", claim="학술지", confidence=0.6)
+    _legacy_note(body="web", locus="Nature", kind="identity", claim="학술지", confidence=0.6)
     tree = FD.doc_path_at("web", "github.com/acme")
     assert os.path.exists(tree) and tree.endswith(os.path.join("web", "github.com", "acme", "memory.md"))
     text = open(tree, encoding="utf-8").read()
@@ -233,7 +247,7 @@ def test_web_url_loci_land_in_host_path_tree_regardless_of_scheme_and_body(env):
 
 
 def test_host_like_locus_in_non_web_body_stays_in_body_doc(env):
-    FM.note_map(body="code:site", locus="README.md", kind="identity", claim="저장소 소개", confidence=0.9)
+    _legacy_note(body="code:site", locus="README.md", kind="identity", claim="저장소 소개", confidence=0.9)
     FM.note_map(body="book:x", locus="irepublic.brain", kind="identity", claim="책 속 상표", confidence=0.9)
     assert not os.path.isdir(os.path.join(FD.DOC_DIR, "web"))
     assert "### README.md" in open(FD.doc_path_at("code:site", "code:site"), encoding="utf-8").read()
@@ -271,3 +285,100 @@ def test_migrate_layout_moves_web_url_body_doc_into_tree(env):
     text = open(dst, encoding="utf-8").read()
     assert FD._read_marker(dst) == ("web", "platform.example.com/usage")
     assert "월요일에 갱신" in text and "### https://platform.example.com/usage" in text
+
+
+def test_entrance_gate_rejects_locus_that_is_not_an_address(env):
+    """포식 기억 = "장소를 주면 그 장소의 전부". 주제 이름·상대 경로·`<몸>/unknown` 은 어느 장소의 기억도 못 된다."""
+    for body, locus in [("web", "web/local_cafe_search"), ("web", "투자 가이드"), ("code:repo", "backend/x.py"),
+                        ("code:repo", "code:repo/unknown"), ("mac", "mac/음악/<아티스트명>"), ("code:repo", "handler.py")]:
+        r = FM.note_map(body=body, locus=locus, kind="convention", claim="x", confidence=0.7)
+        assert r["success"] is False and r["rejected"] == "locus_not_address", (body, locus)
+    for body, locus in [("mac", "/Users/u/Desktop"), ("mac", "~/Desktop"), ("web", "https://github.com/acme?tab=x"),
+                        ("web", "land.naver.com"), ("code:repo", "/Users/u/repo/backend/x.py"), ("book:하네스", "3장"), ("notebook:AI 동향", "출처 12")]:
+        assert FM.note_map(body=body, locus=locus, kind="identity", claim="y", confidence=0.7)["success"], (body, locus)
+
+
+def test_repair_verdict_goes_to_the_file_address_and_general_lessons_to_guide_queue(env, monkeypatch, tmp_path):
+    """수리 교훈: 파일에 붙으면 그 파일의 절대 경로에(열면 나오게), 장소가 없으면 포식 기억이 아니라 가이드 제안 큐로."""
+    import json
+    import repair_verdict_distill as RV
+    repo = tmp_path / "repo"
+    (repo / "backend").mkdir(parents=True)
+    (repo / "backend" / "x.py").write_text("pass\n")
+    monkeypatch.setattr(RV, "_repo_root", lambda: str(repo))
+    queued = []
+    monkeypatch.setattr("guide_feedback._queue_proposal", lambda guide, issue, evidence="": queued.append((guide, issue)))
+    monkeypatch.setattr("consciousness_agent.oneshot_ai_call", lambda **kw: json.dumps({"map": [
+        {"locus": "backend/x.py", "kind": "substrate", "claim": "x 는 빈 입력에 침묵한다"},
+        {"locus": "__repair__", "kind": "convention", "claim": "스윕 범위는 관문이 정한다"},
+        {"locus": "backend/gone.py", "kind": "convention", "claim": "없는 파일에 붙은 교훈"}]}))
+    assert RV._distill_commit("code:repo", "repo", "a" * 40, "fix: x", ["backend/x.py"], "") == 1
+    rows = FM.recall(locus=str(repo / "backend" / "x.py"))["map"]
+    assert [r["claim"] for r in rows if r["locus"] == str(repo / "backend" / "x.py")] == ["x 는 빈 입력에 침묵한다"]
+    assert [q[1] for q in queued] == ["스윕 범위는 관문이 정한다", "없는 파일에 붙은 교훈"]
+
+
+def test_heavy_doc_splits_into_child_folder_docs(env, tmp_path):
+    """한 문서에 단언이 몰리면 자식 폴더 문서로 갈린다 — 파일 locus 는 그 파일의 폴더로, 뿌리 바로 아래 파일은 남는다."""
+    repo = tmp_path / "repo"
+    for d in ("backend/ibl", "scripts"):
+        (repo / d).mkdir(parents=True)
+    FM.note_map(body="mac", locus=str(repo), kind="identity", claim="저장소 뿌리", confidence=0.9, territory=True)
+    for i in range(7):
+        f = repo / "backend" / "ibl" / f"m{i}.py"
+        f.write_text("pass")
+        FM.note_map(body="mac", locus=str(f), kind="substrate", claim=f"ibl 교훈 {i}", confidence=0.7)
+    for i in range(3):
+        f = repo / "scripts" / f"s{i}.py"
+        f.write_text("pass")
+        FM.note_map(body="mac", locus=str(f), kind="convention", claim=f"scripts 교훈 {i}", confidence=0.7)
+    (repo / "README.md").write_text("x")
+    FM.note_map(body="mac", locus=str(repo / "README.md"), kind="identity", claim="뿌리의 파일", confidence=0.7)
+    made = FD.split_heavy_docs(max_rows=8, min_child=5)
+    assert made == [FD.doc_path_at("mac", str(repo / "backend" / "ibl"))], made   # 외길(backend/)은 건너뛰고 단언이 모인 폴더에
+    root_doc = open(FD.doc_path_at("mac", str(repo)), encoding="utf-8").read()
+    assert "ibl 교훈 3" not in root_doc and "scripts 교훈 1" in root_doc and "뿌리의 파일" in root_doc
+    assert "ibl 교훈 3" in open(made[0], encoding="utf-8").read()
+    got = FM.recall(locus=str(repo / "backend" / "ibl" / "m3.py"))
+    assert any(m["claim"] == "ibl 교훈 3" for m in got["map"])
+    assert FD.split_heavy_docs(max_rows=8, min_child=5) == []   # 멱등
+
+
+def test_place_finding_feeds_recall_and_trail_folds_misses_into_cues(env, tmp_path, monkeypatch):
+    """장소를 모를 때: 장소 찾기가 짚은 후보 주소가 places 로 오고 첫 후보의 단언이 전부 온다. 빗나가서 다른 곳을 열면
+    그 질문이 결국 연 장소 문서의 찾는 말 후보가 된다(검색이 사전을 고친다)."""
+    import json
+    import tree_recall
+    import forage_consolidation as FC
+    import forage_recall_store as FRS
+    movies, music = tmp_path / "vol" / "movies", tmp_path / "vol" / "music"
+    movies.mkdir(parents=True); music.mkdir(parents=True)
+    FM.note_map(body="disk:X", locus=str(movies), kind="identity", claim="영화 보관 폴더", confidence=0.9, territory=True)
+    FM.note_map(body="disk:X", locus=str(movies), kind="dead_branch", claim="SF 폴더는 1편뿐", confidence=0.8)
+    FM.note_map(body="disk:X", locus=str(music), kind="identity", claim="음악 립 모음", confidence=0.9, territory=True)
+    assert {r["body"] for r in FM.recall(limit=50)["map"]} == {"mac"}          # 몸 표기는 주소에서 정해진다
+    monkeypatch.setattr(tree_recall, "_index_dir", lambda: str(tmp_path / "idx"))
+    monkeypatch.setattr("thread_context.get_task_origin", lambda: "user")
+    monkeypatch.setattr("thread_context.get_current_task_id", lambda: "task_t")
+    monkeypatch.setattr(tree_recall, "search", lambda store, q, **kw: {"status": "ok", "ids": [str(music)]})
+    monkeypatch.setattr(FM, "_place_order", _REAL_PLACE_ORDER)
+    res = FM.recall(query="주말에 볼 것")
+    assert [p["place"] for p in res["places"]] == [str(music)] and res["map"][0]["via"] == "place"
+    assert 'at="%s"' % music in FM.recall_xml(query="주말에 볼 것")
+    FM.recall(locus=str(movies))                                                # 짚은 곳이 아니라 다른 곳을 열었다
+    out = FC.fold_place_trail()
+    assert out["misses"] >= 1 and out["noted"] == 1
+    doc = FD.doc_path_at("mac", str(movies))
+    assert '찾는 말 후보: "주말에 볼 것"' in open(doc, encoding="utf-8").read()
+    assert "주말에 볼 것" in FRS.cues_of(doc)
+    assert FC.fold_place_trail() == {"misses": 0, "noted": 0}                   # 같은 원장을 두 번 접지 않는다
+    items = {it.id: it for it in FRS.ForageStore().items()}
+    assert "SF 폴더는 1편뿐" in items[str(movies)].text and items[str(movies)].path[-1] == "movies"
+
+
+def test_purge_dead_stamps_drops_only_missing_docs(env):
+    FM.note_map(body="mac", locus="/Users/u/Desktop", kind="identity", claim="바탕화면", confidence=0.8, territory=True)
+    live = FD.doc_path_at("mac", "/Users/u/Desktop")
+    FM.set_meta("docsync:" + str(env / "docs" / "old_flat.md"), "1")
+    assert FD.purge_dead_stamps() == 1
+    assert FM.get_meta("docsync:" + live) and not FM.get_meta("docsync:" + str(env / "docs" / "old_flat.md"))

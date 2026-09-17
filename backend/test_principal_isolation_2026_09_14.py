@@ -187,7 +187,7 @@ def test_deep_memory_and_forage_closed_for_body(monkeypatch):
     import forage_memory as fm
     with P.narrow(P.body("9", 4), "t"):
         res = fm.recall(query="진료")
-        assert not res["map"] and not res["owner"] and not res.get("territory")
+        assert not res["map"] and not res.get("territory") and res.get("closed") == "principal"
         assert fm.recall_xml(query="진료") == ""
 
 

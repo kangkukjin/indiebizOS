@@ -309,6 +309,20 @@ def _stamp(path: str) -> None:
         pass
 
 
+def purge_dead_stamps() -> int:
+    """사라진 문서의 동기화 표식(docsync:<경로>)을 걷는다 — 배치가 바뀔 때마다(평면 → 트리, _gone 접기) 옛 경로의 표식이
+    forage_meta 에 남아 쌓였다(2026-09-18 실측 199개 중 절반 이상이 죽은 경로)."""
+    conn = FM._connect()
+    try:
+        dead = [k for (k,) in conn.execute("SELECT key FROM forage_meta WHERE key LIKE 'docsync:%'").fetchall()
+                if not os.path.exists(k[len("docsync:"):])]
+        conn.executemany("DELETE FROM forage_meta WHERE key=?", [(k,) for k in dead])
+        conn.commit()
+        return len(dead)
+    finally:
+        conn.close()
+
+
 # ----------------------------------------------------------------- DB → 문서
 def rows_for_doc(body: str, root: str) -> List[Dict[str, Any]]:
     """이 문서가 담을 행 — 같은 몸에서 더 구체적인 다른 문서가 덮는 행은 뺀다(상위 문서는 골격, 상세는 하위 문서)."""
@@ -380,6 +394,75 @@ def refresh_doc(path: str, body: str, root: str) -> Optional[str]:
         f.write(text)
     _stamp(path)
     return path
+
+
+# 한 문서가 담는 단언이 이보다 많으면 하위 폴더로 가른다. 포식 기억은 "장소를 열면 그 장소의 전부"인데,
+# 전부가 한 문서에 쌓이면 전부를 줄 수 없다(2026-09-18: 저장소 뿌리 문서 하나에 300행·77KB). 기준은 행 수 —
+# 조사 산문은 조사 지침의 24KB 예산이 따로 지킨다.
+SPLIT_MAX_ROWS = 40
+SPLIT_MIN_CHILD = 5
+
+
+def _child_dir_under(root: str, loc: str, tree_body: str) -> Optional[str]:
+    """root 바로 아래 단(loc 이 지나가는 자식 노드). 경로 트리에서 마지막 단이 파일이면 자식이 못 된다."""
+    rp, lp = _parts(root), _parts(loc)
+    if len(lp) <= len(rp):
+        return None
+    child = _join(tree_body, lp[:len(rp) + 1])
+    if tree_body == TREE_BODY and len(lp) == len(rp) + 1 and not os.path.isdir(child):
+        return None   # root 바로 아래의 파일 — 이 문서에 남는다
+    return child
+
+
+def _common_node(child: str, locs: List[str], tree_body: str) -> str:
+    """child 아래 locs 전부를 덮는 가장 깊은 노드(경로 트리에선 폴더만). 단언이 한 갈래로만 내려가면 그 끝에 문서를 둔다."""
+    split = [_parts(l) for l in locs]
+    common = split[0]
+    for p in split[1:]:
+        k = 0
+        while k < min(len(common), len(p)) and common[k] == p[k]:
+            k += 1
+        common = common[:k]
+    base = len(_parts(child))
+    while len(common) > base:
+        node = _join(tree_body, common)
+        if tree_body != TREE_BODY or os.path.isdir(node):
+            return node
+        common = common[:-1]
+    return child
+
+
+def split_heavy_docs(max_rows: int = SPLIT_MAX_ROWS, min_child: int = SPLIT_MIN_CHILD) -> List[str]:
+    """단언이 max_rows 를 넘는 트리 문서를, 단언 min_child 개 이상이 모인 바로 아래 자식 노드의 문서로 가른다(무LLM·결정론).
+    새 문서도 무거우면 다음 바퀴에서 다시 갈린다. 반환 = 새로 생긴 문서들."""
+    made: List[str] = []
+    for _round in range(6):
+        grew = False
+        for _path, body, root in _scan_docs():
+            t = _tree(root, body)
+            if not t:
+                continue
+            rows = rows_for_doc(body, root)
+            if len(rows) <= max_rows:
+                continue
+            groups: Dict[str, List[str]] = {}
+            for x in rows:
+                loc = _canon(x["locus"], x["body"])
+                c = _child_dir_under(t[1], loc, t[0])
+                if c:
+                    groups.setdefault(c, []).append(loc)
+            for child, locs in sorted(groups.items()):
+                if len(locs) < min_child:
+                    continue
+                child = _common_node(child, locs, t[0])   # 외길은 건너뛴다 — 빈 중간 문서를 만들지 않는다
+                if not os.path.exists(doc_path_at(t[0], child)):
+                    out = refresh_doc_for(t[0], child, own_node=True)
+                    if out:
+                        made.append(out)
+                        grew = True
+        if not grew:
+            break
+    return made
 
 
 def refresh_all_docs() -> List[str]:

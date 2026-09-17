@@ -20,6 +20,7 @@ ROOT = "/x/media"
 def fm(monkeypatch, tmp_path):
     monkeypatch.setattr(FM, "_DB_PATH", str(tmp_path / "forage.db"))
     monkeypatch.setattr(FD, "DOC_DIR", str(tmp_path / "docs"))
+    monkeypatch.setattr(FM, "_place_order", lambda q: [])   # 장소 찾기(의미 채널)는 인코더를 올린다 — 글자·위치 조립 시험에서는 끈다(전용 시험이 따로 있다)
     monkeypatch.setattr(FD, "reconcile_lazy", lambda *a, **k: None)   # 시험의 가짜 경로는 실재하지 않는다 — 대조는 전용 시험에서만   # 정본=문서: 시험이 실제 문서 폴더에 쓰지 않게
     b = "disk:T"
     FM.note_map(body=b, locus=ROOT, kind="identity", claim="미디어 보관 폴더 — 축이 섞임(장르/나라/상태). 주제어: 영화 자막",
@@ -101,7 +102,7 @@ def test_locus_recall_brings_the_folder_whole(fm):
     vias = {(m["locus"], m["via"]) for m in res["map"]}
     assert (ROOT + "/horror", "own") in vias and (ROOT + "/horror/deep", "child") in vias
     assert any(m["via"] == "inherit" and m["claim"] == "파일명 = 원제.연도.태그" for m in res["map"])
-    assert res["territory"] == [] and res["owner"] == []
+    assert res["territory"] == [] and "owner" not in res   # 주인모델은 2026-09-18 은퇴
 
 
 def test_locus_root_shows_territory_identity_as_own_and_all_children(fm):

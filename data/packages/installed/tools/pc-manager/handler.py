@@ -214,11 +214,14 @@ def _forage_flag(raw, default=False):
 
 
 def _forage_note(tool_input: dict) -> str:
-    """[self:forage]{op:note} — 지도(map)/주인모델(owner) 항목 누적."""
+    """[self:forage]{op:note} — 지도(map) 단언 누적. 주인모델(layer=owner)은 2026-09-18 은퇴."""
     import forage_memory as FM
     layer = (tool_input.get("layer") or "map").strip().lower()
-    if layer not in ("map", "owner"):
-        return json.dumps({"success": False, "error": "layer 는 map 또는 owner"}, ensure_ascii=False)
+    if layer != "map":
+        return json.dumps({"success": False, "retired": "owner_model",
+                           "error": "layer 는 map 뿐입니다 — 주인모델(owner)은 은퇴했습니다. 주인에 대한 사실은 "
+                                    "심층기억이 대화에서 직접 증류합니다. 포식 기억에는 장소(locus)에 붙는 단언만 적습니다."},
+                          ensure_ascii=False)
     prior = tool_input.get("prior_class")
     conf = tool_input.get("confidence")
     prov = tool_input.get("provenance")
@@ -227,17 +230,6 @@ def _forage_note(tool_input: dict) -> str:
             prov = json.loads(prov)
         except (ValueError, TypeError):
             prov = {"observed": [prov]}
-    if layer == "owner":
-        facet = tool_input.get("facet")
-        value = tool_input.get("value") or tool_input.get("claim")
-        if not facet or not value:
-            return json.dumps({"success": False,
-                               "error": "owner note 는 facet + value 필요"}, ensure_ascii=False)
-        r = FM.note_owner(facet=facet, value=value,
-                          prior_class=prior or "semantic",
-                          confidence=conf if conf is not None else 0.6,
-                          provenance=prov)
-        return json.dumps(r, ensure_ascii=False)
     # layer == map
     locus = tool_input.get("locus") or tool_input.get("folder_path")
     kind = tool_input.get("kind")

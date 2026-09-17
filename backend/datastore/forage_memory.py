@@ -6,7 +6,9 @@ forager(=AI)가 디스크·웹·코드를 *포식*하며 배운 것을 세션 �
 이건 forager 루프가 아니라 forager가 결여한 *지속 기억*이다(루프는 인지층 AI).
 
   forage_map   — 몸별 지도(이 디스크/볼륨 전속): 폴더 정체·관습·죽은 가지·기질.
-  owner_model  — 몸독립 주인모델(모든 몸 공유): 정체·분야·소속·내용신호·어휘매핑.
+  (owner_model — 몸독립 주인모델은 2026-09-18 은퇴. 주인에 대한 사실은 심층기억의 일이다:
+   같은 종류의 사실이 관문 없는 두 번째 저장소에 쌓였고, 09-03 자동 주입 폐지 뒤로는 읽는 경로도 없었다.
+   docs/FORAGE_MEMORY_AUDIT_2026_09_18.md)
 
 해마([[execution-memory-architecture]])의 *공간판* — 증류(경험 누적)·정리(위생)·
 lazy freshness(감쇠 곡선 대신 mtime 노출, 판단은 AI). 안전판 4(defeasible+prune_reason /
@@ -48,18 +50,6 @@ CREATE TABLE IF NOT EXISTS forage_map (
     territory    INTEGER NOT NULL DEFAULT 0,  -- 거친 영토 앵커(상시-on, 열거가능 공간만). go/skip 은 런타임 파생
     UNIQUE(body, locus, kind, claim)   -- 2026-09-03: 한 자리에 같은 종류의 단언 여럿(정본=문서 절의 줄들). 옛 키 (body,locus,kind) 는 _migrate_unique_key 가 옮긴다
 );
-CREATE TABLE IF NOT EXISTS owner_model (
-    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-    facet        TEXT NOT NULL,               -- identity|domain|affiliation|signal|lexicon|habit
-    value        TEXT NOT NULL,
-    prior_class  TEXT NOT NULL DEFAULT 'semantic',
-    confidence   REAL NOT NULL DEFAULT 0.6,
-    provenance   TEXT,
-    last_seen    TEXT,
-    surface_flag INTEGER NOT NULL DEFAULT 0,
-    scent        INTEGER NOT NULL DEFAULT 0,  -- 상시-on 냄새로 결정화됐나(빈도 게이트). 0=임시(질의 필터)
-    UNIQUE(facet, value)
-);
 CREATE TABLE IF NOT EXISTS forage_meta (
     key   TEXT PRIMARY KEY,
     value TEXT
@@ -67,7 +57,6 @@ CREATE TABLE IF NOT EXISTS forage_meta (
 """
 
 _MAP_KINDS = ("identity", "convention", "dead_branch", "substrate")
-_OWNER_FACETS = ("identity", "domain", "affiliation", "signal", "lexicon", "habit")
 _PRIOR_CLASSES = ("structural", "semantic")
 
 # 상시-on 영토 지도의 하드 상한 — 프롬프트가 무한정 늘지 않도록.
@@ -78,14 +67,7 @@ _TERRITORY_CLAIM_MAX = 64  # 영토 한 줄 claim 길이 상한(거친 윤곽만
 # '빈도가 결정화한다'(자율주행→수동→앱)와 같은 모티프 — 자기-바운딩(대부분 가지는 1회뿐). cap 이 2차 백스톱.
 _TERRITORY_PROMOTE_AT = 2
 
-# owner(주인모델)도 같은 빈도 게이트를 쓴다 — territory 와 대칭.
-# 왜: owner 는 query 면제 *상시* 노출(냄새)이라, 단 1회 포식에서 LLM 이 추론한 일반화가
-# 그대로 모든 프롬프트에 영구 주입된다. 한 번 물어본 주제가 "습관"이 되고, 질문 *대상*이
-# 주인의 "소속"이 되는 오염이 실제로 쌓였다(에피소드 881 진단 — 전 66건이 obs=1이었음).
-# → 서로 다른 포식에서 재확인된 것만 냄새로 결정화. 임시(scent=0)도 *지워지지 않고*
-#   map 처럼 query 필터로 회상된다(잃는 정보 0, 상시 비용만 뺀다).
-_OWNER_SCENT_PROMOTE_AT = 2
-_OWNER_SCENT_CAP = 8  # 결정화된 냄새의 하드 상한(프롬프트 무한증식 차단, _TERRITORY_CAP 대응)
+
 
 
 def _territory_eligible(kind: str, locus: str) -> bool:
@@ -117,18 +99,11 @@ def _connect() -> sqlite3.Connection:
     if "territory" not in cols:
         conn.execute("ALTER TABLE forage_map ADD COLUMN territory INTEGER NOT NULL DEFAULT 0")
         conn.commit()
-    # 마이그레이션: owner_model.scent — 기존 행은 *지우지 않고* provenance 의 실제 관측 수로 판정.
-    #   재확인된 적 없는(obs=1) 항목은 임시로 강등되어 질의 필터로만 회상된다.
-    ocols = {r["name"] for r in conn.execute("PRAGMA table_info(owner_model)")}
-    if "scent" not in ocols:
-        conn.execute("ALTER TABLE owner_model ADD COLUMN scent INTEGER NOT NULL DEFAULT 0")
-        promoted = 0
-        for r in conn.execute("SELECT id, provenance FROM owner_model").fetchall():
-            if _distinct_observations(r["provenance"]) >= _OWNER_SCENT_PROMOTE_AT:
-                conn.execute("UPDATE owner_model SET scent=1 WHERE id=?", (r["id"],))
-                promoted += 1
-        conn.commit()
-        print(f"[포식기억] owner_model.scent 마이그레이션: 결정화 {promoted}건, 나머지는 임시(질의 필터)")
+    # 은퇴한 주인모델 테이블(2026-09-18) — 비어 있을 때만 걷는다(백업에서 되살린 DB 의 행을 조용히 지우지 않는다).
+    if conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='owner_model'").fetchone():
+        if not conn.execute("SELECT 1 FROM owner_model LIMIT 1").fetchone():
+            conn.execute("DROP TABLE owner_model")
+            conn.commit()
     _migrate_unique_key(conn)
     return conn
 
@@ -221,6 +196,45 @@ def _merge_provenance(old_json: Optional[str], new_prov: Optional[Dict[str, Any]
 # ---------------------------------------------------------------------------
 # note — 지도/주인모델에 단언 누적 (증류·수동 주입 공통 경로)
 # ---------------------------------------------------------------------------
+# 자체 주소 공간을 가진 몸 — 폴더 트리·URL 이 아니라 "이 책"·"이 노트북"이 곧 주소다.
+_OWN_SPACE_BODIES = ("book:", "notebook:")
+# 호스트처럼 보이지만 파일 이름인 꼬리(handler.py 가 호스트로 통과하지 않게)
+_FILE_TAILS = (".py", ".js", ".ts", ".tsx", ".json", ".yaml", ".yml", ".md", ".txt", ".sh", ".html", ".css", ".db", ".log")
+_HOST_RE = re.compile(r"[a-z0-9-]+(\.[a-z0-9-]+)+(:\d+)?")
+
+
+def locus_is_address(body: str, locus: str) -> bool:
+    """포식 기억의 계약 = "장소를 주면 그 장소의 기억 전부". 그래서 locus 는 다시 짚을 수 있는 **주소**여야 한다 —
+    절대 경로 · 웹 host[/path] · 자체 주소 공간의 몸. 주제 이름·상대 경로·`<몸>/unknown` 같은 별명은 어느 장소의
+    "전부"에도 들지 못한다(2026-09-18 재고 감사: 702건 중 주소 없는 239건, docs/FORAGE_MEMORY_AUDIT_2026_09_18.md)."""
+    if (body or "").startswith(_OWN_SPACE_BODIES):
+        return True
+    loc = (locus or "").strip()
+    if loc.startswith("~"):
+        loc = os.path.expanduser(loc)
+    if loc.startswith("/"):
+        return True
+    host = _web_norm(loc).split("/", 1)[0]
+    return bool(_HOST_RE.fullmatch(host)) and not host.endswith(_FILE_TAILS)
+
+
+TREE_BODY = "mac"   # 절대 경로 단언이 사는 트리의 몸 표기(forage_doc.TREE_BODY 와 같은 값 — 문서 트리는 이미 이렇게 모은다)
+
+
+def canonical_body(body: str, locus: str) -> str:
+    """주소가 곧 열쇠다 — 절대 경로·URL 단언의 몸 표기는 주소에서 정해진다(2026-09-18).
+    옛 판은 증류기가 지은 이름(`code:indiebizOS`·`code:IndieBiz OS`·`disk:Expansion`…)을 그대로 키로 써서
+    같은 저장소의 기억이 네 몸으로 갈렸다. 자체 주소 공간의 몸(book:·notebook:)만 제 이름을 지킨다."""
+    if (body or "").startswith(_OWN_SPACE_BODIES):
+        return body
+    loc = os.path.expanduser((locus or "").strip())
+    if loc.startswith("/"):
+        return TREE_BODY
+    if _is_url(loc, body):   # 스킴 없는 host 꼴은 웹 몸(또는 몸 미상)일 때만 URL 이다 — code:* 의 README.md 를 호스트로 읽지 않는다
+        return WEB_BODY
+    return body
+
+
 def note_map(*, body: str, locus: str, kind: str, claim: str,
              prior_class: str = "structural", confidence: float = 0.7,
              provenance: Optional[Dict[str, Any]] = None,
@@ -232,6 +246,17 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
     """
     if kind not in _MAP_KINDS:
         return {"success": False, "error": f"kind 는 {_MAP_KINDS} 중 하나여야 합니다 (받음: {kind})"}
+    if not locus_is_address(body, locus):
+        try:
+            from episode_logger import record_trajectory_event
+            record_trajectory_event("forage.note.rejected", {"reason": "locus_not_address", "body": body, "locus": str(locus)[:120]})
+        except Exception:
+            pass
+        return {"success": False, "rejected": "locus_not_address",
+                "error": f"locus 는 주소여야 합니다(절대 경로 또는 웹 host/path) — 받음: {str(locus)[:80]!r}. "
+                         "주제 이름·상대 경로는 어느 장소의 기억도 되지 못합니다. 장소가 없는 지식은 포식 기억의 몫이 아닙니다"
+                         "(방법=가이드, 주인에 대한 사실=심층기억)."}
+    body = canonical_body(body, locus)
     if prior_class not in _PRIOR_CLASSES:
         prior_class = "structural"
     claim = mask_secrets(claim)
@@ -290,57 +315,6 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
     _doc_refresh(body, locus, own_node=bool(territory))   # 정본=문서: 절 재렌더. 영토 앵커면 그 폴더 자기 노드에 문서
     return {"success": True, "action": action, "id": entry_id, "table": "forage_map",
             "promoted_territory": promoted}
-
-
-def note_owner(*, facet: str, value: str, prior_class: str = "semantic",
-               confidence: float = 0.6, provenance: Optional[Dict[str, Any]] = None,
-               surface_flag: bool = False) -> Dict[str, Any]:
-    """owner_model 한 항목 upsert (키=facet+value). 재note 시 강화."""
-    if facet not in _OWNER_FACETS:
-        return {"success": False, "error": f"facet 은 {_OWNER_FACETS} 중 하나여야 합니다 (받음: {facet})"}
-    if prior_class not in _PRIOR_CLASSES:
-        prior_class = "semantic"
-    value = mask_secrets(value)  # upsert 키이기도 하므로 SELECT 이전에 마스킹
-    prov = dict(provenance or {})
-    if prov.get("query"):
-        prov["query"] = mask_secrets(prov["query"])
-    prov.setdefault("formed_at", _now())
-    conf = _clamp_conf(confidence, 0.6)
-    now = _now()
-    conn = _connect()
-    promoted = False
-    try:
-        row = conn.execute(
-            "SELECT id, confidence, provenance, scent FROM owner_model WHERE facet=? AND value=?",
-            (facet, value)).fetchone()
-        if row:
-            merged = _merge_provenance(row["provenance"], prov)
-            new_conf = max(conf, float(row["confidence"] or 0))
-            # 빈도 게이트: 서로 다른 포식에서 재확인됐으면 상시-on 냄새로 결정화(territory 와 대칭).
-            scent = 1 if row["scent"] else 0
-            if not scent and _distinct_observations(merged) >= _OWNER_SCENT_PROMOTE_AT:
-                scent = 1
-                promoted = True
-            conn.execute(
-                "UPDATE owner_model SET prior_class=?, confidence=?, provenance=?, "
-                "last_seen=?, surface_flag=?, scent=? WHERE id=?",
-                (prior_class, new_conf, merged, now, 1 if surface_flag else 0, scent, row["id"]))
-            entry_id = row["id"]
-            action = "reinforced"
-        else:
-            # 첫 관측은 항상 임시(scent=0) — 1회 추론이 모든 프롬프트에 영구 주입되지 않게.
-            cur = conn.execute(
-                "INSERT INTO owner_model (facet, value, prior_class, confidence, provenance, "
-                "last_seen, surface_flag, scent) VALUES (?,?,?,?,?,?,?,0)",
-                (facet, value, prior_class, conf,
-                 json.dumps(prov, ensure_ascii=False), now, 1 if surface_flag else 0))
-            entry_id = cur.lastrowid
-            action = "noted"
-        conn.commit()
-        return {"success": True, "action": action, "id": entry_id, "table": "owner_model",
-                "promoted_scent": promoted}
-    finally:
-        conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -539,7 +513,7 @@ def _fair_by_body(rows: List) -> List:
 
 
 def _principal_allows_recall() -> bool:
-    """요청 주체 관문(2026-09-14): 냄새지도·주인모델은 주인의 것 — 주체가 owner 가 아니면 닫는다."""
+    """요청 주체 관문(2026-09-14): 냄새지도는 주인의 것 — 주체가 owner 가 아니면 닫는다."""
     try:
         import principal
         return principal.recall_allowed("forage")
@@ -547,9 +521,51 @@ def _principal_allows_recall() -> bool:
         return False
 
 
+# ---------------------------------------------------------------------------
+# 장소 찾기 — 주소를 모를 때 "어느 장소인가" (2026-09-18, docs/FORAGE_MEMORY_AUDIT_2026_09_18.md §6)
+# ---------------------------------------------------------------------------
+# 포식 기억에서 고르는 일이 끼는 곳은 이 앞 단계 하나뿐이다. 후보는 기억이 아니라 **주소**이고, 주소가 정해지면
+# 그 장소의 기억은 고르지 않고 전부 준다(recall{locus}). 의미+글자 융합은 tree_recall(심층·세계의 기억과 같은 인코더).
+_PLACE_CANDIDATES = 5
+_PLACE_MIN_SIM = 0.4
+_PLACE_REST_ROWS = 4      # 둘째·셋째 후보 장소는 정체부터 이만큼만 — 전부는 그 주소를 지명해 연다
+
+
+def place_id(body: str, locus: str) -> str:
+    """장소의 이름. 자체 주소 공간의 몸(book:·notebook:)은 몸 이름이 곧 장소, 그 밖은 주소(정규형)."""
+    return body if (body or "").startswith(_OWN_SPACE_BODIES) else _norm_locus(locus, body)
+
+
+def _place_order(query: Optional[str]) -> List[str]:
+    try:
+        import tree_recall
+        from forage_recall_store import ForageStore
+        r = tree_recall.search(ForageStore(), query or "", limit=_PLACE_CANDIDATES, min_sim=_PLACE_MIN_SIM)
+        return list(r.get("ids") or []) if r.get("status") == "ok" else []
+    except Exception as e:   # 의미 채널이 없어도 회상은 글자 일치로 돈다
+        print(f"[포식기억] 장소 찾기 생략(글자 일치만): {e}")
+        return []
+
+
+def _trail(kind: str, **row) -> None:
+    """되먹임 원장 — "회상이 짚은 곳 ≠ 결국 연 곳"을 정리 패스가 읽어 그 장소 문서에 `찾는 말(후보)` 로 돌려준다.
+    개인 데이터라 git 밖(data/recall_index/). 시험·자가점검 출처는 적지 않는다."""
+    try:
+        from thread_context import get_task_origin, get_current_task_id
+        if (get_task_origin() or "") in ("test", "training", "selfcheck"):
+            return
+        import tree_recall
+        path = os.path.join(tree_recall._index_dir(), "forage_place_trail.jsonl")
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(json.dumps({"at": _now(), "task": get_current_task_id() or "", "kind": kind, **row}, ensure_ascii=False) + "\n")
+    except Exception:
+        pass
+
+
 def recall(*, body: Optional[str] = None, query: Optional[str] = None,
-           limit: int = 20, filter_owner: bool = True, locus: Optional[str] = None) -> Dict[str, Any]:
-    """포식 회상 — 몸별 지도(body 일치, query 필터) + 주인모델.
+           limit: int = 20, locus: Optional[str] = None) -> Dict[str, Any]:
+    """포식 회상 — 몸별 지도(body 일치, query 필터). locus 를 주면 그 장소의 전부(문서·조상 상속·자식 골격).
 
     ★주체 관문: 주체가 owner 가 아니면 빈 회상(closed="principal") — 회원 자기 포식은 손발 회상(1단계).
 
@@ -558,18 +574,14 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     몸이 limit 을 독점하지 않는다(두 축 분리: 하드웨어 감지=게이트, 회상=전 공간 —
     FORAGER_MULTIBODY_DESIGN §1).
 
-    filter_owner=False 면 owner_model 을 query 로 거르지 않고 *전부* 반환 — 주인모델은
-    '냄새(scent)'라 상시 노출이 능동 포식을 촉발한다(FORAGER_MULTIBODY_DESIGN §주입).
-    map(상세)은 큼·위치-특정이라 항상 query 필터.
-
     territory(거친 영토 앵커, territory=1)는 query 면제로 상시 노출 — '내 영토가 무엇으로 이뤄졌나'.
     go/skip(파나 건너뛰나)은 저장하지 않고 *지금 의도에 맞춰 런타임 파생*. 단 _TERRITORY_CAP 으로
     상한을 둬 프롬프트가 무한정 늘지 않게 한다(상위 confidence 만 노출). 'dead' 는 장소 속성이
     아니라 (장소×의도) 관계이므로 영토 정체만 띄우고 배제는 AI 가 판단한다.
     """
     if not _principal_allows_recall():
-        return {"success": True, "map": [], "owner": [], "territory": [], "closed": "principal",
-                "map_count": 0, "owner_count": 0, "territory_count": 0}
+        return {"success": True, "map": [], "territory": [], "closed": "principal",
+                "map_count": 0, "territory_count": 0}
     terms, grams = _query_terms(query)
     loc = _norm_locus(os.path.expanduser(locus)) if locus else None
     if loc:
@@ -585,6 +597,10 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         base = os.path.basename(_norm_locus(r["locus"])) if _is_tree(r["locus"]) else (r["locus"] or "")
         return _score(r["claim"], terms, grams) + _score(base, terms, grams)
 
+    if body and loc:
+        body = None   # 장소를 지명했으면 몸 표기는 거르지 않는다 — 주소가 열쇠다
+    elif body:
+        body = canonical_body(body, "/") if body.startswith(("code:", "disk:")) else body
     conn = _connect()
     try:
         if body:
@@ -594,8 +610,6 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
         else:
             map_rows = conn.execute(
                 "SELECT * FROM forage_map ORDER BY confidence DESC, last_seen DESC").fetchall()
-        owner_rows = conn.execute(
-            "SELECT * FROM owner_model ORDER BY confidence DESC, last_seen DESC").fetchall()
     finally:
         conn.close()
 
@@ -614,12 +628,11 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
     # map(상세) — 위치 기반 조립(§3): 일치(match) → 초점 위치의 자기 단언(own) → 조상 상속(inherit)
     # → 자식 골격(child, 한 줄). territory 냄새로 이미 뜬 항목만 제외(지명된 영토는 상세로 포함).
     if loc:
-        # 폴더 지명(locus) — 그 자리 통째: 냄새(territory·owner)는 끄고 그 폴더 자체가 own 으로 온다.
+        # 폴더 지명(locus) — 그 자리 통째: 냄새(territory)는 끄고 그 폴더 자체가 own 으로 온다.
         # 어휘가 기억의 입구(2026-09-03): 자동 주입이 없으므로 AI 가 폴더를 지명해 묻는 기본 경로.
         territory_items = []
         map_items = _assemble_by_locus(map_rows, _hit, limit, fair=False,
                                        no_query=not (terms or grams), focus_override=[loc])
-        owner_items_locus: List[Dict[str, Any]] = []
         doc_path = None
         try:
             import forage_doc
@@ -643,44 +656,36 @@ def recall(*, body: Optional[str] = None, query: Optional[str] = None,
                 root_missing = bool(_r and forage_doc._is_path(_r) and forage_doc._mounted(_r) and not os.path.isdir(os.path.expanduser(_r)))
         except Exception:
             root_missing = False
-        return {"success": True, "map": map_items, "owner": owner_items_locus,
+        _trail("open", locus=loc)
+        return {"success": True, "map": map_items,
                 "territory": territory_items, "locus": loc, "doc": doc_path, "docs_below": docs_below,
                 "root_missing": root_missing,
-                "map_count": len(map_items), "owner_count": 0, "territory_count": 0}
+                "map_count": len(map_items), "territory_count": 0}
     terr_ids = {t["id"] for t in territory_items}
     pool = [r for r in map_rows if r["id"] not in terr_ids]
-    map_items = _assemble_by_locus(pool, _hit, limit, fair=not body,
-                                   no_query=not (terms or grams))
-    # owner — 냄새 모드(filter_owner=False)에서도 *결정화된 것만* 상시 노출.
-    #   임시(scent=0, 1회 관측)는 map 처럼 query 가 지명할 때만 나온다 → 정보는 남고 상시 비용만 사라짐.
-    owner_items: List[Dict[str, Any]] = []
-    scent_shown = 0
-    for r in owner_rows:
-        matched = (not terms) or _match(r["value"], terms) or _match(r["facet"], terms)
-        if filter_owner:
-            if not matched:
-                continue
-        else:
-            if not r["scent"]:
-                if not (terms and matched):
-                    continue          # 임시 항목 — 질의가 지명하지 않으면 침묵
-            elif scent_shown >= _OWNER_SCENT_CAP:
-                continue              # 결정화 냄새 상한 초과
-            else:
-                scent_shown += 1
-        d = dict(r)
-        d["provisional"] = 0 if r["scent"] else 1
-        owner_items.append(d)
-        if len(owner_items) >= limit:
-            break
-    return {"success": True, "map": map_items, "owner": owner_items,
+    places = _place_order(query) if (terms or grams) else []
+    have = {place_id(r["body"], r["locus"]) for r in map_rows}
+    places = [p for p in places if p in have]            # 몸으로 좁힌 회상이면 그 몸의 장소만
+    map_items = _assemble_by_locus(pool if not places else list(map_rows), _hit, limit, fair=not body,
+                                   no_query=not (terms or grams), place_order=places)
+    if places:
+        _trail("query", query=(query or "")[:120], places=places[:_FOCUS_CAP])
+    ident = {}
+    for r in map_rows:            # map_rows 는 confidence 내림차순 — 그 장소의 가장 확실한 정체 한 줄(정체가 없으면 첫 단언)
+        pid = place_id(r["body"], r["locus"])
+        if pid in places and (pid not in ident or (r["kind"] == "identity" and not ident[pid][0])):
+            ident[pid] = (r["kind"] == "identity", _short(r["claim"]))
+    ident = {k: v[1] for k, v in ident.items()}
+    return {"success": True, "map": map_items,
+            # 후보 장소(주소) — 의미+글자 융합 순. 기억이 아니라 주소다: 맞는 곳을 locus 로 지명해 열면 그 장소의 전부가 온다
+            "places": [{"place": p, "what": ident.get(p, "")} for p in places],
             "territory": territory_items,
-            "map_count": len(map_items), "owner_count": len(owner_items),
+            "map_count": len(map_items),
             "territory_count": len(territory_items)}
 
 
 def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: bool,
-                       focus_override: Optional[List[str]] = None):
+                       focus_override: Optional[List[str]] = None, place_order: Optional[List[str]] = None):
     """위치 기반 조립. 반환 map_items.
 
     - match: 질의에 맞는 행(점수 순, 같은 점수면 더 구체적 위치·높은 confidence 먼저) — 전문(全文).
@@ -722,9 +727,18 @@ def _assemble_by_locus(pool: List, hit, limit: int, *, fair: bool, no_query: boo
         included[r["id"]] = d
         order.append(d)
 
+    # place: 장소 찾기(의미+글자 융합)가 짚은 후보 장소 — 첫 후보는 그 장소의 단언 전부, 다음 후보는 정체부터 몇 줄.
+    by_place: Dict[str, List] = {}
+    for r in pool:
+        by_place.setdefault(place_id(r["body"], r["locus"]), []).append(r)
+    kind_rank = {"identity": 0, "convention": 1, "substrate": 2, "dead_branch": 3}
+    for n, pid in enumerate((place_order or [])[:_FOCUS_CAP]):
+        rows = sorted(by_place.get(pid, []), key=lambda r: (kind_rank.get(r["kind"], 9), -r["confidence"]))
+        for r in (rows if n == 0 else rows[:_PLACE_REST_ROWS]):
+            add(r, "place", _FOCUS_CAP - n)
     for sc, r in matched:
         add(r, "match", sc)
-    focus: List[str] = list(focus_override or [])
+    focus: List[str] = list(focus_override or []) + [p for p in (place_order or [])[:_FOCUS_CAP] if _is_tree(p)]
     child_cap = limit if focus_override else _CHILD_CAP
     for _sc, r in matched:
         L = _norm_locus(r["locus"])
@@ -776,26 +790,26 @@ def territory_loci(body: Optional[str] = None) -> List[str]:
 
 
 def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
-               limit: int = 12, filter_owner: bool = True, locus: Optional[str] = None) -> str:
-    """<forage_memory> XML — 인지 파이프라인 주입용(해마 <execution_memory> 짝).
-
-    filter_owner=False 면 owner(주인모델)를 query 무관 상시 노출 — 냄새(scent)로 능동 포식 촉발.
-    map 이 없고 owner 만 있으면(=냄새만) 짧은 note 로 비용 절약.
-    """
-    res = recall(body=body, query=query, limit=limit, filter_owner=filter_owner, locus=locus)
-    if not res["map"] and not res["owner"] and not res.get("territory"):
+               limit: int = 12, locus: Optional[str] = None) -> str:
+    """<forage_memory> XML — `[self:forage]{op:"recall"}` 의 읽기 좋은 꼴(자동 주입은 2026-09-03 폐지)."""
+    res = recall(body=body, query=query, limit=limit, locus=locus)
+    if not res["map"] and not res.get("territory") and not res.get("places"):
         return ""
     if res["map"]:
         note = ('과거 포식에서 누적한 냄새지도입니다. 참고용이며 폐기가능(defeasible) — '
                 'prune_reason과 지금 목표가 안 겹치면 그 가지를 재오픈하세요. prior_class=semantic은 '
                 'committal하게 prune하지 말 것. freshness=stale/missing이면 디스크가 변했으니 재탐침 판단. '
                 'surface=1은 이 라벨이 이질 내용으로 흔들린 표식입니다. '
-                'via=match 질의 일치 · own 그 폴더의 나머지 단언 · inherit 상위 폴더에서 물려받은 관습·기질 · '
+                'via=place 장소 찾기가 짚은 후보 장소의 단언 · match 글자 일치 · own 그 폴더의 나머지 단언 · inherit 상위 폴더에서 물려받은 관습·기질 · '
                 'child 하위 폴더 한 줄 골격(자세한 건 그 폴더를 지명해 recall).')
     else:
-        note = ('주인(나)에 대해 과거 포식에서 배운 모델입니다. 이 주제로 *내 디스크/코드/웹에 자료가 '
-                '있을* 가능성을 떠올리는 단서 — 필요하면 포식(검색)을 시작하세요.')
+        note = '내 영토의 거친 윤곽입니다 — 질의에 맞는 상세 단언은 없습니다.'
     lines = [f'<forage_memory note="{note}">']
+    if res.get("places"):
+        lines.append('  <places note="질문에 맞을 법한 장소 후보(주소) — 기억이 아니라 주소다. 맞는 곳을 locus 로 지명해 다시 부르면 그 장소의 기억 전부가 온다.">')
+        for pl in res["places"]:
+            lines.append(f'    <place at="{pl["place"]}">{pl["what"]}</place>')
+        lines.append('  </places>')
     if res.get("territory"):
         tnote = ('내 영토(열거가능 공간)의 거친 윤곽 — 무엇이 어디 있나. 지금 의도와 *맞는* 가지를 '
                  '먼저 파고, *안 맞는* 가지는 건너뛰세요(go/skip은 의도에 맞춰 직접 판단 — '
@@ -824,16 +838,6 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
             text = m.get("short") if m.get("via") == "child" else m["claim"]
             lines.append(f'    <locus path="{loc}" {attrs}>{text}</locus>')
         lines.append('  </map>')
-    if res["owner"]:
-        onote = ('provisional="1" 은 *단 한 번의 포식*에서 추론된 미확인 항목입니다 — 참고만 하고 '
-                 '주인에 관한 사실로 단정하지 마세요(다른 포식에서 재확인되면 결정화됩니다).')
-        lines.append(f'  <owner note="{onote}">')
-        for o in res["owner"]:
-            sf = ' surface="1"' if o.get("surface_flag") else ''
-            pv = ' provisional="1"' if o.get("provisional") else ''
-            lines.append(f'    <facet name="{o["facet"]}" prior="{o["prior_class"]}" '
-                         f'conf="{o["confidence"]:.2f}"{sf}{pv}>{o["value"]}</facet>')
-        lines.append('  </owner>')
     lines.append('</forage_memory>')
     return "\n".join(lines)
 
@@ -843,8 +847,8 @@ def recall_xml(*, body: Optional[str] = None, query: Optional[str] = None,
 # ---------------------------------------------------------------------------
 def forget(*, entry_id: int, table: str = "forage_map") -> Dict[str, Any]:
     """잘못된/낡은 항목 폐기 (사람이 prune 재오픈·정정)."""
-    if table not in ("forage_map", "owner_model"):
-        return {"success": False, "error": "table 은 forage_map 또는 owner_model"}
+    if table != "forage_map":
+        return {"success": False, "error": "table 은 forage_map (주인모델은 2026-09-18 은퇴)"}
     conn = _connect()
     try:
         where = None
@@ -862,8 +866,8 @@ def forget(*, entry_id: int, table: str = "forage_map") -> Dict[str, Any]:
 
 def mark_surface(*, entry_id: int, table: str = "forage_map", on: bool = True) -> Dict[str, Any]:
     """surface 카운터-패스 — 이 라벨을 의심하라 표식(이질 내용 발견)."""
-    if table not in ("forage_map", "owner_model"):
-        return {"success": False, "error": "table 은 forage_map 또는 owner_model"}
+    if table != "forage_map":
+        return {"success": False, "error": "table 은 forage_map (주인모델은 2026-09-18 은퇴)"}
     conn = _connect()
     try:
         cur = conn.execute(f"UPDATE {table} SET surface_flag=? WHERE id=?",
@@ -878,12 +882,8 @@ def stats() -> Dict[str, Any]:
     conn = _connect()
     try:
         m = conn.execute("SELECT COUNT(*) FROM forage_map").fetchone()[0]
-        o = conn.execute("SELECT COUNT(*) FROM owner_model").fetchone()[0]
-        # 결정화된 냄새(상시-on)와 임시(질의 필터)의 비 — 주인모델이 실제로 굳고 있나 관측용
-        os_ = conn.execute("SELECT COUNT(*) FROM owner_model WHERE scent=1").fetchone()[0]
         bodies = [r[0] for r in conn.execute("SELECT DISTINCT body FROM forage_map").fetchall()]
-        return {"success": True, "forage_map": m, "owner_model": o,
-                "owner_scent": os_, "owner_provisional": o - os_, "bodies": bodies}
+        return {"success": True, "forage_map": m, "bodies": bodies}
     finally:
         conn.close()
 
@@ -920,16 +920,13 @@ def list_bodies() -> List[str]:
 
 
 def merge_candidates(body: str) -> Dict[str, Any]:
-    """정리 대상 후보 — surface 표식 항목은 *제외*(반대힘 보호). map=이 몸, owner=전역."""
+    """정리 대상 후보 — surface 표식 항목은 *제외*(반대힘 보호)."""
     conn = _connect()
     try:
         mr = conn.execute(
             "SELECT id, locus, kind, claim, prior_class, confidence FROM forage_map "
             "WHERE body=? AND surface_flag=0 ORDER BY kind, locus", (body,)).fetchall()
-        orow = conn.execute(
-            "SELECT id, facet, value, prior_class, confidence FROM owner_model "
-            "WHERE surface_flag=0 ORDER BY facet").fetchall()
-        return {"map": [dict(r) for r in mr], "owner": [dict(r) for r in orow]}
+        return {"map": [dict(r) for r in mr]}
     finally:
         conn.close()
 
@@ -962,7 +959,6 @@ def _union_provenance(conn: sqlite3.Connection, table: str, ids: List[int]) -> s
 # 병합 시 갱신 허용 컬럼 화이트리스트 (SQL injection 가드).
 _MERGE_COLS = {
     "forage_map": ("claim", "prior_class", "confidence", "prune_reason"),
-    "owner_model": ("value", "prior_class", "confidence"),
 }
 
 
@@ -988,20 +984,22 @@ def merge_entries(*, table: str, keep_id: int, drop_ids: List[int],
         params = [fields[c] for c in cols] + [prov, _now(), int(keep_id)]
         conn.execute(f"UPDATE {table} SET {sets} WHERE id=?", params)
         conn.execute(f"DELETE FROM {table} WHERE id IN ({','.join('?'*len(drops))})", drops)
-        # 병합으로 provenance 가 합쳐지면 관측 수도 합쳐진다 — 서로 다른 포식에서 같은 말을 달리
-        # 적었던 것이므로 냄새 결정화 조건을 다시 본다(scent ⟺ 관측 2회 이상 불변식 유지).
-        if table == "owner_model" and _distinct_observations(prov) >= _OWNER_SCENT_PROMOTE_AT:
-            conn.execute("UPDATE owner_model SET scent=1 WHERE id=?", (int(keep_id),))
         conn.commit()
         return {"success": True, "kept": int(keep_id), "dropped": len(drops)}
     finally:
         conn.close()
 
 
-def prune_cap(*, body: str, cap_map: int = 150, cap_owner: int = 60) -> Dict[str, int]:
+# 몸당 상한은 **백스톱**이다. 장소마다 문서 하나가 정본이 된 뒤(2026-09-03) 한 장소의 크기는 문서 예산이 지키고,
+# 절대 경로 단언은 몸 표기와 무관하게 한 트리에 모인다 — 09-18 주소 복원으로 `mac` 이 194행이 되자 옛 상한 150 이
+# 다음 정리 주기에 44행을 조용히 지울 참이었다. 몸 하나가 폭주할 때만 걸리게 넉넉히 둔다.
+_CAP_MAP_PER_BODY = 1000
+
+
+def prune_cap(*, body: str, cap_map: int = _CAP_MAP_PER_BODY) -> Dict[str, int]:
     """상한 초과 시 LRU 가지치기 — surface 표식 *보호*, 저확신·오래된 것부터."""
     conn = _connect()
-    pruned = {"map": 0, "owner": 0}
+    pruned = {"map": 0}
     try:
         n = conn.execute("SELECT COUNT(*) FROM forage_map WHERE body=?", (body,)).fetchone()[0]
         if n > cap_map:
@@ -1010,13 +1008,6 @@ def prune_cap(*, body: str, cap_map: int = 150, cap_owner: int = 60) -> Dict[str
                 "WHERE body=? AND surface_flag=0 ORDER BY confidence ASC, last_seen ASC LIMIT ?)",
                 (body, n - cap_map))
             pruned["map"] = cur.rowcount
-        no = conn.execute("SELECT COUNT(*) FROM owner_model").fetchone()[0]
-        if no > cap_owner:
-            cur = conn.execute(
-                "DELETE FROM owner_model WHERE id IN (SELECT id FROM owner_model "
-                "WHERE surface_flag=0 ORDER BY confidence ASC, last_seen ASC LIMIT ?)",
-                (no - cap_owner,))
-            pruned["owner"] = cur.rowcount
         conn.commit()
         return pruned
     finally:

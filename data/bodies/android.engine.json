@@ -134,6 +134,7 @@
     "datastore/focus_map",
     "datastore/forage_doc",
     "datastore/forage_memory",
+    "datastore/forage_recall_store",
     "datastore/guide_registry",
     "datastore/health_sync",
     "datastore/hippo_tree",
@@ -401,8 +402,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 362,
-    "engine": 336,
+    "total": 363,
+    "engine": 337,
     "blocklist": 26
   }
 }

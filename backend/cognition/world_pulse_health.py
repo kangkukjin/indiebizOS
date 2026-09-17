@@ -451,10 +451,9 @@ def run_maintenance_bundle() -> Dict:
         from forage_consolidation import run_forage_consolidation
         fc = run_forage_consolidation()
         result["forage"] = fc
-        if fc.get("map_merged") or fc.get("owner_merged") or fc.get("pruned_map"):
+        if fc.get("map_merged") or fc.get("pruned_map"):
             logger.info(
-                f"[Maintenance] 포식 정리: map 병합 {fc.get('map_merged', 0)} / "
-                f"owner 병합 {fc.get('owner_merged', 0)} / 가지치기 {fc.get('pruned_map', 0)}"
+                f"[Maintenance] 포식 정리: map 병합 {fc.get('map_merged', 0)} / 가지치기 {fc.get('pruned_map', 0)}"
             )
     except Exception as e:
         logger.warning(f"[Maintenance] 포식 정리 실패 (무시): {e}")

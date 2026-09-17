@@ -160,8 +160,7 @@ class CognitiveDistillMixin:
         영구 "missing" 잡음이 된다(냄새지도 오염). 그래서:
           1) 후보(절대=그대로 / 상대=repo_root 결합, 라인접미사 벗겨 재시도)를 실존 검증.
           2) 실존 → 절대경로 canonical 반환(freshness 추적 정상).
-          3) 미해소 → web 처럼 *추상 locus* 로 강등(비-'/' 접두 → _stale_of·mtime 면제).
-             locus 는 안정 키일 뿐, 의미는 claim 이 진다. `{body}/{tail}` 형태.
+          3) 미해소 → is_real=False. 호출측이 그 단언을 버린다(주소 없는 기억은 소환되지 않는다).
         """
         import os, re
         raw = (loc or "").strip()
@@ -187,20 +186,9 @@ class CognitiveDistillMixin:
             if os.path.exists(cand):
                 return cand, True  # 실존 → canonical 절대경로
 
-        # 미해소 → 추상 locus 강등(freshness 면제). 의미 있는 꼬리만 슬러그로.
-        tail = raw
-        m = re.search(r":\d+(?:-\d+)?$", tail)
-        if m:
-            tail = tail[:m.start()]
-        # repo_root 하위 절대경로면 조상 경로가 노이즈 → 상대 꼬리만 남긴다(하드코딩 없음).
-        if repo_root and tail.startswith(repo_root.rstrip("/") + "/"):
-            tail = tail[len(repo_root.rstrip("/")) + 1:]
-        # 남은 노이즈: body 의 레포/라벨 중복 세그먼트 제거(code:indiebizOS → indiebizOS)
-        repo_part = body.split(":", 1)[-1] if ":" in body else body
-        segs = [s for s in tail.strip("/").split("/")
-                if s and s != repo_part and s != body]
-        slug = "/".join(segs[-2:])[:80] if segs else "unknown"
-        return f"{body}/{slug}", False
+        # 미해소 → 거절. 옛 판은 `{body}/{꼬리}` 추상 locus 로 강등해 저장했는데, 그 별명은 어느 장소를 열어도
+        #   나오지 않는 기억이 됐다(2026-09-18 재고 감사 — `code:IndieBiz OS/unknown` 부류). 주소가 없으면 적지 않는다.
+        return raw, False
 
     def _distill_deep_memory(self, user_message: str, ai_response: str):
         """최종 응답 후 사용자 원문의 지속 가치 선별·중복 비교. 도구 초안은 입력이 아니다."""
@@ -485,7 +473,7 @@ JSON 배열로만 응답.
 
     def _distill_forage_memory(self, user_message: str, ai_response: str,
                                assume_forage: bool = False):
-        """포식 후 자동 증류 — 냄새지도(forage_map)+주인모델(owner_model)에 *델타만* 누적.
+        """포식 후 자동 증류 — 냄새지도(forage_map)에 *델타만* 누적(주인모델은 2026-09-18 은퇴 — 주인 사실은 심층 증류의 일).
 
         assume_forage=True(포식 브라우저 등 *정의상 항상 포식*인 표면): 메시지 cue 게이트를
         건너뛴다("강남 맛집"처럼 cue 단어 없는 정당한 포식을 놓치지 않도록). 응답 증거 게이트
@@ -539,8 +527,6 @@ JSON 배열로만 응답.
             known_lines = []
             for m in known.get("map", []):
                 known_lines.append(f'- [{m.get("body","?")}/{m["kind"]}] {m["locus"]}: {m["claim"]}')
-            for o in known.get("owner", []):
-                known_lines.append(f'- [owner:{o["facet"]}] {o["value"]}')
             known_text = "\n".join(known_lines) if known_lines else "(아직 없음)"
 
             # 2) 경량 LLM 으로 *일반화 가능한 공간 지식* 델타 추출 — ★공간-중립 단일 프롬프트.
@@ -556,23 +542,16 @@ JSON 배열로만 응답.
 - map.convention: 주인의 정리·명명·탐색 관습(예 "발표=장소+날짜", "IBL 액션=src에 정의→build로 생성", "동명이인=분야어로 좁힘")
 - map.dead_branch: "여기엔 그것 없음"(+ prune_reason: 왜 아마 없나 — 폐기가능)
 - map.substrate: 기질 가용성(예 "EXIF 색인 없음", "1500줄 파일제한", "이 사이트=페이월")
-- owner.{{identity|domain|affiliation|signal|lexicon|habit}}: 주인이 *누구인가* 모델(정체·분야·소속·내용지문·어휘매핑·*개인 정리습관*) — ★몸 독립, 모든 공간 공유. 웹 포식이면 특히 값지다(다음 검색 중의성 해소). ⚠️owner 는 주인이 *누구인가*만 — *어떻게 검색·탐색하나*(방법·기법)는 owner 아니라 map.convention.
 
 규칙:
 - **이미 아는 것과 같으면 내지 마라**(새롭거나 교정된 것만).
 - **★자기서술 금지(포식≠자기소개)**: 포식 대상이 이 시스템(IndieBiz OS) 자신의 코드라도, *자신의 인지·기억 사고방식*(포식 기억·냄새지도·의식/무의식 에이전트·인지 파이프라인·증류·해마·Reflex·execution_memory·owner_model)을 서술하는 것은 공간 지식이 아니라 자기 자신을 자신에게 다시 적는 순환이다 → 기록 금지. 코드 공간을 포식했다면 *일반화 가능한 코드 관습·구조*(예 "핸들러 op 분기=`_OP_DISPATCHERS`", "IBL 액션=src에 정의→build로 생성", "통화 봉투=message+items 분리")만 기록하라 — 그 코드가 *무엇을 하는 인지 시스템인지*를 논평하지 마라.
 - **owner vs convention 경계**: 검색·탐색 *방법/기법*(예 "흔한 이름은 전공·소속 등 비식별 고유값으로 좁혀라", "동명이인 주의", "본명이 남는 공개기록 우선")은 *주인이 누구인가*가 아니다 → 그 공간의 map.convention 으로(owner 금지). owner.habit/lexicon 은 *주인 자신*에 관한 것만(예 "이력서를 docx+pdf 쌍으로 관리"=정리습관 / "Amari=甘利俊一"=어휘매핑).
 - prior_class: 동질이라 싸게 재검증되면 "structural", 의미·정체 주장이면 "semantic".
-- surface: *이미 아는 라벨을 위반*하는 이질 내용을 봤다면(예 "연구 폴더인 줄 알았는데 개인 투자 메모") 그 locus/owner value 를 surface 에 적고 why.
-- ★간결히: map 최대 6건·owner 최대 4건, 각 claim/value 는 한 문장. 그보다 많으면 출력이
+- surface: *이미 아는 라벨을 위반*하는 이질 내용을 봤다면(예 "연구 폴더인 줄 알았는데 개인 투자 메모") 그 locus 를 surface 에 적고 why.
+- ★간결히: map 최대 6건, 각 claim 은 한 문장. 그보다 많으면 출력이
   잘려(max_tokens) 전부 유실된다 — 가장 일반화 가능한 것만 골라라. 설명·서론 없이 JSON 만.
 - 확실치 않으면 비워라. JSON 으로만 응답.
-- owner는 사용자 자신의 진술로 확인되는 것만. 전달된 AI 답변·보고서나 아래 AI 답변의
-  평가는 주인의 성향이 아니다. owner.source_ids에 eligible=true인 사용자 근거 번호를
-  넣어라. 저장 value는 선택한 원문으로 고정된다. 근거가 없으면 owner는 빈 배열이다.
-
-주인 진술 후보(인용·출처미상은 선택 금지):
-{json.dumps(owner_units, ensure_ascii=False)}
 
 이미 아는 지도(전 공간):
 {known_text[:1500]}
@@ -583,8 +562,7 @@ AI 답변: {ai_response[:1400]}
 응답 형식(빈 배열 허용):
 {{"space":"mac|code:<repo>|web|book:<title>|disk:<label>",
  "map":[{{"locus":"위치(파일시스템이면 절대경로, 웹이면 URL host/path — 주제 이름이 아니라 자리)","kind":"identity|convention|dead_branch|substrate","claim":"...","prior_class":"structural|semantic","prune_reason":"(dead_branch면)","generalizes":true}}],
- "owner":[{{"facet":"domain|identity|...","value":"...","source_ids":[1],"prior_class":"semantic"}}],
- "surface":[{{"locus":"(있으면)","value":"(owner면)","why":"..."}}]}}"""
+ "surface":[{{"locus":"(있으면)","why":"..."}}]}}"""
 
             resp = oneshot_ai_call(
                 prompt=extract_prompt,
@@ -618,6 +596,9 @@ AI 답변: {ai_response[:1400]}
                     continue
                 if is_fs:
                     locus, _real = self._resolve_fs_locus(locus, repo_root, body)
+                    if not _real:
+                        print(f"[포식기억] 주소 미해소 드롭 map[{kind}] {str(locus)[:60]}")
+                        continue
                 r = forage_memory.note_map(
                     body=body, locus=locus, kind=kind, claim=claim,
                     prior_class=m.get("prior_class") or "structural",
@@ -628,47 +609,16 @@ AI 답변: {ai_response[:1400]}
                     noted += 1
                     tag = " ⇧territory(빈도 결정화)" if r.get("promoted_territory") else ""
                     print(f"[포식기억] {r['action']} map[{kind}]{tag}: \"{claim[:48]}\"")
-            for o in (data.get("owner") or [])[:4]:
-                facet, value = o.get("facet"), o.get("value")
-                if not facet or not value:
-                    continue
-                evidence = select_units(o.get("source_ids"), owner_units)
-                if not evidence or any(not u["eligible"] for u in evidence):
-                    continue
-                value = "\n\n".join(u["text"] for u in evidence)
-                # Fix 2: 주인모델도 인지 기계장치 서술은 드롭(정체성 "인지 외골격 구축자"
-                #   같은 값은 마커에 없어 통과 — 기계장치 고유명 서술만 차단).
-                if self._is_self_narration(value):
-                    print(f"[포식기억] 자기서술 드롭 owner[{facet}]: \"{str(value)[:48]}\"")
-                    continue
-                r = forage_memory.note_owner(
-                    facet=facet, value=value,
-                    prior_class=o.get("prior_class") or "semantic",
-                    confidence=0.65, provenance={**prov, "evidence": evidence})
-                if r.get("success"):
-                    noted += 1
-                    # 첫 관측은 임시(질의 필터) — 다른 포식에서 재확인돼야 상시 냄새로 결정화된다.
-                    tag = (" ⇧scent(빈도 결정화)" if r.get("promoted_scent")
-                           else ("" if r.get("action") == "reinforced" else " [임시]"))
-                    print(f"[포식기억] {r['action']} owner[{facet}]{tag}: \"{value[:48]}\"")
-
             # step 5: surface — 기존 라벨 의심 표식(이질 내용 발견).
-            #   위반은 폴더 라벨(map)일 수도, *주인모델*(owner)일 수도 → 둘 다 독립 표식.
             for s in (data.get("surface") or [])[:4]:
                 why = s.get("why") or ""
-                loc, val = s.get("locus"), s.get("value")
+                loc = s.get("locus")
                 marked = []
                 if loc:  # 위반된 폴더 라벨
-                    for x in forage_memory.recall(body=body, query=loc, limit=5).get("map", []):
+                    for x in forage_memory.recall(query=loc, limit=5).get("map", []):   # 몸 표기는 주소에서 정해진다 — 거르지 않는다
                         if x["locus"] == loc:
                             forage_memory.mark_surface(entry_id=x["id"], table="forage_map", on=True)
                             marked.append(f"map#{x['id']}")
-                if val:  # 위반된 주인모델 라벨 — 가장 관련된 semantic 하나(구조적은 surface 무의미)
-                    for o in forage_memory.recall(body=body, query=val, limit=5).get("owner", []):
-                        if o.get("prior_class") == "semantic":
-                            forage_memory.mark_surface(entry_id=o["id"], table="owner_model", on=True)
-                            marked.append(f"owner#{o['id']}")
-                            break
                 if marked:
                     print(f"[포식기억] surface 표식({','.join(marked)}): \"{why[:48]}\"")
 
@@ -727,7 +677,7 @@ AI 답변: {ai_response[:1400]}
                 log(f"[심층메모리] 오류 (무시): {e}")
         else:
             log("[심층메모리] 검수 미완료 — 장기 기억 저장 생략")
-        # 3) 포식 기억 증류(냄새지도·주인모델).
+        # 3) 포식 기억 증류(냄새지도).
         if write_forage:
             try:
                 self._distill_forage_memory(user_message, response, assume_forage=assume_forage)

@@ -50,7 +50,7 @@ def durable_source_units(user):
       - 질문·요청 문장
     각 단위에 basis(왜 그렇게 봤나)를 남겨 저장된 기억이 나중에 철회 가능하게 한다. 문체·표현은
     전달문에서 곧바로 주인의 것으로 뽑지 않는다 — 주인이 자기 말로 다시 하거나 다른 발화에서
-    되풀이될 때(owner_model 의 재확인 결정화) 귀속된다.
+    되풀이될 때 귀속된다.
     """
     text = user or ""
     paragraphs = re.split(r"\n\s*\n", text)

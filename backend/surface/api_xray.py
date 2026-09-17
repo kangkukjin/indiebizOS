@@ -997,13 +997,12 @@ def _collect_memory() -> Dict:
     except Exception as e:
         out["episodic_error"] = str(e)
 
-    # 포식기억 — 냄새지도(forage_map) + 주인모델(owner_model)
+    # 포식기억 — 냄새지도(forage_map). 주인모델은 2026-09-18 은퇴
     try:
         import forage_memory
         fs = forage_memory.stats()
         out["forage"] = {
             "forage_map": fs.get("forage_map"),
-            "owner_model": fs.get("owner_model"),
             "bodies": fs.get("bodies", []),
             "last_consolidated": (forage_memory.get_meta("last_consolidated") or "")[:19] or None,
         }

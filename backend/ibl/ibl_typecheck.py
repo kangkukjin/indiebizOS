@@ -93,8 +93,10 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
         return None
     # ⟨키⟩ 항목(kind scalar — 효과·스칼라 봉투의 필드, 2026-09-06 F55-1)은 통화의 열이 아니다 —
     # 여기서 걸러야 스칼라 액션이 items 처럼 열을 가진 것으로 읽히지 않는다.
+    # 상한에 잘린 관측(`more`)은 전체 열이 아니다 — 그걸 전체로 읽으면 잘린 뒤쪽 열을 '없는 열'로 오신고한다
+    # (2026-09-18: place.distance·book.loan_count). 판정 불능은 미상으로 기권한다.
     shapes = {k: v for k, v in shapes.items()
-              if isinstance(v, dict) and v.get("kind") in (None, "items", "table")}
+              if isinstance(v, dict) and v.get("kind") in (None, "items", "table") and not v.get("more")}
     q = f"{node}:{action}"
     op = params.get("op")
     if (_action_def(node, action) or {}).get("columns_from") == "data":

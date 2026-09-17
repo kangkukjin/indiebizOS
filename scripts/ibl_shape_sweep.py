@@ -30,7 +30,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 API = "http://127.0.0.1:8765"
 OUT = ROOT / "data" / "ibl_return_shapes.json"
-MAX_KEYS = 10
+# 관측 열 상한 — 표시용 절단이 아니다(카탈로그 줄의 표시 상한은 ibl_access 렌더러가 따로 가진다).
+# 옛 값 10 은 정적 검사기가 잘린 목록을 전체로 읽게 해 11번째 이후 열을 '없는 열'로 오신고했다(2026-09-18,
+# place.distance·book.loan_count·performance.start_date). 넘겨서 잘리면 `more` 에 버린 수를 적고 검사기는 기권한다.
+MAX_KEYS = 40
 
 
 def _execute(code, timeout=90):
@@ -58,10 +61,15 @@ def _final_envelope(resp):
     return d if isinstance(d, dict) else None
 
 
+def _cut(keys):
+    """(상한 안의 열, 버린 수)."""
+    return keys[:MAX_KEYS], max(0, len(keys) - MAX_KEYS)
+
+
 def _shape(env):
-    """실측 모양 → (kind, keys). items=첫 dict 행들의 키 합집합(등장 순), table=columns."""
+    """실측 모양 → (kind, keys, more). items=첫 dict 행들의 키 합집합(등장 순), table=columns. more=상한에 잘린 열 수."""
     if not isinstance(env, dict):
-        return None, []
+        return None, [], 0
     items = env.get("items")
     if isinstance(items, list):
         keys = []
@@ -70,19 +78,19 @@ def _shape(env):
                 for k in it.keys():
                     if k not in keys and not str(k).startswith("_"):
                         keys.append(str(k))
-        return "items", keys[:MAX_KEYS]
+        return ("items", *_cut(keys))
     t = env.get("table")
     if isinstance(t, dict) and isinstance(t.get("columns"), list):
-        return "table", [str(c) for c in t["columns"]][:MAX_KEYS]
+        return ("table", *_cut([str(c) for c in t["columns"]]))
     if isinstance(env.get("columns"), list) and isinstance(env.get("rows"), list):
-        return "table", [str(c) for c in env["columns"]][:MAX_KEYS]
+        return ("table", *_cut([str(c) for c in env["columns"]]))
     if env.get("success") is False or (env.get("error") and env.get("success") is not True):
-        return None, []          # 실패 봉투의 키(error)는 모양이 아니다 — main 이 실패로 센다
+        return None, [], 0          # 실패 봉투의 키(error)는 모양이 아니다 — main 이 실패로 센다
     keys = scalar_keys(env)
-    return ("scalar", keys) if keys else (None, [])
+    return ("scalar", keys, 0) if keys else (None, [], 0)
 
 
-def scalar_keys(env: dict, limit: int = MAX_KEYS + 2) -> list:
+def scalar_keys(env: dict, limit: int = 12) -> list:
     """통화가 아닌 성공 봉투의 키 — 최상위(내부 표지 `_…`·success 제외) + dict 값은 `k.sub` 한 겹,
     dict 배열은 `k[].sub` 한 겹. 순서 = 등장 순(모델이 읽는 순)."""
     out = []
@@ -135,7 +143,7 @@ def harvest_from_health(shapes: dict, root: Path = ROOT) -> int:
         if not isinstance(keys, list) or not keys:
             continue
         shapes[key] = {"kind": "scalar" if shape not in ("items", "table") else shape,
-                       "keys": [str(k) for k in keys][:MAX_KEYS + 2],
+                       "keys": [str(k) for k in keys][:12],
                        "observed": str(ts)[:10], "source": "usage"}
         n += 1
     return n
@@ -176,11 +184,12 @@ def main():
             fail += 1
             print(f"  ✗ {key}: {str((env or {}).get('error'))[:80]}")
             continue
-        kind, keys = _shape(env)
+        kind, keys, more = _shape(env)
         if not kind or not keys:
             skip += 1
             continue
-        shapes[key] = {"kind": kind, "keys": keys, "observed": time.strftime("%Y-%m-%d"), "source": "fixture"}
+        shapes[key] = {"kind": kind, "keys": keys, "observed": time.strftime("%Y-%m-%d"), "source": "fixture",
+                       **({"more": more} if more else {})}
         ok += 1
         print(f"  ✓ {key}: {kind} {keys}")
     OUT.write_text(json.dumps({

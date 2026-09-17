@@ -141,6 +141,14 @@ def test_validator_rejects_malformed_declarations():
                        shape_variants={"source=naver": '[sense:realty]{source: "naver"}'})
     assert any("부작용" in m for m in _check_shape_variants("sense:realty", side_effect))
 
+    # 2026-09-18: 액션 플래그가 true 여도 변이 코드가 부르는 op 이 읽기로 선언돼 있으면 통과, 파괴적 op 이면 거절
+    mixed = dict(base, side_effect=True,
+                 ops={"values": {"query": "조회", "delete": "삭제"}, "side_effect": {"query": False}},
+                 shape_variants={"kind=a": '[sense:realty]{op: "query", kind: "a"}'})
+    assert not any("부작용" in m for m in _check_shape_variants("sense:realty", mixed))
+    mixed_bad = dict(mixed, shape_variants={"kind=a": '[sense:realty]{op: "delete", kind: "a"}'})
+    assert any("부작용" in m for m in _check_shape_variants("sense:realty", mixed_bad))
+
     effect_ret = dict(base, returns="effect",
                       shape_variants={"source=naver": '[sense:realty]{source: "naver"}'})
     assert any("통화" in m for m in _check_shape_variants("sense:realty", effect_ret))

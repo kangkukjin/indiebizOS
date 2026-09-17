@@ -561,6 +561,28 @@ _EXT_RE = re.compile(r'\.[A-Za-z0-9]{2,5}$')
 _URL_RE = re.compile(r'[a-z][a-z0-9+.-]*://')
 
 
+# 낱말 용례 본문 상한(자) — 2026-09-18 실행기억 전수 정독 실측: 지운 증류 191건의 25%가 1,000자를
+# 넘었고(최대 10KB, 수리·조사 주행의 본문이 통째로 박힌 것) 살아남은 53건은 최대 600자 남짓이었다.
+EXAMPLE_CODE_CEILING = 1000
+
+
+def example_entrance_reason(intent: str, code: str) -> Optional[str]:
+    """낱말 용례(이름 없는 증류)가 코퍼스에 못 들어오는 사유, 들어와도 되면 None (2026-09-18).
+
+    관용구 관문과 **같은 자**(`_phrase_private_reason`)를 낱말 증류 입구에도 건다 — 자가 한쪽에만
+    있어 09-17 전수 정독에서 지운 증류 191건 중 70건이 홈 절대경로·개인 명사였다. 본문 상한은
+    일회성 주행이 통째로 박히는 부류를 막는다. 둘을 합쳐 그 191건의 절반, 살아남은 용례 오탐 0.
+    ★나머지 절반(의도↔코드 오대응·일회성 질의)은 판단이라 여기 정규식으로 만들지 않는다 — 반성기의 몫.
+    `frozen_incident_reason`(슬롯 0 거절)은 함수의 자라 용례에는 쓰지 않는다: 리터럴 든 단발이 용례의 정상 꼴.
+    """
+    why = _phrase_private_reason(code) or _phrase_private_reason(intent)
+    if why:
+        return why
+    if len(code or "") > EXAMPLE_CODE_CEILING:
+        return f"본문 {len(code)}자 — 상한 {EXAMPLE_CODE_CEILING}. 일회성 주행이 통째로 박힌 모양"
+    return None
+
+
 def frozen_incident_reason(code: str, signature) -> Optional[str]:
     """몸에 **이번 값**이 얼어 있으면 사유, 다시 부를 수 있으면 None (2026-09-07 이름 회수 감사).
 

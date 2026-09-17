@@ -239,6 +239,9 @@
     "table:structure": "경량 LLM 편집자 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합 (self:ask 동류)"
   },
   "shape_variants": {
+    "self:finance@query_type=거래": "[self:finance]{op: \"query\", query_type: \"거래\", days: 90}",
+    "self:finance@query_type=수입": "[self:finance]{op: \"query\", query_type: \"수입\", days: 90}",
+    "self:finance@query_type=지출": "[self:finance]{op: \"query\", query_type: \"지출\", days: 90}",
     "sense:realty@source=naver": "[sense:realty]{op: \"query\", source: \"naver\", region: \"평택 비전동\", limit: 5}",
     "sense:realty@source=zigbang": "[sense:realty]{op: \"query\", source: \"zigbang\", region: \"평택 죽백동\", limit: 5}"
   }

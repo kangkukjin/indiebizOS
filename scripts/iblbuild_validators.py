@@ -1014,10 +1014,6 @@ def _check_shape_variants(qualified: str, action: dict) -> list[str]:
         issues.append(
             f"{qualified}: returns:{action.get('returns')} 인데 shape_variants 보유 — "
             f"⟨열⟩ 이 있는 통화(items/table)만 변이를 선언한다")
-    if action.get("side_effect") is True:
-        issues.append(
-            f"{qualified}: 부작용 액션에 shape_variants — 관측 스윕이 매 실행마다 "
-            f"부작용을 낸다(읽기 액션만)")
     for label, code in sv.items():
         if not _SHAPE_VARIANT_LABEL.match(str(label)):
             issues.append(
@@ -1031,6 +1027,15 @@ def _check_shape_variants(qualified: str, action: dict) -> list[str]:
                 f"{qualified}: shape_variants.{label} 코드가 자기 액션을 부르지 않음 "
                 f"(관측된 열이 엉뚱한 액션의 것이 된다)")
             continue
+        # 부작용은 **변이 코드가 부르는 op** 로 해소한다(2026-09-18) — 액션 플래그는 파괴적 op 하나만 있어도
+        # 통째로 true 라(self:finance: save/delete 때문), 읽기 op(query)의 변이 축까지 막았다. 해소 규칙은
+        # ibl_ops.op_side_effect 한 벌: ops.side_effect[op] 가 말하면 그것, 아니면 끈적한 액션 플래그.
+        from ibl_ops import op_side_effect
+        _m = re.search(r'\bop\s*:\s*["\']([\w-]+)["\']', code)
+        if op_side_effect(action, _m.group(1) if _m else None):
+            issues.append(
+                f"{qualified}: shape_variants.{label} 가 부작용 op 을 부른다 — 관측 스윕이 매 실행마다 "
+                f"부작용을 낸다(읽기 op 만)")
         param = str(label).split("=", 1)[0]
         if not re.search(rf'\b{re.escape(param)}\s*:', code):
             issues.append(

@@ -21,6 +21,13 @@ actions:
     returns: items
     side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
     fixture: '[self:finance]{op: "query", query_type: "summary"}'
+    # 반환 열이 op 이 아니라 query_type 으로 갈린다(2026-09-18): summary=가게별 집계(merchant·count·amount_label),
+    # 거래 계열=거래 행(record_id·date·category·counterparty·amount…). 변이를 선언하지 않으면 검사기가
+    # summary 의 열을 거래 조회에 빌려줘 `category`·`amount` 를 없는 열로 경고한다.
+    shape_variants:
+      query_type=지출: '[self:finance]{op: "query", query_type: "지출", days: 90}'
+      query_type=수입: '[self:finance]{op: "query", query_type: "수입", days: 90}'
+      query_type=거래: '[self:finance]{op: "query", query_type: "거래", days: 90}'
     # runs_on 미지정 = anywhere (2026-09-05): 옛 pc_only 의 근거는 sync 가 adb(USB)에
     # 묶여 있던 것 하나였다. 이제 폰에서는 자기 포획소를 직접 읽으므로(finance_sync 의
     # INDIEBIZ_PROFILE=phone 분기) 재무 원장은 health-record 와 같은 자격으로 폰에서 돈다.

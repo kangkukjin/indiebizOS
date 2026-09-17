@@ -63,6 +63,24 @@ def _principal_key() -> str:
         return "?"
 
 
+def _distinct_codes(results):
+    """같은 코드는 한 번만 — 최고 점수 행(앞선 것)이 그 코드를 대표한다 (2026-09-18).
+
+    코퍼스는 코드 하나에 의도를 여럿 단다(바꿔 말하기 — 의미 검색의 입구이자 재학습 재료라 지우지 않는다).
+    그런데 회상이 그 행들을 따로 세면 Top-K 가 한 코드로 찬다: 300질의 실측 Top-5 슬롯의 26% 가 같은
+    코드였고 15건은 다섯 칸 전부가 한 코드였다("다가오는 일정" → `[self:manage_events]{op:"list"}` ×3 이
+    조합 용례를 밀어냈다). 입구는 여럿이어도 보여줄 코드는 하나다. 빈 칸은 아래 넓히기 고리가 채운다.
+    """
+    seen, out = set(), []
+    for r in results:
+        key = re.sub(r"\s+", "", getattr(r, "ibl_code", "") or "")
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(r)
+    return out
+
+
 def _search_active(db, **kwargs):
     """비활성 상위 결과가 하위의 유효 후보를 가리지 않도록 검색 폭을 늘린다.
     ★모든 해마 검색이 이 한 자리를 지난다 — 주체 관문도 여기 한 번."""
@@ -73,7 +91,7 @@ def _search_active(db, **kwargs):
     previous = None
     while True:
         raw = db.search_hybrid(top_k=count, **kwargs) or []
-        selected = _own_only(raw)
+        selected = _distinct_codes(_own_only(raw))
         if len(selected) >= wanted or len(raw) < count:
             return selected[:wanted]
         signature = tuple(r.id for r in raw)
@@ -1193,6 +1211,13 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
                 return phrase_ok
         except Exception:
             pass  # 검사기 문제로 증류 자체를 막지는 않는다
+
+        # 개인 명사·일회성 본문 관문 (2026-09-18): 관용구 관문과 같은 자를 낱말 증류에도 건다.
+        from ibl_idiom import example_entrance_reason
+        _entrance_why = example_entrance_reason(intent, code)
+        if _entrance_why:
+            print(f"[경험증류] 입구 관문 — 증류 스킵: {_entrance_why}")
+            return phrase_ok
 
         # 노드 추출
         node_pattern = re.compile(r'\[([a-z_-]+):')

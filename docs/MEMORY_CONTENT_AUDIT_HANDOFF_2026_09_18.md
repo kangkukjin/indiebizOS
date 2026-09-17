@@ -2,7 +2,7 @@
 
 > 한 세션에서 "기억의 *회상 메커니즘*이 아니라 *내용물과 구조*"를 점검·정리했다. 컨텍스트가 차서 여기서 끊는다.
 > 짝 문서(회상 설계): `docs/TREE_MEMORY_RECALL_COMMON_DESIGN_2026_09_17.md`.
-> §4 "실행기억의 문법 감사" 는 이어받은 세션에서 집행 완료. **다음 = §3 의 4번(행동이 바뀐 어휘 관문)** — 2번·3번 집행 완료.
+> §4 "실행기억의 문법 감사" 는 이어받은 세션에서 집행 완료. **다음 = §3 의 5번(세계의 기억 재건)** — 2·3·4번 집행 완료.
 
 ## 0. 사용자 질문의 흐름
 1. 심층기억·실행기억·세계의 기억의 *재고 품질*을 점검하라 → 셋 다 재고가 문제였다.
@@ -51,7 +51,7 @@
 1. ~~§4 실행기억 문법 감사~~ ✅ 09-18 집행(§4). 조합 용례 보강도 집행(§4 ④-집행). 근접 중복도 집행(§4 ⑤). 실행기억 다듬기 완료 — 재학습은 사용자 지시 대기
 2. ~~증류 입구 관문~~ ✅ 09-18 집행(미커밋) — `ibl_idiom.example_entrance_reason`(개인 명사·홈 경로를 의도·코드 양쪽 + 본문 1,000자 상한)을 `ibl_usage_rag` 저장 직전에. 지운 증류 191건 재생 92건 거절·남은 53건 오탐 0. **남은 절반(의도↔코드 오대응·일회성 질의)은 기계 관문 밖** — 반성기 프롬프트의 일. 회귀 `backend/test_distill_entrance_gate_2026_09_18.py`, 문서 memory.md.
 3. ~~검사기 조이기~~ ✅ 09-18 집행 — ①`ibl_param_vocab.allowed_param_keys` 의 허용 키 = **그 액션의 선언**(input_schema·aliases·target_key). 패키지 전체 읽기키는 스키마 없는 도구의 폴백으로만. 조이기 전 실측: 코퍼스 3,635행 중 1행·실사용 2,463 step 중 3종만 새로 걸림(빌드의 param 선언 완전성 관문이 코퍼스를 이미 선언에 묶어 둔 덕 — "대량 빨강" 우려는 기우였다). 가려져 있던 선언 구멍 3건 보충: `self:read.sheet`·`limbs:browser.submit`(읽는데 미선언)·`sense:researcher` 의 `query` 별칭. `[self:script]{name}` 은 진짜 적발. ②없는 op 값 — `/ibl/validate` 표면에만 붙어 있던 검사를 `unknown_op_message` 로 옮겨 `check_params` 가 한 벌로 맡는다(증류·시딩·관용구 등록·실행 경고가 같이 본다). 조인 뒤 코퍼스·training JSON 빨강 0, 실사용 1,823 코드에서 6종(전부 진짜 오타). 회귀 `backend/test_param_check_action_scope_2026_09_18.py`. 남은 조각 둘도 같은 날 집행: ③`ibl_typecheck._type_action` 이 없는 op 을 **error** 로 낸다(같은 `unknown_op_message`) ④**T3 죽은 이음매 경고** — `ibl_pipe_types.dead_seam_warnings` + 소비자 17개에 `pipe_in: true` 선언(사전 데이터, 액션 이름은 검사기에 없다). 처음엔 '언어 표면 변경이라 판정 대상'이라 미뤘으나 문법이 아니라 사전 선언+정적 규칙(T1·T2 와 같은 부류)이라 집행. 거절이 아니라 경고인 이유 = `>>` 의 성공 의존은 정당. 실측: 코퍼스 경고 0 · 실사용 1,823 코드에서 알려진 죽은 이음매 1건만(오탐 0). 부패 방지 = `_prev_result` 를 읽는 패키지에 소비자 선언이 없으면 실패하는 시험. 회귀 `backend/test_dead_seam_and_op_check_2026_09_18.py`, 문서 ibl.md §통화와 변환자.
-4. **행동이 바뀐 어휘를 잡는 관문** — 어휘의 동작을 바꾸는 커밋이 그 액션의 용례를 재검토 대상으로 표시하는 절차가 없다.
+4. ~~행동이 바뀐 어휘를 잡는 관문~~ ✅ 09-18 집행 — `scripts/iblbuild_example_review.py` + 원장 `data/ibl_example_review.json`(액션 166개의 계약 필드 지문). `build --check`(pre-commit)가 지문과 대조해 계약이 바뀐 액션마다 **바뀐 필드·로컬 용례 수**를 말하고 실패 → `--show` 로 읽고 고친 뒤 `--ack`(원장도 스테이지). 근거: 09-12 memory save 무동작화는 git 에서 target_description·ops.returns·ops.side_effect·ops.values·fixture 변화로 그대로 보였다 — 읽는 절차가 없었을 뿐. 기준선은 이번 세션의 전수 정독 뒤 상태. 못 잡는 것 = 사전은 그대로인데 핸들러만 바뀐 변화(문서 갱신 의무의 자리). 회귀 `backend/test_example_review_gate_2026_09_18.py`, 문서 ibl.md §건강·hippocampus_retraining.md §7.
 5. 세계의 기억 재건(§2).
 6. 커밋 — 이번 세션의 backend 13파일+회귀·`memory.md`·`memory_tree.py` 가 **다른 세션의 미커밋 회상 작업과 같은 파일에 섞여 있다**(`agent_pipeline.py`·`agent_communication.py`·`api_system_ai.py` 등). 사용자 지시 대기. pathspec 으로도 파일 단위로는 못 가른다 — 같이 커밋하거나 `git add -p`.
 7. ⚠곁가지(미수리·미재현, 사용자 판정 요청해 둠): 예약 주입문이 채팅 핸들러를 타며 `set_task_origin("user")` 를 받는다 → 예약 턴이 RED 수리 그랜트 자격을 얻을 수 있음. 헌법("스케줄러 = 미세팅 = fail-closed")과 어긋남. 이번에 넣은 `schedule` 표식을 그 자리에서 읽으면 닫힌다(`services/chat_streams.py` 의 `_so("user")`·`_set_origin("user")` 3곳).

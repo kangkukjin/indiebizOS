@@ -356,6 +356,21 @@ def build(check: bool = False, validate_only: bool = False) -> int:
         else:
             print("[build_ibl_nodes] flow 선언 완전성 통과 ✓ (모든 transform 액션이 flow 보유)")
 
+    # --- 용례 재검토 (--check/--validate 전용, 2026-09-18): 액션의 행동 계약이 바뀌면 그 액션의 용례를 다시 보게 한다.
+    #     구문·인자·타입이 다 초록인 채 거짓이 되는 용례(09-17 H 부류: memory save 무동작·sense:phone 축소)의 관문.
+    review_failed = False
+    if data is not None and (check or validate_only):
+        from iblbuild_example_review import validate_example_review
+        rissues = validate_example_review(data, root)
+        if rissues:
+            review_failed = True
+            print(f"[build_ibl_nodes] 용례 재검토 대기: {len(rissues)}건 "
+                  f"(계약이 바뀐 액션의 용례를 읽고 `python3 scripts/iblbuild_example_review.py --ack …`)", file=sys.stderr)
+            for issue in rissues:
+                print(f"  ✗ {issue}", file=sys.stderr)
+        else:
+            print("[build_ibl_nodes] 용례 재검토 원장 일치 ✓ (계약이 바뀐 액션 0)")
+
     # --- 부작용 정직성 (--check/--validate 전용, 2026-09-06 55회차 B55-1) ---
     # handler 액션의 구현이 쓰기 원시(open 'w'·write_text·makedirs·INSERT…)에 닿는데
     # returns:scalar/items 이고 side_effect 선언이 없으면 빌드 실패 — dry-run 'read' 라벨을 믿고
@@ -587,7 +602,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
             print("[build_ibl_nodes] 가이드 부패 경고 없음 \u2713 (죽은 참조·고아 0)")
 
     if validate_only:
-        return 1 if (validation_failed or corpus_failed or fixture_failed or flow_failed or side_effect_failed
+        return 1 if (validation_failed or corpus_failed or fixture_failed or flow_failed or review_failed or side_effect_failed
                      or enum_failed
                      or profile_failed or os_failed or launcher_failed
                      or textbook_failed or appvocab_failed or selfimg_failed
@@ -877,7 +892,7 @@ def build(check: bool = False, validate_only: bool = False) -> int:
                      and tool_json_ok and core_manifest_ok and dist_filter_ok
                      and docs_ok
                      and not validation_failed
-                     and not corpus_failed and not fixture_failed and not flow_failed and not side_effect_failed
+                     and not corpus_failed and not fixture_failed and not flow_failed and not review_failed and not side_effect_failed
                      and not enum_failed
                      and not profile_failed and not os_failed
                      and not launcher_failed and not textbook_failed

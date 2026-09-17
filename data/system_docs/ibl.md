@@ -598,6 +598,15 @@ IBL 액션을 연산자로 연결하면 파이프라인이 된다.
 
 IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.json 스키마 ↔ handler 구현)이 일치**하고, 자기 `returns:` 역할의 통화 계약을 지키는 것. 그래서 건강도 단순하게 — **어휘를 쓸 때 만들고, 커밋 때 강제하고, 하루 한 번 회귀 그물로 확인.** 폴링 sweep도, AI 턴도 없다(전부 AI 0). (2026-06-27 단순화)
 
+### 용례는 계약에 기대어 있다 — 재검토 관문 (2026-09-18)
+
+실행기억의 용례는 "이 의도엔 이 문장"이라는 주장이고 그 주장은 액션의 **행동**에 기댄다. 행동이 바뀌면 용례는 구문·인자·타입·어휘 생존이 전부 초록인 채 거짓이 된다 — 09-17 전수 정독의 H 부류 27건(`[self:memory]{op:"save"}` 가 저장을 그만둔 뒤에도 "기억해둬"에 회상되던 15건, 결제 알림 전용이 된 `sense:phone` 의 카톡·문자 용례)이 그랬고, 그 변화는 전부 사전의 계약 필드에 드러나 있었다.
+
+- 원장 `data/ibl_example_review.json` 이 액션마다 **계약 필드의 지문**을 든다(description·target_description·implementation·returns·returns_variants·target_key·params·aliases·ops·side_effect·runs_on·router·tool). 예산·표시용 필드는 계약이 아니다.
+- `build_ibl_nodes.py --check`(= pre-commit)가 지금의 지문과 대조해, 달라진 액션이 있으면 **바뀐 필드와 그 액션을 쓰는 로컬 용례 수**를 말하고 실패한다.
+- 절차: `python3 scripts/iblbuild_example_review.py --show node:action` 으로 용례를 읽는다 → 거짓이 된 것을 고치거나 지운다(`add_examples_batch`·판정표) → `--ack node:action` 으로 원장을 올려 **원장도 같이 스테이지**한다. 빌드는 원장을 쓰지 않는다 — 읽었다는 서명은 읽은 쪽이 남긴다.
+- 못 잡는 것: 사전은 그대로인데 핸들러만 바뀐 변화. 그 자리는 "어휘 변경 시 문서 표면 갱신 의무"(`new_action_checklist.md`)가 막는다.
+
 ### 건강의 두 종류
 
 | 종류 | 무엇 | 언제 변하나 |

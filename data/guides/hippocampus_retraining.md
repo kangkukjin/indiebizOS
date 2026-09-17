@@ -174,3 +174,12 @@ db.add_examples_batch(SEEDS)   # source='manual_seed'
 `source='manual_seed'` 는 `rebuild_usage_db` 덮어쓰기를 피한다. 다만 **다음 파인튜닝이
 배우게 하려면 `data/training/ibl_distilled.json` 에도 같은 용례를 넣어야 한다** —
 DB 는 회상용, training json 은 학습용으로 역할이 갈린다.
+
+## 7. 재학습 전 코퍼스 점검 (2026-09-18)
+
+재학습은 코퍼스를 가중치에 굳힌다 — 굳히기 전에 한 번 돈다.
+
+- `python3 scripts/iblbuild_example_review.py` — 계약이 바뀐 액션의 용례 재검토 대기 0 인지(ibl.md §용례는 계약에 기대어 있다).
+- `python3 scripts/build_ibl_nodes.py --check` — 코퍼스 구문·인자(액션 선언 기준)·어휘 생존.
+- 전 행 `typecheck_code` — 없는 op(error)·죽은 이음매 T3(warning) 0 인지. 추출기 = `data/_backups/2026-09-18_hippocampus_grammar/seams.py`.
+- 행 수 = 벡터 수(`_load_model_sync()` 없이 심은 행이 없는지, §6).

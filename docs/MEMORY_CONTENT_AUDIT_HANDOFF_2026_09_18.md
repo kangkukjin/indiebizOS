@@ -43,16 +43,18 @@
   - **B/F 일회성·개인** ~175 — 증류된 수리·조사 주행(개인 절대경로·10KB 본문·의료·여행). **삭제의 2/3 = 증류가 일반화를 못 하는 것이 최대 오염원.**
 - 벡터 없는 행 23건은 이전부터(09-09 기록과 동일). 라이브 백엔드 검색 캐시는 재기동 때 비워짐.
 
-## 2. 세계의 기억 — 점검만(미집행)
-1,265항목 중 1,099(87%)가 09-17 하루 AI 편집 초안(파일당 정확히 100, "not individually source-verified"). 별칭 영어뿐 1,056(83%) → 글자 채널 2/24 의 원인. 2단 가지 167 중 단독 79·≤2건 103. 관계가 닿는 항목 279(22%). tool 26·resource 2. 가지 사전 `gist`·`see_also` 0/167.
-처방 방향: 사용자의 실제 질문 원장에서 자라게 + 한국어 일상 별칭 + 단독 가지 합치기·`함께 볼 가지` + 이 몸에서 실행 가능한 도구·자료원 보강.
+## 2. 세계의 기억 — 09-17 점검 → 09-18 재건 집행
+점검(09-17): 1,265항목 중 1,099(87%)가 하루치 AI 편집 초안, 별칭 영어뿐 1,056(83%), 2단 가지 167 중 단독 79·≤2건 103, 가지 사전 `gist`·`see_also` 0/167.
+**재건(09-18)**: ①트리 정비 167→67가지·단독 0(도구 축을 개념 축에 통합, 141항목 path 만 수정) ②가지 사전 67가지 전부 cues·gist·see_also ③`--check` 가지 관문 ④**전 항목 눈가림 일상 별칭 5,043개**(한국어 별칭 없는 항목 1,060→0). 측정(눈가림 새 질문 40, 주입 3건에 표적): **12 → 28**, 가지 @1 5→12·@2 12→18. 트리 정비만으로는 12→11 이었다 — 병목은 항목 텍스트의 빈약함이었다. 실제 발화 300건에서 새로 끼어든 글자 채널 주입 0, 부정 질문 12건 전부 기권 유지.
+★내 실수: 가지 사전의 cues 에 설계 문서 부록 A 의 시험 문장을 그대로 옮겨 적었다 → 걷어 내고 그 문항을 버림. 평가 질문을 본 손으로 사전을 쓰면 안 된다 — 그래서 별칭·질문 모두 서로를 못 보는 에이전트에게 맡겼다.
+안 한 것: "사용자의 실제 질문 원장에서 자라게"(되먹임 6단계 — 가지 밖 적중 원장을 편집 절차에 연결) · 이 몸에서 실행 가능한 도구·자료원 보강(에이전트는 이미 IBL 카탈로그를 프롬프트로 받으므로 중복 가치가 낮다고 판단, 미집행) · 항목 자체의 출처 검증(여전히 편집 초안). 기록·도구 = `data/_backups/2026-09-18_world_memory_rebuild/`, 정본 서술 = `data/knowledge_catalog/README.md`·설계 문서 §10.
 
 ## 3. 남은 일 (우선순위 순)
 1. ~~§4 실행기억 문법 감사~~ ✅ 09-18 집행(§4). 조합 용례 보강도 집행(§4 ④-집행). 근접 중복도 집행(§4 ⑤). 실행기억 다듬기 완료 — 재학습은 사용자 지시 대기
 2. ~~증류 입구 관문~~ ✅ 09-18 집행(미커밋) — `ibl_idiom.example_entrance_reason`(개인 명사·홈 경로를 의도·코드 양쪽 + 본문 1,000자 상한)을 `ibl_usage_rag` 저장 직전에. 지운 증류 191건 재생 92건 거절·남은 53건 오탐 0. **남은 절반(의도↔코드 오대응·일회성 질의)은 기계 관문 밖** — 반성기 프롬프트의 일. 회귀 `backend/test_distill_entrance_gate_2026_09_18.py`, 문서 memory.md.
 3. ~~검사기 조이기~~ ✅ 09-18 집행 — ①`ibl_param_vocab.allowed_param_keys` 의 허용 키 = **그 액션의 선언**(input_schema·aliases·target_key). 패키지 전체 읽기키는 스키마 없는 도구의 폴백으로만. 조이기 전 실측: 코퍼스 3,635행 중 1행·실사용 2,463 step 중 3종만 새로 걸림(빌드의 param 선언 완전성 관문이 코퍼스를 이미 선언에 묶어 둔 덕 — "대량 빨강" 우려는 기우였다). 가려져 있던 선언 구멍 3건 보충: `self:read.sheet`·`limbs:browser.submit`(읽는데 미선언)·`sense:researcher` 의 `query` 별칭. `[self:script]{name}` 은 진짜 적발. ②없는 op 값 — `/ibl/validate` 표면에만 붙어 있던 검사를 `unknown_op_message` 로 옮겨 `check_params` 가 한 벌로 맡는다(증류·시딩·관용구 등록·실행 경고가 같이 본다). 조인 뒤 코퍼스·training JSON 빨강 0, 실사용 1,823 코드에서 6종(전부 진짜 오타). 회귀 `backend/test_param_check_action_scope_2026_09_18.py`. 남은 조각 둘도 같은 날 집행: ③`ibl_typecheck._type_action` 이 없는 op 을 **error** 로 낸다(같은 `unknown_op_message`) ④**T3 죽은 이음매 경고** — `ibl_pipe_types.dead_seam_warnings` + 소비자 17개에 `pipe_in: true` 선언(사전 데이터, 액션 이름은 검사기에 없다). 처음엔 '언어 표면 변경이라 판정 대상'이라 미뤘으나 문법이 아니라 사전 선언+정적 규칙(T1·T2 와 같은 부류)이라 집행. 거절이 아니라 경고인 이유 = `>>` 의 성공 의존은 정당. 실측: 코퍼스 경고 0 · 실사용 1,823 코드에서 알려진 죽은 이음매 1건만(오탐 0). 부패 방지 = `_prev_result` 를 읽는 패키지에 소비자 선언이 없으면 실패하는 시험. 회귀 `backend/test_dead_seam_and_op_check_2026_09_18.py`, 문서 ibl.md §통화와 변환자.
 4. ~~행동이 바뀐 어휘를 잡는 관문~~ ✅ 09-18 집행 — `scripts/iblbuild_example_review.py` + 원장 `data/ibl_example_review.json`(액션 166개의 계약 필드 지문). `build --check`(pre-commit)가 지문과 대조해 계약이 바뀐 액션마다 **바뀐 필드·로컬 용례 수**를 말하고 실패 → `--show` 로 읽고 고친 뒤 `--ack`(원장도 스테이지). 근거: 09-12 memory save 무동작화는 git 에서 target_description·ops.returns·ops.side_effect·ops.values·fixture 변화로 그대로 보였다 — 읽는 절차가 없었을 뿐. 기준선은 이번 세션의 전수 정독 뒤 상태. 못 잡는 것 = 사전은 그대로인데 핸들러만 바뀐 변화(문서 갱신 의무의 자리). 회귀 `backend/test_example_review_gate_2026_09_18.py`, 문서 ibl.md §건강·hippocampus_retraining.md §7.
-5. 세계의 기억 재건(§2).
+5. ~~세계의 기억 재건~~ ✅ 09-18 집행(§2). 남은 가지 = 되먹임 연결·가지 벡터 개선·효용 실험(설계 문서 §10).
 6. 커밋 — 이번 세션의 backend 13파일+회귀·`memory.md`·`memory_tree.py` 가 **다른 세션의 미커밋 회상 작업과 같은 파일에 섞여 있다**(`agent_pipeline.py`·`agent_communication.py`·`api_system_ai.py` 등). 사용자 지시 대기. pathspec 으로도 파일 단위로는 못 가른다 — 같이 커밋하거나 `git add -p`.
 7. ~~⚠곁가지: 예약 턴의 RED 수리 자격~~ ✅ 09-18 수리 — 실물 확인: `calendar_actions._inject_message_via_ws` 가 예약문을 WS 채팅 핸들러로 밀어 넣고, `chat_streams` 세 자리가 발화자와 무관하게 `set_task_origin("user")` 를 찍었다. 그 값이 `agent_pipeline` 의 REPAIR 분기·늦은 승격 두 곳에서 그랜트의 유일한 자격 조건. → `thread_context.set_task_origin_for_author`(owner 만 `'user'`, 그 밖은 미세팅·옛 값 소거)로 세 자리 교체. ★표식이 옮겨 가면 기존 관문(`test_user_surface_pipeline` — `set_task_origin("user")` 표식으로 사람-표면을 찾는다)의 시야에서 세 표면이 조용히 빠지므로 관문에 표식 ③을 추가(표면 10곳 그대로 확인). `schedule` 표식은 권한을 *낮추는* 값이라 클라이언트가 위조해도 얻는 것이 없다. 회귀 `backend/test_schedule_origin_fail_closed_2026_09_18.py`, 문서 architecture.md 한도 ①.
 

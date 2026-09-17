@@ -8,7 +8,7 @@ entries:
   path: [과학, 생명과학]
   name: 중합효소 연쇄반응
   hint: 특정 DNA 구간 증폭
-  aliases: [Polymerase chain reaction, PCR]
+  aliases: [Polymerase chain reaction, PCR, "극소량의 유전물질을 검사할 만큼 불리기", "원하는 유전자 부분만 수백만 배로 복제", "온도를 올렸다 내렸다 반복하는 복제 장치", "범죄 현장 미량 시료로 유전자 감식 준비"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -17,7 +17,7 @@ entries:
   path: [과학, 생명과학]
   name: 정량 PCR
   hint: 증폭 신호로 핵산량 추정
-  aliases: [Quantitative PCR, qPCR]
+  aliases: [Quantitative PCR, qPCR, "바이러스가 몸에 얼마나 많은지 수치로 알기", "복제되는 동안 실시간으로 빛 세기를 추적", "몇 번째 주기에서 신호가 뜨는지로 처음 양 계산", "유전자 몇 개의 활동량을 빠르고 정확하게 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -26,7 +26,7 @@ entries:
   path: [과학, 생명과학]
   name: DNA 염기서열 분석
   hint: 핵산 염기의 배열 판독
-  aliases: [DNA sequencing]
+  aliases: [DNA sequencing, "유전물질의 글자 순서를 읽어내기", "돌연변이가 어디 생겼는지 직접 확인", "이 생물이 무슨 종인지 유전자로 판별", "유전병 원인 부위를 글자 단위로 들여다보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -35,7 +35,7 @@ entries:
   path: [과학, 생명과학]
   name: RNA 시퀀싱
   hint: 전사체의 서열과 발현량 분석
-  aliases: [RNA sequencing]
+  aliases: [RNA sequencing, "세포에서 지금 읽히고 있는 유전자 전부 조사", "유전자 활동을 미리 정한 목록 없이 통째로 측정", "같은 유전자에서 나온 다른 이어붙임 형태 찾기", "조직별로 켜진 유전자 지도를 만들고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -44,7 +44,7 @@ entries:
   path: [과학, 생명과학]
   name: 서열 정렬
   hint: 생물 서열의 대응 위치 비교
-  aliases: [Sequence alignment]
+  aliases: [Sequence alignment, "두 유전자 글자열을 나란히 놓고 같은 자리 맞추기", "사람과 쥐의 같은 단백질이 어디가 다른지 보기", "모르는 서열이 기존 자료 중 무엇과 닮았는지 검색", "여러 종에서 변하지 않고 보존된 구간 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -53,7 +53,7 @@ entries:
   path: [과학, 생명과학]
   name: 계통 추론
   hint: 진화적 관계의 모형 추정
-  aliases: [Phylogenetic inference]
+  aliases: [Phylogenetic inference, "어느 종끼리 가까운 친척인지 나무 그림으로 그리기", "바이러스 변이가 어디서 갈라져 나왔는지 추적", "유전자 비교로 공통 조상과 갈라진 순서 추정", "생물 족보 그림을 자료에서 만들어내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -62,7 +62,7 @@ entries:
   path: [과학, 생명과학]
   name: 유전체 조립
   hint: 서열 조각에서 긴 서열 복원
-  aliases: [Genome assembly]
+  aliases: [Genome assembly, "짧게 읽힌 조각들을 겹쳐 이어 전체 복원", "처음 연구하는 생물의 유전 지도 새로 만들기", "수백만 개 퍼즐 조각 같은 판독 결과 맞추기", "참고 서열 없이 염색체 길이로 이어 붙이기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -71,7 +71,7 @@ entries:
   path: [과학, 생명과학]
   name: 유전자 주석
   hint: 유전체의 기능 요소 식별
-  aliases: [Gene annotation]
+  aliases: [Gene annotation, "새로 읽은 유전체에 이름표와 기능 설명 달기", "이 구간이 무슨 단백질을 만드는지 찾아 붙이기", "서열 파일에 시작과 끝 위치 정보 입히기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -80,7 +80,7 @@ entries:
   path: [과학, 생명과학]
   name: 차등발현 분석
   hint: 조건 사이 유전자 발현 차이 추정
-  aliases: [Differential expression analysis, DE analysis]
+  aliases: [Differential expression analysis, DE analysis, "약 처리한 쪽에서 어떤 유전자가 켜지고 꺼졌나", "환자와 정상인 시료에서 활동량이 다른 유전자 고르기", "수만 개 유전자 중 의미 있게 변한 것 목록 뽑기", "두 실험군 발현 수치 표를 통계로 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -89,7 +89,7 @@ entries:
   path: [과학, 생명과학]
   name: 유전자집합 풍부도 분석
   hint: 기능 집합의 변화 경향 검토
-  aliases: [Gene set enrichment]
+  aliases: [Gene set enrichment, "변한 유전자들이 어떤 기능 무리에 몰려 있나", "유전자 목록이 너무 길어 큰 흐름이 안 보임", "특정 대사 경로 전체가 올라갔는지 내려갔는지", "개별로는 약해도 묶음으로 보면 뚜렷한 변화 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -98,7 +98,7 @@ entries:
   path: [과학, 생명과학]
   name: 유세포분석
   hint: 개별 세포의 광학 특성 측정
-  aliases: [Flow cytometry, flow cytometry]
+  aliases: [Flow cytometry, flow cytometry, "세포를 한 줄로 흘리며 하나씩 레이저로 세기", "혈액 속 면역세포 종류별 비율 구하기", "표지 붙은 세포만 골라내 따로 모으기", "수만 개 세포의 크기와 밝기를 몇 분 만에 측정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -107,7 +107,7 @@ entries:
   path: [과학, 생명과학]
   name: 형광현미경법
   hint: 형광 표지의 위치와 변화 관찰
-  aliases: [Fluorescence microscopy]
+  aliases: [Fluorescence microscopy, "빛나는 꼬리표 단 단백질이 세포 어디 있는지", "특정 구조만 색을 입혀 어두운 배경에서 보기", "살아 있는 세포 안 분자 이동을 시간 따라 촬영", "초록 빨강 파랑으로 염색한 세포 사진 찍기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -116,7 +116,7 @@ entries:
   path: [과학, 생명과학]
   name: 공초점현미경법
   hint: 초점면 신호로 광학 절편 구성
-  aliases: [Confocal microscopy]
+  aliases: [Confocal microscopy, "두꺼운 시료를 얇은 층층이 선명하게 촬영", "초점 밖의 뿌연 빛을 걸러낸 세포 사진", "세포 속을 입체로 재구성해 보기", "조직 깊숙한 곳을 자르지 않고 단면으로 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -125,7 +125,7 @@ entries:
   path: [과학, 생명과학]
   name: 웨스턴 블롯
   hint: 분리한 단백질을 항체로 검출
-  aliases: [Western blot]
+  aliases: [Western blot, "특정 단백질이 실제로 만들어졌는지 띠로 확인", "젤에서 크기별로 나눈 뒤 막에 옮겨 찾기", "유전자를 껐더니 그 산물이 정말 사라졌는지 검증", "단백질 크기와 대략적인 양을 밴드 굵기로 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -134,7 +134,7 @@ entries:
   path: [과학, 생명과학]
   name: 효소결합 면역흡착 분석
   hint: 효소 신호로 표적 물질 검출
-  aliases: [ELISA]
+  aliases: [ELISA, "혈액 속 특정 항체나 호르몬이 얼마나 있는지", "항체 붙여 색 변하는 정도로 농도 재기", "구멍 아흔여섯 개짜리 판으로 하는 감염 검사", "식품 속 알레르기 성분 들어 있는지 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -143,7 +143,7 @@ entries:
   path: [과학, 생명과학]
   name: 단백질체 분석
   hint: 단백질의 종류와 양을 함께 분석
-  aliases: [Proteomics]
+  aliases: [Proteomics, "시료 속 단백질 수천 종을 한 번에 목록화", "질량 재는 장비로 어떤 단백질이 얼마나 있는지", "유전자는 같은데 실제 만들어진 산물이 다른지 확인", "암 조직과 정상 조직의 단백질 구성 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -152,7 +152,7 @@ entries:
   path: [과학, 생명과학]
   name: 대사체 분석
   hint: 저분자 대사산물의 구성 분석
-  aliases: [Metabolomics]
+  aliases: [Metabolomics, "혈액이나 소변 속 작은 분자들을 통째로 조사", "당 아미노산 지방산 같은 산물 목록과 양 파악", "질병이 몸속 화학 상태를 어떻게 바꿨는지 보기", "발효 식품이나 식물 추출물의 성분 구성 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -161,7 +161,7 @@ entries:
   path: [과학, 생명과학]
   name: 단일세포 분석
   hint: 세포별 이질성을 분리해 측정
-  aliases: [Single cell analysis]
+  aliases: [Single cell analysis, "평균에 묻힌 세포 하나하나의 차이 드러내기", "종양 안에 섞여 있는 서로 다른 세포 무리 구분", "조직을 갈아 섞지 않고 낱개로 유전자 활동 측정", "드물게 섞인 희귀 세포 종류 찾아내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -170,7 +170,7 @@ entries:
   path: [과학, 생명과학]
   name: 메타유전체 분석
   hint: 환경 시료의 여러 생물 유전정보 분석
-  aliases: [Metagenomics]
+  aliases: [Metagenomics, "장 속에 어떤 세균들이 사는지 한꺼번에 조사", "흙이나 바닷물에서 배양 없이 미생물 파악", "대변 시료로 장내 세균 구성 알아보기", "키울 수 없는 미생물까지 유전정보로 찾아내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -179,7 +179,7 @@ entries:
   path: [과학, 생명과학]
   name: 시스템 생물학
   hint: 생물 구성요소의 상호작용 모형화
-  aliases: [Systems biology]
+  aliases: [Systems biology, "유전자와 단백질이 서로 영향 주는 관계망 그리기", "부품 목록이 아니라 전체 회로로 세포 이해", "세포 안 반응들을 수식으로 묶어 컴퓨터로 흉내", "한 곳을 건드리면 연쇄로 무엇이 바뀔지 예측"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: biology
@@ -188,7 +188,7 @@ entries:
   path: [건강, 보건 연구]
   name: 역학
   hint: 집단의 건강 사건 분포와 결정요인 연구
-  aliases: [Epidemiology]
+  aliases: [Epidemiology, "왜 어떤 동네에서 특정 병이 많은지", "누가 언제 어디서 병에 걸리는지 살피는 학문", "개인이 아니라 인구 전체의 병 원인 찾기", "생활 환경과 병의 관계를 숫자로 밝히기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -197,7 +197,7 @@ entries:
   path: [건강, 보건 연구]
   name: 환자대조군 연구
   hint: 결과에 따라 뽑은 집단의 노출 비교
-  aliases: [Case control study]
+  aliases: [Case control study, "병 걸린 사람과 안 걸린 사람의 과거 비교", "드문 병의 원인을 거꾸로 찾아가는 조사", "이미 아픈 사람들을 모아 뭘 먹었는지 묻기", "오래 기다릴 수 없을 때 원인 찾는 연구"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -206,7 +206,7 @@ entries:
   path: [건강, 보건 연구]
   name: 코호트 연구
   hint: 노출에 따른 집단의 결과 추적
-  aliases: [Cohort study]
+  aliases: [Cohort study, "흡연자와 비흡연자를 수십 년 따라가며 비교", "어떤 습관이 나중에 병으로 이어지는지 보기", "건강한 사람들을 모아 오래 지켜보는 연구", "한 원인이 여러 병에 미치는 영향 한꺼번에 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -215,7 +215,7 @@ entries:
   path: [건강, 보건 연구]
   name: 진단정확도 연구
   hint: 검사 결과와 기준 결과 비교
-  aliases: [Diagnostic accuracy study]
+  aliases: [Diagnostic accuracy study, "새 검사가 확진 검사와 얼마나 일치하는지", "간이 검사 키트를 믿어도 되는지 알아보기", "검사가 환자를 놓치거나 헛짚는 비율 재기", "값싼 검사로 비싼 검사를 대신할 수 있나"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -224,7 +224,7 @@ entries:
   path: [건강, 보건 연구]
   name: 민감도와 특이도
   hint: 양성과 음성을 구별하는 검사 성질
-  aliases: [Sensitivity specificity]
+  aliases: [Sensitivity specificity, "진단 키트가 환자를 얼마나 놓치는지 알고 싶다", "멀쩡한 사람을 환자로 잘못 짚는 정도", "두 가지 검사법 중 어느 쪽이 정확한지 비교", "자가 키트 설명서의 정확도 숫자 읽는 법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -233,7 +233,7 @@ entries:
   path: [건강, 보건 연구]
   name: 양성예측도
   hint: 양성 결과 중 실제 상태의 비율
-  aliases: [Positive predictive value]
+  aliases: [Positive predictive value, "검진에서 이상 소견 나왔는데 진짜 병일 확률", "걸렸다고 나온 사람 중 실제 환자가 몇 명인지", "드문 병 검사에서 걸렸다는 결과를 얼마나 믿을지", "재검 통보 받고 불안할 때 따져볼 숫자"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -242,7 +242,7 @@ entries:
   path: [건강, 보건 연구]
   name: 우도비
   hint: 검사 결과가 상태별 나타날 상대 가능성
-  aliases: [Likelihood ratio]
+  aliases: [Likelihood ratio, "양성이 나오면 병일 가능성이 얼마나 올라가나", "검사 결과로 의심 정도를 얼마나 바꿀지", "음성이면 안심해도 되는 검사인지", "검사 전 짐작을 검사 후 확률로 고치기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -251,7 +251,7 @@ entries:
   path: [건강, 보건 연구]
   name: 절대위험감소
   hint: 두 집단 사건 위험의 차이
-  aliases: [Absolute risk reduction]
+  aliases: [Absolute risk reduction, "약 먹은 쪽과 안 먹은 쪽 발병률 격차 보기", "위험 절반 감소라는 광고가 실제로 얼마인지", "치료로 줄어드는 위험을 뺄셈으로 보기", "드문 병에서 효과가 과장돼 보이는지 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -260,7 +260,7 @@ entries:
   path: [건강, 보건 연구]
   name: 치료필요수
   hint: 추가 한 건의 효과에 필요한 대상 수
-  aliases: [Number needed to treat]
+  aliases: [Number needed to treat, "몇 명이 약을 먹어야 한 명이 덕을 보나", "이 약이 나한테 도움될 가능성 감 잡기", "치료 효과를 사람 수로 바꿔 설명", "예방약을 백 명이 먹으면 몇 명이 이득인지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -269,7 +269,7 @@ entries:
   path: [건강, 보건 연구]
   name: 발생률과 유병률
   hint: 새 사건의 발생과 기존 상태의 빈도
-  aliases: [Incidence prevalence]
+  aliases: [Incidence prevalence, "올해 새로 생긴 환자와 지금 앓는 환자 구분", "당뇨 환자가 많다는 말이 어떤 숫자인지", "오래 앓는 병이라 환자 수가 쌓이는 현상", "일 년에 몇 명 걸리는지와 현재 몇 명인지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -278,7 +278,7 @@ entries:
   path: [건강, 보건 연구]
   name: 역학적 표준화
   hint: 집단 구성 차이를 보정해 비율 비교
-  aliases: [Standardization]
+  aliases: [Standardization, "노인 많은 지역과 젊은 지역 사망률 공정하게 비교", "나이 분포가 다른 두 도시의 발병률 견주기", "옛날과 지금 인구 구조가 달라 비교가 안 될 때", "시골이 사망률 높게 나오는 게 고령 탓인지 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -287,7 +287,7 @@ entries:
   path: [건강, 보건 연구]
   name: 보건의료기술평가
   hint: 의료기술의 효과 비용 영향 종합 평가
-  aliases: [Health technology assessment]
+  aliases: [Health technology assessment, "새 치료법이 값만큼 가치가 있는지 따지기", "건강보험에 넣을지 말지 판단하는 근거", "비싼 의료 장비 도입의 득실 한꺼번에 따지기", "신약의 효능과 돈과 사회적 파장 함께 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -296,7 +296,7 @@ entries:
   path: [건강, 보건 연구]
   name: 환자보고결과
   hint: 당사자가 보고한 건강과 생활 결과
-  aliases: [Patient reported outcomes]
+  aliases: [Patient reported outcomes, "환자 본인이 느끼는 통증과 불편을 설문으로", "검사 수치는 좋은데 환자는 힘들다고 할 때", "치료 후 일상이 나아졌는지 직접 묻기", "의사 판단 말고 환자 목소리로 효과 재기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -305,7 +305,7 @@ entries:
   path: [건강, 보건 연구]
   name: 진료지침 평가
   hint: 지침의 개발 근거와 적용성 검토
-  aliases: [Clinical practice guideline appraisal]
+  aliases: [Clinical practice guideline appraisal, "이 치료 권고안이 믿을 만하게 만들어졌는지", "학회 권고가 우리 병원 실정에 맞는지 따지기", "권고문을 누가 어떤 증거로 썼는지 살피기", "여러 권고안 중 어느 것을 따를지 고르기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -314,7 +314,7 @@ entries:
   path: [건강, 보건 연구]
   name: 위험 소통
   hint: 확률 불확실성과 대응 선택을 전달
-  aliases: [Risk communication]
+  aliases: [Risk communication, "부작용 가능성을 겁주지 않고 알리는 법", "몇 퍼센트라는 말을 주민이 알아듣게 전하기", "감염병 유행 때 안내문 문구 쓰기", "확실치 않은 위험을 환자에게 설명해야 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -323,7 +323,7 @@ entries:
   path: [건강, 보건 연구]
   name: 건강문해력 평가
   hint: 건강 정보를 이해하고 이용하는 능력 조사
-  aliases: [Health literacy assessment]
+  aliases: [Health literacy assessment, "환자가 복약 설명서를 제대로 알아듣는지", "어르신이 병원 안내문을 읽고 따를 수 있는지", "의료 정보 찾고 판단하는 힘을 설문으로 재기", "안내 자료가 너무 어려운 건 아닌지 점검"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -332,7 +332,7 @@ entries:
   path: [건강, 보건 연구]
   name: 집단발생 조사
   hint: 발생 사례의 연결과 공통 노출 탐색
-  aliases: [Outbreak investigation]
+  aliases: [Outbreak investigation, "같은 식당 다녀온 사람들이 단체로 배탈", "학교에서 갑자기 환자가 몰려 나온 원인 찾기", "아픈 사람들이 똑같이 먹은 음식 추려내기", "평소보다 환자가 확 늘었을 때 현장 조사"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -341,7 +341,7 @@ entries:
   path: [건강, 보건 연구]
   name: 접촉자 조사
   hint: 감염 가능 접촉의 연결 추적
-  aliases: [Contact tracing]
+  aliases: [Contact tracing, "확진자와 같이 있던 사람 찾아내기", "누가 누구에게 옮겼는지 고리 따라가기", "전염병 환자의 동선과 만난 사람 파악", "옮았을지 모르는 사람에게 미리 알리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -350,7 +350,7 @@ entries:
   path: [건강, 보건 연구]
   name: 질병 감시
   hint: 건강 사건의 발생 추세를 지속 관찰
-  aliases: [Disease surveillance]
+  aliases: [Disease surveillance, "독감 환자가 늘고 있는지 매주 집계", "이상 징후를 빨리 알아채려고 신고 자료 모으기", "지역별 환자 수 변화를 계속 지켜보기", "유행이 시작됐는지 판단하는 상시 체계"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -359,7 +359,7 @@ entries:
   path: [건강, 보건 연구]
   name: 실행과학
   hint: 근거가 현장에서 쓰이는 조건 연구
-  aliases: [Implementation science]
+  aliases: [Implementation science, "효과 입증된 방법이 왜 병원에서 안 쓰이나", "좋은 연구 결과를 실제 진료에 정착시키기", "시범사업은 잘됐는데 확대하면 안 되는 이유", "새 지침을 의료진이 따르게 만드는 요인 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: health
@@ -368,7 +368,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 생물다양성 평가
   hint: 생물 구성과 분포의 다양성 조사
-  aliases: [Biodiversity assessment]
+  aliases: [Biodiversity assessment, "우리 동네 숲에 몇 종류 생물이 사나 조사", "한 종만 많은 곳과 골고루 있는 곳 비교", "습지에 사는 동식물 목록과 수 세기", "개발 전후로 생물 종류가 얼마나 줄었나 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -377,7 +377,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 종분포 모형
   hint: 환경 조건에 따른 종의 분포 추정
-  aliases: [Species distribution modeling]
+  aliases: [Species distribution modeling, "기온이 오르면 이 나무가 어디까지 북상할까", "발견 지점과 기후 자료로 살 만한 지역 지도 그리기", "외래종이 앞으로 퍼질 지역 예측", "아직 조사 안 한 곳에 그 종이 있을지 짐작"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -386,7 +386,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 포획재포획
   hint: 중복 관찰에서 개체군 크기 추정
-  aliases: [Capture recapture]
+  aliases: [Capture recapture, "연못에 물고기가 몇 마리인지 다 안 잡고 알기", "표시해서 풀어 주고 다시 잡아 전체 수 어림", "가락지 단 새가 다시 잡힌 비율로 무리 크기 계산", "다 셀 수 없는 야생동물 마릿수 짐작하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -395,7 +395,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 점유 모형
   hint: 탐지 불완전성을 고려해 서식 여부 추정
-  aliases: [Occupancy modeling]
+  aliases: [Occupancy modeling, "못 봤다고 해서 정말 없는 걸까 따지기", "여러 번 가서 본 날과 못 본 날 기록으로 추정", "개구리가 이 연못에 사는지 확률로 판단", "조사에서 놓쳤을 가능성까지 감안한 서식 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -404,7 +404,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 개체군 생존가능성 분석
   hint: 미래 존속의 불확실성 모형화
-  aliases: [Population viability analysis]
+  aliases: [Population viability analysis, "이 동물이 백 년 뒤에도 남아 있을 확률", "몇 마리 남아야 멸종을 피할 수 있나", "나쁜 해가 겹치면 무리가 사라질 위험 계산", "작은 집단이 앞으로 버틸 수 있을지 모의실험"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -413,7 +413,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 서식지 적합성 분석
   hint: 생물의 요구에 맞는 환경 평가
-  aliases: [Habitat suitability analysis]
+  aliases: [Habitat suitability analysis, "이 땅이 수달이 살기에 좋은 곳인지 점수 매기기", "멸종위기종 풀어 줄 장소 후보 고르기", "먹이와 숨을 곳과 물이 갖춰졌는지 따져 보기", "동물에게 필요한 조건과 현장 환경 맞춰 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -422,7 +422,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 생태망 분석
   hint: 먹이와 이동 등 생태적 연결 분석
-  aliases: [Ecological network analysis]
+  aliases: [Ecological network analysis, "누가 누구를 먹는지 관계를 그림으로 정리", "한 종이 사라지면 어디까지 영향이 퍼질까", "꽃과 찾아오는 곤충의 연결 관계 조사", "동물이 옮겨 다니는 서식지 사이 연결 살피기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -431,7 +431,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 영양단계 연쇄효과
   hint: 먹이망을 따라 영향이 확산
-  aliases: [Trophic cascade]
+  aliases: [Trophic cascade, "늑대가 사라지자 숲의 나무까지 줄어든 까닭", "포식자 하나 없앴더니 엉뚱한 생물이 불어나는 일", "꼭대기 동물의 변화가 풀과 물고기까지 번지는 흐름", "천적을 들여왔을 때 다른 생물들에 생길 일 짐작"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -440,7 +440,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 생태 천이
   hint: 시간에 따른 군집 구성 변화
-  aliases: [Ecological succession]
+  aliases: [Ecological succession, "산불 난 자리에 풀부터 나무까지 돌아오는 순서", "버려진 논밭이 세월 지나 숲이 되는 과정", "빈 땅에 처음 들어오는 식물과 나중 식물 차이", "해가 갈수록 숲의 나무 종류가 바뀌는 이유"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -449,7 +449,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 환경수용력
   hint: 조건 아래 지속 가능한 개체 수준
-  aliases: [Carrying capacity]
+  aliases: [Carrying capacity, "이 목장에 소를 최대 몇 마리까지 키울 수 있나", "먹이와 공간이 버틸 수 있는 동물 수의 한계", "사슴이 너무 늘어 숲이 망가지는 상황", "어항에 물고기를 몇 마리까지 넣어도 되나"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -458,7 +458,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 복원생태학
   hint: 훼손된 생태계의 회복 과정 연구
-  aliases: [Restoration ecology]
+  aliases: [Restoration ecology, "망가진 갯벌을 예전 모습으로 되돌리기", "폐광 터에 다시 숲을 가꾸는 방법", "복개한 하천을 걷어 내고 물길 살리기", "훼손지에 어떤 식물부터 심어야 하나"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -467,7 +467,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 환경 DNA 분석
   hint: 환경 시료의 유전 흔적으로 생물 탐지
-  aliases: [Environmental DNA]
+  aliases: [Environmental DNA, "물 한 컵 떠서 그 강에 사는 물고기 알아내기", "직접 잡지 않고 희귀 동물이 있는지 확인", "흙이나 물에 남은 흔적으로 생물 찾기", "눈에 안 띄는 외래종이 들어왔는지 검사"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -476,7 +476,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 생태계서비스 평가
   hint: 생태계가 제공하는 편익 분석
-  aliases: [Ecosystem services assessment]
+  aliases: [Ecosystem services assessment, "이 숲이 우리에게 주는 혜택을 돈으로 따지면", "습지가 홍수를 막아 주는 가치 계산하기", "벌이 꽃가루 옮겨 주는 일의 값어치", "공원을 없애면 주민이 잃는 것 정리하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -485,7 +485,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 물질흐름 분석
   hint: 시스템의 물질 투입 축적 배출 계산
-  aliases: [Material flow analysis]
+  aliases: [Material flow analysis, "도시에 들어온 자원이 어디 쌓이고 어디로 나가는지", "공장에 들어간 원료 중 쓰레기로 빠지는 양 셈하기", "플라스틱이 만들어져 버려지기까지 양을 따라가기", "들어온 양과 나간 양이 안 맞는 곳 찾아내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -494,7 +494,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 환경영향평가
   hint: 사업이 환경에 주는 영향을 사전 검토
-  aliases: [Environmental impact assessment]
+  aliases: [Environmental impact assessment, "도로 공사 전에 주변 자연 피해 미리 따져 보기", "공장 들어서면 소음과 수질이 어떻게 될까", "개발 허가 받기 전에 내야 하는 환경 검토 서류", "댐 건설 계획에 주민이 의견 내는 절차"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -503,7 +503,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 생태발자국
   hint: 자원 수요를 생물생산 면적으로 표현
-  aliases: [Ecological footprint]
+  aliases: [Ecological footprint, "모두가 나처럼 살면 지구가 몇 개 필요할까", "내 생활을 유지하는 데 드는 땅 넓이 계산", "한 나라의 소비가 자기 땅으로 감당되는지 비교", "먹고 입고 쓰는 것을 필요한 토지로 환산"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -512,7 +512,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 순환경제
   hint: 자원 사용과 회수의 고리 설계
-  aliases: [Circular economy]
+  aliases: [Circular economy, "쓰고 버리는 대신 돌려 쓰는 사업 구조 만들기", "다 쓴 제품을 회수해서 다시 원료로 쓰기", "수리와 재사용이 쉽게 물건을 설계하기", "쓰레기가 안 나오는 생산과 소비 흐름"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -521,7 +521,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 산업공생
   hint: 서로 다른 공정의 부산물과 자원 교환
-  aliases: [Industrial symbiosis]
+  aliases: [Industrial symbiosis, "옆 공장에서 버리는 열을 우리 공장이 받아 쓰기", "한 회사의 찌꺼기가 다른 회사의 원료가 됨", "산업단지 업체끼리 남는 자원 주고받기", "맥주 공장 찌꺼기를 사료 업체에 넘기기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -530,7 +530,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 폐기물 관리 위계
   hint: 예방 재사용 재활용 등 처리 우선순위
-  aliases: [Waste hierarchy]
+  aliases: [Waste hierarchy, "재활용보다 애초에 덜 만드는 게 먼저인 이유", "쓰레기 줄이기에서 뭐부터 해야 하나 순서", "다시 쓰기와 녹여 쓰기와 태우기 중 뭐가 나은가", "매립은 맨 마지막 수단이라는 원칙"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -539,7 +539,7 @@ entries:
   path: [환경, 생태와 보전]
   name: 물발자국
   hint: 생산과 소비의 물 사용 영향 계정
-  aliases: [Water footprint]
+  aliases: [Water footprint, "청바지 한 벌 만드는 데 물이 얼마나 드나", "커피 한 잔 뒤에 숨은 물 사용량", "수입 농산물에 딸려 오는 남의 나라 물", "우리 공장 제품이 지역 물 부족에 주는 부담"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: ecology
@@ -548,7 +548,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 원격탐사
   hint: 떨어진 센서로 지표 특성 관측
-  aliases: [Remote sensing]
+  aliases: [Remote sensing, "직접 가지 않고 하늘에서 땅 상태 살피기", "위성이나 드론 사진으로 넓은 지역 조사", "산불 피해 면적을 현장 방문 없이 파악", "접근하기 힘든 오지의 변화 지켜보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -557,7 +557,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 지리참조
   hint: 자료를 공간 좌표에 대응
-  aliases: [Georeferencing]
+  aliases: [Georeferencing, "스캔한 옛 지도를 요즘 지도 위에 정확히 겹치기", "항공 사진에 위도 경도를 입히기", "위치 정보 없는 그림 지도를 지도 프로그램에 올리기", "주소 목록을 지도 위 점으로 바꾸기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -566,7 +566,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 지도투영
   hint: 곡면의 위치를 평면 좌표로 변환
-  aliases: [Map projection]
+  aliases: [Map projection, "둥근 지구를 종이 지도로 펴는 방법", "세계지도에서 북쪽 나라가 크게 보이는 이유", "위도 경도를 미터 단위 좌표로 바꾸기", "두 지도 자료가 서로 어긋나 겹치지 않을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -575,7 +575,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 공간보간
   hint: 측정 지점 사이 공간 값을 추정
-  aliases: [Spatial interpolation]
+  aliases: [Spatial interpolation, "관측소 없는 동네의 기온 짐작하기", "점으로 잰 값을 매끈한 면 지도로 바꾸기", "측정 지점 사이 빈칸을 메우는 여러 방법", "미세먼지 측정소 값으로 우리 집 수치 추정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -584,7 +584,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 크리깅
   hint: 공간 공분산을 이용한 보간
-  aliases: [Kriging]
+  aliases: [Kriging, "몇 군데만 잰 값으로 전체 지도 그리기", "가까울수록 비슷하다는 점을 살려 빈 곳 채우기", "추정한 값이 얼마나 믿을 만한지도 함께", "시추 몇 곳 자료로 땅속 매장량 짐작"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -593,7 +593,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 공간자기상관
   hint: 인접 위치 값의 유사성 측정
-  aliases: [Spatial autocorrelation]
+  aliases: [Spatial autocorrelation, "이웃 동네끼리 집값이 닮았는지 확인", "값이 지도에서 뭉쳐 있나 흩어져 있나", "옆 지역과 비슷한 정도를 숫자 하나로", "지역 통계가 무작위로 퍼진 건지 검정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -602,7 +602,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 핫스폿 분석
   hint: 높거나 낮은 값의 공간 군집 탐지
-  aliases: [Hot spot analysis]
+  aliases: [Hot spot analysis, "사고나 범죄가 유독 몰리는 동네 찾기", "지도에서 매출 높은 가게가 뭉친 곳", "우연이 아니라 진짜로 몰려 있는지 확인", "민원 주소 목록으로 집중 지역 가려내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -611,7 +611,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 네트워크 접근성 분석
   hint: 연결망을 통한 도달 시간과 범위
-  aliases: [Network accessibility analysis]
+  aliases: [Network accessibility analysis, "걸어서 십 분 안에 닿는 범위 그리기", "병원까지 실제 도로로 몇 분 걸리는지", "직선거리 말고 길 따라 잰 가게 상권", "소방서에서 제때 도착 못 하는 동네 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -620,7 +620,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 유역 구분
   hint: 지형에서 물이 모이는 영역 식별
-  aliases: [Watershed delineation]
+  aliases: [Watershed delineation, "이 하천으로 빗물이 모여드는 땅 범위", "비가 오면 물이 어느 쪽으로 흘러갈지", "높낮이 자료로 물줄기 경계선 긋기", "저수지 상류에서 오염이 들어오는 구역"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -629,7 +629,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 수치표고모형
   hint: 지표 고도를 격자로 표현
-  aliases: [Digital elevation model, DEM]
+  aliases: [Digital elevation model, DEM, "땅 높낮이를 바둑판 칸마다 숫자로 담은 지도", "산의 경사와 물 흐르는 방향을 컴퓨터로 계산하기", "입체 지형도나 음영 지도를 만들 바탕 자료", "홍수 때 물에 잠길 낮은 곳 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -638,7 +638,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 정규식생지수
   hint: 파장 반사 차이로 식생 특성 표현
-  aliases: [Normalized difference vegetation index, NDVI]
+  aliases: [Normalized difference vegetation index, NDVI, "위성사진으로 농작물 잘 자라는지 보기", "숲이 얼마나 푸르고 건강한지 숫자로", "가뭄으로 풀이 말라 가는 지역 찾기", "드론 사진에서 잎이 무성한 곳 구분"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -647,7 +647,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 토지피복 분류
   hint: 지표의 물리적 덮개 유형 구분
-  aliases: [Land cover classification]
+  aliases: [Land cover classification, "위성사진에서 숲 논밭 시가지 나누기", "우리 지역 땅이 무엇으로 덮여 있는지", "녹지가 몇 년 새 얼마나 줄었는지 비교", "항공사진 색깔로 땅 쓰임새 자동 구분"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -656,7 +656,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 변화탐지
   hint: 시점 사이 지표 상태 변화 비교
-  aliases: [Change detection]
+  aliases: [Change detection, "몇 년 전 위성사진과 지금 사진에서 달라진 곳 찾기", "숲이 얼마나 깎여 나갔는지 사진 두 장으로 보기", "홍수 전후 물에 잠긴 땅이 어디인지 가려내기", "동네에 새로 들어선 건물을 하늘 사진으로 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -665,7 +665,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 자료동화
   hint: 관측과 동적 모형을 결합
-  aliases: [Data assimilation]
+  aliases: [Data assimilation, "날씨 예측 계산에 방금 잰 측정값을 섞어 넣기", "계산 결과와 실제 측정이 어긋날 때 둘을 절충하기", "일기예보의 출발 상태를 가장 그럴듯하게 만들기", "위성과 관측소 자료로 바다나 대기 상태 되짚기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -674,7 +674,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 기후 상세화
   hint: 거친 기후 정보를 작은 공간에 추정
-  aliases: [Climate downscaling]
+  aliases: [Climate downscaling, "전 지구 기후 전망을 우리 시군 단위로 좁혀 보기", "듬성듬성한 기후 예측을 촘촘한 지역 값으로 바꾸기", "우리 지역 농사에 쓸 미래 기온과 강수 전망 얻기", "산과 바다 영향을 반영한 동네 수준 기후 전망"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -683,7 +683,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 지진파 역산
   hint: 관측 파형에서 내부 구조 추정
-  aliases: [Seismic inversion]
+  aliases: [Seismic inversion, "땅을 파지 않고 지하 구조 알아내기", "지진 기록으로 지구 속 층 짐작하기", "흔들림이 도착한 시간 차이로 속 들여다보기", "석유가 묻힌 지층을 진동으로 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -692,7 +692,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 지구물리 탐사
   hint: 물리장 관측으로 지하 구조 탐색
-  aliases: [Geophysical surveying]
+  aliases: [Geophysical surveying, "땅을 파지 않고 땅속에 뭐가 있는지 알아보기", "지하수나 광물이 묻힌 곳을 지표에서 찾기", "공사 전에 땅 밑 빈 공간이나 단단한 바위 확인", "진동이나 전기나 자기를 재서 땅속 모습 그리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -701,7 +701,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 지질연대학
   hint: 지질 물질과 사건의 시기 추정
-  aliases: [Geochronology]
+  aliases: [Geochronology, "이 암석이 몇 년 전에 만들어졌는지 알아내기", "지층이나 화석의 나이를 숫자로 매기기", "화산 폭발이나 빙하기가 언제였는지 재구성", "방사성 원소가 줄어든 양으로 나이 재기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -710,7 +710,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 판구조론
   hint: 판의 운동으로 지질 과정 설명
-  aliases: [Plate tectonics]
+  aliases: [Plate tectonics, "지진과 화산이 특정 띠에 몰리는 이유", "대륙 해안선이 퍼즐처럼 맞는 까닭", "높은 산맥이 어떻게 솟아올랐는지", "땅덩어리가 해마다 조금씩 움직인다는 설명"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -719,7 +719,7 @@ entries:
   path: [공간, 지구와 지리]
   name: 지구통계학
   hint: 공간 상관을 고려한 통계 추론
-  aliases: [Geostatistics]
+  aliases: [Geostatistics, "몇 군데만 잰 값으로 안 잰 곳의 값 어림하기", "가까운 곳끼리 값이 비슷한 성질을 이용한 추정", "토양 오염 측정 지점 사이를 메워 분포도 그리기", "광물 매장량을 시추 몇 곳 자료로 추산하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: earth
@@ -728,7 +728,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 윤작
   hint: 작물의 재배 순서를 바꾸어 관리
-  aliases: [Crop rotation]
+  aliases: [Crop rotation, "같은 자리에 해마다 고추 심었더니 병이 늘 때", "올해 감자 심은 곳에 내년엔 뭘 심을지", "한 밭에 계속 한 가지만 길러 땅심이 떨어질 때", "텃밭 구획을 해마다 돌려가며 쓰는 계획"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -737,7 +737,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 혼작
   hint: 둘 이상의 작물을 함께 재배
-  aliases: [Intercropping]
+  aliases: [Intercropping, "옥수수 밑에 콩과 호박을 같이 심기", "토마토 옆에 바질 심으면 좋다는 얘기", "좁은 텃밭 한 두둑에 여러 채소 섞어 심기", "키 큰 채소 그늘에 잎채소 끼워 기르기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -746,7 +746,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 피복작물 재배
   hint: 토양을 덮는 작물로 토양 관리
-  aliases: [Cover cropping]
+  aliases: [Cover cropping, "수확 끝난 빈 밭을 겨울 동안 놀리지 않기", "맨흙이 비에 쓸려 내려가는 것 막기", "호밀이나 콩과 풀을 심어 갈아엎어 땅 살리기", "풀 덜 나게 밭 표면을 식물로 가려두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -755,7 +755,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 종합적 병해충 관리
   hint: 관측과 여러 방제 수단의 조합
-  aliases: [Integrated pest management]
+  aliases: [Integrated pest management, "농약에만 기대지 않고 벌레 피해 줄이기", "끈끈이로 벌레 수 세어보고 필요할 때만 약 치기", "천적과 그물과 약제를 섞어 쓰는 방제 계획", "진딧물이 약에 내성 생겨 잘 안 죽을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -764,7 +764,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 토양검정
   hint: 토양의 화학 물리 상태 측정
-  aliases: [Soil testing]
+  aliases: [Soil testing, "밭 흙을 떠서 농업기술센터에 맡겨보기", "우리 땅이 산성인지 거름기가 있는지 알기", "비료 주기 전에 땅에 뭐가 부족한지 확인", "작물이 계속 시들한데 흙 탓인지 알고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -773,7 +773,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 양분수지
   hint: 양분 투입과 반출의 균형 계산
-  aliases: [Nutrient budgeting, 비료 투입량, 토양 양분 균형]
+  aliases: [Nutrient budgeting, 비료 투입량, 토양 양분 균형, "넣은 거름과 거둬간 수확물의 영양 득실 따지기", "비료를 너무 많이 줘서 땅에 남아도는지 확인", "해마다 밭에서 빠져나가는 성분만큼 채워주기", "축분을 얼마나 뿌려야 넘치지 않는지 계산"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -782,7 +782,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 정밀농업
   hint: 장소별 상태에 맞춰 투입 조절
-  aliases: [Precision agriculture]
+  aliases: [Precision agriculture, "드론과 센서로 밭 구석구석 상태 파악하기", "넓은 논을 위치별 자료로 나눠 다르게 돌보기", "위성 사진으로 작황 나쁜 곳 짚어내기", "감 대신 측정값으로 농사짓는 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -791,7 +791,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 가변량 처방
   hint: 구역별 요구에 따라 투입량 변경
-  aliases: [Variable rate application]
+  aliases: [Variable rate application, "같은 밭이라도 자리마다 비료 양 달리 뿌리기", "척박한 구간엔 더 주고 기름진 곳엔 덜 주기", "지도에 따라 살포기가 알아서 양 바꾸기", "골고루 똑같이 뿌려 비료가 낭비될 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -800,7 +800,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 점적관개
   hint: 뿌리 부근에 물을 조금씩 공급
-  aliases: [Drip irrigation]
+  aliases: [Drip irrigation, "호스에 작은 구멍 내서 포기마다 방울방울 주기", "물 아끼면서 작물 밑동만 적시고 싶을 때", "잎에 물 닿아 병 생기는 걸 피하는 급수 방식", "비닐하우스 고랑에 가는 관 깔아 자동 급수"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -809,7 +809,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 관개 일정계획
   hint: 토양과 작물 요구에 맞춰 급수
-  aliases: [Irrigation scheduling, 물 주는 시기]
+  aliases: [Irrigation scheduling, 물 주는 시기, "물을 며칠마다 얼마나 줘야 할지 정하기", "흙 마른 정도와 자라는 시기 보고 급수 시점 잡기", "과습으로 뿌리 썩히지 않게 주는 간격 짜기", "장마철과 가뭄 때 물 주는 횟수 달리하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -818,7 +818,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 수경재배
   hint: 토양 대신 양액으로 작물 재배
-  aliases: [Hydroponics]
+  aliases: [Hydroponics, "흙 없이 영양 녹인 물로 상추 기르기", "실내에서 흙 날림 없이 채소 키우고 싶을 때", "스펀지에 씨 뿌려 물통 위에서 기르기", "화분 흙벌레가 싫어서 찾는 재배 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -827,7 +827,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 아쿠아포닉스
   hint: 양식과 수경재배의 물질 흐름 연결
-  aliases: [Aquaponics]
+  aliases: [Aquaponics, "물고기 똥으로 상추를 키우는 장치 만들기", "어항 물을 채소 뿌리로 돌려 다시 쓰기", "물갈이 없이 관상어와 허브를 함께 기르기", "베란다에서 생선과 채소를 한 통에서 기르기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -836,7 +836,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 퇴비화
   hint: 유기물을 생물학적으로 안정화
-  aliases: [Composting]
+  aliases: [Composting, "음식물 찌꺼기와 낙엽을 썩혀 거름 만들기", "마당 구석에 풀더미 쌓아 발효시키기", "거름더미에서 냄새 나고 잘 안 삭을 때", "텃밭에 쓸 흙 영양분을 집에서 직접 마련하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -845,7 +845,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 지렁이 퇴비화
   hint: 지렁이와 미생물로 유기물 처리
-  aliases: [Vermicomposting]
+  aliases: [Vermicomposting, "베란다 상자에서 벌레에게 음식물 찌꺼기 먹이기", "냄새 적게 부엌 쓰레기 줄이는 실내 방법", "분변토를 받아 화분 거름으로 쓰기", "아이와 함께 꿈틀이 키우며 쓰레기 줄이기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -854,7 +854,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 접목
   hint: 식물 조직을 이어 생육
-  aliases: [Grafting]
+  aliases: [Grafting, "튼튼한 밑나무에 맛있는 품종 가지 붙이기", "한 나무에 여러 종류 과일 열리게 하기", "수박 모종을 호박 뿌리에 이어 병에 강하게", "씨로 키우면 어미와 달라지는 과수 늘리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -863,7 +863,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 전정
   hint: 가지의 선택적 제거로 생육 조절
-  aliases: [Pruning]
+  aliases: [Pruning, "과일나무 가지를 언제 어디를 잘라야 할지", "너무 우거진 나무 속까지 햇빛 들게 하기", "장미를 잘라줘야 꽃이 더 많이 핀다는데", "웃자란 가지 쳐내서 열매 크게 키우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -872,7 +872,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 식물 번식
   hint: 종자나 영양기관으로 개체 증식
-  aliases: [Plant propagation]
+  aliases: [Plant propagation, "마음에 드는 화초 한 포기를 여러 포기로 늘리기", "줄기 잘라 물에 꽂아 뿌리 내리기", "포기 나누기와 씨뿌리기 중 뭐가 나을지", "다육이 잎 하나 떼어 새 개체 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -881,7 +881,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 자가채종
   hint: 재배에서 다음 세대 종자 확보
-  aliases: [Seed saving]
+  aliases: [Seed saving, "올해 기른 토마토에서 내년 심을 씨 받기", "해마다 모종 사지 않고 이어서 기르기", "할머니가 기르던 토종 콩을 대대로 지키기", "잘 자란 포기만 골라 씨앗 말려 보관하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -890,7 +890,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 혼농임업
   hint: 나무와 농축산 활동을 함께 배치
-  aliases: [Agroforestry]
+  aliases: [Agroforestry, "과수 사이에 채소를 심거나 가축을 풀어 기르기", "밭 둘레에 큰 나무를 심어 바람과 볕 조절하기", "산비탈 땅에서 목재와 먹거리 같이 얻기", "숲처럼 여러 층으로 꾸미는 농장 구상"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture
@@ -899,7 +899,7 @@ entries:
   path: [생활, 농업과 원예]
   name: 수확후 관리
   hint: 수확물의 품질과 손실 관리
-  aliases: [Postharvest handling]
+  aliases: [Postharvest handling, "딴 과일이 팔기 전에 물러버릴 때", "거둔 채소를 오래 싱싱하게 보관하기", "선별 세척 저온 저장으로 버리는 양 줄이기", "밭에서 식탁까지 가는 동안 상하는 것 막기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: agriculture

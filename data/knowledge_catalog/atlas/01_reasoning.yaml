@@ -8,7 +8,7 @@ entries:
   path: [사고, 추론]
   name: 연역
   hint: 일반 전제에서 결론 도출
-  aliases: [Deduction]
+  aliases: [Deduction, "원칙에서 출발해 개별 결론을 끌어내기", "사람은 다 죽는다에서 나도 죽는다로 가기", "규정을 이 사건에 적용하면 어떻게 되나", "앞의 말이 맞다면 반드시 따라 나오는 것 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -17,7 +17,7 @@ entries:
   path: [사고, 추론]
   name: 귀납
   hint: 사례에서 일반성 추정
-  aliases: [Induction]
+  aliases: [Induction, "여러 번 본 것으로 일반 법칙 짐작하기", "지금까지 늘 그랬으니 다음도 그럴 거라는 판단", "손님 몇 명 반응 보고 전체 취향 추측하기", "관찰을 모아 규칙을 세울 때 조심할 점"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -26,7 +26,7 @@ entries:
   path: [사고, 추론]
   name: 가설추론
   hint: 관찰을 설명할 가설 탐색
-  aliases: [Abduction, abductive reasoning, 최선의 설명으로의 추론, inference to best explanation]
+  aliases: [Abduction, abductive reasoning, 최선의 설명으로의 추론, inference to best explanation, "증상을 보고 가장 그럴듯한 원인 짐작하기", "바닥이 젖어 있으니 비가 왔나 추측하는 식", "단서 몇 개로 무슨 일이 있었는지 추리하기", "고장 원인 후보 중 제일 말 되는 것 고르기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -35,7 +35,7 @@ entries:
   path: [사고, 추론]
   name: 반례
   hint: 일반 주장에 어긋나는 사례
-  aliases: [Counterexample]
+  aliases: [Counterexample, "모든 백조는 희다는 말을 한 마리로 깨기", "항상 그렇다는 주장을 무너뜨릴 예 찾기", "규칙에 안 맞는 예외 하나로 반박하기", "내 추측이 틀렸는지 어긋나는 예부터 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -44,7 +44,7 @@ entries:
   path: [사고, 추론]
   name: 귀류법
   hint: 부정을 가정해 모순 도출
-  aliases: [Proof by contradiction]
+  aliases: [Proof by contradiction, "아니라고 쳐보니 말이 안 되므로 맞다는 증명", "루트 이가 분수가 아님을 보이는 방법", "상대 주장을 받아들이면 생기는 모순 짚기", "직접 보이기 힘들 때 반대로 가정해 풀기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -53,7 +53,7 @@ entries:
   path: [사고, 추론]
   name: 수학적 귀납법
   hint: 기저와 계승 단계로 증명
-  aliases: [Mathematical induction]
+  aliases: [Mathematical induction, "첫 번째가 맞고 다음도 맞으면 전부 맞다는 증명", "도미노처럼 하나씩 넘어가며 모든 수에 보이기", "모든 자연수에 대해 성립함을 보이는 숙제", "일 더하기 이 더하기 합 공식 증명하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -62,7 +62,7 @@ entries:
   path: [사고, 추론]
   name: 구성적 증명
   hint: 대상을 직접 구성해 존재 증명
-  aliases: [Proof by construction]
+  aliases: [Proof by construction, "있다고만 말고 실제로 하나 만들어 보이기", "답이 존재함을 예를 직접 제시해 증명하기", "조건 맞는 수를 찾아내는 절차까지 주는 증명", "말로만 있다는 증명이 찜찜할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -71,7 +71,7 @@ entries:
   path: [사고, 추론]
   name: 경우 분석
   hint: 경우를 나누어 빠짐없이 검토
-  aliases: [Case analysis]
+  aliases: [Case analysis, "상황을 몇 갈래로 나눠 하나씩 다 따져보기", "짝수일 때와 홀수일 때로 갈라서 풀기", "빠뜨린 경우가 없는지 확인하며 검토하기", "비 올 때와 안 올 때 계획을 각각 세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -80,7 +80,7 @@ entries:
   path: [사고, 추론]
   name: 논증 지도
   hint: 주장과 근거의 연결 표시
-  aliases: [Argument mapping, 주장과 근거 연결]
+  aliases: [Argument mapping, 주장과 근거 연결, "찬반 의견과 이유를 나무 모양으로 정리하기", "긴 토론에서 누가 무엇을 반박했는지 그리기", "글 쓰기 전에 주장과 뒷받침을 도식으로 짜기", "어느 이유가 빠졌는지 그림으로 찾아내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -89,7 +89,7 @@ entries:
   path: [사고, 추론]
   name: 논리적 타당성
   hint: 전제와 결론의 추론 관계
-  aliases: [Logical validity]
+  aliases: [Logical validity, "내용의 참 거짓과 별개로 형식이 맞는지 보기", "그래서라는 말이 정말 성립하는지 점검", "결론이 앞 문장들에서 정말 나오는지 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -98,7 +98,7 @@ entries:
   path: [사고, 추론]
   name: 논증의 건전성
   hint: 참인 전제와 타당한 추론
-  aliases: [Soundness]
+  aliases: [Soundness, "논리도 맞고 출발점도 사실인지 둘 다 확인", "형식은 멀쩡한데 앞 문장이 거짓인 주장 가리기", "그럴듯한 말이 믿을 만한 결론인지 판정", "추론은 옳은데 결론이 이상할 때 점검할 것"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -107,7 +107,7 @@ entries:
   path: [사고, 추론]
   name: 필요조건
   hint: 성립에 반드시 필요한 조건
-  aliases: [Necessary condition, necessary condition]
+  aliases: [Necessary condition, necessary condition, "이것 없이는 절대 안 되는 조건 가려내기", "합격하려면 꼭 있어야 하지만 그걸로 끝은 아님", "있어야 하는 것과 있으면 되는 것 헷갈릴 때", "산소가 없으면 불이 안 붙는다는 식의 관계"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -116,7 +116,7 @@ entries:
   path: [사고, 추론]
   name: 충분조건
   hint: 성립을 보장하는 조건
-  aliases: [Sufficient condition, sufficient condition]
+  aliases: [Sufficient condition, sufficient condition, "이것만 되면 무조건 되는 조건 찾기", "만점이면 합격이지만 만점이 아니어도 합격 가능", "하나만 갖추면 결과가 보장되는 경우", "보장해주는 것과 꼭 필요한 것 구분하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -125,7 +125,7 @@ entries:
   path: [사고, 추론]
   name: 대우
   hint: 명제의 동치 변환
-  aliases: [Contraposition]
+  aliases: [Contraposition, "뒤집어서 부정하면 같은 말이 되는 문장 바꾸기", "비가 오면 땅이 젖는다를 거꾸로 표현하기", "직접 보이기 어려운 문장을 같은 뜻으로 돌려 풀기", "역과 헷갈리지 않게 같은 뜻 문장 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -134,7 +134,7 @@ entries:
   path: [사고, 추론]
   name: 자연연역
   hint: 추론 규칙을 적용해 증명 구성
-  aliases: [Natural deduction]
+  aliases: [Natural deduction, "정해진 규칙만 써서 한 줄씩 증명 써 내려가기", "가정을 세웠다가 거두며 결론 끌어내는 연습", "논리학 수업에서 기호로 증명 쓰는 과제", "어느 줄에서 어떤 규칙을 썼는지 밝히며 증명"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -143,7 +143,7 @@ entries:
   path: [사고, 추론]
   name: 사고실험
   hint: 가상 조건에서 개념 시험
-  aliases: [Thought experiment]
+  aliases: [Thought experiment, "실제로 못 해보는 일을 머릿속으로 해보기", "만약 빛의 속도로 달린다면 하고 상상해 따지기", "극단적인 가상 상황으로 내 원칙 시험하기", "실험실 없이 상상만으로 이론의 허점 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -152,7 +152,7 @@ entries:
   path: [사고, 추론]
   name: 유추 추론
   hint: 구조가 비슷한 사례로 추론
-  aliases: [Analogical reasoning]
+  aliases: [Analogical reasoning, "비슷한 다른 분야 사례에서 답 빌려오기", "처음 보는 문제를 익숙한 것에 빗대어 풀기", "전기를 물 흐름에 견주어 이해하는 방식", "옆 업종 성공 사례가 우리에게도 통할지 따지기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -161,7 +161,7 @@ entries:
   path: [사고, 추론]
   name: 강철인간 논증
   hint: 상대 주장의 가장 강한 형태 재구성
-  aliases: [Steelman]
+  aliases: [Steelman, "반대편 의견을 가장 설득력 있게 다시 말해주기", "상대 말을 일부러 약하게 왜곡하지 않고 토론", "반박하기 전에 상대 입장을 최대한 보강해보기", "내 생각을 제일 센 반대 의견에 부딪혀 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -170,7 +170,7 @@ entries:
   path: [사고, 추론]
   name: 소크라테스식 문답
   hint: 질문으로 전제와 함의 점검
-  aliases: [Socratic questioning]
+  aliases: [Socratic questioning, "답을 주지 않고 계속 물어 스스로 깨닫게 하기", "왜 그렇게 생각하느냐고 거듭 묻는 대화", "학생이 당연하게 믿는 것을 질문으로 흔들기", "상대 말의 숨은 가정을 물음으로 드러내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -179,7 +179,7 @@ entries:
   path: [사고, 추론]
   name: 입증 책임
   hint: 주장을 정당화할 책임
-  aliases: [Burden of proof]
+  aliases: [Burden of proof, "없다는 걸 증명해보라는 말에 대꾸하기", "말싸움에서 누가 증거를 내놓아야 하는지", "근거 없이 우기고 반박은 네가 하라는 사람", "새 주장을 꺼낸 쪽이 져야 할 몫 따지기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: reasoning
@@ -188,7 +188,7 @@ entries:
   path: [조사, 연구 설계]
   name: 가설검정
   hint: 자료로 통계 가설 검토
-  aliases: [Hypothesis testing]
+  aliases: [Hypothesis testing, "두 반 평균 차이가 우연인지 진짜인지 가리기", "새 약이 효과 있다고 말해도 되는지 숫자로 판단", "표본 결과로 주장이 맞는지 틀린지 판정하기", "차이가 의미 있는지 기준선 넘는지 확인하고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -197,7 +197,7 @@ entries:
   path: [조사, 연구 설계]
   name: 조작적 정의
   hint: 추상 개념을 관측 기준으로 변환
-  aliases: [Operationalization]
+  aliases: [Operationalization, "스트레스를 무엇으로 셀지 정해야 할 때", "막연한 말을 셀 수 있는 기준으로 바꾸기", "성실함을 출석 횟수로 볼지 정하는 일", "재려는 것을 어떻게 잴지 미리 약속해 두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -206,7 +206,7 @@ entries:
   path: [조사, 연구 설계]
   name: 구성타당도
   hint: 측정이 의도한 개념을 반영하는 정도
-  aliases: [Construct validity]
+  aliases: [Construct validity, "이 설문이 정말 행복을 재고 있는지 의심될 때", "시험 점수가 실력을 제대로 담는지 따져보기", "만든 척도가 재려던 마음을 재는지 확인하기", "비슷한 다른 검사와 결과가 맞는지 비교할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -215,7 +215,7 @@ entries:
   path: [조사, 연구 설계]
   name: 내적 타당도
   hint: 연구 내부 인과 해석의 정당성
-  aliases: [Internal validity]
+  aliases: [Internal validity, "성적이 오른 게 정말 수업 덕분인지 따지기", "실험 중 다른 원인이 끼어들지 않았는지 점검", "참가자가 중간에 빠져 결과가 흐려졌을 때", "원인과 결과라고 말해도 되는지 연구 안에서 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -224,7 +224,7 @@ entries:
   path: [조사, 연구 설계]
   name: 외적 타당도
   hint: 다른 조건으로 일반화할 수 있는 정도
-  aliases: [External validity]
+  aliases: [External validity, "대학생으로 한 실험이 직장인에게도 통할지", "우리 매장 결과를 다른 지역에도 적용해도 되는지", "실험실에서 나온 결과가 현실에서도 맞을지 걱정", "한 나라 조사 결과를 다른 나라에 옮겨 말해도 될까"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -233,7 +233,7 @@ entries:
   path: [조사, 연구 설계]
   name: 사전등록
   hint: 자료 분석 전 계획 공개
-  aliases: [Preregistration]
+  aliases: [Preregistration, "결과 보고 나서 말 바꾸지 않게 미리 적어 두기", "분석 방법을 시작 전에 날짜 찍어 남겨 놓기", "유리한 결과만 골랐다는 의심을 피하고 싶을 때", "연구 계획을 누구나 볼 수 있게 먼저 올려두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -242,7 +242,7 @@ entries:
   path: [조사, 연구 설계]
   name: 등록보고
   hint: 결과 전 연구 계획 심사
-  aliases: [Registered report]
+  aliases: [Registered report, "자료 모으기 전에 학술지에 계획부터 평가받기", "결과가 시시해도 실어 준다는 약속 받고 연구하기", "효과 없음으로 나와도 논문 내고 싶을 때", "방법이 좋으면 결과 상관없이 게재되는 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -251,7 +251,7 @@ entries:
   path: [조사, 연구 설계]
   name: 반복 검증
   hint: 새 자료로 연구 결과 재검사
-  aliases: [Replication]
+  aliases: [Replication, "유명한 실험을 다른 사람들로 다시 해보기", "그 결과가 한 번뿐인 우연인지 확인하고 싶을 때", "남의 연구를 새로 자료 모아 똑같이 따라 하기", "교과서에 실린 효과가 지금도 나오는지 시험"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -260,7 +260,7 @@ entries:
   path: [조사, 연구 설계]
   name: 재현 가능한 연구
   hint: 같은 자료와 코드로 결과 재생성
-  aliases: [Reproducible research]
+  aliases: [Reproducible research, "남이 내 분석 파일을 돌려도 같은 숫자 나오게", "몇 달 뒤 내 계산을 다시 못 돌릴까 걱정될 때", "자료와 계산 과정을 통째로 묶어 공개하기", "논문 속 표를 누구나 그대로 다시 뽑게 하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -269,7 +269,7 @@ entries:
   path: [조사, 연구 설계]
   name: 예비연구
   hint: 본 조사 전 절차 시험
-  aliases: [Pilot study]
+  aliases: [Pilot study, "본격 설문 전에 몇 명에게 먼저 돌려보기", "질문지가 헷갈리지 않는지 작은 규모로 시험", "큰 조사 전에 진행 순서에 구멍 없는지 확인", "돈 많이 들기 전에 미리 작게 해보고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -278,7 +278,7 @@ entries:
   path: [조사, 연구 설계]
   name: 검정력 분석
   hint: 효과 탐지에 필요한 표본 추정
-  aliases: [Power analysis]
+  aliases: [Power analysis, "설문을 몇 명에게 받아야 충분한지 계산하기", "사람이 적어서 차이를 못 잡을까 걱정될 때", "실험 참가자 수를 미리 정해야 하는 연구 계획서", "작은 효과도 놓치지 않으려면 얼마나 모아야 하나"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -287,7 +287,7 @@ entries:
   path: [조사, 연구 설계]
   name: 층화표집
   hint: 부분집단별 표본 추출
-  aliases: [Stratified sampling]
+  aliases: [Stratified sampling, "남녀와 연령대 비율 맞춰 골고루 뽑기", "소수 집단이 표본에서 빠지지 않게 하고 싶을 때", "학년별로 나눠 각각 몇 명씩 추첨하기", "전체 구성비대로 응답자 채우는 설문 설계"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -296,7 +296,7 @@ entries:
   path: [조사, 연구 설계]
   name: 군집표집
   hint: 집단을 단위로 표본 추출
-  aliases: [Cluster sampling]
+  aliases: [Cluster sampling, "학생 개인 말고 학급을 통째로 뽑아 조사하기", "전국 명단이 없어 동네 단위로 골라 설문할 때", "몇 개 마을만 골라 그 안 사람 모두 조사하기", "이동 비용 줄이려 지역 묶음으로 조사 대상 정하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -305,7 +305,7 @@ entries:
   path: [조사, 연구 설계]
   name: 눈덩이표집
   hint: 참여자의 연결로 표본 모집
-  aliases: [Snowball sampling]
+  aliases: [Snowball sampling, "찾기 힘든 사람들을 소개에 소개로 모으기", "응답자에게 아는 사람을 추천받아 조사 넓히기", "명단이 없는 숨은 집단을 인터뷰해야 할 때", "희귀병 환자처럼 드문 대상 알음알음 모집하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -314,7 +314,7 @@ entries:
   path: [조사, 연구 설계]
   name: 목적표집
   hint: 연구 목적에 맞는 사례 선정
-  aliases: [Purposive sampling]
+  aliases: [Purposive sampling, "아무나 뽑지 않고 알아볼 만한 사람을 골라 면담", "면담 대상을 어떤 기준으로 고를지 고민될 때", "무작위로 뽑으면 정작 필요한 경험자가 빠지는 문제", "몇 명만 깊이 인터뷰하는 연구에서 대상자 정하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -323,7 +323,7 @@ entries:
   path: [조사, 연구 설계]
   name: 혼합연구
   hint: 정량과 정성 자료 통합
-  aliases: [Mixed methods]
+  aliases: [Mixed methods, "설문 숫자와 면담 이야기를 함께 쓰고 싶을 때", "통계만으로는 이유를 알 수 없어 인터뷰 덧붙이기", "면담으로 찾은 주제를 설문으로 넓게 확인하기", "수치와 말 자료를 한 보고서에 엮는 방법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -332,7 +332,7 @@ entries:
   path: [조사, 연구 설계]
   name: 삼각검증
   hint: 다른 자료와 방법으로 해석 대조
-  aliases: [Triangulation]
+  aliases: [Triangulation, "면담 내용이 맞는지 기록이나 관찰로 맞춰보기", "한 가지 자료만 믿기 불안해 여러 경로로 확인", "서로 다른 조사자가 같은 결론 내는지 대조하기", "인터뷰 해석이 내 주관 아닌지 점검하고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -341,7 +341,7 @@ entries:
   path: [조사, 연구 설계]
   name: 종단연구
   hint: 같은 대상을 시간에 따라 관찰
-  aliases: [Longitudinal study]
+  aliases: [Longitudinal study, "같은 아이들을 몇 년간 계속 따라가며 조사하기", "나이 들면서 어떻게 변하는지 추적하고 싶을 때", "졸업생 진로를 해마다 다시 물어보는 조사", "한 번 말고 여러 해에 걸쳐 같은 사람 재기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -350,7 +350,7 @@ entries:
   path: [조사, 연구 설계]
   name: 횡단연구
   hint: 한 시점에서 집단 비교
-  aliases: [Cross sectional study]
+  aliases: [Cross sectional study, "지금 이 순간 연령대별 차이를 한 번에 조사하기", "설문 한 번 돌려 집단끼리 비교하는 조사", "오래 따라다닐 여유 없이 현재 모습만 찍어 보기", "올해 기준 흡연자와 비흡연자 건강 상태 견주기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -359,7 +359,7 @@ entries:
   path: [조사, 연구 설계]
   name: 사례연구
   hint: 경계가 있는 사례의 맥락 분석
-  aliases: [Case study]
+  aliases: [Case study, "한 가게나 한 학교만 깊이 파고들어 조사하기", "성공한 회사 하나를 속속들이 들여다보고 싶을 때", "숫자보다 한 곳의 사정과 배경을 자세히 기록하기", "특이한 한 건을 중심으로 논문 쓰려 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: research
@@ -368,7 +368,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 탐색적 자료분석
   hint: 분포와 이상 패턴 탐색
-  aliases: [Exploratory data analysis]
+  aliases: [Exploratory data analysis, "가설 세우기 전에 자료를 그림으로 이리저리 훑기", "튀는 값이나 이상한 입력이 있는지 먼저 살펴보기", "처음 받은 엑셀 자료에서 무슨 일이 있는지 감 잡기", "막대그림과 산점도로 숨은 경향 찾아보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -377,7 +377,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 기술통계
   hint: 자료의 중심과 산포 요약
-  aliases: [Descriptive statistics]
+  aliases: [Descriptive statistics, "평균 중앙값 최대 최소로 자료 한눈에 정리", "설문 응답을 표 하나로 간단히 간추리기", "점수가 얼마나 퍼져 있는지 숫자로 나타내기", "분석 전에 자료가 어떻게 생겼는지 기본 수치 뽑기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -386,7 +386,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 최대우도 추정
   hint: 관측 자료의 우도를 최대화
-  aliases: [Maximum likelihood estimation, MLE]
+  aliases: [Maximum likelihood estimation, MLE, "지금 자료가 가장 그럴듯하게 나올 값을 고르기", "동전 던진 결과로 앞면 나올 확률 역산하기", "분포 모양을 정해 놓고 그 속 숫자를 자료로 맞추기", "모형 속 미지수를 자료에 가장 잘 맞게 정하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -395,7 +395,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 베이지안 추론
   hint: 사전분포를 자료로 갱신
-  aliases: [Bayesian inference, 베이즈 추론]
+  aliases: [Bayesian inference, 베이즈 추론, "원래 믿던 정도를 새 증거로 고쳐 나가기", "양성 판정을 받았을 때 진짜 병일 가능성 계산", "자료가 적을 때 기존 지식을 보태 추정하기", "증거가 쌓일수록 확신을 단계적으로 조정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -404,7 +404,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 신뢰구간
   hint: 반복 표집에 기반한 구간 추정
-  aliases: [Confidence interval]
+  aliases: [Confidence interval, "여론조사 지지율의 오차 범위 구하기", "표본 평균이 실제 값과 얼마나 다를 수 있는지", "같은 조사를 백 번 하면 몇 번이나 참값을 담는지", "추정치 하나 대신 위아래 폭으로 보고하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -413,7 +413,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 신용구간
   hint: 사후분포에 기반한 구간
-  aliases: [Credible interval]
+  aliases: [Credible interval, "참값이 이 범위에 있을 확률이 얼마라고 말하기", "갱신된 믿음에서 가장 그럴듯한 값의 범위 뽑기", "기존 지식을 반영한 추정의 위아래 폭 구하기", "오차 범위를 확률로 직접 해석하고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -422,7 +422,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 효과크기
   hint: 차이와 관계의 크기 표현
-  aliases: [Effect size]
+  aliases: [Effect size, "차이가 있긴 한데 실제로 얼마나 큰지 나타내기", "유의하다는데 현실에서 의미 있는 수준인지 판단", "단위가 다른 연구 결과를 같은 잣대로 비교", "표본이 커서 사소한 차이도 유의하게 나올 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -431,7 +431,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 통계적 검정력
   hint: 실재 효과를 탐지할 확률
-  aliases: [Statistical power]
+  aliases: [Statistical power, "실험 인원을 몇 명 모아야 충분한지 계산", "효과가 있는데도 못 찾아낼 위험 따져 보기", "차이 없음 결과가 표본 부족 탓인지 의심될 때", "연구 계획서에 필요한 참가자 수 근거 대기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -440,7 +440,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 순열검정
   hint: 표지 재배열로 귀무분포 구성
-  aliases: [Permutation test]
+  aliases: [Permutation test, "두 집단 차이가 우연인지 섞어서 확인하기", "표본이 적어 흔한 공식을 쓰기 불안할 때", "집단 이름표를 무작위로 바꿔 붙여 보는 비교", "자료가 종 모양이 아닌데 차이를 따져야 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -449,7 +449,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 잭나이프
   hint: 관측값을 빼며 추정 변동 평가
-  aliases: [Jackknife]
+  aliases: [Jackknife, "자료를 하나씩 빼고 다시 계산해 흔들림 보기", "자료 한 건이 결과를 얼마나 좌우하는지 점검", "공식 없는 통계량의 오차를 재계산으로 어림", "표본이 작을 때 추정값의 치우침 바로잡기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -458,7 +458,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 다중대치
   hint: 결측값의 불확실성을 반영해 대치
-  aliases: [Multiple imputation, 빠진 설문 응답, 결측값 처리, 설문 결측]
+  aliases: [Multiple imputation, 빠진 설문 응답, 결측값 처리, 설문 결측, "설문 응답에 빈칸이 많아 분석이 막힐 때", "빠진 칸을 평균 하나로 메우기 찜찜할 때", "비어 있는 값을 여러 번 다르게 채워 비교하기", "응답 안 한 사람을 버리지 않고 분석하고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -467,7 +467,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 강건통계
   hint: 이상값에 덜 민감한 추정
-  aliases: [Robust statistics]
+  aliases: [Robust statistics, "튀는 값 몇 개 때문에 평균이 엉뚱하게 나올 때", "입력 실수 섞인 자료에서도 믿을 만한 대푯값", "극단적인 숫자를 지우지 않고 영향만 줄이기", "한두 명의 큰손이 매출 통계를 왜곡할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -476,7 +476,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 분산분석
   hint: 집단 간 평균 차이 분석
-  aliases: [Analysis of variance, ANOVA]
+  aliases: [Analysis of variance, ANOVA, "세 반 시험 점수가 정말 다른지 한 번에 비교", "비료 종류별 수확량 차이가 우연인지 판단", "셋 이상 그룹을 둘씩 여러 번 비교하면 안 될 때", "매장별 매출 차이가 매장 탓인지 들쭉날쭉 탓인지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -485,7 +485,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 선형회귀
   hint: 설명변수와 결과의 선형 관계 추정
-  aliases: [Linear regression]
+  aliases: [Linear regression, "광고비를 늘리면 매출이 얼마나 느는지 추정", "점들 사이로 가장 잘 맞는 직선 긋기", "평수와 역까지 거리로 집값 예측하기", "여러 요인 중 무엇이 결과를 얼마나 움직이는지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -494,7 +494,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 로지스틱 회귀
   hint: 범주 결과의 확률 모형
-  aliases: [Logistic regression, logit regression]
+  aliases: [Logistic regression, logit regression, "합격 불합격 같은 둘 중 하나 결과 예측", "고객이 이탈할 가능성을 퍼센트로 계산", "요인 하나가 발병 위험을 몇 배 높이는지 보기", "스팸인지 아닌지를 특징으로 판별하는 식 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -503,7 +503,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 일반화 선형모형
   hint: 연결함수로 분포와 예측자 연결
-  aliases: [Generalized linear model]
+  aliases: [Generalized linear model, "횟수나 비율처럼 종 모양이 아닌 결과 예측하기", "하루 사고 건수를 여러 요인으로 설명하기", "음수가 될 수 없는 결과에 직선 맞추기 곤란할 때", "결과 종류에 맞춰 변환을 끼운 예측식 세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -512,7 +512,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 혼합효과 모형
   hint: 고정효과와 집단별 변이 통합
-  aliases: [Mixed effects model]
+  aliases: [Mixed effects model, "학교별 학생 자료처럼 층이 있는 자료 분석", "같은 사람을 여러 번 잰 자료를 제대로 다루기", "전체 경향과 병원마다 다른 출발점을 함께 추정", "묶음 안 자료끼리 닮아 독립 가정이 깨질 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -521,7 +521,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 분위수 회귀
   hint: 조건부 분포의 분위수 추정
-  aliases: [Quantile regression]
+  aliases: [Quantile regression, "평균 말고 상위 10퍼센트가 어떻게 변하는지 보기", "저소득층과 고소득층에 영향이 다른지 확인", "중간값 기준으로 원인과 결과 관계 구하기", "성적 하위권 학생에게만 효과가 있는지 알고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -530,7 +530,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 거짓발견률 제어
   hint: 다중검정에서 오류 비중 관리
-  aliases: [False discovery rate]
+  aliases: [False discovery rate, "수백 가지 비교하다 우연히 걸린 결과 거르기", "여러 번 시험하니 가짜 효과가 섞여 나오는 문제", "찾아낸 것 가운데 헛것이 얼마나 되는지 묶어 두기", "유전자 수천 개 중 진짜 차이 나는 것만 추리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -539,7 +539,7 @@ entries:
   path: [계산, 통계, 추정]
   name: 메타분석
   hint: 여러 연구의 효과 추정 통합
-  aliases: [Meta analysis]
+  aliases: [Meta analysis, "같은 주제 논문들의 결과를 하나로 합쳐 결론 내기", "연구마다 결론이 엇갈릴 때 종합해서 판단", "작은 임상시험 여럿을 모아 약효 평가하기", "논문들을 표본 크기로 가중해 평균 내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: statistics
@@ -548,7 +548,7 @@ entries:
   path: [조사, 인과 추론]
   name: 반사실
   hint: 실제로 일어나지 않은 조건의 결과
-  aliases: [Counterfactual]
+  aliases: [Counterfactual, "그때 약을 안 먹었다면 어땠을지 따져보기", "일어나지 않은 다른 선택의 결과를 상상해 비교", "광고를 안 했다면 매출이 얼마였을지 궁금할 때", "만약 그러지 않았다면을 기준으로 효과 말하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -557,7 +557,7 @@ entries:
   path: [조사, 인과 추론]
   name: 교란
   hint: 노출과 결과에 함께 영향을 주는 요인
-  aliases: [Confounding]
+  aliases: [Confounding, "아이스크림 팔리면 익사 늘어나는 진짜 이유", "둘 다에 영향 주는 숨은 제3의 원인 찾기", "커피 마시는 사람이 아픈 게 담배 때문일 때", "관계가 있어 보이지만 배후 요인이 따로 있을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -566,7 +566,7 @@ entries:
   path: [조사, 인과 추론]
   name: 충돌변수 편향
   hint: 공통 결과를 조건화해 생기는 편향
-  aliases: [Collider bias]
+  aliases: [Collider bias, "합격자만 놓고 보니 이상한 관계가 나타날 때", "입원 환자만 조사했더니 병끼리 엮여 보일 때", "괜히 변수 하나 더 넣었다가 결과가 뒤틀릴 때", "잘생긴 배우는 연기 못한다는 착시가 생기는 이유"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -575,7 +575,7 @@ entries:
   path: [조사, 인과 추론]
   name: 선택편향
   hint: 대상 선택 과정에서 생기는 왜곡
-  aliases: [Selection bias]
+  aliases: [Selection bias, "설문에 답한 사람만 유독 만족도가 높을 때", "살아남은 회사만 보고 성공 비결 말하는 오류", "자원한 사람만 모았더니 결과가 좋아 보일 때", "조사 대상이 한쪽으로 쏠려 뽑혔는지 의심될 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -584,7 +584,7 @@ entries:
   path: [조사, 인과 추론]
   name: 심프슨의 역설
   hint: 집단 통합과 분리에서 관계 역전
-  aliases: [Simpsons paradox]
+  aliases: [Simpsons paradox, "전체로 보면 이겼는데 나눠 보면 다 지는 통계", "합치면 결과가 거꾸로 되는 이상한 표", "학과별론 여자 합격률 높은데 전체론 낮을 때", "병원 두 곳 성공률 비교가 환자 나누면 뒤집힐 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -593,7 +593,7 @@ entries:
   path: [조사, 인과 추론]
   name: 도구변수법
   hint: 외생 변동을 이용한 인과 추정
-  aliases: [Instrumental variables, 외생적 변동]
+  aliases: [Instrumental variables, 외생적 변동, "실험은 못 하는데 우연히 갈린 요인을 지렛대로", "집과 학교 거리처럼 결과와 무관한 계기 이용하기", "숨은 원인을 못 재도 효과를 뽑아내고 싶을 때", "교육이 소득 올리는지 출생 분기로 따져보는 식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -602,7 +602,7 @@ entries:
   path: [조사, 인과 추론]
   name: 회귀불연속 설계
   hint: 임계값 주변의 처치 효과 추정
-  aliases: [Regression discontinuity, 선발 점수 경계]
+  aliases: [Regression discontinuity, 선발 점수 경계, "커트라인 바로 위와 아래 학생 비교하기", "점수 1점 차로 장학금 받은 쪽과 못 받은 쪽", "기준선 턱걸이 통과자와 아깝게 탈락한 사람 견주기", "나이 제한 바로 앞뒤 사람들로 제도 효과 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -611,7 +611,7 @@ entries:
   path: [조사, 인과 추론]
   name: 중단 시계열 분석
   hint: 개입 전후 추세 변화 분석
-  aliases: [Interrupted time series]
+  aliases: [Interrupted time series, "법 시행 전후로 월별 사고 건수 흐름이 꺾였나", "비교 집단 없이 한 곳의 긴 기록만 있을 때", "캠페인 시작 시점에 그래프가 뚝 떨어졌는지 보기", "원래 오르던 추세를 감안해 제도 효과 가려내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -620,7 +620,7 @@ entries:
   path: [조사, 인과 추론]
   name: 합성통제법
   hint: 비처치 대상의 조합으로 비교군 구성
-  aliases: [Synthetic control]
+  aliases: [Synthetic control, "비교할 도시가 없어 여러 곳 섞어 가짜 짝 만들기", "한 지역만 제도 바뀌었을 때 가상의 쌍둥이 구성", "여러 나라를 비율 섞어 우리나라 닮은꼴 만들기", "정책 없었다면의 흐름을 다른 지역 평균으로 그리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -629,7 +629,7 @@ entries:
   path: [조사, 인과 추론]
   name: 역확률 가중
   hint: 할당 확률의 역수로 표본 보정
-  aliases: [Inverse probability weighting]
+  aliases: [Inverse probability weighting, "설문에 덜 응답한 집단을 더 무겁게 쳐서 바로잡기", "약 먹은 쪽과 안 먹은 쪽이 애초에 다를 때 비교", "뽑힐 가능성이 낮았던 사람의 답에 무게 더 주기", "실험이 아닌 기록 자료로 효과를 공정하게 재기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -638,7 +638,7 @@ entries:
   path: [조사, 인과 추론]
   name: G 계산
   hint: 결과 모형으로 개입 효과 계산
-  aliases: [G computation]
+  aliases: [G computation, "모두가 운동했다고 가정하고 결과를 예측해 비교", "결과 예측식에 가상의 조건을 넣어 효과 계산", "시간 따라 바뀌는 치료 효과를 모의로 따져보기", "전원 처치와 전원 미처치를 가상으로 돌려보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -647,7 +647,7 @@ entries:
   path: [조사, 인과 추론]
   name: 이중강건 추정
   hint: 처치와 결과 모형을 결합한 추정
-  aliases: [Doubly robust estimation]
+  aliases: [Doubly robust estimation, "두 가지 계산법 중 하나만 맞아도 되게 안전장치", "누가 처치받나 예측과 결과 예측을 함께 쓰기", "모형을 잘못 세웠을까 봐 보험 들고 싶을 때", "관찰 자료 효과 추정을 이중으로 방어하는 방법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -656,7 +656,7 @@ entries:
   path: [조사, 인과 추론]
   name: 매개분석
   hint: 효과의 전달 경로 분석
-  aliases: [Mediation analysis]
+  aliases: [Mediation analysis, "운동이 왜 기분을 좋게 하는지 중간 고리 찾기", "효과가 무엇을 거쳐서 생기는지 알고 싶을 때", "교육이 소득 올리는 게 직업 덕인지 따져보기", "직접 영향과 돌아서 가는 영향을 나눠 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -665,7 +665,7 @@ entries:
   path: [조사, 인과 추론]
   name: 조절효과 분석
   hint: 조건에 따른 효과 차이 분석
-  aliases: [Moderation analysis]
+  aliases: [Moderation analysis, "약이 남자에게만 잘 듣는지 확인하고 싶을 때", "어떤 사람에게 효과가 더 큰지 나눠 보기", "칭찬이 어린 학생에게만 통하는지 따져보기", "상황에 따라 효과가 세지거나 약해지는지 분석"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -674,7 +674,7 @@ entries:
   path: [조사, 인과 추론]
   name: 잠재결과
   hint: 처치 선택별로 정의한 결과
-  aliases: [Potential outcomes]
+  aliases: [Potential outcomes, "한 사람에게 먹었을 때와 안 먹었을 때 결과 둘", "둘 중 하나만 볼 수 있는 결과를 나란히 적어보기", "효과를 개인별 두 갈래 결과의 차이로 생각하기", "인과 효과를 수식으로 처음 정의해 배울 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -683,7 +683,7 @@ entries:
   path: [조사, 인과 추론]
   name: 평균처치효과
   hint: 처치와 비처치 결과 차이의 평균
-  aliases: [Average treatment effect]
+  aliases: [Average treatment effect, "이 정책이 사람들에게 평균 얼마나 도움 됐나", "받은 쪽과 안 받은 쪽 결과가 평균 얼마 차이 나나", "쿠폰 받은 고객이 평균 얼마 더 썼는지 한 숫자로", "개인차 말고 전체로 본 효과 크기 알고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -692,7 +692,7 @@ entries:
   path: [조사, 인과 추론]
   name: 자연실험
   hint: 외부 사건이 만든 할당 차이 이용
-  aliases: [Natural experiment]
+  aliases: [Natural experiment, "추첨이나 재해처럼 우연히 갈린 상황 활용하기", "직접 실험은 못 하지만 세상이 대신 나눠줬을 때", "옆 도시만 제도가 바뀐 걸 기회로 비교하기", "입대 추첨 당첨 여부로 군 복무 영향 알아보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -701,7 +701,7 @@ entries:
   path: [조사, 인과 추론]
   name: 음성 대조
   hint: 예상 효과 없는 비교로 편향 탐지
-  aliases: [Negative control]
+  aliases: [Negative control, "효과가 없어야 할 곳에서도 효과가 나오는지 보기", "내 분석에 숨은 치우침 있는지 시험 삼아 돌려보기", "독감 주사가 교통사고도 줄였다면 뭔가 잘못된 것", "상관없는 결과에 같은 방법 써서 방법 검증하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -710,7 +710,7 @@ entries:
   path: [조사, 인과 추론]
   name: 민감도 분석
   hint: 가정 변화에 따른 결론 변화 검토
-  aliases: [Sensitivity analysis]
+  aliases: [Sensitivity analysis, "전제를 조금 바꾸면 결론이 뒤집히는지 확인", "숨은 원인이 얼마나 세야 결과가 사라지나 계산", "이상치 빼고 다시 돌려도 같은 결과인지 보기", "내 결론이 얼마나 튼튼한지 흔들어 보고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -719,7 +719,7 @@ entries:
   path: [조사, 인과 추론]
   name: 양의 확률 가정
   hint: 각 조건에서 처치 가능성이 존재
-  aliases: [Positivity]
+  aliases: [Positivity, "어떤 집단엔 치료받은 사람이 아예 없을 때", "비교할 상대가 한 명도 없는 조건이 있는지 점검", "노인은 전부 약 먹어서 안 먹은 노인과 비교 불가", "모든 유형에서 양쪽 선택이 다 있었는지 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: causality
@@ -728,7 +728,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 시계열 분해
   hint: 추세와 계절성 분리
-  aliases: [Time series decomposition]
+  aliases: [Time series decomposition, "매출 그래프를 큰 흐름과 철 반복과 나머지로 쪼개기", "장기적으로 오르는지 내리는지만 떼어 보기", "반복 무늬를 빼고 남은 이상한 움직임 찾기", "월별 기록을 세 줄 그래프로 나눠 설명하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -737,7 +737,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 자기상관 분석
   hint: 시간차에 따른 자료의 상관
-  aliases: [Autocorrelation]
+  aliases: [Autocorrelation, "오늘 값이 며칠 전 값과 얼마나 닮았는지 보기", "기록이 몇 주 간격으로 되풀이되는지 확인", "예측하고 남은 오차에 규칙이 남았는지 점검", "지난주 같은 요일과 비슷하게 움직이는지 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -746,7 +746,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: ARIMA
   hint: 차분과 자기회귀 이동평균 모형
-  aliases: [ARIMA]
+  aliases: [ARIMA, "지난 몇 년 월별 매출로 다음 달 수치 내다보기", "꾸준히 오르는 숫자를 전월 대비 변화로 바꿔 예측", "어제 값과 어제 오차로 오늘 값을 설명하는 방식", "날짜순 기록 하나만 가지고 앞날 숫자 뽑기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -755,7 +755,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 지수평활
   hint: 최근 관측에 가중한 예측
-  aliases: [Exponential smoothing]
+  aliases: [Exponential smoothing, "오래된 기록보다 요즘 기록을 더 쳐서 내다보기", "들쭉날쭉한 일일 판매량을 부드럽게 다듬어 예측", "엑셀로 간단히 다음 주 주문량 어림하기", "뚜렷한 오르내림 없는 재고 수요 가볍게 예측"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -764,7 +764,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 상태공간 모형
   hint: 숨은 상태와 관측 과정 연결
-  aliases: [State space model]
+  aliases: [State space model, "직접 못 재는 속사정을 겉으로 드러난 값으로 추리기", "안 보이는 진짜 값과 재어진 값을 식 두 줄로 묶기", "경기 체감처럼 드러나지 않는 흐름을 지표로 추적", "측정 오차와 실제 변화를 따로 떼어 모형 세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -773,7 +773,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 칼만 필터
   hint: 동적 상태를 순차 추정
-  aliases: [Kalman filter]
+  aliases: [Kalman filter, "흔들리는 위치 신호로 실제 위치를 계속 바로잡기", "잡음 많은 센서 값에서 진짜 값을 실시간으로 추리기", "새 측정이 들어올 때마다 추정을 조금씩 고치기", "드론이나 로봇의 현재 속도와 자세 어림하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -782,7 +782,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 입자 필터
   hint: 표본 집합으로 상태분포 근사
-  aliases: [Particle filter]
+  aliases: [Particle filter, "수많은 가상 후보를 뿌려 물체 위치 좁혀 가기", "움직임이 직선적이지 않아 흔한 추적법이 안 맞을 때", "로봇이 지도 안에서 자기 위치를 모를 때", "가능성 있는 여러 위치를 동시에 들고 추적하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -791,7 +791,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 변화점 탐지
   hint: 자료 생성 과정이 바뀐 시점 탐색
-  aliases: [Change point detection, changepoint detection, 추세가 바뀐 시점]
+  aliases: [Change point detection, changepoint detection, 추세가 바뀐 시점, "매출 흐름이 언제부터 달라졌는지 날짜 찾기", "기계 센서 값이 어느 순간 다른 양상으로 바뀔 때", "정책 시행 전후로 기록의 성격이 갈린 지점", "긴 기록을 성질이 다른 구간들로 나누기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -800,7 +800,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 계절조정
   hint: 주기적 계절 효과 분리
-  aliases: [Seasonal adjustment]
+  aliases: [Seasonal adjustment, "명절 효과를 걷어내고 진짜 경기 흐름 보기", "실업률이 철 때문에 오른 건지 정말 나빠진 건지", "전월과 공정하게 비교되도록 달마다의 버릇 빼기", "여름마다 뛰는 전력 사용량에서 철 영향 지우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -809,7 +809,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 공적분 분석
   hint: 비정상 시계열의 장기 균형 관계
-  aliases: [Cointegration]
+  aliases: [Cointegration, "둘 다 계속 오르는 값이 서로 묶여 움직이는지 보기", "따로 떠돌다가도 결국 같이 가는 두 가격 찾기", "추세가 있는 자료끼리 가짜 관계가 나올까 걱정될 때", "환율과 물가가 멀리 보면 함께 가는지 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -818,7 +818,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 벡터 자기회귀
   hint: 여러 시계열의 상호 지연 관계
-  aliases: [Vector autoregression]
+  aliases: [Vector autoregression, "금리 환율 물가가 서로 뒤따라 움직이는 관계 보기", "여러 지표를 한꺼번에 넣어 함께 내다보기", "한 지표에 충격이 오면 다른 지표에 퍼지는 모습", "서로 영향을 주고받는 기록 여러 줄 동시에 다루기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -827,7 +827,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 그레인저 인과검정
   hint: 과거 값의 추가 예측력 검정
-  aliases: [Granger causality]
+  aliases: [Granger causality, "광고비가 먼저 움직이고 매출이 뒤따르는지 확인", "한 지표의 지난 기록이 다른 지표 예측에 쓸모 있나", "닭이 먼저냐 달걀이 먼저냐를 기록으로 따지기", "금리와 집값 중 어느 쪽이 앞서 움직이는지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -836,7 +836,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: GARCH
   hint: 시간에 따라 변하는 조건부 변동성
-  aliases: [GARCH]
+  aliases: [GARCH, "주가가 출렁이는 시기와 잠잠한 시기가 몰려 올 때", "내일 가격이 아니라 내일 흔들림 크기를 내다보기", "수익률의 위험 크기가 날마다 달라지는 자료", "한번 크게 요동치면 한동안 계속 요동치는 현상"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -845,7 +845,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 동적 시간 정합
   hint: 속도가 다른 시계열 정렬
-  aliases: [Dynamic time warping]
+  aliases: [Dynamic time warping, "빠르게 말한 음성과 느리게 말한 음성 맞춰 보기", "길이가 다른 두 동작 기록이 같은 동작인지 비교", "박자가 늘어지거나 당겨진 곡선끼리 겹쳐 보기", "걸음 속도가 다른 사람들의 걸음새 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -854,7 +854,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 스펙트럼 분석
   hint: 주파수별 변동 성분 분석
-  aliases: [Spectral analysis]
+  aliases: [Spectral analysis, "기록 속 되풀이가 몇 달 주기인지 세기별로 보기", "어떤 빠르기의 출렁임이 가장 큰 몫인지 찾기", "뇌파나 진동 기록에서 두드러진 리듬 찾기", "느린 굴곡과 빠른 굴곡 중 무엇이 변동을 좌우하는지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -863,7 +863,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 푸리에 변환
   hint: 신호를 주파수 성분으로 변환
-  aliases: [Fourier transform]
+  aliases: [Fourier transform, "녹음된 소리에 어떤 높낮이 음이 섞였는지 알아내기", "복잡한 떨림을 단순한 물결들의 합으로 풀기", "잡음 낀 기록에서 특정 웅웅거림만 걸러내기", "악기 소리의 음색을 이루는 구성 음 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -872,7 +872,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 웨이블릿 변환
   hint: 시간과 주파수의 국소 성분 분석
-  aliases: [Wavelet transform]
+  aliases: [Wavelet transform, "어느 순간에 어떤 높이의 소리가 났는지 함께 보기", "잠깐 나타났다 사라지는 떨림을 시각까지 잡아내기", "사진 용량을 줄이면서 윤곽은 살리기", "심전도에서 짧게 튀는 이상 신호 위치 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -881,7 +881,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 홀트윈터스법
   hint: 추세와 계절성을 평활해 예측
-  aliases: [Holt Winters method]
+  aliases: [Holt Winters method, "해마다 여름에 몰리고 전체로는 느는 판매량 예측", "성수기 비수기가 뚜렷한 가게의 다음 분기 내다보기", "오름세와 철마다 반복을 함께 반영한 간단 예측", "월별 관광객 수처럼 해마다 같은 굴곡이 있는 기록"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -890,7 +890,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 계층 예측 조정
   hint: 전체와 부분 예측의 합계 일치
-  aliases: [Forecast reconciliation]
+  aliases: [Forecast reconciliation, "매장별 예상 판매를 더하면 전체 예상과 안 맞을 때", "지점과 본사가 따로 낸 전망 숫자를 서로 맞추기", "품목별과 총합 전망이 어긋나 보고서가 꼬일 때", "위아래 단계 숫자가 더해서 딱 떨어지게 고치기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series
@@ -899,7 +899,7 @@ entries:
   path: [계산, 통계, 시계열]
   name: 예측구간
   hint: 미래 관측의 불확실성 범위
-  aliases: [Prediction interval]
+  aliases: [Prediction interval, "다음 달 매출이 얼마에서 얼마 사이일지 말하기", "예측 숫자 하나만 내놓기 불안할 때 덧붙일 폭", "예측이 빗나갈 수 있는 정도를 위아래 선으로 표시", "최악과 최선 사이를 확률과 함께 제시하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: time_series

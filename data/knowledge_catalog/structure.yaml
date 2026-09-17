@@ -10,6 +10,10 @@ entries:
   - 3차원
   - 삼차원
   - 입체 표현
+  - "방 안 물건 배치를 입체로 그려 보이기"
+  - "어느 자리에서 본 모습인지 담아 나타내기"
+  - "평면 도면으론 안 와닿는 공간 설명"
+  - "공간 속 물체들의 위치와 모양을 한 화면에"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: problem.arch_visual
@@ -18,7 +22,7 @@ entries:
   hint: 집·건축 공간의 형태와 외관을 입체 이미지로 확인
   path:
   - 표현
-  - 건축
+  - 3D
   aliases:
   - 집 외관
   - 건축 시각화
@@ -27,6 +31,10 @@ entries:
   - 건물 외관
   - 집을 그려
   - 집을 그려보고
+  - "집 짓기 전에 완성된 모습 미리 보기"
+  - "인테리어 바꾸면 어떤 느낌일지 입체로"
+  - "건물 외관을 손님에게 그림으로 보여주기"
+  - "도면만 보고는 공간감이 안 잡힐 때"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: method.scene_render
@@ -41,6 +49,10 @@ entries:
   - 외관 렌더
   - 장면 렌더
   - 입체 이미지
+  - "입체 모형에서 사진 같은 그림 한 장 뽑기"
+  - "빛과 표면 질감 넣어 실물처럼 그려내기"
+  - "촬영 없이 제품 사진 만들어내기"
+  - "설정한 시점에서 본 모습을 그림 파일로"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: condition.scene
@@ -51,7 +63,7 @@ entries:
   - 표현
   - 3D
   - 입력
-  aliases: []
+  aliases: ["입체 그림 뽑기 전 준비해야 할 재료 목록", "물체·표면·빛·시점을 무엇으로 정해주나", "입체 작업 의뢰할 때 넘겨줄 정보 정리", "그림이 이상하게 나올 때 빠뜨린 설정 찾기"]
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: threejs
@@ -60,11 +72,15 @@ entries:
   hint: 브라우저에서 장면·카메라·렌더러로 3D 표현
   path:
   - 표현
-  - 웹 3D
+  - 3D
   aliases:
   - three.js
   - threejs
   - 웹 3d
+  - "홈페이지에 움직이는 입체 그림 넣기"
+  - "웹에서 돌아가는 입체 화면 직접 짜기"
+  - "인터넷 창 안에 입체 게임 화면 만들기"
+  - "웹사이트 배경에 입체 효과 주고 싶을 때"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: method.interactive_3d
@@ -79,6 +95,10 @@ entries:
   - 3d 뷰어
   - 모델 회전
   - 입체 모형 회전
+  - "웹페이지에서 제품을 마우스로 돌려보기"
+  - "설치 없이 링크로 입체 모형 보여주기"
+  - "손님이 상품을 이리저리 돌려 확대해 보게"
+  - "인터넷 창에서 입체 물체 가까이 당겨 보기"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: problem.model_inspection
@@ -93,6 +113,10 @@ entries:
   - 집을 돌려
   - 집을 회전
   - 모델을 돌려
+  - "모형 뒷면과 아랫면까지 돌려가며 살피기"
+  - "입체 물체의 특정 부위만 확대해 확인"
+  - "부품 안쪽 구조를 화면에서 들여다보기"
+  - "받은 입체 파일이 제대로 됐는지 둘러보기"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: problem.staff_schedule
@@ -108,6 +132,10 @@ entries:
   - 당직표
   - 근무표
   - 교대표
+  - "알바생 근무표 자동으로 짜고 싶을 때"
+  - "간호사 3교대 당번 공평하게 나누기"
+  - "사람은 적은데 채울 시간대가 많을 때"
+  - "휴무 희망 반영해서 한 달 당번표 만들기"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: method.cp_sat
@@ -120,6 +148,10 @@ entries:
   aliases:
   - cp-sat
   - 제약 기반 일정
+  - "간호사 근무표를 규칙 다 지키며 자동으로 짜기"
+  - "예 아니오와 정수 값만으로 배정 문제 세우기"
+  - "야간 연속 금지 같은 규칙 아래 가장 공평한 편성"
+  - "좌석 배치를 규칙 어기지 않고 점수 최고로 만들기"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: condition.schedule
@@ -130,7 +162,7 @@ entries:
   - 운영
   - 일정
   - 입력
-  aliases: []
+  aliases: ["근무표 짜기 전에 챙겨야 할 정보 정리", "직원별 되는 날 안 되는 날 모으기", "누가 언제 쉬고 싶은지 희망 받아 적기", "다음 달 근무표에 꼭 지킬 규칙 목록 만들기"]
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: criterion.schedule
@@ -141,7 +173,7 @@ entries:
   - 운영
   - 일정
   - 판정
-  aliases: []
+  aliases: ["짜놓은 근무표에 빠진 시간대 없는지 확인", "연속 야간 같은 금지 규칙 어긴 곳 찾기", "시간대마다 최소 인원 채워졌는지 점검", "근무표 돌리기 전 마지막 검수"]
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: problem.multifile
@@ -150,13 +182,17 @@ entries:
   hint: 흩어진 파일의 자료를 함께 검색·집계
   path:
   - 데이터
-  - 표 조회
+  - 표 분석
   aliases:
   - 여러 파일
   - 여러 csv
   - 파일 백 개
   - 파일들을 합쳐
   - 파일을 합쳐
+  - "월별로 나뉜 파일 열두 개를 한 번에 합산"
+  - "폴더에 흩어진 여러 표에서 한꺼번에 찾기"
+  - "지점마다 따로 받은 엑셀을 묶어서 통계 내기"
+  - "파일을 일일이 열어 복사 붙여넣기 하기 싫을 때"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: method.file_sql
@@ -165,11 +201,15 @@ entries:
   hint: 파일을 직접 읽어 필터·집계·결합
   path:
   - 데이터
-  - 표 조회
+  - 표 분석
   - SQL
   aliases:
   - 파일 sql
   - 파일 직접 조회
+  - "자료 파일을 열지 않고 조건에 맞는 줄만 뽑기"
+  - "표 파일에 질문 문장을 던져 합계 구하기"
+  - "데이터베이스에 넣지 않고 파일째로 걸러보기"
+  - "주문 파일과 고객 파일을 바로 이어 붙여 조회"
   source:
     path: docs/world_map/G_structure_evidence.md
 - id: condition.file_schema
@@ -178,9 +218,9 @@ entries:
   hint: 접근 가능한 파일 경로·형식·스키마 대응 확인
   path:
   - 데이터
-  - 표 조회
+  - 표 분석
   - 입력
-  aliases: []
+  aliases: ["분석할 파일이 실제로 어디 있는지부터 확인", "파일 안에 어떤 칸이 있는지 열어보기 전에 파악", "말한 자료가 어느 파일 어느 칸인지 짚어내기", "파일이 안 열리거나 형식이 뭔지 모르겠을 때"]
   source:
     path: docs/world_map/G_structure_evidence.md
 evidence:

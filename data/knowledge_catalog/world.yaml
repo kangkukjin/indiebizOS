@@ -21,70 +21,70 @@ entries:
     path: ["계산","최적화"]
     name: "OR-Tools"
     hint: "인원·시간·순서 제약을 만족하는 배치·경로·일정 최적화"
-    aliases: ["근무표","교대","배정","스케줄","배송","일정 최적화","scheduling"]
+    aliases: ["근무표","교대","배정","스케줄","배송","일정 최적화","scheduling", "배송 차량 여러 대의 방문 순서를 짜 주는 도구", "직원 교대 일정과 차량 동선을 코드로 자동 계산", "작업장 기계별 작업 차례를 마감에 맞춰 정하기", "외판원 동선 같은 문제를 가져다 쓰는 묶음 도구"]
     source:
       path: data/guides/world_tools.md
   - id: cvxpy
     path: ["계산","최적화"]
     name: "CVXPY"
     hint: "목표 함수와 제약식으로 표현하는 볼록 최적화"
-    aliases: ["볼록","목적함수","최적화","제약식","자원배분"]
+    aliases: ["볼록","목적함수","최적화","제약식","자원배분", "최소화할 식과 조건을 수식 쓰듯 코드로 적기", "풀이 방법은 몰라도 문제만 적으면 풀어 주는 도구", "투자 비중 계산을 몇 줄 코드로 돌려 보기", "바닥이 하나뿐인 문제를 코드 몇 줄로 세워 풀기"]
     source:
       path: data/guides/world_tools.md
   - id: z3
-    path: ["계산","논리"]
+    path: ["계산","최적화"]
     name: "Z3"
     hint: "논리·수치 제약을 동시에 만족하는 해 탐색과 모순 확인"
-    aliases: ["논리 제약","조건 충돌","만족가능성","smt","솔버"]
+    aliases: ["논리 제약","조건 충돌","만족가능성","smt","솔버", "규칙들이 서로 어긋나는지 기계로 확인하기", "조건을 다 만족하는 값이 하나라도 있는지 찾기", "프로그램이 절대 잘못되지 않음을 증명해 보기", "참 거짓 조건과 숫자 부등식이 섞인 퍼즐 풀기"]
     source:
       path: data/guides/world_tools.md
   - id: sympy
     path: ["계산","수학"]
     name: "SymPy"
     hint: "기호식의 미분·적분·방정식 풀이와 수식 변형"
-    aliases: ["기호 계산","미분","적분","방정식","수식"]
+    aliases: ["기호 계산","미분","적분","방정식","수식", "문자가 든 식을 숫자 말고 식 그대로 풀기", "미적분 숙제 답을 컴퓨터로 검산", "긴 수식을 전개하고 묶고 간단히 정리시키기", "근삿값 아닌 분수와 루트 꼴의 정확한 답 구하기"]
     source:
       path: data/guides/world_tools.md
   - id: scipy
     path: ["계산","수학"]
     name: "SciPy"
     hint: "수치 적분·미분방정식·최적화·신호 처리"
-    aliases: ["수치해석","미분방정식","신호처리","주파수","희소행렬"]
+    aliases: ["수치해석","미분방정식","신호처리","주파수","희소행렬", "파이썬으로 곡선 맞추기와 최솟값 찾기 하고 싶을 때", "녹음 신호에서 잡음 거르기를 코드로 하기", "변화 방정식을 직접 안 짜고 가져다 풀기", "공학 계산 기능을 한데 모아둔 파이썬 도구"]
     source:
       path: data/guides/world_tools.md
   - id: statsmodels
     path: ["계산","통계"]
     name: "statsmodels"
     hint: "회귀·시계열·통계검정으로 자료의 관계와 불확실성 분석"
-    aliases: ["회귀","시계열","가설검정","arima","통계검정"]
+    aliases: ["회귀","시계열","가설검정","arima","통계검정", "파이썬에서 원인과 결과 관계식의 자세한 결과표 보기", "파이썬으로 가설 확인과 날짜순 기록 예측 함께 하기", "계수마다 믿을 만한 정도가 표로 나오는 파이썬 도구", "엑셀 분석을 파이썬 코드로 옮겨 제대로 하기"]
     source:
       path: data/guides/world_tools.md
   - id: pymc
     path: ["계산","통계"]
     name: "PyMC"
     hint: "확률 모형과 베이지안 추론으로 불확실성 추정"
-    aliases: ["베이지안","사후분포","확률모형","불확실성"]
+    aliases: ["베이지안","사후분포","확률모형","불확실성", "파이썬으로 확률 기반 추정 모형 짜기", "추정 결과를 얼마나 확신할 수 있는지 함께 뽑기", "적은 자료에 아는 정보를 보태 추정하는 파이썬 도구", "광고 효과를 범위와 함께 추정하는 코드 작성"]
     source:
       path: docs/world_map/D_science_engineering.md
   - id: sklearn
     path: ["계산","기계학습"]
     name: "scikit-learn"
     hint: "분류·회귀·군집·차원축소를 통한 데이터 패턴 탐색"
-    aliases: ["군집","클러스터","차원축소","분류모델","기계학습"]
+    aliases: ["군집","클러스터","차원축소","분류모델","기계학습", "파이썬으로 예측 프로그램 처음 만들어 보려 할 때", "엑셀 같은 표 자료로 분류나 예측 돌려볼 도구", "여러 예측 방법을 같은 방식으로 바꿔가며 시험", "고객 나누기와 매출 예측을 코드로 해야 할 때"]
     source:
       path: data/guides/world_tools.md
   - id: networkx
-    path: ["계산","네트워크"]
+    path: ["계산","알고리즘"]
     name: "NetworkX"
     hint: "관계망의 최단경로·중심성·연결 집단 분석"
-    aliases: ["관계망","중심성","최단경로","네트워크 분석","그래프 알고리즘"]
+    aliases: ["관계망","중심성","최단경로","네트워크 분석","그래프 알고리즘", "연결 자료에서 가장 영향력 큰 사람을 코드로 뽑기", "관계 목록에서 끼리끼리 뭉친 무리 계산해 내기", "두 사람 사이 가장 짧은 연결 고리를 코드로 계산", "점과 선 자료를 프로그램으로 불러와 수치 내기"]
     source:
       path: data/guides/world_tools.md
   - id: graphviz
-    path: ["표현","관계도"]
+    path: ["표현","시각화"]
     name: "Graphviz"
     hint: "노드와 관계를 기술하여 흐름도·의존관계도 배치"
-    aliases: ["의존관계","흐름도","조직도","관계도","dot"]
+    aliases: ["의존관계","흐름도","조직도","관계도","dot", "글로 관계만 적으면 상자와 화살표 그림 자동 생성", "상자 위치를 일일이 맞추지 않고 흐름도 그리기", "어떤 부품이 무엇에 기대는지 그림으로 뽑기", "조직도나 절차도를 텍스트로 관리하고 싶을 때"]
     source:
       path: data/guides/world_tools.md
   - id: duckdb
@@ -92,35 +92,35 @@ entries:
     path: ["데이터","표 분석"]
     name: "DuckDB"
     hint: "CSV·Parquet 등 파일을 SQL로 직접 조회·집계"
-    aliases: ["csv","parquet","sql","파일 집계","대용량 표"]
+    aliases: ["csv","parquet","sql","파일 집계","대용량 표", "설치 서버 없이 내 컴퓨터에서 큰 표 파일 집계", "수백만 줄 파일을 엑셀 대신 빠르게 합계 내기", "따로 불러들이는 과정 없이 파일에 바로 질문하기", "노트북 한 대로 대용량 자료 분석하고 싶을 때"]
     source:
       path: data/guides/world_tools.md
   - id: polars
     path: ["데이터","표 분석"]
     name: "Polars"
     hint: "큰 표의 열 연산·필터·집계를 지연 실행으로 처리"
-    aliases: ["큰 표","수백만 행","대용량","지연실행","데이터프레임"]
+    aliases: ["큰 표","수백만 행","대용량","지연실행","데이터프레임", "표 가공 코드가 너무 느려 더 빠른 걸 찾을 때", "메모리에 다 안 올라가는 큰 표 처리하기", "계산을 한꺼번에 모아뒀다가 효율적으로 돌리기", "컴퓨터 코어를 다 써서 표 집계 빨리 끝내기"]
     source:
       path: data/guides/world_tools.md
   - id: pandas
     path: ["데이터","표 분석"]
     name: "Pandas"
     hint: "표의 결합·정제·결측치 처리와 시계열 가공"
-    aliases: ["결측치","표 결합","데이터 정제","피벗","엑셀 집계"]
+    aliases: ["결측치","표 결합","데이터 정제","피벗","엑셀 집계", "엑셀로 하던 표 가공을 코드로 자동화하기", "빈칸 채우고 두 표 합치는 일을 반복해야 할 때", "날짜별 기록을 주간·월간으로 다시 묶기", "파이썬으로 표 자료 다듬기 시작하려는 사람"]
     source:
       path: data/guides/world_tools.md
   - id: plotly
     path: ["표현","시각화"]
     name: "Plotly"
     hint: "브라우저에서 확대·선택할 수 있는 대화형 차트"
-    aliases: ["대화형 차트","인터랙티브 차트","산점도","3d 그래프"]
+    aliases: ["대화형 차트","인터랙티브 차트","산점도","3d 그래프", "마우스를 올리면 값이 뜨는 그래프 만들기", "웹페이지에 넣어 확대해 볼 수 있는 도표", "보는 사람이 직접 범위를 골라 보는 그래프", "정적인 그림 대신 만져 볼 수 있는 차트"]
     source:
       path: data/guides/world_tools.md
   - id: manim
     path: ["표현","시각화"]
     name: "Manim"
     hint: "수학 개념과 도형의 변화를 애니메이션으로 표현"
-    aliases: ["수학 애니메이션","수식 영상","도형 변화"]
+    aliases: ["수학 애니메이션","수식 영상","도형 변화", "수학 강의 영상에 움직이는 도형 넣기", "공식이 변형되는 과정을 영상으로 보여주기", "코드로 깔끔한 수학 설명 동영상 만들기", "그래프가 스르륵 그려지는 교육 영상 제작"]
     source:
       path: data/guides/world_tools.md
   - id: blender
@@ -128,388 +128,388 @@ entries:
     path: ["표현","3D"]
     name: "Blender"
     hint: "3D 모델링·렌더링·애니메이션을 스크립트로 구성"
-    aliases: ["3d","블렌더","모델링","렌더링","애니메이션"]
+    aliases: ["3d","블렌더","모델링","렌더링","애니메이션", "무료로 입체 캐릭터와 움직임 만들기", "입체 물체를 빚어 사실적인 그림으로 뽑기", "같은 입체 작업을 명령문으로 자동 반복", "제품 홍보용 입체 영상 직접 만들기"]
     source:
       path: data/guides/world_tools.md
   - id: cadquery
-    path: ["제작","CAD"]
+    path: ["공학","기계와 제작"]
     name: "CadQuery"
     hint: "치수와 매개변수로 입체 부품을 구성하는 코드 기반 CAD"
-    aliases: ["부품 설계","치수","step","파라메트릭","cad"]
+    aliases: ["부품 설계","치수","step","파라메트릭","cad", "마우스 대신 코드로 입체 부품 만들기", "크기만 다른 부품을 스크립트로 여러 개 생성", "설계를 글자로 써서 버전 관리하기", "파이썬으로 상자나 브래킷 모양 짜기"]
     source:
       path: data/guides/world_tools.md
   - id: opencv
-    path: ["표현","영상 처리"]
+    path: ["표현","시각예술"]
     name: "OpenCV"
     hint: "사진·영상의 특징·도형·움직임을 계산하여 처리"
-    aliases: ["영상처리","특징점","도형검출","카메라","프레임"]
+    aliases: ["영상처리","특징점","도형검출","카메라","프레임", "카메라 영상에서 얼굴이나 물체 자동으로 찾기", "사진 속 동그라미와 선을 프로그램으로 골라내기", "씨씨티브이 화면에서 움직인 부분만 잡아내기", "찍은 이미지를 코드로 다듬고 윤곽 뽑기"]
     source:
       path: data/guides/world_tools.md
   - id: ffmpeg
-    path: ["미디어","영상 음성"]
+    path: ["미디어","영상과 사진"]
     name: "ffmpeg"
     hint: "영상·음성의 변환·자르기·합치기·트랙 추출"
-    aliases: ["동영상","영상 변환","음성 추출","인코딩","코덱","자르기"]
+    aliases: ["동영상","영상 변환","음성 추출","인코딩","코덱","자르기", "동영상에서 필요한 구간만 잘라내기", "영상 파일에서 소리만 따로 뽑기", "휴대폰에서 안 열리는 동영상 형식 바꾸기", "여러 개로 나뉜 영상 파일 하나로 잇기"]
     source:
       path: data/guides/world_tools.md
   - id: whisper
-    path: ["미디어","전사"]
+    path: ["미디어","오디오"]
     name: "Whisper 계열 로컬 전사"
     hint: "녹음의 음성을 텍스트와 시간 구간이 있는 자막으로 변환"
-    aliases: ["Whisper","녹음","음성인식","받아쓰기","전사","회의록","자막"]
+    aliases: ["Whisper","녹음","음성인식","받아쓰기","전사","회의록","자막", "회의 녹음을 글로 받아 적기", "영상에 넣을 자막 파일 자동으로 만들기", "강의 녹음에서 몇 분에 무슨 말 했는지 찾기", "인터넷에 올리지 않고 내 컴퓨터로 받아쓰기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: demucs
-    path: ["미디어","음악"]
+    path: ["미디어","오디오"]
     name: "Demucs"
     hint: "음악에서 보컬·드럼·베이스 등의 소리 분리"
-    aliases: ["보컬","반주","스템","악기 분리","노래 분리"]
+    aliases: ["보컬","반주","스템","악기 분리","노래 분리", "노래에서 목소리만 빼고 반주 만들기", "좋아하는 곡의 드럼 소리만 따로 듣기", "완성된 음원에서 가수 목소리만 뽑기", "악기 연습용으로 한 파트만 없앤 음원"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: musicbrainz
-    path: ["미디어","음악"]
+    path: ["미디어","오디오"]
     name: "MusicBrainz·AcoustID"
     hint: "음악 지문과 메타데이터를 연결하여 곡·앨범 식별"
-    aliases: ["MusicBrainz","AcoustID","곡 식별","음악 지문","앨범","아티스트","노래 제목"]
+    aliases: ["MusicBrainz","AcoustID","곡 식별","음악 지문","앨범","아티스트","노래 제목", "제목 없는 음악 파일이 무슨 곡인지 찾기", "곡명과 가수 정보가 빈 음원 채워 넣기", "트랙01로만 저장된 오래된 음원 정리", "소리만 듣고 어느 앨범 곡인지 알아내기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: exiftool
-    path: ["미디어","메타데이터"]
+    path: ["미디어","영상과 사진"]
     name: "ExifTool"
     hint: "사진·영상·문서의 촬영 정보·날짜·위치 메타데이터 읽기와 정리"
-    aliases: ["촬영일","촬영 정보","exif","gps","사진 위치","메타데이터"]
+    aliases: ["촬영일","촬영 정보","exif","gps","사진 위치","메타데이터", "사진 찍은 날짜와 장소 확인하기", "올리기 전 사진에 남은 위치 기록 지우기", "찍은 날짜가 뒤죽박죽인 사진 폴더 정리", "어떤 카메라로 찍었는지 파일에서 알아내기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: pandoc
-    path: ["문서","변환"]
+    path: ["문서","변환과 추출"]
     name: "Pandoc"
     hint: "마크다운·워드·HTML·전자책 등 문서 형식 사이의 변환"
-    aliases: ["마크다운","워드 변환","문서 변환","docx","epub"]
+    aliases: ["마크다운","워드 변환","문서 변환","docx","epub", "간단한 글 파일을 워드 문서로 바꾸기", "원고 하나로 웹페이지와 전자책 둘 다 만들기", "워드로 받은 글을 가벼운 텍스트 원고로 되돌리기", "글 형식을 이것저것 서로 바꿔야 할 때"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: libreoffice
-    path: ["문서","오피스"]
+    path: ["문서","변환과 추출"]
     name: "LibreOffice"
     hint: "오피스 문서의 변환·인쇄와 스프레드시트 수식 재계산"
-    aliases: ["오피스","수식 재계산","xlsx","pptx","엑셀 수식"]
+    aliases: ["오피스","수식 재계산","xlsx","pptx","엑셀 수식", "워드나 한셀 파일을 명령 한 줄로 피디에프로 바꾸기", "엑셀 파일 수식을 다시 계산한 값으로 저장하기", "유료 오피스 없이 문서 열고 인쇄용으로 만들기", "수백 개 문서 파일을 일괄로 다른 형식으로 저장"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: docling
-    path: ["문서","구조 추출"]
+    path: ["문서","변환과 추출"]
     name: "Docling"
     hint: "PDF 등 문서에서 표·수식·다단 레이아웃을 구조화하여 추출"
-    aliases: ["다단","문서 구조","pdf 추출","표 추출","레이아웃"]
+    aliases: ["다단","문서 구조","pdf 추출","표 추출","레이아웃", "논문 파일에서 표와 수식을 망가뜨리지 않고 꺼내기", "두 단으로 짜인 문서를 읽는 순서대로 풀어내기", "보고서 파일을 제목·본문·표로 나눠 정리된 글로", "인공지능에 먹일 수 있게 문서 내용을 구조째 뽑기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: ocrmypdf
-    path: ["문서","OCR"]
+    path: ["문서","변환과 추출"]
     name: "OCRmyPDF"
     hint: "스캔 PDF에 문자 층을 더해 본문 검색이 가능하도록 변환"
-    aliases: ["스캔","검색 가능한 pdf","문자 인식","ocr","스캔본"]
+    aliases: ["스캔","검색 가능한 pdf","문자 인식","ocr","스캔본", "스캔한 서류에서 글자 검색이 안 될 때", "종이 문서 스캔본을 찾기 가능한 파일로 만들기", "복사해 붙여넣기가 안 되는 스캔 파일 고치기", "보관한 계약서 스캔본에서 단어로 찾고 싶을 때"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: paddleocr
-    path: ["문서","OCR"]
+    path: ["문서","변환과 추출"]
     name: "PaddleOCR"
     hint: "이미지의 문자와 표·문서 배치를 인식"
-    aliases: ["영수증","이미지 문자","문자인식","ocr","청구서"]
+    aliases: ["영수증","이미지 문자","문자인식","ocr","청구서", "사진 찍은 영수증에서 글자 읽어내기", "간판이나 화면 캡처 속 글씨를 글로 옮기기", "사진 속 표를 칸 구조 그대로 알아보기", "한글·한자 섞인 이미지 글자 인식하기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: pikepdf
-    path: ["문서","PDF"]
+    path: ["문서","변환과 추출"]
     name: "pikepdf·qpdf"
     hint: "PDF 페이지·구조의 병합·분할·회전·복구"
-    aliases: ["pikepdf","qpdf","pdf 병합","pdf 분할","페이지 회전","pdf 복구"]
+    aliases: ["pikepdf","qpdf","pdf 병합","pdf 분할","페이지 회전","pdf 복구", "피디에프 여러 개를 하나로 합치기", "필요한 쪽만 떼어내 따로 저장하기", "옆으로 누운 페이지 바로 세우기", "깨져서 안 열리는 피디에프 살려내기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: calibre
-    path: ["문서","전자책"]
+    path: ["문서","조판과 출판"]
     name: "Calibre"
     hint: "전자책 형식 변환과 서지·라이브러리 관리"
-    aliases: ["전자책","이북","epub","mobi","azw3"]
+    aliases: ["전자책","이북","epub","mobi","azw3", "전자책 파일을 내 단말기에 맞는 형식으로 바꾸기", "모아둔 전자책을 저자·제목별로 정리하기", "책 표지와 저자 정보가 엉망인 파일 고치기", "전자책 단말기로 책 파일 옮겨 넣기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: typst
-    path: ["문서","조판"]
+    path: ["문서","조판과 출판"]
     name: "Typst"
     hint: "수식·표·참조를 포함한 문서 조판과 PDF 제작"
-    aliases: ["조판","수식 문서","논문 조판","pdf 제작"]
+    aliases: ["조판","수식 문서","논문 조판","pdf 제작", "수식 많은 과제를 깔끔한 피디에프로 만들기", "워드로는 수식과 그림 번호 맞추기 힘들 때", "글로 적으면 바로 인쇄 품질로 짜주는 도구", "논문 양식을 빠르게 미리보며 작성하고 싶을 때"]
     source:
       path: data/guides/world_tools.md
   - id: quarto
-    path: ["문서","출판"]
+    path: ["문서","조판과 출판"]
     name: "Quarto"
     hint: "분석 코드·결과·본문을 함께 관리하는 재현 가능한 출판"
-    aliases: ["재현 가능한 보고서","과학 출판","분석 보고서","코드와 문서"]
+    aliases: ["재현 가능한 보고서","과학 출판","분석 보고서","코드와 문서", "분석 코드와 그래프와 글을 한 문서로 엮기", "자료가 바뀌면 보고서 숫자도 자동으로 갱신되게", "같은 원고로 웹사이트·책·발표자료 뽑아내기", "남이 다시 돌려도 똑같이 나오는 분석 보고서"]
     source:
       path: data/guides/world_tools.md
   - id: zotero
-    path: ["지식","문헌"]
+    path: ["지식","자료원과 문헌"]
     name: "Zotero"
     hint: "논문·도서의 서지·첨부 파일·인용문헌 관리"
-    aliases: ["참고문헌 관리","인용문헌 관리","서지 관리","논문 관리","문헌 관리"]
+    aliases: ["참고문헌 관리","인용문헌 관리","서지 관리","논문 관리","문헌 관리", "모아둔 논문 파일이 뒤죽박죽일 때", "참고문헌 목록 자동으로 만들어 넣기", "읽은 책과 논문 출처 한곳에 정리", "졸업논문 쓰며 인용 양식 맞추기 번거로울 때"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: crossref
-    path: ["지식","문헌"]
+    path: ["지식","자료원과 문헌"]
     name: "Crossref"
     hint: "DOI를 중심으로 학술 문헌의 서지와 출판 정보를 확인"
-    aliases: ["doi","서지정보","논문 식별자","학술 출판"]
+    aliases: ["doi","서지정보","논문 식별자","학술 출판", "논문 고유번호로 정확한 제목과 저자 확인하기", "참고문헌 목록의 출판 연도와 학술지명 맞는지 점검", "인용한 논문이 실제로 있는 글인지 조회할 때", "논문 번호만 알고 서지 사항을 채워 넣어야 할 때"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: unpaywall
-    path: ["지식","문헌"]
+    path: ["지식","자료원과 문헌"]
     name: "Unpaywall"
     hint: "학술 문헌의 공개 원문 위치 탐색"
-    aliases: ["공개 논문","오픈액세스","무료 원문","논문 원문"]
+    aliases: ["공개 논문","오픈액세스","무료 원문","논문 원문", "유료로 막힌 논문의 무료 공개본 찾기", "결제 없이 합법적으로 논문 원문 읽고 싶을 때", "저자가 따로 올려둔 원고 파일 있는지 확인", "학교 밖이라 구독 없이 논문 봐야 할 때"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: openalex
-    path: ["지식","학술 지도"]
+    path: ["지식","자료원과 문헌"]
     name: "OpenAlex"
     hint: "연구자·기관·논문과 인용 관계를 탐색하는 학술 목록"
-    aliases: ["인용 관계","연구자","연구동향","학술 네트워크"]
+    aliases: ["인용 관계","연구자","연구동향","학술 네트워크", "어떤 교수가 무슨 논문 썼는지 무료로 찾아보기", "한 대학에서 나온 연구 목록 한눈에 보기", "논문끼리 누가 누구를 인용했는지 대량으로 살피기", "유료 학술 검색 없이 연구 동향 통계 내고 싶을 때"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: wikidata
-    path: ["지식","개체 관계"]
+    path: ["지식","자료원과 문헌"]
     name: "Wikidata"
     hint: "인물·장소·사물의 식별자와 구조화된 속성·관계 탐색"
-    aliases: ["개체 관계","지식그래프","sparql","위키데이터"]
+    aliases: ["개체 관계","지식그래프","sparql","위키데이터", "인물 생년·출생지 같은 항목 표로 뽑기", "동명이인 구분할 고유 번호 찾기", "백과사전 내용을 기계가 읽는 자료로 받기", "누가 누구와 어떤 관계인지 자료로 조회"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: wayback
-    path: ["지식","웹 기록"]
+    path: ["지식","자료원과 문헌"]
     name: "Wayback Machine"
     hint: "웹페이지의 과거 저장본과 시점별 변경 내용 확인"
-    aliases: ["사라진 페이지","과거 웹","웹 아카이브","404","이전 페이지"]
+    aliases: ["사라진 페이지","과거 웹","웹 아카이브","404","이전 페이지", "없어진 홈페이지 예전 모습 다시 보기", "삭제된 기사나 글 원문 되찾기", "사이트가 몇 년 전엔 어땠는지 확인", "링크가 죽어서 안 열리는 글 살려 보기"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: fred
-    path: ["세계 자료","경제"]
+    path: ["세계 자료","경제와 공공"]
     name: "FRED"
     hint: "경제 지표의 시계열과 관측 빈도별 자료 탐색"
-    aliases: ["거시경제","경제지표","금리","인플레이션","경제 시계열"]
+    aliases: ["거시경제","경제지표","금리","인플레이션","경제 시계열", "미국 실업률과 금리 그래프 찾아보기", "해외 경제 숫자를 월별 분기별로 받기", "여러 나라 물가 흐름을 한 그래프로 겹쳐 보기", "미국 연방은행이 모아 둔 경제 자료"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: ecos
-    path: ["세계 자료","경제"]
+    path: ["세계 자료","경제와 공공"]
     name: "한국은행 ECOS"
     hint: "한국 경제·금융 통계와 시계열 자료 탐색"
-    aliases: ["한국은행","한국 경제","통화","국내 경제통계","경제통계"]
+    aliases: ["한국은행","한국 경제","통화","국내 경제통계","경제통계", "기준금리와 환율 과거 수치 찾아보기", "우리나라 물가와 통화량 추이 자료", "국내 총생산 분기별 숫자 내려받기", "중앙은행이 내는 공식 경제 숫자 찾는 곳"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: owid
-    path: ["세계 자료","장기 비교"]
+    path: ["세계 자료","경제와 공공"]
     name: "Our World in Data"
     hint: "국가별 보건·인구·에너지 등 장기 추세 자료와 지표 설명"
-    aliases: ["국가 비교","장기 추세","기대수명","탄소배출","보건통계","세계 통계"]
+    aliases: ["국가 비교","장기 추세","기대수명","탄소배출","보건통계","세계 통계", "나라별 기대수명 변화를 그래프로 보기", "세계 빈곤과 질병이 백 년간 어떻게 변했나", "국가 간 에너지 사용량 비교 자료", "수업 발표용 세계 통계 그림과 해설 구하기"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: datagokr
-    path: ["세계 자료","공공데이터"]
+    path: ["세계 자료","경제와 공공"]
     name: "공공데이터포털"
     hint: "한국 공공기관의 데이터셋·파일·API 목록 탐색"
-    aliases: ["공공데이터","정부 데이터","공공기관","데이터셋"]
+    aliases: ["공공데이터","정부 데이터","공공기관","데이터셋", "정부가 공개한 자료 파일 내려받을 곳", "버스 정류장이나 약국 목록 같은 자료 구하기", "앱에 넣을 나라 제공 정보 연결 신청", "우리 시청이 가진 통계 자료 찾아보기"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: kipris
-    path: ["세계 자료","특허"]
+    path: ["세계 자료","경제와 공공"]
     name: "KIPRIS"
     hint: "특허·상표·디자인 등 산업재산권 문헌 탐색"
-    aliases: ["특허","상표","선행기술","디자인권","산업재산권"]
+    aliases: ["특허","상표","선행기술","디자인권","산업재산권", "내 아이디어가 이미 등록됐는지 확인", "가게 이름을 다른 사람이 먼저 등록했나 보기", "비슷한 발명이 있는지 출원 전에 검색", "경쟁사가 낸 기술 권리 문서 찾아보기"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: kma
-    path: ["세계 자료","기상"]
+    path: ["세계 자료","지구와 기후"]
     name: "기상청 API허브"
     hint: "관측·레이더·특보 등 한국 기상 자료의 접근 통로"
-    aliases: ["기상 관측","관측값","기상청","레이더","기상특보"]
+    aliases: ["기상 관측","관측값","기상청","레이더","기상특보", "우리 동네 실시간 강수와 기온 자료 받기", "태풍이나 호우 경보 정보를 앱에 연결", "비구름 영상과 관측값 가져오기", "국내 날씨 자료를 프로그램으로 받는 곳"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: era5
-    path: ["세계 자료","기후"]
+    path: ["세계 자료","지구와 기후"]
     name: "ERA5·Copernicus CDS"
     hint: "과거 기후를 시간·공간 격자로 다루는 재분석 자료"
-    aliases: ["ERA5","Copernicus CDS","기후변화","과거 기후","재분석","기온 추세","기후 격자"]
+    aliases: ["ERA5","Copernicus CDS","기후변화","과거 기후","재분석","기온 추세","기후 격자", "수십 년 전 어느 지역 기온과 바람 알아내기", "관측소 없는 곳의 과거 날씨 추정값", "전 세계 옛 기상 자료를 지도 칸별로 받기", "유럽 기관이 제공하는 장기 기후 자료"]
     source:
       path: docs/world_map/D_science_engineering.md
   - id: xarray
-    path: ["계산","다차원 자료"]
+    path: ["공간","지구와 지리"]
     name: "xarray·netCDF4"
     hint: "시간·위도·경도처럼 이름 있는 차원의 배열 자료 처리"
-    aliases: ["xarray","netCDF4","netcdf","다차원 배열","기후자료","nc 파일"]
+    aliases: ["xarray","netCDF4","netcdf","다차원 배열","기후자료","nc 파일", "기상청 기후 자료 파일 열어 보기", "날짜와 위치별로 쌓인 기온 자료 다루기", "특정 기간 특정 지역만 뽑아 평균 내기", "여러 겹으로 쌓인 큰 과학 자료 파일"]
     source:
       path: data/guides/world_tools.md
   - id: osm
-    path: ["세계 자료","지리"]
+    path: ["세계 자료","지구와 기후"]
     name: "OpenStreetMap·Overpass"
     hint: "지도 객체의 위치·종류·속성을 조건으로 조회"
-    aliases: ["OpenStreetMap","해외 지도","지도 객체","overpass","osm","시설 위치"]
+    aliases: ["OpenStreetMap","해외 지도","지도 객체","overpass","osm","시설 위치", "반경 1킬로미터 안 편의점 위치 전부 뽑기", "누구나 고칠 수 있는 무료 지도 자료", "특정 도시의 자전거길이나 공원 목록 받기", "지도 위 가게 종류와 영업 정보 조건 검색"]
     source:
       path: docs/world_map/A_knowledge_data.md
   - id: geopandas
-    path: ["계산","공간 분석"]
+    path: ["공간","지구와 지리"]
     name: "GeoPandas"
     hint: "지역 경계·점·선 등 벡터 지리 자료의 공간 연산"
-    aliases: ["공간분석","행정구역","geojson","shapefile","지역 경계"]
+    aliases: ["공간분석","행정구역","geojson","shapefile","지역 경계", "행정구역 경계 파일을 표처럼 다루기", "주소 점과 구역 경계를 코드로 겹쳐 계산", "지도 파일을 엑셀 자료와 합쳐서 그리기", "구별 면적과 거리를 프로그램으로 구하기"]
     source:
       path: data/guides/world_tools.md
   - id: rasterio
-    path: ["계산","공간 분석"]
+    path: ["공간","지구와 지리"]
     name: "Rasterio"
     hint: "위성·지형 등 격자 영상의 좌표 변환과 래스터 처리"
-    aliases: ["위성영상","지형자료","geotiff","래스터","재투영"]
+    aliases: ["위성영상","지형자료","geotiff","래스터","재투영", "위성사진 파일을 코드로 열어 잘라내기", "고도 자료 그림의 좌표계를 바꾸기", "칸칸이 값이 든 지도 그림 읽고 저장", "큰 항공사진에서 관심 지역만 오려 내기"]
     source:
       path: data/guides/world_tools.md
   - id: astropy
-    path: ["계산","천문"]
+    path: ["과학","천문과 우주"]
     name: "Astropy"
     hint: "천체 좌표·단위·시간계·천문 관측 파일 처리"
-    aliases: ["천체","천문","fits","천체 좌표"]
+    aliases: ["천체","천문","fits","천체 좌표", "망원경 관측 파일을 파이썬으로 열어 다루기", "별 위치를 적경 적위에서 다른 기준으로 바꾸기", "광년과 파섹 같은 천문 단위 자동 환산", "관측 시각을 여러 시간 기준으로 맞추는 코드"]
     source:
       path: data/guides/world_tools.md
   - id: rdkit
-    path: ["계산","화학"]
+    path: ["과학","화학"]
     name: "RDKit"
     hint: "분자 구조의 표현·유사도·물성·그림 처리"
-    aliases: ["분자 구조","분자 유사도","smiles","화학 구조"]
+    aliases: ["분자 구조","분자 유사도","smiles","화학 구조", "분자식 문자열을 그림으로 그려주는 파이썬 도구", "수천 개 화합물 중 비슷하게 생긴 분자 찾기", "분자량이나 물에 녹는 정도를 코드로 계산", "신약 후보 목록을 구조 기준으로 걸러내기"]
     source:
       path: data/guides/world_tools.md
   - id: biopython
-    path: ["계산","생명"]
+    path: ["과학","생명과학"]
     name: "Biopython"
     hint: "생물 서열과 단백질 구조 파일의 처리"
-    aliases: ["염기서열","단백질 서열","유전자 서열","fasta","pdb"]
+    aliases: ["염기서열","단백질 서열","유전자 서열","fasta","pdb", "파이썬으로 유전자 서열 파일 읽고 바꾸기", "공개 데이터베이스에서 서열을 코드로 내려받기", "서열 파일 형식 변환과 번역을 스크립트로 자동화", "단백질 입체 구조 파일을 프로그램으로 다루기"]
     source:
       path: data/guides/world_tools.md
   - id: fenics
-    path: ["계산","공학"]
+    path: ["공학","기계와 제작"]
     name: "FEniCSx"
     hint: "편미분방정식을 유한요소법으로 풀어 물리 현상 계산"
-    aliases: ["유한요소","편미분방정식","pde","fem"]
+    aliases: ["유한요소","편미분방정식","pde","fem", "물리 방정식을 코드로 직접 풀어 보기", "열이나 변형 문제를 잘게 쪼개 계산", "상용 해석 프로그램 없이 연구용 모사", "수식을 거의 그대로 적어 넣는 계산 도구"]
     source:
       path: data/guides/world_tools.md
   - id: openfoam
-    path: ["계산","공학"]
+    path: ["공학","기계와 제작"]
     name: "OpenFOAM"
     hint: "유체의 흐름과 관련 물리 현상을 수치 모사"
-    aliases: ["유체","유동","cfd","공기 흐름","유체역학"]
+    aliases: ["유체","유동","cfd","공기 흐름","유체역학", "무료로 공기와 물 흐름 모의실험", "명령어로 돌리는 공개 유동 계산 프로그램", "난류나 열이 섞인 흐름을 큰 규모로 계산", "건물 주변 바람길을 직접 돌려 보기"]
     source:
       path: data/guides/world_tools.md
   - id: mujoco
-    path: ["계산","공학"]
+    path: ["공학","로봇과 자동화"]
     name: "MuJoCo"
     hint: "관절과 접촉을 갖는 로봇·물체의 운동 모사"
-    aliases: ["로봇","관절","접촉","물리 시뮬레이션"]
+    aliases: ["로봇","관절","접촉","물리 시뮬레이션", "로봇을 만들기 전에 컴퓨터 안에서 걷게 해보기", "물건끼리 부딪히고 미끄러지는 움직임 흉내", "실제 기계 망가뜨리지 않고 동작 연습시키기", "팔다리 달린 인형이 넘어지는 모습 가상 실험"]
     source:
       path: data/guides/world_tools.md
   - id: kicad
-    path: ["제작","회로"]
+    path: ["공학","전자와 통신"]
     name: "KiCad·ngspice"
     hint: "전자 회로도·기판 설계와 회로 동작 시뮬레이션"
-    aliases: ["KiCad","ngspice","회로","기판","pcb","회로도","spice"]
+    aliases: ["KiCad","ngspice","회로","기판","pcb","회로도","spice", "취미로 직접 기판 그려서 주문 제작하기", "회로도 그리고 부품 배치까지 무료로 하기", "납땜하기 전에 회로가 제대로 도는지 돌려보기", "빵판 회로를 정식 기판으로 옮기고 싶을 때"]
     source:
       path: data/guides/world_tools.md
   - id: rclone
-    path: ["연결","파일"]
+    path: ["연결","동기화와 자동화"]
     name: "rclone"
     hint: "여러 저장 서비스의 파일 목록·복사·동기화"
-    aliases: ["클라우드 동기화","드라이브 복사","클라우드 파일","원격 저장소"]
+    aliases: ["클라우드 동기화","드라이브 복사","클라우드 파일","원격 저장소", "구글 드라이브 파일을 다른 클라우드로 옮기기", "여러 클라우드 저장소를 명령 한 줄로 다루기", "내 컴퓨터 폴더를 원격 저장소와 똑같이 맞추기", "클라우드 간 대용량 자료 이사하기"]
     source:
       path: docs/world_map/C_protocols_connections.md
   - id: restic
-    path: ["연결","백업"]
+    path: ["연결","동기화와 자동화"]
     name: "restic"
     hint: "스냅샷과 중복 제거를 이용한 파일 백업·복원"
-    aliases: ["백업","스냅샷","중복 제거 백업","복원"]
+    aliases: ["백업","스냅샷","중복 제거 백업","복원", "날짜별 시점으로 되돌릴 수 있게 자료 보관", "같은 파일 여러 번 저장해도 용량 안 늘게", "랜섬웨어 대비해 암호 걸어 사본 남기기", "지난주 상태의 폴더를 통째로 되살리기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: syncthing
-    path: ["연결","파일"]
+    path: ["연결","동기화와 자동화"]
     name: "Syncthing"
     hint: "장치 사이의 파일을 직접 동기화"
-    aliases: ["장치 동기화","폴더 동기화","p2p","컴퓨터 간 파일"]
+    aliases: ["장치 동기화","폴더 동기화","p2p","컴퓨터 간 파일", "클라우드 안 거치고 폰과 컴퓨터 폴더 맞추기", "집 컴퓨터와 노트북 작업 폴더 늘 같게 유지", "남의 서버에 안 올리고 내 기기끼리만 공유", "폰 사진이 집 컴퓨터로 저절로 넘어오게"]
     source:
       path: docs/world_map/C_protocols_connections.md
   - id: mqtt
-    path: ["연결","장치"]
+    path: ["연결","동기화와 자동화"]
     name: "MQTT"
     hint: "장치와 서비스 사이의 발행·구독 방식 메시지 교환"
-    aliases: ["센서","사물인터넷","iot","발행 구독","장치 메시지"]
+    aliases: ["센서","사물인터넷","iot","발행 구독","장치 메시지", "온도 센서 값을 여러 프로그램에 뿌려주기", "작은 보드끼리 가볍게 신호 주고받는 방법", "센서가 값 올리면 관심 있는 쪽만 받아가기", "전력 적고 통신 불안한 기기 연결하기"]
     source:
       path: docs/world_map/C_protocols_connections.md
   - id: homeassistant
-    path: ["연결","장치"]
+    path: ["연결","동기화와 자동화"]
     name: "Home Assistant"
     hint: "집 안의 장치 상태와 자동화 규칙을 통합"
-    aliases: ["스마트홈","집 자동화","가전","홈어시스턴트"]
+    aliases: ["스마트홈","집 자동화","가전","홈어시스턴트", "제조사 다른 전등·센서를 한 화면에서 조작", "해 지면 거실 불 켜지게 집 꾸미기", "집에 아무도 없으면 보일러 저절로 끄기", "스마트 기기 앱이 너무 많아 하나로 합치기"]
     source:
       path: docs/world_map/C_protocols_connections.md
   - id: n8n
-    path: ["연결","작업 흐름"]
+    path: ["연결","동기화와 자동화"]
     name: "n8n·Node-RED"
     hint: "서비스 호출과 사건 처리를 이어 반복 작업 자동화"
-    aliases: ["n8n","Node-RED","서비스 연동","워크플로","노드레드","업무 자동화"]
+    aliases: ["n8n","Node-RED","서비스 연동","워크플로","노드레드","업무 자동화", "메일 오면 표에 적고 알림 보내기 자동으로", "코딩 없이 상자 이어 붙여 업무 흐름 짜기", "여러 웹 서비스를 줄줄이 엮어 돌리기", "매일 손으로 하던 복사 붙여넣기 없애기"]
     source:
       path: docs/world_map/C_protocols_connections.md
   - id: caldav
-    path: ["연결","일정"]
+    path: ["연결","동기화와 자동화"]
     name: "CalDAV"
     hint: "서로 다른 일정 서비스 사이의 달력 조회·동기화"
-    aliases: ["달력 동기화","캘린더 동기화","일정 연동","caldav"]
+    aliases: ["달력 동기화","캘린더 동기화","일정 연동","caldav", "구글 일정과 다른 달력 앱을 서로 맞추기", "폰 달력과 회사 일정을 한곳에서 보기", "내 서버에 둔 일정을 여러 기기에서 열기", "달력 서비스 갈아타도 약속 그대로 옮기기"]
     source:
       path: docs/world_map/C_protocols_connections.md
   - id: kiwi
-    path: ["언어","한국어 처리"]
+    path: ["언어","분석과 번역"]
     name: "Kiwi"
     hint: "한국어 문장의 형태소·품사·문장 경계 분석"
-    aliases: ["형태소","한국어 분석","품사","문장 분리","토큰화"]
+    aliases: ["형태소","한국어 분석","품사","문장 분리","토큰화", "한국어 글을 품사 붙여 쪼개주는 도구 찾기", "마침표 없는 한국어 글을 문장별로 끊기", "댓글 수천 개에서 명사·동사만 뽑는 프로그램", "띄어쓰기 엉망인 한글 문장 분석하기"]
     source:
       path: data/guides/world_tools.md
   - id: huggingface
-    path: ["지식","AI 자원"]
+    path: ["지식","자료원과 문헌"]
     name: "Hugging Face Hub"
     hint: "공개 모델·데이터셋의 탐색과 배포 자료 확인"
-    aliases: ["모델 찾기","공개 모델","학습 데이터","허깅페이스"]
+    aliases: ["모델 찾기","공개 모델","학습 데이터","허깅페이스", "공개된 인공지능 모델 내려받을 곳 찾기", "학습용 자료 묶음을 남들이 올린 데서 구하기", "한국어 되는 공개 언어 모델 어디 있나 찾을 때", "모델 사용 조건과 설명서를 확인하고 싶을 때"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: comfyui
-    path: ["미디어","로컬 생성"]
+    path: ["미디어","영상과 사진"]
     name: "ComfyUI"
     hint: "이미지·영상 생성 절차를 노드 그래프로 구성"
-    aliases: ["로컬 이미지","생성 워크플로","이미지 생성","노드 그래프"]
+    aliases: ["로컬 이미지","생성 워크플로","이미지 생성","노드 그래프", "그림 생성 과정을 상자와 선으로 이어 조립하기", "인공지능 그림 만드는 단계를 세밀하게 손보기", "한번 짠 그림 생성 흐름을 저장해 반복 사용", "그림 뽑고 키우고 고치는 과정을 한 줄로 잇기"]
     source:
       path: docs/world_map/B_media_docs_localai.md
   - id: randomized_experiment
-    path: ["조사","실험 설계"]
+    path: ["조사","연구 설계"]
     name: "무작위 대조 실험 (A/B testing)"
     hint: "무작위 배정이 가능할 때 두 처치의 결과 차이 비교; 사전 지표·표본 설계 필요"
-    aliases: ["a/b","ab test","무작위","무작위 배정","전환율 비교","대조군","구매율 비교"]
+    aliases: ["a/b","ab test","무작위","무작위 배정","전환율 비교","대조군","구매율 비교", "홈페이지 버튼 두 가지 중 뭐가 더 눌리나 시험", "손님을 제비뽑기로 나눠 두 안 비교하기", "새 가격표가 매출을 올리는지 절반만 적용해보기", "두 가지 메일 제목 중 어느 쪽이 더 열리는지"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: randomized_experiment
   - id: factorial_design
-    path: ["조사","실험 설계"]
+    path: ["조사","연구 설계"]
     name: "요인 실험 설계 (Factorial design)"
     hint: "여러 요인을 조합해 주효과·상호작용을 추정; 실험 횟수와 교락 고려"
-    aliases: ["요인 실험","상호작용","실험 조합","다중 요인","실험 횟수"]
+    aliases: ["요인 실험","상호작용","실험 조합","다중 요인","실험 횟수", "온도와 시간 두 조건을 한꺼번에 바꿔 실험하기", "광고 문구와 색상을 조합별로 다 시험해보기", "두 조건이 함께일 때만 효과 나는지 알고 싶을 때", "변수 여러 개를 적은 횟수로 시험하는 계획 짜기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: factorial_design
   - id: bootstrap
-    path: ["계산","불확실성 추정"]
+    path: ["계산","통계"]
     name: "부트스트랩 (Bootstrap)"
     hint: "표본을 재추출해 통계량의 신뢰구간 추정; 표본 대표성과 의존구조 고려"
-    aliases: ["재표집","재추출","신뢰구간","표본 불확실성","오차 범위","bootstrap"]
+    aliases: ["재표집","재추출","신뢰구간","표본 불확실성","오차 범위","bootstrap", "가진 자료에서 다시 뽑고 또 뽑아 오차 범위 구하기", "공식이 없는 지표에 위아래 오차 폭 붙이기", "표본이 하나뿐인데 결과가 얼마나 흔들릴지 보기", "중앙값이나 비율 차이가 얼마나 믿을 만한지 계산"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: bootstrap
   - id: sensitivity_analysis
-    path: ["계산","불확실성 추정"]
+    path: ["계산","통계"]
     name: "Sobol 민감도 분석"
     hint: "입력 범위를 변화시켜 출력 변동에 대한 변수별 기여와 상호작용 분석"
-    aliases: ["민감도","입력 불확실성","영향 변수","모수 영향","sobol"]
+    aliases: ["민감도","입력 불확실성","영향 변수","모수 영향","sobol", "모형 결과가 어느 입력값에 가장 크게 좌우되는지", "입력 여럿을 동시에 흔들어 결과 변동 몫 나누기", "두 조건이 겹칠 때만 커지는 영향 가려내기", "계산 모형에서 신경 안 써도 되는 입력 골라내기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: sensitivity_analysis
@@ -517,7 +517,7 @@ entries:
     path: ["조사","인과 추론"]
     name: "인과 DAG (Causal diagram)"
     hint: "인과 가정을 방향 그래프로 표현해 교란·매개·통제 변수와 식별 가능성 검토"
-    aliases: ["인과관계","교란변수","통제 변수","매개변수","인과 가정","causal diagram"]
+    aliases: ["인과관계","교란변수","통제 변수","매개변수","인과 가정","causal diagram", "원인과 결과를 화살표 그림으로 정리해보기", "어떤 변수를 통제하고 빼야 할지 그림으로 판단", "분석 전에 뭐가 뭐에 영향 주는지 지도 그리기", "변수 관계가 복잡해 머릿속이 엉킬 때 그리는 도식"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: causal_dag
@@ -525,7 +525,7 @@ entries:
     path: ["조사","인과 추론"]
     name: "차분의 차분 (Difference-in-differences)"
     hint: "처치·비교 집단의 전후 변화 차이로 효과 추정; 평행추세·선행반응 부재 가정 검토"
-    aliases: ["전후 변화","변화 차이","미시행","정책 효과","평행추세","did"]
+    aliases: ["전후 변화","변화 차이","미시행","정책 효과","평행추세","did", "바뀐 지역과 안 바뀐 지역의 전후 변화를 빼서 비교", "최저임금 오른 동네와 옆 동네 고용 변화 견주기", "원래 있던 격차는 빼고 늘어난 만큼만 효과로 보기", "두 집단이 원래 나란히 움직였는지부터 확인할 때"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: difference_in_differences
@@ -533,63 +533,63 @@ entries:
     path: ["조사","인과 추론"]
     name: "성향점수 매칭 (Propensity score matching)"
     hint: "관측 공변량으로 처치 확률이 비슷한 대상을 매칭; 미관측 교란은 해결하지 못함"
-    aliases: ["성향점수","관찰자료 매칭","집단 균형","처치 확률","비교집단 매칭"]
+    aliases: ["성향점수","관찰자료 매칭","집단 균형","처치 확률","비교집단 매칭", "조건이 비슷한 사람끼리 짝지어 비교하기", "프로그램 참가자와 닮은 미참가자 골라내기", "나이와 소득이 비슷한 상대를 찾아 효과 보기", "실험 못 한 자료에서 공정한 비교 상대 만들기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: propensity_matching
   - id: systematic_review
-    path: ["조사","근거 종합"]
+    path: ["조사","연구 설계"]
     name: "체계적 문헌고찰 (Systematic review)"
     hint: "질문·검색식·포함 기준을 정해 연구를 선별하고 근거를 종합; 편향과 누락 점검"
-    aliases: ["문헌고찰","근거 종합","포함 기준","검색식","제외 사유","연구 종합"]
+    aliases: ["문헌고찰","근거 종합","포함 기준","검색식","제외 사유","연구 종합", "한 주제 논문을 빠짐없이 모아 정리해야 할 때", "입맛에 맞는 연구만 고르지 않고 근거 모으기", "어떤 논문을 넣고 뺄지 기준부터 세워 조사하기", "치료법 효과에 대한 기존 연구 전부 종합하기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: systematic_review
   - id: citation_chaining
-    path: ["조사","근거 종합"]
+    path: ["조사","연구 설계"]
     name: "인용 추적 (Citation chaining)"
     hint: "핵심 문헌의 참고문헌·후속 인용을 따라 관련 연구 확장; 검색식 기반 조사와 병행"
-    aliases: ["인용 추적","후속 인용","참고문헌 추적","눈덩이 검색","인용 관계"]
+    aliases: ["인용 추적","후속 인용","참고문헌 추적","눈덩이 검색","인용 관계", "좋은 논문 하나에서 출발해 관련 글 넓혀 찾기", "논문 뒤 참고 목록을 거슬러 올라가며 읽기", "이 논문을 나중에 누가 가져다 썼는지 찾아보기", "검색어로는 안 잡히는 관련 연구 찾고 싶을 때"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: citation_chaining
   - id: thematic_analysis
-    path: ["조사","질적 분석"]
+    path: ["사회","사회조사"]
     name: "성찰적 주제분석 (Reflexive thematic analysis)"
     hint: "인터뷰·관찰 기록을 반복 검토·코딩해 의미 패턴과 주제를 해석"
-    aliases: ["주제분석","질적 분석","인터뷰","의미 패턴","질적 코딩"]
+    aliases: ["주제분석","질적 분석","인터뷰","의미 패턴","질적 코딩", "면담 녹취록에서 반복되는 의미 흐름 뽑아내기", "기록을 여러 번 읽으며 꼬리표 달아 묶기", "인터뷰 열 건을 몇 가지 큰 줄기로 정리하기", "내 해석임을 인정하며 자료에서 뜻을 읽어내기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: thematic_analysis
   - id: mcda
-    path: ["판단","대안 비교"]
+    path: ["판단","의사결정"]
     name: "다기준 의사결정 분석 (MCDA)"
     hint: "여러 평가 기준·가중치로 대안을 비교; 가중치 변화에 따른 순위 민감도 점검"
-    aliases: ["다기준","가중치","대안 비교","업체 선정","대안 우선순위","mcda"]
+    aliases: ["다기준","가중치","대안 비교","업체 선정","대안 우선순위","mcda", "항목별 비중 주고 후보들 점수표 만들기", "비중을 바꾸면 일등이 바뀌는지 확인", "가격·성능·서비스 다 따져 업체 고르기", "평가표 합산 결과가 얼마나 튼튼한지 점검"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: mcda
   - id: pareto_optimization
-    path: ["판단","대안 비교"]
+    path: ["판단","의사결정"]
     name: "파레토 다목적 최적화"
     hint: "충돌하는 목적 사이에서 다른 대안에 일방적으로 열등하지 않은 절충 해 집합 탐색"
-    aliases: ["다목적","절충안","비용과 성능","파레토","목적 충돌"]
+    aliases: ["다목적","절충안","비용과 성능","파레토","목적 충돌", "싸면서 좋은 것은 없을 때 남는 후보들", "하나를 올리면 다른 게 내려가는 상황", "모든 면에서 밀리는 안을 먼저 지우기", "무게와 강도 둘 다 챙기는 설계안 추리기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: pareto_optimization
   - id: discrete_event_simulation
-    path: ["운영","대기와 자원"]
+    path: ["운영","생산과 물류"]
     name: "이산사건 시뮬레이션 (Discrete-event simulation)"
     hint: "도착·처리·자원 점유 사건으로 대기열과 병목 모의실험; 입력 분포 검증 필요"
-    aliases: ["대기열","대기시간","모의실험","처리시간","자원 점유","창구 수"]
+    aliases: ["대기열","대기시간","모의실험","처리시간","자원 점유","창구 수", "창구를 하나 늘리면 줄이 얼마나 줄지 미리 보기", "손님 몰리는 시간 대기 상황 컴퓨터로 돌려보기", "설비 사기 전에 효과를 가상으로 시험", "병원 접수부터 진료까지 기다림 모의로 재현"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: discrete_event_simulation
   - id: critical_path
-    path: ["운영","일정 계획"]
+    path: ["운영","일정"]
     name: "주공정법 (Critical Path Method)"
     hint: "작업 기간·선후관계로 완료일을 결정하는 경로와 여유시간 계산"
-    aliases: ["선후관계","여유시간","주공정","프로젝트 납기","일정 지연","critical path"]
+    aliases: ["선후관계","여유시간","주공정","프로젝트 납기","일정 지연","critical path", "어느 작업이 늦으면 전체 마감이 밀리는지 찾기", "공사가 언제 끝날지 작업별 기간으로 계산", "좀 늦어져도 괜찮은 작업과 아닌 작업 가르기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: critical_path
@@ -597,7 +597,7 @@ entries:
     path: ["계산","최적화"]
     name: "동적 계획법 (Dynamic programming)"
     hint: "중복 부분문제의 답을 저장·재사용해 단계별 최적화; 상태·전이·최적부분구조 필요"
-    aliases: ["동적 계획","중복 계산","부분문제","메모이제이션","배낭 문제","점화식"]
+    aliases: ["동적 계획","중복 계산","부분문제","메모이제이션","배낭 문제","점화식", "계단 오르는 방법 수를 작은 경우부터 쌓아 구하기", "무게 한도 안에서 가치 최대인 물건 고르기", "앞 단계 최선을 표에 채워 가며 다음 단계 풀기", "두 문장이 얼마나 비슷한지 글자 단위로 비교 계산"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: dynamic_programming
@@ -605,263 +605,263 @@ entries:
     path: ["계산","최적화"]
     name: "베이지안 최적화 (Bayesian optimization)"
     hint: "평가가 비싼 함수의 대리모형으로 다음 실험점 선택; 탐색·활용 균형 고려"
-    aliases: ["비싼 실험","대리모형","하이퍼파라미터","평가 비용","베이지안 최적화"]
+    aliases: ["비싼 실험","대리모형","하이퍼파라미터","평가 비용","베이지안 최적화", "시험 한 번에 하루 걸리는 설정을 적은 횟수로 찾기", "다음엔 어떤 조합을 실험할지 똑똑하게 고르기", "빵 배합을 몇 번만 구워 보고 가장 좋은 비율 찾기", "안 가 본 곳과 잘 나온 곳 근처 중 어디를 볼지"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: bayesian_optimization
   - id: property_testing
-    path: ["개발","검증"]
+    path: ["개발","설계와 검증"]
     name: "속성 기반 테스트 (Property-based testing)"
     hint: "다양한 입력을 생성해 불변식을 검사하고 실패 입력 축소; 정확한 속성 정의 필요"
-    aliases: ["불변식","입력 생성","경계값","속성 테스트","원소 보존","hypothesis"]
+    aliases: ["불변식","입력 생성","경계값","속성 테스트","원소 보존","hypothesis", "예시 몇 개 대신 무작위 값 수천 개로 시험", "내가 생각 못 한 이상한 값에서 터지는 버그", "뒤집고 또 뒤집으면 원래대로 같은 규칙 검사", "실패한 값을 가장 단순한 꼴로 줄여 보여주기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: property_testing
   - id: state_machine_testing
-    path: ["개발","검증"]
+    path: ["개발","설계와 검증"]
     name: "상태 기반 테스트 (Stateful testing)"
     hint: "조작 순서를 생성해 상태 전이와 불변식 검사; 참조 모델·사전조건 정의 필요"
-    aliases: ["상태 전이","조작 순서","상태 모델","순서 의존","stateful"]
+    aliases: ["상태 전이","조작 순서","상태 모델","순서 의존","stateful", "넣고 빼고 지우는 차례를 마구 섞어 시험", "특정 차례로 눌렀을 때만 나는 버그 찾기", "장바구니 같은 것의 연속 동작 검증", "단순한 본보기와 실제를 단계마다 대조"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: state_machine_testing
   - id: delta_debugging
-    path: ["개발","고장 진단"]
+    path: ["개발","설계와 검증"]
     name: "델타 디버깅 (Delta debugging)"
     hint: "실패 여부를 반복 시험하며 입력·변경을 줄여 최소 재현 사례 탐색"
-    aliases: ["재현 입력","최소 사례","최소 재현","실패 축소","입력 축소","ddmin"]
+    aliases: ["재현 입력","최소 사례","최소 재현","실패 축소","입력 축소","ddmin", "오류 나는 큰 파일에서 원인 부분만 남기기", "수백 개 수정 중 어느 것이 고장 냈는지 좁히기", "버그 신고용으로 가장 짧은 예 만들기", "반씩 덜어내며 여전히 터지는지 되풀이 확인"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: delta_debugging
   - id: fmea
-    path: ["설계","신뢰성"]
+    path: ["운영","품질과 개선"]
     name: "고장형태·영향분석 (FMEA)"
     hint: "부품·기능별 고장 형태와 상위 영향을 검토하여 예방·검출 조치 정리"
-    aliases: ["고장 형태","부품 고장","고장 영향","예방 조치","fmea"]
+    aliases: ["고장 형태","부품 고장","고장 영향","예방 조치","fmea", "부품마다 어떻게 망가질 수 있는지 미리 적기", "출시 전에 생길 만한 탈을 점수로 매기기", "심각함·잦음·발견 어려움으로 위험 순위", "설계 단계에서 말썽거리 목록과 대책 표"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: fmea
   - id: fault_tree
-    path: ["설계","신뢰성"]
+    path: ["운영","품질과 개선"]
     name: "결함수 분석 (Fault Tree Analysis)"
     hint: "상위 실패 사건에서 원인 조합을 AND·OR로 전개; 독립성·공통원인 가정 점검"
-    aliases: ["원인 조합","사건 조합","상위 실패","결함수","fault tree"]
+    aliases: ["원인 조합","사건 조합","상위 실패","결함수","fault tree", "대형 사고가 나려면 무엇이 겹쳐야 하는지", "맨 위에 사고 놓고 나뭇가지로 원인 뻗기", "둘 다 고장 나야 터지는지 하나만으로도 터지는지", "안전장치가 동시에 죽을 가능성 따져보기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: fault_tree
   - id: threat_modeling
-    path: ["설계","보안"]
+    path: ["개발","보안"]
     name: "위협 모델링 (Threat modeling)"
     hint: "자산·데이터 흐름·신뢰 경계에서 위협과 완화책 식별; 구조 변경 때 갱신"
-    aliases: ["위협 모델","신뢰 경계","보안 설계","공격 경로","stride"]
+    aliases: ["위협 모델","신뢰 경계","보안 설계","공격 경로","stride", "설계 단계에서 가능한 공격을 미리 그려보기", "지킬 것과 자료가 오가는 길을 그려 위험 찾기", "새 기능 붙일 때 보안 위험 다시 따져보기", "위험마다 어떤 대책을 둘지 표로 정리"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: threat_modeling
   - id: process_mining
-    path: ["운영","흐름 개선"]
+    path: ["운영","품질과 개선"]
     name: "프로세스 마이닝 (Process mining)"
     hint: "사례 ID·활동·시각이 있는 이벤트 로그로 실제 업무 흐름과 준수 여부 분석"
-    aliases: ["이벤트 로그","업무 흐름","프로세스 발견","준수 검사","프로세스 마이닝"]
+    aliases: ["이벤트 로그","업무 흐름","프로세스 발견","준수 검사","프로세스 마이닝", "전산 기록으로 일이 실제 어떻게 흘러가는지 보기", "규정된 절차대로 처리되는지 기록으로 확인", "주문 처리가 어디서 되돌아가고 지연되는지", "시스템에 남은 처리 시각으로 업무 지도 그리기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: process_mining
   - id: value_stream_mapping
-    path: ["운영","흐름 개선"]
+    path: ["운영","품질과 개선"]
     name: "가치흐름도 (Value Stream Mapping)"
     hint: "공정의 작업·대기·재고·재작업을 그려 낭비와 개선 지점 파악"
-    aliases: ["가치흐름","재작업","공정 대기","낭비 제거","공정 개선"]
+    aliases: ["가치흐름","재작업","공정 대기","낭비 제거","공정 개선", "주문부터 출하까지 흐름을 한 장에 그리기", "실제 작업 시간보다 기다리는 시간이 훨씬 김", "공정 사이에 쌓인 재고와 멈춤 표시하기", "현재 흐름 그림과 바라는 흐름 그림 비교"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: value_stream_mapping
   - id: card_sorting
-    path: ["설계","사용자 경험"]
+    path: ["설계","사용자와 서비스"]
     name: "카드 소팅 (Card sorting)"
     hint: "사용자의 항목 묶음·명명 방식으로 정보구조 설계; 기존 탐색성 검증은 별도"
-    aliases: ["정보구조","메뉴 항목","콘텐츠 분류","메뉴 묶음","카드 소팅"]
+    aliases: ["정보구조","메뉴 항목","콘텐츠 분류","메뉴 묶음","카드 소팅", "항목 쪽지를 사람들에게 직접 묶어 보게 하기", "고객이 생각하는 분류 방식 알아내기", "메뉴 이름을 사용자 말로 짓고 싶을 때", "새 사이트 분류를 짜기 전에 의견 모으기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: card_sorting
   - id: usability_testing
-    path: ["설계","사용자 경험"]
+    path: ["설계","사용자와 서비스"]
     name: "사용성 테스트 (Usability testing)"
     hint: "대표 사용자의 실제 과업 수행을 관찰해 막힘·오류 발견; 선호 설문과 구분"
-    aliases: ["사용성","과업 수행","사용자 관찰","가입 과정","화면 관찰"]
+    aliases: ["사용성","과업 수행","사용자 관찰","가입 과정","화면 관찰", "실제 사람에게 앱을 써 보게 하고 지켜보기", "어디서 헤매고 실수하는지 직접 관찰", "좋아하느냐가 아니라 해낼 수 있는지 확인", "출시 전 고객 몇 명 불러 과제 시켜 보기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: usability_testing
   - id: journey_mapping
-    path: ["설계","사용자 경험"]
+    path: ["설계","사용자와 서비스"]
     name: "사용자 여정 지도 (Journey mapping)"
     hint: "목표 달성 과정의 단계·접점·행동·경험을 정리; 조사 근거로 불편 지점 확인"
-    aliases: ["고객 여정","사용자 여정","접점","서비스 경험","경험 흐름"]
+    aliases: ["고객 여정","사용자 여정","접점","서비스 경험","경험 흐름", "고객이 알게 된 순간부터 구매 후까지 흐름 그리기", "손님이 어느 단계에서 짜증 나는지 찾기", "시간순으로 고객의 행동과 기분 정리하기", "병원 예약부터 귀가까지 환자 경험 훑기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: journey_mapping
   - id: retrieval_practice
-    path: ["학습","기억"]
+    path: ["학습","교수와 평가"]
     name: "인출 연습 (Retrieval practice)"
     hint: "답을 먼저 떠올리고 피드백으로 확인하는 학습; 단순 재독과 구분"
-    aliases: ["인출","퀴즈","능동 회상","자기 시험","책을 덮고"]
+    aliases: ["인출","퀴즈","능동 회상","자기 시험","책을 덮고", "여러 번 읽었는데 시험 때 생각이 안 남", "책 덮고 스스로 퀴즈 내며 공부하기", "읽기만 하는 공부가 효과 없을 때", "단어장 가리고 뜻 먼저 맞혀 보기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: retrieval_practice
   - id: spaced_repetition
-    path: ["학습","기억"]
+    path: ["학습","교수와 평가"]
     name: "간격 반복 (Spaced repetition)"
     hint: "기억 상태에 따라 복습 간격을 조절하여 장기 기억 유지"
-    aliases: ["복습 간격","망각","장기 기억","간격 반복","복습 일정"]
+    aliases: ["복습 간격","망각","장기 기억","간격 반복","복습 일정", "외운 단어가 일주일 뒤면 다 사라짐", "복습을 며칠마다 해야 할지 모르겠음", "잊을 만할 때 다시 보는 암기 일정", "벼락치기 말고 오래 남게 외우는 법"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: spaced_repetition
   - id: toulmin
-    path: ["사고","논증"]
+    path: ["사고","추론"]
     name: "툴민 논증 모형 (Toulmin model)"
     hint: "주장·자료·논거·한정·반박을 구분해 논증의 연결과 빠진 전제 점검"
-    aliases: ["주장과 근거","논거","반론","숨은 전제","논증","설득력"]
+    aliases: ["주장과 근거","논거","반론","숨은 전제","논증","설득력", "내 글의 주장과 근거가 제대로 이어지는지 뜯어보기", "말은 그럴듯한데 어디가 빠졌는지 모르겠는 글", "논술 쓸 때 예상되는 반대 의견 자리까지 짜 넣기", "근거에서 결론으로 넘어가는 숨은 가정 찾아내기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: toulmin
   - id: time_series_cv
-    path: ["계산","예측 검증"]
+    path: ["계산","기계학습"]
     name: "시계열 교차검증 (Rolling-origin validation)"
     hint: "과거로 학습하고 이후 구간으로 예측 평가; 시간 순서·정보 누출 방지"
-    aliases: ["시계열 검증","정보 누출","미래 예측","시간 순서","과거 학습"]
+    aliases: ["시계열 검증","정보 누출","미래 예측","시간 순서","과거 학습", "매출 예측을 미래 자료 훔쳐보지 않고 시험하기", "작년까지로 배우고 올해를 맞혀보는 식의 검증", "날짜 순서 있는 자료를 섞어 나누면 안 될 때", "시험 점수는 좋았는데 실전 예측이 빗나갈 때"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: time_series_cv
   - id: survival_analysis
-    path: ["계산","시간 분석"]
+    path: ["계산","통계"]
     name: "생존분석 (Survival analysis)"
     hint: "사건이 일어날 때까지의 시간을 중도절단과 함께 분석; 관측 종료와 사건 구분"
-    aliases: ["중도절단","이탈 시점","고장 시간","생존분석","사건 시간"]
+    aliases: ["중도절단","이탈 시점","고장 시간","생존분석","사건 시간", "고객이 가입 후 얼마 만에 해지하는지 분석", "조사 끝날 때까지 아무 일 없던 사람도 포함해 분석", "환자가 치료 뒤 재발까지 걸리는 기간 비교", "기계가 고장 날 때까지 버티는 기간 추정"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: survival_analysis
   - id: rapidfuzz
-    path: ["데이터","명칭 연결"]
+    path: ["데이터","정리와 저장"]
     name: "RapidFuzz"
     hint: "문자열 유사도로 철자·표기 차이가 있는 이름 후보 검색; 동일 개체 확정과 구분"
-    aliases: ["철자 오류","문자열 유사도","표기 차이","유사 명칭","오타 매칭"]
+    aliases: ["철자 오류","문자열 유사도","표기 차이","유사 명칭","오타 매칭", "오타 난 상호명과 비슷한 이름 후보 찾기", "띄어쓰기나 철자가 조금 다른 글자 닮은 정도 재기", "검색어를 틀리게 쳐도 가까운 항목 보여주기", "두 글귀가 몇 퍼센트쯤 닮았는지 점수 매기기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: rapidfuzz
   - id: splink
-    path: ["데이터","개체 연결"]
+    path: ["데이터","정리와 저장"]
     name: "Splink"
     hint: "공통 식별자 없는 명부를 여러 필드의 확률적 레코드 연결로 매칭"
-    aliases: ["동일인","명부","공통 식별자","레코드 연결","확률적 매칭"]
+    aliases: ["동일인","명부","공통 식별자","레코드 연결","확률적 매칭", "주민번호 없이 이름·생일·주소로 같은 사람 맞추기", "수십만 명 명부 두 개를 가능성 점수로 짝짓기", "여러 단서를 합쳐 같은 사람일 확률 계산하기", "완전히 일치하지 않는 회원 명단끼리 대조하기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: splink
   - id: great_expectations
-    path: ["데이터","품질 검증"]
+    path: ["데이터","정리와 저장"]
     name: "Great Expectations"
     hint: "표의 결측·범위·유일성·스키마 같은 품질 규칙을 선언해 검증"
-    aliases: ["품질 규칙","스키마","유일성","데이터 검증","품질 검사"]
+    aliases: ["품질 규칙","스키마","유일성","데이터 검증","품질 검사", "이 칸은 비면 안 된다는 규칙을 적어두고 자동 점검", "매일 들어오는 자료가 멀쩡한지 자동으로 시험", "중복되면 안 되는 번호가 겹쳤는지 매번 확인", "자료 품질 기준을 문서처럼 써두고 통과 여부 보기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: great_expectations
   - id: playwright
-    path: ["개발","브라우저 검증"]
+    path: ["개발","설계와 검증"]
     name: "Playwright"
     hint: "브라우저의 클릭·입력·탐색 자동화와 종단간 회귀 검증"
-    aliases: ["브라우저 자동화","e2e","웹 회귀","화면 검증","브라우저 테스트"]
+    aliases: ["브라우저 자동화","e2e","웹 회귀","화면 검증","브라우저 테스트", "웹사이트 눌러보는 점검을 자동으로 돌리기", "가입부터 결제까지 실제 화면 흐름 시험", "사람 대신 웹 화면을 조작해주는 도구", "배포 후 주요 화면이 안 깨졌는지 자동 확인"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: playwright
   - id: numpy
-    path: ["계산","수치 배열"]
+    path: ["계산","수학"]
     name: "NumPy"
     hint: "다차원 배열의 벡터 연산·선형대수·수치 계산"
-    aliases: ["다차원 배열","행렬 연산","벡터화","배열 계산"]
+    aliases: ["다차원 배열","행렬 연산","벡터화","배열 계산", "파이썬에서 숫자 수백만 개를 한꺼번에 빠르게 계산", "반복문이 너무 느려서 통째로 연산하고 싶을 때", "격자 모양 숫자 묶음을 자르고 붙이고 곱하기", "다른 분석 도구들이 바탕으로 깔고 쓰는 기본 도구"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: matplotlib
-    path: ["표현","과학 시각화"]
+    path: ["표현","시각화"]
     name: "Matplotlib"
     hint: "축·범례·여러 패널을 갖춘 정적 그래프와 출판용 도표 작성"
-    aliases: ["출판용 그래프","과학 도표","서브플롯","오차 막대"]
+    aliases: ["출판용 그래프","과학 도표","서브플롯","오차 막대", "엑셀 숫자를 논문에 넣을 깔끔한 그림으로 만들기", "그림 하나에 작은 그래프 여러 개 나란히 넣기", "눈금과 선 설명 글씨를 내 마음대로 고치고 싶을 때", "파이썬으로 계산한 결과를 선이나 막대로 그려 저장"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: pillow
-    path: ["미디어","이미지 처리"]
+    path: ["미디어","영상과 사진"]
     name: "Pillow"
     hint: "래스터 그림의 자르기·크기 변경·합성·파일 형식 변환"
-    aliases: ["이미지 자르기","이미지 크기","사진 합성","래스터 변환"]
+    aliases: ["이미지 자르기","이미지 크기","사진 합성","래스터 변환", "사진 수백 장 크기를 한꺼번에 줄이기", "상품 사진에 가게 로고 겹쳐 넣기", "그림 파일 확장자를 다른 것으로 바꾸기", "사진 가장자리를 같은 비율로 잘라내기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: pdfplumber
-    path: ["문서","PDF 추출"]
+    path: ["문서","변환과 추출"]
     name: "pdfplumber"
     hint: "문자로 생성된 PDF의 글자 좌표·표 구조 추출"
-    aliases: ["PDF 표 추출","글자 좌표","PDF 테이블","문서 레이아웃 추출"]
+    aliases: ["PDF 표 추출","글자 좌표","PDF 테이블","문서 레이아웃 추출", "피디에프 속 표를 엑셀로 옮기고 싶을 때", "글자가 페이지 어느 위치에 있는지 알아내기", "은행 명세서 파일에서 거래 줄만 뽑아내기", "스캔본 아닌 문서 파일의 표 선 따라 칸 읽기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: pyarrow
-    path: ["데이터","열 기반 교환"]
+    path: ["데이터","정리와 저장"]
     name: "PyArrow"
     hint: "Arrow 열 기반 메모리와 Parquet 파일 간 데이터 교환"
-    aliases: ["Arrow","열 기반 메모리","Parquet 교환","컬럼형 저장"]
+    aliases: ["Arrow","열 기반 메모리","Parquet 교환","컬럼형 저장", "큰 표를 용량 작은 파일로 저장하고 빨리 읽기", "프로그램 사이에 표를 복사 없이 넘겨주기", "엑셀로 못 여는 대용량 자료 파일 다루기", "필요한 칸만 골라 읽어 메모리 아끼기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: trimesh
-    path: ["공학","메시 분석"]
+    path: ["공학","기계와 제작"]
     name: "Trimesh"
     hint: "삼각형 메시의 기하·부피·수밀성 분석과 가공"
-    aliases: ["삼각형 메시","STL 분석","OBJ 분석","수밀성","메시 부피"]
+    aliases: ["삼각형 메시","STL 분석","OBJ 분석","수밀성","메시 부피", "입체 모형 파일에 구멍이 뚫려 있는지 검사", "출력 전 모형의 부피와 겉넓이 구하기", "스캔한 입체 파일을 코드로 자르고 합치기", "표면 그물 파일을 파이썬으로 불러와 손질"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: skyfield
-    path: ["과학","천체 위치"]
+    path: ["과학","천문과 우주"]
     name: "Skyfield"
     hint: "천체력으로 행성·별·인공위성의 위치와 좌표 계산"
-    aliases: ["천체력","행성 위치","위성 궤도","천체 좌표"]
+    aliases: ["천체력","행성 위치","위성 궤도","천체 좌표", "오늘 밤 목성이 어디에 뜨는지 파이썬으로 계산", "우주정거장이 우리 동네 위를 지나는 시각 구하기", "특정 날짜의 일출 일몰과 달 위상 코드로 계산", "내 위치에서 본 행성의 고도와 방위 구하기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: qiskit
-    path: ["계산","양자 회로"]
+    path: ["과학","물리"]
     name: "Qiskit"
     hint: "양자 회로 구성·변환과 양자 계산 실험 설계"
-    aliases: ["양자 회로","큐비트","양자 게이트"]
+    aliases: ["양자 회로","큐비트","양자 게이트", "파이썬으로 양자 컴퓨터 프로그램 짜보기", "큐비트 게이트를 이어 붙여 시뮬레이터로 돌리기", "내가 만든 양자 알고리즘을 실제 장비에 제출", "양자 컴퓨팅 입문 실습용 무료 도구"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: gmsh
-    path: ["공학","격자 생성"]
+    path: ["공학","기계와 제작"]
     name: "Gmsh"
     hint: "유한요소 해석을 위한 기하 모델과 계산 격자 생성"
-    aliases: ["유한요소 격자","계산 격자","메시 생성","격자 생성"]
+    aliases: ["유한요소 격자","계산 격자","메시 생성","격자 생성", "해석 전에 모형을 작은 조각으로 나누기", "삼각형과 사면체 그물망 자동 생성", "계산용 그물이 거칠어 결과가 이상할 때", "형상 파일을 해석 프로그램 입력으로 준비"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: pyvista
-    path: ["표현","공학 시각화"]
+    path: ["표현","3D"]
     name: "PyVista"
     hint: "3차원 메시·체적 데이터의 과학 시각화와 후처리"
-    aliases: ["3차원 시각화","체적 데이터","해석 후처리","VTK"]
+    aliases: ["3차원 시각화","체적 데이터","해석 후처리","VTK", "실험·계산 결과를 입체 그림으로 나타내기", "물체 속 온도나 압력 분포를 색으로 보기", "촬영한 몸속 단면 자료를 입체로 쌓아 보기", "그물 모양 입체 자료를 자르고 다듬기"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: cantera
-    path: ["과학","반응 시뮬레이션"]
+    path: ["과학","화학"]
     name: "Cantera"
     hint: "화학 반응속도·열역학·수송과 반응기 모형 계산"
-    aliases: ["반응속도","열역학","연소","반응기"]
+    aliases: ["반응속도","열역학","연소","반응기", "연소할 때 불꽃 온도와 배출가스 조성 계산", "엔진이나 버너 안의 화학 반응을 코드로 모의", "수백 개 반응이 얽힌 기체 혼합물 변화 풀기", "연료와 공기 비율에 따른 점화 시간 예측"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools
   - id: lean4
-    path: ["사고","형식 증명"]
+    path: ["사고","추론"]
     name: "Lean 4"
     hint: "형식 언어로 작성한 수학 정리와 증명을 기계로 검사"
-    aliases: ["형식 증명","정리 증명","증명 검사","증명 보조기"]
+    aliases: ["형식 증명","정리 증명","증명 검사","증명 보조기", "내가 쓴 수학 증명에 빈틈 없는지 컴퓨터로 확인", "증명을 프로그램처럼 입력해 검증받기", "사람이 놓친 증명 오류를 기계가 잡아내게", "긴 증명을 한 줄씩 엄밀하게 확인받고 싶을 때"]
     source:
       path: docs/world_map/F_methods_and_validation.md
       section: source_recovered_tools

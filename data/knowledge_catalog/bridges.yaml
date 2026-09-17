@@ -5,7 +5,7 @@ entries:
   hint: 작성자·시대·목적과 자료의 세부를 대조하여 해석
   path:
   - 인문
-  - 역사
+  - 역사와 고고학
   - 자료 해석
   aliases:
   - 사료
@@ -13,6 +13,10 @@ entries:
   - 역사 자료
   - 당시 기록
   - primary source analysis
+  - "옛 일기나 편지를 역사 공부 재료로 읽는 법"
+  - "수업에서 받은 당시 포스터를 해석할 줄 모를 때"
+  - "누가 언제 무엇 때문에 썼는지 묻고 내용과 맞춰보기"
+  - "교과서 요약 말고 그 시대 원문을 직접 뜯어보기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: history
@@ -22,7 +26,7 @@ entries:
   hint: 경험자의 이야기를 인터뷰하고 맥락과 함께 보존
   path:
   - 인문
-  - 역사
+  - 역사와 고고학
   - 기록
   aliases:
   - 구술사
@@ -31,6 +35,10 @@ entries:
   - 가족의 역사
   - 옛날 이야기 기록
   - oral history
+  - "할머니의 전쟁 피난 이야기를 녹음해 남기기"
+  - "글을 남기지 않은 사람들의 기억을 역사로 만들기"
+  - "동네 어르신들께 옛 마을 모습 여쭤보기"
+  - "사건을 직접 겪은 분의 증언을 제대로 듣는 법"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: history
@@ -40,12 +48,16 @@ entries:
   hint: 녹음·전사·설명·접근 약정을 함께 보존
   path:
   - 인문
-  - 역사
+  - 역사와 고고학
   - 기록
   aliases:
   - 구술 기록 보존
   - 인터뷰 보관
   - 구술 아카이브
+  - "인터뷰 녹음을 나중에도 쓸 수 있게 정리해 두기"
+  - "증언 자료를 누가 볼 수 있는지 동의 받아두기"
+  - "녹취록과 음성과 촬영 정보를 한 묶음으로 관리"
+  - "마을 기록 사업에서 모은 증언을 오래 보관하는 법"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: history
@@ -55,12 +67,16 @@ entries:
   hint: 선택 때문에 포기한 최선의 다른 선택의 가치
   path:
   - 경제
-  - 선택
+  - 분석
   aliases:
   - 기회비용
   - 포기한 기회
   - 시간의 가치
   - opportunity cost
+  - "대학원 가면 그동안 못 버는 월급도 따져야"
+  - "이걸 고르면 대신 놓치게 되는 것의 값"
+  - "내 건물에서 장사하면 월세는 공짜일까"
+  - "공짜 시간에도 실은 치르고 있는 대가"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: economics
@@ -70,11 +86,15 @@ entries:
   hint: 상대적으로 작은 기회비용을 갖는 생산·분업의 기준
   path:
   - 경제
-  - 교환
+  - 분석
   aliases:
   - 비교우위
   - 분업
   - comparative advantage
+  - "뭐든 내가 더 잘해도 일을 나눠 맡는 게 나은 이유"
+  - "잘사는 나라와 못사는 나라가 서로 사고파는 까닭"
+  - "둘이서 집안일을 어떻게 나누면 가장 이득인지"
+  - "하나를 하느라 포기하는 것이 적은 쪽이 맡기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: economics
@@ -84,12 +104,16 @@ entries:
   hint: 경제적 거래의 편익·책임에 반영되지 않은 제삼자의 손익
   path:
   - 경제
-  - 사회적 영향
+  - 분석
   aliases:
   - 외부효과
   - 외부성
   - 제삼자 피해
   - externality
+  - "공장 매연으로 이웃이 보는 피해를 아무도 안 물어줌"
+  - "옆집 예쁜 정원 덕에 우리 집값도 오름"
+  - "층간 소음처럼 남에게 떠넘겨진 손해"
+  - "오염에 세금을 매기는 이유"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: economics
@@ -99,12 +123,16 @@ entries:
   hint: 이미 지출하여 앞으로의 선택으로 회수할 수 없는 비용
   path:
   - 경제
-  - 선택
+  - 분석
   aliases:
   - 매몰비용
   - 이미 쓴 돈
   - 본전 생각
   - sunk cost
+  - "지금까지 들인 돈이 아까워서 못 그만둠"
+  - "재미없는 영화를 표값 때문에 끝까지 봄"
+  - "망해가는 사업에 계속 돈을 붓는 심리"
+  - "이미 쓴 돈은 잊고 앞으로만 보고 결정"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: economics
@@ -114,7 +142,7 @@ entries:
   hint: 수요·고객·시장 규모를 자료와 직접 조사로 파악
   path:
   - 사업
-  - 시장
+  - 전략과 마케팅
   aliases:
   - 시장조사
   - 수요 조사
@@ -122,6 +150,10 @@ entries:
   - 누가 살지
   - 팔릴지
   - market research
+  - "이 동네에 살 사람이 얼마나 되는지"
+  - "창업 전에 수요가 있는지 알아보기"
+  - "통계 자료와 설문으로 시장 크기 가늠"
+  - "투자자에게 보여줄 시장 규모 근거"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: business
@@ -131,13 +163,17 @@ entries:
   hint: 같은 고객의 문제를 해결하는 경쟁 수단을 비교
   path:
   - 사업
-  - 시장
+  - 전략과 마케팅
   aliases:
   - 경쟁분석
   - 경쟁사
   - 경쟁 상품
   - 비슷한 가게
   - competitive analysis
+  - "옆 가게와 우리 가게 조목조목 견주기"
+  - "손님이 우리 대신 고르는 다른 방법들"
+  - "비슷한 앱들의 기능과 가격 표로 정리"
+  - "직접 경쟁자 말고 대체재까지 살펴보기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: business
@@ -146,14 +182,18 @@ entries:
   name: 손익분기 분석 (Break-even analysis)
   hint: 매출과 비용이 같아지는 판매량·매출을 추정
   path:
-  - 사업
-  - 수익 구조
+  - 경제
+  - 재무와 회계
   aliases:
   - 손익분기
   - 얼마나 팔아야
   - 몇 개 팔아야
   - 적자를 면하려면
   - break even
+  - "하루에 몇 잔 팔아야 본전인지 계산"
+  - "월세와 인건비 내고 남으려면 필요한 매출"
+  - "가게 열기 전에 최소 판매 목표 잡기"
+  - "가격을 올리면 본전 시점이 어떻게 달라지나"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: business
@@ -162,13 +202,17 @@ entries:
   name: 설문조사 (Survey research)
   hint: 일정한 질문으로 응답을 모아 집단의 특성을 조사
   path:
-  - 조사
-  - 사회 조사
+  - 사회
+  - 사회조사
   aliases:
   - 설문조사
   - 설문지
   - 응답자
   - survey research
+  - "많은 사람에게 같은 문항을 돌려 의견 모으기"
+  - "고객 만족도를 숫자로 파악하고 싶을 때"
+  - "전교생 생각을 한 번에 알아보는 질문지"
+  - "온라인 양식으로 수백 명 응답 받아 집계하기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: business
@@ -184,6 +228,10 @@ entries:
   - 협상 결렬
   - 합의가 안 되면
   - 거절할 기준
+  - "이 거래가 깨지면 나는 어디로 갈 수 있나"
+  - "연봉 교섭 전에 다른 회사 제안 확보해두기"
+  - "상대 제안을 거절해도 되는지 판단하는 기준"
+  - "물러설 곳이 있어야 흥정에서 당당해지는 이유"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: negotiation
@@ -199,6 +247,10 @@ entries:
   - 합의 가능
   - 협상 범위
   - 서로 받아들일
+  - "파는 쪽 최저가와 사는 쪽 최고가 사이 구간"
+  - "값을 맞출 여지가 아예 있는지부터 확인"
+  - "중고차 흥정에서 서로 수긍할 가격대 찾기"
+  - "양쪽 마지노선이 안 겹쳐 거래가 안 되는 경우"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: negotiation
@@ -214,6 +266,10 @@ entries:
   - 통합적 협상
   - 서로 원하는 것
   - 협상 준비
+  - "한쪽이 얻으면 한쪽이 잃는 흥정에서 벗어나기"
+  - "서로 진짜 원하는 게 달라서 둘 다 만족하는 타협"
+  - "가격 말고 납기와 조건까지 묶어 주고받기"
+  - "오렌지 껍질과 과즙을 각자 나눠 갖는 식의 해결"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: negotiation
@@ -223,7 +279,7 @@ entries:
   hint: 원료·제조·사용·폐기의 환경 영향을 범위를 정해 평가
   path:
   - 환경
-  - 제품과 자원
+  - 기후와 자원
   aliases:
   - 전과정평가
   - lca
@@ -231,6 +287,10 @@ entries:
   - 환경 영향
   - 제조부터 폐기
   - life cycle assessment
+  - "종이컵과 머그컵 중 뭐가 진짜 친환경일까"
+  - "만들 때부터 버릴 때까지 환경 부담 따지기"
+  - "전기차가 생산 단계까지 치면 정말 깨끗한가"
+  - "제품 하나의 일생 동안 생기는 오염 비교"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: environment
@@ -240,13 +300,17 @@ entries:
   hint: 제품 과정에 들어오고 나가는 물질·에너지를 정리
   path:
   - 환경
-  - 제품과 자원
+  - 기후와 자원
   aliases:
   - 전과정 목록
   - lci
   - 물질 투입
   - 에너지 투입
   - life cycle inventory
+  - "제품 만드는 데 들어간 재료와 전기 전부 집계"
+  - "공정마다 뭐가 투입되고 뭐가 배출되나 표 만들기"
+  - "환경 부담 계산 전에 자료부터 모으는 단계"
+  - "공장 단계별 원료 사용량과 폐수 양 기록"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: environment
@@ -256,12 +320,16 @@ entries:
   hint: 정해진 범위의 활동과 관련된 온실가스 배출량
   path:
   - 환경
-  - 기후
+  - 기후와 자원
   aliases:
   - 탄소발자국
   - 온실가스 배출
   - 탄소 배출
   - carbon footprint
+  - "우리 가게가 내뿜는 온실가스가 얼마나 될까"
+  - "비행기 한 번 타면 지구에 얼마나 부담일까"
+  - "전기와 기름 쓴 양을 배출량으로 바꿔 계산"
+  - "회사 기후 보고서에 넣을 배출 수치 구하기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: environment
@@ -271,12 +339,16 @@ entries:
   hint: 연구 결과 묶음을 얼마나 신뢰할지 체계적으로 평가
   path:
   - 건강
-  - 연구근거
+  - 보건 연구
   aliases:
   - grade
   - 근거 확실성
   - 연구를 믿어도
   - 연구의 신뢰도
+  - "연구가 여러 편인데 결론을 어디까지 믿을지"
+  - "진료 지침 권고가 얼마나 탄탄한지 등급 매기기"
+  - "논문마다 결과가 달라 전체 신뢰 수준 판단"
+  - "소규모 연구뿐인 치료법을 권해도 되는지 따지기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: evidence
@@ -286,12 +358,16 @@ entries:
   hint: 건강 관련 체계적 문헌고찰과 쉬운 요약의 자료원
   path:
   - 건강
-  - 연구근거
+  - 보건 연구
   aliases:
   - cochrane
   - 코크란
   - 치료 연구 종합
   - 건강 연구 종합
+  - "이 치료가 정말 효과 있는지 믿을 만한 종합 결론"
+  - "여러 연구를 모아 정리한 건강 정보 찾는 곳"
+  - "건강식품 효능을 광고 말고 연구로 확인하기"
+  - "일반인도 읽을 수 있는 치료 효과 요약본"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: evidence
@@ -301,12 +377,16 @@ entries:
   hint: 의생명 주제를 표준 이름과 계층으로 찾는 어휘집
   path:
   - 건강
-  - 문헌 검색
+  - 보건 연구
   aliases:
   - mesh
   - 의학 주제명
   - 의학 검색어
   - medical subject headings
+  - "의학 논문 검색할 때 단어가 제각각이라 빠뜨림"
+  - "병 이름이 여러 개라 검색 결과가 흩어질 때"
+  - "논문 검색에 쓸 공식 용어 찾기"
+  - "넓은 질환군에서 세부 병명으로 좁혀 검색"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: evidence
@@ -324,6 +404,10 @@ entries:
   - 실제 쓰임
   - 앞뒤 문맥
   - concordance
+  - "한 표현이 쓰인 문장을 줄 맞춰 모아 보기"
+  - "검색어를 가운데 놓고 좌우 글귀 나열"
+  - "단어가 실제 글에서 어떻게 쓰이나 예문 수집"
+  - "여러 책에서 같은 말의 쓰임새 견주기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: language
@@ -339,6 +423,10 @@ entries:
   - 단어 조합
   - 함께 쓰이는
   - collocation
+  - "어떤 단어와 자주 붙어 다니는 짝꿍 말 찾기"
+  - "영어에서 자연스러운 단어 조합 알아내기"
+  - "강한 비인지 센 비인지 어울림 확인"
+  - "특정 낱말 옆에 늘 오는 말 통계 내기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: language
@@ -354,6 +442,10 @@ entries:
   - 자주 나오는 단어
   - 어휘 빈도
   - word frequency
+  - "글에서 가장 많이 나온 낱말 순위 뽑기"
+  - "연설문에 어떤 말이 몇 번 나왔나 세기"
+  - "리뷰 모음에서 자주 언급된 말 집계"
+  - "교재에 나오는 필수 어휘 목록 만들기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: language
@@ -368,6 +460,10 @@ entries:
   - antconc
   - 앤트콘크
   - 말뭉치 도구
+  - "글 묶음에서 단어 쓰임을 뒤지는 무료 프로그램"
+  - "영어 논문 모음에서 자주 쓰는 표현 찾기"
+  - "코딩 없이 문서 뭉치 낱말 통계 내기"
+  - "어학 전공 과제용 텍스트 분석 프로그램"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: language
@@ -377,7 +473,7 @@ entries:
   hint: 지점·선·영역에서 일정 거리 안의 구역을 구성
   path:
   - 공간
-  - 지리 분석
+  - 지구와 지리
   aliases:
   - 공간 버퍼
   - 반경 안
@@ -385,6 +481,10 @@ entries:
   - 주변 시설
   - 일정 거리 이내
   - spatial buffer
+  - "학교 주변 이백 미터 안 구역 표시"
+  - "도로에서 일정 거리 이내 땅 골라내기"
+  - "가게 반경 몇 킬로 안 범위 그리기"
+  - "하천 양옆 보호 구역 띠 만들기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: spatial
@@ -394,13 +494,17 @@ entries:
   hint: 포함·교차 같은 위치 관계로 지리 객체의 속성을 결합
   path:
   - 공간
-  - 지리 분석
+  - 지구와 지리
   aliases:
   - 공간 결합
   - 행정구역별
   - 구역에 속하는
   - 지역별 시설
   - spatial join
+  - "각 가게가 어느 동에 속하는지 붙이기"
+  - "좌표만 있는 점에 구역 이름 달아 주기"
+  - "구역 안에 든 점 개수를 세어 합치기"
+  - "공통 열 없이 위치로 두 표를 잇기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: spatial
@@ -410,10 +514,14 @@ entries:
   hint: 지도 레이어를 편집하고 공간 분석을 수행하는 GIS
   path:
   - 공간
-  - 지리 분석
+  - 지구와 지리
   aliases:
   - qgis
   - 큐지아이에스
+  - "무료로 쓰는 지도 제작 분석 프로그램"
+  - "여러 지도 층을 겹쳐 보고 직접 고치기"
+  - "마우스로 경계선 그려 나만의 지도 만들기"
+  - "받은 지도 파일을 열어 볼 프로그램"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: spatial
@@ -423,12 +531,16 @@ entries:
   hint: 대화로 경험·목적·어려움의 맥락을 탐색
   path:
   - 설계
-  - 사용자 탐색
+  - 사용자와 서비스
   aliases:
   - 사용자 인터뷰
   - 고객 면담
   - 사용자 면담
   - user interview
+  - "고객을 만나 일대일로 깊이 이야기 듣기"
+  - "왜 그렇게 쓰는지 사연을 캐묻고 싶을 때"
+  - "제품 기획 전에 질문지 짜서 대화하기"
+  - "숫자로는 안 보이는 속마음과 불편 듣기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: design
@@ -438,13 +550,17 @@ entries:
   hint: 아이디어의 핵심을 간단한 시제품으로 만들어 확인
   path:
   - 설계
-  - 시제품
+  - 사용자와 서비스
   aliases:
   - 프로토타입
   - 시제품
   - 종이 모형
   - 구현 전에 확인
   - rapid prototyping
+  - "아이디어를 하루 만에 대충 만들어 보기"
+  - "완성도보다 속도로 시제품 찍어 내기"
+  - "핵심만 담은 모형으로 될지 안 될지 보기"
+  - "회의만 하지 말고 일단 만들어서 확인"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: design
@@ -454,12 +570,16 @@ entries:
   hint: 연속 장면으로 개념·경험의 흐름을 표현
   path:
   - 표현
-  - 이야기
+  - 시각예술
   aliases:
   - 스토리보드
   - 콘티
   - 장면 순서
   - storyboard
+  - "영상 찍기 전에 컷마다 그림으로 미리 짜기"
+  - "손님이 서비스를 쓰는 과정을 만화처럼 그려 보기"
+  - "광고 아이디어를 칸 그림으로 설명하기"
+  - "촬영 순서와 화면 구도를 미리 정리하기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: design
@@ -469,12 +589,16 @@ entries:
   hint: 풀이 과정을 읽고 독립 문제 풀이와 연결
   path:
   - 학습
-  - 연습 설계
+  - 교수와 평가
   aliases:
   - 풀이 예제
   - 풀이 과정
   - 예제를 보고
   - worked example
+  - "처음 배우는 단원이라 손도 못 대겠음"
+  - "모범 답안 따라 읽고 비슷한 문제 풀기"
+  - "해설지를 어떻게 활용해야 실력이 늘까"
+  - "초보에게 문제부터 던지니 다들 포기함"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: learning
@@ -484,12 +608,16 @@ entries:
   hint: 풀이의 이유와 개념의 연결을 스스로 설명
   path:
   - 학습
-  - 연습 설계
+  - 교수와 평가
   aliases:
   - 자기 설명
   - 왜 그렇게 푸는지
   - 원리를 설명
   - self explanation
+  - "답은 맞는데 왜 그런지 말을 못 함"
+  - "풀이 한 줄마다 이유를 말로 풀어 보기"
+  - "친구에게 가르치듯 혼자 중얼거리며 공부"
+  - "공식만 외워서 응용 문제에 막힐 때"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: learning
@@ -499,7 +627,7 @@ entries:
   hint: 텍스트의 표현·형식·세부에서 해석의 근거를 찾음
   path:
   - 인문
-  - 문학
+  - 글쓰기와 편집
   - 읽기
   aliases:
   - 문학 분석
@@ -507,6 +635,10 @@ entries:
   - 소설 분석
   - 표현의 의미
   - close reading
+  - "시 한 편을 단어 하나하나 뜯어가며 읽기"
+  - "작품 해석을 본문 구절로 뒷받침해야 할 때"
+  - "줄거리 요약 말고 표현을 파고드는 감상문"
+  - "왜 이 낱말을 골랐을까 따져보는 읽기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: writing
@@ -516,7 +648,7 @@ entries:
   hint: 쓴 글의 문단별 요지와 역할을 추출하여 구성을 점검
   path:
   - 인문
-  - 글쓰기
+  - 글쓰기와 편집
   - 퇴고
   aliases:
   - 글의 구조
@@ -524,6 +656,10 @@ entries:
   - 논리 흐름
   - 퇴고
   - reverse outline
+  - "다 쓴 초고 흐름이 이상한데 어디가 문제인지 모름"
+  - "완성한 글에서 단락마다 한 줄 요약 뽑아보기"
+  - "단락 순서를 바꿔야 할지 판단하기"
+  - "겹치는 단락과 빠진 내용을 퇴고 때 찾아내기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: writing
@@ -540,6 +676,10 @@ entries:
   - 선순환
   - 시간 지연
   - system dynamics
+  - "몇 년 뒤 인구나 재고가 어떻게 변할지 돌려보기"
+  - "정책을 바꾸면 시간이 지나며 생길 일 예측"
+  - "쌓이고 빠지는 양을 식으로 엮어 미래 그려보기"
+  - "호황과 불황이 반복되는 까닭을 모형으로 보기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: systems
@@ -556,6 +696,10 @@ entries:
   - 축적량
   - 유입과 유출
   - stocks and flows
+  - "욕조에 고인 물과 수도꼭지 물줄기 구분하기"
+  - "통장 잔고와 매달 드나드는 돈을 헷갈릴 때"
+  - "재고로 쌓인 양과 하루 입출고를 나눠 보기"
+  - "빚이 줄지 않는 이유를 들어오고 나감으로 이해"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: systems
@@ -571,6 +715,10 @@ entries:
   - 피드백 고리
   - 되먹임
   - causal loop
+  - "원인과 결과를 화살표로 이어 그림 그리기"
+  - "문제가 돌고 도는 악순환을 종이에 그려보기"
+  - "무엇이 무엇을 늘리고 줄이는지 한눈에 보기"
+  - "요인들 사이 영향 관계를 팀과 함께 정리"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: systems
@@ -580,13 +728,17 @@ entries:
   hint: 장애가 있는 사람도 웹의 정보와 기능을 이용할 수 있음
   path:
   - 설계
-  - 접근성
+  - 사용자와 서비스
   aliases:
   - 웹 접근성
   - 스크린리더
   - 키보드만으로
   - 장애인 접근
   - web accessibility
+  - "시각장애인이 우리 홈페이지를 못 쓴다고 할 때"
+  - "화면 읽어 주는 프로그램에서도 되는 사이트"
+  - "마우스 없이 자판만으로 누리집 이용하기"
+  - "공공기관 사이트 장애인 이용 기준 맞추기"
   source:
     path: docs/world_map/H_catalog_bridges.md
     section: accessibility

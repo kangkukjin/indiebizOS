@@ -8,7 +8,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 현금흐름 할인
   hint: 미래 현금흐름을 현재 가치로 환산
-  aliases: [Discounted cash flow, DCF]
+  aliases: [Discounted cash flow, DCF, "몇 년 뒤 받을 돈이 지금 돈으로 얼마인지", "가게나 회사를 얼마에 사야 적정한지 계산", "앞으로 벌 수익으로 투자 가치 매기기", "연금을 한꺼번에 받을지 나눠 받을지 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -17,7 +17,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 순현재가치
   hint: 투자 유출입의 현재 가치 차이
-  aliases: [Net present value, NPV]
+  aliases: [Net present value, NPV, "몇 년 뒤 받을 돈을 지금 돈으로 치면 얼마인지", "지금 큰돈 쓰고 나중에 나눠 받는 게 이득인지", "기계 새로 사는 게 남는 장사인지 따져보기", "나중 돈과 지금 돈을 같은 잣대로 더하고 빼기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -26,7 +26,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 내부수익률
   hint: 순현재가치를 영으로 만드는 할인율
-  aliases: [Internal rate of return, IRR]
+  aliases: [Internal rate of return, IRR, "이 사업에 돈 넣으면 연 몇 퍼센트 버는 셈인지", "은행 이자보다 나은 투자인지 따져보기", "해마다 들어올 돈과 처음 넣는 돈만 알 때", "규모 다른 두 투자안의 벌이율 견주기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -35,7 +35,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 화폐의 시간가치
   hint: 시점에 따른 금액의 가치 차이
-  aliases: [Time value of money]
+  aliases: [Time value of money, "지금 백만 원과 십 년 뒤 백만 원이 다른 이유", "연금을 한 번에 받을지 나눠 받을지 비교", "몇 년 뒤 들어올 돈을 오늘 값으로 바꿔 보기", "할부와 일시불 중 실제로 뭐가 이득인지 따지기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -44,7 +44,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 듀레이션
   hint: 채권 현금흐름의 시간과 금리 민감도
-  aliases: [Duration]
+  aliases: [Duration, "금리가 오르면 내 채권 값이 얼마나 빠질지", "만기가 긴 채권이 더 출렁이는 이유", "이자와 원금을 평균 몇 년 만에 돌려받나", "금리 변동에 덜 흔들리는 채권 묶음 짜기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -53,7 +53,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 포트폴리오 분산
   hint: 상이한 위험 노출을 조합
-  aliases: [Portfolio diversification]
+  aliases: [Portfolio diversification, "한 곳에 몰아넣었다가 다 잃을까 걱정될 때", "같이 떨어지지 않는 것들로 섞어 담기", "한 업종 주식만 잔뜩 들고 있는 상태", "하나가 망해도 전체는 버티게 돈 나누기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -62,7 +62,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 평균분산 최적화
   hint: 수익 기대와 분산으로 배분 계산
-  aliases: [Mean variance optimization]
+  aliases: [Mean variance optimization, "주식과 예금에 몇 대 몇으로 나눠 넣을지 계산", "같은 출렁임이면 가장 많이 버는 비율 찾기", "종목별 예상 벌이와 흔들림 폭을 알고 있을 때", "감으로 말고 숫자로 투자 비중 정하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -71,7 +71,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 위험가치
   hint: 주어진 확률 수준의 손실 경계
-  aliases: [Value at risk, VaR]
+  aliases: [Value at risk, VaR, "웬만해선 하루에 최대 얼마까지 잃을 수 있나", "백 번 중 아흔다섯 번은 이 손해 안 넘는다는 선", "내 투자금의 손해 한도를 숫자 하나로 알고 싶을 때", "보유 종목의 평소 등락 기록으로 손실 폭 재기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -80,7 +80,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 기대초과손실
   hint: 꼬리 손실의 조건부 평균
-  aliases: [Expected shortfall]
+  aliases: [Expected shortfall, "최악의 날들만 모으면 평균 얼마를 잃는지", "드물지만 터지면 큰 손실의 크기 가늠", "한도를 넘는 폭락이 왔을 때 예상 피해", "투자 묶음의 극단 위험을 숫자 하나로"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -89,7 +89,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 스트레스 테스트
   hint: 불리한 시나리오에서 취약성 점검
-  aliases: [Stress testing]
+  aliases: [Stress testing, "금리가 확 오르면 우리 집 대출 감당되는지", "매출이 반토막 나도 가게가 버티는지 미리 보기", "최악의 상황을 넣어 어디가 먼저 무너지나 확인", "경기 나빠질 때를 대비한 재무 체력 점검"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -98,7 +98,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 시나리오 가치평가
   hint: 가정별 가치 차이 비교
-  aliases: [Scenario valuation]
+  aliases: [Scenario valuation, "잘될 때와 안될 때 회사 값이 얼마나 달라지나", "낙관 비관 중간 세 가지로 가게 값 매겨보기", "앞날 전망에 따라 인수 가격이 바뀔 때", "한 가지 숫자로 값을 못 박기 불안할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -107,7 +107,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 운전자본
   hint: 일상 운영에 묶이는 순유동 자원
-  aliases: [Working capital]
+  aliases: [Working capital, "장사는 잘되는데 통장에 돈이 없는 이유", "재고와 외상값에 잠겨 있는 돈이 얼마인지", "물건 사고 돈 받기까지 버틸 자금 계산", "매달 가게 굴리는 데 필요한 여윳돈 규모"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -116,7 +116,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 현금흐름 예측
   hint: 시점별 현금 유입과 유출 추정
-  aliases: [Cash flow forecasting]
+  aliases: [Cash flow forecasting, "다음 달 월급 줄 돈이 통장에 있을지 미리 보기", "이익은 나는데 돈이 말라 부도날까 걱정", "들어올 돈과 나갈 돈을 주 단위로 나열", "대출이 언제 얼마나 필요할지 가늠"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -125,7 +125,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 복식부기
   hint: 거래의 양면을 대차로 기록
-  aliases: [Double entry bookkeeping]
+  aliases: [Double entry bookkeeping, "장부를 두 군데 적어 합계가 맞는지 검산", "돈이 어디서 와서 어디로 갔는지 함께 적기", "가계부식 기록으로는 자산과 빚이 안 보일 때", "작은 가게 회계 장부 제대로 시작하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -134,7 +134,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 발생주의 회계
   hint: 현금 시점과 구별해 수익 비용 인식
-  aliases: [Accrual accounting]
+  aliases: [Accrual accounting, "돈은 다음 달에 받지만 매출은 이번 달로 잡기", "통장 잔고와 장부상 이익이 다른 이유", "외상으로 판 물건을 언제 실적으로 기록하나", "일 년치 선납 보험료를 달마다 나눠 처리"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -143,7 +143,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 활동기준원가
   hint: 활동 사용량으로 간접비 배분
-  aliases: [Activity based costing]
+  aliases: [Activity based costing, "공통 경비를 제품별로 공정하게 나누기", "손 많이 가는 소량 주문이 실제로 남는 장사인지", "임대료와 관리 인건비를 상품 원가에 얹는 법", "매출 비례로 경비 나눴더니 원가가 왜곡됨"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -152,7 +152,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 차이분석
   hint: 계획과 실제 원가의 차이 분해
-  aliases: [Variance analysis]
+  aliases: [Variance analysis, "예산보다 돈이 더 나간 이유를 항목별로 쪼개기", "재료값 탓인지 많이 쓴 탓인지 가려내기", "월말에 계획표와 실제 지출이 안 맞을 때", "공장 생산비가 예상보다 늘어난 원인 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -161,7 +161,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 듀퐁 분석
   hint: 자본수익률을 구성 요인으로 분해
-  aliases: [DuPont analysis]
+  aliases: [DuPont analysis, "주주 돈으로 번 수익률이 왜 높고 낮은지 쪼개보기", "마진과 회전과 빚 중 무엇이 성과를 끌었나", "수익률 같은 두 회사의 체질 차이 확인", "빚으로 부풀린 수익성인지 가려내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -170,7 +170,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 재무비율 분석
   hint: 재무제표 항목의 비율 비교
-  aliases: [Financial ratio analysis]
+  aliases: [Financial ratio analysis, "결산 서류 숫자로 회사가 튼튼한지 판단", "빚이 너무 많은 회사인지 간단히 확인", "같은 업종 경쟁사와 수익성 견주기", "거래처가 대금을 제때 줄 수 있을지 살피기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -179,7 +179,7 @@ entries:
   path: [경제, 재무와 회계]
   name: 유동성
   hint: 가치 손실 없이 현금화할 수 있는 정도
-  aliases: [Liquidity]
+  aliases: [Liquidity, "급할 때 바로 돈으로 바꿀 수 있는 재산인지", "집은 있는데 당장 쓸 돈이 없는 상황", "헐값에 안 팔고 빨리 처분할 수 있는지", "비상금으로 쓸 수 있는 자산 따져보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: finance
@@ -188,7 +188,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 변화이론
   hint: 활동에서 성과로 이어지는 가정 구성
-  aliases: [Theory of change]
+  aliases: [Theory of change, "이 활동이 왜 그런 결과를 낳는다고 믿는지 적기", "사업 밑에 깔린 전제를 하나씩 드러내 검증", "최종 목표에서 거꾸로 필요한 조건 짚어가기", "비영리단체가 사업 구상의 논리 고리 세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -197,7 +197,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 논리모형
   hint: 투입 활동 산출 성과의 연결
-  aliases: [Logic model]
+  aliases: [Logic model, "돈과 인력이 어떤 결과로 이어지는지 한 장 도표", "사업 계획서에 넣을 흐름 그림 그리기", "무엇을 넣어 무엇을 하고 무엇이 나오는지 정리", "지원 신청서의 기대 효과 칸을 채워야 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -206,7 +206,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 정책분석
   hint: 공공 문제의 대안과 영향 비교
-  aliases: [Policy analysis]
+  aliases: [Policy analysis, "공공 문제를 풀 여러 방안을 나란히 놓고 견주기", "주차난 해법 세 가지의 장단점 따져보기", "어떤 제도를 택할지 근거를 갖춰 보고서 쓰기", "시장에게 올릴 방안별 예상 결과 정리하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -215,7 +215,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 이해관계자 분석
   hint: 영향과 이해가 다른 주체 파악
-  aliases: [Stakeholder analysis]
+  aliases: [Stakeholder analysis, "이 일에 얽힌 사람들이 누구누구인지 정리", "누가 찬성하고 누가 반대할지 미리 파악하기", "힘은 세고 관심은 적은 쪽을 표로 나눠보기", "사업 시작 전에 설득해야 할 상대 목록 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -224,7 +224,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 규제영향평가
   hint: 규제 대안의 비용과 영향 검토
-  aliases: [Regulatory impact assessment]
+  aliases: [Regulatory impact assessment, "새 법규가 가게들에 얼마나 부담 줄지 미리 따지기", "의무를 새로 만들기 전에 다른 방법과 견주기", "금지 조항 도입으로 드는 돈과 얻는 이익 계산", "법령 만들 때 함께 내야 하는 부담 검토서"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -233,7 +233,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 프로그램 평가
   hint: 사업의 수행과 성과 평가
-  aliases: [Program evaluation]
+  aliases: [Program evaluation, "우리 사업이 계획대로 굴러갔는지 점검하기", "복지 사업이 끝난 뒤 잘했는지 따져보는 보고서", "후원 기관에 낼 실적 점검 자료 만들기", "운영 과정과 결과를 함께 돌아보는 검토"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -242,7 +242,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 과정평가
   hint: 계획한 활동이 수행된 방식 검토
-  aliases: [Process evaluation, 사업이 계획대로 실행]
+  aliases: [Process evaluation, 사업이 계획대로 실행, "사업이 애초 짠 대로 굴러갔는지 돌아보기", "성과가 안 난 게 방법 탓인지 실행 탓인지 가리기", "교육 프로그램이 현장에서 실제로 어떻게 진행됐는지", "참여자 출석과 빠뜨린 순서가 없었는지 점검"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -251,7 +251,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 영향평가
   hint: 개입 때문에 생긴 결과 변화 추정
-  aliases: [Impact evaluation]
+  aliases: [Impact evaluation, "지원금 덕분에 정말 나아진 건지 확인하기", "안 했어도 어차피 그렇게 됐을 거 아닌가 의문", "받은 집단과 안 받은 집단을 견주어 효과 재기", "교육 사업이 성적을 실제로 올렸는지 따지기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -260,7 +260,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 참여예산
   hint: 주민이 예산 배분 결정에 참여
-  aliases: [Participatory budgeting]
+  aliases: [Participatory budgeting, "동네 사람들이 구청 돈 쓸 곳을 직접 고르기", "우리 마을에 필요한 사업을 제안하고 투표하기", "놀이터 고칠지 가로등 달지 이웃이 정하는 제도", "지자체 살림 일부를 시민 손에 맡기는 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -269,7 +269,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 시민의회
   hint: 추첨된 시민의 숙의적 정책 검토
-  aliases: [Citizens assembly]
+  aliases: [Citizens assembly, "제비뽑기로 뽑힌 일반인들이 모여 정책 토론", "전문가나 정치인 대신 보통 사람이 검토하는 회의", "찬반 갈린 쟁점을 뽑힌 주민 대표단에 맡기기", "며칠간 학습하고 토의해 권고안을 내는 모임"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -278,7 +278,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 숙의조사
   hint: 정보와 토론 전후 의견 조사
-  aliases: [Deliberative polling]
+  aliases: [Deliberative polling, "자료 읽고 토의한 뒤 생각이 어떻게 바뀌는지", "충분히 알고 난 다음의 여론 알아보기", "즉흥적인 찬반 말고 숙고한 뒤의 의견 묻기", "같은 사람들에게 토론 앞뒤로 두 번 묻는 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -287,7 +287,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 사회영향평가
   hint: 개발과 정책의 사회적 변화 검토
-  aliases: [Social impact assessment]
+  aliases: [Social impact assessment, "댐 건설로 마을 공동체가 어떻게 달라질지", "재개발이 원주민 생활에 미칠 변화 살피기", "큰 공사 전에 주민 삶과 문화 피해 예상하기", "공장 입주 후 동네 인구와 일자리 변화 짚기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -296,7 +296,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 분배영향 분석
   hint: 집단별 비용과 편익의 차이 검토
-  aliases: [Distributional analysis]
+  aliases: [Distributional analysis, "이 제도로 누가 이득 보고 누가 손해 보는지", "세금 인상이 저소득층에 더 무겁진 않은지", "전체 평균은 좋아도 특정 계층만 부담 지는 경우", "소득 수준별로 혜택이 어떻게 갈리는지 따지기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -305,7 +305,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 보충성 원칙
   hint: 가까운 수준에서 가능한 일을 결정
-  aliases: [Subsidiarity]
+  aliases: [Subsidiarity, "동네에서 풀 수 있는 일은 동네가 정하게 하기", "중앙정부가 어디까지 개입해야 하는지 기준", "작은 단위가 못 할 때만 윗선이 나서는 원리", "본사가 지점 일에 일일이 간섭할 때의 반론"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -314,7 +314,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 책무성
   hint: 설명과 책임을 요구할 수 있는 관계
-  aliases: [Accountability]
+  aliases: [Accountability, "예산을 어디에 썼는지 따져 물을 수 있는 권리", "일이 잘못됐을 때 누가 답해야 하는지 불분명", "기관장이 결과에 대해 해명하도록 만드는 장치", "위탁 업체가 제대로 했는지 보고받는 체계"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -323,7 +323,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 투명성
   hint: 결정과 집행의 근거를 볼 수 있음
-  aliases: [Transparency]
+  aliases: [Transparency, "왜 그렇게 정했는지 누구나 들여다볼 수 있게", "회의록과 지출 내역을 주민에게 공개하기", "밀실에서 정해졌다는 의심을 없애고 싶을 때", "심사 기준과 점수를 지원자에게 알려주기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -332,7 +332,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 집합행동
   hint: 공동 목표를 위한 다수의 협력
-  aliases: [Collective action]
+  aliases: [Collective action, "다들 원하는데 아무도 먼저 나서지 않는 문제", "아파트 주민이 힘을 모아 관리비 문제 해결하기", "무임승차하는 사람 때문에 협동이 깨질 때", "여럿이 함께 움직여야만 얻을 수 있는 이익"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -341,7 +341,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 다중심 거버넌스
   hint: 여러 자율적 결정 중심의 조정
-  aliases: [Polycentric governance]
+  aliases: [Polycentric governance, "한 곳이 다 정하지 않고 여러 기관이 나눠 결정", "시 구청 주민단체가 각자 권한으로 맞물려 운영", "중앙 통제 없이 여러 주체가 공유 자원 관리", "강 하나를 여러 지역이 제각기 돌보며 조율"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -350,7 +350,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 적응적 관리
   hint: 실행 결과를 학습하며 관리 수정
-  aliases: [Adaptive management]
+  aliases: [Adaptive management, "일단 시행해보고 결과 보며 방식 고쳐나가기", "불확실한 상황에서 계획을 고정하지 않는 운영", "하천 복원을 해보며 배운 대로 조정하기", "처음부터 정답을 모를 때 단계적으로 다듬기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -359,7 +359,7 @@ entries:
   path: [사회, 정책과 거버넌스]
   name: 미래 징후 탐색
   hint: 변화의 초기 신호를 체계적으로 탐색
-  aliases: [Horizon scanning]
+  aliases: [Horizon scanning, "아직 작지만 앞으로 커질 조짐 미리 찾기", "업계에 닥칠 큰 변화를 남보다 일찍 눈치채기", "뉴스와 논문에서 낯선 움직임을 꾸준히 모으기", "십 년 뒤를 대비해 이상한 낌새 살피는 활동"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: policy
@@ -368,7 +368,7 @@ entries:
   path: [사회, 법과 제도]
   name: 법해석학적 연구
   hint: 법령과 판례의 규범 체계 분석
-  aliases: [Doctrinal legal research]
+  aliases: [Doctrinal legal research, "조문과 판결을 읽고 법리 정리하는 논문", "설문이나 실험 없이 법 문헌만으로 연구", "현행법이 이 사안을 어떻게 다루는지 체계화", "법학 대학원생의 전통적 연구 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -377,7 +377,7 @@ entries:
   path: [사회, 법과 제도]
   name: 비교법
   hint: 법체계 간 규범과 제도 비교
-  aliases: [Comparative law]
+  aliases: [Comparative law, "다른 나라는 이 문제를 어떻게 규율하나", "외국 제도를 들여오기 전 견주어 보기", "독일과 미국의 같은 법 다른 점", "입법 제안 논문에 넣을 해외 사례"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -386,7 +386,7 @@ entries:
   path: [사회, 법과 제도]
   name: 판례 요약
   hint: 사실 쟁점 판단 근거를 분리
-  aliases: [Case briefing]
+  aliases: [Case briefing, "긴 판결문을 한 장으로 간추리기", "법대 수업 전에 사건 정리해 가기", "무슨 일이 있었고 법원이 왜 그리 봤는지", "판결문에서 핵심만 뽑는 노트 양식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -395,7 +395,7 @@ entries:
   path: [사회, 법과 제도]
   name: IRAC 법적 분석
   hint: 쟁점 규칙 적용 결론으로 논증
-  aliases: [IRAC]
+  aliases: [IRAC, "법학 시험 답안을 네 토막으로 쓰기", "사례 문제를 순서대로 풀어가는 틀", "무엇이 문제고 어떤 법을 대입할지", "법률 의견서 문단 짜는 기본 순서"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -404,7 +404,7 @@ entries:
   path: [사회, 법과 제도]
   name: 법령 해석
   hint: 문언 체계 목적에 따른 규범 해석
-  aliases: [Statutory interpretation]
+  aliases: [Statutory interpretation, "법 조문 글귀가 애매해 뜻이 갈릴 때", "이 규정이 내 경우에도 해당되는지", "법을 만든 취지에 비춰 읽어보기", "사규나 약관 문장을 어떻게 읽어야 하나"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -413,7 +413,7 @@ entries:
   path: [사회, 법과 제도]
   name: 선례
   hint: 앞선 판단이 이후 판단에 주는 기준
-  aliases: [Precedent]
+  aliases: [Precedent, "예전 비슷한 사건에선 어떻게 결론 났나", "법원이 전에 한 결정을 따라야 하는지", "같은 일은 같게 다뤄야 한다는 원칙", "지난번 처리 사례가 이번 기준이 될 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -422,7 +422,7 @@ entries:
   path: [사회, 법과 제도]
   name: 적법절차
   hint: 권리 제한에서 요구되는 공정한 절차
-  aliases: [Due process]
+  aliases: [Due process, "해명할 기회도 없이 징계를 받았을 때", "처분 전에 미리 알리고 의견을 들었는지", "국가가 불이익 줄 때 밟아야 할 순서", "결론은 맞아도 과정이 부당했던 경우"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -431,7 +431,7 @@ entries:
   path: [사회, 법과 제도]
   name: 비례성 심사
   hint: 목적과 권리 제한의 균형 검토
-  aliases: [Proportionality test]
+  aliases: [Proportionality test, "규제가 목적에 비해 지나친지 따지기", "덜 침해하는 다른 방법은 없었는지", "공익을 위해 자유를 얼마나 막아도 되나", "헌법재판에서 법률을 판단하는 네 단계"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -440,7 +440,7 @@ entries:
   path: [사회, 법과 제도]
   name: 계약 검토
   hint: 권리 의무 조건과 위험 확인
-  aliases: [Contract review]
+  aliases: [Contract review, "도장 찍기 전에 불리한 조항 찾기", "임대차나 용역 서류 꼼꼼히 읽어보기", "위약금과 해지 조건 미리 확인", "상대가 보낸 서류 초안에 숨은 함정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -449,7 +449,7 @@ entries:
   path: [사회, 법과 제도]
   name: 법률 실사
   hint: 거래 전 법적 상태와 위험 조사
-  aliases: [Legal due diligence]
+  aliases: [Legal due diligence, "회사 인수 전에 숨은 소송과 빚 찾기", "투자하기 전 상대 회사 서류 샅샅이 보기", "건물 사기 전 권리관계 문제 확인", "사고 나서 뒤늦게 터질 법적 문제 예방"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -458,7 +458,7 @@ entries:
   path: [사회, 법과 제도]
   name: 준법 요구 매핑
   hint: 의무와 내부 통제를 대응
-  aliases: [Compliance mapping]
+  aliases: [Compliance mapping, "지켜야 할 규정과 회사 절차 짝짓기", "어느 법 조항을 누가 챙기는지 표 만들기", "감독기관 점검 앞두고 빠진 곳 찾기", "규제는 많은데 대응 담당이 불분명할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -467,7 +467,7 @@ entries:
   path: [사회, 법과 제도]
   name: 대체적 분쟁해결
   hint: 재판 외 절차로 분쟁 해결
-  aliases: [Alternative dispute resolution]
+  aliases: [Alternative dispute resolution, "법원 안 가고 다툼 끝내는 방법들", "소송은 너무 비싸고 오래 걸릴 때", "재판 말고 고를 수 있는 길 한눈에", "거래처와 갈등을 조용히 풀고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -476,7 +476,7 @@ entries:
   path: [사회, 법과 제도]
   name: 조정
   hint: 중립 제삼자가 합의를 지원
-  aliases: [Mediation]
+  aliases: [Mediation, "가운데 사람이 도와 서로 양보점 찾기", "이웃이나 가족과 대화로 풀고 싶은 다툼", "결정은 우리가 하고 진행만 남이 돕는 방식", "이혼이나 층간소음 갈등 법정 밖에서 풀기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -485,7 +485,7 @@ entries:
   path: [사회, 법과 제도]
   name: 중재
   hint: 당사자가 맡긴 판단으로 분쟁 해결
-  aliases: [Arbitration]
+  aliases: [Arbitration, "판사 대신 정한 사람의 결정에 따르기", "계약서에 분쟁은 법원 말고 어디서 한다는 조항", "국제 거래 다툼을 비공개로 끝내기", "한 번 내려지면 뒤집기 어려운 법정 밖 판정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -494,7 +494,7 @@ entries:
   path: [사회, 법과 제도]
   name: 회복적 정의
   hint: 피해 책임과 관계 회복을 중심에 둠
-  aliases: [Restorative justice]
+  aliases: [Restorative justice, "처벌보다 피해자가 회복되는 데 초점", "학교폭력 가해자와 피해자 대화 모임", "잘못한 사람이 직접 사과하고 책임지기", "벌만 주고 관계는 그대로 깨져 있을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -503,7 +503,7 @@ entries:
   path: [사회, 법과 제도]
   name: 충분한 설명에 의한 동의
   hint: 내용을 이해한 자발적 동의
-  aliases: [Informed consent]
+  aliases: [Informed consent, "수술 전에 위험을 듣고 서명하기", "연구 참여자에게 미리 알려야 할 것들", "뭔지도 모르고 사인하게 하면 안 되는 이유", "동의서 양식을 어떻게 써야 할지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -512,7 +512,7 @@ entries:
   path: [사회, 법과 제도]
   name: 개인정보 최소수집
   hint: 목적에 필요한 정보만 처리
-  aliases: [Data minimization]
+  aliases: [Data minimization, "회원가입 때 꼭 필요한 것만 묻기", "주민번호까지 받아야 하나 고민될 때", "정보가 새도 피해가 작도록 덜 모으기", "설문지에서 쓸데없는 인적 사항 빼기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -521,7 +521,7 @@ entries:
   path: [사회, 법과 제도]
   name: 개인정보 영향평가
   hint: 개인정보 처리의 위험 검토
-  aliases: [Privacy impact assessment]
+  aliases: [Privacy impact assessment, "새 서비스 출시 전 고객 정보 위험 점검", "카메라나 추적 기능 도입해도 되는지", "정보 유출 사고 나기 전에 미리 따져보기", "대량의 회원 자료를 다루는 시스템 사전 심사"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -530,7 +530,7 @@ entries:
   path: [사회, 법과 제도]
   name: 지식재산
   hint: 창작과 발명 등에 관한 권리 체계
-  aliases: [Intellectual property]
+  aliases: [Intellectual property, "내 그림이나 글을 남이 가져다 썼을 때", "아이디어와 상표를 법으로 지키는 길", "특허 저작권 상표가 어떻게 다른지", "가게 이름과 로고를 먼저 등록해야 하나"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -539,7 +539,7 @@ entries:
   path: [사회, 법과 제도]
   name: 공개 라이선스
   hint: 재사용 조건을 명시한 권리 허락
-  aliases: [Open licensing]
+  aliases: [Open licensing, "내 사진을 누구나 쓰게 하되 조건 달기", "출처만 밝히면 써도 되는 자료 표시", "인터넷 이미지를 가져다 써도 되는지", "코드나 글을 공유할 때 붙이는 이용 조건"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: law
@@ -548,7 +548,7 @@ entries:
   path: [사회, 사회조사]
   name: 참여관찰
   hint: 활동에 참여하며 실천 관찰
-  aliases: [Participant observation]
+  aliases: [Participant observation, "동호회에 직접 가입해서 지내며 조사하기", "설문으로는 안 보이는 현장 분위기 알고 싶을 때", "공장에서 같이 일하며 사람들 행동 기록하기", "몇 달간 마을에 살면서 생활 방식 살펴보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -557,7 +557,7 @@ entries:
   path: [사회, 사회조사]
   name: 근거이론
   hint: 자료 비교를 통해 이론 구성
-  aliases: [Grounded theory]
+  aliases: [Grounded theory, "인터뷰 기록만 잔뜩 있고 가설은 없을 때", "모은 이야기들을 서로 견주어 설명 틀 만들기", "기존 학설 없이 현장 자료에서 출발하는 논문", "녹취록을 쪼개 묶으며 개념을 세워가는 방법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -566,7 +566,7 @@ entries:
   path: [사회, 사회조사]
   name: 담론분석
   hint: 언어 사용과 권력 맥락 분석
-  aliases: [Discourse analysis]
+  aliases: [Discourse analysis, "같은 사건을 어떤 단어로 부르는지 살피기", "말투 뒤에 숨은 힘의 관계 읽어내기", "정치인 연설이 누구 편에서 말하는지", "난민 보도의 표현이 만드는 인상 연구"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -575,7 +575,7 @@ entries:
   path: [사회, 사회조사]
   name: 내용분석
   hint: 텍스트와 매체의 범주별 내용 분석
-  aliases: [Content analysis]
+  aliases: [Content analysis, "신문 기사에 특정 주제가 몇 번 나오나 세기", "광고나 드라마 속 묘사를 항목별로 집계", "댓글 수천 개를 기준 정해 분류하기", "매체가 무엇을 얼마나 다뤘는지 수치화"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -584,7 +584,7 @@ entries:
   path: [사회, 사회조사]
   name: 대화분석
   hint: 발화 순서와 상호작용 조직 분석
-  aliases: [Conversation analysis]
+  aliases: [Conversation analysis, "녹음한 말을 받아 적어 누가 언제 끼어드는지 보기", "회의에서 말 차례가 어떻게 넘어가는지 살피기", "상담 통화 녹취에서 말이 엇갈리는 지점 찾기", "침묵과 말 겹침까지 적어 두고 주고받는 방식 따지기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -593,7 +593,7 @@ entries:
   path: [사회, 사회조사]
   name: 내러티브 탐구
   hint: 경험이 이야기로 구성되는 방식 탐구
-  aliases: [Narrative inquiry]
+  aliases: [Narrative inquiry, "사람들이 자기 경험을 어떤 줄거리로 말하는지", "같은 사건을 사람마다 다르게 풀어내는 이유", "교사가 들려준 교실 일화를 연구 자료로 쓰기", "말하는 방식 자체에서 의미를 읽어내는 연구"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -602,7 +602,7 @@ entries:
   path: [사회, 사회조사]
   name: 현상학적 연구
   hint: 경험의 의미와 구조 탐구
-  aliases: [Phenomenological research]
+  aliases: [Phenomenological research, "암 진단을 받는다는 게 어떤 느낌인지 알고 싶을 때", "겪어본 사람만 아는 체험의 본질 파고들기", "선입견을 내려놓고 당사자 느낌 그대로 듣기", "첫 출산을 겪은 엄마들이 공통으로 느낀 것"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -611,7 +611,7 @@ entries:
   path: [사회, 사회조사]
   name: 실행연구
   hint: 현장 개선과 연구를 순환
-  aliases: [Action research]
+  aliases: [Action research, "교사가 자기 수업을 고치며 기록하는 연구", "해보고 돌아보고 다시 해보는 현장 탐구", "연구자와 실무자가 함께 문제를 고쳐가기", "우리 기관 문제를 직접 연구하며 개선"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -620,7 +620,7 @@ entries:
   path: [사회, 사회조사]
   name: 참여적 실행연구
   hint: 당사자와 함께 문제를 연구하고 변화
-  aliases: [Participatory action research]
+  aliases: [Participatory action research, "주민들과 같이 동네 문제를 조사하고 고치기", "연구 대상이 아니라 공동 연구자로 함께하기", "조사만 하고 끝나지 않고 현장을 바꾸고 싶을 때", "학생들과 함께 학교 문제 원인 찾고 개선하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -629,7 +629,7 @@ entries:
   path: [사회, 사회조사]
   name: 초점집단 면접
   hint: 집단 상호작용을 통한 인식 탐색
-  aliases: [Focus group]
+  aliases: [Focus group, "예닐곱 명 모아놓고 이야기 나누게 하기", "신제품 시안 보여주고 반응 듣는 좌담", "서로 말을 주고받으며 나오는 속마음", "설문으로는 안 나오는 이유를 듣고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -638,7 +638,7 @@ entries:
   path: [사회, 사회조사]
   name: 반구조화 면접
   hint: 질문 틀과 유연한 후속 질문 조합
-  aliases: [Semi structured interview, 인터뷰 질문 틀]
+  aliases: [Semi structured interview, 인터뷰 질문 틀, "질문지는 준비하되 대화 흐름 따라 더 캐묻기", "꼭 물을 항목만 정하고 나머지는 자유롭게", "너무 딱딱하지도 산만하지도 않은 인터뷰 방식", "고객 인터뷰 질문 목록을 어떻게 짤지 고민"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -647,7 +647,7 @@ entries:
   path: [사회, 사회조사]
   name: 생애사 면접
   hint: 삶의 과정과 의미를 시간순 탐색
-  aliases: [Life history interview]
+  aliases: [Life history interview, "어르신께 살아온 이야기를 처음부터 듣기", "한 사람의 어린 시절부터 지금까지 묻는 인터뷰", "할머니 인생 이야기를 기록으로 남기고 싶을 때", "개인의 삶 굴곡으로 시대 변화를 읽고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -656,7 +656,7 @@ entries:
   path: [사회, 사회조사]
   name: 사회연결망 분석
   hint: 사람과 집단의 관계 구조 분석
-  aliases: [Social network analysis]
+  aliases: [Social network analysis, "누가 누구와 친한지 선으로 그려 살펴보기", "조직에서 소문이 퍼지는 중심 인물 찾기", "반 아이들 친구 관계에서 외톨이 찾아내기", "부서 간 협업이 어디서 끊기는지 그림으로 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -665,7 +665,7 @@ entries:
   path: [사회, 사회조사]
   name: 사회적 자본
   hint: 관계망에서 얻는 자원과 신뢰
-  aliases: [Social capital]
+  aliases: [Social capital, "아는 사람이 많아서 일자리를 쉽게 구하는 현상", "이웃끼리 믿고 돕는 동네가 잘 굴러가는 이유", "인맥이 곧 재산이라는 말을 설명하는 개념", "동창회나 모임 활동이 주는 보이지 않는 이득"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -674,7 +674,7 @@ entries:
   path: [사회, 사회조사]
   name: 사회계층화
   hint: 자원과 지위의 구조적 차이
-  aliases: [Social stratification]
+  aliases: [Social stratification, "부모 재산에 따라 출발선이 달라지는 현상", "사회가 위아래 층으로 나뉘어 굳어지는 구조", "직업과 학력에 따라 대우가 갈리는 이유", "개천에서 용 나기 어려워진 까닭 설명"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -683,7 +683,7 @@ entries:
   path: [사회, 사회조사]
   name: 교차성
   hint: 여러 불평등 구조의 교차 경험
-  aliases: [Intersectionality]
+  aliases: [Intersectionality, "여성이면서 이주민인 사람이 겪는 이중 차별", "차별 원인을 하나로만 설명하기 어려울 때", "장애와 가난이 겹친 사람의 어려움 이해하기", "성별 인종 계급이 한꺼번에 작용하는 경험"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -692,7 +692,7 @@ entries:
   path: [사회, 사회조사]
   name: 성찰성
   hint: 연구자의 위치가 해석에 주는 영향 검토
-  aliases: [Reflexivity]
+  aliases: [Reflexivity, "내 출신과 입장이 분석을 왜곡하진 않았을까", "조사자가 같은 직업 출신이라 생기는 편향 점검", "연구일지에 내 감정과 선입견 적어두기", "면담자가 나를 어떻게 봤는지가 답에 준 영향"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -701,7 +701,7 @@ entries:
   path: [사회, 사회조사]
   name: 참여자 검토
   hint: 참여자가 해석에 의견을 제시
-  aliases: [Member checking]
+  aliases: [Member checking, "인터뷰한 분에게 내 정리가 맞는지 되묻기", "분석 결과를 응답자에게 보여주고 확인받기", "내가 상대 말을 멋대로 풀이한 건 아닌지 걱정", "논문 내기 전에 면담자에게 초안 돌려보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -710,7 +710,7 @@ entries:
   path: [사회, 사회조사]
   name: 지속적 비교법
   hint: 자료와 범주를 반복 비교
-  aliases: [Constant comparison]
+  aliases: [Constant comparison, "면담 기록을 읽으며 분류 틀 계속 고치기", "새 인터뷰를 앞선 것과 대조하며 묶기", "미리 정한 틀 없이 자료에서 이론 뽑기", "녹취록에 붙인 꼬리표를 통합해 가기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -719,7 +719,7 @@ entries:
   path: [사회, 사회조사]
   name: 이론적 포화
   hint: 새 자료에서 범주의 새 성질이 줄어듦
-  aliases: [Theoretical saturation]
+  aliases: [Theoretical saturation, "인터뷰를 몇 명까지 해야 충분한지 모를 때", "더 만나봐도 비슷한 얘기만 반복해서 나올 때", "자료 수집을 언제 멈출지 판단하는 기준", "새 면담에서 더는 새로운 내용이 안 나오는 시점"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: social
@@ -728,7 +728,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 작업기억
   hint: 일시적으로 정보를 유지하고 조작
-  aliases: [Working memory]
+  aliases: [Working memory, "전화번호 듣고 받아 적기 전에 잊어버림", "암산하다 중간 숫자를 놓쳐 버림", "여러 지시를 한꺼번에 들으면 앞의 걸 까먹음", "머릿속에 잠깐 담아 두고 굴리는 용량의 한계"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -737,7 +737,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 인지부하
   hint: 과제가 요구하는 정신적 자원
-  aliases: [Cognitive load]
+  aliases: [Cognitive load, "설명이 너무 복잡해서 머리가 멈춰 버림", "한 화면에 정보가 많아 학생들이 못 따라옴", "수업 자료를 덜어내야 이해가 잘 되는 이유", "동시에 신경 쓸 게 많아 실수가 늘어남"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -746,7 +746,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 메타인지
   hint: 자신의 이해와 사고를 점검
-  aliases: [Metacognition]
+  aliases: [Metacognition, "안다고 생각했는데 막상 풀면 틀림", "내가 뭘 모르는지 스스로 파악하기", "공부하다 멈추고 제대로 이해했나 되짚기", "자기 실력을 과대평가하는 학생 지도"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -755,7 +755,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 확증편향
   hint: 기존 믿음에 맞는 정보에 치우침
-  aliases: [Confirmation bias]
+  aliases: [Confirmation bias, "내 생각과 맞는 기사만 골라 읽게 됨", "반대 증거는 무시하고 유리한 것만 봄", "한번 믿은 건 아무리 말해도 안 바뀜", "검색할수록 원래 의견만 더 굳어짐"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -764,7 +764,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 정박효과
   hint: 초기 정보가 뒤 판단을 끌어당김
-  aliases: [Anchoring]
+  aliases: [Anchoring, "처음 본 가격표 때문에 할인가가 싸 보임", "먼저 부른 값이 흥정을 좌우하는 이유", "첫 숫자에 끌려가서 어림짐작이 틀어짐", "연봉 협상에서 누가 먼저 금액을 말할까"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -773,7 +773,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 가용성 휴리스틱
   hint: 떠오르기 쉬움으로 빈도 판단
-  aliases: [Availability heuristic]
+  aliases: [Availability heuristic, "뉴스에 자주 나오니 흔한 일처럼 느껴짐", "비행기 사고가 차 사고보다 무서운 이유", "최근에 들은 사례만으로 위험을 판단함", "기억에 생생한 일을 실제보다 많다고 착각"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -782,7 +782,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 손실회피
   hint: 동일 크기 이득보다 손실을 크게 평가
-  aliases: [Loss aversion]
+  aliases: [Loss aversion, "만 원 번 기쁨보다 만 원 잃은 속상함이 큼", "본전 생각에 떨어진 주식을 못 파는 마음", "무료 체험 끝나면 해지하기 아까운 심리", "잃을까 봐 무서워 좋은 기회도 마다함"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -791,7 +791,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 틀짜기 효과
   hint: 같은 내용의 표현에 따라 판단 변화
-  aliases: [Framing effect]
+  aliases: [Framing effect, "생존율 구십과 사망률 십이 다르게 들림", "같은 말도 어떻게 포장하냐에 따라 선택이 바뀜", "지방 오 퍼센트보다 살코기 구십오가 잘 팔림", "안내문 문구만 바꿔서 참여율 높이기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -800,7 +800,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 자기효능감
   hint: 과제를 수행할 수 있다는 믿음
-  aliases: [Self efficacy]
+  aliases: [Self efficacy, "해 보기도 전에 난 못 한다고 포기함", "작은 성공을 쌓아 할 수 있다는 마음 키우기", "실력은 되는데 자신이 없어 도전을 안 함", "수학만 나오면 난 안 돼 하는 아이"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -809,7 +809,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 내재적 동기
   hint: 활동 자체의 관심과 만족에 의한 동기
-  aliases: [Intrinsic motivation]
+  aliases: [Intrinsic motivation, "상을 주니 오히려 그림 그리기를 싫어함", "시키지 않아도 재미있어서 스스로 하는 공부", "용돈 없이도 아이가 책을 읽게 하려면", "좋아서 하던 취미가 일이 되니 시들해짐"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -818,7 +818,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 실행 의도
   hint: 특정 상황과 행동을 미리 연결
-  aliases: [Implementation intentions]
+  aliases: [Implementation intentions, "하겠다고 마음만 먹고 매번 까먹음", "퇴근해서 현관 들어서면 바로 운동복 입기로 정함", "언제 어디서 할지 미리 못 박아 두기", "결심을 만약 이러면 저렇게 한다로 적어 두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -827,7 +827,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 습관 형성
   hint: 맥락과 반복 행동의 연결 강화
-  aliases: [Habit formation]
+  aliases: [Habit formation, "운동을 생각 없이 저절로 하게 만들고 싶음", "양치 뒤에 바로 하는 식으로 새 버릇 붙이기", "작심삼일을 넘겨 몸에 배게 하는 법", "같은 시간 같은 자리에서 되풀이하면 굳어짐"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -836,7 +836,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 행동활성화
   hint: 가치 있는 활동 참여를 체계화
-  aliases: [Behavioral activation]
+  aliases: [Behavioral activation, "우울해서 아무것도 하기 싫고 누워만 있음", "기분이 나아지길 기다리지 않고 먼저 움직이기", "즐겁던 일을 하루 일과에 조금씩 다시 넣기", "무기력할 때 작은 활동 계획표 짜기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -845,7 +845,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 동기강화 면담
   hint: 양가감정을 탐색하며 변화 동기 지원
-  aliases: [Motivational interviewing]
+  aliases: [Motivational interviewing, "끊고 싶기도 하고 아니기도 한 사람 상담", "잔소리 대신 스스로 바꿀 이유를 말하게 하기", "술 줄이라고 설득하면 더 반발하는 가족", "바꾸고 싶은 마음과 망설임을 같이 들어주는 대화"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -854,7 +854,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 행동 기능 평가
   hint: 행동의 선행 조건과 결과 조사
-  aliases: [Functional behavior assessment]
+  aliases: [Functional behavior assessment, "아이가 왜 자꾸 소리 지르는지 원인 찾기", "문제 행동 직전과 직후에 무슨 일이 있나 기록", "그 행동으로 아이가 뭘 얻는지 알아내기", "교실에서 반복되는 말썽의 이유 관찰하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -863,7 +863,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 강화
   hint: 결과가 이후 행동 가능성을 높임
-  aliases: [Reinforcement]
+  aliases: [Reinforcement, "칭찬해 주니 아이가 그 행동을 더 자주 함", "강아지에게 간식 주며 앉아 가르치기", "잘한 직후 보상하면 다음에도 하게 됨", "스티커 판으로 심부름 버릇 들이기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -872,7 +872,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 소거
   hint: 강화 중단 후 행동 반응 감소
-  aliases: [Extinction]
+  aliases: [Extinction, "떼써도 안 들어주니 점점 떼를 안 씀", "보상을 끊었더니 하던 행동이 줄어듦", "관심 안 주면 나쁜 버릇이 사라질까", "무시하기 시작하자 처음엔 더 심해지는 떼쓰기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -881,7 +881,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 자기결정성이론
   hint: 자율 유능 관계 욕구로 동기 설명
-  aliases: [Self determination theory]
+  aliases: [Self determination theory, "스스로 고르게 하니 의욕이 살아남", "잘하고 있다는 느낌과 소속감이 의욕에 미치는 영향", "시켜서 하는 일은 왜 금방 지치는가", "직원이 주도적으로 일하게 만드는 세 가지 조건"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -890,7 +890,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 귀인이론
   hint: 행동의 원인을 해석하는 방식
-  aliases: [Attribution theory]
+  aliases: [Attribution theory, "시험 망친 걸 운 탓으로 돌리는 아이", "남의 실수는 성격 탓 내 실수는 상황 탓", "성공과 실패 이유를 어디서 찾는지 차이", "직원이 지각한 이유를 멋대로 짐작함"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology
@@ -899,7 +899,7 @@ entries:
   path: [학습, 인지와 행동]
   name: 전망이론
   hint: 준거점과 확률 가중으로 선택 설명
-  aliases: [Prospect theory]
+  aliases: [Prospect theory, "확실한 작은 돈과 큰 돈 도박 중 고르는 심리", "복권처럼 희박한 가능성을 크게 느끼는 이유", "지금 가진 것을 기준으로 득실을 따지는 버릇", "사람들이 계산대로 합리적 선택을 안 하는 까닭"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: psychology

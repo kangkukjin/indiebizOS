@@ -8,7 +8,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 최소제곱법
   hint: 잔차 제곱합 최소화
-  aliases: [Ordinary least squares, OLS]
+  aliases: [Ordinary least squares, OLS, "흩어진 점들에 가장 잘 맞는 직선 긋기", "실험값이 조금씩 어긋날 때 대표 식 구하기", "광고비와 매출 관계를 식 하나로 나타내기", "식보다 측정이 많아 딱 맞는 답이 없을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -17,7 +17,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 특이값 분해
   hint: 행렬을 직교 성분과 크기로 분해
-  aliases: [Singular value decomposition, SVD]
+  aliases: [Singular value decomposition, SVD, "사진을 핵심 성분 몇 개만 남겨 용량 줄이기", "정사각이 아닌 숫자표도 뼈대만 추려내기", "고객과 상품 평점표에서 숨은 취향 뽑아 추천", "잡음 섞인 표에서 굵은 줄기만 남기기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -26,7 +26,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 고유값 분해
   hint: 선형변환의 고유 방향 분석
-  aliases: [Eigenvalue decomposition]
+  aliases: [Eigenvalue decomposition, "변환해도 방향은 그대로고 길이만 바뀌는 축 찾기", "반복해서 곱하면 결국 어디로 쏠리는지 알기", "구조물이 어떤 모양으로 떨리는지 구하기", "정사각 숫자표의 핵심 방향과 세기 뽑아내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -35,7 +35,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: QR 분해
   hint: 직교행렬과 삼각행렬로 분해
-  aliases: [QR decomposition]
+  aliases: [QR decomposition, "직각인 축들로 다시 세워 연립방정식 안정적으로 풀기", "직선 맞추기 계산에서 오차가 덜 쌓이는 방법", "비스듬한 방향들을 서로 수직으로 다시 잡기", "표를 회전 부분과 계단 모양 부분으로 나누기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -44,7 +44,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 촐레스키 분해
   hint: 양의 정부호 행렬의 삼각 분해
-  aliases: [Cholesky decomposition]
+  aliases: [Cholesky decomposition, "대칭인 큰 연립방정식을 절반 수고로 빨리 풀기", "서로 연관된 난수를 만들어야 할 때 쓰는 표 쪼개기", "같은 표를 자기 자신의 곱 꼴로 나누기", "상관관계 표를 가지고 모의실험 돌려야 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -53,7 +53,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 뉴턴법
   hint: 미분 정보를 이용한 근 탐색
-  aliases: [Newton method]
+  aliases: [Newton method, "접선을 따라 내려가며 방정식 답에 빠르게 다가가기", "계산기가 제곱근을 구하는 방식이 궁금할 때", "대략의 답을 알 때 몇 번 만에 정밀하게 다듬기", "기울기를 구할 수 있는 식의 영이 되는 지점 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -62,7 +62,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 이분법
   hint: 부호 변화 구간을 반으로 축소
-  aliases: [Bisection method]
+  aliases: [Bisection method, "답이 이 사이 어딘가에 있을 때 절반씩 좁혀가기", "한쪽은 모자라고 한쪽은 넘칠 때 중간을 찍어보기", "느려도 반드시 답을 찾는 안전한 방정식 풀이", "업다운 숫자 맞히기처럼 범위 줄여 값 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -71,7 +71,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 룽게쿠타법
   hint: 미분방정식의 단계별 수치 적분
-  aliases: [Runge Kutta methods]
+  aliases: [Runge Kutta methods, "변화율만 아는 양을 시간 따라 한 걸음씩 따라가기", "진자나 행성 궤도를 컴퓨터로 그려보기", "단순히 기울기만큼 전진했더니 오차가 커질 때", "한 걸음 안에서 기울기를 여러 번 재서 평균 내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -80,7 +80,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 유한차분법
   hint: 미분을 격자 차분으로 근사
-  aliases: [Finite difference method, FDM]
+  aliases: [Finite difference method, FDM, "이웃한 점들의 값 차이로 기울기 대신하기", "막대의 열 퍼짐을 모눈 위에서 시간별로 계산", "공식으로 안 풀리는 변화 방정식을 표 계산으로", "엑셀 칸에 옆 칸과의 차이를 넣어 물리 문제 풀기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -89,7 +89,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 유한요소법
   hint: 영역을 요소로 나누어 근사 해석
-  aliases: [Finite element method, FEM]
+  aliases: [Finite element method, FEM, "복잡한 모양 부품을 작은 조각으로 쪼개 힘 계산", "다리나 뼈대가 어디서 휘고 부러질지 미리 보기", "설계 도면에 하중을 걸어 변형을 색깔로 확인", "울퉁불퉁한 형상이라 모눈으로는 안 맞을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -98,7 +98,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 유한체적법
   hint: 셀의 보존 법칙으로 수치 해석
-  aliases: [Finite volume method, FVM]
+  aliases: [Finite volume method, FVM, "칸마다 들어온 양과 나간 양을 맞춰 흐름 계산", "배관이나 날개 주변 공기와 물의 흐름 모의실험", "질량이 새거나 생기지 않게 지키며 푸는 방법", "방 안 공기와 열이 어떻게 도는지 계산"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -107,7 +107,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 몬테카를로 적분
   hint: 무작위 표본으로 적분 근사
-  aliases: [Monte Carlo integration]
+  aliases: [Monte Carlo integration, "아무 데나 점을 뿌려 복잡한 모양 넓이 재기", "변수가 많아 모눈으로 나누기 불가능한 부피 계산", "다트를 던져 맞은 비율로 원주율 구하는 방식", "공식이 없는 영역의 크기를 뽑기로 어림"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -116,7 +116,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 중요도 표집
   hint: 중요 영역을 더 자주 표집해 추정
-  aliases: [Importance sampling]
+  aliases: [Importance sampling, "드물지만 중요한 경우를 일부러 많이 뽑아 계산", "아무 데나 찍었더니 결과가 너무 들쭉날쭉할 때", "거의 안 일어나는 사고 확률을 모의실험으로 구하기", "많이 뽑은 만큼 덜 쳐줘서 치우침 바로잡기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -125,7 +125,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 가우스 구적법
   hint: 선택된 절점과 가중치로 적분
-  aliases: [Gaussian quadrature]
+  aliases: [Gaussian quadrature, "몇 군데 값만 재서 넓이를 아주 정확히 구하기", "함수 계산이 비싸서 적은 횟수로 끝내고 싶을 때", "어디를 찍고 얼마나 쳐줄지 정해진 넓이 계산", "매끈한 곡선 아래 면적을 점 서너 개로 구하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -134,7 +134,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 보간
   hint: 관측점 사이의 값을 추정
-  aliases: [Interpolation]
+  aliases: [Interpolation, "한 시간마다 잰 온도로 삼십 분 때 값 짐작", "표에 없는 중간 값을 앞뒤 숫자로 메우기", "빠진 측정값을 주변 값으로 채워 넣기", "듬성듬성한 점들을 이어 사이를 읽어내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -143,7 +143,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 스플라인 보간
   hint: 구간별 다항식을 부드럽게 연결
-  aliases: [Spline interpolation]
+  aliases: [Spline interpolation, "점들을 꺾이지 않고 매끄러운 곡선으로 잇기", "직선으로 이었더니 모서리가 각져 보일 때", "한 식으로 다 이으려니 끝에서 심하게 출렁일 때", "글꼴이나 차체 곡선처럼 유려한 선 그리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -152,7 +152,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 자동미분
   hint: 연산 그래프의 미분을 계산
-  aliases: [Automatic differentiation]
+  aliases: [Automatic differentiation, "복잡한 계산식의 기울기를 컴퓨터가 알아서 구하기", "손으로 미분하다 실수하는 일을 없애고 싶을 때", "프로그램으로 짠 함수의 변화율이 정확히 필요할 때", "신경망 학습에서 어느 쪽으로 고칠지 계산"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -161,7 +161,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 차원해석
   hint: 물리량의 차원으로 관계 점검
-  aliases: [Dimensional analysis]
+  aliases: [Dimensional analysis, "공식 양쪽 단위가 맞는지로 틀린 식 걸러내기", "미터와 초만 따져서 식의 꼴을 짐작하기", "물리 문제 답이 말이 되는지 빠르게 검산", "작은 모형 실험을 실물 크기로 옮겨 적용할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -170,7 +170,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 조건수
   hint: 입력 오차에 대한 해의 민감성
-  aliases: [Condition number]
+  aliases: [Condition number, "입력을 살짝 바꿨는데 답이 확 달라지는 계산", "측정값 끝자리 오차가 결과를 망치는지 확인", "연립방정식 답을 믿어도 되는지 미리 가늠", "계산이 불안정한 문제인지 숫자로 알아보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -179,7 +179,7 @@ entries:
   path: [계산, 수학, 계산 방법]
   name: 구간 연산
   hint: 값의 범위를 보존하며 계산
-  aliases: [Interval arithmetic]
+  aliases: [Interval arithmetic, "오차 달린 값으로 계산해도 답의 상한 하한 보장", "최소 얼마 최대 얼마 식으로 끝까지 들고 계산", "반올림 오차가 쌓여도 참값이 안에 들게 하기", "공차 있는 부품 치수를 더했을 때 전체 범위"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: mathematics
@@ -188,7 +188,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 선형계획법
   hint: 선형 목적과 제약의 최적화
-  aliases: [Linear programming, LP]
+  aliases: [Linear programming, LP, "재료가 한정된 빵집에서 뭘 몇 개 구울지 정하기", "가장 싼 값으로 영양 기준을 채우는 식단 짜기", "자원 배분을 비례 관계 식들로 세워 이익 최대화", "기계 가동 시간을 제품별로 어떻게 나눌지 계산"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -197,7 +197,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 정수계획법
   hint: 정수 결정변수의 최적화
-  aliases: [Integer programming]
+  aliases: [Integer programming, "트럭 두 대 반은 안 되니 딱 떨어지는 대수로 계획", "할지 말지 예 아니오 결정들을 묶어 최선 고르기", "소수점 답을 반올림하면 조건이 깨질 때", "직원을 몇 명 뽑을지 사람 수로 답이 나와야 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -206,7 +206,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 혼합정수계획법
   hint: 연속변수와 정수변수 함께 최적화
-  aliases: [Mixed integer programming, MIP, MILP]
+  aliases: [Mixed integer programming, MIP, MILP, "공장을 열지 말지와 생산량을 함께 정하기", "켜고 끄는 결정과 얼마나 돌릴지를 한 번에 계획", "개수로 세는 것과 무게로 재는 것이 섞인 계획", "발전기 가동 여부와 출력량을 동시에 짜기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -215,7 +215,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 볼록 최적화
   hint: 볼록 목적과 가능 영역의 최적화
-  aliases: [Convex optimization]
+  aliases: [Convex optimization, "그릇 모양이라 바닥이 하나뿐인 문제의 최저점", "어디서 출발해도 같은 최선에 닿는 문제인지 확인", "가짜 바닥에 빠질 걱정 없는 최소화 문제 풀기", "풀기 쉬운 매끈한 꼴로 문제를 바꿔 세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -224,7 +224,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 이차계획법
   hint: 이차 목적함수의 제약 최적화
-  aliases: [Quadratic programming]
+  aliases: [Quadratic programming, "수익은 지키며 흔들림 제곱합이 최소인 투자 비중", "오차 제곱을 줄이되 한도를 지키며 값 맞추기", "제곱항이 들어간 비용을 제한 안에서 가장 작게", "목표치와의 거리를 최소로 하면서 범위 지키기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -233,7 +233,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 경사하강법
   hint: 기울기 반대 방향으로 갱신
-  aliases: [Gradient descent]
+  aliases: [Gradient descent, "안개 낀 산에서 내리막만 따라 골짜기 찾기", "오차가 줄어드는 쪽으로 값을 조금씩 고쳐 가기", "한 걸음 크기를 얼마로 잡을지 고민될 때", "미분되는 식의 최솟값을 반복 계산으로 구하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -242,7 +242,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 확률적 경사하강법
   hint: 표본 기반 기울기로 갱신
-  aliases: [Stochastic gradient descent]
+  aliases: [Stochastic gradient descent, "자료가 너무 많아 일부만 뽑아 보며 조금씩 학습", "전체를 다 계산하지 않고 한 묶음씩 보며 고치기", "인공신경망 훈련 중 오차가 들쭉날쭉 줄어들 때", "사진 수백만 장을 조금씩 떼어 모델 가르치기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -251,7 +251,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 라그랑주 승수법
   hint: 등식 제약을 목적식에 결합
-  aliases: [Lagrange multipliers]
+  aliases: [Lagrange multipliers, "울타리 길이가 정해졌을 때 넓이 최대로 만들기", "예산을 딱 다 쓰면서 만족을 가장 크게 하기", "반드시 맞춰야 할 합계 조건을 식 하나로 합쳐 풀기", "조건을 조금 풀면 이득이 얼마 느는지 알고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -260,7 +260,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 내부점법
   hint: 가능 영역 내부에서 최적점 탐색
-  aliases: [Interior point method]
+  aliases: [Interior point method, "허용 범위 가장자리 말고 안쪽을 가로질러 최선 찾기", "조건이 수만 개인 큰 계획 문제를 빨리 풀기", "경계에 닿지 않게 벽을 세워 두고 답에 다가가기", "꼭짓점을 하나씩 도는 방식이 너무 느릴 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -269,7 +269,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 분기한정법
   hint: 부분 문제의 경계로 탐색 가지치기
-  aliases: [Branch and bound]
+  aliases: [Branch and bound, "가망 없는 경우는 일찍 버리며 최선의 조합 찾기", "이미 찾은 답보다 나빠질 쪽은 더 안 따져 보기", "배낭에 담을 물건 조합을 다 안 보고도 최고 찾기", "경우의 수가 폭발할 때 볼 필요 없는 쪽 잘라내기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -278,7 +278,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 제약 프로그래밍
   hint: 변수 영역과 제약 전파로 해 탐색
-  aliases: [Constraint programming]
+  aliases: [Constraint programming, "규칙만 나열하면 맞는 답을 찾아 주는 방식", "가능한 값을 규칙으로 하나씩 지워 가며 좁히기", "시간표 짤 때 겹치면 안 되는 규칙이 잔뜩일 때", "칸마다 들어갈 후보 숫자를 줄여 가며 퍼즐 풀기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -287,7 +287,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 담금질 기법
   hint: 확률적 이동으로 국소해 탈출
-  aliases: [Simulated annealing]
+  aliases: [Simulated annealing, "가끔 더 나쁜 쪽도 받아들이며 더 좋은 답 찾기", "고만고만한 답에 갇혀 더 나아지지 않을 때", "처음엔 크게 흔들다 점점 얌전하게 조정하기", "쇠를 천천히 식히는 원리를 흉내 낸 배치 개선"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -296,7 +296,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 유전 알고리즘
   hint: 선택과 변이로 후보 해 진화
-  aliases: [Genetic algorithm]
+  aliases: [Genetic algorithm, "좋은 후보끼리 섞고 조금 바꿔 세대마다 개선", "수식으로 못 푸는 설계를 시행착오로 키워 가기", "자연의 대물림을 흉내 내 답을 길러 내기", "복잡한 설계 후보 여럿을 경쟁시켜 살아남기기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -305,7 +305,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 타부 탐색
   hint: 최근 이동을 제한해 순환 방지
-  aliases: [Tabu search]
+  aliases: [Tabu search, "방금 바꾼 자리는 당분간 다시 안 건드리기", "답을 고치다 같은 자리만 맴돌 때", "최근에 해 본 변경을 금지 목록에 적어 두고 개선", "배송 순서를 조금씩 바꾸다 제자리로 돌아올 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -314,7 +314,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 열 생성법
   hint: 필요한 변수만 점진적으로 추가
-  aliases: [Column generation]
+  aliases: [Column generation, "선택지가 수백만 개라 일부만 놓고 풀기 시작", "긴 원자재를 잘라 쓰는 패턴이 너무 많을 때", "도움 될 후보만 그때그때 새로 끼워 넣으며 개선", "승무원 근무 조합 후보가 셀 수 없이 많은 편성"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -323,7 +323,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 벤더스 분해
   hint: 결정과 하위 문제를 분리해 최적화
-  aliases: [Benders decomposition]
+  aliases: [Benders decomposition, "공장 입지 결정과 배송 계획을 따로 떼어 풀기", "큰 결정 먼저 정하고 세부 운영은 나중에 맞춰 보기", "한꺼번에 풀기엔 너무 큰 계획을 두 층으로 쪼개기", "세부 계산 결과를 윗단계 결정에 되먹여 고쳐 가기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -332,7 +332,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 강건 최적화
   hint: 불확실성 집합에 견디는 해 탐색
-  aliases: [Robust optimization]
+  aliases: [Robust optimization, "수요 예측이 빗나가도 망하지 않는 계획 세우기", "최악의 경우에도 조건이 깨지지 않는 답 찾기", "입력 숫자가 어느 범위에서 흔들려도 안전한 설계", "확률은 모르고 범위만 알 때 보수적으로 결정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -341,7 +341,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 확률계획법
   hint: 시나리오 불확실성을 반영한 최적화
-  aliases: [Stochastic programming]
+  aliases: [Stochastic programming, "날씨별 경우를 여러 개 놓고 평균적으로 좋은 계획", "수요를 모른 채 먼저 발주하고 나중에 보충하는 결정", "가능성 있는 미래 몇 가지에 확률을 매겨 대비", "지금 결정과 상황을 본 뒤의 대응을 함께 짜기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -350,7 +350,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: 최적제어
   hint: 시간에 따른 제어 입력 최적화
-  aliases: [Optimal control]
+  aliases: [Optimal control, "연료를 가장 적게 쓰며 로켓을 목표 궤도에 올리기", "매 순간 가속과 감속을 어떻게 할지 전 구간 계획", "난방 세기를 시시각각 조절해 전기료 최소로 하기", "움직이는 기계의 조작을 처음부터 끝까지 최선으로"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -359,7 +359,7 @@ entries:
   path: [계산, 최적화, 알고리즘]
   name: KKT 조건
   hint: 제약 최적점의 필요 조건 체계
-  aliases: [KKT conditions]
+  aliases: [KKT conditions, "조건 붙은 문제에서 구한 답이 진짜 최선인지 점검", "어느 제한이 실제로 답을 묶고 있는지 가려내기", "부등식 달린 최소화를 손으로 풀 때 세울 식들", "여유가 남는 제한은 영향 없음을 식으로 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: optimization
@@ -368,7 +368,7 @@ entries:
   path: [판단, 의사결정]
   name: 의사결정 나무 분석
   hint: 선택과 결과를 분기별 비교
-  aliases: [Decision tree analysis]
+  aliases: [Decision tree analysis, "선택마다 생길 일을 가지 그림으로 펼치기", "이 길 가면 어찌 되나 갈림길별 계산", "확률과 손익을 갈래마다 적어 비교하기", "소송 갈지 합의할지 경우 나눠 따져보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -377,7 +377,7 @@ entries:
   path: [판단, 의사결정]
   name: 기대효용 분석
   hint: 확률과 선호를 결합해 대안 평가
-  aliases: [Expected utility]
+  aliases: [Expected utility, "될 가능성과 좋아하는 정도를 곱해 비교", "위험한 큰 이익과 안전한 작은 이익 고르기", "보험 들지 말지 숫자로 따져보기", "같은 돈이라도 사람마다 값어치 다름 반영"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -386,7 +386,7 @@ entries:
   path: [판단, 의사결정]
   name: 정보가치 분석
   hint: 추가 정보가 결정에 주는 가치
-  aliases: [Value of information]
+  aliases: [Value of information, "더 알아보는 데 돈 쓸 가치가 있는지 판단", "조사해도 결론이 안 바뀌면 그만두기", "시장조사 비용이 그만한 값을 하는지", "검사를 더 받을지 말지 득실 따지기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -395,7 +395,7 @@ entries:
   path: [판단, 의사결정]
   name: 실물옵션 분석
   hint: 유보와 확장의 선택권 가치 평가
-  aliases: [Real options analysis]
+  aliases: [Real options analysis, "일단 작게 시작하고 나중에 키울 권리의 값", "지금 결정 미루고 기다리는 것의 가치", "투자 중간에 그만둘 수 있음의 값어치", "불확실한 사업에서 유연함을 돈으로 환산"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -404,7 +404,7 @@ entries:
   path: [판단, 의사결정]
   name: 최소최대 후회
   hint: 최악의 기회 손실을 줄이는 선택
-  aliases: [Minimax regret]
+  aliases: [Minimax regret, "나중에 가장 덜 후회할 선택 고르기", "안 했으면 아쉬웠을 크기를 표로 비교", "확률을 모를 때 놓친 이익 기준으로 결정", "그때 살걸 하는 마음을 최소로 하는 법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -413,7 +413,7 @@ entries:
   path: [판단, 의사결정]
   name: 계층분석법
   hint: 쌍대 비교로 기준별 우선순위 도출
-  aliases: [Analytic hierarchy process]
+  aliases: [Analytic hierarchy process, "둘씩 짝지어 어느 쪽이 더 중요한지 묻기", "가격·품질·위치 중 뭐가 더 중한지 수치화", "평가 항목별 비중을 설문으로 뽑아내기", "업체 선정 기준의 무게를 단계별로 정하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -422,7 +422,7 @@ entries:
   path: [판단, 의사결정]
   name: TOPSIS
   hint: 이상점과의 거리로 대안 평가
-  aliases: [TOPSIS]
+  aliases: [TOPSIS, "가장 완벽한 가상의 후보에 누가 가까운지", "최선과 최악에서 떨어진 정도로 순위 매기기", "여러 항목 점수를 하나의 가까움 값으로", "노트북 후보들을 꿈의 사양과 견줘 줄세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -431,7 +431,7 @@ entries:
   path: [판단, 의사결정]
   name: ELECTRE
   hint: 기준별 우월 관계로 대안 비교
-  aliases: [ELECTRE]
+  aliases: [ELECTRE, "한 항목이 나쁘면 다른 장점으로 못 덮게", "후보끼리 어느 쪽이 앞서는지 짝지어 가리기", "점수 합산 말고 앞섬 뒤짐으로 후보 추리기", "확실히 밀리는 후보부터 걸러내는 평가"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -440,7 +440,7 @@ entries:
   path: [판단, 의사결정]
   name: 시나리오 플래닝
   hint: 서로 다른 미래 조건을 준비
-  aliases: [Scenario planning, 서로 다른 미래 준비]
+  aliases: [Scenario planning, 서로 다른 미래 준비, "미래가 여러 갈래일 때 각각 대비책 짜기", "경기 좋을 때와 나쁠 때 계획 따로 세우기", "한 가지 예측에만 걸지 않고 준비하기", "환율·규제 변화별로 회사 대응 그려보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -449,7 +449,7 @@ entries:
   path: [판단, 의사결정]
   name: 사전부검
   hint: 실패를 가정하고 원인 탐색
-  aliases: [Premortem]
+  aliases: [Premortem, "시작하기 전에 망했다 치고 이유부터 적어 보기", "다들 낙관만 해서 위험 얘기가 안 나오는 회의", "가게 열기 전에 망할 만한 구석 미리 찾기", "일 년 뒤 실패했다면 왜였을지 거꾸로 따져 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -458,7 +458,7 @@ entries:
   path: [판단, 의사결정]
   name: 백캐스팅
   hint: 바라는 미래에서 현재 경로 역산
-  aliases: [Backcasting]
+  aliases: [Backcasting, "십 년 뒤 원하는 모습부터 거꾸로 계획", "목표 시점에서 지금까지 필요한 단계 역산", "지금 추세로는 닿지 못할 목표 길 찾기", "탄소 감축 같은 장기 목표 달성 경로 짜기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -467,7 +467,7 @@ entries:
   path: [판단, 의사결정]
   name: 델파이 기법
   hint: 익명 반복 응답으로 전문가 판단 수렴
-  aliases: [Delphi method]
+  aliases: [Delphi method, "전문가 의견을 이름 가리고 여러 번 묻기", "목소리 큰 사람에 휘둘리지 않고 의견 모으기", "설문 결과 돌려보고 다시 답하게 하기", "미래 기술 전망을 여러 전문가에게서 좁히기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -476,7 +476,7 @@ entries:
   path: [판단, 의사결정]
   name: 명목집단법
   hint: 독립 의견을 모아 우선순위 결정
-  aliases: [Nominal group technique]
+  aliases: [Nominal group technique, "회의에서 각자 조용히 적고 돌아가며 발표", "말 없는 사람 의견도 똑같이 반영하기", "모인 아이디어에 점수 매겨 순위 정하기", "한자리에 모여 토론 없이 투표로 추리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -485,7 +485,7 @@ entries:
   path: [판단, 의사결정]
   name: 만족화
   hint: 기준을 충족하는 대안을 선택
-  aliases: [Satisficing]
+  aliases: [Satisficing, "최고를 찾지 말고 이만하면 됐다에서 멈추기", "완벽한 것 찾다 시간만 보내는 버릇", "최소 조건 넘는 첫 후보를 바로 택하기", "집·중고차 고를 때 끝없는 비교 끊기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -494,7 +494,7 @@ entries:
   path: [판단, 의사결정]
   name: 제한된 합리성
   hint: 정보와 계산 능력의 한계 속 선택
-  aliases: [Bounded rationality]
+  aliases: [Bounded rationality, "다 따져 볼 시간이 없어 적당한 데서 고르는 이유", "최선 말고 그럭저럭 괜찮은 걸 택하는 까닭", "선택지가 너무 많아 다 비교하지 못하는 상황", "머리와 시간이 모자란 채로 내리는 결정 이해하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -503,7 +503,7 @@ entries:
   path: [판단, 의사결정]
   name: 결정 피로
   hint: 반복 선택에서 생기는 부담
-  aliases: [Decision fatigue, 선택을 너무 많이]
+  aliases: [Decision fatigue, 선택을 너무 많이, "하루 종일 고르다 저녁엔 아무거나 택함", "선택지가 많아 고르는 것 자체가 지칠 때", "오후가 되면 판단이 대충이 되는 현상", "매일 옷·메뉴 고르기를 줄여 기운 아끼기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -512,7 +512,7 @@ entries:
   path: [판단, 의사결정]
   name: 기저율
   hint: 집단에서 사건이 나타나는 비율
-  aliases: [Base rate]
+  aliases: [Base rate, "원래 얼마나 흔한 일인지부터 따져보기", "검사 양성인데 진짜 병일 가능성 계산", "생생한 사례에 끌려 드문 일을 과대평가", "창업 성공 확률을 전체 통계로 먼저 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -521,7 +521,7 @@ entries:
   path: [판단, 의사결정]
   name: 참조집단 예측
   hint: 유사 사례의 실제 분포로 예측
-  aliases: [Reference class forecasting]
+  aliases: [Reference class forecasting, "비슷한 공사들이 실제로 얼마나 걸렸나 보기", "내 계획은 다르다는 낙관을 바로잡기", "일정과 예산이 늘 초과되는 문제 대비", "과거 닮은 사업들의 결과 통계로 어림하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -530,7 +530,7 @@ entries:
   path: [판단, 의사결정]
   name: 가역성
   hint: 선택을 되돌릴 수 있는 정도
-  aliases: [Reversibility]
+  aliases: [Reversibility, "잘못되면 무를 수 있는 결정인지 따지기", "돌이킬 수 없는 선택은 더 신중하게", "쉽게 취소되는 일은 빨리 정하고 넘어가기", "계약·이사·퇴사 전 물릴 수 있나 확인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -539,7 +539,7 @@ entries:
   path: [판단, 의사결정]
   name: 선택권 가치
   hint: 미래 선택 가능성을 남기는 가치
-  aliases: [Option value]
+  aliases: [Option value, "지금 결정 안 하고 기다릴 수 있다는 것의 값어치", "나중에 마음 바꿀 여지를 남겨 두는 쪽 고르기", "한번 없애면 못 되돌리는 숲을 남겨 두는 이유", "당장 쓰지 않아도 언젠가 쓸 수 있게 두는 값"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: decision
@@ -548,7 +548,7 @@ entries:
   path: [사고, 시스템]
   name: 피드백 고리
   hint: 결과가 다시 원인에 영향을 주는 구조
-  aliases: [Feedback loop]
+  aliases: [Feedback loop, "잘될수록 더 잘되고 안될수록 더 안되는 현상", "입소문이 손님을 부르고 손님이 또 입소문을", "결과가 돌고 돌아 처음 원인을 키우는 구조", "자동 온도 조절처럼 스스로 제자리 찾는 원리"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -557,7 +557,7 @@ entries:
   path: [사고, 시스템]
   name: 창발
   hint: 부분 상호작용에서 나타나는 전체 성질
-  aliases: [Emergence]
+  aliases: [Emergence, "개미 한 마리는 단순한데 떼는 똑똑한 이유", "낱낱을 봐서는 설명 안 되는 집단 현상", "아무도 지휘 안 했는데 생긴 질서", "새 떼가 한 몸처럼 움직이는 까닭"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -566,7 +566,7 @@ entries:
   path: [사고, 시스템]
   name: 개입 지점
   hint: 변화가 큰 영향을 줄 수 있는 위치
-  aliases: [Leverage point]
+  aliases: [Leverage point, "적은 힘으로 큰 변화를 낼 곳 찾기", "어디를 건드려야 조직이 바뀌는지 고르기", "애써도 안 바뀌는 문제의 급소 찾기", "규칙 하나 바꿔 전체 행동을 바꾸고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -575,7 +575,7 @@ entries:
   path: [사고, 시스템]
   name: 시간 지연
   hint: 원인과 반응 사이의 간격
-  aliases: [Delay]
+  aliases: [Delay, "조치를 했는데 효과가 한참 뒤에 나타날 때", "샤워기 물 온도를 자꾸 지나치게 돌리는 이유", "광고 효과가 몇 달 뒤에야 매출로 보일 때", "반응이 늦어 주문을 너무 많이 넣은 경우"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -584,7 +584,7 @@ entries:
   path: [사고, 시스템]
   name: 회복탄력성
   hint: 교란 후 기능을 유지하거나 회복
-  aliases: [Resilience]
+  aliases: [Resilience, "큰 충격을 받아도 다시 일어서는 조직 만들기", "위기 뒤에 얼마나 빨리 정상으로 돌아오나", "재난이 와도 가게 문을 계속 열 수 있게", "한번 흔들리면 무너지는 체질 고치기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -593,7 +593,7 @@ entries:
   path: [사고, 시스템]
   name: 경로의존성
   hint: 과거 선택이 이후 가능성을 제약
-  aliases: [Path dependence]
+  aliases: [Path dependence, "처음 잘못 고른 방식에 계속 묶여 있을 때", "더 나은 게 나왔는데도 옛것을 못 버리는 이유", "예전 결정 때문에 지금 선택지가 좁아짐", "초기에 우연히 정한 표준이 굳어버린 경우"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -602,7 +602,7 @@ entries:
   path: [사고, 시스템]
   name: 이력현상
   hint: 현재 상태가 변화 경로에 의존
-  aliases: [Hysteresis]
+  aliases: [Hysteresis, "원인을 없앴는데 원래대로 안 돌아올 때", "올라갈 때와 내려올 때 바뀌는 지점이 다름", "한번 떠난 단골은 값을 내려도 안 돌아옴", "같은 조건인데 지나온 과정 따라 상태가 다름"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -611,7 +611,7 @@ entries:
   path: [사고, 시스템]
   name: 비선형성
   hint: 입력과 출력이 비례하지 않는 관계
-  aliases: [Nonlinearity]
+  aliases: [Nonlinearity, "두 배 넣었는데 효과는 두 배가 아닐 때", "조금 더했을 뿐인데 갑자기 확 달라지는 지점", "광고비를 늘릴수록 효과가 줄어드는 현상", "작은 차이가 엄청난 결과 차이로 벌어짐"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -620,7 +620,7 @@ entries:
   path: [사고, 시스템]
   name: 행위자 기반 모형
   hint: 개별 행위자의 상호작용 시뮬레이션
-  aliases: [Agent based modeling]
+  aliases: [Agent based modeling, "사람 하나하나의 행동 규칙으로 군중 흉내내기", "소문이 동네에 퍼지는 과정 컴퓨터로 돌려보기", "손님들이 제각각 움직일 때 매장 혼잡 예측", "각자 단순하게 행동하는데 전체 결과가 궁금할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -629,7 +629,7 @@ entries:
   path: [사고, 시스템]
   name: 네트워크 분석
   hint: 연결 구조와 흐름 분석
-  aliases: [Network analysis]
+  aliases: [Network analysis, "누가 누구와 연결됐는지 그림으로 파악하기", "거래처 사이 돈과 물건 흐름 따져보기", "친구 관계 속에 어떤 무리가 있는지 찾기", "도로망에서 어디가 막히면 다 막히는지 보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -638,7 +638,7 @@ entries:
   path: [사고, 시스템]
   name: 중심성
   hint: 관계망에서 위치의 중요성
-  aliases: [Centrality]
+  aliases: [Centrality, "모임에서 누가 가장 영향력 있는 사람인지", "이 사람이 빠지면 연락이 끊기는 자리 찾기", "지하철 노선에서 가장 중요한 환승역 고르기", "소식을 퍼뜨리려면 누구에게 먼저 말할지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -647,7 +647,7 @@ entries:
   path: [사고, 시스템]
   name: 모듈성
   hint: 부분을 분리하고 조합하는 구조
-  aliases: [Modularity]
+  aliases: [Modularity, "고장 난 부분만 갈아 끼울 수 있게 만들기", "레고처럼 떼었다 붙였다 하는 설계", "한 팀 일이 다른 팀에 안 번지게 나누기", "같은 부품을 여러 제품에 돌려쓰고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -656,7 +656,7 @@ entries:
   path: [사고, 시스템]
   name: 결합도
   hint: 요소 사이의 의존 정도
-  aliases: [Coupling]
+  aliases: [Coupling, "한 곳을 고치면 다른 곳이 깨지는 구조", "부서끼리 너무 얽혀 혼자 결정 못 할 때", "서로 얼마나 기대고 있는지 따져보기", "한 업체에 너무 매여 있는지 점검하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -665,7 +665,7 @@ entries:
   path: [사고, 시스템]
   name: 병목
   hint: 전체 처리량을 제한하는 부분
-  aliases: [Bottleneck]
+  aliases: [Bottleneck, "한 단계에서 일이 쌓여 전체가 느려질 때", "직원을 늘려도 나오는 양이 그대로일 때", "계산대 하나 때문에 줄이 안 줄어드는 가게", "어디를 고쳐야 전체 속도가 오르는지 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -674,7 +674,7 @@ entries:
   path: [사고, 시스템]
   name: 필요다양성
   hint: 조절에 필요한 대응 다양성
-  aliases: [Requisite variety]
+  aliases: [Requisite variety, "상황은 백 가지인데 대응 수단은 몇 개뿐일 때", "다양한 손님 요구를 매뉴얼 하나로 못 막음", "통제하려면 쓸 수 있는 수가 얼마나 있어야 하나", "복잡한 현장을 단순한 규칙으로 다루다 실패"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -683,7 +683,7 @@ entries:
   path: [사고, 시스템]
   name: 소프트 시스템 방법론
   hint: 다중 관점의 문제 상황 탐구
-  aliases: [Soft systems methodology]
+  aliases: [Soft systems methodology, "사람마다 문제가 뭔지부터 다르게 말할 때", "이해관계자 입장을 그림으로 그려 정리하기", "무엇이 문제인지조차 합의가 안 되는 회의", "정답 없는 조직 갈등을 함께 풀어가는 절차"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -692,7 +692,7 @@ entries:
   path: [사고, 시스템]
   name: 생존가능 시스템 모형
   hint: 조직의 조절과 자율 구조 분석
-  aliases: [Viable system model]
+  aliases: [Viable system model, "본사 통제와 현장 재량 사이 균형 잡기", "조직이 오래 살아남으려면 갖출 기능 점검", "각 지점이 알아서 하되 흩어지지 않게 하기", "회사를 몸의 기관처럼 나눠 진단하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -701,7 +701,7 @@ entries:
   path: [사고, 시스템]
   name: 공통원인 고장
   hint: 한 원인이 여러 요소에 동시 영향
-  aliases: [Common cause failure]
+  aliases: [Common cause failure, "예비 장치까지 같이 고장 난 이유 찾기", "한 가지 문제로 여러 기계가 한꺼번에 멈춤", "백업도 원본도 같은 곳에 둬서 다 날린 경우", "이중으로 대비했는데 동시에 뚫린 까닭"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -710,7 +710,7 @@ entries:
   path: [사고, 시스템]
   name: 연쇄 고장
   hint: 연결을 따라 고장이 확산
-  aliases: [Cascading failure]
+  aliases: [Cascading failure, "하나가 멈추자 줄줄이 다 멈춘 사고", "한 곳 정전이 넓은 지역으로 번지는 이유", "납품업체 한 곳 부도로 줄도산 걱정될 때", "작은 장애가 도미노처럼 퍼지는 걸 막기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -719,7 +719,7 @@ entries:
   path: [사고, 시스템]
   name: 부분최적화
   hint: 부분 최적과 전체 성과의 차이
-  aliases: [Suboptimization]
+  aliases: [Suboptimization, "부서마다 실적은 좋은데 회사는 손해일 때", "내 구역만 잘하려다 전체를 망치는 경우", "구매팀은 싸게 샀는데 생산은 불량 늘어남", "각자 최선을 다했는데 결과가 나쁜 이유"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: systems
@@ -728,7 +728,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 데이터 정규화
   hint: 중복과 갱신 이상을 줄이는 관계 설계
-  aliases: [Data normalization]
+  aliases: [Data normalization, "같은 고객 주소가 여러 줄에 중복 입력된 표 정리", "한 곳만 고쳤더니 다른 줄과 어긋나는 문제", "큰 엑셀 표 하나를 여러 표로 쪼개 연결하기", "한 줄을 지웠더니 필요한 정보까지 사라질 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -737,7 +737,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 개체 식별 통합
   hint: 다른 기록의 동일 대상을 연결
-  aliases: [Entity resolution, 중복 고객 기록]
+  aliases: [Entity resolution, 중복 고객 기록, "같은 손님이 여러 번 다르게 등록돼 있을 때", "중복된 거래처 기록을 하나로 합치기", "이름 표기만 다른 같은 사람 한데 묶기", "한 명부 안 겹친 회원 정리해 한 명으로 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -746,7 +746,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 레코드 연결
   hint: 자료 간 대응하는 기록 찾기
-  aliases: [Record linkage, 서로 다른 명부 연결]
+  aliases: [Record linkage, 서로 다른 명부 연결, "두 명단에서 같은 사람 짝지어 찾기", "병원 기록과 보험 기록을 사람 기준으로 잇기", "서로 다른 파일의 같은 주문을 맞춰보기", "고유번호 없이 두 장부의 행을 서로 대응시키기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -755,7 +755,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 스키마 매칭
   hint: 서로 다른 열과 구조의 대응
-  aliases: [Schema matching, 서로 다른 열 이름 대응]
+  aliases: [Schema matching, 서로 다른 열 이름 대응, "두 파일의 칸 이름이 달라 어느 게 어느 건지 모름", "성명 칸과 이름 칸이 같은 것임을 짝짓기", "양식이 다른 두 표를 합치기 전 항목 맞추기", "다른 회사에서 받은 표를 우리 양식에 끼워 맞추기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -764,7 +764,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 데이터 계보
   hint: 자료의 생성과 변환 경로 추적
-  aliases: [Data lineage]
+  aliases: [Data lineage, "이 보고서 숫자가 어느 원본에서 왔는지 거슬러 찾기", "이 열을 고치면 어떤 보고서가 깨지는지 미리 확인", "자료가 거쳐온 가공 단계를 지도처럼 그리기", "감사 때 수치의 출처를 증명해야 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -773,7 +773,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 데이터 프로파일링
   hint: 열의 분포와 결측 등 특성 조사
-  aliases: [Data profiling]
+  aliases: [Data profiling, "처음 받은 표에 뭐가 들었는지 훑어보기", "칸마다 빈칸이 얼마나 많은지 세어보기", "각 항목 값이 어떤 범위에 몰려 있는지 파악", "분석 전에 자료 상태부터 건강검진하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -782,7 +782,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 데이터 검증
   hint: 형식과 의미 제약의 충족 검사
-  aliases: [Data validation]
+  aliases: [Data validation, "입력된 값이 정해진 규칙에 맞는지 걸러내기", "전화번호나 날짜가 엉뚱한 모양으로 들어올 때", "나이가 음수로 적힌 것 같은 말 안 되는 값 잡기", "받은 자료를 들이기 전에 통과 시험 세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -791,7 +791,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: ETL
   hint: 추출 변환 적재 파이프라인
-  aliases: [ETL]
+  aliases: [ETL, "여러 곳 자료를 꺼내 다듬어 한곳에 옮겨 담기", "매일 밤 판매 기록을 정리해 보고용으로 옮기기", "모양을 맞춘 뒤에야 창고에 넣는 자료 이송", "흩어진 시스템 자료를 정기적으로 모으는 흐름"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -800,7 +800,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: ELT
   hint: 적재한 자료를 저장소에서 변환
-  aliases: [ELT]
+  aliases: [ELT, "일단 원본 그대로 다 쌓아놓고 나중에 가공하기", "창고에 넣은 뒤 그 안에서 모양 다듬기", "가공 전 원자료를 버리지 않고 보관하고 싶을 때", "큰 저장소의 계산 힘을 빌려 자료 손질하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -809,7 +809,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 변경 데이터 캡처
   hint: 원본의 변경분만 추적
-  aliases: [Change data capture]
+  aliases: [Change data capture, "매번 전체를 복사하지 않고 바뀐 줄만 옮기기", "주문 자료가 고쳐지면 곧바로 다른 시스템에 반영", "원본 기록을 읽어 추가 수정 삭제만 뽑아내기", "밤새 통째로 옮기던 작업을 실시간으로 바꾸기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -818,7 +818,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 스타 스키마
   hint: 사실표와 차원표로 분석 구조화
-  aliases: [Star schema]
+  aliases: [Star schema, "매출표 하나에 상품·매장·날짜 표를 둘러 붙이기", "분석하기 쉽게 장부 구조를 짜고 싶을 때", "숫자 기록과 설명 정보를 나눠 담는 설계", "지역별 월별 품목별로 쉽게 잘라 보는 표 구성"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -827,7 +827,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 완만하게 변하는 차원
   hint: 차원 속성의 시간별 변경 관리
-  aliases: [Slowly changing dimensions]
+  aliases: [Slowly changing dimensions, "고객 주소가 바뀌어도 옛 주소 기록 남기기", "직원 부서 이동 전후를 구분해 실적 집계하기", "상품 분류가 바뀌면 과거 통계가 틀어지는 문제", "언제부터 언제까지 이 값이었는지 이력 관리"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -836,7 +836,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 데이터 파티셔닝
   hint: 자료를 구간별로 나누어 저장
-  aliases: [Data partitioning]
+  aliases: [Data partitioning, "몇 년치 기록을 월별로 쪼개 보관하기", "최근 자료만 조회하는데 전체를 뒤져 느릴 때", "오래된 구간만 통째로 떼어내 지우기 쉽게", "너무 커진 표를 날짜나 지역별 조각으로 나누기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -845,7 +845,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 데이터베이스 인덱싱
   hint: 조회 경로를 위한 보조 구조
-  aliases: [Database indexing]
+  aliases: [Database indexing, "자료가 많아지니 찾는 데 너무 오래 걸릴 때", "책 뒤 찾아보기처럼 빨리 찾는 길 만들어두기", "고객 이름으로 검색하면 한참 멈추는 장부", "자주 찾는 항목을 기준으로 미리 정렬해 두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -854,7 +854,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 질의 최적화
   hint: 동등한 질의 실행 계획 비교
-  aliases: [Query optimization]
+  aliases: [Query optimization, "같은 결과인데 더 빨리 뽑는 방법 고르기", "자료 뽑는 명령이 왜 이렇게 느린지 따져보기", "어떤 순서로 표를 합치는 게 덜 힘든지 비교", "조회가 어떤 길로 실행되는지 들여다보고 손보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -863,7 +863,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: ACID
   hint: 트랜잭션의 일관된 처리 성질
-  aliases: [ACID]
+  aliases: [ACID, "이체 도중 꺼져도 돈이 사라지지 않게 하는 원칙", "여러 단계 저장이 전부 되거나 전부 취소되게", "동시에 두 사람이 고쳐도 자료가 꼬이지 않게", "저장 완료된 주문이 정전 후에도 남아 있게"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -872,7 +872,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 멱등성
   hint: 반복 적용해도 결과가 같은 성질
-  aliases: [Idempotency]
+  aliases: [Idempotency, "버튼을 두 번 눌러도 결제는 한 번만 되게", "같은 작업을 다시 돌려도 중복으로 안 쌓이게", "실패해서 재시도해도 안전한 처리 만들기", "끊겼다 다시 보낸 요청이 두 번 반영될까 걱정"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -881,7 +881,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 이벤트 소싱
   hint: 상태 변화를 사건으로 기록
-  aliases: [Event sourcing]
+  aliases: [Event sourcing, "지금 잔액만 말고 바뀐 내역 전부 남겨두기", "과거 어느 시점의 상태로 되돌려 보고 싶을 때", "통장 거래내역처럼 일어난 일을 차곡차곡 적기", "왜 이 값이 됐는지 나중에 되짚어 볼 수 있게"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -890,7 +890,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 구체화 뷰
   hint: 질의 결과를 저장해 재사용
-  aliases: [Materialized view]
+  aliases: [Materialized view, "매번 오래 걸리는 집계를 미리 계산해 두기", "같은 통계 화면을 열 때마다 기다리기 싫을 때", "무거운 합계 결과를 따로 저장해놓고 꺼내 쓰기", "자주 보는 요약표를 주기적으로 새로 고쳐두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data
@@ -899,7 +899,7 @@ entries:
   path: [데이터, 정리와 저장]
   name: 데이터 출처
   hint: 자료의 기원과 책임 추적
-  aliases: [Data provenance]
+  aliases: [Data provenance, "이 숫자가 어디서 온 건지 알 수 없을 때", "누가 언제 만든 자료인지 거슬러 올라가기", "보고서 수치의 원본을 되짚어 확인하기", "자료가 거쳐 온 손과 경로를 기록해두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: data

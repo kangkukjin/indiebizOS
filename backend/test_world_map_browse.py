@@ -35,7 +35,7 @@ def test_every_entry_reachable_by_browsing_without_names():
 
 def test_browse_prefix_is_a_category_not_a_text_match():
     assert catalog.lookup(ROOT, op="browse", path=["인문학"])["status"] == "no_match"
-    assert catalog.lookup(ROOT, op="browse", path=["인문", "역사", "기록"])["total"] == 2
+    assert catalog.lookup(ROOT, op="browse", path=["인문", "역사와 고고학", "기록"])["total"] == 2
     for path in ("인문", [1], [""], ["x"] * 6):
         with pytest.raises(ValueError):
             catalog.lookup(ROOT, op="browse", path=path)
@@ -99,10 +99,10 @@ def test_new_vocabulary_does_not_fill_unrelated_turns(query):
 
 def test_script_browse_and_no_match_recovery():
     p = subprocess.run([sys.executable, str(ROOT / "data/scripts/world_map_lookup.py")],
-                       input=json.dumps({"op": "browse", "path": ["경제", "선택"]}),
+                       input=json.dumps({"op": "browse", "path": ["사회", "협상"]}),
                        text=True, capture_output=True, check=True, timeout=10)
     result = json.loads(p.stdout)
-    assert {r["id"] for r in result["items"]} == {"opportunity_cost", "sunk_cost"}
+    assert {r["id"] for r in result["items"]} == {"batna", "integrative_negotiation", "zopa"}   # 2026-09-18 트리 정비: 경제/선택은 경제/분석으로 합쳐졌다
     empty = catalog.lookup(ROOT, query="nonexistent-vocabulary")
     assert empty["status"] == "no_match"
     assert catalog.lookup(ROOT, **empty["browse"])["items"]

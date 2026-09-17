@@ -8,7 +8,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 마이야르 반응
   hint: 가열 중 아미노 화합물과 당의 반응
-  aliases: [Maillard reaction]
+  aliases: [Maillard reaction, "스테이크 겉면을 갈색으로 맛있게 굽기", "빵 껍질이 노릇해지며 나는 구수한 향", "고기를 삶으면 구운 맛이 안 나는 이유", "팬에 구울 때 물기를 닦아야 하는 까닭"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -17,7 +17,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 캐러멜화
   hint: 당의 가열 분해와 갈변
-  aliases: [Caramelization]
+  aliases: [Caramelization, "설탕을 녹여 갈색 시럽 만들기", "양파를 오래 볶으면 달아지는 이유", "달고나가 타서 쓴맛이 날 때", "푸딩 위에 얹는 갈색 소스 만드는 법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -26,7 +26,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 유화
   hint: 섞이지 않는 액체를 작은 방울로 분산
-  aliases: [Emulsification]
+  aliases: [Emulsification, "드레싱의 기름과 식초가 자꾸 갈라질 때", "마요네즈를 직접 만들다 분리됐을 때", "기름과 물을 뽀얗게 섞이게 하기", "파스타 소스가 기름 따로 겉돌 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -35,7 +35,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 겔화
   hint: 분자 망상 구조로 유동성 제한
-  aliases: [Gelation]
+  aliases: [Gelation, "젤리나 푸딩이 굳지 않고 흐를 때", "묵이나 양갱을 탱글하게 굳히기", "잼이 묽어서 걸쭉하게 만들고 싶을 때", "액체를 말랑한 덩어리로 굳히는 원리"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -44,7 +44,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 발효
   hint: 미생물의 대사로 식품 변화
-  aliases: [Fermentation]
+  aliases: [Fermentation, "김치나 된장이 익어 가는 원리", "집에서 요구르트나 막걸리 담그기", "빵 반죽이 부풀어 오르게 하기", "균을 이용해 음식 맛을 깊게 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -53,7 +53,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 염지
   hint: 소금 용액으로 식품 성질 조절
-  aliases: [Brining]
+  aliases: [Brining, "닭가슴살이 퍽퍽해서 촉촉하게 만들기", "굽기 전에 고기를 소금물에 담가 두기", "햄이나 베이컨을 집에서 만들어 보기", "고기 속까지 간이 배게 하는 밑준비"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -62,7 +62,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 절임
   hint: 산이나 염으로 식품 보존과 풍미 변화
-  aliases: [Pickling]
+  aliases: [Pickling, "오이나 무를 식초물에 담가 두고 먹기", "남는 채소를 새콤하게 오래 보관하기", "장아찌나 피클 담그는 방법", "소금에 절여 아삭한 밑반찬 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -71,7 +71,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 건조
   hint: 수분 제거로 식품 상태 변화
-  aliases: [Dehydration]
+  aliases: [Dehydration, "과일이나 나물을 말려서 오래 두기", "고추나 생선을 햇볕에 말리는 법", "집에서 육포나 과일칩 만들기", "물기를 빼서 음식이 덜 상하게 하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -80,7 +80,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 동결건조
   hint: 동결 수분을 승화시켜 제거
-  aliases: [Freeze drying]
+  aliases: [Freeze drying, "얼린 채로 말려 바삭한 과일 간식 만들기", "뜨거운 물만 부으면 되는 즉석 국 블록", "등산이나 비상용 가벼운 식량 준비", "맛과 모양을 살린 채 물기만 빼기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -89,7 +89,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 저온살균
   hint: 정해진 열처리로 미생물 부하 감소
-  aliases: [Pasteurization]
+  aliases: [Pasteurization, "우유를 끓이지 않고 균만 줄이는 법", "직접 짠 주스를 안전하게 팔고 싶을 때", "맛을 해치지 않을 만큼만 데워 소독하기", "집에서 만든 음료 보관 기간 늘리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -98,7 +98,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 수비드
   hint: 밀봉 식품을 제어된 온도에서 조리
-  aliases: [Sous vide]
+  aliases: [Sous vide, "비닐에 싸서 따뜻한 물에 오래 담가 익히기", "스테이크 속을 원하는 굽기로 정확히 맞추기", "닭가슴살을 일정한 온도로 촉촉하게 익히기", "고기가 너무 익어 버리는 실수 없애기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -107,7 +107,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 데치기
   hint: 짧은 가열로 조직과 효소 상태 변화
-  aliases: [Blanching]
+  aliases: [Blanching, "시금치를 끓는 물에 잠깐 넣었다 찬물에 헹구기", "채소 얼리기 전에 살짝 익혀 색 지키기", "나물의 쓴맛과 풋내를 빼고 싶을 때", "토마토나 복숭아 껍질을 쉽게 벗기는 요령"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -116,7 +116,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 브레이징
   hint: 소량 액체와 낮은 열로 천천히 조리
-  aliases: [Braising]
+  aliases: [Braising, "질긴 고기를 부드럽게 익히고 싶을 때", "국물 자작하게 넣고 오래 끓이는 요리", "갈비찜처럼 약한 불에 뭉근히 익히기", "싼 부위 고기를 맛있게 먹는 조리법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -125,7 +125,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 로스팅
   hint: 건열로 표면과 내부를 가열
-  aliases: [Roasting]
+  aliases: [Roasting, "커피 생두를 집에서 볶아 보기", "오븐에 통닭이나 채소를 구워 내기", "견과류를 고소하게 볶는 법", "물 없이 뜨거운 열기만으로 익히기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -134,7 +134,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 관능평가
   hint: 사람의 감각으로 식품 특성 평가
-  aliases: [Sensory evaluation, 맛을 비교하는 실험]
+  aliases: [Sensory evaluation, 맛을 비교하는 실험, "신제품 맛을 사람들에게 먹여 보고 점수 매기기", "맛과 향과 식감을 체계적으로 비교하기", "시식단을 꾸려 음식 품질 확인하기", "기계로 잴 수 없는 맛을 판정할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -143,7 +143,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 삼점검사
   hint: 세 시료 중 다른 하나로 차이 검정
-  aliases: [Triangle test, 세 시료 중 다른 맛]
+  aliases: [Triangle test, 세 시료 중 다른 맛, "재료를 바꿨는데 손님이 눈치챌지 확인", "셋 중에 다른 맛 하나 골라내기 시험", "두 제품 맛이 정말 구별되는지 알아보기", "원가 절감 후 맛 차이 있는지 검증"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -152,7 +152,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 수분활성
   hint: 미생물이 이용할 수 있는 물의 정도
-  aliases: [Water activity]
+  aliases: [Water activity, "잼이나 꿀이 잘 상하지 않는 이유", "말린 식품에 곰팡이가 필지 가늠하기", "촉촉한데도 오래가는 과자 만들기", "과자가 눅눅해지거나 빵이 마르는 원인"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -161,7 +161,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 위해요소 중점관리
   hint: 공정의 위해와 중요 관리점 분석
-  aliases: [HACCP, 위해요소중점관리기준]
+  aliases: [HACCP, 위해요소중점관리기준, "식품 공장 위생 인증을 준비할 때", "식중독 사고를 막을 점검 지점 정하기", "제조 과정 어디서 오염되는지 따져 보기", "급식소나 반찬가게 안전 관리 체계 세우기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -170,7 +170,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 콜드체인
   hint: 유통 단계의 온도 조건 유지
-  aliases: [Cold chain]
+  aliases: [Cold chain, "냉동식품이 배송 중에 녹아서 왔을 때", "신선식품을 차갑게 유지하며 배달하기", "백신이나 약을 상하지 않게 운반하기", "산지에서 매장까지 냉장 상태 이어가기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -179,7 +179,7 @@ entries:
   path: [생활, 조리와 식품]
   name: 레시피 배합 조정
   hint: 생산량과 공정에 맞춰 배합 변경
-  aliases: [Recipe scaling]
+  aliases: [Recipe scaling, "4인분 조리법을 50인분으로 늘리기", "대량으로 만들면 맛이 달라질 때", "가게 주방 장비에 맞게 재료 비율 고치기", "빵 반죽 양을 줄이거나 늘려 계산하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: food
@@ -188,7 +188,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 점진적 과부하
   hint: 적응에 맞춰 훈련 부하를 높임
-  aliases: [Progressive overload]
+  aliases: [Progressive overload, "같은 무게만 들어서 근육이 더 안 늘 때", "운동 강도를 조금씩 올려가는 계획", "달리기 거리를 언제 얼마나 늘릴지", "몸이 익숙해지면 자극을 더 줘야 하는 이유"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -197,7 +197,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 훈련 주기화
   hint: 시기별 목표와 부하의 구조화
-  aliases: [Training periodization, 운동 주기화]
+  aliases: [Training periodization, 운동 주기화, "대회 날짜에 맞춰 몸 상태를 최고로 올리기", "일 년 훈련을 준비기 시합기로 나눠 짜기", "몇 주 세게 하고 한 주 가볍게 하는 계획", "시즌 내내 같은 훈련만 해서 정체될 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -206,7 +206,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 특이성 원칙
   hint: 연습 조건에 특화된 적응
-  aliases: [Specificity principle]
+  aliases: [Specificity principle, "수영 열심히 했는데 달리기는 그대로인 이유", "시합과 비슷하게 연습해야 하는 까닭", "헬스로 키운 힘이 경기에서 안 나올 때", "목표 종목에 딱 맞는 연습 고르기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -215,7 +215,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 회복
   hint: 부하 이후 기능을 회복하는 과정
-  aliases: [Recovery]
+  aliases: [Recovery, "운동 다음 날 몸이 안 풀리고 계속 무겁다", "훈련 사이에 얼마나 쉬어야 하는지", "잠과 식사로 지친 몸을 되돌리는 법", "쉬지 않고 매일 운동하니 기록이 떨어짐"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -224,7 +224,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 자각운동강도
   hint: 주관적으로 느끼는 운동 부하
-  aliases: [Rate of perceived exertion]
+  aliases: [Rate of perceived exertion, "얼마나 힘든지 본인 느낌으로 점수 매기기", "심박계 없이 운동 세기 조절하는 법", "숨찬 정도로 오늘 달리기 강도 정하기", "환자에게 지금 몇 점만큼 힘든지 묻는 척도"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -233,7 +233,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 심박변이도 분석
   hint: 심박 간격의 변동 분석
-  aliases: [Heart rate variability analysis]
+  aliases: [Heart rate variability analysis, "스마트워치가 알려주는 스트레스 수치의 정체", "맥박이 뛰는 간격이 들쭉날쭉한 정도 보기", "오늘 몸이 훈련할 상태인지 아침에 확인", "자율신경이 지쳤는지 손목 기기로 가늠"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -242,7 +242,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 보행 분석
   hint: 걷기의 운동학과 힘 특성 분석
-  aliases: [Gait analysis]
+  aliases: [Gait analysis, "걸음걸이가 이상해 보여서 원인을 알고 싶다", "절뚝거림이 수술 후 나아졌는지 확인", "보폭과 발 딛는 힘을 재서 걷는 모습 평가", "신발 밑창이 한쪽만 닳는 이유 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -251,7 +251,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 동작 포착
   hint: 신체 움직임의 좌표 기록
-  aliases: [Motion capture, 몸의 움직임 기록]
+  aliases: [Motion capture, 몸의 움직임 기록, "몸에 표식 붙이고 카메라로 움직임 기록", "사람 동작을 그대로 따서 캐릭터에 입히기", "춤이나 스윙을 숫자 자료로 남기고 싶다", "관절 위치를 시간마다 찍어 저장"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -260,7 +260,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 생체역학 분석
   hint: 몸의 움직임과 작용력 분석
-  aliases: [Biomechanical analysis]
+  aliases: [Biomechanical analysis, "공 던질 때 어깨에 얼마나 힘이 걸리는지 알기", "점프 착지 때 무릎에 가는 충격 따져보기", "자세를 바꾸면 관절 부담이 줄어드는지 계산", "스윙 동작에서 힘이 어디서 새는지 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -269,7 +269,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 인간공학 평가
   hint: 작업과 신체 요구의 적합성 검토
-  aliases: [Ergonomic assessment]
+  aliases: [Ergonomic assessment, "일하는 자세 때문에 허리 어깨가 아픈 직원들", "작업대와 도구가 사람 몸에 맞는지 점검", "반복 작업으로 손목 다치는 공정 찾아내기", "사무실 책상 배치가 몸에 무리인지 살펴보기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -278,7 +278,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 인체측정
   hint: 설계에 필요한 신체 치수 측정
-  aliases: [Anthropometry]
+  aliases: [Anthropometry, "의자나 책상 높이를 사람 몸에 맞게 정하기", "옷이나 장갑 치수 체계를 만들려고 몸 재기", "키 작은 사람도 닿는 선반 높이 정하기", "사용자 팔 길이와 앉은키 자료가 필요할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -287,7 +287,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 작업부하 평가
   hint: 업무의 신체적 정신적 요구 평가
-  aliases: [Task load assessment]
+  aliases: [Task load assessment, "이 업무가 한 사람에게 너무 버거운지 재보기", "직원이 느끼는 일의 고됨을 설문으로 파악", "몸도 머리도 혹사당하는 자리 찾아내기", "교대 근무자 업무량이 적정한지 점검"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -296,7 +296,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 운동학습
   hint: 연습을 통한 동작 능력의 지속 변화
-  aliases: [Motor learning]
+  aliases: [Motor learning, "연습한 동작이 며칠 뒤에도 몸에 남는 원리", "당일엔 잘되는데 다음 주면 도로 못함", "새 운동 기술이 몸에 배는 과정 이해", "연습 방식에 따라 실력이 오래가는지 차이"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -305,7 +305,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 외적 주의초점
   hint: 동작의 환경적 효과에 주의
-  aliases: [External focus of attention]
+  aliases: [External focus of attention, "팔 동작 말고 공이 날아갈 곳을 생각하라는 지도", "몸 움직임을 의식할수록 동작이 굳어질 때", "운동 가르칠 때 어디에 집중하라고 말할지", "골프채 끝이나 과녁에 신경 쓰게 하는 코칭"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -314,7 +314,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 영상 피드백
   hint: 수행 영상을 보며 동작 점검
-  aliases: [Video feedback]
+  aliases: [Video feedback, "내 스윙을 찍어서 직접 보며 고치기", "말로 설명해도 자세가 안 바뀌는 학생", "휴대폰으로 운동 자세 촬영해 확인", "잘하는 사람 모습과 내 모습 나란히 비교"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -323,7 +323,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 균형 훈련
   hint: 자세 안정성의 과제별 연습
-  aliases: [Balance training]
+  aliases: [Balance training, "어르신이 자꾸 넘어질까 걱정될 때 하는 운동", "한 발로 서면 휘청거리는 걸 고치고 싶다", "발목 삔 뒤 다시 흔들리지 않게 연습", "울퉁불퉁한 길에서 중심 잡는 능력 기르기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -332,7 +332,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 가동성 훈련
   hint: 관절 움직임 범위와 제어 연습
-  aliases: [Mobility training]
+  aliases: [Mobility training, "어깨가 끝까지 안 올라가서 풀어주는 운동", "쪼그려 앉기가 안 되는 뻣뻣한 발목과 고관절", "몸이 굳어 동작이 끝까지 안 나올 때", "늘어난 움직임 끝에서도 힘 주고 버티기 연습"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -341,7 +341,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 에너지 가용성
   hint: 활동 후 생리 기능에 남는 에너지
-  aliases: [Energy availability]
+  aliases: [Energy availability, "운동량에 비해 너무 적게 먹는 선수", "훈련 많이 하는데 생리가 끊기고 자주 다침", "다이어트하며 운동하니 기운 없고 뼈가 약해짐", "운동에 쓰고 난 뒤 몸 유지에 쓸 열량이 충분한지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -350,7 +350,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 훈련 단조도
   hint: 훈련 부하의 일간 변동이 적은 정도
-  aliases: [Training monotony]
+  aliases: [Training monotony, "매일 똑같은 강도로만 운동해서 탈이 남", "힘든 날과 쉬운 날 구분 없이 훈련하는 선수", "일주일 훈련량이 얼마나 밋밋한지 수치로", "과훈련 조짐을 훈련 일지에서 미리 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -359,7 +359,7 @@ entries:
   path: [건강, 운동과 인간공학]
   name: 기술 전이
   hint: 배운 동작이 다른 과제에 미치는 영향
-  aliases: [Skill transfer]
+  aliases: [Skill transfer, "배드민턴 배운 게 테니스에 도움이 될까", "예전에 익힌 습관이 새 종목을 방해할 때", "연습장에서 된 동작이 실전에서도 통하는지", "비슷한 운동을 먼저 해두면 유리한지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: movement
@@ -368,7 +368,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 짜맞춤
   hint: 부재의 형태를 맞물려 결합
-  aliases: [Joinery]
+  aliases: [Joinery, "못이나 나사 없이 나무끼리 끼워 가구 만들기", "홈과 촉을 파서 목재를 단단히 연결하기", "한옥이나 전통 가구가 쇠붙이 없이 버티는 비결", "접착제에 기대지 않는 원목 조립을 배우고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -377,7 +377,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 장부맞춤
   hint: 돌출 장부와 구멍으로 결합
-  aliases: [Mortise and tenon]
+  aliases: [Mortise and tenon, "못 없이 나무끼리 끼워 맞춰 잇기", "의자 다리가 흔들리지 않게 단단히 끼우기", "한쪽은 튀어나오게 한쪽은 파서 맞추는 목공", "나사 안 쓰고 튼튼한 가구 틀 짜고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -386,7 +386,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 주먹장맞춤
   hint: 벌어진 맞물림으로 인장 분리 억제
-  aliases: [Dovetail joint]
+  aliases: [Dovetail joint, "서랍 앞판이 당겨도 안 빠지게 나무 끼우기", "못 없이 상자 모서리를 튼튼하게 잇는 방법", "부채꼴 모양 촉을 엇갈려 끼운 가구 모서리", "원목 서랍장을 오래 쓰게 만들고 싶은 목공 초보"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -395,7 +395,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 목재 건조
   hint: 목재 수분을 사용 조건에 조절
-  aliases: [Wood seasoning, 나무 수분 조절]
+  aliases: [Wood seasoning, 나무 수분 조절, "갓 벤 나무로 만든 가구가 갈라지고 뒤틀릴 때", "생나무를 얼마나 말려야 쓸 수 있는지", "제재한 판재를 쌓아 두고 물기 빼는 법", "실내에 들이면 상판이 휘는 걸 막고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -404,7 +404,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 증기 휨
   hint: 가열 수분으로 목재를 굽힘
-  aliases: [Steam bending]
+  aliases: [Steam bending, "곧은 나무를 부러뜨리지 않고 둥글게 굽히기", "흔들의자 곡선 다리를 통나무 하나로 만들기", "나무를 찜통에 쪄서 말랑하게 만들어 구부리기", "악기 옆판처럼 휘어진 나무 부재 만들 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -413,7 +413,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 날 갈기
   hint: 절삭 날의 형상과 예리함 복원
-  aliases: [Sharpening]
+  aliases: [Sharpening, "부엌칼이 토마토를 못 자르고 뭉갤 때", "숫돌로 무뎌진 칼 다시 잘 들게 하기", "대패나 끌이 나무를 뜯어 먹을 때", "이 빠진 가위 끝을 다시 세우고 싶을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -422,7 +422,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 패턴 제작
   hint: 입체 형상을 평면 재단 조각으로 전개
-  aliases: [Pattern making]
+  aliases: [Pattern making, "옷 만들기 전에 종이로 본 뜨는 법", "내 몸 치수에 맞는 옷본 그리고 싶을 때", "가방 모양을 천 조각들로 나눠 그리기", "인형 옷 도안을 직접 그려야 할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -431,7 +431,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 입체재단
   hint: 몸이나 모형 위에서 옷의 형태 구성
-  aliases: [Draping]
+  aliases: [Draping, "마네킹에 천을 대고 핀으로 잡아가며 옷 모양 내기", "종이 도면 없이 옷을 디자인하고 싶을 때", "천이 흘러내리는 주름을 직접 보면서 드레스 만들기", "평면 옷본으로는 안 나오는 곡선 실루엣 잡기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -440,7 +440,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 시접 마감
   hint: 재단 가장자리의 풀림과 두께 관리
-  aliases: [Seam finishing]
+  aliases: [Seam finishing, "자른 천 끝에서 올이 자꾸 풀릴 때", "옷 안쪽 꿰맨 자리를 깔끔하게 정리하기", "솔기가 두꺼워 울퉁불퉁하게 비칠 때", "세탁해도 바느질 가장자리가 안 헤지게 하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -449,7 +449,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 짜깁기
   hint: 실로 손상 부위의 조직 복원
-  aliases: [Darning]
+  aliases: [Darning, "양복에 난 담뱃불 구멍을 티 안 나게 메우기", "좀먹은 니트 구멍을 원래 짜임대로 되살리기", "아끼는 옷의 찢어진 자리를 덧대지 않고 고치기", "천의 올을 하나하나 엮어 흠집 감추는 수선"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -458,7 +458,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 천연염색
   hint: 천연 유래 색소로 섬유 착색
-  aliases: [Natural dyeing]
+  aliases: [Natural dyeing, "양파 껍질이나 풀로 천에 색 들이기", "화학 물감 없이 손수건 물들이고 싶을 때", "쪽이나 감물로 옷감 빛깔 내는 법", "아이와 식물 삶은 물로 천 물들이기 체험"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -467,7 +467,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 직조
   hint: 실의 교차로 직물 구성
-  aliases: [Weaving]
+  aliases: [Weaving, "베틀로 실을 엮어 천 짜는 법", "날실과 씨실을 번갈아 걸어 목도리 만들기", "남은 털실로 작은 벽걸이 짜고 싶을 때", "뜨개질 말고 틀에 실 걸어 원단 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -476,7 +476,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 편직
   hint: 고리의 연결로 직물 구성
-  aliases: [Knitting]
+  aliases: [Knitting, "털실로 목도리나 스웨터 뜨기", "잘 늘어나는 티셔츠 원단이 만들어지는 방식", "대바늘이나 코바늘로 실 한 가닥을 엮어 천 만들기", "양말이나 니트가 왜 올이 줄줄 풀리는지 궁금할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -485,7 +485,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 물레성형
   hint: 회전 위에서 점토의 형태 제작
-  aliases: [Wheel throwing]
+  aliases: [Wheel throwing, "돌아가는 판 위에서 흙으로 그릇 빚기", "공방 체험에서 컵 만들 때 흙이 자꾸 흔들리는 이유", "흙덩이 가운데를 잡고 벽을 얇게 끌어올리는 요령", "손으로 둥근 사발이나 항아리 모양 내는 법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -494,7 +494,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 이장주입 성형
   hint: 석고틀에 점토 현탁액을 넣어 성형
-  aliases: [Slip casting]
+  aliases: [Slip casting, "같은 모양 도자기 컵을 여러 개 찍어내기", "흙물을 틀에 부어 속 빈 그릇 만들기", "물레 없이 얇고 고른 도자기 만들고 싶을 때", "인형 모양 도자기를 똑같이 복제하는 법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -503,7 +503,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 유약 배합
   hint: 소성 조건에 맞는 표면 조성 설계
-  aliases: [Glaze formulation]
+  aliases: [Glaze formulation, "도자기 겉면의 색과 광택을 원하는 대로 내기", "가마에서 꺼냈더니 겉이 흘러내리거나 갈라졌을 때", "굽는 온도에 맞춰 바를 재료 비율 정하기", "공방에서 나만의 그릇 색을 시험해 만들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -512,7 +512,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 로스트왁스 주조
   hint: 소실 모형으로 금형 공간 형성
-  aliases: [Lost wax casting]
+  aliases: [Lost wax casting, "밀랍으로 빚은 모양을 그대로 금속으로 바꾸기", "직접 조각한 반지를 은으로 떠내고 싶을 때", "녹여 없앤 자리에 쇳물을 부어 세밀한 장식 만들기", "청동 조각상이나 장신구가 만들어지는 전통 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -521,7 +521,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 납땜
   hint: 모재보다 낮은 융점 재료로 접합
-  aliases: [Soldering]
+  aliases: [Soldering, "끊어진 이어폰 전선 다시 붙이기", "기판에 부품 다리를 녹인 금속으로 고정하기", "인두로 전자 키트 조립해야 할 때", "구리 배관 이음매를 녹여 붙여 막기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -530,7 +530,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 제본
   hint: 낱장과 표지를 책으로 결합
-  aliases: [Bookbinding]
+  aliases: [Bookbinding, "인쇄한 종이 뭉치를 한 권으로 묶고 싶을 때", "직접 쓴 글로 나만의 노트나 작품집 만들기", "실로 꿰맬지 풀로 붙일지 묶는 방식 고르기", "뜯어진 오래된 책의 등을 다시 붙여 고치기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -539,7 +539,7 @@ entries:
   path: [제작, 공예와 수선]
   name: 수리용이성 평가
   hint: 분해 진단 부품 교체의 가능성 검토
-  aliases: [Repairability assessment, 제품을 쉽게 수리]
+  aliases: [Repairability assessment, 제품을 쉽게 수리, "고장 나면 뜯어서 고칠 수 있는 물건인지 따지기", "접착제로 붙여 놔서 배터리도 못 가는 제품", "사기 전에 나중에 고쳐 쓸 수 있는지 알고 싶을 때", "나사가 특수해서 열어 볼 수도 없는 가전"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: craft
@@ -548,7 +548,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 통제어휘
   hint: 일관된 검색을 위한 용어 집합
-  aliases: [Controlled vocabulary]
+  aliases: [Controlled vocabulary, "사람마다 꼬리표를 다르게 달아 검색 안 될 때", "태그에 쓸 낱말을 정해진 목록에서만 고르기", "같은 뜻 다른 말 때문에 자료가 누락될 때", "사내 문서 분류 낱말을 하나로 통일하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -557,7 +557,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 시소러스
   hint: 동의 상하 연관 관계를 가진 어휘 체계
-  aliases: [Thesaurus]
+  aliases: [Thesaurus, "비슷한 말과 더 넓은 말 좁은 말 찾아보기", "검색어를 넓히거나 좁힐 낱말 고르기", "관련된 용어까지 함께 안내해 주는 사전", "같은 뜻 낱말을 대표어로 이끌어 주는 목록"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -566,7 +566,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 분류체계
   hint: 항목을 구별해 배치하는 범주 체계
-  aliases: [Taxonomy]
+  aliases: [Taxonomy, "물건이나 자료를 나눌 큰 갈래와 작은 갈래", "도서관 책 번호처럼 자리를 정해주는 틀", "상품 범주 나무를 처음 짜야 할 때", "어느 칸에 넣을지 애매하지 않게 구획 정하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -575,7 +575,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 온톨로지
   hint: 개체와 관계의 의미를 명시한 모형
-  aliases: [Ontology]
+  aliases: [Ontology, "개념들이 서로 어떤 사이인지 그물로 정리", "기계가 뜻을 알아듣게 분야 지식 적어두기", "환자·질병·약의 연결을 규칙으로 정의하기", "무엇이 무엇의 한 종류인지 추론시키기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -584,7 +584,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 패싯 분류
   hint: 여러 독립 속성 축으로 분류
-  aliases: [Faceted classification, 여러 기준으로 분류]
+  aliases: [Faceted classification, 여러 기준으로 분류, "쇼핑몰처럼 색상·가격·상표로 걸러 찾기", "한 물건을 여러 기준으로 동시에 나누기", "폴더 하나에만 넣기 애매한 자료 정리", "왼쪽 조건 선택창으로 목록 좁히는 방식"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -593,7 +593,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 전거 제어
   hint: 이름의 여러 표기를 동일 주체로 연결
-  aliases: [Authority control, 같은 사람의 다른 이름]
+  aliases: [Authority control, 같은 사람의 다른 이름, "같은 사람인데 이름 표기가 제각각일 때", "한자·영문·필명을 한 사람으로 묶기", "저자 이름으로 찾으면 결과가 흩어질 때", "회사 옛 이름과 새 이름 한데 모으기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -602,7 +602,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 주제 색인
   hint: 자료의 주제를 검색 어휘로 표현
-  aliases: [Subject indexing]
+  aliases: [Subject indexing, "책이 무엇에 관한 것인지 핵심어 달아주기", "제목에 없는 내용으로도 찾아지게 하기", "글마다 다루는 주제를 뽑아 꼬리표 붙이기", "도서관 자료에 주제 낱말 붙이는 일"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -611,7 +611,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 메타데이터 스키마
   hint: 기술 항목과 표현 규칙 정의
-  aliases: [Metadata schema]
+  aliases: [Metadata schema, "자료 설명서에 어떤 칸을 둘지 정하기", "날짜와 이름 적는 형식을 미리 약속하기", "입력자마다 기록 양식이 달라 엉망일 때", "소장품 목록표 설계를 처음 시작할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -620,7 +620,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 영구식별자
   hint: 대상과 참조의 장기 식별
-  aliases: [Persistent identifier]
+  aliases: [Persistent identifier, "주소가 바뀌어도 안 깨지는 논문 링크", "인용한 자료가 나중에도 찾아지게 하기", "연구자마다 평생 쓰는 고유 번호 받기", "자료 옮겨도 가리키는 번호는 그대로 두기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -629,7 +629,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: SKOS
   hint: 어휘 체계의 개념 표지 관계 표현
-  aliases: [SKOS]
+  aliases: [SKOS, "용어 사전을 웹에서 서로 연결되게 공개", "분류 낱말의 대표 이름과 다른 이름 적기", "기관의 주제어 목록을 기계가 읽게 만들기", "두 용어집의 같은 개념끼리 짝지어 주기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -638,7 +638,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 더블린 코어
   hint: 자원을 기술하는 공통 메타데이터 용어
-  aliases: [Dublin Core]
+  aliases: [Dublin Core, "자료마다 제목·만든이·날짜 칸을 공통으로", "기관끼리 소장품 설명 항목 맞추기", "사진·문서·영상에 똑같은 기본 정보 붙이기", "간단한 열다섯 가지 설명 항목 표준 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -647,7 +647,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: FAIR 원칙
   hint: 찾기 접근 상호운용 재사용의 자료 원칙
-  aliases: [FAIR principles]
+  aliases: [FAIR principles, "연구 자료를 남이 다시 쓸 수 있게 공개하기", "공개한 자료를 아무도 못 찾고 못 쓸 때", "자료 공유 계획서에 넣을 점검 기준", "다른 연구실 자료와 합쳐 쓸 수 있게 준비"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -656,7 +656,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 불리언 검색
   hint: 논리 연산으로 검색 조건 조합
-  aliases: [Boolean search]
+  aliases: [Boolean search, "두 단어 모두 들어간 글만 찾고 싶을 때", "특정 낱말 들어간 결과는 빼고 찾기", "검색 결과가 너무 많아 조건 좁히기", "이것 또는 저것 들어간 자료 한번에 찾기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -665,7 +665,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 질의 확장
   hint: 관련 표현을 더해 검색 범위 보완
-  aliases: [Query expansion]
+  aliases: [Query expansion, "찾는 말을 조금 다르게 쓰면 결과가 안 나올 때", "비슷한 말까지 알아서 넣어 찾아 주게 하기", "쇼핑몰에서 운동화를 쳐도 스니커즈가 같이 나오게", "찾는 낱말이 너무 짧아 놓치는 글이 많을 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -674,7 +674,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 적합성 피드백
   hint: 검색 결과 평가로 질의와 순위 개선
-  aliases: [Relevance feedback]
+  aliases: [Relevance feedback, "마음에 드는 결과 골라주면 검색이 나아지게", "이런 것 더 보기 눌러 결과 다듬기", "처음 찾은 목록이 빗나가서 다시 고칠 때", "좋아요·싫어요 표시로 추천 순서 바꾸기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -683,7 +683,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 계량서지학
   hint: 출판과 인용 자료의 정량 분석
-  aliases: [Bibliometrics]
+  aliases: [Bibliometrics, "어느 분야 논문이 얼마나 늘었는지 세기", "가장 많이 언급된 연구자 순위 내기", "학술지 영향력을 숫자로 비교하기", "연구 흐름을 발표 건수 통계로 파악"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -692,7 +692,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 동시인용 분석
   hint: 함께 인용되는 자료의 관계 분석
-  aliases: [Co citation analysis]
+  aliases: [Co citation analysis, "늘 나란히 언급되는 두 논문 찾아내기", "다른 글들이 짝지어 소개하는 책 알아보기", "분야의 핵심 고전들이 어떻게 무리 짓는지", "후속 연구가 같이 묶는 자료로 지도 그리기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -701,7 +701,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 서지결합
   hint: 공통 참고문헌을 가진 자료의 연결
-  aliases: [Bibliographic coupling]
+  aliases: [Bibliographic coupling, "같은 책을 참고한 논문끼리 묶어 보기", "참고문헌 목록이 겹치는 글 찾기", "이 논문과 뿌리가 비슷한 연구 찾기", "출처 겹침으로 글 사이 가까움 재기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -710,7 +710,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 디지털 보존
   hint: 장기 접근과 무결성을 유지
-  aliases: [Digital preservation]
+  aliases: [Digital preservation, "옛 파일이 십 년 뒤에도 열릴지 걱정될 때", "오래된 저장 매체 자료를 안전하게 옮기기", "가족 사진 파일이 깨지지 않게 오래 두기", "프로그램이 사라져 못 여는 문서 대비하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -719,7 +719,7 @@ entries:
   path: [지식, 조직과 탐색]
   name: 버전 관리
   hint: 변경과 분기 이력의 추적
-  aliases: [Version control]
+  aliases: [Version control, "최종·진짜최종 파일이 쌓여 헷갈릴 때", "누가 언제 무엇을 고쳤는지 기록 남기기", "잘못 고친 문서를 예전 상태로 돌리기", "여럿이 따로 고친 내용을 나중에 합치기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: information
@@ -728,7 +728,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 근본원인 분석
   hint: 문제의 발생 구조를 추적
-  aliases: [Root cause analysis, RCA, 반복 고장 원인]
+  aliases: [Root cause analysis, RCA, 반복 고장 원인, "사고가 어떻게 일어났는지 경위를 거슬러 추적", "증상만 고치고 넘어가서 자꾸 재발", "큰 사고 뒤 조사 보고서 쓰기", "문제가 생겨난 과정 전체를 파헤치기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -737,7 +737,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 5왜 분석
   hint: 왜라는 질문으로 원인 연결 탐색
-  aliases: [Five whys]
+  aliases: [Five whys, "이유를 다섯 번 거듭 캐묻기", "겉으로 보이는 이유 말고 진짜 이유 찾기", "퓨즈만 갈고 끝내는 식의 땜질 그만두기", "도구 없이 말로만 빠르게 원인 파고들기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -746,7 +746,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 특성요인도
   hint: 문제의 가능한 원인을 범주별 정리
-  aliases: [Fishbone diagram]
+  aliases: [Fishbone diagram, "생선뼈 모양 그림으로 원인 늘어놓기", "사람·기계·재료·방법별로 의심 가는 것 적기", "원인 후보를 빠짐없이 모으는 회의", "불량 원인이 너무 많아 머릿속이 복잡할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -755,7 +755,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 파레토 분석
   hint: 기여가 큰 문제 항목에 주목
-  aliases: [Pareto analysis]
+  aliases: [Pareto analysis, "불만 유형 중 제일 많은 몇 가지만 먼저 잡기", "소수 항목이 문제 대부분을 차지하는지 확인", "막대를 큰 순서로 세우고 누적선 그리기", "손볼 게 너무 많아 우선순위가 필요할 때"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -764,7 +764,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 통계적 공정관리
   hint: 시간별 변동으로 공정 상태 감시
-  aliases: [Statistical process control, SPC]
+  aliases: [Statistical process control, SPC, "만들면서 품질 숫자를 계속 지켜보기", "불량 나오기 전에 공정이 틀어지는 것 잡기", "다 만든 뒤 검사 말고 도중에 관리", "생산 데이터를 시간순으로 살피는 체계"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -773,7 +773,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 관리도
   hint: 관리 한계와 관측 변화를 비교
-  aliases: [Control chart]
+  aliases: [Control chart, "매일 잰 값이 평소 범위를 벗어났는지 그래프로", "우연한 흔들림인지 진짜 이상인지 구분", "위아래 경계선 그어놓고 점 찍어 보기", "품질 수치가 슬슬 나빠지는 조짐 알아채기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -782,7 +782,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 공정능력 분석
   hint: 공정 분포와 규격의 적합성 평가
-  aliases: [Process capability analysis, 공정 규격 충족]
+  aliases: [Process capability analysis, 공정 규격 충족, "우리 기계가 허용 오차 안에 만들 수 있는지", "제품 치수 퍼짐이 기준 폭에 비해 넉넉한지", "납품처가 요구하는 능력 지수 계산", "불량이 얼마나 나올지 치수 분포로 예측"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -791,7 +791,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 측정시스템 분석
   hint: 측정 오차의 구성과 크기 평가
-  aliases: [Measurement system analysis]
+  aliases: [Measurement system analysis, "우리가 재는 숫자를 믿어도 되는지 확인", "저울이나 계측기가 정확한지 전반적으로 점검", "측정값이 한쪽으로 쏠리거나 시간 따라 변할 때", "데이터 분석 전에 재는 방법부터 검증"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -800,7 +800,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 게이지 반복재현성
   hint: 측정자와 반복의 오차 분리
-  aliases: [Gage repeatability reproducibility]
+  aliases: [Gage repeatability reproducibility, "같은 물건을 재는 사람마다 값이 다를 때", "한 사람이 여러 번 재도 값이 들쭉날쭉", "측정기 탓인지 사람 탓인지 가려내기", "검사원 여럿에게 같은 부품 반복해 재게 하기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -809,7 +809,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 계수형 인수검사
   hint: 표본으로 로트 수락 여부 결정
-  aliases: [Acceptance sampling]
+  aliases: [Acceptance sampling, "납품받은 상자 전부 열어볼 수 없을 때", "몇 개 뽑아 불량 세고 통째로 받을지 정하기", "불량이 몇 개 넘으면 반품할지 기준 정하기", "입고 물건 검사 개수 정하는 법"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -818,7 +818,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 품질기능전개
   hint: 고객 요구를 설계 특성으로 연결
-  aliases: [Quality function deployment, QFD]
+  aliases: [Quality function deployment, QFD, "손님이 원하는 것을 제품 사양으로 옮기기", "집 모양 표로 요구와 기술 항목 짝짓기", "가볍게 해달라는 말을 몇 그램으로 바꾸기", "신제품 기획 때 무엇을 중요하게 설계할지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -827,7 +827,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 다구치 기법
   hint: 잡음에 강한 설계 조건 탐색
-  aliases: [Taguchi methods]
+  aliases: [Taguchi methods, "날씨나 재료가 달라도 결과가 고르게 나오게", "바꿀 수 없는 외부 영향에 덜 흔들리는 조건", "적은 횟수의 실험표로 여러 요인 한꺼번에 시험", "쓰는 환경이 제각각이어도 성능 유지"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -836,7 +836,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 반응표면법
   hint: 실험으로 입력과 반응 곡면 추정
-  aliases: [Response surface methodology]
+  aliases: [Response surface methodology, "온도와 시간을 어떻게 맞춰야 제일 좋은지 찾기", "몇 번 실험으로 최적 조건 근처를 좁혀가기", "조건 바꾸면 결과가 휘어지며 변할 때", "레시피 비율을 실험으로 최적화"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -845,7 +845,7 @@ entries:
   path: [운영, 품질과 개선]
   name: DMAIC
   hint: 정의 측정 분석 개선 관리의 절차
-  aliases: [DMAIC]
+  aliases: [DMAIC, "불량률 줄이는 프로젝트를 다섯 단계로 진행", "데이터로 문제 크기부터 재고 개선하는 순서", "개선 과제를 어떤 순서로 풀지 틀이 필요할 때", "고친 뒤 다시 나빠지지 않게 유지까지 챙기기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -854,7 +854,7 @@ entries:
   path: [운영, 품질과 개선]
   name: PDCA
   hint: 계획 실행 점검 개선의 순환
-  aliases: [PDCA]
+  aliases: [PDCA, "작게 해보고 확인하고 고치기를 되풀이", "개선을 한 번으로 끝내지 않고 계속 돌리기", "해보고 결과 점검해서 다음 계획에 반영", "네 단계 돌림 바퀴로 일하는 습관"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -863,7 +863,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 실수방지
   hint: 실수가 발생하기 어렵도록 설계
-  aliases: [Poka yoke]
+  aliases: [Poka yoke, "거꾸로는 아예 안 끼워지게 모양 만들기", "깜빡해도 사고가 안 나게 장치로 막기", "주의하라는 말로는 안 고쳐지는 잘못", "빠뜨린 부품이 있으면 다음 단계로 못 넘어가게"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -872,7 +872,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 안돈
   hint: 이상 상태를 현장에 가시화
-  aliases: [Andon]
+  aliases: [Andon, "문제 생기면 바로 불 켜서 알리는 장치", "작업자가 줄 당겨 라인 세우고 도움 부르기", "어느 자리에서 탈이 났는지 모두가 보게 하기", "이상을 숨기지 않고 즉시 드러내는 현장"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -881,7 +881,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 표준작업
   hint: 작업 순서와 기준을 공유
-  aliases: [Standard work]
+  aliases: [Standard work, "사람마다 일하는 방식이 달라 품질이 들쭉날쭉", "가장 좋은 작업 방법을 정해 모두가 따르기", "신입도 따라 할 수 있게 순서와 시간 적기", "개선하려면 먼저 기준이 되는 방법이 있어야"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -890,7 +890,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 방침관리
   hint: 장기 목표와 현장 개선의 정렬
-  aliases: [Hoshin kanri]
+  aliases: [Hoshin kanri, "회사 몇 년 계획이 현장 일과 따로 놀 때", "경영진 방침을 부서별 실행 과제로 쪼개기", "위아래가 주고받으며 연간 중점 과제 맞추기", "현장 개선 활동을 회사 큰 방향에 맞추기"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality
@@ -899,7 +899,7 @@ entries:
   path: [운영, 품질과 개선]
   name: 시정예방조치
   hint: 원인 제거와 재발 방지의 관리
-  aliases: [Corrective preventive action]
+  aliases: [Corrective preventive action, "고객 불만 접수 후 처리 기록을 남기는 절차", "같은 불량이 또 나오지 않게 조치하고 확인", "인증 심사에서 지적받은 사항 처리하기", "문제 접수부터 조치 완료까지 서류로 추적"]
   source:
     path: docs/world_map/I_atlas_editorial_2026_09_17.md
     section: quality

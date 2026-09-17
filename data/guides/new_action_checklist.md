@@ -181,8 +181,8 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         keywords: [한글키워드, english_keyword]
         # aliases: {정규키: [별칭1, 별칭2]}   # (선택) 자연스러운 인자명 → 정규키 자동 매핑
         # open_params: true       # (선택) 자유 키를 정당하게 받는 액션만 — 인자 층 검사 면제.
-        #   기본은 검사 대상: 핸들러가 읽지 않는 파라미터 키는 실행 결과에 param_warning 으로
-        #   경고된다 (ibl_param_vocab.check_params — 허용집합=패키지 읽기키∪input_schema∪aliases).
+        #   기본은 검사 대상: 선언 안 된 키·없는 op 값은 실행 결과에 param_warning 으로 경고된다
+        #   (ibl_param_vocab.check_params — 허용=input_schema∪aliases. 읽는 키는 params 에 선언).
         # ai_call: true          # (선택) 원샷 AI 낱말(실행마다 모델 호출)이면 — dry-run 비용 고지
         #   +포털 대여 기본 거부. fixture 는 exempt 로 별도 면제. src README '선택 필드: ai_call' 참조.
         # runs_on: pc_only       # (선택) 폰 네이티브: 데스크톱(맥·리눅스·윈도우) 전용이면. 기본 anywhere.

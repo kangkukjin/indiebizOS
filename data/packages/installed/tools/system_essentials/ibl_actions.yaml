@@ -41,6 +41,7 @@ nodes:
           extract_images: boolean  # docx 전용 — 이미지 추출 여부(기본 true).
           max_blocks: integer      # docx 전용 — 블록(문단·표) 상한(기본 300, 0=무제한).
           max_rows: integer        # xlsx/xls 전용 — 시트당 행 상한(기본 200).
+          sheet: string            # xlsx/xls 전용 — 이 시트만 읽는다(생략=전체). office_ops.read_xlsx 가 읽는다 (2026-09-18 선언 보충)
           numbered: boolean  # text 전용 — 각 줄 앞에 줄번호(cat -n 모양). grep 줄번호·edit start_line 과 같은 자 (2026-09-05 그림자 관문)
           tail: integer      # text 전용 — 끝에서 N줄(1 이상), blocks에서도 동일. 앞쪽 범위 옵션과 동시 지정 불가.
         # ★셸 그림자(2026-09-05): 이 낱말로 표현되는 셸 명령 — 빌드가 data/shell_shadow.json 으로 파생하고

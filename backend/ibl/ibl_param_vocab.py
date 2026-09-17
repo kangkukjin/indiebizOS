@@ -182,12 +182,18 @@ def allowed_param_keys(node: str, action: str,
         pkg_dir = get_tools_path() / pkg_name
         if not pkg_dir.is_dir():
             return None
-        keys = set(_package_read_keys(pkg_dir))
+        # ★허용 키의 출처는 **그 액션의 선언**이다 (2026-09-18 검사기 조이기). 옛 판은 패키지 전체 .py 에서
+        #   읽히는 모든 키를 허용해 같은 패키지 *다른 액션*의 키가 통과했다 — `[self:read]{sheet}` 는
+        #   self:sheet 의 키 덕에, `[sense:researcher]{query}` 는 sense:paper 의 키 덕에 초록이었고, 빌드의
+        #   param 선언 완전성 관문만 뒤늦게 잡았다(증류·시딩·typecheck 경로는 침묵). 실측: 코퍼스 3,635행 중
+        #   1행·실사용 2,463 step 중 3종만 새로 걸렸다 — 선언 완전성 관문이 이미 코퍼스를 선언에 묶어 둔 덕.
+        #   패키지 읽기키는 스키마가 아예 없는 도구의 폴백으로만 남긴다(판정 재료가 없으면 옛 판정).
+        schema = _schema_props(tool_name)
+        keys = set(schema) if schema else set(_package_read_keys(pkg_dir))
     except Exception:
         return None
 
     qualified = f"{node}:{action}"
-    keys |= _schema_props(tool_name)
     keys |= _alias_keys(action_config)
     keys |= UNIVERSAL_PARAM_KEYS | RUNTIME_META_KEYS
     keys |= CORPUS_PARAM_ALLOW.get(qualified, set())
@@ -250,8 +256,48 @@ _PIPELINE_ONLY_TRANSFORMS = {
 }
 
 
+def unknown_op_message(action_config: Any, params: Any) -> Optional[str]:
+    """op **값**이 그 액션의 선언된 op 이 아니면 안내 문장, 아니면 None (2026-09-18 — 한 벌로).
+
+    실행기는 없는 op 을 정직하게 거절하지만 실행 *전* 검사는 dry-run 표면(/ibl/validate)에만 붙어 있어
+    증류·시딩·관용구 등록 경로는 `op: "nope"` 에 침묵했다. enum 은 사전(ops.values)에 이미 있다.
+    동적 값($변수·{{}}·<자리표>)과 op 선언이 없는 액션은 판정하지 않는다."""
+    if not isinstance(action_config, dict) or not isinstance(params, dict):
+        return None
+    op = params.get("op")
+    if not isinstance(op, str) or not op.strip() or any(c in op for c in "$<{"):
+        return None
+    try:
+        from ibl_ops import op_names
+        names = op_names(action_config)
+    except Exception:
+        return None
+    if not names or op.strip() in names:
+        return None
+    return f"op '{op.strip()}' 은(는) 이 액션에 없습니다 — 실행 시 거절됩니다. 사용 가능: {sorted(names)}"
+
+
 def check_params(node: str, action: str, params: Any,
                  action_config: Optional[dict] = None) -> Optional[dict]:
+    """미인식 파라미터·없는 op 검사. 문제 없으면 None."""
+    if action_config is None:
+        try:
+            from ibl_registry import load_nodes_installed
+            action_config = (load_nodes_installed().get("nodes", {})
+                             .get(node, {}).get("actions", {}).get(action)) or {}
+        except Exception:
+            return None
+    keys = _check_param_keys(node, action, params, action_config)
+    op_msg = unknown_op_message(action_config, params)
+    if not op_msg:
+        return keys
+    if keys:
+        return {**keys, "unknown_op": params.get("op"), "message": f"{keys['message']} {op_msg}"}
+    return {"unknown": [], "suggest": {}, "soft": {}, "unknown_op": params.get("op"), "message": op_msg}
+
+
+def _check_param_keys(node: str, action: str, params: Any,
+                      action_config: Optional[dict] = None) -> Optional[dict]:
     """미인식 파라미터 검사. 문제 없으면 None, 있으면
     {"unknown": [...], "suggest": {키: 제안}, "message": 한 줄 경고}.
 
@@ -329,7 +375,7 @@ def check_params(node: str, action: str, params: Any,
             "앞 통화로 넘기세요."
         )
     if unknown:
-        parts.append(f"미인식 파라미터 {unknown} — [{node}:{action}] 핸들러가 읽지 않는 키라 "
+        parts.append(f"미인식 파라미터 {unknown} — [{node}:{action}] 이 선언하지 않은 키라 "
                      f"조용히 무시됐을 수 있습니다.")
         if suggest:
             parts.append("비슷한 키: " + ", ".join(f"{k}→{v}" for k, v in suggest.items()) + ".")

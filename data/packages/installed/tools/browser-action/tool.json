@@ -141,6 +141,10 @@
             "type": "integer",
             "description": "limbs:browser 파라미터"
           },
+          "submit": {
+            "type": "boolean",
+            "description": "limbs:browser 파라미터"
+          },
           "timeout": {
             "type": "number",
             "description": "limbs:browser 파라미터"

@@ -265,6 +265,7 @@
         "extract_images",
         "max_blocks",
         "max_rows",
+        "sheet",
         "numbered",
         "tail",
         "offset"

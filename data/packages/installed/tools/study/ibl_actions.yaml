@@ -46,7 +46,7 @@ actions:
   researcher:
     aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
       limit: [max_results, display]
-      name: [name_ko, searchTerm]
+      name: [name_ko, searchTerm, query]   # query: 핸들러가 name 의 대체로 읽고 fixture 도 쓴다 (2026-09-18 선언 보충)
       org: [orgName_ko]
       id: [lodID, authorID]
     returns: items

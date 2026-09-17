@@ -682,23 +682,7 @@ def validate_code(code: str) -> dict:
                     param_warning = pw["message"]
             except Exception:
                 param_warning = None
-            # F2-op (2026-08-16 상상훈련 5회차): op *값*도 dry-run 이 미리 검사한다 —
-            # `[limbs:radio]{op:"search"}` 가 검수 초록 후 실행에서 "알 수 없는 op" 로
-            # 죽었다(검색=sense:radio). enum 은 레지스트리 ops.values 에 이미 있다.
-            # 소프트 경고(R2 param 경고와 같은 층) — 실행기의 정직 거절이 최종 심판.
-            try:
-                _op_val = str(params.get("op") or "").strip()
-                if _op_val:
-                    from ibl_access import load_nodes_raw
-                    _ac = ((load_nodes_raw() or {}).get("nodes", {})
-                           .get(node, {}).get("actions", {}).get(action, {})) or {}
-                    _vals = ((_ac.get("ops") or {}).get("values") or {})
-                    if _vals and _op_val not in _vals:
-                        _ow = (f"op '{_op_val}' 은(는) 이 액션에 없습니다 — 실행 시 거절됩니다. "
-                               f"사용 가능: {sorted(_vals)}")
-                        param_warning = f"{param_warning} / {_ow}" if param_warning else _ow
-            except Exception:
-                pass
+            # F2-op(2026-08-16): op *값* 검사는 check_params 가 한 벌로 맡는다(2026-09-18 — ibl_param_vocab.unknown_op_message).
 
         if warn:
             param_warning = f"{param_warning} / {warn}" if param_warning else warn

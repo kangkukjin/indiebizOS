@@ -2441,6 +2441,7 @@ nodes:
           name:
           - name_ko
           - searchTerm
+          - query
           org:
           - orgName_ko
           id:
@@ -5011,6 +5012,7 @@ nodes:
           extract_images: boolean
           max_blocks: integer
           max_rows: integer
+          sheet: string
           numbered: boolean
           tail: integer
         shell_shadow:
@@ -5920,6 +5922,7 @@ nodes:
           headless: boolean
           id: string
           index: integer
+          submit: boolean
           timeout: number
         aliases:
           source_ref:

@@ -10,6 +10,7 @@ actions:
       headless: boolean
       id: string
       index: integer
+      submit: boolean   # type 전용 — 입력 뒤 Enter. browser_interact/browser_chrome 이 읽는다 (2026-09-18 선언 보충)
       timeout: number
     aliases:
       source_ref: [from_ref]

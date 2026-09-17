@@ -50,13 +50,13 @@ def _callee_name(node: ast.Call) -> str:
     return ""
 
 
-def _origin_aliases(tree: ast.AST) -> set:
-    """이 모듈에서 set_task_origin 을 가리키는 이름들(별칭 import 포함)."""
+def _origin_aliases(tree: ast.AST, target: str = "set_task_origin") -> set:
+    """이 모듈에서 target(set_task_origin 등)을 가리키는 이름들(별칭 import 포함)."""
     names = set()
     for n in ast.walk(tree):
         if isinstance(n, ast.ImportFrom) and (n.module or "").endswith("thread_context"):
             for a in n.names:
-                if a.name == "set_task_origin":
+                if a.name == target:
                     names.add(a.asname or a.name)
     return names
 
@@ -72,6 +72,10 @@ def _build_index():
         except (SyntaxError, UnicodeDecodeError):
             continue
         aliases = _origin_aliases(tree) or {"set_task_origin"}
+        # 표식 ③(2026-09-18): 발화자에서 출처를 파생하는 자리 — 주인의 말이면 'user' 가 되므로 사람-표면이다.
+        #   WS 채팅 세 자리가 리터럴 "user" 에서 이 함수로 옮겨 갔다(예약 주입 fail-closed). 표식을 같이
+        #   옮기지 않으면 그 세 표면이 이 관문의 시야에서 조용히 빠진다.
+        derived = _origin_aliases(tree, "set_task_origin_for_author") or {"set_task_origin_for_author"}
         rel = os.path.relpath(path, BACKEND)
         for fn in ast.walk(tree):
             if not isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)):
@@ -84,6 +88,8 @@ def _build_index():
                 names.add(cn)
                 # 표식 ①: set_task_origin("user")  ②: actor_context(origin="user")
                 if cn in aliases and c.args and _is_user(c.args[0]):
+                    is_surface = True
+                if cn in derived and c.args:
                     is_surface = True
                 if cn == "actor_context":
                     for kw in c.keywords:

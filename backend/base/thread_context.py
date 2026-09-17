@@ -276,12 +276,23 @@ def is_web_surface() -> bool:
 # origin == 'user' 일 때만 발급된다 — 스케줄러·자가점검·위임 사슬·외부 채널 등
 # 자율 경로는 origin 을 안 세팅하므로(None) fail-closed.
 # 세팅 지점 = 사용자 대면 transport 4곳(WS 채팅×2·/system-ai/chat·에이전트 명령 HTTP).
+# WS 채팅은 발화자에서 파생한다(set_task_origin_for_author) — 같은 핸들러로 예약 주입문도 들어오기 때문(2026-09-18).
 # 해제 = 인지 파이프라인 finally(소비 1회) + clear_all_context(백스톱) — 풀 스레드 재사용
 # 으로 다음 런에 새는 것을 막는다.
 
 def set_task_origin(origin: str):
     """현재 스레드 태스크의 출처 설정 ('user' = 사람의 직접 명령)."""
     _thread_local.task_origin = origin
+
+
+def set_task_origin_for_author(utterance_author: str):
+    """발화자에서 태스크 출처를 **파생**한다 — 주인의 말(owner)만 'user', 그 밖은 미세팅(fail-closed).
+
+    2026-09-18: WS 채팅 핸들러 세 자리가 발화자와 무관하게 'user' 를 찍어, 예약 주입문
+    (calendar_actions 가 같은 핸들러로 밀어 넣는 `utterance_author: "schedule"`)이 REPAIR 로 분류되면
+    RED 수리 그랜트 자격을 얻을 수 있었다 — 헌법("스케줄러 = 미세팅 = fail-closed") 위반. 채팅창을
+    탔다는 사실이 아니라 **누가 말했는가**가 자격이다. 풀 스레드에 남은 옛 값도 지운다."""
+    _thread_local.task_origin = "user" if utterance_author == "owner" else None
 
 
 def get_task_origin() -> str:

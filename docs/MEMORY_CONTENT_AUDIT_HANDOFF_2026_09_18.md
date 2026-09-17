@@ -54,7 +54,7 @@
 4. ~~행동이 바뀐 어휘를 잡는 관문~~ ✅ 09-18 집행 — `scripts/iblbuild_example_review.py` + 원장 `data/ibl_example_review.json`(액션 166개의 계약 필드 지문). `build --check`(pre-commit)가 지문과 대조해 계약이 바뀐 액션마다 **바뀐 필드·로컬 용례 수**를 말하고 실패 → `--show` 로 읽고 고친 뒤 `--ack`(원장도 스테이지). 근거: 09-12 memory save 무동작화는 git 에서 target_description·ops.returns·ops.side_effect·ops.values·fixture 변화로 그대로 보였다 — 읽는 절차가 없었을 뿐. 기준선은 이번 세션의 전수 정독 뒤 상태. 못 잡는 것 = 사전은 그대로인데 핸들러만 바뀐 변화(문서 갱신 의무의 자리). 회귀 `backend/test_example_review_gate_2026_09_18.py`, 문서 ibl.md §건강·hippocampus_retraining.md §7.
 5. 세계의 기억 재건(§2).
 6. 커밋 — 이번 세션의 backend 13파일+회귀·`memory.md`·`memory_tree.py` 가 **다른 세션의 미커밋 회상 작업과 같은 파일에 섞여 있다**(`agent_pipeline.py`·`agent_communication.py`·`api_system_ai.py` 등). 사용자 지시 대기. pathspec 으로도 파일 단위로는 못 가른다 — 같이 커밋하거나 `git add -p`.
-7. ⚠곁가지(미수리·미재현, 사용자 판정 요청해 둠): 예약 주입문이 채팅 핸들러를 타며 `set_task_origin("user")` 를 받는다 → 예약 턴이 RED 수리 그랜트 자격을 얻을 수 있음. 헌법("스케줄러 = 미세팅 = fail-closed")과 어긋남. 이번에 넣은 `schedule` 표식을 그 자리에서 읽으면 닫힌다(`services/chat_streams.py` 의 `_so("user")`·`_set_origin("user")` 3곳).
+7. ~~⚠곁가지: 예약 턴의 RED 수리 자격~~ ✅ 09-18 수리 — 실물 확인: `calendar_actions._inject_message_via_ws` 가 예약문을 WS 채팅 핸들러로 밀어 넣고, `chat_streams` 세 자리가 발화자와 무관하게 `set_task_origin("user")` 를 찍었다. 그 값이 `agent_pipeline` 의 REPAIR 분기·늦은 승격 두 곳에서 그랜트의 유일한 자격 조건. → `thread_context.set_task_origin_for_author`(owner 만 `'user'`, 그 밖은 미세팅·옛 값 소거)로 세 자리 교체. ★표식이 옮겨 가면 기존 관문(`test_user_surface_pipeline` — `set_task_origin("user")` 표식으로 사람-표면을 찾는다)의 시야에서 세 표면이 조용히 빠지므로 관문에 표식 ③을 추가(표면 10곳 그대로 확인). `schedule` 표식은 권한을 *낮추는* 값이라 클라이언트가 위조해도 얻는 것이 없다. 회귀 `backend/test_schedule_origin_fail_closed_2026_09_18.py`, 문서 architecture.md 한도 ①.
 
 ## 4. ✅ 실행기억의 문법 감사 (09-18 이어받은 세션에서 집행 완료)
 

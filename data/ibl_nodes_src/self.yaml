@@ -278,6 +278,7 @@
           content: [data]
           format: [type]
         returns: effect
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         description: 결과를 지정한 목적지로 내보냄 (op 분기). gui=UI 표시, clipboard=클립보드 복사. 파일 저장은 write(파이프 싱크 겸용 — 어휘 중복 흡수 2026-08-05).
         target_description: 'gui — content(HTML/데이터) + format(카드/테이블/HTML). clipboard — content(텍스트).'
         group: output

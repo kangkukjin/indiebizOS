@@ -12,6 +12,7 @@ nodes:
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
       ask:
         returns: scalar
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         ai_call: true  # F14-4 (2026-08-20): 실행마다 모델 호출 — dry-run 고지·포털 기본 거부(포털은 self 노드 자체도 차단)
         exempt: LLM 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합
         description: 내 몸의 경량 모델에게 원샷으로 물어 답을 즉시 받는다(도구·다단계 없이 가볍고 빠름). 요약·개선·설명·변환·답변에. 앱·워크플로우처럼 AI 없는 표면이 AI를 한 줄로 부를 때. 다단계는 [others:delegate], 이웃 몸은 [others:ask].
@@ -58,6 +59,7 @@ nodes:
               cat: {"-n": numbered=true}
               nl: {}
         returns: scalar
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         # 변이 축이 op 이 아니라 **param** 인 통화 (F20-1 shape_variants 판정의 동형 —
         # "변이 축은 param" 문제를 op 로 바꾸지 않고 선언의 입도를 param 축으로 확장한다).
@@ -133,6 +135,7 @@ nodes:
             positional: [path]
             skeleton: {content: "<내용>"}
         returns: effect
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         # spill=true 는 봉투에 {items:[], ref:…} 를 실어 뒤 step 이 투명 해소한다 —
         # 통화가 계속 흐르는 파이프 통과자다. 액션 단위 effect 만 읽으면 이음매 정적
         # 검사(T2)가 `write{spill:true} >> [table:*]` 코퍼스 실례를 오거절한다
@@ -274,6 +277,7 @@ nodes:
             positional: [src, dest]
             path_params: [src, dest]
         returns: effect
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         description: 파일 또는 폴더를 다른 위치로 복사 (원본 유지). 폴더는 재귀 복사. src 없이 파이프로 items를 받으면 그 파일들을 dest 폴더에 한꺼번에 저장(폰 사진 등).
         group: file
         target_description: 'src(원본 경로)와 dest(복사 위치) 두 파라미터. (source/destination 별칭도 허용) ★src를 생략하고 앞 액션 결과를 >> 로 넘기면 그 items의 파일 전부를 dest 폴더로 복사 — 몇 장을 고르는 일은 [table:take]/[table:filter]가 한다. items의 source가 usb면 USB 연결 폰에서 당겨 온다. 이름 충돌은 "(2)"로 피하고 덮어쓰지 않는다. 앞 단계가 **0행**이면 고장이 아니라 빈손 성공(0개 저장) — 통화 자체가 없을 때만 거절한다.'
@@ -554,6 +558,7 @@ nodes:
         guides: [document_edit.md]
       sheet:
         returns: items
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)
         # append/update 가 장부 파일을 쓴다 — op 하나라도 쓰기면 true (webapp 선례).
         side_effect: true
@@ -747,6 +752,7 @@ nodes:
     actions:
       spreadsheet:
         returns: effect
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         runs_on: pc_only
         description: items 통화 → xlsx 스프레드시트 산출. 값만(수식·서식 제외).
         target_description: 'path(출력 경로, .xlsx 자동 보정). 단일 시트: rows(행 배열, 각 행은 셀 배열) + headers(선택, 첫 행)/sheet_name(선택). 다중 시트: sheets={시트명: rows} (rows보다 우선). 표형 table={columns,rows} 파라미터도 수용(headers/rows로 매핑 — table:chart와 같은 입력 형태). bare 파일명은 프로젝트 outputs/로, 디렉토리를 적으면 그 자리에(형제 emitter 공통 규약). 읽기는 self:read{format=xlsx}.'

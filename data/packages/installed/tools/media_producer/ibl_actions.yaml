@@ -94,6 +94,7 @@ nodes:
           height: integer
           timeout: integer
         returns: items
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         side_effect: true
         exempt: 실행마다 PNG 파일 생성(부작용) — 정기 합성 실행 부적합. Playwright 엔진 건강은 scripts/ci_playwright_smoke.py, xlsx 재계산 관문은 backend/test_render_xlsx_contract.py 가 담당.
         runs_on: pc_only
@@ -138,6 +139,7 @@ nodes:
         # 구 image_critic(채점)을 op:critic 으로 흡수 (2026-08-05 어휘 중복 압축 — 변형=op
         # 명명 헌법). 2026-08-27 벤더 중립화: 모델은 실행 역할 우선, 미지원/미확인 때 별도 비전 설정(vision_read.py).
         returns: scalar
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         side_effect: false   # 두 op 모두 순수 읽기(비전 조회) — 세계를 바꾸지 않는다
         # fixture 대신 면제 — self:ask 선례(LLM 원샷 호출)와 같은 이유.
         exempt: 기어-해소 비전 모델 유료 호출 + 이미지 경로 인자 의존 — 정기 실행 부적합

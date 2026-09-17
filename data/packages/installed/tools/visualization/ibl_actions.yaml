@@ -29,6 +29,7 @@ actions:
       # 별칭은 데이터로 — 어휘 이름을 핸들러 코드에 심지 않는다(IBL 헌법 '명사의 자리').
       output_path: [path]
     returns: effect
+    pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
     runs_on: pc_only
     description: '통합 차트. chart_type: line/bar/pie/scatter/heatmap/candlestick/multi (기본 line).'
     target_description: 'title (필수). chart_type으로 종류 분기 (기본 line).

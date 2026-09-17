@@ -248,3 +248,41 @@ def seam_starvation_error(steps: List[Dict[str, Any]]) -> Optional[Tuple[int, st
                    f"변환자(returns: transform)입니다 — 이 이음매에서 변환할 items 가 굶습니다. "
                    f"{transform_input_hint(b_node, b_action)}")
     return None
+
+
+def dead_seam_warnings(steps: List[Dict[str, Any]]) -> List[Tuple[int, str]]:
+    """T3. **죽은 이음매** (2026-09-18) — `A >> B` 에서 B 가 앞 통화를 읽지 않는데 제 입력도 없이 서 있다.
+
+    실측 동기(실행기억 문법 감사): `[sense:here] >> [sense:restaurant]{}` 는 "query 필요"로 죽고,
+    `… >> [table:brief] >> [self:notify_user]{}` 는 제목도 본문도 없는 빈 알림이 나갔다(14행이 그 꼴로
+    코퍼스에 있었다). T2 는 B 가 변환자일 때만 이음매를 본다 — 비변환자 이음매는 아무도 보지 않았다.
+
+    판정(보수적): B 가 변환자도 flow 선언자도 `pipe_in` 소비자도 아니고, 주 인자(target_key, op 제외)를
+    가진 액션인데 op 말고는 params 가 비어 있다. 참조($·{{}})가 하나라도 있으면 기권.
+    ★경고지 거절이 아니다: `>>` 의 의존은 통화와 **성공** 둘이라(빌드 >> 배포, 스냅샷 >> 탭) 통화가 안
+    넘는 이음매 자체는 정당하다. 여기서 말하는 것은 "B 가 받을 것처럼 비워 뒀지만 받지 않는다"뿐이다.
+    소비자는 사전이 `pipe_in: true` 로 선언한다 — 액션 이름을 여기 넣지 말 것(표준/사전 경계)."""
+    out: List[Tuple[int, str]] = []
+    if not isinstance(steps, list):
+        return out
+    for i in range(1, len(steps)):
+        b = steps[i]
+        if not isinstance(b, dict) or b.get("_seq_boundary"):
+            continue
+        if any(b.get(k) for k in _SPECIAL_KEYS) or "_fallback_chain" in b:
+            continue
+        node, action = b.get("_node") or b.get("node") or "", b.get("action") or ""
+        ad = _action_def(node, action) if node and isinstance(action, str) and action else None
+        if not ad or ad.get("returns") == "transform" or ad.get("pipe_in") or isinstance(ad.get("flow"), dict):
+            continue
+        tk = ad.get("target_key")
+        if not tk or tk == "op":
+            continue
+        params = b.get("params") if isinstance(b.get("params"), dict) else {}
+        if any(k for k in params if k != "op" and not str(k).startswith("_")):
+            continue
+        out.append((i, f"[{node}:{action}] 는 앞 결과를 읽지 않는 액션인데 `{tk}` 없이 이음매 뒤에 서 있습니다 — "
+                       f"`>>` 로 넘어온 값은 이 액션에 닿지 않습니다. 값을 넘기려면 `$이름 = …` 로 받아 "
+                       f"`{tk}: \"$이름.필드\"` 로 적거나, 행마다면 [table:each] {{ …'$it.필드'… }} 를 쓰세요. "
+                       f"서로 독립이면 `;` 로 나누세요."))
+    return out

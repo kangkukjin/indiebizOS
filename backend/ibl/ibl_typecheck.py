@@ -566,6 +566,13 @@ class _Checker:
         ad = _action_def(node, action)
         if not ad:
             return unknown()
+        try:                                              # 없는 op 은 실행기가 확정 거절한다 — 같은 판정을 실행 전에(2026-09-18)
+            from ibl_param_vocab import unknown_op_message
+            _opmsg = unknown_op_message(ad, params)
+            if _opmsg:
+                self._issue("error", idx, at, _opmsg, got=params.get("op"))
+        except Exception:
+            pass
         try:
             from ibl_pipe_types import step_currency
             returns = step_currency(st)
@@ -1000,6 +1007,9 @@ def typecheck(steps: List[Any], variables: Optional[Dict[str, int]] = None,
         if _seam:
             _si, _seam_err = _seam
             c._issue("error", _si, "pipeline", _seam_err)
+        from ibl_pipe_types import dead_seam_warnings
+        for _di, _dmsg in dead_seam_warnings(_steps):           # T3 — 경고(통화가 안 넘는 이음매 자체는 정당)
+            c._issue("warning", _di, "pipeline", _dmsg)
         errors = [i for i in c.issues if i.get("severity") == "error"]
         return {"ok": not errors, "issues": c.issues, "types": c.types, "fn_returns": c.fn_returns}
     except Exception as e:                            # pragma: no cover — 안전망

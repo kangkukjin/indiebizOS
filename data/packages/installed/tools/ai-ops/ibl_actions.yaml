@@ -6,6 +6,7 @@ nodes:
     actions:
       struct:
         returns: items
+        pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
         schema_param: schema
         ai_call: true
         exempt: 원샷 AI 호출 — 정기 자가점검 실행 시 토큰 소모·비결정적이라 fixture 부적합 (table:structure·self:ask 동류)

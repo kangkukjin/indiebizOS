@@ -375,6 +375,7 @@ actions:
     # 그 뒤 items 가 붙어 조건부가 아니게 됐는데 선언만 남았다. ★fixture 면제(LLM 비용)라
     # 주간 스윕의 측정 우주 밖이었다 — 면제 = 측정 사각.
     returns: items
+    pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
     ai_call: true  # F14-4 (2026-08-20): 실행마다 경량 LLM 편집자 호출 — dry-run 고지·포털 기본 거부
     exempt: 경량 LLM 편집자 원샷 호출 — 정기 실행 시 토큰 소모·비결정적이라 fixture 부적합 (self:ask 동류)
     runs_on: anywhere
@@ -394,6 +395,7 @@ actions:
     - structure
   document:
     returns: effect
+    pipe_in: true   # 앞 통화(_prev_result)를 읽는다 — 정적 검사 T3(죽은 이음매)의 소비자 선언 (2026-09-18)
     runs_on: anywhere
     aliases:
       filename: [path]   # 모델이 path 로 자주 부름(실험 6 ⑮) — 조용한 무시 대신 filename 규칙(경로부는 기존 note 가 시끄럽게)으로

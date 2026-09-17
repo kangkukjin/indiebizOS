@@ -936,9 +936,9 @@ def _collect_cognition() -> Dict:
 
 
 def _collect_memory() -> Dict:
-    """메모리 관리의 라이브 상태 — 7종 기억 + 정리 패스 현황.
+    """메모리 관리의 라이브 상태 — 8종 기억 + 정리 패스 현황.
 
-    의미·작업·일화·절차·관계·자기상태·포식 각 기억의 규모와, 자기학습 기억
+    의미·작업·일화·절차·관계·자기상태·포식·세계 각 기억의 규모와, 자기학습 기억
     (해마/심층메모리/포식)의 정리 패스 마커를 집계한다.
     """
     out: Dict[str, Any] = {}
@@ -1009,6 +1009,20 @@ def _collect_memory() -> Dict:
         }
     except Exception as e:
         out["forage_error"] = str(e)
+
+    # 세계기억 — 세계의 지도(이름·분류·관계만. 증류·정리 패스 없음 — 갱신은 atlas 편집)
+    try:
+        from knowledge_catalog import load_snapshot
+        snap = load_snapshot(BASE_PATH)
+        out["world"] = {
+            "entries": len(snap.entries),
+            "fields": len({e.path[0] for e in snap.entries if e.path}),
+            "relations": len(snap.graph.edges),
+            "fragments": len(snap.files),
+            "revision": snap.revision,
+        }
+    except Exception as e:
+        out["world_error"] = str(e)
 
     # 의미기억 — 시스템 문서
     try:

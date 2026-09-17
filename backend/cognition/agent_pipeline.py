@@ -368,6 +368,7 @@ class CognitivePipelineMixin:
         allowed_set=None,
         cancel_check=None,
         agent_name: Optional[str] = None,
+        utterance_author: Optional[str] = None,
     ) -> Generator[Dict[str, Any], None, None]:
         """인지 파이프라인 전체를 한 번만 수행하는 제너레이터.
 
@@ -435,6 +436,11 @@ class CognitivePipelineMixin:
             return
         if catalog:
             execution_memory += "\n" + catalog
+        # 세계의 기억(의미 채널): 지도 + 가지 먼저 고른 어휘 3건 — 심층기억과 같은 공통 회상(tree_recall).
+        from catalog_recall import world_memory_for_turn
+        world = world_memory_for_turn(message, catalog)
+        if world:
+            execution_memory += "\n" + world
 
         # 3. 의식(THINK) / reflex·force_role 모델 스왑
         from episode_logger import record_trajectory_event
@@ -912,6 +918,9 @@ class CognitivePipelineMixin:
                         message, final_content,
                         tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
                         turn_tokens=turn_tokens, **({"pursuit_packet": _packet} if _packet else {}),
+                        # 이 턴의 메시지를 누가 썼나 — 진입점이 선언한다. "owner"(주인이 직접 친 말)만
+                        # 심층기억 증류의 재료다. 에이전트 위임문·보고 회수·예약 주입문·미선언은 닫힌다.
+                        write_deep=(utterance_author == "owner"),
                     )
 
         if _error_text is not None:

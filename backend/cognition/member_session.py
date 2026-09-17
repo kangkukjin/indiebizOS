@@ -288,7 +288,8 @@ class MemberSessionManager:
                 else:
                     def events():
                         from contextlib import closing
-                        stream = s.runner.cognitive_stream(model_message, list(s.history), agent_name="클라이언트 담당 에이전트", cancel_check=s.cancel.is_set)
+                        stream = s.runner.cognitive_stream(model_message, list(s.history), agent_name="클라이언트 담당 에이전트", cancel_check=s.cancel.is_set,
+                                                           utterance_author="member")
                         with closing(stream):
                             for event in stream:
                                 from providers.base import turn_limit_reason

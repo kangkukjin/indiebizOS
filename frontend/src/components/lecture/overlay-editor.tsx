@@ -260,11 +260,12 @@ export function OverlayEditor(props: {
     && seed.some((o) => o.x === undefined || o.y === undefined);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center" onClick={onClose}>
+    // 배경 클릭으로는 닫지 않는다 — 저장 안 된 편집이 있는 창이고, 패널 안에서 누르고 밖에서 떼는
+    // 드래그(글상자 이동·폭 손잡이·글자 선택)의 click 이 배경에 떨어져 창이 닫혔다. 닫기 = ✕·취소·Esc·저장.
+    <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center">
       <div
         className="bg-white rounded-xl shadow-2xl p-4 space-y-3 outline-none"
         style={{ width: CANVAS_W + 32 }}
-        onClick={(e) => e.stopPropagation()}
         onKeyDown={onKeyDown}
         tabIndex={0}
       >

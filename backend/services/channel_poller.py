@@ -1064,7 +1064,8 @@ class ChannelPoller:
             response_text, _tool_images = process_system_ai_message(
                 message=command,
                 history=formatted_history,
-                images=None
+                images=None,
+                utterance_author="owner",   # 메신저로 온 사람 명령 — 주인 아닌 주체는 principal 관문이 거른다
             )
 
             # 태스크 완료 처리

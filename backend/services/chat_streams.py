@@ -184,6 +184,8 @@ def owned_entry(handler):
 async def handle_chat_message(client_id: str, data: dict):
     """채팅 메시지 처리 (기존 동기 방식)"""
     message = data.get("message", "")
+    # 발화자 — 서버 안의 예약 주입(calendar_actions)만 "schedule" 을 싣는다. 그 밖의 채팅창 입력은 주인의 말.
+    utterance_author = "schedule" if data.get("utterance_author") == "schedule" else "owner"
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
@@ -285,6 +287,7 @@ async def handle_chat_message(client_id: str, data: dict):
                 result = drain_stream(runner.cognitive_stream(
                     message, history,
                     images=images, action_hint=action_hint, agent_name=agent_name,
+                    utterance_author=utterance_author,
                 ))
                 if result.get("clarify"):
                     print(f"[의식] clarification fast-path (non-stream): 실행 에이전트 스킵")
@@ -350,6 +353,8 @@ async def handle_chat_message(client_id: str, data: dict):
 async def handle_chat_message_stream(client_id: str, data: dict):
     """채팅 메시지 처리 (스트리밍 방식)"""
     message = data.get("message", "")
+    # 발화자 — 서버 안의 예약 주입(calendar_actions)만 "schedule" 을 싣는다. 그 밖의 채팅창 입력은 주인의 말.
+    utterance_author = "schedule" if data.get("utterance_author") == "schedule" else "owner"
     agent_name = data.get("agent_name", "")
     project_id = data.get("project_id", "")
     images = data.get("images", [])
@@ -524,6 +529,7 @@ async def handle_chat_message_stream(client_id: str, data: dict):
                     message, history,
                     images=images, action_hint=action_hint, agent_name=agent_name,
                     cancel_check=lambda: is_cancelled(client_id),
+                    utterance_author=utterance_author,
                 ):
                     # 중단 즉시 탈출 (5라운드 감사 (A) — sysai 워커와 대칭): cancel_check 는
                     # 도구 경계에서만 잡히므로, 긴 텍스트 스트리밍 중에도 여기서 끊는다.
@@ -780,6 +786,8 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
     파이프라인 전체를 수행하고, 이 핸들러는 이벤트를 pump하는 transport 어댑터.
     """
     message = data.get("message", "")
+    # 발화자 — 서버 안의 예약 주입(calendar_actions)만 "schedule" 을 싣는다. 그 밖의 채팅창 입력은 주인의 말.
+    utterance_author = "schedule" if data.get("utterance_author") == "schedule" else "owner"
     images = data.get("images", [])
     action_hint = data.get("action_hint")  # 마법책 선택 액션 (예: "sense:price")
     message = await asyncio.to_thread(_process_documents, data.get("documents", []), message)  # 문서 변환(textutil 등)은 스레드로
@@ -888,6 +896,7 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                     action_hint=action_hint,
                     extra_role=extra_role,
                     cancel_check=lambda: is_cancelled(client_id),
+                    utterance_author=utterance_author,
                 )
                 for event in gen:
                     # 중단 요청 시 루프 탈출 (gen.close()가 제너레이터 뒷정리 실행)

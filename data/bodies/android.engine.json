@@ -164,6 +164,7 @@
     "datastore/switch_manager",
     "datastore/system_ai_memory",
     "datastore/system_docs",
+    "datastore/tree_recall",
     "datastore/verification_cache",
     "datastore/vocabulary_policy",
     "datastore/vocabulary_state",
@@ -171,6 +172,7 @@
     "datastore/warehouse_directory",
     "datastore/warehouse_items",
     "datastore/websocket_manager",
+    "datastore/world_recall_store",
     "datastore/xray_stream",
     "ibl/api_engine",
     "ibl/api_pipeline",
@@ -399,8 +401,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 360,
-    "engine": 334,
+    "total": 362,
+    "engine": 336,
     "blocklist": 26
   }
 }

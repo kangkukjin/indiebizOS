@@ -366,7 +366,8 @@ def _run_agent_command(project_id: str, agent_id: str, runner, command: str):
         # 표면이다("에이전트 명령 HTTP"). WS×2·/system-ai/chat 과 같은 드라이버로 합류시킨다.
         # 기어 동기화도 파이프라인 0단계라 여기서 따로 부르지 않는다.
         from agent_pipeline import drain_stream
-        result = drain_stream(runner.cognitive_stream(command, history, agent_name=agent_name))
+        result = drain_stream(runner.cognitive_stream(command, history, agent_name=agent_name,
+                                                      utterance_author="owner"))
         response = result.get("final") or result.get("error") or ""
 
         # AI 응답 저장

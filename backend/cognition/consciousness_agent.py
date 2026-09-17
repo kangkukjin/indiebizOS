@@ -186,7 +186,7 @@ class ConsciousnessAgent:
             user_message: 사용자의 현재 메시지
             history: 대화 히스토리 원본 (정제 전)
             associative_memory: 연상기억 — <execution_memory>(해마) +
-                <memory_map>(심층기억 지도) + <guide_map>(가이드 목차 — 가지: 파일명;
+                <memory_map>(심층기억 지도) + <recalled_memory>(가지 먼저 고른 기억 3건) + <guide_map>(가이드 목차 — 가지: 파일명;
                 가이드 선택의 유일한 입구. 실행기억 지도 자동 주입은 2026-09-17 폐지)
             world_pulse: 현재 세계 상태 요약
             agent_name: 에이전트 이름
@@ -360,7 +360,7 @@ class ConsciousnessAgent:
                 parts.append(f"<turn index=\"{i}\" role=\"{role}\"{img_attr}>{content}</turn>")
             parts.append("</history>")
 
-        # 연상기억 — <execution_memory>(해마) + <memory_map>(심층기억 지도) + <guide_map>
+        # 연상기억 — <execution_memory>(해마) + <memory_map>·<recalled_memory>(심층기억 지도·선택 기억) + <guide_map>
         # (가이드 목차). 내부 태그가 이미 self-describing이므로 외부 래퍼를 두지 않는다.
         # ★가이드 목록은 따로 싣지 않는다(2026-09-03): 옛 <available_guides> 는 guide_db 키워드
         #   점수(코드 선택기)로 고른 최대 10개였는데, 가이드의 자리는 실행기억의 가지이고

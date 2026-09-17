@@ -85,17 +85,21 @@ def _conn(db_path: str) -> sqlite3.Connection:
 
 
 def ensure_column(db_path: str) -> None:
-    """memories.node 컬럼 보장(옛 DB 이전). memory_db 스키마 보장에서도 부른다."""
+    """트리가 읽는 컬럼 보장(옛 DB 이전) — node 와 source_ref. memory_db 스키마 보장에서도 부른다.
+
+    source_ref 는 memory_db.get_db 만 옮겼는데 rows_of 가 그 칸을 읽는다 — 09-11 이후 저장이 없던 DB
+    (법률·출판사·행정, 2026-09-17 실측)는 가지 열기·문서 재렌더가 `no such column` 으로 죽었다."""
     conn = sqlite3.connect(db_path, timeout=10)
     try:
-        try:
-            conn.execute("SELECT node FROM memories LIMIT 1")
-        except sqlite3.OperationalError:
+        for col, ddl in (("node", "node TEXT DEFAULT ''"), ("source_ref", "source_ref TEXT DEFAULT NULL")):
             try:
-                conn.execute("ALTER TABLE memories ADD COLUMN node TEXT DEFAULT ''")
-                conn.commit()
+                conn.execute(f"SELECT {col} FROM memories LIMIT 1")
             except sqlite3.OperationalError:
-                pass   # memories 표 자체가 없는 빈 DB — 첫 save 가 만든다
+                try:
+                    conn.execute(f"ALTER TABLE memories ADD COLUMN {ddl}")
+                    conn.commit()
+                except sqlite3.OperationalError:
+                    pass   # memories 표 자체가 없는 빈 DB — 첫 save 가 만든다
     finally:
         conn.close()
 
@@ -230,6 +234,27 @@ def gist_of(path: str) -> str:
     m = re.search(r"(?m)^>\s*(.+?)\s*$", text)
     g = m.group(1).strip() if m else ""
     return "" if g.startswith("(한 줄 요약") else g
+
+
+CUES_RE = re.compile(r"(?m)^찾는 말:\s*(.+?)\s*$")
+SEE_ALSO_RE = re.compile(r"(?m)^함께 볼 가지:\s*(.+?)\s*$")
+
+
+def entry_of(path: str) -> Dict[str, Any]:
+    """가지 사전 항목 — 요약·찾는 말·함께 볼 가지 (docs/TREE_MEMORY_RECALL_COMMON_DESIGN §5.2).
+
+    요약은 지도에 실리고, 셋 다 회상의 가지 고르기에 쓰인다. `찾는 말:`·`함께 볼 가지:` 는 머리(## 기억 앞)에
+    사람·AI 가 적는 자유 줄이다 — 없으면 빈 값. 이름이 내용을 예고하지 않는 가지는 찾는 말을 비워 둔다.
+    """
+    try:
+        with open(path, encoding="utf-8") as f:
+            head = f.read(3000).split(SECTION)[0]
+    except OSError:
+        return {"gist": "", "cues": "", "see_also": []}
+    c = CUES_RE.search(head)
+    s = SEE_ALSO_RE.search(head)
+    also = [norm_node(x) for x in (s.group(1).split(",") if s else []) if norm_node(x)]
+    return {"gist": gist_of(path), "cues": c.group(1).strip() if c else "", "see_also": also}
 
 
 def _stamp_key(node: str) -> str:
@@ -399,10 +424,45 @@ def map_lines(db_path: str) -> List[Dict[str, Any]]:
     return out
 
 
-def map_text(db_path: str) -> str:
-    """항상 올리는 목차 — 한 노드 한 줄 `- 노드 (n) — 요약`. 비어 있으면 빈 문자열."""
+MAP_FULL_CHARS = 600         # 지도가 이보다 길면 최상위 가지만 싣는다 — 아래는 recall 로 (공통 회상 설계 §5.6)
+
+
+def map_text(db_path: str, max_chars: Optional[int] = None) -> str:
+    """항상 올리는 목차 — 한 노드 한 줄 `- 노드 (n) — 요약`. 비어 있으면 빈 문자열.
+
+    max_chars 를 주고 전체가 그보다 길면 **최상위 가지만**(건수는 하위 합산, 하위 가지 수 표기) 돌려준다.
+    선택된 기억이 함께 주입되므로(tree_recall) 지도는 '무엇이 있나'의 윤곽이면 된다.
+    """
+    rows = map_lines(db_path)
+    full = _map_render(rows)
+    if max_chars is None or len(full) <= max_chars:
+        return full
+    top: Dict[str, Dict[str, Any]] = {}
+    for row in rows:
+        if not row["node"]:
+            continue
+        head = row["node"].split("/")[0]
+        t = top.setdefault(head, {"node": head, "count": 0, "gist": "", "kids": 0})
+        t["count"] += row["count"]
+        if row["node"] == head:
+            t["gist"] = row["gist"]
+        else:
+            t["kids"] += 1
     lines = []
-    for row in map_lines(db_path):
+    root = next((r for r in rows if r["node"] == "" and r["count"]), None)
+    if root:
+        lines.append(f"- (뿌리 — 아직 가지가 없는 기억) ({root['count']})")
+    for t in top.values():
+        s = f"- {t['node']} ({t['count']}" + (f" · 하위 {t['kids']}가지" if t["kids"] else "") + ")"
+        if t["gist"]:
+            s += f" — {t['gist']}"
+        lines.append(s)
+    return "\n".join(lines)
+
+
+def _map_render(rows) -> str:
+    lines = []
+    for row in rows:
         if row["node"] == "" and row["count"] == 0:
             continue
         label = row["node"] or "(뿌리 — 아직 가지가 없는 기억)"

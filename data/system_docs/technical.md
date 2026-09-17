@@ -340,7 +340,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(52) → `datastore`(53) → `ibl`(58) → `cognition`(72) → `services`(37) → `surface`(79). `.py` 총 414개(test 제외).
+  `base`(52) → `datastore`(55) → `ibl`(58) → `cognition`(72) → `services`(37) → `surface`(79). `.py` 총 416개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(20) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
@@ -376,6 +376,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `<agent name="...">` - 이름 + `<role>` + `<notes>`
 - `<world_pulse>` - 매시간 갱신되는 세계/사용자/시스템 상태
 - `<history>` - 대화 히스토리 (`<turn index="..." role="...">`)
+- `<recalled_memory>` - 이 질문에 맞춰 고른 심층기억 3건(가지 먼저 → 안 2 + 밖 1, `tree_recall`). `<memory_map>` 은 600자를 넘으면 최상위 가지만
 - `<guide_map>` - 가이드 목차(실행기억 가지: 가이드 파일명). 옛 `<execution_map>`(가지·용례 수·요약까지 실은 실행기억 지도)의 자동 주입은 2026-09-17 폐지 — 지도 전체는 `[self:memory]{op:"recall", store:"실행"}`(node 생략 = 실행기억 지도) 로 본다
 - `<user_message>` - 현재 사용자 메시지
 

@@ -24,7 +24,9 @@ except ImportError:  # 백엔드 프로세스 밖 단독 사용 시 통과
         return text
 
 EMBEDDING_DIM = 768
-SEMANTIC_THRESHOLD = 0.4   # 시맨틱 유사도 컷오프 (이하 무시)
+SEMANTIC_THRESHOLD = 0.55  # 시맨틱 유사도 컷오프 (이하 무시) — 2026-09-17 인코더 통일 때 재측정: 기본 모델은 유사도가
+                           #   전반적으로 높다(top-1 중앙 0.63 대 해마 0.47). 옛 0.4 와 같은 통과율(72%)이 0.565.
+VEC_STAMP = "vec_encoder"  # _meta 키 — memories_vec 를 만든 인코더·텍스트 규칙. 어긋나면 그 DB 를 통째로 재임베딩한다.
 # 검색 전략: 해마(ibl_usage_db)와 동일하게 시맨틱 100% 우선, LIKE는 폴백
 # - 시맨틱 결과가 임계값을 통과하면 그것만 사용 (정규화된 점수 0~1)
 # - 시맨틱이 비었거나 모델 미준비 시 LIKE 폴백 (raw 매칭 순서)
@@ -84,18 +86,55 @@ def _backend_path() -> str:
 
 
 def _get_model():
-    """공유 fine-tuned 임베딩 모델 반환 (없으면 None)"""
+    """기억용 인코더(없으면 None) — 공통 회상(tree_recall)과 같은, **재학습하지 않는** 기본 모델.
+
+    2026-09-17 까지는 해마의 fine-tuned 모델을 빌려 썼다. 그 모델은 IBL 용례 회상을 위해 주기적으로
+    재학습되고 그때마다 공간이 바뀌는데, 재학습 절차는 해마만 재색인했다 — 실측: 09-04 재학습 이전에
+    저장된 기억의 벡터는 같은 텍스트를 현재 모델로 다시 임베딩한 것과 코사인 중앙 0.71(최소 0.38).
+    검색도 중복 판정(0.85)도 옛 공간의 벡터에 새 공간의 질의를 던지고 있었다. 기억의 벡터는 남의 목적으로
+    재학습되는 모델에 걸면 안 된다. 중복 후보 품질도 기본 모델이 낫다(해마는 'ESP32 는 2.4GHz 만'과
+    'WiFi 이름은 …'을 0.88 로 묶었다).
+    """
     try:
         bp = _backend_path()
         if bp not in sys.path:
             sys.path.insert(0, bp)
-        from ibl_usage_db import IBLUsageDB
-        if IBLUsageDB._model is None:
-            IBLUsageDB._load_model_sync()
-        return IBLUsageDB._model
+        import tree_recall
+        return tree_recall.model(block=True)
     except Exception as e:
         print(f"[memory_db] 모델 로드 실패 (LIKE 검색만 사용): {e}")
         return None
+
+
+def _vec_stamp_value() -> str:
+    bp = _backend_path()
+    if bp not in sys.path:
+        sys.path.insert(0, bp)
+    import tree_recall
+    return f"{tree_recall.MODEL_NAME}#prepare_text.1"
+
+
+def _ensure_vec_current(db_path: str) -> bool:
+    """memories_vec 가 지금의 인코더로 만들어졌는지 표식으로 확인하고, 아니면 그 DB 를 재임베딩한다.
+
+    "모델을 바꾸고 재색인을 잊는" 사고를 구조로 막는다 — 표식이 어긋난 벡터는 쓰이기 전에 다시 만들어진다.
+    DB 하나가 최대 300행이라 수 초. 인코더가 없으면 False(호출자는 LIKE 폴백).
+    """
+    try:
+        if not os.path.exists(db_path):
+            return False
+        want = _vec_stamp_value()
+        if get_meta(db_path, VEC_STAMP) == want:
+            return True
+        out = _rebuild_vectors(db_path)
+        if out.get("success"):
+            set_meta(db_path, VEC_STAMP, want)
+            print(f"[memory_db] 벡터 재임베딩({want}): {os.path.basename(db_path)} {out.get('indexed', 0)}건")
+            return True
+        return False
+    except Exception as e:
+        print(f"[memory_db] 벡터 표식 확인 실패: {e}")
+        return False
 
 
 def _embed(text: str) -> Optional[bytes]:
@@ -167,6 +206,7 @@ def _index_one(db_path: str, mem_id: int, content: str,
     sqlite-vec의 vec0 가상 테이블은 INSERT OR REPLACE를 제대로 지원하지 않아
     같은 rowid로 다시 INSERT 시 UNIQUE constraint failed가 발생한다.
     명시적 DELETE 후 INSERT 패턴을 사용해 업데이트 의미를 보장한다."""
+    _ensure_vec_current(db_path)
     conn = _get_vec_conn(db_path)
     if conn is None:
         return False
@@ -213,7 +253,7 @@ def _search_semantic(db_path: str, query: str, top_k: int = 10,
     normalize_embeddings=True를 가정하므로 vec0의 distance(L2제곱)는
     L2^2 = 2 - 2*cos 이며, cos = 1 - distance/2 로 환산."""
     model = _get_model()
-    if model is None:
+    if model is None or not _ensure_vec_current(db_path):
         return []
     conn = _get_vec_conn(db_path)
     if conn is None:
@@ -553,7 +593,7 @@ def _search_like(db_path: str, query: str, category: str = None,
 def search(project_path: str, agent_id: str,
            query: str, category: str = None, limit: int = 10,
            semantic_only: bool = False, min_score: float = 0.0,
-           node: str = None) -> List[Dict]:
+           node: str = None, by_relevance: bool = False) -> List[Dict]:
     """시맨틱 우선 + LIKE 폴백 검색 (해마와 동일 패턴).
 
     1) 시맨틱(fine-tuned 임베딩) 검색을 먼저 시도. SEMANTIC_THRESHOLD 통과 항목이 있으면 그것만 반환.
@@ -568,6 +608,15 @@ def search(project_path: str, agent_id: str,
     """
     db_path = _get_db_path(project_path, agent_id)
     _ensure_schema(db_path)  # 신규 프로젝트(미save) 빈 DB에서 LIKE 폴백이 죽지 않도록 테이블 보장
+
+    # 관련성 순위(2026-09-17): AI 가 부르는 조회는 자동 주입(<recalled_memory>)과 **같은 엔진**으로 순위를 낸다 —
+    #   가지 경로가 실린 항목 벡터 + 의미·글자 역순위 융합(tree_recall). 두 길의 순위가 서로 달라지지 않게.
+    #   증류의 중복 조회는 기본값(by_relevance=False)으로 아래 '같은 사실인가' 경로(memories_vec, 경로 없는 텍스트)를 쓴다 —
+    #   같은 가지라는 이유로 다른 사실이 가까워지면 안 되기 때문이다. 공통 색인이 아직 없으면 아래로 떨어진다.
+    if by_relevance:
+        ranked = _search_by_relevance(db_path, query, category, limit, node)
+        if ranked is not None:
+            return ranked
 
     eff_threshold = max(SEMANTIC_THRESHOLD, min_score)
 
@@ -608,6 +657,42 @@ def search(project_path: str, agent_id: str,
     from memory_provenance import search_view
     by_id = {r["id"]: search_view(dict(r), query) for r in rows}
     return [by_id[mid] for mid in sorted_ids if mid in by_id]
+
+
+def _search_by_relevance(db_path: str, query: str, category, limit: int, node) -> Optional[List[Dict]]:
+    """공통 회상의 순위로 검색. 색인·인코더가 준비되지 않았으면 None(호출자가 옛 경로로)."""
+    try:
+        bp = _backend_path()
+        if bp not in sys.path:
+            sys.path.insert(0, bp)
+        if _get_model() is None:                              # 인코더 없음 → 옛 경로(LIKE 폴백 포함)
+            return None
+        import tree_recall
+        from recall_store import DeepMemoryStore
+        # 하한: 의미 채널은 SEMANTIC_THRESHOLD 이상만(글자로 잡힌 것은 그대로) — 무관한 기억을 '결과'로 돌려주지 않는다.
+        r = tree_recall.search(DeepMemoryStore(db_path), query, limit=limit * (3 if category else 1),
+                               min_sim=SEMANTIC_THRESHOLD,
+                               branch_filter=[tuple(p for p in str(node).strip("/").split("/") if p)] if node else None)
+        if r["status"] != "ok":
+            return None
+        ids = [int(i) for i in r["ids"]]
+    except Exception as e:
+        print(f"[memory_db] 관련성 검색 실패(옛 경로로): {e}")
+        return None
+    if not ids:
+        return []
+    conn = sqlite3.connect(db_path, timeout=10)
+    conn.row_factory = sqlite3.Row
+    try:
+        ph = ",".join("?" * len(ids))
+        rows = conn.execute(
+            f"SELECT id, category, keywords, content, source_ref, created_at, used_at, COALESCE(node,'') AS node "
+            f"FROM memories WHERE id IN ({ph})", ids).fetchall()
+    finally:
+        conn.close()
+    from memory_provenance import search_view
+    by_id = {r["id"]: search_view(dict(r), query) for r in rows if not category or r["category"] == category}
+    return [by_id[i] for i in ids if i in by_id][:limit]
 
 
 def read(project_path: str, agent_id: str, memory_id: int,
@@ -732,51 +817,41 @@ def count(project_path: str, agent_id: str) -> int:
 def rebuild_index(project_path: str, agent_id: str) -> Dict:
     """vec 인덱스 전체 재구축 (모든 memories 재인덱싱)"""
     db_path = _get_db_path(project_path, agent_id)
+    out = _rebuild_vectors(db_path)
+    if out.get("success"):
+        set_meta(db_path, VEC_STAMP, _vec_stamp_value())
+    return out
 
-    # 메모리 항목 전수 조회
+
+def _rebuild_vectors(db_path: str) -> Dict:
+    """DB 하나의 memories_vec 를 통째로 다시 만든다 — 지우기와 넣기를 한 트랜잭션으로(중간 상태 노출 없음)."""
     conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
-        rows = conn.execute(
-            "SELECT id, content, keywords, category FROM memories ORDER BY id"
-        ).fetchall()
+        rows = conn.execute("SELECT id, content, keywords, category FROM memories ORDER BY id").fetchall()
     finally:
         conn.close()
-
     if not rows:
         return {"success": True, "indexed": 0, "message": "메모리 없음"}
-
-    # vec 테이블 초기화
+    texts = [_prepare_text(r["content"], r["keywords"], r["category"]) for r in rows]
+    embs = _embed_batch(texts)
+    if not embs:
+        return {"success": False, "error": "임베딩 생성 실패 (모델 없음)"}
     vec_conn = _get_vec_conn(db_path)
     if vec_conn is None:
         return {"success": False, "error": "sqlite-vec 사용 불가"}
     try:
         _ensure_vec_table(vec_conn)
+        vec_conn.execute("BEGIN IMMEDIATE")
         vec_conn.execute("DELETE FROM memories_vec")
-        vec_conn.commit()
-    finally:
-        vec_conn.close()
-
-    # 배치 임베딩
-    texts = [_prepare_text(r["content"], r["keywords"], r["category"]) for r in rows]
-    embs = _embed_batch(texts)
-    if not embs:
-        return {"success": False, "error": "임베딩 생성 실패 (모델 없음)"}
-
-    # 일괄 INSERT
-    vec_conn = _get_vec_conn(db_path)
-    if vec_conn is None:
-        return {"success": False, "error": "vec 연결 실패"}
-    try:
         for row, emb in zip(rows, embs):
-            vec_conn.execute(
-                "INSERT INTO memories_vec(rowid, embedding) VALUES (?, ?)",
-                (row["id"], emb)
-            )
+            vec_conn.execute("INSERT INTO memories_vec(rowid, embedding) VALUES (?, ?)", (row["id"], emb))
         vec_conn.commit()
+    except Exception:
+        vec_conn.rollback()
+        raise
     finally:
         vec_conn.close()
-
     return {"success": True, "indexed": len(rows), "db_path": db_path}
 
 
@@ -889,6 +964,7 @@ def prune_lru(db_path: str, cap: int = DEFAULT_MEMORY_CAP,
 
 def _load_vectors(db_path: str) -> List[Tuple[int, list]]:
     """memories_vec에서 (id, 정규화 벡터 리스트) 전수 로드."""
+    _ensure_vec_current(db_path)
     conn = _get_vec_conn(db_path)
     if conn is None:
         return []

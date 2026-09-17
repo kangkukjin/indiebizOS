@@ -254,7 +254,7 @@ def _switch_to_role(runner, role, agent_id: str = None):
 
 def process_system_ai_message(message: str, history: List[Dict] = None, images: List[Dict] = None,
                               action_hint: str = None, extra_role: str = "", force_role: str = "",
-                              allowed_set=None):
+                              allowed_set=None, utterance_author: str = None):
     """시스템 AI 메시지 처리 (동기 모드) — cognitive_stream을 drain하는 블로킹 어댑터.
 
     인지 오케스트레이션(연상→분류→의식→실행→평가→반성→증류)은 전부
@@ -275,6 +275,7 @@ def process_system_ai_message(message: str, history: List[Dict] = None, images: 
         message, history or [],
         images=images, action_hint=action_hint,
         extra_role=extra_role, force_role=force_role, allowed_set=allowed_set,
+        utterance_author=utterance_author,
     ))
     response = result["final"]
     if not response and result.get("error"):

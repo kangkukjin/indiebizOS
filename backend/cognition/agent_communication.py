@@ -334,6 +334,7 @@ class AgentCommunicationMixin:
 
                 result = drain_stream(self.cognitive_stream(
                     content, history, agent_name=agent_name,
+                    utterance_author="owner",   # 외부 채널의 사람 명령 — 주인 아닌 주체는 principal 관문이 거른다
                 ))
                 process_time = time_module.time() - start_time
 
@@ -507,6 +508,14 @@ class AgentCommunicationMixin:
                 if self.ai:
                     # 실행기억 생성 + 메시지 앞에 주입 (에이전트 간 경로)
                     exec_mem, _ts, _tc = self._build_execution_memory(content)
+                    # 세계의 기억은 개인 기억이 아니다 — 에이전트 간 경로도 같은 블록을 받는다(공통 회상 설계 §5.6).
+                    try:
+                        from catalog_recall import world_memory_for_turn
+                        _world = world_memory_for_turn(content)
+                        if _world:
+                            exec_mem = f"{exec_mem}\n{_world}" if exec_mem else _world
+                    except Exception as _e:
+                        print(f"   [세계의 기억] 실패 (무시): {_e}")
                     ai_message = f"{exec_mem}\n\n{content}" if exec_mem else content
                     history = []
 
@@ -549,6 +558,7 @@ class AgentCommunicationMixin:
                     from agent_pipeline import drain_stream
                     _res = drain_stream(self.cognitive_stream(
                         ai_message, history, agent_name=my_name,
+                        utterance_author="agent",   # 위임문·보고 회수 = 기계가 짠 글(건축 #7 실측)
                     ))
                     response = _res.get("final") or _res.get("error") or ""
                     print(f"[AgentRunner] {my_name} 응답 생성: {len(response)}자")

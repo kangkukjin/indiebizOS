@@ -268,6 +268,8 @@ def test_semantic_filters_inside_knn_candidate_set(memory, monkeypatch):
     monkeypatch.setattr(db, '_get_model', lambda: model)
     monkeypatch.setattr(db, '_get_vec_conn', connection)
     monkeypatch.setattr(db, 'EMBEDDING_DIM', 2)
+    # 손으로 만든 벡터가 '지금 인코더의 것'이라는 표식(2026-09-17) — 없으면 search 가 재임베딩부터 한다.
+    db.set_meta(db_path, db.VEC_STAMP, db._vec_stamp_value())
     for filters in [{'node': 'wanted'}, {'category': '사용자선호'}]:
         result = db.search(project, 'core8', 'TOPIC', limit=1, semantic_only=True, **filters)
         assert [r['id'] for r in result] == [2]

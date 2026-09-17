@@ -111,6 +111,31 @@ def _append_durable_unit(units, part, quoted, uncertain, addressed=False, doc_ba
                       "attribution": attribution, "basis": basis,
                       "eligible": attribution == "user_candidate" and not request})
 
+# 지시 대상 관문(2026-09-17 기억 재고 감사) — 원문 문장 단위 저장의 그림자: 떼어 놓으면 무엇에 관한
+# 말인지 알 수 없는 조각("그런데 나는 그 차이가 중요하다고 생각하는거지."). 판단(이 말이 혼자 서는가)은
+# 추출 모델 몫이고, 기계는 셀 수 있는 것만 본다: ①첫 선택 단위가 앞 문장에 기대는 머리로 시작
+# ②단위 하나만 골랐는데 그 안에 지시 관형사·대명사가 있다(가리키는 문장을 함께 고르지 않았다).
+# '이'는 뺀다 — "이 사이트"처럼 대화 장소가 곧 대상인 직시가 많다.
+_DEPENDENT_HEAD_RE = re.compile(
+    r"^\s*(?:그런데|근데|그래서|그러니까|그러면|그럼|그렇지만|그러나|하지만|그리고|또한|다시 말해|즉|왜냐하면)(?![가-힣])")
+_DEMONSTRATIVE_RE = re.compile(
+    r"(?:^|\s)(?:그런|이런|저런|그것[은이을도]?|그건|그게|그걸|이것[은이을도]?|이건|이게|이걸|그)(?=\s)")
+
+
+def unresolved_reference(selected):
+    """선택된 원문 단위가 자기 밖의 문장에 기대면 사유 문자열, 혼자 서면 None."""
+    if not selected:
+        return None
+    first = selected[0]["text"]
+    if _DEPENDENT_HEAD_RE.search(first):
+        return "dependent_head"
+    if _DEMONSTRATIVE_RE.match(first) and first.lstrip().startswith(("그", "이", "저")):
+        return "dependent_head"
+    if len(selected) == 1 and _DEMONSTRATIVE_RE.search(first):
+        return "lone_demonstrative"
+    return None
+
+
 def grounded_fact(fact, units, source_ref, *, durable_only=False):
     if not isinstance(fact, dict):
         return None

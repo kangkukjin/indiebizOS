@@ -513,6 +513,7 @@ class CalendarActionsMixin:
                 data = {
                     "type": "system_ai_stream",
                     "message": message,
+                    "utterance_author": "schedule",   # 예약문은 주인의 새 발화가 아니다(심층기억 증류 제외)
                 }
                 self._log(f"시스템 AI WS 메시지 주입: {message[:60]}...")
                 coro = handle_system_ai_chat_stream(client_id, data)
@@ -525,6 +526,7 @@ class CalendarActionsMixin:
                     "message": message,
                     "agent_name": agent_name,
                     "project_id": project_id,
+                    "utterance_author": "schedule",
                 }
                 self._log(f"에이전트 WS 메시지 주입: {project_id}/{agent_name} — {message[:60]}...")
                 coro = handle_chat_message_stream(client_id, data)

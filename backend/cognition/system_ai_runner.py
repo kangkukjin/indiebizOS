@@ -435,7 +435,8 @@ class SystemAIRunner:
             original = _switch_to_role(runner, "system_ai",
                                        agent_id="system_ai_delegation")
             try:
-                response, _images = process_system_ai_message(ai_message, history)
+                response, _images = process_system_ai_message(ai_message, history,
+                                                              utterance_author="agent")
                 return response
             finally:
                 _restore_provider(runner, original)

@@ -246,7 +246,8 @@ class CognitiveDistillMixin:
                  "final_response_sha256": __import__("hashlib").sha256(ai_response.encode()).hexdigest()},
                 ensure_ascii=False)
 
-            from memory_evidence import durable_source_units, grounded_fact
+            from memory_evidence import (durable_source_units, grounded_fact, select_units,
+                                         unresolved_reference)
             units = durable_source_units(user_message)
             if not any(u["eligible"] for u in units):
                 from episode_logger import record_trajectory_event
@@ -290,6 +291,13 @@ retention은 user_fact|user_preference|user_decision 중 하나이며 확신 없
 영상 한 편의 길이·목소리·시점·전달 위치도 이번 작업의 조건이다. 향후에도 적용하라는
 근거 없이 "항상 선호한다"로 일반화하지 마라. 해당 에피소드·산출물에 이미 기록되므로 복제하지 않는다.
 
+★저장되는 것은 네가 고른 원문 단위 그대로다. 나중에 이 조각만 따로 읽는 사람이 누구의·무엇에 관한
+말인지 알 수 있어야 한다. "그·그런·그래서"처럼 앞 문장에 기대는 단위는, 가리키는 대상이 담긴 앞
+단위를 source_ids 에 **함께** 골라라(여러 id 는 한 기억으로 이어 붙는다). 같은 메시지 안에 대상이
+없으면(이전 턴·AI 답변에만 있으면) 고르지 마라 — 홀로 서지 못하는 조각은 기계가 거절한다.
+(나쁜 예: [2] "11월 18일이니까 아직 시간은 있는데." 단독 → 무엇의 날짜인지 모른다.
+좋은 예: [1,2] "아내에게 선물을 사고 싶은데 …" + "11월 18일이니까 …")
+
 ★각 조각에 **node(주제 가지)** 를 적어라 — 이 자아의 기억 지도(아래)에서 가장 알맞은 가지를 고른다.
 기존 가지를 우선하고, 정말 새 주제면 새 경로("상위/하위" 꼴, 최대 3단, 한국어 명사)를 만든다.
 가지는 *무엇에 관한 기억인가*(사람·장소·일·물건·주제)로 나눈다 — 종류(선호·결정)는 가지가 아니다.
@@ -328,6 +336,17 @@ JSON 배열로만 응답.
             for candidate in facts[:5]:  # 최대 5개 조각
                 fact = grounded_fact(candidate, units, source_ref, durable_only=True)
                 if not fact:
+                    continue
+                # 지시 대상 관문 — 선행 문장 없이 고른 의존 조각은 저장하지 않는다(사유는 궤적에 남아 셀 수 있다).
+                dangling = unresolved_reference(select_units(candidate.get("source_ids"), units))
+                if dangling:
+                    print(f"[심층메모리] 지시 대상 거부({dangling}): \"{fact.get('content', '')[:50]}\"")
+                    try:
+                        from episode_logger import record_trajectory_event
+                        record_trajectory_event("memory.distill.rejected",
+                                                {"reason": dangling, "text": fact.get("content", "")[:120]})
+                    except Exception:
+                        pass
                     continue
                 content = fact.get("content", "").strip()
                 if not content:
@@ -699,12 +718,14 @@ AI 답변: {ai_response[:1400]}
             evaluation.get("status") not in {"UNKNOWN", "NOT_ACHIEVED"}
             and evaluation.get("achieved", True)
         )
-        if write_deep and memory_approved:
+        if not write_deep:
+            log("[심층메모리] 주인이 직접 한 말이 아닌 턴(에이전트·예약·미선언) 또는 표면 제외 — 생략")
+        elif memory_approved:
             try:
                 self._distill_deep_memory(user_message, response)
             except Exception as e:
                 log(f"[심층메모리] 오류 (무시): {e}")
-        elif write_deep:
+        else:
             log("[심층메모리] 검수 미완료 — 장기 기억 저장 생략")
         # 3) 포식 기억 증류(냄새지도·주인모델).
         if write_forage:
@@ -712,7 +733,7 @@ AI 답변: {ai_response[:1400]}
                 self._distill_forage_memory(user_message, response, assume_forage=assume_forage)
             except Exception as e:
                 log(f"[포식기억] 오류 (무시): {e}")
-        # 4) 가이드 되먹임 — 쓴 놈이 고친다. 가이드는 7종 기억 중 유일하게 *쓰는 쪽*이
+        # 4) 가이드 되먹임 — 쓴 놈이 고친다. 가이드는 8종 기억 중 유일하게 *쓰는 쪽*이
         #    없던 기억이라(해마=실행에서·심층=대화에서·포식=포식에서 증류되는데 가이드만
         #    사람이 손으로 쓰고 방치), 그 공백이 2026-08-17 에 81KB 수동 정리로 청구됐다.
         #    가장 좋은 감사자는 방금 그 가이드를 쓴 에이전트다 — 순찰은 추측하지만 이쪽은 안다.
@@ -732,7 +753,8 @@ AI 답변: {ai_response[:1400]}
 
     def _after_response_async(self, user_message: str, response: str, *,
                               tool_calls=None, hippo_score: float = None, top_code: str = None,
-                              turn_tokens: int = None, pursuit_packet=None):
+                              turn_tokens: int = None, pursuit_packet=None,
+                              write_deep: bool = False):
         """_after_response 를 **영속 큐**(distill_queue)에 적재 — 증류가 턴(스트림 종료·
         에피소드 END·총 소요 측정)을 붙잡지 않게(ep889: 실작업 4.6분에 증류 꼬리 6분) 하되,
         데몬 스레드 시절과 달리 프로세스가 죽어도 작업이 사라지지 않는다(2026-09-02: 행으로
@@ -783,6 +805,8 @@ AI 답변: {ai_response[:1400]}
             "goal_eval": _ge,
             "task_id": get_current_task_id(),
             "pursuit": pursuit_packet,
+            # 심층기억은 주인이 직접 한 말에서만 자란다 — 진입점이 선언한 발화자 축(fail-closed).
+            "write_deep": bool(write_deep),
         }
         from supervision_bus import current as current_supervisor
         supervisor = current_supervisor()

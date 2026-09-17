@@ -46,7 +46,7 @@ see_also: [architecture.md, memory.md, ibl.md]
   - `architecture.md` - 시스템 개요·아키텍처·설계 의도 (구 overview.md 오브젝트/에이전트 유형 흡수)
   - `technical.md` - 기술 문서 (API, 설정, 경로)
   - `ibl.md` - IBL 명세(6-Node·op 어휘화·삼각 검증) + **설계 철학**(구 ibl_design_philosophy.md)
-  - `memory.md` - 메모리 7종 통합 지도 + **연상기억 심층**(해마·심층메모리 — 구 memory_architecture.md + execution_memory.md)
+  - `memory.md` - 메모리 8종 통합 지도 + **연상기억 심층**(해마·심층메모리 — 구 memory_architecture.md + execution_memory.md)
   - `packages.md` - 패키지 시스템 (구조·설치 절차·설치 목록. 수·표는 빌드 파생)
   - `inventory.md` - 프로젝트/패키지 현황 (자동 생성)
   - `communication.md` - 통신/연동 + **위임 체인**(구 delegation.md)
@@ -287,7 +287,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - 무의식 EXECUTE는 'execute' 축 유지 — 분류 오판이 품질 저하로 이어지지 않게 하는 방어. 덕분에 무의식은 EXECUTE 쪽으로 과감하게 기울 수 있다
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
   - 출력 필드: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
-  - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<guide_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<guide_map>`, 2026-09-17)
+  - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<recalled_memory>`, `<guide_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<guide_map>`, 2026-09-17)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **과제 선택·규정 재사용** — `pursuit_bind.py`와 `_run_consciousness_or_reuse()`
   - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE/Reflex도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.
@@ -305,6 +305,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 166 액션(sense 43·self 51·limbs 14·others 17·engines 19·table 22)·50 도구 패키지 + 5 extensions·backend .py 414(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 166 액션(sense 43·self 51·limbs 14·others 17·engines 19·table 22)·50 도구 패키지 + 5 extensions·backend .py 416(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-09-14): 주요 기능에 어휘 레고박스·안경 메뉴 도구 창·재기동 제어·실행 통합 조회 추가, 파이프라인 [4]/[5] 경계(의식 없는 경로 평가 생략·최종 응답 후 기억 선별)·Reflex 분기 소유자·평가 축 라벨 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

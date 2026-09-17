@@ -38,7 +38,7 @@ class CognitiveRecallMixin:
 
         Returns:
             (xml: str, top_score: float, top_code: str)
-            - xml: <execution_memory> + <memory_map> 결합된 문자열 (없으면 "")
+            - xml: <execution_memory> + <memory_map> + <recalled_memory> + <guide_map> … 결합된 문자열 (없으면 "")
             - top_score: 해마 최고 점수 (action_hint 적용 시 1.0)
             - top_code: 해마 최고 점수 항목의 ibl_code (action_hint 적용 시 "[node:action]")
         """
@@ -68,7 +68,9 @@ class CognitiveRecallMixin:
                 exec_xml, top_score, top_code = self._recall_step(
                     "execution_memory", lambda: build_execution_memory(user_message, allowed_set))
 
-            # 심층 기억의 지도(목차) → 연상기억 합성 (내용 자동 주입 아님 — 2026-09-03).
+            # 심층 기억의 지도(목차) + 선택된 기억 → 연상기억 합성.
+            #   2026-09-17 사용자 개정: 지도만 주던 09-03 방식은 AI 가 가지를 열지 않는 턴(실측 절반)에 기억이
+            #   비었다. 이제 지도와 **가지 먼저 고른 기억 3건**을 함께 싣는다(공통 회상, tree_recall).
             #   ★include_related=False(포식 등): 무상태 검색을 개인 사실(심층 메모리)이 하이재킹하지
             #   않도록 관련기억 주입을 끈다 — 포식은 이미 심층 메모리에 *쓰지 않으며*(무상태), 정당한
             #   개인화는 포식기억(owner_model 웹 관습)이 담당한다. 넓은 질의가 최근 관심사로 좁혀지는
@@ -77,6 +79,10 @@ class CognitiveRecallMixin:
             result = exec_xml
             if related:
                 result = (result + "\n" + related) if result else related
+            if include_related:
+                picked = self._recall_step("recalled_memory", lambda: self._recalled_memory_scent(user_message))
+                if picked:
+                    result = (result + "\n" + picked) if result else picked
 
             # 가이드 목차(hippo_tree 의 guide: 링크만) — 실행기억 지도의 자동 주입은 2026-09-17 폐지, 목차만 남긴다.
             guide_map = self._recall_step("guide_map", self._guide_map_scent)
@@ -128,6 +134,8 @@ class CognitiveRecallMixin:
                     parts.append("실행기억")
                 if "memory_map" in result:
                     parts.append("기억지도")
+                if "recalled_memory" in result:
+                    parts.append("선택기억")
                 if "guide_map" in result:
                     parts.append("가이드목차")
                 if "forage_memory" in result:
@@ -250,38 +258,96 @@ class CognitiveRecallMixin:
             print(f"[연상:가이드목차] 실패 (무시): {e}")
             return ""
 
+    def _deep_memory_db(self) -> str:
+        """이 자아의 심층기억 DB 경로(없으면 ""). memory 패키지를 import 경로에 올린다."""
+        import os
+        import sys
+        mem_pkg = os.path.normpath(os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..",
+            "data", "packages", "installed", "tools", "memory"))
+        if mem_pkg not in sys.path:
+            sys.path.insert(0, mem_pkg)
+        import memory_db
+        from thread_context import get_current_agent_id
+        agent_id = get_current_agent_id() or getattr(self, "agent_id", None)
+        db_path = memory_db._get_db_path(str(self.project_path), agent_id)
+        return db_path if os.path.exists(db_path) else ""
+
+    def _recalled_memory_scent(self, user_message: str) -> str:
+        """이 질문에 맞춰 고른 심층기억 <recalled_memory> — 가지 2 → 그 안 2건 + 밖 1건.
+
+        공통 회상(docs/TREE_MEMORY_RECALL_COMMON_DESIGN_2026_09_17.md): 블로그 방식 — 가지 사전(요약·찾는 말)으로
+        가지를 먼저 고르고, 그 안에서 의미+글자 융합으로 고르며, 가지 밖 1건으로 누락을 보충한다.
+        관련 없음은 기계가 가르지 못한다(실측) — 작게 싣고 판단은 받는 AI 가 한다. 인코더 적재·대량 색인은
+        백그라운드라 첫 턴에는 비어 있을 수 있다(unavailable/indexing → 0토큰).
+        """
+        try:
+            db_path = self._deep_memory_db()
+            if not db_path:
+                return ""
+            import tree_recall
+            from recall_store import DeepMemoryStore
+            store = DeepMemoryStore(db_path)
+            r = tree_recall.recall(store, user_message)
+            picked = r["items"] + r["outside"]
+            if not picked:
+                print(f"[연상:선택기억] {r['status']}")
+                return ""
+            if r.get("outside_beats_inside"):
+                self._note_outside_hit(store.key, user_message, r)
+            branches = ", ".join("/".join(b) for b in r["branches"]) or "(가지 고르기 생략)"
+            xml = (
+                '<recalled_memory note="이 질문에 맞춰 기계가 고른 심층기억 후보 — 고른 가지 안에서 2건, 밖에서 1건. '
+                '관련 없으면 무시한다. 긴 기억은 잘려 있다(…): 전문과 같은 가지의 다른 기억은 '
+                '[self:memory]{op:\"recall\", node:\"<가지>\"} 로 연다.">\n'
+                f"고른 가지: {branches}\n" + "\n".join(it.label for it in picked) + "\n</recalled_memory>"
+            )
+            print(f"[연상:선택기억] {r['status']} 가지={branches} 건수={len(picked)}")
+            return xml
+        except Exception as e:
+            print(f"[연상:선택기억] 실패 (무시): {e}")
+            return ""
+
+    @staticmethod
+    def _note_outside_hit(store_key: str, user_message: str, r: dict) -> None:
+        """되먹임 원장(설계 §5.5): 가지 밖 항목이 가지 안보다 앞선 턴 = 사전이 모르는 흩어짐의 신호.
+        정리 패스에서 AI 가 읽고 '함께 볼 가지'·'찾는 말'을 고친다. 개인 데이터라 git 밖(data/recall_index/)."""
+        try:
+            import json
+            import os
+            from datetime import datetime
+            import tree_recall
+            path = os.path.join(tree_recall._index_dir(), "outside_hits.jsonl")
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            row = {"at": datetime.now().isoformat(timespec="seconds"), "store": store_key,
+                   "query": (user_message or "")[:80], "chosen": ["/".join(b) for b in r["branches"]],
+                   "outside": ["/".join(it.path) for it in r["outside"]]}
+            with open(path, "a", encoding="utf-8") as f:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
+
     def _memory_map_scent(self) -> str:
         """심층 기억의 **지도(목차)** 를 <memory_map> 으로 돌려준다 — 가지 이름·건수·한 줄 요약만.
 
-        2026-09-03 사용자 판정: 평면 기억을 벡터 Top-3 로 밀어 넣던 자동 주입을 폐지하고, 주제 트리의
-        목차만 항상 올린다. 단서는 질문이 아니라 지도에서 오고, 가지의 내용은 AI 가
-        [self:memory]{op:"recall", node} 로 연다(포식 기억과 같은 배치 — 어휘가 기억의 입구).
+        2026-09-03: 평면 벡터 Top-3 자동 주입을 폐지하고 주제 트리의 목차를 올렸다. 2026-09-17 개정: 지도는
+        '무엇이 있나'의 윤곽으로 남고(크면 최상위만), 이 질문에 맞는 기억은 <recalled_memory> 가 함께 싣는다.
+        모자라면 AI 가 [self:memory]{op:"recall", node} 로 가지를 연다.
         문서가 사람 손에 고쳐졌으면 먼저 색인에 반영(싼 mtime 대조). 지도가 비면 0토큰.
         """
         try:
-            import sys
             import os
-            mem_pkg = os.path.join(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "..",
-                "data", "packages", "installed", "tools", "memory"
-            )
-            if mem_pkg not in sys.path:
-                sys.path.insert(0, mem_pkg)
-            import memory_db
-            import memory_tree
-
-            from thread_context import get_current_agent_id
-            agent_id = get_current_agent_id() or getattr(self, "agent_id", None)
-            db_path = memory_db._get_db_path(str(self.project_path), agent_id)
-            if not os.path.exists(db_path):
+            db_path = self._deep_memory_db()
+            if not db_path:
                 return ""
+            import memory_tree
             memory_tree.sync_all(db_path)
-            text = memory_tree.map_text(db_path)
+            text = memory_tree.map_text(db_path, max_chars=memory_tree.MAP_FULL_CHARS)
             if not text:
                 return ""
             xml = (
-                '<memory_map note="이 자아의 심층 기억 지도(목차) — 가지 (건수) — 요약. 내용은 실리지 않는다. '
-                '사용자만 아는 사실(내 ~, 지난번 ~, 선호·결정·사람·물건)이 필요하고 관련 가지가 보이면 '
+                '<memory_map note="이 자아의 심층 기억 지도(목차) — 가지 (건수) — 요약. 지도가 크면 최상위 가지만 실린다. '
+                '이 질문에 맞춰 기계가 고른 기억은 아래 <recalled_memory> 에 있다 — 그것으로 모자라고 관련 가지가 보이면 '
                 '답하기 전에 [self:memory]{op:\"recall\", node:\"<가지>\"} 로 연다. 지속 가치가 있는 사용자 사실은 최종 응답 후 자동 선별된다. save 호출은 필요 없다.">\n'
                 + text + "\n</memory_map>"
             )

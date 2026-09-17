@@ -191,6 +191,7 @@ def _memory_search(db, tool_input, project_path, agent_id):
         query=query,
         category=_cat,
         limit=limit,
+        by_relevance=True,      # 자동 주입과 같은 엔진으로 순위(공통 회상) — 준비 안 됐으면 옛 경로로 떨어진다
         **({"node": str(tool_input["node"]).strip().strip("/")} if tool_input.get("node") else {})
     )
     for r in deep_results:

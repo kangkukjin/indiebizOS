@@ -6,7 +6,7 @@ IndieBiz OS Core
 1. architecture.md - 시스템 개요, 구조, 설계 의도 (overview.md 흡수)
 2. technical.md - 기술 상세 (API, 설정, 경로 등)
 3. ibl.md - IBL 명세 + 설계 철학 (구 ibl_design_philosophy.md 흡수)
-4. memory.md - 메모리 7종 통합 지도 + 연상기억 심층 (구 memory_architecture.md + execution_memory.md)
+4. memory.md - 메모리 8종 통합 지도 + 연상기억 심층 (구 memory_architecture.md + execution_memory.md)
 5. packages.md - 패키지 시스템
 6. inventory.md - 프로젝트/패키지 현황 (자동 생성)
 7. communication.md - 통신/연동 + 위임 체인 (구 delegation.md 흡수)

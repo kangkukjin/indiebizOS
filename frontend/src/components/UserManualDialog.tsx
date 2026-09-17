@@ -3,7 +3,7 @@
  * 시스템의 상세한 사용 방법과 기능 안내
  *
  * 2026-07-05 전면 재작성 — 현재 시스템(런처 3표면·IBL 6노드·인지 파이프라인·
- * 메모리 7종·포식 브라우저·두 자아) 기준으로 재구성. 은퇴한 별도 창(이웃 관리창·
+ * 메모리 8종·포식 브라우저·두 자아) 기준으로 재구성. 은퇴한 별도 창(이웃 관리창·
  * 빠른 연락처·비즈니스 관리창)과 낡은 수치를 제거.
  */
 
@@ -55,7 +55,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
               ['6. 자율주행 — 인지', '분류→의식→실행→평가→증류', 'bg-indigo-50 hover:bg-indigo-100'],
               ['7. 조종실', '주권 기관 · 모델 기어 레버', 'bg-cyan-50 hover:bg-cyan-100'],
               ['8. 앱 모드', '결정화된 계기 24종', 'bg-orange-50 hover:bg-orange-100'],
-              ['9. 메모리 — 7종', '해마 · 심층 · 포식 기억', 'bg-blue-50 hover:bg-blue-100'],
+              ['9. 메모리 — 8종', '해마 · 심층 · 포식 · 세계 기억', 'bg-blue-50 hover:bg-blue-100'],
               ['10. 포식 브라우저', '정답이 아닌 시야를 넓히는 검색', 'bg-teal-50 hover:bg-teal-100'],
               ['11. AI 프로바이더 설정', 'API 키 · 모델 기어 · 외부 하네스', 'bg-red-50 hover:bg-red-100'],
               ['12. 도구 패키지', '설치 · 제작 · 공유', 'bg-purple-50 hover:bg-purple-100'],
@@ -503,15 +503,15 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
       )
     },
 
-    // 9. 메모리 — 7종
+    // 9. 메모리 — 8종
     {
-      title: '메모리 — 7종',
+      title: '메모리 — 8종',
       icon: <Database className="w-12 h-12 text-blue-600" />,
       content: (
         <div className="space-y-4 text-base">
           <p className="text-gray-700 text-sm">
             메모리는 곧 <strong>속도·비용 최적화 장치이자 개인화의 엔진</strong>입니다.
-            인간 기억 분류에 대응하는 7종이 있습니다.
+            인간 기억 분류에 대응하는 일곱에, AI 가 이미 가진 지식으로 가는 다리(세계 기억)를 더해 8종이 있습니다.
           </p>
 
           <div className="bg-white border rounded-lg overflow-hidden text-sm">
@@ -528,6 +528,7 @@ export function UserManualDialog({ show, onClose }: UserManualDialogProps) {
                   ['관계 (사용자 사실)', '심층메모리 (선호·결정·중요날짜 자동 흡수)'],
                   ['자기상태 (항상성)', 'World Pulse + Self-Check'],
                   ['공간 (포식)', '포식 기억 (냄새지도 — 어디에 무엇이 사는가)'],
+                  ['세계 (지식의 단서)', '세계의 지도 (방법·도구의 이름·분류·관계 — 내용은 AI 안에)'],
                 ].map(([h, v], i) => (
                   <tr key={i} className="border-t">
                     <td className="p-2">{h}</td>

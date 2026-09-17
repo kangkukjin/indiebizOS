@@ -304,7 +304,8 @@ def chat_with_system_ai(chat: ChatMessage):
             response_text, tool_images = process_system_ai_message(
                 message=ai_message,
                 history=history,
-                images=images_data
+                images=images_data,
+                utterance_author="owner",
             )
             if not tool_images:
                 # claude_code 경로 폴백 — 응답에 적힌 이 턴 산출 이미지 경로를 수확
@@ -373,7 +374,8 @@ class RecallPreviewRequest(BaseModel):
 # 연상 묶음의 채널 태그 → 조종실 표시 라벨. _build_execution_memory 가 이 순서로 결합한다.
 _RECALL_CHANNELS = [
     ("execution_memory", "실행기억 — 해마 (과거 IBL 용례 연상)"),
-    ("memory_map", "심층 기억 지도 — 주제 가지 목차 (내용은 recall 로)"),
+    ("memory_map", "심층 기억 지도 — 주제 가지 목차 (크면 최상위만)"),
+    ("recalled_memory", "선택된 심층 기억 — 가지 먼저 고른 3건 (공통 회상)"),
     ("guide_map", "가이드 목차 — 실행기억 가지별 가이드 파일명 (지도 전체는 recall store:실행)"),
     ("forage_memory", "포식 기억 — 냄새지도 + 주인모델"),
     ("disk_skeleton", "디스크 골격 — 집중 폴더 지도 (포식 의도일 때만)"),
@@ -980,6 +982,7 @@ def forage_chat(chat: ForageMessage):
             message=message_text, history=[], images=images_data, extra_role=extra_role,
             force_role="forage",       # 모델 = 계기판 에이전트 핀(overrides["forage"], 기본 경량). 의식·분류 건너뛰고 빠르게.
             allowed_set=forage_nodes,  # 어휘를 sense+self+table 로만 — 경량 모델 프롬프트 다이어트 + 라우팅 집중.
+            utterance_author="owner",  # 검색어 — force_role 표면이라 심층 증류는 어차피 돌지 않는다
         )
         complete_system_ai_task(task_id, response_text[:500])
         # ★포식 기억 증류 — 포식 브라우저는 웹 포식의 *주 표면*이라 owner_model·웹 관습이 여기서

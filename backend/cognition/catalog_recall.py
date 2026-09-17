@@ -146,3 +146,46 @@ def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
         except Exception as exc:
             event.update(status="error", error=type(exc).__name__)
             return finish()
+
+
+def world_memory_for_turn(message, lexical_snippet=""):
+    """세계의 기억 — 지도(최상위 분야)와 가지 먼저 고른 어휘 3건 (공통 회상 설계 §5.6, 2026-09-17).
+
+    위의 <method_map>(글자 일치 seed + 관계 조각)은 이름을 실제로 말했을 때의 정밀한 길이고, 이 블록은 표현이 달라도
+    닿는 의미 채널이다(실측: 새 질문 2/24 → 17/24). 심층기억의 <memory_map>·<recalled_memory> 와 같은 함수
+    (tree_recall.recall)를 쓴다. 관련 없음은 기계가 가르지 못하므로 작게 싣고 판단은 받는 AI 가 한다.
+    글자 조각에 이미 나온 이름은 뺀다. 인코더 적재·첫 색인은 백그라운드 — 그동안은 지도만 실린다.
+    """
+    started = time.monotonic()
+    event = {"status": "disabled", "mode": "semantic", "ids": [], "branches": [], "chars": 0}
+    try:
+        root = get_base_path()
+        config = load_config(root)
+        # 끄는 키는 `world_memory`(기본 켬). 옛 `semantic_enabled` 는 의미 검색이 없던 때의 자리표라 읽지 않는다.
+        if config.get("enabled", True) is False or config.get("world_memory", True) is False:
+            return ""
+        import tree_recall
+        from world_recall_store import WorldStore
+        store = WorldStore(root)
+        r = tree_recall.recall(store, message)
+        picked = [it for it in r["items"] + r["outside"] if it.label.split(": ", 1)[-1] not in (lexical_snippet or "")]
+        parts = ['<world_map note="세계 지도의 최상위 분야 (어휘 수). 아래 분류와 어휘는 '
+                 '[self:script]{op:\\"run\\", id:\\"세계지도\\", args:{op:\\"browse\\", path:[\\"<분야>\\"]}} 로 내려가며 본다.">\n'
+                 + store.map_text() + "\n</world_map>"]
+        if picked and r["status"] == "ok":
+            branches = ", ".join("/".join(b) for b in r["branches"])
+            parts.append('<world_memory note="이 질문에 맞춰 기계가 고른 세계의 기억 후보 — 분류 경로: 이름. 이름은 당신이 아는 지식을 '
+                         '떠올리는 입구다. 관련 없으면 무시한다. 모자라면 위 지도에서 분야를 골라 직접 찾는다.">\n'
+                         f"고른 가지: {escape(branches)}\n" + "\n".join(escape(it.label) for it in picked) + "\n</world_memory>")
+        snippet = "\n".join(parts)
+        event.update(status=r["status"], ids=[it.id for it in picked], branches=["/".join(b) for b in r["branches"]],
+                     chars=len(snippet), outside_beats_inside=r.get("outside_beats_inside", False),
+                     revision=store.snapshot.revision)
+        return snippet
+    except Exception as exc:
+        event.update(status="error", error=type(exc).__name__)
+        return ""
+    finally:
+        event["elapsed_ms"] = round((time.monotonic() - started) * 1000, 3)
+        _record(dict(event, channel="world_memory"))
+

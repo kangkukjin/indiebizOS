@@ -20,7 +20,7 @@ def test_recall_never_opens_user_disks(message, monkeypatch):
     monkeypatch.setattr(ibl_usage_rag, "build_execution_memory", lambda *a: ("reference", .5, "code"))
     runner = CognitiveRecallMixin()
     runner.config = {}
-    for name in ("_memory_map_scent", "_execution_map_scent", "_limb_presence_scent", "_pending_repair_scent"):
+    for name in ("_memory_map_scent", "_guide_map_scent", "_limb_presence_scent", "_pending_repair_scent"):
         monkeypatch.setattr(runner, name, lambda: "map")
     monkeypatch.setattr(runner, "_decision_scent", lambda message: "decision")
     text, score, code = runner._build_execution_memory(message)

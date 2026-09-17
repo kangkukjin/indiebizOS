@@ -147,7 +147,7 @@ def _recall_bundle(sample: str) -> str:
 
 
 def _recall_section(sample: str, layer: str = "turn") -> Dict[str, Any]:
-    return _section("execution_memory", "실행기억 (해마 회상 + 심층·실행 지도)", layer, "memory",
+    return _section("execution_memory", "실행기억 (해마 회상 + 심층 지도 + 가이드 목차)", layer, "memory",
                     "cognitive_recall._build_execution_memory → ibl_usage_rag.build_execution_memory + hippo_tree",
                     _recall_bundle(sample),
                     note="샘플 메시지로 실제 회상한 결과. 메시지마다 내용·분량이 달라진다(LLM 0, 임베딩 검색).")

@@ -9,7 +9,7 @@ hippo_tree.py — 실행기억(해마 용례)의 **주제 가지 트리 문서**
   성공한 문장들. 결정화 사다리(용례 → 워크플로 → 가이드)가 한 자리에 놓인다.
 - 가지마다 문서 하나: `data/hippocampus_tree/<가지>/memory.md`(표식 + `> 한 줄 요약` + `guide:` +
   `## 용례` 기계 절 + 갱신 기록). 문서가 정본, DB 는 색인 — 사람이 줄을 고치면 색인이 따라온다.
-- **지도(목차)는 항상 올린다**(`<execution_map>`), 가지의 내용은 AI 가 `[self:memory]{op:"recall",
+- **가이드 목차만 항상 올린다**(`<guide_map>`, 2026-09-17 — 옛 `<execution_map>` 상시 주입 폐지. 전체 지도는 recall 의 node 생략으로 본다), 가지의 내용은 AI 가 `[self:memory]{op:"recall",
   node, store:"실행"}` 로 연다.
 - ★다른 점: 매 턴의 유사도 자동 주입(해마 Top-5·반사 0.85)은 **그대로 둔다** — "이 말을 IBL 로 어떻게
   쓰나"는 사용자 문장 자체가 단서라 벡터가 맞는 도구. 트리는 대체가 아니라 축 하나를 얹는 것.
@@ -986,6 +986,18 @@ def map_text(db_path: Optional[str] = None) -> str:
     return "\n".join(lines)
 
 
+def guide_map_text() -> str:
+    """매 턴 올리는 **가이드 목차** — `- 가지: a.md, b.md`. 가이드가 달린 가지만, 용례 수·요약 없이.
+
+    2026-09-17 사용자 판정: 실행기억 지도의 상시 주입을 그만둔다 — 용례는 해마가 자동 연상하고 문법은
+    프롬프트에 있으므로 가지를 찾아 열 입구를 매 턴 실을 이유가 없다. 다만 그 지도는 가이드의 유일한
+    목차였고(의식이 12일간 194회 고름), 회상 용례의 가지(38%)나 임베딩 검색(Top-5 52%)으로는
+    대체되지 않았다(실측). 그래서 목차만 남긴다. 전체 지도는 map_text() — 증류기와 recall(node 생략)이 쓴다.
+    """
+    links = guide_links()
+    return "\n".join(f"- {t}: {links[t]['guide']}" for t in sorted(links, key=lambda s: (s.count("/"), s)))
+
+
 EXPAND_HINT = ("본문은 요청할 때만 — expand:\"이름\"(함수 정의) · expand:\"#id\"(용례 한 건) · expand:\"주행\"(주행 절) · "
                "expand:\"all\"(문서 전문). 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄로 부른다.")
 
@@ -1109,7 +1121,7 @@ def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = No
     path = doc_path(topic)
     if not os.path.exists(path) and topic not in all_topics(db_path):
         return {"success": False, "topic": topic,
-                "error": f"없는 가지: '{topic}' — 지도(execution_map)의 이름을 쓰거나 증류·move 로 가지를 만든다.",
+                "error": f"없는 가지: '{topic}' — 지도([self:memory]{{op:\"recall\", store:\"실행\"}} — node 생략)의 이름을 쓰거나 증류·move 로 가지를 만든다.",
                 "topics": [m["topic"] for m in map_lines(db_path) if m["topic"]]}
     if not os.path.exists(path):
         refresh_topic(topic, db_path)

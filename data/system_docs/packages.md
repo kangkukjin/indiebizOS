@@ -106,7 +106,7 @@ description에 모든 내용을 넣지 않고, 필요할 때만 가이드를 주
 
 동작 흐름:
 ```
-`<execution_map>` 의 가지별 `guide:` 줄(가이드 목차) → 의식이 guide_files 로 지목 (2026-09-03, 옛 get_guide_list 키워드 매칭 폐지)
+`<guide_map>`(가지별 가이드 파일명 목차) → 의식이 guide_files 로 지목 (2026-09-03 옛 get_guide_list 키워드 매칭 폐지 · 2026-09-17 실행기억 지도 `<execution_map>` 자동 주입 폐지, 목차만 남김)
     → consciousness_agent.process() (가이드 선택)
     → JSON 출력: { "guide_files": ["investment.md", ...] }
     → prompt_builder가 data/guides/에서 읽어 프롬프트에 주입

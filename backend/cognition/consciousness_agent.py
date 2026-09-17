@@ -186,8 +186,8 @@ class ConsciousnessAgent:
             user_message: 사용자의 현재 메시지
             history: 대화 히스토리 원본 (정제 전)
             associative_memory: 연상기억 — <execution_memory>(해마) +
-                <memory_map>(심층기억 지도) + <execution_map>(실행기억 지도 — 가지마다
-                guide: 줄이 그 주제의 가이드를 가리킨다; 가이드 선택의 유일한 입구, 2026-09-03)
+                <memory_map>(심층기억 지도) + <guide_map>(가이드 목차 — 가지: 파일명;
+                가이드 선택의 유일한 입구. 실행기억 지도 자동 주입은 2026-09-17 폐지)
             world_pulse: 현재 세계 상태 요약
             agent_name: 에이전트 이름
             agent_role: 에이전트 역할 (전문)
@@ -360,11 +360,11 @@ class ConsciousnessAgent:
                 parts.append(f"<turn index=\"{i}\" role=\"{role}\"{img_attr}>{content}</turn>")
             parts.append("</history>")
 
-        # 연상기억 — <execution_memory>(해마) + <memory_map>(심층기억 지도) + <execution_map>
-        # (실행기억 지도). 내부 태그가 이미 self-describing이므로 외부 래퍼를 두지 않는다.
+        # 연상기억 — <execution_memory>(해마) + <memory_map>(심층기억 지도) + <guide_map>
+        # (가이드 목차). 내부 태그가 이미 self-describing이므로 외부 래퍼를 두지 않는다.
         # ★가이드 목록은 따로 싣지 않는다(2026-09-03): 옛 <available_guides> 는 guide_db 키워드
         #   점수(코드 선택기)로 고른 최대 10개였는데, 가이드의 자리는 실행기억의 가지이고
-        #   <execution_map> 의 `guide:` 줄이 그 목차다 — 기억 입구는 지도 하나, 선택은 AI.
+        #   <guide_map> 이 그 목차다 — 선택은 AI. (2026-09-17: 실행기억 지도의 자동 주입은 빼고 목차만 남김)
         if associative_memory:
             parts.append(associative_memory)
 

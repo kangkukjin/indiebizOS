@@ -162,6 +162,30 @@ def test_gist_and_guide_lines_reach_the_map(env):
     assert "— 정기 보고서 발행 문장들 · guide: ai_trend_report.md" in HT.map_text(db)
 
 
+def test_guide_map_lists_only_guides_and_injection_drops_execution_map(env):
+    """2026-09-17 사용자 판정: 실행기억 지도의 프롬프트 자동 주입 폐지 — 매 턴 실리는 것은 가이드 목차뿐.
+    지도(map_text)는 증류기·recall 을 위해 그대로 산다. 죽은 태그를 가리키는 프롬프트가 남지 않게 막는다."""
+    HT, db = env
+    _add(db, "x", '[self:report]{op: "list"}', "보고서")
+    _add(db, "y", '[sense:price]{}', "투자")                      # 가이드 없는 가지
+    HT.refresh_topic("보고서", db, guide="ai_trend_report.md, deep_research.md")
+    HT.refresh_topic("투자", db)
+    assert HT.guide_map_text() == "- 보고서: ai_trend_report.md, deep_research.md"
+    assert "투자 (1)" in HT.map_text(db)                           # 내부 지도는 그대로
+
+    from cognitive_recall import CognitiveRecallMixin as RecallMixin
+    xml = RecallMixin()._guide_map_scent()
+    assert xml.startswith("<guide_map ") and "ai_trend_report.md" in xml and "투자" not in xml
+    assert not hasattr(RecallMixin, "_execution_map_scent")
+
+    root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    live = [os.path.join(root, "data/common_prompts", n) for n in ("consciousness_prompt.md", "base_prompt_v6.md")]
+    live.append(os.path.join(root, "data/common_prompts/fragments/12_ibl_only.md"))
+    live += [os.path.join(root, "backend/cognition", n) for n in ("agent_cognitive.py", "switch_runner.py", "system_ai_tools.py")]
+    for path in live:
+        assert "<execution_map>" not in _read(path), f"주입되지 않는 태그를 가리킨다: {path}"
+
+
 if __name__ == "__main__":                      # 러너는 하나 — pytest
     sys.exit(pytest.main([__file__, "-q"]))
 

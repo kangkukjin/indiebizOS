@@ -1038,7 +1038,7 @@ def _search_guide(query: str, params: dict) -> Any:
             "message": "가이드 전체 목록입니다. 키워드로 검색하세요.",
         }
 
-    # ★파일명 정확 일치 빠른길 (2026-09-03): 가이드의 입구가 <execution_map> 의 `guide:` 줄로
+    # ★파일명 정확 일치 빠른길 (2026-09-03): 가이드의 입구가 <guide_map>(옛 <execution_map> 의 `guide:` 줄)으로
     #   옮겨져 실행자는 지도의 파일명을 그대로 넘긴다. 파일명은 점수 경쟁 없이 그 파일이다 —
     #   토큰 점수에 맡기면 "goal.md" 가 'goal' 낱말을 가진 다른 가이드에 밀릴 수 있다.
     _q = (query or "").strip().strip("`")

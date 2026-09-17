@@ -43,7 +43,7 @@ class CognitiveRecallMixin:
             - top_code: 해마 최고 점수 항목의 ibl_code (action_hint 적용 시 "[node:action]")
         """
         try:
-            # 요청 주체 관문(2026-09-14): 연상기억 전부(해마·기억지도·실행지도·결정원장·손발)는 주인의 것 —
+            # 요청 주체 관문(2026-09-14): 연상기억 전부(해마·기억지도·가이드목차·결정원장·손발)는 주인의 것 —
             # 주체가 owner 가 아니면 아무것도 싣지 않는다. 회원 자기 기억은 손발 회상(1단계)이 맡는다.
             try:
                 import principal
@@ -78,10 +78,10 @@ class CognitiveRecallMixin:
             if related:
                 result = (result + "\n" + related) if result else related
 
-            # 실행기억 지도(주제 가지 목차, hippo_tree) — 해마 Top-5 는 그대로 두고 축 하나를 얹는다(2026-09-03).
-            exec_map = self._recall_step("execution_map", self._execution_map_scent)
-            if exec_map:
-                result = (result + "\n" + exec_map) if result else exec_map
+            # 가이드 목차(hippo_tree 의 guide: 링크만) — 실행기억 지도의 자동 주입은 2026-09-17 폐지, 목차만 남긴다.
+            guide_map = self._recall_step("guide_map", self._guide_map_scent)
+            if guide_map:
+                result = (result + "\n" + guide_map) if result else guide_map
 
             # 포식 기억 자동 주입 폐지(2026-09-03 사용자 판정): 조사로 기억이 많아지자 "어느 기억이
             #   관련 있나"를 고르는 선택기가 AI 의 판단을 대신하게 됐다. 이제 AI 가 필요할 때
@@ -119,7 +119,7 @@ class CognitiveRecallMixin:
 
             # ★웹 랜드마크(참고지도)는 여기서 bespoke 주입하던 것을 폐기 —
             #   data/guides/web_search.md(웹 검색 가이드) 안으로 접었다. 일반 에이전트는
-            #   read_guide/의식의 guide_files(<execution_map> guide: 줄에서 고름) 로 선택적으로 읽고, 포식 표면은 forage_chat 이
+            #   read_guide/의식의 guide_files(<guide_map> 에서 고름) 로 선택적으로 읽고, 포식 표면은 forage_chat 이
             #   그 가이드를 항상 주입한다(포식=정의상 항상 웹검색). 키워드 게이트 사각지대 제거.
 
             if result:
@@ -128,8 +128,8 @@ class CognitiveRecallMixin:
                     parts.append("실행기억")
                 if "memory_map" in result:
                     parts.append("기억지도")
-                if "execution_map" in result:
-                    parts.append("실행지도")
+                if "guide_map" in result:
+                    parts.append("가이드목차")
                 if "forage_memory" in result:
                     parts.append("포식기억")
                 if "connected_limbs" in result:
@@ -223,29 +223,31 @@ class CognitiveRecallMixin:
         "implement", "module", "repo", "defined", "web", "online", "scholar", "arxiv",
     )
 
-    def _execution_map_scent(self) -> str:
-        """실행기억(해마 용례)의 **주제 지도** <execution_map> — 가지·용례 수·요약·가이드만.
+    def _guide_map_scent(self) -> str:
+        """가이드 목차 <guide_map> — 가이드가 달린 가지와 파일명만.
 
-        2026-09-03 사용자 판정("실행기억도 주제별 폴더로"). 매 턴의 해마 유사도 주입(반사 포함)은 그대로 두고,
-        큰 작업(보고서·정기 작업)에서 그 주제의 성공한 문장들을 한꺼번에 볼 입구를 지도로 준다 —
-        [self:memory]{op:"recall", node, store:"실행"}. 문서가 고쳐졌으면 색인에 반영. 지도가 비면 0토큰.
+        2026-09-17 사용자 판정: 실행기억 지도(<execution_map> — 가지·용례 수·요약)의 프롬프트 자동 주입을 뺀다.
+        용례는 해마가 자동 연상하고 문법은 프롬프트에 있어 매 턴 가지를 찾아 열 입구가 필요 없다. 지도 자체는
+        내부에서 계속 쓴다(증류기의 가지 배정·[self:memory]{op:"recall", store:"실행"} 의 node 생략·가이드 생명주기).
+        그 지도가 겸하던 가이드 목차만 여기 남긴다 — 의식의 guide_files·실행자의 read_guide 가 고르는 자리. 비면 0토큰.
         """
         try:
             import hippo_tree
             hippo_tree.sync_all()
-            text = hippo_tree.map_text()
+            text = hippo_tree.guide_map_text()
             if not text:
                 return ""
             xml = (
-                '<execution_map note="실행기억(IBL 용례) 주제 지도 — 가지 (용례 수) — 요약 · guide. 내용은 실리지 않는다. '
-                '보고서·정기 작업처럼 큰 일이면 그 주제 가지를 [self:memory]{op:\"recall\", node:\"<가지>\", store:\"실행\"} 로 열어 '
-                '성공한 문장들을 보고 조립한다. guide 는 그 주제의 가이드 파일명 — 가이드의 유일한 목차이니 read_guide 에 파일명을 그대로 넣어 연다. 위 <execution_memory> 의 닮은 용례가 이미 충분하면 가지를 열 필요는 없다.">\n'
-                + text + "\n</execution_map>"
+                '<guide_map note="가이드 목차 — 주제 가지: 가이드 파일명. 가이드의 유일한 목차이니 일이 속한 가지의 파일명을 '
+                'read_guide 에 그대로 넣어 연다(의식은 guide_files 로 지목). 성공한 IBL 문장의 주제별 모음은 여기 실리지 않는다 — '
+                '위 <execution_memory> 의 닮은 용례로 부족한 큰 일이면 [self:memory]{op:\"recall\", node:\"<가지>\", store:\"실행\"} 로 '
+                '가지를 열고, node 를 생략하면 실행기억 지도 전체가 나온다.">\n'
+                + text + "\n</guide_map>"
             )
-            print(f"[연상:실행지도] {text.count(chr(10)) + 1}가지")
+            print(f"[연상:가이드목차] {text.count(chr(10)) + 1}가지")
             return xml
         except Exception as e:
-            print(f"[연상:실행지도] 실패 (무시): {e}")
+            print(f"[연상:가이드목차] 실패 (무시): {e}")
             return ""
 
     def _memory_map_scent(self) -> str:

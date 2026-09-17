@@ -118,7 +118,7 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
 시스템 AI와 프로젝트 에이전트는 같은 빌더로 조립되며, 프롬프트 캐시 prefix 를 지키기 위해 두 층으로 나뉜다:
 
 - **안정부(system_prompt)** — 현재 날짜(일 단위) → `base_prompt_v6.md` → `<system_structure>` 정체성 코어 → 조건부 프래그먼트(`06_git`·`09_delegation`·`10_system_ai_delegation`) → IBL 환경(`ibl_access.build_environment`: 압축 문법서 + 허용 노드의 액션 카탈로그 + 상시 관용구) → 프로젝트 에이전트만 `<project_memory>`(폴더 포식 문서) → `# Role`(`system_ai_role.txt` / `agent_<이름>_role.txt`) → `# Notes` / `# 시스템 메모`.
-- **가변부(`<turn_context>`, 사용자 메시지 앞)** — 분 단위 시각 → 실행기억(해마 회상 + 심층·실행 지도) → 모델명 → 의식이 고른 가이드 본문 → 수리 턴 교리(RED 그랜트 때만).
+- **가변부(`<turn_context>`, 사용자 메시지 앞)** — 분 단위 시각 → 실행기억(해마 회상 + 심층 지도 + 가이드 목차) → 모델명 → 의식이 고른 가이드 본문 → 수리 턴 교리(RED 그랜트 때만).
 - **사용자 명령** — `compile_user_command` 가 원문에 의식의 보강(문제 규정·기준 출처·전문가의 선택·전제·액션·수행 절차·실행 초안·가이드·충족 기준)을 당위 앵커로 이어 붙인다(THINK 경로).
 
 의식·의식 감독·무의식·최종 평가자·경험 증류·가이드 순찰·IBL 번역·자동응답은 각자 다른 조립을 갖는다. **어느 에이전트가 무엇을 어떤 순서로 읽는지는 런처 안경 메뉴 → 프롬프트 구성** 표면이 정본 빌더를 그대로 불러 조각별 분량과 본문으로 보여준다(`backend/cognition/prompt_composition.py`, `/prompt-composition/*`). 문서의 조립 순서 서술이 표면과 어긋나면 표면이 맞다. 안경 메뉴의 도구 창(프롬프트 구성·가이드 파일·내 어휘)은 Electron 에서 런처 안 모달이 아니라 **독립 OS 창**이다(`frontend/electron/windows.js` `createToolWindow(kind)` — kind 별 싱글턴, 내 어휘만 폴더별; IPC `open-tool-window`), 웹 표면은 같은 창의 해시 라우트(`#/prompt-composition`·`#/guides`·`#/vocabulary`). 가이드 파일 창은 `data/guides/*.md` 를 등록(guide_db)·신선도·예산과 함께 보여 주고 본문을 고쳐 저장한다(`/guides`, `guide_registry.guide_catalog` — 폴더가 정본이라 '등록만 있고 파일 없음'·'파일만 있고 미등록'을 숨기지 않는다). 정본 `docs/PROMPT_COMPOSITION_SURFACE_2026_09_13.md`.

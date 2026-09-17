@@ -376,7 +376,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - `<agent name="...">` - 이름 + `<role>` + `<notes>`
 - `<world_pulse>` - 매시간 갱신되는 세계/사용자/시스템 상태
 - `<history>` - 대화 히스토리 (`<turn index="..." role="...">`)
-- `<execution_map>` - 실행기억 지도(가지·용례 수·요약·`guide:` 가이드 목차 — 옛 `<available_guides>` 대체, 2026-09-03)
+- `<guide_map>` - 가이드 목차(실행기억 가지: 가이드 파일명). 옛 `<execution_map>`(가지·용례 수·요약까지 실은 실행기억 지도)의 자동 주입은 2026-09-17 폐지 — 지도 전체는 `[self:memory]{op:"recall", store:"실행"}`(node 생략 = 실행기억 지도) 로 본다
 - `<user_message>` - 현재 사용자 메시지
 
 **프래그먼트 (fragments/)**

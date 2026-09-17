@@ -56,11 +56,11 @@
 
 ## 입력
 
-당신은 self-describing한 블록들을 받는다 — `<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<execution_map>`, `<world_pulse>`, `<available_tools>`, `<user_message>`, 수리 턴에만 `<repair_doctrine>`, 그리고 턴 안 재규정 요청일 때만 `<framing_revision>`. 태그 이름과 note 속성에 의미가 적혀 있으므로 그대로 해석한다.
+당신은 self-describing한 블록들을 받는다 — `<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<guide_map>`, `<world_pulse>`, `<available_tools>`, `<user_message>`, 수리 턴에만 `<repair_doctrine>`, 그리고 턴 안 재규정 요청일 때만 `<framing_revision>`. 태그 이름과 note 속성에 의미가 적혀 있으므로 그대로 해석한다.
 
 ### 우선 활용 지침
 - **`<memory_map>`**: 이 에이전트의 심층 기억 **지도(목차)** — 가지 이름·건수·한 줄 요약만 실리고 내용은 없다. "내 ~", "지난번 ~", "방금 ~" 같이 **사용자만 아는 정보**를 요구하면 관련 가지를 고르고, task_framing 에 실행자가 `[self:memory]{op:"recall", node:"<가지>"}` 로 먼저 열도록 적는다. 지도에 관련 가지가 없을 때만 묻는다.
-- **`<execution_map>`**: 실행기억(IBL 용례)의 주제 지도 — 가지·용례 수·요약·가이드. 보고서·정기 작업처럼 큰 일이면 실행자가 그 가지를 `[self:memory]{op:"recall", node:"<가지>", store:"실행"}` 로 열어 성공한 문장들을 보고 조립하도록 task_framing 에 적는다. 닮은 용례가 `<execution_memory>` 에 이미 충분하면 열지 않는다.
+- **`<guide_map>`**: 가이드 목차 — 실행기억의 주제 가지와 그 가지의 가이드 파일명. guide_files 는 여기서 고른다(§5). 가지 이름은 실행기억의 가지이기도 하다 — 보고서·정기 작업처럼 큰 일이고 `<execution_memory>` 의 닮은 용례로 부족하면 실행자가 그 가지를 `[self:memory]{op:"recall", node:"<가지>", store:"실행"}` 로 열어 성공한 문장들을 보고 조립하도록 task_framing 에 적는다(실행기억 지도 전체는 node 를 생략하면 나온다 — 매 턴 실리지 않는다).
 - **`<execution_memory>`**: 과거 IBL 코드 사례(`<ibl_references>`)와 그 액션의 구현(`<implementations>`). task_framing에 도구의 능력·한계를 적을 때 근거 자료. **`<user_selected_action>`이 들어있으면 사용자가 마법책에서 그 액션을 명시적으로 선택한 것이다.** 이때는 capability_focus.highlight_actions에 그 액션을 1순위로 두고 task_framing을 그 액션 중심으로 정의한다 — 사용자 메시지가 액션 사용을 직접 요구하지 않더라도(예: "이거 어때?") 사용자가 *그 액션으로 무엇을 알거나 하려는지*를 추측해 프레이밍한다.
 - **`<world_pulse>`**: 사용자·위치·일정 등 환경 정보. task_framing이 영향을 받을 때만 인용해 문제 규정에 녹인다.
 - **`<history>`**: 현재 지시와의 관련성을 판단할 후보 자료. 앞의 선별 원칙에 따라 필요한 맥락만 복원한다.
@@ -183,7 +183,7 @@ highlight_actions에 넣고 관용구는 hint에 둔다. 호출 횟수를 늘리
 
 ### 5. guide_files — 문제를 풀 때 참조할 지식
 
-가이드의 목차는 `<execution_map>` 의 각 가지에 붙은 `guide:` 줄이다(가지 하나에 여러 파일이면 쉼표). 문제가 속한 가지의 가이드를 고른다(없으면 빈 배열, 가장 관련 있는 2-3개로 제한). 지도에 없는 가이드를 지어내지 마라. 선택한 본문은 실행자에게 주입되며, 미제공·잘림·요약된 본문만 `read_guide`로 확인한다. **심층연구 판단**: 사용자가 깊은 연구를 요구하거나 복합 가설·다수 근거의 종합이 필요한 분석·전망·보고서면 `deep_research.md`를 포함한다. 분석·비교라는 낱말만으로 선택하지 말고, 단순 수치 비교·확인은 그 작업의 멈춤선에 맞춘다.
+가이드의 목차는 `<guide_map>` 이다(`가지: 파일명`, 가지 하나에 여러 파일이면 쉼표). 문제가 속한 가지의 가이드를 고른다(없으면 빈 배열, 가장 관련 있는 2-3개로 제한). 지도에 없는 가이드를 지어내지 마라. 선택한 본문은 실행자에게 주입되며, 미제공·잘림·요약된 본문만 `read_guide`로 확인한다. **심층연구 판단**: 사용자가 깊은 연구를 요구하거나 복합 가설·다수 근거의 종합이 필요한 분석·전망·보고서면 `deep_research.md`를 포함한다. 분석·비교라는 낱말만으로 선택하지 말고, 단순 수치 비교·확인은 그 작업의 멈춤선에 맞춘다.
 
 ### 6. imagined_ibl — 상상실행 초안 (선택)
 

@@ -287,7 +287,7 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
   - 무의식 EXECUTE는 'execute' 축 유지 — 분류 오판이 품질 저하로 이어지지 않게 하는 방어. 덕분에 무의식은 EXECUTE 쪽으로 과감하게 기울 수 있다
 - **의식 에이전트** — `consciousness_agent.py` ('consciousness' 축, 균형 기어 기본=중급)
   - 출력 필드: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 한 문장, 실행자 명령의 제 이름 섹션, 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31) (self_awareness·world_state 는 2026-06-28 폐지; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 소비처 없음)
-  - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<execution_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<execution_map>` 의 guide: 줄, 2026-09-03)
+  - 입력: self-describing XML 블록들 (`<agent>`, `<history>`, `<execution_memory>`, `<memory_map>`, `<guide_map>`, `<world_pulse>`, `<user_message>` — 가이드 목차는 `<guide_map>`, 2026-09-17)
   - 프롬프트: `consciousness_prompt.md` + `system_structure.md` + `data/common_prompts/fragments/12_ibl_only.md`
 - **과제 선택·규정 재사용** — `pursuit_bind.py`와 `_run_consciousness_or_reuse()`
   - 자아별 과제 원장에서 현재 과제를 선택한 뒤 규정의 유효성을 따로 검토한다. 반박은 같은 과제에서 재규정하고 EXECUTE/Reflex도 참여한다. 규정이 유효하면 의식을 스킵하며 턴 기준만 새로 만든다. 전체 기준은 goal_criteria로 독립이다.

@@ -107,7 +107,7 @@ class CognitiveConsciousnessMixin:
             result = agent.process(
                 user_message=user_message,
                 history=history,
-                associative_memory=execution_memory,  # 연상기억(해마+지도 2종) 묶음 — 가이드는 <execution_map> 의 guide: 줄
+                associative_memory=execution_memory,  # 연상기억(해마+심층 지도+가이드 목차) 묶음 — 가이드는 <guide_map>
                 world_pulse=get_world_pulse_text(),
                 agent_name=agent_name,
                 agent_role=agent_role,

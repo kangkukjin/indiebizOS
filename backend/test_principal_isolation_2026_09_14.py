@@ -143,7 +143,7 @@ def test_recall_mixin_yields_nothing_for_body(monkeypatch):
     class Agent(CognitiveRecallMixin):
         config = {}
         def _memory_map_scent(self): return f"<memory_map>{MARK}</memory_map>"
-        def _execution_map_scent(self): return ""
+        def _guide_map_scent(self): return ""
         def _limb_presence_scent(self): return ""
         def _pending_repair_scent(self): return ""
         def _decision_scent(self, m): return f"<decision_ledger>{MARK}</decision_ledger>"

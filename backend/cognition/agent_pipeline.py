@@ -909,6 +909,7 @@ class CognitivePipelineMixin:
                         message, final_content,
                         tool_calls=tool_calls_log, hippo_score=hippo_score, top_code=top_code,
                         turn_tokens=turn_tokens, **({"pursuit_packet": _packet} if _packet else {}),
+                        presented=recall.usage_payload(),   # 제시→사용 결합(2026-09-18) — 값으로 큐를 넘는다
                         # 이 턴의 메시지를 누가 썼나 — 진입점이 선언한다. "owner"(주인이 직접 친 말)만
                         # 심층기억 증류의 재료다. 에이전트 위임문·보고 회수·예약 주입문·미선언은 닫힌다.
                         write_deep=(utterance_author == "owner"),

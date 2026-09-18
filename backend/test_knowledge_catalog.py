@@ -304,8 +304,8 @@ def test_pipeline_cancel_after_catalog_stops_before_models(tmp_path, monkeypatch
     cancelled, calls = [False], []
     def recall_and_cancel(*a, **kw):
         cancelled[0] = True
-        return "<method_map>단서</method_map>"
-    monkeypatch.setattr(recall, "recall_for_turn", recall_and_cancel)
+        return "<method_map>단서</method_map>", {"status": "selected", "ids": []}, {}
+    monkeypatch.setattr(recall, "recall_for_turn_detail", recall_and_cancel)   # 자동 주입 경로는 상세 판을 부른다
     def stream(**kwargs):
         calls.append(kwargs)
         yield {"type": "final", "content": "실행되면 안 됨"}

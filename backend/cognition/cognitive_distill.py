@@ -633,7 +633,7 @@ AI 답변: {ai_response[:1400]}
                         tool_calls=None, hippo_score: float = None, top_code: str = None,
                         write_experience: bool = True, write_deep: bool = True,
                         write_forage: bool = True, assume_forage: bool = False,
-                        guides_used=None, turn_tokens: int = None, turn_cost=None):
+                        guides_used=None, turn_tokens: int = None, turn_cost=None, presented=None):
         """턴 종료 후 메모리 쓰기 초크포인트 — 진입점마다 복붙되던 증류 배선을 한 곳으로.
 
         WS 채팅·에이전트 채널·포식 브라우저가 각자 복붙하던 [경험증류 + 심층메모리 + 포식기억]
@@ -653,6 +653,12 @@ AI 답변: {ai_response[:1400]}
             return
         from thread_context import get_goal_eval_outcome
         evaluation = get_goal_eval_outcome()  # 경험 증류가 소비하기 전에 기억용 상태를 보존한다.
+        # 제시→사용 결합(2026-09-18): 심층기억은 증류가 SAME/UPDATE 로 다시 만난 항목만 used_at 을 올린다 —
+        # 그 전후를 대조해 '확인됨'을 가른다. 값이 없으면(옛 큐 행·다른 진입점) 결합은 조용히 비운다.
+        import associative_recall as _ar
+        _deep = next((p for p in (presented or []) if p.get("source") == "recalled_memory"), None)
+        _deep_db = (_deep or {}).get("join", {}).get("db", "")
+        _deep_before = _ar.deep_used_at(_deep_db, (_deep or {}).get("ids") or [])
         # 1) 경험 증류(해마) — 도구 실행이 있었을 때만. + Reflex top-1 성공률 피드백.
         if write_experience and tool_calls and (turn_cost or {}).get("request_intent") != "context_update":
             try:
@@ -700,11 +706,19 @@ AI 답변: {ai_response[:1400]}
                 review_used_guides(guides_used, user_message, response, tool_calls=tool_calls)
             except Exception as e:
                 log(f"[가이드되먹임] 오류 (무시): {e}")
+        # 5) 제시→사용 결합 — 이 턴에 실린 후보 중 무엇이 쓰였는지 한 사건(recall.used)으로. 점수는 고치지 않는다.
+        if presented:
+            try:
+                _deep_after = _ar.deep_used_at(_deep_db, (_deep or {}).get("ids") or [])
+                touched = [i for i, u in _deep_after.items() if u and u != _deep_before.get(i)]
+                _ar.record_usage(presented, tool_calls=tool_calls, response=response, deep_touched=touched)
+            except Exception as e:
+                log(f"[연상:사용] 오류 (무시): {e}")
 
     def _after_response_async(self, user_message: str, response: str, *,
                               tool_calls=None, hippo_score: float = None, top_code: str = None,
                               turn_tokens: int = None, pursuit_packet=None,
-                              write_deep: bool = False):
+                              write_deep: bool = False, presented=None):
         """_after_response 를 **영속 큐**(distill_queue)에 적재 — 증류가 턴(스트림 종료·
         에피소드 END·총 소요 측정)을 붙잡지 않게(ep889: 실작업 4.6분에 증류 꼬리 6분) 하되,
         데몬 스레드 시절과 달리 프로세스가 죽어도 작업이 사라지지 않는다(2026-09-02: 행으로
@@ -757,6 +771,7 @@ AI 답변: {ai_response[:1400]}
             "pursuit": pursuit_packet,
             # 심층기억은 주인이 직접 한 말에서만 자란다 — 진입점이 선언한 발화자 축(fail-closed).
             "write_deep": bool(write_deep),
+            "presented": presented,   # 제시→사용 결합 키(2026-09-18) — 워커에서 record_usage
         }
         from supervision_bus import current as current_supervisor
         supervisor = current_supervisor()

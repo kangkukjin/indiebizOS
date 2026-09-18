@@ -18,7 +18,8 @@ def test_recall_never_opens_user_disks(message, monkeypatch):
     import ibl_usage_rag
     import file_index
     monkeypatch.setattr(file_index, "disk_skeleton", lambda *a, **k: pytest.fail("회상 중 디스크 탐색"))
-    monkeypatch.setattr(ibl_usage_rag, "build_execution_memory", lambda *a: ("reference", .5, "code"))
+    monkeypatch.setattr(ibl_usage_rag, "build_execution_memory_detail",
+                        lambda *a: {"xml": "reference", "top_score": .5, "top_code": "code", "presented": []})
     monkeypatch.setattr("decision_ledger.scent_xml", lambda q="": "decision")
     monkeypatch.setattr(AR, "SOURCES", tuple(s for s in AR.SOURCES if s.name in ("hippocampus", "decision_ledger")))
     runner = CognitiveRecallMixin()

@@ -28,9 +28,12 @@ FLOW = "backend/cognition/associative_recall.py"
 # 진입 함수 → 정의 모듈(자기 모듈 안의 호출은 허용). 자동 주입 공급원의 턴 단위 입구들이다.
 SOURCE_ENTRIES: Dict[str, str] = {
     "build_execution_memory": "ibl_usage_rag",
+    "build_execution_memory_detail": "ibl_usage_rag",
     "build_execution_memory_from_hint": "ibl_usage_rag",
     "recall_for_turn": "catalog_recall",
+    "recall_for_turn_detail": "catalog_recall",
     "world_memory_for_turn": "catalog_recall",
+    "world_memory_detail": "catalog_recall",
     "scent_xml": "decision_ledger",
     "pending_scent": "red_report",
     "guide_map_text": "hippo_tree",

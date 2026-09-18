@@ -410,8 +410,11 @@ class IBLUsageRAG:
 # 실행기억 (Execution Memory) — 파이프라인 전체가 공유하는 통합 기억
 # =========================================================================
 
-def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tuple:
-    """사용자 명령에 대한 실행기억을 생성한다.
+def build_execution_memory_detail(user_message: str, allowed_nodes: set = None) -> dict:
+    """사용자 명령에 대한 실행기억을 생성한다 — 상세 판: {xml, top_score, top_code, presented}.
+
+    presented = 프롬프트에 실제로 실린 용례 목록 [{id, code, kind(word|phrase), alias}] — 제시→사용 결합(2026-09-18)의
+    결합 키. 종전 튜플 판은 아래 build_execution_memory 래퍼.
 
     실행기억 = 해마(과거 IBL 코드 사례) + 코드 사례에 등장하는 액션의 implementation.
     파이프라인의 모든 에이전트(무의식/의식/실행/평가)가 동일한 실행기억을 공유한다.
@@ -435,9 +438,9 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
         pass
 
     if not user_message or not rag._is_ibl_relevant(user_message):
-        return ("", 0.0, "")
+        return _exec_detail("", 0.0, "")
     if not _principal_allows_recall():
-        return ("", 0.0, "")   # 주체 관문 — 주인 용례·구현 힌트 모두 닫힘
+        return _exec_detail("", 0.0, "")   # 주체 관문 — 주인 용례·구현 힌트 모두 닫힘
 
     # ★긴 붙여넣기 문서(에세이·기사·계약서 등)는 명령이 아니라 *내용*이다 — 본문 한가운데의
     #   표면 단어(예: 에세이 속 '도로교통법')가 무관 용례를 고신뢰(0.69)로 끌어온다(에피소드
@@ -459,7 +462,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
         )
     except Exception as e:
         logger.error(f"[IBL RAG] 검색 실패: {e}")
-        return ("", 0.0, "")
+        return _exec_detail("", 0.0, "")
 
     # 소유-필터를 top_score 확정 전에 — 남의 용례가 Reflex/증류 판정을 주도하면 안 됨
     results = _own_only(results)
@@ -494,7 +497,7 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
         sections.append(impl_xml)
 
     if not sections:
-        return ("", top_score, top_code)
+        return _exec_detail("", top_score, top_code, selected, phrases)
 
     inner = "\n".join(sections)
     result = (
@@ -505,7 +508,21 @@ def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tupl
     # 로그
     print(f"[연상:실행기억] 생성 완료 (top_score={top_score:.3f}): \"{user_message[:40]}...\"")
     print(f"[연상:실행기억] 내용:\n{result}")
-    return (result, top_score, top_code)
+    return _exec_detail(result, top_score, top_code, selected, phrases)
+
+
+def _exec_detail(xml: str, top_score: float, top_code: str, words=(), phrases=()) -> dict:
+    presented = [{"id": str(getattr(ex, "id", "")), "code": ex.ibl_code, "kind": "word", "alias": getattr(ex, "alias", "") or ""}
+                 for ex in (words or [])]
+    presented += [{"id": str(getattr(ex, "id", "")), "code": ex.ibl_code, "kind": "phrase", "alias": getattr(ex, "alias", "") or ""}
+                  for ex in (phrases or [])]
+    return {"xml": xml, "top_score": top_score, "top_code": top_code, "presented": presented}
+
+
+def build_execution_memory(user_message: str, allowed_nodes: set = None) -> tuple:
+    """종전 계약 (xml, top_score, top_code) — 상세 판의 래퍼. 자동 주입 경로는 상세 판을 쓴다."""
+    d = build_execution_memory_detail(user_message, allowed_nodes)
+    return (d["xml"], d["top_score"], d["top_code"])
 
 
 def build_execution_memory_from_hint(action_hint: str) -> tuple:

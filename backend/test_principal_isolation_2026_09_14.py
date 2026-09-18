@@ -140,7 +140,8 @@ def test_recall_mixin_yields_nothing_for_body(monkeypatch):
     import ibl_usage_rag as rag
     import associative_recall as AR
     from cognitive_recall import CognitiveRecallMixin
-    monkeypatch.setattr(rag, "build_execution_memory", lambda m, a=None: (f"<execution_memory>{MARK}</execution_memory>", 0.9, "[x:y]"))
+    monkeypatch.setattr(rag, "build_execution_memory_detail", lambda m, a=None: {
+        "xml": f"<execution_memory>{MARK}</execution_memory>", "top_score": 0.9, "top_code": "[x:y]", "presented": []})
     monkeypatch.setattr("decision_ledger.scent_xml", lambda q="": f"<decision_ledger>{MARK}</decision_ledger>")
     monkeypatch.setattr(AR, "SOURCES", tuple(s for s in AR.SOURCES if s.name in ("hippocampus", "decision_ledger")))
 

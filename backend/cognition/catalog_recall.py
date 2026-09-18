@@ -68,15 +68,24 @@ def _record(event):
 
 def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
                     force_role=None, context_update=False):
+    """종전 계약: 스니펫 문자열. 자동 주입 경로는 recall_for_turn_detail(제시 id·이름 포함)을 쓴다."""
+    return recall_for_turn_detail(runner, message, history, request_type=request_type, reflex_hint=reflex_hint,
+                                  force_role=force_role, context_update=context_update)[0]
+
+
+def recall_for_turn_detail(runner, message, history, *, request_type, reflex_hint=None,
+                           force_role=None, context_update=False):
+    """(snippet, event, names) — names = {id: [이름, 별칭…]} 제시된 항목의 결합 키(제시→사용 결합, 2026-09-18)."""
     from supervision_bus import current
 
     started = time.monotonic()
     event = {"status": "disabled", "mode": "none", "ids": [], "count": 0,
              "chars": 0, "query_kind": "primary", "revision": None}
+    names = {}
     def finish(snippet=""):
         event["elapsed_ms"] = round((time.monotonic() - started) * 1000, 3)
         _record(event)
-        return snippet
+        return snippet, event, names
 
     # 세계 어휘는 개인 기억이 아니다. 주체·에이전트·실행 역할로 막지 않는다.
     # 모델이 없는 세션 제어만 제외한다. 개인 기억의 권한 관문은 별도로 유지한다.
@@ -142,6 +151,8 @@ def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
                          mode=mode, revision=snapshot.revision, ids=ids, count=len(ids),
                          chars=len(snippet), omitted=omitted,
                          semantic="unavailable" if config.get("semantic_enabled") else "disabled")
+            by_id = {e.id: e for e in snapshot.entries}
+            names.update({i: [by_id[i].name, *by_id[i].aliases] for i in ids if i in by_id})
             return finish(snippet)
         except Exception as exc:
             event.update(status="error", error=type(exc).__name__)
@@ -149,7 +160,14 @@ def recall_for_turn(runner, message, history, *, request_type, reflex_hint=None,
 
 
 def world_memory_for_turn(message, lexical_snippet=""):
-    """세계의 기억 — 지도(최상위 분야)와 가지 먼저 고른 어휘 3건 (공통 회상 설계 §5.6, 2026-09-17).
+    """종전 계약: 스니펫 문자열. 자동 주입 경로는 world_memory_detail 을 쓴다."""
+    return world_memory_detail(message, lexical_snippet)[0]
+
+
+def world_memory_detail(message, lexical_snippet=""):
+    """(snippet, event, names) — names = {id: [이름, 별칭…]} 고른 어휘의 결합 키(제시→사용 결합, 2026-09-18).
+
+    세계의 기억 — 지도(최상위 분야)와 가지 먼저 고른 어휘 3건 (공통 회상 설계 §5.6, 2026-09-17).
 
     위의 <method_map>(글자 일치 seed + 관계 조각)은 이름을 실제로 말했을 때의 정밀한 길이고, 이 블록은 표현이 달라도
     닿는 의미 채널이다(실측: 새 질문 2/24 → 17/24). 심층기억의 <memory_map>·<recalled_memory> 와 같은 함수
@@ -158,12 +176,13 @@ def world_memory_for_turn(message, lexical_snippet=""):
     """
     started = time.monotonic()
     event = {"status": "disabled", "mode": "semantic", "ids": [], "branches": [], "chars": 0}
+    names = {}
     try:
         root = get_base_path()
         config = load_config(root)
         # 끄는 키는 `world_memory`(기본 켬). 옛 `semantic_enabled` 는 의미 검색이 없던 때의 자리표라 읽지 않는다.
         if config.get("enabled", True) is False or config.get("world_memory", True) is False:
-            return ""
+            return "", event, names
         import tree_recall
         from world_recall_store import WorldStore
         store = WorldStore(root)
@@ -178,13 +197,17 @@ def world_memory_for_turn(message, lexical_snippet=""):
                          '떠올리는 입구다. 관련 없으면 무시한다. 모자라면 위 지도에서 분야를 골라 직접 찾는다.">\n'
                          f"고른 가지: {escape(branches)}\n" + "\n".join(escape(it.label) for it in picked) + "\n</world_memory>")
         snippet = "\n".join(parts)
-        event.update(status=r["status"], ids=[it.id for it in picked], branches=["/".join(b) for b in r["branches"]],
+        shown = picked if (picked and r["status"] == "ok") else []
+        by_id = {e.id: e for e in store.snapshot.entries}
+        names.update({it.id: ([by_id[it.id].name, *by_id[it.id].aliases] if it.id in by_id else [it.label.split(": ", 1)[-1]])
+                      for it in shown})
+        event.update(status=r["status"], ids=[it.id for it in shown], branches=["/".join(b) for b in r["branches"]],
                      chars=len(snippet), outside_beats_inside=r.get("outside_beats_inside", False),
                      revision=store.snapshot.revision)
-        return snippet
+        return snippet, event, names
     except Exception as exc:
         event.update(status="error", error=type(exc).__name__)
-        return ""
+        return "", event, names
     finally:
         event["elapsed_ms"] = round((time.monotonic() - started) * 1000, 3)
         _record(dict(event, channel="world_memory"))

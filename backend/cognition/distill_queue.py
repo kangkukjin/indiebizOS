@@ -211,6 +211,7 @@ class DistillQueue:
                     top_code=p.get("top_code"), guides_used=p.get("guides_used"),
                     turn_tokens=p.get("turn_tokens"),
                     write_deep=p.get("write_deep", True),   # 옛 행(키 없음)은 종전 의미로 재개
+                    presented=p.get("presented"),
                     **({"turn_cost": p["turn_cost"]} if p.get("turn_cost") else {}),
                 )
                 succeeded = True

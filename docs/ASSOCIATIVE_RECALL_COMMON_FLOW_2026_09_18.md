@@ -31,8 +31,8 @@
 합산·정렬하지 않는다. 지금 필요한 차이만 표현한다 — "다른 기억도 반사에 기여"하도록 미리 넓히지 않는다.
 
 **되먹임은 형식만 공통.** 사건 `recall.presented` 가 턴마다 「채널·request_type·반사 신호·공급원별 {status, ids, chars, ms}」를 남긴다.
-해석과 갱신 규칙은 기억별로 둔다(원장 파일을 물리적으로 합치지 않는다). 사용 여부의 결합 키: 해마=`top_code`(종전 그대로),
-심층=항목 id, 세계=이름. 해마의 제시 전체 id 목록은 `build_execution_memory` 가 XML 만 돌려주므로 아직 `id="…"` 속성이 있는 항목만 잡힌다 — 2단계 항목.
+해석과 갱신 규칙은 기억별로 둔다(원장 파일을 물리적으로 합치지 않는다). 사용 여부의 결합 키: 해마=용례 id·코드(`build_execution_memory_detail`),
+심층=항목 id·가지, 세계=이름·별칭 — 결합 자체는 §8(2단계 ①).
 
 ## 3. 계약
 
@@ -78,15 +78,33 @@ recall.presented()                                # 제시 기록(사건에도 �
 | 기준 | 판정 |
 |---|---|
 | 새 기억을 붙일 때 파이프라인 여러 곳을 고치지 않아도 되는가 | ✅ `SOURCES` 한 줄 + 공급원 함수 하나. 네 호출 지점은 표를 모른다 |
-| 어떤 기억이 왜 제시되고 어떻게 쓰였는지 한 경로로 추적되는가 | ◐ 제시는 `recall.presented` 한 사건으로 닫혔다. **사용**은 아직 해마만(`record_recall_outcome`) — 2단계 |
+| 어떤 기억이 왜 제시되고 어떻게 쓰였는지 한 경로로 추적되는가 | ✅ 제시 `recall.presented` + 사용 `recall.used` 두 사건(§8, 2단계 ① 집행) |
 | 같은 입력에 후보·순서·주입·반사 판단 유지 | ✅ 고정물 14/14 |
 | 지연·토큰 불변 | ✅ 글자 수 동일, ms 는 잡음 범위 |
 
-## 7. 2단계(별도 실험, 기억별로 잰다) — 미착수
+## 7. 2단계(별도 실험, 기억별로 잰다)
 
-1. 사용 결합: `recall.presented` 의 id 와 턴 결과(도구 호출·성공)를 기억별 해석기가 결합 — 해마는 `build_execution_memory` 가 제시 id 를 돌려주도록.
+1. ✅ 사용 결합 — §8 (2026-09-18 집행).
 2. 채널 정책 실험: `agent_message` 에 글자 채널, `switch` 에 심층·가이드 — 각각 켜고 기억별 지표로 판정.
 3. 검색기 통합 실험: 해마 전용 인코더는 유지(세계 어휘 13/24 대 20/24 실측). 후보 수(`n_branches/k_in/k_out`, `DEFAULT_K`, `MAX_ITEMS`)의 정책 표 이전은 효용 실험과 함께.
 4. 가지 문서 기질 공통화(hippo_tree·forage_doc·memory_tree 의 표식·절·동기화·갱신 기록): 절 나누기는 공유하기 쉽지만 동기화엔 기억별 식별·삭제·검증 규칙이 있다 — 여기서 다시 판단.
 
 기억별 품질 고정물: 해마 T5, 심층 정답 40건(`evaluate_tree_recall.py`), 세계 질문 24(설계 부록 A), 포식 장소 찾기 @1. 합산 평균은 보지 않는다.
+
+## 8. 제시→사용 결합 (2단계 ①, 2026-09-18 집행)
+
+**원칙**: 형식은 공통, 해석은 기억별, 점수는 안 고친다. 세 되먹임(해마 사용 결과·가지 밖 적중·장소 흔적)의 뜻이 다르므로 한 값으로 접지 않는다.
+
+| 층 | 무엇 |
+|---|---|
+| 결합 키 | 공급원이 `Block.join` 으로 제시 항목의 결합 키를 낸다 — 해마 `{items:[{id, code, kind, alias}]}`(`build_execution_memory_detail`), 심층 `{paths:{id: 가지}, db}`, 세계 두 채널 `{names:{id:[이름, 별칭…]}}`(`recall_for_turn_detail`/`world_memory_detail`). 옛 튜플·문자열 판은 래퍼로 남는다 |
+| 전달 | `Recall.usage_payload()` → 파이프라인이 `_after_response_async(presented=…)` 로 값으로 넘김(증류 큐 payload) — 사건엔 id·건수만(4KB 절단 안전) |
+| 해석기 (`USAGE` 표) | 해마 `executed`: 제시 용례의 `[node:action]` 쌍이 이 턴의 execute_ibl 에 등장(`record_recall_outcome` 과 같은 규칙), 관용구는 `[fn:이름]`. 세계 `mentioned`: 이름·별칭(2자 이상)이 응답·코드에 등장 — 약한 증거(모델이 이미 알던 이름일 수 있다). 심층 `expanded`: `[self:memory]{op:"recall", node|expand:"#id"}` 가 제시 가지·id 를 열었다 / `confirmed`: 증류가 SAME/UPDATE 로 다시 만나 `used_at` 을 올렸다(전후 대조). 자동 회상은 사용이 아니다(used_at 계약 유지) |
+| 기록 | `_after_response` 5단계에서 `record_usage` → 사건 `recall.used` `{blocks:[{source, presented, used, evidence}]}` 하나 |
+| 읽기 | `scripts/recall_usage_report.py` — 기억별 제시 턴·결합 턴·항목 사용률·증거 분포, 자주 제시되나 안 쓰인 항목. 합산 평균 없음 |
+
+**갱신 규칙은 그대로**: 해마 success_rate 는 `record_recall_outcome`(top-1·≥0.85), 심층 `used_at` 은 증류·명시 조회, 세계는 없음. 결합은 관측이지 학습이 아니다 — 학습 규칙을 바꾸는 일은 이 보고서를 근거로 기억별로 판정한다.
+
+**해마 해석의 알려진 거칠기**: 같은 `[node:action]` 을 공유하는 용례 둘이 제시되면 둘 다 `executed` 로 센다(실측: `[self:workflow]{op:"run"}` 두 용례). 용례 단위의 정밀 귀속은 인자까지 대조해야 하며, 그것이 해마의 규칙 개정이므로 여기서 하지 않았다.
+
+증명: `backend/test_recall_usage_join_2026_09_18.py`(해석기 3종·사건 형식·payload/사건 분리·used_at 스냅샷·상세 판=튜플 판), 고정물 `recall_golden.py check` 14/14 동일(주입 XML 불변), 실데이터 smoke(근무표 질의: 해마 2/2 executed·세계 글자 1/5 mentioned·심층 0/3).

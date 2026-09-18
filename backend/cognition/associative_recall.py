@@ -48,6 +48,7 @@ class Block:
     ids: List[str] = field(default_factory=list)   # 제시된 후보의 식별자(기억별 뜻은 다르다 — 사건에 그대로 남긴다)
     ms: float = 0.0
     meta: Dict[str, Any] = field(default_factory=dict)
+    join: Dict[str, Any] = field(default_factory=dict)   # 제시→사용 결합 키(사건엔 싣지 않고 턴 끝 payload 로 간다)
 
 
 @dataclass(frozen=True)
@@ -97,6 +98,11 @@ class Recall:
         return [{"source": b.source, "tag": b.tag, "status": b.status, "ids": b.ids[:10],
                  "chars": len(b.text), "ms": round(b.ms, 1), **({"meta": b.meta} if b.meta else {})}
                 for b in self.blocks]
+
+    def usage_payload(self) -> List[Dict[str, Any]]:
+        """턴 끝 결합용 — 사용 해석기가 있는 공급원의 제시 id 와 결합 키. 값으로 넘긴다(증류 큐는 스레드를 넘는다)."""
+        return [{"source": b.source, "ids": list(b.ids), "join": b.join}
+                for b in self.blocks if b.ids and b.source in USAGE]
 
 
 def begin(runner, message: str, *, history: Optional[list] = None, channel: str = "pipeline",
@@ -223,21 +229,24 @@ def deep_memory_db(runner) -> str:
 def _hippocampus(req: RecallRequest, recall: Recall) -> Optional[Block]:
     """실행기억 — 해마. 검색기·검증(별칭·관용구·구현 조회·액션 검증)은 ibl_usage_rag 의 몫이고 여기선 부르기만 한다.
     action_hint(마법책에서 고른 액션)는 검색을 건너뛰어 그 액션을 Top-1 로 합성한다. 무효하면 검색으로 폴백."""
-    from ibl_usage_rag import build_execution_memory, build_execution_memory_from_hint
-    xml, score, code = ("", 0.0, "")
+    from ibl_usage_rag import build_execution_memory_detail, build_execution_memory_from_hint
+    xml, score, code, presented = ("", 0.0, "", [])
     if req.action_hint:
         xml, score, code = build_execution_memory_from_hint(req.action_hint)
-        if not xml:
+        if xml:
+            presented = [{"id": "hint", "code": code, "kind": "hint", "alias": ""}]
+        else:
             print(f"[연상] action_hint='{req.action_hint}' 유효하지 않음 — 해마 검색으로 폴백")
     if not xml:
         allowed = _allowed_set(req.runner)
-        xml, score, code = _step("execution_memory", lambda: build_execution_memory(req.message, allowed))
+        d = _step("execution_memory", lambda: build_execution_memory_detail(req.message, allowed))
+        xml, score, code, presented = d["xml"], d["top_score"], d["top_code"], d["presented"]
     recall.reflex = ReflexSignal(float(score or 0.0), code or "")
     if not xml:
         return Block("hippocampus", "execution_memory", "", status="empty", meta={"top_code": code or ""})
-    ids = re.findall(r'\bid="(\d+)"', xml)
-    return Block("hippocampus", "execution_memory", xml, ids=ids,
-                 meta={"refs": xml.count("<ref "), "top_code": (code or "")[:120]})
+    return Block("hippocampus", "execution_memory", xml, ids=[p["id"] for p in presented],
+                 meta={"refs": xml.count("<ref "), "top_code": (code or "")[:120]},
+                 join={"items": presented})
 
 
 def _memory_map(req: RecallRequest, recall: Recall) -> Optional[Block]:
@@ -289,7 +298,8 @@ def _recalled_memory(req: RecallRequest, recall: Recall) -> Optional[Block]:
         print(f"[연상:선택기억] {r['status']} 가지={branches} 건수={len(picked)}")
         return Block("recalled_memory", "recalled_memory", xml, status=r["status"], ids=[it.id for it in picked],
                      meta={"branches": ["/".join(b) for b in r["branches"]],
-                           "outside_beats_inside": bool(r.get("outside_beats_inside"))})
+                           "outside_beats_inside": bool(r.get("outside_beats_inside"))},
+                     join={"paths": {it.id: "/".join(it.path) for it in picked}, "db": db_path})
     return _step("recalled_memory", run)
 
 
@@ -384,21 +394,152 @@ def _decision_ledger(req: RecallRequest, recall: Recall) -> Optional[Block]:
 def _method_map(req: RecallRequest, recall: Recall, *, request_type=None, reflex_hint=None, force_role=None,
                 context_update=False) -> Optional[Block]:
     """세계 지도의 글자 채널 — 이름을 실제로 말했을 때의 정밀한 길. 개인 기억이 아니라 주체로 막지 않는다."""
-    from catalog_recall import recall_for_turn
-    text = recall_for_turn(req.runner, req.message, req.history, request_type=request_type,
-                           reflex_hint=reflex_hint, force_role=force_role, context_update=context_update)
-    return Block("method_map", "method_map", text) if text else Block("method_map", "method_map", "", status="empty")
+    from catalog_recall import recall_for_turn_detail
+    text, event, names = recall_for_turn_detail(req.runner, req.message, req.history, request_type=request_type,
+                                                reflex_hint=reflex_hint, force_role=force_role,
+                                                context_update=context_update)
+    if not text:
+        return Block("method_map", "method_map", "", status=event.get("status") or "empty")
+    return Block("method_map", "method_map", text, status=event.get("status") or "ok", ids=list(event.get("ids") or []),
+                 join={"names": names})
 
 
 def _world_memory(req: RecallRequest, recall: Recall, **_route_kw) -> Optional[Block]:
     """세계의 기억 — 지도 + 가지 먼저 고른 어휘 3건(의미 채널). 글자 채널에 이미 나온 이름은 뺀다."""
-    from catalog_recall import world_memory_for_turn
+    from catalog_recall import world_memory_detail
     lexical = next((b.text for b in recall.blocks if b.source == "method_map"), "")
-    text = world_memory_for_turn(req.message, lexical)
+    text, event, names = world_memory_detail(req.message, lexical)
     if not text:
-        return Block("world_memory", "world_map", "", status="empty")
-    ids = re.findall(r"^- .*?: ", text, re.MULTILINE)
-    return Block("world_memory", "world_map", text, meta={"picked": len(ids)})
+        return Block("world_memory", "world_map", "", status=event.get("status") or "empty")
+    return Block("world_memory", "world_map", text, status=event.get("status") or "ok", ids=list(event.get("ids") or []),
+                 meta={"picked": len(event.get("ids") or [])}, join={"names": names})
+
+
+# ─────────────────────────── 제시 → 사용 결합 (2026-09-18, 2단계 ①) ───────────────────────────
+# 형식은 공통(사건 `recall.used`: 공급원별 제시 id·사용 id·증거 종류), 해석은 기억별(아래 USAGE 표의 함수).
+# 갱신 규칙은 각 기억의 것 그대로다 — 해마 success_rate 는 record_recall_outcome, 심층 used_at 은 증류 SAME/UPDATE·
+# 명시 조회(touch). 여기서는 무엇이 제시됐고 무엇이 쓰였는지를 한 경로로 남길 뿐, 점수·성공률을 고치지 않는다.
+
+_PAIR_RE = re.compile(r"\[([a-z_-]+):([a-z_-]+)\]")
+_FN_RE = re.compile(r"\[fn:\s*([^\]\s]+)\s*\]")
+_DEEP_RECALL_RE = re.compile(r"\[self:memory\]\s*\{([^}]*)\}")
+_QUOTED_RE = re.compile(r'(\w+)\s*:\s*"([^"]*)"')
+
+
+def _ibl_codes(tool_calls) -> List[str]:
+    out = []
+    for tc in tool_calls or []:
+        if isinstance(tc, dict) and tc.get("tool_name") == "execute_ibl":
+            code = (tc.get("input") or {}).get("code", "")
+            if code:
+                out.append(code)
+    return out
+
+
+def _used_hippocampus(ids, join, ev) -> Dict[str, Any]:
+    """실행 절차 — 제시 용례의 [node:action] 쌍이 이 턴의 execute_ibl 에 실제로 등장했나(record_recall_outcome 과 같은 규칙).
+    관용구는 `[fn:이름]` 호출로도 쓰인다. 증거 = executed."""
+    codes = ev.get("ibl_codes") or []
+    run_pairs = set()
+    for c in codes:
+        run_pairs |= set(_PAIR_RE.findall(c))
+    called = set()
+    for c in codes:
+        called |= set(_FN_RE.findall(c))
+    used = []
+    for it in join.get("items") or []:
+        pairs = set(_PAIR_RE.findall(it.get("code") or ""))
+        alias = it.get("alias") or ""
+        if (pairs and pairs & run_pairs) or (alias and alias in called):
+            used.append(it["id"])
+    return {"used": used, "evidence": "executed", "ibl_calls": len(codes)}
+
+
+def _used_names(ids, join, ev) -> Dict[str, Any]:
+    """지식의 단서(세계 지도 두 채널) — 이름·별칭이 응답 본문이나 실행 코드에 나타났나. 증거 = mentioned.
+    '언급'은 약한 증거다(모델이 이미 알던 이름일 수 있다) — 그래서 종류를 붙여 남기고 점수엔 쓰지 않는다."""
+    from common.value_semantics import text_match
+    hay = (ev.get("response") or "") + "\n" + "\n".join(ev.get("ibl_codes") or [])
+    used = []
+    for i, names in (join.get("names") or {}).items():
+        if any(len(n) >= 2 and text_match("contains", hay, n) for n in names if isinstance(n, str)):
+            used.append(i)
+    return {"used": used, "evidence": "mentioned"}
+
+
+def _used_deep(ids, join, ev) -> Dict[str, Any]:
+    """사용자 사실 — ① 명시 조회: 이 턴의 `[self:memory]{op:"recall", node|expand}` 가 제시 항목의 가지·id 를 열었다(expanded).
+    ② 확인: 턴 끝 증류가 그 항목을 SAME/UPDATE 로 다시 만나 used_at 을 올렸다(confirmed — 호출자가 전후 대조로 준다)."""
+    paths = join.get("paths") or {}
+    opened, expanded_ids = [], set()
+    for c in ev.get("ibl_codes") or []:
+        for m in _DEEP_RECALL_RE.finditer(c):
+            args = dict(_QUOTED_RE.findall(m.group(1)))
+            if args.get("op") != "recall" or args.get("store") == "실행":
+                continue
+            if args.get("node"):
+                opened.append(args["node"].strip("/"))
+            for x in re.findall(r"#(\d+)", args.get("expand") or ""):
+                expanded_ids.add(x)
+    used, evidence = [], []
+    for i in ids:
+        p = paths.get(i, "")
+        if i in expanded_ids or any(p == o or p.startswith(o + "/") for o in opened if o):
+            used.append(i); evidence.append("expanded")
+        elif i in set(ev.get("deep_touched") or []):
+            used.append(i); evidence.append("confirmed")
+    return {"used": used, "evidence": "+".join(sorted(set(evidence))) or "none", "opened": opened[:5]}
+
+
+USAGE: Dict[str, Callable] = {
+    "hippocampus": _used_hippocampus,
+    "recalled_memory": _used_deep,
+    "method_map": _used_names,
+    "world_memory": _used_names,
+}
+
+
+def deep_used_at(db_path: str, ids) -> Dict[str, Any]:
+    """제시된 심층기억 id 의 used_at 스냅샷 — 턴 끝 증류 전후를 대조해 confirmed 를 가른다."""
+    if not db_path or not ids:
+        return {}
+    try:
+        import sqlite3
+        conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=5)
+        try:
+            marks = ",".join("?" * len(ids))
+            rows = conn.execute(f"SELECT id, used_at FROM memories WHERE id IN ({marks})", [int(i) for i in ids]).fetchall()
+        finally:
+            conn.close()
+        return {str(i): u for i, u in rows}
+    except Exception:
+        return {}
+
+
+def record_usage(presented, *, tool_calls=None, response: str = "", deep_touched=None) -> List[Dict[str, Any]]:
+    """턴 끝 — 제시된 후보 중 무엇이 쓰였는지 기억별 해석기로 가르고 `recall.used` 사건 하나로 남긴다. 실패는 무시."""
+    if not presented:
+        return []
+    ev = {"ibl_codes": _ibl_codes(tool_calls), "response": response or "", "deep_touched": list(deep_touched or [])}
+    out = []
+    for p in presented:
+        fn = USAGE.get(p.get("source"))
+        if fn is None or not p.get("ids"):
+            continue
+        try:
+            r = fn(list(p["ids"]), p.get("join") or {}, ev)
+        except Exception as e:  # noqa: BLE001
+            r = {"used": [], "evidence": "error", "error": type(e).__name__}
+        out.append({"source": p["source"], "presented": list(p["ids"])[:10], "used": list(r.get("used") or [])[:10],
+                    "evidence": r.get("evidence", ""), **{k: v for k, v in r.items() if k not in ("used", "evidence")}})
+    if out:
+        try:
+            from episode_logger import record_trajectory_event
+            record_trajectory_event("recall.used", {"blocks": out})
+        except Exception:
+            pass
+        print("[연상:사용] " + " · ".join(f"{o['source']} {len(o['used'])}/{len(o['presented'])}({o['evidence']})" for o in out))
+    return out
 
 
 # ─────────────────────────── 정책 표 ───────────────────────────

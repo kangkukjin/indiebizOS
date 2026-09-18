@@ -114,8 +114,8 @@ github저장소메타:
   timeout: 1800
 시험:
   description: 'pytest 를 파일·-k 단위로 — args: files(바뀐 곳의 시험 파일 목록)·k·timeout. items(file·passed·failed·errors·failures[])+ok.
-    [self:edit] 뒤 검증을 같은 프로그램에서(2026-09-05). 전수(files 생략·폴더, 약 8분)는 전경 거절 — background:true 로 돌리고
-    status{job_id, wait:240} 로 받는다(2026-09-18)'
+    [self:edit] 뒤 검증을 같은 프로그램에서(2026-09-05). 전수(files 생략·폴더, 약 8분)는 전경 거절 — background:true
+    로 돌리고 status{job_id, wait:240} 로 받는다(2026-09-18)'
   file: 시험.py
   interpreter: python
   registered_at: '2026-09-05T13:46:00'

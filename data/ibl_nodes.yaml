@@ -5060,7 +5060,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-18'
-          impl: 1dba8757ad99c866
+          impl: 393d4d0d7a11aba4
         target_key: path
         aliases:
           offset:
@@ -5073,7 +5073,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-18'
-          impl: 1dba8757ad99c866
+          impl: 393d4d0d7a11aba4
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)

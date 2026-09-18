@@ -71,6 +71,19 @@ def _review_environment():
     return supervisor.delivery.environment() if supervisor and supervisor.evaluation_enabled else None
 
 
+SCRIPT_MODE_ENV = "INDIEBIZ_SCRIPT_MODE"
+
+
+def _child_env(mode):
+    """자식 스크립트의 환경 — 검수 작업대(있으면) + 실행 방식(foreground|background).
+
+    ep3855(2026-09-18): 수리 턴이 8분짜리 전수 시험을 전경으로 돌리고 끝나기를 30여 호출로 폴링했다. 오래 걸리는 일을
+    전경으로 받을지는 스크립트가 제일 잘 안다 — 그래서 실행 방식을 알려 주고, 거절은 스크립트가 자기 말로 한다(시험.py)."""
+    env = dict(_review_environment() or os.environ)
+    env[SCRIPT_MODE_ENV] = mode
+    return env
+
+
 def _coerce_args(args):
     """run 의 args 경계 관용 (2026-08-30, ep2357): dict 또는 JSON 객체 *문자열*.
 
@@ -453,7 +466,7 @@ def op_run(tool_input):
             [interp, str(p)],
             input=stdin_data, capture_output=True, text=True,
             timeout=timeout, cwd=str(p.parent),
-            env=_review_environment(),
+            env=_child_env("foreground"),
         )
         exit_code, stdout, stderr = proc.returncode, proc.stdout or "", proc.stderr or ""
         timed_out = False
@@ -556,7 +569,7 @@ def _run_background(sid, entry, script_path, stdin_data, timeout, interp, interp
             [sys.executable or "python3", str(_BG_RUNNER), str(job_path)],
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
             cwd=str(script_path.parent),
-            env=_review_environment(),
+            env=_child_env("background"),
         )
     except OSError as e:
         job["status"] = "failed"; job["error"] = f"러너 기동 실패: {e}"

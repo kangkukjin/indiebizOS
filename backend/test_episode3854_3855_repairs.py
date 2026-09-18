@@ -4,6 +4,7 @@
 ② 스크립트는 `id` 로 부르는데 `[self:script]{op:"list"}` 행에 `id` 열이 없어 select·filter 가 두 번 실패했다.
 ③ ddg 검색 0건이 `success:false` "검색 실패: No results found." 로 돌아와 실행 실패로 세어졌다(뉴스 검색은 0행 성공 계약).
 ④ 검색 26건을 한 건씩 호출 — `queries` 배치가 뉴스 소스에만 있었고 가이드·설명에 묶어 부르기가 없었다.
+⑤ 수리 턴이 전수 시험(약 8분)을 전경으로 돌리고 30여 호출로 폴링 — 전수는 전경 거절, 실행기가 자식에게 실행 방식을 알린다.
 """
 import importlib.util
 import json
@@ -104,6 +105,54 @@ def test_web_search_guide_teaches_batching_with_a_placeholder_skeleton():
     assert "queries:[" in guide and "<국내 검색어 1>" in guide and "[table:dedup]" in guide     # 완성 처방이 아니라 자리표 골격
     desc = (TOOLS / "web" / "ibl_actions.yaml").read_text(encoding="utf-8")
     assert "모든 source 공통 배치" in desc
+
+
+def _run_test_script(args, mode):
+    import os
+    import subprocess
+    env = {**os.environ, "INDIEBIZ_SCRIPT_MODE": mode} if mode else {k: v for k, v in os.environ.items() if k != "INDIEBIZ_SCRIPT_MODE"}
+    p = subprocess.run([sys.executable, str(ROOT / "data" / "scripts" / "시험.py")], input=json.dumps(args),
+                       capture_output=True, text=True, timeout=60, env=env)
+    return json.loads(p.stdout), p.stderr
+
+
+def test_whole_suite_is_refused_in_foreground_and_scoped_runs_still_work():
+    """⑤ ep3855: 수리 턴이 8분짜리 전수 시험을 전경으로 돌리고 30여 호출로 폴링했다 — 전수는 전경으로 받지 않는다(거절은 즉시)."""
+    for args in ({}, {"files": ["backend/"]}, {"files": ["backend/test_tree_doc.py", "backend"]}):
+        out, _err = _run_test_script(args, "foreground")
+        assert out["success"] is False and "background:true" in out["error"] and "바뀐 곳" in out["error"], args
+    # 바뀐 곳의 시험 파일은 전경 그대로 — 없는 파일은 그 줄만 실패로 말한다(pytest 를 띄우지 않고 끝난다)
+    out, err = _run_test_script({"files": ["backend/test_없는파일.py"]}, "foreground")
+    assert "success" not in out and out["items"][0]["failures"] == ["파일 없음"] and "[진행] 1/1" in err
+    # 백그라운드는 전수를 받는다 — 여기선 관문을 지나는지만 본다(전수를 실제로 돌리지 않는다)
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("_t_시험_3855", ROOT / "data" / "scripts" / "시험.py")
+    mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
+    assert mod._whole_suite([]) and mod._whole_suite(["backend/"]) and not mod._whole_suite(["backend/test_tree_doc.py"])
+
+
+def test_script_runner_tells_the_child_how_it_is_run(tmp_path, monkeypatch):
+    ops = _load("_t_script_ops_mode_3855", TOOLS / "system_essentials" / "script_ops.py")
+    monkeypatch.setattr(ops, "_review_environment", lambda: None)
+    assert ops._child_env("foreground")["INDIEBIZ_SCRIPT_MODE"] == "foreground"
+    assert ops._child_env("background")["INDIEBIZ_SCRIPT_MODE"] == "background" and "PATH" in ops._child_env("background")
+    monkeypatch.setattr(ops, "_review_environment", lambda: {"PATH": "/x", "STAGING": "/s"})
+    assert ops._child_env("foreground") == {"PATH": "/x", "STAGING": "/s", "INDIEBIZ_SCRIPT_MODE": "foreground"}
+    for name, path in {"_RUN_DIR": tmp_path / "runs", "_JOB_DIR": tmp_path / "runs/jobs", "_STATE": tmp_path / "state.json"}.items():
+        monkeypatch.setattr(ops, name, path)
+    monkeypatch.setattr(ops, "_review_environment", lambda: None)
+    script = tmp_path / "mode.py"
+    script.write_text("import os, json; print(json.dumps({'items': [{'mode': os.environ.get('INDIEBIZ_SCRIPT_MODE')}]}))\n", encoding="utf-8")
+    monkeypatch.setattr(ops, "_read_registry", lambda: {"mode": {"file": "mode.py", "interpreter": "python"}})
+    monkeypatch.setattr(ops, "_script_path", lambda e: script)
+    assert ops.op_run({"id": "mode"})["items"] == [{"mode": "foreground"}]
+
+
+def test_repair_doctrine_and_guide_state_the_verification_scope():
+    doctrine = (ROOT / "data" / "common_prompts" / "fragments" / "13_repair.md").read_text(encoding="utf-8")
+    guide = (ROOT / "data" / "guides" / "script.md").read_text(encoding="utf-8")
+    assert "검증의 범위는 바뀐 곳이다" in doctrine and "검증의 범위는 바뀐 곳이다" in guide
+    assert "wait: 240" in doctrine and "background: true" in guide
 
 
 if __name__ == "__main__":

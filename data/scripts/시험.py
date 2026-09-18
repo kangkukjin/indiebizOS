@@ -3,12 +3,16 @@
 why: 개발 주행이 `.venv/bin/python -m pytest …` 를 Bash 로 매번 쳤다(2주 187회+). 같은 명령의 되풀이 = 등록 스크립트 자리.
      [self:edit] 로 고친 뒤 [self:script]{op:"run", id:"시험", args:{files:[…]}} 로 닫는다 — 고치기→검증이 한 프로그램에 든다.
 args (stdin JSON):
-  files    ["backend/test_x.py", …] — 생략하면 backend/test_*.py 전수(느림 — 보통 관련 파일만)
+  files    ["backend/test_x.py", …] — 생략하거나 폴더를 주면 **전수**(5천여 시험·약 8분)
   k        pytest -k 표현식(선택)
   timeout  전체 시한(초, 기본 600)
+★전수는 전경으로 받지 않는다(2026-09-18, ep3855): 수리 턴이 전수를 전경으로 돌리고 끝나기를 30여 호출로 폴링했고,
+  자기 변경과 무관한 기존 실패까지 조사하러 갔다. 수리·개발의 검증은 **바뀐 곳의 시험 파일**이다 — 전수는 커밋 관문과 CI 의 몫.
+  꼭 전수가 필요하면 run 에 background:true 를 주고 status{job_id, wait:240} 로 받는다(진행은 stderr 로 흐른다).
 산출: {"items": [{"file", "passed", "failed", "errors", "skipped", "ok", "failures":[이름…]}], "ok", "message"}
 """
 import json
+import os
 import re
 import subprocess
 import sys
@@ -50,14 +54,27 @@ def _run(files, k, timeout):
     return counts, failures, p.returncode, text
 
 
+def _whole_suite(requested):
+    """전수인가 — files 생략, 또는 폴더를 가리킨 선택."""
+    return not requested or any((ROOT / f).is_dir() for f in requested)
+
+
 def main():
     a = _args()
-    files = a.get("files") or [str(p.relative_to(ROOT)) for p in sorted((ROOT / "backend").glob("test_*.py"))]
+    requested = a.get("files") or []
+    if _whole_suite(requested) and os.environ.get("INDIEBIZ_SCRIPT_MODE") == "foreground":
+        print(json.dumps({"success": False, "items": [], "error": (
+            "전수 시험(5천여 건·약 8분)은 전경으로 받지 않습니다. 수리·개발의 검증이면 files 에 바뀐 곳의 시험 파일만 주세요"
+            "(전수는 커밋 관문·CI 의 몫). 꼭 전수가 필요하면 [self:script]{op:\"run\", id:\"시험\", background:true} 로 돌리고 "
+            "[self:script]{op:\"status\", job_id:\"<받은 job_id>\", wait:240} 로 받습니다.")}, ensure_ascii=False))
+        return 0
+    files = requested or [str(p.relative_to(ROOT)) for p in sorted((ROOT / "backend").glob("test_*.py"))]
     k = a.get("k") or ""
     timeout = float(a.get("timeout") or 600)
     items = []
     t0 = time.time()
-    for f in files:
+    for n, f in enumerate(files, 1):
+        print(f"[진행] {n}/{len(files)} {f}", file=sys.stderr, flush=True)     # 백그라운드 status 의 progress 로 보인다
         if not (ROOT / f).exists():
             items.append({"file": f, "ok": False, "passed": 0, "failed": 0, "errors": 1, "skipped": 0, "failures": ["파일 없음"]})
             continue

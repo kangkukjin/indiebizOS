@@ -506,9 +506,9 @@ class AgentCommunicationMixin:
 
                 # AI 처리
                 if self.ai:
-                    # 연상 — 공통 흐름(associative_recall, 채널 agent_message: 분류가 없으므로 route(None)).
-                    #   세계의 기억은 개인 기억이 아니라 에이전트 간 경로도 같은 블록을 받는다(공통 회상 설계 §5.6).
-                    exec_mem = self._associate(content, channel="agent_message").route(None).text()
+                    # 연상 — 공통 흐름(associative_recall, 채널 agent_message). 분류가 없는 경로라 EXECUTE 로 닫는다 —
+                    #   세계 지도 두 채널 모두 개인 기억이 아니라 에이전트 간 경로도 같은 블록을 받는다(2026-09-18 판정).
+                    exec_mem = self._associate(content, channel="agent_message").route("EXECUTE").text()
                     ai_message = f"{exec_mem}\n\n{content}" if exec_mem else content
                     history = []
 

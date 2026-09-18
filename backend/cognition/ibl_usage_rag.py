@@ -224,12 +224,12 @@ class IBLUsageRAG:
         self._set_cached(cache_key, xml)
         return xml
 
-    def search_phrases(self, user_query: str, allowed_nodes: set = None) -> list:
-        """이름 채널 — 이름(alias) 붙은 다문장 프로그램 Top-PHRASE_K, PHRASE_MIN_SCORE 이상. 본문 없이 서명만 실린다."""
+    def search_phrases(self, user_query: str, allowed_nodes: set = None, k: int = None) -> list:
+        """이름 채널 — 이름(alias) 붙은 다문장 프로그램 Top-k(기본 PHRASE_K), PHRASE_MIN_SCORE 이상. 본문 없이 서명만 실린다."""
         try:
             from ibl_usage_db import IBLUsageDB
             res = _search_active(IBLUsageDB(),
-                query=user_query, top_k=self.PHRASE_K, allowed_nodes=allowed_nodes,
+                query=user_query, top_k=k or self.PHRASE_K, allowed_nodes=allowed_nodes,
                 aliased_only=True)
         except Exception as e:
             logger.error(f"[IBL RAG] 이름 채널 검색 실패: {e}")
@@ -410,7 +410,8 @@ class IBLUsageRAG:
 # 실행기억 (Execution Memory) — 파이프라인 전체가 공유하는 통합 기억
 # =========================================================================
 
-def build_execution_memory_detail(user_message: str, allowed_nodes: set = None) -> dict:
+def build_execution_memory_detail(user_message: str, allowed_nodes: set = None, *,
+                                  top_k: int = None, phrase_k: int = None) -> dict:
     """사용자 명령에 대한 실행기억을 생성한다 — 상세 판: {xml, top_score, top_code, presented}.
 
     presented = 프롬프트에 실제로 실린 용례 목록 [{id, code, kind(word|phrase), alias}] — 제시→사용 결합(2026-09-18)의
@@ -456,7 +457,7 @@ def build_execution_memory_detail(user_message: str, allowed_nodes: set = None) 
         db = IBLUsageDB()
         results = _search_active(db,
             query=query,
-            top_k=rag.DEFAULT_K,
+            top_k=top_k or rag.DEFAULT_K,
             allowed_nodes=allowed_nodes,
             exclude_category=rag.PHRASE_CATEGORY,   # 낱말 채널 — 반사 top-1 은 낱말만
         )
@@ -472,7 +473,7 @@ def build_execution_memory_detail(user_message: str, allowed_nodes: set = None) 
 
     # 관용구 채널(2026-09-04): 문장 여러 개의 골격 Top-2. 긴 문서엔 싣지 않는다(표면 우연).
     # 이 턴에 올린 관용구는 스레드-로컬에 두어 턴 끝의 증류(이미 아는 관용구면 재추출 안 함)·귀속이 읽는다.
-    phrases = [] if is_long_doc else rag.search_phrases(query, allowed_nodes)
+    phrases = [] if is_long_doc else rag.search_phrases(query, allowed_nodes, k=phrase_k)
     try:
         from thread_context import set_phrase_recall
         set_phrase_recall([p.ibl_code for p in phrases])

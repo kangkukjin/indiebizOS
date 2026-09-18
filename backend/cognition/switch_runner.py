@@ -187,13 +187,15 @@ class SwitchRunner:
 
             self._status(f"도구 {len(tools)}개 로드됨")
 
-            # 연상 — 공통 흐름(associative_recall, 채널 switch: 종전대로 해마만). 러너는 어휘 범위만 가진 자리표.
+            # 연상 — 공통 흐름(associative_recall, 채널 switch: 파이프라인과 같은 묶음, 2026-09-18 판정).
+            #   자리표 러너: 어휘 범위·프로젝트 경로·자아 이름(심층기억 DB 가 있을 때만 실린다).
             command = self.switch.get("command", "")
             execution_memory = ""
             try:
                 from types import SimpleNamespace
                 from associative_recall import begin
-                holder = SimpleNamespace(config={"allowed_nodes": allowed_nodes}, project_path=None)
+                holder = SimpleNamespace(config={"allowed_nodes": allowed_nodes}, project_path=project_path,
+                                         agent_id=self.config.get("agent_id") or self.config.get("agentId") or "")
                 execution_memory = begin(holder, command, channel="switch").route("EXECUTE").text()
                 if execution_memory:
                     self._status("실행기억 로드됨")

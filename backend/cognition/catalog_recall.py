@@ -164,7 +164,7 @@ def world_memory_for_turn(message, lexical_snippet=""):
     return world_memory_detail(message, lexical_snippet)[0]
 
 
-def world_memory_detail(message, lexical_snippet=""):
+def world_memory_detail(message, lexical_snippet="", *, budget=None):
     """(snippet, event, names) — names = {id: [이름, 별칭…]} 고른 어휘의 결합 키(제시→사용 결합, 2026-09-18).
 
     세계의 기억 — 지도(최상위 분야)와 가지 먼저 고른 어휘 3건 (공통 회상 설계 §5.6, 2026-09-17).
@@ -186,7 +186,7 @@ def world_memory_detail(message, lexical_snippet=""):
         import tree_recall
         from world_recall_store import WorldStore
         store = WorldStore(root)
-        r = tree_recall.recall(store, message)
+        r = tree_recall.recall(store, message, **(budget or {}))
         picked = [it for it in r["items"] + r["outside"] if it.label.split(": ", 1)[-1] not in (lexical_snippet or "")]
         parts = ['<world_map note="세계 지도의 최상위 분야 (어휘 수). 아래 분류와 어휘는 '
                  '[self:script]{op:\\"run\\", id:\\"세계지도\\", args:{op:\\"browse\\", path:[\\"<분야>\\"]}} 로 내려가며 본다.">\n'

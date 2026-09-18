@@ -220,6 +220,8 @@ def deep_memory_db(runner) -> str:
     import memory_db
     from thread_context import get_current_agent_id
     agent_id = get_current_agent_id() or getattr(runner, "agent_id", None)
+    if not agent_id:
+        return ""          # 이름 없는 자아(스위치 자리표 등)는 심층기억이 없다 — memory_None.db 를 만들지 않는다
     db_path = memory_db._get_db_path(str(runner.project_path), agent_id)
     return db_path if os.path.exists(db_path) else ""
 
@@ -239,7 +241,7 @@ def _hippocampus(req: RecallRequest, recall: Recall) -> Optional[Block]:
             print(f"[연상] action_hint='{req.action_hint}' 유효하지 않음 — 해마 검색으로 폴백")
     if not xml:
         allowed = _allowed_set(req.runner)
-        d = _step("execution_memory", lambda: build_execution_memory_detail(req.message, allowed))
+        d = _step("execution_memory", lambda: build_execution_memory_detail(req.message, allowed, **BUDGET["hippocampus"]))
         xml, score, code, presented = d["xml"], d["top_score"], d["top_code"], d["presented"]
     recall.reflex = ReflexSignal(float(score or 0.0), code or "")
     if not xml:
@@ -281,7 +283,7 @@ def _recalled_memory(req: RecallRequest, recall: Recall) -> Optional[Block]:
         import tree_recall
         from recall_store import DeepMemoryStore
         store = DeepMemoryStore(db_path)
-        r = tree_recall.recall(store, req.message)
+        r = tree_recall.recall(store, req.message, **BUDGET["recalled_memory"])
         picked = r["items"] + r["outside"]
         if not picked:
             print(f"[연상:선택기억] {r['status']}")
@@ -408,7 +410,7 @@ def _world_memory(req: RecallRequest, recall: Recall, **_route_kw) -> Optional[B
     """세계의 기억 — 지도 + 가지 먼저 고른 어휘 3건(의미 채널). 글자 채널에 이미 나온 이름은 뺀다."""
     from catalog_recall import world_memory_detail
     lexical = next((b.text for b in recall.blocks if b.source == "method_map"), "")
-    text, event, names = world_memory_detail(req.message, lexical)
+    text, event, names = world_memory_detail(req.message, lexical, budget=BUDGET["world_memory"])
     if not text:
         return Block("world_memory", "world_map", "", status=event.get("status") or "empty")
     return Block("world_memory", "world_map", text, status=event.get("status") or "ok", ids=list(event.get("ids") or []),
@@ -559,16 +561,27 @@ SOURCES = (
     Source("world_memory", "world_map", 2, False, _world_memory),
 )
 
-# 채널별 정책 — 어느 공급원이 자동으로 도는가. None = 전부. 종전 동작을 그대로 옮긴 값이며(2026-09-18 구조 통합 = 동작 불변),
-# 바꾸는 일은 2단계(검색·정책 실험)의 몫이다.
-#   agent_message: 에이전트 간 위임 경로 — 분류가 없어 글자 채널(method_map)이 빠져 있었다.
-#   switch: 스위치 실행 — 해마만 받았다(심층·가이드·세계 없음).
+# 채널별 정책 — 어느 공급원이 자동으로 도는가. None = 전부.
+# 2026-09-18 판정(사용자: "판단할 수 있는 건 측정 뒤로 미루지 말 것"): 채널을 가를 이유가 없다.
+#   agent_message: 종전엔 분류가 없어 글자 채널(method_map)이 빠져 있었다 — 세계 어휘는 개인 기억이 아니라 모든 작업 에이전트가
+#     받는 것이 설계(공통 회상 §5.6)이고, 빠진 것은 결함이었다. route("EXECUTE") 로 닫아 같은 블록을 받는다.
+#   switch: 종전엔 해마만 — 스위치 명령도 주인의 명령이고 실행자는 같은 IBL 환경을 받으므로 가이드 목차·판정 원장·세계 지도가
+#     빠질 이유가 없다. 심층기억은 그 에이전트의 DB 가 있을 때만(없으면 0토큰).
+# 채널을 가르는 값이 다시 필요해지면 여기 한 줄이다.
 CHANNELS: Dict[str, Optional[Dict[str, set]]] = {
     "pipeline": None,
     "preview": None,
     "sample": None,
-    "agent_message": {"exclude": {"method_map"}},
-    "switch": {"only": {"hippocampus"}},
+    "agent_message": None,
+    "switch": None,
+}
+
+# 후보 수 — 기억별 자동 주입 분량의 정책 값(2026-09-18 ③: 코드 상수에서 표로). 값은 종전 그대로.
+#   세계 지도 글자 채널(method_map)의 항목·글자 예산은 이미 데이터(data/world_pulse_config.json knowledge_catalog)라 여기 두지 않는다.
+BUDGET: Dict[str, Dict[str, int]] = {
+    "hippocampus": {"top_k": 5, "phrase_k": 2},                  # 낱말 Top-5 · 관용구 Top-2
+    "recalled_memory": {"n_branches": 2, "k_in": 2, "k_out": 1},  # 가지 2 → 안 2건 + 밖 1건
+    "world_memory": {"n_branches": 2, "k_in": 2, "k_out": 1},
 }
 
 

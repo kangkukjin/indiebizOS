@@ -2522,8 +2522,8 @@ nodes:
       search:
         lands_on: hub
         path_audited:
-          at: '2026-09-15'
-          impl: 541b8789aa537342
+          at: '2026-09-18'
+          impl: 467ba05689d59956
         aliases:
           limit:
           - count
@@ -2578,8 +2578,8 @@ nodes:
       crawl:
         lands_on: hub
         path_audited:
-          at: '2026-09-15'
-          impl: 541b8789aa537342
+          at: '2026-09-18'
+          impl: 467ba05689d59956
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
@@ -5059,8 +5059,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-09-15'
-          impl: c7c6eb5d1d2b39f8
+          at: '2026-09-18'
+          impl: 1dba8757ad99c866
         target_key: path
         aliases:
           offset:
@@ -5072,8 +5072,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-09-15'
-          impl: c7c6eb5d1d2b39f8
+          at: '2026-09-18'
+          impl: 1dba8757ad99c866
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)

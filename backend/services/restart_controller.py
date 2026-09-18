@@ -405,6 +405,20 @@ class Controller:
             self.lock.close()
 
 
+def compact_status(state: dict) -> dict:
+    """status 의 기본 출력 — 코드 매니페스트 두 벌은 지문과 파일 수로 접는다(전문은 --full).
+
+    ep3855(2026-09-18): 수리 턴이 `api.py status` 한 번에 18만 자를 문맥으로 받았다 — 파일 791개의 해시 목록이
+    manifest·target_manifest 로 두 번 실려 있었다. 판정에 쓰이는 것은 phase·last_result·defer_note·지문이다.
+    """
+    out = dict(state)
+    for key in ("manifest", "target_manifest"):
+        m = out.get(key)
+        if isinstance(m, dict) and "files" in m:
+            out[key] = {"digest": m.get("digest"), "files": len(m.get("files") or {}), "omitted": "--full 로 전문"}
+    return out
+
+
 def main(argv=None, code_root=None):
     parser = argparse.ArgumentParser()
     parser.add_argument("action", choices=["start", "serve", "restart", "shutdown", "status", "wait"], nargs="?", default="start")
@@ -412,6 +426,7 @@ def main(argv=None, code_root=None):
     parser.add_argument("--request-id")
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--drain-timeout", type=float, default=600)
+    parser.add_argument("--full", action="store_true", help="status: 코드 매니페스트(파일 791개 × 2벌, 18만 자)까지 전부")
     args = parser.parse_args(argv)
     code_root = Path(code_root) if code_root else Path(__file__).resolve().parents[2]
     base = Path(os.environ.get("INDIEBIZ_BASE_PATH", code_root))
@@ -424,7 +439,7 @@ def main(argv=None, code_root=None):
     if args.action == "status":
         state = read_json(control_dir(base) / "state.json", {})
         state.pop("control_token", None)
-        print(state)
+        print(state if args.full else compact_status(state))
         return 0
     manifest = code_manifest(code_root)
     req = request(base, "cli_" + args.action, operation=args.action,

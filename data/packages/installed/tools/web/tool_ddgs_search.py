@@ -13,6 +13,7 @@ if _backend_dir not in sys.path:
     sys.path.insert(0, os.path.abspath(_backend_dir))
 
 from ddgs import DDGS
+from ddgs.exceptions import DDGSException
 from common.response_formatter import format_json
 
 # ddgs rate limit 방어선. 숫자를 올리는 건 트레이드오프 판단이라 그대로 두고,
@@ -73,6 +74,15 @@ def search_web(query: str, count: int = 5, country: str = "kr-kr") -> str:
                               f"조정되어 검색했습니다.")
         return format_json(out)
 
+    except DDGSException as e:
+        # 0건은 실패가 아니다 — 성공한 0행 통화(뉴스 검색과 같은 계약, 2026-09-12). ddgs 는 엔진 오류가 있으면 그 오류문을,
+        # 정말 결과가 없을 때만 "No results found." 를 던진다. ep3854: 0건 검색이 실행 실패로 세어지고 파이프를 끊었다.
+        if "No results found" in str(e):
+            return format_json({
+                "success": True, "query": query, "count": 0, "results": [], "items": [],
+                "message": "검색 결과 0건 — 따옴표·site: 제한을 풀거나 검색어를 넓혀 다시 검색하세요.",
+            })
+        return format_json({"success": False, "query": query, "error": f"검색 실패: {str(e)}"})
     except Exception as e:
         return format_json({
             "success": False,

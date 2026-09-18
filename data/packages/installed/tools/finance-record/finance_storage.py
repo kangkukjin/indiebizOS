@@ -173,7 +173,7 @@ def save_holding(kind: str, name: str, value: float = None, asset_type: str = No
 def merge_synced_rows(rows: list, owner: str = None) -> list:
     """수거된 결제 알림 행들 → 거래 병합 (ext_id dedup — 여러 번 수거해도 안전).
 
-    approve=지출(+) / cancel=지출(−, 환불 차감) / charge(충전)=이체라 원장 제외.
+    approve=지출(+) / cancel=지출(−) / income=수입 / charge(충전)=이체라 원장 제외.
     파싱 실패(amount 0)도 원문을 note 로 보존해 넣는다(침묵 실패 금지 — 합계 무영향).
     returns 새로 들어간 행 목록."""
     new_rows = []
@@ -182,11 +182,14 @@ def merge_synced_rows(rows: list, owner: str = None) -> list:
         for r in rows:
             if r.get('type') == 'charge':
                 continue
+            tx_type = 'income' if r.get('type') == 'income' else 'expense'
             sign = -1 if r.get('type') == 'cancel' else 1
             note_bits = []
             if r.get('type') == 'cancel':
                 note_bits.append('취소·환불')
-            if not r.get('parsed'):
+            if tx_type == 'income':
+                note_bits.append(r.get('body') or r.get('title') or '')
+            elif not r.get('parsed'):
                 note_bits.append((r.get('body') or r.get('title') or '')[:200])
             occurred = datetime.fromtimestamp((r.get('ts') or 0) / 1000).strftime('%Y-%m-%d') \
                 if r.get('ts') else datetime.now().strftime('%Y-%m-%d')
@@ -196,8 +199,8 @@ def merge_synced_rows(rows: list, owner: str = None) -> list:
                 """INSERT OR IGNORE INTO transactions
                    (owner_id, tx_type, amount, category, counterparty, occurred_at, note,
                     source, ext_id, uuid, created_at, updated_at)
-                   VALUES (?, 'expense', ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (oid, sign * (r.get('amount') or 0), r.get('merchant') or None,
+                   VALUES (?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (oid, tx_type, sign * (r.get('amount') or 0), r.get('merchant') or None,
                  occurred, ' · '.join(note_bits) or None,
                  r.get('source'), r['ext_id'], _new_uuid(), _now(), _now()))
             if cur.rowcount > 0:

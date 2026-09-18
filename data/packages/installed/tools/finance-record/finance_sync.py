@@ -158,9 +158,35 @@ def _merchant_from(text: str) -> str:
     return ""
 
 
+# 금액과 완료 동사를 한 문장 안에서 묶는다. 잔액·누적액이나 지급 예정은 수령액이 아니다.
+_RE_REWARD_RECEIPT = re.compile(
+    r"(?:인센티브|캐시백|리워드|포인트)\s*"
+    r"([0-9][0-9,]*)\s*원(?:이|가|을|를)?\s*"
+    r"(?:지급|적립|입금)\s*(?:되었습니다|됐습니다|완료)"
+    r"(?=[.!?\n]|$)"
+)
+_RE_REWARD_NOTICE = re.compile(
+    r"(?:인센티브|캐시백|리워드|포인트)[^.!?\n]*(?:지급|적립|입금)"
+)
+_RE_PAYMENT_EVENT = re.compile(
+    r"[0-9][0-9,]*\s*원(?:이|을)?\s*(?:승인|결제|사용|취소|환불)"
+    r"|(?:승인|결제|사용|취소|환불)\s*(?:금액\s*[:：]?\s*)?"
+    r"[0-9][0-9,]*\s*원"
+)
+
+
 def _parse_payment(title: str, body: str) -> dict:
     text = " ".join(x for x in (title, body) if x)
     out = {"amount": 0, "merchant": "", "type": "approve"}
+    # 결제 알림에 붙은 인센티브 안내는 별도 수령 거래로 바꾸지 않는다.
+    receipt = _RE_REWARD_RECEIPT.search(body or title)
+    if not _RE_PAYMENT_EVENT.search(text):
+        if receipt:
+            out.update(amount=int(receipt.group(1).replace(",", "")), type="income")
+            return out
+        if _RE_REWARD_NOTICE.search(text):
+            out["type"] = "notice"
+            return out
     m = _RE_AMOUNT.search(text)
     if m:
         try:
@@ -186,14 +212,18 @@ def _record_to_row(rec: dict) -> dict:
     text = " ".join(x for x in (title, body) if x)
     if _PROMO_RE.search(text):
         return {}  # 광고 푸시 — 가격이 들어 있어도 결제가 아니다
-    # ★AND 게이트: 금액과 결제 동사가 **둘 다** 있어야 결제 후보.
+    # ★AND 게이트: 지급 완료는 수입, 그 밖에는 금액과 결제 동사가 모두 있어야 결제 후보.
     # 옛 OR 게이트는 주석이 "혜택·공지를 거른다"였는데 금액만으로 통과시켜,
     # 거르려던 바로 그 부류(광고)를 가장 확실하게 통과시켰다.
     # 실패 방향은 의도적으로 비대칭 — 못 거두면 명세서 대사로 메꿀 수 있지만,
     # 원장에 들어간 거짓 지출은 사용자가 눈으로 찾아 지워야 한다.
-    if not (_RE_AMOUNT.search(text) and any(k in text for k in _PAY_KEYWORDS)):
-        return {}  # 결제 무관 알림(혜택·공지)
     parsed = _parse_payment(title, body)
+    if parsed["type"] == "notice":
+        return {}  # 지급 예정·실패 등 수령 사실이 없는 안내
+    if parsed["type"] != "income" and not (
+        _RE_AMOUNT.search(text) and any(k in text for k in _PAY_KEYWORDS)
+    ):
+        return {}  # 거래 무관 알림(혜택·공지)
     # ★중복 방지 키에 알림 key 를 넣지 않는다 — 폰 포획소엔 그 값이 없다.
     # ★시각도 넣지 않는다(2026-09-05 실측): 하나카드는 **같은 결제 알림을 7~238ms 간격으로
     # 두 번 post** 한다(포획소 실측 — 하나카드 고유 알림 15건이 전부 2줄, 청주페이는 1줄).
@@ -211,7 +241,8 @@ def _record_to_row(rec: dict) -> dict:
         "merchant": parsed["merchant"], "amount": parsed["amount"],
         "type": parsed["type"], "ts": rec["ts"] or int(time.time() * 1000),
         "title": title, "body": body,
-        "parsed": 1 if (parsed["amount"] and parsed["merchant"]) else 0,
+        "parsed": int(bool(parsed["amount"] and (
+            parsed["merchant"] or parsed["type"] == "income"))),
     }
 
 

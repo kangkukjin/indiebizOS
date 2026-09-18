@@ -166,6 +166,7 @@
     "datastore/switch_manager",
     "datastore/system_ai_memory",
     "datastore/system_docs",
+    "datastore/tree_doc",
     "datastore/tree_recall",
     "datastore/verification_cache",
     "datastore/vocabulary_policy",
@@ -403,8 +404,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 364,
-    "engine": 338,
+    "total": 365,
+    "engine": 339,
     "blocklist": 26
   }
 }

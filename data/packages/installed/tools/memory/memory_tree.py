@@ -22,10 +22,12 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import tree_doc   # 가지 문서 기질(표식·절·요약·갱신 기록·도장·동기화 계획) — 세 트리 기억이 한 벌을 쓴다(2026-09-18)
+
 DOC_NAME = "memory.md"
 SECTION = "## 기억"
-LEDGER = "## 갱신 기록"
-MARKER_RE = re.compile(r'<!--\s*memory-node\s+agent="([^"]*)"\s+node="([^"]*)"\s*-->')
+LEDGER = tree_doc.LEDGER
+MARKER_RE = tree_doc.marker_re("memory-node", "agent", "node")
 LINE_RE = re.compile(r'^- \[([^\]]*)\]\s+(.*?)\s*‹#(\d+)[^›]*›\s*$')      # 색인된 줄(#id 보유)
 NEW_LINE_RE = re.compile(r'^- \[([^\]]*)\]\s+(.+?)\s*(?:‹[^›]*›)?\s*$')   # 사람이 새로 적은 줄(#id 없음)
 SECTION_NOTE = ("<!-- 기계가 읽는 절: 한 줄 = 기억 하나 `- [분류] 내용 ‹#id · 날짜 · kw: …›`. "
@@ -164,8 +166,7 @@ def unfiled(db_path: str) -> List[Dict[str, Any]]:
 
 # ─────────────────────────── 문서 렌더 ───────────────────────────
 
-def _one_line(text: str) -> str:
-    return re.sub(r"\s*\n+\s*", " ", (text or "").strip())
+_one_line = tree_doc.one_line
 
 
 def _norm_content(text: str) -> str:
@@ -178,7 +179,7 @@ def render_line(r: Dict[str, Any]) -> str:
     kw = (r.get("keywords") or "").strip()
     if kw:
         meta.append(f"kw: {kw[:80]}")
-    return f"- [{r.get('category') or '기타'}] {_one_line(r.get('content'))} ‹{' · '.join(m for m in meta if m)}›"
+    return f"- [{r.get('category') or '기타'}] {_one_line(r.get('content'))} {tree_doc.meta(meta)}"
 
 
 def render_section(rows: List[Dict[str, Any]]) -> str:
@@ -189,51 +190,18 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
 
 def _split_section(text: str) -> Tuple[str, str, str]:
     """(앞, 절, 뒤) — 절이 없으면 절='' 이고 뒤는 '## 갱신 기록' 부터."""
-    m = re.search(r"(?m)^## 기억\s*$", text)
-    if m:
-        start = m.start()
-        nxt = re.search(r"(?m)^## ", text[m.end():])
-        end = m.end() + nxt.start() if nxt else len(text)
-        return text[:start], text[start:end], text[end:]
-    lm = re.search(r"(?m)^## 갱신 기록\s*$", text)
-    if lm:
-        return text[:lm.start()], "", text[lm.start():]
-    return text, "", ""
+    return tree_doc.split_section(text, SECTION)
 
 
 def _replace_section(text: str, section: str) -> str:
-    head, _old, tail = _split_section(text)
-    if head and not head.endswith("\n\n"):
-        head = head.rstrip("\n") + "\n\n"
-    if tail and not tail.startswith("\n"):
-        section = section + "\n"
-    return head + section + tail
+    return tree_doc.replace_section(text, SECTION, section)
 
 
 def _marker(agent: str, node: str) -> str:
-    return f'<!-- memory-node agent="{agent}" node="{norm_node(node)}" -->'
+    return tree_doc.marker_line("memory-node", agent=agent, node=norm_node(node))
 
 
-def _read_marker(path: str) -> Optional[Tuple[str, str]]:
-    try:
-        with open(path, encoding="utf-8") as f:
-            head = f.read(1500)
-    except OSError:
-        return None
-    m = MARKER_RE.search(head)
-    return (m.group(1), norm_node(m.group(2))) if m else None
-
-
-def gist_of(path: str) -> str:
-    """표식 뒤 첫 `> ` 줄 = 목차에 실리는 한 줄 요약."""
-    try:
-        with open(path, encoding="utf-8") as f:
-            text = f.read(3000)
-    except OSError:
-        return ""
-    m = re.search(r"(?m)^>\s*(.+?)\s*$", text)
-    g = m.group(1).strip() if m else ""
-    return "" if g.startswith("(한 줄 요약") else g
+gist_of = tree_doc.gist_of
 
 
 CUES_RE = re.compile(r"(?m)^찾는 말:\s*(.+?)\s*$")
@@ -264,7 +232,7 @@ def _stamp_key(node: str) -> str:
 def _stamp(db_path: str, node: str, path: str) -> None:
     import memory_db
     try:
-        memory_db.set_meta(db_path, _stamp_key(node), str(os.path.getmtime(path)))
+        memory_db.set_meta(db_path, _stamp_key(node), tree_doc.stamp_value(path))
     except Exception:
         pass
 
@@ -276,13 +244,9 @@ def refresh_node(db_path: str, node: str, agent: Optional[str] = None) -> str:
     path = doc_path(db_path, node)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path):
-        text = open(path, encoding="utf-8").read()
-        if not MARKER_RE.search(text[:1500]):
-            text = _marker(agent, node) + "\n" + text
+        text = tree_doc.ensure_marker(open(path, encoding="utf-8").read(), _marker(agent, node), MARKER_RE, head_chars=1500)
     else:
-        title = node or "(뿌리)"
-        text = (f"{_marker(agent, node)}\n# 기억 — {title}\n> {GIST_PLACEHOLDER}\n\n"
-                f"{LEDGER}\n- {datetime.now().strftime('%Y-%m-%d')} 가지 생성\n")
+        text = tree_doc.skeleton(_marker(agent, node), f"기억 — {node or '(뿌리)'}", GIST_PLACEHOLDER)
     text = _replace_section(text, render_section(rows_of(db_path, node)))
     with open(path, "w", encoding="utf-8") as f:
         f.write(text)
@@ -341,12 +305,7 @@ def sync_node(db_path: str, node: str) -> Dict[str, Any]:
     path = doc_path(db_path, node)
     if not os.path.exists(path):
         return {"synced": False, "reason": "no_doc"}
-    try:
-        mtime = os.path.getmtime(path)
-        stamp = float(memory_db.get_meta(db_path, _stamp_key(node)) or 0)
-    except Exception:
-        mtime, stamp = 1.0, 0.0
-    if mtime <= stamp + 1e-6:
+    if not tree_doc.is_stale(path, memory_db.get_meta(db_path, _stamp_key(node)) or 0):
         return {"synced": False, "reason": "fresh",
                 "index_pending": _flush_index_pending(db_path, node)}
     text = open(path, encoding="utf-8").read()
@@ -359,24 +318,22 @@ def sync_node(db_path: str, node: str) -> Dict[str, Any]:
     conn = sqlite3.connect(db_path, timeout=10)
     try:
         now = datetime.now().isoformat()
-        seen = set()
-        for k in known:
-            r = existing.get(k["id"])
-            if r is None:
-                fresh.append({"category": k["category"], "content": k["content"]})   # 색인에 없는 id → 새 기억으로
-                continue
-            seen.add(k["id"])
+        # 세 갈래 계획은 기질(tree_doc.plan_sync), 실행(SQL·검증·색인)은 여기 — 색인에 없는 id 는 새 기억으로 온다.
+        plan = tree_doc.plan_sync(
+            known, fresh, list(existing.values()), key=lambda r: r["id"],
+            changed=lambda k, r: (_norm_content(k["content"]) != _norm_content(r["content"])
+                                  or memory_db.normalize_category(k["category"]) != (r.get("category") or "")))
+        for k, r in plan["update"]:
             cat = memory_db.normalize_category(k["category"])
-            if _norm_content(k["content"]) != _norm_content(r["content"]) or cat != (r.get("category") or ""):
-                conn.execute("UPDATE memories SET content=?, category=?, used_at=? WHERE id=?",
-                             (memory_db.mask_secrets(k["content"]), cat, now, k["id"]))
-                updated += 1
-                pending.add(k["id"])
-        for mid in set(existing) - seen:
-            conn.execute("DELETE FROM memories WHERE id=?", (mid,))
+            conn.execute("UPDATE memories SET content=?, category=?, used_at=? WHERE id=?",
+                         (memory_db.mask_secrets(k["content"]), cat, now, k["id"]))
+            updated += 1
+            pending.add(k["id"])
+        for r in plan["delete"]:
+            conn.execute("DELETE FROM memories WHERE id=?", (r["id"],))
             deleted += 1
-            pending.add(mid)
-        for f in fresh:
+            pending.add(r["id"])
+        for f in plan["insert"]:
             try:
                 memory_db._reject_body_noun(f["content"])
             except Exception as e:

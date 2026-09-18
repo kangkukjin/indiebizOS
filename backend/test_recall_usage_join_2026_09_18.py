@@ -97,7 +97,7 @@ def test_hippocampus_detail_presents_selected_examples(monkeypatch):
     monkeypatch.setattr(rag, "_own_only", lambda r: r)
     monkeypatch.setattr(rag, "_principal_allows_recall", lambda: True)
     monkeypatch.setattr(rag.IBLUsageRAG, "_is_ibl_relevant", lambda self, q: True)
-    monkeypatch.setattr(rag.IBLUsageRAG, "search_phrases", lambda self, q, a=None: [])
+    monkeypatch.setattr(rag.IBLUsageRAG, "search_phrases", lambda self, q, a=None, k=None: [])
     monkeypatch.setattr(rag, "_extract_implementations_from_refs", lambda xml: "")
     monkeypatch.setattr("hippo_tree.reference_needs_expansion", lambda body: False)
     d = rag.build_execution_memory_detail("가격 알려줘", None)

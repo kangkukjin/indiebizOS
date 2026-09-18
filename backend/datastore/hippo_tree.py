@@ -28,9 +28,11 @@ import sqlite3
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+import tree_doc   # 가지 문서 기질(표식·절·요약·갱신 기록·도장·동기화 계획) — 세 트리 기억이 한 벌을 쓴다(2026-09-18)
+
 DOC_NAME = "memory.md"
 SECTION = "## 용례"
-LEDGER = "## 갱신 기록"
+LEDGER = tree_doc.LEDGER
 RUNS = "## 주행"
 RUNS_MAX = 20                 # 가지당 보존 주행 수
 RUNS_MAX_SENTENCES = 30       # 주행당 문장 수 상한(넘으면 앞부분만, 절단 신고)
@@ -59,7 +61,7 @@ PHRASE_HEAD_RE = re.compile(r"^### (?:(\S+) — )?(.*?) · 문장 (\d+)(?: · �
 PHRASE_CALL_RE = re.compile(r"^호출: `(.+)`\s*$")
 PHRASE_LINE_RE = re.compile(r"^\d+\. `(.+)`\s*$")
 SLOT_RE = re.compile(r"\$\{([^}]+)\}")
-MARKER_RE = re.compile(r'<!--\s*hippo-topic\s+topic="([^"]*)"\s*-->')
+MARKER_RE = tree_doc.marker_re("hippo-topic", "topic")
 GUIDE_RE = re.compile(r"(?m)^guide:\s*(.+?)\s*$")
 LINE_RE = re.compile(r'^- (.*?)\s+→\s+`(.+?)`\s*‹#(\d+)[^›]*›\s*$')      # 색인된 줄
 NEW_LINE_RE = re.compile(r'^- (.*?)\s+→\s+`(.+?)`\s*(?:‹[^›]*›)?\s*$')   # 사람이 새로 적은 줄(#id 없음)
@@ -291,8 +293,7 @@ def unfiled(db_path: Optional[str] = None) -> List[Dict[str, Any]]:
 
 # ─────────────────────────── 문서 렌더 ───────────────────────────
 
-def _one_line(text: str) -> str:
-    return re.sub(r"\s*\n+\s*", " ", (text or "").strip())
+_one_line = tree_doc.one_line
 
 
 def render_line(r: Dict[str, Any]) -> str:
@@ -302,7 +303,7 @@ def render_line(r: Dict[str, Any]) -> str:
         meta.append(f"✓{s}/✗{f}")
     meta.append((r.get("created_at") or "")[:10])
     code = _one_line(r.get("ibl_code")).replace("`", "'")
-    return f"- {_one_line(r.get('intent'))} → `{code}` ‹{' · '.join(m for m in meta if m)}›"
+    return f"- {_one_line(r.get('intent'))} → `{code}` {tree_doc.meta(meta)}"
 
 
 def render_section(rows: List[Dict[str, Any]]) -> str:
@@ -477,7 +478,7 @@ def render_phrase(r: Dict[str, Any]) -> str:
     head = "### " + (f"{alias} — " if alias else "") + f"{_one_line(r.get('intent'))} · 문장 {len(sents)}"
     if slots:
         head += " · 슬롯 " + ", ".join(slots)
-    head += f" ‹{' · '.join(m for m in meta if m)}›"
+    head += " " + tree_doc.meta(meta)
     lines = [head]
     if alias:
         lines.append(f"호출: `{phrase_call_line(alias, code, (r.get('returns') or '').strip(), r.get('signature'))}`")
@@ -494,25 +495,11 @@ def render_phrases(rows: List[Dict[str, Any]]) -> str:
 
 def _split_phrases(text: str) -> Tuple[str, str, str]:
     """`## 관용구` 절을 (앞, 절, 뒤) 로. 없으면 `## 주행` 앞(없으면 갱신 기록 앞)을 자리로 잡는다."""
-    m = re.search(r"(?m)^## 관용구\s*$", text)
-    if m:
-        nxt = re.search(r"(?m)^## ", text[m.end():])
-        end = m.end() + nxt.start() if nxt else len(text)
-        return text[:m.start()], text[m.start():end], text[end:]
-    for anchor in (r"(?m)^## 주행\s*$", r"(?m)^## 갱신 기록\s*$"):
-        am = re.search(anchor, text)
-        if am:
-            return text[:am.start()], "", text[am.start():]
-    return text, "", ""
+    return tree_doc.split_section(text, PHRASES, anchors=(RUNS, LEDGER))
 
 
 def _replace_phrases(text: str, section: str) -> str:
-    head, _old, tail = _split_phrases(text)
-    if head and not head.endswith("\n\n"):
-        head = head.rstrip("\n") + "\n\n"
-    if tail and not tail.startswith("\n"):
-        section = section + "\n"
-    return head + section + tail
+    return tree_doc.replace_section(text, PHRASES, section, anchors=(RUNS, LEDGER))
 
 
 def parse_phrases(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
@@ -544,28 +531,12 @@ def parse_phrases(text: str) -> Tuple[List[Dict[str, Any]], List[Dict[str, Any]]
 
 
 def _split_section(text: str) -> Tuple[str, str, str]:
-    m = re.search(r"(?m)^## 용례\s*$", text)
-    if m:
-        nxt = re.search(r"(?m)^## ", text[m.end():])
-        end = m.end() + nxt.start() if nxt else len(text)
-        return text[:m.start()], text[m.start():end], text[end:]
-    lm = re.search(r"(?m)^## 갱신 기록\s*$", text)
-    if lm:
-        return text[:lm.start()], "", text[lm.start():]
-    return text, "", ""
+    return tree_doc.split_section(text, SECTION)
 
 
 def _split_runs(text: str) -> Tuple[str, str, str]:
     """`## 주행` 절을 (앞, 절, 뒤) 로. 없으면 갱신 기록 앞을 자리로 잡는다."""
-    m = re.search(r"(?m)^## 주행\s*$", text)
-    if m:
-        nxt = re.search(r"(?m)^## ", text[m.end():])
-        end = m.end() + nxt.start() if nxt else len(text)
-        return text[:m.start()], text[m.start():end], text[end:]
-    lm = re.search(r"(?m)^## 갱신 기록\s*$", text)
-    if lm:
-        return text[:lm.start()], "", text[lm.start():]
-    return text, "", ""
+    return tree_doc.split_section(text, RUNS)
 
 
 def runs_of(path: str) -> int:
@@ -693,39 +664,22 @@ def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
     dropped = max(0, len(blocks) - RUNS_MAX)
     blocks = blocks[:RUNS_MAX]
     new_sec = RUNS + "\n" + RUNS_NOTE + "\n" + "\n".join(b.rstrip("\n") for b in blocks) + "\n"
-    if head and not head.endswith("\n\n"):
-        head = head.rstrip("\n") + "\n\n"
-    if tail and not tail.startswith("\n"):
-        new_sec += "\n"
     with open(path, "w", encoding="utf-8") as f:
-        f.write(head + new_sec + tail)
+        f.write(tree_doc.replace_section(text, RUNS, new_sec))
     _stamp(topic, path)
     return {"success": True, "topic": topic, "doc": path, "sentences": len(shown),
             "truncated": len(sentences) > len(shown), "dropped_runs": dropped}
 
 
 def _replace_section(text: str, section: str) -> str:
-    head, _old, tail = _split_section(text)
-    if head and not head.endswith("\n\n"):
-        head = head.rstrip("\n") + "\n\n"
-    if tail and not tail.startswith("\n"):
-        section = section + "\n"
-    return head + section + tail
+    return tree_doc.replace_section(text, SECTION, section)
 
 
 def _marker(topic: str) -> str:
-    return f'<!-- hippo-topic topic="{norm_topic(topic)}" -->'
+    return tree_doc.marker_line("hippo-topic", topic=norm_topic(topic))
 
 
-def gist_of(path: str) -> str:
-    try:
-        with open(path, encoding="utf-8") as f:
-            text = f.read(3000)
-    except OSError:
-        return ""
-    m = re.search(r"(?m)^>\s*(.+?)\s*$", text)
-    g = m.group(1).strip() if m else ""
-    return "" if g.startswith("(한 줄 요약") else g
+gist_of = tree_doc.gist_of
 
 
 def guide_of(path: str) -> str:
@@ -744,7 +698,7 @@ def _stamp_path(topic: str) -> str:
 def _stamp(topic: str, path: str) -> None:
     try:
         with open(_stamp_path(topic), "w") as f:
-            f.write(str(os.path.getmtime(path)))
+            f.write(tree_doc.stamp_value(path))
     except OSError:
         pass
 
@@ -804,18 +758,14 @@ def refresh_topic(topic: str, db_path: Optional[str] = None, guide: str = "") ->
     path = doc_path(topic)
     os.makedirs(os.path.dirname(path), exist_ok=True)
     if os.path.exists(path):
-        text = open(path, encoding="utf-8").read()
-        if not MARKER_RE.search(text[:1500]):
-            text = _marker(topic) + "\n" + text
+        text = tree_doc.ensure_marker(open(path, encoding="utf-8").read(), _marker(topic), MARKER_RE, head_chars=1500)
     else:
-        title = topic or "(뿌리 — 아직 가지가 없는 용례)"
         guide = guide or seed_guides(topic)      # 껍데기의 guide: 줄은 씨앗(guide_db topic)으로
-        text = (f"{_marker(topic)}\n# 실행기억 — {title}\n> {GIST_PLACEHOLDER}\n"
-                + (f"guide: {guide}\n" if guide else "")
-                + f"\n{LEDGER}\n- {datetime.now().strftime('%Y-%m-%d')} 가지 생성\n")
+        text = tree_doc.skeleton(_marker(topic), f"실행기억 — {topic or '(뿌리 — 아직 가지가 없는 용례)'}", GIST_PLACEHOLDER,
+                                 extra=[f"guide: {guide}" if guide else ""])
     text = _replace_section(text, render_section(rows_of(topic, db_path, kind="word")))
     phrases = rows_of(topic, db_path, kind="phrase")
-    if phrases or re.search(r"(?m)^## 관용구\s*$", text):
+    if phrases or tree_doc.split_section(text, PHRASES)[1]:     # 절이 이미 있으면 비어도 다시 그린다
         text = _replace_phrases(text, render_phrases(phrases))
     with open(path, "w", encoding="utf-8") as f:
         f.write(text)
@@ -863,11 +813,10 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
     if not os.path.exists(path):
         return {"synced": False, "reason": "no_doc"}
     try:
-        mtime = os.path.getmtime(path)
-        stamp = float(open(_stamp_path(topic)).read() or 0)
-    except Exception:
-        mtime, stamp = 1.0, 0.0
-    if mtime <= stamp + 1e-6:
+        stamp = open(_stamp_path(topic)).read() or 0
+    except OSError:
+        stamp = 0
+    if not tree_doc.is_stale(path, stamp):
         return {"synced": False, "reason": "fresh"}
     text = open(path, encoding="utf-8").read()
     known, fresh = parse_section(text)
@@ -884,24 +833,21 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
     try:
         now = datetime.now().isoformat()
-        seen = set()
-        for k in known:
-            r = existing.get(k["id"])
-            if r is None:
-                fresh.append({"intent": k["intent"], "ibl_code": k["ibl_code"]})
-                continue
-            seen.add(k["id"])
+        # 세 갈래 계획은 기질(tree_doc.plan_sync), 실행(SQL·구문 관문·색인)은 여기 — 색인에 없는 id 는 새 줄로 온다.
+        def _changed(k, r):
             _alias_changed = ("alias" in k) and (k.get("alias") or "") != (r.get("alias") or "")
-            if k["intent"] != r["intent"] or k["ibl_code"] != r["ibl_code"] or _alias_changed:
-                why = _syntax_reason(k["ibl_code"])
-                if why:
-                    rejected.append(f"#{k['id']}: {why}")
-                    continue
-                conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, alias=?, updated_at=? WHERE id=?",
-                             (k["intent"], k["ibl_code"], (k.get("alias") if "alias" in k else r.get("alias")) or "", now, k["id"]))
-                updated += 1
-                _index(db_path, k["id"], k["intent"], k["ibl_code"])
-        gone = [mid for mid in existing if mid not in seen]
+            return k["intent"] != r["intent"] or k["ibl_code"] != r["ibl_code"] or _alias_changed
+        plan = tree_doc.plan_sync(known, fresh, list(existing.values()), key=lambda r: r["id"], changed=_changed)
+        for k, r in plan["update"]:
+            why = _syntax_reason(k["ibl_code"])
+            if why:
+                rejected.append(f"#{k['id']}: {why}")
+                continue
+            conn.execute("UPDATE ibl_examples SET intent=?, ibl_code=?, alias=?, updated_at=? WHERE id=?",
+                         (k["intent"], k["ibl_code"], (k.get("alias") if "alias" in k else r.get("alias")) or "", now, k["id"]))
+            updated += 1
+            _index(db_path, k["id"], k["intent"], k["ibl_code"])
+        gone = [r["id"] for r in plan["delete"]]
         if gone:
             ph = ",".join("?" * len(gone))
             conn.execute(f"DELETE FROM ibl_examples WHERE id IN ({ph})", gone)
@@ -913,7 +859,7 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
                 vconn.execute(f"DELETE FROM ibl_examples_vec WHERE rowid IN ({ph})", gone); vconn.commit(); vconn.close()
             except Exception:
                 pass
-        for f in fresh:
+        for f in plan["insert"]:
             why = _syntax_reason(f["ibl_code"])
             if why:
                 rejected.append(f"{f['ibl_code'][:40]}: {why}")

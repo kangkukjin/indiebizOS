@@ -25,10 +25,11 @@ import time
 from typing import Any, Dict, List, Optional, Tuple
 
 import forage_memory as FM
+import tree_doc   # 가지 문서 기질(표식·절·갱신 기록·도장·동기화 계획) — 세 트리 기억이 한 벌을 쓴다(2026-09-18)
 
 DOC_DIR = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "data", "forage_surveys"))
 SECTION = "## 단언"
-MARKER_RE = re.compile(r"<!--\s*forage-doc\s+body=\"([^\"]*)\"\s+root=\"([^\"]*)\"(?:\s+dir_id=\"[^\"]*\")?\s*-->")
+MARKER_RE = tree_doc.marker_re("forage-doc", "body", "root")   # 옛 dir_id 같은 뒤 속성은 기질이 허용한다
 LINE_RE = re.compile(r"^- \[(identity|convention|dead_branch|substrate)\]\s*([⚑↓≈?]*)\s*(.*?)\s*(?:‹(.*?)›)?\s*$")
 SECTION_NOTE = ("<!-- 기계가 읽는 절: 한 줄 = 단언 하나. `- [종류]` 뒤 표식 ⚑영토 ↓하위에도 적용 ≈의미적 ?의심 · "
                 "끝의 ‹확신 · 시각 · 출처 · prune: 이유›는 메타. 줄을 고치면 색인이 따라온다(recall 이 문서 시각을 본다). -->")
@@ -121,17 +122,11 @@ def doc_path_at(body: str, root: str) -> str:
 
 
 def _marker_line(body: str, root: str) -> str:
-    return f'<!-- forage-doc body="{body}" root="{root}" -->'
+    return tree_doc.marker_line("forage-doc", body=body, root=root)
 
 
 def _read_marker(path: str) -> Optional[Tuple[str, str]]:
-    try:
-        with open(path, encoding="utf-8") as f:
-            head = f.read(2000)
-    except OSError:
-        return None
-    m = MARKER_RE.search(head)
-    return (m.group(1), m.group(2)) if m else None
+    return tree_doc.read_marker(path, "forage-doc", ("body", "root"))
 
 
 def _scan_docs() -> List[Tuple[str, str, str]]:
@@ -254,11 +249,9 @@ def render_section(rows: List[Dict[str, Any]]) -> str:
 
 def parse_section(text: str) -> List[Dict[str, Any]]:
     """`## 단언` 절 → [{locus, kind, claim, territory, generalizes, prior_class, surface_flag, confidence, prune_reason}]"""
-    if SECTION not in text:
+    body = tree_doc.split_section(text, SECTION)[1]
+    if not body:
         return []
-    body = text.split(SECTION, 1)[1]
-    m = re.search(r"^## ", body, re.M)
-    body = body[:m.start()] if m else body
     out, locus = [], None
     for raw in body.splitlines():
         line = raw.rstrip()
@@ -285,17 +278,8 @@ def parse_section(text: str) -> List[Dict[str, Any]]:
 
 
 def _replace_section(text: str, section: str) -> str:
-    if SECTION in text:
-        i = text.index(SECTION)
-        rest = text[i + len(SECTION):]
-        m = re.search(r"^## ", rest, re.M)
-        tail = rest[m.start():] if m else ""
-        return text[:i] + section + ("\n" + tail if tail else "")
-    # 갱신 기록 앞에 끼워 넣는다(있으면), 없으면 끝에
-    if "## 갱신 기록" in text:
-        i = text.index("## 갱신 기록")
-        return text[:i] + section + "\n" + text[i:]
-    return text.rstrip() + "\n\n" + section
+    """절을 통째로 바꾼다(없으면 갱신 기록 앞에). 기질이 절 앞을 빈 줄로 띄우므로 옛 문서는 첫 재렌더에 빈 줄 하나가 정돈된다."""
+    return tree_doc.replace_section(text, SECTION, section)
 
 
 def _stamp_key(path: str) -> str:
@@ -304,7 +288,7 @@ def _stamp_key(path: str) -> str:
 
 def _stamp(path: str) -> None:
     try:
-        FM.set_meta(_stamp_key(path), str(os.path.getmtime(path)))
+        FM.set_meta(_stamp_key(path), tree_doc.stamp_value(path))
     except OSError:
         pass
 
@@ -497,35 +481,34 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
         parsed = [q for q in parsed
                   if not any(_canon(q["locus"], body) == d or _canon(q["locus"], body).startswith(d + "/") for d in deeper)]
     existing = rows_for_doc(body, root)
-    ex_by = {(_canon(r["locus"], r["body"]), r["kind"], _claim_key(r["claim"])): r for r in existing}
-    seen = {(_canon(p["locus"], body), p["kind"], _claim_key(p["claim"])) for p in parsed}
+    # 세 갈래 계획은 기질(tree_doc.plan_sync) — 포식의 식별자는 id 가 아니라 (장소·종류·문장)이고, 같은 줄은 표식(⚑↓≈?)을 늘 갱신한다.
+    def _key(r):
+        return (_canon(r["locus"], r.get("body") or body), r["kind"], _claim_key(r["claim"]))
+    plan = tree_doc.plan_sync(parsed, [], existing, key=_key, changed=lambda p, r: True)
     inserted, updated = 0, 0
     conn = FM._connect()
     try:
         now = FM._now()
         # 삭제를 먼저 — 같은 (locus, kind) 의 옛 줄이 남아 있으면 새 줄 삽입이 유일 키에 걸린다
         deleted = 0
-        for key, r in ex_by.items():
-            if key not in seen:
-                conn.execute("DELETE FROM forage_map WHERE id=?", (r["id"],))
-                deleted += 1
-        for p in parsed:
-            key = (_canon(p["locus"], body), p["kind"], _claim_key(p["claim"]))
-            r = ex_by.get(key)
-            if r:
-                conn.execute("UPDATE forage_map SET territory=?, generalizes=?, prior_class=?, surface_flag=?, "
-                             "confidence=COALESCE(?, confidence), prune_reason=? WHERE id=?",
-                             (1 if p["territory"] else 0, 1 if p["generalizes"] else 0, p["prior_class"],
-                              1 if p["surface_flag"] else 0, p["confidence"], p["prune_reason"], r["id"]))
-                updated += 1
-            else:
-                conn.execute("INSERT INTO forage_map (body, locus, kind, claim, prior_class, confidence, provenance, "
-                             "prune_reason, generalizes, last_seen, locus_mtime, surface_flag, territory) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                             (body, key[0], p["kind"], FM.mask_secrets(p["claim"]), p["prior_class"], p["confidence"] or 0.9,
-                              json.dumps({"sources": ["doc"], "formed_at": now, "observed": [f"문서 편집: {os.path.basename(path)}"]}, ensure_ascii=False),
-                              p["prune_reason"], 1 if p["generalizes"] else 0, now, FM._locus_mtime(key[0]),
-                              1 if p["surface_flag"] else 0, 1 if p["territory"] else 0))
-                inserted += 1
+        for r in plan["delete"]:
+            conn.execute("DELETE FROM forage_map WHERE id=?", (r["id"],))
+            deleted += 1
+        for p, r in plan["update"]:
+            conn.execute("UPDATE forage_map SET territory=?, generalizes=?, prior_class=?, surface_flag=?, "
+                         "confidence=COALESCE(?, confidence), prune_reason=? WHERE id=?",
+                         (1 if p["territory"] else 0, 1 if p["generalizes"] else 0, p["prior_class"],
+                          1 if p["surface_flag"] else 0, p["confidence"], p["prune_reason"], r["id"]))
+            updated += 1
+        for p in plan["insert"]:
+            loc = _canon(p["locus"], body)
+            conn.execute("INSERT INTO forage_map (body, locus, kind, claim, prior_class, confidence, provenance, "
+                         "prune_reason, generalizes, last_seen, locus_mtime, surface_flag, territory) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                         (body, loc, p["kind"], FM.mask_secrets(p["claim"]), p["prior_class"], p["confidence"] or 0.9,
+                          json.dumps({"sources": ["doc"], "formed_at": now, "observed": [f"문서 편집: {os.path.basename(path)}"]}, ensure_ascii=False),
+                          p["prune_reason"], 1 if p["generalizes"] else 0, now, FM._locus_mtime(loc),
+                          1 if p["surface_flag"] else 0, 1 if p["territory"] else 0))
+            inserted += 1
         conn.commit()
     finally:
         conn.close()
@@ -557,12 +540,7 @@ def lazy_sync(locus: str, body: Optional[str] = None) -> List[Dict[str, Any]]:
     """locus 를 덮는 문서가 색인보다 새로우면(사람·AI 가 문서를 고쳤으면) 색인을 맞춘다. 회상 앞에서 부른다 — stat 한 번."""
     out = []
     for p in _covering_docs(locus, body):
-        try:
-            mtime = os.path.getmtime(p)
-        except OSError:
-            continue
-        stamp = FM.get_meta(_stamp_key(p))
-        if stamp is None or float(stamp) + 1e-6 < mtime:   # 우리 쓰기는 정확히 그 mtime 으로 도장 찍는다 — 그 뒤의 편집만 잡는다
+        if tree_doc.is_stale(p, FM.get_meta(_stamp_key(p))):   # 우리 쓰기는 정확히 그 mtime 으로 도장 찍는다 — 그 뒤의 편집만 잡는다
             out.append(sync_doc_to_db(p))
     return out
 
@@ -698,10 +676,7 @@ def _append_record(doc_path: str, line: str) -> None:
     """문서 `## 갱신 기록` 에 한 줄(없으면 절을 만든다)."""
     if not os.path.exists(doc_path):
         return
-    text = open(doc_path, encoding="utf-8").read()
-    if "## 갱신 기록" not in text:
-        text = text.rstrip() + "\n\n## 갱신 기록\n"
-    text = text.rstrip("\n") + "\n" + line + "\n"
+    text = tree_doc.append_ledger(open(doc_path, encoding="utf-8").read(), line)
     open(doc_path, "w", encoding="utf-8").write(text)
     _stamp(doc_path)
 

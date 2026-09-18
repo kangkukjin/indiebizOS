@@ -49,6 +49,38 @@ def _fetch_sections(jobs):
     return load_module("web_search_io").fetch_sections(jobs)
 
 
+def _batch_search(tool_input: dict, inner: str, source: str, project_path) -> dict:
+    """[sense:search]{queries:[…]} 의 소스 공통 팬아웃 — 검색어마다 같은 소스를 병렬로 돌려 `query` 태그된 행을 한 통화로.
+
+    계약은 gnews 배치와 같다: sections 로 검색어별 건수, 실패한 검색어는 errors 에 남기고 성공한 행은 보존한다.
+    0건 검색어는 실패가 아니다(그 섹션 count 0)."""
+    from types import SimpleNamespace
+    raw = tool_input.get("queries")
+    if isinstance(raw, str):
+        raw = re.split(r"[,\n]", raw)
+    queries = [str(q).strip() for q in (raw or []) if str(q).strip()]
+    if not queries:
+        return {"success": False, "error": "검색어(queries)가 비었습니다."}
+    base = {k: v for k, v in tool_input.items() if k not in ("queries", "query")}
+
+    def one(q):
+        r = json.loads(execute({**base, "query": q}, SimpleNamespace(tool_name=inner, project_path=project_path)))
+        section = {"items": [{**it, "query": q} for it in (r.get("items") or [])]}
+        if not r.get("success"):
+            section["error"] = r.get("error") or "검색 실패"
+        return section
+
+    fetched = _fetch_sections([(q, (lambda qq: (lambda: one(qq)))(q)) for q in queries])
+    items = [it for sec in fetched for it in sec.get("items") or []]
+    resp = {"success": True, "source": source, "queries": queries, "count": len(items),
+            "sections": [{"query": q, "count": len(sec.get("items") or [])} for q, sec in zip(queries, fetched)],
+            "items": items}
+    errors = [{"query": q, "error": sec["error"]} for q, sec in zip(queries, fetched) if sec.get("error")]
+    if errors:
+        resp.update(success=False, errors=errors, error=f"검색 {len(errors)}개 실패; 다른 검색 결과는 items에 보존")
+    return resp
+
+
 # ============== 뉴스 검색 관련 함수 ==============
 # clean_html은 common.html_utils에서 임포트
 
@@ -778,6 +810,10 @@ def execute(tool_input: dict, context):
             return format_json({"success": False,
                                 "error": f"알 수 없는 source: {source} (가능: ddg/naver/gnews/hn/guardian)"})
         from types import SimpleNamespace
+        # 배치 팬아웃은 소스 공통이다(2026-09-18, ep3854: naver·ddg 검색 26건을 한 건씩 호출 — queries 가 뉴스 소스에만 있었다).
+        # gnews·hn 은 자기 배치가 헤드라인·편집장을 겸하므로 그대로 두고, 나머지 소스는 여기서 같은 계약으로 편다.
+        if tool_input.get("queries") and source not in ("gnews", "hn"):
+            return format_json(_batch_search(tool_input, inner, source, project_path))
         return execute(tool_input, SimpleNamespace(tool_name=inner, project_path=project_path))
 
     # DuckDuckGo 웹 검색 (search source:ddg 내부 갈래)

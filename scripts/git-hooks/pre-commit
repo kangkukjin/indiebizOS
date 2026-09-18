@@ -231,6 +231,21 @@ if echo "$staged" | grep -qE '^(backend/.*\.py|scripts/check_backend_layers\.py)
   echo "[pre-commit] backend 층 OK ✓"
 fi
 
+# 연상 조립 관문 (2026-09-18): 회상 공급원은 associative_recall 밖에서 못 부르고, 1상을 연 자리는 2상을 닫는다.
+# 세 조립 지점이 각자 부분집합을 부르다 갈라진 부류(프리뷰가 세계 지도를 통째로 못 받음)의 재발 차단.
+if echo "$staged" | grep -qE '^(backend/.*\.py|scripts/check_recall_assembly\.py)$'; then
+  repo_root=$(git rev-parse --show-toplevel)
+  echo "[pre-commit] 연상 조립 관문 실행..."
+  if ! python3 "$repo_root/scripts/check_recall_assembly.py"; then
+    echo "" >&2
+    echo "[pre-commit] 연상 조립 위반 — 커밋 차단." >&2
+    echo "[pre-commit]   • 공급원 호출은 backend/cognition/associative_recall.py 의 공급원 함수로 옮기고 정책 표(SOURCES/CHANNELS)에 등록" >&2
+    echo "[pre-commit]   • _associate()/begin() 을 부른 함수는 같은 함수에서 .route(request_type) 로 닫기" >&2
+    exit 1
+  fi
+  echo "[pre-commit] 연상 조립 OK ✓"
+fi
+
 # 파일 크기 규칙(1500줄) — 게이트 없는 규칙은 선호일 뿐(2026-07 모듈화가 3주 만에
 # 재위반된 실증에서 가드화). 기존 부채는 BASELINE 래칫 동결(악화 금지), 신규 위반 차단.
 if echo "$staged" | grep -qE '\.(py|ts|tsx|js)$|^data/guides/[^/]+\.md$|^data/lifecycle_policy\.yaml$'; then

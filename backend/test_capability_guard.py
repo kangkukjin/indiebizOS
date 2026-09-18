@@ -4,6 +4,7 @@ import threading
 from types import SimpleNamespace as NS
 
 import boot_paths  # noqa: F401
+import associative_recall
 import pytest
 
 import capability_guard as cg
@@ -209,7 +210,7 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
     class Runner(CognitivePipelineMixin):
         config = {"name": "worker"}
         project_path = supervisor.project_path
-        _build_execution_memory = lambda *a, **kw: ("", 0, "")
+        _associate = associative_recall.stub()
         _decide_request_type = lambda *a: ("EXECUTE" if route == "execute" else "THINK", None)
         _run_consciousness_or_reuse = lambda *a, **kw: {"task_framing": "이미지 확인",
             **({"achievement_criteria": "이미지 설명"} if route in {"criteria", "legacy"} else {})}
@@ -239,7 +240,7 @@ def test_pipeline_adopts_one_final_and_saves_same_body(supervisor, monkeypatch, 
     runner.ai = NS(_provider=None, process_message_stream=execute)
     supervisor.runner = runner
     monkeypatch.setattr("supervision_bus.current", lambda: None if route == "legacy" else supervisor)
-    monkeypatch.setattr("pursuit_bind.prepare", lambda mem: (mem, False))
+    monkeypatch.setattr("pursuit_bind.prepare", lambda: ("", False))
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     monkeypatch.setattr("reframe.open_turn", lambda *a, **kw: None)

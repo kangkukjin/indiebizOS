@@ -82,7 +82,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
     },
     "cognition": {
-        "catalog_recall", "world_context",
+        "catalog_recall", "world_context", "associative_recall",
         "capability_guard", "capability_guard_runtime",
         "member_runner", "member_session", "client_workflows",
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",

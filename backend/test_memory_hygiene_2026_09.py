@@ -24,6 +24,12 @@ sys.path.insert(0, __file__.rsplit('/', 1)[0])
 import boot_paths  # noqa: F401
 
 
+def _memory_map_xml(runner) -> str:
+    """공통 흐름의 심층기억 지도 공급원을 러너 하나로 부른다(2026-09-18 — 믹스인 메서드에서 모듈 함수로)."""
+    import associative_recall as AR
+    return AR._memory_map(AR.RecallRequest(runner, "", [], "pipeline"), None).text
+
+
 # ---------- ① 삭제 의미 ----------
 
 def test_clear_conversations_drops_checkpoints(tmp_path, monkeypatch):
@@ -244,7 +250,7 @@ def test_memory_map_falls_back_to_self_agent_id(tmp_path, monkeypatch, memory_db
         def __init__(self):
             self.project_path = tmp_path
             self.agent_id = "agent_z"
-    assert Stub()._memory_map_scent() == ""
+    assert _memory_map_xml(Stub()) == ""
     assert seen["agent_id"] == "agent_z"
 
 
@@ -259,7 +265,7 @@ def test_memory_map_lists_branches_not_contents(tmp_path, monkeypatch, memory_db
         def __init__(self):
             self.project_path = project
             self.agent_id = "agent_z"
-    xml = Stub()._memory_map_scent()
+    xml = _memory_map_xml(Stub())
     assert "<memory_map" in xml and "가족/어머니 (1)" in xml
     assert "수원" not in xml
 

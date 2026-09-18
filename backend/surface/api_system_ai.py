@@ -371,14 +371,19 @@ class RecallPreviewRequest(BaseModel):
     message: str
 
 
-# 연상 묶음의 채널 태그 → 조종실 표시 라벨. _build_execution_memory 가 이 순서로 결합한다.
+# 연상 묶음의 채널 태그 → 조종실 표시 라벨. associative_recall.SOURCES 의 순서(주입 순서)와 같다.
 _RECALL_CHANNELS = [
     ("execution_memory", "실행기억 — 해마 (과거 IBL 용례 연상)"),
     ("memory_map", "심층 기억 지도 — 주제 가지 목차 (크면 최상위만)"),
     ("recalled_memory", "선택된 심층 기억 — 가지 먼저 고른 3건 (공통 회상)"),
     ("guide_map", "가이드 목차 — 실행기억 가지별 가이드 파일명 (지도 전체는 recall store:실행)"),
-    ("forage_memory", "포식 기억 — 냄새지도 + 주인모델"),
-    ("disk_skeleton", "디스크 골격 — 집중 폴더 지도 (포식 의도일 때만)"),
+    ("forage_memory", "포식 기억 — 자동 주입 없음(어휘가 입구: [self:forage]{op:\"recall\"})"),
+    ("connected_limbs", "연결된 손발 — 라이브 게스트 PC 이름 (있을 때만)"),
+    ("repair_outcome", "자기수리 결말 — 미보고 판정 (있을 때만)"),
+    ("decision_ledger", "결정 원장 — 활성 판정 다이제스트 + 질의 일치 상세"),
+    ("method_map", "세계 지도(글자 채널) — 이름이 실제로 나온 어휘와 관계 조각"),
+    ("world_map", "세계 지도(최상위 분야) — 어휘 수"),
+    ("world_memory", "세계의 기억 — 가지 먼저 고른 어휘 3건 (의미 채널)"),
 ]
 
 
@@ -386,9 +391,10 @@ _RECALL_CHANNELS = [
 def recall_preview(req: RecallPreviewRequest):
     """조종실 '기억 회상 검증' — 에이전트 0단계(연상)가 주입하는 기억 묶음을 실행 없이 미리 본다.
 
-    시스템 AI 러너의 _build_execution_memory(해마+심층+포식+디스크골격, LLM 0·부작용 없음)를
-    그대로 호출해 *실제 주입물과 동일한* XML 을 채널별로 갈라 돌려준다 — 가공하면 검증창이
-    거짓말을 하게 되므로 원문 그대로. sync def 라 FastAPI 스레드풀에서 돈다(임베딩 검색 블로킹).
+    시스템 AI 러너의 공통 회상 흐름(associative_recall, LLM 0·부작용 없음)을 파이프라인과 같은 두 상으로
+    돌려 *실제 주입물과 동일한* XML 을 채널별로 갈라 돌려준다 — 가공하면 검증창이 거짓말을 하게 되므로
+    원문 그대로. 2상은 분류 없이 THINK 로 닫는다(세계 지도 글자 채널이 실린다). sync def 라 FastAPI
+    스레드풀에서 돈다(임베딩 검색 블로킹). 종전엔 1상만 불러 세계 지도·세계의 기억이 빠졌었다(2026-09-18 수리).
     """
     import re as _re
     message = (req.message or "").strip()
@@ -398,7 +404,8 @@ def recall_preview(req: RecallPreviewRequest):
     runner = get_system_ai_runner()
     if runner is None:
         raise HTTPException(status_code=503, detail="시스템 AI 러너가 아직 준비되지 않았습니다")
-    xml, top_score, top_code = runner._build_execution_memory(message)
+    recall = runner._associate(message, channel="preview").route("THINK")
+    xml, top_score, top_code = recall.text(), recall.reflex.score, recall.reflex.code
 
     sections = []
     for tag, label in _RECALL_CHANNELS:
@@ -410,6 +417,7 @@ def recall_preview(req: RecallPreviewRequest):
         "top_code": top_code or "",
         "total_chars": len(xml or ""),
         "sections": sections,
+        "presented": recall.presented(),
     }
 
 

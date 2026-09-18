@@ -119,7 +119,8 @@ indiebizOS/
 │   ├── cognition/       # 인지(분류→의식→실행→평가→증류)
 │   │   ├── agent_runner.py   # 에이전트 실행 엔진 (파이프라인 오케스트레이션)
 │   │   ├── agent_cognitive.py # 인지 믹스인 합성 지점 + 코어
-│   │   ├── cognitive_recall.py # 0단계 연상 회상 (해마+심층+포식+디스크골격+손발 프레즌스)
+│   │   ├── associative_recall.py # 0단계 연상 회상의 공통 흐름 — 정책 표(SOURCES/CHANNELS)·주체 관문·조립·제시 기록 (2026-09-18)
+│   │   ├── cognitive_recall.py # 러너 쪽 입구(_associate 위임)+포식 의도 단서
 │   │   ├── cognitive_consciousness.py # 의식·무의식 분류·framing 캐시·SESSION_RESET
 │   │   ├── cognitive_distill.py / cognitive_eval.py / cognitive_trace.py
 │   │   ├── consciousness_agent.py # 의식 에이전트 — 메타 판단(골격 task_framing·assumptions) + achievement_criteria; 수리 교리는 fragments/14 를 repair 턴에만 적재
@@ -272,10 +273,10 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 - **에이전트 핀(overrides)**: 특정 에이전트/역할만 기어 무시하고 티어 고정. 우선순위 override > role > gear. **키 = `resolve(role, agent_id)` 에 실리는 이름 그대로** — 프로젝트 에이전트만 `{project}:{agent_id}` 복합키(동명 격리)이고, 나머지는 단일 이름(`system_ai`·`forage`·`system_ai_delegation` 같은 역할·경로 이름)이다. 계기판 열거는 `api_config._list_pinnable_agents()` 하나뿐이라, 거기 없는 키로 핀이 걸리면 **효력은 있는데 화면에 없는 유령 핀**이 된다 — 그래서 그 함수는 실재 에이전트에 더해 *현재 걸려 있는 핀 전부*를 흡수해 낸다(2026-09-04).
 - **per-agent 모델 폐지**: 에이전트 yaml의 provider/model/apiKey 무시 — 모델*과 키*는 실행 티어 상속. 모달리티(이미지·동영상·임베딩)는 기어 밖 패스스루.
 
-- **연상 단계 (단계 0)** — `agent_cognitive._build_execution_memory()`
-  - 해마(`ibl_usage_rag.build_execution_memory()`)와 심층메모리 지도(`_memory_map_scent()`, `<memory_map>` 목차만 — 내용은 recall 로)를 합쳐 단일 묶음 반환
-  - 반환: `(xml, top_score, top_code)` — 검색 한 번으로 점수/코드까지 확보 (이전 3회 중복 호출 제거)
-  - 무의식/의식의 계획/실행이 같은 묶음을 공유. 감독·검수에는 목표·규정·실제 증거를 전달
+- **연상 단계 (단계 0)** — 공통 흐름 `associative_recall`(2026-09-18): 러너 `_associate()`(1상) → `route(request_type)`(2상) → `text()`
+  - 1상(분류 전): 해마(`ibl_usage_rag.build_execution_memory()`)·심층메모리 지도+선택(`<memory_map>`·`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장. 2상(분류 뒤): 세계 지도. 어느 채널에 어느 기억이 도는지는 정책 표 `SOURCES`/`CHANNELS`(포식=자동 주입 없음)
+  - 반사 신호: `recall.reflex`(점수·코드) — 검색 한 번으로 확보. 제시 기록: `recall.presented` 사건
+  - 무의식/의식의 계획/실행이 같은 묶음을 공유. 감독·검수에는 목표·규정·실제 증거를 전달. 관문 `scripts/check_recall_assembly.py`
 - **Reflex 분기** — `cognitive_consciousness._decide_request_type()` 이 판정(공통 파이프라인 `agent_pipeline` 이 호출)
   - `top_score >= REFLEX_SCORE_THRESHOLD (0.85)` 이면 무의식 모델 호출 스킵
   - reflex_hint로 매칭된 IBL 코드를 실행 에이전트에 힌트로 전달
@@ -305,6 +306,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 166 액션(sense 43·self 51·limbs 14·others 17·engines 19·table 22)·50 도구 패키지 + 5 extensions·backend .py 417(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 166 액션(sense 43·self 51·limbs 14·others 17·engines 19·table 22)·50 도구 패키지 + 5 extensions·backend .py 418(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-09-14): 주요 기능에 어휘 레고박스·안경 메뉴 도구 창·재기동 제어·실행 통합 조회 추가, 파이프라인 [4]/[5] 경계(의식 없는 경로 평가 생략·최종 응답 후 기억 선별)·Reflex 분기 소유자·평가 축 라벨 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

@@ -7,6 +7,7 @@ from types import SimpleNamespace
 import pytest
 
 import boot_paths  # noqa: F401
+import associative_recall
 import thread_context as tc
 from conscious_supervisor import Supervisor
 from supervision_bus import current, wrap
@@ -311,7 +312,7 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     class Runner(CognitivePipelineMixin):
         config = {"name": "worker"}
         project_path = Path(supervisor.project_path)
-        _build_execution_memory = lambda *a, **kw: ("", 0, "")
+        _associate = associative_recall.stub()
         _decide_request_type = lambda *a: ("EXECUTE" if lane == "REFLEX" else "THINK" if lane in {"NO_FRAMING", "NO_CRITERIA"} else lane,
                                           "[self:time]" if lane == "REFLEX" else None)
         _run_consciousness_or_reuse = lambda *a: None if lane == "NO_FRAMING" else {"task_framing": "문제", "achievement_criteria": "" if lane == "NO_CRITERIA" else "기준"}
@@ -340,7 +341,7 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     runner.ai._provider = None
     runner.ai.process_message_stream = stream
     supervisor.runner = runner
-    monkeypatch.setattr("pursuit_bind.prepare", lambda mem: (mem, False))
+    monkeypatch.setattr("pursuit_bind.prepare", lambda: ("", False))
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     monkeypatch.setattr("system_ai_core._switch_to_midtier", lambda *a: None)

@@ -96,10 +96,10 @@ def test_real_prepare_preserves_pursuit_and_episode_link(tmp_path, monkeypatch, 
                                         json.dumps(REVIEW) if recover else raw])
     try:
         if recover:
-            memory, changed = pb.prepare("")
+            memory, changed = pb.prepare()
             assert changed and row["id"] in memory and binding.review == REVIEW
         else:
-            memory, changed = pb.prepare("")
+            memory, changed = pb.prepare()
             assert changed and binding.row is None  # 기억 연결 실패는 새 의식으로 넘긴다.
         assert len(calls) == 3
         assert ledger.get(row["id"])["framing"] == "기존 규정"

@@ -14,17 +14,18 @@ from test_supervisor_episode_repairs import memory_harness  # noqa: F401
 @pytest.mark.parametrize("message", ["직행이면 점심을 어디서 먹을까?", "파일은 어디에 있나?"])
 def test_recall_never_opens_user_disks(message, monkeypatch):
     from cognitive_recall import CognitiveRecallMixin
+    import associative_recall as AR
     import ibl_usage_rag
     import file_index
     monkeypatch.setattr(file_index, "disk_skeleton", lambda *a, **k: pytest.fail("회상 중 디스크 탐색"))
     monkeypatch.setattr(ibl_usage_rag, "build_execution_memory", lambda *a: ("reference", .5, "code"))
+    monkeypatch.setattr("decision_ledger.scent_xml", lambda q="": "decision")
+    monkeypatch.setattr(AR, "SOURCES", tuple(s for s in AR.SOURCES if s.name in ("hippocampus", "decision_ledger")))
     runner = CognitiveRecallMixin()
     runner.config = {}
-    for name in ("_memory_map_scent", "_guide_map_scent", "_limb_presence_scent", "_pending_repair_scent"):
-        monkeypatch.setattr(runner, name, lambda: "map")
-    monkeypatch.setattr(runner, "_decision_scent", lambda message: "decision")
-    text, score, code = runner._build_execution_memory(message)
-    assert "reference" in text and "map" in text and score == .5 and code == "code"
+    r = runner._associate(message).route(None)
+    text = r.text()
+    assert "reference" in text and "decision" in text and r.reflex.score == .5 and r.reflex.code == "code"
     assert "disk_skeleton" not in text
 
 

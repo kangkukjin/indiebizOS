@@ -7,8 +7,8 @@ owner_code: >
   system_ai_memory.py, conversation_db.py, system_docs.py, prompt_builder.py,
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
-  catalog_recall.py, tree_recall.py
-last_updated: 2026-09-17
+  catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
+last_updated: 2026-09-18
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -41,8 +41,8 @@ see_also: [architecture.md, ibl.md]
 | 7 | **공간 기억** (포식) | **포식 기억(냄새지도)** | 정본=문서 트리 `data/forage_surveys/<몸>/<경로>/memory.md` · `forage_memory.db:forage_map`=색인 | "어디에 무엇이 사는가" — 디스크·웹 포식 경험 누적 |
 | 8 | **세계 기억** (지식의 단서) | **세계의 지도** + 가지 사전 | `data/knowledge_catalog/world.yaml` · `atlas/*.yaml` · `branches.yaml` | "세계에 어떤 방법·도구가 있는가" — 이름·분류·관계만. 내용은 모델 가중치에 |
 
-> **핵심 연결**: 매 요청마다 단계 0에서 생성되는 **연상기억(associative memory)** 은
-> #4 해마(`<execution_memory>`)와 #5 심층메모리의 **지도**(`<memory_map>`, 목차만·내용 없음)를 **하나로 합성**한다.
+> **핵심 연결**: 매 요청마다 단계 0에서 생성되는 **연상기억(associative memory)** 은 **공통 흐름 `backend/cognition/associative_recall.py`**(2026-09-18, 정본 `docs/ASSOCIATIVE_RECALL_COMMON_FLOW_2026_09_18.md`)가 조립한다 —
+> 정책 표 `SOURCES`(공급원·상·주체 관문·자동 여부)와 `CHANNELS`(채널별 켬/끔)대로 #4 해마(`<execution_memory>`)·#5 심층메모리의 **지도**(`<memory_map>`)와 선택 기억·가이드 목차·손발·수리 결말·결정 원장(1상, 분류 전)과 #8 세계 지도(2상, 분류 뒤)를 **한 묶음**으로 만들고, 반사 신호(`recall.reflex`)를 이름 붙여 내며, 제시를 `recall.presented` 사건으로 남긴다. 검색기·후보의 뜻·성공의 정의는 기억별로 남는다(해마 전용 인코더 유지). 포식 기억은 표에 `auto=False` 로 실려 자동 주입되지 않는다. 관문 `scripts/check_recall_assembly.py`, 동작 불변 고정물 `scripts/recall_golden.py`.
 > 해마는 fine-tuned 임베딩으로 검색된다. 심층메모리는 **재학습하지 않는 기본 인코더**(`ko-sroberta`)를 쓰며, 지도와 함께 가지 먼저 고른 기억 3건이 자동 주입된다(2026-09-17 — §5). 모자라면 AI 가 `[self:memory]{op:"recall", node}` 로 가지를 연다.
 > #8 세계 기억(`<method_map>`·`<world_map>`·`<world_memory>`)은 심층기억과 **같은 가지-먼저 회상 함수**(`tree_recall.py`)를 쓰지만 채널은 따로이며, 해마 점수·Reflex 판정·개인 사실 회상에는 섞이지 않는다.
 
@@ -279,7 +279,7 @@ Reflex·강제 역할·문맥 갱신에도 적용한다. 과거 에이전트 허
 (주체·날짜·턴·토큰 — 내용 없음)에만 남는다. 회원 로컬 영속(대화·기억)은 2단계(손발)에서. 정본
 `docs/EXTERNAL_SERVICE_APP_HANDOFF.md` §3-0·§6.
 
-모든 회상 공급원(해마 `_search_active`·연상기억 `_build_execution_memory`·심층메모리 검색·포식 `recall`)과 해마 캐시 키가
+모든 회상 공급원(해마 `_search_active`·연상기억 공통 흐름 `associative_recall`(personal 공급원 전부)·심층메모리 검색·포식 `recall`)과 해마 캐시 키가
 **요청 주체(principal)** 축을 본다. 주체가 `owner` 가 아니면(이웃 부탁·포털·회원·무인증) 주인의 기억을 내지 않고 증류도
 쓰지 않는다 — 실행 에이전트 이름이 아니라 전송 관문이 세운 주체가 축이다(`base/principal.py`, communication.md "행위자
 봉투"). 회원 자기 기억의 회상은 외부 서비스 앱 1단계(손발 회상)에서 연다. 시험 `backend/test_principal_isolation_2026_09_14.py`.
@@ -291,10 +291,10 @@ Reflex·강제 역할·문맥 갱신에도 적용한다. 과거 에이전트 허
   │
   ├─[2 작업기억]  최근 7턴 회상 (Observation Masking)
   ├─[과제]       선택 → 미반영 진행 따라잡기 → 규정 재검토 (모든 실행 경로)
-  ├─[4b 해마]     유사 IBL 선례 검색 → 점수 산출 ┐
-  ├─[5 심층메모리] 기억 지도(가지 목차) 합성      ┘→ 연상기억(<execution_memory>+<memory_map>) 합성 — 내용은 recall 로
+  ├─[4b 해마]     유사 IBL 선례 검색 → 반사 신호(recall.reflex) ┐ 공통 흐름 associative_recall 1상(분류 전) —
+  ├─[5 심층메모리] 기억 지도(가지 목차)+가지 먼저 고른 3건      ┘ 가이드 목차·손발·수리 결말·결정 원장까지 한 묶음(<execution_memory>+<memory_map>+<recalled_memory>+…)
   ├─[7 포식기억]   일반 턴 자동 주입 없음(2026-09-03 폐지) — AI 가 [self:forage]{op:"recall", locus|query} 로 직접 연다. 프로젝트 에이전트만 자기 폴더 문서를 안정 프롬프트에 통째(<project_memory>)
-  ├─[8 세계기억]   과제 연결 뒤·의식 이전 1회: 글자 일치(<method_map>) + 가지 먼저 고른 의미 3건(<world_map>+<world_memory>) — 이름·관계만, 모델 호출 없음
+  ├─[8 세계기억]   공통 흐름 2상(분류·과제 연결 뒤·의식 이전 1회): 글자 일치(<method_map>) + 가지 먼저 고른 의미 3건(<world_map>+<world_memory>) — 이름·관계만, 모델 호출 없음. 제시 기록 = recall.presented 사건
   ├─[결정원장]     사용자 판정 다이제스트 상시 + 질의 일치 상세 (<decision_ledger>, 정본=data/decisions.yaml)
   │     │
   │     ├ 해마 점수 높음 → Reflex(EXECUTE): 의식 건너뜀, 중급 모델로 즉시 실행
@@ -313,7 +313,7 @@ Reflex·강제 역할·문맥 갱신에도 적용한다. 과거 에이전트 허
 ```
 
 > **결정 원장** (2026-08-29 신설): `data/decisions.yaml` — 사용자가 내린 설계 판정(기각·채택·보류)의
-> 단일 원장. 회상 0단계(`cognitive_recall._decision_scent` → `decision_ledger.scent_xml`)가 활성 판정의
+> 단일 원장. 회상 0단계(`associative_recall` 의 `decision_ledger` 공급원 → `decision_ledger.scent_xml`)가 활성 판정의
 > 한 줄 다이제스트를 **상시** 주입하고(제안은 턴 *중간*에 생기므로 키워드 게이트만으로는 못 잡는다 —
 > ep 실측: 외부 조사 턴이 노드 스코핑 기각을 모르고 재제안), 질의가 keywords 에 걸리면 사유·출처
 > 상세를 얹는다. 추가·개정은 YAML 편집만(판정 이름을 코드에 넣지 말 것) · 뒤집힌 판정은 삭제 아닌
@@ -916,7 +916,8 @@ memories_vec (embedding float[768])   -- 2026-05-16 추가
 | `backend/cognition/ibl_usage_rag.py` | `build_execution_memory()` — (xml, top_score, top_code) 반환, `distill_experience()` |
 | `backend/datastore/ibl_usage_db.py` | 해마 검색 엔진 (시맨틱 + FTS5 폴백, 점수 0~1 정규화) |
 | `backend/ibl_embedding_trainer.py` | 해마 학습 스크립트 (베이스 모델에서 fine-tuning) |
-| `backend/cognition/cognitive_recall.py` | `_build_execution_memory()` — 해마+기억 지도 합성, `_memory_map_scent()` (agent_cognitive 믹스인) |
+| `backend/cognition/associative_recall.py` | 연상 공통 흐름 — `begin()`(1상)·`route()`(2상)·`text()`·`presented()`, 정책 표 `SOURCES`/`CHANNELS`, 공급원 함수(해마·심층 지도/선택·가이드·손발·수리·판정·세계) |
+| `backend/cognition/cognitive_recall.py` | 러너 쪽 입구 `_associate()`(위임만) + 포식 의도 단서 `_FORAGE_CUES` |
 | `data/packages/installed/tools/memory/memory_db.py` | 심층메모리 (시맨틱 우선 + LIKE 폴백, 2026-05-16 시맨틱 추가) |
 | `backend/services/chat_streams.py` | GUI/WS 실행 서비스 — 인지 파이프라인 호출·대화/작업 기록·스트림 전달 (인증/수신은 api_websocket) |
 | `backend/cognition/agent_communication.py` | 채널 경로 — 동일 패턴 (2026-05-17 중급 모델 전환 추가로 일관성 확보) |

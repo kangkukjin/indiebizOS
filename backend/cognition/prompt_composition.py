@@ -129,26 +129,23 @@ def _ibl_env_section(allowed_nodes=None, project_path=None, agent_id=None, allow
 
 
 def _recall_bundle(sample: str) -> str:
-    """실행기억 묶음 — 실제 러너의 _build_execution_memory(해마+지도 2종). 러너가 없으면 해마만."""
+    """연상 묶음 — 실행자와 같은 공통 흐름(associative_recall, 채널 sample). 러너가 없으면 러너 없는 조립(심층기억만 빠진다)."""
+    runner = None
     try:
         from system_ai_core import get_system_ai_runner
         runner = get_system_ai_runner()
-        if runner is not None:
-            xml, _score, _code = runner._build_execution_memory(sample)
-            return xml or ""
     except Exception as e:  # noqa: BLE001
-        logger.debug(f"[prompt_composition] 러너 회상 실패, 해마 단독으로 폴백: {e}")
+        logger.debug(f"[prompt_composition] 러너 없음, 러너 없는 조립으로: {e}")
     try:
-        from ibl_usage_rag import build_execution_memory
-        xml, _score, _code = build_execution_memory(sample)
-        return xml or ""
+        from associative_recall import begin
+        return begin(runner, sample, channel="sample").route("THINK").text()
     except Exception as e:  # noqa: BLE001
-        return f"(실행기억 조립 실패: {e})"
+        return f"(연상 조립 실패: {e})"
 
 
 def _recall_section(sample: str, layer: str = "turn") -> Dict[str, Any]:
     return _section("execution_memory", "실행기억 (해마 회상 + 심층 지도·선택 기억 + 가이드 목차)", layer, "memory",
-                    "cognitive_recall._build_execution_memory → ibl_usage_rag.build_execution_memory + hippo_tree",
+                    "associative_recall.begin → route — 공급원 정책 표 SOURCES(해마·심층·가이드·손발·수리·판정·세계)",
                     _recall_bundle(sample),
                     note="샘플 메시지로 실제 회상한 결과. 메시지마다 내용·분량이 달라진다(LLM 0, 임베딩 검색).")
 
@@ -447,7 +444,7 @@ def _assemble_consciousness(sample: str) -> Dict[str, Any]:
                  "conversation_db/system_ai_memory → history_excerpt → consciousness_agent._build_input", "",
                  note="이 샘플엔 이력이 없다. 실제 턴은 <turn index role>에 본문 또는 생략을 표시한 앞·뒤 발췌로 실린다. DB 발췌와 체크포인트를 의식 입구에서 다시 앞부분으로 자르지 않는다."),
         _section("execution_memory", "연상기억 (해마 + 지도)", "user", "memory",
-                 "cognitive_recall._build_execution_memory — 실행자와 *같은* 묶음", recall,
+                 "associative_recall — 실행자와 *같은* 묶음", recall,
                  note="실행자에게 가는 실행기억과 동일한 묶음이 의식 입력에도 실린다."),
         _section("available_tools", "<available_tools> 가용 도구", "user", "dynamic",
                  "system_ai_tools.get_all_system_ai_tools / agent_cognitive._get_available_tools",

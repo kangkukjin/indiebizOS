@@ -161,14 +161,14 @@ def test_map_falls_back_to_top_level_when_long(tmp_path, monkeypatch):
 
 
 def test_injection_block_and_no_block_without_related(TR, tmp_path, monkeypatch):
-    from cognitive_recall import CognitiveRecallMixin as M
+    import associative_recall as AR
     db = str(tmp_path / "memory_x.db"); _mk_memory_db(db)
-    m = M()
-    monkeypatch.setattr(M, "_deep_memory_db", lambda self: db)
-    xml = m._recalled_memory_scent("속초 호텔에서 요리할 수 있나")
+    scent = lambda q: AR._recalled_memory(AR.RecallRequest(None, q, [], "pipeline"), None).text
+    monkeypatch.setattr(AR, "deep_memory_db", lambda runner: db)
+    xml = scent("속초 호텔에서 요리할 수 있나")
     assert xml.startswith("<recalled_memory ") and "고른 가지:" in xml and "‹#1›" in xml and xml.count("\n- [") <= 3
-    monkeypatch.setattr(M, "_deep_memory_db", lambda self: "")
-    assert m._recalled_memory_scent("속초") == ""
+    monkeypatch.setattr(AR, "deep_memory_db", lambda runner: "")
+    assert scent("속초") == ""
 
 
 def test_world_dictionary_matches_the_tree():

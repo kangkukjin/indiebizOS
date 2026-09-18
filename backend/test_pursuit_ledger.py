@@ -1,5 +1,6 @@
 """과제 원장의 실제 SQLite 계약과 S1~S3. 모델/실사용 데이터 없이 경계를 검증한다."""
 import boot_paths  # noqa: F401
+import associative_recall
 import json
 from types import SimpleNamespace
 
@@ -70,7 +71,7 @@ def test_runner_config_identity_binds_without_thread_agent(tmp_path, monkeypatch
 
 def test_s1_same_pursuit_correction_rewrites_without_shrinking_goal(bound, row):
     bound.message = row['id'] + ' 아니 서울이 아니라 부산이야'
-    memory, needs_review = pb.prepare('memory')
+    memory, needs_review = pb.prepare()
     assert needs_review and bound.row['id'] == row['id']  # EXECUTE에서도 이 신호가 THINK 승격을 요구
     out = pb.run_consciousness(bound.runner, bound.message, [], memory)
     updated = bound.ledger.get(row['id'])
@@ -84,7 +85,7 @@ def test_s2_choose_old_pursuit_after_other_work(bound, row, monkeypatch):
     bound.ledger.create('다른 일', '다른 기준', 'unrelated')
     answers = iter([{'id': row['id']}, {'action': 'keep', 'criteria': '다음 단계'}])
     monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: next(answers))
-    memory, needs_review = pb.prepare('')
+    memory, needs_review = pb.prepare()
     assert not needs_review and bound.row['progress'] == '원본 수집 완료'
     assert row['id'] in memory and '<goal_criteria>' in memory
     assert '<pending>' not in memory  # 자기 running 턴을 미처리 과거로 오인하지 않는다
@@ -98,7 +99,7 @@ def test_current_consciousness_owns_criteria_despite_old_review(bound, row, monk
     monkeypatch.setattr(pb, 'ask_json', lambda *a, **k: {
         'action': action, 'criteria': '현재 질문에 답하지 말 것', 'amended_framing': '옛 규정'})
     bound.message = row['id'] + ' 부산 데이터는?'
-    memory, _ = pb.prepare('')
+    memory, _ = pb.prepare()
     out = pb.run_consciousness(bound.runner, bound.message, [], memory)
     assert out['task_framing'] == '부산의 월별 보고서를 만든다'
     assert out['achievement_criteria'] == '부산 데이터 조회'
@@ -109,7 +110,7 @@ def test_current_consciousness_owns_criteria_despite_old_review(bound, row, monk
 
 def test_ambiguous_selection_is_unbound(bound, monkeypatch):
     monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'id': None})
-    _, needs_review = pb.prepare('')
+    _, needs_review = pb.prepare()
     assert bound.row is None and not needs_review
 
 
@@ -129,7 +130,7 @@ def test_episode3762_wrong_selection_cannot_replace_current_question(bound, row,
         return {'action': 'detach' if reject_at == 'review' else 'keep',
                 'criteria': '월별 보고서 범위 밖이므로 답하지 않는다'}
     monkeypatch.setattr(pb, 'ask_json', judgment)
-    memory, _ = pb.prepare('원래 기억')
+    memory, _ = pb.prepare()
     if reject_at == 'review':
         assert bound.row is None and not bound.ledger.turns(row['id'])
     calls = []
@@ -219,7 +220,7 @@ def test_s3_pending_read_catches_up_before_execution(bound, row, monkeypatch):
     answers = iter([{'action': 'keep', 'criteria': ''}, {'progress': '보고서 생성 완료', 'next': 'PDF 검증'}])
     monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: next(answers))
     bound.message = row['id'] + ' 이어서'
-    memory, _ = pb.prepare('')
+    memory, _ = pb.prepare()
     assert '보고서 생성 완료' in memory and bound.row['next'] == 'PDF 검증'
     assert next(t for t in bound.ledger.turns(row['id']) if t['task_id'] == 'a')['state'] == 'applied'
 
@@ -248,11 +249,11 @@ def test_pending_summary_reports_all_bad_fields_before_foreground_continues(ledg
     token = pb._current.set(b)
     try:
         if recovers:
-            pb.prepare('')
+            pb.prepare()
             assert len(calls) == 3 and b.row['next'] == '현재 질문 검토'
         else:
             with pytest.raises(ValueError, match='진행 갱신'):
-                pb.prepare('')
+                pb.prepare()
             assert len(calls) == 3 and b.row is None
     finally:
         pb._current.reset(token)
@@ -269,7 +270,7 @@ def test_pending_failure_stops_execution_and_retains_raw(bound, row, monkeypatch
     monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'action': 'keep', 'criteria': ''}
                         if kwargs.get('kind') == 'review' else (_ for _ in ()).throw(ValueError('model unavailable')))
     with pytest.raises(ValueError, match='진행 갱신'):
-        pb.prepare('')
+        pb.prepare()
     assert bound.row is None
     t = bound.ledger.turns(row['id'])[0]
     assert t['response'] == 'file created' and t['error']
@@ -428,7 +429,7 @@ def test_pipeline_reflex_correction_and_durable_finish(tmp_path, monkeypatch):
         project_path = tmp_path
         full_calls = 0
         def _sync_execution_gear(self): pass
-        def _build_execution_memory(self, *a, **kw): return '', 0.99, 'lookup'
+        _associate = associative_recall.stub('', 0.99, 'lookup')
         def _decide_request_type(self, *a): return 'EXECUTE', 'lookup'
         def _run_consciousness(self, *a, **kw):
             self.full_calls += 1
@@ -469,7 +470,7 @@ def test_explicit_completed_pursuit_can_resume(bound, row, monkeypatch):
         c.execute("UPDATE pursuit_turn SET state='applied'")
     bound.message = row['id'] + ' 다시 이어가'
     monkeypatch.setattr(pb, 'ask_json', lambda p, **kwargs: {'action': 'keep', 'criteria': '재개'})
-    pb.prepare(''); bound.aliases = {'agent'}
+    pb.prepare(); bound.aliases = {'agent'}
     result = json.loads(execute_pursuit({'op': 'resume', 'why': '사용자 재개'}, 'agent', bound.task))
     assert result['result']['status'] == 'active'
 

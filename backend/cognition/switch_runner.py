@@ -187,14 +187,14 @@ class SwitchRunner:
 
             self._status(f"도구 {len(tools)}개 로드됨")
 
-            # 실행기억(해마) — 과거 성공 사례를 참조
+            # 연상 — 공통 흐름(associative_recall, 채널 switch: 종전대로 해마만). 러너는 어휘 범위만 가진 자리표.
             command = self.switch.get("command", "")
             execution_memory = ""
             try:
-                from ibl_usage_rag import build_execution_memory
-                from ibl_access import resolve_allowed_nodes
-                allowed_set = resolve_allowed_nodes(allowed_nodes) if allowed_nodes else None
-                execution_memory, _ts, _tc = build_execution_memory(command, allowed_set)
+                from types import SimpleNamespace
+                from associative_recall import begin
+                holder = SimpleNamespace(config={"allowed_nodes": allowed_nodes}, project_path=None)
+                execution_memory = begin(holder, command, channel="switch").route("EXECUTE").text()
                 if execution_memory:
                     self._status("실행기억 로드됨")
             except Exception as e:

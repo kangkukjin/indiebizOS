@@ -506,16 +506,9 @@ class AgentCommunicationMixin:
 
                 # AI 처리
                 if self.ai:
-                    # 실행기억 생성 + 메시지 앞에 주입 (에이전트 간 경로)
-                    exec_mem, _ts, _tc = self._build_execution_memory(content)
-                    # 세계의 기억은 개인 기억이 아니다 — 에이전트 간 경로도 같은 블록을 받는다(공통 회상 설계 §5.6).
-                    try:
-                        from catalog_recall import world_memory_for_turn
-                        _world = world_memory_for_turn(content)
-                        if _world:
-                            exec_mem = f"{exec_mem}\n{_world}" if exec_mem else _world
-                    except Exception as _e:
-                        print(f"   [세계의 기억] 실패 (무시): {_e}")
+                    # 연상 — 공통 흐름(associative_recall, 채널 agent_message: 분류가 없으므로 route(None)).
+                    #   세계의 기억은 개인 기억이 아니라 에이전트 간 경로도 같은 블록을 받는다(공통 회상 설계 §5.6).
+                    exec_mem = self._associate(content, channel="agent_message").route(None).text()
                     ai_message = f"{exec_mem}\n\n{content}" if exec_mem else content
                     history = []
 

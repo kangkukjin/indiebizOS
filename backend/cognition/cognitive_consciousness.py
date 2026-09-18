@@ -333,7 +333,7 @@ class CognitiveConsciousnessMixin:
         """사용자 요청을 SESSION_RESET / EXECUTE / THINK로 분류한다.
 
         무의식 에이전트 — 경량 AI 호출만 담당. Reflex 판정은
-        호출 측에서 단계 0(_build_execution_memory)의 top_score로 미리 분기한다.
+        호출 측에서 단계 0(associative_recall 의 반사 신호 recall.reflex)으로 미리 분기한다.
 
         execution_memory는 받지만 분류 입력에 합치지 않는다.
         unconscious_prompt.md 규칙: "현재 메시지만으로 판단한다."

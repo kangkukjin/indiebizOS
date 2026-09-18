@@ -159,9 +159,11 @@ class MemberRunner(AgentRunner):
             agent_role=self._load_role(), agent_notes="", available_tools=self._get_available_tools(),
             repair=False, revision=revision)
 
-    def _build_execution_memory(self, message, **kwargs):
-        # 로컬 SQLite 회상은 세션 입구에서 받아 회원 문맥으로만 전달한다.
-        return self.config.get("_member_memory", ""), 0.0, ""
+    def _associate(self, message, **kwargs):
+        # 로컬 SQLite 회상은 세션 입구에서 받아 회원 문맥으로만 전달한다 — 주인 기억(1상)은 돌지 않고,
+        # 2상(세계 지도·세계의 기억)은 개인 기억이 아니라 공통 흐름대로 돈다.
+        from associative_recall import stub
+        return stub(self.config.get("_member_memory", ""))(self, message, **kwargs)
 
     def select_local_memory(self, message):
         """회원 원문만 선별한다. 주인 기억을 검색하거나 허브 증류 큐에 적재하지 않는다."""

@@ -388,11 +388,10 @@ class CognitivePipelineMixin:
         # 상주 러너의 바탕 모델 교체이므로 턴 사본에 적으면 안 된다. reflex/force_role
         # 스왑보다 먼저라는 순서는 그대로다(복원도 새 기어로 돌아온다).
 
-        # 1. 연상 — 실행기억/심층 목차 (사용자 디스크 탐색은 도구 실행에서만)
-        # ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 필터버블 드리프트 방지.
-        execution_memory, hippo_score, top_code = self._build_execution_memory(
-            message, action_hint=action_hint, include_related=(force_role != "forage")
-        )
+        # 1. 연상 1상 — 공통 흐름(associative_recall): 실행기억·심층 지도/선택·가이드 목차·손발·수리 결말·판정 원장.
+        #    사용자 디스크 탐색은 도구 실행에서만. ★포식(force_role="forage")은 심층 관련기억 주입을 끈다 — 필터버블 드리프트 방지.
+        recall = self._associate(message, history=history, action_hint=action_hint, deep=(force_role != "forage"))
+        hippo_score, top_code = recall.reflex.score, recall.reflex.code
         if cancel_check and cancel_check():
             yield {"type": "error", "content": "작업이 취소되었습니다."}
             return
@@ -417,30 +416,22 @@ class CognitivePipelineMixin:
 
         # 과제 선택·재검토는 실행 차선과 독립. 정정이면 빠른 실행도 의식을 깨운다.
         from pursuit_bind import prepare as _p_prepare
-        execution_memory, _p_review = _p_prepare(execution_memory)
+        _p_block, _p_review = _p_prepare()
+        recall.attach("pursuit", _p_block)
         if _p_review and request_type != "REPAIR":
             request_type, reflex_hint = "THINK", None
         context_update = request_type == "CONTEXT_UPDATE"
         if context_update:
             from turn_scope import CONTEXT_UPDATE
-            execution_memory += "\n" + CONTEXT_UPDATE
+            recall.attach("context_update", CONTEXT_UPDATE)
             request_type = "EXECUTE"
 
-        # 세계의 지도: 모든 에이전트·역할에 관련 어휘의 작은 조각을 의식과 실행에 공유한다.
-        from catalog_recall import recall_for_turn
-        catalog = recall_for_turn(self, message, history, request_type=request_type,
-                                  reflex_hint=reflex_hint, force_role=force_role,
-                                  context_update=context_update)
+        # 연상 2상 — 세계 지도(글자 채널)·세계의 기억(의미 채널). 어느 채널이 도는지는 associative_recall.SOURCES 가 정한다.
+        recall.route(request_type, reflex_hint=reflex_hint, force_role=force_role, context_update=context_update)
         if cancel_check and cancel_check():
             yield {"type": "error", "content": "작업이 취소되었습니다."}
             return
-        if catalog:
-            execution_memory += "\n" + catalog
-        # 세계의 기억(의미 채널): 지도 + 가지 먼저 고른 어휘 3건 — 심층기억과 같은 공통 회상(tree_recall).
-        from catalog_recall import world_memory_for_turn
-        world = world_memory_for_turn(message, catalog)
-        if world:
-            execution_memory += "\n" + world
+        execution_memory = recall.text()
 
         # 3. 의식(THINK) / reflex·force_role 모델 스왑
         from episode_logger import record_trajectory_event

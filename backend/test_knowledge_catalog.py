@@ -9,6 +9,7 @@ from xml.etree import ElementTree
 
 import pytest
 import boot_paths  # noqa: F401
+import associative_recall
 import catalog_recall as recall
 import knowledge_catalog as catalog
 import principal
@@ -247,7 +248,7 @@ def test_actual_pipeline_passes_identical_snippet_once(tmp_path, monkeypatch, is
     monkeypatch.setattr("system_ai_core._switch_to_midtier", lambda *a: None)
     monkeypatch.setattr("system_ai_core._switch_to_role", lambda *a: None)
     runner._build_system_prompt_split = split
-    runner._build_execution_memory = lambda *a, **kw: ("original memory", 0, "")
+    runner._associate = associative_recall.stub("original memory").__get__(runner)
     if route == "REPAIR":
         import thread_context
         thread_context.set_task_origin("user")

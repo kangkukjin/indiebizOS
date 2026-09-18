@@ -136,23 +136,24 @@ def test_concurrent_owner_and_bodies(hippo):
 
 
 def test_recall_mixin_yields_nothing_for_body(monkeypatch):
+    """주인 것(1상 전부)은 주체가 owner 가 아니면 통째로 닫힌다 — 공통 흐름의 personal 관문."""
     import ibl_usage_rag as rag
+    import associative_recall as AR
     from cognitive_recall import CognitiveRecallMixin
     monkeypatch.setattr(rag, "build_execution_memory", lambda m, a=None: (f"<execution_memory>{MARK}</execution_memory>", 0.9, "[x:y]"))
+    monkeypatch.setattr("decision_ledger.scent_xml", lambda q="": f"<decision_ledger>{MARK}</decision_ledger>")
+    monkeypatch.setattr(AR, "SOURCES", tuple(s for s in AR.SOURCES if s.name in ("hippocampus", "decision_ledger")))
 
     class Agent(CognitiveRecallMixin):
         config = {}
-        def _memory_map_scent(self): return f"<memory_map>{MARK}</memory_map>"
-        def _guide_map_scent(self): return ""
-        def _limb_presence_scent(self): return ""
-        def _pending_repair_scent(self): return ""
-        def _decision_scent(self, m): return f"<decision_ledger>{MARK}</decision_ledger>"
 
     a = Agent()
-    xml, score, code = a._build_execution_memory("정리해줘")
-    assert MARK in xml
+    r = a._associate("정리해줘").route(None)
+    assert MARK in r.text() and (r.reflex.score, r.reflex.code) == (0.9, "[x:y]")
+    assert [b.source for b in r.blocks] == ["hippocampus", "decision_ledger"]
     with P.narrow(P.body("9", 4), "t"):
-        assert a._build_execution_memory("정리해줘") == ("", 0.0, "")
+        r = a._associate("정리해줘").route(None)
+        assert r.text() == "" and (r.reflex.score, r.reflex.code) == (0.0, "") and r.blocks == []
 
 
 def test_distill_skipped_for_body(monkeypatch):

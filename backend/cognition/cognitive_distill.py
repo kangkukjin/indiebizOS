@@ -71,7 +71,7 @@ class CognitiveDistillMixin:
         "포식 기억", "포식기억", "냄새지도", "forage_memory", "forage_agent",
         "foraging_system", "foraging_agent", "owner_model", "주인모델",
         "의식 에이전트", "무의식 에이전트", "무의식 분류", "인지 파이프라인",
-        "인지 아키텍처", "cognitive_pipeline", "_build_execution_memory",
+        "인지 아키텍처", "cognitive_pipeline", "associative_recall",
         "execution_memory", "메모리 동기화", "achievement_criteria",
         "냄새(scent)", "reflex 분기", "reflex)", "증류 단계",
     )

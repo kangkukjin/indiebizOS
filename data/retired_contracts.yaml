@@ -521,3 +521,16 @@ retired:
     instead: 이름과 관계를 짧게 전달하고 상세 설명·근거·해시는 내부 기록과 조회에 보존한다.
     phrases:
       - '등재는 설치·권한·최신 계약·현재 조건 충족의 증명이 아닙니다.'
+
+  - id: recall_assembly_per_call_site
+    retired: 2026-09-18
+    reason: 연상 조립을 호출 지점마다 손으로 하던 계약(러너의 _build_execution_memory 튜플 + 세계 지도를 뒤에 덧붙임)을 폐기했다 — 세 지점이 각자 부분집합을 불러 갈라졌다.
+    instead: associative_recall.begin()/route()/text() 한 흐름. 공급원과 채널 정책은 SOURCES/CHANNELS 표, 관문은 scripts/check_recall_assembly.py.
+    phrases:
+      - '_build_execution_memory'
+      - '_memory_map_scent'
+      - '_recalled_memory_scent'
+      - '_guide_map_scent'
+      - '_limb_presence_scent'
+      - '_pending_repair_scent'
+      - '_decision_scent'

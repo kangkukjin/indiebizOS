@@ -57,7 +57,7 @@ EXECUTE/Reflex                          [2] 과제 규정 재검토 → 유효�
 [5] 증류 (해마 경험 증류 + 심층메모리 증류)
 ```
 
-- **연상기억**: 파이프라인 최상단에서 1회 생성. 해마(과거 IBL 사례)와 심층메모리(사용자 사실)를 합친 self-describing XML 묶음 (`<execution_memory>` + `<related_memory>`)
+- **연상기억**: 파이프라인 최상단에서 1회 생성 — 공통 흐름 `associative_recall`(2026-09-18)이 정책 표대로 해마(`<execution_memory>`)·심층 지도/선택(`<memory_map>`/`<recalled_memory>`)·가이드 목차·손발·수리 결말·결정 원장(1상), 분류 뒤 세계 지도(`<method_map>`/`<world_map>`/`<world_memory>`, 2상)를 한 묶음으로 조립하고 `recall.presented` 로 제시를 기록한다. 네 호출 지점(파이프라인·에이전트 간 통신·조종실 검증창·스위치)은 같은 흐름을 쓴다
 - **분류 실패 경계**: 분류 응답은 허용된 단일 토큰만 채택한다. API 오류·빈 응답·잘못된 출력은 실패로 기록하고 기존 기본 경로 `EXECUTE`로 간다. OpenAI SDK 계열 동기 호출은 스트림 오류와 부분 응답을 성공 텍스트로 반환하지 않는다. [ep3796 오류 전달 수리](../../docs/EPISODE_3796_CLASSIFICATION_FAILURE_2026_09_15.md).
 - **단일 검색**: 검색 1회로 top_score까지 확보 (이전 3회 중복 호출 제거, 2026-05-17)
 - **해마**: 베이스 `ko-sroberta-multitask`에서 fine-tuning. **실제 런타임 검색 ~99%** (라이브 세대·측정표는 memory.md '현재 라이브 모델' — 재학습은 **로컬 M4 Pro**가 정본 경로, 클라우드는 옛 맥에어 OOM 한정이었다). 모델은 런타임 천장이라 재학습 거의 무차별 — 어휘 아닌 intent 의미를 매칭해 vocab에 강건. 절차·함정은 `data/guides/hippocampus_retraining.md`.
@@ -493,7 +493,7 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 
 <!-- IBL_STATS:START -->
 - 도구 패키지: **50개** (+ 백엔드 extensions **5개**), IBL: **6노드 166 액션** (sense 43·self 51·limbs 14·others 17·engines 19·table 22)
-- backend **.py 417개**(test 제외, git 추적 기준) — 층 디렉토리 `base 52 · datastore 56 · ibl 58 · cognition 72 · services 37 · surface 79`(+ common 20·providers 13·channels 4·drivers 3). 가이드 **82개**(guide_db 등록 **81**)
+- backend **.py 418개**(test 제외, git 추적 기준) — 층 디렉토리 `base 52 · datastore 56 · ibl 58 · cognition 73 · services 37 · surface 79`(+ common 20·providers 13·channels 4·drivers 3). 가이드 **82개**(guide_db 등록 **81**)
 - op 분기 액션 **76개** — 핸들러 구현은 전부 `_OP_DISPATCHERS` 표준(**33개 패키지**, 나머지는 패키지 밖 backend-native), `--check` 가 src↔tool.json↔handler 를 AST 정확 비교. 부작용 여부는 통화(`returns`)에서 분리된 `side_effect:` 선언(true 45·false 24·미선언 97)
 <!-- IBL_STATS:END -->
 - 활성 프로젝트: 24개 (시스템 프로젝트 수동모드·앱모드 포함), 에이전트 33개 (2026-08-22 실측)

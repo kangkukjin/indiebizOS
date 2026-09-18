@@ -345,10 +345,11 @@ def connection_prompt(message, history, rows, *, selected=None):
             "먼저 지시 대상이 해소된 뒤에만 같은 목표 안의 후속 질문인지 판단한다.")
 
 
-def prepare(memory):
+def prepare():
+    """과제 원장 블록(목록·본문)과 재검토 여부. 블록은 associative_recall 이 문맥에 끼운다 — 조립은 한 곳이다(2026-09-18)."""
     b = current()
     if not b:
-        return memory, False
+        return "", False
     catalog = b.ledger.list(limit=100)
     rows = catalog["items"]
     for pid in re.findall(r"\bpursuit_[0-9a-f]{32}\b", b.message):
@@ -356,7 +357,7 @@ def prepare(memory):
         if not any(r["id"] == pid for r in rows):
             rows.append(explicit)
     if not rows:
-        return memory, False
+        return "", False
     index = render_index(rows, catalog["total"])
     # ID/고유 title 명시는 선택만 생략한다. 무관한 주제 사이의 대명사는 최근 대화로 판단한다.
     hits = [r for r in rows if r["id"] in b.message or r["title"] in b.message]
@@ -366,26 +367,26 @@ def prepare(memory):
         selection = connection_judgment(
             connection_prompt(b.message, b.history, rows), kind="selection")
         if selection is None:
-            return memory + "\n" + index, True
+            return index, True
         selected = next((r for r in rows if r["id"] == selection.get("id")), None)
     if not selected:
-        return memory + "\n" + index, False
+        return index, False
     # 검색 결과를 연결 확정 전에 검토한다. 오선택이면 옛 과제에 턴도 요약도 쓰지 않는다.
     b.review = connection_judgment(
         connection_prompt(b.message, b.history, rows, selected=selected), kind="review")
     if b.review is None:
         b.review = {}
-        return memory + "\n" + index, True
+        return index, True
     if b.review.get("action") not in {"keep", "amend", "rewrite", "detach"}:
         raise ValueError("과제 규정 검토 응답이 잘못됐습니다")
     if b.review["action"] == "detach":
-        return memory + "\n" + index, False
+        return index, False
     # 관련성이 확인된 과제만 이전 진행을 따라잡는다.
     summarize_pending(b.ledger, selected["id"])
     b.bind(b.ledger.get(selected["id"]))
     pending = [t for t in b.ledger.turns(b.row["id"], pending_only=True) if t["task_id"] != b.task]
     body = render_body(b.row, pending)
-    return memory + "\n" + index + "\n" + body, b.review["action"] != "keep"
+    return index + "\n" + body, b.review["action"] != "keep"
 
 
 def framing_patch(out, previous=None, broken="", evidence="", task=""):

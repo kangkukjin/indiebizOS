@@ -173,10 +173,10 @@ def test_guide_map_lists_only_guides_and_injection_drops_execution_map(env):
     assert HT.guide_map_text() == "- 보고서: ai_trend_report.md, deep_research.md"
     assert "투자 (1)" in HT.map_text(db)                           # 내부 지도는 그대로
 
-    from cognitive_recall import CognitiveRecallMixin as RecallMixin
-    xml = RecallMixin()._guide_map_scent()
+    import associative_recall as AR
+    xml = AR._guide_map(AR.RecallRequest(None, "", [], "pipeline"), None).text
     assert xml.startswith("<guide_map ") and "ai_trend_report.md" in xml and "투자" not in xml
-    assert not hasattr(RecallMixin, "_execution_map_scent")
+    assert not any(s.name == "execution_map" or s.tag == "execution_map" for s in AR.SOURCES)
 
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     live = [os.path.join(root, "data/common_prompts", n) for n in ("consciousness_prompt.md", "base_prompt_v6.md")]

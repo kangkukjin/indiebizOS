@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 import boot_paths  # noqa: F401
+import associative_recall
 from test_conscious_supervisor import supervisor  # noqa: F401
 from test_supervisor_episode_repairs import memory_harness  # noqa: F401
 
@@ -53,7 +54,7 @@ def test_pipeline_queues_only_after_final_delivery(supervisor, monkeypatch, endi
     class Runner(CognitivePipelineMixin):
         config = {"name": "worker"}
         project_path = Path(supervisor.project_path)
-        _build_execution_memory = lambda *a, **kw: ("", 0, "")
+        _associate = associative_recall.stub()
         _decide_request_type = lambda *a: ("THINK", None)
         _run_consciousness_or_reuse = lambda *a: {"task_framing": "문제", "achievement_criteria": "기준"}
         _consciousness_needs_repair = lambda *a: False
@@ -80,7 +81,7 @@ def test_pipeline_queues_only_after_final_delivery(supervisor, monkeypatch, endi
     runner.ai.process_message_stream = execute
     supervisor.runner = runner
     monkeypatch.setattr(supervisor, "finalize", finalize)
-    monkeypatch.setattr("pursuit_bind.prepare", lambda mem: (mem, False))
+    monkeypatch.setattr("pursuit_bind.prepare", lambda: ("", False))
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     stream = runner._cognitive_stream_body("사용자 원문", [])

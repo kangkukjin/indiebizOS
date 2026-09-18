@@ -56,6 +56,7 @@
     "cognition/agent_pipeline",
     "cognition/agent_runner",
     "cognition/ai_agent",
+    "cognition/associative_recall",
     "cognition/body_ask",
     "cognition/capability_guard",
     "cognition/capability_guard_runtime",
@@ -402,8 +403,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 363,
-    "engine": 337,
+    "total": 364,
+    "engine": 338,
     "blocklist": 26
   }
 }

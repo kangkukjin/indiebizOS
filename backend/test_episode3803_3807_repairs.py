@@ -6,6 +6,7 @@ from pathlib import Path
 from types import SimpleNamespace as NS
 
 import boot_paths  # noqa: F401
+import associative_recall
 import pytest
 
 from test_conscious_supervisor import supervisor  # noqa: F401
@@ -29,7 +30,7 @@ def test_repair_candidate_can_return_to_normal_execution(supervisor, monkeypatch
     class Runner(CognitivePipelineMixin):
         config = {"name": "worker"}
         project_path = Path(supervisor.project_path)
-        _build_execution_memory = lambda *a, **kw: ("", 0, "")
+        _associate = associative_recall.stub()
         _decide_request_type = lambda *a: ("REPAIR", None)
         _tag_override = lambda *a: tag
         _run_consciousness_or_reuse = lambda *a, **kw: framing
@@ -44,7 +45,7 @@ def test_repair_candidate_can_return_to_normal_execution(supervisor, monkeypatch
     runner.ai._provider = None
     runner.ai.process_message_stream = lambda **kw: iter([{"type": "final", "content": "완료"}])
     supervisor.runner, supervisor.enabled = runner, False
-    monkeypatch.setattr("pursuit_bind.prepare", lambda mem: (mem, False))
+    monkeypatch.setattr("pursuit_bind.prepare", lambda: ("", False))
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     monkeypatch.setattr("red_grant.issue_grant", lambda **kw: grants.append(kw))

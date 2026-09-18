@@ -64,7 +64,8 @@ indiebizOS/
 │   ├── cognition/       # 인지(분류→의식→실행→평가→증류)
 │   │   ├── agent_runner.py   # 에이전트 실행 엔진 (파이프라인 오케스트레이션)
 │   │   ├── agent_cognitive.py # 인지 믹스인 합성 지점 + 코어
-│   │   ├── cognitive_recall.py # 0단계 연상 회상 (해마+심층+포식+디스크골격+손발 프레즌스)
+│   │   ├── associative_recall.py # 0단계 연상 회상의 공통 흐름 — 정책 표(SOURCES/CHANNELS)·주체 관문·조립·제시 기록 (2026-09-18)
+│   │   ├── cognitive_recall.py # 러너 쪽 입구(_associate 위임)+포식 의도 단서
 │   │   ├── cognitive_consciousness.py # 의식·무의식 분류·framing 캐시·SESSION_RESET
 │   │   ├── cognitive_distill.py / cognitive_eval.py / cognitive_trace.py
 │   │   ├── consciousness_agent.py # 의식 에이전트 — 메타 판단(골격 task_framing·assumptions) + achievement_criteria; 수리 교리는 fragments/14 를 repair 턴에만 적재

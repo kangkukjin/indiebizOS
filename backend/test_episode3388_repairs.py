@@ -8,6 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 import boot_paths  # noqa: F401
+import associative_recall
 import thread_context as tc
 import episode_logger as el
 from agent_pipeline import CognitivePipelineMixin
@@ -64,8 +65,7 @@ class Runner(CognitivePipelineMixin, CognitiveConsciousnessMixin, CognitiveEvalM
                                   _custom_execute_tool=lambda *a, **kw: {'success': True})
     def _sync_execution_gear(self):
         pass
-    def _build_execution_memory(self, *a, **kw):
-        return '', 0, ''
+    _associate = associative_recall.stub()
     def _decide_request_type(self, *a):
         return 'THINK', None
     def _load_role(self):

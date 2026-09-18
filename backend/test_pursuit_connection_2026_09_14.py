@@ -95,7 +95,7 @@ def test_goal_based_connection_can_record_new_subtopic(tmp_path, monkeypatch):
     monkeypatch.setattr(pb, "ask_json", judgment)
     token = pb._current.set(b)
     try:
-        memory, needs_review = pb.prepare("")
+        memory, needs_review = pb.prepare()
         assert b.row["id"] == row["id"] and not needs_review
         assert [kind for kind, _ in prompts] == ["selection", "review"]
         result = json.loads(execute_pursuit({"op": "note", "id": row["id"],

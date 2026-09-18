@@ -25,6 +25,7 @@ on:
       - 'scripts/check_string_returns.py'
       - 'scripts/check_render_core.py'
       - 'scripts/check_backend_layers.py'
+      - 'scripts/check_recall_assembly.py'
       - 'scripts/check_tracked_ignored.py'
       - 'scripts/check_pinned_deps.py'
       - '.gitignore'
@@ -131,6 +132,19 @@ jobs:
         run: python scripts/check_backend_layers.py --self-test
       - name: backend 층 검사
         run: python scripts/check_backend_layers.py
+
+  # 연상 조립 관문 (2026-09-18): 회상 공급원 호출은 associative_recall 안에만, 1상을 연 자리는 2상을 닫는다. 의존성 0.
+  recall-assembly:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+      - name: 관문 자체 회귀
+        run: python scripts/check_recall_assembly.py --self-test
+      - name: 연상 조립 검사
+        run: python scripts/check_recall_assembly.py
 
   # pytest 스위트 (2026-08-05 감사 부채 ⑧): 고아 테스트 5개를 CI 시민으로.
   # -m "not local" — 해마 DB·임베딩 모델이 필요한 측정성 테스트는 로컬 전용

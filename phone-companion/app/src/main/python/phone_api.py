@@ -1595,6 +1595,12 @@ def serve(port=8765, base_path=None):
         _start_hub_registration(int(port))
     except Exception as e:
         print(f"[phone_api] 허브 등록 기동 스킵: {e}")
+    # 재무: 결제 알림 포획 → 폰 원장 수거 → PC 원장과 머지(포획소가 /finance/sync/run 을 부른다).
+    try:
+        import phone_finance_sync
+        phone_finance_sync.install(app, _mac_post_json, lambda: _scratch)
+    except Exception as e:
+        print(f"[phone_api] 재무 동기화 기동 스킵: {e}")
     config = uvicorn.Config(
         app, host=_bind,
         port=int(port), log_level="info", loop="asyncio")

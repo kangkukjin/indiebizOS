@@ -233,6 +233,11 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         #  과금되는 것을 원천 차단한다(토큰 로딩이 실패해 _effective_token 이 None 인 코너 포함).
         #  명시적으로 API 키(sk-ant-api…)를 준 경우에만 API 과금 경로를 연다.
         #  ANTHROPIC_API_KEY 는 os.environ(.env)에 그대로 남아 *다른* 프로바이더에서는 계속 쓰인다.
+        # ★턴 안 문맥 압축(2026-09-18): CLI 의 auto-compact 창을 세션 리셋 문턱(SESSION_RESET_TOKEN_THRESHOLD)에
+        #   맞춘다. 기본 'auto' 는 모델 창(1M) 기준이라 실측 244K 까지 자란 턴에서도 압축이 한 번도 돌지 않았다.
+        #   값은 CLI 가 받는 정수 토큰(100k~1M). 턴 안(압축)과 턴 사이(리셋)가 같은 잣대 하나를 본다.
+        #   사건은 stream-json `system/compact_boundary` → _note_compaction 이 센다.
+        env["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] = str(int(self.SESSION_RESET_TOKEN_THRESHOLD))
         tok = self._effective_token
         if tok and tok.startswith("sk-ant-api"):
             env["ANTHROPIC_API_KEY"] = tok
@@ -667,6 +672,11 @@ class ClaudeCodeProvider(CliSubprocessProvider):
                     },
                     None,
                 ))
+
+        elif etype == "system" and event.get("subtype") == "compact_boundary":
+            # 턴 안 압축 사건(창은 _build_env 의 CLAUDE_CODE_AUTO_COMPACT_WINDOW) — 세기만 한다.
+            meta = event.get("compact_metadata") or {}
+            self._note_compaction({k: meta.get(k) for k in ("trigger", "pre_tokens", "post_tokens") if meta.get(k) is not None})
 
         elif etype == "result":
             final_text = event.get("result") or accumulated_text

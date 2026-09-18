@@ -625,6 +625,26 @@ class CliSubprocessProvider(BaseProvider):
 
     # ================= 공통 몸통 =================
 
+    def _note_compaction(self, detail: Optional[Dict] = None) -> None:
+        """CLI 가 **턴 안에서** 문맥을 압축했다는 사건 — 압축이 실제로 도는지 세는 유일한 자리.
+
+        2026-09-18 실측(09-15~18 실행 60회): 압축 0회. 한 턴이 76라운드 동안 문맥을 창 끝까지 키우며
+        라운드마다 통째 재전송했다(입력 1,224만 토큰 중 70% 가 누적분 재전송). `base.py` 의 롤링 압축은
+        in-process 프로바이더 것이라 CLI 경로엔 닿지 않았고, 세션 리셋 관문은 다음 턴 시작에만 걸린다.
+        그래서 두 CLI 의 자체 auto-compact 문턱을 세션 리셋과 같은 잣대(SESSION_RESET_TOKEN_THRESHOLD)로
+        내렸다 — codex 는 `-c model_auto_compact_token_limit`, claude_code 는 env
+        `CLAUDE_CODE_AUTO_COMPACT_WINDOW`. 사건은 `context.compacted`(trajectory_event) 로 남는다."""
+        try:
+            from model_call_context import fields
+            record_trajectory_event("context.compacted", {
+                **fields(), "provider": self.CLI_LABEL,
+                "threshold_tokens": int(self.SESSION_RESET_TOKEN_THRESHOLD),
+                **{k: v for k, v in (detail or {}).items() if isinstance(v, (int, float, str, bool))},
+            })
+        except Exception:
+            pass
+        self._log(f"문맥 압축(auto-compact) — 문턱 {int(self.SESSION_RESET_TOKEN_THRESHOLD):,} 토큰 {detail or ''}")
+
     def _log(self, msg: str):
         print(f"[{self.CLI_LABEL}/{self.agent_name}] {msg}")
 

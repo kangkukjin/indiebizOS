@@ -283,6 +283,58 @@ def test_codex_native_web_search_is_disabled_under_both_config_keys():
         )
 
 
+def test_cli_providers_compact_inside_a_turn_at_the_reset_threshold(monkeypatch):
+    """턴 안 압축 문턱 = 세션 리셋 문턱(창의 절반) — 두 CLI 모두 (2026-09-18).
+
+    실측 09-15~18: 실행 60회 중 압축 0회. 76라운드 턴이 문맥을 창 끝까지 키워 라운드마다 통째 재전송
+    (입력 1,224만 토큰 중 70%). base.py 롤링 압축은 in-process 전용이라 CLI 경로엔 없었고, 리셋 관문은
+    다음 턴 시작에만 걸린다. 그래서 CLI 자체 auto-compact 문턱을 같은 잣대로 내린다.
+    """
+    from providers import get_provider
+    from providers.claude_code import ClaudeCodeProvider
+
+    p = get_provider("codex", api_key="", model="gpt-5.6-sol", system_prompt="")
+    p._binary_path = "/fake/codex"
+    c = p._build_command(stream=True, tools_mode=None)
+    pairs = {(c[i], c[i + 1]) for i in range(len(c) - 1) if c[i] == "-c"}
+    thr = int(p.SESSION_RESET_TOKEN_THRESHOLD)
+    assert thr > 0
+    assert ("-c", f"model_auto_compact_token_limit={thr}") in pairs, f"codex 턴 안 압축 문턱이 빠졌다: {c}"
+
+    inst = object.__new__(ClaudeCodeProvider)
+    inst._effective_token = None
+    monkeypatch.setattr(inst, "_identity_env", lambda: {})
+    env = inst._build_env()
+    assert env["CLAUDE_CODE_AUTO_COMPACT_WINDOW"] == str(int(inst.SESSION_RESET_TOKEN_THRESHOLD)), env
+
+
+def test_cli_compaction_events_are_counted(monkeypatch):
+    """압축이 실제로 도는지는 사건으로 센다 — codex item.type=context_compaction, claude system/compact_boundary."""
+    import time
+    from providers import get_provider
+    import providers.cli_provider as cli
+
+    recorded = []
+    monkeypatch.setattr(cli, "record_trajectory_event", lambda kind, data=None: recorded.append((kind, data)))
+
+    p = get_provider("codex", api_key="", model="gpt-5.6-sol", system_prompt="")
+    p._binary_path = "/fake/codex"
+    out = p._translate_stream_event(
+        {"type": "item.completed", "item": {"type": "context_compaction", "id": "c1"}}, "", time.time())
+    assert out == [], out
+
+    q = get_provider("claude_code", api_key="", model="opus", system_prompt="")
+    q._translate_stream_event(
+        {"type": "system", "subtype": "compact_boundary",
+         "compact_metadata": {"trigger": "auto", "pre_tokens": 301000, "post_tokens": 40000}}, "", time.time())
+
+    kinds = [k for k, _ in recorded]
+    assert kinds.count("context.compacted") == 2, recorded
+    by_provider = {d.get("provider"): d for _, d in recorded}
+    assert by_provider["Codex"]["threshold_tokens"] == int(p.SESSION_RESET_TOKEN_THRESHOLD)
+    assert by_provider["ClaudeCode"]["pre_tokens"] == 301000
+
+
 if __name__ == "__main__":
     # 러너는 하나다 — 직접 실행도 pytest 로 위임한다(두 번째 러너는 드리프트한다).
     import sys

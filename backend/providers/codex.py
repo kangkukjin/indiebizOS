@@ -589,6 +589,12 @@ class CodexProvider(CliSubprocessProvider):
             # 바꾸는 값이라, 재현 가능한 비용·품질을 원하면 티어에 적어 둘 것.
             cmd += ["-c", f"model_reasoning_effort={_toml_str(effort)}"]
 
+        # ★턴 안 문맥 압축(2026-09-18): Codex 자체 auto-compact 문턱을 **창의 절반**(세션 리셋과 같은
+        #   잣대, SESSION_RESET_TOKEN_THRESHOLD)으로 내린다. 기본값은 모델 창 근처라 실측 60회에서 한 번도
+        #   돌지 않았고, 76라운드 턴이 문맥을 창 끝까지 키우며 라운드마다 통째 재전송했다(입력의 70%).
+        #   압축 사건은 item.type=context_compaction → _note_compaction 이 센다.
+        cmd += ["-c", f"model_auto_compact_token_limit={int(self.SESSION_RESET_TOKEN_THRESHOLD)}"]
+
         # 세션 이어가기 — 옵션 뒤, 프롬프트 앞
         if resume_session_id:
             cmd += ["resume", resume_session_id]
@@ -810,6 +816,10 @@ class CodexProvider(CliSubprocessProvider):
                 _t_str = str(_t).strip()
                 if _t_str:
                     out.append(({"type": "thinking", "content": _t_str}, None))
+
+            elif itype == "context_compaction":
+                # 턴 안 압축 사건(문턱은 _build_command 의 model_auto_compact_token_limit) — 세기만 한다.
+                self._note_compaction({k: item.get(k) for k in ("id", "status") if item.get(k) is not None})
 
             elif itype == "error":
                 out.append((

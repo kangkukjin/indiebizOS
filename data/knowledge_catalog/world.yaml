@@ -15,6 +15,7 @@ fragments:
   - data/knowledge_catalog/atlas/10_food.yaml
   - data/knowledge_catalog/atlas/11_physics.yaml
   - data/knowledge_catalog/atlas/12_relations.yaml
+  - data/knowledge_catalog/atlas/13_geopolitics.yaml
 entries:
   - id: ortools
     kind: tool

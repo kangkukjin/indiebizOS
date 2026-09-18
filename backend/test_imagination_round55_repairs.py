@@ -216,11 +216,11 @@ _sweep = _load("_t55_shape_sweep", _ROOT / "scripts" / "ibl_shape_sweep.py")
 def test_F55_1_sweep_records_scalar_keys_with_one_nested_layer():
     env = {"success": True, "design": {"site": {"width": 20}, "floors": []}, "report": "x",
            "rooms": [{"name": "거실", "area": 30}], "_trace": 1}
-    kind, keys = _sweep._shape(env)
-    assert kind == "scalar"
+    kind, keys, more = _sweep._shape(env)        # more = 상한에 잘린 열 수(09-18: 저장은 전체+more, 절단은 표시 쪽)
+    assert kind == "scalar" and more == 0
     assert keys[:3] == ["design", "design.site", "design.floors"] and "rooms[].name" in keys and "_trace" not in keys
-    assert _sweep._shape({"success": True, "items": [{"a": 1}]}) == ("items", ["a"])
-    assert _sweep._shape({"success": False, "error": "x"}) == (None, [])
+    assert _sweep._shape({"success": True, "items": [{"a": 1}]}) == ("items", ["a"], 0)
+    assert _sweep._shape({"success": False, "error": "x"}) == (None, [], 0)
 
 
 def test_F55_1_harvest_from_health_only_fills_unobserved(tmp_path):

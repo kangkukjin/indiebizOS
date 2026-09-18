@@ -11,7 +11,9 @@
 
 계약:
   G1  두 작명 경로가 같은 관문을 쓴다 — 개인 명사가 박힌 몸은 어느 길로도 **이름을 받지 못한다**.
-  G2  이름은 안 주되 **용례로는 저장한다** — 그 턴에 실제로 일어난 일이라 본문을 잃으면 안 된다.
+  G2  (2026-09-18 개정) 개인 명사가 박힌 몸은 **용례로도 코퍼스에 들어오지 않는다** — 같은 자(`_phrase_private_reason`)가
+      낱말 증류 입구에도 걸렸다(`example_entrance_reason`: 09-17 전수 정독에서 지운 191건 중 70건이 홈 경로·개인 명사,
+      코퍼스는 배포물이라 사용자 원문을 담을 수 없다). 그 턴의 일은 몸-사적인 가지 문서의 주행 절에 남는다.
   G3  스윕의 대상 선정은 관문의 자와 같다 — 사람이 고른 목록으로 쓸지 않는다(고른 범위는 반드시 샌다).
   G4  실행 이력이 섞이면 스윕은 멈춘다 — 돈 적 있는 이름은 남의 이력이라 손으로 판정할 것.
 
@@ -37,9 +39,10 @@ def test_g1_개인명사가_박힌_몸은_낱말_경로에서도_이름을_못_�
                                "phrase": [], "slots": {}})
     import ibl_usage_rag as rag
     rag.distill_experience("찾아 읽기", TOOL_CALLS, top_score=0.3)
-    assert saved, "용례 자체가 사라졌다 — 관문은 이름만 막아야 한다"
-    assert saved[0]["ibl_code"] == HOME_BODY            # G2: 본문은 그대로 남는다
-    assert (saved[0].get("alias") or "") == ""          # G1: 이름은 주지 않는다
+    assert saved == [], "홈 경로가 박힌 몸이 코퍼스에 들어왔다 — 입구 관문(G2 개정)이 막아야 한다"   # G1 은 그 귀결: 이름도 없다
+    from ibl_idiom import example_entrance_reason
+    assert "홈 경로" in example_entrance_reason("찾아 읽기", HOME_BODY)
+    assert example_entrance_reason("찾아 읽기", '[self:grep]{pattern: "x", root_path: "backend"}') is None   # 개인 명사 없는 몸은 들어온다
 
 
 def test_g1_슬롯으로_비운_몸은_수동_경로에서_이름을_받는다():

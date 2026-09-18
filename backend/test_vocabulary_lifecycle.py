@@ -39,11 +39,12 @@ def test_required_cannot_sleep(box):
 
 def test_rag_refills_after_sleeping_top_results(monkeypatch):
     import ibl_usage_rag as rag
-    rows = [SimpleNamespace(id=i, ibl_code="sleep" if i < 10 else "awake") for i in range(13)]
+    # 코드는 줄마다 다르게 — 회상은 같은 코드를 한 번만 보인다(09-18 _distinct_codes). 이 시험이 지키는 것은 '잠든 상위를 건너 채우기'다.
+    rows = [SimpleNamespace(id=i, ibl_code=(f"sleep-{i}" if i < 10 else f"awake-{i}")) for i in range(13)]
     class DB:
         def search_hybrid(self, top_k, **kwargs):
             return rows[:top_k]
-    monkeypatch.setattr(rag, "_own_only", lambda rs: [r for r in rs if r.ibl_code == "awake"])
+    monkeypatch.setattr(rag, "_own_only", lambda rs: [r for r in rs if r.ibl_code.startswith("awake")])
     assert [r.id for r in rag._search_active(DB(), top_k=2)] == [10, 11]
 
 

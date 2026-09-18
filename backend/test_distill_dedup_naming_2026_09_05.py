@@ -86,7 +86,10 @@ def test_n1_name_shape_rule_is_now_a_gate_not_prose():
     assert "phrase_name" not in p                       # 모델에게 짓게 하지 않는다
     sys.path.insert(0, os.path.join(os.path.dirname(BACKEND), "scripts"))
     import register_idiom
-    good = '[self:patch]{op: "status"}; [self:patch]{op: "apply", id: "${제안번호}"}'
+    # 인자는 액션의 선언대로(09-18 인자 검사 조이기): [self:patch] 의 제안 번호 키는 proposal_id — 옛 예의 `id` 는 선언에 없는 키였다.
+    good = '[self:patch]{op: "status"}; [self:patch]{op: "apply", proposal_id: "${제안번호}"}'
+    assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때",
+                                 '[self:patch]{op: "apply", id: "${제안번호}"}')[1] == "존재하지 않는 액션 또는 인자"
     assert register_idiom._gates("오버레이레이아웃무관허용및재적용", "제안을 적용해야 할 때", good)[0] is None
     assert register_idiom._gates("제안적용하기", "제안을 적용해야 할 때", good)[1] is None
 

@@ -445,6 +445,11 @@ def test_p7_always_on_idioms_map(tmp_path, monkeypatch):
     os.replace(db, str(tmp_path / "data" / "ibl_usage.db"))
     monkeypatch.setattr(runtime_utils, "get_base_path", lambda: tmp_path)
     monkeypatch.setattr(A, "_idioms_cache", {"t": 0.0, "text": "", "key": None})
+    # 소유 판정은 이 시험의 대상이 아니다 — 그리고 밀봉해야 한다. code_is_own 은 ibl_nodes.yaml 경로를 첫 사용 때 전역에
+    # 굳히는데, 위에서 base path 를 tmp 로 바꿨으므로 **앞선 시험이 그 전역을 데워 놨느냐**에 따라 통과·실패가 갈렸다
+    # (2026-09-18 실측: 전수 실행에서 간헐 실패 — 경로가 식은 채 오면 tmp 에는 어휘가 없어 전부 '남의 것'→ 빈 지도).
+    import ibl_registry
+    monkeypatch.setattr(ibl_registry, "code_is_own", lambda code: True)
     block = A.idioms_map(None)
     assert block.startswith("<ibl_idioms") and block.endswith("</ibl_idioms>")
     assert "[개발]" in block

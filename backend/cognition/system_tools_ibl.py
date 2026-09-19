@@ -91,7 +91,7 @@ _IBL_LOG_WINDOW = 30.0       # 같은 코드 재로그 최소 간격(초)
 _IBL_DEBUG_CAP = 2000        # providers/claude_code.py _TOOLUSE_CAP_IBL 과 같은 값
 
 
-def _ibl_debug_log(code: str, capped: str) -> None:
+def _ibl_debug_log(code: str, capped: str, files_tag: str = "") -> None:
     """IBL 코드 디버그 줄 — 폭주는 접되 **조용히 접지 않는다**(2026-09-07).
 
     옛 판은 30초 창 안의 동일 코드를 말없이 버렸다. 폴링 도배는 막았지만, **실패 뒤
@@ -107,6 +107,11 @@ def _ibl_debug_log(code: str, capped: str) -> None:
     침묵 클램프 금지와 같은 규약. 창은 마지막 *출력* 시각 기준이라, 계속 도는 폴링도
     30초마다 두 줄(코드 + 접힘 수)로 자기 존재를 밝힌다.
     """
+    # 접기 키 = 코드 + files 지문. 코드가 같아도 $file 본문이 다르면 다른 실행이다
+    # (2026-09-18 ep3861: 서로 다른 [self:edit] 다섯 건이 "같은 코드 5회 생략"으로 접혔다).
+    if files_tag:
+        code = f"{code} files#{files_tag}"
+        capped = f"{capped} files#{files_tag}"
     now = time.monotonic()
     # ① 창이 지난 코드는 접힘 수를 신고하고 물러난다(무한 성장 정리도 겸한다)
     for key in [k for k, t in _ibl_log_seen.items() if now - t > _IBL_LOG_WINDOW]:
@@ -561,7 +566,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     # 디버그 — 잘림 한도 2000자. 표식 모양은 episode_logger 가 소유한다(단일 진실):
     # 옛 판은 `... [trunc, total=N]` 로 자기만의 모양을 썼는데, 같은 사실을 두 모양으로
     # 적으면 읽는 쪽이 두 벌을 알아야 한다(이름 드리프트). 폭도 tool_use 쪽과 맞춘다.
-    _ibl_debug_log(code, truncate_for_log(code, _IBL_DEBUG_CAP))
+    from repeat_guard import files_digest
+    _ibl_debug_log(code, truncate_for_log(code, _IBL_DEBUG_CAP), files_digest(files))
 
     # --- 서킷 브레이커 체크: open 상태면 쿨다운 동안만 차단, 경과하면 half-open 시험 허용 ---
     # 단일 액션만 체크 (파이프라인/병렬은 개별 액션이 아니라 통과)

@@ -160,6 +160,25 @@ def test_journal_counts_rejected_ibl_attempt_without_double_count(tmp_path, monk
     assert rows[2]["ibl_calls"] is None
 
 
+def test_journal_ibl_counts_code_runs_and_actions(tmp_path, monkeypatch):
+    """IBL 실행 = 코드를 실은 호출 + 엔진 전 거절. 설명 조회·결과 읽기(code_chars=0)는 빼고, 액션 수는 따로 합산."""
+    import episode_logger as el
+    db = _journal_db(tmp_path, monkeypatch)
+    tool = ("supervision.tool.started", {"name": "execute_ibl"})
+    events = [tool, ("ibl.started", {"code_chars": 0, "action_count": 0}),          # describe
+              tool, ("ibl.started", {"code_chars": 80, "action_count": 2, "nested": True}),
+              tool, ("ibl.started", {"code_chars": 40, "action_count": 3}),
+              tool]                                                                  # 엔진 진입 전 거절
+    with db() as conn:
+        conn.execute("INSERT INTO episode_log (id, started_at, source) VALUES (1, 'now', 'usage')")
+        for seq, (kind, data) in enumerate(events):
+            conn.execute("INSERT INTO trajectory_event (run_id,event_seq,episode_id,ts,kind,data,source) "
+                         "VALUES ('run',?,1,'now',?,?,'usage')", (seq, kind, json.dumps(data)))
+    row = el.get_episode_journal()[0]
+    assert row["ibl_calls"] == 3
+    assert row["ibl_actions"] == 5
+
+
 def test_live_journal_counts_system_ai_before_summary_and_after_finish(tmp_path, monkeypatch):
     import episode_logger as el
     from datetime import datetime

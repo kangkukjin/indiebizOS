@@ -1,0 +1,2458 @@
+{
+ "_comment": "용례 재검토 원장 — scripts/iblbuild_example_review.py --ack 로만 갱신(빌드는 읽기만). fields=액션 계약 필드의 지문, reviewed=그 계약으로 용례를 읽은 날, examples=그때의 로컬 용례 수.",
+ "actions": {
+  "engines:arch_create": {
+   "fields": {
+    "description": "e1ad470f8a8c",
+    "implementation": "9c4b68fa18d6",
+    "returns": "1cf2462dbf78",
+    "target_key": "6ffe58b85cad",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "c461c024b203"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_elevation": {
+   "fields": {
+    "description": "ece6d0bd8c87",
+    "implementation": "62db740ead16",
+    "returns": "9a5e13f69efc",
+    "target_key": "555a5889fe87",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "1ea61aeae8a5"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_export": {
+   "fields": {
+    "description": "70ef6c7745e1",
+    "implementation": "3d0a8a05f8cb",
+    "returns": "9a5e13f69efc",
+    "target_key": "555a5889fe87",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "d50b1a3ebefd"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_floor_plan": {
+   "fields": {
+    "description": "c22999374492",
+    "implementation": "d6589252f228",
+    "returns": "9a5e13f69efc",
+    "target_key": "555a5889fe87",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "89a3078dd537"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_get": {
+   "fields": {
+    "description": "72036d183da5",
+    "implementation": "eae3917d3ce8",
+    "returns": "1cf2462dbf78",
+    "target_key": "555a5889fe87",
+    "side_effect": "fcbcf165908d",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "94ab58954f39"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_list": {
+   "fields": {
+    "description": "25203ee2aeb2",
+    "implementation": "dc0850da92a9",
+    "returns": "3c22349f8d0b",
+    "side_effect": "fcbcf165908d",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "6b8a2ad7c4ce"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_modify": {
+   "fields": {
+    "description": "96e3cdf2687a",
+    "implementation": "3fe2563cde4f",
+    "returns": "1cf2462dbf78",
+    "target_key": "555a5889fe87",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "74a6a078e77a"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_report": {
+   "fields": {
+    "description": "b67f86abc766",
+    "implementation": "684338311889",
+    "returns": "1cf2462dbf78",
+    "target_key": "555a5889fe87",
+    "side_effect": "fcbcf165908d",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "55b5498e86c0"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_section": {
+   "fields": {
+    "description": "212ec3177014",
+    "implementation": "9309b2878519",
+    "returns": "9a5e13f69efc",
+    "target_key": "555a5889fe87",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "4c76af31ee5c"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:arch_view_3d": {
+   "fields": {
+    "description": "272e7098053c",
+    "implementation": "9670c98d896e",
+    "returns": "9a5e13f69efc",
+    "target_key": "555a5889fe87",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "3f825909c172"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:image_gemini": {
+   "fields": {
+    "description": "37e6ae88dfdb",
+    "target_description": "5ed2340b49d4",
+    "implementation": "8d41703a9782",
+    "returns": "9a5e13f69efc",
+    "target_key": "d5c35dc42880",
+    "params": "c791a8597e81",
+    "aliases": "6153ea46428c",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "7d57f5ed40b6"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 29
+  },
+  "engines:image_read": {
+   "fields": {
+    "description": "8583e4791a5c",
+    "target_description": "3358f0aa9d78",
+    "implementation": "65956c8b0ca2",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "aliases": "ca395880f4b5",
+    "ops": "dbf6d7c27bc1",
+    "side_effect": "fcbcf165908d",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "4a72110db079"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 38
+  },
+  "engines:newspaper": {
+   "fields": {
+    "description": "76a681eaba14",
+    "target_description": "4dc1ddb51cd2",
+    "implementation": "3a7999cf63c2",
+    "returns": "9a5e13f69efc",
+    "params": "1d5ef8a0dfc6",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "638507915871"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 8
+  },
+  "engines:remotion": {
+   "fields": {
+    "description": "da62a2f70de2",
+    "target_description": "30611e102265",
+    "implementation": "2df25b0c16b3",
+    "returns": "9a5e13f69efc",
+    "target_key": "210c34cd112f",
+    "params": "a9f142cec30b",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "64e68d9c2781"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "engines:render": {
+   "fields": {
+    "description": "ae710049eb48",
+    "target_description": "6028f37a8668",
+    "implementation": "8a548bb26784",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "6579d63a0948",
+    "ops": "dc88ceccbc1a",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "62dfd34b8325"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 28
+  },
+  "engines:tts": {
+   "fields": {
+    "description": "589839b2cc0e",
+    "target_description": "92435fe3d8a4",
+    "implementation": "eb45951fa078",
+    "returns": "9a5e13f69efc",
+    "target_key": "1e1d0f251d3a",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "d49e9025325e"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "engines:web": {
+   "fields": {
+    "description": "07ee21271a25",
+    "target_description": "037ea06cf92b",
+    "implementation": "664291f6edc2",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "params": "82c768a8f797",
+    "ops": "3266d3bfb416",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "2494687d7b88"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 22
+  },
+  "engines:web_component": {
+   "fields": {
+    "description": "b9ba2c07f76c",
+    "target_description": "4193c2a193e7",
+    "implementation": "9120cc557937",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "params": "a743a706f1b4",
+    "ops": "f9c540dcc75b",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "2f8f145817d0"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 10
+  },
+  "engines:web_site": {
+   "fields": {
+    "description": "bb270f755eab",
+    "target_description": "e0fd2bad871f",
+    "implementation": "667810196d69",
+    "returns": "9a5e13f69efc",
+    "params": "9bdaa82aa090",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "36b6425af447"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 20
+  },
+  "limbs:android": {
+   "fields": {
+    "description": "fb37c65afa6c",
+    "target_description": "715ac978978e",
+    "implementation": "46630824b8e2",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "aliases": "13dd6f0012da",
+    "ops": "29790edd584c",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "dfacd441badc"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 52
+  },
+  "limbs:browser": {
+   "fields": {
+    "description": "00dd370373eb",
+    "target_description": "c851277642b1",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "params": "b692c2851aa1",
+    "aliases": "4c3faae3901e",
+    "ops": "c6ea98ab9d8f",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "18d81283e959"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 254
+  },
+  "limbs:cctv": {
+   "fields": {
+    "description": "450e426d8dc4",
+    "target_description": "709d3e8d7ae0",
+    "implementation": "a2801a7ddf86",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "ops": "a716ca6fa853",
+    "router": "ebbb1532efbc",
+    "tool": "b67c077616ca"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 22
+  },
+  "limbs:cloudflare_api": {
+   "fields": {
+    "description": "cfefc43fd6d3",
+    "target_description": "3124a56d6093",
+    "implementation": "2aa19b398d28",
+    "returns": "9a5e13f69efc",
+    "target_key": "a2883e3744bc",
+    "router": "ebbb1532efbc",
+    "tool": "23b375480f42"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 6
+  },
+  "limbs:guestpc": {
+   "fields": {
+    "description": "45254e0e8a49",
+    "target_description": "000c42715984",
+    "implementation": "1c614c45ca3f",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "aliases": "39c390016025",
+    "ops": "55f8be6e5061",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "9c98c80a5fd1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 36
+  },
+  "limbs:launch": {
+   "fields": {
+    "description": "5414d2fc67e5",
+    "target_description": "725cc8f46866",
+    "implementation": "4fe36143850d",
+    "returns": "9a5e13f69efc",
+    "target_key": "6b6fdce2c6f9",
+    "router": "ebbb1532efbc",
+    "tool": "07896d60cbc2"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 17
+  },
+  "limbs:music": {
+   "fields": {
+    "description": "2f2d57dcd42d",
+    "target_description": "9dc35b1d75ff",
+    "implementation": "0038a5e7ed9c",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "aliases": "8f573b2b8df9",
+    "ops": "42553e8353e7",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "668d4277c727"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 101
+  },
+  "limbs:open_window": {
+   "fields": {
+    "description": "08fa2c8bfbcd",
+    "target_description": "b7b046e18372",
+    "implementation": "17301a254043",
+    "returns": "9a5e13f69efc",
+    "target_key": "4e5ef144c51c",
+    "runs_on": "54d3f8d78a8b",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 59
+  },
+  "limbs:os_open": {
+   "fields": {
+    "description": "795384a3aa47",
+    "target_description": "b232a128e67f",
+    "implementation": "6015293cb8e4",
+    "returns": "9a5e13f69efc",
+    "target_key": "d070c7ecb482",
+    "runs_on": "54d3f8d78a8b",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 16
+  },
+  "limbs:phone": {
+   "fields": {
+    "description": "fbd6a27d1968",
+    "target_description": "c1cfc0b8701b",
+    "implementation": "9e5757ce3867",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "aliases": "db1119355d9a",
+    "ops": "c0daecd42513",
+    "runs_on": "26271047115a",
+    "router": "ebbb1532efbc",
+    "tool": "632d0dc34bc5"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "limbs:radio": {
+   "fields": {
+    "description": "ba4b841a8990",
+    "target_description": "f05df77d703d",
+    "implementation": "1d21b495ffcb",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "ops": "03f87dd69056",
+    "router": "ebbb1532efbc",
+    "tool": "43a3ee5a2f67"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 26
+  },
+  "limbs:radio_favorite": {
+   "fields": {
+    "description": "98203b093602",
+    "target_description": "c925d2c47347",
+    "implementation": "413faa299b44",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "aliases": "17188de3191a",
+    "ops": "8929265a989a",
+    "router": "ebbb1532efbc",
+    "tool": "cedcb67c6a69"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 8
+  },
+  "limbs:screen": {
+   "fields": {
+    "description": "5f50d9551ee1",
+    "target_description": "123c0c8b62e5",
+    "implementation": "c53c3765a003",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "params": "5ed08d875f57",
+    "ops": "a068b926a07b",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "b24733bf34ec"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 54
+  },
+  "limbs:show_map": {
+   "fields": {
+    "description": "067aea87c284",
+    "target_description": "deac94ffbeed",
+    "implementation": "d844463aaa0f",
+    "returns": "9a5e13f69efc",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "1e7964968945",
+    "router": "ebbb1532efbc",
+    "tool": "06d9d4126604"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 16
+  },
+  "others:agents": {
+   "fields": {
+    "description": "8f3a1b341740",
+    "target_description": "e037465aa3e8",
+    "implementation": "9bbceb3e40f2",
+    "returns": "3c22349f8d0b",
+    "target_key": "4423a660687c",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 24
+  },
+  "others:ask": {
+   "fields": {
+    "description": "36e52f0377b0",
+    "target_description": "a889d0314540",
+    "implementation": "12a194942821",
+    "returns": "3c22349f8d0b",
+    "target_key": "46e6a5e95667",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 10
+  },
+  "others:auto_response": {
+   "fields": {
+    "description": "44580747a9a2",
+    "target_description": "97bba5848515",
+    "implementation": "d30febe637ba",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "ops": "e32611d0fd8a",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "050241acd9af"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 11
+  },
+  "others:board": {
+   "fields": {
+    "description": "5e981546f711",
+    "target_description": "42c3e281f1f7",
+    "implementation": "d8e0af14d429",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "802b43a2d4cf",
+    "side_effect": "b5bea41b6c62",
+    "router": "d1a4b431b2c1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 6
+  },
+  "others:bulletin": {
+   "fields": {
+    "description": "10d41c8ba54d",
+    "target_description": "d36cf2bae6c7",
+    "implementation": "a91eed686fc1",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "cd43b98afd20",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "2330f57c3a43"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 15
+  },
+  "others:channel_read": {
+   "fields": {
+    "description": "0436eebc081c",
+    "target_description": "57e3623b1ddd",
+    "implementation": "4877a73677ac",
+    "returns": "3c22349f8d0b",
+    "target_key": "7c66509c7f76",
+    "router": "d1a4b431b2c1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 7
+  },
+  "others:channel_send": {
+   "fields": {
+    "description": "3e10749930ad",
+    "target_description": "30bd4b6dd818",
+    "implementation": "f51e242d35b8",
+    "returns": "9a5e13f69efc",
+    "target_key": "7c66509c7f76",
+    "router": "d1a4b431b2c1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 13
+  },
+  "others:delegate": {
+   "fields": {
+    "description": "d488ff2aca7c",
+    "target_description": "f342edd54a55",
+    "implementation": "d1ebab6a582e",
+    "returns": "9a5e13f69efc",
+    "target_key": "4423a660687c",
+    "aliases": "bcf5db2b278b",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 55
+  },
+  "others:family_news": {
+   "fields": {
+    "description": "041826373afd",
+    "target_description": "18401f8e2fa6",
+    "implementation": "cefe6ccafbbc",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "30f5e260960b",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "273374de6848"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 22
+  },
+  "others:feed": {
+   "fields": {
+    "description": "2603df621dcd",
+    "target_description": "15d47ea120f9",
+    "implementation": "638638bcb68a",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "b5ae919a3d53",
+    "side_effect": "b5bea41b6c62",
+    "router": "d1a4b431b2c1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 13
+  },
+  "others:follow": {
+   "fields": {
+    "description": "a2779ead2b2f",
+    "target_description": "0bd09968e9df",
+    "implementation": "4e032e1a389e",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "0b23f94dcb77",
+    "side_effect": "b5bea41b6c62",
+    "router": "d1a4b431b2c1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 7
+  },
+  "others:messages": {
+   "fields": {
+    "description": "7f04edad2e31",
+    "target_description": "55d2e089d0cd",
+    "implementation": "46bb9705b912",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "1e9d94b8c45f",
+    "ops": "88d98a636d46",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "a515b3eb2347"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 14
+  },
+  "others:neighbor": {
+   "fields": {
+    "description": "d97d97d23554",
+    "target_description": "f03fa59565ad",
+    "implementation": "4102e54a5e54",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "1381eb6ca139",
+    "ops": "837421504c91",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "0717c4d61138"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 37
+  },
+  "others:nostr": {
+   "fields": {
+    "description": "bde921b91b42",
+    "target_description": "d18ed04aa6fa",
+    "implementation": "d4dba312e938",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "ops": "a2b38a47ea2d",
+    "router": "d1a4b431b2c1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 1
+  },
+  "others:portal": {
+   "fields": {
+    "description": "a645e2376bfd",
+    "target_description": "0b7498fad14f",
+    "implementation": "8fbfc603f4ac",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "7acf9ca43e03",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "261814abe07d"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 28
+  },
+  "others:publish": {
+   "fields": {
+    "description": "acaa6e6f60f1",
+    "target_description": "d09dffca9a3d",
+    "implementation": "93a269d2ef9c",
+    "returns": "9a5e13f69efc",
+    "target_key": "87dfbbd263f1",
+    "router": "d1a4b431b2c1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 0
+  },
+  "others:showcase": {
+   "fields": {
+    "description": "6c3c0a7ac69e",
+    "target_description": "d566d400895a",
+    "implementation": "b4086d002253",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "87d4c1bfb4e7",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "89163a021a9f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 17
+  },
+  "self:ask": {
+   "fields": {
+    "description": "12d18a959416",
+    "target_description": "7bf37e323b41",
+    "implementation": "9dfa506437d5",
+    "returns": "1cf2462dbf78",
+    "target_key": "d5c35dc42880",
+    "params": "4bdc09d50a87",
+    "router": "ebbb1532efbc",
+    "tool": "12bf425e4d9f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 15
+  },
+  "self:blog": {
+   "fields": {
+    "description": "3ab38cee996f",
+    "target_description": "18a02445b42e",
+    "implementation": "e9cee7e68f4a",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "6447534e114b",
+    "ops": "0b8bf8e49ff7",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "01ee1ea99018"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 78
+  },
+  "self:body": {
+   "fields": {
+    "description": "4e0ae43e9438",
+    "target_description": "5295714129c9",
+    "implementation": "aa3d0cf24c77",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "ce52d0d0db64",
+    "ops": "ae6f4491e5cc",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "194a8e43b8b4"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 27
+  },
+  "self:business": {
+   "fields": {
+    "description": "6a62f20bd76d",
+    "target_description": "f7af3b857af4",
+    "implementation": "e522c8ebc32f",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "41ca7eb8b141",
+    "ops": "75eab5f17f51",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "34de78c6cc60"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 44
+  },
+  "self:cctv": {
+   "fields": {
+    "description": "d8ef486bcb3e",
+    "target_description": "c7b13f401250",
+    "implementation": "21681c8bbf96",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "df44f5fd5019",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "2dbf00ac2a14"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 25
+  },
+  "self:copy": {
+   "fields": {
+    "description": "cfaf2b3708d3",
+    "target_description": "989cf054eb69",
+    "implementation": "d59ac86f53d8",
+    "returns": "9a5e13f69efc",
+    "target_key": "073171f7f5e1",
+    "params": "c5b46f727cdd",
+    "router": "ebbb1532efbc",
+    "tool": "70891ae1834d"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 16
+  },
+  "self:deck": {
+   "fields": {
+    "description": "86a9f2bdf7f1",
+    "target_description": "a1dc5694d791",
+    "implementation": "d922d9e1860f",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "ops": "ccb7789b539a",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "2705c1619ee0"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 13
+  },
+  "self:delete": {
+   "fields": {
+    "description": "7f1475a63034",
+    "target_description": "eadc0f3fba14",
+    "implementation": "8a9e1478d799",
+    "returns": "9a5e13f69efc",
+    "target_key": "d070c7ecb482",
+    "router": "ebbb1532efbc",
+    "tool": "cea226385ffd"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 13
+  },
+  "self:document": {
+   "fields": {
+    "description": "ec1fc4927c39",
+    "target_description": "13ee217746e5",
+    "implementation": "dee471f4c794",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "a2dc9bcc8dda",
+    "ops": "19cde0734fce",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "61923ca8e999"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 10
+  },
+  "self:download": {
+   "fields": {
+    "description": "a8a2f75a4dec",
+    "target_description": "17830db441a6",
+    "implementation": "1edcb7aa8aeb",
+    "returns": "9a5e13f69efc",
+    "target_key": "a8aefc374937",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 7
+  },
+  "self:edit": {
+   "fields": {
+    "description": "e68144e49c0e",
+    "target_description": "e4e373423702",
+    "implementation": "acff02c28362",
+    "returns": "9a5e13f69efc",
+    "target_key": "d070c7ecb482",
+    "params": "088af496d89e",
+    "router": "ebbb1532efbc",
+    "tool": "3ff361827675"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 13
+  },
+  "self:file_find": {
+   "fields": {
+    "description": "1bba04a6995c",
+    "target_description": "8e2508911b3d",
+    "implementation": "7d6895f0778e",
+    "returns": "3c22349f8d0b",
+    "target_key": "432ced8bd4f7",
+    "aliases": "2823075e76f0",
+    "router": "ebbb1532efbc",
+    "tool": "c8989e04b8fc"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 44
+  },
+  "self:fill": {
+   "fields": {
+    "description": "a8544d8bdb12",
+    "target_description": "af660020fff3",
+    "implementation": "452b9eaa55b5",
+    "returns": "3c22349f8d0b",
+    "target_key": "d070c7ecb482",
+    "aliases": "40dd246a6f41",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "8862333b30c9"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "self:finance": {
+   "fields": {
+    "description": "07e9c40fd369",
+    "target_description": "b07b2e42ec08",
+    "implementation": "81d310c43b29",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "0b6c4b18e6c3",
+    "aliases": "5e93e34d298a",
+    "ops": "6d8a21ee48d8",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "cb1b1d2f3ccf"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 33
+  },
+  "self:folder_note": {
+   "fields": {
+    "description": "b1639aef82c4",
+    "target_description": "b7620f97ada5",
+    "implementation": "25ee69f1881e",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "aliases": "89917057b2d0",
+    "ops": "c729063036fa",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "7099152721fd"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 22
+  },
+  "self:forage": {
+   "fields": {
+    "description": "b39738150e35",
+    "target_description": "b7166a5e9aa4",
+    "implementation": "0ec8e657ab50",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "aliases": "96cc7b816c74",
+    "ops": "a57f30d25e1f",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "19acb74ca01c"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 4
+  },
+  "self:goal": {
+   "fields": {
+    "description": "1131707711e8",
+    "target_description": "bd7055050922",
+    "implementation": "02d20b4d1c2a",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "ops": "b4ce5815b6e7",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 27
+  },
+  "self:grep": {
+   "fields": {
+    "description": "a119975d8650",
+    "target_description": "ca6564819de2",
+    "implementation": "d6b099940478",
+    "returns": "3c22349f8d0b",
+    "target_key": "432ced8bd4f7",
+    "params": "3ca05741d33c",
+    "aliases": "3832ee52526f",
+    "router": "ebbb1532efbc",
+    "tool": "77e19f549cc9"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "self:health": {
+   "fields": {
+    "description": "d7a29d0994bf",
+    "target_description": "c288cf7a79cc",
+    "implementation": "30cbea2b1a77",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "8675cf5daab7",
+    "aliases": "3f399e157530",
+    "ops": "2784fa9f17b3",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "428ae48a200c"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 63
+  },
+  "self:install_lib": {
+   "fields": {
+    "description": "f7f3530ce887",
+    "target_description": "40961e10609d",
+    "returns": "9a5e13f69efc",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "self:lecture": {
+   "fields": {
+    "description": "20cc6a830e21",
+    "target_description": "e7bba92cf437",
+    "implementation": "96edce8b32d8",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "16562cd08909",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "2739f932844a"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 17
+  },
+  "self:ledger": {
+   "fields": {
+    "description": "e3384b57e6a4",
+    "target_description": "d812c137109d",
+    "implementation": "234a00fb8e13",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "d82d9657c2b9",
+    "ops": "a539a2d5dca3",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "05e436585182"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 11
+  },
+  "self:limb": {
+   "fields": {
+    "description": "bab3ece6b3a7",
+    "target_description": "3e6d15476837",
+    "implementation": "7d822e4d3499",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "399fa2f32490",
+    "ops": "343bab6ee5d2",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "2e81dde1acfc"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 7
+  },
+  "self:list": {
+   "fields": {
+    "description": "7b55e52272cc",
+    "target_description": "47ad8334f7aa",
+    "implementation": "8d9150b4de66",
+    "returns": "3c22349f8d0b",
+    "target_key": "d070c7ecb482",
+    "params": "3582736b2607",
+    "router": "ebbb1532efbc",
+    "tool": "be15d98c09e6"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 17
+  },
+  "self:manage_events": {
+   "fields": {
+    "description": "903a87912c72",
+    "target_description": "12299b9ef70d",
+    "implementation": "9ce0cfe586ea",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "2b43c454a807",
+    "ops": "8e460c989a0c",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 33
+  },
+  "self:material": {
+   "fields": {
+    "description": "9d04daba7ee3",
+    "target_description": "a36f85cf1817",
+    "implementation": "b90c8d910090",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "ops": "ab0f3048e996",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "98d724a58e59"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 9
+  },
+  "self:memory": {
+   "fields": {
+    "description": "76bb20d737f3",
+    "target_description": "6b054f992b1a",
+    "implementation": "5b13c6402f62",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "7ebd616dfad5",
+    "aliases": "66bee06268ee",
+    "ops": "c036f132342a",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "0e84849cdbd9"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 38
+  },
+  "self:mkdir": {
+   "fields": {
+    "description": "a245ec3a2b8e",
+    "target_description": "c71b0c19964f",
+    "implementation": "8ff7debcf275",
+    "returns": "9a5e13f69efc",
+    "target_key": "d070c7ecb482",
+    "router": "ebbb1532efbc",
+    "tool": "723bd4061920"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 8
+  },
+  "self:move": {
+   "fields": {
+    "description": "0142988ed70a",
+    "target_description": "44bdbeaa4dd2",
+    "implementation": "930644ea2660",
+    "returns": "9a5e13f69efc",
+    "target_key": "073171f7f5e1",
+    "params": "c5b46f727cdd",
+    "router": "ebbb1532efbc",
+    "tool": "894f0ffa1ff0"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 6
+  },
+  "self:music": {
+   "fields": {
+    "description": "ae6267ae2fd2",
+    "target_description": "2140562e8930",
+    "implementation": "a94e418d78d1",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "06f6e766993a",
+    "aliases": "312dae9e6dc2",
+    "ops": "6cb8d5b98869",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "cc2d384798b3"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 26
+  },
+  "self:notebook": {
+   "fields": {
+    "description": "b001dbd476c7",
+    "target_description": "442909eed6f7",
+    "implementation": "8a586911c997",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "2b9d8c564e20",
+    "aliases": "6a8150287dd5",
+    "ops": "c066e87c1dce",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "a38f142fa92b"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 14
+  },
+  "self:notify_user": {
+   "fields": {
+    "description": "28d5bfad7524",
+    "target_description": "001911bfb6a6",
+    "implementation": "bd0a8cc616b3",
+    "returns": "9a5e13f69efc",
+    "target_key": "fd3830a0864d",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 72
+  },
+  "self:output": {
+   "fields": {
+    "description": "440568282a58",
+    "target_description": "8c410560166c",
+    "implementation": "c506821395b4",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "aliases": "2a875e395a34",
+    "ops": "a942c37d13b6",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 9
+  },
+  "self:package": {
+   "fields": {
+    "description": "66bf4b7c52ac",
+    "target_description": "42df11e9aa3e",
+    "implementation": "418fb07a0dae",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "6df2f950ce3c",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 31
+  },
+  "self:patch": {
+   "fields": {
+    "description": "543ef8b97a38",
+    "target_description": "f2040ca2a0e1",
+    "implementation": "79621998804f",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "aliases": "f6d057add97d",
+    "ops": "213f5b93c6a0",
+    "router": "ebbb1532efbc",
+    "tool": "81a5a9cfe344"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 10
+  },
+  "self:phone_sync": {
+   "fields": {
+    "description": "0b0762e5864f",
+    "target_description": "c59a52839acb",
+    "implementation": "8a7da8bba4ce",
+    "returns": "9a5e13f69efc",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "907c4e82d2ab"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 5
+  },
+  "self:photo": {
+   "fields": {
+    "description": "b21f2d57359d",
+    "target_description": "ae13ac098cb9",
+    "implementation": "acab82ced2e5",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "params": "1d6cb7b528e8",
+    "aliases": "fb166ddc720f",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "96086f4c0621"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 33
+  },
+  "self:read": {
+   "fields": {
+    "description": "81bf640209e9",
+    "target_description": "2c505d4e7eef",
+    "implementation": "36b93cbe134f",
+    "returns": "1cf2462dbf78",
+    "returns_variants": "fefe30ac0f4e",
+    "target_key": "d070c7ecb482",
+    "params": "f1644affd271",
+    "aliases": "f329c9062c42",
+    "router": "ebbb1532efbc",
+    "tool": "533e886121eb"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 128
+  },
+  "self:recent_chats": {
+   "fields": {
+    "description": "df023be3d254",
+    "target_description": "cd68cbaef67b",
+    "implementation": "e7e0b9b2cdbf",
+    "returns": "3c22349f8d0b",
+    "router": "ff9f3c84cdb9"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 6
+  },
+  "self:schedule": {
+   "fields": {
+    "description": "bab8c5aa81e4",
+    "target_description": "8444003a7508",
+    "implementation": "3bf8cda78cd4",
+    "returns": "9a5e13f69efc",
+    "aliases": "5aa354fab2b5",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 37
+  },
+  "self:script": {
+   "fields": {
+    "description": "66b2123ce383",
+    "target_description": "a0d00c4a209b",
+    "implementation": "3f68ee7a7d84",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "847d6b34c3c6",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "5bf697e1053f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 51
+  },
+  "self:sheet": {
+   "fields": {
+    "description": "4d455635c199",
+    "target_description": "5cccba0a6020",
+    "implementation": "8ba905e5160f",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "e5097edccafe",
+    "aliases": "a2dcca50acfc",
+    "ops": "1b8b2d7053e4",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "9571883cd1de"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 26
+  },
+  "self:slide": {
+   "fields": {
+    "description": "8d208ac203a9",
+    "target_description": "8e88e78d54e1",
+    "implementation": "3a1bc8fb51af",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "params": "1517b7e4210a",
+    "ops": "d619dcb95d5a",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "af1443fe1c56"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 44
+  },
+  "self:storage": {
+   "fields": {
+    "description": "c13de1237fa6",
+    "target_description": "a3340e2d8be6",
+    "implementation": "c85b2d7f9542",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "params": "355d3852e2ee",
+    "ops": "445b6d04f70e",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "f207f76bc6d5"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "self:struct": {
+   "fields": {
+    "description": "8cb629c35ac2",
+    "target_description": "0e5a732a3c7e",
+    "implementation": "a6615a7a39f4",
+    "returns": "3c22349f8d0b",
+    "target_key": "a50dde9a71a7",
+    "aliases": "8e43605bfd89",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "ab70ae85db42"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 9
+  },
+  "self:switch": {
+   "fields": {
+    "description": "52df92555e7a",
+    "target_description": "b6e69b9a0b1c",
+    "implementation": "f46969a9fe96",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "b9968b53f13c",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 11
+  },
+  "self:time": {
+   "fields": {
+    "description": "1cc6dd629543",
+    "target_description": "a94e9e7c1cb3",
+    "implementation": "446887d0ed2f",
+    "returns": "1cf2462dbf78",
+    "router": "ebbb1532efbc",
+    "tool": "781387d348d2"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 21
+  },
+  "self:trigger": {
+   "fields": {
+    "description": "76e49e9632f9",
+    "target_description": "946176ee7604",
+    "implementation": "56d2b5d477bb",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "ffd790f5eaef",
+    "ops": "2393474f6b46",
+    "side_effect": "b5bea41b6c62",
+    "router": "d91f2ba75bf6"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 57
+  },
+  "self:webapp": {
+   "fields": {
+    "description": "53440e2be8a4",
+    "target_description": "2cbc955ee590",
+    "implementation": "df5f0a72d3e5",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "f36ec94eac54",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "9b430cf8b012"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 15
+  },
+  "self:workflow": {
+   "fields": {
+    "description": "5d1083c21ed3",
+    "target_description": "535fadd33dd4",
+    "implementation": "7438bc5a92a5",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "aliases": "1bb934bf4227",
+    "ops": "441091367531",
+    "side_effect": "b5bea41b6c62",
+    "router": "adcb3a461920"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 72
+  },
+  "self:write": {
+   "fields": {
+    "description": "6138ddd9ffd5",
+    "target_description": "ba1dbe8f4bde",
+    "implementation": "5011cee6a0e9",
+    "returns": "9a5e13f69efc",
+    "returns_variants": "13977aefed92",
+    "target_key": "d070c7ecb482",
+    "params": "172c49dbaa39",
+    "router": "ebbb1532efbc",
+    "tool": "1377afcca699"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 93
+  },
+  "sense:book": {
+   "fields": {
+    "description": "24151a21677f",
+    "target_description": "11ccbce4b268",
+    "implementation": "0e6fe8ed3385",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "1d6cb7b528e8",
+    "aliases": "2d50a0d9e4a3",
+    "ops": "b162a36b9b70",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "670dc9456faf"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 54
+  },
+  "sense:cctv": {
+   "fields": {
+    "description": "9259426294dd",
+    "target_description": "0b9b3b88b449",
+    "implementation": "1491d015abbb",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "6447534e114b",
+    "ops": "8d558aebc5d9",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "90c3144637e1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 72
+  },
+  "sense:classic": {
+   "fields": {
+    "description": "de13a5f88fa0",
+    "target_description": "942120d2a963",
+    "implementation": "1eb821c2ecf2",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "5e4555d3ecda",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "c164a0f0ca0a"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 33
+  },
+  "sense:commercial": {
+   "fields": {
+    "description": "8fa9cf6f70e3",
+    "target_description": "b578b4f735c9",
+    "implementation": "7d4b3905025d",
+    "returns": "3c22349f8d0b",
+    "params": "df6812cb0311",
+    "aliases": "ea49b7438195",
+    "router": "ebbb1532efbc",
+    "tool": "165a1add398f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 6
+  },
+  "sense:company": {
+   "fields": {
+    "description": "4e5d5a29a652",
+    "target_description": "ce55a2d7349a",
+    "implementation": "943913de579b",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "7130b9d7d072",
+    "aliases": "6447534e114b",
+    "ops": "40bcaea57719",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "f4d1d98f797f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 34
+  },
+  "sense:contest": {
+   "fields": {
+    "description": "f6f941eab61d",
+    "target_description": "24edbc1ac5d5",
+    "implementation": "4c6a8ab99e90",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "05e25f9d6e19",
+    "router": "ebbb1532efbc",
+    "tool": "87e1513546a5"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 13
+  },
+  "sense:crawl": {
+   "fields": {
+    "description": "515e43612561",
+    "target_description": "2bf6a424b6a1",
+    "implementation": "d2aeb9e54591",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "040525314d1a",
+    "ops": "b30608c89f78",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "6b90f82ab8ac"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 49
+  },
+  "sense:crypto": {
+   "fields": {
+    "description": "c8e9967fad07",
+    "target_description": "28ec85e3f8e8",
+    "implementation": "aef58a68e55b",
+    "returns": "3c22349f8d0b",
+    "target_key": "e80d2d1cbabf",
+    "params": "a0853c24fddd",
+    "aliases": "73ef5bee0c99",
+    "router": "ebbb1532efbc",
+    "tool": "bc465d9781ef"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 19
+  },
+  "sense:devdocs": {
+   "fields": {
+    "description": "4c3f281474e7",
+    "target_description": "b2bb8d191288",
+    "implementation": "637fa3c04366",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "8c731e6d7b09",
+    "ops": "ebb2e459045d",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "ab19145c56c4"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 19
+  },
+  "sense:entity": {
+   "fields": {
+    "description": "5bf81bbafadf",
+    "target_description": "2ef5e41a87fb",
+    "implementation": "03af87a863e2",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "061f4f822aa2",
+    "ops": "1e35dfe57d94",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "a5c9d8217c71"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "sense:exhibit": {
+   "fields": {
+    "description": "6734dbd6f690",
+    "target_description": "3f5077c2704e",
+    "implementation": "80729cfec4ab",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "3f399e157530",
+    "router": "ebbb1532efbc",
+    "tool": "d7e9aa417e0b"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 14
+  },
+  "sense:feed": {
+   "fields": {
+    "description": "789c376ea770",
+    "target_description": "3817f7919929",
+    "implementation": "eebc9fcc605e",
+    "returns": "3c22349f8d0b",
+    "target_key": "a8aefc374937",
+    "router": "ebbb1532efbc",
+    "tool": "99a3bfcfbfeb"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 37
+  },
+  "sense:freelance": {
+   "fields": {
+    "description": "6d5185844094",
+    "target_description": "5016ffda89f6",
+    "implementation": "5c5d64785377",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "ec9588c858cf",
+    "router": "ebbb1532efbc",
+    "tool": "7fb8ea440fbc"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 13
+  },
+  "sense:here": {
+   "fields": {
+    "description": "fe49b2778574",
+    "target_description": "2212b18cb865",
+    "implementation": "8aa4c91e6e01",
+    "returns": "1cf2462dbf78",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "4bb2cfbfe392"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 44
+  },
+  "sense:host": {
+   "fields": {
+    "description": "6f7085a7db61",
+    "target_description": "74c8424452bb",
+    "implementation": "aabf2f40ff47",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "ops": "201b1a6ad325",
+    "side_effect": "fcbcf165908d",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "3ce465979dba"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 45
+  },
+  "sense:http": {
+   "fields": {
+    "description": "e68cf6b02fb5",
+    "target_description": "b1e7e7f0b4a2",
+    "implementation": "00aaacc2d711",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "6e73d01bb417",
+    "ops": "452a2eaecccb",
+    "side_effect": "fcbcf165908d",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "2f03981caf26"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 6
+  },
+  "sense:kosis": {
+   "fields": {
+    "description": "ae45213742a3",
+    "target_description": "202c8b35746c",
+    "implementation": "71a673967a8a",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "params": "0185d4a7256e",
+    "aliases": "a661697e2174",
+    "router": "ebbb1532efbc",
+    "tool": "d54e0652fea1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 24
+  },
+  "sense:legal": {
+   "fields": {
+    "description": "30801ac35c0a",
+    "target_description": "0cb184ebcbcb",
+    "implementation": "4a25acbb0e96",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "abb479403560",
+    "router": "ebbb1532efbc",
+    "tool": "18a5977bd4af"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 23
+  },
+  "sense:listen": {
+   "fields": {
+    "description": "a4e356899809",
+    "target_description": "4edc732d4992",
+    "implementation": "3d2a89586dee",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "982f2b133cc0",
+    "ops": "80e0a4d09629",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "6abb0e2d6bd4"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 32
+  },
+  "sense:navigate_route": {
+   "fields": {
+    "description": "5122fa3b8b86",
+    "target_description": "5f955a58c005",
+    "implementation": "2142c1706b16",
+    "returns": "1cf2462dbf78",
+    "returns_variants": "af737fb0c92d",
+    "target_key": "8ca02f1b3648",
+    "params": "51a2697112bb",
+    "aliases": "08a19e1a5aba",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "1f9898cca6cb"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 18
+  },
+  "sense:paper": {
+   "fields": {
+    "description": "dd61b705db2b",
+    "target_description": "e556477d4906",
+    "implementation": "1d198fa1690a",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "01f8455de9c8",
+    "aliases": "86616571db69",
+    "ops": "bb8824eb0344",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "51beaed299bc"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 55
+  },
+  "sense:performance": {
+   "fields": {
+    "description": "052649e50f22",
+    "target_description": "ea8aa84510ce",
+    "implementation": "f7ffc8492374",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "fa077daeba86",
+    "aliases": "3f399e157530",
+    "ops": "3548436dcbdf",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "ec351220954e"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 31
+  },
+  "sense:phone": {
+   "fields": {
+    "description": "203a5cb465fd",
+    "target_description": "3f100716d72b",
+    "implementation": "bd8587378c99",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "ops": "1fed7adfd7f1",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "da6e4fc8481c"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 5
+  },
+  "sense:place": {
+   "fields": {
+    "description": "d157cb363383",
+    "target_description": "526c700adb85",
+    "implementation": "56430504c31b",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "008c02da8b9b",
+    "aliases": "cd48e05d9ad8",
+    "ops": "fcf9bbaf2cee",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "dfdc6228afd7"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 14
+  },
+  "sense:radio": {
+   "fields": {
+    "description": "77ccaaed9adf",
+    "target_description": "b62f7244efa1",
+    "implementation": "4c073eedf008",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "df6812cb0311",
+    "ops": "23706605ec2a",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "423c32b59da2"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 19
+  },
+  "sense:realty": {
+   "fields": {
+    "description": "a9073339c3b5",
+    "target_description": "cb4369dd76fb",
+    "implementation": "a8433f754fca",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "2eb3fb1d6336",
+    "aliases": "0bdbb31717b4",
+    "ops": "d52f4745599d",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "f02e45b2db1c"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 96
+  },
+  "sense:researcher": {
+   "fields": {
+    "description": "c6273d47d3bd",
+    "target_description": "996db546dab7",
+    "implementation": "f26745d1db51",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "aliases": "1655d1fa57c8",
+    "ops": "f8beecf4fad5",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "6eaf0ad31f7d"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 14
+  },
+  "sense:restaurant": {
+   "fields": {
+    "description": "43e1731d4cdd",
+    "target_description": "fcfc1bf13bce",
+    "implementation": "adfb82f3692d",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "router": "ebbb1532efbc",
+    "tool": "c8ba926b197c"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 23
+  },
+  "sense:reverse_geocode": {
+   "fields": {
+    "description": "fcdafed831b4",
+    "target_description": "51c107c32076",
+    "implementation": "2645d088c96a",
+    "returns": "3c22349f8d0b",
+    "aliases": "cd48e05d9ad8",
+    "router": "ebbb1532efbc",
+    "tool": "2690b93be9ae"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 9
+  },
+  "sense:search": {
+   "fields": {
+    "description": "de849f0a0855",
+    "target_description": "027186d29eb8",
+    "implementation": "9103edc5f400",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "bb6d70d17c4c",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "6ad21f9d2ea1"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 181
+  },
+  "sense:search_shopping": {
+   "fields": {
+    "description": "09d174909e18",
+    "target_description": "781c20de98c7",
+    "implementation": "7d0d781f2586",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "c51974e5ee03",
+    "router": "ebbb1532efbc",
+    "tool": "ec811cffd81f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 16
+  },
+  "sense:search_youtube": {
+   "fields": {
+    "description": "dc9c4e82b1e6",
+    "target_description": "8b2d16668eb7",
+    "implementation": "db77f148ba67",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "6447534e114b",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "5433e2fa2160"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 18
+  },
+  "sense:see": {
+   "fields": {
+    "description": "85f79fbc6ad1",
+    "target_description": "385afd9ba11c",
+    "implementation": "0e8310d813e5",
+    "returns": "1cf2462dbf78",
+    "side_effect": "b5bea41b6c62",
+    "router": "ebbb1532efbc",
+    "tool": "bba2cea6d695"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "sense:self_check": {
+   "fields": {
+    "description": "d2c25e894c0c",
+    "target_description": "cefbc15ba01b",
+    "implementation": "8dc8b22ee684",
+    "returns": "9a5e13f69efc",
+    "target_key": "0cacf69ab63c",
+    "ops": "fbea4733c011",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 25
+  },
+  "sense:sqlite": {
+   "fields": {
+    "description": "e8c3cbfaa258",
+    "target_description": "7fc8163f9ec4",
+    "implementation": "59254e09ee45",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "f37c5e54144c",
+    "ops": "c54fa361b067",
+    "side_effect": "fcbcf165908d",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "4f3c5e5d1dc4"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 10
+  },
+  "sense:startup": {
+   "fields": {
+    "description": "3da60f52051d",
+    "target_description": "4297f5fa9c07",
+    "implementation": "8464dbeda925",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "params": "55a5b1b40845",
+    "aliases": "05e25f9d6e19",
+    "router": "ebbb1532efbc",
+    "tool": "24c74850dea3"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 19
+  },
+  "sense:stay": {
+   "fields": {
+    "description": "7c6c4219711f",
+    "target_description": "e9faefd68907",
+    "implementation": "4b633299ddb1",
+    "returns": "3c22349f8d0b",
+    "aliases": "8bdd002a1a15",
+    "router": "ebbb1532efbc",
+    "tool": "93006f41aa36"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 23
+  },
+  "sense:stock": {
+   "fields": {
+    "description": "371c78e2bfd3",
+    "target_description": "98364e40168f",
+    "implementation": "b61c16068f5c",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "params": "4d836a6542e5",
+    "aliases": "4a18a36666e4",
+    "ops": "546f8f008d06",
+    "side_effect": "fcbcf165908d",
+    "router": "ebbb1532efbc",
+    "tool": "0c5575354d32"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 141
+  },
+  "sense:used": {
+   "fields": {
+    "description": "706f004318bc",
+    "target_description": "260ca64a890a",
+    "implementation": "4ef6cb3f9cfa",
+    "returns": "3c22349f8d0b",
+    "target_key": "4c4f28a0fc9a",
+    "aliases": "96cc7b816c74",
+    "router": "ebbb1532efbc",
+    "tool": "86d9404c5eca"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 31
+  },
+  "sense:video": {
+   "fields": {
+    "description": "6a78e6632767",
+    "target_description": "9f91da44f0f1",
+    "implementation": "62a2d08dca2f",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "aliases": "8337ae8965f2",
+    "ops": "2ef58d682065",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "3979cff852e8"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 57
+  },
+  "sense:weather": {
+   "fields": {
+    "description": "3b54d5ba20cf",
+    "target_description": "7fbec54e128b",
+    "implementation": "f80b0db04061",
+    "returns": "3c22349f8d0b",
+    "aliases": "1fec0fce3dbd",
+    "router": "ebbb1532efbc",
+    "tool": "ac057b567ef7"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 48
+  },
+  "sense:world": {
+   "fields": {
+    "description": "75f3c95ef238",
+    "target_description": "748b6aec876f",
+    "implementation": "270d9573af56",
+    "returns": "1cf2462dbf78",
+    "target_key": "0cacf69ab63c",
+    "ops": "495ddfb2a3a6",
+    "side_effect": "b5bea41b6c62",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 24
+  },
+  "sense:world_bank": {
+   "fields": {
+    "description": "734e7d183d36",
+    "target_description": "d42d19048fa4",
+    "implementation": "cb1aa36b2225",
+    "returns": "3c22349f8d0b",
+    "target_key": "dbed10c401ac",
+    "router": "ebbb1532efbc",
+    "tool": "63eaa11b6c46"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 11
+  },
+  "table:ai": {
+   "fields": {
+    "description": "fa889f62150e",
+    "target_description": "8ae0cb45fa19",
+    "implementation": "4aa5dfa30c86",
+    "returns": "5450ffb2cf8a",
+    "target_key": "4ec46c9ca40f",
+    "aliases": "7ef3c7939d51",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "3fe40b0f97de"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "table:brief": {
+   "fields": {
+    "description": "451828c11599",
+    "target_description": "22538a4b6af1",
+    "implementation": "dcb478915cba",
+    "returns": "1cf2462dbf78",
+    "target_key": "4ec46c9ca40f",
+    "aliases": "7ef3c7939d51",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "5a71b9347b01"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 70
+  },
+  "table:chart": {
+   "fields": {
+    "description": "9c97c23a96a1",
+    "target_description": "86530af482e6",
+    "implementation": "2d31e6305125",
+    "returns": "9a5e13f69efc",
+    "target_key": "87dfbbd263f1",
+    "params": "9f3b204104bb",
+    "aliases": "dd74ca1b5b68",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "016744cf3756"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 60
+  },
+  "table:chunk": {
+   "fields": {
+    "description": "51e09798912d",
+    "target_description": "4241f594d136",
+    "implementation": "38414c92fd09",
+    "returns": "5450ffb2cf8a",
+    "target_key": "eb1e91e44529",
+    "params": "508d66d95e0b",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "17c3086f634b"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 4
+  },
+  "table:compute": {
+   "fields": {
+    "description": "1530729d73e2",
+    "target_description": "434a1e9fac55",
+    "implementation": "90c6935ec8b7",
+    "returns": "5450ffb2cf8a",
+    "target_key": "c7f5814b92ec",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "0790ec1a626f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 3
+  },
+  "table:dedup": {
+   "fields": {
+    "description": "52188e880b16",
+    "target_description": "c790bd2949e3",
+    "implementation": "c8b4ae875515",
+    "returns": "5450ffb2cf8a",
+    "target_key": "26c0fb4158e9",
+    "params": "b40949d89039",
+    "aliases": "58f5d2b4c1cc",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "4e1e4e88e381"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 28
+  },
+  "table:document": {
+   "fields": {
+    "description": "38c8cc62ff33",
+    "target_description": "200421dbd776",
+    "implementation": "1121ac4f734a",
+    "returns": "9a5e13f69efc",
+    "target_key": "86353e9c60d2",
+    "aliases": "5315c08c6be7",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "92eba2ac7446"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 53
+  },
+  "table:each": {
+   "fields": {
+    "description": "7fa95217adbe",
+    "target_description": "e605a7d7d628",
+    "implementation": "c86d8be05a15",
+    "returns": "5450ffb2cf8a",
+    "target_key": "8dd79be12d30",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "519dd933e8a2",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 93
+  },
+  "table:filter": {
+   "fields": {
+    "description": "20efef67e528",
+    "target_description": "6ef626c4cca1",
+    "implementation": "551f98383af6",
+    "returns": "5450ffb2cf8a",
+    "target_key": "43f94244d00c",
+    "params": "858120e366bf",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "47fa78a71bde"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 93
+  },
+  "table:flatten": {
+   "fields": {
+    "description": "34beb4d60d57",
+    "target_description": "1c77e05f794b",
+    "implementation": "bff338a2a348",
+    "returns": "5450ffb2cf8a",
+    "target_key": "d99df5e0eaa5",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "b692d238407b"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 1
+  },
+  "table:groupby": {
+   "fields": {
+    "description": "ce7c6ed451db",
+    "target_description": "011a15cf0594",
+    "implementation": "f2f50dd3068b",
+    "returns": "5450ffb2cf8a",
+    "target_key": "26c0fb4158e9",
+    "params": "b40949d89039",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "3e217bd9f57d"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 36
+  },
+  "table:join": {
+   "fields": {
+    "description": "b2802eb1fe6f",
+    "target_description": "1281ea96212b",
+    "implementation": "682a227b316a",
+    "returns": "5450ffb2cf8a",
+    "target_key": "990c23868b96",
+    "params": "c3cea5021e5b",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "2773a81d8139"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 6
+  },
+  "table:merge": {
+   "fields": {
+    "description": "e50d905d2faf",
+    "target_description": "6f93550b9965",
+    "implementation": "43dc50f30b10",
+    "returns": "5450ffb2cf8a",
+    "target_key": "26c0fb4158e9",
+    "params": "b40949d89039",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "f919af63ef63"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 7
+  },
+  "table:reduce": {
+   "fields": {
+    "description": "51c314dec200",
+    "target_description": "193cdf9583e0",
+    "implementation": "5abbfb676de2",
+    "returns": "5450ffb2cf8a",
+    "target_key": "0d9f50d8178c",
+    "runs_on": "519dd933e8a2",
+    "router": "0dc8cd0a9228"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 12
+  },
+  "table:rename": {
+   "fields": {
+    "description": "c66eb41b5b20",
+    "target_description": "73714529605f",
+    "implementation": "d1e588d0092a",
+    "returns": "5450ffb2cf8a",
+    "target_key": "33dffa18ca3f",
+    "aliases": "ae226be6fea6",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "88f226a5e614"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 10
+  },
+  "table:select": {
+   "fields": {
+    "description": "586123f04019",
+    "target_description": "e39e5c0aff4d",
+    "implementation": "6bed9ea1ed87",
+    "returns": "5450ffb2cf8a",
+    "target_key": "84a49ca9d359",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "bd31ce2d9611"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 76
+  },
+  "table:since": {
+   "fields": {
+    "description": "4637561bdbe2",
+    "target_description": "8d43fffad837",
+    "implementation": "22fa706bb509",
+    "returns": "5450ffb2cf8a",
+    "target_key": "c0c1baf2fa65",
+    "params": "b40949d89039",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "0e17c410575f"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 38
+  },
+  "table:sort": {
+   "fields": {
+    "description": "cd43c04120ad",
+    "target_description": "af1312cbe7ad",
+    "implementation": "94233058bda4",
+    "returns": "5450ffb2cf8a",
+    "target_key": "26c0fb4158e9",
+    "params": "b40949d89039",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "193f54b07478"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 86
+  },
+  "table:spreadsheet": {
+   "fields": {
+    "description": "f6f01e7b52b0",
+    "target_description": "5d36d9b669cc",
+    "implementation": "ba405408355c",
+    "returns": "9a5e13f69efc",
+    "target_key": "d070c7ecb482",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "c0fcf03f6227"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 32
+  },
+  "table:structure": {
+   "fields": {
+    "description": "433f2c0edfc7",
+    "target_description": "c9db57696ea2",
+    "implementation": "77970919cfb4",
+    "returns": "3c22349f8d0b",
+    "target_key": "b09c7d54e7dd",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "0a534cda7c60"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 15
+  },
+  "table:take": {
+   "fields": {
+    "description": "d2c330a731e6",
+    "target_description": "e461e97b83a7",
+    "implementation": "2ed6ce156ec1",
+    "returns": "5450ffb2cf8a",
+    "target_key": "46a3ae93aa7a",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "d5515d822742"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 203
+  },
+  "table:union": {
+   "fields": {
+    "description": "2a1e3e9412fb",
+    "target_description": "628038d3a6e9",
+    "implementation": "950886be9e79",
+    "returns": "5450ffb2cf8a",
+    "target_key": "12ae32cb1ec0",
+    "params": "a525372243b7",
+    "runs_on": "519dd933e8a2",
+    "router": "ebbb1532efbc",
+    "tool": "d99b43cac706"
+   },
+   "reviewed": "2026-09-18",
+   "examples": 31
+  }
+ }
+}

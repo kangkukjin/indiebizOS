@@ -352,7 +352,9 @@ async def execute_ibl(code: str, project_path: str = "",
     # ★회수(recover) 폴링은 반복이 정상 사용이라 가드를 안 태운다(F51-1).
     if code.strip() and not (recover or read_result is not None or describe is not None or check):
         guard_key = agent_id or task_id or "stdio"
-        advisory = _repeat_advisory(guard_key, f"{code.strip()}|{effective_path}")
+        from repeat_guard import files_digest as _files_digest
+        advisory = _repeat_advisory(
+            guard_key, f"{code.strip()}|{effective_path}|{_files_digest(files, files_from)}")
         if advisory:
             from repeat_guard import append_advisory
             text = append_advisory(text, advisory)

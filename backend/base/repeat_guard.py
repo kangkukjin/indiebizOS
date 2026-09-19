@@ -44,6 +44,20 @@ def advise(key: str, signature: str) -> str:
     return ""
 
 
+def files_digest(files=None, files_from=None) -> str:
+    """$file:N 본문의 짧은 지문 — 코드가 같아도 files 가 다르면 다른 호출이다.
+
+    실측(2026-09-18 ep3861): `[self:edit]{old_string:$file:0,new_string:$file:1}` 은 편집마다
+    코드 문자열이 같고 files 만 다르다. 코드만 비교하던 CC 경로 가드가 서로 다른 편집
+    다섯 건을 "같은 호출 5회째"로 신고했고, IBL_DEBUG 접기도 그것들을 한 줄로 접었다.
+    """
+    if not files and not files_from:
+        return ""
+    import hashlib
+    blob = json.dumps([files or [], files_from or []], ensure_ascii=False, default=str)
+    return hashlib.sha1(blob.encode("utf-8")).hexdigest()[:8]
+
+
 def reset_all():
     """테스트 전용 — 체인 전체 초기화."""
     with _lock:

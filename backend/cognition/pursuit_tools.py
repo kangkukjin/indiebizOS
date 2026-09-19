@@ -101,6 +101,12 @@ def execute_pursuit(payload, agent_id, task_id=None):
             b.bind(row)
             result = public_row(row)
         else:
+            if op == "detach" and not b.row and b.detached:
+                # 의식이 이 턴을 이미 분리했다(detach_pursuit). 실행자의 같은 요청은 도달한
+                # 상태의 재확인이지 계약 위반이 아니다(2026-09-18 ep3860 거절 실측).
+                return json.dumps({"success": True, "result": {"detached": None, "already": True,
+                    "directive": "이 턴은 이미 과제에서 분리돼 있습니다. 현재 사용자 질문을 계속 처리하세요."}},
+                    ensure_ascii=False)
             if not b.row or pid != b.row["id"]:
                 raise ValueError("이 턴에 연결된 과제만 갱신할 수 있습니다")
             if "base_version" in payload and payload["base_version"] != b.row["version"]:

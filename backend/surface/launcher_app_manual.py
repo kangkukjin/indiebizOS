@@ -154,7 +154,7 @@ function jMeta(ep){
   if(ep.agent) m.push(String(ep.agent));
   if(ep.hippocampus_score!=null) m.push('확신 '+Math.round(ep.hippocampus_score*100)+'%');
   m.push(ep.execution_rounds!=null?ep.execution_rounds+'라운드':ep.is_running?'라운드 집계 대기':'라운드 미측정');
-  m.push(ep.ibl_calls!=null?'IBL '+ep.ibl_calls+'회':'IBL 미측정');
+  m.push(ep.ibl_calls!=null?'IBL '+ep.ibl_calls+'회'+(ep.ibl_actions!=null?' · 액션 '+ep.ibl_actions:''):'IBL 미측정');
   if(ep.total_ms!=null) m.push((ep.total_ms/1000).toFixed(1)+'초');
   const d=ep.unconscious_decision;
   if(d) m.push(d==='THINK'?'숙고':(d==='EXECUTE'?'실행':String(d)));

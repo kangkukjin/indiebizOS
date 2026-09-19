@@ -340,11 +340,8 @@ IBL 액션 없음. `globals.css` / `tailwind.config.*` / `theme.json`을 `[self:
 
 **배포 방식부터 확인한다 (사이트마다 다름):**
 - git 연동 자동배포가 설정된 사이트면 `git push`만으로 반영된다.
-- 아니면 vercel CLI 토큰 배포: 이 환경은 `vercel whoami`가 자격증명 없음으로 실패할 수 있지만, `$VERCEL_TOKEN`이 있고 프로젝트 폴더에 `.vercel/project.json`이 연결돼 있으면 토큰으로 배포된다.
-```
-run_command('cd {project_path} && vercel deploy --prod --yes --token="$VERCEL_TOKEN"')
-```
-`whoami` 실패만 보고 "배포 불가"로 판단하지 말 것 — 토큰 경로를 먼저 확인한다.
+- 아니면 vercel CLI 배포이고, **통로는 위 `deploy` op 하나다.** op 가 `$VERCEL_TOKEN`(없으면 로컬 `vercel login`)으로 인증하고 출력의 토큰을 가린다. 셸에서 `vercel deploy` 를 직접 치지 말 것 — 토큰이 명령줄·로그에 실리고 실행 이력(성공률·증류)에도 남지 않는다.
+- 셸의 `vercel whoami` 실패만 보고 "배포 불가"로 판단하지 말 것 — 셸에는 토큰이 없을 수 있다. `deploy` op 의 결과(`error`·`solution`)로 판정한다.
 
 ### 파이프라인
 ```

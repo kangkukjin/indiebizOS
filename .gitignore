@@ -171,6 +171,8 @@ data/warehouse_media_web/
 #  추적 정의를 가진다. ibl_fixtures.json 은 특히 중요: scripts/ibl_health_check.py 의
 #  §1B 일일 행동 그물이 런타임에 이 파일을 읽으므로, 없으면 신선 설치에 행동 그물이 없다.)
 !data/ibl_fixtures.json
+# 계약 검토 지문은 CI 입력이다(개인 용례 본문은 포함하지 않는다).
+!data/ibl_example_review.json
 !data/phone_manifest.json
 !data/package_meta.json
 # 셸 그림자 관문표(2026-09-05) — 어휘 shell_shadow: 블록의 순수 파생물. 실행기 훅이 런타임에 읽으므로 신선 clone 에도 있어야 한다.

@@ -1258,12 +1258,15 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
                 f"""SELECT episode_id,
                     SUM(CASE WHEN kind='supervision.tool.started'
                         AND json_extract(data, '$.name')='execute_ibl' THEN 1 ELSE 0 END) attempts,
-                    SUM(CASE WHEN kind='ibl.started'
-                        AND COALESCE(json_extract(data, '$.nested'), 0)=0 THEN 1 ELSE 0 END) starts
+                    SUM(kind='ibl.started') starts,
+                    SUM(kind='ibl.started' AND COALESCE(json_extract(data, '$.code_chars'), 1)>0) coded,
+                    SUM(CASE WHEN kind='ibl.started' THEN COALESCE(json_extract(data, '$.action_count'), 0) END) actions
                     FROM trajectory_event WHERE episode_id IN ({marks})
                     {'' if include_test else "AND COALESCE(source, 'usage') <> 'test'"}
                     GROUP BY episode_id""", [item["id"] for item in items]).fetchall()
-            counts = {r["episode_id"]: max(r["attempts"], r["starts"]) for r in calls}
+            # IBL 실행 = 코드를 실은 호출(설명 조회·결과 읽기 제외) + 엔진 진입 전 거절된 시도. 액션 = 쓴 어휘 수.
+            counts = {r["episode_id"]: r["coded"] + max(r["attempts"] - r["starts"], 0) for r in calls}
+            acts = {r["episode_id"]: r["actions"] for r in calls}
             rounds = {}
             for row in conn.execute(
                 f"SELECT episode_id,data FROM trajectory_event WHERE episode_id IN ({marks}) "
@@ -1275,6 +1278,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
             for item in items:
                 item["is_running"] = item["ended_at"] is None
                 item["ibl_calls"] = counts.get(item["id"])
+                item["ibl_actions"] = acts.get(item["id"])
                 observed = count_execution_rounds(rounds.get(item["id"], []))
                 if observed:
                     # 진행 중에는 요약이 없다. 완료분도 실제 원장이 있으면 누락된 요약을 보완한다.

@@ -43,7 +43,7 @@ AUTH_PRIMITIVES = {
     "validate",          # limb_keys.validate — 모듈 한정으로 아래에서 좁힌다
 }
 # `validate` 는 흔한 이름이라 이 모듈에서만 인증으로 친다.
-_VALIDATE_OK_MODULES = {"api_limb"}
+_VALIDATE_OK_MODULES = {"api_limb", "api_member"}
 
 MAX_DEPTH = 3
 
@@ -56,6 +56,7 @@ MIN_PUBLIC_ROUTES = 40
 # 의도적으로 인증 없이 열린 경로 — (METHOD, PATH): 사유.
 # ★여기 추가하는 것은 "이 경로를 공개 인터넷에 익명으로 연다"는 선언이다.
 ANONYMOUS_ALLOW = {
+    ("GET",  "/m/app"):                         "회원 로그인 셸 — 정적 HTML만 반환하며 데이터 API는 회원 열쇠 인증 필요",
     ("GET",  "/ping"):                           "생존 핑 — 민감정보 없음, 다른 몸이 무인증으로 연결상태 확인",
     ("GET",  "/launcher/app"):                   "런처 셸 — 로그인 화면 자체(로그인 전에 받아야 함)",
     ("GET",  "/launcher/ui/{path:path}"):        "정적 앱 번들 — serve_asset이 번들 내부 JS·CSS·이미지·폰트만 허용(설정·소스맵·경로 탈출 차단), 데이터 API는 세션 필요",
@@ -186,6 +187,7 @@ def self_test() -> int:
         "_resolve": "def _resolve(slug, fid, rel, h):\n    _check_secret(h)\n    return 1",
         "_deep1": "def _deep1(h):\n    return _resolve(1, 2, 3, h)",
         "_innocent": "def _innocent(x):\n    return x + 1",
+        "_member_of": "def _member_of(key):\n    return limb_keys.validate(key)",
     }
     cases = [
         ("직접 호출",           "async def f(h):\n    _check_secret(h)", "api_showcase", True),
@@ -195,6 +197,8 @@ def self_test() -> int:
         ("데코레이터 인증",     "@require_auth\nasync def f(request):\n    return 1", "api_nas", True),
         ("limb_keys.validate",  "async def f(req):\n    rec = limb_keys.validate(req.key)", "api_limb", True),
         ("validate 오인 방지",  "async def f(d):\n    return validate(d)", "api_portal", False),
+        ("회원 열쇠 간접 인증", "def f(req):\n    return _member_of(req.key)", "api_member", True),
+        ("회원 인증 누락",     "def f(req):\n    return _innocent(req.key)", "api_member", False),
     ]
     bad = 0
     for name, src, mod, expect in cases:

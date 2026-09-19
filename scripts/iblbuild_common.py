@@ -139,10 +139,11 @@ GUARD_INPUT_PATTERNS = [
     # OS-가드는 tool_*.py 등 형제 모듈도 읽는다(예: radio/tool_radio.py).
     r"data/packages/(installed|not_installed)/.*\.py",
     r"data/training/.*\.json",
-    r"scripts/(build_ibl_nodes|iblbuild_[a-z]+)\.py",
+    r"scripts/(build_ibl_nodes|iblbuild_[a-z_]+)\.py",
+    r"data/ibl_example_review\.json",
 
     # ── 빌드 산출물 (바이트 일치 대조 대상 — 손으로 고치면 즉시 어긋난다) ──
-    r"data/(ibl_nodes\.yaml|ibl_fixtures\.json|package_meta\.json|phone_manifest\.json|core_manifest\.json)",
+    r"data/(ibl_nodes\.yaml|ibl_fixtures\.json|package_meta\.json|phone_manifest\.json|member_manifest\.json|core_manifest\.json)",
 
     # ── backend (2026-07-25 신규) ──
     # validate_corpus_params 가 (root/"backend").glob("*.py") 를 통째로 읽고,

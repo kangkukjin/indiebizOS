@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "actions": {
+    "limbs:android": {
+      "lands_on": "body",
+      "package": "android",
+      "side_effect": true,
+      "limb_op": {
+        "op": "accessibility",
+        "action": "$op",
+        "query": "$query",
+        "x": "$x",
+        "y": "$y",
+        "x1": "$x1",
+        "y1": "$y1",
+        "x2": "$x2",
+        "y2": "$y2",
+        "text": "$text",
+        "key": "$key",
+        "direction": "$direction",
+        "duration": "$duration",
+        "package_name": "$package_name"
+      }
+    },
+    "limbs:radio": {
+      "lands_on": "body",
+      "package": "radio",
+      "side_effect": true,
+      "member_transform": "radio_member:control",
+      "limb_op": {
+        "op": "media",
+        "action": "$op",
+        "url": "$stream_url",
+        "volume": "$volume"
+      },
+      "path_audited": {
+        "at": "2026-09-15",
+        "impl": "5e75393fac9cd838"
+      }
+    },
+    "self:fill": {
+      "lands_on": "body",
+      "package": "system_essentials",
+      "side_effect": true,
+      "member_transform": "member_documents:fill_document",
+      "limb_op": {
+        "op": "document_fill",
+        "path": "$path"
+      },
+      "path_audited": {
+        "at": "2026-09-18",
+        "impl": "393d4d0d7a11aba4"
+      }
+    },
+    "self:list": {
+      "lands_on": "body",
+      "package": "system_essentials",
+      "side_effect": false,
+      "limb_op": {
+        "op": "list",
+        "path": "$path"
+      }
+    },
+    "self:mkdir": {
+      "lands_on": "body",
+      "package": "system_essentials",
+      "side_effect": true,
+      "limb_op": {
+        "op": "mkdir",
+        "path": "$path"
+      }
+    },
+    "self:move": {
+      "lands_on": "body",
+      "package": "system_essentials",
+      "side_effect": true,
+      "limb_op": {
+        "op": "file_move",
+        "path": "$src",
+        "dest": "$dest"
+      }
+    },
+    "self:read": {
+      "lands_on": "body",
+      "package": "system_essentials",
+      "side_effect": false,
+      "member_transform": "member_documents:read_document",
+      "limb_op": {
+        "op": "read",
+        "path": "$path"
+      },
+      "path_audited": {
+        "at": "2026-09-18",
+        "impl": "393d4d0d7a11aba4"
+      }
+    },
+    "self:script": {
+      "lands_on": "body",
+      "package": "system_essentials",
+      "side_effect": true,
+      "limb_op": {
+        "op": "script",
+        "action": "$op",
+        "id": "$id",
+        "path": "$path",
+        "interpreter": "$interpreter",
+        "args": "$args",
+        "resources": "$resources",
+        "dependencies": "$dependencies"
+      }
+    },
+    "self:write": {
+      "lands_on": "body",
+      "package": "system_essentials",
+      "side_effect": true,
+      "limb_op": {
+        "op": "write",
+        "path": "$path",
+        "content": "$content"
+      }
+    },
+    "sense:crawl": {
+      "lands_on": "hub",
+      "package": "web",
+      "side_effect": false,
+      "path_audited": {
+        "at": "2026-09-18",
+        "impl": "e865330797856b99"
+      }
+    },
+    "sense:here": {
+      "lands_on": "body",
+      "package": "android",
+      "side_effect": true,
+      "limb_op": {
+        "op": "location"
+      }
+    },
+    "sense:radio": {
+      "lands_on": "hub",
+      "package": "radio",
+      "side_effect": false,
+      "path_audited": {
+        "at": "2026-09-15",
+        "impl": "5e75393fac9cd838"
+      }
+    },
+    "sense:search": {
+      "lands_on": "hub",
+      "package": "web",
+      "side_effect": false,
+      "path_audited": {
+        "at": "2026-09-18",
+        "impl": "e865330797856b99"
+      }
+    }
+  }
+}

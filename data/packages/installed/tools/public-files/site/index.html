@@ -236,32 +236,89 @@ function attachSeekRescue(v, it) {
     v.play().catch(() => {});
     cap.textContent = `${it.title || ""} — ⏩ ${fmtTime(off)}부터 이어보는 중`;
   }
-  v.addEventListener("loadedmetadata", () => {
+  const onMetadata = () => {
     // 탐색불가 스트림(생방송)일 때만 커스텀 바. 캐시/원본(Range 지원)은 네이티브가 완전.
     const live = !v.seekable.length || v.seekable.end(v.seekable.length - 1) < fullDur() - off - 60;
     seek.style.display = live ? "flex" : "none";
     if (live) { bar.max = Math.floor(fullDur()); total.textContent = fmtTime(fullDur()); }
-  });
-  v.addEventListener("timeupdate", () => {
+  };
+  const onTimeUpdate = () => {
     if (dragging || seek.style.display === "none") return;
     bar.value = Math.floor(off + v.currentTime);
     now.textContent = fmtTime(off + v.currentTime);
-  });
-  bar.addEventListener("input", () => { dragging = true; now.textContent = fmtTime(+bar.value); });
-  bar.addEventListener("change", () => {
+  };
+  const onInput = () => { dragging = true; now.textContent = fmtTime(+bar.value); };
+  const onChange = () => {
     dragging = false;
     const target = +bar.value;
     const rel = target - off;
     for (let i = 0; i < v.buffered.length; i++)
       if (rel >= v.buffered.start(i) && rel <= v.buffered.end(i) + 1) { v.currentTime = rel; return; }
     swap(target);   // 버퍼 밖 — 그 지점부터의 오프셋 스트림으로 즉시 이동
-  });
+  };
+  bar.addEventListener("input", onInput);
+  bar.addEventListener("change", onChange);
+  v.addEventListener("loadedmetadata", onMetadata);
+  v.addEventListener("timeupdate", onTimeUpdate);
+  return () => {
+    bar.removeEventListener("input", onInput);
+    bar.removeEventListener("change", onChange);
+    v.removeEventListener("loadedmetadata", onMetadata);
+    v.removeEventListener("timeupdate", onTimeUpdate);
+  };
 }
 
 // ── 동영상 열기 — HLS(적응형) 우선, 안 되면 프로그레시브 폴백 ──────────────
 let curHls = null;
+let playbackCleanup = null;
 function destroyHls() {
   if (curHls) { try { curHls.destroy(); } catch (e) {} curHls = null; }
+}
+function releasePlayback() {
+  if (playbackCleanup) { playbackCleanup(); playbackCleanup = null; }
+  destroyHls();
+  // DOM에서 지우는 것만으로는 Safari의 다운로드·디코더가 정리되지 않는다.
+  document.querySelectorAll("#lbBody video, #lbBody audio").forEach(v => {
+    v.pause();
+    v.removeAttribute("src");
+    v.querySelectorAll("source").forEach(s => s.remove());
+    v.load();
+  });
+}
+function attachPlaybackRecovery(v) {
+  // iPadOS 16 실측: 수 분이 버퍼돼도 시작 시각 0.18초에서 HAVE_METADATA로 멈춤.
+  // 받아 둔 범위 안의 작은 이동으로만 복구한다. 회선 지연·일시정지는 건드리지 않는다.
+  let lastTime = v.currentTime, lastProgress = performance.now(), attempts = 0;
+  const onSeeking = () => { lastTime = v.currentTime; lastProgress = performance.now(); };
+  v.addEventListener("seeking", onSeeking);
+  const timer = setInterval(() => {
+    const now = performance.now(), at = v.currentTime;
+    if (!v.isConnected) { stop(); return; }
+    if (v.paused || v.ended || v.error || document.hidden) {
+      lastTime = at; lastProgress = now;
+      return;
+    }
+    if (Math.abs(at - lastTime) > 0.02) {
+      lastTime = at; lastProgress = now; attempts = 0;
+      return;
+    }
+    // 사용자가 탐색하는 동안은 더 기다린다. 충분히 버퍼됐는데 seeking마저
+    // 끝나지 않는 경우에는 영구 대기하지 않고 같은 제한 안에서 복구한다.
+    if (v.readyState >= 3 || now - lastProgress < (v.seeking ? 8000 : 4000) || attempts >= 2) return;
+    for (let i = 0; i < v.buffered.length; i++) {
+      const start = v.buffered.start(i), end = v.buffered.end(i);
+      const target = Math.max(at + 0.25, start + 0.5);
+      if (start > at + 0.5 || target - at > 0.75 || end - target < 0.5) continue;
+      try {
+        v.currentTime = target;
+        lastTime = target; lastProgress = now; attempts++;
+        v.dispatchEvent(new CustomEvent("playbackrecovery", { detail: { from: at, to: target } }));
+      } catch (e) { lastProgress = now; attempts++; }
+      break;
+    }
+  }, 500);
+  function stop() { clearInterval(timer); v.removeEventListener("seeking", onSeeking); }
+  return stop;
 }
 function progressiveVideo(v, it) {
   // 기존 경로 그대로 — 생방송 트랜스코드면 커스텀 시크바(attachSeekRescue)가 구출.
@@ -279,33 +336,55 @@ function keepSubsOn(v) {
   let n = 0;
   const t = setInterval(() => {
     const k = v.textTracks[0];
-    if (!k || (k.cues && k.cues.length) || ++n > 20) { clearInterval(t); return; }
+    if (!v.isConnected || !k || (k.cues && k.cues.length) || ++n > 20) { clearInterval(t); return; }
     if (k.mode !== "showing") k.mode = "showing";
   }, 250);   // 최대 5초
+  return () => clearInterval(t);
 }
 function openVideo(body, it) {
   body.innerHTML = `<video controls autoplay playsinline>${trackHtml(it, 0)}</video>`;
   const v = body.querySelector("video");
-  attachSeekRescue(v, it);   // HLS 는 seekable 전체라 바가 안 뜬다 — 폴백 때만 발동
+  const detachSeek = attachSeekRescue(v, it);
+  const stopRecovery = attachPlaybackRecovery(v);
+  const request = new AbortController();
+  let active = true, fell = false, stopSubs;
+  const fallback = () => {
+    if (!active || !v.isConnected || fell) return;
+    fell = true;
+    request.abort();
+    destroyHls();
+    progressiveVideo(v, it);
+  };
+  playbackCleanup = () => {
+    active = false;
+    request.abort();
+    detachSeek(); stopRecovery();
+    if (stopSubs) stopSubs();
+    v.removeEventListener("error", fallback);
+  };
   if (qmode() === "auto" && window.Hls && Hls.isSupported()) {
     // hls.js — 마스터 404(사다리 준비 전)·치명 오류면 프로그레시브로 즉시 폴백.
     // 마스터 요청 자체가 맥의 결핍 렁 빌드를 방아쇠하므로 실패해도 헛걸음이 아니다.
     const h = new Hls();
     curHls = h;
-    let fell = false;
     h.on(Hls.Events.ERROR, (_, d) => {
-      if (d.fatal && !fell) { fell = true; destroyHls(); progressiveVideo(v, it); }
+      if (d.fatal) fallback();
     });
     h.loadSource(hlsUrl(it));
     h.attachMedia(v);
-    keepSubsOn(v);   // hls.js 가 꺼버린 사이드로드 <track> 을 되살린다
+    stopSubs = keepSubsOn(v);   // hls.js 가 꺼버린 사이드로드 <track> 을 되살린다
     return;
   }
   if (qmode() === "auto" && v.canPlayType("application/vnd.apple.mpegurl")) {
     // 사파리 네이티브 HLS — 404 를 <video> 가 늦게 알리므로 마스터 유무를 먼저 묻는다.
-    fetch(hlsUrl(it), { cache: "no-store" })
-      .then(r => { if (r.ok) { v.src = hlsUrl(it); keepSubsOn(v); v.play().catch(() => {}); } else progressiveVideo(v, it); })
-      .catch(() => progressiveVideo(v, it));
+    v.addEventListener("error", fallback);
+    fetch(hlsUrl(it), { cache: "no-store", signal: request.signal })
+      .then(r => {
+        if (!active || fell) return;
+        if (!r.ok) { fallback(); return; }
+        v.src = hlsUrl(it); stopSubs = keepSubsOn(v); v.play().catch(() => {});
+      })
+      .catch(() => fallback());
     return;
   }
   progressiveVideo(v, it);
@@ -402,7 +481,7 @@ function nextAudioIndex(from) {
 function openLb(idx) {
   const it = curItems[idx]; if (!it) return;
   lbIndex = idx;
-  destroyHls();
+  releasePlayback();
   document.getElementById("lbSeek").style.display = "none";
   syncQBtn(it.kind === "video");
   const body = document.getElementById("lbBody");
@@ -428,7 +507,7 @@ function openLb(idx) {
   document.getElementById("lb").classList.add("open");
 }
 function closeLb() {
-  destroyHls();
+  releasePlayback();
   document.getElementById("lb").classList.remove("open");
   document.getElementById("lbBody").innerHTML = "";
   document.getElementById("lbSeek").style.display = "none";

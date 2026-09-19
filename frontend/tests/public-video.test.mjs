@@ -45,11 +45,13 @@ function fixture() {
     },
   };
   const context = vm.createContext({
-    document, window: {}, AbortController,
+    document, window: {}, navigator: { vendor: '' }, AbortController,
     performance: { now: () => now },
     CustomEvent: class { constructor(type, opts) { this.type = type; this.detail = opts.detail; } },
     setInterval(fn, ms) { const id = nextTimer++; timers.set(id, { fn, ms }); return id; },
     clearInterval(id) { timers.delete(id); },
+    setTimeout(fn, ms) { const id = nextTimer++; timers.set(id, { fn, due: now + ms, once: true }); return id; },
+    clearTimeout(id) { timers.delete(id); },
     qmode: () => 'auto', mediaUrl: it => `media/${it.title}`, hlsUrl: it => `hls/${it.title}`,
     trackHtml: () => '', fmtTime: n => String(n),
     fetch(url, options) { return new Promise((resolve, reject) => pending.push({ url, options, resolve, reject })); },
@@ -57,6 +59,7 @@ function fixture() {
   vm.runInContext(source + '\nglobalThis.api={attachPlaybackRecovery,openVideo,releasePlayback};', context);
   return {
     ...context.api, body, document, pending, timers, elements,
+    safari() { context.navigator.vendor = 'Apple Computer, Inc.'; },
     enableHls() {
       const instances = [];
       class Hls {
@@ -77,7 +80,11 @@ function fixture() {
     tick(ms) {
       for (let t = 0; t < ms; t += 500) {
         now += 500;
-        for (const [id, timer] of [...timers]) if (timers.has(id)) timer.fn();
+        for (const [id, timer] of [...timers]) {
+          if (!timers.has(id) || (timer.once && now < timer.due)) continue;
+          if (timer.once) timers.delete(id);
+          timer.fn();
+        }
       }
     },
   };
@@ -179,4 +186,48 @@ test('late hls.js errors cannot destroy the next video player', () => {
   assert.equal(f.video().src, 'media/new');
   players[1].onError(null, { fatal: true });
   assert.equal(f.video().loadCalls, 1);
+});
+
+test('Safari waits for completed HLS instead of switching to unsupported live MP4', async () => {
+  const f = fixture(); f.safari(); const players = f.enableHls();
+  f.openVideo(f.body, { title: 'movie' });
+  players[0].onError(null, { fatal: true });
+  assert.equal(f.video().src, '');
+  assert.match(f.elements.get('lbCap').textContent, /준비/);
+  f.pending[0].resolve({ ok: false, status: 404 }); await flush();
+  f.tick(3000);
+  f.pending[1].resolve({ ok: true }); await flush();
+  assert.equal(players.length, 2);
+  assert.equal(players[1].url, 'hls/movie');
+  assert.notEqual(f.video().src, 'media/movie');
+  f.video().dispatchEvent({ type: 'playing' });
+  assert.equal(f.elements.get('lbCap').textContent, 'movie');
+  // 준비 완료 후에도 해석할 수 없는 영상은 무한 재시도하지 않는다.
+  players[1].onError(null, { fatal: true });
+  assert.match(f.elements.get('lbCap').textContent, /재생하지 못/);
+  assert.equal(players.length, 2);
+});
+
+test('closing while preparing cancels requests and prevents a stale HLS restart', async () => {
+  const f = fixture(); f.safari(); const players = f.enableHls();
+  f.openVideo(f.body, { title: 'movie' }); players[0].onError(null, { fatal: true });
+  const r = f.pending[0]; f.releasePlayback();
+  assert.equal(r.options.signal.aborted, true);
+  assert.equal(f.timers.size, 0);
+  r.resolve({ ok: true }); await flush(); f.tick(30000);
+  assert.equal(players.length, 1);
+});
+
+test('preparation requests time out and stop after a bounded number of checks', async () => {
+  const f = fixture(); f.safari(); const players = f.enableHls();
+  f.openVideo(f.body, { title: 'movie' }); players[0].onError(null, { fatal: true });
+  f.tick(8000);
+  assert.equal(f.pending[0].options.signal.aborted, true);
+  f.pending[0].reject(new Error('timeout')); await flush(); f.tick(3000);
+  for (let i = 1; i < 40; i++) {
+    f.pending[i].resolve({ ok: false, status: 404 }); await flush(); f.tick(3000);
+  }
+  assert.equal(f.pending.length, 40);
+  assert.match(f.elements.get('lbCap').textContent, /재생하지 못/);
+  f.releasePlayback(); assert.equal(f.timers.size, 0);
 });

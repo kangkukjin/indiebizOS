@@ -341,48 +341,104 @@ function keepSubsOn(v) {
   }, 250);   // 최대 5초
   return () => clearInterval(t);
 }
+// Safari는 변환 중인 길이 미상 MP4를 거부할 수 있다. 완성된 HLS가 준비될 때까지
+// 기다리고 한 번 다시 붙인다. 준비 확인도 타임아웃·횟수·닫기 취소가 모두 유한하다.
+function waitForPreparedHls(it, onReady, onFailure) {
+  let active = true, checks = 0, retryTimer, timeoutTimer, request;
+  async function check() {
+    if (!active) return;
+    if (++checks > 40) { active = false; onFailure(); return; }
+    request = new AbortController();
+    timeoutTimer = setTimeout(() => request.abort(), 8000);
+    try {
+      const r = await fetch(hlsUrl(it), { cache: "no-store", signal: request.signal });
+      if (!active) return;
+      if (r.ok) { active = false; onReady(); return; }
+      if (![404, 502, 503, 504].includes(r.status)) {
+        active = false; onFailure(); return;
+      }
+    } catch (e) { /* 일시적인 연결 오류도 준비 확인 횟수 안에서만 재시도 */ }
+    finally { clearTimeout(timeoutTimer); }
+    if (active) retryTimer = setTimeout(check, 3000);
+  }
+  check();
+  return () => {
+    active = false;
+    clearTimeout(retryTimer); clearTimeout(timeoutTimer);
+    if (request) request.abort();
+  };
+}
 function openVideo(body, it) {
   body.innerHTML = `<video controls autoplay playsinline>${trackHtml(it, 0)}</video>`;
   const v = body.querySelector("video");
   const detachSeek = attachSeekRescue(v, it);
   const stopRecovery = attachPlaybackRecovery(v);
   const request = new AbortController();
-  let active = true, fell = false, stopSubs;
-  const fallback = () => {
-    if (!active || !v.isConnected || fell) return;
-    fell = true;
-    request.abort();
-    destroyHls();
-    progressiveVideo(v, it);
+  const preparedOnly = /Apple/.test(navigator.vendor || "")
+    && !!v.canPlayType("application/vnd.apple.mpegurl");
+  let active = true, fell = false, stopSubs, stopPrepare, preparing = false;
+  const cap = document.getElementById("lbCap");
+  const failed = () => {
+    if (!active) return;
+    destroyHls(); v.pause();
+    cap.textContent = `${it.title || ""} — 재생하지 못했습니다. 잠시 후 영상을 다시 열어 주세요.`;
   };
+  const onPlaying = () => {
+    if (preparing) { preparing = false; cap.textContent = it.title || ""; }
+  };
+  v.addEventListener("playing", onPlaying);
+  function startHls() {
+    if (!active) return;
+    if (window.Hls && Hls.isSupported()) {
+      const h = new Hls();
+      curHls = h;
+      h.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) fallback(); });
+      h.loadSource(hlsUrl(it)); h.attachMedia(v);
+    } else {
+      v.src = hlsUrl(it);
+    }
+    if (stopSubs) stopSubs();
+    stopSubs = keepSubsOn(v);
+    // 준비를 기다린 뒤의 자동 재생이 차단되면 기본 재생 버튼으로 시작할 수 있다.
+    v.play().catch(() => {});
+  }
+  function fallback() {
+    if (!active || !v.isConnected) return;
+    if (fell) { if (preparedOnly && !stopPrepare) failed(); return; }
+    fell = true;
+    request.abort(); destroyHls();
+    if (preparedOnly) {
+      v.pause(); v.removeAttribute("src"); v.load();
+      preparing = true;
+      cap.textContent = `${it.title || ""} — 재생용 영상을 준비하고 있습니다…`;
+      stopPrepare = waitForPreparedHls(it, () => {
+        stopPrepare = null;
+        if (active) startHls();
+      }, () => { stopPrepare = null; failed(); });
+    } else {
+      progressiveVideo(v, it);
+    }
+  }
   playbackCleanup = () => {
     active = false;
     request.abort();
+    if (stopPrepare) stopPrepare();
     detachSeek(); stopRecovery();
     if (stopSubs) stopSubs();
     v.removeEventListener("error", fallback);
+    v.removeEventListener("playing", onPlaying);
   };
   if (qmode() === "auto" && window.Hls && Hls.isSupported()) {
-    // hls.js — 마스터 404(사다리 준비 전)·치명 오류면 프로그레시브로 즉시 폴백.
-    // 마스터 요청 자체가 맥의 결핍 렁 빌드를 방아쇠하므로 실패해도 헛걸음이 아니다.
-    const h = new Hls();
-    curHls = h;
-    h.on(Hls.Events.ERROR, (_, d) => {
-      if (d.fatal) fallback();
-    });
-    h.loadSource(hlsUrl(it));
-    h.attachMedia(v);
-    stopSubs = keepSubsOn(v);   // hls.js 가 꺼버린 사이드로드 <track> 을 되살린다
+    startHls();
     return;
   }
   if (qmode() === "auto" && v.canPlayType("application/vnd.apple.mpegurl")) {
-    // 사파리 네이티브 HLS — 404 를 <video> 가 늦게 알리므로 마스터 유무를 먼저 묻는다.
     v.addEventListener("error", fallback);
     fetch(hlsUrl(it), { cache: "no-store", signal: request.signal })
       .then(r => {
         if (!active || fell) return;
         if (!r.ok) { fallback(); return; }
-        v.src = hlsUrl(it); stopSubs = keepSubsOn(v); v.play().catch(() => {});
+        startHls();
       })
       .catch(() => fallback());
     return;

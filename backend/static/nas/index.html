@@ -31,6 +31,17 @@
             -webkit-tap-highlight-color:transparent;
         }
 
+        /* 텍스트는 설치형 Safari에서도 새 창 없이 같은 앱 안에서 읽는다. */
+        #textReader { position:fixed; inset:0; z-index:100; background:var(--bg); display:none; flex-direction:column; }
+        .reader-header { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--border); }
+        #textTitle { flex:1; min-width:0; font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+        #textDownload { color:#4fc3f7; font-size:13px; }
+        #textBody { flex:1; min-height:0; overflow:auto; -webkit-overflow-scrolling:touch; padding:16px; }
+        #textContent { white-space:pre-wrap; overflow-wrap:anywhere; tab-size:4; font:16px/1.7 -apple-system,BlinkMacSystemFont,sans-serif; }
+        .reader-position { display:flex; gap:12px; align-items:center; padding:12px 16px calc(12px + var(--safe-bottom)); border-top:1px solid var(--border); }
+        #textPosition { flex:1; min-width:0; }
+        #textPercent { min-width:4ch; text-align:right; font-size:13px; }
+
         /* ===== Login ===== */
         #loginScreen {
             display:flex; flex-direction:column; align-items:center;
@@ -248,6 +259,20 @@
         <button type="submit">Login</button>
         <div id="loginError"></div>
     </form>
+</div>
+
+<!-- 같은 화면에서 열고 닫아 파일 목록의 스크롤 위치를 유지한다. -->
+<div id="textReader" role="dialog" aria-modal="true" aria-labelledby="textTitle">
+    <div class="reader-header">
+        <button id="textClose" class="btn btn-secondary" onclick="closeTextReader()">← 목록</button>
+        <h2 id="textTitle"></h2>
+        <a id="textDownload" download>Download</a>
+    </div>
+    <div id="textBody" tabindex="0" aria-busy="false"><pre id="textContent"></pre></div>
+    <div class="reader-position">
+        <input id="textPosition" type="range" min="0" max="1000" value="0" aria-label="읽기 위치" oninput="jumpText(this.value)">
+        <span id="textPercent">0%</span>
+    </div>
 </div>
 
 <!-- ===== MAIN APP ===== -->
@@ -598,82 +623,77 @@ img{max-width:100%;max-height:95vh;object-fit:contain;border-radius:4px}
 <img src="${url}" alt="${esc(name)}"></body></html>`);
 }
 
+let textRequest = null;
+let textReturnFocus = null;
+function updateTextPosition() {
+    const body = $('textBody');
+    const max = body.scrollHeight - body.clientHeight;
+    const frac = max > 0 ? body.scrollTop / max : 0;
+    $('textPosition').value = Math.round(frac * 1000);
+    $('textPosition').disabled = max <= 0;
+    $('textPercent').textContent = Math.round(frac * 100) + '%';
+}
+function jumpText(value) {
+    const body = $('textBody');
+    body.scrollTop = (body.scrollHeight - body.clientHeight) * Number(value) / 1000;
+    updateTextPosition();
+}
+function closeTextReader() {
+    if (textRequest) textRequest.abort();
+    textRequest = null;
+    $('textReader').style.display = 'none';
+    $('textContent').textContent = '';
+    $('textBody').setAttribute('aria-busy', 'false');
+    $('app').inert = false;
+    if (textReturnFocus && textReturnFocus.isConnected) textReturnFocus.focus();
+}
+$('textBody').addEventListener('scroll', updateTextPosition);
+window.addEventListener('resize', updateTextPosition);
+$('textReader').addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeTextReader();
+    if (e.key === 'Tab') {
+        const controls = Array.from($('textReader').querySelectorAll('button,a[href],[tabindex="0"],input:not(:disabled)'));
+        const first = controls[0], last = controls[controls.length - 1];
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+});
 async function viewText(p) {
-    const url = `${API}/file?path=${encodeURIComponent(p)}`;
-    const name = p.split('/').pop();
+    if (textRequest) textRequest.abort();
+    const request = new AbortController();
+    textRequest = request;
+    textReturnFocus = document.activeElement;
+    $('textTitle').textContent = p.split('/').pop();
+    $('textDownload').href = `${API}/file?path=${encodeURIComponent(p)}`;
+    $('textContent').textContent = '불러오는 중…';
+    $('textReader').style.display = 'flex';
+    $('app').inert = true;
+    $('textBody').scrollTop = 0;
+    $('textBody').setAttribute('aria-busy', 'true');
+    $('textClose').focus();
+    updateTextPosition();
     try {
-        // /file 을 fetch().text() 로 읽으면 스펙상 헤더 charset 이 무시되고 항상 UTF-8 로
-        // 풀려, 옛 한글 문서(cp949/euc-kr)가 뷰어에서만 깨졌다(테슬라처럼 뷰어가 유일한
-        // 열람 경로인 기기에서 발견). /text 는 서버가 인코딩을 자동 감지해 UTF-8(JSON)로
-        // 주므로 어떤 브라우저에서도 안전 — 클라이언트 레거시 인코딩 지원에 안 기댐.
-        const r = await fetch(`${API}/text?path=${encodeURIComponent(p)}`, {credentials:'include'});
-        if (r.status === 401) { showLogin(); return; }
+        // 서버가 cp949/euc-kr까지 해석한 JSON을 받고, 원문은 HTML로 해석하지 않는다.
+        const r = await fetch(`${API}/text?path=${encodeURIComponent(p)}`, {
+            credentials:'include', signal:request.signal
+        });
+        if (request !== textRequest) return;
+        if (r.status === 401) { closeTextReader(); showLogin(); return; }
         if (!r.ok) {
             const d = await r.json().catch(() => null);
             throw new Error((d && d.detail) || ('HTTP ' + r.status));
         }
-        const text = (await r.json()).content;
-        const w = window.open('','_blank');
-        w.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(name)}</title>
-<style>*{margin:0;padding:0;box-sizing:border-box}body{background:#1a1a2e;color:#e0e0e0;font:14px/1.6 'Courier New',monospace;padding:50px 38px 40px 16px}
-pre{white-space:pre-wrap;word-break:break-all;tab-size:4}
-.top-bar{position:fixed;top:0;left:0;right:0;padding:10px 16px;background:rgba(26,26,46,0.95);color:#fff;font:14px sans-serif;display:flex;justify-content:space-between;align-items:center;z-index:10;border-bottom:1px solid #333}
-.top-bar a{color:#4fc3f7;text-decoration:none}
-/* 긴 텍스트 빠른 점프 스크롤바: 썸을 잡아끌어 임의 위치로 즉시 이동 (터치/마우스) */
-#jbar{position:fixed;top:46px;right:3px;bottom:6px;width:26px;z-index:20;cursor:pointer;touch-action:none;display:none}
-#jbar::before{content:'';position:absolute;left:11px;right:11px;top:0;bottom:0;background:rgba(255,255,255,0.12);border-radius:2px}
-#jthumb{position:absolute;left:4px;right:4px;min-height:44px;background:#4fc3f7;border-radius:9px;opacity:0.8;box-shadow:0 1px 4px rgba(0,0,0,0.4)}
-#jthumb:active{opacity:1;background:#7fd4f9}
-#jpct{position:fixed;right:36px;background:rgba(0,0,0,0.85);color:#fff;font:12px sans-serif;padding:3px 8px;border-radius:6px;z-index:21;display:none;pointer-events:none}</style></head><body>
-<div class="top-bar"><span>${esc(name)}</span><a href="${url}" download>Download</a></div>
-<pre></pre>
-<div id="jbar"><div id="jthumb"></div></div>
-<div id="jpct"></div>
-<script>
-(function(){
-var bar=document.getElementById('jbar'),thumb=document.getElementById('jthumb'),pct=document.getElementById('jpct');
-var de=document.documentElement;
-function maxScroll(){return Math.max(de.scrollHeight,document.body.scrollHeight)-window.innerHeight;}
-function upd(){
-  var ms=maxScroll();
-  if(ms<=4){bar.style.display='none';return;}  // 짧은 파일이면 점프바 숨김
-  bar.style.display='block';
-  var trackH=bar.clientHeight, vis=window.innerHeight, total=Math.max(de.scrollHeight,document.body.scrollHeight);
-  var thumbH=Math.max(44,trackH*vis/total);
-  var maxTop=trackH-thumbH;
-  thumb.style.height=thumbH+'px';
-  thumb.style.top=(maxTop*(window.scrollY/ms))+'px';
-}
-var dragging=false;
-function jumpTo(cy){
-  var rect=bar.getBoundingClientRect(), thumbH=thumb.offsetHeight, maxTop=rect.height-thumbH;
-  var y=Math.max(0,Math.min(maxTop,cy-rect.top-thumbH/2));  // 썸 중심을 손가락에 맞춤
-  var frac=maxTop?y/maxTop:0;
-  window.scrollTo(0,maxScroll()*frac);
-  pct.style.display='block';
-  pct.style.top=Math.max(46,rect.top+y-10)+'px';
-  pct.textContent=Math.round(frac*100)+'%';
-  upd();
-}
-function getY(e){return e.touches&&e.touches[0]?e.touches[0].clientY:e.clientY;}
-function start(e){dragging=true;e.preventDefault();jumpTo(getY(e));}
-function move(e){if(!dragging)return;e.preventDefault();jumpTo(getY(e));}
-function end(){dragging=false;pct.style.display='none';}
-bar.addEventListener('mousedown',start);
-document.addEventListener('mousemove',move);
-document.addEventListener('mouseup',end);
-bar.addEventListener('touchstart',start,{passive:false});
-document.addEventListener('touchmove',move,{passive:false});
-document.addEventListener('touchend',end);
-window.addEventListener('scroll',upd);
-window.addEventListener('resize',upd);
-setTimeout(upd,60);setTimeout(upd,400);  // pre 텍스트 삽입(비동기) 후 썸 크기 재계산
-})();
-<\/script>
-</body></html>`);
-        w.document.querySelector('pre').textContent = text;
+        const data = await r.json();
+        if (request !== textRequest) return;
+        $('textContent').textContent = data.content;
     } catch(e) {
-        alert('Failed to load: ' + e.message);
+        if (request !== textRequest || e.name === 'AbortError') return;
+        $('textContent').textContent = '파일을 열지 못했습니다: ' + e.message;
+    } finally {
+        if (request === textRequest) {
+            $('textBody').setAttribute('aria-busy', 'false');
+            updateTextPosition();
+        }
     }
 }
 

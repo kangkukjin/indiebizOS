@@ -198,3 +198,16 @@ def test_old_socket_cannot_control_or_remove_same_id_reconnection(client, monkey
             new.send_json({'type': 'ping'})
             assert new.receive_json() == {'type': 'pong'}
     assert cancelled == []
+
+
+@pytest.mark.parametrize('path', ['/launcher/app', '/launcher/lite'])
+def test_http_launcher_upgrades_before_login_but_local_and_https_stay(web_client, path):
+    client, _ = web_client
+    response = client.get('http://remote.invalid' + path + '?view=apps', follow_redirects=False)
+    assert response.status_code == 307
+    assert response.headers['location'] == 'https://remote.invalid' + path + '?view=apps'
+    assert client.get('http://localhost:8765' + path).status_code == 200
+    assert client.get('http://192.168.1.2:8765' + path).status_code == 200
+    # TLS 종단은 터널이 담당: 오리진 HTTP를 다시 리다이렉트하면 무한 루프다.
+    assert client.get('http://remote.invalid' + path,
+                      headers={'x-forwarded-proto': 'https'}, follow_redirects=False).status_code == 200

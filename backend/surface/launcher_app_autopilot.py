@@ -6,9 +6,17 @@ LAUNCHER_AUTOPILOT_JS = """/* ================= 자율주행 (드릴다운) ====
 let apAgents=[]; let apAgProject=null;
 /* 첨부 사진 (전송 대기) — {b64, media_type, dataUrl}. 시스템 AI 채팅 전용. */
 let apImages=[];
-async function apLoad(){ await apLoadProjects(); await apLoadSwitches(); apBrowseRoot(); }
+async function apLoad(){
+  try{ await apLoadProjects(); await apLoadSwitches(); apBrowseRoot(); }
+  catch(e){
+    apShowBrowse();
+    document.getElementById('apBrowse').innerHTML='<p role="alert">프로젝트를 불러오지 못했습니다: '+esc(e.message)+'</p><button class="btn2" onclick="apLoad()">다시 시도</button>';
+  }
+}
 async function apLoadProjects(){
-  try{ const r=await jfetch('/projects'); if(r.ok){ const d=await r.json(); apProjects=d.projects||[]; } }catch(e){}
+  const r=await jfetch('/projects');
+  if(!r.ok) throw new Error(r.status===401?'다시 로그인해주세요.':'HTTP '+r.status);
+  const d=await r.json(); apProjects=d.projects||[];
 }
 async function apLoadSwitches(){
   try{ const r=await jfetch('/switches'); if(r.ok){ const d=await r.json(); apSwitches=d.switches||[]; } }catch(e){}

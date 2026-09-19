@@ -5,7 +5,7 @@
 """
 
 from fastapi import APIRouter, Request, HTTPException, Response
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 import os
@@ -826,9 +826,21 @@ async def logout(request: Request, response: Response):
     response.delete_cookie("launcher_session")
     return {"success": True}
 
+def _launcher_https_redirect(request: Request):
+    """외부 HTTP 설치 아이콘은 Secure 쿠키를 쓸 수 있는 HTTPS 셸로 이동한다."""
+    proto = (request.headers.get("x-forwarded-proto") or request.url.scheme).split(",")[0].strip().lower()
+    if proto == "http" and is_external_request(request):
+        return RedirectResponse(str(request.url.replace(scheme="https")), status_code=307,
+                                headers={"Cache-Control": "no-store"})
+    return None
+
+
 @router.get("/app", response_class=HTMLResponse)
-async def get_webapp():
+async def get_webapp(request: Request):
     """간결한 원격 전용 런처. 데스크톱 빌드 유무와 무관하게 같은 화면을 제공한다."""
+    redirect = _launcher_https_redirect(request)
+    if redirect is not None:
+        return redirect
     return HTMLResponse(get_launcher_webapp_html(), headers={"Cache-Control": "no-store"})
 
 
@@ -846,14 +858,17 @@ async def react_asset(path: str):
 
 
 @router.get("/lite", response_class=HTMLResponse)
-async def get_webapp_lite():
+async def get_webapp_lite(request: Request):
     """구형 기기 호환 경량 런처 (NAS /nas/lite·lite2 의 런처판) — 순수 ES5+XHR.
 
     iOS 10.3 Safari 는 물론 아이패드 1세대(iOS 5.1.1)까지 한 페이지로 덮는다.
     단 터널 HTTPS 는 초구형 기기의 TLS/인증서 한계로 막힐 수 있어, 그 경우
     LAN 평문 HTTP(http://<맥IP>:8765/launcher/lite) 사용을 권장한다."""
+    redirect = _launcher_https_redirect(request)
+    if redirect is not None:
+        return redirect
     from launcher_lite import LAUNCHER_LITE_HTML
-    return LAUNCHER_LITE_HTML
+    return HTMLResponse(LAUNCHER_LITE_HTML, headers={"Cache-Control": "no-store"})
 
 
 # ── 홈 화면 설치 (웹 앱 매니페스트 + 아이콘 + 서비스워커) ──────────────────

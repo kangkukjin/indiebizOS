@@ -37,7 +37,17 @@ function kvVal(v){ const t=String(v==null?'':v).trim();
   return isUrl
     ? '<a href="'+esc(t)+'" target="_blank" rel="noopener" style="color:var(--info);word-break:break-all">'+esc(t)+'</a>'
     : '<span>'+esc(v)+'</span>'; }
-function jfetch(url,opt){ return fetch(API+url, Object.assign({headers:{'Content-Type':'application/json'}}, opt||{})); }
+function launcherLoginRequired(message){
+  if(window.__MEMBER || window.__PORTAL) return;
+  document.getElementById('app').classList.remove('on');
+  document.getElementById('login').style.display='';
+  document.getElementById('loginErr').textContent=message;
+}
+async function jfetch(url,opt){
+  const r=await fetch(API+url, Object.assign({headers:{'Content-Type':'application/json'}}, opt||{}));
+  if(r.status===401 && url!=='/launcher/auth/login') launcherLoginRequired('로그인이 만료되었습니다. 다시 로그인해주세요.');
+  return r;
+}
 async function ibl(code){
   /* 포털(회원 원격 계기): 범용 /ibl/execute 대신 회원 실행 게이트로 보낸다 — 렌더러 포크 금지·매개변수화 */
   /* surface:'web' = 보고 있는 곳이 브라우저라는 표식 — 소리·저장이 맥이 아니라 여기서 나게 한다
@@ -84,7 +94,12 @@ async function doLogin(){
   const el=document.getElementById('loginErr'); el.textContent='';
   try{
     const r=await jfetch('/launcher/auth/login',{method:'POST',body:JSON.stringify({password:pw})});
-    if(r.ok){ showApp(); } else { const d=await r.json().catch(()=>({})); el.textContent=d.detail||'로그인 실패'; }
+    if(r.ok){
+      // 비밀번호 성공만으로 진입하지 않고 브라우저가 실제 세션을 보낼 수 있는지 확인한다.
+      const session=await jfetch('/projects');
+      if(session.ok){ document.getElementById('pw').value=''; showApp(); }
+      else launcherLoginRequired('로그인 연결을 확인하지 못했습니다. HTTPS 주소에서 다시 로그인해주세요.');
+    } else { const d=await r.json().catch(()=>({})); el.textContent=d.detail||'로그인 실패'; }
   }catch(e){ el.textContent='서버 연결 실패'; }
 }
 let IS_PHONE=false;

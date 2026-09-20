@@ -10,6 +10,7 @@ IBL은 정보 흐름 언어다. 도구 execute_ibl(CLI: mcp__indiebizos__execute
 <!-- GRAMMAR_OPERATORS:END -->
 여러 문장은 줄바꿈으로 구분한다. 긴 프로그램은 먼저 check:true로 정적 검사(실행 없음).
 `$이름 = A`로 결과를 보관하면 같은 턴의 다음 호출에서도 `$이름`을 사용한다.
+보존된 이름과 실제 행의 열은 `turn_vars.live/types`로 확인한다. `unavailable/too_large` 이름은 참조하지 않는다. 검색 결과의 요약 열은 반환된 `summary`를 쓰며 `snippet`으로 추측하지 않는다. 행마다 존재하지 않는 `_error`를 select에 넣지 말고 부분 실패는 결과 봉투의 `errors/error_count`에서 확인한다.
 할당은 즉시 실행된다. `$a=A; $b=B; $a & $b`는 A·B를 순차 실행한 뒤 값을 묶는다. 독립 작업의 실행을 병렬화하려면 `A & B`로 묶는다.
 데이터는 {items:[...]} 통화로 다룬다. 목록은 table의 조회·선택·필터·변환 계약을 조회해 가공한다.
 열은 실제 반환 계약·turn_vars.types의 이름을 사용한다. each의 기본 행 이름은 `$it`이며 오류는 행의 `_error`가 아닌 봉투의 errors·error_count에 있다.

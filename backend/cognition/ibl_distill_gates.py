@@ -41,7 +41,6 @@ def empty_final_items(result):
 
 _QUOTED_STR_RE = re.compile(r'"(?:\\.|[^"\\])*"' + r"|'(?:\\.|[^'\\])*'")
 _COMPOSE_OP_RE = re.compile(r'>>|\?\?|&|;')
-_NODE_ACTION_RE = re.compile(r'\[([a-z_-]+:[a-z_0-9]+)\]')
 
 
 def _strip_strings(code: str) -> str:
@@ -57,7 +56,7 @@ def _composed(code: str) -> bool:
 
 def _actions_of(code: str) -> set:
     """따옴표 밖 [node:action] 집합."""
-    return set(_NODE_ACTION_RE.findall(_strip_strings(code)))
+    return set(_head_seq(code))
 
 
 def _heads_grounded(code: str, ibl_calls: list) -> bool:
@@ -129,7 +128,8 @@ def _composition_grounded(code: str, ibl_calls: list) -> bool:
 
 def _head_seq(code: str) -> tuple:
     """따옴표 밖 [node:action] 을 등장 순서대로 — 접지 판정이 쓰는 자."""
-    return tuple(_NODE_ACTION_RE.findall(_strip_strings(code or "")))
+    from ibl_scanner import source_heads
+    return tuple(f"{node}:{action}" for node, action in source_heads(code or ""))
 
 
 def _is_subseq(small: tuple, big: tuple) -> bool:

@@ -149,6 +149,18 @@ def test_recovery_reaches_db_and_training_file(monkeypatch, tmp_path, source, br
     assert training[0]["ibl_code"] == source
 
 
+def test_selected_korean_function_calls_reach_reusable_example(monkeypatch, tmp_path):
+    sources = ['$자료 = [sense:search]{query:"공개 문서"}',
+               '$자료 >> [fn:열추려보기]{열:["title","url"],개수:2}']
+    rag, stored, asked, runs = _arm(monkeypatch, tmp_path, [
+        {"intent": "검색 결과의 제목과 주소 추리기", "source_ids": [2], "topic": "시험"}])
+    calls = [{"tool_name": "execute_ibl", "input": {"code": code}, "success": True}
+             for code in sources]
+    assert rag.distill_experience("공개 문서 검색", calls, 0.0)
+    assert len(asked) == 1 and len(stored) == 1
+    assert stored[0]["ibl_code"] == "\n".join(sources)
+
+
 def test_checks_and_failures_never_become_source_or_runs(monkeypatch, tmp_path):
     good, broken = CASES[0]
     rag, stored, asked, runs = _arm(monkeypatch, tmp_path, [

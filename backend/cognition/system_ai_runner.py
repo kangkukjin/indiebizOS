@@ -278,6 +278,10 @@ class SystemAIRunner:
                 if extracted_task_id:
                     print(f"   [task_id] {extracted_task_id}")
 
+                # 예약이 직접 맡긴 단일 작업의 원장 결과는 판단을 다시 생성하지 않고 전달한다.
+                if extracted_task_id and self._finish_scheduled_report(extracted_task_id):
+                    continue
+
                 # 위임 컨텍스트 복원
                 delegation_context = None
                 is_report_message = any(keyword in content for keyword in ['완료', '보고', '결과'])
@@ -495,6 +499,39 @@ class SystemAIRunner:
             lines.append(f"{i}. {to_agent}: {result_summary}")
 
         return "\n".join(lines) + "\n"
+
+    def _finish_scheduled_report(self, task_id: str) -> bool:
+        """예약의 단일 위임만, 모든 결과가 원장에 도착한 뒤 원문으로 종료한다."""
+        task = get_task(task_id)
+        if (not task or task.get("requester") != "scheduler"
+                or task.get("requester_channel") != "scheduler"):
+            return False
+        try:
+            context = json.loads(task.get("delegation_context") or "{}")
+        except (ValueError, TypeError):
+            return False
+        if not isinstance(context, dict):
+            return False
+        delegations = context.get("delegations") or []
+        if (not isinstance(delegations, list) or len(delegations) != 1 or context.get("completed")
+                or not isinstance(delegations[0], dict)
+                or delegations[0].get("delegation_message") != task.get("original_request")):
+            return False
+        child = delegations[0].get("child_task_id")
+        recorded = context.get("responses")
+        if not isinstance(recorded, list):
+            return False
+        responses = [r for r in recorded if isinstance(r, dict)
+                     and child and r.get("child_task_id") == child]
+        if task.get("pending_delegations") != 0 or len(responses) != 1:
+            return False
+        response = responses[0].get("response")
+        if not isinstance(response, str) or not response.strip():
+            return False
+        if task.get("status") != "completed":
+            # 실패·부분 완료 내용도 원문 그대로 전달한다. 작업 성공을 추측하지 않는다.
+            self._finalize_task(task_id, response)
+        return True
 
     def _finalize_task(self, task_id: str, response: str):
         """태스크 완료 처리 및 사용자에게 응답"""

@@ -16,18 +16,21 @@
 - 키 = (agent_id, task_id). task_id 없는 호출(직접 표면)은 턴 범위 **없음** — 다른 턴으로 새지 않게 침묵 폴백 금지.
 - 프로그램 안 재할당이 턴 변수를 덮는다(파서가 뒤 할당으로 슬롯을 갈아 끼움 — 앞 참조는 옛 값, 뒤는 새 값).
 - 명시 resume:{vars_ref} 가 같은 이름을 실으면 명시가 이긴다.
-- 봉투는 `turn_vars{injected, live, too_large}` 로 정직하게 말한다. 저장소 파일은 data/spill/ 에 살아 24h GC 를 같이 탄다.
+- 큰 값도 별도 파일 참조로 보존하고 `$변수` 사용 시 원형으로 복원한다. 보존된 이름만 `live`에 싣는다.
+- 참조 파일이 사라지거나 지문이 달라지면 변수 이름과 복원 실패를 명시한다. 저장소는 data/spill/의 24h GC를 따른다.
 - 예약 이름(`$items $it $i $error $return $file`)은 주입하지 않는다.
 """
 import hashlib
 import json
 import os
+import threading
 from typing import Dict, List, Optional, Tuple
 
 from common.ibl_vars import find_names
 
-MAX_VALUE_CHARS = 4_000_000    # 이보다 큰 값은 싣지 않는다(그런 통화는 대개 이미 스필 참조) — 봉투 too_large 로 신고
-MAX_STORE_CHARS = 32_000_000   # 턴 저장소 총량 — 넘치면 오래된 이름부터 덜어낸다
+MAX_VALUE_CHARS = 4_000_000    # 큰 값은 별도 스필에 보존하고 사용 시 원형으로 복원한다.
+MAX_STORE_CHARS = 32_000_000   # 인라인 총량 — 넘치면 오래된 값부터 스필, 이름은 보존.
+_STORE_LOCK = threading.RLock()
 
 RESERVED = frozenset({"items", "it", "i", "error", "return", "file"})
 
@@ -67,8 +70,21 @@ def _record(key):
         return {}
 
 
-def load(key: Optional[str]) -> Dict[str, str]:
-    return _record(key).get("values", {})
+def load(key: Optional[str], names=None) -> Dict[str, str]:
+    """요청한 이름만 복원한다. 참조 소실을 미할당/빈 값으로 숨기지 않는다."""
+    from common.spill import read_ref
+    record = _record(key)
+    wanted = None if names is None else set(names)
+    values = {n: v for n, v in record.get("values", {}).items()
+              if wanted is None or n in wanted}
+    for name, ref in record.get("refs", {}).items():
+        if wanted is not None and name not in wanted:
+            continue
+        body, error = read_ref(ref)
+        if error or hashlib.sha256(body.encode("utf-8")).hexdigest() != ref.get("sha256"):
+            raise ValueError(f"턴 변수 ${name} 복원 실패: {error or '보존한 원문 지문 불일치'}")
+        values[name] = body
+    return values
 
 
 def types_for(values, key=None):
@@ -76,45 +92,56 @@ def types_for(values, key=None):
     from ibl_value_types import T, infer_value
     record = _record(key)
     saved, types = record.get("values", {}), record.get("types", {})
-    return {name: T.from_data(types[name]) if name in types and saved.get(name) == value
+    refs = record.get("refs", {})
+    return {name: T.from_data(types[name]) if name in types and (
+                (name in saved and saved[name] == value) or (name in refs and isinstance(value, str)
+                and hashlib.sha256(value.encode("utf-8")).hexdigest() == refs[name].get("sha256")))
             else infer_value(value) for name, value in values.items()}
 
 
 def save(key: Optional[str], live: Dict[str, object]) -> Tuple[List[str], List[str]]:
-    """산 변수를 턴 저장소에 합친다 → (실린 이름, 크기로 뺀 이름). 재할당은 맨 뒤로(최근 순서 보존)."""
+    """산 변수를 원형/참조로 합친다. 동시 호출도 다른 이름의 갱신을 잃지 않는다."""
+    with _STORE_LOCK:
+        return _save(key, live)
+
+
+def _save(key, live):
     if not key or not live:
         return [], []
+    from common.spill import spill_write
     from ibl_value_types import infer_value
     record = _record(key)
     store = record.get("values", {})
     types = record.get("types", {})
+    refs = record.get("refs", {})
     kept: List[str] = []
-    skipped: List[str] = []
+
+    def externalize(name, body):
+        ref = spill_write(body, tag="turn_value")["ref"]
+        refs[name] = {**ref, "sha256": hashlib.sha256(body.encode("utf-8")).hexdigest()}
+        store.pop(name, None)
+
     for n, v in live.items():
         n = str(n)
         s = v if isinstance(v, str) else json.dumps(v, ensure_ascii=False)
-        if len(s) > MAX_VALUE_CHARS:
-            store.pop(n, None)
-            types.pop(n, None)
-            skipped.append(n)
-            continue
         store.pop(n, None)
-        store[n] = s
+        refs.pop(n, None)
+        if len(s) > MAX_VALUE_CHARS:
+            externalize(n, s)
+        else:
+            store[n] = s
         types[n] = infer_value(s).to_data()
         kept.append(n)
     while sum(len(v) for v in store.values()) > MAX_STORE_CHARS:
-        old = next((n for n in store if n not in kept), None)
-        if old is None:
-            break
-        store.pop(old)
-        types.pop(old, None)
+        old = next(iter(store))
+        externalize(old, store[old])
     p = store_path(key)
     tmp = p + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         json.dump({"_format": "ibl-turn-values-v2", "values": store,
-                   "types": types}, f, ensure_ascii=False)
+                   "types": types, "refs": refs}, f, ensure_ascii=False)
     os.replace(tmp, p)
-    return sorted(kept), sorted(skipped)
+    return sorted(kept), []
 
 
 def referenced(code: str) -> List[str]:
@@ -126,7 +153,8 @@ def preset_for(code: str, key: Optional[str], exclude=()) -> Dict[str, str]:
     """이 code 가 참조하는 이름 중 턴 저장소에 있는 것 → {이름: 값 원형}. exclude(명시 resume 이름)는 명시가 이긴다."""
     if not key:
         return {}
-    store = load(key)
+    names = set(referenced(code)) - set(exclude or ())
+    store = load(key, names)
     if not store:
         return {}
     ex = set(exclude or ())

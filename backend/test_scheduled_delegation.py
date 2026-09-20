@@ -155,5 +155,36 @@ def test_repeated_schedules_get_separate_parents(scheduled):
     assert all(memory.get_task(i)["pending_delegations"] == 1 for i in ids)
 
 
+@pytest.mark.parametrize("body", ["완료한 원문\n/outputs/report.html", "부분 실패: 자료를 읽지 못했습니다."])
+def test_scheduled_result_delivery_never_calls_model_and_preserves_failure(scheduled, monkeypatch, body):
+    from system_ai_runner import SystemAIRunner
+    parent_id = scheduled.host._action_run_pipeline(scheduled.task)["delegation_task_ids"][0]
+    child_id = scheduled.children[0]["task_id"]
+    memory.decrement_pending_and_update_context(parent_id, new_response={
+        "child_task_id": child_id, "response": body})
+    runner = object.__new__(SystemAIRunner)
+    runner._sync_gear = lambda: None
+    runner._run_cognitive_message = lambda *a, **k: pytest.fail("완료 전달에 모델 호출")
+    # self.ai조차 만들지 않은 러너로 실제 메시지 경계를 검증한다.
+    saved = []
+    monkeypatch.setattr("system_ai_runner.save_conversation", lambda *a, **k: saved.append((a, k)))
+    monkeypatch.setattr(SystemAIRunner, "internal_messages", [
+        {"task_id": parent_id, "from_agent": "조사자", "content": "이 텍스트 대신 원장을 읽어야 함"},
+        {"task_id": parent_id, "from_agent": "조사자", "content": "중복 도착"}])
+    runner._check_internal_messages()
+    assert memory.get_task(parent_id)["status"] == "completed"
+    assert [a[1] for a, k in saved if a and a[0] == "assistant"] == [body]
+
+
+def test_pending_or_chat_delegation_is_not_auto_finalized(scheduled):
+    from system_ai_runner import SystemAIRunner
+    runner = object.__new__(SystemAIRunner)
+    parent_id = scheduled.host._action_run_pipeline(scheduled.task)["delegation_task_ids"][0]
+    assert not runner._finish_scheduled_report(parent_id)
+    memory.create_task("ordinary_chat", "user@gui", "gui", "調査")
+    assert not runner._finish_scheduled_report("ordinary_chat")
+    assert memory.get_task(parent_id)["status"] == "pending"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

@@ -486,7 +486,10 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
     try:
         from ibl_turn_vars import save as _save_turn_vars
         kept, skipped = _save_turn_vars(key, live or {})
-    except Exception:
+    except Exception as exc:
+        result["turn_vars"] = {"unavailable": sorted(live or {}),
+                               "error": f"턴 변수 보존 실패: {exc}",
+                               "note": "새 값의 보존을 확인하지 못했습니다. result_ref로 원문을 확인하세요."}
         return
     if not (kept or skipped or injected):
         return
@@ -497,13 +500,15 @@ def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint
         tv["live"] = kept
     from ibl_turn_vars import load as _load_values, types_for as _types_for
     from ibl_value_types import display_type
-    _values = _load_values(key)
+    _values = _load_values(key, set(kept + injected))
     tv["types"] = {name: display_type(t) for name, t in _types_for(
         {name: _values[name] for name in sorted(set(kept + injected)) if name in _values}, key).items()}
     if skipped:
         tv["too_large"] = skipped
-    tv["note"] = ("같은 턴의 다음 execute_ibl 에서 $이름 으로 그대로 참조됩니다 — 값을 다시 치지 말 것. "
+    tv["note"] = ("live/injected에 있는 이름만 같은 턴의 다음 execute_ibl 에서 $이름 으로 그대로 참조됩니다 — 값을 다시 치지 말 것. "
                   "턴이 끝나면 소멸(턴을 넘는 회수는 resume:{vars_ref}).")
+    if skipped:
+        tv["note"] += " too_large의 이름은 보존되지 않았습니다. result_ref로 원문을 확인하세요."
     result["turn_vars"] = tv
 
 
@@ -706,9 +711,11 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
                 load_policy as _rt_load_policy
             from ibl_turn_vars import load as _tv_load, load_shadows as _tv_shadows, load_typed as _tv_typed, \
                 save_typed as _tv_save_typed
-            _retyped = _check_retyping(parsed, _tv_load(_tkey), _tv_shadows(_tkey), typed_before=_tv_typed(_tkey))
-            # 이번 호출에 친 긴 문자열을 입력 그림자로 — 다음 호출이 같은 글자를 다른 자리에 치면 잡힌다(출처 ④)
-            _tv_save_typed(_tkey, [s for s, _ in _typed_strings(parsed, int(_rt_load_policy()["min_param_chars"]))])
+            _typed = _typed_strings(parsed, int(_rt_load_policy()["min_param_chars"]))
+            if _typed:
+                # 짧은 변수 참조·필터에는 비교할 긴 입력이 없다. 턴의 큰 원문을 전부 다시 읽지 않는다.
+                _retyped = _check_retyping(parsed, _tv_load(_tkey), _tv_shadows(_tkey), typed_before=_tv_typed(_tkey))
+                _tv_save_typed(_tkey, [s for s, _ in _typed])
         except Exception:
             _retyped = None
         # ★이름 있는 프로그램 인식(§2c, 2026-09-06): 다문장 code 가 이름 있는 관용구와 같은 모양이면 봉투가

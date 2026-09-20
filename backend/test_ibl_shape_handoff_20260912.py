@@ -120,8 +120,12 @@ def test_source_rows_remain_available_and_oversize_reassignment_cannot_reuse_old
     variables.save(key, {"a": value})
     assert run('$a >> [table:select]{fields:["original"]}', isolated).get("success")
     monkeypatch.setattr(variables, "MAX_VALUE_CHARS", 10)
-    kept, skipped = variables.save(key, {"a": value})
-    assert not kept and skipped == ["a"] and "a" not in variables.load(key)
+    replacement = {"items": [{"new_column": "new evidence"}]}
+    kept, skipped = variables.save(key, {"a": replacement})
+    assert kept == ["a"] and not skipped
+    assert json.loads(variables.load(key)["a"]) == replacement
+    assert not run('$a >> [table:select]{fields:["original"]}', isolated).get("success")
+    assert run('$a >> [table:select]{fields:["new_column"]}', isolated).get("success")
 
 
 def test_observed_catalog_and_other_search_modes_are_not_closed():

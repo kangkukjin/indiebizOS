@@ -461,7 +461,11 @@ def _extract_bracket(text: str, pos: int, open_br: str, close_br: str):
                     cursor = _parameter_space(raw, cursor)
                     if cursor < len(raw) - 1:
                         if raw[cursor] != ',':
-                            raise IBLSyntaxError('배열 원소 사이에는 쉼표가 필요합니다.')
+                            raise IBLSyntaxError(
+                                '배열 원소 사이에는 쉼표가 필요합니다. '
+                                '검색 구절 내부의 큰따옴표가 문자열을 닫았는지도 확인하세요. '
+                                '큰따옴표를 포함한 값은 바깥을 작은따옴표로 감싸세요: '
+                                '''queries:['"정확한 구절" 추가어', '다른 검색어']''')
                         cursor += 1
                 return values, i + 1
         elif ch in '"\'':

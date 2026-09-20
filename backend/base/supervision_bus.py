@@ -62,7 +62,9 @@ TOOL_SCHEMA = {
                    "인계된 target_blocks 본문을 우선 사용하고, 누락·변경된 블록만 response로 읽는다. "
                    "response는 id로 특정 블록 하나를 읽는다(id 우선). id 생략 시 offset=블록 순번, limit=문자 예산으로 페이지를 읽는다. "
                    "calculate는 input:{expression,values,unit}의 사칙연산을 코드로 계산한다(unit=minutes면 시·분도 반환). "
-                   "execute로 기존 도구를 사용한다. patch는 response의 블록 ID·해시·버전을 "
+                   "execute는 의식 전용이다. 실행자는 execute_ibl 등 자신의 도구를 직접 호출한다. "
+                   # retired-ok: supervision 전용 페이지 한도이며 execute_ibl.read_result의 60000자 계약과 별개.
+                   "limit는 문자 수 1~24000(기본 12000)이다. patch는 response의 블록 ID·해시·버전을 "
                    "지정해 변경 부분만 교체한다. 독립적인 여러 블록은 patches 한 배열, 같은 블록의 여러 수정은 replacements로 묶는다. "
                    "짧은 수정은 old_string/new_string으로 하며 나머지는 그대로 둔다. "
                    "keep는 보완 완료 신호. 별도 진행 보고는 불필요하다.",
@@ -81,3 +83,11 @@ TOOL_SCHEMA = {
         }, "required": ["id", "hash"], "additionalProperties": False}},
     }, "required": ["op"], "additionalProperties": False},
 }
+
+
+def execution_tool_schema():
+    """실행자에게 허용되지 않는 감독 execute를 호출 선택지에서 제외한다."""
+    from copy import deepcopy
+    schema = deepcopy(TOOL_SCHEMA)
+    schema["input_schema"]["properties"]["op"]["enum"].remove("execute")
+    return schema

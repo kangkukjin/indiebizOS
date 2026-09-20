@@ -87,10 +87,10 @@ class AIAgent:
             agent_tools = load_agent_tools(project_path, agent_id)
             self.tools = SYSTEM_TOOLS + agent_tools
         if role == "execution":
-            from supervision_bus import TOOL_SCHEMA
+            from supervision_bus import execution_tool_schema
             self.tools = list(self.tools)
             if not any(t.get("name") == "supervision" for t in self.tools):
-                self.tools.append(TOOL_SCHEMA)
+                self.tools.append(execution_tool_schema())
 
         self.provider_name = ai_config.get("provider", "anthropic")
         self.model = ai_config.get("model", "claude-sonnet-4-20250514")

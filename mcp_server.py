@@ -426,16 +426,19 @@ async def reframe(broken_assumption: str, evidence: str, progress: str = "",
 
 
 @mcp.tool()
-async def supervision(op: str, id: str = "", offset: int = 0, limit: int = 12000,
+async def supervision(op: str, id: str = "", offset: Annotated[int, Field(ge=0)] = 0,
+                      limit: Annotated[int, Field(ge=1, le=24000)] = 12000,
                       name: str = "", input: Optional[dict] = None, version: Optional[int] = None,
                       patches: Optional[List[dict]] = None, ctx: Context = None) -> str:
     """의식·실행 공유 작업대. 인계의 target_blocks 본문을 우선 사용하고 누락·변경된 블록만 response로 읽습니다.
     state/evidence로 상태·근거를 읽습니다. response는 id로 특정 블록을 읽습니다.
     의식은 execute(name,input)로 기존 도구를 사용합니다. 필요한 스키마는 evidence(id='tool:이름').
+    실행자는 execute를 사용할 수 없습니다. execute_ibl 등 자신의 도구를 직접 호출하세요.
     보완할 때 patch(version,patches=[{id,hash,old_string,new_string}])로 변경 부분만 교체합니다.
     독립적인 여러 블록은 patches 한 배열, 같은 블록의 여러 수정은 replacements 배열로 묶습니다.
     장문 응답 전체를 다시 출력하지 마세요. 수정 불필요 시 keep.
     response의 offset은 블록 번호, evidence의 offset은 문자 위치입니다.
+    limit는 문자 수 1~24000(기본 12000)입니다. execute_ibl.read_result의 60000 한도와 다릅니다.
     """
     agent, _, task, _ = _http_identity(ctx)
     payload = {"op": op, "id": id, "offset": offset, "limit": limit, "name": name,

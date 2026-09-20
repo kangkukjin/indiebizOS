@@ -595,43 +595,26 @@ def _assemble_evaluator(sample: str) -> Dict[str, Any]:
 
 
 def _assemble_distill(sample: str) -> Dict[str, Any]:
-    from ibl_usage_rag import _build_distill_prompt
-    model = _model_info("background")
-    try:
-        import hippo_tree
-        topic_map = hippo_tree.map_text() or ""
-    except Exception as e:  # noqa: BLE001
-        topic_map = f"(지도 조립 실패: {e})"
-    placeholder_log = "(실행 원문 — 이 턴에 실제로 실행된 IBL 문장들이 번호와 함께 실린다)"
-    prompt = _build_distill_prompt(sample, placeholder_log, "", topic_map)
+    from unified_distill import SYSTEM_PROMPT
+    model = _model_info("execution")
+    model["note"] = "현재 실행 역할의 미리보기. 실제 증류는 해당 턴 실행 모델·핀을 동결해 사용한다."
     sections = [
-        _file_section("reflection_prompt", "반성 프롬프트", "system", "data/common_prompts/reflection_prompt.md"),
-        _section("distill_prompt", "증류 지시 (사용자 명령 + 실행 원문 + 주제 지도)", "user", "dynamic",
-                 "ibl_usage_rag._build_distill_prompt", prompt,
-                 note="실행 원문 자리는 자리표. 주제 지도(hippo_tree.map_text)는 실제 값."),
-        _section("tool_log", "실행 원문 (source_ids)", "user", "turn", "턴의 execute_ibl 호출 기록", "",
-                 note="위 증류 지시 안에 번호 붙은 문장으로 삽입된다."),
-        _section("retry_block", "재시도 블록", "user", "turn", "ibl_usage_rag.distill_experience", "",
-                 condition="첫 증류 응답이 관문(hippo_syntax_gate 등)에 걸렸을 때", included=False),
+        _section("system", "통합 기억 선별", "system", "constant", "unified_distill.SYSTEM_PROMPT",
+                 SYSTEM_PROMPT, note="가치가 불확실하면 제외. 세 종류 모두 0건이어도 정상."),
+        _section("evidence", "출처별 원문과 관련 기존 기억", "user", "turn", "unified_distill.model_input",
+                 sample, note="실행 원문·사용자 직접 발화·실제 공간 관측만 선택. 원문을 중간에서 자르지 않는다."),
+        _section("validation", "종류별 검증·저장", "user", "constant", "unified_distill._apply", "",
+                 note="추가 모델 호출 없음. 유효 판단을 보존하고 저장 실패만 재개.",
+                 condition="모델 입력 밖의 저장 단계", included=False),
     ]
     return {"model": model, "sections": sections, "assembled": {},
-            "entry": "ibl_usage_rag.distill_experience → oneshot_ai_call(role='background')"}
+            "entry": "응답 뒤 영속 큐 → unified_distill.run → 동결 실행 모델 원샷 → 종류별 저장"}
 
 
 def _assemble_deep_memory(sample: str) -> Dict[str, Any]:
-    model = _model_info("background")
-    sections = [
-        _section("system", "시스템 한 줄", "system", "constant", "cognitive_distill._distill_deep_memory",
-                 "사실 정보만 추출하라. JSON 배열로만 응답."),
-        _section("extract_prompt", "추출 지시 (오늘 날짜 + 사용자 원문 + 응답)", "user", "turn",
-                 "cognitive_distill._distill_deep_memory (f-string)", "",
-                 note="사용자 원문에서 지속 가치가 있는 사실만 고른다. 도구 초안은 입력이 아니다."),
-        _section("relation_judge", "관계 판정 (후속 호출)", "user", "turn",
-                 "cognitive_distill (기억 관계 판정기) — 기존 기억과의 중복·갱신 판정", "",
-                 condition="추출된 사실이 있을 때", included=False),
-    ]
-    return {"model": model, "sections": sections, "assembled": {},
-            "entry": "cognitive_distill._distill_deep_memory (응답 뒤 백그라운드)"}
+    result = _assemble_distill(sample)
+    result["entry"] += " (심층기억도 같은 호출에서 선별·관계 판단)"
+    return result
 
 
 def _assemble_history_checkpoint(sample: str) -> Dict[str, Any]:
@@ -740,10 +723,10 @@ AGENTS: List[Dict[str, Any]] = [
     {"id": "evaluator", "label": "최종 평가자", "group": "인지", "role": "evaluate",
      "summary": "도구 없는 원샷. 의식이 명시한 기준만 하네스가 모은 증거로 판정.",
      "build": lambda s, p: _assemble_evaluator(s)},
-    {"id": "distill", "label": "경험 증류 (해마)", "group": "배경", "role": "background",
-     "summary": "성공한 턴의 실행 원문에서 재사용할 문장을 골라 해마에 넣는다.",
+    {"id": "distill", "label": "통합 기억 증류", "group": "배경", "role": "execution",
+     "summary": "실행·심층·공간 기억을 한 번에 엄격히 선별한다. 0건 저장이 정상이다.",
      "build": lambda s, p: _assemble_distill(s)},
-    {"id": "deep_memory", "label": "심층기억 추출", "group": "배경", "role": "background",
+    {"id": "deep_memory", "label": "심층기억 (통합 증류)", "group": "배경", "role": "execution",
      "summary": "응답 뒤 사용자 원문에서 지속 가치가 있는 사실을 뽑는다.",
      "build": lambda s, p: _assemble_deep_memory(s)},
     {"id": "history_checkpoint", "label": "대화 이력 압축", "group": "배경", "role": "background",

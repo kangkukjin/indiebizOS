@@ -264,7 +264,7 @@ class AnthropicProvider(BaseProvider):
 
             create_params = {
                 "model": self.model,
-                "max_tokens": max_tokens,
+                "max_tokens": self.distill_max_output_tokens if getattr(self, "distill_single_decision", False) else max_tokens,
                 "system": system_with_cache,
                 "messages": messages
             }

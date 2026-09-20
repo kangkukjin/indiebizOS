@@ -881,7 +881,8 @@ def oneshot_ai_call(prompt: str, system_prompt: str = None,
     return call_oneshot_provider(provider, prompt, system_prompt=system_prompt, images=images, role=role)
 
 
-def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, role="execution", step_role=None):
+def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, role="execution", step_role=None,
+                          usage_sink=None):
     """선택된 모델을 유지하며 원샷 계약·동시성·계측을 한 경로에서 적용한다."""
     from member_runtime import is_member
     from providers.cli_provider import CliSubprocessProvider
@@ -910,6 +911,11 @@ def call_oneshot_provider(provider, prompt, *, system_prompt=None, images=None, 
             logger.warning("[oneshot] %s 호출 실패: %s", role, exc)
             return None
         finally:
+            if usage_sink is not None:
+                metrics = getattr(provider, "metrics", None)
+                data = metrics.to_dict() if metrics is not None else {}
+                usage_sink.update(data if data.get("total_requests") else {"measured": False})
+                usage_sink["reasoning_tokens"] = None  # 미계측 값을 0으로 보고하지 않는다.
             _oneshot_failure.kind = getattr(provider, "last_failure_kind", None)
             _current_role.reset(token)
             reset_purpose(purpose_token)

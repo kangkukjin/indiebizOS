@@ -40,13 +40,15 @@ DEFAULT_MEMORY_CAP = 300   # 에이전트당 기억 상한 (초과 시 used_at L
 DUP_SIM_THRESHOLD = 0.85   # 근접중복 클러스터 코사인 임계
 
 
-def _tree_refresh(db_path: str, *nodes) -> None:
+def _tree_refresh(db_path: str, *nodes, strict=False) -> None:
     """행이 바뀐 노드의 문서를 다시 그린다(주제 트리 문서 = 정본, memory_tree). 실패해도 저장소는 산다."""
     try:
         import memory_tree
         for n in {memory_tree.norm_node(x) for x in nodes}:
             memory_tree.refresh_node(db_path, n)
     except Exception as e:
+        if strict:
+            raise
         print(f"[memory_tree] 문서 갱신 실패(무시): {e}")
 
 
@@ -500,7 +502,8 @@ def _reject_body_noun(content: str):
 
 def save(project_path: str, agent_id: str,
          content: str, keywords: str = "", category: str = "",
-         source_ref: str = None, node: str = "") -> int:
+         source_ref: str = None, node: str = "", candidate_key: str = None,
+         related_id: int = None, expected_version: str = None) -> int:
     """메모리 저장 (임베딩 자동 인덱싱)
 
     source_ref: 이 기억의 출처(발화 스팬·task id 등 JSON 문자열). 기억은 출처를 기억한다.
@@ -517,20 +520,38 @@ def save(project_path: str, agent_id: str,
     db_path = _get_db_path(project_path, agent_id)
     conn = get_db(project_path, agent_id)
     try:
-        now = datetime.now().isoformat()
-        conn.execute(
-            "INSERT INTO memories (category, keywords, content, created_at, source_ref, node) "
-            "VALUES (?, ?, ?, ?, ?, ?)",
-            (category, keywords, content, now, source_ref, node)
-        )
+        from distill_receipts import begin
+        prior = begin(conn, candidate_key)
+        if prior:
+            mem_id = prior["id"]
+        else:
+            if related_id is not None and expected_version:
+                from distill_receipts import fingerprint, DistillConflict
+                target = conn.execute("SELECT content, source_ref, node FROM memories WHERE id=?", (related_id,)).fetchone()
+                if not target or fingerprint(dict(target)) != expected_version:
+                    raise DistillConflict("related_memory_changed")
+            now = datetime.now().isoformat()
+            conn.execute(
+                "INSERT INTO memories (category, keywords, content, created_at, source_ref, node) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (category, keywords, content, now, source_ref, node)
+            )
+            mem_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+            from distill_receipts import record
+            record(conn, candidate_key, {"id": mem_id})
         conn.commit()
-        mem_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     finally:
         conn.close()
 
     # 임베딩 인덱싱 (실패해도 저장은 성공으로 처리)
-    _index_one(db_path, mem_id, content, keywords, category)
-    _tree_refresh(db_path, node)
+    indexed = _index_one(db_path, mem_id, content, keywords, category)
+    if candidate_key and indexed is False:
+        raise RuntimeError("deep_memory_projection_pending:index")
+    _tree_refresh(db_path, node, **({"strict": True} if candidate_key else {}))
+    if candidate_key:
+        from distill_receipts import mark_projected
+        with sqlite3.connect(db_path, timeout=10) as projected:
+            mark_projected(projected, candidate_key)
     return mem_id
 
 
@@ -725,7 +746,8 @@ def read(project_path: str, agent_id: str, memory_id: int,
 
 def update(project_path: str, agent_id: str, memory_id: int,
            content: str = None, keywords: str = None, category: str = None,
-           source_ref: str = None, node: str = None, expected_content: str = None) -> bool:
+           source_ref: str = None, node: str = None, expected_content: str = None,
+           candidate_key: str = None, expected_version: str = None) -> bool:
     """기존 항목 업데이트 (변경 필드만; used_at 자동 갱신; 임베딩 재생성; node 바뀌면 두 문서 갱신)"""
     if content is not None:
         _reject_body_noun(content)
@@ -734,6 +756,25 @@ def update(project_path: str, agent_id: str, memory_id: int,
     conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     try:
+        from distill_receipts import begin, record, fingerprint
+        prior = begin(conn, candidate_key)
+        if prior:
+            conn.commit()
+            row = conn.execute("SELECT content, keywords, category, node FROM memories WHERE id=?",
+                               (memory_id,)).fetchone()
+            if row:
+                indexed = _index_one(db_path, memory_id, row["content"], row["keywords"], row["category"])
+                if indexed is False:
+                    raise RuntimeError("deep_memory_projection_pending:index")
+                _tree_refresh(db_path, row["node"], strict=True)
+            from distill_receipts import mark_projected
+            mark_projected(conn, candidate_key)
+            return prior["applied"]
+        if expected_version:
+            current = conn.execute("SELECT content, source_ref, node FROM memories WHERE id=?",
+                                   (memory_id,)).fetchone()
+            if not current or fingerprint(dict(current)) != expected_version:
+                return False
         _old = conn.execute("SELECT COALESCE(node,'') AS node FROM memories WHERE id = ?", (memory_id,)).fetchone()
         old_node = _old["node"] if _old else ""
         sets, params = [], []
@@ -753,6 +794,7 @@ def update(project_path: str, agent_id: str, memory_id: int,
         if not sets:
             now = datetime.now().isoformat()
             conn.execute("UPDATE memories SET used_at = ? WHERE id = ?", (now, memory_id))
+            record(conn, candidate_key, {"id": memory_id, "applied": True})
             conn.commit()
             return True
 
@@ -765,9 +807,11 @@ def update(project_path: str, agent_id: str, memory_id: int,
             sql += " AND content = ?"
             params.append(expected_content)
         cur = conn.execute(sql, params)
-        conn.commit()
         if cur.rowcount == 0:
+            conn.rollback()
             return False
+        record(conn, candidate_key, {"id": memory_id, "applied": True})
+        conn.commit()
 
         # 의미가 바뀐 필드(content/keywords/category)가 있으면 재인덱싱
         row = conn.execute(
@@ -778,8 +822,15 @@ def update(project_path: str, agent_id: str, memory_id: int,
         conn.close()
 
     if row:
-        _index_one(db_path, memory_id, row["content"], row["keywords"], row["category"])
-    _tree_refresh(db_path, old_node, node if node is not None else old_node)
+        indexed = _index_one(db_path, memory_id, row["content"], row["keywords"], row["category"])
+        if candidate_key and indexed is False:
+            raise RuntimeError("deep_memory_projection_pending:index")
+    _tree_refresh(db_path, old_node, node if node is not None else old_node,
+                  **({"strict": True} if candidate_key else {}))
+    if candidate_key:
+        from distill_receipts import mark_projected
+        with sqlite3.connect(db_path, timeout=10) as projected:
+            mark_projected(projected, candidate_key)
     return True
 
 

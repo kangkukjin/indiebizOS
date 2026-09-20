@@ -1,0 +1,743 @@
+{
+  "models": {
+    "background": {
+      "provider": "deepseek",
+      "model": "deepseek-v4-flash",
+      "tier": "경량",
+      "source": "gear:최대|분류→경량",
+      "role": "background",
+      "pin_key": "",
+      "selected_at": "2026-09-20T23:15:19.603765+00:00"
+    },
+    "execution": {
+      "provider": "codex",
+      "model": "gpt-6-astra:high",
+      "tier": "고급",
+      "source": "gear:최대|실행→고급",
+      "role": "execution",
+      "pin_key": "",
+      "selected_at": "2026-09-20T23:15:19.604076+00:00"
+    }
+  },
+  "sample": "8 synthetic source cases, fixed pre-turn memory",
+  "live_writes": false,
+  "cases": [
+    {
+      "name": "small_fact",
+      "arm": "A",
+      "user": "오늘 점심은 김밥을 먹었어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 1.1434590830467641,
+          "usage": {
+            "total_input_tokens": 1543,
+            "total_output_tokens": 1,
+            "total_cache_read_tokens": 1408,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 746.62,
+            "avg_request_latency_ms": 746.62,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "09e3ef42fc12e258988b592a1685581b45f0d3145d6fd1595807b375fe200226",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[DeepSeek] 에이전트: 초기화 완료 (도구 0개)\n[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=1543, 출력=1, 캐시적중=1408, 지연=747ms\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "small_fact",
+      "arm": "B",
+      "user": "오늘 점심은 김밥을 먹었어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 11.095095166005194,
+          "usage": {
+            "total_input_tokens": 16363,
+            "total_output_tokens": 77,
+            "total_cache_read_tokens": 12672,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 9768.82,
+            "avg_request_latency_ms": 9768.82,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "f6cb7c4eddda867866a6f7d6aa43134e91ef34236f0afc9a398d4aff233b37f6",
+          "raw": "{\"schema_version\":1,\"execution\":[],\"deep\":[],\"forage\":[],\"skip_reasons\":{\"execution\":\"제공된 실행 원문이 없음.\",\"deep\":\"오늘 점심 식사는 일회성 사실이며 향후 판단·행동을 바꿀 지속 가치가 없음.\",\"forage\":\"제공된 공간 관측 근거가 없음.\"}}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex] 에이전트: 초기화 완료 (binary=/Applications/ChatGPT.app/Contents/Resources/codex, model=gpt-6-astra:high, token=ChatGPT 구독 (~/.codex/auth.json))\n[Codex/에이전트] call: session=new system_prompt=2362자 message=2769자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 9769ms in=16363 out=77 cache_read=12672 (CLI보고 in=16363 out=77 cached=12672 cache_write=0)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "small_fact",
+      "arm": "C",
+      "user": "오늘 점심은 김밥을 먹었어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 5.003983875038102,
+          "usage": {
+            "total_input_tokens": 16463,
+            "total_output_tokens": 5,
+            "total_cache_read_tokens": 0,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 3664.64,
+            "avg_request_latency_ms": 3664.64,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "09e3ef42fc12e258988b592a1685581b45f0d3145d6fd1595807b375fe200226",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=26자 message=2495자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 3665ms in=16463 out=5 cache_read=0 (CLI보고 in=16463 out=5)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "one_off",
+      "arm": "A",
+      "user": "이번 영상은 30초로 만들기로 했어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 0.4968995831441134,
+          "usage": {
+            "total_input_tokens": 1545,
+            "total_output_tokens": 1,
+            "total_cache_read_tokens": 1408,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 496.35,
+            "avg_request_latency_ms": 496.35,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "7d01b2964d54c03d530ba1be6969363801f8c83890b9a9fc336f80c3c5f2de8d",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=1545, 출력=1, 캐시적중=1408, 지연=496ms\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "one_off",
+      "arm": "B",
+      "user": "이번 영상은 30초로 만들기로 했어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 8.122997584054247,
+          "usage": {
+            "total_input_tokens": 16363,
+            "total_output_tokens": 119,
+            "total_cache_read_tokens": 0,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 6839.34,
+            "avg_request_latency_ms": 6839.34,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "e0519d92b6c31020616747a5ada7e99b723affb6f9138d7415488c67c10acdff",
+          "raw": "{\"schema_version\":1,\"execution\":[],\"deep\":[],\"forage\":[],\"skip_reasons\":{\"execution\":\"선택 가능한 실행 원문이 없다.\",\"deep\":\"이번 영상의 30초 길이는 일회성 조건이며 다음 협업의 판단을 바꿀 지속 가치가 확인되지 않는다.\",\"forage\":\"일반화 가능한 공간 관습이나 주소 관측이 없다.\"}}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=2362자 message=2774자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 6839ms in=16363 out=119 cache_read=0 (CLI보고 in=16363 out=119)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "one_off",
+      "arm": "C",
+      "user": "이번 영상은 30초로 만들기로 했어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 4.490232582902536,
+          "usage": {
+            "total_input_tokens": 16463,
+            "total_output_tokens": 5,
+            "total_cache_read_tokens": 16256,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 3152.82,
+            "avg_request_latency_ms": 3152.82,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "7d01b2964d54c03d530ba1be6969363801f8c83890b9a9fc336f80c3c5f2de8d",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=26자 message=2500자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 3153ms in=16463 out=5 cache_read=16256 (CLI보고 in=16463 out=5 cached=16256 cache_write=0)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "quoted",
+      "arm": "A",
+      "user": "> 나는 앞으로 답변을 짧게 받을 거야.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [],
+      "error": null,
+      "logs": "",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "quoted",
+      "arm": "B",
+      "user": "> 나는 앞으로 답변을 짧게 받을 거야.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [],
+      "error": null,
+      "logs": "",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "quoted",
+      "arm": "C",
+      "user": "> 나는 앞으로 답변을 짧게 받을 거야.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [],
+      "error": null,
+      "logs": "",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "assistant_fact",
+      "arm": "A",
+      "user": "그렇구나.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 0.4551672500092536,
+          "usage": {
+            "total_input_tokens": 1535,
+            "total_output_tokens": 1,
+            "total_cache_read_tokens": 1280,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 454.67,
+            "avg_request_latency_ms": 454.67,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "559f8b84c89bca9ba6a2e59c08d81abaaa6c11db0c22907718d6d1debe7b226e",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=1535, 출력=1, 캐시적중=1280, 지연=455ms\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "assistant_fact",
+      "arm": "B",
+      "user": "그렇구나.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 8.201813207939267,
+          "usage": {
+            "total_input_tokens": 16356,
+            "total_output_tokens": 81,
+            "total_cache_read_tokens": 12672,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 6947.82,
+            "avg_request_latency_ms": 6947.82,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "4fcc19b2447e4e92ed1a71fa179def3eb3b8f50019115a1c4e150aa28df28720",
+          "raw": "{\"schema_version\":1,\"execution\":[],\"deep\":[],\"forage\":[],\"skip_reasons\":{\"execution\":\"선택할 실행 원문이 없음.\",\"deep\":\"단순 수긍으로 지속 가치가 있는 사실·선호·결정을 확인할 수 없음.\",\"forage\":\"공간 관습을 뒷받침하는 주소나 관측이 없음.\"}}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=2362자 message=2759자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 6948ms in=16356 out=81 cache_read=12672 (CLI보고 in=16356 out=81 cached=12672 cache_write=0)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "assistant_fact",
+      "arm": "C",
+      "user": "그렇구나.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 4.718220666050911,
+          "usage": {
+            "total_input_tokens": 16456,
+            "total_output_tokens": 5,
+            "total_cache_read_tokens": 10496,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 3517.45,
+            "avg_request_latency_ms": 3517.45,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "559f8b84c89bca9ba6a2e59c08d81abaaa6c11db0c22907718d6d1debe7b226e",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=26자 message=2485자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 3517ms in=16456 out=5 cache_read=10496 (CLI보고 in=16456 out=5 cached=10496 cache_write=0)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "lasting_preference",
+      "arm": "A",
+      "user": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+      "expected_saved": 1,
+      "saved": [
+        {
+          "content": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+          "relation": "NEW",
+          "source_ref": "{\"utterance\": \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\", \"task\": \"\", \"episode_id\": null, \"recorded_at\": \"2026-09-21T08:16:03.347890\", \"final_response_sha256\": \"953aa267b84a82e7e9aaf250ebe3857447b671fdae9090f8a10be6b124bbabd7\", \"retention\": \"user_preference\", \"evidence\": [{\"id\": 1, \"role\": \"user\", \"text\": \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"3699fd9ca1abe907dcc40b808cf764c15576abf816b3f2792e50edfaa18aaab5\"}]}"
+        }
+      ],
+      "calls": [
+        {
+          "elapsed_s": 0.9824072499759495,
+          "usage": {
+            "total_input_tokens": 1548,
+            "total_output_tokens": 84,
+            "total_cache_read_tokens": 1408,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 981.98,
+            "avg_request_latency_ms": 981.98,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "efb5c6940b808ba1f5e7115183464cd759171b8ce3f4f3c64b95cd3f23674b47",
+          "raw": "```json\n[{\"source_ids\": [1], \"retention\": \"user_preference\", \"future_use\": \"향후 모든 응답의 말투를 존댓말로 유지할지 판단하는 기준\", \"keywords\": \"존댓말,말투,선호\", \"category\": \"사용자선호\", \"node\": \"사용자\"}]\n```"
+        }
+      ],
+      "error": null,
+      "logs": "[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=1548, 출력=84, 캐시적중=1408, 지연=982ms\n[심층메모리] NEW [사용자선호] @사용자: \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\"\n[심층메모리] 저장 1건, 업데이트 0건: \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\"\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "lasting_preference",
+      "arm": "B",
+      "user": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+      "expected_saved": 1,
+      "saved": [
+        {
+          "content": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+          "relation": "NEW",
+          "source_ref": "{\"recorded_at\": \"2026-09-21T09:00:00+09:00\", \"timezone\": \"Asia/Seoul\", \"episode_id\": null, \"task\": null, \"turn_id\": \"lasting_preference\", \"candidate_key\": \"lasting_preference-0\", \"retention\": \"user_preference\", \"evidence\": [{\"id\": 1, \"role\": \"user\", \"text\": \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"3699fd9ca1abe907dcc40b808cf764c15576abf816b3f2792e50edfaa18aaab5\"}]}"
+        }
+      ],
+      "calls": [
+        {
+          "elapsed_s": 9.43320587510243,
+          "usage": {
+            "total_input_tokens": 16366,
+            "total_output_tokens": 153,
+            "total_cache_read_tokens": 0,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 8329.91,
+            "avg_request_latency_ms": 8329.91,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "598a4481c7c51c163dc3abd905b93626a48c91021139d9bbeefc82dfe443a577",
+          "raw": "{\"schema_version\":1,\"execution\":[],\"deep\":[{\"user_source_ids\":[1],\"retention\":\"user_preference\",\"node\":\"사용자/응답 방식\",\"keywords\":[\"존댓말\",\"답변 말투\"],\"category\":\"사용자선호\",\"relation\":\"NEW\",\"existing_id\":null,\"existing_version\":null,\"future_use\":\"이후 모든 답변에 존댓말을 사용합니다.\",\"novelty\":\"기존 기억에 없는, 사용자가 명시한 지속적인 답변 말투 선호입니다.\",\"durable\":true}],\"forage\":[],\"skip_reasons\":{\"execution\":\"제공된 실행 원문이 없습니다.\",\"deep\":\"\",\"forage\":\"일반화할 공간 관측이 없습니다.\"}}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=2362자 message=2780자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 8330ms in=16366 out=153 cache_read=0 (CLI보고 in=16366 out=153)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "lasting_preference",
+      "arm": "C",
+      "user": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+      "expected_saved": 1,
+      "saved": [
+        {
+          "content": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+          "relation": "NEW",
+          "source_ref": "{\"utterance\": \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\", \"task\": \"\", \"episode_id\": null, \"recorded_at\": \"2026-09-21T08:16:13.766936\", \"final_response_sha256\": \"953aa267b84a82e7e9aaf250ebe3857447b671fdae9090f8a10be6b124bbabd7\", \"retention\": \"user_preference\", \"evidence\": [{\"id\": 1, \"role\": \"user\", \"text\": \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"3699fd9ca1abe907dcc40b808cf764c15576abf816b3f2792e50edfaa18aaab5\"}]}"
+        }
+      ],
+      "calls": [
+        {
+          "elapsed_s": 7.205044375034049,
+          "usage": {
+            "total_input_tokens": 16466,
+            "total_output_tokens": 65,
+            "total_cache_read_tokens": 0,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 5914.53,
+            "avg_request_latency_ms": 5914.53,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "efb5c6940b808ba1f5e7115183464cd759171b8ce3f4f3c64b95cd3f23674b47",
+          "raw": "[{\"source_ids\":[1],\"retention\":\"user_preference\",\"future_use\":\"향후 모든 대화에서 사용자에게 존댓말로 답변하는 기준으로 적용한다.\",\"keywords\":\"존댓말,답변 말투\",\"category\":\"사용자선호\",\"node\":\"사용자\"}]"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=26자 message=2506자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 5915ms in=16466 out=65 cache_read=0 (CLI보고 in=16466 out=65)\n[심층메모리] NEW [사용자선호] @사용자: \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\"\n[심층메모리] 저장 1건, 업데이트 0건: \"나는 앞으로 모든 답변을 존댓말로 받기를 원해.\"\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "known_preference",
+      "arm": "A",
+      "user": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 0.8050324590876698,
+          "usage": {
+            "total_input_tokens": 1548,
+            "total_output_tokens": 83,
+            "total_cache_read_tokens": 1408,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 804.61,
+            "avg_request_latency_ms": 804.61,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "efb5c6940b808ba1f5e7115183464cd759171b8ce3f4f3c64b95cd3f23674b47",
+          "raw": "[{\"source_ids\": [1], \"retention\": \"user_preference\", \"future_use\": \"앞으로 모든 답변을 생성할 때 존댓말을 사용해야 하는지 판단하는 기준이 된다.\", \"keywords\": \"존댓말,답변,선호\", \"category\": \"사용자선호\", \"node\": \"사용자\"}"
+        }
+      ],
+      "error": null,
+      "logs": "[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=1548, 출력=83, 캐시적중=1408, 지연=805ms\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "known_preference",
+      "arm": "B",
+      "user": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 7.199773082975298,
+          "usage": {
+            "total_input_tokens": 16459,
+            "total_output_tokens": 76,
+            "total_cache_read_tokens": 5504,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 5613.81,
+            "avg_request_latency_ms": 5613.81,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "70cd970faebf2489d0f3008351d0fe16957e7a543a95a6639e93079a6c0c42b4",
+          "raw": "{\"schema_version\":1,\"execution\":[],\"deep\":[],\"forage\":[],\"skip_reasons\":{\"execution\":\"제공된 실행 원문이 없습니다.\",\"deep\":\"존댓말 응답 선호는 기존 기억 ID 1과 동일하여 새로 저장할 가치가 없습니다.\",\"forage\":\"제공된 공간 관측 근거가 없습니다.\"}}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=2362자 message=2982자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 5614ms in=16459 out=76 cache_read=5504 (CLI보고 in=16459 out=76 cached=5504 cache_write=0)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "known_preference",
+      "arm": "C",
+      "user": "나는 앞으로 모든 답변을 존댓말로 받기를 원해.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 6.715750165982172,
+          "usage": {
+            "total_input_tokens": 16466,
+            "total_output_tokens": 66,
+            "total_cache_read_tokens": 0,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 5348.73,
+            "avg_request_latency_ms": 5348.73,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "efb5c6940b808ba1f5e7115183464cd759171b8ce3f4f3c64b95cd3f23674b47",
+          "raw": "[{\"source_ids\":[1],\"retention\":\"user_preference\",\"future_use\":\"향후 모든 답변에서 존댓말을 사용하도록 말투를 결정하는 데 필요하다.\",\"keywords\":\"존댓말,답변 말투\",\"category\":\"사용자선호\",\"node\":\"사용자\"}]"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=26자 message=2506자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 5349ms in=16466 out=66 cache_read=0 (CLI보고 in=16466 out=66)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "explicit_correction",
+      "arm": "A",
+      "user": "전에 생일을 11월 18일이라고 말한 것은 틀렸어. 내 생일은 11월 19일이야.",
+      "expected_saved": 1,
+      "saved": [
+        {
+          "content": "전에 생일을 11월 18일이라고 말한 것은 틀렸어.\n\n내 생일은 11월 19일이야.",
+          "relation": "REPLACE",
+          "source_ref": "{\"utterance\": \"전에 생일을 11월 18일이라고 말한 것은 틀렸어. 내 생일은 11월 19일이야.\", \"task\": \"\", \"episode_id\": null, \"recorded_at\": \"2026-09-21T08:16:35.697577\", \"final_response_sha256\": \"953aa267b84a82e7e9aaf250ebe3857447b671fdae9090f8a10be6b124bbabd7\", \"retention\": \"user_fact\", \"evidence\": [{\"id\": 1, \"role\": \"user\", \"text\": \"전에 생일을 11월 18일이라고 말한 것은 틀렸어.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"d564433f7e76ed79dec58cbcad7c00a8383cd37d4dff9e4aee31a32aad5d7e27\"}, {\"id\": 2, \"role\": \"user\", \"text\": \"내 생일은 11월 19일이야.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"b32b82cf9857bcb0e0d17c62a88e8a565b5cb64c35c4d8561338541d1ac5434c\"}], \"superseded\": {\"content\": \"내 생일은 11월 18일이야.\", \"source_ref\": null}}"
+        }
+      ],
+      "calls": [
+        {
+          "elapsed_s": 1.0972650828771293,
+          "usage": {
+            "total_input_tokens": 1602,
+            "total_output_tokens": 97,
+            "total_cache_read_tokens": 1408,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 1096.84,
+            "avg_request_latency_ms": 1096.84,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "5fae95598bb074e19424d9efda7020c0f2aa73121115baec1c775e45c2a5c23f",
+          "raw": "[{\"source_ids\": [1, 2], \"retention\": \"user_fact\", \"future_use\": \"사용자 생일을 기억하고 축하·일정 안내 등 날짜 기반 상호작용에 사용\", \"keywords\": \"생일,11월 19일,사용자 정보 정정\", \"category\": \"사용자정보\", \"node\": \"사용자/중요날짜\"}]"
+        },
+        {
+          "elapsed_s": 0.4243374590296298,
+          "usage": {
+            "total_input_tokens": 649,
+            "total_output_tokens": 16,
+            "total_cache_read_tokens": 128,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 423.77,
+            "avg_request_latency_ms": 423.77,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "db97254a2cd331d8d3350bebe28ca7dd5f3b04d6776491ed0be2cad1d4a74f34",
+          "raw": "{\"verdicts\": [{\"action\": \"REPLACE\"}]}"
+        }
+      ],
+      "error": null,
+      "logs": "[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=1602, 출력=97, 캐시적중=1408, 지연=1097ms\n[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=649, 출력=16, 캐시적중=128, 지연=424ms\n[심층메모리] REPLACE: \"전에 생일을 11월 18일이라고 말한 것은 틀렸어.\n\n내 생일은 11월 19일이야.\" → 기존 ID 1 덮어씀\n[심층메모리] 저장 0건, 업데이트 1건: \"전에 생일을 11월 18일이라고 말한 것은 틀렸어. 내 생일은 11월 1\"\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "explicit_correction",
+      "arm": "B",
+      "user": "전에 생일을 11월 18일이라고 말한 것은 틀렸어. 내 생일은 11월 19일이야.",
+      "expected_saved": 1,
+      "saved": [
+        {
+          "content": "전에 생일을 11월 18일이라고 말한 것은 틀렸어.\n\n내 생일은 11월 19일이야.",
+          "relation": "REPLACE",
+          "source_ref": "{\"recorded_at\": \"2026-09-21T09:00:00+09:00\", \"timezone\": \"Asia/Seoul\", \"episode_id\": null, \"task\": null, \"turn_id\": \"explicit_correction\", \"candidate_key\": \"explicit_correction-0\", \"retention\": \"user_fact\", \"evidence\": [{\"id\": 1, \"role\": \"user\", \"text\": \"전에 생일을 11월 18일이라고 말한 것은 틀렸어.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"d564433f7e76ed79dec58cbcad7c00a8383cd37d4dff9e4aee31a32aad5d7e27\"}, {\"id\": 2, \"role\": \"user\", \"text\": \"내 생일은 11월 19일이야.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"b32b82cf9857bcb0e0d17c62a88e8a565b5cb64c35c4d8561338541d1ac5434c\"}], \"superseded\": {\"id\": 1, \"content\": \"내 생일은 11월 18일이야.\", \"source_ref\": null, \"version\": \"9ac64c6f984e7c14004689974a1c798c1bdcefe05fb01449ba17a4f2503c0ba4\"}}"
+        }
+      ],
+      "calls": [
+        {
+          "elapsed_s": 15.108052583876997,
+          "usage": {
+            "total_input_tokens": 16529,
+            "total_output_tokens": 338,
+            "total_cache_read_tokens": 12672,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 13772.27,
+            "avg_request_latency_ms": 13772.27,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "b25ca78d12a731dfd519a32f525476f6a163c6daf8bd20cde876aed4d2e73863",
+          "raw": "{\n  \"schema_version\": 1,\n  \"execution\": [],\n  \"deep\": [\n    {\n      \"user_source_ids\": [1, 2],\n      \"retention\": \"user_fact\",\n      \"node\": \"사용자\",\n      \"keywords\": \"생일,11월 19일\",\n      \"category\": \"사용자정보\",\n      \"relation\": \"REPLACE\",\n      \"existing_id\": 1,\n      \"existing_version\": \"9ac64c6f984e7c14004689974a1c798c1bdcefe05fb01449ba17a4f2503c0ba4\",\n      \"explicit_correction\": true,\n      \"correction_source_ids\": [1, 2],\n      \"future_use\": \"향후 사용자 생일을 참조할 때 11월 19일을 사용한다.\",\n      \"novelty\": \"사용자가 기존 생일 11월 18일을 명시적으로 부정하고 11월 19일로 정정했다.\",\n      \"durable\": true\n    }\n  ],\n  \"forage\": [],\n  \"skip_reasons\": {\n    \"execution\": \"제공된 실행 원문이 없다.\",\n    \"deep\": \"\",\n    \"forage\": \"공간 관습이나 주소에 관한 근거가 없다.\"\n  }\n}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=2362자 message=3147자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 13772ms in=16529 out=338 cache_read=12672 (CLI보고 in=16529 out=338 cached=12672 cache_write=0)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "explicit_correction",
+      "arm": "C",
+      "user": "전에 생일을 11월 18일이라고 말한 것은 틀렸어. 내 생일은 11월 19일이야.",
+      "expected_saved": 1,
+      "saved": [
+        {
+          "content": "내 생일은 11월 19일이야.",
+          "relation": "REPLACE",
+          "source_ref": "{\"utterance\": \"전에 생일을 11월 18일이라고 말한 것은 틀렸어. 내 생일은 11월 19일이야.\", \"task\": \"\", \"episode_id\": null, \"recorded_at\": \"2026-09-21T08:16:52.330955\", \"final_response_sha256\": \"953aa267b84a82e7e9aaf250ebe3857447b671fdae9090f8a10be6b124bbabd7\", \"retention\": \"user_fact\", \"evidence\": [{\"id\": 2, \"role\": \"user\", \"text\": \"내 생일은 11월 19일이야.\", \"attribution\": \"user_candidate\", \"basis\": \"user_statement\", \"eligible\": true, \"sha256\": \"b32b82cf9857bcb0e0d17c62a88e8a565b5cb64c35c4d8561338541d1ac5434c\"}], \"superseded\": {\"content\": \"내 생일은 11월 18일이야.\", \"source_ref\": null}}"
+        }
+      ],
+      "calls": [
+        {
+          "elapsed_s": 7.16938216611743,
+          "usage": {
+            "total_input_tokens": 16519,
+            "total_output_tokens": 68,
+            "total_cache_read_tokens": 10496,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 5720.5,
+            "avg_request_latency_ms": 5720.5,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "5fae95598bb074e19424d9efda7020c0f2aa73121115baec1c775e45c2a5c23f",
+          "raw": "[{\"source_ids\":[2],\"retention\":\"user_fact\",\"future_use\":\"향후 사용자의 생일을 기억하거나 생일 관련 일정을 계획할 때 정확한 날짜를 적용한다.\",\"keywords\":\"생일,11월 19일\",\"category\":\"중요날짜\",\"node\":\"사용자\"}]"
+        },
+        {
+          "elapsed_s": 5.747339874971658,
+          "usage": {
+            "total_input_tokens": 15586,
+            "total_output_tokens": 16,
+            "total_cache_read_tokens": 12672,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 4442.58,
+            "avg_request_latency_ms": 4442.58,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "5443c3b68961f0d917a7e11e24e196811a8d11efc92cbb3c7b7b6f675f3a30e2",
+          "raw": "{\"verdicts\":[{\"action\":\"REPLACE\"}]}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=26자 message=2641자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 5721ms in=16519 out=68 cache_read=10496 (CLI보고 in=16519 out=68 cached=10496 cache_write=0)\n[Codex/에이전트] call: session=new system_prompt=40자 message=960자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 4443ms in=15586 out=16 cache_read=12672 (CLI보고 in=15586 out=16 cached=12672 cache_write=0)\n[심층메모리] REPLACE: \"내 생일은 11월 19일이야.\" → 기존 ID 1 덮어씀\n[심층메모리] 저장 0건, 업데이트 1건: \"전에 생일을 11월 18일이라고 말한 것은 틀렸어. 내 생일은 11월 1\"\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "dangling",
+      "arm": "A",
+      "user": "그걸 앞으로도 계속 쓰기로 했어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 0.7690387920010835,
+          "usage": {
+            "total_input_tokens": 1544,
+            "total_output_tokens": 1,
+            "total_cache_read_tokens": 1408,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 768.47,
+            "avg_request_latency_ms": 768.47,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "db477c89b540cb5973ab300977c54a1079a0f8b06365eb7f045a6d2bdbf64a22",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[DeepSeek] 라운드 1/100 시작 (role=distill_compare)\n[OpenAI] 토큰: 입력=1544, 출력=1, 캐시적중=1408, 지연=768ms\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "dangling",
+      "arm": "B",
+      "user": "그걸 앞으로도 계속 쓰기로 했어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 8.240279833087698,
+          "usage": {
+            "total_input_tokens": 16361,
+            "total_output_tokens": 107,
+            "total_cache_read_tokens": 0,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 7098.22,
+            "avg_request_latency_ms": 7098.22,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "df5b5b270dd27fb702502c1c2d5f0adb0ec51076af017a1d86cd820ee9901ce4",
+          "raw": "{\"schema_version\":1,\"execution\":[],\"deep\":[],\"forage\":[],\"skip_reasons\":{\"execution\":\"제공된 실행 원문이 없다.\",\"deep\":\"계속 쓰기로 한 대상의 선행 원문이 없어 결정 내용을 특정할 수 없다.\",\"forage\":\"제공된 주소나 공간 관습의 관측 근거가 없다.\"}}"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=2362자 message=2772자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 7098ms in=16361 out=107 cache_read=0 (CLI보고 in=16361 out=107)\n",
+      "count_matches_expectation": true
+    },
+    {
+      "name": "dangling",
+      "arm": "C",
+      "user": "그걸 앞으로도 계속 쓰기로 했어.",
+      "expected_saved": 0,
+      "saved": [],
+      "calls": [
+        {
+          "elapsed_s": 5.640774999978021,
+          "usage": {
+            "total_input_tokens": 16461,
+            "total_output_tokens": 5,
+            "total_cache_read_tokens": 12672,
+            "total_requests": 1,
+            "total_retries": 0,
+            "total_errors": 0,
+            "total_tool_calls": 0,
+            "last_request_latency_ms": 4506.05,
+            "avg_request_latency_ms": 4506.05,
+            "reasoning_tokens": null
+          },
+          "prompt_hash": "db477c89b540cb5973ab300977c54a1079a0f8b06365eb7f045a6d2bdbf64a22",
+          "raw": "[]"
+        }
+      ],
+      "error": null,
+      "logs": "[Codex/에이전트] call: session=new system_prompt=26자 message=2498자\n[Codex] 라운드 1/0 시작 (role=distill_compare)\n[Codex/에이전트] turn.completed 4506ms in=16461 out=5 cache_read=12672 (CLI보고 in=16461 out=5 cached=12672 cache_write=0)\n",
+      "count_matches_expectation": true
+    }
+  ],
+  "limitations": [
+    "historical episode replay is not included",
+    "small deep-memory precision sample",
+    "subscription cost and unreported reasoning tokens are unknown"
+  ]
+}

@@ -164,6 +164,8 @@ class AgentCognitiveMixin(
             self.ai.provider_name, self.ai.model, self.ai.api_key, self.ai._provider = old
             print(f"[AgentRunner] {pin_key}: 기어 전파 실패 → 기존 {old[0]}/{old[1]} 유지")
             return
+        from model_resolver import freeze_descriptor
+        self.ai._provider.distill_descriptor = freeze_descriptor(d, role="execution", pin_key=pin_key)
         # 러너/에이전트 config 도 새 모델로 동기 (다음 _init_ai·계기판 표시 일관성)
         for cfg in (self.ai.config, self.config.get("ai")):
             if isinstance(cfg, dict):

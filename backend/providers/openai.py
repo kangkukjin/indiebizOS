@@ -399,7 +399,7 @@ class OpenAIProvider(BaseProvider):
             # — 추론이 max_tokens를 전부 태운 경우. 이어쓰기(Auto-Continue)도 응답
             # 유도(빈 응답 복구)도 무의미하다(이어쓸 본문이 없음). 1회만 재시도 후 포기.
             if finish_reason == "length" and not collected_text.strip() and not tool_calls:
-                if zero_output_retries < 1:
+                if zero_output_retries < 1 and not getattr(self, "distill_single_decision", False):
                     print(f"[OpenAI] 출력 0자 length 감지 (추론 토큰 소진 추정) — thinking 끄고 1회 재시도")
                     yield from self._agentic_loop(
                         messages, openai_tools, execute_tool, depth, max_tokens,

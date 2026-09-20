@@ -58,13 +58,15 @@ def _norm_topic(topic) -> str:
         return str(topic or "").strip().strip("/")
 
 
-def _tree_refresh(*topics) -> None:
+def _tree_refresh(*topics, strict=False) -> None:
     """행이 바뀐 주제 가지의 문서를 다시 그린다(hippo_tree 문서 = 정본). 실패해도 원장은 산다."""
     try:
         import hippo_tree
         for t in {hippo_tree.norm_topic(x) for x in topics}:
             hippo_tree.refresh_topic(t)
     except Exception as e:
+        if strict:
+            raise
         logger.warning(f"[hippo_tree] 문서 갱신 실패(무시): {e}")
 
 
@@ -532,7 +534,7 @@ class IBLUsageDB:
                     difficulty: int = 1, source: str = "synthetic",
                     tags: str = "", avg_ms: float = -1.0,
                     avg_tokens: float = -1.0, topic: str = "", alias: str = "", returns: str = "",
-                    provenance: Optional[Dict] = None) -> int:
+                    provenance: Optional[Dict] = None, candidate_key: str = None) -> int:
         """용례 추가 (임베딩 자동 생성). Returns: example ID (구문 불가·남의 어휘로 거부되면 0)
 
         avg_ms/avg_tokens: 출생 실측 — 증류 경로가 원 실행의 소요시간·그 턴의 토큰 소요를
@@ -549,22 +551,35 @@ class IBLUsageDB:
         # 서명은 문에서 한 번(2026-09-06) — 기록기마다 세면 표시와 실행이 갈라진다.
         signature = _signature_of(ibl_code)
         with self._get_connection() as conn:
-            cursor = conn.execute(
-                """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns, signature, provenance)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                (intent, ibl_code, nodes, category, difficulty, source, tags,
-                 float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
-                 float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
-                 _norm_topic(topic), (alias or "").strip(), (returns or "").strip(), signature,
-                 json.dumps(provenance or {}, ensure_ascii=False))
-            )
-            example_id = cursor.lastrowid
-            conn.commit()
+            from distill_receipts import begin
+            prior = begin(conn, candidate_key)
+            if prior:
+                example_id = prior["id"]
+                conn.commit()
+            else:
+                cursor = conn.execute(
+                    """INSERT INTO ibl_examples
+                       (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns, signature, provenance)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (intent, ibl_code, nodes, category, difficulty, source, tags,
+                     float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
+                     float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
+                     _norm_topic(topic), (alias or "").strip(), (returns or "").strip(), signature,
+                     json.dumps(provenance or {}, ensure_ascii=False))
+                )
+                example_id = cursor.lastrowid
+                from distill_receipts import record
+                record(conn, candidate_key, {"id": example_id})
+                conn.commit()
 
         # 벡터 인덱스에 추가 (관용구는 이름도 검색 텍스트에)
-        self._index_single(example_id, (f"{alias} {intent}" if alias else intent), ibl_code)
-        _tree_refresh(topic)
+        self._index_single(example_id, (f"{alias} {intent}" if alias else intent), ibl_code,
+                           **({"strict": True} if candidate_key else {}))
+        _tree_refresh(topic, **({"strict": True} if candidate_key else {}))
+        if candidate_key:
+            from distill_receipts import mark_projected
+            with self._get_connection() as projected:
+                mark_projected(projected, candidate_key)
         return example_id
 
     def update_intent(self, example_id: int, intent: str) -> bool:
@@ -730,14 +745,12 @@ class IBLUsageDB:
     # _extract_session_ibl, _extract_inner_code 등은 삭제됨
     # =========================================================================
 
-    # =========================================================================
-    # 인덱싱
-    # =========================================================================
-
-    def _index_single(self, example_id: int, intent: str, ibl_code: str):
+    def _index_single(self, example_id: int, intent: str, ibl_code: str, strict=False):
         """단일 용례 벡터 인덱싱"""
         conn = self._get_vec_connection()
         if conn is None:
+            if strict:
+                raise RuntimeError("execution_projection_pending:index")
             return
         try:
             self._ensure_vec_table(conn)
@@ -752,7 +765,11 @@ class IBLUsageDB:
                     (example_id, emb)
                 )
                 conn.commit()
+            elif strict:
+                raise RuntimeError("execution_projection_pending:embedding")
         except Exception as e:
+            if strict:
+                raise
             logger.error(f"[IBL Usage DB] 인덱싱 실패: {e}")
         finally:
             conn.close()

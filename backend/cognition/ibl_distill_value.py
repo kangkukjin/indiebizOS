@@ -128,7 +128,7 @@ def provenance(reply, rows, code, outcome, turn_cost):
                        for row in rows if row['id'] in selected]}
 
 
-def note_selected_run(topic, intent, code, component, calls, reply, turn_cost):
+def note_selected_run(topic, intent, code, component, calls, reply, turn_cost, candidate_key=None):
     """검증·저장된 절차만 가지에 남긴다. 생략한 탐색은 원 실행 원장에서 찾는다."""
     import hippo_tree
     from cognitive_trace import ibl_call_cost
@@ -141,6 +141,8 @@ def note_selected_run(topic, intent, code, component, calls, reply, turn_cost):
         hippo_tree.note_run(topic, label, statements, ok=True,
                            calls=cost['calls'], failed=cost['failed'], typed_chars=cost['typed_chars'],
                            missed={k: reply.get(k) or [] for k in ('retyped', 'mergeable')},
-                           turn_cost=turn_cost)
+                           turn_cost=turn_cost, **({"candidate_key": candidate_key} if candidate_key else {}))
     except Exception as exc:
+        if candidate_key:
+            raise
         print(f'[경험증류] 선택 절차의 가지 기록 실패: {exc}')

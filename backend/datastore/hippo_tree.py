@@ -607,7 +607,7 @@ def _clean_missed(missed: Optional[Dict[str, Any]]) -> Dict[str, List[str]]:
 def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
              when: Optional[str] = None, db_path: Optional[str] = None,
              calls: Optional[int] = None, failed: Optional[int] = None, typed_chars: Optional[int] = None,
-             missed: Optional[Dict[str, Any]] = None, turn_cost=None) -> Dict[str, Any]:
+             missed: Optional[Dict[str, Any]] = None, turn_cost=None, candidate_key=None) -> Dict[str, Any]:
     """주행 하나(성공한 문장 묶음)를 가지 문서의 `## 주행` 절에 적는다 (2026-09-04, 사용자 판정).
 
     왜: 증류는 에피소드당 대표 문장 하나를 코퍼스에 넣는데, 가장 값진 주행(보고서 40문장·앱 개발
@@ -631,13 +631,16 @@ def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
     if not os.path.exists(path):
         refresh_topic(topic, db_path)
     text = open(path, encoding="utf-8").read()
+    marker = f"<!-- distill:{candidate_key} -->" if candidate_key else ""
+    if marker and marker in text:
+        return {"success": True, "same": True}
     head, sec, tail = _split_runs(text)
     day = (when or datetime.now().strftime("%Y-%m-%d"))[:10]
     shown = sentences[:RUNS_MAX_SENTENCES]
     head_line = f"### {day} · {_one_line(intent)[:120].replace(' · ', ' ')} · 문장 {len(sentences)} · {'✓' if ok else '✗'}"
     if calls is not None:
         head_line += f" · 호출 {int(calls)} · 실패 {int(failed or 0)} · 타이핑 {_fmt_chars(typed_chars or 0)}"
-    lines = [head_line]
+    lines = [head_line + (" " + marker if marker else "")]
     if turn_cost:
         lines.append("전체 비용(위 머리는 IBL만): " + json.dumps(turn_cost, ensure_ascii=False))
     m_ = _clean_missed(missed)
@@ -664,8 +667,10 @@ def note_run(topic: str, intent: str, sentences: List[str], ok: bool = True,
     dropped = max(0, len(blocks) - RUNS_MAX)
     blocks = blocks[:RUNS_MAX]
     new_sec = RUNS + "\n" + RUNS_NOTE + "\n" + "\n".join(b.rstrip("\n") for b in blocks) + "\n"
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(tree_doc.replace_section(text, RUNS, new_sec))
+    from pathlib import Path
+    temp = Path(path).with_suffix(".distill.tmp")
+    temp.write_text(tree_doc.replace_section(text, RUNS, new_sec), encoding="utf-8")
+    temp.replace(path)
     _stamp(topic, path)
     return {"success": True, "topic": topic, "doc": path, "sentences": len(shown),
             "truncated": len(sentences) > len(shown), "dropped_runs": dropped}
@@ -767,8 +772,8 @@ def refresh_topic(topic: str, db_path: Optional[str] = None, guide: str = "") ->
     phrases = rows_of(topic, db_path, kind="phrase")
     if phrases or tree_doc.split_section(text, PHRASES)[1]:     # 절이 이미 있으면 비어도 다시 그린다
         text = _replace_phrases(text, render_phrases(phrases))
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+    from distill_receipts import atomic_text
+    atomic_text(path, text)
     _stamp(topic, path)
     return path
 
@@ -808,6 +813,10 @@ def _index(db_path: Optional[str], example_id: int, intent: str, code: str) -> N
 
 def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
     """문서가 마지막 렌더보다 새로우면 절을 읽어 색인에 반영: 고침=UPDATE · 지움=DELETE · 새 줄=INSERT(구문 관문)."""
+    from distill_receipts import projection_pending
+    if projection_pending(db_path or _default_db_path()):
+        return {"synced": False, "success": False, "reason": "pending_distill_projection"}
+
     topic = norm_topic(topic)
     path = doc_path(topic)
     if not os.path.exists(path):
@@ -818,6 +827,7 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
         stamp = 0
     if not tree_doc.is_stale(path, stamp):
         return {"synced": False, "reason": "fresh"}
+    _source_mtime = os.stat(path).st_mtime_ns
     text = open(path, encoding="utf-8").read()
     known, fresh = parse_section(text)
     pk, pf = parse_phrases(text)
@@ -832,6 +842,10 @@ def sync_topic(topic: str, db_path: Optional[str] = None) -> Dict[str, Any]:
         _syntax_reason = lambda code: None   # noqa: E731
     conn = sqlite3.connect(db_path or _default_db_path(), timeout=10)
     try:
+        conn.execute("BEGIN IMMEDIATE")
+        from distill_receipts import pending_connection
+        if pending_connection(conn) or os.stat(path).st_mtime_ns != _source_mtime:
+            return {"synced": False, "success": False, "reason": "distill_projection_or_document_changed"}
         now = datetime.now().isoformat()
         # 세 갈래 계획은 기질(tree_doc.plan_sync), 실행(SQL·구문 관문·색인)은 여기 — 색인에 없는 id 는 새 줄로 온다.
         def _changed(k, r):

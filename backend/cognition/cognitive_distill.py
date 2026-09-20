@@ -633,7 +633,8 @@ AI 답변: {ai_response[:1400]}
                         tool_calls=None, hippo_score: float = None, top_code: str = None,
                         write_experience: bool = True, write_deep: bool = True,
                         write_forage: bool = True, assume_forage: bool = False,
-                        guides_used=None, turn_tokens: int = None, turn_cost=None, presented=None):
+                        guides_used=None, turn_tokens: int = None, turn_cost=None, presented=None,
+                        distill_job=None, deep_confirmed=None):
         """턴 종료 후 메모리 쓰기 초크포인트 — 진입점마다 복붙되던 증류 배선을 한 곳으로.
 
         WS 채팅·에이전트 채널·포식 브라우저가 각자 복붙하던 [경험증류 + 심층메모리 + 포식기억]
@@ -651,6 +652,26 @@ AI 답변: {ai_response[:1400]}
         if not _principal_owner():
             log("[기억] 회원·이웃 주체의 턴 — 주인 저장소(해마·심층·포식·가이드)에 쓰지 않음(회원 로컬 회상은 2단계)")
             return
+        if distill_job is not None:
+            from unified_distill import run
+            import distill_ledger as ledger
+            ledger.create(distill_job)
+            key = distill_job["job_key"]
+            try:
+                return run(distill_job)
+            finally:
+                state = ledger.read(key)
+                confirmed = [r["id"] for name, r in state["receipts"].items()
+                             if name.startswith("deep:") and r.get("status") == "same" and r.get("id")]
+                ledger.once(key, "feedback", lambda: self._after_response(
+                    user_message, response, tool_calls=tool_calls, hippo_score=hippo_score,
+                    top_code=top_code, write_experience=False, write_deep=False, write_forage=False,
+                    guides_used=guides_used, turn_tokens=turn_tokens, turn_cost=turn_cost,
+                    presented=presented, deep_confirmed=confirmed))
+                if tool_calls:
+                    from ibl_usage_rag import record_recall_outcome
+                    ledger.once(key, "recall_outcome", lambda: record_recall_outcome(
+                        top_code, hippo_score, tool_calls, turn_tokens=turn_tokens))
         from thread_context import get_goal_eval_outcome
         evaluation = get_goal_eval_outcome()  # 경험 증류가 소비하기 전에 기억용 상태를 보존한다.
         # 제시→사용 결합(2026-09-18): 심층기억은 증류가 SAME/UPDATE 로 다시 만난 항목만 used_at 을 올린다 —
@@ -711,6 +732,7 @@ AI 답변: {ai_response[:1400]}
             try:
                 _deep_after = _ar.deep_used_at(_deep_db, (_deep or {}).get("ids") or [])
                 touched = [i for i, u in _deep_after.items() if u and u != _deep_before.get(i)]
+                touched = list(set(touched) | set(deep_confirmed or []))
                 _ar.record_usage(presented, tool_calls=tool_calls, response=response, deep_touched=touched)
             except Exception as e:
                 log(f"[연상:사용] 오류 (무시): {e}")
@@ -718,7 +740,8 @@ AI 답변: {ai_response[:1400]}
     def _after_response_async(self, user_message: str, response: str, *,
                               tool_calls=None, hippo_score: float = None, top_code: str = None,
                               turn_tokens: int = None, pursuit_packet=None,
-                              write_deep: bool = False, presented=None):
+                              write_deep: bool = False, presented=None, model_descriptor=None,
+                              write_experience=True, write_forage=True):
         """_after_response 를 **영속 큐**(distill_queue)에 적재 — 증류가 턴(스트림 종료·
         에피소드 END·총 소요 측정)을 붙잡지 않게(ep889: 실작업 4.6분에 증류 꼬리 6분) 하되,
         데몬 스레드 시절과 달리 프로세스가 죽어도 작업이 사라지지 않는다(2026-09-02: 행으로
@@ -732,8 +755,7 @@ AI 답변: {ai_response[:1400]}
           버퍼에 쌓이고, 완료 시 refresh_episode 가 저장된 행에 꼬리를 재합류시킨다.
         - 경량 프로바이더 동시성: 워커가 하나라 증류끼리는 안 다투고, 분류기와는
           oneshot_ai_call 의 _oneshot_call_lock 이 직렬화.
-        큐 적재 자체가 실패하면(DB 잠금 등) 옛 데몬 스레드 경로로 **강등해 실행하고 그 사실을
-        말한다** — 영속은 잃어도 이번 턴의 기억은 잃지 않는다.
+        큐 적재에 실패하면 원문 에피소드는 보존하고 오류를 남긴다. 무기록 저장으로 강등하지 않는다.
         """
         import contextvars
         from thread_context import (
@@ -771,6 +793,7 @@ AI 답변: {ai_response[:1400]}
             "pursuit": pursuit_packet,
             # 심층기억은 주인이 직접 한 말에서만 자란다 — 진입점이 선언한 발화자 축(fail-closed).
             "write_deep": bool(write_deep),
+            "write_experience": bool(write_experience), "write_forage": bool(write_forage),
             "presented": presented,   # 제시→사용 결합 키(2026-09-18) — 워커에서 record_usage
         }
         from supervision_bus import current as current_supervisor
@@ -783,22 +806,14 @@ AI 답변: {ai_response[:1400]}
             print("[감독비용] " + json.dumps(payload["turn_cost"], ensure_ascii=False))
         ctx = contextvars.copy_context()
         ep = EpisodeLogger.current()
+        from unified_distill import snapshot
+        payload = snapshot(self, payload, ident, descriptor=model_descriptor, episode=ep)
         try:
             from distill_queue import DistillQueue
             DistillQueue.get().enqueue(self, payload, ident=ident, ctx=ctx, ep=ep)
             return
         except Exception as e:
-            print(f"[증류큐] 적재 실패 — 비영속 스레드로 강등 실행: {type(e).__name__}: {e}")
-
-        import threading
-        from distill_queue import _Job, DistillQueue as _DQ
-
-        def _run():
-            try:
-                _DQ._execute(_Job(None, self, payload, ident, ctx=ctx, ep=ep))
-            except Exception as e:
-                print(f"[증류] 백그라운드 오류 (무시): {e}")
-            finally:
-                EpisodeLogger.refresh_episode(ep)
-
-        threading.Thread(target=_run, daemon=True, name="distill-after-response").start()
+            print(f"[증류큐] 적재 실패 — 기억 저장 생략, 원문 원장 보존: {type(e).__name__}: {e}")
+            from episode_logger import record_trajectory_event
+            record_trajectory_event("distillation.enqueue_failed", {"job_key": payload["job_key"],
+                                                                     "reason": type(e).__name__})

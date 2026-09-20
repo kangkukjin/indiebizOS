@@ -967,28 +967,28 @@ from ibl_idiom import (  # noqa: E402,F401
 
 def distill_experience(user_message: str, tool_calls: list, top_score: float,
                        top_code: str = None, turn_tokens: int = None, turn_cost=None) -> bool:
-    """실행 경험을 증류하여 해마에 저장한다.
+    """독립 실행기억 API의 호환 진입점. 공통 큐는 prepare/apply를 직접 사용한다."""
+    try:
+        prepared = prepare_experience(user_message, tool_calls, top_score, top_code, turn_tokens, turn_cost)
+        if not prepared:
+            return False
+        from pathlib import Path
+        from consciousness_agent import oneshot_ai_call
+        from runtime_utils import parse_first_json
+        path = Path(__file__).parent.parent.parent / "data/common_prompts/reflection_prompt.md"
+        result = oneshot_ai_call(prompt=prepared["prompt"],
+                                system_prompt=path.read_text() if path.exists() else "", role="background")
+        distilled = parse_first_json(result) if result else None
+        return apply_experience(prepared, distilled) if isinstance(distilled, dict) else False
+    except Exception as exc:
+        print(f"[경험증류] 실패: {exc}")
+        return False
 
-    조건: 도구 호출이 있었고, 해마 점수가 DISTILL_THRESHOLD 미만일 때 — 단
-    점수가 임계 이상이어도 회상 top-1 액션이 실행에 실제 사용되지 않았으면
-    (top_code 전달 경로 한정) 가짜 유사도로 보고 증류를 진행한다.
-    top_code 미전달 경로(조종실 /ibl/distill 등)는 기존 점수 게이트 그대로.
-    무의식 에이전트와 같은 경량 AI로 경험을 반성하여 일반화된 용례로 변환한다.
 
-    Args:
-        user_message: 사용자 원본 메시지
-        tool_calls: 도구 실행 이력 [{tool_name, input, success}, ...]
-        top_score: 해마 최고 점수 (build_execution_memory 시점)
-        top_code: 해마 최고 점수 항목의 ibl_code (회상 사용 여부 판정용, 선택)
-
-    Returns:
-        증류 성공 여부
-    """
+def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_tokens=None, turn_cost=None):
+    """기존 실행·중복 관문과 원문 선택 자료. 모델·저장 호출 없음."""
     if not _principal_allows_recall():
         return False   # 주체 관문 — 주인 해마에 남의 경험을 쓰지 않는다(쓰기 격리, 2026-09-14)
-    # 목표 평가 게이트: 평가가 NOT_ACHIEVED로 끝난 실행(=목표 미달성)은 학습하지 않는다.
-    # 실패한 실행의 IBL 패턴이 해마에 누적되면 시간이 갈수록 추천 품질을 깎는다(복리 출혈).
-    # 판정은 메시지당 1회만 소비 — 읽고 즉시 비워 평가 없는 다음 메시지로 새지 않게 한다.
     from thread_context import get_goal_eval_outcome, clear_goal_eval_outcome
     _ge = get_goal_eval_outcome()
     clear_goal_eval_outcome()
@@ -1000,8 +1000,6 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             print(f"[경험증류] 목표 미달성(severity={_ge.get('severity')}) — 증류 스킵: \"{user_message[:40]}\"")
         return False
 
-    # 해마 비활성(폰 기본)이면 증류도 건너뜀 — 안 그러면 top_score=0.0 이 매 명령마다 증류
-    # LLM 호출을 켜서 오히려 더 느려진다(해마 끄기의 목적 무력화). search 와 한 쌍으로 게이트.
     from ibl_usage_db import IBLUsageDB
     if IBLUsageDB.hippo_disabled():
         return False
@@ -1009,13 +1007,6 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     if not tool_calls:
         return False
 
-    # 성공한 IBL 호출만 필터 (점수 게이트의 회상 사용 판정도 이 목록을 씀)
-    # ★품질 계약(criteria)과의 접속: 미달(fail) 호출은 봉투 success:false 라
-    #   이 필터가 이미 거른다(agent_pipeline 이 is_error_result 로 재판정).
-    #   재시도-통과(pass_after_retry)는 성공이지만 *첫 지시가 약했다* 는 사실 —
-    #   그대로 증류하면 약한 지시가 코퍼스에 들어가므로, 반성 프롬프트에 미달
-    #   사유를 먹여 개선된 지시로 일반화하게 한다(품질 계약 셋째 신호,
-    #   docs/IBL_QUALITY_CONTRACT_HANDOFF.md §6).
     ibl_calls = []
     accepted_calls = []
     retry_notes = []
@@ -1045,8 +1036,6 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             evidence = tc.get("evidence") or truncation_evidence(tc.get("result"))
             cuts = evidence.get("truncations") or []
             if any(c.get("scope") == "source" for c in cuts if isinstance(c, dict)):
-                # 요청한 표본/미리보기와 달리 생산자가 확인한 원천 누락이다.
-                # 뒤에 재수집했다면 그 성공 호출이 별도로 후보에 들어온다.
                 print(f"[경험증류] 원천 절단 호출 제외: {code[:100]}")
                 continue
             ibl_calls.append(code)
@@ -1061,17 +1050,6 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
     if not ibl_calls or (_ge is None and all(context_program(code) for code in ibl_calls)):
         return False
 
-    # 점수 게이트: 임계 이상이면 원칙적으로 "이미 아는 패턴"이라 스킵. 단 그 판정은
-    # 회상이 실행에 실제 사용됐을 때만 신뢰한다 — 무관한 회상이 점수만 높은 경우
-    # (표면 어휘 유사)는 새 패턴이므로 증류를 진행한다. top_code 없는 경로(조종실)는
-    # 사용 여부를 알 수 없으므로 기존 점수 게이트 유지.
-    # ★2026-09-05 개정(사용자 판정 "이름으로 부르는 학습"): 옛 게이트는 회상 top-1 의 node:action
-    #   쌍이 실행에 하나라도 겹치면 "이미 아는 패턴"으로 보고 **조용히** 스킵했다. 그래서 회상이
-    #   잘 되는 가지일수록(부동산 0.81·팁 0.75) 새 프로그램이 한 번도 쌓이지 않았다 — 베낀 주행은
-    #   겹치기 마련이니 학습 루프가 자기 봉인. 이제 갈림은 '베꼈나/불렀나'다:
-    #   · 회상을 이름으로 불렀고(`[fn:이름]`) 그 밖에 더한 문장이 없으면 → 아는 것, 스킵
-    #   · 불렀고 더한 문장이 있으면 → 부른 것 위에 더한 것을 증류(호출을 품은 프로그램이 남는다)
-    #   · 부르지 않았으면(베꼈든 안 썼든) → 증류(가지가 자라야 다음 호가 부를 수 있다)
     if (top_score or 0.0) >= DISTILL_THRESHOLD:
         if not top_code:
             return False                     # 조종실 등 top_code 없는 경로: 점수 게이트 그대로
@@ -1085,8 +1063,7 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             print(f"[경험증류] 고점수 회상(top={top_score:.2f})을 이름으로 부르지 않음"
                   f"({'이름 있음' if _alias else '이름 없음'} · 베낌 또는 미사용) — 증류 진행")
 
-    # 비용 관문은 모델·임베딩 호출보다 먼저. 실패하면 원장은 보존하고 증류는 보류한다.
-    try:
+    if True:
         import hippo_tree
         import ibl_distill_value as value
         db = IBLUsageDB()
@@ -1125,182 +1102,147 @@ def distill_experience(user_message: str, tool_calls: list, top_score: float,
             print("[경험증류] 입력 예산 초과 — 원문은 실행 원장에 보존, 증류 생략")
             return False
 
-        # 반성 에이전트 프롬프트 로드
-        from pathlib import Path
-        _prompt_path = Path(__file__).parent.parent.parent / "data" / "common_prompts" / "reflection_prompt.md"
-        system_prompt = _prompt_path.read_text(encoding="utf-8").strip() if _prompt_path.exists() else ""
+        return {"prompt": prompt, "rows": rows, "known": known, "source_calls": source_calls,
+                "topic_map": _topic_map, "retry_notes": retry_block,
+                "outcome": json.loads(value.outcome_evidence(accepted_calls, _ge)),
+                "ibl_calls": ibl_calls, "evaluation": _ge, "tool_calls": tool_calls,
+                "turn_cost": turn_cost, "turn_tokens": turn_tokens, "top_score": top_score}
 
-        # 반성 에이전트: 무의식 에이전트와 같은 경량 AI 사용 (도구 없음, 단순 텍스트)
-        from consciousness_agent import oneshot_ai_call
-        result = oneshot_ai_call(prompt=prompt, system_prompt=system_prompt, role="background")
 
-        if not result:
-            return False
-
-        # JSON 파싱 — 첫 JSON 값만 안전 추출(뒤에 잡담·중복 JSON 이 붙어도 살림.
-        # 옛 find/rfind 방식은 '{...}잡담' 을 통째로 loads 해 Extra data 로 전체 유실 — ep855).
-        from runtime_utils import parse_first_json
-        distilled = parse_first_json(result)
-        if not isinstance(distilled, dict):
-            print(f"[경험증류] JSON 추출 실패: {result.strip()[:100]}")
-            return False
-        why = value.value_reason(distilled)
-        if why:
-            print(f"[경험증류] 저장 생략: {why}")
-            return False
-        intent = distilled.get("intent", "").strip()
-        component = distilled.get("scope") != "task" or _ge is None
-        code, selection_note = select_distill_source({"call_ids": distilled["source_ids"]}, source_calls)
-        code = code or ""
-        print(f"[경험증류] 원문 선택: {selection_note}")
-        if not intent or not code:
-            return False
-        if value.redundant_reason([code], known):
-            print("[경험증류] 선택 결과가 기존 용례와 중복 — 저장 생략")
-            return False
-        _topic = str(distilled.get("topic", "") or "").strip()
-        # 새 하위 가지의 출생은 되풀이가 증명한다(2026-09-05, hippo_tree.settle_topic) — 1건짜리 가지 억제
-        try:
-            import hippo_tree as _ht
-            _topic, _topic_note = _ht.settle_topic(_topic)
-            if _topic_note:
-                print(f"[경험증류] 가지 판정: {_topic_note}")
-        except Exception as _e:
-            print(f"[경험증류] 가지 판정 생략: {_e}")
-
-        # 관용구 자동 증류 **중단** (2026-09-07, 사용자 판정): 상시 프롬프트에 소개되는 관용구는
-        # 실질적으로 **어휘**다 — 어휘는 자동으로 늘어나서는 안 된다(ibl.md §8 "작업보다 느리게").
-        # 09-04~09-07 사흘에 38건이 자동으로 이름을 얻었고 34건이 실행 0 이었다. 등록은 이제
-        # 부정기 **수동** 경로(scripts/register_idiom.py)로만 — 에피소드 기억을 사람이 살펴 고른다.
-        # `_distill_phrase` 는 남긴다(수동 경로·replay_idioms 가 같은 관문을 쓴다). 부르는 자리가 없을 뿐.
-        phrase_ok = False
-
-        # 구문 관문 (2026-09-02): 포장을 벗기고, 그래도 IBL 로 파싱 안 되면 적재하지 않는다.
-        # ★이 관문이 없어서 반성기가 JSON 을 이중으로 감싼 출력이 그대로 code 칸에 박혔고
-        #   (실측 id 4374), 아래 게이트들은 전부 정규식 수준이라 그걸 통과시켰다 —
-        #   그 행 하나가 pre-commit 코퍼스 검사를 막아 저장소 전체의 커밋을 세웠다.
-        #   순서가 중요하다: 아래 인자 게이트(check_code_params)는 파싱 실패를 [] 로
-        #   돌려주므로, 구문은 반드시 그보다 먼저 묻는다.
-        from ibl_param_vocab import normalize_corpus_code
-        code = normalize_corpus_code(code)
-        code, _syntax_err = _syntax_gate_with_restore(code, ibl_calls, "[경험증류]")
-        if _syntax_err:
-            print(f"[경험증류] 파싱 불가 — 추가 모델 호출 없이 보류: {_syntax_err}")
-            return phrase_ok
-
-        # 머리 접지 게이트 (2026-09-04): 실행에 없던 액션 머리는 코퍼스에 못 들어온다.
-        if not _heads_grounded(code, ibl_calls):
-            print(f"[경험증류] 머리 접지 실패(실행에 없던 액션) — 증류 스킵: {code[:80]}")
-            return phrase_ok
-
-        # 합성 접지 게이트: 실행에 없던 >>·&·; 합성(거짓 관용구)은 코퍼스에 못 들어온다.
-        # 규칙 3 의 기계판 — 반성기가 별개 호출들을 파이프로 봉합한 경우 여기서 잡힌다.
-        if not _composition_grounded(code, ibl_calls):
-            print(f"[경험증류] 합성 접지 실패(실행에 없던 합성) — 증류 스킵: {code[:80]}")
-            return phrase_ok
-
-        # 배관 키 스크럽 (2026-08-16): `_raw`(파이프 중간 압축 억제)는 workflow_engine 이
-        # 주입하는 내부 배관이지 어휘가 아니다 — 파이프 안 실행이 증류될 때 코드에 박혀
-        # 코퍼스를 오염시킨 실측(빌드의 코퍼스-param 가드가 검출). 언어 표면에 없는 키는
-        # 여기서 벗긴다.
-        code = re.sub(r',\s*_raw:\s*(?:true|false)', '', code)
-        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*,\s*', '{', code)
-        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*\}', '{}', code)
-
-        # 검증 게이트: 환각된(미존재) 액션이 코퍼스에 진입하지 못하도록 정적 검증
-        if not _validate_ibl_actions(code):
-            return phrase_ok
-
-        # 인자 게이트 (2026-07-03): 핸들러가 읽지 않는 키가 박힌 코드는 증류하지 않는다.
-        # 침묵 인자 드리프트가 "성공"으로 위장한 채 코퍼스(몸)에 들어가면 Reflex 가
-        # 틀린 인자명을 영구 재생산한다 — 경고(실행 층)의 짝인 쓰기 층 위생 장치.
-        try:
-            from ibl_param_vocab import check_code_params
-            _param_issues = check_code_params(code)
-            if _param_issues:
-                print(f"[경험증류] 미인식 파라미터 — 증류 스킵: "
-                      f"{[(i['action'], i['unknown']) for i in _param_issues]}")
-                return phrase_ok
-        except Exception as exc:
-            print(f"[경험증류] 인자 검증 불가 — 저장 보류: {exc}")
-            return phrase_ok
-
-        # 개인 명사·일회성 본문 관문 (2026-09-18): 관용구 관문과 같은 자를 낱말 증류에도 건다.
-        from ibl_idiom import example_entrance_reason
-        _entrance_why = example_entrance_reason(intent, code)
-        if _entrance_why:
-            print(f"[경험증류] 입구 관문 — 증류 스킵: {_entrance_why}")
-            return phrase_ok
-
-        # 노드 추출
-        node_pattern = re.compile(r'\[([a-z_-]+):')
-        nodes = ",".join(sorted(set(node_pattern.findall(code))))
-
-        # 파이프라인 여부
-        category = "pipeline" if (">>" in code or "&" in code) else "single"
-
-        # 해마에 저장 (임베딩도 즉시 생성). avg_ms/avg_tokens=출생 실측 — 이 용례가 압축한
-        # 원 실행의 소요시간 합·그 턴의 모델 토큰 소요를 첫 관측으로 심는다(없으면 -1,
-        # 이후 Reflex 귀속이 채움). 근접중복 정리에서 싸고 빠른 표현이 살아남는
-        # 시간·토큰 선택압의 시작점.
-        from ibl_usage_db import IBLUsageDB
-        evidence = value.provenance(distilled, rows, code, _ge, turn_cost)
-        _birth_ms = _ibl_elapsed_ms(tool_calls)
-        # 자동 작명 중단 (2026-09-07, 사용자 판정 — 위 관용구 증류 중단과 한 벌): 이름을 주는 길이
-        # 둘이라 한쪽만 끊으면 샌다(09-07 전수 감사가 확인한 그 비대칭). 용례는 종전대로 코퍼스에
-        # 쌓되 **이름은 주지 않는다** — 상시 프롬프트에 서는 이름은 곧 어휘이고, 어휘는 사람이 고른다.
-        # 이름·반환 모양을 계산하던 관문들(uncallable_reason·slot_values_ungrounded·_phrase_private_reason)은
-        # 수동 등록 경로(scripts/register_idiom.py)가 그대로 쓴다 — 관문은 살아 있고 방아쇠만 사람에게 갔다.
-        _alias, _returns = "", ""
-        example_id = db.add_example(
-            intent=intent,
-            ibl_code=code,
-            nodes=nodes,
-            category=category,
-            difficulty=1,
-            source="distilled_component" if component else "distilled",
-            tags="auto",
-            alias=_alias,
-            returns=_returns,
-            avg_ms=float(_birth_ms) if _birth_ms and not component else -1.0,
-            avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0 and not component) else -1.0,
-            topic=_topic,
-            provenance=evidence,
-        )
-
-        # 원장의 판정을 존중한다 (2026-09-02): add_example 은 입구 게이트에 걸리면 0 을
-        # 돌려준다. 예전엔 그 반환값을 안 보고 학습 파일에는 그대로 append 해서, DB 가
-        # 거부한 코드가 ibl_distilled.json 에만 남아 두 원장이 어긋났다 — 빌드의 코퍼스
-        # 검사는 파일 쪽도 읽으므로 거부당한 코드가 계속 커밋을 막는다.
-        if not example_id:
-            print(f"[경험증류] 원장이 거부 — 학습 파일에도 적재하지 않음: {code[:60]}")
-            return phrase_ok
-
-        # 학습용 JSON 파일에 누적 (재학습 시 기존 데이터와 합쳐서 사용)
-        from pathlib import Path
-        import json as _json
-        distilled_path = Path(__file__).parent.parent.parent / "data" / "training" / "ibl_distilled.json"
-        try:
-            existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
-            existing.append({"intent": intent, "ibl_code": code, "source": "distilled_component" if component else "distilled", "provenance": evidence})
-            distilled_path.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
-        except Exception as e:
-            # 두 원장 어긋남의 형제 — DB 엔 들어갔는데 학습 파일에 못 남았으면 침묵이 아니라 소리.
-            print(f"[경험증류] 학습 파일 적재 실패(DB id={example_id}) — 재학습 원장 어긋남: {e}")
-
-        value.note_selected_run(_topic, intent, code, component, tool_calls, distilled, turn_cost)
-
-        # RAG 캐시 무효화
-        rag = IBLUsageRAG()
-        rag.clear_cache()
-
-        print(f"[경험증류] 저장 완료 (id={example_id}{(' 이름 [fn:' + _alias + ']') if _alias else ''}, score={top_score:.2f}/학습): "
-              f"\"{intent[:40]}\" → {code[:60]}")
-        return True
-
-    except Exception as e:
-        print(f"[경험증류] 실패: {e}")
+def apply_experience(prepared, distilled, *, candidate_key=None):
+    """선택 원문을 기존 입구 관문으로 검증·저장. 추가 의미 판단 없음."""
+    import ibl_distill_value as value
+    from ibl_usage_db import IBLUsageDB
+    db = IBLUsageDB()
+    rows, known = prepared["rows"], prepared["known"]
+    source_calls, ibl_calls = prepared["source_calls"], prepared["ibl_calls"]
+    _ge, tool_calls = prepared["evaluation"], prepared["tool_calls"]
+    turn_cost, turn_tokens = prepared["turn_cost"], prepared["turn_tokens"]
+    top_score = prepared["top_score"]
+    why = value.value_reason(distilled)
+    if why:
+        print(f"[경험증류] 저장 생략: {why}")
         return False
+    intent = distilled.get("intent", "").strip()
+    component = distilled.get("scope") != "task" or _ge is None
+    code, selection_note = select_distill_source({"call_ids": distilled["source_ids"]}, source_calls)
+    code = code or ""
+    print(f"[경험증류] 원문 선택: {selection_note}")
+    if not intent or not code:
+        return False
+    if value.redundant_reason([code], known):
+        print("[경험증류] 선택 결과가 기존 용례와 중복 — 저장 생략")
+        return False
+    _topic = str(distilled.get("topic", "") or "").strip()
+    try:
+        import hippo_tree as _ht
+        _topic, _topic_note = _ht.settle_topic(_topic)
+        if _topic_note:
+            print(f"[경험증류] 가지 판정: {_topic_note}")
+    except Exception as _e:
+        print(f"[경험증류] 가지 판정 생략: {_e}")
+
+    phrase_ok = False
+
+    from ibl_param_vocab import normalize_corpus_code
+    code = normalize_corpus_code(code)
+    code, _syntax_err = _syntax_gate_with_restore(code, ibl_calls, "[경험증류]")
+    if _syntax_err:
+        print(f"[경험증류] 파싱 불가 — 추가 모델 호출 없이 보류: {_syntax_err}")
+        return phrase_ok
+
+    if not _heads_grounded(code, ibl_calls):
+        print(f"[경험증류] 머리 접지 실패(실행에 없던 액션) — 증류 스킵: {code[:80]}")
+        return phrase_ok
+
+    if not _composition_grounded(code, ibl_calls):
+        print(f"[경험증류] 합성 접지 실패(실행에 없던 합성) — 증류 스킵: {code[:80]}")
+        return phrase_ok
+
+    code = re.sub(r',\s*_raw:\s*(?:true|false)', '', code)
+    code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*,\s*', '{', code)
+    code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*\}', '{}', code)
+
+    if not _validate_ibl_actions(code):
+        return phrase_ok
+
+    try:
+        from ibl_param_vocab import check_code_params
+        _param_issues = check_code_params(code)
+        if _param_issues:
+            print(f"[경험증류] 미인식 파라미터 — 증류 스킵: "
+                  f"{[(i['action'], i['unknown']) for i in _param_issues]}")
+            return phrase_ok
+    except Exception as exc:
+        print(f"[경험증류] 인자 검증 불가 — 저장 보류: {exc}")
+        return phrase_ok
+
+    from ibl_idiom import example_entrance_reason
+    _entrance_why = example_entrance_reason(intent, code)
+    if _entrance_why:
+        print(f"[경험증류] 입구 관문 — 증류 스킵: {_entrance_why}")
+        return phrase_ok
+
+    node_pattern = re.compile(r'\[([a-z_-]+):')
+    nodes = ",".join(sorted(set(node_pattern.findall(code))))
+
+    category = "pipeline" if (">>" in code or "&" in code) else "single"
+
+    from ibl_usage_db import IBLUsageDB
+    evidence = value.provenance(distilled, rows, code, _ge, turn_cost)
+    if candidate_key:
+        evidence.update(prepared.get("origin", {}))
+        evidence["candidate_key"] = candidate_key
+    _birth_ms = _ibl_elapsed_ms(tool_calls)
+    # 자동 작명은 중단했다. uncallable_reason·slot_values_ungrounded·_phrase_private_reason은
+    # 수동 등록 경로가 쓰는 관문이며 통합 증류도 새 이름을 만들지 않는다.
+    _alias, _returns = "", ""
+    example_id = db.add_example(
+        intent=intent,
+        ibl_code=code,
+        nodes=nodes,
+        category=category,
+        difficulty=1,
+        source="distilled_component" if component else "distilled",
+        tags="auto",
+        alias=_alias,
+        returns=_returns,
+        avg_ms=float(_birth_ms) if _birth_ms and not component else -1.0,
+        avg_tokens=float(turn_tokens) if (turn_tokens and turn_tokens > 0 and not component) else -1.0,
+        topic=_topic,
+        provenance=evidence,
+        **({"candidate_key": candidate_key} if candidate_key else {}),
+    )
+
+    if not example_id:
+        print(f"[경험증류] 원장이 거부 — 학습 파일에도 적재하지 않음: {code[:60]}")
+        return phrase_ok
+
+    from pathlib import Path
+    import json as _json
+    distilled_path = Path(__file__).parent.parent.parent / "data" / "training" / "ibl_distilled.json"
+    try:
+        existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
+        existing = [e for e in existing if not candidate_key or e.get("provenance", {}).get("candidate_key") != candidate_key]
+        existing.append({"intent": intent, "ibl_code": code, "source": "distilled_component" if component else "distilled", "provenance": evidence})
+        temp = distilled_path.with_suffix(".distill.tmp")
+        temp.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
+        temp.replace(distilled_path)
+    except Exception as e:
+        if candidate_key:
+            raise
+        print(f"[경험증류] 학습 파일 적재 실패(DB id={example_id}) — 재학습 원장 어긋남: {e}")
+
+    value.note_selected_run(_topic, intent, code, component, tool_calls, distilled, turn_cost,
+                            **({"candidate_key": candidate_key} if candidate_key else {}))
+
+    rag = IBLUsageRAG()
+    rag.clear_cache()
+
+    print(f"[경험증류] 저장 완료 (id={example_id}{(' 이름 [fn:' + _alias + ']') if _alias else ''}, score={(top_score or 0):.2f}/학습): "
+          f"\"{intent[:40]}\" → {code[:60]}")
+    return True
+
 
 
 # =========================================================================

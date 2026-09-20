@@ -374,8 +374,8 @@ def refresh_doc(path: str, body: str, root: str) -> Optional[str]:
                 f"| 예산 (어디까지 봤나) | — |\n| 거칠기 | — |\n| 상위 문서 | — |\n| 하위 문서 | — |\n\n"
                 f"## 갱신 기록\n")
     text = _replace_section(text, render_section(rows))
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+    from distill_receipts import atomic_text
+    atomic_text(path, text)
     _stamp(path)
     return path
 
@@ -464,8 +464,13 @@ def refresh_all_docs() -> List[str]:
 # ----------------------------------------------------------------- 문서 → DB
 def sync_doc_to_db(path: str) -> Dict[str, Any]:
     """문서의 `## 단언` 절을 색인에 맞춘다: 같은 (locus, kind, claim) 은 유지(출처 보존), 새 줄은 삽입, 절에 없는 행은 삭제."""
+    from distill_receipts import projection_pending
+    if projection_pending(FM._DB_PATH):
+        return {"synced": False, "success": False, "reason": "pending_distill_projection"}
+
     if not os.path.exists(path):
         return {"success": False, "error": f"문서 없음: {path}"}
+    _source_mtime = os.stat(path).st_mtime_ns
     text = open(path, encoding="utf-8").read()
     m = MARKER_RE.search(text[:2000])
     if not m:
@@ -488,6 +493,10 @@ def sync_doc_to_db(path: str) -> Dict[str, Any]:
     inserted, updated = 0, 0
     conn = FM._connect()
     try:
+        conn.execute("BEGIN IMMEDIATE")
+        from distill_receipts import pending_connection
+        if pending_connection(conn) or os.stat(path).st_mtime_ns != _source_mtime:
+            return {"synced": False, "success": False, "reason": "distill_projection_or_document_changed"}
         now = FM._now()
         # 삭제를 먼저 — 같은 (locus, kind) 의 옛 줄이 남아 있으면 새 줄 삽입이 유일 키에 걸린다
         deleted = 0

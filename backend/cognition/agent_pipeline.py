@@ -661,6 +661,7 @@ class CognitivePipelineMixin:
                             except Exception:
                                 pass  # 판정 불가면 옛 동작(성공 취급) — 여기서 턴을 깨지 않는다
                         tool_calls_log[_idx]["success"] = not _is_err
+                        tool_calls_log[_idx]["result"] = _rt
                         from ibl_honesty import truncation_evidence
                         _evidence = truncation_evidence(_rt)
                         if _evidence:
@@ -846,6 +847,8 @@ class CognitivePipelineMixin:
                 clear_task_origin()
             except Exception:
                 pass
+            from unified_distill import capture_model
+            _distill_model = capture_model(self)
             # 중급/역할 모델 사용 후 원래 provider 복원
             _restore_provider(self, original_provider)
             # 조향 별칭·미배달분은 바깥 task_scope가 같은 작업만 정리한다.
@@ -910,7 +913,13 @@ class CognitivePipelineMixin:
                         # 이 턴의 메시지를 누가 썼나 — 진입점이 선언한다. "owner"(주인이 직접 친 말)만
                         # 심층기억 증류의 재료다. 에이전트 위임문·보고 회수·예약 주입문·미선언은 닫힌다.
                         write_deep=(utterance_author == "owner"),
+                        model_descriptor=_distill_model,
                     )
+            elif force_role == "forage" and _response_completed:
+                self._after_response_async(
+                    message, final_content, tool_calls=tool_calls_log, turn_tokens=turn_tokens,
+                    write_experience=False, write_deep=False, write_forage=True,
+                    model_descriptor=_distill_model)
 
         if _error_text is not None:
             yield {"type": "error", "content": _error_text}

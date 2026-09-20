@@ -110,7 +110,7 @@ class SystemAIRunner:
         사용자 판정). 핀을 지우면 위임도 기어를 따른다(채팅 경로와 동형).
         리졸버 실패/모델 미설정 시 옛 system_ai_config 폴백(동작 보존)."""
         try:
-            from model_resolver import resolve
+            from model_resolver import resolve, freeze_descriptor
             d = resolve("system_ai", agent_id="system_ai_delegation")
             if d.get("model"):
                 return {
@@ -118,6 +118,7 @@ class SystemAIRunner:
                     "model": d["model"],
                     "api_key": d.get("api_key", ""),
                     "_source": d.get("source", ""),
+                    "_execution_descriptor": freeze_descriptor(d, role="system_ai", pin_key="system_ai_delegation"),
                 }
         except Exception as e:
             print(f"[SystemAIRunner] 기어 해소 실패(옛 config 폴백): {e}")
@@ -166,6 +167,7 @@ class SystemAIRunner:
             "provider": resolved["provider"],
             "model": resolved["model"],
             "api_key": resolved["api_key"],
+            "_execution_descriptor": resolved.get("_execution_descriptor", {}),
         }
 
         # WebSocket 경로: execute_ibl만 로딩

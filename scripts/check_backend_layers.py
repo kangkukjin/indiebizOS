@@ -39,7 +39,7 @@ ORDER = ["base", "data", "ibl", "cognition", "services", "surface"]
 
 LAYERS = {
     "base": {
-        "history_excerpt",
+        "history_excerpt", "distill_receipts",
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
@@ -50,6 +50,7 @@ LAYERS = {
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
     "data": {
+        "distill_ledger",
         "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
         "record_admin", "record_assets", "record_facade",
         "knowledge_catalog", "knowledge_graph", "tree_recall", "tree_doc", "world_recall_store", "forage_recall_store",
@@ -84,6 +85,7 @@ LAYERS = {
         "workflow_binding", "workflow_verdict", "workflow_store", "pipeline_state",
     },
     "cognition": {
+        "unified_distill", "distill_memory_adapters",
         "catalog_recall", "world_context", "associative_recall",
         "capability_guard", "capability_guard_runtime",
         "member_runner", "member_session", "client_workflows",

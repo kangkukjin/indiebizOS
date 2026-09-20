@@ -7,6 +7,7 @@
     "base/codex_rollout",
     "base/desktop_notify",
     "base/device_registry",
+    "base/distill_receipts",
     "base/doc_ir",
     "base/document_converter",
     "base/episode_logger",
@@ -72,6 +73,7 @@
     "cognition/consciousness_agent",
     "cognition/corpus_vocab_audit",
     "cognition/derived_freshness",
+    "cognition/distill_memory_adapters",
     "cognition/distill_queue",
     "cognition/doc_drift",
     "cognition/final_evaluator",
@@ -115,6 +117,7 @@
     "cognition/system_tools_delegate",
     "cognition/system_tools_ibl",
     "cognition/turn_scope",
+    "cognition/unified_distill",
     "cognition/vocab_crystallization",
     "cognition/vocab_overlap_audit",
     "cognition/weekly_audits",
@@ -130,6 +133,7 @@
     "datastore/calendar_manager",
     "datastore/conversation_db",
     "datastore/decision_ledger",
+    "datastore/distill_ledger",
     "datastore/face_config",
     "datastore/file_index",
     "datastore/finance_ledger_sync",
@@ -418,8 +422,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 378,
-    "engine": 352,
+    "total": 382,
+    "engine": 356,
     "blocklist": 26
   }
 }

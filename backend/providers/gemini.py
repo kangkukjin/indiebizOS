@@ -234,6 +234,8 @@ class GeminiProvider(BaseProvider):
             }
             if thinking:
                 config_kwargs["thinking_config"] = thinking
+            if getattr(self, "distill_single_decision", False):
+                config_kwargs["max_output_tokens"] = self.distill_max_output_tokens
             return types.GenerateContentConfig(**config_kwargs)
         else:
             config_kwargs = {
@@ -243,6 +245,8 @@ class GeminiProvider(BaseProvider):
             }
             if thinking:
                 config_kwargs["thinking_config"] = thinking
+            if getattr(self, "distill_single_decision", False):
+                config_kwargs["max_output_tokens"] = self.distill_max_output_tokens
             return types.GenerateContentConfig(**config_kwargs)
 
     def cleanup(self):

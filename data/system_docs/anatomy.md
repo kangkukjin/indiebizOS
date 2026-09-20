@@ -100,7 +100,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
   ↓ [3] 실행   IBL 엔진 → 도구 실행
   ↔ [4a] 의식 감독   하네스가 실패 반복·진척 정체·장시간 작업을 관찰, 필요한 때만 의식 호출
   ↓ [4b] 최종 평가   의식이 달성 기준을 정한 턴만 승인 또는 1회 부분 보완 (EXECUTE·Reflex는 4a/4b 생략)
-  ↓ [5] 증류   성공 경험을 해마에 저장, 장기 기억은 최종 응답 뒤 사용자 원문에서 선별 (다음엔 더 빠르게)
+  ↓ [5] 증류   응답 뒤 실행·심층·공간 기억의 지속 가치를 한 번 선별 (0건도 정상)
 ```
 
 **감독과 평가값**: `conscious_supervisor`는 의식의 계획·재규정·중간관리를 유지한다. 의식과 실행은 같은 `AIAgent`를 쓰며 신원·세션·예산은 분리한다. 최종평가는 `final_evaluator`가 기존 `CognitiveEvalMixin`의 도구 없는 `role="evaluate"` 원샷을 사용한다. 하네스가 사용자 목표·전체 응답·실제 호출 원장·결과 발췌·산출물 내용을 제공한다. 짧고 정상적인 조회의 경로는 유지한다. `evaluation_result`의 `ACHIEVED`는 승인, `NOT_ACHIEVED`는 보완 미완료, `UNKNOWN`은 평가 불명, `NULL`은 평가 미실행이다.

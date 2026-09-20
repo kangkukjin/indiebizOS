@@ -248,8 +248,8 @@ def refresh_node(db_path: str, node: str, agent: Optional[str] = None) -> str:
     else:
         text = tree_doc.skeleton(_marker(agent, node), f"기억 — {node or '(뿌리)'}", GIST_PLACEHOLDER)
     text = _replace_section(text, render_section(rows_of(db_path, node)))
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(text)
+    from distill_receipts import atomic_text
+    atomic_text(path, text)
     _stamp(db_path, node, path)
     return path
 
@@ -300,6 +300,10 @@ def _flush_index_pending(db_path, node):
 def sync_node(db_path: str, node: str) -> Dict[str, Any]:
     """문서가 마지막 렌더보다 새로우면 절을 읽어 색인에 반영: 고친 줄=UPDATE · 지운 줄=DELETE · 새 줄=INSERT.
     반영 뒤 다시 그려(새 줄에 #id 부여) 도장을 찍는다."""
+    from distill_receipts import projection_pending
+    if projection_pending(db_path):
+        return {"synced": False, "success": False, "reason": "pending_distill_projection"}
+
     import memory_db
     node = norm_node(node)
     path = doc_path(db_path, node)
@@ -308,6 +312,7 @@ def sync_node(db_path: str, node: str) -> Dict[str, Any]:
     if not tree_doc.is_stale(path, memory_db.get_meta(db_path, _stamp_key(node)) or 0):
         return {"synced": False, "reason": "fresh",
                 "index_pending": _flush_index_pending(db_path, node)}
+    _source_mtime = os.stat(path).st_mtime_ns
     text = open(path, encoding="utf-8").read()
     known, fresh = parse_section(text)
     existing = {r["id"]: r for r in rows_of(db_path, node)}
@@ -317,6 +322,10 @@ def sync_node(db_path: str, node: str) -> Dict[str, Any]:
     pending = set(json.loads(memory_db.get_meta(db_path, pending_key) or "[]"))
     conn = sqlite3.connect(db_path, timeout=10)
     try:
+        conn.execute("BEGIN IMMEDIATE")
+        from distill_receipts import pending_connection
+        if pending_connection(conn) or os.stat(path).st_mtime_ns != _source_mtime:
+            return {"synced": False, "success": False, "reason": "distill_projection_or_document_changed"}
         now = datetime.now().isoformat()
         # 세 갈래 계획은 기질(tree_doc.plan_sync), 실행(SQL·검증·색인)은 여기 — 색인에 없는 id 는 새 기억으로 온다.
         plan = tree_doc.plan_sync(

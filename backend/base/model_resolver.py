@@ -604,7 +604,47 @@ def get_provider_for(role: str, agent_id: Optional[str] = None,
     """
     d = resolve(role, agent_id)
     prov = _provider_from_desc(d, system_prompt=system_prompt, tools=tools, oneshot=oneshot)
+    if prov is not None:
+        # 호출자의 역할·핀은 캐시된 provider에 공유 변이하지 않는다.
+        import copy
+        prov = copy.copy(prov)
+        prov.distill_descriptor = freeze_descriptor(d, role=role, pin_key=agent_id)
     return prov, d
+
+
+def freeze_descriptor(d, *, role="execution", pin_key=None):
+    """재개에 필요한 공개 모델 선택만 보존한다. 비밀은 allowlist 밖이다."""
+    from datetime import datetime, timezone
+    fields = ("provider", "model", "tier", "source", "thinkingBudget", "reasoning_mode")
+    return {**{k: d[k] for k in fields if k in d}, "role": role,
+            "pin_key": _nfc(pin_key or ""),
+            "selected_at": datetime.now(timezone.utc).isoformat()}
+
+
+def provider_from_frozen(descriptor):
+    """기어를 재해소하지 않고 동결 모델을 원샷으로 복원한다."""
+    if not descriptor.get("provider") or not descriptor.get("model"):
+        raise ValueError("증류 실행 모델 정보 없음")
+    d = dict(descriptor)
+    d["api_key"] = env_key_for_provider(d["provider"])
+    if provider_needs_api_key(d["provider"]) and not d["api_key"]:
+        raise RuntimeError("증류 모델 자격 증명 사용 불가")
+    provider = _provider_from_desc(d, oneshot=True)
+    if provider is None:
+        raise RuntimeError("동결 증류 모델 사용 불가")
+    import copy
+    provider = copy.copy(provider)
+    provider.MAX_AUTO_CONTINUES = 0
+    budget = d.get("thinkingBudget", 0)
+    provider.distill_max_output_tokens = max(4000, budget + 1024) if type(budget) is int else 4000
+    provider.DEFAULT_MAX_TOKENS = provider.distill_max_output_tokens
+    provider.distill_single_decision = True
+    if "reasoning_mode" in d:
+        provider.reasoning_mode = d["reasoning_mode"]
+        provider.disable_thinking = d["reasoning_mode"] == "off"
+    if "thinkingBudget" in d:
+        provider.thinking_budget = d["thinkingBudget"]
+    return provider
 
 
 def resolve_vision() -> dict:
@@ -709,6 +749,7 @@ def resolve_agent_ai(base_ai: Optional[dict], project_id: str, agent_id: str) ->
         out["model"] = d["model"]
         out["api_key"] = d.get("api_key", "")
         out["_gear_source"] = d.get("source", "")
+        out["_execution_descriptor"] = freeze_descriptor(d, role="execution", pin_key=pin)
         if "input_modalities" in d:
             out["input_modalities"] = d["input_modalities"]
     return out

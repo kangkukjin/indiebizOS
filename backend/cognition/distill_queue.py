@@ -25,6 +25,7 @@ from typing import Any, Dict, Optional
 MAX_ATTEMPTS = 3
 RETRY_BACKOFF_SEC = (0, 5, 20)      # n번째 시도 전 대기(초). 시험은 (0,0,0) 으로 덮는다.
 DRAIN_TIMEOUT_SEC = 10              # 종료 유예 — 넘으면 행을 남기고 떠난다(다음 부팅이 재개)
+UNIFIED_REGISTRY_PREFIX = "distill-v1:"
 SYSTEM_AI_KEY = "system:system_ai"  # system_ai_core.get_system_ai_runner 의 registry_key
 
 _TABLE_SQL = """
@@ -87,12 +88,16 @@ class DistillQueue:
     def enqueue(self, runner, payload: Dict[str, Any], *, ident: Dict[str, Any],
                 ctx=None, ep=None) -> int:
         """행을 먼저 남기고(영속) 워커에 넘긴다. 반환=행 id."""
+        payload = json.loads(json.dumps(payload, ensure_ascii=False, default=str))
+        registry_key = ident.get("registry_key")
+        if payload.get("schema_version") == 1 and registry_key:
+            registry_key = UNIFIED_REGISTRY_PREFIX + registry_key
         conn = _conn()
         try:
             cur = conn.execute(
                 "INSERT INTO distill_queue (created_at, registry_key, project_id, agent_id, "
                 "agent_name, payload, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')",
-                (_now(), ident.get("registry_key"), ident.get("project_id"),
+                (_now(), registry_key, ident.get("project_id"),
                  ident.get("agent_id"), ident.get("agent_name"),
                  json.dumps(payload, ensure_ascii=False, default=str)))
             conn.commit()
@@ -156,7 +161,8 @@ class DistillQueue:
             self._delete(job.row_id)
         except Exception as e:
             err = f"{type(e).__name__}: {e}"
-            if job.attempts < MAX_ATTEMPTS:
+            from distill_ledger import PermanentDistillError
+            if job.attempts < MAX_ATTEMPTS and not isinstance(e, PermanentDistillError):
                 self._mark(job.row_id, "pending", attempts=job.attempts, error=err)
                 print(f"[증류큐] #{job.row_id} 실패 {job.attempts}/{MAX_ATTEMPTS} — 재시도: {err[:120]}")
                 job.retry_pending = True
@@ -179,6 +185,13 @@ class DistillQueue:
                                     set_current_task_id, clear_current_task_id,
                                     clear_goal_eval_outcome)
         p, ident = job.payload, job.ident
+        if p.get("schema_version"):
+            from distill_ledger import PermanentDistillError
+            if p.get("principal") != "owner":
+                raise PermanentDistillError("unknown_distill_principal")
+            for field in ("agent_id", "project_id"):
+                if ident.get(field) and p.get(field) != ident[field]:
+                    raise PermanentDistillError("distill_identity_mismatch:" + field)
         if p.get("task_id"):
             set_current_task_id(p["task_id"])
         else:
@@ -204,7 +217,12 @@ class DistillQueue:
             try:
                 if p.get("pursuit"):
                     from pursuit_bind import distill
-                    distill(p["pursuit"])
+                    if p.get("schema_version"):
+                        import distill_ledger as ledger
+                        ledger.create(p)
+                        ledger.once(p["job_key"], "pursuit", lambda: distill(p["pursuit"]))
+                    else:
+                        distill(p["pursuit"])
                 job.runner._after_response(
                     p.get("user_message", ""), p.get("response", ""),
                     tool_calls=p.get("tool_calls"), hippo_score=p.get("hippo_score"),
@@ -213,6 +231,7 @@ class DistillQueue:
                     write_deep=p.get("write_deep", True),   # 옛 행(키 없음)은 종전 의미로 재개
                     presented=p.get("presented"),
                     **({"turn_cost": p["turn_cost"]} if p.get("turn_cost") else {}),
+                    **({"distill_job": p} if p.get("schema_version") else {}),
                 )
                 succeeded = True
             finally:
@@ -328,7 +347,8 @@ class DistillQueue:
         try:
             rows = conn.execute(
                 "SELECT id, registry_key, project_id, agent_id, agent_name, payload, attempts "
-                "FROM distill_queue WHERE status IN ('pending', 'running') ORDER BY id").fetchall()
+                "FROM distill_queue WHERE status IN ('pending', 'running') "
+                "OR (status='orphaned' AND registry_key LIKE 'distill-v1:%') ORDER BY id").fetchall()
         finally:
             conn.close()
         resumed = orphaned = exhausted = 0
@@ -362,6 +382,8 @@ class DistillQueue:
     def _resolve_runner(registry_key: Optional[str]):
         if not registry_key:
             return None
+        if registry_key.startswith(UNIFIED_REGISTRY_PREFIX):
+            registry_key = registry_key[len(UNIFIED_REGISTRY_PREFIX):]
         if registry_key == SYSTEM_AI_KEY:
             try:
                 from system_ai_core import get_system_ai_runner

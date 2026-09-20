@@ -239,7 +239,9 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
              prior_class: str = "structural", confidence: float = 0.7,
              provenance: Optional[Dict[str, Any]] = None,
              prune_reason: Optional[str] = None, generalizes: bool = False,
-             surface_flag: bool = False, territory: bool = False) -> Dict[str, Any]:
+             surface_flag: bool = False, territory: bool = False,
+             candidate_key: str = None, expected_target=None,
+             mark_related_surface: bool = False) -> Dict[str, Any]:
     """forage_map 한 항목 upsert (키=body+locus+kind). 재note 시 강화(reinforce).
 
     territory=True 면 거친 영토 앵커로 표식 — 상시-on 냄새지도에 노출(열거가능 공간의 최상위 가지).
@@ -272,6 +274,20 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
     promoted = False
     conn = _connect()
     try:
+        from distill_receipts import begin, record
+        prior = begin(conn, candidate_key)
+        if prior:
+            conn.commit()
+            _doc_refresh(body, locus, own_node=bool(territory), **({"strict": True} if candidate_key else {}))
+            from distill_receipts import mark_projected
+            mark_projected(conn, candidate_key)
+            return prior
+        if expected_target:
+            from distill_receipts import fingerprint, DistillConflict
+            target = conn.execute("SELECT claim, provenance, surface_flag FROM forage_map WHERE id=?",
+                                  (expected_target["id"],)).fetchone()
+            if not target or fingerprint(dict(target)) != expected_target["version"]:
+                raise DistillConflict("spatial_memory_changed")
         # 재확인(reinforce)은 같은 문장일 때만 — 같은 종류의 다른 문장은 새 줄(정본=문서 절, 2026-09-03)
         row = conn.execute(
             "SELECT id, confidence, provenance, territory FROM forage_map WHERE body=? AND locus=? AND kind=? AND claim=?",
@@ -309,10 +325,21 @@ def note_map(*, body: str, locus: str, kind: str, claim: str,
                  1 if territory else 0))
             entry_id = cur.lastrowid
             action = "noted"
+        if expected_target and mark_related_surface:
+            conn.execute("UPDATE forage_map SET surface_flag=1 WHERE id=?", (expected_target["id"],))
+        record(conn, candidate_key, {"success": True, "action": action, "id": entry_id,
+                                     "table": "forage_map", "promoted_territory": promoted})
         conn.commit()
     finally:
         conn.close()
-    _doc_refresh(body, locus, own_node=bool(territory))   # 정본=문서: 절 재렌더. 영토 앵커면 그 폴더 자기 노드에 문서
+    _doc_refresh(body, locus, own_node=bool(territory), **({"strict": True} if candidate_key else {}))   # 정본=문서: 절 재렌더. 영토 앵커면 그 폴더 자기 노드에 문서
+    if candidate_key:
+        from distill_receipts import mark_projected
+        projected = _connect()
+        try:
+            mark_projected(projected, candidate_key)
+        finally:
+            projected.close()
     return {"success": True, "action": action, "id": entry_id, "table": "forage_map",
             "promoted_territory": promoted}
 
@@ -454,11 +481,13 @@ def _is_child(parent: str, child: str) -> bool:
     return _is_ancestor(parent, child) and _depth(child) == _depth(parent) + 1
 
 
-def _doc_refresh(body: str, locus: str, own_node: bool = False) -> None:
+def _doc_refresh(body: str, locus: str, own_node: bool = False, strict: bool = False) -> None:
     try:
         import forage_doc
         forage_doc.refresh_doc_for(body, locus, own_node=own_node)
-    except Exception as e:  # 문서 실패가 기억 쓰기를 막지 않는다
+    except Exception as e:  # 통합 증류는 실패를 영수증과 함께 재개한다.
+        if strict:
+            raise
         print(f"[포식기억] 문서 재렌더 실패(무시): {e}")
 
 

@@ -65,7 +65,7 @@ def _resolve_system_ai_config() -> dict:
     모델을 정한다(기어 프리셋이 시스템AI를 중급/고급으로 가를 수 있음). 리졸버 실패/모델
     미설정 시 옛 system_ai_config 로 폴백(동작 보존)."""
     try:
-        from model_resolver import resolve
+        from model_resolver import resolve, freeze_descriptor
         d = resolve("system_ai")
         if d.get("model"):
             return {
@@ -73,6 +73,7 @@ def _resolve_system_ai_config() -> dict:
                 "model": d["model"],
                 "api_key": d.get("api_key", ""),
                 "_source": d.get("source", ""),
+                "_execution_descriptor": freeze_descriptor(d, role="system_ai"),
             }
     except Exception as e:
         print(f"[시스템AI] 기어 해소 실패(옛 config 폴백): {e}")
@@ -118,6 +119,7 @@ def get_system_ai_runner():
             "provider": resolved["provider"],
             "model": resolved["model"],
             "api_key": resolved["api_key"],
+            "_execution_descriptor": resolved.get("_execution_descriptor", {}),
         }
     }
 

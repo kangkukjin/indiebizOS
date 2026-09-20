@@ -992,29 +992,7 @@ def forage_chat(chat: ForageMessage):
             utterance_author="owner",  # 검색어 — force_role 표면이라 심층 증류는 어차피 돌지 않는다
         )
         complete_system_ai_task(task_id, response_text[:500])
-        # ★포식 기억 증류 — 포식 브라우저는 웹 포식의 *주 표면*이라 웹 장소의 관습이 여기서
-        #   쌓여야 한다(회상은 자동 주입이 아니라 `[self:forage]` 어휘로 — 2026-09-03). 검색 응답을 막지 않도록
-        #   백그라운드 스레드로 돌리고(동기 REST), assume_forage 로 메시지 cue 게이트를 우회한다
-        #   (정의상 항상 포식). 자기서술·locus 실존검증 게이트가 안전판. 심층/의미 메모리는
-        #   여전히 안 건드림(검색 노이즈 격리) — 포식 기억 전용 증류만 붙인다.
-        if response_text:
-            import threading
-            from system_ai_core import get_system_ai_runner
-
-            def _forage_distill(msg: str, resp: str):
-                try:
-                    # 초크포인트에 forage 만 옵트인(심층/의미·경험 증류는 검색 노이즈 격리로 제외)
-                    get_system_ai_runner()._after_response(
-                        msg, resp,
-                        write_experience=False, write_deep=False,
-                        write_forage=True, assume_forage=True,
-                    )
-                except Exception as fe:
-                    print(f"[포식기억] 브라우저 증류 오류 (무시): {fe}")
-
-            threading.Thread(
-                target=_forage_distill, args=(message_text, response_text), daemon=True
-            ).start()
+        # 포식 관측과 실제 실행 모델은 공통 파이프라인이 forage 전용 영속 작업으로 적재한다.
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"포식 검색 실패: {str(e)}")
     finally:

@@ -123,6 +123,12 @@ class AIAgent:
                 agent_id=self.agent_id,
                 thinking_budget=thinking_budget
             )
+            from model_resolver import freeze_descriptor
+            prior = self.config.get("_execution_descriptor") or {}
+            desc = {**self.config, "provider": self.provider_name, "model": self.model,
+                    "source": self.config.get("_gear_source") or prior.get("source") or "execution_instance"}
+            self._provider.distill_descriptor = freeze_descriptor(
+                {**prior, **desc}, role=prior.get("role", self.role), pin_key=prior.get("pin_key", self.agent_id))
             self._provider.agent_role = self.role
             if self.role == "consciousness":
                 self._provider.max_role_rounds = 12

@@ -963,12 +963,18 @@ def _op_union(prev, params):
         col_sets = [{str(c) for c in (t.get("columns") or [])} for t in tables if t.get("columns")]
         return _branch_proto.attach_dead_note(
             _attach_branch_warning(_attach_shape_warning(env, col_sets), objs, branch_numbers), _dead, _total)
-    item_lists = [_get_items(o)[0] for o in objs]
+    item_views = [_get_items(o) for o in objs]
+    item_lists = [rows for rows, _ in item_views]
     if all(il is not None for il in item_lists):
         out = []
         for il in item_lists:
             out.extend(il)
         env = _emit_items(_carry_flags(objs), out)
+        from common.currency import collected_item_display
+        display = collected_item_display([wrapper.get("_display") if isinstance(wrapper, dict) else None
+                                          for rows, wrapper in item_views if rows])
+        if display:
+            env["_display"] = display
         # 분기별 *유효 칸*(null 아닌 값이 실제로 채워지는 키) — canonical null-패딩(title:null
         # 등)은 유효 칸이 아니다. 패딩 키로 재면 혼합 결합이 경고를 영원히 피해간다.
         key_sets = []

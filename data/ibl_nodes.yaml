@@ -2522,8 +2522,8 @@ nodes:
       search:
         lands_on: hub
         path_audited:
-          at: '2026-09-18'
-          impl: e865330797856b99
+          at: '2026-09-20'
+          impl: 483709fd4eea1a3d
         aliases:
           limit:
           - count
@@ -2578,8 +2578,8 @@ nodes:
       crawl:
         lands_on: hub
         path_audited:
-          at: '2026-09-18'
-          impl: e865330797856b99
+          at: '2026-09-20'
+          impl: 483709fd4eea1a3d
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'

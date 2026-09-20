@@ -46,6 +46,25 @@ def items(rows: Iterable[Any] = (), **wrapper) -> dict:
     return out
 
 
+def collected_item_display(displays):
+    """호환되는 항목 표시 정책을 모으되 페이지 수만큼 표시 예산을 늘리지 않는다.
+
+    각 성공 출력이 명시한 정책만 합친다. 일반 표·스칼라가 섞이면 문단으로
+    간주하지 않으며, 원 페이지의 text 미러는 모은 결과에 존재하지 않는다.
+    """
+    if not displays or any(not isinstance(d, dict) for d in displays):
+        return None
+    out = {}
+    if all(d.get("limit_rows") is False for d in displays):
+        caps = [d.get("max_chars") for d in displays]
+        if all(type(cap) is int and cap > 0 for cap in caps):
+            out.update(limit_rows=False, max_chars=min(caps))
+    group_by = displays[0].get("group_by")
+    if isinstance(group_by, str) and group_by and all(d.get("group_by") == group_by for d in displays):
+        out["group_by"] = group_by
+    return out or None
+
+
 def coerce_json_param(value: Any) -> Any:
     """param 자리의 JSON 문자열을 원형(list/dict)으로 — `$변수` 치환은 문자열을 넣는다.
 

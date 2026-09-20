@@ -431,6 +431,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
     from ibl_honesty import markers_of, HONESTY_FLAG_KEYS
     row_honesty: list = []
     inherited_flags: dict = {}
+    item_displays: list = []
 
     def carry_honesty(result, final=None, **location):
         markers = {**markers_of(final), **markers_of(result)}
@@ -611,6 +612,11 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
                 collected_n += 1
             else:
                 noncurrency += 1
+            if _rows_from:
+                from common.currency import value_result_payload
+                _, display_source = value_result_payload(final)
+                item_displays.append(display_source.get("_display")
+                                     if _was_currency and isinstance(display_source, dict) else None)
             out_items.extend(_rows_from)
 
     # 중단 시 남은 행은 '처리 안 함'으로 정직하게 집계 (조용히 사라지지 않게)
@@ -626,6 +632,10 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         "ok_count": ok_n,
         "error_count": err_n,
     }
+    from common.currency import collected_item_display
+    display = collected_item_display(item_displays)
+    if display:
+        out["_display"] = display
     if row_honesty:
         out["row_honesty"] = row_honesty
         out.update(inherited_flags)

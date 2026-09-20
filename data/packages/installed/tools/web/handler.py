@@ -73,6 +73,7 @@ def _batch_search(tool_input: dict, inner: str, source: str, project_path) -> di
     fetched = _fetch_sections([(q, (lambda qq: (lambda: one(qq)))(q)) for q in queries])
     items = [it for sec in fetched for it in sec.get("items") or []]
     resp = {"success": True, "source": source, "queries": queries, "count": len(items),
+            "_display": {"group_by": "query"},
             "sections": [{"query": q, "count": len(sec.get("items") or [])} for q, sec in zip(queries, fetched)],
             "items": items}
     errors = [{"query": q, "error": sec["error"]} for q, sec in zip(queries, fetched) if sec.get("error")]
@@ -933,7 +934,7 @@ def execute(tool_input: dict, context):
                 all_items.extend(items)
                 sections.append({"query": jobs[i][0], "count": len(items)})
             resp = {"success": True, "queries": _queries, "count": len(all_items),
-                    "sections": sections, "items": all_items}
+                    "sections": sections, "items": all_items, "_display": {"group_by": "query"}}
             errors = [{"query": sec["topic"], "error": sec["error"]} for sec in secs if sec.get("error")]
             if errors:
                 resp.update(success=False, errors=errors, error=f"뉴스 검색 {len(errors)}개 실패; 다른 검색 결과는 items에 보존")
@@ -1022,7 +1023,7 @@ def execute(tool_input: dict, context):
                 all_items.extend(items)
                 sections.append({"query": jobs[i][0], "count": len(items)})
             resp = {"success": True, "queries": _queries, "count": len(all_items),
-                    "sections": sections, "items": all_items}
+                    "sections": sections, "items": all_items, "_display": {"group_by": "query"}}
             errors = [{"query": sec["topic"], "error": sec["error"]}
                       for sec in secs if sec.get("error")]
             if errors:

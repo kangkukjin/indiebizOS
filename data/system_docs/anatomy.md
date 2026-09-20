@@ -69,6 +69,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 “상상행동훈련을 하자”는 요청은 [상상행동 가이드](../guides/imagination_action.md)를 따른다.
 기존 미조합 어휘·문형 중심의 상상훈련과 출발점을 구분한다.
 큰 턴 변수는 파일 참조로 보존한 뒤 사용 시 원형으로 복원한다. 한글 함수의 경험 검증도 공통 IBL 스캐너를 쓴다. [9월 20일 에피소드 수리](../../docs/EPISODES_3899_3917_REPAIRS_2026_09_20.md).
+문단 표시 설정은 `each`·`union` 수집 뒤에도 유지하고, 묶음 검색의 모델 미리보기는 검색어별 대표 행을 보여준다. 원문·순위는 보존한다. [3920 표시 수리](../../docs/EPISODE_3920_DISPLAY_REPAIRS_2026_09_20.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

@@ -324,6 +324,30 @@ def display_delivery_budget(raw: str, default: int) -> int:
     return max(default, min(len(raw), AUTO_SPILL_THRESHOLD))
 
 
+def _preview_item_indices(items, rows, group_by):
+    """생산자가 선언한 묶음별로 고른 미리보기. 원본의 행·순서는 바꾸지 않는다."""
+    if not isinstance(group_by, str) or not group_by or any(
+            not isinstance(item, dict) or group_by not in item for item in items):
+        return list(range(min(rows, len(items)))), {}
+    from collections import deque
+    from common.value_semantics import group_identity
+    groups = {}
+    for index, item in enumerate(items):
+        groups.setdefault(group_identity(item[group_by]), deque()).append(index)
+    if len(groups) <= 1:
+        return list(range(min(rows, len(items)))), {}
+    active = deque(groups.values())
+    indices = []
+    while active and len(indices) < rows:
+        group = active.popleft()
+        indices.append(group.popleft())
+        if group:
+            active.append(group)
+    return indices, {"selection": "group_round_robin", "group_by": group_by,
+                     "groups_total": len(groups), "groups_shown": min(len(groups), rows),
+                     "indices": [i + 1 for i in indices]}
+
+
 def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
     """items/표/산문 통화 하나를 미리보기로. 바꿀 것이 없으면 None."""
     rows = int(pol["rows"])
@@ -335,7 +359,9 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
         # 문단 통화는 행 개수보다 글자 예산으로 읽는다. 일반 표는 기존 행 제한 유지.
         limit_rows = display.get("limit_rows") is not False
         if limit_rows and isinstance(obj.get("items"), list) and len(obj["items"]) > rows and serialized_len >= int(pol["min_chars"]):
-            out["items"] = obj["items"][:rows]
+            indices, grouping = _preview_item_indices(obj["items"], rows, display.get("group_by"))
+            out["items"] = [obj["items"][i] for i in indices]
+            meta.update(grouping)
             cols = []
             first = obj["items"][0] if obj["items"] else None
             if isinstance(first, dict):
@@ -362,6 +388,8 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
         preserve = set(HONESTY_KEYS) | {"url", "path", "type", "id", "source_ref", "provenance",
                                        "preview_truncated", "preview_offset", "content_chars",
                                        "error", "_error", "warning", "reason", "traceback"}
+        if meta.get("selection") == "group_round_robin":
+            preserve.add(meta["group_by"])
 
         def clip(value, path):
             nonlocal remaining
@@ -373,6 +401,16 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
                     return value[:shown]
                 return value
             if isinstance(value, list):
+                if path == ["items"] and meta.get("selection") == "group_round_robin":
+                    shown = []
+                    for i, item in enumerate(value):
+                        # 첫 묶음의 긴 요약이 뒤 묶음의 표시량을 전부 쓰지 않게 한다.
+                        pool = remaining
+                        quota = remaining // (len(value) - i)
+                        remaining = quota
+                        shown.append(clip(item, path + [i]))
+                        remaining += pool - quota
+                    return shown
                 if not limit_rows and path in (["items"], ["rows"]):
                     shown = []
                     for i, item in enumerate(value):
@@ -397,6 +435,8 @@ def _preview_currency(obj: Any, pol: Dict[str, Any], serialized_len: int):
         if not meta:
             return None
         meta.update(chars=serialized_len, note=PREVIEW_FULL_HINT)
+        if meta.get("selection") == "group_round_robin":
+            meta["note"] += " 묶음별 대표 미리보기이며 전체 순위가 아닙니다. indices는 원본의 1기반 행 위치입니다."
         if obj.get("source_ref"):
             meta["note"] += " 원문 파일은 source_ref.path에 보관돼 있습니다. 원문 보관은 전량 검토를 뜻하지 않습니다."
         out["_preview"] = meta

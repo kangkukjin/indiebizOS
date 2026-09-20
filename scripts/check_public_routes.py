@@ -17,7 +17,8 @@
   · limb_keys.validate   — USB 손발(/limb/*)의 limb key
 
 ★핸들러가 직접 부르지 않고 헬퍼를 거치는 경우가 많다(showcase 의 thumb/media/subtitle
-은 `_resolve()` 안에서 검사). 그래서 같은 모듈 안의 호출을 깊이 3까지 따라간다 —
+은 `_resolve()` 안에서 검사). 같은 모듈과 함수 내부에서 명시적으로 가져온 backend
+함수의 호출을 깊이 3까지 따라간다 —
 직접 호출만 보면 멀쩡한 라우트를 무검사로 오판한다(실측).
 
 의도적으로 익명인 경로는 ANONYMOUS_ALLOW 에 **사유와 함께** 선언한다. 선언에 없고
@@ -57,6 +58,7 @@ MIN_PUBLIC_ROUTES = 40
 # ★여기 추가하는 것은 "이 경로를 공개 인터넷에 익명으로 연다"는 선언이다.
 ANONYMOUS_ALLOW = {
     ("GET",  "/m/app"):                         "회원 로그인 셸 — 정적 HTML만 반환하며 데이터 API는 회원 열쇠 인증 필요",
+    ("GET",  "/m/records/app"):                 "공동 업무 로그인 셸 — 정적 HTML과 CSRF nonce만 반환하며 데이터 API는 회원 열쇠 인증 필요",
     ("GET",  "/ping"):                           "생존 핑 — 민감정보 없음, 다른 몸이 무인증으로 연결상태 확인",
     ("GET",  "/launcher/app"):                   "런처 셸 — 로그인 화면 자체(로그인 전에 받아야 함)",
     ("GET",  "/launcher/ui/{path:path}"):        "정적 앱 번들 — serve_asset이 번들 내부 JS·CSS·이미지·폰트만 허용(설정·소스맵·경로 탈출 차단), 데이터 API는 세션 필요",
@@ -126,8 +128,17 @@ def _called_names(src: str) -> set:
     return names
 
 
+def _loaded_module_funcs(mod_name: str) -> dict:
+    """이미 로드된 backend 모듈만 읽는다. 검사 때문에 새 코드를 실행하지 않는다."""
+    mod = sys.modules.get(mod_name)
+    filename = getattr(mod, "__file__", None)
+    if not filename or not Path(filename).resolve().is_relative_to(ROOT / "backend"):
+        return {}
+    return _module_funcs(mod)
+
+
 def _auth_reachable(fn_src: str, funcs: dict, mod_name: str, depth: int = 0) -> bool:
-    """이 소스에서 인증 프리미티브가 (모듈 내 호출을 따라) 닿는가."""
+    """인증 함수의 실제 소스를 추적한다. 가져온 함수도 원래 모듈에서 판정한다."""
     names = _called_names(fn_src)
     for p in AUTH_PRIMITIVES:
         if p == "validate" and mod_name not in _VALIDATE_OK_MODULES:
@@ -140,6 +151,20 @@ def _auth_reachable(fn_src: str, funcs: dict, mod_name: str, depth: int = 0) -> 
         sub = funcs.get(n)
         if sub and _auth_reachable(sub, funcs, mod_name, depth + 1):
             return True
+    try:
+        tree = ast.parse(fn_src.lstrip())
+    except SyntaxError:
+        return False
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.ImportFrom) or node.level or not node.module:
+            continue
+        for alias in node.names:
+            if (alias.asname or alias.name) not in names:
+                continue
+            imported = _loaded_module_funcs(node.module)
+            sub = imported.get(alias.name)
+            if sub and _auth_reachable(sub, imported, node.module, depth + 1):
+                return True
     return False
 
 
@@ -206,10 +231,29 @@ def self_test() -> int:
         ok = got == expect
         bad += not ok
         print(f"  [{'PASS' if ok else 'FAIL'}] {name:22} 기대={expect} 실제={got}")
+    # 실제 임포트 실행 없이 출처·별칭·인증 삭제·깊이 제한을 검증한다.
+    from unittest.mock import patch
+    imported_cases = [
+        ("회원 인증 모듈 경유", "from api_member import _member_of\n    return _member_of(key)", funcs, True),
+        ("회원 인증 별칭", "from api_member import _member_of as check\n    return check(key)", funcs, True),
+        ("동명이인 인증 거부", "from api_other import _member_of\n    return _member_of(key)", funcs, False),
+        ("가져오기만 한 인증 거부", "from api_member import _member_of\n    return key", funcs, False),
+        ("실제 인증 삭제 탐지", "from api_member import _member_of\n    return _member_of(key)", {"_member_of": "def _member_of(key):\n    return key"}, False),
+        ("없는 함수 거부", "from api_member import missing\n    return missing(key)", funcs, False),
+    ]
+    for name, body, imported, expect in imported_cases:
+        with patch(__name__ + "._loaded_module_funcs", return_value=imported):
+            src = "def authenticate(key):\n    " + body
+            local = {"authenticate": src}
+            got = _auth_reachable("def endpoint(key):\n    return authenticate(key)", local, "api_records")
+            too_deep = _auth_reachable(src, local, "api_records", MAX_DEPTH)
+        ok = got == expect and not too_deep
+        bad += not ok
+        print(f"  [{'PASS' if ok else 'FAIL'}] {name:22} 기대={expect} 실제={got}")
     if bad:
         print(f"\n[FAIL] 자체 회귀 {bad}건 — 간접 추적이 퇴화하면 대량 오탐으로 가드가 꺼진다.")
         return 1
-    print(f"[OK] 자체 회귀 {len(cases)}건 통과")
+    print(f"[OK] 자체 회귀 {len(cases) + len(imported_cases)}건 통과")
     return 0
 
 

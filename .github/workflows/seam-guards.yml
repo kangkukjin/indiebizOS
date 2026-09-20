@@ -166,7 +166,8 @@ jobs:
         # numpy·markdown·tqdm: 각각 어휘 감사·보고서 전달·상주 모니터 회귀의 실의존.
         # tools 전체 설치는 CI 무게상 배제 — 테스트가 새 tool 의존을 얻으면 여기서 시끄럽게 죽는다(침묵 아님).
         # python-docx: 문서↔시트 변환 회귀가 실제 DOCX 파일을 생성한다.
-        run: pip install -r backend/requirements-core.txt pytest openpyxl xlrd numpy markdown tqdm python-docx
+        # pillow·python-pptx·olefile: 화면 캡처·이미지·PPTX·HWP 읽기 회귀의 실의존.
+        run: pip install -r backend/requirements-core.txt pytest openpyxl xlrd numpy markdown tqdm python-docx pillow python-pptx olefile
       - name: pytest (backend/test_*.py, 로컬 데이터 필요분 제외)
         run: python -m pytest -m "not local"
 

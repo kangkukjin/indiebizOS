@@ -148,7 +148,7 @@ def test_repaired_call_is_learned_instead_of_earlier_cut(monkeypatch, tmp_path):
     old = '[sense:crawl]{url:"' + URL + '"}'
     fixed = '[sense:crawl]{url:"' + URL + '",max_length:23218}'
     rag, stored, asked, _ = _arm(monkeypatch, tmp_path,
-                                [{'intent': '문서 수집', 'code': fixed, 'topic': '시험'}])
+                                [{'intent': '문서 수집', 'source_ids': [1], 'topic': '시험'}])
     calls = [dict(tool_name='execute_ibl', input={'code': old}, success=True, result=source()),
              dict(tool_name='execute_ibl', input={'code': fixed}, success=True, result=source(False))]
     assert rag.distill_experience('문서 수집', calls, 0.0)
@@ -161,7 +161,7 @@ def test_repaired_call_is_learned_instead_of_earlier_cut(monkeypatch, tmp_path):
 def test_preview_and_sample_remain_learnable_with_scope(monkeypatch, tmp_path, evidence):
     code = '[table:take]{items:[{x:1},{x:2}],n:1}'
     rag, stored, asked, _ = _arm(monkeypatch, tmp_path,
-                                [{'intent': '앞 한 행 표본', 'code': code, 'topic': '시험'}])
+                                [{'intent': '앞 한 행 표본', 'source_ids': [1], 'topic': '시험'}])
     call = dict(tool_name='execute_ibl', input={'code': code}, success=True, evidence=evidence)
     assert rag.distill_experience('앞 한 행', [call], 0.0) and stored
     if 'truncations' in evidence:

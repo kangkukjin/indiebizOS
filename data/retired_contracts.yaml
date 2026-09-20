@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: automatic_distill_generated_code
+    retired: 2026-09-20
+    reason: 자동 증류의 코드 재작성·복구 재호출과 무선별 주행 복제가 비용과 회상 잡음을 늘렸다.
+    instead: 기존 반성 한 번에서 효용과 원문 번호를 고르고 검증 실패·새 배움 없음은 저장 0건으로 끝낸다.
+    phrases:
+      - '구 저장 반성 응답의 호환 경로'
+      - '독립 실행 원문이 없으면 source_ids:[]로 두어 주행 기록만 남긴다'
   - id: pursuit_preflight_models
     retired: 2026-09-20
     reason: 과제 연결 선택·재검토와 미반영 요약이 매 요청의 실행 시작을 지연시켰다.

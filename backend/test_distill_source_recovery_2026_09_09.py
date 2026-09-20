@@ -106,6 +106,8 @@ def _arm(monkeypatch, tmp_path, replies):
     import hippo_tree
     import thread_context
 
+    import ibl_distill_value
+    monkeypatch.setattr(ibl_distill_value, "known_examples", lambda db: [])
     stored, requested, runs = [], [], []
     class DB:
         @classmethod
@@ -130,19 +132,20 @@ def _arm(monkeypatch, tmp_path, replies):
     outputs = iter(replies)
     def ask(**kw):
         requested.append(kw)
-        return json.dumps(next(outputs), ensure_ascii=False)
+        return json.dumps({"decision": "keep", "benefit": "검증된 조합으로 반복 탐색 생략",
+                           "applicability": "같은 입력 구조의 자료 조회", **next(outputs)}, ensure_ascii=False)
     monkeypatch.setitem(sys.modules, "consciousness_agent", types.SimpleNamespace(oneshot_ai_call=ask))
     return rag, stored, requested, runs
 
 
 @pytest.mark.parametrize("source,broken", CASES, ids=["ep3219", "ep3223", "ep3224"])
-def test_recovery_reaches_db_and_training_file(monkeypatch, tmp_path, source, broken):
+def test_source_selection_reaches_db_and_training_file(monkeypatch, tmp_path, source, broken):
     rag, stored, asked, _ = _arm(monkeypatch, tmp_path, [
-        {"intent": "실행 원문 패턴", "code": broken, "topic": "시험"}, {"call_ids": [1]},
+        {"intent": "실행 원문 패턴", "source_ids": list(range(1, len(__import__("hippo_tree").split_sentences(source)) + 1)), "topic": "시험"},
     ])
     calls = [{"tool_name": "execute_ibl", "input": {"code": source}, "success": True}]
     assert rag.distill_experience("원문 패턴", calls, 0.0)
-    assert len(asked) == 2 and len(stored) == 1
+    assert len(asked) == 1 and len(stored) == 1
     assert stored[0]["ibl_code"] == source
     assert stored[0]["alias"] == ""  # 자동 함수 작명은 계속 중단
     training = json.loads((tmp_path / "data/training/ibl_distilled.json").read_text())
@@ -164,7 +167,7 @@ def test_selected_korean_function_calls_reach_reusable_example(monkeypatch, tmp_
 def test_checks_and_failures_never_become_source_or_runs(monkeypatch, tmp_path):
     good, broken = CASES[0]
     rag, stored, asked, runs = _arm(monkeypatch, tmp_path, [
-        {"intent": "기억 읽기", "code": broken, "topic": "시험"}, {"call_ids": [1]},
+        {"intent": "기억 읽기", "source_ids": [2], "topic": "시험"},
     ])
     calls = [
         {"tool_name": "execute_ibl", "input": {"code": '[self:time]', "check": True}, "success": True},
@@ -174,7 +177,8 @@ def test_checks_and_failures_never_become_source_or_runs(monkeypatch, tmp_path):
     ]
     assert rag.distill_experience("기억 읽기", calls, 0.0)
     assert '[self:list]' not in asked[0]["prompt"]
-    assert len(runs) == 1 and runs[0][2] == [good, '[self:time]']
+    assert len(runs) == 1 and runs[0][2] == __import__("hippo_tree").split_sentences(good)
+    assert '[self:time]' not in runs[0][2]
     assert stored[0]["ibl_code"] == good
 
 
@@ -187,7 +191,7 @@ def test_check_only_does_not_call_model(monkeypatch, tmp_path):
 
 def test_healthy_distill_has_no_extra_model_call(monkeypatch, tmp_path):
     good = '[self:time]'
-    rag, stored, asked, _ = _arm(monkeypatch, tmp_path, [{"intent": "현재 시간 확인", "code": good}])
+    rag, stored, asked, _ = _arm(monkeypatch, tmp_path, [{"intent": "현재 시간 확인", "source_ids": [1]}])
     assert rag.distill_experience("시간", [{"tool_name": "execute_ibl",
         "input": {"code": good}, "success": True}], 0.0)
     assert len(asked) == len(stored) == 1
@@ -199,11 +203,11 @@ def test_recovery_preserves_independent_statements_and_parameter_gate(monkeypatc
         ['[sense:search]{made_up_parameter_xyz: "x"}'],
     ]):
         rag, stored, asked, _ = _arm(monkeypatch, tmp_path / str(idx), [
-            {"intent": "x", "code": 'broken'}, {"call_ids": list(range(1, len(sources) + 1))},
+            {"intent": "x", "source_ids": list(range(1, len(sources) + 1))},
         ])
         calls = [{"tool_name": "execute_ibl", "input": {"code": c}, "success": True} for c in sources]
         assert bool(rag.distill_experience("x", calls, 0.0)) is (idx == 0)
-        assert len(asked) == 2
+        assert len(asked) == 1
         assert bool(stored) is (idx == 0)
 
 

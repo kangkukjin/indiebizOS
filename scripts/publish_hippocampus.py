@@ -13,10 +13,14 @@ fresh 설치(다른 PC)는 학습 없이 이 에셋을 받아 해마를 그대�
 전제:  gh 인증(repo write). zip 은 build/hippocampus.zip 에 생성.
 """
 import argparse
+import json
 import os
+import sqlite3
 import subprocess
 import sys
+import tempfile
 import zipfile
+from contextlib import closing
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -48,17 +52,36 @@ def build_zip(out_zip: Path) -> int:
     ]
     out_zip.parent.mkdir(parents=True, exist_ok=True)
     n = 0
-    with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
+    with tempfile.TemporaryDirectory() as staging, zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as z:
         for src, arc in _iter_model_files():
             z.write(src, str(arc))
             n += 1
         for src, arc in extra:
             if src.exists():
-                z.write(src, str(arc))
+                z.write(_public_copy(src, Path(staging)), str(arc))
                 n += 1
             else:
                 print(f"  ⚠ 없음(건너뜀): {src}")
     return n
+
+
+def _public_copy(src: Path, staging: Path) -> Path:
+    """과제·에피소드·로컬 원장 주소는 몸의 사적 출처다. 배포 사본에서만 지운다."""
+    target = staging / src.name
+    if src.suffix == '.db':
+        with closing(sqlite3.connect(src.resolve().as_uri() + '?mode=ro', uri=True)) as origin:
+            with closing(sqlite3.connect(target)) as dest:
+                origin.backup(dest)
+                columns = {row[1] for row in dest.execute('PRAGMA table_info(ibl_examples)')}
+                if 'provenance' in columns:
+                    dest.execute('PRAGMA secure_delete=ON')
+                    dest.execute("UPDATE ibl_examples SET provenance='{}' WHERE provenance != '{}' ")
+                dest.commit()
+    else:
+        rows = json.loads(src.read_text(encoding='utf-8'))
+        target.write_text(json.dumps([{k: v for k, v in row.items() if k != 'provenance'}
+                                      for row in rows], ensure_ascii=False), encoding='utf-8')
+    return target
 
 
 def main():

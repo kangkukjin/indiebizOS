@@ -124,6 +124,8 @@ def _arm(monkeypatch, reply, recall=None):
     monkeypatch.setitem(sys.modules, "consciousness_agent", fake)
     monkeypatch.setattr(hippo_tree, "note_run", lambda *a, **k: {"success": True, "sentences": 0})
     monkeypatch.setattr(hippo_tree, "map_text", lambda *a, **k: "- 개발/프론트 (3)")
+    import ibl_distill_value
+    monkeypatch.setattr(ibl_distill_value, "known_examples", lambda db: [])
     saved = []
     monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
     monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
@@ -165,7 +167,8 @@ def test_p2_phrase_is_not_saved_automatically(monkeypatch, tmp_path):
 def test_p2_word_saved_without_a_name(monkeypatch):
     """용례(코퍼스)는 종전대로 쌓인다 — 멈춘 것은 **이름**이지 경험이 아니다."""
     import ibl_usage_rag as rag
-    saved = _arm(monkeypatch, {"intent": "검색해 상위 5건", "code": PIPE, "topic": "개발/프론트",
+    saved = _arm(monkeypatch, {"decision": "keep", "benefit": "검색 뒤 표본 선택", "applicability": "결과 행을 반환하는 검색",
+                               "source_ids": [CALLS.index(PIPE) + 1], "intent": "검색해 상위 5건", "code": PIPE, "topic": "개발/프론트",
                                "phrase": PHRASE, "slots": SLOTS})
     assert rag.distill_experience("AI 팁 5개", TOOL_CALLS, top_score=0.3) is True
     assert sorted(s["category"] for s in saved) == ["pipeline"]

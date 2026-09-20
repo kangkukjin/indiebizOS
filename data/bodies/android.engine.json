@@ -85,6 +85,7 @@
     "cognition/history_checkpoint",
     "cognition/ibl_description_audit",
     "cognition/ibl_distill_gates",
+    "cognition/ibl_distill_value",
     "cognition/ibl_idiom",
     "cognition/ibl_usage_generator",
     "cognition/ibl_usage_rag",
@@ -417,8 +418,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 377,
-    "engine": 351,
+    "total": 378,
+    "engine": 352,
     "blocklist": 26
   }
 }

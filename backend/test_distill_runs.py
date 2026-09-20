@@ -1,8 +1,7 @@
 """증류의 주행 기록 훅 회귀 (2026-09-04, 사용자 판정 "제안대로 집행").
 
-계약: 반성기가 대표 문장을 못 골라도(code "") topic 이 있고 성공 IBL 문장이 둘 이상이면 그 문장들을
-가지 문서 `## 주행` 절에 남긴다 — 프로그램급 주행이 '재사용 패턴 없음'으로 학습 0건이 되던 자리.
-대표 문장이 있을 때도 같이 남긴다. 반성 프롬프트는 실행된 합성문을 대표로 우선한다.
+계약(2026-09-20): 학습 가치가 없어 대표 절차를 선택하지 않은 턴은 실행 원장에만
+남긴다. 선택·검증된 절차만 가지에 기록하고 탐색 전체를 복제하지 않는다.
 
 실행: .venv/bin/python -m pytest backend/test_distill_runs.py -q
 """
@@ -40,14 +39,11 @@ CALLS = [{"tool_name": "execute_ibl", "input": {"code": '[self:memory]{op: "reca
          {"tool_name": "Bash", "input": {"command": "ls"}, "success": True}]
 
 
-def test_run_noted_even_without_representative_code(monkeypatch):
+def test_skip_does_not_duplicate_execution_log_into_recall(monkeypatch):
     import ibl_usage_rag as rag
     calls = _arm(monkeypatch, {"intent": "부동산 보고서 작성", "code": "", "topic": "보고서/부동산 발굴"})
     assert rag.distill_experience("부동산 발굴 보고서 써줘", CALLS, top_score=0.3) is False
-    assert len(calls) == 1
-    topic, intent, sentences, ok = calls[0]
-    assert topic == "보고서/부동산 발굴" and intent == "부동산 보고서 작성" and ok is True
-    assert len(sentences) == 2 and all("[self:write]" not in s for s in sentences)   # 성공한 IBL 문장만, 순서대로
+    assert calls == []  # 학습 가치 없는 원문은 실행 원장에만 남긴다.
 
 
 def test_run_not_noted_for_single_sentence_or_no_topic(monkeypatch):

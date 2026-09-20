@@ -47,7 +47,10 @@ def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path)
     os.makedirs(tmp_path / "tree" / "몸 자기점검·수리")
     (tmp_path / "tree" / "몸 자기점검·수리" / hippo_tree.DOC_NAME).write_text("# x\n", encoding="utf-8")
     code = STATUS + "\n" + APPLY
-    reply = {"intent": "제안된 수리안을 적용한다", "code": code, "code_name": "수리제안적용하기", "topic": "몸 자기점검·수리",
+    import ibl_distill_value
+    monkeypatch.setattr(ibl_distill_value, "known_examples", lambda db: [])
+    reply = {"decision": "keep", "benefit": "상태 확인 뒤 적용하는 절차", "applicability": "유효한 제안 ID",
+             "source_ids": [1, 2], "intent": "제안된 수리안을 적용한다", "code": code, "code_name": "수리제안적용하기", "topic": "몸 자기점검·수리",
              "phrase": [STATUS, '[self:patch]{op: "apply", proposal_id: "${제안번호}"}'], "slots": {"제안번호": "p_20260905_162707"},
              "phrase_name": "수리제안적용하기"}
     fake = types.ModuleType("consciousness_agent")

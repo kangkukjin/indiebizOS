@@ -220,11 +220,11 @@ def test_recovered_dependencies_reach_corpus_without_allowing_fabricated_pipes(m
     sources = ['$x = [sense:search]{query:"fixture"} >> [table:take]{n:2}',
                '$x >> [table:select]{columns:["title"]}']
     rag, stored, asked, _ = _arm(monkeypatch, tmp_path, [
-        {"intent": "검색 제목 확인", "code": "broken"}, {"call_ids": [2]},
+        {"intent": "검색 제목 확인", "source_ids": [2]},
     ])
     calls = [{"tool_name": "execute_ibl", "input": {"code": c}, "success": True} for c in sources]
     assert rag.distill_experience("검색 제목 확인", calls, 0)
-    assert stored[0]["ibl_code"] == "\n".join(sources) and len(asked) == 2
+    assert stored[0]["ibl_code"] == "\n".join(sources) and len(asked) == 1
     assert not _composition_grounded('[sense:search]{query:"fixture"} >> [self:read]{path:"x"}',
                                      [sources[0], '[self:read]{path:"x"}'])
 

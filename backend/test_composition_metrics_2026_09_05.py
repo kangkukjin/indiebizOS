@@ -239,34 +239,20 @@ def test_distill_prompt_asks_for_retyped_and_mergeable():
     assert "[node:" not in p                                                # G5 자리표 금지 유지
 
 
-def test_distill_passes_cost_and_missed_to_note_run(monkeypatch, tmp_path):
-    import ibl_usage_db as mod
-    import thread_context
+def test_selected_run_passes_cost_and_missed_to_note_run(monkeypatch):
     import hippo_tree
-    import ibl_usage_rag as rag
-    # 가지 출생 관문(settle_topic, 2026-09-05): '보고서/X' 가 임시 트리에 실존해야 그 가지로 기록된다(실 트리 무접촉)
-    monkeypatch.setattr(hippo_tree, "DOC_DIR", str(tmp_path / "tree"))
-    os.makedirs(tmp_path / "tree" / "보고서" / "X")
-    (tmp_path / "tree" / "보고서" / "X" / hippo_tree.DOC_NAME).write_text("# 보고서/X\n", encoding="utf-8")
-    monkeypatch.setattr(thread_context, "get_goal_eval_outcome", lambda: {"achieved": True, "severity": 0})
-    monkeypatch.setattr(thread_context, "clear_goal_eval_outcome", lambda: None)
-    monkeypatch.setattr(mod.IBLUsageDB, "hippo_disabled", classmethod(lambda cls: False))
-    fake = types.ModuleType("consciousness_agent")
-    reply = {"intent": "보고서 작성", "code": "", "topic": "보고서/X", "phrase": [],
-             "retyped": ["뉴스모아쓰기"], "mergeable": ["1-2"]}
-    fake.oneshot_ai_call = lambda **kw: json.dumps(reply, ensure_ascii=False)
-    monkeypatch.setitem(sys.modules, "consciousness_agent", fake)
-    monkeypatch.setattr(hippo_tree, "map_text", lambda *a, **k: "- 보고서/X (3)")
+    from ibl_distill_value import note_selected_run
     got = {}
     monkeypatch.setattr(hippo_tree, "note_run",
                         lambda topic, intent, sentences, ok=True, **kw: got.update(kw, topic=topic) or {"success": True, "sentences": len(sentences)})
     calls = [{"tool_name": "execute_ibl", "input": {"code": S1}, "success": True},
              {"tool_name": "execute_ibl", "input": {"code": S2}, "success": True},
              {"tool_name": "execute_ibl", "input": {"code": "[self:time]"}, "success": False}]
-    rag.distill_experience("보고서 써줘라", calls, top_score=0.1)
+    reply = {"retyped": ["뉴스모아쓰기"], "mergeable": ["1-2"]}
+    note_selected_run("보고서/X", "선택 절차", S1 + "\n" + S2, False, calls, reply, None)
     assert got["topic"] == "보고서/X" and got["calls"] == 3 and got["failed"] == 1
     assert got["typed_chars"] == len(S1) + len(S2) + len("[self:time]")
-    assert got["missed"] == {"retyped": ["뉴스모아쓰기"], "mergeable": ["1-2"]}
+    assert got["missed"] == reply
 
 
 # ---------------------------------------------------------------- 이음매 지표(셸↔IBL, 모델 경유)

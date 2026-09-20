@@ -94,6 +94,7 @@ class UsageExample:
     alias: str = ""           # 관용구 이름(category=phrase) — `[fn:이름]{슬롯}` 으로 호출(2026-09-05)
     signature: Optional[str] = None   # 호출 서명(2026-09-06) — 실행기가 문에서 계산. None=미계산
     returns: str = ""         # 반환 모양(2026-09-05)
+    provenance: str = "{}"   # 로컬 출처·적용 조건. 회상에는 조건만 발췌한다.
 
 
 # =============================================================================
@@ -227,6 +228,8 @@ class IBLUsageDB:
         # 같은 목표의 표현 중 싸고 빠른 쪽이 정리 패스에서 살아남고 회상 표면에 표시된다
         # (2026-08-30 시간·토큰 선택압).
         cols = {r[1] for r in conn.execute("PRAGMA table_info(ibl_examples)").fetchall()}
+        if "provenance" not in cols:
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN provenance TEXT DEFAULT '{}'")
         for _col in ("avg_ms", "avg_tokens"):
             if _col not in cols:
                 conn.execute(f"ALTER TABLE ibl_examples ADD COLUMN {_col} REAL DEFAULT -1.0")
@@ -528,7 +531,8 @@ class IBLUsageDB:
                     nodes: str = "", category: str = "single",
                     difficulty: int = 1, source: str = "synthetic",
                     tags: str = "", avg_ms: float = -1.0,
-                    avg_tokens: float = -1.0, topic: str = "", alias: str = "", returns: str = "") -> int:
+                    avg_tokens: float = -1.0, topic: str = "", alias: str = "", returns: str = "",
+                    provenance: Optional[Dict] = None) -> int:
         """용례 추가 (임베딩 자동 생성). Returns: example ID (구문 불가·남의 어휘로 거부되면 0)
 
         avg_ms/avg_tokens: 출생 실측 — 증류 경로가 원 실행의 소요시간·그 턴의 토큰 소요를
@@ -547,12 +551,13 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             cursor = conn.execute(
                 """INSERT INTO ibl_examples
-                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns, signature)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                   (intent, ibl_code, nodes, category, difficulty, source, tags, avg_ms, avg_tokens, created_at, updated_at, topic, alias, returns, signature, provenance)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (intent, ibl_code, nodes, category, difficulty, source, tags,
                  float(avg_ms) if avg_ms and avg_ms > 0 else -1.0,
                  float(avg_tokens) if avg_tokens and avg_tokens > 0 else -1.0, now, now,
-                 _norm_topic(topic), (alias or "").strip(), (returns or "").strip(), signature)
+                 _norm_topic(topic), (alias or "").strip(), (returns or "").strip(), signature,
+                 json.dumps(provenance or {}, ensure_ascii=False))
             )
             example_id = cursor.lastrowid
             conn.commit()
@@ -817,7 +822,7 @@ class IBLUsageDB:
     def consolidate_distilled(self, cap: int = 200,
                               dup_threshold: float = 0.92,
                               min_fails_to_prune: int = 2) -> Dict[str, Any]:
-        """자동증류분(source='distilled')만 정리하는 해마 위생 패스.
+        """자동증류분(distilled·distilled_component)만 정리하는 해마 위생 패스.
 
         학습 코퍼스(synthetic/balanced/manual_seed 등)는 절대 건드리지 않는다.
         세 가지 기계적 정리(LLM 불필요 — 증류물은 사실이 아니라 참고 코드):
@@ -828,7 +833,7 @@ class IBLUsageDB:
         with self._get_connection() as conn:
             rows = [dict(r) for r in conn.execute(
                 "SELECT id, intent, ibl_code, success_count, fail_count, avg_ms, avg_tokens, created_at "
-                "FROM ibl_examples WHERE source='distilled'"
+                "FROM ibl_examples WHERE source IN ('distilled', 'distilled_component')"
             ).fetchall()]
 
         stats = {"distilled": len(rows), "pruned_bad": 0, "deduped": 0,
@@ -1134,6 +1139,7 @@ class IBLUsageDB:
                 alias=meta.get("alias", "") or "",
                 signature=meta.get("signature"),
                 returns=meta.get("returns", "") or "",
+                provenance=meta.get("provenance") or "{}",
             ))
             if len(results) >= top_k:
                 break
@@ -1325,7 +1331,7 @@ class IBLUsageDB:
             rows = conn.execute(
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
                            source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias,
-                           signature, COALESCE(returns,'') AS returns
+                           signature, COALESCE(returns,'') AS returns, provenance
                     FROM ibl_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
@@ -1378,7 +1384,8 @@ class IBLUsageDB:
                 topic=meta['topic'] or '',
                 alias=meta.get('alias') or '',
                 signature=meta.get('signature'),
-                returns=meta.get('returns') or ''
+                returns=meta.get('returns') or '',
+                provenance=meta.get('provenance') or '{}'
             ))
 
             if len(results) >= top_k:

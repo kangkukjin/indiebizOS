@@ -13,10 +13,7 @@ import pursuit_bind as pb
 from pursuit_ledger import PursuitLedger
 
 
-REVIEW = {"action": "amend", "criteria": "디지털 노마드 원고 작성",
-          "amended_framing": "AI 시대의 생활비와 교육 변화를 조사해 디지털 노마드 원고 작성",
-          "broken_assumption": "", "evidence": "이번 사용자 요청"}
-
+SUMMARY = {"progress": "디지털 노마드 원고 작성", "next": "내용 검토"}
 
 def model_answers(monkeypatch, answers):
     calls = []
@@ -31,88 +28,66 @@ def model_answers(monkeypatch, answers):
 
 
 @pytest.mark.parametrize("raw", [
-    '{action:"amend", criteria:"원고 작성"}',
-    '{"action":"keep","criteria":"원고 작성",}',
-    '{"action":"keep","criteria":null}',
-    '{"action":[],"criteria":"원고 작성"}',
-    '{"action":"unknown","criteria":"원고 작성"}',
-    '{"action":"keep","criteria":"원고 작성","status":"done"}',
-    '[]', '', None,
+    '{progress:"원고 작성"}', '{"progress":"원고 작성",}', '{"progress":null}',
+    '{"progress":[]}', '{"status":"done"}', '[]', '', None,
 ])
-def test_invalid_review_retries_once_with_original_request(monkeypatch, raw):
-    calls = model_answers(monkeypatch, [raw, json.dumps(REVIEW)])
-    assert pb.ask_json("사용자의 정정을 반영하라", kind="review") == REVIEW
-    assert len(calls) == 2
-    assert calls[1][0].startswith(calls[0][0])
+def test_invalid_summary_retries_once_with_original_request(monkeypatch, raw):
+    calls = model_answers(monkeypatch, [raw, json.dumps(SUMMARY)])
+    assert pb.ask_json("사용자의 정정을 반영하라", kind="summary") == SUMMARY
+    assert len(calls) == 2 and calls[1][0].startswith(calls[0][0])
     assert "previous_response" in calls[1][0]
     assert all(k["role"] == "background" for _, k in calls)
 
 
 @pytest.mark.parametrize("fenced", [False, True])
 def test_valid_json_needs_only_one_call(monkeypatch, fenced):
-    raw = json.dumps(REVIEW, ensure_ascii=False)
+    raw = json.dumps(SUMMARY, ensure_ascii=False)
     if fenced:
         raw = "```json\n" + raw + "\n```"
     calls = model_answers(monkeypatch, [raw])
-    assert pb.ask_json("검토", kind="review") == REVIEW
+    assert pb.ask_json("요약", kind="summary") == SUMMARY
     assert len(calls) == 1
 
 
-@pytest.mark.parametrize("kind,bad,good", [
-    ("selection", {}, {"id": None}),
-    ("selection", {"id": 123}, {"id": "pursuit_test"}),
-    ("summary", {"status": "done"}, {"progress": "확인된 결과"}),
-    ("summary", {"artifacts": [{"path": "draft.md"}]}, {"artifacts": ["draft.md"]}),
-    ("summary", {"next": "x" * 601}, {"next": "실제 산출물 확인"}),
+@pytest.mark.parametrize("bad,good", [
+    ({"status": "done"}, {"progress": "확인된 결과"}),
+    ({"artifacts": [{"path": "draft.md"}]}, {"artifacts": ["draft.md"]}),
+    ({"next": "x" * 601}, {"next": "실제 산출물 확인"}),
 ])
-def test_selection_and_summary_validate_before_accepting(monkeypatch, kind, bad, good):
+def test_summary_validates_before_accepting(monkeypatch, bad, good):
     model_answers(monkeypatch, [json.dumps(bad), json.dumps(good)])
-    assert pb.ask_json("판단", kind=kind) == good
+    assert pb.ask_json("판단", kind="summary") == good
 
 
 def test_exhausted_retry_retains_cause_and_masks_diagnostic(monkeypatch, capsys):
     secret = "sk-" + "a" * 32
-    raw = '{action:"keep", api_key:"' + secret + '"}'
+    raw = '{progress:"원고", api_key:"' + secret + '"}'
     calls = model_answers(monkeypatch, [raw, raw])
     with pytest.raises(ValueError, match="2회 실패") as caught:
-        pb.ask_json("검토", kind="review")
+        pb.ask_json("요약", kind="summary")
     assert isinstance(caught.value.__cause__, json.JSONDecodeError)
     assert len(calls) == 2
     log = capsys.readouterr().out
-    assert "review 2/2" in log and "응답 미리보기=" in log
-    assert secret not in log
+    assert "summary 2/2" in log and "응답 미리보기=" in log and secret not in log
 
 
-@pytest.mark.parametrize("recover", [True, False])
-def test_real_prepare_preserves_pursuit_and_episode_link(tmp_path, monkeypatch, recover):
+def test_prepare_never_calls_model_and_binding_preserves_episode(tmp_path, monkeypatch):
     import episode_logger as el
     ledger = PursuitLedger(tmp_path / "pursuit.db", "agent")
     row = ledger.create("미래의 문화", "원고 완성", "origin", framing="기존 규정")
     binding = pb.Binding(None, ledger, "agent", "turn", "디지털 노마드 글 작성", [])
     token = pb._current.set(binding)
     monkeypatch.setattr(el.EpisodeLogger, "current", lambda: SimpleNamespace(episode_id=3315))
-    raw = '{action:"amend"}'
-    calls = model_answers(monkeypatch, [json.dumps({"id": row["id"]}), raw,
-                                        json.dumps(REVIEW) if recover else raw])
+    monkeypatch.setattr(ca, "oneshot_ai_call", lambda *a, **k: pytest.fail("전경 과제 판단 금지"))
     try:
-        if recover:
-            memory, changed = pb.prepare()
-            assert changed and row["id"] in memory and binding.review == REVIEW
-        else:
-            memory, changed = pb.prepare()
-            assert changed and binding.row is None  # 기억 연결 실패는 새 의식으로 넘긴다.
-        assert len(calls) == 3
+        assert row["id"] in pb.prepare() and binding.row is None
+        assert not ledger.turns(row["id"])
+        pb.connect(binding, row["id"], "현재 원고는 이 과제의 후속 집필")
         assert ledger.get(row["id"])["framing"] == "기존 규정"
-        if recover:
-            assert ledger.turns(row["id"])[0]["episode_id"] == "3315"
-        else:
-            assert not ledger.turns(row["id"])  # 검토 전에는 오염될 연결을 쓰지 않는다.
+        assert ledger.turns(row["id"])[0]["episode_id"] == "3315"
     finally:
         pb.leave(token)
-    if recover:
-        assert ledger.turns(row["id"])[0]["state"] == "interrupted"
-    else:
-        assert not ledger.turns(row["id"])
+    assert ledger.turns(row["id"])[0]["state"] == "interrupted"
 
 
 @pytest.fixture

@@ -414,12 +414,9 @@ class CognitivePipelineMixin:
             yield {"type": "_turn_meta", "tool_calls": [], "session_reset": True}
             return
 
-        # 과제 선택·재검토는 실행 차선과 독립. 정정이면 빠른 실행도 의식을 깨운다.
+        # 후보 목차만 제공한다. 현재 의식/실행 모델이 연결하며 별도 호출·THINK 승격은 없다.
         from pursuit_bind import prepare as _p_prepare
-        _p_block, _p_review = _p_prepare()
-        recall.attach("pursuit", _p_block)
-        if _p_review and request_type != "REPAIR":
-            request_type, reflex_hint = "THINK", None
+        recall.attach("pursuit", _p_prepare())
         context_update = request_type == "CONTEXT_UPDATE"
         if context_update:
             from turn_scope import CONTEXT_UPDATE

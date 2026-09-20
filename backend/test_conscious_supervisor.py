@@ -341,7 +341,7 @@ def test_real_pipeline_suppresses_draft_and_fast_lane_has_no_supervisor_call(sup
     runner.ai._provider = None
     runner.ai.process_message_stream = stream
     supervisor.runner = runner
-    monkeypatch.setattr("pursuit_bind.prepare", lambda: ("", False))
+    monkeypatch.setattr("pursuit_bind.prepare", lambda: "")
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     monkeypatch.setattr("system_ai_core._switch_to_midtier", lambda *a: None)

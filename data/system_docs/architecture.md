@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-09-14
+last_updated: 2026-09-20
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -259,7 +259,7 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
 - **의식 에이전트 (본격 AI)** — `backend/cognition/consciousness_agent.py`
   - 직접 문제를 풀지 않고 "지금 어떤 문제를 풀어야 하는가"를 자기 한계 인식 기반으로 정의
   - 핵심 철학: 문제는 **나의 한계** × **환경의 제약**이 만나는 곳에서 생긴다
-  - 출력: scope/title/goal_criteria(과제 생성), task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
+  - 출력: scope/title/goal_criteria(과제 생성), pursuit_id/pursuit_reason(기존 과제 연결), task_framing, expert_choice(전문가의 선택 — 2026-09-07), achievement_criteria, history_summary, capability_focus(highlight_actions + hint), guide_files, imagined_ibl(상상실행 초안, 2026-08-31 — 기계 검증 통과분만 실행 출발점으로 융합, 턴-로컬·코퍼스 직행 금지) (self_awareness·world_state 는 2026-06-28 폐지 — task_framing 에 흡수; capability_focus.primary_nodes·tools 는 2026-09-07 폐지 — 96%/85% 의 턴에서 채워지고도 닿는 소비처가 없었다, 관문=test_consciousness_output_routing)
   - 프롬프트: `data/common_prompts/consciousness_prompt.md`
   - 현재 지시를 해석할 때 필요한 과거만 채택한 뒤 규정한다. 명시적 빈 history_summary는
     실행 히스토리를 비우고, 비어 있지 않은 선별 요약도 CLI 세션 재개로 우회하지 않는다.
@@ -267,10 +267,9 @@ fine-tuned 임베딩(768d)으로 과거 IBL 사례(해마)와 사용자 사실(�
   - 베이스 프롬프트(base_prompt_v6.md)의 "네 한계를 알아라" 원칙과 양방향 일관
 - **과제 선택·현재 문제 규정** — `pursuit_bind.py`, `pursuit_ledger.py`
   - task_id는 한 턴, pursuit는 여러 턴의 일이다. 전체 goal_criteria와 이번 턴 achievement_criteria는 별개이며 과제는 대화 삭제·재시작과 독립이다.
-  - 자아별 영속 과제는 관련성 후보다. 최근 대화를 함께 본 경량 검토가 무관한 후보를 detach로 배제하며, 오연결 회수는 원문·과제 보존과 양립한다.
-  - THINK/REPAIR는 현재 의식이 문제·기준을 새로 정한다. 경량 검토의 기준을 프레임으로 승격하지 않는다. 의식과 실행자가 연결을 해제할 수 있다.
-  - `pursuit.judgment`는 선택·검토 결과, `framing_source`는 새 판단 출처를 남긴다. 분리된 턴은 요약·재합류에서 제외한다.
-  - 정본 계약: `docs/CURRENT_INTENT_PURSUIT_REPAIR_2026_09_14.md`.
+  - 자아별 과제 목차는 미연결 후보다. 현재 의식의 `pursuit_id/pursuit_reason` 또는 실행자의 `pursuit bind(id, why)`가 연결한다. 별도 선택·재검토 모델과 전경 요약 호출은 없고 과제 준비는 EXECUTE/반사를 THINK로 승격하지 않는다.
+  - THINK/REPAIR는 현재 의식이 문제·기준을 새로 정한다. 무관한 과제는 연결하지 않으며 의식과 실행자가 오연결을 해제할 수 있다.
+  - `pursuit.bound`는 연결 근거·현재 모델 출처, `framing_source`는 규정 출처를 남긴다. 미정리 턴은 확인 경로와 함께 전달하고 요약은 응답 후 증류한다. 분리된 턴은 요약·재합류에서 제외한다. [구현 계약](../../docs/PURSUIT_ON_DEMAND_2026_09_20.md).
 
 - **평가 에이전트 (경량 AI)** — `final_evaluator` → `cognitive_eval._evaluate_achievement()`
   - 의식의 명시적 criteria/achievement_criteria만 판정한다. 목표·품질·멈춤선을 새로 정하지 않는다. 기준이 비면 평가도 없다.

@@ -64,77 +64,44 @@ CASES = [
 ]
 
 
-def test_goal_based_connection_can_record_new_subtopic(tmp_path, monkeypatch):
-    """모델 의미 판정은 별도 실측. 여기서는 입력 경계와 연결 후 원장 쓰기를 검증한다."""
+@pytest.mark.parametrize("case", CASES, ids=lambda c: c["name"])
+def test_current_model_connection_preserves_goal_and_unrelated_turns(tmp_path, monkeypatch, case):
     from pursuit_ledger import PursuitLedger
     ledger = PursuitLedger(tmp_path / "pursuits.db", "agent")
-    row = ledger.create(TRIP["title"], TRIP["goal_criteria"], "origin",
-                        framing=TRIP["framing"], next=TRIP["next"],
-                        framing_meta={"imagined_ibl": "OLD_EXECUTION_PLAN"},
-                        artifacts=["LARGE_OLD_TOOL_RESULT"])
-    other = ledger.create("10월 제주 출장", "10월 제주 출장의 항공·호텔을 준비한다.", "other")
-    b = pb.Binding(SimpleNamespace(), ledger, "agent", "checkin_turn",
-                   CASES[0]["message"], HOTEL_HISTORY)
+    mapping = {}
+    for i, candidate in enumerate(case["rows"]):
+        mapping[candidate["id"]] = ledger.create(candidate["title"], candidate["goal_criteria"], f"seed{i}")
+    b = pb.Binding(SimpleNamespace(), ledger, "agent", "turn", case["message"], case["history"])
     b.aliases = {"agent"}
-    prompts = []
-
-    def judgment(prompt, *, kind):
-        prompts.append((kind, prompt))
-        payload = json.loads(prompt.split("판단 자료:\n", 1)[1].split("\n판단 자료 끝", 1)[0])
-        if kind == "selection":
-            candidate = next(r for r in payload["candidates"] if r["id"] == row["id"])
-            assert candidate["goal_criteria"] == row["goal_criteria"]
-            return {"id": row["id"]}
-        assert payload["pursuit"]["identity"]["goal_criteria"] == row["goal_criteria"]
-        assert payload["pursuit"]["recent_work"]["next"] == row["next"]
-        assert "OLD_EXECUTION_PLAN" not in prompt and "LARGE_OLD_TOOL_RESULT" not in prompt
-        assert payload["recent_dialogue"] == HOTEL_HISTORY
-        assert payload["other_candidates"][0]["goal_criteria"] == other["goal_criteria"]
-        return {"action": "keep", "criteria": "", "evidence": "같은 숙박의 이용 준비"}
-
-    monkeypatch.setattr(pb, "ask_json", judgment)
+    monkeypatch.setattr(pb, "ask_json", lambda *a, **k: pytest.fail("별도 연결 모델 금지"))
     token = pb._current.set(b)
     try:
-        memory, needs_review = pb.prepare()
-        assert b.row["id"] == row["id"] and not needs_review
-        assert [kind for kind, _ in prompts] == ["selection", "review"]
-        result = json.loads(execute_pursuit({"op": "note", "id": row["id"],
-                                           "progress": "온라인 체크인 방법 확인"}, "agent"))
-        assert result["success"]
-        updated = ledger.get(row["id"])
-        assert updated["goal_criteria"] == row["goal_criteria"]
-        assert updated["progress"] == "온라인 체크인 방법 확인"
-        assert row["id"] in memory
+        assert pb.prepare() and b.row is None
+        # 의미 판정 자체를 시험 대역이 증명하지는 않는다. 선택을 받은 뒤 원장 경계를 검증한다.
+        if case["selected"]:
+            row = mapping[case["selected"]]
+            result = json.loads(execute_pursuit({"op": "bind", "id": row["id"],
+                                               "why": case["message"]}, "agent"))
+            assert result["success"] and result["result"]["goal_criteria"] == row["goal_criteria"]
+            note = json.loads(execute_pursuit({"op": "note", "progress": "현재 후속 질문 확인"}, "agent"))
+            assert note["success"] and ledger.get(row["id"])["goal_criteria"] == row["goal_criteria"]
+        else:
+            assert pb.finish("현재 질문의 답변") is None
+            assert all(not ledger.turns(row["id"]) for row in mapping.values())
     finally:
         pb._current.reset(token)
 
 
-def test_connection_prompt_never_silently_shortens_goal():
+def test_catalog_excerpts_are_explicit_and_full_goal_is_available(tmp_path):
+    from pursuit_ledger import PursuitLedger
     goal = "전체 완료 조건. " * 120 + "중요한 마지막 대상"
-    candidate = {**REPORT, "goal_criteria": goal}
-    for selected in (None, candidate):
-        prompt = pb.connection_prompt("이어줘", [], [candidate], selected=selected)
-        assert goal in prompt
+    ledger = PursuitLedger(tmp_path / "pursuits.db", "agent")
+    row = ledger.create("긴 목표", goal, "seed")
+    text = pb.render_index([row], 1)
+    assert "목표 발췌" in text and "bind/read" in text
+    assert ledger.get(row["id"])["goal_criteria"] == goal
 
 
-def test_selection_evidence_reaches_judgment_record(monkeypatch):
-    evidence = "최근 대화의 숙박 대상과 같은 호텔의 이용 준비"
-    monkeypatch.setattr("consciousness_agent.oneshot_ai_call", lambda *a, **k:
-                        json.dumps({"evidence": evidence, "id": TRIP_ID}, ensure_ascii=False))
-    events = []
-    monkeypatch.setattr("episode_logger.record_trajectory_event", lambda kind, data: events.append((kind, data)))
-    result = pb.ask_json("선택", kind="selection")
-    assert result["id"] == TRIP_ID
-    assert events[0][1]["decision"]["evidence"] == evidence
-
-
-@pytest.mark.parametrize("answer", [{"id": TRIP_ID, "evidence": []},
-                                    {"id": TRIP_ID, "action": "keep"}])
-def test_selection_rejects_wrong_evidence_type_and_review_fields(answer):
-    with pytest.raises(ValueError):
-        pb._validate_answer(answer, "selection")
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))

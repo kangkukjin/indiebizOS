@@ -8,7 +8,7 @@ owner_code: >
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
   catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-09-18
+last_updated: 2026-09-20
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -85,28 +85,21 @@ see_also: [architecture.md, ibl.md]
 상태=pursuit, 사건=pursuit_event, 요약 처리 상태와 원문=pursuit_turn. 전체 완료 기준(goal_criteria)은
 턴 평가 기준과 다르다. 도구 `pursuit`는 인지 이음매이며 IBL 어휘가 아니다.
 
-과제 선택과 규정 재검토를 분리하고, 반박은 같은 과제에서 규정을 다시 쓴다. 모든 실행 경로에서
-참여 가능하며 정정이 있으면 빠른 실행도 의식을 거친다. 도구 결과·턴 원문을 먼저 영속화한 뒤
-기존 증류 큐에서 진행을 고쳐 쓴다. 다음 턴은 아직 반영되지 않은 완료 턴을 먼저 따라잡는다.
-버전·멱등 사건·필드별 출처 순서가 늦은 요약의 후속 정정 덮어쓰기를 막는다.
+과제 연결은 현재 의식·실행 모델의 판단에 합친다(2026-09-20). 시작 시 제목·목표 발췌의 작은
+후보 목차만 제공하며, 별도 선택·재검토 AI나 실행 전 요약 호출은 없다. 최초 숙고 OFF의 EXECUTE와
+반사는 과제 준비 때문에 THINK로 바뀌지 않는다. 의식은 기존 계획 응답에 `pursuit_id/pursuit_reason`을
+내고, 실행자는 `pursuit{op:"bind", id, why}`로 필요할 때만 연결한다. 무관하거나 대상이 모호하면
+연결 없이 답한다. 같은 분야·최신 과제라는 이유만으로 연결하거나 후보 설명으로 대명사의 대상을 만들지 않는다.
+목표가 발췌되면 표시하고 bind/read가 전체 목표·현재 상태·미정리 턴을 제공한다. 같은 목표의 후속 질문·
+실행 준비·이용 조건도 이어질 수 있으며, 옛 하위 작업으로 현재 요청의 범위를 제한하지 않는다.
 
-2026-09-14 수리: 경량 선택·검토는 연결 후보만 판단한다. 검토는 최근 대화를 함께 받고
-`detach`로 무관한 후보를 배제한 뒤에만 턴 연결·미반영 요약을 시작한다. THINK/REPAIR의
-문제 규정과 달성 기준은 항상 현재 의식이 새로 만든다. 의식의 `detach_pursuit:true` 또는
-실행자의 `pursuit{op:"detach", why}`는 현재 연결만 회수한다. 분리된 턴은 `detached`로 원문을
-보존하고 진행 요약·미처리 목록에서 제외하며, 이미 출발한 늦은 요약도 적용하지 않는다.
-새 과제 생성이나 기존 과제 목표 변경과 연결 해제는 별개다. 성공 판정은 사용자 만족의 증거가 아니다.
-선택·검토 판단은 `pursuit.judgment`, 규정 출처는 `framing_source`로 기록한다.
-연결의 기준은 title·전체 goal_criteria의 목표와 대상이다. 후보 선택에도 전체 목표를 제공하며,
-재검토는 목표·원발화와 최근 작업(next/progress/framing)을 분리하고 다른 후보도 함께 대조한다.
-같은 목표의 실행 준비·이용 조건·새 하위 질문은 keep이며, 최근 하위 주제와 다르다는 이유로
-detach하지 않는다. 실제 산출물·목표 범위 추가는 amend, 같은 과제의 전제 정정은 rewrite다.
-대명사의 선행 대상은 현재 발화·최근 대화에서 해소해야 하며, 후보 설명 자체로 채우지 않는다.
-선택 근거(evidence)도 궤적에 남기며, 선택·검토 두 호출 안에서 판단한다.
-검증: [전체 목표를 기준으로 과제 연결](../../docs/PURSUIT_CONNECTION_GOAL_SCOPE_2026_09_14.md).
-연결 판단이 형식 검증에 실패하면 `pursuit.connection_unresolved`를 남기고 연결을 보류한 채 새 의식으로 현재 요청을 처리한다.
-요약의 필드 오류 전체 재요청·동기 실패 시 원문 보존·후처리 비용 누적은 유지한다.
-수리·검증: [현재 의도와 과제 기억](../../docs/CURRENT_INTENT_PURSUIT_REPAIR_2026_09_14.md).
+THINK/REPAIR의 문제 규정과 달성 기준은 현재 의식이 새로 만든다. 전체 목표 변경은 실행자의 goal/why로
+근거를 기록한다. 의식의 `detach_pursuit:true` 또는 실행자의 `pursuit{op:"detach", why}`는 현재 연결만
+회수한다. 분리된 턴은 원문을 보존하고 진행 요약·미처리 목록에서 제외하며 늦은 요약도 적용하지 않는다.
+`pursuit.bound`가 현재 모델의 연결 근거·출처를, `framing_source`가 규정 출처를 남긴다.
+미정리·중단 턴은 결과를 확인한 뒤 이어가며, 요약은 원문 영속화 후 기존 증류 큐에서 수행한다.
+버전·멱등 사건·필드별 출처 순서가 늦은 요약의 후속 정정 덮어쓰기를 막는다. 요약 실패는 다음 요청을
+가로막지 않고 원문·오류를 보존한다. [호출 절약과 검증](../../docs/PURSUIT_ON_DEMAND_2026_09_20.md).
 
 의식의 과제 생성 제안은 실제 연결 상태(`pursuit_binding`)를 기준으로 저장 전에 검증한다.
 같은 주제의 후속 논의만으로 영속 과제를 만들지 않으며, 불완전한 생성 제안은 같은 의식이 한 번
@@ -290,11 +283,11 @@ Reflex·강제 역할·문맥 갱신에도 적용한다. 과거 에이전트 허
 사용자 입력
   │
   ├─[2 작업기억]  최근 7턴 회상 (Observation Masking)
-  ├─[과제]       선택 → 미반영 진행 따라잡기 → 규정 재검토 (모든 실행 경로)
+  ├─[과제]       후보 목차 → 현재 의식/실행 모델이 필요할 때 연결 (별도 AI 없음)
   ├─[4b 해마]     유사 IBL 선례 검색 → 반사 신호(recall.reflex) ┐ 공통 흐름 associative_recall 1상(분류 전) —
   ├─[5 심층메모리] 기억 지도(가지 목차)+가지 먼저 고른 3건      ┘ 가이드 목차·손발·수리 결말·결정 원장까지 한 묶음(<execution_memory>+<memory_map>+<recalled_memory>+…)
   ├─[7 포식기억]   일반 턴 자동 주입 없음(2026-09-03 폐지) — AI 가 [self:forage]{op:"recall", locus|query} 로 직접 연다. 프로젝트 에이전트만 자기 폴더 문서를 안정 프롬프트에 통째(<project_memory>)
-  ├─[8 세계기억]   공통 흐름 2상(분류·과제 연결 뒤·의식 이전 1회): 글자 일치(<method_map>) + 가지 먼저 고른 의미 3건(<world_map>+<world_memory>) — 이름·관계만, 모델 호출 없음. 제시 기록 = recall.presented 사건
+  ├─[8 세계기억]   공통 흐름 2상(분류·과제 목차 뒤·의식 이전 1회): 글자 일치(<method_map>) + 가지 먼저 고른 의미 3건(<world_map>+<world_memory>) — 이름·관계만, 모델 호출 없음. 제시 기록 = recall.presented 사건
   ├─[결정원장]     사용자 판정 다이제스트 상시 + 질의 일치 상세 (<decision_ledger>, 정본=data/decisions.yaml)
   │     │
   │     ├ 해마 점수 높음 → Reflex(EXECUTE): 의식 건너뜀, 중급 모델로 즉시 실행

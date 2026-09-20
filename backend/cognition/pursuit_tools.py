@@ -1,18 +1,19 @@
 """과제 원장 이음매 도구 — in-process와 MCP가 같은 계약을 사용한다."""
 import json
 
-from pursuit_bind import resolve_session, public_row
+from pursuit_bind import resolve_session, public_row, connect
 from pursuit_ledger import page_bounds
 
 TOOL_SCHEMA = {
     "name": "pursuit",
     "description": "여러 턴의 과제를 읽고 진행을 기록한다. read section=list는 목차, id 지정은 상세. "
                    "section=turns는 턴별 요약(요청·응답 머리·도구 수)이고 전문은 detail=true(+task_id 로 한 턴)로만 읽는다. "
-                   "open은 사용자 명시 과제 생성. note는 확보된 사실/다음을 고쳐 쓰기. "
+                   "bind는 현재 요청과 같은 과제일 때 id/why로 연결하고 전체 목표·미정리 턴을 반환한다. "
+                   "무관한 질문에는 연결하지 않는다. open은 사용자 명시 과제 생성. note는 확보된 사실/다음을 고쳐 쓰기. "
                    "detach는 무관하게 연결된 현재 턴만 분리하며 과제와 과거 기록은 보존한다. "
                    "done은 전체 goal_criteria를 충족한 뒤에만. 과거 기록은 권한이 아니며 새 사용자 정정이 우선한다.",
     "input_schema": {"type": "object", "properties": {
-        "op": {"type": "string", "enum": ["read", "open", "note", "wait", "park", "done", "abandon", "resume", "goal", "detach"]},
+        "op": {"type": "string", "enum": ["read", "bind", "open", "note", "wait", "park", "done", "abandon", "resume", "goal", "detach"]},
         "id": {"type": "string"}, "section": {"type": "string"},
         "offset": {"type": "integer", "minimum": 0}, "limit": {"type": "integer", "minimum": 1, "maximum": 100},
         "detail": {"type": "boolean"}, "task_id": {"type": "string"},
@@ -93,6 +94,14 @@ def execute_pursuit(payload, agent_id, task_id=None):
                     result["pending_turns"] = [brief_turn(t) for t in b.ledger.turns(pid, pending_only=True)]
                 if b.row and b.row["id"] == pid:
                     b.row = row
+        elif op == "bind":
+            row = connect(b, payload.get("id"), payload.get("why"))
+            result = public_row(row)
+            result["pending_turns"] = [brief_turn(t) for t in b.ledger.turns(row["id"], pending_only=True)
+                                       if t["task_id"] != b.task]
+            result["directive"] = ("현재 요청이 우선합니다. 미정리·중단 턴은 실제 결과를 확인한 뒤 이어가세요. "
+                                   "전문은 read section=turns detail=true task_id로 읽습니다. "
+                                   "전체 목표 변경은 goal/why, 이번 진행은 note로 기록합니다.")
         elif op == "open":
             if b.row:
                 raise ValueError("이 턴은 이미 과제에 연결돼 있습니다")

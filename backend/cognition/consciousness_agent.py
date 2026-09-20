@@ -371,7 +371,8 @@ class ConsciousnessAgent:
         # 과거 대화가 있다는 것과 실제 영속 과제가 연결됐다는 것은 다르다.
         parts.append("<pursuit_binding>" + json.dumps({
             **(pursuit_state or {"bound": False, "id": None}),
-            "note": "하네스의 실제 연결 상태. bound=false이면 이어 쓸 기존 과제가 없다. "
+            "note": "하네스의 실제 연결 상태. bound=false는 아직 미연결이라는 뜻이다. "
+                    "목차의 기존 과제를 이어갈 때는 pursuit_id/pursuit_reason을 낸다. "
                     "새 과제가 필요할 때만 scope=pursuit와 제목·전체 목표를 함께 낸다.",
         }, ensure_ascii=False) + "</pursuit_binding>")
 

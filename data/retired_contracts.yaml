@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: pursuit_preflight_models
+    retired: 2026-09-20
+    reason: 과제 연결 선택·재검토와 미반영 요약이 매 요청의 실행 시작을 지연시켰다.
+    instead: 후보 목차만 제공하고 현재 의식·실행 모델이 연결한다. 진행 요약은 응답 후 증류한다.
+    phrases:
+      - '연결을 보류하고 새 의식에 맡긴다'
+      - '경량 검토는 연결 후보만 정한다'
+      - '정정이면 빠른 실행도 의식을 깨운다'
   - id: world_catalog_agent_allowlist
     retired: 2026-09-17
     reason: 세계 어휘를 실험 에이전트와 일부 역할로 제한하던 계약을 폐기했다.

@@ -25,6 +25,10 @@ def context_program(code):
 
 def allows_context_tool(name, payload):
     name = name.rsplit("__", 1)[-1]
+    if name == "pursuit":
+        # 연결을 별도 전경 모델에서 현재 실행자로 옮겼다. 사실 통보도 관련 과제를
+        # 읽고 연결·정정·분리할 수 있으나 새 과제/완료/재개로 일을 확대하지 않는다.
+        return payload.get("op") in {"read", "bind", "note", "goal", "detach"}
     if name == "read_result":
         return True
     return name == "execute_ibl" and (bool(payload.get("describe")) or context_program(payload.get("code", "")))

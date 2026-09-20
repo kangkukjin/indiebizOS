@@ -81,7 +81,7 @@ def test_pipeline_queues_only_after_final_delivery(supervisor, monkeypatch, endi
     runner.ai.process_message_stream = execute
     supervisor.runner = runner
     monkeypatch.setattr(supervisor, "finalize", finalize)
-    monkeypatch.setattr("pursuit_bind.prepare", lambda: ("", False))
+    monkeypatch.setattr("pursuit_bind.prepare", lambda: "")
     monkeypatch.setattr("pursuit_bind.refresh_memory", lambda mem: mem)
     monkeypatch.setattr("pursuit_bind.finish", lambda *a, **kw: None)
     stream = runner._cognitive_stream_body("사용자 원문", [])

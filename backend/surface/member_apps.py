@@ -41,6 +41,8 @@ def catalogue(local_apps=None):
                 return isinstance(value, list) and any(requests(v) for v in value)
             if requests(local):
                 raise ValueError('내 앱은 공개 기능의 앱 동작으로 작성하세요')
+            if local.get('web_app'):
+                raise ValueError('서버 업무 화면은 발행된 패키지에서만 열 수 있습니다')
             candidates.append({**local, 'id': 'local_' + local['id']})
     def clean(obj):
         if isinstance(obj, list):
@@ -72,6 +74,8 @@ def catalogue(local_apps=None):
     for source in candidates:
         app = clean(copy.deepcopy(source))
         if app and (app.get('modes') or app.get('action') or app.get('request')):
+            if app.get('web_app') == '/records/app':
+                app['web_app'] = '/m/records/app'
             for mode in app.get('modes', []):
                 action_id = f"{app['id']}:{mode.get('id', 'main')}"
                 if browser and (mode.get('request') or mode.get('action')):

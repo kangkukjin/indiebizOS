@@ -385,8 +385,13 @@ async def lifespan(app: FastAPI):
     # IBL MCP HTTP 세션 매니저를 앱 수명 동안 켠다(마운트한 /mcp 가 동작하려면 필수).
     # 실패/미준비면 nullcontext 로 조용히 통과(기존 stdio 경로는 영향 없음).
     _mcp_ctx = _ibl_mcp.session_manager.run() if _ibl_mcp is not None else nullcontext()
-    async with _mcp_ctx:
-        yield
+    from record_dispatch import start as start_records, stop as stop_records
+    start_records()
+    try:
+        async with _mcp_ctx:
+            yield
+    finally:
+        stop_records()
 
     # Cloudflare 터널 종료 — ★own_only: 떠나는 워커는 *자기가 띄운* 터널만 치운다.
     # 마커 전수 소탕을 여기서 하면, 리로드 때 새 워커가 방금 띄운 터널까지 죽여
@@ -669,6 +674,8 @@ app.include_router(launcher_web_router, tags=["launcher-web"])
 app.include_router(tunnel_router, tags=["tunnel"])
 app.include_router(face_provision_router, tags=["tunnel-provision"])  # 로컬 전용 — is_public_remote_path 등록 금지
 app.include_router(ibl_router, tags=["ibl"])
+from api_records import router as records_router
+app.include_router(records_router, tags=["records"])
 app.include_router(nodes_router, tags=["nodes"])
 app.include_router(limb_router, tags=["limb"])  # /limb/* 는 자체 limb key 인증 (is_public_remote_path 등록)
 from api_external_users import router as external_users_router

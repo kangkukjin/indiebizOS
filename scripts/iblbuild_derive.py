@@ -164,6 +164,8 @@ def derive_member_manifest(data: dict, root: Path) -> dict:
                 entry["limb_op"] = action["limb_op"]
             if action.get("path_audited") is not None:
                 entry["path_audited"] = action["path_audited"]
+            if action.get("resource_scope") is not None:
+                entry["resource_scope"] = action["resource_scope"]
             actions[f"{node_name}:{action_name}"] = entry
     return {"version": 1, "actions": dict(sorted(actions.items()))}
 

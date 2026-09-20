@@ -80,6 +80,24 @@ def fingerprint_ok(e: dict, root: Path = None) -> bool:
     pkg = _package_dir(e.get("package"), root)
     if not pa.get("impl") or pkg is None:
         return False
+    dependencies = pa.get('dependencies', {})
+    if e.get('resource_scope') == 'app_shared' and not dependencies:
+        return False
+    if not isinstance(dependencies, dict):
+        return False
+    base = Path(root or _root()).resolve()
+    for relative, expected in dependencies.items():
+        relative_path = Path(relative)
+        if relative_path.is_absolute() or '..' in relative_path.parts:
+            return False
+        # 배포판의 쓰기 공간(userData)과 실제 실행 엔진 위치는 다르다.
+        dependency_root = Path(__file__).resolve().parents[1] if relative_path.parts[0] == 'backend' else base
+        suffix = Path(*relative_path.parts[1:]) if relative_path.parts[0] == 'backend' else relative_path
+        path = (dependency_root / suffix).resolve()
+        if not path.is_relative_to(dependency_root) or not path.is_file():
+            return False
+        if hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            return False
     return handler_fingerprint(pkg) == str(pa.get("impl"))
 
 

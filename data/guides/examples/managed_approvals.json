@@ -1,0 +1,293 @@
+{
+  "contract_version": 1,
+  "name": "공동 장부",
+  "collections": {
+    "stocks": {
+      "fields": {
+        "sku": {
+          "type": "string",
+          "required": true,
+          "label": "상품 코드"
+        },
+        "available": {
+          "type": "integer",
+          "required": true,
+          "min": 0,
+          "label": "판매 가능 수량"
+        }
+      },
+      "unique": [
+        [
+          "sku"
+        ]
+      ],
+      "access": {
+        "read": {
+          "roles": [
+            "clerk",
+            "reviewer",
+            "admin"
+          ]
+        }
+      },
+      "label": "상품 재고"
+    },
+    "orders": {
+      "fields": {
+        "stock_id": {
+          "type": "record_ref",
+          "collection": "stocks",
+          "required": true,
+          "label": "상품 재고 ID"
+        },
+        "quantity": {
+          "type": "integer",
+          "required": true,
+          "min": 1,
+          "label": "주문 수량"
+        },
+        "status": {
+          "type": "string",
+          "required": true,
+          "default": "draft",
+          "label": "처리 상태"
+        }
+      },
+      "access": {
+        "read": {
+          "roles": [
+            "clerk",
+            "reviewer",
+            "admin"
+          ]
+        }
+      },
+      "process": "ordering",
+      "label": "주문"
+    }
+  },
+  "processes": {
+    "ordering": {
+      "field": "status",
+      "initial": "draft",
+      "transitions": {
+        "confirm": {
+          "from": "draft",
+          "to": "confirmed"
+        },
+        "submit": {
+          "from": "draft",
+          "to": "reviewing",
+          "task": {
+            "roles": [
+              "reviewer"
+            ],
+            "command": "approve",
+            "quorum": 2
+          }
+        },
+        "approve": {
+          "from": "reviewing",
+          "to": "approved"
+        }
+      }
+    }
+  },
+  "commands": {
+    "stock": {
+      "input": {
+        "sku": {
+          "type": "string",
+          "required": true,
+          "label": "상품 코드"
+        },
+        "available": {
+          "type": "integer",
+          "required": true,
+          "label": "판매 가능 수량"
+        }
+      },
+      "allow": {
+        "roles": [
+          "admin"
+        ]
+      },
+      "change": [
+        {
+          "create": {
+            "collection": "stocks",
+            "as": "stock",
+            "values": "$input"
+          }
+        }
+      ],
+      "label": "상품 재고 등록"
+    },
+    "order": {
+      "input": {
+        "stock_id": {
+          "type": "record_ref",
+          "collection": "stocks",
+          "required": true,
+          "label": "상품 재고 ID"
+        },
+        "quantity": {
+          "type": "integer",
+          "required": true,
+          "label": "주문 수량"
+        }
+      },
+      "allow": {
+        "roles": [
+          "clerk",
+          "admin"
+        ]
+      },
+      "change": [
+        {
+          "create": {
+            "collection": "orders",
+            "as": "order",
+            "values": "$input"
+          }
+        }
+      ],
+      "label": "주문 접수"
+    },
+    "confirm": {
+      "input": {
+        "order_id": {
+          "type": "string",
+          "required": true,
+          "label": "주문 ID"
+        }
+      },
+      "allow": {
+        "roles": [
+          "clerk",
+          "admin"
+        ]
+      },
+      "read": {
+        "order": {
+          "collection": "orders",
+          "id": "$input.order_id",
+          "version": "observed"
+        },
+        "stock": {
+          "collection": "stocks",
+          "id": "$order.stock_id",
+          "version": "current"
+        }
+      },
+      "require": [
+        {
+          "expr": "$order.status == \"draft\""
+        },
+        {
+          "expr": "$stock.available >= $order.quantity"
+        }
+      ],
+      "change": [
+        {
+          "patch": {
+            "record": "stock",
+            "set": {
+              "available": {
+                "expr": "$stock.available - $order.quantity"
+              }
+            }
+          }
+        },
+        {
+          "transition": {
+            "record": "order",
+            "from": "draft",
+            "to": "confirmed"
+          }
+        }
+      ],
+      "label": "재고 확인·주문 확정"
+    },
+    "submit": {
+      "input": {
+        "order_id": {
+          "type": "string",
+          "required": true,
+          "label": "주문 ID"
+        }
+      },
+      "allow": {
+        "roles": [
+          "admin"
+        ]
+      },
+      "read": {
+        "order": {
+          "collection": "orders",
+          "id": "$input.order_id",
+          "version": "observed"
+        }
+      },
+      "change": [
+        {
+          "transition": {
+            "record": "order",
+            "from": "draft",
+            "to": "reviewing"
+          }
+        }
+      ],
+      "label": "검토 요청"
+    },
+    "approve": {
+      "input": {
+        "order_id": {
+          "type": "string",
+          "required": true,
+          "label": "주문 ID"
+        },
+        "task_id": {
+          "type": "string",
+          "required": true,
+          "label": "검토 작업 ID"
+        },
+        "task_revision": {
+          "type": "integer",
+          "required": true,
+          "label": "검토 작업 버전"
+        }
+      },
+      "allow": {
+        "roles": [
+          "reviewer",
+          "admin"
+        ]
+      },
+      "read": {
+        "order": {
+          "collection": "orders",
+          "id": "$input.order_id",
+          "version": "observed"
+        }
+      },
+      "change": [
+        {
+          "task": {
+            "op": "complete",
+            "id": "$input.task_id",
+            "revision": "$input.task_revision"
+          }
+        },
+        {
+          "transition": {
+            "record": "order",
+            "from": "reviewing",
+            "to": "approved"
+          }
+        }
+      ],
+      "label": "승인"
+    }
+  }
+}

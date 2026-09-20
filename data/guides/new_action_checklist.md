@@ -2,7 +2,7 @@
 
 > **⇢ 먼저 갈래 판별 (앱/계기를 만들거나 고치려는 것이면):** 이 문서는 **IBL 액션(백엔드 능력)** + 그걸 **선언형 `app:` 계기**로 노출하는 절차다(데이터-모양: 목록·지표·폼·차트). **자유 편집 캔버스·그리기·채팅·특수 인터랙션 같은 리치 커스텀 React 계기(빈노트·신문·길찾기류)를 만들거나 수정**하려면 이 문서가 아니라 **`custom_app_instrument.md`** 를 따른다(인라인 `el` 기본·앱모드 `project_id:'앱모드'`·모델 불문 도구).
 
-새 액션(도구)을 만들 때 **반드시 아래 전체를 완료**해야 한다. 하나라도 빠지면 에이전트가 해당 액션을 사용할 수 없다.
+새 액션은 **아래 절차를 모두 완료**한다. 누락하면 에이전트가 액션을 사용할 수 없다.
 
 > **갱신 (2026-07 능력 자기완결화 반영)**: 도구 패키지의 액션 정의는 **그 패키지 폴더 안 `ibl_actions.yaml`**에 산다 — 코드(handler)와 어휘(액션 정의)가 한 능력에 원자적으로 묶여, 설치/제거로 어휘가 함께 들고난다(설치된 37개 도구 중 36개가 이 형식). `scripts/build_ibl_nodes.py`가 **설치된 패키지들의 `ibl_actions.yaml` + 중앙 `data/ibl_nodes_src/`(6개 코어 노드의 backend-내장 액션)**를 병합해 런타임 파일 `data/ibl_nodes.yaml`을 만든다. 핸들러 시그니처는 ToolContext SDK(`execute(tool_input, context)`).
 >
@@ -387,3 +387,5 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 
 
 회원 공개 선언·격리 시험은 [회원 액션 계약](member_contract.md)을 따른다.
+
+공유 업무 확장: [별도 계약](managed_records.md).

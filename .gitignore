@@ -393,6 +393,7 @@ data/_pylibs_cp314_backup_*/
 #   agents.yaml)이 그대로 들어 있다. 규약이 모두에게 이 폴더를 쓰라고 하므로
 #   무시하지 않으면 `git add -A` 한 번에 키가 히스토리로 들어간다.
 data/_backups/*
+data/record_spaces/
 # 단, 규약 정본 문서는 추적한다 — 신선 clone 에도 규칙이 있어야 하므로.
 !data/_backups/README.md
 
@@ -440,3 +441,7 @@ data/knowledge_catalog_index/
 
 # 트리 기억 공통 회상의 파생 색인·되먹임 원장(개인 데이터 포함)
 data/recall_index/
+
+# 업무 정의 교재는 가상 데이터 없는 재사용 계약이다.
+!data/guides/examples/managed_orders.json
+!data/guides/examples/managed_approvals.json

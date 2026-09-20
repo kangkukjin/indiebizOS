@@ -1302,6 +1302,23 @@
    "reviewed": "2026-09-18",
    "examples": 6
   },
+  "self:record": {
+   "fields": {
+    "description": "7b577ed25044",
+    "target_description": "a5398edfd8da",
+    "implementation": "58653fbc845a",
+    "returns": "3c22349f8d0b",
+    "target_key": "0cacf69ab63c",
+    "params": "847dfc62e140",
+    "ops": "9c650a2fc086",
+    "side_effect": "b5bea41b6c62",
+    "runs_on": "54d3f8d78a8b",
+    "router": "ebbb1532efbc",
+    "tool": "46984e27f892"
+   },
+   "reviewed": "2026-09-20",
+   "examples": 0
+  },
   "self:schedule": {
    "fields": {
     "description": "bab8c5aa81e4",

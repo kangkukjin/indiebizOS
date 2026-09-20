@@ -50,6 +50,8 @@ LAYERS = {
         "steer_inbox", "thread_context", "thumbnails", "window_requests", "write_ledger",
     },
     "data": {
+        "record_store", "record_policy", "record_commands", "record_queries", "record_tasks",
+        "record_admin", "record_assets", "record_facade",
         "knowledge_catalog", "knowledge_graph", "tree_recall", "tree_doc", "world_recall_store", "forage_recall_store",
         "vocabulary_policy", "vocabulary_state", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
@@ -101,6 +103,7 @@ LAYERS = {
         "world_pulse", "world_pulse_collectors", "world_pulse_health",
     },
     "services": {
+        "record_dispatch", "record_adapters",
         "client_agent",
         "android_calibrate", "auto_response", "business_sync", "restart_controller", "restart_helper",
         "calendar_actions", "calendar_html", "cdn_provision",
@@ -115,7 +118,7 @@ LAYERS = {
     },
     # warehouse_likes: /like 라우트 보유 = 창고 공개면의 일부(⑨가 방향을 명시한
     # portal_warehouse 와의 상호 순환도 같은 층 안이 맞다)
-    "surface": {"api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
+    "surface": {"record_app_page", "api_external_users", "member_shell", "member_workspace_ui", "member_browser", "member_app_frame", "member_app_actions", "member_entry", "member_apps", "public_face", "face_provision", "warehouse_likes", "launcher_react"},
 }
 SURFACE_PREFIX = ("api_", "launcher_", "portal_")
 ASSEMBLY = {"api", "boot_common"}

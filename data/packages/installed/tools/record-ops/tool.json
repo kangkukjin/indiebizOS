@@ -1,0 +1,100 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "record-ops",
+  "name": "Managed Records",
+  "description": "공동 업무의 기록·명령·승인·이력·복구 기반",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "record_op",
+      "description": "인증된 업무 공간의 조회와 선언된 명령 실행. describe/query/detail/apply/history/inbox/receipt.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "description": "업무 동작",
+            "enum": [
+              "describe",
+              "query",
+              "detail",
+              "apply",
+              "history",
+              "inbox",
+              "receipt"
+            ],
+            "default": "describe"
+          },
+          "space": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "collection": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "id": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "where": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "description": "self:record 파라미터"
+          },
+          "fields": {
+            "type": "array",
+            "description": "self:record 파라미터"
+          },
+          "order": {
+            "type": "object",
+            "description": "self:record 파라미터"
+          },
+          "cursor": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "self:record 파라미터"
+          },
+          "command": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "definition_revision": {
+            "type": "integer",
+            "description": "self:record 파라미터"
+          },
+          "input": {
+            "type": "object",
+            "description": "self:record 파라미터"
+          },
+          "expected": {
+            "type": "array",
+            "description": "self:record 파라미터"
+          },
+          "request_id": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "reason": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "confirmation": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          },
+          "state": {
+            "type": "string",
+            "description": "self:record 파라미터"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ]
+}

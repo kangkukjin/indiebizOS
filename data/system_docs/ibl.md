@@ -381,7 +381,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
 - **파일 듣기** (2026-09-10): `[sense:listen]{path}`는 파일 전사, `{path, question}`은 소리 내용 분석, `{path, op:"inspect"}`는 원본 신호 검사다. path 생략 시 기존 마이크 동작. 파일에 마이크는 불필요하며 실행·감독은 같은 구간 분석 증거를 재사용한다. [오디오 듣기 가이드](../guides/audio_listen.md).
 <!-- RUNS_ON:START -->
-- 현 분포: `anywhere` 118 · `pc_only` 47 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
+- 현 분포: `anywhere` 118 · `pc_only` 48 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
 <!-- RUNS_ON:END -->
 
 **분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. **맥→폰 도달(2026-06-17 라이브)**=`INDIEBIZ_PHONE_URL`+`INDIEBIZ_PHONE_TOKEN`: 폰 `phone_api` 미들웨어가 비localhost 요청에 `X-Phone-Token`을 검증(hmac.compare_digest, localhost=WebView 자기접속은 통과), 맥 `forward_to_phone`가 그 토큰을 자동 동봉. 폰 백엔드는 **앱 UI 없이 상주**(`AgentForegroundService`가 `App.ensureBackend()` 기동·START_STICKY·부팅 재기동)하고 **토큰이 있을 때만 `0.0.0.0`(LAN) 바인드**(노출과 인증을 한 묶음 — 토큰 없으면 `127.0.0.1` 전용). 빌린 산출 파일은 `_pull_remote_artifacts`로 양방향 회수(맥←phone_only·폰←mac_only). 보안: 양방향 게이트(맥→폰=토큰/폰→맥=HTTPS 터널+런처 비번), 인터넷 비노출(폰=LAN 한정), caveat=맥→폰 LAN 평문 HTTP(가정 WPA2 저위험·공용 WiFi 금지). 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
@@ -398,7 +398,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 ### 핵심 노드 분류
 
 <!-- IBL_STATS:START -->
-총 **166 액션** — sense 43 · self 51 · limbs 14 · others 17 · engines 19 · table 22
+총 **167 액션** — sense 43 · self 52 · limbs 14 · others 17 · engines 19 · table 22
 <!-- IBL_STATS:END -->
 (위 줄은 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 
@@ -1371,3 +1371,19 @@ body의 member_transform:모듈:함수는 path_audited를 검증한 뒤 턴 임�
 fn 전개는 회원 주체로 각 잎을 다시 검사하며, 회원이 허브 주인의 저장 함수/해마 별칭을 조회하지 못한다.
 로컬 .ibl 등록 문장은 정의만 호출 앞에 결합한다. 임의 최상위 동작이 들어간 파일을 자동 실행하지 않는다.
 회원 문법·현재 파일/프로그램 계약은 guides/member_start.md, 설계·제약은 docs/EXTERNAL_SERVICE_APP_HANDOFF.md §11.
+
+## 관리 기록과 공유 업무 계약 (2026-09-20)
+
+선택 패키지 `record-ops`의 `self:record`는 앱 지역의 선언된 업무 계약을 집행한다.
+IBL의 자유로운 통화·문법 전체에 고정 스키마를 강제하는 변경이 아니다. 조회는
+`describe/query/detail/history/inbox/receipt`, 확정은 `apply`이며 호출자는 임의 SQL·변경 계획·actor를 전달하지 않는다.
+
+`lands_on:hub`의 쓰기는 원칙적으로 닫힌다. 명시적인 공동 업무에는 `resource_scope:app_shared`를
+허용하되 패키지 `path_audited.impl`과 `path_audited.dependencies`의 backend 파일 SHA-256을
+빌드·회원 실행 관문에서 모두 확인한다. 인증된 공간 참여·행·필드·명령 권한은 실행층이 별도로 검사한다.
+이 예외는 회원 개인 파일·기억을 허브에 저장하는 폴백을 허용하지 않는다.
+
+`app.web_app`는 `/records/app` 같은 같은 서버의 절대 경로다. PC·웹 렌더러가 이를 iframe으로 연다.
+회원 카탈로그에서는 감사된 패키지 경로만 회원 관문 경로로 연결하며 회원 자작 앱의 web_app는 거절한다.
+화면은 서버 action ID와 타입 값으로 실행 요청을 보내고 서버에서 모든 권한·버전을 다시 검사한다.
+구체적 계약: [공동 업무 가이드](../guides/managed_records.md).

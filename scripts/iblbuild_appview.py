@@ -34,7 +34,7 @@ APP_FORM_FIELD_TYPES = {"text", "select", "toggle", "textarea", "images", "date"
 # ai_dock 어피던스(textarea 위 ephemeral AI 제안 — 요청→제안→반영/첨부/닫기). BinNote 656 UX 를
 # 어휘로 흡수 — 어떤 선언형 form 이든 textarea 에 붙일 수 있다. dismiss 는 항상, 아래는 적용 모드.
 APP_AIDOCK_MODES = {"replace", "append"}
-APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes",
+APP_KEYS = {"instrument", "icon", "name", "order", "mode", "mode_order", "modes", "web_app",
             "note", "auto_run", "inputs", "buttons", "action", "view", "renderer", "compose", "filter",
             "phone_render",
             # run_label: 입력줄 실행 버튼 라벨(기본 '조회') — 쓰기 모드(올리기·기록)에서 '올리기'/'저장' 등
@@ -651,6 +651,8 @@ def validate_app_blocks(data: dict) -> list[str]:
             unknown = set(app.keys()) - APP_KEYS
             if unknown:
                 issues.append(f"{qualified}: app 미지의 키 {sorted(unknown)} (허용: {sorted(APP_KEYS)})")
+            if app.get('web_app') is not None and (not isinstance(app['web_app'], str) or not re.fullmatch(r'/[a-z][a-z0-9/_-]*', app['web_app'])):
+                issues.append(f'{qualified}: web_app은 같은 서버의 절대 라우트 경로여야 합니다')
 
             # io(action/view/inputs/템플릿)는 블록 단위로 검증.
             # 명시적 modes(탭)면 각 탭이 독립 블록, 아니면 app 자신이 단일 블록.

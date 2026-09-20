@@ -1037,6 +1037,11 @@ export function GenericInstrument({ instrument, openNeighborId, onDeepLinkDone }
     }
   };
 
+  if (instrument.web_app && /^\/[a-z][a-z0-9/_-]*$/.test(instrument.web_app)) {
+    return <iframe title={instrument.name} src={`${IMAGE_BASE}${instrument.web_app}`}
+      className="h-full w-full border-0" />;
+  }
+
   return (
     <div className="h-full w-full overflow-auto bg-stone-50">
       {(instrument.modes || topButtons.length > 0) && (

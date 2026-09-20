@@ -1,0 +1,110 @@
+node: self
+actions:
+  record:
+    returns: items
+    exempt: 인증된 주체와 발행한 업무 공간 필요 — 무인 자가점검에서 소유자 폴백 금지
+    columns_from: data
+    side_effect: true
+    runs_on: pc_only
+    lands_on: hub
+    resource_scope: app_shared
+    path_audited:
+      at: '2026-09-20'
+      impl: 3c31b0566918933b
+      dependencies:
+        backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
+        backend/base/runtime_utils.py: 8d715e80bb644fef0691bd95fd61cf1c3c06d01e8e7af59de1bb1d8c60c7b8a9
+        backend/common/field_path.py: 2be80800927b2f9d947356e11badd06354d05a7375f8a7a3864f11b40c83cf94
+        backend/common/ibl_vars.py: c34c6be2bd233867b0a2cd9e675249d0a5f49459831cd2abcdb4ef1ea6b9944e
+        backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
+        backend/common/row_conditions.py: bcd3e640beef798b3cfd48a49998d2a83e07c97df311fecce470724455212b2a
+        backend/common/safe_expr.py: efba8e4fc2354381fec099dddfc269f3aae5d6cefcffa1cd4211633323be1dff
+        backend/common/value_semantics.py: 94307f1fdd83d51f90761c1ffa5ef345dcd9a72e14042aaf77885de71cfa4c2d
+        backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
+        backend/datastore/record_assets.py: a9119891401cab4d11d80091d07d7bf545abb1c34fdabf79cd96bb95016df267
+        backend/datastore/record_commands.py: e58a57308b625a7e485b4cf85357ae9d07464293229f7ef3b795dfcb786aaffb
+        backend/datastore/record_facade.py: 1a174729a552f8eb163e7937b5d0d6a7179566dd55539c956bae49412b80fc0c
+        backend/datastore/record_policy.py: 9854a57fa93a18c2a66311bf0f84b604c0b2703daf9485613ba2db5d29efaaf2
+        backend/datastore/record_queries.py: 96d7910b537fd330792429de671c8ccca13b7148a397e425c3f87c712ab954fc
+        backend/datastore/record_store.py: 9fa2a3ac69f8a949487af6da80d43c3bfc264584f89eae88cde9b2f7dd41ea1f
+        backend/datastore/record_tasks.py: 1eeb5196c1aa5d0190a22ad371f8a69f736defc4830d19915030de7472dcfce8
+        backend/services/record_adapters.py: b6889645d10621d529c9a22db66657cc7c76c6b6f3fe1a94fb762962035b9b19
+        backend/services/record_dispatch.py: 7fb7cad5be40924f1e665187f870468b2bec0fc2903073cc5a61cbff3202510d
+        backend/static/record_app.html: cef6f1e74df5d03819b55be833e874d6a3b4eb8c623a7b6a5cafba314afd1be2
+        backend/surface/api_records.py: aafb8e0ae55991d678511bb765a0b87655607559bd04ada7b2c2047defab3951
+        backend/surface/record_app_page.py: 9359437a7c2af9b70eb2be1ffe6e22314c2bb76fffb0fb51dcf24c040677a987
+    scope: workspace
+    group: system
+    description: 관리 기록과 업무 명령 — 권한·버전·관계 검증 뒤 변경·이력·영수증을 함께 확정한다. 공유 업무 공간은 소유자 업무 화면에서 정의·발행한다.
+    target_description: 'describe(기본): space 생략=참여 공간 목록, 지정=필드·허용 명령. query: space·collection·where(객체/AND 목록)·fields·order·limit·cursor. detail/history: space·collection·id. apply: space·command·definition_revision·input·expected([{collection,id,revision}])·request_id 필수, reason·confirmation 선택. 같은 요청 재시도는 같은 request_id. inbox: 나의 작업 항목. receipt: request_id 확정 결과. 파일 경로·SQL·호출자 actor·임의 변경 계획은 받지 않는다. 인증 문맥 없으면 거절하며 회원 공유 자료는 공간 운영자 기기에 저장된다.'
+    router: handler
+    tool: record_op
+    target_key: op
+    implementation: record-ops handler → record_facade → record_commands/record_queries. SQLite 공간별 원자 확정과 영속 작업 원장.
+    params:
+      space: string
+      collection: string
+      id: string
+      where: [object, array]
+      fields: array
+      order: object
+      cursor: string
+      limit: integer
+      command: string
+      definition_revision: integer
+      input: object
+      expected: array
+      request_id: string
+      reason: string
+      confirmation: string
+      state: string
+    ops:
+      default: describe
+      values:
+        describe: 참여 공간 또는 공간의 필드·명령 설명
+        query: 권한 범위의 기록 조회
+        detail: 기록 하나와 현재 버전
+        apply: 선언된 명령의 원자 확정
+        history: 기록 변경 이력
+        inbox: 자신의 대기 작업 항목
+        receipt: 요청의 확정 영수증과 후속 처리 상태
+      returns: {apply: effect}
+      side_effect: {describe: false, query: false, detail: false, history: false, inbox: false, receipt: false}
+      exempt:
+        describe: 인증된 업무 주체·공간 설정에 의존 — 독립 자가점검에서 소유자 폴백 금지
+        query: 인증·공간·묶음 필요
+        detail: 인증·공간·기록 ID 필요
+        history: 인증·공간·기록 ID 필요
+        inbox: 인증·공간 필요
+        receipt: 인증·공간·요청 ID 필요
+    keywords: [공동 업무, 관리 기록, 승인, 원자 확정, 업무 공간]
+    guides: [managed_records.md]
+    app:
+      instrument: managed_records
+      name: 공동 업무
+      icon: 📋
+      web_app: /records/app
+      modes:
+        - name: 업무 공간
+          auto_run: true
+          action: '[self:record]{op:"describe"}'
+          view:
+            - type: card_list
+              from: items
+              card:
+                title: '{title}'
+                link: {href: '{url}', label: '업무 열기'}
+tool_json:
+  header:
+    id: record-ops
+    name: Managed Records
+    description: 공동 업무의 기록·명령·승인·이력·복구 기반
+    version: 1.0.0
+  tools:
+    - name: record_op
+      description: 인증된 업무 공간의 조회와 선언된 명령 실행. describe/query/detail/apply/history/inbox/receipt.
+      input_schema:
+        type: object
+        properties:
+          op: {type: string, description: 업무 동작}
+        additionalProperties: false

@@ -94,6 +94,39 @@
         "impl": "393d4d0d7a11aba4"
       }
     },
+    "self:record": {
+      "lands_on": "hub",
+      "package": "record-ops",
+      "side_effect": true,
+      "path_audited": {
+        "at": "2026-09-20",
+        "impl": "3c31b0566918933b",
+        "dependencies": {
+          "backend/base/principal.py": "ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779",
+          "backend/base/runtime_utils.py": "8d715e80bb644fef0691bd95fd61cf1c3c06d01e8e7af59de1bb1d8c60c7b8a9",
+          "backend/common/field_path.py": "2be80800927b2f9d947356e11badd06354d05a7375f8a7a3864f11b40c83cf94",
+          "backend/common/ibl_vars.py": "c34c6be2bd233867b0a2cd9e675249d0a5f49459831cd2abcdb4ef1ea6b9944e",
+          "backend/common/record_contract.py": "ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5",
+          "backend/common/row_conditions.py": "bcd3e640beef798b3cfd48a49998d2a83e07c97df311fecce470724455212b2a",
+          "backend/common/safe_expr.py": "efba8e4fc2354381fec099dddfc269f3aae5d6cefcffa1cd4211633323be1dff",
+          "backend/common/value_semantics.py": "94307f1fdd83d51f90761c1ffa5ef345dcd9a72e14042aaf77885de71cfa4c2d",
+          "backend/datastore/record_admin.py": "26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab",
+          "backend/datastore/record_assets.py": "a9119891401cab4d11d80091d07d7bf545abb1c34fdabf79cd96bb95016df267",
+          "backend/datastore/record_commands.py": "e58a57308b625a7e485b4cf85357ae9d07464293229f7ef3b795dfcb786aaffb",
+          "backend/datastore/record_facade.py": "1a174729a552f8eb163e7937b5d0d6a7179566dd55539c956bae49412b80fc0c",
+          "backend/datastore/record_policy.py": "9854a57fa93a18c2a66311bf0f84b604c0b2703daf9485613ba2db5d29efaaf2",
+          "backend/datastore/record_queries.py": "96d7910b537fd330792429de671c8ccca13b7148a397e425c3f87c712ab954fc",
+          "backend/datastore/record_store.py": "9fa2a3ac69f8a949487af6da80d43c3bfc264584f89eae88cde9b2f7dd41ea1f",
+          "backend/datastore/record_tasks.py": "1eeb5196c1aa5d0190a22ad371f8a69f736defc4830d19915030de7472dcfce8",
+          "backend/services/record_adapters.py": "b6889645d10621d529c9a22db66657cc7c76c6b6f3fe1a94fb762962035b9b19",
+          "backend/services/record_dispatch.py": "7fb7cad5be40924f1e665187f870468b2bec0fc2903073cc5a61cbff3202510d",
+          "backend/static/record_app.html": "cef6f1e74df5d03819b55be833e874d6a3b4eb8c623a7b6a5cafba314afd1be2",
+          "backend/surface/api_records.py": "aafb8e0ae55991d678511bb765a0b87655607559bd04ada7b2c2047defab3951",
+          "backend/surface/record_app_page.py": "9359437a7c2af9b70eb2be1ffe6e22314c2bb76fffb0fb51dcf24c040677a987"
+        }
+      },
+      "resource_scope": "app_shared"
+    },
     "self:script": {
       "lands_on": "body",
       "package": "system_essentials",

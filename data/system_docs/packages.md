@@ -287,9 +287,9 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 ---
 
 <!-- IBL_STATS:START -->
-## 현재 보유한 도구 패키지 (50개 — 빌드 파생)
+## 현재 보유한 도구 패키지 (51개 — 빌드 파생)
 
-**op 분기 33 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · books · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · entity-lookup · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **76개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
+**op 분기 34 패키지** (2026-05-28 dispatcher 표준화 — 모두 모듈 레벨 `_OP_DISPATCHERS` dict 노출, `build_ibl_nodes.py --check` 가 AST 정확 비교): android · blog · books · browser-action · bulletin · business · cctv · community-portal · computer-use · context7 · culture · entity-lookup · family-news · finance-record · guest-helper · health-record · investment · lecture_workspace · location-services · media_producer · memory · music-player · notebook · pc-manager · public-files · radio · real-estate · record-ops · study · system_essentials · web · web-builder · youtube · publishing. (전체 op 분기 액션은 **77개** — 그중 일부는 backend-native 라우팅이라 패키지 밖: `others:board/feed/follow/nostr` · `self:goal/manage_events/output/package/switch/trigger/workflow` · `sense:world`.)
 
 > 목록은 현재 `_OP_DISPATCHERS`를 가진 보유 패키지에서 파생한다. 새 op를 추가하거나 은퇴시키면 빌드가 목록과 수를 함께 갱신한다.
 <!-- IBL_STATS:END -->
@@ -336,6 +336,7 @@ POST /packages/{id}/uninstall은 사람의 요청임(`api_vocabulary.human_autho
 | public-files | Public Files | 공개 파일 `[others:showcase]` — `/s/<5자>/` 로 디스크의 폴더를 그대로 공개(EXIF 제거·동영상 스트리밍 트랜스코드·자막) |
 | radio | Radio | 인터넷 라디오 검색 및 재생 |
 | real-estate | Real Estate | 부동산 시세·매물 — 국토부 실거래가 + 직방·네이버부동산 현재 매물 (`sense:realty{source}`) |
+| record-ops | Managed Records | 공동 업무의 기록·명령·승인·이력·복구 기반 |
 | shopping-assistant | 상품·중고 | 새 상품 가격비교와 중고 거래 매물을 검색합니다. |
 | startup | Startup | 창업지원 사업공고 검색 (K-Startup, 중소벤처기업부) |
 | study | 논문·연구자 | 학술 논문 검색·다운로드와 연구자·공저자 조회. |

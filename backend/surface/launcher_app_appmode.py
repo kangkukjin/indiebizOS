@@ -71,6 +71,12 @@ function openInstrument(ix){
   const box=document.getElementById('appInst'); box.style.display='block';
   if(_fromHome){ try{ history.pushState({inst:1}, ''); }catch(e){} }
   let h='<div class="inst-head"><button class="back" onclick="history.back()">←</button><h2>'+esc(inst.icon||'')+' '+esc(inst.name)+'</h2></div>';
+  if(inst.web_app && new RegExp('^/[a-z][a-z0-9/_-]*$').test(inst.web_app)){
+    box.innerHTML=h;
+    const frame=document.createElement('iframe'); frame.title=inst.name;
+    frame.src=API+inst.web_app; frame.style.cssText='width:100%;height:85vh;border:0';
+    box.appendChild(frame); return;
+  }
   if(inst.renderer&&inst.renderer.indexOf('custom:')===0){
     box.innerHTML=h+'<div id="modeBody"></div>';
     const fn=CUSTOM_RENDERERS[inst.renderer.slice(7)];

@@ -51,12 +51,28 @@ def validate_lands_on(data: dict, root: Path) -> list[str]:
             if transform is not None and (lo != "body" or not isinstance(transform, str) or not re.fullmatch(r"[a-z_][a-z_0-9]*:[a-z_][a-z_0-9]*", transform)):
                 issues.append(f"{q} — member_transform은 body 전용 module:function 선언이다")
             # hub 또는 body의 감사된 임시 변환
-            if lo == "hub" and declared_side_effect(action):
+            shared = action.get('resource_scope') == 'app_shared'
+            if action.get('resource_scope') not in (None, 'app_shared') or shared and lo != 'hub':
+                issues.append(f'{q} — resource_scope는 감사된 hub의 app_shared만 허용')
+            if lo == "hub" and declared_side_effect(action) and not shared:
                 issues.append(f"{q} — 부작용 액션은 lands_on: hub 불가(주인 디스크를 쓴다) — body 로 선언하라")
             pa = action.get("path_audited")
             if not isinstance(pa, dict) or not pa.get("at") or not pa.get("impl"):
                 issues.append(f"{q} — 허브 실행/변환은 path_audited {{at, impl}} 감사 표식이 필요하다")
                 continue
+            dependencies = pa.get('dependencies', {})
+            if shared and not dependencies:
+                issues.append(f'{q} — 공유 자원은 backend 의존 지문이 필요하다')
+            if isinstance(dependencies, dict):
+                import hashlib
+                for relative, expected in dependencies.items():
+                    rel = Path(relative)
+                    dependency_root = (root / 'backend').resolve() if rel.parts and rel.parts[0] == 'backend' else root.resolve()
+                    path = (root / rel).resolve()
+                    if rel.is_absolute() or '..' in rel.parts or not path.is_relative_to(dependency_root) or not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+                        issues.append(f'{q} — 의존 구현 지문 불일치: {relative}')
+            else:
+                issues.append(f'{q} — dependencies는 경로:지문 객체여야 한다')
             tool = action.get("tool")
             pkg_dir = tool_index[tool][0] if tool and tool in tool_index else None
             if pkg_dir is None:

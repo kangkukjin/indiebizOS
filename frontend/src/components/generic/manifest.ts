@@ -140,6 +140,7 @@ export interface AppMode {
 }
 
 export interface AppInstrument extends AppMode {
+  web_app?: string;
   id: string;
   icon: string;
   name: string;

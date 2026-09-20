@@ -303,6 +303,8 @@ def _derive_instruments(include_standalone=True) -> dict:
         # 원격/폰(리모컨) 그리드는 무시하고 그대로 노출.
         if primary.get("system"):
             inst["system"] = True
+        if primary.get('web_app'):
+            inst['web_app'] = primary['web_app']
         # top_buttons: 탭 무관 최상단 고정 버튼(소개발행 등) — 인스트루먼트 레벨 통과.
         if primary.get("top_buttons"):
             inst["top_buttons"] = primary.get("top_buttons")
@@ -500,6 +502,10 @@ def is_external_request(request: Request) -> bool:
 
 def is_public_remote_path(method: str, path: str) -> bool:
     """원격에서 인증 없이 허용되는 경로 (로그인 셸 + 자체 인증 보유 경로)"""
+    # 데이터 경로는 api_records가 매번 기존 회원 열쇠로 인증한다.
+    if (method == 'GET' and path in {'/m/records/app', '/m/records/spaces'}) or (
+            method == 'POST' and path.startswith('/m/records/spaces/')):
+        return True
     # 런처 앱 셸 + 로그인 흐름 (lite = 구형 기기용 경량 셸 — 셸 자체는 정적,
     # 데이터 API 는 여전히 세션 게이트 뒤)
     if path in ("/launcher/app", "/launcher/lite"):

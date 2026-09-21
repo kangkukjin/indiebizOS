@@ -940,10 +940,18 @@ class _Checker:
         sub = _Checker(None, self.fn_depth + 1, given={n: unknown() for n in signature})
         sub.fn_defs = dict(self.fn_defs)
         sub.fn_returns = dict(self.fn_returns)
-        out = sub.run(steps)
-        # 리터럴 식의 구문 위반은 호출 인자와 무관하다. 반환 타입 추론에 묻지 않는다.
+        # 함수의 첫 문장은 호출자의 파이프를 받을 수 있다. 미상 통화를 주어
+        # 적법한 파이프형 함수의 머리 변환자를 오거절하지 않는다.
+        out = sub.run(steps, unknown())
+        from ibl_pipe_types import seam_starvation_error
+        seam = seam_starvation_error(steps)
+        if seam:
+            step_idx, message = seam
+            sub._issue("error", step_idx, "pipeline", message)
+        # 인자를 미상으로 두고도 확정된 오류(종류·열·식·입력 누락)는
+        # 함수로 감쌌다는 이유로 사라지면 안 된다. 동적 입력의 경고는 전파하지 않는다.
         for issue in sub.issues:
-            if issue.get("expected") in ("scalar expression", "row condition"):
+            if issue.get("severity") == "error":
                 self.issues.append({**issue, "statement": self.stmt,
                                     "at": f"fn.body › {issue['at']}"})
         # `$return = …` 규약 — 그 문장의 결과가 반환(마지막이 effect 여도 됨)

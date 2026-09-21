@@ -62,6 +62,50 @@ def test_cold_api_check_registers_sources_and_cached_contracts(monkeypatch):
     assert len(ibl_typecheck.FN_CODE_SOURCES) == 2
 
 
+@pytest.mark.parametrize('body', [
+    '$return = [sense:search]{query:$질의} >> [table:brief]{instruction:"요약"} >> [table:take]{n:1}',
+    '$rows = [{id:1}]; $return = $rows >> [table:select]{columns:["missing"]}',
+    '[self:write]{path:$경로,content:"x"} >> [table:filter]{where:{id:1}}',
+    '[self:read]{path:$경로}; [table:take]{n:1}',
+])
+def test_def_and_external_function_cannot_hide_definite_errors(body, monkeypatch):
+    import ibl_typecheck
+    from register_idiom import _gates
+    defined = ibl_typecheck.typecheck_code('[def:오류재현]{' + body + '}')
+    assert not defined['ok'], defined
+    assert any(i['severity'] == 'error' and 'fn.body' in i['at'] for i in defined['issues'])
+    info, why = _gates('오류재현', '잘못된 함수 본문의 등록 거절을 확인할 때', body)
+    assert info is None and '타입 오류' in why
+    monkeypatch.setattr(ibl_typecheck, 'FN_CODE_SOURCES', [lambda name: body])
+    monkeypatch.setattr(ibl_typecheck, '_FN_CACHE', {})
+    for _ in range(2):
+        result = ibl_typecheck.typecheck_code('[fn:오류재현]{질의:"x",경로:"fixture"}')
+        assert not result['ok'], result
+    assert not ibl_typecheck._FN_CACHE  # 두 번째 호출이 캐시 때문에 거짓 통과하면 안 된다.
+
+
+def test_function_incoming_currency_and_unknown_arguments_remain_valid():
+    from ibl_typecheck import typecheck_code
+    for body in ('$return = [table:take]{n:$개수}',
+                 '$return = $목록 >> [table:select]{columns:["title"]}',
+                 '$return = [self:read]{path:$경로} >> [table:take]{n:1}'):
+        result = typecheck_code('[def:정상호출]{' + body + '}')
+        assert result['ok'] and not result.get('abstained'), result
+
+
+@pytest.mark.parametrize('location', ['body', 'example', 'extra'])
+def test_catalog_rejects_invalid_params_in_body_and_every_example(location):
+    from curate_idioms import validate_catalog
+    entry = json.loads(json.dumps(CATALOG['idioms'][0]))
+    bad = '[self:read]{path:"fixture.txt",zzzz_unknown_test_key:1}'
+    if location == 'extra':
+        entry['examples'] = [{'code': entry['example'] + '; ' + bad}]
+    else:
+        entry[location] += '; ' + bad
+    with pytest.raises(ValueError, match='존재하지 않는'):
+        validate_catalog({'idioms': [entry]})
+
+
 def test_conditional_includes_skipped_input_but_not_with_else():
     from ibl_typecheck import return_type_of
     head = '$rows = [{id:1}]; $return = $rows >> '

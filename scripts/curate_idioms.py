@@ -43,8 +43,12 @@ def validate_catalog(catalog):
         # 대표 용례(example)와 생산자가 다른 용례(examples[].code)는 같은 관문을 지난다(2026-09-09).
         for sample in [e["example"]] + [x["code"] for x in e.get("examples", [])]:
             code = definitions + "\n" + sample
-            if not _validate_ibl_actions(code) or check_code_params(code):
-                raise ValueError(f"{e['name']}: 존재하지 않는 어휘 또는 인자 — {check_code_params(code)}")
+            # 본문 인자는 각 항목의 _gates가 한 번씩 검사한다. 용례마다 선정집
+            # 전체를 재검사하면 같은 도구 스키마의 파일 조회만 수백만 번 반복된다.
+            # 함수 사이의 조합 타입 검사는 아래에서 전체 정의를 붙여 그대로 수행한다.
+            param_issues = check_code_params(sample)
+            if not _validate_ibl_actions(code) or param_issues:
+                raise ValueError(f"{e['name']}: 존재하지 않는 어휘 또는 인자 — {param_issues}")
             steps = parse(code)
             calls = []
             def walk(obj, has_prev=False):

@@ -1,0 +1,62 @@
+[
+  {
+    "intent": "각 고객 메시지의 환불 요청 여부를 판정해줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"결제한 돈을 환불해 주세요.\"},{\"text\":\"배송일을 알려 주세요.\"}],\"instruction\":\"고객이 환불을 명시적으로 요청하는가?\"}",
+    "nodes": "table"
+  },
+  {
+    "intent": "Classify whether each message requests a refund",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"결제한 돈을 환불해 주세요.\"},{\"text\":\"배송일을 알려 주세요.\"}],\"instruction\":\"고객이 환불을 명시적으로 요청하는가?\"}",
+    "nodes": "table"
+  },
+  {
+    "intent": "환불 요청인 메시지만 골라줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"결제한 돈을 환불해 주세요.\"},{\"text\":\"배송일을 알려 주세요.\"}],\"instruction\":\"고객이 환불을 명시적으로 요청하는가?\"} >> [table:filter]{where:{field:\"judgment_result_value\",op:\"eq\",value:true}}",
+    "nodes": "table"
+  },
+  {
+    "intent": "판정이 불확실한 항목만 모아줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"결제한 돈을 환불해 주세요.\"},{\"text\":\"배송일을 알려 주세요.\"}],\"instruction\":\"고객이 환불을 명시적으로 요청하는가?\"} >> [table:filter]{where:{field:\"judgment_result_status\",op:\"eq\",value:\"unknown\"}}",
+    "nodes": "table"
+  },
+  {
+    "intent": "기존 판정 열은 보존하고 엄격하게 다시 판정해줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"결제한 돈을 환불해 주세요.\"},{\"text\":\"배송일을 알려 주세요.\"}],\"instruction\":\"고객이 환불을 명시적으로 요청하는가?\",\"as\":\"재판정\",\"threshold\":0.95}",
+    "nodes": "table"
+  },
+  {
+    "intent": "뉴스 제목의 광고성을 판정해서 광고가 아닌 것만 남겨줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"title\":\"신제품 출시, 오늘만 반값 구매하세요!\"},{\"title\":\"공공도서관 운영시간 변경 안내\"}],\"instruction\":\"직접 구매를 유도하는 광고인가?\"} >> [table:filter]{where:{field:\"judgment_result_value\",op:\"eq\",value:false}}",
+    "nodes": "table"
+  },
+  {
+    "intent": "문의 유형을 환불 배송 기타로 분류해줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"환불해 주세요.\"}],\"instruction\":\"고객의 주요 문의 유형은?\",\"type\":\"choice\",\"criteria\":{\"refund\":\"환불 요청\",\"shipping\":\"배송 문의\",\"other\":\"기타 또는 정보 부족\"}}",
+    "nodes": "table"
+  },
+  {
+    "intent": "민원의 긴급성을 낮음 보통 높음 기준으로 점수 매겨줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"문이 잠겨 나갈 수 없어요. 즉시 도와주세요.\"}],\"type\":\"score\",\"instruction\":\"즉시 처리가 필요한 정도는?\",\"criteria\":[\"긴급하지 않음\",\"빠른 처리 필요\",\"즉시 조치 필요\"]}",
+    "nodes": "table"
+  },
+  {
+    "intent": "Rank reports by judged urgency",
+    "ibl_code": "[table:judge]{\"items\":[{\"text\":\"즉시 도와주세요.\"},{\"text\":\"다음 달 일정 문의입니다.\"}],\"type\":\"score\",\"instruction\":\"지금 처리가 필요한 정도는?\",\"criteria\":[\"나중에 처리 가능\",\"빠른 처리 필요\",\"즉시 조치 필요\"]} >> [table:filter]{where:{field:\"judgment_result_status\",op:\"eq\",value:\"decided\"}} >> [table:sort]{by:\"judgment_result_value\",order:\"desc\"}",
+    "nodes": "table"
+  },
+  {
+    "intent": "관련성과 광고성을 한 번에 판정해줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"title\":\"AI 모델 공개 연구 보고서\"}],\"questions\":{\"relevant\":{\"instruction\":\"AI 기술 연구에 관한 내용인가?\"},\"ad\":{\"instruction\":\"상품 구매를 직접 유도하는 광고인가?\"}}}",
+    "nodes": "table"
+  },
+  {
+    "intent": "두 문장이 같은 사실을 말하는지 판정해줘",
+    "ibl_code": "[table:judge]{\"items\":[{\"candidate\":\"회의는 오후 세 시에 시작합니다.\",\"reference\":\"회의 시작 시각은 15시입니다.\"}],\"instruction\":\"candidate와 reference가 같은 회의 시작 시각을 말하는가?\"}",
+    "nodes": "table"
+  },
+  {
+    "intent": "판정이 불명일 때 별도 분기로 처리해줘",
+    "nodes": "table",
+    "ibl_code": "$r = [table:judge]{\"items\":[{\"text\":\"결제한 돈을 환불해 주세요.\"},{\"text\":\"배송일을 알려 주세요.\"}],\"instruction\":\"고객이 환불을 명시적으로 요청하는가?\"}\n[if: $r.items.0.judgment_result_status == \"unknown\"] {\n$return = {status:\"추가 확인 필요\"}\n} [else] {\n$return = {approved:$r.items.0.judgment_result_value}\n}"
+  }
+]

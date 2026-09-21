@@ -2039,3 +2039,5 @@
 [2026-09-19] GitHub Actions 실패 수리: Fresh Clone Check가 읽는 ibl_example_review.json이 광역 JSON 무시 규칙에 가려져 미추적이던 것을 예외 선언하고 기존 검토 지문 원장을 추적(개인 용례 본문 없음). Seam Guards의 문서·시트 회귀에 python-docx 설치 추가. 공개 라우트 가드는 api_member의 _member_of→limb_keys.validate 인증을 인정하고, 정적 로그인 셸 GET /m/app만 사유 있는 익명 선언에 등록. 회원 인증 간접 호출·누락 자체 회귀 추가.
 
 [2026-09-21] 사용자 지정 관용구 노출 조정: 최근 72시간 미사용인 고치고확인하기·미처리만고르기를 상시 지도·잎 액션 병기에서 제외(always_on=0), 본문·서명·실적·명시 호출 유지. 선정집과 운영 원장 일치, SQLite 백업 후 등록 CLI로 반영하고 /packages/reload 성공. 직전보고서찾아읽기는 전역 승격 없이 AI 동향 보고서 가이드에 소개하며 파일명 순서·앞 160줄·추가 열람·첫 작성 계약 명시. 등록·조합 검증과 관용구 가치/확장/조합/목록 회귀 통과, Android 번들 재생성 차이 없음.
+
+[2026-09-21] 판정 전용 [table:judge] 추가 — ai-ops의 Jev 직접 API 어댑터. boolean/choice/score, 행×질문 일괄 요청, 원 행 보존·평평한 판정 열, unknown≠false, 응답 전수 검증·토큰 원장. TYPESAFE_API_KEY는 .env에만 저장. 실제 IBL 용례 12건 실행·해마/학습 JSON 시딩, 관련 회귀 84건 및 빌드·층·Android 관문 통과. 설계 docs/JEV_JUDGMENT_2026_09_21.md, 가이드 data/guides/judgment.md.

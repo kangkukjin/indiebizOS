@@ -2,9 +2,106 @@
   "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
   "id": "ai-ops",
   "name": "AI Ops (원샷 낱말)",
-  "description": "원샷 AI 낱말 — 통화 대수 세 자리(입구 self:struct=비정형→items 구조화 · 중간 table:ai=items→items 의미 변환 · 출구 table:brief=items→산문 종합). 모델=기어 실행 축, 검증 관문(JSON 재시도 1회·정직 실패·행 수 신고·grounded 원문 대조·_ai provenance) 동반. 정본 docs/ONESHOT_VOCAB_DESIGN.md.",
-  "version": "1.0.0",
+  "description": "AI 원자 — struct(구조화)·ai(의미 변환)·brief(산문)는 기어 실행 축의 생성형 원샷. judge(참/거짓·선택·점수)는 TYPESAFE_API_KEY를 쓰는 Jev 직접 API. 판정 결과를 IBL filter/if로 연결한다.",
+  "version": "1.1.0",
   "tools": [
+    {
+      "name": "ai_judge",
+      "description": "items 각 행에 구조화 판정 추가 — [table:judge]. 여러 독립 질문을 한 Jev 요청으로 처리. guides/judgment.md 참조.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object"
+            },
+            "description": "직접 입력할 행 목록. 생략하면 파이프 통화 사용."
+          },
+          "instruction": {
+            "type": "string",
+            "description": "단일 질문의 완전한 판정 기준. questions와 동시 사용 금지."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "boolean",
+              "choice",
+              "score"
+            ],
+            "description": "단일 질문의 답 형식. 기본 boolean."
+          },
+          "criteria": {
+            "type": [
+              "object",
+              "array"
+            ],
+            "description": "choice는 선택지→설명 문자열/null 맵(2~255), score는 낮은 순 등급 설명 배열(2~10).",
+            "oneOf": [
+              {
+                "type": "object"
+              },
+              {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            ]
+          },
+          "questions": {
+            "type": "object",
+            "description": "질문 이름→{instruction,type,criteria?}. 이름은 식별자. 같은 입력에 대한 독립 질문을 묶는다.",
+            "additionalProperties": {
+              "type": "object",
+              "properties": {
+                "instruction": {
+                  "type": "string"
+                },
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "boolean",
+                    "choice",
+                    "score"
+                  ]
+                },
+                "criteria": {
+                  "type": [
+                    "object",
+                    "array"
+                  ],
+                  "oneOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    }
+                  ]
+                }
+              },
+              "required": [
+                "instruction"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "as": {
+            "type": "string",
+            "description": "결과 열 접두사. 기본 judgment, 기존 열 덮어쓰기 금지."
+          },
+          "threshold": {
+            "type": "number",
+            "description": "판정 확정 임계값(0.5 초과 1 이하, 기본 0.8). 미달은 value:null, status:unknown."
+          }
+        },
+        "additionalProperties": true
+      }
+    },
     {
       "name": "ai_struct",
       "description": "비정형 입력(파일·텍스트·파이프 본문) → schema 계약의 레코드 items — [self:struct]. grounded=원문 발췌(_quote) 결정론 대조(탈락 수 신고). 이미 표인 입력은 read{tables:true}, 문서 IR 은 table:structure.",

@@ -68,6 +68,41 @@ def _run(tool_name, tool_input):
     return json.loads(out) if isinstance(out, str) else out
 
 
+def test_judge_real_loader_and_structured_criteria_pipe(monkeypatch):
+    """판정 형제 로딩·choice criteria·원 행→filter 연결은 실제 IBL 경로로 검증한다."""
+    import requests
+    from types import SimpleNamespace
+    from system_tools import _execute_ibl_unified
+
+    calls = []
+
+    def post(url, **kwargs):
+        assert url == "https://api.typesafe.ai/v1/systemone"
+        payload = kwargs["json"]
+        calls.append(payload)
+        answers = {}
+        for i in range(len(payload["state"]["items"])):
+            choice = "refund" if i == 0 else "other"
+            answers[f"r{i}q0"] = {"type": "choice", "choice": choice, "confidence": 0.99,
+                                   "probabilities": {"refund": float(i == 0), "other": float(i != 0)}}
+        return SimpleNamespace(status_code=200, json=lambda: {
+            "model": "jev-test", "answers": answers, "usage": {"input_tokens": 10, "output_tokens": 5}})
+
+    monkeypatch.setenv("TYPESAFE_API_KEY", "test-key-not-a-secret")
+    monkeypatch.setattr(requests, "post", post)
+    code = ('[table:judge]{items:[{id:1,text:"환불"},{id:2,text:"문의"}], '
+            'instruction:"요청 종류", type:"choice", criteria:{refund:"환불",other:"기타"}} '
+            '>> [table:filter]{where:{field:"judgment_result_value",op:"eq",value:"refund"}}')
+    result = _execute_ibl_unified({"code": code}, "/tmp")
+    result = json.loads(result) if isinstance(result, str) else result
+    assert result["success"], result
+    final = result["final_result"]
+    final = json.loads(final) if isinstance(final, str) else final
+    rows = final["items"]
+    assert len(calls) == 1 and len(rows) == 1 and rows[0]["id"] == 1
+    assert rows[0]["judgment_result_value"] == "refund"
+
+
 def test_performance_date_range_contract_reaches_kopis(monkeypatch):
     """공연 날짜 범위는 액션 핸들러에서 KOPIS 요청까지 보존된다."""
     kopis = _load("_t_kopis_dates", os.path.join(_PKG, "culture", "tool_kopis.py"))

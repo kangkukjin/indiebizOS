@@ -143,6 +143,7 @@
     "table:flatten",
     "table:groupby",
     "table:join",
+    "table:judge",
     "table:merge",
     "table:reduce",
     "table:rename",

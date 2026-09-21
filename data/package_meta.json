@@ -1,7 +1,9 @@
 {
   "packages": {
     "ai-ops": {
-      "needs_key": [],
+      "needs_key": [
+        "TYPESAFE_API_KEY"
+      ],
       "weight": "light",
       "locale": "universal"
     },
@@ -454,6 +456,7 @@
     "table:flatten": "data-ops",
     "table:groupby": "data-ops",
     "table:join": "data-ops",
+    "table:judge": "ai-ops",
     "table:merge": "data-ops",
     "table:rename": "data-ops",
     "table:select": "data-ops",

@@ -5,9 +5,10 @@
 
   입구  [self:struct]{file|text, schema}  비정형 → items 구조화     (returns: items)
   중간  [table:ai]{instruction}           items → items 의미 변환   (returns: transform)
+  판정  [table:judge]{instruction|questions} items → items + 구조화 판정 (Jev 직접 API)
   출구  [table:brief]{instruction}        items → 산문 종합         (returns: scalar)
 
-원칙(전 낱말 공통 — oneshot_facade 가 집행):
+원칙(생성형 세 낱말 — oneshot_facade 가 집행; judge 계약은 ai_ops_judge.py):
   · 모델 = 기어 실행 축(role="execution"). 이미지 = 비전 패스스루(ingest_engine).
   · 검증 관문 = JSON 파싱+재시도 1회+정직 실패 / 행 수 신고(rows_in/out) /
     grounded 원문 대조 / _ai provenance.
@@ -100,6 +101,9 @@ def execute(tool_input: dict, context) -> str:
         return _transform(tool_input or {})
     if name == "ai_brief":
         return _brief(tool_input or {})
+    if name == "ai_judge":
+        from common.pkg_utils import load_sibling
+        return _ok(load_sibling(__file__, "ai_ops_judge").judge(tool_input or {}))
     return _fail(f"ai-ops: 알 수 없는 도구 '{name}'.")
 
 

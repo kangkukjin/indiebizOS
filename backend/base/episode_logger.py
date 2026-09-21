@@ -221,7 +221,17 @@ def record_trajectory_event(kind: str, data: dict = None):
         with tr.lock:
             safe = data if isinstance(data, dict) else {}
             encoded = json.dumps(safe, ensure_ascii=False, sort_keys=True, default=str)
-            encoded = mask_secrets(truncate_for_log(encoded, 4096))
+            encoded = mask_secrets(encoded)
+            # 직렬화된 JSON을 자르면 이후 SQL json_extract까지 실패한다.
+            if len(encoded) > 4096:
+                preview = encoded
+                while True:
+                    preview = preview[:len(preview) // 2]
+                    bounded = json.dumps({"truncated": True, "original_chars": len(encoded),
+                                          "preview": preview}, ensure_ascii=False)
+                    if len(bounded) <= 4096:
+                        encoded = bounded
+                        break
             seq = _save_trajectory_event(tr, str(kind)[:80], encoded)
             tr.seq = max(tr.seq, seq)
         return {"run_id": tr.run_id, "event_seq": seq, "episode_id": tr.episode_id}
@@ -1236,6 +1246,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
     각 주행의 시간·에이전트·요청·해마점수·판단·평가결과·라운드·소요를 한 줄에 담는다.
     분석 스위치가 쓰는 목록이라 log 가 남아있는 episode_log 기준(요약만 남은 옛 주행 제외).
     """
+    conn = None
     try:
         conn = _get_db()
         rows = conn.execute(
@@ -1262,6 +1273,7 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
                     SUM(kind='ibl.started' AND COALESCE(json_extract(data, '$.code_chars'), 1)>0) coded,
                     SUM(CASE WHEN kind='ibl.started' THEN COALESCE(json_extract(data, '$.action_count'), 0) END) actions
                     FROM trajectory_event WHERE episode_id IN ({marks})
+                    AND kind IN ('supervision.tool.started', 'ibl.started') AND json_valid(data)
                     {'' if include_test else "AND COALESCE(source, 'usage') <> 'test'"}
                     GROUP BY episode_id""", [item["id"] for item in items]).fetchall()
             # IBL 실행 = 코드를 실은 호출(설명 조회·결과 읽기 제외) + 엔진 진입 전 거절된 시도. 액션 = 쓴 어휘 수.
@@ -1273,7 +1285,12 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
                 "AND kind='model.round' "
                 + ("" if include_test else "AND COALESCE(source,'usage') <> 'test' ")
                 + "ORDER BY rowid", [item["id"] for item in items]):
-                step = json.loads(row["data"])
+                try:
+                    step = json.loads(row["data"])
+                except (ValueError, TypeError):
+                    continue
+                if not isinstance(step, dict):
+                    continue
                 rounds.setdefault(row["episode_id"], []).append({**step, "event": "round"})
             for item in items:
                 item["is_running"] = item["ended_at"] is None
@@ -1283,10 +1300,10 @@ def get_episode_journal(limit: int = 30, include_test: bool = False):
                 if observed:
                     # 진행 중에는 요약이 없다. 완료분도 실제 원장이 있으면 누락된 요약을 보완한다.
                     item["execution_rounds"] = max(item["execution_rounds"] or 0, observed)
-        conn.close()
         return items
-    except Exception:
-        return []
+    finally:
+        if conn is not None:
+            conn.close()
 
 
 def get_episode_detail(episode_id: int):

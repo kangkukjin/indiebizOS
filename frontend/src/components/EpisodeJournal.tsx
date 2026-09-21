@@ -95,7 +95,7 @@ export function EpisodeJournal() {
   }, []);
 
   // 펼칠 때 첫 1회만 조회(지연 로드) — 접혀 있을 땐 호출 안 함
-  const { retry: reload } = useRetryingLoad(load, { enabled: open && rows === null });
+  const { retry: reload, retrying } = useRetryingLoad(load, { enabled: open && rows === null });
   useEffect(() => {
     if (!open || loading || !rows?.some(ep => ep.is_running)) return;
     const timer = setTimeout(() => { void load().catch(() => {}); }, 5000);
@@ -138,7 +138,7 @@ export function EpisodeJournal() {
 
       {open && rows === null && (
         <div className="text-xs text-stone-400 flex items-center gap-1.5">
-          <Loader2 size={12} className="animate-spin" /> 기록 불러오는 중…
+          <Loader2 size={12} className="animate-spin" /> {retrying ? '기록 조회에 실패해 다시 연결하는 중…' : '기록 불러오는 중…'}
         </div>
       )}
       {open && rows !== null && rows.length === 0 && (

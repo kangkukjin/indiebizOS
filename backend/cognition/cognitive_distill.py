@@ -663,6 +663,7 @@ AI 답변: {ai_response[:1400]}
                 state = ledger.read(key)
                 confirmed = [r["id"] for name, r in state["receipts"].items()
                              if name.startswith("deep:") and r.get("status") == "same" and r.get("id")]
+                log(f"[통합증류] 상태={state['status']} — 종류별 선별·생략 사유는 증류 원장에 보존")
                 ledger.once(key, "feedback", lambda: self._after_response(
                     user_message, response, tool_calls=tool_calls, hippo_score=hippo_score,
                     top_code=top_code, write_experience=False, write_deep=False, write_forage=False,
@@ -695,14 +696,14 @@ AI 답변: {ai_response[:1400]}
             evaluation.get("status") not in {"UNKNOWN", "NOT_ACHIEVED"}
             and evaluation.get("achieved", True)
         )
-        if not write_deep:
+        if not write_deep and deep_confirmed is None:
             log("[심층메모리] 주인이 직접 한 말이 아닌 턴(에이전트·예약·미선언) 또는 표면 제외 — 생략")
-        elif memory_approved:
+        elif write_deep and memory_approved:
             try:
                 self._distill_deep_memory(user_message, response)
             except Exception as e:
                 log(f"[심층메모리] 오류 (무시): {e}")
-        else:
+        elif write_deep:
             log("[심층메모리] 검수 미완료 — 장기 기억 저장 생략")
         # 3) 포식 기억 증류(냄새지도).
         if write_forage:

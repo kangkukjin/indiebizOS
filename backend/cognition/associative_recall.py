@@ -422,8 +422,6 @@ def _world_memory(req: RecallRequest, recall: Recall, **_route_kw) -> Optional[B
 # 갱신 규칙은 각 기억의 것 그대로다 — 해마 success_rate 는 record_recall_outcome, 심층 used_at 은 증류 SAME/UPDATE·
 # 명시 조회(touch). 여기서는 무엇이 제시됐고 무엇이 쓰였는지를 한 경로로 남길 뿐, 점수·성공률을 고치지 않는다.
 
-_PAIR_RE = re.compile(r"\[([a-z_-]+):([a-z_-]+)\]")
-_FN_RE = re.compile(r"\[fn:\s*([^\]\s]+)\s*\]")
 _DEEP_RECALL_RE = re.compile(r"\[self:memory\]\s*\{([^}]*)\}")
 _QUOTED_RE = re.compile(r'(\w+)\s*:\s*"([^"]*)"')
 
@@ -439,20 +437,14 @@ def _ibl_codes(tool_calls) -> List[str]:
 
 
 def _used_hippocampus(ids, join, ev) -> Dict[str, Any]:
-    """실행 절차 — 제시 용례의 [node:action] 쌍이 이 턴의 execute_ibl 에 실제로 등장했나(record_recall_outcome 과 같은 규칙).
-    관용구는 `[fn:이름]` 호출로도 쓰인다. 증거 = executed."""
+    """동작 선택 인자와 호출 순서를 대조한다. 이름 호출도 같은 구문 관문을 쓴다."""
+    from ibl_distill_gates import recall_used
     codes = ev.get("ibl_codes") or []
-    run_pairs = set()
-    for c in codes:
-        run_pairs |= set(_PAIR_RE.findall(c))
-    called = set()
-    for c in codes:
-        called |= set(_FN_RE.findall(c))
     used = []
     for it in join.get("items") or []:
-        pairs = set(_PAIR_RE.findall(it.get("code") or ""))
         alias = it.get("alias") or ""
-        if (pairs and pairs & run_pairs) or (alias and alias in called):
+        if (recall_used(it.get("code"), codes)
+                or (alias and recall_used(f'[fn:{alias}]{{}}', codes))):
             used.append(it["id"])
     return {"used": used, "evidence": "executed", "ibl_calls": len(codes)}
 

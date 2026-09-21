@@ -59,6 +59,43 @@ def _actions_of(code: str) -> set:
     return set(_head_seq(code))
 
 
+def recall_used(reference, calls):
+    """호출 순서와 동작 선택 인자가 일치한 용례만 사용으로 귀속한다.
+
+    검색어·파일 경로 같은 작업 대상은 달라도 된다. 문자열 속 코드, 미해석 블록의
+    분기·반복·지연 본문은 실행 증거로 추정하지 않는다. 점수·저장소는 건드리지 않는다.
+    """
+    from ibl_parser import parse, IBLSyntaxError
+
+    def signatures(code, strict=False):
+        try:
+            steps = parse(code or "")
+        except (IBLSyntaxError, ValueError, TypeError, KeyError):
+            return []
+        result = []
+        for step in steps:
+            if step.get('_node') and step.get('action'):
+                params = step.get('params') or {}
+                result.append((step['_node'], step['action'],
+                               {key: params[key] for key in ('op', 'mode', 'source', 'store', 'format', 'do')
+                                if key in params}))
+            elif strict and not step.get('_var_emit'):
+                return []
+        return result
+
+    expected = signatures(reference, strict=True)
+    actual = [sig for code in calls for sig in signatures(code)]
+    if not expected:
+        return False
+    index = 0
+    for sig in actual:
+        if sig == expected[index]:
+            index += 1
+            if index == len(expected):
+                return True
+    return False
+
+
 def _heads_grounded(code: str, ibl_calls: list) -> bool:
     """증류 코드의 액션 머리 집합이 실행된 호출들의 머리 집합 안에 있는가.
 

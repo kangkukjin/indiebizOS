@@ -150,23 +150,41 @@ def model_input(prepared):
             visible[kind] = {**section, 'units': [u for u in section['units'] if u['id'] in section['allowed_ids']]}
         else:
             visible[kind] = section
-    return {'snapshot': prepared['snapshot'], 'sections': visible, 'skip_reasons': prepared['skip_reasons']}
+    omitted = prepared.get('omitted_context', [])
+    for kind, key in (('execution', 'topic_map'), ('deep', 'tree')):
+        if f'{kind}.{key}' in omitted and kind in visible:
+            visible[kind].pop(key, None)
+    result = {'snapshot': prepared['snapshot'], 'sections': visible, 'skip_reasons': prepared['skip_reasons']}
+    if omitted:
+        result['omitted_context'] = omitted
+    return result
 
 
 def fit_input(prepared):
-    # 가장 작은 완결 구획부터 포함. 원문/비교 본문을 중간에서 잘라 저장하지 않는다.
-    ordered = sorted(prepared['sections'], key=lambda k: len(json.dumps(model_input({
-        **prepared, 'sections': {k: prepared['sections'][k]}}), ensure_ascii=False).encode()))
+    # 실행 근거 → 사용자 원문 → 공간 관측. 작은 부수 자료가 실행 전체를 밀어내지 않는다.
+    # 분류 목차는 먼저 덜어도 원문·비교 본문·검수 증거는 자르지 않는다.
+    ordered = [kind for kind in LIMITS if kind in prepared['sections']]
     selected = {}
+
+    def size(value):
+        return len((SYSTEM_PROMPT + json.dumps(model_input(value), ensure_ascii=False)).encode())
+
+    # 뒤에서 추가할 생략 사유까지 예산에 포함한다.
+    reasons = {**prepared['skip_reasons'], **{
+        kind: 'complete_section_exceeds_input_budget' for kind in ordered}}
     for kind in ordered:
-        trial = {**prepared, 'sections': {**selected, kind: prepared['sections'][kind]}}
-        size = len((SYSTEM_PROMPT + json.dumps(model_input(trial), ensure_ascii=False)).encode())
-        if size <= MAX_INPUT_BYTES:
+        trial = {**prepared, 'sections': {**selected, kind: prepared['sections'][kind]},
+                 'skip_reasons': reasons}
+        if size(trial) > MAX_INPUT_BYTES:
+            trial['omitted_context'] = [f'{section}.{field}' for section, field in (
+                ('execution', 'topic_map'), ('deep', 'tree')) if section in trial['sections']]
+        if size(trial) <= MAX_INPUT_BYTES:
             selected[kind] = prepared['sections'][kind]
+            prepared['omitted_context'] = trial.get('omitted_context', [])
         else:
             prepared['skip_reasons'][kind] = 'complete_section_exceeds_input_budget'
     prepared['sections'] = selected
-    prepared['input_bytes'] = len((SYSTEM_PROMPT + json.dumps(model_input(prepared), ensure_ascii=False)).encode())
+    prepared['input_bytes'] = size(prepared)
     return prepared
 
 

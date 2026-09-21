@@ -894,19 +894,9 @@ def _alias_of_code(code: str) -> str:
 
 
 def _recall_was_used(top_code: str, ibl_calls: list) -> bool:
-    """회상 top-1 의 [node:action]이 실행 궤적에 실제로 등장했는지 판정.
-
-    고점수 회상이라도 실행이 그 액션을 전혀 안 썼다면 표면 어휘만 닮은 가짜
-    유사도다(ep949: "자동화 조사" 질의에 [self:read] 회상 0.717 → 실행은 전부
-    sense:freelance/search — 임계만 넘겨 학습이 통째로 스킵됨). 이 경우 경험은
-    새 패턴이므로 증류를 막으면 안 된다. 판정은 node:action 쌍 교집합."""
-    top_pairs = set(re.findall(r'\[([a-z_-]+):([a-z_-]+)\]', top_code or ""))
-    if not top_pairs:
-        return False
-    for code in ibl_calls:
-        if top_pairs & set(re.findall(r'\[([a-z_-]+):([a-z_-]+)\]', code or "")):
-            return True
-    return False
+    """사용 집계와 같은 동작·순서 관문으로 top-1 성공/실패를 귀속한다."""
+    from ibl_distill_gates import recall_used
+    return recall_used(top_code, ibl_calls)
 
 
 # ── 접지·구문 관문은 ibl_distill_gates.py 로 분할(2026-09-06, 1500줄 관문) — 이름은 여기서 다시 내보낸다 ──

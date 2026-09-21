@@ -98,6 +98,7 @@ def durable_source_units(user):
 def _append_durable_unit(units, part, quoted, uncertain, addressed=False, doc_basis=""):
     part = part.strip()
     if part:
+        has_content = any(char.isalnum() for char in part)
         request = bool(re.search(r"[?？]|(?:해줘|해주세요|해\s*주세요|알려줘|봐줘|할까|있나|되나)[.!]?$", part))
         if quoted:
             attribution, basis = "quoted", "quoted_block"
@@ -106,10 +107,11 @@ def _append_durable_unit(units, part, quoted, uncertain, addressed=False, doc_ba
         elif uncertain:
             attribution, basis = "unresolved", doc_basis or "document"
         else:
-            attribution, basis = "user_candidate", ("request" if request else "user_statement")
+            attribution, basis = "user_candidate", (
+                "punctuation_only" if not has_content else "request" if request else "user_statement")
         units.append({"id": len(units) + 1, "role": "user", "text": part,
                       "attribution": attribution, "basis": basis,
-                      "eligible": attribution == "user_candidate" and not request})
+                      "eligible": attribution == "user_candidate" and not request and has_content})
 
 # 지시 대상 관문(2026-09-17 기억 재고 감사) — 원문 문장 단위 저장의 그림자: 떼어 놓으면 무엇에 관한
 # 말인지 알 수 없는 조각("그런데 나는 그 차이가 중요하다고 생각하는거지."). 판단(이 말이 혼자 서는가)은

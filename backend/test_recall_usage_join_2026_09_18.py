@@ -2,7 +2,7 @@
 
 무엇을 고정하나:
   ① 공급원마다 제시 id 와 결합 키(join)가 payload 로 나오고, 사건에는 id·건수만 실린다(4KB 절단에 안전).
-  ② 해마: 제시 용례의 [node:action] 쌍이 실행에 등장해야 '사용'(record_recall_outcome 과 같은 규칙), 관용구는 [fn:이름].
+  ② 해마: 동작 선택 인자와 호출 순서가 일치해야 '사용'(record_recall_outcome 과 같은 규칙), 관용구는 [fn:이름].
   ③ 세계 지도(두 채널): 이름·별칭이 응답이나 코드에 나타나면 'mentioned' — 약한 증거로 종류가 남는다.
   ④ 심층: 명시 조회(node 아래·expand #id)=expanded, 증류가 used_at 을 올림=confirmed. 자동 회상은 사용이 아니다.
   ⑤ 점수·성공률은 여기서 고치지 않는다 — 사용 해석기는 DB 를 쓰지 않는다.

@@ -14,7 +14,7 @@ import json
 import base64
 import threading
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, timezone
 from contextlib import contextmanager
 from typing import Optional, List, Dict
 from history_excerpt import history_excerpt, HISTORY_TEXT_CHARS
@@ -429,7 +429,7 @@ class ConversationDB:
                 "from_agent_id": row[1],
                 "to_agent_id": row[2],
                 "content": row[3],
-                "timestamp": row[4]
+                "timestamp": self.message_timestamp(row[4])
             } for row in cursor.fetchall()]
 
     def mark_messages_delivered(self, message_ids: list) -> int:
@@ -463,8 +463,26 @@ class ConversationDB:
                 "from_agent_id": row[1],
                 "to_agent_id": row[2],
                 "content": row[3],
-                "timestamp": row[4]
+                "timestamp": self.message_timestamp(row[4])
             } for row in cursor.fetchall()]
+
+    @staticmethod
+    def message_timestamp(message_time):
+        """messages.message_time의 SQLite UTC를 시간대가 명시된 ISO 시각으로 전달한다.
+
+        CURRENT_TIMESTAMP는 UTC이나 시간대 표식이 없다. 그대로 JS Date에 넘기면
+        클라이언트 현지 시각으로 오해한다. 저장 원문은 유지하고 읽기 경계에서만 정규화한다.
+        다른 저장소의 현지 시각에는 이 계약을 적용하지 않는다.
+        """
+        if not message_time:
+            return message_time
+        try:
+            moment = datetime.fromisoformat(str(message_time))
+            if moment.tzinfo is None:
+                moment = moment.replace(tzinfo=timezone.utc)
+            return moment.astimezone(timezone.utc).isoformat().replace('+00:00', 'Z')
+        except (TypeError, ValueError):
+            return message_time
 
     @staticmethod
     def _time_prefix(message_time) -> str:
@@ -476,9 +494,9 @@ class ConversationDB:
         assistant 메시지에는 붙이지 않는다 — 과거 자기 응답의 [시각] 머리를
         모방해 새 응답에 타임스탬프를 달기 시작하는 위험 방지."""
         try:
-            t = str(message_time).replace("T", " ")[:16]
-            return f"[{t}] " if len(t) == 16 else ""
-        except Exception:
+            moment = datetime.fromisoformat(ConversationDB.message_timestamp(message_time))
+            return f"[{moment.astimezone().strftime('%Y-%m-%d %H:%M %z')}] "
+        except (TypeError, ValueError):
             return ""
 
     def get_history_for_ai(self, agent_id: int, user_id: int = 1, limit: int = None) -> list:
@@ -486,7 +504,7 @@ class ConversationDB:
 
         최근 N턴은 원본 유지, 오래된 긴 턴은 결과 쪽을 더 넓게 남기는 원문 발췌
         최근 턴의 이미지는 파일에서 로드하여 포함
-        user 메시지에는 절대 시각 프리픽스([YYYY-MM-DD HH:MM])를 붙여 시간 접지
+        user 메시지에는 현지 절대 시각·UTC 오프셋([YYYY-MM-DD HH:MM +HHMM])을 붙여 시간 접지
         """
         if limit is None:
             limit = HISTORY_LIMIT_USER

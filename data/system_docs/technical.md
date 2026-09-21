@@ -260,6 +260,10 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 - **프로젝트 에이전트 심층메모리**: `projects/{id}/memory_{agent}.db` (SQLite, 시맨틱 검색)
 - **World Pulse DB**: `data/world_pulse.db` (SQLite — pulse_log, self_checks, action_health, episode_log, episode_summary, trajectory_event, ibl_code_corpus[IBL 문장 원문·성공/실패 누계, 2026-09-06])
 - **대화 이력**: `projects/{id}/conversations.db` (SQLite)
+  - `messages.message_time`은 SQLite `CURRENT_TIMESTAMP`의 UTC다. 대화 API는 시간대를
+    명시한 ISO 8601(`Z`)로 전달하고 화면은 기기의 현지 시간으로 표시한다. AI용 이력은
+    서버 현지 시간과 UTC 오프셋을 함께 붙인다. 저장 원문을 시간대에 맞춰 이동하지 않는다.
+    [대화 시간대 수리](../../docs/CHAT_TIMESTAMP_TIMEZONE_2026_09_21.md).
 - **도구 패키지(보유 전체)**: `data/packages/{installed,not_installed}/tools/` — 두 폴더의 합집합이 보유이고 사전집 `ibl_nodes.yaml` 은 보유 전체로 빌드된다. **몸별 활성 원장**: `data/vocabulary/activation.json`(`vocabulary_state.py`, `{revision, active:{묶음:bool}, desktop}` — 활성 선택의 유일한 정본, 최초 이관 뒤 폴더명은 활성 의미 없음, PC·폰 비동기화, 2026-09-13). **어휘 보호 선언**: `data/vocabulary_policy.yaml`(`standard_nodes`·`required_packages`·`bundle_splits` — 분리된 묶음이 원본의 선택·배치를 한 번 계승)
 - **비즈니스 DB**: `data/business.db` (SQLite)
 - **해마 (IBL 사용량) DB**: `data/ibl_usage.db` (SQLite — ibl_examples + FTS5 + vec0)

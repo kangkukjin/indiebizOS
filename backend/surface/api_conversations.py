@@ -105,7 +105,7 @@ async def get_messages(project_id: str, agent_id: str, limit: int = 50, offset: 
                     # 이 메시지가 해당 에이전트 발신인지 — 원격 런처가 숫자 id 를 몰라도 라벨/필터 가능하게.
                     "is_agent": (row[1] == num_id),
                     "content": row[3],
-                    "timestamp": row[4]
+                    "timestamp": db.message_timestamp(row[4])
                 })
 
         return {"messages": messages, "agent_id": num_id}
@@ -154,7 +154,7 @@ async def get_conversation_partners(project_id: str, agent_id: int):
                     "id": row[0],
                     "name": row[1],
                     "type": row[2],
-                    "last_message_time": row[3],
+                    "last_message_time": db.message_timestamp(row[3]),
                     "message_count": row[4]
                 })
 
@@ -228,7 +228,7 @@ async def get_messages_between(project_id: str, agent1_id: int, agent2_id: int, 
                     "from_agent_id": row[1],
                     "to_agent_id": row[2],
                     "content": row[3],
-                    "timestamp": row[4]
+                    "timestamp": db.message_timestamp(row[4])
                 })
 
         return {"messages": messages}

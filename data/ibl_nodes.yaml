@@ -8493,7 +8493,7 @@ nodes:
         returns: transform
         flow:
           accepts: items
-          emits: same
+          emits: items
           columns: keep
           reads_fields:
           - where
@@ -8519,7 +8519,7 @@ nodes:
         returns: transform
         flow:
           accepts: items
-          emits: same
+          emits: items
           columns: keep
           reads_fields:
           - by
@@ -8710,7 +8710,7 @@ nodes:
         returns: transform
         flow:
           accepts: items
-          emits: same
+          emits: items
           columns: keep
           reads_fields:
           - by
@@ -8740,7 +8740,7 @@ nodes:
         returns: transform
         flow:
           accepts: items
-          emits: same
+          emits: items
           columns: keep
           reads_fields:
           - by

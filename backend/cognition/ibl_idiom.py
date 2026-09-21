@@ -499,10 +499,15 @@ def _workflow_code_by_name(name: str):
     return None
 
 
-try:
+def register_type_sources():
+    """콜드 검수도 호출한다. 모듈 import 순서에 반환형 조회가 의존하지 않게 한다."""
     from ibl_typecheck import register_fn_code_source as _reg_fn_src
     _reg_fn_src(_workflow_code_by_name)
     _reg_fn_src(_phrase_code_by_alias)
+
+
+try:
+    register_type_sources()
 except Exception:
     pass
 

@@ -11,7 +11,7 @@ actions:
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
-      emits: same
+      emits: items
       columns: keep
       reads_fields: [where]
       row_condition_params: [where, condition]  # 첫 비어 있지 않은 슬롯, 실행 파서와 공유
@@ -34,7 +34,7 @@ actions:
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
-      emits: same
+      emits: items
       columns: keep
       reads_fields: [by]
     runs_on: anywhere
@@ -209,7 +209,7 @@ actions:
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
-      emits: same
+      emits: items
       columns: keep
       reads_fields: [by]
     runs_on: anywhere
@@ -235,7 +235,7 @@ actions:
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
-      emits: same
+      emits: items
       columns: keep
       reads_fields: [by]
     # 검침 원장(data/table_since.db) 갱신 — 자가점검 순찰·dry-run 이 기준선을 올리면

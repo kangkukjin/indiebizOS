@@ -684,6 +684,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         # 정적 통화 검사 (2026-09-05, ibl_typecheck — docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-4)
         #   check:true = 실행 없이 문장별 통화·열(types)과 문제(issues)만 돌려준다(모델의 탐침 자리, 0토큰·부작용 0).
         #   그 외 = 확정 error 가 있으면 **실행 전에** 거절(부수효과 0·앞 단 재실행 0). warning 은 막지 않는다(미상은 초록).
+        from ibl_idiom import register_type_sources
+        register_type_sources()
         from ibl_typecheck import typecheck as _typecheck, format_issues as _fmt_issues
         from ibl_turn_vars import types_for as _types_for
         _tc = _typecheck(parsed, _tc_vars, given=_types_for(_live, _tkey))

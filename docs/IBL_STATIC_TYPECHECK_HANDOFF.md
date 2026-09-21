@@ -100,7 +100,7 @@ flow:
 
 | 액션 | accepts | emits | columns | 근거 |
 |---|---|---|---|---|
-| table:filter / sort / take / dedup / since | items | same | keep | 행만 고른다 |
+| table:filter / sort / take / dedup / since | items | items | keep | 행만 고른다. 미상·JSON 입력도 성공 결과는 items |
 | table:select | items | items | subset(`columns`) | 열이 확정된다 → 뒤 문장의 없는 열은 **확정 오류** |
 | table:rename | items | items | rename(`map`) | |
 | table:compute | items | items | add(`set`) | 파생 열이 확정 추가된다 |

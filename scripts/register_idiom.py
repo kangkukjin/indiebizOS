@@ -41,7 +41,7 @@ def _db_path():
     return str(get_base_path() / "data" / "ibl_usage.db")
 
 
-def _gates(name: str, when: str, code: str):
+def _gates(name: str, when: str, code: str, *, metadata_only=False):
     """등록 관문 — 자동 증류가 쓰던 바로 그 관문들. 방아쇠만 사람에게 갔지 자는 그대로다."""
     from ibl_parser import parse_function_body
     from ibl_usage_rag import _validate_ibl_actions
@@ -56,10 +56,10 @@ def _gates(name: str, when: str, code: str):
         return None, f"이름이 규약에 안 맞는다 — 권장: {sanitize_fn_name(name, name)}"
     # 이름은 **이번 사건이 아니라 되풀이될 모양**을 말한다(옛 반성기 프롬프트의 규약을 관문으로 옮겼다,
     # 2026-09-07): 12자를 넘으면 사건 이름일 확률이 크다 — 사건 이름은 다음 주행이 못 부른다.
-    if len(name) > NAME_MAX_CHARS:
+    if not metadata_only and len(name) > NAME_MAX_CHARS:
         return None, (f"이름 {len(name)}자 — 상한 {NAME_MAX_CHARS}. 이번 사건이 아니라 되풀이될 모양의 "
                       f"동사 골격만 남겨라(나쁜 예 '오버레이레이아웃무관허용및재적용')")
-    if not when or len(when.strip()) < 10:
+    if not metadata_only and (not when or len(when.strip()) < 10):
         return None, "`--when` 이 없다 — 지도는 뜻이 아니라 **부를 조건**을 싣는다(10자 이상)"
     try:
         parse_function_body(code)
@@ -77,7 +77,7 @@ def _gates(name: str, when: str, code: str):
     n = len(hippo_tree.split_sentences(code))
     # 일회성 관문(2026-09-07): 슬롯 0·슬롯 6+·얼어붙은 경로 리터럴 — 다시 부를 수 없는 몸에는 이름을 주지 않는다.
     why = uncallable_reason(sig, n, code) or _phrase_private_reason(code) or frozen_incident_reason(code, sig)
-    if why:
+    if why and not metadata_only:
         return None, why
     return {"signature": sig, "returns": return_type_of(code), "sentences": n}, None
 
@@ -195,16 +195,18 @@ def refresh_idiom_metadata(db, name):
     old = db.find_phrase_by_alias(name)
     if not old:
         raise ValueError(f"'{name}' 이 없다")
-    info, why = _gates(name, old["intent"], old["ibl_code"])
+    # 옛 이름·슬롯 개수의 승격 자격을 다시 심사하지 않는다. 본문 검증은 그대로 한다.
+    info, why = _gates(name, old["intent"], old["ibl_code"], metadata_only=True)
     if why:
         raise ValueError(f"계약 갱신 거절 — {why}")
     signature = _signature_of(old["ibl_code"])
     changed = old.get("returns") != info["returns"] or old.get("signature") != signature
     with db._get_connection() as conn:
         conn.execute("BEGIN IMMEDIATE")
-        current = conn.execute("SELECT ibl_code, intent FROM ibl_examples WHERE id=?",
+        current = conn.execute("SELECT ibl_code, intent, alias FROM ibl_examples WHERE id=?",
                                (old["id"],)).fetchone()
-        if not current or current["ibl_code"] != old["ibl_code"] or current["intent"] != old["intent"]:
+        if (not current or current["ibl_code"] != old["ibl_code"]
+                or current["intent"] != old["intent"] or current["alias"] != name):
             raise ValueError("검사 중 정의가 바뀌었습니다 — 다시 갱신하세요")
         conn.execute("UPDATE ibl_examples SET returns=?, signature=? WHERE id=? AND ibl_code=? AND intent=?",
                      (info["returns"], signature, old["id"], old["ibl_code"], old["intent"]))

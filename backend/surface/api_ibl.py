@@ -566,6 +566,8 @@ async def validate_ibl(req: ValidateRequest):
 
 def _typecheck_of(code: str) -> dict:
     try:
+        from ibl_idiom import register_type_sources
+        register_type_sources()
         from ibl_typecheck import typecheck_code
         return typecheck_code(code)
     except Exception as e:                       # 검사기가 검수를 죽이면 안 된다

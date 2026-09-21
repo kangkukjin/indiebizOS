@@ -74,6 +74,8 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 저장 0건을 정상으로 두며, 선택한 절차의 출처를 보존한다. [증류 효용 보강](../../docs/DISTILL_VALUE_2026_09_20.md).
 판정 관용구 두 개는 items 반환 계약과 원천·크롤 실패 집계를 유지한다. 등록 계약 재산정은
 본문·실적을 보존한다. [관용구 등록 수리](../../docs/JUDGMENT_IDIOM_REGISTRATION_REPAIRS_2026_09_21.md).
+전체 관용구 반환형을 재검사하고, 빈 파일 후보와 콜드 검수의 계약 유실을 고쳤다.
+[반환 계약 수리](../../docs/IDIOM_RETURN_REPAIRS_2026_09_21.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

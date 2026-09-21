@@ -231,8 +231,9 @@ class _Checker:
             if isinstance(born, dict):
                 for n, slot in born.items():
                     try:
-                        self.env[int(slot)] = T("unknown", conditional=True)
+                        self.env.setdefault(int(slot), T("unknown", conditional=True))
                         self.names[int(slot)] = n
+                        self.name_to_idx[n] = int(slot)
                     except (TypeError, ValueError):
                         pass
             prev = t
@@ -262,6 +263,9 @@ class _Checker:
             return self._type_sub(st.get("_branch_steps") or [], prev)
         if st.get("_condition"):
             outs = [self._type_body((b or {}).get("action"), prev) for b in (st.get("branches") or [])]
+            if not any(b.get("condition") is None for b in (st.get("branches") or [])):
+                # 불일치 때 파이프의 직전 통화를 그대로 통과시킨다.
+                outs.append(prev if prev is not None else T("prose"))
             return join(outs)
         if st.get("_case"):
             outs = [self._type_body((b or {}).get("action") if isinstance(b, dict) else b, prev)
@@ -277,7 +281,11 @@ class _Checker:
                 self._type_body(st.get("finally"), prev)
             return join(outs)
         if st.get("_repeat"):
-            self._type_body(st.get("body"), prev)
+            bindings = {}
+            # 반복 중 재할당되는 값은 첫 회차의 타입으로 고정하지 않는다.
+            self._type_body(st.get("body"), prev, bindings, st.get("body_vars") or {})
+            for name, slot in (st.get("_born_vars") or {}).items():
+                self.env[int(slot)] = bindings.get(name, unknown()).copy(conditional=True)
             return T("items") if st.get("collect") else unknown()
         if st.get("_goal"):
             return unknown()
@@ -290,11 +298,19 @@ class _Checker:
         return self._type_action(st, node, action, prev, idx)
 
     def _type_assign(self, st, idx):
-        """값 구성의 모양을 그대로 읽는다. 참조 값·조건식 결과는 추측하지 않는다."""
+        """값 구성과 통짜 참조의 모양을 읽는다. 임의 식의 결과는 추측하지 않는다."""
         import ast
-        from common.ibl_vars import REF_RE
+        from common.ibl_vars import REF_RE, split_ref
         from common.safe_expr import compile_expr
-        expr = REF_RE.sub('_value', str(st.get('expr') or ''))
+        raw = str(st.get('expr') or '').strip()
+        ref = REF_RE.fullmatch(raw)
+        if ref:
+            name, path = split_ref(ref)
+            value = self._type_var_emit({'name': name, 'path': path,
+                                         '_vars': st.get('_vars') or {}}, idx)
+            # 식으로 꺼낸 산문은 문자열 값이다. 미상 참조를 scalar로 단정하지 않는다.
+            return value.copy(kind='scalar') if value.kind == 'prose' else value.copy()
+        expr = REF_RE.sub('_value', raw)
         try:
             compile_expr(expr)
             body = ast.parse(expr, mode='eval').body
@@ -318,14 +334,17 @@ class _Checker:
             return self.type_step(b, prev, idx)
         return unknown()
 
-    def _type_body(self, body: Any, prev: Optional[T]) -> T:
+    def _type_body(self, body: Any, prev: Optional[T], bindings=None, reset_names=()) -> T:
         """블록의 슬롯은 지역 번호다. 바깥 변수는 번호가 아닌 이름으로 계승한다."""
         if body is None:
             return unknown()
         steps = body if isinstance(body, list) else [body] if isinstance(body, dict) else []
-        sub = _Checker(None, self.fn_depth, given=self._scope_types())
+        given = {**self._scope_types(), **{name: unknown() for name in reset_names}}
+        sub = _Checker(None, self.fn_depth, given=given)
         sub.fn_defs, sub.fn_returns = self.fn_defs, self.fn_returns
         out = sub.run(steps, prev)
+        if bindings is not None:
+            bindings.update(sub._scope_types())
         self.issues.extend({**issue, 'statement': self.stmt} for issue in sub.issues)
         return out
 
@@ -746,7 +765,7 @@ class _Checker:
         lit = params.get(cparam) if cparam else None
         row_input = base_for_fields or T("items", in_cols, in_closed)
         if columns == 'left':
-            return inp.branches[0].copy() if inp is not None and inp.branches else T('items')
+            return inp.branches[0].copy(kind='items') if inp is not None and inp.branches else T('items')
         if columns in (None, "keep"):
             return (bundle_rows(inp).copy(kind="items") if inp is not None
                     else T("items", in_cols, in_closed))
@@ -956,6 +975,7 @@ class _Checker:
             return unknown()
         key = hashlib.sha1(code.encode("utf-8")).hexdigest()
         if key in _FN_CACHE:
+            self.fn_returns[name] = describe(_FN_CACHE[key])
             return _FN_CACHE[key]
         try:
             from ibl_parser import parse_function_body      # 함수 몸 — 자유 변수가 시그니처(2026-09-07)

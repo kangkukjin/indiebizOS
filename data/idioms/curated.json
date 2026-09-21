@@ -96,8 +96,8 @@
       "name": "최신파일읽기",
       "when": "폴더에서 패턴에 맞는 파일 중 수정일이 가장 최근인 파일의 앞 160줄을 읽을 때. 검색 상한 200건·수정시각 분 단위이므로 잘림·동률에 주의한다.",
       "topic": "찾기",
-      "body": "$최신 = [self:file_find]{path: \"${폴더}\", pattern: \"${패턴}\"} >> [table:filter]{where: {field: \"is_dir\", op: \"eq\", value: false}} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$return = $최신 >> [self:read]{limit: 160}",
-      "inputs": "폴더: 검색 경로, 패턴: 파일 글롭. 전체 최신을 보장하려면 200건 이내로 폴더·패턴을 좁힌다.",
+      "body": "$최신 = [self:file_find]{path: \"${폴더}\", pattern: \"${패턴}\"} >> [table:filter]{where: {field: \"is_dir\", op: \"eq\", value: false}} >> [table:sort]{by: \"mtime\", desc: true} >> [table:take]{n: 1}\n$return = $최신 >> [if:not empty($items)]{[self:read]{limit: 160}}",
+      "inputs": "폴더: 검색 경로, 패턴: 파일 글롭. 전체 최신을 보장하려면 200건 이내로 폴더·패턴을 좁힌다. 반환은 본문 문자열이며, 후보가 없으면 빈 items를 반환한다.",
       "example": "[fn:최신파일읽기]{폴더: \"보고서\", 패턴: \"*.md\"} >> [table:brief]{instruction: \"직전 보고서의 핵심만 정리\"}",
       "always_on": false
     },
@@ -270,6 +270,15 @@
       "body": "$준비 = $목록 >> [self:script]{op:\"run\",id:\"판정관용구\",args:{op:\"prepare\",mode:\"body\",source:$목록,question:$질문,limit:$개수,context:$문맥}}\n$판정 = $준비 >> [table:each]{limit:$준비.count,on_error:\"stop\"} {\n  [table:judge]{items:$it.items,instruction:$준비.instruction}\n}\n$선별 = [self:script]{op:\"run\",id:\"판정관용구\",args:{op:\"select\",mode:\"body\",prepared:$준비.plan,judged:{items:$판정.items,error_count:$판정.error_count},limit:$개수,context:$문맥}}\n$return = $선별.selection >> [table:take]{n:$선별.count}",
       "inputs": "앞 통화 또는 목록: items(명시 목록 우선). 질문: 관련성을 판단할 자연어 질문. 개수: 0 이상의 선별 상한(0이면 Jev·크롤 호출 없음; 원천 실패 행은 보존). Jev로 일괄 판정하며 생성형 요약은 하지 않는다. unknown·자료 부족·단일 요청보다 큰 행은 보존하고 명확한 false만 제외한다. 판정 통신·형식 실패는 중단한다. 큰 입력은 100행·요청 크기 안에서 여러 호출로 나눈다. selection_info에 제외·불확실·미판정·상한 생략 건수, judgment_audit에 행별 판정을 반환한다. 원본을 변수에 보존하면 제외 자료도 재검토할 수 있다. 의미 선별이 필요할 때만 사용하며 정확한 문자열 조건은 결정론 관용구를 쓴다. 목록은 text·url 문단 items, 문맥은 같은 URL의 앞뒤 입력 행수(0 이상). Jev도 같은 문맥을 보고 중심 문단을 판단한다. 개수는 관련·불확실·미판정 중심 문단의 상한이며 문맥 때문에 반환 행수는 더 많을 수 있다. 다른 URL·실패 행을 넘지 않고 출처 없는 행은 자체만 반환한다. 겹치는 문맥은 중복 없이 원래 순서로, 실패 행은 상한과 무관하게 보존하고 error_count·partial로 신고한다. 이미 필터링한 입력의 누락 문단은 복원하지 못한다.",
       "example": "$원문=[sense:crawl]{url:\"https://example.com\"}; $원문 >> [fn:의미로본문찾기]{질문:\"이 제도의 적용 예외와 제한은 무엇인가?\",문맥:1,개수:5}"
+    },
+    {
+      "name": "직전보고서찾아읽기",
+      "when": "폴더에서 패턴에 맞는 파일 중 이름순으로 가장 마지막 파일 하나를 찾아 내용을 읽는다.",
+      "topic": "보고서",
+      "body": "$직전파일 = [self:file_find]{path: \"${폴더}\", pattern: \"${패턴}\"} >> [table:filter]{where:{field:\"is_dir\",op:\"eq\",value:false}} >> [table:sort]{by: \"name\", desc: true} >> [table:take]{n: 1}; $직전 = $직전파일 >> [if:not empty($items)]{[self:read]{limit: 160}}",
+      "inputs": "폴더: 검색 경로, 패턴: 파일 글롭. 이름 내림차순 첫 파일의 앞 160줄을 반환한다. 반환은 본문 문자열이며 후보가 없으면 빈 items다. 디렉터리는 제외한다. 검색 상한은 200건이다.",
+      "example": "[fn:직전보고서찾아읽기]{폴더:\"reports\",패턴:\"*.md\"}",
+      "always_on": false
     }
   ]
 }

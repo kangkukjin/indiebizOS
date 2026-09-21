@@ -4,7 +4,7 @@
 
 새 액션은 **아래 절차를 모두 완료**한다. 누락하면 에이전트가 액션을 사용할 수 없다.
 
-> **갱신 (2026-07 능력 자기완결화 반영)**: 도구 패키지의 액션 정의는 **그 패키지 폴더 안 `ibl_actions.yaml`**에 산다 — 코드(handler)와 어휘(액션 정의)가 한 능력에 원자적으로 묶여, 설치/제거로 어휘가 함께 들고난다(설치된 37개 도구 중 36개가 이 형식). `scripts/build_ibl_nodes.py`가 **설치된 패키지들의 `ibl_actions.yaml` + 중앙 `data/ibl_nodes_src/`(6개 코어 노드의 backend-내장 액션)**를 병합해 런타임 파일 `data/ibl_nodes.yaml`을 만든다. 핸들러 시그니처는 ToolContext SDK(`execute(tool_input, context)`).
+> 어휘 정본은 각 패키지의 `ibl_actions.yaml`과 코어의 `data/ibl_nodes_src/`다. `scripts/build_ibl_nodes.py`가 합쳐 `data/ibl_nodes.yaml`을 만든다. 패키지의 코드·어휘는 함께 설치·제거하며, 핸들러는 ToolContext SDK의 `execute(tool_input, context)`를 따른다.
 >
 > → 즉 아래 2단계의 "src"는 **패키지 능력이면 그 패키지의 `ibl_actions.yaml`, 코어 노드 액션이면 중앙 `ibl_nodes_src/`**를 뜻한다. (옛 `register_actions()` *런타임 자동 등록*은 폐기 유지 — 지금은 등록이 아니라 **빌드 시 병합**이다.)
 
@@ -43,6 +43,8 @@
    옛 문구를 **이름 불러 거절하는** 자리(이행 진단·회귀 가드)는 그 줄이나 바로 윗줄에 `retired-ok:` 와 사유를 달아 통과시킨다.
 
 ---
+
+조건 슬롯은 `flow.row_condition_params`로 선언한다. [검증·실행 공유 규약](../../docs/IBL_STATIC_TYPECHECK_HANDOFF.md).
 
 ## 0.5단계: 역할과 통화 계약 — "올바른 어휘"의 정의
 

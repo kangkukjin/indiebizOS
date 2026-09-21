@@ -2270,7 +2270,7 @@
   "table:filter": {
    "fields": {
     "description": "20efef67e528",
-    "target_description": "6ef626c4cca1",
+    "target_description": "6c5845b1df91",
     "implementation": "551f98383af6",
     "returns": "5450ffb2cf8a",
     "target_key": "43f94244d00c",
@@ -2279,8 +2279,8 @@
     "router": "ebbb1532efbc",
     "tool": "47fa78a71bde"
    },
-   "reviewed": "2026-09-18",
-   "examples": 93
+   "reviewed": "2026-09-21",
+   "examples": 97
   },
   "table:flatten": {
    "fields": {

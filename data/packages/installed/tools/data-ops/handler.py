@@ -319,6 +319,8 @@ def _row_dicts(table):
 def _op_filter(prev, params):
     """where 문법 오류(모르는 연산자·깨진 정규식)를 정직 거절로 바꾸는 겉옷 (B19-1)."""
     try:
+        from common.row_conditions import validate_where
+        validate_where(params.get("where") or params.get("condition"))
         if "context" in params:
             return _load_sibling_where(__file__, "dataops_filter_context").run(prev, params, globals())
         return _op_filter_impl(prev, params)

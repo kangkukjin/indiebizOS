@@ -149,7 +149,8 @@ def _num_cmp(a, b):
     )
 
 
-_CMP_RE = re.compile(r"^\s*(.+?)\s*(>=|<=|==|!=|>|<|=)\s*(.+?)\s*$")
+# 기존 비교 기호(><=)와 붙은 연산자 전체를 읽는다. 검색어의 단독 !·~는 보존.
+_CMP_RE = re.compile(r"^\s*(.+?)\s*([!~]*[><=][><=!~]*)\s*(.*?)\s*$")
 
 # 워드 연산자(contains/in/matches/startswith/…)도 기호 연산자와 **같은 계약**으로 판다.
 # ★2026-08-22 상상훈련 19회차 B19-1: 옛 _CMP_RE 는 기호만 파서 `"아파트명 matches 자이"`
@@ -171,19 +172,71 @@ def _parse_where_str(where):
     """
     if not isinstance(where, str):
         return None
-    m = _CMP_RE.match(where)
-    if m:
-        field, op, val = m.group(1).strip(), m.group(2), m.group(3).strip()
-        if op == "=":
-            op = "=="
-    else:
-        m = _WORD_CMP_RE.match(where)
-        if not m:
-            return None
-        field, op, val = m.group(1).strip(), m.group(2).lower(), m.group(3).strip()
+    symbolic = _CMP_RE.match(where)
+    word = _WORD_CMP_RE.match(where)
+    # 값 속 기호(정규식 lookahead·URL의 =)를 연산자로 빼앗지 않는다.
+    # vj-ok: 행 값의 순서가 아니라 파서 토큰의 문자열 위치를 비교한다.
+    m = (word if word and (not symbolic or word.start(2) < symbolic.start(2))
+         else symbolic)
+    if not m:
+        return None
+    field, op, val = m.group(1).strip(), m.group(2).lower(), m.group(3).strip()
+    if op == "=":
+        op = "=="
+    _validate_operator(op)
+    if not val:
+        raise _WhereError("비교 값이 없습니다 — '필드 op 값' 또는 {field, op, value}로 쓰세요")
     if len(val) >= 2 and val[0] in "\"'" and val[-1] == val[0]:  # vj-ok: 인용부호 짝 검사
         val = val[1:-1]  # 따옴표 제거
     return field, op, val
+
+
+def _validate_operator(op):
+    if op not in _OPS:
+        raise _WhereError(
+            f"지원하지 않는 연산자 '{op}' — 쓸 수 있는 것: {', '.join(sorted(_OPS))}. "
+            '정규식은 {field:"title", op:"matches", value:"패턴"}으로 쓰세요'
+        )
+
+
+def validate_where(where, *, is_dynamic=None):
+    """행 없이 조건 전체를 검증하고 참조 필드를 반환한다(검사기·실행 공용).
+
+    빈 입력·논리식 단락 평가에도 문법 오류를 숨기지 않는다. 정적 검사만 동적
+    값 판별자를 주입하며, 값 비교·필드 존재 여부는 여기서 추측하지 않는다.
+    """
+    dynamic = is_dynamic or (lambda value: False)
+    if dynamic(where):
+        return []
+    if isinstance(where, str):
+        groups = _split_bool(where)
+        if groups:
+            return [field for group in groups for frag in group
+                    for field in validate_where(frag, is_dynamic=dynamic)]
+        parsed = _parse_where_str(where)
+        if not parsed:
+            return []
+        field, op, value = parsed
+    elif isinstance(where, list):
+        return [field for condition in where
+                for field in validate_where(condition, is_dynamic=dynamic)]
+    elif isinstance(where, dict):
+        field = where.get("field") or where.get("col") or where.get("column")
+        if field is None:
+            return _where_fields(where)
+        op, value = where.get("op", "=="), where.get("value")
+        if dynamic(op):
+            return [] if dynamic(field) else [str(field)]
+        op = str(op).lower()
+    else:
+        return []
+    _validate_operator(op)
+    if op == "matches" and not dynamic(value):
+        try:
+            re.compile(regex_text(str(value)))
+        except re.error as exc:
+            raise _WhereError(f"정규식 오류 '{value}': {exc}") from exc
+    return [] if dynamic(field) else [str(field)]
 
 
 _CONJ_RE = re.compile(r"\s+(and|or)\s+", re.IGNORECASE)

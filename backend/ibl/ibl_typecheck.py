@@ -664,6 +664,21 @@ class _Checker:
                 columns = value
         cparam = flow.get("columns_param")
         inp, _src = self._input_for(params, prev, flow)
+        # 조건 슬롯은 사전 선언으로 선택하고 실제 행 조건 파서로 검사한다.
+        condition_slots = flow.get("row_condition_params") or []
+        condition_fields = []
+        for pname in condition_slots:
+            if params.get(pname):
+                from common.ibl_vars import find_refs
+                from common.row_conditions import _WhereError, validate_where
+                try:
+                    condition_fields = validate_where(
+                        params[pname], is_dynamic=lambda v: isinstance(v, str)
+                        and ("{{" in v or bool(find_refs(v))))
+                except _WhereError as exc:
+                    self._issue("error", idx, at, f"조건 오류 — {exc}",
+                                expected="row condition")
+                break  # where/condition 별칭 우선순위는 런타임과 같다.
         # each 의 do — 안쪽 문장을 타입해 방출 열을 안다($it = 입력 행)
         do_t: Optional[T] = None
         if isinstance(params.get("do"), str) and params.get("do").strip():
@@ -699,6 +714,8 @@ class _Checker:
             base_for_fields = (self._bundle_union(base_for_fields) if accepts in ("same-kind", "pair")
                                else bundle_rows(base_for_fields))
         for pname in (flow.get("reads_fields") or []):
+            if pname in condition_slots:
+                continue
             if pname in flow.get('projection_params', []) and isinstance(params.get(pname), dict):
                 continue
             if columns == "rename" and pname == cparam:
@@ -706,6 +723,9 @@ class _Checker:
             if pname in params and base_for_fields is not None:
                 for f in self._fields_in(params[pname]):
                     self._check_field(base_for_fields, f, idx, at)
+        if base_for_fields is not None:
+            for field in condition_fields:
+                self._check_field(base_for_fields, field, idx, at)
 
         # ── emits ──
         if emits == "same":
@@ -904,7 +924,7 @@ class _Checker:
         out = sub.run(steps)
         # 리터럴 식의 구문 위반은 호출 인자와 무관하다. 반환 타입 추론에 묻지 않는다.
         for issue in sub.issues:
-            if issue.get("expected") == "scalar expression":
+            if issue.get("expected") in ("scalar expression", "row condition"):
                 self.issues.append({**issue, "statement": self.stmt,
                                     "at": f"fn.body › {issue['at']}"})
         # `$return = …` 규약 — 그 문장의 결과가 반환(마지막이 effect 여도 됨)

@@ -211,6 +211,12 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-09-08T06:17:58'
   timeout: 300
+판정관용구:
+  description: Jev 관용구의 결정론적 입력 분할·원문 복원. 판정 호출은 IBL table:judge가 소유한다.
+  file: judgment_idioms.py
+  interpreter: python
+  registered_at: '2026-09-21T21:58:24'
+  timeout: 30
 폴더용량:
   description: outputs 폴더 용량 요약 (items)
   file: 샘플_폴더용량.py

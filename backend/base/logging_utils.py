@@ -91,9 +91,11 @@ def mask_sensitive(text: str) -> str:
 # (에피소드 로그에 [self:read]로 읽은 설정 파일의 apiKey 가 평문 박제된 사고의 재발 방지)
 
 # 필드명 기반: "apiKey": "...", api_key=..., authKey: ... 등 — 값 전체를 가림
+_SECRET_FIELD_NAME = (r'(?:api[_-]?key|auth[_-]?key|access[_-]?token|refresh[_-]?token|'
+                      r'client[_-]?secret|private[_-]?key|token|secret|password|passwd)')
+_SECRET_FIELD_NAME_RE = re.compile(_SECRET_FIELD_NAME, re.IGNORECASE)
 _SECRET_FIELD_RE = re.compile(
-    r'("?(?:api[_-]?key|auth[_-]?key|access[_-]?token|refresh[_-]?token|'
-    r'client[_-]?secret|private[_-]?key|token|secret|password|passwd)"?\s*[:=]\s*)'
+    r'("?' + _SECRET_FIELD_NAME + r'"?\s*[:=]\s*)'
     r'(["\']?)([^"\'\s,}{\]\[]{8,})\2',
     re.IGNORECASE,
 )
@@ -161,6 +163,16 @@ def mask_secrets(text: str) -> str:
         return m.group(0).replace(blob, blob[:4] + '****')
 
     return _SECRET_NEAR_RE.sub(_near, text)
+
+
+def mask_secret_data(value):
+    """JSON 값의 구조를 보존하며 비밀을 가린다. 직렬화된 JSON의 문법은 편집하지 않는다."""
+    if isinstance(value, dict):
+        return {key: ("****" if _SECRET_FIELD_NAME_RE.fullmatch(key)
+                      else mask_secret_data(item)) for key, item in value.items()}
+    if isinstance(value, list):
+        return [mask_secret_data(item) for item in value]
+    return mask_secrets(value) if isinstance(value, str) else value
 
 
 def truncate_content(content: str, max_length: int = 100) -> str:

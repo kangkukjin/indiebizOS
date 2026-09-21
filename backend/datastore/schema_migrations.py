@@ -115,6 +115,13 @@ def _ibl_usage_v3(conn: sqlite3.Connection) -> None:
             conn.execute('UPDATE ibl_examples SET signature=? WHERE id=?', (new, rid))
 
 
+def _world_pulse_v2(conn: sqlite3.Connection) -> None:
+    """과거 파손 사건은 보존하되 어떤 writer도 새 파손 JSON을 넣지 못하게 한다."""
+    if _has_table(conn, "trajectory_event"):
+        from trajectory_payload import ensure_payload_guards
+        ensure_payload_guards(conn)
+
+
 MIGRATIONS: Dict[str, List[Tuple[int, str, Callable[[sqlite3.Connection], None]]]] = {
     "ibl_usage": [
         (1, "storage/folder/cctv 액션명 통합 — ibl_examples.ibl_code 치환", _ibl_usage_v1),
@@ -123,6 +130,7 @@ MIGRATIONS: Dict[str, List[Tuple[int, str, Callable[[sqlite3.Connection], None]]
     ],
     "world_pulse": [
         (1, "storage/folder/cctv 옛 액션명 행 삭제 — action_health/self_checks", _world_pulse_v1),
+        (2, "궤적 사건 JSON 객체 INSERT/UPDATE 검증", _world_pulse_v2),
     ],
     # 나머지 DB 는 version 0 바닥만 (CREATE TABLE IF NOT EXISTS + 모듈 내 idempotent ALTER).
     # 새 개편은 여기에 (version, 설명, fn) 으로 추가한다.

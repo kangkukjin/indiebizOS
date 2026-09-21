@@ -32,6 +32,7 @@ from pathlib import Path
 
 from runtime_utils import get_base_path
 from logging_utils import mask_secrets
+from trajectory_payload import encode_payload, ensure_payload_guards
 
 # 창 크기 — 몸이 자기 삶을 되짚는 롤링 창(2026-09-07 1000→10000, 사용자 지시).
 # 실측 기준선: 1행당 episode_log 21KB + 궤적 15KB ≒ 37KB, 하루 약 24주행
@@ -208,7 +209,7 @@ def current_trajectory_identity() -> dict:
 def record_trajectory_event(kind: str, data: dict = None):
     """현재 run 에 순번 있는 사건 한 건. 원문/내용 대신 작은 메타데이터만 허용한다.
 
-    실패해도 본 실행을 깨지 않는 관측 훅이다. 데이터는 비밀 마스킹 뒤 4KB로 제한하며,
+    실패해도 본 실행을 깨지 않는 관측 훅이다. 데이터는 비밀 마스킹 뒤 4096자로 제한하며,
     큰 본문은 호출자가 hash/ref/length 로 바꿔 싣는 것이 계약이다.
     """
     tr = _current_trace()
@@ -219,23 +220,13 @@ def record_trajectory_event(kind: str, data: dict = None):
         return None
     try:
         with tr.lock:
-            safe = data if isinstance(data, dict) else {}
-            encoded = json.dumps(safe, ensure_ascii=False, sort_keys=True, default=str)
-            encoded = mask_secrets(encoded)
-            # 직렬화된 JSON을 자르면 이후 SQL json_extract까지 실패한다.
-            if len(encoded) > 4096:
-                preview = encoded
-                while True:
-                    preview = preview[:len(preview) // 2]
-                    bounded = json.dumps({"truncated": True, "original_chars": len(encoded),
-                                          "preview": preview}, ensure_ascii=False)
-                    if len(bounded) <= 4096:
-                        encoded = bounded
-                        break
+            encoded = encode_payload(data)
             seq = _save_trajectory_event(tr, str(kind)[:80], encoded)
             tr.seq = max(tr.seq, seq)
         return {"run_id": tr.run_id, "event_seq": seq, "episode_id": tr.episode_id}
-    except Exception:
+    except Exception as exc:
+        from logging_utils import get_logger
+        get_logger(__name__).warning("궤적 사건 저장 실패 (%s): %s", str(kind)[:80], type(exc).__name__)
         return None
 
 
@@ -887,6 +878,7 @@ def _ensure_episode_tables_core():
             conn.execute("ALTER TABLE episode_log ADD COLUMN owner TEXT")
         except sqlite3.OperationalError:
             pass  # 이미 존재
+        ensure_payload_guards(conn)
         conn.commit()
         conn.close()
     except Exception as e:

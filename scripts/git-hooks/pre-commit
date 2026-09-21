@@ -31,6 +31,14 @@ fi
 # 이제 트리거의 단일 진실 소스는 iblbuild_common.GUARD_INPUT_PATTERNS 이고
 # 훅은 `--inputs-regex` 로 물어보기만 한다 — 가드가 새 파일을 읽기 시작해도 훅은 불변.
 repo_root=$(git rev-parse --show-toplevel)
+# 궤적 저장의 구조 보존과 DB 거부 규약은 관련 변경마다 실제 왕복으로 검사한다.
+if echo "$staged" | grep -qE '^(backend/base/(episode_logger|trajectory_payload|logging_utils)\.py|backend/datastore/(pulse_db|schema_migrations)\.py|backend/cognition/conscious_supervisor\.py|backend/test_episode_journal_json\.py|scripts/git-hooks/pre-commit)$'; then
+  echo "[pre-commit] 궤적 JSON 저장 계약 검사 실행..."
+  if ! "$repo_root/.venv/bin/python" -m pytest "$repo_root/backend/test_episode_journal_json.py" -q --no-header; then
+    echo "[pre-commit] 궤적 JSON 저장 계약 위반 — 커밋 차단." >&2
+    exit 1
+  fi
+fi
 if ! ibl_trigger=$(python3 "$repo_root/scripts/build_ibl_nodes.py" --inputs-regex 2>/dev/null) \
    || [ -z "$ibl_trigger" ]; then
   # 트리거를 물어보지 못하면 *넓게* 잡는다(fail-closed) — 트리거 조회 실패를 이유로

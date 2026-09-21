@@ -47,6 +47,7 @@
     "base/thread_context",
     "base/thumbnails",
     "base/trace_read",
+    "base/trajectory_payload",
     "base/window_requests",
     "base/write_ledger",
     "boot_common",
@@ -422,8 +423,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 382,
-    "engine": 356,
+    "total": 383,
+    "engine": 357,
     "blocklist": 26
   }
 }

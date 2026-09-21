@@ -75,7 +75,7 @@ def test_t4_world_pulse_deletes_only_retired_rows():
     sm.apply(conn, "world_pulse")
     assert [r[0] for r in conn.execute("SELECT action FROM action_health")] == ["storage"]
     empty = sqlite3.connect(":memory:")
-    assert sm.apply(empty, "world_pulse") == 1     # 테이블 없음 = 통과
+    assert sm.apply(empty, "world_pulse") == 2     # 테이블 없음 = 통과
 
 
 def test_t5_unknown_db_name_raises():

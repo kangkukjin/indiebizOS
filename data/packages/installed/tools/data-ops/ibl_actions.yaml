@@ -58,7 +58,7 @@ actions:
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
-      emits: same
+      emits: items  # 성공 시 items/table 통화. script의 scalar 선언을 그대로 돌려주지 않는다.
       columns: keep
     runs_on: anywhere
     scope: workspace

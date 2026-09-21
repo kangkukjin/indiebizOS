@@ -15,7 +15,7 @@ import json
 import sqlite3
 from datetime import datetime
 
-from register_idiom import _gates
+from register_idiom import _gates, refresh_idiom_metadata
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT = ROOT / "data" / "idioms" / "curated.json"
@@ -178,6 +178,7 @@ def apply_catalog(catalog, infos, local_encoder=False):
                 con.executemany("DELETE FROM ibl_examples WHERE id=?", [(i,) for i in ids])
                 con.commit()
             print(f"  값 없는 옛 호출 용례 {len(ids)}건 회수")
+        refresh_idiom_metadata(db, e["name"])
         print(f"등록 #{rid}: {e['name']} · 인자 {len(infos[e['name']]['signature'])}개")
     with db._get_connection() as con:
         for name, why in catalog.get("demote", {}).items():

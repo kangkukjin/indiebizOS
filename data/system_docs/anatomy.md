@@ -72,6 +72,8 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 문단 표시 설정은 `each`·`union` 수집 뒤에도 유지하고, 묶음 검색의 모델 미리보기는 검색어별 대표 행을 보여준다. 원문·순위는 보존한다. [3920 표시 수리](../../docs/EPISODE_3920_DISPLAY_REPAIRS_2026_09_20.md).
 경험 증류는 중복을 호출 전에 걸러내고 기존 반성 한 번에서 재사용 가치와 원문을 선택한다.
 저장 0건을 정상으로 두며, 선택한 절차의 출처를 보존한다. [증류 효용 보강](../../docs/DISTILL_VALUE_2026_09_20.md).
+판정 관용구 두 개는 items 반환 계약과 원천·크롤 실패 집계를 유지한다. 등록 계약 재산정은
+본문·실적을 보존한다. [관용구 등록 수리](../../docs/JUDGMENT_IDIOM_REGISTRATION_REPAIRS_2026_09_21.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

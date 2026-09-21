@@ -8546,7 +8546,7 @@ nodes:
         returns: transform
         flow:
           accepts: items
-          emits: same
+          emits: items
           columns: keep
         runs_on: anywhere
         scope: workspace

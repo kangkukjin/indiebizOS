@@ -57,7 +57,8 @@ def test_search_preserves_source_errors_without_recrawling():
     assert r["items"] == source[:1]
     out = helper.finish(dict(selection=r, result={"items": [{"url": "a", "_error": "crawl"}], "error_count": 1}))
     assert out["items"][-1] == source[-1]
-    assert out["error_count"] == 1
+    assert out["error_count"] == 2
+    assert out["partial"] is True
     assert out["selection_info"]["source_error_rows"] == 1
 
 
@@ -81,3 +82,25 @@ def test_explicit_envelopes_preserve_markers_and_empty_currency():
     assert out["items"] == []
     assert out["source_markers"]["error_count"] == 2
     assert out["selection_info"]["api_batches"] == 0
+    assert out["error_count"] == 2 and out["partial"] is True
+
+
+def test_body_and_search_report_source_failure_without_an_upstream_count():
+    source = [{"text": "본문", "title": "제목", "url": "a"},
+              {"_error": "수집 실패", "url": "bad"}]
+    for mode in ("body", "search"):
+        p = prepare(source, mode=mode)
+        selected = helper.select(dict(mode=mode, prepared=p, judged=answers(p), limit=1))
+        assert selected["error_count"] == 1 and selected["partial"] is True
+        if mode == "search":
+            out = helper.finish(dict(selection=selected, result={"items": source[:1], "error_count": 0}))
+            assert out["error_count"] == 1 and out["partial"] is True
+            assert out["items"] == source
+
+
+def test_zero_limit_keeps_failure_evidence_without_judgment_or_selection():
+    source = [{"text": "정상", "url": "a"}, {"_error": "실패", "url": "b"}]
+    p = prepare(source, limit=0)
+    result = helper.select(dict(mode="body", prepared=p, judged=answers(p), limit=0))
+    assert p["count"] == 0 and result["selection_info"]["selected"] == 0
+    assert result["items"] == source[1:] and result["error_count"] == 1

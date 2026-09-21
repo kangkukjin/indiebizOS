@@ -183,6 +183,9 @@ def select(args):
                                   "api_batches": prepared["count"]},
                   judgment_receipt={k: v for k, v in judgments.items() if k != "items"}
                   if isinstance(judgments, dict) else {})
+    result["error_count"] = max(result.get("error_count") or 0, len(errors))
+    if result["error_count"]:
+        result["partial"] = True
     return {**result, "selection": result}
 
 
@@ -195,6 +198,15 @@ def finish(args):
     out["items"] = rows(result) + selection.get("source_error_items", [])
     out["count"] = len(out["items"])
     out["total"] = len(out["items"])
+    # 원천 실패 행을 붙이면서 새 크롤의 error_count=0을 그대로 두면
+    # 하류가 부분 실패를 정상 수집으로 오해한다. 두 단계의 실패를 합산한다.
+    source_errors = max(selection.get("error_count") or 0,
+                        len(selection.get("source_error_items", [])))
+    crawl_errors = max(result.get("error_count") or 0,
+                       sum(bool(row.get("_error")) for row in rows(result)))
+    out["error_count"] = source_errors + crawl_errors
+    if out["error_count"] or selection.get("partial") or result.get("partial"):
+        out["partial"] = True
     out.update(judgment_audit=selection["judgment_audit"],
                selection_info=selection["selection_info"],
                judgment_receipt=selection["judgment_receipt"],

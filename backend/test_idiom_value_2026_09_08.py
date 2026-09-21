@@ -53,8 +53,9 @@ def test_pruned_catalog_keeps_only_intended_recommendations():
     catalog = json.loads((ROOT / 'data/idioms/curated.json').read_text())
     validate_catalog(catalog)
     active = {e['name'] for e in catalog['idioms'] if e.get('always_on', True)}
+    # 2026-09-21 사용자 지정: 생성형 요약 없이 Jev 판정을 하는 두 관용구도 상시 소개.
     assert active == {'열추려보기', '정렬해추리기', '좁혀서읽기',
-                      '주소마다읽기', '본문에서찾기'}
+                      '주소마다읽기', '본문에서찾기', '관련자료골라읽기', '의미로본문찾기'}
     # 호환 항목을 명시 강등하면서도 선정집을 멱등 재적용할 수 있다.
     assert not active.intersection(catalog['demote'])
 

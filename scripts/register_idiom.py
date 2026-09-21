@@ -19,6 +19,7 @@
   python3 scripts/register_idiom.py --list
   python3 scripts/register_idiom.py --add 이름 --when "언제 부르는가" --body 몸.ibl [--always-on]
   python3 scripts/register_idiom.py --update 이름 --body 수리.ibl --reason "재발 원인과 검증 결과"
+  python3 scripts/register_idiom.py --refresh 이름  # 본문·실적 유지, 파생 반환형·서명 재산정
   python3 scripts/register_idiom.py --promote 이름 | --demote 이름
   python3 scripts/register_idiom.py --candidates [--days 3]     # 부정기 수동 수집 보조
 """
@@ -187,6 +188,33 @@ def update_idiom(db, name, code, reason, when="", resign=False):
     return True
 
 
+def refresh_idiom_metadata(db, name):
+    """현재 본문의 파생 계약만 갱신한다. 실행 실적·호출 용례·벡터는 보존한다."""
+    from ibl_usage_db import _signature_of, _tree_refresh
+
+    old = db.find_phrase_by_alias(name)
+    if not old:
+        raise ValueError(f"'{name}' 이 없다")
+    info, why = _gates(name, old["intent"], old["ibl_code"])
+    if why:
+        raise ValueError(f"계약 갱신 거절 — {why}")
+    signature = _signature_of(old["ibl_code"])
+    changed = old.get("returns") != info["returns"] or old.get("signature") != signature
+    with db._get_connection() as conn:
+        conn.execute("BEGIN IMMEDIATE")
+        current = conn.execute("SELECT ibl_code, intent FROM ibl_examples WHERE id=?",
+                               (old["id"],)).fetchone()
+        if not current or current["ibl_code"] != old["ibl_code"] or current["intent"] != old["intent"]:
+            raise ValueError("검사 중 정의가 바뀌었습니다 — 다시 갱신하세요")
+        conn.execute("UPDATE ibl_examples SET returns=?, signature=? WHERE id=? AND ibl_code=? AND intent=?",
+                     (info["returns"], signature, old["id"], old["ibl_code"], old["intent"]))
+        conn.commit()
+    if hasattr(db, "_search_cache"):
+        db._search_cache.clear()
+    _tree_refresh(old["topic"], strict=True)
+    return changed
+
+
 def cmd_update(a):
     from ibl_usage_db import IBLUsageDB
     code = open(a.body, encoding="utf-8").read().strip() if os.path.exists(a.body) else a.body
@@ -252,6 +280,7 @@ def main():
     p.add_argument("--list", action="store_true")
     p.add_argument("--add", metavar="이름")
     p.add_argument("--update", metavar="이름", help="호출 서명을 유지하며 본문을 명시 개정")
+    p.add_argument("--refresh", metavar="이름", help="본문·실적 유지, 반환형·서명 재산정")
     p.add_argument("--reason", default="", help="개정 이유와 검증 결과")
     p.add_argument("--resign", action="store_true", help="--update 와 함께 — 호출 서명(슬롯)이 달라지는 개정을 명시 허용")
     p.add_argument("--when", default="", help="언제 부르는가 — 지도에 실리는 조건")
@@ -266,6 +295,11 @@ def main():
     p.add_argument("--min-seen", type=int, default=2)
     a = p.parse_args()
     a.promote_too = bool(a.add and a.always_on)
+    if a.refresh:
+        from ibl_usage_db import IBLUsageDB
+        changed = refresh_idiom_metadata(IBLUsageDB(), a.refresh)
+        print(f"✓ {a.refresh}: " + ("파생 계약 갱신" if changed else "파생 계약 일치"))
+        return 0
     if a.update:
         return cmd_update(a)
     if a.add:

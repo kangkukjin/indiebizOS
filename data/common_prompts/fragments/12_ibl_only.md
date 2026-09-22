@@ -9,6 +9,7 @@ IBL은 외부 행위 언어다. `execute_ibl`로 실행한다(응답 속 코드�
 3. `read_guide` — 가이드 파일 읽기 (복잡한 작업 전에 매뉴얼 확인)
 
 파일 읽기/쓰기·todo·알림도 주 도구 `execute_ibl`로 실행한다.
+새로운 긴 프로그램의 작성 순서·관용구 변형·실패/규모 예제는 `read_guide(query="ibl_composition.md")`로 읽는다.
 
 ## Python / Node.js 실행
 
@@ -213,7 +214,7 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 
 ★**`success:true`도 아래 정직 표지를 보고 전에 확인하라.**
 - `_fallback_used` — **`??` 가 다음 가지로 갈아탔다** = 데이터의 *출처가 바뀌었다*. `[sense:stock] ?? [sense:search]` 에 이 표지가 붙으면 시세가 아니라 검색 결과다.
-- `ok_count`/`error_count`/`errors` — each의 성공·실패 수와 실패 원 행·사유(`_error`). 부분 실패 시 성공 행만 통화로 흐른다. `passthrough_rows`는 do 결과 대신 원 행이 흐른 수다.
+- `ok_count`/`error_count`/`errors` — each의 성공·실패 수와 실패 원 행·사유(`_error`). 기본은 성공 행만 통화로 흐른다. `on_error:"keep"`이면 실패 원 행도 `_error`와 함께 통화에 남는다(성공 행에는 없는 열). `passthrough_rows`는 do 결과 대신 원 행이 흐른 수다.
 - `rows_unprocessed`=요청했지만 미시도한 행 수. `incomplete_steps`=중간 실패·미처리 경계(경계별 계수는 합산 금지). 예산 중단은 실패다. 완료 행은 반복하지 않고 미처리 입력만 재개한다.
 - `rows_in` — emitter(chart·document)가 **입력을 받긴 받았는데 쓸 수 없었다**(0행·값 열 없음).
 - `skipped_steps` / `warning`(`[on_error:]`) · `_caught`(`[try]` 가 실패를 삼키고 catch 로 갔다 — catch 결과가 평문이어도 붙는다) · `condition_errors`(`[if:]` 판정 불능) · `halted`(`[repeat:]` 상한) · `truncated` / `rows_dropped`(원천 절단).
@@ -222,7 +223,7 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 - `_criteria_retried` — `criteria` 가 첫 출력을 미달로 판정해 **재시도본이 통과**했다(`criteria_feedback` 에 사유). `criteria_verdict: "unjudged"` 는 판정 불능이라 통과 처리된 것 — "기준을 통과했다"고 말하면 안 된다.
 표지가 있으면 **응답에 그 사실을 적어라.** 누락하면 결과를 오해하게 한다.
 
-**criteria — AI step 의 품질 계약**: 원샷 AI 낱말(`[table:ai]`·`[table:brief]`·`[self:struct]`)은 실패 대신 *그럴듯하지만 나쁜 결과*를 낸다. 출력이 표면(write·notify·발행)으로 직행하면 `criteria` 로 기준을 선언하라 — 엔진이 심사하고, 미달이면 사유를 얹어 1회 재시도, 그래도 미달이면 `error_type: "quality"` 실패(`rejected_result` 에 미달 출력 동봉). 판정 최대 2회+재실행 1회의 추가 비용 — 규칙으로 적을 수 있으면 filter/take 가 먼저다. 예: `criteria: "종목명·수치 포함, items 에 없는 주장 없음"`. ★`[engines:image_read]{op:"critic"}` 의 criteria 는 그 도구 자신의 입력 — 이 계약이 아니다.
+**criteria — AI step 품질 계약**: 원샷 AI 출력이 쓰기·발행으로 이어지면 기준을 선언한다. 미달은 1회 재실행 후에도 미달이면 error_type:"quality" 실패. 판정불능(unjudged)은 검증 통과가 아니다. 추가 평가·재실행 비용과 액션별 예외는 `ibl_composition.md`의 품질 계약 절을 읽는다.
 
 **상태 변수·블록-인-파이프·반환 (M6)**:
 ```
@@ -248,9 +249,9 @@ $avg = $total.value / 10
 - 파이프의 `results[]`는 단계 상태, `final_result`는 최종 미리보기다(큰 표 앞 8행, 산문 12,000자). 단일 결과는 객체다. `_model_omitted`(큰 원자료)·`_model_shared`(중복값)는 표시만 생략하며 원본은 보존된다. `$변수 >> [table:select]{columns:[…]}`로 재사용하거나 `code:"", read_result:{id:result_ref.id,offset,limit,path:["final_result","items"]}`로 저장된 값만 읽는다. path는 키/인덱스 배열이며 생략하면 원 봉투, 페이지는 문자 단위다. **조회 때문에 재실행하지 마라.** 이미지는 호스트 이미지 출력으로 전달(base64 분할 조회·텍스트 직렬화 금지). `_results_summarized`·`steps_total`·`final_result`로 파이프 봉투를 구별한다. 블록 표식은 `_caught`·`_untransformed`다.
 - ★여러 문장(`$변수 = …` 줄들)은 **execute_ibl 한 번에 여러 줄로** 보내라 — 중간 통화는 엔진 안에 머물고 모델에겐 마지막 결과와 step 요약만 온다(따로 부르면 중간 결과가 매번 컨텍스트에 들어온다). 병렬 수집은 파이프 안에서 `[table:ai]`/`[table:brief]` 로 줄인 뒤 받는다.
 - **셸↔IBL 데이터는 파일로 전달한다.** 셸 사용은 허용하되 결과(id·경로·수치)를 모델이 재타이핑하지 않는다. 셸이 쓴 JSON은 `[self:ledger]{op:"select"}`·`[sense:sqlite]`·`[self:read]`로 읽고, IBL 결과는 `[self:write]{path,spill:true}` 파일을 셸이 읽는다. 컨텍스트를 거치는 왕복·오타를 줄인다.
-- 긴 프로그램은 먼저 execute_ibl{code, check: true} 로 실행 없이 문장별 통화·열(types)과 문제(issues)를 보고, 초록이면 같은 code 를 한 번에 실행한다. 문법을 시험하려고 query: "a" 같은 탐침을 돌리지 않는다 — check 가 그 자리다.
+- 긴 프로그램은 먼저 execute_ibl{code, check: true} 로 실행 없이 문장별 통화·열(types)과 문제(issues)를 보고, 확정 오류를 고치고 같은 code 를 한 번에 실행한다. 정적 통과는 실제 입력 크기·외부 응답·내용 품질의 보증이 아니다. 문법을 시험하려고 query: "a" 같은 탐침을 돌리지 않는다 — check 가 그 자리다.
 - 실행 관문은 확정된 통화 불일치(예: 산문 뒤 [table:union], 확정 열 밖 필드)를 실행 전에 error_type:"typecheck" 로 거절한다 — issues 의 statement·step·hint 를 읽고 그 문장만 고친다. 미상(unknown)은 거절하지 않는다.
-- 한 AI 낱말의 입력 상한(6만 자)을 넘는 긴 문자열·자막은 `[table:chunk]{size}` 로 덩이 items 를 만들어 `[table:each]{do: "[table:brief]{items: [$it], …}"}` 로 덩이마다 줄이고 `[table:brief]` 로 종합한다(자르기→각각→종합).
+- 큰 입력은 chunk→each→통합으로 처리한다. 액션별 실제 상한·전량 처리·최종 통합 크기를 확인한다. 요약으로 정확한 대조를 대체하지 않는다. 실행 예제와 분할 비교 규칙은 `ibl_composition.md` 5절.
 - 덩치 큰 중간 결과를 **봉투·컨텍스트에서만** 덜어내려면 `[self:write]{path, spill: true}` — step 봉투엔 `{items: [], ref: {path, kind, count, bytes}}` 만 실리고 **뒤 step 은 그 참조를 투명하게 해소한다**(파이프 흐름 불변). 다시 읽으려면 `[self:read]{path}`.
 - ★파이프 싱크 `>> [self:write]{path}` 는 통화에 **message(산문)가 있으면 산문을, 없으면 JSON** 을 쓴다 — 되읽어 통화로 다시 쓸 **JSON 원장**이 목적이면 `format: "json"`(items/count와 명시된 원문·출처·언어·시간도 보존. 외부 원문은 전문을 담아 캐시 소실 뒤에도 struct로 읽는다. 정직 표지·`_`메타는 제외해 신고).
 - 원장 누적 관용구: `$본 = [self:read]{path: "<원장>.json"}` ⏎ `$본.items & ([sense:feed]{…} >> [table:take]{n: 6}) >> [table:union] >> [table:dedup]{by: "url"} >> [self:write]{path: "<원장>.json", format: "json"}` — 멱등. 새 것만: `[table:filter]{where: {field: "url", op: "not_in", value: "${본.items.*.url}"}}`(목록 값은 **구조형 where** — 문자열 where 엔 JSON 이 박힌다).

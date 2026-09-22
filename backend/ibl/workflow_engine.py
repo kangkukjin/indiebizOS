@@ -925,7 +925,7 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
                 "workflow_name": wf_name, "error": _serr}
 
     # 스탬프·시그니처 판정 둘 다 dict step 을 요구한다 — 주입 여부와 무관하게 정규화.
-    steps, _perr = _normalize_steps_for_injection(steps)
+    steps, _perr = normalize_steps_for_injection(steps)
     if _perr:
         return {"success": False, "error": f"워크플로우 문법 오류: {_perr}"}
 
@@ -953,7 +953,7 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
 
     inject_meta = None
     if effective:
-        steps, inject_meta = _apply_caller_params(steps, effective)
+        steps, inject_meta = apply_caller_params(steps, effective)
 
     _stamp_wf_stack(steps, stack)
     _t0 = time.monotonic()
@@ -1139,13 +1139,13 @@ def _run_inline(params: dict, project_path: str,
     # 스탬프는 dict step 에만 찍힌다 — 문자열 step 이 남아 있으면 가드에 구멍이 난다.
     # 그래서 주입 여부와 무관하게 여기서 한 번 정규화한다(execute_pipeline 입구 정규화와
     # 같은 규칙이라 무회귀).
-    steps, _perr = _normalize_steps_for_injection(steps)
+    steps, _perr = normalize_steps_for_injection(steps)
     if _perr:
         return {"error": _perr}
 
     inject_meta = None
     if caller_params:
-        steps, inject_meta = _apply_caller_params(steps, caller_params)
+        steps, inject_meta = apply_caller_params(steps, caller_params)
 
     # 즉석 실행은 "선언하는 순간"이 없어 저장본처럼 거절하지 않는다 — 대신 채워지지 않은
     # 자유 변수를 정직하게 알린다(전엔 리터럴 `$이름` 이 그대로 하류로 흘러 침묵했다).
@@ -1212,4 +1212,4 @@ def _promote_final_currency(out, steps: Optional[list] = None):
 
 
 # 호출자 params 주입기도 workflow_contract 로 이관(2026-08-22) — 시그니처와 같은 계약.
-from workflow_contract import coerce_caller_params, _normalize_steps_for_injection, _apply_caller_params
+from workflow_contract import coerce_caller_params, normalize_steps_for_injection, apply_caller_params

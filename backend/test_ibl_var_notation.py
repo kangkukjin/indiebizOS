@@ -31,7 +31,7 @@ import workflow_engine  # noqa: E402
 from common.ibl_vars import (find_names, sub_ref, is_sole_ref, split_ref, REF_RE)  # noqa: E402
 from ibl_parser import parse  # noqa: E402
 from workflow_engine import execute_pipeline, execute_workflow_action  # noqa: E402
-from workflow_contract import _free_vars, _apply_caller_params  # noqa: E402
+from workflow_contract import _free_vars, apply_caller_params  # noqa: E402
 
 
 def test_b1_notation_module():
@@ -82,7 +82,7 @@ def test_b4_signature():
 
 def test_b5_caller_injection():
     steps = parse('[table:take]{n: "${count}", note: "상한 ${count}건"}')
-    steps, meta = _apply_caller_params(steps, {"count": 5})
+    steps, meta = apply_caller_params(steps, {"count": 5})
     p = steps[0]["params"]
     assert p["n"] == 5 and isinstance(p["n"], int), f"괄호형 통짜 참조 타입 소실: {p['n']!r}"
     assert p["note"] == "상한 5건", p["note"]

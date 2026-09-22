@@ -209,7 +209,7 @@ def call_signature(ibl_code: str) -> List[str]:
 def _signature_of(raw_body) -> List[str]:
     """저장 원문(문장·문장 배열·dict step 배열)에서 시그니처를 뽑는다. 실패하면 빈 목록."""
     try:
-        steps, err = _normalize_steps_for_injection(raw_body)
+        steps, err = normalize_steps_for_injection(raw_body)
         if err or not steps:
             return []
         return _free_vars(steps)
@@ -253,7 +253,7 @@ def coerce_caller_params(raw) -> tuple:
                   '예: [self:workflow]{op:"run", workflow_id:"x", params:{city:"청주"}}')
 
 
-def _normalize_steps_for_injection(steps) -> tuple:
+def normalize_steps_for_injection(steps) -> tuple:
     """문자열 step 을 파싱해 dict 로 — 주입은 파싱된 값 층에서만 안전하다.
     execute_pipeline 입구 정규화와 같은 규칙(통짜 문자열 감싸기 + 원소별 파싱).
     반환: (steps|None, 오류문|None)."""
@@ -303,7 +303,7 @@ def _reserved_row_names(steps) -> set:
     return names
 
 
-def _apply_caller_params(steps: list, caller: dict) -> tuple:
+def apply_caller_params(steps: list, caller: dict) -> tuple:
     """호출자 params 를 steps 의 $변수 자리에 주입. 반환: (새 steps, 정직 메타 dict).
 
     치환 규칙(파서 _resolve_variables 와 동일한 이름 경계):

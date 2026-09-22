@@ -780,9 +780,10 @@ def validate_code(code: str) -> dict:
             return  # 자유 텍스트로 보임 — 컨테이너 재량(예: 위임 지시문)이라 침묵 통과
         from ibl_parser import IBLSyntaxError as _DoSynErr
         try:
-            from ibl_code_ir import compile_code
-            # 실행기와 같은 IR. 가짜 값 치환으로 지역 할당까지 1=…로 바꾸지 않는다.
-            inner = compile_code(params.get(k) or do).tree
+            from ibl_code_ir import compile_code, link_function_scopes
+            # 실행기와 같은 IR·지역 함수 표. 가짜 값 치환으로 지역 할당을 바꾸지 않는다.
+            inner = link_function_scopes(compile_code(params.get(k) or do),
+                                         params.get('_fn_scopes')).tree
         except _DoSynErr as e:
             entry = {
                 "node": st.get("_node", ""), "action": st.get("action", ""),
@@ -835,6 +836,73 @@ def validate_code(code: str) -> dict:
             last["error"] = f"cron/config: {err}"
             all_valid = False
 
+    def _walk_fn(st: dict, depth: int, label: str = None):
+        """함수는 사전 액션이 아니다. 실행기 순서로 몸을 찾아 효과·비용을 펼친다."""
+        nonlocal all_valid
+        from ibl_parser import fn_definition, parse_function_body
+        from workflow_store import get_workflow
+        from workflow_contract import normalize_steps_for_injection
+
+        name = st.get("action") or ""
+        ref = st.get("_fn_ref")
+        defaults = {}
+        try:
+            if ref:
+                definition = fn_definition(ref.get("table"), ref.get("name"))
+                if not definition:
+                    raise ValueError(f"[fn:{name}] 정의 표를 찾지 못했습니다.")
+                if definition.get("todo"):
+                    raise ValueError(f"[fn:{name}] 몸통이 todo입니다.")
+                body = definition.get("body") or []
+            else:
+                workflow = get_workflow(name)
+                if workflow is not None:
+                    if workflow.get("problem"):
+                        raise ValueError(workflow["problem"])
+                    raw = workflow.get("steps") or workflow.get("do") or workflow.get("pipeline")
+                    body, error = normalize_steps_for_injection(raw)
+                    if error:
+                        raise ValueError(error)
+                    defaults = workflow.get("params_default") or {}
+                else:
+                    from ibl_usage_db import IBLUsageDB
+                    row = IBLUsageDB().find_phrase_by_alias(name)
+                    if not row:
+                        raise ValueError(f"[fn:{name}] 정의·저장 워크플로·관용구를 찾지 못했습니다.")
+                    body = parse_function_body(row["ibl_code"])
+            if not body:
+                raise ValueError(f"[fn:{name}] 몸통이 비어 있습니다.")
+        except Exception as exc:
+            all_valid = False
+            _opaque_block(str(exc), "function")
+            steps[-1].update(node="fn", action=name, valid=False, error=str(exc))
+            return
+        if depth >= 6:
+            _opaque_block(f"[fn:{name}] 중첩/재귀 검수 상한 — 내부 효과·AI 비용 미확정.", "function")
+            return
+        # 실제 값이 알려진 인자는 코드가 아닌 값으로 주입(op별 효과도 구별).
+        from workflow_contract import apply_caller_params
+
+        def known(value):
+            if isinstance(value, str):
+                return "$" not in value and "{{" not in value
+            if isinstance(value, dict):
+                return all(known(v) for v in value.values())
+            if isinstance(value, list):
+                return all(known(v) for v in value)
+            return True
+        effective = {**(defaults if isinstance(defaults, dict) else {}), **(st.get("params") or {})}
+        caller = {k: v for k, v in effective.items() if not k.startswith("_") and known(v)}
+        try:
+            body, _ = apply_caller_params(body, caller)
+        except ValueError as exc:
+            all_valid = False
+            _opaque_block(f"[fn:{name}] 인자 오류: {exc}", "function")
+            steps[-1].update(node="fn", action=name, valid=False, error=str(exc))
+            return
+        for sub in body:
+            _walk(sub, depth + 1, label=label or f"[fn:{name} 속]", group="function")
+
     def _walk(st, depth: int = 0, label: str = None, group: str = None, warn: str = None):
         """구조 step(병렬/폴백/블록)을 가지 단위로 펼쳐 전부 검증한다.
 
@@ -842,7 +910,18 @@ def validate_code(code: str) -> dict:
         (_execute_parallel/_execute_fallback/블록 디스패치) 여기서 못 읽으면 조종실이
         멀쩡한 문장을 반려하거나, 반대로 속을 안 본 채 초록불을 켠다."""
         nonlocal has_side_effect
-        if not isinstance(st, dict) or depth > 6:
+        if not isinstance(st, dict):
+            return
+        if depth > 6:
+            _opaque_block("중첩 검수 상한 — 내부 효과·AI 비용 미확정.", group or "block")
+            return
+        if st.get("_def"):
+            steps.append({"node": "def", "action": st.get("name"), "params": {},
+                          "kind": "block", "effect": "지역 함수 정의(호출할 때 몸을 실행)",
+                          "safety": "read", "valid": True, "error": None, "group": "function"})
+            return
+        if st.get("_node") == "fn":
+            _walk_fn(st, depth, label)
             return
         if st.get("_var_emit"):
             _emit_var(st, label=label, group=group)

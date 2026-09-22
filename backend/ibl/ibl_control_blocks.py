@@ -313,8 +313,8 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
         steps = [steps]
     inject_meta = None
     if caller:
-        from workflow_contract import _apply_caller_params
-        steps, inject_meta = _apply_caller_params(steps, caller)
+        from workflow_contract import apply_caller_params
+        steps, inject_meta = apply_caller_params(steps, caller)
     from workflow_engine import execute_pipeline, _promote_final_currency
     nested = []
     for st in steps:

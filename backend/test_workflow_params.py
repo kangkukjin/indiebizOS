@@ -470,7 +470,7 @@ def test_w16_body_bound_vars_not_signature():
     교재 M6 의 `do: '…$return = …'` 저장본이 저장은 되고 실행은 거절된다.
     아래 표가 오탐 경계다 — 진짜 자유 변수(W8)는 차집합 뒤에도 그대로 걸려야 한다.
     """
-    from workflow_contract import _free_vars, _normalize_steps_for_injection
+    from workflow_contract import _free_vars, normalize_steps_for_injection
 
     cases = [
         ('$r = [self:time]\n$return = $r', [], '식 할당 우변'),
@@ -481,7 +481,7 @@ def test_w16_body_bound_vars_not_signature():
         ('[sense:search]{query: "$topic"}\n$r = [self:time]\n$return = $r', ['topic'], '혼합'),
     ]
     for body, want, label in cases:
-        steps, err = _normalize_steps_for_injection(body)
+        steps, err = normalize_steps_for_injection(body)
         assert not err, (label, err)
         got = _free_vars(steps)
         assert got == want, f'{label}: 시그니처 {got} (기대 {want}) — {body!r}'

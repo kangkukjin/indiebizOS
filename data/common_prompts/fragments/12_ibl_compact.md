@@ -2,18 +2,31 @@
 IBL은 정보 흐름 언어다. 도구 execute_ibl(CLI: mcp__indiebizos__execute_ibl)에 code를 전달한다.
 아래 목록은 현재 몸에서 쓸 수 있는 능력이다. 목록이 짧다고 능력이 없는 것이 아니다.
 필요한 인자·op·출력 계약은 execute_ibl(code="", describe=["node:action"])으로 한 번에 1~6개 조회한다.
-자주 쓰는 액션은 현재 사용자 입력에 상세 계약이 추가된다. 문법 전문은 IBL 가이드를 읽는다.
+자주 쓰는 액션은 현재 사용자 입력에 상세 계약이 추가된다. 긴 프로그램 작성·관용구 변형은 read_guide(query="ibl_composition.md"). 문법 전문은 [self:read]{path:"data/common_prompts/fragments/12_ibl_only.md"}.
 
 기본: [node:action]{key: "값", number: 3, flag: true}. 문자열 안에 큰따옴표가 있으면 바깥을 작은따옴표로 감싼다: {query:'"정확한 구절" 추가어'}. 호스트 코드 문자열의 이스케이프와 IBL 문자열의 이스케이프는 별개다.
 <!-- GRAMMAR_OPERATORS:START -->
 `>>`: 앞 단계 성공 시 결과 통화를 다음으로(0건은 정상); `&`: 독립 병렬; `??`: 실패 또는 0건이면 다음 대안; `;`: 결과를 넘기지 않는 독립 문장(줄바꿈과 같음).
 <!-- GRAMMAR_OPERATORS:END -->
-여러 문장은 줄바꿈으로 구분한다. 긴 프로그램은 먼저 check:true로 정적 검사(실행 없음).
+여러 문장은 줄바꿈으로 구분한다. 긴 프로그램은 먼저 check:true로 정적 검사(실행 없음). 통과해도 실제 입력 크기·외부 실패·내용 품질은 별도로 확인한다.
 `$이름 = A`로 결과를 보관하면 같은 턴의 다음 호출에서도 `$이름`을 사용한다.
-보존된 이름과 실제 행의 열은 `turn_vars.live/types`로 확인한다. `unavailable/too_large` 이름은 참조하지 않는다. 검색 결과의 요약 열은 반환된 `summary`를 쓰며 `snippet`으로 추측하지 않는다. 행마다 존재하지 않는 `_error`를 select에 넣지 말고 부분 실패는 결과 봉투의 `errors/error_count`에서 확인한다.
+보존된 이름과 실제 행의 열은 `turn_vars.live/types`로 확인한다. `unavailable/too_large` 이름은 참조하지 않는다. 검색 결과의 요약 열은 반환된 `summary`를 쓰며 `snippet`으로 추측하지 않는다. 부분 실패는 봉투의 `errors/error_count`에서 확인한다. `_error`는 모든 행에 있는 열이 아니다.
 할당은 즉시 실행된다. `$a=A; $b=B; $a & $b`는 A·B를 순차 실행한 뒤 값을 묶는다. 독립 작업의 실행을 병렬화하려면 `A & B`로 묶는다.
 데이터는 {items:[...]} 통화로 다룬다. 목록은 table의 조회·선택·필터·변환 계약을 조회해 가공한다.
-열은 실제 반환 계약·turn_vars.types의 이름을 사용한다. each의 기본 행 이름은 `$it`이며 오류는 행의 `_error`가 아닌 봉투의 errors·error_count에 있다.
+열은 실제 반환 계약·turn_vars.types의 이름을 사용한다. each의 기본 행 이름은 `$it`. 기본은 성공 행만 흐르고, `on_error:"keep"`일 때만 실패 원 행도 `_error`와 함께 흐른다. `keep:["id"]`로 출처 열을 보존한다.
+새 과제는 입력 열→변환→반환 열을 먼저 정하고 한 프로그램으로 연결한다. 규칙은 table, 새 의미 판단만 AI 단계에 둔다. 관용구의 전제가 맞으면 fn으로 연결하고, 다르면 필요한 정의만 expand하여 지역 def로 변형한다.
+```ibl
+[def:환산]{
+  $return = $목록 >> [table:each]{limit:$개수} {
+    $return = [{id:$it.id, total:($it.qty * $단가)}]
+  }
+}
+$행 = [table:take]{items:[{id:"a",qty:2}],n:1}
+[fn:환산]{목록:$행,개수:$행.count,단가:3} >> [if:not empty($items)]{
+  [table:select]{columns:["id","total"]}
+} [else]{[table:take]{n:0}}
+```
+함수의 바깥 값은 인자로 전달한다. each는 반환 행을 모으므로 출처도 반환하거나 keep으로 남긴다. `??`는 실패와 0건 모두 대체하고, `[try]{…}[catch]{…}`는 실패만 복구한다. 덩이 처리는 chunk→each→통합: 건수 제한으로 누락시키지 말고 모든 덩이와 마지막 통합의 크기도 확인한다.
 중간 결과를 손으로 복사해 새 객체로 다시 쓰지 않는다. `$변수 >> ...`로 연결한다.
 긴 신규 본문은 files에 넣고 `$file:0`으로 참조한다. 이미 파일이면 files_from에 경로만 전달한다.
 수정은 기존 파일의 정확한 문자열/범위만 바꾼다. 전체 보고서·HTML을 다시 생성하지 않는다.

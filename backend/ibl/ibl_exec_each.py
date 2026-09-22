@@ -349,7 +349,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
 
     `on_error: "keep"` (언어 개정 2026-08-28, 사용자 판정 "언어의 한계는 다 고쳐"):
       실패 행을 `{원 행…, _error}` 로 **통화에도** 흘린다 — 후속 문장이
-      `[table:filter]{where: {field:"_error", op:"eq", value:null}}` / exists 로 성공·실패를
+      `[table:filter]{where: {field:"_error", op:"eq", value:null}}` / op:"ne", value:null 로 성공·실패를
       가르고, 실패 행만 뽑아 교체·재시도(안티조인·재팬아웃)를 문장 안에서 조합할 수 있게.
       2026-08-23 개정이 은퇴시킨 옛 `_ok` 상시 봉투의 재발이 아니다 — 그때는 전 문장이
       비용을 냈고(코퍼스 사용 0건), 이번엔 실패를 데이터로 쓰겠다고 선언한 문장만 켠다.
@@ -706,7 +706,7 @@ def _execute_table_each(params: dict, project_path: str, agent_id: str = None) -
         # keep = 실패를 데이터로 쓰겠다는 선언 — 실패 행이 통화에 섞였음을 반드시 말한다.
         notes.append(f"on_error=keep: 실패 {err_n}행이 _error 표식과 함께 통화에 흘렀습니다 — "
                      f"[table:filter]{{where: {{field: \"_error\", op: \"eq\", value: null}}}} 로 "
-                     f"성공만, exists 로 실패만 가를 수 있습니다.")
+                     f"성공만, op: \"ne\", value: null 로 실패만 가를 수 있습니다.")
     # 전 행 실패만 상위로 전파한다. 부분 실패는 파이프를 끊지 않되 반드시 보이게 한다.
     # ★on_error=keep 은 전량 실패도 통화로 흘린다 — 실패를 소비하겠다고 선언한 문장의
     #   후속(교체·재시도)이 바로 그 경우에 일할 수 있어야 한다(warning 은 위에서 실림).

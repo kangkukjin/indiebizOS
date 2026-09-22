@@ -2,6 +2,27 @@
   "description": "가이드 파일 DB - data/guides/ 폴더에서 파일 관리",
   "guides": [
     {
+      "id": "ibl_composition",
+      "name": "IBL 조합 — 긴 프로그램 작성과 관용구 변형",
+      "description": "입출력 계약부터 변수·함수·관용구를 연결하는 실행 예제. 빈 결과와 장애 구분, 실패 항목만 재시도, 전량 분할·통합, 입력 크기·재개·총 AI 비용 점검.",
+      "keywords": [
+        "IBL",
+        "IBL 문법",
+        "조합",
+        "긴 IBL",
+        "긴 프로그램",
+        "관용구",
+        "함수",
+        "def",
+        "each",
+        "chunk",
+        "부분 실패",
+        "분할 비교"
+      ],
+      "file": "ibl_composition.md",
+      "topic": "IBL"
+    },
+    {
       "id": "judgment",
       "name": "판정 전용 어휘 — Jev",
       "description": "[table:judge]로 각 행의 참/거짓·선택·점수를 일괄 판정한다. 질문 작성, unknown 분기, 필터·정렬 조합, API 인증·호출 상한과 사용량.",

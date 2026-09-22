@@ -172,9 +172,9 @@ def test_i13_engine_wires_the_mark_into_the_envelope(monkeypatch):
 
 def test_i14_caller_params_list_embed_is_reported():
     """호출자 params(저장 워크플로우 run) 의 목록 임베드도 같은 사실·같은 신고 — 세 번째 치환 자리."""
-    from workflow_contract import _apply_caller_params
+    from workflow_contract import apply_caller_params
     steps = [{"_node": "self", "action": "write", "params": {"content": "목록: $L 끝"}}]
-    _, meta = _apply_caller_params(steps, {"L": [1, 2, 3]})
+    _, meta = apply_caller_params(steps, {"L": [1, 2, 3]})
     assert "목록" in (meta.get("params_warning") or "") and "table:brief" in meta["params_warning"], meta
 
 

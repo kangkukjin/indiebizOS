@@ -543,7 +543,7 @@ def _var_emit_step(text: str, variables: Optional[Dict], where: str,
         # 같은 부류). 그래서 관용구는 통화를 하나(파이프로 흘러드는 앞 통화)만, 그것도 첫
         # 문장에서만 받을 수 있었고, 둘 이상의 통화를 받는 관용구(원장 누적·델타·join)는
         # 아예 말할 수 없어 도메인 머리를 몸에 박는 길밖에 없었다.
-        # 값은 호출자가 인자로 싣는다(_apply_caller_params 가 _var_values 로 스탬프).
+        # 값은 호출자가 인자로 싣는다(apply_caller_params 가 _var_values 로 스탬프).
         if free_ok is True or (free_ok and name in free_ok):
             return {"_var_emit": True, "name": name, "path": path, "_free": free_ok is True}
         raise IBLSyntaxError(

@@ -73,7 +73,8 @@ def _field_missing_error(verb, missing, rows):
     miss = "', '".join(str(m) for m in missing) if isinstance(missing, (list, tuple)) else str(missing)
     hint = f" 사용 가능한 필드: {avail}" if avail else ""
     if isinstance(missing, (list, tuple)) and "_error" in missing:
-        hint += " 부분 실패는 행의 _error 열이 아니라 결과 봉투의 errors/error_count에서 확인하세요."
+        hint += (" 먼저 봉투 errors/error_count를 확인하세요. each on_error:keep의 실패 행에만 "
+                 "_error가 생깁니다. error_count가 0이면 _error 필터를 건너뛰세요.")
     if verb == "filter":
         if "(" in miss:
             hint += (' where의 왼쪽은 계산식이 아닌 필드 이름입니다. 길이 등 계산은 먼저 '

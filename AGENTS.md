@@ -3,6 +3,10 @@
 > Claude Code 는 CLAUDE.md(워크스페이스 루트)를, 그 밖의 AI 도구는 이 파일을 읽는다.
 > 구조·설계의 정본은 `data/system_docs/anatomy.md`(정문)와 그 허브 문서들이다.
 
+IBL과 주변 시스템의 개선·설계·평가를 시작할 때는 `data/system_docs/vision.md`의
+**「IBL과 주변 시스템의 진화 목적」**과 `docs/IBL_EVOLUTION_PURPOSE.md`를 먼저 읽는다.
+개별 사례에서 발견한 문제를 어떤 공통 능력의 개선으로 연결할지 이 기준으로 판단한다.
+
 ## 0. 이 복제본이 정본인가 — 가장 먼저 확인하라
 
 정본 저장소는 소유자의 로컬 클론 하나뿐이다.

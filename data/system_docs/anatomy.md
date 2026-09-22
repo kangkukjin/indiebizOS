@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-09-20
+last_updated: 2026-09-23
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -45,6 +45,12 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 ---
 
 ## 2. 표면 아래의 언어 — IBL (신경계)
+
+**진화 목적**: 도구를 어휘로 포함하는 언어와 그 주변 시스템을 함께 개선해, AI가 실행 의도를
+쉽고 정확하게 표현하고 **다양한 작업에서 결과 품질을 유지·향상하면서 완료 시간과 전체 토큰 소비를 줄인다.**
+개별 사례는 공통 마찰을 발견하고 검증하는 출발점이다. 목적 정본은
+[vision.md의 「IBL과 주변 시스템의 진화 목적」](vision.md#ibl과-주변-시스템의-진화-목적),
+설계·평가 기준은 [IBL 진화 목적과 개선 판단](../../docs/IBL_EVOLUTION_PURPOSE.md)을 먼저 읽는다.
 
 세 표면이 무엇을 하든, 밑바닥에서는 전부 **하나의 문법**으로 번역된다:
 

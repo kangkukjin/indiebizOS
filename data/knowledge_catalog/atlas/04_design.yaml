@@ -131,7 +131,7 @@ entries:
     section: design
 - id: atlas.design.affordance
   kind: concept
-  path: ["공학", "사용자와 서비스"]
+  path: ["공학", "사용자와 서비스", "설계와 인간요인"]
   name: 어포던스
   hint: 환경과 행위자 사이의 행동 가능성
   aliases: [Affordance, "문을 밀어야 할지 당겨야 할지 헷갈릴 때", "보기만 해도 어떻게 쓰는지 알게 만들기", "단추처럼 생겨야 누르고 싶어지는 이유", "설명서 없이도 쓰임새가 드러나는 생김새"]
@@ -140,7 +140,7 @@ entries:
     section: design
 - id: atlas.design.signifier
   kind: concept
-  path: ["공학", "사용자와 서비스"]
+  path: ["공학", "사용자와 서비스", "설계와 인간요인"]
   name: 시그니파이어
   hint: 사용 가능한 행동을 알리는 단서
   aliases: [Signifier, "문을 밀어야 할지 당겨야 할지 헷갈리게 만든 손잡이", "누를 수 있는 곳인지 화면만 봐선 모르겠는 앱", "설명서 없이도 어떻게 쓰는지 눈에 보이게 만들기", "여기를 잡으라고 알려 주는 홈이나 표시"]
@@ -176,7 +176,7 @@ entries:
     section: design
 - id: atlas.design.universal_design
   kind: method
-  path: ["공학", "사용자와 서비스"]
+  path: ["공학", "사용자와 서비스", "설계와 인간요인"]
   name: 유니버설 디자인
   hint: 넓은 사용자 범위의 이용 가능성 설계
   aliases: [Universal design, "누구나 쓸 수 있는 건물이나 물건 만들기", "계단 대신 경사로처럼 모두에게 편한 구조", "어린이부터 노인까지 같이 쓰는 공공시설", "따로 장애인용을 두지 않고 하나로 해결하기"]
@@ -815,7 +815,7 @@ entries:
     section: economics
 - id: atlas.economics.transaction_costs
   kind: concept
-  path: ["경제와 조직", "분석"]
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
   name: 거래비용
   hint: 탐색 협상 집행에 드는 비용
   aliases: [Transaction costs, "거래 상대 찾고 흥정하고 계약 지키게 하는 수고", "물건값 말고 사고파는 과정에 드는 부대 비용", "외주 줄지 직접 할지 가르는 숨은 비용", "중개 플랫폼이 돈을 버는 근거"]

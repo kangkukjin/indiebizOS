@@ -41,7 +41,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.negative_space
   kind: concept
-  path: ["예술과 표현", "시각예술"]
+  path: ["예술과 표현", "시각예술", "형태와 색"]
   name: 여백
   hint: 요소 사이 비어 있는 공간의 역할
   aliases: [Negative space, "전단지가 너무 빽빽해서 답답해 보일 때", "글과 그림 사이를 얼마나 띄울지 정하기", "비워 둔 자리가 오히려 고급스럽게 보이는 이유", "내용을 덜어내 숨 쉴 틈 있는 화면 만들기"]
@@ -185,7 +185,7 @@ entries:
     section: visual_art
 - id: atlas.music.harmony
   kind: concept
-  path: ["예술과 표현", "음악과 소리"]
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
   name: 화성
   hint: 동시에 울리는 음들의 관계
   aliases: [Harmony, "멜로디에 어울리는 코드 붙이기", "어떤 음들을 같이 눌러야 듣기 좋은지", "노래에 화음 넣어 부르고 싶을 때", "코드 진행이 왜 슬프거나 밝게 들리는지"]
@@ -194,7 +194,7 @@ entries:
     section: music
 - id: atlas.music.counterpoint
   kind: concept
-  path: ["예술과 표현", "음악과 소리"]
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
   name: 대위법
   hint: 독립 선율의 동시 진행
   aliases: [Counterpoint, "두 멜로디가 동시에 흘러도 어울리게 쓰기", "돌림노래처럼 가락이 서로 쫓아가는 작곡", "바흐 곡처럼 여러 가락이 얽히는 음악 쓰기", "반주가 아닌 대등한 가락을 하나 더 얹기"]
@@ -221,7 +221,7 @@ entries:
     section: music
 - id: atlas.music.meter
   kind: concept
-  path: ["예술과 표현", "음악과 소리"]
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
   name: 박자
   hint: 박의 규칙적 묶음
   aliases: [Meter, "하나 둘 셋 하나 둘 셋 세며 연주하기", "왈츠는 왜 셋씩 세는지 궁금할 때", "악보 맨 앞 분수처럼 생긴 숫자 읽는 법", "곡을 마디로 나누는 기준 이해하기"]
@@ -230,7 +230,7 @@ entries:
     section: music
 - id: atlas.music.timbre
   kind: concept
-  path: ["예술과 표현", "음악과 소리"]
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
   name: 음색
   hint: 음의 질감과 스펙트럼 특성
   aliases: [Timbre, "같은 음인데 피아노와 기타가 다르게 들리는 이유", "목소리만 듣고 누구인지 알 수 있는 까닭", "소리가 따뜻하다 날카롭다고 느끼는 차이", "신시사이저로 원하는 소리 느낌 만들기"]
@@ -266,7 +266,7 @@ entries:
     section: music
 - id: atlas.music.improvisation
   kind: method
-  path: ["예술과 표현", "음악과 소리"]
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
   name: 즉흥연주
   hint: 진행 중 음악적 선택 구성
   aliases: [Improvisation, "악보 없이 그 자리에서 가락 지어 연주하기", "재즈 솔로를 어떻게 하는지 궁금할 때", "합주 중에 코드만 보고 자유롭게 치기", "외운 곡만 칠 줄 알아 답답한 연주자"]
@@ -455,7 +455,7 @@ entries:
     section: film
 - id: atlas.film.montage
   kind: concept
-  path: ["예술과 표현", "영상과 사진"]
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
   name: 몽타주
   hint: 숏의 결합으로 의미와 리듬 구성
   aliases: [Montage, "짧은 장면들을 이어 붙여 시간 흐름 압축하기", "훈련 과정을 음악에 맞춰 빠르게 보여주기", "따로 찍은 두 장면을 붙여 새로운 뜻 만들기", "컷 길이로 박자감을 만들어 내는 편집"]
@@ -860,7 +860,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.additive_manufacturing
   kind: method
-  path: ["공학", "기계와 제작"]
+  path: ["공학", "기계와 제작", "가공과 제작"]
   name: 적층제조
   hint: 재료를 층별로 쌓아 제작
   aliases: [Additive manufacturing, "삼차원 프린터로 부품 직접 뽑기", "깎아서는 못 만드는 속 빈 복잡한 모양", "금형 없이 시제품 한두 개만 빨리", "한 겹씩 올려 물건을 만드는 방식"]
@@ -878,7 +878,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.injection_molding
   kind: method
-  path: ["공학", "기계와 제작"]
+  path: ["공학", "기계와 제작", "가공과 제작"]
   name: 사출성형
   hint: 금형에 재료를 주입해 성형
   aliases: [Injection molding, "플라스틱 제품을 똑같이 수천 개 찍어 내기", "녹인 재료를 틀에 밀어 넣어 굳히기", "플라스틱 케이스 대량 생산 방법", "틀 제작비는 비싸도 개당 값이 싼 제작"]

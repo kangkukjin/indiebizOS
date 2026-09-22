@@ -1,0 +1,968 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.10.ca8a8225e428
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 선
+  hint: 방향과 경계를 나타내는 시각 요소
+  aliases: ["선의 굵기와 방향이 주는 느낌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.cd4530df02c8
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 면
+  hint: 넓이를 가진 시각적 영역
+  aliases: ["색이나 경계로 공간을 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.e1b56dd67711
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 형태
+  hint: 대상의 외곽과 내부 구조가 이루는 모습
+  aliases: ["둥글고 각진 모양의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.bddbf5492347
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 질감
+  hint: 표면에서 느껴지는 시각·촉각적 성질
+  aliases: ["거칠거나 매끄럽게 보이게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.2c83beb62783
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 명도
+  hint: 색의 밝고 어두운 정도
+  aliases: ["같은 색을 밝고 어둡게 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.b6805283d05b
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 채도
+  hint: 색의 선명하고 탁한 정도
+  aliases: ["색이 또렷하거나 흐릿하게 느껴지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.d1b87acb2d22
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 색상
+  hint: 빨강·파랑처럼 구분되는 색의 종류
+  aliases: ["어떤 계열의 색인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.d3330fba6c97
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 보색
+  hint: 특정 색 체계에서 서로 대응하는 대비 색
+  aliases: ["나란히 두면 두드러지는 색의 조합"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.ced887319638
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 색온도
+  hint: 빛의 색을 온도 척도로 나타내는 표현
+  aliases: ["따뜻하거나 차갑게 보이는 조명"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.634269a095dd
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 균형
+  hint: 시각적 무게가 배치되는 관계
+  aliases: ["그림이 한쪽으로 기울어 보이는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.546689245b16
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 대비
+  hint: 서로 다른 요소의 차이를 강조하는 관계
+  aliases: ["밝고 어두움으로 주목시키기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.470c9b46b948
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 시각적 리듬
+  hint: 시각 요소의 반복과 변화가 만드는 흐름
+  aliases: ["무늬가 눈을 따라 움직이게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.0a4b0dea3338
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 비례
+  hint: 부분과 전체의 크기 관계
+  aliases: ["인물과 사물의 크기를 조화시키기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.5b782d706550
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 강조
+  hint: 특정 요소가 두드러지도록 하는 구성
+  aliases: ["먼저 보게 할 곳 정하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.aa1728a20299
+  kind: concept
+  path: ["예술과 표현", "시각예술", "형태와 색"]
+  name: 통일성과 변화
+  hint: 요소를 묶으면서 차이를 주는 구성 원리
+  aliases: ["비슷함 속에 지루하지 않은 차이 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/형태와 색
+- id: basics.10.f3ffa96aa960
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 회화
+  hint: 평면에 색과 선 등으로 표현하는 예술
+  aliases: ["물감과 선으로 이미지를 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.652d4b53b484
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 조각
+  hint: 입체적 형상과 공간으로 표현하는 예술
+  aliases: ["덩어리와 빈 공간으로 작품 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.a4256c041a7d
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 판화
+  hint: 판에 만든 형상을 다른 표면에 찍는 표현
+  aliases: ["한 원판에서 여러 이미지를 얻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.870d89695ec4
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 소묘
+  hint: 선과 명암을 중심으로 형태를 표현
+  aliases: ["간단한 재료로 형태 관찰해 그리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.4585b593442b
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 수채화
+  hint: 물을 매개로 하는 물감의 회화
+  aliases: ["투명한 색이 겹치는 그림"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.a56bbb81a438
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 유화 (회화)
+  hint: 기름을 매개로 하는 물감의 회화
+  aliases: ["천천히 마르는 물감으로 층을 쌓기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.4d9746ea5efd
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 수묵화
+  hint: 먹의 농담과 붓질을 중심으로 한 회화
+  aliases: ["검은 먹만으로 깊이와 질감 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.5a6ac918123e
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 서예
+  hint: 문자를 붓질과 구성으로 표현하는 예술
+  aliases: ["글씨의 선과 여백을 감상하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.15c17ff11f60
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 도예
+  hint: 흙의 성형과 소성을 통한 제작과 표현
+  aliases: ["흙이 불을 만나 단단한 형태가 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.e409c9c4d1e6
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 설치미술
+  hint: 장소와 여러 요소의 관계로 구성하는 작품
+  aliases: ["작품 속 공간을 걸으며 경험하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.6ee9efbc4a32
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 개념미술
+  hint: 생각과 개념의 역할을 강조하는 미술
+  aliases: ["완성된 물건보다 생각이 중심인 작품"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.d289648ebb42
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 추상미술
+  hint: 대상의 재현보다 형식과 관계를 강조하는 표현
+  aliases: ["무엇을 그렸는지보다 형태와 색을 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.b69dc0c06e93
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 사실주의
+  hint: 현실의 구체적 모습과 경험을 중시하는 표현
+  aliases: ["이상화보다 실제 삶의 모습을 그리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.c4cdd5361da8
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 인상주의
+  hint: 빛과 순간적 지각 등을 탐구한 미술 경향
+  aliases: ["순간의 빛과 색 변화를 담기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.8763ac47f4db
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 표현주의
+  hint: 내적 감정과 주관적 경험을 강조하는 표현
+  aliases: ["모양을 바꾸어 강한 감정을 나타내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.746dc9c0066b
+  kind: concept
+  path: ["예술과 표현", "시각예술", "미술의 매체와 전통"]
+  name: 공예
+  hint: 재료와 기술로 생활물과 표현물을 만드는 활동
+  aliases: ["손기술과 쓰임이 만나는 제작"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/시각예술/미술의 매체와 전통
+- id: basics.10.73a9ca41957e
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 음높이
+  hint: 소리가 높고 낮게 지각되는 성질
+  aliases: ["같은 소리가 더 높거나 낮게 들리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.eb7a5c3fc418
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 음정
+  hint: 두 음높이 사이의 거리 관계
+  aliases: ["두 음이 얼마나 떨어져 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.6468e0cb4935
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 음계
+  hint: 음들을 일정한 관계로 배열한 체계
+  aliases: ["멜로디가 쓰는 음의 모음"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.04caeeee7717
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 조성
+  hint: 으뜸음과 화음 등의 중심 관계
+  aliases: ["음악이 돌아갈 집처럼 느껴지는 음"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.0d584c3f5a1e
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 선법
+  hint: 특정 음 배열과 중심을 가진 조직 방식
+  aliases: ["음들의 배치가 만드는 고유한 느낌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.f0130898c1d1
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 선율
+  hint: 시간에 따라 이어지는 음높이의 흐름
+  aliases: ["흥얼거릴 수 있는 음악의 가락"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.b928d105d026
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 화음
+  hint: 여러 음이 동시에 이루는 결합
+  aliases: ["음을 함께 울렸을 때의 느낌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.fbf72159cdb7
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 리듬 (음악)
+  hint: 소리와 쉼의 시간적 조직
+  aliases: ["길고 짧은 소리가 이어지는 패턴"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.4e099ec6abf9
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 템포
+  hint: 음악이 진행되는 빠르기
+  aliases: ["같은 곡을 빠르거나 느리게 연주"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.bc51742320bb
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 셈여림
+  hint: 음악의 소리 크기와 그 변화
+  aliases: ["점점 커지거나 작아지는 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.2e74ef93a23b
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 악구
+  hint: 의미 있는 단위로 묶인 음악의 흐름
+  aliases: ["멜로디에서 한 문장처럼 들리는 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.0e73b9653993
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 동기
+  hint: 반복·발전되는 작은 음악적 요소
+  aliases: ["짧은 가락이 곡 전체에서 변하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.14fe391b31a7
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "음악의 구성"]
+  name: 음악형식
+  hint: 음악 부분들이 반복·대조·발전하는 구조
+  aliases: ["곡의 여러 부분이 어떻게 이어지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/음악의 구성
+- id: basics.10.59d8150fb75d
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 배음
+  hint: 기본음과 함께 나타나는 고주파 성분
+  aliases: ["악기 소리에 고유한 색이 생기는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.6764c79c2d70
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 아티큘레이션
+  hint: 음을 연결·분리하며 발음하는 방식
+  aliases: ["같은 음표도 부드럽거나 짧게 연주"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.43ad71be1638
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 프레이징
+  hint: 악구의 방향과 호흡을 구성하는 표현
+  aliases: ["음악을 말하듯 자연스럽게 이어가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.e58aa75a605a
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 루바토
+  hint: 표현을 위해 박의 시간을 유연하게 쓰는 방식
+  aliases: ["박자를 조금 밀고 당기는 연주"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.307d5f70c31a
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 합주
+  hint: 여러 연주자가 함께 음악을 만드는 활동
+  aliases: ["각자 소리를 맞추며 연주하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.4672fa6b30c4
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 합창
+  hint: 여러 사람이 함께 노래하는 활동
+  aliases: ["목소리들이 성부로 어울리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.9b4f0902ab77
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 관현악
+  hint: 관악기와 현악기 등을 결합한 연주 편성
+  aliases: ["여러 악기군의 소리를 조합"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.a9274a1c3bf7
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 민속음악
+  hint: 지역과 공동체의 전승에 뿌리를 둔 음악
+  aliases: ["삶과 의례 속에서 이어진 노래"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.f651b3622861
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 구전전승
+  hint: 말과 연주 등을 통해 지식을 이어가는 방식
+  aliases: ["악보 없이 듣고 따라 배우는 음악"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.6ce792a5f988
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 잔향
+  hint: 직접음 뒤에 반사음이 이어지는 현상
+  aliases: ["큰 홀에서 소리가 오래 남는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.45958997c35b
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 흡음
+  hint: 재료 등이 소리 에너지를 흡수하는 작용
+  aliases: ["방의 울림을 줄이는 표면"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.13a021257fc5
+  kind: concept
+  path: ["예술과 표현", "음악과 소리", "연주와 음향"]
+  name: 음향공간
+  hint: 소리의 발생·반사·청취가 이루는 공간적 조건
+  aliases: ["같은 연주가 장소마다 다르게 들리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/음악과 소리/연주와 음향
+- id: basics.10.56f96c886527
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 노출 (사진)
+  hint: 감광면 등에 도달하는 빛의 양과 시간
+  aliases: ["사진이 밝거나 어둡게 찍히는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.b63466acb2d1
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 조리개
+  hint: 렌즈를 통과하는 빛의 구경을 조절하는 장치
+  aliases: ["빛의 양과 배경 흐림을 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.15ea9870736d
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 셔터속도
+  hint: 빛을 받아들이는 시간의 길이
+  aliases: ["움직임이 멈추거나 흐르게 찍히기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.650e4e2fb1e1
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 감도 (사진)
+  hint: 빛에 대한 기록·신호 처리의 민감도 설정
+  aliases: ["어두운 곳에서 밝기와 잡음의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.cb9083827256
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 초점
+  hint: 선명한 상이 형성되는 위치와 상태
+  aliases: ["어느 부분을 또렷하게 보여줄지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.6a558e358d27
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 화각
+  hint: 영상에 담기는 공간의 각도 범위
+  aliases: ["넓게 보거나 좁게 당겨 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.9b9dfd840c5b
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 원근감
+  hint: 화면에서 가까움과 멂이 느껴지는 관계
+  aliases: ["앞뒤 물체의 크기 관계로 깊이 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.6b876e02c6e4
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 프레이밍 (영상)
+  hint: 화면 안에 포함할 범위와 배치의 선택
+  aliases: ["무엇을 보여주고 무엇을 밖에 둘지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.ead9187783ff
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 숏
+  hint: 촬영·편집의 연속적인 영상 단위
+  aliases: ["카메라가 끊기기 전 하나의 화면"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.047a58596eaa
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 시점숏
+  hint: 특정 인물의 시각을 나타내는 화면
+  aliases: ["등장인물이 보는 것을 관객에게 보여주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.e3f3417c1dd0
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 컷
+  hint: 두 영상 단위를 연결하는 편집 전환
+  aliases: ["한 장면에서 다른 장면으로 넘어가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.7ca7701b55c3
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 색보정
+  hint: 영상의 색과 밝기 관계를 조정
+  aliases: ["여러 장면의 색을 맞추기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.a6fb6223e52f
+  kind: concept
+  path: ["예술과 표현", "영상과 사진", "사진과 영상언어"]
+  name: 다큐멘터리
+  hint: 실재의 인물·사건 등을 다루는 영상 형식
+  aliases: ["현실을 선택하고 구성하여 보여주는 영화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/영상과 사진/사진과 영상언어
+- id: basics.10.8b0e2bb594ce
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 연기
+  hint: 인물과 상황을 몸·말·행위로 표현하는 활동
+  aliases: ["다른 인물의 삶을 무대에서 드러내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.5f2ea24b0304
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 배역
+  hint: 공연에서 맡는 인물이나 역할
+  aliases: ["배우가 어떤 사람을 표현하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.91b9d7d62cf1
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 대사 (공연)
+  hint: 인물이 말하는 언어적 표현
+  aliases: ["말을 통해 갈등과 성격 전달"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.5427f503f99a
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 독백
+  hint: 한 인물의 말이 중심이 되는 발화 형식
+  aliases: ["혼자 말하며 내면을 보여주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.49eda29c6bd6
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 앙상블 (공연)
+  hint: 여러 수행자가 상호작용하여 만드는 전체
+  aliases: ["각자 잘하는 것과 함께 어울리는 것"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.6caabfca0126
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 무대동선
+  hint: 무대에서 인물의 이동과 위치 관계
+  aliases: ["누가 어디로 움직이며 만나는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.91b4cc7e5234
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 무대미술
+  hint: 공간과 시각 요소로 공연 환경을 구성
+  aliases: ["배경과 소품으로 세계 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.bf1ff2f94063
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 무대조명
+  hint: 빛으로 공간·시간·주의·정서를 구성
+  aliases: ["빛의 변화로 분위기와 시선 이끌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.7faaad79b745
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 제스처
+  hint: 의미와 정서를 나타내는 몸짓
+  aliases: ["작은 손동작이 전하는 마음"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.247ca4fbbf39
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 신체표현
+  hint: 몸을 매체로 의미와 감정을 드러냄
+  aliases: ["말 없이 몸으로 상황 전달"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.c6512d663fbc
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 리허설
+  hint: 공연을 준비하며 반복·조정하는 과정
+  aliases: ["실제 무대 전에 함께 맞춰 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.b7b6829b1d70
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
+  name: 관객참여
+  hint: 관객의 행위가 공연에 영향을 주는 방식
+  aliases: ["보는 사람이 작품의 일부가 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/무대와 몸
+- id: basics.10.3e83473a1224
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 미학
+  hint: 예술과 미적 경험·가치를 탐구하는 분야
+  aliases: ["아름다움과 예술의 의미를 묻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.9233b549ae39
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 취향
+  hint: 선호가 형성되고 표현되는 경향
+  aliases: ["사람마다 좋아하는 작품이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.16a8daf54141
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 양식
+  hint: 공통된 표현 형식과 특징
+  aliases: ["특정 시대나 작가의 표현 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.4c0facd0ff74
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 장르
+  hint: 관습과 형식으로 구분하는 작품 범주
+  aliases: ["작품을 볼 때 기대하는 규칙"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.f87bf61b6bd0
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 재현
+  hint: 대상과 현실을 표현으로 나타내는 관계
+  aliases: ["예술이 현실을 어떤 방식으로 보여주는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.7cebddfbc69e
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 해석
+  hint: 형식과 맥락에서 의미를 구성하는 활동
+  aliases: ["작품이 무엇을 말하는지 읽기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.4431e5c2d0b6
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 수용 (예술)
+  hint: 관객과 독자가 작품을 경험하고 받아들이는 과정
+  aliases: ["시대와 사람에 따라 작품이 다르게 읽히기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.2b6c0c374f34
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 예술제도
+  hint: 창작·유통·평가를 둘러싼 조직과 규칙
+  aliases: ["미술관과 시장이 작품 가치에 미치는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.01b21208d6ca
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 예술의 자율성
+  hint: 예술이 외부 목적과 맺는 독립성의 문제
+  aliases: ["작품을 쓰임과 별개로 평가할 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.0aa1450a1201
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 전통과 혁신
+  hint: 계승한 형식과 새로운 시도의 관계
+  aliases: ["익숙한 표현을 바꾸어 새로 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.f2e621517910
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 원본과 복제
+  hint: 작품의 고유성과 재생산 사이의 관계
+  aliases: ["같은 이미지의 여러 사본을 어떻게 보는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.121d04b891f5
+  kind: concept
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
+  name: 저자성과 협업
+  hint: 창작의 주체와 공동 제작의 관계
+  aliases: ["여러 사람이 만든 작품의 주인은 누구인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/공연과 감상/감상과 예술맥락
+- id: basics.10.cc485c2163e1
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 기하모형
+  hint: 대상의 형상을 수학적 구조로 표현
+  aliases: ["물체의 모양을 계산 가능한 형태로 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.2452193782b7
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 메시
+  hint: 정점·모서리·면으로 구성한 표면 표현
+  aliases: ["작은 면을 이어 입체 표면 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.8f311ff45e59
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 폴리곤
+  hint: 여러 선분으로 둘러싸인 면
+  aliases: ["입체 모델을 이루는 작은 평면"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.b4f3f7504497
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 정점
+  hint: 형상을 정의하는 점
+  aliases: ["입체 모형의 모서리 끝 위치"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.889addb59960
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 텍스처
+  hint: 표면에 적용하는 색·무늬 등의 자료
+  aliases: ["모형에 나무나 천의 무늬 입히기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.e2a2344dfe2b
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 재질
+  hint: 빛과 표면의 상호작용을 정하는 표현
+  aliases: ["금속과 플라스틱이 다르게 보이는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.ef57d3c8ccf3
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 조명
+  hint: 장면에서 빛의 위치·방향·성질을 구성
+  aliases: ["입체 물체의 분위기와 형태 드러내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.c34ffea0d5a1
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 카메라 투영
+  hint: 삼차원 장면을 화면으로 옮기는 기하 관계
+  aliases: ["입체를 평면 그림으로 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.48c98a24e603
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 렌더링
+  hint: 장면 정보에서 최종 이미지를 생성
+  aliases: ["모형과 빛에서 완성된 그림 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.77564f6a2cc5
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 레이 트레이싱
+  hint: 광선 경로를 추적하여 영상 효과를 계산
+  aliases: ["반사와 그림자를 빛의 길로 계산"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.493ddd895940
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 애니메이션
+  hint: 시간에 따른 변화를 구성해 움직임을 표현
+  aliases: ["정지한 모형을 움직이게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.0a2f314630fd
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 키프레임
+  hint: 중요한 시간의 상태를 지정하는 표현
+  aliases: ["몇 장면을 정해 중간 움직임 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.a30ec9bed352
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 리깅
+  hint: 모형을 움직이기 위한 제어 구조를 부여
+  aliases: ["캐릭터에 뼈대와 조종 장치 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현
+- id: basics.10.2cefef43baaf
+  kind: concept
+  path: ["예술과 표현", "3D", "입체와 공간표현"]
+  name: 공간 스케일
+  hint: 모형과 장면의 크기 기준
+  aliases: ["입체 물건의 크기를 서로 맞추기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 예술과 표현/3D/입체와 공간표현

@@ -1,0 +1,1085 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.02.6c0b9dd710ab
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 위치
+  hint: 기준에 대한 물체의 공간적 자리
+  aliases: ["어디에 있는지를 수로 나타내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.450fc79975e5
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 변위
+  hint: 처음 위치에서 나중 위치까지의 방향 있는 변화
+  aliases: ["움직인 총거리와 출발점에서 떨어진 거리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.7b2d95597bd0
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 속력과 속도
+  hint: 이동의 빠르기와 방향을 포함한 변화율
+  aliases: ["빠르기는 같아도 방향이 다른 운동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.f1ea8861f95d
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 가속도
+  hint: 시간에 따른 속도의 변화율
+  aliases: ["달리는 방향이나 빠르기가 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.987b3f80ba2a
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 질량
+  hint: 관성 및 중력 상호작용과 관련된 물체의 양
+  aliases: ["같은 힘에도 덜 움직이는 물체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.35f538545773
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 무게
+  hint: 중력에 의해 물체에 작용하는 힘
+  aliases: ["달에 가면 달라지는 몸의 무게"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.fcf3bc3d8a5d
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 뉴턴 운동법칙
+  hint: 힘과 물체 운동의 관계를 정하는 법칙
+  aliases: ["힘을 주면 움직임이 어떻게 달라지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.3c21c22f5f88
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 작용과 반작용
+  hint: 상호작용하는 두 물체에 작용하는 반대 방향 힘
+  aliases: ["벽을 밀면 손도 밀리는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.21b64bcf689e
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 운동량
+  hint: 질량과 속도의 곱으로 나타내는 운동의 양
+  aliases: ["무겁고 빠른 물체를 멈추기 어려운 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.d4c3b7b72be7
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 충격량
+  hint: 힘이 작용한 시간에 따른 운동량 변화
+  aliases: ["충돌 시간을 늘리면 충격이 줄어드는 까닭"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.47636253f61d
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 일과 에너지
+  hint: 힘에 의한 에너지 전달과 변화 능력
+  aliases: ["물건을 들어 올릴 때 전달되는 양"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.c58c87bad8de
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 운동에너지
+  hint: 운동 상태에 따른 물체의 에너지
+  aliases: ["빠르게 달릴수록 큰 충돌 효과"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.9339b9ee7c14
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 위치에너지
+  hint: 상호작용 속 위치에 따른 에너지
+  aliases: ["높이 올린 물건이 일을 할 수 있는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.92cdd74b734b
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 토크
+  hint: 힘이 회전을 일으키는 효과
+  aliases: ["문 손잡이를 끝에 두는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.1efb68885aa3
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 각운동량
+  hint: 회전 운동의 양을 나타내는 물리량
+  aliases: ["회전하며 팔을 모으면 빨라지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.a6900a0e9e20
+  kind: concept
+  path: ["물질과 우주", "물리", "운동과 힘"]
+  name: 구심력
+  hint: 곡선 운동에서 중심 방향으로 작용하는 힘
+  aliases: ["원을 도는 물체를 안쪽으로 당기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/운동과 힘
+- id: basics.02.d798e80bd2d0
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 온도
+  hint: 열적 상태를 나타내는 물리량
+  aliases: ["뜨겁고 차가운 정도를 재기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.6f4112362e97
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열
+  hint: 온도 차이로 전달되는 에너지
+  aliases: ["뜨거운 물체에서 차가운 물체로 이동하는 에너지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.ba7aa782c097
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 비열
+  hint: 단위 질량의 온도 변화에 필요한 열량
+  aliases: ["재질마다 데워지는 속도가 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.5faf2b8adc2f
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열전도
+  hint: 물질 내부의 상호작용으로 열이 전달됨
+  aliases: ["금속 숟가락 끝까지 뜨거워지는 현상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.2eae67905421
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 대류
+  hint: 유체의 이동에 의한 열과 물질 전달
+  aliases: ["따뜻한 공기가 올라가며 생기는 흐름"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.04be83a16ce3
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열복사
+  hint: 전자기파를 통해 에너지가 전달되는 현상
+  aliases: ["닿지 않아도 난로 앞이 따뜻한 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.38cc9cc33ad2
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열팽창
+  hint: 온도 변화에 따른 물체의 크기 변화
+  aliases: ["다리 연결부에 틈을 두는 까닭"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.17175e564213
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 잠열
+  hint: 상태 변화에 흡수·방출되는 열
+  aliases: ["얼음이 녹는 동안 온도가 유지되는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.78a2d556b075
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열평형
+  hint: 접촉한 계들 사이에 순열전달이 없는 상태
+  aliases: ["두 물체의 온도가 같아질 때"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.ab97e7021739
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열역학 제1법칙
+  hint: 내부에너지 변화와 열·일의 에너지 보존 관계
+  aliases: ["열을 주거나 일을 하면 에너지가 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.d23c63d1dfbd
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열역학 제2법칙
+  hint: 비가역 과정과 엔트로피 변화의 방향을 제한
+  aliases: ["열이 저절로 한쪽으로 흐르는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.b837760e7cd9
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 내부에너지
+  hint: 계 내부의 미시적 운동과 상호작용 에너지
+  aliases: ["물체 안에 저장된 에너지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.08218f05883c
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 이상기체
+  hint: 분자 간 상호작용 등을 단순화한 기체 모형
+  aliases: ["기체의 온도 압력 부피를 연결하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.6a4b2bd7808e
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 기체 상태방정식
+  hint: 기체의 상태량 사이를 연결하는 관계
+  aliases: ["공기를 압축하면 무엇이 달라지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.05dfdebf973b
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 절대영도
+  hint: 열역학적 온도 척도의 영점
+  aliases: ["온도의 가장 낮은 기준"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.17d18b5571a5
+  kind: concept
+  path: ["물질과 우주", "물리", "열과 에너지"]
+  name: 열기관
+  hint: 열에너지 일부를 일로 바꾸는 장치
+  aliases: ["뜨거운 열원으로 기계를 움직이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/열과 에너지
+- id: basics.02.7460934be60f
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 진폭
+  hint: 진동이 평형 위치에서 벗어나는 최대 크기
+  aliases: ["흔들림이 얼마나 큰지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.39279397055c
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 주기와 진동수
+  hint: 한 번 진동하는 시간과 단위시간의 진동 횟수
+  aliases: ["얼마나 자주 떨리는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.ed0363c62cee
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 파장
+  hint: 동일한 위상의 이웃한 지점 사이 거리
+  aliases: ["물결 마루 사이의 간격"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.28287dea61af
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 위상
+  hint: 주기적 운동에서의 상대적 진행 상태
+  aliases: ["두 떨림의 타이밍 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.204e72eb7c5d
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 간섭
+  hint: 파동의 중첩으로 세기가 강화·약화되는 현상
+  aliases: ["물결이 만나 높아지거나 사라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.abfb8ba9f8b0
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 회절
+  hint: 파동이 틈이나 장애물 주변으로 퍼지는 현상
+  aliases: ["모퉁이 너머의 소리가 들리는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.d468c1358a72
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 굴절
+  hint: 매질 변화 등으로 파동 진행 방향이 바뀜
+  aliases: ["물속 빨대가 꺾여 보이는 까닭"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.5b03c872ca41
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 반사
+  hint: 경계에서 파동이 되돌아오는 현상
+  aliases: ["거울에 모습이 비치는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.871b1e61014d
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 편광
+  hint: 파동의 진동 방향에 관한 성질
+  aliases: ["특정 방향의 빛만 통과시키기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.114c9cd3dd25
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 공명
+  hint: 외부 구동이 계의 고유 진동과 맞아 반응이 커짐
+  aliases: ["맞는 박자로 밀면 그네가 높이 가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.3c7f763823bc
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 도플러 효과
+  hint: 상대 운동으로 관측 진동수가 달라지는 현상
+  aliases: ["지나가는 구급차 소리가 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.3eb31a1c0c0f
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 정상파
+  hint: 반대 진행 파동의 중첩으로 고정된 진동 무늬 형성
+  aliases: ["줄에서 움직이지 않는 마디가 생기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.cc5a4b2395d0
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 전반사
+  hint: 조건을 만족할 때 경계에서 빛이 모두 반사됨
+  aliases: ["광섬유 안에 빛이 갇혀 가는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.e302cd1329cf
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 렌즈
+  hint: 굴절로 빛을 모으거나 퍼뜨리는 광학 요소
+  aliases: ["안경과 돋보기가 초점을 바꾸는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.9d340bc8b417
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 초점거리
+  hint: 광학계의 집광·발산 특성을 나타내는 거리
+  aliases: ["렌즈가 얼마나 강하게 빛을 모으는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.12af1af2d37b
+  kind: concept
+  path: ["물질과 우주", "물리", "파동과 빛"]
+  name: 전자기 스펙트럼
+  hint: 주파수에 따른 전자기파의 범위
+  aliases: ["전파와 빛과 엑스선의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/파동과 빛
+- id: basics.02.b57bcd8ac072
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 전하
+  hint: 전자기 상호작용을 일으키는 물리적 성질
+  aliases: ["문지른 물체가 서로 끌어당기는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.839ecfbf6ed5
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 전기장
+  hint: 전하에 힘을 작용시키는 공간의 장
+  aliases: ["전하 주변에서 힘이 전달되는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.170c17c885e2
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 전위
+  hint: 단위 전하당 위치에너지에 대응하는 양
+  aliases: ["전기가 이동할 때의 높낮이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.3ca43bdf62ef
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 전류
+  hint: 전하의 흐름을 나타내는 양
+  aliases: ["도선을 따라 전하가 이동하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.6663b25b49d5
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 전압
+  hint: 두 지점 사이 전위 차이
+  aliases: ["전류를 흐르게 하는 전기적 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.c02406d896df
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 전기저항
+  hint: 전류 흐름을 방해하는 성질
+  aliases: ["도선마다 전기가 다르게 흐르는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.9c4f16e97f7e
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 자기장
+  hint: 움직이는 전하와 자기 모멘트 등에 작용하는 장
+  aliases: ["자석 주변에서 힘이 생기는 영역"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.4150287efe76
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 전자기 유도
+  hint: 자기선속 변화로 기전력이 생기는 현상
+  aliases: ["자석을 움직여 전기를 만드는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.4ee8490c0a54
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 로런츠 힘
+  hint: 전기장과 자기장이 전하에 가하는 힘
+  aliases: ["전하가 자기장 안에서 휘는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.9387934f8c61
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 인덕턴스
+  hint: 전류 변화와 유도 기전력의 관계를 나타내는 성질
+  aliases: ["코일이 전류 변화를 방해하는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.cf93bfbddeec
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 직류와 교류
+  hint: 전류의 방향이 일정하거나 주기적으로 바뀌는 방식
+  aliases: ["배터리와 가정 전원의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.ac94af9969b1
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 줄열
+  hint: 전류가 저항을 통과하며 발생하는 열
+  aliases: ["전열기가 뜨거워지는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.e3b54c03fb62
+  kind: concept
+  path: ["물질과 우주", "물리", "전자기"]
+  name: 초전도
+  hint: 특정 조건에서 전기저항이 사라지는 상태
+  aliases: ["전류가 손실 없이 흐르는 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/전자기
+- id: basics.02.25e3ee2ced21
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 광자
+  hint: 전자기장의 에너지 양자
+  aliases: ["빛을 에너지 덩어리로 이해하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.4dc9cf0a7b84
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 파동입자 이중성
+  hint: 양자 대상이 파동과 입자의 성질을 나타냄
+  aliases: ["빛과 전자가 서로 다른 모습으로 관측되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.3f6a7fc3fa9c
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 불확정성 원리
+  hint: 특정 물리량들의 분산 곱에 하한이 존재
+  aliases: ["위치와 운동량을 동시에 정밀하게 정할 수 있는 정도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.9db950e7193a
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 양자중첩
+  hint: 양자 상태가 여러 상태의 선형결합으로 표현됨
+  aliases: ["측정 전 여러 가능성이 함께 있는 상태"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.c22ec482a91d
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 양자터널링
+  hint: 고전적으로 넘기 어려운 장벽을 통과하는 양자 현상
+  aliases: ["입자가 에너지 장벽 너머로 나타나기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.e35e56a79308
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 에너지 준위
+  hint: 계가 가질 수 있는 구분된 에너지 값
+  aliases: ["원자가 특정 색의 빛만 내는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.67ca13003c0b
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 배타원리
+  hint: 동일한 페르미온이 같은 양자 상태를 차지하지 못함
+  aliases: ["전자들이 여러 자리에 나누어 들어가는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.1bf59f3bb537
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 특수상대성이론
+  hint: 관성계 사이의 시공간과 빛의 속도 관계
+  aliases: ["빠르게 움직일 때 시간과 길이의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.df701a794d99
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 일반상대성이론
+  hint: 중력을 시공간의 기하로 설명하는 이론
+  aliases: ["질량이 빛의 경로를 휘게 하는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.2ead692f255b
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 질량에너지 등가
+  hint: 질량과 에너지 사이의 대응 관계
+  aliases: ["작은 질량이 큰 에너지로 바뀌는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.3ce753f5334b
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 핵분열
+  hint: 무거운 원자핵이 나뉘는 과정
+  aliases: ["큰 원자핵을 쪼개 에너지 얻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.340e4eb88b40
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 핵융합
+  hint: 가벼운 원자핵들이 합쳐지는 과정
+  aliases: ["별 안에서 에너지가 만들어지는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.0c2d4a28b634
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 방사성 붕괴
+  hint: 불안정한 원자핵이 입자나 에너지를 방출하며 변함
+  aliases: ["시간이 지나며 원자핵 종류가 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.be6a8203bdfa
+  kind: concept
+  path: ["물질과 우주", "물리", "현대물리"]
+  name: 반감기
+  hint: 어떤 양이 절반으로 감소하는 데 걸리는 시간
+  aliases: ["방사성 물질이 줄어드는 속도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/물리/현대물리
+- id: basics.02.c2e3f1983f73
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 원자
+  hint: 원자핵과 전자로 이루어진 화학 원소의 기본 단위
+  aliases: ["물질을 이루는 작은 기본 입자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.c4fa5219eaa5
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 원소
+  hint: 원자번호로 구별되는 원자의 종류
+  aliases: ["철과 산소가 다른 물질인 까닭"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.421c9a3fdf6d
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 동위원소
+  hint: 양성자 수는 같고 중성자 수가 다른 원자
+  aliases: ["같은 원소인데 무게가 다른 원자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.d11f4177bfdc
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 분자
+  hint: 원자들이 결합한 독립적인 화학적 단위
+  aliases: ["여러 원자가 묶인 물질의 단위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.a6550e90f6f9
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 이온
+  hint: 전자를 잃거나 얻어 전하를 띤 입자
+  aliases: ["전기를 띠게 된 원자나 분자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.c7da57dcd366
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 주기율표
+  hint: 원소를 원자번호와 성질의 주기성으로 배열
+  aliases: ["원소들의 성질이 반복되는 질서"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.610d96489b0e
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 전자배치
+  hint: 원자의 전자가 에너지 상태를 점유하는 방식
+  aliases: ["전자들이 어떤 자리에 들어가는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.f11cb25fb93e
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 원자가전자
+  hint: 화학 결합에 주로 관여하는 바깥 전자
+  aliases: ["원소가 다른 원자와 결합하는 성향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.f40f3d5765fa
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 전기음성도
+  hint: 결합 전자를 끌어당기는 상대적 경향
+  aliases: ["결합 속 전자가 한쪽으로 치우치는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.fd539d53310c
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 이온결합
+  hint: 반대 전하 이온 사이의 정전기적 결합
+  aliases: ["소금 결정이 만들어지는 결합"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.23ba4d186409
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 공유결합
+  hint: 원자 사이에 전자를 공유하는 결합
+  aliases: ["원자들이 전자를 나누어 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.044a8314ef94
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 금속결합
+  hint: 금속 원자와 비편재화 전자에 의한 결합
+  aliases: ["금속이 전기를 잘 통하고 잘 펴지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.bef6ab3b1974
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 수소결합
+  hint: 수소가 관여하는 특정 분자 간·분자 내 상호작용
+  aliases: ["물 분자끼리 서로 끌리는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.5ba7a830deff
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 분자간 힘
+  hint: 분자들 사이에 작용하는 상호작용
+  aliases: ["물질마다 끓는점이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.7129629d5be9
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 극성
+  hint: 분자나 결합에서 전하 분포가 치우친 성질
+  aliases: ["분자의 양쪽 전기적 성질이 다른 경우"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.b29c9b21ad35
+  kind: concept
+  path: ["물질과 우주", "화학", "원자와 결합"]
+  name: 몰
+  hint: 입자 수를 나타내는 물질량의 단위
+  aliases: ["아주 많은 원자를 묶어 세기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/원자와 결합
+- id: basics.02.c861c3d57af0
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 용질과 용매
+  hint: 용액에서 녹는 성분과 녹이는 매질
+  aliases: ["소금물에서 무엇이 녹고 무엇이 녹이는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.0ce17e0442bc
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 농도
+  hint: 혼합물에서 특정 성분이 차지하는 양
+  aliases: ["얼마나 진하게 섞였는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.aaf362d6ed6a
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 포화용액
+  hint: 주어진 조건에서 용질이 최대한 녹아 평형인 용액
+  aliases: ["더 넣어도 녹지 않는 상태"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.3f0501b5c302
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 산화환원
+  hint: 전자 이동이나 산화수 변화가 있는 반응
+  aliases: ["철이 녹슬고 연료가 타는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.235a4bfef002
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 산화수
+  hint: 전자 배분을 형식적으로 나타내는 원자의 값
+  aliases: ["반응에서 전자를 주고받는 정도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.e8386d30186d
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 촉매
+  hint: 반응 경로를 바꾸어 속도를 변화시키는 물질
+  aliases: ["반응 뒤 남으면서 반응을 빠르게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.32cc306def39
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 활성화에너지
+  hint: 반응이 진행되는 경로의 에너지 장벽
+  aliases: ["반응이 시작되려면 필요한 에너지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.5f7f71da3715
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 발열반응
+  hint: 주변으로 열을 방출하는 반응
+  aliases: ["반응하면서 뜨거워지는 현상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.d1abbed8907c
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 흡열반응
+  hint: 주변에서 열을 흡수하는 반응
+  aliases: ["반응하면서 주변이 차가워지는 현상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.d96e0b11a44b
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 중화반응
+  hint: 산과 염기가 반응하는 과정
+  aliases: ["산성 용액과 염기성 용액을 섞기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.aa5a2c72b4b6
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 산도
+  hint: 수소 이온 활동도에 따른 산성의 척도
+  aliases: ["용액의 신맛과 산성 정도를 수치화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.285f0d60262d
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 완충용액
+  hint: 산이나 염기 첨가에도 산도 변화가 작은 용액
+  aliases: ["조금 섞어도 산도가 잘 변하지 않는 물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.6f13060e491e
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 침전반응
+  hint: 용액에서 잘 녹지 않는 고체가 생성되는 반응
+  aliases: ["맑은 용액을 섞자 고체가 생기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.be0902a5be15
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 화학양론
+  hint: 반응 물질과 생성물의 정량적 관계
+  aliases: ["반응에 필요한 재료의 양 맞추기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.735a8d235b8c
+  kind: concept
+  path: ["물질과 우주", "화학", "용액과 반응"]
+  name: 르샤틀리에 원리
+  hint: 평형계가 외부 변화의 영향을 완화하는 방향으로 변함
+  aliases: ["압력이나 농도를 바꿨을 때 평형 이동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/용액과 반응
+- id: basics.02.58a9d2da40cb
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 탄화수소
+  hint: 탄소와 수소로 이루어진 화합물
+  aliases: ["연료의 기본 성분 알아보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.0c2cc2431a8a
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 작용기
+  hint: 유기분자의 성질과 반응을 특징짓는 원자 집단
+  aliases: ["분자의 어느 부분이 반응하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.2eac0dd251fa
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 이성질체
+  hint: 분자식은 같지만 구조나 배치가 다른 물질
+  aliases: ["같은 원자로도 성질이 다른 분자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.a37b66dcd117
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 중합
+  hint: 작은 단위들이 반복 결합하여 큰 분자가 되는 반응
+  aliases: ["작은 분자를 이어 긴 사슬 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.7837f4bb47cf
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 고분자
+  hint: 반복 단위 등을 가진 큰 분자
+  aliases: ["플라스틱과 단백질의 긴 사슬"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.31ed8bad774d
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 알코올
+  hint: 하이드록실기가 결합한 유기화합물 계열
+  aliases: ["술과 소독 성분의 화학적 공통점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.04032d1b8325
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 에스터
+  hint: 산과 알코올에서 유래하는 결합을 가진 화합물
+  aliases: ["과일 향을 내는 분자 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.f30750511ba6
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 탄수화물
+  hint: 당과 그 중합체 등을 포함하는 유기물 계열
+  aliases: ["당분과 전분과 섬유소의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.d4b0a15750f7
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 지질
+  hint: 물에 잘 녹지 않는 다양한 생체 유기물
+  aliases: ["기름과 세포막을 이루는 물질"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.d88aaa5803f7
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 아미노산
+  hint: 아미노기와 카복실기를 가진 단백질 구성 단위
+  aliases: ["단백질을 이루는 작은 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.4e51fbe0bd37
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 단백질
+  hint: 아미노산 사슬로 이루어진 생체 고분자
+  aliases: ["몸의 구조와 작용을 만드는 분자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.16f66b7ebff7
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 핵산
+  hint: 유전 정보의 저장과 전달에 관여하는 고분자
+  aliases: ["유전 정보를 담은 분자 사슬"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.69d41d2800bd
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 변성
+  hint: 단백질 등의 고차 구조가 변하는 현상
+  aliases: ["달걀을 익히면 단단해지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자
+- id: basics.02.46bfe76fc131
+  kind: concept
+  path: ["물질과 우주", "화학", "유기물과 생체분자"]
+  name: 비누화
+  hint: 지방 등의 에스터가 염기와 반응해 분해됨
+  aliases: ["기름으로 비누를 만드는 반응"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/화학/유기물과 생체분자

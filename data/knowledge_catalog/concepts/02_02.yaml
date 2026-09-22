@@ -1,0 +1,419 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.02.84e47ca34f1d
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 결정과 비정질
+  hint: 장거리 규칙 구조의 유무로 구분한 고체
+  aliases: ["유리와 결정의 내부 배열 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.8a3d7d17c55e
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 밀도
+  hint: 단위 부피당 질량
+  aliases: ["같은 크기인데 무게가 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.da76920a29c9
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 경도 (재료)
+  hint: 국소적 눌림이나 긁힘에 저항하는 성질
+  aliases: ["표면이 얼마나 잘 긁히는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.bf59c6bdae22
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 인성
+  hint: 파괴되기 전 에너지를 흡수하는 능력
+  aliases: ["충격을 받아도 쉽게 깨지지 않는 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.a84665e87da3
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 취성
+  hint: 큰 소성변형 없이 깨지는 성질
+  aliases: ["휘어지기보다 부러지는 물질"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.b9261843c541
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 연성
+  hint: 인장에 의해 소성변형하는 능력
+  aliases: ["가늘게 늘여도 끊어지지 않는 금속"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.20b787f1f13a
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 소성
+  hint: 힘을 제거해도 변형이 남는 성질
+  aliases: ["한번 구부리면 그대로 남는 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.f8a9ea52dca1
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 피로
+  hint: 반복 하중으로 손상이 누적되는 현상
+  aliases: ["작은 힘도 반복하면 부러지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.773b4648fc44
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 크리프
+  hint: 지속 하중 아래 변형이 시간에 따라 증가
+  aliases: ["오래 걸어 두면 재료가 처지는 현상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.bd492cf42708
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 부식
+  hint: 환경과의 반응으로 재료가 변질되는 과정
+  aliases: ["금속이 녹슬고 약해지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.9a7800e5ad3a
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 합금
+  hint: 둘 이상의 원소를 포함하는 금속 재료
+  aliases: ["금속을 섞어 성질을 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.56f6f13f71f7
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 세라믹
+  hint: 주로 무기 비금속 재료로 이루어진 물질군
+  aliases: ["도자기와 내열 재료의 특성"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.8d8cc01506f1
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 복합재료
+  hint: 서로 다른 구성 재료의 특성을 조합한 재료
+  aliases: ["강화섬유와 수지를 함께 쓰는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.40f5c8093251
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 반도체
+  hint: 전도성을 조건에 따라 제어할 수 있는 물질
+  aliases: ["빛이나 불순물로 전기 흐름 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.e092b13ba7cf
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 접착
+  hint: 서로 다른 표면 사이에 결합이 형성됨
+  aliases: ["풀로 물체가 붙는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.41fd7e3d5da2
+  kind: concept
+  path: ["물질과 우주", "재료와 물성", "물질의 구조와 성질"]
+  name: 표면장력
+  hint: 액체 계면의 면적 증가에 필요한 에너지 성질
+  aliases: ["물방울이 둥글게 모이는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/재료와 물성/물질의 구조와 성질
+- id: basics.02.e86d8893a4ec
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 항성
+  hint: 자체 핵반응 등으로 빛과 에너지를 내는 천체
+  aliases: ["태양처럼 스스로 빛나는 별"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.376e8a4f4a4d
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 행성
+  hint: 항성을 공전하는 일정 조건의 천체
+  aliases: ["별 주변을 도는 큰 천체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.4d8589c5fcfe
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 위성
+  hint: 행성 등 다른 천체를 공전하는 천체
+  aliases: ["달이 지구 주위를 도는 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.a027700a8b05
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 소행성
+  hint: 주로 암석·금속 성분의 작은 태양계 천체
+  aliases: ["행성 사이에 떠도는 작은 바위 천체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.96f84dad7f48
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 혜성
+  hint: 얼음과 먼지 등이 포함되어 활동하는 작은 천체
+  aliases: ["태양 가까이에서 꼬리가 생기는 천체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.8f0d5e038dd2
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 유성
+  hint: 대기 진입 물질이 빛을 내는 현상
+  aliases: ["밤하늘에서 별똥별이 보이는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.b393080a61a2
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 공전과 자전
+  hint: 다른 천체를 도는 운동과 스스로 도는 운동
+  aliases: ["하루와 일 년이 생기는 운동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.5ea5ab6deaf4
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 케플러 법칙
+  hint: 행성 궤도와 공전 속도의 관계
+  aliases: ["행성이 타원 궤도를 도는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.df0d1028cfda
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 항성의 분광형
+  hint: 표면 온도와 스펙트럼에 따른 별의 분류
+  aliases: ["푸른 별과 붉은 별의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.52227a08c21b
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 주계열성
+  hint: 중심에서 수소 핵융합을 하는 안정적 단계의 별
+  aliases: ["별이 생애 대부분을 보내는 상태"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.91f333f22353
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 적색거성
+  hint: 팽창하고 표면 온도가 낮아진 큰 별
+  aliases: ["별이 늙으며 붉고 커지는 단계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.5f77632c8e60
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 백색왜성
+  hint: 전자 축퇴압으로 지탱되는 별의 잔해
+  aliases: ["작은 크기로 남은 뜨거운 별의 핵"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.5653839feae8
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 중성자별
+  hint: 주로 중성자로 이루어진 초고밀도 별의 잔해
+  aliases: ["별이 붕괴해 매우 작고 무거워지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.3cb21d5ccb7a
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 블랙홀
+  hint: 사건의 지평선 안에서 빛도 빠져나오지 못하는 영역
+  aliases: ["탈출할 수 없을 만큼 강한 중력"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.a7a8478519f5
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "별과 행성"]
+  name: 초신성
+  hint: 별의 폭발적 밝기 증가를 동반하는 현상
+  aliases: ["별의 마지막 순간에 일어나는 큰 폭발"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/별과 행성
+- id: basics.02.1bde3ebeb207
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 은하
+  hint: 별·가스·먼지·암흑물질 등이 중력으로 묶인 계
+  aliases: ["수많은 별이 모여 이루는 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.ff5d053ab2ec
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 성운
+  hint: 우주의 가스와 먼지 구름
+  aliases: ["별 사이에 퍼져 있는 구름"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.7a36be26b55e
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 성단
+  hint: 공통 기원 등의 별들이 모인 집단
+  aliases: ["서로 가까이 모여 있는 별 무리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.2bf937fa7746
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 우주팽창
+  hint: 큰 규모에서 은하 사이의 거리가 증가하는 현상
+  aliases: ["먼 은하들이 서로 멀어지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.9686124bc140
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 빅뱅 우주론
+  hint: 뜨겁고 조밀한 초기 상태에서 우주가 진화한 모형
+  aliases: ["우주가 처음부터 지금까지 바뀐 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.a8a95c27895e
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 우주배경복사
+  hint: 초기 우주에서 유래한 전자기 복사
+  aliases: ["하늘 전체에 남아 있는 초기 우주의 흔적"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.1c1c9c256780
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 암흑물질
+  hint: 빛과의 상호작용보다 중력 효과로 추론하는 물질
+  aliases: ["보이는 물질만으로 설명 안 되는 중력"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.2eaacc3b2762
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 암흑에너지
+  hint: 우주 가속 팽창을 설명하기 위한 성분
+  aliases: ["우주 팽창 속도가 빨라지는 현상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.c8a34f534492
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 광년
+  hint: 빛이 일 년에 이동하는 거리
+  aliases: ["별까지의 아주 먼 거리 단위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.ad21a9b98eac
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 천문단위
+  hint: 지구와 태양 사이 평균 거리 규모의 길이 단위
+  aliases: ["태양계 안의 거리 비교"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.2521a11e887e
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 적색편이
+  hint: 스펙트럼의 파장이 길어지는 이동
+  aliases: ["멀어지는 천체의 빛 변화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.655637e09043
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 등급
+  hint: 천체 밝기를 로그 척도로 나타낸 값
+  aliases: ["하늘에서 별의 밝기 비교"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.34dba064e7d2
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 일식과 월식
+  hint: 태양·지구·달의 정렬로 빛이 가려지는 현상
+  aliases: ["해나 달이 잠시 어두워지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.a20a9aca76c5
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 외계행성
+  hint: 태양 이외의 항성 주위를 도는 행성
+  aliases: ["다른 별 주변에도 행성이 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측
+- id: basics.02.22a2b0a01f7a
+  kind: concept
+  path: ["물질과 우주", "천문과 우주", "우주와 관측"]
+  name: 사건의 지평선
+  hint: 외부로 신호가 도달할 수 없는 경계
+  aliases: ["블랙홀에서 돌아올 수 없는 경계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 물질과 우주/천문과 우주/우주와 관측

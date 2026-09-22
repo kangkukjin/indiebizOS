@@ -41,7 +41,7 @@ entries:
     section: education
 - id: atlas.education.mastery_learning
   kind: method
-  path: ["마음과 배움", "교수와 평가"]
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
   name: 완전학습
   hint: 목표 도달을 확인하며 다음 단계 진행
   aliases: [Mastery learning, "이 단원을 다 익혀야 다음으로 넘어가기", "기초가 구멍 난 채 진도만 나가는 문제", "통과 못한 학생에게 보충 후 재시험 주기", "시간이 달라도 모두 기준에 도달하게 가르치기"]
@@ -266,7 +266,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.pragmatics
   kind: concept
-  path: ["인문", "분석과 번역"]
+  path: ["인문", "분석과 번역", "언어의 구조"]
   name: 화용론
   hint: 상황과 의도에 따른 언어 의미
   aliases: [Pragmatics, "같은 말이 상황 따라 다른 뜻이 되는 까닭", "말한 사람 의도까지 헤아려 해석하기", "밥 먹었어가 인사인지 질문인지 가리기", "글자 그대로만 받아들여 대화가 어긋날 때"]
@@ -285,7 +285,7 @@ entries:
 - id: atlas.linguistics.presupposition
   kind: concept
   path: ["인문", "분석과 번역"]
-  name: 전제
+  name: 전제 (화용론)
   hint: 발화가 배경으로 가정하는 내용
   aliases: [Presupposition, "질문 속에 이미 깔려 있는 가정 찾아내기", "담배 끊었냐는 물음이 은근히 단정하는 것", "유도 질문에 숨은 밑바탕 짚어내기", "부정해도 그대로 남는 숨은 내용 확인하기"]
   source:
@@ -527,7 +527,7 @@ entries:
     section: history
 - id: atlas.history.historical_context
   kind: concept
-  path: ["인문", "역사와 고고학"]
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
   name: 역사적 맥락
   hint: 사건과 자료를 둘러싼 시대 조건
   aliases: [Historical context, "그 사건이 왜 하필 그때 일어났는지 배경 살피기", "옛 편지를 당시 사정을 알고 다시 읽기", "그 시절 사람들에게는 그게 상식이었음을 이해하기", "한 장면만 떼어 보면 오해하게 되는 과거사"]
@@ -635,7 +635,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.deontology
   kind: concept
-  path: ["인문", "철학과 윤리"]
+  path: ["인문", "철학과 윤리", "가치와 삶"]
   name: 의무론
   hint: 의무와 규칙에 근거한 윤리 판단
   aliases: [Deontology, "결과가 좋아도 해서는 안 되는 일이 있다는 입장", "약속은 손해를 봐도 지켜야 하는지 고민될 때", "선의의 거짓말도 나쁜가 하는 물음", "사람을 수단으로만 쓰면 안 된다는 원칙"]
@@ -644,7 +644,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.virtue_ethics
   kind: concept
-  path: ["인문", "철학과 윤리"]
+  path: ["인문", "철학과 윤리", "가치와 삶"]
   name: 덕윤리
   hint: 성품과 좋은 삶을 중심으로 판단
   aliases: [Virtue ethics, "무엇을 할까보다 어떤 사람이 될까를 묻는 도덕", "용기와 절제 같은 됨됨이를 기르는 데 초점 두기", "훌륭한 사람이라면 이 상황에서 어떻게 할지 생각하기", "아이 인성 교육의 철학적 바탕이 궁금할 때"]
@@ -762,7 +762,7 @@ entries:
 - id: atlas.writing.coherence
   kind: concept
   path: ["인문", "글쓰기와 편집"]
-  name: 일관성
+  name: 일관성 (글)
   hint: 글 전체 의미의 연결
   aliases: [Coherence, "글이 앞뒤가 안 맞고 딴 얘기로 샘", "문단마다 하는 말이 하나의 주제로 모이는지", "다 읽고도 무슨 말인지 모르겠다는 평", "글 전체가 한 줄기로 통하게 만들기"]
   source:
@@ -807,7 +807,7 @@ entries:
 - id: atlas.writing.proofreading
   kind: method
   path: ["인문", "글쓰기와 편집"]
-  name: 교정
+  name: 교정 (출판)
   hint: 최종 조판의 오류 확인
   aliases: [Proofreading, "인쇄 넘기기 직전 오탈자 마지막으로 잡기", "책 나왔는데 틀린 글자가 있을까 불안할 때", "편집 끝난 지면에서 띄어쓰기와 쪽번호 확인", "디자인까지 앉힌 원고를 한 글자씩 대조하기"]
   source:

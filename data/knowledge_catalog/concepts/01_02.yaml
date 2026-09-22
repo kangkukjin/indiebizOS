@@ -1,0 +1,59 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.01.c12725f7a571
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 임계점
+  hint: 질적으로 다른 상태로 넘어가는 경계
+  aliases: ["조금 더 변하면 상태가 바뀌는 문턱"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.e6b30e3d80d2
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 자기조직화
+  hint: 중앙 지시 없이 국소 상호작용으로 질서가 생김
+  aliases: ["각자 움직이는데 전체 무늬가 생기는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.fe9b2d87551c
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 동기화
+  hint: 여러 진동이나 과정의 시간적 관계가 맞춰짐
+  aliases: ["따로 움직이던 것들의 박자가 맞기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.e9ccd1e427f9
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 확산 (물리)
+  hint: 입자의 무작위 운동에 의해 농도 차이가 완화되는 수송 현상
+  aliases: ["한곳에 모인 것이 주변으로 퍼지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.b1e500d3af46
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 전염
+  hint: 연결을 따라 상태나 행동이 옮겨가는 과정
+  aliases: ["관계망을 타고 유행이 번지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.df773c1a7d68
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 복잡적응계
+  hint: 구성원들이 학습·적응하며 전체 패턴을 만드는 체계
+  aliases: ["부분이 바뀌며 전체 규칙도 달라지는 집단"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학

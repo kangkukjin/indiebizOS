@@ -1,0 +1,1076 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.03.2820679bf350
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 지각 (지구)
+  hint: 지구의 가장 바깥 고체층
+  aliases: ["대륙과 바다 밑을 이루는 단단한 껍질"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.fc08fe44d047
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 맨틀
+  hint: 지각 아래와 핵 사이의 지구 내부층
+  aliases: ["땅속 깊은 곳에서 움직이는 뜨거운 암석"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.c5eb714e66cd
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 지구핵
+  hint: 주로 철 성분으로 이루어진 지구 중심부
+  aliases: ["지구의 중심에 무엇이 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.256fd443ab4a
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 암석권
+  hint: 지각과 상부 맨틀의 단단한 부분
+  aliases: ["움직이는 판을 이루는 바깥층"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.399f6ad0b7dd
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 연약권
+  hint: 암석권 아래 상대적으로 변형되기 쉬운 맨틀 영역
+  aliases: ["판이 움직일 수 있는 아래쪽 층"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.1eba78a2ebc5
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 대륙이동
+  hint: 대륙 위치가 지질 시간에 따라 변하는 현상
+  aliases: ["옛날 대륙이 서로 붙어 있었는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.aa3eb7bcbb92
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 해저확장
+  hint: 해령에서 새 해양지각이 생겨 양쪽으로 이동
+  aliases: ["바다 밑 땅이 새로 만들어지는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.e0a1aaefc26d
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 섭입
+  hint: 한 암석권 판이 다른 판 아래로 들어가는 과정
+  aliases: ["판이 땅속으로 들어가며 지진이 나기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.25e09811cd09
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 단층
+  hint: 파괴면을 따라 암반이 상대적으로 이동한 구조
+  aliases: ["땅이 끊어져 어긋난 흔적"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.020b14e3cb54
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 습곡
+  hint: 힘을 받아 지층이 휘어진 구조
+  aliases: ["겹겹의 지층이 구부러진 모양"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.9d58086eeaec
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 마그마와 용암
+  hint: 지하의 용융물과 지표로 나온 용융물
+  aliases: ["화산 안과 밖의 뜨거운 액체 암석"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.a70430b78bad
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 화성암
+  hint: 마그마나 용암이 굳어 생긴 암석
+  aliases: ["식어서 만들어진 돌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.d757aff4cd37
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 퇴적암
+  hint: 퇴적물이 굳거나 침전되어 생긴 암석
+  aliases: ["층층이 쌓인 물질이 굳은 돌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.bce449e90df6
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 변성암
+  hint: 기존 암석이 열·압력 등으로 변한 암석
+  aliases: ["뜨거운 압력을 받아 달라진 돌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.1c61ef6c3aab
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 광물
+  hint: 자연에서 생성되는 일정한 구조와 조성의 고체
+  aliases: ["돌을 이루는 서로 다른 성분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.a7ceafd37d8a
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지구 내부와 암석"]
+  name: 지진
+  hint: 지구 내부의 에너지가 급격히 방출되는 진동
+  aliases: ["땅이 갑자기 흔들리는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지구 내부와 암석
+- id: basics.03.47722f59a7d1
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 하천
+  hint: 지표의 일정한 물길을 따라 흐르는 물
+  aliases: ["빗물이 모여 바다로 가는 길"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.e4ec554e66c1
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 유역
+  hint: 특정 출구로 물이 모이는 지표 영역
+  aliases: ["비가 내리면 같은 강으로 모이는 범위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.cb6e1ccb510b
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 분수계
+  hint: 인접 유역을 나누는 지형적 경계
+  aliases: ["산등성이 양쪽의 물이 다른 강으로 가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.95c48d54e0a1
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 범람원
+  hint: 하천 범람과 퇴적으로 형성된 평탄한 땅
+  aliases: ["강 주변에 넓은 평지가 생기는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.e884d1fc9993
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 삼각주
+  hint: 하천 운반물이 하구에 쌓인 지형
+  aliases: ["강물이 바다를 만나 만든 땅"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.3b968c83db39
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 선상지
+  hint: 산지 출구 등에 퇴적물이 부채꼴로 쌓인 지형
+  aliases: ["산 아래 부채 모양으로 펼쳐진 땅"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.6f0f27359766
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 사구
+  hint: 바람이 운반한 모래가 쌓인 언덕
+  aliases: ["모래언덕이 생기고 이동하는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.efbdad6c7125
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 빙하
+  hint: 중력에 따라 흐르는 장기간 축적된 얼음
+  aliases: ["큰 얼음 덩어리가 땅을 깎는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.86b02c4761bf
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 빙식지형
+  hint: 빙하의 침식으로 만들어진 지형
+  aliases: ["빙하가 지나간 넓고 깊은 골짜기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.a4673da1270a
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 카르스트
+  hint: 가용성 암석이 물에 녹으며 형성한 지형
+  aliases: ["석회암 동굴과 움푹 꺼진 땅"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.98f5006a1e1e
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 해안침식
+  hint: 파도와 흐름 등이 해안을 깎는 과정
+  aliases: ["해안선이 뒤로 물러나는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.baacb4d27ccd
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 산사태
+  hint: 토사나 암반이 경사를 따라 이동하는 현상
+  aliases: ["비가 많이 온 뒤 비탈이 무너지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.3a1708590d6f
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 지반침하
+  hint: 지표가 아래로 내려앉는 현상
+  aliases: ["땅속 물을 퍼낸 뒤 지면이 가라앉기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.6935aadbc030
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 토양침식
+  hint: 물·바람에 의해 표토가 유실되는 과정
+  aliases: ["농지의 기름진 흙이 씻겨 나가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.c9d6cb9bae5d
+  kind: concept
+  path: ["지구와 환경", "지질과 지형", "지표와 지형"]
+  name: 지형발달
+  hint: 시간과 지질 작용에 따른 지표 형태의 변화
+  aliases: ["산과 평야의 모양이 오랜 시간 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지질과 지형/지표와 지형
+- id: basics.03.925f4660732d
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 기압
+  hint: 대기가 단위 면적에 가하는 압력
+  aliases: ["높은 산에서 공기가 희박해지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.ef26bed47a6a
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 기압경도
+  hint: 거리당 기압의 변화
+  aliases: ["공기가 어느 방향으로 움직이려는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.bbff3a5b70e4
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 코리올리 효과
+  hint: 회전 좌표계에서 이동 경로가 휘어 보이는 효과
+  aliases: ["지구에서 큰 바람의 방향이 휘는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.d2a3104fc8f4
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 고기압과 저기압
+  hint: 주변보다 기압이 높거나 낮은 영역
+  aliases: ["일기도의 기압 배치와 날씨"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.90d9226b56e5
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 기단
+  hint: 온도·습도 등의 성질이 비슷한 큰 공기 덩어리
+  aliases: ["차갑고 건조한 공기가 한꺼번에 들어오기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.f6b5fe269180
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 구름
+  hint: 공기 중 물방울이나 얼음 알갱이의 집합
+  aliases: ["하늘에 떠 있는 흰 덩어리의 성분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.10e81757677c
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 강수
+  hint: 대기의 물이 액체나 고체로 지표에 떨어짐
+  aliases: ["비와 눈과 우박이 내리는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.3ba092d41fa9
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 이슬점
+  hint: 공기가 포화에 도달하는 냉각 온도
+  aliases: ["몇 도까지 식으면 물방울이 맺히는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.8b3fe9b79b00
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 단열변화
+  hint: 주변과 열 교환 없이 일어나는 상태 변화
+  aliases: ["공기가 올라가며 차가워지는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.a5531b87b6bd
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 대기안정도
+  hint: 상승·하강한 공기가 원위치로 돌아가려는 정도
+  aliases: ["공기가 잘 섞이거나 층으로 머무는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.38679d542333
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 기온역전
+  hint: 높이에 따라 기온이 오르는 대기층 상태
+  aliases: ["찬 공기가 아래에 갇혀 오염이 쌓이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.68cbe5e705b3
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 해륙풍
+  hint: 육지와 바다의 가열 차이로 생기는 국지 바람
+  aliases: ["낮과 밤에 해안 바람이 바뀌는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.50c7442ad6f8
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 계절풍
+  hint: 계절에 따라 우세 방향이 달라지는 큰 바람
+  aliases: ["여름과 겨울에 불어오는 바람의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.8970e25e2c28
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 열대저기압
+  hint: 따뜻한 바다에서 발달하는 강한 저기압계
+  aliases: ["태풍이 바다에서 커지는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.eb2c7381c3c9
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "날씨와 대기"]
+  name: 제트기류
+  hint: 상층 대기에서 빠르게 흐르는 좁은 바람대
+  aliases: ["높은 하늘의 강한 바람이 날씨에 주는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/날씨와 대기
+- id: basics.03.1da3baae746e
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 염분
+  hint: 물에 녹아 있는 염류의 농도
+  aliases: ["바닷물이 얼마나 짠지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.e0bbbc4d5d23
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 수온약층
+  hint: 깊이에 따라 수온이 급격히 달라지는 층
+  aliases: ["바닷속 어느 깊이부터 갑자기 차가워지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.be43a74b386d
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 열염순환
+  hint: 수온·염분에 따른 밀도 차이가 구동하는 해양 순환
+  aliases: ["깊은 바닷물이 천천히 이동하는 길"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.1df58a216b54
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 용승
+  hint: 깊은 물이 표층으로 올라오는 현상
+  aliases: ["해안에서 차갑고 영양분 많은 물이 솟기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.5751d675c232
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 파랑
+  hint: 바다 표면을 따라 전파하는 물결
+  aliases: ["바람이 바다에 물결을 만드는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.15ab1914cfcf
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 쓰나미
+  hint: 해저 변위 등으로 발생하는 긴 주기의 해파
+  aliases: ["바다 밑 지진이 먼 해안에 큰 파도를 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.0a2330c63e99
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 대륙붕
+  hint: 대륙 주변의 완만하고 얕은 해저
+  aliases: ["육지 가까이 바다가 얕은 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.50902e217e08
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 해구
+  hint: 길고 좁으며 매우 깊은 해저 지형
+  aliases: ["바다 밑의 깊은 골짜기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.fc23cef35611
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 하구
+  hint: 하천이 바다나 다른 수역으로 들어가는 곳
+  aliases: ["민물과 바닷물이 만나는 장소"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.3f997905579c
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 기수 (물)
+  hint: 담수와 해수가 섞인 중간 염분의 물
+  aliases: ["강 하구의 덜 짠 물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.8b3cbca6092b
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 지하수 함양
+  hint: 지표의 물이 침투하여 지하수에 보충되는 과정
+  aliases: ["비가 우물의 물을 다시 채우기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.8652aa8ee83f
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 투수성
+  hint: 물질이나 지층이 물을 통과시키는 성질
+  aliases: ["모래와 진흙에서 물 빠짐이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.ab0680dfa772
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 대수층
+  hint: 지하수를 저장하고 전달할 수 있는 지층
+  aliases: ["우물에서 물을 얻는 땅속 층"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.1a0dbae58326
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 염수침입
+  hint: 해수가 담수 지하수 영역으로 들어오는 현상
+  aliases: ["해안 우물이 짜지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.d7ffb432dcd0
+  kind: concept
+  path: ["지구와 환경", "기상과 해양", "바다와 물"]
+  name: 해수면 변화
+  hint: 해양 부피와 육지 이동 등에 따른 상대 높이 변화
+  aliases: ["해안에서 바다 높이가 장기적으로 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기상과 해양/바다와 물
+- id: basics.03.66648bbe2abe
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 날씨와 기후
+  hint: 단기 대기 상태와 장기간의 통계적 특성
+  aliases: ["오늘 추운 것과 기후가 변하는 것의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.23f9b2b7a55b
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 복사수지
+  hint: 들어오고 나가는 복사 에너지의 차이
+  aliases: ["지구가 받는 열과 내보내는 열의 균형"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.d4b1e3d4bef1
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 알베도
+  hint: 들어온 복사에너지 중 반사되는 비율
+  aliases: ["눈 덮인 땅과 숲이 햇빛을 다르게 반사"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.6ef70d47f15f
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 온실가스
+  hint: 적외선 복사의 흡수·방출에 관여하는 대기 기체
+  aliases: ["대기 중 어떤 기체가 열 흐름을 바꾸는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.90f56c9a87b4
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 기후피드백
+  hint: 기후 변화가 원래 변화를 증폭·완화하는 과정
+  aliases: ["얼음이 녹은 뒤 더 빨리 따뜻해지는 고리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.94c5fd8924fe
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 엘니뇨
+  hint: 열대 태평양 해수면 온도의 비정상적 온난 상태
+  aliases: ["태평양 수온 변화가 먼 지역 날씨에 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.04f481da8bec
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 라니냐
+  hint: 열대 태평양 해수면 온도의 비정상적 한랭 상태
+  aliases: ["평소보다 차가운 태평양과 강수 변화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.97de3175244e
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 도시열섬
+  hint: 도시가 주변 지역보다 따뜻해지는 현상
+  aliases: ["도심의 밤이 교외보다 더운 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.489a8a14dc17
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 기후대
+  hint: 기온·강수 등의 특징에 따른 지역 구분
+  aliases: ["열대와 온대와 한대의 생활환경 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.2f438a9da525
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 가뭄
+  hint: 물 공급이 수요나 통상 수준보다 부족한 상태
+  aliases: ["비가 부족해 하천과 토양이 마르기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.eb2fee42f7ed
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 사막화
+  hint: 건조지역에서 토지의 생산성과 기능이 악화됨
+  aliases: ["땅이 점점 메마르고 식물이 줄어들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.d9f24c1354e5
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 영구동토
+  hint: 장기간 영하 상태를 유지하는 지반
+  aliases: ["추운 지역의 땅속 얼음이 녹는 문제"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.922c74c1b034
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 기후변화 적응
+  hint: 변화한 기후의 영향에 대응하여 피해를 줄임
+  aliases: ["더워진 환경에 맞춰 생활과 시설 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.c3c51c22a14e
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 기후변화 완화
+  hint: 온실가스 배출을 줄이거나 흡수를 늘림
+  aliases: ["기후 변화의 원인을 줄이는 활동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.dc61763f0c2a
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "기후계"]
+  name: 탄소흡수원
+  hint: 대기에서 탄소를 순흡수하는 저장계
+  aliases: ["숲과 토양에 탄소가 쌓이는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/기후계
+- id: basics.03.720414bc2f1e
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 재생가능자원
+  hint: 자연 과정으로 사용 후 보충될 수 있는 자원
+  aliases: ["관리하면 다시 쓸 수 있는 자연 자원"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.5858c76edc7b
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 비재생자원
+  hint: 인간 시간 척도에서 보충이 매우 느린 자원
+  aliases: ["쓰면 줄어드는 광물과 화석연료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.ea4254284c09
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 물부족
+  hint: 이용 가능한 수자원이 필요를 충족하지 못함
+  aliases: ["물은 있어도 쓸 수 있는 물이 부족한 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.e364f29a2c82
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 부영양화
+  hint: 영양염류 증가로 수생 생태계가 변화하는 현상
+  aliases: ["호수에 조류가 지나치게 늘어나는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.6fdd0b8d7870
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 생물농축
+  hint: 생물체 안에 물질이 주변보다 높은 농도로 축적
+  aliases: ["오염물질이 생물 몸속에 쌓이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.01a7f8e4f322
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 생물확대
+  hint: 먹이단계가 높아지며 물질 농도가 커지는 현상
+  aliases: ["먹이사슬 위쪽 동물에 오염이 더 쌓이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.4ab694307e8a
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 미세플라스틱
+  hint: 환경에 존재하는 작은 플라스틱 입자
+  aliases: ["잘게 부서진 플라스틱이 퍼지는 경로"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.987b537f967e
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 산성비
+  hint: 산성 물질 때문에 산도가 높아진 강수
+  aliases: ["공기 오염이 비와 땅에 영향을 주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.6ddb7508e482
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 대기오염
+  hint: 대기 성분이 생명·환경 등에 해로운 상태
+  aliases: ["공기에 섞인 유해 기체와 입자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.16af379e018d
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 수질오염
+  hint: 물의 성질이 생태·이용에 불리하게 변한 상태
+  aliases: ["하천에 들어온 물질이 물을 바꾸는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.b7fd9652a5f1
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 토양오염
+  hint: 토양에 유해 물질이 축적된 상태
+  aliases: ["땅속에 남아 있는 오염물질"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.25eada6f3665
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 오존층
+  hint: 성층권에서 오존 농도가 상대적으로 높은 영역
+  aliases: ["해로운 자외선을 줄여 주는 대기층"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.68477e791d0e
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 재사용과 재활용
+  hint: 물건을 다시 쓰거나 재료로 회수하는 방식
+  aliases: ["그대로 다시 쓰기와 녹여 새로 만들기의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.fbe9a005e4bb
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 환경정의
+  hint: 환경의 편익과 부담의 공정한 분배와 참여
+  aliases: ["오염 피해가 특정 집단에 몰리는 문제"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.ba3207360aef
+  kind: concept
+  path: ["지구와 환경", "기후와 자원", "자원과 오염"]
+  name: 생태적 한계
+  hint: 환경계가 지속적으로 감당할 수 있는 범위
+  aliases: ["자연이 회복하는 속도보다 많이 사용하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/기후와 자원/자원과 오염
+- id: basics.03.4c6d4a87ba35
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 장소성
+  hint: 특정 장소가 가진 경험·의미·정체성
+  aliases: ["같은 공간도 특별하게 느껴지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.770eb9e292c1
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 지역
+  hint: 특정 기준으로 구분한 지표의 공간 단위
+  aliases: ["서로 비슷한 특징을 가진 곳 묶기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.14a0e88ee83c
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 문화경관
+  hint: 인간 활동이 자연환경에 남긴 가시적 모습
+  aliases: ["논밭과 마을에 드러나는 생활 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.e46685ce20fa
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 입지
+  hint: 활동이나 시설이 자리 잡은 위치와 조건
+  aliases: ["가게와 공장이 어느 곳에 생기는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.4e6c45b165e5
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 공간 접근성
+  hint: 원하는 장소나 서비스에 도달할 수 있는 정도
+  aliases: ["거리보다 실제 이용하기 쉬운지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.5a4bf429e887
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 공간적 불평등
+  hint: 자원·기회·위험이 지역별로 다르게 분포
+  aliases: ["사는 곳에 따라 기회가 달라지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.e9852eea97e2
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 중심지
+  hint: 주변 지역에 재화와 서비스를 제공하는 거점
+  aliases: ["사람들이 큰 마을로 모이는 까닭"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.84e3608eb37b
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 도시권
+  hint: 도시와 기능적으로 연결된 주변 지역
+  aliases: ["출퇴근과 소비로 연결된 생활 범위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.9a3127689683
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 배후지
+  hint: 중심 거점과 물류·서비스로 연결된 주변 영역
+  aliases: ["항구나 시장을 이용하는 넓은 지역"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.4e81d80773d8
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 경계와 영역
+  hint: 공간을 구분하고 통제하는 선과 범위
+  aliases: ["행정구역과 생활권이 다른 경우"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.315bd41b751a
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 공간확산
+  hint: 현상이나 특성이 장소 간에 퍼지는 과정
+  aliases: ["유행이 도시에서 주변 지역으로 번지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.7a9f2c3c0e88
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 거리감쇠
+  hint: 거리가 늘수록 상호작용이 약해지는 경향
+  aliases: ["먼 곳보다 가까운 곳과 자주 교류하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.99a08aeed0a8
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 인간환경 상호작용
+  hint: 사람과 자연환경이 서로 영향을 주는 관계
+  aliases: ["환경에 맞춰 살며 환경도 바꾸는 활동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.d2388cf2d843
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "장소와 지역"]
+  name: 경관변화
+  hint: 자연·인간 과정으로 지역의 모습이 달라짐
+  aliases: ["옛 사진과 지금 풍경이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/장소와 지역
+- id: basics.03.4020fee88e1d
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 위도와 경도
+  hint: 지구상의 위치를 각도로 표시하는 좌표
+  aliases: ["지구 위 주소를 숫자로 표시"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.3312e4738199
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 축척
+  hint: 지도 거리와 실제 거리의 비
+  aliases: ["지도에서 잰 길이를 실제 길이로 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.f73b08874e09
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 등고선
+  hint: 같은 높이의 지점을 이은 선
+  aliases: ["지도에서 산의 높낮이 읽기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.fc1c7955c77f
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 방위
+  hint: 기준 방향에 대한 공간 방향
+  aliases: ["북쪽을 기준으로 길의 방향 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.2be093c78127
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 공간해상도
+  hint: 공간 자료가 구분하는 최소 세부의 크기
+  aliases: ["위성사진에서 얼마나 작은 것을 볼 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.ad8236f49f2e
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 벡터 공간자료
+  hint: 점·선·면으로 지리 대상을 표현한 자료
+  aliases: ["도로와 건물을 선과 면으로 저장"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.1f2bbd0b81cc
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 래스터 공간자료
+  hint: 격자 셀로 공간 값을 표현한 자료
+  aliases: ["지역을 작은 칸마다 색과 값으로 표시"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.73e702c3a3a9
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 공간위상
+  hint: 접함·포함·연결 같은 공간적 관계
+  aliases: ["두 구역이 맞닿거나 길이 이어지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.aaf80811d802
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 좌표참조계
+  hint: 좌표를 실제 지구 위치와 연결하는 기준
+  aliases: ["지도 자료를 겹쳤는데 위치가 어긋나는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.7a3baf4b3e49
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 지오이드
+  hint: 지구 중력장에 따른 평균 해수면의 기준면
+  aliases: ["지구의 높이를 재는 바탕"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.6148f57eb3d5
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 지도일반화
+  hint: 축척과 목적에 맞춰 지리 표현을 단순화
+  aliases: ["작은 지도에서 골목을 생략하는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.9d1a87a0beb6
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 주제도
+  hint: 특정 현상의 분포를 강조한 지도
+  aliases: ["지역별 인구나 기온을 색으로 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.5c6f3e7e0983
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 공간집적
+  hint: 대상이나 활동이 가까이 모이는 현상
+  aliases: ["비슷한 업종이 한곳에 모이는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계
+- id: basics.03.08132d8db8b3
+  kind: concept
+  path: ["지구와 환경", "지리와 공간", "지도와 공간관계"]
+  name: 공간상호작용
+  hint: 장소 사이의 사람·물자·정보 흐름
+  aliases: ["지역들이 이동과 거래로 연결되는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지구와 환경/지리와 공간/지도와 공간관계

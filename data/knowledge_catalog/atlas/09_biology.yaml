@@ -446,7 +446,7 @@ entries:
     section: ecology
 - id: atlas.ecology.carrying_capacity
   kind: concept
-  path: ["생명", "생태와 보전"]
+  path: ["생명", "생태와 보전", "개체군과 군집"]
   name: 환경수용력
   hint: 조건 아래 지속 가능한 개체 수준
   aliases: [Carrying capacity, "이 목장에 소를 최대 몇 마리까지 키울 수 있나", "먹이와 공간이 버틸 수 있는 동물 수의 한계", "사슴이 너무 늘어 숲이 망가지는 상황", "어항에 물고기를 몇 마리까지 넣어도 되나"]
@@ -725,7 +725,7 @@ entries:
     section: earth
 - id: atlas.agriculture.crop_rotation
   kind: method
-  path: ["생활", "농업과 원예"]
+  path: ["생활", "농업과 원예", "작물과 재배"]
   name: 윤작
   hint: 작물의 재배 순서를 바꾸어 관리
   aliases: [Crop rotation, "같은 자리에 해마다 고추 심었더니 병이 늘 때", "올해 감자 심은 곳에 내년엔 뭘 심을지", "한 밭에 계속 한 가지만 길러 땅심이 떨어질 때", "텃밭 구획을 해마다 돌려가며 쓰는 계획"]
@@ -815,7 +815,7 @@ entries:
     section: agriculture
 - id: atlas.agriculture.hydroponics
   kind: method
-  path: ["생활", "농업과 원예"]
+  path: ["생활", "농업과 원예", "작물과 재배"]
   name: 수경재배
   hint: 토양 대신 양액으로 작물 재배
   aliases: [Hydroponics, "흙 없이 영양 녹인 물로 상추 기르기", "실내에서 흙 날림 없이 채소 키우고 싶을 때", "스펀지에 씨 뿌려 물통 위에서 기르기", "화분 흙벌레가 싫어서 찾는 재배 방식"]
@@ -851,7 +851,7 @@ entries:
     section: agriculture
 - id: atlas.agriculture.grafting
   kind: method
-  path: ["생활", "농업과 원예"]
+  path: ["생활", "농업과 원예", "작물과 재배"]
   name: 접목
   hint: 식물 조직을 이어 생육
   aliases: [Grafting, "튼튼한 밑나무에 맛있는 품종 가지 붙이기", "한 나무에 여러 종류 과일 열리게 하기", "수박 모종을 호박 뿌리에 이어 병에 강하게", "씨로 키우면 어미와 달라지는 과수 늘리기"]
@@ -860,7 +860,7 @@ entries:
     section: agriculture
 - id: atlas.agriculture.pruning
   kind: method
-  path: ["생활", "농업과 원예"]
+  path: ["생활", "농업과 원예", "작물과 재배"]
   name: 전정
   hint: 가지의 선택적 제거로 생육 조절
   aliases: [Pruning, "과일나무 가지를 언제 어디를 잘라야 할지", "너무 우거진 나무 속까지 햇빛 들게 하기", "장미를 잘라줘야 꽃이 더 많이 핀다는데", "웃자란 가지 쳐내서 열매 크게 키우기"]

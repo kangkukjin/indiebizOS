@@ -33,6 +33,17 @@ def audit(root=ROOT):
     actual = Counter(tuple(e.path[:2]) for e in snapshot.entries)
     planned = set(declared)
     defined = {tuple(b['path']) for b in dictionary['branches']}
+    topics = []
+    for row in outline.get('subfields', []):
+        parent = tuple(row['path'])
+        if parent not in planned:
+            errors.append(f'상위 가지 없는 세부 주제: {"/".join(parent)}')
+        topics.extend(parent + (topic,) for topic in row['topics'])
+    errors.extend(f'세부 주제 중복: {p}' for p, n in Counter(topics).items() if n > 1)
+    actual_topics = Counter(tuple(e.path[:3]) for e in snapshot.entries if len(e.path) >= 3)
+    for label, extra in [('골격 밖 세부 주제', set(actual_topics) - set(topics)),
+                         ('비어 있는 계획 세부 주제', set(topics) - set(actual_topics))]:
+        errors.extend(f'{label}: {"/".join(p)}' for p in sorted(extra))
     for label, extra in [('골격 밖 항목', set(actual) - planned),
                          ('비어 있는 계획 가지', planned - set(actual)),
                          ('골격 밖 가지 사전', defined - planned),
@@ -44,11 +55,15 @@ def audit(root=ROOT):
         entries = [e for e in snapshot.entries if e.path[0] == name]
         rows.append({'domain': name, 'scope': domain['scope'], 'entries': len(entries),
                      'foundation_entries': sum(e.id.startswith('foundation.') for e in entries),
+                     'basic_entries': sum(e.id.startswith('basics.') for e in entries),
                      'kinds': dict(Counter(e.kind for e in entries)),
                      'branches': {b: actual[(name, b)] for b in domain['branches']}})
     return {'revision': snapshot.revision, 'kind': 'editorial_coverage_inventory',
             'quality_measured': False, 'entries': len(snapshot.entries),
             'domains': len(domains), 'branches': len(planned), 'errors': errors,
+            'topics': len(topics),
+            'topic_entries': {'/'.join(p): actual_topics[p] for p in topics},
+            'thin_topics': {'/'.join(p): n for p, n in actual_topics.items() if n < 5},
             'thin_branches': {'/'.join(p): n for p, n in actual.items() if n < 3}, 'results': rows}
 
 

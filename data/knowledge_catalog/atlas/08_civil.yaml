@@ -293,7 +293,7 @@ entries:
     section: energy
 - id: atlas.energy.pid_control
   kind: method
-  path: ["공학", "에너지와 제어"]
+  path: ["공학", "에너지와 제어", "계측과 제어"]
   name: PID 제어
   hint: 오차의 비례 적분 미분으로 제어
   aliases: [PID control, "온도가 목표에 딱 맞게 머물도록 조절하기", "목표값을 넘었다 모자랐다 출렁일 때", "드론이나 선 따라가는 차 흔들림 잡기", "목표와 차이만 보고 세기를 정하는 간단한 조절법"]
@@ -509,7 +509,7 @@ entries:
     section: electronics
 - id: atlas.electronics.modulation
   kind: method
-  path: ["공학", "전자와 통신"]
+  path: ["공학", "전자와 통신", "회로와 소자"]
   name: 변조
   hint: 반송 신호에 정보를 부호화
   aliases: [Modulation, "목소리를 전파에 실어 멀리 보내기", "라디오 방송국마다 다른 채널로 나눠 보내는 원리", "낮은 소리 신호를 안테나로 쏠 수 있게 바꾸기", "자료를 빠르게 떨리는 파동에 얹어 전송"]

@@ -1,0 +1,1085 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.01.cefe0ad9367a
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 자연수
+  hint: 개수를 세는 데 쓰는 수
+  aliases: ["물건을 하나씩 세기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.f072990305f6
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 정수
+  hint: 양의 정수와 영과 음의 정수
+  aliases: ["영하의 온도를 숫자로 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.36631a79987f
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 유리수
+  hint: 두 정수의 비로 나타낼 수 있는 수
+  aliases: ["분수로 정확히 적을 수 있는 값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.fa636419e429
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 무리수
+  hint: 정수의 비로 나타낼 수 없는 실수
+  aliases: ["끝없이 반복 없이 이어지는 소수"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.546e21147588
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 실수
+  hint: 수직선 위의 점에 대응하는 수
+  aliases: ["연속적인 길이를 수로 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.934129ec9f14
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 복소수
+  hint: 실수부와 허수부로 이루어진 수
+  aliases: ["제곱하면 음수가 되는 수 다루기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.400d1b5596bf
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 소수 (수론)
+  hint: 양의 약수가 둘뿐인 자연수
+  aliases: ["더 작은 자연수의 곱으로 안 쪼개지는 수"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.a5ee0cca5707
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 소인수분해
+  hint: 자연수를 소수들의 곱으로 표현
+  aliases: ["수를 곱셈의 기본 재료로 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.2375dbca833e
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 최대공약수
+  hint: 공통인 양의 약수 중 가장 큰 수
+  aliases: ["두 길이를 남김없이 같은 크기로 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.d6a8e55f84cf
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 최소공배수
+  hint: 공통인 양의 배수 중 가장 작은 수
+  aliases: ["서로 다른 주기가 다시 만나는 때"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.a2644e2ef081
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 절댓값
+  hint: 수직선에서 영까지의 거리
+  aliases: ["부호를 빼고 크기 비교하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.fdd6606308a0
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 분수
+  hint: 전체를 나눈 몫이나 두 수의 비
+  aliases: ["피자 한 판을 여러 명이 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.d4f5356a92f1
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 백분율
+  hint: 전체를 백으로 보았을 때의 비율
+  aliases: ["전체 중 몇 퍼센트인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.0d32317250d7
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 지수
+  hint: 같은 수의 반복 곱셈을 나타내는 표현
+  aliases: ["두 배씩 계속 늘어나는 양"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.e0918eb03c26
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 로그
+  hint: 주어진 밑의 거듭제곱에서 지수를 구하는 연산
+  aliases: ["몇 번 곱해야 원하는 크기가 되는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.12b31fd22356
+  kind: concept
+  path: ["형식과 추론", "기초수학", "수와 연산"]
+  name: 유효숫자
+  hint: 측정 정밀도를 반영하여 의미 있게 표시하는 숫자
+  aliases: ["측정값을 몇 자리까지 적을지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/수와 연산
+- id: basics.01.541034c474b7
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 변수
+  hint: 문맥에 따라 값이 달라지는 기호
+  aliases: ["아직 정해지지 않은 값을 문자로 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.5a4e27af2dfe
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 상수
+  hint: 주어진 맥락에서 변하지 않는 값
+  aliases: ["계산 중 고정해 두는 숫자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.1d010397b9ec
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 방정식
+  hint: 미지수를 포함하는 등식
+  aliases: ["어떤 값을 넣어야 양쪽이 같아지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.b45a66b8cf18
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 부등식
+  hint: 두 식의 크기를 비교하는 관계
+  aliases: ["넘지 말아야 할 수치 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.d9399183dcce
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 연립방정식
+  hint: 여러 방정식을 동시에 만족하는 조건
+  aliases: ["두 조건을 한꺼번에 맞추는 값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.3486871d63e4
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 다항식
+  hint: 변수의 비음수 정수 거듭제곱들의 유한 합
+  aliases: ["문자 항들을 더한 식 정리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.3dd25d9a0953
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 인수분해
+  hint: 식을 더 단순한 인수들의 곱으로 표현
+  aliases: ["긴 식을 곱셈 꼴로 묶기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.44e016cc7815
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 일차함수
+  hint: 변수에 대한 일차식으로 나타나는 함수
+  aliases: ["일정한 속도로 증가하는 그래프"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.09107e018beb
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 이차함수
+  hint: 최고차항이 이차인 다항함수
+  aliases: ["포물선 모양의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.08047d545e93
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 지수함수
+  hint: 독립변수가 지수에 놓이는 함수
+  aliases: ["시간이 갈수록 같은 비율로 불어나는 양"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.28823c4a8614
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 삼각함수
+  hint: 각과 원 또는 직각삼각형의 비에 관한 함수
+  aliases: ["각도에 따라 달라지는 높이와 거리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.839c106306dc
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 역함수
+  hint: 원래 함수의 입력과 출력을 되돌리는 함수
+  aliases: ["결과를 보고 원래 입력 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.55ea488c7ee1
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 합성함수
+  hint: 한 함수의 출력을 다른 함수의 입력으로 연결
+  aliases: ["두 규칙을 차례로 적용하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.5d48cbcb090c
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 극한
+  hint: 입력의 접근에 따라 함수나 수열이 다가가는 값
+  aliases: ["끝없이 가까워지는 값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.0826bbfb81ba
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 연속성
+  hint: 입력의 작은 변화에 출력이 끊기지 않는 성질
+  aliases: ["그래프가 중간에 점프하지 않는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.2f4d6d2e8471
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 수열
+  hint: 순서에 따라 배열된 수의 나열
+  aliases: ["숫자들이 이어지는 규칙"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.ce1245637252
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 급수
+  hint: 수열의 항들을 차례로 더한 합
+  aliases: ["끝없이 이어지는 항의 합"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.1c893104baac
+  kind: concept
+  path: ["형식과 추론", "기초수학", "대수와 함수"]
+  name: 행렬
+  hint: 수를 행과 열로 배열한 수학적 대상
+  aliases: ["여러 식의 계수를 표로 정리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/대수와 함수
+- id: basics.01.6b970f8aaf64
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 점과 직선
+  hint: 위치와 곧은 방향을 나타내는 기본 대상
+  aliases: ["도형을 이루는 가장 단순한 요소"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.45ec909f3017
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 각
+  hint: 두 반직선 사이의 벌어진 정도
+  aliases: ["방향을 얼마나 돌렸는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.57f7ac541b3b
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 평행
+  hint: 같은 평면에서 만나지 않는 직선의 관계
+  aliases: ["간격을 유지하며 나란히 가는 선"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.2ff7894e6a93
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 수직
+  hint: 직선이나 면이 직각으로 만나는 관계
+  aliases: ["두 방향이 직각인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.7b94635a444b
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 삼각형
+  hint: 세 선분으로 둘러싸인 평면도형
+  aliases: ["세 변과 세 각의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.c19fd6787279
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 원
+  hint: 중심에서 같은 거리에 있는 평면의 점 집합
+  aliases: ["중심에서 일정 거리의 경계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.a5ad0f883f48
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 닮음
+  hint: 대응하는 각과 길이의 비가 같은 도형 관계
+  aliases: ["모양은 같고 크기만 다른 그림"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.f2d0c40f1ae4
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 합동
+  hint: 이동과 회전 등으로 겹칠 수 있는 도형 관계
+  aliases: ["크기와 모양이 같은 두 도형"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.a0bf84875952
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 피타고라스 정리
+  hint: 직각삼각형 세 변의 길이 제곱 사이 관계
+  aliases: ["직각인 두 길이로 대각선 구하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.17a7e9de5680
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 좌표계
+  hint: 위치를 수의 묶음으로 나타내는 기준
+  aliases: ["공간의 위치에 숫자 주소 붙이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.056dadac25cf
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 벡터
+  hint: 크기와 방향을 갖는 양
+  aliases: ["여러 방향의 힘을 함께 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.e34196805192
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 내적
+  hint: 두 벡터의 길이와 방향 관계를 스칼라로 표현
+  aliases: ["두 방향이 얼마나 나란한지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.2701554c77c2
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 외적
+  hint: 두 삼차원 벡터에 수직인 벡터를 만드는 연산
+  aliases: ["회전축과 면의 방향 구하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.67e3711dbc41
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 곡률
+  hint: 곡선이나 곡면이 휘어진 정도
+  aliases: ["길이 얼마나 급하게 굽는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.6efa33d338bb
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 위상수학
+  hint: 연속 변형에서 보존되는 공간의 성질 연구
+  aliases: ["늘이거나 휘어도 같은 공간 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.4a6d43705ae1
+  kind: concept
+  path: ["형식과 추론", "기초수학", "기하와 공간"]
+  name: 차원
+  hint: 위치를 지정하는 데 필요한 독립 좌표 수
+  aliases: ["몇 개의 방향으로 움직일 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/기하와 공간
+- id: basics.01.ea4aa19907f2
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 순열
+  hint: 대상의 순서를 구분하여 늘어놓는 경우
+  aliases: ["자리 순서까지 다른 배치 세기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.40acfcb739a1
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 조합
+  hint: 순서를 구분하지 않고 대상을 고르는 경우
+  aliases: ["순서와 관계없이 팀원 고르기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.0113c8b17cde
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 이항계수
+  hint: 전체에서 일정 개수를 고르는 경우의 수
+  aliases: ["여러 개 중 몇 개를 뽑는 방법 수"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.4694ee91180b
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 그래프
+  hint: 정점과 간선으로 연결을 나타내는 구조
+  aliases: ["관계들을 점과 선으로 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.40cc471164d9
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 트리
+  hint: 순환이 없는 연결 그래프
+  aliases: ["갈라지며 내려가는 분류 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.7692ac0a2e6e
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 집합의 분할
+  hint: 겹치지 않는 부분집합으로 전체를 나누기
+  aliases: ["빠짐과 중복 없이 무리 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.3bbe8af48ed7
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 동치관계
+  hint: 반사성·대칭성·추이성을 만족하는 관계
+  aliases: ["어떤 기준에서 같은 것으로 묶기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.0952f0f7bb69
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 부분순서
+  hint: 일부 원소끼리만 비교할 수 있는 순서 관계
+  aliases: ["모두 일렬로 세울 수 없는 선후 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.f172d642f4d3
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 재귀
+  hint: 자신과 같은 형태의 더 작은 문제로 정의
+  aliases: ["같은 규칙이 안쪽에서 다시 나타나기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.7b941c9e3ad8
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 점화식
+  hint: 앞선 항으로 다음 항을 정하는 식
+  aliases: ["앞의 값에서 다음 숫자 계산"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.9b2ab89dd6a9
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 불변량
+  hint: 변환 과정에서도 유지되는 양이나 성질
+  aliases: ["상태가 바뀌어도 남는 특징"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.88e3e56600c2
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 비둘기집 원리
+  hint: 상자보다 대상이 많으면 겹쳐 들어가는 상자가 있음
+  aliases: ["칸보다 물건이 많을 때 생기는 중복"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.4ba4a8887379
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 모듈러 연산
+  hint: 정수의 나머지에 따라 계산하는 연산
+  aliases: ["시계처럼 일정 수마다 다시 돌아가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.4f862501cc28
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 기수 (집합)
+  hint: 집합의 원소 수를 나타내는 크기
+  aliases: ["무한집합끼리 크기 비교"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.4b30c1e59dcb
+  kind: concept
+  path: ["형식과 추론", "기초수학", "이산구조"]
+  name: 전단사
+  hint: 일대일 대응이면서 빠짐없이 대응하는 함수
+  aliases: ["두 집합의 대상을 하나씩 짝짓기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/기초수학/이산구조
+- id: basics.01.6136b02017cb
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 명제
+  hint: 참과 거짓을 판단할 수 있는 진술
+  aliases: ["주장을 참거짓으로 평가하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.59780a677e64
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 전제 (논증)
+  hint: 논증의 출발점으로 삼는 진술
+  aliases: ["결론을 이끌 때 이미 받아들인 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.ce5da34183dc
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 결론
+  hint: 전제에서 도출하거나 뒷받침하려는 진술
+  aliases: ["주장이 최종적으로 말하려는 것"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.0187ac649951
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 모순
+  hint: 동시에 참일 수 없는 진술의 충돌
+  aliases: ["서로 양립할 수 없는 주장"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.c4961ab4977c
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 동어반복
+  hint: 모든 해석에서 참인 논리적 형식
+  aliases: ["내용과 무관하게 항상 참인 식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.6143652eec39
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 양화사
+  hint: 대상의 전부나 존재를 나타내는 논리 표현
+  aliases: ["모든 경우와 어떤 경우의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.c5298bb68f64
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 논리적 동치
+  hint: 모든 해석에서 진리값이 같은 관계
+  aliases: ["다르게 쓴 두 조건이 같은 뜻인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.4ddfb8d1205c
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 논리적 함의
+  hint: 전제가 참이면 결론도 참인 관계
+  aliases: ["조건을 받아들이면 무엇이 따라오는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.fb9c2c6bbd57
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 무모순성 (논리)
+  hint: 진술 집합이 모순을 함께 포함하지 않는 성질
+  aliases: ["여러 믿음이 서로 충돌하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.cae0dc62d9e8
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 논리체계의 완전성
+  hint: 정해진 체계에서 필요한 명제들을 포괄하는 성질
+  aliases: ["증명 체계가 모든 논리적 참을 다루는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.c1d4bc403084
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 논리체계의 건전성
+  hint: 추론 규칙이 참인 전제에서 거짓 결론을 만들지 않는 성질
+  aliases: ["증명 규칙을 믿을 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.a480aee95097
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 연역적 오류
+  hint: 논증 형식상 결론이 따라오지 않는 잘못
+  aliases: ["전제를 인정해도 결론이 안 나오는 경우"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.9cc20d58a9d2
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 순환논증
+  hint: 결론을 전제에 사실상 포함하는 논증
+  aliases: ["증명할 말을 근거로 다시 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.736f9d5633a5
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 허수아비 논증
+  hint: 상대 주장을 약하게 바꾸어 공격하는 오류
+  aliases: ["상대가 하지 않은 주장을 반박하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.6c0fd17c64ce
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 거짓 양자택일
+  hint: 가능한 대안을 부당하게 둘로 제한하는 오류
+  aliases: ["두 선택밖에 없다고 몰아가는 주장"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.1b341b506bd1
+  kind: concept
+  path: ["형식과 추론", "논리와 추론", "명제와 논증"]
+  name: 범주 오류
+  hint: 다른 논리적 종류에 속하는 것을 혼동하는 오류
+  aliases: ["성질이 다른 대상을 같은 방식으로 다루기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/논리와 추론/명제와 논증
+- id: basics.01.eb366145f73d
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 확률변수
+  hint: 무작위 결과를 수치에 대응시키는 함수
+  aliases: ["우연히 정해지는 결과를 숫자로 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.a38eb96fbdd5
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 확률분포
+  hint: 확률변수가 취할 값과 확률의 관계
+  aliases: ["가능한 결과들이 얼마나 자주 나오는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.5c29056a7596
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 기댓값
+  hint: 확률에 따라 가중한 값의 평균
+  aliases: ["많이 반복했을 때의 평균 결과"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.2c6d8d8368b1
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 분산
+  hint: 평균에서 떨어진 정도의 제곱 평균
+  aliases: ["결과가 평균 주변에 얼마나 퍼지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.bf6a50710d77
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 표준편차
+  hint: 분산의 제곱근으로 표현한 산포
+  aliases: ["평균에서 흔히 벗어나는 크기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.cce565406bda
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 정규분포
+  hint: 평균을 중심으로 대칭적인 종 모양 분포
+  aliases: ["평균 근처가 많고 양쪽 끝이 드문 자료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.d7ffb5f7e3f7
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 이항분포
+  hint: 독립 시행에서 성공 횟수의 분포
+  aliases: ["여러 번 중 성공하는 횟수"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.57eb913615b4
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 포아송 분포
+  hint: 일정 구간의 사건 발생 횟수를 나타내는 분포
+  aliases: ["한 시간에 찾아오는 손님의 수"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.9af8ac430a4d
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 균등분포
+  hint: 일정 범위의 결과가 균일한 확률을 갖는 분포
+  aliases: ["범위 안에서 어느 값이나 같은 가능성"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.39fb4569a751
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 지수분포
+  hint: 일정 발생률에서 다음 사건까지 대기시간의 분포
+  aliases: ["다음 사건을 기다리는 시간"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.11f991c74246
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 독립사건
+  hint: 한 사건이 다른 사건의 확률을 바꾸지 않는 관계
+  aliases: ["앞선 결과가 다음 가능성에 영향이 없는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.265b12e68c5e
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 베이즈 정리
+  hint: 조건부확률로 새 증거에 따라 확률을 갱신하는 관계
+  aliases: ["새 단서를 본 뒤 가능성을 다시 계산"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.0ebe04b2d051
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 큰수의 법칙
+  hint: 반복 표본평균이 기댓값에 가까워지는 성질
+  aliases: ["많이 반복하면 평균이 안정되는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.38d95e45cda2
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 중심극한정리
+  hint: 조건 아래 합이나 평균의 분포가 정규분포에 접근
+  aliases: ["개별 자료가 달라도 평균의 모양이 비슷해지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.f2fe58b95acd
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 확률밀도
+  hint: 연속 분포에서 구간 확률을 적분으로 주는 함수
+  aliases: ["한 점의 확률과 구간의 확률 구별"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.312e6765f431
+  kind: concept
+  path: ["형식과 추론", "통계", "확률분포"]
+  name: 누적분포함수
+  hint: 특정 값 이하가 될 확률을 나타내는 함수
+  aliases: ["기준보다 작을 가능성을 모아서 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/확률분포
+- id: basics.01.b3bfc23b2e35
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 산술평균
+  hint: 관측값 합을 개수로 나눈 대표값
+  aliases: ["여러 수치를 하나의 평균으로 요약"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.7cc8adc3a890
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 중앙값
+  hint: 크기순 가운데에 위치하는 값
+  aliases: ["극단적인 값에 덜 흔들리는 대표값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.c22ca12b47b8
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 최빈값
+  hint: 가장 자주 나타나는 값
+  aliases: ["가장 흔한 응답 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.f0d9132beddb
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 분위수
+  hint: 정렬한 분포를 일정 비율로 나누는 값
+  aliases: ["상위 몇 퍼센트의 경계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.53f54b34b3bf
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 사분위범위
+  hint: 첫째와 셋째 사분위수 사이의 거리
+  aliases: ["가운데 절반의 값이 퍼진 폭"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.cf2a2076b1c4
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 공분산
+  hint: 두 변수의 평균 대비 동반 변화량
+  aliases: ["두 값이 함께 커지거나 작아지는 정도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.73d7d9521ab2
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 상관계수
+  hint: 두 변수의 관련 방향과 강도를 표준화한 수치
+  aliases: ["두 값의 움직임이 얼마나 함께하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.bf66bcae99a9
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 이상치
+  hint: 자료의 일반적 분포에서 크게 벗어나는 관측
+  aliases: ["유독 멀리 떨어진 측정값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.737fc1f6f7a0
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 편향
+  hint: 추정이나 측정이 체계적으로 치우치는 경향
+  aliases: ["계속 한쪽으로 틀리는 값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.2bbc7d9c8967
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 표준오차
+  hint: 추정량의 표집 변동성을 나타내는 크기
+  aliases: ["표본을 바꾸면 추정이 얼마나 달라지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.7e41c91c71bc
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 추정량
+  hint: 표본으로 모집단의 특성을 추정하는 규칙
+  aliases: ["일부 자료로 전체의 값을 가늠하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.b45301389090
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 불편추정
+  hint: 추정량의 기댓값이 모수와 일치하는 성질
+  aliases: ["여러 번 추정했을 때 평균적으로 맞기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.33ba2852f006
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 과적합
+  hint: 표본의 우연한 세부까지 맞춰 일반화가 약해지는 현상
+  aliases: ["연습 자료에서만 잘 맞는 예측"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.19eb72507e18
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 잔차
+  hint: 관측값과 모형 예측값의 차이
+  aliases: ["모형이 설명하지 못한 남은 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.1c2f5a7c6d24
+  kind: concept
+  path: ["형식과 추론", "통계", "자료의 요약과 추정"]
+  name: 자유도
+  hint: 제약을 고려한 독립적으로 변할 수 있는 정보 수
+  aliases: ["조건을 고정한 뒤 남는 독립적인 값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/통계/자료의 요약과 추정
+- id: basics.01.665353df16f5
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 상태공간
+  hint: 시스템의 가능한 상태를 나타내는 공간
+  aliases: ["현재 상황을 여러 변수로 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.fca2a7bc219b
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 평형점
+  hint: 시간 변화가 멈추는 시스템의 상태
+  aliases: ["변화가 없을 때 머무는 상태"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.4014ea98ae70
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 끌개
+  hint: 주변 궤적이 장기적으로 가까워지는 상태 집합
+  aliases: ["여러 출발점이 결국 모이는 패턴"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.969667ff2723
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 혼돈
+  hint: 초기조건에 민감한 결정론적 동역학
+  aliases: ["작은 시작 차이가 크게 벌어지는 변화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.8a50ea63a642
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 초기조건
+  hint: 동역학의 출발 상태를 정하는 값
+  aliases: ["처음 상태가 결과에 주는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.d5df95aaccaf
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 경계조건
+  hint: 공간 경계에서 부여하는 제약
+  aliases: ["가장자리에서 어떻게 고정되는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.c6f70a2539db
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 양의 피드백
+  hint: 변화를 같은 방향으로 증폭하는 되먹임
+  aliases: ["한번 커진 변화가 더 커지는 고리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학
+- id: basics.01.32cee707cc6c
+  kind: concept
+  path: ["형식과 추론", "시스템", "연결과 동역학"]
+  name: 분기 (동역학)
+  hint: 매개변수 변화로 정성적 동작이 달라지는 현상
+  aliases: ["조금 바꾸자 전혀 다른 패턴이 생기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 형식과 추론/시스템/연결과 동역학

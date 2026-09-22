@@ -1,0 +1,1076 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.11.0a58c245fe6c
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 비트
+  hint: 두 상태 중 하나를 나타내는 정보 단위
+  aliases: ["영과 일로 정보를 표현하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.dbd793acffe8
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 바이트
+  hint: 통상 여덟 비트로 구성되는 정보 단위
+  aliases: ["파일 크기를 세는 기본 묶음"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.3772eb5041a1
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 문자인코딩
+  hint: 문자와 수치 표현을 대응시키는 방식
+  aliases: ["글자가 깨져 보이는 원인"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.7378011c41c7
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 유니코드
+  hint: 문자에 공통 코드 위치를 부여하는 체계
+  aliases: ["여러 언어의 글자를 함께 다루기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.ac4334dd80ea
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 정수표현
+  hint: 정수를 고정된 비트 구조로 나타내는 방식
+  aliases: ["컴퓨터가 큰 정수를 다룰 수 있는 범위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.04314a2f531a
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 부동소수점
+  hint: 유효숫자와 지수로 근삿값을 표현하는 방식
+  aliases: ["소수 계산에 작은 오차가 생기는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.291738ed6706
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 논리회로
+  hint: 논리 연산을 전기적 상태로 구현한 회로
+  aliases: ["영과 일의 조합으로 판단하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.4a3ffd8716ba
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 중앙처리장치
+  hint: 명령을 해석하고 연산하는 핵심 장치
+  aliases: ["컴퓨터가 계산을 수행하는 곳"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.e1650bcd8f4d
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 주기억장치
+  hint: 실행 중 자료와 명령을 보관하는 기억장치
+  aliases: ["작업 중인 자료가 잠시 머무는 곳"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.402cb8b711fa
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 보조기억장치
+  hint: 자료를 장기간 저장하는 장치
+  aliases: ["전원을 꺼도 파일이 남는 곳"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.b2e8ea8a5f1d
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 캐시
+  hint: 자주 쓸 자료를 빠른 계층에 보관하는 구조
+  aliases: ["같은 자료를 다시 읽을 때 빨라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.fb84fa7f86ea
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 버스
+  hint: 장치 사이에서 신호와 자료를 전달하는 통로
+  aliases: ["컴퓨터 부품끼리 데이터를 주고받기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.558bdbae3e46
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 입출력
+  hint: 외부와 데이터를 주고받는 과정
+  aliases: ["키보드와 화면이 컴퓨터에 연결되는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.4af5f4e06ddc
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 병렬처리
+  hint: 여러 계산을 동시에 수행하는 방식
+  aliases: ["여러 코어가 일을 나누어 처리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.b054fd733d18
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "정보표현과 하드웨어"]
+  name: 지연시간과 처리율
+  hint: 응답까지 시간과 단위시간 처리량의 구분
+  aliases: ["한 요청의 빠르기와 전체 처리량의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/정보표현과 하드웨어
+- id: basics.11.8143161f55aa
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 운영체제
+  hint: 하드웨어 자원을 관리하고 실행 환경을 제공
+  aliases: ["여러 프로그램이 컴퓨터를 함께 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.81960fefe87d
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 프로세스
+  hint: 실행 중인 프로그램과 그 자원 단위
+  aliases: ["서로 분리되어 돌아가는 프로그램"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.bf037a6d2bbd
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 스레드
+  hint: 프로세스 안의 실행 흐름 단위
+  aliases: ["한 프로그램 안에서 여러 일이 진행"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.0116f900b863
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 스케줄링
+  hint: 실행할 작업과 자원 배분 순서를 결정
+  aliases: ["어떤 작업을 먼저 처리할지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.66932ecc2d5b
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 인터럽트
+  hint: 사건에 반응하여 실행 흐름을 전환하는 신호
+  aliases: ["장치가 처리할 일이 생겼다고 알리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.d0796b2e5b2b
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 시스템 호출
+  hint: 프로그램이 운영체제 기능을 요청하는 통로
+  aliases: ["파일을 읽으려 운영체제에 부탁하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.c3299a6941f4
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 메모리 할당
+  hint: 사용할 기억 공간을 배정하는 과정
+  aliases: ["프로그램에 필요한 공간 마련"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.577f3f00d069
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 페이징
+  hint: 주소 공간을 고정 크기 단위로 관리
+  aliases: ["메모리를 작은 조각 단위로 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.0e6c1d3354b6
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 동기화 (컴퓨팅)
+  hint: 공유 상태와 실행 순서를 조정하는 과정
+  aliases: ["여러 작업이 같은 자료를 안전하게 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.cdb05b546d31
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 상호배제
+  hint: 공유 자원 사용을 한 실행에 제한하는 성질
+  aliases: ["둘이 동시에 같은 것을 바꾸지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.192dca5c3637
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 교착상태
+  hint: 작업들이 서로의 자원을 기다리며 멈춘 상태
+  aliases: ["서로 먼저 끝나기를 기다려 진행이 안 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.2804f60516da
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 경쟁조건
+  hint: 실행 순서와 타이밍에 결과가 의존하는 결함
+  aliases: ["가끔만 나타나는 동시 실행 오류"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.1622956fbed8
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 권한분리
+  hint: 역할에 따라 접근 가능 범위를 나누기
+  aliases: ["프로그램마다 할 수 있는 일을 제한"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.256b44bff2f2
+  kind: concept
+  path: ["정보와 컴퓨팅", "컴퓨터와 운영체제", "운영체제와 자원"]
+  name: 자원누수
+  hint: 사용이 끝난 자원이 회수되지 않는 현상
+  aliases: ["오래 켜 두면 메모리가 계속 늘기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/컴퓨터와 운영체제/운영체제와 자원
+- id: basics.11.fff1619dbd29
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 자료형
+  hint: 값의 종류와 가능한 연산을 정하는 체계
+  aliases: ["숫자와 글자를 다르게 처리하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.5cda2ad10b27
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 변수 (프로그래밍)
+  hint: 값을 참조하고 바인딩하는 이름
+  aliases: ["프로그램에서 값에 이름 붙이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.83d98780210b
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 상수 (프로그래밍)
+  hint: 변하지 않도록 다루는 값이나 바인딩
+  aliases: ["설정 값을 고정해 두기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.f2abd94170fb
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 표현식
+  hint: 평가되어 값을 만드는 코드 구성
+  aliases: ["계산식에서 결과 얻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.7fd3a96349ff
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 조건문
+  hint: 조건에 따라 실행 경로를 나누는 구성
+  aliases: ["상황에 따라 다른 동작을 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.4d05e84de9c9
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 반복문
+  hint: 같은 코드 구조를 여러 번 실행
+  aliases: ["목록의 항목을 차례로 처리하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.203d723d9f72
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 함수 (프로그래밍)
+  hint: 입력과 동작·결과를 묶은 호출 단위
+  aliases: ["같은 계산을 이름 붙여 다시 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.b1934f134612
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 재귀함수
+  hint: 자신을 호출하여 문제를 나누는 함수
+  aliases: ["안쪽에 같은 구조가 반복되는 자료 다루기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.ed4371095007
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 배열
+  hint: 순서와 위치를 이용하는 자료의 모음
+  aliases: ["번호로 항목을 찾아가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.68c306f71ff4
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 연결리스트
+  hint: 노드 간 연결로 순서를 나타내는 자료구조
+  aliases: ["자료를 연결 고리로 이어 관리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.c92d1074c636
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 스택
+  hint: 나중에 넣은 것을 먼저 꺼내는 구조
+  aliases: ["가장 최근 작업부터 되돌리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.8111e1df095c
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 큐
+  hint: 먼저 넣은 것을 먼저 꺼내는 구조
+  aliases: ["들어온 순서대로 작업 처리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.ee9e84be62d1
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 해시테이블
+  hint: 키의 해시로 저장 위치를 찾는 구조
+  aliases: ["이름을 이용해 값을 빠르게 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.31f743d21461
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 예외
+  hint: 일반 흐름 밖의 오류·특수 상황 전달 방식
+  aliases: ["문제가 생겼을 때 처리를 넘기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.2bdcad0f64e6
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 컴파일과 해석
+  hint: 코드를 변환하거나 실행하며 의미를 처리하는 방식
+  aliases: ["작성한 코드를 컴퓨터가 실행하기까지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.283008d8dffb
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "프로그래밍의 기초"]
+  name: 알고리즘
+  hint: 문제를 해결하는 명확한 절차
+  aliases: ["입력에서 답까지 가는 계산 방법"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/프로그래밍의 기초
+- id: basics.11.6d2d8bf4fea1
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 모듈
+  hint: 관련 기능을 묶어 나누는 소프트웨어 단위
+  aliases: ["큰 프로그램을 부분으로 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.77cdac84dccf
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 인터페이스
+  hint: 구성요소가 상호작용하는 약속과 경계
+  aliases: ["서로의 내부를 몰라도 연결하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.ba9cf9c4461f
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 추상화
+  hint: 핵심 성질을 드러내고 세부를 감추는 표현
+  aliases: ["복잡한 내부 대신 필요한 기능만 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.5b2aa8c9b665
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 캡슐화
+  hint: 상태와 동작을 묶고 접근을 관리하는 방식
+  aliases: ["내부 자료를 함부로 바꾸지 못하게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.3b2c21f667d1
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 응집도
+  hint: 한 구성요소 안의 기능들이 관련된 정도
+  aliases: ["같이 바뀌는 기능을 한곳에 모으기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.f39dc2af0729
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 의존성
+  hint: 한 요소가 다른 요소에 기대는 관계
+  aliases: ["프로그램이 무엇을 필요로 하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.61006ee1f062
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 객체지향
+  hint: 상태와 동작을 가진 객체로 프로그램을 조직
+  aliases: ["대상과 역할 중심으로 코드 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.2a76be1454bc
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 함수형 프로그래밍
+  hint: 함수와 값 변환을 중심으로 구성하는 방식
+  aliases: ["상태 변경을 줄이고 계산을 조합"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.ff983b543ca7
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 상태기계
+  hint: 상태와 사건에 따른 전이를 표현하는 모형
+  aliases: ["상황에 따라 허용되는 동작이 달라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.94bf1b159600
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 불변성
+  hint: 생성된 값이나 상태가 바뀌지 않는 성질
+  aliases: ["공유한 자료가 나중에 달라지지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.10a39297b2ed
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 부작용
+  hint: 반환값 외에 외부 상태에 미치는 변화
+  aliases: ["계산하면서 파일이나 상태를 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.bc19d3b3c9e4
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 테스트
+  hint: 기대 조건과 실제 동작을 비교하는 확인
+  aliases: ["프로그램이 원하는 대로 작동하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.4dd767e0eac1
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 디버깅
+  hint: 오류 원인을 찾아 수정하는 과정
+  aliases: ["이상한 결과가 어디서 시작됐는지 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.504068a3d7e3
+  kind: concept
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
+  name: 기술부채
+  hint: 과거 선택이 이후 변경 비용을 늘리는 상태
+  aliases: ["급하게 만든 부분이 다음 일을 어렵게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/설계와 검증/소프트웨어의 구조
+- id: basics.11.70e022c94566
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 컴퓨터 네트워크
+  hint: 장치들이 데이터를 주고받는 연결 체계
+  aliases: ["여러 컴퓨터가 서로 통신하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.51e09d47fc7b
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 프로토콜
+  hint: 통신의 형식과 순서를 정한 약속
+  aliases: ["서로 알아들을 수 있게 정한 규칙"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.c12647234ab8
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 패킷
+  hint: 네트워크에서 전달하는 데이터의 단위
+  aliases: ["큰 자료를 작은 조각으로 보내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.001e520218c0
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 주소와 라우팅
+  hint: 통신 대상을 식별하고 전달 경로를 선택
+  aliases: ["자료가 목적지까지 가는 길"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.ce1241ea1643
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 대역폭 (네트워크)
+  hint: 통신로가 전달할 수 있는 정보량의 범위
+  aliases: ["한 번에 얼마나 많은 데이터를 보낼 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.020965a2f08f
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: DNS
+  hint: 도메인 이름과 네트워크 정보를 연결하는 체계
+  aliases: ["사이트 이름으로 서버 위치 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.2e9430507b92
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: TCP
+  hint: 신뢰성 있는 순서화된 바이트 전송을 제공하는 프로토콜
+  aliases: ["빠진 조각을 확인하며 데이터를 전달"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.dc4030f9688d
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: UDP
+  hint: 연결 설정 없이 데이터그램을 전달하는 프로토콜
+  aliases: ["가벼운 단위로 빠르게 메시지 보내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.56d6f32151ad
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: HTTP
+  hint: 웹 자원의 요청과 응답을 위한 프로토콜
+  aliases: ["브라우저가 페이지를 요청하는 약속"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.e7a241debad5
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: URL
+  hint: 자원의 위치와 접근 방식을 나타내는 식별 표현
+  aliases: ["웹 주소가 어떤 부분으로 이루어지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.6457cfb93d60
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 클라이언트와 서버
+  hint: 요청하는 역할과 서비스를 제공하는 역할
+  aliases: ["앱과 서버가 일을 나누는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.c1206fde1460
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 쿠키와 세션
+  hint: 웹 요청 사이의 상태를 연결하는 방식
+  aliases: ["로그인 상태가 이어지는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.c8e5998f6a39
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: API
+  hint: 프로그램이 기능과 자료를 이용하는 인터페이스
+  aliases: ["다른 프로그램의 기능을 호출하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.a52d8c7c10be
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 캐싱
+  hint: 응답이나 자료를 저장해 재사용하는 방식
+  aliases: ["매번 다시 가져오지 않고 빨리 보여주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.e709b1bc7b19
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 타임아웃
+  hint: 정해진 대기 한도를 넘으면 처리를 종료·변경
+  aliases: ["응답 없는 요청을 끝없이 기다리지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.1d9e7fda2b3a
+  kind: concept
+  path: ["정보와 컴퓨팅", "분산 시스템", "네트워크와 웹"]
+  name: 재시도
+  hint: 실패한 요청이나 작업을 다시 수행
+  aliases: ["잠깐의 통신 실패 뒤 다시 시도하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/분산 시스템/네트워크와 웹
+- id: basics.11.cb53ca6fdafa
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 데이터베이스
+  hint: 자료를 조직하고 저장·조회하는 체계
+  aliases: ["많은 자료를 일관되게 보관하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.c6580e4a160e
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 관계형 모델
+  hint: 표와 관계로 자료를 표현하는 모형
+  aliases: ["여러 표의 자료를 연결하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.765137d3274e
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 행과 열
+  hint: 표에서 관측 단위와 속성을 배열하는 방식
+  aliases: ["한 사람의 정보와 각 정보 종류 구분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.4f3e3848c12d
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 기본키
+  hint: 행을 고유하게 식별하는 키
+  aliases: ["동명이인도 구별할 수 있는 식별값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.1287cdc86f98
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 외래키
+  hint: 다른 표의 키를 참조하는 값
+  aliases: ["주문과 고객 정보를 연결하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.3f863f643fcc
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 스키마
+  hint: 자료의 구조와 제약을 정의한 틀
+  aliases: ["어떤 열과 형식으로 저장할지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.3c18f4df59ae
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 질의
+  hint: 자료를 조회·변경하기 위한 요청
+  aliases: ["조건에 맞는 자료를 찾아 집계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.9d3659554f16
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 조인
+  hint: 관련 키 등을 기준으로 자료를 결합
+  aliases: ["서로 다른 표를 맞춰 합치기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.6614c37d329b
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 트랜잭션
+  hint: 일관된 단위로 수행하는 데이터 작업
+  aliases: ["여러 변경을 모두 함께 성공시키기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.15968dac79a2
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 데이터 일관성
+  hint: 자료가 정해진 규칙과 관계를 만족하는 상태
+  aliases: ["서로 모순되는 데이터가 없는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.e65f1a080083
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 인덱스
+  hint: 자료 탐색을 빠르게 하는 보조 구조
+  aliases: ["전체를 읽지 않고 찾는 길 마련"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.43504c529856
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 정규화 (데이터베이스)
+  hint: 중복과 이상을 줄이도록 자료 구조를 분해
+  aliases: ["같은 정보를 여러 곳에 쓰지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.5948d5a94d32
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 백업
+  hint: 복구를 위해 별도로 보존한 자료 사본
+  aliases: ["자료를 잃었을 때 되돌릴 준비"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.8e0203cf2792
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 복제
+  hint: 자료의 사본을 다른 위치에 유지
+  aliases: ["한 곳이 멈춰도 자료를 이용하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.d36f6ee67a11
+  kind: concept
+  path: ["정보와 컴퓨팅", "정리와 저장", "데이터베이스"]
+  name: 데이터 무결성
+  hint: 자료의 정확성과 제약 준수에 관한 성질
+  aliases: ["없는 고객의 주문이 생기지 않게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/정리와 저장/데이터베이스
+- id: basics.11.ca86ae5c52e2
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 기밀성 (정보보호)
+  hint: 허용된 주체만 정보에 접근하는 성질
+  aliases: ["보면 안 되는 사람이 내용을 못 보게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.6b94845ce723
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 무결성
+  hint: 정보가 허가 없이 변조되지 않는 성질
+  aliases: ["전달 중 내용이 바뀌지 않았는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.0b643d3a7b09
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 가용성
+  hint: 필요할 때 정보와 기능을 이용할 수 있는 성질
+  aliases: ["서비스가 멈추지 않고 쓰이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.c1d2fa4e6d1f
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 인증
+  hint: 주체의 신원을 확인하는 과정
+  aliases: ["접속한 사람이 누구인지 확인"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.8ae7d2efba2a
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 인가
+  hint: 주체의 행위 권한을 판단하는 과정
+  aliases: ["확인된 사람이 무엇을 해도 되는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.cb837e10d554
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 암호화
+  hint: 키 등을 이용해 내용을 보호하는 변환
+  aliases: ["내용을 알아볼 수 없게 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.ccfbce42a64d
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 암호학적 해시
+  hint: 입력을 고정 길이 값 등으로 대응시키는 함수
+  aliases: ["자료가 달라졌는지 짧은 값으로 확인"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.6eff737b9ecd
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 접근제어
+  hint: 자원 사용을 주체와 조건에 따라 제한
+  aliases: ["파일과 기능을 누가 쓸 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.af2f8e2e42c8
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 위협과 취약점
+  hint: 해를 줄 가능성과 악용 가능한 약점의 구분
+  aliases: ["공격 방법과 뚫릴 수 있는 틈"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.3ddfd4eb7fa9
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 사회공학
+  hint: 사람의 판단과 관계를 악용하는 기법
+  aliases: ["기술보다 사람을 속여 접근하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.2080cb41d7f3
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 피싱
+  hint: 신뢰 대상을 사칭해 정보나 행동을 유도
+  aliases: ["그럴듯한 연락으로 비밀번호를 빼내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.4133c6a81781
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 다중요소 인증
+  hint: 서로 다른 종류의 확인 수단을 결합
+  aliases: ["비밀번호 외에 다른 증거도 요구하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.3f614c40d82a
+  kind: concept
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
+  name: 보안사고 대응
+  hint: 탐지·억제·복구·학습으로 사고를 다루는 과정
+  aliases: ["문제가 생겼을 때 피해를 줄이고 복구"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/보안/정보보호의 기초
+- id: basics.11.2eaf511a2861
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 학습자료
+  hint: 모형을 조정하는 데 사용하는 사례
+  aliases: ["예측하는 법을 배우는 예시들"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.1f014f03f345
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 특성
+  hint: 모형 입력에 사용하는 관측 속성
+  aliases: ["예측에 쓸 수 있는 정보의 종류"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.2774413b4c5c
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 레이블
+  hint: 학습 사례에 부여한 목표값이나 범주
+  aliases: ["예시마다 알려 주는 정답"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.00af82a43dc5
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 기계학습 모형
+  hint: 자료와 현상의 관계를 표현하는 체계
+  aliases: ["입력에서 결과를 만드는 규칙"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.5939e721cd83
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 모형 매개변수
+  hint: 학습 등을 통해 조정하는 모형 내부 값
+  aliases: ["학습하면서 바뀌는 숫자들"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.bcaa5490f48d
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 손실함수
+  hint: 예측과 목표 사이의 차이를 수치화하는 기준
+  aliases: ["모형이 얼마나 틀렸는지 계산"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.7b2b4a8c1c2e
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 훈련과 추론
+  hint: 모형을 조정하는 과정과 사용하는 과정
+  aliases: ["배우는 단계와 답을 내는 단계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.dd9f029e087c
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 일반화
+  hint: 새로운 사례에도 배운 관계가 적용되는 성질
+  aliases: ["보지 못한 자료에서도 잘 작동하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.a8d733e4e82b
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 검증자료
+  hint: 모형 선택·조정의 성능을 확인하는 자료
+  aliases: ["학습 중 어떤 설정이 나은지 판단"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.9b94c62f7cbd
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 시험자료
+  hint: 최종 성능 평가에 따로 남겨 둔 자료
+  aliases: ["학습에 쓰지 않은 문제로 실력 확인"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.a1fae747b4c6
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 데이터 누출
+  hint: 평가 때 알 수 없는 정보가 학습·선택에 섞임
+  aliases: ["시험 답을 미리 본 셈이 되는 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.cbadf22de9db
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 임베딩
+  hint: 대상을 수치 벡터 공간에 표현
+  aliases: ["뜻이 가까운 대상을 가까운 숫자로 놓기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.1359da7e95fd
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 인공신경망
+  hint: 연결된 계산 단위와 가중치로 구성한 모형
+  aliases: ["여러 층의 계산으로 패턴 배우기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.6ab970138cd9
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 주의기제
+  hint: 입력의 관련 부분에 가중치를 주는 계산 방식
+  aliases: ["지금 필요한 부분을 더 크게 참고"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.8ab0e818ba71
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 생성모형
+  hint: 자료의 구조를 학습해 새 표본을 생성
+  aliases: ["배운 패턴으로 새 문장이나 그림 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형
+- id: basics.11.ab5b195f80fe
+  kind: concept
+  path: ["정보와 컴퓨팅", "기계학습", "학습과 생성모형"]
+  name: 불확실성 추정
+  hint: 예측의 신뢰 범위와 변동을 나타내기
+  aliases: ["모형이 얼마나 확신하는지 구분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅/기계학습/학습과 생성모형

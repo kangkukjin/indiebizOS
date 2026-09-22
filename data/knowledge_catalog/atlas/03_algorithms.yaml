@@ -374,7 +374,7 @@ entries:
     section: security
 - id: atlas.security.least_privilege
   kind: concept
-  path: ["정보와 컴퓨팅", "보안"]
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
   name: 최소권한
   hint: 업무에 필요한 최소 접근 허용
   aliases: [Least privilege, "직원마다 꼭 필요한 자료만 보게 하기", "알바 계정이 관리자 기능까지 되는 게 불안", "계정 하나 털려도 피해가 작게 권한 줄이기", "프로그램에 모든 접근을 다 열어줘도 되나"]
@@ -509,7 +509,7 @@ entries:
     section: security
 - id: atlas.security.digital_signature
   kind: concept
-  path: ["정보와 컴퓨팅", "보안"]
+  path: ["정보와 컴퓨팅", "보안", "정보보호의 기초"]
   name: 전자서명
   hint: 작성 주체와 무결성 확인
   aliases: [Digital signature, "이 문서를 정말 그 사람이 보냈는지 확인", "계약서 파일이 보낸 뒤 고쳐지지 않았다는 증명", "종이 도장 없이 온라인으로 계약 맺기", "내려받은 프로그램이 제작사 것이 맞는지"]
@@ -815,7 +815,7 @@ entries:
     section: software
 - id: atlas.software.refactoring
   kind: method
-  path: ["정보와 컴퓨팅", "설계와 검증"]
+  path: ["정보와 컴퓨팅", "설계와 검증", "소프트웨어의 구조"]
   name: 리팩터링
   hint: 외부 동작을 유지하며 내부 구조 개선
   aliases: [Refactoring, "기능은 그대로 두고 지저분한 코드 정리", "코드가 꼬여서 고치기 무서울 때", "중복된 코드를 묶고 이름을 알기 쉽게 바꾸기", "새 기능 넣기 전에 뼈대부터 다듬기"]

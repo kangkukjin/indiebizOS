@@ -311,7 +311,7 @@ entries:
     section: policy
 - id: atlas.policy.accountability
   kind: concept
-  path: ["사회", "정책과 거버넌스"]
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
   name: 책무성
   hint: 설명과 책임을 요구할 수 있는 관계
   aliases: [Accountability, "예산을 어디에 썼는지 따져 물을 수 있는 권리", "일이 잘못됐을 때 누가 답해야 하는지 불분명", "기관장이 결과에 대해 해명하도록 만드는 장치", "위탁 업체가 제대로 했는지 보고받는 체계"]

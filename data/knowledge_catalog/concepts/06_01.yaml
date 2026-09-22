@@ -1,0 +1,1049 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.06.004cb195b400
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 감각
+  hint: 외부와 내부 자극을 신호로 받아들이는 과정
+  aliases: ["눈과 귀가 자극을 받아들이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.8998bed89a8d
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 지각 (인지)
+  hint: 감각 정보를 조직하고 의미 있게 해석하는 과정
+  aliases: ["같은 자극을 다르게 알아보는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.016e86373a3c
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 절대역
+  hint: 감지 가능한 자극 강도의 기준
+  aliases: ["아주 작은 소리를 알아차리는 정도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.05f3b6f7220c
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 차이역
+  hint: 두 자극의 차이를 구별하는 기준
+  aliases: ["얼마나 달라져야 변화를 느끼는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.c14e4a0cd416
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 감각적응
+  hint: 지속 자극에 대한 반응이 변하는 현상
+  aliases: ["익숙한 냄새를 점점 못 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.57e4e27838ac
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 상향처리
+  hint: 감각 자료에서 시작하여 해석을 구성
+  aliases: ["눈앞의 세부를 모아 무엇인지 알아보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.ee8539ec041c
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 하향처리
+  hint: 기대·지식이 감각 해석에 영향을 주는 과정
+  aliases: ["아는 내용 때문에 다르게 보이는 현상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.abea068f4b27
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 지각항상성
+  hint: 조건 변화에도 대상의 성질을 안정적으로 인식
+  aliases: ["멀어져도 물체 자체가 작아졌다고 안 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.bf1088690b96
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 깊이지각
+  hint: 거리와 입체 관계를 파악하는 능력
+  aliases: ["평면 영상에서도 앞뒤를 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.d64c94a0315e
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 착시
+  hint: 물리적 자극과 다른 양상으로 보이는 지각
+  aliases: ["같은 길이가 다르게 보이는 그림"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.76293dbb455e
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 선택적 주의
+  hint: 일부 정보에 처리 자원을 집중하는 과정
+  aliases: ["시끄러운 곳에서 한 사람 말에 집중"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.29ccca111053
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 분할주의
+  hint: 여러 과제나 정보에 주의를 나누는 과정
+  aliases: ["여러 일을 동시에 하려 할 때"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.4a8575faf0f8
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 주의전환
+  hint: 집중 대상을 다른 것으로 바꾸는 과정
+  aliases: ["하던 일을 멈추고 다른 일로 옮기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.c8b96d4cd974
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 변화맹
+  hint: 시야의 변화가 있어도 알아차리지 못함
+  aliases: ["화면이 바뀌었는데 놓치는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.597604ccf7e5
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "감각과 지각"]
+  name: 부주의맹
+  hint: 주의 밖의 뚜렷한 대상을 알아차리지 못함
+  aliases: ["집중하느라 눈앞의 물체를 못 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/감각과 지각
+- id: basics.06.24e241a63f47
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 부호화
+  hint: 경험을 기억 가능한 형태로 처리하는 과정
+  aliases: ["본 것을 기억으로 바꾸는 단계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.cf4707536a96
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 기억저장
+  hint: 정보가 시간에 걸쳐 유지되는 과정
+  aliases: ["배운 내용이 남아 있는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.c106c23db33f
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 기억인출
+  hint: 저장된 정보를 다시 활용하는 과정
+  aliases: ["알고 있는 말을 떠올리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.3b176436921d
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 단기기억
+  hint: 짧은 시간 동안 정보를 유지하는 기능
+  aliases: ["잠깐 전화번호를 붙잡아 두기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.482f9f536dae
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 장기기억
+  hint: 정보를 비교적 오래 유지하는 기억
+  aliases: ["오래전 배운 내용이 남아 있기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.65ece1c727ad
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 일화기억
+  hint: 특정 시공간의 경험에 관한 기억
+  aliases: ["언제 어디서 겪었는지 떠올리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.22342fb2f270
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 의미기억
+  hint: 개념·사실 등 일반 지식에 관한 기억
+  aliases: ["경험 장면 없이 아는 지식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.e55cba03d246
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 절차기억
+  hint: 기술과 수행 방식에 관한 기억
+  aliases: ["말로 설명 못해도 자전거를 타기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.8bcb499a0c1a
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 암묵기억
+  hint: 의식적 회상 없이 수행에 영향을 주는 기억
+  aliases: ["기억한다고 느끼지 않아도 익숙해지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.bfe221f1a1dd
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 기억공고화
+  hint: 기억이 비교적 안정된 형태로 자리 잡는 과정
+  aliases: ["배운 뒤 시간이 지나며 기억이 굳기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.1354225aa006
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 망각
+  hint: 정보의 유지나 접근이 약해지는 현상
+  aliases: ["알던 내용이 떠오르지 않는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.e60e37e7b290
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 기억 간섭
+  hint: 다른 정보가 기억의 학습·인출에 영향을 줌
+  aliases: ["비슷한 내용을 배워 서로 헷갈리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.d1dbc0afd6d4
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 인출단서
+  hint: 기억 접근을 돕는 정보나 맥락
+  aliases: ["작은 힌트로 기억이 떠오르기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.e7a9afd2accc
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 맥락의존기억
+  hint: 학습·회상 환경의 관계가 인출에 미치는 효과
+  aliases: ["배웠던 장소에 가면 더 잘 생각나기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.2fb8685173d5
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 기억재구성
+  hint: 회상 때 정보가 현재 지식 등과 함께 재조직됨
+  aliases: ["옛 기억이 이야기할 때마다 달라지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.016e2c0f2dbe
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "주의와 기억"]
+  name: 전망기억
+  hint: 미래에 할 일을 기억하는 기능
+  aliases: ["나중에 해야 할 약속을 떠올리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/주의와 기억
+- id: basics.06.08e0dfd4fcdc
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 개념
+  hint: 대상과 경험을 묶어 이해하는 지식 단위
+  aliases: ["서로 다른 사례를 같은 종류로 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.f34325a73039
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 범주화
+  hint: 대상을 공통 기준에 따라 묶는 과정
+  aliases: ["새로운 물건이 어느 종류인지 판단"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.5a3a07a2d685
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 원형
+  hint: 범주의 대표적 특성이나 사례
+  aliases: ["가장 그럴듯한 새나 의자의 모습"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.b78a868b1d12
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 도식
+  hint: 경험과 지식을 조직하는 틀
+  aliases: ["익숙한 상황에서 무엇을 예상하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.068c20420840
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 심적 모형
+  hint: 대상의 작동과 관계에 대한 내부 표현
+  aliases: ["머릿속에서 일이 어떻게 돌아가는지 그리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.62d5d04fe34f
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 문제해결
+  hint: 현재 상태에서 목표로 가는 경로를 찾는 과정
+  aliases: ["막힌 문제를 풀 방법 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.4bd8a87ce29c
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 통찰
+  hint: 문제의 관계를 새로 이해하며 해법이 드러남
+  aliases: ["갑자기 해결 방법이 보이는 순간"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.48015d21c7d7
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 기능적 고착
+  hint: 대상의 익숙한 용도에 생각이 묶이는 경향
+  aliases: ["도구를 다른 용도로 못 떠올리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.ef4a4607088a
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 심적 집합
+  hint: 익숙한 해결 방식이 이후 사고를 지배하는 경향
+  aliases: ["전부터 쓰던 방법만 반복하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.e24e918d3c9e
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 휴리스틱
+  hint: 판단과 해결을 단순화하는 경험적 규칙
+  aliases: ["복잡한 문제를 빠르게 가늠하는 요령"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.7f78a79fffa2
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 인지적 유연성
+  hint: 상황에 맞게 관점과 규칙을 전환하는 능력
+  aliases: ["다른 방식으로 생각을 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.34ce74fa8029
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 언어이해
+  hint: 말과 글의 구조·의미·의도를 파악하는 과정
+  aliases: ["문장 밖의 맥락까지 읽기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.005c610e2133
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 언어산출
+  hint: 생각을 말이나 글로 구성하는 과정
+  aliases: ["머릿속 생각을 문장으로 꺼내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.8b2f338bee0b
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 내적 언어
+  hint: 자신에게 향하는 언어적 사고
+  aliases: ["속으로 말하며 일을 정리하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.c507ff7623b4
+  kind: concept
+  path: ["마음과 배움", "인지와 행동", "사고와 언어"]
+  name: 창의성
+  hint: 새롭고 맥락에 적절한 생각이나 결과를 만드는 성질
+  aliases: ["익숙한 재료로 새로운 해결을 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/인지와 행동/사고와 언어
+- id: basics.06.8144c32ff9e7
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 정서
+  hint: 상황 평가·신체 변화·경험·표현이 결합된 반응
+  aliases: ["사건을 겪으며 마음과 몸이 변하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.ebafc4e98d6e
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 기분
+  hint: 비교적 지속적이고 특정 대상이 약한 정서 상태
+  aliases: ["뚜렷한 이유 없이 하루의 느낌이 이어지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.e556cd6322c8
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 각성
+  hint: 신체와 정신의 활성 수준
+  aliases: ["긴장되거나 처지는 정도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.08c1c0c55db6
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 불안
+  hint: 불확실한 위협에 대한 예기적 반응
+  aliases: ["아직 일어나지 않은 일을 걱정하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.6c82c24828d2
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 공포
+  hint: 지각된 위협에 대한 반응
+  aliases: ["눈앞의 위험에 몸이 움츠러들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.5a90f06f2730
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 분노
+  hint: 방해·부당함 등에 대한 정서 반응
+  aliases: ["억울한 상황에서 화가 나는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.eb2c2921b87b
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 슬픔
+  hint: 상실·좌절 등에 관련된 정서 경험
+  aliases: ["소중한 것을 잃었을 때의 마음"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.a9286a64cba9
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 기쁨
+  hint: 만족·성취·긍정적 사건에 관련된 정서
+  aliases: ["좋은 일을 겪고 즐거움을 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.2afdfc3bdfa5
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 수치심
+  hint: 자기 전체가 부정적으로 평가된다는 경험
+  aliases: ["잘못 때문에 자신을 드러내기 싫어지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.184e0c9c5104
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 죄책감
+  hint: 자신의 행위가 기준을 어겼다는 정서 경험
+  aliases: ["한 행동을 후회하며 바로잡고 싶기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.4bf4def4431c
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 감정표현
+  hint: 얼굴·몸짓·목소리 등으로 정서가 드러남
+  aliases: ["말하지 않아도 기분이 전해지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.127ff5e53b2c
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 정서전염
+  hint: 타인의 정서가 자신의 상태에 영향을 줌
+  aliases: ["주변 분위기에 함께 들뜨거나 가라앉기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.3d1d323a747a
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 재평가
+  hint: 상황 해석을 바꾸어 정서 반응을 조절
+  aliases: ["같은 일을 다른 뜻으로 받아들이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.86cebbd78355
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "정서 경험"]
+  name: 수용 (심리)
+  hint: 경험을 즉시 없애려 하기보다 알아차리는 태도
+  aliases: ["불편한 감정을 관찰하며 두기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/정서 경험
+- id: basics.06.b11541e44944
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 욕구
+  hint: 행동을 일으키는 필요나 바람
+  aliases: ["무엇이 부족해 행동하게 되는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.3182dd7d3d31
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 목표
+  hint: 행동으로 도달하려는 상태
+  aliases: ["어떤 결과를 향해 움직이는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.0ca7c1725cf8
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 외재적 동기
+  hint: 외부 보상이나 결과를 위한 행동 동기
+  aliases: ["상이나 평가 때문에 일을 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.421d4a8207c2
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 자율성
+  hint: 자신의 행동을 선택하고 조절한다는 경험
+  aliases: ["내가 결정해서 한다고 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.0f0341226fe0
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 유능감
+  hint: 환경에 효과적으로 작용할 수 있다는 경험
+  aliases: ["해낼 수 있다는 감각"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.1a33314239a0
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 관계성
+  hint: 타인과 연결되고 소속된다는 경험
+  aliases: ["함께하고 받아들여진다고 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.f5e513f58074
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 자기통제
+  hint: 목표에 맞게 충동과 행동을 조절하는 기능
+  aliases: ["당장의 충동을 멈추고 계획 따르기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.248f5ffb3016
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 자기조절
+  hint: 목표·관찰·조정으로 행동을 유지하는 과정
+  aliases: ["진행을 보며 행동을 고쳐 가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.9444bc762474
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 보상
+  hint: 행동에 뒤따라 가치 있게 받아들여지는 결과
+  aliases: ["다시 하고 싶게 만드는 결과"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.677ceafe6da4
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 성취동기
+  hint: 기준 달성과 능력 향상을 추구하는 경향
+  aliases: ["잘 해내고 싶어 노력하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.2af1bb8b1ccb
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 목표갈등
+  hint: 여러 목표가 서로 양립하기 어려운 상태
+  aliases: ["원하는 두 가지가 충돌할 때"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.16a2a43f1fe3
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 몰입
+  hint: 과제에 깊이 관여하여 집중하는 경험
+  aliases: ["시간 가는 줄 모르고 활동하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.193d30259117
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 지연행동
+  hint: 필요한 행동을 불리함을 알면서도 미루기
+  aliases: ["해야 할 일을 계속 뒤로 미루는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.f73789b65c58
+  kind: concept
+  path: ["마음과 배움", "정서와 동기", "동기와 자기조절"]
+  name: 그릿
+  hint: 장기 목표에 대한 지속적 노력과 관심
+  aliases: ["오랜 목표를 향해 버티는 태도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/정서와 동기/동기와 자기조절
+- id: basics.06.1b840880baa0
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 발달
+  hint: 시간에 따른 기능·구조·행동의 변화
+  aliases: ["자라면서 생각과 행동이 달라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.cd25cae07512
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 성숙
+  hint: 생물학적 성장에 따른 변화
+  aliases: ["배우기 전에도 몸과 기능이 자라기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.8d0829260080
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 민감기
+  hint: 특정 경험의 영향이 특히 큰 발달 시기
+  aliases: ["어느 시기의 경험이 오래 남는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.238ad4ff7dce
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 개인차
+  hint: 사람들 사이의 특성과 반응 차이
+  aliases: ["같은 나이에도 서로 다른 속도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.ef1ebb4602ba
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 자기개념
+  hint: 자신의 특성과 역할에 대한 이해
+  aliases: ["나는 어떤 사람이라고 생각하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.6c59e1aeb296
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 정체성
+  hint: 자신의 연속성과 소속에 관한 구성
+  aliases: ["변화 속에서도 나라고 느끼는 것"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.efbf1d710dec
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 자존감
+  hint: 자신에 대한 전반적 가치 평가
+  aliases: ["자신을 얼마나 가치 있게 보는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.848cc8e1e7d6
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 사회화
+  hint: 규범·역할·문화적 방식을 배우는 과정
+  aliases: ["함께 사는 방법을 익히기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.89ed8c26ef87
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 도덕발달
+  hint: 옳고 그름에 대한 판단과 행동의 변화
+  aliases: ["아이들이 규칙과 공정을 이해하는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.82a74e621e47
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 또래관계
+  hint: 비슷한 나이·지위의 사람 사이 관계
+  aliases: ["친구들 사이에서 배우는 역할"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.b8900dd14f56
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 역할수용
+  hint: 타인의 관점과 위치를 고려하는 능력
+  aliases: ["상대 입장에서 상황을 생각하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.9ec59f8d73f2
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 자기인식
+  hint: 자신의 상태와 행동을 대상으로 알아차림
+  aliases: ["내가 느끼고 하는 것을 관찰"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.6a7df85453a7
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 사회비교
+  hint: 타인을 기준으로 자신을 평가하는 과정
+  aliases: ["남과 비교해 자기 위치를 가늠하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.f371a8e82f4b
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "발달과 사회성"]
+  name: 세대효과
+  hint: 같은 역사적 경험을 공유한 집단의 차이
+  aliases: ["태어난 시대가 태도에 남는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/발달과 사회성
+- id: basics.06.829f5633760a
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 대인신뢰
+  hint: 상대가 기대에 부합할 것이라는 믿음
+  aliases: ["다른 사람에게 의지할 수 있다고 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.ed877c328b28
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 친밀감
+  hint: 정서적 가까움과 이해를 공유하는 경험
+  aliases: ["마음을 털어놓을 수 있는 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.2809d8166972
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 상호의존
+  hint: 서로의 행동과 결과가 영향을 주는 관계
+  aliases: ["각자의 선택이 상대에게도 중요한 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.c1bbf45466d4
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 경청
+  hint: 상대의 말과 맥락에 주의를 기울이는 듣기
+  aliases: ["대답 준비보다 상대 뜻을 알아듣기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.6640b1db809f
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 비언어적 의사소통
+  hint: 표정·몸짓·거리 등으로 정보 전달
+  aliases: ["말투와 자세가 전하는 메시지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.5677d47ea908
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 자기개방
+  hint: 자신에 관한 정보와 감정을 드러내기
+  aliases: ["속마음을 나누며 가까워지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.4bb8d2d91082
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 대인경계
+  hint: 관계에서 허용과 책임의 범위를 구분
+  aliases: ["어디까지 부탁하고 받아들일지 정하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.d17603407527
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 갈등
+  hint: 목표·해석·이익 등이 충돌하는 상태
+  aliases: ["서로 원하는 것이 맞지 않는 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.56e1662be7eb
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 갈등회피
+  hint: 갈등에 직면하거나 표현하는 것을 피함
+  aliases: ["불편해서 말하지 않고 넘기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.66c43bfd8fe7
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 관계회복
+  hint: 손상된 신뢰와 상호작용을 다시 형성
+  aliases: ["다툰 뒤 다시 협력하는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.8a8d5a7d7bab
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 상호성
+  hint: 상대의 행동에 대응하며 관계가 형성되는 성질
+  aliases: ["주고받는 반응이 관계를 만드는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.3751c0ee4f1a
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 외로움
+  hint: 원하는 관계와 실제 관계의 차이에 대한 경험
+  aliases: ["사람이 많아도 연결되지 않는 느낌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.12ce66389cd0
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 소속감
+  hint: 집단이나 관계에 받아들여졌다는 경험
+  aliases: ["내가 여기의 일부라고 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.b27e7571827b
+  kind: concept
+  path: ["마음과 배움", "발달과 관계", "관계와 소통"]
+  name: 사회적 지지
+  hint: 관계에서 얻는 정서·정보·실질적 도움
+  aliases: ["어려울 때 주변에서 받는 도움"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/발달과 관계/관계와 소통
+- id: basics.06.5632c492f88d
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 학습전이
+  hint: 배운 것을 다른 상황에 적용하는 과정
+  aliases: ["교실에서 배운 것을 실제로 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.e3467686a795
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 선행지식
+  hint: 새 학습에 앞서 가진 관련 지식
+  aliases: ["이미 아는 것이 새 이해에 주는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.6a1c11ad5f1f
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 오개념
+  hint: 학문적 설명과 다른 지속적 이해
+  aliases: ["잘못 알지만 쉽게 바뀌지 않는 생각"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.af90f5c05b02
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 피드백
+  hint: 수행과 목표의 차이에 관한 정보
+  aliases: ["어디를 어떻게 고칠지 알려 주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.5f5e5e96ce15
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 학습목표
+  hint: 학습 뒤 기대하는 이해와 수행
+  aliases: ["배우고 나면 무엇을 할 수 있어야 하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.dfe28d696707
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 협동학습
+  hint: 공동 목표와 상호작용을 통한 학습
+  aliases: ["함께 설명하고 맡아 배우는 수업"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.6d6146dd720f
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 자기주도학습
+  hint: 학습자가 목표·자원·과정을 조절
+  aliases: ["스스로 공부 계획을 세우고 확인"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.3538eee85dd6
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 경험학습
+  hint: 경험과 성찰을 통해 이해를 구성
+  aliases: ["직접 해보고 돌아보며 배우기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.73e972fefd01
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 상황학습
+  hint: 지식이 쓰이는 맥락과 참여를 통한 학습
+  aliases: ["실제 하는 사람들 사이에서 익히기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.c8e98cdfa39d
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 교육과정
+  hint: 교육 목표·내용·경험을 조직한 체계
+  aliases: ["무엇을 어떤 순서로 배우는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.9e2302abc0fb
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 잠재적 교육과정
+  hint: 공식 내용 밖에서 배우는 규범과 기대
+  aliases: ["학교생활 자체가 가르치는 태도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.a1aac8a3ff49
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 교육격차
+  hint: 집단 간 교육 기회·조건·성과의 차이
+  aliases: ["배움의 출발 조건이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.925b1718b5c9
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 평생학습
+  hint: 생애 전반에서 이어지는 학습
+  aliases: ["학교를 마친 뒤에도 배우기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경
+- id: basics.06.41b3e005dac4
+  kind: concept
+  path: ["마음과 배움", "교수와 평가", "학습과 교육환경"]
+  name: 포용교육
+  hint: 다양한 학습자의 참여와 접근을 보장하는 교육
+  aliases: ["서로 다른 학생이 함께 배울 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 마음과 배움/교수와 평가/학습과 교육환경

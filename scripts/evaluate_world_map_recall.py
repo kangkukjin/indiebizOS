@@ -18,9 +18,12 @@ import catalog_recall  # noqa: E402
 import associative_recall  # noqa: E402
 import tree_recall  # noqa: E402
 from world_recall_store import WorldStore  # noqa: E402
+from knowledge_catalog import build_index  # noqa: E402
 
 
 def evaluate(root, cases):
+    # 기준판 fixture도 운영판과 같은 FTS 동점 순위를 사용한다.
+    build_index(root)
     store = WorldStore(root)
     started = time.perf_counter()
     tree_recall.build_now(store)
@@ -69,10 +72,11 @@ def evaluate(root, cases):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--baseline-root', type=Path)
+    parser.add_argument('--cases', type=Path, default=ROOT / 'data/knowledge_catalog/recall_evaluation.yaml')
     parser.add_argument('--output', type=Path, required=True)
     args = parser.parse_args()
     os.environ.setdefault('INDIEBIZ_RECALL_INDEX_DIR', str(ROOT / 'outputs/world_map/recall_index'))
-    cases = yaml.safe_load((ROOT / 'data/knowledge_catalog/recall_evaluation.yaml').read_text())['cases']
+    cases = yaml.safe_load(args.cases.read_text())['cases']
     current = WorldStore(ROOT)
     valid = {e.id for e in current.snapshot.entries}
     unknown = {i for c in cases for i in c['acceptable_ids'] if i not in valid}

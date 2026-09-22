@@ -1,0 +1,257 @@
+kind: editorial_development_diagnostic
+blind_holdout: false
+note: 개념·별칭과 동일 편집자가 작성한 진단. 빈 acceptable_ids는 등재 공백이며 성공으로 세지 않음.
+cases:
+- id: 1
+  domain: 형식과 추론
+  query: 세 종류의 버스가 서로 다른 간격으로 올 때 다시 함께 도착하는 시각을 알고 싶어.
+  expected_names:
+  - 최소공배수
+  acceptable_ids:
+  - basics.01.d6a8e55f84cf
+  catalog_gap: false
+- id: 2
+  domain: 형식과 추론
+  query: 확률이 비슷한 두 집단인데 한쪽 결과만 훨씬 넓게 흩어져 있어.
+  expected_names:
+  - 분산
+  - 표준편차
+  acceptable_ids:
+  - basics.01.2c6d8d8368b1
+  - basics.01.bf6a50710d77
+  catalog_gap: false
+- id: 3
+  domain: 물질과 우주
+  query: 구급차가 내 옆을 지나갈 때 사이렌 음이 갑자기 낮아져.
+  expected_names:
+  - 도플러 효과
+  acceptable_ids:
+  - basics.02.3c7f763823bc
+  catalog_gap: false
+- id: 4
+  domain: 물질과 우주
+  query: 얼음을 계속 데우는데 물로 바뀌는 동안 온도계 눈금이 그대로야.
+  expected_names:
+  - 잠열
+  acceptable_ids:
+  - basics.02.17175e564213
+  catalog_gap: false
+- id: 5
+  domain: 지구와 환경
+  query: 바닷물이 강 쪽으로 들어오는 하구는 민물도 바닷물도 아닌 것 같아.
+  expected_names:
+  - 기수 (물)
+  acceptable_ids:
+  - basics.03.3f997905579c
+  catalog_gap: false
+- id: 6
+  domain: 지구와 환경
+  query: 비가 내려도 아스팔트 주변은 물이 잘 빠지지 않고 고여.
+  expected_names:
+  - 침투
+  - 불투수면
+  - 우수 유출
+  acceptable_ids:
+  - basics.12.5f73d525bd5e
+  catalog_gap: false
+- id: 7
+  domain: 생명
+  query: 식물 잎의 작은 구멍은 물과 공기를 주고받는 데 무슨 역할을 해?
+  expected_names:
+  - 기공
+  - 증산
+  acceptable_ids:
+  - basics.04.7b7c66e73631
+  - foundation.transpiration
+  catalog_gap: false
+- id: 8
+  domain: 생명
+  query: 개미는 같은 종이라도 일을 나눠 하는데 어떻게 집단으로 살아갈까?
+  expected_names:
+  - 진사회성
+  - 사회성
+  acceptable_ids: []
+  catalog_gap: true
+- id: 9
+  domain: 건강
+  query: 눈앞이 어두워지면 동공이 커지고 빛을 비추면 작아지는 이유가 궁금해.
+  expected_names:
+  - 동공
+  - 반사 (생리)
+  acceptable_ids:
+  - basics.04.0c6c9b3fbcc8
+  catalog_gap: false
+- id: 10
+  domain: 건강
+  query: 면역계가 자기 몸의 조직까지 공격하는 현상을 뭐라고 해?
+  expected_names:
+  - 자가면역
+  acceptable_ids: []
+  catalog_gap: true
+- id: 11
+  domain: 마음과 배움
+  query: 눈으로 본 그림이 바로 사라져도 잠깐 머릿속에 남아 있어.
+  expected_names:
+  - 감각기억
+  acceptable_ids: []
+  catalog_gap: true
+- id: 12
+  domain: 마음과 배움
+  query: 어제 본 단어를 오늘 다시 보니까 처음 보는 것보다 빨리 읽혀.
+  expected_names:
+  - 점화
+  - 프라이밍
+  acceptable_ids: []
+  catalog_gap: true
+- id: 13
+  domain: 사회
+  query: 한 나라 안에서 중앙정부와 지역정부가 권한을 나누는 방식이 궁금해.
+  expected_names:
+  - 연방제
+  - 지방분권
+  - 분권
+  acceptable_ids:
+  - basics.07.9145d1cc3523
+  catalog_gap: false
+- id: 14
+  domain: 사회
+  query: 일할 나이 사람은 줄고 노인은 늘 때 인구 구성을 어떻게 읽어야 해?
+  expected_names:
+  - 부양비
+  - 인구 고령화
+  - 인구 피라미드
+  acceptable_ids:
+  - basics.07.34dccebccd2d
+  - foundation.population_aging
+  - foundation.population_pyramid
+  catalog_gap: false
+- id: 15
+  domain: 경제와 조직
+  query: 판매량이 늘어날수록 공장 전체 비용은 늘지만 제품 하나의 비용은 내려가.
+  expected_names:
+  - 규모의 경제
+  acceptable_ids:
+  - atlas.economics.economies_of_scale
+  catalog_gap: false
+- id: 16
+  domain: 경제와 조직
+  query: 외상으로 물건을 팔아서 장부에는 매출이 있는데 통장에는 아직 돈이 없어.
+  expected_names:
+  - 매출채권
+  - 발생주의
+  - 현금흐름
+  - 발생주의 회계
+  acceptable_ids:
+  - atlas.finance.accrual_accounting
+  catalog_gap: false
+- id: 17
+  domain: 인문
+  query: 소설을 읽는데 사건의 순서와 독자에게 알려 주는 순서가 달라.
+  expected_names:
+  - 플롯
+  - 시간 구성
+  acceptable_ids:
+  - basics.09.7735b1d2f552
+  catalog_gap: false
+- id: 18
+  domain: 인문
+  query: 말한 문장 자체보다 대화 상황 때문에 전달되는 뜻이 더 커.
+  expected_names:
+  - 화용론
+  - 함축
+  acceptable_ids:
+  - atlas.linguistics.pragmatics
+  - atlas.linguistics.implicature
+  catalog_gap: false
+- id: 19
+  domain: 예술과 표현
+  query: 같은 멜로디를 연주해도 피아노와 바이올린은 다르게 들려.
+  expected_names:
+  - 음색
+  acceptable_ids:
+  - atlas.music.timbre
+  catalog_gap: false
+- id: 20
+  domain: 예술과 표현
+  query: 사진에 들어올 장면의 범위를 바꾸니 같은 장소도 다르게 보여.
+  expected_names:
+  - 프레이밍 (영상)
+  - 초점거리
+  acceptable_ids:
+  - basics.10.6b876e02c6e4
+  - basics.02.9d340bc8b417
+  catalog_gap: false
+- id: 21
+  domain: 정보와 컴퓨팅
+  query: 컴퓨터가 여러 프로그램을 조금씩 번갈아 실행하는 원리가 궁금해.
+  expected_names:
+  - 스케줄링
+  - 시분할
+  - 컨텍스트 스위치
+  acceptable_ids:
+  - basics.11.0116f900b863
+  catalog_gap: false
+- id: 22
+  domain: 정보와 컴퓨팅
+  query: 은행 계좌의 출금 기록과 입금 기록이 함께 성공하거나 함께 취소되어야 해.
+  expected_names:
+  - 트랜잭션
+  - 원자성
+  acceptable_ids:
+  - basics.11.6614c37d329b
+  catalog_gap: false
+- id: 23
+  domain: 공학
+  query: 모터의 회전 방향을 바꿨는데 연결된 부품은 조금 늦게 움직여.
+  expected_names:
+  - 백래시
+  acceptable_ids:
+  - basics.12.d02a72489cb9
+  catalog_gap: false
+- id: 24
+  domain: 공학
+  query: 재료를 계속 접었다 폈더니 큰 힘을 안 줘도 결국 부러졌어.
+  expected_names:
+  - 피로 파괴
+  acceptable_ids:
+  - basics.12.1ac1e380cbfb
+  catalog_gap: false
+- id: 25
+  domain: 생활
+  query: 빵을 만들려고 밀가루에 물을 넣고 치댔더니 늘어나는 덩어리가 됐어.
+  expected_names:
+  - 글루텐
+  - 반죽
+  acceptable_ids:
+  - basics.13.76a50b55a85b
+  - basics.13.61a2d6e7624b
+  catalog_gap: false
+- id: 26
+  domain: 생활
+  query: 뜨거운 물에 세탁한 뒤 옷의 소매와 몸통이 짧아졌어.
+  expected_names:
+  - 직물 수축
+  - 세탁 수축
+  acceptable_ids:
+  - foundation.fabric_shrinkage
+  catalog_gap: false
+- id: 27
+  domain: 지식과 탐구
+  query: 비슷한 제목의 기사 여러 개가 사실은 같은 보도자료를 그대로 인용했어.
+  expected_names:
+  - 출처 독립성
+  - 출처 추적
+  acceptable_ids:
+  - foundation.source_independence
+  - basics.14.87c019dac1b1
+  catalog_gap: false
+- id: 28
+  domain: 지식과 탐구
+  query: 설문에 답한 사람만 분석했는데 답하지 않은 사람들은 성향이 다를 것 같아.
+  expected_names:
+  - 비응답 편향
+  - 선택편향
+  acceptable_ids:
+  - basics.14.91b78b6e4b32
+  - atlas.causality.selection_bias
+  catalog_gap: false

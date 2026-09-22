@@ -184,6 +184,22 @@ def test_world_dictionary_matches_the_tree():
     assert it.label.endswith(": OR-Tools") and len(it.path) == 2
 
 
+def test_world_deep_topics_reach_embeddings_without_splitting_route_branches():
+    from runtime_utils import get_base_path
+    from world_recall_store import WorldStore, BRANCH_DEPTH
+    from tree_recall import item_text, under
+    store = WorldStore(get_base_path())
+    branches = {b.path for b in store.branches()}
+    deep = [i for i in store.items() if len(i.path) > BRANCH_DEPTH]
+    assert deep
+    for item in deep:
+        parent = item.path[:BRANCH_DEPTH]
+        assert parent in branches and under(item.path, parent)
+        assert item.path[-1] in item_text(item)
+        assert '/'.join(item.path) in item.label
+    assert all(len(path) == BRANCH_DEPTH for path in branches)
+
+
 def test_world_memory_block_dedupes_and_can_be_turned_off(TR, monkeypatch):
     import catalog_recall as C
     events = []

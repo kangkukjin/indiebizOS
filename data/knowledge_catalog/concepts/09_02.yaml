@@ -1,0 +1,86 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.09.ec63cf389039
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 코드전환
+  hint: 대화 중 언어나 언어 변이를 바꾸는 현상
+  aliases: ["말하다 다른 언어로 옮겨 가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.77c4c5c8a3ed
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 언어접촉
+  hint: 서로 다른 언어가 만나 영향을 주고받음
+  aliases: ["이웃한 언어끼리 말이 섞이는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.3962d0291e7b
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 차용어
+  hint: 다른 언어에서 받아들인 어휘
+  aliases: ["외국 말이 일상 단어가 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.0ba0eb62c66e
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 언어변화
+  hint: 소리·문법·뜻 등이 시간에 따라 달라짐
+  aliases: ["옛말과 지금 말이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.9388f010c2f6
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 언어정책
+  hint: 언어 사용과 지위에 관한 공적 결정
+  aliases: ["어떤 언어를 학교와 행정에서 쓰는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.0a23040b6c60
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 언어정체성
+  hint: 언어를 통해 형성되는 소속과 자기이해
+  aliases: ["쓰는 말이 누구인지와 연결되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.65d2fb9b8a67
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 번역등가
+  hint: 언어 사이의 대응 의미와 기능에 관한 관계
+  aliases: ["같은 뜻을 다른 언어에서 어떻게 전하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.7de16bac474a
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 통번역
+  hint: 글과 말을 언어 사이에서 옮기는 활동
+  aliases: ["다른 언어의 사람끼리 뜻을 전하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.af9e2f04f9cd
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 언어소멸
+  hint: 한 언어의 사용과 전승이 사라지는 과정
+  aliases: ["아이들이 배우지 않아 사라지는 말"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회

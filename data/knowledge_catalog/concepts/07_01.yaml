@@ -1,0 +1,1013 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.07.580bb8d061b9
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 문화
+  hint: 집단이 공유·전승하는 의미와 생활 방식
+  aliases: ["사람들이 당연하게 여기는 삶의 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.a82eb36beaec
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 하위문화
+  hint: 더 큰 사회 안에서 구별되는 문화적 양식
+  aliases: ["특정 집단만의 취향과 규칙"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.7d3f2728a3cc
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 문화접변
+  hint: 서로 다른 문화의 접촉으로 변화가 생김
+  aliases: ["다른 문화와 만나 생활이 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.3a70124f73da
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 문화전파
+  hint: 문화 요소가 집단과 지역 사이에 퍼짐
+  aliases: ["음식과 관습이 다른 지역으로 이동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.6d0db2adf7ce
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 문화자본
+  hint: 사회적 인정과 기회에 작용하는 문화적 자원
+  aliases: ["말투와 취향과 학력이 기회에 주는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.0edf2dceda5f
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 상징체계
+  hint: 공유된 기호와 의미의 연결
+  aliases: ["같은 표시를 보고 같은 뜻을 떠올리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.1cac66d9c23b
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 관습
+  hint: 반복과 전승으로 유지되는 행동 방식
+  aliases: ["오래 해 와서 자연스럽게 따르는 행동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.a541804e0e44
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 금기
+  hint: 강하게 금지되거나 꺼려지는 행위와 대상
+  aliases: ["어떤 사회에서 해서는 안 되는 행동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.3e24be3303d9
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 민족정체성
+  hint: 역사·문화·기원 등에 기반한 집단 소속감
+  aliases: ["공통의 뿌리를 가진 집단이라고 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.cc3c6972455a
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 다문화주의
+  hint: 다양한 문화 집단의 공존을 다루는 관점
+  aliases: ["서로 다른 생활 방식을 함께 인정하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.61cdb1c855a5
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 동화
+  hint: 소수집단 등이 지배적 문화에 가까워지는 과정
+  aliases: ["새 사회의 언어와 관습을 받아들이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.dd5ff6ed0298
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 차이와 다양성
+  hint: 집단 안팎의 다양한 특성과 경험
+  aliases: ["같은 사회에서도 다른 삶이 존재하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.d661da1f1997
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 공동체
+  hint: 관계·장소·관심 등을 공유하는 집단
+  aliases: ["서로 연결되어 살아가는 사람들"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.5ec0fbe2ddb3
+  kind: concept
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
+  name: 아노미
+  hint: 규범의 약화나 불일치로 방향이 흔들리는 상태
+  aliases: ["무엇을 따라야 할지 혼란스러운 사회"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/문화와 정체성
+- id: basics.07.00f0e6bc9b26
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 사회구조
+  hint: 관계와 제도가 반복적으로 조직된 양상
+  aliases: ["개인의 선택을 둘러싼 사회의 틀"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.170eb63cfa4f
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 사회제도
+  hint: 지속적인 역할·규칙·관행의 체계
+  aliases: ["가족과 학교와 시장이 작동하는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.794b3d6606a8
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 지위
+  hint: 관계와 조직에서 차지하는 위치
+  aliases: ["어떤 자리에 있느냐에 따른 기대"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.a58aae97aeb3
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 역할갈등
+  hint: 여러 역할의 요구가 충돌하는 상태
+  aliases: ["직장인과 돌봄자 역할이 맞지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.8a1f231bb196
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 사회계층
+  hint: 자원과 기회에 따른 위계적 구분
+  aliases: ["부와 권한에 따라 나뉘는 사회 위치"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.914a089f4ecd
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 사회이동
+  hint: 개인·집단의 사회적 위치가 달라지는 과정
+  aliases: ["부모와 자녀의 계층 위치 변화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.a179819b59b5
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 불평등
+  hint: 자원·기회·보상의 고르지 않은 분포
+  aliases: ["누가 더 많은 기회를 가지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.3dea56bfe526
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 차별
+  hint: 집단 속성 등에 따른 불리한 대우
+  aliases: ["같은 상황인데 속성 때문에 다르게 대하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.14d4e8729dcf
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 낙인
+  hint: 특정 속성을 부정적으로 규정하는 사회적 표지
+  aliases: ["붙은 이름 때문에 사람을 다르게 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.85f6616e0ef1
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 배제
+  hint: 자원·관계·참여의 기회에서 밀려나는 과정
+  aliases: ["사회 활동에 끼지 못하게 되는 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.129cbe214448
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 빈곤
+  hint: 기본 생활이나 사회적 참여의 자원이 부족함
+  aliases: ["필요한 생활을 유지할 수 없는 상태"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.a024d4e90205
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 상대적 박탈
+  hint: 비교 기준에 비해 부족하다고 느끼는 경험
+  aliases: ["남과 비교해 불공정함을 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.b15a5a49c6a1
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 사회통합
+  hint: 구성원의 참여와 연결을 유지하는 과정
+  aliases: ["서로 다른 사람들이 함께 사는 기반"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.379e382e005f
+  kind: concept
+  path: ["사회", "문화와 공동체", "구조와 불평등"]
+  name: 사회재생산
+  hint: 사회적 위치와 구조가 세대·시간에 걸쳐 유지
+  aliases: ["기회의 차이가 다음 세대로 이어지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/문화와 공동체/구조와 불평등
+- id: basics.07.bd717f0b2a82
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 출생률
+  hint: 인구 대비 출생 발생의 비율
+  aliases: ["한 지역에서 아이가 얼마나 태어나는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.87f21859388f
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 사망률
+  hint: 인구 대비 사망 발생의 비율
+  aliases: ["인구가 줄어드는 요인을 세기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.2b2a28ff0f7f
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 합계출산율
+  hint: 연령별 출산율을 합산한 기간 지표
+  aliases: ["현재 출산 수준을 하나의 수치로 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.0efe55d8c8b8
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 기대수명
+  hint: 주어진 사망 양상에서 기대되는 생존 기간
+  aliases: ["한 집단의 수명 수준을 비교"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.34dccebccd2d
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 부양비
+  hint: 생산연령 인구 대비 특정 연령층 인구의 비
+  aliases: ["일하는 연령과 돌봄 수요의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.ca11d607dc1a
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 인구밀도
+  hint: 단위 면적당 인구 수
+  aliases: ["지역에 사람이 얼마나 빽빽하게 사는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.c811bf1d0615
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 순이동
+  hint: 들어온 인구와 나간 인구의 차이
+  aliases: ["이사 때문에 인구가 늘었는지 줄었는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.af652082416a
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 디아스포라
+  hint: 원거주지 밖에 흩어져 연계를 유지하는 집단
+  aliases: ["여러 나라에 살면서 뿌리를 공유하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.aee78d946d3b
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 친족
+  hint: 혈연·혼인·사회적 인정으로 맺는 관계
+  aliases: ["가족과 친척의 범위를 정하는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.8d1160b5bc51
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 핵가족
+  hint: 부모와 자녀를 중심으로 하는 가족 형태
+  aliases: ["작은 단위의 가족 구성"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.c0876aa646cc
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 확대가족
+  hint: 여러 세대나 친족이 결합한 가족 형태
+  aliases: ["친척과 여러 세대가 함께 생활하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.d445348d0369
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 가족다양성
+  hint: 다양한 구성과 관계로 존재하는 가족 형태
+  aliases: ["가족이 한 가지 모양만 있는 것은 아닌 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.ac249fdad092
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 세대관계
+  hint: 나이와 역사적 경험이 다른 집단 사이 관계
+  aliases: ["어른과 젊은 사람의 자원과 생각 교환"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.2d2a7cde0429
+  kind: concept
+  path: ["사회", "인구와 이동", "인구와 가족"]
+  name: 돌봄경제
+  hint: 돌봄의 생산·분배·가치와 관련된 경제 영역
+  aliases: ["생활을 유지하는 돌봄 노동의 몫"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/인구와 이동/인구와 가족
+- id: basics.07.431b677d731a
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 법치주의
+  hint: 공권력 행사 등을 법에 따라 제약하는 원리
+  aliases: ["권력을 가진 사람도 규칙에 묶이는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.e8dbf35bcb31
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 헌법
+  hint: 국가의 기본 질서와 권리 등을 정하는 근본 규범
+  aliases: ["국가 제도의 가장 기본적인 규칙"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.3e29c7e3f21b
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 법률
+  hint: 입법 절차를 통해 정하는 일반적 규범
+  aliases: ["사회가 공식적으로 정한 행동 기준"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.284c6aa777e2
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 공법과 사법
+  hint: 공적 관계와 사적 관계를 중심으로 한 법 영역 구분
+  aliases: ["국가와의 관계와 개인 간 관계의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.fc1d12a5cc96
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 민사와 형사
+  hint: 사적 권리 분쟁과 범죄·형벌에 관한 영역 구분
+  aliases: ["손해 배상 문제와 처벌 문제의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.1a8ae3b07ba0
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 권리와 의무
+  hint: 보장되는 이익·권능과 요구되는 행위
+  aliases: ["주장할 수 있는 것과 해야 하는 것"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.1b413b16a3d2
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 법인
+  hint: 법이 독립된 권리·의무 주체로 인정한 조직
+  aliases: ["회사가 개인과 별개의 주체가 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.06127641235c
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 법률행위
+  hint: 의사표시로 법적 효과를 발생시키는 행위
+  aliases: ["약속이 법적 관계를 바꾸는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.38de236ecca5
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 계약
+  hint: 당사자의 합의로 성립하는 법적 관계
+  aliases: ["서로 약속한 권리와 책임"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.db71bf639ade
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 불법행위
+  hint: 타인에게 손해를 주어 책임이 문제되는 행위
+  aliases: ["약속 관계가 없어도 배상 문제가 생기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.5464664aeda9
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 입증과 증거
+  hint: 주장을 뒷받침하는 자료와 그 확인 과정
+  aliases: ["말한 사실을 무엇으로 뒷받침하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.5b27570ef90a
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 사법심사
+  hint: 재판기관이 법적 적합성 등을 판단하는 작용
+  aliases: ["공적 결정이 법에 맞는지 다투기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.89ea24e9b3c6
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 법적 안정성
+  hint: 법 적용의 예측 가능성과 지속성
+  aliases: ["규칙이 어떻게 적용될지 예상할 수 있기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.fbb01386ec94
+  kind: concept
+  path: ["사회", "법과 제도", "법의 기본구조"]
+  name: 법적 정당성
+  hint: 규범과 권력 행사에 대한 정당화의 문제
+  aliases: ["적법한 것과 정당하다고 여기는 것의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/법의 기본구조
+- id: basics.07.bafc64def9c4
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 기본권
+  hint: 헌법적 질서 등에서 보호하는 기본적 권리
+  aliases: ["사람에게 보장되는 핵심 자유와 권리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.420f197a258f
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 평등권
+  hint: 부당한 차별을 받지 않을 권리
+  aliases: ["같은 상황에서 공정하게 대우받기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.5a5d66e9b536
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 표현의 자유
+  hint: 생각과 정보를 표현·전달하는 자유
+  aliases: ["의견을 말하고 나눌 수 있는 권리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.2692ab124529
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 사생활 보호
+  hint: 개인의 사적 영역과 정보를 보호하는 원리
+  aliases: ["개인 생활에 함부로 간섭하지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.6e5a317dffcd
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 소유권
+  hint: 물건 등을 지배·이용·처분하는 권리
+  aliases: ["내 물건을 사용하고 넘길 수 있는 범위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.9166056d16fd
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 채권과 채무
+  hint: 특정 급부를 요구할 권리와 이행할 의무
+  aliases: ["받을 돈과 갚을 돈의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.cf460c1f2af6
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 손해배상
+  hint: 발생한 손해를 책임에 따라 보전하는 제도
+  aliases: ["잘못으로 생긴 손실을 보상하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.609383e7a0ab
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 과실
+  hint: 요구되는 주의를 다하지 않은 상태
+  aliases: ["조심했어야 할 일을 놓친 경우"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.c87a57e15faa
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 고의
+  hint: 행위와 결과에 대한 인식·의사를 포함하는 상태
+  aliases: ["일부러 한 것인지 구별하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.36d14b992757
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 인과관계 (법)
+  hint: 행위와 결과 사이의 원인 연결
+  aliases: ["어떤 행동이 손해를 일으켰는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.3240144da583
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 추정과 간주
+  hint: 사실 인정과 법적 취급을 정하는 서로 다른 방식
+  aliases: ["확인 전 받아들이는 것과 규칙상 그렇게 보는 것"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.960a8af1f24d
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 이해충돌
+  hint: 역할상 의무와 사적 이해가 충돌할 가능성
+  aliases: ["공적 판단에 개인 이익이 걸려 있는 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.81159a2445db
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 책임능력
+  hint: 법적 책임을 지는 데 필요한 능력의 문제
+  aliases: ["행위의 의미를 이해하고 조절할 수 있었는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.0bf45bf47d74
+  kind: concept
+  path: ["사회", "법과 제도", "권리와 책임"]
+  name: 구제절차
+  hint: 권리 침해 등을 바로잡는 제도적 경로
+  aliases: ["부당한 일을 당했을 때 다투는 통로"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/법과 제도/권리와 책임
+- id: basics.07.10a6c77fd1f3
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 국가
+  hint: 영토·주민·공권력 등을 갖춘 정치적 조직
+  aliases: ["사회를 다스리는 공적 조직의 틀"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.1056ea71c5b7
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 주권
+  hint: 최고의 통치 권한과 독립성에 관한 개념
+  aliases: ["누가 최종적으로 결정하는 권한을 갖는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.c0c663edc217
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 권력
+  hint: 타인의 행동과 결과에 영향을 미치는 능력
+  aliases: ["원하는 방향으로 일을 움직이는 힘"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.961d7f7ab4fb
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 권위
+  hint: 정당하게 받아들여지는 지시·판단의 힘
+  aliases: ["사람들이 따를 이유가 있다고 인정하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.b95f669593a7
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 정당성
+  hint: 권력과 제도를 정당하다고 받아들이는 근거
+  aliases: ["왜 그 규칙과 지배를 인정하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.93b109f56382
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 민주주의
+  hint: 구성원의 참여와 통제를 중심으로 한 정치 원리
+  aliases: ["공동의 결정을 누가 어떻게 만드는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.ae68809aa8d3
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 대표제
+  hint: 선출·위임된 사람이 구성원을 대신하는 제도
+  aliases: ["모든 사람이 직접 결정하지 않을 때"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.1a8227e4ef07
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 권력분립
+  hint: 공권력을 나누고 상호 통제하는 원리
+  aliases: ["한곳에 권한이 몰리지 않게 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.af9646590185
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 견제와 균형
+  hint: 권력기관들이 서로 제약하며 균형을 이루는 관계
+  aliases: ["다른 기관이 권한 남용을 막는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.f29fdd656405
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 정당
+  hint: 정치적 목표와 권력 획득 등을 추구하는 조직
+  aliases: ["비슷한 정책을 가진 사람들이 정치에 참여"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.c091c2a2a2ef
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 선거
+  hint: 선택 절차를 통해 대표나 결정을 정하는 제도
+  aliases: ["표를 모아 대표를 정하는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.cd0a20432dcf
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 엘리트 충원
+  hint: 주요 지위를 맡을 사람이 선발·진입하는 과정
+  aliases: ["영향력 있는 자리에 누가 들어가는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.48411e0ef946
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 후견주의
+  hint: 비대칭적 보호·자원과 충성·지지의 교환 관계
+  aliases: ["도움을 주는 사람과 따르는 사람의 연결"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.eb5c733ee583
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 정치적 중립
+  hint: 직무 수행을 특정 정치 세력의 이익과 구별하는 원리
+  aliases: ["공적 역할이 정파적 이익과 충돌하는 문제"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.d5dc1c9a809f
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "국가와 정치"]
+  name: 시민사회
+  hint: 국가와 시장 등과 구별되는 자발적 결사 영역
+  aliases: ["시민들이 모여 공공 문제에 참여하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/국가와 정치
+- id: basics.07.b39886258c5c
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 관료제
+  hint: 규칙·분업·위계 등에 기초한 행정 조직 방식
+  aliases: ["큰 조직이 담당과 절차를 나누는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.0ed7c2a11802
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 공공정책
+  hint: 공적 문제에 대한 목표와 행동의 방향
+  aliases: ["사회 문제를 다루기 위한 공적 선택"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.f521474e872e
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 정책집행
+  hint: 정해진 정책을 실제 행위와 서비스로 옮김
+  aliases: ["좋은 계획이 현장에서 작동하는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.1969b52a1f39
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 정책평가
+  hint: 정책의 과정·성과·영향 등을 검토
+  aliases: ["사업이 실제로 어떤 결과를 냈는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.fda8c4ffaf87
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 공공성
+  hint: 공동의 이익과 접근·책임 등에 관한 성질
+  aliases: ["여러 사람이 함께 누리고 결정하는 영역"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.5ae5c2f7f83a
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 지방자치
+  hint: 지역 공동체가 자체 사무를 결정·처리하는 제도
+  aliases: ["지역 주민이 지역 일을 정하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.9145d1cc3523
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 분권
+  hint: 권한과 책임을 여러 수준에 나누는 방식
+  aliases: ["중앙에서 하던 결정을 지역에 맡기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.4cd581547544
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 참여
+  hint: 결정과 실행 과정에 관여하는 활동
+  aliases: ["영향받는 사람이 과정에 목소리를 내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.1a91f28a5daf
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 숙의
+  hint: 정보와 이유를 주고받으며 판단하는 과정
+  aliases: ["서로 설명을 듣고 결정을 바꾸어 가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.2b8a4a45ef20
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 공론장
+  hint: 공적 문제에 대해 의견과 이유가 오가는 공간
+  aliases: ["사회가 함께 이야기하는 장소"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.3462ef51ab41
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 규제
+  hint: 공적 목적을 위해 행위에 조건과 제한을 부여
+  aliases: ["사업과 행동에 규칙을 두는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.9e4216ef14d6
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 규제포획
+  hint: 규제기관이 대상 집단의 이해에 종속되는 현상
+  aliases: ["감독하는 쪽이 감독받는 쪽에 기울기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.c85eba085262
+  kind: concept
+  path: ["사회", "정책과 거버넌스", "공공행정과 참여"]
+  name: 정보공개
+  hint: 공공 정보에 대한 접근을 보장하는 제도·행위
+  aliases: ["공적 결정의 근거를 볼 수 있게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/정책과 거버넌스/공공행정과 참여
+- id: basics.07.b3383fbf40ec
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 국제체제
+  hint: 국가와 여러 행위자의 관계가 이루는 구조
+  aliases: ["여러 나라가 관계를 맺는 전체 틀"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.fbcd7a19c5e5
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 외교
+  hint: 대화·교섭 등으로 대외 관계를 관리하는 활동
+  aliases: ["나라 사이의 문제를 협의로 다루기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.76077e13cece
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 동맹
+  hint: 공동 목적과 안보 등을 위한 협력 관계
+  aliases: ["위협에 함께 대응하기로 한 나라들"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.6388574bad39
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 세력균형
+  hint: 권력 집중을 다른 세력이 상쇄하는 상태·전략
+  aliases: ["한 나라가 너무 강해지는 것을 견제"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.25e29d54ab95
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 안보딜레마
+  hint: 한쪽의 방어 강화가 다른 쪽의 불안을 키움
+  aliases: ["서로 안전하려는데 긴장이 커지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.2cf5a1efc047
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 억지
+  hint: 예상 비용 등을 통해 상대 행동을 막는 전략
+  aliases: ["행동하면 손해가 크다고 알리는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.ab8d5a7897e2
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 집단안보
+  hint: 공동 규칙에 대한 위협에 집단으로 대응하는 원리
+  aliases: ["여러 나라가 함께 평화를 지키려는 제도"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.ac183111f950
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 다자주의
+  hint: 여러 행위자가 공통 규칙과 협의로 문제를 다룸
+  aliases: ["여러 나라가 함께 정한 방식으로 협력"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.c181d38ca005
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 국제기구
+  hint: 국경을 넘는 공동 목적을 위한 조직
+  aliases: ["나라들이 모여 만든 협력 기관"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.1c6091d4d9b6
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 주권과 개입
+  hint: 국가의 자율성과 외부 관여 사이의 긴장
+  aliases: ["다른 나라의 내부 문제에 관여하는 경계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.c6584433499d
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 연성권력
+  hint: 매력과 설득을 통해 선호에 영향을 주는 힘
+  aliases: ["문화와 가치가 다른 나라에 미치는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.004016225518
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 강성권력
+  hint: 강제와 물질적 수단으로 행동에 영향을 주는 힘
+  aliases: ["군사력과 경제적 압력을 쓰는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.f39715c8a637
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 국제규범
+  hint: 국제사회에서 기대되는 행동의 기준
+  aliases: ["나라들이 지켜야 한다고 여기는 규칙"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서
+- id: basics.07.eb9b92f47d64
+  kind: concept
+  path: ["사회", "국제정세와 안보", "국제관계와 질서"]
+  name: 평화구축
+  hint: 갈등 이후 지속 가능한 평화의 조건을 만드는 활동
+  aliases: ["전쟁이 끝난 뒤 다시 싸우지 않을 기반"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 사회/국제정세와 안보/국제관계와 질서

@@ -5,7 +5,7 @@ curation:
 entries:
 - id: foundation.mechanical_advantage
   kind: concept
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작", "기계요소와 운동"]
   name: 기계적 이득
   hint: 기계가 입력 힘을 출력 힘으로 바꾸는 비
   aliases: [지렛대로 무거운 것을 드는 원리, 도르래를 쓰면 필요한 힘이 줄어드는 이유, 힘을 줄이는 대신 더 움직이는 관계, 간단한 기계의 힘과 거리]
@@ -50,7 +50,7 @@ entries:
     section: 공학
 - id: foundation.energy_efficiency
   kind: concept
-  path: [공학, 에너지와 제어]
+  path: ["공학", "에너지와 제어", "에너지변환과 설비"]
   name: 에너지 효율
   hint: 투입 에너지에 대한 유용한 산출 에너지나 서비스의 비
   aliases: [같은 일을 하는데 전기를 덜 쓰는 장치, 낭비되는 열과 유용한 출력, 기기의 소비량과 성능 비교, 효율과 총사용량의 차이]
@@ -59,7 +59,7 @@ entries:
     section: 공학
 - id: foundation.thermal_bridge
   kind: concept
-  path: [공학, 건축과 도시]
+  path: ["공학", "건축과 도시", "건물과 도시공간"]
   name: 열교
   hint: 단열이 약한 부위로 열이 집중적으로 전달되는 현상
   aliases: [벽 모서리가 유난히 차가운 이유, 창틀 주변에 물방울이 맺히는 원인, 단열재가 끊기는 부분, 건물의 특정 부위로 열이 새는 현상]

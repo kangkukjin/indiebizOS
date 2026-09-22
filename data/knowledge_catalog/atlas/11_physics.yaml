@@ -96,7 +96,7 @@ entries:
 - id: atlas.physics.ensemble
   kind: concept
   path: ["물질과 우주", "물리"]
-  name: 앙상블
+  name: 앙상블 (통계물리)
   hint: 같은 거시 조건의 미시 상태 집합
   aliases: [Ensemble, "겉보기 조건은 같은데 속은 다른 경우 모음", "수많은 가능한 경우를 한꺼번에 놓고 평균", "온도와 부피만 같은 기체의 가상 복사본들", "입자 하나하나 대신 경우 전체로 확률 매기기"]
   source:

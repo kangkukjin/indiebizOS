@@ -273,7 +273,10 @@ Reflex·강제 역할·문맥 갱신에도 적용한다. 과거 에이전트 허
 이름을 모를 때는 browse의 빈 path에서 분야를 열고 하위 분류로 내려간다.
 어휘 일치가 없고 검색어 전체가 정확한 분류명일 때에는 그 분류의 항목을 반환한다.
 분야 골격은 `data/knowledge_catalog/outline.yaml`에 먼저 선언하고 기존 어휘 배치와 빈 가지 보강을 거친다.
-`branches.yaml`은 같은 가지의 검색 단서를 맡고, `atlas/*.yaml`과 `foundation/*.yaml`은 실제 항목을 담는다.
+`branches.yaml`은 같은 가지의 검색 단서를 맡고, `atlas/*.yaml`·`foundation/*.yaml`·`concepts/*.yaml`은 실제 항목을 담는다.
+`outline.yaml`의 세부 주제까지 항목 벡터와 browse 경로에 담되 자동 가지 선택은 앞 두 단에서 한다.
+파일 묶음 전체를 내용 바이트로 캐시하여 조각 수가 개별 문서 캐시보다 많아도 재해석하지 않는다.
+범위와 만 개 합성 부하 실측은 [세부 확장 기록](../../docs/WORLD_MAP_DEPTH_2026_09_22.md)을 따른다.
 골격 밖 항목·빈 계획 가지·사전 불일치는 빌드 검사로 확인한다. [확장 기록](../../docs/WORLD_MAP_TOPDOWN_2026_09_22.md).
 이름·별칭·분류의
 편집 초안과 관계의 외부 확인 범위는 source 기록으로 구별한다. YAML은 내용 바이트에 따라

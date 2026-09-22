@@ -30,6 +30,25 @@ fragments:
   - data/knowledge_catalog/foundation/12.yaml
   - data/knowledge_catalog/foundation/13.yaml
   - data/knowledge_catalog/foundation/14.yaml
+  - data/knowledge_catalog/concepts/01_01.yaml
+  - data/knowledge_catalog/concepts/01_02.yaml
+  - data/knowledge_catalog/concepts/02_01.yaml
+  - data/knowledge_catalog/concepts/02_02.yaml
+  - data/knowledge_catalog/concepts/03_01.yaml
+  - data/knowledge_catalog/concepts/04_01.yaml
+  - data/knowledge_catalog/concepts/04_02.yaml
+  - data/knowledge_catalog/concepts/05_01.yaml
+  - data/knowledge_catalog/concepts/06_01.yaml
+  - data/knowledge_catalog/concepts/07_01.yaml
+  - data/knowledge_catalog/concepts/08_01.yaml
+  - data/knowledge_catalog/concepts/08_02.yaml
+  - data/knowledge_catalog/concepts/09_01.yaml
+  - data/knowledge_catalog/concepts/09_02.yaml
+  - data/knowledge_catalog/concepts/10_01.yaml
+  - data/knowledge_catalog/concepts/11_01.yaml
+  - data/knowledge_catalog/concepts/12_01.yaml
+  - data/knowledge_catalog/concepts/13_01.yaml
+  - data/knowledge_catalog/concepts/14_01.yaml
 entries:
   - id: ortools
     kind: tool

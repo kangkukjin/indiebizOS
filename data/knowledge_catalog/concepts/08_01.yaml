@@ -1,0 +1,1085 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.08.f30d255b0f2d
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 수요
+  hint: 가격과 조건에 따른 구매 의향과 능력
+  aliases: ["가격이 달라질 때 얼마나 사려는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.89425f0409b8
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 공급
+  hint: 가격과 조건에 따른 판매 의향과 능력
+  aliases: ["가격이 오르면 얼마나 더 생산하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.158982454615
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 시장균형
+  hint: 수요량과 공급량이 일치하는 상태
+  aliases: ["사려는 양과 팔려는 양이 맞는 가격"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.cc5342ac3acb
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 초과수요
+  hint: 수요량이 공급량보다 많은 상태
+  aliases: ["물건이 모자라 줄을 서는 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.52313c8e2226
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 초과공급
+  hint: 공급량이 수요량보다 많은 상태
+  aliases: ["팔려는 물건이 남아도는 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.666b526e0f6b
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 가격신호
+  hint: 가격이 희소성과 선호 정보를 전달하는 기능
+  aliases: ["가격 변동이 생산과 소비를 바꾸는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.b7e0c697612d
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 대체재
+  hint: 서로 대신 사용할 수 있는 재화
+  aliases: ["하나가 비싸지면 다른 것을 사기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.ec92ae0415ec
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 보완재
+  hint: 함께 사용할 때 가치가 연결되는 재화
+  aliases: ["한 제품이 팔리면 다른 것도 필요한 경우"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.cf91b86ffe43
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 정상재와 열등재
+  hint: 소득 변화에 따른 수요 방향으로 구분한 재화
+  aliases: ["소득이 늘 때 더 사거나 덜 사는 물건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.93c1234ceb5a
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 독점
+  hint: 한 공급자가 시장을 지배하는 구조
+  aliases: ["선택할 판매자가 하나인 시장"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.8f8f839ad6f2
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 과점
+  hint: 소수 공급자가 큰 비중을 차지하는 구조
+  aliases: ["몇몇 회사가 시장을 나누는 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.3a93512e5020
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 완전경쟁
+  hint: 가격 수용과 자유로운 거래 등을 가정한 시장 모형
+  aliases: ["개별 판매자가 가격을 좌우하지 못하는 시장"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.ce8eeb671ef8
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 진입장벽
+  hint: 새 경쟁자의 시장 진입을 어렵게 하는 조건
+  aliases: ["새 회사가 들어오기 어려운 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.4a3ffa40c80d
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 시장지배력
+  hint: 가격이나 거래 조건에 영향을 줄 수 있는 힘
+  aliases: ["경쟁자보다 유리하게 조건을 정하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.16c2ddab6d6d
+  kind: concept
+  path: ["경제와 조직", "분석", "시장과 가격"]
+  name: 가격차별
+  hint: 같은 재화에 구매자·조건별로 다른 가격을 부과
+  aliases: ["사람이나 시간에 따라 요금이 달라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/시장과 가격
+- id: basics.08.84a03ca4ecf5
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 희소성
+  hint: 욕구에 비해 이용 가능한 자원이 제한됨
+  aliases: ["모든 것을 동시에 가질 수 없는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.6dc595318c97
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 효용
+  hint: 선택에서 얻는 만족이나 선호의 표현
+  aliases: ["어떤 선택을 더 좋아하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.45cc527068fb
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 한계효용
+  hint: 추가 소비 한 단위가 주는 효용 변화
+  aliases: ["하나 더 먹을 때 늘어나는 만족"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.28b6b591fb48
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 예산제약
+  hint: 소득과 가격 아래 가능한 소비의 범위
+  aliases: ["가진 돈으로 선택할 수 있는 조합"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.40ff480613ba
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 생산가능곡선
+  hint: 주어진 자원과 기술로 가능한 산출 조합의 경계
+  aliases: ["한 물건을 더 만들면 다른 것을 줄여야 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.d80bea1ed547
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 분업
+  hint: 생산 과정을 여러 역할로 나누는 방식
+  aliases: ["각자 다른 일을 맡아 함께 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.1e6fb67b5528
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 전문화
+  hint: 특정 활동에 자원과 숙련을 집중
+  aliases: ["잘하는 일을 반복하며 효율을 높이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.ca0b938f1fa6
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 무임승차
+  hint: 비용을 부담하지 않고 공동 편익을 누림
+  aliases: ["다른 사람이 낸 비용으로 혜택받기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.9abbcd0669cd
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 공유지의 비극
+  hint: 공유자원의 과잉 이용으로 자원이 악화되는 문제
+  aliases: ["각자 더 쓰다가 모두의 자원이 줄어들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.17222776daf8
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 시장실패
+  hint: 시장 결과가 효율적 배분 등을 달성하지 못함
+  aliases: ["가격 거래만으로 해결되지 않는 문제"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.85f8c2e4b35e
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 정부실패
+  hint: 공적 개입이 의도한 개선을 이루지 못하는 문제
+  aliases: ["정책이 오히려 낭비나 왜곡을 만드는 경우"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.51743f487a9e
+  kind: concept
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
+  name: 분배
+  hint: 생산물과 소득이 사회 구성원에게 나뉘는 과정
+  aliases: ["만든 가치가 누구에게 돌아가는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/분석/교환과 자원배분
+- id: basics.08.3f206764d716
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 국내총생산
+  hint: 일정 기간 국내에서 생산된 최종 부가가치
+  aliases: ["한 경제가 새로 만들어 낸 가치의 규모"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.33fb1373f8af
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 부가가치
+  hint: 생산 과정에서 새로 더한 가치
+  aliases: ["재료값을 빼고 새로 만들어 낸 몫"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.3ecfbf32901e
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 명목과 실질
+  hint: 현재 가격과 가격 변화 조정 후 값의 구분
+  aliases: ["금액 증가와 실제 양의 증가 구별"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.5d9489f13862
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 경제성장
+  hint: 경제의 생산 능력과 산출 규모가 장기적으로 확대
+  aliases: ["나라의 생산 수준이 커지는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.50863d8d4b81
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 총수요
+  hint: 경제 전체의 재화와 서비스 수요
+  aliases: ["소비와 투자와 정부 지출을 함께 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.3228b6adb3f1
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 총공급
+  hint: 경제 전체의 생산과 공급
+  aliases: ["물가와 생산량의 거시적 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.231068505cdc
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 소비와 저축
+  hint: 현재 사용하는 소득과 미래를 위해 남기는 소득
+  aliases: ["번 돈을 지금 쓰거나 남겨 두기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.9e820c811125
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 투자
+  hint: 미래 생산과 수익을 위한 자원 투입
+  aliases: ["설비와 능력을 늘리기 위한 지출"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.48c404b2388d
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 화폐
+  hint: 교환·계산·가치저장 등에 쓰는 수단
+  aliases: ["사람들이 돈을 받아들이는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.5855695bfa84
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 통화량
+  hint: 정의에 따라 측정한 유통 화폐성 자산의 규모
+  aliases: ["경제 안의 돈이 얼마나 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.ee872f50a971
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 금리
+  hint: 자금 사용의 시간적 대가를 나타내는 비율
+  aliases: ["돈을 빌리거나 맡길 때 붙는 대가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.7dbb5ceb4870
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 환율
+  hint: 서로 다른 통화의 교환 비율
+  aliases: ["같은 돈으로 외국 돈을 얼마나 얻는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.ea99a23a60c5
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 재정정책
+  hint: 정부 지출과 조세를 통한 경제적 개입
+  aliases: ["정부가 쓰고 걷는 돈으로 경기 조절"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.e3b86a8ca4e6
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 국가채무
+  hint: 정부가 부담하는 채무의 규모
+  aliases: ["정부가 빌려 갚아야 할 돈"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.5ab76476fbaf
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 경상수지
+  hint: 상품·서비스·소득 등의 대외 거래 수지
+  aliases: ["국외와 벌고 쓰는 돈의 흐름"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.c3bcce1a75fd
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "국민경제와 화폐"]
+  name: 디플레이션
+  hint: 일반 물가 수준이 지속적으로 하락
+  aliases: ["가격이 전반적으로 내려가는 경제"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/국민경제와 화폐
+- id: basics.08.5f953949a2a5
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 노동력
+  hint: 일할 능력과 의사를 가지고 경제활동에 참여하는 인구
+  aliases: ["취업자와 구직자를 함께 세기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.24be6c24ae46
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 실업
+  hint: 일할 의사·능력이 있지만 일자리가 없는 상태
+  aliases: ["일을 찾지만 아직 구하지 못하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.3d2492b683b1
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 마찰적 실업
+  hint: 일자리 이동과 탐색 과정에서 생기는 실업
+  aliases: ["직장을 옮기는 동안의 빈 시간"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.04d2f3da3e49
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 구조적 실업
+  hint: 산업·기술 변화와 숙련 불일치로 생기는 실업
+  aliases: ["일자리는 있는데 필요한 기술이 다른 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.d834c9584c0c
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 임금
+  hint: 노동 제공에 대한 보수
+  aliases: ["일한 대가로 받는 돈"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.0b9bc760a225
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 실질임금
+  hint: 물가를 고려한 임금의 구매력
+  aliases: ["월급으로 실제 얼마나 살 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.c8320fb83840
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 노동생산성
+  hint: 노동 투입당 산출의 정도
+  aliases: ["같은 시간에 얼마나 만들어 내는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.76e2e3f71655
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 숙련
+  hint: 경험과 학습으로 형성된 수행 능력
+  aliases: ["일을 익히며 능숙해지는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.95f4a0dba29f
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 노동분업
+  hint: 업무를 직종과 역할로 나누는 구조
+  aliases: ["사람마다 맡는 일이 달라지는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.dbc7de22fe15
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 단체교섭
+  hint: 노동자 대표와 사용자 사이의 근로조건 협상
+  aliases: ["개인이 아닌 집단으로 일의 조건 의논"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.45a421cb87a0
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 비정규고용
+  hint: 고용 기간·시간·관계 등이 표준형과 다른 고용
+  aliases: ["일자리의 계약 형태에 따른 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.f3666ee6a6d5
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 돌봄노동
+  hint: 타인의 생활과 발달·건강을 돕는 노동
+  aliases: ["사람을 돌보며 생활을 유지하는 일"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.65c3410ca449
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 무급노동
+  hint: 직접적인 보수 없이 수행하는 노동
+  aliases: ["돈을 받지 않아도 필요한 집안일"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.4f0c3746b081
+  kind: concept
+  path: ["경제와 조직", "거시경제와 노동", "일자리와 노동"]
+  name: 노동시장 이중구조
+  hint: 서로 다른 조건의 일자리 집단과 이동 장벽
+  aliases: ["좋은 일자리와 불안정한 일자리의 격차"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/거시경제와 노동/일자리와 노동
+- id: basics.08.9be5e0335b58
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 자산
+  hint: 경제적 효익을 제공할 것으로 보는 자원
+  aliases: ["소유한 재산과 쓸 수 있는 권리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.4cd483a22d9d
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 부채
+  hint: 미래에 이행해야 하는 경제적 의무
+  aliases: ["갚거나 제공해야 할 몫"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.15a5690e0ab1
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 자기자본
+  hint: 자산에서 부채를 뺀 잔여 지분
+  aliases: ["빚을 제외하고 소유자에게 남는 가치"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.596e6148ef3e
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 수익과 비용
+  hint: 기간의 경제적 성과를 구성하는 증가와 소비
+  aliases: ["얼마를 벌고 얼마가 들었는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.e50a25f8e83c
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 순자산
+  hint: 총자산에서 총부채를 차감한 값
+  aliases: ["재산 총액과 빚을 뺀 재산의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.ce920f5eb363
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 재무상태표
+  hint: 특정 시점의 자산·부채·자본을 보여주는 표
+  aliases: ["한 시점에 무엇을 가지고 빚졌는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.e1fb40336ed0
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 손익계산서
+  hint: 기간의 수익과 비용·손익을 보여주는 표
+  aliases: ["일정 기간 얼마나 벌었는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.3711284ea9d7
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 현금흐름표
+  hint: 현금 유입·유출을 활동별로 보여주는 표
+  aliases: ["이익과 실제 들어온 돈의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.48561c801dd9
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 감가상각
+  hint: 장기 사용 자산의 원가를 기간에 배분
+  aliases: ["오래 쓰는 물건값을 여러 해에 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.d061db8205bb
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 장부가치
+  hint: 회계 장부에 기록된 자산 등의 금액
+  aliases: ["장부의 숫자와 거래 가격의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.81f61bd998a0
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 시장가치
+  hint: 시장에서 교환될 수 있는 가치
+  aliases: ["실제로 팔 때 받을 수 있는 값"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.acde84b45c5c
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 공정가치
+  hint: 특정 평가 기준에 따른 시장 참여자 간 교환 가치
+  aliases: ["평가 조건에 따라 재산의 값을 매기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.5b34973801bb
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 소유지분
+  hint: 대상 자산이나 기업에 대한 소유의 비율
+  aliases: ["전체 재산 중 내 몫이 얼마인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.22378e81bc82
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 실소유자
+  hint: 형식상 명의와 별개로 실질 이익·통제를 갖는 주체
+  aliases: ["이름에 올라간 사람과 실제 주인의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.a1cd3b7729bb
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 연결재무제표
+  hint: 지배 관계의 기업들을 하나의 경제 실체로 보고 작성
+  aliases: ["여러 계열사의 숫자를 함께 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.d9bbe289546f
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "재산과 재무제표"]
+  name: 내부거래
+  hint: 같은 집단 내부의 주체 사이 거래
+  aliases: ["계열사끼리 주고받은 매출을 구별"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/재산과 재무제표
+- id: basics.08.aa2106d8aba0
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 주식
+  hint: 회사의 자본 지분을 나타내는 권리
+  aliases: ["회사 소유의 일부를 나누어 가지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.11200aac2497
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 채권
+  hint: 일정한 상환 등을 약정한 채무 증권
+  aliases: ["돈을 빌려주고 돌려받을 권리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.176494aa449d
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 배당
+  hint: 기업이 이익 등을 주주에게 분배하는 것
+  aliases: ["회사 이익이 주인에게 돌아오기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.bbff9766f50d
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 이자
+  hint: 자금 사용에 대한 대가
+  aliases: ["빌린 돈에 붙는 비용"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.e5add99ada3e
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 수익률
+  hint: 투입한 금액 대비 성과의 비율
+  aliases: ["투자한 돈이 얼마나 늘거나 줄었는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.f318a481fa66
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 위험과 수익
+  hint: 불확실성과 기대 성과 사이의 관계
+  aliases: ["더 높은 이익에 어떤 변동이 따르는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.5cb8638c83dd
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 분산투자
+  hint: 여러 대상에 자원을 나누어 투자
+  aliases: ["한 곳의 손실에 전부 흔들리지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.1838b5d2b671
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 변동성
+  hint: 가격이나 수익률이 변화하는 정도
+  aliases: ["투자 값이 얼마나 크게 출렁이는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.0ae3e0681087
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 신용위험
+  hint: 상대가 약정된 의무를 이행하지 못할 가능성
+  aliases: ["빌려준 돈을 못 받을 위험"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.6590b31c7c69
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 유동성위험
+  hint: 원할 때 거래나 자금 확보가 어려울 가능성
+  aliases: ["값은 있어도 당장 현금으로 못 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.37000bc74ac6
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 레버리지
+  hint: 차입 등을 이용해 노출과 성과의 크기를 확대
+  aliases: ["빌린 돈으로 투자 규모를 키우기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.b1bb456208f5
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 담보
+  hint: 채무 이행을 뒷받침하는 재산이나 장치
+  aliases: ["돈을 못 갚을 때 대신 책임지는 재산"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.5ec89cdaf816
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 비상장주식
+  hint: 공개 거래소에 상장되지 않은 회사 지분
+  aliases: ["거래 가격이 잘 보이지 않는 회사 주식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.ca5a3fd9a6ef
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 기업가치
+  hint: 기업의 사업과 자산 등에 대한 전체적 평가
+  aliases: ["주식 일부 가격과 회사 전체 가치 구별"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.1b060f20dc08
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 현재가치
+  hint: 미래 금액을 시간과 위험 등을 고려해 환산
+  aliases: ["나중에 받을 돈을 지금 값으로 계산"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.53eb0e71b5f4
+  kind: concept
+  path: ["경제와 조직", "재무와 회계", "투자와 금융"]
+  name: 복리
+  hint: 발생한 수익에도 다시 수익이 붙는 계산
+  aliases: ["이자가 이자를 만드는 누적"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/재무와 회계/투자와 금융
+- id: basics.08.65e425a15b2d
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 조직
+  hint: 공동 목적과 역할·규칙으로 연결된 집단
+  aliases: ["여러 사람이 역할을 나누어 일하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.9a7b1e279680
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 위계
+  hint: 권한과 책임이 층별로 배열된 관계
+  aliases: ["누가 누구에게 보고하고 결정하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.0e783ca412e2
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 분업과 조정
+  hint: 역할을 나누고 결과를 맞추는 과정
+  aliases: ["따로 한 일을 하나로 이어 붙이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.955ca0d3a297
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 공식조직과 비공식조직
+  hint: 정해진 구조와 자연히 생긴 관계망의 구분
+  aliases: ["조직도 밖에서 일이 움직이는 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.622e0a3064a5
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 조직문화
+  hint: 조직 안에서 공유되는 가치와 행동 양식
+  aliases: ["그 회사에서 당연하게 일하는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.1f98d9acb5a7
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 조직권력
+  hint: 조직의 자원과 결정에 영향을 미치는 힘
+  aliases: ["직함 외에 실제 영향력이 생기는 곳"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.80f48f74a6b5
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 권한위임
+  hint: 결정 권한을 다른 역할에 맡기는 행위
+  aliases: ["상사가 모든 결정을 직접 하지 않기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.e31b27e14bdf
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 의사결정권
+  hint: 특정 사안을 정할 수 있는 권한
+  aliases: ["누가 최종 선택을 하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.024b9117390c
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 역할명확성
+  hint: 기대되는 책임과 범위를 이해하는 정도
+  aliases: ["누가 무엇을 해야 하는지 분명한 상태"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.aba2f830f7a5
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 성과측정
+  hint: 활동의 결과를 지표와 기준으로 확인
+  aliases: ["일을 잘했는지 무엇으로 보는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.780960e7d45a
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 인센티브
+  hint: 행동의 동기를 바꾸는 보상·조건
+  aliases: ["평가 방식이 일하는 방식을 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.7feb53fb680e
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 조직학습
+  hint: 경험과 지식이 조직의 행동에 반영되는 과정
+  aliases: ["한 번 겪은 일을 다음에 더 잘 처리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.e5b8454df955
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 조직관성
+  hint: 기존 구조와 방식이 지속되는 경향
+  aliases: ["환경이 바뀌어도 하던 대로 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.e62dbf688011
+  kind: concept
+  path: ["경제와 조직", "조직과 협업", "조직의 구조"]
+  name: 이직과 유지
+  hint: 구성원의 떠남과 잔류에 관한 현상
+  aliases: ["사람들이 조직을 떠나거나 남는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/조직과 협업/조직의 구조
+- id: basics.08.120a4a40716c
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 기업
+  hint: 재화와 서비스를 생산·교환하는 조직
+  aliases: ["사람과 자원을 모아 사업을 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.7440ce7241fb
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 사업모형
+  hint: 가치를 만들고 전달하며 수익을 얻는 방식
+  aliases: ["어떻게 고객을 돕고 돈을 버는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.74ced69a8429
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 고객가치
+  hint: 고객이 얻는 편익과 치르는 비용의 관계
+  aliases: ["고객 입장에서 살 이유가 무엇인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.f931ec9862ed
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 고객경험
+  hint: 접점 전반에서 고객이 겪는 인식과 감정
+  aliases: ["구매 전후를 통틀어 느끼는 경험"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.559380a1cea8
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 브랜드
+  hint: 대상을 식별하고 의미와 기대를 연결하는 표지
+  aliases: ["이름을 들었을 때 떠오르는 인상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.5582a4d34262
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 차별화
+  hint: 경쟁 대상과 구별되는 가치와 특성을 형성
+  aliases: ["비슷한 제품 사이에서 선택할 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.3acc4fff469d
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 경쟁우위
+  hint: 경쟁자보다 유리한 성과를 낼 수 있는 조건
+  aliases: ["다른 회사가 쉽게 따라오기 어려운 강점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.e78714e31f5f
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 전환비용
+  hint: 다른 제품·관계로 옮길 때 드는 비용
+  aliases: ["불편해도 기존 서비스를 계속 쓰는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.a39240baebc8
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 진입과 퇴출
+  hint: 사업자가 시장에 들어오거나 나가는 과정
+  aliases: ["새 회사가 생기고 사라지는 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.dea2d2c957a4
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 제품수명주기
+  hint: 제품의 도입·성장·성숙·쇠퇴 등 변화 양상
+  aliases: ["같은 제품의 시장이 시간에 따라 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.f3c0e8ee47ee
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 고객충성도
+  hint: 특정 대상과 관계를 계속 유지하는 경향
+  aliases: ["같은 가게나 제품을 다시 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.307c69c7ec61
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 입소문
+  hint: 사람 사이의 경험과 평가 전달
+  aliases: ["광고보다 주변 추천으로 알려지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.83558e8a7173
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 고객불만
+  hint: 기대와 실제 경험의 불일치에 대한 반응
+  aliases: ["무엇이 기대에 못 미쳤는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.6b19c9e2658b
+  kind: concept
+  path: ["경제와 조직", "전략과 마케팅", "기업과 고객"]
+  name: 서비스회복
+  hint: 실패한 서비스 경험을 수습하는 과정
+  aliases: ["문제가 생긴 뒤 신뢰를 되찾는 대응"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/전략과 마케팅/기업과 고객
+- id: basics.08.033438c93647
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 공급망
+  hint: 원료부터 최종 이용까지 이어지는 조직과 흐름
+  aliases: ["제품 하나가 여러 회사를 거쳐 오기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.6e1b9aecaabc
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 재고
+  hint: 미래 사용·판매를 위해 보유하는 물량
+  aliases: ["필요할 때 쓰려고 쌓아 둔 물건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.893885ded4e9
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 조달
+  hint: 필요한 재화와 서비스를 확보하는 활동
+  aliases: ["사업에 필요한 재료를 구하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통

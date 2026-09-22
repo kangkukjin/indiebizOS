@@ -55,7 +55,12 @@ def mentions(phrase, query):
     return _mentions_normalized(phrase, normalize(query))
 
 
-def _mentions_normalized(phrase, query):
+def _mentions_normalized(phrase, query, compact_query=None):
+    # 패턴은 문구 사이의 공백만 허용한다. 공백을 뺀 부분문자열조차 없으면
+    # 정규식 일치는 불가능하다. 큰 사전의 정규식 캐시 순환을 막는 필요조건이다.
+    compact_query = "".join(query.split()) if compact_query is None else compact_query
+    if "".join(phrase.split()) not in compact_query:
+        return False
     for match in _phrase_pattern(phrase).finditer(query):
         before = query[:match.start()]
         after = query[match.end():]
@@ -103,11 +108,20 @@ def _document(raw):
 
 
 @lru_cache(maxsize=8)
+def _documents(raw, fragments):
+    """파일 수가 개별 문서 캐시보다 커져도 같은 묶음을 매 요청 재해석하지 않는다.
+
+    키는 전체 원문 바이트다. 같은 크기·시각으로 바꾼 파일과 원복도 구별한다.
+    """
+    return (_document(raw),) + tuple(_document(content) for _, content in fragments)
+
+
+@lru_cache(maxsize=8)
 def _parse(root, raw, fragments=(), evidence_hashes=()):
-    doc = _document(raw)
+    documents = _documents(raw, fragments)
+    doc = documents[0]
     if not isinstance(doc, dict) or doc.get("version") not in {1, 2} or not isinstance(doc.get("entries"), list):
         raise ValueError("unsupported catalog schema")
-    documents = [doc] + [_document(content) for _, content in fragments]
     if any(not isinstance(d, dict) or not isinstance(d.get("entries", []), list) for d in documents):
         raise ValueError("invalid catalog fragment")
     entries, seen = [], set()
@@ -151,7 +165,7 @@ def load_snapshot(root):
     if files and doc.get("version") != 2:
         raise ValueError("fragments require version 2")
     fragments = tuple((local_path(root, f), (root / f).read_bytes()) for f in files)
-    documents = [doc] + [_document(content) for _, content in fragments]
+    documents = _documents(raw, fragments)
     sources = {local_path(root, e["path"]) for d in documents for e in d.get("evidence", [])}
     hashes = tuple((p, hashlib.sha256((root / p).read_bytes()).hexdigest()) for p in sorted(sources))
     return _parse(str(root), raw, fragments, hashes)
@@ -226,6 +240,7 @@ def search(root, snapshot, query):
     """(후보, 모드). FTS 순위는 동점 처리만 맡고 실제 어휘 근거가 문턱을 소유한다."""
     # 첨부 전문이 긴 질문에도 검색 시간이 커지지 않도록 앞·뒤에서 단서만 읽는다.
     query = normalize(query if len(query) <= 8000 else query[:4000] + "\n" + query[-4000:])
+    compact_query = "".join(query.split())
     ranks, mode = {}, "lexical_fallback"
     try:
         with closing(_connect(root)) as db:
@@ -243,10 +258,12 @@ def search(root, snapshot, query):
         pass
     scored = []
     for entry in snapshot.entries:
-        name = _mentions_normalized(normalize(entry.name), query)
-        aliases = sum(_mentions_normalized(normalize(a), query) for a in entry.aliases)
-        hits = sum(_mentions_normalized(t, query) for t in set(terms(entry.hint + " " + entry.scope_note)))
-        path_hits = sum(_mentions_normalized(t, query) for t in set(terms(" ".join(entry.path))))
+        name = _mentions_normalized(normalize(entry.name), query, compact_query)
+        aliases = sum(_mentions_normalized(normalize(a), query, compact_query) for a in entry.aliases)
+        hits = sum(_mentions_normalized(t, query, compact_query)
+                   for t in set(terms(entry.hint + " " + entry.scope_note)))
+        path_hits = sum(_mentions_normalized(t, query, compact_query)
+                        for t in set(terms(" ".join(entry.path))))
         # 일반 단어 하나(자료·변환·처리 등)만으로 연관 있다고 가장하지 않는다.
         if not name and not aliases and hits < 2:
             continue

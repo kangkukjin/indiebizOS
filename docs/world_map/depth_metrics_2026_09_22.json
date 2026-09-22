@@ -1,0 +1,123 @@
+{
+  "fixed": {
+    "kind": "development_retrieval_comparison",
+    "blind_holdout": false,
+    "response_model_calls": 0,
+    "behavioral_quality_measured": false,
+    "note": "동일 편집자가 작성한 고정 진단. 동일 기본 예산, 실제 자동 주입 두 채널의 합집합에서 허용 개념 포함 여부.",
+    "reports": [
+      {
+        "revision": "e45a42abd17aed0b3d1c7b26bb62e2a044cd0c2f329d50c2c152b348f1aa7c8c",
+        "entries": 1428,
+        "encoder": "jhgan/ko-sroberta-multitask",
+        "build_ms": 3685.91,
+        "cases": 28,
+        "hits": 24,
+        "status_counts": {
+          "ok": 28
+        },
+        "operational_failures": [],
+        "p50_ms": 43.41,
+        "max_chars": 702
+      },
+      {
+        "revision": "9f842ed9fa7522e0d26af3b43140cb3e1604a53f70c1fc0474ab1eae177d0caf",
+        "entries": 3116,
+        "encoder": "jhgan/ko-sroberta-multitask",
+        "build_ms": 4339.41,
+        "cases": 28,
+        "hits": 24,
+        "status_counts": {
+          "ok": 28
+        },
+        "operational_failures": [],
+        "p50_ms": 61.87,
+        "max_chars": 750
+      }
+    ]
+  },
+  "additional": {
+    "kind": "development_retrieval_comparison",
+    "blind_holdout": false,
+    "response_model_calls": 0,
+    "behavioral_quality_measured": false,
+    "note": "동일 편집자가 작성한 고정 진단. 동일 기본 예산, 실제 자동 주입 두 채널의 합집합에서 허용 개념 포함 여부.",
+    "reports": [
+      {
+        "revision": "e45a42abd17aed0b3d1c7b26bb62e2a044cd0c2f329d50c2c152b348f1aa7c8c",
+        "entries": 1428,
+        "encoder": "jhgan/ko-sroberta-multitask",
+        "build_ms": 3550.75,
+        "cases": 28,
+        "hits": 8,
+        "status_counts": {
+          "ok": 28
+        },
+        "operational_failures": [],
+        "p50_ms": 38.81,
+        "max_chars": 695
+      },
+      {
+        "revision": "9f842ed9fa7522e0d26af3b43140cb3e1604a53f70c1fc0474ab1eae177d0caf",
+        "entries": 3116,
+        "encoder": "jhgan/ko-sroberta-multitask",
+        "build_ms": 4193.37,
+        "cases": 28,
+        "hits": 15,
+        "status_counts": {
+          "ok": 28
+        },
+        "operational_failures": [],
+        "p50_ms": 58.82,
+        "max_chars": 750
+      }
+    ]
+  },
+  "scale": {
+    "response_model_calls": 0,
+    "synthetic_quality_measured": false,
+    "note": "실제 인코더와 공통 주입 흐름. 합성 항목은 반복 개념에 고유 표제·별칭을 붙인 부하이며 지식 확장이 아니다. 전체 작업 응답 시간과 구별.",
+    "reports": [
+      {
+        "kind": "real",
+        "entries": 3116,
+        "catalog_build_ms": 32.33,
+        "encoder_index_build_ms": 3271.96,
+        "cold_lexical_cache_first_turn_ms": 77.81,
+        "warm_turns": 42,
+        "p50_ms": 65.47,
+        "p95_ms": 70.49,
+        "max_ms": 71.6,
+        "max_injected_chars": 740,
+        "vector_bytes": 9836544,
+        "regex_cache": {
+          "hits": 7017,
+          "misses": 85,
+          "maxsize": 32768,
+          "currsize": 85
+        },
+        "operational_failures": []
+      },
+      {
+        "kind": "synthetic_capacity_only",
+        "entries": 10000,
+        "catalog_build_ms": 3991.47,
+        "encoder_index_build_ms": 292.93,
+        "cold_lexical_cache_first_turn_ms": 170.69,
+        "warm_turns": 42,
+        "p50_ms": 167.6,
+        "p95_ms": 173.66,
+        "max_ms": 177.07,
+        "max_injected_chars": 778,
+        "vector_bytes": 30984192,
+        "regex_cache": {
+          "hits": 22237,
+          "misses": 85,
+          "maxsize": 32768,
+          "currsize": 85
+        },
+        "operational_failures": []
+      }
+    ]
+  }
+}

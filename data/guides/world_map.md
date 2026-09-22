@@ -49,7 +49,9 @@ names는 분류와 이름만 전달하는 모드로 선택할 수 있다.
 
 정본은 data/knowledge_catalog/world.yaml과 fragments다. kind 미검토 기존 항목은 term이다.
 분야 골격은 `data/knowledge_catalog/outline.yaml`, 검색용 가지 사전은 `branches.yaml`이다.
-전 분야의 어휘는 `atlas/*.yaml`과 `foundation/*.yaml`에 나뉘며 모두 같은 검색을 쓴다.
+전 분야의 어휘는 `atlas/*.yaml`·`foundation/*.yaml`·`concepts/*.yaml`에 나뉘며 모두 같은 검색을 쓴다.
+`outline.yaml`의 `subfields`는 세부 주제의 골격이다. browse와 항목 벡터는 전체 경로를
+쓰며, 자동 회상의 가지 선택은 앞 두 단에서 한다. 트리 전체를 프롬프트에 넣지 않는다.
 골격을 먼저 검토하고 기존 어휘를 배치한 뒤 빈 가지를 채운다. 현재 분류 경로는 browse에서
 확인한다. 항목 ID는 분류가 옮겨져도 유지한다.
 같은 개념의 번역·약어는 별칭으로 합치고, 새 개념만 새 ID를 부여한다.

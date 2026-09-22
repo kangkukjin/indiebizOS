@@ -1,0 +1,797 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.14.f0b2e34084b8
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 연구 질문
+  hint: 조사를 통해 답하려는 구체적인 물음.
+  aliases: ["무엇을 알아내려는 조사인지 정한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.212dbd10647a
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 가설
+  hint: 관찰과 검토를 통해 평가할 수 있도록 제시한 잠정적 설명.
+  aliases: ["현상을 설명할 가능성을 세워 본다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.74ce91c9756e
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 관찰
+  hint: 대상과 사건의 특성을 살피고 기록하는 활동.
+  aliases: ["실제로 무엇이 일어나는지 본다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.59a4e3135e4e
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 실험
+  hint: 조건을 조작하고 결과를 관찰하는 탐구 방법.
+  aliases: ["조건을 바꾸면 결과도 달라지는지 본다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.51c70939de72
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 이론
+  hint: 현상을 설명하고 관계와 예측을 조직하는 개념 체계.
+  aliases: ["여러 현상을 연결해 설명하는 틀"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.00e9b33fa6e7
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 모형
+  hint: 대상의 일부 구조와 작동을 단순화하여 표현한 것.
+  aliases: ["복잡한 현실을 필요한 부분만 남겨 표현한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.80aab8a91c17
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 증거
+  hint: 주장의 평가에 관련되는 관찰과 자료.
+  aliases: ["어떤 자료가 이 주장을 뒷받침하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.379951fe74c7
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 탐색적 연구
+  hint: 아직 잘 정해지지 않은 현상의 구조와 질문을 찾아가는 연구.
+  aliases: ["무엇이 중요한지부터 살펴본다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.e4dd3af4ead4
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 확증적 연구
+  hint: 미리 정한 가설과 절차를 바탕으로 주장을 평가하는 연구.
+  aliases: ["먼저 정한 예상이 자료와 맞는지 평가한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.9053b8c0820a
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 질적 연구
+  hint: 맥락과 경험 및 의미를 심층적으로 이해하는 연구 접근.
+  aliases: ["숫자만으로 드러나지 않는 경험과 의미를 살핀다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.6aaa2f817854
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 양적 연구
+  hint: 수치화한 자료와 분석으로 패턴과 관계를 검토하는 접근.
+  aliases: ["수치 자료로 관계와 차이를 살핀다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.e39dc6ece11e
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
+  name: 혼합방법 연구
+  hint: 질적 접근과 양적 접근을 함께 구성하는 연구.
+  aliases: ["수치와 경험의 내용을 함께 조사한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/질문과 증거
+- id: basics.14.7e93cbf8632e
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 모집단
+  hint: 연구가 설명하거나 추론하려는 전체 대상 집합.
+  aliases: ["조사 결과를 누구 전체에 적용하려는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.d3a1d7f8b857
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 표본
+  hint: 모집단에서 실제로 관찰하거나 분석하는 부분.
+  aliases: ["전체 대신 일부를 뽑아 조사한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.cb0981e287de
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 표집틀
+  hint: 표본을 추출할 때 이용하는 대상 목록이나 기준.
+  aliases: ["조사 대상을 뽑는 명단에 누가 빠져 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.f74c3b4ee739
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 무작위 표집
+  hint: 확률적 절차를 이용해 표본을 선택하는 방법.
+  aliases: ["우연적 추출 절차로 조사 대상을 뽑는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.92290345dba4
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 편의 표집
+  hint: 접근하기 쉬운 대상을 중심으로 표본을 선택하는 방법.
+  aliases: ["쉽게 만나는 사람만 조사한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.91b78b6e4b32
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 비응답 편향
+  hint: 응답하지 않은 사람들의 특성이 달라 결과가 치우치는 현상.
+  aliases: ["대답하지 않은 사람들이 결과에서 빠진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.803359d4b7b6
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 측정 오차
+  hint: 측정값과 측정하려는 양의 값 사이의 차이.
+  aliases: ["잰 값이 실제와 얼마나 다른가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.85c3269f75bc
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 신뢰도 (측정)
+  hint: 비슷한 조건에서 측정 결과가 일관되는 정도.
+  aliases: ["다시 재면 비슷한 결과가 나오는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.7920120dc140
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 타당도 (측정)
+  hint: 측정과 해석이 의도한 개념과 용도에 적절한 정도.
+  aliases: ["재려던 것을 실제로 재고 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.140c826e4d71
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 구성개념
+  hint: 직접 관찰하기 어려운 특성을 설명하도록 구성한 개념.
+  aliases: ["지능이나 신뢰처럼 여러 지표로 다루는 개념"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.f58cd6f7c660
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 척도
+  hint: 특성을 구분하거나 수량화하는 측정 규칙.
+  aliases: ["응답의 크기와 순서를 어떤 방식으로 표시하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.b6020ea17986
+  kind: concept
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
+  name: 대표성
+  hint: 표본이 관심 모집단의 관련 특성을 반영하는 정도.
+  aliases: ["조사한 사람들이 전체를 잘 반영하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/연구 설계/측정과 표집
+- id: basics.14.0919b9606b33
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 상관관계
+  hint: 변수들이 함께 변하는 통계적 관계.
+  aliases: ["두 현상이 함께 늘어나거나 줄어든다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.47c2321038ea
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 인과관계
+  hint: 한 요인의 변화가 다른 결과에 영향을 미치는 관계.
+  aliases: ["조건을 바꾸면 결과가 달라지는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.11eac46e2f2a
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 교란변수
+  hint: 원인으로 보는 요인과 결과 모두에 영향을 주어 관계 해석을 흐리는 변수.
+  aliases: ["두 현상의 공통 원인이 따로 있을 수 있다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.67ba73ddd3d8
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 매개변수 (인과)
+  hint: 원인에서 결과로 이어지는 경로의 중간에 놓인 변수.
+  aliases: ["영향이 어떤 과정을 거쳐 전달되는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.5a06e96d8329
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 조절효과
+  hint: 한 요인의 효과가 다른 조건의 값에 따라 달라지는 현상.
+  aliases: ["누구에게 어떤 상황에서 효과가 달라지는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.cb50205b372e
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 역인과
+  hint: 가정한 원인과 결과의 방향이 반대일 가능성.
+  aliases: ["결과라고 본 것이 먼저 원인이 되었는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.c619c5949d67
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 무작위 배정
+  hint: 실험 참여자를 확률적 절차로 조건에 배치하는 방법.
+  aliases: ["누가 처치를 받을지 무작위로 정한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.fb6c6dbdee23
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 생존편향
+  hint: 남아 있거나 성공한 사례만 보아 사라진 사례를 놓치는 현상.
+  aliases: ["살아남은 사례만 보고 성공 원인을 판단한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.2a1e5dec7931
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 생태학적 오류
+  hint: 집단 수준의 관계를 개인에게 그대로 적용하는 추론 오류.
+  aliases: ["지역 평균의 관계가 개인에게도 성립하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.d880676da804
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 기제
+  hint: 조건이 결과를 만들어 내는 구체적인 과정.
+  aliases: ["왜 그런 결과가 생기는지 중간 과정을 찾는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.f4165ae6272c
+  kind: concept
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
+  name: 대안 설명
+  hint: 같은 관찰 결과를 설명할 수 있는 다른 가능성.
+  aliases: ["현재 해석 외에 무엇이 같은 결과를 설명하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/인과 추론/원인과 설명
+- id: basics.14.6f5b75d2c834
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
+  name: 계층구조
+  hint: 상위와 하위 관계로 요소를 조직한 구조.
+  aliases: ["큰 갈래에서 작은 갈래로 내려간다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/지식의 분류
+- id: basics.14.f06bde4ff9cd
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
+  name: 범주
+  hint: 공통 특성이나 용도에 따라 묶은 대상의 부류.
+  aliases: ["서로 다른 사례를 하나의 종류로 묶는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/지식의 분류
+- id: basics.14.73447d1ef7fa
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
+  name: 메타데이터
+  hint: 자료의 내용과 구조 및 출처 등을 설명하는 데이터.
+  aliases: ["자료가 언제 어디서 어떻게 만들어졌는지 붙여 둔다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/지식의 분류
+- id: basics.14.e24f8f799a09
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
+  name: 태그
+  hint: 분류와 검색을 위해 자료에 붙이는 짧은 표지.
+  aliases: ["자료에 여러 검색용 이름표를 붙인다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/지식의 분류
+- id: basics.14.ba7a8f6bf01e
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
+  name: 색인
+  hint: 자료의 위치를 찾도록 용어나 항목과 위치를 연결한 목록 또는 구조.
+  aliases: ["원하는 내용이 어디 있는지 빨리 찾는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/지식의 분류
+- id: basics.14.d38c9f7a44e9
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
+  name: 지식 그래프
+  hint: 개체와 개념 및 그 관계를 그래프로 표현한 구조.
+  aliases: ["정보 사이의 관계를 따라 다른 정보를 찾는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/지식의 분류
+- id: basics.14.3f61b1afe73e
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 정보 요구
+  hint: 문제 해결이나 이해를 위해 필요한 정보에 대한 필요.
+  aliases: ["지금 어떤 정보가 있어야 다음 판단을 할 수 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.df1a07a51a9e
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 검색 질의
+  hint: 검색 시스템에 입력하는 단어나 조건.
+  aliases: ["어떤 말로 검색해야 원하는 자료가 나오는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.ab51fd293677
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 재현율
+  hint: 관련 자료 전체 중 검색이 찾아낸 자료의 비율.
+  aliases: ["관련 자료를 얼마나 빠뜨리지 않았는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.0809ef4d2a73
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 정밀도 (검색)
+  hint: 검색 결과 중 실제 관련 자료의 비율.
+  aliases: ["찾은 결과 중 쓸모 있는 것이 얼마나 되는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.5b35bfb2417c
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 관련성
+  hint: 자료가 사용자의 질문과 목적에 맞는 정도.
+  aliases: ["찾은 자료가 지금 질문에 도움이 되는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.491823b47bfc
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 기록 보존
+  hint: 기록의 내용과 맥락을 유지하여 장기 이용이 가능하게 하는 활동.
+  aliases: ["시간이 지나도 기록을 읽고 이해할 수 있게 한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.87c019dac1b1
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 출처 추적
+  hint: 자료가 만들어지고 전달된 경로를 확인하는 것.
+  aliases: ["이 정보의 원래 근거가 어디인가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.3060f09afb12
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 아카이브
+  hint: 기록과 자료를 맥락과 함께 모아 보존하는 조직 또는 집합.
+  aliases: ["사라지기 쉬운 기록을 체계적으로 남긴다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.38f4467f701d
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 중복 제거
+  hint: 같거나 실질적으로 겹치는 항목을 식별하고 정리하는 과정.
+  aliases: ["서로 다른 이름으로 같은 자료가 여러 번 들어갔다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.5425c0f8d527
+  kind: concept
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
+  name: 망각과 선별
+  hint: 보존의 목적과 제약에 따라 무엇을 남길지 선택하는 문제.
+  aliases: ["모든 기록을 같은 비용으로 영원히 보관할 수는 없다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/조직과 탐색/탐색과 보존
+- id: basics.14.bd5380e8f06a
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 일차 자료
+  hint: 사건과 연구 등에 직접 관련하여 생산된 원래 자료.
+  aliases: ["다른 사람의 요약보다 원래 기록을 확인한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.c68c7fb887ff
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 이차 자료
+  hint: 일차 자료 등을 분석하거나 해석한 자료.
+  aliases: ["원자료를 해석한 연구와 해설을 읽는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.4b3e48f23b3f
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 문헌 검토
+  hint: 관련 문헌을 찾아 비교하고 지식의 상태를 정리하는 활동.
+  aliases: ["이미 무엇이 알려졌고 어디가 비어 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.48ef034b25c4
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 프리프린트
+  hint: 정식 학술 출판 전 공개한 연구 원고.
+  aliases: ["심사 전 공개된 연구 결과를 읽는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.d484e2f8736a
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 학술지
+  hint: 연구 성과 등을 정기적으로 싣는 전문 간행물.
+  aliases: ["연구 논문이 발표되는 전문 매체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.4a02004ab78c
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 인용
+  hint: 다른 자료의 내용과 기여를 출처를 밝혀 사용하는 것.
+  aliases: ["어떤 주장이 어느 자료에서 왔는지 표시한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.b9a63d61ac00
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 참고문헌
+  hint: 글에서 인용하거나 참고한 자료의 목록.
+  aliases: ["글의 근거 자료를 다시 찾아본다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.f5372ed5d774
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 재현성
+  hint: 정의된 조건에서 연구 과정이나 결과를 다시 얻을 수 있는 성질.
+  aliases: ["같은 절차와 자료로 결과를 다시 확인한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.4ea7367419ea
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 재검증 연구
+  hint: 새 자료나 수행으로 기존 연구의 결과를 다시 평가하는 연구.
+  aliases: ["다른 표본에서도 같은 결과가 나오는지 확인한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.9e7c1a0cef5b
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 출판 편향
+  hint: 결과의 방향과 성격 등에 따라 공개되는 연구가 치우치는 현상.
+  aliases: ["효과가 없는 연구는 덜 발표되는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.ae988183bd1a
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 철회 (학술출판)
+  hint: 발표된 연구의 신뢰성 등에 문제가 있어 공식적으로 거둬들이는 조치.
+  aliases: ["발표된 논문이 나중에 철회되었는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.6d228d6111b5
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 이해상충
+  hint: 개인적 또는 조직적 이해가 판단에 영향을 줄 수 있는 상황.
+  aliases: ["연구자의 이익이 연구 판단과 충돌할 수 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.ae9111b08bae
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 연구윤리
+  hint: 연구 수행과 발표에서 지켜야 할 책임과 규범.
+  aliases: ["자료와 참여자 및 저자의 기여를 정직하게 다룬다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.958c62949a30
+  kind: concept
+  path: ["지식과 탐구", "자료원과 문헌", "문헌과 학술소통"]
+  name: 공개 데이터
+  hint: 접근과 이용 조건을 공개하여 다른 사람이 사용할 수 있게 한 데이터.
+  aliases: ["다른 사람이 분석을 확인할 원자료가 공개되어 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/자료원과 문헌/문헌과 학술소통
+- id: basics.14.e2cae5479f04
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 매체
+  hint: 정보와 표현을 전달하고 경험하게 하는 수단과 환경.
+  aliases: ["어떤 통로와 형식으로 정보를 접하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.87b0acef85a7
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 편집
+  hint: 내용을 선택하고 배열하며 표현을 다듬는 활동.
+  aliases: ["무엇을 싣고 어떤 순서로 보여 줄 것인가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.286c44e5cdf8
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 소유구조
+  hint: 조직의 지분과 통제권이 배분된 구조.
+  aliases: ["매체를 누가 소유하고 통제하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.155bec40b774
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 광고모형
+  hint: 광고 노출과 거래 등을 중심으로 수입을 얻는 사업 방식.
+  aliases: ["광고 수입이 콘텐츠 선택에 어떤 유인을 주는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.b09ab83ef6a6
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 구독모형
+  hint: 정기적인 이용료를 중심으로 서비스 수입을 얻는 방식.
+  aliases: ["독자가 계속 돈을 내는 구조인가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.8fb4238138b3
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 알고리즘 추천
+  hint: 사용자와 콘텐츠 등의 정보로 노출 대상을 자동 선택하는 과정.
+  aliases: ["어떤 정보가 화면에 먼저 뜨는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.94dd858c6e3c
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 정보 확산
+  hint: 정보나 행동 등이 연결망을 따라 퍼지는 과정.
+  aliases: ["정보가 사람과 매체 사이로 번진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.447118dc2195
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 바이럴 확산
+  hint: 연쇄적인 공유가 큰 규모의 노출을 만드는 전파 양상.
+  aliases: ["사람들이 다시 공유하며 급격히 퍼진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.71c200499e35
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 필터 버블
+  hint: 개인화된 정보 선택이 접하는 관점의 범위를 좁히는 현상.
+  aliases: ["나에게 맞춘 정보만 반복해서 보인다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.7e801bd243b4
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
+  name: 반향실
+  hint: 비슷한 관점끼리 반복 소통하며 기존 믿음이 강화되는 환경.
+  aliases: ["같은 의견끼리 듣고 더 확신하게 된다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/매체와 정보유통
+- id: basics.14.817d68fde841
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 신뢰
+  hint: 상대나 체계의 능력과 성실성 등에 기대를 두는 관계.
+  aliases: ["이 정보와 제공자를 어느 정도 믿을 수 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.f39157d66591
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 신뢰성
+  hint: 자료나 체계 등이 요구되는 역할을 믿고 맡길 만한 정도.
+  aliases: ["정보의 정확성과 일관성을 어떻게 평가하는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.a6eefa431b91
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 전문성
+  hint: 특정 분야에서 축적된 지식과 숙련.
+  aliases: ["그 주장을 평가할 관련 지식과 경험이 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.3cb243755433
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 권위에의 호소
+  hint: 주장 자체의 근거 대신 권위자의 지위에 기대는 논증.
+  aliases: ["유명한 사람이 말했다는 이유만으로 믿는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.7f22fb88e02b
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 교차 확인
+  hint: 여러 자료의 일치와 차이를 비교하며 내용을 점검하는 활동.
+  aliases: ["서로 다른 자료를 대조해 사실관계를 확인한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.528e76d8671d
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 맥락
+  hint: 내용의 의미와 해석을 좌우하는 주변 조건과 상황.
+  aliases: ["문장 하나만 떼면 원래 뜻이 달라질 수 있다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.61ad08b05496
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 사실과 해석
+  hint: 관찰 가능한 기록과 그 의미에 대한 판단을 구별하는 관점.
+  aliases: ["무엇이 확인된 기록이고 무엇이 해석인가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.82101e665b5a
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 불확실성
+  hint: 지식과 측정 및 예측에 남아 있는 한계와 변동 가능성.
+  aliases: ["무엇을 모르며 어느 정도까지 판단할 수 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.18085c772aa8
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 확신도 보정
+  hint: 자신의 확신과 실제 정답률 또는 근거의 강도를 맞추는 것.
+  aliases: ["자신 있게 말한 정도가 실제 정확성과 맞는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.3758751105a5
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 허위정보
+  hint: 사실과 맞지 않는 정보로 의도 여부와 별개로 퍼질 수 있음.
+  aliases: ["틀린 내용이 사실처럼 퍼진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.e0ae50d7b069
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 조작정보
+  hint: 속이려는 목적 등으로 의도적으로 만들어지거나 유통되는 거짓 정보.
+  aliases: ["의도적으로 왜곡한 정보가 유통된다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.98fddf2d7cf6
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 오정보 정정
+  hint: 잘못된 내용을 바로잡고 수정된 근거를 전달하는 활동.
+  aliases: ["틀린 정보가 퍼진 뒤 어떻게 바로잡는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단
+- id: basics.14.59d40696bbed
+  kind: concept
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
+  name: 통계 문해력
+  hint: 수치와 통계의 의미 및 한계를 이해하고 평가하는 능력.
+  aliases: ["수치의 분모와 비교 기준을 읽는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 지식과 탐구/정보와 매체/신뢰와 정보판단

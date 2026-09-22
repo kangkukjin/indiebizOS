@@ -68,7 +68,7 @@ entries:
     section: 인문
 - id: foundation.symbol
   kind: concept
-  path: [인문, 문학과 서사]
+  path: ["인문", "문학과 서사", "서사의 구성"]
   name: 상징
   hint: 구체적 대상이 다른 의미나 관념을 환기하는 관계
   aliases: [작품 속 색이나 물건이 뜻하는 것, 반복되는 사물이 주는 의미, 눈에 보이는 것으로 추상적 생각 표현, 맥락에 따라 달라지는 표상의 뜻]

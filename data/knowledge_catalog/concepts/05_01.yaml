@@ -1,0 +1,1049 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.05.d638194bdb3f
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 조직 (생물)
+  hint: 비슷한 기능을 수행하는 세포와 주변 물질의 집합
+  aliases: ["세포들이 함께 몸의 부분 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.5d78ce2d4d5f
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 기관
+  hint: 여러 조직이 특정 기능을 수행하는 신체 구조
+  aliases: ["심장과 폐처럼 역할을 맡은 몸의 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.1df71238819b
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 기관계
+  hint: 관련 기관들이 협력하는 기능 체계
+  aliases: ["소화기관들이 함께 일하는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.dd40126d3049
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 상피조직
+  hint: 몸의 표면과 기관의 안쪽을 덮는 조직
+  aliases: ["몸의 경계에서 보호하고 흡수하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.ffe94b1bfbaa
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 결합조직
+  hint: 지지·연결·저장 등을 담당하는 조직
+  aliases: ["몸의 여러 부분을 이어 주는 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.d7e2d1ceb003
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 뼈
+  hint: 지지·보호·저장 등을 수행하는 단단한 기관
+  aliases: ["몸의 형태를 지탱하는 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.07837980fc77
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 관절
+  hint: 뼈와 뼈가 연결되는 부위
+  aliases: ["몸이 구부러지는 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.74c36e40a8f9
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 연골
+  hint: 탄성과 압박 저항을 가진 결합조직
+  aliases: ["관절 사이에서 힘을 받는 부드러운 조직"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.0c8453e44a00
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 힘줄과 인대
+  hint: 근육과 뼈·뼈와 뼈를 연결하는 조직
+  aliases: ["관절 주변의 줄 같은 조직 역할"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.4a668ed8494a
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 골격근
+  hint: 주로 몸의 수의적 움직임을 만드는 근육
+  aliases: ["의도대로 팔과 다리를 움직이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.9092ba8a2d90
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 평활근
+  hint: 장기와 혈관 등에서 작용하는 근육
+  aliases: ["생각하지 않아도 장이 움직이는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.30483f3eb547
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 심장
+  hint: 혈액을 순환시키는 근육성 기관
+  aliases: ["피를 몸 전체로 보내는 펌프"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.60d2874695aa
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 폐
+  hint: 호흡 기체교환을 수행하는 기관
+  aliases: ["들이마신 공기가 몸과 만나는 곳"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.74ca8db3a8d7
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 간
+  hint: 대사·해독·저장·합성 등에 관여하는 기관
+  aliases: ["몸속 물질을 가공하고 조절하는 장기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.42c3bd8aac89
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 위와 장
+  hint: 섭취한 음식의 소화·흡수에 관여하는 기관
+  aliases: ["음식이 몸의 재료로 들어오는 길"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.2ab06103292c
+  kind: concept
+  path: ["건강", "인체와 항상성", "기관과 신체구조"]
+  name: 피부
+  hint: 외부와 몸을 구분하며 보호·감각·조절하는 기관
+  aliases: ["몸을 덮는 경계가 하는 여러 역할"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/기관과 신체구조
+- id: basics.05.6efc8c93fbb4
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 뉴런
+  hint: 전기·화학 신호를 주고받는 신경세포
+  aliases: ["몸의 정보를 전달하는 세포"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.fc194155f84a
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 시냅스
+  hint: 뉴런 등이 신호를 전달하는 접합 부위
+  aliases: ["신경세포 사이의 신호 전달 지점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.140a228c821f
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 신경전달물질
+  hint: 시냅스 등에서 신호를 전달하는 화학물질
+  aliases: ["신경 사이에서 메시지를 전하는 물질"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.5b3c87c03ca6
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 활동전위
+  hint: 세포막 전위가 빠르게 변화하며 전달되는 신호
+  aliases: ["신경을 따라 전기 신호가 가는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.ba87b513c266
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 중추신경계
+  hint: 뇌와 척수로 이루어진 신경계
+  aliases: ["몸의 정보를 모아 처리하는 중심"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.55245d51a1a6
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 말초신경계
+  hint: 중추 밖에서 신호를 전달하는 신경계
+  aliases: ["뇌와 온몸을 연결하는 신경"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.eb83983c6259
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 자율신경계
+  hint: 내장 기능 등을 조절하는 신경계
+  aliases: ["의식하지 않아도 심장과 장을 조절하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.dc9fa0195139
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 교감신경과 부교감신경
+  hint: 자율 기능을 서로 다른 방식으로 조절하는 계통
+  aliases: ["긴장할 때와 쉴 때 몸의 변화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.15f3884b932b
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 대뇌피질
+  hint: 대뇌 표면의 신경세포층
+  aliases: ["감각과 생각과 행동을 처리하는 표면"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.b5ed938b82a0
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 소뇌
+  hint: 운동 조정과 학습 등에 관여하는 뇌 구조
+  aliases: ["움직임의 균형과 정확도를 맞추기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.d8c9ed5c0662
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 척수
+  hint: 뇌와 몸의 신호 전달·반사에 관여하는 구조
+  aliases: ["등뼈 안을 지나는 신경의 중심 통로"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.433f772faf20
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 감각수용기
+  hint: 물리·화학 자극을 신호로 바꾸는 구조
+  aliases: ["빛과 소리를 몸이 알아차리는 시작"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.ea80671ab572
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 망막
+  hint: 빛을 신경 신호로 바꾸는 눈의 조직
+  aliases: ["눈 안에서 빛을 받아들이는 막"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.d4230e9a33bc
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 전정기관
+  hint: 머리 움직임과 평형을 감지하는 내이 구조
+  aliases: ["몸이 기울거나 회전하는 것을 느끼기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.74f9fee5460d
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 통각
+  hint: 조직 손상 가능성 등에 관한 유해 자극의 감지
+  aliases: ["몸이 위험한 자극을 알아차리는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.3882c13ad771
+  kind: concept
+  path: ["건강", "인체와 항상성", "신경과 감각"]
+  name: 고유수용감각
+  hint: 몸 각 부분의 위치와 움직임을 감지
+  aliases: ["눈을 감아도 팔 위치를 아는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/신경과 감각
+- id: basics.05.326fc1c1e860
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 혈압
+  hint: 혈액이 혈관 벽에 가하는 압력
+  aliases: ["피가 혈관을 미는 힘"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.adacb5999269
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 심박출량
+  hint: 단위시간에 심장이 내보내는 혈액량
+  aliases: ["심장이 얼마나 많은 피를 보내는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.e02d4e683bb9
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 헤모글로빈
+  hint: 적혈구에서 산소 운반 등에 관여하는 단백질
+  aliases: ["피가 산소를 싣고 다니는 성분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.d304aac48e79
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 림프계
+  hint: 조직액 회수와 면역 등에 관여하는 체계
+  aliases: ["조직 사이의 액체가 돌아오는 길"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.55cc16dad006
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 혈액응고
+  hint: 출혈 부위 등에 혈전이 형성되는 과정
+  aliases: ["상처에서 피가 멎는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.62866e857f37
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 인슐린
+  hint: 혈당과 에너지 대사 조절에 관여하는 호르몬
+  aliases: ["식후 혈당 변화에 반응하는 신호"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.2f24bc0832bd
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 항체
+  hint: 특정 항원에 결합하는 면역 단백질
+  aliases: ["몸이 특정 표적을 알아보는 단백질"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.7b42f898689f
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 항원
+  hint: 면역계가 인식하는 분자적 표적
+  aliases: ["방어 반응이 알아보는 대상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.4f5b01df0bbd
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 선천면역
+  hint: 빠르고 비교적 넓은 범위로 작동하는 방어 체계
+  aliases: ["침입에 처음부터 대응하는 몸의 방어"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.2ccb927a451d
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 적응면역
+  hint: 특이성과 기억을 발달시키는 면역 체계
+  aliases: ["만났던 표적을 다시 알아보는 방어"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.a1e58110b56c
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 염증
+  hint: 손상이나 자극에 대응하는 조직의 반응 과정
+  aliases: ["상처 주변이 붓고 변하는 몸의 반응"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.87e70b7b53dc
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 면역기억
+  hint: 이전 노출에 따라 이후 반응이 달라지는 성질
+  aliases: ["한번 만난 표적을 몸이 기억하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.6db70f426dc5
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 장내미생물군
+  hint: 장에 사는 미생물 집단
+  aliases: ["몸속 장에 함께 사는 작은 생물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.d14db03d017d
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 체액균형
+  hint: 물과 용질의 섭취·분포·배출 사이 조절
+  aliases: ["몸 안의 물과 염분을 일정하게 유지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.fdfcf694d619
+  kind: concept
+  path: ["건강", "인체와 항상성", "조절과 방어"]
+  name: 산염기평형
+  hint: 체액의 산도와 관련 성분을 조절하는 상태
+  aliases: ["몸속 산성 정도를 유지하는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/인체와 항상성/조절과 방어
+- id: basics.05.64093fd95785
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 에너지 균형
+  hint: 섭취 에너지와 소비 에너지의 관계
+  aliases: ["먹는 양과 쓰는 에너지의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.83b19e87ced4
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 기초대사량
+  hint: 기본 생명 기능 유지에 필요한 에너지 소비
+  aliases: ["가만히 있어도 몸이 쓰는 에너지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.a51a77a7560d
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 필수영양소
+  hint: 몸에서 충분히 만들지 못해 섭취가 필요한 성분
+  aliases: ["음식으로 공급해야 하는 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.d4a4eaed75e3
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 식이섬유
+  hint: 사람의 소화효소로 잘 분해되지 않는 식품 성분
+  aliases: ["채소와 곡물의 소화되지 않는 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.32718d2fdb94
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 필수아미노산
+  hint: 몸에서 충분히 합성하지 못하는 아미노산
+  aliases: ["음식 단백질에서 얻어야 하는 구성 성분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.5f843aa71f9e
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 포화지방과 불포화지방
+  hint: 탄소 결합 구조에 따른 지방산의 구분
+  aliases: ["기름마다 구조와 성질이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.921414e9f68b
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 비타민
+  hint: 소량 필요하며 다양한 대사에 관여하는 유기물
+  aliases: ["에너지는 아니지만 몸에 필요한 성분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.c39bd315405a
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 무기질
+  hint: 생체 기능과 구조에 필요한 무기 성분
+  aliases: ["칼슘과 철 같은 영양 성분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.caaf7f679371
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 영양밀도
+  hint: 에너지량 등에 비해 포함된 영양소의 정도
+  aliases: ["같은 열량인데 영양이 다른 음식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.8ce9670da456
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 식품다양성
+  hint: 식사에서 이용하는 식품 종류의 폭
+  aliases: ["여러 식품을 조합해 먹는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.a9f6bb23796d
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 섭취량과 흡수량
+  hint: 먹은 양과 몸으로 실제 들어온 양의 구분
+  aliases: ["먹은 영양이 모두 흡수되는 것은 아닌 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.405f120f6731
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 생체이용률
+  hint: 섭취 성분이 몸에서 이용 가능한 정도
+  aliases: ["같은 성분도 이용되는 비율이 다른 까닭"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.866a434b80c2
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 포만감
+  hint: 섭취 후 더 먹을 필요가 줄었다고 느끼는 상태
+  aliases: ["음식에 따라 배부름이 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.227ba825cec4
+  kind: concept
+  path: ["건강", "영양과 예방", "영양과 식생활"]
+  name: 기호와 식습관
+  hint: 음식 선호와 반복되는 섭취 행동
+  aliases: ["어릴 때의 식사가 취향에 남는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/영양과 식생활
+- id: basics.05.6a45b28e2738
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 수면주기
+  hint: 수면 단계가 일정한 양상으로 반복되는 구조
+  aliases: ["잠자는 동안 여러 단계가 돌아가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.2019a5fc7fdd
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 렘수면
+  hint: 빠른 안구운동 등을 특징으로 하는 수면 단계
+  aliases: ["수면 중 뇌와 몸의 활동이 달라지는 시기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.8608b62c6f1e
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 비렘수면
+  hint: 렘수면과 구별되는 여러 깊이의 수면 단계
+  aliases: ["얕은 잠과 깊은 잠의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.0ca37b4b427a
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 수면부채
+  hint: 필요한 수면이 충족되지 않고 누적된 상태
+  aliases: ["잠을 덜 잔 영향이 쌓이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.f6bcbdcfa5da
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 시차적응
+  hint: 외부 시간 변화에 생체 리듬이 맞춰지는 과정
+  aliases: ["먼 나라에 가면 잠 시간이 어긋나는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.450ef723e34c
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 수면위생
+  hint: 수면에 영향을 주는 행동과 환경의 관리 개념
+  aliases: ["잠자리와 생활 패턴이 잠에 주는 영향"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.365575a2b565
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 건강행동
+  hint: 건강 유지·변화에 관련된 개인의 행동
+  aliases: ["생활 속 반복 행동과 건강의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.527ea1cd7232
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 좌식행동
+  hint: 깨어 있는 동안 낮은 에너지로 앉거나 누워 있음
+  aliases: ["하루 대부분을 앉아서 보내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.a3fb25734e17
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 행동변화 단계
+  hint: 변화의 준비와 실행·유지 상태를 구분하는 관점
+  aliases: ["바꾸고 싶은 마음과 실제 실천의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.bc80ab806d27
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 자기모니터링
+  hint: 자신의 행동과 상태를 관찰·기록하는 과정
+  aliases: ["생활 패턴을 적어 변화를 알아보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.479492446f6e
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 건강신념
+  hint: 위험·이익·장벽 등에 관한 건강 관련 믿음
+  aliases: ["좋다는 것을 알아도 실천하지 않는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.3bb948dae16d
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 생활리듬
+  hint: 수면·식사·활동 등이 반복되는 시간적 패턴
+  aliases: ["매일 비슷한 시간에 몸이 움직이는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.9f3b93019346
+  kind: concept
+  path: ["건강", "영양과 예방", "수면과 건강행동"]
+  name: 회복과 휴식
+  hint: 부하 이후 기능을 회복하는 과정과 활동 중단
+  aliases: ["활동 뒤 몸이 다시 준비되는 시간"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/수면과 건강행동
+- id: basics.05.b6211377d576
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 위해와 위험
+  hint: 해를 줄 수 있는 성질과 실제 피해 가능성의 구분
+  aliases: ["해로운 성분의 존재와 실제 노출의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.52ff0d7508d2
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 노출 (보건)
+  hint: 유해 요인과 접촉하는 양상과 정도
+  aliases: ["얼마나 자주 얼마나 많이 접하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.41a59c4c7a34
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 용량반응 관계
+  hint: 노출량과 생물학적 반응의 관계
+  aliases: ["양이 달라지면 영향이 어떻게 바뀌는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.f5a8081b27ed
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 예방접종
+  hint: 면역 반응을 유도하여 질병 예방을 돕는 개입
+  aliases: ["미리 면역을 준비시키는 원리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.3674cb26a772
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 집단면역
+  hint: 집단의 면역 수준이 전파 가능성에 미치는 효과
+  aliases: ["주변 사람의 면역이 전파에 영향을 주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.842529b41a1a
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 손위생
+  hint: 손을 통한 오염과 전파를 줄이는 관리
+  aliases: ["손이 물질을 옮기는 경로를 이해"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.a4796ac310cb
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 희석환기
+  hint: 공기 교환으로 실내 성분의 농도가 변함
+  aliases: ["실내 공기가 새 공기와 섞이는 효과"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.8ba8a7834cf8
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 식품위생
+  hint: 식품의 생산·보관·조리 중 위해를 관리
+  aliases: ["음식이 오염되는 경로를 살피기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.e3badb9f587f
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 환경보건
+  hint: 환경 요인과 인간 건강의 관계를 다루는 분야
+  aliases: ["사는 환경이 몸에 영향을 주는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.95146b1d588e
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 직업보건
+  hint: 작업환경과 직업 활동의 건강 영향을 다루는 분야
+  aliases: ["일하면서 반복적으로 받는 노출"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.a4aca1aea418
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 일차·이차·삼차 예방
+  hint: 발병 전·조기 발견·장애 감소 등 예방의 단계
+  aliases: ["예방 활동이 어느 시점에 작용하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.bc9aaae56311
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 사회적 건강결정요인
+  hint: 소득·교육·주거 등 건강을 좌우하는 사회 조건
+  aliases: ["건강 차이가 개인 선택만으로 생기지 않는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.c4c78908a523
+  kind: concept
+  path: ["건강", "영양과 예방", "환경과 예방"]
+  name: 건강형평성
+  hint: 피할 수 있는 집단 간 건강 격차의 공정성
+  aliases: ["환경에 따른 건강 기회의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/영양과 예방/환경과 예방
+- id: basics.05.41854cfd4a40
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 증상과 징후
+  hint: 주관적 경험과 관찰 가능한 이상 소견
+  aliases: ["느끼는 불편과 검사에서 보이는 변화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.60398a0389d7
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 급성과 만성
+  hint: 발생·지속 양상에 따른 상태의 구분
+  aliases: ["갑자기 생긴 문제와 오래 이어진 문제"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.2352ee03ccb9
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 병인
+  hint: 질병을 일으키는 원인과 관련 요인
+  aliases: ["병이 왜 생겼는지를 구분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.561973957598
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 병태생리
+  hint: 질병 상태에서 생체 기능이 변하는 과정
+  aliases: ["병이 몸의 작동 방식을 바꾸는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.6175ffcaac62
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 진단
+  hint: 정보를 종합해 상태의 성격을 판단하는 과정
+  aliases: ["증상과 검사 결과를 함께 해석"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.2b089082670c
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 선별검사
+  hint: 증상 없는 집단 등에서 위험 가능성을 가려내기
+  aliases: ["확진과 건강검진의 목적 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.8f28e46479d7
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 예후
+  hint: 질병이나 상태의 향후 경과에 대한 전망
+  aliases: ["시간이 지나며 어떻게 변할 가능성이 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.4b17452068ac
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 합병증
+  hint: 기존 상태나 과정에 동반되어 생기는 추가 문제
+  aliases: ["한 질환이 다른 문제로 이어지는 경우"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.39e97b8010bc
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 동반질환
+  hint: 한 사람에게 함께 존재하는 여러 질환
+  aliases: ["여러 건강 문제가 함께 있을 때"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.ce97d80a8fa6
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 일차의료
+  hint: 주민과 지속적으로 접촉하는 포괄적 의료
+  aliases: ["가까운 의료기관이 생활 속 건강을 맡는 역할"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.c3f7d589903d
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 의료전달체계
+  hint: 의료기관과 서비스 사이 역할과 연결 구조
+  aliases: ["동네 의원과 큰 병원의 역할 분담"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.225380d1d2c9
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 환자안전
+  hint: 의료 과정의 불필요한 위해를 예방하는 활동
+  aliases: ["치료 과정에서 생길 수 있는 오류 줄이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.7abd3fc62ef3
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 공동의사결정
+  hint: 의료 정보와 당사자 선호를 함께 고려하는 선택
+  aliases: ["선택지와 원하는 삶을 함께 의논"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.1f6aed9fe254
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 돌봄의 연속성
+  hint: 시간·기관 사이에 일관되게 이어지는 지원
+  aliases: ["병원을 옮겨도 정보와 도움이 이어지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.527335796697
+  kind: concept
+  path: ["건강", "보건 연구", "질병과 의료체계"]
+  name: 삶의 질
+  hint: 생활의 기능·경험·만족 등 다차원적 상태
+  aliases: ["수명뿐 아니라 어떻게 사는지를 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/보건 연구/질병과 의료체계
+- id: basics.05.2c6ed6e60722
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 근력
+  hint: 근육이 힘을 발휘하는 능력
+  aliases: ["무게를 들거나 밀 수 있는 힘"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.f2d38672aebb
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 근지구력
+  hint: 근육이 수축을 반복·유지하는 능력
+  aliases: ["같은 동작을 오래 계속하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.d2dae994b512
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 심폐지구력
+  hint: 산소 공급을 유지하며 활동하는 능력
+  aliases: ["오래 움직여도 견디는 체력"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.48abebf6b2ee
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 유연성
+  hint: 관절과 조직이 움직일 수 있는 범위의 성질
+  aliases: ["몸이 얼마나 부드럽게 움직이는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.5fc47a38d5bb
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 평형성
+  hint: 몸의 자세와 중심을 유지하는 능력
+  aliases: ["흔들려도 넘어지지 않고 서 있기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.4a6631fe571c
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 민첩성
+  hint: 몸의 방향과 속도를 빠르게 바꾸는 능력
+  aliases: ["움직이다 재빨리 방향 전환"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.ccb2a63a6b2a
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 협응성
+  hint: 여러 신체 부분의 움직임을 조정하는 능력
+  aliases: ["눈과 손과 발이 함께 맞춰 움직이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.a5708823ee68
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 유산소 운동
+  hint: 산화적 에너지 공급의 비중이 큰 지속 활동
+  aliases: ["오래 이어 가는 신체 활동의 에너지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.110674496b6f
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 무산소성 운동
+  hint: 짧고 강한 활동에서 비산화적 공급의 비중이 큼
+  aliases: ["순간적으로 큰 힘을 내는 활동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.c102325ea023
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 신체활동량
+  hint: 강도·시간·빈도 등으로 나타내는 활동의 양
+  aliases: ["얼마나 세게 얼마나 오래 자주 움직이는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.18c4768bb6b8
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 과훈련
+  hint: 훈련과 회복의 불균형으로 수행이 지속 저하
+  aliases: ["쉬지 않고 훈련했는데 능력이 떨어지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.a53aeb01f8b3
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 중립자세
+  hint: 관절과 조직의 부담을 고려한 기본 정렬
+  aliases: ["일할 때 몸의 불필요한 긴장을 줄이는 자세"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.e9f4c2ecbdce
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 반복작업
+  hint: 유사 동작이 연속적으로 수행되는 작업
+  aliases: ["같은 움직임이 누적되는 일"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력
+- id: basics.05.5b4a752821a9
+  kind: concept
+  path: ["건강", "운동과 인간공학", "신체활동과 체력"]
+  name: 인간공학
+  hint: 사람의 특성에 맞게 작업·도구·환경을 설계
+  aliases: ["사람에게 맞는 자리와 물건 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 건강/운동과 인간공학/신체활동과 체력

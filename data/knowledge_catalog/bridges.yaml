@@ -89,7 +89,7 @@ entries:
   kind: concept
   name: 외부효과 (Externality)
   hint: 경제적 거래의 편익·책임에 반영되지 않은 제삼자의 손익
-  path: ["경제와 조직", "분석"]
+  path: ["경제와 조직", "분석", "교환과 자원배분"]
   aliases:
   - 외부효과
   - 외부성

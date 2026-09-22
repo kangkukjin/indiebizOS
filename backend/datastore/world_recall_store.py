@@ -45,14 +45,15 @@ class WorldStore(Store):
         if hit and hit["sig"] == self._sig:
             return hit
         entries = self.snapshot.entries
-        items = [Item(id=e.id, path=tuple(e.path[:BRANCH_DEPTH]),
+        # 세부 주제까지 항목의 검색 문맥에 포함하되, 가지 선택은 앞 두 단에서 한다.
+        items = [Item(id=e.id, path=tuple(e.path),
                       text=" ".join(p for p in (e.name, e.name, e.hint, e.scope_note) if p),
                       cues=" ".join(e.aliases), label=f"{'/'.join(e.path)}: {e.name}") for e in entries]
         entry = _dictionary(self.root)
-        paths = sorted({it.path for it in items if it.path})
+        paths = sorted({it.path[:BRANCH_DEPTH] for it in items if it.path})
         branches = [Branch(path=p, **entry.get(p, {})) for p in paths]
         top = Counter(e.path[0] for e in entries if e.path)
-        world_map = " · ".join(f"{name} {n}" for name, n in sorted(top.items()))      # 한 줄 — 27분야
+        world_map = " · ".join(f"{name} {n}" for name, n in sorted(top.items()))
         hit = {"sig": self._sig, "items": items, "branches": branches, "map": world_map,
                "unknown": sorted("/".join(p) for p in entry if p not in set(paths))}
         _cache["v"] = hit

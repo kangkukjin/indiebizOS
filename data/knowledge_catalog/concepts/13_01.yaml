@@ -1,0 +1,869 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.13.aac66835006a
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 곡류
+  hint: 곡식을 얻는 벼과 작물과 그 낟알을 중심으로 한 식재료 부류.
+  aliases: ["쌀과 밀처럼 주식으로 먹는 곡식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.5a54e21c27c0
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 두류
+  hint: 콩과 식물에서 얻는 콩과 팥 등의 종실 부류.
+  aliases: ["콩과 팥으로 단백질을 보충한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.cde4996c9cf4
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 전분 식품
+  hint: 전분을 주요 탄수화물로 포함하는 식품 부류.
+  aliases: ["감자와 쌀을 익히면 질감이 달라진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.d2d4ec3d53cf
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 식용유지
+  hint: 먹을 수 있는 기름과 지방.
+  aliases: ["조리에 쓰는 기름과 버터"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.3374a8057805
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 유제품
+  hint: 젖을 원료로 가공한 식품.
+  aliases: ["우유로 치즈와 요구르트를 만든다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.0129f39caed4
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 발효식품
+  hint: 미생물의 작용을 이용해 성질과 맛을 바꾼 식품.
+  aliases: ["미생물로 음식의 맛과 보존성을 바꾼다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.62d500e43789
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 향신료
+  hint: 향과 맛을 내기 위해 소량 사용하는 식물성 재료.
+  aliases: ["적은 양으로 음식에 독특한 향을 더한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.7f77cdc09a8c
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 조미료
+  hint: 음식의 맛을 조절하거나 더하는 재료.
+  aliases: ["음식의 간과 감칠맛을 맞춘다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.e38d08e91e94
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 감칠맛
+  hint: 글루탐산 등에서 나타나는 기본 맛의 하나.
+  aliases: ["국물에서 느껴지는 깊은 감칠맛"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.03553a03276b
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 미각
+  hint: 입안의 수용기를 통해 맛 자극을 감지하는 감각.
+  aliases: ["혀에서 단맛과 쓴맛을 느낀다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.27168c6f6169
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 풍미
+  hint: 맛과 향 및 구강 감각 등이 합쳐진 음식의 전체 감각.
+  aliases: ["코를 막으면 음식 맛이 달라진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.ecc01d918f72
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 식감
+  hint: 씹거나 입안에서 다룰 때 느끼는 음식의 물리적 감각.
+  aliases: ["같은 맛이어도 바삭함과 쫄깃함이 다르다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.a145fc80375c
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 제철 식재료
+  hint: 해당 지역과 시기에 주로 수확되거나 상태가 좋은 식재료.
+  aliases: ["계절에 맞는 식재료를 고른다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.6687e49ea16a
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 숙성
+  hint: 시간과 조건에 따라 식품의 성분과 조직이 변하는 과정.
+  aliases: ["시간이 지나며 고기나 치즈의 맛이 달라진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.ad6d82ac5d92
+  kind: concept
+  path: ["생활", "조리와 식품", "식재료와 맛"]
+  name: 식품 알레르겐
+  hint: 일부 사람에게 면역 반응을 일으키는 식품 성분.
+  aliases: ["음식에 알레르기를 유발하는 성분이 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/식재료와 맛
+- id: basics.13.f96a1ab24624
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 열전도 조리
+  hint: 접촉을 통한 열 전달을 주로 이용하는 조리.
+  aliases: ["팬에 닿은 면부터 음식이 익는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.14401e64c93e
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 대류 조리
+  hint: 움직이는 물이나 공기를 통한 열 전달을 이용하는 조리.
+  aliases: ["뜨거운 물이나 공기가 돌면서 익힌다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.ae6a2f681bde
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 복사 가열
+  hint: 전자기파 형태로 전달되는 에너지를 이용한 가열.
+  aliases: ["직접 닿지 않아도 불 가까이에서 익는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.46979a03e898
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 전분 호화
+  hint: 전분이 물과 함께 가열되어 팽윤하고 점성이 달라지는 과정.
+  aliases: ["가루를 물에 넣고 가열하면 걸쭉해진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.995386b29f85
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 단백질 응고
+  hint: 단백질의 변성과 결합으로 조직이 굳는 현상.
+  aliases: ["달걀을 익히면 흰자가 굳는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.61a2d6e7624b
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 반죽
+  hint: 가루와 물 등 재료를 섞어 형성한 조리용 혼합물.
+  aliases: ["밀가루에 물을 넣고 치댄다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.76a50b55a85b
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 글루텐
+  hint: 밀가루 단백질이 물과 반죽 작용으로 이루는 점탄성 망.
+  aliases: ["빵 반죽이 늘어나고 기포를 붙잡는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.73b132c37cee
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 팽창제
+  hint: 기체를 발생시키거나 포함시켜 반죽을 부풀리는 재료.
+  aliases: ["빵과 과자가 구우면서 부푼다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.b4839b91907d
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 염장
+  hint: 소금을 이용해 식품의 성질과 보존 조건을 바꾸는 방법.
+  aliases: ["소금으로 식재료를 절인다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.add759938b8a
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 냉장 보관
+  hint: 낮은 온도로 식품 등의 변화를 늦추는 보관 방식.
+  aliases: ["음식을 차갑게 두어 변질을 늦춘다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.9ac2c4c3544d
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 냉동 보관
+  hint: 수분을 얼리는 온도에서 식품 등을 보관하는 방식.
+  aliases: ["얼려 둔 음식의 질감이 해동 후 달라진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.73b7e4b9b86c
+  kind: concept
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 교차오염
+  hint: 한 재료나 표면의 오염원이 다른 곳으로 옮겨가는 것.
+  aliases: ["생재료의 오염이 칼과 도마를 통해 옮는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/조리와 식품/조리의 원리
+- id: basics.13.8e83a8246741
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 파종
+  hint: 재배를 위해 씨앗을 뿌리거나 심는 작업.
+  aliases: ["언제 어떤 깊이로 씨를 심는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.caa873efe3be
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 육묘
+  hint: 씨앗이나 번식 재료에서 옮겨 심을 어린 식물을 기르는 것.
+  aliases: ["어린 모종을 먼저 키운다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.8cbaf3a015e9
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 이식
+  hint: 식물을 자라던 곳에서 다른 장소로 옮겨 심는 것.
+  aliases: ["화분이나 밭으로 모종을 옮긴다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.9b91a65c04a4
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 삽목
+  hint: 줄기나 잎 등의 일부를 잘라 뿌리내리게 하는 번식 방법.
+  aliases: ["가지를 잘라 새 식물을 키운다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.9b0f604b576e
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 관수
+  hint: 식물 재배에 필요한 물을 공급하는 작업.
+  aliases: ["흙과 뿌리 상태에 맞춰 물을 준다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.ff641f40a11f
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 배수
+  hint: 과도한 물이 빠져나가게 하는 것.
+  aliases: ["화분 바닥에 물이 고이지 않게 한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.a9b115ef73f8
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 토양 산도
+  hint: 토양의 산성 또는 알칼리성 정도.
+  aliases: ["식물이 자라는 흙의 산성도를 살핀다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.a831b19e20a4
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 퇴비
+  hint: 유기물을 분해하고 안정화하여 만든 토양 개량 재료.
+  aliases: ["유기물을 삭혀 흙에 돌려준다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.8dc0a2b555aa
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 멀칭
+  hint: 토양 표면을 재료로 덮어 수분과 온도 및 잡초 등을 조절하는 것.
+  aliases: ["흙을 덮어 수분 증발과 잡초를 줄인다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.6ab6b71486b7
+  kind: concept
+  path: ["생활", "농업과 원예", "작물과 재배"]
+  name: 병해충
+  hint: 식물에 피해를 주는 병과 해충을 함께 이르는 말.
+  aliases: ["잎의 반점과 벌레 피해를 구별한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/농업과 원예/작물과 재배
+- id: basics.13.5026ca24d0a8
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 목재 결
+  hint: 나무 섬유의 배열에서 나타나는 방향과 무늬.
+  aliases: ["나뭇결 방향에 따라 잘 갈라지고 깎인다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.4713df490577
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 함수율
+  hint: 재료에 포함된 수분의 비율.
+  aliases: ["나무가 마르면서 크기와 모양이 달라진다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.da53964a53fd
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 이음과 맞춤
+  hint: 재료를 이어 길이를 늘리거나 서로 결합하는 제작 방식.
+  aliases: ["목재 부품을 서로 끼워 연결한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.0052c6f0328b
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 연마
+  hint: 표면을 문지르거나 깎아 매끈하게 다듬는 작업.
+  aliases: ["거친 표면을 사포로 다듬는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.b0fe42fc1bd7
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 도장
+  hint: 표면에 도료를 입혀 보호하거나 색과 질감을 내는 작업.
+  aliases: ["표면에 페인트나 니스를 바른다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.959fdb98858f
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 점토
+  hint: 작은 입자의 점토광물 등을 포함하며 물에 젖으면 가소성을 보이는 재료.
+  aliases: ["젖은 흙을 빚어 모양을 만든다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.8956c008fc9a
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 가소성
+  hint: 힘을 받아 변형된 뒤 힘을 제거해도 형태가 남는 성질.
+  aliases: ["눌러 만든 모양이 그대로 남는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.660c35fc028f
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 소성 (도예)
+  hint: 성형한 도자기 재료를 높은 온도로 구워 성질을 바꾸는 공정.
+  aliases: ["빚은 그릇을 가마에서 굽는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.6bdd1509d75d
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 유약
+  hint: 도자기 표면에서 녹고 굳어 유리질 층 등을 만드는 재료.
+  aliases: ["그릇 표면에 광택과 보호층을 만든다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.823d60bc2f5d
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 봉제
+  hint: 실과 바늘 등으로 천이나 재료를 이어 붙이는 작업.
+  aliases: ["천을 바느질해서 옷을 만든다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.107044e28709
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 뜨개질
+  hint: 실로 고리를 만들고 연결하여 편물을 만드는 작업.
+  aliases: ["한 가닥의 실로 옷감을 뜬다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.7d3a06330bed
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 자수
+  hint: 바탕 재료 위에 실로 무늬를 놓는 기법.
+  aliases: ["천에 실로 그림과 무늬를 넣는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.9de1ff063d39
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 수선
+  hint: 손상되거나 맞지 않는 부분을 고쳐 다시 쓰는 것.
+  aliases: ["망가진 생활용품을 고쳐 쓴다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.ac560ee83962
+  kind: concept
+  path: ["생활", "공예와 수선", "재료와 손작업"]
+  name: 공구 관리
+  hint: 공구의 상태와 보관을 유지하여 기능과 안전을 확보하는 일.
+  aliases: ["날과 손잡이의 상태를 살피고 공구를 보관한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/공예와 수선/재료와 손작업
+- id: basics.13.c4b1eed0bc7d
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 곰팡이
+  hint: 균사 형태로 자라는 여러 균류를 일상적으로 이르는 말.
+  aliases: ["습한 벽과 음식에 곰팡이가 핀다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.ef56791e2aad
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 세제
+  hint: 오염을 떨어뜨리고 제거하도록 만든 세척 물질.
+  aliases: ["물만으로 지워지지 않는 때를 씻는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.07def74f4a24
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 경수
+  hint: 칼슘과 마그네슘 등의 이온이 상대적으로 많은 물.
+  aliases: ["물에 미네랄이 많아 물때가 잘 생긴다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.0a522d0d4961
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 물때
+  hint: 물에 든 성분이나 미생물 등이 표면에 남아 생기는 오염.
+  aliases: ["수도 주변에 하얗거나 미끈한 때가 낀다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.67ceb3eb49c0
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 생활 폐기물
+  hint: 일상생활에서 발생하여 버려지는 물질과 물건.
+  aliases: ["집에서 나오는 쓰레기를 줄이고 분리한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.59f83bc301eb
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 재사용
+  hint: 제품이나 재료를 큰 변환 없이 다시 쓰는 것.
+  aliases: ["버리기 전에 같은 물건을 다시 쓴다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.af1087e9c279
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 재활용
+  hint: 폐기물을 가공하여 재료나 제품 등으로 다시 이용하는 것.
+  aliases: ["버린 재료를 새 자원으로 바꾼다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.3d5c33f39572
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 가계 예산
+  hint: 가정의 수입과 지출을 예상하고 배분한 계획.
+  aliases: ["한 달 수입 안에서 생활비를 나눈다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.0205aa9ed993
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 고정비
+  hint: 활동량 등의 변화에 상대적으로 덜 따라 변하는 비용.
+  aliases: ["사용량이 적어도 매달 나가는 돈"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.7e73b91f8afa
+  kind: concept
+  path: ["생활", "주거와 살림", "집과 생활관리"]
+  name: 정리와 수납
+  hint: 물건을 분류하고 사용에 맞게 배치하고 보관하는 일.
+  aliases: ["물건을 다시 찾고 꺼내기 쉽게 둔다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/주거와 살림/집과 생활관리
+- id: basics.13.7cb2ce3efd16
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 천연섬유
+  hint: 식물과 동물 등 자연에서 얻는 섬유.
+  aliases: ["면과 양모처럼 자연에서 얻은 옷감 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.f463b44aca88
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 합성섬유
+  hint: 화학적으로 합성한 고분자 등을 바탕으로 만든 섬유.
+  aliases: ["폴리에스터처럼 합성한 옷감 재료"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.b0ff39813b9b
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 직물
+  hint: 주로 날실과 씨실을 교차시켜 만든 천.
+  aliases: ["가로실과 세로실을 엮은 옷감"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.7fd07908f0cd
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 편물
+  hint: 실의 고리를 연결하여 만든 천.
+  aliases: ["실의 고리 때문에 잘 늘어나는 옷감"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.32472ace2a6c
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 흡습성
+  hint: 주변의 수분을 흡수하는 성질.
+  aliases: ["땀과 습기를 잘 머금는 옷감"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.a0d3795a1ebc
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 통기성
+  hint: 재료를 통해 공기가 통과하기 쉬운 정도.
+  aliases: ["옷감 사이로 바람이 잘 통한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.224202d58ac1
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 방수성과 발수성
+  hint: 물의 통과를 막는 성질과 표면에서 물방울이 퍼지지 않는 성질의 구별.
+  aliases: ["물이 스며들지 않는 것과 겉에서 튕기는 것은 다르다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.a21d1ce192b9
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 보온성
+  hint: 열 손실을 줄여 따뜻함을 유지하는 성질.
+  aliases: ["옷 속의 공기층이 체온을 지킨다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.09a29c4b1ec7
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 의복 맞음새
+  hint: 옷의 크기와 형태가 몸과 움직임에 맞는 정도.
+  aliases: ["서 있을 때는 맞지만 움직일 때 옷이 당긴다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.e04ec26fe8db
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 레이어링
+  hint: 옷을 여러 겹 조합하여 착용하는 방식.
+  aliases: ["얇은 옷을 겹쳐 온도에 맞게 조절한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.37b98072e385
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 이염
+  hint: 한 재료의 색이 다른 재료로 옮겨가는 현상.
+  aliases: ["색 있는 옷의 물이 다른 옷에 든다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.f69179460fed
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 보풀
+  hint: 마찰 등으로 섬유가 표면에서 엉켜 작은 덩어리가 되는 현상.
+  aliases: ["옷 표면에 작은 털뭉치가 생긴다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.1e9b13a4f0f0
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 치수 체계
+  hint: 제품의 크기를 분류하고 표시하는 규칙.
+  aliases: ["같은 사이즈 표시인데 실제 크기가 다르다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.2ff1569dd233
+  kind: concept
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
+  name: 마모
+  hint: 접촉과 마찰 등으로 재료 표면이 닳는 현상.
+  aliases: ["자주 닿는 곳부터 옷과 물건이 닳는다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/의복과 섬유/옷과 생활용품
+- id: basics.13.880d3572fbe8
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 도구적 일상생활동작
+  hint: 장보기와 교통수단 이용 등 더 복합적인 자립 생활 활동.
+  aliases: ["혼자 장을 보고 돈과 약속을 관리할 수 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.afab7180d93e
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 보조공학
+  hint: 활동과 참여를 돕기 위한 도구와 기술의 활용.
+  aliases: ["혼자 하기 어려운 일을 보조기기로 수행한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.924a7a974836
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 이동 보조
+  hint: 이동 능력을 보완하는 도구나 사람의 지원.
+  aliases: ["걸음과 이동을 돕는 장치와 지원"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.ff471b108dec
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 생활환경 조정
+  hint: 사용자의 기능과 필요에 맞춰 생활 공간과 조건을 바꾸는 일.
+  aliases: ["문턱과 손잡이를 생활에 맞게 바꾼다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.878ae8d459fd
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 독립생활
+  hint: 필요한 지원을 이용하면서 자신의 생활을 선택하고 통제하는 삶.
+  aliases: ["도움을 받더라도 자기 생활을 스스로 결정한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.a014367722af
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 비공식 돌봄
+  hint: 가족과 친구 등 개인 관계를 통해 제공되는 돌봄.
+  aliases: ["가족과 이웃이 생활을 돌본다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.7fdea8a26b71
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 공식 돌봄
+  hint: 기관이나 직업적 제공자를 통해 이루어지는 돌봄.
+  aliases: ["전문 서비스로 돌봄을 나눈다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.39511aa4274b
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 반려동물 복지
+  hint: 반려동물의 신체적 상태와 행동 및 정서적 필요를 고려하는 것.
+  aliases: ["반려동물이 건강하게 행동하고 쉬는 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.a906bebf80ed
+  kind: concept
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
+  name: 환경 풍부화
+  hint: 동물의 종 특성과 행동 욕구에 맞는 자극과 환경을 제공하는 것.
+  aliases: ["동물이 탐색하고 놀 수 있는 환경을 만든다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/돌봄과 생애/돌봄과 일상자립
+- id: basics.13.fce0e79fcf68
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 취미
+  hint: 여가에 지속적으로 관심을 갖고 즐기는 활동.
+  aliases: ["일 밖에서 꾸준히 즐기는 일이 있다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.b041d0234805
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 레크리에이션
+  hint: 휴식과 즐거움 및 활력 회복을 위한 여가 활동.
+  aliases: ["여가 활동으로 기분과 활력을 회복한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.ec5e7c8fff9b
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 관광
+  hint: 일상 생활권을 벗어난 방문과 체험을 중심으로 하는 활동.
+  aliases: ["다른 지역을 찾아 문화와 풍경을 경험한다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.0fa1ddd018f1
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 여정
+  hint: 출발부터 이동과 체류 및 귀환까지 이어지는 여행 과정.
+  aliases: ["여행의 이동과 머무는 순서를 짠다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.00d078400eec
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 환승
+  hint: 이동 중 교통수단이나 노선을 바꾸는 것.
+  aliases: ["다른 노선이나 교통수단으로 갈아탄다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.d1782feedddf
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 시차
+  hint: 서로 다른 지역의 표준시 사이의 차이.
+  aliases: ["도착지의 시간이 출발지와 다르다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.5081752ac295
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 보행성
+  hint: 공간에서 걷기 편하고 안전하며 목적지에 접근하기 좋은 정도.
+  aliases: ["걸어서 생활하기 편한 동네인가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.b245c400afc7
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 여행 접근성
+  hint: 신체적 언어적 경제적 조건 등이 여행 이용에 미치는 접근 정도.
+  aliases: ["서로 다른 필요를 가진 사람이 여행할 수 있는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.546398690298
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 문화적 예절
+  hint: 특정 사회와 상황에서 기대하는 대인 행동 관습.
+  aliases: ["방문한 곳에서 인사와 행동 방식을 살핀다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.1f11d9c83772
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 야외활동
+  hint: 자연이나 실외 공간에서 이루어지는 여가와 신체 활동.
+  aliases: ["야외에서 걷고 쉬며 시간을 보낸다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.fa53fe860691
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 경기 규칙
+  hint: 놀이와 스포츠에서 허용 행동과 승패 등을 정하는 약속.
+  aliases: ["같은 규칙을 공유해야 경기를 할 수 있다"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행
+- id: basics.13.cc4afea6cbdc
+  kind: concept
+  path: ["생활", "여가와 이동", "놀이와 여행"]
+  name: 페어플레이
+  hint: 규칙과 상대 및 공정한 경쟁을 존중하는 태도와 행동.
+  aliases: ["이기는 것뿐 아니라 공정하게 겨루는가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생활/여가와 이동/놀이와 여행

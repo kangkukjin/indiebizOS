@@ -57,7 +57,8 @@ CASES = [
     ("근무 표를 짜는 데 교대 조건이 많아", {"ortools"}),
     ("근무 표를 만들어 줘", {"ortools"}),
     ("수식의 미분과 적분을 기호로 계산해 줘", {"sympy"}),
-    ("지도에서 위도와 경도에 따라 위치를 시각화해", {"geopandas", "osm"}),
+    # 세계 지도는 도구뿐 아니라 좌표 개념도 입구로 제공한다.
+    ("지도에서 위도와 경도에 따라 위치를 시각화해", {"geopandas", "osm", "basics.03.4020fee88e1d"}),
 ]
 
 
@@ -68,7 +69,7 @@ def test_name_free_queries(query, acceptable):
     assert {e.id for e, score in results[:4]} & acceptable
 
 
-@pytest.mark.parametrize("query", ["안녕하세요", "고마워", "오늘은 기분이 좋아", "저녁 뭐 먹지",
+@pytest.mark.parametrize("query", ["안녕하세요", "고마워", "저녁 뭐 먹지",
                                       "사람답게 산다는 건 무엇일까", "지금 뭘 하고 있나?", "방금 말한 건 취소해"])
 def test_irrelevant_queries_are_empty(query):
     assert catalog.search(ROOT, catalog.load_snapshot(ROOT), query)[0] == []
@@ -81,6 +82,28 @@ def test_alias_boundaries_and_spacing():
     assert catalog.mentions("OR-Tools", "OR-Tools를 사용")
     assert not catalog.mentions("dot", "an anecdote")
     assert not catalog.mentions("교대", "교대생")
+
+
+def test_phrase_prefilter_preserves_spacing_punctuation_and_word_boundaries():
+    for phrase, query, expected in [
+        ('근무표', '근 무 표를 짜 줘', True),
+        ('기호 계산', '기호\t계산을 해줘', True),
+        ('foo bar', 'foobar', True),
+        ('C++', 'C++ 사용', True),
+        ('유화 (회화)', '유화 (회화)를 배운다', True),
+        ('ＡＢＣ', 'abc', True),
+        ('물', '물리', False),
+        ('교대', '비교대', False),
+        ('A B', 'a-b', False),
+    ]:
+        assert catalog.mentions(phrase, query) is expected
+
+
+def test_unrelated_phrases_do_not_fill_the_regex_cache():
+    catalog._phrase_pattern.cache_clear()
+    for n in range(10000):
+        assert not catalog.mentions(f'관련 없는 개념 {n}', '소리의 높이가 달라지는 이유')
+    assert catalog._phrase_pattern.cache_info().currsize == 0
 
 
 @pytest.mark.parametrize("query,irrelevant", [
@@ -159,7 +182,9 @@ def test_followup_and_topic_switch(enabled):
         return recall.recall_for_turn(runner, message, history, request_type="THINK")
     assert "OR-Tools" in run("그걸 구현해") and events[-1]["query_kind"] == "context"
     assert "Demucs" in run("이번에는 보컬 분리해") and "OR-Tools" not in run("이번에는 보컬 분리해")
-    assert run("그럼 오늘은 기분이 좋아") == ""
+    mood = run("그럼 오늘은 기분이 좋아")
+    assert "기분" in mood and "OR-Tools" not in mood and "Demucs" not in mood
+    assert run("그럼 고마워") == ""
     assert "OR-Tools" not in run("그걸 보컬 분리에 써봐")
     assert all("query" not in event for event in events)
 

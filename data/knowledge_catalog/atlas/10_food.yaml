@@ -5,7 +5,7 @@ curation:
 entries:
 - id: atlas.food.maillard_reaction
   kind: concept
-  path: ["생활", "조리와 식품"]
+  path: ["생활", "조리와 식품", "조리의 원리"]
   name: 마이야르 반응
   hint: 가열 중 아미노 화합물과 당의 반응
   aliases: [Maillard reaction, "스테이크 겉면을 갈색으로 맛있게 굽기", "빵 껍질이 노릇해지며 나는 구수한 향", "고기를 삶으면 구운 맛이 안 나는 이유", "팬에 구울 때 물기를 닦아야 하는 까닭"]
@@ -14,7 +14,7 @@ entries:
     section: food
 - id: atlas.food.caramelization
   kind: concept
-  path: ["생활", "조리와 식품"]
+  path: ["생활", "조리와 식품", "조리의 원리"]
   name: 캐러멜화
   hint: 당의 가열 분해와 갈변
   aliases: [Caramelization, "설탕을 녹여 갈색 시럽 만들기", "양파를 오래 볶으면 달아지는 이유", "달고나가 타서 쓴맛이 날 때", "푸딩 위에 얹는 갈색 소스 만드는 법"]
@@ -23,8 +23,8 @@ entries:
     section: food
 - id: atlas.food.emulsification
   kind: method
-  path: ["생활", "조리와 식품"]
-  name: 유화
+  path: ["생활", "조리와 식품", "조리의 원리"]
+  name: 유화 (조리)
   hint: 섞이지 않는 액체를 작은 방울로 분산
   aliases: [Emulsification, "드레싱의 기름과 식초가 자꾸 갈라질 때", "마요네즈를 직접 만들다 분리됐을 때", "기름과 물을 뽀얗게 섞이게 하기", "파스타 소스가 기름 따로 겉돌 때"]
   source:
@@ -42,7 +42,7 @@ entries:
 - id: atlas.food.fermentation
   kind: method
   path: ["생활", "조리와 식품"]
-  name: 발효
+  name: 발효 (식품)
   hint: 미생물의 대사로 식품 변화
   aliases: [Fermentation, "김치나 된장이 익어 가는 원리", "집에서 요구르트나 막걸리 담그기", "빵 반죽이 부풀어 오르게 하기", "균을 이용해 음식 맛을 깊게 만들기"]
   source:
@@ -114,7 +114,7 @@ entries:
 - id: atlas.food.braising
   kind: method
   path: ["생활", "조리와 식품"]
-  name: 브레이징
+  name: 브레이징 (조리)
   hint: 소량 액체와 낮은 열로 천천히 조리
   aliases: [Braising, "질긴 고기를 부드럽게 익히고 싶을 때", "국물 자작하게 넣고 오래 끓이는 요리", "갈비찜처럼 약한 불에 뭉근히 익히기", "싼 부위 고기를 맛있게 먹는 조리법"]
   source:
@@ -545,7 +545,7 @@ entries:
     section: craft
 - id: atlas.information.controlled_vocabulary
   kind: concept
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
   name: 통제어휘
   hint: 일관된 검색을 위한 용어 집합
   aliases: [Controlled vocabulary, "사람마다 꼬리표를 다르게 달아 검색 안 될 때", "태그에 쓸 낱말을 정해진 목록에서만 고르기", "같은 뜻 다른 말 때문에 자료가 누락될 때", "사내 문서 분류 낱말을 하나로 통일하기"]
@@ -554,7 +554,7 @@ entries:
     section: information
 - id: atlas.information.thesaurus
   kind: concept
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
   name: 시소러스
   hint: 동의 상하 연관 관계를 가진 어휘 체계
   aliases: [Thesaurus, "비슷한 말과 더 넓은 말 좁은 말 찾아보기", "검색어를 넓히거나 좁힐 낱말 고르기", "관련된 용어까지 함께 안내해 주는 사전", "같은 뜻 낱말을 대표어로 이끌어 주는 목록"]
@@ -563,7 +563,7 @@ entries:
     section: information
 - id: atlas.information.taxonomy
   kind: concept
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
   name: 분류체계
   hint: 항목을 구별해 배치하는 범주 체계
   aliases: [Taxonomy, "물건이나 자료를 나눌 큰 갈래와 작은 갈래", "도서관 책 번호처럼 자리를 정해주는 틀", "상품 범주 나무를 처음 짜야 할 때", "어느 칸에 넣을지 애매하지 않게 구획 정하기"]
@@ -572,7 +572,7 @@ entries:
     section: information
 - id: atlas.information.ontology
   kind: concept
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
   name: 온톨로지
   hint: 개체와 관계의 의미를 명시한 모형
   aliases: [Ontology, "개념들이 서로 어떤 사이인지 그물로 정리", "기계가 뜻을 알아듣게 분야 지식 적어두기", "환자·질병·약의 연결을 규칙으로 정의하기", "무엇이 무엇의 한 종류인지 추론시키기"]
@@ -581,7 +581,7 @@ entries:
     section: information
 - id: atlas.information.faceted_classification
   kind: method
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "지식의 분류"]
   name: 패싯 분류
   hint: 여러 독립 속성 축으로 분류
   aliases: [Faceted classification, 여러 기준으로 분류, "쇼핑몰처럼 색상·가격·상표로 걸러 찾기", "한 물건을 여러 기준으로 동시에 나누기", "폴더 하나에만 넣기 애매한 자료 정리", "왼쪽 조건 선택창으로 목록 좁히는 방식"]
@@ -617,7 +617,7 @@ entries:
     section: information
 - id: atlas.information.persistent_identifier
   kind: concept
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
   name: 영구식별자
   hint: 대상과 참조의 장기 식별
   aliases: [Persistent identifier, "주소가 바뀌어도 안 깨지는 논문 링크", "인용한 자료가 나중에도 찾아지게 하기", "연구자마다 평생 쓰는 고유 번호 받기", "자료 옮겨도 가리키는 번호는 그대로 두기"]
@@ -707,7 +707,7 @@ entries:
     section: information
 - id: atlas.information.digital_preservation
   kind: method
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
   name: 디지털 보존
   hint: 장기 접근과 무결성을 유지
   aliases: [Digital preservation, "옛 파일이 십 년 뒤에도 열릴지 걱정될 때", "오래된 저장 매체 자료를 안전하게 옮기기", "가족 사진 파일이 깨지지 않게 오래 두기", "프로그램이 사라져 못 여는 문서 대비하기"]
@@ -716,7 +716,7 @@ entries:
     section: information
 - id: atlas.information.version_control
   kind: concept
-  path: ["지식과 탐구", "조직과 탐색"]
+  path: ["지식과 탐구", "조직과 탐색", "탐색과 보존"]
   name: 버전 관리
   hint: 변경과 분기 이력의 추적
   aliases: [Version control, "최종·진짜최종 파일이 쌓여 헷갈릴 때", "누가 언제 무엇을 고쳤는지 기록 남기기", "잘못 고친 문서를 예전 상태로 돌리기", "여럿이 따로 고친 내용을 나중에 합치기"]

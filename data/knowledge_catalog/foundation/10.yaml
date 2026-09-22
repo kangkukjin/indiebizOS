@@ -23,7 +23,7 @@ entries:
     section: 예술과 표현
 - id: foundation.choreography
   kind: concept
-  path: [예술과 표현, 공연과 감상]
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
   name: 안무
   hint: 몸의 움직임과 공간·시간의 관계를 구성하는 작업
   aliases: [춤의 동작을 이어 하나의 작품으로 만들기, 여러 사람이 움직이는 대형, 동작의 반복과 변화, 무대 위 몸의 흐름 설계]
@@ -32,7 +32,7 @@ entries:
     section: 예술과 표현
 - id: foundation.performance_presence
   kind: concept
-  path: [예술과 표현, 공연과 감상]
+  path: ["예술과 표현", "공연과 감상", "무대와 몸"]
   name: 현장성
   hint: 공연의 동시적 만남과 공유된 시간·공간에서 생기는 경험
   aliases: [녹화와 실제 공연이 다르게 느껴지는 이유, 관객의 반응이 공연에 미치는 영향, 한 공간에서 함께 보는 경험, 매번 달라지는 무대의 분위기]
@@ -41,7 +41,7 @@ entries:
     section: 예술과 표현
 - id: foundation.art_criticism
   kind: concept
-  path: [예술과 표현, 공연과 감상]
+  path: ["예술과 표현", "공연과 감상", "감상과 예술맥락"]
   name: 예술비평
   hint: 작품의 형식·맥락·경험에 근거하여 해석하고 평가하는 활동
   aliases: [좋았다는 느낌을 구체적으로 설명하기, 작품의 표현 방식과 의미 연결, 감상과 평가의 근거 정리, 다른 해석을 비교하며 작품 보기]

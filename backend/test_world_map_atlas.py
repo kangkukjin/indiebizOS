@@ -15,7 +15,7 @@ def snapshot():
 
 
 def test_atlas_names_reach_the_selected_excerpt(snapshot):
-    entries = [e for e in snapshot.entries if e.id.startswith(("atlas.", "foundation."))]
+    entries = [e for e in snapshot.entries if e.id.startswith(("atlas.", "foundation.", "basics."))]
     assert len(entries) >= 1000
     assert len({e.source_section for e in entries}) >= 50
     failures = []
@@ -49,7 +49,9 @@ def test_new_fields_can_be_browsed_without_knowing_names(snapshot):
             continue
         result = catalog.lookup(ROOT, op="browse", path=list(path), limit=50)
         assert result["status"] == "ok"
-        assert sum(r["item_type"] == "entry" for r in result["items"]) >= 19
+        # 한 단계 아래 주제가 생겨도 그 안의 항목으로 탐색이 이어진다.
+        assert sum(1 if r["item_type"] == "entry" else r["entry_count"]
+                   for r in result["items"]) >= 19
 
 
 def test_same_size_same_mtime_edit_and_revert_updates_snapshot(world):
@@ -95,3 +97,36 @@ def test_editorial_seeds_and_external_relation_sources_are_distinct(snapshot):
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_same_word_different_world_senses_do_not_merge(snapshot):
+    for query, expected, excluded in [
+        ('유화 (회화)', '유화 (회화)', '유화 (조리)'),
+        ('교정 (계측)', '교정 (계측)', '교정 (출판)'),
+        ('지도에서 위도와 경도에 따라 위치를 시각화해', '위도와 경도', '경도 (재료)'),
+    ]:
+        candidates, _ = catalog.search(ROOT, snapshot, query)
+        names = {e.name for e, _ in candidates[:4]}
+        assert expected in names
+        assert excluded not in names
+
+
+def test_document_cache_handles_more_fragments_than_its_file_cache(tmp_path, monkeypatch):
+    import json
+    import yaml
+    directory = tmp_path / 'data/knowledge_catalog'
+    directory.mkdir(parents=True)
+    fragments = []
+    for n in range(64):
+        fragment = directory / f'part_{n}.yaml'
+        fragment.write_text(f'entries: []\n# fragment {n}\n')
+        fragments.append(str(fragment.relative_to(tmp_path)))
+    (directory / 'world.yaml').write_text(json.dumps({
+        'version': 2, 'entries': [], 'fragments': fragments}))
+    snapshot = catalog.load_snapshot(tmp_path)
+    # A bounded per-file cache may evict the root on the initial parse; warm it once.
+    assert catalog.load_snapshot(tmp_path) == snapshot
+    def unexpected(*args, **kwargs):
+        raise AssertionError('unchanged fragment batch reparsed')
+    monkeypatch.setattr(yaml, 'safe_load', unexpected)
+    assert catalog.load_snapshot(tmp_path) == snapshot

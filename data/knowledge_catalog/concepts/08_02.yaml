@@ -1,0 +1,86 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.08.1f6976926282
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 리드타임
+  hint: 주문·시작부터 완료·도착까지 걸리는 시간
+  aliases: ["주문한 뒤 받을 때까지 기다리는 기간"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.9f9ba9b3965b
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 처리량
+  hint: 단위시간에 완성·처리하는 양
+  aliases: ["한 시간에 얼마나 일을 끝내는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.786cf3b3d43b
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 가동률
+  hint: 능력이나 시간 중 실제 사용하는 비율
+  aliases: ["기계가 가능한 시간 중 얼마나 도는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.eaa60102ff35
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 물류
+  hint: 물자의 이동·보관과 관련 정보의 관리
+  aliases: ["물건을 필요한 곳에 제때 보내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.04e106ea1f43
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 수요예측
+  hint: 미래에 필요한 양을 추정하는 활동
+  aliases: ["얼마나 팔릴지 예상해 준비하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.49561af208de
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 채찍효과
+  hint: 공급망 상류로 갈수록 주문 변동이 커짐
+  aliases: ["작은 판매 변화가 큰 발주 변화가 되는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.ab7866e530cb
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 학습곡선
+  hint: 누적 경험에 따라 수행과 비용이 변화
+  aliases: ["반복하며 더 빠르고 덜 비싸게 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.0bf86b74df5b
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 아웃소싱
+  hint: 업무 일부를 외부 조직에 맡기는 방식
+  aliases: ["직접 하지 않고 다른 회사에 맡기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통
+- id: basics.08.3096180f9b59
+  kind: concept
+  path: ["경제와 조직", "생산과 물류", "생산과 유통"]
+  name: 수직통합
+  hint: 생산·유통의 연속 단계를 한 조직이 소유·관리
+  aliases: ["재료부터 판매까지 한 회사가 맡기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 경제와 조직/생산과 물류/생산과 유통

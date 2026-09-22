@@ -194,7 +194,7 @@ entries:
     section: research
 - id: atlas.research.operationalization
   kind: method
-  path: ["지식과 탐구", "연구 설계"]
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
   name: 조작적 정의
   hint: 추상 개념을 관측 기준으로 변환
   aliases: [Operationalization, "스트레스를 무엇으로 셀지 정해야 할 때", "막연한 말을 셀 수 있는 기준으로 바꾸기", "성실함을 출석 횟수로 볼지 정하는 일", "재려는 것을 어떻게 잴지 미리 약속해 두기"]
@@ -212,7 +212,7 @@ entries:
     section: research
 - id: atlas.research.internal_validity
   kind: concept
-  path: ["지식과 탐구", "연구 설계"]
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
   name: 내적 타당도
   hint: 연구 내부 인과 해석의 정당성
   aliases: [Internal validity, "성적이 오른 게 정말 수업 덕분인지 따지기", "실험 중 다른 원인이 끼어들지 않았는지 점검", "참가자가 중간에 빠져 결과가 흐려졌을 때", "원인과 결과라고 말해도 되는지 연구 안에서 확인"]
@@ -221,7 +221,7 @@ entries:
     section: research
 - id: atlas.research.external_validity
   kind: concept
-  path: ["지식과 탐구", "연구 설계"]
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
   name: 외적 타당도
   hint: 다른 조건으로 일반화할 수 있는 정도
   aliases: [External validity, "대학생으로 한 실험이 직장인에게도 통할지", "우리 매장 결과를 다른 지역에도 적용해도 되는지", "실험실에서 나온 결과가 현실에서도 맞을지 걱정", "한 나라 조사 결과를 다른 나라에 옮겨 말해도 될까"]
@@ -284,7 +284,7 @@ entries:
     section: research
 - id: atlas.research.stratified_sampling
   kind: method
-  path: ["지식과 탐구", "연구 설계"]
+  path: ["지식과 탐구", "연구 설계", "측정과 표집"]
   name: 층화표집
   hint: 부분집단별 표본 추출
   aliases: [Stratified sampling, "남녀와 연령대 비율 맞춰 골고루 뽑기", "소수 집단이 표본에서 빠지지 않게 하고 싶을 때", "학년별로 나눠 각각 몇 명씩 추첨하기", "전체 구성비대로 응답자 채우는 설문 설계"]
@@ -356,7 +356,7 @@ entries:
     section: research
 - id: atlas.research.case_study
   kind: method
-  path: ["지식과 탐구", "연구 설계"]
+  path: ["지식과 탐구", "연구 설계", "질문과 증거"]
   name: 사례연구
   hint: 경계가 있는 사례의 맥락 분석
   aliases: [Case study, "한 가게나 한 학교만 깊이 파고들어 조사하기", "성공한 회사 하나를 속속들이 들여다보고 싶을 때", "숫자보다 한 곳의 사정과 배경을 자세히 기록하기", "특이한 한 건을 중심으로 논문 쓰려 할 때"]
@@ -545,7 +545,7 @@ entries:
     section: statistics
 - id: atlas.causality.counterfactual
   kind: concept
-  path: ["지식과 탐구", "인과 추론"]
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
   name: 반사실
   hint: 실제로 일어나지 않은 조건의 결과
   aliases: [Counterfactual, "그때 약을 안 먹었다면 어땠을지 따져보기", "일어나지 않은 다른 선택의 결과를 상상해 비교", "광고를 안 했다면 매출이 얼마였을지 궁금할 때", "만약 그러지 않았다면을 기준으로 효과 말하기"]
@@ -572,7 +572,7 @@ entries:
     section: causality
 - id: atlas.causality.selection_bias
   kind: concept
-  path: ["지식과 탐구", "인과 추론"]
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
   name: 선택편향
   hint: 대상 선택 과정에서 생기는 왜곡
   aliases: [Selection bias, "설문에 답한 사람만 유독 만족도가 높을 때", "살아남은 회사만 보고 성공 비결 말하는 오류", "자원한 사람만 모았더니 결과가 좋아 보일 때", "조사 대상이 한쪽으로 쏠려 뽑혔는지 의심될 때"]
@@ -689,7 +689,7 @@ entries:
     section: causality
 - id: atlas.causality.natural_experiment
   kind: method
-  path: ["지식과 탐구", "인과 추론"]
+  path: ["지식과 탐구", "인과 추론", "원인과 설명"]
   name: 자연실험
   hint: 외부 사건이 만든 할당 차이 이용
   aliases: [Natural experiment, "추첨이나 재해처럼 우연히 갈린 상황 활용하기", "직접 실험은 못 하지만 세상이 대신 나눠줬을 때", "옆 도시만 제도가 바뀐 걸 기회로 비교하기", "입대 추첨 당첨 여부로 군 복무 영향 알아보기"]

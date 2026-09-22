@@ -1,0 +1,1085 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.09.37d732edc7e1
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 존재론
+  hint: 무엇이 존재하고 어떤 종류인지 탐구
+  aliases: ["세상에 있다고 말하는 것의 뜻"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.715cf63ce5d7
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 인식론
+  hint: 지식의 성립·근거·한계를 탐구
+  aliases: ["무엇을 안다고 할 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.4c3d0af386a9
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 형이상학
+  hint: 현실의 근본 구조와 원리를 탐구
+  aliases: ["사물과 원인과 시간의 기본 성격"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.1290b095e796
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 실재론
+  hint: 인식과 독립된 실재 등을 인정하는 입장
+  aliases: ["우리가 몰라도 세계가 존재하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.f0fbf3666ce1
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 관념론
+  hint: 정신·관념의 역할을 근본적으로 보는 입장
+  aliases: ["현실과 마음의 관계를 어떻게 보는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.f6e944c2d2f9
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 경험론
+  hint: 지식에서 경험의 역할을 강조하는 입장
+  aliases: ["관찰과 경험으로 무엇을 알 수 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.e0b145682597
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 합리론
+  hint: 이성과 선천적 원리 등의 역할을 강조하는 입장
+  aliases: ["경험 전에 생각으로 알 수 있는 것"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.d29689cf6c4c
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 회의주의
+  hint: 지식과 정당화 가능성을 검토·의심하는 태도
+  aliases: ["당연하게 믿는 근거를 다시 묻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.26b84a074751
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 실용주의
+  hint: 관념의 의미를 실천과 결과 등에 연결하는 입장
+  aliases: ["생각이 실제 경험에서 어떤 차이를 만드는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.ba311a36f653
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 현상과 실재
+  hint: 나타나는 모습과 존재의 성격을 구별하는 문제
+  aliases: ["보이는 것과 실제인 것의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.08a1c517f486
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 주체와 객체
+  hint: 인식·행위하는 쪽과 그 대상의 관계
+  aliases: ["아는 사람과 알려지는 대상 구별"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.b9bca54be25f
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 인과성
+  hint: 원인과 결과의 연결에 관한 성질
+  aliases: ["일이 다른 일을 일으킨다는 뜻"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.872d502a0fb2
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 필연성과 우연성
+  hint: 반드시 그러함과 달리 될 수 있음의 구분
+  aliases: ["다른 결과가 가능했는지 생각하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.c24b9a31937e
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 본질과 우연적 속성
+  hint: 대상의 성격을 정하는 특성과 부수적 특성
+  aliases: ["바뀌어도 같은 것으로 남는 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.6fa77119bb19
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 자유의지
+  hint: 행위를 스스로 선택할 수 있는지에 관한 문제
+  aliases: ["내 선택이 얼마나 나에게 달려 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.f216c25affc3
+  kind: concept
+  path: ["인문", "철학과 윤리", "존재와 인식"]
+  name: 결정론
+  hint: 상태와 법칙이 이후의 상태를 결정한다는 입장
+  aliases: ["이전 조건이 같으면 결과도 같아지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/존재와 인식
+- id: basics.09.93675720c63c
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 윤리학
+  hint: 옳은 행위와 좋은 삶의 기준을 탐구
+  aliases: ["어떻게 살아야 하는지를 묻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.f34843c77b3b
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 규범윤리
+  hint: 행위를 평가할 기준과 원리를 탐구
+  aliases: ["어떤 선택이 옳은지 판단하는 틀"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.30c11a5803a3
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 메타윤리
+  hint: 도덕 언어·판단·근거의 성격을 탐구
+  aliases: ["좋다고 말하는 것의 의미"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.c95efc8b3d19
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 응용윤리
+  hint: 구체적 실천 영역의 윤리 문제를 탐구
+  aliases: ["새 기술과 실제 선택의 윤리적 쟁점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.896dc028089b
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 결과주의
+  hint: 행위의 결과를 도덕 평가의 중심으로 삼음
+  aliases: ["어떤 결과를 만드는지로 선택 평가"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.87c242333a3e
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 정의
+  hint: 권리·기회·부담 등의 정당한 배분과 관계
+  aliases: ["무엇이 공정한 몫과 대우인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.34be85f436eb
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 자율
+  hint: 스스로의 원칙과 판단에 따라 행위하는 성격
+  aliases: ["남의 지시만이 아닌 자기 판단으로 살기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.a864236b01c3
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 존엄성
+  hint: 존중받아야 할 기본적 가치에 관한 개념
+  aliases: ["사람을 수단으로만 다루지 않는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.34720ed784c1
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 행복
+  hint: 좋은 삶과 만족을 나타내는 다의적 개념
+  aliases: ["즐거움과 잘 사는 삶의 관계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.715fe8435ed8
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 복지
+  hint: 삶이 잘되어 가는 상태와 조건
+  aliases: ["사람에게 무엇이 이로운지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.d9e8885b1d9b
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 책임
+  hint: 행위와 결과에 대한 응답·귀속의 관계
+  aliases: ["내가 한 일에 어떻게 답해야 하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.5b9383206111
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 도덕적 딜레마
+  hint: 서로 충돌하는 도덕적 요구의 상황
+  aliases: ["어느 쪽을 골라도 중요한 것을 어기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.92c4d4c57707
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 관용
+  hint: 차이나 반대에도 공존을 허용하는 태도
+  aliases: ["동의하지 않아도 함께 살아가기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.8af227e2d7c8
+  kind: concept
+  path: ["인문", "철학과 윤리", "가치와 삶"]
+  name: 연대
+  hint: 공통 문제에 대해 함께 책임지고 행동하는 관계
+  aliases: ["남의 어려움을 함께 짊어지는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/철학과 윤리/가치와 삶
+- id: basics.09.99b0c3f828fa
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 연대기
+  hint: 사건을 시간 순서로 배열한 기록
+  aliases: ["무슨 일이 먼저 있었는지 정리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.73b7b6e71e0a
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 장기지속
+  hint: 긴 시간에 걸쳐 유지되는 역사적 구조
+  aliases: ["사건보다 천천히 바뀌는 삶의 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.e66ace03f3fb
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 변화와 연속성
+  hint: 시간 속 달라짐과 유지됨의 관계
+  aliases: ["시대가 바뀌어도 남는 것 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.ca7564b6a305
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 농경의 시작
+  hint: 재배와 사육 중심 생활로의 전환
+  aliases: ["사람들이 정착해 식량을 생산하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.004a56a63db8
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 도시의 형성
+  hint: 인구와 기능이 집중된 정주지의 발달
+  aliases: ["큰 마을과 도시가 생기는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.684f1350b501
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 문자와 기록
+  hint: 언어와 정보를 기호로 보존하는 방식
+  aliases: ["기억을 바깥에 남기며 사회가 달라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.d8d2380ccae8
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 제국
+  hint: 여러 지역과 집단을 지배하는 정치적 구조
+  aliases: ["넓은 지역을 묶어 다스린 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.5f27d11a69d0
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 봉건제
+  hint: 토지·신분·의무의 관계에 기초한 역사적 질서
+  aliases: ["땅과 충성의 관계로 사회가 조직되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.3a94472edaff
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 식민주의
+  hint: 외부 집단이 지역과 주민을 지배·이용하는 체계
+  aliases: ["다른 지역의 지배가 삶을 바꾸는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.490c161f6c60
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 산업혁명
+  hint: 기계화와 공장제 등 생산·사회 구조의 큰 변화
+  aliases: ["손작업에서 기계 생산으로 바뀐 시대"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.024e542b9bb2
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 근대화
+  hint: 근대적 제도·생산·생활 방식으로의 다양한 변화
+  aliases: ["국가와 도시와 생활이 크게 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.063452e544dc
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 국민국가
+  hint: 국가와 국민 정체성이 결합한 정치 형태
+  aliases: ["사람들을 하나의 국민으로 묶는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.dd1be0a38d4b
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 혁명
+  hint: 정치·사회 질서의 급격하고 근본적인 변화
+  aliases: ["기존 질서를 바꾸려는 집단적 움직임"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.756aec5aeeef
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 탈식민화
+  hint: 식민 지배를 벗어나 정치·문화적 자율성을 형성
+  aliases: ["지배받던 사회가 독립과 자기결정을 찾기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.c5d51b079808
+  kind: concept
+  path: ["인문", "역사와 고고학", "시간과 역사변동"]
+  name: 세계화
+  hint: 국경을 넘는 연결과 상호작용의 확대
+  aliases: ["먼 지역의 일이 일상에 영향을 주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/역사와 고고학/시간과 역사변동
+- id: basics.09.1a8384fb4ade
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 불교
+  hint: 깨달음과 괴로움의 소멸 등을 중심으로 한 전통
+  aliases: ["집착과 고통을 바라보는 사상"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.ffd496d8c013
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 기독교
+  hint: 예수 그리스도에 대한 신앙을 중심으로 한 전통
+  aliases: ["구원과 사랑을 말하는 종교적 세계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.d9aba4b3d76c
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 이슬람
+  hint: 유일신 신앙과 계시 등을 중심으로 한 전통
+  aliases: ["신앙과 생활 규범이 연결된 전통"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.3bdf080de833
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 유대교
+  hint: 언약·율법·공동체 전승 등을 중심으로 한 전통
+  aliases: ["신앙과 민족의 역사가 이어지는 전통"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.02f073b42a46
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 힌두교
+  hint: 다양한 신앙·철학·실천을 포함하는 인도 종교 전통
+  aliases: ["삶과 우주를 여러 전통으로 이해하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.eb15171a8bbe
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 유교
+  hint: 인간관계와 수양·예·정치를 중시하는 사상 전통
+  aliases: ["관계 속에서 바르게 사는 법을 묻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.41d4e4349979
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 도교
+  hint: 도와 자연·수양 등을 중심으로 한 다양한 전통
+  aliases: ["자연스러운 삶과 우주의 질서를 생각하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.ae49c93a75a6
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 신토
+  hint: 일본의 신과 의례·장소 전승에 관련된 전통
+  aliases: ["지역과 자연에 깃든 신앙의 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.251eaaa2a602
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 시크교
+  hint: 인도에서 형성된 유일신적 신앙 전통
+  aliases: ["평등과 봉사를 강조하는 신앙 공동체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.d38e84ad36d8
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 애니미즘
+  hint: 비인간 존재에도 인격·정신을 인정하는 세계 이해
+  aliases: ["동물과 숲을 관계 맺는 존재로 보기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.b7c51630e810
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 샤머니즘
+  hint: 매개자의 의례를 통한 영적 관계의 전통들
+  aliases: ["의례를 통해 보이지 않는 세계와 소통"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.0b5169a066dc
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 세속적 인본주의
+  hint: 초자연적 권위보다 인간의 이성과 존엄을 중시
+  aliases: ["종교 없이도 삶의 가치를 찾는 관점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.41ec0932e24c
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 종교개혁
+  hint: 종교 제도·교리·실천을 바꾸려는 역사적 운동
+  aliases: ["신앙의 방식과 권위가 재편되는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.c234879a9981
+  kind: concept
+  path: ["인문", "종교와 사상", "종교의 전통"]
+  name: 종교혼합
+  hint: 서로 다른 종교 요소가 결합하는 현상
+  aliases: ["여러 신앙이 만나 새로운 형태가 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교의 전통
+- id: basics.09.534faf8194df
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 신앙
+  hint: 종교적 대상과 의미에 대한 믿음과 신뢰
+  aliases: ["삶의 방향을 특정 믿음에 두기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.f715dc8c7f77
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 교리
+  hint: 종교 공동체가 체계화한 가르침
+  aliases: ["공동체가 무엇을 믿는지 정리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.ba5b3adc52be
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 경전
+  hint: 권위 있는 종교적 가르침과 기록
+  aliases: ["신앙 공동체가 읽고 전하는 문헌"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.1b22759f0091
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 예배
+  hint: 신성한 대상에 대한 공동·개인적 실천
+  aliases: ["함께 모여 신앙을 표현하는 행위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.2e5118a2f378
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 기도
+  hint: 신성한 대상에 호소·감사·성찰하는 실천
+  aliases: ["믿음의 언어로 바람과 마음을 표현"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.4ed7c05c6906
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 명상
+  hint: 주의와 마음의 상태를 다루는 다양한 실천
+  aliases: ["마음의 움직임을 관찰하고 가라앉히기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.212e40abb6d0
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 수행
+  hint: 종교·윤리적 목적을 위한 지속적 실천
+  aliases: ["삶의 태도를 반복 훈련으로 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.8aa2760defc9
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 성지순례
+  hint: 특별한 종교적 장소로 향하는 여정
+  aliases: ["중요한 장소를 찾아 의미를 경험"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.7545ea04e45a
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 구원
+  hint: 고통·죄·한계 등에서 벗어남의 종교적 개념
+  aliases: ["삶의 근본 문제에서 벗어난다는 뜻"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.42d8c48bebd2
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 해탈
+  hint: 속박과 괴로움에서 벗어남을 뜻하는 개념
+  aliases: ["집착의 고리에서 자유로워지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.924289173593
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 업
+  hint: 행위와 그 결과의 관계에 관한 인도적 개념
+  aliases: ["한 행동이 이후 삶에 이어지는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.9551694e1f06
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 윤회
+  hint: 생명이 반복되는 생을 거친다는 관념
+  aliases: ["삶과 죽음이 순환한다고 보는 관점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.9f0182b27b5b
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 초월
+  hint: 일상적 경험이나 한계를 넘어서는 성격
+  aliases: ["현재의 경험 너머 의미를 생각하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.d5b4485d5d3c
+  kind: concept
+  path: ["인문", "종교와 사상", "종교적 삶과 사유"]
+  name: 신정론
+  hint: 선한 신과 악·고통의 존재를 함께 설명하는 문제
+  aliases: ["좋은 신이 있다면 왜 고통이 있는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/종교와 사상/종교적 삶과 사유
+- id: basics.09.bfa42cf6a12e
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 시
+  hint: 압축된 언어·리듬·이미지 등을 활용하는 문학
+  aliases: ["적은 말로 감각과 생각을 불러오기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.88c77f43092f
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 소설
+  hint: 인물과 사건 등을 허구적으로 구성하는 산문 문학
+  aliases: ["꾸며 낸 이야기로 삶을 탐색하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.66d7b88b0082
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 희곡
+  hint: 공연을 위한 대사와 행위 중심의 문학 형식
+  aliases: ["무대에서 펼쳐질 이야기를 글로 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.82dd4cc16573
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 수필
+  hint: 경험과 생각을 비교적 자유롭게 풀어내는 산문
+  aliases: ["자신의 경험에서 생각을 펼치기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.9cad63ef337f
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 서사시
+  hint: 사건과 인물의 이야기를 노래하는 긴 시
+  aliases: ["영웅과 공동체의 이야기를 시로 전하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.03a33d270230
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 서정시
+  hint: 감정과 사유의 표현을 중심으로 하는 시
+  aliases: ["개인의 느낌을 언어로 압축하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.4107e8355c4b
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 풍자
+  hint: 웃음과 비틀기로 대상의 문제를 드러내는 표현
+  aliases: ["우스운 이야기로 사회를 비판하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.c0afa7f8d192
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 우화
+  hint: 비유적 이야기로 의미와 교훈을 전하는 형식
+  aliases: ["동물 이야기로 인간사를 말하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.c1ea90596cac
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 설화
+  hint: 집단에서 전승되는 이야기
+  aliases: ["사람들 사이에서 전해 온 옛이야기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.d7a38fd8b5b8
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 전설
+  hint: 특정 인물·장소 등에 연결된 전승 이야기
+  aliases: ["동네의 바위나 인물에 얽힌 이야기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.adb0815650d3
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 민담
+  hint: 민간에서 전해지는 다양한 이야기
+  aliases: ["세대를 거치며 들려주는 옛이야기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.279b5d608910
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 비극
+  hint: 중대한 갈등과 파국 등을 다루는 극적 형식
+  aliases: ["피할 수 없는 갈등이 만드는 슬픔"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.d41ed7dcaa02
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 희극
+  hint: 웃음과 해소 등을 중심으로 하는 극적 형식
+  aliases: ["오해와 갈등이 웃음으로 풀리는 이야기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.70858578247f
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 성장소설
+  hint: 인물의 형성과 성숙을 중심으로 한 소설
+  aliases: ["주인공이 경험을 통해 달라지는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.517ff9f4210f
+  kind: concept
+  path: ["인문", "문학과 서사", "문학의 갈래"]
+  name: 장르문학
+  hint: 특정한 관습과 독자 기대를 공유하는 문학
+  aliases: ["추리와 환상처럼 규칙이 있는 이야기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/문학의 갈래
+- id: basics.09.8a1facd6d542
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 서사
+  hint: 사건을 시간과 의미 관계로 조직한 이야기
+  aliases: ["일어난 일을 하나의 이야기로 묶기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.7735b1d2f552
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 플롯
+  hint: 사건을 선택·배열하여 효과를 만드는 구조
+  aliases: ["같은 사건도 순서에 따라 달리 느껴지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.16673e931e14
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 인물
+  hint: 이야기 속에서 행위와 경험을 하는 존재
+  aliases: ["등장하는 사람의 욕망과 변화"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.479bae588d1f
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 서사 갈등
+  hint: 이야기를 움직이는 목표와 힘의 충돌
+  aliases: ["주인공이 원하는 것을 막는 힘"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.d643b2528920
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 배경
+  hint: 이야기의 시간·공간·사회적 조건
+  aliases: ["사건이 어디서 언제 벌어지는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.496ee7ee4bb8
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 서술자
+  hint: 이야기를 전달하는 목소리
+  aliases: ["누가 이야기를 들려주는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.fd2798960782
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 초점화
+  hint: 이야기 정보가 특정 관점으로 제한·조직됨
+  aliases: ["누구의 눈으로 사건을 보는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.291b38c58228
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 모티프
+  hint: 작품 안팎에서 반복되는 요소
+  aliases: ["계속 등장하는 이미지나 상황"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.09053ac2411b
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 주제
+  hint: 작품이 탐구하는 중심 문제와 의미
+  aliases: ["이야기가 무엇을 생각하게 하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.caee3f3e1fcc
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 아이러니
+  hint: 표면과 실제 의미·결과의 어긋남
+  aliases: ["말한 것과 뜻한 것이 달라지는 효과"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.40e3d297714b
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 알레고리
+  hint: 이야기 전체가 다른 의미 체계에 대응하는 표현
+  aliases: ["겉이야기와 속뜻이 나란히 이어지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.b6d161e60970
+  kind: concept
+  path: ["인문", "문학과 서사", "서사의 구성"]
+  name: 열린 결말
+  hint: 최종 의미나 결과를 확정하지 않는 마무리
+  aliases: ["이야기 뒤를 독자가 생각하게 하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/문학과 서사/서사의 구성
+- id: basics.09.a7661883a18b
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 음성
+  hint: 발화에서 실제로 만들어지는 말소리
+  aliases: ["입과 목으로 소리를 만드는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.7f7b606aae58
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 음운
+  hint: 언어 체계에서 기능적으로 구별되는 소리
+  aliases: ["뜻을 구별하는 소리의 단위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.76c1230323a4
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 형태소
+  hint: 의미나 문법 기능을 가진 최소 단위
+  aliases: ["단어를 더 작은 뜻의 조각으로 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.df1b33bc83ac
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 어휘
+  hint: 언어에서 사용하는 단어와 표현의 집합
+  aliases: ["어떤 말을 알고 쓰는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.02479e5cde1d
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 통사
+  hint: 단어들이 문장을 이루는 구조
+  aliases: ["단어 순서와 결합이 뜻을 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.4f44b7f8f231
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 의미론
+  hint: 언어 표현의 의미를 연구하는 영역
+  aliases: ["단어와 문장이 무엇을 뜻하는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.91818c81f896
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 지시
+  hint: 표현이 특정 대상이나 맥락을 가리키는 관계
+  aliases: ["여기와 그 사람이 무엇을 가리키는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.0a84bd9e8482
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 다의어
+  hint: 관련된 여러 뜻을 가진 표현
+  aliases: ["한 단어가 문맥에 따라 다른 뜻이 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.2daa6cb9c9e0
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 동음이의어
+  hint: 소리는 같지만 뜻이 다른 표현
+  aliases: ["같은 소리를 다른 의미로 쓰기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.4b34bed8cc1f
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 동의어
+  hint: 비슷하거나 같은 의미를 가진 표현
+  aliases: ["다른 말로 비슷한 뜻을 전하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.8a638b8545d6
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 반의어
+  hint: 의미상 대립하는 표현
+  aliases: ["서로 반대 뜻의 말"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.5491b7d0053d
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 문법범주
+  hint: 시제·수·격 등 언어의 체계적 구분
+  aliases: ["말에서 시간과 역할을 표시하는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.3de799871d03
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 문장성분
+  hint: 문장 안에서 표현이 수행하는 기능
+  aliases: ["누가 무엇을 어떻게 했는지 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.43177db9707d
+  kind: concept
+  path: ["인문", "분석과 번역", "언어의 구조"]
+  name: 어순
+  hint: 문장 구성요소가 배열되는 순서
+  aliases: ["언어마다 단어 순서가 다른 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어의 구조
+- id: basics.09.005242e44c4e
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 방언
+  hint: 지역·집단 등에 따라 구별되는 언어 변이
+  aliases: ["같은 언어도 지역마다 다른 말"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.b2dcdb78427c
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 표준어
+  hint: 공적 기준으로 정한 언어 변이
+  aliases: ["학교와 방송에서 기준으로 쓰는 말"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.a28f2cb17903
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 사회방언
+  hint: 사회적 집단에 따른 언어의 차이
+  aliases: ["세대와 직업마다 다른 말투"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.7a615c1bfd97
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 격식
+  hint: 상황과 관계에 맞춰 달라지는 언어 양식
+  aliases: ["친구와 공식 자리에서 다르게 말하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.fff6dcf23051
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 높임법
+  hint: 사회적 관계를 언어 형태로 나타내는 체계
+  aliases: ["상대와 대상에 따라 말을 높이기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회
+- id: basics.09.cbb52df60a98
+  kind: concept
+  path: ["인문", "분석과 번역", "언어와 사회"]
+  name: 이중언어
+  hint: 두 언어를 사용하는 능력이나 상태
+  aliases: ["두 언어로 생활하고 생각하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 인문/분석과 번역/언어와 사회

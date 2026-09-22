@@ -1,0 +1,1085 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: basics.04.3bfe6cb52b4f
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 세포
+  hint: 생명체를 구성하는 기본 구조와 기능 단위
+  aliases: ["생물의 몸을 이루는 작은 방"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.58d99ba68056
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 원핵세포
+  hint: 막으로 둘러싸인 핵이 없는 세포
+  aliases: ["세균의 세포가 사람 세포와 다른 점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.f9c5104f12cb
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 진핵세포
+  hint: 핵과 막성 소기관을 가진 세포
+  aliases: ["핵이 있는 복잡한 세포의 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.e2e3dad75967
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 세포핵
+  hint: 유전물질을 주로 보관하는 진핵세포 소기관
+  aliases: ["세포 안에서 유전 정보가 모인 곳"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.5179d2ec0065
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 세포질
+  hint: 세포막 안에서 핵 등을 제외한 내부 영역
+  aliases: ["세포 안의 반응이 이루어지는 바탕"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.bbc0c37300a1
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 미토콘드리아
+  hint: 세포 호흡과 에너지 전환에 관여하는 소기관
+  aliases: ["세포가 사용할 에너지를 만드는 장소"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.e5f95f9a9e58
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 엽록체
+  hint: 식물과 조류의 광합성 소기관
+  aliases: ["잎의 세포가 빛을 이용하는 곳"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.6dbfa921d9aa
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 리보솜
+  hint: RNA 정보를 읽어 단백질을 합성하는 구조
+  aliases: ["유전 정보를 따라 단백질 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.1f2f48c9097c
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 소포체
+  hint: 단백질·지질 합성과 수송에 관여하는 막 구조
+  aliases: ["세포 안의 물질 생산과 이동 통로"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.00ec64ef1816
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 골지체
+  hint: 단백질과 지질을 가공·분류하는 소기관
+  aliases: ["세포가 만든 물질을 포장해 보내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.f6c928564528
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 리소좀
+  hint: 분해효소를 포함한 세포 내 소기관
+  aliases: ["낡은 세포 부품과 물질을 분해하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.8564f22abf42
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 세포골격
+  hint: 세포 형태·운동·수송을 담당하는 단백질 망
+  aliases: ["세포를 지탱하고 움직이는 뼈대"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.0c94931e1074
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 세포벽
+  hint: 세포막 바깥에서 지지·보호하는 구조
+  aliases: ["식물 세포가 모양을 유지하는 단단한 벽"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.8ad1e2051530
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 액포
+  hint: 물질 저장과 삼투 조절 등에 관여하는 주머니
+  aliases: ["식물 세포 안의 큰 저장 공간"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.a84295a19034
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 세포분화
+  hint: 세포가 특정 구조와 기능을 갖게 되는 과정
+  aliases: ["같은 출발의 세포가 근육과 신경이 되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.263417d07e3a
+  kind: concept
+  path: ["생명", "분자와 세포", "세포의 구조"]
+  name: 줄기세포
+  hint: 자기재생과 다른 세포로의 분화 능력을 가진 세포
+  aliases: ["여러 종류의 세포로 자랄 수 있는 세포"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/세포의 구조
+- id: basics.04.4d9e779cd9bd
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: DNA
+  hint: 유전 정보의 저장에 중심적 역할을 하는 핵산
+  aliases: ["유전 정보가 적힌 분자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.0b51a0aecbe3
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: RNA
+  hint: 정보 전달·조절·촉매 등에 관여하는 핵산
+  aliases: ["유전 정보를 전달하고 작동시키는 분자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.66e4918893c3
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 유전자
+  hint: 기능적 산물이나 유전적 특성과 관련된 서열 단위
+  aliases: ["부모에게서 물려받는 정보의 단위"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.b16ac96cf290
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 염색체
+  hint: DNA와 단백질 등으로 구성된 유전물질 구조
+  aliases: ["유전 정보가 묶여 있는 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.f87d5e700596
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 유전체
+  hint: 생명체가 가진 전체 유전물질의 집합
+  aliases: ["한 생물의 유전 정보 전체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.64afa5d71597
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: DNA 복제
+  hint: DNA를 주형으로 새로운 DNA를 만드는 과정
+  aliases: ["세포가 나뉘기 전 유전 정보를 복사"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.d7ff047bcc2f
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 전사 (유전정보)
+  hint: DNA 등의 정보를 RNA로 옮기는 과정
+  aliases: ["유전 정보의 작업용 사본 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.bf7419422d9a
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 번역 (단백질 합성)
+  hint: RNA의 코돈 정보를 단백질 서열로 바꾸는 과정
+  aliases: ["정보의 문자를 단백질 재료로 읽기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.a09171201a28
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 코돈
+  hint: 아미노산 등을 지정하는 세 염기의 단위
+  aliases: ["유전 정보를 세 글자씩 읽는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.5cbc572c1c78
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 돌연변이
+  hint: 유전물질 서열이나 구조의 변화
+  aliases: ["물려줄 정보가 달라지는 원인"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.3f7b0aad371a
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 대립유전자
+  hint: 같은 유전자 위치에서 나타나는 서로 다른 형태
+  aliases: ["같은 특징에 대한 다른 유전 정보"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.78d5a855afd5
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 유전자형과 표현형
+  hint: 유전적 구성과 관찰되는 특성의 구분
+  aliases: ["가진 유전자와 겉으로 나타난 모습의 차이"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.1f506b16d4ed
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 우성과 열성
+  hint: 이형접합에서 대립유전자의 표현 관계
+  aliases: ["두 유전 형태 중 어떤 특성이 나타나는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.100354640444
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 멘델 유전
+  hint: 분리와 독립 등으로 설명하는 유전의 기본 양상
+  aliases: ["부모의 특징이 자손에 나뉘어 나타나기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.5f180a6e71a0
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 유전자 재조합
+  hint: 유전물질의 새로운 조합이 생기는 과정
+  aliases: ["부모 정보가 섞여 자손마다 달라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.06748f532645
+  kind: concept
+  path: ["생명", "분자와 세포", "유전과 정보"]
+  name: 후성유전
+  hint: 서열 변화 없이 유전자 작동 상태가 유지·변화함
+  aliases: ["같은 유전자라도 다르게 켜지는 조절"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/유전과 정보
+- id: basics.04.a6c76cc2d5c5
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 물질대사
+  hint: 생물체에서 일어나는 화학반응의 총체
+  aliases: ["몸 안에서 물질을 만들고 분해하는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.a88578f0760b
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 동화작용
+  hint: 작은 물질로 더 복잡한 물질을 합성
+  aliases: ["영양분으로 몸의 재료를 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.51c1ba6c4c5d
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 이화작용
+  hint: 복잡한 물질을 분해하는 대사 과정
+  aliases: ["큰 분자를 쪼개 에너지 얻기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.c5492d28ce4b
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 효소
+  hint: 생체 반응을 촉진하는 촉매
+  aliases: ["몸속 화학반응을 빠르게 하는 물질"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.098321b99453
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: ATP
+  hint: 세포의 에너지 전달에 널리 쓰이는 분자
+  aliases: ["세포가 바로 꺼내 쓰는 에너지 매개체"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.def553e0dd64
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 해당과정
+  hint: 포도당을 분해하는 초기 대사 경로
+  aliases: ["당에서 에너지를 얻는 첫 단계"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.e8a6801be7bb
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 시트르산 회로
+  hint: 산화 반응으로 에너지 운반체를 만드는 대사 회로
+  aliases: ["세포 호흡에서 이어지는 순환 반응"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.9a4d42e44998
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 전자전달계
+  hint: 전자 이동과 막의 에너지 차이를 연결하는 체계
+  aliases: ["전자 흐름으로 세포 에너지 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.a6767f8a6f2f
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 발효 (대사)
+  hint: 외부 전자수용체 없이 유기물을 변환하는 대사 방식
+  aliases: ["산소가 없어도 에너지를 얻는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.b9bef8592c31
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 능동수송
+  hint: 에너지를 사용하여 농도 차이에 거슬러 물질 이동
+  aliases: ["세포가 필요한 물질을 거슬러 들여오기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.60f38e4a8876
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 수동수송
+  hint: 별도 에너지 투입 없이 기울기에 따른 물질 이동
+  aliases: ["농도가 다른 쪽으로 자연히 퍼지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.e4c5c8a26bd7
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 세포내섭취
+  hint: 막으로 둘러싸 물질을 세포 안으로 들이는 과정
+  aliases: ["세포가 큰 물질을 감싸 먹기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.2e37eef3a3de
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 세포외배출
+  hint: 소낭이 막과 합쳐져 물질을 밖으로 내보냄
+  aliases: ["세포가 만든 물질을 밖으로 분비"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.db851e2b46ff
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 기질특이성
+  hint: 효소 등이 특정 대상에 선택적으로 작용하는 성질
+  aliases: ["맞는 재료에만 작동하는 효소"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.341ebf067ea2
+  kind: concept
+  path: ["생명", "분자와 세포", "물질대사"]
+  name: 대사조절
+  hint: 생체 반응의 속도와 경로를 조정하는 과정
+  aliases: ["필요한 만큼만 물질을 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/분자와 세포/물질대사
+- id: basics.04.3ddf16f83e80
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 진화
+  hint: 세대에 걸친 집단의 유전적 특성 변화
+  aliases: ["오랜 세월 생물 집단이 달라지는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.173a68fc4563
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 변이
+  hint: 개체 사이에 나타나는 특성의 차이
+  aliases: ["같은 종인데 서로 다른 모습"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.d7370e4c799b
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 적응도
+  hint: 다음 세대에 유전적 기여를 하는 상대적 정도
+  aliases: ["얼마나 많은 자손을 남기는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.ee0b02414fcd
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 성선택
+  hint: 짝짓기 성공 차이로 특성이 달라지는 과정
+  aliases: ["화려한 깃털이 생기는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.500b69f8b2ba
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 유전자 흐름
+  hint: 집단 사이의 이동·번식으로 유전자가 전달됨
+  aliases: ["다른 집단과 섞여 유전 정보가 바뀌기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.04897e5a2afe
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 창시자 효과
+  hint: 소수 개체가 새 집단을 만들 때 생기는 유전적 편향
+  aliases: ["몇 마리에서 시작한 섬 집단의 특징"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.aae9c62c8ecf
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 병목효과
+  hint: 집단 크기의 급감으로 유전 다양성이 줄어듦
+  aliases: ["개체 수가 줄었다 늘어도 다양성이 낮은 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.36ce4a06382f
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 생식적 격리
+  hint: 집단 사이 유전자 교환을 막는 생식상의 장벽
+  aliases: ["서로 만나도 자손을 남기기 어려워지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.140db4d4363f
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 공진화
+  hint: 상호작용하는 종들이 서로의 진화에 영향을 줌
+  aliases: ["꽃과 곤충이 서로 맞춰 달라지는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.6cbea243b2f9
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 수렴진화
+  hint: 다른 계통에서 비슷한 특성이 독립적으로 생김
+  aliases: ["서로 먼 생물인데 모양이 비슷한 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.d7e9d49f903b
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 적응방산
+  hint: 공통 조상에서 여러 생태적 형태로 분화
+  aliases: ["한 계통이 다양한 환경에 맞춰 갈라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.32fbd887d05a
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 멸종
+  hint: 어떤 생물 집단이나 종의 생존 개체가 사라짐
+  aliases: ["한 종이 지구에서 없어지는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.143961075b1d
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 대멸종
+  hint: 짧은 지질 기간에 많은 종이 사라지는 사건
+  aliases: ["많은 생물 종류가 한꺼번에 줄어든 시기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.8d813c3ecd5a
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 공통조상
+  hint: 여러 계통이 공유하는 조상 집단
+  aliases: ["서로 다른 생물의 뿌리가 이어지는 지점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.d49d486315cd
+  kind: concept
+  path: ["생명", "진화와 다양성", "진화의 기작"]
+  name: 진화계통수
+  hint: 공통 기원과 분기 관계를 나타낸 구조
+  aliases: ["생물들이 어떤 순서로 갈라졌는지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/진화의 기작
+- id: basics.04.62003983e167
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 종
+  hint: 생물 분류와 진화에서 쓰는 기본 집단 단위
+  aliases: ["어디까지 같은 종류의 생물인지"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.82def7aaaa52
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 생물분류
+  hint: 생물을 특징과 계통에 따라 조직하는 체계
+  aliases: ["여러 생물의 관계를 묶어 정리"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.215a587b4e88
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 세균
+  hint: 원핵생물의 한 큰 계통
+  aliases: ["발효와 분해 등에 관여하는 작은 생물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.478263c58ef1
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 고세균
+  hint: 세균과 구별되는 원핵생물 계통
+  aliases: ["세균처럼 보여도 계통이 다른 미생물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.fd2489833f99
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 원생생물
+  hint: 다양한 단세포 중심 진핵생물을 일컫는 편의 집단
+  aliases: ["작은 진핵생물들의 다양한 생활"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.4d5feda160a5
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 균류
+  hint: 흡수 영양을 하며 독특한 세포벽을 가진 진핵생물
+  aliases: ["버섯과 곰팡이가 양분을 얻는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.94f070de286f
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 식물
+  hint: 광합성을 중심으로 진화한 주요 진핵생물 계통
+  aliases: ["빛을 이용하며 뿌리내려 사는 생물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.227e25cceb2f
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 동물
+  hint: 다세포이며 주로 먹이를 섭취하는 진핵생물 계통
+  aliases: ["먹고 움직이는 다양한 다세포 생물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.38b5772e1520
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 바이러스
+  hint: 숙주 세포를 이용해 증식하는 유전물질 복합체
+  aliases: ["세포 없이 숙주에서만 복제되는 입자"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.8728df62406c
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 척추동물
+  hint: 척추를 포함하는 몸 구조를 가진 동물 집단
+  aliases: ["등뼈가 있는 동물들의 공통점"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.f7bfe482af03
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 절지동물
+  hint: 관절 있는 부속지와 외골격을 가진 동물
+  aliases: ["곤충과 거미와 게의 공통 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.a8f721f22182
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 연체동물
+  hint: 연한 몸과 외투막 등을 특징으로 하는 동물
+  aliases: ["조개와 문어가 같은 무리인 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.0d3d8b3de305
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 포유류
+  hint: 젖샘 등을 가진 척추동물 계통
+  aliases: ["새끼에게 젖을 먹이는 동물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.3173500266a2
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 조류
+  hint: 깃털 등을 가진 공룡 계통의 척추동물
+  aliases: ["새의 몸을 특징짓는 구조"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.7fd64e4d7bc2
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 양서류
+  hint: 현생 분류에서 개구리·도롱뇽 등을 포함하는 계통
+  aliases: ["물과 육지에 걸친 생활 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.d90d65ea8267
+  kind: concept
+  path: ["생명", "진화와 다양성", "생물의 다양성"]
+  name: 피자식물
+  hint: 밑씨가 씨방 안에 있는 꽃식물
+  aliases: ["꽃과 열매를 만드는 식물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/진화와 다양성/생물의 다양성
+- id: basics.04.450c8a414b68
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 뿌리
+  hint: 식물을 지지하고 물과 양분을 흡수하는 기관
+  aliases: ["식물이 흙에서 물을 얻는 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.9aa7eeb0d6ac
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 줄기
+  hint: 지지와 물질 수송을 하는 식물 기관
+  aliases: ["뿌리와 잎을 이어 주는 기둥"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.1f5ed7d9a9f8
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 잎
+  hint: 주로 광합성과 기체교환을 하는 식물 기관
+  aliases: ["넓은 잎이 빛을 받는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.e2c6e13dc6e8
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 물관
+  hint: 물과 무기양분의 수송에 관여하는 조직
+  aliases: ["뿌리에서 잎까지 물이 올라가는 통로"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.eb3a4baccd08
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 체관
+  hint: 당 등 유기물 수송에 관여하는 조직
+  aliases: ["잎에서 만든 양분을 다른 곳으로 보내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.7b7c66e73631
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 기공
+  hint: 잎 표면 등에서 기체교환을 조절하는 구멍
+  aliases: ["식물이 숨 쉬고 물을 내보내는 문"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.22bbbcceaf70
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 분열조직
+  hint: 세포분열이 활발한 식물의 성장 조직
+  aliases: ["식물이 끝에서 계속 자라는 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.e1436bbd76df
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 식물호르몬
+  hint: 식물의 생장과 반응을 조절하는 신호물질
+  aliases: ["식물의 키와 뿌리 성장을 조절하는 신호"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.6dd5d9fcdd7e
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 광주기성
+  hint: 낮과 밤의 길이에 반응하는 생리 성질
+  aliases: ["계절에 맞춰 꽃이 피는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.4a5aa6c0da0c
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 휴면
+  hint: 성장과 활동이 일시적으로 억제된 상태
+  aliases: ["씨앗이 바로 싹트지 않고 기다리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.be508c61def7
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 발아
+  hint: 씨앗 등이 성장 활동을 시작하는 과정
+  aliases: ["씨앗에서 싹이 나오는 조건"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.ae192cce97d5
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 수분
+  hint: 꽃가루가 수술에서 암술 등에 전달되는 과정
+  aliases: ["곤충이 꽃 사이에서 하는 일"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.3537f0cc3ec9
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 수정
+  hint: 생식세포가 융합하여 새 개체의 출발을 형성
+  aliases: ["꽃가루 전달 뒤 씨가 생기는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.3fb9cec6c7ea
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 종자
+  hint: 배와 저장양분 등을 포함하는 번식 구조
+  aliases: ["작은 씨앗 안에 새 식물이 준비되기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.34e07c18fd5a
+  kind: concept
+  path: ["생명", "생리와 행동", "식물의 구조와 기능"]
+  name: 열매
+  hint: 주로 씨방이 발달하여 씨를 보호·퍼뜨리는 구조
+  aliases: ["씨앗을 감싸고 이동을 돕는 부분"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/식물의 구조와 기능
+- id: basics.04.837bea9d219f
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 섭식
+  hint: 먹이를 얻고 섭취하는 행동
+  aliases: ["동물이 먹이를 찾고 먹는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.0ee9f8952a4f
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 소화
+  hint: 먹이를 흡수 가능한 물질로 분해하는 과정
+  aliases: ["먹은 것을 몸에 쓸 수 있게 바꾸기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.83280f9bff4f
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 호흡
+  hint: 기체교환과 관련된 생리 과정
+  aliases: ["생물이 산소를 얻고 이산화탄소를 내보내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.d042d40fb7cb
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 배설
+  hint: 대사 노폐물과 과잉 물질을 몸 밖으로 내보냄
+  aliases: ["몸에 쌓이면 안 되는 물질을 버리기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.66fc8640d1bc
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 체온조절
+  hint: 열 생산과 손실을 조절하는 과정
+  aliases: ["추위와 더위에 몸이 대응하는 방식"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.2c2ce21902b0
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 내온성과 외온성
+  hint: 대사열과 외부 열에 대한 체온 유지의 의존 차이
+  aliases: ["새와 도마뱀이 온도를 다르게 유지하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.0c6c9b3fbcc8
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 반사 (생리)
+  hint: 특정 자극에 대한 비교적 자동적인 반응
+  aliases: ["생각하기 전에 몸이 반응하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.17832cc6fc6d
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 본능행동
+  hint: 학습 없이도 나타나는 종 특유의 행동 경향
+  aliases: ["처음부터 할 수 있는 동물의 행동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.2c4384e7ca1d
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 각인
+  hint: 특정 시기에 빠르게 형성되는 지속적 학습
+  aliases: ["어린 새가 특정 대상을 따라다니기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.fcb6aaa13599
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 조건형성
+  hint: 자극과 반응·결과의 연합을 배우는 과정
+  aliases: ["경험을 통해 신호와 결과를 연결하기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.aab236fa3c56
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 이동과 회유
+  hint: 생활사와 환경에 따른 동물의 장소 이동
+  aliases: ["계절마다 먼 곳으로 이동하는 동물"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.89410dd8cd2b
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 영역행동
+  hint: 특정 공간을 차지하고 방어하는 행동
+  aliases: ["동물이 자기 구역을 표시하는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.c0e230fdfca5
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 동면
+  hint: 추운 시기 대사와 활동이 크게 낮아지는 상태
+  aliases: ["겨울 동안 에너지를 아끼며 지내기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.9f0270ab585d
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 사회행동
+  hint: 같은 종 개체 사이의 상호작용
+  aliases: ["무리에서 협력하거나 경쟁하는 행동"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.c0d993541a25
+  kind: concept
+  path: ["생명", "생리와 행동", "동물의 기능과 행동"]
+  name: 친족선택
+  hint: 친족의 번식을 통한 유전자 전달 효과의 선택
+  aliases: ["가족을 돕는 행동이 유지되는 이유"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/동물의 기능과 행동
+- id: basics.04.ebf087bddc71
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 무성생식
+  hint: 생식세포 융합 없이 새 개체를 만드는 번식
+  aliases: ["한 개체에서 비슷한 자손이 생기기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.79d41157d57d
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 유성생식
+  hint: 생식세포의 융합을 포함하는 번식
+  aliases: ["두 유전 정보가 섞여 새 개체 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.63d609bcbaa4
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 유사분열
+  hint: 복제된 염색체를 딸세포에 분배하는 분열
+  aliases: ["몸의 세포가 같은 정보를 나누기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.c70ab7e79679
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 감수분열
+  hint: 염색체 수를 줄여 생식세포 등을 만드는 분열
+  aliases: ["자손에게 절반의 유전 정보를 주기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.0ef5790e055e
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 수정란
+  hint: 생식세포 융합으로 생긴 첫 세포
+  aliases: ["새 개체가 시작되는 한 세포"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.a94b81ce5452
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 배아
+  hint: 초기 발생 단계의 개체
+  aliases: ["한 세포에서 몸의 틀이 만들어지는 시기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.b282ffe88018
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 난할
+  hint: 초기 배아에서 연속적으로 일어나는 세포분열
+  aliases: ["작은 세포들이 빠르게 나뉘는 초기 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.417c41e7b34c
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 배엽
+  hint: 발생 과정에서 조직과 기관을 만드는 기본 세포층
+  aliases: ["몸의 여러 기관이 유래하는 층"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.0e5953053eaa
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 기관형성
+  hint: 배아에서 기관의 형태와 기능이 만들어짐
+  aliases: ["발생 중 눈과 팔다리가 생기는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.ac8d75972aa2
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 발생유도
+  hint: 일부 세포가 이웃 세포의 발생 방향에 영향을 줌
+  aliases: ["세포끼리 신호를 주어 몸의 모양 만들기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.83095e833e9f
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 형태형성
+  hint: 세포의 배열과 변화로 몸의 형태가 생성됨
+  aliases: ["세포들이 조직의 모양을 만드는 과정"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생
+- id: basics.04.b2a3cd8baee0
+  kind: concept
+  path: ["생명", "생리와 행동", "번식과 발생"]
+  name: 세포자멸사
+  hint: 조절된 경로에 따라 세포가 제거되는 과정
+  aliases: ["몸을 만들며 필요 없는 세포가 사라지기"]
+  source:
+    path: docs/world_map/M_depth_editorial_2026_09_22.md
+    section: 생명/생리와 행동/번식과 발생

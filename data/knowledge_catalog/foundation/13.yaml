@@ -5,7 +5,7 @@ curation:
 entries:
 - id: foundation.condensation
   kind: concept
-  path: [생활, 주거와 살림]
+  path: ["생활", "주거와 살림", "집과 생활관리"]
   name: 결로
   hint: 표면 온도가 이슬점 이하일 때 수증기가 물방울로 맺히는 현상
   aliases: [창문 안쪽에 물방울이 맺히는 이유, 차가운 벽이 젖는 현상, 온도와 습기가 만나는 표면, 겨울철 실내 물방울의 원리]
@@ -23,7 +23,7 @@ entries:
     section: 생활
 - id: foundation.surfactant
   kind: concept
-  path: [생활, 주거와 살림]
+  path: ["생활", "주거와 살림", "집과 생활관리"]
   name: 계면활성제
   hint: 계면 장력을 변화시켜 젖음·분산·세정 등을 돕는 물질
   aliases: [물만으로 안 지워지는 기름때, 세제가 때를 떼어내는 원리, 물과 기름 사이에서 작용하는 성분, 비누로 씻으면 깨끗해지는 이유]
@@ -41,7 +41,7 @@ entries:
     section: 생활
 - id: foundation.preventive_maintenance
   kind: concept
-  path: [생활, 주거와 살림]
+  path: ["생활", "주거와 살림", "집과 생활관리"]
   name: 예방정비
   hint: 고장 이전에 점검·교체·관리를 수행하여 기능을 유지하는 방식
   aliases: [고장 나기 전에 물건을 돌보기, 정기적으로 점검할 설비, 작은 이상이 큰 수리로 번지는 것을 줄이기, 사용 기간에 따른 소모품 관리]
@@ -50,7 +50,7 @@ entries:
     section: 생활
 - id: foundation.indoor_air_quality
   kind: concept
-  path: [생활, 주거와 살림]
+  path: ["생활", "주거와 살림", "집과 생활관리"]
   name: 실내공기질
   hint: 실내의 입자·기체 오염물과 환기 등 공기 상태의 특성
   aliases: [집 안 공기의 오염원 알아보기, 새 가구나 조리에서 나오는 물질, 실외와 실내 공기가 다른 이유, 실내 공기 상태를 구성하는 요인]
@@ -77,7 +77,7 @@ entries:
     section: 생활
 - id: foundation.fabric_shrinkage
   kind: concept
-  path: [생활, 의복과 섬유]
+  path: ["생활", "의복과 섬유", "옷과 생활용품"]
   name: 직물 수축
   hint: 수분·열·기계 작용으로 천의 치수와 구조가 변하는 현상
   aliases: [세탁 뒤 옷이 작아지는 이유, 옷감이 젖었다 마르며 변하는 크기, 소재에 따라 다른 수축, 열과 물이 천에 주는 변화]
@@ -113,7 +113,7 @@ entries:
     section: 생활
 - id: foundation.activities_daily_living
   kind: concept
-  path: [생활, 돌봄과 생애]
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
   name: 일상생활 수행능력
   hint: 식사·옷입기·이동 등 기본 생활 활동을 수행하는 능력
   aliases: [혼자 할 수 있는 생활과 도움이 필요한 일, 매일의 기본 활동을 나누어 보기, 자립 생활의 구체적인 구성, 돌봄 지원의 범위 이해]
@@ -122,7 +122,7 @@ entries:
     section: 생활
 - id: foundation.caregiver_burden
   kind: concept
-  path: [생활, 돌봄과 생애]
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
   name: 돌봄 부담
   hint: 돌봄 역할에 수반되는 시간적·신체적·정서적·경제적 부담
   aliases: [가족을 돌보는 사람이 지치는 이유, 보이지 않는 돌봄 시간과 비용, 역할을 나누지 못해 생기는 압박, 돌보는 사람의 생활도 살피기]
@@ -131,7 +131,7 @@ entries:
     section: 생활
 - id: foundation.respite_care
   kind: concept
-  path: [생활, 돌봄과 생애]
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
   name: 휴식 지원 돌봄
   hint: 주 돌봄자가 쉴 수 있도록 돌봄을 일정 기간 대신하는 지원
   aliases: [가족 돌봄자가 잠시 쉴 시간, 돌봄을 번갈아 맡는 방식, 쉬는 동안 이어지는 도움, 장기간 돌봄의 지속 가능성]
@@ -140,7 +140,7 @@ entries:
     section: 생활
 - id: foundation.life_transition
   kind: concept
-  path: [생활, 돌봄과 생애]
+  path: ["생활", "돌봄과 생애", "돌봄과 일상자립"]
   name: 생애 전환
   hint: 입학·취업·이주·은퇴 등으로 역할과 생활이 재구성되는 과정
   aliases: [은퇴 뒤 생활을 다시 짜기, 큰 변화 이후의 역할 적응, 익숙한 일상이 바뀌는 시기, 삶의 단계가 넘어갈 때 필요한 조정]
@@ -158,7 +158,7 @@ entries:
     section: 생활
 - id: foundation.play
   kind: concept
-  path: [생활, 여가와 이동]
+  path: ["생활", "여가와 이동", "놀이와 여행"]
   name: 놀이
   hint: 자발적 참여와 규칙·상상·탐색을 통해 즐거움을 얻는 활동
   aliases: [결과보다 하는 과정이 즐거운 일, 아이와 어른이 노는 방식, 정해진 목표 없이 탐색하기, 규칙을 만들며 함께 즐기기]
@@ -176,7 +176,7 @@ entries:
     section: 생활
 - id: foundation.wayfinding
   kind: concept
-  path: [생활, 여가와 이동]
+  path: ["생활", "여가와 이동", "놀이와 여행"]
   name: 길찾기
   hint: 공간 단서와 인지 지도를 이용하여 위치와 이동 경로를 파악하는 과정
   aliases: [낯선 건물에서 방향을 잡기, 표지판과 주변 특징으로 위치 파악, 지도를 실제 공간과 연결하기, 길을 잃지 않게 공간을 읽기]

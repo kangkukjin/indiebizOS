@@ -5,7 +5,7 @@ curation:
 entries:
 - id: foundation.social_norm
   kind: concept
-  path: [사회, 문화와 공동체]
+  path: ["사회", "문화와 공동체", "문화와 정체성"]
   name: 사회규범
   hint: 집단에서 기대되고 유지되는 행동의 기준
   aliases: [말하지 않아도 지키는 모임의 규칙, 다들 그렇게 한다는 압력, 공식 규칙과 관습의 차이, 공동체에서 허용되는 행동]

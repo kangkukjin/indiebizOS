@@ -5,7 +5,7 @@ curation:
 entries:
 - id: foundation.gatekeeping
   kind: concept
-  path: [지식과 탐구, 정보와 매체]
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
   name: 게이트키핑
   hint: 정보가 선택·편집되어 수용자에게 전달되는 과정
   aliases: [수많은 사건 중 어떤 것이 뉴스가 되는지, 편집자가 무엇을 빼고 넣는지, 정보가 전달되기 전 거치는 선택, 화면에 보이는 소식이 정해지는 방식]
@@ -14,7 +14,7 @@ entries:
     section: 지식과 탐구
 - id: foundation.agenda_setting
   kind: concept
-  path: [지식과 탐구, 정보와 매체]
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
   name: 의제설정
   hint: 매체가 특정 주제의 중요성과 주목도에 영향을 주는 과정
   aliases: [많이 다뤄지는 일이 중요해 보이는 이유, 사람들이 무엇을 이야기하게 되는지, 보도량과 관심의 관계, 특정 주제가 계속 등장하는 영향]
@@ -23,7 +23,7 @@ entries:
     section: 지식과 탐구
 - id: foundation.media_literacy
   kind: concept
-  path: [지식과 탐구, 정보와 매체]
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
   name: 미디어 리터러시
   hint: 매체의 표현·생산 조건·정보를 이해하고 평가하며 사용하는 능력
   aliases: [영상과 뉴스의 제작 의도 읽기, 누가 어떤 방식으로 만든 정보인지, 매체를 소비하고 만들어 쓰는 능력, 내용과 표현 형식을 함께 살피기]
@@ -32,7 +32,7 @@ entries:
     section: 지식과 탐구
 - id: foundation.framing_media
   kind: concept
-  path: [지식과 탐구, 정보와 매체]
+  path: ["지식과 탐구", "정보와 매체", "매체와 정보유통"]
   name: 미디어 프레이밍
   hint: 사건의 특정 측면을 선택·강조하여 해석의 틀을 만드는 과정
   aliases: [같은 사건의 제목이 전혀 다른 이유, 강조한 부분에 따라 달라지는 인상, 어떤 맥락이 빠졌는지 살피기, 사진과 표현이 해석에 미치는 영향]
@@ -41,7 +41,7 @@ entries:
     section: 지식과 탐구
 - id: foundation.source_independence
   kind: concept
-  path: [지식과 탐구, 정보와 매체]
+  path: ["지식과 탐구", "정보와 매체", "신뢰와 정보판단"]
   name: 출처 독립성
   hint: 여러 정보가 동일한 원천을 되풀이하는지 구별하는 성질
   aliases: [여러 기사인데 원래 자료는 하나일 때, 서로 베낀 보도를 별개 증거로 세지 않기, 정보의 최초 출처를 구별하기, 확인 경로가 실제로 몇 개인지]

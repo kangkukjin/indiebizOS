@@ -1,0 +1,89 @@
+{
+  "scope": "Static source comparison only; no workflow execution, model/API call, benchmark, registration, or quality measurement.",
+  "generation_method": "Informed rewrite after reading current idiom and implementation; not blind regeneration.",
+  "repository_head_before_artifact_commit": "ed791ef982c99c90f970c36237440619a540f79a",
+  "legacy_source": "d3b40470:data/idioms/ai_tips_report.ibl",
+  "current_source": "data/idioms/ai_tips_report.ibl",
+  "unchanged_helper_sha256": "575e804957577419aa34c2a4e3adc17d0c58fae3b2bd5f7603242f0772a4aa2d",
+  "metrics": {
+    "legacy_v1": {
+      "characters": 9195,
+      "utf8_bytes": 11463,
+      "lines": 40,
+      "sha256": "f993f40b510c57ae94c2dfa06d19a67b5699c40ee1297d5eda22be8cf0056d3a"
+    },
+    "current_v2": {
+      "characters": 5791,
+      "utf8_bytes": 7203,
+      "lines": 44,
+      "sha256": "d7cd12dc2935b2068fbcb5fff85c549394f0047e1325f18ba51c911baf74beb3",
+      "signature": [
+        "설정"
+      ],
+      "parser_top_level_entries": 51,
+      "parameter_issues": [],
+      "typecheck": {
+        "ok": true,
+        "issues": [],
+        "types": [],
+        "fn_returns": {
+          "AI팁보고서비교": "items⟨열 미상⟩"
+        }
+      },
+      "return_type": "items⟨열 미상⟩"
+    },
+    "candidate_v3": {
+      "characters": 4574,
+      "utf8_bytes": 5872,
+      "lines": 37,
+      "sha256": "395d860058e938156750a4d4b1ccc20213c92ac52d27d007a845c6ebc6356235",
+      "signature": [
+        "설정"
+      ],
+      "parser_top_level_entries": 39,
+      "parameter_issues": [],
+      "typecheck": {
+        "ok": true,
+        "issues": [],
+        "types": [],
+        "fn_returns": {
+          "AI팁보고서비교": "items⟨열 미상⟩"
+        }
+      },
+      "return_type": "items⟨열 미상⟩"
+    }
+  },
+  "static_checks": {
+    "seven_ai_instructions_identical": true,
+    "four_diagnostic_envelope_expressions_identical": true,
+    "seven_each_options_identical": true,
+    "two_grounded_extractions_identical": true,
+    "thirteen_script_stage_order_identical": true,
+    "public_signature_identical": true,
+    "ai_contract_shared_without_change": true,
+    "current_snapshot_matches_operational_source": true
+  },
+  "script_stage_order": [
+    "start",
+    "queries",
+    "search",
+    "metadata",
+    "videos",
+    "transcripts",
+    "candidates",
+    "compared",
+    "chosen",
+    "details",
+    "reviewed",
+    "draft",
+    "finish"
+  ],
+  "candidate_character_reduction_vs_current_percent": 21.015,
+  "candidate_character_reduction_vs_legacy_percent": 50.256,
+  "measurements_not_performed": [
+    "report_quality",
+    "wall_clock_time",
+    "model_tokens",
+    "runtime_equivalence"
+  ]
+}

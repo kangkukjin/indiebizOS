@@ -377,7 +377,7 @@ if EXEMPT:
 
 # ── §1C 골든 파이프 (문법+통화 흐름) ──
 PIPES = [
-  ("naver>>filter>>take", '[sense:search]{source: "naver", query: "AI"} >> [table:filter]{where: "title != "} >> [table:take]{n: 3}', "items"),
+  ("naver>>filter>>take", '[sense:search]{source: "naver", query: "AI"} >> [table:filter]{where: {field: "title", op: "ne", value: ""}} >> [table:take]{n: 3}', "items"),
   ("world_bank>>chart",   '[sense:world_bank]{indicator: "인구", country: "한국"} >> [table:chart]{chart_type: "line"}', "chart"),
   ("paper>>take>>document",'[sense:paper]{query: "transformer"} >> [table:take]{n: 5} >> [table:document]{format: "html"}', "doc"),
   ("legal>>dedup>>take",  '[sense:legal]{query: "도로교통법"} >> [table:dedup]{} >> [table:take]{n: 3}', "items"),

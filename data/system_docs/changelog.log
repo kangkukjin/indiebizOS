@@ -2043,3 +2043,5 @@
 [2026-09-21] 판정 전용 [table:judge] 추가 — ai-ops의 Jev 직접 API 어댑터. boolean/choice/score, 행×질문 일괄 요청, 원 행 보존·평평한 판정 열, unknown≠false, 응답 전수 검증·토큰 원장. TYPESAFE_API_KEY는 .env에만 저장. 실제 IBL 용례 12건 실행·해마/학습 JSON 시딩, 관련 회귀 84건 및 빌드·층·Android 관문 통과. 설계 docs/JEV_JUDGMENT_2026_09_21.md, 가이드 data/guides/judgment.md.
 
 [2026-09-21] BUG_FIX: episode 3942 필터 사전검증 — 조건 파서 공유, ~= 등 미지원 기호 연산자와 잘못된 정규식 조기 거절. 빈 입력/context/논리식·별칭·함수 몸 검증 보강.
+
+[2026-09-23] 조종실 파이프 흐름 점검 수리: naver>>filter>>take의 값 없는 `title !=` 조건을 `{field: "title", op: "ne", value: ""}`로 교체. 필터 사전검증 강화 뒤 점검 문장 자체가 거절되어 발생한 4/5 FAIL을 해소하고, 빈 제목 제외 의도를 명시. 함께 드러난 배포 목록 누락(ai_tips_report.py·test_ai_tips_report.py)은 build_core_manifest.py로 재생성.

@@ -71,11 +71,13 @@
     "scripts": [
       "Cloudflare사용량.py",
       "ai_era_news.py",
+      "ai_tips_report.py",
       "arch_render_cli.py",
       "arxiv최신피드.py",
       "github저장소메타.py",
       "judgment_idioms.py",
       "nest_tip_rows.py",
+      "test_ai_tips_report.py",
       "test_judgment_idioms.py",
       "tips_nest.py",
       "world_map_lookup.py",

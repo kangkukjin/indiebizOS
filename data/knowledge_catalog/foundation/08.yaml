@@ -1,0 +1,59 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.inflation
+  kind: concept
+  path: [경제와 조직, 거시경제와 노동]
+  name: 인플레이션
+  hint: 경제 전반의 물가 수준이 지속적으로 오르는 현상
+  aliases: [같은 돈으로 살 수 있는 양이 줄 때, 개별 가격 인상과 전체 물가 상승, 돈의 구매력 변화, 생활비가 전반적으로 오르는 이유]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 경제와 조직
+- id: foundation.business_cycle
+  kind: concept
+  path: [경제와 조직, 거시경제와 노동]
+  name: 경기순환
+  hint: 생산·소비·투자·고용 등이 확장과 수축을 반복하는 움직임
+  aliases: [경제가 좋아졌다 나빠지는 흐름, 매출과 채용이 함께 줄어드는 시기, 호황과 불황이 이어지는 과정, 경제 활동의 오르내림]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 경제와 조직
+- id: foundation.productivity
+  kind: concept
+  path: [경제와 조직, 거시경제와 노동]
+  name: 생산성
+  hint: 투입 자원에 비해 산출되는 재화와 서비스의 양
+  aliases: [같은 시간에 더 많이 만드는 방법, 일하는 시간과 성과의 차이, 설비와 기술이 산출에 주는 영향, 투입 대비 결과 비교]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 경제와 조직
+- id: foundation.human_capital
+  kind: concept
+  path: [경제와 조직, 거시경제와 노동]
+  name: 인적자본
+  hint: 생산 활동에 영향을 주는 개인의 지식·기술·경험과 건강
+  aliases: [배움과 경험이 일의 능력에 주는 영향, 숙련이 임금과 연결되는 방식, 사람에게 축적되는 업무 역량, 교육을 투자로 보는 관점]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 경제와 조직
+- id: foundation.labor_market_segmentation
+  kind: concept
+  path: [경제와 조직, 거시경제와 노동]
+  name: 노동시장 분절
+  hint: 일자리 집단 사이의 이동 장벽과 보상·조건의 구조적 차이
+  aliases: [비슷한 일을 해도 처우가 다른 이유, 일자리 사이를 옮기기 어려운 구조, 안정된 직장과 불안정한 직장의 격차, 노동시장이 여러 부분으로 나뉘는 현상]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 경제와 조직
+- id: foundation.monetary_policy
+  kind: concept
+  path: [경제와 조직, 거시경제와 노동]
+  name: 통화정책
+  hint: 중앙은행이 금리와 유동성 등에 영향을 주어 경제를 조절하는 정책
+  aliases: [기준금리가 경제에 전해지는 경로, 금리가 소비와 투자에 미치는 영향, 중앙은행이 물가를 다루는 방식, 돈을 빌리는 비용과 경기의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 경제와 조직

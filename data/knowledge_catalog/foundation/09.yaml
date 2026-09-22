@@ -1,0 +1,113 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.sacred_profane
+  kind: concept
+  path: [인문, 종교와 사상]
+  name: 성스러움과 세속성
+  hint: 특별한 의미로 구별된 영역과 일상적 영역의 구분
+  aliases: [어떤 장소나 물건을 특별하게 대하는 이유, 일상과 종교적 공간의 차이, 금기와 성스러운 대상, 공동체가 특별한 의미를 부여하는 방식]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.myth
+  kind: concept
+  path: [인문, 종교와 사상]
+  name: 신화
+  hint: 세계·인간·공동체의 기원과 질서를 상징적으로 서술하는 이야기
+  aliases: [옛사람들의 세상 기원 이야기, 신과 영웅의 이야기가 전하는 뜻, 공동체의 시작을 설명하는 서사, 이야기로 표현한 세계관]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.secularization
+  kind: concept
+  path: [인문, 종교와 사상]
+  name: 세속화
+  hint: 종교의 사회적 위치와 제도·생활의 관계가 변화하는 과정
+  aliases: [정치와 종교의 영역이 나뉘는 변화, 종교가 일상에 미치는 영향의 변화, 근대화와 신앙의 관계, 종교 기관의 역할이 달라지는 과정]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.religious_pluralism
+  kind: concept
+  path: [인문, 종교와 사상]
+  name: 종교다원주의
+  hint: 여러 종교 전통의 공존과 관계를 다루는 관점
+  aliases: [다른 신앙을 가진 사람들이 함께 사는 방식, 종교 사이의 대화, 여러 종교가 공존하는 사회, 믿음의 차이를 대하는 관점]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.asceticism
+  kind: concept
+  path: [인문, 종교와 사상]
+  name: 금욕주의
+  hint: 욕망과 생활을 절제하여 정신적·윤리적 목적을 추구하는 태도
+  aliases: [생활을 단순하게 줄이는 수행, 즐거움을 절제하는 종교적 이유, 몸의 훈련과 정신적 목표, 소유와 욕망을 줄이는 사상]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.worldview
+  kind: concept
+  path: [인문, 종교와 사상]
+  name: 세계관
+  hint: 세계와 인간의 위치·의미에 관한 기본적인 이해의 틀
+  aliases: [사람마다 세상을 다르게 보는 뿌리, 삶의 의미를 해석하는 기본 생각, 신념들이 연결되는 전체 그림, 인간과 자연의 관계를 보는 관점]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.metaphor
+  kind: concept
+  path: [인문, 문학과 서사]
+  name: 은유
+  hint: 다른 대상의 관계나 성질을 빌려 의미를 구성하는 표현
+  aliases: [직접 말하지 않고 다른 것에 빗대기, 시에서 낯선 두 대상이 연결될 때, 표현이 문자 그대로가 아닌 이유, 비유가 생각을 바꾸는 방식]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.symbol
+  kind: concept
+  path: [인문, 문학과 서사]
+  name: 상징
+  hint: 구체적 대상이 다른 의미나 관념을 환기하는 관계
+  aliases: [작품 속 색이나 물건이 뜻하는 것, 반복되는 사물이 주는 의미, 눈에 보이는 것으로 추상적 생각 표현, 맥락에 따라 달라지는 표상의 뜻]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.literary_genre
+  kind: concept
+  path: [인문, 문학과 서사]
+  name: 문학 장르
+  hint: 형식·관습·주제와 독서 기대에 따른 문학의 갈래
+  aliases: [시와 소설의 읽는 방식 차이, 독자가 기대하는 이야기 규칙, 비극과 희극의 특성, 문학 작품을 갈래로 이해하기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.intertextuality
+  kind: concept
+  path: [인문, 문학과 서사]
+  name: 상호텍스트성
+  hint: 작품이 다른 텍스트와 맺는 인용·변형·응답의 관계
+  aliases: [다른 작품을 알고 읽으면 달라지는 뜻, 옛이야기를 바꿔 쓴 소설, 작품 속 인용과 패러디, 이야기들이 서로 대화하는 방식]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.characterization
+  kind: concept
+  path: [인문, 문학과 서사]
+  name: 인물 형상화
+  hint: 행동·대화·묘사 등으로 작품 속 인물의 성격을 구성하는 방식
+  aliases: [등장인물의 성격이 드러나는 장면, 말투와 행동으로 인물 이해, 설명하지 않고 성격을 보여주기, 이야기 속 사람이 변하는 과정]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문
+- id: foundation.poetic_meter
+  kind: concept
+  path: [인문, 문학과 서사]
+  name: 운율
+  hint: 말의 소리·강세·길이·반복이 만드는 리듬과 형식
+  aliases: [시를 소리 내 읽을 때 느껴지는 박자, 행의 길이와 반복이 주는 효과, 시어의 소리 배열, 뜻뿐 아니라 소리로 작품 읽기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 인문

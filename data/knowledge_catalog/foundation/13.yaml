@@ -1,0 +1,212 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.condensation
+  kind: concept
+  path: [생활, 주거와 살림]
+  name: 결로
+  hint: 표면 온도가 이슬점 이하일 때 수증기가 물방울로 맺히는 현상
+  aliases: [창문 안쪽에 물방울이 맺히는 이유, 차가운 벽이 젖는 현상, 온도와 습기가 만나는 표면, 겨울철 실내 물방울의 원리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.ventilation
+  kind: concept
+  path: [생활, 주거와 살림]
+  name: 환기
+  hint: 실내외 공기를 교환하여 오염물과 수분 등을 배출하는 과정
+  aliases: [집 안 공기가 답답할 때, 창문을 열어 공기를 바꾸는 원리, 실내에 쌓인 냄새와 습기, 공기청정과 공기 교환의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.surfactant
+  kind: concept
+  path: [생활, 주거와 살림]
+  name: 계면활성제
+  hint: 계면 장력을 변화시켜 젖음·분산·세정 등을 돕는 물질
+  aliases: [물만으로 안 지워지는 기름때, 세제가 때를 떼어내는 원리, 물과 기름 사이에서 작용하는 성분, 비누로 씻으면 깨끗해지는 이유]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.capillary_action
+  kind: concept
+  path: [생활, 주거와 살림]
+  name: 모세관 현상
+  hint: 좁은 틈에서 표면장력과 젖음성에 따라 액체가 이동하는 현상
+  aliases: [수건이 물을 빨아들이는 이유, 좁은 틈을 따라 물이 올라갈 때, 심지를 따라 액체가 이동하는 방식, 종이 끝을 적시면 물이 퍼지는 현상]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.preventive_maintenance
+  kind: concept
+  path: [생활, 주거와 살림]
+  name: 예방정비
+  hint: 고장 이전에 점검·교체·관리를 수행하여 기능을 유지하는 방식
+  aliases: [고장 나기 전에 물건을 돌보기, 정기적으로 점검할 설비, 작은 이상이 큰 수리로 번지는 것을 줄이기, 사용 기간에 따른 소모품 관리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.indoor_air_quality
+  kind: concept
+  path: [생활, 주거와 살림]
+  name: 실내공기질
+  hint: 실내의 입자·기체 오염물과 환기 등 공기 상태의 특성
+  aliases: [집 안 공기의 오염원 알아보기, 새 가구나 조리에서 나오는 물질, 실외와 실내 공기가 다른 이유, 실내 공기 상태를 구성하는 요인]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.fiber_types
+  kind: concept
+  path: [생활, 의복과 섬유]
+  name: 섬유의 종류
+  hint: 천연·재생·합성 섬유의 기원과 성질에 따른 구분
+  aliases: [면과 양모와 폴리에스터의 차이, 옷감마다 땀과 열을 다루는 방식, 재료에 따라 다른 촉감, 섬유 표시를 읽는 기초]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.weave_knit
+  kind: concept
+  path: [생활, 의복과 섬유]
+  name: 직물과 편물
+  hint: 실을 교차시키거나 고리로 연결하여 천을 만드는 구조
+  aliases: [티셔츠와 셔츠가 다르게 늘어나는 이유, 실이 짜인 모양에 따른 성질, 고리로 이어진 천과 교차한 천, 옷감의 구조 알아보기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.fabric_shrinkage
+  kind: concept
+  path: [생활, 의복과 섬유]
+  name: 직물 수축
+  hint: 수분·열·기계 작용으로 천의 치수와 구조가 변하는 현상
+  aliases: [세탁 뒤 옷이 작아지는 이유, 옷감이 젖었다 마르며 변하는 크기, 소재에 따라 다른 수축, 열과 물이 천에 주는 변화]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.seam_allowance
+  kind: concept
+  path: [생활, 의복과 섬유]
+  name: 시접
+  hint: 봉제선 바깥에 남겨 두는 천의 여유 폭
+  aliases: [천을 자를 때 박음질할 여유 남기기, 옷본 크기와 재단 크기의 차이, 솔기를 만들 공간, 수선할 때 남은 천의 폭]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.visible_mending
+  kind: concept
+  path: [생활, 의복과 섬유]
+  name: 보이는 수선
+  hint: 수선 흔적을 장식과 표현으로 드러내며 의복을 고치는 방식
+  aliases: [해진 옷을 무늬를 넣어 고치기, 구멍을 감추지 않고 꾸미기, 옷을 오래 입기 위한 손바느질, 수선 자국을 디자인으로 쓰기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.care_ethics_practice
+  kind: concept
+  path: [생활, 돌봄과 생애]
+  name: 사람 중심 돌봄
+  hint: 돌봄받는 사람의 선호·관계·생활 맥락을 중심에 두는 접근
+  aliases: [도움을 받는 사람의 선택을 존중하기, 편의보다 당사자의 생활을 먼저 보기, 돌봄 계획에 본인의 뜻 반영, 한 사람의 삶에 맞춘 지원]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.activities_daily_living
+  kind: concept
+  path: [생활, 돌봄과 생애]
+  name: 일상생활 수행능력
+  hint: 식사·옷입기·이동 등 기본 생활 활동을 수행하는 능력
+  aliases: [혼자 할 수 있는 생활과 도움이 필요한 일, 매일의 기본 활동을 나누어 보기, 자립 생활의 구체적인 구성, 돌봄 지원의 범위 이해]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.caregiver_burden
+  kind: concept
+  path: [생활, 돌봄과 생애]
+  name: 돌봄 부담
+  hint: 돌봄 역할에 수반되는 시간적·신체적·정서적·경제적 부담
+  aliases: [가족을 돌보는 사람이 지치는 이유, 보이지 않는 돌봄 시간과 비용, 역할을 나누지 못해 생기는 압박, 돌보는 사람의 생활도 살피기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.respite_care
+  kind: concept
+  path: [생활, 돌봄과 생애]
+  name: 휴식 지원 돌봄
+  hint: 주 돌봄자가 쉴 수 있도록 돌봄을 일정 기간 대신하는 지원
+  aliases: [가족 돌봄자가 잠시 쉴 시간, 돌봄을 번갈아 맡는 방식, 쉬는 동안 이어지는 도움, 장기간 돌봄의 지속 가능성]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.life_transition
+  kind: concept
+  path: [생활, 돌봄과 생애]
+  name: 생애 전환
+  hint: 입학·취업·이주·은퇴 등으로 역할과 생활이 재구성되는 과정
+  aliases: [은퇴 뒤 생활을 다시 짜기, 큰 변화 이후의 역할 적응, 익숙한 일상이 바뀌는 시기, 삶의 단계가 넘어갈 때 필요한 조정]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.intergenerational_support
+  kind: concept
+  path: [생활, 돌봄과 생애]
+  name: 세대 간 지원
+  hint: 서로 다른 세대가 자원·돌봄·경험을 주고받는 관계
+  aliases: [조부모와 손주가 서로 돕는 방식, 나이 든 세대와 젊은 세대의 자원 교환, 가족 안에서 오가는 시간과 도움, 세대가 함께 생활하는 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.play
+  kind: concept
+  path: [생활, 여가와 이동]
+  name: 놀이
+  hint: 자발적 참여와 규칙·상상·탐색을 통해 즐거움을 얻는 활동
+  aliases: [결과보다 하는 과정이 즐거운 일, 아이와 어른이 노는 방식, 정해진 목표 없이 탐색하기, 규칙을 만들며 함께 즐기기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.leisure_constraints
+  kind: concept
+  path: [생활, 여가와 이동]
+  name: 여가 제약
+  hint: 시간·비용·접근성·관계 등이 여가 참여에 미치는 제한
+  aliases: [쉬고 싶어도 못 쉬는 이유, 취미를 시작하기 어려운 조건, 여가 시간과 접근 가능한 장소, 함께 할 사람이 없을 때의 제약]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.wayfinding
+  kind: concept
+  path: [생활, 여가와 이동]
+  name: 길찾기
+  hint: 공간 단서와 인지 지도를 이용하여 위치와 이동 경로를 파악하는 과정
+  aliases: [낯선 건물에서 방향을 잡기, 표지판과 주변 특징으로 위치 파악, 지도를 실제 공간과 연결하기, 길을 잃지 않게 공간을 읽기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.slow_tourism
+  kind: concept
+  path: [생활, 여가와 이동]
+  name: 슬로 투어리즘
+  hint: 이동 속도와 방문 수보다 장소와 생활의 깊은 경험을 중시하는 여행
+  aliases: [일정을 빽빽하게 채우지 않는 여행, 한 지역에 오래 머물며 알아가기, 이동보다 현지 경험에 시간을 쓰기, 천천히 걷고 머무는 여행]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.carrying_capacity_tourism
+  kind: concept
+  path: [생활, 여가와 이동]
+  name: 관광 수용력
+  hint: 장소의 환경·시설·생활과 방문 경험이 감당할 수 있는 이용 수준
+  aliases: [관광객이 너무 많아지는 장소, 붐빔이 주민과 방문객에 주는 영향, 관광지 이용량과 환경의 관계, 방문 규모를 생각하는 기준]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활
+- id: foundation.recreation_recovery
+  kind: concept
+  path: [생활, 여가와 이동]
+  name: 여가 회복 경험
+  hint: 일과 요구에서 벗어나 이완·자율성·숙련 등을 경험하며 회복하는 과정
+  aliases: [쉬었는데도 개운하지 않은 이유, 일 생각에서 벗어나는 시간, 휴식의 양과 질의 차이, 자기 선택으로 보내는 여가]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생활

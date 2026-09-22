@@ -1,0 +1,131 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.cell_membrane
+  kind: concept
+  path: [생명, 분자와 세포]
+  name: 세포막
+  hint: 세포의 경계를 이루며 물질 이동과 신호 교환을 조절하는 구조
+  aliases: [세포 안팎을 나누는 얇은 경계, 필요한 물질만 드나드는 원리, 세포가 외부 신호를 받는 곳, 물질 출입을 조절하는 막]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.gene_expression
+  kind: concept
+  path: [생명, 분자와 세포]
+  name: 유전자 발현
+  hint: 유전 정보가 RNA와 단백질 등 기능적 산물로 나타나는 과정
+  aliases: [같은 유전자를 가진 세포가 다르게 일하는 이유, 유전 정보가 실제 기능이 되는 과정, 유전자가 켜지고 꺼진다는 뜻, 환경에 따라 달라지는 단백질 생성]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.natural_selection
+  kind: concept
+  path: [생명, 진화와 다양성]
+  name: 자연선택
+  hint: 유전되는 변이가 생존·번식 차이를 통해 세대별로 달라지는 과정
+  aliases: [환경에 유리한 특징이 많아지는 이유, 세대가 지나며 생물이 바뀌는 과정, 항생제에 견디는 균이 늘어나는 원리, 살아남는 것과 자손을 남기는 것]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.genetic_drift
+  kind: concept
+  path: [생명, 진화와 다양성]
+  name: 유전적 부동
+  hint: 우연한 표본 변동으로 집단의 유전자 빈도가 달라지는 현상
+  aliases: [작은 집단에서 유전적 특징이 사라지는 이유, 유리하지 않아도 늘어나는 형질, 우연이 생물 집단을 바꾸는 과정, 몇 마리에서 시작한 집단의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.speciation
+  kind: concept
+  path: [생명, 진화와 다양성]
+  name: 종분화
+  hint: 집단 사이의 유전적 분화와 생식적 격리로 새로운 종이 생기는 과정
+  aliases: [한 종류의 생물이 여러 종으로 갈라지는 이유, 섬마다 다른 생물이 생기는 과정, 떨어져 사는 집단의 진화, 서로 번식하지 못하게 되는 변화]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.adaptation
+  kind: concept
+  path: [생명, 진화와 다양성]
+  name: 생물학적 적응
+  hint: 자연선택으로 형성된 환경에 대한 기능적 적합성
+  aliases: [사막 동물의 몸이 다른 이유, 생김새가 서식 환경과 맞는 까닭, 보호색이 생존에 주는 이점, 특징이 환경에 유리한지 이해하기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.homology
+  kind: concept
+  path: [생명, 진화와 다양성]
+  name: 상동성
+  hint: 공통 조상에서 유래한 생물 구조나 서열의 대응 관계
+  aliases: [사람 팔과 새 날개의 공통점, 쓰임은 달라도 뿌리가 같은 기관, 닮은 모양과 같은 기원을 구별하기, 생물의 구조로 친연 관계 이해]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.binomial_nomenclature
+  kind: concept
+  path: [생명, 진화와 다양성]
+  name: 이명법
+  hint: 속명과 종소명으로 생물 종의 학명을 구성하는 체계
+  aliases: [같은 생물의 여러 지역 이름 정리, 학명이 두 단어인 이유, 생물의 국제적인 이름 읽기, 속과 종의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.photosynthesis
+  kind: concept
+  path: [생명, 생리와 행동]
+  name: 광합성
+  hint: 빛 에너지를 이용해 유기물을 합성하는 과정
+  aliases: [식물이 햇빛으로 자라는 원리, 잎에서 양분이 만들어지는 과정, 식물과 이산화탄소의 관계, 빛이 생물의 에너지가 되는 방식]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.cellular_respiration
+  kind: concept
+  path: [생명, 생리와 행동]
+  name: 세포 호흡
+  hint: 유기물 등의 에너지를 세포가 쓸 수 있는 형태로 전환하는 과정
+  aliases: [음식의 에너지를 세포가 쓰는 방식, 산소와 에너지 생산의 관계, 세포가 활동할 힘을 얻는 과정, 식물도 숨을 쉬는지]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.osmosis
+  kind: concept
+  path: [생명, 생리와 행동]
+  name: 삼투
+  hint: 선택적 투과막을 사이에 둔 용매의 화학 퍼텐셜 차이에 따른 이동
+  aliases: [소금물에서 세포 크기가 바뀌는 이유, 막을 사이에 두고 물이 이동할 때, 농도가 다른 두 쪽의 물 이동, 절인 채소에서 물이 빠지는 원리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.transpiration
+  kind: concept
+  path: [생명, 생리와 행동]
+  name: 증산
+  hint: 식물체에서 수분이 수증기로 방출되는 현상
+  aliases: [나무가 뿌리에서 잎까지 물을 올리는 과정, 잎에서 물이 사라지는 이유, 식물 주변 공기가 달라지는 까닭, 기공과 수분 손실의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.tropism
+  kind: concept
+  path: [생명, 생리와 행동]
+  name: 굴성
+  hint: 방향성 자극에 대한 식물 기관의 성장 반응
+  aliases: [줄기가 빛 쪽으로 휘는 이유, 뿌리가 아래로 자라는 까닭, 식물이 자극 방향을 따라 자랄 때, 화분을 돌리면 잎 방향이 달라지는 현상]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명
+- id: foundation.animal_communication
+  kind: concept
+  path: [생명, 생리와 행동]
+  name: 동물 의사소통
+  hint: 소리·몸짓·화학 신호 등으로 동물 사이에 정보가 전달되는 과정
+  aliases: [새는 왜 서로 다른 소리로 우는지, 벌의 춤이 전달하는 정보, 동물의 냄새 표시가 하는 역할, 무리 안에서 신호를 주고받는 방식]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 생명

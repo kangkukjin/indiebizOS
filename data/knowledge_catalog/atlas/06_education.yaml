@@ -5,7 +5,7 @@ curation:
 entries:
 - id: atlas.education.interleaving
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 교차학습
   hint: 다른 유형을 섞어 연습
   aliases: [Interleaving, "한 단원만 몰아 풀면 시험에서 헷갈리는 문제", "여러 종류 문제를 뒤섞어 푸는 공부법", "어떤 풀이를 써야 할지 고르는 힘 기르기", "연습 땐 잘되는데 실전에서 구분이 안 될 때"]
@@ -14,7 +14,7 @@ entries:
     section: education
 - id: atlas.education.elaborative_interrogation
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 정교화 질문
   hint: 왜 그런지 묻고 연결을 설명
   aliases: [Elaborative interrogation, "공부하며 스스로 이건 왜 이럴까 되묻기", "배운 것을 이미 아는 것과 이어 말해 보기", "외우긴 했는데 이해는 안 된 느낌일 때", "아이에게 어떻게 그렇게 되는지 풀어 말하게 하기"]
@@ -23,7 +23,7 @@ entries:
     section: education
 - id: atlas.education.dual_coding
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 이중부호화
   hint: 언어와 시각 표현을 함께 활용
   aliases: [Dual coding, "설명과 그림을 같이 보여주면 더 잘 외워지는 원리", "글만 가득한 수업 자료에 도식 넣기", "필기할 때 말과 스케치를 나란히 적기", "듣기만 해서는 기억에 안 남을 때"]
@@ -32,7 +32,7 @@ entries:
     section: education
 - id: atlas.education.concept_mapping
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 개념도
   hint: 개념 사이의 명명된 관계 표시
   aliases: [Concept mapping, "배운 용어들을 선으로 잇고 관계 적어 보기", "단원 내용을 한 장 그림으로 정리하기", "개념들이 머릿속에서 따로 놀 때", "학생이 내용을 어떻게 연결하는지 그려 보게 하기"]
@@ -41,7 +41,7 @@ entries:
     section: education
 - id: atlas.education.mastery_learning
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 완전학습
   hint: 목표 도달을 확인하며 다음 단계 진행
   aliases: [Mastery learning, "이 단원을 다 익혀야 다음으로 넘어가기", "기초가 구멍 난 채 진도만 나가는 문제", "통과 못한 학생에게 보충 후 재시험 주기", "시간이 달라도 모두 기준에 도달하게 가르치기"]
@@ -50,7 +50,7 @@ entries:
     section: education
 - id: atlas.education.formative_assessment
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 형성평가
   hint: 학습 중 피드백을 위한 평가
   aliases: [Formative assessment, 학습 중 피드백, "수업 도중에 얼마나 따라오는지 확인하는 쪽지시험", "점수 매기기보다 고칠 점 알려 주려는 확인", "진도 나가기 전에 이해 못한 부분 찾기", "수업 끝에 한 줄 적어 내게 해서 점검"]
@@ -59,7 +59,7 @@ entries:
     section: education
 - id: atlas.education.summative_assessment
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 총괄평가
   hint: 학습 종료 시 성취 평가
   aliases: [Summative assessment, "학기 말에 최종 성적을 내는 시험", "단원이 다 끝난 뒤 얼마나 배웠는지 확인", "기말고사나 졸업 시험 같은 마무리 시험", "과정 수료 여부를 판정해야 할 때"]
@@ -68,7 +68,7 @@ entries:
     section: education
 - id: atlas.education.rubric
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 평가 루브릭
   hint: 수준별 수행 기준을 명시
   aliases: [Rubric, 루브릭, "발표나 글쓰기 과제 채점 기준표 만들기", "채점하는 사람마다 점수가 달라질 때", "상 중 하가 각각 어떤 모습인지 적어 주기", "학생에게 뭘 잘해야 하는지 미리 알려 주기"]
@@ -77,7 +77,7 @@ entries:
     section: education
 - id: atlas.education.backward_design
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 백워드 설계
   hint: 목표와 증거에서 학습 활동 역설계
   aliases: [Backward design, "수업 끝에 뭘 할 수 있어야 하는지부터 정하기", "활동은 재미있는데 남는 게 없는 수업 고치기", "시험 문제를 먼저 만들고 수업 계획 짜기", "강의 계획서를 도착점에서 거꾸로 짜기"]
@@ -86,7 +86,7 @@ entries:
     section: education
 - id: atlas.education.bloom_taxonomy
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 블룸 교육목표 분류
   hint: 인지적 학습 목표의 수준 구분
   aliases: [Bloom taxonomy, "외우기부터 창조하기까지 단계 나누기", "시험 문제가 암기만 묻고 있는지 점검", "학습 목표에 쓸 동사 고르기", "생각의 깊이에 따라 과제 난이도 구분"]
@@ -95,7 +95,7 @@ entries:
     section: education
 - id: atlas.education.scaffolding
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 비계 설정
   hint: 숙달에 따라 지원을 조절
   aliases: [Scaffolding, "처음엔 많이 도와주고 점점 손을 떼기", "자전거 보조 바퀴처럼 익숙해지면 빼는 도움", "어려운 과제를 힌트와 단계로 나눠 주기", "혼자 하기 벅찬 학생에게 임시 받침 대기"]
@@ -104,7 +104,7 @@ entries:
     section: education
 - id: atlas.education.zone_of_proximal_development
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 근접발달영역
   hint: 도움을 받아 수행할 수 있는 범위
   aliases: [Zone of proximal development, "혼자는 못 풀지만 옆에서 거들면 푸는 문제 수준", "아이에게 너무 쉽지도 어렵지도 않은 과제 찾기", "지금 가르치면 가장 잘 느는 지점", "어른이 조금만 도와주면 해내는 일의 범위"]
@@ -113,7 +113,7 @@ entries:
     section: education
 - id: atlas.education.problem_based_learning
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 문제중심학습
   hint: 복합 문제 해결을 통해 학습
   aliases: [Problem based learning, "실제 환자 사례를 주고 조별로 풀게 하는 수업", "정답이 하나가 아닌 과제로 배우기", "무엇을 더 알아야 하는지부터 스스로 찾기", "의대에서 사례 하나로 몇 주 공부하는 방식"]
@@ -122,7 +122,7 @@ entries:
     section: education
 - id: atlas.education.project_based_learning
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 프로젝트학습
   hint: 지속적 탐구로 산출물 제작
   aliases: [Project based learning, "한 학기 동안 결과물을 만들어 발표하는 수업", "모둠이 몇 주에 걸쳐 작품을 완성하기", "마을 지도나 영상 같은 걸 직접 제작하며 배우기", "시험 대신 전시회로 마무리하는 수업"]
@@ -131,7 +131,7 @@ entries:
     section: education
 - id: atlas.education.inquiry_based_learning
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 탐구학습
   hint: 질문과 증거를 통해 이해 형성
   aliases: [Inquiry based learning, "학생이 스스로 궁금한 걸 정해 조사하는 수업", "답을 알려 주지 않고 실험으로 찾게 하기", "과학 시간에 가설 세우고 확인하는 활동", "왜 그럴까에서 출발해 자료로 결론 내기"]
@@ -140,7 +140,7 @@ entries:
     section: education
 - id: atlas.education.peer_instruction
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 동료교수법
   hint: 설명과 토론으로 개념 이해 점검
   aliases: [Peer instruction, "옆 친구에게 설명하며 답을 다시 고르게 하기", "대형 강의에서 객관식 질문 던지고 짝 토론", "학생끼리 서로 가르치며 오개념 잡기", "강의 중간에 손들기 투표로 이해 확인"]
@@ -149,7 +149,7 @@ entries:
     section: education
 - id: atlas.education.flipped_classroom
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 거꾸로 교실
   hint: 사전 학습과 교실 적용 활동 배치
   aliases: [Flipped classroom, "강의는 집에서 영상으로 보고 수업엔 문제 풀이", "수업 시간에 설명하느라 실습할 틈이 없을 때", "숙제와 강의의 자리를 서로 바꾸는 수업", "미리 보고 와서 교실에서는 토론하는 방식"]
@@ -158,7 +158,7 @@ entries:
     section: education
 - id: atlas.education.universal_design_for_learning
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 보편적 학습설계
   hint: 다양한 참여 표현 접근 경로 제공
   aliases: [Universal design for learning, "읽기 힘든 학생도 들을 수 있게 자료 여러 형태로", "글 대신 영상이나 말로 과제를 내도 되게 하기", "장애 학생과 함께 듣는 수업을 처음부터 계획", "학생마다 배우는 방식이 달라 한 가지로 안 될 때"]
@@ -167,7 +167,7 @@ entries:
     section: education
 - id: atlas.education.learning_analytics
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 학습분석
   hint: 학습 자료로 과정과 지원 요구 파악
   aliases: [Learning analytics, "온라인 강의 접속 기록으로 뒤처진 학생 찾기", "누가 중도 포기할지 미리 알아채기", "과제 제출 기록에서 학습 습관 읽기", "수강생 활동 기록을 수업 개선에 쓰기"]
@@ -176,7 +176,7 @@ entries:
     section: education
 - id: atlas.education.item_response_theory
   kind: method
-  path: [학습, 교수와 평가]
+  path: ["마음과 배움", "교수와 평가"]
   name: 문항반응이론
   hint: 능력과 문항 특성으로 응답 모형화
   aliases: [Item response theory, "시험 문제마다 어려운 정도를 수치로 매기기", "다른 시험지를 본 학생들 점수 공정하게 비교", "맞힌 개수가 같아도 실력이 다를 수 있는 이유", "잘하는 학생과 못하는 학생을 가르는 문제 고르기"]
@@ -185,7 +185,7 @@ entries:
     section: education
 - id: atlas.linguistics.morphological_analysis
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 형태소 분석
   hint: 단어의 의미 단위 분해
   aliases: [Morphological analysis, "먹었겠더라 같은 말을 뜻 조각으로 쪼개기", "조사와 어미를 떼고 단어 원형만 뽑기", "후기 글에서 명사만 골라 개수 세고 싶을 때", "붙여 쓴 한국어를 검색되게 잘게 나누기"]
@@ -194,7 +194,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.syntactic_parsing
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 구문 분석
   hint: 문장 구성 요소의 관계 해석
   aliases: [Syntactic parsing, "긴 문장에서 주어와 서술어 짝 찾기", "꾸미는 말이 어느 단어에 걸리는지 따지기", "문장 뼈대를 나뭇가지 그림으로 그려보기", "영어 긴 문장이 어떻게 짜였는지 뜯어보기"]
@@ -203,7 +203,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.dependency_parsing
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 의존구문 분석
   hint: 단어 사이의 의존 관계 분석
   aliases: [Dependency parsing, "문장에서 어느 말이 어느 말을 꾸미는지 가려내기", "긴 문장에서 누가 무엇을 했는지 기계로 뽑기", "컴퓨터가 문장 뼈대를 화살표로 이어 보여 주기", "꾸미는 말이 길어 주어와 서술어 찾기 어려운 글"]
@@ -212,7 +212,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.semantic_role_labeling
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 의미역 분석
   hint: 사건 참여자의 역할 식별
   aliases: [Semantic role labeling, "문장에서 누가 누구에게 무엇을 했는지 뽑기", "때린 쪽과 맞은 쪽을 자동으로 구분하기", "수동문과 능동문이 같은 사건인지 알아보기", "사건 기사에서 행위자·대상·도구 정리하기"]
@@ -221,7 +221,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.named_entity_recognition
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 개체명 인식
   hint: 사람 조직 장소 등 명명 대상 식별
   aliases: [Named entity recognition, "기사에서 사람 이름과 회사 이름만 뽑기", "글 속 지명과 날짜를 자동으로 표시하기", "계약서에서 당사자와 기관명 찾아내기", "많은 문서에서 누가 어디서 등장하는지 정리"]
@@ -230,7 +230,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.coreference_resolution
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 상호참조 해소
   hint: 같은 대상을 가리키는 표현 연결
   aliases: [Coreference resolution, "글 속의 그나 이것이 누구를 가리키는지 찾기", "같은 인물을 다르게 부른 말끼리 묶기", "대명사가 많은 문서를 컴퓨터가 이해하게 하기", "기사에서 한 회사 언급을 모두 하나로 잇기"]
@@ -239,7 +239,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.word_sense_disambiguation
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 어의 중의성 해소
   hint: 문맥에 맞는 단어 의미 선택
   aliases: [Word sense disambiguation, "배가 과일인지 탈것인지 신체인지 가려내기", "뜻이 여러 개인 낱말 중 맞는 것 고르기", "번역기가 은행을 엉뚱한 뜻으로 옮길 때", "동음이의어 때문에 검색 결과가 섞일 때"]
@@ -248,7 +248,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.corpus_linguistics
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 말뭉치 언어학
   hint: 실제 언어 자료의 용법 연구
   aliases: [Corpus linguistics, "이 표현을 사람들이 실제로 쓰는지 확인", "신문·소설 글을 잔뜩 모아 쓰임새 세기", "어떤 단어와 자주 붙어 다니는지 조사", "사전 설명과 실제 쓰임이 다른지 따져보기"]
@@ -257,7 +257,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.distributional_semantics
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 분포 의미론
   hint: 사용 문맥 분포로 의미 표현
   aliases: [Distributional semantics, "같이 나오는 말로 단어 뜻 짐작하기", "비슷한 뜻의 단어끼리 자동으로 묶기", "단어 사이가 얼마나 가까운지 숫자로 재기", "검색어와 뜻이 비슷한 다른 말 찾아주기"]
@@ -266,7 +266,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.pragmatics
   kind: concept
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 화용론
   hint: 상황과 의도에 따른 언어 의미
   aliases: [Pragmatics, "같은 말이 상황 따라 다른 뜻이 되는 까닭", "말한 사람 의도까지 헤아려 해석하기", "밥 먹었어가 인사인지 질문인지 가리기", "글자 그대로만 받아들여 대화가 어긋날 때"]
@@ -275,7 +275,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.speech_act
   kind: concept
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 화행
   hint: 발화로 수행하는 사회적 행위
   aliases: [Speech act, "말 한마디가 약속이나 사과가 되는 원리", "이 문장이 부탁인지 명령인지 경고인지 구분", "선언한다고 말하는 순간 효력이 생기는 말", "고객 문의가 불만인지 요청인지 나누기"]
@@ -284,7 +284,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.presupposition
   kind: concept
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 전제
   hint: 발화가 배경으로 가정하는 내용
   aliases: [Presupposition, "질문 속에 이미 깔려 있는 가정 찾아내기", "담배 끊었냐는 물음이 은근히 단정하는 것", "유도 질문에 숨은 밑바탕 짚어내기", "부정해도 그대로 남는 숨은 내용 확인하기"]
@@ -293,7 +293,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.implicature
   kind: concept
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 함축
   hint: 직접 말하지 않았지만 전달되는 의미
   aliases: [Implicature, "돌려서 한 말의 속뜻 알아채기", "대놓고 말 안 했는데 다들 알아듣는 이유", "춥네요 한마디가 창문 닫아달란 뜻일 때", "광고 문구가 은근히 흘리는 메시지 읽기"]
@@ -302,7 +302,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.register
   kind: concept
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 언어 사용역
   hint: 상황과 관계에 따른 표현 양식
   aliases: [Register, "상사에게 쓰는 말투와 친구에게 쓰는 말투", "공문서와 메신저 글의 문체 차이 맞추기", "자리에 안 맞는 말투라 어색하게 들릴 때", "번역문 격식 수준을 원문과 맞추고 싶을 때"]
@@ -311,7 +311,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.contrastive_analysis
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 대조분석
   hint: 언어 간 구조와 사용 차이 비교
   aliases: [Contrastive analysis, "한국어와 영어 어순이 어떻게 다른지 견주기", "모국어 때문에 생기는 외국어 실수 예측", "두 나라 말의 높임 표현 차이 정리", "외국인에게 한국어 가르칠 때 어려운 점 찾기"]
@@ -320,7 +320,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.back_translation
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 역번역
   hint: 번역을 원언어로 되돌려 차이 검토
   aliases: [Back translation, "번역된 글을 다시 원래 말로 옮겨 맞는지 보기", "외국어 설문지가 뜻이 같게 옮겨졌나 확인", "모르는 언어로 된 번역을 검수해야 할 때", "번역기 결과를 거꾸로 돌려 오역 찾기"]
@@ -329,7 +329,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.terminology_management
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 용어 관리
   hint: 전문용어의 대응과 사용 일관성 관리
   aliases: [Terminology management, "같은 부품 이름이 문서마다 다르게 번역될 때", "회사 전용 낱말 대역표 만들어 지키기", "여러 번역자가 같은 표현 쓰게 맞추기", "금지 표현과 권장 표현 목록 관리하기"]
@@ -338,7 +338,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.translation_memory
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 번역 메모리
   hint: 이전 번역 단위를 저장해 재사용
   aliases: [Translation memory, "전에 옮긴 문장을 다시 옮기지 않게 하기", "설명서 개정판에서 바뀐 문장만 새로 번역", "원문과 옮긴 문장 짝을 쌓아두고 꺼내 쓰기", "비슷한 문장에 지난번 번역을 자동 제안받기"]
@@ -347,7 +347,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.localization
   kind: method
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 현지화
   hint: 지역 언어와 사용 맥락에 맞춰 조정
   aliases: [Localization, "해외에 앱 내놓을 때 그 나라 식으로 고치기", "날짜·화폐·단위 표기를 나라별로 맞추기", "번역은 했는데 그 나라 사람에겐 어색할 때", "외국 상품 설명을 우리 정서에 맞게 손보기"]
@@ -356,7 +356,7 @@ entries:
     section: linguistics
 - id: atlas.linguistics.phonemic_awareness
   kind: concept
-  path: [언어, 분석과 번역]
+  path: ["인문", "분석과 번역"]
   name: 음소 인식
   hint: 말소리의 최소 단위를 구별
   aliases: [Phonemic awareness, "ㄹ 발음 두 가지를 귀로 구별 못할 때", "비슷하게 들리는 두 소리 가려 듣기 연습", "녹음된 말을 글자로 바꾸는 첫 단계", "아이가 바와 파를 헷갈려 듣는 문제"]
@@ -365,7 +365,7 @@ entries:
     section: linguistics
 - id: atlas.history.source_criticism
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 사료비판
   hint: 자료의 기원 신뢰성과 맥락 검토
   aliases: [Source criticism, "이 기록을 누가 왜 남겼는지부터 의심해 보기", "옛 신문 기사를 그대로 믿어도 되는지 따지기", "승자가 쓴 기록의 치우침 걸러내기", "인터넷에 도는 옛 사진이 진짜 그 장면인지 확인"]
@@ -374,7 +374,7 @@ entries:
     section: history
 - id: atlas.history.textual_criticism
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 본문비평
   hint: 판본의 차이로 텍스트 전승 검토
   aliases: [Textual criticism, "베껴 쓰다 달라진 여러 사본 중 원래 문장 찾기", "같은 고전인데 책마다 구절이 다를 때", "옮겨 적다 생긴 오류가 어디서 시작됐는지 추적", "고전 번역 전에 어느 판을 기준으로 할지 정하기"]
@@ -383,7 +383,7 @@ entries:
     section: history
 - id: atlas.history.historiography
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 역사서술 연구
   hint: 역사를 쓰는 관점과 방법 분석
   aliases: [Historiography, "같은 사건을 역사책마다 다르게 쓰는 이유", "교과서 서술이 시대에 따라 바뀐 과정 살피기", "역사가가 어떤 입장에서 썼는지 따져 읽기", "한 주제를 학자들이 그동안 어떻게 다뤄왔는지 정리"]
@@ -392,7 +392,7 @@ entries:
     section: history
 - id: atlas.history.periodization
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 시대구분
   hint: 변화의 특징에 따라 시기 나눔
   aliases: [Periodization, "긴 역사를 고대 중세 근대로 끊어 보는 기준", "어디서부터를 근대로 볼지 논쟁이 있을 때", "연표를 몇 개의 덩어리로 묶어 정리하기", "회사나 마을의 발자취를 몇 단계로 나눠 쓰기"]
@@ -401,7 +401,7 @@ entries:
     section: history
 - id: atlas.history.comparative_history
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 비교사
   hint: 여러 사회의 역사 과정 비교
   aliases: [Comparative history, "두 나라가 왜 다른 길을 걸었는지 나란히 놓고 보기", "한국과 일본의 근대화를 견주어 보고 싶을 때", "비슷한 혁명이 나라마다 다르게 끝난 이유 찾기", "한 나라만 봐서는 안 보이는 특징 알아내기"]
@@ -410,7 +410,7 @@ entries:
     section: history
 - id: atlas.history.microhistory
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 미시사
   hint: 작은 사례에서 사회적 맥락 탐구
   aliases: [Microhistory, "이름 없는 한 사람의 재판 기록으로 시대 들여다보기", "한 마을 한 집안 이야기로 큰 역사 이해하기", "왕과 전쟁 말고 평범한 사람의 삶을 다룬 역사", "작은 사건 하나를 끝까지 파고드는 연구"]
@@ -419,7 +419,7 @@ entries:
     section: history
 - id: atlas.history.prosopography
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 집단전기 연구
   hint: 집단 구성원의 이력을 함께 분석
   aliases: [Prosopography, "국회의원 수백 명의 출신과 경력을 한꺼번에 조사하기", "어떤 직업 사람들의 공통 배경 통계 내기", "과거 급제자들이 어느 집안 출신인지 모아 보기", "한 명 말고 무리 전체의 인생 경로 패턴 찾기"]
@@ -428,7 +428,7 @@ entries:
     section: history
 - id: atlas.history.genealogical_method
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 계보학적 방법
   hint: 개념과 제도의 형성 과정 추적
   aliases: [Genealogical method, "당연해 보이는 제도가 언제 생겼는지 거슬러 가기", "정상과 비정상이라는 구분이 만들어진 내력", "지금 쓰는 말의 뜻이 어떻게 바뀌어 왔는지 캐기", "원래 그랬다는 통념을 의심해 보고 싶을 때"]
@@ -437,7 +437,7 @@ entries:
     section: history
 - id: atlas.history.archival_research
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 문서보관소 조사
   hint: 보존 기록의 체계적 탐색
   aliases: [Archival research, "기록관에 가서 옛 공문서 뒤져보기", "할아버지 시절 관청 서류를 찾아야 할 때", "어느 상자에 뭐가 있는지 목록부터 훑는 자료 찾기", "책에 안 나온 사실을 원본 기록에서 캐내기"]
@@ -446,7 +446,7 @@ entries:
     section: history
 - id: atlas.history.paleography
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 고문서학
   hint: 옛 필체와 문서 형식 판독
   aliases: [Paleography, "흘려 쓴 옛 글씨를 못 읽겠을 때", "족보나 옛 편지의 붓글씨 판독하기", "글씨체만 보고 언제쯤 쓴 것인지 가늠하기", "한문 초서로 된 집안 문서 풀어 읽기"]
@@ -455,7 +455,7 @@ entries:
     section: history
 - id: atlas.history.diplomatics
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 문서형식학
   hint: 기록의 형식과 진정성 분석
   aliases: [Diplomatics, "이 옛 문서가 진짜인지 위조인지 가려내기", "도장 위치와 서식이 당시 관행과 맞는지 보기", "집안에 전해오는 교지나 증서의 진위 확인", "공문서 양식만 보고 발급처와 시기 짐작하기"]
@@ -464,7 +464,7 @@ entries:
     section: history
 - id: atlas.history.stratigraphy
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 층서 분석
   hint: 쌓인 층의 순서와 관계 해석
   aliases: [Stratigraphy, "땅을 파면 아래쪽일수록 오래됐다는 원리로 읽기", "발굴 현장 흙 단면에서 시간 순서 파악하기", "구덩이가 어느 흙을 뚫고 들어갔는지로 선후 가리기", "한 자리에 여러 시대 집터가 겹쳐 있을 때"]
@@ -473,7 +473,7 @@ entries:
     section: history
 - id: atlas.history.seriation
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 순서배열법
   hint: 유물 유형의 변화로 상대 순서 구성
   aliases: [Seriation, "무덤마다 나온 토기 모양으로 앞뒤 시기 늘어놓기", "정확한 연도 없이 어느 게 먼저인지만 정하기", "유행이 바뀌듯 달라진 유물 형태로 차례 매기기", "출토품 양식을 표로 만들어 시간 흐름 짜기"]
@@ -482,7 +482,7 @@ entries:
     section: history
 - id: atlas.history.radiocarbon_dating
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 방사성탄소 연대측정
   hint: 탄소 동위원소로 유기물 시기 추정
   aliases: [Radiocarbon dating, "땅에서 나온 뼈나 숯이 몇 년 전 것인지 알아내기", "오래된 천 조각이 어느 시대 것인지 과학적으로 재기", "수천 년 된 씨앗의 나이를 실험실에서 측정", "유적의 나이를 기록 없이 숫자로 확인하고 싶을 때"]
@@ -491,7 +491,7 @@ entries:
     section: history
 - id: atlas.history.dendrochronology
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 연륜연대학
   hint: 나이테의 패턴으로 연대 대조
   aliases: [Dendrochronology, "오래된 목재가 언제 베어진 나무인지 알아내기", "고택 기둥으로 건물 지은 해 추정하기", "나무 단면의 줄무늬 간격으로 시기 맞춰보기", "옛 가구나 악기의 제작 연도를 확인하고 싶을 때"]
@@ -500,7 +500,7 @@ entries:
     section: history
 - id: atlas.history.archaeological_survey
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 고고학 지표조사
   hint: 유적의 분포와 표면 흔적 조사
   aliases: [Archaeological survey, "땅을 파지 않고 걸어 다니며 옛 흔적 찾기", "밭에 흩어진 그릇 조각으로 옛 마을 자리 짐작", "개발 예정지에 묻힌 옛것이 있는지 먼저 훑어보기", "넓은 지역에서 옛 사람이 살던 곳이 어디 몰렸는지"]
@@ -509,7 +509,7 @@ entries:
     section: history
 - id: atlas.history.experimental_archaeology
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 실험고고학
   hint: 옛 제작과 사용 과정을 재현
   aliases: [Experimental archaeology, "돌도끼를 직접 만들어 써 보며 옛 생활 알아보기", "선사시대 움집을 실제로 지어 보는 연구", "옛날 방식으로 토기를 구워 보면 알게 되는 것", "유물이 어떻게 쓰였는지 몸으로 확인하기"]
@@ -518,7 +518,7 @@ entries:
     section: history
 - id: atlas.history.material_culture_analysis
   kind: method
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 물질문화 분석
   hint: 물건의 제작 사용 의미 해석
   aliases: [Material culture analysis, "옛날 그릇 하나로 그 시절 살림살이 읽어내기", "글로 남지 않은 서민의 삶을 쓰던 도구로 알아보기", "박물관 유물이 누가 만들어 어떻게 썼는지 궁금할 때", "할머니 재봉틀에 담긴 시대 이야기 풀어내기"]
@@ -527,7 +527,7 @@ entries:
     section: history
 - id: atlas.history.historical_context
   kind: concept
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 역사적 맥락
   hint: 사건과 자료를 둘러싼 시대 조건
   aliases: [Historical context, "그 사건이 왜 하필 그때 일어났는지 배경 살피기", "옛 편지를 당시 사정을 알고 다시 읽기", "그 시절 사람들에게는 그게 상식이었음을 이해하기", "한 장면만 떼어 보면 오해하게 되는 과거사"]
@@ -536,7 +536,7 @@ entries:
     section: history
 - id: atlas.history.anachronism
   kind: concept
-  path: [인문, 역사와 고고학]
+  path: ["인문", "역사와 고고학"]
   name: 시대착오
   hint: 다른 시대의 관념을 소급 적용
   aliases: [Anachronism, "옛날 사람을 요즘 잣대로 평가하는 실수", "사극에 그 시절엔 없던 물건이나 말투가 나올 때", "과거 인물에게 현대 가치관을 덮어씌운 해석", "역사 소설의 고증이 어긋났는지 점검하기"]
@@ -545,7 +545,7 @@ entries:
     section: history
 - id: atlas.philosophy.conceptual_analysis
   kind: method
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 개념분석
   hint: 개념의 조건과 경계 검토
   aliases: [Conceptual analysis, "자유나 행복 같은 말이 정확히 무슨 뜻인지 따지기", "어디까지를 거짓말이라고 부를지 선 긋기", "같은 단어를 서로 다르게 써서 토론이 헛돌 때", "반대 사례를 들어가며 정의를 다듬는 작업"]
@@ -554,7 +554,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.hermeneutics
   kind: method
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 해석학
   hint: 텍스트와 경험의 이해 조건 탐구
   aliases: [Hermeneutics, "옛 글을 지금의 내가 어떻게 이해하는가 하는 물음", "부분과 전체를 오가며 뜻을 잡아가는 읽기", "읽는 사람의 선입견이 해석에 끼어드는 문제", "법 조문이나 경전의 뜻을 풀이하는 일의 원리"]
@@ -563,7 +563,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.phenomenology
   kind: method
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 현상학
   hint: 경험에 드러나는 의미 구조 탐구
   aliases: [Phenomenology, "아픔이 당사자에게 어떻게 느껴지는지 그대로 기술하기", "선입견을 접어두고 겪은 그대로 들여다보기", "환자나 이용자의 체험을 깊이 인터뷰해 본질 찾기", "내게 세상이 어떻게 나타나는지부터 출발하는 철학"]
@@ -572,7 +572,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.dialectic
   kind: method
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 변증법
   hint: 대립과 긴장을 통해 개념 전개
   aliases: [Dialectic, "반대되는 두 생각을 부딪쳐 더 나은 생각 얻기", "주장과 반박을 거쳐 제3의 결론 끌어내기", "모순을 피하지 않고 발전의 동력으로 보는 사고", "찬반 토론 끝에 양쪽을 아우르는 답을 찾고 싶을 때"]
@@ -581,7 +581,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.reflective_equilibrium
   kind: method
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 반성적 평형
   hint: 원칙과 개별 판단을 상호 조정
   aliases: [Reflective equilibrium, "일반 원칙과 이번 직관이 어긋날 때 서로 맞춰가기", "규칙을 고칠지 내 느낌을 고칠지 오가며 다듬기", "도덕적 신념들을 앞뒤가 맞게 정리하고 싶을 때", "직관에 어긋나는 결론이 나오면 이론을 손보는 방법"]
@@ -590,7 +590,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.fallibilism
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 오류가능주의
   hint: 믿음과 지식이 수정될 수 있음
   aliases: [Fallibilism, "내가 확신하는 것도 틀릴 수 있다고 인정하는 태도", "과학 지식이 언제든 고쳐질 수 있다는 생각", "완벽히 확실한 앎은 없어도 탐구를 계속하는 자세", "새 증거가 나오면 생각을 바꿀 준비를 해 두기"]
@@ -599,7 +599,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.falsifiability
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 반증가능성
   hint: 경험적 반례로 틀림을 보일 수 있음
   aliases: [Falsifiability, "어떤 결과가 나와도 맞다고 우기는 주장 걸러내기", "과학과 사이비를 구분하는 잣대", "이 이론이 틀렸다면 어떤 관찰이 나와야 하는지 묻기", "점쟁이 말이 왜 절대 안 틀리는지 설명하기"]
@@ -608,7 +608,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.underdetermination
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 과소결정
   hint: 같은 증거가 여러 이론과 양립
   aliases: [Underdetermination, "같은 자료를 두고 설명이 여러 개 다 말이 될 때", "실험 결과만으로는 어느 설명이 맞는지 못 가릴 때", "관찰이 똑같은데 학자마다 결론이 다른 이유", "자료를 더 모아도 하나로 좁혀지지 않는 가설들"]
@@ -617,7 +617,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.paradigm
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 패러다임
   hint: 학문 공동체의 문제와 해법 틀
   aliases: [Paradigm, "한 시대 과학자들이 당연하게 공유하는 사고방식", "천동설에서 지동설로 넘어가듯 판이 통째로 바뀌는 일", "무엇이 제대로 된 질문인지부터 정해주는 테두리", "업계의 상식이 뒤집히는 순간을 설명하는 말"]
@@ -626,7 +626,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.utilitarianism
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 공리주의
   hint: 결과의 총효용으로 행위 평가
   aliases: [Utilitarianism, "가장 많은 사람이 가장 행복해지는 쪽을 고르기", "한 명을 희생해 다섯을 구해도 되는가 하는 계산", "정책을 이익과 손해의 합계로 따져 정하기", "기부금을 어디에 써야 가장 큰 도움이 될지 비교"]
@@ -635,7 +635,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.deontology
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 의무론
   hint: 의무와 규칙에 근거한 윤리 판단
   aliases: [Deontology, "결과가 좋아도 해서는 안 되는 일이 있다는 입장", "약속은 손해를 봐도 지켜야 하는지 고민될 때", "선의의 거짓말도 나쁜가 하는 물음", "사람을 수단으로만 쓰면 안 된다는 원칙"]
@@ -644,7 +644,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.virtue_ethics
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 덕윤리
   hint: 성품과 좋은 삶을 중심으로 판단
   aliases: [Virtue ethics, "무엇을 할까보다 어떤 사람이 될까를 묻는 도덕", "용기와 절제 같은 됨됨이를 기르는 데 초점 두기", "훌륭한 사람이라면 이 상황에서 어떻게 할지 생각하기", "아이 인성 교육의 철학적 바탕이 궁금할 때"]
@@ -653,7 +653,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.care_ethics
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 돌봄윤리
   hint: 의존과 관계의 책임에 주목
   aliases: [Care ethics, "아픈 부모를 돌보는 일의 도덕적 의미 따져보기", "규칙보다 눈앞의 사람과의 관계를 중시하는 생각", "간호나 육아 현장의 판단을 설명해 주는 관점", "누구나 남에게 기대어 산다는 데서 출발하는 도덕"]
@@ -662,7 +662,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.capabilities_approach
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 역량 접근
   hint: 실질적으로 할 수 있는 삶의 가능성
   aliases: [Capabilities approach, "돈보다 실제로 뭘 할 수 있는지가 중요하다는 관점", "소득 말고 다른 잣대로 삶의 질 재기", "장애인에게 같은 금액을 줘도 불평등한 이유", "복지 정책이 선택의 폭을 넓혔는지 평가하기"]
@@ -671,7 +671,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.veil_of_ignorance
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 무지의 베일
   hint: 자신의 지위를 모른 채 원칙 선택
   aliases: [Veil of ignorance, "내가 부자로 태어날지 가난하게 태어날지 모른다면", "케이크 자르는 사람이 마지막에 고르게 하는 공정함", "내 처지를 빼놓고 사회 규칙을 상상해 보기", "누구에게도 억울하지 않은 제도를 설계하는 사고실험"]
@@ -680,7 +680,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.double_effect
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 이중효과 원칙
   hint: 의도한 결과와 부수 결과의 구별
   aliases: [Double effect, "좋은 일을 하려다 생긴 나쁜 결과도 내 책임인지", "통증 줄이는 약이 수명을 단축할 수 있을 때의 판단", "노린 것과 어쩔 수 없이 따라온 것을 가르기", "전쟁에서 민간인 피해가 예상되는 공격의 정당성"]
@@ -689,7 +689,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.moral_uncertainty
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 도덕적 불확실성
   hint: 어떤 윤리 기준이 옳은지의 불확실성
   aliases: [Moral uncertainty, "어느 도덕 이론이 맞는지 몰라도 결정은 해야 할 때", "고기를 먹는 게 잘못일 가능성을 얼마나 고려할지", "여러 도덕관에 확률을 나눠 걸고 행동 고르기", "옳고 그름의 기준 자체에 확신이 없을 때의 선택"]
@@ -698,7 +698,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.epistemic_injustice
   kind: concept
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 인식적 부정의
   hint: 지식 주체로 인정받는 데 생기는 부당함
   aliases: [Epistemic injustice, "여자라서 어려서 내 말을 안 믿어주는 경험", "환자의 호소가 의사에게 무시당하는 문제", "겪은 일을 설명할 말이 없어 피해를 알리지 못할 때", "말하는 사람의 신분 때문에 증언이 깎이는 현상"]
@@ -707,7 +707,7 @@ entries:
     section: philosophy
 - id: atlas.philosophy.ethical_deliberation
   kind: method
-  path: [인문, 철학과 윤리]
+  path: ["인문", "철학과 윤리"]
   name: 윤리적 숙의
   hint: 가치 충돌의 이유와 대안 검토
   aliases: [Ethical deliberation, "둘 다 옳아 보이는 선택 사이에서 차근차근 따져보기", "병원 위원회에서 어려운 사례 논의하는 절차", "회사 결정이 도덕적으로 괜찮은지 팀이 함께 검토", "감으로 정하지 않고 이유와 다른 길을 나열해 비교"]
@@ -716,7 +716,7 @@ entries:
     section: philosophy
 - id: atlas.writing.freewriting
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 자유쓰기
   hint: 검열을 줄여 생각을 연속 기록
   aliases: [Freewriting, "첫 문장이 안 써져서 백지만 보고 있을 때", "고치지 말고 시간 정해 손 안 멈추고 쓰기", "머릿속 생각을 거르지 않고 쏟아내기", "완벽하게 쓰려다 아무것도 못 쓰는 버릇"]
@@ -725,7 +725,7 @@ entries:
     section: writing
 - id: atlas.writing.outlining
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 개요 작성
   hint: 글의 주장과 전개 순서 구성
   aliases: [Outlining, "쓰기 전에 목차와 뼈대부터 잡기", "무슨 말을 어떤 순서로 할지 미리 정하기", "쓰다 보면 글이 산으로 가는 사람", "서론·본론·결론에 넣을 내용 나눠 적기"]
@@ -734,7 +734,7 @@ entries:
     section: writing
 - id: atlas.writing.rhetorical_analysis
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 수사 분석
   hint: 대상 목적 설득 방식 분석
   aliases: [Rhetorical analysis, "광고나 연설이 사람 마음을 움직이는 법 뜯어보기", "이 글이 누구에게 뭘 노리고 쓴 건지 파악하기", "정치인 연설문이 왜 먹히는지 알고 싶을 때", "감정에 호소하는지 근거로 말하는지 구분하기"]
@@ -743,7 +743,7 @@ entries:
     section: writing
 - id: atlas.writing.thesis_statement
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 논제문
   hint: 글의 중심 주장을 명시
   aliases: [Thesis statement, "그래서 이 글이 하려는 말이 뭐냐는 지적을 받을 때", "에세이 서론 끝에 넣을 한 줄 주장 만들기", "글 전체를 한 문장으로 못 줄이겠을 때", "논술 답안의 입장을 첫머리에 분명히 밝히기"]
@@ -752,7 +752,7 @@ entries:
     section: writing
 - id: atlas.writing.topic_sentence
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 주제문
   hint: 문단의 핵심 내용을 제시
   aliases: [Topic sentence, "한 단락이 무슨 얘기인지 첫 줄에서 알려주기", "단락 안에 여러 얘기가 섞여 산만할 때", "단락 첫 문장을 어떻게 시작할지 모르겠을 때", "각 단락 첫 줄만 읽어도 흐름이 보이게 쓰기"]
@@ -761,7 +761,7 @@ entries:
     section: writing
 - id: atlas.writing.coherence
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 일관성
   hint: 글 전체 의미의 연결
   aliases: [Coherence, "글이 앞뒤가 안 맞고 딴 얘기로 샘", "문단마다 하는 말이 하나의 주제로 모이는지", "다 읽고도 무슨 말인지 모르겠다는 평", "글 전체가 한 줄기로 통하게 만들기"]
@@ -770,7 +770,7 @@ entries:
     section: writing
 - id: atlas.writing.cohesion
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 응집성
   hint: 문장 사이의 언어적 연결
   aliases: [Cohesion, "문장과 문장이 뚝뚝 끊겨 읽힘", "이어주는 말과 가리키는 말로 매끄럽게 잇기", "앞 문장의 낱말을 뒤에서 받아 이어가기", "그러나·따라서 같은 연결어 제대로 쓰기"]
@@ -779,7 +779,7 @@ entries:
     section: writing
 - id: atlas.writing.developmental_editing
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 구조 편집
   hint: 주장 구성과 전개를 큰 단위로 수정
   aliases: [Developmental editing, "원고의 장 순서를 통째로 바꿔야 할 때", "빠진 논점 넣고 겹치는 부분 덜어내기", "문장 손보기 전에 글의 뼈대부터 고치기", "초고의 큰 흐름이 설득력 없을 때"]
@@ -788,7 +788,7 @@ entries:
     section: writing
 - id: atlas.writing.line_editing
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 문장 편집
   hint: 표현 리듬과 문장 흐름 개선
   aliases: [Line editing, "문장이 길고 꼬여서 숨이 참", "같은 어미가 반복돼 단조롭게 읽힘", "소리 내어 읽으면 걸리는 곳 다듬기", "뜻은 맞는데 어색한 표현 자연스럽게 고치기"]
@@ -797,7 +797,7 @@ entries:
     section: writing
 - id: atlas.writing.copyediting
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 교열
   hint: 표기 문법 일관성 점검
   aliases: [Copyediting, "맞춤법과 띄어쓰기 틀린 곳 잡기", "같은 말을 여기저기 다르게 적은 것 통일", "인쇄 넘기기 전 마지막 오탈자 점검", "숫자·외래어 적는 방식 한 가지로 맞추기"]
@@ -806,7 +806,7 @@ entries:
     section: writing
 - id: atlas.writing.proofreading
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 교정
   hint: 최종 조판의 오류 확인
   aliases: [Proofreading, "인쇄 넘기기 직전 오탈자 마지막으로 잡기", "책 나왔는데 틀린 글자가 있을까 불안할 때", "편집 끝난 지면에서 띄어쓰기와 쪽번호 확인", "디자인까지 앉힌 원고를 한 글자씩 대조하기"]
@@ -815,7 +815,7 @@ entries:
     section: writing
 - id: atlas.writing.fact_checking
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 사실 확인
   hint: 주장과 출처의 대응 검사
   aliases: [Fact checking, "단톡방에 도는 소문이 진짜인지 알아보기", "기사에 나온 숫자가 원래 자료와 맞는지 대조", "정치인 발언이 근거가 있는 말인지 따져 보기", "인용된 말이 실제로 그 사람이 한 말인지 찾아보기"]
@@ -824,7 +824,7 @@ entries:
     section: writing
 - id: atlas.writing.audience_analysis
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 독자 분석
   hint: 독자의 지식 기대와 상황 파악
   aliases: [Audience analysis, "이 글을 누가 읽을지 먼저 생각하기", "읽는 사람이 이미 아는 것과 모르는 것 가늠", "전문가용인지 초보자용인지 수준 정하기", "보고서 받는 사람이 뭘 알고 싶어 하는지"]
@@ -833,7 +833,7 @@ entries:
     section: writing
 - id: atlas.writing.show_dont_tell
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 보여주기
   hint: 구체적 장면으로 의미 전달
   aliases: [Show dont tell, "슬펐다고 쓰지 말고 우는 모습을 그려주기", "설명만 늘어놓아서 밋밋한 소설 고치기", "독자가 직접 느끼게 만드는 묘사 요령", "인물 성격을 행동과 대사로 드러내고 싶을 때"]
@@ -842,7 +842,7 @@ entries:
     section: writing
 - id: atlas.writing.point_of_view
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 서술 시점
   hint: 이야기를 지각하고 전달하는 위치
   aliases: [Point of view, "소설을 나로 쓸지 그로 쓸지 고민될 때", "누구 눈으로 이야기를 들려줄지 정하기", "인물 속마음을 어디까지 알려줄지 헷갈릴 때", "장면마다 말하는 사람이 왔다갔다해서 어색한 글"]
@@ -851,7 +851,7 @@ entries:
     section: writing
 - id: atlas.writing.unreliable_narrator
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 신뢰할 수 없는 화자
   hint: 서술과 사건 해석 사이의 간극
   aliases: [Unreliable narrator, "말하는 사람의 이야기를 그대로 믿으면 안 되는 소설", "주인공이 거짓말하거나 착각하고 있는 이야기", "읽다 보니 들려준 내용과 실제가 다른 반전", "독자를 속이는 일인칭 소설을 쓰고 싶을 때"]
@@ -860,7 +860,7 @@ entries:
     section: writing
 - id: atlas.writing.dramatic_irony
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 극적 아이러니
   hint: 관객과 인물 사이의 정보 차이
   aliases: [Dramatic irony, "독자는 범인을 아는데 주인공만 모름", "관객만 아는 비밀로 긴장감 만들기", "인물이 모르고 하는 말이 다르게 들리는 장면", "보는 사람 애태우는 이야기 장치"]
@@ -869,7 +869,7 @@ entries:
     section: writing
 - id: atlas.writing.foreshadowing
   kind: concept
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 복선
   hint: 후속 사건을 미리 암시
   aliases: [Foreshadowing, "나중에 터질 일의 단서를 앞에 슬쩍 깔기", "반전이 뜬금없다는 말을 듣지 않으려면", "앞에 나온 소품이 결말에서 쓰이게 하기", "다시 읽으면 아 그래서 그랬구나 싶은 장치"]
@@ -878,7 +878,7 @@ entries:
     section: writing
 - id: atlas.writing.story_structure
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 서사 구조
   hint: 사건과 갈등의 전개 조직
   aliases: [Story structure, "이야기의 처음 중간 끝을 어떻게 짤지 막막할 때", "중반부가 늘어지는 소설 뼈대 다시 잡기", "갈등을 언제 터뜨리고 어떻게 풀지 설계하기", "영화 대본의 막 나누기와 절정 배치"]
@@ -887,7 +887,7 @@ entries:
     section: writing
 - id: atlas.writing.peer_review
   kind: method
-  path: [인문, 글쓰기와 편집]
+  path: ["인문", "글쓰기와 편집"]
   name: 동료평가
   hint: 다른 전문가가 근거와 논증 검토
   aliases: [Peer review, "논문 내기 전에 같은 분야 사람에게 봐달라고 하기", "내 주장에 허점이 없는지 남이 따져봐 주기", "학술지에 실릴 만한 글인지 심사받는 절차", "혼자 쓴 연구를 믿어도 되는지 확인받고 싶을 때"]

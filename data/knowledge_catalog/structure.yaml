@@ -3,9 +3,7 @@ entries:
   kind: method
   name: 3차원 장면 표현
   hint: 공간의 형상과 시점을 장면으로 표현
-  path:
-  - 표현
-  - 3D
+  path: ["예술과 표현", "3D"]
   aliases:
   - 3차원
   - 삼차원
@@ -20,9 +18,7 @@ entries:
   kind: problem
   name: 건축 공간 시각화
   hint: 집·건축 공간의 형태와 외관을 입체 이미지로 확인
-  path:
-  - 표현
-  - 3D
+  path: ["예술과 표현", "3D"]
   aliases:
   - 집 외관
   - 건축 시각화
@@ -41,10 +37,7 @@ entries:
   kind: method
   name: 장면 기반 렌더링
   hint: 형상·재질·조명·카메라로 장면 이미지를 생성
-  path:
-  - 표현
-  - 3D
-  - 렌더링
+  path: ["예술과 표현", "3D", "렌더링"]
   aliases:
   - 외관 렌더
   - 장면 렌더
@@ -59,10 +52,7 @@ entries:
   kind: condition
   name: 렌더 장면 입력
   hint: 형상·재질·조명·카메라를 제작 과정에서 정의
-  path:
-  - 표현
-  - 3D
-  - 입력
+  path: ["예술과 표현", "3D", "입력"]
   aliases: ["입체 그림 뽑기 전 준비해야 할 재료 목록", "물체·표면·빛·시점을 무엇으로 정해주나", "입체 작업 의뢰할 때 넘겨줄 정보 정리", "그림이 이상하게 나올 때 빠뜨린 설정 찾기"]
   source:
     path: docs/world_map/G_structure_evidence.md
@@ -70,9 +60,7 @@ entries:
   kind: tool
   name: Three.js
   hint: 브라우저에서 장면·카메라·렌더러로 3D 표현
-  path:
-  - 표현
-  - 3D
+  path: ["예술과 표현", "3D"]
   aliases:
   - three.js
   - threejs
@@ -87,10 +75,7 @@ entries:
   kind: method
   name: 대화형 3D 표시
   hint: 브라우저에서 모델을 회전·확대하며 확인
-  path:
-  - 표현
-  - 3D
-  - 대화형
+  path: ["예술과 표현", "3D", "대화형"]
   aliases:
   - 3d 뷰어
   - 모델 회전
@@ -105,10 +90,7 @@ entries:
   kind: problem
   name: 입체 모델 탐색
   hint: 화면에서 모델의 여러 방향과 부분을 살펴봄
-  path:
-  - 표현
-  - 3D
-  - 탐색
+  path: ["예술과 표현", "3D", "탐색"]
   aliases:
   - 집을 돌려
   - 집을 회전
@@ -123,9 +105,7 @@ entries:
   kind: problem
   name: 직원 교대 배치
   hint: 기간·인원·근무 조건을 만족하는 직원 배정
-  path:
-  - 운영
-  - 일정
+  path: ["경제와 조직", "일정"]
   aliases:
   - 직원 배치
   - 인력 일정
@@ -142,9 +122,7 @@ entries:
   kind: method
   name: CP-SAT 제약 최적화
   hint: 이산 변수·제약·목적으로 배치를 모델링
-  path:
-  - 계산
-  - 최적화
+  path: ["형식과 추론", "최적화"]
   aliases:
   - cp-sat
   - 제약 기반 일정
@@ -158,10 +136,7 @@ entries:
   kind: condition
   name: 근무 배치 입력
   hint: 대상 기간·인원·가용일·강제 제약과 선호를 정의
-  path:
-  - 운영
-  - 일정
-  - 입력
+  path: ["경제와 조직", "일정", "입력"]
   aliases: ["근무표 짜기 전에 챙겨야 할 정보 정리", "직원별 되는 날 안 되는 날 모으기", "누가 언제 쉬고 싶은지 희망 받아 적기", "다음 달 근무표에 꼭 지킬 규칙 목록 만들기"]
   source:
     path: docs/world_map/G_structure_evidence.md
@@ -169,10 +144,7 @@ entries:
   kind: criterion
   name: 근무 조건 충족
   hint: 필수 인원과 강제 제약의 충족 여부를 검사
-  path:
-  - 운영
-  - 일정
-  - 판정
+  path: ["경제와 조직", "일정", "판정"]
   aliases: ["짜놓은 근무표에 빠진 시간대 없는지 확인", "연속 야간 같은 금지 규칙 어긴 곳 찾기", "시간대마다 최소 인원 채워졌는지 점검", "근무표 돌리기 전 마지막 검수"]
   source:
     path: docs/world_map/G_structure_evidence.md
@@ -180,9 +152,7 @@ entries:
   kind: problem
   name: 여러 표 파일의 통합 조회
   hint: 흩어진 파일의 자료를 함께 검색·집계
-  path:
-  - 데이터
-  - 표 분석
+  path: ["정보와 컴퓨팅", "표 분석"]
   aliases:
   - 여러 파일
   - 여러 csv
@@ -199,10 +169,7 @@ entries:
   kind: method
   name: 파일 기반 SQL 조회
   hint: 파일을 직접 읽어 필터·집계·결합
-  path:
-  - 데이터
-  - 표 분석
-  - SQL
+  path: ["정보와 컴퓨팅", "표 분석", "SQL"]
   aliases:
   - 파일 sql
   - 파일 직접 조회
@@ -216,10 +183,7 @@ entries:
   kind: condition
   name: 파일 경로와 열 대응
   hint: 접근 가능한 파일 경로·형식·스키마 대응 확인
-  path:
-  - 데이터
-  - 표 분석
-  - 입력
+  path: ["정보와 컴퓨팅", "표 분석", "입력"]
   aliases: ["분석할 파일이 실제로 어디 있는지부터 확인", "파일 안에 어떤 칸이 있는지 열어보기 전에 파악", "말한 자료가 어느 파일 어느 칸인지 짚어내기", "파일이 안 열리거나 형식이 뭔지 모르겠을 때"]
   source:
     path: docs/world_map/G_structure_evidence.md

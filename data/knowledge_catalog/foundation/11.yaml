@@ -1,0 +1,59 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.binary_representation
+  kind: concept
+  path: [정보와 컴퓨팅, 컴퓨터와 운영체제]
+  name: 이진 표현
+  hint: 두 상태의 조합으로 수·문자 등 정보를 나타내는 방식
+  aliases: [컴퓨터가 숫자와 글자를 저장하는 원리, 비트와 바이트의 차이, 두 가지 상태로 복잡한 정보 표현, 숫자가 컴퓨터 안에서 보이는 형태]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅
+- id: foundation.process_thread
+  kind: concept
+  path: [정보와 컴퓨팅, 컴퓨터와 운영체제]
+  name: 프로세스와 스레드
+  hint: 실행 중인 프로그램의 자원 단위와 그 안의 실행 흐름
+  aliases: [여러 프로그램이 동시에 도는 방식, 한 프로그램 안에서 일을 나누기, 작업끼리 메모리를 공유하는 차이, 실행 단위와 자원 소유의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅
+- id: foundation.virtual_memory
+  kind: concept
+  path: [정보와 컴퓨팅, 컴퓨터와 운영체제]
+  name: 가상 메모리
+  hint: 프로세스에 독립된 주소 공간을 제공하는 기억장치 추상화
+  aliases: [프로그램마다 자기 메모리가 있는 것처럼 보이는 이유, 실제 메모리와 주소의 관계, 메모리가 부족할 때 디스크를 쓰는 원리, 프로그램 간 기억 공간 격리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅
+- id: foundation.cache_locality
+  kind: concept
+  path: [정보와 컴퓨팅, 컴퓨터와 운영체제]
+  name: 참조 지역성
+  hint: 가까운 시간이나 주소의 데이터를 반복 접근하는 경향
+  aliases: [자주 쓰는 데이터를 가까이 두면 빠른 이유, 메모리 접근 순서에 따른 속도 차이, 작은 임시 저장소가 성능을 높이는 원리, 연속된 자료를 읽는 이점]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅
+- id: foundation.file_system
+  kind: concept
+  path: [정보와 컴퓨팅, 컴퓨터와 운영체제]
+  name: 파일 시스템
+  hint: 저장장치의 파일·디렉터리·이름·공간을 조직하는 체계
+  aliases: [폴더와 파일이 저장되는 구조, 파일 이름과 실제 저장 위치의 관계, 디스크의 빈 공간 관리, 저장한 자료를 다시 찾는 원리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅
+- id: foundation.concurrency
+  kind: concept
+  path: [정보와 컴퓨팅, 컴퓨터와 운영체제]
+  name: 동시성
+  hint: 여러 작업이 겹치는 기간에 진행되고 상호작용하는 성질
+  aliases: [같은 자료를 여러 작업이 바꿀 때, 작업 순서에 따라 결과가 달라지는 이유, 여러 일을 번갈아 진행하기, 동시에 진행하는 것과 병렬 실행의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 정보와 컴퓨팅

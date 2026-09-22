@@ -1,0 +1,186 @@
+status: development; same editor as catalog, not a blind holdout
+cases:
+- id: '1'
+  domain: 형식과 추론
+  group: new
+  query: 달리는 속도가 계속 달라질 때 지금 이 순간의 변화량을 어떻게 이해하면 될까?
+  acceptable_ids:
+  - foundation.derivative
+- id: '2'
+  domain: 형식과 추론
+  group: existing
+  query: 상담원마다 가능한 시간이 다르고 야간에는 두 명 이상 있어야 해. 근무표를 짜야 해.
+  acceptable_ids:
+  - ortools
+  - atlas.optimization.constraint_programming
+- id: '3'
+  domain: 물질과 우주
+  group: new
+  query: 똑같은 불에 올려도 물과 금속의 온도가 올라가는 속도가 왜 다르지?
+  acceptable_ids:
+  - foundation.heat_capacity
+- id: '4'
+  domain: 물질과 우주
+  group: existing
+  query: 전자 두 개가 멀리 떨어져 있는데도 측정 결과에 특별한 관계가 있다는 게 무슨 뜻이야?
+  acceptable_ids:
+  - atlas.physics.quantum_entanglement
+- id: '5'
+  domain: 지구와 환경
+  group: new
+  query: 바다는 어떻게 육지에 내리는 비와 연결되는 거야?
+  acceptable_ids:
+  - foundation.water_cycle
+- id: '6'
+  domain: 지구와 환경
+  group: existing
+  query: 둥근 지구를 종이 한 장에 그리면 왜 나라의 크기나 모양이 달라 보이지?
+  acceptable_ids:
+  - atlas.earth.map_projection
+- id: '7'
+  domain: 생명
+  group: new
+  query: 공룡과 새, 사람의 뼈가 비슷한 부분이 있다는 건 어떻게 이해할 수 있어?
+  acceptable_ids:
+  - foundation.homology
+  - atlas.biology.phylogenetic_inference
+- id: '8'
+  domain: 생명
+  group: existing
+  query: 습지가 줄어들면 그곳 생물들과 사람들이 얻던 혜택이 어떻게 달라질까?
+  acceptable_ids:
+  - atlas.ecology.ecosystem_services_assessment
+  - atlas.ecology.biodiversity_assessment
+- id: '9'
+  domain: 건강
+  group: new
+  query: 숨으로 들어온 산소는 어떤 과정을 거쳐 발끝까지 도달해?
+  acceptable_ids:
+  - foundation.circulation
+  - foundation.gas_exchange
+- id: '10'
+  domain: 건강
+  group: existing
+  query: 새 검사에서 양성이라고 나왔다는 것과 실제 병이 있다는 것은 어떤 관계야?
+  acceptable_ids:
+  - atlas.health.positive_predictive_value
+  - atlas.health.sensitivity_specificity
+- id: '11'
+  domain: 마음과 배움
+  group: new
+  query: 아이들은 남이 자기와 다른 생각을 할 수 있다는 걸 어떻게 알게 될까?
+  acceptable_ids:
+  - foundation.theory_of_mind
+- id: '12'
+  domain: 마음과 배움
+  group: existing
+  query: 책을 다시 읽을 때는 아는데 덮으면 설명을 못 해. 공부법을 바꾸고 싶어.
+  acceptable_ids:
+  - retrieval_practice
+- id: '13'
+  domain: 사회
+  group: new
+  query: 지역마다 사람들이 당연하게 여기는 예절이 다른 건 어떻게 이해하지?
+  acceptable_ids:
+  - foundation.cultural_relativism
+  - foundation.social_norm
+- id: '14'
+  domain: 사회
+  group: existing
+  query: 서로 가격만 깎으려는 거래에서 양쪽이 모두 얻는 타협을 찾고 싶어.
+  acceptable_ids:
+  - integrative_negotiation
+  - zopa
+- id: '15'
+  domain: 경제와 조직
+  group: new
+  query: 내 월급 숫자는 그대로인데 살 수 있는 물건이 줄어드는 이유가 뭐야?
+  acceptable_ids:
+  - foundation.inflation
+- id: '16'
+  domain: 경제와 조직
+  group: existing
+  query: 빵집을 열 때 하루에 얼마나 팔아야 임대료와 인건비를 감당할 수 있을까?
+  acceptable_ids:
+  - break_even
+- id: '17'
+  domain: 인문
+  group: new
+  query: 요즘 소설이 옛 신화를 비틀어 쓰고 있는데 원래 이야기를 알면 어떻게 달리 읽을까?
+  acceptable_ids:
+  - foundation.intertextuality
+  - foundation.myth
+- id: '18'
+  domain: 인문
+  group: existing
+  query: 옛날 일기에 쓰인 내용을 당시 실제 생활을 보여주는 자료로 읽고 싶어.
+  acceptable_ids:
+  - primary_source_analysis
+  - atlas.history.source_criticism
+- id: '19'
+  domain: 예술과 표현
+  group: new
+  query: 공연을 보고 좋았다는 말 말고, 어떤 부분 때문에 그랬는지 설명하고 싶어.
+  acceptable_ids:
+  - foundation.art_criticism
+  - foundation.aesthetic_experience
+- id: '20'
+  domain: 예술과 표현
+  group: existing
+  query: 단순한 멜로디에 여러 악기 소리를 붙이면 어떻게 서로 다른 느낌을 만들 수 있을까?
+  acceptable_ids:
+  - atlas.music.orchestration
+  - atlas.music.musical_arrangement
+  - atlas.music.timbre
+- id: '21'
+  domain: 정보와 컴퓨팅
+  group: new
+  query: 실행 중인 프로그램은 같은 컴퓨터의 메모리를 어떻게 나눠 쓰는 거야?
+  acceptable_ids:
+  - foundation.virtual_memory
+  - foundation.process_thread
+- id: '22'
+  domain: 정보와 컴퓨팅
+  group: existing
+  query: 수백 개의 CSV를 서버 없이 내 노트북에서 조건별로 합계 내고 싶어.
+  acceptable_ids:
+  - duckdb
+  - polars
+- id: '23'
+  domain: 공학
+  group: new
+  query: 지렛대를 길게 잡으면 적은 힘으로도 무거운 물건을 들 수 있는 이유가 뭐야?
+  acceptable_ids:
+  - foundation.mechanical_advantage
+- id: '24'
+  domain: 공학
+  group: existing
+  query: 로봇 팔 끝을 정해진 위치로 보내려면 관절을 각각 얼마나 돌려야 할까?
+  acceptable_ids:
+  - atlas.robotics.inverse_kinematics
+- id: '25'
+  domain: 생활
+  group: new
+  query: 겨울 아침마다 창문에 물방울이 생겨. 그 원리를 이해하고 싶어.
+  acceptable_ids:
+  - foundation.condensation
+  - foundation.thermal_bridge
+- id: '26'
+  domain: 생활
+  group: existing
+  query: 마요네즈를 만들 때 물과 기름이 어떻게 한 덩어리처럼 섞이는 거야?
+  acceptable_ids:
+  - atlas.food.emulsification
+- id: '27'
+  domain: 지식과 탐구
+  group: new
+  query: 여러 신문이 같은 발표문을 옮겼다면 확인된 사실이 그만큼 더 많아지는 걸까?
+  acceptable_ids:
+  - foundation.source_independence
+  - foundation.gatekeeping
+- id: '28'
+  domain: 지식과 탐구
+  group: existing
+  query: 한 도시가 정책을 바꿨는데 비슷한 다른 도시와 비교해서 효과를 보고 싶어.
+  acceptable_ids:
+  - difference_in_differences

@@ -87,6 +87,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 **세계의 지도**는 AI가 가진 지식과 찾아볼 지식으로 가는 구조적 어휘 카탈로그다. 관련 이름·분류·문제–방법–도구
 관계와 근거를 접한 AI가 전문지식을 회상하거나 검색한다. 이미 적절한 접근을 그대로 돕고,
 관점 전환·대안을 강제하지 않는다. 정본은 `data/knowledge_catalog/world.yaml`과 그 fragments이며,
+분야 골격은 `outline.yaml`에 먼저 선언하고 기존 항목을 배치한 뒤 빈 가지를 채운다.
 전체 열람은 등록 스크립트 `세계지도`다. 이름을 모르면 `browse`로 분야부터 탐색한다. [지도 사용법](../guides/world_map.md) · [도구 실행 통로](../guides/world_tools.md).
 
 ---

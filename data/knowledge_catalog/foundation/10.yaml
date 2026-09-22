@@ -1,0 +1,59 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.dramaturgy
+  kind: concept
+  path: [예술과 표현, 공연과 감상]
+  name: 드라마투르기
+  hint: 공연의 텍스트·구조·맥락·무대 요소를 조직하고 해석하는 작업
+  aliases: [연극 장면들이 전체 이야기로 이어지는 방식, 대본을 무대에 맞게 해석하기, 공연의 흐름과 의미를 함께 구성, 장면 순서가 관객 경험에 주는 영향]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 예술과 표현
+- id: foundation.mise_en_scene
+  kind: concept
+  path: [예술과 표현, 공연과 감상]
+  name: 미장센
+  hint: 공간·인물·조명·소품 등의 배치로 장면의 의미를 구성하는 방식
+  aliases: [무대와 화면에서 배치가 주는 느낌, 소품과 조명이 이야기를 전하는 방식, 장면 안의 시각적 요소 읽기, 인물의 위치로 관계 표현]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 예술과 표현
+- id: foundation.choreography
+  kind: concept
+  path: [예술과 표현, 공연과 감상]
+  name: 안무
+  hint: 몸의 움직임과 공간·시간의 관계를 구성하는 작업
+  aliases: [춤의 동작을 이어 하나의 작품으로 만들기, 여러 사람이 움직이는 대형, 동작의 반복과 변화, 무대 위 몸의 흐름 설계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 예술과 표현
+- id: foundation.performance_presence
+  kind: concept
+  path: [예술과 표현, 공연과 감상]
+  name: 현장성
+  hint: 공연의 동시적 만남과 공유된 시간·공간에서 생기는 경험
+  aliases: [녹화와 실제 공연이 다르게 느껴지는 이유, 관객의 반응이 공연에 미치는 영향, 한 공간에서 함께 보는 경험, 매번 달라지는 무대의 분위기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 예술과 표현
+- id: foundation.art_criticism
+  kind: concept
+  path: [예술과 표현, 공연과 감상]
+  name: 예술비평
+  hint: 작품의 형식·맥락·경험에 근거하여 해석하고 평가하는 활동
+  aliases: [좋았다는 느낌을 구체적으로 설명하기, 작품의 표현 방식과 의미 연결, 감상과 평가의 근거 정리, 다른 해석을 비교하며 작품 보기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 예술과 표현
+- id: foundation.aesthetic_experience
+  kind: concept
+  path: [예술과 표현, 공연과 감상]
+  name: 미적 경험
+  hint: 형식·감각·정서·의미에 주의를 기울이며 작품과 대상을 경험하는 과정
+  aliases: [그림이나 음악에 몰입하는 느낌, 쓸모와 별개로 아름다움을 느끼기, 예술을 접하며 생각과 감정이 변하는 경험, 일상 풍경을 새롭게 감상하기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 예술과 표현

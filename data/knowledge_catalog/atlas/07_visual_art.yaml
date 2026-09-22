@@ -5,7 +5,7 @@ curation:
 entries:
 - id: atlas.visual_art.composition
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 구도
   hint: 화면 안 요소의 위치와 관계
   aliases: [Composition, "사진 찍을 때 주인공을 어디에 둘지", "그림 화면이 한쪽으로 쏠려 어색할 때", "시선이 자연스럽게 흐르게 요소 배치", "여백과 사물의 균형 잡아 화면 짜기"]
@@ -14,7 +14,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.visual_hierarchy
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 시각적 위계
   hint: 중요도에 따른 시선 순서
   aliases: [Visual hierarchy, "포스터에서 제목이 제일 먼저 눈에 띄게 하기", "뭐가 중요한지 모르겠는 산만한 화면 고치기", "글자 크기와 굵기로 읽는 차례 유도하기", "보는 사람 눈길이 어디부터 갈지 설계하기"]
@@ -23,7 +23,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.gestalt_principles
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 게슈탈트 원리
   hint: 부분을 묶어 지각하는 경향
   aliases: [Gestalt principles, "가까이 놓인 점들이 한 덩어리로 보이는 이유", "끊어진 선인데 이어진 모양으로 읽히는 현상", "메뉴 항목을 같은 무리로 보이게 배치하기", "비슷한 모양끼리 저절로 짝지어 보이는 까닭"]
@@ -32,7 +32,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.figure_ground
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 도형과 배경
   hint: 주목 대상과 배경의 구별
   aliases: [Figure ground, "주인공이 뒤쪽 그림에 묻혀 안 보일 때", "로고에서 빈 부분이 다른 모양으로 보이는 효과", "사진에서 인물이 또렷이 떠오르게 하기", "꽃병으로도 두 얼굴로도 보이는 그림의 이유"]
@@ -41,7 +41,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.negative_space
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 여백
   hint: 요소 사이 비어 있는 공간의 역할
   aliases: [Negative space, "전단지가 너무 빽빽해서 답답해 보일 때", "글과 그림 사이를 얼마나 띄울지 정하기", "비워 둔 자리가 오히려 고급스럽게 보이는 이유", "내용을 덜어내 숨 쉴 틈 있는 화면 만들기"]
@@ -50,7 +50,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.color_harmony
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 색채 조화
   hint: 색들 사이의 대비와 통일
   aliases: [Color harmony, "어떤 색끼리 같이 써야 어울리는지", "포스터 배색이 촌스럽고 따로 놀 때", "옷이나 인테리어 색 맞춤이 어려울 때", "강조할 색과 받쳐줄 색 고르는 법"]
@@ -59,7 +59,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.color_space
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 색 공간
   hint: 색을 수치로 표현하는 좌표 체계
   aliases: [Color space, "색을 숫자 세 개로 적는 방식 이해하기", "빨강·초록·파랑 값과 인쇄용 값의 차이", "같은 숫자인데 기기마다 색이 다른 이유", "사진 저장할 때 색 범위 설정 고르기"]
@@ -68,7 +68,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.color_management
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 색 관리
   hint: 장치 간 색 표현의 대응
   aliases: [Color management, "화면에서 본 색과 인쇄물 색이 다를 때", "모니터마다 사진 색이 달라 보이는 문제", "촬영부터 출력까지 색을 똑같이 유지", "인쇄소 맡기기 전 색 틀어짐 막기"]
@@ -77,7 +77,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.perspective_drawing
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 원근법
   hint: 공간 깊이를 평면에 표현
   aliases: [Perspective drawing, "멀리 있는 건물을 작게 그려 깊이감 내기", "길이 저 멀리 한 점으로 모이게 그리는 법", "그린 방 안이 납작하고 어색해 보일 때", "종이 위에 입체적인 거리 풍경 그리기"]
@@ -86,7 +86,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.orthographic_projection
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 정투영
   hint: 평행 투영으로 형태와 치수 표현
   aliases: [Orthographic projection, "물건을 앞 위 옆에서 본 모양으로 나눠 그리기", "멀어도 작아지지 않게 그려서 길이를 바로 재는 그림", "가구 만들기 전에 치수 적힌 그림 그리는 법", "입체 물건을 공장에 맡길 납작한 그림으로 옮기기"]
@@ -95,7 +95,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.gesture_drawing
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 제스처 드로잉
   hint: 움직임과 흐름을 빠르게 포착
   aliases: [Gesture drawing, "삼십 초 안에 사람 자세를 쓱쓱 그리는 연습", "그린 인물이 뻣뻣하고 굳어 보일 때", "춤추는 사람의 동세를 몇 줄 선으로 잡기", "크로키 시간에 세부 말고 전체 기운 잡기"]
@@ -104,7 +104,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.observational_drawing
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 관찰 드로잉
   hint: 실제 대상의 관계를 관찰해 표현
   aliases: [Observational drawing, "눈앞의 정물을 보이는 그대로 그리는 연습", "아는 대로 그려서 실물과 비율이 어긋날 때", "연필을 들어 길이와 각도를 재며 그리기", "사진 말고 실물을 앞에 두고 그리는 공부"]
@@ -113,7 +113,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.chiaroscuro
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 명암법
   hint: 빛과 어둠으로 입체감 구성
   aliases: [Chiaroscuro, "그림이 납작해 보여 볼륨이 안 살 때", "밝은 곳과 그늘로 둥근 느낌 내기", "연필 소묘에서 덩어리감 표현하기", "빛이 어디서 오는지에 따라 그늘 넣기"]
@@ -122,7 +122,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.linocut
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 리노컷
   hint: 판을 깎아 찍는 볼록판화
   aliases: [Linocut, "고무판을 조각칼로 파서 찍어내는 그림", "같은 그림을 집에서 여러 장 찍어내고 싶을 때", "직접 새긴 도장 같은 느낌의 엽서 만들기", "학교 미술 시간에 하던 판 파기 작업"]
@@ -131,7 +131,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.screen_printing
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 실크스크린
   hint: 망판의 열린 부분으로 잉크 전사
   aliases: [Screen printing, "티셔츠에 직접 디자인한 무늬 찍어내기", "천 가방에 같은 그림을 수십 장 인쇄하기", "고운 천 틀에 물감을 밀어 찍는 인쇄", "색을 한 겹씩 올려 포스터 찍는 방법"]
@@ -140,7 +140,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.collage
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 콜라주
   hint: 서로 다른 재료를 조합해 표현
   aliases: [Collage, "잡지 오려 붙여 작품 만들기", "사진·천·종이를 한 화면에 섞어 붙이기", "아이와 함께 하는 오려 붙이기 미술", "여러 조각 그림을 모아 새 이미지 꾸미기"]
@@ -149,7 +149,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.photomontage
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 포토몽타주
   hint: 사진 조각의 결합으로 의미 구성
   aliases: [Photomontage, "잡지에서 오린 이미지를 붙여 새 장면 만들기", "여러 장의 사진을 합쳐 풍자 포스터 만들기", "서로 다른 사진을 이어 붙여 메시지 전하기", "찍은 사진들을 오려 한 화면으로 재구성하기"]
@@ -158,7 +158,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.generative_art
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 생성예술
   hint: 규칙과 과정으로 작품 생성
   aliases: [Generative art, "코드를 짜서 매번 다른 그림이 나오게 하기", "우연과 반복으로 무늬를 만들어 내는 작업", "직접 안 그리고 절차만 정해 작품 만들기", "컴퓨터로 끝없이 변하는 패턴 그림 만들기"]
@@ -167,7 +167,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.data_visualization
   kind: method
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 데이터 시각화
   hint: 자료의 관계를 시각 형태로 표현
   aliases: [Data visualization, "숫자만 빽빽한 표를 한눈에 보이게 만들기", "매출 변화를 그림으로 보여주고 싶을 때", "보고서에 넣을 그래프 종류 고르기", "엑셀 자료를 봐도 흐름이 안 읽힐 때"]
@@ -176,7 +176,7 @@ entries:
     section: visual_art
 - id: atlas.visual_art.small_multiples
   kind: concept
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: 작은 다중 그래프
   hint: 같은 형식의 여러 도표로 비교
   aliases: [Small multiples, "같은 눈금의 작은 도표를 격자로 배열하기", "지역마다 연도마다 달라지는 추세를 한 장에 보기"]
@@ -185,7 +185,7 @@ entries:
     section: visual_art
 - id: atlas.music.harmony
   kind: concept
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 화성
   hint: 동시에 울리는 음들의 관계
   aliases: [Harmony, "멜로디에 어울리는 코드 붙이기", "어떤 음들을 같이 눌러야 듣기 좋은지", "노래에 화음 넣어 부르고 싶을 때", "코드 진행이 왜 슬프거나 밝게 들리는지"]
@@ -194,7 +194,7 @@ entries:
     section: music
 - id: atlas.music.counterpoint
   kind: concept
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 대위법
   hint: 독립 선율의 동시 진행
   aliases: [Counterpoint, "두 멜로디가 동시에 흘러도 어울리게 쓰기", "돌림노래처럼 가락이 서로 쫓아가는 작곡", "바흐 곡처럼 여러 가락이 얽히는 음악 쓰기", "반주가 아닌 대등한 가락을 하나 더 얹기"]
@@ -203,7 +203,7 @@ entries:
     section: music
 - id: atlas.music.voice_leading
   kind: concept
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 성부 진행
   hint: 화음 사이 개별 음의 이동
   aliases: [Voice leading, "코드가 바뀔 때 손이 덜 움직이게 잇기", "합창 각 파트가 부르기 쉽게 음 배치하기", "코드 넘어갈 때 뚝뚝 끊겨 들릴 때", "화음 속 각 음이 다음 화음 어디로 가는지"]
@@ -212,7 +212,7 @@ entries:
     section: music
 - id: atlas.music.rhythm
   kind: concept
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 리듬
   hint: 시간 속 길이 강세와 반복
   aliases: [Rhythm, "노래할 때 자꾸 박을 놓치고 밀릴 때", "쿵짝 쿵짝 같은 패턴을 만드는 원리", "긴 음과 짧은 음의 배열로 생기는 흐름", "손뼉으로 따라 치며 익히는 음악 요소"]
@@ -221,7 +221,7 @@ entries:
     section: music
 - id: atlas.music.meter
   kind: concept
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 박자
   hint: 박의 규칙적 묶음
   aliases: [Meter, "하나 둘 셋 하나 둘 셋 세며 연주하기", "왈츠는 왜 셋씩 세는지 궁금할 때", "악보 맨 앞 분수처럼 생긴 숫자 읽는 법", "곡을 마디로 나누는 기준 이해하기"]
@@ -230,7 +230,7 @@ entries:
     section: music
 - id: atlas.music.timbre
   kind: concept
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 음색
   hint: 음의 질감과 스펙트럼 특성
   aliases: [Timbre, "같은 음인데 피아노와 기타가 다르게 들리는 이유", "목소리만 듣고 누구인지 알 수 있는 까닭", "소리가 따뜻하다 날카롭다고 느끼는 차이", "신시사이저로 원하는 소리 느낌 만들기"]
@@ -239,7 +239,7 @@ entries:
     section: music
 - id: atlas.music.orchestration
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 관현악법
   hint: 악기의 음색과 역할 배치
   aliases: [Orchestration, "피아노 스케치를 오케스트라 악보로 옮기기", "이 가락을 플루트에 줄지 바이올린에 줄지", "여러 악기가 함께 울릴 때 소리 섞임 설계", "웅장한 영화음악 같은 소리를 내고 싶을 때"]
@@ -248,7 +248,7 @@ entries:
     section: music
 - id: atlas.music.musical_arrangement
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 편곡
   hint: 기존 곡의 악기와 구조 재구성
   aliases: [Musical arrangement, "피아노곡을 밴드가 연주할 수 있게 바꾸기", "유명한 노래를 우리 합창단에 맞게 고치기", "발라드를 신나는 버전으로 새로 꾸미기", "같은 곡에 전주와 간주를 새로 붙이기"]
@@ -257,7 +257,7 @@ entries:
     section: music
 - id: atlas.music.ear_training
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 청음
   hint: 듣고 음정 리듬 화성 구별
   aliases: [Ear training, "들은 멜로디를 악보로 받아 적는 훈련", "노래를 듣고 무슨 코드인지 알아맞히기", "음대 입시 시험에서 듣고 적는 과목", "귀로만 듣고 곡을 따라 치고 싶을 때"]
@@ -266,7 +266,7 @@ entries:
     section: music
 - id: atlas.music.improvisation
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 즉흥연주
   hint: 진행 중 음악적 선택 구성
   aliases: [Improvisation, "악보 없이 그 자리에서 가락 지어 연주하기", "재즈 솔로를 어떻게 하는지 궁금할 때", "합주 중에 코드만 보고 자유롭게 치기", "외운 곡만 칠 줄 알아 답답한 연주자"]
@@ -275,7 +275,7 @@ entries:
     section: music
 - id: atlas.music.motivic_development
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 동기 발전
   hint: 짧은 음악 재료의 변형과 확장
   aliases: [Motivic development, "네 음짜리 아이디어로 곡 전체 끌고 가기", "같은 가락을 조금씩 바꿔 가며 길게 늘이기", "작곡하다 첫 여덟 마디 뒤에 막혔을 때", "운명 교향곡의 빠바바밤이 계속 변하는 방식"]
@@ -284,7 +284,7 @@ entries:
     section: music
 - id: atlas.music.multitrack_recording
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 멀티트랙 녹음
   hint: 소리를 분리 기록해 조합
   aliases: [Multitrack recording, "악기마다 따로 녹음해서 나중에 합치기", "혼자서 기타 베이스 노래를 모두 녹음하기", "틀린 파트만 다시 녹음하고 싶을 때", "녹음 후에 악기별 크기를 따로 조절하기"]
@@ -293,7 +293,7 @@ entries:
     section: music
 - id: atlas.music.equalization
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 이퀄라이제이션
   hint: 주파수별 크기 조정
   aliases: [Equalization, "목소리가 웅웅거리고 먹먹하게 들릴 때", "저음을 줄이고 고음을 살려 소리 선명하게", "악기끼리 소리가 겹쳐 뭉개질 때 자리 나누기", "이어폰 소리를 내 취향으로 음역별 조절"]
@@ -302,7 +302,7 @@ entries:
     section: music
 - id: atlas.music.dynamic_range_compression
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 다이내믹 압축
   hint: 신호 크기 차이 조절
   aliases: [Dynamic range compression, "속삭임은 안 들리고 고함은 너무 클 때", "노래 목소리 크기가 들쭉날쭉한 녹음 고르게", "작은 소리는 키우고 큰 소리는 눌러 주기", "드럼 소리를 단단하고 꽉 차게 만들기"]
@@ -311,7 +311,7 @@ entries:
     section: music
 - id: atlas.music.sidechain_compression
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 사이드체인 압축
   hint: 다른 신호로 압축 동작 제어
   aliases: [Sidechain compression, "킥 드럼이 칠 때마다 베이스가 살짝 줄어들게", "말할 때만 배경음악이 자동으로 작아지게", "댄스 음악에서 소리가 꿀렁이는 효과", "두 소리가 부딪칠 때 한쪽을 자동으로 비키게"]
@@ -320,7 +320,7 @@ entries:
     section: music
 - id: atlas.music.convolution_reverb
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 컨볼루션 리버브
   hint: 공간 응답으로 잔향 합성
   aliases: [Convolution reverb, "방에서 녹음한 목소리를 성당에서 부른 듯 만들기", "실제 공연장의 울림을 녹음에 입히기", "박수 소리로 잰 공간의 울림 재현하기", "건조한 녹음에 진짜 같은 공간감 더하기"]
@@ -329,7 +329,7 @@ entries:
     section: music
 - id: atlas.music.audio_mastering
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 오디오 마스터링
   hint: 배포용 음원의 최종 균형과 규격 조정
   aliases: [Audio mastering, "완성한 노래를 음원 사이트에 올리기 전 마무리", "내 곡이 다른 곡보다 작고 탁하게 들릴 때", "앨범 수록곡들의 소리 느낌을 통일하기", "믹싱 끝난 곡을 발매용으로 최종 손질"]
@@ -338,7 +338,7 @@ entries:
     section: music
 - id: atlas.music.loudness_normalization
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 음량 정규화
   hint: 지각 음량 기준으로 크기 맞춤
   aliases: [Loudness normalization, "영상마다 소리 크기가 달라 볼륨 계속 만질 때", "재생목록의 곡들을 비슷한 크기로 들리게", "팟캐스트 회차별 소리 크기 일정하게 맞추기", "방송 기준에 맞는 소리 크기로 내보내기"]
@@ -347,7 +347,7 @@ entries:
     section: music
 - id: atlas.music.spectral_subtraction
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 스펙트럼 감산
   hint: 추정 잡음 성분을 빼서 신호 정리
   aliases: [Spectral subtraction, "녹음에 깔린 쉬이 하는 잡음 지우기", "에어컨 소리가 섞인 인터뷰 음성 살리기", "조용한 구간의 소음 모양을 본떠 전체에서 제거", "오래된 테이프 녹음을 깨끗하게 복원"]
@@ -356,7 +356,7 @@ entries:
     section: music
 - id: atlas.music.soundscape_analysis
   kind: method
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: 사운드스케이프 분석
   hint: 장소의 소리와 지각 경험 분석
   aliases: [Soundscape analysis, "우리 동네에서 들리는 소리들 기록하고 조사", "공원이 시끄럽게 느껴지는 원인 따져 보기", "시장과 골목의 소리 풍경 비교하기", "어떤 곳의 소음과 편안함 관계 살피기"]
@@ -365,7 +365,7 @@ entries:
     section: music
 - id: atlas.film.exposure_triangle
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 노출의 삼각관계
   hint: 조리개 셔터 감도의 관계
   aliases: [Exposure triangle, "사진이 너무 밝거나 어둡게 나올 때 조절법", "수동 모드에서 세 가지 설정을 어떻게 맞출지", "어두운 실내에서 흔들림 없이 찍는 설정 찾기", "하나를 바꾸면 다른 걸 어떻게 보상해야 하는지"]
@@ -374,7 +374,7 @@ entries:
     section: film
 - id: atlas.film.depth_of_field
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 피사계심도
   hint: 허용 선명도로 보이는 거리 범위
   aliases: [Depth of field, "인물은 또렷하고 배경은 흐리게 찍고 싶을 때", "단체 사진에서 앞줄 뒷줄 다 선명하게", "풍경 사진에서 가까운 꽃과 먼 산 모두 또렷하게", "조리개를 조이면 선명한 범위가 왜 넓어지는지"]
@@ -383,7 +383,7 @@ entries:
     section: film
 - id: atlas.film.dynamic_range
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 다이내믹 레인지
   hint: 구별 가능한 밝기 범위
   aliases: [Dynamic range, "하늘은 하얗게 날아가고 그늘은 까맣게 뭉칠 때", "창가 역광에서 안과 밖이 같이 안 담기는 이유", "카메라가 밝은 곳과 어두운 곳을 얼마나 함께 담나", "카메라 고를 때 명암 표현력 비교하기"]
@@ -392,7 +392,7 @@ entries:
     section: film
 - id: atlas.film.white_balance
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 화이트밸런스
   hint: 광원의 색을 고려해 중립색 조정
   aliases: [White balance, "실내 사진이 누렇게 나올 때", "흰 종이가 푸르스름하게 찍히는 문제", "형광등 아래서 피부색이 이상하게 나올 때", "조명 바뀔 때마다 색이 달라지는 상품 사진"]
@@ -401,7 +401,7 @@ entries:
     section: film
 - id: atlas.film.high_dynamic_range_imaging
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: HDR 영상
   hint: 여러 밝기 범위를 통합
   aliases: [High dynamic range imaging, "밝기를 달리해 찍은 여러 장을 한 장으로 합치기", "노을 하늘과 어두운 땅을 모두 살린 사진", "눈으로 본 것처럼 명암이 풍부한 영상 만들기", "밝은 티브이에서 더 생생하게 보이는 영상 제작"]
@@ -410,7 +410,7 @@ entries:
     section: film
 - id: atlas.film.focus_stacking
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 초점 합성
   hint: 서로 다른 초점의 이미지를 결합
   aliases: [Focus stacking, 초점이 다른 사진 합치기, "작은 곤충을 머리부터 꼬리까지 선명하게 찍기", "접사에서 일부만 또렷하고 나머지가 흐릴 때", "초점을 조금씩 옮겨 찍은 여러 장을 한 장으로", "상품 사진을 앞뒤 전부 또렷하게 만들기"]
@@ -419,7 +419,7 @@ entries:
     section: film
 - id: atlas.film.photogrammetry
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 사진측량
   hint: 사진의 대응점으로 공간 형태 복원
   aliases: [Photogrammetry, 사진으로 입체 복원, "여러 각도 사진으로 물건의 입체 모형 만들기", "드론 사진으로 땅의 높낮이 지도 만들기", "유물이나 건물을 사진만으로 입체 기록하기", "사진에서 실제 거리와 크기를 재고 싶을 때"]
@@ -428,7 +428,7 @@ entries:
     section: film
 - id: atlas.film.structure_from_motion
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 움직임 기반 구조복원
   hint: 다중 영상에서 카메라와 구조 추정
   aliases: [Structure from motion, "걸으며 찍은 영상으로 공간의 입체 점 구름 얻기", "사진마다 찍은 위치와 방향을 거꾸로 알아내기", "순서 없는 관광지 사진 묶음으로 건물 형태 계산", "로봇이 찍은 화면으로 자기 위치와 주변 모양 추정"]
@@ -437,7 +437,7 @@ entries:
     section: film
 - id: atlas.film.shot_reverse_shot
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 숏 역숏
   hint: 상대 방향 숏을 교차해 관계 표현
   aliases: [Shot reverse shot, "두 사람 대화를 번갈아 얼굴로 보여주기", "마주 앉은 인물을 어느 쪽에서 찍어야 할지", "말하는 사람과 듣는 사람 반응을 오가며 편집", "카메라 한 대로 대화 장면 찍는 순서 짜기"]
@@ -446,7 +446,7 @@ entries:
     section: film
 - id: atlas.film.continuity_editing
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 연속편집
   hint: 시간과 공간의 연속감을 유지
   aliases: [Continuity editing, "컷이 바뀔 때 튀지 않고 자연스럽게 이어지게", "앞 장면과 소품 위치가 달라 어색한 문제", "인물이 걷는 방향이 컷마다 뒤집혀 보일 때", "보는 사람이 편집을 의식하지 않게 이어 붙이기"]
@@ -455,7 +455,7 @@ entries:
     section: film
 - id: atlas.film.montage
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 몽타주
   hint: 숏의 결합으로 의미와 리듬 구성
   aliases: [Montage, "짧은 장면들을 이어 붙여 시간 흐름 압축하기", "훈련 과정을 음악에 맞춰 빠르게 보여주기", "따로 찍은 두 장면을 붙여 새로운 뜻 만들기", "컷 길이로 박자감을 만들어 내는 편집"]
@@ -464,7 +464,7 @@ entries:
     section: film
 - id: atlas.film.j_cut
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: J 컷
   hint: 다음 장면의 소리를 먼저 연결
   aliases: [J cut, "화면이 바뀌기 전에 다음 장면 소리부터 들리게", "대화 장면 전환을 소리로 미리 끌어당기기", "장면 넘어갈 때 궁금증을 소리로 먼저 주기", "다음 사람 목소리가 먼저 나오고 얼굴이 뒤따르게"]
@@ -473,7 +473,7 @@ entries:
     section: film
 - id: atlas.film.l_cut
   kind: concept
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: L 컷
   hint: 이전 장면의 소리를 이어 연결
   aliases: [L cut, "화면은 넘어갔는데 앞 장면 말소리가 계속되게", "말하는 사람 목소리 위에 듣는 사람 표정 보여주기", "인터뷰 음성을 깔고 관련 자료 화면 얹기", "앞 장면의 여운을 소리로 남기며 넘어가기"]
@@ -482,7 +482,7 @@ entries:
     section: film
 - id: atlas.film.color_grading
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 색보정 연출
   hint: 색과 명암으로 영상의 인상 구성
   aliases: [Color grading, "영상 분위기를 차갑게 또는 따뜻하게 바꾸기", "영화 같은 색감을 내고 싶을 때", "장면마다 색이 달라 통일감이 없을 때", "밋밋한 영상에 감정이 실린 색조 입히기"]
@@ -491,7 +491,7 @@ entries:
     section: film
 - id: atlas.film.chroma_key
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 크로마키
   hint: 특정 색 영역을 분리해 합성
   aliases: [Chroma key, "초록 천 앞에서 찍고 배경 바꿔 넣기", "일기예보처럼 사람 뒤에 다른 화면 띄우기", "방에서 찍은 영상을 다른 장소처럼 보이게", "방송할 때 내 모습만 남기고 뒤를 지우기"]
@@ -500,7 +500,7 @@ entries:
     section: film
 - id: atlas.film.rotoscoping
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 로토스코핑
   hint: 프레임별 대상 윤곽 추적
   aliases: [Rotoscoping, "영상 속 사람만 한 장 한 장 테두리 따내기", "초록 천 없이 찍은 영상에서 인물 분리하기", "실사 영상을 따라 그려 만화처럼 만들기", "머리카락 날리는 인물을 배경에서 떼어내는 수작업"]
@@ -509,7 +509,7 @@ entries:
     section: film
 - id: atlas.film.motion_tracking
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 모션 트래킹
   hint: 영상 속 대상의 움직임 추적
   aliases: [Motion tracking, "움직이는 사람 얼굴에 모자이크 따라붙게 하기", "달리는 차 위에 글자가 같이 움직이게", "영상 속 물체 위치를 장면마다 자동으로 따라가기", "화면 속 공의 이동 경로를 뽑아내고 싶을 때"]
@@ -518,7 +518,7 @@ entries:
     section: film
 - id: atlas.film.match_moving
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 매치무빙
   hint: 실사 카메라 움직임과 합성 장면 정합
   aliases: [Match moving, "흔들리는 촬영 영상에 컴퓨터 그림을 붙박이로 넣기", "실제 찍은 거리에 가상 건물을 어색하지 않게 세우기", "카메라가 움직여도 합성한 물체가 미끄러지지 않게", "촬영한 카메라의 움직임을 입체 공간에서 되살리기"]
@@ -527,7 +527,7 @@ entries:
     section: film
 - id: atlas.film.foley
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 폴리
   hint: 영상 동작에 맞춰 효과음 제작
   aliases: [Foley, "발소리나 옷 스치는 소리를 따로 녹음해 입히기", "촬영 때 안 담긴 생활 소리를 만들어 넣기", "화면 속 움직임에 딱 맞는 소리를 직접 연기하기", "문 닫는 소리가 밋밋해서 실감이 안 날 때"]
@@ -536,7 +536,7 @@ entries:
     section: film
 - id: atlas.film.nonlinear_editing
   kind: method
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: 비선형 편집
   hint: 원본 순서와 독립적으로 영상 조합
   aliases: [Nonlinear editing, "찍은 순서와 상관없이 장면을 자유롭게 배치", "중간 장면을 빼거나 끼워도 원본이 안 상하게", "컴퓨터에서 영상 조각을 줄 위에 늘어놓고 다듬기", "테이프 편집과 달리 아무 지점이나 바로 고치기"]
@@ -545,7 +545,7 @@ entries:
     section: film
 - id: atlas.architecture.building_information_modeling
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 건축정보모델링
   hint: 형상과 건물 속성의 통합 모형
   aliases: [Building information modeling, BIM, "건물을 입체 도면과 자재 정보로 한꺼번에 관리", "설계 변경이 도면마다 자동으로 반영되게 하기", "배관과 구조물이 서로 부딪히는지 시공 전에 확인", "입체 도면에서 자재 수량과 공사비 바로 뽑기"]
@@ -554,7 +554,7 @@ entries:
     section: architecture
 - id: atlas.architecture.parametric_design
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 매개변수 설계
   hint: 변수와 관계로 형상 생성
   aliases: [Parametric design, "숫자 몇 개만 바꾸면 건물 모양이 자동으로 바뀌게", "손으로 그리기 힘든 물결 모양 외벽 만들기", "규칙을 정해 놓고 수백 가지 형태 안 뽑아 보기", "조건을 바꿔 가며 최적의 지붕 곡면 찾기"]
@@ -563,7 +563,7 @@ entries:
     section: architecture
 - id: atlas.architecture.space_syntax
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 공간구문론
   hint: 공간 연결 구조와 이용 관계 분석
   aliases: [Space syntax, "어느 골목에 사람이 많이 다닐지 길 짜임으로 예측", "건물 안 방들이 어떻게 이어졌는지 그림으로 분석", "가게 자리가 눈에 잘 띄고 닿기 쉬운지 따지기", "미술관에서 관람객이 몰리는 방과 외진 방 찾기"]
@@ -572,7 +572,7 @@ entries:
     section: architecture
 - id: atlas.architecture.site_analysis
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 대지 분석
   hint: 지형 기후 접근과 주변 맥락 조사
   aliases: [Site analysis, "집 짓기 전에 땅의 경사와 햇빛과 바람 살피기", "건물 지을 땅 주변 도로와 이웃 건물 조사", "이 땅에 어느 방향으로 건물을 앉힐지 정하기", "설계 시작 전 현장 답사에서 챙길 것들 정리"]
@@ -581,7 +581,7 @@ entries:
     section: architecture
 - id: atlas.architecture.post_occupancy_evaluation
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 거주후평가
   hint: 사용 중인 건물의 성능과 경험 평가
   aliases: [Post occupancy evaluation, "다 지은 건물을 쓰는 사람들이 만족하는지 조사", "입주 뒤 덥다 춥다 불만이 왜 나오는지 점검", "설계 의도대로 건물이 쓰이고 있는지 확인", "다음 건물 설계에 반영할 실제 이용 경험 모으기"]
@@ -590,7 +590,7 @@ entries:
     section: architecture
 - id: atlas.architecture.daylighting_analysis
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 주광 분석
   hint: 자연광의 분포와 이용 가능성 검토
   aliases: [Daylighting analysis, 실내 자연광, "낮에 불을 안 켜도 방이 충분히 밝은지 확인", "창 크기와 위치에 따라 햇빛이 어디까지 드는지", "교실이나 사무실 책상 위 밝기 고르게 만들기", "눈부심 없이 햇빛을 들이는 창 계획"]
@@ -599,7 +599,7 @@ entries:
     section: architecture
 - id: atlas.architecture.solar_shading_analysis
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 일사 차폐 분석
   hint: 태양 경로와 차양 효과 분석
   aliases: [Solar shading analysis, "여름 오후 햇볕이 창으로 얼마나 들이치는지 계산", "처마 길이를 얼마로 해야 그늘이 지는지", "철마다 해 높이에 따라 가림막 효과 비교", "서향 창 때문에 너무 더운 방 해결하기"]
@@ -608,7 +608,7 @@ entries:
     section: architecture
 - id: atlas.architecture.passive_design
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 패시브 설계
   hint: 형태와 외피로 환경 부하 감소
   aliases: [Passive design, "기계 설비 없이도 여름에 시원하고 겨울에 따뜻한 집", "집 방향과 창 배치로 난방비 아끼기", "두꺼운 단열과 빈틈없는 시공으로 열 새는 것 막기", "바람길과 햇빛만으로 쾌적한 집 짓기"]
@@ -617,7 +617,7 @@ entries:
     section: architecture
 - id: atlas.architecture.building_energy_simulation
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 건물 에너지 시뮬레이션
   hint: 기후와 운영 조건의 에너지 성능 계산
   aliases: [Building energy simulation, "집을 짓기 전에 냉난방비가 얼마나 들지 계산", "단열재를 바꾸면 전기료가 얼마나 주는지 미리 보기", "설계안 여러 개의 연간 전력 사용량 비교", "지역 날씨와 사용 시간표를 넣어 건물 성능 따지기"]
@@ -626,7 +626,7 @@ entries:
     section: architecture
 - id: atlas.architecture.acoustic_design
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 건축 음향설계
   hint: 소리의 전달과 잔향 조절
   aliases: [Acoustic design, "강당에서 말소리가 울려 알아듣기 힘들 때", "공연장이나 교회에 소리가 고르게 퍼지게 하기", "옆방 소음이 벽을 넘어오지 않게 짓기", "녹음실이나 연습실 울림을 알맞게 맞추기"]
@@ -635,7 +635,7 @@ entries:
     section: architecture
 - id: atlas.architecture.universal_accessibility
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 무장애 공간설계
   hint: 이동과 이용의 물리적 장벽 감소
   aliases: [Universal accessibility, "휠체어나 유모차가 턱 없이 다닐 수 있게 하기", "어르신과 장애인도 혼자 쓸 수 있는 화장실과 출입구", "계단뿐인 가게 입구에 경사로 놓기", "시각장애인이 길을 찾을 수 있는 건물 안내 계획"]
@@ -644,7 +644,7 @@ entries:
     section: architecture
 - id: atlas.architecture.adaptive_reuse
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 적응적 재사용
   hint: 기존 건물을 새 용도로 전환
   aliases: [Adaptive reuse, "낡은 공장을 카페나 전시장으로 바꿔 쓰기", "허물지 않고 옛 건물에 새 쓰임새 넣기", "문 닫은 학교나 창고를 되살리고 싶을 때", "빈 상가 건물을 다른 업종 공간으로 고쳐 쓰기"]
@@ -653,7 +653,7 @@ entries:
     section: architecture
 - id: atlas.architecture.transit_oriented_development
   kind: concept
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 대중교통 중심 개발
   hint: 교통 거점에 토지이용 연계
   aliases: [Transit oriented development, "지하철역 주변에 집과 가게를 촘촘히 모으기", "차 없이도 살 수 있는 역세권 동네 계획", "새 역이 생기는 곳 주변 땅 쓰임새 정하기", "자동차 의존을 줄이는 도시 성장 방식"]
@@ -662,7 +662,7 @@ entries:
     section: architecture
 - id: atlas.architecture.mixed_use_development
   kind: concept
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 복합용도 개발
   hint: 서로 다른 도시 기능을 함께 배치
   aliases: [Mixed use development, "한 건물에 집과 가게와 사무실을 같이 넣기", "밤이면 텅 비는 업무 지구에 활기 불어넣기", "걸어서 출근과 장보기가 다 되는 동네 만들기", "아래층은 상가 위층은 주거인 단지 기획"]
@@ -671,7 +671,7 @@ entries:
     section: architecture
 - id: atlas.architecture.participatory_planning
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 참여계획
   hint: 지역 주체와 함께 공간 계획 수립
   aliases: [Participatory planning, "동네 공원을 주민 의견 모아 함께 설계하기", "재개발 계획에 주민 반발이 클 때 풀어 가는 방식", "주민 모임을 열어 마을 미래 그림 그리기", "행정이 일방적으로 정하지 않고 동네 사람들과 정하기"]
@@ -680,7 +680,7 @@ entries:
     section: architecture
 - id: atlas.architecture.urban_morphology
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 도시형태 분석
   hint: 필지 가로 건축의 형태 변화 분석
   aliases: [Urban morphology, "옛 지도와 지금 지도를 비교해 동네 짜임 변화 보기", "땅 나뉨과 길과 건물 배치가 세월 따라 바뀐 모습", "오래된 골목 동네와 신도시의 생김새 차이 분석", "도시 조직의 역사적 층위를 읽어 내기"]
@@ -689,7 +689,7 @@ entries:
     section: architecture
 - id: atlas.architecture.walkability_assessment
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 보행성 평가
   hint: 걷기 편의와 연결성 평가
   aliases: [Walkability assessment, "우리 동네가 걸어 다니기 좋은지 점수 매기기", "인도가 끊기거나 건널목이 먼 구간 찾아내기", "집에서 가게와 학교까지 걸어갈 만한지 따지기", "노인과 아이가 안전하게 걸을 수 있는 길인지 점검"]
@@ -698,7 +698,7 @@ entries:
     section: architecture
 - id: atlas.architecture.placemaking
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 장소 만들기
   hint: 이용과 의미를 바탕으로 공공장소 형성
   aliases: [Placemaking, "썰렁한 광장을 사람들이 머무는 곳으로 바꾸기", "동네 빈터를 주민이 아끼는 쉼터로 가꾸기", "벤치와 장터 같은 작은 시도로 거리 살리기"]
@@ -707,7 +707,7 @@ entries:
     section: architecture
 - id: atlas.architecture.green_infrastructure
   kind: concept
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 녹색 기반시설
   hint: 자연 기능을 연결한 공간 체계
   aliases: [Green infrastructure, "공원과 하천과 가로수를 하나로 이어 도시 계획하기", "폭우 때 빗물을 땅과 식물이 머금게 하기", "콘크리트 대신 풀과 나무로 도시 열기 식히기", "동물이 다닐 수 있게 끊긴 숲을 이어 주기"]
@@ -716,7 +716,7 @@ entries:
     section: architecture
 - id: atlas.architecture.viewshed_analysis
   kind: method
-  path: [공간, 건축과 도시]
+  path: ["공학", "건축과 도시"]
   name: 가시권 분석
   hint: 지형과 장애물에 따른 시야 계산
   aliases: [Viewshed analysis, "이 자리에 서면 어디까지 보이는지 지도에 칠하기", "새 건물이 산이나 바다 조망을 가리는지 확인", "전망대나 감시 카메라 놓을 자리 고르기", "언덕과 건물에 가려 안 보이는 구역 찾기"]
@@ -725,7 +725,7 @@ entries:
     section: architecture
 - id: atlas.mechanical.computer_aided_design
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 컴퓨터 지원 설계
   hint: 치수와 형상으로 설계 모델 작성
   aliases: [Computer aided design, CAD, "정확한 치수를 넣어 입체 모형 만들기", "제품 모양을 화면에서 돌려 보며 고치기", "공장에 넘길 도면 파일 만드는 법"]
@@ -734,7 +734,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.computer_aided_manufacturing
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 컴퓨터 지원 제조
   hint: 설계 모델에서 가공 경로 구성
   aliases: [Computer aided manufacturing, CAM, "그린 모형을 기계가 깎도록 명령 만들기", "공구가 지나갈 길을 자동으로 짜기", "설계 파일을 가공 기계에 넘기는 단계"]
@@ -743,7 +743,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.tolerance_analysis
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 공차 분석
   hint: 부품 치수 오차의 조합 평가
   aliases: [Tolerance analysis, "부품마다의 작은 오차가 쌓여 안 맞는 조립", "여러 부품을 겹쳤을 때 틈이 얼마나 될지", "치수 허용폭을 얼마나 빡빡하게 줄지 결정", "최악의 경우에도 조립되는지 미리 계산"]
@@ -752,7 +752,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.geometric_dimensioning_and_tolerancing
   kind: concept
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 기하공차
   hint: 형상 위치 자세의 허용 범위 표현
   aliases: [Geometric dimensioning and tolerancing, "도면에 평평함과 곧음 정도를 적는 기호", "구멍 위치가 얼마나 어긋나도 되는지 표기", "치수는 맞는데 끼워지지 않는 부품", "수직과 평행의 허용 한계를 도면에 표시"]
@@ -761,7 +761,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.design_for_manufacturing
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 제조용이성 설계
   hint: 가공 제약과 비용을 고려한 설계
   aliases: [Design for manufacturing, "공장에서 만들기 어렵다고 퇴짜 맞은 도면", "가공비가 덜 들게 모양 바꾸기", "설계 단계에서 생산 단가 낮추기", "기계로 깎을 수 없는 형상 미리 피하기"]
@@ -770,7 +770,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.design_for_assembly
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 조립용이성 설계
   hint: 부품 수와 조립 작업의 단순화
   aliases: [Design for assembly, "나사 개수를 줄여 조립 시간 단축", "부품이 너무 많아 끼우기 번거로운 제품", "한 방향으로만 끼워 맞추게 설계", "조립 라인에서 실수가 자주 나는 구조 개선"]
@@ -779,7 +779,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.topology_optimization
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 위상최적화
   hint: 하중 조건에 맞는 재료 배치 탐색
   aliases: [Topology optimization, "튼튼함은 지키며 무게를 최대한 덜기", "힘을 안 받는 부분의 재료를 파내기", "뼈대처럼 구멍 숭숭 뚫린 가벼운 부품", "컴퓨터가 알아서 찾아 주는 가장 효율적인 모양"]
@@ -788,7 +788,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.modal_analysis
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 모드 해석
   hint: 구조물의 고유 진동 형태 분석
   aliases: [Modal analysis, "특정 회전수에서 기계가 심하게 떠는 이유", "구조물이 잘 흔들리는 고유한 떨림수 찾기", "공진으로 부서지지 않게 미리 확인", "다리나 선반이 어떤 모양으로 출렁이는지"]
@@ -797,7 +797,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.fatigue_analysis
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 피로 해석
   hint: 반복 하중에 따른 수명 검토
   aliases: [Fatigue analysis, "계속 흔들리다 어느 날 부러지는 부품", "약한 힘도 수없이 되풀이되면 생기는 파손", "몇 번이나 쓰면 망가질지 미리 계산", "자전거 프레임이 오래 버틸지 검토"]
@@ -806,7 +806,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.fracture_mechanics
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 파괴역학
   hint: 균열의 성장과 파괴 조건 분석
   aliases: [Fracture mechanics, "작은 금이 언제 갑자기 쫙 갈라지는지", "금 간 부품을 계속 써도 되는지 판단", "흠집이 점점 커지는 속도 예측", "유리나 금속이 깨지는 조건 따지기"]
@@ -815,7 +815,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.tribology
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 마찰마모학
   hint: 접촉면의 마찰 윤활 마모 연구
   aliases: [Tribology, "맞닿아 움직이는 부품이 빨리 닳는 문제", "어떤 기름을 발라야 덜 닳고 부드러운지", "베어링이나 기어 표면이 갈려 나가는 원인", "미끄러짐과 닳음을 다루는 학문"]
@@ -824,7 +824,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.kinematic_analysis
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 기구학 해석
   hint: 힘과 구별해 운동 관계 분석
   aliases: [Kinematic analysis, "링크 장치가 어떤 궤적으로 움직이는지", "힘은 빼고 위치 속도 관계만 따지기", "크랭크를 돌릴 때 끝단이 어디까지 가는지", "움직이는 장난감의 관절 동작 범위 그리기"]
@@ -833,7 +833,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.multibody_dynamics
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 다물체 동역학
   hint: 연결된 물체들의 운동 해석
   aliases: [Multibody dynamics, "여러 부품이 맞물린 기계 전체의 움직임 모사", "서스펜션이 요철을 넘을 때 거동 계산", "관절로 이어진 팔에 걸리는 힘과 움직임", "굴착기 팔을 움직일 때 각 핀에 걸리는 하중"]
@@ -842,7 +842,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.computational_fluid_dynamics
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 전산유체역학
   hint: 유체 지배 방정식의 수치 해석
   aliases: [Computational fluid dynamics, CFD, "자동차 주변 공기 흐름을 컴퓨터로 보기", "풍동 실험 없이 바람 저항 미리 계산", "배관 속 물이 어디서 막히고 소용돌이치는지", "선풍기 날개 모양에 따른 바람 비교"]
@@ -851,7 +851,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.heat_transfer_analysis
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 열전달 해석
   hint: 전도 대류 복사의 열 이동 계산
   aliases: [Heat transfer analysis, "기기 안에서 뜨거워지는 부분 미리 계산", "방열판 크기를 얼마로 해야 식을지", "단열재 두께에 따른 열 손실 비교", "열이 어디로 얼마나 빠져나가는지 추정"]
@@ -860,7 +860,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.additive_manufacturing
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 적층제조
   hint: 재료를 층별로 쌓아 제작
   aliases: [Additive manufacturing, "삼차원 프린터로 부품 직접 뽑기", "깎아서는 못 만드는 속 빈 복잡한 모양", "금형 없이 시제품 한두 개만 빨리", "한 겹씩 올려 물건을 만드는 방식"]
@@ -869,7 +869,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.subtractive_manufacturing
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 절삭제조
   hint: 재료를 제거해 형상 제작
   aliases: [Subtractive manufacturing, "쇳덩이를 깎아 원하는 모양 내기", "선반과 밀링으로 정밀 부품 가공", "덩어리에서 필요 없는 부분 덜어 내는 제작", "드릴로 구멍 뚫고 면을 다듬는 작업"]
@@ -878,7 +878,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.injection_molding
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 사출성형
   hint: 금형에 재료를 주입해 성형
   aliases: [Injection molding, "플라스틱 제품을 똑같이 수천 개 찍어 내기", "녹인 재료를 틀에 밀어 넣어 굳히기", "플라스틱 케이스 대량 생산 방법", "틀 제작비는 비싸도 개당 값이 싼 제작"]
@@ -887,7 +887,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.sheet_metal_forming
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 판금성형
   hint: 금속판을 굽히거나 늘려 형상 제작
   aliases: [Sheet metal forming, "얇은 철판을 접어 상자나 케이스 만들기", "철판을 눌러 그릇 모양으로 뽑기", "접은 부분이 터지거나 주름지는 문제", "컴퓨터 본체 같은 금속 외장 제작"]
@@ -896,7 +896,7 @@ entries:
     section: mechanical
 - id: atlas.mechanical.non_destructive_testing
   kind: method
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: 비파괴검사
   hint: 대상을 파괴하지 않고 결함 검사
   aliases: [Non destructive testing, "자르지 않고 용접 속 결함 찾기", "초음파나 엑스선으로 내부 흠 확인", "쓰고 있는 배관을 멈추지 않고 점검", "제품을 망가뜨리지 않는 품질 검사"]

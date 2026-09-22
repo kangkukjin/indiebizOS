@@ -5,7 +5,7 @@ curation:
 entries:
 - id: atlas.physics.conservation_law
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 보존법칙
   hint: 계의 변화 속에서 유지되는 물리량
   aliases: [Conservation law, "충돌 전후로 합쳐도 그대로인 값 찾기", "에너지가 어디로 갔는지 계산이 안 맞음", "과정은 몰라도 처음과 끝만으로 답 구하기", "롤러코스터 높이로 속도 알아내는 문제"]
@@ -14,7 +14,7 @@ entries:
     section: physics
 - id: atlas.physics.symmetry
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 대칭성
   hint: 변환에도 바뀌지 않는 성질
   aliases: [Symmetry, "돌리거나 뒤집어도 똑같아 보이는 성질", "눈 결정이 여섯 방향으로 똑같은 이유", "좌우를 바꿔도 법칙이 그대로인지 따지기", "모양의 규칙성 덕분에 계산을 확 줄이기"]
@@ -23,7 +23,7 @@ entries:
     section: physics
 - id: atlas.physics.noether_theorem
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 뇌터 정리
   hint: 연속 대칭과 보존량의 연결
   aliases: [Noether theorem, "어디서 실험해도 같으면 운동량이 지켜지는 이유", "언제 해도 같은 법칙이 에너지를 지켜준다는 것", "돌려도 똑같은 계에서 회전량이 유지되는 까닭", "지켜지는 양이 어디서 나오는지 근본 설명"]
@@ -32,7 +32,7 @@ entries:
     section: physics
 - id: atlas.physics.dimensional_similarity
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 차원적 상사
   hint: 무차원 조건이 같은 계의 대응
   aliases: [Dimensional similarity, "작은 모형 실험 결과를 실물에 적용하기", "축소 비행기 바람 실험이 진짜와 맞는 조건", "크기가 달라도 똑같이 움직이게 비율 맞추기", "수조 모형 배로 실제 배의 저항 추정"]
@@ -41,7 +41,7 @@ entries:
     section: physics
 - id: atlas.physics.superposition_principle
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 중첩 원리
   hint: 선형계의 응답을 합으로 구성
   aliases: [Superposition principle, "원인이 여럿일 때 각각의 효과를 더해 전체 구하기", "두 물결이 만나 커지거나 지워지는 현상", "복잡한 파형을 단순한 파동들의 합으로 보기", "전하 여러 개가 만드는 힘을 하나씩 구해 합산"]
@@ -50,7 +50,7 @@ entries:
     section: physics
 - id: atlas.physics.perturbation_theory
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 섭동이론
   hint: 작은 변화로 기준 해를 보정
   aliases: [Perturbation theory, "풀 수 있는 쉬운 문제에 작은 영향 덧붙여 근사", "정확히 못 푸는 식을 단계별 보정으로 접근", "다른 행성의 약한 끌림이 궤도를 얼마나 바꾸나", "약한 전기장을 걸면 원자 에너지가 얼마나 변하나"]
@@ -59,7 +59,7 @@ entries:
     section: physics
 - id: atlas.physics.variational_method
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 변분법
   hint: 함수의 변화로 극값 조건 탐색
   aliases: [Variational method, "모든 가능한 곡선 중 가장 좋은 곡선 고르기", "공이 가장 빨리 굴러 내려가는 미끄럼틀 모양", "비눗물 막이 가장 작은 넓이로 펴지는 형태", "숫자가 아니라 경로 전체를 바꿔가며 최소 찾기"]
@@ -68,7 +68,7 @@ entries:
     section: physics
 - id: atlas.physics.lagrangian_mechanics
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 라그랑주 역학
   hint: 작용과 일반화 좌표로 운동 기술
   aliases: [Lagrangian mechanics, "힘을 일일이 안 그리고 에너지 차이로 운동 풀기", "이중 진자처럼 얽힌 장치의 움직임 구하기", "줄이나 레일에 묶인 물체를 편한 변수로 다루기", "운동에너지 빼기 위치에너지로 방정식 세우기"]
@@ -77,7 +77,7 @@ entries:
     section: physics
 - id: atlas.physics.hamiltonian_mechanics
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 해밀턴 역학
   hint: 좌표와 운동량의 변화로 운동 기술
   aliases: [Hamiltonian mechanics, "위치와 운동량을 짝지어 움직임 풀기", "에너지 식 하나에서 운동 방정식 뽑아내기", "행성 궤도를 위상 공간 그림으로 보기", "양자역학 배우기 전에 필요한 고전 운동 서술"]
@@ -86,7 +86,7 @@ entries:
     section: physics
 - id: atlas.physics.statistical_mechanics
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 통계역학
   hint: 미시 상태에서 거시 성질 유도
   aliases: [Statistical mechanics, "분자 하나하나의 움직임에서 온도와 압력 끌어내기", "셀 수 없이 많은 입자를 확률로 다루기", "기체 법칙이 왜 성립하는지 밑바닥부터 설명", "열 현상을 알갱이들의 평균 행동으로 이해"]
@@ -95,7 +95,7 @@ entries:
     section: physics
 - id: atlas.physics.ensemble
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 앙상블
   hint: 같은 거시 조건의 미시 상태 집합
   aliases: [Ensemble, "겉보기 조건은 같은데 속은 다른 경우 모음", "수많은 가능한 경우를 한꺼번에 놓고 평균", "온도와 부피만 같은 기체의 가상 복사본들", "입자 하나하나 대신 경우 전체로 확률 매기기"]
@@ -104,7 +104,7 @@ entries:
     section: physics
 - id: atlas.physics.entropy
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 엔트로피
   hint: 상태의 통계적 다양성과 열역학적 성질
   aliases: [Entropy, "방은 왜 저절로 어질러지기만 하는지", "섞인 잉크가 다시 모이지 않는 까닭", "열이 뜨거운 데서 찬 데로만 흐르는 이유", "무질서한 정도를 숫자로 나타내기"]
@@ -113,7 +113,7 @@ entries:
     section: physics
 - id: atlas.physics.phase_transition
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 상전이
   hint: 조건 변화에 따른 물질 상태 변화
   aliases: [Phase transition, "물이 어느 온도에서 갑자기 얼거나 끓는 현상", "자석을 달구면 어느 순간 자성을 잃음", "조금씩 바꿨는데 성질이 확 달라지는 지점", "얼음 물 수증기로 바뀌는 경계 조건"]
@@ -122,7 +122,7 @@ entries:
     section: physics
 - id: atlas.physics.renormalization_group
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 재규격화군
   hint: 관측 척도에 따른 이론의 변화 분석
   aliases: [Renormalization group, "확대 배율을 바꾸면 법칙의 모습이 어떻게 달라지나", "잘게 보던 것을 뭉쳐서 큰 그림만 남기기", "전혀 다른 물질이 임계점에서 같은 행동을 하는 이유", "무한대로 튀는 계산을 눈금 바꿔 다스리기"]
@@ -131,7 +131,7 @@ entries:
     section: physics
 - id: atlas.physics.scattering_theory
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 산란이론
   hint: 입사 대상과 상호작용의 결과 분석
   aliases: [Scattering theory, "입자를 쏘아 튕겨 나온 방향으로 속 구조 알기", "과녁에 맞고 흩어지는 각도별 비율 계산", "하늘이 파랗고 노을이 붉은 이유", "가속기 충돌 실험 결과 해석하기"]
@@ -140,7 +140,7 @@ entries:
     section: physics
 - id: atlas.physics.interferometry
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 간섭계측
   hint: 파동의 위상 차이로 정밀 측정
   aliases: [Interferometry, "빛 두 줄기를 겹쳐 아주 작은 길이 재기", "머리카락보다 훨씬 미세한 변위 측정", "겹친 빛의 밝고 어두운 줄무늬로 거리 읽기", "렌즈나 거울 표면이 얼마나 평평한지 검사"]
@@ -149,7 +149,7 @@ entries:
     section: physics
 - id: atlas.physics.lock_in_detection
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 록인 검출
   hint: 기준 주파수에 동기화해 약한 신호 추출
   aliases: [Lock in detection, "잡음에 완전히 묻힌 미약한 신호 꺼내기", "정해진 박자로 깜빡여서 그 박자만 골라 듣기", "센서 출력이 너무 작아 잡음과 구분 안 됨", "주변 조명 속에서 내 광원 세기만 재기"]
@@ -158,7 +158,7 @@ entries:
     section: physics
 - id: atlas.physics.error_propagation
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 오차 전파
   hint: 입력 불확실성이 계산 결과에 주는 영향
   aliases: [Error propagation, "잰 값이 조금 틀리면 계산 결과는 얼마나 틀릴까", "실험 보고서에 최종값의 플러스마이너스 달기", "길이와 시간 측정 오차로 속도의 오차 구하기", "여러 측정값을 곱하고 나눌 때 불확실한 폭"]
@@ -167,7 +167,7 @@ entries:
     section: physics
 - id: atlas.physics.inverse_problem
   kind: method
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 역문제 해법
   hint: 관측 결과에서 원인과 매개변수 추정
   aliases: [Inverse problem, "결과만 보고 안에 뭐가 있는지 거꾸로 알아내기", "땅 위 진동 기록으로 땅속 구조 짐작", "측정 자료에 맞는 모형 숫자를 역으로 찾기", "몸 밖에서 찍은 신호로 단면 영상 만들기"]
@@ -176,7 +176,7 @@ entries:
     section: physics
 - id: atlas.physics.quantum_entanglement
   kind: concept
-  path: [과학, 물리]
+  path: ["물질과 우주", "물리"]
   name: 양자얽힘
   hint: 부분별로 분리되지 않는 양자 상태
   aliases: [Quantum entanglement, "멀리 떨어진 두 입자가 한 몸처럼 결과가 맞음", "한쪽을 재면 다른 쪽 상태도 정해지는 현상", "각각 따로는 설명 안 되고 짝으로만 설명되는 상태", "양자 통신과 양자 컴퓨터의 핵심 자원"]
@@ -185,7 +185,7 @@ entries:
     section: physics
 - id: atlas.astronomy.astrometry
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 위치천문학
   hint: 천체의 위치와 고유운동 측정
   aliases: [Astrometry, "별이 하늘에서 해마다 얼마나 움직이는지 재기", "별의 정확한 자리를 재서 목록으로 만드는 일", "수억 개 별의 지도를 만드는 위성 관측", "사진 속 별 위치로 촬영 방향 알아내기"]
@@ -194,7 +194,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.photometry
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 측광
   hint: 천체의 밝기와 변화 측정
   aliases: [Photometry, "사진에서 별이 몇 등급인지 재는 방법", "기준별과 비교해 대상 별 밝기 구하기", "별 주위에 원을 그려 빛의 양 합산하기", "아마추어 관측으로 변광성 밝기 보고하기"]
@@ -203,7 +203,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.astronomical_spectroscopy
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 천체 분광
   hint: 스펙트럼으로 천체의 물리 상태 분석
   aliases: [Astronomical spectroscopy, "별빛을 무지개로 펼쳐 성분 알아내기", "별의 온도와 구성 원소를 빛으로 추정", "별빛 속 검은 줄무늬가 뜻하는 것 해석", "아마추어 망원경에 회절격자 달아 별빛 나눠 보기"]
@@ -212,7 +212,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.transit_photometry
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 통과 측광
   hint: 천체 가림에 따른 밝기 감소 측정
   aliases: [Transit photometry, "행성이 별 앞을 지날 때 살짝 어두워지는 것 포착", "별빛이 주기적으로 조금씩 줄어드는 기록 해석", "외계행성의 크기를 밝기 감소량으로 추정", "아마추어 망원경으로 외계행성 확인하기"]
@@ -221,7 +221,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.radial_velocity_method
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 시선속도법
   hint: 도플러 변화로 천체의 운동 추정
   aliases: [Radial velocity method, "별이 앞뒤로 흔들리는 것으로 행성 찾기", "별빛 줄무늬가 푸른 쪽 붉은 쪽으로 오가는 폭", "쌍성이 서로 도는 빠르기 알아내기", "보이지 않는 동반 천체의 질량 추정"]
@@ -230,7 +230,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.gravitational_lensing
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 중력렌즈 분석
   hint: 중력에 의해 휘어진 빛의 형상 분석
   aliases: [Gravitational lensing, "먼 은하가 고리나 활 모양으로 늘어져 보일 때", "같은 천체가 여러 개로 겹쳐 보이는 사진 해석", "보이지 않는 물질의 질량을 빛의 휘어짐으로 추정", "은하단 뒤 배경 은하의 찌그러짐 재기"]
@@ -239,7 +239,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.adaptive_optics
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 적응광학
   hint: 관측 왜곡에 맞춰 광학계를 보정
   aliases: [Adaptive optics, "대기 흔들림 때문에 별이 번져 보일 때", "지상 망원경으로 우주망원경급 선명도 얻기", "거울 모양을 실시간으로 바꿔 상을 또렷하게", "레이저로 가짜 별을 만들어 흔들림 재는 장치"]
@@ -248,7 +248,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.aperture_synthesis
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 개구합성
   hint: 여러 관측기의 신호로 해상력 구성
   aliases: [Aperture synthesis, "멀리 떨어진 안테나 여러 대를 하나처럼 쓰기", "접시 하나로는 흐릿한 전파 영상을 선명하게", "지구 크기만 한 망원경 효과를 내는 방법", "블랙홀 그림자 사진을 어떻게 찍었는지"]
@@ -257,7 +257,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.orbit_determination
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 궤도 결정
   hint: 관측에서 천체의 운동 궤도 추정
   aliases: [Orbit determination, "며칠간 관측한 위치로 소행성 길 알아내기", "새로 발견한 혜성이 언제 다시 올지 계산", "인공위성 추적 자료로 지나는 경로 추정", "이 소행성이 지구에 부딪힐지 판단하려면"]
@@ -266,7 +266,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.n_body_simulation
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 다체 시뮬레이션
   hint: 여러 물체의 상호작용 운동 계산
   aliases: [N body simulation, "별 수천 개가 서로 끌어당기며 움직이는 모습 계산", "두 은하가 충돌하면 어떻게 되는지 컴퓨터로 재현", "행성 여러 개의 궤도가 오래 안정한지 확인", "성단이 시간이 지나며 흩어지는 과정 모의실험"]
@@ -275,7 +275,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.redshift_measurement
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 적색편이 측정
   hint: 기준 파장과 관측 파장 비교
   aliases: [Redshift measurement, "은하가 얼마나 빨리 멀어지는지 빛으로 재기", "실험실 값보다 길어진 빛 줄무늬 위치 비교", "먼 은하까지의 거리와 우주 나이 가늠하기", "우주가 팽창한다는 증거를 자료로 확인"]
@@ -284,7 +284,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.spectral_energy_distribution_fitting
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 분광에너지분포 적합
   hint: 파장별 방출 분포를 모형과 비교
   aliases: [Spectral energy distribution fitting, "전파부터 적외선까지 밝기를 이어 붙여 해석", "여러 필터로 잰 밝기로 은하 나이와 질량 추정", "별 둘레 먼지 원반이 있는지 색 분포로 확인", "관측한 색별 밝기에 이론 곡선 맞춰 보기"]
@@ -293,7 +293,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.light_curve_analysis
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 광도곡선 분석
   hint: 시간에 따른 천체 밝기 변화 분석
   aliases: [Light curve analysis, "별 밝기를 날짜별로 그린 그래프 해석하기", "밝아졌다 어두워지는 별의 종류 판별", "초신성이 폭발 후 어떻게 어두워지는지 추적", "밝기 기록에서 폭발이나 식 현상 찾아내기"]
@@ -302,7 +302,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.standard_candle
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 표준촛불
   hint: 알려진 광도와 관측 밝기로 거리 추정
   aliases: [Standard candle, "원래 밝기를 아는 천체로 먼 은하 거리 재기", "같은 전구가 멀수록 어둡게 보이는 원리 이용", "특정 초신성이 거리 자로 쓰이는 이유", "깜빡이는 주기로 실제 밝기를 아는 별 활용"]
@@ -311,7 +311,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.parallax_measurement
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 시차 측정
   hint: 관측 위치 변화의 각도 차이로 거리 계산
   aliases: [Parallax measurement, "가까운 별까지 거리를 삼각측량으로 재기", "반년 간격으로 찍은 사진에서 별이 옮겨 보이는 정도", "양쪽 눈으로 번갈아 볼 때 손가락이 움직이는 원리", "지구 공전을 이용해 별의 거리 구하기"]
@@ -320,7 +320,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.period_search
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 주기 탐색
   hint: 관측열에서 반복 변화의 시간척도 추정
   aliases: [Period search, "들쭉날쭉 관측한 밝기 기록에서 되풀이 간격 찾기", "이 변광성이 며칠마다 깜빡이는지 알아내기", "빠진 날이 많은 관측 자료의 반복 리듬 추정", "밝기 자료를 접어서 한 바퀴 모양으로 겹쳐 보기"]
@@ -329,7 +329,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.image_stacking
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 영상 적층
   hint: 여러 관측 이미지를 정렬해 합성
   aliases: [Image stacking, "짧게 찍은 밤하늘 사진 수십 장을 한 장으로 합치기", "희미한 성운을 잡음 없이 또렷하게 만들기", "별 위치를 맞춰 여러 컷을 겹치는 작업", "추적 장치 없이 은하수 사진 깨끗하게 얻기"]
@@ -338,7 +338,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.dark_frame_subtraction
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 다크프레임 감산
   hint: 센서의 암신호를 보정
   aliases: [Dark frame subtraction, "장노출 천체사진에 찍힌 울긋불긋한 점 없애기", "렌즈 뚜껑 닫고 찍은 사진으로 잡음 빼기", "카메라 센서가 뜨거워져 생긴 얼룩 제거", "밤하늘 사진의 고정된 밝은 점 지우기"]
@@ -347,7 +347,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.flat_field_correction
   kind: method
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 플랫필드 보정
   hint: 화소와 광학계 감도 차이 보정
   aliases: [Flat field correction, "천체사진 가장자리가 어둡게 나올 때 바로잡기", "센서 먼지 때문에 생긴 도넛 모양 얼룩 제거", "균일하게 밝은 면을 찍어 사진 밝기 고르게", "화면 위치마다 다른 밝기 차이 보정"]
@@ -356,7 +356,7 @@ entries:
     section: astronomy
 - id: atlas.astronomy.celestial_coordinate_system
   kind: concept
-  path: [과학, 천문과 우주]
+  path: ["물질과 우주", "천문과 우주"]
   name: 천구좌표계
   hint: 하늘의 위치를 나타내는 기준 체계
   aliases: [Celestial coordinate system, "하늘에서 별 자리를 숫자로 나타내는 방법", "적경과 적위가 무슨 뜻인지 알고 싶을 때", "고도와 방위각으로 별 찾는 법 이해하기", "망원경 자동 도입에 넣는 별 좌표 읽는 법"]
@@ -365,7 +365,7 @@ entries:
     section: astronomy
 - id: atlas.robotics.forward_kinematics
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 정기구학
   hint: 관절 상태에서 말단 위치 계산
   aliases: [Forward kinematics, "각 관절 각도를 알 때 손끝이 어디 있는지", "모터 회전값으로 팔 끝 좌표 구하기", "로봇 팔 자세를 화면에 그려 보기", "마디 길이와 각도로 끝점 위치 계산"]
@@ -374,7 +374,7 @@ entries:
     section: robotics
 - id: atlas.robotics.inverse_kinematics
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 역기구학
   hint: 목표 말단 위치의 관절 상태 계산
   aliases: [Inverse kinematics, "손끝을 여기로 보내려면 관절을 얼마나 꺾을지", "원하는 위치에서 거꾸로 모터 각도 구하기", "캐릭터 손이 물건에 닿게 팔 자세 맞추기", "같은 지점에 닿는 자세가 여럿일 때 고르기"]
@@ -383,7 +383,7 @@ entries:
     section: robotics
 - id: atlas.robotics.simultaneous_localization_and_mapping
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 동시적 위치추정과 지도작성
   hint: 이동 중 자기 위치와 환경 지도를 함께 추정
   aliases: [Simultaneous localization and mapping, SLAM, 로봇 위치와 지도, "처음 가는 집에서 청소기가 길을 익히며 다니는 원리", "위성 신호 없는 실내에서 기계가 제 자리 알아내기", "돌아다니면서 주변 생김새를 그려 나가는 기계", "어디 있는지도 모르고 주변 그림도 없는 채로 출발"]
@@ -392,7 +392,7 @@ entries:
     section: robotics
 - id: atlas.robotics.visual_odometry
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 시각 주행거리계
   hint: 연속 영상으로 이동량 추정
   aliases: [Visual odometry, visual odometry, "카메라 화면만으로 얼마나 움직였는지 알기", "위성 신호 안 잡히는 실내에서 위치 따라가기", "바퀴가 미끄러져 이동 거리가 틀릴 때", "찍은 동영상으로 지나온 길 되짚기"]
@@ -401,7 +401,7 @@ entries:
     section: robotics
 - id: atlas.robotics.sensor_fusion
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 센서 융합
   hint: 서로 다른 관측의 오차를 보완
   aliases: [Sensor fusion, "위성 위치와 바퀴 회전을 합쳐 위치 추정", "한 센서가 튈 때 다른 센서로 메우기", "카메라와 거리 센서를 함께 써서 더 정확히", "제각각 부정확한 측정들을 합쳐 믿을 값 얻기"]
@@ -410,7 +410,7 @@ entries:
     section: robotics
 - id: atlas.robotics.path_planning
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 경로계획
   hint: 장애물과 목표를 고려한 이동 경로
   aliases: [Path planning, "부딪히지 않고 목적지까지 가는 길 찾기", "창고 로봇이 선반 사이로 다니는 길", "출발점에서 도착점까지 안전한 이동선 짜기", "로봇 팔이 주변에 안 걸리게 움직일 궤적"]
@@ -419,7 +419,7 @@ entries:
     section: robotics
 - id: atlas.robotics.trajectory_optimization
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 궤적 최적화
   hint: 시간과 동역학을 고려한 운동 최적화
   aliases: [Trajectory optimization, "로봇 팔이 덜컹거리지 않게 움직이는 길 짜기", "가장 빠르고 부드럽게 도착하는 움직임 찾기", "드론이 힘 덜 쓰고 목표까지 가는 경로", "모터 힘 한계 안에서 동작 순서 짜기"]
@@ -428,7 +428,7 @@ entries:
     section: robotics
 - id: atlas.robotics.rapidly_exploring_random_tree
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 급속탐색 무작위트리
   hint: 공간을 무작위로 확장하며 경로 탐색
   aliases: [Rapidly exploring random tree, "출발점에서 가지를 뻗어 가며 길 찾기", "한 번만 빠르게 길을 구하면 될 때", "좁고 복잡한 공간을 마구잡이로 더듬어 탐색", "나무가 자라듯 퍼져 나가 목표에 닿는 방식"]
@@ -437,7 +437,7 @@ entries:
     section: robotics
 - id: atlas.robotics.probabilistic_roadmap
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 확률적 로드맵
   hint: 표본 연결망으로 경로 탐색
   aliases: [Probabilistic roadmap, "빈 곳에 점을 뿌려 놓고 이어서 길 만들기", "같은 공간에서 길 찾기를 여러 번 할 때", "미리 그물길을 깔아 두고 재사용", "관절이 많은 팔의 통로를 점 표본으로 찾기"]
@@ -446,7 +446,7 @@ entries:
     section: robotics
 - id: atlas.robotics.occupancy_grid_mapping
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 점유격자 지도
   hint: 격자별 장애물 존재 가능성 표현
   aliases: [Occupancy grid mapping, "로봇 청소기가 집 안 구조를 기억하는 방식", "바닥을 칸으로 나눠 막힌 곳 표시", "거리 센서 값으로 빈 곳과 벽 구분한 그림", "지나갈 수 있는 칸인지 확률로 적어 두기"]
@@ -455,7 +455,7 @@ entries:
     section: robotics
 - id: atlas.robotics.grasp_planning
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 파지 계획
   hint: 대상의 형상에 맞는 잡기 동작 구성
   aliases: [Grasp planning, "로봇 손이 물건의 어디를 잡아야 안 놓치는지", "처음 보는 모양의 물체를 집어 올리기", "상자에 뒤섞인 부품을 하나씩 꺼내기", "손가락을 어느 방향에서 갖다 댈지 정하기"]
@@ -464,7 +464,7 @@ entries:
     section: robotics
 - id: atlas.robotics.force_control
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 힘 제어
   hint: 접촉 힘을 목표에 맞게 조절
   aliases: [Force control, "로봇이 물건을 너무 세게 누르지 않게", "일정한 세기로 표면을 문지르는 연마 작업", "닿는 세기를 재면서 팔 움직임 조절", "달걀처럼 깨지기 쉬운 물건 다루기"]
@@ -473,7 +473,7 @@ entries:
     section: robotics
 - id: atlas.robotics.impedance_control
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 임피던스 제어
   hint: 접촉의 힘과 운동 관계 조절
   aliases: [Impedance control, "로봇 팔을 용수철처럼 부드럽게 만들기", "사람과 부딪혀도 밀려 주는 안전한 팔", "끼워 넣는 작업에서 살짝 비껴 주는 움직임", "딱딱함과 말랑함의 정도를 조절하는 방식"]
@@ -482,7 +482,7 @@ entries:
     section: robotics
 - id: atlas.robotics.visual_servoing
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 비주얼 서보
   hint: 영상 오차로 로봇 운동 제어
   aliases: [Visual servoing, "카메라로 보면서 로봇 손을 목표에 맞추기", "화면 속 물체가 가운데 오도록 계속 움직이기", "움직이는 물건을 눈으로 쫓아가며 집기", "보이는 위치와 원하는 위치 차이로 팔 조종"]
@@ -491,7 +491,7 @@ entries:
     section: robotics
 - id: atlas.robotics.robot_calibration
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 로봇 보정
   hint: 기구와 센서 모형의 매개변수 추정
   aliases: [Robot calibration, "명령한 위치와 실제 위치가 조금씩 다른 팔", "조립 오차로 생긴 팔 길이 차이 바로잡기", "로봇 정밀도를 출고 후 다시 맞추기", "여러 자세를 재어 기계의 실제 치수 역추적"]
@@ -500,7 +500,7 @@ entries:
     section: robotics
 - id: atlas.robotics.hand_eye_calibration
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 손눈 보정
   hint: 카메라와 로봇 사이 좌표변환 추정
   aliases: [Hand eye calibration, "카메라가 본 위치로 팔이 정확히 가게 맞추기", "화면 속 좌표와 팔의 좌표가 어긋날 때", "팔에 단 카메라의 장착 위치 알아내기", "보이는 곳과 집는 곳이 몇 센티씩 빗나감"]
@@ -509,7 +509,7 @@ entries:
     section: robotics
 - id: atlas.robotics.behavior_tree
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 행동트리
   hint: 조건과 행동을 계층적으로 조합
   aliases: [Behavior tree, "로봇이 상황마다 무슨 행동을 할지 짜기", "게임 캐릭터 판단을 나뭇가지 구조로 설계", "실패하면 다음 대안을 시도하는 규칙 묶음", "복잡한 조건문이 엉켜 관리가 안 될 때"]
@@ -518,7 +518,7 @@ entries:
     section: robotics
 - id: atlas.robotics.task_and_motion_planning
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 작업 운동 통합계획
   hint: 기호적 작업과 실제 동작의 연결
   aliases: [Task and motion planning, "컵을 치운 뒤 접시를 놓는 식의 순서와 동작 함께", "할 일 순서는 맞는데 팔이 닿지 않아 실패", "무엇을 먼저 할지와 어떻게 움직일지 동시에 결정", "정리 정돈 로봇이 단계와 자세를 한꺼번에 짜기"]
@@ -527,7 +527,7 @@ entries:
     section: robotics
 - id: atlas.robotics.digital_twin
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 디지털 트윈
   hint: 실물 상태와 연결된 디지털 모형
   aliases: [Digital twin, "공장 설비와 똑같이 움직이는 가상 복제품", "실제 기계 상태를 화면 속 모형으로 실시간 보기", "현장에 가지 않고 설비 이상을 미리 시험", "센서 값이 그대로 반영되는 가상 공장"]
@@ -536,7 +536,7 @@ entries:
     section: robotics
 - id: atlas.robotics.human_robot_interaction
   kind: method
-  path: [공학, 로봇과 자동화]
+  path: ["공학", "로봇과 자동화"]
   name: 인간 로봇 상호작용
   hint: 사람과 로봇의 협업 방식 연구
   aliases: [Human robot interaction, HRI, "공장에서 기계 팔과 사람이 나란히 일할 때 안전", "식당 서빙 기계를 손님이 편하게 느끼게 만들기", "돌봄 기계가 어르신에게 어떻게 말 걸어야 하는지", "기계가 다음에 뭘 할지 사람이 알아채게 하는 법"]
@@ -545,7 +545,7 @@ entries:
     section: robotics
 - id: atlas.organization.organizational_network_analysis
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 조직연결망 분석
   hint: 공식 구조 밖 협업과 정보 흐름 분석
   aliases: [Organizational network analysis, "조직도와 달리 실제로 누가 누구와 일하는지", "정보가 어느 사람에게 몰리는지 찾기", "부서 사이에 소통이 끊긴 곳 찾아내기", "다들 물어보러 가는 숨은 핵심 인물 찾기"]
@@ -554,7 +554,7 @@ entries:
     section: organization
 - id: atlas.organization.psychological_safety
   kind: concept
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 심리적 안전감
   hint: 대인 위험을 감수해 말할 수 있다는 믿음
   aliases: [Psychological safety, "회의에서 아무도 반대 의견을 안 냄", "실수를 숨기고 보고하지 않는 분위기", "모른다고 말해도 무시당하지 않는 팀 만들기", "질문하면 바보 취급받을까 입 닫는 직원들"]
@@ -563,7 +563,7 @@ entries:
     section: organization
 - id: atlas.organization.team_charter
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 팀 헌장
   hint: 목적 역할 협업 규칙의 합의
   aliases: [Team charter, "새 팀 꾸릴 때 일하는 규칙 먼저 정하기", "우리 팀이 왜 있는지 한 장으로 적기", "회의 방식과 연락 예절을 팀이 함께 약속", "조별 과제 시작 전에 역할과 규칙 합의"]
@@ -572,7 +572,7 @@ entries:
     section: organization
 - id: atlas.organization.raci_matrix
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: RACI 책임표
   hint: 수행 책임 협의 공유 역할 구분
   aliases: [RACI matrix, "이 일 누가 하는 건지 서로 미룰 때", "누가 결정하고 누구에게 알려야 하는지 표로", "여러 부서가 얽힌 일의 담당 정리", "일마다 실행자와 최종 책임자 한 명씩 정하기"]
@@ -581,7 +581,7 @@ entries:
     section: organization
 - id: atlas.organization.objectives_and_key_results
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 목표와 핵심결과
   hint: 목표와 측정 가능한 결과 연결
   aliases: [Objectives and key results, OKR, "큰 방향은 있는데 잘 가고 있는지 모를 때", "스타트업에서 분기별 집중할 것 정하기"]
@@ -590,7 +590,7 @@ entries:
     section: organization
 - id: atlas.organization.management_by_objectives
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 목표관리
   hint: 합의한 목표를 중심으로 업무 관리
   aliases: [Management by objectives, "상사와 부하가 함께 올해 할 일 정하기", "연초에 정한 것 기준으로 연말 평가하기", "시키는 대로가 아니라 약속한 성과로 일하기", "개인별 연간 성과 약속 면담"]
@@ -599,7 +599,7 @@ entries:
     section: organization
 - id: atlas.organization.after_action_review
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 사후검토
   hint: 의도와 실제 수행의 차이에서 학습
   aliases: [After action review, "행사 끝나고 계획과 달랐던 점 짚어보기", "프로젝트 마치고 바로 하는 짧은 되짚기 모임", "원래 하려던 것과 실제로 한 것 비교", "같은 실수 반복하지 않게 끝난 일에서 배우기"]
@@ -608,7 +608,7 @@ entries:
     section: organization
 - id: atlas.organization.retrospective
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 회고
   hint: 작업 방식의 개선점을 함께 검토
   aliases: [Retrospective, "2주마다 팀이 일하는 방식 돌아보기", "잘된 점 아쉬운 점 다음에 해볼 것 나누기", "개발팀 주기 끝날 때마다 하는 모임", "같이 일하는 방법을 조금씩 고쳐나가기"]
@@ -617,7 +617,7 @@ entries:
     section: organization
 - id: atlas.organization.knowledge_transfer
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 지식 이전
   hint: 경험과 수행 지식을 다른 사람에게 전달
   aliases: [Knowledge transfer, "퇴직하는 고참의 노하우가 사라질까 걱정", "인수인계가 문서만으로는 안 될 때", "한 사람만 아는 일을 다른 사람도 하게 만들기", "숙련자 옆에 붙여서 일 배우게 하기"]
@@ -626,7 +626,7 @@ entries:
     section: organization
 - id: atlas.organization.communities_of_practice
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 실천공동체
   hint: 공동 실천을 통해 지식을 형성
   aliases: [Communities of practice, "같은 일 하는 사람끼리 모여 노하우 나누기", "부서는 달라도 관심사 같은 직원들 모임", "책으로 안 배워지는 요령을 함께 하며 익히기", "사내 자발적 공부 모임 꾸리기"]
@@ -635,7 +635,7 @@ entries:
     section: organization
 - id: atlas.organization.succession_planning
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 승계계획
   hint: 핵심 역할의 지속 가능성 준비
   aliases: [Succession planning, "사장이 갑자기 빠져도 가게가 돌아가게 준비", "그 사람만 아는 일이 많아 그만두면 큰일 나는 상황", "다음 대표를 미리 키워 두고 싶을 때", "가업을 자식에게 넘길 때 미리 챙겨야 할 것"]
@@ -644,7 +644,7 @@ entries:
     section: organization
 - id: atlas.organization.job_analysis
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 직무분석
   hint: 업무 활동과 요구 역량을 파악
   aliases: [Job analysis, "이 자리에서 실제로 무슨 일을 하는지 조사", "채용 공고에 쓸 업무 내용 정리", "하루 종일 무슨 일 하는지 하나하나 적어보기", "월급 등급 정하려고 일의 내용과 난이도 파악"]
@@ -653,7 +653,7 @@ entries:
     section: organization
 - id: atlas.organization.structured_interview
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 구조화 면접
   hint: 같은 질문과 기준으로 지원자 평가
   aliases: [Structured interview, "면접관마다 묻는 게 달라서 비교가 안 됨", "모든 지원자에게 똑같은 질문지로 면접", "첫인상에 휘둘리는 채용 줄이기", "면접 점수표와 채점 기준 미리 만들기"]
@@ -662,7 +662,7 @@ entries:
     section: organization
 - id: atlas.organization.work_sample_test
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 작업표본 평가
   hint: 실제 업무와 유사한 과제로 역량 평가
   aliases: [Work sample test, "이력서 말고 직접 해보게 해서 뽑기", "지원자에게 실제 일감 비슷한 과제 내주기", "말은 잘하는데 일은 못 하는 사람 걸러내기", "디자이너 채용 때 시안 하나 만들어보게 하기"]
@@ -671,7 +671,7 @@ entries:
     section: organization
 - id: atlas.organization.competency_mapping
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 역량 매핑
   hint: 역할과 필요한 능력을 대응
   aliases: [Competency mapping, "자리마다 어떤 능력이 필요한지 표로 정리", "우리 팀에 부족한 능력이 뭔지 한눈에 보기", "직원 교육 계획 세우기 전에 할 일", "누구를 어느 자리에 앉힐지 능력으로 맞춰보기"]
@@ -680,7 +680,7 @@ entries:
     section: organization
 - id: atlas.organization.360_degree_feedback
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 다면 피드백
   hint: 여러 관계자의 관찰을 종합
   aliases: [360 degree feedback, "상사 말고 동료와 부하 의견도 들어 평가", "한 사람 평가에만 기대는 인사고과가 불안할 때", "주변 사람들이 나를 어떻게 보는지 모아 보기", "팀장 리더십을 팀원들에게 물어보기"]
@@ -689,7 +689,7 @@ entries:
     section: organization
 - id: atlas.organization.conflict_resolution
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 갈등 해결
   hint: 이해와 요구 차이를 조정
   aliases: [Conflict resolution, "팀원 둘이 사이가 틀어져 일이 안 돌아갈 때", "층간소음으로 이웃과 다투는 상황 풀기", "서로 원하는 게 달라 부딪치는 가족 사이 중재", "감정 상하지 않게 다툼을 매듭짓는 방법"]
@@ -698,7 +698,7 @@ entries:
     section: organization
 - id: atlas.organization.interest_based_bargaining
   kind: method
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 이해관계 기반 교섭
   hint: 표면 입장 뒤의 요구를 중심으로 협상
   aliases: [Interest based bargaining, "서로 버티기만 하는 흥정에서 빠져나오는 법", "상대가 왜 그걸 고집하는지 속사정부터 묻기", "둘 다 손해 안 보는 합의점을 찾고 싶을 때", "월세 인상을 두고 집주인과 말이 안 통할 때"]
@@ -707,7 +707,7 @@ entries:
     section: organization
 - id: atlas.organization.span_of_control
   kind: concept
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 관리 범위
   hint: 한 관리자가 직접 조정하는 인원 범위
   aliases: [Span of control, "팀장 한 명 밑에 팀원이 너무 많을 때", "한 사람이 몇 명까지 챙길 수 있는지", "조직 계층을 몇 단으로 할지 고민", "관리자가 팀원 면담할 시간도 없을 때"]
@@ -716,7 +716,7 @@ entries:
     section: organization
 - id: atlas.organization.organizational_ambidexterity
   kind: concept
-  path: [운영, 조직과 협업]
+  path: ["경제와 조직", "조직과 협업"]
   name: 조직 양손잡이성
   hint: 기존 활용과 새로운 탐색을 함께 수행
   aliases: [Organizational ambidexterity, "지금 돈 버는 사업과 신사업 둘 다 챙기기", "본업에 치여 새로운 시도를 못 할 때", "효율만 좇다 변화에 뒤처질까 걱정", "실험하는 팀과 운영하는 팀을 따로 두기"]
@@ -725,7 +725,7 @@ entries:
     section: organization
 - id: atlas.tools.r_statistical_computing
   kind: tool
-  path: [계산, 통계]
+  path: ["형식과 추론", "통계"]
   name: R
   hint: 통계 계산과 그래픽을 위한 언어
   aliases: [R statistical computing, R 언어, "통계 분석을 직접 명령어로 짜서 돌리고 싶을 때", "논문에 실을 깔끔한 그래프를 코드로 그리기", "통계학과에서 가장 널리 배우는 무료 분석 환경", "남이 만든 분석 꾸러미를 내려받아 쓰는 통계 환경"]
@@ -734,7 +734,7 @@ entries:
     section: tools
 - id: atlas.tools.jasp
   kind: tool
-  path: [계산, 통계]
+  path: ["형식과 추론", "통계"]
   name: JASP
   hint: 통계 분석을 위한 시각적 작업도구
   aliases: [JASP, "마우스로 고르면 결과표가 바로 바뀌는 통계 프로그램", "확률로 믿음 정도를 따지는 분석을 클릭으로 하기", "논문 양식 결과표를 자동으로 만들어 주는 무료 도구", "통계 수업 실습용으로 설치할 쉬운 프로그램"]
@@ -743,7 +743,7 @@ entries:
     section: tools
 - id: atlas.tools.jamovi
   kind: tool
-  path: [계산, 통계]
+  path: ["형식과 추론", "통계"]
   name: jamovi
   hint: 표 기반 통계 분석 작업도구
   aliases: [jamovi, "코딩 없이 엑셀처럼 클릭으로 통계 돌리기", "비싼 통계 프로그램 대신 쓸 무료 프로그램", "논문용 통계를 메뉴 눌러서 처음 해보는 대학원생", "설문 표를 불러와 바로 평균 비교 돌려보기"]
@@ -752,7 +752,7 @@ entries:
     section: tools
 - id: atlas.tools.stan
   kind: tool
-  path: [계산, 통계]
+  path: ["형식과 추론", "통계"]
   name: Stan
   hint: 확률 모형과 베이지안 추론 도구
   aliases: [Stan, "내가 세운 확률 가정을 직접 적어 결과 뽑기", "미리 아는 정보와 자료를 합쳐 추정하는 프로그램", "기성 메뉴에 없는 복잡한 구조의 모형 맞추기", "추정값 하나가 아니라 가능한 값의 분포 전체 얻기"]
@@ -761,7 +761,7 @@ entries:
     section: tools
 - id: atlas.tools.gnu_octave
   kind: tool
-  path: [계산, 수학]
+  path: ["형식과 추론", "수치해석"]
   name: GNU Octave
   hint: 수치 선형대수와 수치 계산 환경
   aliases: [GNU Octave, "비싼 공학용 계산 프로그램 대신 쓸 무료 도구", "대학 수업의 행렬 계산 숙제를 집에서 돌리기", "매트랩용으로 짠 코드를 돈 안 들이고 실행", "명령 몇 줄로 숫자표 계산하고 그래프 그리기"]
@@ -770,7 +770,7 @@ entries:
     section: tools
 - id: atlas.tools.sagemath
   kind: tool
-  path: [계산, 수학]
+  path: ["형식과 추론", "수치해석"]
   name: SageMath
   hint: 대수와 조합 등 수학 계산 환경
   aliases: [SageMath, "정수와 소수 성질을 컴퓨터로 실험해 보기", "경우의 수와 그래프 문제를 다루는 무료 수학 도구", "순수 수학 연구와 공부에 쓰는 통합 프로그램", "암호 수업의 나머지 계산과 군 계산 해보기"]
@@ -779,7 +779,7 @@ entries:
     section: tools
 - id: atlas.tools.freecad
   kind: tool
-  path: [공학, 기계와 제작]
+  path: ["공학", "기계와 제작"]
   name: FreeCAD
   hint: 매개변수 기반 기계 설계 도구
   aliases: [FreeCAD, "무료로 쓰는 기계 부품 입체 설계 프로그램", "치수 숫자를 바꾸면 모양이 따라 바뀌는 설계", "취미로 프린터 출력용 부품 그리기", "비싼 설계 프로그램 대신 쓸 공개 도구"]
@@ -788,7 +788,7 @@ entries:
     section: tools
 - id: atlas.tools.inkscape
   kind: tool
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: Inkscape
   hint: 벡터 그래픽 편집 도구
   aliases: [Inkscape, "확대해도 안 깨지는 로고 만들기", "간판·명함용 도안을 선으로 그리기", "무료로 아이콘과 도형 그림 그리기", "인쇄소에 넘길 깨끗한 선 그림 파일"]
@@ -797,7 +797,7 @@ entries:
     section: tools
 - id: atlas.tools.krita
   kind: tool
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: Krita
   hint: 디지털 회화와 이미지 제작 도구
   aliases: [Krita, "태블릿 펜으로 붓 느낌 그림 그리기", "무료로 웹툰이나 삽화 그리는 프로그램", "수채화·유화 같은 붓질을 컴퓨터로", "빈 화면에 손그림으로 작품 완성하기"]
@@ -806,7 +806,7 @@ entries:
     section: tools
 - id: atlas.tools.gimp
   kind: tool
-  path: [표현, 시각예술]
+  path: ["예술과 표현", "시각예술"]
   name: GIMP
   hint: 래스터 이미지 편집 도구
   aliases: [GIMP, "무료로 사진 보정하고 합성하기", "사진에서 배경 지우고 잡티 없애기", "비싼 사진 편집 프로그램 대신 쓸 것", "점으로 이뤄진 그림 파일 색과 크기 손보기"]
@@ -815,7 +815,7 @@ entries:
     section: tools
 - id: atlas.tools.audacity
   kind: tool
-  path: [미디어, 오디오]
+  path: ["예술과 표현", "음악과 소리"]
   name: Audacity
   hint: 녹음과 파형 편집 도구
   aliases: [Audacity, "녹음 파일 앞뒤 잡음 구간 잘라내기", "마이크로 내 목소리 간단히 녹음하기", "인터뷰 녹음에서 기침 소리 지우기", "소리 크기가 들쭉날쭉한 녹음 고르게 하기"]
@@ -824,7 +824,7 @@ entries:
     section: tools
 - id: atlas.tools.ardour
   kind: tool
-  path: [미디어, 오디오]
+  path: ["예술과 표현", "음악과 소리"]
   name: Ardour
   hint: 멀티트랙 오디오 제작 환경
   aliases: [Ardour, "악기별로 따로 녹음해 한 곡으로 섞기", "집에서 밴드 데모 음원 만들기", "여러 소리 층의 음량과 좌우 균형 맞추기", "노래와 반주를 겹쳐 완성곡 뽑아내기"]
@@ -833,7 +833,7 @@ entries:
     section: tools
 - id: atlas.tools.musescore_studio
   kind: tool
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: MuseScore Studio
   hint: 악보 작성과 재생 도구
   aliases: [MuseScore Studio, "무료로 악보 그리고 바로 들어 보는 프로그램", "손으로 쓴 악보를 컴퓨터로 깨끗하게 옮기기", "작곡한 곡이 어떻게 들리는지 미리 재생", "합주용 파트 악보를 뽑아 나눠 주기"]
@@ -842,7 +842,7 @@ entries:
     section: tools
 - id: atlas.tools.lilypond
   kind: tool
-  path: [표현, 음악과 소리]
+  path: ["예술과 표현", "음악과 소리"]
   name: LilyPond
   hint: 텍스트 기반 악보 조판 도구
   aliases: [LilyPond, "글자로 입력하면 인쇄용 악보가 나오는 프로그램", "마우스 없이 타이핑으로 악보 만들기", "출판물처럼 정갈한 악보 뽑고 싶을 때", "악보를 문서 파일처럼 버전 관리하기"]
@@ -851,7 +851,7 @@ entries:
     section: tools
 - id: atlas.tools.obs_studio
   kind: tool
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: OBS Studio
   hint: 화면과 소리의 녹화 방송 도구
   aliases: [OBS Studio, "게임 화면을 실시간으로 방송하기", "컴퓨터 화면과 내 목소리를 함께 녹화", "강의 화면에 내 얼굴 캠을 같이 넣어 찍기", "여러 화면 구성을 미리 짜두고 방송 중 전환"]
@@ -860,7 +860,7 @@ entries:
     section: tools
 - id: atlas.tools.kdenlive
   kind: tool
-  path: [미디어, 영상과 사진]
+  path: ["예술과 표현", "영상과 사진"]
   name: Kdenlive
   hint: 비선형 영상 편집 도구
   aliases: [Kdenlive, "무료로 쓸 수 있는 영상 자르고 붙이는 프로그램", "리눅스에서도 돌아가는 영상 만들기 도구", "유튜브 영상에 자막과 음악 얹어 내보내기", "여러 영상 줄과 소리 줄을 쌓아 편집하기"]
@@ -869,7 +869,7 @@ entries:
     section: tools
 - id: atlas.tools.imagej
   kind: tool
-  path: [과학, 생명과학]
+  path: ["생명", "분자와 세포"]
   name: ImageJ
   hint: 과학 이미지의 측정과 분석 도구
   aliases: [ImageJ, "현미경 사진에서 길이와 면적 재기", "젤 사진의 띠 밝기를 숫자로 바꾸기", "실험 사진 밝기 조절과 입자 개수 세기", "연구실에서 누구나 쓰는 무료 사진 측정 프로그램"]
@@ -878,7 +878,7 @@ entries:
     section: tools
 - id: atlas.tools.cellprofiler
   kind: tool
-  path: [과학, 생명과학]
+  path: ["생명", "분자와 세포"]
   name: CellProfiler
   hint: 세포 이미지의 자동 측정 파이프라인
   aliases: [CellProfiler, "현미경 사진 수천 장 속 세포를 자동으로 세기", "세포 크기와 모양을 사람 손 없이 일괄 측정", "약물 선별 실험 사진을 같은 절차로 대량 처리", "코딩 없이 단계를 이어 붙여 세포 사진 분석"]
@@ -887,7 +887,7 @@ entries:
     section: tools
 - id: atlas.tools.openrefine
   kind: tool
-  path: [데이터, 정리와 저장]
+  path: ["정보와 컴퓨팅", "정리와 저장"]
   name: OpenRefine
   hint: 표 자료의 정리와 값 군집화 도구
   aliases: [OpenRefine, "지저분한 엑셀 자료를 클릭으로 대량 정리", "서울시·서울특별시처럼 제각각 적힌 값 묶기", "설문 응답의 오타와 표기 흔들림 한 번에 고치기", "코딩 없이 수천 줄 표를 청소하고 싶을 때"]
@@ -896,7 +896,7 @@ entries:
     section: tools
 - id: atlas.tools.gephi
   kind: tool
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: Gephi
   hint: 관계망의 탐색과 시각화 도구
   aliases: [Gephi, "인맥 관계를 점과 선 그림으로 그려 보기", "누가 누구와 이어졌는지 지도처럼 펼쳐 구경하기", "코딩 없이 마우스로 연결 그림을 만져 보기", "계정들의 팔로우 관계를 색깔별 덩어리로 보기"]

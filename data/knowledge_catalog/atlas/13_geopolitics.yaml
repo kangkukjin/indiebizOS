@@ -5,7 +5,7 @@ curation:
 entries:
 - id: atlas.geopolitics.isw_iran_update
   kind: resource
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: ISW 이란 업데이트
   hint: 전쟁연구소(ISW)·CTP의 전선별 일일 전황 정리 — 발표·보도를 시간순으로 대조한 2차 자료
   aliases: [Institute for the Study of War, Critical Threats, Iran Update, "이란 전쟁 오늘 상황을 전선별로 정리한 데", "전쟁 상황 일일 브리핑 어디서 보나", "어제와 오늘 사이에 뭐가 달라졌는지 정리된 보고", "이스라엘·이란 교전이 지금 소강인지 확인"]
@@ -14,7 +14,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.ukmto_incidents
   kind: resource
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: UKMTO 해상 사건 통보
   hint: 영국 해사무역기구의 홍해·아덴만·호르무즈 선박 피격·접근 사건 공식 통보 — 시각·좌표·선종
   aliases: [UKMTO, "홍해에서 배가 공격당했는지 공식 기록", "호르무즈 해협 유조선 피격 사건", "선박 피격 통보 최신", "바다에서 오늘 무슨 사건이 있었는지", "해적·드론 접근 경보"]
@@ -23,7 +23,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.un_security_council_records
   kind: resource
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 유엔 안보리 회의 기록
   hint: UN Press SC/번호 문서 — 브리핑 발언·결의안 표결·거부권의 원문 기록
   aliases: [UN Security Council, "안보리에서 무슨 말이 나왔는지 원문", "결의안이 부결됐는지 누가 거부권 썼는지", "유엔 공식 발표 그대로 보기", "안보리 긴급회의 내용"]
@@ -32,7 +32,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.osesgy_briefing
   kind: resource
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 예멘 유엔 특사실 브리핑
   hint: OSESGY(유엔 예멘 특사)의 성명·안보리 브리핑 — 후티·예멘 휴전 협상의 공식 진행 상황
   aliases: [OSESGY, Grundberg, "후티 휴전 협상이 어디까지 갔는지 공식", "예멘 유엔 특사 발표", "예멘 로드맵 진행 상황"]
@@ -41,7 +41,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.wire_live_blogs
   kind: resource
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 통신사 라이브 블로그
   hint: 로이터·AP·알자지라의 시간순 속보 페이지 — 사건 시각과 최초 보도 출처를 잡는 1차 창
   aliases: [Reuters live, AP live updates, Al Jazeera liveblog, "지금 이 시각 전쟁 상황", "오늘 일어난 일을 시간순으로", "라이브 업데이트 페이지", "가장 최신 속보 어디서"]
@@ -50,7 +50,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.crisis_group_reports
   kind: resource
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 국제위기그룹 보고서
   hint: International Crisis Group의 분쟁 배경·당사자·시나리오 분석 — 속보가 아니라 구조
   aliases: [International Crisis Group, CrisisWatch, "이 분쟁이 왜 시작됐는지 배경 정리", "누가 무엇을 원하는지 당사자 분석", "분쟁 월간 동향"]
@@ -59,7 +59,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.claim_triangulation
   kind: method
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 전황 3원 대조
   hint: 교전 당사자 발표·제3자 관측(유엔·OSINT)·현장 보도를 대조해 사건의 발생·시각·규모를 확정하는 절차
   aliases: ["양쪽 주장이 다른데 뭐가 맞는지", "공격이 실제로 있었는지 확인하는 법", "공식 발표와 보도가 어긋날 때", "확인된 사실과 주장을 구분해 보고", "최신 소식이 사실인지 검증"]
@@ -68,7 +68,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.osint_verification
   kind: method
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: OSINT 위치·시각 검증
   hint: 지오로케이션·위성사진·선박 AIS·항공 추적으로 사진과 사건의 장소·시각을 검증
   aliases: [geolocation, MarineTraffic, AIS, Bellingcat, "사진이 진짜 그 장소인지 확인", "배가 지금 어디 있는지 추적", "위성 사진으로 피해 확인", "가짜 전쟁 영상 가려내기"]
@@ -77,7 +77,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.ceasefire_types
   kind: concept
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 휴전·정전·종전
   hint: 일시 교전 중지(truce)·감시되는 휴전(ceasefire)·정전협정(armistice)·평화조약의 구별
   aliases: [ceasefire, truce, armistice, "휴전이 정말 성립한 건지", "일시 중단과 전쟁 끝의 차이", "휴전 발표가 났는데 공격이 계속되는 이유"]
@@ -86,7 +86,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.escalation_ladder
   kind: concept
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 확전 사다리
   hint: 보복·억지·비례 대응의 단계 개념 — 전쟁이 커질지 판단하는 틀
   aliases: [escalation, deterrence, "전쟁이 더 커질지 판단", "보복 공격이 있을지", "확전 위험이 얼마나 되는지", "제3국이 끌려 들어갈 가능성"]
@@ -95,7 +95,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.proxy_forces
   kind: concept
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 대리 세력과 비국가 무장집단
   hint: 후티·헤즈볼라 같은 비국가 무장집단과 후원국의 관계 — 대리전의 구조
   aliases: [Houthis, Hezbollah, proxy war, "후티가 누구고 누가 지원하는지", "대리전이란", "이란이 직접 안 싸우고 다른 세력을 쓰는 이유"]
@@ -104,7 +104,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.maritime_chokepoints
   kind: concept
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 해상 교통 요충
   hint: 호르무즈·바브엘만데브·수에즈 같은 초크포인트 — 봉쇄·우회가 유가·운임에 미치는 경로
   aliases: [Hormuz, Bab el-Mandeb, chokepoint, "유조선 길이 막히면 기름값이 어떻게", "해협 봉쇄 가능성", "홍해 우회 항로 때문에 운임 상승", "수에즈 대신 희망봉 돌아가는 배"]
@@ -113,7 +113,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.sanctions
   kind: concept
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 제재와 2차 제재
   hint: 유엔·미국(OFAC)·EU 제재의 대상·범위와 제3국 거래를 겨누는 2차 제재
   aliases: [sanctions, OFAC, secondary sanctions, "제재가 어디까지 적용되는지", "미국 제재 명단에 있는지", "그 회사와 거래하면 걸리는지", "제재 해제 조건"]
@@ -122,7 +122,7 @@ entries:
     section: geopolitics
 - id: atlas.geopolitics.risk_premium
   kind: concept
-  path: [사회, 국제정세와 안보]
+  path: ["사회", "국제정세와 안보"]
   name: 지정학 위험 프리미엄
   hint: 전쟁·봉쇄 위험이 유가·전쟁보험료·운임·환율에 얹히는 웃돈 — 사건과 가격의 연결
   aliases: [geopolitical risk premium, war risk insurance, "전쟁 뉴스가 기름값에 어떻게 반영되나", "전쟁 위험으로 보험료가 오름", "리스크 프리미엄", "분쟁이 내 투자에 미치는 영향"]

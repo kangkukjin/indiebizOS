@@ -1,0 +1,131 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.rock_cycle
+  kind: concept
+  path: [지구와 환경, 지질과 지형]
+  name: 암석 순환
+  hint: 화성암·퇴적암·변성암 사이의 생성과 변환
+  aliases: [돌이 만들어지고 다시 바뀌는 과정, 용암에서 생긴 돌과 쌓여서 생긴 돌, 압력과 열로 바뀐 암석, 암석 종류 사이의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.weathering
+  kind: concept
+  path: [지구와 환경, 지질과 지형]
+  name: 풍화
+  hint: 지표의 암석이 물리·화학·생물 작용으로 분해되는 과정
+  aliases: [바위가 오랜 세월 부서지는 이유, 돌 표면이 가루가 되는 과정, 얼었다 녹으며 생기는 틈, 비와 공기가 암석을 바꾸는 방식]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.erosion
+  kind: concept
+  path: [지구와 환경, 지질과 지형]
+  name: 침식
+  hint: 물·바람·빙하 등이 지표 물질을 깎아 옮기는 과정
+  aliases: [강이 계곡을 깊게 만드는 이유, 빗물에 흙이 씻겨 내려갈 때, 해안의 모양이 바뀌는 과정, 바람이 땅을 깎는 현상]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.sedimentation
+  kind: concept
+  path: [지구와 환경, 지질과 지형]
+  name: 퇴적
+  hint: 운반된 입자가 가라앉거나 쌓여 지층과 지형을 만드는 과정
+  aliases: [강 하구에 모래가 쌓이는 이유, 호수 바닥의 층이 생기는 과정, 물이 느려지면 입자가 가라앉는 까닭, 삼각주가 만들어지는 방식]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.groundwater
+  kind: concept
+  path: [지구와 환경, 지질과 지형]
+  name: 지하수
+  hint: 지하의 공극과 틈을 채우며 이동하는 물
+  aliases: [비가 땅속으로 스며든 뒤 어디로 가는지, 우물에서 물이 나오는 원리, 지하에 저장된 물의 흐름, 땅속 물과 하천의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.soil_horizons
+  kind: concept
+  path: [지구와 환경, 지질과 지형]
+  name: 토양층위
+  hint: 토양 형성 과정에 따라 성질이 달라진 수직 층
+  aliases: [땅을 파면 흙 색이 달라지는 이유, 표면의 부식질과 아래 흙의 차이, 흙이 만들어지는 시간, 토양 단면의 층 구분]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.water_cycle
+  kind: concept
+  path: [지구와 환경, 기상과 해양]
+  name: 물의 순환
+  hint: 증발·응결·강수·유출과 저장을 통한 지구의 물 이동
+  aliases: [바닷물이 비가 되어 돌아오는 과정, 구름과 강물은 어떻게 이어지는지, 물이 땅과 하늘 사이를 오가는 길, 비가 온 뒤 물의 행방]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.relative_humidity
+  kind: concept
+  path: [지구와 환경, 기상과 해양]
+  name: 상대습도
+  hint: 같은 온도에서 포화 수증기압에 대한 실제 수증기압의 비
+  aliases: [기온이 바뀌면 습도도 달라지는 이유, 공기가 눅눅하게 느껴질 때, 같은 수분량인데 습도계 값이 다른 까닭, 포화 상태에 얼마나 가까운 공기인지]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.atmospheric_circulation
+  kind: concept
+  path: [지구와 환경, 기상과 해양]
+  name: 대기 대순환
+  hint: 불균등한 가열과 지구 자전에 따른 대규모 공기 순환
+  aliases: [위도마다 바람과 날씨가 다른 이유, 적도와 극 사이 열의 이동, 사막이 특정 위도에 많은 까닭, 전 지구의 바람 방향]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.weather_front
+  kind: concept
+  path: [지구와 환경, 기상과 해양]
+  name: 기상 전선
+  hint: 성질이 다른 기단이 만나는 경계와 그에 따른 날씨
+  aliases: [찬 공기와 따뜻한 공기가 만날 때, 비구름이 띠 모양으로 생기는 이유, 날씨가 갑자기 바뀌는 경계, 일기예보 지도의 파란 선과 빨간 선]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.ocean_current
+  kind: concept
+  path: [지구와 환경, 기상과 해양]
+  name: 해류
+  hint: 바람·밀도 차이 등으로 형성되는 바닷물의 지속적 흐름
+  aliases: [바닷물이 큰 강처럼 흐르는 이유, 따뜻한 바닷물이 기후에 주는 영향, 바다에서 열이 이동하는 경로, 해안마다 수온이 다른 까닭]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.tides
+  kind: concept
+  path: [지구와 환경, 기상과 해양]
+  name: 조석
+  hint: 주로 달과 태양의 기조력으로 나타나는 해수면의 주기적 변화
+  aliases: [바닷물이 하루에도 들어왔다 나가는 이유, 갯벌이 드러나는 시간, 달과 바닷물 높이의 관계, 밀물과 썰물의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.greenhouse_effect
+  kind: concept
+  path: [지구와 환경, 기후와 자원]
+  name: 온실효과
+  hint: 대기 성분의 복사 흡수·방출이 지표 온도에 미치는 효과
+  aliases: [대기가 지표의 열에 영향을 주는 방식, 이산화탄소가 늘면 기온이 달라지는 이유, 햇빛과 지구가 내보내는 빛의 차이, 행성의 온도를 정하는 요인]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경
+- id: foundation.carbon_cycle
+  kind: concept
+  path: [지구와 환경, 기후와 자원]
+  name: 탄소 순환
+  hint: 대기·생물·토양·바다·암석 사이의 탄소 이동
+  aliases: [숲과 바다에 저장되는 탄소, 생물이 죽은 뒤 탄소의 행방, 연료를 태우면 대기가 바뀌는 이유, 자연 속 탄소의 저장과 이동]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 지구와 환경

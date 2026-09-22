@@ -1,0 +1,113 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.homeostasis
+  kind: concept
+  path: [건강, 인체와 항상성]
+  name: 항상성
+  hint: 외부 변화에도 내부 상태를 일정 범위에 유지하는 조절
+  aliases: [몸의 온도가 비슷하게 유지되는 이유, 환경이 변해도 몸속 상태를 조절하기, 정상 범위로 되돌리는 몸의 작용, 혈당과 수분의 균형]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.circulation
+  kind: concept
+  path: [건강, 인체와 항상성]
+  name: 혈액순환
+  hint: 심장과 혈관을 통해 혈액이 이동하며 물질을 운반하는 과정
+  aliases: [심장이 몸 전체에 하는 일, 산소와 영양소가 조직에 도달하는 길, 동맥과 정맥이 이어지는 방식, 폐와 온몸을 도는 혈액]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.gas_exchange
+  kind: concept
+  path: [건강, 인체와 항상성]
+  name: 기체 교환
+  hint: 확산 등에 의해 호흡면과 혈액 사이에 기체가 이동하는 과정
+  aliases: [숨을 쉰 산소가 피로 들어가는 원리, 폐포가 넓은 표면을 가진 이유, 이산화탄소가 몸 밖으로 나가는 길, 호흡과 혈액의 연결]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.endocrine_system
+  kind: concept
+  path: [건강, 인체와 항상성]
+  name: 내분비계
+  hint: 호르몬을 분비해 표적 조직의 기능을 조절하는 체계
+  aliases: [몸의 여러 기관이 신호를 주고받는 방식, 성장과 대사를 조절하는 물질, 호르몬이 작용하는 곳, 신경 신호와 호르몬 신호의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.immune_response
+  kind: concept
+  path: [건강, 인체와 항상성]
+  name: 면역 반응
+  hint: 생체가 이물질과 손상 등에 대응하는 인식·방어 과정
+  aliases: [몸이 침입자를 알아보는 원리, 한번 만난 병원체를 기억하는 방식, 선천적 방어와 후천적 방어의 차이, 방어 세포들이 협력하는 과정]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.renal_function
+  kind: concept
+  path: [건강, 인체와 항상성]
+  name: 신장 기능
+  hint: 여과·재흡수·분비로 체액 조성과 노폐물 배출을 조절하는 기능
+  aliases: [콩팥이 피에서 하는 일, 몸의 물과 염분을 조절하는 방식, 소변이 만들어지는 과정, 필요한 물질을 다시 흡수하는 기관]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.macronutrients
+  kind: concept
+  path: [건강, 영양과 예방]
+  name: 다량영양소
+  hint: 탄수화물·지방·단백질 등 비교적 많은 양이 필요한 영양 성분
+  aliases: [음식을 이루는 큰 영양 성분, 몸의 에너지원과 구성 재료, 탄수화물과 단백질의 역할 차이, 식사의 성분을 나누어 이해하기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.micronutrients
+  kind: concept
+  path: [건강, 영양과 예방]
+  name: 미량영양소
+  hint: 소량 필요하지만 생리 기능에 필수적인 비타민과 무기질
+  aliases: [조금 필요해도 빠지면 안 되는 영양, 비타민과 무기질이 하는 일, 열량과 영양이 다른 이유, 음식의 작은 성분이 몸에 미치는 역할]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.circadian_rhythm
+  kind: concept
+  path: [건강, 영양과 예방]
+  name: 일주기 리듬
+  hint: 약 하루 주기로 나타나는 생체 기능의 시간적 변화
+  aliases: [밤에 졸리고 아침에 깨는 원리, 빛이 수면 시간에 미치는 영향, 시간대를 옮기면 몸이 적응하는 과정, 하루 중 달라지는 몸의 활동]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.sleep_homeostasis
+  kind: concept
+  path: [건강, 영양과 예방]
+  name: 수면 항상성
+  hint: 깨어 있는 시간에 따라 수면 압력이 쌓이고 잠을 자며 줄어드는 조절
+  aliases: [오래 깨어 있으면 졸린 이유, 잠을 자면 줄어드는 피로 압력, 생체 시계와 잠의 필요량 차이, 밤샘 뒤 잠이 몰리는 원리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.infection_chain
+  kind: concept
+  path: [건강, 영양과 예방]
+  name: 감염 사슬
+  hint: 병원체·저장소·전파 경로·숙주로 이어지는 감염 과정
+  aliases: [병이 사람 사이에 옮는 경로, 손과 물건이 전파에 관여하는 방식, 병원체가 몸에 들어오는 입구, 전염 과정의 연결 고리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강
+- id: foundation.primary_prevention
+  kind: concept
+  path: [건강, 영양과 예방]
+  name: 일차 예방
+  hint: 질병 발생 이전에 위험 요인과 노출을 줄이는 접근
+  aliases: [아프기 전에 건강을 지키는 활동, 발병을 막는 일과 조기 발견의 차이, 생활환경에서 위험 요인 줄이기, 예방 활동의 단계 구분]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 건강

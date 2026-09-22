@@ -1,0 +1,77 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.mechanical_advantage
+  kind: concept
+  path: [공학, 기계와 제작]
+  name: 기계적 이득
+  hint: 기계가 입력 힘을 출력 힘으로 바꾸는 비
+  aliases: [지렛대로 무거운 것을 드는 원리, 도르래를 쓰면 필요한 힘이 줄어드는 이유, 힘을 줄이는 대신 더 움직이는 관계, 간단한 기계의 힘과 거리]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학
+- id: foundation.friction
+  kind: concept
+  path: [공학, 기계와 제작]
+  name: 마찰
+  hint: 접촉면 사이의 상대 운동을 방해하는 힘과 현상
+  aliases: [물체가 바닥에서 잘 미끄러지지 않는 이유, 미끄러지기 전과 후의 저항 차이, 재질과 표면에 따른 저항, 기계에서 열과 마모가 생기는 원인]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학
+- id: foundation.series_parallel
+  kind: concept
+  path: [공학, 전자와 통신]
+  name: 직렬과 병렬
+  hint: 회로 요소를 한 경로 또는 여러 갈래로 연결하는 구조
+  aliases: [전구를 이어 붙이는 방법에 따른 차이, 전류가 갈라지는 회로, 배터리 연결에 따라 전압이 달라지는 이유, 한 부품이 끊어질 때 전체에 미치는 영향]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학
+- id: foundation.capacitance
+  kind: concept
+  path: [공학, 전자와 통신]
+  name: 정전용량
+  hint: 전압 차이에 대해 전하를 저장하는 능력
+  aliases: [회로에서 전기를 잠깐 저장하는 부품, 전압이 급격히 바뀌는 것을 완화하기, 두 도체 사이에 저장되는 전하, 축전기의 크기가 뜻하는 것]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학
+- id: foundation.negative_feedback
+  kind: concept
+  path: [공학, 에너지와 제어]
+  name: 음의 피드백
+  hint: 출력의 변화를 줄이는 방향으로 입력을 조절하는 되먹임
+  aliases: [설정한 온도 근처를 유지하는 원리, 결과를 보고 오차를 줄이기, 변화가 커지면 반대로 조절하는 장치, 자동 조절이 안정되는 이유]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학
+- id: foundation.energy_efficiency
+  kind: concept
+  path: [공학, 에너지와 제어]
+  name: 에너지 효율
+  hint: 투입 에너지에 대한 유용한 산출 에너지나 서비스의 비
+  aliases: [같은 일을 하는데 전기를 덜 쓰는 장치, 낭비되는 열과 유용한 출력, 기기의 소비량과 성능 비교, 효율과 총사용량의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학
+- id: foundation.thermal_bridge
+  kind: concept
+  path: [공학, 건축과 도시]
+  name: 열교
+  hint: 단열이 약한 부위로 열이 집중적으로 전달되는 현상
+  aliases: [벽 모서리가 유난히 차가운 이유, 창틀 주변에 물방울이 맺히는 원인, 단열재가 끊기는 부분, 건물의 특정 부위로 열이 새는 현상]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학
+- id: foundation.factor_of_safety
+  kind: concept
+  path: [공학, 기계와 제작]
+  name: 안전계수
+  hint: 재료·구조의 한계 능력과 설계 하중 등의 비로 두는 여유
+  aliases: [예상보다 큰 힘에도 버티도록 여유 두기, 설계에서 견디는 한계와 실제 사용량 비교, 불확실한 하중을 고려하는 비율, 구조물을 딱 맞는 강도로 만들지 않는 이유]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 공학

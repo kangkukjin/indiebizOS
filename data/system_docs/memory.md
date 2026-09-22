@@ -39,7 +39,7 @@ see_also: [architecture.md, ibl.md]
 | 5 | **관계 기억** (사용자 사실) = 통칭 **심층기억** | **심층메모리** | 에이전트별 `memory.db` (memory 패키지) | 사용자 선호·결정·중요날짜·작업기록 |
 | 6 | **자기 상태** (항상성) | World Pulse + Self-Check | `world_pulse.db:pulse_log / self_checks / action_health` | 세계·사용자·자신의 실시간 상태와 건강 |
 | 7 | **공간 기억** (포식) | **포식 기억(냄새지도)** | 정본=문서 트리 `data/forage_surveys/<몸>/<경로>/memory.md` · `forage_memory.db:forage_map`=색인 | "어디에 무엇이 사는가" — 디스크·웹 포식 경험 누적 |
-| 8 | **세계 기억** (지식의 단서) | **세계의 지도** + 가지 사전 | `data/knowledge_catalog/world.yaml` · `atlas/*.yaml` · `branches.yaml` | "세계에 어떤 방법·도구가 있는가" — 이름·분류·관계만. 내용은 모델 가중치에 |
+| 8 | **세계 기억** (지식의 단서) | **세계의 지도** + 가지 사전 | `data/knowledge_catalog/world.yaml` · `atlas/*.yaml` · `foundation/*.yaml` · `outline.yaml` · `branches.yaml` | "세계를 이해하고 다루는 데 어떤 개념·방법·도구가 있는가" — 이름·분류·관계만. 내용은 모델 가중치에 |
 
 > **핵심 연결**: 매 요청마다 단계 0에서 생성되는 **연상기억(associative memory)** 은 **공통 흐름 `backend/cognition/associative_recall.py`**(2026-09-18, 정본 `docs/ASSOCIATIVE_RECALL_COMMON_FLOW_2026_09_18.md`)가 조립한다 —
 > 정책 표 `SOURCES`(공급원·상·주체 관문·자동 여부)와 `CHANNELS`(채널별 켬/끔)대로 #4 해마(`<execution_memory>`)·#5 심층메모리의 **지도**(`<memory_map>`)와 선택 기억·가이드 목차·손발·수리 결말·결정 원장(1상, 분류 전)과 #8 세계 지도(2상, 분류 뒤)를 **한 묶음**으로 만들고, 반사 신호(`recall.reflex`)를 이름 붙여 내며, 제시를 `recall.presented` 사건으로 남긴다. 검색기·후보의 뜻·성공의 정의는 기억별로 남는다(해마 전용 인코더 유지). 포식 기억은 표에 `auto=False` 로 실려 자동 주입되지 않는다. 채널을 가르는 예외는 없다(에이전트 간 경로·스위치도 같은 묶음, 2026-09-18 판정) · 후보 수는 `BUDGET` 표. 세 트리 기억의 **가지 문서 기질**(표식·절·요약·갱신 기록·도장·동기화 계획)은 `backend/datastore/tree_doc.py` 한 벌이고 줄 문법·식별·검증·저장만 기억별이다(2단계 ④). 관문 `scripts/check_recall_assembly.py`, 동작 불변 고정물 `scripts/recall_golden.py`. **제시→사용 결합**(2단계 ①): 턴 끝 `record_usage` 가 기억별 해석기(해마 executed·세계 mentioned·심층 expanded/confirmed)로 무엇이 쓰였는지 가르고 사건 `recall.used` 하나로 남긴다 — 점수·성공률은 안 고친다(관측). 보고 `scripts/recall_usage_report.py`.
@@ -244,7 +244,7 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 
 ## 8. 세계 기억 — 세계의 지도 (AI 가 이미 가진 지식으로 가는 다리)
 
-> **다른 일곱과의 차이: 내용을 담지 않는다.** 모델 가중치에는 세계의 방법·도구 지식이 이미 있지만, 이름이 불리지 않으면 떠오르지 않는다. 세계 기억은 그 지식의 **이름·분류·관계만** 구조화해 두고 턴마다 작게 건넨다 — 기억의 내용은 모델 안에, 단서는 여기에. #1 의미 기억이 *시스템 자신*에 대한 지식이라면 이것은 *바깥 세계의 방법*에 대한 지식이고, #5 심층기억이 *주인 개인*의 사실이라면 이것은 누구에게나 같은 공용 어휘라 회원·위임 에이전트에도 실린다.
+> **다른 일곱과의 차이: 내용을 담지 않는다.** 모델 가중치에는 세계의 개념·방법·도구 지식이 이미 있지만, 이름이 불리지 않으면 떠오르지 않는다. 세계 기억은 그 지식의 **이름·분류·관계만** 구조화해 두고 턴마다 작게 건넨다 — 기억의 내용은 모델 안에, 단서는 여기에. #1 의미 기억이 *시스템 자신*에 대한 지식이라면 이것은 *바깥 세계*에 대한 지식이고, #5 심층기억이 *주인 개인*의 사실이라면 이것은 누구에게나 같은 공용 어휘라 회원·위임 에이전트에도 실린다.
 
 `data/knowledge_catalog/world.yaml`과 fragments는 개념·방법·도구·자료원의 이름·분류·뜻·별칭과
 검토된 문제–방법–도구 관계·근거를 담는다. 전체 지도 크기는 턴마다 주입하는 정보량과 별개다. 이름과 위치에서 전문지식을 회상하거나 검색하도록 돕는다.
@@ -256,7 +256,7 @@ UTF-8 바이트/2 추정 1800토큰·6000문자는 조각의 비정상 팽창을
 관계에 명시된 적용 범위와 어휘 구별용 범위는 유지한다.
 근거 정보는 검증과 내부 WorldContext에 보존한다. 추정값은 모델 실측 토큰이 아니다.
 `<method_map>` 안의 같은 어휘 조각을 의식과 실행 가변 문맥에 전달한다.
-**세계의 기억(의미 채널, 2026-09-17)**: 글자 일치는 이름을 실제로 말했을 때만 닿는다(새 표현 2/24). 그 옆에 `catalog_recall.world_memory_for_turn` 이 `<world_map>`(최상위 27분야 한 줄)과 `<world_memory>`(가지 사전 `data/knowledge_catalog/branches.yaml` 로 **가지 2개를 먼저** 고른 뒤 그 안 2건 + 밖 1건, `분류 경로: 이름`)를 싣는다 — 심층기억의 `<recalled_memory>` 와 같은 함수(`backend/datastore/tree_recall.py`), 정본 `docs/TREE_MEMORY_RECALL_COMMON_DESIGN_2026_09_17.md`. 글자 조각에 이미 나온 이름은 뺀다. 에이전트 간 위임 경로(`agent_communication`)도 같은 블록을 받는다. 끄는 키는 `knowledge_catalog.world_memory`(기본 켬 — 옛 자리표 `semantic_enabled` 는 읽지 않는다). 관련 없음은 기계가 가르지 못하므로(실측) 작게 싣고 판단은 받는 AI 가 한다.
+**세계의 기억(의미 채널, 2026-09-17)**: 글자 일치는 이름을 실제로 말했을 때만 닿는다(새 표현 2/24). 그 옆에 `catalog_recall.world_memory_for_turn` 이 `<world_map>`(최상위 분야 한 줄)과 `<world_memory>`(가지 사전 `data/knowledge_catalog/branches.yaml` 로 **가지 2개를 먼저** 고른 뒤 그 안 2건 + 밖 1건, `분류 경로: 이름`)를 싣는다 — 심층기억의 `<recalled_memory>` 와 같은 함수(`backend/datastore/tree_recall.py`), 정본 `docs/TREE_MEMORY_RECALL_COMMON_DESIGN_2026_09_17.md`. 글자 조각에 이미 나온 이름은 뺀다. 에이전트 간 위임 경로(`agent_communication`)도 같은 블록을 받는다. 끄는 키는 `knowledge_catalog.world_memory`(기본 켬 — 옛 자리표 `semantic_enabled` 는 읽지 않는다). 관련 없음은 기계가 가르지 못하므로(실측) 작게 싣고 판단은 받는 AI 가 한다.
 revision/digest는 내부 WorldContext와 사건에만 남긴다.
 개인 사실의 회상·해마 점수·Reflex 판정에는 섞지 않는다.
 
@@ -272,7 +272,10 @@ Reflex·강제 역할·문맥 갱신에도 적용한다. 과거 에이전트 허
 자동 생략과 별개로 등록 스크립트 `세계지도`에서 전체 search/browse/open/neighbors/ancestors 조회가 가능하다.
 이름을 모를 때는 browse의 빈 path에서 분야를 열고 하위 분류로 내려간다.
 어휘 일치가 없고 검색어 전체가 정확한 분류명일 때에는 그 분류의 항목을 반환한다.
-넓은 분야의 어휘는 `data/knowledge_catalog/atlas/*.yaml`에서 편집한다. 이름·별칭·분류의
+분야 골격은 `data/knowledge_catalog/outline.yaml`에 먼저 선언하고 기존 어휘 배치와 빈 가지 보강을 거친다.
+`branches.yaml`은 같은 가지의 검색 단서를 맡고, `atlas/*.yaml`과 `foundation/*.yaml`은 실제 항목을 담는다.
+골격 밖 항목·빈 계획 가지·사전 불일치는 빌드 검사로 확인한다. [확장 기록](../../docs/WORLD_MAP_TOPDOWN_2026_09_22.md).
+이름·별칭·분류의
 편집 초안과 관계의 외부 확인 범위는 source 기록으로 구별한다. YAML은 내용 바이트에 따라
 파싱 결과를 재사용하므로 큰 지도도 매 턴 전체를 다시 해석하지 않으며 내용 변경은 바로 반영한다.
 [구현 계약](../../docs/WORLD_MAP_STRUCTURE_PLAN_2026_09_17.md) · [사용법](../guides/world_map.md).

@@ -1,0 +1,113 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.social_norm
+  kind: concept
+  path: [사회, 문화와 공동체]
+  name: 사회규범
+  hint: 집단에서 기대되고 유지되는 행동의 기준
+  aliases: [말하지 않아도 지키는 모임의 규칙, 다들 그렇게 한다는 압력, 공식 규칙과 관습의 차이, 공동체에서 허용되는 행동]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.social_role
+  kind: concept
+  path: [사회, 문화와 공동체]
+  name: 사회적 역할
+  hint: 사회적 지위와 관계에 따라 기대되는 행동 양식
+  aliases: [같은 사람이 집과 직장에서 다르게 행동하는 이유, 자리마다 기대되는 책임, 여러 역할이 충돌하는 상황, 관계 속에서 맡는 몫]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.cultural_relativism
+  kind: concept
+  path: [사회, 문화와 공동체]
+  name: 문화상대주의
+  hint: 문화적 관행을 해당 맥락에서 이해하려는 관점
+  aliases: [낯선 관습을 자기 기준만으로 보지 않기, 지역마다 다른 생활양식 이해, 문화 안에서 행동이 갖는 뜻, 관습을 이해하는 것과 찬성하는 것의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.ritual
+  kind: concept
+  path: [사회, 문화와 공동체]
+  name: 의례
+  hint: 반복되고 상징화된 행동으로 의미와 관계를 표현하는 형식
+  aliases: [입학식과 결혼식이 하는 역할, 함께 반복하는 행사의 의미, 삶의 전환을 표시하는 절차, 몸짓으로 소속감을 나누기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.reciprocity
+  kind: concept
+  path: [사회, 문화와 공동체]
+  name: 호혜성
+  hint: 주고받음의 기대와 실천을 통해 유지되는 사회적 관계
+  aliases: [도움을 받으면 돌려주려는 마음, 이웃끼리 품을 나누는 방식, 선물이 관계를 만드는 이유, 즉시 계산하지 않는 상호 도움]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.collective_memory
+  kind: concept
+  path: [사회, 문화와 공동체]
+  name: 집합기억
+  hint: 집단이 공유·재구성하며 정체성을 형성하는 과거의 기억
+  aliases: [같은 사건을 공동체마다 다르게 기억하는 이유, 기념일이 소속감에 주는 영향, 가족과 지역이 전하는 옛이야기, 기억을 통해 만들어지는 집단 정체성]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.population_transition
+  kind: concept
+  path: [사회, 인구와 이동]
+  name: 인구 전환
+  hint: 출생률과 사망률의 장기적 변화에 따른 인구 구조의 전환
+  aliases: [사망률과 출생률이 달라지는 순서, 사회의 변화와 인구 증가율, 인구가 늘다가 줄어드는 과정, 인구 변화를 장기적으로 이해하기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.population_pyramid
+  kind: concept
+  path: [사회, 인구와 이동]
+  name: 인구 피라미드
+  hint: 연령과 성별에 따른 인구 구성을 나타내는 도표
+  aliases: [어린 사람과 노인의 비중 비교, 연령별 인구 구조 읽기, 세대 크기가 다른 이유, 지역의 나이 구성을 그림으로 보기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.migration
+  kind: concept
+  path: [사회, 인구와 이동]
+  name: 인구 이동
+  hint: 거주지의 이동과 그 원인·경로·사회적 영향
+  aliases: [고향을 떠나 다른 곳에 사는 이유, 일자리와 사람의 이동, 사람을 떠나게 하는 조건과 끌어들이는 조건, 이주가 출발지와 도착지에 주는 변화]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.urbanization
+  kind: concept
+  path: [사회, 인구와 이동]
+  name: 도시화
+  hint: 인구와 활동이 도시에 집중되며 생활과 공간이 바뀌는 과정
+  aliases: [사람들이 도시에 모이는 이유, 농촌과 도시의 관계 변화, 도시가 커지며 달라지는 생활, 인구 집중과 기반시설의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.household_structure
+  kind: concept
+  path: [사회, 인구와 이동]
+  name: 가구 구조
+  hint: 함께 생활하는 단위의 규모와 구성·관계
+  aliases: [혼자 사는 집이 늘어나는 변화, 가족과 가구의 차이, 누구와 함께 사는지에 따른 생활, 세대 구성과 주거 수요]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회
+- id: foundation.population_aging
+  kind: concept
+  path: [사회, 인구와 이동]
+  name: 인구 고령화
+  hint: 전체 인구에서 높은 연령층의 비중이 커지는 변화
+  aliases: [지역에 노인이 많아지는 이유, 수명과 출생의 변화가 만드는 구조, 일하는 세대와 부양의 관계, 사회 서비스 수요의 연령별 변화]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 사회

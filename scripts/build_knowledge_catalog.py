@@ -43,6 +43,8 @@ def main():
     print(f"catalog: {len(snapshot.entries)} entries, {snapshot.revision[:12]}")
     if args.check:
         fails, warns = branch_gate(snapshot)
+        from audit_world_map_coverage import audit
+        fails.extend(audit(ROOT)["errors"])
         for w in warns:
             print(f"catalog: 경고 — {w}", file=sys.stderr)
         for f in fails:

@@ -15,7 +15,7 @@ def snapshot():
 
 
 def test_atlas_names_reach_the_selected_excerpt(snapshot):
-    entries = [e for e in snapshot.entries if e.id.startswith("atlas.")]
+    entries = [e for e in snapshot.entries if e.id.startswith(("atlas.", "foundation."))]
     assert len(entries) >= 1000
     assert len({e.source_section for e in entries}) >= 50
     failures = []
@@ -43,7 +43,7 @@ def test_aliases_are_bridges_without_duplicate_concepts(snapshot, query, name):
 
 def test_new_fields_can_be_browsed_without_knowing_names(snapshot):
     for path in (("생활", "農業"), ("생활", "농업과 원예"), ("인문", "철학과 윤리"),
-                 ("건강", "보건 연구"), ("공학", "로봇과 자동화"), ("표현", "음악과 소리")):
+                 ("건강", "보건 연구"), ("공학", "로봇과 자동화"), ("예술과 표현", "음악과 소리")):
         if path[-1] == "農業":
             assert catalog.lookup(ROOT, op="browse", path=list(path))["status"] == "no_match"
             continue

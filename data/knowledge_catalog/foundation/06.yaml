@@ -1,0 +1,113 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.emotion_regulation
+  kind: concept
+  path: [마음과 배움, 정서와 동기]
+  name: 정서 조절
+  hint: 감정의 발생·강도·표현과 지속에 영향을 주는 과정
+  aliases: [화가 난 뒤 반응을 고르는 과정, 감정을 알아차리고 다루기, 상황을 다시 해석하면 기분이 바뀌는 이유, 느끼는 감정과 표현하는 행동의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.empathy
+  kind: concept
+  path: [마음과 배움, 정서와 동기]
+  name: 공감
+  hint: 타인의 감정과 관점을 이해하거나 함께 느끼는 능력
+  aliases: [다른 사람 입장에서 생각하기, 상대의 기분을 알아차리는 과정, 이해하는 것과 동의하는 것의 차이, 말없이 드러나는 마음을 읽기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.delayed_gratification
+  kind: concept
+  path: [마음과 배움, 정서와 동기]
+  name: 만족 지연
+  hint: 즉각적 보상 대신 더 늦은 목표나 보상을 선택하는 행동
+  aliases: [당장 하고 싶은 일을 뒤로 미루기, 작은 즉시 보상과 나중의 큰 보상, 장기 목표를 위해 기다리는 선택, 충동과 계획 사이의 갈등]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.approach_avoidance
+  kind: concept
+  path: [마음과 배움, 정서와 동기]
+  name: 접근 회피 갈등
+  hint: 같은 대상이 매력과 부담을 함께 가져 선택이 어려운 상태
+  aliases: [하고 싶지만 동시에 두려운 일, 기대와 걱정이 함께 드는 선택, 가까이 갈수록 망설여지는 상황, 한 대상에 대한 엇갈린 마음]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.emotional_labor
+  kind: concept
+  path: [마음과 배움, 정서와 동기]
+  name: 감정노동
+  hint: 직무의 요구에 맞추어 감정이나 그 표현을 조절하는 노동
+  aliases: [속마음과 다른 표정을 유지해야 하는 일, 손님 앞에서 감정을 관리하는 부담, 업무가 요구하는 친절한 태도, 감정을 표현하는 것도 일이 되는 상황]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.stress_appraisal
+  kind: concept
+  path: [마음과 배움, 정서와 동기]
+  name: 스트레스 평가
+  hint: 상황의 요구와 대처 자원을 해석하며 스트레스가 형성되는 과정
+  aliases: [같은 일이 사람마다 다르게 부담되는 이유, 감당할 수 있다는 느낌과 압박감, 위협으로 느끼는 상황의 해석, 자원과 요구 사이의 차이]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.attachment
+  kind: concept
+  path: [마음과 배움, 발달과 관계]
+  name: 애착
+  hint: 돌봄 관계에서 형성되는 정서적 유대와 안전 기반
+  aliases: [아이에게 익숙한 보호자가 중요한 이유, 불안할 때 특정 사람을 찾는 마음, 안전하다고 느끼면 탐색하는 행동, 돌봄 관계가 주는 안정감]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.theory_of_mind
+  kind: concept
+  path: [마음과 배움, 발달과 관계]
+  name: 마음이론
+  hint: 타인의 믿음·의도·지식이 자신과 다를 수 있음을 이해하는 능력
+  aliases: [다른 사람은 내가 아는 것을 모를 수 있다는 이해, 아이들이 거짓 믿음을 이해하는 과정, 상대의 의도를 추측하기, 자기 관점과 남의 관점 구별]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.temperament
+  kind: concept
+  path: [마음과 배움, 발달과 관계]
+  name: 기질
+  hint: 어린 시기부터 나타나는 반응성과 자기조절의 개인차
+  aliases: [아이마다 낯선 상황에 반응이 다른 이유, 타고난 반응 경향과 배운 행동, 활동량과 민감성의 차이, 개인차에 맞춰 관계 맺기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.joint_attention
+  kind: concept
+  path: [마음과 배움, 발달과 관계]
+  name: 공동주의
+  hint: 다른 사람과 같은 대상에 주의를 기울이며 관심을 공유하는 과정
+  aliases: [아기가 가리키는 곳을 함께 보는 이유, 시선을 따라 관심을 나누기, 말을 배우기 전의 소통, 함께 바라보며 의미를 익히기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.social_learning
+  kind: concept
+  path: [마음과 배움, 발달과 관계]
+  name: 사회학습
+  hint: 타인의 행동과 결과를 관찰하며 행동을 배우는 과정
+  aliases: [어른을 보고 아이가 따라 하는 이유, 직접 해보지 않고도 배우는 행동, 본보기의 행동이 미치는 영향, 관찰과 모방으로 익히기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움
+- id: foundation.life_span_development
+  kind: concept
+  path: [마음과 배움, 발달과 관계]
+  name: 전생애 발달
+  hint: 출생부터 노년까지 이어지는 변화와 연속성을 다루는 관점
+  aliases: [성인이 된 뒤에도 달라지는 마음, 나이에 따라 달라지는 과제, 성장과 노화를 함께 이해하기, 삶의 여러 시기를 잇는 변화]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 마음과 배움

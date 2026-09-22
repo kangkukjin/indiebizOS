@@ -1,0 +1,113 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.inertia
+  kind: concept
+  path: [물질과 우주, 물리]
+  name: 관성
+  hint: 외력이 없을 때 운동 상태를 유지하는 성질
+  aliases: [차가 멈출 때 몸이 쏠리는 이유, 움직이던 물체가 계속 가려는 성질, 정지 상태를 바꾸는 데 필요한 힘, 버스가 출발할 때 몸의 움직임]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.pressure
+  kind: concept
+  path: [물질과 우주, 물리]
+  name: 압력
+  hint: 단위 면적에 수직으로 작용하는 힘
+  aliases: [같은 힘인데 좁은 곳이 더 아픈 이유, 물속 깊이에 따른 누르는 힘, 공기가 용기 벽을 미는 정도, 접촉 면적과 힘의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.heat_capacity
+  kind: concept
+  path: [물질과 우주, 물리]
+  name: 열용량
+  hint: 물체의 온도를 변화시키는 데 필요한 열량의 비
+  aliases: [같이 가열해도 온도가 다르게 오를 때, 물이 천천히 식는 까닭, 재질과 양에 따른 온도 변화, 열을 얼마나 저장하는지]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.wave
+  kind: concept
+  path: [물질과 우주, 물리]
+  name: 파동
+  hint: 공간을 따라 전달되는 진동과 에너지
+  aliases: [물결과 소리의 공통점, 진동이 멀리 퍼지는 과정, 마루 사이의 거리와 떨리는 횟수, 매질이 움직이는 것과 신호가 가는 것]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.chemical_bond
+  kind: concept
+  path: [물질과 우주, 화학]
+  name: 화학 결합
+  hint: 원자 사이의 전자 상호작용으로 형성되는 연결
+  aliases: [원자가 붙어서 분자가 되는 이유, 물질마다 단단함이 다른 까닭, 전자를 나누거나 주고받는 방식, 분자 속 원자들이 이어지는 구조]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.acid_base
+  kind: concept
+  path: [물질과 우주, 화학]
+  name: 산과 염기
+  hint: 양성자 전달 등으로 설명하는 물질의 산성·염기성과 반응
+  aliases: [신맛 나는 물질과 알칼리의 차이, 중화가 일어나는 원리, 용액의 산성 정도, 수소 이온과 산도의 관계]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.solubility
+  kind: concept
+  path: [물질과 우주, 화학]
+  name: 용해도
+  hint: 주어진 조건에서 용매에 녹을 수 있는 용질의 양
+  aliases: [설탕이 더는 녹지 않는 이유, 뜨거운 물에 더 많이 녹는 물질, 액체 속에 기체가 녹아 있는 상태, 온도에 따른 포화량]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.chemical_equilibrium
+  kind: concept
+  path: [물질과 우주, 화학]
+  name: 화학 평형
+  hint: 정반응과 역반응의 속도가 같아 거시적 조성이 유지되는 상태
+  aliases: [반응이 끝난 것처럼 보여도 계속되는 변화, 조건을 바꾸면 생성량이 달라지는 이유, 양방향 반응의 균형, 농도 변화에 따른 반응 방향]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.stellar_evolution
+  kind: concept
+  path: [물질과 우주, 천문과 우주]
+  name: 항성 진화
+  hint: 별의 질량과 핵융합에 따른 생애 변화
+  aliases: [별도 태어나고 죽는지, 태양이 빛을 내는 원리, 별의 색과 수명 관계, 별이 늙으면 무엇이 되는지]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.solar_system
+  kind: concept
+  path: [물질과 우주, 천문과 우주]
+  name: 태양계
+  hint: 태양과 그 중력에 묶인 행성·위성·소천체의 계
+  aliases: [행성과 위성의 차이, 지구 주변 천체들의 위치 관계, 태양 둘레를 도는 물체, 행성의 공전 순서]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.elasticity
+  kind: concept
+  path: [물질과 우주, 재료와 물성]
+  name: 탄성
+  hint: 힘을 제거하면 원래 형태로 돌아가려는 재료의 성질
+  aliases: [늘렸다 놓으면 돌아오는 재질, 힘과 변형량의 관계, 영구적으로 휘는 것과 되돌아오는 것, 재료의 뻣뻣함 비교]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주
+- id: foundation.porosity
+  kind: concept
+  path: [물질과 우주, 재료와 물성]
+  name: 다공성
+  hint: 재료 내부 빈 공간의 비율과 연결 구조
+  aliases: [스펀지가 물을 머금는 이유, 구멍 많은 재료의 단열, 빈틈이 물과 공기를 통과시키는 방식, 같은 재료인데 밀도가 다른 이유]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 물질과 우주

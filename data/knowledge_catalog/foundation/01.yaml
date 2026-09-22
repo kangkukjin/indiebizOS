@@ -1,0 +1,59 @@
+curation:
+  origin: model_knowledge_editorial_seed
+  edited_at: '2026-09-22'
+  review: editorial; not individually source-verified
+entries:
+- id: foundation.sets
+  kind: concept
+  path: [형식과 추론, 기초수학]
+  name: 집합
+  hint: 공통 조건으로 묶은 대상과 포함·교집합·합집합의 구조
+  aliases: [두 조건을 모두 만족하는 대상, 여러 무리의 겹치는 부분, 전체와 부분의 관계, 조건으로 대상을 묶기]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 형식과 추론
+- id: foundation.ratio
+  kind: concept
+  path: [형식과 추론, 기초수학]
+  name: 비와 비례
+  hint: 두 양의 상대적 크기와 일정한 비율에 따른 변화
+  aliases: [인원에 맞춰 재료 양 바꾸기, 크기를 두 배로 늘릴 때, 전체 중 차지하는 몫, 서로 다른 크기의 양 비교]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 형식과 추론
+- id: foundation.function
+  kind: concept
+  path: [형식과 추론, 기초수학]
+  name: 함수
+  hint: 입력마다 출력을 대응시키는 수학적 관계
+  aliases: [입력에 따라 결과가 바뀌는 규칙, 식과 그래프를 연결하기, 같은 값을 넣으면 어떤 값이 나오는지, 두 양 사이의 대응]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 형식과 추론
+- id: foundation.derivative
+  kind: concept
+  path: [형식과 추론, 기초수학]
+  name: 미분
+  hint: 함수의 국소적 변화율과 접선의 기울기
+  aliases: [한순간 얼마나 빨리 변하는지, 곡선의 특정 지점 기울기, 속도가 시간마다 달라질 때, 증가율이 가장 큰 곳]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 형식과 추론
+- id: foundation.integral
+  kind: concept
+  path: [형식과 추론, 기초수학]
+  name: 적분
+  hint: 작은 부분의 누적과 곡선 아래 넓이를 다루는 연산
+  aliases: [속도로부터 이동 거리를 구하기, 시간에 따라 쌓이는 양, 불규칙한 곡선 아래의 넓이, 아주 작은 조각을 합친 전체]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 형식과 추론
+- id: foundation.conditional_probability
+  kind: concept
+  path: [형식과 추론, 기초수학]
+  name: 조건부확률
+  hint: 주어진 사건을 조건으로 다른 사건의 확률을 계산
+  aliases: [새 정보를 알았을 때 가능성 변화, 특정 집단 안에서의 비율, 두 사건이 함께 일어나는 가능성, 조건에 따라 달라지는 확률]
+  source:
+    path: docs/world_map/L_topdown_editorial_2026_09_22.md
+    section: 형식과 추론

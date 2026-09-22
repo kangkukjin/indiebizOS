@@ -10,7 +10,7 @@
 ```ibl
 [self:script]{op:"run", id:"세계지도", args:{op:"browse"}}
 [self:script]{op:"run", id:"세계지도", args:{op:"browse", path:["인문"]}}
-[self:script]{op:"run", id:"세계지도", args:{op:"browse", path:["인문","글쓰기","퇴고"]}}
+[self:script]{op:"run", id:"세계지도", args:{op:"browse", path:["인문","글쓰기와 편집"]}}
 [self:script]{op:"run", id:"세계지도", args:{op:"search", query:"3차원"}}
 [self:script]{op:"run", id:"세계지도", args:{op:"open", id:"blender"}}
 [self:script]{op:"run", id:"세계지도", args:{op:"neighbors", id:"problem.arch_visual"}}
@@ -48,7 +48,10 @@ names는 분류와 이름만 전달하는 모드로 선택할 수 있다.
 ## 갱신
 
 정본은 data/knowledge_catalog/world.yaml과 fragments다. kind 미검토 기존 항목은 term이다.
-전 분야의 확장 어휘는 `data/knowledge_catalog/atlas/*.yaml`에 분야별로 나뉜다.
+분야 골격은 `data/knowledge_catalog/outline.yaml`, 검색용 가지 사전은 `branches.yaml`이다.
+전 분야의 어휘는 `atlas/*.yaml`과 `foundation/*.yaml`에 나뉘며 모두 같은 검색을 쓴다.
+골격을 먼저 검토하고 기존 어휘를 배치한 뒤 빈 가지를 채운다. 현재 분류 경로는 browse에서
+확인한다. 항목 ID는 분류가 옮겨져도 유지한다.
 같은 개념의 번역·약어는 별칭으로 합치고, 새 개념만 새 ID를 부여한다.
 편집 초안과 외부 근거의 확인 범위는 각 항목의 source에서 확인한다.
 path는 편집 분류 경로, broader는 별도로 검토한 직접 일반화 관계다.

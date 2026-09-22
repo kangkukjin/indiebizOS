@@ -5,7 +5,7 @@ curation:
 entries:
 - id: atlas.algorithms.divide_and_conquer
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 분할정복
   hint: 하위 문제로 나누어 해 결합
   aliases: [Divide and conquer, "큰 일을 반으로 쪼개 따로 풀고 다시 합치기", "카드 더미를 나눠 정렬한 뒤 하나로 합치기", "덩치 큰 계산을 같은 모양 작은 조각으로 나누기", "여러 사람이 나눠 처리한 결과를 하나로 모으기"]
@@ -14,7 +14,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.greedy_algorithm
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 탐욕 알고리즘
   hint: 매 단계의 국소 선택으로 구성
   aliases: [Greedy algorithm, "거스름돈을 큰 동전부터 내주기", "지금 당장 제일 좋아 보이는 것부터 고르기", "회의실에 일찍 끝나는 회의부터 채워 넣기", "앞일 안 따지고 순간 최선만 골라도 되는지 확인"]
@@ -23,7 +23,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.backtracking
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 백트래킹
   hint: 제약 위반 시 선택을 되돌려 탐색
   aliases: [Backtracking, "스도쿠 칸을 채우다 막히면 앞 칸으로 되돌아가기", "조건에 어긋나면 앞 선택을 물리고 다시 고르기", "가능한 조합을 빠짐없이 하나씩 시도해 보기", "체스판에 말을 서로 안 잡히게 놓는 방법 찾기"]
@@ -32,7 +32,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.breadth_first_search
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 너비우선 탐색
   hint: 시작점에서 가까운 깊이부터 탐색
   aliases: [Breadth first search, "미로에서 출구까지 가장 적은 칸 수 찾기", "친구의 친구로 몇 다리 건너면 닿는지 세기", "가까운 곳부터 차례로 퍼져 나가며 살피기", "지하철에서 가장 적은 정거장 수로 가는 길"]
@@ -41,7 +41,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.depth_first_search
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 깊이우선 탐색
   hint: 한 경로를 깊게 따라 탐색
   aliases: [Depth first search, "미로에서 한 길을 끝까지 가 보고 돌아오기", "폴더 안의 폴더를 바닥까지 파고들며 훑기", "서로 이어진 덩어리가 몇 개인지 세어 보기", "서로 물고 물리는 순환 관계가 있는지 찾기"]
@@ -50,7 +50,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.dijkstra_algorithm
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 다익스트라 알고리즘
   hint: 비음수 가중 그래프의 최단경로
   aliases: [Dijkstra algorithm, "도로마다 걸리는 시간이 다를 때 가장 빠른 길", "내비처럼 출발지에서 목적지까지 최소 거리 구하기", "구간 요금이 제각각일 때 제일 싼 이동 경로 찾기", "한 지점에서 모든 곳까지 최소 비용 한꺼번에 계산"]
@@ -59,7 +59,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.a_star_search
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: A* 탐색
   hint: 비용과 휴리스틱으로 경로 탐색
   aliases: [A star search, 에이스타, A* search, A star, "지도에서 장애물 피해 가장 빠른 길 찾기", "게임 캐릭터가 목적지까지 똑똑하게 걸어가게 하기", "목표까지 남은 거리 어림으로 헛걸음 줄이기", "모든 길을 다 뒤지기엔 지도가 너무 클 때"]
@@ -68,7 +68,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.topological_sorting
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 위상정렬
   hint: 의존 방향을 지키는 순서 구성
   aliases: [Topological sorting, "먼저 들어야 할 과목이 얽힌 수업의 수강 순서 짜기", "서로 물고 물리는 준비물 설치를 어떤 차례로 할지", "앞뒤 조건만 있는 할 일 목록을 한 줄로 세우기"]
@@ -77,7 +77,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.maximum_flow
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 최대유량
   hint: 용량 제약 안의 최대 흐름 계산
   aliases: [Maximum flow, "수도관 굵기가 제각각일 때 최대로 보낼 물의 양", "도로망에서 한 시간에 빠져나갈 수 있는 차량 수", "어느 구간이 막혀 전체 수송량을 묶는지 찾기", "창고에서 매장까지 동시에 나를 수 있는 물량 한도"]
@@ -86,7 +86,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.minimum_spanning_tree
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 최소신장트리
   hint: 전체 정점을 최소 비용으로 연결
   aliases: [Minimum spanning tree, "마을들을 가장 적은 전선으로 모두 잇기", "건물 전부를 가장 싼 공사비로 배관 연결하기", "끊기는 곳 없이 전체를 묶는 가장 싼 선 고르기", "컴퓨터 여러 대를 남는 선 없이 케이블로 잇기"]
@@ -95,7 +95,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.bipartite_matching
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 이분 매칭
   hint: 두 집합 원소의 짝 구성
   aliases: [Bipartite matching, "지원자와 일자리를 겹치지 않게 짝지어 주기", "학생마다 희망 동아리 자리 하나씩 배정하기", "기사와 차량을 가능한 조합으로 최대한 맺어 주기", "한쪽 사람과 다른 쪽 자리를 일대일로 연결하기"]
@@ -104,7 +104,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.union_find
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 서로소 집합 자료구조
   hint: 집합 병합과 소속 질의
   aliases: [Union find, "두 사람이 같은 무리에 속하는지 빨리 확인", "무리들을 계속 합쳐 가며 누가 어느 편인지 추적", "친구를 맺을 때마다 한 무리로 묶어 관리하기", "선을 하나 더 그으면 고리가 생기는지 즉시 판단"]
@@ -113,7 +113,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.hashing
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 해싱
   hint: 키를 제한된 주소 공간에 대응
   aliases: [Hashing, "이름만으로 자료 위치를 단번에 찾아가게 저장", "파일 두 개가 같은지 짧은 지문으로 비교하기", "회원 번호를 서랍 번호로 바꿔 넣어 두기", "목록이 길어져도 찾는 시간이 늘지 않게 하기"]
@@ -122,7 +122,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.binary_search
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 이진탐색
   hint: 정렬된 탐색 구간을 반씩 축소
   aliases: [Binary search, "가나다순 명부에서 이름 빨리 찾기", "숫자 맞히기 놀이에서 절반씩 좁혀 가기", "어느 시점부터 고장 났는지 중간부터 짚어 보기", "순서대로 놓인 긴 목록에서 몇 번 만에 찾아내기"]
@@ -131,7 +131,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.memoization
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 메모이제이션
   hint: 계산 결과를 인자별로 저장
   aliases: [Memoization, "같은 계산을 또 하지 않게 답을 적어 두기", "한 번 구한 값을 다시 물으면 바로 꺼내 주기", "되풀이 호출로 함수가 너무 느려질 때", "입력값마다 결과를 쪽지에 기록해 다시 쓰기"]
@@ -140,7 +140,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.reservoir_sampling
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 저수지 표집
   hint: 크기 미상의 흐름에서 표본 추출
   aliases: [Reservoir sampling, "끝이 언제일지 모르는 기록에서 공평하게 몇 개 뽑기", "전체 인원을 모른 채 지나가는 손님 중 추첨하기", "다 못 담는 큰 기록에서 고르게 일부만 남기기", "한 번 훑으면서 모두에게 같은 당첨 기회 주기"]
@@ -149,7 +149,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.bloom_filter
   kind: method
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 블룸 필터
   hint: 확률적으로 집합 포함 여부 검사
   aliases: [Bloom filter, "이미 본 주소인지 메모리 아끼며 빠르게 확인", "가끔 틀려도 되니 명단에 있는지 대충 걸러내기", "수억 개 목록을 다 저장 못 할 때 중복 가려내기", "없는 게 확실한 것만 먼저 걸러 조회 횟수 줄이기"]
@@ -158,7 +158,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.amortized_analysis
   kind: concept
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 분할상환 분석
   hint: 연산열 전체의 평균 비용 분석
   aliases: [Amortized analysis, "가끔 아주 느린 작업이 있어도 전체론 빠름을 보이기", "꽉 차면 두 배로 늘리는 목록이 왜 효율적인지", "최악의 한 번만 보면 너무 비관적인 속도 평가", "드문 큰 비용을 여러 번의 싼 작업에 나눠 셈하기"]
@@ -167,7 +167,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.computational_complexity
   kind: concept
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 계산 복잡도
   hint: 입력 크기에 따른 자원 증가
   aliases: [Computational complexity, "자료가 열 배 늘면 시간이 얼마나 늘지 가늠하기", "데이터가 많아지자 프로그램이 갑자기 느려질 때", "두 풀이법 중 큰 자료에서 어느 쪽이 버티는지 비교", "이 문제를 컴퓨터로 풀 만한지 미리 따져 보기"]
@@ -176,7 +176,7 @@ entries:
     section: algorithms
 - id: atlas.algorithms.approximation_algorithm
   kind: concept
-  path: [계산, 알고리즘]
+  path: ["형식과 추론", "알고리즘"]
   name: 근사 알고리즘
   hint: 최적해에 대한 보장 범위의 해
   aliases: [Approximation algorithm, "완벽한 답은 너무 오래 걸려 쓸 만한 답으로 만족", "최선보다 얼마나 손해인지 한도를 알고 쓰는 풀이", "배달 동선 경우가 너무 많아 다 따져볼 수 없을 때", "최선과 크게 차이 안 나는 답으로 빨리 끝내기"]
@@ -185,7 +185,7 @@ entries:
     section: algorithms
 - id: atlas.machine_learning.supervised_learning
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 지도학습
   hint: 입력과 정답 쌍에서 예측 학습
   aliases: [Supervised learning, "스팸인지 아닌지 표시된 메일로 가려내는 법 가르치기", "문제와 답이 짝지어진 자료로 맞히는 연습", "과거 집값과 조건을 보고 새 집값 예상하기", "사람이 미리 분류해 둔 예시가 충분할 때"]
@@ -194,7 +194,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.unsupervised_learning
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 비지도학습
   hint: 정답 없이 자료의 구조 탐색
   aliases: [Unsupervised learning, "뭘 찾을지 모르는 채로 자료에서 패턴 캐내기", "표시 없는 기록 더미에서 숨은 짜임새 발견", "분류 기준을 사람이 안 정해주고 맡겨 보기", "처음 받은 낯선 자료가 어떻게 생겼나 훑어보기"]
@@ -203,7 +203,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.self_supervised_learning
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 자기지도학습
   hint: 자료 자체에서 학습 신호 구성
   aliases: [Self supervised learning, "문장 일부를 가리고 맞히게 해서 글 익히기", "사람이 정답 안 달아도 되는 대량 학습", "표시 안 된 글과 사진만 잔뜩 쌓여 있을 때", "자료 스스로 문제와 답을 만들어 공부시키기"]
@@ -212,7 +212,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.transfer_learning
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 전이학습
   hint: 기존 학습 표현을 새 과제에 이용
   aliases: [Transfer learning, "사진이 몇백 장뿐인데 구분하는 인공지능 만들기", "남이 미리 길러 놓은 것을 가져다 내 일에 맞추기", "처음부터 가르치기엔 자료도 시간도 모자랄 때", "비슷한 일 배운 인공지능에 새 일 조금만 가르치기"]
@@ -221,7 +221,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.active_learning
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 능동학습
   hint: 학습 가치가 큰 자료의 표지 요청
   aliases: [Active learning, "정답 달아줄 사람 품이 모자라 골라서 물어보기", "기계가 헷갈려하는 것만 사람에게 확인받기", "분류 안 된 사진은 많은데 일일이 표시하기 힘들 때", "적은 표시 작업으로 판별 실력 빨리 올리기"]
@@ -230,7 +230,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.reinforcement_learning
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 강화학습
   hint: 보상 신호로 행동 정책 학습
   aliases: [Reinforcement learning, "해보고 점수 받으면서 스스로 요령 익히게 하기", "게임을 수없이 하며 이기는 법을 터득하는 프로그램", "정답은 없고 잘했는지만 나중에 알 수 있을 때", "로봇이 넘어지며 걷는 법을 깨치게 하기"]
@@ -239,7 +239,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.cross_validation
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 교차검증
   hint: 자료를 나누어 일반화 성능 추정
   aliases: [Cross validation, "만든 예측 모델이 새 자료에도 통할지 미리 확인", "일부를 떼어 놓고 번갈아 시험해 점수 내기", "연습 문제만 잘 맞히는 건 아닌지 의심될 때", "자료가 적어서 시험용을 따로 못 남길 때"]
@@ -248,7 +248,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.regularization
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 정규화 규제
   hint: 모형 복잡도에 제약을 주어 학습
   aliases: [Regularization, "연습 자료를 통째로 외워버리는 걸 막기", "예측식 계수가 터무니없이 커지지 않게 누르기", "항목은 많고 자료는 적어 과하게 끼워 맞춰질 때", "단순한 쪽에 점수를 더 줘서 새 자료에 강하게"]
@@ -257,7 +257,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.feature_engineering
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 특성 공학
   hint: 예측에 유용한 입력 표현 구성
   aliases: [Feature engineering, "날짜에서 요일과 휴일 여부를 뽑아 새 칸 만들기", "원본 숫자를 비율이나 차이로 바꿔 예측 돕기", "있는 자료 그대로 넣었더니 예측이 잘 안될 때", "기계가 알아보기 좋게 재료를 손질하는 작업"]
@@ -266,7 +266,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.feature_selection
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 특성 선택
   hint: 유용한 변수의 부분집합 선택
   aliases: [Feature selection, "예측에 쓸모없는 항목을 걸러내고 몇 개만 남기기", "수십 개 칸 중 진짜 도움 되는 것만 고르기", "항목을 다 넣었더니 오히려 성능이 떨어질 때", "조사 비용 줄이려고 꼭 필요한 질문만 추리기"]
@@ -275,7 +275,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.principal_component_analysis
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 주성분분석
   hint: 분산이 큰 직교 축으로 차원 축소
   aliases: [Principal component analysis, PCA, "자료가 가장 넓게 퍼진 방향을 찾아 새 축으로 삼기", "서로 겹치는 항목들을 안 겹치는 몇 개로 바꾸기", "키와 몸무게처럼 같이 움직이는 칸을 하나로 합치기", "여러 과목 점수를 종합 지표 두어 개로 요약"]
@@ -284,7 +284,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.factor_analysis
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 요인분석
   hint: 관측 상관을 잠재 요인으로 설명
   aliases: [Factor analysis, "설문 문항 수십 개 뒤에 숨은 공통 성향 찾기", "같이 오르내리는 문항들을 몇 가지 뿌리로 묶기", "성격 검사 문항이 실제로 몇 갈래를 재는지 확인", "직접 잴 수 없는 속마음을 응답 패턴으로 짐작"]
@@ -293,7 +293,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.clustering
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 군집분석
   hint: 비슷한 관측을 묶어 집단 탐색
   aliases: [Clustering, "손님들을 비슷한 성향끼리 몇 무리로 나누기", "분류 기준 없이 닮은 것끼리 저절로 묶기", "설문 응답자가 어떤 유형들로 갈리는지 보기", "상품 수백 개를 성격 비슷한 그룹으로 정리"]
@@ -302,7 +302,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.dimensionality_reduction
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 차원축소
   hint: 고차원 자료를 낮은 차원으로 표현
   aliases: [Dimensionality reduction, "항목이 수백 개라 한눈에 안 들어오는 표 줄이기", "많은 숫자 열을 두세 개로 압축해 그림으로 보기", "열이 너무 많아 계산이 느리고 복잡할 때", "정보는 최대한 살리고 표 크기만 줄이기"]
@@ -311,7 +311,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.random_forest
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 랜덤 포레스트
   hint: 무작위화한 결정나무의 앙상블
   aliases: [Random forest, "조금씩 다른 판단 규칙 여럿의 다수결로 맞히기", "손질 덜 한 표 자료로 무난하게 예측하고 싶을 때", "스무고개식 판단 하나로는 들쭉날쭉할 때", "자료와 항목을 매번 달리 뽑아 여럿 만들어 합치기"]
@@ -320,7 +320,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.gradient_boosting
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 그래디언트 부스팅
   hint: 잔여 오차를 순차 보완하는 앙상블
   aliases: [Gradient boosting, "앞 모델이 틀린 부분만 다음 모델이 고쳐 나가기", "약한 예측기를 차례로 쌓아 정확도 끌어올리기", "표로 된 자료에서 예측 대회 상위권 노릴 때", "틀린 만큼을 다시 학습시켜 조금씩 줄여가기"]
@@ -329,7 +329,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.support_vector_machine
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 서포트 벡터 머신
   hint: 마진을 이용한 분류와 회귀
   aliases: [Support vector machine, "두 무리 사이를 가장 넉넉하게 가르는 선 긋기", "경계 근처의 아슬아슬한 자료만 보고 구분하기", "자료가 많지 않은데 둘 중 하나로 가려야 할 때", "직선으로 안 갈리는 무리를 휘어서 나누기"]
@@ -338,7 +338,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.anomaly_detection
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 이상탐지
   hint: 통상 패턴에서 벗어난 관측 탐색
   aliases: [Anomaly detection, "카드 내역에서 평소와 다른 수상한 결제 찾기", "기계 센서값이 갑자기 튀는 순간 잡아내기", "대부분 정상인 기록 속에서 별난 것만 골라내기", "고장이나 사기 조짐을 미리 알아채고 싶을 때"]
@@ -347,7 +347,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.probability_calibration
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 확률 보정
   hint: 예측 확률과 실제 빈도의 대응
   aliases: [Probability calibration, "칠십 퍼센트라고 했는데 실제로 그만큼 맞는지", "기계가 말하는 자신감 수치를 믿어도 되는지 점검", "비 올 가능성 예보가 실제 결과와 어긋날 때", "지나치게 확신하는 예측 수치를 현실에 맞추기"]
@@ -356,7 +356,7 @@ entries:
     section: machine_learning
 - id: atlas.machine_learning.model_interpretation
   kind: method
-  path: [계산, 기계학습, 방법]
+  path: ["정보와 컴퓨팅", "기계학습", "방법"]
   name: 모형 해석
   hint: 예측에 기여한 요인 분석
   aliases: [Model interpretation, "기계가 왜 이 대출을 거절했는지 이유 알고 싶을 때", "예측 결과에 어떤 항목이 크게 작용했는지 보기", "속을 알 수 없는 예측 프로그램을 설명해야 할 때", "고객에게 판정 근거를 납득시켜야 하는 상황"]
@@ -365,7 +365,7 @@ entries:
     section: machine_learning
 - id: atlas.security.defense_in_depth
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 심층방어
   hint: 여러 방어 층으로 실패 보완
   aliases: [Defense in depth, "자물쇠 하나 뚫려도 다음 장치가 막게 하기", "보안 장치 하나만 믿어도 되는지 불안", "한 군데 실수해도 전체가 털리지 않게", "겹겹이 막아두는 보안 구성법"]
@@ -374,7 +374,7 @@ entries:
     section: security
 - id: atlas.security.least_privilege
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 최소권한
   hint: 업무에 필요한 최소 접근 허용
   aliases: [Least privilege, "직원마다 꼭 필요한 자료만 보게 하기", "알바 계정이 관리자 기능까지 되는 게 불안", "계정 하나 털려도 피해가 작게 권한 줄이기", "프로그램에 모든 접근을 다 열어줘도 되나"]
@@ -383,7 +383,7 @@ entries:
     section: security
 - id: atlas.security.zero_trust
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 제로 트러스트
   hint: 접근을 지속 검증하는 보안 원칙
   aliases: [Zero trust, "사내망 안이라고 그냥 믿어도 되나", "한 번 로그인했다고 끝까지 통과시키지 않기", "재택근무자 접속을 매번 확인하고 싶을 때", "안쪽 바깥쪽 구분 없이 요청마다 신원 확인"]
@@ -392,7 +392,7 @@ entries:
     section: security
 - id: atlas.security.attack_surface_analysis
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 공격 표면 분석
   hint: 침입 가능한 접점 식별
   aliases: [Attack surface analysis, "해커가 들어올 만한 구멍 전부 찾아보기", "우리 서비스에 밖으로 열린 문이 몇 개인지", "안 쓰는 접속 통로가 방치된 건 아닌지", "쇼핑몰이 어디로 뚫릴 수 있는지 목록 만들기"]
@@ -401,7 +401,7 @@ entries:
     section: security
 - id: atlas.security.penetration_testing
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 침투시험
   hint: 공격 시도로 방어의 취약점 검증
   aliases: [Penetration testing, "전문가에게 일부러 우리 회사 뚫어보게 하기", "실제 해커처럼 덤벼서 방어 수준 확인", "보안 장비 샀는데 진짜 막히는지 시험", "출시 전에 모의 해킹 의뢰하기"]
@@ -410,7 +410,7 @@ entries:
     section: security
 - id: atlas.security.fuzz_testing
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 퍼즈 테스트
   hint: 비정상 입력으로 오류 탐색
   aliases: [Fuzz testing, "엉뚱한 값을 마구 넣어 프로그램이 죽는지 보기", "사용자가 이상하게 입력하면 뻗는 앱 미리 잡기", "생각지 못한 입력에서 터지는 허점 자동으로 찾기", "깨진 파일을 열게 해서 멈추는지 시험"]
@@ -419,7 +419,7 @@ entries:
     section: security
 - id: atlas.security.static_application_security_testing
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 정적 보안 분석
   hint: 코드를 실행하지 않고 취약점 탐색
   aliases: [Static application security testing, "소스만 훑어서 위험한 부분 자동으로 찾기", "프로그램을 돌리지 않고 보안 구멍 미리 점검", "소스에 비밀번호가 박혀 있는지 검사", "코드 올릴 때마다 보안 실수 자동으로 잡기"]
@@ -428,7 +428,7 @@ entries:
     section: security
 - id: atlas.security.dynamic_application_security_testing
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 동적 보안 분석
   hint: 실행 중인 시스템의 취약점 검사
   aliases: [Dynamic application security testing, "돌아가는 사이트를 직접 찔러보며 허점 찾기", "서비스를 켜놓은 상태에서 자동 보안 점검", "운영 중인 웹페이지가 이상한 요청에 버티는지", "코드를 볼 수 없는 프로그램의 보안 점검"]
@@ -437,7 +437,7 @@ entries:
     section: security
 - id: atlas.security.stride
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: STRIDE
   hint: 위협 유형별 모델링 분류
   aliases: [STRIDE, "생길 수 있는 공격 종류를 빠짐없이 짚어보기", "사칭 변조 부인 유출 마비 권한탈취 점검표", "위험을 여섯 갈래로 나눠 하나씩 따져보기", "보안 회의에서 뭘 물어봐야 할지 모를 때"]
@@ -446,7 +446,7 @@ entries:
     section: security
 - id: atlas.security.security_boundary
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 보안 경계
   hint: 권한과 신뢰가 달라지는 접점
   aliases: [Security boundary, "어디서부터 들어오는 자료를 의심해야 하나", "믿을 수 있는 구역과 아닌 구역 선 긋기", "내부망과 외부가 만나는 지점 표시하기", "일반 사용자와 관리자 영역이 갈리는 곳 찾기"]
@@ -455,7 +455,7 @@ entries:
     section: security
 - id: atlas.security.input_validation
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 입력 검증
   hint: 외부 입력의 허용 형식 검사
   aliases: [Input validation, "가입 칸에 이상한 글자 넣으면 오류 나는 문제", "전화번호 칸에 숫자만 들어오게 막기", "사용자가 보낸 값을 그대로 믿어도 되나", "정해진 모양의 값만 받아들이게 거르기"]
@@ -464,7 +464,7 @@ entries:
     section: security
 - id: atlas.security.output_encoding
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 출력 인코딩
   hint: 출력 문맥에 맞게 데이터 표현
   aliases: [Output encoding, "게시글에 넣은 기호가 화면을 깨뜨리는 문제", "댓글에 심은 나쁜 코드가 남의 화면에서 실행됨", "사용자가 쓴 글을 화면에 안전하게 보여주기", "웹페이지와 주소창에 넣을 때 다르게 바꿔 쓰기"]
@@ -473,7 +473,7 @@ entries:
     section: security
 - id: atlas.security.key_rotation
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 키 교체
   hint: 암호 키의 수명과 교체 관리
   aliases: [Key rotation, "오래 쓴 비밀 열쇠를 주기적으로 바꾸기", "퇴사자가 알던 접속 비밀값 새로 발급하기", "비밀값이 새어나갔을 때 서비스 안 끊고 바꾸기", "인증용 비밀값의 유효기간 정하기"]
@@ -482,7 +482,7 @@ entries:
     section: security
 - id: atlas.security.incident_response
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 사고 대응
   hint: 탐지 봉쇄 복구와 사후 분석
   aliases: [Incident response, "해킹당한 걸 알았을 때 뭐부터 해야 하나", "침해가 났을 때 역할과 순서 미리 정해두기", "피해 번지지 않게 막고 서비스 되살리기", "보안 사고가 끝난 뒤 원인 정리하고 재발 막기"]
@@ -491,7 +491,7 @@ entries:
     section: security
 - id: atlas.security.digital_forensics
   kind: method
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 디지털 포렌식
   hint: 전자 흔적의 보존과 분석
   aliases: [Digital forensics, "지운 파일과 접속 기록에서 증거 찾기", "직원이 자료 빼돌린 자취를 컴퓨터에서 확인", "법정에 낼 수 있게 휴대폰 기록 그대로 보관", "해킹당한 뒤 누가 무엇을 했는지 되짚기"]
@@ -500,7 +500,7 @@ entries:
     section: security
 - id: atlas.security.public_key_cryptography
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 공개키 암호
   hint: 서로 다른 암호화 검증 키 체계
   aliases: [Public key cryptography, "처음 보는 상대와 비밀번호 공유 없이 비밀 통신", "잠그는 열쇠는 공개하고 여는 열쇠만 숨기기", "열쇠를 미리 몰래 전달할 방법이 없을 때", "누구나 나만 읽을 수 있는 편지를 보내게 하기"]
@@ -509,7 +509,7 @@ entries:
     section: security
 - id: atlas.security.digital_signature
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 전자서명
   hint: 작성 주체와 무결성 확인
   aliases: [Digital signature, "이 문서를 정말 그 사람이 보냈는지 확인", "계약서 파일이 보낸 뒤 고쳐지지 않았다는 증명", "종이 도장 없이 온라인으로 계약 맺기", "내려받은 프로그램이 제작사 것이 맞는지"]
@@ -518,7 +518,7 @@ entries:
     section: security
 - id: atlas.security.authenticated_encryption
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 인증 암호화
   hint: 기밀성과 무결성을 함께 보호
   aliases: [Authenticated encryption, "남이 못 읽게 하면서 중간에 고친 것도 알아채기", "잠근 내용이 도중에 바뀌지 않았는지 걱정", "비밀 메시지를 누가 살짝 바꿔 보낼까 봐", "숨기기와 변조 확인을 한 번에 하고 싶을 때"]
@@ -527,7 +527,7 @@ entries:
     section: security
 - id: atlas.security.differential_privacy
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 차등프라이버시
   hint: 개인 포함 여부의 정보 노출 제한
   aliases: [Differential privacy, "통계를 공개해도 누가 들어있는지 모르게", "설문 결과에서 특정인 답이 역추적될까 걱정", "고객 자료 집계만 내놓고 개인은 숨기기", "숫자에 일부러 잡음 섞어 신원 보호하기"]
@@ -536,7 +536,7 @@ entries:
     section: security
 - id: atlas.security.secure_multiparty_computation
   kind: concept
-  path: [개발, 보안]
+  path: ["정보와 컴퓨팅", "보안"]
   name: 안전한 다자간 계산
   hint: 입력을 공개하지 않고 공동 계산
   aliases: [Secure multiparty computation, "서로 연봉을 안 밝히고 평균만 알아내기", "경쟁사끼리 자료 안 넘기고 합산 결과만 얻기", "각자 가진 비밀 숫자로 함께 셈하기", "병원들이 환자 자료 공유 없이 공동 통계 내기"]
@@ -545,7 +545,7 @@ entries:
     section: security
 - id: atlas.networks.consensus
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 합의 알고리즘
   hint: 분산 노드가 상태에 동의
   aliases: [Consensus, "여러 서버가 같은 결정을 내리게 하기", "대장 서버 죽으면 새 대장 뽑는 방법", "일부 기계가 고장 나도 기록 순서 맞추기", "서로 다른 값을 가진 서버들 하나로 정리"]
@@ -554,7 +554,7 @@ entries:
     section: networks
 - id: atlas.networks.quorum
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 정족수
   hint: 승인을 위해 필요한 응답 집합
   aliases: [Quorum, "몇 대가 확인해줘야 저장 성공으로 칠지", "과반수 응답으로 결정 내리는 방식", "복제본 다섯 중 셋만 답해도 읽기 허용", "둘로 갈린 서버 무리가 각자 결정 못하게"]
@@ -563,7 +563,7 @@ entries:
     section: networks
 - id: atlas.networks.eventual_consistency
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 최종적 일관성
   hint: 갱신 전파 후 같은 상태로 수렴
   aliases: [Eventual consistency, "방금 고친 값이 다른 곳에선 옛 값으로 보일 때", "잠깐 달라도 조금 뒤엔 다 같아지는 저장 방식", "좋아요 수가 새로고침마다 다르게 뜨는 이유", "속도를 위해 즉시 일치를 포기하는 선택"]
@@ -572,7 +572,7 @@ entries:
     section: networks
 - id: atlas.networks.linearizability
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 선형화 가능성
   hint: 연산이 단일 시점에 일어난 듯 관찰
   aliases: [Linearizability, "쓰기 끝난 직후 누가 읽어도 새 값 보장", "여러 서버인데 한 대처럼 보이게 하는 조건", "동시에 들어온 요청에 순서가 뒤집혀 보일 때", "잔액처럼 절대 옛 값 보이면 안 되는 자료"]
@@ -581,7 +581,7 @@ entries:
     section: networks
 - id: atlas.networks.cap_theorem
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: CAP 정리
   hint: 네트워크 분할 중 일관성과 가용성 제약
   aliases: [CAP theorem, "서버 사이 연결이 끊겼을 때 무엇을 포기할까", "항상 응답과 항상 정확 둘 다는 안 되는 이유", "여러 곳에 둔 자료 저장소 고를 때 기준", "통신 두절 시 멈출지 틀릴지 선택하기"]
@@ -590,7 +590,7 @@ entries:
     section: networks
 - id: atlas.networks.backpressure
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 역압력
   hint: 처리 능력에 맞춰 유입 조절
   aliases: [Backpressure, "받는 쪽이 못 따라오면 보내는 쪽 늦추기", "밀려드는 자료에 메모리가 터질 때", "빠른 생산자와 느린 소비자 속도 맞추기", "처리 못한 일이 끝없이 쌓이는 것 막기"]
@@ -599,7 +599,7 @@ entries:
     section: networks
 - id: atlas.networks.rate_limiting
   kind: method
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 요청률 제한
   hint: 시간 구간별 요청량 통제
   aliases: [Rate limiting, "한 사용자가 1분에 너무 많이 호출하지 못하게", "긁어가는 봇 때문에 서버가 버거울 때", "무료 사용자 호출 횟수에 상한 두기", "요청이 너무 많다는 오류를 받는 이유"]
@@ -608,7 +608,7 @@ entries:
     section: networks
 - id: atlas.networks.circuit_breaker
   kind: method
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 서킷 브레이커
   hint: 반복 실패 중 호출 차단
   aliases: [Circuit breaker, "죽은 서버를 계속 불러서 나까지 느려질 때", "연달아 실패하면 잠시 부르지 않게 하기", "한 곳 장애가 전체로 번지는 것 끊기", "조금 뒤 슬쩍 다시 시도해 회복 확인하기"]
@@ -617,7 +617,7 @@ entries:
     section: networks
 - id: atlas.networks.exponential_backoff
   kind: method
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 지수 백오프
   hint: 재시도 간격을 점차 확대
   aliases: [Exponential backoff, "실패하면 1초 2초 4초 늘려가며 다시 하기", "다 같이 재접속해 서버가 또 죽는 것 막기", "끊긴 연결에 재시도 몰아치지 않게 하기", "몇 번까지 얼마 간격으로 다시 시도할지"]
@@ -626,7 +626,7 @@ entries:
     section: networks
 - id: atlas.networks.load_balancing
   kind: method
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 부하분산
   hint: 요청을 여러 처리자로 분배
   aliases: [Load balancing, "접속자 몰릴 때 서버 여러 대에 나눠 받기", "한 대만 바쁘고 나머지는 노는 상황 고치기", "서버 한 대 죽어도 서비스 계속 되게 하기", "들어오는 접속을 돌아가며 배정하기"]
@@ -635,7 +635,7 @@ entries:
     section: networks
 - id: atlas.networks.consistent_hashing
   kind: method
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 일관 해싱
   hint: 노드 변경 시 재배치 범위 축소
   aliases: [Consistent hashing, "서버 한 대 늘렸더니 자료가 다 이사 갈 때", "기계 추가·제거해도 조금만 옮겨지게 나누기", "캐시 서버 바뀔 때마다 적중률 폭락 막기", "자료를 여러 기계에 고르게 나눠 담는 규칙"]
@@ -644,7 +644,7 @@ entries:
     section: networks
 - id: atlas.networks.distributed_tracing
   kind: method
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 분산 추적
   hint: 요청이 서비스 간 이동한 경로 추적
   aliases: [Distributed tracing, "요청 하나가 어느 서버에서 느려졌는지 찾기", "여러 프로그램 거친 호출을 한 줄로 이어 보기", "어디서 오류가 시작됐는지 발자취 따라가기", "단계별 소요 시간을 그림으로 확인하기"]
@@ -653,7 +653,7 @@ entries:
     section: networks
 - id: atlas.networks.publish_subscribe
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 발행 구독
   hint: 발신자와 수신자를 주제로 분리
   aliases: [Publish subscribe, "보내는 쪽이 받는 쪽을 몰라도 되게 하기", "관심 분야 등록한 사람에게만 소식 전달", "한 사건을 여러 프로그램이 동시에 받아가기", "수신자 추가해도 발신 코드 안 고치기"]
@@ -662,7 +662,7 @@ entries:
     section: networks
 - id: atlas.networks.message_queue
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 메시지 큐
   hint: 비동기 작업 메시지 저장과 전달
   aliases: [Message queue, "오래 걸리는 일을 나중에 처리하게 맡겨두기", "주문 폭주해도 하나도 안 잃고 줄 세우기", "받는 프로그램이 꺼져 있어도 전달 보장", "메일 발송 같은 뒷일을 화면 응답과 분리"]
@@ -671,7 +671,7 @@ entries:
     section: networks
 - id: atlas.networks.saga_pattern
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 사가 패턴
   hint: 분산 작업과 보상 동작 조합
   aliases: [Saga pattern, "결제는 됐는데 배송 예약이 실패했을 때 되돌리기", "여러 서비스 걸친 주문을 단계별로 취소하기", "중간에 틀어지면 앞 단계를 거꾸로 물리기", "한 번에 묶을 수 없는 긴 업무 흐름 처리"]
@@ -680,7 +680,7 @@ entries:
     section: networks
 - id: atlas.networks.two_phase_commit
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 2단계 커밋
   hint: 분산 트랜잭션의 준비와 확정
   aliases: [Two phase commit, "두 저장소에 모두 쓰거나 모두 안 쓰게 하기", "다들 준비됐는지 묻고 나서 한꺼번에 확정", "계좌 두 곳에 걸친 이체를 반쪽만 되지 않게", "조정자가 멈추면 참가자도 멈추는 방식"]
@@ -689,7 +689,7 @@ entries:
     section: networks
 - id: atlas.networks.content_delivery_network
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 콘텐츠 전송망
   hint: 사용자 가까운 위치에서 자료 전달
   aliases: [Content delivery network, "해외 방문자에게 사이트가 느리게 뜰 때", "이미지·영상을 가까운 곳에서 내려받게 하기", "접속 몰릴 때 본 서버 부담 덜어내기", "전 세계 어디서나 빠르게 파일 배포하기"]
@@ -698,7 +698,7 @@ entries:
     section: networks
 - id: atlas.networks.service_discovery
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 서비스 발견
   hint: 실행 중인 서비스의 위치 조회
   aliases: [Service discovery, "서버 주소가 자꾸 바뀌어도 알아서 찾아가게", "새로 뜬 프로그램을 자동으로 명부에 올리기", "주소를 설정 파일에 박아두지 않고 연결하기", "지금 살아 있는 상대가 어디 있는지 묻기"]
@@ -707,7 +707,7 @@ entries:
     section: networks
 - id: atlas.networks.websocket
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: 웹소켓
   hint: 연결 위의 양방향 통신
   aliases: [WebSocket, "새로고침 없이 채팅이 바로 뜨게 하기", "서버가 먼저 브라우저에 알림 밀어주기", "주식 시세를 화면에 실시간으로 갱신", "계속 물어보는 대신 연결 열어두고 주고받기"]
@@ -716,7 +716,7 @@ entries:
     section: networks
 - id: atlas.networks.webrtc
   kind: concept
-  path: [연결, 분산 시스템]
+  path: ["정보와 컴퓨팅", "분산 시스템"]
   name: WebRTC
   hint: 브라우저의 실시간 미디어 통신
   aliases: [WebRTC, "프로그램 안 깔고 웹페이지에서 바로 영상통화", "내 홈페이지에 화상 상담 기능 넣고 싶을 때", "서버 안 거치고 두 사람 화면과 소리 바로 주고받기", "웹에서 카메라와 마이크로 얼굴 보며 얘기하게 하기"]
@@ -725,7 +725,7 @@ entries:
     section: networks
 - id: atlas.software.test_driven_development
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 테스트 주도 개발
   hint: 실패 테스트에서 구현을 시작
   aliases: [Test driven development, "코드보다 시험을 먼저 쓰는 개발 방식", "빨간불 초록불 정리 순서로 짧게 반복하기", "무엇을 만들지 시험으로 먼저 못박기", "만들고 나서 시험을 안 쓰게 되는 습관 고치기"]
@@ -734,7 +734,7 @@ entries:
     section: software
 - id: atlas.software.behavior_driven_development
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 행동 주도 개발
   hint: 사용 사례를 실행 가능한 명세로 작성
   aliases: [Behavior driven development, "기획자도 읽을 수 있는 말로 시험 시나리오 쓰기", "이런 상황에 이렇게 하면 이렇게 된다 식 요구사항", "요구사항 문서가 곧 자동 점검이 되게 하기", "개발자와 기획자가 기능을 다르게 이해하는 문제"]
@@ -743,7 +743,7 @@ entries:
     section: software
 - id: atlas.software.contract_testing
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 계약 테스트
   hint: 서비스 접점의 기대 계약 검사
   aliases: [Contract testing, "다른 팀 서비스가 응답 형식을 바꿔 깨지는 문제", "두 서비스가 주고받는 약속이 지켜지는지 점검", "상대 서비스를 전부 띄우지 않고 연동 확인", "제공 쪽과 쓰는 쪽의 기대가 어긋나는지 검사"]
@@ -752,7 +752,7 @@ entries:
     section: software
 - id: atlas.software.mutation_testing
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 변이 테스트
   hint: 코드 변형을 테스트가 잡는지 확인
   aliases: [Mutation testing, 테스트가 오류를 잡는지, "우리 시험 코드가 정말 버그를 잡아내는지", "일부러 코드를 망가뜨려도 시험이 통과하는 문제", "시험 범위 수치는 높은데 믿음이 안 갈 때", "시험 묶음의 품질을 점수로 재기"]
@@ -761,7 +761,7 @@ entries:
     section: software
 - id: atlas.software.metamorphic_testing
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 변형관계 테스트
   hint: 입력 변환에 따른 결과 관계 검증
   aliases: [Metamorphic testing, "정답을 모르는 프로그램을 시험하는 법", "넣는 값을 두 배로 하면 답도 두 배인지 확인", "검색어 순서를 바꿔도 같은 목록이 나오는지", "값을 살짝 바꿨을 때 답이 어떻게 변해야 하나"]
@@ -770,7 +770,7 @@ entries:
     section: software
 - id: atlas.software.differential_testing
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 차등 테스트
   hint: 같은 입력의 구현별 결과 비교
   aliases: [Differential testing, 두 구현의 결과 비교, "옛 버전과 새 버전에 같은 값 넣어 답 맞춰보기", "두 프로그램이 같은 답을 내는지 대조", "정답을 몰라도 서로 다른 제품끼리 맞춰보기", "다시 짠 코드가 원래 것과 똑같이 도는지"]
@@ -779,7 +779,7 @@ entries:
     section: software
 - id: atlas.software.snapshot_testing
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 스냅샷 테스트
   hint: 기준 출력과 새 출력 비교
   aliases: [Snapshot testing, "지난번 화면 결과를 저장해두고 달라졌는지 확인", "결과물이 의도치 않게 바뀌었는지 자동 감지", "긴 결과물을 일일이 기대값으로 쓰기 귀찮을 때", "저장해둔 정답 파일과 통째로 대조하기"]
@@ -788,7 +788,7 @@ entries:
     section: software
 - id: atlas.software.model_checking
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 모형검사
   hint: 상태 공간에서 명세 위반 탐색
   aliases: [Model checking, "가능한 모든 경우를 기계로 다 따져보기", "동시에 돌 때 드물게 멈추는 설계 결함 찾기", "규칙을 어기는 상황이 하나라도 있는지 자동 탐색", "신호등 제어 논리에 빠진 경우가 없는지"]
@@ -797,7 +797,7 @@ entries:
     section: software
 - id: atlas.software.symbolic_execution
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 기호 실행
   hint: 입력을 기호로 두고 경로 분석
   aliases: [Symbolic execution, "어떤 값을 넣어야 이 갈림길에 도달하는지 계산", "구체적 값 대신 미지수로 프로그램 따라가기", "모든 갈림길을 지나는 시험 값 자동 생성", "깊숙이 숨은 오류를 일으키는 값 찾기"]
@@ -806,7 +806,7 @@ entries:
     section: software
 - id: atlas.software.static_analysis
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 정적 분석
   hint: 실행 없이 코드 성질 분석
   aliases: [Static analysis, "돌려보기 전에 오타와 실수를 자동으로 잡기", "안 쓰는 변수나 닿지 않는 코드 찾아내기", "코드 작성 규칙 위반을 도구가 검사하게 하기", "자료형이 안 맞는 곳을 미리 알아내기"]
@@ -815,7 +815,7 @@ entries:
     section: software
 - id: atlas.software.refactoring
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 리팩터링
   hint: 외부 동작을 유지하며 내부 구조 개선
   aliases: [Refactoring, "기능은 그대로 두고 지저분한 코드 정리", "코드가 꼬여서 고치기 무서울 때", "중복된 코드를 묶고 이름을 알기 쉽게 바꾸기", "새 기능 넣기 전에 뼈대부터 다듬기"]
@@ -824,7 +824,7 @@ entries:
     section: software
 - id: atlas.software.dependency_injection
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 의존성 주입
   hint: 협력 객체를 외부에서 제공
   aliases: [Dependency injection, "시험할 때 진짜 데이터베이스 대신 가짜 끼우기", "부품이 필요한 것을 스스로 만들지 않고 받아쓰기", "코드 안에 박힌 연결 대상을 바꾸기 어려운 문제", "결제 모듈을 갈아끼울 수 있게 짜기"]
@@ -833,7 +833,7 @@ entries:
     section: software
 - id: atlas.software.hexagonal_architecture
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 육각형 아키텍처
   hint: 핵심 로직과 외부 접점 분리
   aliases: [Hexagonal architecture, "데이터베이스를 바꿔도 알맹이 코드는 안 건드리기", "업무 규칙이 화면과 저장소 코드에 뒤섞인 문제", "바깥 연결부를 갈아끼우는 구조로 짜기", "웹이든 명령창이든 같은 알맹이를 쓰게 하기"]
@@ -842,7 +842,7 @@ entries:
     section: software
 - id: atlas.software.domain_driven_design
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 도메인 주도 설계
   hint: 업무 언어와 경계에 맞춰 모형 구성
   aliases: [Domain driven design, "현장에서 쓰는 말과 프로그램 속 이름이 따로 놀 때", "큰 업무 프로그램을 부서별 덩어리로 나눠 짜기", "같은 고객이란 말이 영업과 배송에서 뜻이 다를 때", "업무를 잘 아는 사람과 개발자가 같은 말로 얘기하기"]
@@ -851,7 +851,7 @@ entries:
     section: software
 - id: atlas.software.bounded_context
   kind: concept
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 경계 맥락
   hint: 용어와 모형이 일관된 업무 범위
   aliases: [Bounded context, "같은 단어를 부서마다 다른 뜻으로 쓰는 문제", "주문팀의 고객과 배송팀의 고객이 달라 혼란", "큰 시스템을 업무 영역별로 나누는 기준", "한 낱말이 한 뜻으로만 쓰이는 구역 정하기"]
@@ -860,7 +860,7 @@ entries:
     section: software
 - id: atlas.software.separation_of_concerns
   kind: concept
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 관심사 분리
   hint: 서로 다른 책임을 분리
   aliases: [Separation of concerns, "한 파일이 너무 많은 일을 하는 문제", "화면 코드와 계산 코드가 뒤엉켜 있을 때", "하나 고치면 엉뚱한 데가 깨지는 코드", "역할별로 코드를 나눠 담는 원칙"]
@@ -869,7 +869,7 @@ entries:
     section: software
 - id: atlas.software.design_by_contract
   kind: concept
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 계약에 의한 설계
   hint: 사전조건 사후조건 불변식 명시
   aliases: [Design by contract, "함수가 받을 값과 돌려줄 값의 약속 적어두기", "호출 전에 만족돼야 할 것을 코드에 밝히기", "잘못은 부른 쪽인가 불린 쪽인가 가리기", "항상 참이어야 하는 규칙을 코드에 새기기"]
@@ -878,7 +878,7 @@ entries:
     section: software
 - id: atlas.software.continuous_integration
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 지속적 통합
   hint: 변경을 자주 통합하고 자동 검증
   aliases: [Continuous integration, "여럿이 고친 코드를 합칠 때마다 충돌 나는 문제", "코드 올리면 자동으로 조립하고 검사 돌리기", "며칠씩 따로 작업하다 합치면 깨지는 문제", "누가 코드를 망가뜨렸는지 바로 알아채기"]
@@ -887,7 +887,7 @@ entries:
     section: software
 - id: atlas.software.canary_deployment
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 카나리 배포
   hint: 일부 트래픽으로 변경 영향 확인
   aliases: [Canary deployment, "새 버전을 소수 사용자에게만 먼저 열어보기", "전체에 풀기 전에 작은 무리에서 문제없는지 확인", "업데이트 한 번에 다 바꿨다가 장애 날까 걱정", "새 버전 이용자 비율을 조금씩 늘려가기"]
@@ -896,7 +896,7 @@ entries:
     section: software
 - id: atlas.software.feature_flag
   kind: method
-  path: [개발, 설계와 검증]
+  path: ["정보와 컴퓨팅", "설계와 검증"]
   name: 기능 플래그
   hint: 배포와 기능 활성화를 분리
   aliases: [Feature flag, "코드는 올려두고 기능은 나중에 켜기", "문제 생기면 다시 올리지 않고 바로 끄기", "특정 고객에게만 새 기능 보여주기", "미완성 기능을 숨긴 채로 합쳐두기"]

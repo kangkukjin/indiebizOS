@@ -1053,6 +1053,10 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             record_trajectory_event("ibl.started", {
                 "code_sha256": hashlib.sha256(code.encode("utf-8", "replace")).hexdigest(),
                 "code_chars": len(code),
+                # 조회 종류를 원문·티켓 없이 보존한다. 빈 코드 해시만으로는
+                # 계약 조회·결과 열람·잘못된 빈 호출을 구별할 수 없다.
+                "request_keys": [k for k in ("describe", "read_result", "recover")
+                                 if tool_input.get(k) is not None],
                 "actions": actions[:100],
                 "action_count": len(actions),
                 "fn_count": sum(a.startswith("fn:") for a in actions),

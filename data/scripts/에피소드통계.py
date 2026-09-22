@@ -45,13 +45,12 @@ args (stdin JSON):
   · in-process 의 도구 계수 정본은 **화살표 라인**이다. [IBL_DEBUG] 는 같은 코드가 30초
     안에 되풀이되면 생략되므로(system_tools_ibl._IBL_LOG_WINDOW) 계수로 쓰면 적게 나온다.
     코드를 못 본 호출 수는 상태=코드미기록 N 으로 신고한다(조합 지표에서만 빠진 것).
-  · **회수 폴링은 문장이 아니다** (2026-09-01): `execute_ibl{code: "", recover: "티켓"}` 는
-    실행이 아니라 조회다. 빈 code 는 파서를 통과할 수 없으므로 옛 판은 이것을 '문법오류'로
-    셌고, 09-01 주행의 회수 9회가 "그 주행에서 실제로 깨진 문장 9건"으로 읽혔다(정상 사용을
-    결함으로 신고 — 계기가 오독을 만든 자리). 이제 `회수` 칸으로 따로 세고 조합 지표에서
-    뺀다. 그 수 자체가 관측이다 — **결과를 기다리며 쓴 모델 왕복 수**이고, 회수에 wait 초를
-    주면(유한 대기) 한 번으로 줄어든다. `IBL` 칸은 여전히 execute_ibl 호출 총수라
-    실질 문장 수 = IBL − 회수 − 코드미기록 이다.
+  · **빈 코드의 조회는 문장이 아니다**: `describe`는 계약조회, `read_result`는 결과열람,
+    `recover`는 회수로 나눈다. `IBL`은 이들을 포함한 전체 호출 수이고 `실행`은 비어 있지
+    않은 코드를 제출한 수다(성공 횟수 아님). 종류 정보가 없는 구판 빈 호출은 종류미상,
+    조회 인자도 없는 명시적인 빈 입력은 빈호출이다. 빈 호출을 문법오류나 회수로 추정하지 않는다.
+    궤적의 request_keys 또는 대응 가능한 로그 인자로 분류하며, 원문은 호출마다 복원한다.
+    tool_use/IBL_DEBUG의 이중 표현만 합치고 같은 코드를 재실행한 횟수는 보존한다.
   · 도구 줄이 0일 때는 상태로 갈라 적는다 — 도구없음(읽히는 방언인데 안 씀=사실) /
     끊김(Episode ORPHAN) / 로그없음 / 형식밖(모르는 방언 = 0 은 관측이 아니라 무지).
   · IBL 조합 판정은 정규식이 아니라 실제 파서(ibl_parser.parse)로 한다. 파서를 못 부르면
@@ -64,6 +63,7 @@ args (stdin JSON):
     상태=절단하한 N 으로 신고하니, 그 주행의 조합·단계는 '실제 이상은 아닌 값' 으로 읽어라.
     앞부분조차 못 읽으면 그때만 파싱실패.
 """
+import hashlib
 import json
 import re
 import sqlite3
@@ -85,7 +85,7 @@ TRUNC_FALLBACK = re.compile(r"…\(\+(\d+)자\)$")   # 로거 표식 예비(파�
 # 여러 문장 IBL 코드는 줄바꿈째 찍히므로 뒤따르는 줄을 이어붙인다. 다른 로그 줄과
 # 겹치지 않는 모양만 인정 — 화살표는 '[숫자', 프로바이더 태그는 대문자로 시작한다.
 IBL_CONT = re.compile(
-    r"^\s*(\[[a-z_]+:[a-z_]+\]|\$\w|\[(?:if|else|case|try|catch|finally|repeat|goal|on_error)\b)")
+    r"^\s*(\[[a-z_]+:[\w]+\]|\$\w|\[(?:if|else|case|try|catch|finally|repeat|goal|on_error)\b)")
 # 로그가 '읽을 수 있는 방언'인지의 표지 — 도구 줄이 0일 때 '안 썼다'와 '못 읽었다'를
 # 가르는 유일한 근거. 라운드 줄(in-process 에이전트 루프)·ClaudeCode 줄·IBL_DEBUG 중
 # 하나라도 있으면 이 스크립트가 읽는 방언이므로 도구 0 은 사실이다.
@@ -94,10 +94,8 @@ READABLE = re.compile(r"^\[[^\]]+\] 라운드 \d+|^\[ClaudeCode/|^\[IBL_DEBUG\] 
 TAIL_OP = re.compile(r"^\s*(>>|\?\?|&|\|)")
 # 잘린 JSON 에서 code 값의 시작점 — 뒤따르는 키(files 등)가 잘려도 코드는 온전할 수 있다.
 CODE_KEY = re.compile(r'"code"\s*:\s*"')
-# 회수 폴링 — `execute_ibl{code: "", recover: "티켓"}`. 문장이 아니라 **조회**다.
-# ★없으면 빈 code 가 파서에 걸려 '문법오류'로 신고된다 — 정상 사용을 결함으로 세는 것이라,
-#   09-01 실측에서 회수 9회가 "그 주행에서 실제로 깨진 문장 9건"으로 읽혔다(오독 유발 확인).
-RECOVER_KEY = re.compile(r'"recover"\s*:\s*"[0-9a-f]{8,32}"')
+REQUEST_KINDS = {"describe": "계약조회", "read_result": "결과열람", "recover": "회수"}
+CALL_KINDS = ("실행", *REQUEST_KINDS.values(), "빈호출", "종류미상")
 BLOCK_KEYS = ("_condition", "_try", "_repeat", "_case", "_goal")
 
 
@@ -189,6 +187,7 @@ def _collect(log, trunc_re=None):
     codes, tool_lines = [], 0
     rchars, rchars_seen, rchars_lower = 0, False, False
     lines = (log or "").split("\n")
+    pending = None
     i = 0
     while i < len(lines):
         line = lines[i]
@@ -202,11 +201,13 @@ def _collect(log, trunc_re=None):
             continue
         mt = TOOL_LINE.match(line)          # ① 아웃오브프로세스(claude_code)
         if mt:
+            pending = None
             tool_lines += 1
             tool, raw = mt.group(1), mt.group(2) or ""
             if tool == IBL_TOOL:
                 counts["IBL"] += 1
                 codes.append(("json", raw))
+                pending = len(codes) - 1
             elif tool == "Bash":
                 counts["Bash"] += 1
             else:
@@ -218,10 +219,25 @@ def _collect(log, trunc_re=None):
             while i < len(lines) and IBL_CONT.match(lines[i]):
                 code += "\n" + lines[i]
                 i += 1
+            # 같은 호출의 tool_use/DEBUG는 표현만 둘이다. 코드 내용으로 전역
+            # 중복 제거하면 실제로 같은 코드를 재실행한 호출까지 사라진다.
+            if pending is not None:
+                previous_call = _log_call(*codes[pending], trunc_re)
+                previous, cut = previous_call["code"], previous_call["cut"]
+                debug_code, debug_cut = _code_of("raw", code, trunc_re)
+                if previous and (previous == debug_code
+                                 or (cut and debug_code.startswith(previous))
+                                 or (debug_cut and previous.startswith(debug_code))
+                                 or previous.startswith(debug_code + "\n")):
+                    if cut and (not debug_cut or len(debug_code) > len(previous)):
+                        codes[pending] = ("raw", code)
+                    pending = None
+                    continue
             codes.append(("raw", code))
             continue
         ma = ARROW_LINE.match(line)         # ③ in-process 도구 계수의 정본
         if ma:
+            pending = None
             tool_lines += 1
             marker = ma.group(1)
             if marker == "tool:run_command":
@@ -232,6 +248,82 @@ def _collect(log, trunc_re=None):
                 counts["IBL"] += 1
             continue
     return counts, codes, tool_lines, (rchars if rchars_seen else None), rchars_lower
+
+
+def _call_kind(code, keys=None):
+    if code and code.strip():
+        return "실행"
+    if keys is None:
+        return "종류미상"
+    modes = [REQUEST_KINDS[k] for k in keys if k in REQUEST_KINDS]
+    return modes[0] if len(modes) == 1 else ("빈호출" if not modes else "종류미상")
+
+
+def _log_call(kind, raw, trunc_re):
+    """호출의 코드와 종류를 복원. 코드 생략형 조회도 정상 입력이다."""
+    keys = None
+    if kind == "json":
+        try:
+            payload = json.loads(raw)
+            code = payload.get("code") or payload.get("pipeline") or ""
+            if not isinstance(code, str):
+                raise ValueError("코드가 문자열이 아님")
+            keys = [k for k in REQUEST_KINDS if payload.get(k) is not None]
+            return {"code": code, "cut": False, "kind": _call_kind(code, keys), "source": "log"}
+        except (ValueError, AttributeError):
+            pass
+    try:
+        code, cut = _code_of(kind, raw, trunc_re)
+    except ValueError:
+        code, cut = None, False
+    return {"code": code, "cut": cut, "kind": _call_kind(code, keys), "source": "log"}
+
+
+def _code_sha(code):
+    return hashlib.sha256(code.encode("utf-8", "replace")).hexdigest()
+
+
+def _select_calls(log_codes, trunc_re, traj, corpus):
+    """호출마다 코퍼스 → 일치하는 로그를 선택한다. 누락 하나로 전체 폴백하지 않는다.
+
+    빈 코드의 해시는 모든 조회가 공유한다. 구판 조회 종류는 빈 호출 수까지
+    일치할 때만 순서대로 복원하고, 대응이 불명확하면 종류미상으로 남긴다.
+    """
+    observed = [_log_call(k, r, trunc_re) for k, r in log_codes]
+    if traj is None:
+        return observed
+    events = traj["calls"]
+    by_sha = {}
+    for call in observed:
+        if call["code"] is not None and not call["cut"]:
+            by_sha.setdefault(_code_sha(call["code"]), []).append(call)
+    empty_sha = _code_sha("")
+    empty_logs = list(by_sha.get(empty_sha, []))
+    empty_count = sum(e.get("code_chars") == 0 or e.get("code_sha256") == empty_sha for e in events)
+    empty_aligned = empty_count == len(empty_logs)
+    selected = []
+    for event in events:
+        sha = event.get("code_sha256")
+        code = (corpus or {}).get(sha)
+        if event.get("code_chars") == 0 or sha == empty_sha:
+            code = ""
+        matches = by_sha.get(sha, [])
+        log_call = matches[0] if matches and sha != empty_sha else None
+        if code == "" and empty_aligned:
+            log_call = empty_logs.pop(0)
+        if code is not None:
+            keys = event.get("request_keys")
+            kind = _call_kind(code, keys)
+            if keys is None and log_call and not code:
+                kind = log_call["kind"]
+            selected.append({"code": code, "cut": False, "kind": kind, "source": "corpus"})
+        elif log_call:
+            selected.append(log_call)
+        else:
+            selected.append({"code": None, "cut": False,
+                             "kind": ("실행" if event.get("code_chars", 0) else
+                                      _call_kind(None, event.get("request_keys"))), "source": "missing"})
+    return selected
 
 
 def _code_of(kind, raw, trunc_re):
@@ -310,7 +402,7 @@ def _pair_trajectory(events, corpus=None):
     구판 actions는 한글을 누락했으므로 코퍼스로 재계수한다. 원문도 없으면 미측정(None).
     shas = started 순서의 코드 해시(코퍼스에서 원문을 찾는 열쇠)."""
     from ibl_scanner import source_heads
-    out = {"IBL": 0, "실패": 0, "fn": 0, "fn미측정": 0, "중첩": 0, "shas": []}
+    out = {"IBL": 0, "실패": 0, "fn": 0, "fn미측정": 0, "중첩": 0, "shas": [], "calls": []}
     stack = []
     for kind, data in events:
         try:
@@ -333,6 +425,7 @@ def _pair_trajectory(events, corpus=None):
                     out["fn미측정"] += 1
             out["fn"] += fn_count
             out["shas"].append(d.get("code_sha256") or "")
+            out["calls"].append(d)
             stack.append(d)
         elif kind == "ibl.finished":
             if stack:
@@ -348,18 +441,19 @@ def _scan(log, parse, trunc_re=None, traj=None, corpus=None):
     """에피소드 로그 한 건 (+ 궤적·코퍼스) → 도구·조합 계수.
 
     traj = _pair_trajectory 의 결과(없으면 None = 궤적 이전 주행 → 로그 방언 폴백).
-    corpus = {sha: code} — 궤적의 해시가 전부 풀리면 코드 소스는 코퍼스(온전·순서 보존), 아니면 로그.
+    corpus = {sha: code} — 호출마다 코퍼스 우선, 누락된 호출만 로그로 복원한다.
     """
     acc = {"IBL": 0, "Bash": 0, "기타도구": 0, "파싱실패": 0, "절단": 0, "절단불가": 0, "문법오류": 0,
            "문맥불명": 0, "회수": 0, "실패": None, "fn": None, "fn미측정": 0, "중첩": 0,
            "문장": 0, "조합": 0, "seq": 0, "par": 0, "fb": 0, "블록": 0, "each": 0, "최대단계": 0}
     counts, log_codes, tool_lines, rchars, rchars_lower = _collect(log, trunc_re)
     acc.update(counts)
+    acc.update({k: 0 for k in CALL_KINDS})
+    acc["코드미기록"] = 0
     acc["_결과문자"] = rchars
     acc["_결과문자하한"] = rchars_lower
     acc["_로그IBL"] = counts["IBL"]
     acc["_궤적"] = traj is not None
-    codes, source = log_codes, "log"
     if traj is not None:
         # 궤적이 1차 소스 — 로그 계수는 대조용으로만 남긴다(어긋나면 상태에 신고)
         acc["IBL"] = traj["IBL"]
@@ -367,33 +461,29 @@ def _scan(log, parse, trunc_re=None, traj=None, corpus=None):
         acc["fn"] = traj["fn"]
         acc["fn미측정"] = traj.get("fn미측정", 0)
         acc["중첩"] = traj["중첩"]
-        shas = [h for h in traj["shas"] if h]
-        if shas and corpus and all(h in corpus for h in shas):
-            codes, source = [("corpus", corpus[h]) for h in shas], "corpus"
-    acc["_코드소스"] = source
+    calls = _select_calls(log_codes, trunc_re, traj, corpus)
+    sources = {c["source"] for c in calls}
+    acc["_코드소스"] = next(iter(sources)) if len(sources) == 1 else "mixed"
     variables = {}                     # 턴 변수 문맥 — 실행 순서대로 앞 호출의 할당을 잇는다
-    for kind, raw in codes:
-        if parse is None:
-            break
-        if kind == "corpus":
-            code, cut = raw, False
-        else:
-            try:
-                code, cut = _code_of(kind, raw, trunc_re)
-            except Exception:
-                acc["파싱실패"] += 1        # 로그 줄 자체를 못 읽었다 = 형식 변화 신호
-                continue
-        if not code.strip() and (kind == "corpus" or RECOVER_KEY.search(raw)):
-            # 회수 폴링은 문장이 아니다 — 조합·단계 지표에서 빼고 따로 센다.
-            # (이 수 자체가 관측이다: 그 주행이 결과를 기다리며 쓴 모델 왕복 수)
-            acc["회수"] += 1
+    incomplete_context = False
+    for call in calls:
+        acc[call["kind"]] += 1
+        code, cut = call["code"], call["cut"]
+        if code is None:
+            acc["코드미기록"] += 1
+            incomplete_context = True
+            if call["source"] == "log":
+                acc["파싱실패"] += 1
             continue
+        if not code.strip() or parse is None:
+            continue
+        incomplete_context = incomplete_context or cut
         try:
             got, variables = (_measure_prefix(code, parse, variables) if cut
                               else _measure(code, parse, variables))
         except Exception as e:
             got = None
-            if UNASSIGNED_RE.search(str(e)) and source == "log":
+            if UNASSIGNED_RE.search(str(e)) and (incomplete_context or call["source"] == "log"):
                 # 로그는 잘리므로 앞 호출의 할당이 문맥에서 빠졌을 수 있다 — 미할당은 문법오류가 아니라 문맥 부족.
                 acc["문맥불명"] += 1
                 continue
@@ -412,7 +502,9 @@ def _scan(log, parse, trunc_re=None, traj=None, corpus=None):
     acc["_tool_lines"] = tool_lines
     # 코드를 못 본 IBL 호출 — in-process 디듀프(30초 창) 또는 IBL_DEBUG 이전 구판 로그, 코퍼스 이전 궤적.
     # 계수는 맞고 조합 지표에서만 빠진 몫이라 0 으로 뭉개지 않고 따로 신고한다.
-    acc["코드미기록"] = max(0, acc["IBL"] - len(codes))
+    unobserved = max(0, acc["IBL"] - len(calls))
+    acc["코드미기록"] += unobserved
+    acc["종류미상"] += unobserved
     return acc
 
 
@@ -537,6 +629,8 @@ def main():
             state = f"코드미기록 {a['코드미기록']}"
         elif a["문맥불명"]:
             state = f"문맥불명 {a['문맥불명']}"   # 잘린 로그라 변수 문맥이 불완전 — 문법오류로 신고하지 않는다
+        elif a["종류미상"]:
+            state = f"호출종류미상 {a['종류미상']}"
         elif a["회수"]:
             state = f"회수폴링 {a['회수']}"   # 결함이 아니라 '기다린 왕복' — 칸이 비면 ok
         elif not a["_궤적"]:
@@ -555,7 +649,8 @@ def main():
             "총초": round(r["total_ms"] / 1000) if r["total_ms"] else None,
             "IBL": a["IBL"], "실패": a["실패"], "fn": a["fn"],
             "fn미측정": a["fn미측정"],
-            "회수": a["회수"], "Bash": a["Bash"], "기타도구": a["기타도구"],
+            **{k: a[k] for k in CALL_KINDS},
+            "Bash": a["Bash"], "기타도구": a["기타도구"],
             "IBL비중": _pct(a["IBL"], tools),
             # 모델이 도구 결과로 읽은 문자수(천 단위) — 절단 표식의 숨긴 글자수까지 복원한
             # 정확값(옛 '...' 행만 하한). None = in-process 방언이라 결과 줄이 없음(0 아님).
@@ -572,7 +667,7 @@ def main():
         for it in items:
             g = groups.setdefault(it["에이전트"] or "?", {"에이전트": it["에이전트"], "주행": 0})
             g["주행"] += 1
-            for k in ("IBL", "실패", "fn", "회수", "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록",
+            for k in ("IBL", "실패", "fn", *CALL_KINDS, "Bash", "기타도구", "문장", "조합", "seq", "par", "fb", "블록",
                       "each", "결과천자"):
                 if k == "fn" and (it[k] is None or (k in g and g[k] is None)):
                     g[k] = None

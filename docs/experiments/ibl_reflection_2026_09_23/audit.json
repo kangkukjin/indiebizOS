@@ -1,0 +1,112 @@
+{
+  "observed_at": "2026-09-23T08:37:53.309631+09:00",
+  "basis_commit": "c834bd45b627b7ea0717efa85806393470346efa",
+  "method": "Read-only SQLite named-definition scan using ibl_scanner.source_heads; strings/comments excluded; same-definition local functions excluded from registered dependency graph. No execution-frequency inference. Raw [fn: occurrences checked separately.",
+  "registry": {
+    "named_definitions": 48,
+    "always_on": 7,
+    "sources": {
+      "manual_seed": 2,
+      "distilled": 23,
+      "manual_registry": 23
+    },
+    "registered_dependency_edges": 0,
+    "max_registered_layers": 1,
+    "definitions_using_local_functions": 1,
+    "raw_fn_occurrences": 2,
+    "self_workflow_occurrences": 0,
+    "definitions_using_self_script": 7,
+    "definitions_with_nonnegative_avg_ms": 14,
+    "definitions_with_nonnegative_avg_tokens": 3,
+    "dependency_graph": {
+      "재시도렌더알림": [],
+      "장부재시도알림": [],
+      "뉴스모아선별산문쓰기": [],
+      "유튜브모아조회수표만들기": [],
+      "직전보고서찾아읽기": [],
+      "검색요약마크다운저장하기": [],
+      "논문검색해주목할것추리기": [],
+      "원장에검색결과누적하기": [],
+      "검색소스폴백해요약하기": [],
+      "유튜브검색해정보자막받기": [],
+      "나레이션스크립트띄우고대기하기": [],
+      "파일고치고패치적용하기": [],
+      "문서폴더에서찾아훑기": [],
+      "찾아읽고고쳐되읽어확인하기": [],
+      "큰원문스필로덜어요약하기": [],
+      "항목별원문요지로줄이기": [],
+      "긴자막덩이별요약종합하기": [],
+      "함수나눠모으고줄이기": [],
+      "DB표보고조회하기": [],
+      "찾아서각각읽기": [],
+      "고치고시험돌리기": [],
+      "관문배터리돌리기": [],
+      "수리제안적용하기": [],
+      "파일읽어고치기": [],
+      "패키지설치상태확인하기": [],
+      "잘라각각종합": [],
+      "덜어내고요지만": [],
+      "행마다붙이기": [],
+      "모아서추리기": [],
+      "원장에누적": [],
+      "좁혀서읽기": [],
+      "띄우고기다리기": [],
+      "최신파일읽기": [],
+      "고치고확인하기": [],
+      "표보고조회하기": [],
+      "중복빼고추리기": [],
+      "각각읽고요약": [],
+      "위치마다읽기": [],
+      "최신범위읽기": [],
+      "미처리만고르기": [],
+      "묶어순위내기": [],
+      "주소마다읽기": [],
+      "열추려보기": [],
+      "정렬해추리기": [],
+      "본문에서찾기": [],
+      "관련자료골라읽기": [],
+      "의미로본문찾기": [],
+      "AI팁보고서쓰기": []
+    },
+    "always_on_returns": {
+      "좁혀서읽기": "items⟨파일·줄번호·내용·…⟩",
+      "주소마다읽기": "items⟨type·level·text·url·paragraph_index·title·…⟩",
+      "열추려보기": "items⟨열 미상⟩",
+      "정렬해추리기": "items⟨열 미상⟩",
+      "본문에서찾기": "items⟨열 미상⟩",
+      "관련자료골라읽기": "items⟨열 미상⟩",
+      "의미로본문찾기": "items⟨열 미상⟩"
+    }
+  },
+  "in_memory_metric_probe": {
+    "calls": 1,
+    "failed_calls": 0,
+    "single_action_calls": 1,
+    "first_program_success": false,
+    "first_call_actions": [
+      "fn:합성능력"
+    ]
+  },
+  "tests": {
+    "command": ".venv/bin/python -m pytest backend/test_idiom_composition_2026_09_07.py backend/test_idiom_return_repairs.py backend/test_ibl_composition_teaching.py backend/test_idiom_exposure_repairs_2026_09_09.py backend/test_ibl_execution_evolution.py -q -o addopts=",
+    "passed": 113,
+    "seconds": 8.09,
+    "scope": "Existing selected regression tests; not a new model or production workload experiment."
+  },
+  "file_sha256": {
+    "backend/cognition/ibl_usage_rag.py": "020399f8cc7ba16c3cb30a1f6845b7ccdd9eaf283d79c7b71c6ed4726d8fff38",
+    "backend/cognition/ibl_idiom.py": "c160a387f4d24e2b9135bb24c468f672bf363306a2316ac7f258a8c24ad3d8bf",
+    "backend/ibl/ibl_control_blocks.py": "6a8a26f4d84c872d55de519942553af9d6b1ec4a9dfe3599dd304a56567abaf1",
+    "backend/ibl/ibl_executors.py": "331cbd7c09a9ac5e556179a886dd1dd78cb1a9e096122dbe70160d1b24791036",
+    "backend/ibl/ibl_engine.py": "49451061ad15cd8f72a8464f537530765ff82b3aa69e2ec01e365ade49c55e67",
+    "backend/ibl/pipeline_state.py": "647e3deefcf647cd99557c269aadff4ea425060bbf3227b1d20010897684695a",
+    "scripts/ibl_composition_cost_metrics.py": "a0940f2daa1fb0cef4025de0046d63600134777ab845d16f6d76adf10bdd8b3f",
+    "scripts/register_idiom.py": "2931063ee51bb0cdcba6909a19d94e20e8168819c0745e315db31ec7f425b146",
+    "data/idioms/ai_tips_report.ibl": "d7cd12dc2935b2068fbcb5fff85c549394f0047e1325f18ba51c911baf74beb3"
+  },
+  "limits": [
+    "No fresh model/API execution or production workflow was run.",
+    "Registry source/success/cost metadata can reflect manual seeding or revisions; not causal efficacy.",
+    "Generalization and end-to-end quality/time/token changes are not measured by this audit."
+  ]
+}

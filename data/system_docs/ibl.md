@@ -255,6 +255,12 @@ IBL의 진짜 엔진은 액션 목록이 아니라 `>>`(순차) `&`(병렬 — �
 
 계약: 모델=**기어 실행 축**(경량 `self:ask` 와 별개 — 새 의미 판단은 EXECUTE=본격 논리와 동류) · JSON 검증+재시도 1회+정직 실패 · 행 수 신고(rows_in/out) · `_ai` provenance · 집합 단위 1호출(0행=호출 생략+빈손 성공, 통화 없음=거절) · `ai_call: true` 플래그로 dry-run 고지+포털 대여 기본 거부. 규칙으로 적을 수 있으면 filter/sort 가 먼저다. 상세 = `data/guides/ai_words.md`, 정본 설계 = `docs/ONESHOT_VOCAB_DESIGN.md`.
 
+`table:ai`의 선택 인자 `input_fields`는 모델 입력 열만 좁히며 숨긴 원본은 코드에 보존한다.
+`preserve_rows:true`는 색인 전수·중복 검증 후 입력 순서로 병합한다. `fields`는 여전히 출력 투영이다.
+`self:script`의 `input_as`는 실행 파이프 봉투 전체를 stdin의 지정 키로 인계한다.
+원본/표시 사본을 섞거나 `$변수`의 뜻을 바꾸지 않는다. 상세는 `guides/ai_words.md`·`guides/script.md`.
+구조 검사는 코드로, 의미 검수는 독립 판단으로 남기는 적용 예는 `docs/IBL_EXECUTION_EVOLUTION_IMPLEMENTATION_2026_09_23.md`.
+
 > 옛 교훈(태그-only 시절): "engines에 이질적인 게 있다"는 관찰은 옳았고, 처음엔 *이름 이전*(화장+코퍼스 비용) 대신 태그·계약·문서로 그 다름을 *드러내는* 것으로 족하다고 봤다. 그러나 노드 on/off 요구가 생기자 태그로는 못 긋는 경계(끄기 단위)가 필요해져 결국 별도 노드로 승격했다 — 분류의 실효는 *기계가 그 구분에 작용할 때* 생긴다는 원리는 그대로다. 여기선 "작용"이 노드 토글이었다.
 
 ## 5. *용례 증류*와 *단어 주조*를 혼동하지 마라

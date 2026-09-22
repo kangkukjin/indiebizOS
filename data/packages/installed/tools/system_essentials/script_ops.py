@@ -155,6 +155,8 @@ def _resolve_run_args(tool_input):
     """
     has_file = bool(str(tool_input.get("args_file") or "").strip())
     has_args = tool_input.get("args") is not None
+    if "input_as" in tool_input and has_file:
+        return None, "input_as와 args_file을 함께 쓸 수 없습니다.", None
     if has_file and has_args:
         return None, ("args 와 args_file 을 함께 줬습니다 — stdin 은 하나입니다. "
                       "큰 payload 면 args_file 만, 작은 리터럴이면 args 만 주세요."), None
@@ -163,6 +165,50 @@ def _resolve_run_args(tool_input):
         return args, err, str(tool_input["args_file"]).strip()
     args, err = _coerce_args(tool_input.get("args"))
     return args, err, None
+
+
+def _stdin_args(tool_input, *, expand_paths=True):
+    """명시 args의 경로만 펼친 후 실제 파이프 봉투를 그대로 주입한다."""
+    args, err, source = _resolve_run_args(tool_input)
+    if err:
+        return None, err, source
+    if expand_paths:
+        args = _expand_args_body_paths(args)
+    if "input_as" not in tool_input:
+        return args, None, source
+    name = tool_input["input_as"]
+    if not isinstance(name, str) or not name.strip():
+        return None, "input_as는 비어 있지 않은 최상위 키 이름이어야 합니다.", source
+    if name in (args or {}):
+        return None, "input_as가 args의 기존 키와 충돌합니다: " + name, source
+    if "_prev_result" not in tool_input or tool_input["_prev_result"] is None:
+        return None, "input_as에는 >> 파이프 입력이 필요합니다(빈 items는 허용).", source
+    value = tool_input["_prev_result"]
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            return None, "input_as에는 JSON 파이프 봉투가 필요합니다.", source
+    from common.spill import resolve_ref
+    value, err = resolve_ref(value)
+    if err:
+        return None, "input_as 원본 복원 실패: " + err, source
+    if not isinstance(value, dict):
+        return None, "input_as에는 객체 파이프 봉투가 필요합니다.", source
+    return {**(args or {}), name: value}, None, source
+
+
+def member_script(params, command, exchange, workspace):
+    """회원 기기에는 인계한 args만 전송한다. 허브 경로 확장·스크립트 실행 없음."""
+    if "input_as" in params:
+        if params.get("op") != "run":
+            return {"success": False, "error": "input_as는 run 전용입니다."}
+        # args_file과 input_as의 병용은 _resolve_run_args가 파일을 읽기 전에 거절한다.
+        args, error, _ = _stdin_args(params, expand_paths=False)
+        if error:
+            return {"success": False, "error": error}
+        command = {**command, "args": args}
+    return exchange(command)
 
 
 
@@ -445,10 +491,9 @@ def op_run(tool_input):
         return {"success": False,
                 "error": f"등록된 파일이 사라졌습니다: {p} — 파일 복구 후 재등록하거나 op:remove."}
 
-    args, _aerr, _args_src = _resolve_run_args(tool_input)
+    args, _aerr, _args_src = _stdin_args(tool_input)
     if _aerr:
         return {"success": False, "error": _aerr}
-    args = _expand_args_body_paths(args)
     stdin_data = json.dumps(args, ensure_ascii=False) if args is not None else None
     try:
         timeout = int(tool_input.get("timeout") or entry.get("timeout") or _DEFAULT_TIMEOUT)

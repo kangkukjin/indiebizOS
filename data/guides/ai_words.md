@@ -33,11 +33,32 @@
 - **모델 = 기어 실행 축** — `self:ask`(경량 단답)와 다르다. 실행 에이전트와 같은 지능. 이미지 입력은 비전 패스스루(Gemini — 모달리티는 기어 무관).
 - **JSON 검증 + 재시도 1회 + 정직 실패** — 빈 결과로 위장하지 않는다.
 - **행 수 신고** — `table:ai` 는 rows_in/rows_out(+rows_dropped)을 항상 동반(조용한 깎기 금지).
-- **출력은 새 정보만(색인 병합, 2026-09-06)** — `table:ai` 는 입력 행에 색인 `_i` 를 달아 보내고 모델은 행마다 `{_i, 새로 만들거나 바꾼 필드}` 만 돌려준다. 코드가 원 행에 병합하므로 `fields` 에 title·url·summary 를 나열해도 모델이 되쓰지 않는다(옛 계약은 출력 글자의 76% 가 입력 echo — 한 호출 140초의 4분의 3). 값을 바꾸려면 그 필드를 적으면 덮인다. 봉투 `_merge: index|full`(full = 모델이 `_i` 없이 전 행을 돌려준 폴백).
+- **출력은 새 정보만(색인 병합, 2026-09-06)** — `table:ai` 는 입력 행에 색인 `_i` 를 달아 보내고 모델은 행마다 `{_i, 새로 만들거나 바꾼 필드}` 만 돌려준다. 코드가 원 행에 병합하므로 `fields` 에 title·url·summary 를 나열해도 모델이 되쓰지 않는다(옛 계약은 출력 글자의 76% 가 입력 echo — 한 호출 140초의 4분의 3). 값을 바꾸려면 그 필드를 적으면 덮인다. 봉투 `_merge: index|full`(full = 모델이 `_i` 없이 전 행을 돌려준 폴백; input_fields 또는 preserve_rows를 선택한 경우는 폴백 거절).
 - **grounded**(struct) — 각 레코드에 원문 발췌 `_quote` 를 요구하고 **코드가 원문과 대조**(notebook 인용 후검증 부류). finance/health 원장 스키마=기본 on, 그 외 off, `grounded:` 파라미터로 오버라이드. 탈락 수는 `dropped_ungrounded` 로 신고, 전멸=정직 실패.
 - **_ai provenance** — 출력 items 행에 `_ai: true`.
 - **비용 = 집합 단위 1호출** — items 전체를 한 번에. 입력 상한(6만 자) 초과=정직 거절(take/filter 로 줄이기). 0행 입력=**세 낱말 모두 호출 생략(비용 0)·빈손 성공** — `table:ai` 는 `items:[]`, `brief` 는 `message` 없이 `note`+`rows_in:0`(F20-3 판정 2026-08-22: 0행은 고장이 아니라 정당한 빈손이다. 감시자 문형 `[table:since] >> [table:brief]` 이 첫 실행마다 error 로 끝나던 원인). **통화 자체가 없으면 여전히 정직 거절** — 두 갈래를 섞지 말 것.
 - **`ai_call: true`** — dry-run 이 "실행마다 모델 호출(비용·편차)" 을 고지하고, 포털 대여 계기에서는 기본 거부된다.
+
+## 필요한 열만 판단하고 원본·행을 보존하기
+
+```ibl
+[table:ai]{items:[{id:"a",title:"문서 A",text:"원문",path:"자료/a.md"}],
+  instruction:"원문을 한 문장으로 요약해 summary를 추가하라",
+  input_fields:["title","text"],preserve_rows:true}
+```
+
+모델에는 title·text와 `_i`만 보내고 id·path는 코드가 그대로 보존한다.
+input_fields는 **입력** 투영, fields는 병합 뒤 **출력** 투영이다. 둘 다 선택 인자다.
+input_fields는 중복 없는 최상위 이름 배열이며 모든 행에 없는 열은 호출 전에 오류다.
+일부 행에서 없는 열은 없는 채로 보내며, 숨긴 원본 열을 모델이 변경하면 거절한다.
+preserve_rows=true는 모든 색인을 정확히 한 번 요구하고 입력 순서를 복원한다.
+행 선별·추가를 원하면 기본 false를 유지한다. input_fields를 선택했을 때는 선별은 가능하지만
+색인 없는 신규 행·전체 행 폴백은 허용하지 않는다. 잘못된 옵션은 빈 입력에서도 검사한다.
+
+상한은 투영·색인 주입 후 실제 JSON 크기로 검사한다. 초과 오류의 input_chars/input_bytes와
+limit_chars는 토큰 추정치가 아니다. 전건 처리가 필요하면 chunk/each로 나누고 ID로 범위를 검증한다.
+input_fields로 뺀 자료를 AI가 읽었다고 주장하거나 전건 검토 대신 임의 take를 넣지 않는다.
+중첩 result의 필수 값·ID는 결정론 소비자가 검사하고 의미 검수는 따로 유지한다.
 
 ## criteria — 품질 계약 (2026-08-27 언어 개정)
 

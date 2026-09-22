@@ -474,14 +474,23 @@ def _transform(tool_input: dict) -> str:
     if items is None:
         return _fail("입력 통화가 없습니다 — >> 파이프로 앞 액션의 items 를 받습니다. "
                      "예: [sense:search]{...} >> [table:ai]{instruction: ...}")
-    if not items:
-        return _ok({"items": [], "rows_in": 0, "rows_out": 0,
-                    "note": "입력 0행 — AI 호출 생략(비용 0)."})
     fields = tool_input.get("fields")
     if fields is not None and (not isinstance(fields, list) or any(not isinstance(f, str) for f in fields)):
         return _fail("fields 는 문자열 배열이어야 합니다.")
     if fields and declared and set(declared) - set(fields):
         return _fail("fields가 schema에 선언한 필드를 제거합니다.")
+    input_fields = tool_input.get("input_fields")
+    if input_fields is not None and (
+            not isinstance(input_fields, list) or not input_fields
+            or any(not isinstance(f, str) or not f.strip() or f == "_i" for f in input_fields)
+            or len(set(input_fields)) != len(input_fields)):
+        return _fail("input_fields는 중복 없는 최상위 필드 이름 배열이어야 합니다(_i 제외).")
+    preserve = tool_input.get("preserve_rows", False)
+    if type(preserve) is not bool:
+        return _fail("preserve_rows는 boolean이어야 합니다.")
+    if not items:
+        return _ok({"items": [], "rows_in": 0, "rows_out": 0,
+                    "note": "입력 0행 — AI 호출 생략(비용 0)."})
 
     # ★색인 병합 계약(2026-09-06, ep2882 실측): 옛 계약은 모델이 **행 전체**를 다시 쓰게 했다 —
     #   fields 에 title·summary·url 이 있으면 규칙 ⑤가 입력을 되받아쓰게 만들어, 출력 글자의 76%
@@ -491,9 +500,18 @@ def _transform(tool_input: dict) -> str:
     #   병합한다(값 보존·순서 = 반환 순서·뺀 _i = 제거·_i 없는 행 = 신규). 모델이 계약을 어기고
     #   _i 없이 전 행을 돌려주면 옛 계약(전체 행)으로 정직 폴백하고 `_merge: "full"` 로 신고한다.
     dict_items = [r if isinstance(r, dict) else {"value": r} for r in items]
-    payload, perr = _items_payload([{**r, "_i": i} for i, r in enumerate(dict_items)])
+    visible = dict_items
+    if input_fields is not None:
+        missing = [f for f in input_fields if not any(f in r for r in dict_items)]
+        if missing:
+            return _fail("모든 입력 행에 없는 input_fields: " + ", ".join(missing))
+        visible = [{k: v for k, v in r.items() if k in input_fields} for r in dict_items]
+    indexed = [{**r, "_i": i} for i, r in enumerate(visible)]
+    payload, perr = _items_payload(indexed)
     if perr:
-        return _fail(perr)
+        encoded = json.dumps(indexed, ensure_ascii=False)
+        return _fail(perr, error_type="input_size", input_chars=len(encoded),
+                     input_bytes=len(encoded.encode("utf-8")), limit_chars=_ITEMS_CAP)
 
     system = (
         "너는 통화 변환자다. 입력 items(JSON 배열, 각 행에 색인 _i)를 지시대로 변환한다. "
@@ -508,6 +526,10 @@ def _transform(tool_input: dict) -> str:
     if fields:
         system += (f" ⑤병합 뒤 각 행은 다음 필드만 남는다: {[str(f) for f in fields]} — "
                    "이 중 입력에 없는 필드만 채워라.")
+    if input_fields is not None:
+        system += " 입력은 일부 열만 보낸 것이다. 반드시 _i를 쓰고 보이지 않는 기존 열을 생성·수정하지 마라."
+    if preserve:
+        system += " 모든 입력 _i를 정확히 한 번씩 반환하라. 행 추가·누락·중복은 오류다. 순서는 코드가 복원한다."
 
     from oneshot_facade import oneshot_json, records_gate, mark_ai
     parsed, err = oneshot_json(f"[items]\n{payload}\n\n[지시]\n{instruction}", system)
@@ -517,6 +539,23 @@ def _transform(tool_input: dict) -> str:
     if gerr:
         return _fail(f"변환 실패: {gerr}")
     try:
+        if preserve or input_fields is not None:
+            indices = []
+            for row in out:
+                i = row.get("_i")
+                if isinstance(i, str) and re.fullmatch(r"[+-]?\d+", i.strip()):
+                    i = int(i)
+                if type(i) is not int or not 0 <= i < len(dict_items):
+                    raise ValueError("투영/행 보존 출력에는 유효한 _i가 필요합니다.")
+                indices.append(i)
+                if input_fields is not None:
+                    hidden = set(dict_items[i]) - set(input_fields) - {"_i"}
+                    if hidden.intersection(row):
+                        raise ValueError("모델이 input_fields 밖의 원본 필드를 변경했습니다.")
+            if preserve:
+                if sorted(indices) != list(range(len(dict_items))):
+                    raise ValueError("preserve_rows: 입력 행 누락 또는 중복입니다.")
+                out = [row for _, row in sorted(zip(indices, out), key=lambda pair: pair[0])]
         out, merge_mode, bad_idx = _merge_by_index(dict_items, out)
     except ValueError as exc:
         return _fail(f"변환 실패: {exc}")

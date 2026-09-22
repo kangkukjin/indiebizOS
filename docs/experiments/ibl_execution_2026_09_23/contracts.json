@@ -1,0 +1,33 @@
+{
+  "mode": "read_only_contract_replay_no_model_calls",
+  "episode": 4005,
+  "input_sha256": "cbc7f75022c28d67dad17a2f13900c25ff8fec108732b6eb07ee26eab4b56efb",
+  "candidates": 18,
+  "known": 647,
+  "batch_count": 4,
+  "batch_rows": [
+    243,
+    220,
+    162,
+    22
+  ],
+  "request_chars": [
+    56995,
+    56912,
+    56880,
+    12375
+  ],
+  "request_cap_chars": 57000,
+  "all_known_ids_unique_and_covered": true,
+  "old_idiom_chars": 9195,
+  "new_idiom_chars": 5791,
+  "new_model_tokens": null,
+  "new_wall_time_ms": null,
+  "semantic_quality_comparison": "not_measured",
+  "notes": [
+    "Source files and production ledgers were not changed.",
+    "Character counts are not token counts or cache-adjusted costs.",
+    "First comparison now requires four calls; semantic review stages remain."
+  ],
+  "baseline_revision": "d3b40470"
+}

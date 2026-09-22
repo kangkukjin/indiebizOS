@@ -21,7 +21,8 @@ import re
 import tempfile
 import unicodedata
 
-VERSION = 1
+VERSION = 2
+REQUEST_CAP = 57000
 STRATA = ("korean", "english", "specific", "skeptical", "action")
 CHECKS = ("grounding", "actionability", "novelty", "qualifications",
           "source_identity", "editorial_separation", "coverage_and_counts")
@@ -140,8 +141,6 @@ def answer(value):
 
 def task(state, label, instruction, payload):
     item = {"task": AI_RULE + instruction, "input": payload}
-    require(len(canonical([item])) < 57000,
-            label + " 입력이 AI 상한을 넘습니다. 자동 절단하지 않습니다")
     state["phase"] = label
     return {"items": [item], "count": 1, "run": state["run"]}
 
@@ -203,7 +202,7 @@ def start(config):
     state["start_output"] = result
     run_dir.mkdir(parents=True, exist_ok=False)
     atomic(run_dir / "state.json", state)
-    return result
+    return next_output(state, "start", result)
 
 
 def stage_queries(state, data):
@@ -386,17 +385,91 @@ def stage_candidates(state, data):
         row["candidate_id"] = "c" + str(i + 1)
     require(records, "자막에서 근거 있는 팁을 찾지 못했습니다")
     state["candidates"] = records
+    # 유효한 추출 결과를 먼저 확정한다. 크기 분할은 저장 이후 준비 경계의 일이다.
+    return {"_prepare": "comparison"}
+
+
+def comparison_request(state, known, batch_id):
+    return {"batch_id": batch_id, **task(state, "compared",
+        "후보 각각을 이 배치의 기존 팁 전부와 의미 비교한다. 같은 방법이면 duplicate, "
+        "판정 근거가 부족하면 unknown, 이 배치에 중복이 없으면 novel. 후보끼리의 선정은 다음 단계다. "
+        "result={batch_id,decisions:[{candidate_id,verdict:'novel|duplicate|unknown',"
+        "matched_ids:[known_id],reason}]}. 모든 후보를 정확히 한 번 판정한다. "
+        "duplicate는 이 배치의 실제 known_id를 최소 하나 연결하고 이유에 차이·중복 근거를 쓴다. "
+        "novel도 비교한 방법과 차이를 구체적으로 설명한다.",
+        {"batch_id": batch_id, "topic": state["config"]["topic"],
+         "candidates": state["candidates"], "known": known})["items"][0]}
+
+
+def request_size(item):
+    # table:ai의 input_fields 투영 및 _i 주입과 같은 직렬화 기준.
+    return len(json.dumps([{k: item[k] for k in ("task", "input")} | {"_i": 0}],
+                          ensure_ascii=False))
+
+
+def prepare_comparison(state):
+    known = [{"known_id": "k" + str(i + 1), **{k: row.get(k) for k in ("tip", "how", "topic")}}
+             for i, row in enumerate(state["snapshot"]["tips"])]
+    batches, chunk = [], []
+    for row in known:
+        candidate = comparison_request(state, chunk + [row], "b" + str(len(batches) + 1))
+        if request_size(candidate) >= REQUEST_CAP:
+            require(chunk, "기존 팁 한 건과 후보가 입력 상한을 넘습니다. 자동 절단하지 않습니다")
+            batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1)))
+            chunk = [row]
+        else:
+            chunk.append(row)
+    if chunk:
+        batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1)))
+    require(all(request_size(r) < REQUEST_CAP for r in batches), "비교 배치 입력 상한 초과")
+    state["comparison_batches"] = {r["batch_id"]: {
+        "known_ids": [k["known_id"] for k in r["input"]["known"]],
+        "request_hash": digest(r)} for r in batches}
+    return {"items": batches, "count": len(batches), "run": state["run"]}
+
+
+def stage_compared(state, data):
+    batches = state["comparison_batches"]
+    received = keyed(rows(data), "batch_id", batches)
+    candidates = keyed(state["candidates"], "candidate_id")
+    audit, excluded = [], set()
+    for bid, wrapper in received.items():
+        result = wrapper.get("result")
+        require(isinstance(result, dict) and result.get("batch_id") == bid, "비교 배치 ID 변경")
+        decisions = keyed(result.get("decisions", []), "candidate_id", candidates)
+        for cid, decision in decisions.items():
+            verdict = decision.get("verdict")
+            require(verdict in ("novel", "duplicate", "unknown"), "비교 판정 누락")
+            text_field(decision, "reason")
+            matches = decision.get("matched_ids")
+            require(isinstance(matches, list) and all(isinstance(k, str) for k in matches)
+                    and len(matches) == len(set(matches))
+                    and set(matches) <= set(batches[bid]["known_ids"]), "비교 근거 ID 오류")
+            require(verdict != "unknown", "신규성 추가 근거 필요: " + decision["reason"])
+            require((verdict == "duplicate") == bool(matches), "중복 판정과 근거 ID 불일치")
+            if verdict == "duplicate":
+                excluded.add(cid)
+            audit.append({"batch_id": bid, **decision})
+    eligible = [r for r in state["candidates"] if r["candidate_id"] not in excluded]
+    require(eligible, "기존 원장과 비교해 새로운 팁이 없습니다")
+    matched = {k for r in audit for k in r["matched_ids"]}
+    state["novelty"] = {
+        "snapshot_hash": state["snapshot_hash"], "known_count": len(state["snapshot"]["tips"]),
+        "batches": batches, "decisions": audit,
+        "matched_known": [{"known_id": "k" + str(i + 1), **row}
+                          for i, row in enumerate(state["snapshot"]["tips"])
+                          if "k" + str(i + 1) in matched]}
+    state["eligible"] = eligible
     return task(state, "chosen",
-                "기존 팁과 후보를 의미로 비교해 같은 방법의 재탕을 제외하라. "
+                "원장 전체 분할 비교 결과를 참고해 이번 후보끼리의 의미 중복과 실용 가치를 검토한다. "
                 "8~15개를 목표로 하되 가치가 없으면 줄여라. 영상별 최소 개수 없음. "
                 "result={decisions:[{candidate_id,keep:boolean,reason}]}로 모든 후보를 판정한다.",
-                {"topic": state["config"]["topic"], "candidates": records,
-                 "known": [{"tip": r.get("tip"), "how": r.get("how"), "topic": r.get("topic")}
-                           for r in state["snapshot"]["tips"]]})
+                {"topic": state["config"]["topic"], "candidates": eligible,
+                 "novelty": state["novelty"]})
 
 
 def stage_chosen(state, data):
-    source = keyed(state["candidates"], "candidate_id")
+    source = keyed(state["eligible"], "candidate_id")
     decisions = keyed(answer(data).get("decisions", []), "candidate_id", source)
     chosen = []
     for cid, decision in decisions.items():
@@ -434,7 +507,7 @@ def stage_details(state, data):
                 and all(isinstance(t, str) and t.strip() for t in tools)),
                 "tools는 도구명 목록 또는 미확인 null")
     state["details"] = list(details.values())
-    return review_tasks(state)
+    return {"_prepare": "review"}
 
 
 def review_tasks(state):
@@ -446,7 +519,8 @@ def review_tasks(state):
                    "transcript": source_segments(state, vid),
                    "tips": [r for r in detail if r["video_id"] == vid],
                    "reader_context": state["config"].get("reader_context", ""),
-                   "revision": state.get("revision_feedback", "")}
+                   "revision": state.get("revision_feedback", ""),
+                   "novelty": state["novelty"]}
         request = task(state, "reviewed", REVIEW_RULE +
                        "result={video_id,decisions:[{candidate_id,verdict:'pass|reject|needs_evidence',reason,"
                        "tip,how,hype,implication_class:'이미 하는 것|이식 후보|해당 없음',implication}]}. "
@@ -493,7 +567,7 @@ def stage_reviewed(state, data):
                 "같은 조건의 상반된 주장일 때만 대립으로 표현. 한계를 숨기거나 새 팁을 만들지 않는다.",
                 {"topic": state["config"]["topic"], "tips": accepted, "videos": state["videos"],
                  "excluded": state["excluded"], "review": audit,
-                 "known": [{"tip": r.get("tip"), "how": r.get("how")} for r in state["snapshot"]["tips"]]})
+                 "novelty": state["novelty"]})
 
 
 def projected(state):
@@ -617,7 +691,8 @@ def stage_draft(state, data):
                 "모든 인용·시점은 원문과 결정론 검증했다. 여기서는 그 검토를 무조건 승인하지 말고 "
                 "근거 행·검토 이유의 모순, 불충분한 방법, 편집 과정에 새로 생긴 주장과 과장을 확인한다. "
                 "원문 전문을 다시 받지 않았다는 이유 자체는 실패 사유가 아니다. "
-                "known은 해당 출력 위치의 누적 원장 전체다. 빈 목록은 새 원장이므로 기존 항목 0개다. "
+                "novelty는 원장 전체 분할 비교의 범위·판정·근거다. known_count=0만 기존 항목 0개다. "
+                "비교 이유와 최종 방법이 불일치하거나 신규성을 확인할 수 없으면 novelty=false. "
                 "새 원장의 신규성은 이번 최종 팁 사이의 중복을 확인하되 세계 전체의 새로움을 뜻하지 않는다. "
                 "result={report_hash,checks:{grounding:boolean,actionability:boolean,novelty:boolean,"
                 "qualifications:boolean,source_identity:boolean,editorial_separation:boolean,"
@@ -633,7 +708,7 @@ def stage_draft(state, data):
                  "excluded": state["excluded"], "search": state["search"],
                  "prior_counts": {"tips": len(state["snapshot"]["tips"]),
                                   "covered": len(state["snapshot"]["covered"]["covered"])},
-                 "known": [{"tip": r.get("tip"), "how": r.get("how")} for r in state["snapshot"]["tips"]]})
+                 "novelty": state["novelty"]})
 
 
 def recover_transaction(root, transaction):
@@ -704,7 +779,7 @@ def stage_finish(state, data):
 
 STAGES = {name: globals()["stage_" + name] for name in (
     "queries", "search", "metadata", "videos", "transcripts", "candidates",
-    "chosen", "details", "reviewed", "draft", "finish")}
+    "compared", "chosen", "details", "reviewed", "draft", "finish")}
 
 
 def next_output(state, op, output):
@@ -713,8 +788,22 @@ def next_output(state, op, output):
     index = order.index(op)
     if index + 1 < len(order) and order[index + 1] in state.get("receipts", {}):
         return {"items": [], "count": 0, "run": state["run"], "cached": True}
-    if op == "details":
-        return review_tasks(state)
+    try:
+        if output.get("_prepare") == "comparison":
+            output = prepare_comparison(state)
+        elif op == "details":
+            output = review_tasks(state)
+        for item in output.get("items", []):
+            if "task" in item and "input" in item:
+                require(request_size(item) < REQUEST_CAP,
+                        state.get("phase", op) + " 입력이 AI 상한을 넘습니다. 자동 절단하지 않습니다")
+    except (ValueError, TypeError, KeyError) as exc:
+        return {"success": False, "status": "blocked", "stage": op,
+                "accepted": op in state.get("receipts", {}), "error": str(exc),
+                "run": state["run"], "evidence": str(Path(state["run"]) / "state.json"),
+                "resume": ({"op": "start", "config": state["config"]} if op == "start" else
+                           {"op": op, "run": state["run"], "data": {"items": []}})}
+    atomic(Path(state["run"]) / "state.json", state)
     if op == "transcripts":
         for vid, source in state["sources"].items():
             atomic(Path(source["path"]), transcript_document(source_segments(state, vid)))
@@ -730,6 +819,7 @@ def run(args):
     state_path = directory / "state.json"
     state = load_json(state_path)
     require(state and state.get("run") == str(directory), "보고서 실행 상태를 찾지 못했습니다")
+    require(state.get("version") == VERSION, "실행 상태 버전 변경: 기존 상태는 보존하고 새 run_id로 실행하세요")
     op = args.get("op")
     if op == "revise":
         reason = text_field(args, "reason")
@@ -760,6 +850,10 @@ def run(args):
         payload_hash = digest(unpack(args.get("data")))
         completed = state.setdefault("receipts", {}).get(op)
         if completed:
+            require(completed.get("version") == VERSION
+                    and completed.get("scope_hash") == digest([state["config"], state["snapshot_hash"]])
+                    and completed.get("output_hash") == digest(completed["output"]),
+                    "완료 영수증의 버전·범위·출력 지문 불일치")
             empty_replay = rows(args.get("data")) == []
             require(empty_replay or completed["input_hash"] == payload_hash,
                     "끝난 단계의 입력 변경: 새 run에서 재검토하세요")
@@ -775,9 +869,12 @@ def run(args):
                     "error": str(exc), "run": str(directory),
                     "evidence": str(directory / ("input-" + op + ".json"))}
         output.setdefault("run", state["run"])
-        state["receipts"][op] = {"input_hash": payload_hash, "output": output}
+        state["receipts"][op] = {
+            "version": VERSION, "scope_hash": digest([state["config"], state["snapshot_hash"]]),
+            "input_hash": payload_hash, "output_hash": digest(output), "output": output}
+        # acceptance는 다음 요청 준비보다 먼저 원자적으로 확정한다.
         atomic(state_path, state)
-        return output
+        return next_output(state, op, output)
 
 
 if __name__ == "__main__":

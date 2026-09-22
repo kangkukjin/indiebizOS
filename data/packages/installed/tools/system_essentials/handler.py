@@ -673,6 +673,8 @@ def execute(tool_input: dict, context) -> str:
     # _project_path(상대경로 해석)·_path_guard(쓰기 범위 검증)를 주입 — 형제 모듈이 소비.
     if tool_name in _OP_DISPATCHERS:
         op = tool_input.get("op") or _OP_DEFAULTS.get(tool_name)
+        if tool_name == "script_op" and "input_as" in tool_input and op != "run":
+            return json.dumps({"success": False, "error": "input_as는 run 전용입니다."}, ensure_ascii=False)
         fn = _OP_DISPATCHERS[tool_name].get(op)
         if fn is None:
             return json.dumps({"success": False,

@@ -27,6 +27,10 @@ def fixture_ai(item):
     if "selected:[영상ID]" in task:
         return {"selected": list(IDS), "decisions": [
             {"video_id": r["video_id"], "reason": "서로 다른 복구 방식"} for r in source["videos"]]}
+    if "matched_ids:[known_id]" in task:
+        return {"batch_id": source["batch_id"], "decisions": [
+            {"candidate_id": r["candidate_id"], "verdict": "novel", "matched_ids": [],
+             "reason": "기존 방법과 다른 복구 절차"} for r in source["candidates"]]}
     if "keep:boolean" in task:
         return {"decisions": [{"candidate_id": r["candidate_id"], "keep": True,
                                "reason": "기존 자료에 없는 구체 방법"} for r in source["candidates"]]}
@@ -64,7 +68,10 @@ def execute(tmp_path, monkeypatch):
         "tips_dataops", ROOT / "data/packages/installed/tools/data-ops/handler.py")
     dataops = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(dataops)
+    from common.pkg_utils import load_sibling
+    scriptops = load_sibling(str(ROOT / "data/packages/installed/tools/system_essentials/handler.py"), "script_ops")
     calls, stages = [], {}
+    model_calls = []
     corrupt = {}
     class DB:
         def find_phrase_by_alias(self, name):
@@ -87,7 +94,8 @@ def execute(tmp_path, monkeypatch):
         if node == "table" and "data_" + str(act) in dataops._DISPATCH:
             return dataops.execute(p, ToolContext(project, "data_" + act))
         if node == "self" and act == "script":
-            args = helper.unpack(p["args"])
+            args, error, _ = scriptops._stdin_args(p)
+            assert error is None, error
             stage = args["op"]
             if stage in corrupt:
                 args = corrupt[stage](copy.deepcopy(args))
@@ -108,6 +116,7 @@ def execute(tmp_path, monkeypatch):
             return {"success": True, "items": [{"start": 0.0, "duration": 8.0,
                                                "text": QUOTES[IDS.index(vid)]}]}
         if node == "self" and act == "struct":
+            model_calls.append(("struct", p["schema"]))
             vid = Path(p["file"]).stem.removeprefix("transcript-")
             n = IDS.index(vid)
             assert isinstance(p["schema"], str)
@@ -123,6 +132,8 @@ def execute(tmp_path, monkeypatch):
         if node == "table" and act == "ai":
             source = p.get("_prev_result") if "_prev_result" in p else p.get("items")
             inputs = helper.rows(source)
+            if inputs:
+                model_calls.append(("ai", len(inputs)))
             return {"success": True, "items": [{**r, "result": fixture_ai(r)} for r in inputs],
                     "rows_in": len(inputs), "rows_out": len(inputs)}
         return original(ti, project, agent_id)
@@ -137,6 +148,7 @@ def execute(tmp_path, monkeypatch):
         return workflow_engine.execute_pipeline(steps, str(tmp_path))
     run.stages, run.calls, run.corrupt = stages, calls, corrupt
     run.root = tmp_path / "reports"
+    run.model_calls = model_calls
     return run
 
 
@@ -370,3 +382,87 @@ def test_static_contract_and_real_registration_gates():
     from ibl_typecheck import typecheck_code
     result = typecheck_code("[def:AI팁보고서쓰기]{\n" + BODY + "\n}")
     assert result["ok"] and result["fn_returns"]["AI팁보고서쓰기"].startswith("items")
+
+
+def test_accepted_extraction_survives_next_request_preparation_failure(execute, monkeypatch):
+    prepare = helper.prepare_comparison
+    def blocked(state):
+        raise ValueError("fixture: 다음 요청 입력 상한")
+    monkeypatch.setattr(helper, "prepare_comparison", blocked)
+    assert not execute()["success"]
+    directory = execute.root / "_runs/test"
+    state = helper.load_json(directory / "state.json")
+    assert "candidates" in state["receipts"] and len(state["candidates"]) == 2
+    before = list(execute.model_calls)
+    response = helper.run({"op": "candidates", "run": str(directory), "data": {"items": []}})
+    assert response["status"] == "blocked" and response["accepted"]
+    assert response["resume"]["op"] == "candidates"
+    monkeypatch.setattr(helper, "prepare_comparison", prepare)
+    assert final(execute())["status"] == "reviewed_draft"
+    # 앞 단계 table:ai와 1차 struct 호출을 반복하지 않는다.
+    assert execute.model_calls[:len(before)] == before
+    assert sum(k == "struct" and "candidate_id" not in v for k, v in execute.model_calls) == 2
+
+
+def test_large_ledger_is_fully_compared_and_not_repeated_in_editorial(execute):
+    known = [{"tip": "기존 팁 " + str(i), "how": "다른 방법 " * 80} for i in range(647)]
+    helper.atomic(execute.root / "db/tips.json", known)
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    batches = state["comparison_batches"]
+    assert len(batches) > 1
+    ids = [k for batch in batches.values() for k in batch["known_ids"]]
+    assert len(ids) == len(set(ids)) == len(known)
+    assert set(ids) == {"k" + str(i + 1) for i in range(len(known))}
+    for stage in ("draft", "finish"):
+        source = execute.stages[stage]["data"]["items"][0]["input"]
+        assert "known" not in source
+        assert source["novelty"]["known_count"] == 647
+    assert helper.load_json(execute.root / "db/tips.json") == known
+
+
+@pytest.mark.parametrize("mutation", ["missing_batch", "missing_candidate", "unknown", "bad_id"])
+def test_incomplete_comparison_cannot_reach_selection(execute, mutation):
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "원본"}])
+    def corrupt(args):
+        data = args["data"]["items"]
+        if mutation == "missing_batch":
+            data.clear()
+        elif mutation == "missing_candidate":
+            data[0]["result"]["decisions"].pop()
+        elif mutation == "unknown":
+            data[0]["result"]["decisions"][0]["verdict"] = "unknown"
+        else:
+            data[0]["result"]["decisions"][0].update(verdict="duplicate", matched_ids=["outside"])
+        return args
+    execute.corrupt["compared"] = corrupt
+    assert not execute()["success"]
+    assert "chosen" not in execute.stages
+
+
+def test_completed_reentry_makes_zero_new_model_calls(execute):
+    final(execute())
+    before = list(execute.model_calls)
+    final(execute())
+    assert execute.model_calls == before
+
+
+def test_receipt_tampering_and_old_version_are_rejected(execute):
+    final(execute())
+    path = execute.root / "_runs/test/state.json"
+    state = helper.load_json(path)
+    state["receipts"]["finish"]["output"]["items"][0]["new_tips"] = 999
+    helper.atomic(path, state)
+    with pytest.raises(ValueError, match="지문"):
+        helper.run(execute.stages["finish"])
+    state["version"] = 1
+    helper.atomic(path, state)
+    with pytest.raises(ValueError, match="버전"):
+        helper.run(execute.stages["finish"])
+
+
+def test_structural_criteria_removed_but_semantic_review_remains():
+    assert "criteria:" not in BODY
+    assert BODY.count("preserve_rows:true") == 7
+    assert 'op:"reviewed"' in BODY and 'op:"finish"' in BODY
+    assert "원문과 팁을 독립 대조" in BODY and "품질 기준을 독립 검토" in BODY

@@ -1334,7 +1334,7 @@
   "self:script": {
    "fields": {
     "description": "66b2123ce383",
-    "target_description": "a0d00c4a209b",
+    "target_description": "cd02bf59c66e",
     "implementation": "3f68ee7a7d84",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1344,8 +1344,8 @@
     "router": "ebbb1532efbc",
     "tool": "5bf697e1053f"
    },
-   "reviewed": "2026-09-18",
-   "examples": 51
+   "reviewed": "2026-09-23",
+   "examples": 54
   },
   "self:sheet": {
    "fields": {
@@ -2150,7 +2150,7 @@
   "table:ai": {
    "fields": {
     "description": "e17c5e8b93dd",
-    "target_description": "8ae0cb45fa19",
+    "target_description": "595562eeac9e",
     "implementation": "4aa5dfa30c86",
     "returns": "5450ffb2cf8a",
     "target_key": "4ec46c9ca40f",
@@ -2159,8 +2159,8 @@
     "router": "ebbb1532efbc",
     "tool": "3fe40b0f97de"
    },
-   "reviewed": "2026-09-21",
-   "examples": 12
+   "reviewed": "2026-09-23",
+   "examples": 13
   },
   "table:brief": {
    "fields": {

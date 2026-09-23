@@ -1,0 +1,126 @@
+{
+  "observed_at": "2026-09-23T02:37:57.781629+00:00",
+  "baseline_commit": "26c77500a5e08c5f33c505e8d45951f318246756",
+  "method": "Isolated Python process; direct legacy payload helper and in-memory function definitions. No model, tool, workflow or production DB execution. These probes are not full-language benchmarks.",
+  "source_sha256": {
+    "backend/ibl/workflow_binding.py": "62c3de5c362a442714c0fe63088b34c066f44bb427f532542043cf3cddfdd19c",
+    "backend/ibl/ibl_typecheck.py": "6f7ad5b1af0ca71727278cda2469c3d508ac7707cec39c5823adc04af6719d12",
+    "backend/ibl/ibl_exec_each.py": "903538ee8cad2e2bd0460c1f9da37c6d56181c50cfded3ed545a54bbc08de3c6",
+    "backend/ibl/workflow_contract.py": "1088f56908fc7968a5abd9f6274665283b5385aad740b5203d876ab0f61b3181",
+    "backend/common/currency.py": "8323c8f935cfd5d01035938a182fb0eefac66afeb84744d29101b1439cd581c4",
+    "backend/ibl/ibl_code_ir.py": "d82cd2c88539b16e223cb638d82ab779120ccb63de975c6361d8b23f7026fb79"
+  },
+  "legacy_payload_probe": [
+    {
+      "input": {
+        "items": [
+          {
+            "id": "a"
+          }
+        ],
+        "success": true
+      },
+      "output": [
+        {
+          "id": "a"
+        }
+      ],
+      "output_type": "list"
+    },
+    {
+      "input": {
+        "items": [],
+        "success": true
+      },
+      "output": {
+        "items": [],
+        "success": true
+      },
+      "output_type": "dict"
+    },
+    {
+      "input": {
+        "items": [
+          {
+            "id": "a"
+          }
+        ],
+        "success": true,
+        "provenance": {
+          "source": "fixture"
+        }
+      },
+      "output": {
+        "items": [
+          {
+            "id": "a"
+          }
+        ],
+        "success": true,
+        "provenance": {
+          "source": "fixture"
+        }
+      },
+      "output_type": "dict"
+    }
+  ],
+  "dependency_cache_probe": {
+    "code": "[fn:outer]{} >> [table:select]{columns:[\"a\"]}",
+    "before": {
+      "ok": true,
+      "issues": [],
+      "types": [
+        "(1) items⟨a⟩"
+      ],
+      "fn_returns": {
+        "outer": "items⟨a⟩"
+      }
+    },
+    "after_child_change_warm": {
+      "ok": true,
+      "issues": [],
+      "types": [
+        "(1) items⟨a⟩"
+      ],
+      "fn_returns": {
+        "outer": "items⟨a⟩"
+      }
+    },
+    "after_child_change_cold": {
+      "ok": false,
+      "issues": [
+        {
+          "severity": "error",
+          "statement": 1,
+          "step": 2,
+          "at": "table:select",
+          "message": "'a' 열이 없습니다 — 앞 문장이 열을 items⟨b⟩ 로 확정했습니다.",
+          "hint": "실제 행의 열 가운데 고르세요. 보존된 값의 구조는 turn_vars.types에 있습니다.",
+          "expected": [
+            "b"
+          ],
+          "got": "a"
+        }
+      ],
+      "types": [
+        "(1) items⟨a⟩"
+      ],
+      "fn_returns": {
+        "outer": "items⟨b⟩"
+      }
+    },
+    "definitions_before": {
+      "outer": "[fn:inner]{}",
+      "inner": "[table:select]{items:[{a:1}],columns:[\"a\"]}"
+    },
+    "definitions_after": {
+      "outer": "[fn:inner]{}",
+      "inner": "[table:select]{items:[{b:1}],columns:[\"b\"]}"
+    }
+  },
+  "limits": [
+    "Legacy helper observations do not imply every variable route uses this path.",
+    "No implementation of proposed edition 2 exists in this artifact.",
+    "No first-generation model comparison or time/token improvement was measured."
+  ]
+}

@@ -79,7 +79,10 @@ def _op_info(tool_input, yt):
 # 병기(items 1행 스냅샷)는 **op 함수(=액션 경계)** 에서 한다 — 공용 헬퍼
 # get_youtube_info 는 relay·tool_youtube 도 쓰므로 거기 넣으면 내부 호출자까지 오염된다.
 # sense:stock#info 선례(2026-08-19)와 같은 자리·같은 방식.
-_INFO_ROW_KEYS = ("title", "duration", "uploader", "view_count", "upload_date")
+_INFO_ROW_KEYS = ("title", "duration", "uploader", "view_count", "upload_date",
+                  "like_count", "comment_count", "channel", "channel_id", "channel_url",
+                  "uploader_id", "uploader_url", "channel_follower_count", "channel_is_verified",
+                  "description", "observed_at")
 
 
 def _snapshot_row(result, video_id=None, url=None):

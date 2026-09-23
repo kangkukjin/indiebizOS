@@ -24,6 +24,7 @@ import unicodedata
 from types import SimpleNamespace
 
 sourceflow = load_sibling(__file__, "ai_tips_sources")
+selection = load_sibling(__file__, "ai_tips_selection")
 
 
 def source_api():
@@ -252,61 +253,11 @@ def stage_search(state, data):
 
 
 def stage_metadata(state, data):
-    expected = {r["video_id"]: r for r in state["search"]["candidates"]}
-    received = keyed(rows(data, failures=True), "video_id", expected)
-    metadata, excluded = [], []
-    today = date(state["config"]["date"])
-    for vid, wrapper in received.items():
-        try:
-            infos = rows(wrapper.get("data")) if not wrapper.get("_error") else []
-            require(len(infos) == 1, "영상 정보 1건 필요")
-            info = infos[0]
-            require(info.get("video_id", vid) == vid, "메타데이터 ID 변경")
-            uploaded = text_field(info, "upload_date")
-            age = (today - date(uploaded)).days
-            duration = info.get("duration")
-            require(isinstance(duration, (int, float)) and not isinstance(duration, bool)
-                    and duration > 0, "길이 미확인")
-            r = {"video_id": vid, "title": text_field(info, "title"),
-                 "channel": info.get("channel") or info.get("uploader"),
-                 "url": "https://www.youtube.com/watch?v=" + vid,
-                 "upload_date": uploaded, "duration": duration,
-                 "strata": expected[vid]["strata"]}
-            text_field(r, "channel")
-            if age < 0 or age > 180:
-                excluded.append({**r, "verdict": "too_old" if age > 180 else "not_selected",
-                                 "note": "허용 날짜 범위 밖"})
-            else:
-                metadata.append(r)
-        except (ValueError, TypeError) as exc:
-            excluded.append({"video_id": vid, "verdict": "not_selected", "metadata_error": str(exc),
-                             "note": "메타데이터 확인 실패: " + str(exc)})
-    require(len(metadata) >= 2, "180일 내 날짜가 확인된 새 영상이 2편 미만입니다")
-    state["metadata"], state["excluded"] = metadata, excluded
-    return task(state, "videos",
-                "새 영상을 2~4편 고른다. result={selected:[영상ID],decisions:[{video_id,reason}]}."
-                "모든 후보를 한 번씩 판정. 최근성·독자에게 새로운 실행법·초보 관점도 고려한다. "
-                "검색 층을 섞고 관련 회의적 관점이 있으면 포함한다. 60분 초과는 최대 1편. "
-                "제목만으로 팁의 실재를 확정하지 말고 자막 검토 대상으로 선정하라.",
-                {"topic": state["config"]["topic"], "videos": metadata})
+    return selection.metadata(source_api(), state, data)
 
 
 def stage_videos(state, data):
-    result = answer(data)
-    selected = result.get("selected")
-    require(isinstance(selected, list) and 2 <= len(selected) <= 4, "선정 영상은 2~4편")
-    require(len(set(selected)) == len(selected), "선정 영상 중복")
-    meta = keyed(state["metadata"], "video_id")
-    require(set(selected) <= set(meta), "미확인 영상 선정")
-    decisions = keyed(result.get("decisions", []), "video_id", meta)
-    for row in decisions.values():
-        text_field(row, "reason")
-    require(sum(meta[v]["duration"] > 3600 for v in selected) <= 1, "60분 초과 영상은 최대 1편")
-    strata = {s for v in selected for s in meta[v]["strata"]}
-    require(len(strata) >= 2, "한 검색 층만 선정됐습니다")
-    state["videos"] = [meta[v] for v in selected]
-    state["video_decisions"] = decisions
-    return {"items": state["videos"], "count": len(selected)}
+    return selection.videos(source_api(), state, data)
 
 
 def segments(envelope):
@@ -773,8 +724,13 @@ def stage_compared(state, data):
     return task(state, "chosen",
                 "원장 전체 분할 비교 결과를 참고해 이번 후보끼리의 의미 중복과 실용 가치를 검토한다. "
                 "8~15개를 목표로 하되 가치가 없으면 줄여라. 영상별 최소 개수 없음. "
-                "result={decisions:[{candidate_id,keep:boolean,reason}]}로 모든 후보를 판정한다.",
-                {"topic": state["config"]["topic"], "candidates": eligible,
+                "result={decisions:[{candidate_id,keep:boolean,reason,source_assessment,popularity_assessment,value_assessment}]}로 "
+                "모든 후보를 판정한다. source_profiles를 video_id로 연결해 출처와 인기를 확인하고 "
+                "구체 행동·근거·적용 조건·독자 효용을 종합해 남길 가치를 스스로 판단한다. "
+                "남긴 팁에는 세 평가를 각각 짧고 구체적인 한 문장으로 적는다. 제외 팁은 reason에 핵심 근거를 압축하고 "
+                "세 평가 필드를 생략할 수 있다. 불확실성을 밝히고 유명세로 빈약한 방법을 통과시키지 않는다. "
+                + selection.SOURCE_RULE,
+                {"topic": state["config"]["topic"], "candidates": eligible, "source_profiles": selection.profiles(state),
                  "novelty": novelty_view(state)})
 
 
@@ -786,6 +742,7 @@ def stage_chosen(state, data):
         require(type(decision.get("keep")) is bool, "keep은 명시적인 boolean")
         text_field(decision, "reason")
         if decision["keep"]:
+            selection.assessments(source_api(), state, decision, tip=True)
             chosen.append(source[cid])
     require(1 <= len(chosen) <= 15, "새로운 팁이 없거나 15개를 넘었습니다")
     state["chosen"], state["tip_decisions"] = chosen, decisions
@@ -885,11 +842,13 @@ def review_tasks(state):
         payload = {"video": next(v for v in state["videos"] if v["video_id"] == vid),
                    "transcript": transcript, "source_coverage": scope,
                    "tips": subset,
+                   "video_selection": state.get("video_decisions", {}).get(vid),
+                   "tip_selections": selection.tip_assessments(state, {r["candidate_id"] for r in subset}),
                    "reader_context": state["config"].get("reader_context", ""),
                    "revision": state.get("revision_feedback", ""),
                    "supplements": supplemental_evidence(state, {r["candidate_id"] for r in subset}),
                    "novelty": novelty_view(state, {r["candidate_id"] for r in subset})}
-        request = task(state, "reviewed", REVIEW_RULE +
+        request = task(state, "reviewed", REVIEW_RULE + selection.SOURCE_RULE +
                        "source_coverage.scope가 complete이면 전문, 그 외에는 전체 구간을 읽고 모은 관련 원문이다. "
                        "색인에 불확실성이 남으면 needs_evidence. 관련 문맥의 누락이 의심되면 통과시키지 마라. "
                        "result={video_id,decisions:[{candidate_id,verdict:'pass|reject|needs_evidence',reason,"
@@ -952,7 +911,8 @@ def stage_reviewed(state, data):
                 "summary는 대표 1~5개, try_ids는 0~3개. video_opinions는 선택 영상 전부. "
                 "의견과 다음 질문은 편집자 해석으로 명시하며 입증된 외부 사실처럼 쓰지 않는다. "
                 "같은 조건의 상반된 주장일 때만 대립으로 표현. 한계를 숨기거나 새 팁을 만들지 않는다.",
-                {"topic": state["config"]["topic"], "tips": accepted, "videos": state["videos"],
+                {"topic": state["config"]["topic"], "tips": accepted, "videos": selection.profiles(state),
+                 "tip_selections": selection.tip_assessments(state, {r["candidate_id"] for r in accepted}),
                  "excluded": state["excluded"], "review": audit,
                  "supplements": supplemental_evidence(state),
                  "novelty_scope": {"known_count": state["novelty"]["known_count"],
@@ -1020,6 +980,9 @@ def render(state, counts):
                 "- **보정**: " + (tip["hype"] or "별도 보정 없음. 효과는 직접 재현하지 않음."),
                 "- **우리 시스템 함의** (편집자 해석): " + tip["implication_class"] + " — " +
                 tip["implication"], ""]
+        assessment = state.get("tip_decisions", {}).get(tip["candidate_id"], {}).get("value_assessment")
+        if assessment:
+            out += ["- **선정 가치 판단**: " + safe_inline(assessment), ""]
     if editorial["try_ids"]:
         out += ["## 시도 후보", ""] + ["- " + tips[cid]["tip"] for cid in editorial["try_ids"]] + [""]
     out += ["## 오늘의 영상", ""]
@@ -1028,6 +991,11 @@ def render(state, counts):
         out += ["- [" + safe_inline(video["title"]) + "](" + video["url"] + ") — " +
                 safe_inline(video["channel"]) + " · 업로드 " + video["upload_date"] +
                 " · " + str(video["duration"]) + "초. **편집자 의견**: " + row["opinion"]]
+        assessment = state.get("video_decisions", {}).get(row["video_id"], {})
+        if state.get("selection_policy", 1) >= 2:
+            out += ["  - " + safe_inline(selection.popularity_text(video)),
+                    "  - 출처 판단: " + safe_inline(assessment.get("source_assessment", "미확인")),
+                    "  - 인기 판단: " + safe_inline(assessment.get("popularity_assessment", "미확인"))]
     out += ["", "## 지켜볼 점 / 내일 주제 후보", ""] + ["- " + x for x in editorial["watch_points"]]
     out += ["", "## 이 호의 한계", "",
             "- 자막 전문에 근거했다. 영상의 화면은 확인하지 않았고 팁의 효과를 직접 재현하지 않았다.",
@@ -1096,6 +1064,8 @@ def stage_draft(state, data):
                 "보고서 편집 결과를 검수한다. 자막의 전 구간 추출·색인과 독립 내용 검토(reviews)가 원문 대조를 담당했고 "
                 "모든 인용·시점은 원문과 결정론 검증했다. 여기서는 그 검토를 무조건 승인하지 말고 "
                 "근거 행·검토 이유의 모순, 불충분한 방법, 편집 과정에 새로 생긴 주장과 과장을 확인한다. "
+                "출처·인기·가치 판단이 실제 영상 메타데이터와 원문 근거에 맞는지도 검토한다. "
+                "조회수·인증·자기소개를 정확성이나 전문성 보증으로 썼거나 미확인 경력·인기를 만들어내면 실패다. "
                 "원문 전문을 다시 받지 않았다는 이유 자체는 실패 사유가 아니다. "
                 "novelty는 원장 전체 분할 비교의 범위·판정·근거다. known_count=0만 기존 항목 0개다. "
                 "전체 원장 재비교는 앞 단계가 담당했으며 원본 전체의 미전달 자체는 실패 이유가 아니다. "
@@ -1115,7 +1085,8 @@ def stage_draft(state, data):
                  "reviews": [{k: r[k] for k in ("candidate_id", "verdict", "reason")}
                              for r in state["review_audit"]],
                  "supplements": supplemental_evidence(state),
-                 "videos": state["videos"],
+                 "videos": selection.profiles(state),
+                 "tip_selections": selection.tip_assessments(state, {r["candidate_id"] for r in state["final_tips"]}),
                  "metadata": [{k: r[k] for k in ("video_id", "upload_date", "duration")}
                               for r in state["metadata"]],
                  "excluded": state["excluded"], "search": state["search"],

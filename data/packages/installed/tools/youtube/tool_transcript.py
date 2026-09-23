@@ -11,7 +11,7 @@ import shutil
 import re
 import json
 from runtime_utils import expand_body_path  # 경로 펼침 단일 해소점 (~workspace/·~)
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 from common.platform_utils import find_binary, install_hint, open_url
 
@@ -219,7 +219,7 @@ def merge_transcript_segments(segments: List[dict], max_duration: float = 60.0) 
 
 
 def get_youtube_info(url: str) -> dict:
-    """YouTube 동영상 정보 조회"""
+    """한 번의 메타데이터 조회로 발행자·인기 지표도 보존한다. 미제공은 0이 아닌 None."""
     try:
         import yt_dlp
     except ImportError:
@@ -233,7 +233,12 @@ def get_youtube_info(url: str) -> dict:
                 'title': info.get('title', 'Unknown'),
                 'duration': info.get('duration', 0),
                 'uploader': info.get('uploader', 'Unknown'),
-                'view_count': info.get('view_count', 0),
+                'view_count': info.get('view_count'),
+                **{key: info.get(key) for key in (
+                    'like_count', 'comment_count', 'channel', 'channel_id', 'channel_url',
+                    'uploader_id', 'uploader_url', 'channel_follower_count', 'channel_is_verified',
+                    'description')},
+                'observed_at': datetime.now(timezone.utc).isoformat(),
                 'upload_date': info.get('upload_date'),  # YYYYMMDD — 최신성 필터(AI 팁 보고서 6개월 규칙 등)에 필요
             }
     except Exception as e:

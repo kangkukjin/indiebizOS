@@ -68,5 +68,38 @@ def test_batch_empty_section_survives_and_network_failure_stays_failure():
     assert out["sections"][0]["status"] == "empty"
 
 
+@pytest.mark.parametrize("provided", [False, True])
+def test_video_info_preserves_publisher_metrics_in_single_request(monkeypatch, provided):
+    handler = load_sibling(HANDLER, "handler")
+    transcript = load_sibling(HANDLER, "tool_transcript")
+    info = {"title": "Fixture", "duration": 120, "uploader": "Publisher", "upload_date": "20260924"}
+    fields = {"view_count": 0, "like_count": 120, "comment_count": 9,
+              "channel": "Named Channel", "channel_id": "UCfixture", "channel_url": "https://www.youtube.com/@fixture",
+              "uploader_id": "@fixture", "uploader_url": "https://www.youtube.com/@fixture",
+              "channel_follower_count": 4000, "channel_is_verified": False, "description": "Self-reported expertise"}
+    if provided:
+        info.update(fields)
+    calls = []
+    class Downloader:
+        def __init__(self, options):
+            pass
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            pass
+        def extract_info(self, url, download):
+            calls.append((url, download))
+            return info
+    monkeypatch.setitem(sys.modules, "yt_dlp", SimpleNamespace(YoutubeDL=Downloader))
+    result = handler._op_info({"video_id": "abcdefghijk"}, transcript)
+    assert result["success"] and len(calls) == 1 and calls[0][1] is False
+    row = result["items"][0]
+    assert row["upload_date"] == "2026-09-24"
+    for key, value in fields.items():
+        assert row[key] == (value if provided else None)
+    from datetime import datetime
+    assert datetime.fromisoformat(row["observed_at"]).utcoffset().total_seconds() == 0
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, *sys.argv[1:]]))

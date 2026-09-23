@@ -2095,7 +2095,7 @@
   "sense:video": {
    "fields": {
     "description": "6a78e6632767",
-    "target_description": "9f91da44f0f1",
+    "target_description": "c087249a5290",
     "implementation": "62a2d08dca2f",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
@@ -2106,8 +2106,8 @@
     "router": "ebbb1532efbc",
     "tool": "3979cff852e8"
    },
-   "reviewed": "2026-09-18",
-   "examples": 57
+   "reviewed": "2026-09-24",
+   "examples": 58
   },
   "sense:weather": {
    "fields": {

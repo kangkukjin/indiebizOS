@@ -92,7 +92,7 @@
     },
     {
       "name": "video_op",
-      "description": "유튜브 동영상 조회·시청 (op 분기) — [sense:video]. 검색은 search_youtube.\n- op=info(기본): 메타데이터(제목·조회수·채널). url/video_id 필수.\n- op=transcript: 자막/스크립트. language 옵션.\n- op=languages: 사용 가능한 자막 언어 목록.\n- op=channel: 채널 핸들(@name)·URL·channel_id 해석 + 최신 영상. handle/url/channel_id 중 하나.\n- op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션. 긴 자막은 전체를 구간별로 요약한 뒤 통합한다(원문 절단 없음).\n",
+      "description": "유튜브 동영상 조회·시청 (op 분기) — [sense:video]. 검색은 search_youtube.\n- op=info(기본): 메타데이터(제목·발행 채널/ID/URL·설명·조회수/좋아요/댓글/구독자·인증·observed_at). 미제공 지표는 null. url/video_id 필수.\n- op=transcript: 자막/스크립트. language 옵션.\n- op=languages: 사용 가능한 자막 언어 목록.\n- op=channel: 채널 핸들(@name)·URL·channel_id 해석 + 최신 영상. handle/url/channel_id 중 하나.\n- op=summarize: 자막+AI요약+HTML 보고서+브라우저 열기. summary_length 옵션. 긴 자막은 전체를 구간별로 요약한 뒤 통합한다(원문 절단 없음).\n",
       "input_schema": {
         "type": "object",
         "properties": {

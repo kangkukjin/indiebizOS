@@ -32,7 +32,9 @@ def fixture_ai(item):
         return {"queries": [{"stratum": s, "query": "AI tips " + s} for s in helper.STRATA]}
     if "selected:[영상ID]" in task:
         return {"selected": list(IDS), "decisions": [
-            {"video_id": r["video_id"], "reason": "서로 다른 복구 방식"} for r in source["videos"]]}
+            {"video_id": r["video_id"], "reason": "서로 다른 복구 방식",
+             "source_assessment": "제공 채널 정보만 확인, 전문성 미확인",
+             "popularity_assessment": "제공된 반응 수치 범위에서 평가"} for r in source["videos"]]}
     if "repair_id,candidate_id" in task:
         return {"repair_id": source["repair_id"], "candidate_id": source["candidate"]["candidate_id"],
                 "verdict": "unknown", "matched_ids": [], "reason": "fixture: 독립 확인 불가"}
@@ -42,7 +44,10 @@ def fixture_ai(item):
              "reason": "기존 방법과 다른 복구 절차"} for r in source["candidates"]]}
     if "keep:boolean" in task:
         return {"decisions": [{"candidate_id": r["candidate_id"], "keep": True,
-                               "reason": "기존 자료에 없는 구체 방법"} for r in source["candidates"]]}
+                               "reason": "기존 자료에 없는 구체 방법",
+                               "source_assessment": "출처 정보의 한계를 인지함",
+                               "popularity_assessment": "인기만으로 가치를 판정하지 않음",
+                               "value_assessment": "원문에 실행 가능한 복구 행동이 있어 시험할 가치"} for r in source["candidates"]]}
     if "verdict:'pass|reject|needs_evidence'" in task:
         return {"video_id": source["video"]["video_id"], "decisions": [
             {"candidate_id": r["candidate_id"], "verdict": "pass", "reason": "원문에서 방법 확인",
@@ -83,6 +88,7 @@ def execute(tmp_path, monkeypatch):
     calls, stages = [], {}
     model_calls = []
     transcripts, struct_calls, struct_hooks = {}, [], []
+    metadata_overrides = {}
     search_calls, search_responses = [], {}
     corrupt = {}
     class DB:
@@ -132,7 +138,7 @@ def execute(tmp_path, monkeypatch):
             calls.append((p["op"], vid))
             if p["op"] == "info":
                 return {"success": True, "items": [{"video_id": vid, "title": "Fixture " + vid,
-                        "uploader": "Fixture Channel", "duration": 240, "upload_date": "2026-09-01"}]}
+                        "uploader": "Fixture Channel", "duration": 240, "upload_date": "2026-09-01", **metadata_overrides.get(vid, {})}]}
             if vid in transcripts:
                 return {"success": True, "items": copy.deepcopy(transcripts[vid])}
             return {"success": True, "items": [{"start": 0.0, "duration": 8.0,
@@ -187,6 +193,7 @@ def execute(tmp_path, monkeypatch):
     run.root = tmp_path / "reports"
     run.model_calls = model_calls
     run.transcripts, run.struct_calls, run.struct_hooks = transcripts, struct_calls, struct_hooks
+    run.metadata_overrides = metadata_overrides
     run.search_calls, run.search_responses = search_calls, search_responses
     return run
 
@@ -1315,3 +1322,87 @@ def test_character_parts_rejoin_without_inventing_spaces_or_times():
         disconnected = helper.sourceflow.source_rows([units[0], units[2]])
         assert len(disconnected) == 2
         assert all(r['start'] == 10.0 for r in disconnected)
+
+
+def test_publisher_and_popularity_reach_video_choice_tip_choice_review_and_report(execute):
+    observed = '2026-09-24T00:00:00+00:00'
+    execute.metadata_overrides[IDS[0]] = {
+        'view_count': 123456, 'like_count': 3210, 'comment_count': 56,
+        'channel_follower_count': 7890, 'channel_is_verified': True,
+        'channel_id': 'UCsource', 'channel_url': 'https://www.youtube.com/@source',
+        'description': 'Publisher describes firsthand implementation. ' * 100,
+        'observed_at': observed}
+    execute.metadata_overrides[IDS[1]] = {'view_count': 0, 'like_count': None}
+    result = final(execute())
+    state = helper.load_json(execute.root / '_runs/test/state.json')
+    requests = execute.stages['videos']['data']['items'][0]['input']['videos']
+    assert requests[0]['view_count'] == 123456 and requests[0]['description_truncated']
+    assert requests[1]['view_count'] == 0 and requests[1]['like_count'] is None
+    profiles = execute.stages['chosen']['data']['items'][0]['input']['source_profiles']
+    assert profiles[0]['channel_id'] == 'UCsource' and profiles[0]['observed_at'] == observed
+    assert profiles[0]['selection_assessment']['source_assessment']
+    reviews = execute.stages['reviewed']['data']['items']
+    first = next(r for r in reviews if r['video_id'] == IDS[0])
+    assert first['input']['video']['view_count'] == 123456
+    assert first['input']['tip_selections']
+    finish = execute.stages['finish']['data']['items'][0]['input']
+    assert finish['videos'][0]['view_count'] == 123456 and finish['tip_selections']
+    report = Path(result['report']).read_text()
+    assert '조회 123,456' in report and '조회 0' in report and '좋아요 미확인' in report
+    assert '선정 가치 판단' in report and '출처 판단' in report and observed in report
+    assert state['video_decisions'][IDS[0]]['popularity_assessment']
+
+
+@pytest.mark.parametrize('stage,field', [('videos', 'source_assessment'), ('videos', 'popularity_assessment'),
+                                        ('chosen', 'source_assessment'), ('chosen', 'popularity_assessment'),
+                                        ('chosen', 'value_assessment')])
+def test_missing_selection_judgment_cannot_pass(execute, stage, field):
+    def corrupt(args):
+        args['data']['items'][0]['result']['decisions'][0].pop(field)
+        return args
+    execute.corrupt[stage] = corrupt
+    assert not execute('commit')['success']
+    assert not (execute.root / 'db/tips.json').exists()
+    if stage == 'videos':
+        assert not any(op == 'transcript' for op, _ in execute.calls)
+
+
+def test_sixty_candidates_keep_identity_and_metrics_with_explicit_description_excerpts():
+    ids = [f'{i:011d}' for i in range(60)]
+    state = {'config': {'date': '2026-09-24', 'topic': '평가'}, 'run': '/fixture',
+             'search': {'candidates': [{'video_id': vid, 'strata': ['english']} for vid in ids]}}
+    wrappers = [{'video_id': vid, 'data': {'items': [{'video_id': vid, 'title': 'A detailed source title ' * 4,
+                 'duration': 120, 'uploader': 'Source Publisher', 'upload_date': '2026-09-20',
+                 'description': 'Publisher disclosure and described expertise. ' * 200,
+                 'view_count': i, 'like_count': None, 'channel_url': 'https://www.youtube.com/@publisher',
+                 'observed_at': '2026-09-24T00:00:00+00:00'}]}} for i, vid in enumerate(ids)]
+    request = helper.stage_metadata(state, {'items': wrappers})['items'][0]
+    assert helper.request_size(request) < helper.REQUEST_CAP
+    assert [r['video_id'] for r in request['input']['videos']] == ids
+    assert [r['view_count'] for r in request['input']['videos']] == list(range(60))
+    assert all(r['description_truncated'] and r['like_count'] is None for r in request['input']['videos'])
+
+
+def test_selection_remains_ai_judgment_and_captions_only_follow_selected_videos():
+    ids = ['a' * 11, 'b' * 11, 'c' * 11]
+    state = {'config': {'date': '2026-09-24', 'topic': '평가'}, 'run': '/fixture',
+             'search': {'candidates': [{'video_id': vid, 'strata': [s]} for vid, s in zip(ids, ['english','korean','action'])]}}
+    wrappers = [{'video_id': vid, 'data': {'items': [{'video_id': vid, 'title': vid, 'duration': 60,
+                 'uploader': 'Publisher', 'upload_date': '2026-09-20', 'view_count': n}]}}
+                for vid, n in zip(ids, [1000000, 10, 0])]
+    helper.stage_metadata(state, {'items': wrappers})
+    decision = {'selected': ids[1:], 'decisions': [{'video_id': vid, 'reason': '전문 출처와 구체 행동 우선',
+                 'source_assessment': '제공 정보 범위에서 출처를 평가',
+                 'popularity_assessment': '많은 조회수가 낮은 실용성을 보상하지 않음'} for vid in ids]}
+    decision['decisions'][0].pop('source_assessment')
+    decision['decisions'][0].pop('popularity_assessment')
+    result = helper.stage_videos(state, {'items': [{'result': decision}]})
+    assert [r['video_id'] for r in result['items']] == ids[1:]
+    assert result['items'][1]['view_count'] == 0
+
+
+@pytest.mark.parametrize('bad', [True, -1, '1000', 2.5, None])
+def test_bad_or_missing_popularity_is_unknown_not_zero(bad):
+    result = helper.selection.source_fields({'view_count': bad})
+    assert result['view_count'] is None
+    assert helper.selection.source_fields({'view_count': 0})['view_count'] == 0

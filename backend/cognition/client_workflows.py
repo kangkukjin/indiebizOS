@@ -13,6 +13,8 @@ def _value(raw):
     if isinstance(value, dict):
         if value.get('success') is False or value.get('error'):
             raise ValueError('공개 조사 도구 실행 실패')
+        if value.get('edition') == 2 and 'value' in value:
+            return value['value']
         for key in ('final_result', 'result'):
             if key in value:
                 return _value(value[key])

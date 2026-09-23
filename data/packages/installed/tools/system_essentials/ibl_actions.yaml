@@ -32,22 +32,31 @@ nodes:
             path: Text
             offset: Number
             limit: Number
+            format: Text
+            pages: Text
+            tables: Bool
+            sheet: Text
+            max_rows: Number
+            max_blocks: Number
+            extract_images: Bool
+            numbered: Bool
+            tail: Number
+            start_line: Number
+            end_line: Number
           required:
           - path
           pipe_input: path
           result:
             text: Text
             blocks: List<Record>
+            data: Record
           effects:
           - read_external
           adapter:
-            protocol: legacy-envelope
+            protocol: document-value/1
             fixed_params:
-              format: text
               blocks: true
-            value_fields:
-              text: /message
-              blocks: /items
+            value_path: /value
             attachments:
             - path
             - total_lines
@@ -109,7 +118,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-09-23", impl: "80d9066222dc9f26"}
+        path_audited: {at: "2026-09-23", impl: "92b9c7dd47766043"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -121,7 +130,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-09-23", impl: "80d9066222dc9f26"}
+        path_audited: {at: "2026-09-23", impl: "92b9c7dd47766043"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -701,7 +710,7 @@ nodes:
             value_path: /value
           nondeterministic: true
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-09-23", impl: "80d9066222dc9f26"}
+        path_audited: {at: "2026-09-23", impl: "92b9c7dd47766043"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

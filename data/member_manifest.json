@@ -49,7 +49,7 @@
       },
       "path_audited": {
         "at": "2026-09-23",
-        "impl": "80d9066222dc9f26"
+        "impl": "92b9c7dd47766043"
       }
     },
     "self:list": {
@@ -91,7 +91,7 @@
       },
       "path_audited": {
         "at": "2026-09-23",
-        "impl": "80d9066222dc9f26"
+        "impl": "92b9c7dd47766043"
       }
     },
     "self:record": {
@@ -144,7 +144,7 @@
       },
       "path_audited": {
         "at": "2026-09-23",
-        "impl": "80d9066222dc9f26"
+        "impl": "92b9c7dd47766043"
       }
     },
     "self:write": {

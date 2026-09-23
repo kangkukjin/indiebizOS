@@ -475,7 +475,7 @@ class Compiler:
 
 def compile_program(source, registry=None, inputs=None, definitions=None):
     from ibl_v2_adapters import Adapter
-    registry = {k: Adapter(copy.deepcopy(v.contract), v.run) for k, v in (registry or {}).items()}
+    registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize) for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
     compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))
     root = parse(source)
@@ -485,13 +485,15 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
     # Unused definitions must also be well formed; validate to a fixed point for
     # nested forward definitions, without inventing caller-local parameters.
     while set(compiler.functions) - compiler.checked:
-        sid = next(iter(set(compiler.functions) - compiler.checked))
+        sid = sorted(set(compiler.functions) - compiler.checked)[0]
         compiler.function(sid, {})
-    dependencies = {"source": digest(compiler.source), "libraries": digest(compiler.definitions),
+    dependencies = {"source": digest(compiler.source), "libraries": digest(dict(sorted(compiler.definitions.items()))),
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
-                    "source_map": compiler.source_map, "contracts": digest({k: v.contract for k, v in registry.items()}),
+                    "source_map": compiler.source_map, "contracts": digest({k: registry[k].contract for k in sorted(registry)}),
                     "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
-                    "core": digest({p.name: digest(p.read_text()) for p in Path(__file__).parent.glob("ibl_v2_*.py")})}
+                    "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
+                              {Path(__file__).parent / name for name in ("ibl_document_value.py", "ibl_member_library.py",
+                                                                        "ibl_remote_call.py", "ibl_run_journal.py")})})}
     for entry in compiler.issues + compiler.guards:
         old = entry["source_span"]
         entry["source_span"] = span(compiler.source, Node("diagnostic", old["start"], old["end"]))

@@ -111,3 +111,48 @@ def legacy_value_output(stdout):
     if isinstance(value, dict) and (value.get("success") is False or value.get("error")):
         return value, str(value.get("error") or "스크립트가 실패 결과를 반환했습니다.")
     return value, None
+
+
+def member_value_script(params, command, exchange):
+    """Negotiate with the member device; stdin and stdout retain their values."""
+    if params.get("args_file") or params.get("background"):
+        return {"success": False, "error": "회원 스크립트는 명시 args와 동기 실행을 사용합니다."}
+    catalogue = exchange({"op": "script", "action": "list"})
+    if catalogue.get("success") is False:
+        return catalogue
+    if "ibl-script/2" not in catalogue.get("script_protocols", []):
+        return {"success": False, "error_type": "capability", "error": "회원 기기의 스크립트 프로토콜 업데이트가 필요합니다."}
+    op = params.get("op", "run" if params.get("id") else "list")
+    if op == "list":
+        return catalogue
+    command = {**command, "timeout": params.get("timeout", 120)}
+    if op == "register":
+        contract = params.get("callable_contract")
+        if contract:
+            validate_v2_contract(contract)
+            command["callable_contract"] = contract
+        return exchange(command)
+    if op != "run":
+        return exchange(command)
+    entry = next((r for r in catalogue.get("items", []) if r.get("id") == params.get("id")), None)
+    if entry is None:
+        return {"success": False, "error": "회원 기기에 등록되지 않은 스크립트입니다."}
+    contract = entry.get("callable_contract")
+    args = params.get("args") or {}
+    command["args"] = v2_input(entry, args) if contract else args
+    command["script_protocol"] = "ibl-script/2" if contract else "registered-json/1"
+    result = exchange(command)
+    if result.get("success") is False or result.get("error"):
+        return result
+    if result.get("truncated"):
+        return {**result, "success": False, "error": "스크립트 stdout이 잘려 값으로 읽을 수 없습니다."}
+    value, error = v2_output(result.get("stdout", ""), contract) if contract else legacy_value_output(result.get("stdout", ""))
+    if error:
+        details = {k: value[k] for k in ("blocked", "denied", "permission_denied", "error_type")
+                   if not contract and isinstance(value, dict) and k in value}
+        return {**result, **details, "success": False, "error": error}
+    out = {**result, "value": value, "script_protocol": command["script_protocol"]}
+    if not contract:
+        from ibl_honesty import merge_into
+        merge_into(value, out)
+    return out

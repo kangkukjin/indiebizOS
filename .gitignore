@@ -447,3 +447,6 @@ data/recall_index/
 # 업무 정의 교재는 가상 데이터 없는 재사용 계약이다.
 !data/guides/examples/managed_orders.json
 !data/guides/examples/managed_approvals.json
+
+# Durable IBL execution receipts contain private runtime values.
+data/ibl_runs/

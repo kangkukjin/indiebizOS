@@ -202,7 +202,7 @@ def test_member_tool_schema_advertises_only_forwarded_arguments():
     with P.narrow(P.member('a', 4, 'd')):
         tool = runner._build_ibl_tools()[0]
     properties = tool['input_schema']['properties']
-    assert set(properties) == {'code', 'files', 'describe', 'read_result'}
+    assert set(properties) == {'code', 'edition', 'inputs', 'check', 'resume', 'describe', 'read_result'}
     assert 'files_from' not in json.dumps(tool)
     assert 'gnews' not in properties['code']['description']
 

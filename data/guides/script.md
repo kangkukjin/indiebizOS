@@ -194,6 +194,8 @@ stdin은 `{protocol:"ibl-script/2", args:{x:3}, context:{edition:2}}`다.
 stdout은 `{protocol:"ibl-script/2", ok:true, value:{n:6}}` 또는
 `{protocol:"ibl-script/2", ok:false, error:"사유"}`다. `value.error`는 평범한 업무 데이터다.
 입력 이름·반환 타입·JSON·종료 코드를 검사한다. 일반 args 문자열의 몸 경로 별칭은 확장하지 않는다.
-새 계약과 기존 호출의 판본이 다르면 실행 전에 거절한다. 현재 새 프로토콜은 로컬 동기 실행만 지원하며
-회원 기기·원격·background 실행은 협상 구현 전까지 거절한다. 등록 계약을 모르는 script는 순수 캐시 대상으로 간주하지 않는다.
+새 계약과 기존 호출의 판본이 다르면 실행 전에 거절한다. 현재 새 프로토콜은 로컬·회원 PC·인증된 원격 기기의 동기 실행을 지원한다.
+원격은 capabilities의 ibl-script-call/1, 회원 PC는 도우미의 ibl-script/2를 확인한 뒤 실행한다.
+새 wire의 background·회원 args_file·직접 연결 불가 기기의 푸시 큐 전송은 지원하지 않는다.
+원격 응답이 끊기면 결과 불명으로 남기며 같은 실행을 자동 재전송하지 않는다. 등록 계약을 모르는 script는 순수 캐시 대상으로 간주하지 않는다.
 자세한 언어 계약은 [주 IBL 교재](ibl_composition.md)를 읽는다.

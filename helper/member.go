@@ -311,8 +311,13 @@ func runMemberProgramContext(parent context.Context, path, interpreter string, a
 	configureMemberProcess(cmd)
 	cmd.Dir = filepath.Dir(path)
 	cmd.Stdin = bytes.NewReader(raw)
-	out, err := cmd.CombinedOutput()
-	result := map[string]interface{}{"success": err == nil, "stdout": clip(string(out)), "exit": exitCode(err)}
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+	out, err := cmd.Output()
+	result := map[string]interface{}{"success": err == nil, "stdout": clip(string(out)), "stderr": clip(stderr.String()), "exit": exitCode(err)}
+	if len(out) > maxOutput {
+		result["truncated"] = true
+	}
 	if err != nil {
 		result["error"] = fmt.Sprint(err)
 	}

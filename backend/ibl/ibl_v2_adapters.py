@@ -16,6 +16,7 @@ from ibl_v2_expr import boolean
 class Adapter:
     contract: dict
     run: object
+    authorize: object = None
 
 
 @dataclass(frozen=True)
@@ -45,7 +46,7 @@ def validate_contract(contract):
     if not isinstance(writes, dict) or any(v not in contract["params"] for v in writes.values()):
         raise ValueError("write_resources는 자원 종류→선언 인자 이름입니다.")
     adapter = contract.get("adapter", {})
-    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2"}:
+    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1"}:
         raise ValueError("지원하지 않는 어댑터 프로토콜입니다.")
     return contract
 
@@ -99,9 +100,14 @@ def decode_envelope(raw, adapter):
     # Only this explicitly declared legacy envelope has error/status meaning.
     if raw.get("success") is False or raw.get("error"):
         kind = "permission" if raw.get("blocked") or raw.get("denied") or raw.get("permission_denied") or raw.get("error_type") == "permission" else "runtime"
-        if raw.get("error_type") == "capability":
+        if raw.get("error_type") in {"capability", "result_unknown"}:
             kind = "protocol"
         raise Fault("TOOL", str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind)
+    if adapter.get("protocol") == "document-value/1":
+        from ibl_document_value import document_value
+        raw = {**raw, "value": document_value(raw)}
+        if (raw.get("metadata") or {}).get("truncated"):
+            raw["truncated"] = True
     fields = adapter.get("value_fields")
     value = ({k: pointer(raw, p) for k, p in fields.items()} if fields is not None
              else pointer(raw, adapter.get("value_path", "")))
@@ -175,9 +181,6 @@ def load_registry(project_path=".", agent_id=None):
                 plain_arguments(args)
                 params = {**args, **c["adapter"].get("fixed_params", {})}
                 if protocol == "ibl-script/2":
-                    from member_profile import is_member_principal
-                    if is_member_principal():
-                        raise Fault("SCRIPT_CAPABILITY", "회원 기기의 ibl-script/2는 아직 지원하지 않습니다.", kind="permission")
                     params.setdefault("op", "run" if params.get("id") else "list")
                     params["_ibl_edition"] = 2
                 raw = execute_ibl({"_node": node, "action": action, "params": params}, project_path, agent_id=agent_id)
@@ -186,7 +189,12 @@ def load_registry(project_path=".", agent_id=None):
                     boundary = {**boundary, "value_path": ""}
                 value, evidence = decode_envelope(raw, boundary)
                 return Adapted(value, evidence)
-            result[key] = Adapter(contract, run)
+            def authorize(node=node, action=action, ac=action_config):
+                from member_profile import visible
+                current_allowed = get_allowed_nodes()
+                if (current_allowed is not None and not check_node_access(node, current_allowed)) or not visible(node, action, ac):
+                    raise Fault("RECEIPT_ACCESS", "현재 권한으로 이 호출의 영수증을 사용할 수 없습니다.", kind="permission")
+            result[key] = Adapter(contract, run, authorize)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

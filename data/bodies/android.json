@@ -2,7 +2,7 @@
   "_doc": "몸(body) 프로파일 — 'android' 하드웨어가 indiebizOS 단일 코드베이스에서 무엇을 못 돌리는지 선언한다. 번들은 이 선언에서 *파생*된다(손-리스트 아님). 새 몸(iphone/windows/linux…)을 더하려면 data/bodies/<body>.json 하나를 추가하면 된다. 파생 도구 = scripts/build_body_bundle.py.",
   "body": "android",
   "entry": "phone-companion/app/src/main/python/phone_api.py",
-  "_absent_doc": "이 몸에 없는 외부 파이썬 패키지(top-package명). backend 모듈이 이걸 *모듈 최상위에서* import하면 그 몸에선 import 자체가 크래시 → 번들 제외(전이 포함). 가드(try/except·지연 import)된 것은 무관. 안드로이드 Chaquopy pip = fastapi/pydantic/uvicorn/PyYAML/requests/httpx/bs4/feedparser/numpy/Pillow 뿐.",
+  "_absent_doc": "이 몸에 없는 외부 파이썬 패키지(top-package명). backend 모듈이 이걸 *모듈 최상위에서* import하면 그 몸에선 import 자체가 크래시 → 번들 제외(전이 포함). 가드(try/except·지연 import)된 것은 무관. 안드로이드 Chaquopy pip = fastapi/pydantic/uvicorn/PyYAML/filelock/requests/httpx/bs4/feedparser/numpy/Pillow 뿐.",
   "absent_packages": [
     "torch",
     "sentence_transformers",

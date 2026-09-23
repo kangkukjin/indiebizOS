@@ -47,28 +47,30 @@ type Job struct {
 }
 
 type Command struct {
-	ctx          context.Context
-	TaskID       string                 `json:"task_id,omitempty"`
-	OldString    string                 `json:"old_string,omitempty"`
-	NewString    string                 `json:"new_string,omitempty"`
-	Pattern      string                 `json:"pattern,omitempty"`
-	ReplaceAll   bool                   `json:"replace_all,omitempty"`
-	Volume       *float64               `json:"volume,omitempty"`
-	Resources    []string               `json:"resources,omitempty"`
-	Dependencies []string               `json:"dependencies,omitempty"`
-	Dest         string                 `json:"dest,omitempty"`
-	Action       string                 `json:"action,omitempty"`
-	Member       bool                   `json:"member,omitempty"`
-	RequestKey   string                 `json:"request_key,omitempty"`
-	QueryKey     string                 `json:"query_key,omitempty"`
-	Record       map[string]interface{} `json:"record,omitempty"`
-	Query        string                 `json:"query,omitempty"`
-	Limit        int                    `json:"limit,omitempty"`
-	Encoding     string                 `json:"encoding,omitempty"`
-	URL          string                 `json:"url,omitempty"`
-	ScriptID     string                 `json:"id,omitempty"`
-	Interpreter  string                 `json:"interpreter,omitempty"`
-	Args         map[string]interface{} `json:"args,omitempty"`
+	ScriptProtocol   string                 `json:"script_protocol,omitempty"`
+	CallableContract map[string]interface{} `json:"callable_contract,omitempty"`
+	ctx              context.Context
+	TaskID           string                 `json:"task_id,omitempty"`
+	OldString        string                 `json:"old_string,omitempty"`
+	NewString        string                 `json:"new_string,omitempty"`
+	Pattern          string                 `json:"pattern,omitempty"`
+	ReplaceAll       bool                   `json:"replace_all,omitempty"`
+	Volume           *float64               `json:"volume,omitempty"`
+	Resources        []string               `json:"resources,omitempty"`
+	Dependencies     []string               `json:"dependencies,omitempty"`
+	Dest             string                 `json:"dest,omitempty"`
+	Action           string                 `json:"action,omitempty"`
+	Member           bool                   `json:"member,omitempty"`
+	RequestKey       string                 `json:"request_key,omitempty"`
+	QueryKey         string                 `json:"query_key,omitempty"`
+	Record           map[string]interface{} `json:"record,omitempty"`
+	Query            string                 `json:"query,omitempty"`
+	Limit            int                    `json:"limit,omitempty"`
+	Encoding         string                 `json:"encoding,omitempty"`
+	URL              string                 `json:"url,omitempty"`
+	ScriptID         string                 `json:"id,omitempty"`
+	Interpreter      string                 `json:"interpreter,omitempty"`
+	Args             map[string]interface{} `json:"args,omitempty"`
 
 	Op      string `json:"op"`             // shell | read | write | list | info | screen | note
 	Cmd     string `json:"cmd,omitempty"`  // shell

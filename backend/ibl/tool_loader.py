@@ -208,7 +208,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 },
                 "files": {"type": "array", "items": {"type": "string"}, "description": "기존 저장 코드(edition:1)의 인라인 파일 인자. 새 코드는 inputs에 값 전달."},
                 "files_from": {"type": "array", "items": {"type": "string"}, "description": "기존 저장 코드(edition:1)의 파일 인자. 새 코드는 self:read의 text를 명시 전달."},
-                "resume": {"type": "object", "description": "기존 저장 코드(edition:1)의 재개 인자. 새 코드는 저장 영수증·명시 입력으로 재개."},
+                "resume": {"type": "object", "description": "현재 IBL은 반환된 {run_id}와 동일 code·inputs로 재개. 완료 영수증을 재사용하며 결과 불명 외부 작업은 재실행하지 않는다. 기존 저장 코드의 재개 인자도 보존."},
                 "describe": {"type": "array", "items": {"type": "string"}, "maxItems": 6,
                              "description": "code를 비우고 액션 이름 1~6개의 계약 조회. 실행하지 않음."},
                 "read_result": read_result_schema(),

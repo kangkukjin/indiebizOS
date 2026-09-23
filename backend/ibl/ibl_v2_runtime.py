@@ -47,7 +47,8 @@ class Budget:
 
 class Runtime:
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
-                 recordings=None, replay=False):
+                 recordings=None, replay=False, journal=None):
+        self.journal = journal
         self.plan = plan
         self.inputs = copy.deepcopy(inputs or {})
         self.cancel_check = cancel_check
@@ -355,15 +356,20 @@ class Runtime:
         results, errors, states = {}, {}, ["pending"] * count
         depth = getattr(self.local, "depth", 0)
         nested = getattr(self.local, "parallel", False)
+        route = getattr(self.local, "route", ()) + ((node.id, self.ordinal("fanout:" + node.id)),)
         def run(i):
             previous = getattr(self.local, "parallel", False)
             previous_depth = getattr(self.local, "depth", 0)
+            previous_route = getattr(self.local, "route", ())
+            previous_counts = getattr(self.local, "counts", {})
+            self.local.route, self.local.counts = route + (i,), {}
             self.local.parallel, self.local.depth = True, depth
             try:
                 self.check()
                 return fn(i)
             finally:
                 self.local.parallel, self.local.depth = previous, previous_depth
+                self.local.route, self.local.counts = previous_route, previous_counts
         def accept(i, future=None):
             try:
                 result = future.result() if future else run(i)
@@ -456,6 +462,14 @@ class Runtime:
             raise primary
         return Binding(result.value, result.evidence | cleanup_result.evidence)
 
+    def ordinal(self, key):
+        counts = getattr(self.local, "counts", None)
+        if counts is None:
+            counts = self.local.counts = {}
+        value = counts.get(key, 0)
+        counts[key] = value + 1
+        return value
+
     def invoke(self, node, args, piped):
         key = f"{node.data['node']}:{node.data['action']}"
         spec = self.plan.registry[key]
@@ -476,20 +490,33 @@ class Runtime:
         eid = self.event(node, "invoke", args.evidence, action=key,
                          effects=spec.contract["effects"], request_hash=request_hash)
         tool_evidence = {}
-        if self.replay and spec.contract["effects"] != ["pure"]:
-            from ibl_v2_ir import unpack
+        external = spec.contract["effects"] != ["pure"]
+        call_id = digest([getattr(self.local, "route", ()), node.id, self.ordinal(node.id)])
+        receipt = None
+        if self.journal and external:
+            receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None)
+        if self.replay and external and receipt is None:
             with self.lock:
-                match = next((r for r in self.recorded if r["request_hash"] == request_hash), None)
-                if match:
-                    self.recorded.remove(match)
-            if match is None:
+                receipt = next((r for r in self.recorded if r["request_hash"] == request_hash), None)
+                if receipt is not None:
+                    self.recorded.remove(receipt)
+            if receipt is None:
                 raise Fault("REPLAY_MISSING", "이 입력·정의의 실행 기록이 없습니다. 외부 호출하지 않습니다.", node, kind="protocol")
-            if "error" in match:
-                error = match["error"]
-                raise Fault(error["code"], error["message"], node, kind=error["kind"],
-                            partial=unpack(match["partial"]))
-            value = unpack(match["value"])
-            tool_evidence = match.get("evidence", {})
+        if receipt is not None:
+            if spec.authorize:
+                spec.authorize()
+            from ibl_v2_ir import unpack
+            self.event(node, "receipt_reused", [eid], call_id=call_id)
+            with self.lock:
+                self.recordings.append(receipt)
+            if "error" in receipt:
+                error = receipt["error"]
+                restored = Fault(error["code"], error["message"], node, kind=error["kind"],
+                                 partial=unpack(receipt["partial"]), details=error.get("details"))
+                restored.evidence = [eid]
+                raise restored
+            value = unpack(receipt["value"])
+            tool_evidence = receipt.get("evidence", {})
         else:
             try:
                 value = spec.run(self, copy.deepcopy(args.value))
@@ -497,14 +524,20 @@ class Runtime:
                 if isinstance(value, Adapted):
                     tool_evidence, value = value.evidence, value.value
                 guard(value, spec.contract["result"], f"{key} 반환")
-                if spec.contract["effects"] != ["pure"]:
+                if external:
+                    receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence}
+                    if self.journal:
+                        self.journal.finish(call_id, receipt)
                     with self.lock:
-                        self.recordings.append({"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence})
+                        self.recordings.append(receipt)
             except Fault as exc:
                 exc.evidence = sorted(set(exc.evidence) | {eid})
+                receipt = {"request_hash": request_hash,
+                           "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial)}
+                if self.journal and external:
+                    self.journal.finish(call_id, receipt)
                 with self.lock:
-                    self.recordings.append({"request_hash": request_hash,
-                                            "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial)})
+                    self.recordings.append(receipt)
                 raise
         if tool_evidence:
             eid = self.event(node, "tool_evidence", [eid], **tool_evidence)
@@ -534,4 +567,7 @@ class Runtime:
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,
                     "usage": {"steps": self.budget.used_steps, "rows": self.budget.used_rows,
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
+        if self.journal:
+            out["resume"] = {"run_id": self.journal.run_id}
+            out["resumed"] = self.journal.resuming
         return out

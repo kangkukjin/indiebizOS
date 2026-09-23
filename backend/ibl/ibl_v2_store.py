@@ -12,7 +12,8 @@ def definitions():
     from workflow_store import _get_workflows_path
     from member_runtime import is_member
     if is_member():
-        return {}  # Owner's saved procedures do not enter member compilation.
+        from ibl_member_library import definitions as member_definitions
+        return member_definitions()
     out = {}
     from ibl_usage_db import IBLUsageDB
     from ibl_edition import source_edition

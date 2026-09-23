@@ -120,6 +120,15 @@ async def ibl_capabilities():
     return capabilities()
 
 
+@router.post("/call")
+async def call_ibl_leaf(payload: dict):
+    from starlette.concurrency import run_in_threadpool
+    from project_manager import ProjectManager
+    from ibl_remote_call import receive
+    path = ProjectManager().get_project_path("앱모드")
+    return await run_in_threadpool(receive, payload, str(path))
+
+
 @router.post("/execute")
 async def execute_ibl_code(req: IBLRequest):
     # 표면 티켓(F51-1) — 시작 표식은 실행 전에, 결말 표식은 모든 출구(성공 2·예외 1)에서.

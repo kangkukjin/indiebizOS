@@ -271,6 +271,7 @@ class MemberSessionManager:
                     if recalled.get("context_truncated"):
                         s.runner.config["_member_memory"] += "\n기기 회상 용량 제한으로 일부 이전 맥락이 생략됐습니다. 필요한 자료는 직접 읽거나 질문하세요."
                     s.runner.config["_member_memory"] += "\n회원 작업 폴더: " + str(recalled.get("workspace", ""))
+                    s.runner.config["_member_libraries"] = [str(x.get("code", "")) for x in recalled.get("sentences", [])]
                     s.runner.config["_member_sentences"] = "\n".join(str(x.get("code", "")) for x in recalled.get("sentences", []))
                 model_message = message
                 if (client_context or {}).get("workflow"):
@@ -281,7 +282,8 @@ class MemberSessionManager:
                     model_message += "\n<client_attachments>" + json.dumps(attachments, ensure_ascii=False) + "</client_attachments>"
                 from agent_pipeline import drain_stream
                 if code is not None:
-                    raw = s.runner._member_tool("execute_ibl", {"code": code})
+                    from ibl_edition import source_edition
+                    raw = s.runner._member_tool("execute_ibl", {"code": code, "edition": source_edition(code)})
                     value = json.loads(raw) if isinstance(raw, str) else raw
                     result = {"final": json.dumps(value, ensure_ascii=False), "app_result": value,
                               "error": (value.get("error") or ("앱 실행 실패" if value.get("success") is False else None)) if isinstance(value, dict) else None}

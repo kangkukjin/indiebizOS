@@ -23,9 +23,8 @@ class MemberRunner(AgentRunner):
         tool = self._build_execute_ibl_tool()
         if tool:
             properties = tool['input_schema']['properties']
-            tool['input_schema']['properties'] = {k: v for k, v in properties.items() if k in {'code', 'files', 'describe', 'read_result'}}
+            tool['input_schema']['properties'] = {k: v for k, v in properties.items() if k in {'code', 'edition', 'inputs', 'check', 'resume', 'describe', 'read_result'}}
             properties['code']['description'] = '현재 회원 카탈로그에 있는 액션만 실행한다. 예: [sense:search]{source:"ddg",query:"AI news",limit:5}. 액션 계약 조회는 code를 비우고 describe를 사용한다.'
-            properties['files']['description'] = '긴 본문을 인라인 문자열 목록으로 전달한다. code의 content:"$file:0"에서 참조한다. 파일은 회원 기기에 self:write로 저장한다.'
         tools = [tool] if tool else []
         tools.append({"name": "ask_user_question", "description": "작업에 필요한 정보가 빠졌을 때 클라이언트에게 질문하고 현재 턴을 끝낸다. 다음 답변은 같은 작업에서 이어진다.",
                       "input_schema": {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"]}})
@@ -47,7 +46,10 @@ class MemberRunner(AgentRunner):
         environment = build_environment(allowed_nodes=self.config.get("allowed_nodes"), expose_idioms=False, compact=True)
         # 주인용 교재의 미공개 낱말·허브 경로 예제를 회원에게 실행 예제로 소개하지 않는다.
         catalogue = '<ibl_actions>' + environment.split('<ibl_actions>', 1)[1] if '<ibl_actions>' in environment else ''
-        stable = role + "\n\n" + catalogue
+        from runtime_utils import get_base_path
+        compact = (get_base_path() / "data/common_prompts/fragments/12_ibl_compact.md").read_text()
+        grammar = compact.split("<!-- MEMBER_GRAMMAR:START -->", 1)[1].split("<!-- MEMBER_GRAMMAR:END -->", 1)[0]
+        stable = role + "\n\n" + grammar + "\n" + catalogue
         dynamic = execution_memory
         definitions = self.config.get("_member_sentences", "")
         if definitions:
@@ -116,26 +118,31 @@ class MemberRunner(AgentRunner):
                         cfg = nodes.get(node, {}).get('actions', {}).get(action, {})
                         if not visible(node, action, cfg):
                             raise ValueError('외부사용자에게 공개되지 않은 액션입니다')
-                    value = describe_actions(names, self.config.get('allowed_nodes'))
+                    value = describe_actions(names, self.config.get('allowed_nodes'), edition=tool_input.get('edition', 2))
                 return json.dumps(value, ensure_ascii=False)
             except (ValueError, KeyError, TypeError, OSError):
                 return json.dumps({'success': False, 'error': '현재 회원 턴에서 해당 계약/결과를 조회할 수 없습니다'}, ensure_ascii=False)
-        # files 인라인 본문만 받는다. files_from·resume·행위자 인자는 허브 경로/신원 주입이라 받지 않는다.
-        definitions = getattr(self, "config", {}).get("_member_sentences", "")
-        if definitions.strip():
+        # Model authoring uses the same language boundary as the owner. No paths,
+        # actor claims or owner libraries are accepted from the tool payload.
+        from ibl_edition import authoring_request
+        from ibl_member_library import library
+        request = authoring_request({k: v for k, v in tool_input.items()
+                                     if k in {"code", "edition", "inputs", "check", "resume", "files"}})
+        if len(json.dumps(request, ensure_ascii=False).encode()) > 4 * 1024 * 1024:
+            return json.dumps({"success": False, "error": "입력은 합계 4MB 이하여야 합니다"}, ensure_ascii=False)
+        source = getattr(self, "config", {}).get("_member_sentences", "")
+        # Explicit old saved calls retain their stored meaning; new calls obtain
+        # only member-provided functions through the scoped library adapter.
+        from ibl_edition import source_edition
+        sources = getattr(self, "config", {}).get("_member_libraries", [source])
+        if source_edition(request.get("code", ""), request.get("edition")) == 1:
             from ibl_parser import parse
-            # 로컬 문장은 정의만 앞에 붙인다. 등록 파일의 최상위 부작용을 매 호출마다 실행하지 않는다.
-            try:
-                if any(not step.get("_def") for step in parse(definitions)):
-                    definitions = ""
-            except Exception:
-                definitions = ""
-        files = tool_input.get("files") or []
-        if not isinstance(files, list) or any(not isinstance(f, str) for f in files) or sum(len(f.encode("utf-8")) for f in files) > 4*1024*1024:
-            return json.dumps({"success": False, "error": "files는 합계 4MB 이하의 인라인 문자열 목록이어야 합니다"}, ensure_ascii=False)
-        return _execute_ibl_unified({"code": definitions + "\n" + str(tool_input.get("code", "")), "files": files},
-            str(self.project_path), agent_id=principal.current().key(),
-            cancel_check=member_runtime.current()["cancel"].is_set)
+            old_source = "\n".join(s for s in sources if source_edition(s) == 1)
+            if old_source and all(s.get("_def") for s in parse(old_source)):
+                request["code"] = old_source + "\n" + request.get("code", "")
+        with library(sources):
+            return _execute_ibl_unified(request, str(self.project_path),
+                agent_id=principal.current().key(), cancel_check=member_runtime.current()["cancel"].is_set)
 
     def _classify_request(self, user_message, execution_memory=""):
         from consciousness_agent import call_oneshot_provider

@@ -128,7 +128,7 @@ def test_actual_ibl_inline_file_and_body_ref(member, monkeypatch):
     monkeypatch.setattr(bridge, 'request', lambda c, **kw: sent.append(c) or {'success': True, 'path': c.get('path')})
     runner=MemberRunner.__new__(MemberRunner); runner.project_path=member
     result=runner._member_tool('execute_ibl', {
-        'code':'[self:write]{path:"local.txt",content:"$file:0"}', 'files':['inline $text stays literal'],
+        'edition':1, 'code':'[self:write]{path:"local.txt",content:"$file:0"}', 'files':['inline $text stays literal'],
         'files_from':['/owner/forbidden']})
     assert sent==[{'op':'write','path':'local.txt','content':'inline $text stays literal'}],result
     MR.current().setdefault('files',{})['member-file:owned']='local2.txt'

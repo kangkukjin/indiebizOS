@@ -74,7 +74,7 @@ return $결과
 목록은 0/1/N건 모두 목록이며 `.items` 같은 가상 필드는 없다. 길이는 `len($x)`다.
 레코드와 목록은 불변이고 변수만 재바인딩한다. 외부 입력은 `inputs`로 명시하며 이전 턴 변수는 자동 주입하지 않는다.
 큰 본문은 `[self:read]{path:...}`의 `.text`를 전달한다. 일반 외부 값은 `inputs`로 받는다.
-`files`, `files_from`, 기존 `resume` 봉투는 기존 저장 프로그램의 호환 인자다.
+`files`, `files_from`는 기존 저장 프로그램의 호환 인자다. 현재 실행은 반환된 `resume:{run_id}`와 동일한 code·inputs로 이어간다.
 
 일반 문자열은 문자 그대로다. `f"${row.id}: ${1+2}"`만 보간하며 한 번만 해석한다.
 보간은 Text·Number·Bool을 받는다. 구조는 `json($x)`, 결측은 `has($r,"key")`와
@@ -123,13 +123,13 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | table:compute | items와 `set:($r)=>Record` → 새 필드를 합친 List<Record> |
 | table:sort | items, by(Text), descending(Bool, 선택) → List<Record> |
 | table:take | items, n(0 이상 정수) → List |
-| self:read | path, offset/limit 선택 → `{text:Text,blocks:List<Record>}`. 첫 어댑터는 **텍스트/Markdown** 고정이다. PDF·Office의 기존 기능은 판본 1을 사용한다. |
+| self:read | path → `{text:Text,blocks:List<Record>,data:Record}`. 확장자로 텍스트/PDF/Office를 해소한다. pages/tables/sheet/max_rows 등은 조회한 계약대로 지정하며 표·시트·이미지·범위 원문은 data에 보존한다. |
 | self:write | path, content(Text; 파이프 자리) → 파일 영수증 Record. 기존 쓰기 보호·outputs 경로 규칙 적용. |
 | self:list | path, pattern 선택 → List<Record> |
 | self:script | id, args(Record; 파이프 자리) → 등록 계약의 값. 기존 등록은 JSON stdin/stdout을 값으로 연결하며, 새 wire 계약도 지원한다. |
 
 새 사전 항목은 선언된 어댑터로 확장한다. 파서에 업무 액션 이름을 넣지 않는다.
-데이터를 보고 message/items 중에서 고르는 규칙은 현재 IBL에 없다. 봉투 해제는 사전이 지정한 고정 경로다.
+일반 값에 자동 봉투 추출은 없다. 사전의 고정 경로 또는 명시 문서 어댑터가 도구별 결과를 정규화한다.
 의도한 selection·화면 preview와 원천 누락을 구분한다. 원천 누락은 Fail + partial이며
 `$error.partial`을 명시적으로 사용해도 `source_complete:false`는 남는다.
 권한 거절·취소·예산 고갈·프로토콜 미지원은 기본 catch/fallback으로 성공 처리하지 않는다.
@@ -186,3 +186,25 @@ API를 직접 사용하는 새 프로그램은 `#!ibl edition=2` 헤더를 넣�
 결과 품질 기준은 `result_quality.md`다. 계획의 전제가 깨지면 reframe으로 근거와 상태를 보낸다.
 내용 판단이 필요할 때만 AI를 호출하되 요구 품질·모델·음성을 비용 때문에 임의로 낮추지 않는다.
 </ibl_executor>
+
+
+## 실행 중단과 재개
+
+현재 IBL은 외부 호출 전후 영수증을 디스크에 보존한다. 반환된 `resume:{run_id}`를
+동일한 `code`, `inputs`와 함께 보내면 완료한 호출의 값·실패·근거를 재사용하고 미실행 부분을 진행한다.
+같은 인자의 반복 호출도 함수·반복·병렬 위치로 구분한다. 확인된 실패의 재개는 그 실패를 다시 보여주며,
+실패한 읽기를 새로 시도하려면 별도 프로그램을 명시적으로 작성한다.
+소스·입력·연결된 정의·도구 구현·주체·프로젝트·권한이 바뀌면 재개를 거절한다.
+영수증 없이 실행 시작만 남은 외부 작업은 `EFFECT_UNCERTAIN`이며 자동 재실행하지 않는다.
+취소 후 finally가 외부 정리를 시작한 실행도 재개를 거절한다. 외부 효과의 exactly-once 보장은 아니다.
+기존 결과를 복원하는 계산도 실행 예산 안에서 진행하므로 무한 계산·행 상한 우회 수단은 아니다.
+회원의 실행 기록은 기존 사적 세션 저장소에만 두며 세션 삭제·서버 재기동 시 기존 개인정보 수명대로 폐기한다.
+주인 실행 기록은 백엔드 재기동을 넘는다. 상세 열람만 필요하면 read_result를 사용한다.
+
+회원 AI도 현재 문법·inputs·check를 쓴다. 회원이 동봉한 새 함수와 과거 함수만 연결하며 주인 사전을 읽지 않는다.
+원격 스크립트는 인증된 `/ibl/capabilities`와 `ibl-script-call/1` 계약을 확인한 뒤 원문 값을 전송한다.
+회원 PC는 도우미가 광고하는 `ibl-script/2`를 확인한다. 이전 기기는 실행 전 업데이트 요구를 반환한다.
+새 wire의 background, 회원 args_file, 직접 연결 불가 기기의 푸시 큐 전달은 현재 지원 범위에 포함되지 않는다.
+
+최종 응답을 받기 전에 연결이 끊겼다면 기존 HTTP 티켓 recover의 `progress.resume` 또는
+실행 궤적의 `ibl.checkpoint`에서 시작 시 발행한 run_id를 찾는다. 원래 코드를 새 실행으로 다시 보내지 않는다.

@@ -69,6 +69,55 @@
     "Legacy handlers and functions retain their full Record envelopes and unknown effect/type boundaries; preflight reports incomplete.",
     "Existing edition 1 assets are retained, not automatically transpiled.",
     "Independent reusable edition 2 programs must close their inputs; mixed/multiple program distillation is rejected.",
-    "IDE/LSP, durable resume, precise row lineage and new remote script wire negotiation are outside this integration."
-  ]
+    "IDE/LSP and precise row lineage remain outside this integration. Durable resume and negotiated remote scripts are now implemented; see migration_completion."
+  ],
+  "migration_completion": {
+    "date": "2026-09-23",
+    "features": [
+      "member current-language authoring and scoped native/legacy libraries",
+      "text/PDF/Office document values with complete format payload",
+      "durable effect receipts and deterministic scoped resume",
+      "member and authenticated remote script protocol negotiation",
+      "CLI shared durable entry"
+    ],
+    "focused_new_tests": {
+      "passed": 17,
+      "seconds": 7.18
+    },
+    "helper": {
+      "tests": "passed",
+      "built": [
+        "windows/amd64",
+        "darwin/arm64",
+        "darwin/amd64",
+        "linux/amd64"
+      ]
+    },
+    "phone_route_import": {
+      "registered_routes": 49,
+      "required_routes": "passed"
+    },
+    "limits": [
+      "Uncertain external effects are never automatically repeated; no exactly-once claim.",
+      "Member receipts follow private session deletion, including server restart.",
+      "New wire background, member args_file, and non-direct remote push transport remain unsupported.",
+      "New helper/phone code must be installed on target devices; no remote-device deployment performed."
+    ],
+    "full_backend": {
+      "command": ".venv/bin/python -m pytest backend/ -q -o addopts=",
+      "passed": 5644,
+      "skipped": 1,
+      "warnings": 116,
+      "seconds": 492.3
+    },
+    "live_backend": {
+      "health": "healthy",
+      "canonical_code_digest_matches": true,
+      "model_authoring_edition": 2,
+      "resume_protocol": "ibl-resume/1",
+      "call_protocol": "ibl-script-call/1",
+      "native_function_execute_and_resume": "passed, value=21",
+      "restart": "managed restart completed"
+    }
+  }
 }

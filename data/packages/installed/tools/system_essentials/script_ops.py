@@ -201,7 +201,7 @@ def _stdin_args(tool_input, *, expand_paths=True):
 def member_script(params, command, exchange, workspace):
     """회원 기기에는 인계한 args만 전송한다. 허브 경로 확장·스크립트 실행 없음."""
     if params.get("_ibl_edition") == 2:
-        return {"success": False, "error": "회원 기기는 아직 ibl-script/2 프로토콜을 지원하지 않습니다."}
+        return _runtime.member_value_script(params, command, exchange)
     if "input_as" in params:
         if params.get("op") != "run":
             return {"success": False, "error": "input_as는 run 전용입니다."}

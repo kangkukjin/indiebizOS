@@ -587,6 +587,7 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
         targets = [sheet_name] if sheet_name else all_sheets
 
         parts = []
+        truncations = []
         for sn in targets:
             if sn not in all_sheets:
                 parts.append(f"### 시트: {sn} — 없음")
@@ -603,6 +604,8 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             header = f"### 시트: {sn} ({ws.max_row}행 × {ws.max_column}열)"
             if truncated:
                 header += f" — 처음 {max_rows}행만 (max_rows로 조정)"
+                truncations.append({"scope": "selection" if "max_rows" in tool_input else "source",
+                                    "sheet": sn, "returned_rows": max_rows, "total_rows": ws.max_row})
             parts.append(header + "\n" + "\n".join(rows_text))
 
         # === 공유 통화 table {columns, rows} (비파괴 ADD) ===
@@ -666,6 +669,8 @@ def read_xlsx(tool_input: dict, project_path: str) -> str:
             "sheets": all_sheets,
             "text": "\n\n".join(parts),
         }
+        if truncations:
+            res.update(truncated=True, truncations=truncations)
         if table is not None:
             res["table"] = table
         if legacy:

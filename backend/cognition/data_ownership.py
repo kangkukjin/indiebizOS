@@ -122,6 +122,7 @@ DECLARATIONS: List[tuple] = [
     ("data/workflows/**",           "워크플로우 원장(workflow_engine)",          "state"),
     ("data/scripts/**",             "등록 스크립트([self:script] — 절차의 거처)", "state"),
     ("data/scripts.json",           "등록 스크립트 원장([self:script])",          "state"),
+    ("data/ibl_runs/**",            "IBL 실행 영수증·재개(ibl_run_journal)",      "state"),
     ("data/script_runs/**",         "스크립트 실행 기록([self:script])",          "log"),
     ("data/showcase_stage/**",      "공개파일 스테이징(showcase)",               "state"),
     ("data/xray/**",                "xray 스트림(xray_stream)",                  "state"),

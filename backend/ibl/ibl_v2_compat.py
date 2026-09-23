@@ -47,10 +47,14 @@ def legacy_functions():
             continue
         if isinstance(data, dict) and data.get("edition", 1) == 1:
             assets[path.stem] = {"workflow": data, "kind": "workflow"}
-    return assets
+    return dict(sorted(assets.items()))
 
 
 def function_adapters(project_path, agent_id):
+    from member_runtime import is_member
+    if is_member():
+        from ibl_member_library import adapters
+        return adapters(project_path, agent_id)
     from ibl_v2_adapters import Adapter, Adapted, decode_envelope
     from ibl_v2_ir import digest
     from ibl_engine import execute_ibl

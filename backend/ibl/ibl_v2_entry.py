@@ -10,10 +10,10 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
             if request.get("inputs") is not None:
                 raise Fault("EDITION_ARGUMENT", "inputs는 판본 2에서만 사용할 수 있습니다.", kind="compile")
             return None
-        incompatible = [k for k in ("resume", "files", "files_from") if request.get(k) is not None]
+        incompatible = [k for k in ("files", "files_from") if request.get(k) is not None]
         if incompatible:
             raise Fault("EDITION_ARGUMENT", "판본 2는 명시 inputs를 사용합니다. 지원하지 않는 인자: " + ", ".join(incompatible), kind="compile")
-        inputs = request.get("inputs") or {}
+        inputs = {} if request.get("inputs") is None else request["inputs"]
         if not isinstance(inputs, dict) or any(not isinstance(k, str) or not k.isidentifier() or k in {"it", "i", "error"} for k in inputs):
             raise Fault("INPUTS", "inputs는 예약 이름을 제외한 이름→값 Record입니다.", kind="compile")
         from ibl_v2_ir import pack
@@ -25,7 +25,12 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
         plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions())
         if request.get("check"):
             return plan.report()
-        result = Runtime(plan, inputs, cancel_check=cancel_check).run()
+        if plan.issues:
+            return Runtime(plan, inputs).run()
+        from ibl_run_journal import Journal, journal_root, identity
+        with Journal(journal_root(project_path), identity(plan, inputs, project_path, agent_id), request.get("resume")) as journal:
+            journal.announce(plan.fingerprint)
+            result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal).run()
         try:
             from ibl_v2_learning import record_functions
             record_functions(plan, result)
@@ -44,5 +49,5 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
 
 def capabilities():
     return {"editions": [1, 2], "default_edition": 1, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1"],
-            "v2_resume": False, "v2_remote_script": False,
+            "v2_resume": True, "resume_protocols": ["ibl-resume/1"], "v2_remote_script": True, "call_protocols": ["ibl-script-call/1"],
             "v2_budget": {"steps": 100000, "rows": 10000, "seconds": 120, "depth": 64}}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""IBL v2 check/run/replay/register/inventory. Defaults to check, never execution."""
+"""IBL check/run/replay/register/inventory; run uses the shared durable entry."""
 import sys
 from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
@@ -19,16 +19,20 @@ def main():
     parser.add_argument("command", choices=["check", "run", "replay", "register", "inventory", "capabilities"])
     parser.add_argument("source", nargs="?")
     parser.add_argument("--inputs", help="JSON 입력 파일(이름→값)")
+    parser.add_argument("--resume", help="이전 실행 응답의 run_id (run에만 사용, 같은 소스·inputs 필요)")
     parser.add_argument("--record", help="replay가 읽을 이전 run 결과 JSON")
     parser.add_argument("--output", help="결과 JSON 파일(생략=stdout)")
     parser.add_argument("--project", default=".")
     args = parser.parse_args()
+    if args.resume and args.command != "run":
+        parser.error("--resume은 run에만 사용합니다.")
     try:
         registry = load_registry(args.project)
         if args.command == "capabilities":
-            result = {"editions": [1, 2], "value_protocols": ["ibl-value/1"],
-                      "v2_actions": {k: v.contract for k, v in registry.items()},
-                      "resume": False, "remote_script_v2": False}
+            from ibl_v2_entry import capabilities
+            shared = capabilities()
+            result = {**shared, "v2_actions": {k: v.contract for k, v in registry.items()},
+                      "resume": shared["v2_resume"], "remote_script_v2": shared["v2_remote_script"]}
         elif args.command == "inventory":
             from workflow_store import list_workflows
             result = {"workflows": [{"id": w["id"], "name": w["name"], "edition": w.get("edition", 1)}
@@ -42,6 +46,12 @@ def main():
             inputs = json.loads(Path(args.inputs).read_text()) if args.inputs else {}
             if args.command == "register":
                 result = action("save", {"edition": 2, "code": source}, args.project)
+            elif args.command == "run":
+                from ibl_v2_entry import handle_request
+                request = {"edition": 2, "code": source, "inputs": inputs}
+                if args.resume:
+                    request["resume"] = {"run_id": args.resume}
+                result = handle_request(request, args.project)
             else:
                 plan = compile_program(source, registry, inputs, definitions())
                 if args.command == "check":

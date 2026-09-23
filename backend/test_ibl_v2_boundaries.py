@@ -156,7 +156,10 @@ def test_workflow_save_load_and_legacy_id_guard(tmp_path,monkeypatch):
 
 def test_member_and_remote_script_protocol_rejected_before_exchange(monkeypatch):
     s=script_module()
-    assert not s.member_script({'_ibl_edition':2},{},lambda *a:pytest.fail('exchange'),None)['success']
+    assert not s.member_script({'_ibl_edition':2},{},lambda *a:{'items':[]},None)['success']
+    import requests
+    monkeypatch.setattr(requests, 'get', lambda *a, **kw: (_ for _ in ()).throw(OSError('offline')))
+    monkeypatch.setattr(requests, 'post', lambda *a, **kw: pytest.fail('execution before negotiation'))
     from ibl_engine import forward_to_phone, _forward_to_mac
     assert forward_to_phone('http://invalid','self','script',{'_ibl_edition':2})['error_type']=='capability'
     assert _forward_to_mac('self','script',{'_ibl_edition':2})['error_type']=='capability'

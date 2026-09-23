@@ -27,6 +27,7 @@ android {
                 install "uvicorn"
                 // IBL 엔진/핸들러 런타임 의존 (전부 순수파이썬)
                 install "PyYAML"
+                install "filelock"
                 install "requests"
                 install "httpx"
                 install "beautifulsoup4"

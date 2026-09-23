@@ -43,6 +43,7 @@ func openMemberStore(dir string) (*MemberStore, error) {
 	_, _ = db.Exec("ALTER TABLE jobs ADD COLUMN command TEXT")
 	_, _ = db.Exec("ALTER TABLE scripts ADD COLUMN resources TEXT NOT NULL DEFAULT '[]'")
 	_, _ = db.Exec("ALTER TABLE scripts ADD COLUMN dependencies TEXT NOT NULL DEFAULT '[]'")
+	_, _ = db.Exec("ALTER TABLE scripts ADD COLUMN callable_contract TEXT")
 	return &MemberStore{db: db}, nil
 }
 func (s *MemberStore) claim(key, fp string) (map[string]interface{}, bool, error) {
@@ -193,19 +194,19 @@ func (s *MemberStore) pendingResults() []map[string]interface{} {
 	return out
 }
 func (s *MemberStore) scripts() map[string]interface{} {
-	rows, err := s.db.Query("SELECT id,path,interpreter,description FROM scripts ORDER BY id")
+	rows, err := s.db.Query("SELECT id,path,interpreter,description,coalesce(callable_contract,'null') FROM scripts ORDER BY id")
 	if err != nil {
 		return errResult("storage", err.Error())
 	}
 	defer rows.Close()
 	items := []map[string]interface{}{}
 	for rows.Next() {
-		var id, p, i, d string
-		if rows.Scan(&id, &p, &i, &d) == nil {
-			items = append(items, map[string]interface{}{"id": id, "path": p, "interpreter": i, "description": d})
+		var id, p, i, d, contract string
+		if rows.Scan(&id, &p, &i, &d, &contract) == nil {
+			items = append(items, map[string]interface{}{"id": id, "path": p, "interpreter": i, "description": d, "callable_contract": json.RawMessage(contract)})
 		}
 	}
-	return map[string]interface{}{"items": items}
+	return map[string]interface{}{"success": true, "items": items, "script_protocols": []string{"ibl-script/2", "registered-json/1"}}
 }
 func (s *MemberStore) register(c Command) map[string]interface{} {
 	if c.ScriptID == "" || c.Path == "" {
@@ -247,16 +248,24 @@ func (s *MemberStore) register(c Command) map[string]interface{} {
 	}
 	resources, _ := json.Marshal(c.Resources)
 	dependencies, _ := json.Marshal(c.Dependencies)
-	_, err = s.db.Exec("INSERT OR REPLACE INTO scripts(id,path,interpreter,description,resources,dependencies) VALUES(?,?,?,?,?,?)", c.ScriptID, c.Path, c.Interpreter, c.Text, string(resources), string(dependencies))
+	contract, _ := json.Marshal(c.CallableContract)
+	_, err = s.db.Exec("INSERT OR REPLACE INTO scripts(id,path,interpreter,description,resources,dependencies,callable_contract) VALUES(?,?,?,?,?,?,?)", c.ScriptID, c.Path, c.Interpreter, c.Text, string(resources), string(dependencies), string(contract))
 	if err != nil {
 		return errResult("storage", err.Error())
 	}
 	return map[string]interface{}{"success": true, "id": c.ScriptID}
 }
 func (s *MemberStore) script(c Command) map[string]interface{} {
-	var path, interpreter string
-	if err := s.db.QueryRow("SELECT path,interpreter FROM scripts WHERE id=?", c.ScriptID).Scan(&path, &interpreter); err != nil {
+	var path, interpreter, contract string
+	if err := s.db.QueryRow("SELECT path,interpreter,coalesce(callable_contract,'null') FROM scripts WHERE id=?", c.ScriptID).Scan(&path, &interpreter, &contract); err != nil {
 		return errResult("script_missing", fmt.Sprint(err))
+	}
+	if contract != "null" && contract != "{}" {
+		if c.ScriptProtocol != "ibl-script/2" || c.Args["protocol"] != "ibl-script/2" {
+			return errResult("script_protocol", "현재 스크립트 입력 프로토콜이 필요합니다")
+		}
+	} else if c.ScriptProtocol == "ibl-script/2" {
+		return errResult("script_protocol", "등록 계약과 호출 프로토콜이 다릅니다")
 	}
 	return runMemberProgramContext(c.ctx, path, interpreter, c.Args, c.Timeout)
 }

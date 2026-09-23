@@ -274,6 +274,8 @@ class IBLUsageRAG:
                      "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
                      "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:] 로 고쳐 부른다. "
                      "여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
+        note += " edition은 실행 판본이다. 서로 다른 판본의 문법·반환을 섞지 말고 판본2 교재 ibl_v2.md를 참고하라."
+        from ibl_edition import source_edition
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
             # ★코드는 속성이 아니라 CDATA 본문 — 속성에 넣으면 코드 안의 홑따옴표가
@@ -284,6 +286,7 @@ class IBLUsageRAG:
             condition = applicability_note(getattr(ex, 'provenance', '{}'))
             if condition:
                 attrs += f' applicability="{_xml_attr(condition)}"'
+            attrs += f' edition="{source_edition(ex.ibl_code)}"'
             if getattr(ex, 'source', '') == 'distilled_component':
                 attrs += ' scope="component"'
             # success_rate >= 0 이면 시도 이력 있음(0.0=전부 실패 포함) → 표시.
@@ -324,6 +327,8 @@ class IBLUsageRAG:
             except Exception:
                 names, known = [], False
             attrs = f'kind="phrase" intent="{_xml_attr(ex.intent)}" score="{ex.score}" sentences="{len(sents)}" name="{_xml_attr(alias)}"'
+            edition = source_edition(ex.ibl_code)
+            attrs += f' edition="{edition}"'
             if known and names:
                 attrs += f' slots="{_xml_attr(", ".join(names))}"'
             if ex.success_rate >= 0:
@@ -338,6 +343,8 @@ class IBLUsageRAG:
             else:
                 body = (f"[fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
                         f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
+            if edition == 2:
+                body = "#!ibl edition=2\n" + body
             lines.append(f'  <ref {attrs}><![CDATA[\n{_cdata(body)}\n]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)
@@ -1014,6 +1021,11 @@ def prepare_experience(user_message, tool_calls, top_score, top_code=None, turn_
         inputs = tc.get("input") or {}
         if not isinstance(inputs, dict) or inputs.get("check"):
             continue  # 검사 통과는 실행 성공이 아니다 — 접지·주행 기록에서도 제외
+        from ibl_v2_experience import closed_call
+        tc = closed_call(tc)
+        if tc is None:
+            continue
+        inputs = tc.get("input") or {}
         code = inputs.get("code", "")
         if code:
             from ibl_distill_gates import empty_final_items
@@ -1133,45 +1145,51 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
         print(f"[경험증류] 가지 판정 생략: {_e}")
 
     phrase_ok = False
-
-    from ibl_param_vocab import normalize_corpus_code
-    code = normalize_corpus_code(code)
-    code, _syntax_err = _syntax_gate_with_restore(code, ibl_calls, "[경험증류]")
-    if _syntax_err:
-        print(f"[경험증류] 파싱 불가 — 추가 모델 호출 없이 보류: {_syntax_err}")
-        return phrase_ok
-
-    if not _heads_grounded(code, ibl_calls):
-        print(f"[경험증류] 머리 접지 실패(실행에 없던 액션) — 증류 스킵: {code[:80]}")
-        return phrase_ok
-
-    if not _composition_grounded(code, ibl_calls):
-        print(f"[경험증류] 합성 접지 실패(실행에 없던 합성) — 증류 스킵: {code[:80]}")
-        return phrase_ok
-
-    code = re.sub(r',\s*_raw:\s*(?:true|false)', '', code)
-    code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*,\s*', '{', code)
-    code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*\}', '{}', code)
-
-    if not _validate_ibl_actions(code):
-        return phrase_ok
-
-    try:
-        from ibl_param_vocab import check_code_params
-        _param_issues = check_code_params(code)
-        if _param_issues:
-            print(f"[경험증류] 미인식 파라미터 — 증류 스킵: "
-                  f"{[(i['action'], i['unknown']) for i in _param_issues]}")
+    from ibl_edition import source_edition
+    edition = source_edition(code)
+    if edition == 2:
+        from ibl_v2_learning import check_source
+        if check_source(code) or code not in source_calls:
+            return False
+    else:
+        from ibl_param_vocab import normalize_corpus_code
+        code = normalize_corpus_code(code)
+        code, _syntax_err = _syntax_gate_with_restore(code, ibl_calls, "[경험증류]")
+        if _syntax_err:
+            print(f"[경험증류] 파싱 불가 — 추가 모델 호출 없이 보류: {_syntax_err}")
             return phrase_ok
-    except Exception as exc:
-        print(f"[경험증류] 인자 검증 불가 — 저장 보류: {exc}")
-        return phrase_ok
 
-    from ibl_idiom import example_entrance_reason
-    _entrance_why = example_entrance_reason(intent, code)
-    if _entrance_why:
-        print(f"[경험증류] 입구 관문 — 증류 스킵: {_entrance_why}")
-        return phrase_ok
+        if not _heads_grounded(code, ibl_calls):
+            print(f"[경험증류] 머리 접지 실패(실행에 없던 액션) — 증류 스킵: {code[:80]}")
+            return phrase_ok
+
+        if not _composition_grounded(code, ibl_calls):
+            print(f"[경험증류] 합성 접지 실패(실행에 없던 합성) — 증류 스킵: {code[:80]}")
+            return phrase_ok
+
+        code = re.sub(r',\s*_raw:\s*(?:true|false)', '', code)
+        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*,\s*', '{', code)
+        code = re.sub(r'\{\s*_raw:\s*(?:true|false)\s*\}', '{}', code)
+
+        if not _validate_ibl_actions(code):
+            return phrase_ok
+
+        try:
+            from ibl_param_vocab import check_code_params
+            _param_issues = check_code_params(code)
+            if _param_issues:
+                print(f"[경험증류] 미인식 파라미터 — 증류 스킵: "
+                      f"{[(i['action'], i['unknown']) for i in _param_issues]}")
+                return phrase_ok
+        except Exception as exc:
+            print(f"[경험증류] 인자 검증 불가 — 저장 보류: {exc}")
+            return phrase_ok
+
+        from ibl_idiom import example_entrance_reason
+        _entrance_why = example_entrance_reason(intent, code)
+        if _entrance_why:
+            print(f"[경험증류] 입구 관문 — 증류 스킵: {_entrance_why}")
+            return phrase_ok
 
     node_pattern = re.compile(r'\[([a-z_-]+):')
     nodes = ",".join(sorted(set(node_pattern.findall(code))))
@@ -1214,7 +1232,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     try:
         existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
         existing = [e for e in existing if not candidate_key or e.get("provenance", {}).get("candidate_key") != candidate_key]
-        existing.append({"intent": intent, "ibl_code": code, "source": "distilled_component" if component else "distilled", "provenance": evidence})
+        existing.append({"intent": intent, "ibl_code": code, "edition": edition, "source": "distilled_component" if component else "distilled", "provenance": evidence})
         temp = distilled_path.with_suffix(".distill.tmp")
         temp.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
         temp.replace(distilled_path)

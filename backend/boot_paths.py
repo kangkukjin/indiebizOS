@@ -47,6 +47,10 @@ def wire_ledger_syntax_gate() -> None:
         return  # 원장이 없는 몸이면 꽂을 문도 없다
 
     def _validator(ibl_code: str, function_body: bool = False):
+        from ibl_edition import source_edition
+        if source_edition(ibl_code) == 2:
+            from ibl_v2_learning import check_source
+            return check_source(ibl_code, function_body)
         from ibl_param_vocab import code_syntax_error
         return code_syntax_error(ibl_code, function_body)
 
@@ -66,6 +70,10 @@ def wire_ledger_signature() -> None:
         return
 
     def _signature(ibl_code: str):
+        from ibl_edition import source_edition
+        if source_edition(ibl_code) == 2:
+            from ibl_v2_learning import signature
+            return signature(ibl_code)
         from workflow_contract import call_signature
         return call_signature(ibl_code)
 

@@ -1,0 +1,146 @@
+[
+  {
+    "intent": "열을 선택하고 앞에서 정한 개수만 남깁니다. 목록 모양과 문자열 값을 보존합니다.",
+    "ibl_code": "#!ibl edition=2\n[def:열추려보기]($목록,$열,$개수){\n  $목록 >> [table:select]{columns:$열} >> [table:take]{n:$개수}\n}",
+    "edition": 2,
+    "alias": "열추려보기",
+    "nodes": "table",
+    "category": "phrase",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "List<Record>",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "열추려보기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "목록을 기준 열로 정렬한 다음 지정 개수와 열을 선택합니다.",
+    "ibl_code": "#!ibl edition=2\n[def:정렬해추리기]($목록,$기준,$내림차순,$개수,$열){\n  $목록 >> [table:sort]{by:$기준,descending:$내림차순} >> [table:take]{n:$개수} >> [table:select]{columns:$열}\n}",
+    "edition": 2,
+    "alias": "정렬해추리기",
+    "nodes": "table",
+    "category": "phrase",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "List<Record>",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "정렬해추리기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "기준 점수 이상인 행만 남기고 점수를 두 배로 계산합니다.",
+    "ibl_code": "#!ibl edition=2\n$기준=5\n$목록=[{id:\"007\",score:7},{id:\"b\",score:3}]\n$목록 >> [table:filter]{where:($행)=>$행.score >= $기준} >> [table:select]{columns:($행)=>{id:$행.id,score:$행.score*2}}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "table",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "반복 결과의 중첩 목록을 한 겹 펼칩니다.",
+    "ibl_code": "#!ibl edition=2\n[[1,2],[],[3]] >> [table:each]{mode:\"flat_map\"}{return $it}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "table",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "항목별 계산 실패를 성공 값과 구분해 수집합니다.",
+    "ibl_code": "#!ibl edition=2\n[2,0,4] >> [table:each]{on_error:\"collect\"}{return 8/$it}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "table",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "병렬로 계산하되 입력 행의 순서대로 결과를 받습니다.",
+    "ibl_code": "#!ibl edition=2\n[3,1,2] >> [table:each]{parallel:3}{return {original:$it,square:$it*$it}}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "table",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "목록의 수량과 단가를 곱한 총액을 순수 식으로 합산합니다.",
+    "ibl_code": "#!ibl edition=2\n$행=[{quantity:2,price:3},{quantity:4,price:5}]\nreturn reduce($행,0,($합,$항목)=>$합+$항목.quantity*$항목.price)",
+    "edition": 2,
+    "alias": "",
+    "nodes": "",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "명시적 인자를 받는 함수를 조합하고 식을 문자열에 보간합니다.",
+    "ibl_code": "#!ibl edition=2\n[def:증가]($값,$폭=1){return $값+$폭}\n$결과=3 >> [fn:증가]{폭:2}\nreturn f\"결과: ${결과}\"",
+    "edition": 2,
+    "alias": "",
+    "nodes": "",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/조합",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  }
+]

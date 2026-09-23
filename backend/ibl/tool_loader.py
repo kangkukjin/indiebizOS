@@ -193,13 +193,13 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
             "type": "object",
             "properties": {
                 "edition": {"type": "integer", "enum": [1, 2],
-                            "description": "판본 선택. 생략=1. 판본 2는 명시 입력·값·함수 문법(ibl_v2 가이드)을 사용."},
+                            "description": "생략=기존 판본1. 새 조합은 ibl_v2 가이드를 읽고 판본2로 작성. 회상 원문의 판본은 유지."},
                 "inputs": {"type": "object", "description": "판본 2의 명시 외부 이름→값. 이전 턴 변수는 자동 주입하지 않음."},
                 "check": {"type": "boolean", "description": "실행 없이 같은 컴파일러로 검사."},
                 "code": {
                     "type": "string",
                     "description": (
-                        "IBL 코드. "
+                        "다음 예시는 판본1 코드. 판본2는 ibl_v2 가이드 참조. "
                         '단일: [sense:search]{query: "AI 뉴스"} / '
                         '파라미터: [sense:stock]{op: "investors", market: "STK", start_date: "2026-01"} / '
                         '파이프라인: [sense:search]{query: "AI"} >> [self:write]{path: "result.md"} / '

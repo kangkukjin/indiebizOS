@@ -414,6 +414,7 @@ data/hippocampus_tree/
 # 수동 선정 관용구의 재현 가능한 등록 입력·교재(개인 실행기억 아님)
 !data/idioms/curated.json
 !data/idioms/web_collection_seeds.json
+!data/idioms/ibl_v2_seeds.json
 # 노트북 원장·소스 카드 — 개인 자료(2026-09-04)
 data/notebook/
 

@@ -575,9 +575,13 @@ async def validate_ibl(req: ValidateRequest):
     code = (req.code or "").strip()
     if not code:
         raise HTTPException(status_code=400, detail="빈 코드입니다.")
-    if getattr(req, "edition", None) is not None or getattr(req, "inputs", None) is not None:
-        return validate_request_code(code, edition=req.edition, inputs=req.inputs)
-    return validate_code(code)
+    def _validate():
+        if getattr(req, "edition", None) is not None or getattr(req, "inputs", None) is not None:
+            return validate_request_code(code, edition=req.edition, inputs=req.inputs)
+        return validate_code(code)
+    import asyncio
+    from execution_workers import bind_context
+    return await asyncio.to_thread(bind_context(_validate))
 
 
 def _typecheck_of(code: str) -> dict:

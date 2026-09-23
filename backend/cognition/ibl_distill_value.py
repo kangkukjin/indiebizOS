@@ -90,9 +90,12 @@ def source_rows(calls):
     from hippo_tree import split_sentences
     rows = []
     for tool_index, tc in calls:
-        for statement_index, code in enumerate(split_sentences(tc['input']['code']), 1):
+        from ibl_edition import source_edition, explicit_source
+        source = explicit_source(tc['input']['code'], tc['input'].get('edition'))
+        statements = [source] if source_edition(source) == 2 else split_sentences(source)
+        for statement_index, code in enumerate(statements, 1):
             rows.append({'id': len(rows) + 1, 'code': code, 'tool_call_index': tool_index,
-                         'statement_index': statement_index})
+                         'statement_index': statement_index, 'edition': source_edition(code)})
     return rows
 
 

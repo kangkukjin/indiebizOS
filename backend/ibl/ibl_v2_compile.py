@@ -293,22 +293,30 @@ class Compiler:
                 return self.each(node, args, env, names, piped)
             if d["node"] == "fn":
                 sid = self.resolve_function(d["action"], names)
-                if not sid:
-                    self.issue(node, "FUNCTION", f"판본 2 함수가 없습니다: {d['action']}. 판본 1 함수는 자동 호출하지 않습니다.")
+                if sid:
+                    d["symbol"] = sid
+                    params = self.functions[sid].data["params"]
+                    receiver = next(iter(params), None)
+                    self.arguments(node, args, params, receiver, piped)
+                    return self.function(sid, args)
+                if key not in self.registry:
+                    self.issue(node, "FUNCTION", f"등록된 함수가 없습니다: {d['action']}")
                     return UNKNOWN
-                d["symbol"] = sid
-                params = self.functions[sid].data["params"]
-                receiver = next(iter(params), None)
-                self.arguments(node, args, params, receiver, piped)
-                return self.function(sid, args)
             spec = self.registry.get(key)
             if not spec:
                 self.issue(node, "UNSUPPORTED_ADAPTER", f"판본 2 계약이 없는 어휘: {key}")
                 return UNKNOWN
             contract = spec.contract
+            if contract.get("compatibility"):
+                self.guards.append({"source_span": span(self.source, node),
+                                    "boundary": contract["compatibility"], "action": key,
+                                    "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인"})
             params = contract["params"]
             required = set(contract.get("required", params))
-            self.arguments(node, args, {k: None if k in required else UNIT for k in params}, contract.get("pipe_input"), piped)
+            allowed = {k: None if k in required else UNIT for k in params}
+            if contract.get("open_params"):
+                allowed.update({k: UNIT for k in args if not k.startswith("_")})
+            self.arguments(node, args, allowed, contract.get("pipe_input"), piped)
             for k, t in args.items():
                 if k in params:
                     self.need(node, t, declared(params[k]))

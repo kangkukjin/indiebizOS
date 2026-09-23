@@ -15,6 +15,8 @@
     "base/episode_trace_reader",
     "base/execution_workers",
     "base/history_excerpt",
+    "base/ibl_code_corpus",
+    "base/ibl_edition",
     "base/image_envelopes",
     "base/korean_utils",
     "base/limb_keys",
@@ -92,6 +94,7 @@
     "cognition/ibl_idiom",
     "cognition/ibl_usage_generator",
     "cognition/ibl_usage_rag",
+    "cognition/ibl_v2_experience",
     "cognition/member_runner",
     "cognition/member_session",
     "cognition/memory_consolidation",
@@ -145,6 +148,7 @@
     "datastore/guide_registry",
     "datastore/health_sync",
     "datastore/hippo_tree",
+    "datastore/ibl_example_batch",
     "datastore/ibl_name_search",
     "datastore/ibl_registry",
     "datastore/ibl_signature_slot",
@@ -230,10 +234,13 @@
     "ibl/ibl_turn_vars",
     "ibl/ibl_typecheck",
     "ibl/ibl_v2_adapters",
+    "ibl/ibl_v2_compat",
     "ibl/ibl_v2_compile",
+    "ibl/ibl_v2_contracts",
     "ibl/ibl_v2_entry",
     "ibl/ibl_v2_expr",
     "ibl/ibl_v2_ir",
+    "ibl/ibl_v2_learning",
     "ibl/ibl_v2_parser",
     "ibl/ibl_v2_runtime",
     "ibl/ibl_v2_store",
@@ -468,8 +475,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 393,
-    "engine": 367,
+    "total": 400,
+    "engine": 374,
     "blocklist": 26
   }
 }

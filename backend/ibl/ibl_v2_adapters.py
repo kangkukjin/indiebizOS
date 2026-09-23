@@ -120,11 +120,21 @@ def load_registry(project_path=".", agent_id=None):
     from thread_context import get_allowed_nodes
     from ibl_access import check_node_access
     catalog = copy.deepcopy(load_nodes_installed())
+    from tool_loader import build_tool_package_map, package_path
+    package_map = build_tool_package_map()
+    package_roots = {name: package_path(name) for name in set(package_map.values())}
+    schemas = {}
+    for root in package_roots.values():
+        schema = json.loads((root / "tool.json").read_text())
+        for tool in schema.get("tools", [schema]):
+            schemas[tool.get("name")] = set((tool.get("input_schema") or {}).get("properties", {}))
     allowed = get_allowed_nodes()
-    result = {}
+    result, file_hashes = {}, {}
+    from ibl_v2_contracts import handler_contract
+    from ibl_v2_compat import plain_arguments
     for node, config in catalog.get("nodes", {}).items():
         for action, action_config in config.get("actions", {}).items():
-            contract = action_config.get("callable_contract")
+            contract = action_config.get("callable_contract") or handler_contract(node, action, action_config, schemas.get(action_config.get("tool")))
             if not contract or (allowed is not None and not check_node_access(node, allowed)):
                 continue
             contract = copy.deepcopy(validate_contract(contract))
@@ -135,17 +145,19 @@ def load_registry(project_path=".", agent_id=None):
             implementation = action_config.get("tool", "")
             package_paths = []
             if implementation:
-                from tool_loader import build_tool_package_map, package_path
-                package = build_tool_package_map().get(implementation)
+                package = package_map.get(implementation)
                 if package:
-                    package_paths = sorted(package_path(package).glob("*.py"))
+                    package_paths = sorted(package_roots[package].glob("*.py"))
             if adapter["protocol"] == "ibl-script/2":
                 from runtime_utils import get_base_path
                 script_root = get_base_path() / "data/scripts"
                 package_paths += sorted(script_root.glob("*.py")) + sorted(script_root.glob("*.sh")) + sorted(script_root.glob("*.js"))
                 if (script_root / "registry.yaml").is_file():
                     package_paths.append(script_root / "registry.yaml")
-            files = {str(p): digest(p.read_text()) for p in package_paths}
+            for p in package_paths:
+                if str(p) not in file_hashes:
+                    file_hashes[str(p)] = digest(p.read_text())
+            files = {str(p): file_hashes[str(p)] for p in package_paths}
             contract["implementation_fingerprint"] = digest(files)
             def run(runtime, args, *, node=node, action=action, c=contract,
                     ac=action_config, files=files, allowed=allowed):
@@ -160,6 +172,7 @@ def load_registry(project_path=".", agent_id=None):
                     if gate(node, action, ac):
                         raise Fault("MEMBER_ACCESS", "회원의 어휘 권한이 없습니다.", kind="permission")
                     return table_operation(c["adapter"]["operation"], runtime, args)
+                plain_arguments(args)
                 params = {**args, **c["adapter"].get("fixed_params", {})}
                 if protocol == "ibl-script/2":
                     from member_profile import is_member_principal
@@ -170,4 +183,6 @@ def load_registry(project_path=".", agent_id=None):
                 value, evidence = decode_envelope(raw, c["adapter"])
                 return Adapted(value, evidence)
             result[key] = Adapter(contract, run)
+    from ibl_v2_compat import function_adapters
+    result.update(function_adapters(project_path, agent_id))
     return result

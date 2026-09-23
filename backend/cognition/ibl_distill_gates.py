@@ -261,6 +261,14 @@ def _close_source_dependencies(ids: list, ibl_calls: list):
     contracts = []
     try:
         for call in ibl_calls:
+            from ibl_edition import source_edition
+            if source_edition(call) == 2:
+                from ibl_v2_learning import check_source
+                why = check_source(call)
+                if why:
+                    return None, why
+                contracts.append((set(), set()))
+                continue
             exports, required = set(), set()
             for stmt in hippo_tree.split_sentences(call):
                 free = set(call_signature(stmt))
@@ -350,6 +358,10 @@ def select_distill_source(selection, ibl_calls):
     if (any(type(i) is not int or not 1 <= i <= len(ibl_calls) for i in ids)
             or ids != sorted(set(ids))):
         return None, "call_ids는 범위 안의 중복 없는 실행 순서여야 함"
+    from ibl_v2_experience import select_program
+    v2 = select_program(ids, ibl_calls)
+    if v2 is not None:
+        return v2
     ids, dependency_error = _close_source_dependencies(ids, ibl_calls)
     if dependency_error:
         return None, dependency_error

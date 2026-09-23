@@ -268,7 +268,7 @@ def project_result(result, verbose=False):
     return out
 
 
-def describe_actions(names, allowed_nodes):
+def describe_actions(names, allowed_nodes, edition=None):
     from ibl_access import load_nodes_raw, resolve_allowed_nodes
     from ibl_registry import self_can_run
     if not isinstance(names, list) or not 1 <= len(names) <= 6:
@@ -282,5 +282,8 @@ def describe_actions(names, allowed_nodes):
         if not isinstance(spec, dict) or (allowed is not None and node not in allowed) or not self_can_run(node, action, spec):
             answer.append({"action": name, "error": "사용 가능한 액션이 아닙니다"})
         else:
+            if edition == 2:
+                from ibl_v2_contracts import handler_contract
+                spec = {**spec, "callable_contract": spec.get("callable_contract") or handler_contract(node, action, spec)}
             answer.append({"action": name, "definition": spec})
     return {"actions": answer, "executed": False}

@@ -43,7 +43,7 @@ LAYERS = {
         "audit_lifecycle", "execution_workers", "runtime_work", "runtime_worker_adapters", "trace_read", "episode_trace_reader", "memory_provenance", "quantity_checks",
         "restart_protocol", "restart_process", "restart_child", "runtime_legacy", "result_read_contract", "image_envelopes",
         "desktop_notify", "device_registry", "doc_ir", "document_converter",
-        "member_runtime", "episode_logger", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
+        "member_runtime", "episode_logger", "ibl_edition", "ibl_code_corpus", "model_call_context", "episode_orphans", "codex_rollout", "hls_ladder", "korean_utils", "limb_keys",
         "ai_candidates", "logging_utils", "mime_compat", "model_resolver", "nip17", "nip44",
         "phone_jobs", "principal", "quiescent_reload", "r2_client", "reload_gate", "repeat_guard", "runtime_utils", "safe_store", "seam_metrics",
         "selfbuild_gate", "shell_shadow_gate", "supervision_bus", "supervision_watch", "supervision_hook",
@@ -57,7 +57,7 @@ LAYERS = {
         "vocabulary_policy", "vocabulary_state", "pursuit_ledger", "agent_registry", "body_trust", "boot_status", "business_manager",
         "calendar_manager", "conversation_db", "decision_ledger", "face_config", "file_index", "focus_map",
         "forage_memory", "forage_doc", "hippo_tree", "guide_registry", "health_sync", "finance_ledger_sync", "ibl_registry",
-        "ibl_signature_slot", "ibl_name_search", "ibl_usage_db",
+        "ibl_signature_slot", "ibl_name_search", "ibl_example_batch", "ibl_usage_db",
         "install_approvals",
         "multi_chat_db", "node_registry", "notification_manager", "onboarding_state",
         "notify_dispatch", "peer_cards", "project_manager", "pulse_db", "red_apply",
@@ -68,7 +68,7 @@ LAYERS = {
     },
     "ibl": {
         "ibl_v2_ir", "ibl_v2_parser", "ibl_v2_expr", "ibl_v2_types",
-        "ibl_v2_compile", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "ibl_v2_store",
+        "ibl_v2_compile", "ibl_v2_contracts", "ibl_v2_learning", "ibl_v2_compat", "ibl_v2_runtime", "ibl_v2_adapters", "ibl_v2_entry", "ibl_v2_store",
         "member_bridge", "member_profile", "member_files",
         # ★api_engine·api_pipeline·api_transforms 는 이름만 api_* — FastAPI 라우터가
         # 아니라 api_registry.yaml 실행 엔진이다(APIRouter 0). 프리픽스 규칙보다 이
@@ -97,7 +97,7 @@ LAYERS = {
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "final_evaluator", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",
-        "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "ibl_idiom", "ibl_distill_gates", "ibl_distill_value",
+        "ibl_description_audit", "corpus_vocab_audit", "ibl_usage_generator", "ibl_usage_rag", "ibl_idiom", "ibl_distill_gates", "ibl_distill_value", "ibl_v2_experience",
         "memory_consolidation", "memory_evidence", "supervisor_content", "supervisor_review", "prompt_builder", "prompt_composition", "repair_verdict_distill", "turn_scope",
         "pursuit_bind", "pursuit_tools", "pursuit_maintenance", "reframe", "routing_system", "switch_runner",
         "system_ai_core", "system_ai_plans", "system_ai_runner",

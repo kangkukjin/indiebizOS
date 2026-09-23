@@ -22,17 +22,12 @@ PRECEDENCE = {"??": 1, ">>": 2, "&": 3, "or": 4, "||": 4,
 
 
 def edition_of(source, requested=None):
-    header = re.match(r"\A\s*#!ibl\s+edition=(\d+)\s*(?:\n|$)", source)
-    if source.lstrip().startswith("#!ibl") and not header:
-        raise Fault("EDITION_HEADER", "파일 헤더는 #!ibl edition=1 또는 2입니다.", kind="compile")
-    declared = int(header[1]) if header else None
-    if requested is not None and (type(requested) is not int or requested not in (1, 2)):
-        raise Fault("EDITION", "지원 판본은 1과 2입니다.", kind="compile")
-    if declared is not None and declared not in (1, 2):
-        raise Fault("EDITION", "지원하지 않는 파일 판본입니다.", kind="compile")
-    if declared is not None and requested is not None and declared != requested:
-        raise Fault("EDITION_CONFLICT", "파일 헤더와 API edition이 다릅니다.", kind="compile")
-    return requested or declared or 1
+    from ibl_edition import source_edition
+    try:
+        return source_edition(source, requested)
+    except ValueError as exc:
+        code, message = str(exc).split(": ", 1)
+        raise Fault(code, message, kind="compile") from exc
 
 
 class Parser:

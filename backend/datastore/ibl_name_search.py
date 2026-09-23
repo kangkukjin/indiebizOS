@@ -148,7 +148,7 @@ def phrase_aliases(db, limit: int = 12) -> List[str]:
     return [r[0] for r in rows]
 
 
-def find_phrase_by_alias(db, name: str) -> Optional[Dict]:
+def find_phrase_by_alias(db, name: str, edition: int = 1) -> Optional[Dict]:
     """이름으로 관용구 하나 — `[fn:이름]` 해소의 셋째 길(프로그램 정의 → 저장 워크플로 → 관용구). 없으면 None."""
     if not name:
         return None
@@ -160,9 +160,10 @@ def find_phrase_by_alias(db, name: str) -> Optional[Dict]:
             # 실행 이력·우회 횟수도 준다(2026-09-07) — 증류의 덮어쓰기 판정이 '돈 적 있는가'를 여기서 묻는다
             "COALESCE(success_count,0) AS success_count, COALESCE(fail_count,0) AS fail_count, "
             "COALESCE(bypass_count,0) AS bypass_count "
-            "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC LIMIT 1",
-            (name.strip(),)).fetchone()
-    return dict(row) if row else None
+            "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC",
+            (name.strip(),)).fetchall()
+    from ibl_edition import source_edition
+    return next((dict(r) for r in row if source_edition(r["ibl_code"]) == edition), None)
 
 
 def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: str = "",
@@ -188,9 +189,13 @@ def replace_example(db, example_id: int, *, intent: str, ibl_code: str, nodes: s
         return 0
     now = datetime.now().isoformat()
     with db._get_connection() as conn:
-        old = conn.execute("SELECT COALESCE(topic,'') AS topic FROM ibl_examples WHERE id = ?",
+        old = conn.execute("SELECT COALESCE(topic,'') AS topic, ibl_code FROM ibl_examples WHERE id = ?",
                            (example_id,)).fetchone()
         if not old:
+            return 0
+        from ibl_edition import source_edition
+        if source_edition(old["ibl_code"]) != source_edition(ibl_code):
+            logger.warning("판본 변경은 기존 행 덮어쓰기 대신 새 판본 행으로 등록해야 합니다.")
             return 0
         conn.execute(
             "UPDATE ibl_examples SET intent = ?, ibl_code = ?, nodes = ?, topic = ?, alias = ?, returns = ?, "

@@ -1,4 +1,5 @@
 <ibl_executor>
+새 조합은 `ibl_v2.md`를 읽고 `edition:2`로 작성한다. 아래 예제·무표기 자산은 판본1이며 섞지 않는다.
 IBL은 정보 흐름 언어다. 도구 execute_ibl(CLI: mcp__indiebizos__execute_ibl)에 code를 전달한다.
 아래 목록은 현재 몸에서 쓸 수 있는 능력이다. 목록이 짧다고 능력이 없는 것이 아니다.
 필요한 인자·op·출력 계약은 execute_ibl(code="", describe=["node:action"])으로 한 번에 1~6개 조회한다.

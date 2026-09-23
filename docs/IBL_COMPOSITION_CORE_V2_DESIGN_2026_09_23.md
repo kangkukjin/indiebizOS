@@ -1,6 +1,7 @@
 # IBL 조합 기반 개정 설계 — 값·호출·반복의 의미를 고정한다
 
-상태: **선택형 판본 2 코어 구현. 기본 판본·기존 운영 자산은 판본 1 유지.**
+상태: **판본 2 코어·기존 어휘/함수 호환·판본별 학습 연결 구현. 기존 무표기 자산은 판본 1 유지.**
+운영 연결: [관용구·코퍼스 후속 구현](IBL_V2_ASSET_INTEGRATION_2026_09_23.md).
 구현 범위와 검증/잔여 단계: [구현 기록](IBL_V2_IMPLEMENTATION_2026_09_23.md). 이 문서의 장기 목표 전체를 구현 완료로 간주하지 않는다.
 작성: 2026-09-23. 코드 기준과 격리 재현은 [audit.json](experiments/ibl_composition_core_v2_2026_09_23/audit.json)에 보존한다.
 목적 정본: [IBL 진화 목적](IBL_EVOLUTION_PURPOSE.md), [vision.md](../data/system_docs/vision.md).

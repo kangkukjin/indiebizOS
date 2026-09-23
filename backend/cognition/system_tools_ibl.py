@@ -530,7 +530,7 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         if tool_input.get("code") or tool_input.get("pipeline") or (tool_input.get("describe") is not None and tool_input.get("read_result") is not None):
             return json.dumps({"error": "조회에는 code를 비우고 describe/read_result 중 하나만 사용하세요"}, ensure_ascii=False)
         try:
-            value = (describe_actions(tool_input["describe"], allowed) if tool_input.get("describe") is not None
+            value = (describe_actions(tool_input["describe"], allowed, edition=tool_input.get("edition")) if tool_input.get("describe") is not None
                      else read_result(tool_input["read_result"]))
             return json.dumps(value, ensure_ascii=False)
         except (ValueError, KeyError, TypeError, OSError) as exc:
@@ -1057,10 +1057,15 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
                     _origin = get_task_origin() or ""
                 except Exception:
                     _origin = ""
+            from ibl_edition import source_edition, program_hash
+            try:
+                edition = source_edition(code, tool_input.get("edition"))
+            except ValueError:
+                edition = tool_input.get("edition") if type(tool_input.get("edition")) is int else 1
             record_trajectory_event("ibl.started", {
-                "code_sha256": hashlib.sha256(code.encode("utf-8", "replace")).hexdigest(),
+                "code_sha256": program_hash(code, edition),
                 "code_chars": len(code),
-                "edition": tool_input.get("edition") or (2 if code.lstrip().startswith("#!ibl edition=2") else 1),
+                "edition": edition,
                 # 조회 종류를 원문·티켓 없이 보존한다. 빈 코드 해시만으로는
                 # 계약 조회·결과 열람·잘못된 빈 호출을 구별할 수 없다.
                 "request_keys": [k for k in ("describe", "read_result", "recover")
@@ -1113,11 +1118,11 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             record_trajectory_event("ibl.finished", _finished)
             # 원문 코퍼스 — 궤적은 해시만 싣는 계약이라 원문은 여기(같은 해시로 조인).
             # 2026-09-06 부활. 실패 사유는 봉투의 error 한 줄(캡·마스킹은 기록기 몫).
-            if not (isinstance(obj, dict) and obj.get("edition") == 2):
+            if not tool_input.get("check"):
                 record_ibl_code(
                     code, success=not failed, elapsed_ms=_finished["elapsed_ms"],
                     error=(obj.get("error") if failed and isinstance(obj, dict) else ""),
-                    agent=agent_id or "",
+                    agent=agent_id or "", edition=edition,
                     origin=str((tool_input or {}).get("origin") or ""))
             return result
     except Exception as e:

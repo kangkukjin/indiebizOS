@@ -160,7 +160,7 @@ def documented_vocab(action_config: dict, tool_name: str) -> Set[str]:
 
 
 def allowed_param_keys(node: str, action: str,
-                       action_config: dict) -> Optional[Set[str]]:
+                       action_config: dict, *, schema_keys=None) -> Optional[Set[str]]:
     """액션의 허용 파라미터 키 집합. 계산 불가/검사 부적합이면 None (= 검사 스킵).
 
     handler 라우터 + tool 매핑 액션만 대상. open_params: true 는 자유 키 선언(스킵).
@@ -174,24 +174,27 @@ def allowed_param_keys(node: str, action: str,
     tool_name = action_config.get("tool")
     if not tool_name:
         return None
-    try:
-        from tool_loader import build_tool_package_map, get_tools_path
-        pkg_name = build_tool_package_map().get(tool_name)
-        if not pkg_name:
+    if schema_keys is not None:
+        keys = set(schema_keys)  # One caller-owned schema snapshot for a whole compilation.
+    else:
+        try:
+            from tool_loader import build_tool_package_map, get_tools_path
+            pkg_name = build_tool_package_map().get(tool_name)
+            if not pkg_name:
+                return None
+            pkg_dir = get_tools_path() / pkg_name
+            if not pkg_dir.is_dir():
+                return None
+            # ★허용 키의 출처는 **그 액션의 선언**이다 (2026-09-18 검사기 조이기). 옛 판은 패키지 전체 .py 에서
+            #   읽히는 모든 키를 허용해 같은 패키지 *다른 액션*의 키가 통과했다 — `[self:read]{sheet}` 는
+            #   self:sheet 의 키 덕에, `[sense:researcher]{query}` 는 sense:paper 의 키 덕에 초록이었고, 빌드의
+            #   param 선언 완전성 관문만 뒤늦게 잡았다(증류·시딩·typecheck 경로는 침묵). 실측: 코퍼스 3,635행 중
+            #   1행·실사용 2,463 step 중 3종만 새로 걸렸다 — 선언 완전성 관문이 이미 코퍼스를 선언에 묶어 둔 덕.
+            #   패키지 읽기키는 스키마가 아예 없는 도구의 폴백으로만 남긴다(판정 재료가 없으면 옛 판정).
+            schema = _schema_props(tool_name)
+            keys = set(schema) if schema else set(_package_read_keys(pkg_dir))
+        except Exception:
             return None
-        pkg_dir = get_tools_path() / pkg_name
-        if not pkg_dir.is_dir():
-            return None
-        # ★허용 키의 출처는 **그 액션의 선언**이다 (2026-09-18 검사기 조이기). 옛 판은 패키지 전체 .py 에서
-        #   읽히는 모든 키를 허용해 같은 패키지 *다른 액션*의 키가 통과했다 — `[self:read]{sheet}` 는
-        #   self:sheet 의 키 덕에, `[sense:researcher]{query}` 는 sense:paper 의 키 덕에 초록이었고, 빌드의
-        #   param 선언 완전성 관문만 뒤늦게 잡았다(증류·시딩·typecheck 경로는 침묵). 실측: 코퍼스 3,635행 중
-        #   1행·실사용 2,463 step 중 3종만 새로 걸렸다 — 선언 완전성 관문이 이미 코퍼스를 선언에 묶어 둔 덕.
-        #   패키지 읽기키는 스키마가 아예 없는 도구의 폴백으로만 남긴다(판정 재료가 없으면 옛 판정).
-        schema = _schema_props(tool_name)
-        keys = set(schema) if schema else set(_package_read_keys(pkg_dir))
-    except Exception:
-        return None
 
     qualified = f"{node}:{action}"
     keys |= _alias_keys(action_config)
@@ -524,6 +527,11 @@ def code_syntax_error(code: str, function_body: bool = False) -> Optional[str]:
     if not s:
         return "빈 코드"
     try:
+        from ibl_edition import source_edition
+        if source_edition(s) == 2:
+            from ibl_v2_parser import parse as parse_v2
+            parse_v2(s)
+            return None
         # 관용구 골격·워크플로 몸은 **함수 몸**이다 — 미할당 `$이름` 이 자리를 가리지 않고
         # 시그니처다(언어 개정 2026-09-07). 최상위 문법으로 읽으면 파이프 머리 슬롯
         # (`$목록 >> [table:take]`)을 오타로 보고 원장 입구에서 거절한다.

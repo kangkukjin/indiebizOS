@@ -10,7 +10,17 @@ from ibl_v2_parser import parse, edition_of
 
 def definitions():
     from workflow_store import _get_workflows_path
+    from member_runtime import is_member
+    if is_member():
+        return {}  # Owner's saved procedures do not enter member compilation.
     out = {}
+    from ibl_usage_db import IBLUsageDB
+    from ibl_edition import source_edition
+    db = IBLUsageDB()
+    with db._get_connection() as conn:
+        for row in conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY updated_at"):
+            if source_edition(row["ibl_code"]) == 2:
+                out[row["alias"]] = row["ibl_code"]
     for path in sorted(_get_workflows_path().glob("*.yaml")):
         if path.is_symlink():
             continue
@@ -56,7 +66,7 @@ def action(action_name, params, project_path):
                 raise Fault("MIGRATION_ID", "판본 1 저장본은 새 id로 명시 등록하세요. 기존 호출은 보존합니다.", kind="compile")
             saved = save_workflow({"id": wf_id, "name": name, "edition": 2,
                                    "code": source, "description": params.get("description", ""),
-                                   "params_required": list(plan.root.data["statements"][0].data["params"]),
+                                   "params_required": [k for k, v in plan.root.data["statements"][0].data["params"].items() if v is None],
                                    "plan_hash": plan.fingerprint})
             return {"success": True, "edition": 2, "workflow_id": saved, "name": name, "check": plan.report()}
         if action_name == "run":

@@ -320,6 +320,9 @@ def split_sentences(code: str) -> List[str]:
     ★2026-09-05: 줄바꿈도 경계다(파서 `_extract_statements` 가 `;` 를 개행과 같은 것으로 접는다). 종전엔 `;` 만
     봐서 여러 줄 프로그램(팁 보고서 15단계)이 '문장 1' 로 잡혀 이름 먼저 회상이 본문을 그대로 내보내고
     자동 작명이 건너뛰었다."""
+    from ibl_edition import source_edition
+    if source_edition(code or "") == 2:
+        return [code] if code.strip() else []
     out, buf, q, depth = [], [], None, 0
     i, n = 0, len(code or "")
     while i < n:
@@ -429,11 +432,16 @@ def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = 
         return ""
     slots = slot_names(code or "", signature)
     args = ", ".join(f'{s}: "…"' for s in slots)
-    return f"[fn:{alias}]{{{args}}}" + (f" → {returns}" if returns else "")
+    from ibl_edition import source_edition
+    prefix = "판본 2 (execute_ibl edition:2): " if source_edition(code or "") == 2 else ""
+    return prefix + f"[fn:{alias}]{{{args}}}" + (f" → {returns}" if returns else "")
 
 
 def phrase_def_block(alias: str, code: str) -> str:
     """관용구를 고쳐 쓰는 정의 블록 — 프로그램에 붙여 넣는 `[def: 이름]{ 문장들 }` (여러 줄)."""
+    from ibl_edition import source_edition
+    if source_edition(code or "") == 2:
+        return code
     sents = split_sentences(code or "")
     body = "\n".join("  " + s for s in sents)
     return f"[def: {alias or '이름'}]{{\n{body}\n}}"
@@ -1057,12 +1065,15 @@ def reference_needs_expansion(code: str) -> bool:
     1200자는 의미 판정이 아니라 자동 노출 상한이다. 한 문장의 write에도 보고서
     전체가 실릴 수 있다. 원장 내용·실행 가능성은 바꾸지 않는다.
     """
-    return len(code) > 1200 or len(split_sentences(code)) > 1
+    from ibl_edition import source_edition
+    return source_edition(code) == 2 or len(code) > 1200 or len(split_sentences(code)) > 1
 
 
 def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
     """JSON 봉투: 긴 본문·여러 문장·이름 있는 함수의 정의는 명시 expand로만 연다."""
     out = dict(r)
+    from ibl_edition import source_edition
+    out["edition"] = source_edition(r.get("ibl_code") or "")
     code = r.get("ibl_code") or ""
     n = len(split_sentences(code))
     alias = (r.get("alias") or "").strip()

@@ -25,7 +25,13 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
         plan = compile_program(source, load_registry(project_path, agent_id), inputs, definitions())
         if request.get("check"):
             return plan.report()
-        return Runtime(plan, inputs, cancel_check=cancel_check).run()
+        result = Runtime(plan, inputs, cancel_check=cancel_check).run()
+        try:
+            from ibl_v2_learning import record_functions
+            record_functions(plan, result)
+        except Exception:
+            pass  # Usage accounting never retries an already executed program.
+        return result
     except Fault as exc:
         return {"edition": 2, "ok": False, "success": False, "executed": False,
                 "status": "invalid" if exc.kind == "compile" else "failed",

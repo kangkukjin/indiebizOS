@@ -1,0 +1,74 @@
+{
+  "date": "2026-09-23",
+  "scope": "Edition-aware existing vocabulary, reusable functions, corpus, recall, distillation and teaching integration",
+  "model_comparison_performed": false,
+  "embedding_model_retrained": false,
+  "live_assets": {
+    "before_by_edition": {
+      "1": 3669,
+      "2": 0
+    },
+    "after_by_edition": {
+      "1": 3669,
+      "2": 8
+    },
+    "preservation": {
+      "legacy_rows": 3669,
+      "legacy_rows_changed": 0,
+      "new_rows": 8,
+      "total": 3677
+    },
+    "preservation_fields": [
+      "id",
+      "intent",
+      "ibl_code",
+      "success_count",
+      "fail_count"
+    ],
+    "native_idiom_names": [
+      "열추려보기",
+      "정렬해추리기"
+    ],
+    "seed_file": "data/idioms/ibl_v2_seeds.json",
+    "seed_sha256": "3b6ea8b7f352c794add379bba3947ccb4cf309e9a02060d6c7e804f93388d061",
+    "seed_inserted": 8,
+    "semantic_indexed": 8,
+    "index_mode": "semantic+fts",
+    "second_apply_pending": 0,
+    "second_apply_inserted": 0,
+    "backup": "data/_backups/2026-09-23_ibl_v2_assets_140820/ibl_usage.db"
+  },
+  "checks": {
+    "focused": {
+      "passed": 168,
+      "warnings": 99,
+      "seconds": 31.91
+    },
+    "vocabulary_generated_files": "passed",
+    "android_bundle": "passed",
+    "backend_layers": "passed",
+    "file_and_guide_budget": "passed",
+    "event_loop": "passed",
+    "body_path_expansion": "passed",
+    "validate_parity": {
+      "fixtures_checked": 148,
+      "textbook_checked": 11,
+      "false_red": 0
+    },
+    "items_injection": "passed",
+    "private_nouns": "passed",
+    "full_backend": {
+      "command": ".venv/bin/python -m pytest backend/ -q -o addopts=''",
+      "passed": 5617,
+      "skipped": 1,
+      "warnings": 116,
+      "seconds": 500.48
+    }
+  },
+  "compatibility_limits": [
+    "Legacy handlers and functions retain their full Record envelopes and unknown effect/type boundaries; preflight reports incomplete.",
+    "Existing edition 1 assets are retained, not automatically transpiled.",
+    "Independent reusable edition 2 programs must close their inputs; mixed/multiple program distillation is rejected.",
+    "IDE/LSP, durable resume, precise row lineage and new remote script wire negotiation are outside this integration."
+  ]
+}

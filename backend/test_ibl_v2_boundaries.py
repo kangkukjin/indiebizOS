@@ -135,6 +135,9 @@ def test_script_v2_rejects_missing_or_wrong_contract(tmp_path,monkeypatch):
 
 
 def test_workflow_save_load_and_legacy_id_guard(tmp_path,monkeypatch):
+    import ibl_usage_db
+    monkeypatch.setattr(ibl_usage_db, 'DB_PATH', str(tmp_path/'usage.db'))
+    monkeypatch.setattr(ibl_usage_db.IBLUsageDB, '_instance', None)
     import workflow_store
     from ibl_v2_store import action,definitions
     from workflow_engine import execute_workflow

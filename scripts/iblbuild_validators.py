@@ -24,7 +24,7 @@ from iblbuild_common import (
 )
 from iblbuild_derive import build_tool_index
 from iblbuild_appview import validate_app_blocks, validate_standalone_instruments
-
+from iblbuild_v2 import check_v2_corpus
 
 def _handler_syntax_issue(pkg_name: str, handler_text: str) -> str | None:
     """handler.py 구문 오류를 **정직 빨강**으로. 멀쩡하면 None.
@@ -41,7 +41,6 @@ def _handler_syntax_issue(pkg_name: str, handler_text: str) -> str | None:
     except SyntaxError as e:
         return (f"{pkg_name}/handler.py: 파이썬 구문 오류 line {e.lineno}: {e.msg} — "
                 f"깨진 핸들러는 로드 시 그 패키지 도구가 조용히 사라집니다(폴백 초록 금지)")
-
 
 def _extract_op_dispatchers(handler_text: str) -> dict[str, tuple[set[str], object]] | None:
     """handler.py 본문에서 _OP_DISPATCHERS dict 를 AST 로 파싱.
@@ -78,7 +77,6 @@ def _extract_op_dispatchers(handler_text: str) -> dict[str, tuple[set[str], obje
             result[tool_name] = (op_keys, v_node)
         return result
     return None
-
 
 def _stub_ops(table_node) -> list[str]:
     """_OP_DISPATCHERS 테이블(ast.Dict)에서 값이 None 상수인 op 키 목록.
@@ -612,6 +610,8 @@ def validate_corpus_vocab(data: dict, root: Path) -> list[str] | None:
         # 관용구 골격은 **함수 몸**이다 — 미할당 `$이름` 이 자리를 가리지 않고 시그니처다
         # (언어 개정 2026-09-07). 최상위 문법으로 읽으면 파이프 머리·병렬 분기 슬롯을 오타로 본다.
         _is_body = bool(e.get("alias")) or e.get("category") == "phrase"
+        if check_v2_corpus(code, e, issues, fname):
+            continue
         try:
             parsed = (ibl_parser.parse_function_body(code) if _is_body else ibl_parser.parse(code))
         except Exception as ex:

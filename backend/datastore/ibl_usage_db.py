@@ -593,9 +593,9 @@ class IBLUsageDB:
         from ibl_name_search import search_aliased as _sa
         return _sa(self, query, top_k=top_k, alpha=alpha, allowed_nodes=allowed_nodes)
 
-    def find_phrase_by_alias(self, name: str) -> Optional[Dict]:
+    def find_phrase_by_alias(self, name: str, edition: int = 1) -> Optional[Dict]:
         from ibl_name_search import find_phrase_by_alias as _f
-        return _f(self, name)
+        return _f(self, name, edition=edition)
 
     def alias_of_code(self, ibl_code: str) -> str:
         from ibl_name_search import alias_of_code as _f
@@ -616,59 +616,8 @@ class IBLUsageDB:
             examples: [{intent, ibl_code, nodes?, category?, difficulty?, source?, tags?}]
         Returns: 추가된 수 (파싱 불가·남의 어휘 용례는 입구 게이트가 걸러 제외)
         """
-        if not examples:
-            return 0
-
-        bad = [(ex['ibl_code'], _syntax_reason(
-            ex['ibl_code'], function_body=bool(ex.get('alias')) or ex.get('category') == "phrase"))
-            for ex in examples]
-        bad = [(c, r) for c, r in bad if r]
-        if bad:
-            logger.warning(
-                f"[IBL Usage DB] 파싱 불가 용례 {len(bad)}건 거부(입구 구문-게이트): "
-                + "; ".join(f"{r} / {c[:60]}" for c, r in bad[:5])
-                + (" …" if len(bad) > 5 else ""))
-            _badset = {c for c, _ in bad}
-            examples = [ex for ex in examples if ex['ibl_code'] not in _badset]
-            if not examples:
-                return 0
-
-        from ibl_registry import code_is_owned
-        dropped = [ex['ibl_code'] for ex in examples
-                   if (not code_is_owned(ex['ibl_code']) if owned_vocabulary
-                       else self._is_foreign_vocab(ex['ibl_code']))]
-        if dropped:
-            logger.warning(
-                f"[IBL Usage DB] 남의 어휘 용례 {len(dropped)}건 거부(입구 소유-게이트): "
-                + "; ".join(dropped[:5]) + (" …" if len(dropped) > 5 else ""))
-            examples = [ex for ex in examples if ex['ibl_code'] not in set(dropped)]
-            if not examples:
-                return 0
-
-        now = datetime.now().isoformat()
-        ids = []
-
-        with self._get_connection() as conn:
-            for ex in examples:
-                cursor = conn.execute(
-                    """INSERT INTO ibl_examples
-                       (intent, ibl_code, nodes, category, difficulty, source, tags, created_at, updated_at, topic)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (
-                        ex['intent'], ex['ibl_code'],
-                        ex.get('nodes', ''), ex.get('category', 'single'),
-                        ex.get('difficulty', 1), ex.get('source', 'synthetic'),
-                        ex.get('tags', ''), now, now, _norm_topic(ex.get('topic', ''))
-                    )
-                )
-                ids.append(cursor.lastrowid)
-            conn.commit()
-
-        # 배치 임베딩
-        self._index_batch(ids, examples)
-        _tree_refresh(*[ex.get('topic', '') for ex in examples])
-        logger.info(f"[IBL Usage DB] 배치 추가 완료: {len(ids)}개")
-        return len(ids)
+        from ibl_example_batch import add_examples_batch
+        return add_examples_batch(self, examples, owned_vocabulary=owned_vocabulary)
 
     def get_stats(self) -> Dict[str, Any]:
         """용례 사전 통계"""

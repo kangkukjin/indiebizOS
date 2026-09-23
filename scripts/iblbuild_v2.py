@@ -18,3 +18,17 @@ def validate_v2_contracts(data):
                 except (ValueError, KeyError, TypeError) as exc:
                     issues.append(f"{name}:{action} callable_contract: {exc}")
     return issues
+
+
+def check_v2_corpus(code, entry, issues, origin):
+    from ibl_edition import source_edition
+    try:
+        if source_edition(code, entry.get("edition")) != 2:
+            return False
+        from ibl_v2_learning import check_source
+        why = check_source(code, bool(entry.get("alias")) or entry.get("category") == "phrase")
+        if why:
+            issues.append(f"{origin}: 판본 2 용례 검사 — {why}")
+    except Exception as exc:
+        issues.append(f"{origin}: 판본 2 검사 불가 — {exc}")
+    return True

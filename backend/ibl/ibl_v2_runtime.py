@@ -229,7 +229,7 @@ class Runtime:
             args = sub(d["params"])
             if d["node"] == "table" and d["action"] == "each":
                 return self.each(node, env, args, piped)
-            if d["node"] == "fn":
+            if d["node"] == "fn" and "symbol" in d:
                 definition = self.plan.functions[d["symbol"]]
                 params = definition.data["params"]
                 args = self.inject(node, args, next(iter(params), None), piped)
@@ -241,8 +241,13 @@ class Runtime:
                 self.local.depth = depth + 1
                 try:
                     result = self.frame(definition.data["body"], local)
-                    return Binding(result.value, result.evidence | args.evidence)
+                    eid = self.event(node, "function_result", result.evidence | args.evidence,
+                                     name=d["action"], definition_start=definition.start, success=True)
+                    return Binding(result.value, frozenset({eid}))
                 except Fault as exc:
+                    eid = self.event(node, "function_result", exc.evidence,
+                                     name=d["action"], definition_start=definition.start, success=False)
+                    exc.evidence = [eid]
                     exc.frames.append({"function": d["action"], "call": span(self.plan.source, node),
                                        "definition": span(self.plan.source, definition)})
                     raise
@@ -456,7 +461,7 @@ class Runtime:
         spec = self.plan.registry[key]
         args = self.inject(node, args, spec.contract.get("pipe_input"), piped)
         for name, value in args.value.items():
-            guard(value, spec.contract["params"][name], f"{key}.{name}")
+            guard(value, spec.contract["params"].get(name, "Unknown"), f"{key}.{name}")
         def request_value(value):
             if isinstance(value, Closure):
                 return {"closure_node": value.body.id, "params": list(value.params),

@@ -52,7 +52,8 @@ def list_workflows() -> List[Dict]:
             from ibl_v2_store import definition_name
             try:
                 definition_name(data.get("code", ""))
-                problem = None
+                from ibl_v2_learning import check_source
+                problem = check_source(data.get("code", ""), function_body=True)
             except Exception as exc:
                 problem = str(exc)
             workflows.append({"id": f.stem, "name": data.get("name", f.stem),

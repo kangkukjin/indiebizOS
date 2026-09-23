@@ -68,8 +68,9 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 
 ## 도구 경계
 
-액션의 `callable_contract`가 명시된 어휘만 실행한다. `describe:["table:filter"]`로 두 판본의 계약을 함께 읽을 수 있다.
-현재 연결된 범위:
+사전에 `callable_contract`가 있으면 그 값 계약을 사용한다. 나머지 설치·활성 어휘는 기존 실행기를 거치는
+호환 어댑터로 호출한다. `edition:2, describe:["sense:search"]`로 실제 계약을 읽는다.
+아래는 값 모양을 고정한 네이티브 연결이다:
 
 | 어휘 | 판본 2 입력/결과 |
 | --- | --- |
@@ -108,7 +109,9 @@ Unit·Result·Decimal은 일반 JSON 레코드로 위장하지 않는다. 타입
 검증한 함수를 기존 workflow 원장에 **새 id / edition:2**로 저장한다. 소스는 하나의 `[def:이름](...){...}`다.
 관리 호출은 `[self:workflow]{op:"save",edition:2,code:...}` 또는 아래 CLI register다.
 실행은 새 판본의 `[fn:이름]{...}`다. `[self:workflow]{op:"run",edition:2,name:...,params:{...}}`도 같은 진입점을 쓴다.
-판본 1 id 덮어쓰기와 암묵 판본 간 함수 호출은 거절한다. 저장본의 하위 함수를 바꿔도 실행 중 계획의 본문은 바뀌지 않는다.
+판본 1 id 덮어쓰기는 거절한다. 해마에도 헤더가 있는 명시 `[def:]`를 등록할 수 있다.
+같은 이름의 판본 1·2 관용구는 별도 행·서명·실적으로 보존된다. 판본 1 호출은 판본 1을 계속 사용한다.
+판본 2의 이름 해소는 지역 정의 → 판본 2 저장 정의 → 기존 함수의 호환 어댑터 순서다. 저장본의 하위 함수를 바꿔도 실행 중 계획의 본문은 바뀌지 않는다.
 
 ```bash
 .venv/bin/python scripts/ibl_v2.py check docs/examples/ibl_v2/table.ibl
@@ -120,4 +123,37 @@ Unit·Result·Decimal은 일반 JSON 레코드로 위장하지 않는다. 타입
 
 replay는 기록된 입력·계획 지문이 같을 때만 외부 결과를 재생한다. 기록이 없으면 외부 호출하지 않고 실패한다.
 현재 재생은 디버깅 용도다. 중단된 쓰기의 자동 재개·exactly-once·결과 캐시는 제공하지 않는다.
-새 판본의 실행은 기존 판본용 자동 증류 코퍼스에 넣지 않는다. 실제 모델 첫 생성 비교와 검증된 관용구의 점진 이전은 별도 평가 단계다.
+## 기존 어휘·관용구를 조합하기
+
+호환 어댑터의 반환은 원래 JSON 봉투 전체인 Record다. 자동 `.items` 추출·파이프 인자 추측은 없다.
+순수 콜백·Unit·Result·정밀 숫자를 구형 JSON 핸들러로 암묵 변환하지 않는다.
+
+```ibl
+#!ibl edition=2
+$검색 = [sense:search]{query:"공개 자료",count:5}
+$검색.items >> [table:select]{columns:["title","url"]}
+```
+
+기존 관용구도 명시 인자로 호출하고 `$결과.items`처럼 반환 봉투를 읽는다.
+검사 응답의 `guards[].boundary`는 `legacy-envelope/1` 또는 `legacy-function/1`이고 상태는 `incomplete`다.
+선언된 키는 검사하지만 코어의 열린 인자·실제 반환·효과는 기존 실행기에서 확인한다.
+검사가 모든 업무 계약을 증명했다는 뜻이 아니다. 권한·회원·도구 보호는 기존 실행기가 집행한다.
+
+## 관용구와 학습 자료 이관
+
+기존 무표기 자료는 판본 1로 보존한다. 새 용례는 헤더로 판본을 명시하고 같은 원장 문에서 새 컴파일러로 검사한다.
+회상 카드에도 판본이 나타난다. 판본 2 함수의 실제 호출은 해당 원문의 실적에만 기록한다.
+완료된 판본 2 프로그램은 기존 한 번의 증류에서 통째로 선택한다. 부분 실패·검사만 한 코드·외부 inputs가
+필요한 코드는 자동 재사용 예제로 만들지 않는다. 서로 다른 프로그램이나 판본을 임의로 연결하지 않는다.
+실행 원문은 별도의 관측 코퍼스에 판본과 함께 보존하며 재사용 적합 판정과 구분한다.
+
+```bash
+.venv/bin/python scripts/ibl_v2_assets.py inventory
+.venv/bin/python scripts/ibl_v2_assets.py seed                     # 검사·예정 건수
+.venv/bin/python scripts/ibl_v2_assets.py seed --apply             # 중복 없는 실제 적재
+.venv/bin/python scripts/ibl_v2_assets.py seed /path/to/reviewed.json --apply
+```
+
+배포 씨앗 정본은 `data/idioms/ibl_v2_seeds.json`이다. `열추려보기`·`정렬해추리기`는 같은 이름의
+판본 2 정의가 있으며, 각기 목록 자체를 반환한다. 기존 행의 본문·실적은 덮어쓰지 않는다.
+새 별칭의 선언 이름과 `[def:]` 이름은 일치해야 한다. 일반적인 자동 문법 변환은 하지 않는다.

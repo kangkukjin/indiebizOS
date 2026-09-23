@@ -206,6 +206,7 @@
     "ibl/ibl_code_binding",
     "ibl/ibl_code_ir",
     "ibl/ibl_control_blocks",
+    "ibl/ibl_dependencies",
     "ibl/ibl_document_value",
     "ibl/ibl_engine",
     "ibl/ibl_envelope",
@@ -481,8 +482,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 406,
-    "engine": 380,
+    "total": 407,
+    "engine": 381,
     "blocklist": 26
   }
 }

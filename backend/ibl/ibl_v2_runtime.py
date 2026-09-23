@@ -476,6 +476,8 @@ class Runtime:
         from ibl_callable_contract import normalize, selected, problems
         args = Binding(normalize(spec.contract, args.value), args.evidence)
         args = self.inject(node, args, spec.contract.get("pipe_input"), piped)
+        if spec.dependency and spec.dependency(node.data['dependency_args']) != node.data['dependency_snapshot']:
+            raise Fault('DEFINITION_CHANGED', '참조한 실행 자산이 검사 이후 변경되었습니다.', node, kind='protocol')
         contract = selected(spec.contract, args.value)
         failures = problems(contract, args.value)
         failures += [f"필수 인자 누락: {k}" for k in contract.get("required", contract["params"]) if k not in args.value]
@@ -577,4 +579,5 @@ class Runtime:
         if self.journal:
             out["resume"] = {"run_id": self.journal.run_id}
             out["resumed"] = self.journal.resuming
+            out["run_status"] = self.journal.complete(out)
         return out

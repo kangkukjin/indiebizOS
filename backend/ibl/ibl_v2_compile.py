@@ -54,6 +54,8 @@ class Compiler:
         self.stack, self.checked = [], set()
         self.returns = []
         self.function_contracts = {}
+        self.used_actions = set()
+        self.call_dependencies = {}
 
     def issue(self, node, code, message):
         item = {"code": code, "message": message, "source_span": span(self.source, node)}
@@ -320,6 +322,12 @@ class Compiler:
                 self.issue(node, exc.code, str(exc))
                 return UNKNOWN
             values = {k: v.data['value'] if v.kind == 'literal' else UNRESOLVED for k, v in fields.items()}
+            self.used_actions.add(key)
+            if spec.dependency:
+                selectors = {k: v for k, v in values.items() if v is not UNRESOLVED}
+                snapshot = spec.dependency(selectors)
+                d['dependency_args'], d['dependency_snapshot'] = selectors, snapshot
+                self.call_dependencies[node.id] = snapshot
             contract = selected(spec.contract, values)
             for problem in problems(contract, values):
                 self.issue(node, 'ARGUMENT_CONTRACT', problem)
@@ -495,7 +503,7 @@ class Compiler:
 
 def compile_program(source, registry=None, inputs=None, definitions=None):
     from ibl_v2_adapters import Adapter
-    registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize) for k, v in (registry or {}).items()}
+    registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency) for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
     compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))
     root = parse(source)
@@ -507,13 +515,15 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
     while set(compiler.functions) - compiler.checked:
         sid = sorted(set(compiler.functions) - compiler.checked)[0]
         compiler.function(sid, {})
-    dependencies = {"source": digest(compiler.source), "libraries": digest(dict(sorted(compiler.definitions.items()))),
+    dependencies = {"source": digest(compiler.source), "libraries": digest({k: compiler.definitions[k] for k in sorted(compiler.external)}),
+                    "calls": compiler.call_dependencies,
                     "input_types": {k: str(t) for k, t in compiler.inputs.items()},
-                    "source_map": compiler.source_map, "contracts": digest({k: registry[k].contract for k in sorted(registry)}),
+                    "source_map": compiler.source_map, "contracts": digest({k: registry[k].contract for k in sorted(compiler.used_actions)}),
+                    "edition": digest((Path(__file__).parents[1] / "base/ibl_edition.py").read_text()),
                     "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
                     "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
                               {Path(__file__).parent / name for name in ("ibl_document_value.py", "ibl_member_library.py",
-                                                                        "ibl_remote_call.py", "ibl_run_journal.py")})})}
+                                                                        "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}
     for entry in compiler.issues + compiler.guards:
         old = entry["source_span"]
         entry["source_span"] = span(compiler.source, Node("diagnostic", old["start"], old["end"]))

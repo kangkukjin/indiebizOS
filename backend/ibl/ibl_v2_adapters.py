@@ -17,6 +17,7 @@ class Adapter:
     contract: dict
     run: object
     authorize: object = None
+    dependency: object = None
 
 
 @dataclass(frozen=True)
@@ -162,12 +163,6 @@ def load_registry(project_path=".", agent_id=None):
                 package = package_map.get(implementation)
                 if package:
                     package_paths = sorted(package_roots[package].glob("*.py"))
-            if adapter["protocol"] == "ibl-script/2":
-                from runtime_utils import get_base_path
-                script_root = get_base_path() / "data/scripts"
-                package_paths += sorted(script_root.glob("*.py")) + sorted(script_root.glob("*.sh")) + sorted(script_root.glob("*.js"))
-                if (script_root / "registry.yaml").is_file():
-                    package_paths.append(script_root / "registry.yaml")
             for p in package_paths:
                 if str(p) not in file_hashes:
                     file_hashes[str(p)] = digest(p.read_text())
@@ -202,7 +197,9 @@ def load_registry(project_path=".", agent_id=None):
                 current_allowed = get_allowed_nodes()
                 if (current_allowed is not None and not check_node_access(node, current_allowed)) or not visible(node, action, ac):
                     raise Fault("RECEIPT_ACCESS", "현재 권한으로 이 호출의 영수증을 사용할 수 없습니다.", kind="permission")
-            result[key] = Adapter(contract, run, authorize)
+            from ibl_dependencies import script_snapshot
+            result[key] = Adapter(contract, run, authorize,
+                                  script_snapshot if adapter['protocol'] == 'ibl-script/2' else None)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

@@ -293,7 +293,10 @@ async def execute_ibl_code(req: IBLRequest):
 
 class RecoverRequest(BaseModel):
     """표면 티켓 회수(F51-1) — 표면 대기가 끊긴 실행의 최종 봉투를 되찾는다."""
-    ticket: str
+    ticket: Optional[str] = None
+    run_id: Optional[str] = None
+    project_path: str = "."
+    project_id: Optional[str] = None
     # 유한 대기(2026-09-01) — 0이면 종전대로 즉답. `[self:script]{op:"status", wait}` 와
     # 같은 계약(상한 240초, 넘기면 줄이고 신고). 없으면 부르는 쪽이 sleep 으로 대기를
     # 흉내 내다 폴링으로 무너진다(09-01 06:00 실측: 도구 호출의 36%가 기다림이었다).
@@ -312,6 +315,18 @@ async def recover_ibl_result(req: RecoverRequest):
     함수가 이벤트 루프 위에서 잠들면 그 대기를 풀어 줄 요청(진행 신고·실행 완료)을
     서버가 못 받아 자기교착한다(api_ibl 실행 경로가 to_thread 를 쓰는 것과 같은 이유)."""
     import asyncio
+    if req.run_id:
+        from ibl_run_journal import inspect_run, journal_root
+        def inspect():
+            path = req.project_path
+            if req.project_id:
+                from project_manager import ProjectManager
+                resolved = ProjectManager().get_project_path(req.project_id)
+                if resolved is None:
+                    raise ValueError('프로젝트를 찾을 수 없습니다.')
+                path = str(resolved.resolve())
+            return inspect_run(journal_root(path), req.run_id)
+        return await asyncio.to_thread(inspect)
     from common.spill import ticket_recover, ticket_wait
     if not req.wait:
         return await asyncio.to_thread(ticket_recover, req.ticket)

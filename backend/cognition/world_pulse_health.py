@@ -409,6 +409,12 @@ def run_maintenance_bundle() -> Dict:
     """
     result: Dict[str, Any] = {}
 
+    try:
+        from ibl_run_journal import maintain_owner_runs
+        result['ibl_runs'] = maintain_owner_runs()
+    except Exception as exc:
+        logger.warning(f'[Maintenance] IBL 실행 기록 정리 실패: {exc}')
+
     # 1) 만성 실패 능동 알림
     try:
         from world_pulse import _load_config

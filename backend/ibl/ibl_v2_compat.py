@@ -60,9 +60,10 @@ def function_adapters(project_path, agent_id):
     from ibl_engine import execute_ibl
     from workflow_contract import call_signature, _signature_of
     assets = legacy_functions()
-    snapshot = digest(assets)
+    from ibl_dependencies import legacy_snapshot
     result = {}
     for name, asset in assets.items():
+        snapshot = legacy_snapshot(name, assets)
         try:
             wf = asset.get("workflow", {})
             params = (call_signature(asset["code"]) if asset["kind"] == "idiom" else
@@ -77,11 +78,13 @@ def function_adapters(project_path, agent_id):
                     "result": "Record", "effects": ["unknown"],
                     "compatibility": "legacy-function/1", "implementation_fingerprint": snapshot,
                     "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
-        def run(runtime, args, *, name=name, contract=contract):
-            if digest(legacy_functions()) != snapshot:
+        def run(runtime, args, *, name=name, contract=contract, snapshot=snapshot):
+            if legacy_snapshot(name, legacy_functions()) != snapshot:
                 raise Fault("DEFINITION_CHANGED", "컴파일 이후 기존 관용구가 바뀌었습니다. 다시 검사하세요.", kind="protocol")
-            raw = execute_ibl({"_node": "fn", "action": name, "params": plain_arguments(args)},
-                              project_path, agent_id=agent_id)
+            from ibl_edition import source_context
+            with source_context(1):
+                raw = execute_ibl({"_node": "fn", "action": name, "params": plain_arguments(args)},
+                                  project_path, agent_id=agent_id)
             value, evidence = decode_envelope(raw, contract["adapter"])
             evidence["compatibility"] = "legacy-function/1"
             return Adapted(value, evidence)

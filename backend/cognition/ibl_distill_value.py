@@ -95,7 +95,8 @@ def source_rows(calls):
         statements = [source] if source_edition(source) == 2 else split_sentences(source)
         for statement_index, code in enumerate(statements, 1):
             rows.append({'id': len(rows) + 1, 'code': code, 'tool_call_index': tool_index,
-                         'statement_index': statement_index, 'edition': source_edition(code)})
+                         'statement_index': statement_index, 'edition': source_edition(code),
+                         **({'abstraction': tc['_ibl_abstraction']} if tc.get('_ibl_abstraction') else {})})
     return rows
 
 
@@ -127,7 +128,8 @@ def provenance(reply, rows, code, outcome, turn_cost):
             'applicability': reply['applicability'].strip(),
             'code_sha256': hashlib.sha256(code.encode()).hexdigest(),
             'sources': [{k: row[k] for k in ('id', 'tool_call_index', 'statement_index')} |
-                       {'sha256': hashlib.sha256(row['code'].encode()).hexdigest()}
+                       {'sha256': hashlib.sha256(row['code'].encode()).hexdigest(),
+                        **({'abstraction': row['abstraction']} if row.get('abstraction') else {})}
                        for row in rows if row['id'] in selected]}
 
 

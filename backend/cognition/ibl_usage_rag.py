@@ -945,13 +945,13 @@ def _build_distill_prompt(user_message: str, tool_log: str, retry_block: str, to
 - 탐색 부산물·쓰기 영수증·알림만으로 더 큰 일을 완수한다고 하지 마라.
 - criteria 재시도 후보는 성공한 최종 지시가 원문에 있을 때만 선택한다. 지시를 고쳐 쓰지 마라.
 - 함께 실행된 합성문은 그 문장을 대표로 선택한다. 단일 액션으로 줄이지 마라.
-- 병렬 실행된 문장은 통째로 보존된다. 이름으로 부른 함수는 본문으로 풀지 마라. 새 함수·별칭을 만들지 마라.
+- 병렬 실행된 문장은 통째로 보존된다. 이름으로 부른 함수는 본문으로 풀지 마라. 코드를 바꿔 새 함수를 만들지 마라. abstraction 증거가 붙은 입력 함수 후보에만 name으로 재사용할 이름을 제안할 수 있다.
 - topic은 기존 실행기억 가지를 우선한다. 반복되지 않은 새 하위 가지는 만들지 마라.
 {topic_map or "(아직 가지 없음)"}
 - 되풀이 검토: retyped는 이름 있는 함수를 재타이핑한 경우 이름만, mergeable은 묶을 수 있는 번호 범위만 적는다.
 JSON: {{"decision":"keep|skip", "benefit":"기존 용례 대비 구체적으로 나아지는 점",
 "applicability":"적용 조건과 이번 값의 한계", "intent":"선택한 절차의 의도", "source_ids":[1], "scope":"task|component",
-"topic":"가지/경로", "retyped":[], "mergeable":[]}}
+"topic":"가지/경로", "name":"입력 함수 후보에만 제안할 이름", "retyped":[], "mergeable":[]}}
 독립 실행 원문이 없으면 decision="skip", source_ids:[]로 둔다. 원문은 기존 실행 원장에 보존된다."""
 
 
@@ -1145,11 +1145,19 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
         print(f"[경험증류] 가지 판정 생략: {_e}")
 
     phrase_ok = False
+    _alias, _returns = "", ""
     from ibl_edition import source_edition
     edition = source_edition(code)
     if edition == 2:
         from ibl_v2_learning import check_source
         if check_source(code) or code not in source_calls:
+            return False
+        from ibl_v2_experience import finalize_candidate
+        try:
+            row = next(r for r in rows if r['code'] == code)
+            code, _alias, _returns = finalize_candidate(row, distilled.get('name', ''))
+        except (ValueError, StopIteration) as exc:
+            print(f'[경험증류] 입력 함수 증거 검사 실패: {exc}')
             return False
     else:
         from ibl_param_vocab import normalize_corpus_code
@@ -1194,7 +1202,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     node_pattern = re.compile(r'\[([a-z_-]+):')
     nodes = ",".join(sorted(set(node_pattern.findall(code))))
 
-    category = "pipeline" if (">>" in code or "&" in code) else "single"
+    category = "phrase" if _alias else ("pipeline" if (">>" in code or "&" in code) else "single")
 
     from ibl_usage_db import IBLUsageDB
     evidence = value.provenance(distilled, rows, code, _ge, turn_cost)
@@ -1202,9 +1210,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
         evidence.update(prepared.get("origin", {}))
         evidence["candidate_key"] = candidate_key
     _birth_ms = _ibl_elapsed_ms(tool_calls)
-    # 자동 작명은 중단했다. uncallable_reason·slot_values_ungrounded·_phrase_private_reason은
-    # 수동 등록 경로가 쓰는 관문이며 통합 증류도 새 이름을 만들지 않는다.
-    _alias, _returns = "", ""
+    # 입력 함수는 검증된 AST 포장만 허용한다. 신규 입력의 성공 실적은 추가하지 않는다.
     example_id = db.add_example(
         intent=intent,
         ibl_code=code,
@@ -1232,7 +1238,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     try:
         existing = _json.loads(distilled_path.read_text(encoding="utf-8")) if distilled_path.exists() else []
         existing = [e for e in existing if not candidate_key or e.get("provenance", {}).get("candidate_key") != candidate_key]
-        existing.append({"intent": intent, "ibl_code": code, "edition": edition, "source": "distilled_component" if component else "distilled", "provenance": evidence})
+        existing.append({"intent": intent, "ibl_code": code, "edition": edition, "alias": _alias, "returns": _returns, "category": category, "source": "distilled_component" if component else "distilled", "provenance": evidence})
         temp = distilled_path.with_suffix(".distill.tmp")
         temp.write_text(_json.dumps(existing, ensure_ascii=False, indent=2), encoding="utf-8")
         temp.replace(distilled_path)

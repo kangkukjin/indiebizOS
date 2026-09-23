@@ -89,6 +89,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 AI 팁 보고서의 큰 비교 입력은 후보·기존 팁 양쪽으로 나누고 비교 쌍과 재개 범위를 검증한다.
 준비 실패의 저장과 최초 원인 표시: [4010 수리](../../docs/EPISODE_4010_REPAIRS_2026_09_24.md).
 단계별 절약·근거 재전달·부분 복구의 공통 문제와 검증 범위: [4010 시스템 성찰](../../docs/EPISODE_4010_SYSTEM_REFLECTION_2026_09_24.md).
+긴 자막의 전 구간 추출·관련 원문 색인·구간별 재개: [4011 긴 원문 수리](../../docs/EPISODE_4011_LONG_SOURCES_2026_09_24.md).
 빈 검색의 정상 통화·질의별 결과 보존과 부분 재개: [4011 검색 수리](../../docs/EPISODE_4011_SEARCH_REPAIR_2026_09_24.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 

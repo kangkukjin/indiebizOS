@@ -22,6 +22,12 @@ TITLES = ("수정 전 체크포인트와 차이를 확인한다", "실패 단계
 
 def fixture_ai(item):
     task, source = item["task"], item["input"]
+    if "scan_id" in source:
+        return {"scan_id": source["scan_id"], "decisions": [
+            {"candidate_id": c["candidate_id"], "unit_ids": [u["unit_id"] for u in source["units"]
+             if any(q in u["text"] for q in QUOTES) or "CAVEAT" in u["text"]],
+             "uncertain": False, "reason": "방법과 멀리 떨어진 조건의 원문 위치"}
+            for c in source["candidates"]]}
     if "queries:[{stratum,query}]" in task:
         return {"queries": [{"stratum": s, "query": "AI tips " + s} for s in helper.STRATA]}
     if "selected:[영상ID]" in task:
@@ -76,6 +82,7 @@ def execute(tmp_path, monkeypatch):
     scriptops = load_sibling(str(ROOT / "data/packages/installed/tools/system_essentials/handler.py"), "script_ops")
     calls, stages = [], {}
     model_calls = []
+    transcripts, struct_calls, struct_hooks = {}, [], []
     search_calls, search_responses = [], {}
     corrupt = {}
     class DB:
@@ -126,22 +133,39 @@ def execute(tmp_path, monkeypatch):
             if p["op"] == "info":
                 return {"success": True, "items": [{"video_id": vid, "title": "Fixture " + vid,
                         "uploader": "Fixture Channel", "duration": 240, "upload_date": "2026-09-01"}]}
+            if vid in transcripts:
+                return {"success": True, "items": copy.deepcopy(transcripts[vid])}
             return {"success": True, "items": [{"start": 0.0, "duration": 8.0,
                                                "text": QUOTES[IDS.index(vid)]}]}
         if node == "self" and act == "struct":
             model_calls.append(("struct", p["schema"]))
-            vid = Path(p["file"]).stem.removeprefix("transcript-")
+            struct_calls.append(copy.deepcopy(p))
+            for hook in struct_hooks:
+                override = hook(p)
+                if override is not None:
+                    return override
+            path = Path(p["file"])
+            state = helper.load_json(path.parent / "state.json")
+            vid = path.stem.removeprefix("transcript-")
+            for job in state.get("source_plan", {}).get("jobs", {}).values():
+                if job["request"]["path"] == str(path):
+                    vid = job["request"]["video_id"]
+            for record in state.get("source_evidence", {}).values():
+                if record["path"] == str(path):
+                    vid = record["video_id"]
             n = IDS.index(vid)
             assert isinstance(p["schema"], str)
             source = helper.load_json(Path(p["file"]))
             assert source["transcript"] == "\n".join(r["text"] for r in source["items"])
-            record = {"tip": TITLES[n], "timestamp": "00:00", "_quote": QUOTES[n]}
+            records = [{"tip": TITLES[n], "timestamp": f"{int(r['start']) // 60:02d}:{int(r['start']) % 60:02d}",
+                        "_quote": QUOTES[n]} for r in source["items"] if QUOTES[n] in r["text"]]
             if "candidate_id" in p["schema"]:
-                state = helper.load_json(Path(p["file"]).parent / "state.json")
-                chosen = next(r for r in state["chosen"] if r["video_id"] == vid)
-                record.update(candidate_id=chosen["candidate_id"], how=TITLES[n], tools=None, hype="")
+                ids = {k for k, v in state.get("source_detail_jobs", {}).items() if v["path"] == str(path)}
+                chosen = [r for r in state["chosen"] if r["video_id"] == vid and (
+                    not ids or vid in ids or r["candidate_id"] in ids)]
+                records = [{**r, "how": TITLES[n], "tools": None, "hype": ""} for r in chosen]
             assert p["grounded"] is True
-            return {"success": True, "grounded": True, "timestamp_grounded": 1, "items": [record]}
+            return {"success": True, "grounded": True, "timestamp_grounded": len(records), "items": records}
         if node == "table" and act == "ai":
             source = p.get("_prev_result") if "_prev_result" in p else p.get("items")
             inputs = helper.rows(source)
@@ -162,6 +186,7 @@ def execute(tmp_path, monkeypatch):
     run.stages, run.calls, run.corrupt = stages, calls, corrupt
     run.root = tmp_path / "reports"
     run.model_calls = model_calls
+    run.transcripts, run.struct_calls, run.struct_hooks = transcripts, struct_calls, struct_hooks
     run.search_calls, run.search_responses = search_calls, search_responses
     return run
 
@@ -1067,3 +1092,226 @@ def test_legacy_comparison_plan_keeps_original_requests(execute):
         {k: r[k] for k in ("batch_id", "task", "input")} for r in original["items"]]
     audit, _ = helper.comparison_audit(state, original)
     assert len(audit) == 2
+
+
+def long_source(execute):
+    filler = [{"start": float(i * 10), "text": (f"Background {i}. " + "context " * 120)}
+              for i in range(1, 160)]
+    source = [{"start": 0.0, "text": QUOTES[0]}, *filler,
+              {"start": 1600.0, "text": "CAVEAT: Only use this method after checking the backup."},
+              {"start": 1610.0, "text": QUOTES[0]}]
+    execute.transcripts[IDS[0]] = source
+    return source
+
+
+def test_long_transcript_full_pipeline_keeps_tail_caveat_and_all_intervals(execute):
+    source = long_source(execute)
+    out = final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert helper.source_segments(state, IDS[0]) == source
+    plan = state["source_plan"]
+    jobs = [r for r in plan["jobs"].values() if r["request"]["video_id"] == IDS[0]]
+    assert len(jobs) > 4
+    assert [i for r in jobs for i in range(r["first"], r["last"])] == list(
+        range(len(helper.sourceflow.units(source))))
+    assert set(state["source_extractions"]) == set(plan["jobs"])
+    assert set(state["source_scans"]) == set(state["source_scan"]["jobs"])
+    assert any(c["timestamp"] == "26:50" for c in state["candidates"])
+    assert len(state["candidates"]) == 3
+    for cid in state["source_evidence"]:
+        evidence, scope = helper.sourceflow.evidence(helper.source_api(), state, cid)
+        assert any("CAVEAT" in r["text"] for r in evidence)
+        assert scope["scanned_units"] == len(helper.sourceflow.units(source))
+    assert all(helper.request_size(r) < helper.REQUEST_CAP for r in state["source_scan"]["jobs"].values())
+    assert "관련 위치의 선택에는 AI 판단" in Path(out["report"]).read_text()
+    calls = len(execute.model_calls)
+    assert final(execute()) == out
+    assert len(execute.model_calls) == calls
+
+
+def test_long_extraction_failure_resumes_only_unaccepted_chunks(execute):
+    from collections import Counter
+    long_source(execute)
+    failed = []
+    def once(p):
+        if Path(p["file"]).stem == "chunk-" + IDS[0] + "-3" and not failed:
+            failed.append(True)
+            return {"success": False, "error": "fixture extraction outage"}
+    execute.struct_hooks.append(once)
+    assert not execute()["success"]
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    done = [r["request"]["path"] for k, r in state["source_plan"]["jobs"].items()
+            if k in state["source_extractions"]]
+    assert done and "candidates" not in state["receipts"]
+    before = Counter(r["file"] for r in execute.struct_calls)
+    final(execute())
+    after = Counter(r["file"] for r in execute.struct_calls)
+    assert all(after[p] == before[p] for p in done)
+
+
+@pytest.mark.parametrize("fault", ["missing", "wrong_id", "duplicate_unit", "changed_input", "partial"])
+def test_long_source_scan_rejects_incomplete_or_changed_evidence(execute, fault):
+    long_source(execute)
+    def corrupt(args):
+        row = args["data"]["items"][0]
+        decisions = row["result"]["decisions"]
+        if fault == "missing":
+            decisions.pop()
+        elif fault == "wrong_id":
+            decisions[0]["unit_ids"] = ["s99999:0"]
+        elif fault == "duplicate_unit":
+            unit = row["input"]["units"][0]["unit_id"]
+            decisions[0]["unit_ids"] = [unit, unit]
+        elif fault == "changed_input":
+            row["input"]["units"][0]["text"] = "changed"
+        else:
+            args["data"]["partial"] = True
+        return args
+    execute.corrupt["source_scanned"] = corrupt
+    assert not execute("commit")["success"]
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert "compared" not in state["receipts"]
+    assert not (execute.root / "db/tips.json").exists()
+
+
+def test_long_scan_resume_preserves_successful_siblings(execute):
+    long_source(execute)
+    failed = []
+    def once(args):
+        row = args["data"]["items"][0]
+        if "-3-scan-" in row["scan_id"] and not failed:
+            failed.append(True)
+            row["result"]["decisions"] = []
+        return args
+    execute.corrupt["source_scanned"] = once
+    assert not execute()["success"]
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    before = copy.deepcopy(state["source_scans"])
+    assert before
+    structs = len(execute.struct_calls)
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert all(state["source_scans"][k] == v for k, v in before.items())
+    # 재개 후에는 선정 후보의 상세 추출만 남는다.
+    assert len(execute.struct_calls) - structs == len(state["source_detail_jobs"])
+
+
+@pytest.mark.parametrize("target", ["source", "chunk", "receipt", "evidence"])
+def test_long_source_mutation_cannot_pass_final_review(execute, target):
+    long_source(execute)
+    def corrupt(args):
+        state_path = Path(args["run"]) / "state.json"
+        state = helper.load_json(state_path)
+        if target == "receipt":
+            next(iter(state["source_scans"].values()))["response"]["result"]["decisions"][0]["reason"] = "changed"
+            helper.atomic(state_path, state)
+        else:
+            path = (state["sources"][IDS[0]]["path"] if target == "source" else
+                    next(iter(state["source_plan"]["jobs"].values()))["request"]["path"] if target == "chunk" else
+                    next(iter(state["source_evidence"].values()))["path"])
+            doc = helper.load_json(Path(path))
+            doc["items"][0]["text"] += "changed"
+            helper.atomic(Path(path), doc)
+        return args
+    execute.corrupt["finish"] = corrupt
+    assert not execute("commit")["success"]
+    assert not (execute.root / "db/tips.json").exists()
+
+
+def test_long_uncertain_source_index_cannot_be_approved(execute, monkeypatch):
+    long_source(execute)
+    original = fixture_ai
+    def respond(item):
+        result = original(item)
+        if "scan_id" in result:
+            result["decisions"][0]["uncertain"] = True
+        return result
+    monkeypatch.setitem(globals(), "fixture_ai", respond)
+    assert not execute("commit")["success"]
+    assert not (execute.root / "db/tips.json").exists()
+
+
+def test_long_single_segment_is_partitioned_without_losing_characters():
+    source = [{"start": 3.0, "text": "alpha " * 15000}]
+    pieces = helper.sourceflow.units(source)
+    assert "".join(u["text"] for u in pieces) == source[0]["text"]
+    chunks = helper.sourceflow.chunks(pieces)
+    assert [i for r in chunks for i in range(r["first"], r["last"])] == list(range(len(pieces)))
+
+
+def test_long_novelty_retry_uses_scanned_verbatim_evidence(execute, monkeypatch):
+    long_source(execute)
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
+    original = fixture_ai
+    seen = []
+    def respond(item):
+        source = item["input"]
+        if "repair_id" not in source:
+            return original(item)
+        seen.append(source)
+        assert source["source_scope"] == "full_source_scan_selected_verbatim_evidence"
+        assert "CAVEAT" in source["transcript"]
+        return {"repair_id": source["repair_id"], "candidate_id": source["candidate"]["candidate_id"],
+                "verdict": "novel", "matched_ids": [], "reason": "전 구간 색인과 원문 대조"}
+    monkeypatch.setitem(globals(), "fixture_ai", respond)
+    execute.corrupt["compared"] = force_uncertain
+    final(execute())
+    assert seen
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert isinstance(state["comparison_retry"]["scope_hash"], str)
+    assert all(helper.request_size(r) < helper.REQUEST_CAP for r in state["comparison_retry"]["requests"])
+
+
+def test_long_evidence_reentry_does_not_overwrite_corruption(execute):
+    long_source(execute)
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    helper.sourceflow.indexed(helper.source_api(), state)
+    path = Path(next(iter(state["source_evidence"].values()))["path"])
+    document = helper.load_json(path)
+    document["items"][0]["text"] += "tampered"
+    helper.atomic(path, document)
+    with pytest.raises(ValueError, match="근거 묶음 변경"):
+        helper.sourceflow.indexed(helper.source_api(), state)
+    assert helper.load_json(path) == document
+
+
+def test_long_revision_reuses_extraction_and_scan_but_rechecks_content(execute):
+    long_source(execute)
+    failures = []
+    def once(args):
+        if not failures:
+            failures.append(True)
+            for row in args["data"]["items"]:
+                row["result"]["checks"]["actionability"] = False
+                row["result"]["issues"] = ["구체 방법과 조건을 다시 대조할 것"]
+        return args
+    execute.corrupt["finish"] = once
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert state["auto_revision_used"]
+    assert len(execute.struct_calls) == len(state["source_plan"]["jobs"]) + len(state["source_detail_jobs"])
+
+
+def test_old_long_transcript_failure_reuses_recorded_captions(execute, monkeypatch):
+    long_source(execute)
+    original = helper.STAGES['transcripts']
+    def previous_limit(state, data):
+        raise ValueError('자막이 단일 추출 상한을 넘습니다. 전체 분할 검토가 필요합니다')
+    monkeypatch.setitem(helper.STAGES, 'transcripts', previous_limit)
+    assert not execute()['success']
+    calls = list(execute.calls)
+    monkeypatch.setitem(helper.STAGES, 'transcripts', original)
+    final(execute())
+    assert execute.calls == calls
+
+
+def test_character_parts_rejoin_without_inventing_spaces_or_times():
+    for text in ('단일긴원문' * 1500, 'a natural sentence. ' * 900):
+        source = [{'start': 10.0, 'text': text}]
+        units = helper.sourceflow.units(source)
+        assert len(units) > 2
+        assert helper.sourceflow.source_rows(units) == source
+        disconnected = helper.sourceflow.source_rows([units[0], units[2]])
+        assert len(disconnected) == 2
+        assert all(r['start'] == 10.0 for r in disconnected)

@@ -88,6 +88,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 [반환 계약 수리](../../docs/IDIOM_RETURN_REPAIRS_2026_09_21.md).
 AI 팁 보고서의 큰 비교 입력은 후보·기존 팁 양쪽으로 나누고 비교 쌍과 재개 범위를 검증한다.
 준비 실패의 저장과 최초 원인 표시: [4010 수리](../../docs/EPISODE_4010_REPAIRS_2026_09_24.md).
+단계별 절약·근거 재전달·부분 복구의 공통 문제와 검증 범위: [4010 시스템 성찰](../../docs/EPISODE_4010_SYSTEM_REFLECTION_2026_09_24.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

@@ -1116,6 +1116,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     import ibl_distill_value as value
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
+    committed = db.find_distilled_candidate(candidate_key) if candidate_key else None
     rows, known = prepared["rows"], prepared["known"]
     source_calls, ibl_calls = prepared["source_calls"], prepared["ibl_calls"]
     _ge, tool_calls = prepared["evaluation"], prepared["tool_calls"]
@@ -1132,7 +1133,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     print(f"[경험증류] 원문 선택: {selection_note}")
     if not intent or not code:
         return False
-    if value.redundant_reason([code], known):
+    if not committed and value.redundant_reason([code], known):
         print("[경험증류] 선택 결과가 기존 용례와 중복 — 저장 생략")
         return False
     _topic = str(distilled.get("topic", "") or "").strip()
@@ -1148,7 +1149,12 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     _alias, _returns = "", ""
     from ibl_edition import source_edition
     edition = source_edition(code)
-    if edition == 2:
+    if committed:
+        # 재시도는 새 함수 생성이 아니다. 먼저 저장된 이름으로 색인·학습 파일을 복구한다.
+        code, _alias, _returns = (committed[k] for k in ('ibl_code', 'alias', 'returns'))
+        intent, _topic = committed['intent'], committed['topic']
+        edition = source_edition(code)
+    elif edition == 2:
         from ibl_v2_learning import check_source
         if check_source(code) or code not in source_calls:
             return False
@@ -1205,7 +1211,7 @@ def apply_experience(prepared, distilled, *, candidate_key=None):
     category = "phrase" if _alias else ("pipeline" if (">>" in code or "&" in code) else "single")
 
     from ibl_usage_db import IBLUsageDB
-    evidence = value.provenance(distilled, rows, code, _ge, turn_cost)
+    evidence = json.loads(committed['provenance']) if committed else value.provenance(distilled, rows, code, _ge, turn_cost)
     if candidate_key:
         evidence.update(prepared.get("origin", {}))
         evidence["candidate_key"] = candidate_key

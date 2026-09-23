@@ -110,5 +110,41 @@ def test_script_relative_import_dependency(tmp_path):
     assert first != script_snapshot({'id':'one'}, tmp_path)
 
 
+@pytest.mark.parametrize('selection', [{'id': 'one'}, {}])
+def test_script_symlink_target_changes_invalidate_resume(tmp_path, selection):
+    from ibl_dependencies import script_snapshot
+    root = tmp_path / 'scripts'; root.mkdir()
+    target = tmp_path / 'target.py'; target.write_text('print(1)')
+    (root / 'registry.yaml').write_text('one: {file: one.py}')
+    (root / 'one.py').symlink_to(target)
+    before = script_snapshot(selection, root)
+    target.write_text('print(2)')
+    assert before != script_snapshot(selection, root)
+
+
+@pytest.mark.parametrize('payload', [{}, {'run_id': ''}, {'run_id': '../outside'},
+                                    {'run_id': 'a'*32, 'ticket': 'b'*16}])
+def test_recovery_bad_request_is_422(payload):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from api_ibl import router
+    app = FastAPI(); app.include_router(router)
+    with TestClient(app) as client:
+        response = client.post('/ibl/recover', json=payload)
+    assert response.status_code == 422
+
+
+def test_linked_script_imports_follow_actual_entry_directory(tmp_path):
+    from ibl_dependencies import script_snapshot
+    root = tmp_path / 'scripts'; root.mkdir()
+    target = tmp_path / 'target.py'; target.write_text('import part')
+    part = tmp_path / 'part.py'; part.write_text('N=1')
+    (root / 'registry.yaml').write_text('one: {file: one.py}')
+    (root / 'one.py').symlink_to(target)
+    before = script_snapshot({'id': 'one'}, root)
+    part.write_text('N=2')
+    assert before != script_snapshot({'id': 'one'}, root)
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

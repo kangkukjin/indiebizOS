@@ -582,6 +582,18 @@ class IBLUsageDB:
                 mark_projected(projected, candidate_key)
         return example_id
 
+    def find_distilled_candidate(self, candidate_key):
+        """부분 저장의 재배달은 이미 커밋된 이름·본문·증거를 그대로 투영한다."""
+        from distill_receipts import lookup, DistillConflict
+        with self._get_connection() as conn:
+            prior = lookup(conn, candidate_key)
+            if not prior:
+                return None
+            row = conn.execute('SELECT * FROM ibl_examples WHERE id=?', (prior['id'],)).fetchone()
+            if row is None:
+                raise DistillConflict('이미 저장한 증류 후보가 삭제되었습니다.')
+            return dict(row)
+
     def update_intent(self, example_id: int, intent: str) -> bool:
         """intent(이름이면 '함수의 뜻') 갱신 + 재색인 — 몸체는 ibl_name_search(2026-09-06)."""
         from ibl_name_search import update_intent as _ui

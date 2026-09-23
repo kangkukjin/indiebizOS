@@ -315,7 +315,11 @@ async def recover_ibl_result(req: RecoverRequest):
     함수가 이벤트 루프 위에서 잠들면 그 대기를 풀어 줄 요청(진행 신고·실행 완료)을
     서버가 못 받아 자기교착한다(api_ibl 실행 경로가 to_thread 를 쓰는 것과 같은 이유)."""
     import asyncio
-    if req.run_id:
+    if (req.run_id is None) == (req.ticket is None):
+        raise HTTPException(status_code=422, detail='ticket 또는 run_id 중 하나만 지정하세요.')
+    if req.run_id is not None:
+        if not re.fullmatch(r'[0-9a-f]{32}', req.run_id):
+            raise HTTPException(status_code=422, detail='run_id는 32자리 소문자 hex 문자열이어야 합니다.')
         from ibl_run_journal import inspect_run, journal_root
         def inspect():
             path = req.project_path
@@ -323,7 +327,7 @@ async def recover_ibl_result(req: RecoverRequest):
                 from project_manager import ProjectManager
                 resolved = ProjectManager().get_project_path(req.project_id)
                 if resolved is None:
-                    raise ValueError('프로젝트를 찾을 수 없습니다.')
+                    raise HTTPException(status_code=404, detail='프로젝트를 찾을 수 없습니다.')
                 path = str(resolved.resolve())
             return inspect_run(journal_root(path), req.run_id)
         return await asyncio.to_thread(inspect)

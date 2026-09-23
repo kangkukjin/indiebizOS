@@ -104,5 +104,39 @@ def test_dependency_provenance_keeps_hashes_not_private_filesystem_paths(monkeyp
     assert '/Users/private-host' not in json.dumps(candidate['_ibl_abstraction'])
 
 
+def test_partial_memory_save_retries_original_name_and_body(memory, monkeypatch, tmp_path):
+    from pathlib import Path
+    from test_distill_source_recovery_2026_09_09 import _arm
+    import ibl_usage_db, ibl_v2_store
+    db_type = type(memory)
+    rag, _, _, _ = _arm(monkeypatch, tmp_path, [])
+    monkeypatch.setattr(ibl_usage_db, 'IBLUsageDB', db_type)
+    prepared = rag.prepare_experience('입력 전달', [call()], 0)
+    reply = {'decision': 'keep', 'intent': '입력 전달', 'benefit': '조합 절차 재사용',
+             'applicability': '문자열', 'source_ids': [1], 'scope': 'component',
+             'topic': '시험', 'name': '전달'}
+    original_replace = Path.replace
+    def fail_projection(path, target):
+        if path.name == 'ibl_distilled.distill.tmp':
+            raise OSError('simulated projection interruption')
+        return original_replace(path, target)
+    monkeypatch.setattr(Path, 'replace', fail_projection)
+    with pytest.raises(OSError, match='projection interruption'):
+        rag.apply_experience(prepared, reply, candidate_key='same-candidate')
+    stored = memory.find_distilled_candidate('same-candidate')
+    assert stored['alias'] == '전달'
+    # 재배달 시 이미 저장된 함수가 사전에 나타나는 실제 조건.
+    monkeypatch.setattr(ibl_v2_store, 'definitions', lambda: {'전달': stored['ibl_code']})
+    monkeypatch.setattr(Path, 'replace', original_replace)
+    assert rag.apply_experience(prepared, reply, candidate_key='same-candidate')
+    training = json.loads((tmp_path / 'data/training/ibl_distilled.json').read_text())
+    assert len(training) == 1
+    assert training[0]['alias'] == stored['alias']
+    assert training[0]['ibl_code'] == stored['ibl_code']
+    assert training[0]['provenance'] == json.loads(stored['provenance'])
+    with memory._get_connection() as conn:
+        assert conn.execute('SELECT COUNT(*) FROM ibl_examples').fetchone()[0] == 1
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

@@ -17,7 +17,8 @@ def script_snapshot(args, root=None):
     dynamic = not entry or args.get('op', 'run' if sid else 'list') != 'run'
     files, pending, seen = {}, [], set()
     import_root = root / str(entry.get('file') or '') if entry else root
-    import_root = import_root.parent if entry else root
+    # Python의 스크립트 검색 경로는 링크 이름이 아니라 실제 진입 파일의 디렉터리다.
+    import_root = import_root.resolve().parent if entry else root
     if not dynamic:
         pending = [root / str(entry.get('file') or '')]
     while pending:
@@ -25,8 +26,8 @@ def script_snapshot(args, root=None):
         if path in seen:
             continue
         seen.add(path)
-        if path.is_symlink() or not path.is_file():
-            files[str(path)] = 'missing-or-symlink'
+        if not path.is_file():
+            files[str(path)] = 'missing'
             continue
         files[str(path)] = digest(path.read_bytes().hex())
         if path.suffix != '.py':
@@ -63,8 +64,8 @@ def script_snapshot(args, root=None):
                     if target.is_file():
                         pending.append(target)
     if dynamic:
-        files = {str(p): digest(p.read_bytes().hex()) for p in sorted(root.rglob('*'))
-                 if p.is_file() and not p.is_symlink() and p.suffix in {'.py', '.sh', '.js'} and '__pycache__' not in p.parts}
+        files.update({str(p): digest(p.read_bytes().hex()) for p in sorted(root.rglob('*'))
+                      if p.is_file() and p.suffix in {'.py', '.sh', '.js'} and '__pycache__' not in p.parts})
     return {'scope': 'script-namespace' if dynamic else 'script-closure',
             'registry': digest(registry if dynamic else {sid: entry}), 'files': files}
 

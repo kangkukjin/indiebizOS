@@ -452,10 +452,10 @@ def _attach_precheck(result, tc) -> None:
     warns = [i for i in (tc.get("issues") or []) if isinstance(i, dict) and i.get("severity") == "warning"]
     if not warns:
         return
-    result["precheck_warnings"] = [{k: i[k] for k in ("statement", "step", "at", "message", "hint") if k in i}
+    result["precheck_warnings"] = [{k: i[k] for k in ("statement", "step", "at", "message", "hint", "rule", "facts") if k in i}
                                    for i in warns[:4]]
     if not result.get("success", True):
-        result["precheck_note"] = "실행 전 검사가 위 경고를 냈습니다 — 앞 단 결과의 columns/preview 로 열 이름을 확인하고 그 문장만 고치세요."
+        result["precheck_note"] = "실행 전 검사가 위 경고를 냈습니다 — statement·at·hint와 실제 결과를 대조하고 해당 연결이나 반복 범위를 확인하세요."
 
 
 def _attach_turn_vars(result, parsed, key, injected: list, retyped=None, fn_hint=None) -> None:
@@ -692,7 +692,8 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
         if tool_input.get("check"):
             _tc.update({"mode": "check", "executed": False,
                         "note": ("실행하지 않았습니다. types = 문장별 마지막 통화(items⟨열⟩·prose·scalar·effect·?=미상), "
-                                 "issues = error(실행하면 반드시 실패)·warning(아마). 초록이면 같은 code 를 check 없이 실행하세요.")})
+                                 "issues = error(확정 위반)·warning(조건부 위험). preflight = 반복 범위·AI 어휘 방문 상한. "
+                                 "ok는 알려진 정적 오류가 없다는 뜻이며 의미 품질·비용·실행 성공의 보증이 아닙니다.")})
             return json.dumps(_tc, ensure_ascii=False, indent=2)
         if not _tc.get("ok"):
             from ibl_traceback import build_tb

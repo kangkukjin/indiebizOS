@@ -1039,7 +1039,8 @@ def typecheck(steps: List[Any], variables: Optional[Dict[str, int]] = None,
     """파싱된 step 리스트의 정적 통화 검사.
 
     반환: {"ok": error 없음, "issues": [{severity, statement, step, at, message, hint?, expected?, got?}],
-           "types": ["$이름: items⟨…⟩", "(2) prose", …], "fn_returns": {이름: "items⟨…⟩"}}
+           "types": ["$이름: items⟨…⟩", "(2) prose", …], "fn_returns": {이름: "items⟨…⟩"},
+           "preflight": 반복 계획·선언된 AI 어휘 방문 상한·미상 자리}
     예외는 삼킨다(검사기가 실행을 죽이면 안 된다) — 그때는 ok=True·issues 빈 목록·`abstained` 표지."""
     try:
         c = _Checker(variables, given=given)
@@ -1058,8 +1059,12 @@ def typecheck(steps: List[Any], variables: Optional[Dict[str, int]] = None,
         from ibl_pipe_types import dead_seam_warnings
         for _di, _dmsg in dead_seam_warnings(_steps):           # T3 — 경고(통화가 안 넘는 이음매 자체는 정당)
             c._issue("warning", _di, "pipeline", _dmsg)
+        from ibl_preflight import analyze
+        preflight = analyze(_steps, _action_def, _external_fn_code)
+        c.issues.extend(preflight.pop('issues'))
         errors = [i for i in c.issues if i.get("severity") == "error"]
-        return {"ok": not errors, "issues": c.issues, "types": c.types, "fn_returns": c.fn_returns}
+        return {"ok": not errors, "issues": c.issues, "types": c.types,
+                "fn_returns": c.fn_returns, "preflight": preflight}
     except Exception as e:                            # pragma: no cover — 안전망
         return {"ok": True, "issues": [], "types": [], "fn_returns": {}, "abstained": f"{type(e).__name__}: {e}"}
 

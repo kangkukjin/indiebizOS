@@ -31,6 +31,8 @@ from common.ibl_vars import REF_RE, split_ref, is_sole_ref, sub_ref
 # 스택은 밑줄-메타 관습(_depth·_node·_parallel)대로 step 에 찍혀 내려간다 — 스레드를 건너는
 # 병렬 branch 도 따라가야 해서 contextvar 가 아니라 명시 스탬프다.
 MAX_WORKFLOW_DEPTH = 5
+# each 실행기와 실행 전 계획 분석이 함께 읽는 반복 계약.
+EACH_DEFAULT_LIMIT = 20
 _INLINE_FRAME = "<inline>"
 
 # 스택을 물려줄 하위 문장 자리 — _stamp_depth(ibl_executors)와 같은 키 집합.

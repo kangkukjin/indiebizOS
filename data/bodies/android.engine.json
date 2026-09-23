@@ -217,6 +217,7 @@
     "ibl/ibl_parser_values",
     "ibl/ibl_pipe_types",
     "ibl/ibl_predicates",
+    "ibl/ibl_preflight",
     "ibl/ibl_progress",
     "ibl/ibl_quality",
     "ibl/ibl_result_transport",
@@ -458,8 +459,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 383,
-    "engine": 357,
+    "total": 384,
+    "engine": 358,
     "blocklist": 26
   }
 }

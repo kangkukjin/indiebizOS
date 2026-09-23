@@ -9,6 +9,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from common.currency import currency_shape_note
+from workflow_contract import EACH_DEFAULT_LIMIT as _EACH_DEFAULT_LIMIT
 
 
 # ── [table:each] — 문장을 값으로 받는 유일한 변환자 (2026-08-15 고차 문장 M2) ──────────
@@ -17,7 +18,6 @@ from common.currency import currency_shape_note
 # 2단에서 끝났고(코퍼스 실측: 파이프 평균 길이 2.45·2단이 72%), 항목 단위 싱크
 # (notify_user·channel_send·delegate·publish)는 파이프에 한 번도 들어오지 못했다
 # (미조합 액션 68/150 의 다수가 이 부류). 설계 정본: docs/HIGHER_ORDER_SENTENCE_DESIGN.md
-_EACH_DEFAULT_LIMIT = 20
 
 # 스칼라 행(문자열·숫자)을 dict 로 감쌀 때 쓰는 필드 이름.
 # ★출력 감싸기와 $it 치환이 *같은* 이름을 봐야 한다 — 두 자리가 어긋나면

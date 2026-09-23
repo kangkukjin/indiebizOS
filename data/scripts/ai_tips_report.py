@@ -44,6 +44,10 @@ REVIEW_RULE = (
 )
 
 
+class ContentReviewRejected(ValueError):
+    """유효한 최종 검수가 내용 보완을 요구한 경우에만 자동 재검토한다."""
+
+
 def unpack(value):
     for _ in range(8):
         if isinstance(value, str):
@@ -360,7 +364,7 @@ def grounded(state, vid, record):
     require(all(p < 60 for p in parts[1:]), "시간 범위 오류")
     seconds = parts[0] * 60 + parts[1] if len(parts) == 2 else parts[0] * 3600 + parts[1] * 60 + parts[2]
     segs = source_segments(state, vid)
-    nearby = [r for r in segs if abs(r["start"] - seconds) <= 15]
+    nearby = [r for r in segs if clean(r["text"]) and abs(r["start"] - seconds) <= 15]
     require(nearby and any(clean(r["text"]) in clean(quote) or clean(quote) in clean(r["text"])
                            for r in nearby), "인용문과 시간 위치 불일치")
 
@@ -389,16 +393,33 @@ def stage_candidates(state, data):
     return {"_prepare": "comparison"}
 
 
-def comparison_request(state, known, batch_id):
+def comparison_candidates(state):
+    """짧은 인용만으로 후속 방법을 오판하지 않도록 검증된 원문의 문맥을 인계한다."""
+    sources = {vid: source_segments(state, vid) for vid in state["sources"]}
+    output = []
+    for row in state["candidates"]:
+        parts = [int(p) for p in row["timestamp"].split(":")]
+        seconds = parts[0] * 60 + parts[1] if len(parts) == 2 else parts[0] * 3600 + parts[1] * 60 + parts[2]
+        start, end = max(0, seconds - 30), seconds + 90
+        context = [{"start": r["start"], "text": r["text"]}
+                   for r in sources[row["video_id"]] if start <= r["start"] <= end]
+        output.append({**row, "source_context": {"from_seconds": start, "to_seconds": end,
+                                               "scope": "excerpt", "items": context}})
+    return output
+
+
+def comparison_request(state, known, batch_id, candidates):
     return {"batch_id": batch_id, **task(state, "compared",
         "후보 각각을 이 배치의 기존 팁 전부와 의미 비교한다. 같은 방법이면 duplicate, "
         "판정 근거가 부족하면 unknown, 이 배치에 중복이 없으면 novel. 후보끼리의 선정은 다음 단계다. "
         "result={batch_id,decisions:[{candidate_id,verdict:'novel|duplicate|unknown',"
         "matched_ids:[known_id],reason}]}. 모든 후보를 정확히 한 번 판정한다. "
         "duplicate는 이 배치의 실제 known_id를 최소 하나 연결하고 이유에 차이·중복 근거를 쓴다. "
-        "novel도 비교한 방법과 차이를 구체적으로 설명한다.",
+        "novel도 비교한 방법과 차이를 구체적으로 설명한다. "
+         "source_context는 보존 자막의 시점 앞 30초·뒤 90초 발췌다. 인용 한 토막에 없는 후속 방법은 "
+         "이 문맥에서 확인하되 제목을 증거로 믿지 말고, 여기에도 근거가 없으면 unknown을 유지한다.",
         {"batch_id": batch_id, "topic": state["config"]["topic"],
-         "candidates": state["candidates"], "known": known})["items"][0]}
+         "candidates": candidates, "known": known})["items"][0]}
 
 
 def request_size(item):
@@ -408,19 +429,20 @@ def request_size(item):
 
 
 def prepare_comparison(state):
+    candidates = comparison_candidates(state)
     known = [{"known_id": "k" + str(i + 1), **{k: row.get(k) for k in ("tip", "how", "topic")}}
              for i, row in enumerate(state["snapshot"]["tips"])]
     batches, chunk = [], []
     for row in known:
-        candidate = comparison_request(state, chunk + [row], "b" + str(len(batches) + 1))
+        candidate = comparison_request(state, chunk + [row], "b" + str(len(batches) + 1), candidates)
         if request_size(candidate) >= REQUEST_CAP:
             require(chunk, "기존 팁 한 건과 후보가 입력 상한을 넘습니다. 자동 절단하지 않습니다")
-            batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1)))
+            batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1), candidates))
             chunk = [row]
         else:
             chunk.append(row)
     if chunk:
-        batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1)))
+        batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1), candidates))
     require(all(request_size(r) < REQUEST_CAP for r in batches), "비교 배치 입력 상한 초과")
     state["comparison_batches"] = {r["batch_id"]: {
         "known_ids": [k["known_id"] for k in r["input"]["known"]],
@@ -550,7 +572,7 @@ def stage_reviewed(state, data):
                 continue
             final = copy.deepcopy(selected[cid])
             for field in ("tip", "how", "hype", "implication"):
-                final[field] = text_field(decision, field, empty=field in ("how", "hype"))
+                final[field] = text_field(decision, field, empty=field == "hype")
             cls = decision.get("implication_class")
             require(cls in ("이미 하는 것", "이식 후보", "해당 없음"), "시스템 함의 분류 누락")
             final["implication_class"] = cls
@@ -591,6 +613,7 @@ def projected(state):
     snap["covered"]["covered"] = list(by_id.values())
     snap["covered"].setdefault("recent_topics", []).append(
         {"date": state["config"]["date"], "topic": state["config"]["topic"]})
+    snap["covered"]["recent_topics"] = snap["covered"]["recent_topics"][-10:]
     videos = keyed(state["videos"], "video_id")
     for t in tips:
         v = videos[t["video_id"]]
@@ -754,13 +777,17 @@ def stage_finish(state, data):
     require(result.get("report_hash") == state["report_hash"], "검수 대상 지문 불일치")
     checks = result.get("checks", {})
     require(isinstance(checks, dict) and set(checks) == set(CHECKS), "검수 항목 누락")
-    require(all(checks[k] is True for k in CHECKS) and result.get("issues") == [],
-            "최종 내용 검수 미통과: " + canonical(result))
+    require(all(type(checks[k]) is bool for k in CHECKS), "검수 판정은 boolean이어야 합니다")
+    issues = result.get("issues")
+    require(isinstance(issues, list) and all(isinstance(x, str) and x.strip() for x in issues),
+            "검수 issues는 구체적인 보완 사유 목록이어야 합니다")
     require(digest(state["markdown"]) == state["report_hash"], "보고서 본문 변경")
     draft = Path(state["run"]) / "draft.md"
     require(draft.read_text(encoding="utf-8") == state["markdown"], "저장된 보고서 본문 변경")
     for vid in state["sources"]:
         source_segments(state, vid)
+    if not all(checks.values()) or issues:
+        raise ContentReviewRejected("최종 내용 검수 미통과: " + canonical(result))
     state["final_review"] = result
     mode = state["config"].get("mode", "draft")
     if mode == "commit":
@@ -821,17 +848,35 @@ def run(args):
     require(state and state.get("run") == str(directory), "보고서 실행 상태를 찾지 못했습니다")
     require(state.get("version") == VERSION, "실행 상태 버전 변경: 기존 상태는 보존하고 새 run_id로 실행하세요")
     op = args.get("op")
-    if op == "revise":
-        reason = text_field(args, "reason")
-        stage = args.get("from")
+    if op in ("revise", "retry_review"):
+        automatic = op == "retry_review"
+        reason = "" if automatic else text_field(args, "reason")
+        stage = "reviewed" if automatic else args.get("from")
         require(stage == "reviewed", "재검토 시작은 reviewed")
         with file_lock(state_path):
             state = load_json(state_path)
             require(not state.get("completed"), "완료된 보고서는 새 run으로 수정하세요")
             require(stage in state.get("receipts", {}), "완료된 해당 단계가 없습니다")
+            if automatic:
+                failure = state.get("last_failure", {})
+                require(failure.get("kind") == "content_review" and failure.get("stage") == "finish",
+                        "자동 보완 대상이 아닙니다: " + str(failure.get("error", "최종 내용 검수 탈락 없음")))
+                require(not state.get("auto_revision_used"), "자동 내용 보완 1회를 이미 사용했습니다")
+                rejected = load_json(directory / "input-finish.json")
+                require(digest(rejected) == failure.get("input_hash"), "탈락 검수 입력 변경")
+                require((directory / "draft.md").read_text(encoding="utf-8") == state["markdown"]
+                        and digest(state["markdown"]) == state["report_hash"], "검수 대상 본문 변경")
+                for vid in state["sources"]:
+                    source_segments(state, vid)
+                require(digest(state_snapshot(Path(state["root"]))) == state["snapshot_hash"],
+                        "조사 중 원장이 변경됐습니다")
+                reason = failure["error"]
             revision = len(state.get("revisions", [])) + 1
             atomic(directory / ("revision-" + str(revision) + ".json"), state)
-            state.setdefault("revisions", []).append({"from": stage, "reason": reason})
+            state.setdefault("revisions", []).append({"from": stage, "reason": reason, "automatic": automatic})
+            if automatic:
+                state["auto_revision_used"] = True
+            state.pop("last_failure", None)
             state["revision_feedback"] = reason
             order = list(STAGES)
             for name in order[order.index(stage):]:
@@ -842,6 +887,8 @@ def run(args):
                            load_json(evidence))
             state["phase"] = stage
             atomic(state_path, state)
+            if automatic:
+                return next_output(state, "details", state["receipts"]["details"]["output"])
             return {"items": [{"status": "revision_ready", "from": stage, "run": str(directory)}]}
     require(op in STAGES, "알 수 없는 단계")
     # 기존 원장에 대한 배타적 마지막 비교·쓰기. 다른 단계도 같은 잠금을 사용한다.
@@ -865,9 +912,13 @@ def run(args):
         try:
             output = STAGES[op](state, args.get("data"))
         except (ValueError, TypeError, KeyError) as exc:
+            state["last_failure"] = {"stage": op, "input_hash": payload_hash, "error": str(exc),
+                                     "kind": "content_review" if isinstance(exc, ContentReviewRejected) else "invalid"}
+            atomic(state_path, state)
             return {"success": False, "status": "needs_review", "stage": op,
                     "error": str(exc), "run": str(directory),
                     "evidence": str(directory / ("input-" + op + ".json"))}
+        state.pop("last_failure", None)
         output.setdefault("run", state["run"])
         state["receipts"][op] = {
             "version": VERSION, "scope_hash": digest([state["config"], state["snapshot_hash"]]),

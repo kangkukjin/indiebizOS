@@ -139,8 +139,8 @@ def execute(tmp_path, monkeypatch):
         return original(ti, project, agent_id)
     monkeypatch.setattr(ibl_engine, "_execute_ibl_impl", leaf)
     monkeypatch.setattr(ibl_engine, "execute_ibl", leaf)
-    def run(mode="draft", named=True):
-        config = {"root": str(tmp_path / "reports"), "date": "2026-09-23", "topic": "복구",
+    def run(mode="draft", named=True, topic="복구"):
+        config = {"root": str(tmp_path / "reports"), "date": "2026-09-23", "topic": topic,
                   "mode": mode, "run_id": "test"}
         code = ("[fn:AI팁보고서쓰기]" + json.dumps({"설정": config}, ensure_ascii=False) if named else
                 "$설정=" + json.dumps(config, ensure_ascii=False) + "\n" + BODY)
@@ -335,8 +335,9 @@ def test_revision_preserves_rejection_and_reuses_sources(execute):
     state = helper.load_json(directory / "state.json")
     assert "reviewed" not in state["receipts"] and "draft" not in state["receipts"]
     assert state["sources"] == before["sources"]
-    assert helper.load_json(directory / "revision-1.json") == before
+    assert helper.load_json(directory / "revision-2.json") == before
     assert helper.load_json(directory / "revision-1-input-finish.json")
+    assert helper.load_json(directory / "revision-2-input-finish.json")
     execute.corrupt.clear()
     assert final(execute())["status"] == "reviewed_draft"
     assert execute.calls == calls
@@ -466,3 +467,137 @@ def test_structural_criteria_removed_but_semantic_review_remains():
     assert BODY.count("preserve_rows:true") == 7
     assert 'op:"reviewed"' in BODY and 'op:"finish"' in BODY
     assert "원문과 팁을 독립 대조" in BODY and "품질 기준을 독립 검토" in BODY
+
+
+def test_one_automatic_revision_keeps_research_and_rechecks_quality(execute):
+    attempts = []
+    def reject_once(args):
+        attempts.append(copy.deepcopy(args))
+        if len(attempts) == 1:
+            args["data"]["items"][0]["result"]["checks"]["actionability"] = False
+            args["data"]["items"][0]["result"]["issues"] = ["방법의 적용 조건을 명확히 하라"]
+        return args
+    execute.corrupt["finish"] = reject_once
+    out = final(execute("commit"))
+    state = helper.load_json(Path(out["evidence"]))
+    assert len(attempts) == 2 and state["auto_revision_used"]
+    assert len(state["revisions"]) == 1
+    assert state["final_review"]["checks"]["actionability"] is True
+    assert "방법의 적용 조건" in state["revision_feedback"]
+    assert "방법의 적용 조건" in execute.stages["reviewed"]["data"]["items"][0]["input"]["revision"]
+    assert len(execute.calls) == 4  # 메타·자막을 두 번 수집하지 않는다.
+    assert sum(k == "struct" for k, _ in execute.model_calls) == 4
+    assert len(helper.load_json(execute.root / "db/tips.json")) == 2
+    assert helper.load_json(Path(out["evidence"]).parent / "revision-1-input-finish.json")
+
+
+def test_repeated_quality_rejection_stops_after_one_revision_across_reentry(execute):
+    attempts = []
+    def reject(args):
+        attempts.append(1)
+        args["data"]["items"][0]["result"]["checks"]["actionability"] = False
+        args["data"]["items"][0]["result"]["issues"] = ["아직 구체 방법이 없음"]
+        return args
+    execute.corrupt["finish"] = reject
+    assert not execute("commit")["success"]
+    assert len(attempts) == 2
+    assert not (execute.root / "db/tips.json").exists()
+    assert not execute("commit")["success"]
+    assert len(attempts) == 3  # 미완료 검수는 재실행하지만 자동 보완은 재충전하지 않는다.
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert len(state["revisions"]) == 1
+
+
+@pytest.mark.parametrize("mutation", ["hash", "source", "malformed"])
+def test_invalid_final_evidence_is_not_automatically_revised(execute, mutation):
+    def corrupt(args):
+        result = args["data"]["items"][0]["result"]
+        result["checks"]["actionability"] = False
+        if mutation == "hash":
+            result["report_hash"] = "wrong"
+        elif mutation == "source":
+            helper.atomic(Path(args["run"]) / ("transcript-" + IDS[0] + ".json"),
+                          {"items": [{"start": 0, "text": "변경된 원문"}]})
+        else:
+            result["checks"]["grounding"] = "true"
+        return args
+    execute.corrupt["finish"] = corrupt
+    assert not execute("commit")["success"]
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert not state.get("revisions")
+    assert not (execute.root / "db/tips.json").exists()
+
+
+def test_empty_method_cannot_pass_content_review(execute):
+    def corrupt(args):
+        args["data"]["items"][0]["result"]["decisions"][0]["how"] = "  "
+        return args
+    execute.corrupt["reviewed"] = corrupt
+    assert not execute("commit")["success"]
+    assert "finish" not in execute.stages
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert not state.get("revisions")
+
+
+def test_empty_transcript_segment_cannot_validate_wrong_timestamp(tmp_path):
+    path = tmp_path / "source.json"
+    segs = [{"start": 0, "text": ""}, {"start": 120, "text": QUOTES[0]}]
+    helper.atomic(path, {"items": segs})
+    state = {"sources": {IDS[0]: {"path": str(path), "hash": helper.digest(segs)}}}
+    with pytest.raises(ValueError, match="시간 위치"):
+        helper.grounded(state, IDS[0], {"_quote": QUOTES[0], "timestamp": "00:00"})
+    helper.grounded(state, IDS[0], {"_quote": QUOTES[0], "timestamp": "02:00"})
+
+
+@pytest.mark.parametrize("topic", ["교사활용", "문서업무", "코딩"])
+def test_topic_is_input_through_review_and_report(execute, topic):
+    out = final(execute(topic=topic))
+    state = helper.load_json(Path(out["evidence"]))
+    assert state["config"]["topic"] == topic
+    assert topic in Path(out["report"]).read_text().splitlines()[0]
+    assert execute.stages["queries"]["data"]["items"][0]["input"]["topic"] == topic
+    assert execute.stages["videos"]["data"]["items"][0]["input"]["topic"] == topic
+    assert execute.stages["draft"]["data"]["items"][0]["input"]["topic"] == topic
+    assert set(state["final_review"]["checks"]) == set(helper.CHECKS)
+
+
+def test_recent_topics_remain_ten_entries(execute):
+    helper.atomic(execute.root / "_covered_videos.json",
+                  {"covered": [], "recent_topics": [{"topic": str(i)} for i in range(20)]})
+    final(execute("commit"))
+    history = helper.load_json(execute.root / "_covered_videos.json")["recent_topics"]
+    assert len(history) == 10 and history[-1]["topic"] == "복구"
+
+
+def test_comparison_uses_verified_neighboring_source_not_only_anchor(tmp_path):
+    path = tmp_path / "source.json"
+    segs = [{"start": 40, "text": "Earlier unrelated content"},
+            {"start": 60, "text": "Before the anchor"},
+            {"start": 90, "text": QUOTES[0]},
+            {"start": 120, "text": "Then combine the answers into one response."},
+            {"start": 181, "text": "Outside the declared excerpt"}]
+    helper.atomic(path, {"items": segs})
+    state = {"sources": {IDS[0]: {"path": str(path), "hash": helper.digest(segs)}},
+             "candidates": [{"candidate_id": "c1", "video_id": IDS[0],
+                             "timestamp": "01:30", "_quote": QUOTES[0]}]}
+    row = helper.comparison_candidates(state)[0]
+    assert row["source_context"]["items"] == segs[1:4]
+    assert row["source_context"]["scope"] == "excerpt"
+    assert "source_context" not in state["candidates"][0]
+    helper.atomic(path, {"items": segs[:-1]})
+    with pytest.raises(ValueError, match="자막이 변경"):
+        helper.comparison_candidates(state)
+
+
+def test_comparison_context_counts_towards_request_limit(execute, monkeypatch):
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "절차"}])
+    original = helper.comparison_candidates
+    def oversized(state):
+        candidates = original(state)
+        candidates[0]["source_context"]["items"][0]["text"] = "근거" * helper.REQUEST_CAP
+        return candidates
+    monkeypatch.setattr(helper, "comparison_candidates", oversized)
+    assert not execute()["success"]
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert "candidates" in state["receipts"] and "compared" not in state["receipts"]
+    assert "chosen" not in execute.stages

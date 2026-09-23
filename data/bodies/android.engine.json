@@ -202,6 +202,7 @@
     "ibl/channel_engine",
     "ibl/event_engine",
     "ibl/ibl_access",
+    "ibl/ibl_callable_contract",
     "ibl/ibl_code_binding",
     "ibl/ibl_code_ir",
     "ibl/ibl_control_blocks",
@@ -480,8 +481,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 405,
-    "engine": 379,
+    "total": 406,
+    "engine": 380,
     "blocklist": 26
   }
 }

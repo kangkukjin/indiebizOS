@@ -278,6 +278,10 @@ def describe_actions(names, allowed_nodes, edition=None):
     answer = []
     for name in dict.fromkeys(names):
         node, action = name.split(":", 1)
+        if node == "fn" and edition == 2:
+            from ibl_v2_store import describe
+            answer.append({"action": name, "definition": describe(action, allowed)})
+            continue
         spec = nodes.get(node, {}).get("actions", {}).get(action)
         if not isinstance(spec, dict) or (allowed is not None and node not in allowed) or not self_can_run(node, action, spec):
             answer.append({"action": name, "error": "사용 가능한 액션이 아닙니다"})

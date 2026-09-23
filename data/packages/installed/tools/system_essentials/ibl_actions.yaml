@@ -283,6 +283,74 @@ nodes:
         implementation: pattern 있으면 pathlib.glob(max_results 상한, 기본 200). 메타 파라미터만 있으면 backend/file_index.query 위임(mdfind 무상태, 비색인 경로는 라이브 walk 폴백 — 구 pc-manager _query_storage 이식).
         target_key: pattern
       grep:
+        callable_contract:
+          version: 1
+          params:
+            pattern: Text
+            path: Text
+            file_pattern: Text
+            regex: Bool
+            output_mode: Text
+            include_logs: Bool
+            limit: Number
+            context: Number
+            ignore_case: Bool
+          result:
+            items: List<Record>
+            total: Number
+            truncated: Bool
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          required:
+          - pattern
+          aliases:
+            root_path: path
+            query: pattern
+            max_results: limit
+          integers:
+          - limit
+          - context
+          minimum:
+            limit: 1
+            context: 0
+          enums:
+            output_mode:
+            - content
+            - files_with_matches
+            - count
+          defaults:
+            output_mode: content
+          variants:
+          - when:
+              output_mode: content
+            result:
+              items:
+                $list:
+                  파일: Text
+                  줄번호: Number
+                  내용: Text
+              total: Number
+              truncated: Bool
+          - when:
+              output_mode: files_with_matches
+            result:
+              items:
+                $list:
+                  파일: Text
+              total: Number
+              truncated: Bool
+          - when:
+              output_mode: count
+            result:
+              items:
+                $list:
+                  파일: Text
+                  매칭 수: Number
+              total: Number
+              truncated: Bool
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
         #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -316,6 +384,41 @@ nodes:
         implementation: 2층 — ripgrep(rg) 있고 ASCII 패턴이면 rg --json 고속 경로, 아니면(한글 패턴 포함) 파이썬 줄 스캔. 파이썬 경로는 utf-8→cp949→utf-8(replace) 인코딩 폴백으로 옛 한글(cp949) 문서 침묵 탈락 방지
         target_key: pattern
       edit:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            old_string: Text
+            new_string: Text
+            replace_all: Bool
+            start_line: Number
+            end_line: Number
+          result: {message: Text}
+          effects:
+          - write_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+            text_success_prefix: 'Successfully edited '
+            text_error_prefixes: ['Error:']
+          required:
+          - path
+          - new_string
+          required_any:
+          - - old_string
+            - start_line
+          aliases:
+            file_path: path
+          integers:
+          - start_line
+          - end_line
+          minimum:
+            start_line: 1
+            end_line: 1
+          nonempty:
+          - path
+          write_resources:
+            file: path
         params:
           replace_all: boolean   # true 면 old_string 이 여러 곳이어도 전부 교체(2026-09-05, ep2836 — 모델이 이미 쓰던 인자). 기본 false = 고유해야 함
           start_line: integer    # 줄 범위 편집(1-기반 양끝 포함) — old_string 없이 [start_line, end_line] 을 new_string 으로 교체, new_string "" 이면 삭제 (2026-09-05, ep2862: 127줄 블록을 되타이핑 못 해 /tmp 파이썬으로 갔던 자리)

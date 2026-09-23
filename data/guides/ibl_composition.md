@@ -151,3 +151,8 @@ PDF의 `pages`·`tables`, XLSX의 `sheet`·`max_rows`를 현재 문법에서 지
 
 최종 응답을 받기 전에 연결이 끊겼다면 기존 HTTP 티켓 recover의 `progress.resume` 또는
 실행 궤적의 `ibl.checkpoint`에서 시작 시 발행한 run_id를 찾는다. 원래 코드를 새 실행으로 다시 보내지 않는다.
+
+
+계약 조회는 `describe:["fn:이름"]`으로 저장 함수에도 사용할 수 있다. 오류를 고치려고 본문을 읽는 경우를 제외하면
+입력·반환·효과·미확정 경계부터 확인한다. 파일 편집·grep·웹 검색·크롤링도 현재의 명시 계약을 제공한다.
+grep과 search/crawl의 결과는 Record이므로 목록 조합에는 `.items`, 본문에는 계약에 있는 `.text`를 명시한다.

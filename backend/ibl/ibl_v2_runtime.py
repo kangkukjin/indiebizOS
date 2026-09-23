@@ -473,9 +473,16 @@ class Runtime:
     def invoke(self, node, args, piped):
         key = f"{node.data['node']}:{node.data['action']}"
         spec = self.plan.registry[key]
+        from ibl_callable_contract import normalize, selected, problems
+        args = Binding(normalize(spec.contract, args.value), args.evidence)
         args = self.inject(node, args, spec.contract.get("pipe_input"), piped)
+        contract = selected(spec.contract, args.value)
+        failures = problems(contract, args.value)
+        failures += [f"필수 인자 누락: {k}" for k in contract.get("required", contract["params"]) if k not in args.value]
+        if failures:
+            raise Fault('ARGUMENT_CONTRACT', '; '.join(failures), node)
         for name, value in args.value.items():
-            guard(value, spec.contract["params"].get(name, "Unknown"), f"{key}.{name}")
+            guard(value, contract['params'].get(name, 'Unknown'), f'{key}.{name}')
         def request_value(value):
             if isinstance(value, Closure):
                 return {"closure_node": value.body.id, "params": list(value.params),
@@ -488,9 +495,9 @@ class Runtime:
         request = {"action": key, "args": pack(request_value(args.value)), "plan": self.plan.fingerprint}
         request_hash = digest(request)
         eid = self.event(node, "invoke", args.evidence, action=key,
-                         effects=spec.contract["effects"], request_hash=request_hash)
+                         effects=contract["effects"], request_hash=request_hash)
         tool_evidence = {}
-        external = spec.contract["effects"] != ["pure"]
+        external = contract["effects"] != ["pure"]
         call_id = digest([getattr(self.local, "route", ()), node.id, self.ordinal(node.id)])
         receipt = None
         if self.journal and external:
@@ -523,7 +530,7 @@ class Runtime:
                 from ibl_v2_adapters import Adapted
                 if isinstance(value, Adapted):
                     tool_evidence, value = value.evidence, value.value
-                guard(value, spec.contract["result"], f"{key} 반환")
+                guard(value, contract["result"], f"{key} 반환")
                 if external:
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence}
                     if self.journal:

@@ -2,6 +2,85 @@ nodes:
   sense:
     actions:
       search:
+        callable_contract:
+          version: 1
+          params:
+            query: Text
+            source: Text
+            limit: Number
+            days: Number
+            type: Text
+            sort: Text
+            country: Text
+            language: Text
+            curate: Number
+            headlines: Bool
+            queries: Text|List<Text>
+            sources: Text
+            from_date: Text
+            to_date: Text
+          result:
+            items: List<Record>
+          effects:
+          - read_external
+          - model
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          required: []
+          aliases:
+            count: limit
+            display: limit
+            page_size: limit
+            max_results: limit
+            front_page: headlines
+          integers:
+          - limit
+          - days
+          - curate
+          minimum:
+            limit: 1
+            days: 0
+            curate: 0
+          nonempty:
+          - query
+          - queries
+          enums:
+            source:
+            - ddg
+            - naver
+            - gnews
+            - hn
+            - guardian
+          defaults:
+            source: ddg
+            headlines: false
+            curate: 0
+          variants:
+          - when:
+              headlines: false
+            required_any:
+            - - query
+              - queries
+          - when:
+              curate: 0
+            effects:
+            - read_external
+          - when:
+              source: ddg
+            required_any:
+            - - query
+              - queries
+          - when:
+              source: naver
+            required_any:
+            - - query
+              - queries
+          - when:
+              source: guardian
+            required_any:
+            - - query
+              - queries
         lands_on: hub
         path_audited: {at: "2026-09-20", impl: "483709fd4eea1a3d"}
         aliases:
@@ -30,6 +109,44 @@ nodes:
         implementation: source 분기 단일 도구 — ddg=DuckDuckGo ddgs 라이브러리(키 불요), naver=네이버 개발자센터 API(NAVER_CLIENT_ID/SECRET — 구 web-kr 패키지 흡수), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
         target_key: query
       crawl:
+        callable_contract:
+          version: 1
+          params:
+            url: Text
+            op: Text
+            max_length: Number
+            refresh: Bool
+          result:
+            items: List<Record>
+            url: Text
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          required:
+          - url
+          integers:
+          - max_length
+          minimum:
+            max_length: 1
+          nonempty:
+          - url
+          enums:
+            op:
+            - content
+            - links
+            - metadata
+          defaults:
+            op: content
+          variants:
+          - when:
+              op: content
+            result:
+              text: Text
+              title: Text
+              url: Text
+              items: List<Record>
         lands_on: hub
         path_audited: {at: "2026-09-20", impl: "483709fd4eea1a3d"}
         returns: items

@@ -112,7 +112,7 @@ def test_bridge_errors_and_large_values_are_not_success(memory, monkeypatch):
     result = handle_request({'edition': 2, 'code': '[sense:search]{query:"x"} ?? {fallback:true}'})
     assert not result['success'] and result['diagnostic']['kind'] == 'permission'
     result = handle_request({'edition': 2, 'code': '[sense:search]{query:9007199254740993}'})
-    assert not result['success'] and result['diagnostic']['code'] == 'LEGACY_VALUE'
+    assert not result['success'] and any(i['code'] == 'TYPE' for i in result['issues'])
 
 
 def test_compiler_gate_rejects_unbound_v2_and_accepts_explicit_function(memory):

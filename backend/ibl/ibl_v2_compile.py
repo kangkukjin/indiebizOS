@@ -31,12 +31,13 @@ class Plan:
     result_type: Type
     fingerprint: str
     dependencies: dict
+    function_contracts: dict = field(default_factory=dict)
 
     def report(self):
         status = "invalid" if self.issues else ("incomplete" if self.guards else "valid")
         return {"edition": 2, "mode": "check", "executed": False, "ok": not self.issues,
                 "status": status, "issues": self.issues, "guards": self.guards,
-                "result_type": str(self.result_type), "effects": sorted(self.effects),
+                "result_type": str(self.result_type), "effects": sorted(self.effects), "functions": self.function_contracts,
                 "plan_hash": self.fingerprint, "dependencies": self.dependencies,
                 "capabilities": ["ibl-edition/2", "ibl-value/1"],
                 "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."}
@@ -52,6 +53,7 @@ class Compiler:
         self.issues, self.guards, self.effects = [], [], set()
         self.stack, self.checked = [], set()
         self.returns = []
+        self.function_contracts = {}
 
     def issue(self, node, code, message):
         item = {"code": code, "message": message, "source_span": span(self.source, node)}
@@ -146,12 +148,16 @@ class Compiler:
                 self.pure(default)
                 dtype = self.visit(default, {}, {}, frozenset(), False)
             env[name] = args.get(name, dtype)
+        parameter_types = {k: str(v) for k, v in env.items()}
         result = self.sequence(node.data["body"], env, self.function_scopes[sid])
         for t in self.returns:
             result = t if result == UNIT_T else join(result, t)
         self.returns = old_returns
         self.stack.pop()
         self.checked.add(sid)
+        self.function_contracts[sid] = {'name': node.data['name'],
+            'params': parameter_types,
+            'required': [k for k,v in params.items() if v is None], 'result': str(result)}
         return result
 
     def visit(self, node, env, names, readonly=frozenset(), final=False, piped=None):
@@ -306,7 +312,19 @@ class Compiler:
             if not spec:
                 self.issue(node, "UNSUPPORTED_ADAPTER", f"판본 2 계약이 없는 어휘: {key}")
                 return UNKNOWN
-            contract = spec.contract
+            from ibl_callable_contract import normalize, selected, problems, UNRESOLVED
+            try:
+                args = normalize(spec.contract, args)
+                fields = normalize(spec.contract, d['params'].data['fields'])
+            except Fault as exc:
+                self.issue(node, exc.code, str(exc))
+                return UNKNOWN
+            values = {k: v.data['value'] if v.kind == 'literal' else UNRESOLVED for k, v in fields.items()}
+            contract = selected(spec.contract, values)
+            for problem in problems(contract, values):
+                self.issue(node, 'ARGUMENT_CONTRACT', problem)
+            if any(values.get(k) is UNRESOLVED for variant in spec.contract.get('variants', []) for k in variant['when']):
+                self.guards.append({'source_span': span(self.source, node), 'expected': '동적 인자에 따른 도구 계약은 실행 직전에 확인합니다.'})
             if contract.get("compatibility"):
                 self.guards.append({"source_span": span(self.source, node),
                                     "boundary": contract["compatibility"], "action": key,
@@ -407,6 +425,8 @@ class Compiler:
             key = f"{node.data['node']}:{node.data['action']}"
             spec = self.registry.get(key)
             if spec:
+                from ibl_callable_contract import normalize
+                values = normalize(spec.contract, values)
                 return {(realm, values[param]) for realm, param in spec.contract.get("write_resources", {}).items()
                         if isinstance(values.get(param), str)}
         out = set()
@@ -499,4 +519,4 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
         entry["source_span"] = span(compiler.source, Node("diagnostic", old["start"], old["end"]))
     return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,
-                digest(dependencies), dependencies)
+                digest(dependencies), dependencies, compiler.function_contracts)

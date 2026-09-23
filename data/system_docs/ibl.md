@@ -97,7 +97,16 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | self:read | path → `{text:Text,blocks:List<Record>,data:Record}`. 확장자로 텍스트/PDF/Office를 해소한다. pages/tables/sheet/max_rows 등은 조회한 계약대로 지정하며 표·시트·이미지·범위 원문은 data에 보존한다. |
 | self:write | path, content(Text; 파이프 자리) → 파일 영수증 Record. 기존 쓰기 보호·outputs 경로 규칙 적용. |
 | self:list | path, pattern 선택 → List<Record> |
+| self:edit | path, new_string, old_string 또는 start_line → 편집 영수증 Record. 줄 번호·별칭·동일 파일 병렬 쓰기를 검사한다. |
+| self:grep | pattern, path, output_mode → items/total/truncated Record. content/count/files_with_matches에 따라 행 필드 계약을 해소한다. |
+| sense:search | query 또는 queries, source; gnews/hn은 headlines 가능 → items Record. source·curate에 따른 요구 입력·모델 효과를 검사한다. |
+| sense:crawl | url, op(content/links/metadata) → 원문 봉투 Record. content는 text/title/url/items가 있으며 원천 누락은 실패와 partial로 보존한다. |
 | self:script | id, args(Record; 파이프 자리) → 등록 계약의 값. 기존 등록은 JSON stdin/stdout을 값으로 연결하며, 새 wire 계약도 지원한다. |
+
+계약은 aliases·required_any·enums·integers·minimum·nonempty와 리터럴 조건 variants를 선언할 수 있다.
+검사와 실행은 같은 선언을 소비한다. 동적 선택자는 실행 직전 검사로 남긴다.
+`{"$list": {필드: 타입}}`은 구조를 가진 목록 행의 타입 선언이다.
+`describe:["fn:이름"]`은 컴파일러가 검사한 저장 함수의 입력·반환·효과·미확정 경계를 본문 없이 돌려준다.
 
 새 사전 항목은 선언된 어댑터로 확장한다. 파서에 업무 액션 이름을 넣지 않는다.
 일반 값에 자동 봉투 추출은 없다. 사전의 고정 경로 또는 명시 문서 어댑터가 도구별 결과를 정규화한다.

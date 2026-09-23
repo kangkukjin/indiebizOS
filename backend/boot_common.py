@@ -30,6 +30,9 @@ def wire_local_subsystems(profile: str = None) -> dict:
     Returns:
         {서브시스템명: 성공여부} dict.
     """
+    from ibl_engine import register_compress_caller
+    from consciousness_agent import oneshot_ai_call
+    register_compress_caller(oneshot_ai_call)
     results = {}
     tag = f"[boot:{profile}]" if profile else "[boot]"
 

@@ -48,6 +48,8 @@ def validate_contract(contract):
     adapter = contract.get("adapter", {})
     if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1"}:
         raise ValueError("지원하지 않는 어댑터 프로토콜입니다.")
+    from ibl_callable_contract import validate_extensions
+    validate_extensions(contract)
     return contract
 
 
@@ -94,7 +96,13 @@ def decode_envelope(raw, adapter):
         try:
             raw = json.loads(raw)
         except ValueError as exc:
-            raise Fault("ADAPTER_SHAPE", f"선언된 JSON 실행 봉투가 아닙니다: {raw[:1000]}") from exc
+            prefix = adapter.get("text_success_prefix")
+            if prefix and raw.startswith(prefix):
+                raw = {"success": True, "message": raw}
+            elif any(raw.startswith(p) for p in adapter.get("text_error_prefixes", [])):
+                raise Fault("TOOL", raw) from exc
+            else:
+                raise Fault("ADAPTER_SHAPE", f"선언된 JSON 실행 봉투가 아닙니다: {raw[:1000]}") from exc
     if not isinstance(raw, dict):
         raise Fault("ADAPTER_SHAPE", "선언된 Record 실행 봉투가 아닙니다.")
     # Only this explicitly declared legacy envelope has error/status meaning.

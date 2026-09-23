@@ -2520,6 +2520,85 @@ nodes:
         - SQL
         - 테이블
       search:
+        callable_contract:
+          version: 1
+          params:
+            query: Text
+            source: Text
+            limit: Number
+            days: Number
+            type: Text
+            sort: Text
+            country: Text
+            language: Text
+            curate: Number
+            headlines: Bool
+            queries: Text|List<Text>
+            sources: Text
+            from_date: Text
+            to_date: Text
+          result:
+            items: List<Record>
+          effects:
+          - read_external
+          - model
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          required: []
+          aliases:
+            count: limit
+            display: limit
+            page_size: limit
+            max_results: limit
+            front_page: headlines
+          integers:
+          - limit
+          - days
+          - curate
+          minimum:
+            limit: 1
+            days: 0
+            curate: 0
+          nonempty:
+          - query
+          - queries
+          enums:
+            source:
+            - ddg
+            - naver
+            - gnews
+            - hn
+            - guardian
+          defaults:
+            source: ddg
+            headlines: false
+            curate: 0
+          variants:
+          - when:
+              headlines: false
+            required_any:
+            - - query
+              - queries
+          - when:
+              curate: 0
+            effects:
+            - read_external
+          - when:
+              source: ddg
+            required_any:
+            - - query
+              - queries
+          - when:
+              source: naver
+            required_any:
+            - - query
+              - queries
+          - when:
+              source: guardian
+            required_any:
+            - - query
+              - queries
         lands_on: hub
         path_audited:
           at: '2026-09-20'
@@ -2576,6 +2655,44 @@ nodes:
         implementation: source 분기 단일 도구 — ddg=DuckDuckGo ddgs 라이브러리(키 불요), naver=네이버 개발자센터 API(NAVER_CLIENT_ID/SECRET — 구 web-kr 패키지 흡수), gnews=Google News RSS(feedparser, 배치 팬아웃+curate 편집장+가디언 합류), hn=HN Algolia API(키 불요), guardian=Guardian Open Platform(GUARDIAN_API_KEY — 구 study search_guardian 흡수). gnews 언어 자동 감지.
         target_key: query
       crawl:
+        callable_contract:
+          version: 1
+          params:
+            url: Text
+            op: Text
+            max_length: Number
+            refresh: Bool
+          result:
+            items: List<Record>
+            url: Text
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          required:
+          - url
+          integers:
+          - max_length
+          minimum:
+            max_length: 1
+          nonempty:
+          - url
+          enums:
+            op:
+            - content
+            - links
+            - metadata
+          defaults:
+            op: content
+          variants:
+          - when:
+              op: content
+            result:
+              text: Text
+              title: Text
+              url: Text
+              items: List<Record>
         lands_on: hub
         path_audited:
           at: '2026-09-20'
@@ -5392,6 +5509,74 @@ nodes:
         implementation: pattern 있으면 pathlib.glob(max_results 상한, 기본 200). 메타 파라미터만 있으면 backend/file_index.query 위임(mdfind 무상태, 비색인 경로는 라이브 walk 폴백 — 구 pc-manager _query_storage 이식).
         target_key: pattern
       grep:
+        callable_contract:
+          version: 1
+          params:
+            pattern: Text
+            path: Text
+            file_pattern: Text
+            regex: Bool
+            output_mode: Text
+            include_logs: Bool
+            limit: Number
+            context: Number
+            ignore_case: Bool
+          result:
+            items: List<Record>
+            total: Number
+            truncated: Bool
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          required:
+          - pattern
+          aliases:
+            root_path: path
+            query: pattern
+            max_results: limit
+          integers:
+          - limit
+          - context
+          minimum:
+            limit: 1
+            context: 0
+          enums:
+            output_mode:
+            - content
+            - files_with_matches
+            - count
+          defaults:
+            output_mode: content
+          variants:
+          - when:
+              output_mode: content
+            result:
+              items:
+                $list:
+                  파일: Text
+                  줄번호: Number
+                  내용: Text
+              total: Number
+              truncated: Bool
+          - when:
+              output_mode: files_with_matches
+            result:
+              items:
+                $list:
+                  파일: Text
+              total: Number
+              truncated: Bool
+          - when:
+              output_mode: count
+            result:
+              items:
+                $list:
+                  파일: Text
+                  매칭 수: Number
+              total: Number
+              truncated: Bool
         params:
           limit: integer
           include_logs: boolean
@@ -5454,6 +5639,43 @@ nodes:
         implementation: 2층 — ripgrep(rg) 있고 ASCII 패턴이면 rg --json 고속 경로, 아니면(한글 패턴 포함) 파이썬 줄 스캔. 파이썬 경로는 utf-8→cp949→utf-8(replace) 인코딩 폴백으로 옛 한글(cp949) 문서 침묵 탈락 방지
         target_key: pattern
       edit:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            old_string: Text
+            new_string: Text
+            replace_all: Bool
+            start_line: Number
+            end_line: Number
+          result:
+            message: Text
+          effects:
+          - write_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+            text_success_prefix: 'Successfully edited '
+            text_error_prefixes:
+            - 'Error:'
+          required:
+          - path
+          - new_string
+          required_any:
+          - - old_string
+            - start_line
+          aliases:
+            file_path: path
+          integers:
+          - start_line
+          - end_line
+          minimum:
+            start_line: 1
+            end_line: 1
+          nonempty:
+          - path
+          write_resources:
+            file: path
         params:
           replace_all: boolean
           start_line: integer

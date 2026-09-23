@@ -61,6 +61,8 @@ def infer(value):
 
 
 def declared(spec):
+    if isinstance(spec, dict) and set(spec) == {"$list"}:
+        return Type("List", item=declared(spec["$list"]))
     if isinstance(spec, dict):
         return Type("Record", tuple((k, declared(v)) for k, v in spec.items()))
     if not isinstance(spec, str):

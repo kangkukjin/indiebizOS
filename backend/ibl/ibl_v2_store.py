@@ -86,3 +86,24 @@ def action(action_name, params, project_path):
         raise Fault("WORKFLOW_OPERATION", "edition:2는 save/run에 지정합니다. 조회·삭제는 기존 관리 경로입니다.", kind="compile")
     except Fault as exc:
         return {"success": False, "edition": 2, "error": str(exc), "diagnostic": exc.view()}
+
+
+def describe(name, allowed_nodes=None):
+    """Expose compiler-owned function signatures without publishing every body."""
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    registry = load_registry()
+    if allowed_nodes is not None:
+        registry = {key:value for key,value in registry.items()
+                    if key.split(':')[0] in allowed_nodes or key.startswith('fn:')}
+    sources = definitions()
+    if name not in sources:
+        adapter = registry.get('fn:'+name)
+        return {'callable_contract': adapter.contract} if adapter else {'error':'등록된 함수가 없습니다'}
+    plan = compile_program(sources[name], registry, definitions=sources)
+    report = plan.report()
+    node = next((n for n in plan.root.data['statements'] if n.kind == 'def' and n.data['name'] == name), None)
+    if node is None or plan.issues:
+        return {'error':'함수 계약 검사 실패', 'issues':plan.issues}
+    return {'callable_contract': {**plan.function_contracts[node.id], 'effects': report['effects']},
+            'status': report['status'], 'guards': report['guards'], 'plan_hash': plan.fingerprint}

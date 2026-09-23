@@ -129,7 +129,8 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
     from calendar_manager import get_calendar_manager
 
     # pipeline 또는 code 둘 다 허용 (AI가 자주 혼동하므로)
-    pipeline = params.get("pipeline", "") or params.get("code", "")
+    from ibl_edition import pin_source
+    pipeline = pin_source(params.get("pipeline", "") or params.get("code", ""), params.get("edition"))
     if not pipeline:
         return json.dumps({"success": False, "error": "pipeline은 필수입니다. 실행할 IBL 코드를 지정하세요."}, ensure_ascii=False)
 
@@ -236,7 +237,7 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
                 repeat="none",
                 event_time=execute_time_hm,
                 action="run_pipeline",
-                action_params={"pipeline": pipeline},
+                action_params={"pipeline": pipeline, "inputs": params.get("inputs", {})},
                 owner_project_id=project_id,
                 owner_agent_id=owner_agent or ("system_ai" if project_id == "__system_ai__" else ""),
             )
@@ -278,9 +279,10 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
                         pass
 
                 print(f"[Schedule] ⏰ 타이머 만료, 실행: {pipeline[:80]}... (context: {_timer_project_id}/{_timer_agent_id})")
-                steps = ibl_parse(pipeline)
-                if steps:
-                    result = execute_pipeline(steps, run_path, agent_id=_timer_agent_id)
+                if pipeline:
+                    from ibl_scheduled import execute_scheduled
+                    result = execute_scheduled(
+                        pipeline, run_path, _timer_agent_id, inputs=params.get("inputs"))
                     print(f"[Schedule] 완료: success={result.get('success')}")
 
                     # 결과를 소유자에게 전달 — 성공·실패 모두 (B54-3: 옛 판은 성공만, 그것도
@@ -386,7 +388,7 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
                 repeat=repeat,
                 event_time=event_time,
                 action="run_pipeline",
-                action_params={"pipeline": pipeline},
+                action_params={"pipeline": pipeline, "inputs": params.get("inputs", {})},
                 owner_project_id=project_id,
                 owner_agent_id=owner_agent or ("system_ai" if project_id == "__system_ai__" else ""),
                 weekdays=params.get("weekdays"),

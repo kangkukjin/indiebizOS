@@ -306,6 +306,6 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 ---
 
-<!-- SELF_IMAGE:START -->**현 상태 = 6노드 168 액션(sense 43·self 52·limbs 14·others 17·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 461(test 제외)**<!-- SELF_IMAGE:END -->
+<!-- SELF_IMAGE:START -->**현 상태 = 6노드 168 액션(sense 43·self 52·limbs 14·others 17·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 462(test 제외)**<!-- SELF_IMAGE:END -->
 
 *최근 변경(2026-09-14): 주요 기능에 어휘 레고박스·안경 메뉴 도구 창·재기동 제어·실행 통합 조회 추가, 파이프라인 [4]/[5] 경계(의식 없는 경로 평가 생략·최종 응답 후 기억 선별)·Reflex 분기 소유자·평가 축 라벨 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*

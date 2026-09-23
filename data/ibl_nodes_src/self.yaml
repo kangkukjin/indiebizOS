@@ -181,7 +181,7 @@
         - 메시지
       workflow:
         params:
-          edition: integer  # 명시 2=새 함수 저장/실행; 생략은 기존 판본.
+          edition: integer  # 원문 의미 명시용. code 저장과 저장본 run은 자동 해소.
           code: string      # edition:2 저장은 하나의 [def:이름](명시 인자){몸통}.
         aliases:
           # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 steps 유지.
@@ -190,7 +190,7 @@
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:workflow]{op: "list"}'
         description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
-        target_description: 'detail/delete — workflow_id 또는 name(저장본 이름). save — name + do(IBL 문장 또는 문장 배열) 필수. run — workflow_id 또는 name(저장본) 혹은 do(즉석 실행, 저장 안 함) + params 옵션(문장 안 $변수에 주입). run 은 몸통 마지막 문장의 items 를 통화로 냄 — `[self:workflow]{op:"run", name:…} >> [table:*]` 파이프 가능(effect 로 끝나는 몸통이면 통화 없음). 몸통에 `$return = …` 할당이 있으면 그 문장의 결과가 반환값(마지막 문장이 알림 같은 effect 여도 됨, 2026-08-22 M6). **시그니처**: 몸통의 미할당 `$이름`(괄호형 `${이름}` 동일 — 한글 조사·단위가 이름에 먹히는 자리엔 괄호를 쓴다: `"${n}건"`)이 곧 인자다 — save 가 계산해 params_required 로 저장·보고하고, 저장본 run 은 빠진 인자를 정직 거절한다(즉석 run 은 선언 시점이 없어 경고만). 저장본에 params_default:{이름:값}을 두면 기본값이 된다(호출자 params 가 이김). 워크플로우가 워크플로우를 부르는 사슬은 순환(같은 id 재진입)·깊이 상한 5에서 거절된다 — 반복은 [repeat:]/[table:each] 로.'
+        target_description: '현재 함수 저장은 code:"[def:이름]($인자){return ...}". 명시 인자·기본값·값 반환을 사용하며 code로 저장하면 현재 문법으로 검사한다. run은 workflow_id/name + params Record로 호출하고 저장본의 판본을 자동 해소한다. 새 조합은 [fn:이름]{인자:값}으로 부른다. 현재 작성법은 workflow.md. 기존 do/steps 및 무표기 저장본은 원래 실행 의미를 보존하는 호환 경로다.'
         group: workflow
         target_key: op
         router: workflow_engine
@@ -212,9 +212,9 @@
           values:
             list: 저장된 워크플로우 목록
             detail: 워크플로우 조회 (workflow_id)
-            save: 워크플로우 저장 (name + steps IBL 코드 배열)
+            save: 함수 저장 (code에 명시 인자 정의; 기존 steps는 호환)
             delete: 워크플로우 삭제 (workflow_id)
-            run: 워크플로우 실행 — workflow_id/name(저장본) 또는 do(즉석) + params($변수 주입, 저장본은 인자 누락 거절)
+            run: 저장 함수 실행 — workflow_id/name + params; 저장 판본 자동 해소
         implementation: workflow_engine.execute_workflow_action 입구에서 op→action 재매핑 후 기존 분기 활용.
         keywords:
         - 워크플로우

@@ -147,6 +147,10 @@ check('applyDynFilter 거르기', sandbox.applyDynFilter({items:[{c:'A'},{c:'B'}
 check('unwrapFinalResult JSON 문자열', sandbox.unwrapFinalResult({final_result:'{"a":1}'}).a === 1, '');
 check('unwrapFinalResult 비-JSON 문자열 → message', sandbox.unwrapFinalResult({final_result:'끝'}).message === '끝', '');
 
+check('현재 값 0 보존', sandbox.unwrapFinalResult({edition:2,success:true,value:0}) === 0, '');
+check('현재 값 빈 목록 보존', JSON.stringify(sandbox.unwrapFinalResult({edition:2,success:true,value:[]})) === '[]', '');
+check('부분 원천 봉투 보존', sandbox.unwrapFinalResult({edition:2,success:true,source_complete:false,value:[]}).source_complete === false, '');
+
 // 5) compose 채널
 const opts = sandbox.composeChannelOptions({channels:{from:'contacts', type:'ct', value:'cv', sendable:['gmail','nostr']}},
   {channel:'nostr', contacts:[{ct:'gmail', cv:'a@b.c'}, {ct:'nostr', cv:'npub1'}, {ct:'phone', cv:'010'}]});

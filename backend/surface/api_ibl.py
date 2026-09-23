@@ -488,7 +488,11 @@ async def translate_to_ibl(req: TranslateRequest):
     if not raw:
         raise HTTPException(status_code=503, detail="번역 모델이 응답하지 않았습니다. 모델 기어(실행 축) 설정을 확인하세요.")
 
-    ibl_code = strip_code_fence(raw)
+    from ibl_translate import translated_source
+    try:
+        ibl_code = translated_source(raw)
+    except Exception as exc:
+        raise HTTPException(status_code=422, detail=f"번역 구문 검사 실패: {exc}") from exc
     return {
         "intent": intent,
         "ibl_code": ibl_code,

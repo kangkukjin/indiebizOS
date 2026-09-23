@@ -99,7 +99,15 @@ class CalendarActionsMixin:
 
             self._log(f"워크플로우 실행: {workflow_id}"
                       + (f" (params: {', '.join(wf_params)})" if wf_params else ""))
-            result = execute_workflow(workflow_id, ".", params=wf_params)
+            import thread_context as tc
+            previous = tc.snapshot()
+            try:
+                with tc.actor_context(agent_id=task.get("owner_agent_id") or "system_ai",
+                                      task_id="", origin="scheduler"):
+                    tc.set_call_channel("scheduler", override=True)
+                    result = execute_workflow(workflow_id, CalendarActionsMixin._owner_run_path(task.get("owner_project_id")), params=wf_params)
+            finally:
+                tc.restore(previous)
 
             try:
                 from notification_manager import get_notification_manager
@@ -176,21 +184,14 @@ class CalendarActionsMixin:
                 )
             else:
                 # ── 소유 에이전트 없는 스케줄: 파이프라인 직접 실행 ──
-                from ibl_parser import parse as ibl_parse, IBLSyntaxError
-
-                try:
-                    steps = ibl_parse(pipeline)
-                except IBLSyntaxError as e:
-                    self._log(f"IBL 문법 오류: {e}")
-                    return {"success": False, "error": f"IBL 문법 오류: {e}"}
-
                 # ★B54-1 (2026-09-02 54회차): 옛 판은 project_path "." 고정이라 발화한 문장의
                 #   패키지 도구가 전부 "활성 프로젝트 경로를 확보할 수 없어"로 죽었다(등록한
                 #   프로젝트를 트리거가 몰랐다). 소유 프로젝트가 있으면 그 경로에서 돈다.
                 run_path = self._owner_run_path(owner_project_id)
                 self._log(f"[직접 실행] 파이프라인: {pipeline[:60]}... (project={owner_project_id or '-'})")
                 result = self._execute_scheduled_pipeline(
-                    steps, run_path, owner_agent_id)
+                    pipeline, run_path, owner_agent_id, edition=params.get("edition"),
+                    inputs=params.get("inputs"))
 
             duration_ms = int((_time.time() - start) * 1000)
 
@@ -243,37 +244,9 @@ class CalendarActionsMixin:
             return {"success": False, "error": str(e)}
 
     @staticmethod
-    def _execute_scheduled_pipeline(steps, run_path, agent_id):
-        """직접 발화의 출처를 전달한다. 위임 종류별 원장은 해당 위임기가 소유한다."""
-        import json
-        import thread_context as tc
-        from workflow_engine import execute_pipeline
-
-        previous = tc.snapshot()
-        try:
-            with tc.actor_context(agent_id=agent_id or "system_ai",
-                                  task_id="", origin="scheduler"):
-                tc.clear_called_agent()
-                tc.set_call_channel("scheduler", override=True)
-                result = execute_pipeline(steps, run_path, agent_id=agent_id)
-                # 비동기 접수와 실제 작업 완료를 구분한다(파이프라인 성공=호출 성공).
-                values = [result.get("final_result")]
-                values += [r.get("result") for r in result.get("results", [])]
-                queued_tasks = []
-                for value in values:
-                    if isinstance(value, str):
-                        try:
-                            value = json.loads(value)
-                        except (ValueError, TypeError):
-                            continue
-                    if isinstance(value, dict) and value.get("queued") and value.get("task_id"):
-                        if value["task_id"] not in queued_tasks:
-                            queued_tasks.append(value["task_id"])
-                if queued_tasks:
-                    result.update(queued=True, delegation_task_ids=queued_tasks)
-                return result
-        finally:
-            tc.restore(previous)  # 호출자·재사용 스레드에 위임 플래그를 남기지 않는다.
+    def _execute_scheduled_pipeline(steps, run_path, agent_id, edition=None, inputs=None):
+        from ibl_scheduled import execute_scheduled
+        return execute_scheduled(steps, run_path, agent_id, edition, inputs)
 
     @staticmethod
     def _owner_run_path(owner_project_id: str) -> str:

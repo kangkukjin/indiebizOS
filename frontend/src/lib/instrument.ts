@@ -33,6 +33,10 @@ export async function iblExecuteApp(code: string): Promise<unknown> {
   checkRemoteSession(res.status);
   if (!res.ok) throw new Error(`HTTP ${res.status}`);
   const d = await res.json();
+  if (d?.edition === 2) {
+    if (d.success !== true || d.source_complete === false) throw new Error(d.error || '실행 결과가 불완전합니다.');
+    return d.value;
+  }
   let r: unknown =
     d?.final_result ??
     (d && typeof d === 'object' && 'result' in d ? (d as { result: unknown }).result : d);
@@ -60,6 +64,10 @@ export async function askSystemAI(message: string): Promise<string> {
     body: JSON.stringify({ message }),
   });
   const d = await res.json();
+  if (d?.edition === 2) {
+    if (d.success !== true || d.source_complete === false) throw new Error(d.error || '실행 결과가 불완전합니다.');
+    return d.value;
+  }
   return String(d?.response ?? '');
 }
 

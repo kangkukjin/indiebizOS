@@ -76,11 +76,13 @@ def action(action_name, params, project_path):
             if not wf or wf.get("edition") != 2:
                 raise Fault("EDITION_BOUNDARY", "판본 2 저장본이 아닙니다.", kind="compile")
             name = definition_name(wf["code"])
-            inputs = params.get("params") or {}
+            inputs = {} if params.get("params") is None else params["params"]
             if not isinstance(inputs, dict) or any(not isinstance(k, str) or not k.isidentifier() for k in inputs):
                 raise Fault("INPUTS", "params는 명시 이름→값 Record입니다.", kind="compile")
             code = f'[fn:{name}]' + '{' + ','.join(f'{k}:${k}' for k in inputs) + '}'
-            return handle_request({"edition": 2, "code": code, "inputs": inputs}, project_path)
+            from thread_context import get_current_agent_id
+            return handle_request({"edition": 2, "code": code, "inputs": inputs}, project_path,
+                                  agent_id=get_current_agent_id())
         raise Fault("WORKFLOW_OPERATION", "edition:2는 save/run에 지정합니다. 조회·삭제는 기존 관리 경로입니다.", kind="compile")
     except Fault as exc:
         return {"success": False, "edition": 2, "error": str(exc), "diagnostic": exc.view()}

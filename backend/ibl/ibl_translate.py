@@ -18,7 +18,7 @@ IBL_TRANSLATE_TASK = """너는 IBL(IndieBiz Logic) 컴파일러다. 사용자의
 
 규칙:
 1. 아래 '참고 용례'에 나온 실제 액션 이름만 사용하라. 지어내지 마라.
-2. IBL 원문만 출력하라 — execute_ibl('...') 같은 호출 래퍼, 따옴표, 코드블록 표시(```), 설명·인사 모두 금지. [node:action]{...}, 블록([goal:]/[if:]/[case:]) 또는 변수 할당($이름 = ...)으로 시작해서 끝나야 한다.
+2. IBL 원문만 출력하라 — execute_ibl('...') 같은 호출 래퍼, 따옴표, 코드블록 표시(```), 설명·인사 모두 금지. 현재 문법의 헤더 #!ibl edition=2와 프로그램 전체를 출력하라. 명시 인자·return·값 식을 사용하라.
 3. 의도가 모호하면 가장 단순하고 되돌릴 수 있는 해석을 택하라."""
 
 
@@ -34,23 +34,16 @@ def load_ibl_spec() -> str:
 
 
 def strip_code_fence(text: str) -> str:
-    """모델 출력에서 IBL 원문만 추출. 앞의 펜스/설명/execute_ibl( 래퍼와
-    뒤의 따옴표/괄호 잔여물(예: ...}')))을 모두 떼어낸다."""
+    """바깥 코드 펜스만 벗긴다. 원문의 구문·헤더·마지막 식은 보존한다."""
     t = (text or "").strip()
-    # ```lang ... ``` 펜스 제거
-    fence = re.search(r"```[a-zA-Z]*\s*(.+?)\s*```", t, re.DOTALL)
-    if fence:
-        t = fence.group(1).strip()
-    # 첫 IBL 시작점부터 채택 (앞에 execute_ibl(' 같은 래퍼·설명이 붙은 경우).
-    # 시작점은 세 모양 — [node:action] 토큰 · 블록 개시([goal:]/[if:]/[case:]) ·
-    # 변수 할당($이름 =). 액션 토큰만 찾으면 블록/할당 접두가 잘려 코드가 훼손된다
-    # (예: "[if: ...]{[self:notify_user]..." 에서 [if: 가 소실 — 2026-08-16 실측).
-    from common.ibl_vars import HAS_ASSIGN_RE
-    m = re.search(r"\[[a-z_]+:[a-z_]+\]|\[(?:goal|if|case)\s*:|" + HAS_ASSIGN_RE.pattern, t)
-    if m:
-        t = t[m.start():].strip()
-    # 마지막 } 또는 ] 이후는 잘라낸다 (execute_ibl('...') 흉내의 ') 꼬리, 후행 설명 제거)
-    last = max(t.rfind("}"), t.rfind("]"))
-    if last != -1:
-        t = t[:last + 1]
-    return t
+    fence = re.fullmatch(r"```(?:ibl|text)?[ \t]*\n([\s\S]*?)\n```", t)
+    return fence.group(1).strip() if fence else t
+
+
+def translated_source(text: str) -> str:
+    """새 작성 의미를 고정하고 실제 파서로 검사한다. 임의 텍스트 절단은 없다."""
+    from ibl_edition import explicit_source
+    from ibl_v2_parser import parse
+    source = explicit_source(strip_code_fence(text), 2)
+    parse(source)
+    return source

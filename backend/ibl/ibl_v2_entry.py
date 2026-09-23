@@ -30,7 +30,9 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
         from ibl_run_journal import Journal, journal_root, identity
         with Journal(journal_root(project_path), identity(plan, inputs, project_path, agent_id), request.get("resume")) as journal:
             journal.announce(plan.fingerprint)
-            result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal).run()
+            from ibl_edition import source_context
+            with source_context(2):
+                result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal).run()
         try:
             from ibl_v2_learning import record_functions
             record_functions(plan, result)

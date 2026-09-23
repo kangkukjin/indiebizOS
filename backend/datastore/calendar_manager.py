@@ -255,7 +255,10 @@ class CalendarManagerBase:
         if action:
             event["action"] = action
         if action_params:
-            event["action_params"] = action_params
+            from ibl_edition import pin_source
+            event["action_params"] = dict(action_params)
+            if isinstance(action_params.get("pipeline"), str):
+                event["action_params"]["pipeline"] = pin_source(action_params["pipeline"], action_params.get("edition"))
         if repeat == "weekly" and weekdays:
             event["weekdays"] = weekdays
         if repeat in ("yearly", "monthly"):
@@ -284,6 +287,9 @@ class CalendarManagerBase:
             if evt["id"] == event_id:
                 for key, value in kwargs.items():
                     if key in valid_keys:
+                        if key == "action_params" and isinstance(value, dict) and isinstance(value.get("pipeline"), str):
+                            from ibl_edition import pin_source
+                            value = {**value, "pipeline": pin_source(value["pipeline"], value.get("edition"))}
                         evt[key] = value
                 self._save_config()
                 return True

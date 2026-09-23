@@ -217,3 +217,11 @@ AI 호출은 raw fetch 로 새로 짜지 말고 **어휘로** 부른다. 세 모
 - `new_action_checklist.md` — IBL 액션 저술 + 선언형 `app:` 블록
 - `codebase_map.md` — 파일 위치(ActionDesktop/GenericInstrument/App/main.js)
 - `open_window.md` — 기존 6개 메인 창 여는 런타임 사용법(저술 아님)
+
+
+## 현재 IBL 프로그램 연결
+
+새 앱의 IBL 원문에는 `#!ibl edition=2` 헤더를 보존한다. 기존 앱의 무표기 코드를 일괄 바꾸지 않는다.
+새 함수는 명시 인자·값 반환으로 구성하고 저장/예약은 `workflow.md`를 따른다.
+`iblExecuteApp`과 공통 선언형 렌더러는 현재 실행의 `value`를 읽는다. 실패·부분 원천을 정상 값으로 펼치지 않는다.
+일반 HTTP 호출에서 외부 값은 `inputs`로 전달하고, 검사와 실행에 같은 소스·입력을 보낸다.

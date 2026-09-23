@@ -41,3 +41,25 @@ def authoring_request(request):
     if request.get("edition") is not None or source.lstrip().startswith("#!ibl"):
         return request
     return {**request, "edition": 2}
+
+
+from contextlib import contextmanager
+from contextvars import ContextVar
+_current_edition = ContextVar("ibl_source_edition", default=1)
+
+
+@contextmanager
+def source_context(edition):
+    token = _current_edition.set(edition)
+    try:
+        yield
+    finally:
+        _current_edition.reset(token)
+
+
+def pin_source(source, requested=None):
+    """새 저장 코드만 작성 문맥에 고정한다. 기존 원문 조회에는 사용하지 않는다."""
+    if not isinstance(source, str) or not source.strip():
+        return source
+    declared = source_edition(source, requested) if requested is not None or source.lstrip().startswith("#!ibl") else _current_edition.get()
+    return explicit_source(source, declared)

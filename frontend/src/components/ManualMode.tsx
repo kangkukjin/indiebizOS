@@ -189,6 +189,8 @@ export default function ManualMode() {
   const [recallResult, setRecallResult] = useState<RecallPreviewResult | null>(null);
   const [recallError, setRecallError] = useState<string | null>(null);
 
+  const validationGeneration = useRef(0);
+  const validatedCode = useRef('');
   const validateTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -260,10 +262,14 @@ export default function ManualMode() {
       setValidation(null);
       return;
     }
+    const generation = ++validationGeneration.current;
     setValidating(true);
     try {
       const res = await api.validateIBL(code);
-      setValidation(res);
+      if (generation === validationGeneration.current) {
+        validatedCode.current = code;
+        setValidation(res);
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : '검증 실패');
     } finally {
@@ -273,6 +279,8 @@ export default function ManualMode() {
 
   // IBL 코드가 바뀌면 자동으로 효과를 다시 미리보고, 부작용 확인·학습 표시는 리셋한다
   useEffect(() => {
+    ++validationGeneration.current;
+    setValidation(null);
     setConfirmSideEffect(false);
     setLearned(false);
     if (validateTimer.current) clearTimeout(validateTimer.current);
@@ -323,9 +331,11 @@ export default function ManualMode() {
     setExecResult(null);
     setExecuting(true);
     try {
-      const res = await api.executeIBL(iblCode, MANUAL_PROJECT_ID);
+      const res = await api.executeIBL(iblCode, MANUAL_PROJECT_ID, ".", true);
       setExecResult(typeof res === 'string' ? res : JSON.stringify(res, null, 2));
-      setHistory((h) => [{ intent, code: iblCode, ok: true }, ...h].slice(0, 8));
+      const outcome = res as {success?: boolean; error?: string} | null;
+      const ok = outcome?.success !== false && !outcome?.error;
+      setHistory((h) => [{ intent, code: iblCode, ok }, ...h].slice(0, 8));
       // 자동 학습하지 않는다 — '실행 성공'은 '결과가 좋다'가 아니다.
       // 사용자가 결과를 보고 만족하면 '학습' 버튼으로 직접 증류한다(handleLearn).
     } catch (e) {
@@ -422,7 +432,7 @@ export default function ManualMode() {
   }, [recallQuery, recalling]);
 
   const canExecute =
-    !!validation && validation.valid && !!iblCode.trim() && !executing &&
+    !!validation && validation.valid && validatedCode.current === iblCode && !!iblCode.trim() && !executing && !validating &&
     (!needsConfirm || confirmSideEffect);
 
   return (
@@ -831,6 +841,14 @@ export default function ManualMode() {
           <div className="space-y-1.5">
             <span className="text-xs text-stone-400">실행하면 일어나는 일 (미리보기 — 아직 실행되지 않음)</span>
 
+            {validation.edition === 2 && (
+              <div className="text-xs space-y-1 rounded-xl bg-white border border-stone-200 p-3">
+                <div>{validation.status === 'incomplete' ? '실행 중 확인할 계약이 남아 있습니다.' : validation.valid ? '구문·계약 검사 통과' : '실행 전 오류를 수정하세요.'}</div>
+                <div>반환: {validation.result_type ?? '미확정'} · 효과: {(validation.effects ?? []).join(', ') || '외부 효과 없음'}</div>
+                {(validation.issues ?? []).map((issue, i) => <div className="text-red-700" key={i}>{issue.source_span && `${issue.source_span.line}:${issue.source_span.column} `}{issue.message}</div>)}
+                {(validation.guards ?? []).map((guard, i) => <div className="text-amber-700" key={i}>{guard.source_span && `${guard.source_span.line}:${guard.source_span.column} `}{guard.expected}</div>)}
+              </div>
+            )}
             {validation.syntax_error ? (
               <div className="px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm flex items-start gap-2">
                 <AlertTriangle size={16} className="mt-0.5 shrink-0" />

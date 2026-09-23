@@ -305,6 +305,7 @@ def _sync_schedule_trigger(trigger: dict, action: str = "add"):
                 action="run_pipeline",
                 action_params={
                     "pipeline": trigger.get("pipeline", ""),
+                    "inputs": trigger.get("inputs", {}),
                     "trigger_id": trigger["id"]
                 },
                 enabled=trigger.get("enabled", True),
@@ -401,7 +402,7 @@ def _list_triggers(params: dict) -> dict:
     from workflow_engine import preflight_sentence
     triggers = [dict(t) for t in triggers]
     for t in triggers:
-        pf = preflight_sentence(t.get("pipeline") or t.get("steps") or "")
+        pf = preflight_sentence(t.get("pipeline") or t.get("steps") or "", inputs=t.get("inputs"))
         t["runnable"] = pf["runnable"]
         if pf["problem"]:
             t["problem"] = pf["problem"]
@@ -474,7 +475,8 @@ def _create_trigger(target: str, params: dict, project_path: str = None) -> dict
         return {"error": "트리거 이름(name)이 필요합니다."}
 
     trigger_type = params.get("type", "schedule")
-    pipeline = params.get("pipeline", "")
+    from ibl_edition import pin_source
+    pipeline = pin_source(params.get("pipeline", ""), params.get("edition"))
 
     if not pipeline:
         return {"error": "pipeline이 필요합니다. 실행할 IBL 코드를 지정하세요."}
@@ -492,6 +494,7 @@ def _create_trigger(target: str, params: dict, project_path: str = None) -> dict
         "type": trigger_type,
         "config": config,
         "pipeline": pipeline,
+        "inputs": params.get("inputs", {}),
         "enabled": params.get("enabled", True),
         "created_at": datetime.now().isoformat(),
         "last_run": None,
@@ -540,6 +543,11 @@ def _update_trigger_locked(target: str, params: dict) -> dict:
             cfg = resolve_trigger_config(cfg_params, updated["type"])
             if "error" in cfg:
                 return {"error": cfg["error"]}
+            from ibl_edition import pin_source
+            if "pipeline" in params:
+                updated["pipeline"] = pin_source(params["pipeline"], params.get("edition"))
+            if "inputs" in params:
+                updated["inputs"] = params["inputs"]
             updated["config"] = cfg["config"]
             t.update(updated)
             _save_triggers(data)

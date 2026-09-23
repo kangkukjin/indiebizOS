@@ -823,7 +823,7 @@ from workflow_binding import _inject_step_results, _bind_items_params, _items_bo
 
 # === 워크플로우 CRUD ===
 
-def preflight_sentence(code: Any) -> Dict:
+def preflight_sentence(code: Any, inputs=None) -> Dict:
     """저장된 IBL 문장이 **지금의 어휘로** 실행 가능한지 검사 (2026-08-15).
 
     왜 필요한가 — 저장된 문장은 어휘가 진화하면 썩는다. 08-15 실측: 워크플로 원장에
@@ -841,6 +841,13 @@ def preflight_sentence(code: Any) -> Dict:
     파싱된다(params 만 빈 채로). 그러므로 이 검사는 **어휘 생존**을 보장하지 지 문장이
     의도대로 쓰였는지는 보장하지 않는다. 잡는 것은 "은퇴한 낱말을 부르는 문장"이다.
     """
+    if isinstance(code, str):
+        from ibl_edition import source_edition
+        if source_edition(code) == 2:
+            from ibl_v2_entry import handle_request
+            report = handle_request({"code": code, "inputs": inputs, "check": True})
+            return {"runnable": bool(report.get("ok")), "problem": None if report.get("ok") else str(report.get("issues") or report.get("error")), "dead_vocab": []}
+
     from ibl_parser import parse as _parse, IBLSyntaxError
     from ibl_engine import get_node_actions
 
@@ -895,7 +902,8 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     if not wf:
         return {"success": False, "error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
     if wf.get("edition") == 2:
-        return {"success": False, "error": "판본 2 저장본은 execute_ibl edition:2의 [fn:] 또는 workflow run edition:2로 호출하세요."}
+        from ibl_v2_store import action
+        return action("run", {"workflow_id": workflow_id, "params": params}, project_path)
     if wf.get("problem"):
         return {"success": False, "error": wf["problem"]}
 
@@ -1001,7 +1009,7 @@ def execute_workflow_action(action: str, params: dict,
             return {"error": "op 파라미터가 필요합니다. (list|get|save|delete|run)"}
         action = op
 
-    if params.get("edition") == 2:
+    if params.get("edition") == 2 or (action in ("save", "save_workflow") and "code" in params and params.get("edition") != 1):
         from ibl_v2_store import action as v2_action
         return v2_action(action, params, project_path)
     workflow_id = params.get("workflow_id", "")

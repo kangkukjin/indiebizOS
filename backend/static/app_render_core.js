@@ -108,6 +108,9 @@ function statusGlyph(s) {
 
 /** 합성(>>) 응답의 final_result(마지막 단계)를 펼쳐 단일 액션처럼 노출 */
 function unwrapFinalResult(data) {
+  if (data && data.edition === 2 && data.success === true && data.source_complete !== false && Object.prototype.hasOwnProperty.call(data, 'value')) {
+    return data.value;
+  }
   if (data && typeof data === 'object' && 'final_result' in data) {
     var fr = data.final_result;
     if (typeof fr === 'string') {

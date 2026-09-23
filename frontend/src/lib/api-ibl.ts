@@ -32,6 +32,12 @@ export interface IblValidateStep {
 }
 
 export interface IblValidateResult {
+  edition?: number;
+  status?: 'valid' | 'incomplete' | 'invalid' | 'failed';
+  issues?: {message: string; source_span?: {line: number; column: number}}[];
+  guards?: {expected: string; source_span?: {line: number; column: number}}[];
+  effects?: string[];
+  result_type?: string;
   valid: boolean;
   syntax_error: string | null;
   step_count?: number;
@@ -132,18 +138,22 @@ export function applyIblMethods<T extends APIClientCore>(client: T) {
     },
 
     /** dry-run: IBL 코드를 파싱·검증만 하고 효과를 미리 본다 (실행 안 함). */
-    async validateIBL(code: string) {
-      return client.request<IblValidateResult>('/ibl/validate', {
+    async validateIBL(code: string, inputs?: Record<string, unknown>) {
+      const report = await client.request<IblValidateResult>('/ibl/validate', {
         method: 'POST',
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code, ...(/^\s*#!ibl/.test(code) ? {} : {edition: 2}), inputs }),
       });
+      return {...report, steps: report.steps ?? [], syntax_error: report.syntax_error ?? null,
+        has_side_effect: report.edition === 2
+          ? (report.effects ?? ['unknown']).some(e => ['write_external', 'model', 'unknown'].includes(e))
+          : report.has_side_effect};
     },
 
     /** 검수를 마친 IBL 코드를 실제 실행한다. projectId로 표면별 프로젝트 컨텍스트를 지정. */
-    async executeIBL(code: string, projectId?: string, projectPath = '.') {
+    async executeIBL(code: string, projectId?: string, projectPath = '.', authoring = false, inputs?: Record<string, unknown>) {
       return client.request<unknown>('/ibl/execute', {
         method: 'POST',
-        body: JSON.stringify({ ...iblSurface, code, project_id: projectId ?? null, project_path: projectPath }),
+        body: JSON.stringify({ ...iblSurface, code, ...(authoring && !/^\s*#!ibl/.test(code) ? {edition: 2} : {}), inputs, project_id: projectId ?? null, project_path: projectPath }),
       });
     },
 

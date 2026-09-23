@@ -233,6 +233,7 @@
     "ibl/ibl_run_journal",
     "ibl/ibl_safety",
     "ibl/ibl_scanner",
+    "ibl/ibl_scheduled",
     "ibl/ibl_traceback",
     "ibl/ibl_translate",
     "ibl/ibl_turn_vars",
@@ -479,8 +480,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 404,
-    "engine": 378,
+    "total": 405,
+    "engine": 379,
     "blocklist": 26
   }
 }

@@ -32,8 +32,8 @@ def _payload_note(payload) -> str:
     if not isinstance(payload, dict) or not payload:
         return ""
     return ("첨부 데이터(payload) 키: " + ", ".join(sorted(payload.keys())) +
-            ' — 코드 파라미터 값 자리에 "$payload.<키>" 를 그대로 쓰면 실행 전에 실제 값으로 '
-            "치환된다. 첨부 내용을 코드에 옮겨 적지 마라.\n\n")
+            ' — 따옴표 없는 $payload.<키> 식으로 읽는다. payload는 inputs로 전달된다. '
+            "첨부 내용을 코드에 옮겨 적지 마라.\n\n")
 
 
 def _foreign_actions(code: str) -> list:
@@ -137,11 +137,12 @@ def _compile_cockpit(message: str, correction: str, references: str,
     if "CANNOT" in raw and "[" not in raw:
         return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200],
                 "compiler": "cockpit"}
-    code = strip_code_fence(raw)
-    if not code.startswith("["):
-        return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200],
-                "compiler": "cockpit"}
-    return {"ok": True, "code": code, "had_references": bool(references), "compiler": "cockpit"}
+    from ibl_translate import translated_source
+    try:
+        code = translated_source(raw)
+    except Exception as exc:
+        return {"ok": False, "error": f"컴파일 실패: {exc}", "compiler": "cockpit"}
+    return {"ok": True, "code": code, "edition": 2, "had_references": bool(references), "compiler": "cockpit"}
 
 
 def _own_vocab_lines() -> str:
@@ -176,11 +177,13 @@ def _compile_gemini(message: str, correction: str = "", payload=None) -> Dict[st
     system_text = (
         "너는 IBL(IndieBiz Logic) 컴파일러다. 사용자의 자연어 명령을 아래 사전의 IBL 코드로 번역만 한다.\n"
         "문법: [node:action]{params} · 순차 파이프 >> · 병렬 & · 폴백 ?? · params 값은 JSON 스타일.\n"
-        "표(items) 후처리는 table 노드(filter/sort/take/select 등)를 파이프로 잇는다.\n"
+        "현재 명시 값 문법을 사용하고 #!ibl edition=2 헤더를 보존한다.\n"
         "아래 사전에 있는 액션 이름만 사용하라. 수행 불가능한 명령이면 정확히 CANNOT 만 출력.\n"
         "IBL 코드만 출력(설명·펜스 금지).\n\n"
         f"<내 사전>\n{_own_vocab_lines()}\n</내 사전>"
     )
+    from ibl_translate import load_ibl_spec
+    system_text += "\n<ibl_spec>\n" + load_ibl_spec() + "\n</ibl_spec>"
     user_text = f'사용자 명령: "{message}"'
     note = _payload_note(payload)
     if note:
@@ -216,14 +219,15 @@ def _compile_gemini(message: str, correction: str = "", payload=None) -> Dict[st
         return {"ok": False, "error": "내 어휘로 수행할 수 없는 부탁입니다.", "raw": raw.strip()[:200],
                 "compiler": "gemini"}
     from ibl_translate import strip_code_fence
-    code = strip_code_fence(raw)
-    if not code.startswith("["):
-        return {"ok": False, "error": "컴파일 실패(내 어휘로 번역되지 않음)", "raw": raw.strip()[:200],
-                "compiler": "gemini"}
-    return {"ok": True, "code": code, "had_references": False, "compiler": "gemini"}
+    from ibl_translate import translated_source
+    try:
+        code = translated_source(raw)
+    except Exception as exc:
+        return {"ok": False, "error": f"컴파일 실패: {exc}", "compiler": "gemini"}
+    return {"ok": True, "code": code, "edition": 2, "had_references": False, "compiler": "gemini"}
 
 
-def _execute(code: str) -> Any:
+def _execute(code: str, payload=None) -> Any:
     """컴파일된 코드를 직접조작 표면과 같은 컨텍스트(앱모드·system_ai)로 실행."""
     from project_manager import ProjectManager
     p = ProjectManager().get_project_path("앱모드")
@@ -236,7 +240,8 @@ def _execute(code: str) -> Any:
     set_current_project_id("앱모드")
     try:
         from system_tools import _execute_ibl_unified
-        result = _execute_ibl_unified({"code": code}, project_path, agent_id="system_ai")
+        result = _execute_ibl_unified({"code": code, "edition": 2,
+                                       "inputs": {"payload": payload or {}}}, project_path, agent_id="system_ai")
     finally:
         set_current_project_id(_prev)
 
@@ -468,7 +473,7 @@ def _handle_ask_scoped(message: str, dry_run: bool, from_body: str, device_id: s
     try:
         # 동봉 치환은 실행 직전에만 — 응답의 compiled_ibl 은 자리표시자 그대로
         # (긴 원문을 봉투로 되돌려 보내지 않는다: 크기·투명성 둘 다).
-        result = _execute(_substitute_payload(code, payload))
+        result = _execute(code, payload)
     except Exception as e:  # noqa: BLE001 — 부탁 응답은 항상 dict 로
         result = {"error": f"실행 오류: {e}"}
 
@@ -488,7 +493,7 @@ def _handle_ask_scoped(message: str, dry_run: bool, from_body: str, device_id: s
                              payload=payload)
             if comp2.get("ok") and comp2["code"] != code:
                 try:
-                    result2 = _execute(_substitute_payload(comp2["code"], payload))
+                    result2 = _execute(comp2["code"], payload)
                 except Exception as e:  # noqa: BLE001
                     result2 = {"error": f"실행 오류: {e}"}
                 if _ok(result2):

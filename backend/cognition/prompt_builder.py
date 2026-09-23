@@ -842,7 +842,7 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
         try:
             from model_result_view import describe_actions
             from thread_context import get_allowed_nodes
-            contracts = describe_actions(list(dict.fromkeys(highlight))[:4], get_allowed_nodes())
+            contracts = describe_actions(list(dict.fromkeys(highlight))[:4], get_allowed_nodes(), edition=2)
             aug.append("이번 작업의 상세 계약: " + json.dumps(contracts, ensure_ascii=False))
         except (ValueError, KeyError, TypeError):
             pass

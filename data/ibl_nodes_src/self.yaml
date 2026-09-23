@@ -180,6 +180,9 @@
         - 통지
         - 메시지
       workflow:
+        params:
+          edition: integer  # 명시 2=새 함수 저장/실행; 생략은 기존 판본.
+          code: string      # edition:2 저장은 하나의 [def:이름](명시 인자){몸통}.
         aliases:
           # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 steps 유지.
           steps: [do]

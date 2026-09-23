@@ -1,0 +1,127 @@
+{
+  "date": "2026-09-23",
+  "canonical_repository": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+  "python": "3.13.5",
+  "default_edition": 1,
+  "model_comparison_executed": false,
+  "model_tokens": null,
+  "scope": "deterministic semantics and real isolated file/process boundaries",
+  "checks": [
+    {
+      "case": "full_map",
+      "input_rows": 0,
+      "output_rows": 0,
+      "reference_equal": true,
+      "value_hash": "cb92dd8102afa7783fd9e3d9dd3daf9b55d6eaf74672af6c8d4984123802d082",
+      "plan_hash": "3de0f53a14b3edcbf790a17a6611923a6251f6012643650255969b54785b410c",
+      "usage": {
+        "steps": 11,
+        "rows": 0,
+        "elapsed_ms": 0
+      },
+      "source_complete": true
+    },
+    {
+      "case": "full_map",
+      "input_rows": 1,
+      "output_rows": 1,
+      "reference_equal": true,
+      "value_hash": "57c45a431f8d60150bbed9972241b39f8c5cdf997384fe85fa6c7290a42cc34f",
+      "plan_hash": "e12e3aea9f0c3ee191f1272469d183f656c8677759ff9e556c13255700debe0d",
+      "usage": {
+        "steps": 22,
+        "rows": 1,
+        "elapsed_ms": 0
+      },
+      "source_complete": true
+    },
+    {
+      "case": "full_map",
+      "input_rows": 1000,
+      "output_rows": 1000,
+      "reference_equal": true,
+      "value_hash": "f8f857f86884555d848ac9f91e6b8c13453a6e36a1d3fb2da9490e4f2b5109bf",
+      "plan_hash": "e12e3aea9f0c3ee191f1272469d183f656c8677759ff9e556c13255700debe0d",
+      "usage": {
+        "steps": 11011,
+        "rows": 1000,
+        "elapsed_ms": 27
+      },
+      "source_complete": true
+    },
+    {
+      "case": "budget_stops_without_false_success",
+      "success": false,
+      "kind": "budget",
+      "partial_rows": 3,
+      "coverage": [
+        "ok",
+        "ok",
+        "ok",
+        "failed",
+        "pending"
+      ]
+    }
+  ],
+  "source_hashes": {
+    "backend/ibl/ibl_v2_adapters.py": "1195775f5c4841a56c3bf5f00550a3779c1ff9a6df96feffcd1f5c4a629ccd7d",
+    "backend/ibl/ibl_v2_compile.py": "01c1f854fe4db75747ddb934d550086ae25a1100367f676bf6b121d3e83d6a26",
+    "backend/ibl/ibl_v2_entry.py": "722025abc7e948508483d86fa10ce2f25a9a82f3da773d7547a48c6907abc0fb",
+    "backend/ibl/ibl_v2_expr.py": "62002638d81755efcc02bd2138662e294bea557f93ce3b913bfb916c81385dec",
+    "backend/ibl/ibl_v2_ir.py": "44461d86ec6eb3dd7f347a283b8a437c2d1cf3a602e6785e6448382880c98d5e",
+    "backend/ibl/ibl_v2_parser.py": "f48b1ae8a408daa276b344bcc1622d5c7a90f0276c6822d832c12ec25d2a50a6",
+    "backend/ibl/ibl_v2_runtime.py": "af01e3fe9be84d23f2a0b4122bc5fc8a26a70664656d19e12aea3ad468e079d1",
+    "backend/ibl/ibl_v2_store.py": "e6b2210be1897b168f2dc072365552ea2a53792373bcdbf980e281c684d49af7",
+    "backend/ibl/ibl_v2_types.py": "e32390cc94177fed2d2623e8364e028e2ad79de0903c3e26a8fcbf7c0efcf430"
+  },
+  "validation": {
+    "full_regression": {
+      "command": ".venv/bin/python -m pytest backend/ -q -o addopts=",
+      "passed": 5599,
+      "skipped": 1,
+      "failed": 0,
+      "seconds": 478.29
+    },
+    "final_targeted_regression": {
+      "passed": 166,
+      "failed": 0,
+      "seconds": 9.93,
+      "note": "최종 return 증거 보존·도달 경로 합류 보완과 API 호환을 포함. 전체 회귀와 중복되는 시험이며 합산하지 않음.",
+      "files": [
+        "backend/test_ibl_v2_core.py",
+        "backend/test_ibl_v2_boundaries.py",
+        "backend/test_example_review_gate_2026_09_18.py",
+        "backend/test_ibl_composition_teaching.py",
+        "backend/test_imagination_round53_repairs.py",
+        "backend/test_single_runner.py",
+        "backend/test_member_isolation_stage1_2026_09_14.py",
+        "backend/test_member_files_2026_09_14.py",
+        "backend/test_member_workspace_2026_09_14.py"
+      ]
+    },
+    "gates": [
+      "build_ibl_nodes.py --check",
+      "build_body_bundle.py android --check",
+      "check_backend_layers.py",
+      "check_value_judgment.py",
+      "check_retired_contracts.py",
+      "check_file_size.py",
+      "check_win_portability.py",
+      "git diff --check"
+    ]
+  },
+  "cli_example": {
+    "source": "docs/examples/ibl_v2/table.ibl",
+    "run_and_replay_equal": true,
+    "value": {
+      "rows": [
+        {
+          "id": "007",
+          "weighted": 21
+        }
+      ],
+      "total": 21
+    }
+  },
+  "measurements_note": "위 elapsed_ms는 결정적 계산 경계의 단일 관측이며 모델 첫 생성/총토큰/비교 속도 평가가 아니다."
+}

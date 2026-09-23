@@ -1,0 +1,5 @@
+#!ibl edition=2
+# inputs: {path: 읽을 텍스트/Markdown 문서의 경로}
+$문서 = [self:read]{path:$path}
+$제목 = $문서.blocks >> [table:filter]{where:($r) => get($r,"type","") == "heading"}
+return {headings:$제목, text:$문서.text, origin:evidence($문서)}

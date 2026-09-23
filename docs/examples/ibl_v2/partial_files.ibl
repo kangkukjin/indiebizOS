@@ -1,0 +1,6 @@
+#!ibl edition=2
+# inputs: {paths: 파일 경로 목록}; 실패를 값처럼 숨기지 않고 Result로 남긴다.
+$읽기 = $paths >> [table:each]{parallel:4,on_error:"collect"} {
+  [self:read]{path:$it}
+}
+return $읽기

@@ -176,7 +176,38 @@ def _bound(value, cap=1000):
     return clip(value)
 
 
+def project_v2_result(result):
+    """Typed values keep their meaning; verbose execution evidence stays on disk."""
+    raw = json.dumps(result, ensure_ascii=False, default=str)
+    ref = evidence_store().evidence(raw)
+    policy = display_policy()
+    out = {k: v for k, v in result.items() if k not in {"evidence", "recordings", "source_map"}}
+    out["evidence_summary"] = {"events": len(result.get("evidence", [])),
+                               "source_complete": result.get("source_complete")}
+    if len(json.dumps(out, ensure_ascii=False)) > policy["min_chars"]:
+        out.pop("value_wire", None)
+        if "value" in out:
+            def preview(value, depth=0):
+                if depth >= 5 and isinstance(value, (dict, list)):
+                    return "…(result_ref 참조)"
+                if isinstance(value, list):
+                    return [preview(v, depth + 1) for v in value[:6]]
+                if isinstance(value, dict):
+                    return {k: preview(v, depth + 1) for k, v in list(value.items())[:12]}
+                if isinstance(value, str) and len(value) > 500:
+                    return value[:500] + "…(result_ref 참조)"
+                return value
+            out["value"] = preview(out["value"])
+        out["_preview"] = True
+    out["result_ref"] = _read_reference(ref, result)
+    out["_hint"] = ("판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. "
+                    "전체 값·소스맵·실행 증거는 result_ref.read_args로 조회하세요. 다음 호출 입력은 inputs에 명시합니다.")
+    return out
+
+
 def project_result(result, verbose=False):
+    if isinstance(result, dict) and result.get("edition") == 2:
+        return project_v2_result(result)
     from ibl_envelope import diet_envelope, preview_envelope
     if not isinstance(result, dict):
         return result

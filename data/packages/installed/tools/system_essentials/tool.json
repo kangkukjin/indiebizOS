@@ -1104,6 +1104,10 @@
           "timeout": {
             "type": "number",
             "description": "실행 제한 초 (기본 300)"
+          },
+          "callable_contract": {
+            "type": "object",
+            "description": "self:script 파라미터"
           }
         }
       }

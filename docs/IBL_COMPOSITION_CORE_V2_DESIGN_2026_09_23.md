@@ -1,6 +1,7 @@
 # IBL 조합 기반 개정 설계 — 값·호출·반복의 의미를 고정한다
 
-상태: **설계 제안. 런타임·현재 문법·운영 관용구에는 미반영.**
+상태: **선택형 판본 2 코어 구현. 기본 판본·기존 운영 자산은 판본 1 유지.**
+구현 범위와 검증/잔여 단계: [구현 기록](IBL_V2_IMPLEMENTATION_2026_09_23.md). 이 문서의 장기 목표 전체를 구현 완료로 간주하지 않는다.
 작성: 2026-09-23. 코드 기준과 격리 재현은 [audit.json](experiments/ibl_composition_core_v2_2026_09_23/audit.json)에 보존한다.
 목적 정본: [IBL 진화 목적](IBL_EVOLUTION_PURPOSE.md), [vision.md](../data/system_docs/vision.md).
 현재 계약 정본: [ibl.md](../data/system_docs/ibl.md), [통화 계약](IBL_CURRENCY_CONTRACT.md).
@@ -126,7 +127,7 @@ Diagnostic = {code, kind, message, source_span, frames, details_ref}
 
 ## 6. 표현식·함수·제어의 정규 작성법
 
-아래 `ibl-v2`는 **제안 문법**이며 현행 파서에 보내면 안 된다. API에서는 `edition:2`를 지정하고, 파일에는 `#!ibl edition=2`를 사용한다. 둘이 충돌하면 실행 전에 거절한다.
+아래 `ibl-v2`는 **판본 2 문법**이다. 무표기 판본 1 파서에 보내면 안 된다. API에서는 `edition:2`를 지정하고, 파일에는 `#!ibl edition=2`를 사용한다. 둘이 충돌하면 실행 전에 거절한다.
 
 ### 6.1 식 한 벌, 문자열 한 뜻
 
@@ -246,7 +247,7 @@ v2의 파이프 오른쪽은 입력을 선언한 Call이다. 조건·try 블록�
 사전의 액션/op 계약에 아래 정보가 필요하다. 기존 returns/flow를 폐기하고 손으로 두 벌 유지하지 않고, 빌더가 호환 표현을 파생하게 한다.
 
 ```yaml
-# 제안 스키마 예시 — 아직 ibl_actions.yaml에 지원되는 필드가 아니다.
+# 지원 스키마 예시 — ibl_actions.yaml 원천에서 선언하고 빌더가 검증한다.
 callable_contract:
   version: 1
   params: {query: Text}

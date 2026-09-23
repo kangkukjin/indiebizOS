@@ -159,6 +159,9 @@ def forward_to_phone(phone_url: str, node: str, action: str, params: dict,
     agent_id: 빌림은 호출하는 주체가 액션 주체(설계결정 §6.4) — 호출자 신원을 폰에 전파해
     폰이 system_ai 로 떨구지 않고 진짜 호출자로 기록한다(폰 honor는 phone_api 측, 미설정이면 무해).
     """
+    if params.get("_ibl_edition") == 2:
+        return {"success": False, "error_type": "capability",
+                "error": "원격 기기의 ibl-script/2 협상이 없어 실행하지 않았습니다. 로컬 실행만 지원합니다."}
     code = f"[{node}:{action}]"
     if params:
         from ibl_code_ir import transport_params
@@ -243,6 +246,9 @@ def _forward_to_mac(node: str, action: str, params: dict, agent_id: str = None,
 
     mac_url: 다중 노드 라우팅이 레지스트리서 찾은 compute-class 노드 주소를 넘김. 미지정이면
     레거시 단수 env(INDIEBIZ_MAC_URL) — 폰 자기등록 전 호환."""
+    if params.get("_ibl_edition") == 2:
+        return {"success": False, "error_type": "capability",
+                "error": "원격 기기의 ibl-script/2 협상이 없어 실행하지 않았습니다. 로컬 실행만 지원합니다."}
     mac_url = (mac_url or os.environ.get("INDIEBIZ_MAC_URL") or "").rstrip("/")
     if not mac_url:
         return {"error": f"[{node}:{action}]은 집 PC(맥)에서 실행되는 액션인데 위임 대상이 "

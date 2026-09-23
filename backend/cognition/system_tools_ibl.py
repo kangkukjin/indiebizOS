@@ -561,6 +561,12 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             }
         }, ensure_ascii=False)
 
+    # 판본 경계는 legacy 파싱·턴 변수 주입보다 앞에 둔다. 헤더/API 충돌도 효과 전에 거절한다.
+    from ibl_v2_entry import handle_request as _v2_request
+    _v2 = _v2_request(dict(tool_input, code=code), project_path, agent_id, cancel_check)
+    if _v2 is not None:
+        return json.dumps(_v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input), ensure_ascii=False)
+
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---
     # files_from(경로 참조)은 여기서 인라인 files 뒤에 병합된다 — 번호 연속.
     files, _ff_err = _resolve_files_from(tool_input.get("files"),
@@ -1054,6 +1060,7 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             record_trajectory_event("ibl.started", {
                 "code_sha256": hashlib.sha256(code.encode("utf-8", "replace")).hexdigest(),
                 "code_chars": len(code),
+                "edition": tool_input.get("edition") or (2 if code.lstrip().startswith("#!ibl edition=2") else 1),
                 # 조회 종류를 원문·티켓 없이 보존한다. 빈 코드 해시만으로는
                 # 계약 조회·결과 열람·잘못된 빈 호출을 구별할 수 없다.
                 "request_keys": [k for k in ("describe", "read_result", "recover")
@@ -1106,11 +1113,12 @@ def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = No
             record_trajectory_event("ibl.finished", _finished)
             # 원문 코퍼스 — 궤적은 해시만 싣는 계약이라 원문은 여기(같은 해시로 조인).
             # 2026-09-06 부활. 실패 사유는 봉투의 error 한 줄(캡·마스킹은 기록기 몫).
-            record_ibl_code(
-                code, success=not failed, elapsed_ms=_finished["elapsed_ms"],
-                error=(obj.get("error") if failed and isinstance(obj, dict) else ""),
-                agent=agent_id or "",
-                origin=str((tool_input or {}).get("origin") or ""))
+            if not (isinstance(obj, dict) and obj.get("edition") == 2):
+                record_ibl_code(
+                    code, success=not failed, elapsed_ms=_finished["elapsed_ms"],
+                    error=(obj.get("error") if failed and isinstance(obj, dict) else ""),
+                    agent=agent_id or "",
+                    origin=str((tool_input or {}).get("origin") or ""))
             return result
     except Exception as e:
         # trajectory 는 관측이다. 계측 실패가 IBL 실행을 막지 않는다.

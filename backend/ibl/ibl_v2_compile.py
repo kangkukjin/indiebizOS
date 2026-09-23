@@ -1,0 +1,492 @@
+"""Name resolution, structural preflight and immutable execution snapshots.
+
+Unknown is an explicit runtime guard, not a successful proof. No warm cache is
+used yet: every plan contains its source/definitions/contracts and dependency
+fingerprint, avoiding the legacy transitive-cache invalidation problem.
+"""
+from dataclasses import dataclass, field
+from pathlib import Path
+import copy
+from ibl_v2_ir import Fault, Node, UNIT, digest, span
+from ibl_v2_parser import parse
+from ibl_v2_expr import BUILTINS
+from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
+                          infer, join, declared, compatible)
+
+RESERVED = {"it", "i", "error"}
+PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
+              "index", "builtin", "pure_call", "lambda", "format"}
+
+
+@dataclass
+class Plan:
+    source: str
+    root: Node
+    functions: dict
+    registry: dict
+    input_types: dict
+    issues: list
+    guards: list
+    effects: set
+    result_type: Type
+    fingerprint: str
+    dependencies: dict
+
+    def report(self):
+        status = "invalid" if self.issues else ("incomplete" if self.guards else "valid")
+        return {"edition": 2, "mode": "check", "executed": False, "ok": not self.issues,
+                "status": status, "issues": self.issues, "guards": self.guards,
+                "result_type": str(self.result_type), "effects": sorted(self.effects),
+                "plan_hash": self.fingerprint, "dependencies": self.dependencies,
+                "capabilities": ["ibl-edition/2", "ibl-value/1"],
+                "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."}
+
+
+class Compiler:
+    def __init__(self, source, registry, inputs, definitions=None):
+        self.source, self.registry = source, registry
+        self.definitions, self.external = definitions or {}, {}
+        self.source_map = [{"name": "<program>", "start": 0, "end": len(source)}]
+        self.inputs = {k: infer(v) for k, v in inputs.items()}
+        self.functions, self.scopes, self.function_scopes = {}, {}, {}
+        self.issues, self.guards, self.effects = [], [], set()
+        self.stack, self.checked = [], set()
+        self.returns = []
+
+    def issue(self, node, code, message):
+        item = {"code": code, "message": message, "source_span": span(self.source, node)}
+        if item not in self.issues:
+            self.issues.append(item)
+
+    def need(self, node, actual, expected):
+        if actual.kind == "Unknown":
+            item = {"source_span": span(self.source, node), "expected": str(expected)}
+            if item not in self.guards:
+                self.guards.append(item)
+        elif not compatible(actual, expected):
+            self.issue(node, "TYPE", f"{expected}가 필요하지만 {actual}입니다.")
+
+    def pure(self, node):
+        if node is None:
+            return
+        if node.kind not in PURE_KINDS:
+            self.issue(node, "PURE_EXPRESSION", "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.")
+        for value in node.data.values():
+            self.pure_children(value)
+
+    def pure_children(self, value):
+        if isinstance(value, Node):
+            self.pure(value)
+        elif isinstance(value, dict):
+            for v in value.values():
+                self.pure_children(v)
+        elif isinstance(value, (list, tuple)):
+            for v in value:
+                self.pure_children(v)
+
+    def predeclare(self, body, names):
+        names = dict(names)
+        local = set()
+        for node in body.data["statements"]:
+            if node.kind == "def":
+                name = node.data["name"]
+                if name in local:
+                    self.issue(node, "DUPLICATE_FUNCTION", f"중복 함수: {name}")
+                local.add(name)
+                sid = node.id
+                names[name] = sid
+                self.functions[sid] = node
+                node.data["symbol"] = sid
+        for node in body.data["statements"]:
+            if node.kind == "def":
+                self.function_scopes[node.id] = names.copy()
+        return names
+
+    def sequence(self, node, env, names, readonly=frozenset(), final=False):
+        names = self.predeclare(node, names)
+        result = UNIT_T
+        for statement in node.data["statements"]:
+            result = self.visit(statement, env, names, readonly, final)
+        return result
+
+    def resolve_function(self, name, names):
+        if name in names:
+            return names[name]
+        if name in self.external:
+            return self.external[name]
+        if name not in self.definitions:
+            return None
+        from ibl_v2_parser import Parser
+        from ibl_v2_store import definition_name
+        code = self.definitions[name]
+        if definition_name(code) != name:
+            raise Fault("LIBRARY_NAME", f"등록 이름과 정의 이름이 다릅니다: {name}", kind="compile")
+        offset = len(self.source) + 1
+        self.source += "\n" + code
+        self.source_map.append({"name": name, "start": offset, "end": len(self.source)})
+        body = Parser(code, offset).program()
+        symbols = self.predeclare(body, {})
+        self.external[name] = symbols[name]
+        return symbols[name]
+
+    def function(self, sid, args):
+        node = self.functions[sid]
+        if sid in self.stack:
+            self.issue(node, "RECURSION", "첫 판본에서는 재귀 함수를 지원하지 않습니다.")
+            return UNKNOWN
+        self.stack.append(sid)
+        old_returns, self.returns = self.returns, []
+        params = node.data["params"]
+        env = {}
+        for name, default in params.items():
+            if name in RESERVED:
+                self.issue(node, "RESERVED", f"예약 바인딩은 인자로 쓸 수 없습니다: {name}")
+            dtype = UNKNOWN
+            if default:
+                self.pure(default)
+                dtype = self.visit(default, {}, {}, frozenset(), False)
+            env[name] = args.get(name, dtype)
+        result = self.sequence(node.data["body"], env, self.function_scopes[sid])
+        for t in self.returns:
+            result = t if result == UNIT_T else join(result, t)
+        self.returns = old_returns
+        self.stack.pop()
+        self.checked.add(sid)
+        return result
+
+    def visit(self, node, env, names, readonly=frozenset(), final=False, piped=None):
+        if node is None:
+            return UNIT_T
+        d, kind = node.data, node.kind
+        sub = lambda n, e=env: self.visit(n, e, names, readonly, final)
+        if kind == "sequence":
+            return self.sequence(node, env, names, readonly, final)
+        if kind == "literal":
+            return infer(d["value"])
+        if kind == "ref":
+            if d["name"] not in env:
+                self.issue(node, "UNBOUND", f"정의되지 않은 값: ${d['name']}")
+            return env.get(d["name"], UNKNOWN)
+        if kind == "bind":
+            name = d["name"]
+            if name in readonly or name in RESERVED:
+                self.issue(node, "READONLY", f"읽기 전용 바인딩: ${name}")
+            env[name] = sub(d["value"])
+            return UNIT_T
+        if kind == "return":
+            if final:
+                self.issue(node, "FINALLY_RETURN", "finally 안에는 return을 쓸 수 없습니다.")
+            result = sub(d["value"])
+            self.returns.append(result)
+            return result
+        if kind == "def":
+            return UNIT_T
+        if kind == "list":
+            self.pure(node)
+            types = [sub(v) for v in d["values"]]
+            item = types[0] if types else UNKNOWN
+            for t in types[1:]:
+                item = join(item, t)
+            return Type("List", item=item)
+        if kind == "record":
+            self.pure(node)
+            return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()), open=False)
+        if kind in ("field", "index"):
+            base = sub(d["base"])
+            key = d.get("key")
+            if isinstance(key, Node):
+                sub(key)
+                key = key.data["value"] if key.kind == "literal" else None
+            if base.kind == "Record" and isinstance(key, str):
+                fields = dict(base.fields)
+                if key in fields:
+                    return fields[key]
+                if not base.open:
+                    self.issue(node, "MISSING_FIELD", f"선언된 필드가 없습니다: {key}. 선택 필드는 has/get을 쓰세요.")
+                else:
+                    self.need(node, UNKNOWN, UNKNOWN)
+                return UNKNOWN
+            if base.kind in ("List", "Text") and kind == "index":
+                self.need(node, sub(d["key"]), NUMBER)
+                return base.item if base.kind == "List" else TEXT
+            if base.kind == "Unknown":
+                self.need(node, UNKNOWN, Type("Record") if kind == "field" else UNKNOWN)
+            else:
+                self.issue(node, "FIELD_TYPE", f"{base}에 해당 필드 접근을 할 수 없습니다.")
+            return UNKNOWN
+        if kind in ("binary", "unary"):
+            self.pure(node)
+            op = d["op"]
+            values = [sub(d["value"])] if kind == "unary" else [sub(d["left"]), sub(d["right"])]
+            if op in ("and", "or", "&&", "||", "!", "not"):
+                for t in values:
+                    self.need(node, t, BOOL)
+                return BOOL
+            if op in ("==", "!=", "<", ">", "<=", ">=", "in"):
+                return BOOL
+            if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
+                return join(*values)
+            for t in values:
+                if t.kind not in ("Number", "Text", "Unknown"):
+                    self.issue(node, "ARITHMETIC", f"산술로 관측할 수 없는 타입: {t}")
+                if t.kind in ("Text", "Unknown"):
+                    self.need(node, UNKNOWN, NUMBER)
+            return NUMBER
+        if kind == "builtin":
+            if d["name"] not in BUILTINS:
+                self.issue(node, "BUILTIN", f"알 수 없는 내장 함수: {d['name']}")
+            return Type("Callable")
+        if kind == "pure_call":
+            self.pure(node)
+            fn = d["fn"]
+            self.need(fn, sub(fn), Type("Callable"))
+            types = [sub(a) for a in d["args"]]
+            if fn.kind == "builtin" and fn.data["name"] in BUILTINS:
+                name = fn.data["name"]
+                low, high = BUILTINS[name]
+                if not low <= len(types) <= high:
+                    self.issue(node, "ARITY", f"{name}은 {low}~{high}개 인자를 받습니다.")
+                return {"len": NUMBER, "number": NUMBER, "has": BOOL, "is_ok": BOOL,
+                        "text": TEXT, "json": TEXT, "evidence": Type("Record")}.get(name, UNKNOWN)
+            return UNKNOWN
+        if kind == "lambda":
+            params = d["params"]
+            if len(set(params)) != len(params) or RESERVED.intersection(params):
+                self.issue(node, "PARAMETERS", "람다 인자는 중복·예약 이름을 쓸 수 없습니다.")
+            local = {**env, **dict.fromkeys(params, UNKNOWN)}
+            self.pure(d["body"])
+            sub(d["body"], local)
+            return Type("Callable")
+        if kind == "format":
+            for part in d["parts"]:
+                if isinstance(part, Node):
+                    self.pure(part)
+                    t = sub(part)
+                    if t.kind not in ("Text", "Number", "Bool", "Unknown"):
+                        self.issue(part, "FORMAT_TYPE", "보간에는 Text·Number·Bool만 사용할 수 있습니다.")
+            return TEXT
+        if kind == "pipe":
+            left = sub(d["left"])
+            if d["right"].kind != "call":
+                self.issue(node, "PIPE_TARGET", "파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.")
+                return UNKNOWN
+            return self.visit(d["right"], env, names, readonly, final, piped=left)
+        if kind == "parallel":
+            types = []
+            for branch in (d["left"], d["right"]):
+                old_returns, self.returns = self.returns, []
+                result = sub(branch, env.copy())
+                for t in self.returns:
+                    result = t if result == UNIT_T else join(result, t)
+                self.returns = old_returns
+                types.append(result)
+            conflict = self.writes(d["left"]) & self.writes(d["right"])
+            if conflict:
+                self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
+            return Type("List", item=join(*types))
+        if kind == "fallback":
+            return join(sub(d["left"], env.copy()), sub(d["right"], env.copy()))
+        if kind == "call":
+            args = dict(sub(d["params"]).fields)
+            key = f"{d['node']}:{d['action']}"
+            if key == "table:each":
+                return self.each(node, args, env, names, piped)
+            if d["node"] == "fn":
+                sid = self.resolve_function(d["action"], names)
+                if not sid:
+                    self.issue(node, "FUNCTION", f"판본 2 함수가 없습니다: {d['action']}. 판본 1 함수는 자동 호출하지 않습니다.")
+                    return UNKNOWN
+                d["symbol"] = sid
+                params = self.functions[sid].data["params"]
+                receiver = next(iter(params), None)
+                self.arguments(node, args, params, receiver, piped)
+                return self.function(sid, args)
+            spec = self.registry.get(key)
+            if not spec:
+                self.issue(node, "UNSUPPORTED_ADAPTER", f"판본 2 계약이 없는 어휘: {key}")
+                return UNKNOWN
+            contract = spec.contract
+            params = contract["params"]
+            required = set(contract.get("required", params))
+            self.arguments(node, args, {k: None if k in required else UNIT for k in params}, contract.get("pipe_input"), piped)
+            for k, t in args.items():
+                if k in params:
+                    self.need(node, t, declared(params[k]))
+            self.effects.update(contract["effects"])
+            result_type = declared(contract["result"])
+            if result_type.kind == "Unknown":
+                self.need(node, UNKNOWN, UNKNOWN)
+            return result_type
+        if kind == "if":
+            self.pure(d["value"])
+            self.need(node, sub(d["value"]), BOOL)
+            a, b = env.copy(), env.copy()
+            ta, tb = sub(d["body"], a), sub(d["otherwise"], b)
+            if self.returns_unconditionally(d["body"]):
+                env.update(b)
+            elif self.returns_unconditionally(d["otherwise"]):
+                env.update(a)
+            else:
+                self.merge_env(env, a, b)
+            return join(ta, tb)
+        if kind == "case":
+            self.pure(d["value"])
+            sub(d["value"])
+            environments, types = [], []
+            for condition, body in d["branches"]:
+                self.pure(condition)
+                sub(condition)
+                child = env.copy()
+                types.append(sub(body, child))
+                environments.append(child)
+            child = env.copy()
+            types.append(sub(d["otherwise"], child))
+            environments.append(child)
+            for child in environments[1:]:
+                self.merge_env(environments[0], environments[0].copy(), child)
+            env.update(environments[0])
+            result = types[0]
+            for t in types[1:]:
+                result = join(result, t)
+            return result
+        if kind == "repeat":
+            self.pure(d["value"])
+            self.need(node, sub(d["value"]), NUMBER if d["mode"] == "count" else BOOL)
+            sub(d["body"], {**env, "i": NUMBER})
+            return UNIT_T
+        if kind == "try":
+            a, b = env.copy(), {**env, "error": Type("Record")}
+            ta, tb = sub(d["body"], a), sub(d["catch"], b)
+            b.pop("error", None)
+            self.merge_env(env, a, b) if d["catch"] else env.update(a)
+            self.visit(d["final"], env, names, readonly, True)
+            return join(ta, tb) if d["catch"] else ta
+        self.issue(node, "IR", f"지원하지 않는 구문: {kind}")
+        return UNKNOWN
+
+    @staticmethod
+    def returns_unconditionally(node):
+        if node is None:
+            return False
+        d, kind = node.data, node.kind
+        recur = Compiler.returns_unconditionally
+        if kind == "return":
+            return True
+        if kind == "sequence":
+            return any(recur(s) for s in d["statements"])
+        if kind == "if":
+            return recur(d["body"]) and recur(d["otherwise"])
+        if kind == "case":
+            return recur(d["otherwise"]) and all(recur(b) for _, b in d["branches"])
+        if kind == "try":
+            return recur(d["body"]) and (d["catch"] is None or recur(d["catch"]))
+        return False
+
+    def writes(self, node, bindings=None, seen=frozenset()):
+        """Only declared, statically known resource identities justify conflicts."""
+        bindings = bindings or {}
+        if not isinstance(node, Node) or node.kind == "def":
+            return set()
+        if node.kind == "call":
+            fields = node.data["params"].data["fields"]
+            values = {k: v.data["value"] if v.kind == "literal" else
+                      bindings.get(v.data["name"]) if v.kind == "ref" else None
+                      for k, v in fields.items()}
+            if node.data["node"] == "fn":
+                sid = node.data.get("symbol")
+                if sid in self.functions and sid not in seen:
+                    return self.writes(self.functions[sid].data["body"], values, seen | {sid})
+            key = f"{node.data['node']}:{node.data['action']}"
+            spec = self.registry.get(key)
+            if spec:
+                return {(realm, values[param]) for realm, param in spec.contract.get("write_resources", {}).items()
+                        if isinstance(values.get(param), str)}
+        out = set()
+        def visit(value):
+            if isinstance(value, Node):
+                out.update(self.writes(value, bindings, seen))
+            elif isinstance(value, dict):
+                for v in value.values():
+                    visit(v)
+            elif isinstance(value, (list, tuple)):
+                for v in value:
+                    visit(v)
+        for value in node.data.values():
+            visit(value)
+        return out
+
+    def arguments(self, node, args, params, receiver, piped):
+        if piped is not None:
+            if receiver is None or receiver in args:
+                self.issue(node, "PIPE_COLLISION", "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.")
+            else:
+                args[receiver] = piped
+        for name, default in params.items():
+            if name not in args and default is None:
+                self.issue(node, "MISSING_ARGUMENT", f"필수 인자 누락: {name}")
+        for name in args.keys() - params.keys():
+            self.issue(node, "UNKNOWN_ARGUMENT", f"알 수 없는 인자: {name}")
+
+    def each(self, node, args, env, names, piped):
+        self.arguments(node, args, {"items": None, "mode": UNIT, "on_error": UNIT, "parallel": UNIT}, "items", piped)
+        items = args.get("items", UNKNOWN)
+        self.need(node, items, Type("List", item=UNKNOWN))
+        fields = node.data["params"].data["fields"]
+        options = {}
+        for key, default in (("mode", "map"), ("on_error", "stop"), ("parallel", 1)):
+            value = fields.get(key)
+            if value and value.kind != "literal":
+                self.issue(value, "STATIC_OPTION", f"{key}는 컴파일 시 리터럴이어야 합니다.")
+            options[key] = value.data.get("value") if value else default
+        if options["mode"] not in ("map", "flat_map", "effect") or options["on_error"] not in ("stop", "collect"):
+            self.issue(node, "EACH_MODE", "each mode/on_error가 잘못되었습니다.")
+        if options["on_error"] == "collect" and options["mode"] != "map":
+            self.issue(node, "EACH_COLLECT", "on_error:collect는 map에서만 지원합니다.")
+        if type(options["parallel"]) is not int or not 1 <= options["parallel"] <= 8:
+            self.issue(node, "CONCURRENCY", "parallel은 1~8 정수입니다.")
+        old_returns, self.returns = self.returns, []
+        local = {**env, "it": items.item or UNKNOWN, "i": NUMBER}
+        result = self.visit(node.data["body"], local, names, frozenset(env) | RESERVED)
+        for t in self.returns:
+            result = t if result == UNIT_T else join(result, t)
+        self.returns = old_returns
+        if options["mode"] == "effect":
+            return UNIT_T
+        if options["mode"] == "flat_map":
+            self.need(node, result, Type("List", item=UNKNOWN))
+            return result
+        if options["on_error"] == "collect":
+            result = Type("Result", item=result)
+        return Type("List", item=result)
+
+    @staticmethod
+    def merge_env(target, a, b):
+        target.clear()
+        target.update({k: join(a[k], b[k]) for k in a.keys() & b.keys()})
+
+
+def compile_program(source, registry=None, inputs=None, definitions=None):
+    from ibl_v2_adapters import Adapter
+    registry = {k: Adapter(copy.deepcopy(v.contract), v.run) for k, v in (registry or {}).items()}
+    inputs = copy.deepcopy(inputs or {})
+    compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))
+    root = parse(source)
+    result = compiler.sequence(root, compiler.inputs.copy(), {})
+    for t in compiler.returns:
+        result = t if result == UNIT_T else join(result, t)
+    # Unused definitions must also be well formed; validate to a fixed point for
+    # nested forward definitions, without inventing caller-local parameters.
+    while set(compiler.functions) - compiler.checked:
+        sid = next(iter(set(compiler.functions) - compiler.checked))
+        compiler.function(sid, {})
+    dependencies = {"source": digest(compiler.source), "libraries": digest(compiler.definitions),
+                    "input_types": {k: str(t) for k, t in compiler.inputs.items()},
+                    "source_map": compiler.source_map, "contracts": digest({k: v.contract for k, v in registry.items()}),
+                    "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
+                    "core": digest({p.name: digest(p.read_text()) for p in Path(__file__).parent.glob("ibl_v2_*.py")})}
+    for entry in compiler.issues + compiler.guards:
+        old = entry["source_span"]
+        entry["source_span"] = span(compiler.source, Node("diagnostic", old["start"], old["end"]))
+    return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
+                compiler.issues, compiler.guards, compiler.effects, result,
+                digest(dependencies), dependencies)

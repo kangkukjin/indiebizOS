@@ -33,3 +33,65 @@ def parse_output(stdout):
     if isinstance(parsed.get('items'), list) or isinstance(parsed.get('table'), dict):
         return parsed, None
     return None, None
+
+
+def validate_v2_contract(contract):
+    from ibl_v2_adapters import validate_contract
+    validate_contract(contract)
+    if contract["adapter"]["protocol"] != "ibl-script/2":
+        raise ValueError("등록 script의 새 프로토콜은 ibl-script/2입니다.")
+    return contract
+
+
+def _v2_json_safe(value):
+    """This script protocol uses plain JSON; reject values needing tagged wire."""
+    from ibl_v2_ir import pack
+    def visit(wire):
+        if wire[0] == "scalar":
+            return
+        if wire[0] == "list":
+            for child in wire[1]:
+                visit(child)
+            return
+        if wire[0] == "record":
+            for _, child in wire[1]:
+                visit(child)
+            return
+        raise ValueError("ibl-script/2의 일반 JSON은 안전 정수 범위·유한 숫자·일반 데이터만 지원합니다.")
+    visit(pack(value))
+
+
+def v2_input(entry, args, context=None):
+    from ibl_v2_types import guard
+    contract = validate_v2_contract(entry.get("callable_contract"))
+    if not isinstance(args, dict):
+        raise ValueError("script args는 Record입니다.")
+    params = contract["params"]
+    required = contract.get("required", list(params))
+    if any(k not in args for k in required) or any(k not in params for k in args):
+        raise ValueError("script의 명시 인자 계약과 args가 다릅니다.")
+    for key, value in args.items():
+        guard(value, params[key], key)
+    _v2_json_safe(args)
+    return {"protocol": "ibl-script/2", "args": args,
+            "context": {"edition": 2, **(context or {})}}
+
+
+def v2_output(stdout, contract):
+    from ibl_v2_types import guard
+    from ibl_v2_ir import pack
+    try:
+        envelope = json.loads(stdout)
+        if not isinstance(envelope, dict) or envelope.get("protocol") != "ibl-script/2":
+            raise ValueError("stdout에 ibl-script/2 봉투가 필요합니다.")
+        if type(envelope.get("ok")) is not bool:
+            raise ValueError("stdout.ok는 Bool입니다.")
+        if not envelope["ok"]:
+            return None, str(envelope.get("error") or "script 실패")
+        if "value" not in envelope:
+            raise ValueError("stdout.value가 없습니다(null은 값으로 허용).")
+        value = guard(envelope["value"], contract["result"], "script 반환")
+        _v2_json_safe(value)
+        return value, None
+    except Exception as exc:
+        return None, f"script 출력 계약 위반: {exc}"

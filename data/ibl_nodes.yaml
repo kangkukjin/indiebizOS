@@ -3068,6 +3068,9 @@ nodes:
         - 통지
         - 메시지
       workflow:
+        params:
+          edition: integer
+          code: string
         aliases:
           steps:
           - do
@@ -5113,6 +5116,34 @@ nodes:
         - summarize
         - rewrite
       read:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            offset: Number
+            limit: Number
+          required:
+          - path
+          pipe_input: path
+          result:
+            text: Text
+            blocks: List<Record>
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            fixed_params:
+              format: text
+              blocks: true
+            value_fields:
+              text: /message
+              blocks: /items
+            attachments:
+            - path
+            - total_lines
+            - start_line
+            - end_line
+          nondeterministic: true
         params:
           format: string
           limit: integer
@@ -5171,7 +5202,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-23'
-          impl: ade1e153439d20be
+          impl: c45b25e4033b8c5c
         target_key: path
         aliases:
           offset:
@@ -5184,7 +5215,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-23'
-          impl: ade1e153439d20be
+          impl: c45b25e4033b8c5c
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5208,6 +5239,24 @@ nodes:
         - fill
         - form
       write:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            content: Text
+          required:
+          - path
+          - content
+          pipe_input: content
+          write_resources:
+            file: path
+          result: Record
+          effects:
+          - write_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          nondeterministic: true
         params:
           spill: boolean
           format: string
@@ -5239,6 +5288,24 @@ nodes:
           content: $content
         target_key: path
       list:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            pattern: Text
+          required:
+          - path
+          pipe_input: path
+          result: List<Record>
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: /items
+            attachments:
+            - total
+            - pattern
+          nondeterministic: true
         lands_on: body
         limb_op:
           op: list
@@ -5773,10 +5840,30 @@ nodes:
         guides:
         - sheet.md
       script:
+        params:
+          callable_contract: object
+        callable_contract:
+          version: 1
+          params:
+            id: Text
+            args: Record
+          required:
+          - id
+          - args
+          pipe_input: args
+          result: Unknown
+          effects:
+          - unknown
+          adapter:
+            protocol: ibl-script/2
+            fixed_params:
+              op: run
+            value_path: /value
+          nondeterministic: true
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-23'
-          impl: ade1e153439d20be
+          impl: c45b25e4033b8c5c
         pipe_in: true
         lands_on: body
         limb_op:
@@ -8490,6 +8577,22 @@ nodes:
         - 한줄로
         - brief
       filter:
+        callable_contract:
+          version: 1
+          params:
+            items: List<Record>
+            where: Callable
+          required:
+          - items
+          - where
+          pipe_input: items
+          result: List<Record>
+          effects:
+          - pure
+          nondeterministic: false
+          adapter:
+            protocol: core-table/2
+            operation: filter
         params:
           field: string
           value:
@@ -8523,6 +8626,23 @@ nodes:
         - 만
         - filter
       sort:
+        callable_contract:
+          version: 1
+          params:
+            items: List<Record>
+            by: Text
+            descending: Bool
+          required:
+          - items
+          - by
+          pipe_input: items
+          result: List<Record>
+          effects:
+          - pure
+          nondeterministic: false
+          adapter:
+            protocol: core-table/2
+            operation: sort
         returns: transform
         flow:
           accepts: items
@@ -8550,6 +8670,22 @@ nodes:
         - sort
         - 순서
       take:
+        callable_contract:
+          version: 1
+          params:
+            items: List
+            n: Number
+          required:
+          - items
+          - n
+          pipe_input: items
+          result: List
+          effects:
+          - pure
+          nondeterministic: false
+          adapter:
+            protocol: core-table/2
+            operation: take
         returns: transform
         flow:
           accepts: items
@@ -8600,6 +8736,22 @@ nodes:
         - split
         - 긴 자막
       select:
+        callable_contract:
+          version: 1
+          params:
+            items: List<Record>
+            columns: Callable|List<Text>
+          required:
+          - items
+          - columns
+          pipe_input: items
+          result: List<Record>
+          effects:
+          - pure
+          nondeterministic: false
+          adapter:
+            protocol: core-table/2
+            operation: select
         returns: transform
         flow:
           accepts: items
@@ -8631,6 +8783,22 @@ nodes:
         - select
         - 골라
       compute:
+        callable_contract:
+          version: 1
+          params:
+            items: List<Record>
+            set: Callable
+          required:
+          - items
+          - set
+          pipe_input: items
+          result: List<Record>
+          effects:
+          - pure
+          nondeterministic: false
+          adapter:
+            protocol: core-table/2
+            operation: compute
         returns: transform
         flow:
           accepts: items

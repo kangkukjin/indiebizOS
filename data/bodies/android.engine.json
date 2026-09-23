@@ -229,6 +229,15 @@
     "ibl/ibl_translate",
     "ibl/ibl_turn_vars",
     "ibl/ibl_typecheck",
+    "ibl/ibl_v2_adapters",
+    "ibl/ibl_v2_compile",
+    "ibl/ibl_v2_entry",
+    "ibl/ibl_v2_expr",
+    "ibl/ibl_v2_ir",
+    "ibl/ibl_v2_parser",
+    "ibl/ibl_v2_runtime",
+    "ibl/ibl_v2_store",
+    "ibl/ibl_v2_types",
     "ibl/ibl_value_types",
     "ibl/member_bridge",
     "ibl/member_files",
@@ -459,8 +468,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 384,
-    "engine": 358,
+    "total": 393,
+    "engine": 367,
     "blocklist": 26
   }
 }

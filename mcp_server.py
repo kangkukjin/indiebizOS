@@ -216,6 +216,8 @@ async def execute_ibl(code: str, project_path: str = "",
                       check: bool = False,
                       describe: Optional[List[str]] = None,
                       read_result: Optional[ResultRead] = None,
+                      edition: Optional[int] = None,
+                      inputs: Optional[dict] = None,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
@@ -241,6 +243,7 @@ async def execute_ibl(code: str, project_path: str = "",
         files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: 먼저 임시 파일에
         쓰고 여기에 경로만 싣는다.
     describe: code를 비우고 ["node:action"]으로 계약 조회(1~6개, 실행 없음).
+    edition: 생략=1, 2=명시 값·함수 문법. inputs는 판본 2의 이름→값 입력입니다.
     read_result: code를 비우고 result_ref.read_args를 그대로 넣어 기존 원문 회수.
         limit는 문자 수 1~60000(기본 60000), offset은 0 이상. 다음 페이지는 next_read 그대로.
         result_ref.paths에 실제 본문 경로가 있다. path 생략은 원 봉투 전체(재실행 없음).
@@ -285,6 +288,10 @@ async def execute_ibl(code: str, project_path: str = "",
         runtime_parent = None
     if runtime_parent:
         payload["_runtime_parent"] = runtime_parent
+    if edition is not None:
+        payload["edition"] = edition
+    if inputs is not None:
+        payload["inputs"] = inputs
     if describe is not None:
         payload["describe"] = describe
     if read_result is not None:

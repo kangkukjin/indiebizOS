@@ -192,6 +192,10 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
         "input_schema": {
             "type": "object",
             "properties": {
+                "edition": {"type": "integer", "enum": [1, 2],
+                            "description": "판본 선택. 생략=1. 판본 2는 명시 입력·값·함수 문법(ibl_v2 가이드)을 사용."},
+                "inputs": {"type": "object", "description": "판본 2의 명시 외부 이름→값. 이전 턴 변수는 자동 주입하지 않음."},
+                "check": {"type": "boolean", "description": "실행 없이 같은 컴파일러로 검사."},
                 "code": {
                     "type": "string",
                     "description": (

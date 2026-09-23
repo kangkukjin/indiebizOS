@@ -894,6 +894,8 @@ def execute_workflow(workflow_id: str, project_path: str = ".",
     wf = get_workflow(workflow_id)
     if not wf:
         return {"success": False, "error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}
+    if wf.get("edition") == 2:
+        return {"success": False, "error": "판본 2 저장본은 execute_ibl edition:2의 [fn:] 또는 workflow run edition:2로 호출하세요."}
     if wf.get("problem"):
         return {"success": False, "error": wf["problem"]}
 
@@ -999,6 +1001,9 @@ def execute_workflow_action(action: str, params: dict,
             return {"error": "op 파라미터가 필요합니다. (list|get|save|delete|run)"}
         action = op
 
+    if params.get("edition") == 2:
+        from ibl_v2_store import action as v2_action
+        return v2_action(action, params, project_path)
     workflow_id = params.get("workflow_id", "")
     # 코퍼스/사용자는 name으로도 호출 → 저장된 id로 해소 (run/get/delete round-trip).
     # save는 제외 (save_workflow가 name→slug로 새 id를 생성).

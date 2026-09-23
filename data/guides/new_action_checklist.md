@@ -391,3 +391,6 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 회원 공개 선언·격리 시험은 [회원 액션 계약](member_contract.md)을 따른다.
 
 공유 업무 확장: [별도 계약](managed_records.md).
+
+
+판본 2 어댑터 추가: [ibl_v2_adapter.md](ibl_v2_adapter.md).

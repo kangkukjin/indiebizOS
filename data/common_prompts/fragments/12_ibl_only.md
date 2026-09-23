@@ -9,6 +9,7 @@ IBL은 외부 행위 언어다. `execute_ibl`로 실행한다(응답 속 코드�
 3. `read_guide` — 가이드 파일 읽기 (복잡한 작업 전에 매뉴얼 확인)
 
 파일 읽기/쓰기·todo·알림도 주 도구 `execute_ibl`로 실행한다.
+판본2 교재: ibl_v2.md.
 새로운 긴 프로그램의 작성 순서·관용구 변형·실패/규모 예제는 `read_guide(query="ibl_composition.md")`로 읽는다.
 
 ## Python / Node.js 실행

@@ -171,3 +171,26 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
   행에 `progress`(마지막 줄들)를 싣는다. 긴 스크립트는 진행을 stderr 에 쓰면 된다(stdout 은 통화 자리).
   실사고: 55분짜리 나레이션 생성이 26라운드 내내 'running' 만 돌려줬다 — 로그가 끝난 뒤에야 생겼기 때문.
 - wait 상한 240초(초과 요청은 신고 후 상한). 더 긴 작업은 status 를 다시 부르거나 트리거에 맡긴다.
+
+
+## 판본 2 프로토콜 (선택)
+
+Python·Bash·Node 인터프리터는 그대로 지원한다. 기존 등록의 stdin/stdout는 변경하지 않는다.
+새 id 등록에 아래 `callable_contract`를 명시하면 판본 2에서만 실행한다.
+
+```yaml
+callable_contract:
+  version: 1
+  params: {x: Number}
+  result: Record
+  effects: [pure]
+  adapter: {protocol: ibl-script/2}
+```
+
+stdin은 `{protocol:"ibl-script/2", args:{x:3}, context:{edition:2}}`다.
+stdout은 `{protocol:"ibl-script/2", ok:true, value:{n:6}}` 또는
+`{protocol:"ibl-script/2", ok:false, error:"사유"}`다. `value.error`는 평범한 업무 데이터다.
+입력 이름·반환 타입·JSON·종료 코드를 검사한다. 일반 args 문자열의 몸 경로 별칭은 확장하지 않는다.
+새 계약과 기존 호출의 판본이 다르면 실행 전에 거절한다. 현재 새 프로토콜은 로컬 동기 실행만 지원하며
+회원 기기·원격·background 실행은 협상 구현 전까지 거절한다. 등록 계약을 모르는 script는 순수 캐시 대상으로 간주하지 않는다.
+자세한 언어 계약은 [ibl_v2.md](ibl_v2.md)를 읽는다.

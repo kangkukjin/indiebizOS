@@ -200,6 +200,8 @@ def _stdin_args(tool_input, *, expand_paths=True):
 
 def member_script(params, command, exchange, workspace):
     """회원 기기에는 인계한 args만 전송한다. 허브 경로 확장·스크립트 실행 없음."""
+    if params.get("_ibl_edition") == 2:
+        return {"success": False, "error": "회원 기기는 아직 ibl-script/2 프로토콜을 지원하지 않습니다."}
     if "input_as" in params:
         if params.get("op") != "run":
             return {"success": False, "error": "input_as는 run 전용입니다."}
@@ -443,6 +445,12 @@ def op_register(tool_input):
     except (TypeError, ValueError):
         timeout = int(prev.get("timeout") or _DEFAULT_TIMEOUT)
 
+    contract = tool_input.get("callable_contract", prev.get("callable_contract"))
+    if contract is not None:
+        try:
+            _runtime.validate_v2_contract(contract)
+        except Exception as exc:
+            return {"success": False, "error": f"script 계약 거절: {exc}"}
     registry[sid] = {
         "file": rel,
         "interpreter": interpreter,
@@ -450,6 +458,8 @@ def op_register(tool_input):
         "timeout": timeout,
         "registered_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
     }
+    if contract is not None:
+        registry[sid]["callable_contract"] = contract
     _write_registry(registry)
     return {"success": True, "id": sid, "updated": updated, "path": str(p), "interpreter": interpreter,
             "timeout": timeout,
@@ -482,6 +492,11 @@ def op_run(tool_input):
         return {"success": False,
                 "error": f"등록되지 않은 id: {sid or '(비어 있음)'} — 임의 경로·코드 실행은 불가, op:register 로 먼저 등록. "
                          f"등록: {', '.join(sorted(registry)) or '없음'}"}
+    v2 = tool_input.get("_ibl_edition") == 2
+    if v2 != bool(entry.get("callable_contract")):
+        return {"success": False, "error": "스크립트 등록 프로토콜과 호출 판본이 다릅니다. 명시적 ibl-script/2 계약이 필요합니다."}
+    if v2 and tool_input.get("background"):
+        return {"success": False, "error": "ibl-script/2는 동기 실행만 지원합니다."}
     p = _script_path(entry)
     if not p.is_file():
         # pre-flight 실패도 상태에 남긴다(⑱) — 안 남기면 list/이력이 이 실패를 영영 모른다
@@ -491,9 +506,14 @@ def op_run(tool_input):
         return {"success": False,
                 "error": f"등록된 파일이 사라졌습니다: {p} — 파일 복구 후 재등록하거나 op:remove."}
 
-    args, _aerr, _args_src = _stdin_args(tool_input)
+    args, _aerr, _args_src = _stdin_args(tool_input, expand_paths=not v2)
     if _aerr:
         return {"success": False, "error": _aerr}
+    if v2:
+        try:
+            args = _runtime.v2_input(entry, args, tool_input.get("_ibl_context"))
+        except Exception as exc:
+            return {"success": False, "error": f"script 입력 계약 위반: {exc}"}
     stdin_data = json.dumps(args, ensure_ascii=False) if args is not None else None
     try:
         timeout = int(tool_input.get("timeout") or entry.get("timeout") or _DEFAULT_TIMEOUT)
@@ -531,7 +551,11 @@ def op_run(tool_input):
     except OSError:
         pass
 
-    parsed, result_error = _runtime.parse_output(stdout)
+    if v2:
+        script_value, result_error = _runtime.v2_output(stdout, entry["callable_contract"])
+        parsed = None
+    else:
+        parsed, result_error = _runtime.parse_output(stdout)
     ok = (exit_code == 0) and not timed_out and not result_error
     last_run = {"at": time.strftime("%Y-%m-%dT%H:%M:%S"), "ok": ok,
                 "exit_code": exit_code, "duration_ms": duration_ms}
@@ -557,6 +581,9 @@ def op_run(tool_input):
         # 결과만 보고는 알 수 없다(가리키기의 값은 호출 밖에서 바뀐다).
         res["args_file"] = _args_src
         res["args_bytes"] = len(stdin_data or "")
+    if v2:
+        res["value"] = script_value
+        return res
     # stdout 이 JSON 이고 items/table 을 실으면 통화로 승격 — 파이프로 흐른다.
     if isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)):
         for k, v in parsed.items():

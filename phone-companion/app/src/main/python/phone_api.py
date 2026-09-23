@@ -1305,6 +1305,12 @@ def output_file(name: str):
     return JSONResponse({"error": "파일을 찾을 수 없습니다."}, status_code=404)
 
 
+@app.get("/ibl/capabilities")
+async def ibl_capabilities():
+    from ibl_v2_entry import capabilities
+    return capabilities()
+
+
 @app.post("/ibl/execute")
 async def execute(req: Request):
     """정본 통합 실행기로 라우팅 — PC /ibl/execute 와 동일 계약.
@@ -1326,7 +1332,11 @@ async def execute(req: Request):
     from system_tools import _execute_ibl_unified
 
     def _run():
-        return _execute_ibl_unified({"code": code}, _scratch, agent_id=agent_id)
+        request = {"code": code}
+        for key in ("edition", "inputs", "check", "resume", "files", "files_from"):
+            if key in body:
+                request[key] = body[key]
+        return _execute_ibl_unified(request, _scratch, agent_id=agent_id)
 
     # 엔진은 동기(내부에 자체 이벤트 루프 관리). 서버 asyncio 루프 블록 방지 위해 스레드로.
     result = await asyncio.to_thread(_run)
@@ -1378,6 +1388,8 @@ async def ibl_validate(payload: dict):
 
     class _Req:
         code = str((payload or {}).get("code") or "")
+        edition = (payload or {}).get("edition")
+        inputs = (payload or {}).get("inputs")
 
     return JSONResponse(await api_ibl.validate_ibl(_Req()))
 

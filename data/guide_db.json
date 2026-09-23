@@ -2,6 +2,37 @@
   "description": "가이드 파일 DB - data/guides/ 폴더에서 파일 관리",
   "guides": [
     {
+      "id": "ibl_v2",
+      "name": "IBL 판본 2 — 명시 값·함수·조합",
+      "description": "edition:2의 표현식·함수·순수 콜백·반복·부분 실패·검사·증거·지원 도구와 저장 방법. 기존 판본과의 경계.",
+      "keywords": [
+        "IBL 판본 2",
+        "ibl_v2",
+        "edition 2",
+        "명시 인자",
+        "map",
+        "flat_map",
+        "Result",
+        "evidence",
+        "컴파일"
+      ],
+      "file": "ibl_v2.md",
+      "topic": "IBL"
+    },
+    {
+      "id": "ibl_v2_adapter",
+      "name": "IBL 판본 2 사전 어댑터 작성",
+      "description": "callable_contract 원천 선언, 값·실행 봉투의 경계, 도구 확장과 검증 체크리스트.",
+      "keywords": [
+        "callable_contract",
+        "판본 2 어댑터",
+        "IBL 2 계약",
+        "ibl_v2_adapter"
+      ],
+      "file": "ibl_v2_adapter.md",
+      "topic": "IBL"
+    },
+    {
       "id": "ibl_composition",
       "name": "IBL 조합 — 긴 프로그램 작성과 관용구 변형",
       "description": "입출력 계약부터 변수·함수·관용구를 연결하는 실행 예제. 빈 결과와 장애 구분, 실패 항목만 재시도, 전량 분할·통합, 입력 크기·재개·총 AI 비용 점검.",

@@ -26,6 +26,34 @@ nodes:
         implementation: consciousness_agent.oneshot_ai_call(role="background") — 모델은 기어가 분류 축으로 해소(세 프리셋 모두 경량 티어). 도구·다단계·대화맥락 없음.
         keywords: [질문, 물어봐, 요약, 개선, 설명, 변환, 답변, ask, ai, summarize, rewrite]
       read:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            offset: Number
+            limit: Number
+          required:
+          - path
+          pipe_input: path
+          result:
+            text: Text
+            blocks: List<Record>
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            fixed_params:
+              format: text
+              blocks: true
+            value_fields:
+              text: /message
+              blocks: /items
+            attachments:
+            - path
+            - total_lines
+            - start_line
+            - end_line
+          nondeterministic: true
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
         #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -81,7 +109,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-09-23", impl: "ade1e153439d20be"}
+        path_audited: {at: "2026-09-23", impl: "c45b25e4033b8c5c"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -93,7 +121,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-09-23", impl: "ade1e153439d20be"}
+        path_audited: {at: "2026-09-23", impl: "c45b25e4033b8c5c"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -121,6 +149,23 @@ nodes:
         - fill
         - form
       write:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            content: Text
+          required:
+          - path
+          - content
+          pipe_input: content
+          write_resources: {file: path}
+          result: Record
+          effects:
+          - write_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: ''
+          nondeterministic: true
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
         #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
         #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -152,6 +197,24 @@ nodes:
         limb_op: {op: write, path: $path, content: $content}
         target_key: path
       list:
+        callable_contract:
+          version: 1
+          params:
+            path: Text
+            pattern: Text
+          required:
+          - path
+          pipe_input: path
+          result: List<Record>
+          effects:
+          - read_external
+          adapter:
+            protocol: legacy-envelope
+            value_path: /items
+            attachments:
+            - total
+            - pattern
+          nondeterministic: true
         lands_on: body
         limb_op: {op: list, path: $path}
         # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
@@ -611,8 +674,28 @@ nodes:
         guides:
         - sheet.md
       script:
+        params:
+          callable_contract: object  # opt-in ibl-script/2 args/result/effects 계약; 기존 등록은 유지.
+        callable_contract:
+          version: 1
+          params:
+            id: Text
+            args: Record
+          required:
+          - id
+          - args
+          pipe_input: args
+          result: Unknown
+          effects:
+          - unknown
+          adapter:
+            protocol: ibl-script/2
+            fixed_params:
+              op: run
+            value_path: /value
+          nondeterministic: true
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-09-23", impl: "ade1e153439d20be"}
+        path_audited: {at: "2026-09-23", impl: "c45b25e4033b8c5c"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

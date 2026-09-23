@@ -10,6 +10,18 @@ see_also: [memory.md, packages.md, technical.md]
 
 # IBL (IndieBiz Logic)
 
+## 판본 선택 (2026-09-23)
+
+무표기 코드는 판본 1이다. `edition:2` 또는 `#!ibl edition=2`를 명시하면 새 조합 코어를 사용한다.
+아래 기존 문법 설명은 판본 1 기준이다. 판본 2의 현재 실행 계약·지원 어휘·반환·제약은
+[ibl_v2 가이드](../guides/ibl_v2.md), 설계/구현 경계는
+[조합 코어 개정](../../docs/IBL_COMPOSITION_CORE_V2_DESIGN_2026_09_23.md)에 있다.
+판본 2는 값·Outcome·증거를 분리하고 명시 함수 인자·순수 콜백·map/flat_map/effect를 사용한다.
+표준 노드(`self`/`others`/`table`)와 내용어의 사전 경계는 유지하며 `callable_contract`는 사전의 명시 어댑터 선언이다.
+기존 관용구·스케줄·앱은 자동 이전하지 않는다. 판본 2 함수는 같은 workflow 원장에 edition과 새 id로 저장한다.
+모델의 첫 생성 성공률·품질/시간/전체 토큰 우위는 아직 미측정이므로 기본 판본 전환은 별도 평가 후 결정한다.
+
+
 > indiebizOS의 정보 흐름 추상화 언어
 
 ## IBL이 하는 일

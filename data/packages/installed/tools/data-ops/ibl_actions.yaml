@@ -1,6 +1,22 @@
 node: table
 actions:
   filter:
+    callable_contract:
+      version: 1
+      params:
+        items: List<Record>
+        where: Callable
+      required:
+      - items
+      - where
+      pipe_input: items
+      result: List<Record>
+      effects:
+      - pure
+      nondeterministic: false
+      adapter:
+        protocol: core-table/2
+        operation: filter
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -31,6 +47,23 @@ actions:
     - 만
     - filter
   sort:
+    callable_contract:
+      version: 1
+      params:
+        items: List<Record>
+        by: Text
+        descending: Bool
+      required:
+      - items
+      - by
+      pipe_input: items
+      result: List<Record>
+      effects:
+      - pure
+      nondeterministic: false
+      adapter:
+        protocol: core-table/2
+        operation: sort
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
@@ -55,6 +88,22 @@ actions:
     - sort
     - 순서
   take:
+    callable_contract:
+      version: 1
+      params:
+        items: List
+        n: Number
+      required:
+      - items
+      - n
+      pipe_input: items
+      result: List
+      effects:
+      - pure
+      nondeterministic: false
+      adapter:
+        protocol: core-table/2
+        operation: take
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
@@ -105,6 +154,22 @@ actions:
     - split
     - 긴 자막
   select:
+    callable_contract:
+      version: 1
+      params:
+        items: List<Record>
+        columns: Callable|List<Text>
+      required:
+      - items
+      - columns
+      pipe_input: items
+      result: List<Record>
+      effects:
+      - pure
+      nondeterministic: false
+      adapter:
+        protocol: core-table/2
+        operation: select
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items
@@ -130,6 +195,22 @@ actions:
     - select
     - 골라
   compute:
+    callable_contract:
+      version: 1
+      params:
+        items: List<Record>
+        set: Callable
+      required:
+      - items
+      - set
+      pipe_input: items
+      result: List<Record>
+      effects:
+      - pure
+      nondeterministic: false
+      adapter:
+        protocol: core-table/2
+        operation: compute
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: items

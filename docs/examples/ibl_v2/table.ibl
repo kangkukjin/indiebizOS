@@ -1,0 +1,10 @@
+#!ibl edition=2
+[def:가중점수]($목록, $배수=2) {
+  $목록 >> [table:each] {
+    return {id:$it.id, weighted:$it.score * $배수}
+  }
+}
+$목록 = [{id:"007",score:7},{id:"b",score:5}]
+$결과 = $목록 >> [fn:가중점수]{배수:3}
+$선택 = $결과 >> [table:filter]{where:($r) => $r.weighted >= 18}
+return {rows:$선택, total:reduce($선택, 0, ($acc,$r) => $acc+$r.weighted)}

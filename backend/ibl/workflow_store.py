@@ -48,6 +48,18 @@ def list_workflows() -> List[Dict]:
                 "problem": f"워크플로 파일을 읽을 수 없습니다: {e}",
             })
             continue
+        if data.get("edition") == 2:
+            from ibl_v2_store import definition_name
+            try:
+                definition_name(data.get("code", ""))
+                problem = None
+            except Exception as exc:
+                problem = str(exc)
+            workflows.append({"id": f.stem, "name": data.get("name", f.stem),
+                              "description": data.get("description", ""), "edition": 2,
+                              "steps_count": 1, "file": str(f), "runnable": problem is None,
+                              "problem": problem, "params_required": data.get("params_required", [])})
+            continue
         steps = data.get("steps") or data.get("do") or data.get("pipeline") or []
         # ★B1 동형: steps 가 문자열(저장 원문)이면 len()이 글자 수가 된다 — 목록에서
         # "스텝 121개"로 보이는 오표시 방지. 문장 하나 = 스텝 하나로 센다.

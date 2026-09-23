@@ -14,6 +14,8 @@ router.include_router(supervision_router)
 
 class IBLRequest(BaseModel):
     code: str
+    edition: Optional[int] = None
+    inputs: Optional[dict] = None
     describe: Optional[List[str]] = None
     read_result: Optional[dict] = None
     check: bool = False                # 정적 통화 검사만(실행 없음) — ibl_typecheck (2026-09-05)
@@ -99,6 +101,8 @@ class TranslateRequest(BaseModel):
 class ValidateRequest(BaseModel):
     """수동 모드: dry-run 검증 요청 (실행하지 않고 효과만 미리보기)"""
     code: str
+    edition: Optional[int] = None
+    inputs: Optional[dict] = None
 
 
 class DistillRequest(BaseModel):
@@ -109,6 +113,12 @@ class DistillRequest(BaseModel):
     intent: str
     code: str
     top_score: float = 0.0
+
+@router.get("/capabilities")
+async def ibl_capabilities():
+    from ibl_v2_entry import capabilities
+    return capabilities()
+
 
 @router.post("/execute")
 async def execute_ibl_code(req: IBLRequest):
@@ -206,6 +216,10 @@ async def execute_ibl_code(req: IBLRequest):
                     # 도구 스키마와 같은 파라미터 집합을 나른다 (B23-1). 없을 때만 빼서
                     # 옛 호출의 tool_input 모양을 바꾸지 않는다(무회귀).
                     _ti = {"code": req.code}
+                    if req.edition is not None:
+                        _ti["edition"] = req.edition
+                    if req.inputs is not None:
+                        _ti["inputs"] = req.inputs
                     if req.describe is not None:
                         _ti["describe"] = req.describe
                     if req.read_result is not None:
@@ -561,6 +575,8 @@ async def validate_ibl(req: ValidateRequest):
     code = (req.code or "").strip()
     if not code:
         raise HTTPException(status_code=400, detail="빈 코드입니다.")
+    if getattr(req, "edition", None) is not None or getattr(req, "inputs", None) is not None:
+        return validate_request_code(code, edition=req.edition, inputs=req.inputs)
     return validate_code(code)
 
 
@@ -575,10 +591,19 @@ def _typecheck_of(code: str) -> dict:
 
 
 def validate_code(code: str) -> dict:
+    """기존 관문/호출자의 단일 인자 API. 같은 판본별 검사 본체로 위임한다."""
+    return validate_request_code(code)
+
+
+def validate_request_code(code: str, edition=None, inputs=None) -> dict:
     """dry-run 본체 — 라우터(`/ibl/validate`)와 관문(`scripts/check_validate_parity.py`)이
     **같은 함수**를 쓴다 (B53-1, 2026-09-02). 검수기가 파서 개정을 모르면 멀쩡한 문장에
     거짓 빨강이 난다(B49-1 `do` 재파싱 · B53-1 `$변수 >>` 파이프 머리 — 같은 속 두 번).
     그 부류는 "실행되는 문장 전수를 검수에 넣어 valid:false 가 0" 인 관문으로만 닫힌다."""
+    from ibl_v2_entry import handle_request
+    v2 = handle_request({"code": code, "edition": edition, "inputs": inputs, "check": True})
+    if v2 is not None:
+        return {**v2, "valid": v2.get("ok", False)}
     code = (code or "").strip()
     # 조건식 검수용 — 이 코드가 할당하는 $변수 이름(조건의 미할당 $변수를 미리 잡는다, M2)
     import re as _re

@@ -136,7 +136,8 @@ def test_current_lesson_matches_operational_registry():
     )  # 운영 몸을 옛 교재로 되돌리지 않는다
 
 
-def test_current_block_body_keeps_teaching_in_actual_introduction(tmp_path, monkeypatch):
+def test_current_block_body_uses_edition_checked_call_teaching(tmp_path, monkeypatch):
+    import hashlib
     import ibl_access
     import runtime_utils
     from workflow_contract import call_signature
@@ -145,8 +146,8 @@ def test_current_block_body_keeps_teaching_in_actual_introduction(tmp_path, monk
     lesson = next(e for e in catalog["idioms"] if e["name"] == "위치마다읽기")
     row = {"intent": lesson["when"], "ibl_code": lesson["body"], "alias": lesson["name"],
            "returns": "items", "signature": " ".join(call_signature(lesson["body"]))}
-    # 노출 선정과 몸/교재 일치는 별개다. 명시 호출용으로 강등된 정의도
-    # 아래 격리 원장에서 다시 소개하면 현재 블록 본문의 교재가 살아야 한다.
+    # 상시 소개는 현재 호출 문법이다. 몸이 같은 구형 교재도 현재 호출의
+    # 반환 봉투·파이프 계약을 검토하기 전에는 예시를 그대로 가르치지 않는다.
     (tmp_path / "data/idioms").mkdir(parents=True)
     (tmp_path / "data/idioms/curated.json").write_text(json.dumps(catalog))
     with sqlite3.connect(tmp_path / "data/ibl_usage.db") as con:
@@ -174,7 +175,22 @@ def test_current_block_body_keeps_teaching_in_actual_introduction(tmp_path, monk
         ibl_access, "_idioms_cache", {"text": None, "t": 0, "key": None}
     )
     block = ibl_access.idioms_map(None)
-    assert lesson["inputs"] in block and lesson["example"] in block
+    assert lesson["example"] not in block
+    assert '[fn:위치마다읽기]' in block and '→ Record' in block
+    assert '앞 통화' not in block
+
+    current = {
+        'name': lesson['name'], 'source_edition': 1,
+        'source_sha256': hashlib.sha256(lesson['body'].encode()).hexdigest(),
+        'inputs': '위치 목록·개수·줄수를 명시하고 전체 Record를 받는다.',
+        'example': '#!ibl edition=2\nreturn [fn:위치마다읽기]{위치:[],개수:0,줄수:1}',
+    }
+    (tmp_path / 'data/idioms/current_call_lessons.json').write_text(json.dumps({'idioms': [current]}))
+    monkeypatch.setattr(ibl_access, '_idioms_cache', {'text': None, 't': 0, 'key': None})
+    block = ibl_access.idioms_map(None)
+    assert current['inputs'] in block
+    assert current['example'].split('\n', 1)[1] in block
+    assert lesson['example'] not in block
 
 
 def test_correct_artifact_with_incidental_error_does_not_require_repair():

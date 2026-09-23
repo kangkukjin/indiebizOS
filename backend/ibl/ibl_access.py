@@ -658,6 +658,7 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                 "FROM ibl_examples WHERE COALESCE(alias,'') != '' AND COALESCE(always_on,0) = 1 "
                 "ORDER BY (success_count + fail_count) DESC, created_at DESC LIMIT ?",
                 (IDIOMS_MAP_ROWS,)).fetchall()
+            rows = _current_idiom_rows(conn, rows, _ret, _sig)
             conn.close()
             # 수동 등록 교재. 몸이 바뀌면 옛 예시를 가르치지 않는다(원장/교재 드리프트).
             teaching = {}
@@ -668,6 +669,14 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                     teaching = {e["name"]: e for e in json.loads(catalog.read_text(encoding="utf-8"))["idioms"]}
                 except (ValueError, KeyError, TypeError):
                     logger.warning("관용구 교재를 읽지 못함: %s", catalog)
+            current_teaching = {}
+            current_catalog = get_base_path() / "data" / "idioms" / "current_call_lessons.json"
+            if current_catalog.exists():
+                import json
+                try:
+                    current_teaching = {e['name']: e for e in json.loads(current_catalog.read_text())['idioms']}
+                except (ValueError, KeyError, TypeError):
+                    logger.warning("현재 관용구 호출 교재를 읽지 못함: %s", current_catalog)
             kept = []
             for r in rows:
                 code = r[1] or ""
@@ -680,18 +689,17 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                 if allowed is not None and not nodes <= set(allowed):
                     continue
                 lesson = teaching.get(r[5], {})
+                current = _current_lesson(current_teaching.get(r[5]), code)
                 authored = (lesson.get("always_on") is True
-                            and lesson.get("body", "").strip() == code.strip())
+                            and lesson.get("body", "").strip() == code.strip()) or bool(current)
                 if len(_split_sentences(code)) < 2 and not authored:
                     continue  # 자동 단문 별칭은 제외. 사람이 선정한 인자 특화 관용구는 허용.
                 kept.append(r)
             # 예산 안에서 고른다: 쓰인 것 먼저, 남은 자리는 가지별 하나씩 — 그 뒤 가지별로 모아 그린다.
             chosen, budget = [], IDIOMS_MAP_CHARS
             for r in _spread_by_topic(kept, len(kept)):
-                lesson = teaching.get(r[5], {})
-                if lesson.get("body", "").strip() != r[1].strip():
-                    lesson = {}
-                entry = _idiom_lines(r, lesson)
+                lesson = _current_lesson(current_teaching.get(r[5]), r[1])
+                entry = _idiom_lines(r, lesson, authoring=True)
                 cost = sum(len(x) + 1 for x in entry)
                 if cost > budget:
                     continue
@@ -702,7 +710,7 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                 groups.setdefault((r[4] or "").split("/")[0] or "기타", []).extend(entry)
                 anchor = _anchor_action(r[1])
                 if anchor:
-                    anchors.setdefault(anchor, []).append(_anchor_line(r))
+                    anchors.setdefault(anchor, []).append(_anchor_line(r, authoring=True))
             lines = []
             for g in sorted(groups):
                 lines.append(f"[{g}]")
@@ -710,11 +718,11 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
             if lines:
                 text = ("<ibl_idioms note=\"관용구 — 자주 쓰는 표현을 한 낱말로 접은 것. 낱말을 매번 조합하지 말고, "
                         "'언제' 가 이번 일과 맞으면 [fn:이름]{슬롯: 값} 한 줄로 불러라(정의 없이 이름만으로 돈다). "
-                        "관용구도 문장 속 표현이다: 생산자 >> [fn:이름]{인자} >> 다른 낱말·관용구로 이어라. "
-                        "'앞 통화'를 받는 표현에는 목록·긴 원문을 인자로 다시 쓰지 않는다. "
+                        "인자를 명시하고 반환 계약을 확인해 다음 식에 연결하라. List는 값 자체이며 Record는 필요한 필드를 명시한다. "
+                        "파이프 자리가 선언된 함수만 >>로 연결하고 같은 인자를 중복 전달하지 않는다. "
                         "'골격' 은 무엇이 도는지 알라고 적은 것 — 부를 때는 필요 없다. 이번 일에 한 문장이 안 맞을 때만 "
                         "[self:memory]{op: \\\"recall\\\", store: \\\"실행\\\", expand: \\\"이름\\\"} 으로 정의를 열어 "
-                        "[def: 이름]{…} 를 프로그램에 붙이고 그 문장만 고친 뒤 부른다. "
+                        "명시 인자·return을 가진 [def:이름]($인자){…}로 새 정의를 검사한다. 과거 본문은 그대로 붙여 넣지 않는다. "
                         "★여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화($변수)는 엔진 안에 머물고 모델은 마지막 결과와 "
                         "step 요약만 본다. 마지막 문장은 작은 결과(take/select/brief)로 끝내라.\">\n"
                         + "\n".join(lines) + "\n</ibl_idioms>")
@@ -722,6 +730,41 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")
     _idioms_cache.update({"t": time.time(), "text": text, "key": key, "anchors": anchors})
     return text
+
+
+def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
+    """Keep the selected names; describe the definition current calls resolve to.
+
+    A same-name current definition overrides the compatibility bridge even when
+    the old row owns always_on. Never transfer that old body's usage statistics.
+    """
+    from ibl_edition import source_edition
+    result, seen = [], set()
+    columns = {r[1] for r in conn.execute('PRAGMA table_info(ibl_examples)')}
+    order = 'updated_at DESC, rowid DESC' if 'updated_at' in columns else 'rowid DESC'
+    for row in rows:
+        name = row[5]
+        if name in seen:
+            continue
+        seen.add(name)
+        candidates = conn.execute(
+            f"SELECT intent,ibl_code,success_count,fail_count,COALESCE(topic,''),alias,{returns_sql},{signature_sql} "
+            f"FROM ibl_examples WHERE alias=? ORDER BY {order}", (name,)).fetchall()
+        current = next((r for r in candidates if source_edition(r[1]) == 2), None)
+        selected = list(current or (candidates[0] if candidates else row))
+        if current is None:
+            selected[6] = 'Record'  # The current legacy-function adapter returns the complete envelope.
+        result.append(tuple(selected))
+    return result
+
+
+def _current_lesson(lesson, source):
+    import hashlib
+    from ibl_edition import source_edition
+    if (lesson and lesson.get('source_edition') == source_edition(source)
+            and lesson.get('source_sha256') == hashlib.sha256(source.encode()).hexdigest()):
+        return lesson
+    return {}
 
 
 def _idiom_anchors(allowed: Optional[Set[str]]) -> dict:
@@ -742,14 +785,14 @@ def _anchor_action(code: str) -> str:
     return last
 
 
-def _anchor_line(r) -> str:
+def _anchor_line(r, authoring=False) -> str:
     """병기 한 줄: `↳ 관용구 [fn:이름]{슬롯…} → 반환 :: 언제(첫 문장)`. 교재 전체는 <ibl_idioms> 에."""
     intent, code, _sc, _fc, _topic, alias, returns, signature = r
     from hippo_tree import phrase_call_line
     call = phrase_call_line(alias, code, returns, signature)
     when = (intent or "").strip()
     first = when.split(". ")[0].rstrip(".")[:130]     # 실험 v3 는 90자 절단으로 돌았다(evidence exposure_delta.txt) — 문장이 잘려 130 으로
-    pipe = _pipe_input_note(code)
+    pipe = _authoring_pipe_note(code) if authoring else _pipe_input_note(code)
     return f"    ↳ 관용구 {call} :: {first}" + (f" · {pipe}" if pipe else "") + " (교재: ibl_idioms)"
 
 
@@ -764,7 +807,21 @@ def _pipe_input_note(code: str) -> str:
     return f"앞 통화 → {name} (명시 인자 우선)" if name else ""
 
 
-def _idiom_lines(r, lesson=None) -> List[str]:
+def _authoring_pipe_note(code):
+    from ibl_edition import source_edition
+    if source_edition(code) != 2:
+        return ''  # Compatibility adapters have no implicit pipe receiver.
+    from ibl_v2_parser import parse
+    from ibl_v2_ir import Fault
+    try:
+        node = parse(code).data['statements'][0]
+        params = list(node.data.get('params', {})) if node.kind == 'def' else []
+        return f"앞 값 → {params[0]} (같은 인자 동시 명시 금지)" if params else ''
+    except (Fault, IndexError):
+        return ''
+
+
+def _idiom_lines(r, lesson=None, authoring=False) -> List[str]:
     """지도의 한 항목 — **호출 · 언제 · 골격** 세 줄 (2026-09-07 사용자 판정 "언제 어떻게 쓰는지 설명해야").
 
     옛 판은 `이름 — 뜻` + 서명이었다. 뜻은 *무엇을 하는가* 라서 **부를 조건**이 없었다 — 모델은 이름을
@@ -782,7 +839,7 @@ def _idiom_lines(r, lesson=None) -> List[str]:
     if _n:
         call += f"  · 사용 {_n}회"
     out = [call, f"  언제: {(intent or '').strip()[:150]}"]
-    pipe = _pipe_input_note(code)
+    pipe = _authoring_pipe_note(code) if authoring else _pipe_input_note(code)
     if pipe:
         out.append(f"  연결: {pipe}. 파이프가 있으면 이 인자만 생략 가능.")
     skel = _skeleton(code)
@@ -790,7 +847,10 @@ def _idiom_lines(r, lesson=None) -> List[str]:
         out.append(f"  골격: {skel}")
     if lesson:
         out.append(f"  입력: {lesson['inputs']}")
-        out.append("  조합 예: " + lesson["example"].replace("\n", "; "))
+        example = lesson['example']
+        if authoring and example.startswith('#!ibl edition=2\n'):
+            example = example.split('\n', 1)[1]
+        out.append("  조합 예: " + example.replace("\n", "; "))
     return out
 
 

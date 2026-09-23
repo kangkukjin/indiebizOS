@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "idioms": [
+    {
+      "name": "좁혀서읽기",
+      "source_edition": 1,
+      "source_sha256": "79b7102edeae2036d38da49267b14a0a2effb3718252d79ed5fa29f2292f890b",
+      "inputs": "패턴·루트·파일패턴을 명시한다. 앞 3곳을 일치 줄부터 30줄씩 읽는다. 반환 Record의 items에 파일·줄번호·본문이 있다.",
+      "example": "#!ibl edition=2\nreturn [fn:좁혀서읽기]{패턴:\"TODO\",루트:\"backend\",파일패턴:\"*.py\"}",
+      "returns": "Record",
+      "intent": "파일 내용에서 패턴의 위치를 찾고 앞 3곳을 일치 줄부터 30줄씩 읽을 때. 전체 일치 목록이 필요한 작업에는 grep을 직접 쓴다.",
+      "topic": "찾기",
+      "runtime_success_claimed": false,
+      "seed_intent": "backend 폴더의 *.py 파일에서 TODO를 찾아 앞 3곳을 일치 줄부터 30줄씩 읽고 파일·줄번호를 보존해줘."
+    },
+    {
+      "name": "주소마다읽기",
+      "source_edition": 1,
+      "source_sha256": "2a2b04a30107308b24566d1565fc4bdbc24d99a13fd253b6db692008eab819e6",
+      "inputs": "url을 가진 목록과 0 이상 개수를 명시한다. 반환 Record에 items와 수집 진단이 있다. 원천 누락은 실패·partial 증거로 전달된다.",
+      "example": "#!ibl edition=2\nreturn [fn:주소마다읽기]{목록:[{title:\"참고 문서\",url:\"https://example.com/\"}],개수:1}",
+      "returns": "Record",
+      "intent": "url 열이 있는 목록에서 중복 URL을 빼고 앞 개수개 페이지의 원문 문단을 모을 때. 출처와 실패를 보존하며 요약·평가·AI 호출은 하지 않는다.",
+      "topic": "수집",
+      "runtime_success_claimed": false,
+      "seed_intent": "목록 [{title:\"참고 문서\",url:\"https://example.com/\"}]에서 중복 URL을 제거하고 앞 1개 페이지의 원문과 수집 진단을 돌려줘."
+    },
+    {
+      "name": "열추려보기",
+      "source_edition": 2,
+      "source_sha256": "ffd145d226ccbeba9efbecf008a5f6fced4790bc18b3040cbc69a383db64c268",
+      "inputs": "목록·열 이름 목록·0 이상 개수를 명시한다. 반환은 List<Record>이며 .items를 붙이지 않는다.",
+      "example": "#!ibl edition=2\nreturn [fn:열추려보기]{목록:[{id:\"007\",score:3}],열:[\"id\"],개수:1}",
+      "returns": "List<Record>",
+      "intent": "열을 선택하고 앞에서 정한 개수만 남깁니다. 목록 모양과 문자열 값을 보존합니다.",
+      "topic": "IBL/조합",
+      "runtime_success_claimed": false,
+      "seed_intent": "목록 [{id:\"007\",score:3}]에서 id 열만 남기고 앞 1행을 목록으로 돌려줘. 문자열 007을 보존해줘."
+    },
+    {
+      "name": "정렬해추리기",
+      "source_edition": 2,
+      "source_sha256": "277d0d1cc9da9b2f7939ff65d69b7eb1775b0b890e452959c42be31b21ce1d4d",
+      "inputs": "목록·정렬 기준 열 이름(Text)·내림차순(Bool)·0 이상 개수·출력 열 목록을 명시한다. 반환은 List<Record>다.",
+      "example": "#!ibl edition=2\nreturn [fn:정렬해추리기]{목록:[{id:\"a\",score:2},{id:\"b\",score:5}],기준:\"score\",내림차순:true,개수:1,열:[\"id\"]}",
+      "returns": "List<Record>",
+      "intent": "목록을 기준 열로 정렬한 다음 지정 개수와 열을 선택합니다.",
+      "topic": "IBL/조합",
+      "runtime_success_claimed": false,
+      "seed_intent": "목록 [{id:\"a\",score:2},{id:\"b\",score:5}]를 score 내림차순으로 정렬하고 앞 1행의 id만 목록으로 돌려줘."
+    },
+    {
+      "name": "본문에서찾기",
+      "source_edition": 1,
+      "source_sha256": "55fffca39cdcd67b64af112991f4e63c43d895f0cc6f389eb16921bb411f5c90",
+      "inputs": "원문 문단 목록·정규식 패턴·문맥 폭·선택 개수를 명시한다. items는 문단이며, 일치·원천 진단은 final_result·results를 포함한 반환 Record 전체에서 확인한다.",
+      "example": "#!ibl edition=2\nreturn [fn:본문에서찾기]{목록:[{url:\"https://example.com/\",text:\"앞 문단\"},{url:\"https://example.com/\",text:\"핵심 근거\"}],패턴:\"핵심\",문맥:1,개수:1}",
+      "returns": "Record",
+      "intent": "수집한 본문 문단에서 패턴에 맞는 대목과 같은 페이지의 앞뒤 문맥을 출처·실패·일치 계수와 함께 찾을 때. 추가 AI 호출·요약 없이 원문을 보존한다.",
+      "topic": "수집",
+      "runtime_success_claimed": false,
+      "seed_intent": "문단 목록 [{url:\"https://example.com/\",text:\"앞 문단\"},{url:\"https://example.com/\",text:\"핵심 근거\"}]에서 정규식 핵심에 맞는 앞 1개 대목을 문맥 폭 1로 찾아 출처와 일치 정보를 돌려줘."
+    },
+    {
+      "name": "관련자료골라읽기",
+      "source_edition": 1,
+      "source_sha256": "60f5584dfa2eba5cda9439d06b40ad21418851d0c67ce771f9f43c9cf8229d54",
+      "inputs": "title·summary·url이 있는 목록과 질문·개수를 명시한다. 불확실 후보도 읽으며 반환 Record에 원문·판정·수집 진단이 있다.",
+      "example": "#!ibl edition=2\nreturn [fn:관련자료골라읽기]{목록:[{title:\"연구 방법\",summary:\"방법과 한계를 설명한다\",url:\"https://example.com/\"}],질문:\"연구 방법과 한계\",개수:1}",
+      "returns": "Record",
+      "intent": "검색 후보가 많아 질문과 관련된 자료를 먼저 골라 원문을 읽을 때. Jev가 제목·요약을 일괄 판정하고 불확실 후보도 읽는다. 지정한 URL을 모두 읽을 때는 주소마다읽기를 쓴다.",
+      "topic": "수집",
+      "runtime_success_claimed": false,
+      "seed_intent": "후보 [{title:\"연구 방법\",summary:\"방법과 한계를 설명한다\",url:\"https://example.com/\"}]를 질문 연구 방법과 한계로 판정하고 앞 1개 관련 또는 불확실 자료의 원문과 진단을 돌려줘."
+    },
+    {
+      "name": "의미로본문찾기",
+      "source_edition": 1,
+      "source_sha256": "018f8d99dc5b81666670f0e4b704eaf0fdb3383c04bc1876d2cd19944a755ba4",
+      "inputs": "url·text가 있는 문단 목록과 질문·개수·문맥 폭을 명시한다. 반환 Record에 원문·선별·판정 진단이 있다.",
+      "example": "#!ibl edition=2\nreturn [fn:의미로본문찾기]{목록:[{url:\"https://example.com/\",text:\"이 연구는 표본 크기의 한계를 밝힌다.\"}],질문:\"연구의 한계\",개수:1,문맥:0}",
+      "returns": "Record",
+      "intent": "원문 문단에서 정확한 검색어로 잡기 어려운 질문 관련 대목과 앞뒤 문맥을 찾을 때. Jev 판정 후 원문 그대로 반환하며 불확실 문단도 남긴다. 정규식으로 찾을 수 있으면 본문에서찾기를 쓴다.",
+      "topic": "수집",
+      "runtime_success_claimed": false,
+      "seed_intent": "문단 [{url:\"https://example.com/\",text:\"이 연구는 표본 크기의 한계를 밝힌다.\"}]에서 질문 연구의 한계와 관련되거나 불확실한 앞 1개 대목을 문맥 폭 0으로 골라 원문과 판정 진단을 돌려줘."
+    }
+  ]
+}

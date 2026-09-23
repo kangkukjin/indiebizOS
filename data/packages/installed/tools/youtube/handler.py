@@ -239,7 +239,8 @@ def _direct_search(tool_input, yt):
                     seen.add(vid)
                 items.append({**row, "query": q} if isinstance(row, dict) else row)
                 n += 1
-            sections.append({"query": q, "count": n,
+            sections.append({"query": q, "count": n, "success": True,
+                             "status": "ok" if rows else "empty", "raw_count": len(rows),
                              **{k: r[k] for k in ("clamped", "requested", "message") if k in r}})
         return {"success": not errors, "queries": _queries, "count": len(items),
                 "sections": sections, "items": items,

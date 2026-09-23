@@ -362,7 +362,8 @@ def search_youtube(query: str, count: int = 5) -> dict:
         count: 검색 결과 수 (1-75, 기본 5). 상한 초과 시 clamped/requested 로 신고
 
     Returns:
-        dict: {success, count, results: [{video_id, title, channel, duration, url}, ...]}
+        dict: {success, count, results: [{video_id, title, channel, duration, url}, ...]}.
+        정상 검색의 0건은 success=True, results=[]; 공급자 오류는 success=False.
     """
     try:
         import yt_dlp
@@ -382,15 +383,16 @@ def search_youtube(query: str, count: int = 5) -> dict:
             'extract_flat': True,
         }) as ydl:
             result = ydl.extract_info(search_query, download=False)
-            entries = result.get('entries', [])
-
-        if not entries:
-            return {'success': False, 'error': f'"{query}" 검색 결과가 없습니다.'}
+            from collections.abc import Iterable
+            raw_entries = result.get('entries') if isinstance(result, dict) else None
+            if not isinstance(raw_entries, Iterable) or isinstance(raw_entries, (str, bytes, dict)):
+                raise ValueError('검색 응답의 entries 목록이 없습니다.')
+            entries = list(raw_entries)
+            if any(not isinstance(e, dict) for e in entries):
+                raise ValueError('검색 결과에 읽지 못한 항목이 있습니다.')
 
         # 채널/플레이리스트 ID 필터링 (video ID만 남김)
         entries = [e for e in entries if e.get('id') and not e['id'].startswith('UC') and len(e['id']) <= 16]
-        if not entries:
-            return {'success': False, 'error': f'"{query}" 검색 결과에서 영상을 찾지 못했습니다.'}
 
         results = []
         for i, e in enumerate(entries):
@@ -410,6 +412,7 @@ def search_youtube(query: str, count: int = 5) -> dict:
             'query': query,
             'count': len(results),
             'results': results,
+            'status': 'ok' if results else 'empty',
         }
         # 침묵 클램프 금지 — 요청보다 적게 받았으면 그 사실을 결과에 실어 보낸다.
         if requested != count:

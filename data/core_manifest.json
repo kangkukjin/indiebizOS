@@ -72,6 +72,7 @@
       "Cloudflare사용량.py",
       "ai_era_news.py",
       "ai_tips_report.py",
+      "ai_tips_search.py",
       "arch_render_cli.py",
       "arxiv최신피드.py",
       "github저장소메타.py",

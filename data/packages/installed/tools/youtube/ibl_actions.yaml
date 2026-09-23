@@ -78,7 +78,7 @@ nodes:
         - 영상검색
         - 동영상검색
         - video search
-        target_description: 검색어 queries는 문자열 배열 또는 쉼표/개행 문자열이다. 배치 일부 실패도 success:false이며 errors/sections에 검색어별 실패를 싣고, 이미 얻은 items는 partial:true로 보존한다. 검색 상한 조정은 sections에도 표시한다.
+        target_description: 검색어 queries는 문자열 배열 또는 쉼표/개행 문자열이다. 정상 검색 0건은 success:true·items:[]·status:empty다. 통신·공급자·응답 형식 오류는 실패다. 배치 일부 실패도 success:false이며 errors/sections에 검색어별 실패를 싣고, 이미 얻은 items는 partial:true로 보존한다. sections의 count는 중복 제거 후 건수, raw_count는 원 검색 건수이며 status로 빈 검색과 중복 제거를 구분한다. 검색 상한 조정은 sections에도 표시한다.
         router: handler
         tool: search_youtube
         implementation: yt-dlp ytsearch로 유튜브 검색 결과 목록 추출
@@ -202,7 +202,7 @@ tool_json:
   tools:
   - name: search_youtube
     description: 유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출
-      전에 원하는 영상을 먼저 찾을 때 사용.
+      전에 원하는 영상을 먼저 찾을 때 사용. 정상 0건은 success:true·items:[]·status:empty이며 통신·공급자 오류와 구분한다.
     input_schema:
       type: object
       properties:

@@ -7,7 +7,7 @@
   "tools": [
     {
       "name": "search_youtube",
-      "description": "유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출 전에 원하는 영상을 먼저 찾을 때 사용.",
+      "description": "유튜브 검색 (재생하지 않고 결과 목록만 반환). 검색어로 영상을 찾고 video_id, title, channel, duration, url 정보를 포함한 결과 목록을 반환합니다. 재생/다운로드/자막추출 전에 원하는 영상을 먼저 찾을 때 사용. 정상 0건은 success:true·items:[]·status:empty이며 통신·공급자 오류와 구분한다.",
       "input_schema": {
         "type": "object",
         "properties": {

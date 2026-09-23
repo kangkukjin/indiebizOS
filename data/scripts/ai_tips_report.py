@@ -14,6 +14,7 @@ from common.pkg_utils import load_sibling
 
 file_lock = load_sibling(str(ROOT / "data/packages/installed/tools/system_essentials/ledger_ops.py"),
                          "essentials_file_io").file_lock
+searchflow = load_sibling(__file__, "ai_tips_search")
 import hashlib
 import json
 import os
@@ -219,7 +220,7 @@ def stage_queries(state, data):
 
 
 def stage_search(state, data):
-    found = rows(data, sampled=True)
+    found = searchflow.accept(state, rows(data, sampled=True, failures=True))
     known = {r.get("id") for r in state["snapshot"]["covered"]["covered"]}
     candidates = {}
     for row in found:
@@ -234,8 +235,11 @@ def stage_search(state, data):
             current["strata"].append(stratum)
     require(candidates, "미처리 영상이 없습니다. 이미 다룬 영상으로 채우지 않습니다")
     require(len(candidates) <= 60, "5개 검색어×12건 범위를 넘었습니다")
+    empty = [s for s, r in state["search_outcomes"].items() if r["status"] == "empty"]
     state["search"] = {"candidates": list(candidates.values()), "raw_count": len(found),
-                       "scope": "검색 층별 상위 12건 표본, 전체 유튜브의 전수조사 아님"}
+                       "empty_strata": empty,
+                       "scope": "검색 층별 상위 12건 표본, 전체 유튜브의 전수조사 아님"
+                       + ("; 결과 0건인 검색 층: " + ", ".join(empty) if empty else "")}
     return {"items": list(candidates.values()), "count": len(candidates)}
 
 
@@ -1228,7 +1232,19 @@ def next_output(state, op, output):
     if index + 1 < len(order) and order[index + 1] in state.get("receipts", {}):
         return {"items": [], "count": 0, "run": state["run"], "cached": True}
     try:
-        if output.get("_prepare") == "comparison":
+        if op == "queries":
+            # 이전 판본의 실패 회차도 원 입력 지문을 확인하고 성공 검색을 회수한다.
+            failure = state.get("last_failure", {})
+            if not state.get("search_outcomes") and failure.get("stage") == "search":
+                previous = load_json(Path(state["run"]) / "input-search.json")
+                require(digest(previous) == failure.get("input_hash"), "실패 검색 입력 변경")
+                try:
+                    searchflow.accept(state, rows(previous, sampled=True, failures=True))
+                except searchflow.SearchIncomplete:
+                    pass
+            pending = searchflow.requests(state)
+            output = {"items": pending, "count": len(pending), "run": state["run"]}
+        elif output.get("_prepare") == "comparison":
             output = prepare_comparison(state)
         elif op == "details":
             output = review_tasks(state)
@@ -1271,6 +1287,9 @@ def run(args):
     require(state and state.get("run") == str(directory), "보고서 실행 상태를 찾지 못했습니다")
     require(state.get("version") == VERSION, "실행 상태 버전 변경: 기존 상태는 보존하고 새 run_id로 실행하세요")
     op = args.get("op")
+    if op == "search_retry":
+        with file_lock(state_path):
+            return searchflow.retry(load_json(state_path))
     if op == "evidence":
         with file_lock(state_path):
             return attach_evidence(load_json(state_path), args)
@@ -1342,7 +1361,8 @@ def run(args):
             output = STAGES[op](state, args.get("data"))
         except (ValueError, TypeError, KeyError) as exc:
             state["last_failure"] = {"stage": op, "input_hash": payload_hash, "error": str(exc),
-                                     "kind": ("content_review" if isinstance(exc, ContentReviewRejected) else
+                                     "kind": ("search_incomplete" if isinstance(exc, searchflow.SearchIncomplete) else
+                                              "content_review" if isinstance(exc, ContentReviewRejected) else
                                               "novelty_unknown" if isinstance(exc, NoveltyUnresolved) else "invalid")}
             atomic(state_path, state)
             return {"success": False, "status": "needs_review", "stage": op,

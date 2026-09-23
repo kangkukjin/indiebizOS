@@ -1978,7 +1978,7 @@
   "sense:search_youtube": {
    "fields": {
     "description": "dc9c4e82b1e6",
-    "target_description": "8b2d16668eb7",
+    "target_description": "868554153436",
     "implementation": "db77f148ba67",
     "returns": "3c22349f8d0b",
     "target_key": "4c4f28a0fc9a",
@@ -1987,8 +1987,8 @@
     "router": "ebbb1532efbc",
     "tool": "5433e2fa2160"
    },
-   "reviewed": "2026-09-18",
-   "examples": 18
+   "reviewed": "2026-09-24",
+   "examples": 19
   },
   "sense:see": {
    "fields": {

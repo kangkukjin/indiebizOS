@@ -76,6 +76,7 @@ def execute(tmp_path, monkeypatch):
     scriptops = load_sibling(str(ROOT / "data/packages/installed/tools/system_essentials/handler.py"), "script_ops")
     calls, stages = [], {}
     model_calls = []
+    search_calls, search_responses = [], {}
     corrupt = {}
     class DB:
         def find_phrase_by_alias(self, name):
@@ -113,6 +114,11 @@ def execute(tmp_path, monkeypatch):
                 out = {"success": False, "error": str(exc)}
             return {"success": True, "id": p["id"], "exit_code": 0, **out}
         if node == "sense" and act == "search_youtube":
+            query = p["query"]
+            search_calls.append(query)
+            override = search_responses.get(query.rsplit(" ", 1)[-1])
+            if override is not None:
+                return override(search_calls.count(query)) if callable(override) else copy.deepcopy(override)
             return {"success": True, "items": [{"video_id": vid} for vid in IDS]}
         if node == "sense" and act == "video":
             vid = p["video_id"]
@@ -156,12 +162,116 @@ def execute(tmp_path, monkeypatch):
     run.stages, run.calls, run.corrupt = stages, calls, corrupt
     run.root = tmp_path / "reports"
     run.model_calls = model_calls
+    run.search_calls, run.search_responses = search_calls, search_responses
     return run
 
 
 def final(result):
     assert result["success"], str(result.get("error") or result.get("traceback") or result)[-3000:]
     return helper.rows(helper.unpack(result["final_result"]))[0]
+
+
+def test_empty_searches_preserve_scope_and_finish_without_retry(execute):
+    execute.search_responses.update(korean={"success": True, "items": [], "count": 0},
+                                    specific={"success": True, "items": [], "count": 0})
+    out = final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert set(state["search"]["empty_strata"]) == {"korean", "specific"}
+    assert len(execute.search_calls) == 5
+    assert "결과 0건인 검색 층" in Path(out["report"]).read_text()
+    assert final(execute()) == out
+    assert len(execute.search_calls) == 5
+
+
+def test_only_failed_search_retries_and_successes_survive(execute):
+    execute.search_responses["korean"] = lambda n: (
+        {"success": False, "error": "network timeout"} if n == 1 else
+        {"success": True, "items": [], "count": 0})
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert len(execute.search_calls) == 6
+    assert execute.search_calls.count("AI tips korean") == 2
+    assert [r["status"] for r in state["search_outcomes"]["korean"]["attempts"]] == ["error", "empty"]
+    assert all(len(r["attempts"]) == 1 for s, r in state["search_outcomes"].items() if s != "korean")
+
+
+def test_persistent_search_failure_stops_and_manual_resume_only_calls_failed(execute):
+    execute.search_responses["korean"] = {"success": False, "error": "network timeout"}
+    result = execute("commit")
+    assert not result["success"]
+    assert len(execute.search_calls) == 6
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert len(state["search_outcomes"]) == 5
+    assert "search" not in state["receipts"]
+    assert not (execute.root / "db/tips.json").exists()
+    execute.search_responses["korean"] = {"success": True, "items": []}
+    final(execute("commit"))
+    assert len(execute.search_calls) == 7
+    assert execute.search_calls[-1] == "AI tips korean"
+
+
+def test_all_empty_searches_do_not_invent_report_or_retry(execute):
+    execute.search_responses.update({s: {"success": True, "items": []} for s in helper.STRATA})
+    assert not execute("commit")["success"]
+    assert len(execute.search_calls) == 5
+    assert not (execute.root / "db/tips.json").exists()
+    assert not execute("commit")["success"]
+    assert len(execute.search_calls) == 5
+
+
+@pytest.mark.parametrize("mutation", ["missing", "query", "duplicate", "count", "partial"])
+def test_search_protocol_errors_are_not_retried_or_accepted(execute, mutation):
+    def corrupt(args):
+        data = args["data"]
+        if mutation == "missing":
+            data["items"].pop()
+        elif mutation == "duplicate":
+            data["items"].append(copy.deepcopy(data["items"][0]))
+        elif mutation == "query":
+            helper.unpack(data["items"][0])["query"] = "changed"
+        else:
+            helper.unpack(data["items"][0])["data"][mutation] = 999 if mutation == "count" else True
+        return args
+    execute.corrupt["search"] = corrupt
+    assert not execute("commit")["success"]
+    assert len(execute.search_calls) == 5
+    assert not (execute.root / "db/tips.json").exists()
+
+
+def test_search_attempt_receipts_reject_mutation_and_replay_idempotently():
+    state = {"queries": [{"stratum": s, "query": "AI tips " + s} for s in helper.STRATA]}
+    data = [{**q, "data": {"success": True, "items": []}}
+            for q in helper.searchflow.requests(state)]
+    assert helper.searchflow.accept(state, data) == []
+    before = copy.deepcopy(state)
+    assert helper.searchflow.accept(state, data) == []
+    assert state == before
+    data[0]["data"]["items"] = [{"video_id": IDS[0]}]
+    with pytest.raises(ValueError, match="입력 변경"):
+        helper.searchflow.accept(state, data)
+    state["search_outcomes"]["korean"]["status"] = "error"
+    with pytest.raises(ValueError, match="지문 변경"):
+        helper.searchflow.requests(state)
+
+
+def test_old_flattened_failed_search_resumes_only_failed_queries(execute):
+    final(execute())
+    state_path = execute.root / "_runs/test/state.json"
+    state = helper.load_json(state_path)
+    state.pop("completed")
+    state.pop("search_outcomes")
+    state["receipts"] = {"queries": state["receipts"]["queries"]}
+    old = {"items": [{**q, **({"_error": "검색 결과가 없습니다."} if q["stratum"] == "korean"
+                              else {"video_id": IDS[0]})} for q in state["queries"]],
+           "success": True, "error_count": 1}
+    state["last_failure"] = {"stage": "search", "input_hash": helper.digest(old), "kind": "invalid"}
+    helper.atomic(state_path, state)
+    helper.atomic(state_path.parent / "input-search.json", old)
+    pending = helper.run({"op": "queries", "run": str(state_path.parent), "data": {"items": []}})
+    assert pending["items"] == [{"stratum": "korean", "query": "AI tips korean", "attempt": 2}]
+    restored = helper.load_json(state_path)
+    assert restored["search_outcomes"]["korean"]["status"] == "error"
+    assert all(restored["search_outcomes"][s]["status"] == "ok" for s in helper.STRATA if s != "korean")
 
 
 

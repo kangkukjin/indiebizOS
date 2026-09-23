@@ -72,7 +72,8 @@ def test_l3_search_youtube_queries_fanout():
     assert out["success"] and out["queries"] == ["a", "b"] and out["count"] == 3
     assert [i["video_id"] for i in out["items"]] == ["v1", "v2", "v3"]          # v2 는 한 번만(먼저 온 a 태그)
     assert [i["query"] for i in out["items"]] == ["a", "a", "b"]
-    assert out["sections"] == [{"query": "a", "count": 2}, {"query": "b", "count": 1}]
+    assert out["sections"] == [{"query": "a", "count": 2, "success": True, "status": "ok", "raw_count": 2},
+                               {"query": "b", "count": 1, "success": True, "status": "ok", "raw_count": 2}]
     out = mod._direct_search({"queries": "a, b"}, FakeYT())
     assert out["count"] == 3                                                   # 쉼표 문자열도 같은 뜻
     single = mod._direct_search({"query": "a"}, FakeYT())

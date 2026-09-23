@@ -27,6 +27,9 @@ def fixture_ai(item):
     if "selected:[영상ID]" in task:
         return {"selected": list(IDS), "decisions": [
             {"video_id": r["video_id"], "reason": "서로 다른 복구 방식"} for r in source["videos"]]}
+    if "repair_id,candidate_id" in task:
+        return {"repair_id": source["repair_id"], "candidate_id": source["candidate"]["candidate_id"],
+                "verdict": "unknown", "matched_ids": [], "reason": "fixture: 독립 확인 불가"}
     if "matched_ids:[known_id]" in task:
         return {"batch_id": source["batch_id"], "decisions": [
             {"candidate_id": r["candidate_id"], "verdict": "novel", "matched_ids": [],
@@ -47,7 +50,8 @@ def fixture_ai(item):
                                    for v in source["videos"]],
                 "watch_points": ["다른 환경에서도 같은 방법이 가능한지 검토한다"], "limitations": []}
     if "report_hash,checks:" in task:
-        return {"report_hash": source["report_hash"], "checks": {k: True for k in helper.CHECKS},
+        return {"report_hash": source["report_hash"], "review_id": source.get("review_id"),
+                "checks": {k: True for k in helper.CHECKS},
                 "issues": []}
     raise AssertionError(task)
 
@@ -84,6 +88,9 @@ def execute(tmp_path, monkeypatch):
     monkeypatch.setattr(spill, "_root", lambda: str(tmp_path / "spill"))
     original = ibl_engine._execute_ibl_impl
     def leaf(ti, project, agent_id=None):
+        # Test doubles must retain the real dispatcher depth guard.
+        if (ti.get("_depth") or 0) > ibl_engine.MAX_NEST_DEPTH:
+            return original(ti, project, agent_id)
         node, act = ti.get("_node"), ti.get("action")
         p = dict(ti.get("params") or {})
         if node == "fn":
@@ -156,6 +163,54 @@ def final(result):
     assert result["success"], str(result.get("error") or result.get("traceback") or result)[-3000:]
     return helper.rows(helper.unpack(result["final_result"]))[0]
 
+
+
+@pytest.mark.parametrize("mutation", ["none", "missing", "changed", "rejected"])
+def test_partitioned_final_review_keeps_every_reason_and_requires_every_pass(execute, mutation):
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    state.pop("completed")
+    original = copy.deepcopy(execute.stages["finish"]["data"]["items"][0])
+    original.pop("result")
+    decisions = [{"candidate_id": "c1", "verdict": "novel", "matched_ids": [],
+                  "batch_ids": ["b" + str(i)], "reason": str(i) + "원문 비교 근거" * 250}
+                 for i in range(45)]
+    original["input"]["novelty"]["decisions"] = decisions
+    request = helper.final_review_tasks(state, {"items": [original]})
+    assert request["count"] > 1
+    assert all(helper.request_size(r) < helper.REQUEST_CAP for r in request["items"])
+    assert [d for r in request["items"] for d in r["input"]["novelty"]["decisions"]] == decisions
+    assert all(r["input"]["markdown"] == state["markdown"] for r in request["items"])
+    data = {"items": [{**r, "result": fixture_ai(r)} for r in request["items"]]}
+    if mutation == "missing":
+        data["items"].pop()
+    elif mutation == "changed":
+        data["items"][-1]["input"]["novelty"]["decisions"].pop()
+    elif mutation == "rejected":
+        data["items"][-1]["result"]["checks"]["novelty"] = False
+        data["items"][-1]["result"]["issues"] = ["마지막 분할 근거 모순"]
+    if mutation == "none":
+        assert helper.stage_finish(state, data)["items"][0]["status"] == "reviewed_draft"
+        assert len(state["final_review"]["parts"]) == request["count"]
+    else:
+        with pytest.raises(ValueError):
+            helper.stage_finish(state, data)
+        assert not state.get("completed")
+
+
+
+def test_feedback_handoff_uses_exact_ledger_entries_without_rewriting_audit(execute):
+    known = [{"tip": "첫 기존 팁", "how": "원본 절차", "source": {"url": "https://example.com"}},
+             {"tip": "다른 기존 팁", "how": "별도 원본"}]
+    helper.atomic(execute.root / "db/tips.json", known)
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    original = copy.deepcopy(state["novelty"])
+    state["revision_feedback"] = "k1의 설명이 충돌함. k999는 존재하지 않음."
+    view = helper.novelty_view(state)
+    assert view["feedback_known"] == [{"known_id": "k1", **known[0]}]
+    assert state["novelty"] == original
+    assert view["full_audit_hash"] == helper.digest(original)
 
 def test_named_full_pipeline_draft_keeps_production_ledgers_unchanged(execute):
     out = final(execute())
@@ -418,7 +473,7 @@ def test_large_ledger_is_fully_compared_and_not_repeated_in_editorial(execute):
     for stage in ("draft", "finish"):
         source = execute.stages[stage]["data"]["items"][0]["input"]
         assert "known" not in source
-        assert source["novelty"]["known_count"] == 647
+        assert source["novelty_scope" if stage == "draft" else "novelty"]["known_count"] == 647
     assert helper.load_json(execute.root / "db/tips.json") == known
 
 
@@ -462,9 +517,211 @@ def test_receipt_tampering_and_old_version_are_rejected(execute):
         helper.run(execute.stages["finish"])
 
 
+
+
+def force_uncertain(args):
+    args["data"]["items"][0]["result"]["decisions"][0]["verdict"] = "unknown"
+    return args
+
+
+def repair_model(monkeypatch, verdict="novel", mutate=None):
+    original = fixture_ai
+    def respond(item):
+        if "repair_id,candidate_id" not in item["task"]:
+            return original(item)
+        source = item["input"]
+        assert source["source_scope"] == "complete"
+        assert "0.0s " in source["transcript"]
+        result = {"repair_id": source["repair_id"],
+                  "candidate_id": source["candidate"]["candidate_id"],
+                  "verdict": verdict, "matched_ids": [],
+                  "reason": "전문과 기존 자료 전체를 확인한 판정"}
+        if mutate:
+            mutate(result, source)
+        return result
+    monkeypatch.setitem(globals(), "fixture_ai", respond)
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_full_source_repair_completes_all_comparison_pairs(execute, monkeypatch, missing):
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
+    repair_model(monkeypatch)
+    def corrupt(args):
+        if missing:
+            args["data"]["items"][0]["result"]["decisions"].pop()
+        else:
+            force_uncertain(args)
+        return args
+    execute.corrupt["compared"] = corrupt
+    out = final(execute())
+    assert out["new_tips"] == 2
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    assert state["comparison_repair_used"]
+    assert len(state["novelty"]["decisions"]) == 2
+    assert all(d["verdict"] == "novel" for d in state["novelty"]["decisions"])
+    before = list(execute.model_calls)
+    execute.corrupt.clear()
+    final(execute())
+    assert execute.model_calls == before
+    assert helper.run(execute.stages["comparison_repair"])["cached"]
+    altered = copy.deepcopy(execute.stages["comparison_repair"])
+    altered["data"]["items"][0]["result"]["reason"] = "changed"
+    with pytest.raises(ValueError, match="입력 변경"):
+        helper.run(altered)
+
+
+def test_verified_unsupported_candidate_is_excluded_with_reason(execute, monkeypatch):
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
+    repair_model(monkeypatch, "unsupported")
+    execute.corrupt["compared"] = force_uncertain
+    out = final(execute())
+    assert out["new_tips"] == 1
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    rejected = {d["candidate_id"] for d in state["novelty"]["decisions"]
+                if d["verdict"] == "unsupported"}
+    assert len(rejected) == 1
+    assert rejected.isdisjoint(t["candidate_id"] for t in state["final_tips"])
+    assert "근거가 확인되지 않아 제외" in Path(out["report"]).read_text()
+
+
+@pytest.mark.parametrize("mutation", [
+    lambda r, s: r.update(candidate_id="outside"),
+    lambda r, s: r.update(verdict="duplicate", matched_ids=["outside"]),
+    lambda r, s: r.update(verdict="unknown"),
+    lambda r, s: r.update(reason=""),
+])
+def test_bad_full_source_repair_stays_blocked(execute, monkeypatch, mutation):
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
+    repair_model(monkeypatch, mutate=mutation)
+    execute.corrupt["compared"] = force_uncertain
+    assert not execute("commit")["success"]
+    assert "chosen" not in execute.stages
+    assert helper.load_json(execute.root / "db/tips.json") == [{"tip": "기존", "how": "다른 방법"}]
+    with pytest.raises(ValueError, match="1회"):
+        helper.run({"op": "comparison_retry", "run": str(execute.root / "_runs/test")})
+
+
+def test_repair_checks_source_integrity_before_acceptance(execute, monkeypatch):
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
+    repair_model(monkeypatch)
+    execute.corrupt["compared"] = force_uncertain
+    def change(args):
+        path = execute.root / "_runs/test/transcript-aaaaaaaaaaa.json"
+        helper.atomic(path, {"items": [{"start": 0, "text": "changed"}]})
+        return args
+    execute.corrupt["comparison_repair"] = change
+    assert not execute()["success"]
+    assert "chosen" not in execute.stages
+
+
+def test_novelty_view_retains_every_relevant_reason_and_batch(execute):
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    selected = {state["final_tips"][0]["candidate_id"]}
+    view = helper.novelty_view(state, selected)
+    expanded = [{**{k: v for k, v in r.items() if k != "batch_ids"}, "batch_id": bid}
+                for r in view["decisions"] for bid in r["batch_ids"]]
+    expected = [r for r in state["novelty"]["decisions"] if r["candidate_id"] in selected]
+    assert sorted(expanded, key=helper.canonical) == sorted(expected, key=helper.canonical)
+
+
+
+
+@pytest.mark.parametrize("conflict", [False, True])
+def test_full_source_retry_split_preserves_all_known_and_conflicts(execute, monkeypatch, conflict):
+    known = [{"tip": "기존 " + str(i), "how": "다른 방법 " * 150} for i in range(120)]
+    helper.atomic(execute.root / "db/tips.json", known)
+    def response(result, source):
+        if source["repair_id"] == "r1":
+            result.update(verdict="unsupported" if conflict else "duplicate",
+                          matched_ids=[] if conflict else [source["known"][0]["known_id"]])
+    repair_model(monkeypatch, mutate=response)
+    def corrupt(args):
+        for row in args["data"]["items"]:
+            row["result"]["decisions"][0]["verdict"] = "unknown"
+        return args
+    execute.corrupt["compared"] = corrupt
+    result = execute()
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    requests = state["comparison_retry"]["requests"]
+    assert len(requests) > 1
+    ids = [r["known_id"] for item in requests for r in item["input"]["known"]]
+    assert len(ids) == len(set(ids)) == len(known)
+    assert all(helper.request_size(item) < helper.REQUEST_CAP for item in requests)
+    if conflict:
+        assert not result["success"] and "chosen" not in execute.stages
+    else:
+        assert final(result)["new_tips"] == 1
+        assert state["novelty"]["matched_known"][0]["known_id"] == "k1"
+    assert helper.load_json(execute.root / "db/tips.json") == known
+
+
+
+def needs_official_evidence(execute):
+    def stop(args):
+        args["data"]["items"][0]["result"]["decisions"][0].update(
+            verdict="needs_evidence", reason="공식 표기와 적용 환경 확인 필요")
+        return args
+    execute.corrupt["reviewed"] = stop
+    assert not execute("commit")["success"]
+    run = execute.stages["reviewed"]["run"]
+    return run, {"op": "evidence", "run": run, "candidate_ids": ["c1"],
+                 "data": {"items": [{"url": "https://example.org/official",
+                                    "paragraph_index": 1, "text": "Official spelling and conditions."}]}}
+
+
+def test_supplement_keeps_review_required_and_preserves_sources(execute):
+    run, args = needs_official_evidence(execute)
+    before = len(execute.calls)
+    result = helper.run(args)
+    assert result["items"][0]["status"] == "evidence_added"
+    assert helper.run(args) == result
+    state = helper.load_json(Path(run) / "state.json")
+    assert len(state["supplements"]) == 1 and "reviewed" not in state["receipts"]
+    assert not execute("commit")["success"]  # attaching a source alone cannot approve it
+    execute.corrupt.clear()
+    out = final(execute("commit"))
+    assert len(execute.calls) == before
+    review = execute.stages["reviewed"]["data"]["items"][0]["input"]
+    assert review["supplements"][0]["sources"][0]["text"] == "[1] Official spelling and conditions."
+    finishing = execute.stages["finish"]["data"]["items"][0]["input"]
+    assert finishing["supplements"] == review["supplements"]
+    assert "https://example.org/official" in Path(out["report"]).read_text()
+
+
+@pytest.mark.parametrize("bad", ["candidate", "partial", "source"])
+def test_supplement_rejects_wrong_candidate_partial_or_missing_source(execute, bad):
+    run, args = needs_official_evidence(execute)
+    if bad == "candidate":
+        args["candidate_ids"] = ["c999"]
+    elif bad == "partial":
+        args["data"]["partial"] = True
+    else:
+        args["data"]["items"][0]["url"] = "file:///tmp/not-a-web-source"
+    with pytest.raises(ValueError):
+        helper.run(args)
+    assert not helper.load_json(Path(run) / "state.json").get("supplements")
+    assert not (execute.root / "db/tips.json").exists()
+
+
+def test_changed_supplement_cannot_pass_final_review(execute):
+    run, args = needs_official_evidence(execute)
+    result = helper.run(args)
+    execute.corrupt.clear()
+    def change(args):
+        path = Path(result["items"][0]["evidence"])
+        source = helper.load_json(path)
+        source["items"][0]["text"] = "Changed after independent review."
+        helper.atomic(path, source)
+        return args
+    execute.corrupt["finish"] = change
+    assert not execute("commit")["success"]
+    assert not (execute.root / "db/tips.json").exists()
+
+
 def test_structural_criteria_removed_but_semantic_review_remains():
     assert "criteria:" not in BODY
-    assert BODY.count("preserve_rows:true") == 7
+    assert BODY.count("preserve_rows:true") == BODY.count("[table:ai]")
     assert 'op:"reviewed"' in BODY and 'op:"finish"' in BODY
     assert "원문과 팁을 독립 대조" in BODY and "품질 기준을 독립 검토" in BODY
 

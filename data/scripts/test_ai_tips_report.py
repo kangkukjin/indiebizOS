@@ -714,6 +714,46 @@ def test_empty_transcript_segment_cannot_validate_wrong_timestamp(tmp_path):
     helper.grounded(state, IDS[0], {"_quote": QUOTES[0], "timestamp": "02:00"})
 
 
+def test_quote_crossing_two_partial_segments_keeps_source_time(tmp_path):
+    # Episode 4016: neither whole segment is inside the quote, but the quote
+    # is an exact continuous span starting at 1757.279 seconds.
+    segs = [
+        {"start": 1757.279, "text": "layers. So it depends on which layer you"},
+        {"start": 1759.679, "text": "want to add these LLM test in. You can"},
+    ]
+    path = tmp_path / "source.json"
+    helper.atomic(path, {"items": segs})
+    state = {"sources": {IDS[0]: {"path": str(path), "hash": helper.digest(segs)}}}
+    row = {"_quote": "So it depends on which layer you\nwant to add these LLM test in.",
+           "timestamp": "29:17"}
+    helper.grounded(state, IDS[0], row)
+    with pytest.raises(ValueError, match="시간 위치"):
+        helper.grounded(state, IDS[0], {**row, "timestamp": "00:00"})
+
+
+def test_shared_short_segment_does_not_prove_quote_location(tmp_path):
+    segs = [{"start": 0, "text": "the"},
+            {"start": 120, "text": "Review the complete evidence before publishing."}]
+    path = tmp_path / "source.json"
+    helper.atomic(path, {"items": segs})
+    state = {"sources": {IDS[0]: {"path": str(path), "hash": helper.digest(segs)}}}
+    row = {"_quote": segs[1]["text"], "timestamp": "00:00"}
+    with pytest.raises(ValueError, match="시간 위치"):
+        helper.grounded(state, IDS[0], row)
+    helper.grounded(state, IDS[0], {**row, "timestamp": "02:00"})
+
+
+def test_quote_location_checks_later_occurrences_and_normalized_text(tmp_path):
+    segs = [{"start": 0, "text": "prefix ＡＢＣ"}, {"start": 4, "text": "def suffix"},
+            {"start": 120, "text": "prefix ABC"}, {"start": 124, "text": "def suffix"}]
+    path = tmp_path / "source.json"
+    helper.atomic(path, {"items": segs})
+    state = {"sources": {IDS[0]: {"path": str(path), "hash": helper.digest(segs)}}}
+    helper.grounded(state, IDS[0], {"_quote": "ABC\n def", "timestamp": "02:00"})
+    with pytest.raises(ValueError, match="원문에 없는"):
+        helper.grounded(state, IDS[0], {"_quote": "ABC invented def", "timestamp": "02:00"})
+
+
 @pytest.mark.parametrize("topic", ["교사활용", "문서업무", "코딩"])
 def test_topic_is_input_through_review_and_report(execute, topic):
     out = final(execute(topic=topic))
@@ -783,6 +823,8 @@ def test_long_extraction_failure_resumes_only_unaccepted_chunks(execute):
     done = [r["request"]["path"] for k, r in state["source_plan"]["jobs"].items()
             if k in state["source_extractions"]]
     assert done and "candidates" not in state["receipts"]
+    assert "source_requests" not in execute.stages
+    assert "sources_indexed" not in execute.stages
     before = Counter(r["file"] for r in execute.struct_calls)
     final(execute())
     after = Counter(r["file"] for r in execute.struct_calls)

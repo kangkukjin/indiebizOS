@@ -317,19 +317,34 @@ def source_text(state, vid):
 
 
 def grounded(state, vid, record):
+    from bisect import bisect_right
+
     quote = text_field(record, "_quote")
-    text = clean(" ".join(r["text"] for r in source_segments(state, vid)))
-    require(clean(quote) in text, "원문에 없는 인용문")
+    segs = source_segments(state, vid)
+    # 인용은 한 세그먼트의 중간에서 시작해 다음 세그먼트 중간까지 이어질 수 있다.
+    # 전체 인용의 연속 위치를 찾고, 그 시작 문자가 속한 원본 시각과 대조한다.
+    texts, offsets, times, size = [], [], [], 0
+    for seg in segs:
+        text = clean(seg["text"])
+        if text:
+            offsets.append(size)
+            times.append(seg["start"])
+            texts.append(text)
+            size += len(text) + 1
+    text, quote = " ".join(texts), clean(quote)
+    require(quote and quote in text, "원문에 없는 인용문")
     timestamp = text_field(record, "timestamp")
     require(not record.get("_timestamp_error"), "타임스탬프 검증 오류")
     require(re.fullmatch(r"\d{1,3}:\d{2}(?::\d{2})?", timestamp), "시간 형식 오류")
     parts = [int(p) for p in timestamp.split(":")]
     require(all(p < 60 for p in parts[1:]), "시간 범위 오류")
     seconds = parts[0] * 60 + parts[1] if len(parts) == 2 else parts[0] * 3600 + parts[1] * 60 + parts[2]
-    segs = source_segments(state, vid)
-    nearby = [r for r in segs if clean(r["text"]) and abs(r["start"] - seconds) <= 15]
-    require(nearby and any(clean(r["text"]) in clean(quote) or clean(quote) in clean(r["text"])
-                           for r in nearby), "인용문과 시간 위치 불일치")
+    position = text.find(quote)
+    while position >= 0:
+        if abs(times[bisect_right(offsets, position) - 1] - seconds) <= 15:
+            return
+        position = text.find(quote, position + 1)
+    raise ValueError("인용문과 시간 위치 불일치: " + vid + " @ " + timestamp)
 
 
 def extraction(state, data, expected):

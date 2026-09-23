@@ -196,6 +196,17 @@ def test_t5c_derived_failures_cite_root():
     assert not any(c.get("action") == "sink" for c in calls)
 
 
+def test_root_cause_survives_long_cascade_preview():
+    from pipeline_state import PipelineState
+    state = PipelineState(steps=[], context=None, prev_result="")
+    state.var_errors["비교요청"] = {"step": 26, "error": "후보 입력 상한 초과"}
+    out = {"error": "뒤쪽 변수 누락·try/catch 실패 " * 100}
+    state.root_note(out)
+    assert "후보 입력 상한 초과" in out["error"][:200]
+    assert "try/catch 실패" in out["error"]
+    assert out["root_failures"][0]["step"] == 26
+
+
 def test_t6_fallback_paren_branch():
     calls = []
     out = _run('[sense:bad]{} ?? ([sense:rows]{} >> [sense:take]{n: 2})', calls)

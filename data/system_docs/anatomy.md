@@ -86,6 +86,8 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 본문·실적을 보존한다. [관용구 등록 수리](../../docs/JUDGMENT_IDIOM_REGISTRATION_REPAIRS_2026_09_21.md).
 전체 관용구 반환형을 재검사하고, 빈 파일 후보와 콜드 검수의 계약 유실을 고쳤다.
 [반환 계약 수리](../../docs/IDIOM_RETURN_REPAIRS_2026_09_21.md).
+AI 팁 보고서의 큰 비교 입력은 후보·기존 팁 양쪽으로 나누고 비교 쌍과 재개 범위를 검증한다.
+준비 실패의 저장과 최초 원인 표시: [4010 수리](../../docs/EPISODE_4010_REPAIRS_2026_09_24.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

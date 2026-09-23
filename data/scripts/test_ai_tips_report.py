@@ -453,11 +453,13 @@ def test_accepted_extraction_survives_next_request_preparation_failure(execute, 
     response = helper.run({"op": "candidates", "run": str(directory), "data": {"items": []}})
     assert response["status"] == "blocked" and response["accepted"]
     assert response["resume"]["op"] == "candidates"
+    assert helper.load_json(directory / "state.json")["preparation_failure"] == response
     monkeypatch.setattr(helper, "prepare_comparison", prepare)
     assert final(execute())["status"] == "reviewed_draft"
     # 앞 단계 table:ai와 1차 struct 호출을 반복하지 않는다.
     assert execute.model_calls[:len(before)] == before
     assert sum(k == "struct" and "candidate_id" not in v for k, v in execute.model_calls) == 2
+    assert "preparation_failure" not in helper.load_json(directory / "state.json")
 
 
 def test_large_ledger_is_fully_compared_and_not_repeated_in_editorial(execute):
@@ -858,3 +860,100 @@ def test_comparison_context_counts_towards_request_limit(execute, monkeypatch):
     state = helper.load_json(execute.root / "_runs/test/state.json")
     assert "candidates" in state["receipts"] and "compared" not in state["receipts"]
     assert "chosen" not in execute.stages
+
+
+def large_comparison(execute, monkeypatch):
+    known = [{"tip": "기존 " + str(i), "how": "서로 다른 기존 방법 " * 70} for i in range(80)]
+    helper.atomic(execute.root / "db/tips.json", known)
+    original = helper.comparison_candidates
+    def contexts(state):
+        candidates = original(state)
+        for row in candidates:
+            row["source_context"]["items"].append({"start": 1, "text": "보존된 이웃 문맥 " * 2300})
+        return candidates
+    monkeypatch.setattr(helper, "comparison_candidates", contexts)
+    return known
+
+
+def test_two_axis_comparison_completes_every_pair_and_reuses_plan(execute, monkeypatch):
+    from collections import Counter
+    known = large_comparison(execute, monkeypatch)
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    requests = execute.stages["compared"]["data"]["items"]
+    assert len(requests) > 2
+    assert all(helper.request_size(r) < helper.REQUEST_CAP for r in requests)
+    expected = {(cid, "k" + str(i + 1)) for cid in ("c1", "c2") for i in range(len(known))}
+    actual = Counter((c["candidate_id"], k["known_id"]) for r in requests
+                     for c in r["input"]["candidates"] for k in r["input"]["known"])
+    assert set(actual) == expected and set(actual.values()) == {1}
+    source = {r["candidate_id"]: r for r in helper.comparison_candidates(state)}
+    assert all(c == source[c["candidate_id"]] for r in requests for c in r["input"]["candidates"])
+    assert len(state["novelty"]["decisions"]) == sum(len(r["input"]["candidates"]) for r in requests)
+    # 재진입 때 더 큰 상한을 사용할 수 있어도 이미 보낸 배치·ID·원문은 유지한다.
+    monkeypatch.setattr(helper, "REQUEST_CAP", helper.REQUEST_CAP * 2)
+    before = [{k: r[k] for k in ("batch_id", "task", "input")} for r in requests]
+    assert helper.prepare_comparison(state)["items"] == before
+    assert helper.load_json(execute.root / "db/tips.json") == known
+
+
+@pytest.mark.parametrize("mutation", ["outside_candidate", "input", "missing_batch", "scope_gap", "scope_overlap"])
+def test_partitioned_comparison_rejects_scope_and_input_corruption(execute, monkeypatch, mutation):
+    large_comparison(execute, monkeypatch)
+    def corrupt(args):
+        rows = args["data"]["items"]
+        if mutation == "outside_candidate":
+            other = next(r for r in rows if r["input"]["candidates"][0]["candidate_id"] !=
+                         rows[0]["input"]["candidates"][0]["candidate_id"])
+            rows[0]["result"]["decisions"].append(other["result"]["decisions"][0])
+        elif mutation == "input":
+            rows[0]["input"]["candidates"][0]["source_context"]["items"].pop()
+        elif mutation == "missing_batch":
+            rows.pop()
+        else:
+            path = Path(args["run"]) / "state.json"
+            state = helper.load_json(path)
+            if mutation == "scope_gap":
+                state["comparison_batches"].pop(rows[-1]["batch_id"])
+                rows.pop()
+            else:
+                state["comparison_batches"]["extra"] = state["comparison_batches"][rows[0]["batch_id"]]
+            helper.atomic(path, state)
+        return args
+    execute.corrupt["compared"] = corrupt
+    assert not execute()["success"]
+    assert "chosen" not in execute.stages
+
+
+@pytest.mark.parametrize("missing", [False, True])
+def test_partitioned_uncertain_retry_only_repairs_assigned_candidates(execute, monkeypatch, missing):
+    large_comparison(execute, monkeypatch)
+    repair_model(monkeypatch)
+    def corrupt(args):
+        if missing:
+            args["data"]["items"][0]["result"]["decisions"].clear()
+        else:
+            force_uncertain(args)
+        return args
+    execute.corrupt["compared"] = corrupt
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    repaired = helper.load_json(Path(state["run"]) / "comparison-after-retry.json")["items"]
+    for wrapper in repaired:
+        ids = {d["candidate_id"] for d in wrapper["result"]["decisions"]}
+        assert ids == set(state["comparison_batches"][wrapper["batch_id"]]["candidate_ids"])
+    first = execute.stages["compared"]["data"]["items"][0]["input"]["candidates"][0]["candidate_id"]
+    assert {r["input"]["candidate"]["candidate_id"] for r in state["comparison_retry"]["requests"]} == {first}
+
+
+def test_legacy_comparison_plan_keeps_original_requests(execute):
+    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    for batch in state["comparison_batches"].values():
+        batch.pop("candidate_ids")
+    original = execute.stages["compared"]["data"]
+    assert helper.prepare_comparison(state)["items"] == [
+        {k: r[k] for k in ("batch_id", "task", "input")} for r in original["items"]]
+    audit, _ = helper.comparison_audit(state, original)
+    assert len(audit) == 2

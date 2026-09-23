@@ -56,7 +56,8 @@ class PipelineState:
         out["root_failures"] = [{"var": n, **v} for n, v in self.var_errors.items()]
         _roots = "; ".join(f"step {v['step']} ${n} 할당 실패: {v['error'][:200]}"
                            for n, v in self.var_errors.items())
-        out["error"] = f"{out.get('error') or ''} — 뿌리 {len(self.var_errors)}: {_roots}"
+        # 긴 연쇄·try/catch 오류의 뒤에 두면 모델용 미리보기에서 최초 실패가 잘린다.
+        out["error"] = f"뿌리 {len(self.var_errors)}: {_roots} — {out.get('error') or ''}"
         if self.derived:
             out["error"] += f" (연쇄 {self.derived}개는 그 변수를 읽어 죽은 문장)"
 
@@ -212,5 +213,4 @@ class PipelineState:
         except Exception:
             pass
         return prev
-
 

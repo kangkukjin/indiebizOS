@@ -438,20 +438,52 @@ def prepare_comparison(state):
     candidates = comparison_candidates(state)
     known = [{"known_id": "k" + str(i + 1), **{k: row.get(k) for k in ("tip", "how", "topic")}}
              for i, row in enumerate(state["snapshot"]["tips"])]
-    batches, chunk = [], []
-    for row in known:
-        candidate = comparison_request(state, chunk + [row], "b" + str(len(batches) + 1), candidates)
-        if request_size(candidate) >= REQUEST_CAP:
-            require(chunk, "기존 팁 한 건과 후보가 입력 상한을 넘습니다. 자동 절단하지 않습니다")
-            batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1), candidates))
-            chunk = [row]
-        else:
-            chunk.append(row)
+    if not known:
+        state["comparison_batches"] = {}
+        return {"items": [], "count": 0, "run": state["run"]}
+    if state.get("comparison_batches"):
+        # 이미 보낸 배치는 재개·코드 개정으로 재분할하지 않는다. 기존 판정의 범위를 유지한다.
+        scopes = comparison_scope(state)
+        batches = [comparison_request(state, [r for r in known if r["known_id"] in meta["known_ids"]],
+                                      bid, [r for r in candidates if r["candidate_id"] in scopes[bid]])
+                   for bid, meta in state["comparison_batches"].items()]
+        require(all(digest(r) == state["comparison_batches"][r["batch_id"]]["request_hash"]
+                    and request_size(r) < REQUEST_CAP for r in batches), "저장된 비교 요청 범위·원문 변경")
+        return {"items": batches, "count": len(batches), "run": state["run"]}
+    # 후보 문맥도 커진다. 양쪽을 분할하되 후보×기존 팁의 모든 쌍을 정확히 한 번 보낸다.
+    # 큰 쪽만 꽉 채우면 반대쪽 한 행 때문에 배치가 폭증하므로 양쪽에 공간을 배분한다.
+    probe_id = "b" + str(max(1, len(candidates) * max(1, len(known))))
+    base = request_size(comparison_request(state, [], probe_id, []))
+    largest = max(known, key=lambda r: request_size(comparison_request(state, [r], probe_id, [])), default=None)
+    reserve = ([largest] if largest else [])
+    known_size = request_size(comparison_request(state, known, probe_id, [])) - base
+    target = max(REQUEST_CAP // 2, REQUEST_CAP - known_size - 1)
+    groups, chunk = [], []
+    for row in candidates:
+        require(request_size(comparison_request(state, reserve, probe_id, [row])) < REQUEST_CAP,
+                "후보 " + row["candidate_id"] + " 한 건과 기존 팁 한 건이 입력 상한을 넘습니다. 자동 절단하지 않습니다")
+        trial = chunk + [row]
+        if chunk and (request_size(comparison_request(state, [], probe_id, trial)) >= target
+                      or request_size(comparison_request(state, reserve, probe_id, trial)) >= REQUEST_CAP):
+            groups.append(chunk)
+            chunk = []
+        chunk.append(row)
     if chunk:
-        batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1), candidates))
+        groups.append(chunk)
+    batches = []
+    for group in groups:
+        chunk = []
+        for row in known:
+            if request_size(comparison_request(state, chunk + [row], probe_id, group)) >= REQUEST_CAP:
+                batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1), group))
+                chunk = []
+            chunk.append(row)
+        if chunk or not known:
+            batches.append(comparison_request(state, chunk, "b" + str(len(batches) + 1), group))
     require(all(request_size(r) < REQUEST_CAP for r in batches), "비교 배치 입력 상한 초과")
     state["comparison_batches"] = {r["batch_id"]: {
         "known_ids": [k["known_id"] for k in r["input"]["known"]],
+        "candidate_ids": [c["candidate_id"] for c in r["input"]["candidates"]],
         "request_hash": digest(r)} for r in batches}
     return {"items": batches, "count": len(batches), "run": state["run"]}
 
@@ -460,19 +492,43 @@ class NoveltyUnresolved(ValueError):
     """형식·범위는 유효하지만 발췌만으로 신규성을 판단할 수 없는 경우."""
 
 
+def comparison_scope(state):
+    """분할 지도 자체의 누락·중복도 검사한다. 이전 v2 회차는 전 후보 배치로 읽는다."""
+    candidates = set(keyed(state["candidates"], "candidate_id"))
+    known = {"k" + str(i + 1) for i in range(len(state["snapshot"]["tips"]))}
+    if not known and not state["comparison_batches"]:
+        return {}
+    scopes, covered = {}, {cid: [] for cid in candidates}
+    for bid, batch in state["comparison_batches"].items():
+        cids = batch.get("candidate_ids", list(candidates))
+        kids = batch["known_ids"]
+        require(cids and len(cids) == len(set(cids)) and set(cids) <= candidates, "비교 후보 범위 오류")
+        require(len(kids) == len(set(kids)) and set(kids) <= known, "비교 원장 범위 오류")
+        scopes[bid] = set(cids)
+        for cid in cids:
+            covered[cid].extend(kids or [None])
+    for cid, ids in covered.items():
+        require(len(ids) == len(set(ids)) and set(ids) == (known or {None}),
+                "비교 쌍 누락 또는 중복: " + cid)
+    return scopes
+
+
 def comparison_audit(state, data, allow_unknown=False, allow_missing=False):
     batches = state["comparison_batches"]
+    scopes = comparison_scope(state)
     received = keyed(rows(data), "batch_id", batches)
-    candidates = keyed(state["candidates"], "candidate_id")
     audit, excluded = [], set()
     for bid, wrapper in received.items():
+        candidates = scopes[bid]
+        require(digest({k: wrapper[k] for k in ("batch_id", "task", "input")}) == batches[bid]["request_hash"],
+                "비교 요청 입력 변경")
         result = wrapper.get("result")
         require(isinstance(result, dict) and result.get("batch_id") == bid, "비교 배치 ID 변경")
         decisions = keyed(result.get("decisions", []), "candidate_id",
                           None if allow_missing else candidates)
         require(set(decisions) <= set(candidates), "비교 후보 ID 추가")
         if allow_missing:
-            for cid in sorted(candidates.keys() - decisions.keys()):
+            for cid in sorted(candidates - decisions.keys()):
                 decisions[cid] = {"candidate_id": cid, "verdict": "unknown",
                                   "matched_ids": [], "reason": "비교 응답에서 이 후보의 판정 누락"}
         for cid, decision in decisions.items():
@@ -585,10 +641,10 @@ def accept_comparison_retry(state, data):
         require(verdict != "unknown", "전문에서도 신규성·근거 미확인: " + decision["reason"])
         grouped.setdefault(decision["candidate_id"], []).append(decision)
     merged = copy.deepcopy(rows(retry["original"]))
-    candidates = keyed(state["candidates"], "candidate_id")
+    scopes = comparison_scope(state)
     for wrapper in merged:
         present = {d["candidate_id"] for d in wrapper["result"]["decisions"]}
-        for cid in sorted(candidates.keys() - present):
+        for cid in sorted(scopes[wrapper["batch_id"]] - present):
             wrapper["result"]["decisions"].append(
                 {"candidate_id": cid, "verdict": "unknown", "matched_ids": [],
                  "reason": "비교 응답에서 이 후보의 판정 누락"})
@@ -668,7 +724,9 @@ def novelty_view(state, candidate_ids=None):
                       for i, row in enumerate(state["snapshot"]["tips"])
                       if "k" + str(i + 1) in questioned]
     return {"snapshot_hash": audit["snapshot_hash"], "known_count": audit["known_count"],
-            "batches": {bid: {"known_ids": row["known_ids"]} for bid, row in audit["batches"].items()},
+            "batches": {bid: {k: row[k] for k in ("known_ids", "candidate_ids") if k in row}
+                        for bid, row in audit["batches"].items()
+                        if candidate_ids.intersection(row.get("candidate_ids", candidate_ids))},
             "decisions": decisions, "matched_known": [
                 row for row in audit["matched_known"] if row["known_id"] in matched],
             "scope": "현재 검토 후보의 모든 배치 판정. 같은 이유의 판정은 batch_ids로 묶음.",
@@ -1185,11 +1243,16 @@ def next_output(state, op, output):
                 require(request_size(item) < REQUEST_CAP,
                         state.get("phase", op) + " 입력이 AI 상한을 넘습니다. 자동 절단하지 않습니다")
     except (ValueError, TypeError, KeyError) as exc:
-        return {"success": False, "status": "blocked", "stage": op,
-                "accepted": op in state.get("receipts", {}), "error": str(exc),
-                "run": state["run"], "evidence": str(Path(state["run"]) / "state.json"),
-                "resume": ({"op": "start", "config": state["config"]} if op == "start" else
-                           {"op": op, "run": state["run"], "data": {"items": []}})}
+        failure = {"success": False, "status": "blocked", "stage": op,
+                   "accepted": op in state.get("receipts", {}), "error": str(exc),
+                   "run": state["run"], "evidence": str(Path(state["run"]) / "state.json"),
+                   "resume": ({"op": "start", "config": state["config"]} if op == "start" else
+                              {"op": op, "run": state["run"], "data": {"items": []}})}
+        # 호출 봉투가 연쇄 오류로 가려져도 디스크에서 최초 준비 실패와 재개 위치를 찾는다.
+        state["preparation_failure"] = failure
+        atomic(Path(state["run"]) / "state.json", state)
+        return failure
+    state.pop("preparation_failure", None)
     atomic(Path(state["run"]) / "state.json", state)
     if op == "transcripts":
         for vid, source in state["sources"].items():

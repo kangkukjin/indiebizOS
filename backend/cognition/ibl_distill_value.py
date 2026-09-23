@@ -35,6 +35,23 @@ def url_only_head(code):
 
 def redundant_reason(codes, known):
     """이미 있는 전체 절차와 URL만 교체한 원시 호출은 다시 증류하지 않는다."""
+    def function_shape(source):
+        from ibl_edition import source_edition
+        from ibl_v2_parser import parse
+        from ibl_v2_experience import structure
+        try:
+            if source_edition(source) != 2:
+                return None
+            body = parse(source).data['statements']
+            if len(body) == 1 and body[0].kind == 'def':
+                data = {k: v for k, v in body[0].data.items() if k != 'name'}
+                return json.dumps(structure(data), ensure_ascii=False, sort_keys=True)
+        except Exception:
+            return None
+    if len(codes) == 1:
+        shape = function_shape(codes[0])
+        if shape and any(function_shape(row['ibl_code']) == shape for row in known):
+            return '이름을 제외한 같은 입력 함수가 이미 있음'
     existing = {r['ibl_code'].strip() for r in known}
     if '\n'.join(codes).strip() in existing:
         return '동일한 실행 절차가 이미 있음'

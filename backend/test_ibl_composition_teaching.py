@@ -29,7 +29,8 @@ def current(monkeypatch):
         calls.append(url)
         if url.endswith('/bad') and not (execute.recover and calls.count(url) == 2):
             return {'success': False, 'error': '원문 실패'}
-        return {'success': True, 'text': '원문', 'url': url}
+        return {'success': True, 'text': '원문', 'title': '문서', 'url': url,
+                'items': [{'text':'원문', 'url':url, 'paragraph_index':0}]}
     monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
     registry = load_registry()
     seeds = json.loads((ROOT / 'data/idioms/ibl_v2_seeds.json').read_text())

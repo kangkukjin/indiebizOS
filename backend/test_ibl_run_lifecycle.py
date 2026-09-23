@@ -97,5 +97,18 @@ def test_scoped_recovery_route_uses_same_project(tmp_path, monkeypatch):
     assert asyncio.run(recover_ibl_result(RecoverRequest(run_id=run_id, project_path='two')))['status'] == 'unavailable'
 
 
+def test_script_relative_import_dependency(tmp_path):
+    from ibl_dependencies import script_snapshot
+    (tmp_path/'registry.yaml').write_text('one: {file: main.py}')
+    (tmp_path/'main.py').write_text('import pkg.work')
+    pkg = tmp_path/'pkg'; pkg.mkdir()
+    (pkg/'__init__.py').write_text('')
+    (pkg/'work.py').write_text('from . import data')
+    (pkg/'data.py').write_text('N=1')
+    first = script_snapshot({'id':'one'}, tmp_path)
+    (pkg/'data.py').write_text('N=2')
+    assert first != script_snapshot({'id':'one'}, tmp_path)
+
+
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))

@@ -102,7 +102,9 @@ def abstract_call(tc, request, result):
              'source_sha256': digest(source), 'candidate_sha256': digest(code),
              'body_sha256': digest(structure(original)), 'original_plan_hash': result.get('plan_hash'),
              'candidate_plan_hash': candidate.fingerprint,
-             'dependencies': plan.dependencies, 'new_input_successes': 0}
+             'dependencies': {k: digest(v) for k, v in plan.dependencies.items()},
+             'referenced_functions': [entry['name'] for entry in plan.dependencies['source_map'][1:]],
+             'effects': sorted(plan.effects), 'new_input_successes': 0}
     # The prepared candidate carries names/proof only, never the original values.
     return {**tc, 'input': {'code': code, 'edition': 2}, '_ibl_abstraction': proof}
 

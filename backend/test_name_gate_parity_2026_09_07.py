@@ -62,13 +62,20 @@ def test_g1_슬롯으로_비운_몸은_수동_경로에서_이름을_받는다()
                '[self:read]{path: "/Users/kangkukjin/Desktop/a.py", start_line: 1, end_line: 20}')
     assert register_idiom._gates("찾아읽기2", "어디 있는지 모르는 것을 읽어야 할 때", private)[0] is None
 
-def test_g1_두_경로가_같은_관문을_부른다():
-    """짝이 맞는지 자리로도 확인 — 한쪽에만 달린 관문이 이 부류를 만들었다."""
-    word = open(os.path.join(BACKEND, "cognition", "ibl_usage_rag.py"), encoding="utf-8").read()
-    phrase = open(os.path.join(BACKEND, "cognition", "ibl_idiom.py"), encoding="utf-8").read()
-    for gate in ("_phrase_private_reason", "uncallable_reason", "slot_values_ungrounded"):
-        assert gate in word, f"낱말 자동 작명 경로에 {gate} 가 없다"
-        assert gate in phrase, f"관용구 증류 경로에 {gate} 가 없다"
+def test_g1_입력함수도_개인명사_관문을_통과해야_한다(monkeypatch):
+    """본문을 추출한 새 경로도 개인 명사를 허용하지 않는다. 주석 이름 검사는 하지 않는다."""
+    import pytest
+    import ibl_v2_adapters, ibl_v2_store
+    from ibl_v2_experience import closed_call, finalize_candidate
+    from ibl_distill_value import source_rows
+    monkeypatch.setattr(ibl_v2_adapters, 'load_registry', lambda *a: {})
+    monkeypatch.setattr(ibl_v2_store, 'definitions', lambda: {})
+    tc = {'input': {'edition':2, 'code':'return {path:"/Users/private/task.txt",n:$n}', 'inputs':{'n':1}},
+          'result': {'success':True, 'executed':True, 'source_complete':True}}
+    candidate = closed_call(tc)
+    assert candidate
+    with pytest.raises(ValueError, match='개인 명사'):
+        finalize_candidate(source_rows([(1,candidate)])[0], '사적함수')
 
 
 # ─────────────────────────────────────────────────────────── G3·G4 스윕 규율

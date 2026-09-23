@@ -121,7 +121,7 @@ def member_value_script(params, command, exchange):
     if catalogue.get("success") is False:
         return catalogue
     if "ibl-script/2" not in catalogue.get("script_protocols", []):
-        return {"success": False, "error_type": "capability", "error": "회원 기기의 스크립트 프로토콜 업데이트가 필요합니다."}
+        return {"success": False, "error_type": "capability", "error": "PC 회원은 회원 설치 화면에서 최신 IndieBiz 도우미를 다시 내려받아 설치하세요. Android 회원 앱은 로컬 프로그램 인터프리터를 제공하지 않습니다."}
     op = params.get("op", "run" if params.get("id") else "list")
     if op == "list":
         return catalogue

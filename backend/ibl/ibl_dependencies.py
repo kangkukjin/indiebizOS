@@ -16,6 +16,8 @@ def script_snapshot(args, root=None):
     # Dynamic selection and list/register/remove observe the whole namespace.
     dynamic = not entry or args.get('op', 'run' if sid else 'list') != 'run'
     files, pending, seen = {}, [], set()
+    import_root = root / str(entry.get('file') or '') if entry else root
+    import_root = import_root.parent if entry else root
     if not dynamic:
         pending = [root / str(entry.get('file') or '')]
     while pending:
@@ -37,16 +39,23 @@ def script_snapshot(args, root=None):
             break
         for node in ast.walk(tree):
             modules = []
+            module_root = import_root
             if isinstance(node, ast.Import):
                 modules = [n.name for n in node.names]
             elif isinstance(node, ast.ImportFrom):
+                if node.level:
+                    module_root = path.parent
+                    for _ in range(node.level - 1):
+                        module_root = module_root.parent
                 modules = [node.module or ''] + [node.module + '.' + n.name if node.module else n.name for n in node.names]
             elif isinstance(node, ast.Call):
                 name = node.func.id if isinstance(node.func, ast.Name) else node.func.attr if isinstance(node.func, ast.Attribute) else ''
                 if name in {'eval', 'exec', '__import__', 'import_module', 'load_sibling', 'load_singleton', 'run_path', 'spec_from_file_location', 'run', 'Popen', 'system'}:
                     dynamic = True
+            modules = sorted({'.'.join(parts[:i]) for m in modules if m
+                              for parts in [m.split('.')] for i in range(1, len(parts)+1)})  # path-ok: Python 패키지 초기화 모듈도 의존성
             for module in modules:
-                candidate = root.joinpath(*module.split('.'))  # path-ok: Python import 모듈명 해소, 데이터 필드 경로 아님
+                candidate = module_root.joinpath(*module.split('.'))  # path-ok: Python import 모듈명 해소, 데이터 필드 경로 아님
                 for target in (candidate.with_suffix('.py'), candidate / '__init__.py'):
                     # Absent local imports are dependencies too: adding one may
                     # change Python's resolution order on the next execution.
@@ -98,3 +107,15 @@ def legacy_snapshot(name, assets):
             continue
         scan(selected[key])
     return digest(assets if dynamic else selected)
+
+
+def legacy_runtime_snapshot():
+    """Legacy function effects are opaque: pin their declared interpreter realm."""
+    from runtime_utils import get_base_path
+    from ibl_registry import load_nodes_installed
+    root = get_base_path()
+    paths = list(Path(__file__).parent.glob('*.py'))
+    paths += [p for p in (root/'data/packages/installed/tools').rglob('*.py')
+              if '__pycache__' not in p.parts and not p.name.startswith('test_')]
+    return digest({'files': {str(p): digest(p.read_bytes().hex()) for p in sorted(paths)},
+                   'vocabulary': load_nodes_installed(), 'scripts': script_snapshot({})})

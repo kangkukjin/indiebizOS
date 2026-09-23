@@ -60,7 +60,8 @@ def function_adapters(project_path, agent_id):
     from ibl_engine import execute_ibl
     from workflow_contract import call_signature, _signature_of
     assets = legacy_functions()
-    from ibl_dependencies import legacy_snapshot
+    from ibl_dependencies import legacy_snapshot, legacy_runtime_snapshot
+    implementation = legacy_runtime_snapshot()
     result = {}
     for name, asset in assets.items():
         snapshot = legacy_snapshot(name, assets)
@@ -76,10 +77,10 @@ def function_adapters(project_path, agent_id):
         contract = {"version": 1, "params": {p: "Unknown" for p in [*params, *defaults]},
                     "required": [p for p in params if p not in defaults],
                     "result": "Record", "effects": ["unknown"],
-                    "compatibility": "legacy-function/1", "implementation_fingerprint": snapshot,
+                    "compatibility": "legacy-function/1", "implementation_fingerprint": digest([snapshot, implementation]),
                     "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
         def run(runtime, args, *, name=name, contract=contract, snapshot=snapshot):
-            if legacy_snapshot(name, legacy_functions()) != snapshot:
+            if legacy_snapshot(name, legacy_functions()) != snapshot or legacy_runtime_snapshot() != implementation:
                 raise Fault("DEFINITION_CHANGED", "컴파일 이후 기존 관용구가 바뀌었습니다. 다시 검사하세요.", kind="protocol")
             from ibl_edition import source_context
             with source_context(1):

@@ -68,10 +68,6 @@ def test_existing_single_reflection_stores_callable_provenance(monkeypatch, tmp_
     assert 'PRIVATE_INPUT_928' not in json.dumps(saved, ensure_ascii=False)
     assert saved[0]['provenance']['sources'][0]['abstraction']['new_input_successes'] == 0
 
-
-if __name__ == '__main__':
-    raise SystemExit(pytest.main([__file__]))
-
 from test_ibl_v2_assets import memory  # noqa: E402,F401
 
 
@@ -88,3 +84,25 @@ def test_real_memory_round_trip_and_actual_success_count(memory):
     assert result['value'] == 21
     record_functions(plan, result)
     assert memory.find_phrase_by_alias(name, edition=2)['success_count'] == 1
+
+
+def test_named_function_is_not_distilled_again_under_candidate_name():
+    from ibl_distill_value import redundant_reason
+    candidate = closed_call(call('return $n+1', {'n':4}))
+    row = source_rows([(1,candidate)])[0]
+    code, _, _ = finalize_candidate(row, '덧셈')
+    assert redundant_reason([row['code']], [{'ibl_code':code}])
+
+
+def test_dependency_provenance_keeps_hashes_not_private_filesystem_paths(monkeypatch):
+    import ibl_v2_adapters
+    adapter = ibl_v2_adapters.Adapter({'params':{'n':'Number'}, 'result':'Number', 'effects':['read_external']},
+                                    lambda *_:1, dependency=lambda _: {'file':'/Users/private-host/script.py'})
+    monkeypatch.setattr(ibl_v2_adapters, 'load_registry', lambda *a: {'test:read':adapter})
+    candidate = closed_call(call('[test:read]{n:$n}', {'n':3}))
+    assert candidate
+    assert '/Users/private-host' not in json.dumps(candidate['_ibl_abstraction'])
+
+
+if __name__ == '__main__':
+    raise SystemExit(pytest.main([__file__]))

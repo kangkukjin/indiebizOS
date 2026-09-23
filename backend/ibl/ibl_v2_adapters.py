@@ -162,7 +162,7 @@ def load_registry(project_path=".", agent_id=None):
             if implementation:
                 package = package_map.get(implementation)
                 if package:
-                    package_paths = sorted(package_roots[package].glob("*.py"))
+                    package_paths = sorted(p for p in package_roots[package].rglob("*.py") if "__pycache__" not in p.parts)
             for p in package_paths:
                 if str(p) not in file_hashes:
                     file_hashes[str(p)] = digest(p.read_text())

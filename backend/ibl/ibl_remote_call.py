@@ -50,7 +50,7 @@ def forward(url, node, action, params, agent_id, target):
                 headers["X-Launcher-Session"] = mac_session_cache["session"]
                 caps = requests.get(url + "/ibl/capabilities", headers=headers, timeout=(4, 15))
         if caps.status_code != 200 or PROTOCOL not in caps.json().get("call_protocols", []):
-            return {"success": False, "error_type": "capability", "error": "받는 기기의 IBL 스크립트 호출 지원을 확인하지 못했습니다. 기기 업데이트가 필요합니다."}
+            return {"success": False, "error_type": "capability", "error": ("소유자 Android의 IndieBiz Phone Agent APK를 업데이트해야 합니다." if target == "phone" else "소유자 Mac의 IndieBiz OS 백엔드를 업데이트하고 재시작해야 합니다.") + " ibl-script-call/1 지원을 확인하지 못해 실행을 보내지 않았습니다."}
     except Exception:
         return {"success": False, "error_type": "capability", "error": "받는 기기의 호출 프로토콜을 확인하지 못했습니다. 실행은 보내지 않았습니다."}
     payload = {"protocol": PROTOCOL, "node": node, "action": action,

@@ -354,6 +354,10 @@ class _Plan:
         definition = self.action_def(node, action) or {}
         if not definition:
             self.unknown(path, 'unresolved_action')
+        inspection = definition.get('ai_inspect_param')
+        inspect_only = inspection and params.get(inspection) in ('batch', 'each')
+        if inspect_only:
+            return self.input(params, names, slots, previous)
         if definition.get('ai_call') is True:
             self.sites.append({'path': path, 'action': f'{node}:{action}', 'visits_upper_bound': multiplier})
             inp = self.input(params, names, slots, previous)

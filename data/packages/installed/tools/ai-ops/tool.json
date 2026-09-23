@@ -147,6 +147,18 @@
       "input_schema": {
         "type": "object",
         "properties": {
+          "contract": {
+            "type": "object",
+            "description": "선택 행별 완전성 계약. {covers:[{input:\"input.lines\",output:\"result.lines\",key:\"id\",output_key:\"source_id\",required:[\"text\"],allowed:{status:[\"done\"]}}]}. input/output은 배열 점 경로, ID는 비어 있지 않은 문자열. output_key 생략=key. 모든 입력 ID를 정확히 한 번 반환; required는 필수 비null 필드; allowed는 허용값. 입력은 호출 전, 새 출력은 응답 직후 검사. 행 보존 자동 적용(preserve_rows:false 충돌). 선언은 정적 검사와 공유. 의미 정확성을 보증하지 않음."
+          },
+          "inspect": {
+            "type": "string",
+            "enum": [
+              "batch",
+              "each"
+            ],
+            "description": "모델 호출 없이 실제 투영 입력 검사. batch=전체 한 요청, each=행별 한 요청을 계획. 원본 items와 inspection(계획 요청 수·JSON 문자/바이트 수·상한 초과·반복 중첩 배열)을 반환. 상한 초과는 실패. 입력 수정·요약·모델 호출 없음. 토큰/전체 프롬프트 크기는 아님. 실행하려면 inspect를 빼고 같은 input_fields/contract를 사용. each 실행은 table:each로 따로 구성."
+          },
           "schema": {
             "type": "string",
             "description": "선택 출력 계약. 예 \"selected(불리언), reason(선정 사유)\". 필드 명세는 정적 검사·출력 지시·필드 존재 검사에 함께 쓰며, 입력 필드는 유지한다."

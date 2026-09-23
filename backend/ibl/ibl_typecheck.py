@@ -599,6 +599,16 @@ class _Checker:
             returns = ad.get("returns")
         flow = ad.get("flow") if isinstance(ad.get("flow"), dict) else None
         self._check_scalar_exprs(flow, params, idx, at)
+        contract_key = ad.get("row_contract_param")
+        if contract_key and contract_key in params:
+            self._check_row_contract(params, contract_key, idx, at)
+        inspection = ad.get("ai_inspect_param")
+        if inspection and params.get(inspection) in ("batch", "each"):
+            if params.get("criteria"):
+                self._issue("error", idx, at, "inspect와 criteria는 함께 사용할 수 없습니다.")
+            # Inspection returns the original currency, not the proposed model output.
+            inspection_flow = {**(flow or {}), "columns": "keep"}
+            return self._type_transform(st, node, action, params, inspection_flow, prev, idx, at)
         if flow and flow.get("columns_param_aliases"):
             params = dict(params)
             canonical = flow.get("columns_param")
@@ -624,6 +634,26 @@ class _Checker:
         if returns in ("scalar", "effect"):
             return T(returns)
         return unknown()
+
+    def _check_row_contract(self, params, key, idx, at):
+        from common.item_contract import ContractError, validate_contract
+
+        def dynamic(value):
+            if isinstance(value, dict):
+                return any(dynamic(v) for v in value.values())
+            if isinstance(value, list):
+                return any(dynamic(v) for v in value)
+            return _dynamic(value)
+
+        value = params[key]
+        if dynamic(value):
+            return  # Resolved values are checked at the runtime boundary.
+        options = {name: params[name] for name in ("input_fields", "fields", "preserve_rows")
+                   if name in params and not dynamic(params[name])}
+        try:
+            validate_contract(value, **options)
+        except ContractError as exc:
+            self._issue("error", idx, at, str(exc), expected="valid row contract")
 
     def _schema_columns(self, definition, params, idx, at):
         key = definition.get('schema_param')

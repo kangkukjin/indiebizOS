@@ -209,8 +209,17 @@ input_fields는 최상위 열 이름의 중복 없는 비어 있지 않은 목�
 투영 출력은 유효한 `_i`가 필요하다. preserve_rows=true는 모든 색인의 정확히 한 번 반환을
 검사하고 입력 순서로 복원한다. 기본 false의 선별·신규 행 동작은 그대로다.
 
-행 보존·ID 집합·필드 존재는 이 계약과 결정론 소비자에 맡긴다. 중첩 result의 값 형식은
-해당 소비자가 검사해야 한다. 근거의 충분성·과장·해석 품질은 독립 검수/criteria로 남긴다.
+중첩 배열의 전수 응답은 `contract:{covers:[{input:"input.lines",output:"result.lines",key:"id",
+required:["text"],allowed:{status:["done"]}}]}`로 선언한다. 선언은 정적 검사, 입력은 호출 전,
+새 응답은 병합 전에 검사한다. 바깥 행도 자동 보존한다(preserve_rows:false와 충돌).
+실제 입력이 준비되면 같은 input_fields·contract에 `inspect:"each"`(행별 요청 가정) 또는
+`inspect:"batch"`(전체 한 요청)를 더해 모델 없이 크기·반복 중첩 자료를 점검한다.
+items는 그대로, inspection에 요청 수·문자/바이트·상한 초과·반복량을 반환한다. 토큰 수는 아니다.
+실행 시 inspect를 빼며, 입력을 자동으로 자르지 않는다. inspect와 criteria는 함께 쓸 수 없다.
+[선언·오류·한도와 사례](../../docs/IBL_AI_BOUNDARY_CONTRACTS.md).
+
+행 보존·ID 집합·필드 존재는 계약과 결정론 소비자에 맡긴다. 선언 밖의 값 형식·업무 관계는
+해당 소비자가 검사한다. 근거의 충분성·과장·해석 품질은 독립 검수/criteria로 남긴다.
 criteria를 자연어 모양이나 빈 행만 보고 자동 생략하지 않는다.
 
 등록 스크립트로 결과를 인계할 때는 `input_as`를 쓴다([가이드](script.md)).

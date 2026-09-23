@@ -260,6 +260,11 @@ def apply_criteria(criteria: str, result: Any, tool_input: dict, node: str, acti
         return result                    # 실행 실패가 우선 — criteria 는 미판정
 
     params = tool_input.get("params") if isinstance(tool_input, dict) else None
+    cfg = _action_config(node, action)
+    inspection = cfg.get("ai_inspect_param")
+    if inspection and (params or {}).get(inspection) in ("batch", "each"):
+        return {"success": False, "error_type": "input_inspection",
+                "error": "inspect와 criteria는 함께 사용할 수 없습니다. 입력 점검에는 모델 품질 심사를 실행하지 않습니다."}
     v = _judge(criteria, result, node, action, params)
 
     if v.get("unjudgeable"):

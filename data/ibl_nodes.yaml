@@ -8440,10 +8440,12 @@ nodes:
           columns_param: fields
           schema_param: schema
         ai_call: true
+        row_contract_param: contract
+        ai_inspect_param: inspect
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(AI) — items 를 자연어 지시(instruction)대로 의미 변환(선별·주석·재구성). 참/거짓·선택·점수만 필요하면 [table:judge], 규칙으로 적을 수 있으면 filter/sort 먼저.
-        target_description: instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · schema(선택 — 새 필드 명세 "selected(불리언), reason(사유)". 정적 검사·출력 지시·필드 존재 검사 공용) · input_fields(선택 — 모델에 보낼 최상위 열 배열, 생략=전체; 숨긴 원본 열은 모델이 수정할 수 없음) · preserve_rows(선택 boolean, 기본 false — 모든 _i 정확히 한 번, 입력 순서 복원; 누락·중복·추가 거절) · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. 실행마다 모델 비용(기어 실행 축).
+        target_description: instruction(필수 — 자연어 지시, 예 "광고성 행 제거"·"각 행에 한 줄 요약 summary 필드 추가"·"조건에 맞는 것만") · schema(선택 — 새 필드 명세 "selected(불리언), reason(사유)". 정적 검사·출력 지시·필드 존재 검사 공용) · input_fields(선택 — 모델에 보낼 최상위 열 배열, 생략=전체; 숨긴 원본 열은 모델이 수정할 수 없음) · preserve_rows(선택 boolean, 기본 false — 모든 _i 정확히 한 번, 입력 순서 복원; 누락·중복·추가 거절) · fields(선택 — 병합 뒤 남길 필드 배열, 생략=입력 필드 보존+추가 허용; 입력 필드를 나열해도 모델이 되쓰지 않는다 — 코드가 원 행에서 가져온다). 모델 출력=행마다 새/바뀐 필드만(색인 병합, 2026-09-06) — 큰 입력이라도 출력은 새 정보 크기. 집합 전체를 한 호출로 처리(행별 독립 처리는 [table:each] 안에서). 반환에 rows_in/rows_out(+rows_dropped) 동반 — 조용한 깎기 금지. 입력 상한 초과=정직 거절(take/filter 로 줄이기). >> 파이프로 앞 통화 자동 수용. contract(선택 — 중첩 배열의 입력 ID 전수 응답·필수 필드·허용값, 응답 직후 검사; 행 보존 자동 적용) · inspect:batch|each(선택 — 실제 투영 입력의 요청 크기·반복 배열 점검, 모델 호출 0, 원본 items+inspection 반환; criteria와 충돌). 상세 guides/ibl_composition.md. 일반 실행은 모델 비용(기어 실행 축).
         group: transform
         router: handler
         tool: ai_transform

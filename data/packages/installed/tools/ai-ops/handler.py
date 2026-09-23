@@ -460,6 +460,7 @@ def _struct(tool_input: dict) -> str:
 # ───────────────────────── 중간: [table:ai] ─────────────────────────
 
 def _transform(tool_input: dict) -> str:
+    """Optional contract checks coverage at the call boundary; inspect never calls AI."""
     instruction = str(tool_input.get("instruction") or "").strip()
     if not instruction:
         return _fail('instruction(자연어 지시)이 필요합니다 — 예 "광고성 행 제거", '
@@ -488,9 +489,19 @@ def _transform(tool_input: dict) -> str:
     preserve = tool_input.get("preserve_rows", False)
     if type(preserve) is not bool:
         return _fail("preserve_rows는 boolean이어야 합니다.")
-    if not items:
-        return _ok({"items": [], "rows_in": 0, "rows_out": 0,
-                    "note": "입력 0행 — AI 호출 생략(비용 0)."})
+    from common.item_contract import ContractError, validate_contract, check_inputs, check_outputs
+    from common.ai_input_inspection import inspect_inputs, indexed_payload
+    contract = tool_input.get("contract")
+    inspect = tool_input.get("inspect")
+    if inspect is not None and inspect not in ("batch", "each"):
+        return _fail("inspect는 batch(전체 한 요청) 또는 each(행별 한 요청)여야 합니다.")
+    try:
+        validate_contract(contract, input_fields=input_fields, fields=fields,
+                          preserve_rows=tool_input.get("preserve_rows"))
+    except ContractError as exc:
+        return _fail(str(exc), error_type="contract", **exc.details)
+    if contract is not None:
+        preserve = True
 
     # ★색인 병합 계약(2026-09-06, ep2882 실측): 옛 계약은 모델이 **행 전체**를 다시 쓰게 했다 —
     #   fields 에 title·summary·url 이 있으면 규칙 ⑤가 입력을 되받아쓰게 만들어, 출력 글자의 76%
@@ -500,18 +511,34 @@ def _transform(tool_input: dict) -> str:
     #   병합한다(값 보존·순서 = 반환 순서·뺀 _i = 제거·_i 없는 행 = 신규). 모델이 계약을 어기고
     #   _i 없이 전 행을 돌려주면 옛 계약(전체 행)으로 정직 폴백하고 `_merge: "full"` 로 신고한다.
     dict_items = [r if isinstance(r, dict) else {"value": r} for r in items]
+    try:
+        check_inputs(dict_items, contract, input_fields=input_fields)
+    except ContractError as exc:
+        return _fail(str(exc), error_type="contract", **exc.details)
     visible = dict_items
-    if input_fields is not None:
+    if input_fields is not None and dict_items:
         missing = [f for f in input_fields if not any(f in r for r in dict_items)]
         if missing:
             return _fail("모든 입력 행에 없는 input_fields: " + ", ".join(missing))
         visible = [{k: v for k, v in r.items() if k in input_fields} for r in dict_items]
-    indexed = [{**r, "_i": i} for i, r in enumerate(visible)]
-    payload, perr = _items_payload(indexed)
-    if perr:
-        encoded = json.dumps(indexed, ensure_ascii=False)
-        return _fail(perr, error_type="input_size", input_chars=len(encoded),
-                     input_bytes=len(encoded.encode("utf-8")), limit_chars=_ITEMS_CAP)
+    if inspect is not None:
+        try:
+            inspection = inspect_inputs(visible, mode=inspect, limit_chars=_ITEMS_CAP)
+        except ValueError as exc:
+            return _fail(str(exc), error_type="input_inspection")
+        result = {"items": items, "inspection": inspection}
+        if inspection["oversized_count"]:
+            return _fail("계획된 요청이 입력 상한을 초과합니다.", error_type="input_size", **result)
+        return _ok(result)
+    if not items:
+        return _ok({"items": [], "rows_in": 0, "rows_out": 0,
+                    "note": "입력 0행 — AI 호출 생략(비용 0)."})
+    payload = indexed_payload(visible)
+    if len(payload) > _ITEMS_CAP:
+        return _fail("입력이 너무 큽니다 — 입력 투영·분할을 점검하세요. 일부 처리 의도라면 "
+                     "[table:take]/[table:filter]로 범위를 정하세요. 자동 축소하지 않습니다.",
+                     error_type="input_size", input_chars=len(payload),
+                     input_bytes=len(payload.encode("utf-8")), limit_chars=_ITEMS_CAP)
 
     system = (
         "너는 통화 변환자다. 입력 items(JSON 배열, 각 행에 색인 _i)를 지시대로 변환한다. "
@@ -530,6 +557,11 @@ def _transform(tool_input: dict) -> str:
         system += " 입력은 일부 열만 보낸 것이다. 반드시 _i를 쓰고 보이지 않는 기존 열을 생성·수정하지 마라."
     if preserve:
         system += " 모든 입력 _i를 정확히 한 번씩 반환하라. 행 추가·누락·중복은 오류다. 순서는 코드가 복원한다."
+    if contract is not None:
+        system += ("\n[행별 완전성 계약] covers의 input 배열에 있는 key를 output 배열의 "
+                   "output_key(생략 시 key)에 정확히 한 번씩 반환하라. required는 필수 비null 필드, "
+                   "allowed는 필드별 허용값이다. output은 이번 응답에 반드시 포함하라.\n"
+                   + json.dumps(contract, ensure_ascii=False))
 
     from oneshot_facade import oneshot_json, records_gate, mark_ai
     parsed, err = oneshot_json(f"[items]\n{payload}\n\n[지시]\n{instruction}", system)
@@ -556,8 +588,15 @@ def _transform(tool_input: dict) -> str:
                 if sorted(indices) != list(range(len(dict_items))):
                     raise ValueError("preserve_rows: 입력 행 누락 또는 중복입니다.")
                 out = [row for _, row in sorted(zip(indices, out), key=lambda pair: pair[0])]
+        # Fresh output is checked against the original snapshot BEFORE merging;
+        # an old result carried by an input row cannot satisfy a missing response.
+        check_outputs(dict_items, out, contract)
         out, merge_mode, bad_idx = _merge_by_index(dict_items, out)
+    except ContractError as exc:
+        return _fail(str(exc), error_type="contract", **exc.details)
     except ValueError as exc:
+        if contract is not None:
+            return _fail(f"변환 실패: {exc}", error_type="contract", phase="output")
         return _fail(f"변환 실패: {exc}")
     schema_error = records_schema_error(out, schema)
     if schema_error:

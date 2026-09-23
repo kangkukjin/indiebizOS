@@ -86,8 +86,9 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 본문·실적을 보존한다. [관용구 등록 수리](../../docs/JUDGMENT_IDIOM_REGISTRATION_REPAIRS_2026_09_21.md).
 전체 관용구 반환형을 재검사하고, 빈 파일 후보와 콜드 검수의 계약 유실을 고쳤다.
 [반환 계약 수리](../../docs/IDIOM_RETURN_REPAIRS_2026_09_21.md).
-AI 팁 보고서의 큰 비교 입력은 후보·기존 팁 양쪽으로 나누고 비교 쌍과 재개 범위를 검증한다.
-준비 실패의 저장과 최초 원인 표시: [4010 수리](../../docs/EPISODE_4010_REPAIRS_2026_09_24.md).
+AI 팁 보고서는 영상 ID로 재사용을 막고 이번 후보만 선발한다. 누적 팁 의미 비교는 제거했다.
+현재 계약: [영상 단위 중복 방지](../../docs/AI_TIPS_VIDEO_ONLY_DEDUP_2026_09_24.md).
+과거 비교 분할·준비 실패 저장 수리 기록: [4010 수리](../../docs/EPISODE_4010_REPAIRS_2026_09_24.md).
 단계별 절약·근거 재전달·부분 복구의 공통 문제와 검증 범위: [4010 시스템 성찰](../../docs/EPISODE_4010_SYSTEM_REFLECTION_2026_09_24.md).
 긴 자막의 전 구간 추출·관련 원문 색인·구간별 재개: [4011 긴 원문 수리](../../docs/EPISODE_4011_LONG_SOURCES_2026_09_24.md).
 빈 검색의 정상 통화·질의별 결과 보존과 부분 재개: [4011 검색 수리](../../docs/EPISODE_4011_SEARCH_REPAIR_2026_09_24.md).

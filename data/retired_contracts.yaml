@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: ai_tips_cross_report_semantic_dedup
+    retired: 2026-09-24
+    reason: 사용자가 요구한 영상 ID 중복 방지를 누적 팁 전건 의미 비교로 확대해 불필요한 호출·복구·검수 비용을 만들었다.
+    instead: 다룬 영상은 ID로 제외하고 과거와 같은 팁은 허용한다. AI는 이번 후보만 선발·검수한다.
+    phrases:
+      - 'known: $기존팁제목'
+      - '재탕은 오늘 주제의 기존 팁'
+      - 'op:compared는 원장 전건 분할 비교를 검증한다'
   - id: ibl_separate_current_curriculum
     retired: 2026-09-23
     reason: 새 언어를 선택 기능처럼 소개하고 주 교재와 모델 실행 기본값을 구형으로 남겨 조합을 방해했다.

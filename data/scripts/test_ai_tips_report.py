@@ -35,16 +35,9 @@ def fixture_ai(item):
             {"video_id": r["video_id"], "reason": "서로 다른 복구 방식",
              "source_assessment": "제공 채널 정보만 확인, 전문성 미확인",
              "popularity_assessment": "제공된 반응 수치 범위에서 평가"} for r in source["videos"]]}
-    if "repair_id,candidate_id" in task:
-        return {"repair_id": source["repair_id"], "candidate_id": source["candidate"]["candidate_id"],
-                "verdict": "unknown", "matched_ids": [], "reason": "fixture: 독립 확인 불가"}
-    if "matched_ids:[known_id]" in task:
-        return {"batch_id": source["batch_id"], "decisions": [
-            {"candidate_id": r["candidate_id"], "verdict": "novel", "matched_ids": [],
-             "reason": "기존 방법과 다른 복구 절차"} for r in source["candidates"]]}
     if "keep:boolean" in task:
         return {"decisions": [{"candidate_id": r["candidate_id"], "keep": True,
-                               "reason": "기존 자료에 없는 구체 방법",
+                               "reason": "이번 후보 중 실행 가능한 구체 방법",
                                "source_assessment": "출처 정보의 한계를 인지함",
                                "popularity_assessment": "인기만으로 가치를 판정하지 않음",
                                "value_assessment": "원문에 실행 가능한 복구 행동이 있어 시험할 가치"} for r in source["candidates"]]}
@@ -86,7 +79,7 @@ def execute(tmp_path, monkeypatch):
     from common.pkg_utils import load_sibling
     scriptops = load_sibling(str(ROOT / "data/packages/installed/tools/system_essentials/handler.py"), "script_ops")
     calls, stages = [], {}
-    model_calls = []
+    model_calls, ai_inputs = [], []
     transcripts, struct_calls, struct_hooks = {}, [], []
     metadata_overrides = {}
     search_calls, search_responses = [], {}
@@ -175,6 +168,7 @@ def execute(tmp_path, monkeypatch):
         if node == "table" and act == "ai":
             source = p.get("_prev_result") if "_prev_result" in p else p.get("items")
             inputs = helper.rows(source)
+            ai_inputs.extend(copy.deepcopy(inputs))
             if inputs:
                 model_calls.append(("ai", len(inputs)))
             return {"success": True, "items": [{**r, "result": fixture_ai(r)} for r in inputs],
@@ -191,7 +185,7 @@ def execute(tmp_path, monkeypatch):
         return workflow_engine.execute_pipeline(steps, str(tmp_path))
     run.stages, run.calls, run.corrupt = stages, calls, corrupt
     run.root = tmp_path / "reports"
-    run.model_calls = model_calls
+    run.model_calls, run.ai_inputs = model_calls, ai_inputs
     run.transcripts, run.struct_calls, run.struct_hooks = transcripts, struct_calls, struct_hooks
     run.metadata_overrides = metadata_overrides
     run.search_calls, run.search_responses = search_calls, search_responses
@@ -306,54 +300,6 @@ def test_old_flattened_failed_search_resumes_only_failed_queries(execute):
     assert all(restored["search_outcomes"][s]["status"] == "ok" for s in helper.STRATA if s != "korean")
 
 
-
-@pytest.mark.parametrize("mutation", ["none", "missing", "changed", "rejected"])
-def test_partitioned_final_review_keeps_every_reason_and_requires_every_pass(execute, mutation):
-    final(execute())
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    state.pop("completed")
-    original = copy.deepcopy(execute.stages["finish"]["data"]["items"][0])
-    original.pop("result")
-    decisions = [{"candidate_id": "c1", "verdict": "novel", "matched_ids": [],
-                  "batch_ids": ["b" + str(i)], "reason": str(i) + "원문 비교 근거" * 250}
-                 for i in range(45)]
-    original["input"]["novelty"]["decisions"] = decisions
-    request = helper.final_review_tasks(state, {"items": [original]})
-    assert request["count"] > 1
-    assert all(helper.request_size(r) < helper.REQUEST_CAP for r in request["items"])
-    assert [d for r in request["items"] for d in r["input"]["novelty"]["decisions"]] == decisions
-    assert all(r["input"]["markdown"] == state["markdown"] for r in request["items"])
-    data = {"items": [{**r, "result": fixture_ai(r)} for r in request["items"]]}
-    if mutation == "missing":
-        data["items"].pop()
-    elif mutation == "changed":
-        data["items"][-1]["input"]["novelty"]["decisions"].pop()
-    elif mutation == "rejected":
-        data["items"][-1]["result"]["checks"]["novelty"] = False
-        data["items"][-1]["result"]["issues"] = ["마지막 분할 근거 모순"]
-    if mutation == "none":
-        assert helper.stage_finish(state, data)["items"][0]["status"] == "reviewed_draft"
-        assert len(state["final_review"]["parts"]) == request["count"]
-    else:
-        with pytest.raises(ValueError):
-            helper.stage_finish(state, data)
-        assert not state.get("completed")
-
-
-
-def test_feedback_handoff_uses_exact_ledger_entries_without_rewriting_audit(execute):
-    known = [{"tip": "첫 기존 팁", "how": "원본 절차", "source": {"url": "https://example.com"}},
-             {"tip": "다른 기존 팁", "how": "별도 원본"}]
-    helper.atomic(execute.root / "db/tips.json", known)
-    final(execute())
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    original = copy.deepcopy(state["novelty"])
-    state["revision_feedback"] = "k1의 설명이 충돌함. k999는 존재하지 않음."
-    view = helper.novelty_view(state)
-    assert view["feedback_known"] == [{"known_id": "k1", **known[0]}]
-    assert state["novelty"] == original
-    assert view["full_audit_hash"] == helper.digest(original)
-
 def test_named_full_pipeline_draft_keeps_production_ledgers_unchanged(execute):
     out = final(execute())
     assert out["status"] == "reviewed_draft" and out["new_tips"] == 2
@@ -381,7 +327,7 @@ def test_full_pipeline_commit_and_idempotent_finish(execute):
     ("candidates", lambda data: helper.unpack(data["items"][0])["data"]["items"][0].update(timestamp="08:00")),
     ("chosen", lambda data: data["items"][0]["result"]["decisions"].pop()),
     ("reviewed", lambda data: data["items"][0]["result"]["decisions"][0].update(verdict="needs_evidence")),
-    ("finish", lambda data: data["items"][0]["result"]["checks"].update(novelty=False)),
+    ("finish", lambda data: data["items"][0]["result"]["checks"].update(within_report_uniqueness=False)),
     ("finish", lambda data: data["items"][0]["result"].update(report_hash="changed")),
 ])
 def test_bad_evidence_never_reaches_ledgers(execute, stage, mutate):
@@ -418,8 +364,6 @@ def test_freshness_boundary_missing_date_and_long_video_limits():
     wrappers[0]["data"]["items"][0]["upload_date"] = "2026-03-26"
     with pytest.raises(ValueError, match="2편 미만"):
         helper.stage_metadata(state, {"items": wrappers})
-
-
 
 
 def test_named_and_expanded_have_identical_report(execute):
@@ -514,8 +458,6 @@ def test_saved_report_mutation_blocks_finish(execute):
     assert not (execute.root / "db/tips.json").exists()
 
 
-
-
 def test_revision_preserves_rejection_and_reuses_sources(execute):
     def reject(args):
         args["data"]["items"][0]["result"]["checks"]["actionability"] = False
@@ -552,8 +494,6 @@ def test_final_review_receives_actual_metadata_and_search_scope(execute):
     assert len(source["search"]["candidates"]) == 2
 
 
-
-
 def test_editorial_references_are_readable_titles_before_final_review(execute):
     def mention(args):
         args["data"]["items"][0]["result"]["summary"][0]["reason"] = "c2와 보완적이다"
@@ -583,10 +523,10 @@ def test_static_contract_and_real_registration_gates():
 
 
 def test_accepted_extraction_survives_next_request_preparation_failure(execute, monkeypatch):
-    prepare = helper.prepare_comparison
+    prepare = helper.prepare_selection
     def blocked(state):
         raise ValueError("fixture: 다음 요청 입력 상한")
-    monkeypatch.setattr(helper, "prepare_comparison", blocked)
+    monkeypatch.setattr(helper, "prepare_selection", blocked)
     assert not execute()["success"]
     directory = execute.root / "_runs/test"
     state = helper.load_json(directory / "state.json")
@@ -596,48 +536,12 @@ def test_accepted_extraction_survives_next_request_preparation_failure(execute, 
     assert response["status"] == "blocked" and response["accepted"]
     assert response["resume"]["op"] == "candidates"
     assert helper.load_json(directory / "state.json")["preparation_failure"] == response
-    monkeypatch.setattr(helper, "prepare_comparison", prepare)
+    monkeypatch.setattr(helper, "prepare_selection", prepare)
     assert final(execute())["status"] == "reviewed_draft"
     # 앞 단계 table:ai와 1차 struct 호출을 반복하지 않는다.
     assert execute.model_calls[:len(before)] == before
     assert sum(k == "struct" and "candidate_id" not in v for k, v in execute.model_calls) == 2
     assert "preparation_failure" not in helper.load_json(directory / "state.json")
-
-
-def test_large_ledger_is_fully_compared_and_not_repeated_in_editorial(execute):
-    known = [{"tip": "기존 팁 " + str(i), "how": "다른 방법 " * 80} for i in range(647)]
-    helper.atomic(execute.root / "db/tips.json", known)
-    final(execute())
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    batches = state["comparison_batches"]
-    assert len(batches) > 1
-    ids = [k for batch in batches.values() for k in batch["known_ids"]]
-    assert len(ids) == len(set(ids)) == len(known)
-    assert set(ids) == {"k" + str(i + 1) for i in range(len(known))}
-    for stage in ("draft", "finish"):
-        source = execute.stages[stage]["data"]["items"][0]["input"]
-        assert "known" not in source
-        assert source["novelty_scope" if stage == "draft" else "novelty"]["known_count"] == 647
-    assert helper.load_json(execute.root / "db/tips.json") == known
-
-
-@pytest.mark.parametrize("mutation", ["missing_batch", "missing_candidate", "unknown", "bad_id"])
-def test_incomplete_comparison_cannot_reach_selection(execute, mutation):
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "원본"}])
-    def corrupt(args):
-        data = args["data"]["items"]
-        if mutation == "missing_batch":
-            data.clear()
-        elif mutation == "missing_candidate":
-            data[0]["result"]["decisions"].pop()
-        elif mutation == "unknown":
-            data[0]["result"]["decisions"][0]["verdict"] = "unknown"
-        else:
-            data[0]["result"]["decisions"][0].update(verdict="duplicate", matched_ids=["outside"])
-        return args
-    execute.corrupt["compared"] = corrupt
-    assert not execute()["success"]
-    assert "chosen" not in execute.stages
 
 
 def test_completed_reentry_makes_zero_new_model_calls(execute):
@@ -659,146 +563,6 @@ def test_receipt_tampering_and_old_version_are_rejected(execute):
     helper.atomic(path, state)
     with pytest.raises(ValueError, match="버전"):
         helper.run(execute.stages["finish"])
-
-
-
-
-def force_uncertain(args):
-    args["data"]["items"][0]["result"]["decisions"][0]["verdict"] = "unknown"
-    return args
-
-
-def repair_model(monkeypatch, verdict="novel", mutate=None):
-    original = fixture_ai
-    def respond(item):
-        if "repair_id,candidate_id" not in item["task"]:
-            return original(item)
-        source = item["input"]
-        assert source["source_scope"] == "complete"
-        assert "0.0s " in source["transcript"]
-        result = {"repair_id": source["repair_id"],
-                  "candidate_id": source["candidate"]["candidate_id"],
-                  "verdict": verdict, "matched_ids": [],
-                  "reason": "전문과 기존 자료 전체를 확인한 판정"}
-        if mutate:
-            mutate(result, source)
-        return result
-    monkeypatch.setitem(globals(), "fixture_ai", respond)
-
-
-@pytest.mark.parametrize("missing", [False, True])
-def test_full_source_repair_completes_all_comparison_pairs(execute, monkeypatch, missing):
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
-    repair_model(monkeypatch)
-    def corrupt(args):
-        if missing:
-            args["data"]["items"][0]["result"]["decisions"].pop()
-        else:
-            force_uncertain(args)
-        return args
-    execute.corrupt["compared"] = corrupt
-    out = final(execute())
-    assert out["new_tips"] == 2
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    assert state["comparison_repair_used"]
-    assert len(state["novelty"]["decisions"]) == 2
-    assert all(d["verdict"] == "novel" for d in state["novelty"]["decisions"])
-    before = list(execute.model_calls)
-    execute.corrupt.clear()
-    final(execute())
-    assert execute.model_calls == before
-    assert helper.run(execute.stages["comparison_repair"])["cached"]
-    altered = copy.deepcopy(execute.stages["comparison_repair"])
-    altered["data"]["items"][0]["result"]["reason"] = "changed"
-    with pytest.raises(ValueError, match="입력 변경"):
-        helper.run(altered)
-
-
-def test_verified_unsupported_candidate_is_excluded_with_reason(execute, monkeypatch):
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
-    repair_model(monkeypatch, "unsupported")
-    execute.corrupt["compared"] = force_uncertain
-    out = final(execute())
-    assert out["new_tips"] == 1
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    rejected = {d["candidate_id"] for d in state["novelty"]["decisions"]
-                if d["verdict"] == "unsupported"}
-    assert len(rejected) == 1
-    assert rejected.isdisjoint(t["candidate_id"] for t in state["final_tips"])
-    assert "근거가 확인되지 않아 제외" in Path(out["report"]).read_text()
-
-
-@pytest.mark.parametrize("mutation", [
-    lambda r, s: r.update(candidate_id="outside"),
-    lambda r, s: r.update(verdict="duplicate", matched_ids=["outside"]),
-    lambda r, s: r.update(verdict="unknown"),
-    lambda r, s: r.update(reason=""),
-])
-def test_bad_full_source_repair_stays_blocked(execute, monkeypatch, mutation):
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
-    repair_model(monkeypatch, mutate=mutation)
-    execute.corrupt["compared"] = force_uncertain
-    assert not execute("commit")["success"]
-    assert "chosen" not in execute.stages
-    assert helper.load_json(execute.root / "db/tips.json") == [{"tip": "기존", "how": "다른 방법"}]
-    with pytest.raises(ValueError, match="1회"):
-        helper.run({"op": "comparison_retry", "run": str(execute.root / "_runs/test")})
-
-
-def test_repair_checks_source_integrity_before_acceptance(execute, monkeypatch):
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
-    repair_model(monkeypatch)
-    execute.corrupt["compared"] = force_uncertain
-    def change(args):
-        path = execute.root / "_runs/test/transcript-aaaaaaaaaaa.json"
-        helper.atomic(path, {"items": [{"start": 0, "text": "changed"}]})
-        return args
-    execute.corrupt["comparison_repair"] = change
-    assert not execute()["success"]
-    assert "chosen" not in execute.stages
-
-
-def test_novelty_view_retains_every_relevant_reason_and_batch(execute):
-    final(execute())
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    selected = {state["final_tips"][0]["candidate_id"]}
-    view = helper.novelty_view(state, selected)
-    expanded = [{**{k: v for k, v in r.items() if k != "batch_ids"}, "batch_id": bid}
-                for r in view["decisions"] for bid in r["batch_ids"]]
-    expected = [r for r in state["novelty"]["decisions"] if r["candidate_id"] in selected]
-    assert sorted(expanded, key=helper.canonical) == sorted(expected, key=helper.canonical)
-
-
-
-
-@pytest.mark.parametrize("conflict", [False, True])
-def test_full_source_retry_split_preserves_all_known_and_conflicts(execute, monkeypatch, conflict):
-    known = [{"tip": "기존 " + str(i), "how": "다른 방법 " * 150} for i in range(120)]
-    helper.atomic(execute.root / "db/tips.json", known)
-    def response(result, source):
-        if source["repair_id"] == "r1":
-            result.update(verdict="unsupported" if conflict else "duplicate",
-                          matched_ids=[] if conflict else [source["known"][0]["known_id"]])
-    repair_model(monkeypatch, mutate=response)
-    def corrupt(args):
-        for row in args["data"]["items"]:
-            row["result"]["decisions"][0]["verdict"] = "unknown"
-        return args
-    execute.corrupt["compared"] = corrupt
-    result = execute()
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    requests = state["comparison_retry"]["requests"]
-    assert len(requests) > 1
-    ids = [r["known_id"] for item in requests for r in item["input"]["known"]]
-    assert len(ids) == len(set(ids)) == len(known)
-    assert all(helper.request_size(item) < helper.REQUEST_CAP for item in requests)
-    if conflict:
-        assert not result["success"] and "chosen" not in execute.stages
-    else:
-        assert final(result)["new_tips"] == 1
-        assert state["novelty"]["matched_known"][0]["known_id"] == "k1"
-    assert helper.load_json(execute.root / "db/tips.json") == known
-
 
 
 def needs_official_evidence(execute):
@@ -970,137 +734,6 @@ def test_recent_topics_remain_ten_entries(execute):
     assert len(history) == 10 and history[-1]["topic"] == "복구"
 
 
-def test_comparison_uses_verified_neighboring_source_not_only_anchor(tmp_path):
-    path = tmp_path / "source.json"
-    segs = [{"start": 40, "text": "Earlier unrelated content"},
-            {"start": 60, "text": "Before the anchor"},
-            {"start": 90, "text": QUOTES[0]},
-            {"start": 120, "text": "Then combine the answers into one response."},
-            {"start": 181, "text": "Outside the declared excerpt"}]
-    helper.atomic(path, {"items": segs})
-    state = {"sources": {IDS[0]: {"path": str(path), "hash": helper.digest(segs)}},
-             "candidates": [{"candidate_id": "c1", "video_id": IDS[0],
-                             "timestamp": "01:30", "_quote": QUOTES[0]}]}
-    row = helper.comparison_candidates(state)[0]
-    assert row["source_context"]["items"] == segs[1:4]
-    assert row["source_context"]["scope"] == "excerpt"
-    assert "source_context" not in state["candidates"][0]
-    helper.atomic(path, {"items": segs[:-1]})
-    with pytest.raises(ValueError, match="자막이 변경"):
-        helper.comparison_candidates(state)
-
-
-def test_comparison_context_counts_towards_request_limit(execute, monkeypatch):
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "절차"}])
-    original = helper.comparison_candidates
-    def oversized(state):
-        candidates = original(state)
-        candidates[0]["source_context"]["items"][0]["text"] = "근거" * helper.REQUEST_CAP
-        return candidates
-    monkeypatch.setattr(helper, "comparison_candidates", oversized)
-    assert not execute()["success"]
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    assert "candidates" in state["receipts"] and "compared" not in state["receipts"]
-    assert "chosen" not in execute.stages
-
-
-def large_comparison(execute, monkeypatch):
-    known = [{"tip": "기존 " + str(i), "how": "서로 다른 기존 방법 " * 70} for i in range(80)]
-    helper.atomic(execute.root / "db/tips.json", known)
-    original = helper.comparison_candidates
-    def contexts(state):
-        candidates = original(state)
-        for row in candidates:
-            row["source_context"]["items"].append({"start": 1, "text": "보존된 이웃 문맥 " * 2300})
-        return candidates
-    monkeypatch.setattr(helper, "comparison_candidates", contexts)
-    return known
-
-
-def test_two_axis_comparison_completes_every_pair_and_reuses_plan(execute, monkeypatch):
-    from collections import Counter
-    known = large_comparison(execute, monkeypatch)
-    final(execute())
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    requests = execute.stages["compared"]["data"]["items"]
-    assert len(requests) > 2
-    assert all(helper.request_size(r) < helper.REQUEST_CAP for r in requests)
-    expected = {(cid, "k" + str(i + 1)) for cid in ("c1", "c2") for i in range(len(known))}
-    actual = Counter((c["candidate_id"], k["known_id"]) for r in requests
-                     for c in r["input"]["candidates"] for k in r["input"]["known"])
-    assert set(actual) == expected and set(actual.values()) == {1}
-    source = {r["candidate_id"]: r for r in helper.comparison_candidates(state)}
-    assert all(c == source[c["candidate_id"]] for r in requests for c in r["input"]["candidates"])
-    assert len(state["novelty"]["decisions"]) == sum(len(r["input"]["candidates"]) for r in requests)
-    # 재진입 때 더 큰 상한을 사용할 수 있어도 이미 보낸 배치·ID·원문은 유지한다.
-    monkeypatch.setattr(helper, "REQUEST_CAP", helper.REQUEST_CAP * 2)
-    before = [{k: r[k] for k in ("batch_id", "task", "input")} for r in requests]
-    assert helper.prepare_comparison(state)["items"] == before
-    assert helper.load_json(execute.root / "db/tips.json") == known
-
-
-@pytest.mark.parametrize("mutation", ["outside_candidate", "input", "missing_batch", "scope_gap", "scope_overlap"])
-def test_partitioned_comparison_rejects_scope_and_input_corruption(execute, monkeypatch, mutation):
-    large_comparison(execute, monkeypatch)
-    def corrupt(args):
-        rows = args["data"]["items"]
-        if mutation == "outside_candidate":
-            other = next(r for r in rows if r["input"]["candidates"][0]["candidate_id"] !=
-                         rows[0]["input"]["candidates"][0]["candidate_id"])
-            rows[0]["result"]["decisions"].append(other["result"]["decisions"][0])
-        elif mutation == "input":
-            rows[0]["input"]["candidates"][0]["source_context"]["items"].pop()
-        elif mutation == "missing_batch":
-            rows.pop()
-        else:
-            path = Path(args["run"]) / "state.json"
-            state = helper.load_json(path)
-            if mutation == "scope_gap":
-                state["comparison_batches"].pop(rows[-1]["batch_id"])
-                rows.pop()
-            else:
-                state["comparison_batches"]["extra"] = state["comparison_batches"][rows[0]["batch_id"]]
-            helper.atomic(path, state)
-        return args
-    execute.corrupt["compared"] = corrupt
-    assert not execute()["success"]
-    assert "chosen" not in execute.stages
-
-
-@pytest.mark.parametrize("missing", [False, True])
-def test_partitioned_uncertain_retry_only_repairs_assigned_candidates(execute, monkeypatch, missing):
-    large_comparison(execute, monkeypatch)
-    repair_model(monkeypatch)
-    def corrupt(args):
-        if missing:
-            args["data"]["items"][0]["result"]["decisions"].clear()
-        else:
-            force_uncertain(args)
-        return args
-    execute.corrupt["compared"] = corrupt
-    final(execute())
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    repaired = helper.load_json(Path(state["run"]) / "comparison-after-retry.json")["items"]
-    for wrapper in repaired:
-        ids = {d["candidate_id"] for d in wrapper["result"]["decisions"]}
-        assert ids == set(state["comparison_batches"][wrapper["batch_id"]]["candidate_ids"])
-    first = execute.stages["compared"]["data"]["items"][0]["input"]["candidates"][0]["candidate_id"]
-    assert {r["input"]["candidate"]["candidate_id"] for r in state["comparison_retry"]["requests"]} == {first}
-
-
-def test_legacy_comparison_plan_keeps_original_requests(execute):
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
-    final(execute())
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    for batch in state["comparison_batches"].values():
-        batch.pop("candidate_ids")
-    original = execute.stages["compared"]["data"]
-    assert helper.prepare_comparison(state)["items"] == [
-        {k: r[k] for k in ("batch_id", "task", "input")} for r in original["items"]]
-    audit, _ = helper.comparison_audit(state, original)
-    assert len(audit) == 2
-
-
 def long_source(execute):
     filler = [{"start": float(i * 10), "text": (f"Background {i}. " + "context " * 120)}
               for i in range(1, 160)]
@@ -1177,7 +810,7 @@ def test_long_source_scan_rejects_incomplete_or_changed_evidence(execute, fault)
     execute.corrupt["source_scanned"] = corrupt
     assert not execute("commit")["success"]
     state = helper.load_json(execute.root / "_runs/test/state.json")
-    assert "compared" not in state["receipts"]
+    assert "chosen" not in state["receipts"]
     assert not (execute.root / "db/tips.json").exists()
 
 
@@ -1244,29 +877,6 @@ def test_long_single_segment_is_partitioned_without_losing_characters():
     assert "".join(u["text"] for u in pieces) == source[0]["text"]
     chunks = helper.sourceflow.chunks(pieces)
     assert [i for r in chunks for i in range(r["first"], r["last"])] == list(range(len(pieces)))
-
-
-def test_long_novelty_retry_uses_scanned_verbatim_evidence(execute, monkeypatch):
-    long_source(execute)
-    helper.atomic(execute.root / "db/tips.json", [{"tip": "기존", "how": "다른 방법"}])
-    original = fixture_ai
-    seen = []
-    def respond(item):
-        source = item["input"]
-        if "repair_id" not in source:
-            return original(item)
-        seen.append(source)
-        assert source["source_scope"] == "full_source_scan_selected_verbatim_evidence"
-        assert "CAVEAT" in source["transcript"]
-        return {"repair_id": source["repair_id"], "candidate_id": source["candidate"]["candidate_id"],
-                "verdict": "novel", "matched_ids": [], "reason": "전 구간 색인과 원문 대조"}
-    monkeypatch.setitem(globals(), "fixture_ai", respond)
-    execute.corrupt["compared"] = force_uncertain
-    final(execute())
-    assert seen
-    state = helper.load_json(execute.root / "_runs/test/state.json")
-    assert isinstance(state["comparison_retry"]["scope_hash"], str)
-    assert all(helper.request_size(r) < helper.REQUEST_CAP for r in state["comparison_retry"]["requests"])
 
 
 def test_long_evidence_reentry_does_not_overwrite_corruption(execute):
@@ -1406,3 +1016,65 @@ def test_bad_or_missing_popularity_is_unknown_not_zero(bad):
     result = helper.selection.source_fields({'view_count': bad})
     assert result['view_count'] is None
     assert helper.selection.source_fields({'view_count': 0})['view_count'] == 0
+
+
+@pytest.mark.parametrize("size", [0, 655, 2000])
+def test_prior_tip_count_does_not_add_model_calls_or_feed_history(execute, size):
+    marker = "OLD_TIP_BODY_NOT_FOR_AI"
+    old = [{"tip": TITLES[i % 2], "topic": "복구",
+            "how": TITLES[i % 2] if i < 2 else marker * 50, "note": marker} for i in range(size)]
+    helper.atomic(execute.root / "db/tips.json", old)
+    helper.atomic(execute.root / "ai_tips_report_2026-09-22_old.md", marker, text=True)
+    out = final(execute("commit"))
+    assert out["new_tips"] == 2 and out["tips"] == size + 2
+    assert helper.load_json(execute.root / "db/tips.json")[:size] == old
+    assert sum(k == "ai" for k, _ in execute.model_calls) == 7
+    assert len(execute.struct_calls) == 4
+    assert all("known" not in r for r in execute.struct_calls)
+    assert marker not in json.dumps(execute.ai_inputs)
+    for request in execute.ai_inputs:
+        source = request["input"]
+        assert not {"known", "novelty", "novelty_scope", "previous_report"}.intersection(source)
+    assert not {"compared", "comparison_retry", "comparison_repair"}.intersection(execute.stages)
+    assert "within_report_uniqueness" in execute.stages["finish"]["data"]["items"][0]["result"]["checks"]
+    before = copy.deepcopy(execute.model_calls)
+    assert final(execute("commit")) == out
+    assert execute.model_calls == before
+
+
+def test_previously_handled_video_is_excluded_before_metadata_and_transcript(execute):
+    old_id = "oldvideo123"
+    assert len(old_id) == 11
+    helper.atomic(execute.root / "_covered_videos.json", {
+        "covered": [{"id": old_id, "verdict": "tips_1"}], "recent_topics": []})
+    execute.search_responses.update({s: {"success": True, "items": [
+        {"video_id": old_id}, *[{"video_id": vid} for vid in IDS]]} for s in helper.STRATA})
+    final(execute())
+    assert all(vid != old_id for _, vid in execute.calls)
+    assert set(execute.calls) == {(op, vid) for op in ("info", "transcript") for vid in IDS}
+
+
+def test_final_review_rejects_overlarge_report_without_silent_truncation(execute):
+    final(execute())
+    state = helper.load_json(execute.root / "_runs/test/state.json")
+    request = copy.deepcopy(execute.stages["finish"]["data"])
+    request["items"][0]["input"]["markdown"] = "x" * helper.REQUEST_CAP
+    with pytest.raises(ValueError, match="상한"):
+        helper.final_review_tasks(state, request)
+
+
+def test_new_default_run_preserves_old_state_and_removed_ops_cannot_resume(tmp_path):
+    config = {"root": str(tmp_path), "topic": "복구", "date": "2026-09-24"}
+    old_dir = tmp_path / "_runs" / (config["date"] + "-" + helper.digest(config["topic"])[:12])
+    old = {"version": 2, "run": str(old_dir), "config": config, "marker": "old evidence"}
+    helper.atomic(old_dir / "state.json", old)
+    before = (old_dir / "state.json").read_bytes()
+    result = helper.start(config)
+    assert result["run"] != str(old_dir) and result["run"].endswith("-v3")
+    for op in ("compared", "comparison_retry", "comparison_repair", "sources_indexed"):
+        with pytest.raises(ValueError, match="버전"):
+            helper.run({"op": op, "run": str(old_dir), "data": {"items": []}})
+    assert (old_dir / "state.json").read_bytes() == before
+    for op in ("compared", "comparison_retry", "comparison_repair"):
+        with pytest.raises(ValueError, match="알 수 없는 단계"):
+            helper.run({"op": op, "run": result["run"], "data": {"items": []}})

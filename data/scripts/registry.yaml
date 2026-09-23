@@ -9,12 +9,12 @@ AI시대뉴스동기화:
   timeout: 120
 AI팁보고서:
   description: AI팁보고서쓰기 관용구의 상태·검증·저장 부품. op:start는 config(topic,date,root,mode:draft|commit,run_id,reader_context),
-    나머지 단계는 run,data(input_as로 봉투 전달 가능). op:compared는 원장 전건 분할 비교를 검증한다. op:revise는
-    run,from(reviewed),reason으로 내용 검토부터 재개한다. op:evidence는 run,candidate_ids,data로
-    needs_evidence 후보의 추가 원문을 보존하며 승인 없이 재검토로 넘긴다. comparison_retry/comparison_repair는
-    전문을 이용해 불확실·누락 비교만 한 번 재검토한다. v2 영수증은 검증 완료를 먼저 저장하고 다음 요청 준비 실패 시
-    blocked와 재개 위치를 반환한다. 원문·검토 증거를 보존하고 품질 미달·원장 충돌을 거부한다. 단독 보고서 생성 AI가 아니며 관용구로
-    호출한다.
+    나머지 단계는 run,data(input_as로 봉투 전달 가능). 영상 ID로 이미 다룬 영상을 제외한 뒤 영상 선정·팁 추출·이번 후보 선발·검수를 수행한다.
+    과거 팁의 의미 중복은 허용하며 누적 팁을 AI 비교에 보내지 않는다. op:revise는 run,from(reviewed),reason으로 내용 검토부터 재개한다.
+    op:evidence는 run,candidate_ids,data로 needs_evidence 후보의 추가 원문을 보존하며 승인 없이 재검토로 넘긴다.
+    v3 영수증은 검증 완료를 먼저 저장하고 다음 요청 준비 실패 시 blocked와 재개 위치를 반환한다.
+    v1/v2 상태는 보존하고 새 run_id로 실행한다. 원문·검토 증거를 보존하고 품질 미달·원장 충돌을 거부한다.
+    단독 보고서 생성 AI가 아니며 관용구로 호출한다.
   file: ai_tips_report.py
   interpreter: python
   registered_at: '2026-09-23T05:40:38'

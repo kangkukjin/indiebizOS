@@ -85,8 +85,6 @@ def make_plan(h, state, requests):
             h.atomic(path, h.transcript_document(rows))
             job = {**request, "job_id": jid, "path": str(path)}
             if vid in long:
-                # 중복 판정은 후보를 다 모은 뒤 한다. 같은 원장 전체를 구간마다 반복 주입하지 않는다.
-                job["known"] = []
                 job["instruction"] += " 이번 파일은 전체 자막의 한 구간이다. 경계 문맥도 읽되 근거 없는 완결을 추측하지 마라."
             plan["jobs"][jid] = {"request": job, "first": part["first"], "last": part["last"],
                                  "units": part["units"], "hash": h.digest(rows)}
@@ -167,7 +165,7 @@ def candidates(h, state, data):
 
 
 def scan_requests(h, state):
-    if not state.get("source_plan") or "compared" in state.get("receipts", {}):
+    if not state.get("source_plan") or "chosen" in state.get("receipts", {}):
         return envelope([])
     plan = validate_plan(h, state)
     h.require("candidates" in state.get("receipts", {}), "후보 추출이 먼저 필요합니다")

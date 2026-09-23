@@ -576,6 +576,8 @@ class Runtime:
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,
                     "usage": {"steps": self.budget.used_steps, "rows": self.budget.used_rows,
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
+        if self.plan.preflight.get('warnings'):
+            out['precheck_warnings'] = self.plan.preflight['warnings']
         if self.journal:
             out["resume"] = {"run_id": self.journal.run_id}
             out["resumed"] = self.journal.resuming

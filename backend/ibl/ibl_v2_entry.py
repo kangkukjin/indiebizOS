@@ -40,9 +40,8 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
             pass  # Usage accounting never retries an already executed program.
         return result
     except Fault as exc:
-        return {"edition": 2, "ok": False, "success": False, "executed": False,
-                "status": "invalid" if exc.kind == "compile" else "failed",
-                "error": str(exc), "diagnostic": projection(exc.view(source))}
+        from ibl_v2_analysis import syntax_report
+        return projection(syntax_report(exc, source))
     except Exception as exc:
         # A compiler/infrastructure exception is never an affirmative check.
         return {"edition": 2, "ok": False, "success": False, "executed": False,

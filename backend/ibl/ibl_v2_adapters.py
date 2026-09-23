@@ -153,6 +153,8 @@ def load_registry(project_path=".", agent_id=None):
             if not contract or (allowed is not None and not check_node_access(node, allowed)):
                 continue
             contract = copy.deepcopy(validate_contract(contract))
+            contract["analysis"] = {"ai_call": action_config.get("ai_call") is True,
+                                    "ai_inspect_param": action_config.get("ai_inspect_param")}
             adapter = contract["adapter"]
             key = f"{node}:{action}"
             # Capture contract and implementation identities now. A changed

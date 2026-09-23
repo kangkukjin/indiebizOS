@@ -272,7 +272,7 @@ def describe_actions(names, allowed_nodes, edition=None):
     from ibl_access import load_nodes_raw, resolve_allowed_nodes
     from ibl_registry import self_can_run
     if not isinstance(names, list) or not 1 <= len(names) <= 6:
-        raise ValueError("describe는 node:action 이름 1~6개 배열입니다")
+        raise ValueError("describe는 node:action 또는 fn:이름 1~6개 배열입니다")
     allowed = resolve_allowed_nodes(allowed_nodes)
     nodes = load_nodes_raw().get("nodes", {})
     answer = []

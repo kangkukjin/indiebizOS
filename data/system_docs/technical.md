@@ -147,6 +147,10 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 - **요청 봉투 = 행위자 3칸 + 표면**(2026-08-21): `agent_id`(발신 신원 — 없으면 `system_ai`, 이 표면은 전부 소유자 게이트 뒤다) · `task_id`(위임 체인 — 아웃오브프로세스 재진입이 부모 태스크를 복원하는 통로) · `origin`(출처. `user`=사람의 직접 명령, 포털 경유는 `portal`. 없으면 무출처로 원장에 남는다) · `surface`(`web`=원격런처/포털/폰 WebView — "소리가 어디서 나야 하는가"의 판정 축. 데스크탑은 보내지 않는다) · `project_id`/`project_path`.
 - **응답 봉투 = 다이어트**(2026-08-22 M1): `results[]` 는 step 요약(shape·count·bytes·columns·preview, 실패 step 은 오류문 원형), `final_result` 만 원형. 옛 모양은 `verbose: true`. 실패 시 `resume:{from_step, prev_ref}` 가 실리고 `execute_ibl(code, resume)` 로 앞 단 재실행 0으로 이어붙인다.
 - **자동 스필**: 이음매 통화가 200K자를 넘으면 `data/spill/` 참조 봉투로 바뀐다(소비자 투명 해소, cache 계급 24h GC). `[self:write]{spill: true}` 는 명시적 싱크.
+- **현재 문법 작성 검사**: 공통 컴파일러의 `issues/guards/functions/warnings/preflight`를 MCP·직결·HTTP·CLI가 공유한다.
+  진단 `location`은 함수 원문별 좌표, `call_path`는 호출 경로다. 조종실은 기존 검사 API를 사용한다.
+  Hypothesis는 `backend/requirements-dev.txt`의 개발 의존성이고 런타임 번들에 넣지 않는다.
+  도입·구/신 진단 대응: `docs/IBL_AUTHORING_SUPPORT_IMPLEMENTATION_2026_09_24.md`.
 - **형 보존 턴 변수**(2026-09-12 `8f943a61`): `execute_ibl` 경로의 정적 검사는 `typecheck(given=…)` 로 앞 호출이 남긴 턴 변수의 형(`ibl_turn_vars.types_for`, `turn_vars.live` 의 `types`)을 이어받아 검사하고, 구조 추론은 `ibl_value_types` 가 소유한다(행의 열·바깥 봉투·중첩 필드·병렬 분기·빈 결과 구별, 예산 초과는 미상). `/ibl/validate` 의 `typecheck_code` 는 코드만 보므로 이 문맥이 없다. 실행기가 읽는 열 인자 별칭(select 의 columns/cols/fields, compute 의 columns/expr)은 사전의 `flow.columns_param_aliases` 로 선언해 검사기가 같은 우선순위를 본다 — 검사기 코드에 액션 이름을 넣지 않는다. 정본 `docs/IBL_SHAPE_HANDOFF_2026_09_12.md`.
 - **원문 조회 계약**(2026-09-12 ep3632, `db1e14aa`·`310d7aad`): 큰 결과의 표시 참조 `result_ref` 는 실제 큰 필드 `paths`·`max_limit`·바로 쓸 `read_args` 를 싣고, `execute_ibl(code:"", read_result:…)` 조회 응답의 `next_read` 는 같은 ID·경로·페이지 크기에 다음 offset 을 보존한다(마지막 페이지 null, 옛 `next_offset` 유지). 문자 한도·스키마는 `backend/base/result_read_contract.py` 가 소유해 네이티브 도구와 FastMCP 가 같은 스키마를 내며, 기본·상한은 60,000자 — 응답이 `_display.max_chars` 로 페이지 예산을 선언해 액션당 16K 전송 접힘에 본문·`next_read` 가 잘리지 않는다. 파일 입구의 `~workspace/…` 는 `runtime_utils.expand_body_path` 로 해소한다(`self:struct` 의 `file`, 봉투의 `saved_to_file.file_path`). 정본 `docs/EPISODE3632_READ_CONTRACT_2026_09_12.md`.
 - **표면 티켓 회수 규약**(2026-08-27 F51-1): 표면(MCP 등)이 `ticket`(hex 12자, 전송 계층 필드)을 실어 보내면 백엔드가 시작·결말 봉투를 `data/spill/` 에 남긴다(24h GC 동승). 표면의 HTTP 대기가 먼저 끊겨도 그것은 "실행이 죽었다"가 아니라 **"기다림이 끝났다"** 이므로, 정직한 봉투(ticket + 회수법)를 돌려주고 결과는 `execute_ibl{recover}` → `POST /ibl/recover` 로 회수한다. 상태 셋(`done`/`running`/`unknown`)을 뭉개지 않는다. **유한 대기**(2026-09-01): 회수에 `wait` 초(≤240, `[self:script]{op:"status", wait}` 와 같은 계약)를 주면 결말이 날 때까지 기다렸다 돌려준다 — 대기가 먼저 끝나면 `waited` 와 함께 진행 상태를 준다(기다림이 끝난 것이지 실행이 죽은 것이 아니다). 이 통로가 없던 동안 부르는 쪽은 셸 `sleep` 으로 대기를 흉내 내다 몇 초 간격 폴링으로 무너졌다(09-01 실측: 한 주행의 도구 호출 45건 중 16건이 기다림). ★타임아웃 연장은 임시방편이다 — 어떤 한도든 더 긴 문장에 진다. 유한 대기의 반복이라야 어떤 길이의 실행도 덮는다. 티켓 검증은 hex 만 통과(네트워크 값이 파일명이 되는 자리 — 경로 탈출 차단). 가드 `backend/test_surface_ticket_recovery.py` T1~T15. **2026-09-05**: `execute_ibl` 의 `wait` 는 처음 실행에도 통한다 — 넘길 것을 아는 호출이 표면 대기를 늘려 타임아웃 봉투→회수 왕복을 없앤다(ep2829 세 번).
@@ -345,7 +349,7 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(57) → `datastore`(67) → `ibl`(78) → `cognition`(77) → `services`(39) → `surface`(81). `.py` 총 465개(test 제외).
+  `base`(57) → `datastore`(67) → `ibl`(80) → `cognition`(77) → `services`(39) → `surface`(81). `.py` 총 467개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
   - 층 밖 공용: `backend/common/`(23) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)

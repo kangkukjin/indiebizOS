@@ -61,7 +61,10 @@ def main():
                         parser.error("replay에는 --record가 필요합니다.")
                     recorded = json.loads(Path(args.record).read_text()).get("recordings", []) if args.record else []
                     result = Runtime(plan, inputs, recordings=recorded, replay=args.command == "replay").run()
-    except (Fault, ValueError, OSError) as exc:
+    except Fault as exc:
+        from ibl_v2_analysis import syntax_report
+        result = syntax_report(exc, locals().get('source', ''))
+    except (ValueError, OSError) as exc:
         result = {"success": False, "error": str(exc)}
     output = json.dumps(projection(result), ensure_ascii=False, indent=2)
     if args.output:

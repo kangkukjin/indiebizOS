@@ -1,0 +1,602 @@
+{
+  "kind": "synthetic-inert-regression",
+  "structural_families": 6,
+  "input_sizes_per_family": [
+    0,
+    1,
+    3,
+    10,
+    50
+  ],
+  "external_calls": 0,
+  "model_tokens": "not measured",
+  "current": {
+    "errors": [
+      {
+        "case": "builtin_len",
+        "status": "invalid",
+        "expected": "TYPE",
+        "detected": true
+      },
+      {
+        "case": "builtin_has",
+        "status": "invalid",
+        "expected": "TYPE",
+        "detected": true
+      },
+      {
+        "case": "builtin_get",
+        "status": "invalid",
+        "expected": "TYPE",
+        "detected": true
+      },
+      {
+        "case": "builtin_result",
+        "status": "invalid",
+        "expected": "TYPE",
+        "detected": true
+      },
+      {
+        "case": "builtin_text",
+        "status": "invalid",
+        "expected": "TYPE",
+        "detected": true
+      },
+      {
+        "case": "numeric_literal",
+        "status": "invalid",
+        "expected": "NUMBER_REQUIRED",
+        "detected": true
+      },
+      {
+        "case": "numeric_call",
+        "status": "invalid",
+        "expected": "NUMBER_REQUIRED",
+        "detected": true
+      },
+      {
+        "case": "loop_shape",
+        "status": "invalid",
+        "expected": "MISSING_FIELD",
+        "detected": true
+      },
+      {
+        "case": "repeat_integer",
+        "status": "invalid",
+        "expected": "REPEAT_COUNT",
+        "detected": true
+      }
+    ],
+    "detected": 9,
+    "normal_cases": [
+      {
+        "family": "report",
+        "size": 0,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 1,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 3,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 10,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 50,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 0,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 1,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 3,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 10,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 50,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 0,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 1,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 3,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 10,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 50,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 0,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 1,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 3,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 10,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 50,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "aggregate",
+        "size": 0,
+        "lines": 41,
+        "chars": 1125,
+        "status": "incomplete"
+      },
+      {
+        "family": "aggregate",
+        "size": 1,
+        "lines": 41,
+        "chars": 1125,
+        "status": "incomplete"
+      },
+      {
+        "family": "aggregate",
+        "size": 3,
+        "lines": 41,
+        "chars": 1125,
+        "status": "incomplete"
+      },
+      {
+        "family": "aggregate",
+        "size": 10,
+        "lines": 41,
+        "chars": 1125,
+        "status": "incomplete"
+      },
+      {
+        "family": "aggregate",
+        "size": 50,
+        "lines": 41,
+        "chars": 1125,
+        "status": "incomplete"
+      },
+      {
+        "family": "partial",
+        "size": 0,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 1,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 3,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 10,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 50,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      }
+    ],
+    "normal_rejected": 0,
+    "median_fixture_check_ms": 1.649,
+    "stress": [
+      {
+        "statements": 52,
+        "p50_ms": 1.456,
+        "p95_ms": 1.555,
+        "samples": 10
+      },
+      {
+        "statements": 202,
+        "p50_ms": 3.455,
+        "p95_ms": 6.122,
+        "samples": 10
+      },
+      {
+        "statements": 502,
+        "p50_ms": 7.285,
+        "p95_ms": 7.463,
+        "samples": 10
+      }
+    ]
+  },
+  "value_oracles_passed": 30,
+  "baseline_compiler_ref": "0f16fa093b0dda30408b91480373bd005cc05b88",
+  "baseline_scope": "compiler only; current shared dependencies",
+  "baseline": {
+    "errors": [
+      {
+        "case": "builtin_len",
+        "status": "valid",
+        "expected": "TYPE",
+        "detected": false
+      },
+      {
+        "case": "builtin_has",
+        "status": "valid",
+        "expected": "TYPE",
+        "detected": false
+      },
+      {
+        "case": "builtin_get",
+        "status": "valid",
+        "expected": "TYPE",
+        "detected": false
+      },
+      {
+        "case": "builtin_result",
+        "status": "valid",
+        "expected": "TYPE",
+        "detected": false
+      },
+      {
+        "case": "builtin_text",
+        "status": "valid",
+        "expected": "TYPE",
+        "detected": false
+      },
+      {
+        "case": "numeric_literal",
+        "status": "incomplete",
+        "expected": "NUMBER_REQUIRED",
+        "detected": false
+      },
+      {
+        "case": "numeric_call",
+        "status": "valid",
+        "expected": "NUMBER_REQUIRED",
+        "detected": false
+      },
+      {
+        "case": "loop_shape",
+        "status": "valid",
+        "expected": "MISSING_FIELD",
+        "detected": false
+      },
+      {
+        "case": "repeat_integer",
+        "status": "valid",
+        "expected": "REPEAT_COUNT",
+        "detected": false
+      }
+    ],
+    "detected": 0,
+    "normal_cases": [
+      {
+        "family": "report",
+        "size": 0,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 1,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 3,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 10,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "report",
+        "size": 50,
+        "lines": 39,
+        "chars": 1088,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 0,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 1,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 3,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 10,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "files",
+        "size": 50,
+        "lines": 39,
+        "chars": 1110,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 0,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 1,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 3,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 10,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "records",
+        "size": 50,
+        "lines": 39,
+        "chars": 1113,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 0,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 1,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 3,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 10,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "branch",
+        "size": 50,
+        "lines": 40,
+        "chars": 1117,
+        "status": "valid"
+      },
+      {
+        "family": "aggregate",
+        "size": 0,
+        "lines": 41,
+        "chars": 1125,
+        "status": "valid"
+      },
+      {
+        "family": "aggregate",
+        "size": 1,
+        "lines": 41,
+        "chars": 1125,
+        "status": "valid"
+      },
+      {
+        "family": "aggregate",
+        "size": 3,
+        "lines": 41,
+        "chars": 1125,
+        "status": "valid"
+      },
+      {
+        "family": "aggregate",
+        "size": 10,
+        "lines": 41,
+        "chars": 1125,
+        "status": "valid"
+      },
+      {
+        "family": "aggregate",
+        "size": 50,
+        "lines": 41,
+        "chars": 1125,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 0,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 1,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 3,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 10,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      },
+      {
+        "family": "partial",
+        "size": 50,
+        "lines": 39,
+        "chars": 1116,
+        "status": "valid"
+      }
+    ],
+    "normal_rejected": 0,
+    "median_fixture_check_ms": 1.309,
+    "stress": [
+      {
+        "statements": 52,
+        "p50_ms": 1.128,
+        "p95_ms": 1.154,
+        "samples": 10
+      },
+      {
+        "statements": 202,
+        "p50_ms": 2.695,
+        "p95_ms": 6.758,
+        "samples": 10
+      },
+      {
+        "statements": 502,
+        "p50_ms": 6.116,
+        "p95_ms": 11.857,
+        "samples": 10
+      }
+    ]
+  }
+}

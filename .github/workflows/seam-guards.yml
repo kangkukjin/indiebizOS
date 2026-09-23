@@ -28,6 +28,7 @@ on:
       - 'scripts/check_recall_assembly.py'
       - 'scripts/check_tracked_ignored.py'
       - 'scripts/check_pinned_deps.py'
+      - 'scripts/check_ibl_authoring.py'
       - '.gitignore'
       - 'scripts/test_render_core.js'
       - 'frontend/src/components/**'
@@ -167,9 +168,11 @@ jobs:
         # tools 전체 설치는 CI 무게상 배제 — 테스트가 새 tool 의존을 얻으면 여기서 시끄럽게 죽는다(침묵 아님).
         # python-docx: 문서↔시트 변환 회귀가 실제 DOCX 파일을 생성한다.
         # pillow·python-pptx·olefile: 화면 캡처·이미지·PPTX·HWP 읽기 회귀의 실의존.
-        run: pip install -r backend/requirements-core.txt pytest openpyxl xlrd numpy markdown tqdm python-docx pillow python-pptx olefile
+        run: pip install -r backend/requirements-core.txt -r backend/requirements-dev.txt openpyxl xlrd numpy markdown tqdm python-docx pillow python-pptx olefile
       - name: pytest (backend/test_*.py, 로컬 데이터 필요분 제외)
         run: python -m pytest -m "not local"
+      - name: IBL 작성 지원의 효과 없는 기준선 재현
+        run: python scripts/check_ibl_authoring.py --output /tmp/ibl-authoring-check.json
 
   # 추적 ∩ 무시 = 0 (2026-08-24): .gitignore 는 이미 추적 중인 파일을 되돌리지 못해,
   # 규칙을 나중에 세운 부류(런타임 캐시·일회성 백업·모델 카드)가 규칙이 생긴 뒤에도

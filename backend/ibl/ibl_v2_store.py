@@ -106,4 +106,5 @@ def describe(name, allowed_nodes=None):
     if node is None or plan.issues:
         return {'error':'함수 계약 검사 실패', 'issues':plan.issues}
     return {'callable_contract': {**plan.function_contracts[node.id], 'effects': report['effects']},
-            'status': report['status'], 'guards': report['guards'], 'plan_hash': plan.fingerprint}
+            'status': report['status'], 'guards': report['guards'], 'plan_hash': plan.fingerprint,
+            'source_hash': report['source_hash'], 'warnings': report['warnings']}

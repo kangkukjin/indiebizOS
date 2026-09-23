@@ -1,0 +1,4 @@
+# Development only: reproducible generated regression cases (upgrade with the
+# authoring property suite). Not included in desktop/phone runtime dependencies.
+pytest
+hypothesis==6.168.1

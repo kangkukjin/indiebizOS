@@ -226,8 +226,9 @@ async def execute_ibl(code: str, project_path: str = "",
     주 교재: read_guide(query="ibl_composition.md"). 함수는 [def:f]($x){return $x},
     반복은 목록 >> [table:each]{parallel:4}{return $it}, 조건은 Bool 식입니다.
     결과는 value이며 목록은 목록 그대로입니다. 필요한 도구 계약은 code="",
-    describe=["node:action"]으로 조회합니다. 긴 프로그램은 check=True로 먼저 검사합니다.
-    확정 오류는 실행하지 않으며 incomplete는 실행 중 검사할 경계가 있다는 뜻입니다.
+    describe=["node:action"] 또는 ["fn:이름"]으로 조회합니다. 긴 프로그램은 check=True로 먼저 검사합니다.
+    issues의 location/call_path/hint로 오류를 모아 고친 뒤 전체를 재검사합니다.
+    warnings는 의도를 확인하며 incomplete는 실행 중 검사할 경계가 있다는 뜻입니다.
 
     inputs는 이름→값 객체입니다. 문자열 안의 $이름은 치환하지 않습니다.
     이전 호출의 변수는 자동 상속하지 않습니다. 큰 본문은 저장 파일을 self:read로

@@ -10,6 +10,8 @@ import copy
 from ibl_v2_ir import Fault, Node, UNIT, digest, span
 from ibl_v2_parser import parse
 from ibl_v2_expr import BUILTINS
+from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
+                             assigned_names, location)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
                           infer, join, declared, compatible)
 
@@ -32,6 +34,7 @@ class Plan:
     fingerprint: str
     dependencies: dict
     function_contracts: dict = field(default_factory=dict)
+    preflight: dict = field(default_factory=dict)
 
     def report(self):
         status = "invalid" if self.issues else ("incomplete" if self.guards else "valid")
@@ -39,7 +42,9 @@ class Plan:
                 "status": status, "issues": self.issues, "guards": self.guards,
                 "result_type": str(self.result_type), "effects": sorted(self.effects), "functions": self.function_contracts,
                 "plan_hash": self.fingerprint, "dependencies": self.dependencies,
+                "source_hash": digest(self.source[:self.dependencies["source_map"][0]["end"]]),
                 "capabilities": ["ibl-edition/2", "ibl-value/1"],
+                "preflight": self.preflight, "warnings": self.preflight.get("warnings", []),
                 "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."}
 
 
@@ -52,23 +57,27 @@ class Compiler:
         self.functions, self.scopes, self.function_scopes = {}, {}, {}
         self.issues, self.guards, self.effects = [], [], set()
         self.stack, self.checked = [], set()
+        self.call_path = []
         self.returns = []
         self.function_contracts = {}
         self.used_actions = set()
         self.call_dependencies = {}
 
-    def issue(self, node, code, message):
-        item = {"code": code, "message": message, "source_span": span(self.source, node)}
+    def issue(self, node, code, message, **details):
+        item = {"code": code, "message": message, "source_span": span(self.source, node),
+                "call_path": copy.deepcopy(self.call_path), **details}
         if item not in self.issues:
             self.issues.append(item)
 
     def need(self, node, actual, expected):
         if actual.kind == "Unknown":
-            item = {"source_span": span(self.source, node), "expected": str(expected)}
+            item = {"source_span": span(self.source, node), "expected": str(expected),
+                    "actual": str(actual), "call_path": copy.deepcopy(self.call_path)}
             if item not in self.guards:
                 self.guards.append(item)
         elif not compatible(actual, expected):
-            self.issue(node, "TYPE", f"{expected}가 필요하지만 {actual}입니다.")
+            self.issue(node, "TYPE", f"{expected}가 필요하지만 {actual}입니다.",
+                       expected=str(expected), actual=str(actual))
 
     def pure(self, node):
         if node is None:
@@ -133,12 +142,15 @@ class Compiler:
         self.external[name] = symbols[name]
         return symbols[name]
 
-    def function(self, sid, args):
+    def function(self, sid, args, call=None):
         node = self.functions[sid]
         if sid in self.stack:
             self.issue(node, "RECURSION", "첫 판본에서는 재귀 함수를 지원하지 않습니다.")
             return UNKNOWN
         self.stack.append(sid)
+        self.call_path.append({"function": node.data["name"],
+                               "call": span(self.source, call) if call else None,
+                               "definition": span(self.source, node)})
         old_returns, self.returns = self.returns, []
         params = node.data["params"]
         env = {}
@@ -156,10 +168,23 @@ class Compiler:
             result = t if result == UNIT_T else join(result, t)
         self.returns = old_returns
         self.stack.pop()
+        self.call_path.pop()
         self.checked.add(sid)
-        self.function_contracts[sid] = {'name': node.data['name'],
-            'params': parameter_types,
-            'required': [k for k,v in params.items() if v is None], 'result': str(result)}
+        observed = {'params': parameter_types, 'result': str(result)}
+        summary = self.function_contracts.setdefault(sid, {
+            'name': node.data['name'], 'params': parameter_types.copy(),
+            'required': [k for k,v in params.items() if v is None],
+            'result': str(result), 'specializations': [], 'specializations_omitted': 0})
+        for key, value in parameter_types.items():
+            if summary['params'][key] != value:
+                summary['params'][key] = 'Unknown'
+        if summary['result'] != str(result):
+            summary['result'] = 'Unknown'
+        if observed not in summary['specializations']:
+            if len(summary['specializations']) < 32:
+                summary['specializations'].append(observed)
+            else:
+                summary['specializations_omitted'] += 1
         return result
 
     def visit(self, node, env, names, readonly=frozenset(), final=False, piped=None):
@@ -234,11 +259,9 @@ class Compiler:
                 return BOOL
             if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
                 return join(*values)
-            for t in values:
-                if t.kind not in ("Number", "Text", "Unknown"):
-                    self.issue(node, "ARITHMETIC", f"산술로 관측할 수 없는 타입: {t}")
-                if t.kind in ("Text", "Unknown"):
-                    self.need(node, UNKNOWN, NUMBER)
+            operands = [d["value"]] if kind == "unary" else [d["left"], d["right"]]
+            for operand, typ in zip(operands, values):
+                numeric_operand(self, operand, typ)
             return NUMBER
         if kind == "builtin":
             if d["name"] not in BUILTINS:
@@ -254,8 +277,7 @@ class Compiler:
                 low, high = BUILTINS[name]
                 if not low <= len(types) <= high:
                     self.issue(node, "ARITY", f"{name}은 {low}~{high}개 인자를 받습니다.")
-                return {"len": NUMBER, "number": NUMBER, "has": BOOL, "is_ok": BOOL,
-                        "text": TEXT, "json": TEXT, "evidence": Type("Record")}.get(name, UNKNOWN)
+                return builtin_type(self, node, name, types)
             return UNKNOWN
         if kind == "lambda":
             params = d["params"]
@@ -306,7 +328,7 @@ class Compiler:
                     params = self.functions[sid].data["params"]
                     receiver = next(iter(params), None)
                     self.arguments(node, args, params, receiver, piped)
-                    return self.function(sid, args)
+                    return self.function(sid, args, node)
                 if key not in self.registry:
                     self.issue(node, "FUNCTION", f"등록된 함수가 없습니다: {d['action']}")
                     return UNKNOWN
@@ -385,8 +407,24 @@ class Compiler:
             return result
         if kind == "repeat":
             self.pure(d["value"])
-            self.need(node, sub(d["value"]), NUMBER if d["mode"] == "count" else BOOL)
-            sub(d["body"], {**env, "i": NUMBER})
+            count = d["value"].data.get("value") if d["mode"] == "count" and d["value"].kind == "literal" else None
+            if count is not None and (type(count) is not int or count < 0):
+                self.issue(d["value"], "REPEAT_COUNT", "repeat 횟수는 0 이상의 정수입니다.")
+            mutated = assigned_names(d["body"]) & env.keys()
+            local = {**env, "i": NUMBER}
+            # Later iterations may see a different shape. Widen before checking
+            # the body rather than certify a stale first-iteration type.
+            if count not in (0, 1):
+                local.update(dict.fromkeys(mutated, UNKNOWN))
+            self.need(node, self.visit(d["value"], local, names, readonly, final),
+                      NUMBER if d["mode"] == "count" else BOOL)
+            sub(d["body"], local)
+            if count == 1:
+                for name in mutated:
+                    env[name] = local[name]
+            elif count != 0:
+                for name in mutated:
+                    env[name] = join(env[name], local[name])
             return UNIT_T
         if kind == "try":
             a, b = env.copy(), {**env, "error": Type("Record")}
@@ -524,9 +562,16 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                     "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
                               {Path(__file__).parent / name for name in ("ibl_document_value.py", "ibl_member_library.py",
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}
-    for entry in compiler.issues + compiler.guards:
-        old = entry["source_span"]
-        entry["source_span"] = span(compiler.source, Node("diagnostic", old["start"], old["end"]))
+    finish_diagnostics(compiler)
+    for sid, contract in compiler.function_contracts.items():
+        contract['definition'] = location(compiler.source, compiler.source_map, compiler.functions[sid])
+    from ibl_v2_preflight import analyze
+    try:
+        preflight = analyze(compiler, root, inputs)
+    except Exception as exc:
+        preflight = {'status': 'abstained', 'declared_ai_visits_upper_bound': None,
+                     'unknowns': [{'reason': '분석 기반 오류', 'kind': type(exc).__name__}],
+                     'warnings': []}
     return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,
-                digest(dependencies), dependencies, compiler.function_contracts)
+                digest(dependencies), dependencies, compiler.function_contracts, preflight)

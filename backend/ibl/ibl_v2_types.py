@@ -86,10 +86,10 @@ def declared(spec):
 def compatible(actual, expected):
     if "Unknown" in (actual.kind, expected.kind):
         return True
-    if expected.kind == "Union":
-        return any(compatible(actual, t) for t in expected.item)
     if actual.kind == "Union":
         return all(compatible(t, expected) for t in actual.item)
+    if expected.kind == "Union":
+        return any(compatible(actual, t) for t in expected.item)
     if actual.kind != expected.kind:
         return False
     if expected.kind in ("List", "Result"):

@@ -247,7 +247,8 @@ def test_V53_1_ledger_accumulate_roundtrip_is_idempotent():
 def test_V53_1_catalog_and_textbook_teach_format_json():
     y = open(os.path.join(_PKG, "system_essentials", "ibl_actions.yaml"), encoding="utf-8").read()
     assert "format: string" in y and 'format:"json"' in y
-    tb = open(os.path.join(_ROOT, "data", "common_prompts", "fragments", "12_ibl_only.md"), encoding="utf-8").read()
+    # 이 검사는 저장 원문의 구형 실행 계약이다. 현재 교재는 test_ibl_composition_teaching에서 실행한다.
+    tb = open(os.path.join(_ROOT, "docs", "compatibility", "ibl_legacy_language.md"), encoding="utf-8").read()
     assert 'format: "json"' in tb and "$변수.경로 >> [액션]" in tb
     assert "구조 보존이 필요하면 table:spreadsheet/structure 로 저장하세요" not in open(_sysess.__file__, encoding="utf-8").read()
 

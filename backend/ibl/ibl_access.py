@@ -331,6 +331,14 @@ def render_action_line(node_name: str, action_name: str, action_config, indent: 
         return f"{indent}{qualified}{dormant_suffix}"
 
     desc = action_config.get("description", "")
+    contract = action_config.get("callable_contract")
+    if contract:
+        import json
+        required = contract.get("required", list(contract["params"]))
+        params = "·".join(k if k in required else f"({k})" for k in contract["params"])
+        result = json.dumps(contract["result"], ensure_ascii=False)
+        return (f"{indent}{qualified} :: {desc} ⟨인자: {params}⟩ → {result}"
+                f" (정확한 타입·콜백은 describe){dormant_suffix}")
     ops = action_config.get("ops")
 
     lines = [f"{indent}{qualified} :: {desc}{_param_suffix(qualified)}"

@@ -16,90 +16,95 @@ EXAMPLES = dict(re.findall(
     r'<!-- example:(\w+) -->\s*```ibl\n(.*?)\n```', GUIDE.read_text(), re.S))
 
 
+@pytest.fixture
+def current(monkeypatch):
+    import ibl_engine
+    from ibl_v2_adapters import load_registry
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    calls = []
+    def leaf(ti, *args, **kwargs):
+        assert (ti['_node'], ti['action']) == ('sense', 'crawl')
+        url = ti['params']['url']
+        calls.append(url)
+        if url.endswith('/bad') and not (execute.recover and calls.count(url) == 2):
+            return {'success': False, 'error': '원문 실패'}
+        return {'success': True, 'text': '원문', 'url': url}
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
+    registry = load_registry()
+    seeds = json.loads((ROOT / 'data/idioms/ibl_v2_seeds.json').read_text())
+    definitions = {e['alias']: e['ibl_code'] for e in seeds if e.get('alias')}
+    def execute(code):
+        plan = compile_program(code, registry, definitions=definitions)
+        assert not plan.issues, plan.report()
+        return Runtime(plan).run()
+    execute.calls, execute.recover = calls, False
+    return execute
+
+
 @pytest.mark.parametrize('name', list(EXAMPLES))
-def test_guide_programs_pass_static_check(name, run):
-    out = validate_code(EXAMPLES[name])
-    assert out['valid'] and out['typecheck']['ok'], out
+def test_guide_programs_execute(name, current):
+    out = current(EXAMPLES[name])
+    assert out['success'], out
 
 
-def test_pipeline_and_new_idiom_composition(run):
-    assert run(EXAMPLES['pipeline'])['items'] == [
+def test_pipeline_and_new_idiom_composition(current):
+    assert current(EXAMPLES['pipeline'])['value'] == [
         {'id': 'b', 'score': 7}, {'id': 'c', 'score': 5}]
-    assert run(EXAMPLES['compose'])['items'] == [
+    assert current(EXAMPLES['compose'])['value'] == [
         {'id': 'b', 'score': 7, 'weighted': 14},
         {'id': 'c', 'score': 5, 'weighted': 10}]
-    assert run(EXAMPLES['compose'].replace('최소:5', '최소:99'))['items'] == []
-    assert run.observed['used']  # 실제 저장 관용구 해소 경로도 사용
-    assert not run.observed['brief']  # 규칙 계산에 숨은 AI 호출 없음
+    assert current(EXAMPLES['compose'].replace('최소:5', '최소:99'))['value'] == []
+    assert not current.calls  # 규칙 계산에 숨은 외부 호출 없음
 
 
-def test_empty_and_failure_are_distinct(run):
-    assert run(EXAMPLES['empty'])['items'] == [{'status': '대상 없음'}]
-    present = EXAMPLES['empty'].replace('items:[]', 'items:[{id:"a"}]')
-    assert run(present)['items'] == [{'id': 'a'}]
-    caught = run(EXAMPLES['catch'])
-    assert caught['items'] == [{'status': '원문 확인 실패'}]
-    assert caught['_caught']
+def test_empty_and_failure_are_distinct(current):
+    assert current(EXAMPLES['empty'])['value'] == [{'status': '대상 없음'}]
+    present = EXAMPLES['empty'].replace('$후보 = []', '$후보 = [{id:"a"}]')
+    assert current(present)['value'] == [{'id': 'a'}]
+    caught = current(EXAMPLES['catch'])
+    assert caught['value'] == {'status': '원문 확인 실패', 'reason': '원문 실패'}
+    assert any(e['kind'] == 'recovered' for e in caught['evidence'])
 
 
 @pytest.mark.parametrize('recover', [False, True])
-def test_retry_only_failed_row_and_preserve_unresolved_failure(run, monkeypatch, recover):
-    import ibl_engine
-    original = ibl_engine._execute_ibl_impl
-    attempts = []
-    diagnostics = []
-
-    def leaf(ti, project, agent=None):
-        if ti.get('_node') == 'sense' and ti.get('action') == 'crawl':
-            url = ti['params']['url']
-            attempts.append(url)
-            if recover and url.endswith('/bad') and attempts.count(url) == 2:
-                return {'success': True, 'items': [{'text': '회복한 원문'}]}
-        result = original(ti, project, agent)
-        if ti.get('_node') == 'table' and ti.get('action') == 'each':
-            diagnostics.append(json.loads(result) if isinstance(result, str) else result)
-        return result
-
-    monkeypatch.setattr(ibl_engine, '_execute_ibl_impl', leaf)
-    out = run(EXAMPLES['retry'])
-    assert attempts.count('https://example.org/one') == 1
-    assert attempts.count('https://example.org/bad') == 2
-    assert [r['id'] for r in out['items']] == ['a', 'b']
-    assert ('_error' in out['items'][1]) is not recover
-    assert diagnostics[0]['error_count'] == 1
-    assert diagnostics[0]['errors'][0]['id'] == 'b'
+def test_retry_only_failed_row_and_preserve_unresolved_failure(current, recover):
+    current.recover = recover
+    out = current(EXAMPLES['retry'])
+    assert current.calls.count('https://example.org/one') == 1
+    assert current.calls.count('https://example.org/bad') == 2
+    assert [r['id'] for r in out['value']] == ['a', 'b']
+    assert ('error' in out['value'][1]) is not recover
+    assert not out['source_complete']  # 복구해도 앞선 실패 증거는 지우지 않는다.
 
 
-@pytest.mark.parametrize('text', ['', '가나다라마바사아자차카타파하', '가' * 647],
-                         ids=['empty', 'three_chunks', '130_chunks'])
-def test_chunk_covers_empty_and_more_than_default_each_limit(run, text):
-    code = EXAMPLES['chunk'].replace('가나다라마바사아자차카타파하', text)
-    rows = run(code)['items']
-    assert ''.join(r['text'] for r in rows) == text
-    assert [r['index'] for r in rows] == list(range(len(rows)))
-    assert all(r['chars'] <= 5 for r in rows)
-    assert [r['start'] for r in rows] == list(range(0, len(text), 5))
+@pytest.mark.parametrize('count', [0, 3, 130])
+def test_chunk_covers_empty_and_more_than_old_default_each_limit(current, count):
+    rows = [{'index': i, 'text': '가나'} for i in range(count)]
+    code = re.sub(r'(?m)^\$덩이 = .*$', lambda _: '$덩이 = ' + json.dumps([rows]), EXAMPLES['chunk'])
+    out = current(code)
+    assert out['value'] == [{**r, 'chars': 2} for r in rows]
 
 
-def test_compact_example_is_executable_and_bounded(run):
+def test_compact_example_is_executable_and_bounded(current):
     compact = (FRAGMENTS / '12_ibl_compact.md').read_text()
     examples = re.findall(r'```ibl\n(.*?)\n```', compact, re.S)
     assert len(examples) == 1
-    check = validate_code(examples[0])
-    assert check['valid'] and check['typecheck']['ok'], check
-    assert run(examples[0])['items'] == [{'id': 'a', 'total': 6}]
-    empty = examples[0].replace('items:[{id:"a",qty:2}]', 'items:[]')
-    assert run(empty)['items'] == []
-    assert len((FRAGMENTS / "12_ibl_only.md").read_bytes()) <= 36000
+    assert current(examples[0])['value'] == [{'id': 'a', 'total': 6}]
+    empty = examples[0].replace('[{id:"a",qty:2}]', '[]')
+    assert current(empty)['value'] == []
+    assert len((FRAGMENTS / '12_ibl_only.md').read_bytes()) <= 36000
     assert len(GUIDE.read_bytes()) <= 36000
-    assert len(compact) <= 4200  # 상세 교재를 상시 프롬프트에 통째 싣지 않는다
+    assert len(compact) <= 4200
 
 
-def test_guide_is_reachable_from_actual_prompt_and_exact_filename():
+def test_guide_is_reachable_from_actual_prompt_and_old_links():
     from ibl_access import build_environment
     from ibl_routing import _search_guide
-    guide = _search_guide('ibl_composition.md', {'read': True})
-    assert guide['match'] == 'filename' and guide['content'] == GUIDE.read_text()
+    for query in ('ibl_composition.md', 'ibl_v2.md', 'ibl_v2'):
+        guide = _search_guide(query, {'read': True})
+        assert guide['match'] == 'filename' and guide['content'] == GUIDE.read_text()
+    assert 'ibl_v2' not in [g['id'] for g in _search_guide('', {})['guides']]
     for compact in (True, False):
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
@@ -161,16 +166,16 @@ def test_validation_honors_workflow_before_idiom(run, monkeypatch):
 
 
 @pytest.mark.parametrize('all_failed', [False, True])
-def test_retry_with_zero_or_all_failures(run, all_failed):
+def test_retry_with_zero_or_all_failures(current, all_failed):
     code = EXAMPLES['retry']
     if all_failed:
         code = code.replace('/one', '/bad')
     else:
         code = code.replace('/bad', '/two')
-    out = run(code)
-    assert len(out['items']) == 2
-    assert sum('_error' in row for row in out['items']) == (2 if all_failed else 0)
-    assert len(run.observed['crawl']) == (4 if all_failed else 2)
+    out = current(code)
+    assert len(out['value']) == 2
+    assert sum('error' in row for row in out['value']) == (2 if all_failed else 0)
+    assert len(current.calls) == (4 if all_failed else 2)
 
 
 if __name__ == '__main__':

@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: ibl_separate_current_curriculum
+    retired: 2026-09-23
+    reason: 새 언어를 선택 기능처럼 소개하고 주 교재와 모델 실행 기본값을 구형으로 남겨 조합을 방해했다.
+    instead: 주 교재·프롬프트·모델 도구는 현재 명시 값·함수 문법을 기본으로 쓰며 저장 원문의 실행 의미는 호환 계층이 보존한다.
+    phrases:
+      - '판본2 교재 ibl_v2.md를 참고하라'
+      - 'edition: 생략=1, 2=명시 값·함수 문법'
   - id: automatic_distill_generated_code
     retired: 2026-09-20
     reason: 자동 증류의 코드 재작성·복구 재호출과 무선별 주행 복제가 비용과 회상 잡음을 늘렸다.

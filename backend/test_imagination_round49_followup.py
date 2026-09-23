@@ -36,7 +36,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401,E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-FRAG = os.path.join(ROOT, "data", "common_prompts", "fragments", "12_ibl_only.md")
+# 이 검사는 저장 원문의 구형 실행 계약이다. 현재 교재는 test_ibl_composition_teaching에서 실행한다.
+FRAG = os.path.join(ROOT, "docs", "compatibility", "ibl_legacy_language.md")
 
 
 # ─────────────────── F48-4 · F48-5 교재 드리프트 ───────────────────

@@ -393,4 +393,4 @@ python3 -c "from ibl_usage_db import IBLUsageDB; print(IBLUsageDB().rebuild_inde
 공유 업무 확장: [별도 계약](managed_records.md).
 
 
-판본 2 어댑터 추가: [ibl_v2_adapter.md](ibl_v2_adapter.md).
+현재 IBL 사전 어댑터 추가: [ibl_v2_adapter.md](ibl_v2_adapter.md).

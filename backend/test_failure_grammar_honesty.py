@@ -128,7 +128,8 @@ def test_R7_봉투_정직_표지가_교재에_있다():
     데이터의 *출처가 바뀌었다*는 표지라, 못 읽으면 검색 결과를 시세라고 보고하게 된다.
     """
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    frag = os.path.join(root, "data", "common_prompts", "fragments", "12_ibl_only.md")
+    # 이 검사는 저장 원문의 구형 실행 계약이다. 현재 교재는 test_ibl_composition_teaching에서 실행한다.
+    frag = os.path.join(root, "docs", "compatibility", "ibl_legacy_language.md")
     src = open(frag, encoding="utf-8").read()
     for marker in ("_fallback_used", "ok_count", "error_count", "rows_in",
                    "skipped_steps", "_caught", "condition_errors", "halted"):
@@ -192,7 +193,8 @@ def test_R9_표지_목록은_단일_소스다():
     교재가 가르치는 표지와 코드가 아는 표지가 어긋나면 모델은 없는 것을 찾는다."""
     from ibl_honesty import HONESTY_KEYS, markers_of
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    frag = os.path.join(root, "data", "common_prompts", "fragments", "12_ibl_only.md")
+    # 이 검사는 저장 원문의 구형 실행 계약이다. 현재 교재는 test_ibl_composition_teaching에서 실행한다.
+    frag = os.path.join(root, "docs", "compatibility", "ibl_legacy_language.md")
     src = open(frag, encoding="utf-8").read()
     for marker in HONESTY_KEYS:
         assert marker in src, f"코드는 표지 '{marker}' 를 아는데 교재가 안 가르친다"

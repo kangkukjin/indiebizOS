@@ -43,6 +43,6 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
 
 
 def capabilities():
-    return {"editions": [1, 2], "default_edition": 1, "value_protocols": ["ibl-value/1"],
+    return {"editions": [1, 2], "default_edition": 1, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1"],
             "v2_resume": False, "v2_remote_script": False,
             "v2_budget": {"steps": 100000, "rows": 10000, "seconds": 120, "depth": 64}}

@@ -109,7 +109,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-09-23", impl: "c45b25e4033b8c5c"}
+        path_audited: {at: "2026-09-23", impl: "80d9066222dc9f26"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -121,7 +121,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-09-23", impl: "c45b25e4033b8c5c"}
+        path_audited: {at: "2026-09-23", impl: "80d9066222dc9f26"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -675,27 +675,33 @@ nodes:
         - sheet.md
       script:
         params:
-          callable_contract: object  # opt-in ibl-script/2 args/result/effects 계약; 기존 등록은 유지.
+          callable_contract: object  # 선택적 입출력 타입 계약. 기존 등록도 현재 IBL에서 호출 가능.
         callable_contract:
           version: 1
           params:
+            op: Text
             id: Text
             args: Record
-          required:
-          - id
-          - args
+            args_file: Text
+            path: Text
+            description: Text
+            interpreter: Text
+            timeout: Number
+            background: Bool
+            job_id: Text
+            wait: Number
+            callable_contract: Record
+          required: []
           pipe_input: args
           result: Unknown
           effects:
           - unknown
           adapter:
             protocol: ibl-script/2
-            fixed_params:
-              op: run
             value_path: /value
           nondeterministic: true
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-09-23", impl: "c45b25e4033b8c5c"}
+        path_audited: {at: "2026-09-23", impl: "80d9066222dc9f26"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -706,7 +712,7 @@ nodes:
         fixture: '[self:script]{}'
         description: 등록 스크립트 실행기 — 완성·검증된 스크립트를 등록하면 워크플로우·트리거·앱이 id 한 단어로 결정론 실행. 코드가 아니라 참조만 나른다(저작·디버깅은 write+run_command).
         group: system
-        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, stdout 이 items/table JSON 이면 통화로 승격되어 파이프로 흐름, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · input_as(선택, run 전용): 실제 >> 파이프 봉투 전체를 args의 지정 최상위 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
+        target_description: 'op=list(기본): 등록 목록+마지막 실행 상태 / register: path(실존 파일 — 완성본만)·id(생략 시 파일명)·interpreter(**생략 권장** — 확장자로 역할이 정해지고 실경로는 실행 시점에 그 몸이 해소한다; 경로를 박으면 그 기기에서만 도는 원장이 되어 경고)·description·timeout(초, 기본 300 — 재등록 시 생략하면 기존 값 승계) — 같은 id 재등록=갱신 / run: id 필수(임의 경로·코드 문자열 실행 불가 — 등록된 것만), args(JSON 객체 또는 그 JSON 문자열 → 스크립트 stdin) 또는 args_file(그 JSON 객체가 담긴 파일 경로 — 원장 배치처럼 큰 payload 는 문장에 박지 말고 파일을 가리킨다; 둘 다 주면 거절), 셸 미경유 argv 실행, 현재 IBL에서 stdout JSON 전체가 값이고 평문은 Text; 기존 저장 실행에서는 items/table 통화 승격 유지, 실패=exit_code·stderr 꼬리·로그 경로 정직 반환(수리는 run_command 로 고쳐 재등록); background:true 면 호출마다 고유한 job_id 반환(긴 작업 — 타임아웃·폴링 대신) · 현재 조합은 args:{data:$값}으로 명시 전달. 기존 저장 실행의 input_as(run 전용)는 파이프 봉투 전체를 args의 지정 키에 주입. 진단·출처 포함 원본 보존. args 키 충돌·args_file 병용·파이프 없음은 거절 / status: job_id(하나) 또는 id(그 스크립트 최근 작업) 또는 전체, wait(초, ≤240 — 끝날 때까지 유한 대기; 셸 sleep 폴링 금지), done/failed 이면 result(stdout 통화)가 실림. 종료 코드 0이어도 JSON 결과의 success:false 또는 error는 실패이며, job_id를 지정한 status도 실패를 반환 / remove: id (파일은 보존).'
         router: handler
         tool: script_op
         implementation: system_essentials/script_ops.py — data/scripts/registry.yaml 정의(추적) + data/scripts.json 실행상태(무시) + data/script_runs/ 로그. argv 리스트 실행(인젝션·이스케이프 원리적 차단). 인터프리터는 원장에 역할 이름(python/bash/node)만 적고 실경로는 런타임 해소 — 원장이 3 OS 로 클론되기 때문(_resolve_interpreter, 옛 경로 원장은 자가치유).

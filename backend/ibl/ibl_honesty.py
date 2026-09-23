@@ -9,7 +9,7 @@
   · F35-1(35회차) 폴백 — `_fallback_used` 가 봉투 최상위에 없어 첨 가지 결과로 착각됨
   · B48-1/2(48회차) try · 병렬 — 아래 각 수리 지점의 주석 참조
 
-교재(`data/common_prompts/fragments/12_ibl_only.md` — "정직 표지를 읽어라")가
+저장 원문 호환 명세(`docs/compatibility/ibl_legacy_language.md` — "정직 표지를 읽어라")가
 가르치는 키와 이 목록이 어깋나면 모델은 없는 표지를 찾게 된다 — 둘은 함께 움직인다.
 
 ★이 모듈은 **잎**이다(형제 모듈을 import 하지 않는다) — workflow_engine · ibl_control_blocks ·

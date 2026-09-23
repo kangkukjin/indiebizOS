@@ -1,3 +1,7 @@
+# 기존 저장 프로그램의 스크립트 호출 기록
+
+현재 호출·작성 교재는 [script.md](../../data/guides/script.md)다. 아래는 구형 저장 원문 해석용 기록이다.
+
 # 등록 스크립트 실행기 — [self:script]
 
 > 2026-08-07 신설. **결정화 사다리의 가운데 가로대** — 자율주행이 write+run_command 로 만들어
@@ -14,7 +18,7 @@
 - 실행은 argv 리스트(셸 미경유 — 인젝션·따옴표 지옥 원리적 차단), args 는 JSON stdin.
 
 ## 몸의 되풀이 명령은 등록돼 있다 (2026-09-05)
-관문 배터리·시험 실행처럼 매 수리 주행이 같은 명령을 치는 일은 이미 등록 스크립트다 — 셸로 다시 치지 말고 `[self:script]{op: "list"}` 로 id 를 보고 `run` 한다. 고치기 뒤 검증이 같은 프로그램에 든다: `$r=[self:script]{id:"<시험 스크립트>",args:{files:["<시험 파일>"]}}; $r.items >> [table:select]{columns:["file","passed","failed","failures"]}`. 결과 객체의 items 목록을 명시적으로 선택한 뒤 표 연산에 전달한다.
+관문 배터리·시험 실행처럼 매 수리 주행이 같은 명령을 치는 일은 이미 등록 스크립트다 — 셸로 다시 치지 말고 `[self:script]{op: "list"}` 로 id 를 보고 `run` 한다. 고치기 뒤 검증이 같은 프로그램에 든다: `[self:edit]{…}` ⏎ `[self:script]{op: "run", id: "<시험 스크립트>", args: {files: ["<시험 파일>"]}} >> [table:select]{columns: ["file", "passed", "failed", "failures"]}`. 결과가 items 라 실패 목록으로 바로 흐른다.
 
 **검증의 범위는 바뀐 곳이다.** 수리·개발 주행의 시험은 고친 모듈의 시험 파일만 준다 — 전수(수천 건·수 분)는 커밋 관문과 CI 의 몫이고, 시험 스크립트는 전수를 전경으로 받지 않는다. 오래 걸리는 스크립트는 전경으로 붙들지 말고 핸들로 받는다: `[self:script]{op: "run", id: "<id>", background: true}` ⏎ `[self:script]{op: "status", job_id: "<받은 job_id>", wait: 240}` — 끝날 때까지 한 호출로 기다리고(진행 줄이 함께 온다), 프로세스 목록·로그 파일을 뒤지는 폴링은 하지 않는다.
 
@@ -54,29 +58,22 @@
 - **경로는 저장소 상대**로 적힌다(본문=파일명, 저장소 안 인터프리터=`.venv/bin/python3`).
   옛 절대경로(`/Users/…`)는 클론한 다른 기기에서 원리적으로 못 돌았다.
 
-## 값 반환 계약
+## 통화 계약 — 스크립트가 파이프에 흐르게 하려면
 
-현재 IBL에서는 기존 스크립트도 직접 호출한다. 기존 스크립트의 JSON stdin 형식은 그대로다.
-JSON stdout은 객체·목록·스칼라 전체가 값이고, 평문 stdout은 완전한 문자열이다.
-실행 결과는 `value`에 담긴다. `.items` 자동 추출이나 문자열 JSON 봉투를 가정하지 않는다.
+스크립트 stdout 이 `{"items": [...]}` 또는 `{"table": {columns, rows}}` JSON 이면 **통화로 승격**:
 
-```ibl
-#!ibl edition=2
-$r=[self:script]{id:"수집",args:{}}
-$r.items >> [table:sort]{by:"mb",descending:true} >> [table:take]{n:5}
+```
+[self:script]{op: "run", id: "수집"} >> [table:sort]{by: "mb"} >> [table:take]{n: 5}
+[self:script]{op: "run", id: "수집"} >> [self:sheet]{op: "append", path: "장부.xlsx"}
 ```
 
-위 `수집`은 등록 id 예시다. 실제 id는 list로 확인한다. 종료 코드가 0이어도 JSON의
-`success:false` 또는 `error`는 실행 실패다. 부분 원천 표지도 경계에서 전파한다.
-새 명시 타입 프로토콜(`callable_contract`의 `ibl-script/2`)은 opt-in이며 기존 스크립트의
-본문·등록을 이 프로토콜로 바꾸지 않아도 현재 IBL에서 호출할 수 있다.
-list/register/remove/status는 관리 결과 Record를 반환한다. 기존 등록의 background 실행은
-job_id 영수증을 반환한다. 새 wire 스크립트의 background는 아직 지원하지 않으며 실행 전에 거절한다.
+각 실행의 로그와 백그라운드 job_id는 고유하다. 종료 코드가 0이어도 JSON의 `success:false` 또는 `error`는 실행 실패로 기록한다. `status{job_id}`도 해당 작업이 실패하면 `success:false`와 `error`를 반환한다. `status{job_id}`에서 성공·실패의 JSON 결과는 `result`로 확인한다.
 
+JSON 이 아니면 stdout 꼬리(8KB)가 그대로 담긴다. args 는 stdin 으로 온다:
 ```python
 import sys, json
 args = json.loads(sys.stdin.read() or "{}")
-print(json.dumps({"items": [{"value": args.get("value")}]}))
+print(json.dumps({"items": [...]}, ensure_ascii=False))
 ```
 
 ## 큰 payload — 나르지 말고 가리킨다 (`args_file`, 2026-09-01)
@@ -94,13 +91,18 @@ print(json.dumps({"items": [{"value": args.get("value")}]}))
 결과에 `args_file`·`args_bytes` 가 실린다 — 가리키는 값은 호출 밖에서 바뀌므로
 **무엇으로 돌았는지**를 결과만 보고 알 수 있어야 한다.
 
-## 결과를 다음 스크립트에 전달하기
+## 파이프 봉투를 stdin으로 전달하기 (`input_as`)
 
-`$r=[self:script]{id:"수집",args:{}}; [self:script]{id:"검증",args:{op:"accept",data:$r}}`처럼
-값을 명시적으로 넣는다. 파이프를 쓰면 전체 args 객체가 전달된다:
-`{op:"accept",data:$r} >> [self:script]{id:"검증"}`.
-IBL의 부분 실패는 실행 증거로 보존한다. 일반 데이터에 근거 없는 success 표지를 새로 붙이지 않는다.
-기존 저장 프로그램의 input_as·자동 봉투 추출은 docs/compatibility/ibl_legacy_script.md에 기록돼 있다.
+실행 결과를 등록 스크립트가 검증·저장할 때는
+`$결과 >> [self:script]{op:"run",id:"등록된처리",args:{op:"accept"},input_as:"data"}`로 쓴다.
+stdin은 `{op:"accept",data:앞결과의전체봉투}`다. items뿐 아니라 부분 실패·잘림·출처도
+보존한다. 스필은 공통 해소기로 원본을 복원하고, 만료되면 실행 전에 거절한다.
+모델 표시용 미리보기나 `$결과`의 값 추출을 봉투 대신 사용하지 않는다.
+
+`input_as`는 비어 있지 않은 최상위 키 이름이다(점도 이름의 일부이며 경로가 아니다).
+run 전용이며 args에 같은 키가 있거나 args_file과 함께 쓰거나 파이프 입력이 없으면 거절한다.
+`{items:[]}`는 유효한 빈 입력이다. 주입할 봉투 내부의 문자열·키는 경로 확장을 하지 않는다.
+생략하면 기존 args/args_file 동작이 유지된다. 상류 실패를 파이프가 중단시키는 기존 규약도 유지된다.
 
 ## 어디서나 도는 원장 — 인터프리터는 역할 이름만 (2026-08-22)
 
@@ -175,11 +177,10 @@ last_error 에 기록한다(목록에서 🔴 표시). 고치는 절차: 로그 
 - wait 상한 240초(초과 요청은 신고 후 상한). 더 긴 작업은 status 를 다시 부르거나 트리거에 맡긴다.
 
 
-## 입출력 타입을 선언하는 스크립트 계약 (선택)
+## 판본 2 프로토콜 (선택)
 
 Python·Bash·Node 인터프리터는 그대로 지원한다. 기존 등록의 stdin/stdout는 변경하지 않는다.
-기존 등록은 계약을 새로 붙이지 않아도 현재 IBL에서 직접 호출한다.
-입출력 타입까지 검사할 스크립트는 등록 시 아래 `callable_contract`와 전용 입출력 봉투를 함께 구현한다.
+새 id 등록에 아래 `callable_contract`를 명시하면 판본 2에서만 실행한다.
 
 ```yaml
 callable_contract:
@@ -196,4 +197,4 @@ stdout은 `{protocol:"ibl-script/2", ok:true, value:{n:6}}` 또는
 입력 이름·반환 타입·JSON·종료 코드를 검사한다. 일반 args 문자열의 몸 경로 별칭은 확장하지 않는다.
 새 계약과 기존 호출의 판본이 다르면 실행 전에 거절한다. 현재 새 프로토콜은 로컬 동기 실행만 지원하며
 회원 기기·원격·background 실행은 협상 구현 전까지 거절한다. 등록 계약을 모르는 script는 순수 캐시 대상으로 간주하지 않는다.
-자세한 언어 계약은 [주 IBL 교재](ibl_composition.md)를 읽는다.
+자세한 언어 계약은 [ibl_v2.md](ibl_v2.md)를 읽는다.

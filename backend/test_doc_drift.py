@@ -69,7 +69,7 @@ def test_generated_tables_follow_registry_sets_and_keep_curated_descriptions(gen
 
 def test_grammar_examples_parse_and_surfaces_share_operator_contracts(generated_docs):
     import json
-    from ibl_parser import parse
+    from ibl_v2_parser import parse
     build, facts, root = generated_docs
     operators = json.loads((root / "docs/generated_templates/ibl_grammar.json").read_text())["operators"]
     assert {o["symbol"] for o in operators} == {">>", "&", "??", ";"}
@@ -81,7 +81,7 @@ def test_grammar_examples_parse_and_surfaces_share_operator_contracts(generated_
         assert not issues
         span = rendered.split("<!-- GRAMMAR_OPERATORS:START -->")[1].split("<!-- GRAMMAR_OPERATORS:END -->")[0]
         assert all(f"`{o['symbol']}`" in span for o in operators)
-        assert "0건" in span  # 빈 결과 폴백을 실패 전용으로 축약하지 않는다.
+        assert "0건" in span  # 빈 결과는 실패가 아니므로 그대로 유지한다.
 
 
 @pytest.mark.parametrize("damage", ["missing", "duplicate", "reversed", "unknown_slot", "missing_template"])

@@ -936,7 +936,8 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
 
         # IBL 통합 실행기 (Phase 13)
         if tool_name == "execute_ibl":
-            return _execute_ibl_unified(tool_input, project_path, agent_id, cancel_check=cancel_check)
+            from ibl_edition import authoring_request
+            return _execute_ibl_unified(authoring_request(tool_input), project_path, agent_id, cancel_check=cancel_check)
 
         # 시스템 도구 처리
         if tool_name == "call_agent":

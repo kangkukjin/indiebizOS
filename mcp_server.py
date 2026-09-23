@@ -221,57 +221,27 @@ async def execute_ibl(code: str, project_path: str = "",
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
     # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
-    """IBL 코드를 실행합니다.
+    """현재 IBL로 코드를 작성·검사·실행합니다. 기본은 명시 값·함수 문법입니다.
 
-    예시:
-        [sense:web_search]{query: "AI 뉴스"}
-        [limbs:play_youtube]{query: "Queen Bohemian Rhapsody"}
-        [sense:radio]{op: "search", name: "KBS"}
-        [limbs:radio]{op: "play", station_id: "kbs_coolfm"}
+    주 교재: read_guide(query="ibl_composition.md"). 함수는 [def:f]($x){return $x},
+    반복은 목록 >> [table:each]{parallel:4}{return $it}, 조건은 Bool 식입니다.
+    결과는 value이며 목록은 목록 그대로입니다. 필요한 도구 계약은 code="",
+    describe=["node:action"]으로 조회합니다. 긴 프로그램은 check=True로 먼저 검사합니다.
+    확정 오류는 실행하지 않으며 incomplete는 실행 중 검사할 경계가 있다는 뜻입니다.
 
-    project_path를 비워두면 현재 호출 컨텍스트의 프로젝트가 사용됩니다.
+    inputs는 이름→값 객체입니다. 문자열 안의 $이름은 치환하지 않습니다.
+    이전 호출의 변수는 자동 상속하지 않습니다. 큰 본문은 저장 파일을 self:read로
+    읽어 .text를 전달하고, 일반 데이터는 inputs로 받습니다.
+    read_result는 result_ref.read_args를 그대로 사용해 저장된 값·증거를 읽습니다.
+    페이지는 next_read를 따르고 읽기 위해 원래 실행을 반복하지 않습니다.
+    recover는 이전 실행의 ticket을 회수하며 wait는 유한 대기 시간입니다.
+    실행 중인 작업을 다시 시작하지 말고 반환된 작업 ID·티켓을 사용합니다.
+    이미지 블록은 호스트의 이미지 출력으로 전달하며 base64로 쪼개 읽지 않습니다.
 
-    resume: 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 같은 code 를 그 step 부터
-        다시 돈다(앞 단 재실행 없음, 스필 24h 유효). {vars_ref} 는 부분 실패 봉투의 산 변수 주입.
-        ★턴 범위 변수(2026-09-06): 같은 턴 안에서는 resume 없이도 앞 호출의 `$이름 = …` 가 다음 호출에
-        그대로 보인다 — 앞 결과(JSON·행·본문)를 다시 치지 말고 `$이름` 으로 가리킬 것. 봉투 turn_vars 가
-        산 이름을 말한다. resume 은 턴을 넘는 24h 회수 자리.
-    files: 긴 텍스트/코드를 IBL 파서 밖에서 전달. 코드에서 $file:0, $file:1 로 참조.
-        ★수십 KB급 본문은 인라인 대신 files_from 으로 — 도구 호출 JSON 이 커지면
-        호출 자체가 전송에서 깨진다(2026-08-30 ep2356, 60KB 실측).
-    files_from: files 의 경로 참조판(로컬 파일 경로 목록) — 서버가 내용을 읽어 인라인
-        files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: 먼저 임시 파일에
-        쓰고 여기에 경로만 싣는다.
-    describe: code를 비우고 ["node:action"]으로 계약 조회(1~6개, 실행 없음).
-    edition: 생략=1, 2=명시 값·함수 문법. inputs는 판본 2의 이름→값 입력입니다.
-    read_result: code를 비우고 result_ref.read_args를 그대로 넣어 기존 원문 회수.
-        limit는 문자 수 1~60000(기본 60000), offset은 0 이상. 다음 페이지는 next_read 그대로.
-        result_ref.paths에 실제 본문 경로가 있다. path 생략은 원 봉투 전체(재실행 없음).
-        반환된 이미지 블록은 호스트의 이미지 출력으로 전달한다. 전체 응답을 text로
-        직렬화하거나 base64를 read_result로 분할 회수하지 않는다.
-    recover: 표면 타임아웃 봉투의 ticket 값 그대로 — 그 실행의 최종 봉투를 회수한다
-        (code 는 무시됨, "" 로 두면 됨). 완료면 원 봉투, 실행 중이면 진행 상태,
-        기록 없음이면 만료(24h)/미탑재를 정직하게 알린다(F51-1: 표면 대기가 끊겨도
-        결과는 잃지 않는다).
-    wait: recover 와 함께 — 결말이 날 때까지 **유한 대기**할 초. 기다렸는데도
-        안 끝나면 진행 상태를 돌려준다(대기가 끝난 것이지 실행이 죽은 것이 아니다).
-        ★처음 실행(code)에는 실을 필요가 없다(2026-09-07 개정): 표면이 언제나 상한까지
-        기다리므로 느린 실행을 미리 알아맞혀 wait 를 실을 이유가 사라졌다. 옛 규약(기본
-        120초 + 아는 호출만 늘리기)은 예측이 틀릴 때마다 회수 왕복을 물렸다.
-        ★긴 실행을 기다릴 때 셸 `sleep` 을 쓰지 말 것 — 전경 sleep 은 막히고 배경
-        sleep 은 즉시 돌아와, 대기가 몇 초 간격 폴링으로 무너진다(폴링 1회 = 모델
-        왕복 1회. 2026-09-01 실측: 한 주행의 도구 호출 45건 중 16건이 기다림이었다).
-        `[self:script]{op:"status", wait}` 와 같은 계약이다.
-
-    check: **실행하지 않고** 정적 통화 검사만 — 문장별 마지막 통화·열(types: items⟨열⟩·prose·scalar·
-        effect·?)과 문제(issues: error=실행하면 반드시 실패 / warning=아마)를 돌려준다(0토큰·부작용 0).
-        긴 프로그램은 먼저 check 로 보고 초록이면 같은 code 를 실행한다 — 문법을 시험하려고 탐침
-        문장을 돌리지 않는다. check 없이도 확정 error 는 실행 전에 error_type:"typecheck" 로 거절된다.
-
-    ★2026-08-22 B23-1: 이 셋은 도구 스키마(tool_loader)와 엔진에는 있었는데 이 MCP 표면에만
-    없어서, 봉투 note 가 안내하는 대로 보낸 resume 이 조용히 사라졌다. 표면은 도구 스키마와
-    같은 파라미터 집합을 나른다 — 스키마에 새 파라미터를 넣을 때 여기와 api_ibl.IBLRequest 도
-    함께 늘릴 것.
+    project_path를 비우면 현재 프로젝트를 사용합니다. edition은 저장 코드의 호환
+    메타데이터입니다. 생략하면 현재 문법(2), 기존 원문 재실행에만 1을 명시합니다.
+    files/files_from/resume은 명시적으로 지정한 기존 실행의 호환 인자입니다.
+    새 프로그램에서는 inputs·명시 값·저장된 실행 영수증을 사용합니다.
     """
     # ctx 는 FastMCP 가 자동 주입(모델에 노출 안 됨). HTTP 경로면 헤더에서 신원을 꺼낸다.
     h_agent, h_project, h_task, h_origin = _http_identity(ctx)
@@ -288,8 +258,10 @@ async def execute_ibl(code: str, project_path: str = "",
         runtime_parent = None
     if runtime_parent:
         payload["_runtime_parent"] = runtime_parent
+    from ibl_edition import authoring_request
     if edition is not None:
         payload["edition"] = edition
+    payload = authoring_request(payload)
     if inputs is not None:
         payload["inputs"] = inputs
     if describe is not None:

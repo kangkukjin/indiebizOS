@@ -1042,9 +1042,10 @@ def _search_guide(query: str, params: dict) -> Any:
     #   옮겨져 실행자는 지도의 파일명을 그대로 넘긴다. 파일명은 점수 경쟁 없이 그 파일이다 —
     #   토큰 점수에 맡기면 "goal.md" 가 'goal' 낱말을 가진 다른 가이드에 밀릴 수 있다.
     _q = (query or "").strip().strip("`")
-    if _q.endswith(".md"):
-        _hit = next((g for g in guides if (g.get("file") or "") == _q), None)
+    if _q.endswith(".md") or any(_q in g.get("aliases", []) for g in guides):
+        _hit = next((g for g in guides if (g.get("file") or "") == _q or _q in g.get("aliases", [])), None)
         if _hit:
+            _q = _hit["file"]
             out = {"guides": [{"id": _hit["id"], "name": _hit["name"],
                                "description": _hit.get("description", ""), "file": _hit.get("file")}],
                    "count": 1, "match": "filename"}

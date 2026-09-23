@@ -181,7 +181,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
     # --- description: IBL 코드 기반 실행 ---
     node_list = ', '.join(node_names)
     description = (
-        f"IBL 코드를 실행합니다. "
+        f"현재 IBL로 새 코드를 실행합니다. 주 교재: ibl_composition.md. "
         f"사용 가능한 노드: {node_list}. "
         f"액션 계약은 code=빈 문자열, describe=[node:action]으로 조회. 저장된 원문은 read_result로 회수."
     )
@@ -192,54 +192,23 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
         "input_schema": {
             "type": "object",
             "properties": {
-                "edition": {"type": "integer", "enum": [1, 2],
-                            "description": "생략=기존 판본1. 새 조합은 ibl_v2 가이드를 읽고 판본2로 작성. 회상 원문의 판본은 유지."},
-                "inputs": {"type": "object", "description": "판본 2의 명시 외부 이름→값. 이전 턴 변수는 자동 주입하지 않음."},
+                "edition": {"type": "integer", "enum": [1, 2], "default": 2,
+                            "description": "새 작성 기본값=2. 저장된 기존 원문의 재실행에만 1을 명시. 문법 오류로 자동 전환하지 않음."},
+                "inputs": {"type": "object", "description": "명시 외부 이름→값. 이전 턴 변수는 자동 주입하지 않음."},
                 "check": {"type": "boolean", "description": "실행 없이 같은 컴파일러로 검사."},
                 "code": {
                     "type": "string",
                     "description": (
-                        "다음 예시는 판본1 코드. 판본2는 ibl_v2 가이드 참조. "
-                        '단일: [sense:search]{query: "AI 뉴스"} / '
-                        '파라미터: [sense:stock]{op: "investors", market: "STK", start_date: "2026-01"} / '
-                        '파이프라인: [sense:search]{query: "AI"} >> [self:write]{path: "result.md"} / '
-                        '병렬: [sense:search]{query: "AI"} & [sense:search]{source: "gnews", query: "tech"} / '
-                        '폴백: [sense:stock]{op: "quote", ticker: "AAPL"} ?? [sense:search]{query: "AAPL stock"}'
+                        '명시 값·함수 문법. [def:두배]($x){return $x*2}; [fn:두배]{x:3}. '
+                        '목록 >> [table:each]{parallel:4}{return $it}는 순서 보존 반복. '
+                        '검색: $r=[sense:search]{query:"AI"}; return $r.items. '
+                        '조건 필터: $rows >> [table:filter]{where:($r)=>$r.score>=5}. '
+                        '변수는 한 프로그램의 값이며 외부 입력은 inputs. 반환은 value.'
                     )
                 },
-                "files": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "긴 텍스트/코드 콘텐츠를 IBL 파서 밖에서 전달. "
-                        'IBL 코드에서 $file:0, $file:1 등으로 참조. '
-                        '예: code=[self:write]{path: "app.tsx", content: "$file:0"}, files=["import React..."] '
-                        "★수십 KB급 본문은 인라인 대신 files_from 으로 — 도구 호출 JSON 이 "
-                        "커지면 호출 자체가 전송에서 깨진다(2026-08-30 60KB 실측)."
-                    )
-                },
-                "files_from": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "description": (
-                        "files 의 경로 참조판: 로컬 파일 경로 목록 — 서버가 내용을 읽어 "
-                        "인라인 files 뒤에 이어붙인다($file 번호 연속). 큰 본문의 정본 통로: "
-                        "먼저 임시 파일에 쓰고 여기에 경로만 싣는다. "
-                        '예: code=[self:write]{path: "보고서.md", content: "$file:0"}, '
-                        'files_from=["/tmp/report_body.md"]'
-                    )
-                },
-                "resume": {
-                    "type": "object",
-                    "description": (
-                        "두 모드 중 하나(24h 유효). ①{from_step, prev_ref}: 실패 봉투의 resume 값 그대로 — 같은 code 를 "
-                        "그 step 부터 다시 돈다(앞 단은 재실행 없이 스필된 직전 통화를 받음). ②{vars_ref}: 부분 실패 봉투의 "
-                        "resume_vars.vars_ref — 산 $변수를 주입하니 죽은 문장만 고쳐 그 문장(들)을 code 로 보낸다. "
-                        "문장 하나가 죽었다고 전체를 다시 돌리지 말 것. ★같은 턴 안에서는 resume 없이도 앞 호출의 "
-                        "`$이름 = …` 변수가 다음 호출에 그대로 보인다(턴 범위 변수, 2026-09-06) — 앞 결과를 다시 치지 말고 "
-                        "이름으로 가리킬 것. resume 은 턴을 넘는 24h 회수 자리."
-                    )
-                },
+                "files": {"type": "array", "items": {"type": "string"}, "description": "기존 저장 코드(edition:1)의 인라인 파일 인자. 새 코드는 inputs에 값 전달."},
+                "files_from": {"type": "array", "items": {"type": "string"}, "description": "기존 저장 코드(edition:1)의 파일 인자. 새 코드는 self:read의 text를 명시 전달."},
+                "resume": {"type": "object", "description": "기존 저장 코드(edition:1)의 재개 인자. 새 코드는 저장 영수증·명시 입력으로 재개."},
                 "describe": {"type": "array", "items": {"type": "string"}, "maxItems": 6,
                              "description": "code를 비우고 액션 이름 1~6개의 계약 조회. 실행하지 않음."},
                 "read_result": read_result_schema(),

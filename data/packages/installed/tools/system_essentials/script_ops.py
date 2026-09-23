@@ -493,9 +493,10 @@ def op_run(tool_input):
                 "error": f"등록되지 않은 id: {sid or '(비어 있음)'} — 임의 경로·코드 실행은 불가, op:register 로 먼저 등록. "
                          f"등록: {', '.join(sorted(registry)) or '없음'}"}
     v2 = tool_input.get("_ibl_edition") == 2
-    if v2 != bool(entry.get("callable_contract")):
-        return {"success": False, "error": "스크립트 등록 프로토콜과 호출 판본이 다릅니다. 명시적 ibl-script/2 계약이 필요합니다."}
-    if v2 and tool_input.get("background"):
+    wire_v2 = bool(entry.get("callable_contract"))
+    if wire_v2 and not v2:
+        return {"success": False, "error": "이 스크립트는 현재 IBL의 명시 값 호출 계약을 사용합니다."}
+    if v2 and wire_v2 and tool_input.get("background"):
         return {"success": False, "error": "ibl-script/2는 동기 실행만 지원합니다."}
     p = _script_path(entry)
     if not p.is_file():
@@ -509,9 +510,9 @@ def op_run(tool_input):
     args, _aerr, _args_src = _stdin_args(tool_input, expand_paths=not v2)
     if _aerr:
         return {"success": False, "error": _aerr}
-    if v2:
+    if v2 and wire_v2:
         try:
-            args = _runtime.v2_input(entry, args, tool_input.get("_ibl_context"))
+            args = _runtime.v2_input(entry, args or {}, tool_input.get("_ibl_context"))
         except Exception as exc:
             return {"success": False, "error": f"script 입력 계약 위반: {exc}"}
     stdin_data = json.dumps(args, ensure_ascii=False) if args is not None else None
@@ -524,7 +525,8 @@ def op_run(tool_input):
     log_path = _RUN_DIR / f"{sid}-{uuid.uuid4().hex}.log"
     interp, interp_note = _resolve_interpreter(entry.get("interpreter"), p.suffix)
     if tool_input.get("background"):
-        return _run_background(sid, entry, p, stdin_data, timeout, interp, interp_note)
+        job = _run_background(sid, entry, p, stdin_data, timeout, interp, interp_note)
+        return {**job, "value": job} if v2 else job
     started = time.time()
     try:
         proc = subprocess.run(
@@ -552,7 +554,11 @@ def op_run(tool_input):
         pass
 
     if v2:
-        script_value, result_error = _runtime.v2_output(stdout, entry["callable_contract"])
+        try:
+            script_value, result_error = (_runtime.v2_output(stdout, entry["callable_contract"])
+                                          if wire_v2 else _runtime.legacy_value_output(stdout))
+        except ValueError as exc:
+            script_value, result_error = None, str(exc)
         parsed = None
     else:
         parsed, result_error = _runtime.parse_output(stdout)
@@ -566,7 +572,13 @@ def op_run(tool_input):
     _update_state(sid, **changes)
 
     if not ok:
-        return {"success": False, "id": sid, "exit_code": exit_code, "duration_ms": duration_ms,
+        # Preserve declared legacy failure/permission evidence at the adapter boundary.
+        details = {}
+        if v2 and not wire_v2 and isinstance(script_value, dict):
+            details = {k: script_value[k] for k in
+                       ("blocked", "denied", "permission_denied", "error_type") if k in script_value}
+            details["result"] = script_value
+        return {**details, "success": False, "id": sid, "exit_code": exit_code, "duration_ms": duration_ms,
                 **({"timed_out": True, "error": f"타임아웃 {timeout}초 초과 — 스크립트 중단."} if timed_out
                    else {"error": result_error or f"스크립트 실패 (exit {exit_code}) — 로그를 보고 도구층(run_command)에서 고친 뒤 재등록."}),
                 "stderr_tail": stderr[-_STDERR_TAIL:], "log": str(log_path),
@@ -583,6 +595,10 @@ def op_run(tool_input):
         res["args_bytes"] = len(stdin_data or "")
     if v2:
         res["value"] = script_value
+        if not wire_v2:
+            from ibl_honesty import merge_into
+            merge_into(script_value, res)
+            res["script_protocol"] = "registered-json/1"
         return res
     # stdout 이 JSON 이고 items/table 을 실으면 통화로 승격 — 파이프로 흐른다.
     if isinstance(parsed, dict) and (isinstance(parsed.get("items"), list) or isinstance(parsed.get("table"), dict)):

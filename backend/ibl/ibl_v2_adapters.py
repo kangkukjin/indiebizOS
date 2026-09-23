@@ -178,9 +178,13 @@ def load_registry(project_path=".", agent_id=None):
                     from member_profile import is_member_principal
                     if is_member_principal():
                         raise Fault("SCRIPT_CAPABILITY", "회원 기기의 ibl-script/2는 아직 지원하지 않습니다.", kind="permission")
+                    params.setdefault("op", "run" if params.get("id") else "list")
                     params["_ibl_edition"] = 2
                 raw = execute_ibl({"_node": node, "action": action, "params": params}, project_path, agent_id=agent_id)
-                value, evidence = decode_envelope(raw, c["adapter"])
+                boundary = c["adapter"]
+                if protocol == "ibl-script/2" and params["op"] != "run":
+                    boundary = {**boundary, "value_path": ""}
+                value, evidence = decode_envelope(raw, boundary)
                 return Adapted(value, evidence)
             result[key] = Adapter(contract, run)
     from ibl_v2_compat import function_adapters

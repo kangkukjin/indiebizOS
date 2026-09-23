@@ -272,9 +272,9 @@ class IBLUsageRAG:
         if phrases:
             note += (" kind=\"phrase\" 는 이미 이름이 붙은 프로그램이다. 그대로 쓰려면 [fn:이름]{슬롯: 값} 한 줄 — 정의 없이 이름만으로 돈다. "
                      "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
-                     "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:] 로 고쳐 부른다. "
+                     "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:이름]($인자){...} 로 고쳐 부른다. "
                      "여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
-        note += " edition은 실행 판본이다. 서로 다른 판본의 문법·반환을 섞지 말고 판본2 교재 ibl_v2.md를 참고하라."
+        note += " edition은 저장 원문의 실행 의미다. 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하되 반환 계약을 확인하라."
         from ibl_edition import source_edition
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:

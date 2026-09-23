@@ -29,3 +29,15 @@ def program_hash(source, edition=1):
     # under another edition. Source text itself remains unchanged in storage.
     identity = source if edition == 1 else f"ibl-edition:{edition}\0{source}"
     return hashlib.sha256(identity.encode("utf-8", "replace")).hexdigest()
+
+
+def authoring_request(request):
+    """New model-authored code uses current IBL; stored source keeps its edition.
+
+    Do not call this from saved workflow/schedule readers. A header or explicit
+    edition is authoritative; syntax errors never trigger legacy execution.
+    """
+    source = request.get("code") or request.get("pipeline") or ""
+    if request.get("edition") is not None or source.lstrip().startswith("#!ibl"):
+        return request
+    return {**request, "edition": 2}

@@ -95,3 +95,19 @@ def v2_output(stdout, contract):
         return value, None
     except Exception as exc:
         return None, f"script 출력 계약 위반: {exc}"
+
+
+def legacy_value_output(stdout):
+    """Adapt a registered JSON/stdout script without changing its stdin ABI.
+
+    JSON remains its entire value, never a guessed items/message projection.
+    Plain output is complete Text. Legacy failure markers remain failures.
+    """
+    try:
+        value = json.loads(stdout)
+    except ValueError:
+        return stdout, None
+    _v2_json_safe(value)
+    if isinstance(value, dict) and (value.get("success") is False or value.get("error")):
+        return value, str(value.get("error") or "스크립트가 실패 결과를 반환했습니다.")
+    return value, None

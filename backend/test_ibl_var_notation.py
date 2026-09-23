@@ -181,7 +181,8 @@ def test_b11_교재가_표기_형태를_전부_가르친다():
     """
     import os
     root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    frag = os.path.join(root, "data", "common_prompts", "fragments", "12_ibl_only.md")
+    # 이 검사는 저장 원문의 구형 실행 계약이다. 현재 교재는 test_ibl_composition_teaching에서 실행한다.
+    frag = os.path.join(root, "docs", "compatibility", "ibl_legacy_language.md")
     text = open(frag, encoding="utf-8").read()
     missing = [label for label, probe in (
         ("괄호형 ${이름}", "${"),

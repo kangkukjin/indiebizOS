@@ -103,6 +103,8 @@ def guide_staleness_warnings(data: dict, root: Path) -> list[str]:
         try:
             for e in _json.loads(db_path.read_text(encoding="utf-8")).get("guides", []):
                 referenced.add(Path(str(e.get("file") or "")).name)
+                referenced.update(Path(alias).name for alias in e.get("aliases", [])
+                                  if isinstance(alias, str) and alias.endswith(".md"))
         except Exception:
             pass
     for _n, v in nodes.items():

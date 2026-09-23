@@ -3,31 +3,34 @@
     {
       "symbol": ">>",
       "name": "Sequential",
-      "meaning": "순차 실행, 이전 결과를 다음에 전달. 앞 단계가 **성공했을 때만** 다음으로 (에러 전파 방지)",
-      "example": "[sense:search]{query: \"AI\"} >> [self:write]{path: \"result.md\"}",
-      "brief": "앞 단계 성공 시 결과 통화를 다음으로(0건은 정상)"
+      "meaning": "성공한 값을 선언된 다음 인자에 전달. 빈 목록도 정상 값",
+      "example": "[{score:7}] >> [table:take]{n:1}",
+      "brief": "성공 값 전달",
+      "prompt_name": "Sequential"
     },
     {
       "symbol": "&",
       "name": "Parallel",
-      "meaning": "동시 실행, 결과를 합침",
-      "example": "[sense:stock]{op: \"info\", ticker: \"AAPL\"} & [sense:stock]{op: \"info\", ticker: \"MSFT\"}",
-      "brief": "독립 병렬"
+      "meaning": "독립 가지를 병렬 실행하고 가지 순서의 목록을 반환. 자동 펼침 없음",
+      "example": "[self:time]{} & [self:time]{}",
+      "brief": "독립 병렬·순서 보존 목록",
+      "prompt_name": "Parallel"
     },
     {
       "symbol": "??",
       "name": "Fallback",
-      "meaning": "실패 **또는 빈 결과(0건 — items:[]·total:0)** 시 대체 실행. `>>` 는 고장만 멈춤(0건은 정상 흐름) — 두 연산자의 술어가 다르다(2026-08-08 ⑯)",
-      "example": "[sense:stock]{op: \"quote\", ticker: \"AAPL\"} ?? [sense:search]{query: \"AAPL price\"}",
-      "brief": "실패 또는 0건이면 다음 대안",
-      "prompt_name": "Fallback (실패·0건이면 다음 시도)"
+      "meaning": "잡을 수 있는 실패만 대체. 0건·빈 문자열·null은 그대로 반환",
+      "example": "[sense:search]{query:\"AI\"} ?? [sense:search]{query:\"인공지능\"}",
+      "brief": "실패만 대체(0건은 유지)",
+      "prompt_name": "Fallback (0건은 유지)"
     },
     {
       "symbol": ";",
       "name": "Statement (독립 문장)",
-      "meaning": "**되든 안 되든 다음.** 한 줄 안의 줄바꿈 — 개행으로 나눈 문장과 완전히 같다. 앞 문장이 실패해도 뒤 문장을 실행하고, 결과(`_prev_result`)는 경계를 넘지 않는다. 실패는 숨기지 않는다(`success:false` + `statements_failed`)",
-      "example": "[self:time]; [self:time]",
-      "brief": "결과를 넘기지 않는 독립 문장(줄바꿈과 같음)"
+      "meaning": "독립 문장 경계(줄바꿈과 동일). 실패 즉시 중단, 계속할 곳은 try/catch로 명시",
+      "example": "$x=1; return $x",
+      "brief": "문장 경계·실패 즉시 중단",
+      "prompt_name": "Statement (독립 문장)"
     }
   ]
 }

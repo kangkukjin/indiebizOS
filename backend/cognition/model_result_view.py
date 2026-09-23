@@ -284,6 +284,13 @@ def describe_actions(names, allowed_nodes, edition=None):
         else:
             if edition == 2:
                 from ibl_v2_contracts import handler_contract
-                spec = {**spec, "callable_contract": spec.get("callable_contract") or handler_contract(node, action, spec)}
+                contract = spec.get("callable_contract")
+                if contract:
+                    # Current authoring must not receive contradictory legacy params/flow.
+                    spec = {**{k: spec[k] for k in ("description", "guides", "group", "runs_on") if k in spec},
+                            "callable_contract": contract,
+                            "operations": (spec.get("ops") or {}).get("values", {})}
+                else:
+                    spec = {**spec, "callable_contract": handler_contract(node, action, spec)}
             answer.append({"action": name, "definition": spec})
     return {"actions": answer, "executed": False}

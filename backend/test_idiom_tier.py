@@ -24,6 +24,8 @@ from datetime import datetime
 
 import pytest
 
+pytestmark = pytest.mark.usefixtures('isolated_distill_training')
+
 BACKEND = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, BACKEND)
 import boot_paths  # noqa: E402,F401
@@ -138,10 +140,7 @@ def _arm(monkeypatch, reply, recall=None):
     monkeypatch.setattr(rag, "_validate_ibl_actions", lambda code: True)
     import ibl_param_vocab
     monkeypatch.setattr(ibl_param_vocab, "check_code_params", lambda code: [])
-    # 학습 파일은 건드리지 않는다
-    import pathlib
-    real = pathlib.Path.write_text
-    monkeypatch.setattr(pathlib.Path, "write_text", lambda self, *a, **k: None if self.name == "ibl_distilled.json" else real(self, *a, **k))
+    # 학습 저장은 isolated_distill_training 안에서 실제 atomic replace까지 검사한다.
     return saved
 
 
@@ -164,7 +163,7 @@ def test_p2_phrase_is_not_saved_automatically(monkeypatch, tmp_path):
     assert [s for s in saved if s.get("category") == "phrase"] == []
 
 
-def test_p2_word_saved_without_a_name(monkeypatch):
+def test_p2_word_saved_without_a_name(monkeypatch, isolated_distill_training):
     """용례(코퍼스)는 종전대로 쌓인다 — 멈춘 것은 **이름**이지 경험이 아니다."""
     import ibl_usage_rag as rag
     saved = _arm(monkeypatch, {"decision": "keep", "benefit": "검색 뒤 표본 선택", "applicability": "결과 행을 반환하는 검색",
@@ -173,6 +172,8 @@ def test_p2_word_saved_without_a_name(monkeypatch):
     assert rag.distill_experience("AI 팁 5개", TOOL_CALLS, top_score=0.3) is True
     assert sorted(s["category"] for s in saved) == ["pipeline"]
     assert all(not s.get("alias") for s in saved), "자동 경로가 아직 이름을 준다"
+    assert json.loads(isolated_distill_training.read_text())[0]['ibl_code'] == PIPE
+    assert not isolated_distill_training.with_suffix('.distill.tmp').exists()
 
 
 def test_p2_gates_still_reject_on_the_manual_path(monkeypatch):
@@ -281,6 +282,10 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setattr(HT, "DOC_DIR", str(tmp_path / "tree"))
     monkeypatch.setattr(HT, "GUIDE_DB_PATH", str(tmp_path / "guide_db.json"))
     monkeypatch.setattr(HT, "_default_db_path", lambda: db)
+    # 트리의 기본 DB를 바꾸면 _index의 시험 DB 판별도 바뀐다. 벡터 쪽까지 격리한다.
+    monkeypatch.setattr(mod, "DB_PATH", db)
+    monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
+    monkeypatch.setattr(mod.IBLUsageDB, "_index_single", lambda *a, **k: None)
     # 검증자 계약은 (code, function_body) — 관용구 몸은 함수 몸으로 읽는다(언어 개정 2026-09-07).
     # 한 인자 스텁을 두면 _syntax_reason 의 fail-closed 가 **모든 코드를 거절**로 바꾼다(설계대로).
     import ibl_signature_slot as _slot        # 슬롯의 주인(2026-09-07 이동) — 원장은 재수출만 한다

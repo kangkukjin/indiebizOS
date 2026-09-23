@@ -34,7 +34,7 @@ def test_d1_same_program_by_blank_signature():
 
 
 # ---------------------------------------------------------------- D2
-def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path):
+def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path, isolated_distill_training):
     import ibl_usage_db as mod
     import thread_context
     import hippo_tree
@@ -65,9 +65,6 @@ def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path)
     monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias", lambda self, n: None)
     monkeypatch.setattr(rag, "_validate_ibl_actions", lambda code: True)
     monkeypatch.setattr(ibl_param_vocab, "check_code_params", lambda code: [])
-    import pathlib
-    real = pathlib.Path.write_text
-    monkeypatch.setattr(pathlib.Path, "write_text", lambda self, *a, **k: None if self.name == "ibl_distilled.json" else real(self, *a, **k))
     calls = [{"tool_name": "execute_ibl", "input": {"code": STATUS}, "success": True},
              {"tool_name": "execute_ibl", "input": {"code": APPLY}, "success": True}]
     assert rag.distill_experience("#repair 적용해줘", calls, top_score=0.3) is True
@@ -77,6 +74,8 @@ def test_d2_no_phrase_and_no_name_from_the_automatic_path(monkeypatch, tmp_path)
     cats = [s.get("category") for s in saved]
     assert "phrase" not in cats, cats
     assert all(not s.get("alias") for s in saved), "자동 경로가 아직 이름을 준다"
+    assert json.loads(isolated_distill_training.read_text())[0]['ibl_code'] == code
+    assert not isolated_distill_training.with_suffix('.distill.tmp').exists()
 
 
 # ---------------------------------------------------------------- N1 · R1

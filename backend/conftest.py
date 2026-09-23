@@ -30,3 +30,22 @@ def isolated_episode_store(tmp_path, monkeypatch):
     monkeypatch.setattr(episode_logger, "_get_db", connect)
     episode_logger._ensure_episode_tables()
     return path
+
+
+@pytest.fixture
+def isolated_distill_training(tmp_path, monkeypatch):
+    """증류의 임시 파일→replace 저장도 운영 학습 자료 밖에서 검증한다."""
+    from pathlib import Path
+    import ibl_usage_rag as rag
+    import ibl_idiom
+
+    root = tmp_path / 'distill_workspace'
+    prompt = Path(rag.__file__).resolve().parents[2] / 'data/common_prompts/reflection_prompt.md'
+    target = root / 'data/common_prompts/reflection_prompt.md'
+    target.parent.mkdir(parents=True)
+    target.write_bytes(prompt.read_bytes())
+    training = root / 'data/training/ibl_distilled.json'
+    training.parent.mkdir(parents=True)
+    monkeypatch.setattr(rag, '__file__', str(root / 'backend/cognition/ibl_usage_rag.py'))
+    monkeypatch.setattr(ibl_idiom, '__file__', str(root / 'backend/cognition/ibl_idiom.py'))
+    return training

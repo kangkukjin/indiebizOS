@@ -43,10 +43,14 @@ def _add(db, intent, code, topic="", ok=0):
 @pytest.fixture
 def env(tmp_path, monkeypatch):
     import hippo_tree as HT
+    import ibl_usage_db as mod
     db = str(tmp_path / "usage.db"); _mk_db(db)
     monkeypatch.setattr(HT, "DOC_DIR", str(tmp_path / "tree"))
     monkeypatch.setattr(HT, "GUIDE_DB_PATH", str(tmp_path / "guide_db.json"))   # 기본=씨앗 없음
     monkeypatch.setattr(HT, "_default_db_path", lambda: db)
+    monkeypatch.setattr(mod, "DB_PATH", db)
+    monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
+    monkeypatch.setattr(mod.IBLUsageDB, "_index_single", lambda *a, **k: None)
     return HT, db
 
 

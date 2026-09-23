@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """유튜브 AI 팁 보고서 — 평탄 팁 행(tip/how/vid/title/uploader/url)을
-tips.json 스키마(source 중첩)로 변환한다. IBL compute 가 dict 를 만들 수 없어
-이 한 단계만 스크립트가 맡는다. 출력은 [self:ledger]{op:'append', items_file:...} 로 적재.
+tips.json 스키마(source 중첩)로 변환한다. 기존 보고서의 저장 스키마 변환을
+이 스크립트가 맡는다. 현재 IBL compute 콜백도 Record를 만들 수 있다. 출력은 [self:ledger]{op:'append', items_file:...} 로 적재.
 
 인자는 stdin JSON: {src, out, topic, date, report, try_match}
   try_match — '||' 로 구분한 부분문자열 목록. 팁 제목에 포함되면 try_candidate=true.

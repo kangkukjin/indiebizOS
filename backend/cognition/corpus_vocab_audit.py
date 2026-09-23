@@ -50,17 +50,63 @@ def audit_corpus_vocab() -> Dict:
     import sqlite3
     import yaml
     from ibl_parser import parse
+    from ibl_edition import source_edition
+    from corpus_policy import exclusion_reason
 
     nodes = (yaml.safe_load(_NODES_PATH.read_text(encoding="utf-8")) or {}).get("nodes", {})
-    conn = sqlite3.connect(str(_DB_PATH), timeout=10)
-    rows = list(conn.execute("SELECT id, intent, ibl_code FROM ibl_examples"))
+    conn = sqlite3.connect(_DB_PATH.resolve().as_uri() + "?mode=ro", uri=True, timeout=10)
+    conn.row_factory = sqlite3.Row
+    rows = [dict(r) for r in conn.execute("SELECT * FROM ibl_examples")]
     conn.close()
 
     flags: List[Dict] = []
     dead = unparsable = 0
-    for rid, intent, code in rows:
+    current = {'valid': 0, 'incomplete': 0, 'invalid': 0, 'failed': 0}
+    excluded = 0
+    registry = definitions = None
+    registry_error = None
+    aliases = {r.get('alias') for r in rows if r.get('alias')}
+    for row in rows:
+        rid, intent, code = row['id'], row['intent'], row['ibl_code']
+        excluded += bool(exclusion_reason(row))
         try:
-            parsed = parse(code or "")
+            edition = source_edition(code, row.get('edition'))
+        except ValueError as exc:
+            current['invalid'] += 1
+            flags.append({'id': rid, 'kind': 'edition_conflict', 'detail': str(exc)[:160]})
+            continue
+        if edition == 2:
+            try:
+                from ibl_v2_compile import compile_program
+                from ibl_v2_adapters import load_registry
+                from ibl_v2_store import definitions as load_definitions, definition_name
+                if registry is None and registry_error is None:
+                    try:
+                        registry, definitions = load_registry(), load_definitions()
+                    except Exception as exc:
+                        registry_error = exc
+                if registry_error:
+                    raise registry_error
+                if row.get('alias') and definition_name(code) != row['alias']:
+                    raise ValueError('alias/definition name mismatch')
+                checked = compile_program(code, registry, definitions=definitions).report()
+                current[checked['status']] += 1
+                if checked['status'] == 'invalid':
+                    flags.append({'id': rid, 'kind': 'current_invalid', 'intent': str(intent)[:60],
+                                  'issues': checked['issues']})
+            except Exception as exc:
+                from ibl_v2_ir import Fault
+                status = ('invalid' if isinstance(exc, ValueError)
+                          or isinstance(exc, Fault) and exc.kind == 'compile' else 'failed')
+                current[status] += 1
+                flags.append({'id': rid, 'kind': 'current_' + status, 'detail': str(exc)[:160]})
+            continue
+        try:
+            if row.get('alias'):
+                from ibl_parser import parse_function_body
+                parsed = parse_function_body(code or "")
+            else:
+                parsed = parse(code or "")
         except Exception as e:
             unparsable += 1
             flags.append({"id": rid, "kind": "unparsable",
@@ -70,11 +116,14 @@ def audit_corpus_vocab() -> Dict:
         _walk_leaves(parsed, leaves)
         for st in leaves:
             n, a = st.get("_node"), st.get("action")
+            if n == 'fn' and (a in aliases or st.get('_fn_ref')):
+                continue
             if n not in nodes or a not in (nodes.get(n, {}).get("actions") or {}):
                 dead += 1
                 flags.append({"id": rid, "kind": "dead_vocab", "vocab": f"{n}:{a}",
                               "intent": str(intent)[:60]})
-    return {"total": len(rows), "dead": dead, "unparsable": unparsable, "flags": flags}
+    return {"total": len(rows), "dead": dead, "unparsable": unparsable, "flags": flags,
+            "current": current, "authoring_excluded": excluded}
 
 
 def _should_run(force: bool = False) -> bool:
@@ -97,6 +146,8 @@ def _save_state(result: Dict):
             "total": result.get("total", 0),
             "dead": result.get("dead", 0),
             "unparsable": result.get("unparsable", 0),
+            "current": result.get("current", {}),
+            "authoring_excluded": result.get("authoring_excluded", 0),
             "flags": result.get("flags", [])[:60],
         }, ensure_ascii=False, indent=2), encoding="utf-8")
     except Exception as e:
@@ -111,13 +162,14 @@ def run_corpus_vocab_audit(force: bool = False) -> Dict:
     result = audit_corpus_vocab()
     _save_state(result)
 
-    bad = result["dead"] + result["unparsable"]
+    bad = (result["dead"] + result["unparsable"]
+           + result['current']['invalid'] + result['current']['failed'])
     if bad:
         head = "; ".join(
             f.get("vocab") or f"#{f['id']} 파싱불가" for f in result["flags"][:_MAX_REPORT])
         logger.warning(
             f"[CorpusVocab] 라이브 코퍼스 {result['total']}건 중 죽은 어휘 {result['dead']} / "
-            f"파싱 불가 {result['unparsable']} — {head} ({_STATE_PATH.name} 참조)")
+            f"파싱 불가 {result['unparsable']} · 현재 검사 {result['current']} — {head} ({_STATE_PATH.name} 참조)")
     else:
         logger.info(f"[CorpusVocab] 라이브 코퍼스 {result['total']}건 전수 감사 — 죽은 어휘·파싱 불가 0")
 
@@ -125,7 +177,8 @@ def run_corpus_vocab_audit(force: bool = False) -> Dict:
         "name": "corpus_vocab",
         "ok": bad == 0,
         "detail": (f"용례 {result['total']}건 · 죽은 어휘 {result['dead']} · "
-                   f"파싱 불가 {result['unparsable']}"),
+                   f"파싱 불가 {result['unparsable']} · 현재 검사 {result['current']} · "
+                   f"현재 작성/학습 제외 {result['authoring_excluded']}"),
     }
 
 
@@ -134,7 +187,8 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
     import boot_paths  # noqa: F401 — 단독 실행 시에만 층 경로를 얹는다
     r = audit_corpus_vocab()
-    print(f"라이브 코퍼스 {r['total']}건 — 죽은 어휘 {r['dead']} · 파싱 불가 {r['unparsable']}")
+    print(json.dumps(r, ensure_ascii=False, indent=2))
     for f in r["flags"][:20]:
-        print(f"  ✗ #{f['id']} [{f['kind']}] {f.get('vocab', '')} {f['intent']}")
-    sys.exit(1 if (r["dead"] or r["unparsable"]) else 0)
+        print(f"  ✗ #{f['id']} [{f['kind']}] {f.get('vocab', '')} {f.get('intent', '')}")
+    sys.exit(1 if (r["dead"] or r["unparsable"] or r["current"]["invalid"]
+                   or r["current"]["failed"]) else 0)

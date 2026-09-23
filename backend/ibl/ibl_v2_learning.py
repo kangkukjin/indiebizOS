@@ -4,7 +4,7 @@ from ibl_v2_ir import Fault
 from ibl_v2_parser import parse
 
 
-def check_source(source, function_body=False):
+def check_source(source, function_body=False, *, registry=None, library=None):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_store import definitions, definition_name
@@ -12,7 +12,8 @@ def check_source(source, function_body=False):
         source_edition(source, 2)
         if function_body:
             definition_name(source)
-        plan = compile_program(source, load_registry(), definitions=definitions())
+        plan = compile_program(source, load_registry() if registry is None else registry,
+                               definitions=definitions() if library is None else library)
         return "; ".join(i["message"] for i in plan.issues) or None
     except (Fault, ValueError) as exc:
         return str(exc)

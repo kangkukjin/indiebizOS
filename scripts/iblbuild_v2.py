@@ -20,13 +20,25 @@ def validate_v2_contracts(data):
     return issues
 
 
-def check_v2_corpus(code, entry, issues, origin):
+def check_v2_corpus(code, entry, issues, origin, session=None):
     from ibl_edition import source_edition
     try:
         if source_edition(code, entry.get("edition")) != 2:
             return False
         from ibl_v2_learning import check_source
-        why = check_source(code, bool(entry.get("alias")) or entry.get("category") == "phrase")
+        kwargs = {}
+        if session is not None:
+            if not session:
+                try:
+                    from ibl_v2_adapters import load_registry
+                    from ibl_v2_store import definitions
+                    session.update(registry=load_registry(), library=definitions())
+                except Exception as exc:
+                    session['error'] = exc
+            if 'error' in session:
+                raise session['error']
+            kwargs = session
+        why = check_source(code, bool(entry.get("alias")) or entry.get("category") == "phrase", **kwargs)
         if why:
             issues.append(f"{origin}: 판본 2 용례 검사 — {why}")
     except Exception as exc:

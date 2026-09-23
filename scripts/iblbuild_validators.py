@@ -603,6 +603,7 @@ def validate_corpus_vocab(data: dict, root: Path) -> list[str] | None:
     nodes = data.get("nodes", {}) if isinstance(data, dict) else {}
     issues: list[str] = []
     seen_any = False
+    v2_session = {}  # One pinned vocabulary/library per full validation pass.
     for fname, e in _corpus_entries(root, include_db=True):
         seen_any = True
         code = e.get("ibl_code") or ""
@@ -610,7 +611,7 @@ def validate_corpus_vocab(data: dict, root: Path) -> list[str] | None:
         # 관용구 골격은 **함수 몸**이다 — 미할당 `$이름` 이 자리를 가리지 않고 시그니처다
         # (언어 개정 2026-09-07). 최상위 문법으로 읽으면 파이프 머리·병렬 분기 슬롯을 오타로 본다.
         _is_body = bool(e.get("alias")) or e.get("category") == "phrase"
-        if check_v2_corpus(code, e, issues, fname):
+        if check_v2_corpus(code, e, issues, fname, v2_session):
             continue
         try:
             parsed = (ibl_parser.parse_function_body(code) if _is_body else ibl_parser.parse(code))

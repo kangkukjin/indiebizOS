@@ -1,46 +1,84 @@
 """
-IBL 해마 파일럿: 학습된 임베딩 검색 모델 구축
+IBL 해마 임베딩 학습 — 클라우드(CUDA) 포팅판
 
-현재 범용 임베딩(ko-sroberta-multitask) vs IBL 도메인 fine-tuned 모델의
-검색 정확도를 비교하는 실험 스크립트.
+backend/ibl_embedding_trainer.py 의 충실한 포팅. 로직(데이터 추출/변형/밸런싱/
+정규화/description 페어/평가)은 원본과 동일하며, 다음만 변경했다:
 
-사용법:
-    cd <repo>/backend
-    python ibl_embedding_trainer.py
+  - device "mps" → DEVICE (cuda 우선, 없으면 cpu)
+  - epoch 사이 torch.mps.empty_cache() → torch.cuda.empty_cache()
+  - 평가 encode device 'cpu' → DEVICE (GPU에서 빠르게, 결과는 동일)
+  - 경로를 환경변수/기본값으로 (번들 디렉터리 기준)
+
+원본과 같은 베이스 모델(jhgan/ko-sroberta-multitask), 손실(MNR),
+정규화(normalize=True), seed(42)를 쓰므로 지표가 로컬 결과와 비교 가능하다.
+
+사용법 (Colab):
+    IBL_DATA_DIR=/content/bundle/data \
+    IBL_MODEL_OUT=/content/ibl_embedding \
+    python ibl_embedding_trainer_cloud.py
 """
 
 import os
 import sys
-import boot_paths  # noqa: F401 — standalone and imported training entry points
 import json
 import random
 import sqlite3
-import struct
 from pathlib import Path
 from typing import List, Dict, Tuple
 from dataclasses import dataclass
+
+# A standalone bundle carries the same two pure modules beside this file.
+# In a checkout use the canonical implementation, never a copied policy.
+_base = Path(__file__).resolve().parents[1] / 'backend' / 'base'
+if _base.is_dir():
+    sys.path.insert(0, str(_base))
 from corpus_policy import current_examples
 
-# 프로젝트 루트
-PROJECT_ROOT = Path(__file__).parent.parent
-DATA_DIR = PROJECT_ROOT / "data"
+import torch
+
+# ---- 경로/디바이스 (원본과 다른 부분) ----------------------------------------
+DATA_DIR = Path(os.environ.get("IBL_DATA_DIR", "/content/bundle/data"))
 DB_PATH = DATA_DIR / "ibl_usage.db"
-MODEL_OUTPUT_DIR = DATA_DIR / "models" / "ibl_embedding"
+MODEL_OUTPUT_DIR = Path(os.environ.get("IBL_MODEL_OUT", "/content/ibl_embedding"))
+
+if torch.cuda.is_available():
+    DEVICE = "cuda"
+elif getattr(torch.backends, "mps", None) is not None and torch.backends.mps.is_available():
+    DEVICE = "mps"
+else:
+    DEVICE = "cpu"
+print(f"[device] {DEVICE}")
+
+# 배치 크기 — 원본 검증값 4. GPU면 16/32 실험 가능(README의 주의 참고).
+BATCH_SIZE = int(os.environ.get("IBL_BATCH_SIZE", "4"))
+MAX_SEQ_LENGTH = int(os.environ.get("IBL_MAX_SEQ", "64"))
+
 
 # ============================================================================
-# Step 1: 데이터 추출 및 변형 생성
+# Step 1: 데이터 추출 및 변형 생성  (원본 그대로)
 # ============================================================================
 
 @dataclass
 class TrainingPair:
     intent: str
     ibl_code: str
-    group_id: int  # 같은 ibl_code를 공유하는 그룹
+    group_id: int
 
 
 def extract_examples_from_db() -> List[Dict]:
-    """현재 DB에서 (intent, ibl_code) 쌍 추출"""
-    conn = sqlite3.connect(str(DB_PATH), timeout=10)
+    """DB 용례 추출. 번들에는 보통 export JSON 만 들어있으므로 그걸 우선 사용,
+    없으면 원본 DB(있을 때)에서 읽는다."""
+    export_path = DATA_DIR / "ibl_examples_export.json"
+    if export_path.exists():
+        with open(export_path, "r", encoding="utf-8") as f:
+            examples = json.load(f)
+        examples, rejected = current_examples(examples)
+        print(f"[데이터] export 현재 {len(examples)}개, 제외 {rejected}")
+        return examples
+    if not DB_PATH.exists():
+        print(f"[데이터] DB/export 없음 — DB 시드 건너뜀")
+        return []
+    conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     cursor = conn.execute(
         "SELECT id, intent, ibl_code, nodes, category, provenance FROM ibl_examples ORDER BY id"
@@ -53,7 +91,6 @@ def extract_examples_from_db() -> List[Dict]:
     return examples
 
 
-# 동사 변형 패턴 (ibl_usage_generator.py에서 확장)
 VERB_VARIATIONS = {
     "조회": ["확인", "알려줘", "보여줘", "가져와", "찾아봐", "체크"],
     "검색": ["찾아줘", "찾아봐", "검색해줘", "서치해줘", "찾아"],
@@ -82,7 +119,6 @@ NOUN_SYNONYMS = {
     "뉴스": ["소식", "뉴스", "기사"],
 }
 
-# 추가 변형 패턴 — 어미 변환
 ENDING_VARIATIONS = [
     ("해줘", ["해", "해줄래", "해볼래", "좀 해줘", "해주세요"]),
     ("알려줘", ["알려", "알려줄래", "알려주세요"]),
@@ -100,10 +136,9 @@ def generate_variations(examples: List[Dict]) -> List[Dict]:
         ibl_code = ex['ibl_code']
         generated = set()
 
-        # 1. 동사 변형
         for verb_key, replacements in VERB_VARIATIONS.items():
             if verb_key in intent:
-                for rep in replacements[:3]:  # 상위 3개
+                for rep in replacements[:3]:
                     new_intent = intent.replace(verb_key, rep, 1)
                     if new_intent != intent and new_intent not in generated:
                         generated.add(new_intent)
@@ -113,7 +148,6 @@ def generate_variations(examples: List[Dict]) -> List[Dict]:
                             'source': 'verb_variation'
                         })
 
-        # 2. 명사 동의어
         for noun_key, synonyms in NOUN_SYNONYMS.items():
             if noun_key in intent:
                 for syn in synonyms[:2]:
@@ -126,7 +160,6 @@ def generate_variations(examples: List[Dict]) -> List[Dict]:
                             'source': 'noun_variation'
                         })
 
-        # 3. 어미 변환
         for ending, alts in ENDING_VARIATIONS:
             if intent.endswith(ending):
                 for alt in alts[:2]:
@@ -143,50 +176,28 @@ def generate_variations(examples: List[Dict]) -> List[Dict]:
     return variations
 
 
-import re
-import re as _re_mod
-_QUOTED_RE = _re_mod.compile(r'"(?:\\.|[^"\\])*"' + r"|'(?:\\.|[^'\\])*'")
-
-
-def _strip_strings(code: str) -> str:
-    return _QUOTED_RE.sub('""', code or "")
-
-
-def is_phrase_code(ibl_code: str) -> bool:
-    """관용구(2026-09-04) — 따옴표 밖에 `;` 로 이은 독립 문장 열. 낱말·파이프와 다른 버킷으로 센다."""
-    return ';' in _strip_strings(ibl_code)
-
-
-def balance_by_action(data: List[Dict], max_per_action: int = 20) -> List[Dict]:
+def balance_by_action(data: List[Dict], max_per_action: int = 30) -> List[Dict]:
     """액션별 데이터 밸런싱 — 초과분은 오래된(앞쪽) 데이터부터 제거.
-
-    증류 데이터는 시간순으로 쌓이므로, 리스트 뒤쪽이 최신이다.
-    같은 액션 패턴이 max_per_action건을 초과하면 오래된 것부터 버린다.
-    관용구(`;` 문장 열)는 낱말 집합이 같아도 별도 버킷 — 머리 열(순서)이 곧 패턴이다.
-    """
+    (2026-06-04: 상한 20→30 — 데이터량 레버, 인기 액션에 더 많은 대조 신호.)"""
+    import re
     from collections import defaultdict
 
     action_pattern = re.compile(r'\[(\w+:\w+)\]')
 
-    # 액션 패턴별로 인덱스 수집 (뒤쪽 = 최신)
     action_indices: Dict[str, List[int]] = defaultdict(list)
     for i, item in enumerate(data):
         code = item.get('ibl_code', '')
-        if is_phrase_code(code):
-            key = "phrase:" + ">".join(action_pattern.findall(_strip_strings(code)))
-        else:
-            actions = tuple(sorted(set(action_pattern.findall(code))))
-            key = "+".join(actions) if actions else "_unknown"
+        actions = tuple(sorted(set(action_pattern.findall(code))))
+        key = "+".join(actions) if actions else "_unknown"
         action_indices[key].append(i)
 
-    # 초과분 제거 대상 인덱스 수집
     drop = set()
     trimmed_actions = []
     for key, indices in action_indices.items():
         if len(indices) > max_per_action:
-            old_indices = indices[:-max_per_action]  # 앞쪽(오래된) 것 제거
+            old_indices = indices[:-max_per_action]
             drop.update(old_indices)
-            trimmed_actions.append(f"{key}({len(indices)}→{max_per_action})")
+            trimmed_actions.append(f"{key}({len(indices)}->{max_per_action})")
 
     if trimmed_actions:
         print(f"[밸런싱] 액션별 상한 {max_per_action}건 적용, "
@@ -197,70 +208,12 @@ def balance_by_action(data: List[Dict], max_per_action: int = 20) -> List[Dict]:
     return [item for i, item in enumerate(data) if i not in drop]
 
 
-def prepare_training_data(examples: List[Dict], variations: List[Dict],
-                          test_ratio: float = 0.2,
-                          normalize: bool = False) -> Tuple[List, List, Dict]:
-    """학습/평가 데이터 분리 및 그룹핑
-
-    Args:
-        normalize: True이면 코드를 액션 패턴으로 정규화.
-                   [sense:stock]{op: "info", ticker: "삼성전자"} → [sense:stock]
-                   파라미터만 다른 코드들이 같은 그룹으로 합쳐짐.
-    """
-    # 모든 데이터를 ibl_code 기준으로 그룹핑
-    code_to_intents: Dict[str, List[str]] = {}
-    for item in examples + variations:
-        code = item['ibl_code']
-        if normalize:
-            code = normalize_code_to_pattern(code)
-        intent = item['intent']
-        if code not in code_to_intents:
-            code_to_intents[code] = []
-        if intent not in code_to_intents[code]:
-            code_to_intents[code].append(intent)
-
-    if normalize:
-        print(f"[데이터] 정규화 후 고유 패턴: {len(code_to_intents)}개 (정규화 전 코드 수와 비교)")
-
-    # 각 패턴 안에서 intent를 train/test로 분리
-    train_pairs = []
-    test_pairs = []
-
-    for code, intents in code_to_intents.items():
-        random.shuffle(intents)
-        if len(intents) <= 2:
-            # 2건 이하면 전부 학습용
-            train_pairs.extend([(intent, code) for intent in intents])
-        else:
-            split_idx = max(1, int(len(intents) * (1 - test_ratio)))
-            train_pairs.extend([(intent, code) for intent in intents[:split_idx]])
-            test_pairs.extend([(intent, code) for intent in intents[split_idx:]])
-
-    print(f"[데이터] 학습: {len(train_pairs)}쌍, 평가: {len(test_pairs)}쌍 ({len(code_to_intents)}개 패턴, 패턴 내 분할)")
-
-    return train_pairs, test_pairs, code_to_intents
-
-
-# ============================================================================
-# Step 2: 모델 Fine-tuning
-# ============================================================================
-
-def load_action_descriptions() -> Dict[str, str]:
-    """ibl_nodes.yaml에서 [node:action] → description 매핑 로드"""
-    import yaml
-    nodes_path = PROJECT_ROOT / "data" / "ibl_nodes.yaml"
-    if not nodes_path.exists():
-        return {}
-    with open(nodes_path) as f:
-        data = yaml.safe_load(f)
-    descriptions = {}
-    for node_name, node_data in data.get('nodes', {}).items():
-        for action_name, action_data in node_data.get('actions', {}).items():
-            if isinstance(action_data, dict):
-                desc = action_data.get('description', '')
-                if desc:
-                    descriptions[f"{node_name}:{action_name}"] = str(desc)
-    return descriptions
+def normalize_code_to_pattern(ibl_code: str) -> str:
+    """IBL 코드를 액션 패턴으로 정규화 (파라미터 블록 제거)."""
+    import re
+    pattern = re.sub(r'\{[^}]*\}', '', ibl_code)
+    pattern = re.sub(r'\s+', ' ', pattern).strip()
+    return pattern
 
 
 def extract_action_from_code(ibl_code: str) -> str:
@@ -276,11 +229,13 @@ def extract_action_from_code(ibl_code: str) -> str:
 def extract_actions_from_code(ibl_code: str) -> list:
     """코드에 등장하는 **모든** [node:action] — 등장 순, 중복 제거.
 
-    왜 필요했나(2026-08-23 실측): desc 쌍이 머리 액션으로만 만들어져서, 파이프의
-    꼬리에만 사는 낱말은 intent→description 학습 쌍을 **한 건도** 못 받았다.
-    코퍼스에 나오지만 머리에 선 적 없는 액션이 **14개, 전부 `table:` 변환자**였고
-    (take 150회·filter 52·sort 46·brief 30·since 25·…), 직전 A/B 에서 실패한 프로브
-    6건 중 5건이 정확히 그 부류였다. 파이프의 뒷낱말에게 이름이 없었던 셈이다.
+    ★로컬 트레이너(backend/ibl_embedding_trainer.py)와 **같은 규칙**이어야 한다.
+      두 트레이너가 갈리면 어느 경로로 학습했느냐에 따라 몸이 달라진다.
+      가드: backend/test_desc_pair_coverage.py 의 클라우드 동기화 시험.
+
+    왜(2026-08-23 실측): desc 쌍이 머리 액션으로만 만들어져서, 파이프의 꼬리에만 사는
+    낱말은 intent→description 학습 쌍을 **한 건도** 못 받았다. 코퍼스에 나오지만 머리에
+    선 적 없는 액션이 **14개, 전부 `table:` 변환자**였다.
     """
     import re
     seen, out = set(), []
@@ -291,66 +246,79 @@ def extract_actions_from_code(ibl_code: str) -> list:
     return out
 
 
-def normalize_code_to_pattern(ibl_code: str) -> str:
-    """IBL 코드를 액션 패턴으로 정규화.
+def prepare_training_data(examples: List[Dict], variations: List[Dict],
+                          test_ratio: float = 0.2,
+                          normalize: bool = False) -> Tuple[List, List, Dict]:
+    """학습/평가 데이터 분리 및 그룹핑 (패턴 내 분할)."""
+    code_to_intents: Dict[str, List[str]] = {}
+    for item in examples + variations:
+        code = item['ibl_code']
+        if normalize:
+            code = normalize_code_to_pattern(code)
+        intent = item['intent']
+        if code not in code_to_intents:
+            code_to_intents[code] = []
+        if intent not in code_to_intents[code]:
+            code_to_intents[code].append(intent)
 
-    파라미터를 제거하고 액션 패턴만 남긴다.
-    [sense:stock]{op: "info", ticker: "삼성전자"} → [sense:stock]
-    [sense:stock]{op: "quote", ticker: "A"} >> [table:chart]{type: "line"} → [sense:stock] >> [table:chart]
-    [a:b]{...} & [c:d]{...} → [a:b] & [c:d]
-    관용구: [a:b]{x: "${슬롯}"}; [c:d]{…} → [a:b]; [c:d] — 머리 열(순서)이 패턴이다.
-    ★중괄호 짝을 센다(2026-09-04): 옛 정규식(첫 닫는 중괄호까지)은 `${슬롯}`·`do: "[x:y]{…}"` 처럼 안에 `}` 가 있는
-      블록을 첫 `}` 에서 끊어 잔해를 남겼다. 따옴표 안은 통째로 건너뛴다.
-    """
-    out, depth, q, i, n = [], 0, None, 0, len(ibl_code or "")
-    while i < n:
-        ch = ibl_code[i]
-        if q:
-            if ch == "\\" and i + 1 < n:
-                i += 2; continue
-            if ch == q:
-                q = None
-        elif depth:
-            if ch in "\"'":
-                q = ch
-            elif ch == "{":
-                depth += 1
-            elif ch == "}":
-                depth -= 1
+    if normalize:
+        print(f"[데이터] 정규화 후 고유 패턴: {len(code_to_intents)}개")
+
+    train_pairs = []
+    test_pairs = []
+
+    for code, intents in code_to_intents.items():
+        random.shuffle(intents)
+        if len(intents) <= 2:
+            train_pairs.extend([(intent, code) for intent in intents])
         else:
-            if ch == "{":
-                depth = 1
-            elif ch in "\"'":
-                q = ch; out.append(ch)
-            else:
-                out.append(ch)
-        i += 1
-    pattern = "".join(out)
-    # 공백 정리
-    pattern = re.sub(r'\s+', ' ', pattern).strip()
-    return pattern
+            split_idx = max(1, int(len(intents) * (1 - test_ratio)))
+            train_pairs.extend([(intent, code) for intent in intents[:split_idx]])
+            test_pairs.extend([(intent, code) for intent in intents[split_idx:]])
+
+    print(f"[데이터] 학습: {len(train_pairs)}쌍, 평가: {len(test_pairs)}쌍 "
+          f"({len(code_to_intents)}개 패턴, 패턴 내 분할)")
+
+    return train_pairs, test_pairs, code_to_intents
+
+
+# ============================================================================
+# Step 2: 모델 Fine-tuning
+# ============================================================================
+
+def load_action_descriptions() -> Dict[str, str]:
+    """ibl_nodes.yaml에서 [node:action] -> description 매핑 로드"""
+    import yaml
+    nodes_path = DATA_DIR / "ibl_nodes.yaml"
+    if not nodes_path.exists():
+        print(f"[학습] ibl_nodes.yaml 없음({nodes_path}) — description 페어 생략")
+        return {}
+    with open(nodes_path) as f:
+        data = yaml.safe_load(f)
+    descriptions = {}
+    for node_name, node_data in data.get('nodes', {}).items():
+        for action_name, action_data in node_data.get('actions', {}).items():
+            if isinstance(action_data, dict):
+                desc = action_data.get('description', '')
+                if desc:
+                    descriptions[f"{node_name}:{action_name}"] = str(desc)
+    return descriptions
 
 
 def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
                 test_pairs: List[Tuple[str, str]] = None):
-    """sentence-transformer fine-tuning (intent→description 매핑 포함)"""
+    """sentence-transformer fine-tuning (intent->description 매핑 포함)"""
     from sentence_transformers import SentenceTransformer, InputExample, losses
-    from sentence_transformers.evaluation import InformationRetrievalEvaluator
     from torch.utils.data import DataLoader
 
     BASE_MODEL = 'jhgan/ko-sroberta-multitask'
     print(f"\n[학습] 베이스 모델 로딩: {BASE_MODEL}")
-    model = SentenceTransformer(BASE_MODEL, device="mps")
-    # 2026-05-29 v12: max_seq_length 128→64. 의도/설명/코드가 모두 짧아(대개 30~50토큰)
-    # 손실 거의 없이 activation 메모리를 절반으로. batch=4가 9GB 천장(v11 epoch3 OOM)
-    # 아래로 들어가도록. v11이 epoch2에서 0.898(상승 중)이었으니 peak 포착이 목표.
-    model.max_seq_length = 64
+    model = SentenceTransformer(BASE_MODEL, device=DEVICE)   # 원본: device="mps"
+    model.max_seq_length = MAX_SEQ_LENGTH
 
-    # 액션 description 로드
     action_descs = load_action_descriptions()
     print(f"[학습] {len(action_descs)}개 액션 description 로드")
 
-    # 학습 데이터 구성
     train_examples = []
     train_code_to_intents: Dict[str, List[str]] = {}
 
@@ -360,37 +328,22 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
         train_code_to_intents[code].append(intent)
 
     for code, intents in train_code_to_intents.items():
-        # 1. intent ↔ intent 쌍 — 2026-05-28 완전 제거.
-        # 라운드 2 통합 + 윈도우 2 축소(0.825) vs 이전 윈도우 4(0.948) 비교에서
-        # intent-intent supervision이 plateau를 만든다는 판단. intent→code 매칭이
-        # 본질이고, 같은 code에 묶인 intent들은 자연스럽게 비슷한 embedding으로 수렴
-        # (모두 code와 가까이 가야 하므로). 메모리/시간 부담도 추가 감소.
-
-        # 2. intent → ibl_code 쌍
+        # intent -> ibl_code 쌍
         for intent in intents:
             train_examples.append(InputExample(texts=[intent, code]))
 
-        # 3. intent → action description 쌍 — 2026-05-29 v6 복원.
-        # v5 (제거) 시 best 0.796 vs v4 (유지) 0.829 — description 페어가 핵심 신호.
-        # batch_size=1 로 메모리 부담 대신 시간으로 비용 전환.
+        # intent -> action description 쌍 + description -> code 쌍
         actions = extract_actions_from_code(code)
         action = actions[0] if actions else ""
         if action in action_descs:
             desc = action_descs[action]
-            for intent in intents[:5]:  # 상위 5개 intent
+            for intent in intents[:5]:
                 train_examples.append(InputExample(texts=[intent, desc]))
             train_examples.append(InputExample(texts=[desc, code]))
 
-        # 3-b. ★꼬리 액션도 **굶지는 않게** — code 당 intent 1개 (2026-08-23).
-        #
-        # 문장의 의미는 액션들에 나뉘어 있는데 옛 규칙은 머리에게만 몫을 줬다. 그래서
-        # 파이프 꼬리에만 사는 14개 낱말(전부 table: 변환자)이 desc 쌍 0건이었다.
-        #
-        # ★그렇다고 꼬리에 머리와 같은 몫(intents[:5])을 주지는 않는다. 그러면 하나의
-        #   질의가 두 description 을 똑같이 당겨 **머리의 desc Top-1 이 동전던지기가 된다**
-        #   — 평가의 정답 라벨은 여전히 머리이므로 그건 자를 만족시키려다 몸을 흐리는 짓이다.
-        #   고치려는 병은 '희석'이 아니라 '굶주림'이다. 0 을 벗어나게 하는 최소량만 준다.
-        #   (부족하면 늘린다. 늘리는 것은 쉽고, 흐려진 뒤 되돌리는 것은 어렵다.)
+        # ★꼬리 액션도 굶지는 않게 — code 당 intent 1개 (로컬 트레이너와 동일 규칙).
+        #   대등한 몫을 주면 한 질의가 두 description 을 똑같이 당겨 머리의 desc Top-1 이
+        #   동전던지기가 된다. 고치려는 병은 '희석'이 아니라 '굶주림'이므로 최소량만 준다.
         for tail in actions[1:]:
             if tail in action_descs and intents:
                 train_examples.append(InputExample(texts=[intents[0], action_descs[tail]]))
@@ -398,42 +351,21 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
     random.shuffle(train_examples)
     print(f"[학습] {len(train_examples)}개 학습 쌍 구성")
 
-    # DataLoader — batch_size
-    # 2026-05-28: batch_size=4 OOM → 2.
-    # 2026-05-29 v6: batch=1로 실험했으나 MultipleNegativesRankingLoss가 in-batch
-    # negatives를 못 만들어 loss=0/grad=0 (학습 자체 안 됨). 2로 복원.
-    # 2026-05-29 v10: batch=4 복원 실험. 0.948 모델이 batch=4("윈도우 4")였음.
-    # batch 4→2는 OOM 응급처치였으나 진짜 원인은 시스템 메모리 굶주림 +
-    # HIGH_WATERMARK_RATIO=0.0(자체 브레이크 해제 → OS jetsam kill 유도)로 추정.
-    # 메모리 위생(epoch 사이 empty_cache + watermark 기본값)으로 batch=4 재시도.
-    # 2026-06-03: M4 Pro 24GB로 batch=16 — 옛 OOM은 메모리 빈약한 맥에어 한정.
-    #   in-batch negative가 많아 대조학습 신호↑ (클라우드 b16 = Top-5 95.3% 재현 목표).
-    #   WATERMARK_RATIO는 절대 0.0으로 두지 말 것(기본값 유지 = 깔끔한 RuntimeError).
-    # 2026-06-03 batch 스윕(4/8/16/32) 결론: batch는 레버 아님 — 넷 다 클라우드 백업(desc Top-5 94.5%)
-    #   못 넘음. 로컬 최고는 b8(desc 92.8). 진짜 레버는 데이터량·epoch·재현성(generate_variations 시딩).
-    #   상세: [[project_hippocampus_retrain_memory]]. 기본은 8(로컬 최선)로 둠.
-    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=8)
-
-    # Loss: MultipleNegativesRankingLoss
-    # 같은 배치 내의 다른 쌍이 자동으로 negative가 됨
+    train_dataloader = DataLoader(train_examples, shuffle=True, batch_size=BATCH_SIZE)
     train_loss = losses.MultipleNegativesRankingLoss(model)
 
-    # Epoch별 학습 + 검증 (조기 종료 없이 고정 epoch)
-    max_epochs = 10
+    max_epochs = int(os.environ.get("IBL_EPOCHS", "10"))
     warmup_steps = int(len(train_dataloader) * 0.1)
 
-    print(f"[학습] {max_epochs} epochs 고정 실행, epoch별 검증")
-    print(f"[학습] warmup steps: {warmup_steps}")
+    print(f"[학습] {max_epochs} epochs, batch={BATCH_SIZE}, warmup={warmup_steps}")
 
     best_score = -1
     best_epoch = 0
-    patience = 3  # 2026-05-29 v10: 무의미한 꼬리 epoch에서 kill 노출 줄이기 (999→3)
+    patience = 4
     no_improve = 0
 
     for epoch in range(1, max_epochs + 1):
-        # 2026-05-29 v10: 직전 epoch의 CPU 평가가 모델을 cpu로 옮겨두므로(ST 5.x
-        # encode(device='cpu') 부작용 확인됨) fit 전에 mps로 강제 복귀.
-        model.to('mps')
+        model.to(DEVICE)   # 원본: model.to('mps')
         model.fit(
             train_objectives=[(train_dataloader, train_loss)],
             epochs=1,
@@ -442,43 +374,47 @@ def train_model(train_pairs: List[Tuple[str, str]], code_to_intents: Dict,
             show_progress_bar=True,
         )
 
-        # 검증: 실제 test set으로 평가 (CPU에서 — MPS 예산을 학습에 양보)
         if test_pairs:
-            val_score = _eval_on_test(model, test_pairs, list(code_to_intents.keys()))
+            code_top5 = _eval_on_test(model, test_pairs, list(code_to_intents.keys()))
+            # 채택 지표(desc-Top5)와 정렬 — 조기종료가 엉뚱한 epoch 고르던 문제(2026-06-03) 해소.
+            if action_descs:
+                desc_top5 = _eval_desc_top5(model, test_pairs, action_descs)
+                val_score = 0.5 * code_top5 + 0.5 * desc_top5
+                print(f"  [Epoch {epoch}] code-Top5={code_top5:.3f} desc-Top5={desc_top5:.3f} blend={val_score:.3f}")
+            else:
+                val_score = code_top5
+                print(f"  [Epoch {epoch}] 검증 점수(code-Top5): {val_score:.3f}")
         else:
             val_score = _quick_eval(model, train_code_to_intents)
-        print(f"  [Epoch {epoch}] 검증 점수: {val_score:.3f}")
+            print(f"  [Epoch {epoch}] 검증 점수(Top-5): {val_score:.3f}")
 
         if val_score > best_score:
             best_score = val_score
             best_epoch = epoch
             no_improve = 0
-            # 최적 모델 저장
             model.save(str(MODEL_OUTPUT_DIR))
         else:
             no_improve += 1
 
-        # 2026-05-29 v10: epoch 사이 MPS 캐시 해제. PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0
-        # 으로 무한정 자라던 누적 누수가 epoch 7 system kill의 유력 원인. 매 epoch
-        # 캐시를 OS에 반납해 wired 메모리가 평평하게 유지되도록.
+        # epoch 사이 GPU 캐시 해제 (원본: torch.mps.empty_cache())
         try:
-            import torch
-            if torch.backends.mps.is_available():
+            if DEVICE == "cuda":
+                torch.cuda.empty_cache()
+            elif DEVICE == "mps":
                 torch.mps.empty_cache()
-                import gc as _gc
-                _gc.collect()
+            import gc as _gc
+            _gc.collect()
         except Exception as _e:
-            print(f"  [경고] MPS 캐시 해제 실패(무시): {_e}")
+            print(f"  [경고] 캐시 해제 실패(무시): {_e}")
 
         if no_improve >= patience:
-            print(f"  [조기 종료] {patience} epoch 연속 개선 없음 → epoch {best_epoch}이 최적")
+            print(f"  [조기 종료] {patience} epoch 연속 개선 없음 -> epoch {best_epoch}이 최적")
             break
 
     print(f"[학습] 최적 epoch: {best_epoch} (점수: {best_score:.3f})")
-    print(f"[학습] 최적 모델 → {MODEL_OUTPUT_DIR}")
+    print(f"[학습] 최적 모델 -> {MODEL_OUTPUT_DIR}")
 
-    # 최적 모델 로드
-    best_model = SentenceTransformer(str(MODEL_OUTPUT_DIR))
+    best_model = SentenceTransformer(str(MODEL_OUTPUT_DIR), device=DEVICE)
     return best_model
 
 
@@ -488,10 +424,9 @@ def _eval_on_test(model, test_pairs: List[Tuple[str, str]], all_codes: List[str]
 
     unique_codes = list(set(all_codes))
     test_intents = [p[0] for p in test_pairs]
-    test_codes = [p[1] for p in test_pairs]
 
-    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False, device='cpu')
-    code_embs = model.encode(unique_codes, convert_to_tensor=True, show_progress_bar=False, device='cpu')
+    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False, device=DEVICE)
+    code_embs = model.encode(unique_codes, convert_to_tensor=True, show_progress_bar=False, device=DEVICE)
     sims = cos_sim(intent_embs, code_embs)
 
     correct = 0
@@ -502,12 +437,32 @@ def _eval_on_test(model, test_pairs: List[Tuple[str, str]], all_codes: List[str]
     return correct / len(test_pairs)
 
 
+def _eval_desc_top5(model, test_pairs: List[Tuple[str, str]], action_descs: Dict[str, str]) -> float:
+    """채택 지표와 동일한 desc-Top5(액션 description 매칭) — 조기종료 모니터 정렬용."""
+    from sentence_transformers.util import cos_sim
+
+    action_list = list(action_descs.keys())
+    desc_list = [action_descs[a] for a in action_list]
+    test_intents = [p[0] for p in test_pairs]
+
+    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False, device=DEVICE)
+    desc_embs = model.encode(desc_list, convert_to_tensor=True, show_progress_bar=False, device=DEVICE)
+    sims = cos_sim(intent_embs, desc_embs)
+
+    correct = 0
+    for i, (_, true_code) in enumerate(test_pairs):
+        true_action = extract_action_from_code(true_code)
+        top5 = sims[i].topk(5).indices.tolist()
+        if true_action in [action_list[idx] for idx in top5]:
+            correct += 1
+    return correct / len(test_pairs)
+
+
 def _quick_eval(model, code_to_intents: Dict) -> float:
-    """빠른 검증: 학습 데이터 내에서 intent→code 매칭 정확도 (샘플링)"""
+    """빠른 검증: intent->code 매칭 정확도 (샘플링)"""
     from sentence_transformers.util import cos_sim
     import random as _rand
 
-    # 각 코드에서 intent 하나씩 샘플링하여 검증
     codes = list(code_to_intents.keys())
     if len(codes) > 200:
         codes = _rand.sample(codes, 200)
@@ -523,11 +478,10 @@ def _quick_eval(model, code_to_intents: Dict) -> float:
     if not test_intents:
         return 0.0
 
-    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False, device='cpu')
-    code_embs = model.encode(test_codes, convert_to_tensor=True, show_progress_bar=False, device='cpu')
+    intent_embs = model.encode(test_intents, convert_to_tensor=True, show_progress_bar=False, device=DEVICE)
+    code_embs = model.encode(test_codes, convert_to_tensor=True, show_progress_bar=False, device=DEVICE)
     sims = cos_sim(intent_embs, code_embs)
 
-    # Top-5 정확도
     correct = 0
     for i in range(len(test_intents)):
         top5 = sims[i].topk(5).indices.tolist()
@@ -544,22 +498,18 @@ def evaluate_model(model, test_pairs: List[Tuple[str, str]],
                    all_codes: List[str], label: str,
                    action_descs: Dict[str, str] = None):
     """top-k 검색 정확도 측정 (code 매칭 + description 매칭)"""
-    # 모든 고유 ibl_code의 임베딩 계산
+    from sentence_transformers.util import cos_sim
+
     unique_codes = list(set(all_codes))
     code_embeddings = model.encode(unique_codes, convert_to_tensor=True,
-                                   show_progress_bar=False, device='cpu')
+                                   show_progress_bar=False, device=DEVICE)
 
-    # 평가 셋의 intent → 가장 가까운 코드 찾기
     test_intents = [pair[0] for pair in test_pairs]
-    test_codes = [pair[1] for pair in test_pairs]
     intent_embeddings = model.encode(test_intents, convert_to_tensor=True,
-                                      show_progress_bar=False, device='cpu')
+                                      show_progress_bar=False, device=DEVICE)
 
-    # 코사인 유사도 계산
-    from sentence_transformers.util import cos_sim
     similarities = cos_sim(intent_embeddings, code_embeddings)
 
-    # Top-k 정확도 (code 매칭)
     results = {}
     for k in [1, 3, 5]:
         correct = 0
@@ -575,31 +525,11 @@ def evaluate_model(model, test_pairs: List[Tuple[str, str]],
     print(f"  평가 쌍: {len(test_pairs)}개")
     print(f"  Top-1: {results[1]:.1f}%  Top-3: {results[3]:.1f}%  Top-5: {results[5]:.1f}%")
 
-    # 관용구 분리 보고(2026-09-04): 질의→관용구(문장 열) 회상은 낱말 지표에 묻히면 안 보인다.
-    # 채택 조건(compare_models)이 이 값의 회귀를 본다. 평가 쌍이 없으면 n=0 으로 정직하게.
-    phrase_idx = [i for i, (_, c) in enumerate(test_pairs) if is_phrase_code(c)]
-    ph = {"n": len(phrase_idx)}
-    for k in [1, 5]:
-        hit = 0
-        for i in phrase_idx:
-            top_k_codes = [unique_codes[idx] for idx in similarities[i].topk(k).indices.tolist()]
-            hit += test_codes[i] in top_k_codes
-        ph[k] = (hit / len(phrase_idx) * 100) if phrase_idx else None
-    results["phrase"] = ph
-    if phrase_idx:
-        print(f"  관용구 쌍 {ph['n']}개: Top-1 {ph[1]:.1f}%  Top-5 {ph[5]:.1f}%")
-    else:
-        print("  관용구 쌍 0개 — 관용구 회상은 미측정")
-
-    # Description 매칭도 평가 (action 단위)
     if action_descs:
-        import re
-        # 고유 action → description
         action_list = list(action_descs.keys())
         desc_list = [action_descs[a] for a in action_list]
         desc_embeddings = model.encode(desc_list, convert_to_tensor=True,
-                                        show_progress_bar=False, device='cpu')
-
+                                        show_progress_bar=False, device=DEVICE)
         desc_sim = cos_sim(intent_embeddings, desc_embeddings)
 
         desc_results = {}
@@ -625,20 +555,24 @@ def evaluate_model(model, test_pairs: List[Tuple[str, str]],
 
 def main():
     random.seed(42)
+    # 재현성: DataLoader(shuffle=True)는 torch RNG를 쓰므로 torch도 시딩(2026-06-04).
+    try:
+        import torch as _torch
+        _torch.manual_seed(42)
+        if _torch.cuda.is_available():
+            _torch.cuda.manual_seed_all(42)
+    except Exception:
+        pass
     print("=" * 60)
-    print("IBL 해마 파일럿: 학습된 임베딩 검색 모델 실험")
+    print("IBL 해마: 임베딩 검색 모델 학습 (클라우드)")
     print("=" * 60)
 
-    # Step 1: 데이터 준비
     print("\n--- Step 1: 데이터 준비 ---")
     examples = extract_examples_from_db()
-    # Unreviewed synonym substitution can change the requested effect (e.g.
-    # show -> fetch, email -> Gmail). The audited intents are the training unit.
-    variations = []
+    variations = []  # Unreviewed paraphrases do not inherit a row's audit.
 
-    # 학습 데이터 로드 (data/training/ 폴더)
     training_dir = DATA_DIR / "training"
-    for synth_file in sorted(training_dir.glob("*.json")) if training_dir.exists() else []:
+    for synth_file in (sorted(training_dir.glob("*.json")) if training_dir.exists() else []):
         try:
             with open(synth_file, 'r', encoding='utf-8') as f:
                 synth_data = json.load(f)
@@ -649,33 +583,27 @@ def main():
         except Exception as e:
             print(f"[데이터] {synth_file.name} 로드 실패: {e}")
 
-    # 액션별 데이터 밸런싱 — 과다 축적된 액션의 오래된 데이터 제거
     variations = balance_by_action(variations)
 
     train_pairs, test_pairs, code_to_intents = prepare_training_data(
         examples, variations, normalize=True
     )
     all_codes = list(code_to_intents.keys())
-
-    # 액션 description 로드 (평가용)
     action_descs = load_action_descriptions()
 
-    # Step 2: Baseline 평가 (fine-tuning 전)
     print("\n--- Step 2: Baseline 평가 ---")
     from sentence_transformers import SentenceTransformer
-    baseline_model = SentenceTransformer('jhgan/ko-sroberta-multitask')
+    baseline_model = SentenceTransformer('jhgan/ko-sroberta-multitask', device=DEVICE)
     baseline_results = evaluate_model(
         baseline_model, test_pairs, all_codes,
         "Baseline (ko-sroberta-multitask)",
         action_descs=action_descs
     )
 
-    # Step 3: Fine-tuning (intent→description 매핑 포함)
     print("\n--- Step 3: Fine-tuning (+ description 매핑) ---")
     MODEL_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     finetuned_model = train_model(train_pairs, code_to_intents, test_pairs=test_pairs)
 
-    # Step 4: Fine-tuned 모델 평가
     print("\n--- Step 4: Fine-tuned 모델 평가 ---")
     finetuned_results = evaluate_model(
         finetuned_model, test_pairs, all_codes,
@@ -683,16 +611,14 @@ def main():
         action_descs=action_descs
     )
 
-    # 결과 비교
     print("\n" + "=" * 60)
     print("결과 비교")
     print("=" * 60)
     for k in [1, 3, 5]:
         diff = finetuned_results[k] - baseline_results[k]
-        arrow = "↑" if diff > 0 else "↓" if diff < 0 else "→"
-        print(f"  Top-{k}: {baseline_results[k]:.1f}% → {finetuned_results[k]:.1f}% ({arrow}{abs(diff):.1f}%p)")
+        arrow = "up" if diff > 0 else "down" if diff < 0 else "="
+        print(f"  Top-{k}: {baseline_results[k]:.1f}% -> {finetuned_results[k]:.1f}% ({arrow}{abs(diff):.1f}%p)")
 
-    # 결과 저장
     result_path = MODEL_OUTPUT_DIR / "pilot_results.json"
     with open(result_path, 'w', encoding='utf-8') as f:
         json.dump({
@@ -705,6 +631,8 @@ def main():
             },
             'baseline': baseline_results,
             'finetuned': finetuned_results,
+            'device': DEVICE,
+            'batch_size': BATCH_SIZE,
         }, f, indent=2, ensure_ascii=False)
     print(f"\n결과 저장: {result_path}")
 

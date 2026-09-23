@@ -40,8 +40,8 @@ def literal_call(source):
         raise ValueError('단일 호출이 아닙니다.')
     call = steps[0]
     if (set(call) - {'_node', 'action', 'target', 'params'}
-            or call.get('_node') != 'sense' or call.get('target')):
-        raise ValueError('허용한 명시 sense 호출이 아닙니다.')
+            or call.get('_node') in {'fn', 'def'} or call.get('target')):
+        raise ValueError('대상 없는 명시 액션 호출이 아닙니다.')
     def literal(value):
         if isinstance(value, str):
             return '$' not in value
@@ -174,7 +174,8 @@ def upgraded(row, entry, review_hash):
                                   'decision': entry['decision'], 'reason': entry['reason'],
                                   'static_status': 'incomplete', 'fixture_verified': True,
                                   'runtime_success_claimed': False, 'external_execution': 'not_run'}
-    new.update(ibl_code=entry['after_code'], nodes='sense', signature='', returns='Record')
+    action, _ = candidate_call(entry['after_code'])
+    new.update(ibl_code=entry['after_code'], nodes=action.split(':')[0], signature='', returns='Record')
     for key, value in RESET.items():
         if key in row:
             new[key] = value

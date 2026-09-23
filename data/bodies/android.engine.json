@@ -5,6 +5,7 @@
     "base/ai_candidates",
     "base/audit_lifecycle",
     "base/codex_rollout",
+    "base/corpus_policy",
     "base/desktop_notify",
     "base/device_registry",
     "base/distill_receipts",
@@ -482,8 +483,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 407,
-    "engine": 381,
+    "total": 408,
+    "engine": 382,
     "blocklist": 26
   }
 }

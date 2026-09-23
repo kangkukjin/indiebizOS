@@ -66,6 +66,12 @@ def test_g1_malformed_row_rejected_even_after_normalize():
 
 
 # ---------------------------------------------------------------- G2 원장 문
+@pytest.fixture(autouse=True)
+def isolated_tree_documents(tmp_path, monkeypatch):
+    import hippo_tree
+    monkeypatch.setattr(hippo_tree, "DOC_DIR", str(tmp_path / "tree"))
+
+
 @pytest.fixture
 def db(tmp_path, monkeypatch):
     """임시 DB 위의 IBLUsageDB — 라이브 해마·모델·vec 무접촉."""

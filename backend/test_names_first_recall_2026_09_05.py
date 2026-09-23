@@ -70,13 +70,14 @@ def test_recall_shows_names_not_bodies(env):
     assert "## 부를 수 있는 함수" in text and "[fn:팁영상수집]{원장경로: \"…\", 주제: \"…\"}" in text
     assert "✓3" in text
     assert "[def: 팁영상수집]{" not in text and "search_youtube" not in text.split("## 용례")[0].split("## 부를 수 있는 함수")[1]
-    # 한 문장 용례는 그대로, 여러 문장 무명 용례는 문장 수만
-    assert SINGLE.replace("`", "'") in text
+    # 구형 한 문장도 현재 작성 정답으로 노출하지 않는다. 명시 expand는 보존한다.
+    assert SINGLE.replace("`", "'") not in text and f'expand:"#{s_id}"' in text
     assert "[self:write]" not in text and f"expand:\"#{m_id}\"" in text and "문장 3" in text
     assert "## 주행 1건" in text and "expand:\"주행\"" in text
     # JSON 봉투도 본문을 감춘다(모델은 text 만 읽지 않는다)
     items = {r["id"]: r for r in out["items"]}
-    assert items[s_id]["ibl_code"] == SINGLE
+    assert 'expand' in items[s_id]["ibl_code"]
+    assert items[s_id]['authoring_excluded'] == 'legacy_source'
     assert "expand" in items[m_id]["ibl_code"] and "[self:write]" not in items[m_id]["ibl_code"]
     ph = out["phrases"][0]
     assert ph["alias"] == "팁영상수집" and ph["call"].startswith("[fn:팁영상수집]") and "expand" in ph["ibl_code"]

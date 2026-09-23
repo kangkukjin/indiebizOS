@@ -302,7 +302,7 @@ def test_p4_phrase_section_roundtrip_and_map(env):
     assert "## 용례" in text and "## 관용구" in text
     assert text.index("## 용례") < text.index("## 관용구") < text.index("## 갱신 기록")
     assert f"### 찾아고치기 — 찾아 읽고 고친다 · 문장 3 · 슬롯 패턴, 루트, 파일, 앞, 뒤 ‹#{pid} · ✓2/✗0" in text
-    assert '호출: `[fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"}`' in text   # 관용구 = 이름 붙은 함수
+    assert '호출: `[fn:찾아고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"} → Record`' in text   # 관용구 = 이름 붙은 함수
     assert "1. `" + PHRASE[0] + "`" in text
     # 용례 절엔 관용구가 섞이지 않는다
     sec = text[text.index("## 용례"):text.index("## 관용구")]
@@ -358,6 +358,7 @@ def test_p4_human_block_inserted_and_removed_block_deleted(env):
 # ---------------------------------------------------------------- P5 회상 XML
 class _Ex:
     def __init__(self, code, intent="i", score=0.9, category="single", topic=""):
+        self.id = 1
         self.ibl_code, self.intent, self.score, self.category, self.topic = code, intent, score, category, topic
         self.success_rate, self.avg_ms, self.avg_tokens, self.nodes = -1.0, -1.0, -1.0, ""
         self.alias, self.signature, self.returns = "", None, ""
@@ -378,17 +379,21 @@ def test_p5_references_carry_phrase_block_and_word_channel_excludes_phrase(monke
     monkeypatch.setattr(mod.IBLUsageDB, "_instance", None)
     monkeypatch.setattr(mod.IBLUsageDB, "__init__", lambda self, *a, **k: None)
     monkeypatch.setattr(mod.IBLUsageDB, "search_hybrid", fake_search)
+    monkeypatch.setattr(mod.IBLUsageDB, "find_phrase_by_alias", lambda self, name, edition=1:
+                        None if edition == 2 else {
+                            "alias": name, "ibl_code": "; ".join(PHRASE),
+                            "signature": "패턴 루트 파일 앞 뒤", "returns": "effect"})
     monkeypatch.setattr(rag, "_own_only", lambda r: r)
     monkeypatch.setattr(rag, "_extract_implementations_from_refs", lambda x: "")
     r = rag.IBLUsageRAG(); r.clear_cache()
     monkeypatch.setattr(r, "_is_ibl_relevant", lambda q: True)
     xml, top_score, top_code = rag.build_execution_memory("컴포넌트 고쳐줘")
-    assert top_code == PIPE and top_score == 0.7                      # 반사 top-1 은 낱말
+    assert top_code == '' and top_score == 0.7  # 구형 원문은 반사 실행하지 않는다
     assert any(k.get("exclude_category") == "phrase" for k in calls)  # 낱말 채널은 관용구 제외
     assert 'kind="phrase"' in xml and 'sentences="3"' in xml
     assert 'slots="패턴, 루트, 파일, 앞, 뒤"' in xml and 'name="찾아읽고고치기"' in xml
     # 이름 먼저(2026-09-05 판정을 회상 채널에도, 2026-09-06): 본문은 안 싣는다 — 서명 한 줄만
-    assert '[fn:찾아읽고고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"} → effect' in xml
+    assert '[fn:찾아읽고고치기]{패턴: "…", 루트: "…", 파일: "…", 앞: "…", 뒤: "…"} → Record' in xml
     assert "[def: " not in xml and PHRASE[0] not in xml
     assert thread_context.get_phrase_recall() == ["; ".join(PHRASE)]
     # 문턱(2026-09-06): 본문을 안 싣게 됐으니 낱말의 저신뢰 바닥까지 연다 — 안 보이면 못 부른다

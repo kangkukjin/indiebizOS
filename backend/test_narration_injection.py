@@ -8,6 +8,7 @@
 """
 import importlib.util, json, shutil, sys, tempfile
 from pathlib import Path
+import boot_paths  # noqa: F401 — 직접 실행에도 backend 층 모듈 경로를 등록한다.
 
 # 스크립트형 테스트(모듈 레벨 실행 + sys.exit) — pytest 수집이 임포트만 해도 본문이
 # 돌아버리므로 pytest 아래서는 모듈 단위 스킵. 의존도 로컬 전용이다:

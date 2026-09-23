@@ -34,7 +34,7 @@ def test_real_compiler_and_decoder_keep_values_failures_and_arguments():
 
 @pytest.mark.parametrize('source', [
     '[sense:search]{query:$q}', '[sense:search]{query:"$q"}',
-    '[sense:search]{} >> [table:take]{n:1}', '[self:write]{path:"x",content:"x"}',
+    '[sense:search]{} >> [table:take]{n:1}', '[fn:예전함수]{}',
 ])
 def test_nonliteral_or_composed_sources_require_separate_review(source):
     with pytest.raises(ValueError):
@@ -44,6 +44,15 @@ def test_nonliteral_or_composed_sources_require_separate_review(source):
 def test_changed_argument_cannot_be_claimed_as_equivalent_conversion():
     with pytest.raises(ValueError, match='달라졌습니다'):
         migration.prove(OLD, NEW.replace('007', '008'), CONTRACT, 'convert')
+
+
+def test_other_nodes_preserve_namespace_and_do_not_execute_side_effects():
+    old = '[limbs:browser]{op:"close"}'
+    e = {**entry(), 'before_code': old, 'before_sha256': sha(old),
+         'after_code': '#!ibl edition=2\nreturn ' + old}
+    result = migration.prove(old, e['after_code'], CONTRACT, 'convert')
+    assert result['external_calls'] == 0 and len(result['cases']) == 7
+    assert migration.upgraded({'ibl_code': old}, e, 'review')['nodes'] == 'limbs'
 
 
 def test_storage_format_uses_origin_and_keeps_training_id():

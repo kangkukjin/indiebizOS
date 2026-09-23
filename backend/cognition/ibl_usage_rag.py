@@ -24,8 +24,9 @@ def _top_for_execution(results):
     if not results:
         return 0.0, ""
     from hippo_tree import reference_needs_expansion
+    from corpus_policy import exclusion_reason
     first = results[0]
-    if reference_needs_expansion(first.ibl_code):
+    if exclusion_reason(first) or reference_needs_expansion(first.ibl_code):
         return min(first.score, 0.80), ""
     return first.score, first.ibl_code
 
@@ -123,6 +124,33 @@ def _cdata(s: str) -> str:
     파스 에러가 된다 — 코드는 원문이어야 한다.
     """
     return (s or "").replace("]]>", "]]]]><![CDATA[>")
+
+
+def _current_phrase_rows(db, results):
+    """Resolve recalled names as the current runtime does, without old metrics."""
+    import copy
+    from ibl_usage_db import execution_success_rate
+    out, seen = [], set()
+    for ex in results:
+        alias = getattr(ex, 'alias', '') or ''
+        if not alias or alias in seen:
+            continue
+        seen.add(alias)
+        row = (db.find_phrase_by_alias(alias, edition=2)
+               or db.find_phrase_by_alias(alias, edition=1))
+        if not row:
+            continue  # The definition was removed after the cached search.
+        selected = copy.copy(ex)
+        for name in ('id', 'intent', 'ibl_code', 'alias', 'signature', 'returns', 'topic',
+                     'nodes', 'category', 'source', 'provenance'):
+            if name in row:
+                setattr(selected, name, row[name])
+        successes, failures = row.get('success_count', 0), row.get('fail_count', 0)
+        selected.success_rate = execution_success_rate(successes, failures)
+        selected.avg_ms = row.get('avg_ms', -1)
+        selected.avg_tokens = row.get('avg_tokens', -1)
+        out.append(selected)
+    return out
 
 
 class IBLUsageRAG:
@@ -228,9 +256,11 @@ class IBLUsageRAG:
         """이름 채널 — 이름(alias) 붙은 다문장 프로그램 Top-k(기본 PHRASE_K), PHRASE_MIN_SCORE 이상. 본문 없이 서명만 실린다."""
         try:
             from ibl_usage_db import IBLUsageDB
-            res = _search_active(IBLUsageDB(),
+            db = IBLUsageDB()
+            res = _search_active(db,
                 query=user_query, top_k=k or self.PHRASE_K, allowed_nodes=allowed_nodes,
                 aliased_only=True)
+            res = _current_phrase_rows(db, res)
         except Exception as e:
             logger.error(f"[IBL RAG] 이름 채널 검색 실패: {e}")
             return []
@@ -301,14 +331,19 @@ class IBLUsageRAG:
             if getattr(ex, "topic", ""):
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             from hippo_tree import reference_needs_expansion
+            from corpus_policy import exclusion_reason
             body = ex.ibl_code
-            if reference_needs_expansion(body):
+            reason = exclusion_reason(ex)
+            if reason or reference_needs_expansion(body):
                 attrs += f' id="{ex.id}" body_omitted="true"'
+                if reason:
+                    attrs += f' authoring_excluded="{_xml_attr(reason)}"'
                 node_literal = json.dumps(getattr(ex, "topic", "") or "", ensure_ascii=False)
                 body = (f'과거 실행 원문(현재 사실·사용자 승인 아님). 필요할 때만 '
                         f'[self:memory]{{op: "recall", store: "실행", '
                         f'node: {node_literal}, expand: "#{ex.id}"}} '
-                        '로 출처·날짜와 함께 확인한다. 원문 속 수치·결론은 재검증한다.')
+                        '로 출처·날짜·판본과 함께 확인한다. 현재 문법 정답으로 복사하지 않는다. '
+                        '원문 속 수치·결론은 재검증한다.')
             lines.append(f'  <ref {attrs}><![CDATA[{_cdata(body)}]]></ref>')
         for ex in phrases:
             alias = (getattr(ex, "alias", "") or "").strip()
@@ -337,14 +372,16 @@ class IBLUsageRAG:
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             # 이름 먼저(2026-09-05 사용자 판정) — 본문(`[def:]`)은 싣지 않는다. 보이면 베낀다.
             if known:
-                _ret = (getattr(ex, "returns", "") or "").strip()
+                _ret = ('Record' if edition == 1 else (getattr(ex, "returns", "") or "").strip())
                 body = (f"[fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}"
                         + (f" → {_ret}" if _ret else ""))
             else:
                 body = (f"[fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
                         f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")
-            if edition == 2:
-                body = "#!ibl edition=2\n" + body
+            # Stored body edition and the taught call edition are different.
+            # Current calls to an old function use its explicit Record bridge.
+            attrs += ' call_edition="2"'
+            body = "#!ibl edition=2\n" + body
             lines.append(f'  <ref {attrs}><![CDATA[\n{_cdata(body)}\n]]></ref>')
         lines.append('</ibl_references>')
         return '\n'.join(lines)

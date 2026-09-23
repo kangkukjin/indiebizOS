@@ -102,7 +102,8 @@ def test_hippocampus_detail_presents_selected_examples(monkeypatch):
     monkeypatch.setattr("hippo_tree.reference_needs_expansion", lambda body: False)
     d = rag.build_execution_memory_detail("가격 알려줘", None)
     assert d["presented"] == [{"id": "11", "code": '[sense:price]{query: "x"}', "kind": "word", "alias": ""}]
-    assert d["top_code"] == '[sense:price]{query: "x"}' and "<execution_memory" in d["xml"]
+    assert d["top_code"] == '' and "<execution_memory" in d["xml"]
+    assert 'authoring_excluded="legacy_source"' in d['xml']
     assert rag.build_execution_memory("가격 알려줘", None) == (d["xml"], d["top_score"], d["top_code"])
 
 

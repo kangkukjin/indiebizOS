@@ -9,7 +9,7 @@ import boot_paths  # noqa: E402,F401
 import argparse
 import json
 
-from ibl_corpus_snapshot import dump
+from ibl_corpus_snapshot import dump, sha
 from audit_ibl_corpus_v2 import forbidden
 from ibl_v2_adapters import Adapter, table_operation
 from ibl_v2_compile import compile_program
@@ -57,6 +57,31 @@ def probes(base):
     check('parallel_keeps_nesting', '[1] & [2]', {}, [[1], [2]])
     check('empty_is_not_fallback', '[] ?? [9]', {}, [])
     check('string_is_literal', '$x="actual"\nreturn "${x}"', {}, '${x}')
+    # All six stored native composition programs, not rewritten substitutes.
+    seeds = json.loads((base / 'data/idioms/ibl_v2_seeds.json').read_text())
+    expected = [
+        [{'id': '007', 'score': 14}], [1, 2, 3], None,
+        [{'original': n, 'square': n*n} for n in (3, 1, 2)], 26, '결과: 5',
+    ]
+    native = [seed for seed in seeds if not seed.get('alias')]
+    if len(native) != len(expected):
+        raise ValueError('Native seed inventory changed; review expected values')
+    for i, (seed, value) in enumerate(zip(native, expected)):
+        if i == 2:
+            # Result carries a failure object whose source spans are dynamic.
+            plan = compile_program(seed['ibl_code'], registry, definitions=definitions)
+            result = Runtime(plan).run()
+            assert result['success'], result
+            values = unpack(result['value_wire']['data'])
+            assert [v.ok for v in values] == [True, False, True]
+            assert [values[0].value, values[2].value] == [4, 2]
+            assert values[1].error['kind'] == 'runtime'
+            out.append({'name': 'native_collect', 'passed': True,
+                        'static_status': plan.report()['status'],
+                        'value_wire': result['value_wire']})
+        else:
+            check('native_seed_' + str(i), seed['ibl_code'], {}, value)
+        out[-1].update(code_sha256=sha(seed['ibl_code']), intent_sha256=sha(seed['intent']))
     dump(base / 'audit/value_probes.json', {'passed': len(out), 'external_calls': 0, 'cases': out})
     return out
 

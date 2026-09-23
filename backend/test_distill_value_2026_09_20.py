@@ -146,7 +146,10 @@ def test_unavailable_comparison_or_validation_fails_closed(monkeypatch, tmp_path
 
 def test_db_migration_provenance_and_component_retention(monkeypatch, tmp_path):
     import ibl_usage_db as mod
+    import hippo_tree
     from test_hippo_tree import _mk_db
+    # consolidate_distilled also refreshes all tree documents after deletion.
+    monkeypatch.setattr(hippo_tree, 'DOC_DIR', str(tmp_path / 'tree'))
     path = str(tmp_path / 'usage.db')
     _mk_db(path)  # 기존 provenance 없는 스키마에서 시작
     monkeypatch.setattr(mod, 'DB_PATH', path)

@@ -307,7 +307,11 @@ data/training/.hippocampus_consolidated
 *.bak.*
 
 # --- 해마 클라우드 학습 산출물 (대용량, 추적 제외) ---
-cloud_training/
+cloud_training/*
+# Training input policy is source; private exports, models and bundles stay local.
+!cloud_training/compare_models.py
+!cloud_training/ibl_embedding_trainer_cloud.py
+!cloud_training/make_bundle.sh
 
 # --- DB 백업 덤프 (개인정보 포함) ---
 data/*.sql

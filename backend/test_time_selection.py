@@ -26,6 +26,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import boot_paths  # noqa: F401
 
 
+@pytest.fixture(autouse=True)
+def isolated_tree_documents(tmp_path, monkeypatch):
+    import hippo_tree
+    monkeypatch.setattr(hippo_tree, "DOC_DIR", str(tmp_path / "tree"))
+
+
 @pytest.fixture
 def db(tmp_path, monkeypatch):
     """임시 DB 위의 IBLUsageDB — 라이브 해마·모델·vec 무접촉."""

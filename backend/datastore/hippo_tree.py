@@ -433,7 +433,10 @@ def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = 
     slots = slot_names(code or "", signature)
     args = ", ".join(f'{s}: "…"' for s in slots)
     from ibl_edition import source_edition
-    prefix = "판본 2 (execute_ibl edition:2): " if source_edition(code or "") == 2 else ""
+    edition = source_edition(code or "")
+    prefix = "판본 2 (execute_ibl edition:2): " if edition == 2 else ""
+    if edition == 1:
+        returns = "Record"  # Current calls retain the legacy execution envelope.
     return prefix + f"[fn:{alias}]{{{args}}}" + (f" → {returns}" if returns else "")
 
 
@@ -1034,12 +1037,13 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     if not named:
         lines.append("- (이 범위에 이름 붙은 함수가 없다. 자동 작명은 중단됐으며 검증 후 수동 등록한다.)")
     lines.append("")
-    lines.append("## 용례 — 짧은 한 문장은 그대로 쓴다. 긴 본문·여러 문장은 expand:\"#id\" 로 연다")
+    lines.append("## 용례 — 원문은 expand:\"#id\" 로 판본과 함께 확인한다. 구형 원문은 현재 작성 정답이 아니다")
     for r in words:
         if (r.get("alias") or "").strip():
             continue                                    # 위 '부를 수 있는 함수' 절에 이미 실렸다
         n = len(split_sentences(r.get("ibl_code") or ""))
-        if not reference_needs_expansion(r.get("ibl_code") or ""):
+        from corpus_policy import exclusion_reason
+        if not exclusion_reason(r) and not reference_needs_expansion(r.get("ibl_code") or ""):
             lines.append(render_line(r))
         else:
             s, f = int(r.get("success_count") or 0), int(r.get("fail_count") or 0)
@@ -1081,8 +1085,48 @@ def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
         out["call"] = phrase_call_line(alias, code, (r.get('returns') or '').strip() if isinstance(r, dict) else "",
                                        r.get("signature") if isinstance(r, dict) else None)
         out["ibl_code"] = f"(문장 {n} — expand:\"{alias}\")"
-    elif reference_needs_expansion(code):
-        out["ibl_code"] = f"(문장 {n}, 이름 없음 — expand:\"#{r.get('id')}\")"
+    else:
+        from corpus_policy import exclusion_reason
+        reason = exclusion_reason(r)
+        if reason:
+            out['authoring_excluded'] = reason
+        if reason or reference_needs_expansion(code):
+            out["ibl_code"] = f"(문장 {n}, 이름 없음 — expand:\"#{r.get('id')}\")"
+    return out
+
+
+def _current_names(groups, db_path):
+    """Use the same edition precedence as a current fn call; IDs still open history."""
+    from ibl_edition import source_edition
+    names = {r.get('alias') for group in groups for r in group if r.get('alias')}
+    if not names:
+        return groups
+    conn = _conn(db_path)
+    try:
+        definitions = [dict(r) for r in conn.execute(
+            "SELECT * FROM ibl_examples WHERE alias != '' ORDER BY updated_at DESC")]
+    finally:
+        conn.close()
+    from ibl_usage_db import execution_success_rate
+    selected = {}
+    for row in definitions:
+        row['success_rate'] = execution_success_rate(row.get('success_count', 0) or 0,
+                                                    row.get('fail_count', 0) or 0)
+        alias = row['alias']
+        if alias not in selected or (source_edition(row['ibl_code']) == 2
+                                     and source_edition(selected[alias]['ibl_code']) != 2):
+            selected[alias] = row
+    seen, out = set(), []
+    for group in groups:
+        rows = []
+        for row in group:
+            alias = row.get('alias')
+            if not alias:
+                rows.append(row)
+            elif alias not in seen and alias in selected:
+                rows.append(selected[alias])
+                seen.add(alias)
+        out.append(rows)
     return out
 
 
@@ -1115,6 +1159,8 @@ def recall(topic: str, db_path: Optional[str] = None, expand: Optional[str] = No
     counts = topic_counts(db_path)
     full = open(path, encoding="utf-8").read()
     exp = (expand or "").strip()
+    if exp not in ("all", "전문", "주행") and not exp.startswith("#"):
+        rows, phrases, inherited = _current_names([rows, phrases, inherited], db_path)
     text = render_names_first(topic, rows, phrases + inherited, full, exp)
     opened = exp in ("all", "전문")
     visible = rows + phrases + inherited

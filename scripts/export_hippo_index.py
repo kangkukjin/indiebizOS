@@ -30,6 +30,7 @@ except ImportError:
 
 def main() -> int:
     from ibl_usage_db import IBLUsageDB
+    from corpus_policy import current_examples
 
     db = IBLUsageDB()
     dim = IBLUsageDB.EMBEDDING_DIM
@@ -41,9 +42,11 @@ def main() -> int:
     with db._get_connection() as conn:
         rows = conn.execute(
             """SELECT id, intent, ibl_code, nodes, category, difficulty,
-                      source, success_count, fail_count, avg_ms, avg_tokens
+                      source, success_count, fail_count, avg_ms, avg_tokens, provenance
                FROM ibl_examples ORDER BY id"""
         ).fetchall()
+    rows, rejected = current_examples(rows)
+    print(f"[export_hippo] 현재 판본 자격 제외: {rejected}")
     if not rows:
         print("[export_hippo] ibl_examples 비어있음 — rebuild_index 먼저", file=sys.stderr)
         return 1

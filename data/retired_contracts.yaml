@@ -564,3 +564,11 @@ retired:
       - '_limb_presence_scent'
       - '_pending_repair_scent'
       - '_decision_scent'
+
+  - id: ai_tips_report_repeated_content_gates
+    retired: 2026-09-24
+    reason: 단순한 영상 팁 정리에 두 번의 추출·인용 대조·별도 내용 검수·최종 심사를 강제해 실패와 비용을 늘렸다.
+    instead: 최근 영상 선정 후 팁과 방법을 함께 추출하고 보고서로 작성한다. 출처 연결과 저장·재개는 유지한다.
+    phrases:
+      - '검색·선정·두 차례 추출·이번 후보 선발·영상별 내용 검토·편집·최종 검수는 관용구 안에서 매번 수행한다.'
+      - '호출 수·속도를 맞추려고 영상별 내용 검토·최종 검수를 생략하지 않는다.'

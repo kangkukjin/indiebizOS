@@ -72,9 +72,8 @@
       "Cloudflare사용량.py",
       "ai_era_news.py",
       "ai_tips_report.py",
-      "ai_tips_search.py",
       "ai_tips_selection.py",
-      "ai_tips_sources.py",
+      "ai_tips_storage.py",
       "arch_render_cli.py",
       "arxiv최신피드.py",
       "github저장소메타.py",
@@ -122,6 +121,8 @@
       "folder_survey"
     ],
     "scripts": [
+      "ai_tips_search.py",
+      "ai_tips_sources.py",
       "json원장.py",
       "폴더조사.py"
     ],

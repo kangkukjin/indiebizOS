@@ -1,0 +1,386 @@
+{
+  "round": 56,
+  "recorded_at": "2026-09-25T08:39:29.091212+09:00",
+  "repository": "/Users/kangkukjin/Desktop/AI/indiebizOS",
+  "head_at_recording": "6e864b4a9cedd2549e2f2a8f5c8006fc0f4eb07a",
+  "note": "Core compiler/IR/runtime already had another session's changes when training started. These were neither modified nor committed by this training. Raw responses retained alongside this compact evidence.",
+  "cases": [
+    {
+      "name": "T01",
+      "intent": "가계부 DB에서 분류별 합계를 구하고 큰 순서로 보여 주세요.",
+      "code": "#!ibl edition=2\n\n$원본=[sense:sqlite]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/fixture.sqlite3\",query:\"SELECT category, amount FROM expenses\"}\n$집계=[table:groupby]{items:$원본.items,by:\"category\",agg:{total:[\"sum\",\"amount\"]}}\n$집계.items >> [table:sort]{by:\"total\",descending:true}\n",
+      "expected": [
+        {
+          "category": "food",
+          "total": 300
+        },
+        {
+          "category": "book",
+          "total": 50
+        }
+      ],
+      "check_only": false
+    },
+    {
+      "name": "T02",
+      "intent": "매물별 가격과 관심 목록을 연결하고 관심 없는 매물도 보존해 주세요.",
+      "code": "#!ibl edition=2\n\n$매물=[{id:\"a\",price:300},{id:\"b\",price:200}]\n$관심=[{id:\"a\",memo:\"역세권\"}]\n$결합=[table:join]{left:$매물,right:$관심,on:\"id\",how:\"left\",defaults:{memo:\"미검토\"}}\n$결합.items >> [table:select]{columns:[\"id\",\"memo\"]}\n",
+      "expected": [
+        {
+          "id": "a",
+          "memo": "역세권"
+        },
+        {
+          "id": "b",
+          "memo": "미검토"
+        }
+      ],
+      "check_only": false
+    },
+    {
+      "name": "T03",
+      "intent": "영상별 팁 목록을 펼치되 영상 ID를 각 팁에 붙여 주세요.",
+      "code": "#!ibl edition=2\n\n$영상=[{id:\"v1\",tips:[{text:\"단축키\"},{text:\"자동화\"}]},{id:\"v2\",tips:[]}]\n$팁=[table:flatten]{items:$영상,field:\"tips\",keep:[\"id\"]}\n$팁.items >> [table:select]{columns:[\"id\",\"text\"]}\n",
+      "expected": [
+        {
+          "id": "v1",
+          "text": "단축키"
+        },
+        {
+          "id": "v1",
+          "text": "자동화"
+        }
+      ],
+      "check_only": false
+    },
+    {
+      "name": "T04",
+      "intent": "서로 다른 두 출처의 기사 ID 이름을 맞추고 중복 기사를 합쳐 주세요.",
+      "code": "#!ibl edition=2\n\n$첫=[table:rename]{items:[{article_id:\"a\",title:\"첫 기사\"}],map:{article_id:\"id\"}}\n$합=[table:merge]{left:$첫.items,right:[{id:\"a\",title:\"중복\"},{id:\"b\",title:\"둘째\"}],by:\"id\"}\n$합.items >> [table:select]{columns:[\"id\"]}\n",
+      "expected": [
+        {
+          "id": "a"
+        },
+        {
+          "id": "b"
+        }
+      ],
+      "check_only": false
+    },
+    {
+      "name": "T05",
+      "intent": "폴더의 자료 목록에서 마크다운을 읽어 파일별 글자 수를 세어 주세요.",
+      "code": "#!ibl edition=2\n\n$자료=[self:list]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56\",pattern:\"sample.md\"}\n$자료 >> [table:each]{parallel:2}{\n  $문서=[self:read]{path:$it.path}\n  return {name:$it.name,chars:len($문서.text)}\n}\n",
+      "expected": [
+        {
+          "name": "sample.md",
+          "chars": 20
+        }
+      ],
+      "check_only": false
+    },
+    {
+      "name": "T06",
+      "intent": "분석한 숫자 목록을 JSON으로 저장하고 다시 읽어 그대로 보존됐는지 확인해 주세요.",
+      "code": "#!ibl edition=2\n\n$목록=[{id:\"007\",amount:3500},{id:\"b\",amount:0}]\n$저장=[self:write]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\",content:json($목록)}\n$읽음=[self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\"}\nreturn $읽음\n",
+      "expected": null,
+      "check_only": false
+    },
+    {
+      "name": "T07",
+      "intent": "지원사업 세 건의 점수를 합산하고 총점이 10 이상인지 판정해 주세요.",
+      "code": "#!ibl edition=2\n\n$합=[table:reduce]{items:[{score:2},{score:3},{score:7}],init:0,step:\"acc + score\",as:\"total\"}\nreturn {total:$합.value,passed:$합.value>=10}\n",
+      "expected": {
+        "total": 12,
+        "passed": true
+      },
+      "check_only": false
+    },
+    {
+      "name": "T08",
+      "intent": "오늘 날짜와 오전·오후 기준을 읽어 보고서 제목을 만들어 주세요.",
+      "code": "#!ibl edition=2\n\n$날짜=[self:time]{format:\"%Y-%m-%d\"}\n$시=[self:time]{format:\"%H\"}\nreturn {date:$날짜,hour:$시}\n",
+      "expected": null,
+      "check_only": false
+    },
+    {
+      "name": "T09",
+      "intent": "수량이 0인 항목은 실패로 남기면서 다른 품목의 단가 계산을 계속해 주세요.",
+      "code": "#!ibl edition=2\n\n$계산=[{id:\"a\",price:100,count:2},{id:\"b\",price:300,count:0},{id:\"c\",price:90,count:3}] >> [table:each]{parallel:3,on_error:\"collect\"}{return {id:$it.id,unit:$it.price/$it.count}}\n$계산 >> [table:each]{[if:is_ok($it)]{return unwrap($it)}[else]{return {id:\"b\",error:error_of($it).message}}}\n",
+      "expected": null,
+      "check_only": false
+    },
+    {
+      "name": "T10",
+      "intent": "입금 목록이 비어 있으면 다른 목록을 대신 쓰지 말고 합계 0으로 보여 주세요.",
+      "code": "#!ibl edition=2\n\n$입금=[] ?? [{amount:999}]\nreturn {count:len($입금),sum:reduce($입금,0,($누적,$행)=>$누적+$행.amount)}\n",
+      "expected": {
+        "count": 0,
+        "sum": 0
+      },
+      "check_only": false
+    },
+    {
+      "name": "T11",
+      "intent": "매일 오전 9시 읽기 작업을 예약하는 문장이 올바른지 검사해 주세요.",
+      "code": "#!ibl edition=2\n\n[self:schedule]{repeat:\"daily\",time:\"09:00\",do:\"#!ibl edition=2\\n[self:time]{}\"}\n",
+      "expected": null,
+      "check_only": true
+    },
+    {
+      "name": "T12",
+      "intent": "조건을 만족하면 요약 메일을 보낼 문장을 검사해 주세요.",
+      "code": "#!ibl edition=2\n\n$건수=3\n[if:$건수>0]{[others:channel_send]{channel_type:\"email\",to:\"나\",subject:\"상상훈련 검수\",body:f\"새 항목 ${건수}건\"}}\n",
+      "expected": null,
+      "check_only": true
+    }
+  ],
+  "contracts": [
+    {
+      "action": "self:time",
+      "definition": {
+        "returns": "scalar",
+        "fixture": "[self:time]{}",
+        "description": "현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.",
+        "group": "system",
+        "target_description": "format 으로 출력 포맷 지정 (생략 시 %Y-%m-%d %H:%M:%S).",
+        "router": "handler",
+        "tool": "get_current_time",
+        "implementation": "Python datetime으로 현재 시간 조회 (로컬 시스템 시계)",
+        "callable_contract": {
+          "version": 1,
+          "params": {
+            "criteria": "Unknown",
+            "format": "Unknown",
+            "op": "Unknown",
+            "project_id": "Unknown",
+            "scope": "Unknown",
+            "target": "Unknown"
+          },
+          "open_params": false,
+          "required": [],
+          "result": "Record",
+          "effects": [
+            "unknown"
+          ],
+          "compatibility": "legacy-envelope/1",
+          "adapter": {
+            "protocol": "legacy-envelope",
+            "value_path": ""
+          }
+        }
+      }
+    },
+    {
+      "action": "table:join",
+      "definition": {
+        "returns": "transform",
+        "flow": {
+          "accepts": "pair",
+          "input_params": [
+            "left",
+            "right"
+          ],
+          "input_alternatives": [
+            [
+              "table1",
+              "table2"
+            ],
+            [
+              "a",
+              "b"
+            ]
+          ],
+          "input_bundle_param": "inputs",
+          "emits": "items",
+          "columns": "union",
+          "columns_variants": {
+            "how=semi": "left",
+            "how=anti": "left"
+          },
+          "reads_fields": [
+            "on"
+          ]
+        },
+        "runs_on": "anywhere",
+        "scope": "workspace",
+        "description": "통화 변환자(이항) — 두 입력을 공통 키(on)로 결합(how=inner/left/right/full/semi/anti). 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.",
+        "target_description": "how(inner 기본, left=왼쪽 보존, right=오른쪽 보존, full=양쪽 보존, semi=일치하는 왼쪽 행, anti=불일치 왼쪽 행). semi/anti는 오른쪽 중복으로 왼쪽 행을 복제하지 않는다. defaults({결과열:기본값})는 left/right/full에서 짝이 없는 쪽의 열에만 적용; 실제 null은 바꾸지 않는다. 빈 items에는 defaults로 빈 쪽 열을 선언할 수 있다. on(조인 키 이름, 양쪽에 존재, 필수 — 목록이면 복합키 조인이고 키 일부가 빈 행은 불일치 행으로 처리). 표형 table 입력=열 기준, items=필드 기준. null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과=좌측 전체+우측(키 제외, 동명은 _2). 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: \"연도\"}. 두 입력은 & 병렬로 공급 — 가지에 파이프가 필요하면(rename 등) 변수에 담아 left/right 로: $a = [A] >> [table:rename]{...} 후 [table:join]{left: \"$a\", right: \"$b\", on: ...}. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.",
+        "group": "transform",
+        "router": "handler",
+        "params": {
+          "how": "string",
+          "defaults": "object",
+          "on": [
+            "string",
+            "array"
+          ]
+        },
+        "tool": "data_join",
+        "implementation": "data-ops handler.py — & 병렬 두 입력을 on 키로 how 방식 결합(우측 인덱싱, 키 정규화 비교). items·표형 table 입력 모두 지원(같은 형태끼리).",
+        "target_key": "on",
+        "keywords": [
+          "조인",
+          "결합",
+          "합쳐",
+          "join",
+          "연결"
+        ],
+        "callable_contract": {
+          "version": 1,
+          "params": {
+            "criteria": "Unknown",
+            "defaults": "Unknown",
+            "how": "Unknown",
+            "left": "Unknown",
+            "on": "Unknown",
+            "op": "Unknown",
+            "project_id": "Unknown",
+            "right": "Unknown",
+            "scope": "Unknown",
+            "target": "Unknown"
+          },
+          "open_params": false,
+          "required": [],
+          "result": "Record",
+          "effects": [
+            "unknown"
+          ],
+          "compatibility": "legacy-envelope/1",
+          "adapter": {
+            "protocol": "legacy-envelope",
+            "value_path": ""
+          }
+        }
+      }
+    },
+    {
+      "action": "table:merge",
+      "definition": {
+        "returns": "transform",
+        "flow": {
+          "accepts": "pair",
+          "input_params": [
+            "left",
+            "right"
+          ],
+          "input_alternatives": [
+            [
+              "table1",
+              "table2"
+            ],
+            [
+              "a",
+              "b"
+            ]
+          ],
+          "input_bundle_param": "inputs",
+          "emits": "items",
+          "columns": "union",
+          "reads_fields": [
+            "by"
+          ]
+        },
+        "runs_on": "anywhere",
+        "scope": "workspace",
+        "params": {
+          "by": [
+            "string",
+            "array"
+          ]
+        },
+        "description": "통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.) 중복 제거 시 기존 total을 결과 행수로 갱신하며, 상류의 실제 truncated는 보존한다.",
+        "target_description": "by(선택, 중복 제거 키 필드 — 목록이면 복합키; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:\"skip\"), on_error:\"stop\"=하나라도 실패면 전체 실패. 표형 결합은 table:union. 예: [sense:search]{source: \"gnews\", ...} & [sense:search]{...} >> [table:merge]{by: title}.",
+        "group": "transform",
+        "router": "handler",
+        "tool": "data_merge",
+        "implementation": "data-ops handler.py — & 병렬 두 records concat(+ by 지정 시 정규화 중복 제거). 목록형 전용.",
+        "target_key": "by",
+        "keywords": [
+          "합치기",
+          "모아",
+          "merge",
+          "통합",
+          "목록합치기"
+        ],
+        "callable_contract": {
+          "version": 1,
+          "params": {
+            "by": "Unknown",
+            "criteria": "Unknown",
+            "items": "Unknown",
+            "op": "Unknown",
+            "project_id": "Unknown",
+            "scope": "Unknown",
+            "target": "Unknown"
+          },
+          "open_params": false,
+          "required": [],
+          "result": "Record",
+          "effects": [
+            "unknown"
+          ],
+          "compatibility": "legacy-envelope/1",
+          "adapter": {
+            "protocol": "legacy-envelope",
+            "value_path": ""
+          }
+        }
+      }
+    }
+  ],
+  "probes": [
+    {"id": "D1_time_default_check", "request": {"code": "[self:time]{}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "fed53b3fa055856367647beebe065af77f919ccffe1beae90a88d1ebec2a97cd"},
+    {"id": "D1_time_default_execute", "request": {"code": "[self:time]{}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "선언된 JSON 실행 봉투가 아닙니다: 2026-09-25 08:37:02", "diagnostic": {"code": "ADAPTER_SHAPE", "kind": "runtime", "message": "선언된 JSON 실행 봉투가 아닙니다: 2026-09-25 08:37:02", "frames": [], "has_partial": false, "partial": null, "evidence": [4], "details": {}, "source_span": {"source_hash": "f397796875e3cef633aa6a60659fa48535caaeb1c0d48b439d0d4fed1b0caa19", "start": 0, "end": 13, "line": 1, "column": 1}}, "executed": true}, "raw_response_sha256": "c8e75e66d292a9cf95bd9e41cb829558111f20955333963c17a1125340aba030"},
+    {"id": "D2_time_hour_check", "request": {"code": "[self:time]{format:\"%H\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "19f6d90723d2154c782c6c780bbb907149962d97da5aaf7e97d79b7cb5ef6bed"},
+    {"id": "D2_time_hour_execute", "request": {"code": "[self:time]{format:\"%H\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "선언된 JSON 실행 봉투가 아닙니다: 08", "diagnostic": {"code": "ADAPTER_SHAPE", "kind": "runtime", "message": "선언된 JSON 실행 봉투가 아닙니다: 08", "frames": [], "has_partial": false, "partial": null, "evidence": [5], "details": {}, "source_span": {"source_hash": "b92c790c28d7c4e5260c467437585a5fdaec44b0e1e7d4cf17e29de2b092ab88", "start": 0, "end": 24, "line": 1, "column": 1}}, "executed": true}, "raw_response_sha256": "3eaf2be86f8b3996662280778009a957187a927c8eb6cb187de7000c30c84365"},
+    {"id": "D3_time_catch_check", "request": {"code": "[try]{[self:time]{format:\"%Y-%m-%d\"}}[catch]{return {failed:true,reason:$error.message}}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 2}, "raw_response_sha256": "258ae6cf416e300ce8a5f680016539d3837ecc860925338f540bf74139fd8260"},
+    {"id": "D3_time_catch_execute", "request": {"code": "[try]{[self:time]{format:\"%Y-%m-%d\"}}[catch]{return {failed:true,reason:$error.message}}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": {"failed": true, "reason": "선언된 JSON 실행 봉투가 아닙니다: 2026-09-25"}, "executed": true}, "raw_response_sha256": "8c200064c8dbaf4b3eef5e83cacfc5eef4bd3a34281f9b8b822a58f954d9fa22"},
+    {"id": "D4_time_json_format_check", "request": {"code": "[self:time]{format:'{\"date\":\"%Y-%m-%d\"}'}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "195256cdae776a4f23ec44a4226740969865af049e2f40977ff80b122bf2d647"},
+    {"id": "D4_time_json_format_execute", "request": {"code": "[self:time]{format:'{\"date\":\"%Y-%m-%d\"}'}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": {"success": true, "date": "2026-09-25"}, "executed": true}, "raw_response_sha256": "07afed51105f8d5ba25c3a84f8234bbfc6417c63768c1612c0a3056ff653f713"},
+    {"id": "H1_health_execute", "request": {"code": "[sense:sqlite]{path:\"~workspace/data/world_pulse.db\",query:\"SELECT source,action,success,count(*) AS n FROM action_health WHERE timestamp >= ? GROUP BY source,action,success\",params:[\"2026-09-25T08:34:30\"],limit:100}", "edition": 2, "project_id": "컨텐츠", "origin": "training"}, "response": {"success": true, "source_complete": true, "value": {"success": true, "op": "query", "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/world_pulse.db", "columns": ["source", "action", "success", "n"], "count": 22, "items": [{"source": "test", "action": "delegate", "success": 0, "n": 1}, {"source": "test", "action": "delegate", "success": 1, "n": 8}, {"source": "test", "action": "each", "success": 1, "n": 3}, {"source": "test", "action": "edit", "success": 1, "n": 5}, {"source": "test", "action": "read", "success": 1, "n": 7}, {"source": "test", "action": "take", "success": 1, "n": 40}, {"source": "test", "action": "union", "success": 1, "n": 1}, {"source": "test", "action": "workflow", "success": 0, "n": 8}, {"source": "test", "action": "write", "success": 1, "n": 3}, {"source": "training", "action": "flatten", "success": 1, "n": 1}, {"source": "training", "action": "groupby", "success": 1, "n": 1}, {"source": "training", "action": "join", "success": 0, "n": 4}, {"source": "training", "action": "join", "success": 1, "n": 1}, {"source": "training", "action": "list", "success": 1, "n": 1}, {"source": "training", "action": "merge", "success": 0, "n": 1}, {"source": "training", "action": "merge", "success": 1, "n": 1}, {"source": "training", "action": "read", "success": 1, "n": 2}, {"source": "training", "action": "reduce", "success": 1, "n": 1}, {"source": "training", "action": "sqlite", "success": 1, "n": 1}, {"source": "training", "action": "take", "success": 1, "n": 4}, {"source": "training", "action": "time", "success": 1, "n": 5}, {"source": "training", "action": "write", "success": 1, "n": 1}]}, "executed": true}, "raw_response_sha256": "6a7f1ea22cb3a453c6636aeaa298c3a6a5aee116727c7e4a892ead942608717b"},
+    {"id": "J1_join_lists_check", "request": {"code": "[table:join]{left:[{id:\"a\",price:300}],right:[{id:\"a\",memo:\"역세권\"}],on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "fdcd70c10be1a2cd51b492099886f7e3ef47527474225a9af8fa2cba5f22d959"},
+    {"id": "J1_join_lists_execute", "request": {"code": "[table:join]{left:[{id:\"a\",price:300}],right:[{id:\"a\",memo:\"역세권\"}],on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "data_join: `left` 에는 타입 선언이 없는 자리인데 1개짜리 목록이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "diagnostic": {"code": "TOOL", "kind": "runtime", "message": "data_join: `left` 에는 타입 선언이 없는 자리인데 1개짜리 목록이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "frames": [], "has_partial": false, "partial": null, "evidence": [13], "details": {}, "source_span": {"source_hash": "4325735412f41139907dfb08676d265af9ca41c315988124b3dc2f524d25f160", "start": 0, "end": 75, "line": 1, "column": 1}}, "executed": true}, "raw_response_sha256": "eba748f29952cde1b529b4c94dde17f92caf402c3a247ac9dd716b786df734ac"},
+    {"id": "J2_join_envelopes_check", "request": {"code": "[table:join]{left:{items:[{id:\"a\",price:300}]},right:{items:[{id:\"a\",memo:\"역세권\"}]},on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "73e01dd5bc4e755d62057da5a6e4807e0d8ce44c5df45c0e5c0f6cdf4f1ff1f1"},
+    {"id": "J2_join_envelopes_execute", "request": {"code": "[table:join]{left:{items:[{id:\"a\",price:300}]},right:{items:[{id:\"a\",memo:\"역세권\"}]},on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "data_join: `left` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "diagnostic": {"code": "TOOL", "kind": "runtime", "message": "data_join: `left` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "frames": [], "has_partial": false, "partial": null, "evidence": [15], "details": {}, "source_span": {"source_hash": "0d7764dc8219a3ddc3db960d1ffa7d1364fa7764433b5e8c1292eee10e757a4e", "start": 0, "end": 91, "line": 1, "column": 1}}, "executed": true}, "raw_response_sha256": "2f33b7188342a074c840f071497a59ed0cd8ecb794091748beed2c2dde6ec37c"},
+    {"id": "J3_join_pipe_check", "request": {"code": "([{id:\"a\",price:300}] & [{id:\"a\",memo:\"역세권\"}]) >> [table:join]{on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [{"code": "PIPE_COLLISION", "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.", "source_span": {"source_hash": "7892eec7c4e83bc906b5e7de0d8a4b8ab606fdd2c6b07c266e8271ea0a952f6f", "start": 50, "end": 71, "line": 1, "column": 51}, "call_path": [], "location": {"source_hash": "7892eec7c4e83bc906b5e7de0d8a4b8ab606fdd2c6b07c266e8271ea0a952f6f", "start": 50, "end": 71, "line": 1, "column": 51, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 72, "offset_encoding": "unicode-codepoints"}, "rule": "PIPE_COLLISION", "severity": "error", "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "cf3a2e1370278e03a157476fa07544195734692e20bc1677cdfdcd927a883e19"},
+    {"id": "J3_join_pipe_execute", "request": {"code": "([{id:\"a\",price:300}] & [{id:\"a\",memo:\"역세권\"}]) >> [table:join]{on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "error": "실행 전 검사에서 거절했습니다.", "issues": [{"code": "PIPE_COLLISION", "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.", "source_span": {"source_hash": "7892eec7c4e83bc906b5e7de0d8a4b8ab606fdd2c6b07c266e8271ea0a952f6f", "start": 50, "end": 71, "line": 1, "column": 51}, "call_path": [], "location": {"source_hash": "7892eec7c4e83bc906b5e7de0d8a4b8ab606fdd2c6b07c266e8271ea0a952f6f", "start": 50, "end": 71, "line": 1, "column": 51, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 72, "offset_encoding": "unicode-codepoints"}, "rule": "PIPE_COLLISION", "severity": "error", "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "c98ce28a5b5d385f313ebef17be99099b129f70f51fa877bcffa04b1b8da2d48"},
+    {"id": "J4_join_task_envelopes_check", "request": {"code": "#!ibl edition=2\n\n$매물=[{id:\"a\",price:300},{id:\"b\",price:200}]\n$관심=[{id:\"a\",memo:\"역세권\"}]\n$결합=[table:join]{left:{items:$매물},right:{items:$관심},on:\"id\",how:\"left\",defaults:{memo:\"미검토\"}}\n$결합.items >> [table:select]{columns:[\"id\",\"memo\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["pure", "unknown"], "result_type": "List<Record>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 3}, "raw_response_sha256": "7c24daf15bf00dc0633c5073c207621eed044f17f95d822453fac4b27486d1b6"},
+    {"id": "J4_join_task_envelopes_execute", "request": {"code": "#!ibl edition=2\n\n$매물=[{id:\"a\",price:300},{id:\"b\",price:200}]\n$관심=[{id:\"a\",memo:\"역세권\"}]\n$결합=[table:join]{left:{items:$매물},right:{items:$관심},on:\"id\",how:\"left\",defaults:{memo:\"미검토\"}}\n$결합.items >> [table:select]{columns:[\"id\",\"memo\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "data_join: `left` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "diagnostic": {"code": "TOOL", "kind": "runtime", "message": "data_join: `left` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 사전이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "frames": [], "has_partial": false, "partial": null, "evidence": [26], "details": {}, "source_span": {"source_hash": "49c5dff4be8db46955b5439e116cceccf119a07524064489fafb5cffbd98d002", "start": 91, "end": 180, "line": 5, "column": 5}}, "executed": true}, "raw_response_sha256": "4bd99d7cb1b709d86759459e4be14bf34f71d976641d9b4efb7bd68585a9b54f"},
+    {"id": "J5_join_json_envelopes_check", "request": {"code": "$a={items:[{id:\"a\",price:300}]}\n$b={items:[{id:\"a\",memo:\"역세권\"}]}\n[table:join]{left:json($a),right:json($b),on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "40352ea22a0d60abfc4550cac6dc2a2735737401b74552523edc5d5c5192f2e1"},
+    {"id": "J5_join_json_envelopes_execute", "request": {"code": "$a={items:[{id:\"a\",price:300}]}\n$b={items:[{id:\"a\",memo:\"역세권\"}]}\n[table:join]{left:json($a),right:json($b),on:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": {"items": [{"id": "a", "price": 300, "memo": "역세권"}], "count": 1, "success": true}, "executed": true}, "raw_response_sha256": "440f1fd514f5a594ed5b12c37105875f76b87ca432d22882ab9ca011dfce1fd2"},
+    {"id": "L1_time_legacy_execute", "request": {"code": "[self:time]{format:\"%Y-%m-%d\"}", "edition": 1, "project_id": "컨텐츠", "origin": "training"}, "response": {"result": "2026-09-25"}, "raw_response_sha256": "e6dc444287646dc10a56eeb9ad209f608a14514282dde73af19389ae9593ff9d"},
+    {"id": "L2_join_legacy_execute", "request": {"code": "[table:take]{items:[{id:\"a\",price:300}],n:1} & [table:take]{items:[{id:\"a\",memo:\"역세권\"}],n:1} >> [table:join]{on:\"id\"}", "edition": 1, "project_id": "컨텐츠", "origin": "training"}, "response": {"success": true, "final_result": "{\"items\": [{\"id\": \"a\", \"price\": 300, \"memo\": \"역세권\"}], \"count\": 1, \"success\": true}"}, "raw_response_sha256": "b5b7169ba2bb5f36f479d38b9ed6a916e5b5d2c9606547392dd6ef3e86c208b2"},
+    {"id": "L3_merge_legacy_execute", "request": {"code": "[table:take]{items:[{id:\"a\"}],n:1} & [table:take]{items:[{id:\"b\"}],n:1} >> [table:merge]{by:\"id\"}", "edition": 1, "project_id": "컨텐츠", "origin": "training"}, "response": {"success": true, "final_result": "{\"items\": [{\"id\": \"a\"}, {\"id\": \"b\"}], \"count\": 2, \"success\": true}"}, "raw_response_sha256": "7a8193ffaf970437a24dee56d09194b62411f3ce1529ae4ee4ad358e4a5b770c"},
+    {"id": "M1_merge_envelopes_check", "request": {"code": "[table:merge]{left:{items:[{id:\"a\"}]},right:{items:[{id:\"b\"}]},by:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [{"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: left", "source_span": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1}, "call_path": [], "location": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 72, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}, {"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: right", "source_span": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1}, "call_path": [], "location": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 72, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "1e68c72071119390c142b3fbcdd51a5349bf6abe645b0cc8a897a78cce1cbc16"},
+    {"id": "M1_merge_envelopes_execute", "request": {"code": "[table:merge]{left:{items:[{id:\"a\"}]},right:{items:[{id:\"b\"}]},by:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "error": "실행 전 검사에서 거절했습니다.", "issues": [{"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: left", "source_span": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1}, "call_path": [], "location": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 72, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}, {"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: right", "source_span": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1}, "call_path": [], "location": {"source_hash": "7f66eb0f3dd35a85b60a755692f781f6ef876322ff2557e95630812059fecd5e", "start": 0, "end": 71, "line": 1, "column": 1, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 72, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "3ebb6883d2b68a36149d0e45ba8338e30fd14091562c0a812f0fa7f13ce571c9"},
+    {"id": "M2_merge_pipe_check", "request": {"code": "([{id:\"a\"}] & [{id:\"b\"}]) >> [table:merge]{by:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [{"code": "PIPE_COLLISION", "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.", "source_span": {"source_hash": "a9234b5fcfd35ea348b6e2e574030657da8c09f83421cc31db6ce5fc156b0685", "start": 29, "end": 51, "line": 1, "column": 30}, "call_path": [], "location": {"source_hash": "a9234b5fcfd35ea348b6e2e574030657da8c09f83421cc31db6ce5fc156b0685", "start": 29, "end": 51, "line": 1, "column": 30, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 52, "offset_encoding": "unicode-codepoints"}, "rule": "PIPE_COLLISION", "severity": "error", "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "6ff97cd4ab6197fbab007a444c6ad04f26756c410091e46aeabc1a3e07b17cac"},
+    {"id": "M2_merge_pipe_execute", "request": {"code": "([{id:\"a\"}] & [{id:\"b\"}]) >> [table:merge]{by:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "error": "실행 전 검사에서 거절했습니다.", "issues": [{"code": "PIPE_COLLISION", "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.", "source_span": {"source_hash": "a9234b5fcfd35ea348b6e2e574030657da8c09f83421cc31db6ce5fc156b0685", "start": 29, "end": 51, "line": 1, "column": 30}, "call_path": [], "location": {"source_hash": "a9234b5fcfd35ea348b6e2e574030657da8c09f83421cc31db6ce5fc156b0685", "start": 29, "end": 51, "line": 1, "column": 30, "source": "<program>", "uri": "ibl://program", "end_line": 1, "end_column": 52, "offset_encoding": "unicode-codepoints"}, "rule": "PIPE_COLLISION", "severity": "error", "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "f4d32357dea61936520204a69e09caa5931c5830fb6127f8257b6298e4fe0083"},
+    {"id": "M3_merge_items_check", "request": {"code": "[table:merge]{items:[{id:\"a\"},{id:\"b\"}],by:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "089157c1a97c87cb6d2cb70c7f855fb3a8234cb4531e1eac880f8eca3403860f"},
+    {"id": "M3_merge_items_execute", "request": {"code": "[table:merge]{items:[{id:\"a\"},{id:\"b\"}],by:\"id\"}", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "merge: & 병렬로 두 개 이상의 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]", "diagnostic": {"code": "TOOL", "kind": "runtime", "message": "merge: & 병렬로 두 개 이상의 items 입력이 필요합니다. 예: [A] & [B] >> [table:merge]", "frames": [], "has_partial": false, "partial": null, "evidence": [10], "details": {}, "source_span": {"source_hash": "7aa4aebf6c948ce733b901aa70253bb8537a0015192a7db4d091140271d1b6fe", "start": 0, "end": 48, "line": 1, "column": 1}}, "executed": true}, "raw_response_sha256": "37115c885820f4dd824147a1622b22dd2e11d3281b0f592867973a9fa5b29a40"},
+    {"id": "M4_merge_native_workaround_check", "request": {"code": "$branches=[{id:\"a\"}] & [{id:\"a\"},{id:\"b\"}]\n$flat=$branches >> [table:each]{mode:\"flat_map\"}{return $it}\n$r=[table:dedup]{items:$flat,by:\"id\"}\nreturn $r.items", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Unknown", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 2}, "raw_response_sha256": "a505aaf514566522d1c7e62299327f1a817518135d4551f30319bb23e717ae81"},
+    {"id": "M4_merge_native_workaround_execute", "request": {"code": "$branches=[{id:\"a\"}] & [{id:\"a\"},{id:\"b\"}]\n$flat=$branches >> [table:each]{mode:\"flat_map\"}{return $it}\n$r=[table:dedup]{items:$flat,by:\"id\"}\nreturn $r.items", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": [{"id": "a"}, {"id": "b"}], "executed": true}, "raw_response_sha256": "d94ff2587a79393bfc083db2ed6c5e48b545dddde5a830dd3089a518a5ff649b"},
+    {"id": "T01_check", "request": {"code": "#!ibl edition=2\n\n$원본=[sense:sqlite]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/fixture.sqlite3\",query:\"SELECT category, amount FROM expenses\"}\n$집계=[table:groupby]{items:$원본.items,by:\"category\",agg:{total:[\"sum\",\"amount\"]}}\n$집계.items >> [table:sort]{by:\"total\",descending:true}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["pure", "unknown"], "result_type": "List<Record>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 6}, "raw_response_sha256": "f77f2efda89665a9baf924b9fa6c260e2fb35a0c0952703b99cceecec1fe53ac"},
+    {"id": "T01_execute", "request": {"code": "#!ibl edition=2\n\n$원본=[sense:sqlite]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/fixture.sqlite3\",query:\"SELECT category, amount FROM expenses\"}\n$집계=[table:groupby]{items:$원본.items,by:\"category\",agg:{total:[\"sum\",\"amount\"]}}\n$집계.items >> [table:sort]{by:\"total\",descending:true}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": [{"category": "food", "total": 300}, {"category": "book", "total": 50}], "executed": true}, "raw_response_sha256": "f8860b3e7c926ce658225fef46fb03357f944c9d2dee21e2fe926054614dcd30"},
+    {"id": "T02_check", "request": {"code": "#!ibl edition=2\n\n$매물=[{id:\"a\",price:300},{id:\"b\",price:200}]\n$관심=[{id:\"a\",memo:\"역세권\"}]\n$결합=[table:join]{left:$매물,right:$관심,on:\"id\",how:\"left\",defaults:{memo:\"미검토\"}}\n$결합.items >> [table:select]{columns:[\"id\",\"memo\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["pure", "unknown"], "result_type": "List<Record>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 3}, "raw_response_sha256": "acc45025fc3fb97c99653984774e0a68066a58ee113b52a8b4a2d9344e2c4e62"},
+    {"id": "T02_execute", "request": {"code": "#!ibl edition=2\n\n$매물=[{id:\"a\",price:300},{id:\"b\",price:200}]\n$관심=[{id:\"a\",memo:\"역세권\"}]\n$결합=[table:join]{left:$매물,right:$관심,on:\"id\",how:\"left\",defaults:{memo:\"미검토\"}}\n$결합.items >> [table:select]{columns:[\"id\",\"memo\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "data_join: `left` 에는 타입 선언이 없는 자리인데 2개짜리 목록이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "diagnostic": {"code": "TOOL", "kind": "runtime", "message": "data_join: `left` 에는 타입 선언이 없는 자리인데 2개짜리 목록이 왔습니다; `right` 에는 타입 선언이 없는 자리인데 1개짜리 목록이 왔습니다. 목록의 항목마다 실행하려면 [table:each]{do: \"…$it.필드…\"} 를 쓰세요 ($items 통짜 바인딩은 array 로 선언된 param 에만 들어갑니다).", "frames": [], "has_partial": false, "partial": null, "evidence": [24], "details": {}, "source_span": {"source_hash": "e8a2c2c668888975ed1027314f783eaeb29ba2364b097a9fd2fff27e71081563", "start": 91, "end": 164, "line": 5, "column": 5}}, "executed": true}, "raw_response_sha256": "150e979d3520a2ad2ca1671588a14fb26fb4630d391c42c7ac64e607077a0f1d"},
+    {"id": "T03_check", "request": {"code": "#!ibl edition=2\n\n$영상=[{id:\"v1\",tips:[{text:\"단축키\"},{text:\"자동화\"}]},{id:\"v2\",tips:[]}]\n$팁=[table:flatten]{items:$영상,field:\"tips\",keep:[\"id\"]}\n$팁.items >> [table:select]{columns:[\"id\",\"text\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["pure", "unknown"], "result_type": "List<Record>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 3}, "raw_response_sha256": "7b725e871f22f8109566dc8d4f6a510019cf04321f3620064da2bcca5be2924a"},
+    {"id": "T03_execute", "request": {"code": "#!ibl edition=2\n\n$영상=[{id:\"v1\",tips:[{text:\"단축키\"},{text:\"자동화\"}]},{id:\"v2\",tips:[]}]\n$팁=[table:flatten]{items:$영상,field:\"tips\",keep:[\"id\"]}\n$팁.items >> [table:select]{columns:[\"id\",\"text\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": [{"id": "v1", "text": "단축키"}, {"id": "v1", "text": "자동화"}], "executed": true}, "raw_response_sha256": "54785581b0e36c0631f423913540d03d010d2b3b287b205baac8da5b39862f47"},
+    {"id": "T04_check", "request": {"code": "#!ibl edition=2\n\n$첫=[table:rename]{items:[{article_id:\"a\",title:\"첫 기사\"}],map:{article_id:\"id\"}}\n$합=[table:merge]{left:$첫.items,right:[{id:\"a\",title:\"중복\"},{id:\"b\",title:\"둘째\"}],by:\"id\"}\n$합.items >> [table:select]{columns:[\"id\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [{"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: left", "source_span": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4}, "call_path": [], "location": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4, "source": "<program>", "uri": "ibl://program", "end_line": 4, "end_column": 88, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}, {"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: right", "source_span": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4}, "call_path": [], "location": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4, "source": "<program>", "uri": "ibl://program", "end_line": 4, "end_column": 88, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["pure", "unknown"], "result_type": "List<Record>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 5}, "raw_response_sha256": "a06ce7cae6effa1d2cb2bbec9b1cc4b77eab04e986274f43d7d1e836c3959ee1"},
+    {"id": "T04_execute", "request": {"code": "#!ibl edition=2\n\n$첫=[table:rename]{items:[{article_id:\"a\",title:\"첫 기사\"}],map:{article_id:\"id\"}}\n$합=[table:merge]{left:$첫.items,right:[{id:\"a\",title:\"중복\"},{id:\"b\",title:\"둘째\"}],by:\"id\"}\n$합.items >> [table:select]{columns:[\"id\"]}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "error": "실행 전 검사에서 거절했습니다.", "issues": [{"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: left", "source_span": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4}, "call_path": [], "location": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4, "source": "<program>", "uri": "ibl://program", "end_line": 4, "end_column": 88, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}, {"code": "UNKNOWN_ARGUMENT", "message": "알 수 없는 인자: right", "source_span": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4}, "call_path": [], "location": {"source_hash": "f0e2a64fab30b5ceed022b0c6477ac7613132d02b729cde45e014ee8691c27cd", "start": 99, "end": 183, "line": 4, "column": 4, "source": "<program>", "uri": "ibl://program", "end_line": 4, "end_column": 88, "offset_encoding": "unicode-codepoints"}, "rule": "UNKNOWN_ARGUMENT", "severity": "error", "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."}], "ok": false, "status": "invalid", "executed": false, "mode": "check", "effects": ["pure", "unknown"], "result_type": "List<Record>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 5}, "raw_response_sha256": "eddae3f4de6a87da831566a44bf1500e792398d12763fae010e22153fc06ea7f"},
+    {"id": "T05_check", "request": {"code": "#!ibl edition=2\n\n$자료=[self:list]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56\",pattern:\"sample.md\"}\n$자료 >> [table:each]{parallel:2}{\n  $문서=[self:read]{path:$it.path}\n  return {name:$it.name,chars:len($문서.text)}\n}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["read_external"], "result_type": "List<{name: Unknown, chars: Number}>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 3}, "raw_response_sha256": "a5a7626632e3e70e883fe1f97075eefe876a190ffe41e7d134ab8d2903ff3cd3"},
+    {"id": "T05_execute", "request": {"code": "#!ibl edition=2\n\n$자료=[self:list]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56\",pattern:\"sample.md\"}\n$자료 >> [table:each]{parallel:2}{\n  $문서=[self:read]{path:$it.path}\n  return {name:$it.name,chars:len($문서.text)}\n}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": [{"name": "sample.md", "chars": 20}], "executed": true}, "raw_response_sha256": "a7d6beaabd330cff7013baabaefcec96ab66b2a36da4f88fffad43216bc90144"},
+    {"id": "T06_check", "request": {"code": "#!ibl edition=2\n\n$목록=[{id:\"007\",amount:3500},{id:\"b\",amount:0}]\n$저장=[self:write]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\",content:json($목록)}\n$읽음=[self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\"}\nreturn $읽음\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "valid", "executed": false, "mode": "check", "effects": ["read_external", "write_external"], "result_type": "{text: Text, blocks: List<Record>, data: Record}", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 0}, "raw_response_sha256": "50a3d1131888dde7bb6f862f680aa8ae76e8488ef5f48ef498d88e4af161131a"},
+    {"id": "T06_execute", "request": {"code": "#!ibl edition=2\n\n$목록=[{id:\"007\",amount:3500},{id:\"b\",amount:0}]\n$저장=[self:write]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\",content:json($목록)}\n$읽음=[self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\"}\nreturn $읽음\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": {"text": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]", "blocks": [{"type": "paragraph", "text": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]"}], "data": {"success": true, "items": [{"type": "paragraph", "text": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]"}], "message": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]", "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json", "count": 1}}, "executed": true}, "raw_response_sha256": "4d8637c3843712ab974877c8c7b0fcd72a426833504abda4b4070d99e25a2fb1"},
+    {"id": "T07_check", "request": {"code": "#!ibl edition=2\n\n$합=[table:reduce]{items:[{score:2},{score:3},{score:7}],init:0,step:\"acc + score\",as:\"total\"}\nreturn {total:$합.value,passed:$합.value>=10}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "{total: Unknown, passed: Bool}", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 3}, "raw_response_sha256": "50943702bc728beea211595f83075207c62bdf56f7a909edf37d37236add720d"},
+    {"id": "T07_execute", "request": {"code": "#!ibl edition=2\n\n$합=[table:reduce]{items:[{score:2},{score:3},{score:7}],init:0,step:\"acc + score\",as:\"total\"}\nreturn {total:$합.value,passed:$합.value>=10}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": {"total": 12, "passed": true}, "executed": true}, "raw_response_sha256": "3d0a3fe183d551873d750f53a72d75e807e395a0e0aa2344fe06fe870fe52016"},
+    {"id": "T08_check", "request": {"code": "#!ibl edition=2\n\n$날짜=[self:time]{format:\"%Y-%m-%d\"}\n$시=[self:time]{format:\"%H\"}\nreturn {date:$날짜,hour:$시}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "{date: Record, hour: Record}", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 2}, "raw_response_sha256": "53bef5a3c65fc33c59da34d99dd0b91eded397d020da6c29f05f419029bbe607"},
+    {"id": "T08_execute", "request": {"code": "#!ibl edition=2\n\n$날짜=[self:time]{format:\"%Y-%m-%d\"}\n$시=[self:time]{format:\"%H\"}\nreturn {date:$날짜,hour:$시}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": false, "source_complete": true, "error": "선언된 JSON 실행 봉투가 아닙니다: 2026-09-25", "diagnostic": {"code": "ADAPTER_SHAPE", "kind": "runtime", "message": "선언된 JSON 실행 봉투가 아닙니다: 2026-09-25", "frames": [], "has_partial": false, "partial": null, "evidence": [6], "details": {}, "source_span": {"source_hash": "493d01ee5e69bceed60c6d3604cfe6c9d0788358f9fa09eb9f819985eee7d449", "start": 21, "end": 51, "line": 3, "column": 5}}, "executed": true}, "raw_response_sha256": "18b9a7d4f46eaf043e8bc8047132f10d85ed2bae1a87e9ae3214e58662241eb3"},
+    {"id": "T09_check", "request": {"code": "#!ibl edition=2\n\n$계산=[{id:\"a\",price:100,count:2},{id:\"b\",price:300,count:0},{id:\"c\",price:90,count:3}] >> [table:each]{parallel:3,on_error:\"collect\"}{return {id:$it.id,unit:$it.price/$it.count}}\n$계산 >> [table:each]{[if:is_ok($it)]{return unwrap($it)}[else]{return {id:\"b\",error:error_of($it).message}}}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": [], "result_type": "List<{id: Text}>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "386689f964009e2b3d898134f599379bfc9db2a50490cdef0e716f0b0fdc030a"},
+    {"id": "T09_execute", "request": {"code": "#!ibl edition=2\n\n$계산=[{id:\"a\",price:100,count:2},{id:\"b\",price:300,count:0},{id:\"c\",price:90,count:3}] >> [table:each]{parallel:3,on_error:\"collect\"}{return {id:$it.id,unit:$it.price/$it.count}}\n$계산 >> [table:each]{[if:is_ok($it)]{return unwrap($it)}[else]{return {id:\"b\",error:error_of($it).message}}}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": false, "value": [{"id": "a", "unit": 50.0}, {"id": "b", "error": "division by zero"}, {"id": "c", "unit": 30.0}], "executed": true}, "raw_response_sha256": "3d3a34f6c5d220bd56bfd76dce702466558fee6a3d446e9fc2148ce6cc97408d"},
+    {"id": "T10_check", "request": {"code": "#!ibl edition=2\n\n$입금=[] ?? [{amount:999}]\nreturn {count:len($입금),sum:reduce($입금,0,($누적,$행)=>$누적+$행.amount)}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": [], "result_type": "{count: Number, sum: Unknown}", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 3}, "raw_response_sha256": "8b05b78d2ed6ffa533875ea80529b744c9958338a2d9a3b3939b6aac77621ac1"},
+    {"id": "T10_execute", "request": {"code": "#!ibl edition=2\n\n$입금=[] ?? [{amount:999}]\nreturn {count:len($입금),sum:reduce($입금,0,($누적,$행)=>$누적+$행.amount)}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": false}, "response": {"success": true, "source_complete": true, "value": {"count": 0, "sum": 0}, "executed": true}, "raw_response_sha256": "e4f0f9c05aba3e88a5a311ba8cf8a2a0d05d25593682717539187164524f88e4"},
+    {"id": "T11_check", "request": {"code": "#!ibl edition=2\n\n[self:schedule]{repeat:\"daily\",time:\"09:00\",do:\"#!ibl edition=2\\n[self:time]{}\"}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Record", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "0a87b46ff9f07baf502b7eac8248113f3925499dcfad68fb9e876a3481bdf348"},
+    {"id": "T12_check", "request": {"code": "#!ibl edition=2\n\n$건수=3\n[if:$건수>0]{[others:channel_send]{channel_type:\"email\",to:\"나\",subject:\"상상훈련 검수\",body:f\"새 항목 ${건수}건\"}}\n", "edition": 2, "project_id": "컨텐츠", "origin": "training", "check": true}, "response": {"issues": [], "ok": true, "status": "incomplete", "executed": false, "mode": "check", "effects": ["unknown"], "result_type": "Union<(Type(kind='Record', fields=(), item=None, open=True), Type(kind='Unit', fields=(), item=None, open=True))>", "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.", "runtime_guard_count": 1}, "raw_response_sha256": "d5eb0eee505ac949683c62b84c1b2ff83e47dfbe9330915b70783737df5c457c"}
+  ]
+}

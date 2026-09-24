@@ -9,7 +9,8 @@ import threading
 import time
 from concurrent.futures import wait, FIRST_COMPLETED
 from execution_workers import create_executor
-from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, pack, projection, span)
+from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, pack, projection, span,
+                       parallel_branches)
 from ibl_v2_expr import Closure, binary, boolean, number, scalar_text, pure_call
 from ibl_v2_types import guard
 
@@ -216,14 +217,7 @@ class Runtime:
                 result = sub(d["right"])
                 return Binding(result.value, result.evidence | {eid})
         if kind == "parallel":
-            nodes = []
-            def branches(n):
-                if n.kind == "parallel":
-                    branches(n.data["left"])
-                    branches(n.data["right"])
-                else:
-                    nodes.append(n)
-            branches(node)
+            nodes = list(parallel_branches(node))
             results = self.fanout(node, len(nodes), lambda i: self.frame(nodes[i], env.copy()), min(8, len(nodes)))
             return Binding([b.value for b in results], self.parents(results))
         if kind == "call":

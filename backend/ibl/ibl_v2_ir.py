@@ -37,6 +37,17 @@ class Node:
         return f"{self.kind}:{self.start}:{self.end}"
 
 
+def parallel_branches(node):
+    """Flatten parallel syntax, never values returned by a branch."""
+    pending = [node]
+    while pending:
+        current = pending.pop()
+        if current.kind == "parallel":
+            pending.extend((current.data["right"], current.data["left"]))
+        else:
+            yield current
+
+
 class Fault(Exception):
     """Only catchable execution faults participate in catch/fallback."""
     def __init__(self, code, message, node=None, *, kind="runtime", partial=UNIT,

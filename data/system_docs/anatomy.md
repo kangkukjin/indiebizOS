@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-09-24
+last_updated: 2026-09-25
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -95,6 +95,8 @@ AI 팁 보고서는 한 관용구 호출로 주제 준비 → 최근 영상 선�
 [4016 인용 대조](../../docs/EPISODE_4016_GROUNDING_REPAIR_2026_09_24.md).
 모델 프로바이더의 도구 결과 경계는 공통 완료 대기를 사용한다. 실행 중 상태를 모델에게 반복 전달하지 않고, 같은 작업을 회수한다. [공통 완료 대기 설계](../../docs/PROVIDER_NEUTRAL_COMPLETION_WAIT_2026_09_24.md).
 기존 관용구의 파이프 입력 자리는 현재 호환 계약에도 전달한다. 건강 조회 인자 선언과 능력 판정의 원문 선택·실패 근거를 보강했다. [4028~4036 점검·수리](../../docs/EPISODES_4028_4036_REPAIRS_2026_09_24.md).
+3개 이상 병렬 결과의 타입과 case·catch 조기 반환 뒤의 변수 검사를 실행 의미에 맞췄다.
+finally의 정리와 병렬 쓰기 충돌 검사도 유지한다. [조합 검사기 수리](../../docs/IBL_COMPOSITION_REPAIRS_2026_09_25.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에
@@ -228,4 +230,4 @@ Codex 의식은 네이티브 읽기 전용 샌드박스를 유지하면서 자�
 → 더 깊이: [vision.md](vision.md) (인지 외골격의 4문제의식·모양·기반 철학)
 
 ---
-*최근 변경(2026-09-24): 현재 IBL 작성·저장 계약, 관리되는 기록, 세계 지도, 프로바이더 공통 완료 대기와 최근 관용구 수리 포인터를 반영. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-09-25): 병렬 결과 타입·case/catch 조기 반환의 조합 검사기 수리 포인터를 반영. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

@@ -7,7 +7,7 @@ fingerprint, avoiding the legacy transitive-cache invalidation problem.
 from dataclasses import dataclass, field
 from pathlib import Path
 import copy
-from ibl_v2_ir import Fault, Node, UNIT, digest, span
+from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches
 from ibl_v2_parser import parse
 from ibl_v2_expr import BUILTINS
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
@@ -303,17 +303,23 @@ class Compiler:
             return self.visit(d["right"], env, names, readonly, final, piped=left)
         if kind == "parallel":
             types = []
-            for branch in (d["left"], d["right"]):
+            writes, conflict = set(), set()
+            for branch in parallel_branches(node):
                 old_returns, self.returns = self.returns, []
                 result = sub(branch, env.copy())
                 for t in self.returns:
                     result = t if result == UNIT_T else join(result, t)
                 self.returns = old_returns
                 types.append(result)
-            conflict = self.writes(d["left"]) & self.writes(d["right"])
+                branch_writes = self.writes(branch)
+                conflict.update(writes & branch_writes)
+                writes.update(branch_writes)
             if conflict:
                 self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
-            return Type("List", item=join(*types))
+            item = types[0]
+            for typ in types[1:]:
+                item = join(item, typ)
+            return Type("List", item=item)
         if kind == "fallback":
             return join(sub(d["left"], env.copy()), sub(d["right"], env.copy()))
         if kind == "call":
@@ -378,12 +384,7 @@ class Compiler:
             self.need(node, sub(d["value"]), BOOL)
             a, b = env.copy(), env.copy()
             ta, tb = sub(d["body"], a), sub(d["otherwise"], b)
-            if self.returns_unconditionally(d["body"]):
-                env.update(b)
-            elif self.returns_unconditionally(d["otherwise"]):
-                env.update(a)
-            else:
-                self.merge_env(env, a, b)
+            self.merge_continuations(env, [(d["body"], a), (d["otherwise"], b)])
             return join(ta, tb)
         if kind == "case":
             self.pure(d["value"])
@@ -394,13 +395,11 @@ class Compiler:
                 sub(condition)
                 child = env.copy()
                 types.append(sub(body, child))
-                environments.append(child)
+                environments.append((body, child))
             child = env.copy()
             types.append(sub(d["otherwise"], child))
-            environments.append(child)
-            for child in environments[1:]:
-                self.merge_env(environments[0], environments[0].copy(), child)
-            env.update(environments[0])
+            environments.append((d["otherwise"], child))
+            self.merge_continuations(env, environments)
             result = types[0]
             for t in types[1:]:
                 result = join(result, t)
@@ -429,9 +428,24 @@ class Compiler:
         if kind == "try":
             a, b = env.copy(), {**env, "error": Type("Record")}
             ta, tb = sub(d["body"], a), sub(d["catch"], b)
-            b.pop("error", None)
-            self.merge_env(env, a, b) if d["catch"] else env.update(a)
-            self.visit(d["final"], env, names, readonly, True)
+            if "error" in env:
+                b["error"] = env["error"]
+            else:
+                b.pop("error", None)
+            paths = [(d["body"], a)]
+            cleanup_env = a.copy()
+            if d["catch"]:
+                paths.append((d["catch"], b))
+                self.merge_env(cleanup_env, a, b)
+            self.merge_continuations(env, paths)
+            # finally also runs on returning paths. Check it before excluding
+            # their bindings, then carry its assignments into the continuation.
+            self.visit(d["final"], cleanup_env, names, readonly, True)
+            for name in assigned_names(d["final"]):
+                if name in cleanup_env:
+                    env[name] = cleanup_env[name]
+                elif name in env:
+                    env[name] = UNKNOWN
             return join(ta, tb) if d["catch"] else ta
         self.issue(node, "IR", f"지원하지 않는 구문: {kind}")
         return UNKNOWN
@@ -537,6 +551,17 @@ class Compiler:
     def merge_env(target, a, b):
         target.clear()
         target.update({k: join(a[k], b[k]) for k in a.keys() & b.keys()})
+
+    def merge_continuations(self, target, paths):
+        """Only paths reaching the next statement constrain its bindings."""
+        continuing = [env for body, env in paths if not self.returns_unconditionally(body)]
+        if not continuing:
+            return  # Keep checking unreachable source without inventing bindings.
+        merged = continuing[0].copy()
+        for env in continuing[1:]:
+            self.merge_env(merged, merged.copy(), env)
+        target.clear()
+        target.update(merged)
 
 
 def compile_program(source, registry=None, inputs=None, definitions=None):

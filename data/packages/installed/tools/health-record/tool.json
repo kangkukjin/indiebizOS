@@ -70,6 +70,30 @@
           "text": {
             "type": "string",
             "description": "self:health 파라미터"
+          },
+          "person": {
+            "type": "string",
+            "description": "self:health 파라미터"
+          },
+          "days": {
+            "type": "integer",
+            "description": "self:health 파라미터"
+          },
+          "include_images": {
+            "type": "boolean",
+            "description": "self:health 파라미터"
+          },
+          "active_only": {
+            "type": "boolean",
+            "description": "self:health 파라미터"
+          },
+          "measured_at": {
+            "type": "string",
+            "description": "self:health 파라미터"
+          },
+          "note": {
+            "type": "string",
+            "description": "self:health 파라미터"
           }
         },
         "additionalProperties": true

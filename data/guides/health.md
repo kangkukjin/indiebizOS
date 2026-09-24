@@ -17,6 +17,8 @@
 - **query**: 조회. `query_type` 하나로 분기 — `summary`(기본)/`search`/`측정기록`/`증상`/`투약`/`문서`/`목록`(사람 목록),
   또는 `혈압`·`혈당` 같은 카테고리명을 직접 넣으면 그 측정 추이.
   - 옵션: `keyword`(search 필수), `days`(기본 365), `person`, `category`(측정 필터).
+    대상자·기간 지정 예: `[self:health]{op:"query",query_type:"summary",person:"가족",days:365}`.
+    `include_images`와 투약 조회의 `active_only`는 불리언 옵션이다.
   - 측정 조회는 `{text, table, blocks, points}` 통화 — table 은 날짜 피벗(혈압=수축기/이완기 2열)이라
     `>> [table:chart]` / `>> [table:spreadsheet]` 파이프 직결.
 - **ingest**: 다형 입력 일괄 적재 — `file`(이미지·PDF·엑셀·txt/md/csv 경로) 또는 `text`(자유 텍스트/붙여넣기)를

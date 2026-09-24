@@ -176,6 +176,60 @@ def test_fabricated_span_or_receipt_is_not_a_valid_verdict(rows):
         cg.parse(json.dumps({"claims": rows}), EYES, [])
 
 
+def test_candidate_id_preserves_markdown_without_model_copy(monkeypatch):
+    response = '**이미지를 볼 수 없습니다.**'
+    packet = cg.packet('이미지 확인', response, [], cg.DEFAULTS)
+    rows = [{'candidate_id': 'c0', 'status': 'unknown', 'target': '이미지 열람'}]
+    parsed = cg.parse(json.dumps({'claims': rows}), response, [], packet['candidates'])
+    assert parsed[0]['quote'] == response
+    install_judge(monkeypatch, [rows])
+    assert drain(cg.CapabilityGuard(limits=dict(cg.DEFAULTS)).adopt(
+        NS(), '이미지 확인', response, []))[1] == response
+
+
+@pytest.mark.parametrize('row', [
+    {'candidate_id': 'missing', 'status': 'unknown'},
+    {'candidate_id': 'c0', 'status': 'limited', 'evidence_ids': []},
+    {'candidate_id': 'c0', 'status': 'unknown', 'quote': '정상 문장입니다.'},
+])
+def test_candidate_id_cannot_invent_span_or_evidence(row):
+    response = EYES + '\n정상 문장입니다.'
+    packet = cg.packet('확인', response, [], cg.DEFAULTS)
+    with pytest.raises(ValueError):
+        cg.parse(json.dumps({'claims': [row]}), response, [], packet['candidates'])
+
+
+def test_invalid_judgment_keeps_diagnostic_evidence_and_original(monkeypatch):
+    logs, evidence = [], []
+    install_judge(monkeypatch, [[claim('원문에 없는 문장')]])
+    monkeypatch.setattr(cg, 'log', lambda kind, **data: logs.append((kind, data)))
+    monkeypatch.setattr(cg, 'evidence_ref', lambda value: evidence.append(value) or {'id': 'test'})
+    guard = cg.CapabilityGuard(limits=dict(cg.DEFAULTS))
+    assert drain(guard.adopt(NS(), '이미지 확인', EYES, []))[1] == EYES
+    detail = next(data for kind, data in logs if kind == 'invalid_judgment')
+    assert detail['reason'] == 'claim does not quote response'
+    assert evidence[0]['packet']['response'] == EYES and evidence[0]['raw']
+    assert guard.lookups == guard.resumes == 0
+
+
+def test_candidate_budget_does_not_drop_denial_after_medium_response():
+    text = '설명입니다.\n' * 350 + EYES
+    data = cg.packet('확인', text, [], cg.DEFAULTS)
+    assert EYES in data['response']
+    assert any(EYES in c['quote'] for c in data['candidates'])
+    assert len((json.dumps(data, ensure_ascii=False) + cg.POLICY).encode()) <= cg.DEFAULTS['input_bytes']
+
+
+def test_candidate_selection_does_not_replace_adjacent_normal_sentence():
+    response = '첫 작업은 완료했습니다. **이미지를 볼 수 없습니다.** 다음 작업은 보존합니다.'
+    data = cg.packet('확인', response, [], cg.DEFAULTS)
+    rows = cg.parse(json.dumps({'claims': [{'candidate_id': 'c0', 'status': 'unsupported'}]}),
+                    response, [], data['candidates'])
+    assert rows[0]['quote'] == '**이미지를 볼 수 없습니다.**'
+    result = cg.replace_unknown(response, rows)
+    assert result.startswith('첫 작업은 완료했습니다.') and result.endswith('다음 작업은 보존합니다.')
+
+
 def test_bounded_read_times_out_and_releases_capacity_after_completion():
     from capability_guard_runtime import bounded_read
     done = threading.Event()

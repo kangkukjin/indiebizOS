@@ -4084,6 +4084,12 @@ nodes:
           query: string
           query_type: string
           text: string
+          person: string
+          days: integer
+          include_images: boolean
+          active_only: boolean
+          measured_at: string
+          note: string
         aliases:
           query:
           - keyword

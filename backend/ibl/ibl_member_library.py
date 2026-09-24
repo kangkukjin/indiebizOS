@@ -38,6 +38,7 @@ def adapters(project_path, agent_id):
     from ibl_engine import execute_ibl
     from ibl_v2_adapters import Adapter, Adapted, decode_envelope
     from ibl_v2_compat import plain_arguments
+    from workflow_contract import pipe_input_param
     source = "\n".join(s for s in _source.get() if source_edition(s) == 1)
     if not source:
         return {}
@@ -51,6 +52,9 @@ def adapters(project_path, agent_id):
                     "result": "Record", "effects": ["unknown"],
                     "compatibility": "legacy-function/1", "implementation_fingerprint": digest(source),
                     "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
+        receiver = pipe_input_param(s.get("body"))
+        if receiver in contract["params"]:
+            contract["pipe_input"] = receiver
         def run(runtime, args, name=name, contract=contract):
             # Parse only the pinned definitions and a literal function name.
             # Arguments enter as values, never interpolated into source.

@@ -61,6 +61,56 @@ def test_legacy_function_reuses_original_semantics_and_returns_envelope(memory):
     assert any(g.get('boundary') == 'legacy-function/1' for g in checked['guards'])
 
 
+def test_legacy_pipe_receiver_survives_bridge_and_rejects_collision(memory):
+    code = '$return = $목록 >> [table:take]{n:$개수}'
+    assert memory.add_examples_batch([example(code, '앞부분호환')]) == 1
+    result = handle_request({'edition': 2, 'code':
+        '$r = [{id:"007"},{id:"b"}] >> [fn:앞부분호환]{개수:1}; return $r.items'})
+    assert result['success'] and result['value'] == [{'id': '007'}], result
+    bad = handle_request({'edition': 2, 'check': True, 'code':
+        '[] >> [fn:앞부분호환]{목록:[],개수:1}'})
+    assert any(i['code'] == 'PIPE_COLLISION' for i in bad['issues'])
+    missing = handle_request({'edition': 2, 'check': True, 'code':
+        '[fn:앞부분호환]{개수:1}'})
+    assert any(i['code'] == 'MISSING_ARGUMENT' for i in missing['issues'])
+
+
+def test_health_query_declared_options_reach_handler(memory, monkeypatch):
+    import ibl_engine
+    seen = []
+    def execute(request, *args, **kwargs):
+        seen.append(request['params'])
+        return {'success': True, 'items': [{'person': request['params']['person']}]}
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', execute)
+    result = handle_request({'edition': 2, 'code':
+        '[self:health]{op:"query",query_type:"summary",person:"가족",days:365,'
+        'include_images:false,active_only:true}'})
+    assert result['success'], result
+    assert seen[0]['person'] == '가족' and seen[0]['days'] == 365
+    assert seen[0]['active_only'] is True
+    bad = handle_request({'edition': 2, 'check': True,
+                          'code': '[self:health]{op:"query",persno:"가족"}'})
+    assert any(i['code'] == 'UNKNOWN_ARGUMENT' for i in bad['issues'])
+
+
+def test_member_legacy_pipe_contract_uses_same_body_rule(monkeypatch):
+    from ibl_member_library import library, adapters
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    import ibl_engine
+    seen = []
+    def execute(call, *args, **kwargs):
+        seen.append(call['params'])
+        return {'success': True, 'items': call['params']['목록'][:call['params']['개수']]}
+    monkeypatch.setattr(ibl_engine, 'execute_ibl', execute)
+    with library('[def:앞부분]{$return = $목록 >> [table:take]{n:$개수}}'):
+        registry = adapters(None, None)
+    plan = compile_program('[{id:"007"}] >> [fn:앞부분]{개수:1}', registry)
+    result = Runtime(plan).run()
+    assert result['success'] and result['value']['items'] == [{'id': '007'}], result
+    assert seen == [{'개수': 1, '목록': [{'id': '007'}]}]
+
+
 def test_legacy_asset_change_invalidates_pinned_bridge(memory):
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program

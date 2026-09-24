@@ -11,6 +11,12 @@ actions:
       query: string
       query_type: string
       text: string
+      person: string
+      days: integer
+      include_images: boolean
+      active_only: boolean
+      measured_at: string
+      note: string
     aliases:
       query: [keyword]    # ★정본은 query(check_param_canon) — 관습어 keyword 는 별칭
     returns: items

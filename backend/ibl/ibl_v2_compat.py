@@ -58,7 +58,10 @@ def function_adapters(project_path, agent_id):
     from ibl_v2_adapters import Adapter, Adapted, decode_envelope
     from ibl_v2_ir import digest
     from ibl_engine import execute_ibl
-    from workflow_contract import call_signature, _signature_of
+    from workflow_contract import (
+        call_signature, _signature_of, normalize_steps_for_injection, pipe_input_param,
+    )
+    from ibl_parser import parse_function_body
     assets = legacy_functions()
     from ibl_dependencies import legacy_snapshot, legacy_runtime_snapshot
     implementation = legacy_runtime_snapshot()
@@ -70,6 +73,11 @@ def function_adapters(project_path, agent_id):
             params = (call_signature(asset["code"]) if asset["kind"] == "idiom" else
                       _signature_of(wf.get("steps") or wf.get("do") or wf.get("pipeline")))
             defaults = wf.get("params_default") or {}
+            body = asset.get("code") if asset["kind"] == "idiom" else (
+                wf.get("steps") or wf.get("do") or wf.get("pipeline"))
+            steps, error = ((parse_function_body(body), None) if asset["kind"] == "idiom"
+                            else normalize_steps_for_injection(body))
+            receiver = pipe_input_param(steps) if not error else None
             if any(not p.isidentifier() or p.startswith("_") for p in params):
                 continue
         except (ValueError, TypeError):
@@ -79,6 +87,8 @@ def function_adapters(project_path, agent_id):
                     "result": "Record", "effects": ["unknown"],
                     "compatibility": "legacy-function/1", "implementation_fingerprint": digest([snapshot, implementation]),
                     "adapter": {"protocol": "legacy-envelope", "value_path": ""}}
+        if receiver in params:
+            contract["pipe_input"] = receiver
         def run(runtime, args, *, name=name, contract=contract, snapshot=snapshot):
             if legacy_snapshot(name, legacy_functions()) != snapshot or legacy_runtime_snapshot() != implementation:
                 raise Fault("DEFINITION_CHANGED", "컴파일 이후 기존 관용구가 바뀌었습니다. 다시 검사하세요.", kind="protocol")

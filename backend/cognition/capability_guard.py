@@ -37,10 +37,13 @@ unknown(확인되지 않음을 정직하게 표명), meta 네 가지다.
 도구 기록 하나가 있다는 이유만으로 limited라 하지 않는다. 대상·범위·결과가 주장을 뒷받침해야 한다.
 실행 실패 한 번이나 사전 검색 결과 없음은 일반적인 능력 부재를 증명하지 않는다.
 실행자가 조회/연결/열람을 하지 않았으면 '실패했다'도 지어낸 근거다.
-JSON 객체 하나만 출력: {"claims":[{"quote":"응답에서 그대로 복사한 완전한 해당 문장",
+일반적인 사실·진단·예측의 불확실성은 자기 도구/수단 부족이 아니다. 해당 주장이 없으면 claims는 빈 목록이다.
+JSON 객체 하나만 출력: {"claims":[{"candidate_id":"candidates에서 선택한 id",
 "target":"주장의 대상", "status":"unsupported|limited|unknown|meta",
 "evidence_ids":["e0"], "lookup_terms":["대상과 관련된 검색어", "영문 동의어"]}]}.
-limited는 해당 주장을 지지하는 제공된 evidence id가 필수. unsupported도 반드시 정확한 원문 quote를 적는다.
+원문은 다시 작성하지 말고 candidate_id로 선택한다. 한 후보 문단에 독립적인 다른 주장도 섞였거나
+후보 목록에서 생략됐으면 해당 문장만 quote에 원문 그대로 지정한다.
+limited는 해당 주장을 지지하는 제공된 evidence id가 필수.
 대상은 짧은 명사구다. 무관한 정상 문장은 포함하지 마라. 수정 응답/계획/실행 명령은 작성하지 마라.
 """
 
@@ -94,8 +97,8 @@ def packet(message, response, calls, limits):
         value = response[start:end]
         if value not in windows:
             windows.append(value)
-    view = response if len(response.encode("utf-8")) <= budget // 2 else "\n[…]\n".join(windows)
-    view = excerpt(view, budget // 2)
+    view = response if len(response.encode("utf-8")) <= budget // 3 else "\n[…]\n".join(windows)
+    view = excerpt(view, budget // 3)
     evidence = []
     # 최근 원장부터, 각 호출의 입력·결과를 같은 ID로 묶는다. 부재와 생략을 구분한다.
     allowance = budget // 3
@@ -110,12 +113,23 @@ def packet(message, response, calls, limits):
             continue
         evidence.append(record)
         allowance -= size
-    return {"request": excerpt(message, budget // 6), "response": view,
+    candidates = []
+    candidate_budget = budget // 6
+    sentences = [part.strip() for line in view.splitlines()
+                 for part in re.split(r"(?<=[.!?。！？])\s+|(?<=[.!?。！？]\*\*)\s+", line)]
+    for line in sentences:
+        if candidate_matches(line) and line not in [c["quote"] for c in candidates]:
+            candidate = {"id": f"c{len(candidates)}", "quote": line}
+            size = len(json.dumps(candidate, ensure_ascii=False).encode()) + 2
+            if size <= candidate_budget:
+                candidates.append(candidate)
+                candidate_budget -= size
+    return {"request": excerpt(message, budget // 6), "response": view, "candidates": candidates,
             "response_excerpt": view != response, "evidence": evidence,
             "omitted_calls": len(calls) - len(evidence)}
 
 
-def parse(raw, response, evidence):
+def parse(raw, response, evidence, candidates=()):
     text = (raw or "").strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -123,20 +137,26 @@ def parse(raw, response, evidence):
     if not isinstance(obj, dict) or not isinstance(obj.get("claims"), list):
         raise ValueError("invalid capability judgment")
     ids = {r["id"] for r in evidence}
+    spans = {c["id"]: c["quote"] for c in candidates}
     claims = []
     for row in obj["claims"]:
         if not isinstance(row, dict) or row.get("status") not in {"unsupported", "limited", "unknown", "meta"}:
             raise ValueError("invalid claim status")
-        quote = row.get("quote")
+        candidate_id = row.get("candidate_id")
+        if candidate_id is not None and (not isinstance(candidate_id, str) or candidate_id not in spans):
+            raise ValueError("invalid candidate id")
+        quote = row.get("quote", spans.get(candidate_id))
         if not isinstance(quote, str) or not quote.strip() or quote not in response:
             raise ValueError("claim does not quote response")
+        if candidate_id is not None and quote not in spans[candidate_id]:
+            raise ValueError("claim outside candidate")
         if row["status"] == "limited" and (not row.get("evidence_ids")
                 or any(i not in ids for i in row["evidence_ids"])):
             raise ValueError("limitation has no observed evidence")
         terms = row.get("lookup_terms", [])
         if not isinstance(terms, list) or any(not isinstance(t, str) for t in terms):
             raise ValueError("invalid lookup terms")
-        claims.append({**row, "target": excerpt(row.get("target") or "해당 기능", 180),
+        claims.append({**row, "quote": quote, "target": excerpt(row.get("target") or "해당 기능", 180),
                        "lookup_terms": [excerpt(t, 100) for t in terms[:8]]})
     return claims
 
@@ -162,7 +182,14 @@ class CapabilityGuard:
         self.judgments += 1
         data = packet(message, response, [*calls, *self.evidence], self.limits)
         raw = judge_once(json.dumps(data, ensure_ascii=False), POLICY, self.limits, cancel_check)
-        claims = parse(raw, data["response"], data["evidence"])
+        try:
+            claims = parse(raw, data["response"], data["evidence"], data["candidates"])
+        except (ValueError, TypeError, KeyError) as exc:
+            # Keep failed model output in the existing private evidence store too.
+            log("invalid_judgment", error_type=type(exc).__name__,
+                reason=str(exc)[:160],
+                evidence=evidence_ref({"packet": data, "raw": raw}))
+            raise
         # 발췌 연결 기호를 포함한 합성 문장은 원문을 바꿀 수 없다.
         if any(row["quote"] not in response for row in claims):
             raise ValueError("claim crosses excerpt boundary")

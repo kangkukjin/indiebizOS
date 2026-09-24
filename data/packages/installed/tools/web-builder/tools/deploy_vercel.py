@@ -6,6 +6,7 @@ Vercel에 사이트를 배포합니다.
 import subprocess
 import json
 import os
+import re
 
 TOOL_NAME = "deploy_vercel"
 TOOL_DESCRIPTION = "Vercel에 사이트를 배포합니다"
@@ -85,6 +86,17 @@ def _mask_token_in_text(text: str, token: str) -> str:
     return text.replace(token, "***")
 
 
+def _deployment_url(stdout: str, stderr: str):
+    """CLI의 기계 출력(stdout)을 우선하고 로그(stderr)는 별도로 검색한다."""
+    pattern = r'https://[a-zA-Z0-9-]+\.vercel\.app(?=$|[\s/\x1b\]\)])'
+    for stream in (stdout, stderr):
+        clean = re.sub(r'\x1b\[[0-?]*[ -/]*[@-~]', '', stream or '')
+        match = re.search(pattern, clean)
+        if match:
+            return match.group()
+    return None
+
+
 def run(project_path: str, production: bool = False, project_name: str = None) -> dict:
     """
     Vercel에 배포
@@ -162,29 +174,14 @@ def run(project_path: str, production: bool = False, project_name: str = None) -
     # 배포 URL 추출
     stdout = deploy_result.get("stdout", "")
     stderr = deploy_result.get("stderr", "")
-    output = stdout + stderr
-
-    # URL 찾기
-    deploy_url = None
-    for line in output.split("\n"):
-        line = line.strip()
-        if line.startswith("https://") and "vercel.app" in line:
-            deploy_url = line
-            break
-
-    if not deploy_url:
-        # 다른 패턴 시도
-        import re
-        url_match = re.search(r'https://[a-zA-Z0-9-]+\.vercel\.app', output)
-        if url_match:
-            deploy_url = url_match.group()
+    deploy_url = _deployment_url(stdout, stderr)
 
     results.append("✓ 배포 완료!")
 
     if deploy_url:
         results.append(f"🌐 URL: {deploy_url}")
 
-    return {
+    result = {
         "success": True,
         "project_path": project_path,
         "production": production,
@@ -192,6 +189,9 @@ def run(project_path: str, production: bool = False, project_name: str = None) -
         "logs": results,
         "note": "프로덕션 배포는 커스텀 도메인이 연결된 경우 해당 도메인으로도 접근 가능합니다"
     }
+    if not deploy_url:
+        result["warning"] = "CLI는 성공했지만 배포 URL을 확인하지 못했습니다. 배포 목록에서 확인하세요."
+    return result
 
 
 def get_deployments(project_path: str) -> dict:

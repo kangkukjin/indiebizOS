@@ -155,11 +155,9 @@ class PromptBuilder:
         )
 
     def _load_guide_file(self, guide_filename: str) -> str:
-        """data/guides/ 폴더에서 가이드 파일 로드 (캐시 사용 — mtime 무효화)"""
-        return self._read_cached(
-            f"__guide__{guide_filename}",
-            get_base_path() / "data" / "guides" / guide_filename,
-        )
+        """내용 지문과 함께 제공할 본문. mtime 보존 수정도 새 본문을 읽는다."""
+        path = get_base_path() / "data" / "guides" / guide_filename
+        return path.read_text(encoding="utf-8") if path.exists() else ""
 
     def _guide_block(self, guide_filename: str, origin: str = "agent") -> str:
         """주입할 가이드 블록 = 제목 + **신선도 표식** + 본문. 없으면 빈 문자열.
@@ -170,6 +168,8 @@ class PromptBuilder:
 
         표식은 실패해도 본문 주입을 막지 않는다(신선도는 부가 정보지 전제가 아니다).
         """
+        from guide_registry import catalog_revision
+        revision = catalog_revision()
         try:
             content = self._load_guide_file(guide_filename)
         except OSError as e:
@@ -190,7 +190,7 @@ class PromptBuilder:
             mark_injected(guide_filename)   # 턴 종료 후 증류 4단계가 회수해 되돌려 쓴다
         except Exception as e:
             logger.debug(f"[prompt_builder] 가이드 신선도 생략 (무시): {e}")
-        head = f"# 가이드: {guide_filename} (전문 제공)"
+        head = f"# 가이드: {guide_filename} (전문 제공, catalog_revision={revision})"
         body = f"{head}\n{note}\n{content}" if note else f"{head}\n{content}"
         return f"{body}\n# 가이드 전문 끝: {guide_filename}"
 
@@ -869,7 +869,8 @@ def compile_user_command(user_message: str, consciousness_output: dict) -> str:
     if guide_files:
         aug.append(
             "참고할 가이드: " + ", ".join(dict.fromkeys(guide_files))
-            + " — 현재 컨텍스트에 전문이 있으면 그 본문을 따르고, 없거나 잘림·요약됐으면 read_guide로 열어 따르라."
+            + " — 현재 목차의 catalog_revision과 같은 전문이 있으면 그 본문을 따르고, "
+              "지문이 없거나 다르거나 본문이 잘림·요약됐으면 read_guide로 열어 따르라."
         )
 
     achievement_criteria = (co.get("achievement_criteria") or "").strip()

@@ -42,7 +42,13 @@ async def _resolve_locator(session, page, params: dict, input_mode: bool = False
     locator = await find_locator(page, element_info, input_mode=input_mode)
     if locator is None:
         desc = params.get("element", "")
-        return None, {"success": False, "error": f"요소를 찾을 수 없습니다: {desc} (ref={ref})"}
+        return None, {
+            "success": False,
+            "error": f"요소를 찾을 수 없습니다: {desc} (ref={ref}). "
+                     "화면 변경 후에는 browser_snapshot을 다시 호출하고 새 ref를 선택하세요.",
+            "error_code": "REF_NOT_RESOLVED",
+            "recovery": {"op": "snapshot", "reason": "요소가 사라졌거나 신원을 유일하게 확인할 수 없습니다."},
+        }
 
     return locator, None
 

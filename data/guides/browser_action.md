@@ -31,6 +31,7 @@ screenshot 없이 CSS 셀렉터나 ref를 추측하면 높은 확률로 실패�
 - `[limbs:browser]{op: "snapshot"}` 호출 시 각 요소에 `e1`, `e2`, `e3` ... 형태의 고유 ID가 부여됨
 - 이후 `[limbs:browser]{op: "click", ref: "e5"}`, `[limbs:browser]{op: "type", ref: "e3"}` 등으로 정확한 요소 지정
 - 페이지가 변경되면(네비게이션, 동적 콘텐츠) **반드시 `browser_snapshot`을 다시 호출**해서 새 ref 확보
+- 메뉴 열기·닫기와 화면 크기 변경도 포함한다. `REF_NOT_RESOLVED`를 받으면 같은 ref를 재시도하지 않고 새 snapshot의 요소를 고른다.
 
 ### snapshot vs screenshot vs browser_content
 | 액션 | 용도 | 반환 |

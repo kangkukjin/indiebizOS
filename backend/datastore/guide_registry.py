@@ -40,6 +40,7 @@ degrade — 정확도는 떨어져도 "언제쯤"은 남는다.
 """
 
 import json
+import hashlib
 import logging
 import os
 import re
@@ -62,6 +63,24 @@ _date_cache: Optional[Dict[str, Dict]] = None
 
 # 오래됐다고 볼 기준(일). 이 이상이면서 무수정 사용이 0이면 주의 문구를 붙인다.
 STALE_DAYS = 60
+
+
+def catalog_revision() -> str:
+    """매 턴 목차와 읽기 응답이 공유하는 내용 지문. 재시작·같은 날 수정에도 바뀐다.
+
+    파일별 지문을 상시 프롬프트에 늘어놓지 않는다. 하나라도 바뀌면 예전 본문은
+    재확인이 필요하다는 보수적인 계약이며, 모델 호출이나 사용 기록은 만들지 않는다.
+    """
+    digest = hashlib.sha256()
+    for path in sorted(GUIDES_DIR.glob('*.md')):
+        name = path.name.encode('utf-8')
+        try:
+            content = path.read_bytes()
+        except OSError:
+            content = b'<unavailable>'
+        digest.update(len(name).to_bytes(4, 'big') + name)
+        digest.update(len(content).to_bytes(8, 'big') + content)
+    return digest.hexdigest()[:16]
 
 
 # ---------------------------------------------------------------- 사용 기록

@@ -8559,7 +8559,7 @@ nodes:
 
           - create: target=site(name + template:blank/landing/portfolio/blog/business + features) 또는 page(project_path + page_name + sections[] + metadata).
 
-          - build: 현재 프로젝트 프로덕션 빌드 (Next.js .next/).
+          - build: 프로젝트 build 스크립트 실행. 선언된 lint 실패도 success=false이며 build_success와 lint 상세를 별도 반환.
 
           - deploy: Vercel 배포. project_name/production 옵션.
 
@@ -8580,7 +8580,7 @@ nodes:
           default: preview
           values:
             create: 웹 프로젝트/페이지 생성 (target site|page)
-            build: 프로덕션 빌드 (Next.js)
+            build: 프로젝트 빌드·선언된 린트 검사
             deploy: Vercel 배포
             preview: 로컬 미리보기 서버 (start/stop/status, 기본)
             snapshot: 등록 사이트 현재 상태 요약

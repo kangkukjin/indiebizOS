@@ -332,8 +332,13 @@ def _guide_map(req: RecallRequest, recall: Recall) -> Optional[Block]:
         text = hippo_tree.guide_map_text()
         if not text:
             return Block("guide_map", "guide_map", "", status="empty")
+        from guide_registry import catalog_revision
+        revision = catalog_revision()
         xml = (
-            '<guide_map note="가이드 목차 — 주제 가지: 가이드 파일명. 가이드의 유일한 목차이니 일이 속한 가지의 파일명을 '
+            f'<guide_map catalog_revision="{revision}" note="가이드 목차 — 주제 가지: 가이드 파일명. '
+            '이어지는 대화에서도 현재 목차를 기준으로 한다. 과거 가이드 전문은 같은 catalog_revision이 '
+            '표시된 경우에만 재사용하고, 지문이 없거나 다르면 작업에 필요한 가이드를 read_guide로 다시 읽는다. '
+            '가이드의 유일한 목차이니 일이 속한 가지의 파일명을 '
             'read_guide 에 그대로 넣어 연다(의식은 guide_files 로 지목). 성공한 IBL 문장의 주제별 모음은 여기 실리지 않는다 — '
             '위 <execution_memory> 의 닮은 용례로 부족한 큰 일이면 [self:memory]{op:\"recall\", node:\"<가지>\", store:\"실행\"} 로 '
             '가지를 열고, node 를 생략하면 실행기억 지도 전체가 나온다.">\n'

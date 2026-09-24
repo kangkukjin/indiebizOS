@@ -1140,7 +1140,11 @@ def _search_guide(query: str, params: dict) -> Any:
 
 def search_guide(query: str, params: dict) -> Any:
     """실제로 반환한 가이드 본문을 현재 행위자의 열람으로 기록한다."""
+    from guide_registry import catalog_revision
+    revision = catalog_revision()
     result = _search_guide(query, params)
+    if isinstance(result, dict) and (result.get("content") or result.get("guide_content")):
+        result["catalog_revision"] = revision
     if (params.get("read", True) and isinstance(result, dict)
             and (result.get("content") or result.get("guide_content"))
             and result.get("file") in {"world_tools.md", "world_tools_local.md"}):

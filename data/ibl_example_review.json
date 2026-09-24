@@ -231,18 +231,18 @@
   "engines:web": {
    "fields": {
     "description": "07ee21271a25",
-    "target_description": "037ea06cf92b",
+    "target_description": "1d58f0928949",
     "implementation": "664291f6edc2",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
     "params": "82c768a8f797",
-    "ops": "3266d3bfb416",
+    "ops": "e84993d6ccf2",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "2494687d7b88"
    },
-   "reviewed": "2026-09-18",
-   "examples": 22
+   "reviewed": "2026-09-24",
+   "examples": 23
   },
   "engines:web_component": {
    "fields": {

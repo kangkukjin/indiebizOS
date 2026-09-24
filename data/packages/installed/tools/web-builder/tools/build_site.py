@@ -108,6 +108,7 @@ def run(project_path: str, analyze: bool = False) -> dict:
     if not scripts.get("build"):
         return {"success": False, "error": "package.json에 build 스크립트가 없습니다."}
     results = []
+    lint_result = None
     if scripts.get("lint"):
         lint_result = run_command(["npm", "run", "lint"], cwd=project_path, timeout=60)
         results.append("린트 검사 통과" if lint_result["success"] else "린트 검사 실패 (빌드 계속 진행)")
@@ -124,6 +125,8 @@ def run(project_path: str, analyze: bool = False) -> dict:
         return {
             "success": False,
             "error": f"빌드 실패: {error_msg[:1000]}",
+            "build_success": False,
+            "lint": lint_result,
             "logs": results
         }
 
@@ -144,8 +147,10 @@ def run(project_path: str, analyze: bool = False) -> dict:
             if "○" in line or "●" in line or "ƒ" in line or "λ" in line:
                 results.append(f"   {line.strip()}")
 
-    return {
-        "success": True,
+    result = {
+        "success": lint_result is None or lint_result["success"],
+        "build_success": True,
+        "lint": lint_result,
         "project_path": project_path,
         "output_dir": stats["output_dir"],
         "stats": stats,
@@ -155,6 +160,11 @@ def run(project_path: str, analyze: bool = False) -> dict:
             "등록된 배포처와 프로젝트 배포 설정에 따라 검증한 산출물을 배포"
         ]
     }
+    if lint_result is not None and not lint_result["success"]:
+        detail = lint_result.get("stderr") or lint_result.get("error") or lint_result.get("stdout", "")
+        result["error"] = f"빌드는 완료됐지만 린트 검사 실패: {detail[:1000]}"
+        result["next_steps"] = ["lint의 오류를 해결한 뒤 검사를 다시 실행"]
+    return result
 
 
 if __name__ == "__main__":

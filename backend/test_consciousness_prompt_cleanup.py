@@ -109,7 +109,7 @@ def test_guide_delivery_handles_missing_empty_and_duplicate_files(tmp_path, monk
     cmd = pb.compile_user_command("작업", co)
     assert cmd.count("ready.md") == 1
     assert "위 turn_context에 본문 포함" not in cmd
-    assert "없거나 잘림·요약됐으면 read_guide" in cmd
+    assert "catalog_revision" in cmd and "본문이 잘림·요약됐으면 read_guide" in cmd
     # 이전에 읽힌 가이드가 삭제돼도 캐시된 전문을 제공했다고 표시하지 않는다.
     guide.unlink()
     assert "# 가이드 본문 미제공\nready.md" in pb._build_dynamic_context(co)

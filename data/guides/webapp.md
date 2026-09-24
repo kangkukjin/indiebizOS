@@ -43,6 +43,8 @@
 ## 4. C 레시피 — 외부 서버리스
 
 - **Cloudflare Worker**: `outputs/web-projects/<이름>/` 에 worker.js+wrangler.toml (선례 kospi-board). 라이브 데이터가 필요해지면 그건 A 부류 신호다(맥 API 프록시) — Worker 안에 데이터를 박제하지 않는다(박제 데이터=조용히 썩는다).
+  - 기존 앱 수정은 해당 폴더의 README·package.json을 먼저 확인한다. kospi-board는 `npm ci` → `npm test` → `npm run build`(dry-run), 인증 환경에서 `npm run deploy`를 쓴다. 프로젝트의 Node·Wrangler 버전과 ES 모듈 선언을 재사용한다.
+  - `outputs/`는 기본적으로 Git 무시 대상이다. `git add -f`로 커밋 관문을 우회하려 하지 않는다. 유지할 운영 소스는 `.gitignore`에 해당 파일만 예외로 선언하고, 캐시·비밀 파일은 제외한다. kospi-board의 허용 파일은 해당 README를 따른다.
 - **Next.js/Vercel**: `web_builder.md` + `[engines:web]` 가 정본.
 
 ## 5. 완성 의무 — 만들었으면 등기한다

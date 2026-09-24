@@ -33,6 +33,21 @@ $접수 >> [table:filter]{where:($행)=>$행.score >= 5} >> [table:sort]{by:"sco
 결과는 `[{id:"b",score:7},{id:"c",score:5}]`다. 반환 목록은 `value`에서 읽는다.
 조건을 문자열이나 `{field,op,value}`로 다시 해석하지 않는다. 콜백도 일반 식과 같은 규칙이다.
 
+**객체·배열 리터럴의 필드에는 계산된 값만 넣는다.** `table` 호출도 필드 안에 직접
+넣으면 `PURE_EXPRESSION`이다. 파이프를 괄호로 감싸도 이 규칙은 바뀌지 않는다.
+도구·파이프 결과를 앞 문장에서 변수에 담고 반환 객체를 조립한다:
+
+<!-- example:pure_record -->
+```ibl
+#!ibl edition=2
+$목록 = [{url:"https://example.org/board"},{url:"https://example.org/news"}]
+$선택 = $목록 >> [table:filter]{where:($행)=>$행.url == "https://example.org/board"}
+return {apps:$선택}
+```
+
+위 예제는 URL의 정확한 일치 검사다. `contains(...)`라는 내장 함수는 없고,
+`in`은 목록의 원소 검사이므로 문자열 부분 검색으로 대체해 쓰지 않는다.
+
 ## 2. 함수·관용구·병렬을 함께 조합하기
 
 <!-- example:compose -->

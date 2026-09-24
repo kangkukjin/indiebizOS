@@ -197,6 +197,15 @@ cf_api(method="GET", endpoint="/accounts/{account_id}/workers/scripts")
 ```
 
 ### Worker 배포 (CLI 권장)
+기존 프로젝트에 `package.json`·lockfile이 있으면 그 프로젝트의 README와 npm 스크립트를
+우선한다. 전역 Node와 최신 Wrangler를 임의로 조합하지 않는다. 예를 들어 kospi-board는
+프로젝트에 Node·Wrangler를 고정했고 `npm test` → `npm run build`(dry-run) →
+인증 환경의 `npm run deploy` 순서다. ES 모듈 Worker를 Node로 검사하려면
+`package.json`의 `type: module` 또는 `.mjs` 확장자가 필요하다.
+
+새 프로젝트도 먼저 [Wrangler 설치 문서](https://developers.cloudflare.com/workers/wrangler/install-and-update/)와
+설치한 버전의 `engines.node`를 확인하고, 호환 런타임·도구 버전을 프로젝트에 고정한다.
+
 ```bash
 wrangler deploy --name my-worker
 ```

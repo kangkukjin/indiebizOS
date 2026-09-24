@@ -68,6 +68,17 @@ def test_empty_and_failure_are_distinct(current):
     assert any(e['kind'] == 'recovered' for e in caught['evidence'])
 
 
+def test_record_field_pipeline_is_rejected_and_hoisted_example_executes(current):
+    from ibl_v2_compile import compile_program
+    invalid = '$목록=[]; return {apps:($목록 >> [table:filter]{where:($행)=>true})}'
+    assert 'PURE_EXPRESSION' in [issue['code'] for issue in compile_program(invalid).issues]
+    invalid_contains = EXAMPLES['pure_record'].replace(
+        '$행.url == "https://example.org/board"', 'contains($행.url,"board")')
+    assert 'BUILTIN' in [issue['code'] for issue in compile_program(invalid_contains).issues]
+    assert current(EXAMPLES['pure_record'])['value'] == {
+        'apps': [{'url': 'https://example.org/board'}]}
+
+
 @pytest.mark.parametrize('recover', [False, True])
 def test_retry_only_failed_row_and_preserve_unresolved_failure(current, recover):
     current.recover = recover
@@ -110,7 +121,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'compose', 'empty', 'catch', 'retry', 'chunk'}
+    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

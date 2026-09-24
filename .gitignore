@@ -62,6 +62,19 @@ data/storage_scans/
 
 # 출력 결과물
 outputs/
+# 운영 중인 KOSPI Worker의 소스·검증·배포 계약만 보존한다.
+!/outputs/
+/outputs/*
+!/outputs/web-projects/
+/outputs/web-projects/*
+!/outputs/web-projects/kospi-board/
+/outputs/web-projects/kospi-board/*
+!/outputs/web-projects/kospi-board/worker.js
+!/outputs/web-projects/kospi-board/wrangler.toml
+!/outputs/web-projects/kospi-board/package.json
+!/outputs/web-projects/kospi-board/package-lock.json
+!/outputs/web-projects/kospi-board/worker.test.js
+!/outputs/web-projects/kospi-board/README.md
 
 # Python
 __pycache__/

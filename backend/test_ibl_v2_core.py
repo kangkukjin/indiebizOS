@@ -286,3 +286,15 @@ def test_explicit_return_retains_preceding_effect_evidence():
 if __name__ == "__main__":
     import sys
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
+
+
+def test_default_budget_allows_real_multi_model_workflow_and_is_still_bounded(monkeypatch):
+    import ibl_v2_runtime
+    budget = Budget()
+    start = budget.started
+    monkeypatch.setattr(ibl_v2_runtime.time, 'monotonic', lambda: start + 141)
+    budget.tick()  # Episode 4017's real idiom duration already exceeded the former 120 seconds.
+    monkeypatch.setattr(ibl_v2_runtime.time, 'monotonic', lambda: start + budget.seconds + 1)
+    with pytest.raises(Fault) as error:
+        budget.tick()
+    assert error.value.kind == 'budget'

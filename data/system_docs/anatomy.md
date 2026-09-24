@@ -86,9 +86,9 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 본문·실적을 보존한다. [관용구 등록 수리](../../docs/JUDGMENT_IDIOM_REGISTRATION_REPAIRS_2026_09_21.md).
 전체 관용구 반환형을 재검사하고, 빈 파일 후보와 콜드 검수의 계약 유실을 고쳤다.
 [반환 계약 수리](../../docs/IDIOM_RETURN_REPAIRS_2026_09_21.md).
-AI 팁 보고서는 최근 영상 선정 → 자막에서 팁·방법 동시 추출 → 보고서 작성으로 수행한다.
+AI 팁 보고서는 한 관용구 호출로 주제 준비 → 최근 영상 선정 → 자막에서 팁·방법 동시 추출 → 보고서 작성·공유창고 저장까지 수행한다.
 영상 ID 중복 방지와 저장·재개를 유지하고, 별도 인용문 대조·원문 색인·재검수는 하지 않는다.
-현재 계약: [AI 팁 관용구](../../docs/AI_TIPS_REPORT_IDIOM.md) · [가이드 단순화](../../docs/AI_TIPS_SIMPLE_WORKFLOW_2026_09_24.md).
+현재 계약: [AI 팁 관용구](../../docs/AI_TIPS_REPORT_IDIOM.md) · [가이드 단순화](../../docs/AI_TIPS_SIMPLE_WORKFLOW_2026_09_24.md) · [4017 완료·비용 수리](../../docs/EPISODE_4017_COMPLETION_REPAIR_2026_09_24.md).
 과거 실패와 수리 기록: [4010 성찰](../../docs/EPISODE_4010_SYSTEM_REFLECTION_2026_09_24.md),
 [4011 검색](../../docs/EPISODE_4011_SEARCH_REPAIR_2026_09_24.md),
 [4011 긴 자막](../../docs/EPISODE_4011_LONG_SOURCES_2026_09_24.md),

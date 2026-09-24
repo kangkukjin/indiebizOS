@@ -8,11 +8,11 @@ AI시대뉴스동기화:
   registered_at: '2026-09-15T21:09:05'
   timeout: 120
 AI팁보고서:
-  description: AI팁보고서쓰기의 저장·재개 부품. 영상 선정 → 자막에서 팁과 방법 동시 추출 → 보고서 작성. op:start는 config(topic,date,root,mode:draft|commit,run_id,reader_context),
-    나머지는 run,data. 단계는 queries/search/metadata/videos/transcripts/extracted_part/compose/finish.
-    같은 영상 ID는 제외하고 과거 팁의 의미 반복은 허용한다. 별도 인용문·시간 대조나 검수 AI는 없다. 일부 자료 실패는 한계에 표시하고
-    나머지 팁으로 작성한다. 완료 단계·추출 구간은 재사용한다. v4 상태를 사용하며 이전 상태는 보존하고 새 run_id로 실행한다. 원장 충돌·덮어쓰기는
-    거부한다. 관용구로 호출하며 자체 모델 호출·공유·알림은 하지 않는다.
+  description: AI팁보고서쓰기의 준비·저장·공유·재개 부품. op:start의 config는 생략 가능한 설정 객체(topic,date,root,share_root,mode:draft|commit,run_id,reader_context).
+    기본값은 오늘·최근 다음 주제·운영 폴더·commit. 나머지는 run,data이며 단계는 queries/search/metadata/videos/transcripts/extracted_part/compose/finish.
+    finish는 로컬 보고서·원장·공유창고 HTML까지 저장하고 경로·요약·건수만 반환한다. 개인 의견은 공유판에서 제외한다. 같은 영상 ID만
+    제외하며 별도 인용문·시간 대조나 검수 AI는 없다. 일부 자료 실패는 한계에 표시하고 나머지 팁으로 작성한다. v5 상태로 완료 단계·추출
+    구간을 재사용하며 공유 실패는 저장만 재개한다. 원장 충돌·덮어쓰기는 거부한다. 관용구로 호출하며 자체 모델 호출·알림은 하지 않는다.
   file: ai_tips_report.py
   interpreter: python
   registered_at: '2026-09-23T05:40:38'

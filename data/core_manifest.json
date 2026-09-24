@@ -71,6 +71,7 @@
     "scripts": [
       "Cloudflare사용량.py",
       "ai_era_news.py",
+      "ai_tips_delivery.py",
       "ai_tips_report.py",
       "ai_tips_selection.py",
       "ai_tips_storage.py",

@@ -122,7 +122,9 @@ def test_l6_dispatch_default_and_root_guard(lg):
     assert r["success"] is False and "저장소" in r["error"]
     for g in ("housing_report", "ai_trend_report", "youtube_ai_tips_report"):
         text = open(os.path.join(ROOT, "data", "guides", g + ".md"), encoding="utf-8").read()
-        assert "[self:ledger]" in text
+        # AI 팁은 원장까지 관용구 안에서 저장한다. 가이드에 수동 갱신을 다시 강제하지 않는다.
+        entry = "[fn:AI팁보고서쓰기]{}" if g == "youtube_ai_tips_report" else "[self:ledger]"
+        assert entry in text
         assert "json" + "원장" not in text, g       # retired-ok: 이관 검산 — 옛 스크립트 id 잔재 금지
 
 

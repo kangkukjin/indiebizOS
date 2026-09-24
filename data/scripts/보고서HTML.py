@@ -72,88 +72,86 @@ def _wrap_cards(body):
                      for p in parts if p.strip())
 
 
+def render(args):
+    """동일 변환기를 등록 스크립트와 보고서 관용구에서 재사용한다."""
+    import markdown
+    src = _repo_path(args.get("src"), "src")
+    dst = _repo_path(args.get("dst"), "dst")
+    if not src.exists():
+        raise ValueError(f"src 파일이 없습니다: {src}")
+
+    theme = str(args.get("theme") or "plain").lower()
+    if theme not in _THEMES:
+        raise ValueError(f"theme 은 {'|'.join(_THEMES)} 중 하나여야 합니다.")
+    accent = str(args.get("accent") or _THEMES[theme])
+
+    _drop_arg = args.get("drop_lines") or []
+    # 문자열 하나를 주면 그대로 순회해 *글자* 하나하나가 토큰이 된다 —
+    # '건'·':' 같은 흔한 글자가 문서 절반을 조용히 지운다(2026-09-01 실측: 225줄 중 71줄).
+    if isinstance(_drop_arg, str):
+        _drop_arg = [_drop_arg]
+    drop = [str(x) for x in _drop_arg if str(x).strip()]
+    lines, dropped = [], 0
+    for line in io.open(src, encoding="utf-8").read().split("\n"):
+        if drop and any(token in line for token in drop):
+            dropped += 1
+            continue
+        lines.append(line)
+    text = "\n".join(lines)
+
+    title = args.get("title")
+    if not title:
+        head = re.search(r'^#\s+(.+)$', text, re.M)
+        title = head.group(1).strip() if head else src.stem
+    title = re.sub(r'[*`]', '', str(title))
+
+    body = markdown.markdown(text, extensions=["tables", "sane_lists", "nl2br"])
+    if theme == "card":
+        body = _wrap_cards(body)
+
+    css = _CSS % {"acc": accent, "acc_d": accent}
+    if theme == "card":
+        css += _CSS_CARD
+    esc = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;")
+                     .replace(">", "&gt;").replace('"', "&quot;"))
+    subtitle = args.get("subtitle")
+    head_html = f'<div class="head">{esc(subtitle)}</div>\n' if subtitle else ""
+
+    html = ('<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n'
+            '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
+            f'<title>{esc(title)}</title>\n<style>{css}</style>\n</head>\n'
+            f'<body>\n<main>\n{head_html}{body}\n</main>\n</body>\n</html>\n')
+
+    # 감독 턴에서는 비공개 초안을 만든다. 하네스가 검수한 바이트를 승인 뒤 공개한다.
+    sys.path.insert(0, str(_ROOT / "backend"))
+    import boot_paths  # noqa: F401
+    from supervision_delivery import stage_artifact
+    publication = stage_artifact(dst, html.encode("utf-8"), _ROOT / "공유창고")
+    if publication:
+        output_path = Path(publication["staged"])
+    else:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(html, encoding="utf-8")
+        output_path = dst
+
+    return {"success": True,
+                     **({"publication_pending": True, "publication": publication,
+                         "message": "검수 대기 초안입니다. 승인 후 하네스가 공개하며 재생성할 필요 없습니다."}
+                        if publication else {}), "items": [{
+        "path": str(output_path), "title": title, "theme": theme,
+        **({"public_target": str(dst)} if publication else {}),
+        "bytes": len(html.encode("utf-8")),
+        "headings": len(re.findall(r'<h[123][ >]', body)),
+        "links": len(re.findall(r'<a href=', body)),
+        "tables": len(re.findall(r'<table>', body)),
+        "dropped_lines": dropped,
+    }]}
+
+
 def main():
     try:
-        import markdown
-    except ImportError:
-        msg = "python-markdown 이 없습니다 — pip install markdown"
-        print(msg, file=sys.stderr)
-        print(json.dumps({"success": False, "items": [], "error": msg}, ensure_ascii=False))
-        raise SystemExit(1)
-    try:
-        args = json.loads(sys.stdin.read() or "{}")
-        src = _repo_path(args.get("src"), "src")
-        dst = _repo_path(args.get("dst"), "dst")
-        if not src.exists():
-            raise ValueError(f"src 파일이 없습니다: {src}")
-
-        theme = str(args.get("theme") or "plain").lower()
-        if theme not in _THEMES:
-            raise ValueError(f"theme 은 {'|'.join(_THEMES)} 중 하나여야 합니다.")
-        accent = str(args.get("accent") or _THEMES[theme])
-
-        _drop_arg = args.get("drop_lines") or []
-        # 문자열 하나를 주면 그대로 순회해 *글자* 하나하나가 토큰이 된다 —
-        # '건'·':' 같은 흔한 글자가 문서 절반을 조용히 지운다(2026-09-01 실측: 225줄 중 71줄).
-        if isinstance(_drop_arg, str):
-            _drop_arg = [_drop_arg]
-        drop = [str(x) for x in _drop_arg if str(x).strip()]
-        lines, dropped = [], 0
-        for line in io.open(src, encoding="utf-8").read().split("\n"):
-            if drop and any(token in line for token in drop):
-                dropped += 1
-                continue
-            lines.append(line)
-        text = "\n".join(lines)
-
-        title = args.get("title")
-        if not title:
-            head = re.search(r'^#\s+(.+)$', text, re.M)
-            title = head.group(1).strip() if head else src.stem
-        title = re.sub(r'[*`]', '', str(title))
-
-        body = markdown.markdown(text, extensions=["tables", "sane_lists", "nl2br"])
-        if theme == "card":
-            body = _wrap_cards(body)
-
-        css = _CSS % {"acc": accent, "acc_d": accent}
-        if theme == "card":
-            css += _CSS_CARD
-        esc = lambda s: (str(s).replace("&", "&amp;").replace("<", "&lt;")
-                         .replace(">", "&gt;").replace('"', "&quot;"))
-        subtitle = args.get("subtitle")
-        head_html = f'<div class="head">{esc(subtitle)}</div>\n' if subtitle else ""
-
-        html = ('<!DOCTYPE html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n'
-                '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-                f'<title>{esc(title)}</title>\n<style>{css}</style>\n</head>\n'
-                f'<body>\n<main>\n{head_html}{body}\n</main>\n</body>\n</html>\n')
-
-        # 감독 턴에서는 비공개 초안을 만든다. 하네스가 검수한 바이트를 승인 뒤 공개한다.
-        sys.path.insert(0, str(_ROOT / "backend"))
-        import boot_paths  # noqa: F401
-        from supervision_delivery import stage_artifact
-        publication = stage_artifact(dst, html.encode("utf-8"), _ROOT / "공유창고")
-        if publication:
-            output_path = Path(publication["staged"])
-        else:
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            dst.write_text(html, encoding="utf-8")
-            output_path = dst
-
-        print(json.dumps({"success": True,
-                         **({"publication_pending": True, "publication": publication,
-                             "message": "검수 대기 초안입니다. 승인 후 하네스가 공개하며 재생성할 필요 없습니다."}
-                            if publication else {}), "items": [{
-            "path": str(output_path), "title": title, "theme": theme,
-            **({"public_target": str(dst)} if publication else {}),
-            "bytes": len(html.encode("utf-8")),
-            "headings": len(re.findall(r'<h[123][ >]', body)),
-            "links": len(re.findall(r'<a href=', body)),
-            "tables": len(re.findall(r'<table>', body)),
-            "dropped_lines": dropped,
-        }]}, ensure_ascii=False))
-    except (OSError, ValueError, TypeError) as exc:
+        print(json.dumps(render(json.loads(sys.stdin.read() or "{}")), ensure_ascii=False))
+    except (OSError, ValueError, TypeError, ImportError) as exc:
         # 사유는 stderr 로도 낸다 — 러너가 실패 봉투에 싣는 것은 stderr_tail 이라,
         # stdout 에만 두면 호출부가 로그 파일을 열어야 이유를 안다.
         print(str(exc), file=sys.stderr)

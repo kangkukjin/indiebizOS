@@ -40,35 +40,24 @@ def fixture_ai(item):
 @pytest.fixture
 def execute(tmp_path, monkeypatch):
     import ibl_engine
-    import ibl_typecheck
-    import ibl_usage_db
-    import workflow_engine
-    from ibl_parser import parse_with_vars
-    from ibl_control_blocks import _execute_fn
-    from ibl_executors import _execute_table_each
+    import ibl_v2_store
+    import ibl_v2_compat
+    import ibl_v2_learning
+    import ibl_run_journal
+    from ibl_v2_entry import handle_request
     from common import spill
-    from tool_context import ToolContext
-
-    spec = importlib.util.spec_from_file_location(
-        "tips_dataops", ROOT / "data/packages/installed/tools/data-ops/handler.py")
-    dataops = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(dataops)
-    from common.pkg_utils import load_sibling
-    scriptops = load_sibling(str(ROOT / "data/packages/installed/tools/system_essentials/handler.py"), "script_ops")
+    monkeypatch.setattr(ibl_v2_store, 'definitions', lambda: {'AI팁보고서쓰기': BODY})
+    monkeypatch.setattr(ibl_v2_compat, 'legacy_functions', lambda: {})
+    monkeypatch.setattr(ibl_v2_learning, 'record_functions', lambda *a: None)
+    monkeypatch.setattr(ibl_run_journal, 'journal_root', lambda *a: tmp_path / 'journal')
+    monkeypatch.setattr(helper.delivery, 'ROOT', tmp_path)
+    monkeypatch.setattr(helper.delivery.renderer, '_ROOT', tmp_path)
     calls, stages = [], {}
     model_calls, ai_inputs = [], []
     transcripts, ai_hooks = {}, []
-    metadata_overrides = {}
+    metadata_overrides, metadata_responses = {}, {}
     search_calls, search_responses = [], {}
     corrupt = {}
-    class DB:
-        def find_phrase_by_alias(self, name):
-            return {"ibl_code": BODY, "alias": name} if name == "AI팁보고서쓰기" else None
-        def update_success_by_code(self, *args, **kwargs):
-            pass
-    monkeypatch.setattr(ibl_usage_db, "IBLUsageDB", DB)
-    monkeypatch.setattr(workflow_engine, "get_workflow", lambda name: None)
-    monkeypatch.setattr(ibl_typecheck, "FN_CODE_SOURCES", [lambda n: BODY if n == "AI팁보고서쓰기" else None])
     monkeypatch.setattr(spill, "_root", lambda: str(tmp_path / "spill"))
     original = ibl_engine._execute_ibl_impl
     def leaf(ti, project, agent_id=None):
@@ -77,16 +66,9 @@ def execute(tmp_path, monkeypatch):
             return original(ti, project, agent_id)
         node, act = ti.get("_node"), ti.get("action")
         p = dict(ti.get("params") or {})
-        if node == "fn":
-            return _execute_fn(ti, project, agent_id)
-        if node == "table" and act == "each":
-            p["_depth"] = ti.get("_depth", 0)
-            return _execute_table_each(p, project, agent_id=agent_id)
-        if node == "table" and "data_" + str(act) in dataops._DISPATCH:
-            return dataops.execute(p, ToolContext(project, "data_" + act))
         if node == "self" and act == "script":
-            args, error, _ = scriptops._stdin_args(p)
-            assert error is None, error
+            args = p["args"]
+            assert p["_ibl_edition"] == 2
             stage = args["op"]
             if stage in corrupt:
                 args = corrupt[stage](copy.deepcopy(args))
@@ -95,7 +77,7 @@ def execute(tmp_path, monkeypatch):
                 out = helper.run(args)
             except Exception as exc:
                 out = {"success": False, "error": str(exc)}
-            return {"success": True, "id": p["id"], "exit_code": 0, **out}
+            return out if out.get("success") is False else {"success": True, "value": out}
         if node == "sense" and act == "search_youtube":
             query = p["query"]
             search_calls.append(query)
@@ -107,6 +89,8 @@ def execute(tmp_path, monkeypatch):
             vid = p["video_id"]
             calls.append((p["op"], vid))
             if p["op"] == "info":
+                if vid in metadata_responses:
+                    return copy.deepcopy(metadata_responses[vid])
                 return {"success": True, "items": [{"video_id": vid, "title": "Fixture " + vid,
                         "uploader": "Fixture Channel", "duration": 240, "upload_date": "2026-09-01", **metadata_overrides.get(vid, {})}]}
             if vid in transcripts:
@@ -128,29 +112,29 @@ def execute(tmp_path, monkeypatch):
         return original(ti, project, agent_id)
     monkeypatch.setattr(ibl_engine, "_execute_ibl_impl", leaf)
     monkeypatch.setattr(ibl_engine, "execute_ibl", leaf)
-    def run(mode="draft", named=True, topic="복구"):
+    def run(mode="draft", named=True, topic="복구", config_override=None):
         config = {"root": str(tmp_path / "reports"), "date": "2026-09-24", "topic": topic,
-                  "mode": mode, "run_id": "test"}
-        code = ("[fn:AI팁보고서쓰기]" + json.dumps({"설정": config}, ensure_ascii=False) if named else
-                "$설정=" + json.dumps(config, ensure_ascii=False) + "\n" + BODY)
-        steps, _ = parse_with_vars(code)
-        return workflow_engine.execute_pipeline(steps, str(tmp_path))
+                  "mode": mode, "run_id": "test", "share_root": str(tmp_path / "공유창고/0/AI 팁들")}
+        if config_override is not None:
+            config = config_override
+        code = "[fn:AI팁보고서쓰기]{설정:$config}"
+        return handle_request({'edition': 2, 'code': code, 'inputs': {'config': config}}, str(tmp_path))
     run.stages, run.calls, run.corrupt = stages, calls, corrupt
     run.root = tmp_path / "reports"
     run.model_calls, run.ai_inputs = model_calls, ai_inputs
     run.transcripts, run.ai_hooks = transcripts, ai_hooks
-    run.metadata_overrides = metadata_overrides
+    run.metadata_overrides, run.metadata_responses = metadata_overrides, metadata_responses
     run.search_calls, run.search_responses = search_calls, search_responses
     return run
 
 
 def final(result):
     assert result["success"], str(result.get("error") or result.get("traceback") or result)[-3000:]
-    return helper.rows(helper.unpack(result["final_result"]))[0]
+    return result["value"]
 
 def test_named_commit_and_resume_do_not_repeat_work(execute):
     out = final(execute('commit'))
-    assert out['status'] == 'committed' and out['new_tips'] == 2
+    assert out['status'] == 'completed' and out['new_tips'] == 2
     report = Path(out['report']).read_text()
     assert all('watch?v=' + vid in report for vid in IDS)
     tips = helper.load_json(execute.root / 'db/tips.json')
@@ -308,7 +292,7 @@ def test_externalized_transcript_reads_full_body(execute, tmp_path, format):
 def test_incomplete_transcript_is_not_silently_used(execute):
     execute.transcripts[IDS[0]] = {'success': True, 'items': [{'text': QUOTES[0]}], 'partial': True}
     out = final(execute('commit'))
-    assert out['new_tips'] == 1 and '불완전' in Path(out['report']).read_text()
+    assert out['new_tips'] == 1 and '자막을 읽지 못한 영상' in Path(out['report']).read_text()
 
 
 def test_existing_report_is_not_overwritten(execute):
@@ -319,11 +303,13 @@ def test_existing_report_is_not_overwritten(execute):
     assert not (execute.root / 'db/tips.json').exists()
 
 
-def test_named_result_retains_items_contract():
-    from ibl_typecheck import return_type_of
-    from workflow_contract import call_signature
-    assert return_type_of(BODY).startswith('items')
-    assert set(call_signature(BODY)) == {'설정'}
+def test_named_result_has_native_optional_config_contract():
+    from ibl_v2_parser import parse
+    from ibl_v2_learning import check_source
+    assert check_source(BODY, function_body=True) is None
+    definition = parse(BODY).data['statements'][0]
+    assert list(definition.data['params']) == ['설정']
+    assert definition.data['params']['설정'] is not None
 
 
 def test_used_video_is_covered_even_when_one_chunk_failed(execute):
@@ -343,3 +329,105 @@ def test_private_implication_stays_on_one_removable_line(execute):
     report = Path(final(execute())['report']).read_text()
     assert '개인 환경 내부 적용 구상' in report
     assert '\n내부 적용 구상' not in report
+
+
+def test_handled_missing_video_returns_compact_success_at_real_v2_boundary(execute):
+    execute.metadata_responses[IDS[0]] = {'success': False, 'error': 'This video is not available'}
+    result = execute('commit')
+    out = final(result)
+    assert result['source_complete'] and out['status'] == 'completed'
+    assert out['new_tips'] == 1 and out['published']
+    assert Path(out['shared_report']).is_file()
+    assert '결과' not in out and 'results' not in out and 'final_result' not in out
+    assert len(json.dumps(out, ensure_ascii=False)) < 2500
+    from model_result_view import project_v2_result
+    assert len(json.dumps(project_v2_result(result), ensure_ascii=False).encode()) < 6000
+    assert '원천 결과가 불완전' not in json.dumps(result, ensure_ascii=False)
+    assert 'This video is not available' not in Path(out['report']).read_text()
+    assert any(e['kind'] == 'recovered' for e in result['evidence'])
+
+
+def test_reader_context_reaches_queries_selection_and_extraction(execute):
+    final(execute())
+    for kind in ['queries', 'select', 'extract', 'compose']:
+        inputs = [r['input'] for r in execute.ai_inputs if r['input']['kind'] == kind]
+        assert inputs and all('AI 도구' in r['reader_context'] for r in inputs)
+
+
+def test_shared_report_has_all_tips_and_no_private_context(execute):
+    def private(args):
+        result = args['data']['items'][0]['result']
+        result['summary'] = 'PRIVATE_READER_CONTEXT 라는 독자 환경에 대한 요약'
+        for tip in result['tips']:
+            tip['implication'] = '편집자 해석: PRIVATE_READER_CONTEXT 적용 의견'
+        return args
+    execute.corrupt['finish'] = private
+    out = final(execute('commit'))
+    html = Path(out['shared_report']).read_text()
+    assert 'PRIVATE_READER_CONTEXT' not in html and '우리 시스템 함의' not in html
+    assert html.count('<h3>') == 2 and html.count('https://www.youtube.com/watch?v=') == 4
+    assert '(편집자 해석): 편집자 해석:' not in Path(out['report']).read_text()
+
+
+def test_default_call_needs_no_outside_preparation_and_reuses_same_run(execute, monkeypatch):
+    import datetime
+    from types import SimpleNamespace
+    class Today:
+        @staticmethod
+        def today():
+            return datetime.date(2026, 9, 24)
+    monkeypatch.setattr(helper.delivery, 'dt', SimpleNamespace(date=Today))
+    # Empty settings means ordinary report creation, including warehouse delivery.
+    out = final(execute(config_override={}))
+    assert out['status'] == 'completed' and out['topic'] == '코딩'
+    assert Path(out['report']).is_file() and Path(out['shared_report']).is_file()
+    before = (len(execute.calls), len(execute.model_calls))
+    assert final(execute(config_override={})) == out
+    assert before == (len(execute.calls), len(execute.model_calls))
+
+
+def test_share_failure_resumes_only_delivery(execute, monkeypatch):
+    render = helper.delivery.renderer.render
+    def unavailable(args):
+        raise OSError('shared disk unavailable')
+    monkeypatch.setattr(helper.delivery.renderer, 'render', unavailable)
+    assert not execute('commit')['success']
+    assert len(helper.load_json(execute.root / 'db/tips.json')) == 2
+    before = (len(execute.calls), len(execute.model_calls))
+    monkeypatch.setattr(helper.delivery.renderer, 'render', render)
+    out = final(execute('commit'))
+    assert out['status'] == 'completed' and Path(out['shared_report']).exists()
+    assert before == (len(execute.calls), len(execute.model_calls))
+    assert len(helper.load_json(execute.root / 'db/tips.json')) == 2
+
+
+def test_review_queue_gets_html_and_published_flag_remains_honest(execute, tmp_path, monkeypatch):
+    from supervision_delivery import STAGING_ENV, DeliveryQueue
+    queue = DeliveryQueue(tmp_path / 'review', tmp_path / '공유창고', lambda *a, **k: None)
+    monkeypatch.setenv(STAGING_ENV, str(queue.directory))
+    out = final(execute('commit'))
+    assert out['status'] == 'publication_pending' and not out['published']
+    assert not Path(out['shared_report']).exists() and Path(out['shared_preview']).exists()
+    manifest = queue.manifest()
+    queue.deliver(manifest['hash'])
+    before = len(execute.model_calls)
+    published = final(execute('commit'))
+    assert published['published'] and published['status'] == 'completed'
+    assert len(execute.model_calls) == before
+
+
+def test_existing_different_shared_report_is_not_overwritten(execute, tmp_path):
+    shared = tmp_path / '공유창고/0/AI 팁들/AI 팁 보고서 2026-09-24 복구.html'
+    helper.atomic(shared, 'another report', text=True)
+    assert not execute('commit')['success']
+    assert shared.read_text() == 'another report'
+
+
+def test_default_topic_uses_previous_issue_and_ignores_same_day(execute):
+    root = helper.delivery.ROOT / 'outputs/ai_tips_reports'
+    helper.atomic(root / '_covered_videos.json', {'covered': [], 'recent_topics': [
+        {'date': '2026-09-23', 'topic': '코딩'}, {'date': '2026-09-24', 'topic': '문서'}]})
+    helper.atomic(root / 'ai_tips_report_2026-09-23_코딩.md', '## 다음 주제 후보\n\n평가\n', text=True)
+    helper.atomic(root / 'ai_tips_report_2026-09-24_문서.md', '## 다음 주제 후보\n\n다른 주제\n', text=True)
+    config = helper.delivery.settings({'date': '2026-09-24'})
+    assert config['topic'] == '평가' and config['run_id'] == '2026-09-24-auto-v5'

@@ -29,7 +29,7 @@ class Returned(BaseException):
 class Budget:
     steps: int = 100000
     rows: int = 10000
-    seconds: float = 120
+    seconds: float = 900
     depth: int = 64
     started: float = field(default_factory=time.monotonic)
     used_steps: int = 0

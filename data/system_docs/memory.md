@@ -8,7 +8,7 @@ owner_code: >
   workflow_engine.py, ibl_engine.py, forage_memory.py, forage_consolidation.py,
   final_evaluator.py, distill_queue.py, pursuit_ledger.py, execution_trace.py,
   catalog_recall.py, tree_recall.py, associative_recall.py, cognitive_recall.py
-last_updated: 2026-09-20
+last_updated: 2026-09-24
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -175,13 +175,12 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 - **낱말 증류의 입구 관문**(2026-09-18, `ibl_idiom.example_entrance_reason`): 관용구 관문과 **같은 자**(`_phrase_private_reason` — 홈 절대경로·`data/private_nouns.txt`)를 의도·코드 양쪽에 걸고, 본문 1,000자 상한(`EXAMPLE_CODE_CEILING`)으로 일회성 주행이 통째로 박히는 것을 막는다. 09-17 전수 정독에서 지운 증류 191건 중 절반을 잡고 살아남은 용례 오탐 0(실측). 함수의 자(`frozen_incident_reason`, 슬롯 0 거절)는 쓰지 않는다 — 리터럴 든 단발이 용례의 정상 꼴. 의도↔코드 오대응·일회성 질의는 판단이라 관문이 아니라 반성기의 몫. 회귀 `backend/test_distill_entrance_gate_2026_09_18.py`.
 - 상세: 아래 **부록: 연상기억 심층**
 
-**(c) 워크플로우** — 명시적으로 저장된 조합, **2026-08-22부터 함수 쪽으로 한 칸**
-`data/workflows/*.yaml`에 문장(`>>` 순차 / `&` 병렬 / `??` 폴백 / 블록)을 이름 붙여 저장. `[self:workflow]{op:"save|run|list|get|delete"}`.
-- **이름**: 저장본은 `name` 또는 `workflow_id` 로 부른다(`do` 를 직접 주면 저장 없는 즉석 실행).
-- **인자(시그니처)**: 파스 후에도 남은 **미할당 `$이름`이 곧 자유 변수 = 인자**다. `save` 가 계산해 `params_required` 로 저장·보고하고 `list`/`get` 이 노출한다. 저장본 `run` 은 인자 누락을 **정직 거절**(선언 시점이 있으므로), 즉석 `run` 은 `params_warning` 만. `params_default:{이름:값}` 는 기본값이고 호출자 `params` 가 이긴다. ★한글 조사·단위가 이름에 먹히는 자리는 괄호로 끊는다(`"${n}건"`).
-- **반환값**: 몸통 마지막 문장의 통화가 반환값. 몸통에 `$return = …` 이 있으면 그 결과가 반환값이 된다(마지막 문장이 알림 같은 effect 여도 된다).
-- **합성**: `[self:workflow]{op:"run", name:…} >> [table:*]` 로 다음 문장에 통화를 넘긴다 — 옛 '다른 IBL 과 합성 불가'는 해소됐다. 남은 것은 *이름을 1급 어휘로 승격*하는 것뿐인데, 그건 반-어휘-증식 원칙과 정면으로 부딪힌다(아래 다듬을 자리 ①).
-- **스코프·재귀**: 몸통의 `step_results` 는 run 마다 새로 나는 지역 dict — 호출 경계가 실제로 닫혀 있다. 워크플로우가 워크플로우를 부르는 사슬은 **순환(같은 id 재진입)·깊이 상한 5**에서 거절된다(`backend/ibl/workflow_contract.py`). 반복이 필요하면 `[repeat:]`/`[table:each]`.
+**(c) 저장 함수(워크플로우)** — 검사된 조합을 이름으로 재사용하는 절차 기억
+`#!ibl edition=2`의 `[def:이름]($인자,$선택=기본){...}`를 `[self:workflow]{op:"save",edition:2,code:...}`로 저장하고 `[fn:이름]{인자:값}`으로 부른다. 저장소는 `data/workflows/*.yaml`이며 옛 저장본은 호환 어댑터가 원래 계약으로 실행한다.
+- **시그니처**: 인자는 정의 머리에서 명시한다. 첫 인자가 파이프 자리이며, 모든 외부 의존을 인자로 받는다. 자유 변수·누락 인자·파이프와 같은 인자의 이중 전달은 컴파일러가 거절한다.
+- **반환값**: 명시 `return`은 가장 가까운 함수에서 즉시 반환한다. 없으면 마지막 문장 값이 결과이고, 할당·정의·빈 블록은 null이 아닌 Unit이다.
+- **조회와 합성**: `describe:["fn:이름"]`으로 본문을 열지 않고 입력·반환·효과·미확정 경계를 읽는다. 함수 결과는 값이므로 `>>`로 다음 도구에 전달하거나 변수에 담는다.
+- **스코프·재귀**: 함수 범위는 닫혀 있고 재귀는 지원하지 않는다. 반복은 `[repeat:]` 또는 `[table:each]`로 표현한다. 옛 `params_required`·`params_default`는 기존 workflow 호출과 스케줄의 호환 계약으로만 유지한다.
 
 ## 5. 관계 기억 — 심층메모리 (사용자 지식 자동 흡수)
 

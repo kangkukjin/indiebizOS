@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-09-23
+last_updated: 2026-09-24
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -227,4 +227,4 @@ Codex 의식은 네이티브 읽기 전용 샌드박스를 유지하면서 자�
 → 더 깊이: [vision.md](vision.md) (인지 외골격의 4문제의식·모양·기반 철학)
 
 ---
-*최근 변경(2026-09-14): 1장 안경 메뉴 도구 창(내 어휘·프롬프트 구성·가이드 파일) 포인터, 3장 실행 통합 조회·최종 응답 후 기억 선별, 6장 활성 원장·재기동 제어 포인터. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-09-24): 현재 IBL 작성·저장 계약, 관리되는 기록, 세계 지도, 프로바이더 공통 완료 대기와 최근 관용구 수리 포인터를 반영. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

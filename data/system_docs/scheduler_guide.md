@@ -2,7 +2,7 @@
 title: 스케줄러 가이드
 scope: 정기 작업 스케줄, 트리거 엔진, 워크플로우, 캘린더 연동
 owner_code: scheduler.py, trigger_engine.py, workflow_engine.py, workflow_contract.py, calendar_actions.py, calendar_manager.py
-last_updated: 2026-09-14
+last_updated: 2026-09-24
 see_also: [architecture.md, communication.md, memory.md]
 ---
 
@@ -140,22 +140,20 @@ action_params:
 }
 ```
 
-**인자(params)**(2026-08-22 수리): 스케줄러 액션이 `action_params.params` 를 엔진에 그대로 넘긴다(`calendar_actions._action_run_workflow` → `execute_workflow(..., params=…)`). 주입·경고 규칙은 직접 실행과 완전히 동일하다(강제 규칙도 엔진의 `coerce_caller_params` 단일 소스 — 모델이 JSON 문자열로 저장한 `params` 도 같이 수용).
+**인자(params)**: 스케줄러 액션은 `action_params.params`를 저장 함수의 입력으로 그대로 넘긴다(`calendar_actions._action_run_workflow` → `execute_workflow(..., params=…)`). 새 `edition:2` 함수의 정의 머리와 직접 호출에서 쓰는 인자 이름을 그대로 사용한다. 옛 workflow의 `params_required`·`params_default`도 호환 어댑터가 유지한다.
 
-- 워크플로우 몸통에 미할당 `$이름`이 있으면 그것이 인자다 — **등록 시점에 값을 같이 저장해야 한다**(예약 시각엔 물어볼 사람이 없다). 비워 두면 실행 시각에 **"인자 누락"으로 정직 거절**된다(옛날엔 `$city` 가 리터럴로 흘러 엉뚱한 결과를 내고도 success 였다).
-- 인자 유무는 스케줄 걸기 전에 `[self:workflow]{op: "list"}` 의 `params_required` 로 본다.
-- 저장본에 `params_default:{이름:값}` 이 있으면 그게 기본값이고, 여기 넣은 `params` 가 기본값을 이긴다.
+- 새 함수의 인자 유무·기본값은 `describe:["fn:이름"]`으로 본다. 옛 저장본은 `[self:workflow]{op:"list"}`의 `params_required`·`params_default`를 본다.
+- 필수 인자를 비워 두면 실행 시각에 **인자 누락으로 정직 거절**된다. 예약 시각에는 물어볼 사람이 없으므로 스케줄을 만들 때 값을 확정한다.
+- 정의의 기본값보다 `action_params.params`가 우선한다.
 - 값이 매번 달라져야 하면(어제 날짜 등) 워크플로우 대신 `do` 자리에 문장을 직접 적는다 — `action_params.params` 는 등록 시점에 얼어붙은 상수다.
 
 수리 전엔 이 자리가 `workflow_id` 만 읽어, 인자를 요구하는 워크플로우를 스케줄에 걸면 실행 시점에 반드시 실패했다. 무회귀는 `backend/test_workflow_params.py` W15.
 
-#### 워크플로우 = 이름 붙은 함수 (2026-08-22)
-`[self:workflow]` 는 저장된 문장을 **함수처럼** 부른다 — 스케줄에 거는 쪽에서 알아야 할 계약:
-- **시그니처**: 몸통에 남은 미할당 `$이름`이 인자다. `save` 가 `params_required` 로 계산·저장하고 `list`/`get` 이 노출한다 — 스케줄 걸기 전에 `[self:workflow]{op:"list"}` 로 인자 유무를 먼저 본다.
-- **기본값**: 저장본의 `params_default:{이름:값}`. 호출자가 준 `params` 가 이긴다.
-- **반환값**: 몸통 마지막 문장의 통화. `$return = …` 을 쓰면 그 결과가 반환값(마지막이 알림 같은 effect 여도 됨).
-- **재귀 금지**: 워크플로우가 (직접이든 다른 워크플로우를 거쳐서든) 자기를 부르면 거절된다. 중첩 깊이 상한도 5다. 반복은 `[repeat:]{times: N}` 또는 `[table:each]`.
-- 명세 정본은 ibl.md '워크플로우' 절.
+#### 저장 함수(워크플로우)
+새 정의는 `[def:이름]($인자,$선택=기본){...}`로 명시하고 `#!ibl edition=2`와 함께 저장한다. 스케줄러는 같은 인자 이름을 `action_params.params`로 넘긴다.
+- **반환값**: `return`이 있으면 즉시 반환하고, 없으면 마지막 문장 값이 결과다. Unit과 null은 다르다.
+- **재귀 금지**: 직접·간접 재귀는 거절된다. 반복은 `[repeat:횟수] { ... }`, `[repeat:while 조건] { ... }`, `[repeat:until 조건] { ... }` 또는 `[table:each]`다.
+- 명세 정본은 ibl.md '관용구와 저장', 작성 예제는 `data/guides/ibl_composition.md`다.
 
 #### run_goal - 목표 반복 실행 (Phase 26)
 Goal의 every/schedule 설정에 의해 트리거됩니다. CalendarManager가 주기에 맞춰 goal의 다음 라운드를 실행합니다.
@@ -399,4 +397,4 @@ GET /scheduler/calendar/events/by-agent?project_id=투자&agent_id=researcher
 - **신문 발행은 결정론 액션 `[engines:newspaper]{}`** 를 직접 스케줄에 건다(기본 백그라운드, `wait:true`=동기). 정기보고 '작성'은 본질이 LLM 글쓰기라 `[others:delegate]{scope:"system"}` 위임 유지.
 
 ---
-*최근 변경(2026-08-22): 워크플로우=함수 계약 절 신설 + 스케줄 run_workflow 가 `action_params.params` 로 인자를 넘긴다(함정 → 수리). 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-09-24): 스케줄의 저장 함수 설명을 edition 2 명시 시그니처·return·반복 계약으로 갱신하고 옛 params 계약은 호환 경계로 분리. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

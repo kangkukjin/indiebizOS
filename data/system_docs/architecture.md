@@ -2,7 +2,7 @@
 title: 시스템 아키텍처
 scope: 설계 의도, 신체 구조 비유, 인지 파이프라인 큰 그림, 핵심 컴포넌트 개요
 owner_code: 전체 backend/ (개념 수준)
-last_updated: 2026-09-20
+last_updated: 2026-09-24
 see_also: [system_structure.md, memory.md, ibl.md, packages.md, technical.md]
 ---
 
@@ -163,13 +163,13 @@ IBL 노드/액션 정의는 **ibl.md** 참조. 프로바이더는 **technical.md
     ②**같은 개념의 낱말을 축으로 접는다**(검색 5액션→`[sense:search]{source}` · 사업 4형제→`[self:ledger]{store, op}` · 연락처→`[others:neighbor]{op:"contact_*"}` · 라디오 재생제어→`[limbs:radio]{op}`)
     ③**절차는 낱말이 아니라 문장이다** — 오케스트레이션뿐인 것은 `[self:script]`(등록 스크립트)나 앱 인스턴스로 얼린다. "새 낱말 만들까?"의 기본 답이 "스크립트로 등록"인 것이 **반-어휘-증식 장치**다.
   - ★**계수만으로 생사를 판정하지 말 것**(2026-08-15 실측): `sense:search_local` 은 호출 계수 19였지만 결과를 낸 적이 없었다(후계 3건 vs 은퇴어 0건). 계수는 "호출됐다"이지 "쓸모 있었다"가 아니다 — **판별법은 핸들러를 열어 대체 경로를 실측하는 것**.
-- **문장이 프로그램급으로 올라갔다 (2026-08-22, M1~M6)** — 어휘 증가는 `[table:reduce]` 하나뿐이고 나머지는 전부 *문법*이다. 설계 의도: **한 문장 = 한 프로그램**, 단 범용 자료구조·재귀는 `[self:script]` 로 얼린다(언어를 프로그래밍 언어로 키우지 않는다).
-  - 술어 언어(`$변수[.경로]`·`count/empty/exists`·`matches`·`and/or/not`·AI 술어) · 제어 블록(`[try][catch][finally]`·`[on_error:]`·`[repeat:]`) · 상태(`$n = $n + 1` 한 줄 식·`while` 이 몸 변수를 봄) · 블록-인-파이프 · `$return` 반환
-  - 봉투 다이어트·자동 스필·재개는 **엔진 규약**(언어 밖) — 아래 '감각 피드백' 절.
-  - 워크플로우는 **함수 쪽으로 한 칸** 옮겨졌다: 이름·인자(미할당 `$이름`=시그니처, `params_required`/`params_default`)·반환값(`$return`)·스코프 격리·합성(파이프로 다음 문장에 통화를 넘김) + 순환·깊이(5) 가드.
-  - **개정은 실제 프로그램이 끌었다**(2026-08-27~28, 여덟 건). 매일 사람이 손으로 돌리던 세 일간 보고서(AI 동향·부동산·유튜브 팁)를 **한 문장 = 한 프로그램**으로 다시 쓰는 실험이 표현 공백을 적발했고, 사용자 판정("언어의 한계는 다 고쳐")으로 일괄 집행했다 — 치환 의미론(통짜 `.path`=원형)·`$변수 >>` 파이프 머리·변환자 `items` 개방·식 문자열 함수, 그리고 괄호형 확장 경로 `${x.items.*.f}`/옵셔널 `?`·`[table:each]{on_error:"keep"}`(실패 행을 `_error` 를 달아 통화로 흘림)·파이프 세그먼트 `if` 불일치=**직전 통화 통과**·document blocks 의 `when` 절. 검증 결과 팁 23문장·동향 24문장·부동산 21문장이 전부 가이드 품질 기준을 충족했다(원문·산출물=`data/_backups/2026-08-28_report_program_experiments/`, 상태=`docs/IBL_REPORT_PROGRAMS_HANDOFF.md`). ★교훈: **언어의 표현 공백은 진짜 프로그램을 써 봐야 드러난다** — 상상훈련이 못 잡는 부류다.
-  - **실패는 위치를 갖는다**(2026-08-27): 모든 실패 봉투에 `traceback`(frames 바깥→안쪽·`error_type`·실패 지점 입력 통화 요약·예외 꼬리)이 붙고 — each 행·병렬 가지 같은 부분 실패도 예외 없다 — AI step 의 품질 미달은 `criteria` 품질 계약이 `error_type:"quality"` 로 **위치 있는 실패**로 만든다(판정 불능=통과+`unjudged`, 재시도 통과=`_criteria_retried` 정직 표지). 둘 다 봉투 다이어트 밖. 정본 = `docs/IBL_TRACEBACK_HANDOFF.md` · `docs/IBL_QUALITY_CONTRACT_HANDOFF.md`.
-  - 명세·예약어는 **ibl.md**, 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 개정 이력은 `docs/IBL_PROGRAM_GRADE_DESIGN.md`.
+- **현재 작성 언어는 명시 값·함수 문법 한 벌**(2026-09-23 전환 완료)이다. 새 저장 원문은 `#!ibl edition=2`로 의미를 고정하고, 모델 도구는 별도 판본 선택 없이 이 문법을 기본으로 쓴다. 옛 저장본은 호환 어댑터가 원래 실행 의미를 보존한다.
+  - 값은 List·Record·Text·Number·Bool·null·Unit·Result다. 목록에 가상 `.items`는 없고, 도구가 Record를 선언할 때만 실제 `.items`·`.text`를 고른다. 일반 문자열은 그대로이며 `f"${값}"`만 보간한다.
+  - 함수는 `[def:이름]($첫인자,$선택=기본){...}` / `[fn:이름]{선택:값}`이다. 첫 인자가 파이프 자리이고 모든 외부 의존은 인자로 선언한다. 자유 변수·재귀는 거절하며 명시 `return`이 없으면 마지막 문장 값이 결과다.
+  - `[table:each] { ... }`는 `$it`·`$i`를 제공한다. `mode`는 `map|flat_map|effect`, 실패 수집은 map의 `on_error:"collect"`만 허용하며 `Result`를 `is_ok/unwrap/error_of`로 다룬다. 순차 실패는 즉시 중단하고 계속할 곳은 `try/catch`로 명시한다.
+  - `check:true`는 실행과 같은 컴파일러로 효과 없이 검사해 `valid|invalid|incomplete|failed`, 위치·호출 경로·기대/실제·AI 방문 상한을 돌려준다. 검사 결과는 실행 승인 토큰이 아니다.
+  - 값·`source_complete`·증거는 분리한다. `value_wire`가 컨테이너 타입을 보존하고, `result_ref`로 큰 결과를 다시 읽으며, 중단 뒤에는 `resume:{run_id}`와 같은 code·inputs로 이어 완료한 외부 작업을 재실행하지 않는다.
+  - 명세는 **ibl.md**, 주 작성 교재는 `data/guides/ibl_composition.md`, 상시 실행기 교재는 `data/common_prompts/fragments/12_ibl_only.md`, 과거 문법은 `docs/compatibility/`다.
 - **액션 해석**: 직접 매칭만 사용 (verb 런타임 해석 제거)
 - **어휘 스캔 한 벌**(2026-09-11 `c96e6481`): 따옴표 경계·연산자 분할·소스 머리 인식은 `backend/ibl/ibl_scanner.py` 하나를 파서 셋(`ibl_parser`·`ibl_parser_blocks`·`ibl_parser_values`)이 공유하고, JSON5→JSON 복호는 `ibl_parser_values._try_json_like` 한 곳이다 — 골든 경계 코퍼스 `backend/testdata/ibl_parser_boundaries.json`.
 - **값 의미론 단일 코어**(2026-08-25): `common/value_semantics.py`가 값 분류(null/bool/number/**datetime**/text/structure/other — datetime 은 2026-08-27 신설), JSON 구조 순회(dict=무순서 쌍·list=순서 열), 조건 동등성, 4상태 순서(작음/같음/큼/판정불능), 숫자 관측, 정렬 버킷(숫자→날짜→문자열→결측), groupby 엄격 식별자와 join/merge/dedup 관계 식별자를 한 벌로 소유한다. `table:filter/sort`·`[if]/[case]/repeat`·선언형 `response.sort`·집계·관계 연산은 의미를 재구현하지 않고 공통 결과를 자기 오류 봉투로 번역만 한다. `test_value_semantics_single_owner.py`가 대칭·추이·동등/순서/정렬 일치와 사적 정책 함수 재도입 금지를 지킨다.
@@ -209,9 +209,9 @@ IBL 파서 밖에서 코드나 긴 텍스트를 전달하기 위한 메커니즘
 - 15일치 일간 보고서에서 벽시계가 IBL 조합 증가에도 접히지 않아 시간을 갈라 봤더니, 도구 실행은 총 시간의 한 자릿수 %이고 거의 전부가 모델 왕복인데 **왕복당 모델 시간이 읽는 양에 따라 20~28초로 움직였다**. 재는 계기가 없던 자리라 등록 스크립트 `에피소드통계` 에 **결과천자**를 신설했다 — `tool_result` 줄의 보이는 몫 + 절단 표식 `(+N자)` 의 숨긴 글자수를 더한 **정확값**(로그 절단은 기록을 자른 것이지 모델이 받은 결과를 자른 게 아니다). 옛 `...` 행은 하한 표지를 달고, 결과 줄이 없는 in-process 방언은 `None`(0 과 다름).
 - 처방은 **읽기-접기**: 목록·후보는 표 꼬리로 얇게 흘리고 원문 정독은 선별 통과분에만. 경계 — 내용 판단에 필요한 정독까지 접지 말 것(두 단으로 나누는 것이 원리이지 깊이 제거가 아니다). 세 보고서 가이드 §0 에 조항으로 들어갔다.
 
-**>> 연산자 실패 규약**
-- 기본은 **즉시 중단**(`stop`) — 앞 단계가 실패하면 뒤를 돌리지 않는다.
-- 문장 접두 `[on_error: skip|null]`로 문장 단위 변경 가능(2026-08-22 M3). 건너뛴 step 은 봉투에 신고된다(침묵 금지). 블록 차원의 처리는 `[try]{…}[catch]{…}[finally]{…}`.
+**실패 규약**
+- `>>`와 독립 문장은 기본적으로 **즉시 중단**한다. 빈 목록·빈 문자열·null은 실패가 아니며 `??`를 발동하지 않는다.
+- 계속할 자리는 `[try] {…} [catch] {…} [finally] {…}`로 명시한다. 전건 실패를 값으로 보존할 때만 `[table:each]{on_error:"collect"}`를 쓰며, 권한 거절·취소·예산 고갈·프로토콜 미지원은 성공으로 바꾸지 않는다.
 
 **검색 결과 후속 액션 안내**
 - 검색 결과에 `_note` 필드로 후속 액션 안내 (crawl, video_transcript 등)
@@ -510,4 +510,4 @@ IndieBiz OS는 **표준 코어**(IBL 문법 + 기능어 노드 + 백엔드/프�
 - 설계 철학 (백서): `WHITEPAPER.md`
 
 ---
-*최근 변경(2026-08-28): 밭 폐쇄 여섯(값 판정·경로 해석·compute 식·파라미터 표면·시간 의미론·동시성)과 상시 관문, RED 몸-가족·리로드 스크래치 부류 원칙 둘, `[self:body]` 쓰기 굴절 `commit` 반영. 봉투의 errors 다이제스트와 '속도의 지렛대=읽은 문자수' 계기, '결정화는 통로 지정까지' 교훈 추가. 라우팅 분포·수치는 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*
+*최근 변경(2026-09-24): IBL 현재 명시 값·함수·검사·실패·증거·재개 계약으로 본문을 통일하고 옛 작성 문법은 호환성 문서로 돌림. 라우팅 분포·수치는 파생 마커가 정본. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

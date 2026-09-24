@@ -692,7 +692,7 @@ IBL은 단순하다 — 액션 한 항목 = **세 얼굴(src 정의 ↔ tool.jso
 
 ### 수동 점검
 
-- 수동 모드 런처의 **🩺 건강 확인** 버튼 → `POST /world-pulse/ibl-health-check`(동기) → §1A/§1B/§1C 결과 표시.
+- 조종실의 **🩺 건강 확인** 버튼 → `POST /world-pulse/ibl-health-check`(동기) → §1A/§1B/§1C 결과 표시.
 - 또는 직접: `python scripts/ibl_health_check.py` (단독 실행, 외부 인프라 비의존 — 레지스트리 + `/ibl/execute`만).
 - IBL 액션으로도: `[*:self_check]` = `run_daily_health_check`.
 

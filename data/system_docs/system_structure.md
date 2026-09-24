@@ -2,7 +2,7 @@
 title: 시스템 구조 가이드
 scope: 프롬프트 주입용 — 자기 인식, 디렉토리 구조, 인지 파이프라인 (의식·실행·평가에 자동 주입)
 owner_code: prompt_builder.py, consciousness_agent.py, agent_cognitive.py (모두 자동 로드)
-last_updated: 2026-09-14
+last_updated: 2026-09-24
 see_also: [architecture.md, memory.md, ibl.md]
 ---
 
@@ -24,7 +24,7 @@ see_also: [architecture.md, memory.md, ibl.md]
 - **안경 메뉴 도구 창**: 내 어휘 · **프롬프트 구성**(에이전트별 프롬프트 조립을 정본 빌더로 층·조각·분량까지 표시, `/prompt-composition/*`) · **가이드 파일**(`data/guides` 목록·신선도·예산과 본문 편집, `/guides`) — Electron 은 독립 OS 창(`electron/windows.js` `createToolWindow`), 웹은 해시 라우트. → technical.md
 - **재기동 제어**: 백엔드 밖 단일 제어자 `restart_controller`(`backend/api.py start|restart|status|shutdown --wait`, `/runtime/status`)가 접수 차단·종료 대기·코드 사전검사·재기동·RED 복구를 소유. 워커에 uvicorn 리로더 없음(`reload=False`), 상주 서비스 수명은 작업 수명과 분리, 생존 판정은 PID+출생 신원. → technical.md '데스크탑 재기동 제어'
 - **실행 통합 조회**: 한 작업의 기록을 여러 원장(에피소드·궤적·쓰기 원장·검수 저장소·과제 원장·대화 DB)에서 읽어 한 응답으로 잇는 읽기 전용 서비스(`services/execution_trace.py`, `/world-pulse/episodes/{id}/trace`), 주행기록 상세가 소비자. 물리 통합·이중 쓰기 없음. → docs/EXECUTION_TRACE_VIEW_DESIGN_2026_09_11.md
-- **IBL (IndieBiz Logic)**: 정보 흐름 추상화 언어 — 통합 인터페이스로 모든 정보 소스 접근. 조합이 문법에 있다: 순차 `>>`(파이프 단축 `|`)·병렬 `&`·폴백 `??`, 조건/분기 **블록**(`if`/`else`/`case` — 문장 위치에도 놓인다), 고차 문장 `[table:each]{do, as, limit, on_error}`(찾은 것 *각각*에 IBL 문장 적용), 변수·`goal`. 재귀 깊이 상한 3. → ibl.md
+- **IBL (IndieBiz Logic)**: 정보 흐름 추상화 언어 — 순차 `>>`·병렬 `&`·실패 폴백 `??`·독립 문장 `;`, 명시 값과 함수(`[def]`/`[fn]`), Bool 식의 `if/case`, `try/catch/finally`, `repeat`, `$it/$i`를 쓰는 `[table:each]`를 한 문법으로 다룬다. 새 저장 코드는 `#!ibl edition=2`, 실행 전 `check:true`; 자유 변수와 재귀는 거절한다. → ibl.md · guides/ibl_composition.md
 - **스케줄러**: 정기적인 정보 수집 및 리포트 자동 생성
 - **IndieNet**: 외부 메신저/이메일 연동 (Gmail, Nostr)
 - **공유창고**: 몸(노드)의 공개 얼굴 — `공유창고/0..4/` 폴더가 노드 주소에서 그대로 서빙(색인·변환 없음, 파일시스템이 진실). 사람은 브라우저로, 남의 AI는 `/manifest`(JSON)로 읽는다. 레벨 0~4 = 이웃 CRM 등급과 같은 자(등급 위 파일은 403 아닌 **404**). 읽는 쪽=이웃 창고 폴러(30분, 방언 어댑터로 nginx 색인·RSS·Nextcloud·일반 웹페이지까지 같은 통화로 정규화) + 리트윗(`.url` 포인터 파일). → communication.md
@@ -308,4 +308,4 @@ EXECUTE                                THINK ( = "framing이 필요하다"는 �
 
 <!-- SELF_IMAGE:START -->**현 상태 = 6노드 168 액션(sense 43·self 52·limbs 14·others 17·engines 19·table 23)·51 도구 패키지 + 5 extensions·backend .py 470(test 제외)**<!-- SELF_IMAGE:END -->
 
-*최근 변경(2026-09-14): 주요 기능에 어휘 레고박스·안경 메뉴 도구 창·재기동 제어·실행 통합 조회 추가, 파이프라인 [4]/[5] 경계(의식 없는 경로 평가 생략·최종 응답 후 기억 선별)·Reflex 분기 소유자·평가 축 라벨 정정. 이력 정본=git log·changelog.log(`[self:body]` 회상) — 꼬리에 이력을 쌓지 말 것(2026-08-21 다이어트, 전문=직전 git 판).*
+*최근 변경(2026-09-24): 프롬프트 자기상의 IBL 설명을 현재 명시 값·함수·검사·실패 문법으로 교체. 이력 정본=git log·changelog.log(`[self:body]` 회상).*

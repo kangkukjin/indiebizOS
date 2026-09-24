@@ -2,7 +2,7 @@
 title: 기술 참조
 scope: API 엔드포인트, 설정 파일 위치, AI 프로바이더, 프롬프트 XML 구조, 감각 전처리
 owner_code: api_*.py, providers/, ibl_engine.py
-last_updated: 2026-09-14
+last_updated: 2026-09-24
 see_also: [architecture.md, ibl.md]
 ---
 
@@ -229,20 +229,17 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
 예시:
 ```
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"}')
-execute_ibl(code='[sense:search]{query: "AI"} >> [self:write]{path: "result.md"}')
+execute_ibl(code='$r=[sense:search]{query:"AI"}; [self:write]{path:"result.md",content:json($r)}')
 execute_ibl(code='[sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "MSFT"}')
 
-# 고차 문장 — 찾은 것 *각각*에 IBL 문장을 적용 (2026-08-15 신설)
-execute_ibl(code='[sense:search]{query: "AI"} >> [table:each]{as: "row", do: "[self:notify_user]{message: \'{row.title}\'}"}')
+# 고차 문장 — 목록의 각 행은 $it, 인덱스는 $i
+execute_ibl(code='$r=[sense:search]{query:"AI"}; $r.items >> [table:each]{mode:"effect"} { [self:notify_user]{message:$it.title} }')
 
-# 블록 — 조건 분기. 문장 위치에 통째로 쓰거나, 2026-08-22부터 **파이프 한 칸**으로도 쓴다
-#   (`[A] >> [if: count($items) > 0]{…} >> [B]` — 블록이 직전 통화를 $items 로 받는다).
-#   좌변은 IBL 소스 참조 `node:action{params}[.field]` 또는 `$변수[.경로]`·count()/empty()/exists() —
-#   자연어 조건은 평가되지 않는다(판정 불능은 조용한 false 가 아니라 오류).
-execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_user]{message: "CPU 과부하"}}')
+# 도구 결과를 먼저 값에 담고 Bool 식으로 분기한다. 인자 안에 도구 호출을 넣지 않는다.
+execute_ibl(code='$s=[sense:host]{op:"status"}; [if:$s.cpu_percent>80] { [self:notify_user]{message:"CPU 과부하"} }')
 ```
 
-문법 정본은 교재 `data/common_prompts/fragments/12_ibl_only.md`(에이전트 + 조종실 번역기 공용, **캐시 없음 = 수정 즉시 라이브**)와 **ibl.md**. 낱말 스캔(따옴표 경계·연산자 분할·소스 머리)은 `backend/ibl/ibl_scanner.py` 한 벌을 파서 셋이 공유하고 JSON5 복호는 `ibl_parser_values._try_json_like` 한 곳이다(2026-09-11, 골든 코퍼스 `backend/testdata/ibl_parser_boundaries.json`).
+문법 정본은 **ibl.md**, 주 작성 교재는 `data/guides/ibl_composition.md`, 상시 실행기 교재는 `data/common_prompts/fragments/12_ibl_only.md`(에이전트 + 조종실 번역기 공용, **캐시 없음 = 수정 즉시 라이브**)다. 새 저장 코드는 `#!ibl edition=2`, 실행 전 검사는 `check:true`를 쓴다. 낱말 스캔(따옴표 경계·연산자 분할·소스 머리)은 `backend/ibl/ibl_scanner.py` 한 벌을 파서 셋이 공유하고 JSON5 복호는 `ibl_parser_values._try_json_like` 한 곳이다(2026-09-11, 골든 코퍼스 `backend/testdata/ibl_parser_boundaries.json`).
 
 **자동 발견**: `ibl_engine._merge_api_registry_actions()`가 로드 시 `api_registry.yaml`의 node 바인딩 도구를 노드 액션에 자동 병합.
 

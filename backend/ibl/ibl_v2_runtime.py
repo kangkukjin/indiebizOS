@@ -29,7 +29,7 @@ class Returned(BaseException):
 class Budget:
     steps: int = 100000
     rows: int = 10000
-    seconds: float = 900
+    seconds: float | None = None
     depth: int = 64
     started: float = field(default_factory=time.monotonic)
     used_steps: int = 0
@@ -41,7 +41,7 @@ class Budget:
             self.used_steps += 1
             self.used_rows += int(row)
             if (self.used_steps > self.steps or self.used_rows > self.rows or
-                    time.monotonic() - self.started > self.seconds or depth > self.depth):
+                    (self.seconds is not None and time.monotonic() - self.started > self.seconds) or depth > self.depth):
                 raise Fault("BUDGET", "공유 실행 예산을 초과했습니다.", kind="budget")
 
 

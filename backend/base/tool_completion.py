@@ -8,7 +8,6 @@ from dataclasses import dataclass
 import time
 from typing import Any, Callable
 
-from common.spill import TICKET_MAX_WAIT_S
 
 
 @dataclass(frozen=True)
@@ -34,9 +33,11 @@ class CompletionWaitError(RuntimeError):
         super().__init__(self.result['error'])
 
 
-def await_completion(value, *, cancel_check=None, timeout=TICKET_MAX_WAIT_S,
+def await_completion(value, *, cancel_check=None, timeout=None,
                      notify=None, clock=time.monotonic, pause=time.sleep):
-    """Keep the result boundary closed until completion, cancellation or deadline.
+    """Keep the boundary closed until completion or cancellation.
+
+    No implicit job wall time. A caller may opt into an explicit timeout.
 
     poll may wait at most its supplied interval. It retrieves the same task;
     submission/retry is deliberately absent from this interface. Failed *jobs*
@@ -60,7 +61,7 @@ def await_completion(value, *, cancel_check=None, timeout=TICKET_MAX_WAIT_S,
         if cancel_check and cancel_check():
             emit({'state': 'cancelled', 'task_id': task.task_id})
             raise CompletionWaitError(task.task_id, 'cancelled')
-        remaining = timeout - (clock() - started)
+        remaining = float("inf") if timeout is None else timeout - (clock() - started)
         if remaining <= 0:
             emit({'state': 'deadline', 'task_id': task.task_id})
             raise CompletionWaitError(task.task_id, 'deadline')
@@ -73,7 +74,7 @@ def await_completion(value, *, cancel_check=None, timeout=TICKET_MAX_WAIT_S,
                   'elapsed_s': round(clock() - started, 3)})
             return state.value
         # A disconnected transport may return instantly. Back off in code.
-        idle = min(0.1, max(0, timeout - (clock() - started))) - (clock() - before)
+        idle = min(0.1, max(0, remaining - (clock() - before))) - (clock() - before)
         if idle > 0:
             pause(idle)
         if state.progress is not None and state.progress != previous:

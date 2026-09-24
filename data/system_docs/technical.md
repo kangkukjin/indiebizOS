@@ -153,12 +153,11 @@ Tool Use 기반 단일 AI 호출로 판단/검색/발송 통합
   도입·구/신 진단 대응: `docs/IBL_AUTHORING_SUPPORT_IMPLEMENTATION_2026_09_24.md`.
 - **형 보존 턴 변수**(2026-09-12 `8f943a61`): `execute_ibl` 경로의 정적 검사는 `typecheck(given=…)` 로 앞 호출이 남긴 턴 변수의 형(`ibl_turn_vars.types_for`, `turn_vars.live` 의 `types`)을 이어받아 검사하고, 구조 추론은 `ibl_value_types` 가 소유한다(행의 열·바깥 봉투·중첩 필드·병렬 분기·빈 결과 구별, 예산 초과는 미상). `/ibl/validate` 의 `typecheck_code` 는 코드만 보므로 이 문맥이 없다. 실행기가 읽는 열 인자 별칭(select 의 columns/cols/fields, compute 의 columns/expr)은 사전의 `flow.columns_param_aliases` 로 선언해 검사기가 같은 우선순위를 본다 — 검사기 코드에 액션 이름을 넣지 않는다. 정본 `docs/IBL_SHAPE_HANDOFF_2026_09_12.md`.
 - **원문 조회 계약**(2026-09-12 ep3632, `db1e14aa`·`310d7aad`): 큰 결과의 표시 참조 `result_ref` 는 실제 큰 필드 `paths`·`max_limit`·바로 쓸 `read_args` 를 싣고, `execute_ibl(code:"", read_result:…)` 조회 응답의 `next_read` 는 같은 ID·경로·페이지 크기에 다음 offset 을 보존한다(마지막 페이지 null, 옛 `next_offset` 유지). 문자 한도·스키마는 `backend/base/result_read_contract.py` 가 소유해 네이티브 도구와 FastMCP 가 같은 스키마를 내며, 기본·상한은 60,000자 — 응답이 `_display.max_chars` 로 페이지 예산을 선언해 액션당 16K 전송 접힘에 본문·`next_read` 가 잘리지 않는다. 파일 입구의 `~workspace/…` 는 `runtime_utils.expand_body_path` 로 해소한다(`self:struct` 의 `file`, 봉투의 `saved_to_file.file_path`). 정본 `docs/EPISODE3632_READ_CONTRACT_2026_09_12.md`.
-- **공통 완료 대기**: API 제공자는 `BaseProvider._execute_tool_to_completion`, CLI 제공자는 공통 MCP 서버에서 `tool_completion.await_completion`을 사용한다. 실행 중이라는 이유로 모델을 다시 호출하지 않는다. MCP의 HTTP 대기가 끊기면 기존 티켓을 코드에서 회수하며, 완료·실패·취소·마감 때만 결과 경계를 연다. 작업 미상·취소·마감을 실행 종료로 오인하지 않고 재제출하지 않는다. 기존 영속 티켓(24h)과 명시적 `recover` 조회는 유지한다. 상세: [공통 완료 대기](../../docs/PROVIDER_NEUTRAL_COMPLETION_WAIT_2026_09_24.md).
-
-  **대기 한도의 소유자**: `common/spill.py`의 `SURFACE_CLIENT_WALL_S`가 MCP 클라이언트 한도를 정하고, `TICKET_MAX_WAIT_S`는 그보다 60초 짧게 파생된다. Codex·Claude Code의 HTTP·stdio 연결 모두 이 값을 사용한다. 서버는 클라이언트가 연결을 끊기 전에 작업 ID를 포함한 명시적 대기 마감 결과를 반환한다. 진행 알림은 클라이언트 한도를 연장하지 않는다.
-  정상 실행의 HTTP 대기 구간과 회수 반복은 MCP 서버가 소유한다. `wait`는 명시적 회수 조회에만 적용된다. Codex의 IBL MCP 네임스페이스는 직접 호출로 고정해 바깥 exec/wait 반복을 피하며, Claude Code도 같은 MCP 완료 경계를 사용한다.
-  ★형제 낱말 `[self:script]{op:"status", wait}` 는 **240 그대로 두었다**(더는 "같은 값" 이 아니다 — 같은 *규율*일 뿐). 갈라진 이유: 실행 경로는 어차피 에이전트가 막혀 있어 길게 기다려도 잃는 게 없지만, `background:true` 로 띄운 작업은 에이전트가 **다른 일을 하려고** 배경으로 보낸 것이라 14분 강제 대기가 곧 퇴보다. 같은 수를 공유한다는 이유로 함께 옮기지 말 것.
-- **진행 신고 규약 — 좌표는 소유하고 움직임은 공유한다**(2026-09-01, 정본=`backend/ibl/ibl_progress.py`): `running` 회수는 프로그램 좌표(`step`/`of`/`action`)와 회차(`detail`: each 의 `row`/`rows`, 하위 파이프의 `substep`/`substeps`)를 함께 싣는다. 좌표는 **프로그램의 좌표를 아는 자**가 한 번만 집고(파이프면 `execute_pipeline`, 단일 step 이면 초크포인트 `system_tools_ibl`), 그 아래 모든 깊이는 `detail` 칸만 갱신한다 — 안쪽이 바깥의 좌표를 덮으면 좌표가 거짓이 된다. `updated_at` 은 **마지막 움직임** 시각이라, 회수를 두 번 물어 그 값이 바뀌면 도는 중이고 안 바뀌면 멈춘 것이다(멈춤 ↔ 느림 판별의 유일한 증거 — 이게 없어 23분 무한 대기를 눈감고 기다린 09-01 사고). 가드 `backend/test_each_progress_visibility.py`.
+- **공통 완료 대기**: API는 `BaseProvider._execute_tool_to_completion`, CLI는 공통 MCP에서 `tool_completion.await_completion`을 사용한다. 기본 총시간 마감은 없다. IBL 판본 2의 기본 시간 예산도 없으며 단계·행·깊이 예산, 명시적 시간 예산, 사용자 취소는 유지한다. MCP는 HTTP 연결이 끊기면 기존 티켓을 회수하며 재제출하지 않는다. 연속 통신 장애는 별도로 120초 후 미확인 결과와 티켓을 반환한다. 상세: [공통 완료 대기](../../docs/PROVIDER_NEUTRAL_COMPLETION_WAIT_2026_09_24.md).
+  CLI 무출력 감시는 턴별 `completion_channel`의 살아 있는 대기자 lease를 확인한다. 신호와 출력이 모두 없을 때만 무응답으로 종료하며, 사용자 취소는 stdout과 독립적으로 확인하고 IBL 실행기의 협력적 취소에 전달한다. Codex는 MCP 직접 호출, Claude Code는 MCP 자동 백그라운드 전환 비활성화로 같은 계약을 지킨다.
+  외부 CLI의 숫자형 통신 한도는 `common.completion_contract.MCP_CLIENT_TIMEOUT_S`가 소유한다(현재 JS 타이머 안전 범위 내 약 24.8일). 이 호환 한도와 명시적 `recover` 조회 상한 840초는 작업 수명과 분리된다. 기존 자동 생성 900000ms 설정은 이행하고 다른 명시적 사용자 설정은 보존한다.
+  티켓은 실행 소유 프로세스의 PID·생성 시각을 기록한다. 소유자 소실은 `interrupted`로 반환하고, 살아 있는 작업 티켓은 24h 스필 GC에서 제외한다. 완주 영수증의 기존 보관 기간과 명시적 백그라운드 상태 조회 계약은 유지한다. 프로세스가 죽은 작업을 자동 재실행하거나 복구 완료로 표현하지 않는다.
+- **진행 신고 규약**: `ibl_progress.py`가 프로그램 좌표와 하위 진행을 기록한다. `updated_at`은 마지막 진행 갱신이며 생존 증명이 아니다. 긴 단계는 갱신 없이 실행될 수 있다. 대기자 lease·프로세스 신원과 업무 진행은 구분한다. 가드: `test_each_progress_visibility.py`, `test_long_completion.py`.
 - 실행은 워커 스레드에서 돈다(`asyncio.to_thread`) — 블로킹 핸들러가 이벤트 루프를 잡으면 그 대기를 풀어줄 요청 자체를 못 받아 자기교착한다.
 
 ### 몸 사이 소통 (/nodes) — api_nodes.py
@@ -349,10 +348,10 @@ execute_ibl(code='[if: sense:host{op: "status"}.cpu_percent > 80]{[self:notify_u
 
 <!-- IBL_STATS:START -->
 - `backend/`: 서버 소스 코드 — **층=디렉토리**(2026-08-05 물리 이동). 의존은 아래→위 한 방향:
-  `base`(58) → `datastore`(67) → `ibl`(80) → `cognition`(77) → `services`(39) → `surface`(81). `.py` 총 468개(test 제외).
+  `base`(59) → `datastore`(67) → `ibl`(80) → `cognition`(77) → `services`(39) → `surface`(81). `.py` 총 470개(test 제외).
   - ★**모듈 이름은 평면**(`import ibl_engine`) — `backend/boot_paths.py` 가 층 경로를 `sys.path` 에 얹는다.
   - 새 backend 모듈 = 층 폴더에 두고 `scripts/check_backend_layers.py` 의 `LAYERS` 에 배정. 독립 스크립트는 맨 위에 `import boot_paths`.
-  - 층 밖 공용: `backend/common/`(23) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
+  - 층 밖 공용: `backend/common/`(24) · `backend/providers/`(13, AI 프로바이더 스트리밍) · `backend/channels/`(4) · `backend/drivers/`(3)
 - `data/`: 시스템 설정 및 데이터
 - `data/packages/{installed,not_installed}/tools/`: 보유 도구 패키지 (**51개** — op 분기 **34개**가 `_OP_DISPATCHERS` 표준)
 - `data/packages/{installed,not_installed}/extensions/`: 백엔드 코어 모듈 (**5개**)

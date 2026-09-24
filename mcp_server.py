@@ -212,10 +212,12 @@ _RPC_WAIT_S = 30
 
 def _execute_until_complete(payload, ticket, cancel_check):
     import time
+    from completion_lease import TRANSPORT_LOSS_S, pulse
     from tool_completion import (DeferredToolResult, CompletionState,
                                  CompletionWaitError, await_completion, observe_wait)
-    started = time.monotonic()
-    raw = _post_backend("/ibl/execute", payload, min(_RPC_WAIT_S, _MAX_WAIT_S))
+    channel = payload.get("completion_channel", "")
+    pulse(channel, ticket)
+    raw = _post_backend("/ibl/execute", payload, _RPC_WAIT_S)
     def decode(value):
         try:
             return json.loads(value) if isinstance(value, str) else value
@@ -225,23 +227,32 @@ def _execute_until_complete(payload, ticket, cancel_check):
     if not (isinstance(first, dict) and
             (first.get("_surface_timeout") or first.get("_transport_error"))):
         return raw
+    unavailable_since = time.monotonic()
 
     def poll(seconds):
+        nonlocal unavailable_since
         result = _post_backend("/ibl/recover", {"ticket": ticket, "wait": seconds}, seconds + 5)
         value = decode(result)
-        terminal_ticket = isinstance(value, dict) and value.get('_recovered_from_ticket') == ticket
-        pending = not terminal_ticket and isinstance(value, dict) and (
-            value.get('status') == 'running' or value.get('transient') or
-            value.get('_surface_timeout') or value.get('_transport_error'))
-        # Unknown/expired is terminal uncertainty; never resubmit the action.
-        if isinstance(value, dict) and value.get('status') in ('unknown', 'invalid', 'unreadable'):
+        terminal = isinstance(value, dict) and value.get('_recovered_from_ticket') == ticket
+        unavailable = not terminal and (not isinstance(value, dict) or
+            value.get('transient') or value.get('_surface_timeout') or value.get('_transport_error'))
+        if unavailable:
+            if unavailable_since is None:
+                unavailable_since = time.monotonic()
+            if time.monotonic() - unavailable_since >= TRANSPORT_LOSS_S:
+                raise CompletionWaitError(ticket, 'transport_unavailable')
+        else:
+            unavailable_since = None
+        pending = not terminal and (unavailable or value.get('status') == 'running')
+        # This renews the local waiter lease, not the business progress timestamp.
+        pulse(channel, ticket)
+        if isinstance(value, dict) and value.get('status') in ('unknown', 'invalid', 'unreadable', 'interrupted'):
             value = {**value, 'ticket': ticket}
             result = json.dumps(value, ensure_ascii=False)
         return CompletionState(not pending, result,
                                value.get('progress') if isinstance(value, dict) else None)
     try:
         return await_completion(DeferredToolResult(ticket, poll), cancel_check=cancel_check,
-                                timeout=max(0, _MAX_WAIT_S - (time.monotonic() - started)),
                                 notify=observe_wait)
     except CompletionWaitError as exc:
         return json.dumps({**exc.result, 'ticket': ticket}, ensure_ascii=False)
@@ -355,13 +366,19 @@ async def execute_ibl(code: str, project_path: str = "",
         # the waiter; the durable ticket remains available for the original job.
         import threading
         cancelled = threading.Event()
+        from completion_lease import channel_from_context, channel_cancelled, pulse
+        channel = channel_from_context(ctx)
+        if channel:
+            payload['completion_channel'] = channel
         try:
             raw = await anyio.to_thread.run_sync(
-                lambda: _execute_until_complete(payload, ticket, cancelled.is_set),
+                lambda: _execute_until_complete(payload, ticket,
+                    lambda: cancelled.is_set() or channel_cancelled(channel)),
                 abandon_on_cancel=True,
             )
         finally:
             cancelled.set()
+            pulse(channel, ticket, active=False)
     # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야
     # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
     cleaned, images = _harvest_images_for_mcp(raw)

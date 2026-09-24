@@ -228,6 +228,8 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         - 신원(INDIEBIZOS_*) 은 상위(CliSubprocessProvider)가 채운다.
         """
         env = super()._build_env()
+        # 완료는 공통 실행 계층이 소유한다. 장기 MCP 호출을 모델에게 작업 ID로 넘기지 않는다.
+        env["CLAUDE_CODE_MCP_AUTO_BACKGROUND_MS"] = "0"
         # ★구독(OAuth) vs API 과금 경로를 코드로 격리한다. 기본은 "구독만" —
         #  .env 의 ANTHROPIC_API_KEY 가 claude 서브프로세스에 새어들어 구독 대신 API 로
         #  과금되는 것을 원천 차단한다(토큰 로딩이 실패해 _effective_token 이 None 인 코너 포함).
@@ -262,10 +264,24 @@ class ClaudeCodeProvider(CliSubprocessProvider):
     def _mcp_bridge_acquire(self) -> Optional[str]:
         """MCP 브리지: HTTP 우선(플래그 ON일 때) → stdio 폴백."""
         self._mcp_temp_path = self._http_mcp_config_path()
-        return self._mcp_temp_path or get_mcp_config_path()
+        if self._mcp_temp_path:
+            return self._mcp_temp_path
+        source = get_mcp_config_path()
+        if not source:
+            return None
+        with open(source, encoding="utf-8") as f:
+            cfg = json.load(f)
+        server = cfg.get("mcpServers", {}).get("indiebizos")
+        if server is not None:
+            server["env"] = {**server.get("env", {}), **self._identity_env()}
+        fd, path = tempfile.mkstemp(prefix="ccmcp_", suffix=".json")
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(cfg, f)
+        self._mcp_temp_path = path
+        return path
 
     def _mcp_bridge_release(self, handle: Optional[str]) -> None:
-        """HTTP 모드에서 spawn 마다 만든 유니크 temp config 정리 (stdio 경로는 영속 파일)."""
+        """HTTP/stdio 턴별 신원 설정을 담은 유니크 temp config 정리."""
         if self._mcp_temp_path:
             try:
                 os.remove(self._mcp_temp_path)
@@ -283,16 +299,14 @@ class ClaudeCodeProvider(CliSubprocessProvider):
         """
         if os.environ.get("INDIEBIZOS_MCP_HTTP", "0") != "1":
             return None
-        from common.spill import SURFACE_CLIENT_WALL_S
+        from completion_lease import MCP_CLIENT_TIMEOUT_S
         cfg = {"mcpServers": {"indiebizos": {
             "type": "http",
             # ★트레일링 슬래시: backend mount /mcp + 내부 streamable_http_path "/" → /mcp/ 가 직행
             "url": "http://localhost:8765/mcp/",
             "headers": self._identity_headers(),
-            # ★클라이언트의 hard wall-clock 을 우리가 못박는다(2026-09-07) — 안 적으면 CLI
-            #   기본값(미지수, 버전 따라 변함) 아래로 우리 대기를 숨겨야 했다. 이 수가
-            #   표면 대기 상한(TICKET_MAX_WAIT_S)의 짝이다. 진행 알림은 이 벽을 못 늘린다.
-            "timeout": SURFACE_CLIENT_WALL_S * 1000,
+            # 외부 CLI의 숫자형 연결 한도. 작업 수명과 분리한다.
+            "timeout": MCP_CLIENT_TIMEOUT_S * 1000,
         }}}
         fd, path = tempfile.mkstemp(prefix="ccmcp_", suffix=".json")
         with os.fdopen(fd, "w", encoding="utf-8") as f:

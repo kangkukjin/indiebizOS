@@ -21,22 +21,11 @@ import uuid
 from typing import Any, Dict, Optional, Tuple
 
 SPILL_TTL_S = 24 * 3600
-# ── 표면 대기의 벽 (2026-09-07 개정) ────────────────────────────────────────
-# ★왜 두 수가 짝인가: 표면 대기를 끊는 벽은 **둘**이다 — 우리 HTTP 대기와, 그 위에
-#   있는 MCP 클라이언트의 hard wall-clock. 옛 240 은 뒤엣것을 *모르는 채로* 그 아래
-#   어딘가에 있으라고 고른 수였다(클라이언트 기본값은 우리가 안 적었으니 미지수).
-#   모르는 수 밑에 숨는 대신, 클라이언트 벽을 **우리가 config 에 못박고**(providers 의
-#   MCP config `timeout`) 우리 상한을 그 아래로 파생한다. 짝을 깨지 말 것 —
-#   우리 봉투가 벽보다 먼저 와야 정직한 티켓 안내가 살고, 늦으면 클라이언트의
-#   구조 없는 오류가 대신 온다(티켓도 안내도 없이).
-# ★왜 늘려도 되는가: 표면 대기를 짧게 잡아 얻는 것이 없다. 대기가 끊겨도 에이전트가
-#   풀려나는 게 아니라 곧장 recover 로 다시 막히기 때문이다(ep3073 실측: 네 번 끊겼고
-#   네 번 다 즉시 같은 티켓을 다시 기다렸다 — 끊김이 산 정보는 0, 든 비용은 왕복 4회).
-#   짧은 대기는 트레이드오프가 아니라 순손실이었다.
-SURFACE_CLIENT_WALL_S = 900     # MCP 클라이언트 tool timeout — config `timeout` 으로 명시
-SURFACE_WALL_MARGIN_S = 60      # 우리 봉투가 벽을 이기는 여유
-# 회수의 유한 대기 상한 — `[self:script]{op:"status", wait}` 와 같은 값·같은 규율.
-TICKET_MAX_WAIT_S = SURFACE_CLIENT_WALL_S - SURFACE_WALL_MARGIN_S
+# 통신 한도와 실행 수명은 독립적이다. 기본 완료 대기에는 총시간 마감이 없다.
+# SURFACE_CLIENT_WALL_S는 기존 설정 소비자의 호환 이름이다.
+from common.completion_contract import MCP_CLIENT_TIMEOUT_S as SURFACE_CLIENT_WALL_S
+SURFACE_WALL_MARGIN_S = 60
+TICKET_MAX_WAIT_S = 840  # 명시적 recover 한 번의 조회 상한; 작업 수명 아님
 TICKET_POLL_S = 2.0
 AUTO_SPILL_THRESHOLD = 200_000          # 문자 — 이 위는 모델 컨텍스트로 돌려 보낼 크기가 아니다
 # 표시 예산이 있는 문서(기본 본문 60K + JSON 구조)의 MCP 전달 여유.
@@ -73,6 +62,15 @@ def gc(max_age_s: int = SPILL_TTL_S) -> int:
             p = os.path.join(d, name)
             try:
                 if os.path.isfile(p) and now - os.path.getmtime(p) > max_age_s:
+                    if name.startswith('ticket_'):
+                        from common.completion_contract import owner_alive
+                        try:
+                            with open(p, encoding='utf-8') as f:
+                                rec = json.load(f)
+                            if rec.get('status') == 'running' and owner_alive(rec.get('owner')) is True:
+                                continue
+                        except (OSError, ValueError):
+                            continue
                     os.remove(p)
                     n += 1
             except OSError:
@@ -241,7 +239,8 @@ def ticket_begin(ticket: str) -> bool:
     if not valid_ticket(ticket):
         return False
     gc()
-    _ticket_write(ticket, {"status": "running",
+    from common.completion_contract import process_identity
+    _ticket_write(ticket, {"status": "running", "owner": process_identity(),
                            "started_at": time.strftime("%Y-%m-%dT%H:%M:%S")})
     return True
 
@@ -320,7 +319,7 @@ def _progress_note(prog: dict) -> str:
                 f"wait 초(≤{TICKET_MAX_WAIT_S})를 주세요. 셸 sleep 폴링은 쓰지 마세요.")
     return (f"실행이 아직 돌고 있습니다 — {' · '.join(parts)} 진행 중"
             f"(마지막 움직임 {prog.get('updated_at')}). "
-            f"★이 시각이 물을 때마다 새로워지면 도는 중이고, 멈춰 있으면 멈춘 것입니다. "
+            f"이 시각은 진행 좌표의 갱신 시각이며, 변하지 않아도 긴 단계가 실행 중일 수 있습니다. "
             f"끝날 때까지 기다리려면 같은 회수에 wait 초(≤{TICKET_MAX_WAIT_S})를 주세요 — "
             f"셸 sleep 폴링은 쓰지 마세요.")
 
@@ -363,13 +362,14 @@ def ticket_wait(ticket: str, wait_s=0) -> dict:
         # 단 **읽기 실패(transient)는 결말이 아니다** — 2026-09-03 실측(ep2742)에서 찢어진
         # 읽기가 결말처럼 대기를 즉시 풀어, wait 를 주고도 회수가 폴링이 됐다.
         if not (isinstance(env, dict)
+                and env.get("_recovered_from_ticket") != ticket
                 and (env.get("status") == "running" or env.get("transient"))):
             break
         left = wait_s - (time.time() - started)
         if left <= 0:
             break
         time.sleep(min(TICKET_POLL_S, left))
-    if wait_s and isinstance(env, dict):
+    if wait_s and isinstance(env, dict) and env.get("_recovered_from_ticket") != ticket:
         waited = round(time.time() - started, 1)
         if env.get("transient"):
             env["waited"] = waited   # 기다렸는데도 읽기가 계속 실패했다 — 그 사실을 말한다
@@ -416,6 +416,11 @@ def ticket_recover(ticket: str) -> dict:
                 "note": ("이것은 **실행에 대한 사실이 아니라 읽기 실패**입니다 — 실행은 계속 "
                          "돌고 있을 수 있습니다. 같은 회수를 wait 초와 함께 다시 부르세요.")}
     if rec.get("status") == "running":
+        from common.completion_contract import owner_alive
+        if owner_alive(rec.get('owner')) is False:
+            return {'success': False, 'status': 'interrupted', 'ticket': ticket,
+                    'execution_status': 'unconfirmed',
+                    'error': '실행 소유 프로세스가 종료되었습니다. 저장된 실행 기록으로 복구하고 자동 재제출하지 마세요.'}
         out = {"success": True, "status": "running",
                "started_at": rec.get("started_at"),
                "note": ("실행이 아직 돌고 있습니다 — 끝날 때까지 기다리려면 같은 회수에 "

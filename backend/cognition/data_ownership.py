@@ -93,6 +93,7 @@ DECLARATIONS: List[tuple] = [
     ("data/forage_thumbs.db",       "포식 부속(forage 계열)",                    "state"),
     ("data/guide_usage.db",         "가이드 사용 계수(guide_registry)",          "state"),
     ("data/guide_dates_cache.json", "가이드 감사 캐시",                          "cache"),
+    ("data/completion_wait/**",      "공통 완료 대기 채널(completion_lease, 종료 후 24h GC)", "state"),
     ("data/spill/**",               "파이프 자동 스필·재개 참조(common.spill, 24h 기계 GC)", "cache"),
     ("data/system_locator.db*",     "시스템 로케이터(file_index)",               "state"),
     ("data/table_since.db*",        "[table:since] 상태",                        "state"),

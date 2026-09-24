@@ -146,7 +146,7 @@ def test_mcp_missing_task_is_not_restarted(monkeypatch,state):
 
 def test_cli_adapters_share_bridge_and_codex_bypasses_yielding_wrapper():
     from providers import get_provider
-    from common.spill import SURFACE_CLIENT_WALL_S
+    from completion_lease import MCP_CLIENT_TIMEOUT_S
     for name in ['codex','claude_code']:
         p=get_provider(name,api_key='',model='',system_prompt='')
         from providers.cli_provider import CliSubprocessProvider
@@ -154,7 +154,7 @@ def test_cli_adapters_share_bridge_and_codex_bypasses_yielding_wrapper():
     args=get_provider('codex',api_key='',model='',system_prompt='')._bridge_config_args('http')
     assert 'features.code_mode.direct_only_tool_namespaces=["mcp__indiebizos"]' in args
 
-    assert f'mcp_servers.indiebizos.tool_timeout_sec={SURFACE_CLIENT_WALL_S}' in args
+    assert f'mcp_servers.indiebizos.tool_timeout_sec={MCP_CLIENT_TIMEOUT_S}' in args
 
 
 @pytest.mark.parametrize('name',['gemini_http','deepseek_http'])
@@ -166,13 +166,13 @@ def test_rest_cancel_does_not_start_next_model_call(name,monkeypatch):
     assert '중단' in p.process_message('test',cancel_check=lambda:True)
 
 
-def test_mcp_deadline_and_cancel_keep_ticket(monkeypatch):
+def test_mcp_disconnect_budget_and_cancel_keep_ticket(monkeypatch):
     import mcp_server
+    import completion_lease
     monkeypatch.setattr(mcp_server,'_post_backend',lambda *a:json.dumps({'_surface_timeout':True}))
-    monkeypatch.setattr(mcp_server,'_MAX_WAIT_S',0)
+    monkeypatch.setattr(completion_lease,'TRANSPORT_LOSS_S',0)
     out=json.loads(mcp_server._execute_until_complete({'ticket':'abcdef12'},'abcdef12',lambda:False))
-    assert out['completion_wait']=='deadline' and out['ticket']=='abcdef12'
-    monkeypatch.setattr(mcp_server,'_MAX_WAIT_S',30)
+    assert out['completion_wait']=='transport_unavailable' and out['ticket']=='abcdef12'
     out=json.loads(mcp_server._execute_until_complete({'ticket':'abcdef12'},'abcdef12',lambda:True))
     assert out['completion_wait']=='cancelled' and out['execution_status']=='unconfirmed'
 

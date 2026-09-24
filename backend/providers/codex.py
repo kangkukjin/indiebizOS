@@ -430,12 +430,15 @@ class CodexProvider(CliSubprocessProvider):
             if len(cmd) > 1:
                 arr = "[" + ", ".join(_toml_str(a) for a in cmd[1:]) + "]"
                 args += ["-c", f"{ns}.args={arr}"]
-            # stdio 서버는 codex 의 자식이라 env 를 그대로 물려받는다 → 신원(INDIEBIZOS_*)은
-            # _build_env 로 이미 전달된다. 여기서 다시 실을 필요 없다.
+            # Codex filters the child environment. Explicitly carry transport
+            # identity; otherwise a silent tool loses its completion lease.
+            identity = self._identity_env()
+            if identity:
+                args += ["-c", f"{ns}.env={_toml_inline_table(identity)}"]
         # IBL 한 호출이 파이프라인 전체일 수 있어 기본 타임아웃으로는 짧다.
         args += ["-c", f"{ns}.startup_timeout_sec=30"]
-        from common.spill import SURFACE_CLIENT_WALL_S
-        args += ["-c", f"{ns}.tool_timeout_sec={SURFACE_CLIENT_WALL_S}"]
+        from completion_lease import MCP_CLIENT_TIMEOUT_S
+        args += ["-c", f"{ns}.tool_timeout_sec={MCP_CLIENT_TIMEOUT_S}"]
         if getattr(self, "agent_role", "execution") == "consciousness":
             # supervision은 조회와 execute/patch를 함께 품어 readOnlyHint를 붙일 수 없다.
             # read-only + approval_policy=never만 주면 조회도 승인 필요로 거절된다.

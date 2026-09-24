@@ -288,13 +288,12 @@ if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, *sys.argv[1:]]))
 
 
-def test_default_budget_allows_real_multi_model_workflow_and_is_still_bounded(monkeypatch):
+def test_default_budget_has_no_wall_time_but_work_limits_remain(monkeypatch):
     import ibl_v2_runtime
-    budget = Budget()
+    budget = Budget(steps=1)
     start = budget.started
-    monkeypatch.setattr(ibl_v2_runtime.time, 'monotonic', lambda: start + 141)
-    budget.tick()  # Episode 4017's real idiom duration already exceeded the former 120 seconds.
-    monkeypatch.setattr(ibl_v2_runtime.time, 'monotonic', lambda: start + budget.seconds + 1)
+    monkeypatch.setattr(ibl_v2_runtime.time, 'monotonic', lambda: start + 7200)
+    budget.tick()
     with pytest.raises(Fault) as error:
         budget.tick()
     assert error.value.kind == 'budget'

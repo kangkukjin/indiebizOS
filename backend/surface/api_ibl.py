@@ -51,6 +51,7 @@ class IBLRequest(BaseModel):
                                        # (실측 98.4%) → task_id 와 같은 통로(env/헤더→payload)로 복원.
     parent_run_id: Optional[str] = None  # 부모 run(에피소드의 run_id) — 자식 run 의 parent_run_id 로
                                        # 실려 "이 실행이 어느 턴의 일부였나" 조인을 닫는다. episode_id 와 한 쌍.
+    completion_channel: Optional[str] = None  # 전송 계층의 취소/생존 채널, 모델 인자 아님
     ticket: Optional[str] = None       # ★표면 티켓(F51-1, 2026-08-27) — 표면의 HTTP 대기가 실행보다
                                        # 먼저 끊겨도 최종 봉투를 잃지 않는 통로. 실리면 시작·결말을
                                        # data/spill/ 에 남기고(/ibl/recover 로 회수), hex 8~32자만
@@ -243,7 +244,9 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["check"] = True
                     from supervision_bus import current as supervisor_current
                     supervisor = supervisor_current(agent_id, req.task_id)
-                    call = lambda: _execute_ibl_unified(_ti, project_path, agent_id=agent_id)
+                    from completion_lease import channel_cancelled
+                    cancel_check = (lambda: channel_cancelled(req.completion_channel)) if req.completion_channel else None
+                    call = lambda: _execute_ibl_unified(_ti, project_path, agent_id=agent_id, **({"cancel_check": cancel_check} if cancel_check else {}))
                     return supervisor.run_tool("execute_ibl", _ti, call) if supervisor else call()
                 finally:
                     set_current_project_id(_prev_pid)

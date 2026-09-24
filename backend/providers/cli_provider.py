@@ -203,27 +203,21 @@ def _data_dir() -> Path:
 
 
 def _ensure_tool_timeout(path: Path) -> None:
-    """성한 설정에 **빠진 `timeout` 만** 채운다 (2026-09-07).
+    """빠진 timeout과 종전 자동 생성값(900000ms)을 현재 연결 한도로 이행한다.
 
-    ★왜 재생성이 아니라 병합인가: `_broken()` 은 command·script 만 보므로 옛 설정(=이 몸에서
-    실제로 도는 것)은 성한 것으로 판정돼 영영 안 고쳐진다. 그렇다고 통째로 다시 쓰면 "이 몸의
-    커스텀 설정은 존중한다"는 이 함수의 약속을 깬다. 그래서 **없을 때만** 넣는다 —
-    사람이 제 값을 적어 뒀으면 그대로 둔다.
-
-    이 수는 표면 대기 상한의 짝이다(common/spill.py 주석) — 클라이언트의 hard wall 이
-    우리 대기보다 낮으면, 우리의 정직한 티켓 봉투 대신 구조 없는 클라이언트 오류가 온다.
+    그 외 명시적 사용자 설정은 보존한다. 이 값은 작업의 총시간 예산이 아니다.
     """
     try:
-        from common.spill import SURFACE_CLIENT_WALL_S
+        from completion_lease import MCP_CLIENT_TIMEOUT_S
         with open(path, "r", encoding="utf-8") as f:
             cfg = json.load(f)
         srv = ((cfg.get("mcpServers") or {}).get("indiebizos") or {})
-        if not srv or "timeout" in srv:
+        if not srv or ("timeout" in srv and srv["timeout"] != 900000):
             return
-        srv["timeout"] = SURFACE_CLIENT_WALL_S * 1000
+        srv["timeout"] = MCP_CLIENT_TIMEOUT_S * 1000
         with open(path, "w", encoding="utf-8") as f:
             json.dump(cfg, f, ensure_ascii=False, indent=2)
-        print(f"[MCP] 브리지 설정에 tool timeout 보강: {SURFACE_CLIENT_WALL_S}s")
+        print(f"[MCP] 브리지 설정에 tool timeout 보강: {MCP_CLIENT_TIMEOUT_S}s")
     except (json.JSONDecodeError, OSError, TypeError, ValueError, ImportError) as e:
         print(f"[MCP] tool timeout 보강 실패(무시): {e}")
 
@@ -265,13 +259,13 @@ def ensure_mcp_bridge_config() -> Optional[Path]:
     if not server.exists():
         return path if path.exists() else None   # 파생 재료가 없으면 손대지 않는다
     try:
-        from common.spill import SURFACE_CLIENT_WALL_S
+        from completion_lease import MCP_CLIENT_TIMEOUT_S
         path.parent.mkdir(parents=True, exist_ok=True)
         with open(path, "w", encoding="utf-8") as f:
             json.dump({"mcpServers": {"indiebizos": {
                 "command": sys.executable,
                 "args": [str(server)],
-                "timeout": SURFACE_CLIENT_WALL_S * 1000,
+                "timeout": MCP_CLIENT_TIMEOUT_S * 1000,
             }}}, f, ensure_ascii=False, indent=2)
         print(f"[MCP] 브리지 설정 파생 생성: {path} (python={sys.executable})")
         return path
@@ -407,20 +401,10 @@ class CliSubprocessProvider(BaseProvider):
 
     DEFAULT_TIMEOUT_SEC = 600  # 10분 — 스트림이 EOF 로 끝난 뒤 종료를 기다리는 한도
 
-    # ★무출력 마감 (2026-09-01 실측 수리 — ep 유튜브팁 배관 사고).
-    # 사고: `[table:each]` 2행째의 `[self:struct]` 원샷이 **23분 동안 무한 대기**했다.
-    # 거절도 실패도 아니고 그냥 안 돌아왔다. 원인은 이 파일에 있었다 —
-    # 옛 코드의 유일한 시간 한도는 `proc.wait(timeout=DEFAULT_TIMEOUT_SEC)` 였는데,
-    # 그 자리는 **stdout 이 이미 EOF 로 닫힌 뒤**다. 즉 한도가 지키던 것은
-    # "다 뱉고 안 죽는 자식"(사실상 안 일어나는 사건)이었고, 진짜로 멈추는 자리
-    # (`for raw_line in proc.stdout` 의 블로킹 읽기 = 자식이 파이프를 연 채 침묵)는
-    # 아무 한도도 없는 무한 대기였다. 한도가 있다는 착시가 10개월 산 셈이다.
-    # ★규율: **읽기·쓰기 블로킹에는 마감이 붙는다.** 프로세스를 죽이면 파이프가 닫혀
-    # 두 블로킹(stdin 쓰기·stdout 읽기)이 함께 풀리므로, 감시는 프로세스 하나에 건다.
-    # 값은 관대하게 — 도구를 오래 도는 에이전트 런의 침묵(긴 Bash·큰 편집)을 죽이면
-    # 안 된다. "한 줄도 안 오는 10분"은 정상 실행에 존재하지 않는다(실측: 성공한
-    # 같은 부류 호출 67초).
-    STREAM_IDLE_TIMEOUT_SEC = 600      # 출력 한 줄도 없는 침묵의 한도
+    # 출력도 신뢰할 수 있는 도구 대기 lease도 없을 때만 CLI를 무응답으로 판정한다.
+    # 오래 걸리는 도구는 모델 출력 없이 completion_channel로 생존을 확인한다.
+    # 취소는 stdout 수신과 독립적으로 같은 감시 스레드에서 확인한다.
+    STREAM_IDLE_TIMEOUT_SEC = 600
     STREAM_IDLE_POLL_SEC = 5.0         # 감시 스레드의 확인 주기
 
     # 서버측 일시 과부하(529 Overloaded / overloaded_error 등) 자동 재시도.
@@ -782,8 +766,11 @@ class CliSubprocessProvider(BaseProvider):
         image_paths: List[str] = self._save_images_to_temp(images or [])
 
         # 2) 도구 브리지 확보 (벤더마다 방식이 다름 — 파일/인라인)
-        mcp_config_path = self._mcp_bridge_acquire()
+        from completion_lease import create_channel, cancel_channel, is_waiting, pending_tickets
+        self._completion_channel = create_channel()
+        mcp_config_path = None
         try:
+            mcp_config_path = self._mcp_bridge_acquire()
             # 2.5) 시스템 프롬프트를 파일로 (윈도우 argv 상한 회피).
             #      리트라이 루프 전체에서 재사용(내용 불변). 실패 시 None → 인자 방식 폴백.
             system_prompt_file = self._write_system_prompt_file()
@@ -871,6 +858,7 @@ class CliSubprocessProvider(BaseProvider):
                 )
 
                 env = self._build_env()
+                env["INDIEBIZOS_COMPLETION_CHANNEL"] = self._completion_channel
                 start = time.time()
                 cwd = self.project_path if self.project_path and self.project_path != "." else None
                 try:
@@ -925,14 +913,22 @@ class CliSubprocessProvider(BaseProvider):
                 # stdin 쓰기 **전에** 건다: 큰 프롬프트(자막 전문 등)는 파이프 버퍼를
                 # 넘겨 자식이 읽어 주기를 기다리며 블로킹하므로, 그 자리도 자식이
                 # 침묵하면 무한 대기다. 감시는 프로세스를 죽여 두 블로킹을 함께 푼다.
-                _idle = {"last": time.time(), "fired": 0.0}
+                _idle = {"last": time.monotonic(), "fired": 0.0, "cancelled": False}
                 _idle_stop = threading.Event()
 
                 def _idle_watch(_p=None):
                     while not _idle_stop.wait(self.STREAM_IDLE_POLL_SEC):
                         if proc.poll() is not None:
                             return
-                        silent = time.time() - _idle["last"]
+                        if cancel_check and cancel_check():
+                            _idle["cancelled"] = True
+                            cancel_channel(self._completion_channel)
+                            proc.kill()
+                            return
+                        if is_waiting(self._completion_channel):
+                            _idle["last"] = time.monotonic()
+                            continue
+                        silent = time.monotonic() - _idle["last"]
                         if silent > self.STREAM_IDLE_TIMEOUT_SEC:
                             _idle["fired"] = silent
                             self._log(f"무출력 {int(silent)}초 — 프로세스 종료(마감)")
@@ -964,7 +960,7 @@ class CliSubprocessProvider(BaseProvider):
                 deferred: List[Dict] = []  # resume 시도 중 보류한 터미널 이벤트(error/final)
                 try:
                     for raw_line in proc.stdout:
-                        _idle["last"] = time.time()     # 한 줄 = 살아 있다는 신호
+                        _idle["last"] = time.monotonic()     # 한 줄 = 살아 있다는 신호
                         if cancel_check and cancel_check():
                             proc.kill()
                             yield {"type": "error", "content": "사용자 취소"}
@@ -1005,6 +1001,9 @@ class CliSubprocessProvider(BaseProvider):
 
                     proc.wait(timeout=self.DEFAULT_TIMEOUT_SEC)
 
+                    if _idle["cancelled"]:
+                        yield {"type": "error", "content": "사용자 취소"}
+                        return
                     if _idle["fired"]:
                         # 감시가 죽인 것이므로 EOF 는 "끝"이 아니라 "끊김"이다 —
                         # 조용히 빈 응답·재시도 루프로 흘려보내지 않는다(무한 대기의
@@ -1012,13 +1011,15 @@ class CliSubprocessProvider(BaseProvider):
                         self.metrics.record_error()
                         self.last_failure_kind = "deadline"
                         _got = len(accumulated_text)
+                        tickets = pending_tickets(self._completion_channel)
+                        recovery = (f" 회수 티켓: {', '.join(tickets)}." if tickets else "")
                         yield {"type": "error",
                                "content": (f"{self.CLI_DISPLAY} 무응답 마감 — "
                                            f"{int(_idle['fired'])}초 동안 출력이 한 줄도 오지 않아 "
                                            f"프로세스를 종료했습니다"
                                            f"(총 {int(time.time() - start)}초 경과, 수신 {_got}자). "
-                                           f"모델 호출이 멈춘 것이지 거절된 것이 아닙니다 — "
-                                           f"같은 호출을 다시 시도하거나 입력을 줄이세요.")}
+                                           f"실행 연결의 응답을 확인하지 못했습니다 — "
+                                           f"진행 중인 도구가 있었다면 기존 작업을 회수하고 다시 제출하지 마세요.{recovery}")}
                         return
 
                 except subprocess.TimeoutExpired:
@@ -1034,6 +1035,7 @@ class CliSubprocessProvider(BaseProvider):
                 finally:
                     _idle_stop.set()          # 감시 해제 (프로세스보다 먼저 — 오살 방지)
                     if proc.poll() is None:
+                        cancel_channel(self._completion_channel)
                         proc.kill()
 
                 # 비정상 종료 시 stderr 확보 (resume 실패 메시지가 여기에 담긴다)
@@ -1123,6 +1125,7 @@ class CliSubprocessProvider(BaseProvider):
                     self._store.record_size(session_key_val, self._last_context_size)
                 break
         finally:
+            cancel_channel(self._completion_channel)
             self._mcp_bridge_release(mcp_config_path)
 
     # ================= 공통 헬퍼 =================
@@ -1286,6 +1289,10 @@ class CliSubprocessProvider(BaseProvider):
         """재진입 IBL 실행이 복원할 신원 — env 통로 (서브클래스 _build_env 가 합친다)."""
         from runtime_work import parent_token
         env: Dict[str, str] = {}
+        if os.environ.get("INDIEBIZ_BASE_PATH"):
+            env["INDIEBIZ_BASE_PATH"] = os.environ["INDIEBIZ_BASE_PATH"]
+        if getattr(self, "_completion_channel", None):
+            env["INDIEBIZOS_COMPLETION_CHANNEL"] = self._completion_channel
         if parent_token():
             env["INDIEBIZ_RUNTIME_PARENT"] = parent_token()
         if self.project_path and self.project_path != ".":
@@ -1323,6 +1330,8 @@ class CliSubprocessProvider(BaseProvider):
         """
         from runtime_work import parent_token
         headers: Dict[str, str] = {}
+        if getattr(self, "_completion_channel", None):
+            headers["X-IndieBiz-Completion-Channel"] = self._completion_channel
         if parent_token():
             headers["X-Runtime-Parent"] = parent_token()
         if self.agent_id:

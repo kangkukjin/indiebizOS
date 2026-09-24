@@ -165,6 +165,7 @@ data/conversations.db*
 data/**/*.db*
 data/**/*.json
 !data/idioms/webapp_seeds.json
+!data/idioms/housing_seeds.json
 !data/packages/installed/tools/ai-ops/judge_examples.json
 data/ibl_hippo_vecs.f32
 # 공개파일 런타임 스테이징(썸네일 캐시·비공개 실경로 색인 = PII) — 절대 커밋 금지

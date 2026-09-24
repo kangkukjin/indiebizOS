@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""웹앱 관용구·호출 용례를 현재 IBL 입구로 멱등 등록한다. 상시 소개는 끈다."""
+"""검증된 관용구·호출 용례를 현재 IBL 입구로 멱등 등록한다. 상시 소개는 끈다."""
 import sys
 from pathlib import Path
 
@@ -56,7 +56,8 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json'):
             raise ValueError(why)
     if not apply:
         return {'validated': len(seeds), 'changed': False}
-    backup = ROOT / 'data/_backups' / (datetime.now().strftime('%Y-%m-%d_%H%M%S') + '_웹앱관용구')
+    label = '부동산관용구' if seed_file == 'housing_seeds.json' else '웹앱관용구'
+    backup = ROOT / 'data/_backups' / (datetime.now().strftime('%Y-%m-%d_%H%M%S') + '_' + label)
     backup.mkdir(parents=True, exist_ok=False)
     with sqlite3.connect(ROOT / 'data/ibl_usage.db') as src, sqlite3.connect(backup / 'ibl_usage.db') as dst:
         src.backup(dst)
@@ -70,7 +71,7 @@ def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json'):
                 with urllib.request.urlopen(request, timeout=60) as response:
                     return np.asarray(json.load(response)['vectors'], dtype='float32')
         encoder = RunningEncoder()
-        encoder.encode(['웹앱 관용구 등록'])
+        encoder.encode(['관용구 등록'])
         IBLUsageDB._model = encoder
     elif not db._load_model_sync():
         raise RuntimeError('임베딩 모델을 준비하지 못했습니다')
@@ -108,6 +109,6 @@ if __name__ == '__main__':
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--local-encoder', action='store_true')
     parser.add_argument('--seed-file', default='webapp_seeds.json',
-                        choices=['webapp_seeds.json', 'homepage_seeds.json'])
+                        choices=['webapp_seeds.json', 'homepage_seeds.json', 'housing_seeds.json'])
     args = parser.parse_args()
     print(json.dumps(register(args.apply, args.local_encoder, args.seed_file), ensure_ascii=False, indent=2))

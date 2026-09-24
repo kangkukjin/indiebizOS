@@ -1,0 +1,82 @@
+[
+  {
+    "intent": "부동산 발굴 보고서 시작 전 설정·순회 원장·연구 노트·직전 보고서와 선택한 지역 DB를 한 번에 읽는다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing",
+    "topic": "보고서/부동산 발굴",
+    "alias": "부동산준비읽기",
+    "ibl_code": "#!ibl edition=2\n[def:부동산준비읽기]($폴더,$슬러그=\"\") {\n  $파일 = [{kind:\"config\",path:f\"${폴더}/_report_config.json\"},{kind:\"rotation\",path:f\"${폴더}/db/rotation.json\"},{kind:\"thesis\",path:f\"${폴더}/_thesis.md\"}]\n  $문서 = $파일 >> [table:each]{parallel:3} {\n    [try] {\n      $읽기 = [self:read]{path:$it.path}\n      return {kind:$it.kind,path:$it.path,ok:true,text:$읽기.text}\n    } [catch] { return {kind:$it.kind,path:$it.path,ok:false,error:$error} }\n  }\n  $이전 = [self:list]{path:$폴더,pattern:\"housing_report_*.md\"}\n  $직전 = $이전 >> [table:filter]{where:($행)=>get($행,\"is_dir\",false)==false} >> [table:sort]{by:\"name\",descending:true} >> [table:take]{n:1} >> [table:each] {\n    $읽기 = [self:read]{path:$it.path}\n    return {kind:\"previous\",path:$it.path,ok:true,text:$읽기.text}\n  }\n  $지역 = []\n  [if:$슬러그!=\"\"] {\n    $지역파일 = [self:list]{path:f\"${폴더}/db/regions\",pattern:f\"${슬러그}.json\"}\n    $지역 = $지역파일 >> [table:each] {\n      $읽기 = [self:read]{path:$it.path}\n      return {kind:\"region\",path:$it.path,ok:true,text:$읽기.text}\n    }\n  }\n  $실패 = $문서 >> [table:filter]{where:($행)=>$행.ok==false}\n  return {ok:len($실패)==0,documents:$문서+ $직전+ $지역,failed:len($실패),previous_found:len($직전)>0,region_requested:$슬러그,region_found:len($지역)>0}\n}",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "부동산 발굴 보고서 시작 전 설정·순회 원장·연구 노트·직전 보고서와 선택한 지역 DB를 한 번에 읽는다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing,call",
+    "topic": "보고서/부동산 발굴",
+    "ibl_code": "#!ibl edition=2\n[fn:부동산준비읽기]{폴더:\"~workspace/outputs/housing_reports\"}",
+    "category": "composition"
+  },
+  {
+    "intent": "선정한 지역의 네이버 주택·아파트, 직방 빌라 호가와 국토부 아파트 전월세·매매를 모으고 원천 실패를 구분한다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing",
+    "topic": "보고서/부동산 발굴",
+    "alias": "부동산기본수집",
+    "ibl_code": "#!ibl edition=2\n[def:부동산기본수집]($지역,$법정동코드,$예산,$기간) {\n  [if:$예산.jeonse_min<0 or $예산.jeonse_max<$예산.jeonse_min] { return {ok:false,error:\"예산은 만원 단위의 0 이상 하한·상한이어야 합니다\",items:[],failed:0} }\n  $조회 = [{source:\"naver\",type:\"house\",deal:\"rent\"},{source:\"naver\",type:\"apt\",deal:\"rent\"},{source:\"zigbang\",type:\"villa\",deal:\"rent\"},{source:\"molit\",type:\"apt\",deal:\"rent\"},{source:\"molit\",type:\"apt\",deal:\"trade\"}]\n  $결과 = $조회 >> [table:each]{parallel:3} {\n    [try] {\n      [if:$it.source==\"molit\"] {\n        $자료 = [sense:realty]{op:\"query\",source:\"molit\",region_code:$법정동코드,type:$it.type,deal:$it.deal,start_month:$기간.start_month,end_month:$기간.end_month}\n      } [else] {\n        [if:$it.source==\"naver\"] {\n          $자료 = [sense:realty]{op:\"query\",source:\"naver\",region:$지역,type:$it.type,deal:\"rent\",lease:\"전세\",deposit_min:$예산.jeonse_min,deposit_max:$예산.jeonse_max,limit:60}\n        } [else] {\n          $자료 = [sense:realty]{op:\"query\",source:\"zigbang\",region:$지역,type:\"villa\",deal:\"rent\",lease:\"전세\",deposit_max:$예산.jeonse_max,limit:60}\n        }\n      }\n      return {query:$it,ok:true,count:len($자료.items),data:$자료}\n    } [catch] { return {query:$it,ok:false,error:$error} }\n  }\n  $실패 = $결과 >> [table:filter]{where:($행)=>$행.ok==false}\n  return {ok:len($실패)==0,items:$결과,failed:len($실패),region:$지역,region_code:$법정동코드,period:$기간,budget_unit:\"만원\"}\n}",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "선정한 지역의 네이버 주택·아파트, 직방 빌라 호가와 국토부 아파트 전월세·매매를 모으고 원천 실패를 구분한다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing,call",
+    "topic": "보고서/부동산 발굴",
+    "ibl_code": "#!ibl edition=2\n[fn:부동산기본수집]{지역:\"충남 당진시\",법정동코드:\"44270\",예산:{jeonse_min:20000,jeonse_max:40000},기간:{start_month:\"202607\",end_month:\"202609\"}}",
+    "category": "composition"
+  },
+  {
+    "intent": "네이버·직방 매물에서 전세 여부와 만원 단위 예산 양끝을 확인하고 정보 누락은 확인 대상으로 남긴다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing",
+    "topic": "보고서/부동산 발굴",
+    "alias": "전세예산추리기",
+    "ibl_code": "#!ibl edition=2\n[def:전세예산추리기]($목록,$출처,$하한만원,$상한만원) {\n  [if:not ($출처 in [\"naver\",\"zigbang\"]) or $하한만원<0 or $상한만원<$하한만원] {\n    return {ok:false,error:\"출처 naver/zigbang 및 만원 단위의 올바른 예산을 지정하세요\",items:[],review:[]}\n  }\n  $판정 = $목록 >> [table:each] {\n    [try] {\n      $설명 = get($it,\"meta\",null)\n      [if:len($설명)<2 or $설명[0]!=\"전\" or $설명[1]!=\"세\"] { return {status:\"other_deal\",original:$it} }\n      [if:$출처==\"naver\"] { $만원 = number(get($it,\"price\",null))/10000 }\n      [else] {\n        $만원 = number(get($it,\"deposit\",null))\n        [if:number(get($it,\"rent\",null))!=0] { return {status:\"review\",reason:\"전세 표기와 월세액 충돌\",original:$it} }\n      }\n      [if:$만원<$하한만원 or $만원>$상한만원] { return {status:\"outside_budget\",original:$it} }\n      [if:len(get($it,\"url\",null))==0] { return {status:\"review\",reason:\"매물 URL 없음\",original:$it} }\n      return {status:\"candidate\",source:$출처,deposit_man:$만원,url:get($it,\"url\",null),original:$it}\n    } [catch] { return {status:\"review\",error:$error,original:$it} }\n  }\n  $후보 = $판정 >> [table:filter]{where:($행)=>$행.status==\"candidate\"}\n  $확인 = $판정 >> [table:filter]{where:($행)=>$행.status==\"review\"}\n  $그외 = $판정 >> [table:filter]{where:($행)=>$행.status==\"other_deal\"}\n  $예산밖 = $판정 >> [table:filter]{where:($행)=>$행.status==\"outside_budget\"}\n  return {ok:len($확인)==0,items:$후보,review:$확인,input_count:len($목록),other_deal:len($그외),outside_budget:len($예산밖),note:\"예산 후보이며 주거 철학·안전 평가 통과를 뜻하지 않습니다. 중복 URL과 동일 주택은 후속 평가에서 대조합니다.\"}\n}",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "네이버·직방 매물에서 전세 여부와 만원 단위 예산 양끝을 확인하고 정보 누락은 확인 대상으로 남긴다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing,call",
+    "topic": "보고서/부동산 발굴",
+    "ibl_code": "#!ibl edition=2\n[fn:전세예산추리기]{목록:[{meta:\"전세 3억\",price:300000000,url:\"https://example.org/listing/1\"}],출처:\"naver\",하한만원:20000,상한만원:40000}",
+    "category": "composition"
+  },
+  {
+    "intent": "부동산 재방문 때 같은 단위로 정리한 URL별 기존·현재 가격을 비교하고 검색 누락은 재확인, 거절 매물은 재보고 제외로 남긴다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing",
+    "topic": "보고서/부동산 발굴",
+    "alias": "매물재방문비교",
+    "ibl_code": "#!ibl edition=2\n[def:매물재방문비교]($기존,$현재) {\n  $변동 = $기존 >> [table:each] {\n    $옛것 = $it\n    $일치 = $현재 >> [table:filter]{where:($행)=>$행.id==$옛것.id}\n    [if:get($옛것,\"status\",\"\")==\"rejected\"] { return {id:$옛것.id,status:\"rejected\",previous:$옛것} }\n    [if:len($일치)==0] { return {id:$옛것.id,status:\"needs_recheck\",previous:$옛것} }\n    [if:len($일치)>1] { return {id:$옛것.id,status:\"conflict\",previous:$옛것,current:$일치} }\n    [if:$일치[0].price!=$옛것.price] { return {id:$옛것.id,status:\"changed\",previous:$옛것,current:$일치[0]} }\n    return {id:$옛것.id,status:\"unchanged\",previous:$옛것,current:$일치[0]}\n  }\n  $새것 = $현재 >> [table:each]{mode:\"flat_map\"} {\n    $현재행 = $it\n    $일치 = $기존 >> [table:filter]{where:($행)=>$행.id==$현재행.id}\n    [if:len($일치)==0] { return [{id:$현재행.id,status:\"new\",current:$현재행}] }\n    return []\n  }\n  return {items:$변동+ $새것,note:\"양쪽 price는 같은 단위·거래 형식이어야 합니다. 검색 누락은 소멸 증거가 아니며 needs_recheck는 링크 재확인 대상입니다. DB를 쓰지 않습니다.\"}\n}",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "부동산 재방문 때 같은 단위로 정리한 URL별 기존·현재 가격을 비교하고 검색 누락은 재확인, 거절 매물은 재보고 제외로 남긴다.",
+    "nodes": "self,sense,table",
+    "source": "manual_seed",
+    "tags": "manual,housing,call",
+    "topic": "보고서/부동산 발굴",
+    "ibl_code": "#!ibl edition=2\n[fn:매물재방문비교]{기존:[{id:\"https://example.org/listing/1\",price:30000,status:\"active\"}],현재:[{id:\"https://example.org/listing/1\",price:29000}]}",
+    "category": "composition"
+  }
+]

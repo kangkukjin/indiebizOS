@@ -1,0 +1,25 @@
+#!ibl edition=2
+[def:전세예산추리기]($목록,$출처,$하한만원,$상한만원) {
+  [if:not ($출처 in ["naver","zigbang"]) or $하한만원<0 or $상한만원<$하한만원] {
+    return {ok:false,error:"출처 naver/zigbang 및 만원 단위의 올바른 예산을 지정하세요",items:[],review:[]}
+  }
+  $판정 = $목록 >> [table:each] {
+    [try] {
+      $설명 = get($it,"meta",null)
+      [if:len($설명)<2 or $설명[0]!="전" or $설명[1]!="세"] { return {status:"other_deal",original:$it} }
+      [if:$출처=="naver"] { $만원 = number(get($it,"price",null))/10000 }
+      [else] {
+        $만원 = number(get($it,"deposit",null))
+        [if:number(get($it,"rent",null))!=0] { return {status:"review",reason:"전세 표기와 월세액 충돌",original:$it} }
+      }
+      [if:$만원<$하한만원 or $만원>$상한만원] { return {status:"outside_budget",original:$it} }
+      [if:len(get($it,"url",null))==0] { return {status:"review",reason:"매물 URL 없음",original:$it} }
+      return {status:"candidate",source:$출처,deposit_man:$만원,url:get($it,"url",null),original:$it}
+    } [catch] { return {status:"review",error:$error,original:$it} }
+  }
+  $후보 = $판정 >> [table:filter]{where:($행)=>$행.status=="candidate"}
+  $확인 = $판정 >> [table:filter]{where:($행)=>$행.status=="review"}
+  $그외 = $판정 >> [table:filter]{where:($행)=>$행.status=="other_deal"}
+  $예산밖 = $판정 >> [table:filter]{where:($행)=>$행.status=="outside_budget"}
+  return {ok:len($확인)==0,items:$후보,review:$확인,input_count:len($목록),other_deal:len($그외),outside_budget:len($예산밖),note:"예산 후보이며 주거 철학·안전 평가 통과를 뜻하지 않습니다. 중복 URL과 동일 주택은 후속 평가에서 대조합니다."}
+}

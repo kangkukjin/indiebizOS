@@ -1,0 +1,21 @@
+#!ibl edition=2
+[def:부동산기본수집]($지역,$법정동코드,$예산,$기간) {
+  [if:$예산.jeonse_min<0 or $예산.jeonse_max<$예산.jeonse_min] { return {ok:false,error:"예산은 만원 단위의 0 이상 하한·상한이어야 합니다",items:[],failed:0} }
+  $조회 = [{source:"naver",type:"house",deal:"rent"},{source:"naver",type:"apt",deal:"rent"},{source:"zigbang",type:"villa",deal:"rent"},{source:"molit",type:"apt",deal:"rent"},{source:"molit",type:"apt",deal:"trade"}]
+  $결과 = $조회 >> [table:each]{parallel:3} {
+    [try] {
+      [if:$it.source=="molit"] {
+        $자료 = [sense:realty]{op:"query",source:"molit",region_code:$법정동코드,type:$it.type,deal:$it.deal,start_month:$기간.start_month,end_month:$기간.end_month}
+      } [else] {
+        [if:$it.source=="naver"] {
+          $자료 = [sense:realty]{op:"query",source:"naver",region:$지역,type:$it.type,deal:"rent",lease:"전세",deposit_min:$예산.jeonse_min,deposit_max:$예산.jeonse_max,limit:60}
+        } [else] {
+          $자료 = [sense:realty]{op:"query",source:"zigbang",region:$지역,type:"villa",deal:"rent",lease:"전세",deposit_max:$예산.jeonse_max,limit:60}
+        }
+      }
+      return {query:$it,ok:true,count:len($자료.items),data:$자료}
+    } [catch] { return {query:$it,ok:false,error:$error} }
+  }
+  $실패 = $결과 >> [table:filter]{where:($행)=>$행.ok==false}
+  return {ok:len($실패)==0,items:$결과,failed:len($실패),region:$지역,region_code:$법정동코드,period:$기간,budget_unit:"만원"}
+}

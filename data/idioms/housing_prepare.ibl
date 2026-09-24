@@ -1,0 +1,25 @@
+#!ibl edition=2
+[def:부동산준비읽기]($폴더,$슬러그="") {
+  $파일 = [{kind:"config",path:f"${폴더}/_report_config.json"},{kind:"rotation",path:f"${폴더}/db/rotation.json"},{kind:"thesis",path:f"${폴더}/_thesis.md"}]
+  $문서 = $파일 >> [table:each]{parallel:3} {
+    [try] {
+      $읽기 = [self:read]{path:$it.path}
+      return {kind:$it.kind,path:$it.path,ok:true,text:$읽기.text}
+    } [catch] { return {kind:$it.kind,path:$it.path,ok:false,error:$error} }
+  }
+  $이전 = [self:list]{path:$폴더,pattern:"housing_report_*.md"}
+  $직전 = $이전 >> [table:filter]{where:($행)=>get($행,"is_dir",false)==false} >> [table:sort]{by:"name",descending:true} >> [table:take]{n:1} >> [table:each] {
+    $읽기 = [self:read]{path:$it.path}
+    return {kind:"previous",path:$it.path,ok:true,text:$읽기.text}
+  }
+  $지역 = []
+  [if:$슬러그!=""] {
+    $지역파일 = [self:list]{path:f"${폴더}/db/regions",pattern:f"${슬러그}.json"}
+    $지역 = $지역파일 >> [table:each] {
+      $읽기 = [self:read]{path:$it.path}
+      return {kind:"region",path:$it.path,ok:true,text:$읽기.text}
+    }
+  }
+  $실패 = $문서 >> [table:filter]{where:($행)=>$행.ok==false}
+  return {ok:len($실패)==0,documents:$문서+ $직전+ $지역,failed:len($실패),previous_found:len($직전)>0,region_requested:$슬러그,region_found:len($지역)>0}
+}

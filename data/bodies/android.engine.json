@@ -49,6 +49,7 @@
     "base/supervision_watch",
     "base/thread_context",
     "base/thumbnails",
+    "base/tool_completion",
     "base/trace_read",
     "base/trajectory_payload",
     "base/window_requests",
@@ -485,8 +486,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 410,
-    "engine": 384,
+    "total": 411,
+    "engine": 385,
     "blocklist": 26
   }
 }

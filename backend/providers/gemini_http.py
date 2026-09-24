@@ -199,7 +199,7 @@ class GeminiHTTPProvider(BaseProvider):
 
     # ── 메인 루프 ───────────────────────────────────────────
     def process_message(self, message: str, history: List[Dict] = None,
-                        images: List[Dict] = None, execute_tool: Callable = None) -> str:
+                        images: List[Dict] = None, execute_tool: Callable = None, cancel_check: Callable = None) -> str:
         if not self._client:
             return "AI가 초기화되지 않았습니다. GEMINI_API_KEY를 확인해주세요."
         try:
@@ -211,6 +211,8 @@ class GeminiHTTPProvider(BaseProvider):
         accumulated = ""
         iteration = 0
         while iteration < self.MAX_TOOL_ITERATIONS:
+            if cancel_check and cancel_check():
+                return (accumulated + "\n사용자가 작업을 중단했습니다.").strip()
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
             # ★보존(요약) 먼저, 삭제는 최후 — deepseek_http 와 대칭(2026-08-19 배선).
             if iteration > 0 and self._should_compact(contents, iteration):
@@ -245,7 +247,7 @@ class GeminiHTTPProvider(BaseProvider):
                 name = fc.get("name", "")
                 args = fc.get("args") or {}
                 try:
-                    out = execute_tool(name, args, self.project_path, self.agent_id) if execute_tool \
+                    out = self._execute_tool_to_completion(execute_tool, name, args, cancel_check=cancel_check) if execute_tool \
                         else "(도구 실행기 없음)"
                 except Exception as e:
                     out = f"도구 '{name}' 실행 오류: {e}"

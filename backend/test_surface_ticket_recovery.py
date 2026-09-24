@@ -357,35 +357,26 @@ def test_T13_표면이_wait_를_나른다():
     assert 'recover: "{ticket}", wait:' in mcp_src, "타임아웃 봉투가 wait 통로를 안내하지 않는다(통로 미지정)"
 
 
-def test_T14_표면은_예측_없이_늘_상한까지_기다린다(monkeypatch):
-    """★2026-09-07 개정: 표면 대기는 호출자의 예측에 걸려 있지 않다.
-
-    옛 규약은 기본 120초 + "넘길 것을 *아는* 호출만 wait 로 늘리기"였다. 그러나 느림은
-    호출 전에 알 수 있는 사실이 아니고(ep3073: 같은 [self:slide] 가 90~125초, 3장 묶으면
-    300초), 예측이 틀릴 때마다 값이 회수 왕복 한 번이었다 — 그 주행에서 네 번.
-    짧은 대기가 버는 것은 없으므로(끊겨도 에이전트는 곧장 recover 로 다시 막힌다)
-    실행 경로는 wait 와 무관하게 늘 상한까지 기다린다."""
-    sys.path.insert(0, _REPO)
+def test_T14_surface_waits_in_code_without_resubmitting(monkeypatch):
     import asyncio
     import mcp_server
-    from common.spill import TICKET_MAX_WAIT_S
     seen = []
-
-    def _fake_post(path, payload, timeout):
-        seen.append((path, timeout))
-        return json.dumps({"success": True, "items": []})
-    monkeypatch.setattr(mcp_server, "_post_backend", _fake_post)
+    def post(path, payload, timeout):
+        seen.append((path, payload, timeout))
+        if path == '/ibl/execute':
+            return json.dumps({'_surface_timeout': True})
+        if len(seen) == 2:
+            return json.dumps({'status': 'running', 'progress': {'step': 1}})
+        return json.dumps({'success': True, 'value': 'done'})
+    monkeypatch.setattr(mcp_server, '_post_backend', post)
     for w in (0, 200, 999, None):
         seen.clear()
-        asyncio.run(mcp_server.execute_ibl(code="[sense:x]{}", wait=w))
-        assert seen and seen[0][0] == "/ibl/execute", (w, seen)
-        assert seen[0][1] == TICKET_MAX_WAIT_S, (
-            f"wait={w} 에서 표면 대기가 {seen[0][1]} — 상한 {TICKET_MAX_WAIT_S} 이어야 한다")
-    # 타임아웃 봉투는 실제 기다린 초를 말한다
-    monkeypatch.setattr(mcp_server, "_post_backend",
-                        lambda p, pl, t: json.dumps({"error": "timed out", "_surface_timeout": True}))
-    out = asyncio.run(mcp_server.execute_ibl(code="[sense:x]{}"))
-    assert f"{TICKET_MAX_WAIT_S}초" in out and "recover" in out, out
+        out = json.loads(asyncio.run(mcp_server.execute_ibl(code='[sense:x]{}', wait=w)))
+        assert out['value'] == 'done'
+        assert [r[0] for r in seen] == ['/ibl/execute', '/ibl/recover', '/ibl/recover']
+        ticket = seen[0][1]['ticket']
+        assert all(r[1]['ticket'] == ticket for r in seen)
+        assert seen[0][2] == mcp_server._RPC_WAIT_S
 
 
 def test_T15_클라이언트_벽이_표면_상한보다_높다(tmp_path, monkeypatch):

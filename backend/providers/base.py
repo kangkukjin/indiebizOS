@@ -416,6 +416,18 @@ class BaseProvider(ABC):
             if name in cls.__dict__:
                 setattr(cls, name, trace_provider_method(cls.__dict__[name]))
 
+    def _execute_tool_to_completion(self, execute_tool, name, arguments, *, cancel_check=None):
+        """All API adapters cross the same terminal-result boundary."""
+        from tool_completion import await_completion, observe_wait, CompletionWaitError
+        if cancel_check and cancel_check():
+            return json.dumps({'success': False, 'error': '도구 제출 전 취소됨',
+                               'completion_wait': 'cancelled', 'execution_status': 'not_started'}, ensure_ascii=False)
+        raw = execute_tool(name, arguments, self.project_path, self.agent_id)
+        try:
+            return await_completion(raw, cancel_check=cancel_check, notify=observe_wait)
+        except CompletionWaitError as exc:
+            return json.dumps(exc.result, ensure_ascii=False)
+
     def __init__(
         self,
         api_key: str,

@@ -280,7 +280,16 @@ def describe_actions(names, allowed_nodes, edition=None):
         node, action = name.split(":", 1)
         if node == "fn" and edition == 2:
             from ibl_v2_store import describe
-            answer.append({"action": name, "definition": describe(action, allowed)})
+            definition = describe(action, allowed)
+            guards = definition.get("guards")
+            if guards:
+                # Callers need the contract; per-expression diagnostics belong to
+                # explicit inspection, not every invocation's model context.
+                ref = evidence_store().evidence(json.dumps(definition, ensure_ascii=False))
+                definition = {k: v for k, v in definition.items() if k != "guards"}
+                definition["runtime_checks"] = len(guards)
+                definition["result_ref"] = _read_reference(ref, {"guards": guards})
+            answer.append({"action": name, "definition": definition})
             continue
         spec = nodes.get(node, {}).get("actions", {}).get(action)
         if not isinstance(spec, dict) or (allowed is not None and node not in allowed) or not self_can_run(node, action, spec):

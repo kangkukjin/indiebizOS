@@ -520,7 +520,7 @@ class AnthropicProvider(BaseProvider):
             ui_details = None  # [content/details] UI용 상세 결과
             if execute_tool:
                 try:
-                    raw_output = execute_tool(tool["name"], tool["input"], self.project_path, self.agent_id)
+                    raw_output = self._execute_tool_to_completion(execute_tool, tool["name"], tool["input"], cancel_check=cancel_check)
 
                     # [content/details 분리] dict 반환 시 AI용과 UI용 분리
                     tool_images = None  # [images] 도구가 반환한 이미지 데이터

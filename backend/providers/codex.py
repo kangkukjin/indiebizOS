@@ -413,7 +413,10 @@ class CodexProvider(CliSubprocessProvider):
         if not transport:
             return []
         ns = f"mcp_servers.{self.MCP_SERVER_NAME}"
-        args: List[str] = []
+        # Shared completion contract: the MCP request owns the wait. Do not put
+        # this namespace behind code mode's yielding exec/wait model loop.
+        args: List[str] = ["-c", 'features.code_mode.direct_only_tool_namespaces=["mcp__'
+                           + self.MCP_SERVER_NAME + '"]']
         if transport == "http":
             args += ["-c", f'{ns}.url={_toml_str("http://localhost:8765/mcp/")}']
             headers = self._identity_headers()
@@ -431,7 +434,8 @@ class CodexProvider(CliSubprocessProvider):
             # _build_env 로 이미 전달된다. 여기서 다시 실을 필요 없다.
         # IBL 한 호출이 파이프라인 전체일 수 있어 기본 타임아웃으로는 짧다.
         args += ["-c", f"{ns}.startup_timeout_sec=30"]
-        args += ["-c", f"{ns}.tool_timeout_sec={self.DEFAULT_TIMEOUT_SEC}"]
+        from common.spill import SURFACE_CLIENT_WALL_S
+        args += ["-c", f"{ns}.tool_timeout_sec={SURFACE_CLIENT_WALL_S}"]
         if getattr(self, "agent_role", "execution") == "consciousness":
             # supervision은 조회와 execute/patch를 함께 품어 readOnlyHint를 붙일 수 없다.
             # read-only + approval_policy=never만 주면 조회도 승인 필요로 거절된다.

@@ -1,7 +1,7 @@
-"""IndieBiz OS MCP Server — Claude Code에서 IBL 명령을 실행할 수 있게 해주는 MCP 서버.
+"""IndieBiz OS MCP Server — CLI 제공자와 외부 MCP 클라이언트의 공통 IBL 실행 경계.
 
 외부 사용 (Claude Desktop): project_path를 호출 시 명시.
-내부 사용 (indiebizOS가 spawn한 Claude Code): INDIEBIZOS_PROJECT_PATH env로 기본값 주입.
+내부 사용 (indiebizOS가 spawn한 CLI 제공자): INDIEBIZOS_PROJECT_PATH env로 기본값 주입.
 """
 import json
 import os
@@ -187,7 +187,7 @@ def _post_backend(path: str, payload: dict, timeout: int) -> str:
         if isinstance(e, TimeoutError) or isinstance(_reason, TimeoutError):
             return json.dumps({"error": "timed out", "_surface_timeout": True,
                                "_timeout_s": timeout})
-        return json.dumps({"error": str(e)})
+        return json.dumps({"error": str(e), "_transport_error": True})
 
 
 def _surface_timeout_envelope(ticket: str, timeout_s: int) -> str:
@@ -204,6 +204,47 @@ def _surface_timeout_envelope(ticket: str, timeout_s: int) -> str:
                  "봉투가, 아직 돌고 있으면 진행 상태(마지막 움직임 시각 포함)가 옵니다(보관 24h). "
                  "★셸 sleep 으로 기다리지 말 것 — 그 자리는 이 wait 가 맡는다."),
     }, ensure_ascii=False)
+
+
+# A transport wait may expire; it is not a model-visible business result.
+_RPC_WAIT_S = 30
+
+
+def _execute_until_complete(payload, ticket, cancel_check):
+    import time
+    from tool_completion import (DeferredToolResult, CompletionState,
+                                 CompletionWaitError, await_completion, observe_wait)
+    started = time.monotonic()
+    raw = _post_backend("/ibl/execute", payload, min(_RPC_WAIT_S, _MAX_WAIT_S))
+    def decode(value):
+        try:
+            return json.loads(value) if isinstance(value, str) else value
+        except (ValueError, TypeError):
+            return None
+    first = decode(raw)
+    if not (isinstance(first, dict) and
+            (first.get("_surface_timeout") or first.get("_transport_error"))):
+        return raw
+
+    def poll(seconds):
+        result = _post_backend("/ibl/recover", {"ticket": ticket, "wait": seconds}, seconds + 5)
+        value = decode(result)
+        terminal_ticket = isinstance(value, dict) and value.get('_recovered_from_ticket') == ticket
+        pending = not terminal_ticket and isinstance(value, dict) and (
+            value.get('status') == 'running' or value.get('transient') or
+            value.get('_surface_timeout') or value.get('_transport_error'))
+        # Unknown/expired is terminal uncertainty; never resubmit the action.
+        if isinstance(value, dict) and value.get('status') in ('unknown', 'invalid', 'unreadable'):
+            value = {**value, 'ticket': ticket}
+            result = json.dumps(value, ensure_ascii=False)
+        return CompletionState(not pending, result,
+                               value.get('progress') if isinstance(value, dict) else None)
+    try:
+        return await_completion(DeferredToolResult(ticket, poll), cancel_check=cancel_check,
+                                timeout=max(0, _MAX_WAIT_S - (time.monotonic() - started)),
+                                notify=observe_wait)
+    except CompletionWaitError as exc:
+        return json.dumps({**exc.result, 'ticket': ticket}, ensure_ascii=False)
 
 
 @mcp.tool()
@@ -310,20 +351,17 @@ async def execute_ibl(code: str, project_path: str = "",
         import uuid
         ticket = uuid.uuid4().hex[:12]
         payload["ticket"] = ticket
-        # ★표면은 언제나 상한까지 기다린다(2026-09-07) — 호출자가 느림을 미리 알 필요가 없다.
-        #   옛 규약은 기본 120초였고, 넘길 것을 *아는* 호출만 wait 로 늘리게 했다. 그러나
-        #   느림은 호출 전에 알 수 있는 사실이 아니고(같은 [self:slide] 가 3초일 때도 120초일
-        #   때도 있다), 틀리면 값이 왕복 한 번이다. 짧게 기다려 버는 것은 없으므로(위 spill.py
-        #   주석) 예측을 요구하지 않고 늘 상한을 쓴다. wait 는 회수(recover) 쪽 파라미터로 남는다.
-        _t = int(_MAX_WAIT_S)
-        raw = await anyio.to_thread.run_sync(
-            lambda: _post_backend("/ibl/execute", payload, _t)
-        )
+        # Both CLI providers use this same completion wait. Cancellation releases
+        # the waiter; the durable ticket remains available for the original job.
+        import threading
+        cancelled = threading.Event()
         try:
-            if isinstance(raw, str) and json.loads(raw).get("_surface_timeout"):
-                raw = _surface_timeout_envelope(ticket, _t)
-        except Exception:
-            pass
+            raw = await anyio.to_thread.run_sync(
+                lambda: _execute_until_complete(payload, ticket, cancelled.is_set),
+                abandon_on_cancel=True,
+            )
+        finally:
+            cancelled.set()
     # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야
     # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
     cleaned, images = _harvest_images_for_mcp(raw)

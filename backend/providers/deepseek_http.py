@@ -135,7 +135,7 @@ class DeepSeekHTTPProvider(BaseProvider):
 
     # ── 메인 루프 ───────────────────────────────────────────
     def process_message(self, message: str, history: List[Dict] = None,
-                        images: List[Dict] = None, execute_tool: Callable = None) -> str:
+                        images: List[Dict] = None, execute_tool: Callable = None, cancel_check: Callable = None) -> str:
         # images 는 무시 — 딥시크 비전 없음(이미지 파트=400). gemini_http v1 과 동급.
         if not self._client:
             return "AI가 초기화되지 않았습니다. DEEPSEEK_API_KEY를 확인해주세요."
@@ -145,6 +145,8 @@ class DeepSeekHTTPProvider(BaseProvider):
         iteration = 0
         force_thinking_off = False
         while iteration < self.MAX_TOOL_ITERATIONS:
+            if cancel_check and cancel_check():
+                return (accumulated + "\n사용자가 작업을 중단했습니다.").strip()
             self._notify_round(iteration + 1, self.MAX_TOOL_ITERATIONS)
             # ★보존(요약) 먼저, 삭제는 최후 — 순서가 곧 정책이다(base 의 임계값 주석 참조).
             #   2026-08-19: 그전엔 이 자리에 프루닝만 있었다. COMPACTION_CHAR_THRESHOLD 를
@@ -201,7 +203,7 @@ class DeepSeekHTTPProvider(BaseProvider):
                 except (json.JSONDecodeError, TypeError):
                     args = {}
                 try:
-                    out = execute_tool(name, args, self.project_path, self.agent_id) \
+                    out = self._execute_tool_to_completion(execute_tool, name, args, cancel_check=cancel_check) \
                         if execute_tool else "(도구 실행기 없음)"
                 except Exception as e:
                     out = f"도구 '{name}' 실행 오류: {e}"

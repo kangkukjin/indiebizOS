@@ -13,12 +13,29 @@ import sqlite3
 from datetime import datetime
 
 
-def register(apply=False, local_encoder=False):
+def insert_seeds(db, seeds, backup):
+    """선행 관용구를 확정한 뒤 그 관용구를 호출하는 정의·용례를 등록한다."""
+    added = 0
+    for row in seeds:
+        with db._get_connection() as conn:
+            exists = conn.execute('SELECT 1 FROM ibl_examples WHERE intent=? AND ibl_code=?',
+                                  (row['intent'], row['ibl_code'])).fetchone()
+        if exists:
+            continue
+        inserted = db.add_examples_batch([row])
+        if inserted != 1:
+            raise RuntimeError(f'원장 입구 거절: {row.get("alias", row["intent"])}. 백업: {backup}')
+        added += inserted
+    return added
+
+
+def register(apply=False, local_encoder=False, seed_file='webapp_seeds.json'):
     from ibl_usage_db import IBLUsageDB
     from ibl_v2_store import definitions, definition_name
     from ibl_v2_learning import check_source
     db = IBLUsageDB()
-    seeds = json.loads((ROOT / 'data/idioms/webapp_seeds.json').read_text())
+    seed_path = ROOT / 'data/idioms' / seed_file
+    seeds = json.loads(seed_path.read_text())
     functions = [row for row in seeds if row.get('alias')]
     calls = [row for row in seeds if not row.get('alias')]
     library = definitions()
@@ -30,7 +47,10 @@ def register(apply=False, local_encoder=False):
         if old and old['ibl_code'].strip() != row['ibl_code'].strip():
             raise ValueError(f'{name}: 이미 다른 정의가 있습니다. 명시적 개정이 필요합니다')
         library[name] = row['ibl_code']
-    for row in seeds:
+        why = check_source(row['ibl_code'], True, library=library)
+        if why:
+            raise ValueError(f'{name}: 의존 함수부터 등록 입력에 배치하세요: {why}')
+    for row in calls:
         why = check_source(row['ibl_code'], bool(row.get('alias')), library=library)
         if why:
             raise ValueError(why)
@@ -56,17 +76,7 @@ def register(apply=False, local_encoder=False):
         raise RuntimeError('임베딩 모델을 준비하지 못했습니다')
     if not db._check_sqlite_vec():
         raise RuntimeError('sqlite_vec가 없습니다. .venv 파이썬으로 실행하세요')
-    added = 0
-    # 호출 용례는 앞 배치에서 등록된 함수로 검증된다. 모든 행은 단일 배치 입구를 쓴다.
-    for batch in (functions, calls):
-        with db._get_connection() as conn:
-            pending = [row for row in batch if not conn.execute(
-                'SELECT 1 FROM ibl_examples WHERE intent=? AND ibl_code=?',
-                (row['intent'], row['ibl_code'])).fetchone()]
-        inserted = db.add_examples_batch(pending)
-        if inserted != len(pending):
-            raise RuntimeError(f'원장 입구 거절: {inserted}/{len(pending)}. 백업: {backup}')
-        added += inserted
+    added = insert_seeds(db, functions + calls, backup)
     rows = []
     with db._get_connection() as conn:
         for seed in seeds:
@@ -97,5 +107,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--apply', action='store_true')
     parser.add_argument('--local-encoder', action='store_true')
+    parser.add_argument('--seed-file', default='webapp_seeds.json',
+                        choices=['webapp_seeds.json', 'homepage_seeds.json'])
     args = parser.parse_args()
-    print(json.dumps(register(args.apply, args.local_encoder), ensure_ascii=False, indent=2))
+    print(json.dumps(register(args.apply, args.local_encoder, args.seed_file), ensure_ascii=False, indent=2))

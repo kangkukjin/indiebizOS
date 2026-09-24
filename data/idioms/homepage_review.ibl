@@ -1,0 +1,13 @@
+#!ibl edition=2
+[def:홈페이지갱신검토자료]($사이트,$저장소,$기준시각,$정본문서,$화면=true) {
+  $페이지 = [fn:홈페이지살펴보기]{사이트:$사이트,화면:$화면}
+  $이력 = [self:script]{op:"run",id:"웹앱작업",args:{op:"history",project:$저장소,since:$기준시각}}
+  $문서 = $정본문서 >> [table:each] {
+    [try] {
+      $읽기 = [self:read]{path:$it}
+      return {path:$it,ok:true,text:$읽기.text}
+    } [catch] { return {path:$it,ok:false,error:$error.message} }
+  }
+  $실패 = $문서 >> [table:filter]{where:($행)=>$행.ok == false}
+  return {ok:$페이지.ok and len($실패)==0 and len($문서)>0,page:$페이지,history:$이력,documents:$문서,document_failures:len($실패),review_scope:"수집 자료로 갱신 필요성과 우선순위를 판단한다. 정본문서 0건은 검토 준비 미완료. 수정·배포는 수행하지 않는다."}
+}

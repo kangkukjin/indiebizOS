@@ -1,0 +1,42 @@
+[
+  {
+    "intent": "등록된 홈페이지의 현재 본문·링크·데스크톱 화면을 모아 살펴본다.",
+    "nodes": "engines,sense,self,table",
+    "source": "manual_seed",
+    "tags": "manual,homepage",
+    "topic": "웹앱·홈페이지",
+    "ibl_code": "#!ibl edition=2\n[def:홈페이지살펴보기]($사이트,$화면=true) {\n  $등록 = [engines:web_site]{op:\"list\"}\n  $대상 = $등록.sites >> [table:filter]{where:($행)=>$행.id == $사이트}\n  [if:len($대상)!=1] { return {ok:false,site_id:$사이트,error:\"등록된 site_id 하나를 지정하세요\",items:[]} }\n  $주소 = $대상[0].deploy_url\n  [if:$주소 == \"\"] { return {ok:false,site_id:$사이트,error:\"배포 URL이 없습니다\",items:[]} }\n  $자료 = [\"content\",\"links\",\"screen\"] >> [table:each] {\n    [try] {\n      [if:$it == \"screen\"] {\n        [if:$화면] {\n          $검사 = [engines:web]{op:\"check\",url:$주소,checks:[\"status\",\"screenshot\"]}\n          $실패 = $검사.items >> [table:filter]{where:($행)=>$행.ok == false}\n          return {kind:$it,ok:len($실패)==0,value:$검사}\n        } [else] { return {kind:$it,ok:true,skipped:true} }\n      }\n      $읽기 = [sense:crawl]{url:$주소,op:$it,refresh:($it == \"content\")}\n      return {kind:$it,ok:true,value:$읽기}\n    } [catch] { return {kind:$it,ok:false,error:$error.message} }\n  }\n  $실패 = $자료 >> [table:filter]{where:($행)=>$행.ok == false}\n  return {ok:len($실패)==0,site:$대상[0],items:$자료,failed:len($실패),screen_scope:\"요청 시 데스크톱 1280×800 캡처; 모바일·미적 품질·링크 목적지 응답은 별도 확인\"}\n}",
+    "alias": "홈페이지살펴보기",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "등록된 홈페이지의 현재 본문·링크·데스크톱 화면을 모아 살펴본다.",
+    "nodes": "engines,sense,self,table",
+    "source": "manual_seed",
+    "tags": "manual,homepage",
+    "topic": "웹앱·홈페이지",
+    "ibl_code": "#!ibl edition=2\n[fn:홈페이지살펴보기]{사이트:\"등록된-site-id\",화면:true}",
+    "category": "composition"
+  },
+  {
+    "intent": "홈페이지 업데이트가 필요한지 판단할 현재 페이지·정본 문서·기준 시각 이후 변경 이력을 모은다.",
+    "nodes": "engines,sense,self,table",
+    "source": "manual_seed",
+    "tags": "manual,homepage",
+    "topic": "웹앱·홈페이지",
+    "ibl_code": "#!ibl edition=2\n[def:홈페이지갱신검토자료]($사이트,$저장소,$기준시각,$정본문서,$화면=true) {\n  $페이지 = [fn:홈페이지살펴보기]{사이트:$사이트,화면:$화면}\n  $이력 = [self:script]{op:\"run\",id:\"웹앱작업\",args:{op:\"history\",project:$저장소,since:$기준시각}}\n  $문서 = $정본문서 >> [table:each] {\n    [try] {\n      $읽기 = [self:read]{path:$it}\n      return {path:$it,ok:true,text:$읽기.text}\n    } [catch] { return {path:$it,ok:false,error:$error.message} }\n  }\n  $실패 = $문서 >> [table:filter]{where:($행)=>$행.ok == false}\n  return {ok:$페이지.ok and len($실패)==0 and len($문서)>0,page:$페이지,history:$이력,documents:$문서,document_failures:len($실패),review_scope:\"수집 자료로 갱신 필요성과 우선순위를 판단한다. 정본문서 0건은 검토 준비 미완료. 수정·배포는 수행하지 않는다.\"}\n}",
+    "alias": "홈페이지갱신검토자료",
+    "category": "phrase",
+    "returns": "Record"
+  },
+  {
+    "intent": "홈페이지 업데이트가 필요한지 판단할 현재 페이지·정본 문서·기준 시각 이후 변경 이력을 모은다.",
+    "nodes": "engines,sense,self,table",
+    "source": "manual_seed",
+    "tags": "manual,homepage",
+    "topic": "웹앱·홈페이지",
+    "ibl_code": "#!ibl edition=2\n[fn:홈페이지갱신검토자료]{사이트:\"등록된-site-id\",저장소:\".\",기준시각:\"2026-09-01T00:00:00+09:00\",정본문서:[\"README.md\"]}",
+    "category": "composition"
+  }
+]

@@ -470,3 +470,5 @@ data/recall_index/
 
 # Durable IBL execution receipts contain private runtime values.
 data/ibl_runs/
+
+!data/idioms/homepage_seeds.json

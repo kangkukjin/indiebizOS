@@ -15,6 +15,7 @@ import signal
 import subprocess
 import time
 import uuid
+from datetime import datetime
 
 from logging_utils import mask_secrets
 
@@ -154,6 +155,35 @@ def inspect_project(project):
             "checks_available": bool(config["checks"])}
 
 
+def history(project, since):
+    """명시한 시각부터 고정 HEAD까지 전건 조회. 페이지 상한으로 이력을 자르지 않는다."""
+    require(isinstance(since, str) and 'T' in since, "since는 시간대가 있는 ISO 날짜·시각이어야 합니다")
+    try:
+        start = datetime.fromisoformat(since.replace('Z', '+00:00'))
+    except ValueError as exc:
+        raise ValueError("since는 시간대가 있는 ISO 날짜·시각이어야 합니다") from exc
+    require(start.tzinfo is not None, "since에 시간대를 명시하세요(예: +09:00)")
+
+    def git(*args):
+        result = subprocess.run(['git', '-C', str(project), *args], capture_output=True,
+                                text=True, timeout=30, check=False)
+        require(result.returncode == 0, f"Git 이력 조회 실패: {result.stderr.strip()[:500]}")
+        return result.stdout
+
+    head = git('rev-parse', '--verify', 'HEAD').strip()
+    # --since와 달리 날짜가 역전된 커밋도 탐색한다. -z와 필드 NUL로 제목의 줄/탭을 보존한다.
+    raw = git('log', head, f'--since-as-filter={start.isoformat()}',
+              '--format=%H%x00%cI%x00%s', '-z', '--', '.')
+    fields = raw.removesuffix('\0').split('\0') if raw else []
+    require(len(fields) % 3 == 0, "Git 이력 응답의 필드 수가 잘못되었습니다")
+    items = [{'commit': fields[i], 'committed_at': fields[i + 1], 'subject': fields[i + 2]}
+             for i in range(0, len(fields), 3)]
+    return {'project': str(project), 'since': start.isoformat(), 'head': head,
+            'items': items, 'count': len(items), 'source_complete': True,
+            'scope': '지정 폴더의 커밋된 변경; 날짜는 committer 기준',
+            'git': git_state(project)}
+
+
 def plan(project, names):
     require(isinstance(names, list) and bool(names) and all(isinstance(n, str) and n for n in names),
             "checks는 비어 있지 않은 검사 이름 목록이어야 합니다")
@@ -217,17 +247,19 @@ def execute(args):
     op = args.get("op")
     if op == "inspect":
         return inspect_project(project)
+    if op == "history":
+        return history(project, args.get('since'))
     if op == "plan":
         return plan(project, args.get("checks", ["test", "build"]))
     if op == "run":
         return run_check(project, args.get("name"), args.get("timeout", 120), args.get("fingerprint"))
-    raise ValueError("op는 inspect/plan/run 중 하나여야 합니다")
+    raise ValueError("op는 inspect/history/plan/run 중 하나여야 합니다")
 
 
 if __name__ == "__main__":
     try:
         result = execute(json.load(sys.stdin))
         print(mask_secrets(json.dumps(result, ensure_ascii=False)))
-    except (ValueError, OSError, TypeError) as exc:
+    except (ValueError, OSError, TypeError, subprocess.TimeoutExpired) as exc:
         print(json.dumps({"success": False, "error": mask_secrets(str(exc))}, ensure_ascii=False))
         sys.exit(1)

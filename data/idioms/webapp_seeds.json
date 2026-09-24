@@ -1,0 +1,42 @@
+[
+  {
+    "intent": "웹앱 제작·수정 전에 프로젝트 문서·실행 설정·Git 상태·검사 명령을 한 번에 확인한다.",
+    "ibl_code": "#!ibl edition=2\n[def:웹앱작업준비]($프로젝트) {\n  $준비 = [self:script]{op:\"run\",id:\"웹앱작업\",args:{op:\"inspect\",project:$프로젝트}}\n  $문서 = $준비.documents >> [table:each]{on_error:\"collect\"} {\n    $본문 = [self:read]{path:$it.path,limit:120}\n    return {path:$it.path,name:$it.name,content:$본문}\n  }\n  return {project:$준비.project,config:$준비.config,git:$준비.git,runtimes:$준비.runtimes,config_files:$준비.config_files,documents:$문서,checks_available:$준비.checks_available}\n}",
+    "alias": "웹앱작업준비",
+    "nodes": "self,table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "tags": "manual,webapp",
+    "topic": "웹앱·홈페이지",
+    "returns": "Record"
+  },
+  {
+    "intent": "웹앱 제작·수정 전에 프로젝트 문서·실행 설정·Git 상태·검사 명령을 한 번에 확인한다.",
+    "ibl_code": "#!ibl edition=2\n[fn:웹앱작업준비]{프로젝트:\"outputs/web-projects/kospi-board\"}",
+    "nodes": "self,table",
+    "category": "composition",
+    "source": "manual_seed",
+    "tags": "manual,webapp,call",
+    "topic": "웹앱·홈페이지"
+  },
+  {
+    "intent": "웹앱을 수정한 뒤 프로젝트에 선언된 테스트·빌드를 실행하고 검사별 성공·실패와 로그 근거를 모은다.",
+    "ibl_code": "#!ibl edition=2\n[def:웹앱검사하기]($프로젝트,$검사=[\"test\",\"build\"],$시한=120) {\n  $계획 = [self:script]{op:\"run\",id:\"웹앱작업\",args:{op:\"plan\",project:$프로젝트,checks:$검사}}\n  $결과 = $계획.items >> [table:each] {\n    [try] {\n      return [self:script]{op:\"run\",id:\"웹앱작업\",args:{op:\"run\",project:$계획.project,name:$it.name,timeout:$시한,fingerprint:$계획.fingerprint}}\n    } [catch] { return {name:$it.name,ok:false,status:\"error\",error:$error.message} }\n  }\n  $실패 = $결과 >> [table:filter]{where:($행)=>$행.ok == false}\n  return {project:$계획.project,ok:len($실패)==0,items:$결과,failed:len($실패)}\n}",
+    "alias": "웹앱검사하기",
+    "nodes": "self,table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "tags": "manual,webapp",
+    "topic": "웹앱·홈페이지",
+    "returns": "Record"
+  },
+  {
+    "intent": "웹앱을 수정한 뒤 프로젝트에 선언된 테스트·빌드를 실행하고 검사별 성공·실패와 로그 근거를 모은다.",
+    "ibl_code": "#!ibl edition=2\n[fn:웹앱검사하기]{프로젝트:\"outputs/web-projects/kospi-board\",검사:[\"test\",\"build\"],시한:120}",
+    "nodes": "self,table",
+    "category": "composition",
+    "source": "manual_seed",
+    "tags": "manual,webapp,call",
+    "topic": "웹앱·홈페이지"
+  }
+]

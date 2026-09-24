@@ -241,3 +241,10 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
+
+웹앱작업:
+  description: '웹앱작업준비·웹앱검사하기 관용구의 결정론 부품. args: op(inspect|plan|run), project(필수). inspect는 README·규칙 경로, package 설정·검사 목록·Git 상태를 읽는다. plan은 checks(기본 test/build) 이름의 선언된 argv를 확인한다. run은 name·fingerprint·timeout(기본120, 최대600)으로 한 검사를 실행하고 ok·종료코드·로그 근거를 반환한다. npm scripts 또는 프로젝트 webapp-checks.json을 사용하며 자체 AI 호출·설치·배포는 하지 않는다.'
+  file: webapp_work.py
+  interpreter: python
+  registered_at: '2026-09-24T14:07:05'
+  timeout: 660

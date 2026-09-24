@@ -83,6 +83,7 @@
       "test_ai_tips_report.py",
       "test_judgment_idioms.py",
       "tips_nest.py",
+      "webapp_work.py",
       "world_map_lookup.py",
       "나레이션생성.py",
       "나레이션원고추출.py",

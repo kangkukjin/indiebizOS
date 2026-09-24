@@ -1,0 +1,9 @@
+#!ibl edition=2
+[def:웹앱작업준비]($프로젝트) {
+  $준비 = [self:script]{op:"run",id:"웹앱작업",args:{op:"inspect",project:$프로젝트}}
+  $문서 = $준비.documents >> [table:each]{on_error:"collect"} {
+    $본문 = [self:read]{path:$it.path,limit:120}
+    return {path:$it.path,name:$it.name,content:$본문}
+  }
+  return {project:$준비.project,config:$준비.config,git:$준비.git,runtimes:$준비.runtimes,config_files:$준비.config_files,documents:$문서,checks_available:$준비.checks_available}
+}

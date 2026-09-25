@@ -1,0 +1,57 @@
+{
+  "focused": {
+    "passed": 279,
+    "warnings": 1,
+    "seconds": 8.55,
+    "log": "/tmp/imagination62-focused.log"
+  },
+  "new_regressions": {
+    "passed": 106,
+    "included_in": "focused"
+  },
+  "teaching_and_authoring": {
+    "passed": 86,
+    "seconds": 9.79,
+    "log": "/tmp/imagination62-teaching.log"
+  },
+  "live_before": {
+    "passed": 37,
+    "failed": 7,
+    "observations": 44
+  },
+  "live_after": {
+    "passed": 44,
+    "failed": 0,
+    "observations": 44
+  },
+  "singleton_live": {
+    "passed": 4,
+    "failed": 0
+  },
+  "full_backend": {
+    "status": "completed_with_corrected_test_rechecked",
+    "passed": 6356,
+    "failed": 1,
+    "skipped": 1,
+    "warnings": 116,
+    "seconds": 561.09,
+    "failed_test": "backend/test_ibl_composition_teaching.py::test_guide_is_reachable_from_actual_prompt_and_old_links",
+    "failure_reason": "Full run imported the old fixed example inventory before the new guide example was added; the test inventory was updated.",
+    "recheck": {
+      "passed": 1,
+      "failed": 0,
+      "seconds": 3.88,
+      "junit": "/tmp/imagination62-recheck.xml"
+    },
+    "remaining_failures": 0,
+    "log": "/tmp/imagination62-full.log",
+    "junit": "/tmp/imagination62-full.xml"
+  },
+  "checks": {
+    "body_bundle": "passed",
+    "ibl_generated": "passed",
+    "backend_layers": "passed",
+    "retired_contracts": "passed",
+    "diff_whitespace": "passed"
+  }
+}

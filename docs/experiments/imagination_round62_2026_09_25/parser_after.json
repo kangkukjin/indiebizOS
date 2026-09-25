@@ -1,0 +1,451 @@
+[
+  {
+    "request": {
+      "code": "#!ibl edition=2\nreturn [true]",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "response": {
+      "success": true,
+      "value": [
+        true
+      ],
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "list",
+          [
+            [
+              "scalar",
+              true
+            ]
+          ]
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "7353fcea9ac8c18ef3a4d622bdcd21fe7adb495fe8d0f6d598a201de18a0603b",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:24:28",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "list:23:29",
+          "invocation_id": 2,
+          "kind": "list",
+          "parents": [
+            1
+          ]
+        }
+      ],
+      "source_map": {
+        "literal:24:28": {
+          "source_hash": "c7943275ce72e9f62abde3576d1776bac5cd735fa581020b94124d224c5bdaf5",
+          "start": 24,
+          "end": 28,
+          "line": 2,
+          "column": 9
+        },
+        "list:23:29": {
+          "source_hash": "c7943275ce72e9f62abde3576d1776bac5cd735fa581020b94124d224c5bdaf5",
+          "start": 23,
+          "end": 29,
+          "line": 2,
+          "column": 8
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 4,
+        "rows": 0,
+        "elapsed_ms": 0
+      },
+      "resume": {
+        "run_id": "ba130c042d414a349959c1a2df158766"
+      },
+      "resumed": false,
+      "run_status": "completed"
+    },
+    "expected": [
+      true
+    ],
+    "passed": true
+  },
+  {
+    "request": {
+      "code": "#!ibl edition=2\nreturn [false]",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "response": {
+      "success": true,
+      "value": [
+        false
+      ],
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "list",
+          [
+            [
+              "scalar",
+              false
+            ]
+          ]
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "1e3ce0d67929bf4b691a1cb68e8fa33a09109f6cfea6b375a8f379533ed1714f",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:24:29",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "list:23:30",
+          "invocation_id": 2,
+          "kind": "list",
+          "parents": [
+            1
+          ]
+        }
+      ],
+      "source_map": {
+        "literal:24:29": {
+          "source_hash": "8de8d62503ac249bdb60771dabdb0bade711639ebbcec0a51bcbb1329f37c2b0",
+          "start": 24,
+          "end": 29,
+          "line": 2,
+          "column": 9
+        },
+        "list:23:30": {
+          "source_hash": "8de8d62503ac249bdb60771dabdb0bade711639ebbcec0a51bcbb1329f37c2b0",
+          "start": 23,
+          "end": 30,
+          "line": 2,
+          "column": 8
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 4,
+        "rows": 0,
+        "elapsed_ms": 0
+      },
+      "resume": {
+        "run_id": "adf4ecdb9191430bae4eeac97e5f3e4d"
+      },
+      "resumed": false,
+      "run_status": "completed"
+    },
+    "expected": [
+      false
+    ],
+    "passed": true
+  },
+  {
+    "request": {
+      "code": "#!ibl edition=2\nreturn [null]",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "response": {
+      "success": true,
+      "value": [
+        null
+      ],
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "list",
+          [
+            [
+              "scalar",
+              null
+            ]
+          ]
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "750b204b6c4d28926820d9fe7d483942e316ca3e352ff59613692a89acd1095a",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:24:28",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "list:23:29",
+          "invocation_id": 2,
+          "kind": "list",
+          "parents": [
+            1
+          ]
+        }
+      ],
+      "source_map": {
+        "literal:24:28": {
+          "source_hash": "ab34fd4f907ff08a1b9f8d2a840eb76653d987e927bd619853d2c432cf690600",
+          "start": 24,
+          "end": 28,
+          "line": 2,
+          "column": 9
+        },
+        "list:23:29": {
+          "source_hash": "ab34fd4f907ff08a1b9f8d2a840eb76653d987e927bd619853d2c432cf690600",
+          "start": 23,
+          "end": 29,
+          "line": 2,
+          "column": 8
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 4,
+        "rows": 0,
+        "elapsed_ms": 0
+      },
+      "resume": {
+        "run_id": "b1274ce78b77457ea245ee1bc7b15e58"
+      },
+      "resumed": false,
+      "run_status": "completed"
+    },
+    "expected": [
+      null
+    ],
+    "passed": true
+  },
+  {
+    "request": {
+      "code": "#!ibl edition=2\n$fs=[abs]; $f=$fs[0]; return $f(-7)",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "response": {
+      "success": true,
+      "value": 7,
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "scalar",
+          7
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "9fd69f11144b73e7f646652888133b0e5e3b5d5cc7e1269fe0558fd9ce85473e",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "builtin:21:24",
+          "invocation_id": 1,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "list:20:25",
+          "invocation_id": 2,
+          "kind": "list",
+          "parents": [
+            1
+          ]
+        },
+        {
+          "id": 3,
+          "node_id": "bind:16:25",
+          "invocation_id": 3,
+          "kind": "bind",
+          "parents": [
+            2
+          ]
+        },
+        {
+          "id": 4,
+          "node_id": "ref:30:33",
+          "invocation_id": 4,
+          "kind": "ref",
+          "parents": [
+            2
+          ]
+        },
+        {
+          "id": 5,
+          "node_id": "literal:34:35",
+          "invocation_id": 5,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 6,
+          "node_id": "index:30:36",
+          "invocation_id": 6,
+          "kind": "index",
+          "parents": [
+            4,
+            5
+          ]
+        },
+        {
+          "id": 7,
+          "node_id": "bind:27:36",
+          "invocation_id": 7,
+          "kind": "bind",
+          "parents": [
+            6
+          ]
+        },
+        {
+          "id": 8,
+          "node_id": "literal:49:50",
+          "invocation_id": 8,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 9,
+          "node_id": "unary:48:50",
+          "invocation_id": 9,
+          "kind": "unary",
+          "parents": [
+            8
+          ]
+        },
+        {
+          "id": 10,
+          "node_id": "ref:45:47",
+          "invocation_id": 10,
+          "kind": "ref",
+          "parents": [
+            6
+          ]
+        },
+        {
+          "id": 11,
+          "node_id": "pure_call:45:51",
+          "invocation_id": 11,
+          "kind": "pure_call",
+          "parents": [
+            9,
+            10
+          ]
+        }
+      ],
+      "source_map": {
+        "builtin:21:24": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 21,
+          "end": 24,
+          "line": 2,
+          "column": 6
+        },
+        "list:20:25": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 20,
+          "end": 25,
+          "line": 2,
+          "column": 5
+        },
+        "bind:16:25": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 16,
+          "end": 25,
+          "line": 2,
+          "column": 1
+        },
+        "ref:30:33": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 30,
+          "end": 33,
+          "line": 2,
+          "column": 15
+        },
+        "literal:34:35": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 34,
+          "end": 35,
+          "line": 2,
+          "column": 19
+        },
+        "index:30:36": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 30,
+          "end": 36,
+          "line": 2,
+          "column": 15
+        },
+        "bind:27:36": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 27,
+          "end": 36,
+          "line": 2,
+          "column": 12
+        },
+        "literal:49:50": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 49,
+          "end": 50,
+          "line": 2,
+          "column": 34
+        },
+        "unary:48:50": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 48,
+          "end": 50,
+          "line": 2,
+          "column": 33
+        },
+        "ref:45:47": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 45,
+          "end": 47,
+          "line": 2,
+          "column": 30
+        },
+        "pure_call:45:51": {
+          "source_hash": "e8d28e430dc4ecb5816cb295ca47fae00b2af4d418f86a43e7a6c59f6b6526b7",
+          "start": 45,
+          "end": 51,
+          "line": 2,
+          "column": 30
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 14,
+        "rows": 0,
+        "elapsed_ms": 0
+      },
+      "resume": {
+        "run_id": "10e487e00e884297ac2d373533210de5"
+      },
+      "resumed": false,
+      "run_status": "completed"
+    },
+    "expected": 7,
+    "passed": true
+  }
+]

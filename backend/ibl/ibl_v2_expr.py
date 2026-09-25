@@ -23,6 +23,20 @@ class Closure:
     env: dict
 
 
+@dataclass(frozen=True)
+class Builtin:
+    """An internal callable reference, never an ordinary JSON value."""
+    name: str
+
+
+def check_arity(name, count):
+    if name not in BUILTINS:
+        raise Fault("BUILTIN", f"알 수 없는 내장 함수: {name}")
+    lower, upper = BUILTINS[name]
+    if not lower <= count <= upper:
+        raise Fault("ARITY", f"{name}의 인자 수는 {lower}~{upper}개입니다.")
+
+
 def boolean(value):
     if type(value) is not bool:
         raise Fault("BOOL_REQUIRED", "조건에는 Bool이 필요합니다.")
@@ -76,9 +90,7 @@ def binary(op, left, right):
 
 
 def pure_call(name, args):
-    lower, upper = BUILTINS[name]
-    if not lower <= len(args) <= upper:
-        raise Fault("ARITY", f"{name}의 인자 수는 {lower}~{upper}개입니다.")
+    check_arity(name, len(args))
     first = args[0]
     if name == "len":
         if not isinstance(first, (str, list, dict)):

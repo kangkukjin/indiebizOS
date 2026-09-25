@@ -1,0 +1,94 @@
+[
+  {
+    "code": "return [true]",
+    "result": {
+      "success": false,
+      "diagnostic": {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "':'가 필요합니다: ]",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "9113e015173c49027bd39673eb81e6395d1ebfc0e32b62f85a7c2d0c454be7fe",
+          "start": 12,
+          "end": 13,
+          "line": 1,
+          "column": 13
+        }
+      }
+    }
+  },
+  {
+    "code": "return [false]",
+    "result": {
+      "success": false,
+      "diagnostic": {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "':'가 필요합니다: ]",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "fcb083bc3afb3ce73e1256933edaa6436bbbe9f736dc6b5bc55dfffaf6915520",
+          "start": 13,
+          "end": 14,
+          "line": 1,
+          "column": 14
+        }
+      }
+    }
+  },
+  {
+    "code": "return [null]",
+    "result": {
+      "success": false,
+      "diagnostic": {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "':'가 필요합니다: ]",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "1f673f2c78f89f9f2a5c8d2edf1731647833a590c1062a5c0340edc938ff083a",
+          "start": 12,
+          "end": 13,
+          "line": 1,
+          "column": 13
+        }
+      }
+    }
+  },
+  {
+    "code": "$fs=[abs]; $f=$fs[0]; return $f(-7)",
+    "result": {
+      "success": false,
+      "diagnostic": {
+        "code": "SYNTAX",
+        "kind": "compile",
+        "message": "':'가 필요합니다: ]",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [],
+        "details": {},
+        "source_span": {
+          "source_hash": "1d767de8daf1d94fc4b9e7cd1c415d1bac50946a104c1cdbd0f6f097ed2e82a7",
+          "start": 8,
+          "end": 9,
+          "line": 1,
+          "column": 9
+        }
+      }
+    }
+  }
+]

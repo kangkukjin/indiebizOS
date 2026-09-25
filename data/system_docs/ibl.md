@@ -62,6 +62,10 @@ return $결과
 `len`, `has`, `get`, `json`, `number`, `text`, `abs`, `round`, `min`, `max`, `sum`,
 `reduce(목록,초깃값,($누적,$행)=>식)`, `is_ok`, `unwrap`, `error_of`, `evidence`가 내장 함수다.
 
+내장 함수도 Callable 값으로 전달한다. `$f=abs; return $f(-2)`와 함수 인자·기본값·콜백 자리는
+같은 실행 계약을 사용한다. `[true]`, `[null]`, `[abs]`도 한 원소 목록이다.
+Callable은 실행 내부 값이며 일반 JSON이나 외부 결과 값으로 전송하지 않는다.
+
 ## 반환·분기·반복
 
 `return`은 가장 가까운 프로그램·함수·each 콜백·병렬 가지에서 즉시 반환한다.

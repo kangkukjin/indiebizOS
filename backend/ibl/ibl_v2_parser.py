@@ -185,7 +185,11 @@ class Parser:
         if text == "{":
             return self.record()
         if text == "[":
-            if self.tokens[self.i + 1].kind == "name" and self.tokens[self.i + 2].text in (":", "]"):
+            head, following = self.tokens[self.i + 1:self.i + 3]
+            # Only try is a standalone colon-free control head here.
+            # A singleton literal/builtin is still a list, just like [1].
+            if head.kind == "name" and (following.text == ":" or
+                                         (head.text == "try" and following.text == "]")):
                 return self.call_or_control()
             self.pop()
             return self.node("list", start, values=self.arguments("]"))

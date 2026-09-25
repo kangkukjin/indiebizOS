@@ -61,6 +61,7 @@ def test_pipeline_and_new_idiom_composition(current):
         {'id': 'b', 'score': 7, 'weighted': 14},
         {'id': 'c', 'score': 5, 'weighted': 10}]
     assert current(EXAMPLES['compose'].replace('최소:5', '최소:99'))['value'] == []
+    assert current(EXAMPLES['builtin_callable'])['value'] == [7, 3]
     assert not current.calls  # 규칙 계산에 숨은 외부 호출 없음
 
 
@@ -143,7 +144,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate'}
+    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

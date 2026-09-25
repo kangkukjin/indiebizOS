@@ -11,7 +11,8 @@ from concurrent.futures import wait, FIRST_COMPLETED
 from execution_workers import create_executor
 from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, pack, projection, span,
                        parallel_branches)
-from ibl_v2_expr import Closure, binary, boolean, number, scalar_text, pure_call
+from ibl_v2_expr import (Builtin, Closure, binary, boolean, number, scalar_text,
+                         pure_call, check_arity)
 from ibl_v2_types import guard
 
 
@@ -212,20 +213,10 @@ class Runtime:
             return Binding(binary(op, a.value, b.value), self.parents([a, b]))
         if kind == "lambda":
             return Binding(Closure(tuple(d["params"]), d["body"], env.copy()), self.parents(env.values()))
+        if kind == "builtin":
+            return Binding(Builtin(d["name"]))
         if kind == "pure_call":
             args = [sub(a) for a in d["args"]]
-            if d["fn"].kind == "builtin":
-                name = d["fn"].data["name"]
-                if name == "reduce":
-                    rows = guard(args[0].value, "List", "reduce 목록")
-                    acc = args[1]
-                    for row in rows:
-                        self.budget.tick(row=True)
-                        acc = self.callback(args[2].value, [acc, Binding(row, args[0].evidence)])
-                    return acc
-                if name == "evidence":
-                    return Binding(self.evidence(args[0].evidence), self.parents(args))
-                return Binding(pure_call(name, [a.value for a in args]), self.parents(args))
             fn = sub(d["fn"])
             return self.callback(fn.value, args)
         if kind == "format":
@@ -357,6 +348,19 @@ class Runtime:
         return Binding({**args.value, receiver: piped.value}, args.evidence | piped.evidence)
 
     def callback(self, fn, args):
+        if isinstance(fn, Builtin):
+            self.check()
+            check_arity(fn.name, len(args))
+            if fn.name == "reduce":
+                rows = guard(args[0].value, "List", "reduce 목록")
+                acc = args[1]
+                for row in rows:
+                    self.budget.tick(row=True)
+                    acc = self.callback(args[2].value, [acc, Binding(row, args[0].evidence)])
+                return acc
+            if fn.name == "evidence":
+                return Binding(self.evidence(args[0].evidence), self.parents(args))
+            return Binding(pure_call(fn.name, [a.value for a in args]), self.parents(args))
         if not isinstance(fn, Closure) or len(args) != len(fn.params):
             raise Fault("CALLABLE", "콜백 또는 인자 수가 잘못되었습니다.")
         env = {**fn.env, **dict(zip(fn.params, args))}
@@ -522,6 +526,8 @@ class Runtime:
         for name, value in args.value.items():
             guard(value, contract['params'].get(name, 'Unknown'), f'{key}.{name}')
         def request_value(value):
+            if isinstance(value, Builtin):
+                return {"builtin": value.name}
             if isinstance(value, Closure):
                 return {"closure_node": value.body.id, "params": list(value.params),
                         "captures": {k: request_value(b.value) for k, b in value.env.items()}}

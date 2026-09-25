@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from decimal import Decimal
 from ibl_v2_ir import Unit, ResultValue, Fault
-from ibl_v2_expr import Closure
+from ibl_v2_expr import Builtin, Closure
 
 
 @dataclass(frozen=True)
@@ -65,7 +65,7 @@ def infer(value):
         return Type("List", item=item)
     if isinstance(value, dict):
         return Type("Record", tuple((k, infer(v)) for k, v in value.items()), open=False)
-    if isinstance(value, Closure):
+    if isinstance(value, (Builtin, Closure)):
         return Type("Callable")
     if isinstance(value, ResultValue):
         return Type("Result", item=infer(value.value) if value.ok else UNKNOWN)

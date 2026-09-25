@@ -118,6 +118,8 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 검수에 보존한다. [2배 상상훈련 63회차](../../docs/experiments/imagination_round63_2026_09_25/report.md).
 수집한 함수의 재사용에서 불필요한 주변 변수 캡처를 제거하고, Result 안의 함수도
 내부 호출 지문에 반영한다. [2배 상상훈련 64회차](../../docs/experiments/imagination_round64_2026_09_25/report.md).
+희소 자료를 결합해도 열의 출처 이름이 행마다 바뀌지 않고, 표의 생략된 후행 셀 때문에
+오른쪽 값이 다른 열로 밀리지 않는다. [2배 상상훈련 65회차](../../docs/experiments/imagination_round65_2026_09_25/report.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

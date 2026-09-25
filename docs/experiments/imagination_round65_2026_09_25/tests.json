@@ -1,0 +1,25 @@
+{
+  "full_run": [
+    {
+      "tests": "6508",
+      "failures": "1",
+      "errors": "0",
+      "skipped": "1",
+      "time": "562.154"
+    }
+  ],
+  "failed_cases": [
+    {
+      "name": "test_live_ledger_matches_live_vocabulary",
+      "classname": "backend.test_example_review_gate_2026_09_18"
+    }
+  ],
+  "followup": "tests_review.txt; only table:join example-review ledger acknowledged, no runtime code changed after full run",
+  "new_regressions": 46,
+  "related": 302,
+  "api": {
+    "before": 37,
+    "after": 44,
+    "total": 44
+  }
+}

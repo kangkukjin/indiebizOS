@@ -1,0 +1,392 @@
+F...F...FFF...F...F...........F..FFFFFFF......                           [100%]
+=================================== FAILURES ===================================
+__ test_sparse_columns_keep_source_identity_for_every_join_mode[False-inner] ___
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+how = 'inner', reverse = False
+
+    @pytest.mark.parametrize('how', ['inner', 'left', 'right', 'full'])
+    @pytest.mark.parametrize('reverse', [False, True])
+    def test_sparse_columns_keep_source_identity_for_every_join_mode(ops, how, reverse):
+        left = [{'id': 'a', 'score': 10, 'score_2': 9}, {'id': 'b'}]
+        right = [{'id': 'a', 'score': 20}, {'id': 'b', 'score': 30}]
+        if reverse:
+            left.reverse()
+            right.reverse()
+        inputs = [{'items': left}, {'items': right}]
+        before = copy.deepcopy(inputs)
+        out = ops._op_join(inputs, {'on': 'id', 'how': how})
+        assert out['success'], out
+>       assert {row['id']: row['score_3'] for row in out['items']} == {'a': 20, 'b': 30}
+                           ^^^^^^^^^^^^^^
+E       KeyError: 'score_3'
+
+backend/test_imagination_round65_repairs.py:33: KeyError
+___ test_sparse_columns_keep_source_identity_for_every_join_mode[True-inner] ___
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+how = 'inner', reverse = True
+
+    @pytest.mark.parametrize('how', ['inner', 'left', 'right', 'full'])
+    @pytest.mark.parametrize('reverse', [False, True])
+    def test_sparse_columns_keep_source_identity_for_every_join_mode(ops, how, reverse):
+        left = [{'id': 'a', 'score': 10, 'score_2': 9}, {'id': 'b'}]
+        right = [{'id': 'a', 'score': 20}, {'id': 'b', 'score': 30}]
+        if reverse:
+            left.reverse()
+            right.reverse()
+        inputs = [{'items': left}, {'items': right}]
+        before = copy.deepcopy(inputs)
+        out = ops._op_join(inputs, {'on': 'id', 'how': how})
+        assert out['success'], out
+>       assert {row['id']: row['score_3'] for row in out['items']} == {'a': 20, 'b': 30}
+                           ^^^^^^^^^^^^^^
+E       KeyError: 'score_3'
+
+backend/test_imagination_round65_repairs.py:33: KeyError
+_ test_sparse_right_columns_get_one_mapping_even_with_suffix_collisions[False] _
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+reverse = False
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    def test_sparse_right_columns_get_one_mapping_even_with_suffix_collisions(ops, reverse):
+        left = [{'id': 'a', 'score': 10}, {'id': 'b', 'score': 11}]
+        right = [{'id': 'a', 'score': 20, 'score_2': 90}, {'id': 'b', 'score_2': 91}]
+        if reverse:
+            left.reverse()
+            right.reverse()
+        out = ops._op_join([left, right], {'on': 'id'})
+        # Mapping must not be recalculated per matched pair: each right source
+        # column occupies the same destination in all output rows.
+        first = next(row for row in out['items'] if row['id'] == 'a')
+        second = next(row for row in out['items'] if row['id'] == 'b')
+        destination = next(key for key, value in first.items() if value == 90)
+>       assert second[destination] == 91
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'score_2_2'
+
+backend/test_imagination_round65_repairs.py:51: KeyError
+_ test_sparse_right_columns_get_one_mapping_even_with_suffix_collisions[True] __
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+reverse = True
+
+    @pytest.mark.parametrize('reverse', [False, True])
+    def test_sparse_right_columns_get_one_mapping_even_with_suffix_collisions(ops, reverse):
+        left = [{'id': 'a', 'score': 10}, {'id': 'b', 'score': 11}]
+        right = [{'id': 'a', 'score': 20, 'score_2': 90}, {'id': 'b', 'score_2': 91}]
+        if reverse:
+            left.reverse()
+            right.reverse()
+        out = ops._op_join([left, right], {'on': 'id'})
+        # Mapping must not be recalculated per matched pair: each right source
+        # column occupies the same destination in all output rows.
+        first = next(row for row in out['items'] if row['id'] == 'a')
+        second = next(row for row in out['items'] if row['id'] == 'b')
+        destination = next(key for key, value in first.items() if value == 90)
+>       assert second[destination] == 91
+               ^^^^^^^^^^^^^^^^^^^
+E       KeyError: 'score_2_2'
+
+backend/test_imagination_round65_repairs.py:51: KeyError
+________ test_ragged_table_rows_keep_declared_cell_positions[1-1-inner] ________
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+how = 'inner', left_width = 1, right_width = 1
+
+    @pytest.mark.parametrize('how', ['inner', 'left', 'right', 'full'])
+    @pytest.mark.parametrize('left_width,right_width', [(1, 1), (1, 3), (2, 2), (3, 1), (3, 3)])
+    def test_ragged_table_rows_keep_declared_cell_positions(ops, how, left_width, right_width):
+        left_row = ['a', 'left', 'memo'][:left_width]
+        right_row = ['a', 20, 'note'][:right_width]
+        inputs = [
+            {'table': {'columns': ['id', 'name', 'memo'], 'rows': [left_row]}},
+            {'table': {'columns': ['id', 'score', 'note'], 'rows': [right_row]}},
+        ]
+        before = copy.deepcopy(inputs)
+        out = ops._op_join(inputs, {'on': 'id', 'how': how})
+        expected = (left_row + [None] * (3 - left_width)
+                    + right_row[1:] + [None] * (3 - right_width))
+>       assert out['table'] == {'columns': ['id', 'name', 'memo', 'score', 'note'],
+                                'rows': [expected]}, out
+E       AssertionError: {'table': {'columns': ['id', 'name', 'memo', 'score', 'note'], 'rows': [['a', None, None]]}, 'success': True}
+E       assert {'columns': [... None, None]]} == {'columns': [... None, None]]}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'rows': [['a', None, None]]} != {'rows': [['a', None, None, None, None]]}
+E         Use -v to get more diff
+
+backend/test_imagination_round65_repairs.py:68: AssertionError
+________ test_ragged_table_rows_keep_declared_cell_positions[1-3-inner] ________
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+how = 'inner', left_width = 1, right_width = 3
+
+    @pytest.mark.parametrize('how', ['inner', 'left', 'right', 'full'])
+    @pytest.mark.parametrize('left_width,right_width', [(1, 1), (1, 3), (2, 2), (3, 1), (3, 3)])
+    def test_ragged_table_rows_keep_declared_cell_positions(ops, how, left_width, right_width):
+        left_row = ['a', 'left', 'memo'][:left_width]
+        right_row = ['a', 20, 'note'][:right_width]
+        inputs = [
+            {'table': {'columns': ['id', 'name', 'memo'], 'rows': [left_row]}},
+            {'table': {'columns': ['id', 'score', 'note'], 'rows': [right_row]}},
+        ]
+        before = copy.deepcopy(inputs)
+        out = ops._op_join(inputs, {'on': 'id', 'how': how})
+        expected = (left_row + [None] * (3 - left_width)
+                    + right_row[1:] + [None] * (3 - right_width))
+>       assert out['table'] == {'columns': ['id', 'name', 'memo', 'score', 'note'],
+                                'rows': [expected]}, out
+E       AssertionError: {'table': {'columns': ['id', 'name', 'memo', 'score', 'note'], 'rows': [['a', 20, 'note']]}, 'success': True}
+E       assert {'columns': [... 20, 'note']]} == {'columns': [... 20, 'note']]}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'rows': [['a', 20, 'note']]} != {'rows': [['a', None, None, 20, 'note']]}
+E         Use -v to get more diff
+
+backend/test_imagination_round65_repairs.py:68: AssertionError
+________ test_ragged_table_rows_keep_declared_cell_positions[2-2-inner] ________
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+how = 'inner', left_width = 2, right_width = 2
+
+    @pytest.mark.parametrize('how', ['inner', 'left', 'right', 'full'])
+    @pytest.mark.parametrize('left_width,right_width', [(1, 1), (1, 3), (2, 2), (3, 1), (3, 3)])
+    def test_ragged_table_rows_keep_declared_cell_positions(ops, how, left_width, right_width):
+        left_row = ['a', 'left', 'memo'][:left_width]
+        right_row = ['a', 20, 'note'][:right_width]
+        inputs = [
+            {'table': {'columns': ['id', 'name', 'memo'], 'rows': [left_row]}},
+            {'table': {'columns': ['id', 'score', 'note'], 'rows': [right_row]}},
+        ]
+        before = copy.deepcopy(inputs)
+        out = ops._op_join(inputs, {'on': 'id', 'how': how})
+        expected = (left_row + [None] * (3 - left_width)
+                    + right_row[1:] + [None] * (3 - right_width))
+>       assert out['table'] == {'columns': ['id', 'name', 'memo', 'score', 'note'],
+                                'rows': [expected]}, out
+E       AssertionError: {'table': {'columns': ['id', 'name', 'memo', 'score', 'note'], 'rows': [['a', 'left', 20, None]]}, 'success': True}
+E       assert {'columns': [...', 20, None]]} == {'columns': [...e, 20, None]]}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'rows': [['a', 'left', 20, None]]} != {'rows': [['a', 'left', None, 20, None]]}
+E         Use -v to get more diff
+
+backend/test_imagination_round65_repairs.py:68: AssertionError
+______ test_inner_join_keeps_sparse_absence_and_many_to_many_multiplicity ______
+
+ops = <module 'round65_dataops' from '/Users/kangkukjin/Desktop/AI/indiebizOS/data/packages/installed/tools/data-ops/handler.py'>
+
+    def test_inner_join_keeps_sparse_absence_and_many_to_many_multiplicity(ops):
+        left = [{'id': 'a', 'score': 10}, {'id': 'a'}]
+        right = [{'id': 'a', 'score': 20}, {'id': 'a', 'note': 'late'}]
+        out = ops._op_join([left, right], {'on': 'id'})
+>       assert out['items'] == [
+            {'id': 'a', 'score': 10, 'score_2': 20},
+            {'id': 'a', 'score': 10, 'note': 'late'},
+            {'id': 'a', 'score_2': 20}, {'id': 'a', 'note': 'late'},
+        ]
+E       AssertionError: assert [{'id': 'a', ...ote': 'late'}] == [{'id': 'a', ...ote': 'late'}]
+E         
+E         At index 2 diff: {'id': 'a', 'score': 20} != {'id': 'a', 'score_2': 20}
+E         Use -v to get more diff
+
+backend/test_imagination_round65_repairs.py:77: AssertionError
+_____________________ test_real_vocabulary_compositions[0] _____________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10a2e7ec0>, authorize=<function load_registry.<locals>.authorize at 0x10ad840e0>, dependency=None), ...}
+case_number = 0
+
+    @pytest.mark.parametrize('case_number', [0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17])
+    def test_real_vocabulary_compositions(registry, case_number):
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        spec = importlib.util.spec_from_file_location(
+            'round65_probe', ROOT / 'docs/experiments/imagination_round65_2026_09_25/probe.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _, _, code, _, expected = module.CASES[case_number]
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+        out = Runtime(plan).run()
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': True, 'value': [{'id': 'a', 'score': 10, 'score_2': 20}, {'id': 'b', 'score': 30}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...], [...], [...]]], ['record', [[...], [...]]]]]}, 'edition': 2, ...}
+E       assert (True and [{'id': 'a', ... 'score': 30}] == [{'id': 'a', ...score_2': 30}]
+E         
+E         At index 1 diff: {'id': 'b', 'score': 30} != {'id': 'b', 'score_2': 30}
+E         Use -v to get more diff)
+
+backend/test_imagination_round65_repairs.py:110: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[도구 핸들러 로드] data_join <- data-ops
+_____________________ test_real_vocabulary_compositions[1] _____________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10a2e7ec0>, authorize=<function load_registry.<locals>.authorize at 0x10ad840e0>, dependency=None), ...}
+case_number = 1
+
+    @pytest.mark.parametrize('case_number', [0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17])
+    def test_real_vocabulary_compositions(registry, case_number):
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        spec = importlib.util.spec_from_file_location(
+            'round65_probe', ROOT / 'docs/experiments/imagination_round65_2026_09_25/probe.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _, _, code, _, expected = module.CASES[case_number]
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+        out = Runtime(plan).run()
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': False, 'error': '필드가 없습니다: score_2', 'diagnostic': {'code': 'MISSING_FIELD', 'kind': 'runtime', 'message': '필드가 없습니다: score_2', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round65_repairs.py:110: AssertionError
+_____________________ test_real_vocabulary_compositions[2] _____________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10a2e7ec0>, authorize=<function load_registry.<locals>.authorize at 0x10ad840e0>, dependency=None), ...}
+case_number = 2
+
+    @pytest.mark.parametrize('case_number', [0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17])
+    def test_real_vocabulary_compositions(registry, case_number):
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        spec = importlib.util.spec_from_file_location(
+            'round65_probe', ROOT / 'docs/experiments/imagination_round65_2026_09_25/probe.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _, _, code, _, expected = module.CASES[case_number]
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+        out = Runtime(plan).run()
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': True, 'value': [{'id': 'a', 'price': 100, 'price_2': 90, 'price_3': 110}, {'id': 'b', 'price': 200, 'price...', 'data': ['list', [['record', [[...], [...], [...], [...]]], ['record', [[...], [...], [...]]]]]}, 'edition': 2, ...}
+E       assert (True and [{'id': 'a', ...rice_2': 210}] == [{'id': 'a', ...rice_3': 210}]
+E         
+E         At index 1 diff: {'id': 'b', 'price': 200, 'price_2': 210} != {'id': 'b', 'price': 200, 'price_3': 210}
+E         Use -v to get more diff)
+
+backend/test_imagination_round65_repairs.py:110: AssertionError
+_____________________ test_real_vocabulary_compositions[3] _____________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10a2e7ec0>, authorize=<function load_registry.<locals>.authorize at 0x10ad840e0>, dependency=None), ...}
+case_number = 3
+
+    @pytest.mark.parametrize('case_number', [0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17])
+    def test_real_vocabulary_compositions(registry, case_number):
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        spec = importlib.util.spec_from_file_location(
+            'round65_probe', ROOT / 'docs/experiments/imagination_round65_2026_09_25/probe.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _, _, code, _, expected = module.CASES[case_number]
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+        out = Runtime(plan).run()
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': True, 'value': False, 'value_wire': {'protocol': 'ibl-value/1', 'data': ['scalar', False]}, 'edition': 2, ...}
+E       assert (True and False == True)
+
+backend/test_imagination_round65_repairs.py:110: AssertionError
+_____________________ test_real_vocabulary_compositions[4] _____________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10a2e7ec0>, authorize=<function load_registry.<locals>.authorize at 0x10ad840e0>, dependency=None), ...}
+case_number = 4
+
+    @pytest.mark.parametrize('case_number', [0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17])
+    def test_real_vocabulary_compositions(registry, case_number):
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        spec = importlib.util.spec_from_file_location(
+            'round65_probe', ROOT / 'docs/experiments/imagination_round65_2026_09_25/probe.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _, _, code, _, expected = module.CASES[case_number]
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+        out = Runtime(plan).run()
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': True, 'value': {'columns': ['id', 'memo', 'score'], 'rows': [['a', 20], ['b', '출석', 30]]}, 'value_wire': {...col': 'ibl-value/1', 'data': ['record', [['columns', ['list', [...]]], ['rows', ['list', [...]]]]]}, 'edition': 2, ...}
+E       assert (True and {'columns': [...', '출석', 30]]} == {'columns': [...', '출석', 30]]}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'rows': [['a', 20], ['b', '출석', 30]]} != {'rows': [['a', None, 20], ['b', '출석', 30]]}
+E         Use -v to get more diff)
+
+backend/test_imagination_round65_repairs.py:110: AssertionError
+_____________________ test_real_vocabulary_compositions[5] _____________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10a2e7ec0>, authorize=<function load_registry.<locals>.authorize at 0x10ad840e0>, dependency=None), ...}
+case_number = 5
+
+    @pytest.mark.parametrize('case_number', [0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17])
+    def test_real_vocabulary_compositions(registry, case_number):
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        spec = importlib.util.spec_from_file_location(
+            'round65_probe', ROOT / 'docs/experiments/imagination_round65_2026_09_25/probe.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _, _, code, _, expected = module.CASES[case_number]
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+        out = Runtime(plan).run()
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': True, 'value': [{'id': 'a', 'memo': '가족', '작성자': None}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...], [...], [...]]]]]}, 'edition': 2, ...}
+E       assert (True and [{'id': 'a', ... '작성자': None}] == [{'id': 'a', ... '작성자': '가족'}]
+E         
+E         At index 0 diff: {'id': 'a', 'memo': '가족', '작성자': None} != {'id': 'a', 'memo': None, '작성자': '가족'}
+E         Use -v to get more diff)
+
+backend/test_imagination_round65_repairs.py:110: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[도구 핸들러 재사용] data_rename <- data-ops (공유 모듈)
+_____________________ test_real_vocabulary_compositions[6] _____________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10a2e7ec0>, authorize=<function load_registry.<locals>.authorize at 0x10ad840e0>, dependency=None), ...}
+case_number = 6
+
+    @pytest.mark.parametrize('case_number', [0, 1, 2, 3, 4, 5, 6, 7, 13, 14, 15, 16, 17])
+    def test_real_vocabulary_compositions(registry, case_number):
+        from ibl_v2_compile import compile_program
+        from ibl_v2_runtime import Runtime
+        spec = importlib.util.spec_from_file_location(
+            'round65_probe', ROOT / 'docs/experiments/imagination_round65_2026_09_25/probe.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        _, _, code, _, expected = module.CASES[case_number]
+        plan = compile_program(code, registry)
+        assert not plan.issues, plan.report()
+        out = Runtime(plan).run()
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': True, 'value': {'columns': ['id', 'memo', 'title'], 'rows': [['a', None]]}, 'value_wire': {'protocol': 'ibl-value/1', 'data': ['record', [['columns', ['list', [...]]], ['rows', ['list', [...]]]]]}, 'edition': 2, ...}
+E       assert (True and {'columns': [...[['a', None]]} == {'columns': [... None, None]]}
+E         
+E         Omitting 1 identical items, use -vv to show
+E         Differing items:
+E         {'rows': [['a', None]]} != {'rows': [['a', None, None]]}
+E         Use -v to get more diff)
+
+backend/test_imagination_round65_repairs.py:110: AssertionError
+=========================== short test summary info ============================
+FAILED backend/test_imagination_round65_repairs.py::test_sparse_columns_keep_source_identity_for_every_join_mode[False-inner]
+FAILED backend/test_imagination_round65_repairs.py::test_sparse_columns_keep_source_identity_for_every_join_mode[True-inner]
+FAILED backend/test_imagination_round65_repairs.py::test_sparse_right_columns_get_one_mapping_even_with_suffix_collisions[False]
+FAILED backend/test_imagination_round65_repairs.py::test_sparse_right_columns_get_one_mapping_even_with_suffix_collisions[True]
+FAILED backend/test_imagination_round65_repairs.py::test_ragged_table_rows_keep_declared_cell_positions[1-1-inner]
+FAILED backend/test_imagination_round65_repairs.py::test_ragged_table_rows_keep_declared_cell_positions[1-3-inner]
+FAILED backend/test_imagination_round65_repairs.py::test_ragged_table_rows_keep_declared_cell_positions[2-2-inner]
+FAILED backend/test_imagination_round65_repairs.py::test_inner_join_keeps_sparse_absence_and_many_to_many_multiplicity
+FAILED backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[0]
+FAILED backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[1]
+FAILED backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[2]
+FAILED backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[3]
+FAILED backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[4]
+FAILED backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[5]
+FAILED backend/test_imagination_round65_repairs.py::test_real_vocabulary_compositions[6]
+15 failed, 31 passed in 5.73s

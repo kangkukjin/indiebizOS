@@ -1,0 +1,216 @@
+==============================================================
+ 언어 조합성 4지표
+==============================================================
+ ★판정 근거는 [행동] 이다 — [교재] 는 맥락. 시드는 교재만 올리고
+   행동은 못 건드린다(그래서 시딩으로 못 속이는 지표다).
+ ★단 [행동]=증류는 해마 점수<0.7 인 **새 실행만** 담는다 — 단발 조회는 대개
+   고점수라 빠지고 새 조합은 남는다. 조합률은 상한이지 추정치가 아니다.
+   (편향 없는 모집단=trajectory_event.ibl.started — 2026-08-31 부터 pipes/nested
+    까지 적힌다. 이 스크립트는 아직 그 자리를 안 읽는다 → 아래는 여전히 상한.)
+   출처: balanced_20260516 1,658 · manual_seed 1,287 · synthetic 355 · distilled 51 · boost_limbs_round2 49
+
+──────────────────────────────────────────────────────────────
+ [행동 — 새 실행만 (증류)  ※조합률 과대추정]
+──────────────────────────────────────────────────────────────
+문장                   51
+조합 문장              28 (54.9%)   [파이프 28 · 고차 0]
+
+① 파이프 길이 중앙값   3.0   [평균 3.18]
+② 미조합 액션          140 / 168
+     ↳ 훈련 도달 가능 139  (프롬프트 비노출 1건 제외: engines:newspaper)
+     self     42
+     sense    37
+     engines  18
+     others   17
+     limbs    14
+     table    12
+③ 문형 수 (파이프 안)  4
+     조회      26    [단발 3]
+     축적       8    [단발 4]
+     적용       6    [단발 0]
+     조건       2    [단발 0]
+     시간       0          [단발 1]  ← 조합된 적 없음
+     발신       0          [단발 1]  ← 조합된 적 없음
+④ 파트너 다양성 중앙값 2.0   [최대 9 · 파트너 1개뿐 10개]
+
+문법 사용률
+     ;        25 (49.0%)
+     $변수      10 (19.6%)
+     &        8 (15.7%)
+     if/case  2 (3.9%)
+
+──────────────────────────────────────────────────────────────
+ [교재 — 전 코퍼스]
+──────────────────────────────────────────────────────────────
+문장                   3,701
+조합 문장              786 (21.2%)   [파이프 701 · 고차 85]
+
+① 파이프 길이 중앙값   2   [평균 2.62]
+② 미조합 액션          35 / 168
+     ↳ 훈련 도달 가능 34  (프롬프트 비노출 1건 제외: engines:newspaper)
+     engines  14
+     self     11
+     others   5
+     limbs    4
+     table    1
+③ 문형 수 (파이프 안)  6
+     조회     656    [단발 1,008]
+     발신     147    [단발 869]
+     축적     131    [단발 336]
+     적용      94    [단발 14]
+     시간      64    [단발 101]
+     조건      31    [단발 26]
+④ 파트너 다양성 중앙값 3.0   [최대 76 · 파트너 1개뿐 35개]
+
+문법 사용률
+     $변수      187 (5.1%)
+     &        133 (3.6%)
+     ;        88 (2.4%)
+     if/case  57 (1.5%)
+     ??       15 (0.4%)
+     @몸       8 (0.2%)
+==============================================================
+
+미조합 액션 전체 (행동 기준 — 실사용 파이프에 한 번도 안 나온 것):
+   engines:arch_create
+   engines:arch_elevation
+   engines:arch_export
+   engines:arch_floor_plan
+   engines:arch_get
+   engines:arch_list
+   engines:arch_modify
+   engines:arch_report
+   engines:arch_section
+   engines:arch_view_3d
+   engines:image_read
+   engines:remotion
+   engines:render   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   engines:tts
+   engines:web   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   engines:web_component   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   engines:web_site   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:android   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:browser   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:cctv
+   limbs:cloudflare_api   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:guestpc
+   limbs:launch   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:music   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:open_window
+   limbs:os_open   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:phone
+   limbs:radio   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:radio_favorite   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:screen   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   limbs:show_map   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:agents   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:ask
+   others:auto_response
+   others:board   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:bulletin   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:channel_read   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:channel_send   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:delegate   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:family_news   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:feed   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:follow
+   others:messages   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:neighbor   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:nostr
+   others:portal   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   others:publish
+   others:showcase   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:ask   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:blog   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:body   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:business   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:cctv   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:copy   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:deck
+   self:delete   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:document   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:download   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:fill   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:finance   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:folder_note
+   self:forage
+   self:goal
+   self:install_lib
+   self:lecture   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:ledger   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:limb   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:list   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:manage_events   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:material   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:mkdir   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:music   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:notebook   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:notify_user   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:output
+   self:package   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:phone_sync
+   self:photo   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:recent_chats   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:record
+   self:schedule   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:sheet   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:slide
+   self:storage   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:struct   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:switch
+   self:time
+   self:trigger   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:webapp   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   self:workflow   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:book   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:cctv   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:classic   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:commercial   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:company   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:contest   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:crypto   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:devdocs   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:entity   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:exhibit   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:feed   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:freelance   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:here   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:host   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:http   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:kosis   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:legal   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:listen   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:navigate_route   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:performance   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:phone   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:place   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:radio   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:realty   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:researcher   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:restaurant   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:reverse_geocode   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:search_shopping   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:see   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:self_check   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:startup   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:stay   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:stock   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:used   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:weather   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:world   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   sense:world_bank   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:chart   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:compute   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:document   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:flatten
+   table:join   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:judge   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:merge   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:reduce   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:rename   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:since   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:spreadsheet   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+   table:structure   (교재에는 조합 있음 = 가르쳤으나 안 씀)
+
+  ※ 메뉴에서 제외 1건 — 프롬프트 카탈로그 비노출(prompt_hidden: 앱 계기 전용). 훈련자가 볼 수 없어 상상 대상이 아니다:
+      engines:newspaper

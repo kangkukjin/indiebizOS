@@ -107,7 +107,8 @@ def join(prev, params, h):
 def inner_join(prev, params, h):
     """두 table을 키 열로 inner join. params.on(양쪽 공통 키 열명 또는 복합키 목록, 필수).
 
-    결과 열 = 좌측 전체 + 우측(키 제외). 서로 다른 소스를 한 키로 묶어 분석.
+    결과 열 = 좌측 전체 + 우측(키 제외). 열 충돌 이름은 입력 전체에서 한 번 정한다.
+    희소 items의 없는 필드는 그대로 없고, 표의 생략된 후행 셀은 null로 자리를 채운다.
     on 이 목록이면 복합키 조인(2026-09-07 언어 개정) — 키 일부가 빈 행은 조인 밖.
     예: [sense:stock]{op:history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}.
     """
@@ -158,6 +159,12 @@ def inner_join(prev, params, h):
                 return {"success": False,
                         "error": f"join: 키 '{missing_fields}' 이(가) {_side}측 items 의 "
                                  f"어느 행에도 없습니다. 실제 필드: {list(_dicts[0].keys())}"}
+        # A destination column identifies its source across the entire result,
+        # not just one matched pair. Sparse rows must not change that identity.
+        left_columns = list(dict.fromkeys(k for row in ra for k in row))
+        right_columns = list(dict.fromkeys(k for row in rb for k in row if k not in keys))
+        destinations = dict(zip(
+            right_columns, h['_suffix_collisions'](left_columns, right_columns)))
         index = {}
         for r in rb:
             key = h['_join_keys'](r, keys)
@@ -168,13 +175,11 @@ def inner_join(prev, params, h):
             key = h['_join_keys'](l, keys)
             if key is None:
                 continue
-            lkeys = list(l.keys())
             for r in index.get(key, []):
-                add = [k for k in r.keys() if k not in keys]
-                disp = h['_suffix_collisions'](lkeys, add)  # 동명 필드 _2 (침묵 오선택 방지)
                 merged = dict(l)
-                for orig, name in zip(add, disp):
-                    merged[name] = r[orig]
+                for orig, name in destinations.items():
+                    if orig in r:
+                        merged[name] = r[orig]
                 out.append(merged)
         return h['_attach_branch_warning'](h['_emit_items'](h['_carry_flags']([a, b], with_total=False), out), [a, b])
     ta, _ = h['_get_table'](a)
@@ -206,7 +211,8 @@ def inner_join(prev, params, h):
             continue
         for rb_row in index.get(key, []):
             rbd = {cb[i]: (rb_row[i] if i < len(rb_row) else None) for i in range(len(cb))}
-            out_rows.append(list(r) + [rbd.get(c) for c in extra])
+            left_cells = [r[i] if i < len(r) else None for i in range(len(ca))]
+            out_rows.append(left_cells + [rbd.get(c) for c in extra])
     return h['_attach_branch_warning'](
         h['_emit_table']({**h['_carry_flags']([a, b], with_total=False), "table": {}},
                     {"columns": out_cols, "rows": out_rows}), [a, b])

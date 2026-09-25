@@ -2361,7 +2361,7 @@
   },
   "table:reduce": {
    "fields": {
-    "description": "51c314dec200",
+    "description": "41381afc435d",
     "target_description": "193cdf9583e0",
     "implementation": "5abbfb676de2",
     "returns": "5450ffb2cf8a",
@@ -2369,7 +2369,7 @@
     "runs_on": "519dd933e8a2",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-25",
    "examples": 12
   },
   "table:rename": {

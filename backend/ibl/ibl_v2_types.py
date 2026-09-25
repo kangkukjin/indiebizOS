@@ -11,6 +11,9 @@ class Type:
     fields: tuple = ()
     item: object = None
     open: bool = True
+    # Optional refinement of an existing List, not a new value/wire type.
+    # None means unknown length/order; () is a known empty list.
+    positions: tuple | None = None
 
     def __str__(self):
         if self.kind == "Union":
@@ -37,14 +40,34 @@ def join(left, right):
     if left == right:
         return left
     if left.kind == right.kind == "List":
-        return Type("List", item=join(left.item, right.item))
+        positions = None
+        if (left.positions is not None and right.positions is not None
+                and len(left.positions) == len(right.positions)):
+            positions = tuple(join(a, b) for a, b in zip(left.positions, right.positions))
+        return Type("List", item=join(left.item, right.item), positions=positions)
     if left.kind == right.kind == "Record":
         a, b = dict(left.fields), dict(right.fields)
         return Type("Record", tuple((k, join(a[k], b[k])) for k in sorted(a.keys() & b.keys())), open=left.open or right.open)
     if "Unknown" in (left.kind, right.kind):
         return UNKNOWN
     members = set(alternatives(left)) | set(alternatives(right))
-    return Type("Union", item=tuple(sorted(members, key=str)))
+    return Type("Union", item=tuple(sorted(members, key=lambda t: (str(t), repr(t)))))
+
+
+def ordered_list(types):
+    """Keep the ordered slots as well as the common element upper bound."""
+    positions = tuple(types)
+    item = positions[0] if positions else UNKNOWN
+    for typ in positions[1:]:
+        item = join(item, typ)
+    return Type("List", item=item, positions=positions)
+
+
+def concat_lists(left, right):
+    """Concatenation appends positions; control-flow join combines alternatives."""
+    if left.positions is not None and right.positions is not None:
+        return ordered_list(left.positions + right.positions)
+    return Type("List", item=join(left.item, right.item))
 
 
 def infer(value):
@@ -59,10 +82,7 @@ def infer(value):
     if isinstance(value, str):
         return TEXT
     if isinstance(value, list):
-        item = infer(value[0]) if value else UNKNOWN
-        for v in value[1:]:
-            item = join(item, infer(v))
-        return Type("List", item=item)
+        return ordered_list(infer(v) for v in value)
     if isinstance(value, dict):
         return Type("Record", tuple((k, infer(v)) for k, v in value.items()), open=False)
     if isinstance(value, (Builtin, Closure)):

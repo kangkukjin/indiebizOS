@@ -13,7 +13,8 @@ from ibl_v2_expr import BUILTINS
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
                              assigned_names, location, access_type)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
-                          infer, join, declared, compatible, alternatives)
+                          infer, join, declared, compatible, alternatives,
+                          ordered_list, concat_lists)
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
@@ -227,11 +228,7 @@ class Compiler:
             return UNIT_T
         if kind == "list":
             self.pure(node)
-            types = [sub(v) for v in d["values"]]
-            item = types[0] if types else UNKNOWN
-            for t in types[1:]:
-                item = join(item, t)
-            return Type("List", item=item)
+            return ordered_list(sub(v) for v in d["values"])
         if kind == "record":
             self.pure(node)
             return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()), open=False)
@@ -254,7 +251,7 @@ class Compiler:
             if op in ("==", "!=", "<", ">", "<=", ">=", "in"):
                 return BOOL
             if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
-                return join(*values)
+                return concat_lists(*values) if values[0].kind == "List" else TEXT
             if op == "+" and any(t.kind in ("Unknown", "Union") for t in values):
                 # An unknown accumulator/callback operand may concatenate.
                 # Do not select numeric addition until both shapes are known.
@@ -321,10 +318,7 @@ class Compiler:
                 writes.update(branch_writes)
             if conflict:
                 self.issue(node, "PARALLEL_WRITE_CONFLICT", f"병렬 가지가 같은 선언 자원에 씁니다: {sorted(conflict)}")
-            item = types[0]
-            for typ in types[1:]:
-                item = join(item, typ)
-            return Type("List", item=item)
+            return ordered_list(types)
         if kind == "fallback":
             return join(sub(d["left"], env.copy()), sub(d["right"], env.copy()))
         if kind == "call":

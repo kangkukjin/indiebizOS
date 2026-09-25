@@ -8750,7 +8750,7 @@ nodes:
           emits: scalar
         runs_on: anywhere
         scope: workspace
-        description: 통화 변환자(고차) — items 를 순회하며 한 줄 식으로 누적(fold). init 초기값, step 식(acc=누적값·i=행 번호·열 이름·col("열")), as 결과 이름. 합·최대·문자열 이어붙이기 같은 한 줄 누적만 — 그 이상은 [self:script].
+        description: 통화 변환자(고차) — items 객체 행을 순회하며 한 줄 식으로 누적(fold). 객체 아닌 행은 위치와 함께 거절하고 빈 목록은 init을 보존한다. init 초기값, step 식(acc=누적값·i=행 번호·열 이름·col("열")), as 결과 이름. 합·최대·문자열 이어붙이기 같은 한 줄 누적만 — 그 이상은 [self:script].
         target_description: 'step(한 줄 식, 필수 — acc 가 누적값, 열 이름을 그대로 쓴다: "acc + 보증금", "max(acc, price)", "acc + title + \", \"") · init(초기값, 기본 0 — 문자열 누적이면 "") · as(결과 열 이름, 기본 value) · items(앞 통화 없이 직접 줄 때). 결과: value(스칼라)·message·items 1행 [{as: value}] — $변수로 받아 조건에 쓴다. 예: [sense:realty]{…} >> [table:reduce]{init: 0, step: "acc + 보증금", as: "총보증금"}'
         group: transform
         router: system

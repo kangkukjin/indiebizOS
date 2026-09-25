@@ -1,0 +1,32 @@
+[
+  {
+    "tests": 326,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suite": "focused",
+    "seconds": 9.353,
+    "junit": "/tmp/imagination63-focused.xml",
+    "passed": 326
+  },
+  {
+    "tests": 190,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "suite": "final-focused",
+    "seconds": 27.884,
+    "junit": "/tmp/imagination63-final-focused.xml",
+    "passed": 190
+  },
+  {
+    "tests": 6433,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "suite": "full",
+    "seconds": 565.403,
+    "junit": "/tmp/imagination63-full.xml",
+    "passed": 6432
+  }
+]

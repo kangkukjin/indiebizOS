@@ -114,6 +114,8 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 진행된 변수 상태를 읽도록 보강했다. [2배 상상훈련 61회차](../../docs/experiments/imagination_round61_2026_09_25/report.md).
 내장 함수의 값 전달을 공통 호출 경로로 연결하고, 한 원소 Bool·Null·함수 목록의 명령 오인을
 고쳤다. [2배 상상훈련 62회차](../../docs/experiments/imagination_round62_2026_09_25/report.md).
+잘못된 행을 합산·결합에서 조용히 버리지 않으며, 고정 목록·병렬 결과의 위치별 타입을
+검수에 보존한다. [2배 상상훈련 63회차](../../docs/experiments/imagination_round63_2026_09_25/report.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

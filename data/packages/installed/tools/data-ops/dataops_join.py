@@ -2,6 +2,17 @@
 import copy
 
 
+def _invalid_rows(left, right):
+    """Validate both consumed sources before matching can hide malformed rows."""
+    invalid = {side: [i for i, row in enumerate(rows) if not isinstance(row, dict)]
+               for side, rows in (("left", left), ("right", right))}
+    invalid = {side: indices for side, indices in invalid.items() if indices}
+    if invalid:
+        return {'success': False, 'error': f'join: 입력은 객체 행이어야 합니다(0 기반 행 위치: {invalid}). 행을 제외한 결합을 만들지 않았습니다.',
+                'invalid_row_indices': invalid}
+    return None
+
+
 def join(prev, params, h):
     how = params.get('how', 'inner')
     if not isinstance(how, str) or how not in ('inner', 'left', 'right', 'full', 'semi', 'anti'):
@@ -38,8 +49,9 @@ def join(prev, params, h):
         ca, cb = list(ta['columns']), list(tb['columns'])
     elif ra is None or rb is None:
         return {'success': False, 'error': 'join: 두 입력이 같은 통화여야 합니다.'}
-    if any(not isinstance(r, dict) for r in ra + rb):
-        return {'success': False, 'error': 'join: 입력은 객체 행이어야 합니다.'}
+    row_error = _invalid_rows(ra, rb)
+    if row_error:
+        return row_error
     ca = ca if ca is not None else list(dict.fromkeys(k for r in ra for k in r))
     cb = cb if cb is not None else list(dict.fromkeys(k for r in rb for k in r))
     for side, rows, cols in [('좌', ra, ca), ('우', rb, cb)]:
@@ -129,12 +141,15 @@ def inner_join(prev, params, h):
     if ra is not None or rb is not None:
         if ra is None or rb is None:
             return {"success": False, "error": "join: 두 입력이 같은 통화여야 합니다(둘 다 table 또는 둘 다 items)."}
+        row_error = _invalid_rows(ra, rb)
+        if row_error:
+            return row_error
         # 두 입력이 items 통화면 items inner join (table 분기와 대칭).
         # items 행도 dict 라 키 필드로 조인 가능 — merge/union 이 items 를 받는 것과 일관.
         # ★키 실존은 표 경로처럼 **먼저** 본다(2026-09-07): 없는 키는 전 행에서 키 없음이 되어
         #   0행이 success 로 나갔다 — 복합키에서는 오타 하나가 조용히 빈 표가 된다(⑧′ 부류).
         for _side, _rows in (("좌", ra), ("우", rb)):
-            _dicts = [r for r in _rows if isinstance(r, dict)]
+            _dicts = _rows
             if not _dicts:
                 continue
             _missing = [k for k in keys if not any(k in r for r in _dicts)]
@@ -145,15 +160,11 @@ def inner_join(prev, params, h):
                                  f"어느 행에도 없습니다. 실제 필드: {list(_dicts[0].keys())}"}
         index = {}
         for r in rb:
-            if not isinstance(r, dict):
-                continue
             key = h['_join_keys'](r, keys)
             if key is not None:
                 index.setdefault(key, []).append(r)
         out = []
         for l in ra:
-            if not isinstance(l, dict):
-                continue
             key = h['_join_keys'](l, keys)
             if key is None:
                 continue

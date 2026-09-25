@@ -769,6 +769,7 @@ def _execute_assign(tool_input: dict, project_path: str, agent_id: str) -> Any:
 def _execute_table_reduce(params: dict, project_path: str, agent_id: str = None) -> Any:
     """[table:reduce]{init, step, as} — 진짜 fold, 단 **식 한 줄**만(설계 §2.3 판정).
     step 식은 compute 와 같은 화이트리스트(common.safe_expr): 열 이름·acc·i·col("열")·산술·비교·조건식.
+    객체 아닌 행은 누적 전에 위치와 함께 거절한다. 빈 목록은 init을 보존한다.
     그 이상(dict 상태·분기)은 명시 거절 + [self:script] 안내. 결과 스칼라는 value/message 와 items 1행으로."""
     from common.safe_expr import compile_expr, eval_expr
     expr = params.get("step") or params.get("expr")
@@ -782,7 +783,12 @@ def _execute_table_reduce(params: dict, project_path: str, agent_id: str = None)
     if rows is None:
         shape = currency_shape_note(env)
         return {"success": False, "items": [], "error": f"reduce: 입력에서 items 통화를 찾지 못했습니다. 받은 봉투: {shape} — 파이프(>>) 뒤에 놓거나, 단독으로 쓰려면 items 에 목록(또는 $변수)을 주세요."}
-    dict_rows = [r for r in rows if isinstance(r, dict)]
+    invalid = [i for i, row in enumerate(rows) if not isinstance(row, dict)]
+    if invalid:
+        return {"success": False, "items": [],
+                "error": f"reduce: 입력은 객체 행이어야 합니다(0 기반 행 위치: {invalid}). 행을 제외한 합계를 만들지 않았습니다.",
+                "invalid_row_indices": invalid, "rows_done": 0}
+    dict_rows = rows
     need = [n for n in names if n not in ("acc", "i")] + cols
     missing = [k for k in need if dict_rows and not any(k in r for r in dict_rows)]
     if missing:

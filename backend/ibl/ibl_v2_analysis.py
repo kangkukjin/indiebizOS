@@ -114,6 +114,9 @@ def access_type(compiler, node, base, key, key_type=None):
         return UNKNOWN
     if base.kind in ('List', 'Text') and node.kind == 'index':
         compiler.need(node, key_type, NUMBER)
+        if (base.kind == 'List' and base.positions is not None
+                and type(key) is int and 0 <= key < len(base.positions)):
+            return base.positions[key]
         return base.item if base.kind == 'List' else TEXT
     if base.kind == 'Unknown':
         compiler.need(node, UNKNOWN, Type('Record') if node.kind == 'field' else UNKNOWN)

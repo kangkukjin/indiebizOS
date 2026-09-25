@@ -1,0 +1,4 @@
+$기존AX = [self:ledger]{op: "select", path: "outputs/ai_tips_reports/db/tips.json", fields: ["tip", "date"], where: {topic: "AX"}}
+$선정 = $심사 >> [table:filter]{where: "selected == true"}
+$후보팁 = $선정 >> [table:each]{do: "[sense:video]{op: 'transcript', video_id: '$it.video_id'} >> [self:struct]{schema: 'tip(실행형 팁 제목·동사로 끝남), timestamp(MM:SS 추정)', grounded: true, criteria: '각 행에 tip 과 timestamp 가 있고 3~20행이다'}", keep: ["title", "uploader", "url", "video_id", "view_count", "duration", "upload_date", "reason"], limit: 4, on_error: "continue"}
+$후보팁 >> [table:select]{columns: ["video_id", "title", "tip", "timestamp"]}

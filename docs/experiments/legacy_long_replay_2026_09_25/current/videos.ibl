@@ -1,0 +1,10 @@
+#!ibl edition=2
+$원장 = [self:ledger]{path: "outputs/ai_tips_reports/_covered_videos.json", op: "select", target: "covered", fields: ["id", "verdict"]}
+$검색 = [sense:search_youtube]{query: "AI로 공부", limit: 12} & [sense:search_youtube]{query: "study with AI", limit: 12} & [sense:search_youtube]{query: "AI tutor tips", limit: 12} & [sense:search_youtube]{query: "NotebookLM study tips", limit: 12} & [sense:search_youtube]{query: "AI studying overrated OR limitations OR trap", limit: 12} >> [table:union]{} >> [table:dedup]{by: "video_id"}
+
+$기존ID=$원장.items >> [table:each]{return $it.id}
+$대상=$검색.items >> [table:filter]{where:($r)=>not ($r.video_id in $기존ID)}
+$처리=$대상 >> [table:take]{n:70} >> [table:each]{parallel:4,on_error:"collect"}{[sense:video]{op:"info",video_id:$it.video_id}}
+$성공=$처리 >> [table:each]{mode:"flat_map"}{ [if:is_ok($it)]{ $v=unwrap($it); return $v.items } [else]{return []} }
+$신선=$성공 >> [table:filter]{where:($r)=>$r.upload_date>="2026-03-11"} >> [table:sort]{by:"view_count",descending:true} >> [table:select]{columns:["video_id","title","uploader","view_count","duration","upload_date","url"]}
+$신선 >> [table:take]{n:40}

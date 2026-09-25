@@ -1,0 +1,43 @@
+{
+  "full_backend": {
+    "command": ".venv/bin/python3 -m pytest backend/ -q",
+    "exit_code": 1,
+    "passed_progress_marks": 6198,
+    "failed": 1,
+    "failure": "backend/test_single_runner.py::test_r2_direct_run_delegates_to_pytest",
+    "cause": "New test file lacked direct-execution pytest entrypoint",
+    "log": "/tmp/ibl-historical-pytest.log",
+    "log_sha256": "530fcb3d4b48f7691f22472c12a2387e807cc49545f1eb732c8ce43b9b8799ea"
+  },
+  "final_targeted": {
+    "command": ".venv/bin/python3 -m pytest backend/test_single_runner.py backend/test_ibl_historical_replay.py -o addopts='' -q",
+    "exit_code": 0,
+    "passed": 66,
+    "seconds": 9.3,
+    "log": "/tmp/ibl-historical-final-targeted.log"
+  },
+  "followup_scope": "Added only __main__ pytest delegation after the full run; no production changes after full regression. Rechecked runner guards and all 62 new regressions; did not repeat the entire suite.",
+  "corpus_replay": {
+    "baseline_runtime_commit": "968aa186",
+    "before": {
+      "passed": 32,
+      "total": 36
+    },
+    "after": {
+      "passed": 36,
+      "total": 36
+    }
+  },
+  "live": {
+    "rotation": "passed: 12 rows",
+    "forex_http": "passed: 5 year / 2 period / 2 quote / 4 news rows",
+    "failure_boundaries": "3/3 passed"
+  },
+  "checks": {
+    "ibl_build": "passed",
+    "android_body_manifest": "regenerated; no tracked delta",
+    "backend_layers": "passed",
+    "retired_contracts": "passed",
+    "git_diff_check": "passed"
+  }
+}

@@ -1,0 +1,12 @@
+#!ibl edition=2
+$sg = [sense:commercial]{lat: 37.1328, lng: 128.2018, radius: 1000}
+$ss = [sense:commercial]{lat: 37.1327, lng: 128.1910, radius: 1000}
+$g2 = $sg.items >> [table:groupby]{by: "category", agg: {"수": ["count", "name"]}}
+$상권1=$g2.items >> [table:sort]{by: "수", descending:true} >> [table:take]{n: 8}
+$g3 = $ss.items >> [table:groupby]{by: "category", agg: {"수": ["count", "name"]}}
+$상권2=$g3.items >> [table:sort]{by: "수", descending:true} >> [table:take]{n: 8}
+$p4 = [sense:place]{op: "search", query: "제천 종합병원", limit: 5}
+$병원=$p4.items >> [table:select]{columns: ["name", "category", "address"]}
+$p5 = [sense:place]{op: "search", query: "제천 도서관", limit: 6}
+$도서관=$p5.items >> [table:select]{columns: ["name", "category", "address"]}
+return {shops:[$상권1,$상권2],hospitals:$병원,libraries:$도서관}

@@ -1,0 +1,6 @@
+$전세거래 = $molit_apt >> [table:filter]{where: ["계약유형 == 전세", "보증금 >= 20000", "보증금 <= 40000"]}
+$전세큰집 = $전세거래 >> [table:filter]{where: "전용면적 >= 76"}
+$전세단지 = $전세거래 >> [table:groupby]{by: "아파트명", agg: {건수: ["count", "보증금"], 평균보증금: ["avg", "보증금"], 평균면적: ["avg", "전용면적"]}} >> [table:sort]{by: "건수", desc: true} >> [table:take]{n: 8}
+$매매84 = $molit_trade >> [table:filter]{where: ["전용면적 >= 76", "전용면적 <= 90"]} >> [table:groupby]{by: "법정동", agg: {건수: ["count", "price"], 평균가: ["avg", "price"]}} >> [table:sort]{by: "건수", desc: true} >> [table:take]{n: 6}
+$상권 = [sense:commercial]{lat: 36.7849, lng: 126.4503, radius: 1500} >> [table:groupby]{by: "category"} >> [table:sort]{by: "count", desc: true} >> [table:take]{n: 10}
+$전세단지 & $매매84 >> [table:union]

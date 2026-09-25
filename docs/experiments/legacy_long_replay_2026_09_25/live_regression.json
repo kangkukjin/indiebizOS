@@ -1,0 +1,60 @@
+[
+  {
+    "name": "external_catch",
+    "request": "[try]{[self:read]{path:\"~workspace/outputs/__ibl_missing_probe_20260925__.txt\"}}[catch]{return {handled:true,reason:$error.message}}",
+    "success": true,
+    "source_complete": false,
+    "value": {
+      "handled": true,
+      "reason": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/__ibl_missing_probe_20260925__.txt'"
+    },
+    "evidence": [
+      {
+        "id": 4,
+        "node_id": "call:6:79",
+        "invocation_id": 4,
+        "kind": "tool_failure",
+        "parents": [
+          3
+        ],
+        "action": "self:read",
+        "code": "ADAPTER_SHAPE",
+        "failure_kind": "runtime",
+        "incomplete": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "name": "external_fallback",
+    "request": "[self:read]{path:\"~workspace/outputs/__ibl_missing_probe_20260925__.txt\"} ?? []",
+    "success": true,
+    "source_complete": false,
+    "value": [],
+    "evidence": [
+      {
+        "id": 4,
+        "node_id": "call:0:73",
+        "invocation_id": 4,
+        "kind": "tool_failure",
+        "parents": [
+          3
+        ],
+        "action": "self:read",
+        "code": "ADAPTER_SHAPE",
+        "failure_kind": "runtime",
+        "incomplete": true
+      }
+    ],
+    "passed": true
+  },
+  {
+    "name": "pure_catch",
+    "request": "[try]{1/0}[catch]{return 0}",
+    "success": true,
+    "source_complete": true,
+    "value": 0,
+    "evidence": [],
+    "passed": true
+  }
+]

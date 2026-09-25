@@ -1,0 +1,5 @@
+$원장 = [self:ledger]{op: "select", path: "outputs/ai_tips_reports/_covered_videos.json", target: "covered", fields: ["id", "verdict"]}
+$검색 = [sense:search_youtube]{queries: ["기업 AI 에이전트 도입 사례", "enterprise AI transformation 2026 rollout", "AI agents business workflow automation", "AI agents enterprise overrated ROI failure", "기업 AI 전환 실패 후회"], count: 12} >> [table:filter]{where: {field: "video_id", op: "not_in", value: "${원장.items.*.id}"}}
+$정보 = $검색 >> [table:each]{do: "[sense:video]{op: 'info', video_id: '$it.video_id'}", limit: 60, on_error: "continue"}
+$신선 = $정보 >> [table:filter]{where: "upload_date >= 2026-03-11"} >> [table:sort]{by: "view_count", desc: true} >> [table:select]{columns: ["video_id", "title", "uploader", "view_count", "duration", "upload_date", "url"]}
+$신선 >> [table:take]{n: 45}

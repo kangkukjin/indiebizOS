@@ -1,0 +1,12 @@
+#!ibl edition=2
+$전세거래 = $molit_apt >> [table:filter]{where:($r)=>$r.계약유형=="전세" and $r.보증금>=20000 and $r.보증금<=40000}
+$전세큰집 = $전세거래 >> [table:filter]{where:($r)=>$r.전용면적>=76}
+$전세집계 = $전세거래 >> [table:groupby]{by:"아파트명",agg:{건수:["count","보증금"],평균보증금:["avg","보증금"],평균면적:["avg","전용면적"]}}
+$전세단지 = $전세집계.items >> [table:sort]{by:"건수",descending:true} >> [table:take]{n:8}
+$매매대상 = $molit_trade >> [table:filter]{where:($r)=>$r.전용면적>=76 and $r.전용면적<=90}
+$매매집계 = $매매대상 >> [table:groupby]{by:"법정동",agg:{건수:["count","price"],평균가:["avg","price"]}}
+$매매84 = $매매집계.items >> [table:sort]{by:"건수",descending:true} >> [table:take]{n:6}
+$상권원문 = [sense:commercial]{lat:36.7849,lng:126.4503,radius:1500}
+$상권집계 = $상권원문.items >> [table:groupby]{by:"category"}
+$상권 = $상권집계.items >> [table:sort]{by:"count",descending:true} >> [table:take]{n:10}
+$전세단지 & $매매84 >> [table:union]{}

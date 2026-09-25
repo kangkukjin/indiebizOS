@@ -1,0 +1,5 @@
+#!ibl edition=2
+$종목 = [sense:stock]{op: "quote", ticker: "NVDA"} & [sense:stock]{op: "quote", ticker: "AAPL"} & [sense:stock]{op: "quote", ticker: "ORCL"} & [sense:stock]{op: "quote", ticker: "ADBE"} & [sense:stock]{op: "quote", ticker: "AVGO"} & [sense:stock]{op: "quote", ticker: "MU"} & [sense:stock]{op: "quote", ticker: "XLE"} & [sense:stock]{op: "quote", ticker: "XLU"} & [sense:stock]{op: "quote", ticker: "SMH"} & [sense:stock]{op: "quote", ticker: "TLT"}
+$cpi = [sense:search]{source: "gnews", queries: ["August CPI report 3.4% core inflation Fed rate hike", "Saudi pipeline shut Houthi attack oil September 2026", "Oracle earnings September 2026 stock reaction"], limit: 6}
+$뉴스선택=$cpi.items >> [table:select]{columns: ["title", "meta", "summary"]} >> [table:take]{n: 18}
+return {stocks:$종목,news:$뉴스선택}

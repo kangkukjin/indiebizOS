@@ -1,0 +1,8 @@
+#!ibl edition=2
+[def:rows]($r){return $r.items}
+$연간=[table:each]{items: [{통화: "원화 KRW", 시작: 1389.63, 최근: 1351.10}, {통화: "엔 JPY", 시작: 147.98, 최근: 156.22}, {통화: "위안 CNY", 시작: 7.14, 최근: 6.71}, {통화: "대만달러 TWD", 시작: 30.72, 최근: 31.62}, {통화: "달러지수 DXY", 시작: 97.45, 최근: 99.16}]} { [self:time]{}; return $it } >> [table:compute]{set:($r)=>{"1년변화율%":round(($r.최근-$r.시작)/$r.시작*100,2)}} >> [table:select]{columns: ["통화", "시작", "최근", "1년변화율%"]}
+$구간=[table:each]{items: [{구간: "원화 6/24→9/6", 시작: 1542.76, 최근: 1351.10}, {구간: "달러지수 6/25→9/4", 시작: 101.43, 최근: 99.16}]} { [self:time]{}; return $it } >> [table:compute]{set:($r)=>{"변화율%":round(($r.최근-$r.시작)/$r.시작*100,2)}} >> [table:select]{columns: ["구간", "시작", "최근", "변화율%"]}
+$주가=[sense:stock]{op: "quote", ticker: "^KS11"} & [sense:stock]{op: "quote", ticker: "102110"} >> [table:union]{} >> [fn:rows]{} >> [table:select]{columns: ["symbol", "name", "current_price", "change_percent", "as_of"]}
+$뉴스=[sense:search]{source: "naver", query: "7월 경상수지 흑자 억달러", type: "news"}
+$뉴스선택=$뉴스.items >> [table:take]{n: 4} >> [table:select]{columns: ["title", "summary", "date"]}
+return {year:$연간,period:$구간,quotes:$주가,news:$뉴스선택}

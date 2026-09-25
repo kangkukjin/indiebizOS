@@ -536,6 +536,18 @@ class Runtime:
                          effects=contract["effects"], request_hash=request_hash)
         tool_evidence = {}
         external = contract["effects"] != ["pure"]
+
+        def failed(error):
+            # A failed external leaf is a missing source even when a surrounding
+            # catch returns a normal value. Keep the same fact on receipt reuse;
+            # ordinary pure computation faults do not imply missing sources.
+            exc = error if isinstance(error, Fault) else Fault("VALUE", str(error), node)
+            failure = self.event(node, "tool_failure", set(exc.evidence) | {eid},
+                                 action=key, code=exc.code, failure_kind=exc.kind,
+                                 incomplete=external or exc.kind == "partial")
+            exc.evidence = [failure]
+            return exc
+
         call_id = digest([getattr(self.local, "route", ()), node.id, self.ordinal(node.id)])
         receipt = None
         if self.journal and external:
@@ -558,8 +570,7 @@ class Runtime:
                 error = receipt["error"]
                 restored = Fault(error["code"], error["message"], node, kind=error["kind"],
                                  partial=unpack(receipt["partial"]), details=error.get("details"))
-                restored.evidence = [eid]
-                raise restored
+                raise failed(restored)
             value = unpack(receipt["value"])
             tool_evidence = receipt.get("evidence", {})
         else:
@@ -575,15 +586,15 @@ class Runtime:
                         self.journal.finish(call_id, receipt)
                     with self.lock:
                         self.recordings.append(receipt)
-            except Fault as exc:
-                exc.evidence = sorted(set(exc.evidence) | {eid})
+            except Exception as error:
+                exc = failed(error)
                 receipt = {"request_hash": request_hash,
                            "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial)}
                 if self.journal and external:
                     self.journal.finish(call_id, receipt)
                 with self.lock:
                     self.recordings.append(receipt)
-                raise
+                raise exc
         if tool_evidence:
             eid = self.event(node, "tool_evidence", [eid], **tool_evidence)
         return Binding(value, frozenset({eid}))

@@ -1,0 +1,7 @@
+#!ibl edition=2
+$보강=[table:each]{items:[{q:"Doosan September 17 2026 CCL 1 trillion"},{q:"TypeSafe AI new models machines September 2026"},{q:"Anthropic Claude Docs Slides September 2026"},{q:"GlobalFoundries Marvell September 17 2026 capacity agreement"}],mode:"flat_map"}{ $r=[sense:search]{source:"ddg",query:$it.q,limit:4}; return $r.items }
+$공식=([sense:crawl]{url:"https://www.anthropic.com/news"} & [sense:feed]{url:"https://deepmind.google/blog/rss.xml"} & [sense:feed]{url:"https://blogs.nvidia.com/feed/"}) >> [table:union]{}
+$사례=[sense:search]{source:"ddg",query:"site:reddit.com \"I built\" AI September 2026",limit:5}
+$깃헙=[self:script]{op:"run",id:"github저장소메타",args:{query:"topic:ai created:>2026-08-28",limit:8,sort:"stars"}}
+$논문=[self:script]{op:"run",id:"arxiv최신피드",args:{categories:["cs.AI","cs.CL","cs.LG"],limit:16}}
+$보강

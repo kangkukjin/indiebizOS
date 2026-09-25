@@ -1,0 +1,10 @@
+#!ibl edition=2
+[self:ledger]{op:"append",path:$ledger_path,target:"covered",items_file:$covered_path}
+$팁수=$절제 >> [table:groupby]{by:"video_id",agg:{n:["count","tip"]}}
+$선정행=[table:join]{left:$선정,right:$팁수,on:"video_id"}
+$선정행.items >> [table:take]{n:4} >> [table:each]{mode:"effect"}{
+ [self:ledger]{op:"upsert",path:$ledger_path,target:"covered",key:"id",item:{id:$it.video_id,title:$it.title,channel:$it.uploader,date:"2026-09-06",upload_date:$it.upload_date,topic:"평가",verdict:f"tips_${it.n}"}}
+}
+[self:ledger]{op:"append",path:$ledger_path,target:"recent_topics",item:{date:"2026-09-06",topic:"평가"},max_items:10}
+$기록=[self:ledger]{path:$ledger_path,op:"select",target:"covered",fields:["id","verdict"],where:{date:"2026-09-06"}}
+$기록.items >> [table:groupby]{by:"verdict"}

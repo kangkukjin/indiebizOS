@@ -1,0 +1,7 @@
+$cfg = [self:read]{path: "~workspace/outputs/housing_reports/_report_config.json"}
+$explore = [self:ledger]{op: "select", path: "~workspace/outputs/housing_reports/db/rotation.json", target: "explore_first"}
+$q = [self:ledger]{op: "select", path: "~workspace/outputs/housing_reports/db/rotation.json", target: "queue", fields: ["slug", "name", "unit", "tier", "last_visited", "visits", "verdict"]}
+$unvisited = $q >> [table:filter]{where: "visits == 0"} >> [table:take]{n: 6}
+$interest = $q >> [table:filter]{where: "verdict == 관심"} >> [table:sort]{by: "last_visited"} >> [table:take]{n: 6}
+$recent = [self:file_find]{path: "~workspace/outputs/housing_reports", pattern: "housing_report_*.md"} >> [table:sort]{by: "name", desc: true} >> [table:take]{n: 8} >> [table:select]{columns: ["name"]}
+$unvisited & $interest >> [table:union]

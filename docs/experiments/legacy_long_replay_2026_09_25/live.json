@@ -1,0 +1,77 @@
+[
+  {
+    "name": "rotation",
+    "check_status": "incomplete",
+    "issues": [],
+    "success": true,
+    "source_complete": true,
+    "error": null,
+    "diagnostic": null,
+    "seconds": 0.403,
+    "calls": [
+      "self:read",
+      "self:ledger",
+      "self:ledger",
+      "table:filter",
+      "table:take",
+      "table:filter",
+      "table:sort",
+      "table:take",
+      "self:file_find",
+      "table:sort",
+      "table:take",
+      "table:select",
+      "table:union"
+    ],
+    "row_counts": {
+      "items": 12
+    }
+  },
+  {
+    "name": "forex",
+    "check_status": "incomplete",
+    "issues": [],
+    "success": false,
+    "source_complete": false,
+    "error": "NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 환경변수가 설정되지 않았습니다.",
+    "diagnostic": {
+      "code": "TOOL",
+      "kind": "runtime",
+      "message": "NAVER_CLIENT_ID, NAVER_CLIENT_SECRET 환경변수가 설정되지 않았습니다.",
+      "frames": [],
+      "has_partial": false,
+      "partial": null,
+      "evidence": [
+        235
+      ],
+      "details": {},
+      "source_span": {
+        "source_hash": "9fb7e59c796c9ef2ee78099e5a2c83670db0cc0e07d4080733394b71180a313a",
+        "start": 932,
+        "end": 1002,
+        "line": 6,
+        "column": 5
+      }
+    },
+    "seconds": 0.563,
+    "calls": [
+      "self:time",
+      "self:time",
+      "self:time",
+      "self:time",
+      "self:time",
+      "table:compute",
+      "table:select",
+      "self:time",
+      "self:time",
+      "table:compute",
+      "table:select",
+      "sense:stock",
+      "sense:stock",
+      "table:union",
+      "table:select",
+      "sense:search"
+    ],
+    "row_counts": {}
+  }
+]

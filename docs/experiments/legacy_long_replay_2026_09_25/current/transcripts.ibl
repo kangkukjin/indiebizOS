@@ -1,0 +1,11 @@
+#!ibl edition=2
+$기존AX = [self:ledger]{op: "select", path: "outputs/ai_tips_reports/db/tips.json", fields: ["tip", "date"], where: {topic: "AX"}}
+$선정=$심사 >> [table:filter]{where:($r)=>$r.selected==true} >> [table:take]{n:4}
+$처리=$선정 >> [table:each]{parallel:2,on_error:"collect"}{
+  $영상=$it
+  $자막=[sense:video]{op:"transcript",video_id:$영상.video_id}
+  $팁=[self:struct]{text:$자막.text,schema:"tip(실행형 팁 제목·동사로 끝남), timestamp(MM:SS 추정)",grounded:true,criteria:"각 행에 tip 과 timestamp 가 있고 3~20행이다"}
+  $팁.items >> [table:compute]{set:($r)=>{title:$영상.title,uploader:$영상.uploader,url:$영상.url,video_id:$영상.video_id,view_count:$영상.view_count,duration:$영상.duration,upload_date:$영상.upload_date,reason:$영상.reason}}
+}
+$후보팁=$처리 >> [table:each]{mode:"flat_map"}{ [if:is_ok($it)]{return unwrap($it)} [else]{return []} }
+$후보팁 >> [table:select]{columns:["video_id","title","tip","timestamp"]}

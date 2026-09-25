@@ -1,0 +1,6 @@
+[self:ledger]{op: "append", path: "outputs/ai_tips_reports/_covered_videos.json", target: "covered", items_file: "/tmp/yt_tips_20260906_covered.json"}
+$팁수 = $절제 >> [table:groupby]{by: "video_id", agg: {n: ["count", "tip"]}}
+$선정행 = [table:join]{left: "$선정", right: "$팁수", on: "video_id"}
+$선정행 >> [table:each]{do: "[self:ledger]{op: 'upsert', path: 'outputs/ai_tips_reports/_covered_videos.json', target: 'covered', key: 'id', item: {id: '${it.video_id}', title: '${it.title}', channel: '${it.uploader}', date: '2026-09-06', upload_date: '${it.upload_date}', topic: '평가', verdict: 'tips_${it.n}'}}", limit: 4}
+[self:ledger]{op: "append", path: "outputs/ai_tips_reports/_covered_videos.json", target: "recent_topics", item: {date: "2026-09-06", topic: "평가"}, max_items: 10}
+[self:ledger]{path: "outputs/ai_tips_reports/_covered_videos.json", op: "select", target: "covered", fields: ["id", "verdict"], where: {date: "2026-09-06"}} >> [table:groupby]{by: "verdict"}

@@ -1,0 +1,6 @@
+$sg = [sense:commercial]{lat: 37.1328, lng: 128.2018, radius: 1000}
+$ss = [sense:commercial]{lat: 37.1327, lng: 128.1910, radius: 1000}
+$sg >> [table:groupby]{by: "category", agg: {"수": ["count", "name"]}} >> [table:sort]{by: "수", desc: true} >> [table:take]{n: 8}
+$ss >> [table:groupby]{by: "category", agg: {"수": ["count", "name"]}} >> [table:sort]{by: "수", desc: true} >> [table:take]{n: 8}
+[sense:place]{op: "search", query: "제천 종합병원", limit: 5} >> [table:select]{columns: ["name", "category", "address"]}
+[sense:place]{op: "search", query: "제천 도서관", limit: 6} >> [table:select]{columns: ["name", "category", "address"]}

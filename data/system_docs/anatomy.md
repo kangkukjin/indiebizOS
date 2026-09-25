@@ -107,6 +107,9 @@ finally의 정리와 병렬 쓰기 충돌 검사도 유지한다. [조합 검사
 명시 경로 접근 뒤에도 유지한다. [2배 상상훈련 59회차](../../docs/experiments/imagination_round59_2026_09_25/report.md).
 반복·콜백에서 목록과 문자열을 누적할 수 있고, while은 현재 회차 번호를 읽는다.
 until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2배 상상훈련 60회차](../../docs/experiments/imagination_round60_2026_09_25/report.md).
+개정 이전의 긴 실행 원문을 현재 문법으로 옮겨 고정 자료와 실제 도구로 검증했다.
+외부 도구 실패의 원천 불완전성은 복구·영수증 재사용 뒤에도 유지한다.
+[긴 문장 수집·재현·수리](../../docs/experiments/legacy_long_replay_2026_09_25/report.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

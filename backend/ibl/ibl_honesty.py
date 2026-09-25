@@ -336,7 +336,7 @@ def completion_evidence(env: Any) -> list:
             # 이미 모은 경계 증거는 그대로 읽는다. 매 요약 때 원본까지 다시 세어 증식하지 않는다.
             visit(recorded, f"{path}.incomplete_steps" if path else "incomplete_steps", depth + 1)
             return
-        counts = {k: value[k] for k in ("error_count", "rows_unprocessed")
+        counts = {k: value[k] for k in ("error_count", "rows_unprocessed", "rows_dropped")
                   if isinstance(value.get(k), int) and not isinstance(value[k], bool) and value[k] > 0}
         missing_branches = {k: value[k] for k in ("branches_failed", "branches_skipped")
                             if isinstance(value.get(k), list) and value[k]}
@@ -364,42 +364,51 @@ def truncation_evidence(env: Any) -> Dict[str, Any]:
     import json
 
     found, seen = [], set()
-    truncated = preview = False
+    preview = False
+
+    def record(entry):
+        key = json.dumps(entry, sort_keys=True, ensure_ascii=False, default=str)
+        if key not in seen:
+            seen.add(key)
+            found.append(dict(entry))
 
     def visit(obj, depth=0):
-        nonlocal truncated, preview
+        nonlocal preview
         if depth > 16:
-            return
+            return False
         if isinstance(obj, str):
             try:
                 obj = json.loads(obj)
             except (ValueError, TypeError):
-                return
+                return False
         if isinstance(obj, list):
+            scoped = False
             for child in obj:
-                visit(child, depth + 1)
-            return
+                scoped = visit(child, depth + 1) or scoped
+            return scoped
         if not isinstance(obj, dict):
-            return
-        truncated = truncated or bool(obj.get("truncated"))
+            return False
         preview = preview or bool(obj.get("_preview"))
+        scoped = False
         for entry in obj.get("truncations") or []:
             if not isinstance(entry, dict):
                 continue
-            key = json.dumps(entry, sort_keys=True, ensure_ascii=False, default=str)
-            if key not in seen:
-                seen.add(key)
-                found.append(dict(entry))
+            record(entry)
+            scoped = True
         for key in ("final_result", "result", "results", "row_honesty",
                     "branches_honesty", "branches", "markers"):
             if key in obj:
-                visit(obj[key], depth + 1)
+                scoped = visit(obj[key], depth + 1) or scoped
         if obj.get("type") == "text":  # MCP ContentBlock
-            visit(obj.get("text"), depth + 1)
+            scoped = visit(obj.get("text"), depth + 1) or scoped
+        # Resolve unknown scope within this boundary's subtree. A sibling's
+        # intentional selection must not explain away this source's truncation.
+        if obj.get("truncated") and not scoped:
+            record({"scope": "unknown"})
+            scoped = True
+        return scoped
 
     visit(env)
-    if truncated and not found:
-        found.append({"scope": "unknown"})
     out = {"truncations": found} if found else {}
     if preview:
         out["preview"] = True

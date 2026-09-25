@@ -99,12 +99,12 @@
       "package": "record-ops",
       "side_effect": true,
       "path_audited": {
-        "at": "2026-09-20",
+        "at": "2026-09-25",
         "impl": "3c31b0566918933b",
         "dependencies": {
           "backend/base/principal.py": "ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779",
           "backend/base/runtime_utils.py": "8d715e80bb644fef0691bd95fd61cf1c3c06d01e8e7af59de1bb1d8c60c7b8a9",
-          "backend/common/field_path.py": "2be80800927b2f9d947356e11badd06354d05a7375f8a7a3864f11b40c83cf94",
+          "backend/common/field_path.py": "b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df",
           "backend/common/ibl_vars.py": "c34c6be2bd233867b0a2cd9e675249d0a5f49459831cd2abcdb4ef1ea6b9944e",
           "backend/common/record_contract.py": "ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5",
           "backend/common/row_conditions.py": "154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce",

@@ -169,6 +169,11 @@ $합계.items >> [table:sort]{by:"합계",descending:true}
 0건이며 본문이 없거나 빈 행을 생략하면 행 수와 원래 인덱스를 신고한다. 일부 원문을 잃은
 결과는 `PARTIAL_SOURCE`이고, catch에서 `$error.partial`을 사용해도 불완전 표지는 남는다.
 
+`flatten`도 모든 중첩 목록이 비어 있으면 정상 0건을 반환한다. 목록이 아닌 행을 생략하면
+`rows_dropped`와 `skipped_row_indices`로 원래 위치를 알린다. `field:"refs"`로 items 봉투를
+자동 펼치거나 `field:"refs.items"`로 직접 읽어도 원천의 실패·절단 근거는 `row_honesty`에
+남으며 `PARTIAL_SOURCE`로 보고한다. 목록 속 업무 행의 상태 필드는 원천 실패로 판정하지 않는다.
+
 `$r=[sense:search]{query:"..."}; $r.items >> ...`처럼 반환 계약에 맞게 명시적으로 연결한다.
 `[self:script]{id:"등록이름",args:{...}}`는 기존 등록 스크립트도 직접 실행한다.
 기존 JSON stdin을 유지하며 JSON stdout 전체가 값이다. `{items:[...],run:...}`이면 `$r.items`와

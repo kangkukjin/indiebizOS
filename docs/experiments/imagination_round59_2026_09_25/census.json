@@ -1,0 +1,42 @@
+{
+  "scope": "Consumed nested collection boundaries and common evidence walkers; not a census of every package",
+  "flatten_paths": [
+    "automatic items envelope",
+    "serialized JSON envelope",
+    "items",
+    "refs.items",
+    "refs.0.items",
+    "refs.*.items"
+  ],
+  "source_markers": [
+    "truncated",
+    "rows_dropped",
+    "rows_unprocessed",
+    "error_count",
+    "success:false + error",
+    "error"
+  ],
+  "completion_boundaries": [
+    "row_honesty",
+    "branches_honesty",
+    "incomplete_steps"
+  ],
+  "negative_controls": [
+    "business records",
+    "plain Record status fields",
+    "intentional selection",
+    "unrelated sibling envelope"
+  ],
+  "shared_owners": {
+    "path": "backend/common/field_path.py:walk_path",
+    "markers": "backend/ibl/ibl_honesty.py:markers_of",
+    "completion": "backend/ibl/ibl_honesty.py:completion_evidence",
+    "truncation": "backend/ibl/ibl_honesty.py:truncation_evidence"
+  },
+  "existing_regressions": [
+    "test_imagination_round58_repairs",
+    "test_episode3286_repairs",
+    "test_field_path_single_owner",
+    "test_population_scope_2026_09_08"
+  ]
+}

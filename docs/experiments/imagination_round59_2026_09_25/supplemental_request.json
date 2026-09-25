@@ -1,0 +1,1 @@
+{"code": "#!ibl edition=2\n[try]{[{refs:{items:[],rows_dropped:1}}] >> [table:flatten]{field:\"refs.items\"}}[catch]{return {code:$error.code,partial:$error.partial}}", "edition": 2, "origin": "training", "project_id": "컨텐츠"}

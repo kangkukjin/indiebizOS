@@ -2288,7 +2288,7 @@
   "table:flatten": {
    "fields": {
     "description": "34beb4d60d57",
-    "target_description": "1c77e05f794b",
+    "target_description": "78979aa749d6",
     "implementation": "bff338a2a348",
     "returns": "5450ffb2cf8a",
     "target_key": "d99df5e0eaa5",
@@ -2296,7 +2296,7 @@
     "router": "ebbb1532efbc",
     "tool": "b692d238407b"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-25",
    "examples": 1
   },
   "table:groupby": {

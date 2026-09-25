@@ -51,10 +51,12 @@ def parse_path(path: str, *, brackets: bool = False) -> List[Union[str, int]]:
 
 def walk_path(obj: Any, path: str, *, brackets: bool = False,
               fallback: Optional[Callable[[Any, str], Any]] = None,
-              on_missing: Optional[Callable[[Any, Union[str, int]], Any]] = None) -> Any:
+              on_missing: Optional[Callable[[Any, Union[str, int]], Any]] = None,
+              on_step: Optional[Callable[[Any, Union[str, int], Any], None]] = None) -> Any:
     """경로를 걷는다. 결측이면 MISSING(또는 on_missing 의 반환/예외).
 
     한 단계의 판정 순서: dict 문자열 키 → 리스트 숫자 인덱스 → fallback → 결측.
+    on_step(부모, 조각, 값)은 성공한 접근을 관찰한다. 값이나 경로 판정은 바꾸지 않는다.
     int 조각(대괄호)은 리스트 인덱스만 뜻한다(dict 에는 결측 — 기존 추출기 계약).
 
     `*` 조각 = 열 벡터 사상 (언어 개정 2026-08-28, 사용자 판정 "언어의 한계는 다 고쳐"):
@@ -66,12 +68,13 @@ def walk_path(obj: Any, path: str, *, brackets: bool = False,
         단 **전 원소 결측이면 정직 오류**(오타가 침묵 [] 로 새는 것 방지).
     """
     return _walk_parts(obj, parse_path(path, brackets=brackets), path,
-                       fallback=fallback, on_missing=on_missing)
+                       fallback=fallback, on_missing=on_missing, on_step=on_step)
 
 
 def _walk_parts(cur: Any, parts: List[Union[str, int]], path: str, *,
                 fallback: Optional[Callable[[Any, str], Any]] = None,
-                on_missing: Optional[Callable[[Any, Union[str, int]], Any]] = None) -> Any:
+                on_missing: Optional[Callable[[Any, Union[str, int]], Any]] = None,
+                on_step: Optional[Callable[[Any, Union[str, int], Any], None]] = None) -> Any:
     for i, seg in enumerate(parts):
         nxt = MISSING
         if isinstance(seg, int):
@@ -84,7 +87,7 @@ def _walk_parts(cur: Any, parts: List[Union[str, int]], path: str, *,
             rest = parts[i + 1:]
             if not rest:
                 return list(cur)
-            mapped = [_walk_parts(el, rest, path, fallback=fallback, on_missing=None)
+            mapped = [_walk_parts(el, rest, path, fallback=fallback, on_missing=None, on_step=on_step)
                       for el in cur]
             if cur and all(v is MISSING for v in mapped):
                 if on_missing is not None:
@@ -101,5 +104,7 @@ def _walk_parts(cur: Any, parts: List[Union[str, int]], path: str, *,
             if on_missing is not None:
                 return on_missing(cur, seg)
             return MISSING
+        if on_step is not None:
+            on_step(cur, seg, nxt)
         cur = nxt
     return cur

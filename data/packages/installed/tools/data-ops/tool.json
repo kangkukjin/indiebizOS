@@ -210,7 +210,7 @@
     },
     {
       "name": "data_flatten",
-      "description": "records → 행 속 중첩 목록 펼치기(unnest). field(중첩 목록 경로), keep(각 행에 같은 이름으로 승계할 부모 필드/점 경로 배열, 예 [\"data.symbol\"]). each 출력은 이미 평탄하므로 flatten 없이 잇는다. >> 앞 통화를 받음.",
+      "description": "records → 행 속 중첩 목록 펼치기(unnest). field(중첩 목록 경로), keep(각 행에 같은 이름으로 승계할 부모 필드/점 경로 배열, 예 [\"data.symbol\"]). 빈 목록은 정상 0행. 생략 행은 rows_dropped·skipped_row_indices로, 소비한 items 봉투의 원천 근거는 row_honesty로 보존한다. each 출력은 이미 평탄하므로 flatten 없이 잇는다. >> 앞 통화를 받음.",
       "input_schema": {
         "type": "object",
         "properties": {

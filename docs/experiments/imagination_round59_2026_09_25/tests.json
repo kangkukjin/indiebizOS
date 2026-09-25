@@ -1,0 +1,11 @@
+{
+  "tests": 6068,
+  "failures": 0,
+  "errors": 0,
+  "skipped": 1,
+  "passed": 6067,
+  "seconds": 550.14,
+  "new_regressions": 36,
+  "targeted_passed": 121,
+  "managed_records_passed": 29
+}

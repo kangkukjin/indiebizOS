@@ -1103,7 +1103,9 @@ def _op_flatten(prev, params):
 
     field 경로의 값이 목록이면 그 원소들이 새 행이 되고, {items: [...]} 봉투면
     items 로 자동 승격. keep=[부모 필드/점 경로]는 같은 이름으로 각 새 행에 승계(충돌 시 _2 접미 —
-    침묵 오선택 방지). 목록 아닌 행은 건너뛰되 skipped_rows 로 신고한다.
+    침묵 오선택 방지). 빈 목록은 정상 0행이며, 목록 아닌 행의 생략은
+    rows_dropped/skipped_rows/skipped_row_indices로 신고한다. 명시 items 봉투의
+    원천 근거는 row_honesty로 보존하며 업무 레코드 내부의 상태 필드는 판정하지 않는다.
     ★기본값 "_result" 는 은퇴한 옛 each 계약의 잔영이다 — 지금은 그 자리로 온
     옛 문장에게 "flatten 을 빼라"는 참인 처방을 돌려주는 이행 진단용으로만 남는다.
     """
@@ -1139,20 +1141,37 @@ def _op_flatten(prev, params):
                     "error": (f"flatten: keep {keep} 이(가) 어느 행에도 없습니다. "
                               f"사용 가능한 필드: {sample}")}
 
-    def _dig(row, path):
+    def _dig(row, path, row_index):
         # 걷는 규칙의 정본은 common.field_path 한 벌 (2026-08-27 경로 방언 통일 —
         # 리스트 숫자 인덱스는 블록 술어의 문서화된 경로 문법을 승계한다)
         from common.field_path import MISSING, walk_path
-        value = walk_path(row, path)
+        def observe(parent, key, value):
+            if key == "items" and isinstance(parent, dict) and isinstance(value, list):
+                remember_envelope(parent, row_index)
+        value = walk_path(row, path, on_step=observe)
         return None if value is MISSING else value
 
+    def remember_envelope(envelope, row_index):
+        # Only the explicitly consumed items envelope owns source status.
+        from ibl_honesty import markers_of
+        markers = markers_of(envelope)
+        if envelope.get("success") is False or envelope.get("error"):
+            markers["error_count"] = max(1, markers.get("error_count", 0))
+            markers["errors"] = [*(markers.get("errors") or []),
+                                 {"error": envelope.get("error") or envelope.get("message") or "실패 봉투"}]
+        if markers:
+            nested_honesty.append({"row_index": row_index, "field": field,
+                                   "markers": markers})
+
     out = []
-    skipped = 0
-    for r in recs:
+    skipped = []
+    valid_inputs = 0
+    nested_honesty = []
+    for row_index, r in enumerate(recs):
         if not isinstance(r, dict):
-            skipped += 1
+            skipped.append(row_index)
             continue
-        v = _dig(r, field)
+        v = _dig(r, field, row_index)
         if isinstance(v, str):
             # each 가 _result 를 JSON 문자열로 붙였을 수 있다 — 파싱 시도
             try:
@@ -1162,6 +1181,9 @@ def _op_flatten(prev, params):
             except Exception:
                 pass
         if isinstance(v, dict) and isinstance(v.get("items"), list):
+            # This is the boundary being unwrapped. Inspect only its markers,
+            # never status-like fields in its business rows or plain Records.
+            remember_envelope(v, row_index)
             v = v["items"]
         elif isinstance(v, dict):
             # ★레코드 하나도 '펼 수 있는 것'이다 (2026-08-23).
@@ -1174,8 +1196,9 @@ def _op_flatten(prev, params):
             # '성공'으로 위장돼 정직한 거절이 사라진다.
             v = [v]
         if not isinstance(v, list):
-            skipped += 1
+            skipped.append(row_index)
             continue
+        valid_inputs += 1
         carry = {k: value for k in keep if (value := _keep_value(r, k)) is not MISSING}
         for sub in v:
             base = dict(sub) if isinstance(sub, dict) else {"value": sub}
@@ -1184,7 +1207,7 @@ def _op_flatten(prev, params):
                 for (ck, cv), name in zip(carry.items(), disp):
                     base[name] = cv
             out.append(base)
-    if not out:
+    if not out and not valid_inputs:
         # ★F17 확장 (2026-08-17 12회차): 입력 0행은 실수가 아니라 정당한 빈손 — 0건 통화로
         # 파이프를 완주시킨다(each 와 같은 수리 — "목록 필드가 없다" 오류의 전제는
         # "행이 있는데"라 행 0개엔 성립하지 않는다).
@@ -1209,7 +1232,10 @@ def _op_flatten(prev, params):
                           f"(행 {len(recs)}개 전부 건너뜀). 행 필드 예: {sample}")}
     res = _emit_items(env, out, population=True)
     if skipped:
-        res["skipped_rows"] = skipped
+        res.update(skipped_rows=len(skipped), rows_dropped=len(skipped),
+                   skipped_row_indices=skipped)
+    if nested_honesty:
+        res["row_honesty"] = [*(res.get("row_honesty") or []), *nested_honesty]
     if keep_missing:
         res["keep_missing"] = keep_missing
         res["warning"] = (f"keep 중 어느 행에도 없는 필드: {keep_missing} — 승계되지 않았습니다.")

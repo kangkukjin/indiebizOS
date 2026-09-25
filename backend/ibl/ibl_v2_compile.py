@@ -11,9 +11,9 @@ from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches
 from ibl_v2_parser import parse
 from ibl_v2_expr import BUILTINS
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
-                             assigned_names, location)
+                             assigned_names, location, access_type)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
-                          infer, join, declared, compatible)
+                          infer, join, declared, compatible, alternatives)
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
@@ -118,8 +118,19 @@ class Compiler:
     def sequence(self, node, env, names, readonly=frozenset(), final=False):
         names = self.predeclare(node, names)
         result = UNIT_T
+        terminated = False
+        dead_env = None
         for statement in node.data["statements"]:
-            result = self.visit(statement, env, names, readonly, final)
+            if terminated:
+                # Still diagnose invalid dead source, but it cannot supply a
+                # frame result or add return types to the reachable paths.
+                old_returns, self.returns = self.returns, []
+                self.visit(statement, dead_env, names, readonly, final)
+                self.returns = old_returns
+            else:
+                result = self.visit(statement, env, names, readonly, final)
+                if self.returns_unconditionally(statement):
+                    terminated, dead_env = True, env.copy()
         return result
 
     def resolve_function(self, name, names):
@@ -227,26 +238,11 @@ class Compiler:
         if kind in ("field", "index"):
             base = sub(d["base"])
             key = d.get("key")
+            key_type = None
             if isinstance(key, Node):
-                sub(key)
+                key_type = sub(key)
                 key = key.data["value"] if key.kind == "literal" else None
-            if base.kind == "Record" and isinstance(key, str):
-                fields = dict(base.fields)
-                if key in fields:
-                    return fields[key]
-                if not base.open:
-                    self.issue(node, "MISSING_FIELD", f"선언된 필드가 없습니다: {key}. 선택 필드는 has/get을 쓰세요.")
-                else:
-                    self.need(node, UNKNOWN, UNKNOWN)
-                return UNKNOWN
-            if base.kind in ("List", "Text") and kind == "index":
-                self.need(node, sub(d["key"]), NUMBER)
-                return base.item if base.kind == "List" else TEXT
-            if base.kind == "Unknown":
-                self.need(node, UNKNOWN, Type("Record") if kind == "field" else UNKNOWN)
-            else:
-                self.issue(node, "FIELD_TYPE", f"{base}에 해당 필드 접근을 할 수 없습니다.")
-            return UNKNOWN
+            return access_type(self, node, base, key, key_type)
         if kind in ("binary", "unary"):
             self.pure(node)
             op = d["op"]
@@ -259,10 +255,11 @@ class Compiler:
                 return BOOL
             if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
                 return join(*values)
-            if op == "+" and any(t.kind == "Unknown" for t in values):
+            if op == "+" and any(t.kind in ("Unknown", "Union") for t in values):
                 # An unknown accumulator/callback operand may concatenate.
                 # Do not select numeric addition until both shapes are known.
-                if all(t.kind in ("Unknown", "List", "Text", "Number") for t in values):
+                if all(member.kind in ("Unknown", "List", "Text", "Number")
+                       for t in values for member in alternatives(t)):
                     self.need(node, UNKNOWN, UNKNOWN)
                     return UNKNOWN
             operands = [d["value"]] if kind == "unary" else [d["left"], d["right"]]
@@ -298,8 +295,10 @@ class Compiler:
                 if isinstance(part, Node):
                     self.pure(part)
                     t = sub(part)
-                    if t.kind not in ("Text", "Number", "Bool", "Unknown"):
+                    if not compatible(t, join(join(TEXT, NUMBER), BOOL)):
                         self.issue(part, "FORMAT_TYPE", "보간에는 Text·Number·Bool만 사용할 수 있습니다.")
+                    elif t.kind == "Unknown":
+                        self.need(part, t, join(join(TEXT, NUMBER), BOOL))
             return TEXT
         if kind == "pipe":
             left = sub(d["left"])
@@ -447,6 +446,10 @@ class Compiler:
             return UNIT_T
         if kind == "try":
             a, b = env.copy(), {**env, "error": Type("Record")}
+            # A fault may happen before or after any shared-frame assignment.
+            # Catch observes partial progress, not a rollback to entry types.
+            mutated = assigned_names(d["body"]) & env.keys()
+            b.update(dict.fromkeys(mutated, UNKNOWN))
             ta, tb = sub(d["body"], a), sub(d["catch"], b)
             if "error" in env:
                 b["error"] = env["error"]
@@ -457,6 +460,9 @@ class Compiler:
             if d["catch"]:
                 paths.append((d["catch"], b))
                 self.merge_env(cleanup_env, a, b)
+            # Cleanup also observes failures partway through body/catch.
+            cleanup_mutated = (mutated | assigned_names(d["catch"])) & env.keys()
+            cleanup_env.update(dict.fromkeys(cleanup_mutated, UNKNOWN))
             self.merge_continuations(env, paths)
             # finally also runs on returning paths. Check it before excluding
             # their bindings, then carry its assignments into the continuation.
@@ -486,6 +492,10 @@ class Compiler:
             return recur(d["otherwise"]) and all(recur(b) for _, b in d["branches"])
         if kind == "try":
             return recur(d["body"]) and (d["catch"] is None or recur(d["catch"]))
+        if kind == "repeat":
+            count = d['value'].data.get('value') if d['value'].kind == 'literal' else None
+            once = d['mode'] == 'until' or (d['mode'] == 'count' and type(count) is int and count > 0)
+            return once and recur(d['body'])
         return False
 
     def writes(self, node, bindings=None, seen=frozenset()):

@@ -77,7 +77,7 @@ return $결과
 `files`, `files_from`는 기존 저장 프로그램의 호환 인자다. 현재 실행은 반환된 `resume:{run_id}`와 동일한 code·inputs로 이어간다.
 
 일반 문자열은 문자 그대로다. `f"${row.id}: ${1+2}"`만 보간하며 한 번만 해석한다.
-보간은 Text·Number·Bool을 받는다. 구조는 `json($x)`, 결측은 `has($r,"key")`와
+보간은 Text·Number·Bool 및 이들로만 구성된 조건부 값을 받는다. 구조는 `json($x)`, 결측은 `has($r,"key")`와
 `get($r,"key",기본값)`을 사용한다. null은 존재하는 값이다. `"007"`을 복사하면 문자열이 유지된다.
 산술·동등·순서의 숫자 관측 정책은 기존 `common/value_semantics.py`를 공유한다.
 
@@ -91,6 +91,9 @@ return $결과
 `return`은 가장 가까운 프로그램·함수·each 콜백·병렬 가지에서 즉시 반환한다.
 if/try는 반환 프레임을 만들지 않는다. finally는 거치며 finally 안 return은 금지다.
 명시 return이 없으면 마지막 문장 값이 결과다. 할당·정의·빈 블록은 Unit이며 null과 다르다.
+모든 경로가 반환한 뒤의 코드는 반환형에 섞이지 않지만 정적 오류 검사는 유지한다.
+catch/finally는 실패 직전까지 재대입한 값을 읽는다. 기존 변수는 진입값으로 롤백되지 않으며,
+실패 위치에 따라 타입이 달라질 수 있으면 실행 시 검사한다. 복구에 필요한 변수는 try 전에 초기화한다.
 
 - `[if:Bool 식] { ... } [else] { ... }` — else 생략은 Unit.
 - `[case:식] { [when:식] {...} [when:식] {...} [else] {...} }` — 같은 값인 첫 가지.

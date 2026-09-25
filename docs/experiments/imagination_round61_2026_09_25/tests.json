@@ -1,0 +1,35 @@
+{
+  "full": {
+    "tests": 6246,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 1,
+    "time": "570.369",
+    "timestamp": "2026-09-25T19:26:17.946051+09:00",
+    "passed": 6245
+  },
+  "focused": {
+    "tests": 51,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "time": "0.318",
+    "timestamp": "2026-09-25T19:27:51.494242+09:00",
+    "passed": 51
+  },
+  "related": {
+    "passed": 228,
+    "seconds": 1.33,
+    "note": "Includes initial 46 round61 tests; 5 additional tests passed in the focused 51-test run."
+  },
+  "teaching": {
+    "passed": 85,
+    "seconds": 9.94
+  },
+  "http": {
+    "before_passed": 30,
+    "after_passed": 44,
+    "observations_per_phase": 44
+  },
+  "full_log": "/tmp/imagination61-full.log"
+}

@@ -2,7 +2,7 @@
 from urllib.parse import quote
 
 from ibl_v2_ir import Fault, Node, digest, span
-from ibl_v2_types import Type, UNKNOWN, NUMBER, TEXT, BOOL, join
+from ibl_v2_types import Type, UNKNOWN, NUMBER, TEXT, BOOL, join, alternatives
 from ibl_v2_expr import number
 
 
@@ -79,11 +79,47 @@ def numeric_operand(compiler, node, typ):
         except Fault as exc:
             compiler.issue(node, exc.code, str(exc), expected='Number', actual=str(typ))
         return
-    if typ.kind in ('Text', 'Unknown', 'Union'):
+    if typ.kind == 'Union':
+        for member in alternatives(typ):
+            numeric_operand(compiler, node, member)
+    elif typ.kind in ('Text', 'Unknown'):
         compiler.need(node, UNKNOWN, NUMBER)
     elif typ.kind != 'Number':
         compiler.issue(node, 'ARITHMETIC', f'산술로 관측할 수 없는 타입: {typ}',
                        expected='Number', actual=str(typ))
+
+
+def access_type(compiler, node, base, key, key_type=None):
+    """Check each possible receiver shape, retaining its projected type."""
+    if base.kind == 'Union':
+        values = [access_type(compiler, node, member, key, key_type)
+                  for member in alternatives(base)]
+        result = values[0]
+        for value in values[1:]:
+            result = join(result, value)
+        return result
+    if base.kind == 'Record' and isinstance(key, str):
+        fields = dict(base.fields)
+        if key in fields:
+            return fields[key]
+        if not base.open:
+            compiler.issue(node, 'MISSING_FIELD',
+                           f'선언된 필드가 없습니다: {key}. 선택 필드는 has/get을 쓰세요.')
+        else:
+            compiler.need(node, UNKNOWN, UNKNOWN)
+        return UNKNOWN
+    if base.kind == 'Record' and key is None and node.kind == 'index':
+        compiler.need(node, key_type, TEXT)
+        compiler.need(node, UNKNOWN, UNKNOWN)
+        return UNKNOWN
+    if base.kind in ('List', 'Text') and node.kind == 'index':
+        compiler.need(node, key_type, NUMBER)
+        return base.item if base.kind == 'List' else TEXT
+    if base.kind == 'Unknown':
+        compiler.need(node, UNKNOWN, Type('Record') if node.kind == 'field' else UNKNOWN)
+    else:
+        compiler.issue(node, 'FIELD_TYPE', f'{base}에 해당 필드 접근을 할 수 없습니다.')
+    return UNKNOWN
 
 
 def builtin_type(compiler, node, name, types):

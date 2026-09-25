@@ -13,6 +13,8 @@ class Type:
     open: bool = True
 
     def __str__(self):
+        if self.kind == "Union":
+            return " | ".join(str(t) for t in self.item)
         if self.kind == "Record" and self.fields:
             return "{" + ", ".join(f"{k}: {v}" for k, v in self.fields) + "}"
         return f"{self.kind}<{self.item}>" if self.item else self.kind
@@ -20,6 +22,15 @@ class Type:
 
 UNKNOWN, UNIT_T, BOOL = Type("Unknown"), Type("Unit"), Type("Bool")
 NUMBER, TEXT, NULL = Type("Number"), Type("Text"), Type("Null")
+
+
+def alternatives(typ):
+    """Leaf alternatives, including older nested union representations."""
+    if typ.kind == "Union":
+        for member in typ.item:
+            yield from alternatives(member)
+    else:
+        yield typ
 
 
 def join(left, right):
@@ -32,7 +43,8 @@ def join(left, right):
         return Type("Record", tuple((k, join(a[k], b[k])) for k in sorted(a.keys() & b.keys())), open=left.open or right.open)
     if "Unknown" in (left.kind, right.kind):
         return UNKNOWN
-    return Type("Union", item=tuple(sorted({left, right}, key=str)))
+    members = set(alternatives(left)) | set(alternatives(right))
+    return Type("Union", item=tuple(sorted(members, key=str)))
 
 
 def infer(value):

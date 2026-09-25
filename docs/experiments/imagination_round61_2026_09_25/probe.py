@@ -107,7 +107,7 @@ def main():
                 result.get('success') is True and result.get('value') == expected and result.get('source_complete') is (name != 'T09'))
             evidence.append(dict(name=name,intent=intent,request=payload,expected=expected,
                                  response=response,passed=bool(passed),seconds=round(time.monotonic()-started,4)))
-            (HERE/f'{phase}.json').write_text(json.dumps(evidence,ensure_ascii=False,indent=2)+'\n')
+            (HERE/f'{phase}.json').write_text('[\n'+',\n'.join(json.dumps(r,ensure_ascii=False) for r in evidence)+'\n]\n')
             print(name,'check' if check else 'run','PASS' if passed else 'FAIL',
                   json.dumps({k:result[k] for k in ('value','issues','diagnostic','error') if k in result},ensure_ascii=False)[:1600],flush=True)
     print('SUMMARY',sum(r['passed'] for r in evidence),'/',len(evidence),flush=True)

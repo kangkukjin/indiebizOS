@@ -33,6 +33,31 @@ nodes:
   table:
     actions:
       judge:
+        callable_contract:
+          version: 1
+          params:
+            as: Unknown
+            criteria: Unknown
+            instruction: Unknown
+            items: List|Record|Text
+            op: Unknown
+            project_id: Unknown
+            questions: Unknown
+            scope: Unknown
+            target: Unknown
+            threshold: Unknown
+            type: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes: [items]
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -51,6 +76,35 @@ nodes:
         implementation: 'ai_ops_judge — TypeSafe systemone 직접 API, 행마다 질문 경로를 명시해 한 요청, 응답 전수 검증 후 원 행에 병합. ProviderMetrics 사용량 원장.'
         keywords: [판정, 분류, 선택, 점수, 관련성, 광고성, 판단, judge, Jev]
       ai:
+        callable_contract:
+          version: 1
+          params:
+            contract: Unknown
+            criteria: Unknown
+            do: Unknown
+            fields: Unknown
+            input_fields: Unknown
+            inspect: Unknown
+            instruction: Unknown
+            items: List|Record|Text
+            op: Unknown
+            preserve_rows: Unknown
+            project_id: Unknown
+            prompt: Unknown
+            schema: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes: [items]
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
           accepts: items
@@ -82,6 +136,29 @@ nodes:
         - 의미변환
         - ai
       brief:
+        callable_contract:
+          version: 1
+          params:
+            criteria: Unknown
+            do: Unknown
+            instruction: Unknown
+            items: List|Record|Text
+            op: Unknown
+            project_id: Unknown
+            prompt: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes: [items]
+            value_path: ''
+          pipe_input: items
         returns: scalar
         flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
           accepts: items

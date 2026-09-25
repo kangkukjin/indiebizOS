@@ -1,0 +1,72 @@
+[
+  {
+    "action": "table:chunk",
+    "source": "data/packages/installed/tools/data-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:rename",
+    "source": "data/packages/installed/tools/data-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:flatten",
+    "source": "data/packages/installed/tools/data-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:dedup",
+    "source": "data/packages/installed/tools/data-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:since",
+    "source": "data/packages/installed/tools/data-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:groupby",
+    "source": "data/packages/installed/tools/data-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:judge",
+    "source": "data/packages/installed/tools/ai-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:ai",
+    "source": "data/packages/installed/tools/ai-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:brief",
+    "source": "data/packages/installed/tools/ai-ops/ibl_actions.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  },
+  {
+    "action": "table:reduce",
+    "source": "data/ibl_nodes_src/table.yaml",
+    "pipe_input": "items",
+    "result": "Record",
+    "compatibility": true
+  }
+]

@@ -101,6 +101,8 @@ finally의 정리와 병렬 쓰기 충돌 검사도 유지한다. [조합 검사
 보존한다. [상상훈련 56회차 수리](../../docs/IMAGINATION_ROUND56_REPAIRS_2026_09_25.md).
 값의 증거는 빈 합산·조기 반환·실패 복구·정리·병렬 실패 뒤에도 연결하며, 분기 내부 대입의
 조건 근거를 보존한다. [상상훈련 57회차 수리](../../docs/experiments/imagination_round57_2026_09_25/report.md).
+단항 변환자의 파이프 입력을 전수 연결하고, 입력 봉투의 원천 누락과 본문 분할의 생략 행을
+보존한다. [2배 상상훈련 58회차](../../docs/experiments/imagination_round58_2026_09_25/report.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

@@ -1,0 +1,25 @@
+{
+  "full_suite": {
+    "name": "pytest",
+    "errors": "0",
+    "failures": "1",
+    "skipped": "1",
+    "tests": "6030",
+    "time": "554.920",
+    "timestamp": "2026-09-25T13:39:29.458475+09:00",
+    "hostname": "Mac-mini.local"
+  },
+  "failures": [
+    {
+      "file": "backend.test_ibl_composition_teaching",
+      "test": "test_guide_is_reachable_from_actual_prompt_and_old_links"
+    }
+  ],
+  "focused_new": {
+    "passed": 40
+  },
+  "teaching_after_update": {
+    "passed": 32
+  },
+  "full_suite_rerun_after_teaching_fix": false
+}

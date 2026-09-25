@@ -1,0 +1,135 @@
+[
+  {
+    "action": "table:each",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": null,
+    "native_control": true
+  },
+  {
+    "action": "table:reduce",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:judge",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:ai",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:brief",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:filter",
+    "accepts": "items",
+    "before_receiver": "items",
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:sort",
+    "accepts": "items",
+    "before_receiver": "items",
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:take",
+    "accepts": "items",
+    "before_receiver": "items",
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:chunk",
+    "accepts": "prose|items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:select",
+    "accepts": "items",
+    "before_receiver": "items",
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:compute",
+    "accepts": "items",
+    "before_receiver": "items",
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:rename",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:flatten",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:dedup",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:since",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:groupby",
+    "accepts": "items",
+    "before_receiver": null,
+    "after_receiver": "items",
+    "native_control": false
+  },
+  {
+    "action": "table:join",
+    "accepts": "pair",
+    "before_receiver": "inputs",
+    "after_receiver": "inputs",
+    "native_control": false
+  },
+  {
+    "action": "table:union",
+    "accepts": "same-kind",
+    "before_receiver": "inputs",
+    "after_receiver": "inputs",
+    "native_control": false
+  },
+  {
+    "action": "table:merge",
+    "accepts": "pair",
+    "before_receiver": "inputs",
+    "after_receiver": "inputs",
+    "native_control": false
+  }
+]

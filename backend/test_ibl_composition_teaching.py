@@ -25,7 +25,7 @@ def current(monkeypatch, tmp_path):
     calls = []
     real_leaf = ibl_engine.execute_ibl
     def leaf(ti, *args, **kwargs):
-        if (ti['_node'], ti['action']) in {('table', 'join'), ('self', 'time')}:
+        if (ti['_node'], ti['action']) in {('table', 'join'), ('table', 'groupby'), ('self', 'time')}:
             return real_leaf(ti, *args, **kwargs)
         assert (ti['_node'], ti['action']) == ('sense', 'crawl')
         url = ti['params']['url']
@@ -71,6 +71,10 @@ def test_join_time_guide_preserves_unmatched_rows(current):
     assert out['value']['items'] == [
         {'id': 'a', 'price': 300, 'memo': '역세권'},
         {'id': 'b', 'price': 200, 'memo': '미검토'}]
+
+
+def test_unary_group_guide_preserves_aggregate(current):
+    assert current(EXAMPLES['unary_group'])['value'] == [{'분류': '식비', '합계': 50}]
 
 
 def test_empty_and_failure_are_distinct(current):
@@ -135,7 +139,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time'}
+    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

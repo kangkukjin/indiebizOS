@@ -47,6 +47,10 @@ def validate_contract(contract):
     if not isinstance(writes, dict) or any(v not in contract["params"] for v in writes.values()):
         raise ValueError("write_resources는 자원 종류→선언 인자 이름입니다.")
     adapter = contract.get("adapter", {})
+    envelopes = adapter.get("input_envelopes", [])
+    if (not isinstance(envelopes, list)
+            or any(not isinstance(key, str) or key not in contract["params"] for key in envelopes)):
+        raise ValueError("input_envelopes는 선언된 입력 인자 이름 목록입니다.")
     if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1"}:
         raise ValueError("지원하지 않는 어댑터 프로토콜입니다.")
     from ibl_callable_contract import validate_extensions
@@ -91,7 +95,7 @@ def pointer(value, path):
     return value
 
 
-def decode_envelope(raw, adapter):
+def decode_envelope(raw, adapter, input_values=None):
     from ibl_honesty import completion_evidence, truncation_evidence, markers_of
     if isinstance(raw, str):
         try:
@@ -120,10 +124,25 @@ def decode_envelope(raw, adapter):
     fields = adapter.get("value_fields")
     value = ({k: pointer(raw, p) for k, p in fields.items()} if fields is not None
              else pointer(raw, adapter.get("value_path", "")))
-    incomplete = completion_evidence(raw)
-    truncation = truncation_evidence(raw)
+    # Only declared envelope slots carry source status. A List is user rows,
+    # never a list of envelopes; business error/truncated fields stay data.
+    sources = []
+    for key in adapter.get("input_envelopes", []):
+        source = (input_values or {}).get(key)
+        if isinstance(source, str):
+            try:
+                source = json.loads(source)
+            except ValueError:
+                continue
+        if isinstance(source, dict):
+            sources.append(source)
+    boundaries = [raw, *sources]
+    incomplete = completion_evidence(boundaries if sources else raw)
+    incomplete.extend({"at": "input", "error": source.get("error") or source.get("message")}
+                      for source in sources if source.get("success") is False or source.get("error"))
+    truncation = truncation_evidence(boundaries if sources else raw)
     markers = markers_of(raw)
-    if incomplete or any(t.get("scope") != "selection" for t in truncation.get("truncations", [])) or raw.get("rows_dropped"):
+    if incomplete or any(t.get("scope") != "selection" for t in truncation.get("truncations", [])) or any(b.get("rows_dropped") for b in boundaries):
         raise Fault("PARTIAL_SOURCE", "도구의 원천 결과가 불완전합니다.", kind="partial", partial=value,
                     details={"completion": incomplete, "truncation": truncation, "markers": markers})
     return value, {"markers": markers, "attachments": {k: raw[k] for k in adapter.get("attachments", []) if k in raw}}
@@ -192,7 +211,7 @@ def load_registry(project_path=".", agent_id=None):
                 boundary = c["adapter"]
                 if protocol == "ibl-script/2" and params["op"] != "run":
                     boundary = {**boundary, "value_path": ""}
-                value, evidence = decode_envelope(raw, boundary)
+                value, evidence = decode_envelope(raw, boundary, params)
                 return Adapted(value, evidence)
             def authorize(node=node, action=action, ac=action_config):
                 from member_profile import visible

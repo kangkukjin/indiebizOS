@@ -30,6 +30,21 @@
         - 모두에게
         - each
       reduce:
+        callable_contract:
+          version: 1
+          params:
+            items: List|Record|Text
+          open_params: true
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes: [items]
+            value_path: ''
+          pipe_input: items
         # 프로그램급 IBL M5 (2026-08-22, docs/IBL_PROGRAM_GRADE_DESIGN.md §2.3): 행을 순회하며 상태(acc)를
         # 넘기는 fold — groupby(고정 집계 5종)·compute(행→행)가 못 하는 "누적". 식 한 줄만(경계선 판정):
         # 객체·목록 구성도 허용한다. 임의 실행문은 [self:script]. 식 평가기는 common.safe_expr(compute 와 같은 화이트리스트).

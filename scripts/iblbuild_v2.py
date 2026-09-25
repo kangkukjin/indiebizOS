@@ -17,6 +17,16 @@ def validate_v2_contracts(data):
             # Multi-source consumers already declare their input topology. An
             # opaque JSON fallback cannot carry that topology into current IBL.
             flow = entry.get('flow') or {}
+            if (flow.get('accepts') in {'items', 'prose', 'prose|items', 'items|prose'}
+                    and entry.get('func') != 'table_each'):
+                contract = entry.get('callable_contract') or {}
+                receiver = contract.get('pipe_input')
+                if not receiver or receiver not in contract.get('params', {}):
+                    issues.append(f'{name}:{action}: 단항 flow에 callable_contract.pipe_input과 입력 인자 선언이 필요합니다')
+                adapter = contract.get('adapter', {})
+                if (adapter.get('protocol') == 'legacy-envelope'
+                        and receiver not in adapter.get('input_envelopes', [])):
+                    issues.append(f'{name}:{action}: 단항 봉투 입력의 근거를 adapter.input_envelopes에 연결하세요')
             if flow.get('accepts') in {'pair', 'same-kind'}:
                 qualified = f'{name}:{action}'
                 contract = entry.get('callable_contract') or {}

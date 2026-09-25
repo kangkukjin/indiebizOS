@@ -21,13 +21,13 @@ def _chunk_source_text(prev, params):
         field = params.get("field")
         if field and isinstance(prev.get(field), str) and prev[field].strip():
             return prev[field], prev, None
-        if isinstance(prev.get("items"), list) and prev["items"]:
+        if isinstance(prev.get("items"), list):
             return None, prev, None      # items 통화가 있으면 그것이 본문 — 봉투의 message 는 안내문일 때가 많다(자막 op 실측)
         for k in ([field] if field else list(_CHUNK_TEXT_FIELDS)):
             v = prev.get(k) if k else None
             if isinstance(v, str) and v.strip():
                 return v, prev, None
-        return None, prev, f"chunk: 본문 문자열을 찾지 못했습니다 (찾은 키: {cands}, 받은 키: {list(prev.keys())[:12]}). field 로 지정하세요."
+        return None, prev, f"chunk: 본문 문자열을 찾지 못했습니다 (후보 키: {([field] if field else list(_CHUNK_TEXT_FIELDS))}, 받은 키: {list(prev.keys())[:12]}). field 로 지정하세요."
     if isinstance(prev, list):
         return None, {"items": prev}, None
     return None, None, "chunk: 입력이 문자열도 봉투도 아닙니다."
@@ -37,6 +37,8 @@ def _chunk_rows(rows, params, size):
     """items 통화(자막 구간·검색 결과처럼 행마다 본문이 있는 것) → 행 경계를 지키며 size 안에 담은 덩이 items.
     field(기본 text 계열 첫 키)의 문자열을 줄바꿈으로 이어 붙인다. start=첫 행 번호, rows=담긴 행 수.
     행 하나가 size 를 넘으면 그 행만 글자로 내려간다(침묵 통짜 금지)."""
+    if not rows:
+        return [], None, []
     field = params.get("field")
     if not field:
         for r in rows:
@@ -45,8 +47,8 @@ def _chunk_rows(rows, params, size):
                 if field:
                     break
     if not field:
-        return None, f"chunk: 행에서 본문 키를 찾지 못했습니다 (후보 {list(_CHUNK_TEXT_FIELDS)}, 첫 행 키: {list(rows[0].keys())[:12] if rows and isinstance(rows[0], dict) else '-'}). field 로 지정하세요."
-    items, buf, buf_start, cur = [], [], 0, 0
+        return None, f"chunk: 행에서 본문 키를 찾지 못했습니다 (후보 {list(_CHUNK_TEXT_FIELDS)}, 첫 행 키: {list(rows[0].keys())[:12] if rows and isinstance(rows[0], dict) else '-'}). field 로 지정하세요.", []
+    items, buf, buf_start, cur, skipped = [], [], 0, 0, []
     def _flush():
         if buf:
             piece = "\n".join(buf)
@@ -54,6 +56,7 @@ def _chunk_rows(rows, params, size):
     for i, r in enumerate(rows):
         t = r.get(field) if isinstance(r, dict) else None
         if not isinstance(t, str) or not t.strip():
+            skipped.append(i)
             continue
         if len(t) > size:
             _flush(); buf, cur = [], 0
@@ -68,7 +71,7 @@ def _chunk_rows(rows, params, size):
                 buf_start = i
             buf.append(t); cur = cur + (1 if cur else 0) + len(t)
     _flush()
-    return items, None
+    return items, None, skipped
 
 
 def _op_chunk(prev, params):
@@ -98,11 +101,15 @@ def _op_chunk(prev, params):
     items = []
     if text is None and isinstance(env, dict) and isinstance(env.get("items"), list):
         rows = env["items"]
-        items, why = _chunk_rows(rows, params, size)
+        items, why, skipped = _chunk_rows(rows, params, size)
         if why:
             return {"success": False, "error": why}
         out = {"success": True, "items": items, "count": len(items), "source_rows": len(rows),
                "source_chars": sum(it["chars"] for it in items), "by": "rows", "size": size}
+        if skipped:
+            out.update(rows_dropped=len(skipped), skipped_rows=len(skipped),
+                       skipped_row_indices=skipped,
+                       warning="chunk: 본문이 없거나 비어 있는 행을 건너뛰었습니다.")
         for k in ("video_id", "title", "url", "path", "language"):
             if k in env:
                 out[k] = env[k]

@@ -155,6 +155,20 @@ return {date:$날짜,items:$결합.items}
 읽는다. 실패한 분기를 건너뛰어 만든 결과는 부분 결과이며 `source_complete:false`를 유지한다.
 `self:time`은 Text를 반환하므로 보고서 제목이나 파일 이름에 바로 쓴다.
 
+`groupby/dedup/rename/flatten/since/reduce/chunk/ai/brief/judge`도 파이프 입력을 받는다.
+이 도구들은 기존 Record 반환을 유지한다. 예를 들어 집계 뒤 정렬은 다음처럼 연결한다:
+
+<!-- example:unary_group -->
+```ibl
+#!ibl edition=2
+$합계 = [{분류:"식비",금액:30},{분류:"식비",금액:20}] >> [table:groupby]{by:"분류",agg:{합계:["sum","금액"]}}
+$합계.items >> [table:sort]{by:"합계",descending:true}
+```
+
+`chunk`는 평문·목록·본문 봉투를 받아 Record의 `.items`로 덩이를 낸다. 빈 목록은 정상
+0건이며 본문이 없거나 빈 행을 생략하면 행 수와 원래 인덱스를 신고한다. 일부 원문을 잃은
+결과는 `PARTIAL_SOURCE`이고, catch에서 `$error.partial`을 사용해도 불완전 표지는 남는다.
+
 `$r=[sense:search]{query:"..."}; $r.items >> ...`처럼 반환 계약에 맞게 명시적으로 연결한다.
 `[self:script]{id:"등록이름",args:{...}}`는 기존 등록 스크립트도 직접 실행한다.
 기존 JSON stdin을 유지하며 JSON stdout 전체가 값이다. `{items:[...],run:...}`이면 `$r.items`와

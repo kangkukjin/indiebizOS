@@ -8728,6 +8728,22 @@ nodes:
         - 모두에게
         - each
       reduce:
+        callable_contract:
+          version: 1
+          params:
+            items: List|Record|Text
+          open_params: true
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -8749,6 +8765,32 @@ nodes:
         - reduce
         - fold
       judge:
+        callable_contract:
+          version: 1
+          params:
+            as: Unknown
+            criteria: Unknown
+            instruction: Unknown
+            items: List|Record|Text
+            op: Unknown
+            project_id: Unknown
+            questions: Unknown
+            scope: Unknown
+            target: Unknown
+            threshold: Unknown
+            type: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -8776,6 +8818,36 @@ nodes:
         - judge
         - Jev
       ai:
+        callable_contract:
+          version: 1
+          params:
+            contract: Unknown
+            criteria: Unknown
+            do: Unknown
+            fields: Unknown
+            input_fields: Unknown
+            inspect: Unknown
+            instruction: Unknown
+            items: List|Record|Text
+            op: Unknown
+            preserve_rows: Unknown
+            project_id: Unknown
+            prompt: Unknown
+            schema: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -8807,6 +8879,30 @@ nodes:
         - 의미변환
         - ai
       brief:
+        callable_contract:
+          version: 1
+          params:
+            criteria: Unknown
+            do: Unknown
+            instruction: Unknown
+            items: List|Record|Text
+            op: Unknown
+            project_id: Unknown
+            prompt: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: scalar
         flow:
           accepts: items
@@ -8964,6 +9060,32 @@ nodes:
         - take
         - top
       chunk:
+        callable_contract:
+          version: 1
+          params:
+            by: Unknown
+            criteria: Unknown
+            field: Unknown
+            items: List|Record|Text
+            op: Unknown
+            overlap: Unknown
+            project_id: Unknown
+            scope: Unknown
+            size: Unknown
+            target: Unknown
+            text: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         params:
           items: array
           size: integer
@@ -8979,7 +9101,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자 — 긴 문자열 하나(크롤 본문·산문) 또는 본문 열이 있는 items(자막 구간 등)를 덩이 items 로 자른다(size 자 상한, by=paragraph|line|chars, overlap; items 는 행 경계). 긴 원문을 파이프 안에서 나눠 [table:each] 로 덩이마다 요약하고 다시 [table:brief] 로 종합하는 자리.
-        target_description: 'size(덩이 상한 자, 기본 20000) · by(paragraph|line|chars, 기본 paragraph — 경계로 나눈 뒤 size 안에서 이어 붙임, 경계 없는 통짜 본문은 줄·글자로 내려감) · overlap(겹침 자, chars 전용) · field(봉투 입력의 본문 키, 기본 text/transcript/content/message/body 순) · text(직접 본문). 출력 items {index, text, chars, start}. 예: [sense:video]{op: "transcript", video_id: "…"} >> [table:chunk]{size: 15000} >> [table:each]{do: "[table:brief]{items: [$it], instruction: \"이 덩이의 팁만 불릿으로\"}"} >> [table:brief]{instruction: "덩이 요약들을 하나로"}. items 통화(자막 구간·검색 결과)도 받는다 — 행의 본문 키(field, 기본 text 계열)를 행 경계를 지키며 size 안에 담아 {index, text, chars, start(첫 행), rows} 로. 변환자라 파이프 머리에 홀로 설 수 없다 — 본문을 직접 주려면 items: [{text: "…"}] 로(text 파라미터는 $변수 주입용).'
+        target_description: 'size(덩이 상한 자, 기본 20000) · by(paragraph|line|chars, 기본 paragraph — 경계로 나눈 뒤 size 안에서 이어 붙임, 경계 없는 통짜 본문은 줄·글자로 내려감) · overlap(겹침 자, chars 전용) · field(봉투 입력의 본문 키, 기본 text/transcript/content/message/body 순) · text(직접 본문). 출력 items {index, text, chars, start}. 빈 목록은 0건 성공이며, 본문이 없거나 빈 행은 rows_dropped·skipped_row_indices로 신고한다. 예: [sense:video]{op: "transcript", video_id: "…"} >> [table:chunk]{size: 15000} >> [table:each]{do: "[table:brief]{items: [$it], instruction: \"이 덩이의 팁만 불릿으로\"}"} >> [table:brief]{instruction: "덩이 요약들을 하나로"}. items 통화(자막 구간·검색 결과)도 받는다 — 행의 본문 키(field, 기본 text 계열)를 행 경계를 지키며 size 안에 담아 {index, text, chars, start(첫 행), rows} 로. 변환자라 파이프 머리에 홀로 설 수 없다 — 본문을 직접 주려면 items: [{text: "…"}] 로(text 파라미터는 $변수 주입용).'
         group: transform
         router: handler
         tool: data_chunk
@@ -9088,6 +9210,29 @@ nodes:
         - 나누기
         - compute
       rename:
+        callable_contract:
+          version: 1
+          params:
+            columns: Unknown
+            criteria: Unknown
+            items: List|Record|Text
+            map: Unknown
+            op: Unknown
+            project_id: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -9115,6 +9260,29 @@ nodes:
         - 개명
         - 키맞추기
       flatten:
+        callable_contract:
+          version: 1
+          params:
+            criteria: Unknown
+            field: Unknown
+            items: List|Record|Text
+            keep: Unknown
+            op: Unknown
+            project_id: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -9139,6 +9307,29 @@ nodes:
         - unnest
         - 풀기
       dedup:
+        callable_contract:
+          version: 1
+          params:
+            by: Unknown
+            criteria: Unknown
+            items: List|Record|Text
+            key: Unknown
+            op: Unknown
+            project_id: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -9169,6 +9360,31 @@ nodes:
         - dedup
         - 고유
       since:
+        callable_contract:
+          version: 1
+          params:
+            by: Unknown
+            criteria: Unknown
+            items: List|Record|Text
+            key: Unknown
+            op: Unknown
+            peek: Unknown
+            project_id: Unknown
+            scope: Unknown
+            target: Unknown
+            watch: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items
@@ -9200,6 +9416,29 @@ nodes:
         - since
         - 감시
       groupby:
+        callable_contract:
+          version: 1
+          params:
+            agg: Unknown
+            by: Unknown
+            criteria: Unknown
+            items: List|Record|Text
+            op: Unknown
+            project_id: Unknown
+            scope: Unknown
+            target: Unknown
+          open_params: false
+          required: []
+          result: Record
+          effects:
+          - unknown
+          compatibility: legacy-envelope/1
+          adapter:
+            protocol: legacy-envelope
+            input_envelopes:
+            - items
+            value_path: ''
+          pipe_input: items
         returns: transform
         flow:
           accepts: items

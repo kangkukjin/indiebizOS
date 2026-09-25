@@ -1,0 +1,9 @@
+{
+  "checks": 24,
+  "executions": 20,
+  "values_verified": 20,
+  "expected_partial": [
+    "T10"
+  ],
+  "all_passed": true
+}

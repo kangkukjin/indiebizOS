@@ -312,13 +312,15 @@ class Runtime:
             old_i = env.get("i")
             try:
                 while count is None or i < count.value:
+                    # The pre-test condition and body share this iteration's
+                    # index, never an outer index or the previous iteration's.
+                    env["i"] = Binding(i)
                     if mode == "while":
                         cond = sub(d["value"])
                         parents.update(cond.evidence)
                         if not boolean(cond.value):
                             break
                     self.budget.tick(row=True)
-                    env["i"] = Binding(i)
                     result = self.eval(d["body"], env, control=parents)
                     # The body root already links prior iterations through
                     # control; retaining every old root here grows quadratically.

@@ -1,0 +1,43 @@
+{
+  "defects": [
+    "B60-1: dynamic + overload selection",
+    "B60-2: iteration index scope and timing",
+    "B60-3: loop definite assignment and post-test order"
+  ],
+  "addition_contexts": [
+    "repeat",
+    "reduce",
+    "lambda",
+    "function"
+  ],
+  "addition_operands": [
+    "empty list + populated list",
+    "populated list + empty list",
+    "Text + Text",
+    "Number + Number"
+  ],
+  "loop_modes": [
+    "count zero/one/multiple/dynamic",
+    "while zero/multiple",
+    "until body-defined condition"
+  ],
+  "control_contexts": [
+    "if/else",
+    "case/else",
+    "try/catch",
+    "nested repeat",
+    "each read-only",
+    "finally no return"
+  ],
+  "scope_and_failures": [
+    "count expression before inner i",
+    "nested i restoration",
+    "exception i restoration",
+    "no leaked i",
+    "shared row budget",
+    "conditional new binding rejection",
+    "runtime rejection of dynamic non-lists"
+  ],
+  "regression_tests": 68,
+  "source": "backend/test_imagination_round60_repairs.py"
+}

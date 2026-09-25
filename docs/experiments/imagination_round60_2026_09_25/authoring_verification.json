@@ -1,0 +1,71 @@
+{
+  "phase": "authoring",
+  "observations": 44,
+  "passed": 28,
+  "failed": [
+    {
+      "name": "T03",
+      "check": true
+    },
+    {
+      "name": "T03",
+      "check": false
+    },
+    {
+      "name": "T04",
+      "check": true
+    },
+    {
+      "name": "T04",
+      "check": false
+    },
+    {
+      "name": "T05",
+      "check": true
+    },
+    {
+      "name": "T05",
+      "check": false
+    },
+    {
+      "name": "T06",
+      "check": true
+    },
+    {
+      "name": "T06",
+      "check": false
+    },
+    {
+      "name": "T08",
+      "check": true
+    },
+    {
+      "name": "T08",
+      "check": false
+    },
+    {
+      "name": "T09",
+      "check": true
+    },
+    {
+      "name": "T09",
+      "check": false
+    },
+    {
+      "name": "T16",
+      "check": true
+    },
+    {
+      "name": "T16",
+      "check": false
+    },
+    {
+      "name": "T18",
+      "check": true
+    },
+    {
+      "name": "T18",
+      "check": false
+    }
+  ]
+}

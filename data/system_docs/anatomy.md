@@ -105,6 +105,8 @@ finally의 정리와 병렬 쓰기 충돌 검사도 유지한다. [조합 검사
 보존한다. [2배 상상훈련 58회차](../../docs/experiments/imagination_round58_2026_09_25/report.md).
 중첩 자료를 펼칠 때 빈 목록은 정상으로 처리하고, 소비한 봉투의 실패·생략·절단 근거는
 명시 경로 접근 뒤에도 유지한다. [2배 상상훈련 59회차](../../docs/experiments/imagination_round59_2026_09_25/report.md).
+반복·콜백에서 목록과 문자열을 누적할 수 있고, while은 현재 회차 번호를 읽는다.
+until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2배 상상훈련 60회차](../../docs/experiments/imagination_round60_2026_09_25/report.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

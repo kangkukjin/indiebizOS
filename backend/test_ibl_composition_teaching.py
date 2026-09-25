@@ -77,6 +77,10 @@ def test_unary_group_guide_preserves_aggregate(current):
     assert current(EXAMPLES['unary_group'])['value'] == [{'분류': '식비', '합계': 50}]
 
 
+def test_loop_accumulation_guide_uses_the_current_iteration_index(current):
+    assert current(EXAMPLES['loop_accumulate'])['value'] == ['기초', '실습', '심화']
+
+
 def test_empty_and_failure_are_distinct(current):
     assert current(EXAMPLES['empty'])['value'] == [{'status': '대상 없음'}]
     present = EXAMPLES['empty'].replace('$후보 = []', '$후보 = [{id:"a"}]')
@@ -139,7 +143,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group'}
+    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

@@ -259,6 +259,12 @@ class Compiler:
                 return BOOL
             if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
                 return join(*values)
+            if op == "+" and any(t.kind == "Unknown" for t in values):
+                # An unknown accumulator/callback operand may concatenate.
+                # Do not select numeric addition until both shapes are known.
+                if all(t.kind in ("Unknown", "List", "Text", "Number") for t in values):
+                    self.need(node, UNKNOWN, UNKNOWN)
+                    return UNKNOWN
             operands = [d["value"]] if kind == "unary" else [d["left"], d["right"]]
             for operand, typ in zip(operands, values):
                 numeric_operand(self, operand, typ)
@@ -414,21 +420,30 @@ class Compiler:
             count = d["value"].data.get("value") if d["mode"] == "count" and d["value"].kind == "literal" else None
             if count is not None and (type(count) is not int or count < 0):
                 self.issue(d["value"], "REPEAT_COUNT", "repeat 횟수는 0 이상의 정수입니다.")
+            # Count is evaluated outside the new index scope. While sees the
+            # first iteration's environment before any body assignment.
+            if d["mode"] == "count":
+                self.need(node, sub(d["value"]), NUMBER)
+            elif d["mode"] == "while":
+                sub_env = {**env, "i": NUMBER}
+                self.need(node, sub(d["value"], sub_env), BOOL)
             mutated = assigned_names(d["body"]) & env.keys()
             local = {**env, "i": NUMBER}
             # Later iterations may see a different shape. Widen before checking
             # the body rather than certify a stale first-iteration type.
             if count not in (0, 1):
                 local.update(dict.fromkeys(mutated, UNKNOWN))
-            self.need(node, self.visit(d["value"], local, names, readonly, final),
-                      NUMBER if d["mode"] == "count" else BOOL)
+            if d["mode"] == "while":
+                self.need(node, sub(d["value"], local), BOOL)
             sub(d["body"], local)
-            if count == 1:
-                for name in mutated:
-                    env[name] = local[name]
+            if d["mode"] == "until":
+                # Post-test conditions may use values definitely assigned by
+                # the body, including new bindings. Conditional ones still fail.
+                self.need(node, sub(d["value"], local), BOOL)
+            if d["mode"] == "until" or (type(count) is int and count > 0):
+                env.update({k: v for k, v in local.items() if k != "i"})
             elif count != 0:
-                for name in mutated:
-                    env[name] = join(env[name], local[name])
+                self.merge_env(env, env.copy(), {k: v for k, v in local.items() if k != "i" or k in env})
             return UNIT_T
         if kind == "try":
             a, b = env.copy(), {**env, "error": Type("Record")}

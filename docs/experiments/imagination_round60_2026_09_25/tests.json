@@ -1,0 +1,39 @@
+{
+  "initial_regression": {
+    "passed": 26,
+    "failed": 19,
+    "tests": 45
+  },
+  "new_regressions": {
+    "passed": 68
+  },
+  "focused": {
+    "passed": 244
+  },
+  "full_backend": {
+    "tests": 6138,
+    "errors": 0,
+    "failures": 0,
+    "skipped": 1,
+    "passed": 6137,
+    "seconds": 558.57
+  },
+  "full_log": "/tmp/imagination60-full-native.log",
+  "junit": "/tmp/imagination60-full-native.xml",
+  "api_before": {
+    "passed": 36,
+    "failed": 8
+  },
+  "api_after": {
+    "passed": 44,
+    "failed": 0
+  },
+  "guards": [
+    "IBL build freshness",
+    "Android body bundle",
+    "backend layers",
+    "retired contracts",
+    "git diff --check"
+  ],
+  "restart": "restarted; ACTIVE; API verified"
+}

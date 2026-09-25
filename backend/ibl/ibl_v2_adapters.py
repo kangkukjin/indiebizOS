@@ -77,6 +77,13 @@ def table_operation(operation, runtime, args):
             raise Fault("TAKE_COUNT", "take.n은 0 이상의 정수입니다.")
         return rows[:args["n"]]
     if operation == "sort":
+        # The shared ordering primitive tolerates missing cells. The adapter
+        # must distinguish those from an entirely absent ranking criterion;
+        # otherwise sort -> take certifies the original order as a ranking.
+        if rows and not any(args["by"] in row for row in rows):
+            available = list(dict.fromkeys(key for row in rows[:20] for key in row))[:12]
+            raise Fault("MISSING_FIELD", f"sort의 기준 필드가 입력 행에 없습니다: {args['by']}. "
+                        f"입력 필드 예: {available}")
         return sort_records(rows, args["by"], descending=args.get("descending", False))
     if operation == "compute":
         return [{**row, **guard(runtime.callback(args["set"], [Binding(row)]).value, "Record", "compute.set")}

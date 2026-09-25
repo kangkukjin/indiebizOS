@@ -1,0 +1,222 @@
+FFFFFFFFFF.........F                                                     [100%]
+=================================== FAILURES ===================================
+______ test_missing_sort_field_never_returns_a_false_ranking[rows0-False] ______
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+descending = False
+rows = [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}]
+
+    @pytest.mark.parametrize('descending', [False, True])
+    @pytest.mark.parametrize('rows', [
+        [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}],
+        [{}, {}],
+        [{'id': 'a'}, {'id': 'b', 'price': None}],
+    ])
+    def test_missing_sort_field_never_returns_a_false_ranking(registry, descending, rows):
+        inputs = {'rows': rows, 'descending': descending, 'key': 'cost'}
+        original = copy.deepcopy(inputs)
+        result = run(registry, '$rows >> [table:sort]{by:$key,descending:$descending} '
+                     '>> [table:take]{n:1}', inputs)
+>       assert result['success'] is False, result
+E       AssertionError: {'success': True, 'value': [{'id': 'a', 'price': 300}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...], [...]]]]]}, 'edition': 2, ...}
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:40: AssertionError
+______ test_missing_sort_field_never_returns_a_false_ranking[rows0-True] _______
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+descending = True, rows = [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}]
+
+    @pytest.mark.parametrize('descending', [False, True])
+    @pytest.mark.parametrize('rows', [
+        [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}],
+        [{}, {}],
+        [{'id': 'a'}, {'id': 'b', 'price': None}],
+    ])
+    def test_missing_sort_field_never_returns_a_false_ranking(registry, descending, rows):
+        inputs = {'rows': rows, 'descending': descending, 'key': 'cost'}
+        original = copy.deepcopy(inputs)
+        result = run(registry, '$rows >> [table:sort]{by:$key,descending:$descending} '
+                     '>> [table:take]{n:1}', inputs)
+>       assert result['success'] is False, result
+E       AssertionError: {'success': True, 'value': [{'id': 'a', 'price': 300}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...], [...]]]]]}, 'edition': 2, ...}
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:40: AssertionError
+______ test_missing_sort_field_never_returns_a_false_ranking[rows1-False] ______
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+descending = False, rows = [{}, {}]
+
+    @pytest.mark.parametrize('descending', [False, True])
+    @pytest.mark.parametrize('rows', [
+        [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}],
+        [{}, {}],
+        [{'id': 'a'}, {'id': 'b', 'price': None}],
+    ])
+    def test_missing_sort_field_never_returns_a_false_ranking(registry, descending, rows):
+        inputs = {'rows': rows, 'descending': descending, 'key': 'cost'}
+        original = copy.deepcopy(inputs)
+        result = run(registry, '$rows >> [table:sort]{by:$key,descending:$descending} '
+                     '>> [table:take]{n:1}', inputs)
+>       assert result['success'] is False, result
+E       AssertionError: {'success': True, 'value': [{}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', []]]]}, 'edition': 2, ...}
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:40: AssertionError
+______ test_missing_sort_field_never_returns_a_false_ranking[rows1-True] _______
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+descending = True, rows = [{}, {}]
+
+    @pytest.mark.parametrize('descending', [False, True])
+    @pytest.mark.parametrize('rows', [
+        [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}],
+        [{}, {}],
+        [{'id': 'a'}, {'id': 'b', 'price': None}],
+    ])
+    def test_missing_sort_field_never_returns_a_false_ranking(registry, descending, rows):
+        inputs = {'rows': rows, 'descending': descending, 'key': 'cost'}
+        original = copy.deepcopy(inputs)
+        result = run(registry, '$rows >> [table:sort]{by:$key,descending:$descending} '
+                     '>> [table:take]{n:1}', inputs)
+>       assert result['success'] is False, result
+E       AssertionError: {'success': True, 'value': [{}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', []]]]}, 'edition': 2, ...}
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:40: AssertionError
+______ test_missing_sort_field_never_returns_a_false_ranking[rows2-False] ______
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+descending = False, rows = [{'id': 'a'}, {'id': 'b', 'price': None}]
+
+    @pytest.mark.parametrize('descending', [False, True])
+    @pytest.mark.parametrize('rows', [
+        [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}],
+        [{}, {}],
+        [{'id': 'a'}, {'id': 'b', 'price': None}],
+    ])
+    def test_missing_sort_field_never_returns_a_false_ranking(registry, descending, rows):
+        inputs = {'rows': rows, 'descending': descending, 'key': 'cost'}
+        original = copy.deepcopy(inputs)
+        result = run(registry, '$rows >> [table:sort]{by:$key,descending:$descending} '
+                     '>> [table:take]{n:1}', inputs)
+>       assert result['success'] is False, result
+E       AssertionError: {'success': True, 'value': [{'id': 'a'}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...]]]]]}, 'edition': 2, ...}
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:40: AssertionError
+______ test_missing_sort_field_never_returns_a_false_ranking[rows2-True] _______
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+descending = True, rows = [{'id': 'a'}, {'id': 'b', 'price': None}]
+
+    @pytest.mark.parametrize('descending', [False, True])
+    @pytest.mark.parametrize('rows', [
+        [{'id': 'a', 'price': 300}, {'id': 'b', 'price': 100}],
+        [{}, {}],
+        [{'id': 'a'}, {'id': 'b', 'price': None}],
+    ])
+    def test_missing_sort_field_never_returns_a_false_ranking(registry, descending, rows):
+        inputs = {'rows': rows, 'descending': descending, 'key': 'cost'}
+        original = copy.deepcopy(inputs)
+        result = run(registry, '$rows >> [table:sort]{by:$key,descending:$descending} '
+                     '>> [table:take]{n:1}', inputs)
+>       assert result['success'] is False, result
+E       AssertionError: {'success': True, 'value': [{'id': 'a'}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...]]]]]}, 'edition': 2, ...}
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:40: AssertionError
+_____ test_schema_rename_and_function_forwarding_keep_missing_field_check ______
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+
+    def test_schema_rename_and_function_forwarding_keep_missing_field_check(registry):
+        result = run(registry, '''
+    [def:추천]($rows,$key){$rows >> [table:sort]{by:$key} >> [table:take]{n:1}}
+    $r=[{price:300},{price:100}] >> [table:rename]{map:{price:"가격"}}
+    [fn:추천]{rows:$r.items,key:"price"}
+    ''')
+>       assert result['success'] is False
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:53: AssertionError
+----------------------------- Captured stdout call -----------------------------
+[도구 핸들러 로드] data_rename <- data-ops
+_______________ test_missing_sort_field_reaches_recovery[catch] ________________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+recovery = 'catch'
+
+    @pytest.mark.parametrize('recovery', ['catch', 'fallback'])
+    def test_missing_sort_field_reaches_recovery(registry, recovery):
+        sort = '[{score:10}] >> [table:sort]{by:"total"}'
+        code = ('[try]{' + sort + '; return "ranked"}[catch]{return "review"}'
+                if recovery == 'catch' else '(' + sort + ') ?? "review"')
+>       assert output(run(registry, code)) == 'review'
+E       AssertionError: assert 'ranked' == 'review'
+E
+E         - review
+E         + ranked
+
+backend/test_imagination_round66_repairs.py:63: AssertionError
+______________ test_missing_sort_field_reaches_recovery[fallback] ______________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+recovery = 'fallback'
+
+    @pytest.mark.parametrize('recovery', ['catch', 'fallback'])
+    def test_missing_sort_field_reaches_recovery(registry, recovery):
+        sort = '[{score:10}] >> [table:sort]{by:"total"}'
+        code = ('[try]{' + sort + '; return "ranked"}[catch]{return "review"}'
+                if recovery == 'catch' else '(' + sort + ') ?? "review"')
+>       assert output(run(registry, code)) == 'review'
+E       assert [{'score': 10}] == 'review'
+E        +  where [{'score': 10}] = output({'success': True, 'value': [{'score': 10}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...]]]]]}, 'edition': 2, ...})
+E        +    where {'success': True, 'value': [{'score': 10}], 'value_wire': {'protocol': 'ibl-value/1', 'data': ['list', [['record', [[...]]]]]}, 'edition': 2, ...} = run({'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}, '([{score:10}] >> [table:sort]{by:"total"}) ?? "review"')
+
+backend/test_imagination_round66_repairs.py:63: AssertionError
+______________ test_parallel_rankings_collect_the_invalid_source _______________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+
+    def test_parallel_rankings_collect_the_invalid_source(registry):
+        result = run(registry, '''
+    $r=[[{rank:2}],[{score:10}]] >> [table:each]{parallel:2,on_error:"collect"}{
+     $it >> [table:sort]{by:"rank"}
+    }
+    return [is_ok($r[0]),is_ok($r[1])]
+    ''')
+>       assert output(result) == [True, False]
+E       assert [True, True] == [True, False]
+E
+E         At index 1 diff: True != False
+E         Use -v to get more diff
+
+backend/test_imagination_round66_repairs.py:73: AssertionError
+____________ test_record_keys_are_literal_not_implicit_nested_paths ____________
+
+registry = {'sense:world': Adapter(contract={'version': 1, 'params': {}, 'open_params': True, 'required': [], 'result': 'Record',...cals>.run at 0x10bfb2e80>, authorize=<function load_registry.<locals>.authorize at 0x10bfb3060>, dependency=None), ...}
+
+    def test_record_keys_are_literal_not_implicit_nested_paths(registry):
+        result = run(registry, '[{"price.value":20},{"price.value":10}] '
+                     '>> [table:sort]{by:"price.value"}')
+        assert output(result) == [{'price.value': 10}, {'price.value': 20}]
+        missing = run(registry, '[{price:{value:10}}] >> [table:sort]{by:"price.value"}')
+>       assert missing['success'] is False
+E       assert True is False
+
+backend/test_imagination_round66_repairs.py:111: AssertionError
+=========================== short test summary info ============================
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_never_returns_a_false_ranking[rows0-False]
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_never_returns_a_false_ranking[rows0-True]
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_never_returns_a_false_ranking[rows1-False]
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_never_returns_a_false_ranking[rows1-True]
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_never_returns_a_false_ranking[rows2-False]
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_never_returns_a_false_ranking[rows2-True]
+FAILED backend/test_imagination_round66_repairs.py::test_schema_rename_and_function_forwarding_keep_missing_field_check
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_reaches_recovery[catch]
+FAILED backend/test_imagination_round66_repairs.py::test_missing_sort_field_reaches_recovery[fallback]
+FAILED backend/test_imagination_round66_repairs.py::test_parallel_rankings_collect_the_invalid_source
+FAILED backend/test_imagination_round66_repairs.py::test_record_keys_are_literal_not_implicit_nested_paths
+11 failed, 9 passed in 1.94s

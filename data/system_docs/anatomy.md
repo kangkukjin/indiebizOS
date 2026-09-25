@@ -2,7 +2,7 @@
 title: indiebizOS 해부도 (Anatomy) — 신참을 위한 전체 지도
 scope: 시스템 전체를 하나의 몸으로 보는 정문(正門) 문서. 철학 → 3표면 → IBL → 인지 → 메모리 → 검색 브라우저 → 몸 순으로 각 기관을 짚고 상세 문서로 안내.
 owner_code: 전체 (개념 지도 — 구현 상세는 각 절이 가리키는 문서)
-last_updated: 2026-09-25
+last_updated: 2026-09-26
 see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, packages.md]
 ---
 
@@ -120,6 +120,8 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 내부 호출 지문에 반영한다. [2배 상상훈련 64회차](../../docs/experiments/imagination_round64_2026_09_25/report.md).
 희소 자료를 결합해도 열의 출처 이름이 행마다 바뀌지 않고, 표의 생략된 후행 셀 때문에
 오른쪽 값이 다른 열로 밀리지 않는다. [2배 상상훈련 65회차](../../docs/experiments/imagination_round65_2026_09_25/report.md).
+정렬 기준이 입력 전체에 없으면 오류로 알려 잘못된 추천과 거짓 완료를 막는다.
+일부 결측과 빈 목록의 정상 동작은 유지한다. [2배 상상훈련 66회차](../../docs/experiments/imagination_round66_2026_09_26/report.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

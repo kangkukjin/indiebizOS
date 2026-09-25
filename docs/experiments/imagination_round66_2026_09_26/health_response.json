@@ -1,0 +1,397 @@
+{
+  "request": {
+    "code": "#!ibl edition=2\n[sense:sqlite]{path:\"~workspace/data/world_pulse.db\",query:\"select source, count(*) as n from action_health where datetime(timestamp) >= datetime('2026-09-26 00:54:22') group by source\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training"
+  },
+  "response": {
+    "success": true,
+    "value": {
+      "success": true,
+      "op": "query",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/data/world_pulse.db",
+      "columns": [
+        "source",
+        "n"
+      ],
+      "count": 3,
+      "items": [
+        {
+          "source": "test",
+          "n": 526
+        },
+        {
+          "source": "training",
+          "n": 20
+        },
+        {
+          "source": "usage",
+          "n": 3
+        }
+      ]
+    },
+    "value_wire": {
+      "protocol": "ibl-value/1",
+      "data": [
+        "record",
+        [
+          [
+            "success",
+            [
+              "scalar",
+              true
+            ]
+          ],
+          [
+            "op",
+            [
+              "scalar",
+              "query"
+            ]
+          ],
+          [
+            "path",
+            [
+              "scalar",
+              "/Users/kangkukjin/Desktop/AI/indiebizOS/data/world_pulse.db"
+            ]
+          ],
+          [
+            "columns",
+            [
+              "list",
+              [
+                [
+                  "scalar",
+                  "source"
+                ],
+                [
+                  "scalar",
+                  "n"
+                ]
+              ]
+            ]
+          ],
+          [
+            "count",
+            [
+              "scalar",
+              3
+            ]
+          ],
+          [
+            "items",
+            [
+              "list",
+              [
+                [
+                  "record",
+                  [
+                    [
+                      "source",
+                      [
+                        "scalar",
+                        "test"
+                      ]
+                    ],
+                    [
+                      "n",
+                      [
+                        "scalar",
+                        526
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "record",
+                  [
+                    [
+                      "source",
+                      [
+                        "scalar",
+                        "training"
+                      ]
+                    ],
+                    [
+                      "n",
+                      [
+                        "scalar",
+                        20
+                      ]
+                    ]
+                  ]
+                ],
+                [
+                  "record",
+                  [
+                    [
+                      "source",
+                      [
+                        "scalar",
+                        "usage"
+                      ]
+                    ],
+                    [
+                      "n",
+                      [
+                        "scalar",
+                        3
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "97e720108e57b21fa15b5ddf9bcb6f0b96e618825108fb54255ffe16bfb4b098",
+    "source_complete": true,
+    "evidence": [
+      {
+        "id": 1,
+        "node_id": "literal:36:68",
+        "invocation_id": 1,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 2,
+        "node_id": "literal:75:201",
+        "invocation_id": 2,
+        "kind": "literal",
+        "parents": []
+      },
+      {
+        "id": 3,
+        "node_id": "record:30:202",
+        "invocation_id": 3,
+        "kind": "record",
+        "parents": [
+          1,
+          2
+        ]
+      },
+      {
+        "id": 4,
+        "node_id": "call:16:202",
+        "invocation_id": 4,
+        "kind": "invoke",
+        "parents": [
+          3
+        ],
+        "action": "sense:sqlite",
+        "effects": [
+          "unknown"
+        ],
+        "request_hash": "8aad7bf9689dcd70b60f8186f16c8dcb1288b6365df902e3fc2163414c50c478"
+      },
+      {
+        "id": 5,
+        "node_id": "call:16:202",
+        "invocation_id": 5,
+        "kind": "tool_evidence",
+        "parents": [
+          4
+        ],
+        "markers": {},
+        "attachments": {}
+      },
+      {
+        "id": 6,
+        "node_id": "call:16:202",
+        "invocation_id": 6,
+        "kind": "call",
+        "parents": [
+          3,
+          4,
+          5
+        ]
+      },
+      {
+        "id": 7,
+        "node_id": "sequence:15:202",
+        "invocation_id": 7,
+        "kind": "sequence",
+        "parents": [
+          6
+        ]
+      }
+    ],
+    "source_map": {
+      "literal:36:68": {
+        "source_hash": "827fee8998166400f957b2040c5f3a87c228acfb4703c69bfe4c2dbad5f8ce82",
+        "start": 36,
+        "end": 68,
+        "line": 2,
+        "column": 21
+      },
+      "literal:75:201": {
+        "source_hash": "827fee8998166400f957b2040c5f3a87c228acfb4703c69bfe4c2dbad5f8ce82",
+        "start": 75,
+        "end": 201,
+        "line": 2,
+        "column": 60
+      },
+      "record:30:202": {
+        "source_hash": "827fee8998166400f957b2040c5f3a87c228acfb4703c69bfe4c2dbad5f8ce82",
+        "start": 30,
+        "end": 202,
+        "line": 2,
+        "column": 15
+      },
+      "call:16:202": {
+        "source_hash": "827fee8998166400f957b2040c5f3a87c228acfb4703c69bfe4c2dbad5f8ce82",
+        "start": 16,
+        "end": 202,
+        "line": 2,
+        "column": 1
+      },
+      "sequence:15:202": {
+        "source_hash": "827fee8998166400f957b2040c5f3a87c228acfb4703c69bfe4c2dbad5f8ce82",
+        "start": 15,
+        "end": 202,
+        "line": 1,
+        "column": 16
+      }
+    },
+    "recordings": [
+      {
+        "request_hash": "8aad7bf9689dcd70b60f8186f16c8dcb1288b6365df902e3fc2163414c50c478",
+        "value": [
+          "record",
+          [
+            [
+              "success",
+              [
+                "scalar",
+                true
+              ]
+            ],
+            [
+              "op",
+              [
+                "scalar",
+                "query"
+              ]
+            ],
+            [
+              "path",
+              [
+                "scalar",
+                "/Users/kangkukjin/Desktop/AI/indiebizOS/data/world_pulse.db"
+              ]
+            ],
+            [
+              "columns",
+              [
+                "list",
+                [
+                  [
+                    "scalar",
+                    "source"
+                  ],
+                  [
+                    "scalar",
+                    "n"
+                  ]
+                ]
+              ]
+            ],
+            [
+              "count",
+              [
+                "scalar",
+                3
+              ]
+            ],
+            [
+              "items",
+              [
+                "list",
+                [
+                  [
+                    "record",
+                    [
+                      [
+                        "source",
+                        [
+                          "scalar",
+                          "test"
+                        ]
+                      ],
+                      [
+                        "n",
+                        [
+                          "scalar",
+                          526
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "record",
+                    [
+                      [
+                        "source",
+                        [
+                          "scalar",
+                          "training"
+                        ]
+                      ],
+                      [
+                        "n",
+                        [
+                          "scalar",
+                          20
+                        ]
+                      ]
+                    ]
+                  ],
+                  [
+                    "record",
+                    [
+                      [
+                        "source",
+                        [
+                          "scalar",
+                          "usage"
+                        ]
+                      ],
+                      [
+                        "n",
+                        [
+                          "scalar",
+                          3
+                        ]
+                      ]
+                    ]
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "evidence": {
+          "markers": {},
+          "attachments": {}
+        }
+      }
+    ],
+    "usage": {
+      "steps": 5,
+      "rows": 0,
+      "elapsed_ms": 236
+    },
+    "resume": {
+      "run_id": "b70a82cf68f143bca82cf996025c393b"
+    },
+    "resumed": false,
+    "run_status": "completed"
+  }
+}

@@ -1,0 +1,514 @@
+FFFFFFFFFFFFF.FFFFFFF.FF....F                                            [100%]
+=================================== FAILURES ===================================
+_ test_unrelated_collected_functions_do_not_poison_table_calls[($x)=>$x*2-select-columns-{score:$row.score*2}-expected0] _
+
+operation = 'select', argument = 'columns', body = '{score:$row.score*2}'
+expected = [{'score': 60}], fn = '($x)=>$x*2'
+
+    @pytest.mark.parametrize('operation,argument,body,expected', [
+        ('select', 'columns', '{score:$row.score*2}', [{'score': 60}]),
+        ('compute', 'set', '{weighted:$row.score*2}', [{'score': 30, 'weighted': 60}]),
+        ('filter', 'where', '$row.score>20', [{'score': 30}]),
+    ])
+    @pytest.mark.parametrize('fn', ['($x)=>$x*2', 'abs'])
+    def test_unrelated_collected_functions_do_not_poison_table_calls(operation, argument, body, expected, fn):
+        code = f'''$unused=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        [{{score:30}}] >> [fixture:{operation}]{{{argument}:($row)=>{body}}}'''
+        out = execute(code, table_registry(operation))
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:37: AssertionError
+_ test_unrelated_collected_functions_do_not_poison_table_calls[($x)=>$x*2-compute-set-{weighted:$row.score*2}-expected1] _
+
+operation = 'compute', argument = 'set', body = '{weighted:$row.score*2}'
+expected = [{'score': 30, 'weighted': 60}], fn = '($x)=>$x*2'
+
+    @pytest.mark.parametrize('operation,argument,body,expected', [
+        ('select', 'columns', '{score:$row.score*2}', [{'score': 60}]),
+        ('compute', 'set', '{weighted:$row.score*2}', [{'score': 30, 'weighted': 60}]),
+        ('filter', 'where', '$row.score>20', [{'score': 30}]),
+    ])
+    @pytest.mark.parametrize('fn', ['($x)=>$x*2', 'abs'])
+    def test_unrelated_collected_functions_do_not_poison_table_calls(operation, argument, body, expected, fn):
+        code = f'''$unused=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        [{{score:30}}] >> [fixture:{operation}]{{{argument}:($row)=>{body}}}'''
+        out = execute(code, table_registry(operation))
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:37: AssertionError
+_ test_unrelated_collected_functions_do_not_poison_table_calls[($x)=>$x*2-filter-where-$row.score>20-expected2] _
+
+operation = 'filter', argument = 'where', body = '$row.score>20'
+expected = [{'score': 30}], fn = '($x)=>$x*2'
+
+    @pytest.mark.parametrize('operation,argument,body,expected', [
+        ('select', 'columns', '{score:$row.score*2}', [{'score': 60}]),
+        ('compute', 'set', '{weighted:$row.score*2}', [{'score': 30, 'weighted': 60}]),
+        ('filter', 'where', '$row.score>20', [{'score': 30}]),
+    ])
+    @pytest.mark.parametrize('fn', ['($x)=>$x*2', 'abs'])
+    def test_unrelated_collected_functions_do_not_poison_table_calls(operation, argument, body, expected, fn):
+        code = f'''$unused=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        [{{score:30}}] >> [fixture:{operation}]{{{argument}:($row)=>{body}}}'''
+        out = execute(code, table_registry(operation))
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:37: AssertionError
+_ test_unrelated_collected_functions_do_not_poison_table_calls[abs-select-columns-{score:$row.score*2}-expected0] _
+
+operation = 'select', argument = 'columns', body = '{score:$row.score*2}'
+expected = [{'score': 60}], fn = 'abs'
+
+    @pytest.mark.parametrize('operation,argument,body,expected', [
+        ('select', 'columns', '{score:$row.score*2}', [{'score': 60}]),
+        ('compute', 'set', '{weighted:$row.score*2}', [{'score': 30, 'weighted': 60}]),
+        ('filter', 'where', '$row.score>20', [{'score': 30}]),
+    ])
+    @pytest.mark.parametrize('fn', ['($x)=>$x*2', 'abs'])
+    def test_unrelated_collected_functions_do_not_poison_table_calls(operation, argument, body, expected, fn):
+        code = f'''$unused=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        [{{score:30}}] >> [fixture:{operation}]{{{argument}:($row)=>{body}}}'''
+        out = execute(code, table_registry(operation))
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Builtin', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Builtin', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:37: AssertionError
+_ test_unrelated_collected_functions_do_not_poison_table_calls[abs-compute-set-{weighted:$row.score*2}-expected1] _
+
+operation = 'compute', argument = 'set', body = '{weighted:$row.score*2}'
+expected = [{'score': 30, 'weighted': 60}], fn = 'abs'
+
+    @pytest.mark.parametrize('operation,argument,body,expected', [
+        ('select', 'columns', '{score:$row.score*2}', [{'score': 60}]),
+        ('compute', 'set', '{weighted:$row.score*2}', [{'score': 30, 'weighted': 60}]),
+        ('filter', 'where', '$row.score>20', [{'score': 30}]),
+    ])
+    @pytest.mark.parametrize('fn', ['($x)=>$x*2', 'abs'])
+    def test_unrelated_collected_functions_do_not_poison_table_calls(operation, argument, body, expected, fn):
+        code = f'''$unused=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        [{{score:30}}] >> [fixture:{operation}]{{{argument}:($row)=>{body}}}'''
+        out = execute(code, table_registry(operation))
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Builtin', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Builtin', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:37: AssertionError
+_ test_unrelated_collected_functions_do_not_poison_table_calls[abs-filter-where-$row.score>20-expected2] _
+
+operation = 'filter', argument = 'where', body = '$row.score>20'
+expected = [{'score': 30}], fn = 'abs'
+
+    @pytest.mark.parametrize('operation,argument,body,expected', [
+        ('select', 'columns', '{score:$row.score*2}', [{'score': 60}]),
+        ('compute', 'set', '{weighted:$row.score*2}', [{'score': 30, 'weighted': 60}]),
+        ('filter', 'where', '$row.score>20', [{'score': 30}]),
+    ])
+    @pytest.mark.parametrize('fn', ['($x)=>$x*2', 'abs'])
+    def test_unrelated_collected_functions_do_not_poison_table_calls(operation, argument, body, expected, fn):
+        code = f'''$unused=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        [{{score:30}}] >> [fixture:{operation}]{{{argument}:($row)=>{body}}}'''
+        out = execute(code, table_registry(operation))
+>       assert out['success'] and out['value'] == expected, out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Builtin', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Builtin', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:37: AssertionError
+_ test_required_collected_functions_are_fingerprinted_recursively[$collected-$held[0]-($a,$x)=>$a+$x*2] _
+
+fn = '($a,$x)=>$a+$x*2', container = '$collected', path = '$held[0]'
+
+    @pytest.mark.parametrize('fn', ['($a,$x)=>$a+$x*2', 'max'])
+    @pytest.mark.parametrize('container,path', [
+        ('$collected', '$held[0]'),
+        ('{rules:$collected}', '$held.rules[0]'),
+        ('[[$collected]]', '$held[0][0][0]'),
+    ])
+    def test_required_collected_functions_are_fingerprinted_recursively(fn, container, path):
+        code = f'''$collected=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        $held={container}
+        [{{score:30}}] >> [fixture:select]{{columns:($row)=>{{score:reduce([$row.score],0,unwrap({path}))}}}}'''
+        out = execute(code, table_registry('select'))
+        expected = 60 if fn.startswith('(') else 30
+>       assert out['success'] and out['value'] == [{'score': expected}], out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:52: AssertionError
+_ test_required_collected_functions_are_fingerprinted_recursively[$collected-$held[0]-max] _
+
+fn = 'max', container = '$collected', path = '$held[0]'
+
+    @pytest.mark.parametrize('fn', ['($a,$x)=>$a+$x*2', 'max'])
+    @pytest.mark.parametrize('container,path', [
+        ('$collected', '$held[0]'),
+        ('{rules:$collected}', '$held.rules[0]'),
+        ('[[$collected]]', '$held[0][0][0]'),
+    ])
+    def test_required_collected_functions_are_fingerprinted_recursively(fn, container, path):
+        code = f'''$collected=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        $held={container}
+        [{{score:30}}] >> [fixture:select]{{columns:($row)=>{{score:reduce([$row.score],0,unwrap({path}))}}}}'''
+        out = execute(code, table_registry('select'))
+        expected = 60 if fn.startswith('(') else 30
+>       assert out['success'] and out['value'] == [{'score': expected}], out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Builtin', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Builtin', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:52: AssertionError
+_ test_required_collected_functions_are_fingerprinted_recursively[{rules:$collected}-$held.rules[0]-($a,$x)=>$a+$x*2] _
+
+fn = '($a,$x)=>$a+$x*2', container = '{rules:$collected}'
+path = '$held.rules[0]'
+
+    @pytest.mark.parametrize('fn', ['($a,$x)=>$a+$x*2', 'max'])
+    @pytest.mark.parametrize('container,path', [
+        ('$collected', '$held[0]'),
+        ('{rules:$collected}', '$held.rules[0]'),
+        ('[[$collected]]', '$held[0][0][0]'),
+    ])
+    def test_required_collected_functions_are_fingerprinted_recursively(fn, container, path):
+        code = f'''$collected=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        $held={container}
+        [{{score:30}}] >> [fixture:select]{{columns:($row)=>{{score:reduce([$row.score],0,unwrap({path}))}}}}'''
+        out = execute(code, table_registry('select'))
+        expected = 60 if fn.startswith('(') else 30
+>       assert out['success'] and out['value'] == [{'score': expected}], out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:52: AssertionError
+_ test_required_collected_functions_are_fingerprinted_recursively[{rules:$collected}-$held.rules[0]-max] _
+
+fn = 'max', container = '{rules:$collected}', path = '$held.rules[0]'
+
+    @pytest.mark.parametrize('fn', ['($a,$x)=>$a+$x*2', 'max'])
+    @pytest.mark.parametrize('container,path', [
+        ('$collected', '$held[0]'),
+        ('{rules:$collected}', '$held.rules[0]'),
+        ('[[$collected]]', '$held[0][0][0]'),
+    ])
+    def test_required_collected_functions_are_fingerprinted_recursively(fn, container, path):
+        code = f'''$collected=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        $held={container}
+        [{{score:30}}] >> [fixture:select]{{columns:($row)=>{{score:reduce([$row.score],0,unwrap({path}))}}}}'''
+        out = execute(code, table_registry('select'))
+        expected = 60 if fn.startswith('(') else 30
+>       assert out['success'] and out['value'] == [{'score': expected}], out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Builtin', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Builtin', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:52: AssertionError
+_ test_required_collected_functions_are_fingerprinted_recursively[[[$collected]]-$held[0][0][0]-($a,$x)=>$a+$x*2] _
+
+fn = '($a,$x)=>$a+$x*2', container = '[[$collected]]', path = '$held[0][0][0]'
+
+    @pytest.mark.parametrize('fn', ['($a,$x)=>$a+$x*2', 'max'])
+    @pytest.mark.parametrize('container,path', [
+        ('$collected', '$held[0]'),
+        ('{rules:$collected}', '$held.rules[0]'),
+        ('[[$collected]]', '$held[0][0][0]'),
+    ])
+    def test_required_collected_functions_are_fingerprinted_recursively(fn, container, path):
+        code = f'''$collected=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        $held={container}
+        [{{score:30}}] >> [fixture:select]{{columns:($row)=>{{score:reduce([$row.score],0,unwrap({path}))}}}}'''
+        out = execute(code, table_registry('select'))
+        expected = 60 if fn.startswith('(') else 30
+>       assert out['success'] and out['value'] == [{'score': expected}], out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:52: AssertionError
+_ test_required_collected_functions_are_fingerprinted_recursively[[[$collected]]-$held[0][0][0]-max] _
+
+fn = 'max', container = '[[$collected]]', path = '$held[0][0][0]'
+
+    @pytest.mark.parametrize('fn', ['($a,$x)=>$a+$x*2', 'max'])
+    @pytest.mark.parametrize('container,path', [
+        ('$collected', '$held[0]'),
+        ('{rules:$collected}', '$held.rules[0]'),
+        ('[[$collected]]', '$held[0][0][0]'),
+    ])
+    def test_required_collected_functions_are_fingerprinted_recursively(fn, container, path):
+        code = f'''$collected=[1] >> [table:each]{{on_error:"collect"}}{{return {fn}}}
+        $held={container}
+        [{{score:30}}] >> [fixture:select]{{columns:($row)=>{{score:reduce([$row.score],0,unwrap({path}))}}}}'''
+        out = execute(code, table_registry('select'))
+        expected = 60 if fn.startswith('(') else 30
+>       assert out['success'] and out['value'] == [{'score': expected}], out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Builtin', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Builtin', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:52: AssertionError
+_____ test_nested_result_callable_in_success_value_is_supported_internally _____
+
+    def test_nested_result_callable_in_success_value_is_supported_internally():
+        code = '''$inner=[1] >> [table:each]{on_error:"collect"}{return abs}
+        $outer=[1] >> [table:each]{on_error:"collect"}{return $inner[0]}
+        [{score:-30}] >> [fixture:select]{columns:($r)=>{score:reduce([$r.score],0,($a,$x)=>unwrap(unwrap($outer[0]))($x))}}'''
+        # Callable syntax accepts named variables, so pass the extracted value to a
+        # named function before composing the final callback.
+        code = '''$inner=[1] >> [table:each]{on_error:"collect"}{return abs}
+        $outer=[1] >> [table:each]{on_error:"collect"}{return $inner[0]}
+        [def:apply]($fn,$x){return $fn($x)}
+        $f=unwrap(unwrap($outer[0])); $n=[fn:apply]{fn:$f,x:-30}
+        [{score:$n}] >> [fixture:select]{columns:($r)=>{score:$r.score,n:len($outer)}}'''
+        out = execute(code, table_registry('select'))
+>       assert out['success'] and out['value'] == [{'score': 30, 'n': 1}], out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Builtin', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Builtin', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (False)
+
+backend/test_imagination_round64_repairs.py:68: AssertionError
+_ test_closures_capture_only_lexically_free_bindings[($x)=>$x+$factor-expected0] _
+
+expression = '($x)=>$x+$factor', expected = {'factor'}
+
+    @pytest.mark.parametrize('expression,expected', [
+        ('($x)=>$x+$factor', {'factor'}),
+        ('($factor)=>$factor+1', set()),
+        ('($x)=>($y)=>$x+$y+$factor', {'factor'}),
+        ('($x)=>($factor)=>$x+$factor', set()),
+        ('($x)=>{name:f"${title}",score:$x*$factor}', {'title', 'factor'}),
+        ('($x)=>$rules[$x]', {'rules'}),
+        ('($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)', {'rules', 'factor'}),
+    ])
+    def test_closures_capture_only_lexically_free_bindings(expression, expected):
+        closure = inspect_closure(expression, '$factor=2; $title="가족"; $rules=[3,4]; $unused=99;')
+>       assert set(closure.env) == expected
+E       AssertionError: assert {'factor', 'r...le', 'unused'} == {'factor'}
+E         
+E         Extra items in the left set:
+E         'title'
+E         'rules'
+E         'unused'
+E         Use -v to get more diff
+
+backend/test_imagination_round64_repairs.py:103: AssertionError
+_ test_closures_capture_only_lexically_free_bindings[($factor)=>$factor+1-expected1] _
+
+expression = '($factor)=>$factor+1', expected = set()
+
+    @pytest.mark.parametrize('expression,expected', [
+        ('($x)=>$x+$factor', {'factor'}),
+        ('($factor)=>$factor+1', set()),
+        ('($x)=>($y)=>$x+$y+$factor', {'factor'}),
+        ('($x)=>($factor)=>$x+$factor', set()),
+        ('($x)=>{name:f"${title}",score:$x*$factor}', {'title', 'factor'}),
+        ('($x)=>$rules[$x]', {'rules'}),
+        ('($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)', {'rules', 'factor'}),
+    ])
+    def test_closures_capture_only_lexically_free_bindings(expression, expected):
+        closure = inspect_closure(expression, '$factor=2; $title="가족"; $rules=[3,4]; $unused=99;')
+>       assert set(closure.env) == expected
+E       AssertionError: assert {'factor', 'r...le', 'unused'} == set()
+E         
+E         Extra items in the left set:
+E         'title'
+E         'rules'
+E         'unused'
+E         'factor'
+E         Use -v to get more diff
+
+backend/test_imagination_round64_repairs.py:103: AssertionError
+_ test_closures_capture_only_lexically_free_bindings[($x)=>($y)=>$x+$y+$factor-expected2] _
+
+expression = '($x)=>($y)=>$x+$y+$factor', expected = {'factor'}
+
+    @pytest.mark.parametrize('expression,expected', [
+        ('($x)=>$x+$factor', {'factor'}),
+        ('($factor)=>$factor+1', set()),
+        ('($x)=>($y)=>$x+$y+$factor', {'factor'}),
+        ('($x)=>($factor)=>$x+$factor', set()),
+        ('($x)=>{name:f"${title}",score:$x*$factor}', {'title', 'factor'}),
+        ('($x)=>$rules[$x]', {'rules'}),
+        ('($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)', {'rules', 'factor'}),
+    ])
+    def test_closures_capture_only_lexically_free_bindings(expression, expected):
+        closure = inspect_closure(expression, '$factor=2; $title="가족"; $rules=[3,4]; $unused=99;')
+>       assert set(closure.env) == expected
+E       AssertionError: assert {'factor', 'r...le', 'unused'} == {'factor'}
+E         
+E         Extra items in the left set:
+E         'title'
+E         'rules'
+E         'unused'
+E         Use -v to get more diff
+
+backend/test_imagination_round64_repairs.py:103: AssertionError
+_ test_closures_capture_only_lexically_free_bindings[($x)=>($factor)=>$x+$factor-expected3] _
+
+expression = '($x)=>($factor)=>$x+$factor', expected = set()
+
+    @pytest.mark.parametrize('expression,expected', [
+        ('($x)=>$x+$factor', {'factor'}),
+        ('($factor)=>$factor+1', set()),
+        ('($x)=>($y)=>$x+$y+$factor', {'factor'}),
+        ('($x)=>($factor)=>$x+$factor', set()),
+        ('($x)=>{name:f"${title}",score:$x*$factor}', {'title', 'factor'}),
+        ('($x)=>$rules[$x]', {'rules'}),
+        ('($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)', {'rules', 'factor'}),
+    ])
+    def test_closures_capture_only_lexically_free_bindings(expression, expected):
+        closure = inspect_closure(expression, '$factor=2; $title="가족"; $rules=[3,4]; $unused=99;')
+>       assert set(closure.env) == expected
+E       AssertionError: assert {'factor', 'r...le', 'unused'} == set()
+E         
+E         Extra items in the left set:
+E         'title'
+E         'rules'
+E         'unused'
+E         'factor'
+E         Use -v to get more diff
+
+backend/test_imagination_round64_repairs.py:103: AssertionError
+_ test_closures_capture_only_lexically_free_bindings[($x)=>{name:f"${title}",score:$x*$factor}-expected4] _
+
+expression = '($x)=>{name:f"${title}",score:$x*$factor}'
+expected = {'factor', 'title'}
+
+    @pytest.mark.parametrize('expression,expected', [
+        ('($x)=>$x+$factor', {'factor'}),
+        ('($factor)=>$factor+1', set()),
+        ('($x)=>($y)=>$x+$y+$factor', {'factor'}),
+        ('($x)=>($factor)=>$x+$factor', set()),
+        ('($x)=>{name:f"${title}",score:$x*$factor}', {'title', 'factor'}),
+        ('($x)=>$rules[$x]', {'rules'}),
+        ('($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)', {'rules', 'factor'}),
+    ])
+    def test_closures_capture_only_lexically_free_bindings(expression, expected):
+        closure = inspect_closure(expression, '$factor=2; $title="가족"; $rules=[3,4]; $unused=99;')
+>       assert set(closure.env) == expected
+E       AssertionError: assert {'factor', 'r...le', 'unused'} == {'factor', 'title'}
+E         
+E         Extra items in the left set:
+E         'rules'
+E         'unused'
+E         Use -v to get more diff
+
+backend/test_imagination_round64_repairs.py:103: AssertionError
+_ test_closures_capture_only_lexically_free_bindings[($x)=>$rules[$x]-expected5] _
+
+expression = '($x)=>$rules[$x]', expected = {'rules'}
+
+    @pytest.mark.parametrize('expression,expected', [
+        ('($x)=>$x+$factor', {'factor'}),
+        ('($factor)=>$factor+1', set()),
+        ('($x)=>($y)=>$x+$y+$factor', {'factor'}),
+        ('($x)=>($factor)=>$x+$factor', set()),
+        ('($x)=>{name:f"${title}",score:$x*$factor}', {'title', 'factor'}),
+        ('($x)=>$rules[$x]', {'rules'}),
+        ('($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)', {'rules', 'factor'}),
+    ])
+    def test_closures_capture_only_lexically_free_bindings(expression, expected):
+        closure = inspect_closure(expression, '$factor=2; $title="가족"; $rules=[3,4]; $unused=99;')
+>       assert set(closure.env) == expected
+E       AssertionError: assert {'factor', 'r...le', 'unused'} == {'rules'}
+E         
+E         Extra items in the left set:
+E         'title'
+E         'unused'
+E         'factor'
+E         Use -v to get more diff
+
+backend/test_imagination_round64_repairs.py:103: AssertionError
+_ test_closures_capture_only_lexically_free_bindings[($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)-expected6] _
+
+expression = '($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)'
+expected = {'factor', 'rules'}
+
+    @pytest.mark.parametrize('expression,expected', [
+        ('($x)=>$x+$factor', {'factor'}),
+        ('($factor)=>$factor+1', set()),
+        ('($x)=>($y)=>$x+$y+$factor', {'factor'}),
+        ('($x)=>($factor)=>$x+$factor', set()),
+        ('($x)=>{name:f"${title}",score:$x*$factor}', {'title', 'factor'}),
+        ('($x)=>$rules[$x]', {'rules'}),
+        ('($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)', {'rules', 'factor'}),
+    ])
+    def test_closures_capture_only_lexically_free_bindings(expression, expected):
+        closure = inspect_closure(expression, '$factor=2; $title="가족"; $rules=[3,4]; $unused=99;')
+>       assert set(closure.env) == expected
+E       AssertionError: assert {'factor', 'r...le', 'unused'} == {'factor', 'rules'}
+E         
+E         Extra items in the left set:
+E         'title'
+E         'unused'
+E         Use -v to get more diff
+
+backend/test_imagination_round64_repairs.py:103: AssertionError
+_________ test_unrelated_closure_chain_does_not_grow_the_next_capture __________
+
+    def test_unrelated_closure_chain_does_not_grow_the_next_capture():
+        setup = '\n'.join(f'$f{i}=($x)=>$x+{i}' for i in range(12))
+        closure = inspect_closure('($row)=>$row.score', setup)
+>       assert closure.env == {}
+E       AssertionError: assert {'f0': Bindin...et({7})), ...} == {}
+E         
+E         Left contains 12 more items:
+E         {'f0': Binding(value=Closure(params=('x',),
+E                                      body=Node(kind='binary',
+E                                                start=10,
+E                                                end=14,
+E                                                data={'left': Node(kind='ref',...
+E         
+E         ...Full output truncated (59374 lines hidden), use '-vv' to show
+
+backend/test_imagination_round64_repairs.py:116: AssertionError
+_______ test_used_capture_changes_request_hash_but_unused_input_does_not _______
+
+    def test_used_capture_changes_request_hash_but_unused_input_does_not():
+        code = '''$rules=[1] >> [table:each]{on_error:"collect"}{return ($a,$x)=>$a+$x*$factor}
+        [{score:30}] >> [fixture:select]{columns:($r)=>{score:reduce([$r.score],0,unwrap($rules[0]))}}'''
+        outputs = [execute(code, table_registry('select'), inputs={'factor': factor, 'unused': unused})
+                   for factor, unused in [(2, 10), (2, 99), (3, 99)]]
+>       assert all(out['success'] for out in outputs), outputs
+E       AssertionError: [{'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'mess...'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}]
+E       assert False
+E        +  where False = all(<generator object test_used_capture_changes_request_hash_but_unused_input_does_not.<locals>.<genexpr> at 0x1099a9700>)
+
+backend/test_imagination_round64_repairs.py:124: AssertionError
+_________ test_wrong_callback_arity_is_not_hidden_by_request_encoding __________
+
+    def test_wrong_callback_arity_is_not_hidden_by_request_encoding():
+        code = '''$rules=[2] >> [table:each]{on_error:"collect"}{return ($r)=>$r*$it}
+        [{score:30}] >> [fixture:select]{columns:($row)=>{score:reduce([$row.score],0,unwrap($rules[0]))}}'''
+        out = execute(code, table_registry('select'))
+>       assert not out['success'] and out['diagnostic']['code'] == 'CALLABLE', out
+E       AssertionError: {'success': False, 'error': '전송할 수 없는 값: Closure', 'diagnostic': {'code': 'VALUE_PROTOCOL', 'kind': 'protocol', 'message': '전송할 수 없는 값: Closure', 'frames': [], ...}, 'edition': 2, ...}
+E       assert (not False and 'VALUE_PROTOCOL' == 'CALLABLE'
+E         
+E         - CALLABLE
+E         + VALUE_PROTOCOL)
+
+backend/test_imagination_round64_repairs.py:140: AssertionError
+=========================== short test summary info ============================
+FAILED backend/test_imagination_round64_repairs.py::test_unrelated_collected_functions_do_not_poison_table_calls[($x)=>$x*2-select-columns-{score:$row.score*2}-expected0]
+FAILED backend/test_imagination_round64_repairs.py::test_unrelated_collected_functions_do_not_poison_table_calls[($x)=>$x*2-compute-set-{weighted:$row.score*2}-expected1]
+FAILED backend/test_imagination_round64_repairs.py::test_unrelated_collected_functions_do_not_poison_table_calls[($x)=>$x*2-filter-where-$row.score>20-expected2]
+FAILED backend/test_imagination_round64_repairs.py::test_unrelated_collected_functions_do_not_poison_table_calls[abs-select-columns-{score:$row.score*2}-expected0]
+FAILED backend/test_imagination_round64_repairs.py::test_unrelated_collected_functions_do_not_poison_table_calls[abs-compute-set-{weighted:$row.score*2}-expected1]
+FAILED backend/test_imagination_round64_repairs.py::test_unrelated_collected_functions_do_not_poison_table_calls[abs-filter-where-$row.score>20-expected2]
+FAILED backend/test_imagination_round64_repairs.py::test_required_collected_functions_are_fingerprinted_recursively[$collected-$held[0]-($a,$x)=>$a+$x*2]
+FAILED backend/test_imagination_round64_repairs.py::test_required_collected_functions_are_fingerprinted_recursively[$collected-$held[0]-max]
+FAILED backend/test_imagination_round64_repairs.py::test_required_collected_functions_are_fingerprinted_recursively[{rules:$collected}-$held.rules[0]-($a,$x)=>$a+$x*2]
+FAILED backend/test_imagination_round64_repairs.py::test_required_collected_functions_are_fingerprinted_recursively[{rules:$collected}-$held.rules[0]-max]
+FAILED backend/test_imagination_round64_repairs.py::test_required_collected_functions_are_fingerprinted_recursively[[[$collected]]-$held[0][0][0]-($a,$x)=>$a+$x*2]
+FAILED backend/test_imagination_round64_repairs.py::test_required_collected_functions_are_fingerprinted_recursively[[[$collected]]-$held[0][0][0]-max]
+FAILED backend/test_imagination_round64_repairs.py::test_nested_result_callable_in_success_value_is_supported_internally
+FAILED backend/test_imagination_round64_repairs.py::test_closures_capture_only_lexically_free_bindings[($x)=>$x+$factor-expected0]
+FAILED backend/test_imagination_round64_repairs.py::test_closures_capture_only_lexically_free_bindings[($factor)=>$factor+1-expected1]
+FAILED backend/test_imagination_round64_repairs.py::test_closures_capture_only_lexically_free_bindings[($x)=>($y)=>$x+$y+$factor-expected2]
+FAILED backend/test_imagination_round64_repairs.py::test_closures_capture_only_lexically_free_bindings[($x)=>($factor)=>$x+$factor-expected3]
+FAILED backend/test_imagination_round64_repairs.py::test_closures_capture_only_lexically_free_bindings[($x)=>{name:f"${title}",score:$x*$factor}-expected4]
+FAILED backend/test_imagination_round64_repairs.py::test_closures_capture_only_lexically_free_bindings[($x)=>$rules[$x]-expected5]
+FAILED backend/test_imagination_round64_repairs.py::test_closures_capture_only_lexically_free_bindings[($x)=>reduce($rules,0,($a,$v)=>$a+$v*$factor)-expected6]
+FAILED backend/test_imagination_round64_repairs.py::test_unrelated_closure_chain_does_not_grow_the_next_capture
+FAILED backend/test_imagination_round64_repairs.py::test_used_capture_changes_request_hash_but_unused_input_does_not
+FAILED backend/test_imagination_round64_repairs.py::test_wrong_callback_arity_is_not_hidden_by_request_encoding

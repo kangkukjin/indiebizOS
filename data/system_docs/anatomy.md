@@ -116,6 +116,8 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 고쳤다. [2배 상상훈련 62회차](../../docs/experiments/imagination_round62_2026_09_25/report.md).
 잘못된 행을 합산·결합에서 조용히 버리지 않으며, 고정 목록·병렬 결과의 위치별 타입을
 검수에 보존한다. [2배 상상훈련 63회차](../../docs/experiments/imagination_round63_2026_09_25/report.md).
+수집한 함수의 재사용에서 불필요한 주변 변수 캡처를 제거하고, Result 안의 함수도
+내부 호출 지문에 반영한다. [2배 상상훈련 64회차](../../docs/experiments/imagination_round64_2026_09_25/report.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

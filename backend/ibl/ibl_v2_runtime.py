@@ -12,7 +12,7 @@ from execution_workers import create_executor
 from ibl_v2_ir import (Fault, UNIT, Unit, ResultValue, digest, pack, projection, span,
                        parallel_branches)
 from ibl_v2_expr import (Builtin, Closure, binary, boolean, number, scalar_text,
-                         pure_call, check_arity)
+                         pure_call, check_arity, free_names)
 from ibl_v2_types import guard
 
 
@@ -212,7 +212,8 @@ class Runtime:
             b = sub(d["right"])
             return Binding(binary(op, a.value, b.value), self.parents([a, b]))
         if kind == "lambda":
-            return Binding(Closure(tuple(d["params"]), d["body"], env.copy()), self.parents(env.values()))
+            captures = {name: env[name] for name in free_names(node) if name in env}
+            return Binding(Closure(tuple(d["params"]), d["body"], captures), self.parents(captures.values()))
         if kind == "builtin":
             return Binding(Builtin(d["name"]))
         if kind == "pure_call":
@@ -530,7 +531,12 @@ class Runtime:
                 return {"builtin": value.name}
             if isinstance(value, Closure):
                 return {"closure_node": value.body.id, "params": list(value.params),
-                        "captures": {k: request_value(b.value) for k, b in value.env.items()}}
+                        "captures": {k: request_value(b.value) for k, b in sorted(value.env.items())}}
+            if isinstance(value, ResultValue):
+                # Collected results may contain internal callables. Encode
+                # them only for request identity; the public wire still
+                # rejects callables, including inside Result containers.
+                return ResultValue(value.ok, request_value(value.value), request_value(value.error))
             if isinstance(value, dict):
                 return {k: request_value(v) for k, v in value.items()}
             if isinstance(value, list):

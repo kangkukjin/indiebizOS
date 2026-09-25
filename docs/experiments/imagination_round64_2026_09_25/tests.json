@@ -1,0 +1,40 @@
+{
+  "new_regression": {
+    "command": ".venv/bin/python -m pytest backend/test_imagination_round64_repairs.py -q -o addopts=''",
+    "passed": 29,
+    "failed": 0,
+    "seconds": 0.26,
+    "log": "tests_after.txt"
+  },
+  "related": {
+    "command": ".venv/bin/python -m pytest backend/test_imagination_round64_repairs.py backend/test_imagination_round62_repairs.py backend/test_ibl_v2_core.py backend/test_ibl_v2_boundaries.py -q -o addopts=''",
+    "passed": 229,
+    "failed": 0,
+    "warnings": 1,
+    "seconds": 8.45,
+    "log": "tests_related.txt"
+  },
+  "live_api": {
+    "before_passed": 40,
+    "after_passed": 44,
+    "checks": 24,
+    "executions": 20,
+    "independent_verifier": "verify.py"
+  },
+  "guards": {
+    "android_bundle": "regenerated; tracked output unchanged",
+    "ibl_nodes": "passed",
+    "backend_layers": "passed",
+    "retired_contracts": "passed",
+    "diff_whitespace": "passed"
+  },
+  "full_backend": {
+    "command": ".venv/bin/python -m pytest backend/ -q -o addopts=''",
+    "passed": 6461,
+    "skipped": 1,
+    "failed": 0,
+    "warnings": 116,
+    "seconds": 579.51,
+    "log": "tests_full.txt"
+  }
+}

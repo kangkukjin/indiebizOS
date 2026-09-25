@@ -5,7 +5,7 @@ import json
 import operator
 from common.value_semantics import (numeric_value, values_equal, compare_order,
                                     order_matches, list_membership, public_result)
-from ibl_v2_ir import Fault, ResultValue, Unit, projection
+from ibl_v2_ir import Fault, Node, ResultValue, Unit, projection
 
 
 # (minimum, maximum) argument counts; shared by compiler and evaluator.
@@ -27,6 +27,32 @@ class Closure:
 class Builtin:
     """An internal callable reference, never an ordinary JSON value."""
     name: str
+
+
+def free_names(node, bound=frozenset()):
+    """Lexical dependencies of a pure expression, including nested lambdas.
+
+    Capturing the entire frame retains unrelated results/callables and makes
+    subsequent request fingerprints depend on work the callback never reads.
+    Inner parameters shadow outer names, but inner free names must still be
+    available when the outer closure creates that inner closure.
+    """
+    if isinstance(node, Node):
+        if node.kind == "ref":
+            return {node.data["name"]} - bound
+        if node.kind == "lambda":
+            return free_names(node.data["body"], bound | set(node.data["params"]))
+        return free_names(node.data, bound)
+    if isinstance(node, dict):
+        children = node.values()
+    elif isinstance(node, (list, tuple)):
+        children = node
+    else:
+        children = ()
+    result = set()
+    for child in children:
+        result.update(free_names(child, bound))
+    return result
 
 
 def check_arity(name, count):

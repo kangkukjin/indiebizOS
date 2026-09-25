@@ -1,0 +1,36 @@
+{
+  "repeat1000": {
+    "before": {
+      "median_ms": 11.96,
+      "events": 5005,
+      "edges": 6003,
+      "value": 499500
+    },
+    "after": {
+      "median_ms": 15.12,
+      "events": 5005,
+      "edges": 11004,
+      "value": 499500
+    }
+  },
+  "each1000": {
+    "before": {
+      "median_ms": 12.71,
+      "events": 3004,
+      "edges": 4003,
+      "value": [
+        0,
+        1998
+      ]
+    },
+    "after": {
+      "median_ms": 16.38,
+      "events": 3004,
+      "edges": 4003,
+      "value": [
+        0,
+        1998
+      ]
+    }
+  }
+}

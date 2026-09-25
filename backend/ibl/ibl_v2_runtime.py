@@ -68,6 +68,9 @@ class Runtime:
             self.trace.append({"id": eid, "node_id": node.id, "invocation_id": eid,
                                "kind": kind, "parents": sorted(parents),
                                **extra})
+            dependencies = getattr(self.local, "dependencies", None)
+            if dependencies is not None:
+                dependencies.add(eid)
         return eid
 
     def evidence(self, roots):
@@ -101,23 +104,46 @@ class Runtime:
         except Returned as returned:
             return returned.binding
 
-    def eval(self, node, env, piped=None):
+    def eval(self, node, env, piped=None, *, control=()):
         if node is None:
             return Binding(UNIT)
-        self.check()
+        # Every evaluated child contributes on all three exits: value, return,
+        # and failure. Per-syntax unions missed empty folds, interrupted loops,
+        # failed conditions, and finally. Keep scopes local to each worker;
+        # fanout explicitly joins their roots after all started work settles.
+        previous = getattr(self.local, "dependencies", None)
+        previous_control = getattr(self.local, "control", frozenset())
+        self.local.control = previous_control | frozenset(control)
+        dependencies, roots = set(self.local.control), frozenset()
+        self.local.dependencies = dependencies
         try:
-            result = self._eval(node, env, piped)
-            eid = self.event(node, node.kind, result.evidence)
-            return Binding(result.value, frozenset({eid}))
+            self.check()
+            try:
+                result = self._eval(node, env, piped)
+            except Exception as exc:
+                if isinstance(exc, Fault):
+                    raise
+                raise Fault("VALUE", str(exc), node) from exc
+            eid = self.event(node, node.kind, result.evidence | dependencies)
+            roots = frozenset({eid})
+            return Binding(result.value, roots)
+        except Returned as returned:
+            roots = returned.binding.evidence | dependencies
+            returned.binding = Binding(returned.binding.value, frozenset(roots))
+            raise
         except Fault as exc:
             if exc.node is None:
                 exc.node = node
-            eid = self.event(node, "failure", exc.evidence, code=exc.code,
+            eid = self.event(node, "failure", set(exc.evidence) | dependencies, code=exc.code,
                              failure_kind=exc.kind, incomplete=exc.kind == "partial")
+            roots = frozenset({eid})
             exc.evidence = [eid]
             raise
-        except Exception as exc:
-            raise Fault("VALUE", str(exc), node) from exc
+        finally:
+            self.local.dependencies = previous
+            self.local.control = previous_control
+            if previous is not None:
+                previous.update(roots)
 
     def _eval(self, node, env, piped):
         d, kind = node.data, node.kind
@@ -252,7 +278,8 @@ class Runtime:
         if kind == "if":
             condition = sub(d["value"])
             try:
-                result = sub(d["body"] if boolean(condition.value) else d["otherwise"])
+                result = self.eval(d["body"] if boolean(condition.value) else d["otherwise"],
+                                   env, control=condition.evidence)
                 return Binding(result.value, result.evidence | condition.evidence)
             except Returned as returned:
                 returned.binding = Binding(returned.binding.value, returned.binding.evidence | condition.evidence)
@@ -268,7 +295,7 @@ class Runtime:
                     target = body
                     break
             try:
-                result = sub(target)
+                result = self.eval(target, env, control=parents)
                 return Binding(result.value, result.evidence | parents)
             except Returned as returned:
                 returned.binding = Binding(returned.binding.value, returned.binding.evidence | parents)
@@ -281,6 +308,7 @@ class Runtime:
             if count and (type(count.value) is not int or count.value < 0):
                 raise Fault("REPEAT_COUNT", "repeat 횟수는 0 이상의 정수입니다.", node)
             i, parents = 0, set(count.evidence if count else ())
+            before = env.copy()
             old_i = env.get("i")
             try:
                 while count is None or i < count.value:
@@ -291,8 +319,10 @@ class Runtime:
                             break
                     self.budget.tick(row=True)
                     env["i"] = Binding(i)
-                    result = sub(d["body"])
-                    parents.update(result.evidence)
+                    result = self.eval(d["body"], env, control=parents)
+                    # The body root already links prior iterations through
+                    # control; retaining every old root here grows quadratically.
+                    parents = set(result.evidence)
                     i += 1
                     if mode == "until":
                         cond = sub(d["value"])
@@ -300,6 +330,11 @@ class Runtime:
                         if boolean(cond.value):
                             break
             finally:
+                # The final while/until decision also controls which version
+                # of a rebound value leaves the loop.
+                for name, binding in env.items():
+                    if name != "i" and binding is not before.get(name):
+                        env[name] = Binding(binding.value, binding.evidence | parents)
                 if old_i is None:
                     env.pop("i", None)
                 else:
@@ -349,6 +384,7 @@ class Runtime:
     def fanout(self, node, count, fn, workers, collect=False):
         results, errors, states = {}, {}, ["pending"] * count
         depth = getattr(self.local, "depth", 0)
+        control = getattr(self.local, "control", frozenset())
         nested = getattr(self.local, "parallel", False)
         route = getattr(self.local, "route", ()) + ((node.id, self.ordinal("fanout:" + node.id)),)
         def run(i):
@@ -356,14 +392,17 @@ class Runtime:
             previous_depth = getattr(self.local, "depth", 0)
             previous_route = getattr(self.local, "route", ())
             previous_counts = getattr(self.local, "counts", {})
+            previous_control = getattr(self.local, "control", frozenset())
             self.local.route, self.local.counts = route + (i,), {}
             self.local.parallel, self.local.depth = True, depth
+            self.local.control = control
             try:
                 self.check()
                 return fn(i)
             finally:
                 self.local.parallel, self.local.depth = previous, previous_depth
                 self.local.route, self.local.counts = previous_route, previous_counts
+                self.local.control = previous_control
         def accept(i, future=None):
             try:
                 result = future.result() if future else run(i)
@@ -398,7 +437,8 @@ class Runtime:
         fatal = [i for i, e in errors.items() if not collect or not e.catchable]
         if fatal:
             first = errors[min(fatal)]
-            eid = self.event(node, "coverage", self.parents(results.values()), states=states,
+            parents = self.parents(results.values()) | {e for error in errors.values() for e in error.evidence}
+            eid = self.event(node, "coverage", parents, states=states,
                              successful_indices=sorted(results), incomplete=True)
             error = Fault(first.code, str(first), first.node,
                           kind=first.kind if not first.catchable else "partial",
@@ -422,7 +462,7 @@ class Runtime:
                 env["error"] = Binding(exc.view(self.plan.source), frozenset(exc.evidence))
                 recovered = self.event(node, "recovered", exc.evidence, code=exc.code)
                 try:
-                    result = self.eval(d["catch"], env)
+                    result = self.eval(d["catch"], env, control={recovered})
                     result = Binding(result.value, result.evidence | {recovered})
                 except Returned as returned:
                     returned.binding = Binding(returned.binding.value, returned.binding.evidence | {recovered})

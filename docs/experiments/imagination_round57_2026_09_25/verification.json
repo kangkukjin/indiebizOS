@@ -1,0 +1,22 @@
+{
+  "T02": {
+    "invokes_before": 0,
+    "invokes_after": 1
+  },
+  "T03": {
+    "invokes_before": 0,
+    "invokes_after": 1
+  },
+  "T04": {
+    "invokes_before": 0,
+    "invokes_after": 1
+  },
+  "T05": {
+    "invokes_before": 1,
+    "invokes_after": 2
+  },
+  "T06": {
+    "invokes_before": 0,
+    "invokes_after": 1
+  }
+}

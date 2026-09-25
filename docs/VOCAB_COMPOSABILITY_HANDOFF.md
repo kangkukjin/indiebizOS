@@ -1270,3 +1270,10 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - time의 정상 문자열은 생산 시점에 현재 판본 실행 봉투로 감싼 뒤 Text로 추출한다. 동일 원인의 copy/move/delete와 image_read(read/critic) 성공 반환도 수리한다. 구형 원문 문자열·실패 반환은 보존한다.
 - 결합에서 생략한 실패 분기 branches_skipped를 공통 정직 표지·완료 증거에 포함. 부분 출처는 PARTIAL_SOURCE와 source_complete:false로 남고 사용자 items 안의 동명 필드는 건드리지 않는다.
 - 원래 12과제 검사·10과제 기대값 통과, 추가 경계 대조 7건 통과(총 HTTP 29회, origin=training). 예약·발신은 검사만 수행. 상세·전체 회귀: `docs/IMAGINATION_ROUND56_REPAIRS_2026_09_25.md`, 요청·응답: `docs/experiments/imagination_training_2026_09_25/repair_evidence.json`. **발견 3건의 미수리 0.**
+
+### 57회차 — 결과 근거의 조합 보존 (2026-09-25, 발견·수리 요청)
+- 콘텐츠·강의·지출·매물 등 10과제 검수, 8개 실측. 5개 과제에서 값은 맞지만 evidence(결과)의 조회·정리 근거가 사라지는 결함을 확인했다. 예약·외부 발신은 검수만. 전후 각 18요청, origin=training.
+- **B57-1 수리**: 문형별 수동 증거 연결을 공통 평가 경계에서 보완. 빈/인자를 무시하는 합산, 반복의 return·실패, 조건·산술·필드·컨테이너 실패, finally 뒤 오류 재전파, 일반 예외 변환의 근거 보존.
+- **B57-2 수리**: fanout coverage의 부모에 모든 실패 가지의 근거를 연결. 성공 값·부분 실패·미처리 상태는 유지하며 작업자별 근거 격리를 검사.
+- **B57-3 수리**: if/case/repeat/catch 내부 대입과 병렬 작업자에 제어 근거 전달. 반복 근거를 이전 회차 루트로 연결하여 선형 증가 유지.
+- 새 회귀 28개·HTTP 기대값 검사 통과. 합성 1,000행/회 계산에서 약 3~4ms 추적 비용 증가를 측정했으며 토큰·시간 절감으로 주장하지 않는다. 새 어휘·문법·발신·예약 생성·해마 시딩 없음. 상세·전체 회귀: `docs/experiments/imagination_round57_2026_09_25/report.md`. **발견 부류 3건 미수리 0.**

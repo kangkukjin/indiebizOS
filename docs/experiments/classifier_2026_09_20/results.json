@@ -1,0 +1,965 @@
+{
+  "configured_model": "deepseek-v4-flash",
+  "rows": [
+    {
+      "case": 1,
+      "message": "지금 몇 시야?",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 884.69,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2644,
+        "total_tokens": 2647,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 212
+      }
+    },
+    {
+      "case": 1,
+      "message": "지금 몇 시야?",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 818.73,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 423,
+        "total_tokens": 426,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 0
+        },
+        "prompt_cache_hit_tokens": 0,
+        "prompt_cache_miss_tokens": 423
+      }
+    },
+    {
+      "case": 2,
+      "message": "예약 완료됐어. 이번엔 형님도 같이 가.",
+      "expected": "CONTEXT_UPDATE",
+      "variant": "compact",
+      "raw": "CONTEXT_UPDATE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 798.07,
+      "usage": {
+        "completion_tokens": 4,
+        "prompt_tokens": 435,
+        "total_tokens": 439,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 179
+      }
+    },
+    {
+      "case": 2,
+      "message": "예약 완료됐어. 이번엔 형님도 같이 가.",
+      "expected": "CONTEXT_UPDATE",
+      "variant": "current",
+      "raw": "CONTEXT_UPDATE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 731.76,
+      "usage": {
+        "completion_tokens": 4,
+        "prompt_tokens": 2656,
+        "total_tokens": 2660,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 224
+      }
+    },
+    {
+      "case": 3,
+      "message": "이제 이 대화 끝내고 새 세션으로 시작하자.",
+      "expected": "SESSION_RESET",
+      "variant": "current",
+      "raw": "SESSION_RESET",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 919.18,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2654,
+        "total_tokens": 2657,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 222
+      }
+    },
+    {
+      "case": 3,
+      "message": "이제 이 대화 끝내고 새 세션으로 시작하자.",
+      "expected": "SESSION_RESET",
+      "variant": "compact",
+      "raw": "SESSION_RESET",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 913.65,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 433,
+        "total_tokens": 436,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 177
+      }
+    },
+    {
+      "case": 4,
+      "message": "처음부터 차근차근 설명해줘.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 707.9,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 429,
+        "total_tokens": 432,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 173
+      }
+    },
+    {
+      "case": 4,
+      "message": "처음부터 차근차근 설명해줘.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 848.85,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2650,
+        "total_tokens": 2653,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 218
+      }
+    },
+    {
+      "case": 5,
+      "message": "오늘은 계획까지만 해줘.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 644.4,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2649,
+        "total_tokens": 2652,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 217
+      }
+    },
+    {
+      "case": 5,
+      "message": "오늘은 계획까지만 해줘.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 802.48,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 428,
+        "total_tokens": 431,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 172
+      }
+    },
+    {
+      "case": 6,
+      "message": "이 파일의 제목을 여행 준비로 바꿔줘.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 866.29,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 435,
+        "total_tokens": 438,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 179
+      }
+    },
+    {
+      "case": 6,
+      "message": "이 파일의 제목을 여행 준비로 바꿔줘.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 731.97,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2656,
+        "total_tokens": 2659,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 224
+      }
+    },
+    {
+      "case": 7,
+      "message": "엄마에게 지금 도착했다고 문자 보내줘.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 610.88,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2654,
+        "total_tokens": 2657,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 222
+      }
+    },
+    {
+      "case": 7,
+      "message": "엄마에게 지금 도착했다고 문자 보내줘.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 544.86,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 433,
+        "total_tokens": 436,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 177
+      }
+    },
+    {
+      "case": 8,
+      "message": "근처 식당을 검색한 다음 가격과 리뷰를 비교해서 세 곳 추천해줘.",
+      "expected": "THINK",
+      "variant": "compact",
+      "raw": "THINK",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 739.17,
+      "usage": {
+        "completion_tokens": 2,
+        "prompt_tokens": 444,
+        "total_tokens": 446,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 188
+      }
+    },
+    {
+      "case": 8,
+      "message": "근처 식당을 검색한 다음 가격과 리뷰를 비교해서 세 곳 추천해줘.",
+      "expected": "THINK",
+      "variant": "current",
+      "raw": "THINK",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 459.5,
+      "usage": {
+        "completion_tokens": 2,
+        "prompt_tokens": 2665,
+        "total_tokens": 2667,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 233
+      }
+    },
+    {
+      "case": 9,
+      "message": "예약했어. 숙소 근처 식당을 검색해줘.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 576.57,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2657,
+        "total_tokens": 2660,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 225
+      }
+    },
+    {
+      "case": 9,
+      "message": "예약했어. 숙소 근처 식당을 검색해줘.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 859.46,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 436,
+        "total_tokens": 439,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 180
+      }
+    },
+    {
+      "case": 10,
+      "message": "안 쓰는 파일들 전부 지워줘.",
+      "expected": "THINK",
+      "variant": "compact",
+      "raw": "THINK",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 880.95,
+      "usage": {
+        "completion_tokens": 2,
+        "prompt_tokens": 429,
+        "total_tokens": 431,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 173
+      }
+    },
+    {
+      "case": 10,
+      "message": "안 쓰는 파일들 전부 지워줘.",
+      "expected": "THINK",
+      "variant": "current",
+      "raw": "THINK",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 818.48,
+      "usage": {
+        "completion_tokens": 2,
+        "prompt_tokens": 2650,
+        "total_tokens": 2652,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 218
+      }
+    },
+    {
+      "case": 11,
+      "message": "런처에 다크모드 버튼을 추가해줘.",
+      "expected": "REPAIR",
+      "variant": "current",
+      "raw": "REPAIR",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 536.38,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2654,
+        "total_tokens": 2657,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 222
+      }
+    },
+    {
+      "case": 11,
+      "message": "런처에 다크모드 버튼을 추가해줘.",
+      "expected": "REPAIR",
+      "variant": "compact",
+      "raw": "REPAIR",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 957.21,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 433,
+        "total_tokens": 436,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 177
+      }
+    },
+    {
+      "case": 12,
+      "message": "서버가 자꾸 죽어. 원인을 찾아서 코드를 고쳐줘.",
+      "expected": "REPAIR",
+      "variant": "compact",
+      "raw": "REPAIR",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 758.63,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 439,
+        "total_tokens": 442,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 183
+      }
+    },
+    {
+      "case": 12,
+      "message": "서버가 자꾸 죽어. 원인을 찾아서 코드를 고쳐줘.",
+      "expected": "REPAIR",
+      "variant": "current",
+      "raw": "REPAIR",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 916.25,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2660,
+        "total_tokens": 2663,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 228
+      }
+    },
+    {
+      "case": 13,
+      "message": "이 오류 메시지가 무슨 뜻인지 설명해줘.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 576.72,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2656,
+        "total_tokens": 2659,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 224
+      }
+    },
+    {
+      "case": 13,
+      "message": "이 오류 메시지가 무슨 뜻인지 설명해줘.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 707.23,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 435,
+        "total_tokens": 438,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 179
+      }
+    },
+    {
+      "case": 14,
+      "message": "별도로 만든 커뮤니티 웹앱의 비밀번호 정책을 8자에서 4자로 바꿔줘.",
+      "expected": "THINK",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": false,
+      "error": null,
+      "ms": 812.53,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 454,
+        "total_tokens": 457,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 198
+      }
+    },
+    {
+      "case": 14,
+      "message": "별도로 만든 커뮤니티 웹앱의 비밀번호 정책을 8자에서 4자로 바꿔줘.",
+      "expected": "THINK",
+      "variant": "current",
+      "raw": "THINK",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 621.04,
+      "usage": {
+        "completion_tokens": 2,
+        "prompt_tokens": 2675,
+        "total_tokens": 2677,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 243
+      }
+    },
+    {
+      "case": 15,
+      "message": "여러 출처를 조사해서 반도체 시장 전망 보고서를 만들어줘.",
+      "expected": "THINK",
+      "variant": "current",
+      "raw": "THINK",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 562.59,
+      "usage": {
+        "completion_tokens": 2,
+        "prompt_tokens": 2660,
+        "total_tokens": 2662,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 228
+      }
+    },
+    {
+      "case": 15,
+      "message": "여러 출처를 조사해서 반도체 시장 전망 보고서를 만들어줘.",
+      "expected": "THINK",
+      "variant": "compact",
+      "raw": "THINK",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 816.0,
+      "usage": {
+        "completion_tokens": 2,
+        "prompt_tokens": 439,
+        "total_tokens": 441,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 183
+      }
+    },
+    {
+      "case": 16,
+      "message": "회의 녹음을 남기면 AI가 나중에 정보를 꺼낼 수 있잖아. 이렇게 이해하면 맞아?",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 1198.84,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 450,
+        "total_tokens": 453,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 194
+      }
+    },
+    {
+      "case": 16,
+      "message": "회의 녹음을 남기면 AI가 나중에 정보를 꺼낼 수 있잖아. 이렇게 이해하면 맞아?",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 880.4,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2671,
+        "total_tokens": 2674,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 239
+      }
+    },
+    {
+      "case": 17,
+      "message": "데이터베이스와 AI를 연결하면 앱 만들기가 쉬워지는 이유가 뭐야?",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 755.8,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2662,
+        "total_tokens": 2665,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 230
+      }
+    },
+    {
+      "case": 17,
+      "message": "데이터베이스와 AI를 연결하면 앱 만들기가 쉬워지는 이유가 뭐야?",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 951.4,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 441,
+        "total_tokens": 444,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 185
+      }
+    },
+    {
+      "case": 18,
+      "message": "도서 검색 패키지를 새로 추가해줘.",
+      "expected": "THINK",
+      "variant": "compact",
+      "raw": "REPAIR",
+      "valid": true,
+      "correct": false,
+      "error": null,
+      "ms": 847.46,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 431,
+        "total_tokens": 434,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 175
+      }
+    },
+    {
+      "case": 18,
+      "message": "도서 검색 패키지를 새로 추가해줘.",
+      "expected": "THINK",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": false,
+      "error": null,
+      "ms": 965.82,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2652,
+        "total_tokens": 2655,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 220
+      }
+    },
+    {
+      "case": 19,
+      "message": "그것도 해줘.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 652.29,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2645,
+        "total_tokens": 2648,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 213
+      }
+    },
+    {
+      "case": 19,
+      "message": "그것도 해줘.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 1023.05,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 424,
+        "total_tokens": 427,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 168
+      }
+    },
+    {
+      "case": 20,
+      "message": "아까 실패한 작업 다시 해봐.",
+      "expected": "EXECUTE",
+      "variant": "compact",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 650.19,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 429,
+        "total_tokens": 432,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 256
+        },
+        "prompt_cache_hit_tokens": 256,
+        "prompt_cache_miss_tokens": 173
+      }
+    },
+    {
+      "case": 20,
+      "message": "아까 실패한 작업 다시 해봐.",
+      "expected": "EXECUTE",
+      "variant": "current",
+      "raw": "EXECUTE",
+      "valid": true,
+      "correct": true,
+      "error": null,
+      "ms": 736.24,
+      "usage": {
+        "completion_tokens": 3,
+        "prompt_tokens": 2650,
+        "total_tokens": 2653,
+        "completion_tokens_details": null,
+        "prompt_tokens_details": {
+          "audio_tokens": null,
+          "cache_write_tokens": null,
+          "cached_tokens": 2432
+        },
+        "prompt_cache_hit_tokens": 2432,
+        "prompt_cache_miss_tokens": 218
+      }
+    }
+  ]
+}

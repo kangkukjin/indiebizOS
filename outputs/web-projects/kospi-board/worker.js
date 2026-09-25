@@ -170,6 +170,9 @@ const HTML = `<!DOCTYPE html>
     margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
   .holding-details{display:flex;flex-wrap:wrap;gap:8px 20px;width:100%;font-size:13px;color:var(--tx2);font-variant-numeric:tabular-nums}
   .holding-details b{font-weight:650;color:var(--tx)}
+  .holding-performance{display:flex;flex-wrap:wrap;gap:12px 24px;width:100%;margin-top:6px}
+  .holding-performance span{display:flex;flex-direction:column;gap:4px;font-size:14px}
+  .holding-performance b{font-size:24px;font-weight:750;letter-spacing:-.03em;line-height:1.2;white-space:nowrap}
   .holding-details b.up{color:var(--up)} .holding-details b.down{color:var(--down)}
   .holding-label{font-size:13px;color:var(--tx2)}
   .holding-value{font-size:26px;font-weight:750;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
@@ -230,9 +233,10 @@ function holding(q){
     + '<div class="holding-details">'
     + '<span>평균 매수가 <b>' + KRW.format(TIGER200_AVG_COST) + '원</b></span>'
     + '<span>매수금액 <b>' + KRW.format(cost) + '원</b></span>'
+    + '<div class="holding-performance">'
     + '<span>평가손익 <b class="' + cls(profit) + '">' + signed(profit, v => KRW.format(v)) + '원</b></span>'
     + '<span>수익률 <b class="' + cls(profit) + '">' + signed(rate, v => v.toFixed(2)) + '%</b></span>'
-    + '</div><div class="sub">수수료·세금·분배금 제외</div></div>';
+    + '</div></div><div class="sub">수수료·세금·분배금 제외</div></div>';
 }
 
 function card(q){

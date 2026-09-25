@@ -137,6 +137,24 @@ AI 호출의 입력 한도와 마지막 통합의 크기도 계산한다. 작업
 
 ## 도구·스크립트를 붙이는 법
 
+두 출처의 행은 목록이나 `{items:[...]}`를 그대로 인자로 전달한다.
+
+<!-- example:join_time -->
+```ibl
+#!ibl edition=2
+$매물 = [{id:"a",price:300},{id:"b",price:200}]
+$관심 = [{id:"a",memo:"역세권"}]
+$결합 = [table:join]{left:$매물,right:$관심,on:"id",how:"left",defaults:{memo:"미검토"}}
+$날짜 = [self:time]{format:"%Y-%m-%d"}
+return {date:$날짜,items:$결합.items}
+```
+
+`join`은 정확히 두 출처를, `merge/union`은 두 개 이상의 출처를 받는다.
+`($첫 & $둘 & $셋) >> [table:merge]{by:"id"}` 또는 `inputs:[$첫,$둘,$셋]`도 가능하다.
+`left/right`와 `inputs`(파이프 포함)를 함께 지정하지 않는다. 결과는 Record이므로 행은 `.items`로
+읽는다. 실패한 분기를 건너뛰어 만든 결과는 부분 결과이며 `source_complete:false`를 유지한다.
+`self:time`은 Text를 반환하므로 보고서 제목이나 파일 이름에 바로 쓴다.
+
 `$r=[sense:search]{query:"..."}; $r.items >> ...`처럼 반환 계약에 맞게 명시적으로 연결한다.
 `[self:script]{id:"등록이름",args:{...}}`는 기존 등록 스크립트도 직접 실행한다.
 기존 JSON stdin을 유지하며 JSON stdout 전체가 값이다. `{items:[...],run:...}`이면 `$r.items`와

@@ -148,6 +148,7 @@ def critique_image(tool_input, output_base):
       사람 가독 요약 + "verdict_json: {passed, score, issues, notes, tier}"
     """
     import json as _json
+    from ibl_edition import text_result
 
     # path 는 IBL 표준 파라미터(self:read/grep/edit 모두 path) — image_path 미지정 시 폴백 수용.
     image_path = (tool_input.get("image_path") or tool_input.get("path")
@@ -170,12 +171,12 @@ def critique_image(tool_input, output_base):
                    "issues": [f.strip() for f in prescreen.split(";") if f.strip()],
                    "notes": "0층 기계 관측 실패 — 비전 심사 생략(비용 계층화)",
                    "tier": "prescreen"}
-        return "\n".join([
+        return text_result("\n".join([
             f"이미지 평가: {image_path}",
             f"의도: {intent[:80]}{'...' if len(intent) > 80 else ''}",
             f"평가 결과: ✗ 실패 (score=0/10, 0층 기계 관측 — 비전 호출 생략)",
             "문제점:", *(f"  - {i}" for i in verdict["issues"]), "",
-            f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}"])
+            f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}"]))
 
     image, ierr = _load_image_b64(image_path)
     if ierr:
@@ -306,7 +307,7 @@ def critique_image(tool_input, output_base):
         summary_lines.append(f"메모: {verdict['notes']}")
     summary_lines.append("")
     summary_lines.append(f"verdict_json: {_json.dumps(verdict, ensure_ascii=False)}")
-    return "\n".join(summary_lines)
+    return text_result("\n".join(summary_lines))
 
 
 def read_image(tool_input, output_base):
@@ -350,4 +351,5 @@ def read_image(tool_input, output_base):
         return json.dumps({"success": False,
                            "error": "이미지 읽기 실패 — 조종실 기어 설정의 이미지 읽기·채점 모델과 비전 대체 설정을 확인하세요."},
                           ensure_ascii=False)
-    return str(text).strip()
+    from ibl_edition import text_result
+    return text_result(str(text).strip())

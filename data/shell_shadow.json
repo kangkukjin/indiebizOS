@@ -32,7 +32,8 @@
         ]
       },
       "params": [
-        "path"
+        "path",
+        "missing_ok"
       ]
     },
     "self:edit": {

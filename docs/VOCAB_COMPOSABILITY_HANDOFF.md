@@ -1264,3 +1264,9 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - **B56-2 발견**: `table:merge`가 현재 판본에 병렬 입력 경로 없음(`pipe_input` 부재), left/right는 UNKNOWN_ARGUMENT, 계약에 있는 items도 실제 분기 입력으로 전달되지 않음. 기존 판본 성공, 현재 `each(mode:flat_map) → dedup` 우회 성공. pair/병렬 소비 어댑터의 계약·실행 경로를 다음 수리 턴에서 전수 점검할 것. 수리성.
 - **B56-3 발견**: `self:time`의 정상 strftime 평문을 `legacy-envelope` Record로 읽어 ADAPTER_SHAPE. 기본/날짜/시간 모두 재현. 기존 판본 정상, 포맷을 JSON 객체로 강제한 대조도 정상 → 평문·스칼라 반환 어댑터의 계약 census 필요. 수리성.
 - 위생: 전 요청 origin=training, 관측 창 training 24·usage 0(test 76은 동시 세션으로 분리). 자기 스크래치 저장 파일 제거, 합성 재현 입력 보존. 사용자 데이터·예약·알림·발신 변경 0, 코어 수리·해마 시딩 0. 시작부터 다른 세션의 검사기 수정이 있는 라이브 환경이며 그 수정은 건드리지 않음. **미수리 3건, 새 문법·어휘 판정 요청 없음.**
+
+### 56회차 후속 수리 — 도구 계약 정합성 (2026-09-25)
+- **B56-1/2/3 수리**: join/merge/union의 목록·Record·분기 묶음을 현재 callable_contract와 잎 스키마 양쪽에 선언. 공통 requires/exclusive 및 파이프 포함 인자 검사, pair/same-kind 빌드 가드로 선언 드리프트를 차단한다.
+- time의 정상 문자열은 생산 시점에 현재 판본 실행 봉투로 감싼 뒤 Text로 추출한다. 동일 원인의 copy/move/delete와 image_read(read/critic) 성공 반환도 수리한다. 구형 원문 문자열·실패 반환은 보존한다.
+- 결합에서 생략한 실패 분기 branches_skipped를 공통 정직 표지·완료 증거에 포함. 부분 출처는 PARTIAL_SOURCE와 source_complete:false로 남고 사용자 items 안의 동명 필드는 건드리지 않는다.
+- 원래 12과제 검사·10과제 기대값 통과, 추가 경계 대조 7건 통과(총 HTTP 29회, origin=training). 예약·발신은 검사만 수행. 상세·전체 회귀: `docs/IMAGINATION_ROUND56_REPAIRS_2026_09_25.md`, 요청·응답: `docs/experiments/imagination_training_2026_09_25/repair_evidence.json`. **발견 3건의 미수리 0.**

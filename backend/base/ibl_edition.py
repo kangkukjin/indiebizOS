@@ -57,6 +57,16 @@ def source_context(edition):
         _current_edition.reset(token)
 
 
+def text_result(text):
+    """Wrap a producer-confirmed text success before envelope heuristics run.
+
+    Legacy programs keep their exact string. Current callers receive an explicit
+    envelope, so JSON-looking business text cannot turn into status or fields.
+    Failures must not pass through this helper.
+    """
+    return {"success": True, "message": text} if _current_edition.get() == 2 else text
+
+
 def pin_source(source, requested=None):
     """새 저장 코드만 작성 문맥에 고정한다. 기존 원문 조회에는 사용하지 않는다."""
     if not isinstance(source, str) or not source.strip():

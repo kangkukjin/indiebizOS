@@ -344,10 +344,56 @@
             ]
           },
           "left": {
-            "description": "좌측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능)."
+            "description": "좌측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능).",
+            "type": [
+              "array",
+              "object",
+              "string"
+            ]
           },
           "right": {
-            "description": "우측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능)."
+            "description": "우측 입력 통화(& 병렬 대신 직접 공급 — $변수 참조 가능).",
+            "type": [
+              "array",
+              "object",
+              "string"
+            ]
+          },
+          "inputs": {
+            "type": "array",
+            "description": "table:join 파라미터"
+          },
+          "table1": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:join 파라미터"
+          },
+          "table2": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:join 파라미터"
+          },
+          "a": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:join 파라미터"
+          },
+          "b": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:join 파라미터"
           }
         },
         "required": [
@@ -367,6 +413,58 @@
           },
           "on_error": {
             "type": "string",
+            "description": "table:union 파라미터"
+          },
+          "inputs": {
+            "type": "array",
+            "description": "table:union 파라미터"
+          },
+          "left": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:union 파라미터"
+          },
+          "right": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:union 파라미터"
+          },
+          "table1": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:union 파라미터"
+          },
+          "table2": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:union 파라미터"
+          },
+          "a": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:union 파라미터"
+          },
+          "b": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
             "description": "table:union 파라미터"
           }
         }
@@ -388,6 +486,62 @@
               "string",
               "array"
             ]
+          },
+          "on_error": {
+            "type": "string",
+            "description": "table:merge 파라미터"
+          },
+          "inputs": {
+            "type": "array",
+            "description": "table:merge 파라미터"
+          },
+          "left": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:merge 파라미터"
+          },
+          "right": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:merge 파라미터"
+          },
+          "table1": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:merge 파라미터"
+          },
+          "table2": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:merge 파라미터"
+          },
+          "a": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:merge 파라미터"
+          },
+          "b": {
+            "type": [
+              "array",
+              "object",
+              "string"
+            ],
+            "description": "table:merge 파라미터"
           }
         }
       }

@@ -17,13 +17,16 @@ EXAMPLES = dict(re.findall(
 
 
 @pytest.fixture
-def current(monkeypatch):
+def current(monkeypatch, tmp_path):
     import ibl_engine
     from ibl_v2_adapters import load_registry
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
     calls = []
+    real_leaf = ibl_engine.execute_ibl
     def leaf(ti, *args, **kwargs):
+        if (ti['_node'], ti['action']) in {('table', 'join'), ('self', 'time')}:
+            return real_leaf(ti, *args, **kwargs)
         assert (ti['_node'], ti['action']) == ('sense', 'crawl')
         url = ti['params']['url']
         calls.append(url)
@@ -32,13 +35,15 @@ def current(monkeypatch):
         return {'success': True, 'text': '원문', 'title': '문서', 'url': url,
                 'items': [{'text':'원문', 'url':url, 'paragraph_index':0}]}
     monkeypatch.setattr(ibl_engine, 'execute_ibl', leaf)
-    registry = load_registry()
+    registry = load_registry(str(tmp_path))
     seeds = json.loads((ROOT / 'data/idioms/ibl_v2_seeds.json').read_text())
     definitions = {e['alias']: e['ibl_code'] for e in seeds if e.get('alias')}
     def execute(code):
+        from ibl_edition import source_context
         plan = compile_program(code, registry, definitions=definitions)
         assert not plan.issues, plan.report()
-        return Runtime(plan).run()
+        with source_context(2):
+            return Runtime(plan).run()
     execute.calls, execute.recover = calls, False
     return execute
 
@@ -57,6 +62,15 @@ def test_pipeline_and_new_idiom_composition(current):
         {'id': 'c', 'score': 5, 'weighted': 10}]
     assert current(EXAMPLES['compose'].replace('최소:5', '최소:99'))['value'] == []
     assert not current.calls  # 규칙 계산에 숨은 외부 호출 없음
+
+
+def test_join_time_guide_preserves_unmatched_rows(current):
+    out = current(EXAMPLES['join_time'])
+    assert out['source_complete'], out
+    assert re.fullmatch(r'\d{4}-\d{2}-\d{2}', out['value']['date'])
+    assert out['value']['items'] == [
+        {'id': 'a', 'price': 300, 'memo': '역세권'},
+        {'id': 'b', 'price': 200, 'memo': '미검토'}]
 
 
 def test_empty_and_failure_are_distinct(current):
@@ -121,7 +135,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk'}
+    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

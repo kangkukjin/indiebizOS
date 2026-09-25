@@ -443,6 +443,10 @@
           "path": {
             "type": "string",
             "description": "삭제할 파일 또는 폴더 경로"
+          },
+          "missing_ok": {
+            "type": "boolean",
+            "description": "self:delete 파라미터"
           }
         },
         "required": [

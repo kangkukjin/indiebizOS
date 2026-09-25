@@ -24,6 +24,7 @@ HONESTY_LIST_KEYS = (
     "_caught",            # [try] 가 삼킨 오류 전문
     "errors",             # [table:each] 의 행별 실패(원 행 + _error)
     "branches_failed",    # 병렬 가지 전체 실패
+    "branches_skipped",   # 결합 도구가 건너뛴 실패 분기
     "empty_notes",        # 0행 사유
     "vars_dropped",       # 블록 몸이 할당한 변수가 경계 밖으로 못 나갔다 (B49-2)
     "row_honesty",        # each 입력/내부 행의 표지 — 행 실패 계수와 분리한 출처
@@ -337,13 +338,15 @@ def completion_evidence(env: Any) -> list:
             return
         counts = {k: value[k] for k in ("error_count", "rows_unprocessed")
                   if isinstance(value.get(k), int) and not isinstance(value[k], bool) and value[k] > 0}
-        if counts:
-            row = {"at": path or "result", **counts}
+        missing_branches = {k: value[k] for k in ("branches_failed", "branches_skipped")
+                            if isinstance(value.get(k), list) and value[k]}
+        if counts or missing_branches:
+            row = {"at": path or "result", **counts, **missing_branches}
             for k in ("rows_requested", "rows_processed", "ok_count", "halted"):
                 if k in value:
                     row[k] = value[k]
             found.append(row)
-        for key in ("results", "result", "final_result", "row_honesty", "markers", "branches"):
+        for key in ("results", "result", "final_result", "row_honesty", "markers", "branches", "branches_honesty"):
             if key in value:
                 visit(value[key], f"{path}.{key}" if path else key, depth + 1)
 

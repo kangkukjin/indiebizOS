@@ -12,6 +12,27 @@ def validate_v2_contracts(data):
         if not isinstance(node, dict):
             continue
         for action, entry in (node.get("actions") or {}).items():
+            if not isinstance(entry, dict):
+                continue
+            # Multi-source consumers already declare their input topology. An
+            # opaque JSON fallback cannot carry that topology into current IBL.
+            flow = entry.get('flow') or {}
+            if flow.get('accepts') in {'pair', 'same-kind'}:
+                qualified = f'{name}:{action}'
+                contract = entry.get('callable_contract') or {}
+                bundle = flow.get('input_bundle_param')
+                if not bundle or contract.get('pipe_input') != bundle:
+                    issues.append(f'{qualified}: 결합 flow의 input_bundle_param을 callable_contract.pipe_input으로 연결하세요')
+                params = entry.get('params') or {}
+                for key in [bundle, *(flow.get('input_params') or [])]:
+                    if not key:
+                        continue
+                    declared = params.get(key)
+                    kinds = declared if isinstance(declared, list) else [declared]
+                    if 'array' not in kinds or (key != bundle and 'object' not in kinds):
+                        issues.append(f'{qualified}: 결합 입력 {key}에 컨테이너 타입(array/object)을 선언하세요')
+                    if key not in contract.get('params', {}):
+                        issues.append(f'{qualified}: 결합 입력 {key}가 callable_contract.params에 없습니다')
             if isinstance(entry, dict) and "callable_contract" in entry:
                 try:
                     validate_contract(entry["callable_contract"])

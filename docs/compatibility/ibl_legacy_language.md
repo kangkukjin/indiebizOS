@@ -225,7 +225,7 @@ $job = [self:script]{op: "run", id: "long_job", background: true}
 - `rows_in` — emitter(chart·document)가 **입력을 받긴 받았는데 쓸 수 없었다**(0행·값 열 없음).
 - `skipped_steps` / `warning`(`[on_error:]`) · `_caught`(`[try]` 가 실패를 삼키고 catch 로 갔다 — catch 결과가 평문이어도 붙는다) · `condition_errors`(`[if:]` 판정 불능) · `halted`(`[repeat:]` 상한) · `truncated` / `rows_dropped`(원천 절단).
 - `row_honesty`=each 내부 표지, `truncations`=절단 범위. `error_count:0`≠전량. `_preview`는 변수·`source_ref.path`로 더 읽는다.
-- `branches_failed`=병렬 `&` 분기 실패, `branches_honesty`=성공 분기 내부의 부분 실패·경로 변경(`success:true`도 전량 성공이 아니다). `empty_notes`=중간 0행 사유(0건≠없다). `statements_failed`=실패한 독립 문장 수. `vars_dropped`=블록 내부에서 태어나 밖으로 못 나간 변수. 밖에서 쓸 변수는 블록 앞에서 할당하고 몸에서 재할당하라.
+- `branches_failed`=병렬 `&` 분기 실패, `branches_skipped`=결합 도구가 건너뛴 실패 분기, `branches_honesty`=성공 분기 내부의 부분 실패·경로 변경(`success:true`도 전량 성공이 아니다). `empty_notes`=중간 0행 사유(0건≠없다). `statements_failed`=실패한 독립 문장 수. `vars_dropped`=블록 내부에서 태어나 밖으로 못 나간 변수. 밖에서 쓸 변수는 블록 앞에서 할당하고 몸에서 재할당하라.
 - `_criteria_retried` — `criteria` 가 첫 출력을 미달로 판정해 **재시도본이 통과**했다(`criteria_feedback` 에 사유). `criteria_verdict: "unjudged"` 는 판정 불능이라 통과 처리된 것 — "기준을 통과했다"고 말하면 안 된다.
 표지가 있으면 **응답에 그 사실을 적어라.** 누락하면 결과를 오해하게 한다.
 

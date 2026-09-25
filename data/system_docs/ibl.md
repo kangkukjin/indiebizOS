@@ -99,6 +99,9 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | table:compute | items와 `set:($r)=>Record` → 새 필드를 합친 List<Record> |
 | table:sort | items, by(Text), descending(Bool, 선택) → List<Record> |
 | table:take | items, n(0 이상 정수) → List |
+| table:join | left/right 또는 inputs(파이프 자리), on → items Record. 두 출처의 목록·봉투를 그대로 받는다. |
+| table:merge / table:union | left/right 또는 inputs(파이프 자리) → items Record. 두 개 이상 출처·빈 목록·부분 실패를 보존한다. merge의 by는 중복 키다. |
+| self:time | format 선택 → Text. JSON처럼 생긴 포맷도 원문 문자열로 반환한다. |
 | self:read | path → `{text:Text,blocks:List<Record>,data:Record}`. 확장자로 텍스트/PDF/Office를 해소한다. pages/tables/sheet/max_rows 등은 조회한 계약대로 지정하며 표·시트·이미지·범위 원문은 data에 보존한다. |
 | self:write | path, content(Text; 파이프 자리) → 파일 영수증 Record. 기존 쓰기 보호·outputs 경로 규칙 적용. |
 | self:list | path, pattern 선택 → List<Record> |
@@ -108,7 +111,7 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | sense:crawl | url, op(content/links/metadata) → 원문 봉투 Record. content는 text/title/url/items가 있으며 원천 누락은 실패와 partial로 보존한다. |
 | self:script | id, args(Record; 파이프 자리) → 등록 계약의 값. 기존 등록은 JSON stdin/stdout을 값으로 연결하며, 새 wire 계약도 지원한다. |
 
-계약은 aliases·required_any·enums·integers·minimum·nonempty와 리터럴 조건 variants를 선언할 수 있다.
+계약은 aliases·required_any·requires(인자 동반)·exclusive(동시 입력 금지)·enums·integers·minimum·nonempty와 리터럴 조건 variants를 선언할 수 있다.
 검사와 실행은 같은 선언을 소비한다. 동적 선택자는 실행 직전 검사로 남긴다.
 `{"$list": {필드: 타입}}`은 구조를 가진 목록 행의 타입 선언이다.
 `describe:["fn:이름"]`은 컴파일러가 검사한 저장 함수의 입력·반환·효과·미확정 경계를 본문 없이 돌려준다.

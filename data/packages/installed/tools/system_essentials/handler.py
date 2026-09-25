@@ -10,6 +10,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 import importlib.util
+from ibl_edition import text_result
 
 _CURRENT_DIR = Path(__file__).parent
 
@@ -860,7 +861,7 @@ def execute(tool_input: dict, context) -> str:
 
         elif tool_name == "get_current_time":
             fmt = tool_input.get("format", "%Y-%m-%d %H:%M:%S")
-            return datetime.now().strftime(fmt)
+            return text_result(datetime.now().strftime(fmt))
 
         elif tool_name == "ai_ask":
             # 시스템 AI 원샷 호출 — 도구·다단계 없이 경량 LLM 으로 즉답. [self:ask]
@@ -1171,14 +1172,14 @@ def execute(tool_input: dict, context) -> str:
                     shutil.rmtree(dst)
                 shutil.copytree(src, dst)
                 count = sum(len(files) for _, _, files in os.walk(dst))
-                return f"폴더를 복사했습니다: {os.path.abspath(dst)} ({count}개 파일)"
+                return text_result(f"폴더를 복사했습니다: {os.path.abspath(dst)} ({count}개 파일)")
             else:
                 # 파일 복사
                 shutil.copy2(src, dst)
                 _red_write_finalize(dst)
                 _vg = _vocab_enforce(dst)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
-                return (f"파일을 복사했습니다: {os.path.abspath(dst)}"
-                        + (_vocab_gate_mod().note(_vg) if _vg else ""))
+                return text_result(f"파일을 복사했습니다: {os.path.abspath(dst)}"
+                                   + (_vocab_gate_mod().note(_vg) if _vg else ""))
 
         elif tool_name == "move_path":
             _src = tool_input.get("src") or tool_input.get("source")  # src 우선(코퍼스/자연어), source 별칭
@@ -1247,7 +1248,7 @@ def execute(tool_input: dict, context) -> str:
 
             shutil.move(src, dst)
             _red_write_finalize(dst)
-            return f"이동 완료: {os.path.abspath(dst)}"
+            return text_result(f"이동 완료: {os.path.abspath(dst)}")
 
         elif tool_name == "delete_path":
             target = os.path.join(project_path, expand_body_path(tool_input["path"]))
@@ -1259,7 +1260,7 @@ def execute(tool_input: dict, context) -> str:
                 # missing_ok: 없으면 '이미 없음'을 성공으로 — 지우고 다시 올리는 정기 작업처럼
                 # 멱등하게 돌아야 하는 곳에서, 첫 실행이 에러로 파이프를 끊지 않게 한다.
                 if tool_input.get("missing_ok"):
-                    return f"이미 없습니다: {os.path.abspath(target)}"
+                    return text_result(f"이미 없습니다: {os.path.abspath(target)}")
                 return f"Error: 경로가 존재하지 않습니다: {target}"
 
             abs_target = os.path.abspath(target)
@@ -1285,10 +1286,10 @@ def execute(tool_input: dict, context) -> str:
             if os.path.isdir(target):
                 count = sum(len(files) for _, _, files in os.walk(target))
                 shutil.rmtree(target)
-                return f"폴더를 삭제했습니다: {abs_target} ({count}개 파일 포함)"
+                return text_result(f"폴더를 삭제했습니다: {abs_target} ({count}개 파일 포함)")
             else:
                 os.remove(target)
-                return f"파일을 삭제했습니다: {abs_target}"
+                return text_result(f"파일을 삭제했습니다: {abs_target}")
 
         elif tool_name == "make_directory":
             raw_path = _get_path(tool_input)

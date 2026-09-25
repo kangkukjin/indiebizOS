@@ -833,10 +833,11 @@
     "implementation": "8a9e1478d799",
     "returns": "9a5e13f69efc",
     "target_key": "d070c7ecb482",
+    "params": "688cce383427",
     "router": "ebbb1532efbc",
     "tool": "cea226385ffd"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-25",
    "examples": 13
   },
   "self:document": {
@@ -2320,12 +2321,12 @@
     "implementation": "682a227b316a",
     "returns": "5450ffb2cf8a",
     "target_key": "990c23868b96",
-    "params": "c3cea5021e5b",
+    "params": "9f1faf1eb44f",
     "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "2773a81d8139"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-25",
    "examples": 6
   },
   "table:judge": {
@@ -2350,12 +2351,12 @@
     "implementation": "43dc50f30b10",
     "returns": "5450ffb2cf8a",
     "target_key": "26c0fb4158e9",
-    "params": "b40949d89039",
+    "params": "2a2d0ccbfa5c",
     "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "f919af63ef63"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-25",
    "examples": 7
   },
   "table:reduce": {
@@ -2480,13 +2481,13 @@
     "implementation": "950886be9e79",
     "returns": "5450ffb2cf8a",
     "target_key": "12ae32cb1ec0",
-    "params": "a525372243b7",
+    "params": "511013a3b2de",
     "runs_on": "519dd933e8a2",
     "router": "ebbb1532efbc",
     "tool": "d99b43cac706"
    },
-   "reviewed": "2026-09-18",
-   "examples": 31
+   "reviewed": "2026-09-25",
+   "examples": 40
   }
  }
 }

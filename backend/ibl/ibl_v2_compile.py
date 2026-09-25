@@ -350,6 +350,11 @@ class Compiler:
                 self.issue(node, exc.code, str(exc))
                 return UNKNOWN
             values = {k: v.data['value'] if v.kind == 'literal' else UNRESOLVED for k, v in fields.items()}
+            # Argument relationships see the same receiver as runtime.invoke.
+            # The value is not known here, but its presence is statically known.
+            receiver = spec.contract.get('pipe_input')
+            if piped is not None and receiver and receiver not in values:
+                values[receiver] = UNRESOLVED
             self.used_actions.add(key)
             if spec.dependency:
                 selectors = {k: v for k, v in values.items() if v is not UNRESOLVED}

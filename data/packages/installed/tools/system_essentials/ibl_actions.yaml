@@ -2,6 +2,16 @@ nodes:
   self:
     actions:
       time:
+        callable_contract:
+          version: 1
+          params: {format: Text}
+          required: []
+          result: Text
+          effects: [read_external]
+          nondeterministic: true
+          adapter:
+            protocol: legacy-envelope
+            value_path: /message
         returns: scalar
         fixture: '[self:time]{}'
         description: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
@@ -118,7 +128,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: "2026-09-23", impl: "678db418385365e2"}
+        path_audited: {at: "2026-09-25", impl: "41fa7b32d194eff8"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -130,7 +140,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: "2026-09-23", impl: "678db418385365e2"}
+        path_audited: {at: "2026-09-25", impl: "41fa7b32d194eff8"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -493,6 +503,8 @@ nodes:
         target_description: 삭제할 파일 또는 폴더 경로. 폴더는 재귀 삭제 (rmtree).
         router: handler
         tool: delete_path
+        params:
+          missing_ok: boolean
         implementation: os.remove/shutil.rmtree로 파일/폴더 삭제
         target_key: path
       mkdir:
@@ -813,7 +825,7 @@ nodes:
             value_path: /value
           nondeterministic: true
         member_transform: script_ops:member_script
-        path_audited: {at: "2026-09-23", impl: "678db418385365e2"}
+        path_audited: {at: "2026-09-25", impl: "41fa7b32d194eff8"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}

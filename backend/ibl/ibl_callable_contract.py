@@ -31,6 +31,12 @@ def problems(contract, values):
     for group in contract.get('required_any', []):
         if not any(k in values for k in group):
             errors.append('다음 인자 중 하나가 필요합니다: ' + ', '.join(group))
+    for key, companions in contract.get('requires', {}).items():
+        if key in values and any(name not in values for name in companions):
+            errors.append(f'{key}에는 함께 지정할 인자가 필요합니다: ' + ', '.join(companions))
+    for group in contract.get('exclusive', []):
+        if sum(key in values for key in group) > 1:
+            errors.append('함께 지정할 수 없는 인자입니다: ' + ', '.join(group))
     for key, value in values.items():
         if value is UNRESOLVED:
             continue
@@ -60,6 +66,17 @@ def validate_extensions(contract):
     for group in contract.get('required_any', []):
         if not isinstance(group, list) or not group or set(group) - params.keys():
             raise ValueError('required_any는 선언 인자들의 대안 목록입니다')
+    dependencies = contract.get('requires', {})
+    if not isinstance(dependencies, dict) or set(dependencies) - params.keys():
+        raise ValueError('requires는 선언 인자→함께 필요한 인자 목록입니다')
+    for key, companions in dependencies.items():
+        if (not isinstance(companions, list) or not companions or key in companions
+                or set(companions) - params.keys()):
+            raise ValueError('requires는 자기 자신을 제외한 선언 인자들을 참조합니다')
+    for group in contract.get('exclusive', []):
+        if (not isinstance(group, list) or len(set(group)) < 2
+                or len(set(group)) != len(group) or set(group) - params.keys()):
+            raise ValueError('exclusive는 함께 지정할 수 없는 선언 인자들의 목록입니다')
     for choices in contract.get('enums', {}).values():
         if not isinstance(choices, list) or not choices:
             raise ValueError('enums에는 하나 이상의 허용 값이 필요합니다')

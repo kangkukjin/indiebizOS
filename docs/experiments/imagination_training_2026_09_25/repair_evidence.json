@@ -1,0 +1,716 @@
+{
+  "date": "2026-09-25",
+  "origin": "training",
+  "requests": 29,
+  "raw_directory": "outputs/imagination_training/round56/repair",
+  "note": "상태·값·진단을 보존한 응답 투영. raw_sha256은 전체 HTTP 응답 원문 해시. 예약·발신은 check만 실행.",
+  "records": [
+    {
+      "id": "T01_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$원본=[sense:sqlite]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/fixture.sqlite3\",query:\"SELECT category, amount FROM expenses\"}\n$집계=[table:groupby]{items:$원본.items,by:\"category\",agg:{total:[\"sum\",\"amount\"]}}\n$집계.items >> [table:sort]{by:\"total\",descending:true}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "1567c41cb2be6a19633a9ba07e068e4636c5e3930f94aa1244cac345dfde7df1"
+    },
+    {
+      "id": "T01_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$원본=[sense:sqlite]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/fixture.sqlite3\",query:\"SELECT category, amount FROM expenses\"}\n$집계=[table:groupby]{items:$원본.items,by:\"category\",agg:{total:[\"sum\",\"amount\"]}}\n$집계.items >> [table:sort]{by:\"total\",descending:true}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": [
+          {
+            "category": "food",
+            "total": 300
+          },
+          {
+            "category": "book",
+            "total": 50
+          }
+        ],
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "0a228d3e820e8080f6e2eba005f24275150d7c09969c6a0cf86ba860326f9d7f"
+    },
+    {
+      "id": "T02_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$매물=[{id:\"a\",price:300},{id:\"b\",price:200}]\n$관심=[{id:\"a\",memo:\"역세권\"}]\n$결합=[table:join]{left:$매물,right:$관심,on:\"id\",how:\"left\",defaults:{memo:\"미검토\"}}\n$결합.items >> [table:select]{columns:[\"id\",\"memo\"]}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "616757813418bac688a7d08c34e687a8538a5e5d7f8c76798023a2e3124d02aa"
+    },
+    {
+      "id": "T02_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$매물=[{id:\"a\",price:300},{id:\"b\",price:200}]\n$관심=[{id:\"a\",memo:\"역세권\"}]\n$결합=[table:join]{left:$매물,right:$관심,on:\"id\",how:\"left\",defaults:{memo:\"미검토\"}}\n$결합.items >> [table:select]{columns:[\"id\",\"memo\"]}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": [
+          {
+            "id": "a",
+            "memo": "역세권"
+          },
+          {
+            "id": "b",
+            "memo": "미검토"
+          }
+        ],
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "0eed82515ce2d898155b6cb26de2cfb5a6105d171eb802cbb3b735fb8f28c4be"
+    },
+    {
+      "id": "T03_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$영상=[{id:\"v1\",tips:[{text:\"단축키\"},{text:\"자동화\"}]},{id:\"v2\",tips:[]}]\n$팁=[table:flatten]{items:$영상,field:\"tips\",keep:[\"id\"]}\n$팁.items >> [table:select]{columns:[\"id\",\"text\"]}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "223e3c7afa91d3e48bdfe912448c2094c066cc9c14ae70971ef91a7017b3afd0"
+    },
+    {
+      "id": "T03_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$영상=[{id:\"v1\",tips:[{text:\"단축키\"},{text:\"자동화\"}]},{id:\"v2\",tips:[]}]\n$팁=[table:flatten]{items:$영상,field:\"tips\",keep:[\"id\"]}\n$팁.items >> [table:select]{columns:[\"id\",\"text\"]}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": [
+          {
+            "id": "v1",
+            "text": "단축키"
+          },
+          {
+            "id": "v1",
+            "text": "자동화"
+          }
+        ],
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "6c894dcc1b15ab345af66a8715f2714ddae440eb9ccdcd057d955f0aa5d85185"
+    },
+    {
+      "id": "T04_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$첫=[table:rename]{items:[{article_id:\"a\",title:\"첫 기사\"}],map:{article_id:\"id\"}}\n$합=[table:merge]{left:$첫.items,right:[{id:\"a\",title:\"중복\"},{id:\"b\",title:\"둘째\"}],by:\"id\"}\n$합.items >> [table:select]{columns:[\"id\"]}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "a328c05542946674ed8226fe098f453444ca59ce8eccaa22351e3777568fb448"
+    },
+    {
+      "id": "T04_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$첫=[table:rename]{items:[{article_id:\"a\",title:\"첫 기사\"}],map:{article_id:\"id\"}}\n$합=[table:merge]{left:$첫.items,right:[{id:\"a\",title:\"중복\"},{id:\"b\",title:\"둘째\"}],by:\"id\"}\n$합.items >> [table:select]{columns:[\"id\"]}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": [
+          {
+            "id": "a"
+          },
+          {
+            "id": "b"
+          }
+        ],
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "c8cfa2e73bca2cb81414e6344a1bfd623f2095f3d34249d4a4d682909f3739f0"
+    },
+    {
+      "id": "T05_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$자료=[self:list]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56\",pattern:\"sample.md\"}\n$자료 >> [table:each]{parallel:2}{\n  $문서=[self:read]{path:$it.path}\n  return {name:$it.name,chars:len($문서.text)}\n}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "8ba104fb7915395368f16faa34ac67940eccbb444c72697d04aeb0018313982c"
+    },
+    {
+      "id": "T05_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$자료=[self:list]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56\",pattern:\"sample.md\"}\n$자료 >> [table:each]{parallel:2}{\n  $문서=[self:read]{path:$it.path}\n  return {name:$it.name,chars:len($문서.text)}\n}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": [
+          {
+            "name": "sample.md",
+            "chars": 20
+          }
+        ],
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "74c998906a630fa9d41b0096003469b1c287a587d43afe8bd7c61dfa6d35ef49"
+    },
+    {
+      "id": "T06_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$목록=[{id:\"007\",amount:3500},{id:\"b\",amount:0}]\n$저장=[self:write]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\",content:json($목록)}\n$읽음=[self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\"}\nreturn $읽음\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "2c7109e958ca00bd76303a5af381375ac5dee1cf8726760c41795befd1cda604"
+    },
+    {
+      "id": "T06_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$목록=[{id:\"007\",amount:3500},{id:\"b\",amount:0}]\n$저장=[self:write]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\",content:json($목록)}\n$읽음=[self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\"}\nreturn $읽음\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "text": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]",
+          "blocks": [
+            {
+              "type": "paragraph",
+              "text": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]"
+            }
+          ],
+          "data": {
+            "success": true,
+            "items": [
+              {
+                "type": "paragraph",
+                "text": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]"
+              }
+            ],
+            "message": "[{\"id\": \"007\", \"amount\": 3500}, {\"id\": \"b\", \"amount\": 0}]",
+            "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json",
+            "count": 1
+          }
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "7d0722b4727fe18cd8f3980f0394e26632d773ece3685ff532670a2f8e1041f6"
+    },
+    {
+      "id": "T07_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$합=[table:reduce]{items:[{score:2},{score:3},{score:7}],init:0,step:\"acc + score\",as:\"total\"}\nreturn {total:$합.value,passed:$합.value>=10}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "e7b0777213b6960c9d55109b913b6ab9e518b486715897bd067fdb9c896d11f0"
+    },
+    {
+      "id": "T07_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$합=[table:reduce]{items:[{score:2},{score:3},{score:7}],init:0,step:\"acc + score\",as:\"total\"}\nreturn {total:$합.value,passed:$합.value>=10}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "total": 12,
+          "passed": true
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "9c8bd325379902526405d3159c9d8f0a2277d82609e1db758e28d07e014310de"
+    },
+    {
+      "id": "T08_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$날짜=[self:time]{format:\"%Y-%m-%d\"}\n$시=[self:time]{format:\"%H\"}\nreturn {date:$날짜,hour:$시}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "544b3e0cf82673cbda39ab02db3dcd42f72ab99177e2b8b15114fd8fb5c08db4"
+    },
+    {
+      "id": "T08_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$날짜=[self:time]{format:\"%Y-%m-%d\"}\n$시=[self:time]{format:\"%H\"}\nreturn {date:$날짜,hour:$시}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "date": "2026-09-25",
+          "hour": "08"
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "0935797948e0ce84c4fb810cfa9b9f3d162ef550a78546ab7179711fa54f6dc5"
+    },
+    {
+      "id": "T09_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$계산=[{id:\"a\",price:100,count:2},{id:\"b\",price:300,count:0},{id:\"c\",price:90,count:3}] >> [table:each]{parallel:3,on_error:\"collect\"}{return {id:$it.id,unit:$it.price/$it.count}}\n$계산 >> [table:each]{[if:is_ok($it)]{return unwrap($it)}[else]{return {id:\"b\",error:error_of($it).message}}}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "0dc4ebf3bd5a58f283acac4157f9d0b0ee0e7f9a19c9e26cfcb5ab72f3d5cd12"
+    },
+    {
+      "id": "T09_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$계산=[{id:\"a\",price:100,count:2},{id:\"b\",price:300,count:0},{id:\"c\",price:90,count:3}] >> [table:each]{parallel:3,on_error:\"collect\"}{return {id:$it.id,unit:$it.price/$it.count}}\n$계산 >> [table:each]{[if:is_ok($it)]{return unwrap($it)}[else]{return {id:\"b\",error:error_of($it).message}}}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": [
+          {
+            "id": "a",
+            "unit": 50.0
+          },
+          {
+            "id": "b",
+            "error": "division by zero"
+          },
+          {
+            "id": "c",
+            "unit": 30.0
+          }
+        ],
+        "edition": 2,
+        "executed": true,
+        "source_complete": false
+      },
+      "raw_sha256": "b37744756946ce516d77604b37411e6c1fe28a897c25cfa90ef9840c5f2f066d"
+    },
+    {
+      "id": "T10_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$입금=[] ?? [{amount:999}]\nreturn {count:len($입금),sum:reduce($입금,0,($누적,$행)=>$누적+$행.amount)}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "93ab7ef4060e3e0c6fffe9fc6a1ed3c5ebc9b02a293f5e727c7ac5693420961e"
+    },
+    {
+      "id": "T10_execute",
+      "request": {
+        "code": "#!ibl edition=2\n\n$입금=[] ?? [{amount:999}]\nreturn {count:len($입금),sum:reduce($입금,0,($누적,$행)=>$누적+$행.amount)}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": false
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "count": 0,
+          "sum": 0
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "0f68cf5fdc5a096d74908fce3d7a9e78085b4c47e12f09bdccd12884801ef542"
+    },
+    {
+      "id": "T11_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n[self:schedule]{repeat:\"daily\",time:\"09:00\",do:\"#!ibl edition=2\\n[self:time]{}\"}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "8d341f3efa60298025978cdd4b69ff4053fe1e9ca0d6b683958d3c7218405556"
+    },
+    {
+      "id": "T12_check",
+      "request": {
+        "code": "#!ibl edition=2\n\n$건수=3\n[if:$건수>0]{[others:channel_send]{channel_type:\"email\",to:\"나\",subject:\"상상훈련 검수\",body:f\"새 항목 ${건수}건\"}}\n",
+        "edition": 2,
+        "project_id": "컨텐츠",
+        "origin": "training",
+        "check": true
+      },
+      "response": {
+        "edition": 2,
+        "executed": false,
+        "ok": true,
+        "issues": []
+      },
+      "raw_sha256": "9e2954dd45d1ae2fa8f28c298e885ce9426a260738b512082e561b12949356a1"
+    },
+    {
+      "id": "R01_join_pipe",
+      "request": {
+        "edition": 2,
+        "code": "([{id:\"a\"}] & {items:[{id:\"a\",memo:\"ok\"}]}) >> [table:join]{on:\"id\"}",
+        "project_id": "컨텐츠",
+        "origin": "training"
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "items": [
+            {
+              "id": "a",
+              "memo": "ok"
+            }
+          ],
+          "count": 1,
+          "success": true
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "0c4c3ad1f65a6ea3ce5cd51e29f5eee2fd0f2c36a6cc09ac871e6e659a8658d0"
+    },
+    {
+      "id": "R02_merge_three",
+      "request": {
+        "edition": 2,
+        "code": "([{id:\"a\"}] & [] & [{id:\"b\"}]) >> [table:merge]{by:\"id\"}",
+        "project_id": "컨텐츠",
+        "origin": "training"
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "items": [
+            {
+              "id": "a"
+            },
+            {
+              "id": "b"
+            }
+          ],
+          "count": 2,
+          "success": true
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "805ed909ec256f388759f62c37b125b63b605a88544407ec1b900cb6d2bf5715"
+    },
+    {
+      "id": "R03_union_empty",
+      "request": {
+        "edition": 2,
+        "code": "([] & []) >> [table:union]{}",
+        "project_id": "컨텐츠",
+        "origin": "training"
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "items": [],
+          "count": 0,
+          "success": true
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "0355919f31e9d9f31e8c75ed0d77035ab01fdd780cfb17dbe004b72882d35a9c"
+    },
+    {
+      "id": "R04_merge_partial",
+      "request": {
+        "edition": 2,
+        "code": "[table:merge]{inputs:[{items:[{id:\"a\"}]},{success:false,error:\"synthetic\"}]}",
+        "project_id": "컨텐츠",
+        "origin": "training"
+      },
+      "response": {
+        "success": false,
+        "diagnostic": {
+          "code": "PARTIAL_SOURCE",
+          "kind": "partial",
+          "message": "도구의 원천 결과가 불완전합니다.",
+          "frames": [],
+          "has_partial": true,
+          "partial": {
+            "items": [
+              {
+                "id": "a"
+              }
+            ],
+            "count": 1,
+            "success": true,
+            "branches_skipped": [
+              {
+                "branch": 2,
+                "error": "synthetic"
+              }
+            ],
+            "warning": "분기 2개 중 1개가 실패해 건너뛰었습니다(분기 2) — 결과는 부분입니다."
+          },
+          "evidence": [
+            12
+          ],
+          "details": {
+            "completion": [
+              {
+                "at": "result",
+                "branches_skipped": [
+                  {
+                    "branch": 2,
+                    "error": "synthetic"
+                  }
+                ]
+              }
+            ],
+            "truncation": {},
+            "markers": {
+              "branches_skipped": [
+                {
+                  "branch": 2,
+                  "error": "synthetic"
+                }
+              ]
+            }
+          },
+          "source_span": {
+            "source_hash": "045879abcc5754d56fabb2aabfd97452ce1473b8ee4c3650b2189aabbe3e6722",
+            "start": 0,
+            "end": 76,
+            "line": 1,
+            "column": 1
+          }
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": false
+      },
+      "raw_sha256": "13c318e4475d78a4f46cf7411fce0b9c5069b49b54b38dc100ae9d2064d9dd59"
+    },
+    {
+      "id": "R05_union_partial",
+      "request": {
+        "edition": 2,
+        "code": "[table:union]{inputs:[{items:[{id:\"a\"}]},{items:[{id:\"b\"}],truncated:true}]}",
+        "project_id": "컨텐츠",
+        "origin": "training"
+      },
+      "response": {
+        "success": false,
+        "diagnostic": {
+          "code": "PARTIAL_SOURCE",
+          "kind": "partial",
+          "message": "도구의 원천 결과가 불완전합니다.",
+          "frames": [],
+          "has_partial": true,
+          "partial": {
+            "truncated": true,
+            "items": [
+              {
+                "id": "a"
+              },
+              {
+                "id": "b"
+              }
+            ],
+            "count": 2,
+            "success": true
+          },
+          "evidence": [
+            14
+          ],
+          "details": {
+            "completion": [],
+            "truncation": {
+              "truncations": [
+                {
+                  "scope": "unknown"
+                }
+              ]
+            },
+            "markers": {
+              "truncated": true
+            }
+          },
+          "source_span": {
+            "source_hash": "0b96d3a288184cf465ed15096ddd1ed04dd29308db0933ba23b3dd76a5416848",
+            "start": 0,
+            "end": 76,
+            "line": 1,
+            "column": 1
+          }
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": false
+      },
+      "raw_sha256": "092fc946c60bffa1c896c961aea11367af57a9ac97ee52cf3cde9f3d284ff68e"
+    },
+    {
+      "id": "R06_text",
+      "request": {
+        "edition": 2,
+        "code": "[self:time]{format:'{\"error\":\"business data\"}'}",
+        "project_id": "컨텐츠",
+        "origin": "training"
+      },
+      "response": {
+        "success": true,
+        "value": "{\"error\":\"business data\"}",
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "43b71f3e669b600d5a0210ac8d2efa1157ac99a8f3f8b4cd8272ce80c25396a9"
+    },
+    {
+      "id": "R07_cleanup",
+      "request": {
+        "edition": 2,
+        "code": "[self:delete]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json\"}",
+        "project_id": "컨텐츠",
+        "origin": "training"
+      },
+      "response": {
+        "success": true,
+        "value": {
+          "success": true,
+          "message": "파일을 삭제했습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/imagination_training/round56/IT56_roundtrip.json"
+        },
+        "edition": 2,
+        "executed": true,
+        "source_complete": true
+      },
+      "raw_sha256": "77a4ef4748fac5d5ce834a62b5b03793dc8c4cdfaf10f6a9b27c759a60893749"
+    }
+  ]
+}

@@ -83,6 +83,41 @@ def test_gear_failure_is_honest(vr, png, monkeypatch):
         assert "GEMINI" not in out["error"]
 
 
+@pytest.mark.parametrize('text', ['007', '{"error":"문서 속 내용"}', 'Error: 이미지 속 글자'])
+def test_current_read_text_crosses_envelope_boundary_without_reinterpretation(vr, png, monkeypatch, text):
+    from ibl_edition import source_context
+    from ibl_v2_adapters import decode_envelope
+    monkeypatch.setattr(vr, '_ai_call', lambda *a, **k: text)
+    with source_context(2):
+        raw = vr.read_image({'path': png}, '.')
+    value, _ = decode_envelope(raw, {'value_path': '/message'})
+    assert value == text
+    with source_context(1):
+        assert vr.read_image({'path': png}, '.') == text
+
+
+@pytest.mark.parametrize('prescreen', ['', '빈 화면'])
+def test_current_critic_separates_tool_success_from_negative_verdict(vr, png, monkeypatch, prescreen):
+    from ibl_edition import source_context
+    from ibl_v2_adapters import decode_envelope
+    monkeypatch.setattr(vr, '_ai_call', lambda *a, **k: '{"passed":false,"score":1,"issues":["빈 화면"]}')
+    with source_context(2):
+        raw = vr.critique_image({'path': png, 'intent': '내용 검수', 'prescreen': prescreen}, '.')
+    text, _ = decode_envelope(raw, {'value_path': '/message'})
+    assert json.loads(text.split('verdict_json:', 1)[1])['passed'] is False
+
+
+def test_current_vision_model_failure_still_fails(vr, png, monkeypatch):
+    from ibl_edition import source_context
+    from ibl_v2_adapters import decode_envelope
+    from ibl_v2_ir import Fault
+    monkeypatch.setattr(vr, '_ai_call', lambda *a, **k: None)
+    with source_context(2):
+        for fn, args in [(vr.read_image, {'path': png}), (vr.critique_image, {'path': png, 'intent': '검수'})]:
+            with pytest.raises(Fault):
+                decode_envelope(fn(args, '.'), {})
+
+
 # ── 원샷의 0차: 비전 모달리티 슬롯 우선 ───────────────────────────
 
 

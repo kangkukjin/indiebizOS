@@ -367,6 +367,26 @@ actions:
     - groupby
     - 통계
   join:
+    callable_contract:
+      version: 1
+      params:
+        inputs: List<List<Record>|Record|Text>
+        left: List<Record>|Record|Text
+        right: List<Record>|Record|Text
+        'on': Text|List<Text>
+        how: Text
+        defaults: Record
+      required: ['on']
+      required_any: [[inputs, left]]
+      requires: &pair_requires {left: [right], right: [left]}
+      exclusive: &pair_exclusive [[inputs, left], [inputs, right]]
+      aliases: &pair_aliases {table1: left, table2: right, a: left, b: right}
+      pipe_input: inputs
+      result: Record
+      effects: [pure]
+      nondeterministic: false
+      enums: {how: [inner, left, right, full, semi, anti]}
+      adapter: {protocol: legacy-envelope, value_path: ''}
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: pair
@@ -387,6 +407,13 @@ actions:
       how: string
       defaults: object
       "on": ["string", "array"]   # 키 자리 = 속성 집합(복합키), YAML on→bool 회피
+      inputs: array
+      left: [array, object, string]
+      right: [array, object, string]
+      table1: [array, object, string]
+      table2: [array, object, string]
+      a: [array, object, string]
+      b: [array, object, string]
     tool: data_join
     implementation: data-ops handler.py — & 병렬 두 입력을 on 키로 how 방식 결합(우측 인덱싱, 키 정규화 비교). items·표형 table 입력 모두 지원(같은 형태끼리).
     target_key: "on"      # ★따옴표 필수 — YAML 1.1 은 맨 on 을 boolean 으로 읽는다
@@ -397,6 +424,24 @@ actions:
     - join
     - 연결
   union:
+    callable_contract: &combine_contract
+      version: 1
+      params:
+        inputs: List<List<Record>|Record|Text>
+        left: List<Record>|Record|Text
+        right: List<Record>|Record|Text
+        on_error: Text
+      required: []
+      required_any: [[inputs, left]]
+      requires: *pair_requires
+      exclusive: *pair_exclusive
+      aliases: *pair_aliases
+      pipe_input: inputs
+      result: Record
+      effects: [pure]
+      nondeterministic: false
+      enums: {on_error: [skip, stop]}
+      adapter: {protocol: legacy-envelope, value_path: ''}
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: same-kind
@@ -407,8 +452,15 @@ actions:
       columns: union
     runs_on: anywhere
     scope: workspace
-    params:
+    params: &combine_params
       on_error: string
+      inputs: array
+      left: [array, object, string]
+      right: [array, object, string]
+      table1: [array, object, string]
+      table2: [array, object, string]
+      a: [array, object, string]
+      b: [array, object, string]
     description: 두 개 이상의 입력을 행 결합. 저장된 표는 $a & $b >> [table:union]{} 로 공급. 줄바꿈은 입력을 넘기지 않으며 with 인자는 미지원. 중복 제거는 뒤에 >> dedup. 효과 봉투는 1행(effect_rows 신고). items 끼리는 items, 명시 표형 분기가 있으면 표형 반환.
     target_description: '표형 table 입력은 열 이름으로 통합(순서 보존, 한쪽에만 있는 열은 None), items는 단순 concat. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 예: [A] & [B] >> [table:union]. items 합치며 중복까지 지우려면 table:merge. 효과 봉투(items/table 없는 success 봉투 — write·notify 결과)는 분기당 1행(그 봉투의 필드)으로 받고 effect_rows 에 원래 입력의 분기 번호를 신고한다(실패 분기를 제외해도 번호 유지)(2026-09-05) — 병렬 부수효과 문장을 union 으로 닫아도 된다. 부수효과만이면 맨몸 [A] & [B] 로 끝내도 되며(결과=분기 봉투 목록) union 은 그것을 표로 만든다.'
     group: transform
@@ -423,6 +475,14 @@ actions:
     - 합집합
     - 세로결합
   merge:
+    callable_contract:
+      <<: *combine_contract
+      params:
+        inputs: List<List<Record>|Record|Text>
+        left: List<Record>|Record|Text
+        right: List<Record>|Record|Text
+        on_error: Text
+        by: Text|List<Text>
     returns: transform
     flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
       accepts: pair
@@ -434,13 +494,12 @@ actions:
       reads_fields: [by]
     runs_on: anywhere
     scope: workspace
-    params:
-      on_error: string
     description: "통화 변환자(이항) — 두 입력을 합치되 by 키로 중복 제거. & 병렬로 공급. (단순 이어붙이기는 union.) 중복 제거 시 기존 total을 결과 행수로 갱신하며, 상류의 실제 truncated는 보존한다."
     target_description: 'by(선택, 중복 제거 키 필드 — 목록이면 복합키; 미지정 시 단순 concat). 여러 검색 결과를 한 목록으로 모을 때. 죽은 분기(실패 봉투)는 기본 건너뛰고 branches_skipped 로 신고(on_error:"skip"), on_error:"stop"=하나라도 실패면 전체 실패. 표형 결합은 table:union. 예: [sense:search]{source: "gnews", ...} & [sense:search]{...} >> [table:merge]{by: title}.'
     group: transform
     router: handler
     params:
+      <<: *combine_params
       by: ["string", "array"]   # 키 자리 = 속성 집합(복합키)
     tool: data_merge
     implementation: data-ops handler.py — & 병렬 두 records concat(+ by 지정 시 정규화 중복 제거). 목록형 전용.

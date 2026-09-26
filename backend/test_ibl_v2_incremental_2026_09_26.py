@@ -162,6 +162,26 @@ def test_observed_return_fields_warn_outside_observation_but_never_reject(monkey
     assert out["success"] and [w["code"] for w in out["precheck_warnings"]] == ["UNOBSERVED_FIELD"]
 
 
+def test_declared_items_contract_still_gets_observed_row_fields(monkeypatch):
+    """실제 어휘(sense:search 등)는 result 를 {items: List<Record>} 로 선언한다 — 그 행 원소에도 관측 필드가 붙어야 한다."""
+    import ibl_access
+    import ibl_typecheck
+    monkeypatch.setattr(ibl_access, "_return_shapes", lambda: {"t:decl": {"kind": "items", "keys": ["title", "url"]}})
+    monkeypatch.setattr(ibl_typecheck, "_action_def", lambda node, action: {})
+    declared = Adapter({"version": 1, "params": {"query": "Text"}, "result": {"items": "List<Record>", "count": "Number"},
+                        "effects": ["read_external"], "adapter": {"protocol": "legacy-envelope", "value_path": ""}},
+                       lambda rt, a: {"items": [{"title": "t", "url": "u", "titel": "x"}], "count": 1})  # 실제 값엔 관측 밖 필드도 있을 수 있다
+    reg = {"t:decl": declared}
+    plan = compile_program("$r = [t:decl]{query:\"x\"}\nreturn {n:$r.count, rows:$r.items >> [table:each] { return {a:$it.title, b:$it.titel} }}", reg)
+    warns = [w for w in plan.preflight["warnings"] if w["code"] == "UNOBSERVED_FIELD"]
+    assert [w["facts"]["field"] for w in warns] == ["titel"]
+    assert not plan.issues and Runtime(plan).run()["success"]
+    # 선언이 행 모양을 이미 말하면 관측을 덮지 않는다
+    rowed = Adapter({**declared.contract, "result": {"items": {"$list": {"title": "Text"}}}}, declared.run)
+    plan2 = compile_program("$r = [t:decl]{query:\"x\"}\nreturn $r.items >> [table:each] { return $it.titel }", {"t:decl": rowed})
+    assert not [w for w in plan2.preflight["warnings"] if w["code"] == "UNOBSERVED_FIELD"]
+
+
 def test_catalog_entry_is_the_single_resolution_rule(monkeypatch):
     import ibl_access
     import ibl_typecheck

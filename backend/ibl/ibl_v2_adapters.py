@@ -179,10 +179,20 @@ def observed_result(key, contract, params, result_type):
     if entry.get("kind") == "scalar":
         # ⟨키⟩ = 봉투 최상위 필드 — `$r.키` 로 읽는 자리
         return record if result_type.kind == "Record" and not result_type.fields else result_type
-    # ⟨열⟩ = 통화의 행 필드 — 봉투 Record 의 items 원소, 또는 List 원소
+    # ⟨열⟩ = 통화의 행 필드 — 봉투 Record 의 items 원소, 또는 List 원소. 선언이 행 모양을 이미 말하면(필드 있는 Record) 손대지 않는다.
+    def blank_row(t):
+        return t is None or t.kind == "Unknown" or (t.kind == "Record" and not t.fields)
+
     if result_type.kind == "Record" and not result_type.fields:
         return Type("Record", (("items", Type("List", item=record)),), open=True)
-    if result_type.kind == "List" and (result_type.item is None or (result_type.item.kind == "Record" and not result_type.item.fields)):
+    if result_type.kind == "Record":
+        fields = dict(result_type.fields)
+        items = fields.get("items")
+        if items is not None and items.kind == "List" and blank_row(items.item):
+            fields["items"] = Type("List", item=record, positions=items.positions)
+            return Type("Record", tuple(fields.items()), open=result_type.open)
+        return result_type
+    if result_type.kind == "List" and blank_row(result_type.item):
         return Type("List", item=record)
     return result_type
 

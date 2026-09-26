@@ -122,9 +122,11 @@ def test_l6_dispatch_default_and_root_guard(lg):
     assert r["success"] is False and "저장소" in r["error"]
     for g in ("housing_report", "ai_trend_report", "youtube_ai_tips_report"):
         text = open(os.path.join(ROOT, "data", "guides", g + ".md"), encoding="utf-8").read()
-        # AI 팁은 원장까지 관용구 안에서 저장한다. 가이드에 수동 갱신을 다시 강제하지 않는다.
-        entry = "[fn:AI팁보고서쓰기]{}" if g == "youtube_ai_tips_report" else "[self:ledger]"
-        assert entry in text
+        # AI 팁 가이드는 2026-09-26 사용자 판정으로 `AI팁보고서쓰기` 한 관용구를 쓰라는 절을 뺐다(관용구 없이 드러나는
+        # IBL 조합 능력을 보기 위한 실험). 그 가이드엔 원장 갱신 처방이 없어야 하고, 나머지는 [self:ledger] 로 갱신한다.
+        if g != "youtube_ai_tips_report":
+            assert "[self:ledger]" in text
+        assert "[fn:AI팁보고서쓰기]" not in text or g != "youtube_ai_tips_report"
         assert "json" + "원장" not in text, g       # retired-ok: 이관 검산 — 옛 스크립트 id 잔재 금지
 
 

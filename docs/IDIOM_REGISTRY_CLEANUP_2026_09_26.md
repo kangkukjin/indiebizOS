@@ -52,8 +52,11 @@
   always_on=0, 백업 `data/_backups/2026-09-26_175432_판본2이식관용구`. 첫 적용은 호출 용례 7줄이 `category:"phrase"`
   (alias 없음)로 적혀 원장 입구가 거절했다 — 다른 시드와 같이 `composition`으로 고쳐 재적용(멱등). 라이브
   `/ibl/execute`로 `직전보고서찾아읽기`가 판본 2 정의로 해소돼 `{found,path,text,candidates}`를 돌려줌을 확인.
-- 이름 채널이 상시 7개를 후보에서 빼지 않는다(이미 프롬프트에 있는 이름이 Top-2를 먹을 수 있음).
-  `set_phrase_recall`을 증류 관문·귀속이 읽어서 단순 필터로 끝나지 않아 손대지 않았다.
+- ✅ 이름 채널이 상시 블록의 이름을 Top-2 자리에 다시 싣던 것 수리(같은 날 뒷처리): `ibl_access.exposed_idiom_names`
+  (예산 안에서 실제로 실린 이름)만큼 넓게 찾아 그것을 뺀 Top-k 를 제시한다(`IBLUsageRAG.search_phrases_split`).
+  상시 블록에 있던 적중은 제시하지 않되 `set_phrase_recall` 에는 종전대로 싣는다 — 이 턴에 모델이 본 이름이므로
+  증류 관문·귀속의 뜻은 그대로. 회귀 `backend/test_phrase_channel_exposed_names_2026_09_26.py`. 회상 고정물 불일치
+  14건은 제외를 끄고 켜도 동일(09-18 기준선 낡음, 이번 변경과 무관).
 - 같은 이름의 판본 1·2 행(`열추려보기`·`정렬해추리기`·`AI팁보고서쓰기`)은 판본별 카운터가 갈린다. `AI_TIPS_REPORT_IDIOM.md`가
   레거시 행 보존을 명시해 두었다.
 - ✅ `backend/test_idiom_expansion_2026_09_09.py` 5건(3ded991b 이후 실패) 수리: 스크립트를 일반 인증하지 않고

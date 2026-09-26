@@ -588,7 +588,7 @@ def build_environment(
 
 IDIOMS_MAP_CHARS = 7000     # 이름 지도 예산(자) — 시스템 프롬프트 한 자리, 캐시되므로 왕복마다 새로 물지 않는다(2026-09-06)
 IDIOMS_MAP_ROWS = 400        # 지도 후보 상한(행)
-_idioms_cache = {"t": 0.0, "text": "", "key": None, "anchors": {}}
+_idioms_cache = {"t": 0.0, "text": "", "key": None, "anchors": {}, "names": frozenset()}
 
 
 def _stored_signature(raw):
@@ -645,6 +645,7 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
         return _idioms_cache["text"]
     text = ""
     anchors: dict = {}
+    names: set = set()
     try:
         from runtime_utils import get_base_path
         db_path = get_base_path() / "data" / "ibl_usage.db"
@@ -705,6 +706,7 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                     continue
                 budget -= cost
                 chosen.append((r, entry))
+                names.add(r[5])
             groups: dict = {}
             for r, entry in chosen:
                 groups.setdefault((r[4] or "").split("/")[0] or "기타", []).extend(entry)
@@ -728,8 +730,19 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
                         + "\n".join(lines) + "\n</ibl_idioms>")
     except Exception as e:
         logger.debug(f"[ibl_access] 관용구 블록 생략: {e}")
-    _idioms_cache.update({"t": time.time(), "text": text, "key": key, "anchors": anchors})
+    _idioms_cache.update({"t": time.time(), "text": text, "key": key, "anchors": anchors,
+                          "names": frozenset(names if text else ())})
     return text
+
+
+def exposed_idiom_names(allowed: Optional[Set[str]]) -> frozenset:
+    """상시 블록(<ibl_idioms>)에 이 허용 범위로 실제로 실린 이름들 — 예산에 잘린 것은 들지 않는다.
+
+    이름 회상 채널이 같은 이름을 Top-k 자리에 다시 싣지 않게 하는 자(2026-09-26): 이미 매 턴 보이는
+    이름이 회상 두 자리를 먹으면 상시 블록 밖의 이름은 영영 안 보인다. 관용구를 소개하지 않는 표면
+    (expose_idioms=False)은 회상도 주인 기억이 닫혀 있어 이 자를 쓰지 않는다."""
+    idioms_map(allowed)
+    return _idioms_cache.get("names") or frozenset()
 
 
 def _current_idiom_rows(conn, rows, returns_sql, signature_sql):

@@ -72,7 +72,9 @@ def test_이름_채널은_카테고리가_아니라_부를_수_있는가로_고�
     """`[fn:]` 해소가 카테고리 무관이므로 보여주기도 그래야 한다 — 잠기면 부를 수 있는데 안 보인다."""
     import inspect
     from ibl_usage_rag import IBLUsageRAG
-    src = inspect.getsource(IBLUsageRAG.search_phrases)
+    # 검색 본체는 search_phrases_split(2026-09-26 상시 이름 제외로 분리) — search_phrases 는 그 첫 몫.
+    src = inspect.getsource(IBLUsageRAG.search_phrases_split)
+    assert "search_phrases_split" in inspect.getsource(IBLUsageRAG.search_phrases)
     assert "aliased_only=True" in src, "이름 채널이 다시 category='phrase' 로 잠겼다"
 
 

@@ -2141,3 +2141,5 @@
 2026-09-26 관용구 반환 관측: 성공 실행이 돌려준 최상위 필드를 `returns_observed` 에 병합(ibl_v2_runtime.returned_shape → ibl_v2_learning.record_functions → IBLUsageDB.record_observed_returns), 회상 줄·어휘 병기·describe 가 `→ Record⟨관측: …⟩` 로 같이 표시(returns_display 한 벌). 4018 실측(팁 보고서 74→4회, 남은 describe 1회)의 뿌리. AI팁보고서쓰기는 09-24 저널 영수증 15필드로 씨앗. 정본: docs/IBL_INCREMENTAL_EXECUTION_2026_09_26.md §5
 
 2026-09-26 4083(부동산 보고서, IBL 50회) 실측 셋: ①언어 개정 — 줄 머리 `&`·`>>`·`??`는 앞 식의 계속(ibl_v2_parser.CONTINUATION) ②`부동산준비읽기` 반환을 본문→요약·머리·경로로(4만 6천 자 되읽기 제거) ③`보고서HTML검수` 관용구(변환·렌더·화면 검수 한 호출, 손 고리 7회). 확실한 오류 수리: 원장 select 의 `limit` 표본이 선택 범위 표기 없이 `truncated` 만 남겨 PARTIAL_SOURCE 로 거절되던 것(ledger_ops, 4079 와 같은 부류).
+
+2026-09-27 IBL과 주변 시스템의 구조 수렴 설계 작성: 기존 능력·책임의 유지, 같은 판정의 통합, 대체된 임시 경로의 은퇴와 순서를 정리. 계약/회상 → 결과/복구 → 전환 마감 → 전체 능력 확인 순서. 기존 피드백·실행 영수증·업무 확정·공개 확정의 서로 다른 의미 보존. 목적 문서와 09-11 단순화 기록에서 연결. 설계안이며 구현·운영·모델 비교 변경 없음. 정본: docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md

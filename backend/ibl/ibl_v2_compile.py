@@ -619,7 +619,8 @@ class Compiler:
 
 def compile_program(source, registry=None, inputs=None, definitions=None):
     from ibl_v2_adapters import Adapter
-    registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency) for k, v in (registry or {}).items()}
+    registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency, getattr(v, "reusable", None))
+                for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
     compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))
     root = parse(source)

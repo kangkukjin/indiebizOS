@@ -22,7 +22,7 @@
 ### ① `reuse:{run_id}` — 고친 프로그램의 영수증 재사용
 - 재사용 키 = digest{action, args, 도구 구현 지문}. **프로그램 지문 없음.** 영수증에 `action`·`reuse_key` 를 함께 적는다(옛 영수증은 후보 아님).
 - 후보 = 이 문맥(주체·프로젝트 저널 루트)의 지난 실행이 남긴 **성공** 영수증(`ibl_run_journal.reusable_receipts`). 진행 중(잠금)이면 `REUSE_BUSY`, 없으면 `REUSE_NOT_FOUND`.
-- 실행기는 `effects == ["read_external"]` 인 호출에서만 꺼내 쓴다. 쓰기·모델·미상 효과·바뀐 인자는 실행. 권한 확인(`authorize`)은 재사용에도 걸린다.
+- 실행기는 선언 `effects == ["read_external"]` 인 호출, 또는 효과 미상(legacy) 어휘면 `Adapter.reusable(args)` — `ibl_ops.op_side_effect(resolve_op)` 가 '없음'이고 `ai_call`·스크립트가 아닌 op — 에서만 꺼내 쓴다(실 레지스트리 기본 op 기준 114/188 어휘, 선언만으로는 5). 쓰기·모델·바뀐 인자는 실행. 권한 확인(`authorize`)은 재사용에도 걸린다.
 - 재사용한 호출은 **새 실행의 저널에도 완결 영수증**으로 남는다 — 그 실행을 다시 resume/reuse 할 수 있다(사슬).
 - 증거: `receipt_reused{source: reuse|journal|replay, run_id}` 사건, 봉투 `reuse:{run_id, reused_calls, candidates}`.
 - `resume` 과 함께 쓰면 `REUSE_ARGUMENT`. 같은 프로그램=resume, 고친 프로그램=reuse.

@@ -581,8 +581,11 @@ class Runtime:
             if receipt is None:
                 raise Fault("REPLAY_MISSING", "이 입력·정의의 실행 기록이 없습니다. 외부 호출하지 않습니다.", node, kind="protocol")
             source = "replay"
-        if receipt is None and external and self.reusable and contract["effects"] == ["read_external"]:
-            # 읽기 효과만 — 쓰기·모델 호출·미상 효과는 언제나 다시 실행한다. 실패 영수증도 재사용하지 않는다.
+        if receipt is None and external and self.reusable and (
+                contract["effects"] == ["read_external"]
+                or (contract["effects"] == ["unknown"] and spec.reusable is not None and spec.reusable(args.value))):
+            # 선언된 읽기 효과, 또는 미상 효과 어휘의 부작용 해소 규칙이 '없음'인 op 만 — 쓰기·모델 호출은 언제나
+            # 다시 실행한다. 실패 영수증도 재사용하지 않는다.
             hit = self.reusable.get(reuse_key)
             if hit is not None and "value" in hit:
                 receipt, source = hit, "reuse"

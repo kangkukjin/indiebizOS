@@ -18,6 +18,9 @@ class Adapter:
     run: object
     authorize: object = None
     dependency: object = None
+    # args → bool: 이 호출의 영수증을 고친 프로그램이 재사용해도 되는가. 선언 effects 가 미상(legacy)인
+    # 어휘는 부작용 해소 규칙(ibl_ops.op_side_effect — 안전 분류·dry-run·건강검진과 같은 한 벌)로 op 단위 판정.
+    reusable: object = None
 
 
 @dataclass(frozen=True)
@@ -268,8 +271,15 @@ def load_registry(project_path=".", agent_id=None):
                 if (current_allowed is not None and not check_node_access(node, current_allowed)) or not visible(node, action, ac):
                     raise Fault("RECEIPT_ACCESS", "현재 권한으로 이 호출의 영수증을 사용할 수 없습니다.", kind="permission")
             from ibl_dependencies import script_snapshot
+            def reusable(args, ac=action_config):
+                # 조이는 건 자동, 푸는 건 명시(ibl_ops 규칙 그대로): 부작용 없음 + 내부 모델 호출 없음 + 스크립트 아님.
+                if ac.get("ai_call") is True or (ac.get("callable_contract") or {}).get("adapter", {}).get("protocol") == "ibl-script/2":
+                    return False
+                from ibl_ops import op_side_effect, resolve_op
+                return not op_side_effect(ac, resolve_op(ac, args if isinstance(args, dict) else {}))
             result[key] = Adapter(contract, run, authorize,
-                                  script_snapshot if adapter['protocol'] == 'ibl-script/2' else None)
+                                  script_snapshot if adapter['protocol'] == 'ibl-script/2' else None,
+                                  None if contract["effects"] != ["unknown"] else reusable)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

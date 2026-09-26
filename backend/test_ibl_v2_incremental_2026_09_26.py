@@ -87,6 +87,27 @@ def test_changed_implementation_failed_receipts_and_missing_runs_are_not_reused(
         assert busy.value.code == "REUSE_BUSY"
 
 
+def test_unknown_effect_vocabulary_reuses_by_side_effect_rule(tmp_path):
+    """legacy 어휘(effects unknown)는 ibl_ops 부작용 규칙으로 op 단위 판정 — 읽기 op 재사용, 쓰기 op 재실행."""
+    from ibl_ops import op_side_effect, resolve_op
+    calls = []
+    action_def = {"ops": {"values": {"list": "목록", "save": "저장"}, "side_effect": {"list": False, "save": True}, "default": "list"}}
+    def reusable(args, ac=action_def):
+        return not op_side_effect(ac, resolve_op(ac, args))
+    contract = {"version": 1, "params": {"op": "Text", "n": "Number"}, "result": "Record", "effects": ["unknown"],
+                "compatibility": "legacy-envelope/1", "adapter": {"protocol": "legacy-envelope", "value_path": ""},
+                "implementation_fingerprint": "impl-1"}
+    reg = {"t:legacy": Adapter(contract, lambda rt, a: calls.append((a["op"], a["n"])) or {"op": a["op"]}, None, None, reusable)}
+    first = compile_program('$a = [t:legacy]{op:"list", n:1}\n$b = [t:legacy]{op:"save", n:1}\nreturn $a', reg)
+    with Journal(tmp_path, "one") as journal:
+        run_id = journal.run_id
+        assert Runtime(first, journal=journal).run()["success"]
+    calls.clear()
+    edited = compile_program('$a = [t:legacy]{op:"list", n:1}\n$b = [t:legacy]{op:"save", n:1}\nreturn {a:$a, x:1}', reg)
+    out = Runtime(edited, reusable=reusable_receipts(tmp_path, run_id), reuse_run=run_id).run()
+    assert out["success"] and calls == [("save", 1)] and out["reuse"]["reused_calls"] == 1
+
+
 def test_entry_rejects_bad_reuse_shape_and_reuse_with_resume():
     from ibl_v2_entry import handle_request
     bad = handle_request({"code": "#!ibl edition=2\nreturn 1", "reuse": {"run": "x"}})

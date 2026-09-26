@@ -46,9 +46,9 @@ class Plan:
         # 의존 스냅샷은 지문만 — 재개 지문(plan_hash)은 그대로다.
         dependencies = {**self.dependencies,
                         "calls": {k: digest(v) for k, v in (self.dependencies.get("calls") or {}).items()}}
-        # 호출한 저장 함수 *안*의 실행 시 검사는 그 함수의 몫(describe 의 runtime_checks)이다 — 이 프로그램의 보고서엔
-        # 제출 원문 자리의 검사만 싣고 안쪽은 수로 남긴다.
-        own = [g for g in self.guards if not g.get("call_path")]
+        # 호출한 *저장* 함수 안의 실행 시 검사는 그 함수의 몫(describe 의 runtime_checks)이다 — 이 프로그램의 보고서엔
+        # 제출 원문(지역 함수 포함, location.source == "<program>") 자리의 검사만 싣고 안쪽은 수로 남긴다.
+        own = [g for g in self.guards if (g.get("location") or {}).get("source", "<program>") == "<program>"]
         return {"edition": 2, "mode": "check", "executed": False, "ok": not self.issues,
                 "status": status, "issues": self.issues, "guards": own[:self.REPORT_GUARDS_CAP],
                 "guards_total": len(self.guards), "guards_inner": len(self.guards) - len(own),

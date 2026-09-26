@@ -2150,3 +2150,5 @@
 
 2026-09-27 시스템AI 무응답 복구: ChatGPT 앱의 Codex CLI가 codex-cli/CodexCLI.app/Contents/MacOS/codex로 이동했으나 기존 탐색이 옛 경로만 알아 초기화 전에 종료되던 문제를 수정. PATH 우선순위와 기존 앱 배치를 보존하고 시스템·사용자 Applications의 새 배치를 탐색. 시스템AI 스트림 오류는 최종 응답·대화 이력에도 원인을 보존해 일반적인 응답 없음 안내로 덮지 않음. 관련 회귀 42건, 층·은퇴 계약 검사 통과, Android 번들 재생성(내용 변경 없음). 실행 중 백엔드 자동 반영 후 실제 WebSocket 요청에서 Codex gpt-6-astra:high의 “응답 정상” 응답 수신 확인.
   전체 백엔드 회귀: 6730 passed, 8 failed. 실패는 기존 관용구 개정/덮어쓰기 시험 2파일에서 단독 실행으로도 동일 재현(테스트 DB returns_observed 누락 및 이름 선택 단언); 해당 구현·시험은 HEAD 대비 무변경. 이번 복구와 별개로 남김.
+
+2026-09-27 모델 설정 조회 실패의 기본값 덮어쓰기 차단: 런처는 고급·경량·중급 설정을 모두 읽은 뒤에만 편집창을 열며, 조회 실패를 Gemini 초기값으로 저장하던 경로 제거. 실패·복구·정상 저장 행동 시험 4건과 frontend TypeScript 검사·Vite 빌드 통과. 경량 deepseek-flash·중급 deepseek-v4-pro 저장값은 유지; 두 모델의 실제 짧은 무도구 요청 응답 확인. 과거 Flash 이름 전송으로 인한 API 400은 로그에서 확인했지만 Gemini 전환의 실제 저장 시점·주체는 미확인. 기동/재기동 중 조회 실패가 전환을 유발했을 가능성과 실제 발생 증거는 구분한다. 정본 구현: frontend/src/components/Launcher.tsx, 회귀: frontend/tests/model-settings-load.test.mjs.

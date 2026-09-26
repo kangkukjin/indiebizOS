@@ -476,7 +476,10 @@ export function Launcher() {
 
   const handleOpenSettings = async () => {
     try {
-      const config = await api.getSystemAI();
+      // 모두 읽은 뒤에만 편집한다. 조회 실패를 초기값으로 저장하면 다른 티어까지 덮어쓴다.
+      const [config, lConfig, mConfig] = await Promise.all([
+        api.getSystemAI(), api.getLightweightAI(), api.getMidtierAI(),
+      ]);
       setSystemAiSettings({
         enabled: config.enabled ?? true,
         provider: config.provider ?? 'google',
@@ -485,34 +488,26 @@ export function Launcher() {
         providerModels: config.providerModels ?? {},
         providerHasApiKey: config.providerHasApiKey ?? {},
       });
-      // 경량 AI 설정 로드
-      try {
-        const lConfig = await api.getLightweightAI();
-        setLightweightAiSettings({
-          enabled: lConfig.enabled ?? true,
-          provider: lConfig.provider ?? 'google',
-          model: lConfig.model ?? 'gemini-2.5-flash-lite',
-          apiKey: lConfig.apiKey ?? '',
-          providerModels: lConfig.providerModels ?? {},
-          providerHasApiKey: lConfig.providerHasApiKey ?? {},
-        });
-      } catch { /* 경량 AI 설정 없으면 기본값 유지 */ }
-      // 중급 AI 설정 로드
-      try {
-        const mConfig = await api.getMidtierAI();
-        setMidtierAiSettings({
-          enabled: mConfig.enabled ?? true,
-          provider: mConfig.provider ?? 'google',
-          model: mConfig.model ?? 'gemini-2.5-flash',
-          apiKey: mConfig.apiKey ?? '',
-          providerModels: mConfig.providerModels ?? {},
-          providerHasApiKey: mConfig.providerHasApiKey ?? {},
-        });
-      } catch { /* 중급 AI 설정 없으면 기본값 유지 */ }
+      setLightweightAiSettings({
+        enabled: lConfig.enabled ?? true,
+        provider: lConfig.provider ?? 'google',
+        model: lConfig.model ?? 'gemini-2.5-flash-lite',
+        apiKey: lConfig.apiKey ?? '',
+        providerModels: lConfig.providerModels ?? {},
+        providerHasApiKey: lConfig.providerHasApiKey ?? {},
+      });
+      setMidtierAiSettings({
+        enabled: mConfig.enabled ?? true,
+        provider: mConfig.provider ?? 'google',
+        model: mConfig.model ?? 'gemini-2.5-flash',
+        apiKey: mConfig.apiKey ?? '',
+        providerModels: mConfig.providerModels ?? {},
+        providerHasApiKey: mConfig.providerHasApiKey ?? {},
+      });
       setShowSettingsDialog(true);
     } catch (error) {
       console.error('Failed to load system AI settings:', error);
-      setShowSettingsDialog(true);
+      alert('모델 설정을 불러오지 못했습니다. 기존 설정은 유지됩니다. 잠시 후 다시 열어주세요.');
     }
   };
 

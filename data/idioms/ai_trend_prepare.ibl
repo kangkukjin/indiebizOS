@@ -1,0 +1,19 @@
+#!ibl edition=2
+[def:AI동향준비읽기]($폴더) {
+  $후보 = [self:list]{path:$폴더,pattern:"ai_trend_report_*.md"}
+  $직전 = $후보 >> [table:filter]{where:($행)=>get($행,"is_dir",false)==false} >> [table:sort]{by:"name",descending:true} >> [table:take]{n:1} >> [table:each] {
+    $본문 = [self:read]{path:$it.path}
+    return {kind:"previous",found:true,path:$it.path,text:$본문.text}
+  }
+  $파일 = [{kind:"coverage",name:"_coverage_ledger.json",required:false},{kind:"rules",name:"_methodology_rules.md",required:true},{kind:"scan",name:"_scan_log.json",required:false}]
+  $상태 = $파일 >> [table:each]{parallel:3} {
+    $경로 = f"${폴더}/${it.name}"
+    [if:$it.required==false] {
+      $존재 = [self:list]{path:$폴더,pattern:$it.name}
+      [if:len($존재)==0] { return {kind:$it.kind,found:false,path:$경로,text:""} }
+    }
+    $본문 = [self:read]{path:$경로}
+    return {kind:$it.kind,found:true,path:$경로,text:$본문.text}
+  }
+  return {previous_found:len($직전)>0,documents:$직전+ $상태}
+}

@@ -1019,12 +1019,9 @@ class BaseProvider(ABC):
         if tool_output == "None":
             return f"도구 '{tool_name}'이 None을 반환했습니다.", True
 
-        # 에러 패턴 검증
-        error_patterns = ["error:", "exception:", "failed:", "traceback"]
-        output_lower = tool_output.lower()
-        is_error = any(pattern in output_lower for pattern in error_patterns)
-
-        return tool_output, is_error
+        # API·MCP 모두 실행기의 구조화 상태를 운반한다. 본문은 업무 값이다.
+        from ibl_result_transport import tool_result_is_error
+        return tool_output, tool_result_is_error(tool_output)
 
     # ========== Rolling Compaction ==========
 

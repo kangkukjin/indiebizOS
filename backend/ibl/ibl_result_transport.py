@@ -8,6 +8,26 @@ from ibl_honesty import HONESTY_KEYS, completion_evidence
 PER_ACTION_CHARS = 16_000
 
 
+def tool_result_is_error(raw: str) -> bool:
+    """실행 상태를 운반한다. 업무 값·부분 자료의 진단을 실패로 재판정하지 않는다.
+
+    구조화 결과는 최상위 bool success가 정본이다. success 없는 옛 오류 봉투는
+    최상위 error만 읽고, 키워드 호환 판정은 JSON이 아닌 평문에만 적용한다.
+    """
+    try:
+        result = json.loads(raw)
+    except (ValueError, TypeError):
+        text = str(raw or "").strip()
+        return not text or text == "None" or any(
+            word in text.lower() for word in ("error:", "exception:", "failed:", "traceback"))  # vj-ok: 평문 오류 호환 표지, IBL 업무 값 비교가 아님
+    if isinstance(result, dict):
+        success = result.get("success")
+        if type(success) is bool:
+            return not success
+        return bool(result.get("error"))
+    return False
+
+
 def _parse(raw):
     try:
         return json.loads(raw)
@@ -79,7 +99,7 @@ def fit_tool_result(raw: str, budget: int) -> str:
         issues = completion_evidence(parsed)
         if issues:
             parsed = {**parsed, "completion_issues": issues}
-        keys = ("success", "error", "warning", "reason", "step", "steps_completed", "steps_total",
+        keys = ("success", "source_complete", "error", "warning", "reason", "step", "steps_completed", "steps_total",
                 "completion_issues",
                 "resume", "result_ref", "source_ref", *HONESTY_KEYS)
         for key in dict.fromkeys(keys):

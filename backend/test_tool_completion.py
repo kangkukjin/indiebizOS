@@ -125,7 +125,9 @@ def test_mcp_disconnect_recovers_original_failed_job(monkeypatch):
         if len(calls)==2:return json.dumps({'transient':True,'status':'unreadable'})
         return json.dumps({'success':False,'error':'actual job error'})
     monkeypatch.setattr(mcp_server,'_post_backend',post)
-    out=json.loads(asyncio.run(mcp_server.execute_ibl(code='[self:read]{path:"x"}')))
+    wire = asyncio.run(mcp_server.execute_ibl(code='[self:read]{path:"x"}'))
+    assert wire.isError is True
+    out = json.loads(wire.content[0].text)
     assert out['error']=='actual job error'
     assert [p for p,_ in calls].count('/ibl/execute')==1
     assert len({p['ticket'] for _,p in calls})==1
@@ -139,7 +141,9 @@ def test_mcp_missing_task_is_not_restarted(monkeypatch,state):
         calls.append(path)
         return json.dumps({'_surface_timeout':True} if path=='/ibl/execute' else {'success':False,'status':state})
     monkeypatch.setattr(mcp_server,'_post_backend',post)
-    out=json.loads(asyncio.run(mcp_server.execute_ibl(code='[self:read]{path:"x"}')))
+    wire = asyncio.run(mcp_server.execute_ibl(code='[self:read]{path:"x"}'))
+    assert wire.isError is True
+    out = json.loads(wire.content[0].text)
     assert out['status']==state and out['ticket']
     assert calls==['/ibl/execute','/ibl/recover']
 

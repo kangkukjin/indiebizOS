@@ -96,6 +96,9 @@ AI 팁 보고서는 한 관용구 호출로 주제 준비 → 최근 영상 선�
 [4011 긴 자막](../../docs/EPISODE_4011_LONG_SOURCES_2026_09_24.md),
 [4016 인용 대조](../../docs/EPISODE_4016_GROUNDING_REPAIR_2026_09_24.md).
 모델 프로바이더의 도구 결과 경계는 공통 완료 대기를 사용한다. 실행 중 상태를 모델에게 반복 전달하지 않고, 같은 작업을 회수한다. [공통 완료 대기 설계](../../docs/PROVIDER_NEUTRAL_COMPLETION_WAIT_2026_09_24.md).
+실행 결과의 최상위 `success`는 API·MCP 경계에서 그대로 전달한다. 업무 값의 오류 문자열이나
+자료 불완전성을 실행 실패로 다시 판정하지 않으며, MCP의 `isError`는 Codex·Claude Code가 함께 소비한다.
+전송 실패·취소는 별도로 보존한다. [구조 수렴 설계 1단계](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md).
 기존 관용구의 파이프 입력 자리는 현재 호환 계약에도 전달한다. 건강 조회 인자 선언과 능력 판정의 원문 선택·실패 근거를 보강했다. [4028~4036 점검·수리](../../docs/EPISODES_4028_4036_REPAIRS_2026_09_24.md).
 3개 이상 병렬 결과의 타입과 case·catch 조기 반환 뒤의 변수 검사를 실행 의미에 맞췄다.
 finally의 정리와 병렬 쓰기 충돌 검사도 유지한다. [조합 검사기 수리](../../docs/IBL_COMPOSITION_REPAIRS_2026_09_25.md).

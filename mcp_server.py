@@ -273,7 +273,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       inputs: Optional[dict] = None,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
-    # 이미지 블록 리스트 반환(위 images 분기)을 거부한다. 텍스트뿐이면 str 그대로.
+    # 이미지 블록 리스트와 실패의 CallToolResult 반환을 거부한다.
     """현재 IBL로 코드를 작성·검사·실행합니다. 기본은 명시 값·함수 문법입니다.
 
     주 교재: read_guide(query="ibl_composition.md"). 함수는 [def:f]($x){return $x},
@@ -385,6 +385,9 @@ async def execute_ibl(code: str, project_path: str = "",
         finally:
             cancelled.set()
             pulse(channel, ticket, active=False)
+    # 표시 축약·이미지 분리 전에 실행기의 상태를 읽는다. 두 CLI에 같은 MCP 판정을 전달한다.
+    from ibl_result_transport import tool_result_is_error
+    is_error = tool_result_is_error(raw)
     # 이미지 봉투 승격은 예산 절단보다 먼저 — base64 를 들어낸 정리본에 예산을 적용해야
     # 봉투가 잘려 이미지가 유실되거나 base64 조각이 모델에 새는 일이 없다.
     cleaned, images = _harvest_images_for_mcp(raw)
@@ -399,18 +402,22 @@ async def execute_ibl(code: str, project_path: str = "",
         if advisory:
             from repeat_guard import append_advisory
             text = append_advisory(text, advisory)
+    blocks = [text]
     if images:
         import base64 as _b64
         from mcp.server.fastmcp import Image as _McpImage
-        blocks = [text]
         for env in images:
             try:
                 fmt = (env.get("media_type") or "image/png").split("/")[-1]
                 blocks.append(_McpImage(data=_b64.b64decode(env["b64"]), format=fmt))
             except Exception as e:
                 blocks.append(f"[이미지 블록 변환 실패: {e}]")
-        return blocks
-    return text
+    if is_error:
+        from mcp.types import CallToolResult, TextContent
+        return CallToolResult(isError=True, content=[
+            TextContent(type="text", text=block) if isinstance(block, str)
+            else block.to_image_content() for block in blocks])
+    return blocks if images else text
 
 
 @mcp.tool()

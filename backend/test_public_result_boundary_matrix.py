@@ -111,5 +111,177 @@ def test_unsupported_value_error_reports_the_nested_path():
     assert "date" in result["error"]
 
 
+@pytest.mark.parametrize("code,failed", [('return "traceback"', False), ('return 1 / 0', True)])
+@pytest.mark.parametrize("provider_name", ["openai", "openrouter", "deepseek", "anthropic", "ollama", "gemini"])
+def test_runtime_status_reaches_provider_tool_turn(code, failed, provider_name, monkeypatch):
+    """실제 실행 결과 → content/details 분리 → 제공자의 결과 이벤트·모델 입력."""
+    from types import SimpleNamespace
+    from providers import get_provider
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+
+    result = Runtime(compile_program(code, {})).run()
+    raw = json.dumps(result, ensure_ascii=False)
+    provider = get_provider(provider_name, api_key="test", model="test", system_prompt="")
+    provider._last_tool_images = []
+    monkeypatch.setattr(provider, "_execute_tool_to_completion", lambda *a, **kw: {
+        "content": raw, "details": "UI용 별도 표시"})
+    if provider_name != "gemini":
+        monkeypatch.setattr(provider, "_agentic_loop", lambda *a, **kw: iter(()))
+    messages = []
+    if provider_name == "gemini":
+        output, _, _, flag = provider._execute_single_tool(
+            SimpleNamespace(name="execute_ibl", args={"code": code}), lambda: None, 0)
+        assert flag is failed
+        from ibl_result_transport import provider_tool_result
+        provider._genai_types = SimpleNamespace(FunctionResponse=SimpleNamespace, Part=SimpleNamespace)
+        part = provider._function_response_part(
+            SimpleNamespace(name="execute_ibl", id="t"), provider_tool_result(output))
+        delivered = part.function_response.response["output"]
+    else:
+        kwargs = dict(messages=messages, collected_text="", execute_tool=lambda: None, depth=0)
+        if provider_name == "anthropic":
+            kwargs["tool_uses"] = [{"id": "t", "name": "execute_ibl", "input": {"code": code}}]
+        else:
+            kwargs.update(tool_calls={"t": {"name": "execute_ibl", "arguments": json.dumps({"code": code})}}, openai_tools=[])
+            if provider_name != "ollama":
+                kwargs["collected_reasoning"] = ""
+        events = list(provider._execute_tools_and_continue(**kwargs))
+        assert next(e for e in events if e["type"] == "tool_result")["is_error"] is failed
+        if provider_name == "anthropic":
+            block = messages[-1]["content"][0]
+            assert bool(block.get("is_error")) is failed
+            delivered = block["content"]
+        else:
+            delivered = messages[-1]["content"]
+    assert json.loads(delivered) == result
+
+
+@pytest.mark.parametrize("payload,failed", [
+    ({"success": True, "source_complete": False, "incomplete_steps": [{"error": "traceback"}]}, False),
+    ({"success": True, "value": {"success": False, "error": "failed:"}}, False),
+    ({"success": False, "error": "division by zero"}, True),
+    ({"items": [{"error": "traceback"}]}, False),
+    ({"error": "legacy failure"}, True),
+    ("Error: plain failure", True), ("plain traceback", True), ("normal text", False),
+])
+def test_provider_status_does_not_scan_structured_business_values(payload, failed):
+    from providers.base import BaseProvider
+    raw = json.dumps(payload) if isinstance(payload, dict) else payload
+    text, flag = BaseProvider._verify_tool_result(None, "execute_ibl", {}, raw)
+    assert text == raw
+    assert flag is failed
+
+
+@pytest.mark.parametrize("code,failed", [('return "traceback"', False), ('return 1 / 0', True)])
+def test_mcp_protocol_status_reaches_both_cli_providers(code, failed, monkeypatch):
+    import time
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    import mcp_server as mcp_boundary
+    from mcp.types import CallToolResult
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    from providers import get_provider
+
+    result = Runtime(compile_program(code, {})).run()
+    raw = json.dumps(result)
+    monkeypatch.setattr(mcp_boundary, "_post_backend", lambda *a: raw)
+    monkeypatch.setattr(mcp_boundary, "_repeat_advisory", lambda *a: "")
+    monkeypatch.setattr(mcp_boundary.mcp, "get_context", lambda: None)
+    wire = asyncio.run(mcp_boundary.mcp.call_tool("execute_ibl", {"code": code}))
+    if not isinstance(wire, CallToolResult):
+        wire = CallToolResult(content=wire)
+    assert wire.isError is failed
+    assert json.loads(wire.content[0].text) == result
+
+    codex = get_provider("codex", api_key="", model="test", system_prompt="")
+    events = codex._translate_stream_event({"type": "item.completed", "item": {
+        "id": "t", "type": "mcp_tool_call", "status": "completed", "tool": "execute_ibl",
+        "result": wire.model_dump()}}, "", time.time())
+    assert next(e for e, _ in events if e["type"] == "tool_result")["is_error"] is failed
+
+    claude = get_provider("claude_code", api_key="", model="test", system_prompt="")
+    events = claude._translate_stream_event({"type": "user", "message": {"content": [{
+        "type": "tool_result", "tool_use_id": "t", "is_error": wire.isError,
+        "content": [b.model_dump() for b in wire.content]}]}}, "", time.time())
+    assert next(e for e, _ in events if e["type"] == "tool_result")["is_error"] is failed
+
+
+@pytest.mark.parametrize("provider_name", ["gemini_http", "deepseek_http"])
+@pytest.mark.parametrize("code", ['return "traceback"', 'return 1 / 0'])
+def test_http_providers_preserve_execution_status(provider_name, code, monkeypatch):
+    """별도 오류 플래그가 없는 REST 경로도 모델 입력의 실행 봉투를 보존한다."""
+    from providers import get_provider
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    result = Runtime(compile_program(code, {})).run()
+    raw = json.dumps(result)
+    provider = get_provider(provider_name, api_key="test", model="test", system_prompt="")
+    provider._client = object()
+    monkeypatch.setattr(provider, "_execute_tool_to_completion", lambda *a, **kw: raw)
+    seen = []
+
+    def request(messages, *args):
+        if not seen:
+            seen.append(True)
+            if provider_name == "gemini_http":
+                return {"candidates": [{"content": {"parts": [{"functionCall": {
+                    "name": "execute_ibl", "args": {"code": code}}}]}}]}
+            return {"choices": [{"message": {"tool_calls": [{"id": "t", "function": {
+                "name": "execute_ibl", "arguments": json.dumps({"code": code})}}]}}]}
+        if provider_name == "gemini_http":
+            delivered = messages[-1]["parts"][0]["functionResponse"]["response"]["result"]
+            reply = {"candidates": [{"content": {"parts": [{"text": "done"}]}}]}
+        else:
+            delivered = messages[-1]["content"]
+            reply = {"choices": [{"message": {"content": "done"}}]}
+        seen.append(json.loads(delivered))
+        return reply
+
+    monkeypatch.setattr(provider, "_generate" if provider_name == "gemini_http" else "_chat", request)
+    assert provider.process_message("probe", execute_tool=lambda: None) == "done"
+    assert seen == [True, result]
+
+
+@pytest.mark.parametrize("failed", [False, True])
+def test_projection_and_mcp_trimming_preserve_status_and_images(failed, monkeypatch, tmp_path):
+    import base64
+    import mcp_server as mcp_boundary
+    import model_result_view
+    from supervision_store import TurnStore
+    from ibl_result_transport import tool_result_is_error
+    from mcp.types import CallToolResult
+
+    monkeypatch.setattr(model_result_view, "evidence_store", lambda: TurnStore(tmp_path / "evidence"))
+    result = {"edition": 2, "success": not failed, "source_complete": False,
+              "value": {"error": "traceback", "text": "x" * 100000},
+              "incomplete_steps": [{"error": "failed: missing source"}]}
+    projected = model_result_view.project_result(result)
+    assert tool_result_is_error(json.dumps(projected)) is failed
+    projected["images"] = [{"base64": base64.b64encode(b"image").decode(), "media_type": "image/png"}]
+    monkeypatch.setattr(mcp_boundary, "_post_backend", lambda *a: json.dumps(projected))
+    monkeypatch.setattr(mcp_boundary, "_repeat_advisory", lambda *a: "")
+    monkeypatch.setattr(mcp_boundary.mcp, "get_context", lambda: None)
+    # 더 큰 진단도 실제 전송 축약을 거친다. 실패 판정은 미리보기 텍스트에 의존하지 않는다.
+    projected["diagnostic_text"] = "traceback " * 10000
+    wire = asyncio.run(mcp_boundary.mcp.call_tool("execute_ibl", {"code": "return 1"}))
+    if not isinstance(wire, CallToolResult):
+        wire = CallToolResult(content=wire)
+    assert wire.isError is failed
+    body = json.loads(wire.content[0].text)
+    assert body["success"] is (not failed)
+    assert body["source_complete"] is False
+    assert body["result_ref"]["id"] == projected["result_ref"]["id"]
+    assert wire.content[1].type == "image"
+
+
+def test_codex_transport_failure_is_not_overridden_by_successful_payload():
+    from providers.codex import CodexProvider
+    for status in ("failed", "interrupted"):
+        _, failed = CodexProvider._tool_result({"type": "mcp_tool_call", "status": status,
+            "result": {"content": [{"type": "text", "text": '{"success":true}'}], "isError": False}})
+        assert failed is True
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__]))

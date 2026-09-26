@@ -7,6 +7,33 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 
+@pytest.mark.parametrize("root", ["/Applications", "/fixture-home/Applications"])
+@pytest.mark.parametrize("relative", [
+    "codex-cli/CodexCLI.app/Contents/MacOS/codex", "codex",
+])
+def test_gui_launch_finds_desktop_cli_without_shell_path(monkeypatch, root, relative):
+    from pathlib import Path
+    from common import platform_utils
+    from providers.codex import find_codex_binary
+
+    expected = f"{root}/ChatGPT.app/Contents/Resources/{relative}"
+    monkeypatch.setattr(Path, "home", lambda: Path("/fixture-home"))
+    monkeypatch.setattr(platform_utils.shutil, "which", lambda name: None)
+    monkeypatch.setattr(platform_utils.os.path, "isfile", lambda path: path == expected)
+    assert find_codex_binary() == expected
+
+
+def test_codex_shell_path_takes_priority_and_missing_cli_returns_none(monkeypatch):
+    from common import platform_utils
+    from providers.codex import find_codex_binary
+
+    monkeypatch.setattr(platform_utils.shutil, "which", lambda name: "/custom/codex")
+    assert find_codex_binary() == "/custom/codex"
+    monkeypatch.setattr(platform_utils.shutil, "which", lambda name: None)
+    monkeypatch.setattr(platform_utils.os.path, "isfile", lambda path: False)
+    assert find_codex_binary() is None
+
+
 def test_catalog_selection_reaches_cli(monkeypatch, tmp_path):
     import api_config_tiers
     from providers.codex import CodexProvider

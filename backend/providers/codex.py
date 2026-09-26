@@ -176,10 +176,12 @@ def find_codex_binary() -> Optional[str]:
     """
     from common.platform_utils import find_binary
 
+    # 데스크톱 업데이트로 CLI가 별도 앱 번들 안으로 이동했다(2026-09-27 실측).
+    # GUI에서 시작하면 셸 PATH가 없으므로 새 배치와 기존 배치를 함께 탐색한다.
     candidates: List[str] = [
-        # macOS — ChatGPT 데스크톱 앱 동봉 (실측 경로)
-        "/Applications/ChatGPT.app/Contents/Resources/codex",
-        str(Path.home() / "Applications" / "ChatGPT.app" / "Contents" / "Resources" / "codex"),
+        str(root / "ChatGPT.app" / "Contents" / "Resources" / relative)
+        for root in (Path("/Applications"), Path.home() / "Applications")
+        for relative in ("codex-cli/CodexCLI.app/Contents/MacOS/codex", "codex")
     ]
     # Windows — 환경변수가 없는 OS 에서는 후보가 안 생긴다(분기 없이 자연 소거)
     for var in ("LOCALAPPDATA", "PROGRAMFILES", "APPDATA"):

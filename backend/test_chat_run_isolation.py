@@ -118,6 +118,7 @@ def test_late_send_failure_and_disconnect_preserve_replacement(route, monkeypatc
 @pytest.mark.parametrize('provider,key,runner_error', [
     ('openai', 'fixture-env-key', False), ('ollama', '', False),
     ('openai', '', False), ('openai', 'fixture-env-key', True),
+    ('codex', '', 'stream'),
 ])
 def test_system_chat_uses_resolved_model_before_creating_task(monkeypatch, provider, key, runner_error):
     import chat_runs
@@ -135,11 +136,14 @@ def test_system_chat_uses_resolved_model_before_creating_task(monkeypatch, provi
         messages.append(payload)
 
     def runner():
-        if runner_error:
+        if runner_error is True:
             raise ValueError('provider initialization failed')
 
         def stream(*args, **kwargs):
             calls.append((tc.get_current_task_id(), kwargs['cancel_check']()))
+            if runner_error == 'stream':
+                yield {'type': 'error', 'content': 'AI가 초기화되지 않았습니다.'}
+                return
             yield {'type': 'final', 'content': 'fixture result'}
         return SimpleNamespace(cognitive_stream=stream)
 
@@ -175,7 +179,11 @@ def test_system_chat_uses_resolved_model_before_creating_task(monkeypatch, provi
         assert created == saved == calls == []
         assert messages[-1]['type'] == 'error'
     elif runner_error:
-        assert any(m.get('message') == 'provider initialization failed' for m in messages)
+        reason = ('AI가 초기화되지 않았습니다.' if runner_error == 'stream'
+                  else 'provider initialization failed')
+        assert ('assistant', reason) in saved
+        assert any(m.get('type') == 'response' and m.get('content') == reason for m in messages)
+        assert any(m.get('message') == reason for m in messages)
         assert messages[-1]['type'] == 'end'
     else:
         assert calls == [(created[0]['task_id'], False)]

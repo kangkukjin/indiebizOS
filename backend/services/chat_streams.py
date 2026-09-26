@@ -1095,9 +1095,12 @@ async def handle_system_ai_chat_stream(client_id: str, data: dict):
                 final_content = event.get("content", "")
 
             elif event_type == "error":
+                # 실패 원인을 최종 응답·대화 이력에도 남긴다. 아래의 빈 응답
+                # 폴백이 초기화/호출 오류를 일반적인 '응답 없음'으로 덮지 않게 한다.
+                final_content = event.get("content") or "알 수 없는 오류"
                 await manager.send_message(client_id, {
                     "type": "error",
-                    "message": event.get("content", "알 수 없는 오류")
+                    "message": final_content
                 })
                 break
 

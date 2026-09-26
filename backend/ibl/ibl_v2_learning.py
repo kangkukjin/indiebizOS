@@ -49,4 +49,8 @@ def record_functions(plan, result):
             # source_complete:false 가 되면서 "자료 하나 빠지면 한계를 적고 완료" 하도록 설계된
             # 보고서 관용구가 설계대로 동작한 턴마다 fail_count 를 먹었다(AI동향준비읽기·검색묶음추리기·
             # 웹앱검사하기 실측). 원천 불완전은 봉투가 따로 말한다 — 성적과 섞지 않는다.
-            IBLUsageDB().update_success_by_code(code, bool(event["success"]))
+            db = IBLUsageDB()
+            db.update_success_by_code(code, bool(event["success"]))
+            if event.get("success") and event.get("returns_keys"):
+                # 관측 반환 필드(2026-09-26) — 성공한 실행이 돌려준 최상위 키를 정의 행에 병합
+                db.record_observed_returns(code, event["returns_keys"], event.get("returns_kind", "record"))

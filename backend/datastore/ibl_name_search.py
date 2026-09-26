@@ -156,7 +156,7 @@ def find_phrase_by_alias(db, name: str, edition: int = 1) -> Optional[Dict]:
         # 2026-09-05: 카테고리 무관 — 이름이 붙은 용례(관용구·다문장 프로그램)는 무엇이든 부를 수 있다(자동 작명과 한 벌)
         row = conn.execute(
             "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category, "
-            "COALESCE(returns,'') AS returns, signature, "
+            "COALESCE(returns,'') AS returns, COALESCE(returns_observed,'') AS returns_observed, signature, "
             # 실행 이력·우회 횟수도 준다(2026-09-07) — 증류의 덮어쓰기 판정이 '돈 적 있는가'를 여기서 묻는다
             "COALESCE(success_count,0) AS success_count, COALESCE(fail_count,0) AS fail_count, "
             "COALESCE(bypass_count,0) AS bypass_count "

@@ -47,6 +47,15 @@ class Budget:
                 raise Fault("BUDGET", "공유 실행 예산을 초과했습니다.", kind="budget")
 
 
+def returned_shape(value):
+    """함수가 실제로 돌려준 값의 최상위 모양 — 관측 반환 필드의 재료(값 자체는 싣지 않는다, 2026-09-26)."""
+    if isinstance(value, dict):
+        return {"returns_kind": "record", "returns_keys": [k for k in value][:40]}
+    if isinstance(value, list) and value and isinstance(value[0], dict):
+        return {"returns_kind": "list", "returns_keys": [k for k in value[0]][:40]}
+    return {}
+
+
 class Runtime:
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
                  recordings=None, replay=False, journal=None, reusable=None, reuse_run=None):
@@ -261,7 +270,8 @@ class Runtime:
                 try:
                     result = self.frame(definition.data["body"], local)
                     eid = self.event(node, "function_result", result.evidence | args.evidence,
-                                     name=d["action"], definition_start=definition.start, success=True)
+                                     name=d["action"], definition_start=definition.start, success=True,
+                                     **returned_shape(result.value))
                     return Binding(result.value, frozenset({eid}))
                 except Fault as exc:
                     eid = self.event(node, "function_result", exc.evidence,

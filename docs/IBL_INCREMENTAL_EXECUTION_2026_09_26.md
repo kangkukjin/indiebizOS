@@ -46,6 +46,19 @@
 - 새 시험 `backend/test_ibl_v2_incremental_2026_09_26.py`: 고친 프로그램의 읽기 재사용·쓰기/바뀐 인자 재실행·저널 사슬(resume)·구현 지문 불일치·실패 영수증 제외·BUSY/NOT_FOUND/ARGUMENT·inputs 참조(value_wire/final_result/path/스필/오류)·관측 경고(items·scalar·more 기권·has/get·실행 봉투)·catalog_entry 규칙.
 - 기존: test_ibl_v2_core·run_lifecycle·historical_replay·current_surfaces·callable_contracts·container_calls·migration_completion·client_agent_contract·composition_teaching·ibl_typecheck·imagination_round55·param_shapes·v2_assets 통과.
 
+## 5. 같은 날 후속 — 관용구 반환 관측 (4018 실측에서)
+
+"유튜브 AI 팁 보고서 써줘"의 09-24 다섯 실행은 IBL 호출 74→44→32→20→4회. 마지막 4018의 4회는
+describe(반환 계약 확인)·관용구 호출·회수였다. 회상 줄이 `[fn:AI팁보고서쓰기]{} → Record` 만 말하고 프롬프트가
+"반환 계약을 확인하라" 하니 모델이 describe 를 부른다. 이상은 1회이므로 그 describe 를 없앤다.
+
+- 실행기: `function_result` 성공 사건에 `returns_kind`·`returns_keys`(값 아님, 최상위 키 40개 상한).
+- 학습: `record_functions` 가 성공 실행마다 `IBLUsageDB.record_observed_returns` — 정의 행의 `returns_observed` JSON 에 병합(먼저 본 순서, runs, observed 날짜, source).
+- 표시: `returns_display(returns, observed)` 한 벌을 회상 줄(ibl_usage_rag)·어휘 병기(ibl_access._current_idiom_rows → hippo_tree.phrase_call_line)·describe(`observed_returns` 전체) 가 같이 쓴다. 선언이 필드를 말하면(`{…}`·`⟨…⟩`) 덮지 않는다.
+- 프롬프트 노트: "회상 줄의 `→ 반환`이 계약이고 ⟨관측⟩은 실제 필드다. 그 줄에 반환이 없을 때만 describe".
+- 씨앗: `AI팁보고서쓰기` 는 09-24 10:04 실행 저널(f94d7ad5)의 finish 영수증에서 관측한 15개 필드로 병합(source=journal). 다음 실행부터는 자동.
+- 시험: `backend/test_idiom_observed_returns_2026_09_26.py`.
+
 ## 4. 남은 것 (설계 문서와의 연결)
 - 교재 확장은 이제 정직하게 쓸 수 있다: 스파이크(작은 입력 실행) → 함수 하나 수리 → `reuse` 로 재실행 → 최종 프로그램. 용례는 해마에 심고 회상 통로를 지정한다(`data/guides/new_action_checklist.md`).
 - 관측 데이터의 신선도는 기존 `ibl_shape_sweep.py`(fixture·`--from-health`) 카덴스 그대로. 영수증에 `action` 이 남으므로 저널 기반 관측 스윕도 가능하나 지금은 만들지 않는다.

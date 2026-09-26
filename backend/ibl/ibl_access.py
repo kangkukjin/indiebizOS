@@ -760,19 +760,24 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
     result, seen = [], set()
     columns = {r[1] for r in conn.execute('PRAGMA table_info(ibl_examples)')}
     order = 'updated_at DESC, rowid DESC' if 'updated_at' in columns else 'rowid DESC'
+    observed_sql = "COALESCE(returns_observed,'')" if 'returns_observed' in columns else "''"
+    from ibl_returns_observed import returns_display
     for row in rows:
         name = row[5]
         if name in seen:
             continue
         seen.add(name)
         candidates = conn.execute(
-            f"SELECT intent,ibl_code,success_count,fail_count,COALESCE(topic,''),alias,{returns_sql},{signature_sql} "
+            f"SELECT intent,ibl_code,success_count,fail_count,COALESCE(topic,''),alias,{returns_sql},{signature_sql},{observed_sql} "
             f"FROM ibl_examples WHERE alias=? ORDER BY {order}", (name,)).fetchall()
         current = next((r for r in candidates if source_edition(r[1]) == 2), None)
-        selected = list(current or (candidates[0] if candidates else row))
+        selected = list(current or (candidates[0] if candidates else tuple(row) + ('',)))
         if current is None:
             selected[6] = 'Record'  # The current legacy-function adapter returns the complete envelope.
-        result.append(tuple(selected))
+        else:
+            # 관측 반환 필드(2026-09-26) — 병기 줄의 `→ 반환` 에 `⟨관측: …⟩` 로 붙는다(선언이 필드를 말하면 그대로)
+            selected[6] = returns_display(selected[6], selected[8])
+        result.append(tuple(selected[:8]))
     return result
 
 

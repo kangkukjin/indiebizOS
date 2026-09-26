@@ -155,6 +155,7 @@
     "datastore/ibl_example_batch",
     "datastore/ibl_name_search",
     "datastore/ibl_registry",
+    "datastore/ibl_returns_observed",
     "datastore/ibl_signature_slot",
     "datastore/ibl_usage_db",
     "datastore/install_approvals",
@@ -488,8 +489,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 413,
-    "engine": 387,
+    "total": 414,
+    "engine": 388,
     "blocklist": 26
   }
 }

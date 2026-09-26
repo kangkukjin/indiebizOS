@@ -96,6 +96,7 @@ class UsageExample:
     alias: str = ""           # 관용구 이름(category=phrase) — `[fn:이름]{슬롯}` 으로 호출(2026-09-05)
     signature: Optional[str] = None   # 호출 서명(2026-09-06) — 실행기가 문에서 계산. None=미계산
     returns: str = ""         # 반환 모양(2026-09-05)
+    returns_observed: str = ""  # 실행이 실제로 돌려준 최상위 필드 JSON(2026-09-26) — returns_display 가 `⟨관측: …⟩` 로 붙인다
     provenance: str = "{}"   # 로컬 출처·적용 조건. 회상에는 조건만 발췌한다.
 
 
@@ -251,6 +252,11 @@ class IBLUsageDB:
             # 실행 0 이라 아무도 갱신하지 않는 자기강화 루프의 눈. 성공/실패와 섞지 않는다 —
             # 정의가 실패한 게 아니라 거부당한 것이다.
             conn.execute("ALTER TABLE ibl_examples ADD COLUMN bypass_count INTEGER DEFAULT 0")
+        if "returns_observed" not in cols:
+            # 관측 반환 필드(2026-09-26) — 실행이 *실제로* 돌려준 최상위 키를 실행마다 병합한 JSON
+            # {kind, keys, more, runs, observed, source}. 선언(returns)이 아니라 흔적. 회상 줄의 `→ Record⟨관측: …⟩` 재료 —
+            # 4018 실측: 회상 줄이 `→ Record` 만 말해 모델이 describe 를 한 번 더 불렀다.
+            conn.execute("ALTER TABLE ibl_examples ADD COLUMN returns_observed TEXT DEFAULT ''")
 
         # 스키마 버전 레지스트리 — 옛 액션명 개편 등 데이터 마이그레이션은 여기서 자동 따라잡는다
         # (backend/datastore/schema_migrations.py, 2026-09-02). 실패 = 예외(반쯤 적용 금지).
@@ -608,6 +614,11 @@ class IBLUsageDB:
     def find_phrase_by_alias(self, name: str, edition: int = 1) -> Optional[Dict]:
         from ibl_name_search import find_phrase_by_alias as _f
         return _f(self, name, edition=edition)
+
+    def record_observed_returns(self, ibl_code: str, keys, kind: str = "record", source: str = "run") -> bool:
+        """실행이 실제로 돌려준 최상위 필드를 그 정의 행에 병합(2026-09-26) — 회상 줄 `→ Record⟨관측: …⟩` 의 재료."""
+        from ibl_returns_observed import record_observed_returns as _f
+        return _f(self, ibl_code, keys, kind, source)
 
     def alias_of_code(self, ibl_code: str) -> str:
         from ibl_name_search import alias_of_code as _f
@@ -1309,7 +1320,7 @@ class IBLUsageDB:
             rows = conn.execute(
                 f"""SELECT id, intent, ibl_code, nodes, category, difficulty,
                            source, success_count, fail_count, avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias,
-                           signature, COALESCE(returns,'') AS returns, provenance
+                           signature, COALESCE(returns,'') AS returns, COALESCE(returns_observed,'') AS returns_observed, provenance
                     FROM ibl_examples WHERE id IN ({placeholders})""",
                 all_ids
             ).fetchall()
@@ -1363,6 +1374,7 @@ class IBLUsageDB:
                 alias=meta.get('alias') or '',
                 signature=meta.get('signature'),
                 returns=meta.get('returns') or '',
+                returns_observed=meta.get('returns_observed') or '',
                 provenance=meta.get('provenance') or '{}'
             ))
 

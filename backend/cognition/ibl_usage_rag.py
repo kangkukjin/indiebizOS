@@ -141,7 +141,7 @@ def _current_phrase_rows(db, results):
         if not row:
             continue  # The definition was removed after the cached search.
         selected = copy.copy(ex)
-        for name in ('id', 'intent', 'ibl_code', 'alias', 'signature', 'returns', 'topic',
+        for name in ('id', 'intent', 'ibl_code', 'alias', 'signature', 'returns', 'returns_observed', 'topic',
                      'nodes', 'category', 'source', 'provenance'):
             if name in row:
                 setattr(selected, name, row[name])
@@ -322,7 +322,7 @@ class IBLUsageRAG:
                      "본문은 여기 없다(베끼라고 주는 것이 아니다): 이번 일에 안 맞는 문장이 있을 때만 "
                      "[self:memory]{op: \"recall\", store: \"실행\", expand: \"이름\"} 으로 정의를 열어 [def:이름]($인자){...} 로 고쳐 부른다. "
                      "여러 문장은 execute_ibl 한 번에 여러 줄로 — 중간 통화는 엔진에 머물고 마지막 결과만 온다.")
-        note += " edition은 저장 원문의 실행 의미다. 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하되 반환 계약을 확인하라."
+        note += " edition은 저장 원문의 실행 의미다. 과거 용례에서는 목적·도구·품질 조건을 참고하고 새 프로그램은 주 교재 ibl_composition.md의 명시 인자·값 반환으로 작성하라. 기존 관용구는 이름으로 호출하라. 회상 줄의 `→ 반환`이 반환 계약이고 `⟨관측: …⟩`은 실제 실행이 돌려준 필드다. 그 줄에 반환이 없을 때만 describe로 확인하라."
         from ibl_edition import source_edition
         lines = [f'<ibl_references note="{_xml_attr(note)}">']
         for ex in examples:
@@ -390,7 +390,9 @@ class IBLUsageRAG:
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             # 이름 먼저(2026-09-05 사용자 판정) — 본문(`[def:]`)은 싣지 않는다. 보이면 베낀다.
             if known:
-                _ret = ('Record' if edition == 1 else (getattr(ex, "returns", "") or "").strip())
+                from ibl_returns_observed import returns_display
+                _ret = ('Record' if edition == 1
+                        else returns_display(getattr(ex, "returns", "") or "", getattr(ex, "returns_observed", "") or ""))
                 body = (f"[fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}"
                         + (f" → {_ret}" if _ret else ""))
             else:

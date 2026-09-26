@@ -329,6 +329,18 @@ def project_result(result, verbose=False):
     return out
 
 
+def observed_returns_of_alias(alias):
+    """관용구의 관측 반환 필드(returns_observed JSON) — describe 응답에만 전체를 싣는다."""
+    try:
+        from ibl_usage_db import IBLUsageDB
+        row = IBLUsageDB().find_phrase_by_alias(alias, edition=2)
+        raw = (row or {}).get("returns_observed") or ""
+        obs = json.loads(raw) if raw else {}
+        return obs if isinstance(obs, dict) and obs.get("keys") else {}
+    except Exception:
+        return {}
+
+
 def observed_returns(name):
     """describe 에 싣는 관측 반환 모양 — 액션·op(#)·변이(@) 항목 전부. 카탈로그 줄이 아니라 조회 응답에만(토큰 예산)."""
     try:
@@ -354,6 +366,10 @@ def describe_actions(names, allowed_nodes, edition=None):
         if node == "fn" and edition == 2:
             from ibl_v2_store import describe
             definition = describe(action, allowed)
+            observed = observed_returns_of_alias(action)
+            if observed:
+                definition = {**definition, "observed_returns": observed,
+                              "observed_note": "실행이 실제로 돌려준 최상위 필드(선언 아님). runs=관측 횟수."}
             guards = definition.get("guards")
             if guards:
                 # Callers need the contract; per-expression diagnostics belong to

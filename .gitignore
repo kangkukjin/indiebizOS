@@ -152,6 +152,7 @@ data/conversations.db*
 data/**/*.db*
 data/**/*.json
 !data/idioms/webapp_seeds.json
+!data/idioms/code_read_seeds.json
 !data/idioms/housing_seeds.json
 !data/idioms/ai_trend_seeds.json
 !data/packages/installed/tools/ai-ops/judge_examples.json

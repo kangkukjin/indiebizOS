@@ -1,3 +1,9 @@
+코드조사범위:
+  description: '대상별좁혀읽기의 결정론적 값 처리. args.op(prepare|plan|finish)로 단계를 고른다. prepare: targets[{name,pattern}], before(2), after(29), limit(20)를 검증한다. plan: config·searches로 겹친 읽기 범위를 병합한다. finish: plan·reads로 대상별 상태와 중복 없는 발췌를 반환한다. 파일 접근·AI 호출 없이 값만 처리하며 all_targets_read와 각 대상 reason을 확인한다.'
+  file: targeted_code_read.py
+  interpreter: python
+  registered_at: '2026-09-26T15:52:02'
+  timeout: 30
 AI시대뉴스동기화:
   description: '완료된 AI 동향 보고서의 공개 출처 준비·제목 번역용 메타 정규화·뉴스 전송 — args: op(prepare 기본값|normalize|publish|retry|status)·data(normalize/publish에서
     필수인 행 목록 또는 items 봉투)·keys(retry에서 필수인 후보 키 목록). prepare는 미처리 출처를 반환하고, normalize는

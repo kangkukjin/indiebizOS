@@ -1,0 +1,22 @@
+[
+  {
+    "nodes": "self,table",
+    "source": "manual_seed",
+    "tags": "manual,code,coverage",
+    "topic": "찾기",
+    "intent": "지정한 심볼별 정규식 모두를 검색하고 겹치는 코드 범위를 한 번씩 읽어, 대상별 확인 위치·읽은 범위·미확인 사유를 반환한다. 함수 전체나 의미를 자동 판정하지 않는다.",
+    "ibl_code": "#!ibl edition=2\n[def:대상별좁혀읽기]($대상,$루트,$파일패턴=\"*.py\",$앞줄=2,$뒷줄=29,$검색상한=20) {\n  $설정 = [self:script]{id:\"코드조사범위\",args:{op:\"prepare\",targets:$대상,before:$앞줄,after:$뒷줄,limit:$검색상한}}\n  $검색 = $설정.targets >> [table:each]{parallel:4} {\n    [if:$it.problem != \"\"] { return {name:$it.name,problem:$it.problem} }\n    [try] {\n      $결과 = [self:grep]{pattern:$it.pattern,path:$루트,file_pattern:$파일패턴,regex:true,output_mode:\"content\",limit:$설정.limit + 1}\n      return {name:$it.name,result:$결과}\n    } [catch] { return {name:$it.name,problem:$error.message} }\n  }\n  $계획 = [self:script]{id:\"코드조사범위\",args:{op:\"plan\",config:$설정,searches:$검색}}\n  $본문 = $계획.ranges >> [table:each]{parallel:4} {\n    [try] {\n      $값 = [self:read]{path:$it.path,start_line:$it.start_line,end_line:$it.end_line,numbered:false}\n      return {id:$it.id,result:$값}\n    } [catch] { return {id:$it.id,problem:$error.message} }\n  }\n  return [self:script]{id:\"코드조사범위\",args:{op:\"finish\",plan:$계획,reads:$본문}}\n}",
+    "alias": "대상별좁혀읽기",
+    "returns": "Record",
+    "category": "phrase"
+  },
+  {
+    "nodes": "self,table",
+    "source": "manual_seed",
+    "tags": "manual,code,coverage",
+    "topic": "찾기",
+    "intent": "채널 읽기와 검색 구현을 모두 조사하고 대상별 확인 여부와 코드 발췌를 돌려줘.",
+    "ibl_code": "#!ibl edition=2\n[fn:대상별좁혀읽기]{대상:[{name:\"_channel_read\",pattern:\"^def _channel_read\"},{name:\"_channel_search\",pattern:\"^def _channel_search\"}],루트:\"backend/ibl/channel_engine.py\"}",
+    "category": "composition"
+  }
+]

@@ -80,6 +80,7 @@
       "github저장소메타.py",
       "judgment_idioms.py",
       "nest_tip_rows.py",
+      "targeted_code_read.py",
       "test_ai_tips_report.py",
       "test_judgment_idioms.py",
       "tips_nest.py",

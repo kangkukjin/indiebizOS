@@ -5,7 +5,7 @@
       "name": "좁혀서읽기",
       "source_edition": 1,
       "source_sha256": "79b7102edeae2036d38da49267b14a0a2effb3718252d79ed5fa29f2292f890b",
-      "inputs": "패턴·루트·파일패턴을 명시한다. 앞 3곳을 일치 줄부터 30줄씩 읽는다. 반환 Record의 items에 파일·줄번호·본문이 있다.",
+      "inputs": "패턴·루트·파일패턴을 명시한다. 앞 3곳을 일치 줄부터 30줄씩 읽는다. 반환 Record의 items에 파일·줄번호·본문이 있다. 지정한 모든 대상의 확인·미확인이 필요하면 대상별좁혀읽기를 describe한 뒤 대상:[{name,pattern}]·루트로 호출한다.",
       "example": "#!ibl edition=2\nreturn [fn:좁혀서읽기]{패턴:\"TODO\",루트:\"backend\",파일패턴:\"*.py\"}",
       "returns": "Record",
       "intent": "파일 내용에서 패턴의 위치를 찾고 앞 3곳을 일치 줄부터 30줄씩 읽을 때. 전체 일치 목록이 필요한 작업에는 grep을 직접 쓴다.",

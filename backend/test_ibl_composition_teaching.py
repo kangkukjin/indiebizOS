@@ -67,6 +67,28 @@ def test_pipeline_and_new_idiom_composition(current):
     assert not current.calls  # 규칙 계산에 숨은 외부 호출 없음
 
 
+@pytest.mark.parametrize('rows,expected', [
+    ('[{id:"a",수량:2,단가:30},{id:"b",수량:1,단가:50}]',
+     {'내역': [{'id': 'a', '금액': 60}, {'id': 'b', '금액': 50}], '합계': 110, '예산이내': False}),
+    ('[]', {'내역': [], '합계': 0, '예산이내': True}),
+    ('[{id:"다른입력",수량:4,단가:25}]',
+     {'내역': [{'id': '다른입력', '금액': 100}], '합계': 100, '예산이내': True}),
+])
+def test_local_decomposition_needs_no_saved_functions_or_adapters(rows, expected):
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    code = EXAMPLES['local_decomposition'].replace(
+        '[{id:"a",수량:2,단가:30},{id:"b",수량:1,단가:50}]', rows)
+    plan = compile_program(code, registry={}, definitions={})
+    assert not plan.issues, plan.report()
+    out = Runtime(plan).run()
+    assert out['success'] and out['source_complete'], out
+    assert out['value'] == {
+        '첫안': expected,
+        '둘째안': {'내역': [{'id': 'c', '금액': 80}], '합계': 80, '예산이내': True},
+    }
+
+
 def test_join_time_guide_preserves_unmatched_rows(current):
     out = current(EXAMPLES['join_time'])
     assert out['source_complete'], out
@@ -135,6 +157,18 @@ def test_compact_example_is_executable_and_bounded(current):
     assert len(compact) <= 4200
 
 
+def test_full_prompt_local_functions_execute_without_saved_definitions():
+    from ibl_v2_compile import compile_program
+    from ibl_v2_runtime import Runtime
+    examples = re.findall(r'```ibl\n(.*?)\n```', (FRAGMENTS / '12_ibl_only.md').read_text(), re.S)
+    assert len(examples) == 1
+    plan = compile_program(examples[0], registry={}, definitions={})
+    assert not plan.issues, plan.report()
+    out = Runtime(plan).run()
+    assert out['success'], out
+    assert out['value'] == [{'id': '007', 'weighted': 21}, {'id': 'b', 'weighted': 15}]
+
+
 def test_guide_is_reachable_from_actual_prompt_and_old_links():
     from ibl_access import build_environment
     from ibl_routing import _search_guide
@@ -146,7 +180,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file'}
+    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

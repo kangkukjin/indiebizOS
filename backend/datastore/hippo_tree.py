@@ -323,6 +323,12 @@ def split_sentences(code: str) -> List[str]:
     from ibl_edition import source_edition
     if source_edition(code or "") == 2:
         return [code] if code.strip() else []
+    return _scan_sentences(code)
+
+
+def _scan_sentences(code: str) -> List[str]:
+    """스캐너 본체 — 따옴표·괄호(`{[(`) 밖의 `;`/줄바꿈이 경계. 판본 1 문장과 판본 2 최상위 문장이 같은 규칙을 쓴다
+    (판본 2 문법도 '문장 사이에는 줄바꿈 또는 ;' — ibl_v2_parser.Parser.program)."""
     out, buf, q, depth = [], [], None, 0
     i, n = 0, len(code or "")
     while i < n:
@@ -1041,7 +1047,7 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     for r in words:
         if (r.get("alias") or "").strip():
             continue                                    # 위 '부를 수 있는 함수' 절에 이미 실렸다
-        n = len(split_sentences(r.get("ibl_code") or ""))
+        n = sentence_count(r.get("ibl_code") or "")
         from corpus_policy import exclusion_reason
         if not exclusion_reason(r) and not reference_needs_expansion(r.get("ibl_code") or ""):
             lines.append(render_line(r))
@@ -1051,7 +1057,7 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
             lines.append(f"- {_one_line(r.get('intent'))} → (문장 {n}, 이름 없음 — expand:\"#{r['id']}\") ‹{' · '.join(meta)}›")
     for p in phrases:
         if not (p.get("alias") or "").strip():
-            n = len(split_sentences(p.get("ibl_code") or ""))
+            n = sentence_count(p.get("ibl_code") or "")
             lines.append(f"- (이름 없는 관용구) {_one_line(p.get('intent'))} · 문장 {n} — expand:\"#{p['id']}\" ‹#{p['id']}›")
     if not words and not phrases:
         lines.append("- (아직 없음)")
@@ -1063,14 +1069,39 @@ def render_names_first(topic: str, words: List[Dict[str, Any]], phrases: List[Di
     return "\n".join(lines) + "\n"
 
 
+def v2_statements(code: str) -> List[str]:
+    """판본 2 프로그램의 최상위 문장들 — 헤더(`#!ibl …`)·주석 줄을 빼고 `_scan_sentences` 로 자른다.
+
+    `split_sentences` 는 증류·관용구 기계의 전제대로 판본 2 를 한 단위로 돌려준다(test_ibl_v2_assets) — 그건 그대로 두고,
+    노출·반사 판정에 쓰는 문장 수만 여기서 센다. 파서는 ibl 층이라 data 층에서 부르지 않는다(층 가드)."""
+    body = "\n".join(ln for ln in (code or "").splitlines()
+                     if ln.strip() and not ln.lstrip().startswith("#"))
+    return _scan_sentences(body)
+
+
+def sentence_count(code: str) -> int:
+    """판본을 아는 문장 수 — 판본 2 는 최상위 문장, 판본 1 은 split_sentences. 판본 헤더가 깨졌으면 0."""
+    from ibl_edition import source_edition
+    try:
+        ed = source_edition(code or "")
+    except ValueError:
+        return 0
+    return len(v2_statements(code)) if ed == 2 else len(split_sentences(code))
+
+
 def reference_needs_expansion(code: str) -> bool:
     """무명 여러 문장과 긴 본문은 원문을 명시적으로 열 때만 준다.
 
     1200자는 의미 판정이 아니라 자동 노출 상한이다. 한 문장의 write에도 보고서
     전체가 실릴 수 있다. 원장 내용·실행 가능성은 바꾸지 않는다.
+
+    ★2026-09-26 수리: 판본만으로는 숨기지 않는다. 09-23 에 판본 2 를 통째로 숨기는 자리표(자격 정책 확정 전)가
+    여기 들어왔고, 같은 날 corpus_policy.exclusion_reason 이 판본 1 을 구형(legacy_source)으로 제외했다. 둘을 OR 로
+    묶는 반사 판정(`_top_for_execution`)·본문 노출이 저장 용례 3,721건 전부를 걸러 반사 후보가 0건이 됐다.
+    역할을 가른다 — 자격은 exclusion_reason, 노출은 길이와 문장 수(판본을 아는 sentence_count).
+    정본: docs/REFLEX_RULES_CONTRADICTION_REPAIR_2026_09_26.md
     """
-    from ibl_edition import source_edition
-    return source_edition(code) == 2 or len(code) > 1200 or len(split_sentences(code)) > 1
+    return len(code or "") > 1200 or sentence_count(code) != 1
 
 
 def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
@@ -1079,7 +1110,7 @@ def _hide_body(r: Dict[str, Any]) -> Dict[str, Any]:
     from ibl_edition import source_edition
     out["edition"] = source_edition(r.get("ibl_code") or "")
     code = r.get("ibl_code") or ""
-    n = len(split_sentences(code))
+    n = sentence_count(code)
     alias = (r.get("alias") or "").strip()
     if alias:
         out["call"] = phrase_call_line(alias, code, (r.get('returns') or '').strip() if isinstance(r, dict) else "",

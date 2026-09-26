@@ -242,8 +242,9 @@ class CognitiveConsciousnessMixin:
                 and any(v in low for v in self._REPAIR_VERB_WORDS))
 
     # 되돌리기 어렵거나 오래 걸리는 op — 회상된 코드 자체에서 읽는다(세계의 명사 아님).
-    _LONGRUN_OPS = ('op: "deploy"', "op: 'deploy'", 'op: "build"', "op: 'build'",
-                    'op: "publish"', "op: 'publish'")
+    # 키의 따옴표·공백 표기(`op: "deploy"` / `"op":"deploy"` / `op:'build'`)에 무관하게 잡는다(2026-09-26 —
+    # 저장 용례 다수가 JSON 꼴 `{"op":"run",…}` 이라 옛 문자열 목록은 그 표기를 놓쳤다).
+    _LONGRUN_OP_RE = re.compile(r"""["']?\bop["']?\s*:\s*["'](?:deploy|build|publish)["']""")
     # 요구가 몇 개인지 문장 구조로 센다(주제어가 아니라 문형).
     # 부탁 종결: 보조용언 '주다' 계열이 대부분을 덮는다(해줘·찍어줘·띄워줘·보내주세요…).
     _DEMAND_RE = re.compile(r"줘|주세요|줄래|주라|해라|하라|해봐|해다오")
@@ -268,7 +269,7 @@ class CognitiveConsciousnessMixin:
         if ">>" in code:
             return "회상이 다단계 파이프라인"
         # ② 되돌리기 어려운 작업(빌드·배포·발행) — 위험 축
-        if any(op in code for op in self._LONGRUN_OPS):
+        if self._LONGRUN_OP_RE.search(code):
             return "빌드·배포 등 되돌리기 어려운 작업"
         # ③ 요구는 여럿인데 회상은 단발 — 회상이 요청을 못 덮는다
         msg = message or ""

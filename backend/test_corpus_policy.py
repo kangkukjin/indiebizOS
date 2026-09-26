@@ -41,10 +41,13 @@ def test_legacy_reference_is_retrievable_but_neither_executable_nor_quoted():
     before, after = root.findall('ref')
     assert '[self:time]' not in before.text
     assert '#987' in before.text and before.attrib['authoring_excluded'] == 'legacy_source'
-    # Current edition retains the existing explicit-expansion policy.
-    assert 'authoring_excluded' not in after.attrib and '#988' in after.text
+    # Current edition: a single statement is quoted inline and is the reflex candidate.
+    # Only the explicit-expansion policy (length / several statements) can still hide it — not the edition itself
+    # (2026-09-26: edition-based hiding + legacy exclusion together left zero reflex candidates).
+    assert 'authoring_excluded' not in after.attrib and 'body_omitted' not in after.attrib
+    assert 'return [self:time]{}' in after.text
     assert _top_for_execution([old]) == (.80, '')
-    assert _top_for_execution([new]) == (.80, '')
+    assert _top_for_execution([new]) == (.98, NEW)
 
 
 def test_weekly_audit_routes_editions_and_distinguishes_unknown(tmp_path, monkeypatch):

@@ -24,7 +24,7 @@ class MemberRunner(AgentRunner):
         if tool:
             properties = tool['input_schema']['properties']
             tool['input_schema']['properties'] = {k: v for k, v in properties.items() if k in {'code', 'edition', 'inputs', 'check', 'resume', 'describe', 'read_result'}}
-            properties['code']['description'] = '현재 회원 카탈로그에 있는 액션만 실행한다. 예: [sense:search]{source:"ddg",query:"AI news",limit:5}. 액션 계약 조회는 code를 비우고 describe를 사용한다.'
+            properties['code']['description'] = '현재 회원 카탈로그에 있는 액션만 실행한다. 예: [sense:search]{source:"ddg",query:"AI news",limit:5}. describe는 계약 조회이며 code를 함께 주면 조회 성공 후 한 번 실행한다.'
         tools = [tool] if tool else []
         tools.append({"name": "ask_user_question", "description": "작업에 필요한 정보가 빠졌을 때 클라이언트에게 질문하고 현재 턴을 끝낸다. 다음 답변은 같은 작업에서 이어진다.",
                       "input_schema": {"type": "object", "properties": {"question": {"type": "string"}}, "required": ["question"]}})
@@ -100,8 +100,10 @@ class MemberRunner(AgentRunner):
         import principal
         import member_runtime
         if tool_input.get('read_result') is not None or tool_input.get('describe') is not None:
-            if tool_input.get('code') or (tool_input.get('read_result') is not None and tool_input.get('describe') is not None):
-                return json.dumps({'success': False, 'error': '조회에는 code를 비우고 describe/read_result 중 하나만 사용하세요'})
+            if tool_input.get('read_result') is not None and (
+                    tool_input.get('code') or tool_input.get('pipeline') or tool_input.get('describe') is not None):
+                return json.dumps({'success': False, 'executed': False,
+                                   'error': 'read_result는 code·pipeline·describe와 함께 사용할 수 없습니다'})
             try:
                 from model_result_view import read_result, describe_actions
                 if tool_input.get('read_result') is not None:
@@ -118,16 +120,18 @@ class MemberRunner(AgentRunner):
                         cfg = nodes.get(node, {}).get('actions', {}).get(action, {})
                         if not visible(node, action, cfg):
                             raise ValueError('외부사용자에게 공개되지 않은 액션입니다')
-                    value = describe_actions(names, self.config.get('allowed_nodes'), edition=tool_input.get('edition', 2))
-                return json.dumps(value, ensure_ascii=False)
+                    if not tool_input.get('code'):
+                        value = describe_actions(names, self.config.get('allowed_nodes'), edition=tool_input.get('edition', 2))
+                if not tool_input.get('code'):
+                    return json.dumps(value, ensure_ascii=False)
             except (ValueError, KeyError, TypeError, OSError):
-                return json.dumps({'success': False, 'error': '현재 회원 턴에서 해당 계약/결과를 조회할 수 없습니다'}, ensure_ascii=False)
+                return json.dumps({'success': False, 'executed': False, 'error': '현재 회원 턴에서 해당 계약/결과를 조회할 수 없습니다'}, ensure_ascii=False)
         # Model authoring uses the same language boundary as the owner. No paths,
         # actor claims or owner libraries are accepted from the tool payload.
         from ibl_edition import authoring_request
         from ibl_member_library import library
         request = authoring_request({k: v for k, v in tool_input.items()
-                                     if k in {"code", "edition", "inputs", "check", "resume", "files"}})
+                                     if k in {"code", "edition", "inputs", "check", "resume", "files", "describe"}})
         if len(json.dumps(request, ensure_ascii=False).encode()) > 4 * 1024 * 1024:
             return json.dumps({"success": False, "error": "입력은 합계 4MB 이하여야 합니다"}, ensure_ascii=False)
         source = getattr(self, "config", {}).get("_member_sentences", "")

@@ -23,9 +23,11 @@ def current(monkeypatch, tmp_path):
     from ibl_v2_compile import compile_program
     from ibl_v2_runtime import Runtime
     calls = []
+    (tmp_path / 'outputs').mkdir()
     real_leaf = ibl_engine.execute_ibl
     def leaf(ti, *args, **kwargs):
-        if (ti['_node'], ti['action']) in {('table', 'join'), ('table', 'groupby'), ('self', 'time')}:
+        if (ti['_node'], ti['action']) in {('table', 'join'), ('table', 'groupby'),
+                                         ('self', 'time'), ('self', 'list'), ('self', 'read')}:
             return real_leaf(ti, *args, **kwargs)
         assert (ti['_node'], ti['action']) == ('sense', 'crawl')
         url = ti['params']['url']
@@ -144,7 +146,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable'}
+    assert set(EXAMPLES) == {'pipeline', 'pure_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

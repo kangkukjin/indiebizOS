@@ -768,9 +768,8 @@ def execute_tool(tool_name: str, tool_input: dict, project_path: str, agent_id: 
     try:
         from repeat_guard import advise as _repeat_advise
         _sig = tool_name + "|" + json.dumps(tool_input or {}, sort_keys=True, ensure_ascii=False)
-        observing = tool_name == "execute_ibl" and any(
-            (tool_input or {}).get(key) is not None and (tool_input or {}).get(key) is not False
-            for key in ("read_result", "describe", "recover", "check"))
+        from result_read_contract import is_observation_request
+        observing = tool_name == "execute_ibl" and is_observation_request(tool_input or {})
         if not observing:
             _advisory = _repeat_advise(agent_id or "anon", _sig)
     except Exception:

@@ -5338,15 +5338,15 @@ nodes:
         target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용; offset은 0 이상, limit은 0 이상 정수이며 0은 빈 본문, 생략은 전체 읽기) 또는 start_line/end_line(1-기반 양끝 포함, 역전·비정수·충돌 범위는 오류) 또는 tail(끝에서 N줄, 1 이상 정수; offset/start/start_line/end/end_line/limit와 동시 지정은 오류). blocks=true는 선택한 범위를 문단 items로 변환하며 같은 물리 줄번호를 사용한다. 빈 문단 범위의 start_line/end_line은 null이다. pdf — pages는 1-기반 양끝 포함 범위(예 '2', '1-5,8'; 잘못된 범위는 오류), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). hwp(v5)/hwpx — 문단·표를 docx 와 같은 text+blocks 로(offset/limit/max_blocks, extract_images); 암호·배포용 hwp 는 정직 거절. pptx — 슬라이드마다 heading+본문·표·[노트], pages 로 슬라이드 범위(그림만 있는 슬라이드는 본문 없음 — 이미지는 extract_images). epub — 챕터(spine) 순 heading+문단, pages 로 챕터 범위. JSON 배열을 변수에 받으면 변수 자체가 목록($목록)이며 .items 필드가 있는 봉투가 아니다. 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
-        implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임.
+        implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임. 읽기 예외는 JSON 실패 봉투로 반환하며 파일 부재(not_found)·권한(permission)·I/O(io)의 error_type과 errno를 보존한다. 선택 파일은 self:list의 빈 목록으로 부재를 먼저 확인하고 필수 파일의 실패는 전파한다.
         lands_on: body
         limb_op:
           op: read
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-09-25'
-          impl: 41fa7b32d194eff8
+          at: '2026-09-26'
+          impl: e89b936ee912cb46
         target_key: path
         aliases:
           offset:
@@ -5358,8 +5358,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-09-25'
-          impl: 41fa7b32d194eff8
+          at: '2026-09-26'
+          impl: e89b936ee912cb46
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6119,8 +6119,8 @@ nodes:
           nondeterministic: true
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-09-25'
-          impl: 41fa7b32d194eff8
+          at: '2026-09-26'
+          impl: e89b936ee912cb46
         pipe_in: true
         lands_on: body
         limb_op:

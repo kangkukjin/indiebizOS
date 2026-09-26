@@ -5,6 +5,15 @@ MAX_LIMIT = 60000
 MAX_PATH_DEPTH = 16
 
 
+def is_observation_request(request):
+    """계약 조회를 곁들인 실행도 실제 작업이다. 추적·반복 관문을 건너뛰지 않는다."""
+    if request.get("check"):
+        return True
+    if request.get("code") or request.get("pipeline"):
+        return False
+    return request.get("describe") is not None or request.get("read_result") is not None
+
+
 def read_result_schema():
     return {
         "type": "object",

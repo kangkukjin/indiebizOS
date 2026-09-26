@@ -1280,7 +1280,7 @@
    "fields": {
     "description": "81bf640209e9",
     "target_description": "2c505d4e7eef",
-    "implementation": "36b93cbe134f",
+    "implementation": "5adeccd74a33",
     "returns": "1cf2462dbf78",
     "returns_variants": "fefe30ac0f4e",
     "target_key": "d070c7ecb482",
@@ -1289,8 +1289,8 @@
     "router": "ebbb1532efbc",
     "tool": "533e886121eb"
    },
-   "reviewed": "2026-09-18",
-   "examples": 128
+   "reviewed": "2026-09-26",
+   "examples": 131
   },
   "self:recent_chats": {
    "fields": {

@@ -16,7 +16,7 @@ import boot_paths  # noqa: E402,F401
 import anyio
 from mcp.server.fastmcp import FastMCP, Context
 from pydantic import Field
-from result_read_contract import read_result_schema
+from result_read_contract import read_result_schema, is_observation_request
 
 ResultRead = Annotated[dict, Field(json_schema_extra=read_result_schema())]
 
@@ -278,7 +278,8 @@ async def execute_ibl(code: str, project_path: str = "",
     주 교재: read_guide(query="ibl_composition.md"). 함수는 [def:f]($x){return $x},
     반복은 목록 >> [table:each]{parallel:4}{return $it}, 조건은 Bool 식입니다.
     결과는 value이며 목록은 목록 그대로입니다. 필요한 도구 계약은 code="",
-    describe=["node:action"] 또는 ["fn:이름"]으로 조회합니다. 긴 프로그램은 check=True로 먼저 검사합니다.
+    describe=["node:action"] 또는 ["fn:이름"]으로 조회합니다. code와 describe를 함께 주면
+    계약 조회 성공 후 코드를 한 번 실행하고 descriptions를 덧붙입니다. 긴 프로그램은 check=True로 먼저 검사합니다.
     issues의 location/call_path/hint로 오류를 모아 고친 뒤 전체를 재검사합니다.
     warnings는 의도를 확인하며 incomplete는 실행 중 검사할 경계가 있다는 뜻입니다.
 
@@ -385,7 +386,7 @@ async def execute_ibl(code: str, project_path: str = "",
     text = await anyio.to_thread.run_sync(lambda: _trim_for_agent(cleaned, _count_actions(code)))
     # 반복 호출 가드 — 조언은 예산 밖 부록(±200자)이라 절단과 무관.
     # ★회수(recover) 폴링은 반복이 정상 사용이라 가드를 안 태운다(F51-1).
-    if code.strip() and not (recover or read_result is not None or describe is not None or check):
+    if code.strip() and not recover and not is_observation_request(payload):
         guard_key = agent_id or task_id or "stdio"
         from repeat_guard import files_digest as _files_digest
         advisory = _repeat_advisory(

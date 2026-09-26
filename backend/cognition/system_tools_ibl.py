@@ -15,6 +15,7 @@ from typing import Dict, Optional
 
 from common.value_semantics import dumps_public_result
 from episode_logger import truncate_for_log
+from result_read_contract import is_observation_request
 
 
 # === 액션 서킷 브레이커 (같은 액션 반복 실패 방지) ===
@@ -527,14 +528,34 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
     allowed = get_allowed_nodes()
     if tool_input.get("describe") is not None or tool_input.get("read_result") is not None:
         from model_result_view import describe_actions, read_result
-        if tool_input.get("code") or tool_input.get("pipeline") or (tool_input.get("describe") is not None and tool_input.get("read_result") is not None):
-            return json.dumps({"error": "조회에는 code를 비우고 describe/read_result 중 하나만 사용하세요"}, ensure_ascii=False)
+        has_code = bool(tool_input.get("code") or tool_input.get("pipeline"))
+        if tool_input.get("read_result") is not None and (has_code or tool_input.get("describe") is not None):
+            return json.dumps({"success": False, "executed": False,
+                               "error": "read_result는 code·pipeline·describe와 함께 사용할 수 없습니다"}, ensure_ascii=False)
         try:
             value = (describe_actions(tool_input["describe"], allowed, edition=tool_input.get("edition")) if tool_input.get("describe") is not None
                      else read_result(tool_input["read_result"]))
-            return json.dumps(value, ensure_ascii=False)
         except (ValueError, KeyError, TypeError, OSError) as exc:
-            return json.dumps({"error": str(exc)}, ensure_ascii=False)
+            return json.dumps({"success": False, "executed": False, "error": str(exc)}, ensure_ascii=False)
+        if not has_code:
+            return json.dumps(value, ensure_ascii=False)
+        descriptions = value["actions"]
+        if any(row.get("error") for row in descriptions):
+            return json.dumps({"success": False, "executed": False,
+                               "error": "요청한 액션 계약을 확인하지 못해 실행하지 않았습니다",
+                               "descriptions": descriptions}, ensure_ascii=False)
+        # 부가 조회의 실패는 효과 전에 거절한다. 실행은 원래 경로를 딱 한 번
+        # 통과하며 value·실패·영수증·check의 의미를 그대로 보존한다.
+        request = {k: v for k, v in tool_input.items() if k != "describe"}
+        raw = _execute_ibl_unified_impl(request, project_path, agent_id, cancel_check=cancel_check)
+        try:
+            result = json.loads(raw)
+        except (ValueError, TypeError):
+            result = raw
+        if not isinstance(result, dict):
+            result = {"result": raw}  # 기존 저장 문장의 평문도 원형으로 보존한다.
+        result["descriptions"] = descriptions
+        return json.dumps(result, ensure_ascii=False)
 
     # --- IBL 코드 결정 ---
     code = tool_input.get("code") or tool_input.get("pipeline")
@@ -1014,7 +1035,7 @@ def _collect_honesty_markers(obj) -> dict:
 
 
 @runtime_work.tracked("ibl-program", bypass=lambda tool_input, *a, **kw:
-                      bool(tool_input.get("describe") or tool_input.get("read_result") or tool_input.get("check")))
+                      is_observation_request(tool_input))
 def _execute_ibl_unified(tool_input: dict, project_path: str, agent_id: str = None,
                          cancel_check=None) -> str:
     """전 IBL 표면의 trajectory choke point.

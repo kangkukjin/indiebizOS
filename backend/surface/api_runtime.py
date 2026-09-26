@@ -109,7 +109,8 @@ class RuntimeAdmission:
                     break
             try:
                 body = json.loads(b"".join(chunks))
-                safe = isinstance(body, dict) and bool(body.get("read_result") or body.get("describe") or body.get("check"))
+                from result_read_contract import is_observation_request
+                safe = isinstance(body, dict) and is_observation_request(body)
             except (ValueError, UnicodeError):
                 pass
             original_receive = receive

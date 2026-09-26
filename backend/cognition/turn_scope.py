@@ -31,4 +31,6 @@ def allows_context_tool(name, payload):
         return payload.get("op") in {"read", "bind", "note", "goal", "detach"}
     if name == "read_result":
         return True
-    return name == "execute_ibl" and (bool(payload.get("describe")) or context_program(payload.get("code", "")))
+    code = payload.get("code") or payload.get("pipeline") or ""
+    return name == "execute_ibl" and (
+        (not code and bool(payload.get("describe"))) or context_program(code))

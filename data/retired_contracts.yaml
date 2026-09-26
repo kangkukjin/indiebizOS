@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: exclusive-code-describe
+    retired: 2026-09-26
+    reason: 실행과 부가 계약 조회를 함께 보낸 정상 의도를 거절해 재호출을 강제했다.
+    instead: describe와 code는 계약 조회 성공 후 단일 실행으로 처리하고 descriptions를 덧붙인다. read_result는 독립 조회다.
+    phrases:
+      - '조회에는 code를 비우고 describe/read_result 중 하나만 사용하세요'
+      - 'code를 비우고 액션 이름 1~6개의 계약 조회. 실행하지 않음.'
   - id: ai_tips_cross_report_semantic_dedup
     retired: 2026-09-24
     reason: 사용자가 요구한 영상 ID 중복 방지를 누적 팁 전건 의미 비교로 확대해 불필요한 호출·복구·검수 비용을 만들었다.

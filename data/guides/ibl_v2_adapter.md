@@ -7,6 +7,7 @@
 빌더와 런타임은 같은 validator를 사용한다. callable_contract는 현재 IBL이 소비한다. 기존 returns/flow는 저장 원문 호환 실행을 위해 유지한다.
 두 판본의 입력 의미가 달라지는 경우 하나를 다른 하나로 자동 파생하지 않는다(예: where 문자열과 순수 Callable).
 도구 성공·실패·원천 절단을 선언된 외부 봉투에서만 해석하고 사용자 value/items 안의 동명 키는 건드리지 않는다.
+JSON 봉투를 선언한 도구는 실패도 `success:false,error,error_type`으로 반환한다. 예외를 평문으로 바꾸면 어댑터가 실제 실패를 형식 오류로 오진한다. `error_type`·`errno`는 TOOL 진단의 details로 보존하고 permission은 폴백으로 삼키지 않는다. 본문 속 `Error:` 문자열은 오류로 추측하지 않는다.
 0/1/N건, Unit, 실제 파일/프로세스, 부분 실패·권한·취소·재생 및 기존 호출 회귀를 시험한다.
 지원 범위와 예제는 주 교재 ibl_composition.md와 문법 전문에 함께 갱신하며, 추가 계약은 build_ibl_nodes.py로 파생한다.
 

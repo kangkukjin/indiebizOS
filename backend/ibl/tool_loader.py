@@ -183,7 +183,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
     description = (
         f"현재 IBL로 새 코드를 실행합니다. 주 교재: ibl_composition.md. "
         f"사용 가능한 노드: {node_list}. "
-        f"액션 계약은 code=빈 문자열, describe=[node:action]으로 조회. 저장된 원문은 read_result로 회수."
+        f"액션 계약은 describe=[node:action]으로 조회. code를 함께 주면 조회 성공 후 한 번 실행하고 descriptions를 덧붙임. 저장된 원문은 code 없이 read_result로 회수."
     )
 
     return {
@@ -210,7 +210,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 "files_from": {"type": "array", "items": {"type": "string"}, "description": "기존 저장 코드(edition:1)의 파일 인자. 새 코드는 self:read의 text를 명시 전달."},
                 "resume": {"type": "object", "description": "현재 IBL은 반환된 {run_id}와 동일 code·inputs로 재개. 완료 영수증을 재사용하며 결과 불명 외부 작업은 재실행하지 않는다. 기존 저장 코드의 재개 인자도 보존."},
                 "describe": {"type": "array", "items": {"type": "string"}, "maxItems": 6,
-                             "description": "code를 비우고 액션 이름 1~6개의 계약 조회. 실행하지 않음."},
+                             "description": "액션 이름 1~6개의 계약 조회. code가 비면 조회만, 있으면 조회 성공 후 한 번 실행하고 descriptions를 반환."},
                 "read_result": read_result_schema(),
             },
             "required": ["code"]

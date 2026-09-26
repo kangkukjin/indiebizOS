@@ -6,7 +6,7 @@
 
 ## 작성 순서
 
-1. 입력·반환·출처·완료 조건을 정한다. 실제 액션 계약은 `execute_ibl(code="",describe=["node:action"])`으로 조회한다.
+1. 입력·반환·출처·완료 조건을 정한다. 실제 액션 계약은 `execute_ibl(code="",describe=["node:action"])`으로 조회한다. 이미 작성한 코드와 `describe`를 함께 주면 계약 조회가 성공한 뒤 코드를 한 번 실행하고 `descriptions`를 덧붙인다. `check:true`이면 검사만 한다. 기존 결과 조회인 `read_result`는 실행·계약 조회와 섞지 않는다.
 2. 변수는 값이다. 목록은 `.items/.count`로 감싸지 않고 그대로 전달하며 길이는 `len`으로 구한다.
    Record를 반환하는 도구에만 계약에 맞게 `.items/.text` 등을 사용한다.
 3. 독립 실행은 `A & B`, 값 전달은 `A >> B`, 여러 곳에서 쓸 값은 `$이름=A`다.
@@ -106,6 +106,17 @@ $후보 = []
 ```
 
 빈 목록·빈 문자열·null은 정상 값이다. `??`는 잡을 수 있는 실패만 대체한다.
+
+선택 파일은 목록에서 존재를 확인한 뒤 읽는다. 필수 파일에는 이 분기를 쓰지 않는다.
+아래 결과는 `found`로 부재와 빈 파일을 구별한다. 목록·읽기의 실패는 그대로 전파한다.
+
+<!-- example:optional_file -->
+```ibl
+#!ibl edition=2
+$파일 = [self:list]{path:"outputs",pattern:"optional.json"}
+[if:len($파일)==0] { return {found:false,text:""} }
+[else] { $문서=[self:read]{path:$파일[0].path}; return {found:true,text:$문서.text} }
+```
 
 <!-- example:catch -->
 ```ibl

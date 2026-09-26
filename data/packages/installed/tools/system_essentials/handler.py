@@ -1434,4 +1434,13 @@ def execute(tool_input: dict, context) -> str:
             return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:
+        if tool_name.startswith("read_"):
+            # 읽기 실패도 성공과 같은 JSON 경계를 사용한다. 평문 Error는
+            # document 어댑터에서 파일 부재를 봉투 파손으로 오진하게 한다.
+            error_type = ("not_found" if isinstance(e, FileNotFoundError) else
+                          "permission" if isinstance(e, PermissionError) else
+                          "io" if isinstance(e, OSError) else "read")
+            return json.dumps({"success": False, "error": str(e),
+                               "error_type": error_type,
+                               "errno": getattr(e, "errno", None)}, ensure_ascii=False)
         return f"Error: {str(e)}"

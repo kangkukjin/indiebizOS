@@ -238,14 +238,16 @@ github저장소메타:
   registered_at: '2026-09-08T06:17:58'
   timeout: 300
 판정관용구:
-  description: 'Jev 관용구의 결정론적 입력 분할·원문 복원. 판정 호출은 IBL table:judge가 소유한다. 보통 관련자료골라읽기·의미로본문찾기로
-    호출한다. args: op(prepare|select|finish), mode(search|body), source(items 봉투 또는 행
+  description: '수집·Jev 관용구의 결정론적 URL 선택·입력 분할·원문 복원. 판정 호출은 IBL table:judge가 소유한다. 보통 주소마다읽기·관련자료골라읽기·의미로본문찾기로
+    호출한다. args: op(urls|prepare|select|finish), mode(search|body), source(items 봉투 또는 행
     목록), origin(prepare 선택: 중복 제거 전 원천 봉투), question(prepare: 관련성 질문), limit(prepare/select:
     0 이상 선별 상한), context(prepare/select: 앞뒤 문맥 행수, 기본 0), prepared(select: prepare의
     plan), judged(select: 판정 items와 error_count 봉투), selection(finish: select의 selection),
-    result(finish: 크롤 items와 오류·잘림 봉투). prepare는 배치·plan, select는 선별 items·selection·판정
+    result(finish: 크롤 items와 오류·잘림 봉투). urls는 정상 URL 문자열의 정확한 중복만 제거하고 실패 행을 보존한다.
+    urls에 limit을 주면 앞 개수개 정상 후보와 collection을 반환하며 실패 행은 finish에서 복원한다.
+    prepare는 배치·plan, select는 선별 items·selection·판정
     내역, finish는 최종 items를 반환한다. 실패 행과 error_count·partial·truncated를 보존한다. 0개면 외부
-    호출 없이 실패 증거만 남긴다.'
+    호출 없이 실패 증거만 남긴다. 의도한 선별은 truncations.scope=selection으로 원천 절단과 구별한다.'
   file: judgment_idioms.py
   interpreter: python
   registered_at: '2026-09-21T21:58:24'

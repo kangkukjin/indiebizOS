@@ -1,6 +1,11 @@
-"""판정 관용구의 결정론적 준비·복원. 모델 호출은 관용구의 table:judge만 한다."""
+"""수집·판정 관용구의 결정론적 준비·복원. 모델 호출은 table:judge만 한다."""
 import json
 import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
+import boot_paths  # noqa: E402,F401
+from ibl_honesty import truncation_evidence  # noqa: E402
 
 
 def decode(value):
@@ -28,6 +33,53 @@ def integer(value, name):
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise ValueError(f"{name}은 0 이상의 정수여야 합니다.")
     return value
+
+
+def selection_markers(result, total, selected):
+    """의도한 선택을 원천 절단과 구별한다. 기존 원천 표지는 지우지 않는다."""
+    markers = list(truncation_evidence(result).get("truncations", []))
+    if selected < total:
+        markers.append({"scope": "selection", "total": total,
+                        "selected": selected, "omitted": total - selected})
+        result["truncated"] = True
+    if markers:
+        result["truncations"] = markers
+
+
+def urls(args):
+    """URL은 주소 문자열 그대로 비교한다. 일반 텍스트의 느슨한 동등성을 쓰지 않는다."""
+    original = decode(args["source"])
+    source = rows(original)
+    seen, unique, failures, ordered = set(), [], [], []
+    for row in source:
+        if row.get("_error"):
+            failures.append(row)
+            ordered.append(row)
+            continue
+        url = row.get("url")
+        if not isinstance(url, str) or not url.strip():
+            raise ValueError("수집 후보에는 비어 있지 않은 url이 필요합니다.")
+        if url not in seen:
+            seen.add(url)
+            unique.append(row)
+            ordered.append(row)
+    out = dict(original) if isinstance(original, dict) else {}
+    out.pop("text", None)
+    out.update(items=ordered, count=len(ordered), total=len(ordered))
+    out["error_count"] = max(out.get("error_count") or 0, len(failures))
+    if out["error_count"]:
+        out["partial"] = True
+    if "limit" not in args:
+        return out
+    limit = integer(args["limit"], "개수")
+    chosen = unique[:limit]
+    selection_markers(out, len(unique), len(chosen))
+    out.update(items=chosen, count=len(chosen), total=len(chosen),
+               source_error_items=failures,
+               selection_info={"source_count": len(source), "unique_urls": len(unique),
+                               "duplicates": len(source) - len(failures) - len(unique),
+                               "selected": len(chosen), "omitted_by_limit": len(unique) - len(chosen)})
+    return {**out, "collection": out}
 
 
 def neighbors(source, index, context):
@@ -169,8 +221,8 @@ def select(args):
     original = decode(source_input)
     result = {k: v for k, v in original.items() if k != "items"} if isinstance(original, dict) else {}
     result.pop("text", None)
+    selection_markers(result, len(eligible), len(chosen))
     result.update(success=True, items=output, count=len(output), total=len(output),
-                  truncated=bool(result.get("truncated") or len(chosen) < len(eligible)),
                   source_error_items=[source[i] for i in errors],
                   judgment_audit=audit,
                   selection_info={"source_count": len(source), "evaluated": len(found),
@@ -207,18 +259,25 @@ def finish(args):
     out["error_count"] = source_errors + crawl_errors
     if out["error_count"] or selection.get("partial") or result.get("partial"):
         out["partial"] = True
-    out.update(judgment_audit=selection["judgment_audit"],
-               selection_info=selection["selection_info"],
-               judgment_receipt=selection["judgment_receipt"],
+    out.update(selection_info=selection["selection_info"],
                source_markers={k: v for k, v in selection.items()
                                if k not in ("items", "judgment_audit", "selection_info",
                                             "judgment_receipt", "success", "count", "total")},
                truncated=bool(result.get("truncated") or selection.get("truncated")))
+    # source_markers는 현재 판본의 정직 표지 탐색 경로가 아니다. 최상위에도 명시한다.
+    markers = []
+    for origin in (selection, result):
+        markers.extend(truncation_evidence(origin).get("truncations", []))
+    if markers:
+        out["truncations"] = markers
+    if "judgment_audit" in selection:
+        out.update(judgment_audit=selection["judgment_audit"],
+                   judgment_receipt=selection["judgment_receipt"])
     return out
 
 
 def run(args):
-    return {"prepare": prepare, "select": select, "finish": finish}[args["op"]](args)
+    return {"urls": urls, "prepare": prepare, "select": select, "finish": finish}[args["op"]](args)
 
 
 if __name__ == "__main__":

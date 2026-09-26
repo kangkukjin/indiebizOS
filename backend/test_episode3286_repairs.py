@@ -1,5 +1,6 @@
 """ep3286: 원천 절단의 each/fn 경계·복구 안내·평가/학습 전달 회귀."""
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -41,7 +42,7 @@ def test_each_and_idiom_preserve_source_warning_without_false_row_failure(parall
         # 원장 정의를 같은 실행기에서 쓰되 병렬 조건만 대역 교재로 바꾼다.
         catalog = json.loads((ROOT / 'data/idioms/curated.json').read_text())
         entry = next(e for e in catalog['idioms'] if e['name'] == '주소마다읽기')
-        entry['body'] = entry['body'].replace('collect: true', f'collect: true, parallel: {parallel}')
+        entry['body'] = re.sub(r'collect:\s*true', f'collect: true, parallel: {parallel}', entry['body'])
         code = '$목록=[{url:"' + URL + '"},{url:"https://fixture.test/c"}]; [fn:주소마다읽기]{목록:$목록,개수:2}'
         result = run_trial(code, 'dedup', catalog=catalog,
                            source_results={URL: source(truncated)})['result']

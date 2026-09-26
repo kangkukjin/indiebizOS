@@ -5346,7 +5346,7 @@ nodes:
         member_transform: member_documents:read_document
         path_audited:
           at: '2026-09-26'
-          impl: e89b936ee912cb46
+          impl: bfefa18431f3b99b
         target_key: path
         aliases:
           offset:
@@ -5359,7 +5359,7 @@ nodes:
         member_transform: member_documents:fill_document
         path_audited:
           at: '2026-09-26'
-          impl: e89b936ee912cb46
+          impl: bfefa18431f3b99b
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -5646,7 +5646,7 @@ nodes:
         fixture: '[self:grep]{pattern: "provider", path: "."}'
         description: 파일 내용에서 패턴 검색 (grep/ripgrep). items 통화(파일/줄번호/내용 필드) + total/truncated(절단 신고). 패턴은 기본 정규식(alternation 'a|b' 동작), regex=false면 리터럴. context:N 이면 앞뒤 N줄(문맥 필드). 파일명 검색은 find.
         group: file
-        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴, ignore_case=true 면 대소문자 무시. path로 검색 루트, file_pattern 으로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). context=N 이면 매칭 앞뒤 N줄을 '문맥' 필드로(grep -A/-B/-C 의 자리 — 앞뒤를 보려고 셸로 가지 말 것). content는 limit(기본 100, 최대 2000)건 표본 + total(진짜 총 매칭 수)·truncated 봉투 키. 로그(*.log·회전본)·_backups·.worktrees·spill 은 기본 제외(봉투 excluded 로 신고) — 로그를 뒤지려면 include_logs:true.
+        target_description: 검색 패턴 (기본 정규식, 'a|b' OR 가능). regex=false면 리터럴, ignore_case=true 면 대소문자 무시. path로 검색 루트, file_pattern 으로 확장자 필터. output_mode=content(매칭 라인, 기본)/files_with_matches(파일 목록)/count(파일별 매칭 수 — ★전수·결정적이라 집계엔 이것). context=N 이면 매칭 앞뒤 N줄을 '문맥' 필드로(grep -A/-B/-C 의 자리 — 앞뒤를 보려고 셸로 가지 말 것). content는 limit(기본 100, 최대 2000)건 표본 + total·total_complete(전수 계수 여부)·truncated 봉투 키. truncations.scope=selection은 요청 상한에 따른 선택, source는 검색 시간·크기·줄 본문 절단이다. 전수 계수 미가용 시 total은 관측치이며 전체 개수로 단정하지 않는다. 로그(*.log·회전본)·_backups·.worktrees·spill 은 기본 제외(봉투 excluded 로 신고) — 로그를 뒤지려면 include_logs:true.
         keywords:
         - 검색
         - 내용검색
@@ -6120,7 +6120,7 @@ nodes:
         member_transform: script_ops:member_script
         path_audited:
           at: '2026-09-26'
-          impl: e89b936ee912cb46
+          impl: bfefa18431f3b99b
         pipe_in: true
         lands_on: body
         limb_op:

@@ -978,7 +978,7 @@
   "self:grep": {
    "fields": {
     "description": "a119975d8650",
-    "target_description": "ca6564819de2",
+    "target_description": "7a497ac612e6",
     "implementation": "d6b099940478",
     "returns": "3c22349f8d0b",
     "target_key": "432ced8bd4f7",
@@ -987,8 +987,8 @@
     "router": "ebbb1532efbc",
     "tool": "77e19f549cc9"
    },
-   "reviewed": "2026-09-18",
-   "examples": 12
+   "reviewed": "2026-09-26",
+   "examples": 13
   },
   "self:health": {
    "fields": {

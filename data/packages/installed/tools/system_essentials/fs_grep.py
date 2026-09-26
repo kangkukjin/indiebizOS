@@ -352,7 +352,10 @@ def run(tool_input: dict, project_path: str) -> str:
         # 0건도 통화 봉투로(2026-08-08 ⑯) — 맨 문자열은 ??(폴백)의 빈손 술어와
         # 변환자가 구조로 인식할 수 없다. 사람용 안내는 text 에 그대로.
         return json.dumps({"success": True, "items": [], "total": 0, "total_files": 0, "excluded": _excl_note,
-                           "truncated": False,
+                           "truncated": bool(search_done),
+                           "truncations": ([{"scope": "source", "reason": "검색 시간·크기 상한"}]
+                                           if search_done else []),
+                           "total_complete": full_counts is not None or not search_done,
                            "text": f"No matches found for: {pattern}{regex_note}"},
                           ensure_ascii=False)
 
@@ -415,6 +418,20 @@ def run(tool_input: dict, project_path: str) -> str:
         text = "\n--\n".join(blocks) + truncated
     else:
         text = "\n".join(results) + truncated
+    # 요청한 앞 N건 선택과 시간·크기 때문에 못 읽은 원천을 구분한다.
+    # 판본 2는 selection만 정상 값으로 받으며 source/unknown 절단은 계속 거절한다.
+    truncations = []
+    if truncated_flag:
+        limited = len(raw_rows) >= max_results and not hit_size_cap
+        marker = {"scope": "selection" if limited else "source",
+                  "reason": "limit" if limited else "검색 시간·크기 상한",
+                  "selected": len(items), "limit": max_results}
+        if full_counts is not None:
+            marker["total"] = grand_total
+        truncations.append(marker)
+    if any(len(row[2]) > MAX_LINE_CHARS for row in raw_rows):
+        truncations.append({"scope": "source", "reason": "일치 줄 본문 절단"})
     return json.dumps({"text": text, "items": items, "total": grand_total, "excluded": _excl_note,
-                       "total_files": n_files, "truncated": truncated_flag},
+                       "total_files": n_files, "truncated": bool(truncations),
+                       "truncations": truncations, "total_complete": full_counts is not None or not search_done},
                       ensure_ascii=False)

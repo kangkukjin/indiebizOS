@@ -16,8 +16,8 @@
     {
       "name": "주소마다읽기",
       "source_edition": 1,
-      "source_sha256": "2a2b04a30107308b24566d1565fc4bdbc24d99a13fd253b6db692008eab819e6",
-      "inputs": "url을 가진 목록과 0 이상 개수를 명시한다. 반환 Record에 items와 수집 진단이 있다. 원천 누락은 실패·partial 증거로 전달된다.",
+      "source_sha256": "24e537a45209e43f56caea9bdbe899dee82799d94ff61530c5299b329e69ac92",
+      "inputs": "url을 가진 목록과 0 이상 개수를 명시한다. 반환 Record에 items와 수집 진단이 있다. 원천 누락은 실패·partial 증거로 전달된다. URL 문자열이 같은 정상 행만 중복 제거하고 원천 실패 행은 개수 밖에서 보존한다.",
       "example": "#!ibl edition=2\nreturn [fn:주소마다읽기]{목록:[{title:\"참고 문서\",url:\"https://example.com/\"}],개수:1}",
       "returns": "Record",
       "intent": "url 열이 있는 목록에서 중복 URL을 빼고 앞 개수개 페이지의 원문 문단을 모을 때. 출처와 실패를 보존하며 요약·평가·AI 호출은 하지 않는다.",
@@ -64,8 +64,8 @@
     {
       "name": "관련자료골라읽기",
       "source_edition": 1,
-      "source_sha256": "60f5584dfa2eba5cda9439d06b40ad21418851d0c67ce771f9f43c9cf8229d54",
-      "inputs": "title·summary·url이 있는 목록과 질문·개수를 명시한다. 불확실 후보도 읽으며 반환 Record에 원문·판정·수집 진단이 있다.",
+      "source_sha256": "f6bb449934ba621aab23336190eff2aca6fbf942ec3d56748657c4de2454f50b",
+      "inputs": "title·summary·url이 있는 목록과 질문·개수를 명시한다. 불확실 후보도 읽으며 반환 Record에 원문·판정·수집 진단이 있다. URL 문자열이 같은 정상 행만 중복 제거하고 원천 실패 행은 개수 밖에서 보존한다.",
       "example": "#!ibl edition=2\nreturn [fn:관련자료골라읽기]{목록:[{title:\"연구 방법\",summary:\"방법과 한계를 설명한다\",url:\"https://example.com/\"}],질문:\"연구 방법과 한계\",개수:1}",
       "returns": "Record",
       "intent": "검색 후보가 많아 질문과 관련된 자료를 먼저 골라 원문을 읽을 때. Jev가 제목·요약을 일괄 판정하고 불확실 후보도 읽는다. 지정한 URL을 모두 읽을 때는 주소마다읽기를 쓴다.",

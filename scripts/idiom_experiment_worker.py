@@ -53,6 +53,7 @@ def run_trial(code, case_id, named=True, catalog=None, suite='legacy', source_re
     dataops = load('_experiment_dataops', ROOT / 'data/packages/installed/tools/data-ops/handler.py')
     fs = load('_experiment_fs', ROOT / 'data/packages/installed/tools/system_essentials/handler.py')
     aiops = load('_experiment_aiops', ROOT / 'data/packages/installed/tools/ai-ops/handler.py')
+    collection = load('_experiment_collection', ROOT / 'data/scripts/judgment_idioms.py')
     class DB:
         def find_phrase_by_alias(self, name):
             e = entries.get(name) if named else None
@@ -84,6 +85,9 @@ def run_trial(code, case_id, named=True, catalog=None, suite='legacy', source_re
             if ti.get('_def') or any(ti.get(k) for k in ['_condition', '_case', '_try', '_repeat', '_var_emit', '_assign', '_parallel', '_fallback']):
                 return original(ti, project, agent)
             observed['leaf_calls'].append(f'{n}:{a}')
+            if n == 'self' and a == 'script' and p.get('id') == '판정관용구':
+                # 파일·네트워크를 실행하는 임의 스크립트는 열지 않는다. 등록된 순수 값 처리만.
+                return {'success': True, **collection.run(collection.decode(p['args']))}
             if n == 'table' and a == 'each':
                 p['_depth'] = ti.get('_depth', 0)
                 return _execute_table_each(p, project, agent_id=agent)

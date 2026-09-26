@@ -946,39 +946,55 @@ def _channel_send(channel_type: str, params: dict, identity: dict) -> dict:
     return {"error": f"send 미지원 채널: {channel_type}"}
 
 
+def _read_email(params: dict, identity: dict, include_body: bool) -> dict:
+    """Select the account's provider after the identity gate; IMAP is read-only.
+
+    Gmail retains its native query syntax. General IMAP supports the subset in
+    imap_reader.search_criteria and rejects unsupported queries before login.
+    """
+    from imap_reader import configured_reader, MailReadError
+
+    account = identity.get("email")
+    query = params.get("query")
+    try:
+        client = configured_reader(account)
+        provider = "imap" if client is not None else "gmail"
+        if client is None:
+            client = _get_gmail_client(email=account)
+        messages = client.get_messages(query=query, max_results=params.get("max_results", 10))
+        items = []
+        for message in messages:
+            if message is None:
+                continue
+            row = {key: message.get(key, "") for key in ("id", "subject", "from", "date", "snippet")}
+            if include_body:
+                body = message.get("body") or ""
+                row.update(body=body[:500], body_truncated=len(body) > 500)
+            items.append(row)
+        result = {"success": True, "channel": "email", "account": account,
+                  "provider": provider, "query": query, "count": len(items), "items": items}
+        if provider == "imap":
+            result.update(total=client.total, truncated=client.total > len(items), readonly=True)
+            if result["truncated"]:
+                result["truncations"] = [{"scope": "selection", "unit": "messages",
+                                          "retained": len(items), "total": client.total,
+                                          "parameter": "max_results"}]
+        if not include_body:
+            result["messages"] = items  # Existing search consumers; items is the pipeline currency.
+        return result
+    except MailReadError as exc:
+        return {"success": False, "channel": "email", "account": account,
+                "stage": exc.stage, "error": str(exc)}
+    except Exception:
+        # Provider exceptions may contain authentication details; do not echo them.
+        return {"success": False, "channel": "email", "account": account,
+                "stage": "provider", "error": "메일 계정 설정 또는 조회에 실패했습니다."}
+
+
 def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 읽기"""
     if channel_type == "email":
-        query = params.get("query")
-        max_results = params.get("max_results", 10)
-
-        try:
-            client = _get_gmail_client(email=identity.get("email"))
-            messages = client.get_messages(query=query, max_results=max_results)
-
-            simplified = []
-            for msg in messages:
-                if msg is None:
-                    continue
-                simplified.append({
-                    "id": msg.get("id"),
-                    "subject": msg.get("subject", ""),
-                    "from": msg.get("from", ""),
-                    "date": msg.get("date", ""),
-                    "snippet": msg.get("snippet", ""),
-                    "body": (msg.get("body") or "")[:500],
-                })
-
-            return {
-                "success": True,
-                "channel": "email",
-                "account": identity.get("email"),
-                "count": len(simplified),
-                "query": query,
-                "items": simplified  # 단일 통화 items = native 메시지 dict(id/subject/from/date/snippet/body)
-            }
-        except Exception as e:
-            return {"success": False, "channel": "email", "error": str(e)}
+        return _read_email(params, identity, include_body=True)
 
     elif channel_type == "nostr":
         limit = params.get("limit", 20)
@@ -1002,38 +1018,9 @@ def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
 def _channel_search(channel_type: str, params: dict, identity: dict) -> dict:
     """메시지 검색"""
     if channel_type == "email":
-        query = params.get("query", "")
-        max_results = params.get("max_results", 10)
-
-        if not query:
+        if not params.get("query"):
             return {"error": "검색어(query)가 필요합니다."}
-
-        try:
-            client = _get_gmail_client(email=identity.get("email"))
-            messages = client.get_messages(query=query, max_results=max_results)
-
-            simplified = []
-            for msg in messages:
-                if msg is None:
-                    continue
-                simplified.append({
-                    "id": msg.get("id"),
-                    "subject": msg.get("subject", ""),
-                    "from": msg.get("from", ""),
-                    "date": msg.get("date", ""),
-                    "snippet": msg.get("snippet", "")
-                })
-
-            return {
-                "success": True,
-                "channel": "email",
-                "account": identity.get("email"),
-                "query": query,
-                "count": len(simplified),
-                "messages": simplified
-            }
-        except Exception as e:
-            return {"success": False, "channel": "email", "error": str(e)}
+        return _read_email(params, identity, include_body=False)
 
     elif channel_type == "nostr":
         query_text = params.get("query", "")

@@ -140,6 +140,12 @@ IBL 유무 대조가 없으므로 언어 도입 자체가 순비용 증가의 �
 
 ## 3. 일화 기억 — 에피소드 로그/요약 (경험·반성의 재료)
 
+자격증명은 영속 사본을 만들 때 공통 마스킹을 적용한다. 명시적인 한글 비밀번호 전달과
+`IMAP_PASSWORD` 같은 설정 키도 처리하며, 에피소드 미리보기는 자르기 전에 가린다.
+과제 원장과 감독의 증거·사건 기록도 같은 함수를 사용하고 실행 인자 원본은 변경하지 않는다.
+기존 기록의 일괄 삭제·재작성은 수행하지 않는다.
+[4077~4080 수리](../../docs/EPISODES_4077_4080_REPAIRS_2026_09_26.md).
+
 - **저장** (`episode_logger.py`): 사용자 명령 1건 = 1 에피소드. stdout 전체를 가로채 종료 시 저장.
   - `episode_log`: user_message + 실행 로그 전문 + 소요시간 (최근 **10,000건** 롤링 — `episode_logger.MAX_EPISODES`, 2026-09-07 1000→10000. 실측 1행 ≒ 37KB(로그 21KB + 궤적 15KB)·하루 약 24주행이라 창 = 약 400일치 ≒ 370MB 대)
   - `ibl_code_corpus` (2026-09-06 부활, 사용자 판정 "필요한 정보가 지워지고 있다"): 몸이 실제로 쓴 **IBL 문장 원문 전량**. 전 IBL 표면의 초크포인트(`system_tools_ibl._execute_ibl_unified`)가 매 실행 `episode_logger.record_ibl_code` 로 upsert — 키=원문 sha256(궤적 `ibl.started.code_sha256` 과 같아 한 DB 안에서 조인), 같은 문장은 한 행에 seen/success/fail 누계·마지막 실패 사유·last_agent/origin, 본문은 `mask_secrets` 를 거치고 바뀌었으면 `masked=1`(해시는 원문 기준). 롤링 없이 영구(중복 제거 뒤 월 수 MB 미만). ibl_usage.db 가 아닌 world_pulse.db 인 이유 = 해마 DB 는 hippocampus.zip 으로 릴리스에 실려 사용자 원문을 담을 수 없다. `source` 는 B18-2(실사용이 한 번 밟은 행은 `usage` 유지). 파인튜닝 코퍼스·조합률 실측(`scripts/vocab_composition_metrics.py`, 아직 미독)의 정본 자리.

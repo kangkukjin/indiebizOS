@@ -6,6 +6,8 @@ import threading
 from collections import Counter
 from pathlib import Path
 
+from logging_utils import mask_secret_data, mask_secrets
+
 EVENT_PAGE_LIMIT = 12000
 RESPONSE_PAGE_LIMIT = 13000
 
@@ -61,6 +63,7 @@ class TurnStore:
         self.cost = Counter()
 
     def evidence(self, value):
+        value = mask_secrets(value) if isinstance(value, str) else mask_secret_data(value)
         text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, default=str)
         key = digest(text)
         path = self.directory / (key + ".txt")
@@ -137,7 +140,7 @@ class TurnStore:
     def log(self, kind, **fields):
         with self.lock:
             self.sequence += 1
-            record = {"seq": self.sequence, "kind": kind, **fields}
+            record = mask_secret_data({"seq": self.sequence, "kind": kind, **fields})
             if kind == "tool.finished":
                 self.cost["execution_calls"] += 1
                 self.cost["execution_failures"] += int(bool(fields.get("is_error")))

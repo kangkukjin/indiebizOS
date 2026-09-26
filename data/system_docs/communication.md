@@ -47,6 +47,22 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 - **발송**: SMTP
 - **설정 파일**: `data/packages/installed/extensions/gmail/config.yaml`
 
+### 일반 IMAP (읽기 전용 조회)
+
+`[others:channel_read]{channel_type:"email",account:"계정 주소",max_results:10}`은
+신원 관문을 통과한 계정이 루트 `.env`의 `IMAP_EMAIL`과 일치하면 일반 IMAP을 사용한다.
+`IMAP_HOST`, `IMAP_PORT`(기본 993), `IMAP_USERNAME`, `IMAP_PASSWORD`로 TLS에 연결하며,
+다른 계정은 기존 Gmail 경로를 유지한다. 인증 실패 시 다른 공급자로 우회하지 않는다.
+일반 IMAP은 읽기 전용 INBOX·BODY.PEEK 조회만 제공하며 발송·폴링·자동응답을 추가하지 않는다.
+검색은 일반 텍스트와 `from:`, `to:`, `subject:`, `after:`, `before:`, `is:unread/read`의
+AND 조합을 지원한다. 날짜는 YYYY-MM-DD 또는 YYYY/MM/DD이며 after는 해당 날짜를 포함한다.
+지원하지 않는 Gmail 검색 문법은 오류로 반환한다.
+
+요청한 건수 제한은 `truncations.scope="selection"`으로 표시해 정상 반환하고,
+전체 검색 건수·반환 건수를 함께 보존한다. 목록의 500자 본문 미리보기는
+각 행의 `body_truncated`로 알린다. 요청한 제목 조회를 수신함 전체 수집 실패로 판정하지 않는다.
+구현·회귀 근거: [4077~4080 수리](../../docs/EPISODES_4077_4080_REPAIRS_2026_09_26.md).
+
 ### Nostr (실시간 WebSocket)
 - **인증**: nsec 개인키 (NIP-01)
 - **수신**: 실시간 WebSocket (릴레이 구독). DM 조회는 전체 릴레이 fan-out + dedup (`_query_relays` — 단일 릴레이만 읽던 버그 수정됨)

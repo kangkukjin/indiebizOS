@@ -20,6 +20,7 @@
     "base/ibl_code_corpus",
     "base/ibl_edition",
     "base/image_envelopes",
+    "base/imap_reader",
     "base/korean_utils",
     "base/limb_keys",
     "base/logging_utils",
@@ -487,8 +488,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 412,
-    "engine": 386,
+    "total": 413,
+    "engine": 387,
     "blocklist": 26
   }
 }

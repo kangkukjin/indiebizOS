@@ -90,6 +90,36 @@ def test_structured_masking_never_edits_json_syntax():
     assert parsed["count"] == 7
 
 
+def test_episode_secret_masking_precedes_preview_and_storage(journal_db, capsys):
+    secret = 'abcdefghijklmnop'
+    message = '설정 ' * 160 + f'비밀번호는 {secret}다.'
+    el.EpisodeLogger.start_episode('test', message, task_id='secret-test')
+    try:
+        episode = el._current_episode.get()
+        assert secret not in episode.user_message
+        with journal_db() as conn:
+            saved = conn.execute('SELECT user_message FROM episode_log').fetchone()[0]
+        assert secret not in saved and secret[:8] not in saved
+    finally:
+        el.EpisodeLogger.end_episode()
+    assert secret not in capsys.readouterr().out
+
+
+def test_supervisor_evidence_masks_secret_before_hash_and_excerpt(tmp_path):
+    from supervision_store import TurnStore, digest
+    secret = 'abcdefghijklmnop'
+    original = {'note': f'{secret}를 비밀번호로 사용해줘.', 'inputs': {'new': secret}}
+    store = TurnStore(tmp_path)
+    ref = store.evidence(original)
+    text = store.read_evidence(ref['id'])['text']
+    assert secret not in text and secret not in ref['excerpt']
+    assert ref['id'] == digest(text)
+    event = store.log('tool.started', input=original)
+    assert secret not in json.dumps(event)
+    assert secret not in (tmp_path / 'events.jsonl').read_text()
+    assert original['inputs']['new'] == secret
+
+
 def test_long_supervisor_event_preserves_original_store_link(journal_db, tmp_path):
     from types import SimpleNamespace
     from conscious_supervisor import Supervisor

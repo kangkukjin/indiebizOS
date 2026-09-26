@@ -94,6 +94,9 @@ def mask_sensitive(text: str) -> str:
 _SECRET_FIELD_NAME = (r'(?:api[_-]?key|auth[_-]?key|access[_-]?token|refresh[_-]?token|'
                       r'client[_-]?secret|private[_-]?key|token|secret|password|passwd)')
 _SECRET_FIELD_NAME_RE = re.compile(_SECRET_FIELD_NAME, re.IGNORECASE)
+_SECRET_DATA_KEY_RE = re.compile(
+    r'(?:[a-z][a-z0-9]*[_-])*' + _SECRET_FIELD_NAME, re.IGNORECASE,
+)
 _SECRET_FIELD_RE = re.compile(
     r'("?' + _SECRET_FIELD_NAME + r'"?\s*[:=]\s*)'
     r'(["\']?)([^"\'\s,}{\]\[]{8,})\2',
@@ -131,6 +134,20 @@ _SECRET_NEAR_RE = re.compile(
     r'[^\n]{0,24}?([A-Za-z0-9_\-]{24,})'
 )
 
+# 명시적인 자연어 자격증명 전달도 영속 기록에서는 값만 가린다.
+# 영문 앱 비밀번호는 숫자·벤더 접두가 없어 기존 엔트로피 규칙에 잡히지 않는다.
+_PROSE_SECRET_VALUE = r'(?P<secret>[A-Za-z0-9][A-Za-z0-9_!@#$%^&*+=./~-]{7,})'
+_PROSE_SECRET_RES = [re.compile(pattern, re.IGNORECASE) for pattern in (
+    r'(?:비밀번호|패스워드|암호)(?:는|은|가|이|를|을)?\s*[:=]?\s*[\'"`]?'
+    + _PROSE_SECRET_VALUE,
+    _PROSE_SECRET_VALUE + r'[\'"`]?(?:를|을)\s*(?:앱\s*)?(?:비밀번호|패스워드|암호)로',
+)]
+
+
+def _prose_secrets(text):
+    return {m.group('secret') for pattern in _PROSE_SECRET_RES
+            for m in pattern.finditer(text)}
+
 
 def _looks_like_credential(blob: str) -> bool:
     """영문+숫자가 섞이고 엔트로피가 높은 덩어리인가 — 경로·문장·id 오탐을 줄인다."""
@@ -146,12 +163,15 @@ def _looks_like_credential(blob: str) -> bool:
 def mask_secrets(text: str) -> str:
     """디스크에 영속될 텍스트에서 자격증명을 마스킹한다. PRODUCTION_MODE 무관 항상 적용.
 
-    세 층이다: ①필드명 매칭(값 전체 ****) ②벤더 접두 형식 매칭 ③이름 근접 +
-    고엔트로피 매칭. ②③은 식별용 접두 4자만 남긴다."""
+    명시적 한글 비밀번호 전달·필드명은 값 전체를 가리고, 벤더 접두 형식과
+    이름 근접 고엔트로피 매칭은 식별용 접두 4자만 남긴다."""
     if not text:
         return text
     if not isinstance(text, str):
         text = str(text)
+    # 같은 본문에 old/new 등으로 다시 인용된 값까지 가린다.
+    for secret in sorted(_prose_secrets(text), key=len, reverse=True):
+        text = text.replace(secret, '****')
     text = _SECRET_FIELD_RE.sub(r'\1\2****\2', text)
     for token_re in _SECRET_TOKEN_RES:
         text = token_re.sub(lambda m: m.group(0)[:4] + '****', text)
@@ -167,12 +187,37 @@ def mask_secrets(text: str) -> str:
 
 def mask_secret_data(value):
     """JSON 값의 구조를 보존하며 비밀을 가린다. 직렬화된 JSON의 문법은 편집하지 않는다."""
-    if isinstance(value, dict):
-        return {key: ("****" if _SECRET_FIELD_NAME_RE.fullmatch(key)
-                      else mask_secret_data(item)) for key, item in value.items()}
-    if isinstance(value, list):
-        return [mask_secret_data(item) for item in value]
-    return mask_secrets(value) if isinstance(value, str) else value
+    secrets = set()
+
+    def collect(item):
+        if isinstance(item, dict):
+            for key, child in item.items():
+                if (_SECRET_DATA_KEY_RE.fullmatch(str(key))
+                        and isinstance(child, str) and len(child) >= 8):
+                    secrets.add(child)
+                collect(child)
+        elif isinstance(item, (list, tuple)):
+            for child in item:
+                collect(child)
+        elif isinstance(item, str):
+            secrets.update(_prose_secrets(item))
+
+    collect(value)
+    ordered = sorted(secrets, key=len, reverse=True)
+
+    def mask(item):
+        if isinstance(item, dict):
+            return {key: ("****" if _SECRET_DATA_KEY_RE.fullmatch(str(key)) else mask(child))
+                    for key, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [mask(child) for child in item]
+        if isinstance(item, str):
+            for secret in ordered:
+                item = item.replace(secret, '****')
+            return mask_secrets(item)
+        return item
+
+    return mask(value)
 
 
 def truncate_content(content: str, max_length: int = 100) -> str:

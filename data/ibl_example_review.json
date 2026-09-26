@@ -550,14 +550,14 @@
   },
   "others:channel_read": {
    "fields": {
-    "description": "0436eebc081c",
-    "target_description": "57e3623b1ddd",
-    "implementation": "4877a73677ac",
+    "description": "13b6c07f64fb",
+    "target_description": "a0a66a63780f",
+    "implementation": "92d18e2401df",
     "returns": "3c22349f8d0b",
     "target_key": "7c66509c7f76",
     "router": "d1a4b431b2c1"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-26",
    "examples": 7
   },
   "others:channel_send": {

@@ -43,6 +43,38 @@ def test_owner_isolation_and_idempotent_create(ledger, row):
         other.get(row['id'])
 
 
+def test_credentials_never_persist_in_pursuit_state_events_or_turns(ledger):
+    secret = 'abcdefghijklmnop'
+    message = f'비밀번호는 {secret}다. 메일을 설정해줘.'
+    row = ledger.create(message, message, 'secret-origin')
+    pid = row['id']
+    seq = ledger.begin_turn(pid, 'secret-turn', message)
+    event = {'input': {'IMAP_PASSWORD': secret, 'new': secret}, 'success': True}
+    ledger.observe(pid, 'secret-turn', event, 1)
+    ledger.finish_turn(pid, 'secret-turn', message, [event])
+    ledger.apply(pid, 'secret-turn', row['version'], {'progress': message}, 'note', seq)
+    ledger.summary_failed(pid, 'secret-turn', message)
+    assert event['input']['IMAP_PASSWORD'] == secret  # 실행 입력은 원형 유지
+    with ledger.connect() as conn:
+        for table in ('pursuit', 'pursuit_event', 'pursuit_turn'):
+            rows = conn.execute(f'SELECT * FROM {table}').fetchall()
+            assert rows and secret not in str([tuple(r) for r in rows])
+    assert secret not in json.dumps(ledger.get(pid), ensure_ascii=False)
+
+
+def test_legacy_pursuit_secrets_are_masked_on_read(ledger, row):
+    secret = 'abcdefghijklmnop'
+    pid = row['id']
+    ledger.begin_turn(pid, 'legacy', '설정 요청')
+    with ledger.connect(True) as conn:
+        conn.execute('UPDATE pursuit_turn SET input=? WHERE pursuit_id=?',
+                     (f'비밀번호는 {secret}다.', pid))
+        conn.execute('UPDATE pursuit_event SET payload=? WHERE pursuit_id=?',
+                     (json.dumps({'IMAP_PASSWORD': secret}), pid))
+    assert secret not in json.dumps(ledger.turns(pid))
+    assert secret not in json.dumps(ledger.events(pid))
+
+
 @pytest.mark.parametrize('system_ai', [False, True])
 def test_runner_config_identity_binds_without_thread_agent(tmp_path, monkeypatch, system_ai):
     import thread_context as tc

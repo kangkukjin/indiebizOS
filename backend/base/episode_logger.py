@@ -264,7 +264,7 @@ class _Episode:
     def __init__(self, agent: str, user_message: str, project_id: str = "",
                  task_id: Optional[str] = None):
         self.agent = agent
-        self.user_message = (user_message or "")[:500]
+        self.user_message = mask_secrets(user_message or "")[:500]
         self.started_at = datetime.now()
         self.buffer = []
         self.project_id = project_id or ""
@@ -373,7 +373,7 @@ class EpisodeLogger:
             "task_id": ep.task_id,
         })
         # 시작 마커 — contextvar 가 ep 로 설정된 뒤 print → write() 가 ep.buffer 로 캡처
-        _msg_preview = (user_message or "")[:80].replace("\n", " ")
+        _msg_preview = mask_secrets(user_message or "")[:80].replace("\n", " ")
         print(f"[Episode START] agent={agent} message={_msg_preview!r}")
 
     @classmethod

@@ -6918,12 +6918,12 @@ nodes:
       channel_read:
         returns: items
         exempt: 발신 신원(agent identity) 게이트 의존 — 신원 없는 헤드리스 점검이 항상 거부돼 거짓 실패만 쌓임 (실사용은 에이전트 신원으로 정상)
-        description: 채널 수신함 원시 조회/검색 (Gmail/Nostr). query 있으면 검색, 없으면 최근 수신. nostr는 릴레이를 당겨 DM 캐시도 갱신(새로고침) — 이웃별 대화 뷰는 [others:messages]가 정본.
-        target_description: 채널 타입 (email/nostr — gmail은 email의 옛 별칭). query 옵션으로 검색어 (email은 Gmail 검색 문법). 검색 미사용 시 max_results로 건수 제한(기본 10).
+        description: 채널 수신함 원시 조회/검색 (Gmail·일반 IMAP·Nostr). query 있으면 검색, 없으면 최근 수신. nostr는 릴레이를 당겨 DM 캐시도 갱신(새로고침) — 이웃별 대화 뷰는 [others:messages]가 정본.
+        target_description: 채널 타입 email/nostr(gmail은 email의 옛 별칭). 시스템 AI는 account로 계정 선택, 프로젝트 에이전트는 설정된 신원 유지. .env의 IMAP_EMAIL과 일치하는 계정은 IMAP_HOST/PORT/USERNAME/PASSWORD로 TLS 읽기 전용 INBOX 조회. query는 Gmail 계정에서 Gmail 문법, 일반 IMAP은 일반 텍스트·from:·to:·subject:·after:·before:·is:unread/read의 AND 검색만 지원(미지원 문법은 오류). 날짜 YYYY-MM-DD 또는 YYYY/MM/DD, after는 해당 날짜 포함·before는 제외. max_results 기본 10(일반 IMAP 1~100). 인증 실패 시 다른 공급자로 우회하지 않음.
         group: channel
         target_key: channel_type
         router: channel_engine
-        implementation: channel_engine 입구가 query 유무로 자동 분기 — query 있으면 _channel_search, 없으면 _channel_read (Gmail IMAP, Nostr 릴레이 구독 등).
+        implementation: channel_engine 입구가 query 유무로 분기. email은 신원 확인 후 imap_reader의 계정 설정과 대조해 일반 IMAP(EXAMINE·BODY.PEEK·MIME·검색 변환) 또는 기존 Gmail 클라이언트 선택. 조회와 검색 모두 items 반환. Nostr는 릴레이/캐시 경로 유지.
         keywords:
         - 메시지읽기
         - 수신

@@ -68,6 +68,36 @@ def test_no_false_positive_on_ordinary_text():
         assert mask_secrets(keep) == keep, f"오탐: {keep!r} -> {mask_secrets(keep)!r}"
 
 
+def test_korean_app_password_declarations_and_repeated_values():
+    secret = "abcdefghijklmnop"
+    for declaration in (
+        f"앱이름은 sample이고 비밀번호는 {secret}다.",
+        f"{secret}를 비밀번호로 그리고 앱이름은 sample로 해서 시도해봐.",
+        f"새 비밀번호 '{secret}'와 앱이름 sample로 재시도했다.",
+        f'암호: "{secret}"',
+    ):
+        out = _assert_masked(declaration + f' inputs={{"new": "{secret}"}}',
+                             secret, "한글 자격증명")
+        assert "****" in out
+
+
+def test_structured_credentials_mask_copies_without_mutating_input():
+    from logging_utils import mask_secret_data
+    secret = "abcdefghijklmnop"
+    raw = {"IMAP_PASSWORD": secret, "input": {"new": secret},
+           "note": f"비밀번호는 {secret}다.", "count": 10}
+    masked = mask_secret_data(raw)
+    assert secret not in str(masked)
+    assert raw["IMAP_PASSWORD"] == secret and raw["input"]["new"] == secret
+    assert masked["count"] == 10
+
+
+def test_password_instructions_without_values_stay_readable():
+    for keep in ("앱 비밀번호를 발급해 주세요.", "비밀번호는 비공개로 저장했습니다.",
+                 "IMAP_PASSWORD 설정이 필요합니다.", "비밀번호를 .env에 기록하세요."):
+        assert mask_secrets(keep) == keep
+
+
 if __name__ == "__main__":
     import pytest
     raise SystemExit(pytest.main([__file__, "-v"]))

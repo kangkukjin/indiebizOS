@@ -11,6 +11,8 @@ import uuid
 from contextlib import contextmanager
 from pathlib import Path
 
+from logging_utils import mask_secret_data, mask_secrets
+
 PROCESS = f"{os.getpid()}:{uuid.uuid4().hex}"
 TEXT_LIMITS = {"title": 60, "framing": 3000, "approach": 1500,
                "goal_criteria": 1500, "progress": 3000, "next": 600, "origin": 500}
@@ -18,6 +20,12 @@ LIST_LIMITS = {"assumptions": 12, "open_questions": 8, "artifacts": 30}
 SUMMARY_FIELDS = {"progress", "next", "open_questions", "artifacts"}
 STATUSES = {"active", "parked", "done", "abandoned"}
 PAGE_LIMIT = 100
+
+
+def _stored_json(value):
+    """원장의 사본만 가린다. 호출자가 실행에 쓰는 입력 객체는 바꾸지 않는다."""
+    normalized = json.loads(json.dumps(value, ensure_ascii=False, default=str))
+    return json.dumps(mask_secret_data(normalized), ensure_ascii=False)
 
 
 def page_bounds(offset, limit):
@@ -120,7 +128,7 @@ class PursuitLedger:
                       (pid, self.agent_key)).fetchone()
         if r is None:
             raise KeyError("이 자아의 과제를 찾을 수 없습니다")
-        result = json.loads(r["state"])
+        result = mask_secret_data(json.loads(r["state"]))
         result.update({k: r[k] for k in ("id", "agent_key", "version", "created_at",
                                         "updated_at", "last_turn_at", "status")})
         return result
@@ -146,7 +154,7 @@ class PursuitLedger:
     def _event(self, c, pid, key, task, kind, payload):
         c.execute("INSERT OR IGNORE INTO pursuit_event "
                   "(pursuit_id,event_key,task_id,kind,payload,created_at) VALUES (?,?,?,?,?,?)",
-                  (pid, key, task, kind, json.dumps(payload, ensure_ascii=False, default=str), time.time()))
+                  (pid, key, task, kind, _stored_json(payload), time.time()))
         return c.execute("SELECT id FROM pursuit_event WHERE pursuit_id=? AND event_key=?",
                          (pid, key)).fetchone()[0]
 
@@ -169,7 +177,7 @@ class PursuitLedger:
                      "progress": "", "next": "", "assumptions": [], "open_questions": [],
                      "artifacts": [], "waiting_for": {}, "framing_meta": {}, "_field_order": {}, **fields}
             c.execute("INSERT INTO pursuit VALUES (?,?,?,?,?,?,?,?)",
-                      (pid, self.agent_key, json.dumps(state, ensure_ascii=False), 1, now, now, now, "active"))
+                      (pid, self.agent_key, _stored_json(state), 1, now, now, now, "active"))
             self._event(c, pid, "created", task_id, "created", state)
             return self._get(c, pid)
 
@@ -183,11 +191,13 @@ class PursuitLedger:
             c.execute("INSERT OR IGNORE INTO pursuit_turn "
                       "(pursuit_id,task_id,source_order,process,state,input,episode_id,updated_at) "
                       "VALUES (?,?,?,?,'running',?,?,?)",
-                      (pid, task_id, seq, PROCESS, message, str(episode_id or ""), time.time()))
+                      (pid, task_id, seq, PROCESS, mask_secrets(message), str(episode_id or ""), time.time()))
             c.execute("UPDATE pursuit SET last_turn_at=? WHERE id=?", (time.time(), pid))
             return seq
 
     def finish_turn(self, pid, task_id, response, tools, interrupted=False):
+        safe = mask_secret_data({"response": response, "tools": tools})
+        response, tools = safe["response"], safe["tools"]
         with self.connect(True) as c:
             self._get(c, pid)
             kind = "interrupted" if interrupted else "pending"
@@ -200,6 +210,7 @@ class PursuitLedger:
 
     def observe(self, pid, task_id, event, index):
         """응답/증류보다 먼저 도구 결말을 보존한다. 강제 종료 뒤에도 중복 실행을 피할 근거."""
+        event = mask_secret_data(event)
         with self.connect(True) as c:
             self._get(c, pid)
             self._event(c, pid, f"tool:{task_id}:{index}", task_id, "tool.observed", event)
@@ -217,7 +228,7 @@ class PursuitLedger:
             sql = "SELECT * FROM pursuit_turn WHERE pursuit_id=?"
             if pending_only:
                 sql += " AND state NOT IN ('applied','detached')"
-            return [dict(r) | {"tools": json.loads(r["tools"])}
+            return [mask_secret_data(dict(r) | {"tools": json.loads(r["tools"])})
                     for r in c.execute(sql + " ORDER BY source_order", (pid,))]
 
     def detach_turn(self, pid, task_id, why):
@@ -244,7 +255,7 @@ class PursuitLedger:
             self._get(c, pid)
             rows = c.execute("SELECT * FROM pursuit_event WHERE pursuit_id=? ORDER BY id LIMIT ? OFFSET ?",
                              (pid, limit, offset))
-            return [dict(r) | {"payload": json.loads(r["payload"])} for r in rows]
+            return [mask_secret_data(dict(r) | {"payload": json.loads(r["payload"])}) for r in rows]
 
     def apply(self, pid, task_id, base_version, patch, event_key, source_order,
               kind="note", why="", summary=False):
@@ -287,7 +298,7 @@ class PursuitLedger:
                      {"id", "agent_key", "version", "created_at", "updated_at", "last_turn_at", "status"}}
             c.execute("UPDATE pursuit SET state=?,status=?,version=version+1,updated_at=? "
                       "WHERE id=? AND version=?",
-                      (json.dumps(state, ensure_ascii=False), row["status"], time.time(), pid, base_version))
+                      (_stored_json(state), row["status"], time.time(), pid, base_version))
             if summary:
                 c.execute("UPDATE pursuit_turn SET state='applied',error=NULL,updated_at=? "
                           "WHERE pursuit_id=? AND task_id=?", (time.time(), pid, task_id))
@@ -297,7 +308,7 @@ class PursuitLedger:
         with self.connect(True) as c:
             self._get(c, pid)
             c.execute("UPDATE pursuit_turn SET error=?,updated_at=? WHERE pursuit_id=? AND task_id=?",
-                      (str(error), time.time(), pid, task_id))
+                      (mask_secrets(str(error)), time.time(), pid, task_id))
             self._event(c, pid, f"merge_failed:{task_id}:{uuid.uuid4().hex}", task_id,
                         "merge_failed", {"error": str(error)})
 

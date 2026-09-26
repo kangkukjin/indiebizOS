@@ -519,12 +519,12 @@ class Compiler:
             values = {k: v.data["value"] if v.kind == "literal" else
                       bindings.get(v.data["name"]) if v.kind == "ref" else None
                       for k, v in fields.items()}
-            if node.data["node"] == "fn":
-                sid = node.data.get("symbol")
-                if sid in self.functions and sid not in seen:
-                    out.update(self.writes(self.functions[sid].data["body"], values, seen | {sid}))
+            sid = node.data.get("symbol") if node.data["node"] == "fn" else None
+            if sid in self.functions and sid not in seen:
+                out.update(self.writes(self.functions[sid].data["body"], values, seen | {sid}))
             key = f"{node.data['node']}:{node.data['action']}"
-            spec = self.registry.get(key)
+            # A resolved definition shadows the adapter of the same name.
+            spec = None if sid in self.functions else self.registry.get(key)
             if spec:
                 from ibl_callable_contract import normalize
                 values = normalize(spec.contract, values)

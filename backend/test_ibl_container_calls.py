@@ -206,6 +206,24 @@ def test_model_cost_and_effects_include_nested_function_arguments():
     assert plan.preflight["declared_ai_visits_upper_bound"] == 3
 
 
+def test_local_function_shadows_registered_write_resources_but_keeps_argument_writes():
+    reg = {
+        "test:write": adapter(lambda rt, a: 1, {"path": "Text"}, effects=["write_external"],
+                              write_resources={"file": "path"}),
+        "fn:local": adapter(lambda rt, a: pytest.fail("shadowed adapter"),
+                            {"path": "Text", "n": "Number"}, effects=["write_external"],
+                            write_resources={"file": "path"}),
+    }
+    prefix = '[def:local]($path,$n){return $n}\n'
+    tail = ' & [test:write]{path:"same"}'
+    source = prefix + '[fn:local]{path:"same",n:1}' + tail
+    out = Runtime(checked(source, reg)).run()
+    assert out["success"] and out["value"] == [1, 1]
+    nested = prefix + '[fn:local]{path:"same",n:[test:write]{path:"same"}}' + tail
+    plan = compile_program(nested, reg)
+    assert "PARALLEL_WRITE_CONFLICT" in {issue["code"] for issue in plan.issues}
+
+
 @pytest.mark.parametrize("source", [
     '[if:{x:[test:leaf]{}}.x]{return 1}',
     '[def:f]($x={n:[test:leaf]{}}){return $x};[fn:f]{}',

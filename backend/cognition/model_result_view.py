@@ -376,7 +376,7 @@ def describe_actions(names, allowed_nodes, edition=None):
                 # explicit inspection, not every invocation's model context.
                 ref = evidence_store().evidence(json.dumps(definition, ensure_ascii=False))
                 definition = {k: v for k, v in definition.items() if k != "guards"}
-                definition["runtime_checks"] = len(guards)
+                definition["runtime_checks"] = definition.get("guards_total", len(guards))
                 definition["result_ref"] = _read_reference(ref, {"guards": guards})
             answer.append({"action": name, "definition": definition})
             continue

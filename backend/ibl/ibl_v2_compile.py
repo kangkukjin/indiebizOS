@@ -37,12 +37,24 @@ class Plan:
     function_contracts: dict = field(default_factory=dict)
     preflight: dict = field(default_factory=dict)
 
+    REPORT_GUARDS_CAP = 24
+
     def report(self):
         status = "invalid" if self.issues else ("incomplete" if self.guards else "valid")
+        # 보고서는 모델 경계(액션당 16K)에 들어야 한다. 4082 실측: 저장 관용구 호출 한 줄의 check 가 guards 62개(76KB)
+        # + 스크립트 의존 스냅샷(64KB) = 14만 자로 스필돼 모델이 파일을 다시 읽었다. guards 는 상한 뒤 수만,
+        # 의존 스냅샷은 지문만 — 재개 지문(plan_hash)은 그대로다.
+        dependencies = {**self.dependencies,
+                        "calls": {k: digest(v) for k, v in (self.dependencies.get("calls") or {}).items()}}
+        # 호출한 저장 함수 *안*의 실행 시 검사는 그 함수의 몫(describe 의 runtime_checks)이다 — 이 프로그램의 보고서엔
+        # 제출 원문 자리의 검사만 싣고 안쪽은 수로 남긴다.
+        own = [g for g in self.guards if not g.get("call_path")]
         return {"edition": 2, "mode": "check", "executed": False, "ok": not self.issues,
-                "status": status, "issues": self.issues, "guards": self.guards,
+                "status": status, "issues": self.issues, "guards": own[:self.REPORT_GUARDS_CAP],
+                "guards_total": len(self.guards), "guards_inner": len(self.guards) - len(own),
+                "guards_omitted": max(0, len(own) - self.REPORT_GUARDS_CAP),
                 "result_type": str(self.result_type), "effects": sorted(self.effects), "functions": self.function_contracts,
-                "plan_hash": self.fingerprint, "dependencies": self.dependencies,
+                "plan_hash": self.fingerprint, "dependencies": dependencies,
                 "source_hash": digest(self.source[:self.dependencies["source_map"][0]["end"]]),
                 "capabilities": ["ibl-edition/2", "ibl-value/1"],
                 "preflight": self.preflight, "warnings": self.preflight.get("warnings", []),

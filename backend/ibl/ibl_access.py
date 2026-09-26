@@ -214,6 +214,11 @@ def _shape_suffix(qualified: str, op: str = None, ops: dict = None) -> str:
 _PARAM_CACHE = {"mtime": None, "data": {}, "always": 0.8}
 
 
+def return_shapes() -> dict:
+    """공개명 — 층 밖(인지 describe 의 observed_returns)에서 읽는 관측 반환 모양. 사적 구현은 _return_shapes."""
+    return _return_shapes()
+
+
 def _param_shapes() -> dict:
     """교재·실행 실측 입력 인자(data/ibl_param_shapes.json, scripts/ibl_param_sweep.py 산출) — mtime 캐시.
 

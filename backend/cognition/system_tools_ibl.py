@@ -584,8 +584,22 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
 
     # 판본 경계는 legacy 파싱·턴 변수 주입보다 앞에 둔다. 헤더/API 충돌도 효과 전에 거절한다.
     from ibl_v2_entry import handle_request as _v2_request
+    # inputs 값 자리의 {"$ref": result_ref.id, "path": [...]} — 앞 실행의 저장 결과를 복사 없이 넘긴다(2026-09-26).
+    # 증거 저장소는 턴 문맥의 것이라 인지 층에서 풀고, 실행기에는 값만 준다.
+    _ref_notes = []
+    if isinstance(tool_input.get("inputs"), dict):
+        try:
+            from model_result_view import resolve_input_refs
+            _resolved, _ref_notes = resolve_input_refs(tool_input["inputs"])
+        except ValueError as exc:
+            return json.dumps({"edition": 2, "ok": False, "success": False, "executed": False,
+                               "status": "invalid", "error": str(exc)}, ensure_ascii=False)
+        if _ref_notes:
+            tool_input = dict(tool_input, inputs=_resolved)
     _v2 = _v2_request(dict(tool_input, code=code), project_path, agent_id, cancel_check)
     if _v2 is not None:
+        if _ref_notes and isinstance(_v2, dict):
+            _v2["inputs_resolved"] = _ref_notes
         return json.dumps(_v2 if tool_input.get("check") else _preview_boundary(_v2, tool_input), ensure_ascii=False)
 
     # --- files 파라미터: $file:N 참조 정보 보관 (파싱 후 치환) ---

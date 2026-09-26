@@ -11,7 +11,7 @@ from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches
 from ibl_v2_parser import parse
 from ibl_v2_expr import BUILTINS
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
-                             assigned_names, location, access_type)
+                             assigned_names, location, access_type, HINTS)
 from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
                           infer, join, declared, compatible, alternatives,
                           ordered_list, concat_lists)
@@ -57,6 +57,7 @@ class Compiler:
         self.inputs = {k: infer(v) for k, v in inputs.items()}
         self.functions, self.scopes, self.function_scopes = {}, {}, {}
         self.issues, self.guards, self.effects = [], [], set()
+        self.warnings = []  # 실행을 막지 않는 관측 불일치 — preflight.warnings 로 합류
         self.stack, self.checked = [], set()
         self.call_path = []
         self.returns = []
@@ -69,6 +70,13 @@ class Compiler:
                 "call_path": copy.deepcopy(self.call_path), **details}
         if item not in self.issues:
             self.issues.append(item)
+
+    def warn(self, node, code, message, **facts):
+        item = {"code": code, "rule": code, "severity": "warning", "message": message,
+                "source_span": span(self.source, node), "call_path": copy.deepcopy(self.call_path),
+                "facts": facts, "hint": HINTS.get(code, "해당 위치의 계약과 실제 결과를 확인하세요.")}
+        if item not in self.warnings:
+            self.warnings.append(item)
 
     def need(self, node, actual, expected):
         if actual.kind == "Unknown":
@@ -396,6 +404,9 @@ class Compiler:
                     self.need(node, t, declared(params[k]))
             self.effects.update(contract["effects"])
             result_type = declared(contract["result"])
+            from ibl_v2_adapters import observed_result
+            result_type = observed_result(key, spec.contract,
+                                          {k: v for k, v in values.items() if v is not UNRESOLVED}, result_type)
             if result_type.kind == "Unknown":
                 self.need(node, UNKNOWN, UNKNOWN)
             return result_type
@@ -630,6 +641,10 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                               {Path(__file__).parent / name for name in ("ibl_document_value.py", "ibl_member_library.py",
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}
     finish_diagnostics(compiler)
+    for entry in compiler.warnings:
+        old = entry['source_span']
+        node = Node('diagnostic', old['start'], old['end'])
+        entry['location'] = location(compiler.source, compiler.source_map, node)
     for sid, contract in compiler.function_contracts.items():
         contract['definition'] = location(compiler.source, compiler.source_map, compiler.functions[sid])
     from ibl_v2_preflight import analyze
@@ -639,6 +654,10 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
         preflight = {'status': 'abstained', 'declared_ai_visits_upper_bound': None,
                      'unknowns': [{'reason': '분석 기반 오류', 'kind': type(exc).__name__}],
                      'warnings': []}
+    if compiler.warnings:
+        merged = compiler.warnings + [w for w in preflight.get('warnings', []) if w not in compiler.warnings]
+        preflight['warnings'] = merged[:32]
+        preflight['warnings_omitted'] = preflight.get('warnings_omitted', 0) + max(0, len(merged) - 32)
     return Plan(compiler.source, root, compiler.functions, registry, compiler.inputs,
                 compiler.issues, compiler.guards, compiler.effects, result,
                 digest(dependencies), dependencies, compiler.function_contracts, preflight)

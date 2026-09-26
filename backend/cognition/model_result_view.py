@@ -47,16 +47,7 @@ def read_result(request):
                 any(type(p) not in (str, int) for p in path)):
             raise ValueError("path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 16단계)")
         page = evidence_store().read_evidence(request.get("id"), 0, None)
-        value = json.loads(page["text"])
-        for part in path:
-            value = _decode_json(value)
-            if isinstance(value, dict) and isinstance(part, str) and part in value:
-                value = value[part]
-            elif isinstance(value, list) and type(part) is int and 0 <= part < len(value):
-                value = value[part]
-            else:
-                raise ValueError(f"저장된 결과에 경로 {path!r}가 없습니다 (실패: {part!r})")
-        value = _decode_json(value)
+        value = _walk(json.loads(page["text"]), path)
         text = json.dumps(value, ensure_ascii=False, indent=2)
         page.update(source_chars=page["chars"], chars=len(text), path=path,
                     offset=offset, text=text[offset:offset + limit])
@@ -82,6 +73,76 @@ def _decode_json(value):
         except ValueError:
             pass
     return value
+
+
+def _walk(value, path):
+    """저장 결과 안의 실제 키/인덱스 경로 — read_result 와 inputs 참조가 같은 규칙으로 걷는다."""
+    for part in path:
+        value = _decode_json(value)
+        if isinstance(value, dict) and isinstance(part, str) and part in value:
+            value = value[part]
+        elif isinstance(value, list) and type(part) is int and 0 <= part < len(value):
+            value = value[part]
+        else:
+            raise ValueError(f"저장된 결과에 경로 {path!r}가 없습니다 (실패: {part!r})")
+    return _decode_json(value)
+
+
+def resolve_input_refs(inputs):
+    """inputs 값 자리의 참조를 저장 결과의 실제 값으로 푼다 — 앞 실행의 결과를 *복사 없이* 다음 프로그램에 넘기는 통로.
+
+    형태: {"$ref": result_ref.id, "path": [키·인덱스…]}. path 생략 = 판본 2 는 value_wire(손실 없는 값),
+    옛 봉투는 final_result, 둘 다 없으면 저장 본문 전체. 전송 절단 봉투의 스필 참조({"ref": {"path"…}, "_spilled": true})도 푼다.
+    값은 여전히 *명시 입력*이다 — 이전 턴 변수의 자동 주입이 아니라 모델이 이름·출처를 적은 것만 들어온다(2026-09-26).
+    실패는 ValueError 로 — 호출자가 실행 전 거절 봉투로 돌려준다."""
+    if not isinstance(inputs, dict):
+        return inputs, []
+    from common.spill import is_ref, resolve_ref
+    out, notes = {}, []
+    for name, value in inputs.items():
+        if isinstance(value, dict) and "$ref" in value:
+            if set(value) - {"$ref", "path"}:
+                raise ValueError(f"inputs.{name}: $ref 참조에는 path만 함께 씁니다")
+            ref_id, path = value["$ref"], value.get("path")
+            if path is not None and (not isinstance(path, list) or len(path) > MAX_PATH_DEPTH
+                                     or any(type(p) not in (str, int) for p in path)):
+                raise ValueError(f"inputs.{name}: path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 {MAX_PATH_DEPTH}단계)")
+            try:
+                page = evidence_store().read_evidence(ref_id, 0, None)
+            except (ValueError, OSError, TypeError) as exc:
+                raise ValueError(f"inputs.{name}: 저장된 결과 {ref_id!r}를 읽을 수 없습니다: {exc}") from exc
+            stored = _decode_json(page["text"])
+            if path is None:
+                wire = stored.get("value_wire") if isinstance(stored, dict) else None
+                if isinstance(wire, dict) and "data" in wire:
+                    from ibl_v2_ir import unpack
+                    resolved, path = unpack(wire["data"]), ["value_wire"]
+                elif isinstance(stored, dict) and "final_result" in stored:
+                    resolved, path = _walk(stored, ["final_result"]), ["final_result"]
+                else:
+                    resolved, path = stored, []
+            else:
+                resolved = _walk(stored, path)
+            out[name] = resolved
+            notes.append({"name": name, "id": ref_id, "path": path,
+                          "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
+        elif is_ref(value):
+            resolved, err = resolve_ref(value)
+            if err:
+                raise ValueError(f"inputs.{name}: {err}")
+            out[name] = resolved
+            notes.append({"name": name, "ref": value["ref"].get("path"),
+                          "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
+        else:
+            out[name] = value
+    if notes:
+        try:
+            from episode_logger import record_trajectory_event
+            record_trajectory_event("context.input_ref_resolved", {
+                "inputs": [n["name"] for n in notes], "chars": sum(n["chars"] for n in notes)})
+        except Exception:
+            pass
+    return out, notes
 
 
 def _read_reference(ref, result):
@@ -268,6 +329,18 @@ def project_result(result, verbose=False):
     return out
 
 
+def observed_returns(name):
+    """describe 에 싣는 관측 반환 모양 — 액션·op(#)·변이(@) 항목 전부. 카탈로그 줄이 아니라 조회 응답에만(토큰 예산)."""
+    try:
+        from ibl_access import return_shapes
+        shapes = return_shapes() or {}
+    except Exception:
+        return {}
+    return {k: {f: v[f] for f in ("kind", "keys", "more", "observed", "source") if f in v}
+            for k, v in shapes.items()
+            if isinstance(v, dict) and (k == name or k.startswith(name + "#") or k.startswith(name + "@"))}
+
+
 def describe_actions(names, allowed_nodes, edition=None):
     from ibl_access import load_nodes_raw, resolve_allowed_nodes
     from ibl_registry import self_can_run
@@ -305,5 +378,9 @@ def describe_actions(names, allowed_nodes, edition=None):
                             "operations": (spec.get("ops") or {}).get("values", {})}
                 else:
                     spec = {**spec, "callable_contract": handler_contract(node, action, spec)}
+                observed = observed_returns(name)
+                if observed:
+                    spec = {**spec, "observed_returns": observed,
+                            "observed_note": "fixture·실사용에서 관측된 반환 필드(선언 아님). 관측 밖 이름 접근은 check 경고."}
             answer.append({"action": name, "definition": spec})
     return {"actions": answer, "executed": False}

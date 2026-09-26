@@ -20,6 +20,7 @@ class IBLRequest(BaseModel):
     read_result: Optional[dict] = None
     check: bool = False                # 정적 통화 검사만(실행 없음) — ibl_typecheck (2026-09-05)
     resume: Optional[dict] = None      # 실패 봉투의 resume 값 그대로({from_step, prev_ref}) — 그 step 부터 재개.
+    reuse: Optional[dict] = None       # 고친 프로그램이 이전 실행 {run_id}의 읽기 영수증을 재사용(2026-09-26).
     files: Optional[List[str]] = None  # 긴 텍스트/코드를 IBL 파서 밖에서 전달 ($file:0 로 참조).
     files_from: Optional[List[str]] = None  # files 의 경로 참조판 — 서버가 읽어 files 뒤에 병합.
                                        # 수십 KB급 본문이 도구 호출 JSON 을 깨뜨리던 부류의 봉인(ep2356).
@@ -236,6 +237,8 @@ async def execute_ibl_code(req: IBLRequest):
                         _ti["read_result"] = req.read_result
                     if req.resume is not None:
                         _ti["resume"] = req.resume
+                    if req.reuse is not None:
+                        _ti["reuse"] = req.reuse
                     if req.files is not None:
                         _ti["files"] = req.files
                     if req.files_from is not None:

@@ -23,7 +23,7 @@ class MemberRunner(AgentRunner):
         tool = self._build_execute_ibl_tool()
         if tool:
             properties = tool['input_schema']['properties']
-            tool['input_schema']['properties'] = {k: v for k, v in properties.items() if k in {'code', 'edition', 'inputs', 'check', 'resume', 'describe', 'read_result'}}
+            tool['input_schema']['properties'] = {k: v for k, v in properties.items() if k in {'code', 'edition', 'inputs', 'check', 'resume', 'reuse', 'describe', 'read_result'}}
             properties['code']['description'] = '현재 회원 카탈로그에 있는 액션만 실행한다. 예: [sense:search]{source:"ddg",query:"AI news",limit:5}. describe는 계약 조회이며 code를 함께 주면 조회 성공 후 한 번 실행한다.'
         tools = [tool] if tool else []
         tools.append({"name": "ask_user_question", "description": "작업에 필요한 정보가 빠졌을 때 클라이언트에게 질문하고 현재 턴을 끝낸다. 다음 답변은 같은 작업에서 이어진다.",

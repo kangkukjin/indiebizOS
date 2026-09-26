@@ -156,6 +156,37 @@ def decode_envelope(raw, adapter, input_values=None):
     return value, {"markers": markers, "attachments": {k: raw[k] for k in adapter.get("attachments", []) if k in raw}}
 
 
+def observed_result(key, contract, params, result_type):
+    """fixture·실사용 실측 반환 열(data/ibl_return_shapes.json)을 결과 타입에 *관측 필드*로 붙인다.
+
+    선언이 아니라 흔적이다: Record 는 열린 채 두고, 관측 밖 이름을 읽으면 컴파일 *경고*(UNOBSERVED_FIELD)만 낸다.
+    옛 검사기(ibl_typecheck)가 판본 1 에 하던 '관측 열 밖 참조' 경고를 판본 2 컴파일러가 이어받는 자리다.
+    해소 규칙(node:action · #op · @param=값 · columns_from · fixture op)은 ibl_typecheck.catalog_entry 한 벌.
+    상한에 잘린 관측(`more`)·미상은 기권한다. 외부 도구 봉투(legacy-envelope)에만 붙인다 — 표 변환자의
+    열은 입력이 정한다. 관측은 계약 지문에 들어가지 않으므로 스윕 갱신이 재개 지문을 바꾸지 않는다."""
+    if (contract.get("adapter") or {}).get("protocol") != "legacy-envelope" or ":" not in key:
+        return result_type
+    node, action = key.split(":", 1)
+    try:
+        from ibl_typecheck import catalog_entry
+        entry = catalog_entry(node, action, dict(params), kinds=("items", "table", "scalar"))
+    except Exception:
+        return result_type
+    if not entry or not entry.get("keys"):
+        return result_type
+    from ibl_v2_types import Type, UNKNOWN
+    record = Type("Record", tuple((k, UNKNOWN) for k in entry["keys"]), open=True, observed=True)
+    if entry.get("kind") == "scalar":
+        # ⟨키⟩ = 봉투 최상위 필드 — `$r.키` 로 읽는 자리
+        return record if result_type.kind == "Record" and not result_type.fields else result_type
+    # ⟨열⟩ = 통화의 행 필드 — 봉투 Record 의 items 원소, 또는 List 원소
+    if result_type.kind == "Record" and not result_type.fields:
+        return Type("Record", (("items", Type("List", item=record)),), open=True)
+    if result_type.kind == "List" and (result_type.item is None or (result_type.item.kind == "Record" and not result_type.item.fields)):
+        return Type("List", item=record)
+    return result_type
+
+
 def load_registry(project_path=".", agent_id=None):
     from ibl_registry import load_nodes_installed
     from ibl_engine import execute_ibl

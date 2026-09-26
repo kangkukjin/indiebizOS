@@ -16,6 +16,7 @@ HINTS = {
     "PIPE_COLLISION": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요.",
     "REPEAT_COUNT": "반복 횟수에는 0 이상의 정수를 사용하세요.",
     "SYNTAX": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
+    "UNOBSERVED_FIELD": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
 }
 
 
@@ -106,6 +107,11 @@ def access_type(compiler, node, base, key, key_type=None):
             compiler.issue(node, 'MISSING_FIELD',
                            f'선언된 필드가 없습니다: {key}. 선택 필드는 has/get을 쓰세요.')
         else:
+            if base.observed:
+                observed = [k for k, _ in base.fields]
+                compiler.warn(node, 'UNOBSERVED_FIELD',
+                              f'관측된 반환 필드에 없는 이름입니다: {key}. 관측 필드: {", ".join(observed)}',
+                              field=key, observed=observed)
             compiler.need(node, UNKNOWN, UNKNOWN)
         return UNKNOWN
     if base.kind == 'Record' and key is None and node.kind == 'index':

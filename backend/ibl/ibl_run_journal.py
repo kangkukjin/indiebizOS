@@ -212,6 +212,39 @@ def inspect_run(root, run_id):
             lock.release()
 
 
+def reusable_receipts(root, run_id):
+    """편집한 프로그램이 재사용할 후보: 이 문맥(주체·프로젝트)의 지난 실행이 남긴 완료 영수증, reuse_key 별.
+
+    값을 돌려주지 않는다 — 실행기가 액션·인자·구현 지문이 맞고 읽기 효과인 호출에서만 꺼내 쓴다.
+    진행 중(잠금)인 실행은 반쯤 쓴 상태를 빌려주지 않도록 거절한다. 옛 영수증(reuse_key 없음)은 후보가 아니다."""
+    if not isinstance(run_id, str) or not re.fullmatch(r'[0-9a-f]{32}', run_id):
+        raise Fault('REUSE_ARGUMENT', '올바른 run_id가 필요합니다.', kind='compile')
+    path = Path(root) / (run_id + '.sqlite')
+    if path.is_symlink() or not path.is_file():
+        raise Fault('REUSE_NOT_FOUND', '이 문맥의 실행 기록이 없거나 보존 정책으로 정리되었습니다. 이 핸들의 영수증을 재사용할 수 없습니다.', kind='permission')
+    lock = FileLock(str(path) + '.lock', timeout=0)
+    try:
+        lock.acquire()
+    except Timeout as exc:
+        raise Fault('REUSE_BUSY', '같은 실행이 아직 진행 중입니다. 끝난 뒤 재사용하세요.', kind='protocol') from exc
+    try:
+        with sqlite3.connect(path.as_uri() + '?mode=ro', uri=True, timeout=10) as db:
+            rows = db.execute('SELECT receipt FROM calls WHERE receipt IS NOT NULL ORDER BY rowid').fetchall()
+    except sqlite3.Error as exc:
+        raise Fault('JOURNAL_IO', '실행 영수증 저장소를 읽을 수 없습니다.', kind='protocol') from exc
+    finally:
+        lock.release()
+    out = {}
+    for (raw,) in rows:
+        try:
+            receipt = json.loads(raw)
+        except ValueError:
+            continue
+        if isinstance(receipt, dict) and 'value' in receipt and receipt.get('reuse_key'):
+            out.setdefault(receipt['reuse_key'], receipt)
+    return out
+
+
 def cleanup_runs(root, *, now=None, retention_days=30, max_bytes=512*1024*1024):
     """Prune completed receipts only, oldest first. Protected data may exceed cap."""
     now = time.time() if now is None else now

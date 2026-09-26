@@ -84,28 +84,30 @@ def _action_def(node: str, action: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[List[str]]:
-    """fixture 실측 열(data/ibl_return_shapes.json) — `node:action` · `#op` · `@param=값` 순. 없으면 None(미상)."""
+def catalog_entry(node: str, action: str, params: Dict[str, Any], *,
+                  kinds=("items", "table")) -> Optional[Dict[str, Any]]:
+    """fixture 실측 항목(data/ibl_return_shapes.json) — `node:action` · `#op` · `@param=값` 순. 없으면 None(미상).
+
+    해소 규칙은 이 한 벌이다 — 판본 1 검사기(_catalog_cols)와 판본 2 컴파일러(ibl_v2_adapters.observed_result)가
+    같이 쓴다. kinds 로 ⟨열⟩(items/table)만 볼지 ⟨키⟩(scalar, 2026-09-06 F55-1)까지 볼지 고른다 —
+    판본 1 검사기는 ⟨키⟩를 열로 쓰지 않는다. 반환 dict 는 캐시 원본이므로 바꾸지 않는다.
+    상한에 잘린 관측(`more`)은 전체 열이 아니다 — 그걸 전체로 읽으면 잘린 뒤쪽 열을 '없는 열'로 오신고한다
+    (2026-09-18: place.distance·book.loan_count). 판정 불능은 미상으로 기권한다."""
     try:
         from ibl_access import _return_shapes
         shapes = _return_shapes() or {}
     except Exception:
         return None
-    # ⟨키⟩ 항목(kind scalar — 효과·스칼라 봉투의 필드, 2026-09-06 F55-1)은 통화의 열이 아니다 —
-    # 여기서 걸러야 스칼라 액션이 items 처럼 열을 가진 것으로 읽히지 않는다.
-    # 상한에 잘린 관측(`more`)은 전체 열이 아니다 — 그걸 전체로 읽으면 잘린 뒤쪽 열을 '없는 열'로 오신고한다
-    # (2026-09-18: place.distance·book.loan_count). 판정 불능은 미상으로 기권한다.
     shapes = {k: v for k, v in shapes.items()
-              if isinstance(v, dict) and v.get("kind") in (None, "items", "table") and not v.get("more")}
+              if isinstance(v, dict) and (v.get("kind") or "items") in kinds and not v.get("more") and v.get("keys")}
     q = f"{node}:{action}"
     op = params.get("op")
-    if (_action_def(node, action) or {}).get("columns_from") == "data":
+    ad = _action_def(node, action) or {}
+    if ad.get("columns_from") == "data":
         # 열은 데이터가 정한다(ledger·read·script) — fixture 열은 그 fixture 의 것. 단 그 op 를 부른 fixture 가
         # 따로 관측돼 있으면(`self:script#list` 처럼 목록 op 의 열은 코드가 정한다) 그 열은 안다(2026-09-16 ep3816).
         if isinstance(op, str) and not _dynamic(op):
-            ent = shapes.get(f"{q}#{op}")
-            if ent and ent.get("keys"):
-                return list(ent["keys"])
+            return shapes.get(f"{q}#{op}")
         return None
     # 변이 축(F20-1): param 리터럴이 변이 키와 맞으면 그 열이 정본
     for k, v in shapes.items():
@@ -116,30 +118,33 @@ def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[Li
         except ValueError:
             continue
         val = params.get(p)
-        if val is not None and not _dynamic(val) and str(val) == want and (v or {}).get("keys"):
-            return list(v["keys"])
+        if val is not None and not _dynamic(val) and str(val) == want:
+            return v
     if isinstance(op, str) and not _dynamic(op):
         ent = shapes.get(f"{q}#{op}")
-        if ent and ent.get("keys"):
-            return list(ent["keys"])
-    ad = _action_def(node, action) or {}
+        if ent:
+            return ent
     ent = shapes.get(q)
-    if ent and ent.get("keys"):
+    if ent:
         # 액션 레벨 관측은 액션 fixture 의 op 하나가 낸 열이다 — 다른 op 로 부른 문장에 그 열을 빌려주지 않는다
         # (2026-09-05 ep2858: `[self:lecture]{op:"load"}` 가 list fixture 의 title·meta·summary·url 을 받았다). 미상이 맞다.
         fop = _fixture_op(ad)
         if not (isinstance(op, str) and not _dynamic(op) and fop and op != fop):
-            return list(ent["keys"])
+            return ent
     try:
         from ibl_ops import default_op
         d = default_op(ad)
     except Exception:
         d = None
     if d:
-        ent = shapes.get(f"{q}#{d}")
-        if ent and ent.get("keys"):
-            return list(ent["keys"])
+        return shapes.get(f"{q}#{d}")
     return None
+
+
+def _catalog_cols(node: str, action: str, params: Dict[str, Any]) -> Optional[List[str]]:
+    """fixture 실측 열 — catalog_entry 의 keys 사본. 없으면 None(미상)."""
+    ent = catalog_entry(node, action, params)
+    return list(ent["keys"]) if ent else None
 
 
 _FIXTURE_OP_RE = re.compile(r'\bop\s*:\s*["\']([\w-]+)["\']')

@@ -2135,3 +2135,5 @@
 2026-09-26 이름 회상 채널이 상시 관용구 블록에 이미 실린 이름을 Top-2 자리에 다시 싣지 않게 수리(ibl_access.exposed_idiom_names·IBLUsageRAG.search_phrases_split). 상시 적중은 제시하지 않되 증류 관문·귀속용 set_phrase_recall 에는 유지. 정본: docs/IDIOM_REGISTRY_CLEANUP_2026_09_26.md
 
 2026-09-26 반사 규칙 모순 수리: 09-23 자격(corpus_policy.exclusion_reason=판본 1 제외)과 노출(hippo_tree.reference_needs_expansion=판본 2 무조건 숨김)이 OR 로 묶여 반사 후보 0건·귀속 0건·<ref> 전부 body_omitted. 노출 규칙에서 판본 조건 제거, 판본을 아는 sentence_count(판본 2 최상위 문장) 신설, 반사 거부권 위험 축을 키 표기 무관 정규식으로. 실측 반사 후보 1,232/3,721(판본 1 2,481은 정책대로 제외). 정본: docs/REFLEX_RULES_CONTRADICTION_REPAIR_2026_09_26.md
+
+2026-09-26 IBL 증분 실행 3종(판본 2): ①`reuse:{run_id}` — 고친 프로그램이 이전 실행의 읽기 영수증(액션·인자·구현 지문, 프로그램 지문 제외)을 재실행 없이 재사용(ibl_v2_runtime/ibl_run_journal.reusable_receipts/ibl_v2_entry, 표면 4곳) ②inputs 값 자리 `{"$ref": result_ref.id, "path"}` — 저장 결과를 복사 없이 다음 프로그램에 전달(model_result_view.resolve_input_refs, 4078 read_result 22만 자의 뿌리) ③관측 반환 필드를 판본 2 컴파일러에 연결 — 옛 검사기의 '관측 열 밖 참조' 경고가 09-23 이행 때 끊긴 것을 UNOBSERVED_FIELD 경고로 복원(ibl_typecheck.catalog_entry 한 벌·ibl_v2_adapters.observed_result·describe.observed_returns). 어휘·op·문법 증가 0. 정본: docs/IBL_INCREMENTAL_EXECUTION_2026_09_26.md

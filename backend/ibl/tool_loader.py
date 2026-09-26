@@ -194,7 +194,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
             "properties": {
                 "edition": {"type": "integer", "enum": [1, 2], "default": 2,
                             "description": "새 작성 기본값=2. 저장된 기존 원문의 재실행에만 1을 명시. 문법 오류로 자동 전환하지 않음."},
-                "inputs": {"type": "object", "description": "명시 외부 이름→값. 이전 턴 변수는 자동 주입하지 않음."},
+                "inputs": {"type": "object", "description": "명시 외부 이름→값. 이전 턴 변수는 자동 주입하지 않음. 값 자리에 {\"$ref\": result_ref.id, \"path\": [...]}를 주면 저장된 결과를 복사 없이 전달(path 생략=최종 값)."},
                 "check": {"type": "boolean", "description": "실행 없이 같은 컴파일러로 검사."},
                 "code": {
                     "type": "string",
@@ -209,6 +209,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
                 "files": {"type": "array", "items": {"type": "string"}, "description": "기존 저장 코드(edition:1)의 인라인 파일 인자. 새 코드는 inputs에 값 전달."},
                 "files_from": {"type": "array", "items": {"type": "string"}, "description": "기존 저장 코드(edition:1)의 파일 인자. 새 코드는 self:read의 text를 명시 전달."},
                 "resume": {"type": "object", "description": "현재 IBL은 반환된 {run_id}와 동일 code·inputs로 재개. 완료 영수증을 재사용하며 결과 불명 외부 작업은 재실행하지 않는다. 기존 저장 코드의 재개 인자도 보존."},
+                "reuse": {"type": "object", "description": "고친 프로그램용 {run_id}: 이전 실행에서 액션·인자·도구 구현이 같은 읽기 호출의 영수증을 재실행 없이 재사용. 쓰기·모델 호출·바뀐 인자는 실행. resume과 함께 쓰지 않음."},
                 "describe": {"type": "array", "items": {"type": "string"}, "maxItems": 6,
                              "description": "액션 이름 1~6개의 계약 조회. code가 비면 조회만, 있으면 조회 성공 후 한 번 실행하고 descriptions를 반환."},
                 "read_result": read_result_schema(),

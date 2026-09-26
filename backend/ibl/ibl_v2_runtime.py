@@ -49,8 +49,11 @@ class Budget:
 
 class Runtime:
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
-                 recordings=None, replay=False, journal=None):
+                 recordings=None, replay=False, journal=None, reusable=None, reuse_run=None):
         self.journal = journal
+        # 편집한 프로그램이 앞 실행(reuse_run)의 읽기 영수증을 액션·인자·구현 지문으로 재사용한다.
+        # 프로그램 지문은 키에 없다 — 함수 하나를 고쳐도 검증된 수집 결과가 살아남는 통로(2026-09-26).
+        self.reusable, self.reuse_run, self.reused_calls = dict(reusable or {}), reuse_run, 0
         self.plan = plan
         self.inputs = copy.deepcopy(inputs or {})
         self.cancel_check = cancel_check
@@ -547,6 +550,9 @@ class Runtime:
             return value
         request = {"action": key, "args": pack(request_value(args.value)), "plan": self.plan.fingerprint}
         request_hash = digest(request)
+        # 재사용 키: 프로그램 지문 없이 액션·인자·도구 구현만 — 같은 요청이면 다른 프로그램에서도 같은 값이다.
+        reuse_key = digest({"action": key, "args": request["args"],
+                            "implementation": spec.contract.get("implementation_fingerprint")})
         eid = self.event(node, "invoke", args.evidence, action=key,
                          effects=contract["effects"], request_hash=request_hash)
         tool_evidence = {}
@@ -564,7 +570,7 @@ class Runtime:
             return exc
 
         call_id = digest([getattr(self.local, "route", ()), node.id, self.ordinal(node.id)])
-        receipt = None
+        receipt, source = None, "journal"
         if self.journal and external:
             receipt = self.journal.begin(call_id, request_hash, getattr(self.local, "cleanup", None) is not None)
         if self.replay and external and receipt is None:
@@ -574,11 +580,23 @@ class Runtime:
                     self.recorded.remove(receipt)
             if receipt is None:
                 raise Fault("REPLAY_MISSING", "이 입력·정의의 실행 기록이 없습니다. 외부 호출하지 않습니다.", node, kind="protocol")
+            source = "replay"
+        if receipt is None and external and self.reusable and contract["effects"] == ["read_external"]:
+            # 읽기 효과만 — 쓰기·모델 호출·미상 효과는 언제나 다시 실행한다. 실패 영수증도 재사용하지 않는다.
+            hit = self.reusable.get(reuse_key)
+            if hit is not None and "value" in hit:
+                receipt, source = hit, "reuse"
         if receipt is not None:
             if spec.authorize:
                 spec.authorize()
             from ibl_v2_ir import unpack
-            self.event(node, "receipt_reused", [eid], call_id=call_id)
+            self.event(node, "receipt_reused", [eid], call_id=call_id, source=source,
+                       **({"run_id": self.reuse_run} if source == "reuse" else {}))
+            if source == "reuse":
+                with self.lock:
+                    self.reused_calls += 1
+                if self.journal:
+                    self.journal.finish(call_id, receipt)  # 새 실행의 저널도 완결 — 이 실행을 다시 resume/reuse 할 수 있다
             with self.lock:
                 self.recordings.append(receipt)
             if "error" in receipt:
@@ -596,14 +614,15 @@ class Runtime:
                     tool_evidence, value = value.evidence, value.value
                 guard(value, contract["result"], f"{key} 반환")
                 if external:
-                    receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence}
+                    receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
+                               "action": key, "reuse_key": reuse_key}
                     if self.journal:
                         self.journal.finish(call_id, receipt)
                     with self.lock:
                         self.recordings.append(receipt)
             except Exception as error:
                 exc = failed(error)
-                receipt = {"request_hash": request_hash,
+                receipt = {"request_hash": request_hash, "action": key, "reuse_key": reuse_key,
                            "error": projection(exc.view(self.plan.source)), "partial": pack(exc.partial)}
                 if self.journal and external:
                     self.journal.finish(call_id, receipt)
@@ -640,6 +659,8 @@ class Runtime:
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
         if self.plan.preflight.get('warnings'):
             out['precheck_warnings'] = self.plan.preflight['warnings']
+        if self.reuse_run:
+            out["reuse"] = {"run_id": self.reuse_run, "reused_calls": self.reused_calls, "candidates": len(self.reusable)}
         if self.journal:
             out["resume"] = {"run_id": self.journal.run_id}
             out["resumed"] = self.journal.resuming

@@ -14,10 +14,16 @@ class Type:
     # Optional refinement of an existing List, not a new value/wire type.
     # None means unknown length/order; () is a known empty list.
     positions: tuple | None = None
+    # Observed (not declared) field names of an open Record: fixture/usage
+    # traces from data/ibl_return_shapes.json. Access outside them is a
+    # compile warning, never an error; join drops the marker.
+    observed: bool = False
 
     def __str__(self):
         if self.kind == "Union":
             return " | ".join(str(t) for t in self.item)
+        if self.kind == "Record" and self.observed:
+            return "Record⟨관측: " + "·".join(k for k, _ in self.fields) + "⟩"
         if self.kind == "Record" and self.fields:
             return "{" + ", ".join(f"{k}: {v}" for k, v in self.fields) + "}"
         return f"{self.kind}<{self.item}>" if self.item else self.kind
@@ -127,6 +133,8 @@ def compatible(actual, expected):
     if expected.kind in ("List", "Result"):
         return compatible(actual.item or UNKNOWN, expected.item or UNKNOWN)
     if expected.kind == "Record":
+        if expected.observed:
+            return True  # 관측 필드는 요구 사항이 아니다
         fields = dict(actual.fields)
         return all(k in fields and compatible(fields[k], v) for k, v in expected.fields)
     return True

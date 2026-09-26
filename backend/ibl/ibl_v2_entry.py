@@ -18,6 +18,12 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
             raise Fault("INPUTS", "inputs는 예약 이름을 제외한 이름→값 Record입니다.", kind="compile")
         from ibl_v2_ir import pack
         pack(inputs)
+        reuse = request.get("reuse")
+        if reuse is not None:
+            if request.get("resume") is not None:
+                raise Fault("REUSE_ARGUMENT", "resume과 reuse는 함께 쓸 수 없습니다. 같은 프로그램은 resume, 고친 프로그램은 reuse입니다.", kind="compile")
+            if not isinstance(reuse, dict) or set(reuse) != {"run_id"}:
+                raise Fault("REUSE_ARGUMENT", "reuse에는 이전 실행이 반환한 run_id만 지정하세요.", kind="compile")
         from ibl_v2_adapters import load_registry
         from ibl_v2_compile import compile_program
         from ibl_v2_runtime import Runtime
@@ -27,12 +33,15 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
             return plan.report()
         if plan.issues:
             return Runtime(plan, inputs).run()
-        from ibl_run_journal import Journal, journal_root, identity
-        with Journal(journal_root(project_path), identity(plan, inputs, project_path, agent_id), request.get("resume")) as journal:
+        from ibl_run_journal import Journal, journal_root, identity, reusable_receipts
+        root = journal_root(project_path)
+        reusable = reusable_receipts(root, reuse["run_id"]) if reuse else None
+        with Journal(root, identity(plan, inputs, project_path, agent_id), request.get("resume")) as journal:
             journal.announce(plan.fingerprint)
             from ibl_edition import source_context
             with source_context(2):
-                result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal).run()
+                result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal,
+                                 reusable=reusable, reuse_run=reuse["run_id"] if reuse else None).run()
         try:
             from ibl_v2_learning import record_functions
             record_functions(plan, result)

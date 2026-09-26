@@ -79,7 +79,7 @@ return $result'''
     ('$x=1\n[table:each]{items:[2]} {$x=$it}', 'READONLY'),
     ('[table:each]{items:[1],limit:1}{return $it}', 'UNKNOWN_ARGUMENT'),
     ('[table:each]{items:[1],mode:"flat_map",on_error:"collect"}{return [$it]}', 'EACH_COLLECT'),
-    ('{x:[self:read]{path:"secret"}}', 'PURE_EXPRESSION'),
+    ('[def:f]($x={doc:[self:read]{path:"secret"}}){return $x};[fn:f]{}', 'PURE_EXPRESSION'),
 ])
 def test_static_errors_before_any_effect(src, code):
     result = run(src)

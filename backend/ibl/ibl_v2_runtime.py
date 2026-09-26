@@ -176,6 +176,9 @@ class Runtime:
         if kind == "return":
             raise Returned(sub(d["value"]))
         if kind == "list":
+            # Source-order, fail-fast evaluation through the ordinary eval /
+            # invoke path: nested calls keep budgets, evidence and receipts.
+            # Do not hoist children out of their branch or auto-parallelize.
             values = [sub(v) for v in d["values"]]
             return Binding([b.value for b in values], self.parents(values))
         if kind == "record":

@@ -1110,6 +1110,7 @@ def validate_node_guides(data: dict, root: Path) -> list[str]:
 # 파서·엔진 코드에 이름이 박히면 안 된다 (별칭·always_on 데이터화로 확립된 불변식).
 # 2026-09-09 값 표기·여러 줄·each 반환 정리: 기존 코어 안의 개정, 노드 추가 없음.
 # 2026-09-13 fn 첫 입력 슬롯의 파이프 연결: 실행 의미 개정, 문법 타깃·코어 노드 집합 유지.
+# 2026-09-26 객체·목록 값의 호출 허용: 기존 호출 경로를 조합하며 코어 노드 집합 유지.
 from vocabulary_policy import load_policy
 
 STANDARD_CORE_NODES = set(load_policy()["standard_nodes"])

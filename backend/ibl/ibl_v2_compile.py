@@ -86,17 +86,33 @@ class Compiler:
         if node.kind not in PURE_KINDS:
             self.issue(node, "PURE_EXPRESSION", "이 자리에는 순수 식만 쓸 수 있습니다. 도구 호출은 앞 문장에 두세요.")
         for value in node.data.values():
-            self.pure_children(value)
+            self.check_children(value, self.pure)
 
-    def pure_children(self, value):
+    def container_value(self, node):
+        """Construct values with calls, without adding a statement/return scope.
+
+        Calls own their argument checks and each/function return frames. Pure
+        slots (operators, lambdas, defaults, conditions) still check recursively
+        in visit; a nested record cannot smuggle effects into those slots.
+        """
+        if node.kind in ("call", "lambda"):
+            return
+        if node.kind not in PURE_KINDS | {"pipe", "parallel", "fallback"}:
+            self.issue(node, "VALUE_EXPRESSION",
+                       "객체·목록의 값에는 식·호출·조합을 쓰세요. 제어 블록은 앞 문장이나 함수 본문에 두세요.")
+            return
+        for value in node.data.values():
+            self.check_children(value, self.container_value)
+
+    def check_children(self, value, check):
         if isinstance(value, Node):
-            self.pure(value)
+            check(value)
         elif isinstance(value, dict):
             for v in value.values():
-                self.pure_children(v)
+                self.check_children(v, check)
         elif isinstance(value, (list, tuple)):
             for v in value:
-                self.pure_children(v)
+                self.check_children(v, check)
 
     def predeclare(self, body, names):
         names = dict(names)
@@ -227,10 +243,10 @@ class Compiler:
         if kind == "def":
             return UNIT_T
         if kind == "list":
-            self.pure(node)
+            self.container_value(node)
             return ordered_list(sub(v) for v in d["values"])
         if kind == "record":
-            self.pure(node)
+            self.container_value(node)
             return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()), open=False)
         if kind in ("field", "index"):
             base = sub(d["base"])
@@ -497,6 +513,7 @@ class Compiler:
         bindings = bindings or {}
         if not isinstance(node, Node) or node.kind == "def":
             return set()
+        out = set()
         if node.kind == "call":
             fields = node.data["params"].data["fields"]
             values = {k: v.data["value"] if v.kind == "literal" else
@@ -505,15 +522,16 @@ class Compiler:
             if node.data["node"] == "fn":
                 sid = node.data.get("symbol")
                 if sid in self.functions and sid not in seen:
-                    return self.writes(self.functions[sid].data["body"], values, seen | {sid})
+                    out.update(self.writes(self.functions[sid].data["body"], values, seen | {sid}))
             key = f"{node.data['node']}:{node.data['action']}"
             spec = self.registry.get(key)
             if spec:
                 from ibl_callable_contract import normalize
                 values = normalize(spec.contract, values)
-                return {(realm, values[param]) for realm, param in spec.contract.get("write_resources", {}).items()
-                        if isinstance(values.get(param), str)}
-        out = set()
+                out.update((realm, values[param]) for realm, param in spec.contract.get("write_resources", {}).items()
+                           if isinstance(values.get(param), str))
+        # Arguments now execute too. An outer read/pure call (or a function)
+        # must not hide a declared write in its nested argument expressions.
         def visit(value):
             if isinstance(value, Node):
                 out.update(self.writes(value, bindings, seen))

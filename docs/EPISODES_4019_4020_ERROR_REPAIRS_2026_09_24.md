@@ -13,7 +13,7 @@
 
 | 오류 | 재현·판정 | 처리 |
 | --- | --- | --- |
-| 반환 객체 필드 안의 table 파이프 | PURE_EXPRESSION으로 정당하게 거절 | 파이프를 앞 변수로 분리하는 실행 가능한 교재와 회귀 검사 추가. 엔진 규칙은 유지 |
+| 반환 객체 필드 안의 table 파이프 | 당시 계약의 PURE_EXPRESSION으로 거절 | 당시에는 앞 변수로 분리하는 교재·회귀를 추가. 이후 [2026-09-26 컨테이너 호출 개정](IBL_CONTAINER_CALLS_2026_09_26.md)에서 직접 호출을 허용 |
 | contains 내장 함수 가정 | 원래 실패 문장에 함께 들어 있던 미지원 호출 | 정확한 URL 일치 예제로 교정. contains 미지원·in은 목록 원소 검사임을 설명 |
 | worker.js의 export 로딩 실패 | 기존 Node 20에서 직접 import 시 재현 | 프로젝트 package.json에 type: module 선언 |
 | Wrangler와 Node 버전 불일치 | 기존 로그의 Node 20 / Wrangler 4.137.0 요구사항 불일치 | 프로젝트 개발 의존성·lockfile에 Node 22.23.3과 Wrangler 4.137.0 고정, npm test/build/deploy 경로 마련 |

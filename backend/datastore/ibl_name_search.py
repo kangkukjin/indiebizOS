@@ -157,6 +157,8 @@ def find_phrase_by_alias(db, name: str, edition: int = 1) -> Optional[Dict]:
         row = conn.execute(
             "SELECT id, intent, ibl_code, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias, category, "
             "COALESCE(returns,'') AS returns, COALESCE(returns_observed,'') AS returns_observed, signature, "
+            # provenance 도 최신 행에서(2026-09-26) — 검색 메타는 내보낸 색인이라 심사 판정(hold)이 낡는다
+            "COALESCE(provenance,'{}') AS provenance, "
             # 실행 이력·우회 횟수도 준다(2026-09-07) — 증류의 덮어쓰기 판정이 '돈 적 있는가'를 여기서 묻는다
             "COALESCE(success_count,0) AS success_count, COALESCE(fail_count,0) AS fail_count, "
             "COALESCE(bypass_count,0) AS bypass_count "

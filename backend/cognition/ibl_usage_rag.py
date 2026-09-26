@@ -281,6 +281,10 @@ class IBLUsageRAG:
             logger.error(f"[IBL RAG] 이름 채널 검색 실패: {e}")
             return [], []
         hits = [r for r in _own_only(res or []) if r.score >= self.PHRASE_MIN_SCORE]
+        # 코퍼스 심사 판정 hold·quarantine 인 이름은 제시하지 않는다(2026-09-26) — 용례 채널의 exclusion_reason 과
+        # 같은 원장이다. 판본 1(legacy_source)은 다리로 부를 수 있으니 이름은 남긴다.
+        from corpus_policy import exclusion_reason
+        hits = [r for r in hits if exclusion_reason(r) not in ("review_hold", "review_quarantine")]
         fresh = [r for r in hits if (getattr(r, "alias", "") or "") not in exposed]
         return fresh[:k], [r for r in hits if (getattr(r, "alias", "") or "") in exposed]
 

@@ -57,6 +57,20 @@ def test_no_exposed_block_keeps_old_behaviour(channel, monkeypatch):
     assert [r.alias for r in fresh] == ["상시A", "상시B"] and seen == []
 
 
+def test_held_names_are_not_presented(channel, monkeypatch):
+    """corpus_review.decision hold/quarantine 인 이름은 이름 채널에서도 빠진다(2026-09-26 실험: 관용구 없는 조합 능력)."""
+    import json
+    monkeypatch.setattr(ibl_access, "exposed_idiom_names", lambda allowed: frozenset())
+    def search(db, query, top_k, allowed_nodes=None, aliased_only=False, **_):
+        held = _row("보류G", 0.95); held.ibl_code = "#!ibl edition=2\n[def:보류G](){return 1}"
+        held.provenance = json.dumps({"corpus_review": {"decision": "hold"}})
+        live = _row("새것C", 0.8); live.ibl_code = "#!ibl edition=2\n[def:새것C](){return 1}"; live.provenance = "{}"
+        return [held, live][:top_k]
+    monkeypatch.setattr(R, "_search_active", search)
+    fresh, seen = R.IBLUsageRAG().search_phrases_split("질의", None, k=2)
+    assert [r.alias for r in fresh] == ["새것C"] and seen == []
+
+
 def test_turn_recall_keeps_what_the_model_saw(channel, monkeypatch):
     import thread_context
     monkeypatch.setattr(R.IBLUsageRAG, "_is_ibl_relevant", lambda self, q: True)

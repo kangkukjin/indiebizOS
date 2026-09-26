@@ -44,4 +44,9 @@ def record_functions(plan, result):
         entry = next((s for s in entries if s["start"] <= event["definition_start"] < s["end"]), None)
         if entry:
             code = plan.source[entry["start"]:entry["end"]]
-            IBLUsageDB().update_success_by_code(code, event["success"] and result.get("source_complete", False))
+            # 함수의 성적은 그 함수가 값을 돌려줬는가다(2026-09-26). 종전엔 프로그램 봉투의
+            # source_complete 와 AND 했는데, 09-25 언어 개정(91448265)으로 catch 한 외부 실패도
+            # source_complete:false 가 되면서 "자료 하나 빠지면 한계를 적고 완료" 하도록 설계된
+            # 보고서 관용구가 설계대로 동작한 턴마다 fail_count 를 먹었다(AI동향준비읽기·검색묶음추리기·
+            # 웹앱검사하기 실측). 원천 불완전은 봉투가 따로 말한다 — 성적과 섞지 않는다.
+            IBLUsageDB().update_success_by_code(code, bool(event["success"]))

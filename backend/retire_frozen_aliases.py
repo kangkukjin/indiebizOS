@@ -15,8 +15,13 @@
 본문·intent·topic·이력은 건드리지 않는다. **떼는 것은 이름뿐**이다 — 그 턴에 실제로 일어난 일이라
 용례로는 남을 값이 있고, 다만 `[fn:이름]` 으로 다시 부를 수 있는 척하면 안 된다.
 
+둘째 자(2026-09-26 등록만 정리에서 추가, `--stale-days N`): ①②③을 만족하고 등록 후 N일이 지났으면
+관문이 얼었다고 하지 않아도 뗀다 — 09-04~06 자동 증류 잔재 21건이 실행 0·참조 0인 채 이름 채널 Top-2 를
+차지하며 산 이름을 밀어내던 것을 실측한 뒤의 자다(docs/IDIOM_REGISTRY_CLEANUP_2026_09_26.md).
+
 실행:
   .venv/bin/python backend/retire_frozen_aliases.py --dry-run
+  .venv/bin/python backend/retire_frozen_aliases.py --dry-run --stale-days 14
   .venv/bin/python backend/retire_frozen_aliases.py
   .venv/bin/python backend/retire_frozen_aliases.py --restore <스냅샷.json>
 """
@@ -68,12 +73,12 @@ def _referenced_names() -> set:
     return found
 
 
-def targets(conn):
-    """관문의 자가 고른 범위 — 사람이 고른 범위가 아니다."""
+def targets(conn, stale_days: int = 0):
+    """관문의 자가 고른 범위 — 사람이 고른 범위가 아니다. stale_days>0 이면 묵은 무참조 이름도 고른다."""
     refs = _referenced_names()
     out = []
     for r in conn.execute(
-            "SELECT id, alias, intent, topic, success_count, fail_count, ibl_code, "
+            "SELECT id, alias, intent, topic, success_count, fail_count, ibl_code, created_at, "
             "COALESCE(signature,'') AS sig, COALESCE(always_on,0) AS on_ "
             "FROM ibl_examples WHERE COALESCE(alias,'') != ''"):
         if r["on_"]:
@@ -84,6 +89,13 @@ def targets(conn):
             continue                                              # ③ 누가 부르고 있다
         names, known = parse_signature(r["sig"])
         why = frozen_incident_reason(r["ibl_code"], names if known else [])
+        if not why and stale_days > 0:
+            try:
+                age = (datetime.now() - datetime.fromisoformat(str(r["created_at"])[:19])).days
+            except (TypeError, ValueError):
+                age = -1
+            if age >= stale_days:
+                why = f"등록 {age}일째 실행 0·참조 0 (--stale-days {stale_days})"
         if why:
             out.append((dict(r), why))
     return out, refs
@@ -91,8 +103,9 @@ def targets(conn):
 
 def main() -> int:
     dry = "--dry-run" in sys.argv
+    stale = int(sys.argv[sys.argv.index("--stale-days") + 1]) if "--stale-days" in sys.argv else 0
     with _conn() as conn:
-        rows, refs = targets(conn)
+        rows, refs = targets(conn, stale)
         print(f"참조되는 이름 {len(refs)}건은 대상에서 뺀다 — 가이드·문서·코드가 부르는 이름")
         print(f"관문이 고른 회수 대상 {len(rows)}건\n")
         for r, why in rows:

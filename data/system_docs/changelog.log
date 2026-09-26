@@ -2129,3 +2129,5 @@
 2026-09-26 컨테이너 호출 최종 검토: 지역 함수가 가린 등록 어댑터의 쓰기 자원은 제외하고 실제 함수 본문·중첩 인자의 자원만 검사. 새 회귀 33개 포함 최종 관련 검사 204개 통과. 전체 회귀의 테스트 준비 오류 2건은 보완 후 재검증 완료. 상세: docs/IBL_CONTAINER_CALLS_2026_09_26.md.
 
 2026-09-26 IBL 기본 작성법을 사용자 요구 → 분해 이유 → 함수별 계약 → 구현 → 최상위 조합으로 명시. 기본·축약·회원 교재와 주 조합 가이드에 저장 없는 지역 함수 정의·상호 호출을 가르치고, 저장은 검증 후 반복 사용 가치가 있는 정의의 후속 선택으로 정리. 세 지역 함수의 독립 실행·빈 입력·다른 입력 및 프롬프트 예제 포함 교재/문서 검사 58개 통과. 실행기 변경 없음. 실제 에이전트의 새 과제 작성 행동·품질·시간·토큰 개선은 미측정. 목적 정본: data/system_docs/vision.md, docs/IBL_EVOLUTION_PURPOSE.md; 실행 예제: data/guides/ibl_composition.md.
+
+2026-09-26 등록만(always_on=0) 관용구 정리: 실행 0·참조 0 자동 증류 잔재와 동의어 쌍의 죽은 쪽 등 26개 이름 회수(본문·이력 보존, data/_backups/2026-09-26_등록만관용구정리). 가이드가 판본 2 흐름에서 부르는 판본 1 관용구 7개를 판본 2 정의로 이식(data/idioms/legacy_port_seeds.json, 라이브 등록 완료 id 4884~4890). ibl_v2_learning.record_functions가 catch한 외부 실패(09-25 개정 뒤 source_complete:false)를 함수 실패로 세던 것을 함수 반환 여부로 정정. register_idiom.py 판본 2 인지, retire_frozen_aliases.py --stale-days. 관련 시험 333 통과. test_idiom_expansion 5건(3ded991b 이후 실패)은 판정관용구 모델 없는 op만 허용하도록 수리. 정본: docs/IDIOM_REGISTRY_CLEANUP_2026_09_26.md

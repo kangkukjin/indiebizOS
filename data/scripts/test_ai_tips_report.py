@@ -335,7 +335,12 @@ def test_handled_missing_video_returns_compact_success_at_real_v2_boundary(execu
     execute.metadata_responses[IDS[0]] = {'success': False, 'error': 'This video is not available'}
     result = execute('commit')
     out = final(result)
-    assert result['source_complete'] and out['status'] == 'completed'
+    # 2026-09-25 언어 개정(91448265): catch로 처리한 외부 실패도 실행 봉투의
+    # `source_complete:false` 근거로 남는다. 관용구는 완료(completed)로 값을 돌려주되
+    # 빠진 영상을 limitations에 적고, 봉투는 원천 불완전을 감추지 않는다.
+    assert result['success'] and out['status'] == 'completed'
+    assert result['source_complete'] is False
+    assert any('영상 정보를 확인하지 못해 제외' in str(x) for x in out['limitations'])
     assert out['new_tips'] == 1 and out['published']
     assert Path(out['shared_report']).is_file()
     assert '결과' not in out and 'results' not in out and 'final_result' not in out

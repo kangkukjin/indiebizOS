@@ -18,13 +18,17 @@ NEW = {'미처리만고르기', '묶어순위내기', '주소마다읽기'}
 # 이 선정집에서 실측한 비-AI 원시의 닫힌 집합. 동적 fn/script/AI 술어는 인증하지 않는다.
 LEAVES = {'table:dedup', 'table:join', 'table:groupby', 'table:sort',
           'table:take', 'table:each', 'sense:crawl'}
+# 스크립트는 일반 인증하지 않는다. 예외는 판정관용구의 모델 없는 두 op 뿐(3ded991b):
+# urls(주소 문자열 그대로 중복 제거)·finish(실패·잘림 합산). 판정 op(prepare·select)는 불허.
+SCRIPT_CALL = re.compile(r'\[self:script\]\{op:"run",id:"([^"]+)",args:\{op:"([a-z_]+)"')
+PURE_SCRIPT_OPS = {('판정관용구', 'urls'), ('판정관용구', 'finish')}
 
 
 def run(code):
     trial = run_trial(code, 'dedup')
     assert trial['result']['success'], trial['result'].get('error')
     assert trial['observed']['brief'] == 0
-    assert set(trial['observed']['leaf_calls']) <= LEAVES | {'self:read', 'self:write'}
+    assert set(trial['observed']['leaf_calls']) <= LEAVES | {'self:read', 'self:write', 'self:script'}
     return decoded(trial['result']['final_result']), trial['observed']
 
 
@@ -36,6 +40,10 @@ def test_new_bodies_are_closed_non_ai_procedures():
         # 본문 계약은 상시 노출 선정과 독립적이다. 내려간 관용구도 호출 가능하다.
         parse_function_body(e['body'])
         actions = set(re.findall(r'\[([a-z_]+:[a-z_]+)', e['body']))
+        scripts = set(SCRIPT_CALL.findall(e['body']))
+        assert scripts <= PURE_SCRIPT_OPS
+        assert e['body'].count('[self:script]') == len(SCRIPT_CALL.findall(e['body']))
+        actions.discard('self:script')
         assert actions and actions <= LEAVES
         assert not re.search(r'\b(criteria|instruction|prompt|do)\s*:', e['body'])
         assert '[goal' not in e['body'] and '[if' not in e['body']

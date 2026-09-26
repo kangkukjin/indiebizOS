@@ -6,6 +6,7 @@ from ibl_v2_experience import closed_call, finalize_candidate
 from ibl_distill_value import source_rows
 from ibl_v2_compile import compile_program
 from ibl_v2_runtime import Runtime
+from ibl_v2_adapters import load_registry as _real_registry  # autouse 픽스처가 비우기 전의 실제 등록부
 
 
 @pytest.fixture(autouse=True)
@@ -140,3 +141,29 @@ def test_partial_memory_save_retries_original_name_and_body(memory, monkeypatch,
 
 if __name__ == '__main__':
     raise SystemExit(pytest.main([__file__]))
+
+
+def test_function_that_handles_external_failure_counts_as_success(memory, monkeypatch):
+    """catch 로 처리한 외부 실패는 봉투의 source_complete:false 로 남지만(09-25 언어 개정),
+    함수 자체는 값을 돌려줬으므로 성적은 성공이다(2026-09-26 — 보고서 관용구의 fail_count 오염 수리)."""
+    import ibl_v2_adapters
+    from ibl_v2_ir import Fault
+    from ibl_v2_learning import record_functions
+
+    def flaky(*_):
+        raise Fault('TOOL_ERROR', '외부 장애', kind='tool')
+    registry = _real_registry()
+    registry['sense:search'] = ibl_v2_adapters.Adapter(registry['sense:search'].contract, flaky)
+    monkeypatch.setattr(ibl_v2_adapters, 'load_registry', lambda *a: registry)
+    body = ('#!ibl edition=2\n[def:버티기]($n){\n  [try] {\n    $r = [sense:search]{query:"x",limit:$n}\n'
+            '    return len($r.items)\n  } [catch] { return -1 }\n}')
+    assert memory.add_examples_batch([{'intent': '실패를 버티고 값 반환', 'ibl_code': body,
+                                      'category': 'phrase', 'alias': '버티기', 'returns': 'Number'}]) == 1
+    plan = compile_program('[fn:버티기]{n:3}', registry, definitions={'버티기': body})
+    assert not plan.issues, plan.report()
+    result = Runtime(plan).run()
+    assert result['success'] and result['value'] == -1
+    assert result['source_complete'] is False
+    record_functions(plan, result)
+    row = memory.find_phrase_by_alias('버티기', edition=2)
+    assert row['success_count'] == 1 and row['fail_count'] == 0

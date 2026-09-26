@@ -15,6 +15,11 @@
 (단일 경로 `add_examples_batch`) — 낱말이 문장 안에 있는 모습을 본 적 있어야 실제로 불린다
 (실측 상관 r=0.72, ibl_access._partners 주석).
 
+판본(2026-09-26): 본문 첫 줄 `#!ibl edition=2` 면 판본 2 정의(`[def:이름]($인자){…}`)로 검사한다 —
+파싱·닫힘·어휘 계약은 `ibl_v2_learning.check_source`, 이름·언제·슬롯 관문은 판본 공통. 같은 이름이
+판본별로 한 행씩 있을 수 있다(예: 열추려보기 ed1 상시 + ed2 조합). --update/--refresh 는 새 본문의
+판본과 같은 행을 고친다. always_on 은 이름 단위다(지도는 판본 2 몸이 있으면 그것을 보여준다).
+
 쓰기:
   python3 scripts/register_idiom.py --list
   python3 scripts/register_idiom.py --add 이름 --when "언제 부르는가" --body 몸.ibl [--always-on]
@@ -41,8 +46,50 @@ def _db_path():
     return str(get_base_path() / "data" / "ibl_usage.db")
 
 
+def _edition(code: str) -> int:
+    from ibl_edition import source_edition
+    return source_edition(code or "") or 1
+
+
+def _gates_v2(name: str, when: str, code: str, *, metadata_only=False):
+    """판본 2 정의의 관문(2026-09-26) — 이름·언제·슬롯 수는 판본 1과 같은 자, 본문은 판본 2 컴파일러가 본다."""
+    from ibl_v2_store import definition_name, definitions
+    from ibl_v2_learning import check_source
+    from ibl_v2_parser import parse
+    from ibl_idiom import sanitize_fn_name
+    if sanitize_fn_name(name, name) != name:
+        return None, f"이름이 규약에 안 맞는다 — 권장: {sanitize_fn_name(name, name)}"
+    if not metadata_only and len(name) > NAME_MAX_CHARS:
+        return None, (f"이름 {len(name)}자 — 상한 {NAME_MAX_CHARS}. 이번 사건이 아니라 되풀이될 모양의 "
+                      f"동사 골격만 남겨라")
+    if not metadata_only and (not when or len(when.strip()) < 10):
+        return None, "`--when` 이 없다 — 지도는 뜻이 아니라 **부를 조건**을 싣는다(10자 이상)"
+    try:
+        if definition_name(code) != name:
+            return None, f"정의 이름이 등록 이름과 다르다: [def:{definition_name(code)}] ≠ {name}"
+    except Exception as e:
+        return None, f"판본 2 정의가 아니다: {getattr(e, 'message', e)}"
+    library = definitions()
+    library[name] = code
+    why = check_source(code, True, library=library)
+    if why:
+        return None, f"판본 2 검사 실패: {why}"
+    params = parse(code).data["statements"][0].data["params"]
+    sig = list(params)
+    n = code.count("\n")
+    if not metadata_only and not sig:
+        return None, "슬롯 0 — 부를 때 바꿀 것이 없다(매크로이지 함수가 아니다)"
+    required = [k for k, default in params.items() if default is None]
+    if not metadata_only and len(required) >= 6:
+        return None, f"필수 슬롯 {len(required)}개 — 서명이 본문만큼 길다. 묶어서 Record 하나로 받아라(기본값 있는 인자는 세지 않는다)"
+    return {"signature": sig, "returns": "", "sentences": n, "edition": 2}, None
+
+
 def _gates(name: str, when: str, code: str, *, metadata_only=False):
-    """등록 관문 — 자동 증류가 쓰던 바로 그 관문들. 방아쇠만 사람에게 갔지 자는 그대로다."""
+    """등록 관문 — 자동 증류가 쓰던 바로 그 관문들. 방아쇠만 사람에게 갔지 자는 그대로다.
+    판본 2 본문(`#!ibl edition=2`)은 _gates_v2 로 간다(2026-09-26)."""
+    if _edition(code) == 2:
+        return _gates_v2(name, when, code, metadata_only=metadata_only)
     from ibl_parser import parse_function_body
     from ibl_usage_rag import _validate_ibl_actions
     from ibl_param_vocab import check_code_params
@@ -79,7 +126,17 @@ def _gates(name: str, when: str, code: str, *, metadata_only=False):
     why = uncallable_reason(sig, n, code) or _phrase_private_reason(code) or frozen_incident_reason(code, sig)
     if why and not metadata_only:
         return None, why
-    return {"signature": sig, "returns": return_type_of(code), "sentences": n}, None
+    return {"signature": sig, "returns": return_type_of(code), "sentences": n, "edition": 1}, None
+
+
+def _find(db, name: str, edition: int = None):
+    """이름→행. edition=None 이면 판본 2 우선, 없으면 판본 1(현재 실행기의 해소 순서와 같다)."""
+    if edition is None:
+        return _find(db, name, 2) or _find(db, name, 1)
+    try:
+        return db.find_phrase_by_alias(name, edition=edition)
+    except TypeError:                      # 옛 시험 대역(edition 인자 없음)
+        return db.find_phrase_by_alias(name)
 
 
 def _corpus_example(name: str, sig, when: str):
@@ -93,17 +150,18 @@ def _corpus_example(name: str, sig, when: str):
 def cmd_list(_a):
     conn = sqlite3.connect(_db_path())
     rows = conn.execute(
-        "SELECT alias, COALESCE(always_on,0), success_count+fail_count, COALESCE(topic,''), intent "
+        "SELECT alias, COALESCE(always_on,0), success_count+fail_count, COALESCE(topic,''), intent, ibl_code "
         "FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY COALESCE(always_on,0) DESC, alias").fetchall()
     conn.close()
+    rows = [(a, o, n, t, i, _edition(c)) for a, o, n, t, i, c in rows]
     on = [r for r in rows if r[1]]
     off = [r for r in rows if not r[1]]
     print(f"■ 상시 소개(어휘) {len(on)}건")
-    for a, _o, n, t, i in on:
-        print(f"   {a:20} · 사용 {n:>3}회 · [{t}] {i[:60]}")
+    for a, _o, n, t, i, e in on:
+        print(f"   {a:20} ed{e} · 사용 {n:>3}회 · [{t}] {i[:60]}")
     print(f"\n■ 등록만(소개 안 함) {len(off)}건 — 이름으로 부를 수는 있다")
-    for a, _o, n, t, i in off:
-        print(f"   {a:20} · 사용 {n:>3}회 · [{t}] {i[:60]}")
+    for a, _o, n, t, i, e in off:
+        print(f"   {a:20} ed{e} · 사용 {n:>3}회 · [{t}] {i[:60]}")
 
 
 def cmd_add(a):
@@ -114,8 +172,8 @@ def cmd_add(a):
         return 1
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
-    if db.find_phrase_by_alias(a.add):
-        print(f"✗ 이름 '{a.add}' 이 이미 있다 — 본문 수리는 --update, 소개 층은 --promote/--demote로 바꾸라")
+    if _find(db, a.add, info["edition"]):
+        print(f"✗ 이름 '{a.add}' 의 판본 {info['edition']} 정의가 이미 있다 — 본문 수리는 --update, 소개 층은 --promote/--demote로 바꾸라")
         return 1
     eid = db.add_example(intent=a.when, ibl_code=code, nodes="", category="phrase",
                          source="manual_registry", tags="manual", topic=a.topic or "",
@@ -141,16 +199,19 @@ def update_idiom(db, name, code, reason, when="", resign=False):
     from workflow_contract import call_signature
     from ibl_usage_db import _signature_of, _tree_refresh
 
-    old = db.find_phrase_by_alias(name)
+    edition = _edition(code)
+    old = _find(db, name, edition)
     if not old:
-        raise ValueError(f"'{name}' 이 없다")
+        raise ValueError(f"'{name}' 의 판본 {edition} 정의가 없다(같은 판본의 본문만 개정한다 — 다른 판본은 --add)")
     if not reason.strip():
         raise ValueError("--reason에 수리 이유와 검증 결과를 적으세요")
     intent = when or old["intent"]
     info, why = _gates(name, intent, code)
     if why:
         raise ValueError(f"개정 거절 — {why}")
-    resigned = set(call_signature(old["ibl_code"])) != set(info["signature"])
+    old_sig = (set(_gates(name, intent, old["ibl_code"], metadata_only=True)[0]["signature"]) if edition == 2
+               else set(call_signature(old["ibl_code"])))
+    resigned = old_sig != set(info["signature"])
     if resigned and not resign:
         raise ValueError("호출 서명이 달라집니다 — 기존 인자를 유지해 수리하거나 --resign 으로 서명 개정을 명시하세요")
     if old["ibl_code"].strip() == code.strip() and old["intent"] == intent:
@@ -169,10 +230,11 @@ def update_idiom(db, name, code, reason, when="", resign=False):
         conn.execute("INSERT INTO ibl_idiom_revisions "
                      "(example_id, alias, revised_at, reason, old_row, new_code) VALUES (?,?,?,?,?,?)",
                      (old["id"], name, now, reason, json.dumps(dict(current), ensure_ascii=False), code))
+        returns = info["returns"] if edition == 1 else (old.get("returns") or "")
         conn.execute("UPDATE ibl_examples SET ibl_code=?, intent=?, returns=?, signature=?, "
                      "success_count=0, fail_count=0, bypass_count=0, avg_ms=-1, avg_tokens=-1, "
                      "updated_at=? WHERE id=?",
-                     (code, intent, info["returns"], _signature_of(code), now, old["id"]))
+                     (code, intent, returns, _signature_of(code), now, old["id"]))
         conn.commit()
     # 새 본문에 옛 실적을 붙이지 않는다. 이름·always_on·topic·용례 id는 유지한다.
     db._index_single(old["id"], f"{name} {intent}", code)
@@ -192,9 +254,14 @@ def refresh_idiom_metadata(db, name):
     """현재 본문의 파생 계약만 갱신한다. 실행 실적·호출 용례·벡터는 보존한다."""
     from ibl_usage_db import _signature_of, _tree_refresh
 
-    old = db.find_phrase_by_alias(name)
+    old = _find(db, name)
     if not old:
         raise ValueError(f"'{name}' 이 없다")
+    if _edition(old["ibl_code"]) == 2:
+        info, why = _gates(name, old["intent"], old["ibl_code"], metadata_only=True)
+        if why:
+            raise ValueError(f"계약 갱신 거절 — {why}")
+        return False        # 판본 2 는 파생 반환형이 없다 — 검사만 하고 바꿀 것이 없다
     # 옛 이름·슬롯 개수의 승격 자격을 다시 심사하지 않는다. 본문 검증은 그대로 한다.
     info, why = _gates(name, old["intent"], old["ibl_code"], metadata_only=True)
     if why:
@@ -232,7 +299,7 @@ def cmd_update(a):
 def _promote(name: str, on: bool, when: str = "") -> int:
     from ibl_usage_db import IBLUsageDB
     db = IBLUsageDB()
-    row = db.find_phrase_by_alias(name)
+    row = _find(db, name)
     if not row:
         print(f"✗ '{name}' 이 없다")
         return 1
@@ -253,7 +320,13 @@ def _promote(name: str, on: bool, when: str = "") -> int:
     print(f"✓ {name} → {'상시 소개(어휘)' if on else '등록만'}")
     if on:
         from workflow_contract import call_signature
-        n = db.add_examples_batch([_corpus_example(name, call_signature(row["ibl_code"]), when or row["intent"])])
+        if _edition(row["ibl_code"]) == 2:
+            sig = _gates(name, when or row["intent"], row["ibl_code"], metadata_only=True)[0]["signature"]
+            example = _corpus_example(name, sig, when or row["intent"])
+            example["ibl_code"] = "#!ibl edition=2\n" + example["ibl_code"]
+        else:
+            example = _corpus_example(name, call_signature(row["ibl_code"]), when or row["intent"])
+        n = db.add_examples_batch([example])
         print(f"  코퍼스에 호출 용례 {n}건 심음 — 낱말은 문장 안에 있는 모습을 본 적 있어야 불린다")
     return 0
 

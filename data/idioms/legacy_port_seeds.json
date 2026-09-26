@@ -1,0 +1,254 @@
+[
+  {
+    "intent": "후보 목록에서 이미 처리한 키를 제외하고 중복 없는 새 행만 남길 때. 후보의 첫 행과 순서를 보존하며 기존 행 갱신은 감지하지 않는다.",
+    "ibl_code": "#!ibl edition=2\n[def:미처리만고르기]($후보,$키,$처리됨) {\n  $고유 = [table:dedup]{items:$후보,by:$키}\n  [if:len($처리됨)==0] { return $고유.items }\n  $남음 = [table:join]{left:$고유.items,right:$처리됨,on:$키,how:\"anti\"}\n  return $남음.items\n}",
+    "edition": 2,
+    "alias": "미처리만고르기",
+    "nodes": "table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "topic": "되풀이 실행",
+    "returns": "List<Record>",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "미처리만고르기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "이번 호에서 이미 읽은 URL을 빼고 새 후보만 남겨줘.",
+    "ibl_code": "#!ibl edition=2\n[fn:미처리만고르기]{후보:[{url:\"https://a.example/1\",title:\"A\"},{url:\"https://b.example/2\",title:\"B\"}],키:\"url\",처리됨:[{url:\"https://b.example/2\"}]}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "topic": "되풀이 실행",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "검색·수집 결과에서 같은 키의 중복을 빼고 앞에서 개수만큼 고를 때. 앞쪽 행을 우선 보존한다.",
+    "ibl_code": "#!ibl edition=2\n[def:중복빼고추리기]($목록,$키,$개수) {\n  $고유 = [table:dedup]{items:$목록,by:$키}\n  return $고유.items >> [table:take]{n:$개수}\n}",
+    "edition": 2,
+    "alias": "중복빼고추리기",
+    "nodes": "table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "topic": "목록 다루기",
+    "returns": "List<Record>",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "중복빼고추리기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "검색 결과에서 같은 URL 중복을 빼고 앞 5개만 보여줘.",
+    "ibl_code": "#!ibl edition=2\n[fn:중복빼고추리기]{목록:[{url:\"u1\",t:1},{url:\"u1\",t:2},{url:\"u2\",t:3}],키:\"url\",개수:5}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "topic": "목록 다루기",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "숫자 열이 있는 목록을 하나 또는 여러 열로 묶고 합계가 큰 그룹부터 개수만큼 고를 때. 그룹별 합계와 건수를 함께 반환한다.",
+    "ibl_code": "#!ibl edition=2\n[def:묶어순위내기]($목록,$묶음,$값열,$개수) {\n  $집계 = [table:groupby]{items:$목록,by:$묶음,agg:{합계:[\"sum\",$값열],건수:[\"count\"]}}\n  return $집계.items >> [table:sort]{by:\"합계\",descending:true} >> [table:take]{n:$개수}\n}",
+    "edition": 2,
+    "alias": "묶어순위내기",
+    "nodes": "table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "topic": "집계",
+    "returns": "List<Record>",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "묶어순위내기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "매출 목록을 지역별로 묶어 합계가 큰 상위 3곳만 보여줘.",
+    "ibl_code": "#!ibl edition=2\n[fn:묶어순위내기]{목록:[{지역:\"서울\",매출:3},{지역:\"부산\",매출:5},{지역:\"서울\",매출:4}],묶음:\"지역\",값열:\"매출\",개수:3}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "topic": "집계",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "폴더에서 패턴에 맞는 파일 중 이름순 마지막 파일 하나(직전 보고서)를 찾아 앞 줄수만큼 읽을 때. 수정시각 기준이 아니다. 없으면 found:false.",
+    "ibl_code": "#!ibl edition=2\n[def:직전보고서찾아읽기]($폴더,$패턴,$줄수=160) {\n  $후보 = [self:list]{path:$폴더,pattern:$패턴} >> [table:filter]{where:($행)=>get($행,\"is_dir\",false)==false} >> [table:sort]{by:\"name\",descending:true} >> [table:take]{n:1}\n  [if:len($후보)==0] { return {found:false,path:\"\",text:\"\",candidates:0} }\n  $파일 = $후보[0]\n  $본문 = [self:read]{path:$파일.path,limit:$줄수}\n  return {found:true,path:$파일.path,text:$본문.text,candidates:len($후보)}\n}",
+    "edition": 2,
+    "alias": "직전보고서찾아읽기",
+    "nodes": "self",
+    "category": "phrase",
+    "source": "manual_seed",
+    "topic": "보고서",
+    "returns": "Record",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "직전보고서찾아읽기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "보고서 폴더에서 직전 AI 동향 보고서를 찾아 읽어줘.",
+    "ibl_code": "#!ibl edition=2\n[fn:직전보고서찾아읽기]{폴더:\"~workspace/outputs/ai_trend_reports\",패턴:\"ai_trend_report_*.md\"}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "topic": "보고서",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "파일의 문자열을 치환한 뒤 확인 패턴의 일치 위치를 최대 5곳 반환할 때. 일치 0건이면 반영 확인 실패이며, 일치해도 기능 검증 성공을 뜻하지 않는다.",
+    "ibl_code": "#!ibl edition=2\n[def:고치고확인하기]($파일,$앞,$뒤,$확인) {\n  $편집 = [self:edit]{path:$파일,old_string:$앞,new_string:$뒤}\n  $확인결과 = [self:grep]{pattern:$확인,path:$파일,limit:5}\n  return {edited:true,message:get($편집,\"message\",\"\"),matches:$확인결과.items,total:get($확인결과,\"total\",len($확인결과.items)),confirmed:len($확인결과.items)>0}\n}",
+    "edition": 2,
+    "alias": "고치고확인하기",
+    "nodes": "self",
+    "category": "phrase",
+    "source": "manual_seed",
+    "topic": "고치기",
+    "returns": "Record",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "고치고확인하기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "설정 파일의 포트 번호를 8765로 바꾸고 바뀐 줄을 확인해줘.",
+    "ibl_code": "#!ibl edition=2\n[fn:고치고확인하기]{파일:\"~workspace/config.ini\",앞:\"port = 8000\",뒤:\"port = 8765\",확인:\"port = 8765\"}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "topic": "고치기",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "기존 목록과 새 목록을 키로 중복 제거해 JSON 원장에 누적 저장할 때. 같은 키는 기존 행 보존. 기존 행 갱신(upsert)은 하지 않는다.",
+    "ibl_code": "#!ibl edition=2\n[def:원장에누적]($옛것,$새것,$키,$원장) {\n  $합 = [table:dedup]{items:$옛것+ $새것,by:$키}\n  $저장 = [self:write]{path:$원장,content:json($합.items)}\n  return {path:$원장,count:len($합.items),added:len($합.items)-len($옛것)}\n}",
+    "edition": 2,
+    "alias": "원장에누적",
+    "nodes": "self,table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "topic": "되풀이 실행",
+    "returns": "Record",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "원장에누적",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "새로 수집한 행을 기존 원장에 URL 기준으로 누적 저장해줘.",
+    "ibl_code": "#!ibl edition=2\n$옛것 = [{url:\"u1\",t:\"a\"}]\n$새것 = [{url:\"u1\",t:\"b\"},{url:\"u2\",t:\"c\"}]\n[fn:원장에누적]{옛것:$옛것,새것:$새것,키:\"url\",원장:\"~workspace/outputs/ledger.json\"}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "topic": "되풀이 실행",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "파일의 한 부분을 수정한 뒤 관련 pytest 시험 파일을 실행하고 파일별 통과·실패 항목을 반환할 때. Node·브라우저 시험에는 쓰지 않는다.",
+    "ibl_code": "#!ibl edition=2\n[def:고치고시험돌리기]($파일,$앞,$뒤,$시험파일) {\n  $편집 = [self:edit]{path:$파일,old_string:$앞,new_string:$뒤}\n  $시험 = [self:script]{id:\"시험\",args:{files:[$시험파일]}}\n  $요약 = $시험.items >> [table:select]{columns:($행)=>{file:get($행,\"file\",\"\"),passed:get($행,\"passed\",0),failed:get($행,\"failed\",0),failures:get($행,\"failures\",[])}}\n  return {ok:get($시험,\"ok\",false),edited:true,items:$요약}\n}",
+    "edition": 2,
+    "alias": "고치고시험돌리기",
+    "nodes": "self,table",
+    "category": "phrase",
+    "source": "manual_seed",
+    "topic": "개발",
+    "returns": "Record",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": "고치고시험돌리기",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "파서의 오타를 고치고 관련 시험 파일을 돌려 실패한 항목만 알려줘.",
+    "ibl_code": "#!ibl edition=2\n[fn:고치고시험돌리기]{파일:\"backend/ibl/ibl_parser.py\",앞:\"retrun\",뒤:\"return\",시험파일:\"backend/test_ibl_parser.py\"}",
+    "edition": 2,
+    "alias": "",
+    "nodes": "fn",
+    "category": "composition",
+    "source": "manual_seed",
+    "topic": "개발",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "legacy_alias": null,
+      "runtime_success_claimed": false
+    }
+  }
+]

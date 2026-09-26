@@ -1,0 +1,13 @@
+#!ibl edition=2
+[def:보고서HTML검수]($원본,$출력,$제목,$부제="",$테마="plain",$제거줄=[],$뷰포트=["1280x900","390x844"],$질문="보고서 레이아웃 검수: 제목·본문·표가 읽히는지, 겹침·잘림·빈 화면·가로 넘침이 있는지만 간결히 답하라. 내용은 재평가하지 않는다. 해상도 때문에 못 읽으면 미확인이라고 밝혀라.") {
+  $변환 = [self:script]{id:"보고서HTML",args:{src:$원본,dst:$출력,title:$제목,subtitle:$부제,theme:$테마,drop_lines:$제거줄}}
+  $신고 = $변환.items[0]
+  $렌더 = [engines:render]{path:$출력,viewports:$뷰포트,full_page:true,output_path:f"${출력}.qa"}
+  $검수 = $렌더.items >> [table:each]{parallel:2} {
+    [try] {
+      $답 = [engines:image_read]{path:$it.path,question:$질문}
+      return {viewport:$it.label,screenshot:$it.path,ok:true,review:$답.message}
+    } [catch] { return {viewport:$it.label,screenshot:$it.path,ok:false,error:$error.message} }
+  }
+  return {html:$출력,links:$신고.links,tables:$신고.tables,headings:$신고.headings,dropped_lines:$신고.dropped_lines,bytes:$신고.bytes,reviews:$검수,note:"원본·출력은 절대경로(engines:render 는 ~workspace 접두를 모른다). links 가 매물+출처 건수보다 적으면 발행하지 않는다(가이드 §5). 고친 뒤 같은 인자로 다시 부르면 변환·렌더·검수를 반복한다."}
+}

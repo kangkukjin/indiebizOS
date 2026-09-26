@@ -138,7 +138,7 @@
 
 | 관용구 | 부르는 때·인자 | 반환·주의 |
 |---|---|---|
-| `부동산준비읽기` | 시작 전 `폴더`, 선택 `슬러그` | `documents`에 config·rotation·thesis·최신 보고서·선택 지역 DB의 `kind/path/text`. 필수 3파일 실패는 `ok:false`. 이전 보고서·지역 파일 부재는 `*_found:false`. JSON은 text 원문이므로 필요한 값을 읽어 다음 호출의 명시 인자로 준다. |
+| `부동산준비읽기` | 시작 전 `폴더`, 선택 `슬러그` | `documents`는 문서마다 **요약·머리·경로**(09-26 개정 — 본문 4만 6천 자를 돌려주던 것을 접음): config는 `text`, rotation은 `queue`(slug·name·unit·verdict·last_visited·visits)·`explore_first`, thesis·최신 보고서는 `chars`·`head_blocks`(앞 6/10 블록)·`headings`, 지역 DB는 `listings` 요약·`head`. 본문 전체는 각 `path`를 `[self:read]`로. 필수 3파일 실패는 `ok:false`. 이전 보고서·지역 파일 부재는 `*_found:false`. |
 | `부동산기본수집` | 지역 선정 후 `지역`, `법정동코드`(현행 시군구 5자리), `예산`(config의 budget), `기간`(start_month/end_month) | 네이버 house·apt 전세, 직방 villa 전세, 국토부 apt 전월세·매매 5갈래. `items`의 각 행에 `query/ok/count/data` 또는 `error`. 원천의 빈 목록·실패·부분 결과를 구분한다. 호가 60건 상한, 국토부 기간을 명시한다. |
 | `전세예산추리기` | 호가 결과의 `목록`, `출처`(naver/zigbang), `하한만원`, `상한만원` | `items`는 예산 후보, `review`는 누락·모순 확인 대상. 네이버 price(원)만 1만으로 나누고 직방 deposit(만원)은 유지. 전세 표기·양쪽 예산 경계를 확인하며 직방 월세액 충돌은 보류한다. 원행은 `original`, 비교액은 `deposit_man`. |
 | `매물재방문비교` | 재방문 때 `기존`, `현재`: URL을 id로, price를 같은 단위·거래 형식으로 정리한 목록 | `items.status`: new/changed/unchanged/needs_recheck/rejected/conflict. 검색에 안 잡힌 매물은 needs_recheck이고 gone이 아니다. 거절 매물은 재보고 제외, 동일 id의 현재 행이 여럿이면 conflict. |
@@ -250,7 +250,7 @@ return {collection:$수집,candidates:$선별}
 ## 출처
 ```
 
-**저장 순서**: ①`db/regions` upsert + `rotation` 갱신 ②심층을 썼으면 `_coverage_ledger.json` append(`list_limits`) ②b 가설을 건드렸으면 `_thesis.md`(옛 문단은 아카이브로) ③md 저장 ④`보고서HTML`로 공유창고 등재 — 실행 후 `links`·`tables`·`dropped_lines`를 읽고 **links가 매물+출처 건수보다 적으면 발행하지 않는다**(`drop_lines`는 리스트) ⑤`[self:notify_user]` 절대경로 + TL;DR.
+**저장 순서**: ①`db/regions` upsert + `rotation` 갱신 ②심층을 썼으면 `_coverage_ledger.json` append(`list_limits`) ②b 가설을 건드렸으면 `_thesis.md`(옛 문단은 아카이브로) ③md 저장 ④`보고서HTML`로 공유창고 등재 — 실행 후 `links`·`tables`·`dropped_lines`를 읽고 **links가 매물+출처 건수보다 적으면 발행하지 않는다**(`drop_lines`는 리스트). 변환·렌더·화면 검수를 한 번에 하려면 관용구 `보고서HTML검수`{원본, 출력(절대경로), 제목, 부제, 뷰포트}가 같은 `links`·`tables`·`dropped_lines`와 뷰포트별 `reviews`를 돌려준다(09-26 — 4083에서 손으로 7회 돌던 고리) ⑤`[self:notify_user]` 절대경로 + TL;DR.
 
 ### 5-1. 순회 불가 로그
 소스 장애로 그날 순회를 못 한 경우에만 `[self:ledger]{path: "outputs/housing_reports/_scan_log.json", op: "append", item: {date: "YYYY-MM-DD", reason: "...", resume: "같은 지역"}, max_items: 60}`. 커서는 전진시키지 않는다.

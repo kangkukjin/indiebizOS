@@ -206,9 +206,15 @@ def op_select(tool_input):
             rows = rows[:max(0, int(limit))]
         if fields:
             rows = [{k: _key_value(r, k) for k in fields} for r in rows]
-        # 봉투 규모 불변식: total 은 where 를 통과한 모집단, limit 으로 덜 냈으면 표본
-        return {"success": True, "op": "select", "path": str(path), "count": len(rows),
-                "total": total, "truncated": total > len(rows), "items": rows}
+        # 봉투 규모 불변식: total 은 where 를 통과한 모집단, limit 으로 덜 냈으면 표본.
+        # 표본은 호출자가 고른 *선택 범위*다 — 범위를 적지 않으면 IBL 봉투 해석기가 원천 절단(PARTIAL_SOURCE)으로
+        # 판정해 `limit:2` 가 "도구의 원천 결과가 불완전합니다" 로 거절됐다(2026-09-26 4083 실측, 한메일 4079 와 같은 부류).
+        out = {"success": True, "op": "select", "path": str(path), "count": len(rows),
+               "total": total, "truncated": total > len(rows), "items": rows}
+        if out["truncated"]:
+            out["truncations"] = [{"scope": "selection", "unit": "rows", "retained": len(rows),
+                                   "total": total, "parameter": "limit"}]
+        return out
     except (OSError, ValueError, TypeError, _WhereError) as exc:
         return _fail(exc)
 

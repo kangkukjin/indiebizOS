@@ -8,7 +8,8 @@
 
 | 이름 | 원문 | 역할 |
 |---|---|---|
-| 부동산준비읽기 | `data/idioms/housing_prepare.ibl` | 설정·순회 원장·연구 노트·최신 보고서·선택 지역 DB 읽기 |
+| 부동산준비읽기 | `data/idioms/housing_prepare.ibl` | 설정·순회 원장·연구 노트·최신 보고서·선택 지역 DB 읽기 — 09-26 개정: 본문 대신 요약·머리·경로(4083에서 4만 6천 자 반환을 read_result 로 되읽던 뿌리) |
+| 보고서HTML검수 | `data/idioms/report_html_qa.ibl` | md→HTML 변환·뷰포트 렌더·화면 검수를 한 호출로(09-26, 4083의 손 QA 고리 7회) |
 | 부동산기본수집 | `data/idioms/housing_collect.ibl` | 호가 3갈래·실거래 2갈래를 병렬 수집하고 실패·원문 보존 |
 | 전세예산추리기 | `data/idioms/housing_filter.ibl` | 원/만원 단위 구분, 전세·예산 양끝 확인, 누락·모순 보류 |
 | 매물재방문비교 | `data/idioms/housing_compare.ibl` | URL별 가격 변동·재확인·거절·충돌 분류 |

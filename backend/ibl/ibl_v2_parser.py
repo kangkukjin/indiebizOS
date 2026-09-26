@@ -30,11 +30,25 @@ def edition_of(source, requested=None):
         raise Fault(code, message, kind="compile") from exc
 
 
+# 줄 머리에 오면 앞 식의 계속으로 읽는 연산자(언어 개정 2026-09-26, 사용자 판정). 4083 실측: 여러 줄 병렬
+# `A\n& B\n& C` 가 SYNTAX 로 거절됐다 — 문장을 시작할 수 없는 연산자이므로 줄바꿈이 분리자일 수 없다.
+CONTINUATION = {"&", ">>", "??"}
+
+
 class Parser:
     def __init__(self, source, offset=0):
         self.source = source
-        self.tokens = [Token(m[0], m.start() + offset, m.end() + offset, m.lastgroup)
-                       for m in TOKEN.finditer(source) if m.lastgroup not in ("space", "comment")]
+        raw = [Token(m[0], m.start() + offset, m.end() + offset, m.lastgroup)
+               for m in TOKEN.finditer(source) if m.lastgroup not in ("space", "comment")]
+        self.tokens = []
+        for idx, tok in enumerate(raw):
+            if tok.text == "\n":
+                j = idx + 1
+                while j < len(raw) and raw[j].text == "\n":
+                    j += 1
+                if j < len(raw) and raw[j].kind == "op" and raw[j].text in CONTINUATION:
+                    continue
+            self.tokens.append(tok)
         self.tokens.append(Token("<eof>", len(source) + offset, len(source) + offset))
         self.i = 0
 

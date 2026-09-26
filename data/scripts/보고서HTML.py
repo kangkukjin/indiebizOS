@@ -54,7 +54,12 @@ body{background:#f6f7f9}
 def _repo_path(raw, kind):
     if not raw:
         raise ValueError(f"{kind} 는 필수입니다.")
-    path = Path(str(raw))
+    raw = str(raw)
+    if raw.startswith("~workspace/"):
+        # IBL 의 저장소 상대 접두(self:read·self:ledger 와 같은 규약). 4083 후속 실측: 관용구가 ~workspace/ 경로를
+        # 그대로 넘기자 "src 파일이 없습니다: …/indiebizOS/~workspace/…" 로 실패했다.
+        raw = raw[len("~workspace/"):]
+    path = Path(raw)
     if not path.is_absolute():
         path = _ROOT / path
     path = path.resolve()

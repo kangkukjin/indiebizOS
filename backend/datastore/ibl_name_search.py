@@ -33,7 +33,9 @@ def search_aliased(db, query: str, top_k: int = 5, alpha: float = None,
         rows = conn.execute(
             """SELECT id, intent, ibl_code, nodes, category, difficulty, source, success_count, fail_count,
                       avg_ms, avg_tokens, COALESCE(topic,'') AS topic, COALESCE(alias,'') AS alias,
-                      signature, COALESCE(returns,'') AS returns
+                      signature, COALESCE(returns,'') AS returns,
+                      COALESCE(returns_observed,'') AS returns_observed,
+                      COALESCE(provenance,'{}') AS provenance
                FROM ibl_examples WHERE COALESCE(alias,'') != ''""").fetchall()
     metas = {int(r["id"]): dict(r) for r in rows}
     if not metas:
@@ -99,7 +101,8 @@ def search_aliased(db, query: str, top_k: int = 5, alpha: float = None,
             avg_ms=round(float(meta["avg_ms"]), 0) if (meta["avg_ms"] or -1) >= 0 else -1.0,
             avg_tokens=round(float(meta["avg_tokens"]), 0) if (meta["avg_tokens"] or -1) >= 0 else -1.0,
             topic=meta["topic"] or "", alias=meta["alias"] or "", signature=meta.get("signature"),
-            returns=meta.get("returns") or ""))
+            returns=meta.get("returns") or "", returns_observed=meta.get("returns_observed") or "",
+            provenance=meta.get("provenance") or "{}"))
         if len(results) >= top_k:
             break
     return results
@@ -162,7 +165,7 @@ def find_phrase_by_alias(db, name: str, edition: int = 1) -> Optional[Dict]:
             # 실행 이력·우회 횟수도 준다(2026-09-07) — 증류의 덮어쓰기 판정이 '돈 적 있는가'를 여기서 묻는다
             "COALESCE(success_count,0) AS success_count, COALESCE(fail_count,0) AS fail_count, "
             "COALESCE(bypass_count,0) AS bypass_count "
-            "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC",
+            "FROM ibl_examples WHERE alias = ? ORDER BY updated_at DESC, id DESC",
             (name.strip(),)).fetchall()
     from ibl_edition import source_edition
     return next((dict(r) for r in row if source_edition(r["ibl_code"]) == edition), None)

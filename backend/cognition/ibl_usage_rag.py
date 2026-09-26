@@ -283,8 +283,8 @@ class IBLUsageRAG:
         hits = [r for r in _own_only(res or []) if r.score >= self.PHRASE_MIN_SCORE]
         # 코퍼스 심사 판정 hold·quarantine 인 이름은 제시하지 않는다(2026-09-26) — 용례 채널의 exclusion_reason 과
         # 같은 원장이다. 판본 1(legacy_source)은 다리로 부를 수 있으니 이름은 남긴다.
-        from corpus_policy import exclusion_reason
-        hits = [r for r in hits if exclusion_reason(r) not in ("review_hold", "review_quarantine")]
+        from corpus_policy import callable_exclusion_reason
+        hits = [r for r in hits if not callable_exclusion_reason(r)]
         fresh = [r for r in hits if (getattr(r, "alias", "") or "") not in exposed]
         return fresh[:k], [r for r in hits if (getattr(r, "alias", "") or "") in exposed]
 
@@ -384,6 +384,10 @@ class IBLUsageRAG:
             except Exception:
                 names, known = [], False
             attrs = f'kind="phrase" intent="{_xml_attr(ex.intent)}" score="{ex.score}" sentences="{len(sents)}" name="{_xml_attr(alias)}"'
+            from corpus_policy import applicability_note
+            condition = applicability_note(getattr(ex, 'provenance', '{}'))
+            if condition:
+                attrs += f' applicability="{_xml_attr(condition)}"'
             edition = source_edition(ex.ibl_code)
             attrs += f' edition="{edition}"'
             if known and names:
@@ -394,11 +398,10 @@ class IBLUsageRAG:
                 attrs += f' topic="{_xml_attr(ex.topic)}"'
             # 이름 먼저(2026-09-05 사용자 판정) — 본문(`[def:]`)은 싣지 않는다. 보이면 베낀다.
             if known:
-                from ibl_returns_observed import returns_display
-                _ret = ('Record' if edition == 1
-                        else returns_display(getattr(ex, "returns", "") or "", getattr(ex, "returns_observed", "") or ""))
-                body = (f"[fn:{alias}]{{" + ", ".join(f'{s}: "…"' for s in names) + "}"
-                        + (f" → {_ret}" if _ret else ""))
+                from hippo_tree import phrase_call_line
+                body = phrase_call_line(alias, ex.ibl_code, getattr(ex, "returns", "") or "",
+                                        getattr(ex, "signature", None),
+                                        observed=getattr(ex, "returns_observed", "") or "", call_only=True)
             else:
                 body = (f"[fn:{alias}]{{…}} — 서명 미상, 부르기 전에 "
                         f"[self:memory]{{op: \"recall\", store: \"실행\", expand: \"{alias}\"}} 로 인자를 확인")

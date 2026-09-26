@@ -58,13 +58,16 @@ def returned_shape(value):
 
 class Runtime:
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
-                 recordings=None, replay=False, journal=None, reusable=None, reuse_run=None):
+                 recordings=None, replay=False, journal=None, reusable=None, reuse_run=None,
+                 input_evidence=None):
         self.journal = journal
         # 편집한 프로그램이 앞 실행(reuse_run)의 읽기 영수증을 액션·인자·구현 지문으로 재사용한다.
         # 프로그램 지문은 키에 없다 — 함수 하나를 고쳐도 검증된 수집 결과가 살아남는 통로(2026-09-26).
         self.reusable, self.reuse_run, self.reused_calls = dict(reusable or {}), reuse_run, 0
         self.plan = plan
         self.inputs = copy.deepcopy(inputs or {})
+        self.input_evidence = copy.deepcopy(input_evidence or {})
+        self.reuse_invalidated = False
         self.cancel_check = cancel_check
         self.budget = budget or Budget()
         self.trace, self.recordings = [], []
@@ -560,13 +563,25 @@ class Runtime:
             return value
         request = {"action": key, "args": pack(request_value(args.value)), "plan": self.plan.fingerprint}
         request_hash = digest(request)
-        # 재사용 키: 프로그램 지문 없이 액션·인자·도구 구현만 — 같은 요청이면 다른 프로그램에서도 같은 값이다.
+        # The whole program may change, but the selected call contract and its
+        # dependency snapshot must still describe the same value/effect boundary.
         reuse_key = digest({"action": key, "args": request["args"],
-                            "implementation": spec.contract.get("implementation_fingerprint")})
+                            "contract": contract,
+                            "dependency": node.data.get("dependency_snapshot"),
+                            "semantics": {k: self.plan.dependencies[k]
+                                          for k in ("core", "edition", "semantics")}})
         eid = self.event(node, "invoke", args.evidence, action=key,
                          effects=contract["effects"], request_hash=request_hash)
         tool_evidence = {}
         external = contract["effects"] != ["pure"]
+        read_only = (contract["effects"] == ["read_external"] or
+                     (contract["effects"] == ["unknown"] and spec.reusable is not None
+                      and spec.reusable(args.value)))
+        # A write/opaque/model call can change the state read by any later
+        # external leaf. Reuse remains available before that boundary only.
+        if external and not read_only:
+            with self.lock:
+                self.reuse_invalidated = True
 
         def failed(error):
             # A failed external leaf is a missing source even when a surrounding
@@ -591,9 +606,7 @@ class Runtime:
             if receipt is None:
                 raise Fault("REPLAY_MISSING", "이 입력·정의의 실행 기록이 없습니다. 외부 호출하지 않습니다.", node, kind="protocol")
             source = "replay"
-        if receipt is None and external and self.reusable and (
-                contract["effects"] == ["read_external"]
-                or (contract["effects"] == ["unknown"] and spec.reusable is not None and spec.reusable(args.value))):
+        if receipt is None and external and self.reusable and read_only and not self.reuse_invalidated:
             # 선언된 읽기 효과, 또는 미상 효과 어휘의 부작용 해소 규칙이 '없음'인 op 만 — 쓰기·모델 호출은 언제나
             # 다시 실행한다. 실패 영수증도 재사용하지 않는다.
             hit = self.reusable.get(reuse_key)
@@ -606,6 +619,7 @@ class Runtime:
             self.event(node, "receipt_reused", [eid], call_id=call_id, source=source,
                        **({"run_id": self.reuse_run} if source == "reuse" else {}))
             if source == "reuse":
+                receipt = {**receipt, "request_hash": request_hash}
                 with self.lock:
                     self.reused_calls += 1
                 if self.journal:
@@ -618,6 +632,7 @@ class Runtime:
                                  partial=unpack(receipt["partial"]), details=error.get("details"))
                 raise failed(restored)
             value = unpack(receipt["value"])
+            guard(value, contract["result"], f"{key} 반환")
             tool_evidence = receipt.get("evidence", {})
         else:
             try:
@@ -657,7 +672,16 @@ class Runtime:
                 pack(value)
                 if not compatible(infer(value), self.plan.input_types[key]):
                     raise Fault("INPUT_TYPE", f"컴파일 시 입력 타입과 다릅니다: {key}", kind="protocol")
-            result = self.frame(self.plan.root, {k: Binding(v) for k, v in self.inputs.items()})
+            env = {}
+            for key, value in self.inputs.items():
+                note = self.input_evidence.get(key)
+                roots = frozenset()
+                if note:
+                    eid = self.event(self.plan.root, "input_ref", origin=note,
+                                     incomplete=(note.get("evidence") or {}).get("incomplete") is True)
+                    roots = frozenset({eid})
+                env[key] = Binding(value, roots)
+            result = self.frame(self.plan.root, env)
             wire = pack(result.value)
             out = {"success": True, "value": projection(result.value),
                    "value_wire": {"protocol": "ibl-value/1", "data": wire}}

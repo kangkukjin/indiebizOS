@@ -645,7 +645,18 @@ def idioms_map(allowed: Optional[Set[str]]) -> str:
     import time
     from ibl_parser_blocks import _FN_RESERVED_NAMES
     from vocabulary_state import revision
-    key = (tuple(sorted(allowed)) if allowed is not None else None, revision())
+    from runtime_utils import get_base_path
+    db_path = get_base_path() / "data" / "ibl_usage.db"
+    # Definition edits, review holds and deletions must expire the same cached
+    # names that search resolves freshly. Include WAL writes before checkpoint.
+    stamps = []
+    for path in (db_path, db_path.with_name(db_path.name + '-wal')):
+        try:
+            stat = path.stat()
+            stamps.append((stat.st_mtime_ns, stat.st_size))
+        except OSError:
+            stamps.append(None)
+    key = (tuple(sorted(allowed)) if allowed is not None else None, revision(), tuple(stamps))
     if _idioms_cache["text"] is not None and time.time() - _idioms_cache["t"] < 300 and _idioms_cache["key"] == key:
         return _idioms_cache["text"]
     text = ""
@@ -761,17 +772,21 @@ def _current_idiom_rows(conn, rows, returns_sql, signature_sql):
     columns = {r[1] for r in conn.execute('PRAGMA table_info(ibl_examples)')}
     order = 'updated_at DESC, rowid DESC' if 'updated_at' in columns else 'rowid DESC'
     observed_sql = "COALESCE(returns_observed,'')" if 'returns_observed' in columns else "''"
+    provenance_sql = "COALESCE(provenance,'{}')" if 'provenance' in columns else "'{}'"
     from ibl_returns_observed import returns_display
+    from corpus_policy import callable_exclusion_reason
     for row in rows:
         name = row[5]
         if name in seen:
             continue
         seen.add(name)
         candidates = conn.execute(
-            f"SELECT intent,ibl_code,success_count,fail_count,COALESCE(topic,''),alias,{returns_sql},{signature_sql},{observed_sql} "
+            f"SELECT intent,ibl_code,success_count,fail_count,COALESCE(topic,''),alias,{returns_sql},{signature_sql},{observed_sql},{provenance_sql} "
             f"FROM ibl_examples WHERE alias=? ORDER BY {order}", (name,)).fetchall()
         current = next((r for r in candidates if source_edition(r[1]) == 2), None)
         selected = list(current or (candidates[0] if candidates else tuple(row) + ('',)))
+        if candidates and callable_exclusion_reason({'ibl_code': selected[1], 'provenance': selected[9]}):
+            continue
         if current is None:
             selected[6] = 'Record'  # The current legacy-function adapter returns the complete envelope.
         else:

@@ -3,7 +3,7 @@ from ibl_v2_ir import Fault, projection
 from ibl_v2_parser import edition_of
 
 
-def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
+def handle_request(request, project_path=".", agent_id=None, cancel_check=None, *, input_evidence=None):
     source = request.get("code") or request.get("pipeline") or ""
     try:
         if edition_of(source, request.get("edition")) != 2:
@@ -36,12 +36,13 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None):
         from ibl_run_journal import Journal, journal_root, identity, reusable_receipts
         root = journal_root(project_path)
         reusable = reusable_receipts(root, reuse["run_id"]) if reuse else None
-        with Journal(root, identity(plan, inputs, project_path, agent_id), request.get("resume")) as journal:
+        with Journal(root, identity(plan, inputs, project_path, agent_id, input_evidence=input_evidence), request.get("resume")) as journal:
             journal.announce(plan.fingerprint)
             from ibl_edition import source_context
             with source_context(2):
                 result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal,
-                                 reusable=reusable, reuse_run=reuse["run_id"] if reuse else None).run()
+                                 reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
+                                 input_evidence=input_evidence).run()
         try:
             from ibl_v2_learning import record_functions
             record_functions(plan, result)

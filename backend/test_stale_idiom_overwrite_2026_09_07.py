@@ -54,6 +54,7 @@ class _FakeDB:
             success_count INTEGER DEFAULT 0, fail_count INTEGER DEFAULT 0, avg_ms REAL DEFAULT -1.0,
             avg_tokens REAL DEFAULT -1.0, tags TEXT DEFAULT '', created_at TEXT, updated_at TEXT,
             topic TEXT DEFAULT '', alias TEXT DEFAULT '', returns TEXT DEFAULT '', signature TEXT,
+            returns_observed TEXT DEFAULT '', provenance TEXT DEFAULT '',
             bypass_count INTEGER DEFAULT 0)""")
         conn.commit()
         conn.close()

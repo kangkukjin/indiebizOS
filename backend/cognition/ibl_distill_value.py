@@ -1,6 +1,7 @@
 """경험 증류의 비용·효용 관문. 기존 한 번의 반성 호출만 사용한다."""
 import hashlib
 import json
+from corpus_policy import applicability_note  # shared recall/definition-card projection
 
 MAX_INPUT_CHARS = 24000
 
@@ -88,18 +89,6 @@ def value_reason(reply):
     if not isinstance(reply.get('source_ids'), list):
         return '실행 원문 번호 없음 — 코드 생성 응답은 저장하지 않음'
     return None
-
-
-def applicability_note(raw):
-    """회상에는 사적 출처 대신 짧은 적용 조건만 싣는다."""
-    try:
-        data = json.loads(raw) if isinstance(raw, str) else raw
-        condition = data.get('applicability')
-        if isinstance(condition, str):
-            return condition[:240] + ('…(조건 발췌)' if len(condition) > 240 else '')
-    except (ValueError, TypeError, AttributeError):
-        pass
-    return ''
 
 
 def source_rows(calls):

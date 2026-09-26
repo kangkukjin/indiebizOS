@@ -125,6 +125,7 @@ def resolve_input_refs(inputs):
                 resolved = _walk(stored, path)
             out[name] = resolved
             notes.append({"name": name, "id": ref_id, "path": path,
+                          "evidence": input_ref_evidence(stored),
                           "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
         elif is_ref(value):
             resolved, err = resolve_ref(value)
@@ -132,6 +133,7 @@ def resolve_input_refs(inputs):
                 raise ValueError(f"inputs.{name}: {err}")
             out[name] = resolved
             notes.append({"name": name, "ref": value["ref"].get("path"),
+                          "evidence": input_ref_evidence(resolved),
                           "chars": len(json.dumps(resolved, ensure_ascii=False, default=str))})
         else:
             out[name] = value
@@ -143,6 +145,27 @@ def resolve_input_refs(inputs):
         except Exception:
             pass
     return out, notes
+
+
+def input_ref_evidence(stored):
+    """Preserve source status at the reference boundary, never infer it from business values."""
+    from ibl_v2_ir import digest
+    out = {"fingerprint": digest(stored)}
+    if not isinstance(stored, dict):
+        return out
+    if stored.get("edition") == 2:
+        # Only the execution envelope owns these fields. A selected value's
+        # `error` or `source_complete` key is ordinary data.
+        out["incomplete"] = stored.get("source_complete") is False
+        out["execution_success"] = stored.get("success")
+        out["run_id"] = (stored.get("resume") or {}).get("run_id")
+    else:
+        from ibl_honesty import completion_evidence, truncation_evidence
+        incomplete = completion_evidence(stored)
+        truncation = truncation_evidence(stored)
+        out["incomplete"] = bool(incomplete or any(
+            t.get("scope") != "selection" for t in truncation.get("truncations", [])))
+    return out
 
 
 def _read_reference(ref, result):
@@ -361,6 +384,7 @@ def describe_actions(names, allowed_nodes, edition=None):
     allowed = resolve_allowed_nodes(allowed_nodes)
     nodes = load_nodes_raw().get("nodes", {})
     answer = []
+    runtime_registry = None
     for name in dict.fromkeys(names):
         node, action = name.split(":", 1)
         if node == "fn" and edition == 2:
@@ -385,15 +409,20 @@ def describe_actions(names, allowed_nodes, edition=None):
             answer.append({"action": name, "error": "사용 가능한 액션이 아닙니다"})
         else:
             if edition == 2:
-                from ibl_v2_contracts import handler_contract
-                contract = spec.get("callable_contract")
-                if contract:
-                    # Current authoring must not receive contradictory legacy params/flow.
-                    spec = {**{k: spec[k] for k in ("description", "guides", "group", "runs_on") if k in spec},
-                            "callable_contract": contract,
-                            "operations": (spec.get("ops") or {}).get("values", {})}
-                else:
-                    spec = {**spec, "callable_contract": handler_contract(node, action, spec)}
+                from ibl_v2_adapters import load_registry
+                if runtime_registry is None:
+                    runtime_registry = load_registry()
+                adapter = runtime_registry.get(name)
+                if adapter is None:
+                    answer.append({"action": name, "error": "현재 실행 계약이 없는 액션입니다"})
+                    continue
+                # Inspection consumes the same schema-resolved contract as the
+                # compiler. Never independently reconstruct legacy parameters.
+                contract = {k: v for k, v in adapter.contract.items()
+                            if k not in {"analysis", "implementation_fingerprint"}}
+                spec = {**{k: spec[k] for k in ("description", "guides", "group", "runs_on") if k in spec},
+                        "callable_contract": contract,
+                        "operations": (spec.get("ops") or {}).get("values", {})}
                 observed = observed_returns(name)
                 if observed:
                     spec = {**spec, "observed_returns": observed,

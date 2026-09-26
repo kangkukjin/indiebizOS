@@ -200,6 +200,8 @@ class Compiler:
                                "call": span(self.source, call) if call else None,
                                "definition": span(self.source, node)})
         old_returns, self.returns = self.returns, []
+        outer_effects, self.effects = self.effects, set()
+        outer_actions, self.used_actions = self.used_actions, set()
         params = node.data["params"]
         env = {}
         for name, default in params.items():
@@ -214,6 +216,8 @@ class Compiler:
         result = self.sequence(node.data["body"], env, self.function_scopes[sid])
         for t in self.returns:
             result = t if result == UNIT_T else join(result, t)
+        effects, actions = self.effects, self.used_actions
+        self.effects, self.used_actions = outer_effects | effects, outer_actions | actions
         self.returns = old_returns
         self.stack.pop()
         self.call_path.pop()
@@ -222,7 +226,13 @@ class Compiler:
         summary = self.function_contracts.setdefault(sid, {
             'name': node.data['name'], 'params': parameter_types.copy(),
             'required': [k for k,v in params.items() if v is None],
+            'pipe_input': next(iter(params), None),
+            'default_expressions': {k: self.source[v.start:v.end] for k, v in params.items() if v is not None},
+            'effects': [], 'actions': [],
+            'source_hash': digest(self.source[node.start:node.end]),
             'result': str(result), 'specializations': [], 'specializations_omitted': 0})
+        summary['effects'] = sorted((set(summary['effects']) | effects) - {'pure'}) or ['pure']
+        summary['actions'] = sorted(set(summary['actions']) | actions)
         for key, value in parameter_types.items():
             if summary['params'][key] != value:
                 summary['params'][key] = 'Unknown'

@@ -159,12 +159,13 @@ class Journal:
             return status
 
 
-def identity(plan, inputs, project_path, agent_id):
+def identity(plan, inputs, project_path, agent_id, *, input_evidence=None):
     import principal
     import member_runtime
     from thread_context import get_allowed_nodes
     p, state = principal.current(), member_runtime.current() or {}
     return digest({"protocol": "ibl-resume/1", "plan": plan.fingerprint, "inputs": pack(inputs),
+                   **({"input_evidence": input_evidence} if input_evidence else {}),
                    "project": str(Path(project_path).resolve()), "agent": agent_id,
                    "principal": [p.key(), p.device_id, p.level], "allowed": get_allowed_nodes(),
                    "member_task": state.get("local_task_id"), "member_policy": state.get("policy")})

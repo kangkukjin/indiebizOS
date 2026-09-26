@@ -10,6 +10,18 @@ from collections import Counter
 from ibl_edition import source_edition
 
 
+def applicability_note(raw):
+    """Shared compact applicability projection; private provenance stays in storage."""
+    try:
+        data = json.loads(raw) if isinstance(raw, str) else raw
+        condition = data.get('applicability')
+        if isinstance(condition, str):
+            return condition[:240] + ('…(조건 발췌)' if len(condition) > 240 else '')
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return ''
+
+
 def field(row, key, default=None):
     if isinstance(row, dict) or hasattr(row, 'keys'):
         return row[key] if key in row.keys() else default
@@ -26,6 +38,18 @@ def exclusion_reason(row):
         return 'edition_conflict'
     if edition != 2:
         return 'legacy_source'
+    return review_exclusion_reason(row)
+
+
+def callable_exclusion_reason(row):
+    """Names may expose compatibility calls, but never held or invalid definitions."""
+    reason = exclusion_reason(row)
+    if reason == 'legacy_source':
+        reason = review_exclusion_reason(row)
+    return None if reason == 'review_compatibility' else reason
+
+
+def review_exclusion_reason(row):
     provenance = field(row, 'provenance', {}) or {}
     try:
         if isinstance(provenance, str):

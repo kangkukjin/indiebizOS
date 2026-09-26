@@ -431,7 +431,8 @@ def slot_names(code: str, signature: Any = None) -> List[str]:
     return out
 
 
-def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = None) -> str:
+def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = None,
+                     *, observed: str = "", call_only: bool = False) -> str:
     """관용구를 그대로 쓰는 호출 한 줄 — `[fn:이름]{슬롯: "…", …} → 반환` (슬롯은 실행기가 계산한 저장 서명,
     반환은 ibl_typecheck 가 계산한 `items⟨열⟩`/`prose`/`?` — 2026-09-05: 부르기 전에 무엇이 나올지 알아야 뒤 문장을 쓴다)."""
     if not alias:
@@ -440,9 +441,12 @@ def phrase_call_line(alias: str, code: str, returns: str = "", signature: Any = 
     args = ", ".join(f'{s}: "…"' for s in slots)
     from ibl_edition import source_edition
     edition = source_edition(code or "")
-    prefix = "판본 2 (execute_ibl edition:2): " if edition == 2 else ""
+    prefix = "판본 2 (execute_ibl edition:2): " if edition == 2 and not call_only else ""
     if edition == 1:
         returns = "Record"  # Current calls retain the legacy execution envelope.
+    else:
+        from ibl_returns_observed import returns_display
+        returns = returns_display(returns, observed)
     return prefix + f"[fn:{alias}]{{{args}}}" + (f" → {returns}" if returns else "")
 
 
@@ -472,11 +476,15 @@ def phrase_expand_card(r: Dict[str, Any]) -> str:
     if b:
         ran += (f" · 거부 {b}회 — 이 정의를 열어 보고 부르지 않은 실행이 {b}번. 또 베끼지 말고, 안 맞는 문장을 "
                 f"아래 [def:] 로 고쳐 부르면 그 골격이 다음 증류에서 이 이름의 새 본문이 된다")
-    call = phrase_call_line(alias, code, (r.get("returns") or "").strip(), r.get("signature"))
+    call = phrase_call_line(alias, code, (r.get("returns") or "").strip(), r.get("signature"),
+                            observed=r.get("returns_observed") or "")
+    from corpus_policy import applicability_note
+    condition = applicability_note(r.get("provenance"))
     return "\n".join([
         f"호출: {call}",
+        *([f"적용 조건: {condition}"] if condition else []),
         f"문장 {len(split_sentences(code))} · {ran}",
-        "그대로 쓰려면 위 한 줄. 아래 정의는 문장을 빼거나 더할 때만 — [def: 이름]{…} 를 프로그램에 붙여 고친 뒤 "
+        "그대로 쓰려면 위 한 줄. 아래 정의는 문장을 빼거나 더할 때만 — 해당 판본의 함수 정의를 프로그램에 붙여 고친 뒤 "
         "[fn:이름]{…} 으로 부른다. 본문을 베껴 새로 치면 이름·성공/실패 귀속이 끊기고 다음 호가 또 처음부터 조립한다.",
         phrase_def_block(alias, code),
     ])

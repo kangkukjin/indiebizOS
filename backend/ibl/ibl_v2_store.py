@@ -19,7 +19,7 @@ def definitions():
     from ibl_edition import source_edition
     db = IBLUsageDB()
     with db._get_connection() as conn:
-        for row in conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY updated_at"):
+        for row in conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY updated_at, id"):
             if source_edition(row["ibl_code"]) == 2:
                 out[row["alias"]] = row["ibl_code"]
     for path in sorted(_get_workflows_path().glob("*.yaml")):
@@ -105,6 +105,8 @@ def describe(name, allowed_nodes=None):
     node = next((n for n in plan.root.data['statements'] if n.kind == 'def' and n.data['name'] == name), None)
     if node is None or plan.issues:
         return {'error':'함수 계약 검사 실패', 'issues':plan.issues}
-    return {'callable_contract': {**plan.function_contracts[node.id], 'effects': report['effects']},
-            'status': report['status'], 'guards': report['guards'], 'plan_hash': plan.fingerprint,
+    return {'callable_contract': plan.function_contracts[node.id],
+            'status': report['status'], 'guards': report['guards'],
+            'guards_total': report['guards_total'], 'guards_inner': report['guards_inner'],
+            'plan_hash': plan.fingerprint,
             'source_hash': report['source_hash'], 'warnings': report['warnings']}

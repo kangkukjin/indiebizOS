@@ -35,7 +35,7 @@ def legacy_functions():
     import yaml
     assets = {}
     with IBLUsageDB()._get_connection() as conn:
-        for row in conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY updated_at"):
+        for row in conn.execute("SELECT alias, ibl_code FROM ibl_examples WHERE COALESCE(alias,'') != '' ORDER BY updated_at, id"):
             if source_edition(row["ibl_code"]) == 1:
                 assets[row["alias"]] = {"code": row["ibl_code"], "kind": "idiom"}
     for path in sorted(_get_workflows_path().glob("*.yaml")):

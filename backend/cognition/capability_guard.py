@@ -17,15 +17,16 @@ CANDIDATE = re.compile(
     r"(?:지원|접근|실행|사용|읽기|보기)[^\n.!?]{0,20}(?:안\s*(?:됩|돼|되)|불가능|지\s*않)|"
     r"\b(?:cannot|can't|unable to|no access|not supported|don't have|do not have)\b)", re.I)
 
-# 이미 한 답변의 해석을 정정하는 구문은 현재 수단 부족 주장이 아니다.
-# 문장 전체를 면제하지 않고 이 구문과 겹친 후보만 제외해 별도 능력 부정을 보존한다.
-_RETROSPECTIVE = re.compile(
-    r"(?:문맥|맥락|핵심|취지)[을를]\s*(?:충분히\s*|제대로\s*)?"
-    r"(?:반영|파악|이해|잡|짚)(?:하지|지)\s*못했습니다")
+# 완료한 시도의 부정은 결과 관측이지 현재 수단 부재의 단정이 아니다.
+# 주제별 예외나 문장 전체 면제 대신 해당 부정 표현의 과거형만 제외한다.
+# 같은 문장의 '도구가 없어서' / '지금도 할 수 없다'는 별도 후보로 남는다.
+_COMPLETED_NEGATION = re.compile(
+    r"못\s*(?:했|하였|봤|됐|[가-힣]{1,10}?[았었였])|"
+    r"수\s*(?:는|가|도|조차)?\s*없었")
 
 
 def candidate_matches(response):
-    ignored = [match.span() for match in _RETROSPECTIVE.finditer(response)]
+    ignored = [match.span() for match in _COMPLETED_NEGATION.finditer(response)]
     return [match for match in CANDIDATE.finditer(response)
             if not any(start <= match.start() < end for start, end in ignored)]
 
@@ -38,6 +39,9 @@ unknown(확인되지 않음을 정직하게 표명), meta 네 가지다.
 실행 실패 한 번이나 사전 검색 결과 없음은 일반적인 능력 부재를 증명하지 않는다.
 실행자가 조회/연결/열람을 하지 않았으면 '실패했다'도 지어낸 근거다.
 일반적인 사실·진단·예측의 불확실성은 자기 도구/수단 부족이 아니다. 해당 주장이 없으면 claims는 빈 목록이다.
+과거 답변의 정정·시도의 실패·검색 결과 없음·잔여석 등 외부 사실의 미확인은 능력 부정이 아니다.
+이 관측이 참인지 심사하거나 기능 목록으로 검증하지 마라. '확인할 수 없다'도 외부 사실의 불확실성만
+말하면 제외한다. 현재 도구·권한·지원의 부족 때문에 요청을 수행할 수 없다고 주장한 부분만 선택한다.
 JSON 객체 하나만 출력: {"claims":[{"candidate_id":"candidates에서 선택한 id",
 "target":"주장의 대상", "status":"unsupported|limited|unknown|meta",
 "evidence_ids":["e0"], "lookup_terms":["대상과 관련된 검색어", "영문 동의어"]}]}.
@@ -150,6 +154,10 @@ def parse(raw, response, evidence, candidates=()):
             raise ValueError("claim does not quote response")
         if candidate_id is not None and quote not in spans[candidate_id]:
             raise ValueError("claim outside candidate")
+        # quote 보충 경로도 동일 후보 경계를 따른다. 모델이 주변 과거 결과를 다시
+        # 지명해도 현재 능력 부정으로 승격하지 않는다.
+        if not candidate_matches(quote):
+            continue
         if row["status"] == "limited" and (not row.get("evidence_ids")
                 or any(i not in ids for i in row["evidence_ids"])):
             raise ValueError("limitation has no observed evidence")

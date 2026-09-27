@@ -104,7 +104,7 @@ def test_retrospective_critique_needs_no_capability_judge():
     assert not guard.candidate_matches(text)
     refusal = '저는 눈이 없어서 이미지를 볼 수 없습니다.'
     assert guard.candidate_matches(text + ' ' + refusal)
-    assert guard.candidate_matches('현재 파일을 읽지 못했습니다.')
+    assert not guard.candidate_matches('현재 파일을 읽지 못했습니다.')  # 시도 결과, 능력 부재 단정 아님
     assert guard.candidate_matches('이미지를 볼 수는 없습니다.')
     assert guard.candidate_matches('이 파일을 열 수가 없습니다.')
     assert not guard.CANDIDATE.search('수업을 마치면 문제가 없습니다.')

@@ -81,7 +81,7 @@ def test_normal_answer_costs_no_calls():
 
 
 @pytest.mark.parametrize("text,status,trace,refs", [
-    (META, "meta", [], []), (UNKNOWN, "unknown", [], []),
+    (META, "meta", [], []),
     (LIMITED, "limited", [{"name": "read", "input": {"path": "/a"},
                            "result": "Permission denied", "is_error": True}], ["e0"]),
 ])
@@ -120,7 +120,7 @@ def test_ffmpeg_overgeneralization_is_replaced_not_appended(monkeypatch):
 
     _, result = drain(guard.adopt(NS(ai=NS()), "자막을 넣어줘", FFMPEG, [], resume=resume))
     assert result == UNKNOWN and FFMPEG not in result
-    assert (guard.judgments, guard.lookups, guard.resumes) == (2, 1, 1)
+    assert (guard.judgments, guard.lookups, guard.resumes) == (1, 1, 1)
 
 
 def test_second_unsupported_response_ends_without_third_model_call(monkeypatch):

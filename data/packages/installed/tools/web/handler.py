@@ -791,7 +791,7 @@ _OP_DISPATCHERS = {"http_probe": {"head": _http_head, "body": _http_body},
 _OP_DEFAULTS = {"http_probe": "head", "crawl_website": "content"}
 
 
-def execute(tool_input: dict, context):
+def _execute(tool_input: dict, context):
     """IndieBiz OS에서 도구를 호출할 때 실행되는 메인 핸들러 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
     project_path = context.project_path
@@ -1064,3 +1064,15 @@ def execute(tool_input: dict, context):
             "success": False,
             "error": f"Unknown tool: {tool_name}"
         })
+
+
+def execute(tool_input: dict, context):
+    result = _execute(tool_input, context)
+    if context.tool_name == "search":
+        notes = load_module("web_search_io").query_notes(tool_input)
+        if notes:
+            value = json.loads(result) if isinstance(result, str) else result
+            if isinstance(value, dict):
+                value = {**value, "query_notes": notes}
+                return format_json(value) if isinstance(result, str) else value
+    return result

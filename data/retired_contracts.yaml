@@ -25,6 +25,15 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: research-counterargument-quota
+    retired: 2026-09-28
+    reason: 조사 횟수와 반론 개수를 채우는 규칙이 논증 이해와 근거의 가치를 대체했다.
+    instead: 원래 주장과 근거의 관계를 평가하고 판단을 바꿀 불확실성에 따라 조사한다.
+    phrases:
+      - '조사 5회 이상, 영어 2회 이상'
+      - '반론·리스크·한계를 반드시 제시'
+      - '사용자 가설에 대한 반대 논거를 최소 1개 포함'
+      - 'IBL 액션을 하나씩 호출하고'
   - id: blanket-idiom-body-blame
     retired: 2026-09-28
     reason: 입력 형태 오류와 원인 미확정 실패까지 관용구 정의 결함으로 안내하고 실패 점수에 귀속했다.

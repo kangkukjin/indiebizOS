@@ -107,6 +107,12 @@ def _diagnose(status: int, final_url: str, requested_url: str, text: str,
     text = text or ''
     low = text[:4000].lower()
     title_low = (title or '').lower()
+    # HTTP 200으로 오는 클라이언트 챌린지. 주제를 설명하는 정상 기사는 제외한다.
+    if (title_low.strip() == 'client challenge'
+            and (not text.strip() or (len(text) < _SUSPICIOUS_CONTENT_LENGTH
+                 and 'a required part of this site' in low
+                 and ('couldn’t load' in low or "couldn't load" in low)))):
+        return "bot_blocked"
     if title_low and any(s in title_low for s in _CHALLENGE_TITLE_SIGNS):
         return "bot_blocked"
     if status in (403, 429, 503):

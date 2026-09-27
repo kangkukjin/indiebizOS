@@ -113,7 +113,18 @@ def resolve_input_refs(inputs):
                 else:
                     resolved, path = stored, []
             else:
-                resolved = _walk(stored, path)
+                if (isinstance(stored, dict) and stored.get("edition") == 2
+                        and path[:2] == ["diagnostic", "partial"]):
+                    wire = stored.get("partial_wire")
+                    if isinstance(wire, dict) and "data" in wire:
+                        from ibl_v2_ir import unpack
+                        resolved = _walk(unpack(wire["data"]), path[2:])
+                    elif stored.get("partial_wire_error"):
+                        raise ValueError("부분 결과의 손실 없는 값 전송이 지원되지 않습니다. 원 실행의 진단과 프로토콜을 확인하세요.")
+                    else:
+                        resolved = _walk(stored, path)
+                else:
+                    resolved = _walk(stored, path)
             out[name] = resolved
             notes.append({"name": name, "id": ref_id, "path": path,
                           "evidence": input_ref_evidence(stored),
@@ -189,6 +200,33 @@ def _read_reference(ref, result):
         value_path = {} if isinstance(wire, dict) and "data" in wire else {"path": ["value"]}
         out["input_args"] = {"입력": {"$ref": ref["id"], **value_path}}
         out["input_hint"] = "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    diagnostic = result.get("diagnostic") or {}
+    if result.get("edition") == 2 and isinstance(diagnostic, dict):
+        partial = diagnostic.get("partial")
+        details = diagnostic.get("details") or {}
+        indices = details.get("successful_indices") if isinstance(details, dict) else None
+        # 원래 가지 번호와 압축된 partial 위치는 다르다. 확인된 대응만 제공한다.
+        if (isinstance(partial, list) and isinstance(indices, list)
+                and len(indices) == len(partial)
+                and all(type(i) is int and i >= 0 for i in indices)
+                and len(set(indices)) == len(indices)):
+            reads = []
+            for position, (branch, value) in enumerate(zip(indices[:6], partial[:6])):
+                path = ["diagnostic", "partial", position]
+                read = {"id": ref["id"], "path": path, "offset": 0, "limit": DEFAULT_LIMIT}
+                entry = {"branch_index": branch, "partial_index": position, "read_args": read,
+                         "input_args": {"입력": {"$ref": ref["id"], "path": path}}}
+                if result.get("partial_wire_error"):
+                    entry.pop("input_args")
+                    entry["input_unavailable"] = "원 실행의 partial_wire_error를 확인하세요. 표시 값을 실제 값으로 대체하지 마세요."
+                if isinstance(value, dict) and isinstance(value.get("text"), str):
+                    entry["text_read_args"] = {**read, "path": path + ["text"]}
+                reads.append(entry)
+            out["partial_reads"] = reads
+            out["partial_reads_omitted"] = len(partial) - len(reads)
+            out["partial_mapping_read_args"] = {
+                "id": ref["id"], "path": ["diagnostic", "details"],
+                "offset": 0, "limit": DEFAULT_LIMIT}
     return out
 
 
@@ -292,10 +330,13 @@ def project_v2_result(result):
             out["value"], preview = preview_value(out["value"], policy["prose_chars"], ref["id"])
             if preview:
                 out["_preview"] = preview
-            # Only bounded value views opt out of the transport's default cut.
-            # Large diagnostics without a value retain their existing safeguards.
-            if len(json.dumps(out, ensure_ascii=False)) <= 2 * policy["prose_chars"]:
-                out["_display"] = {"max_chars": policy["prose_chars"]}
+        diagnostic = out.get("diagnostic")
+        if isinstance(diagnostic, dict) and diagnostic.get("has_partial"):
+            shown, preview = preview_value(diagnostic.get("partial"), policy["prose_chars"],
+                                          ref["id"], path=["diagnostic", "partial"])
+            out["diagnostic"] = {**diagnostic, "partial": shown}
+            if preview:
+                out["partial_preview"] = preview
     out["result_ref"] = _read_reference(ref, result)
     out["_hint"] = ("판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. "
                     + ("다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. "
@@ -305,6 +346,9 @@ def project_v2_result(result):
         out["images"] = [{**{k: v for k, v in image.items() if k != "b64"},
                           "base64": image["b64"]} for image in images]
         out["_hint"] += " 이미지는 별도 이미지 블록으로 첨부됩니다. base64 원문을 되읽지 마세요."
+    # 원문·복구 참조까지 붙인 표시 사본만 예산 안에 있을 때 전달 한도를 협상한다.
+    if len(raw) > policy["min_chars"] and len(json.dumps(out, ensure_ascii=False)) <= 2 * policy["prose_chars"]:
+        out["_display"] = {"max_chars": policy["prose_chars"]}
     return out
 
 

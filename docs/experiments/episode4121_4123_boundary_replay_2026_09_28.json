@@ -1,0 +1,25 @@
+{
+  "scope": "offline boundary replay, not an end-to-end model rerun",
+  "episodes": [
+    {
+      "episode": 4121,
+      "before_projected_chars": 188836,
+      "after_projected_chars": 20178,
+      "reduction_percent": 89.31,
+      "original_partial_values_equal": true,
+      "status_and_details_unchanged": true,
+      "provider_keeps_read_mapping": true
+    },
+    {
+      "episode": 4123,
+      "before_projected_chars": 60240,
+      "after_projected_chars": 19684,
+      "reduction_percent": 67.32,
+      "original_partial_values_equal": true,
+      "status_and_details_unchanged": true,
+      "provider_keeps_read_mapping": true
+    }
+  ],
+  "token_savings": null,
+  "latency_savings": null
+}

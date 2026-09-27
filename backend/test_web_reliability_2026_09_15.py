@@ -273,8 +273,16 @@ def test_hn_batch_preserves_partial_results_and_distinguishes_empty(handler, mon
 
 
 def test_hn_malformed_payload_is_failure(handler, monkeypatch):
-    monkeypatch.setattr(handler, 'load_module', lambda _: SimpleNamespace(read_json=lambda _: {'error': 'bad API'}))
-    assert not search(handler, source='hn', query='test')['success']
+    # HTTP 응답만 바꾼다. 모듈 전체를 가짜로 바꾸면 질의 진단까지 사라진다.
+    from io import BytesIO
+    def response(*args, **kwargs):
+        body = BytesIO(b'{"error": "bad API"}')
+        body.headers = {}
+        body.geturl = lambda: 'https://example.test'
+        return body
+    monkeypatch.setattr('urllib.request.urlopen', response)
+    out = search(handler, source='hn', query='test')
+    assert not out['success'] and out['items'] == [] and 'hits' in out['error']
 
 
 def test_guardian_date_survives_direct_and_joined_results(handler, monkeypatch):

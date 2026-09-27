@@ -441,6 +441,10 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 `unique/union/intersection/difference`는 순서 보존 목록 연산이며 집합 타입을 만들지 않는다.
 `zip/enumerate`의 각 행도 목록이다. `any/all`은 Bool 목록을 받으며,
 `sorted($행,"점수",true)` 또는 `sorted($행,($r)=>$r.점수)`로 키를 지정한다.
+`table:filter`는 레코드 행을 받는다. 문자열·목록 원소를 그대로 거르려면
+`table:each`의 `mode:"flat_map"`에서 조건에 따라 `[$it]` 또는 `[]`를 반환한다.
+예: `enumerate(["첫 줄","찾을 줄"]) >> [table:each]{mode:"flat_map"}{[if:contains($it[1],"찾을")]{return [$it]}; return []}`.
+행 번호와 본문을 계속 가공할 때는 `table:each`에서 `{번호:$i,내용:$it}`로 변환한 뒤 필터한다.
 `keys/values/entries`로 레코드를 열거한다. `**` 펼침은 뒤 필드 우선이고 중복 명시 키는 오류다.
 assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체의 충분성은 별도 판단이다.
 메시지와 상세 값은 실패 때만 평가한다. 큰 본문은 삼중 따옴표로 작성할 수 있지만,
@@ -456,3 +460,8 @@ assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체
 날짜·이름 등 중요한 필드가 압축되면 해당 경로만 더 읽는다. 작은 완결 결과는 그대로 온다.
 
 결과 참조 `inputs:{자료:{"$ref":"id"}}`는 `$자료` 자체가 업무 값이다. `.value`를 다시 붙이지 않는다. 오류의 `result_ref.read_args`는 진단을 우선 열고, `evidence_summary`는 내부 도구·원천 실패를 상위 실행 성공과 구분한다. 원문 가공은 참조로 수행하고 판단에 필요한 필드만 읽는다. 가이드 본문이 현재 문맥에 남아 있으면 재독하지 않는다. 변경 확인은 `read_guide`의 `if_hash`, 특정 절만 재확인할 때는 `section`을 쓴다. 본문이 문맥에서 사라졌으면 전문을 다시 읽는다.
+일반 파일에서 특정 문단을 찾을 때는 `self:grep`의 `pattern`·`context` 또는
+`self:read`의 줄 범위를 사용한다. 이미 받은 본문은 다시 읽지 않고 참조 입력으로 가공한다.
+액션의 인자가 불명확하면 `describe`의 `callable_contract`와 `target_description`을 함께 본다.
+legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_description_edition: 1`을 표시해 새 판본 조회에서 제외한다.
+실패의 `diagnostic.details`에 사용 예시·허용 값·hint가 있으면 소스 탐색 전에 이를 확인한다.

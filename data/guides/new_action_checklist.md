@@ -165,7 +165,7 @@ _OP_DEFAULTS    = { "my_action": "list" }   # op 미지정 시 폴백
         description: 액션 설명 (시스템 프롬프트에 노출 — 20~50자)
         returns: items            # ★통화 역할 (items|transform|scalar|effect) — 0.5단계, --check 강제
         group: my_group           # UI 그룹(도메인). 표시용
-        target_description: 주요 입력 설명 (UI 전용)
+        target_description: 입력 설명 (UI·describe)
         router: handler
         tool: my_action           # ← tool.json 의 name 과 일치해야 함
         implementation: 내부 동작 요약 (UI 전용)

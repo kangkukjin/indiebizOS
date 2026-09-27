@@ -5,6 +5,7 @@
       #   실행이 execute_ibl 재귀라 엔진 층에 구현이 있어야 한다(패키지가 엔진을 import 하면
       #   층 역전). 2026-08-15 언어 개정 — docs/HIGHER_ORDER_SENTENCE_DESIGN.md
       each:
+        target_description_edition: 1  # 아래 do/collect 설명은 저장된 구판 전용. 새 작성은 주 교재.
         returns: transform
         flow:   # 정적 통화 검사(2026-09-05, docs/IBL_STATIC_TYPECHECK_HANDOFF.md §2-2) — 검사기는 이 선언만 읽는다
           accepts: items

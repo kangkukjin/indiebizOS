@@ -92,10 +92,23 @@
         - 공개글
         - 링크공유
       channel_read:
+        callable_contract:
+          version: 1
+          params: {channel_type: Text, account: Text, query: Text, max_results: Number, limit: Number, since: Number, to: Text}
+          required: []
+          required_any: [[channel_type, to]]
+          exclusive: [[limit, max_results]]
+          enums: {channel_type: [email, nostr, gmail]}
+          integers: [max_results, limit, since]
+          minimum: {max_results: 1, limit: 1, since: 0}
+          result: Record
+          effects: [read_external]
+          nondeterministic: true
+          adapter: {protocol: legacy-envelope, value_path: ""}
         returns: items
         exempt: 발신 신원(agent identity) 게이트 의존 — 신원 없는 헤드리스 점검이 항상 거부돼 거짓 실패만 쌓임 (실사용은 에이전트 신원으로 정상)
         description: 채널 수신함 원시 조회/검색 (Gmail·일반 IMAP·Nostr). query 있으면 검색, 없으면 최근 수신. nostr는 릴레이를 당겨 DM 캐시도 갱신(새로고침) — 이웃별 대화 뷰는 [others:messages]가 정본.
-        target_description: "채널 타입 email/nostr(gmail은 email의 옛 별칭). 시스템 AI는 account로 계정 선택, 프로젝트 에이전트는 설정된 신원 유지. .env의 IMAP_EMAIL과 일치하는 계정은 IMAP_HOST/PORT/USERNAME/PASSWORD로 TLS 읽기 전용 INBOX 조회. query는 Gmail 계정에서 Gmail 문법, 일반 IMAP은 일반 텍스트·from:·to:·subject:·after:·before:·is:unread/read의 AND 검색만 지원(미지원 문법은 오류). 날짜 YYYY-MM-DD 또는 YYYY/MM/DD, after는 해당 날짜 포함·before는 제외. max_results 기본 10(일반 IMAP 1~100). 인증 실패 시 다른 공급자로 우회하지 않음."
+        target_description: "channel_type은 email/nostr(gmail은 email의 옛 별칭). 한메일·다음메일 등 메일 서비스 이름도 channel_type은 email이다. 최근 메일 5개: [others:channel_read]{channel_type:\"email\",max_results:5}. 시스템 AI는 account로 계정 선택, 프로젝트 에이전트는 설정된 신원 유지. .env의 IMAP_EMAIL과 일치하는 계정은 IMAP_HOST/PORT/USERNAME/PASSWORD로 TLS 읽기 전용 INBOX 조회. query는 Gmail 계정에서 Gmail 문법, 일반 IMAP은 일반 텍스트·from:·to:·subject:·after:·before:·is:unread/read의 AND 검색만 지원(미지원 문법은 오류). 날짜 YYYY-MM-DD 또는 YYYY/MM/DD, after는 해당 날짜 포함·before는 제외. 조회 개수는 limit 또는 기존 max_results 중 하나(동시 지정 금지). email 기본 10(일반 IMAP 1~100), nostr 기본 20. nostr 최근 수신은 since(Unix 초)를 지원한다. 인증 실패 시 다른 공급자로 우회하지 않음."
         group: channel
         target_key: channel_type
         router: channel_engine

@@ -69,6 +69,12 @@ def finish_diagnostics(compiler):
             entry.setdefault('severity', severity)
             entry.setdefault('message', entry.get('expected', '실행 중 계약 확인이 필요합니다.'))
             entry.setdefault('hint', HINTS.get(entry['code'], '해당 위치의 계약과 호출 인자를 확인하세요.'))
+            if (entry['code'] == 'TYPE' and entry.get('expected') == 'List<Record>'
+                    and str(entry.get('actual', '')).startswith('List<')):
+                entry['hint'] = ('이 입력은 객체 행 목록을 요구합니다. zip/enumerate의 행은 목록입니다. '
+                                 '각 원소를 table:each로 명시적 필드의 레코드로 변환하거나, '
+                                 '원소를 그대로 거를 때는 table:each 안에서 조건에 따라 '
+                                 '[$it] 또는 []를 반환하고 mode:"flat_map"을 사용하세요.')
             for frame in entry.get('call_path', []):
                 for key in ('call', 'definition'):
                     if frame.get(key):

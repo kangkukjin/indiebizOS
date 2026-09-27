@@ -16,6 +16,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Any
 
+
+def _connection_error_detail(error):
+    """Expose bounded leaf causes instead of an opaque TaskGroup wrapper."""
+    from logging_utils import mask_secrets
+    pending, leaves = [error], []
+    while pending and len(leaves) < 8:
+        current = pending.pop()
+        if isinstance(current, BaseExceptionGroup):
+            pending.extend(reversed(current.exceptions))
+        else:
+            leaves.append(f"{type(current).__name__}: {current}")
+    text = "; ".join(leaves)
+    if pending:
+        text += "; 추가 원인 생략"
+    return mask_secrets(text)[:2000]
+
 # ─────────────────────────────────────────────
 # Chrome MCP 드라이버 (싱글톤)
 # ─────────────────────────────────────────────
@@ -74,7 +90,11 @@ class ChromeMCPDriver:
             return {"success": True, "url": url, "tab_id": self._tab_id}
         except Exception as e:
             self._connected = False
-            raise ConnectionError(f"Chrome MCP 연결 실패: {e}")
+            raise ConnectionError(
+                f"Chrome MCP 연결 실패: {_connection_error_detail(e)}. "
+                "Chrome MCP 서버와 확장 프로그램의 실행·연결 주소를 확인하세요. "
+                "다른 브라우저 드라이버가 같은 로그인 세션을 공유한다고 가정하지 마세요."
+            ) from e
 
     async def disconnect(self):
         """연결 해제"""

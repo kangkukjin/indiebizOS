@@ -75,3 +75,54 @@ def check_v2_corpus(code, entry, issues, origin, session=None):
     except Exception as exc:
         issues.append(f"{origin}: 판본 2 검사 불가 — {exc}")
     return True
+
+
+def corpus_entries(root: Path, include_db: bool = False):
+    """트레이너가 **실제로 읽는** 학습 입력을 그대로 훑는다.
+
+    ★CORPUS_FILES 는 두 파일을 이름으로 못박고 있는데, 트레이너는
+    `data/training/*.json` 글롭이다(ibl_embedding_trainer.py). 그 차이만큼 검사가
+    학습 입력보다 좁았다 — 여기서는 트레이너와 같은 규칙을 쓴다.
+
+    ★2026-08-22 (20회차 B20-1): 그런데 트레이너는 **DB(ibl_usage.db)와 파일을 둘 다**
+    읽는다 — 바로 아래 validate_corpus_vocab 의 docstring 자신이 그렇게 적고 있으면서도
+    검사는 파일만 봤다. 즉 **검사가 학습 입력의 절반만 보고 있었다**(20회차에 발견된
+    유령 op 오염이 하필 DB 쪽에 있었다). include_db=True 면 DB 도 같은 모양으로 낸다.
+    기본이 False 인 이유: param 정합 검사는 관대한 상위집합 대조라 범위를 넓히면
+    오탐이 폭증한다 — 어휘/op 생존처럼 오탐이 없는 검사만 켠다.
+    반환: (출처이름, 항목) 이터레이터. 없으면 아무것도 내지 않는다."""
+    import json
+    from corpus_policy import review_exclusion_reason
+    tdir = root / "data" / "training"
+    if tdir.is_dir():
+        for f in sorted(tdir.glob("*.json")):
+            try:
+                entries = json.loads(f.read_text(encoding="utf-8"))
+            except Exception:
+                continue
+            if not isinstance(entries, list):
+                continue
+            for e in entries:
+                if isinstance(e, dict) and not review_exclusion_reason(e):
+                    yield f.name, e
+    if not include_db:
+        return
+    db = root / "data" / "ibl_usage.db"
+    if not db.is_file():
+        return
+    try:
+        import sqlite3
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        # alias·category 도 낸다 — 관용구 골격은 함수 몸으로 읽어야 한다(언어 개정 2026-09-07).
+        columns = {r[1] for r in con.execute("PRAGMA table_info(ibl_examples)")}
+        provenance = "provenance" if "provenance" in columns else "'{}'"
+        rows = con.execute("SELECT intent, ibl_code, COALESCE(alias,''), COALESCE(category,''), "
+                           + provenance + " FROM ibl_examples").fetchall()
+        con.close()
+    except Exception:
+        return
+    for intent, code, alias, category, provenance in rows:
+        entry = {"intent": intent, "ibl_code": code, "alias": alias, "category": category,
+                 "provenance": provenance}
+        if not review_exclusion_reason(entry):
+            yield "ibl_usage.db", entry

@@ -60,7 +60,7 @@ def get_system_gmail_address() -> Optional[str]:
         return None
 
 
-# === 에이전트 identity 조회 (발신 신원 + 발신 게이트) ===
+# === 에이전트 identity 조회 (송수신 계정 + 접근 게이트) ===
 
 def _resolve_agent_identity(channel_type: str, params: dict,
                             project_path: str, agent_id: str = None) -> dict:
@@ -71,7 +71,7 @@ def _resolve_agent_identity(channel_type: str, params: dict,
     - 시스템 AI(SYSTEM_AI_ID): 시스템 자체 계정 사용 (email=gmail 드라이버 config.yaml, nostr=indienet 신원).
       신뢰된 주체이므로 account 명시 override 허용. 항상 발신 가능.
     - 프로젝트 에이전트: 자기 agents.yaml에 설정된 계정(email/npub)만 사용.
-      계정이 비어 있으면 '연락처 없음'으로 보고 외부 발신을 차단한다.
+      계정이 비어 있으면 '연락처 없음'으로 보고 채널 접근을 차단한다.
       (외부로 연락하는 기능은 함부로 열지 않는다 — 명시적 옵트인.)
       사칭 방지를 위해 account override는 허용하지 않는다.
     - 내부(internal) 에이전트: 외부 채널 사용 불가.
@@ -126,17 +126,19 @@ def _resolve_agent_identity(channel_type: str, params: dict,
     if agent_config.get("type") == "internal":
         return {"error": f"내부 에이전트 '{agent_id}'는 외부 채널을 사용할 수 없습니다."}
 
-    # 발신 게이트: 계정(연락처)이 비어 있으면 외부 발신 차단
+    # 송수신 모두 설정된 계정만 사용한다. 다른 주체의 계정으로 우회하지 않는다.
     if channel_type == "email":
         email = agent_config.get("email")
         if not email:
-            return {"error": f"에이전트 '{agent_id}'에 email 계정(연락처)이 설정되지 않아 외부 발신이 차단됩니다."}
+            return {"error": f"에이전트 '{agent_id}'에 email 계정(연락처)이 설정되지 않아 메일 조회·발신을 할 수 없습니다.",
+                    "hint": "이 프로젝트 에이전트의 email 계정을 설정해야 합니다. account 인자로 다른 계정을 지정해도 프로젝트 에이전트의 신원은 바뀌지 않습니다."}
         return {"email": email}
 
     elif channel_type == "nostr":
         npub = agent_config.get("npub") or agent_config.get("nostr")
         if not npub:
-            return {"error": f"에이전트 '{agent_id}'에 nostr 계정(연락처)이 설정되지 않아 외부 발신이 차단됩니다."}
+            return {"error": f"에이전트 '{agent_id}'에 nostr 계정(연락처)이 설정되지 않아 채널 조회·발신을 할 수 없습니다.",
+                    "hint": "이 프로젝트 에이전트의 nostr 계정을 설정해야 합니다."}
         return {"npub": npub}
 
     return {"error": f"identity 미지원 채널: {channel_type}"}
@@ -369,7 +371,7 @@ def execute_channel_action(action: str, params: dict,
     # 에이전트 identity 결정
     identity = _resolve_agent_identity(channel_type, params, project_path, agent_id)
     if "error" in identity:
-        return {"success": False, "channel": channel_type, "error": identity["error"]}
+        return {"success": False, "channel": channel_type, **identity}
 
     # IBL 액션명(channel_send/read/search)을 내부 키(send/read/search)로 정규화.
     if action.startswith("channel_"):
@@ -961,7 +963,7 @@ def _read_email(params: dict, identity: dict, include_body: bool) -> dict:
         provider = "imap" if client is not None else "gmail"
         if client is None:
             client = _get_gmail_client(email=account)
-        messages = client.get_messages(query=query, max_results=params.get("max_results", 10))
+        messages = client.get_messages(query=query, max_results=params.get("limit", params.get("max_results", 10)))
         items = []
         for message in messages:
             if message is None:
@@ -997,7 +999,7 @@ def _channel_read(channel_type: str, params: dict, identity: dict) -> dict:
         return _read_email(params, identity, include_body=True)
 
     elif channel_type == "nostr":
-        limit = params.get("limit", 20)
+        limit = params.get("limit", params.get("max_results", 20))
         since = params.get("since")
 
         try:
@@ -1024,7 +1026,7 @@ def _channel_search(channel_type: str, params: dict, identity: dict) -> dict:
 
     elif channel_type == "nostr":
         query_text = params.get("query", "")
-        limit = params.get("max_results", 20)
+        limit = params.get("limit", params.get("max_results", 20))
 
         if not query_text:
             return {"error": "검색어(query)가 필요합니다."}

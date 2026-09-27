@@ -551,13 +551,13 @@
   "others:channel_read": {
    "fields": {
     "description": "13b6c07f64fb",
-    "target_description": "a0a66a63780f",
+    "target_description": "1913a88c1291",
     "implementation": "92d18e2401df",
     "returns": "3c22349f8d0b",
     "target_key": "7c66509c7f76",
     "router": "d1a4b431b2c1"
    },
-   "reviewed": "2026-09-26",
+   "reviewed": "2026-09-27",
    "examples": 7
   },
   "others:channel_send": {

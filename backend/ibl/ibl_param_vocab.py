@@ -153,6 +153,9 @@ def _schema_props(tool_name: str) -> Set[str]:
 def documented_vocab(action_config: dict, tool_name: str) -> Set[str]:
     """제안(did-you-mean)용 문서화 어휘 — 허용집합보다 좁은, 사람이 쓰라고 만든 키."""
     vocab = _schema_props(tool_name) | _alias_keys(action_config) | {"op"}
+    contract = action_config.get("callable_contract") or {}
+    vocab.update(contract.get("params", {}))
+    vocab.update(contract.get("aliases", {}))
     tk = action_config.get("target_key")
     if tk:
         vocab.add(tk)

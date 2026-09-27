@@ -49,6 +49,11 @@ IndieBiz OS는 GUI 외에도 Gmail, Nostr 등 외부 채널을 통해 사용자 
 
 ### 일반 IMAP (읽기 전용 조회)
 
+메일 서비스 이름과 채널 타입은 구분한다. 한메일·다음메일도 `channel_type:"email"`이며
+최근 5건은 `max_results:5`로 지정한다. `describe`는 인자 계약과 상세 사용법을 함께 전달하고
+잘못된 채널·인자는 실행 전에 거절한다. 프로젝트 에이전트는 조회에도 설정된 자기 계정이 필요하며,
+계정이 없으면 조회·발신 불가와 설정 안내를 반환한다. `account`로 이 신원 제한을 우회하지 않는다.
+
 `[others:channel_read]{channel_type:"email",account:"계정 주소",max_results:10}`은
 신원 관문을 통과한 계정이 루트 `.env`의 `IMAP_EMAIL`과 일치하면 일반 IMAP을 사용한다.
 `IMAP_HOST`, `IMAP_PORT`(기본 993), `IMAP_USERNAME`, `IMAP_PASSWORD`로 TLS에 연결하며,

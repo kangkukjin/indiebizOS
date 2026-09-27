@@ -371,8 +371,17 @@ class Supervisor:
                                                              call.get("_payload") or {}, result)
             job_observation = _job_observation(result)
             result_signature = digest(json.dumps(job_observation, sort_keys=True, ensure_ascii=False)) if job_observation else ref["id"]
+            try:
+                detail = json.loads(result) if isinstance(result, str) else result
+                detail = detail if isinstance(detail, dict) else {}
+                evidence_summary = detail.get('evidence_summary') or {}
+            except (TypeError, ValueError):
+                detail, evidence_summary = {}, {}
             self.recent.append(self.log("tool.finished", id=key, name=call.get("name"), evidence=ref,
                                         is_error=error, observation="missing_read" if observation else "",
+                                        internal_tool_failures=evidence_summary.get('tool_failures', 0),
+                                        source_failures=evidence_summary.get('source_failures', 0),
+                                        check_rejected=detail.get('mode') == 'check' and detail.get('ok') is False,
                                         elapsed_s=round(time.monotonic() - call.get("started", time.monotonic()), 3)))
             payload = call.get("_payload") or {}
             if (not error and str(call.get("name", "")).endswith("execute_ibl") and not payload.get("code")

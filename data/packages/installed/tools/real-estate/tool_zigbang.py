@@ -204,8 +204,19 @@ def get_zigbang_listings(tool_input: dict):
     """[sense:realty]{source: "zigbang"} — 직방 현재 매물(호가) 조회.
 
     입력: region(지명) 또는 lat/lng · type(villa/oneroom/officetel) · deal(trade/rent) ·
-          lease(전세/월세, 좁힘) · deposit_max/rent_max/deposit_min(만원) · radius(m,기본3000) · limit(기본30)
+          lease(전세/월세, 좁힘) · deposit_max/rent_max/deposit_min(만원) · radius(m,기본3000) · limit(1~50, 기본30)
     """
+    # ★침묵 클램프 청산(2026-08-24 #repair B6)
+    try:
+        _requested = int(tool_input.get("limit") or 30)
+    except (TypeError, ValueError):
+        _requested = 30
+    if _requested > 50:
+        return {"success": False, "requested": _requested,
+                "error": f"직방은 한 번에 50건까지입니다(요청 {_requested}). limit 을 50 이하로 주세요."}
+    limit = max(1, _requested)
+
+
     region = tool_input.get("region") or tool_input.get("region_name") or tool_input.get("q")
     lat = tool_input.get("lat")
     lng = tool_input.get("lng")
@@ -234,15 +245,6 @@ def get_zigbang_listings(tool_input: dict):
         radius = int(tool_input.get("radius") or 3000)
     except (TypeError, ValueError):
         radius = 3000
-    # ★침묵 클램프 청산(2026-08-24 #repair B6)
-    try:
-        _requested = int(tool_input.get("limit") or 30)
-    except (TypeError, ValueError):
-        _requested = 30
-    if _requested > 50:
-        return {"success": False, "requested": _requested,
-                "error": f"직방은 한 번에 50건까지입니다(요청 {_requested}). limit 을 50 이하로 주세요."}
-    limit = max(1, _requested)
 
     # 리스트 호출 (geohash5 박스 — 약 4.9km). salesTypes 서버 필터.
     # 2026-08-10: /v2/items/{cat} 404 은퇴 → /house/property/v1/items/{복수형}. 평문 geohash 통과.

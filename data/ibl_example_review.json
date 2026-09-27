@@ -1891,7 +1891,7 @@
   "sense:realty": {
    "fields": {
     "description": "a9073339c3b5",
-    "target_description": "cb4369dd76fb",
+    "target_description": "9924cbb7beac",
     "implementation": "a8433f754fca",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
@@ -1902,8 +1902,8 @@
     "router": "ebbb1532efbc",
     "tool": "f02e45b2db1c"
    },
-   "reviewed": "2026-09-18",
-   "examples": 96
+   "reviewed": "2026-09-27",
+   "examples": 97
   },
   "sense:researcher": {
    "fields": {

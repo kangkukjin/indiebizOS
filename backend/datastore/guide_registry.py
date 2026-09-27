@@ -530,3 +530,46 @@ def guide_catalog() -> Dict:
         "total_bytes": sum(i["bytes"] for i in items),
         "dir": str(GUIDES_DIR),
     }
+
+
+def read_guide_schema():
+    """One provider-neutral schema; conditional reads never assume retained context."""
+    return {"name": "read_guide", "description":
+            "가이드 파일명으로 엽니다. 이미 읽은 본문이 현재 문맥에 있으면 재독하지 마세요. "
+            "변경 확인은 if_hash, 특정 절 재확인은 section을 사용합니다. 문맥에서 사라졌으면 본문을 다시 읽습니다.",
+            "input_schema": {"type": "object", "properties": {
+                "query": {"type": "string", "description": "가이드 파일명 또는 검색어"},
+                "read": {"type": "boolean", "description": "기본 true, false면 목록만"},
+                "if_hash": {"type": "string", "description": "현재 보유한 본문의 content_hash. 같으면 본문 생략"},
+                "section": {"type": "string", "description": "재확인할 절 제목(정확 일치). 생략하면 전문"}
+            }, "required": ["query"]}}
+
+
+def guide_read_view(result, params):
+    """Explicit version/section requests only; ordinary reads always return full text."""
+    from hashlib import sha256
+    import re
+    key = 'content' if 'content' in result else 'guide_content'
+    content = result.get(key)
+    if not isinstance(content, str):
+        return result
+    out = dict(result)
+    content_hash = sha256(content.encode()).hexdigest()
+    headings = list(re.finditer(r'(?m)^(#{1,6}) +(.+?)\s*$', content))
+    out.update(content_hash=content_hash, sections=[m[2] for m in headings],
+               read_hint='현재 문맥에 본문이 있으면 재독하지 마세요. 변경 확인은 if_hash, 필요한 절만 다시 볼 때는 section. 본문을 잃었으면 둘 다 생략해 전문을 읽습니다.')
+    section = params.get('section')
+    if section:
+        hits = [i for i, m in enumerate(headings) if m[2] == section]
+        if len(hits) != 1:
+            out.pop(key, None)
+            out['error'] = '절 제목이 없거나 중복입니다. sections에서 유일한 제목을 선택하거나 전문을 읽으세요.'
+            return out
+        i = hits[0]; start = headings[i]
+        end = next((m.start() for m in headings[i+1:] if len(m[1]) <= len(start[1])), len(content))
+        out[key] = content[start.start():end]
+        out['section'] = section
+    elif params.get('if_hash') == content_hash:
+        out.pop(key, None)
+        out['unchanged'] = True
+    return out

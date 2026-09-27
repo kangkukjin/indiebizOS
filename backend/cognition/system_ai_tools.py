@@ -72,18 +72,8 @@ def get_all_system_ai_tools() -> List[Dict]:
         print(f"[시스템AI] reframe 도구 로드 실패(생략): {e}")
 
     # 가이드 검색 도구
-    tools.append({
-        "name": "read_guide",
-        "description": "가이드 파일을 여는 도구. 가이드의 목차는 <guide_map>(가지: 파일명)이다 — 파일명(예: query='investment.md')을 그대로 주면 그 파일을 정확히 연다. 지도에 마땅한 가지가 없을 때만 키워드(예: query='동영상')로 검색한다.",
-        "input_schema": {
-            "type": "object",
-            "properties": {
-                "query": {"type": "string", "description": "검색 키워드 (예: 캘린더, 스케줄, 영상)"},
-                "read": {"type": "boolean", "description": "true(기본): 가이드 내용까지 반환, false: 목록만"}
-            },
-            "required": ["query"]
-        }
-    })
+    from guide_registry import read_guide_schema
+    tools.append(read_guide_schema())
 
     return tools
 

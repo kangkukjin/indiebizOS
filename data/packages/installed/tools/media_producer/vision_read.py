@@ -51,6 +51,34 @@ def _load_image_b64(image_path):
 _IMG_EXTS = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")
 
 
+def _readable_images(image):
+    """One call sees overview + all original-pixel tiles of a long screenshot."""
+    import base64
+    import io
+    from PIL import Image, ImageOps
+    with Image.open(io.BytesIO(base64.b64decode(image['base64']))) as raw:
+        src = ImageOps.exif_transpose(raw)
+        w, h = src.size
+        if max(w, h) <= 1600 or max(w, h) < 2 * min(w, h):
+            return [image], ''
+        edge, overlap = 1600, 64
+        def offsets(length):
+            return list(range(0, max(1, length - overlap), edge - overlap))
+        boxes = [(x, y, min(x + edge, w), min(y + edge, h))
+                 for y in offsets(h) for x in offsets(w)]
+        if len(boxes) > 24:
+            raise ValueError('이미지가 24개 구간을 넘습니다. 페이지·셀렉터로 범위를 나누어 읽으세요. 원문을 생략하지 않았습니다.')
+        images = [image]
+        for box in boxes:
+            buf = io.BytesIO()
+            src.crop(box).save(buf, format='PNG')
+            images.append({'base64': base64.b64encode(buf.getvalue()).decode(), 'media_type': 'image/png'})
+        note = (f'첫 이미지는 전체 배치 개요({w}×{h})입니다. 다음 {len(boxes)}장은 원본 픽셀의 '
+                f'겹치는 구간이며 위→아래, 왼쪽→오른쪽 순서입니다. 좌표: {boxes}. '
+                '문자 판독은 구간 이미지를 사용하고, 구간 경계를 페이지의 잘림으로 오인하지 마세요.\n\n')
+        return images, note
+
+
 def _image_path_from_prev(prev) -> str:
     """파이프 통화(_prev_result)에서 이미지 경로 회수 (2026-08-29 마찰 ②).
 
@@ -259,7 +287,11 @@ def critique_image(tool_input, output_base):
     )
 
     # 개별 산출물 채점은 실행 역할, 전체 목표의 최종 승인은 의식 역할이다.
-    text = _ai_call(instruction, images=[image], role="execution")
+    try:
+        images, tile_note = _readable_images(image)
+    except Exception as exc:
+        return json.dumps({'success': False, 'error': f'검수 이미지 준비 실패: {exc}'}, ensure_ascii=False)
+    text = _ai_call(tile_note + instruction, images=images, role="execution")
     if not text or not str(text).strip():
         return json.dumps({"success": False,
                            "error": "이미지 채점 실패 — 조종실 기어 설정의 이미지 읽기·채점 모델과 비전 대체 설정을 확인하세요."},
@@ -346,7 +378,11 @@ def read_image(tool_input, output_base):
                        "텍스트·숫자가 있으면 보이는 그대로 정확히 옮기세요.")
 
     # 읽기 = 실행 중 지각 — 실행 축.
-    text = _ai_call(instruction, images=[image], role="execution")
+    try:
+        images, tile_note = _readable_images(image)
+    except Exception as exc:
+        return json.dumps({'success': False, 'error': f'검수 이미지 준비 실패: {exc}'}, ensure_ascii=False)
+    text = _ai_call(tile_note + instruction, images=images, role="execution")
     if not text or not str(text).strip():
         return json.dumps({"success": False,
                            "error": "이미지 읽기 실패 — 조종실 기어 설정의 이미지 읽기·채점 모델과 비전 대체 설정을 확인하세요."},

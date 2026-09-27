@@ -80,6 +80,8 @@ class GuideRequest(BaseModel):
     그러면 모든 프로바이더의 IBL 표면에 퍼져 '보편화'되기 때문 — claude_code 결손만 메운다."""
     query: str
     read: bool = True
+    if_hash: Optional[str] = None
+    section: Optional[str] = None
     agent_id: Optional[str] = None
     task_id: Optional[str] = None
 
@@ -371,7 +373,7 @@ async def read_guide_bridge(req: GuideRequest):
         from ibl_routing import search_guide
         from thread_context import actor_context
         with actor_context(agent_id=req.agent_id or "", task_id=req.task_id or ""):
-            return search_guide(req.query, {"read": req.read})
+            return search_guide(req.query, {"read": req.read, "if_hash": req.if_hash, "section": req.section})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

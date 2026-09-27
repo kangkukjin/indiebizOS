@@ -68,6 +68,65 @@ actions:
                 href: '{url}'
                 label: 카카오맵·상세 보기 →
   realty:
+    callable_contract:
+      version: 1
+      params:
+        city: Unknown
+        code: Unknown
+        count_per_month: Unknown
+        criteria: Unknown
+        deal: Unknown
+        deposit_max: Unknown
+        deposit_min: Unknown
+        district_code: Unknown
+        dong: Unknown
+        dong_code: Unknown
+        end_month: Unknown
+        lat: Unknown
+        lease: Unknown
+        limit: Unknown
+        lng: Unknown
+        month: Unknown
+        months: Unknown
+        name: Unknown
+        op: Unknown
+        project_id: Unknown
+        q: Unknown
+        query: Unknown
+        radius: Unknown
+        refresh: Unknown
+        region: Unknown
+        region_code: Unknown
+        region_name: Unknown
+        rent_max: Unknown
+        scope: Unknown
+        source: Unknown
+        start_month: Unknown
+        target: Unknown
+        type: Unknown
+        year_month: Unknown
+      open_params: false
+      required: []
+      result: Record
+      effects:
+      - unknown
+      compatibility: legacy-envelope/1
+      adapter:
+        protocol: legacy-envelope
+        value_path: ''
+      defaults:
+        source: molit
+        op: query
+      variants:
+      - when:
+          source: zigbang
+          op: query
+        integers:
+        - limit
+        minimum:
+          limit: 1
+        maximum:
+          limit: 50
     # ★B35-3 ①(2026-08-24 #repair): op 하위 param 의 타입 단일 소스.
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
@@ -97,7 +156,7 @@ actions:
       source=zigbang: '[sense:realty]{op: "query", source: "zigbang", region: "평택 죽백동", limit: 5}'
     description: 부동산 시세·매물 (op 분기). query 는 source=molit(국토부 실거래가, 기본)/zigbang(직방 현재 매물·링크·사진)/naver(네이버부동산 현재 매물 — 아파트·단지명 검색). region 이름만 넣으면 자동 해소.
     group: real_estate
-    target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit. 반환 items의 deposit/rent는 만원, area_m2·floor·itemId도 보존. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 지역은 주소 성분이 맞는 유일 후보만 조회하며 불일치·동명이면 후보와 오류를 반환. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → items=[{지역, 코드}] (>> take/filter/each 로 흐름). city 생략=시/도 목록. (region 자동변환이 있어 보통 불필요한 보조.) 응답의 catalog 가 카탈로그 출처·생성시각·나이를 말한다 — refresh=true 면 현행 행정구역(네이버 지역 트리)으로 카탈로그를 갱신한 뒤 조회한다. ★행정구역이 재편되면 폐지된 코드는 molit 에서 오류가 아니라 **조용히 0건**이므로, 시 단위 조회가 0건이면 refresh 로 하위 구 재편을 먼저 의심할 것(2024 부천·화성 구 부활, 인천 개편, 군위 대구 편입).\n"
+    target_description: "op로 분기 (기본 query).\n- query: source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가 — 체결된 과거 거래(시세). 링크·사진 없음. region=지역 이름(예 \"강남구\", 읍·면·동 \"오송\"도 상위 시군구로 자동변환) 또는 region_code=법정동 5자리. type=apt(아파트)/house(단독다가구)/villa(연립다세대). deal=trade/rent. dong=법정동으로 좁히기. start_month/end_month 기간.\n  · source=zigbang: 직방 현재 매물 — 지금 시장에 나온 호가·사진·클릭 링크. region=동·지명·건물명(예 \"평택 죽백동\", \"배다리도서관\") 또는 lat/lng. type=villa(빌라/다세대)/oneroom(원룸)/officetel(오피스텔). deal=trade/rent + lease=전세|월세(좁힘). deposit_max/rent_max(만원). radius(m,기본3000). limit(1~50, 기본30). 반환 items의 deposit/rent는 만원, area_m2·floor·itemId도 보존. 빌라·원룸·오피스텔 개별 호실 강함, 아파트·단독/다가구·직거래는 약함(→가이드 real_estate.md).\n  · source=naver: 네이버부동산 현재 매물 — 중개사 등록 매물 전국 최다 풀(아파트 강함). region=동 이름(예 \"평택 비전동\") 또는 *아파트 단지명*(예 \"우미린센트럴파크\" → 단지 매물 직조회). type=apt(기본)/officetel/villa/house(단독다가구)/oneroom. deal=trade/rent + lease=전세|월세. deposit_min/deposit_max(만원, 서버필터)·rent_max(만원). limit(기본30). 동일매물 자동 묶음. 지역은 주소 성분이 맞는 유일 후보만 조회하며 불일치·동명이면 후보와 오류를 반환. 아파트·단지 검색은 naver, 빌라·원룸 개별호실은 zigbang이 유리.\n- codes: city=시/도명(서울·경기 등) → items=[{지역, 코드}] (>> take/filter/each 로 흐름). city 생략=시/도 목록. (region 자동변환이 있어 보통 불필요한 보조.) 응답의 catalog 가 카탈로그 출처·생성시각·나이를 말한다 — refresh=true 면 현행 행정구역(네이버 지역 트리)으로 카탈로그를 갱신한 뒤 조회한다. ★행정구역이 재편되면 폐지된 코드는 molit 에서 오류가 아니라 **조용히 0건**이므로, 시 단위 조회가 0건이면 refresh 로 하위 구 재편을 먼저 의심할 것(2024 부천·화성 구 부활, 인천 개편, 군위 대구 편입).\n"
     target_key: op
     router: handler
     tool: realty_op
@@ -310,7 +369,7 @@ tool_json:
     description: "부동산 시세·매물 (op 분기) — [sense:realty].\n- op=query(기본): source로 데이터 종류 선택.\n  · source=molit(기본): 국토부 실거래가(체결된\
       \ 과거 거래, 링크·사진 없음). region(시군구명, 자동코드변환) 또는 region_code(5자리) + type(apt/house/villa) + deal(trade/rent) + dong + start_month/end_month.\n\
       \  · source=zigbang: 직방 현재 매물(지금 나온 호가·사진·클릭 링크). region(지명/동/건물명) 또는 lat/lng + type(villa/oneroom/officetel) + deal(trade/rent)\
-      \ + lease(전세/월세로 좁힘) + deposit_max/rent_max(만원) + radius(m,기본3000) + limit. 빌라/원룸/오피스텔 개별 호실 강함, 아파트·단독/다가구 약함.\n  · source=naver:\
+      \ + lease(전세/월세로 좁힘) + deposit_max/rent_max(만원) + radius(m,기본3000) + limit(1~50, 기본30). 빌라/원룸/오피스텔 개별 호실 강함, 아파트·단독/다가구 약함.\n  · source=naver:\
       \ 네이버부동산 현재 매물(중개사 등록 전국 최다 풀, 아파트 강함). region(동 이름 또는 아파트 단지명 → 단지 직조회) + type(apt 기본/officetel/villa/house/oneroom)\
       \ + deal(trade/rent) + lease + deposit_min/deposit_max/rent_max(만원) + limit(기본30). 아파트·단지 검색은 naver, 빌라·원룸 개별 호실은 zigbang.\n- op=codes:\
       \ city(시/도명) → 법정동 지역코드 목록(보조, region 자동변환으로 보통 불필요)."

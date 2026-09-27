@@ -111,6 +111,7 @@ def test_image_critic_rejects_malformed_verdict(monkeypatch, verdict):
 def test_image_critic_provenance_is_runtime_owned(monkeypatch):
     mod = load('media_producer', 'vision_read')
     monkeypatch.setattr(mod, '_load_image_b64', lambda p: ({}, None))
+    monkeypatch.setattr(mod, '_readable_images', lambda image: ([image], ''))
     monkeypatch.setattr(mod, '_ai_call', lambda *a, **kw: json.dumps(
         {'passed': False, 'score': 2, 'issues': ['cut off'], 'tier': 'prescreen', 'rubric': 'fake'}))
     out = mod.critique_image({'image_path': '/fixture.png', 'intent': 'test'}, '.')

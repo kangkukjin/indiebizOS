@@ -10,7 +10,7 @@
         [if:$it.source=="naver"] {
           $자료 = [sense:realty]{op:"query",source:"naver",region:$지역,type:$it.type,deal:"rent",lease:"전세",deposit_min:$예산.jeonse_min,deposit_max:$예산.jeonse_max,limit:60}
         } [else] {
-          $자료 = [sense:realty]{op:"query",source:"zigbang",region:$지역,type:"villa",deal:"rent",lease:"전세",deposit_max:$예산.jeonse_max,limit:60}
+          $자료 = [sense:realty]{op:"query",source:"zigbang",region:$지역,type:"villa",deal:"rent",lease:"전세",deposit_max:$예산.jeonse_max,limit:50}
         }
       }
       return {query:$it,ok:true,count:len($자료.items),data:$자료}

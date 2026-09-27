@@ -5,7 +5,7 @@
   $렌더 = [engines:render]{path:$출력,viewports:$뷰포트,full_page:true,output_path:f"${출력}.qa"}
   $검수 = $렌더.items >> [table:each]{parallel:2} {
     [try] {
-      $답 = [engines:image_read]{path:$it.path,question:$질문}
+      $답 = [engines:image_read]{path:$it.path,question:$질문+" 렌더의 DOM 관측: "+json($it.layout)+". 가로 스크롤과 내용 소실을 구분하라. 전체 개요와 원본 구간 이미지가 함께 제공되면 구간에서 문자를 확인하라."}
       return {viewport:$it.label,screenshot:$it.path,ok:true,review:$답.message}
     } [catch] { return {viewport:$it.label,screenshot:$it.path,ok:false,error:$error.message} }
   }

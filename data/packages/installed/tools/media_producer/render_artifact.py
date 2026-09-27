@@ -271,6 +271,15 @@ def render_op_html(tool_input, output_base="."):
                     page.set_content(html)
                 page.wait_for_load_state("networkidle")
                 page.wait_for_timeout(500)  # 폰트/늦은 스타일 대기
+                layout = page.evaluate("""() => {
+                  const elements = [...document.querySelectorAll('table,pre,main')];
+                  const overflow = elements.filter(e => e.scrollWidth > e.clientWidth + 2)
+                    .map(e => ({tag:e.tagName.toLowerCase(), client_width:e.clientWidth,
+                      scroll_width:e.scrollWidth, overflow_x:getComputedStyle(e).overflowX}));
+                  return {page_width:document.documentElement.scrollWidth,
+                    viewport_width:innerWidth, overflow_count:overflow.length,
+                    overflow:overflow.slice(0,20)};
+                }""")
                 suffix = f"_{vp['label']}" if len(viewports) > 1 else ""
                 out = os.path.abspath(os.path.join(output_base, f"{stem}{suffix}.png"))
                 if selector:
@@ -283,9 +292,12 @@ def render_op_html(tool_input, output_base="."):
                     page.screenshot(path=out, full_page=bool(full_page))
                 page.close()
                 facts = _web_prescreen_facts(events) + [_blank_fact(_ink_ratio_png(out))]
+                from PIL import Image
+                with Image.open(out) as screenshot:
+                    width, height = screenshot.size
                 rows.append(_attach_prescreen(
                     {"op": "html", "label": vp["label"], "page": 1,
-                     "width": vp["width"], "height": vp["height"], "path": out}, facts))
+                     "width": width, "height": height, "path": out, "layout": layout}, facts))
             browser.close()
         return _finish(rows, output_base)
     except Exception as e:

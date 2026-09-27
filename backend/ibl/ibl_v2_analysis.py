@@ -10,7 +10,7 @@ HINTS = {
     "INPUTS": 'inputs는 {입력:값}이며 코드는 $입력을 사용합니다. 결과 참조는 inputs:{입력:{"$ref":"결과 id"}}처럼 이름의 값 자리에 둡니다.',
     "UNBOUND": "이 위치 전에 값을 정의하거나 함수의 명시 인자로 전달하세요.",
     "MISSING_FIELD": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요.",
-    "FIELD_TYPE": "List 반환은 값 자체가 목록입니다. .items를 붙이지 말고 표 연산에 직접 전달하세요. Record의 필드는 반환 계약을 확인하세요.",
+    "FIELD_TYPE": "List 반환은 값 자체가 목록입니다. .items나 .value를 붙이지 말고 직접 전달·인덱싱하세요. inputs의 $ref는 이미 업무 값으로 해소됩니다. Record의 필드는 반환 계약을 확인하세요.",
     "VALUE_PROTOCOL": "값 전송 경계에서 지원하지 않는 타입입니다. 기존 실행 여부는 실행 기록을 확인하세요. 같은 오류가 반복되면 문법을 바꾸며 재시도하지 말고 실행 기반 오류로 보고하세요.",
     "TYPE": "기대 타입과 실제 타입을 비교하고 값을 만드는 호출부터 확인하세요.",
     "NUMBER_REQUIRED": "숫자로 관측할 수 있는 값인지 확인하세요. 구조·산문은 숫자가 아닙니다.",
@@ -22,6 +22,19 @@ HINTS = {
     "STRING_LITERAL": '줄바꿈은 \\n 또는 삼중 따옴표로 쓰세요. 긴 본문은 inputs:{본문:"…"}로 전달해 $본문을 사용하거나 기존 파일·결과를 참조하세요.',
     "UNOBSERVED_FIELD": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
 }
+
+
+def constant_value(node, depth=0):
+    """Observe literal containers without executing code or inventing dynamic values."""
+    from ibl_callable_contract import UNRESOLVED
+    if depth > 16:
+        return UNRESOLVED
+    if node.kind == 'literal':
+        return node.data['value']
+    if node.kind == 'list':
+        values = [constant_value(v, depth + 1) for v in node.data['values']]
+        return UNRESOLVED if any(v is UNRESOLVED for v in values) else values
+    return UNRESOLVED
 
 
 def location(source, source_map, node):
@@ -143,7 +156,10 @@ def builtin_type(compiler, node, name, types):
         spec = CONTRACTS[name]
         for i, typ in enumerate(types):
             expected = spec[2][min(i, len(spec[2]) - 1)]
+            before = len(compiler.issues)
             compiler.need(node.data['args'][i], typ, declared(expected))
+            for issue in compiler.issues[before:]:
+                issue['hint'] = f"{name}({', '.join(spec[2])})의 인자 순서를 확인하세요. {i + 1}번째는 {expected}입니다."
         result = declared(spec[3])
         if name in ('unique', 'intersection', 'difference', 'sorted') and types and types[0].kind == 'List':
             return Type('List', item=types[0].item or UNKNOWN)
@@ -172,7 +188,19 @@ def builtin_type(compiler, node, name, types):
         return NUMBER
     if name in ('is_ok', 'unwrap', 'error_of'):
         need(0, Type('Result', item=UNKNOWN))
-        return BOOL if name == 'is_ok' else (types[0].item or UNKNOWN) if name == 'unwrap' and types else UNKNOWN
+        if name == 'is_ok':
+            return BOOL
+        if name != 'unwrap' or not types:
+            return UNKNOWN
+        # Union.item is a tuple of types, whereas Result.item is one type.
+        # Invalid operands already have a diagnostic; never propagate that tuple.
+        members = list(alternatives(types[0]))
+        if any(t.kind != 'Result' for t in members):
+            return UNKNOWN
+        result = members[0].item or UNKNOWN
+        for member in members[1:]:
+            result = join(result, member.item or UNKNOWN)
+        return result
     if name == 'reduce':
         need(0, Type('List', item=UNKNOWN))
         need(2, Type('Callable'))

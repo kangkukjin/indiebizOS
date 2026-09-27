@@ -83,6 +83,7 @@ def test_collection_preserves_empty_failure_and_all_five_requests():
     assert value['items'][2]['error']['partial']['items'][0]['url'] == 'partial'
     assert all(r['deposit_min'] == 20000 and r['limit'] == 60
                for r in seen if r['source'] == 'naver')
+    assert all(r['limit'] == 50 for r in seen if r['source'] == 'zigbang')
     assert all(r['start_month'] == '202601' and r['region_code'] == '11110'
                for r in seen if r['source'] == 'molit')
 
@@ -103,7 +104,8 @@ def test_preparation_reads_full_latest_and_marks_required_failure():
         return {'text': args['path'], 'blocks': [], 'data': {}}
 
     out = run('housing_prepare.ibl', '[fn:부동산준비읽기]{폴더:"/fixture",슬러그:"new_region"}',
-              {}, {'self:list': listing, 'self:read': read})
+              {}, {'self:list': listing, 'self:read': read,
+                   'self:ledger': lambda rt, args: {'items': []}})
     assert out['success'], out
     value = out['value']
     assert not value['ok'] and value['failed'] == 1

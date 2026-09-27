@@ -131,7 +131,8 @@ def test_critic_prescreen_shortcircuit_calls_no_model(gv, tmp_path, monkeypatch)
         raise AssertionError("0층 단락인데 모델이 호출됐다 — 비용 계층화 위반")
     monkeypatch.setattr(gv, "_ai_call", _boom)
     img = tmp_path / "x.png"
-    img.write_bytes(b"png-stub")            # 단락 경로는 이미지를 읽지 않는다
+    from PIL import Image
+    Image.new("RGB", (32, 32), "white").save(img)            # 단락 경로는 이미지를 읽지 않는다
     out = gv.critique_image(
         {"image_path": str(img), "intent": "웹 페이지 품질",
          "prescreen": "콘솔 오류 2건: TypeError…; 빈 화면(잉크 0.00%)"}, ".")
@@ -148,7 +149,8 @@ def test_critic_without_prescreen_keeps_normal_path(gv, tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(gv, "_ai_call", lambda *a, **k: calls.append(k) or None)
     img = tmp_path / "x.png"
-    img.write_bytes(b"png-stub")
+    from PIL import Image
+    Image.new("RGB", (32, 32), "white").save(img)
     for tin in ({"image_path": str(img), "intent": "t"},
                 {"image_path": str(img), "intent": "t", "prescreen": ""}):
         out = json.loads(gv.critique_image(tin, "."))

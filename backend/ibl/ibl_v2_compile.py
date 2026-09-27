@@ -436,7 +436,8 @@ class Compiler:
             except Fault as exc:
                 self.issue(node, exc.code, str(exc))
                 return UNKNOWN
-            values = {k: v.data['value'] if v.kind == 'literal' else UNRESOLVED for k, v in fields.items()}
+            from ibl_v2_analysis import constant_value
+            values = {k: constant_value(v) for k, v in fields.items()}
             for arg in args:
                 values.setdefault(arg, UNRESOLVED)
             if arg_type.open:

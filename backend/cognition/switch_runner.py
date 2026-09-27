@@ -172,18 +172,8 @@ class SwitchRunner:
                         pass
 
             # 3) 가이드 검색 도구
-            tools.append({
-                "name": "read_guide",
-                "description": "가이드 파일을 여는 도구. 가이드의 목차는 <guide_map>(가지: 파일명)이다 — 파일명(예: query='investment.md')을 그대로 주면 그 파일을 정확히 연다. 지도에 마땅한 가지가 없을 때만 키워드(예: query='동영상')로 검색한다.",
-                "input_schema": {
-                    "type": "object",
-                    "properties": {
-                        "query": {"type": "string", "description": "검색 키워드"},
-                        "read": {"type": "boolean", "description": "true: 내용 반환, false: 목록만"}
-                    },
-                    "required": ["query"]
-                }
-            })
+            from guide_registry import read_guide_schema
+            tools.append(read_guide_schema())
 
             self._status(f"도구 {len(tools)}개 로드됨")
 

@@ -278,3 +278,5 @@ return {collection:$수집,candidates:$선별}
 ---
 
 *이력은 `git log -- data/guides/housing_report.md`와 `data/system_docs/changelog.log`. 최근 개정 2026-09-25: 검증된 관용구 4개와 호출 예시 연결, 현재 필터 문법 안내. 옛 판 = `data/_backups/2026-09-02_housing_report_guide_pre_diet.md`.*
+
+공용 HTML 변환은 긴 표 셀을 줄바꿈한다. 화면 검수는 긴 이미지를 개요와 원본 픽셀의 전 구간으로 한 번에 읽는다. `reviews.ok`는 검수 호출 성공이며 합격 판정은 `review` 본문으로 확인한다. 렌더의 DOM 관측에서 가로 스크롤과 내용 소실을 구분하고, 문제가 남은 부분만 수정·재검수한다.

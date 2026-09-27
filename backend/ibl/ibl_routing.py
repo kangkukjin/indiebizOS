@@ -1151,7 +1151,8 @@ def search_guide(query: str, params: dict) -> Any:
         from thread_context import get_current_agent_id
         from selfbuild_gate import note_consult
         note_consult(get_current_agent_id() or "", f"read_guide({result['file']})")
-    return result
+    from guide_registry import guide_read_view
+    return guide_read_view(result, params) if isinstance(result, dict) else result
 
 
 # 위임 기계(_delegate_unified·_delegate_workflow·_agent_ask_sync·_agent_info)는

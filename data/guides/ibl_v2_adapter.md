@@ -46,3 +46,5 @@ JSON 도구 경계의 Decimal은 십진 표기가 JSON 숫자 왕복 후 동일�
 모델 표시의 `_preview.scope:display`는 실행·원천 완전성을 바꾸지 않는다. 원문 값과
 타입 전송은 저장소에 유지하고, 표시에서 잘린 목록·필드·문자열은 경로별 read_args로
 읽는다. 생산자의 content_selection은 HTML 본문 영역 선택이며 문서 전체 검토의 증명이 아니다.
+
+원천별 제한은 `variants.when`과 `minimum`/`maximum`/`integers`/`nonempty`로 선언한다. 알려진 리터럴·목록은 실행 전에, 동적 값은 호출 직전에 같은 계약으로 검사한다. 예: source=zigbang의 limit 최대 50. 상한 초과를 조용히 자르지 않는다.

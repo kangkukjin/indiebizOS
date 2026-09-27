@@ -179,6 +179,9 @@ def _read_reference(ref, result):
     """표시 사본이 아닌 원 봉투에서 조회 가능한 큰 필드를 찾는다(최대 6개)."""
     typed_value = result.get("edition") == 2 and "value" in result
     prefix = ["value"] if typed_value else ["final_result"] if "final_result" in result else []
+    # Failure recovery opens the diagnostic, never megabytes of provenance by default.
+    if not prefix and result.get('edition') == 2:
+        prefix = next(([k] for k in ('diagnostic', 'issues', 'error') if result.get(k)), [])
     value = _decode_json(result[prefix[0]] if prefix else result)
     paths = []
     if isinstance(value, dict):
@@ -194,14 +197,14 @@ def _read_reference(ref, result):
         "max_limit": MAX_LIMIT,
         "paths": paths,
         "read_args": {"id": ref["id"], "offset": 0, "limit": DEFAULT_LIMIT,
-                      "path": prefix if typed_value else paths[0]["path"] if paths else prefix},
+                      "path": prefix if result.get('edition') == 2 else paths[0]["path"] if paths else prefix},
         "read": 'execute_ibl(code="", read_result=result_ref.read_args); 다음 페이지는 next_read 그대로. 원래 code를 재실행하지 마세요',
     }
     if typed_value:
         wire = result.get("value_wire")
         value_path = {} if isinstance(wire, dict) and "data" in wire else {"path": ["value"]}
         out["input_args"] = {"입력": {"$ref": ref["id"], **value_path}}
-        out["input_hint"] = "다음 execute_ibl의 inputs에 input_args를 넣고 $입력으로 사용하세요. 이름 변경·path 선택 가능. 표시 본문을 복사하지 않습니다."
+        out["input_hint"] = "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
     return out
 
 
@@ -282,6 +285,14 @@ def project_v2_result(result):
     out = {k: v for k, v in result.items() if k not in {"evidence", "recordings", "source_map"}}
     out["evidence_summary"] = {"events": len(result.get("evidence", [])),
                                "source_complete": result.get("source_complete")}
+    failures = [e for e in result.get('evidence', []) if e.get('kind') == 'tool_failure']
+    out['evidence_summary'].update(tool_failures=len(failures),
+                                  source_failures=sum(e.get('incomplete') is True for e in failures))
+    if failures:
+        out['evidence_summary']['failures'] = [
+            {k: e[k] for k in ('id', 'action', 'code', 'failure_kind', 'incomplete') if k in e}
+            for e in failures[:8]]
+        out['evidence_summary']['failures_omitted'] = max(0, len(failures) - 8)
     from image_envelopes import harvest_images
     # Harvest before string/depth previews can destroy base64. The stored original
     # retains typed values; only this display copy loses duplicate wire bytes.

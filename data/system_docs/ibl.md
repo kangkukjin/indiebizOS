@@ -175,7 +175,7 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | sense:crawl | url, op(content/links/metadata) → 원문 봉투 Record. content는 text/title/url/items가 있으며 원천 누락은 실패와 partial로 보존한다. |
 | self:script | id, args(Record; 파이프 자리) → 등록 계약의 값. 기존 등록은 JSON stdin/stdout을 값으로 연결하며, 새 wire 계약도 지원한다. |
 
-계약은 aliases·required_any·requires(인자 동반)·exclusive(동시 입력 금지)·enums·integers·minimum·nonempty와 리터럴 조건 variants를 선언할 수 있다.
+계약은 aliases·required_any·requires(인자 동반)·exclusive(동시 입력 금지)·enums·integers·minimum·maximum·nonempty와 리터럴 조건 variants를 선언할 수 있다.
 검사와 실행은 같은 선언을 소비한다. 동적 선택자는 실행 직전 검사로 남긴다.
 `{"$list": {필드: 타입}}`은 구조를 가진 목록 행의 타입 선언이다.
 `describe:["fn:이름"]`은 컴파일러가 검사한 저장 함수의 입력·반환·효과·미확정 경계를 본문 없이 돌려준다.

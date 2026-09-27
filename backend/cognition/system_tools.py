@@ -930,7 +930,8 @@ def _execute_tool_inner(tool_name: str, tool_input: dict, project_path: str, age
             from ibl_routing import search_guide  # 정의처 직수입(엔진 재수출 경유 아님)
             query = tool_input.get("query", "")
             read = tool_input.get("read", True)
-            result = search_guide(query, {"read": read})
+            result = search_guide(query, {"read": read, "if_hash": tool_input.get("if_hash"),
+                                          "section": tool_input.get("section")})
             return _dict_to_json(result)
 
         # IBL 통합 실행기 (Phase 13)

@@ -33,7 +33,7 @@ h3{font-size:1.08rem;margin:1.8rem 0 .6rem;color:var(--acc)}
 blockquote{margin:1.2rem 0;padding:.85rem 1.1rem;background:var(--card);border-left:3px solid var(--acc);border-radius:0 6px 6px 0;color:var(--mut);font-size:.94rem}
 blockquote p{margin:.3rem 0}
 table{width:100%%;border-collapse:collapse;margin:1.2rem 0;font-size:.9rem;display:block;overflow-x:auto}
-th,td{padding:.5rem .65rem;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th,td{padding:.5rem .65rem;border-bottom:1px solid var(--line);text-align:left;white-space:normal;overflow-wrap:anywhere;vertical-align:top}
 th{background:var(--card);font-weight:600}
 a{color:var(--acc)}
 hr{border:0;border-top:1px solid var(--line);margin:2.5rem 0}

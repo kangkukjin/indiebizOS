@@ -144,6 +144,9 @@ class TurnStore:
             if kind == "tool.finished":
                 self.cost["execution_calls"] += 1
                 self.cost["execution_failures"] += int(bool(fields.get("is_error")))
+                self.cost["internal_tool_failures"] += fields.get("internal_tool_failures", 0)
+                self.cost["source_failures"] += fields.get("source_failures", 0)
+                self.cost["check_rejections"] += int(bool(fields.get("check_rejected")))
                 self.cost["execution_tool_s"] += fields.get("elapsed_s", 0)
             elif kind in {"tool.supervisor", "tool.error"} and fields.get("role") == "consciousness":
                 self.cost["supervisor_tools"] += 1

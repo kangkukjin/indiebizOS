@@ -38,7 +38,8 @@ def vr():
 @pytest.fixture()
 def png(tmp_path):
     p = tmp_path / "x.png"
-    p.write_bytes(b"\x89PNG-stub")
+    from PIL import Image
+    Image.new("RGB", (32, 32), "white").save(p)
     return str(p)
 
 

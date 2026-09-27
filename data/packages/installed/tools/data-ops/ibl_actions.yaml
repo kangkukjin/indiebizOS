@@ -460,6 +460,7 @@ actions:
   groupby:
     callable_contract:
       version: 1
+      nonempty: [by]
       params:
         agg: Unknown
         by: Unknown

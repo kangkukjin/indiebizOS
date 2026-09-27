@@ -47,6 +47,8 @@ def problems(contract, values):
             errors.append(f'{key}: 정수가 필요합니다')
         if key in contract.get('minimum', {}) and not order_matches(compare_order(value, contract['minimum'][key]), '>='):
             errors.append(f'{key}: 최소 {contract["minimum"][key]}입니다')
+        if key in contract.get('maximum', {}) and not order_matches(compare_order(value, contract['maximum'][key]), '<='):
+            errors.append(f'{key}: 최대 {contract["maximum"][key]}입니다')
         if key in contract.get('nonempty', []) and (not isinstance(value, (str, list)) or not value):
             errors.append(f'{key}: 빈 값은 허용하지 않습니다')
     return errors
@@ -57,7 +59,7 @@ def validate_extensions(contract):
     for alias, key in contract.get('aliases', {}).items():
         if key not in params or alias in params or not isinstance(alias, str):
             raise ValueError('aliases는 별칭→정본 인자 이름입니다')
-    for key in ('enums', 'minimum', 'defaults'):
+    for key in ('enums', 'minimum', 'maximum', 'defaults'):
         if not isinstance(contract.get(key, {}), dict) or set(contract.get(key, {})) - params.keys():
             raise ValueError(f'{key}는 선언 인자만 참조합니다')
     for key in ('integers', 'nonempty'):
@@ -83,7 +85,7 @@ def validate_extensions(contract):
     for variant in contract.get('variants', []):
         if not isinstance(variant.get('when'), dict) or not variant['when'] or set(variant['when']) - params.keys():
             raise ValueError('variants.when은 선언 인자의 리터럴 값입니다')
-        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'minimum', 'nonempty'}:
+        if set(variant) - {'when', 'result', 'effects', 'required', 'required_any', 'enums', 'integers', 'minimum', 'maximum', 'nonempty'}:
             raise ValueError('조건부 계약의 변경 가능 필드가 아닙니다')
         from ibl_v2_adapters import validate_contract
         validate_contract({**{k:v for k,v in contract.items() if k!='variants'},

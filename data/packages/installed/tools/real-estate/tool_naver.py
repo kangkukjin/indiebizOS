@@ -99,6 +99,9 @@ def _region_matches(keyword, address):
     시·군·구·도의 약칭은 허용하되 동·읍·면·리는 정확한 이름으로 맞춘다.
     지명 목록을 코드에 넣지 않고 API가 준 주소만 대조한다.
     """
+    from common.pkg_utils import load_singleton
+    _normalize_region_name = load_singleton(
+        __file__, "tool_region_codes", module_key="realty_region_names")._normalize_region_name
     # API는 같은 주소를 공백 또는 쉼표로 구분해 반환한다.
     parts = [part for part in re.split(r"[\s,]+", str(address or "")) if part]
     suffixes = ("특별자치도", "특별자치시", "특별시", "광역시", "시", "군", "구", "도")
@@ -107,7 +110,9 @@ def _region_matches(keyword, address):
         return True
     for term in terms:
         for i, part in enumerate(parts):
-            if term == part or any(part == term + suffix for suffix in suffixes):
+            if (term == part or any(part == term + suffix for suffix in suffixes)
+                    or (i == 0 and part.endswith(("도", "특별시", "광역시", "특별자치시"))
+                        and _normalize_region_name(term) == _normalize_region_name(part))):
                 parts = parts[i + 1:]
                 break
         else:

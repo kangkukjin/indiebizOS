@@ -110,7 +110,8 @@ def _paged(endpoint: str, params: dict, limit: int):
     while len(items) < limit and page <= 3:
         data = api_call("kakao", endpoint, params={**params, "size": _PAGE, "page": page}, timeout=10)
         if isinstance(data, dict) and "error" in data:
-            return items, total, data if page == 1 else None
+            return items, total, {**data, "success": False, "items": items,
+                                 "error": data["error"], "failed_page": page}
         _meta = data.get("meta") or {}
         total = _meta.get("pageable_count", total)
         _paged.estimate = _meta.get("total_count", _paged.estimate)
@@ -173,6 +174,10 @@ def place_search(tool_input: dict) -> dict:
         "total": total,
         "total_estimate": getattr(_paged, "estimate", 0),
         "truncated": isinstance(total, int) and total > len(items),
+        "truncations": ([{"scope": "selection" if len(items) >= limit else "source",
+                           "source": "place.search", "unit": "items", "retained": len(items),
+                           "total": total, "requested": limit}]
+                        if isinstance(total, int) and total > len(items) else []),
         "query": query,
         "category": code,
         "message": f"'{label}' 장소 {len(items)}곳 (전체 {total})" + (f" · 반경 {params['radius']}m" if "radius" in params else ""),

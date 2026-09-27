@@ -804,12 +804,17 @@ _REASON_HINTS = {
 
 
 def crawl_website(url: str, max_length: int = 60000, *, refresh: bool = False,
-                  project_path: str = None, op: str = "content") -> dict:
+                  project_path: str = None, op: str = "content", selector=None,
+                  include_images=False, image_offset=0, image_limit=4) -> dict:
     """원문은 전문 보관·통화로 반환하고 max_length는 모델 표시 예산만 선언한다.
 
     동일 URL의 읽기는 캐시를 재사용한다. 새 내용 확인은 refresh=True로 명시한다.
     원문 파일(source_ref)은 표시량·갱신 호출과 독립된 스냅샷이다.
     """
+    view = load_sibling(__file__, "webcrawl_view")
+    error = view.validate(selector, include_images, image_offset, image_limit, op)
+    if error:
+        return {"success": False, "items": [], "error": error}
     if op not in ("content", "links", "metadata"):
         return {"success": False, "items": [], "error": "op은 content/links/metadata 중 하나여야 합니다."}
     if not isinstance(max_length, int) or isinstance(max_length, bool) or max_length < 1:
@@ -824,13 +829,19 @@ def crawl_website(url: str, max_length: int = 60000, *, refresh: bool = False,
     from common.pkg_utils import load_singleton
     store = load_singleton(__file__, "webcrawl_store")
     try:
-        fetch = (lambda: _crawl_website_impl(url, None)) if op == "content" else (
-            lambda: _crawl_website_impl(url, None, op=op))
-        result = store.fetch_once(url, fetch, refresh=refresh, project_path=project_path, op=op)
+        # Image-only notices are valid HTML even when the textual body is short.
+        fetch_op = "links" if include_images or selector else op
+        fetch = (lambda: _crawl_website_impl(url, None)) if fetch_op == "content" else (
+            lambda: _crawl_website_impl(url, None, op=fetch_op))
+        result = store.fetch_once(url, fetch, refresh=refresh, project_path=project_path, op=fetch_op)
     except OSError as exc:
         return {"success": False, "url": url, "error": f"원문 보관 실패: {exc}",
                 "reason": "source_storage_failed"}
-    result = _structure().project(result, op)
+    if selector or include_images:
+        result = view.project(result, selector=selector, include_images=include_images,
+                              image_offset=image_offset, image_limit=image_limit, parse_html=_parse_html)
+    else:
+        result = _structure().project(result, op)
     if result.get("success"):
         result["_display"] = {"max_chars": max_length, "mirror_fields": ["text"],
                               "limit_rows": False}
@@ -963,4 +974,7 @@ def use_tool(tool_input: dict) -> dict:
     url = tool_input.get('url', '')
     max_length = tool_input.get('max_length', 60000)
     return crawl_website(url, max_length, refresh=tool_input.get('refresh', False),
-                         op=tool_input.get('op', 'content'))
+                         op=tool_input.get('op', 'content'), selector=tool_input.get('selector'),
+                         include_images=tool_input.get('include_images', False),
+                         image_offset=tool_input.get('image_offset', 0),
+                         image_limit=tool_input.get('image_limit', 4))

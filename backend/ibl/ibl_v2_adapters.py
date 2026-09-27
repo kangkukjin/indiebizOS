@@ -254,8 +254,7 @@ def load_registry(project_path=".", agent_id=None):
                     if gate(node, action, ac):
                         raise Fault("MEMBER_ACCESS", "회원의 어휘 권한이 없습니다.", kind="permission")
                     return table_operation(c["adapter"]["operation"], runtime, args)
-                plain_arguments(args)
-                params = {**args, **c["adapter"].get("fixed_params", {})}
+                params = {**plain_arguments(args), **c["adapter"].get("fixed_params", {})}
                 if protocol == "ibl-script/2":
                     params.setdefault("op", "run" if params.get("id") else "list")
                     params["_ibl_edition"] = 2

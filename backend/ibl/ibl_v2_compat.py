@@ -8,20 +8,34 @@ from ibl_v2_ir import Fault
 
 
 def plain_arguments(value):
-    """An old JSON handler must never receive an interpreter-only object."""
+    """Project exact decimals only when their JSON numeric spelling round-trips.
+
+    Interpreter-only values and numbers losing precision still require an explicit
+    conversion. This returns a new tree; receipts retain the original typed args.
+    """
+    import math
+    from decimal import Decimal
     from ibl_v2_ir import pack
-    wire = pack(value)
-    def check(item):
-        if item[0] in {"unit", "result", "decimal", "integer"}:
-            raise Fault("LEGACY_VALUE", "이 값은 기존 JSON 도구 경계를 넘을 수 없습니다. 명시적으로 변환하세요.", kind="protocol")
-        if item[0] == "record":
-            for _, child in item[1]:
-                check(child)
-        elif item[0] == "list":
-            for child in item[1]:
-                check(child)
-    check(wire)
-    return value
+
+    pack(value)  # Validate keys, nonfinite numbers and supported value shapes first.
+
+    def convert(item, path):
+        if isinstance(item, Decimal):
+            number = float(item)  # vj-ok: JSON numeric transport, not value comparison
+            if item.is_finite() and math.isfinite(number) and Decimal(str(number)) == item:
+                return number
+            raise Fault("LEGACY_VALUE", f"{path}: JSON 숫자로 전달하면 정밀도를 잃습니다. text()로 명시적으로 변환하세요.",
+                        kind="protocol", details={"path": path, "reason": "numeric_precision"})
+        if isinstance(item, dict):
+            return {key: convert(child, f"{path}.{key}") for key, child in item.items()}
+        if isinstance(item, (list, tuple)):
+            return [convert(child, f"{path}[{i}]") for i, child in enumerate(item)]
+        if pack(item)[0] in {"unit", "result", "integer"}:
+            raise Fault("LEGACY_VALUE", f"{path}: 이 값은 기존 JSON 도구 경계를 넘을 수 없습니다. 명시적으로 변환하세요.",
+                        kind="protocol", details={"path": path})
+        return item
+
+    return convert(value, "$args")
 
 
 def legacy_functions():

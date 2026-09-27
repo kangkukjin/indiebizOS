@@ -102,11 +102,13 @@ def extract(html, url):
                 for key, value in reversed(list(obj.items())):
                     if isinstance(value, (dict, list)):
                         pending.append((value, f"{path}.{key}"))
-    return {"links": links, "metadata": metadata, "errors": errors}
+    return {"links": links, "metadata": metadata, "errors": errors,
+            "documents": [{"html": html, "url": url}]}
 
 
 def combine(parts, errors=()):
-    return {"links": [r for p in parts for r in p["links"]],
+    return {"documents": [r for p in parts for r in p.get("documents", [])],
+            "links": [r for p in parts for r in p["links"]],
             "metadata": [r for p in parts for r in p["metadata"]],
             "errors": [r for p in parts for r in p.get("errors", [])] + list(errors)}
 

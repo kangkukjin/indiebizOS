@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: blanket-decimal-tool-rejection
+    retired: 2026-09-27
+    reason: 정상 소수 좌표도 해석기 타입이라는 이유로 거절해 도구 호출 전 왕복을 강제했다.
+    instead: JSON 숫자 왕복으로 같은 십진 값을 보존하는 Decimal만 사본으로 투영한다. 정밀도 손실과 내부 전용 타입은 명시 변환을 요구한다.
+    phrases:
+      - 'Decimal은 항상 기존 JSON 도구 경계에서 거절한다'
+      - 'Decimal 값은 모두 명시적 문자열 변환이 필요하다'
   - id: isolated-python-expression-evaluator
     retired: 2026-09-27
     reason: 두 식 경로의 함수와 변환 계약이 갈라져 기능 보강 때마다 중복 구현과 의미 차이가 생겼다.

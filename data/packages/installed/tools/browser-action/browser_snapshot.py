@@ -334,6 +334,9 @@ def _finalize_snapshot(elements: list, url: str, title: str) -> dict:
     if truncated:
         omitted = total - len(included)
         result["truncated"] = True
+        result["truncations"] = [{"scope": "selection", "source": "browser.snapshot",
+                                  "unit": "elements", "retained": len(included),
+                                  "total": total, "reason": "display_budget"}]
         result["omitted_count"] = omitted
         result["guide"] = (
             f"페이지가 커서 상위 {len(included)}개 요소(interactive 우선)만 표시하고 "

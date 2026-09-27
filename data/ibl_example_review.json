@@ -298,12 +298,12 @@
     "target_key": "0cacf69ab63c",
     "params": "b692c2851aa1",
     "aliases": "4c3faae3901e",
-    "ops": "c6ea98ab9d8f",
+    "ops": "034c9299b811",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "18d81283e959"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-27",
    "examples": 254
   },
   "limbs:cctv": {
@@ -1596,19 +1596,19 @@
   },
   "sense:crawl": {
    "fields": {
-    "description": "515e43612561",
-    "target_description": "2bf6a424b6a1",
+    "description": "a7e2a6285c10",
+    "target_description": "e85f7dc48945",
     "implementation": "d2aeb9e54591",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "040525314d1a",
+    "params": "d0374971be33",
     "ops": "b30608c89f78",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "6b90f82ab8ac"
    },
-   "reviewed": "2026-09-18",
-   "examples": 49
+   "reviewed": "2026-09-27",
+   "examples": 55
   },
   "sense:crypto": {
    "fields": {
@@ -1859,7 +1859,7 @@
    "fields": {
     "description": "d157cb363383",
     "target_description": "526c700adb85",
-    "implementation": "56430504c31b",
+    "implementation": "7c0a005a6859",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
     "params": "008c02da8b9b",
@@ -1869,7 +1869,7 @@
     "router": "ebbb1532efbc",
     "tool": "dfdc6228afd7"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-27",
    "examples": 14
   },
   "sense:radio": {

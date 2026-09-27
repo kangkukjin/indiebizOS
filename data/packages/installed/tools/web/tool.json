@@ -182,6 +182,25 @@
             "description": "모델 미리보기 글자 예산(양의 정수, 기본 60000). 문단 수로 먼저 자르지 않으며 원문 보관·IBL 후속 처리량은 제한하지 않는다. execute_ibl의 verbose:true는 미리보기를 생략한다.",
             "default": 60000
           },
+          "selector": {
+            "type": "string",
+            "description": "content 전용 CSS 본문 영역. 미지정은 article/main/body. 일치하지 않으면 실패."
+          },
+          "include_images": {
+            "type": "boolean",
+            "description": "선택 영역 본문과 이미지 픽셀을 함께 전달(기본 false). 최대 4장, 실패는 명시.",
+            "default": false
+          },
+          "image_offset": {
+            "type": "integer",
+            "description": "이미지 목록의 시작 위치(기본0). 다음 묶음은 next_image_offset 사용, HTML 캐시 재사용.",
+            "default": 0
+          },
+          "image_limit": {
+            "type": "integer",
+            "description": "한 번에 첨부할 이미지 수(1~4, 기본4). 원본 8MiB·2000만 픽셀 한도, 표시 최대1600px.",
+            "default": 4
+          },
           "refresh": {
             "type": "boolean",
             "description": "true면 URL 캐시를 건너뛰고 새 원문 수집. 더 읽기에는 불필요(기본 false).",

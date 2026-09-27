@@ -777,7 +777,9 @@ def _crawl_mode(tool_input, context, op):
         return {"success": False, "items": [], "error": "URL이 제공되지 않았습니다."}
     result = load_module("tool_webcrawl").crawl_website(
         url, tool_input.get("max_length", 60000), op=op,
-        refresh=tool_input.get("refresh", False), project_path=context.project_path)
+        refresh=tool_input.get("refresh", False), project_path=context.project_path,
+        selector=tool_input.get("selector"), include_images=tool_input.get("include_images", False),
+        image_offset=tool_input.get("image_offset", 0), image_limit=tool_input.get("image_limit", 4))
     if op == "content" and result.get("success") and result.get("text") and "items" not in result:
         result["items"] = _text_to_blocks(result.get("title"), result.get("text"))
     return result

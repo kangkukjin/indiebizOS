@@ -282,6 +282,13 @@ def project_v2_result(result):
     out = {k: v for k, v in result.items() if k not in {"evidence", "recordings", "source_map"}}
     out["evidence_summary"] = {"events": len(result.get("evidence", [])),
                                "source_complete": result.get("source_complete")}
+    from image_envelopes import harvest_images
+    # Harvest before string/depth previews can destroy base64. The stored original
+    # retains typed values; only this display copy loses duplicate wire bytes.
+    image_view = {k: v for k, v in out.items() if k not in {"value_wire", "partial_wire"}}
+    cleaned, images = harvest_images(json.dumps(image_view, ensure_ascii=False))
+    if images:
+        out = json.loads(cleaned)
     if len(json.dumps(out, ensure_ascii=False)) > policy["min_chars"]:
         out.pop("value_wire", None)
         if "value" in out:
@@ -302,6 +309,10 @@ def project_v2_result(result):
                     + ("다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. "
                        if "input_args" in out["result_ref"] else "진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. ")
                     + "success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.")
+    if images:
+        out["images"] = [{**{k: v for k, v in image.items() if k != "b64"},
+                          "base64": image["b64"]} for image in images]
+        out["_hint"] += " 이미지는 별도 이미지 블록으로 첨부됩니다. base64 원문을 되읽지 마세요."
     return out
 
 

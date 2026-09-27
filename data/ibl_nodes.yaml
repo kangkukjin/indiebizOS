@@ -1439,7 +1439,7 @@ nodes:
         target_description: search — query(검색어) 또는 category(카페·편의점·주차장·병원·약국·은행·마트·숙박·관광명소·지하철·주유소·음식점·학교·학원·문화시설·공공기관·부동산 한글 라벨 또는 카카오 코드), lat·lng 중심 + radius(m, 최대 20000), sort accuracy|distance, limit 최대 45. detail — name(+id·lat·lng 로 동명 판별).
         router: handler
         tool: search_place
-        implementation: tool_place.py — 키워드는 keyword.json, 카테고리만이면 category.json(좌표 필수), 15×3 페이지네이션, 좌표 없는 항목 드롭. detail 은 keyword 재조회로 id 일치 항목을 고른 뒤 네이버 local(설명·링크)·blog(blog_count·reason) 부착.
+        implementation: tool_place.py — 키워드는 keyword.json, 카테고리만이면 category.json(좌표 필수), 15×3 페이지네이션, 좌표 없는 항목 드롭. limit 충족 표본은 selection, 미충족 누락은 source로 표기하고 뒷페이지 오류도 실패로 보존. detail 은 keyword 재조회로 id 일치 항목을 고른 뒤 네이버 local(설명·링크)·blog(blog_count·reason) 부착.
         target_key: op
         params:
           query: string
@@ -2601,8 +2601,8 @@ nodes:
               - queries
         lands_on: hub
         path_audited:
-          at: '2026-09-20'
-          impl: 483709fd4eea1a3d
+          at: '2026-09-27'
+          impl: a371dd221e3bfba5
         aliases:
           limit:
           - count
@@ -2662,6 +2662,10 @@ nodes:
             op: Text
             max_length: Number
             refresh: Bool
+            selector: Text
+            include_images: Bool
+            image_offset: Number
+            image_limit: Number
           result:
             items: List<Record>
             url: Text
@@ -2674,11 +2678,20 @@ nodes:
           - url
           integers:
           - max_length
+          - image_offset
+          - image_limit
           minimum:
             max_length: 1
+            image_offset: 0
+            image_limit: 1
           nonempty:
           - url
           enums:
+            image_limit:
+            - 1
+            - 2
+            - 3
+            - 4
             op:
             - content
             - links
@@ -2695,14 +2708,14 @@ nodes:
               items: List<Record>
         lands_on: hub
         path_audited:
-          at: '2026-09-20'
-          impl: 483709fd4eea1a3d
+          at: '2026-09-27'
+          impl: a371dd221e3bfba5
         returns: items
         side_effect: false
         fixture: '[sense:crawl]{url: "https://example.com"}'
-        description: 웹페이지 수집 — op:content(기본)=본문 문단, links=링크 문구·실제 주소, metadata=제목·대표주소·발행일·수정일·작성자의 원문 근거. 본문에서 대목 찾기는 [fn:본문에서찾기]. 동일 URL 스냅샷을 재사용하고 새 내용은 refresh:true.
+        description: 웹 수집 — content=본문, links=링크, metadata=페이지 정보. selector로 영역 선택, include_images:true로 이미지 최대4장 첨부. 대목 찾기는 fn:본문에서찾기. 캐시 재사용, 갱신은 refresh:true.
         group: research
-        target_description: 'url 필수(http/https). op=content(기본): 전문·문단 items(url·paragraph_index), 제목은 봉투 title(주소마다읽기는 각 문단에 title도 보존). links: items(text·url·href·source_url·title·rel·link_index), 상대 링크를 해소하며 HTTP(S)만 수집한다. metadata: 관측별 items(field·value·raw·source·source_url·url·title), 날짜 normalized는 ISO 파싱 가능할 때만, 없으면 null. 서로 다른 발행일은 각각 보존하고 일반 time은 date로 남겨 발행일로 추정하지 않는다. 구조가 없는 PDF는 links/metadata 실패. 부분 구조 수집은 structure_errors로 알린다. max_length는 모델 표시 예산(기본 60000)이며 원문·후속 처리량을 자르지 않는다. 캐시 만료·미완성 또는 refresh:true면 재수집, 더 읽기는 저장 변수·source_ref.path. 본문 대목 발췌: >> [fn:본문에서찾기]{패턴:"수영|사우나",문맥:1,개수:5}.'
+        target_description: 'url 필수(http/https). op=content(기본): 전문·문단 items(url·paragraph_index), 제목은 봉투 title(주소마다읽기는 각 문단에 title도 보존). links: items(text·url·href·source_url·title·rel·link_index), 상대 링크를 해소하며 HTTP(S)만 수집한다. metadata: 관측별 items(field·value·raw·source·source_url·url·title), 날짜 normalized는 ISO 파싱 가능할 때만, 없으면 null. 서로 다른 발행일은 각각 보존하고 일반 time은 date로 남겨 발행일로 추정하지 않는다. 구조가 없는 PDF는 links/metadata 실패. 부분 구조 수집은 structure_errors로 알린다. max_length는 모델 표시 예산(기본 60000)이며 원문·후속 처리량을 자르지 않는다. 캐시 만료·미완성 또는 refresh:true면 재수집, 더 읽기는 저장 변수·source_ref.path. 본문 대목 발췌: >> [fn:본문에서찾기]{패턴:"수영|사우나",문맥:1,개수:5}. content에서 selector(CSS)를 지정하면 해당 영역의 본문만 선택한다(불일치 실패). include_images:true는 선택 영역 이미지(기본 article/main/body)의 실제 픽셀을 첨부한다. image_limit=1~4(기본4), image_offset=0부터, next_image_offset이 있으면 같은 URL·selector로 이어 읽는다. 전체 원문은 source_ref에 남으며 선택은 원천 누락을 뜻하지 않는다. 이미지 다운로드 실패는 성공으로 숨기지 않는다.'
         router: handler
         tool: crawl_website
         implementation: 1차 curl_cffi(TLS 크롬 위장) 정적 크롤링 → 로그인 벽·봇차단·콘텐츠 부족 감지 시 Chrome MCP/Playwright(로그인 세션 자동 복원, iframe 전 프레임 수집)로 자동 에스컬레이션. 최종 실패 시 reason(bot_blocked/login_required) 명시.
@@ -2711,6 +2724,10 @@ nodes:
           url: string
           max_length: integer
           refresh: boolean
+          selector: string
+          include_images: boolean
+          image_offset: integer
+          image_limit: integer
         ops:
           default: content
           values:
@@ -6433,7 +6450,7 @@ nodes:
             logs: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
             dialog_info: 라이브 브라우저 세션 의존(navigate 선행) — 세션 없는 무인 점검은 항상 거짓 실패
           values:
-            snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여 (클릭/입력 전 필수)
+            snapshot: 접근성 트리 스냅샷 — 요소에 ref 부여. 표시 예산 선택은 selection으로 표시하고 전체/표시 개수를 보존(클릭/입력 전 필수)
             navigate: 페이지 이동 (mode goto|back|forward; goto는 url)
             click: 요소 클릭 (ref; mode single|double|right)
             type: 입력 필드에 텍스트 입력 (ref, text)

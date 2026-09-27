@@ -83,6 +83,44 @@ return $결과
 같은 실행 계약을 사용한다. `[true]`, `[null]`, `[abs]`도 한 원소 목록이다.
 Callable은 실행 내부 값이며 일반 JSON이나 외부 결과 값으로 전송하지 않는다.
 
+
+### 공통 값 연산 (2026-09-27)
+
+식은 같은 함수 계약과 평가기를 사용한다. 문자열 함수는 Text를 받으며 숫자·Bool의
+변환은 `text()`, 구조의 문자열화는 `json()`으로 명시한다. null을 몰래 문자열로 바꾸지 않는다.
+기존 저장 compute/reduce 식은 호환 입력 변환 뒤 같은 평가기를 쓰며 옛 변환 의미를 보존한다.
+
+| 함수 | 인자와 결과 |
+| --- | --- |
+| split | `split(text, sep=null, maxsplit=-1)` → List<Text>; null 구분자는 공백 분리 |
+| replace / strip | `replace(text, old, new, count=-1)`, `strip(text, chars=null)` → Text |
+| upper / lower / contains / join | `upper(text)`, `lower(text)`, `contains(text, part)` → Bool, `join(sep, List<Text>)` → Text. contains는 기존 부분일치 정책(NFC·대소문자 정규화)을 공유 |
+| unique / union / intersection / difference | `unique(list)`, `union(a,b,...)`, `intersection(a,b)`, `difference(a,b)` → List |
+| zip / enumerate | `zip(a,b,...)`은 가장 짧은 입력 길이의 행 목록, `enumerate(list,start=0)`은 `[번호,값]` 목록 |
+| any / all | List<Bool> → Bool. 빈 목록은 각각 false/true. 입력 전체의 Bool 타입을 검사 |
+| sorted | `sorted(list,key=null,reverse=false)` → 안정 정렬 목록. key는 필드 이름 또는 단일 인자 콜백, null이면 값 자체. 비교 불가능한 키는 실패 |
+| keys / values / entries | Record의 키·값·`[키,값]` 목록. 레코드의 필드 순서 보존 |
+
+위 표의 `=`는 기본값 설명이다. 호출은 위치 인자로 쓴다: `sorted($행,"점수",true)`.
+목록 집합 연산은 `values_equal`로 비교하며 처음 나온 대표 값과 순서를 보존한다.
+숫자 표기·텍스트·날짜 관측도 기존 동등 계약을 따른다. 날짜와 시간의 관측 비교는
+엄격한 수학적 동치 관계가 아닐 수 있으므로 결과는 입력 순서의 대표 선택이다.
+독립 Set 타입은 없다. 행의 키 기준 교집합·차집합은 `table:join`의 `how:"semi"/"anti"`다.
+집합 후보 색인은 동등성의 대체가 아니며, 충돌 후보는 원래 비교로 확인한다.
+
+`$목록[시작:끝:간격]`과 문자열 슬라이싱은 끝 제외·음수 경계를 지원한다. 간격 0은 오류다.
+정수 인덱스도 음수를 허용한다. `{**$기본, key:값, **$추가}`는 왼쪽부터 평가하고 뒤 필드가
+앞 필드를 대체한다. 펼칠 값은 Record다. 함수·도구 인자에도 같은 표기를 사용하고,
+최종 인자는 기존 필수·타입·별칭·파이프 충돌 검사를 받는다. 중복 명시 키는 오류다.
+each의 mode/on_error/parallel은 기존 정적 옵션 계약을 지킨다. 동적 펼침으로 들어온 옵션은
+뒤에서 리터럴로 명시한다.
+
+삼중 따옴표(`"""…"""`, `'''…'''`)는 실제 여러 줄 본문을 받으며 f 접두면 기존 보간을 사용한다.
+`assert 조건, "메시지", {상세:값}`은 Bool 조건을 검사한다. 메시지·상세는 선택이며
+실패할 때만 평가한다. 성공은 Unit, 실패는 `ASSERTION_FAILED`로 위치·상세·근거를 남긴다.
+try/catch로 복구할 수 있고 finally는 실행된다. 타입 검사나 임의의 업무 품질 보증을 대체하지 않는다.
+순수 연산의 반복·정렬·집합 비교도 공유 단계·시간·취소 예산을 소비한다.
+
 ## 반환·분기·반복
 
 `return`은 가장 가까운 프로그램·함수·each 콜백·병렬 가지에서 즉시 반환한다.

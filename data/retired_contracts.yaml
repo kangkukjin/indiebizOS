@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: isolated-python-expression-evaluator
+    retired: 2026-09-27
+    reason: 두 식 경로의 함수와 변환 계약이 갈라져 기능 보강 때마다 중복 구현과 의미 차이가 생겼다.
+    instead: 기존 식은 호환 입력 변환을 거쳐 공통 값 트리·평가기·함수 계약을 사용한다. 새 식은 명시 변환을 사용한다.
+    phrases:
+      - 'contains(...)`라는 내장 함수는 없고'
+      - '문자열 안의 실제 줄바꿈은 지원하지 않습니다.'
   - id: pure-only-container-values
     retired: 2026-09-26
     reason: 결과 객체 안의 정상 함수 호출을 거절해 임시 변수 작성과 수정 왕복을 강제했다.

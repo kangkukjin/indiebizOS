@@ -2317,7 +2317,7 @@
   "table:join": {
    "fields": {
     "description": "b2802eb1fe6f",
-    "target_description": "6584e9d2a438",
+    "target_description": "d9930d321dd3",
     "implementation": "682a227b316a",
     "returns": "5450ffb2cf8a",
     "target_key": "990c23868b96",
@@ -2326,8 +2326,8 @@
     "router": "ebbb1532efbc",
     "tool": "2773a81d8139"
    },
-   "reviewed": "2026-09-25",
-   "examples": 6
+   "reviewed": "2026-09-27",
+   "examples": 7
   },
   "table:judge": {
    "fields": {

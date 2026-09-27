@@ -119,9 +119,10 @@ def test_record_field_pipeline_executes_without_hoisting(current):
     from ibl_v2_compile import compile_program
     empty = '$목록=[]; return {apps:($목록 >> [table:filter]{where:($행)=>true})}'
     assert current(empty)['value'] == {'apps': []}
-    invalid_contains = EXAMPLES['container_record'].replace(
+    contains_example = EXAMPLES['container_record'].replace(
         '$행.url == "https://example.org/board"', 'contains($행.url,"board")')
-    assert 'BUILTIN' in [issue['code'] for issue in compile_program(invalid_contains).issues]
+    assert 'BUILTIN' not in [i['code'] for i in compile_program(contains_example).issues]
+    assert current(contains_example)['value'] == {'apps':[{'url':'https://example.org/board'}]}
     assert current(EXAMPLES['container_record'])['value'] == {
         'apps': [{'url': 'https://example.org/board'}]}
 
@@ -180,7 +181,7 @@ def test_guide_is_reachable_from_actual_prompt_and_old_links():
         prompt = build_environment(allowed_set={'table', 'self'},
                                    expose_idioms=False, compact=compact)
         assert 'read_guide(query="ibl_composition.md")' in prompt
-    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion'}
+    assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision'}
     assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
 
 

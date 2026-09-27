@@ -142,5 +142,56 @@
       "legacy_alias": null,
       "runtime_success_claimed": false
     }
+  },
+  {
+    "intent": "중복을 없애고 이미 처리한 항목을 제외해 정렬합니다.",
+    "ibl_code": "#!ibl edition=2\n$후보=[\"c\",\"a\",\"b\",\"a\"];return sorted(difference($후보,[\"b\"]))",
+    "edition": 2,
+    "alias": "",
+    "nodes": "",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/값연산",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "공통 인자를 펼치고 결과의 완료 조건을 검사합니다.",
+    "ibl_code": "#!ibl edition=2\n[def:합산]($목록){return sum($목록)}\n$기본={목록:[1,2,3]}\n$결과=[fn:합산]{**$기본}\nassert $결과==6,\"합계 불일치\",{actual:$결과}\nreturn $결과",
+    "edition": 2,
+    "alias": "",
+    "nodes": "",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/값연산",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "runtime_success_claimed": false
+    }
+  },
+  {
+    "intent": "문자열을 나누고 역순으로 일부를 골라 표시합니다.",
+    "ibl_code": "#!ibl edition=2\nreturn join(\" / \",split(\"first second third\")[::-1][:2])",
+    "edition": 2,
+    "alias": "",
+    "nodes": "",
+    "category": "composition",
+    "source": "synthetic",
+    "topic": "IBL/값연산",
+    "returns": "",
+    "provenance": {
+      "version": 1,
+      "edition": 2,
+      "kind": "reviewed_seed",
+      "runtime_success_claimed": false
+    }
   }
 ]

@@ -19,7 +19,7 @@ HINTS = {
     "PIPE_COLLISION": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요.",
     "REPEAT_COUNT": "반복 횟수에는 0 이상의 정수를 사용하세요.",
     "SYNTAX": "표시된 구문 경계를 수정한 뒤 프로그램 전체를 다시 검사하세요.",
-    "STRING_LITERAL": '줄바꿈은 \\n으로 쓰세요. 긴 본문은 inputs:{본문:"…"}로 전달해 $본문을 사용하거나 기존 파일·결과를 참조하세요.',
+    "STRING_LITERAL": '줄바꿈은 \\n 또는 삼중 따옴표로 쓰세요. 긴 본문은 inputs:{본문:"…"}로 전달해 $본문을 사용하거나 기존 파일·결과를 참조하세요.',
     "UNOBSERVED_FIELD": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
 }
 
@@ -125,7 +125,7 @@ def access_type(compiler, node, base, key, key_type=None):
     if base.kind in ('List', 'Text') and node.kind == 'index':
         compiler.need(node, key_type, NUMBER)
         if (base.kind == 'List' and base.positions is not None
-                and type(key) is int and 0 <= key < len(base.positions)):
+                and type(key) is int and -len(base.positions) <= key < len(base.positions)):
             return base.positions[key]
         return base.item if base.kind == 'List' else TEXT
     if base.kind == 'Unknown':
@@ -137,6 +137,21 @@ def access_type(compiler, node, base, key, key_type=None):
 
 def builtin_type(compiler, node, name, types):
     """Structural obligations only; never invoke a callback or external tool."""
+    from common.expression_functions import CONTRACTS
+    from ibl_v2_types import declared
+    if name in CONTRACTS:
+        spec = CONTRACTS[name]
+        for i, typ in enumerate(types):
+            expected = spec[2][min(i, len(spec[2]) - 1)]
+            compiler.need(node.data['args'][i], typ, declared(expected))
+        result = declared(spec[3])
+        if name in ('unique', 'intersection', 'difference', 'sorted') and types and types[0].kind == 'List':
+            return Type('List', item=types[0].item or UNKNOWN)
+        if name == 'union' and types:
+            result = types[0]
+            for typ in types[1:]:
+                result = join(result, typ)
+        return result
     nodes = node.data['args']
     def need(i, typ):
         if i < len(types):

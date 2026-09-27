@@ -1,0 +1,1174 @@
+{
+  "scope": "read-only stored workflows/idiom files and observed edition-1 table compute/reduce/select expressions; no execution; not all future expressions",
+  "counts": {
+    "corpus_edition_1": 9398,
+    "programs_inspected": 2480,
+    "programs_not_legacy_parseable": 770,
+    "corpus_edition_2": 896,
+    "stored_files_inspected": 24,
+    "baseline:accepted": 113,
+    "compatibility:accepted": 113,
+    "direct_current:syntax_accepted_not_semantic_proof": 23,
+    "coercion_sensitive:False": 112,
+    "direct_current:requires_binding_adapter": 85,
+    "coercion_sensitive:True": 3,
+    "baseline:ValueError": 1,
+    "compatibility:ValueError": 1,
+    "direct_current:requires_syntax_adapter": 7,
+    "baseline:SyntaxError": 1,
+    "compatibility:SyntaxError": 1,
+    "unique_expressions": 115
+  },
+  "expressions": [
+    {
+      "sha256": "56cb86ba387f89bff01c6b46477f2bf99070700358f9063fa82e816e3f71ad12",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "d45cc05ee3ad834724d47c737d1153e9fe8026c190a822f0dba70de7e120fcd3",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "27fe7d0674b87acacc4e39a7a03f6b7bada9f8f758d53b1fe417c3b049bd5377",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "43d09b7495ca10020cf2a75d8fa6c555c412888d04389bc0f29663ca0d0b1669",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "e16bc2ca4640adf43fdda7660bb7785633bfa3ef89cd22e6a034d5d0d17b62de",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "c2e418d6b92feb54d82280a63d0747490717f4a2774b53746b380565d44ffae6",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "2cfb492560cd33bb132f930a4c90d9519d7e80881dabed22bc274cf1d01cbe7b",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "bd79d0eb1fe4996a55341b8162b7d0194f447f948d13bcb35445b1766425b7ae",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": true
+    },
+    {
+      "sha256": "1b4ce8f3750989c69f2dfef450287679e69e9aff876a5125ddaa38f5ddc88437",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "531eb35138917db6c550cac4ec758955896b9b55b81d47206dad2a3ccbf00989",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "ValueError",
+      "baseline": "ValueError",
+      "direct_current": "requires_syntax_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "f16df21caf060571e917ce83616769cd9c9f8b6775ba0cb06a8ba55ef180e7bc",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_syntax_adapter",
+      "coercion_sensitive": true
+    },
+    {
+      "sha256": "9ca39c9674192e092e2aa8c1f9399be5deb5ec85413305aa52cdf01373b4eeac",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_syntax_adapter",
+      "coercion_sensitive": true
+    },
+    {
+      "sha256": "e25c63069e484756db5d5f4e83607eec2119ee63d91b5c981615cd42076480dc",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "fa9c267ff0f53b4c4a1a1128c63209bcdf00a15eeb5460312f7eb95d009a8d43",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "2c2ebb09303e101c37f2f2f6a182babe5a4634def7798e1b92a0b52c05fb88f5",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "f6e4aa7fb18ff707d820feb8369e09347ac5afffff670813f9bad06066291ac7",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "b08c81d43d512b21a2f775b1ca0c9b5d8bb283b3f9991074ef24a73b5f4fee79",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "54cf6e18f2d031b4f1b37cd08c9fe11d51caa9aba72071bc083b3cb63258e6ae",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "7db8e9001239c99f4805de8de20f6b5d0458752096bf847c0f7826005cc0bec4",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "497b560b0638374d1d644883449efd5ae99c18108252f95a26fcfd1d7668487e",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_syntax_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "6493ce6b028b9368ad2aeea8b02eb28c04726f1b1cc39d60d011f9eecdd8b7da",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "6068e45e67049bc7e4545af27c3cfbfc979489a26746f96f5135e280acc55f23",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "fa0bd50b09e40caf2b7891e5fce3ee6a3a484eefe132ec60390f968bcd84c905",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_syntax_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "8ebb85cb84d00c81dc3d7dafa375d8495c75df34ccc7203f3eed53f0214ef2c0",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_syntax_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "0be721f5ad1afc38ebdb08a19b576257d126f198b90a9c8375c839b6c99c42df",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "89f488a70f759677a067a7be65816acebf036e9fb38bb1b26e0d179c4e166a94",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "7c90d3071cf45481163a948dd5936a63ccb3c1ee8f5a70670cb9be782408ad4b",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "b9b1286c687e691ed0cb556c99640c3bb889039984792e99857d871db9d6acc9",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "d6c10e879e46e49d359427a79af64294e3f371ddbc4289416c78bec03725b6f7",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "60a33e6cf5151f2d52eddae9685cfa270426aa89d8dbc7dfb854606f1d1a40fe",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "e646a7ef736967da756eeb19fa6a9605b4ce299f89e86ee5c34081f2c49ca48b",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "dae8ed51a00cb6fd38cb8b2089cc21c54a27711ff992f5199ae4934766c1d686",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "9d8992755594d9f1d0be9c4c683ae52991028cd45c6728efa80317ed7455f68d",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "cca3792cecc1ccb7eb99ce837d2334c1eafeab647f7e1a24c3fe9f06fdc0aa61",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "dc5cecdb4e5d24d31ea4a4c39658aa063408fc5378b3f1aae57ec6e24c579803",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "7c7c431f70241cb6cf113e717e902be24d6a2cbdeccd23068225352f26833beb",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "070672c2f992d4dd96fe20b92ef64e81672e2eee6de46ea1d58a7c0e97f559dc",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "69e36568cd8b4659389b9fcfbe1167547f6421e78168bfb439dada2ffddb0146",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "3a5bf10f79942cd63a76b82af255f8b806eb7f9564bd23e9d16801d38109dee9",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "e70e88f954f44aef2105bd0d7d7c066837a3e63c565339e21e17562adbb6eeec",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "fd8bf0e11027a49a48793962cc76d9d58ef64c76c2f12e787942d3c083bcdb68",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "c39296a1a829d699508ea6439aa44f39d62ce25ca9c9d22d18e5a9712dbcb303",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "df6e98c8bcef5d6b5f688473a5a6a714675f28c48c10a9252f3553699fc64357",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "6f9bf9b1f752e0ff15e2e3ce9b5e4cd28502db7d3392b59486bbd949182a7d26",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "38c118571fad79d5f4d412116c2b383e05a34f12b2613b2c5a0839c4248ca9d0",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "0970a99843c77deb53ef0ede2c5cb07240a76f052b626ee36967af679b362cc7",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "28602d771bbfafb68f7ce93717a58eac4788edba944016d5a64fe77a266fae7f",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "3d0e694bb7515345a0db44e3750493b4254b8e379545f1a379b43fac262f3ccb",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "c7cc354f2d004ceb8635483d52da4c79706e6a5b19f3e6bc4b6f5c8d34f82f9f",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "1bdf6e8f7a031f31ebcd46d32320f0e54ba7ca1aea0d99d5a4a4d0992eafec58",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "03b64bec547b2671d4a3d6c32dbacd091197c20b4b8be23a98fd597f93136e6c",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "ee8fbd33398742512722bdc62e440e4a1494448cea70880ccbfea9cfd16c111b",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "faabc638521071eb652c016ced4a4fbf66504fbcc48a9a31fa3d2f5db89e91b1",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "01ba16e9d4e85f3b460e1561ec33b2f0d927c1f660f3c2a1edd3b5f9da6f0548",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "05078fc243c00a2e91c7fb41059d9ac0200684087d8fa2bc4d7e75a375122380",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "c2c8ac3222699d1b96b58120dc8eefd23516cee050618cdac6702e217f97167c",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "78a1938662ad1e8260fd4d2d3543fddef88cbbe1d15b38221c01a7f30c5a2545",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "861213b84a3e9c4dbbdd314205f4b540dc6a5f73265296af4231208685a1d504",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "0bfef9513e5bfcd61b9c9dd5cec20a68d283d58d2c41569c77a321ecbae09978",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "e5cf008fb6c07c6a442280cdf3cdb556cca0efabfab2dbd51cd81f380cbb3f48",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "655286e756d7244cd2e4a2833766b17e97376bec4d50b21b0729d4643c8e96d1",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "9cb6a2cbf67bbe2c44889c341af3186d4aba836bc3bf196a807ac72ec8398acb",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "0e87632cd46bd4907c516317eb6d81fe0f921a23c7643018f21292894b470681",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "aebd12e70b604acd4ea9393ab5c1740b9f6a5bbd0b7c4011171a19a581f57bdc",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "8044aae1f86875d993f20d7fe3815306b640d6e039c4512cd7a2f8453207b4cd",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "a56145270ce6b3bebd1dd012b73948677dd618d496488bc608a3cb43ce3547dd",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "4bde45285706feb80bb6225e95734767bbc036c9ed054af7089c17f1f8dacf05",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "2663b01ebe24cfd51db3c0601467909163d263b44ba8485cad1533bdb170dd34",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "332cd182f30d48984202fa6dc6bad85ec5877d5c0b24c7c1b75175c61e266303",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "59f173475a44e1c6ee6f4bfdd0d97ace8aaca78d56f241abb7eaaf6b6a1bab04",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "syntax_accepted_not_semantic_proof",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "b94c1b52e84014016a875fed4464ddf1db945a8d2b5b5b2b0c8ca82f6b53acb0",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "aafef5df0f3cc11be39ac9e7b04d86fe966a517a7242f74ad0c85c69dd708f72",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "82a3537ff0dbce7eec35d69edc3a189ee6f17d82f353a553f9aa96cb0be3ce89",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "383fbd1ea791ee73d9d701829393e818d33647be613688d3331ebc7330b5683d",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "05cde18ff3a8cff544cce8c13e1ccd3dfdd209888f5988657f0af22c13fa5829",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "0e83cafbbd67b37bf84b0be5b3f61d1574c04da1082058ceb36228f9b6186641",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "683b531f41ec88a2f345b727afe59757b73162a340a65c86bba62866f8fe556c",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "f49005760c252c2a0ebfb42b7c7a06bf7d575457ae300f621cda012fe77abf36",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "845e91831319e89c4d656bdb80c278ac09a7230d61e5dfd2e1b1fbb436ac8917",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "0d90d58661c4c7ccf9cadb159669b94c61e48d2aa6a1fa8265fb19ccef42a90c",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "80c7557525ed0914947f0a723839f65db09da1c34d646fe624335dd4f48541cc",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "d40b063c872bce81db7cec4ae462aebbaaaae4025976469dff959d7d7af169d5",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "eeaa0a70d79903d536f7c2d24dc82c1ede30caf905f1839008c23810767eb04d",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "760a3bcf0366e0c1dc4689885cb8a5d501c2afce448ca2dd42b76f72ea1de474",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "fb39532d821ba96442c9cdd4035e044da91017badb898bcec8bc3360b3bb85df",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "9eaca743515cc6a382c3a0582e2af8e5b250b98f0fbd60bc723a85c5c1a63adb",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "2e4087ff94f48208a1d05ba05cab3ea9ee67fe67c77bfeb4bcad3e8e5d13f141",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "f6ad13d124932fddd953205102f14f723425768749f0de5bb270a04c7bdd1f57",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "a03ff0a2e1ddaf78102011c9195a5d8933cd609f616fb5a63c2238905f41e54d",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "881a12e06342bc6451950ce210b9a83cc0250674a62228984f37ccd35dce2486",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "611fe5277ee82380c40f7a49b0042e795b22770c9b52c04e40df9691d5f4884d",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "96e7995e08d1de6db8386c40e71e9a3243d3a0bbc653fac4631ad8d846e99984",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "acd6a15e9b62d33398b5ced5691c8552ab9a9080316e770168e1ae07c1d741bb",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "SyntaxError",
+      "baseline": "SyntaxError",
+      "direct_current": "requires_syntax_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "cab15da8282e66c90347c5c760e108a257db160d32b60a61afed8b34dd6a5435",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "430ae2b4953d1bde6c800a6a7349e37a379991d7d89ae0cca819d3af142a4837",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "97380187a878903ffe722b7bfd8d8ba92457ef77de0216cfe9261c72c2b87397",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "aaf2320646108059a87ab5017a86aee454f5378ed95003dbb2e12f4ca5266e0e",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "23d611a6f6f8e3ef8775959efd61eee094c1e6b147ab978e7bf7ca452e51110b",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "018f421bea86ee059ae1d42c76f6a0a0c8a5adeff6677a83aabd6d85cd13a4d5",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "ebb389196cd700a8a6974c873c3e22a441fa42edb29625e05e23eb436e29b286",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "cfdc129e475d7bb885854f7c3a86d34a35b662a1706e7585d7b88647b9535447",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "28e5ebabd9d8f6e237df63da2b503785093f0229241bc7021198f63c43b93269",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "e43c7a3a37c3703a5e31964942d0f8e09d0d11e3796905320c639356bced17f2",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "c767e5b0a0e90fcc6787e9da6c661742acfdcda2a3651de05a3990ef611ec161",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "c622da04e89dd54f53bda04bb663c42e490c6995847d104df18bb19c475042a4",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "6bf0a0105bba9a1729dbf970b966e7e86c69f3803f6d90ca7654446d58f14d32",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "b918d5af77b8733a489218cf90ec744604ce4966780baaef23f3d1950a23813a",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "069698c303d1b00ba1486dd98a98c9784f2626e1ccdbbb079e02656d7c40f80d",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "5bf3cd190f65893c9702ae4a81dd51dc7941ab1e735d9ea47b05a49cc25b4c68",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "ff798569c3b556abfeba965f3ded35e597c5552c6a7109f36c76b789d4810743",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "5e028e374ef3f7133444a402c4e1b2e71dfeba5133d83aa8893370e5fb837909",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "7363ad1dc1b74ab51415c79fde5198298b398ec33a65294207d8df2cd613ff3f",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "7b38bb2828960438cdf18836b51e790bb447baa5b31bdff23689afa2d7c069e5",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    },
+    {
+      "sha256": "5d670d5dc385f1d5738b4600b54a94baca4f6fdf8f8d0184bbe9a0b1404adf43",
+      "origins": [
+        "observed"
+      ],
+      "compatibility": "accepted",
+      "baseline": "accepted",
+      "direct_current": "requires_binding_adapter",
+      "coercion_sensitive": false
+    }
+  ]
+}

@@ -38,6 +38,10 @@ $행 = [{id:"a",qty:2}]
 함수의 인자는 명시한다. 첫 인자가 파이프 자리다. return은 현재 프로그램·함수·each에서 즉시 반환한다.
 if/try는 반환 프레임을 만들지 않는다. 빈 목록은 정상 값이며 ??로 대체되지 않는다.
 [if:len($목록)==0]{...}[else]{...}로 빈값을 다룬다. [try]{...}[catch]{...}는 잡을 수 있는 실패를 처리한다.
+문자열 가공: split/replace/strip/upper/lower/contains/join(Text 입력; 변환은 text/json으로 명시).
+목록: unique/union/intersection/difference(순서 보존·기존 동등성), zip/enumerate, any/all(Bool 목록),
+sorted($목록,"키",true), keys/values/entries. 슬라이스 $목록[1:3], 펼침 {**$기본,k:값}(뒤 필드 우선).
+실제 여러 줄은 삼중 따옴표. assert 조건,"메시지",{상세:값}은 실패 시 ASSERTION_FAILED와 근거를 남긴다.
 각 값의 필드는 has/get으로 확인한다. 필드가 없으면 null로 추측하지 않는다.
 
 표 계산은 filter{where:($r)=>Bool}, compute{set:($r)=>Record}, select{columns:[...]}, sort{by,descending}, take{n}이다.

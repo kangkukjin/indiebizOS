@@ -5,7 +5,7 @@ Unknown cardinalities/definitions are explicitly reported, never counted as zero
 """
 from dataclasses import dataclass
 
-from ibl_v2_ir import Node
+from ibl_v2_ir import Node, record_fields
 from ibl_v2_analysis import location
 
 
@@ -94,8 +94,10 @@ def analyze(compiler, root, inputs):
         if node.kind != 'call':
             return Facts()
         d = node.data
+        if 'entries' in d['params'].data:
+            unknown(node, '펼침 인자의 값·효과는 실행 시 해소합니다.')
         args = {k: walk(v, env, loops, multiplier, depth)
-                for k, v in d['params'].data['fields'].items()}
+                for k, v in record_fields(d['params']).items()}
         key = d['node'] + ':' + d['action']
         if key == 'table:each':
             items = piped if piped is not None else args.get('items', Facts())
@@ -105,7 +107,7 @@ def analyze(compiler, root, inputs):
                      'i': Facts(dependencies=frozenset({node.id}))}
             walk(d['body'], local, (*loops, (node.id, items.count)),
                  multiplier * items.count if multiplier is not None and items.count is not None else None, depth)
-            mode = d['params'].data['fields'].get('mode')
+            mode = record_fields(d['params']).get('mode')
             return Facts(items.count if mode is None or mode.data.get('value') == 'map' else None,
                          items.dependencies)
         sid = d.get('symbol')
@@ -131,7 +133,7 @@ def analyze(compiler, root, inputs):
         from ibl_callable_contract import normalize, selected, UNRESOLVED
         try:
             args = normalize(spec.contract, args)
-            fields = normalize(spec.contract, d['params'].data['fields'])
+            fields = normalize(spec.contract, record_fields(d['params']))
         except Exception:
             unknown(node, '인자 계약 해석 실패')
             return Facts()

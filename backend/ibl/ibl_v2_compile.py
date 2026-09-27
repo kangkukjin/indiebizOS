@@ -7,7 +7,7 @@ fingerprint, avoiding the legacy transitive-cache invalidation problem.
 from dataclasses import dataclass, field
 from pathlib import Path
 import copy
-from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches
+from ibl_v2_ir import Fault, Node, UNIT, digest, span, parallel_branches, record_fields
 from ibl_v2_parser import parse
 from ibl_v2_expr import BUILTINS
 from ibl_v2_analysis import (finish_diagnostics, numeric_operand, builtin_type,
@@ -18,7 +18,7 @@ from ibl_v2_types import (Type, UNKNOWN, UNIT_T, BOOL, NUMBER, TEXT, NULL,
 
 RESERVED = {"it", "i", "error"}
 PURE_KINDS = {"literal", "ref", "record", "list", "unary", "binary", "field",
-              "index", "builtin", "pure_call", "lambda", "format"}
+              "index", "slice", "builtin", "pure_call", "lambda", "format"}
 
 
 @dataclass
@@ -264,6 +264,15 @@ class Compiler:
                 self.issue(node, "READONLY", f"읽기 전용 바인딩: ${name}")
             env[name] = sub(d["value"])
             return UNIT_T
+        if kind == "assert":
+            for key in ("condition", "message", "details"):
+                self.pure(d[key])
+            self.need(node, sub(d["condition"]), BOOL)
+            if d["message"] is not None:
+                self.need(node, sub(d["message"]), TEXT)
+            if d["details"] is not None:
+                self.need(node, sub(d["details"]), Type("Record"))
+            return UNIT_T
         if kind == "return":
             if final:
                 self.issue(node, "FINALLY_RETURN", "finally 안에는 return을 쓸 수 없습니다.")
@@ -277,7 +286,36 @@ class Compiler:
             return ordered_list(sub(v) for v in d["values"])
         if kind == "record":
             self.container_value(node)
-            return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()), open=False)
+            if "entries" not in d:
+                return Type("Record", tuple((k, sub(v)) for k, v in d["fields"].items()), open=False)
+            fields, opened = {}, False
+            for key, value in d["entries"]:
+                typ = sub(value)
+                if key is None:
+                    self.need(value, typ, Type("Record"))
+                    if typ.kind == "Record":
+                        if typ.open:
+                            fields = {k: UNKNOWN for k in fields}
+                        fields.update(dict(typ.fields))
+                        opened |= typ.open
+                    else:
+                        fields = {k: UNKNOWN for k in fields}
+                        opened = True
+                else:
+                    fields[key] = typ
+            return Type("Record", tuple(fields.items()), open=opened)
+        if kind == "slice":
+            self.pure(node)
+            base = sub(d["base"])
+            self.need(node, base, join(TEXT, Type("List", item=UNKNOWN)))
+            for key in ("lower", "upper", "stride"):
+                if d[key] is not None:
+                    self.need(d[key], sub(d[key]), join(NUMBER, NULL))
+                    if d[key].kind == "literal":
+                        v = d[key].data["value"]
+                        if v is not None and (type(v) is not int or key == "stride" and v == 0):
+                            self.issue(d[key], "SLICE_BOUND", "슬라이스는 정수 경계와 0이 아닌 간격을 받습니다.")
+            return Type("List", item=base.item or UNKNOWN) if base.kind == "List" else base
         if kind in ("field", "index"):
             base = sub(d["base"])
             key = d.get("key")
@@ -368,7 +406,11 @@ class Compiler:
         if kind == "fallback":
             return join(sub(d["left"], env.copy()), sub(d["right"], env.copy()))
         if kind == "call":
-            args = dict(sub(d["params"]).fields)
+            arg_type = sub(d["params"])
+            args = dict(arg_type.fields)
+            d["open_arguments"] = arg_type.open
+            if arg_type.open:
+                self.need(d["params"], UNKNOWN, Type("Record"))
             key = f"{d['node']}:{d['action']}"
             if key == "table:each":
                 return self.each(node, args, env, names, piped)
@@ -390,11 +432,16 @@ class Compiler:
             from ibl_callable_contract import normalize, selected, problems, UNRESOLVED
             try:
                 args = normalize(spec.contract, args)
-                fields = normalize(spec.contract, d['params'].data['fields'])
+                fields = normalize(spec.contract, record_fields(d["params"]))
             except Fault as exc:
                 self.issue(node, exc.code, str(exc))
                 return UNKNOWN
             values = {k: v.data['value'] if v.kind == 'literal' else UNRESOLVED for k, v in fields.items()}
+            for arg in args:
+                values.setdefault(arg, UNRESOLVED)
+            if arg_type.open:
+                for arg in spec.contract['params']:
+                    values.setdefault(arg, UNRESOLVED)
             # Argument relationships see the same receiver as runtime.invoke.
             # The value is not known here, but its presence is statically known.
             receiver = spec.contract.get('pipe_input')
@@ -407,7 +454,7 @@ class Compiler:
                 d['dependency_args'], d['dependency_snapshot'] = selectors, snapshot
                 self.call_dependencies[node.id] = snapshot
             contract = selected(spec.contract, values)
-            for problem in problems(contract, values):
+            for problem in ([] if arg_type.open else problems(contract, values)):
                 self.issue(node, 'ARGUMENT_CONTRACT', problem)
             if any(values.get(k) is UNRESOLVED for variant in spec.contract.get('variants', []) for k in variant['when']):
                 self.guards.append({'source_span': span(self.source, node), 'expected': '동적 인자에 따른 도구 계약은 실행 직전에 확인합니다.'})
@@ -548,7 +595,7 @@ class Compiler:
             return set()
         out = set()
         if node.kind == "call":
-            fields = node.data["params"].data["fields"]
+            fields = record_fields(node.data["params"])
             values = {k: v.data["value"] if v.kind == "literal" else
                       bindings.get(v.data["name"]) if v.kind == "ref" else None
                       for k, v in fields.items()}
@@ -585,7 +632,9 @@ class Compiler:
             else:
                 args[receiver] = piped
         for name, default in params.items():
-            if name not in args and default is None:
+            if name not in args and node.data.get("open_arguments"):
+                args[name] = UNKNOWN
+            elif name not in args and default is None:
                 self.issue(node, "MISSING_ARGUMENT", f"필수 인자 누락: {name}")
         for name in args.keys() - params.keys():
             self.issue(node, "UNKNOWN_ARGUMENT", f"알 수 없는 인자: {name}")
@@ -594,10 +643,12 @@ class Compiler:
         self.arguments(node, args, {"items": None, "mode": UNIT, "on_error": UNIT, "parallel": UNIT}, "items", piped)
         items = args.get("items", UNKNOWN)
         self.need(node, items, Type("List", item=UNKNOWN))
-        fields = node.data["params"].data["fields"]
+        fields = record_fields(node.data["params"])
         options = {}
         for key, default in (("mode", "map"), ("on_error", "stop"), ("parallel", 1)):
             value = fields.get(key)
+            if value is None and (key in args or node.data.get("open_arguments")):
+                self.issue(node, "STATIC_OPTION", f"펼친 each의 {key}는 뒤에 리터럴로 명시하세요.")
             if value and value.kind != "literal":
                 self.issue(value, "STATIC_OPTION", f"{key}는 컴파일 시 리터럴이어야 합니다.")
             options[key] = value.data.get("value") if value else default
@@ -660,6 +711,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                     "source_map": compiler.source_map, "contracts": digest({k: registry[k].contract for k in sorted(compiler.used_actions)}),
                     "edition": digest((Path(__file__).parents[1] / "base/ibl_edition.py").read_text()),
                     "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
+                    "expressions": digest({p.name: digest(p.read_text()) for p in sorted((Path(__file__).parents[1] / "common").glob("expression_*.py"))}),
                     "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
                               {Path(__file__).parent / name for name in ("ibl_document_value.py", "ibl_member_library.py",
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}

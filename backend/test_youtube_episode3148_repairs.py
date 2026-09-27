@@ -130,11 +130,19 @@ def test_compute_contains_prescription_executes():
     assert probe(dict(id='contains', code=code, expected=expected, error=False, contains=None))['ok']
 
 
-@pytest.mark.parametrize('expr,hint', [("'툴 콜' in tip", 'contains('), ("[id for id in rows]", 'ListComp')])
+@pytest.mark.parametrize('expr,hint', [("[id for id in rows]", 'ListComp')])
 def test_compute_rejects_unsupported_syntax_with_specific_remedy(expr, hint):
     from common.safe_expr import compile_expr
     with pytest.raises(ValueError, match=__import__('re').escape(hint)):
         compile_expr(expr)
+
+
+def test_compute_membership_uses_shared_list_contract():
+    from common.safe_expr import compile_expr, eval_expr
+    code, _, _ = compile_expr("'툴 콜' in tip")
+    with pytest.raises(ValueError, match='contains\\('):
+        eval_expr(code, {'tip': '툴 콜 상한'})
+    assert eval_expr(code, {'tip': ['툴 콜', '다른 팁']}) is True
 
 
 if __name__ == '__main__':

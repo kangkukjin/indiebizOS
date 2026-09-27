@@ -116,6 +116,7 @@ def legacy_runtime_snapshot():
     from ibl_registry import load_nodes_installed
     root = get_base_path()
     paths = list(Path(__file__).parent.glob('*.py'))
+    paths += list((root / 'backend/common').glob('*.py'))
     paths += [p for p in (root/'data/packages/installed/tools').rglob('*.py')
               if '__pycache__' not in p.parts and not p.name.startswith('test_')]
     return digest({'files': {str(p): digest(p.read_bytes().hex()) for p in sorted(paths)},

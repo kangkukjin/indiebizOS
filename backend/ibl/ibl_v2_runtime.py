@@ -16,10 +16,7 @@ from ibl_v2_expr import (Builtin, Closure, binary, boolean, number, scalar_text,
 from ibl_v2_types import guard
 
 
-@dataclass(frozen=True)
-class Binding:
-    value: object
-    evidence: frozenset = frozenset()
+from common.expression_eval import Binding, ExpressionEvaluator
 
 
 class Returned(BaseException):
@@ -56,7 +53,7 @@ def returned_shape(value):
     return {}
 
 
-class Runtime:
+class Runtime(ExpressionEvaluator):
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
                  recordings=None, replay=False, journal=None, reusable=None, reuse_run=None,
                  input_evidence=None):
@@ -165,12 +162,9 @@ class Runtime:
     def _eval(self, node, env, piped):
         d, kind = node.data, node.kind
         sub = lambda n: self.eval(n, env)
-        if kind == "literal":
-            return Binding(copy.deepcopy(d["value"]))
-        if kind == "ref":
-            if d["name"] not in env:
-                raise Fault("UNBOUND", f"정의되지 않은 값: ${d['name']}", node)
-            return env[d["name"]]
+        value = self.expression(node, env)
+        if value is not NotImplemented:
+            return value
         if kind == "sequence":
             result, parents = Binding(UNIT), set()
             for statement in d["statements"]:
@@ -189,59 +183,17 @@ class Runtime:
             return Binding(UNIT, env[d["name"]].evidence)
         if kind == "def":
             return Binding(UNIT)
+        if kind == "assert":
+            condition = sub(d["condition"])
+            if not boolean(condition.value):
+                message = sub(d["message"]) if d["message"] is not None else Binding("조건을 충족하지 못했습니다.")
+                details = sub(d["details"]) if d["details"] is not None else Binding({})
+                if not isinstance(message.value, str) or not isinstance(details.value, dict):
+                    raise Fault("ASSERT_CONTRACT", "assert의 메시지는 Text, 상세는 Record입니다.", node)
+                raise Fault("ASSERTION_FAILED", message.value, node, details=details.value)
+            return Binding(UNIT, condition.evidence)
         if kind == "return":
             raise Returned(sub(d["value"]))
-        if kind == "list":
-            # Source-order, fail-fast evaluation through the ordinary eval /
-            # invoke path: nested calls keep budgets, evidence and receipts.
-            # Do not hoist children out of their branch or auto-parallelize.
-            values = [sub(v) for v in d["values"]]
-            return Binding([b.value for b in values], self.parents(values))
-        if kind == "record":
-            values = {k: sub(v) for k, v in d["fields"].items()}
-            return Binding({k: b.value for k, b in values.items()}, self.parents(values.values()))
-        if kind in ("field", "index"):
-            base = sub(d["base"])
-            key = Binding(d["key"]) if kind == "field" else sub(d["key"])
-            if isinstance(base.value, dict) and isinstance(key.value, str):
-                if key.value not in base.value:
-                    raise Fault("MISSING_FIELD", f"필드가 없습니다: {key.value}", node)
-            elif kind == "index" and isinstance(base.value, (str, list)):
-                if type(key.value) is not int or not 0 <= key.value < len(base.value):
-                    raise Fault("INDEX", "인덱스가 범위를 벗어났거나 정수가 아닙니다.", node)
-            else:
-                raise Fault("FIELD_TYPE", "이 값에는 해당 필드/인덱스 접근을 할 수 없습니다.", node)
-            if d["base"].kind == "ref" and d["base"].data["name"] == "error" and key.value == "partial":
-                self.event(node, "handled_partial", base.evidence)
-            return Binding(base.value[key.value], self.parents([base, key]))
-        if kind == "unary":
-            value = sub(d["value"])
-            out = not boolean(value.value) if d["op"] in ("not", "!") else number(value.value)
-            if d["op"] == "-":
-                out = -out
-            return Binding(out, value.evidence)
-        if kind == "binary":
-            a, op = sub(d["left"]), d["op"]
-            if op in ("and", "&&", "or", "||"):
-                value = boolean(a.value)
-                if (op in ("and", "&&") and not value) or (op in ("or", "||") and value):
-                    return a
-                b = sub(d["right"])
-                return Binding(boolean(b.value), self.parents([a, b]))
-            b = sub(d["right"])
-            return Binding(binary(op, a.value, b.value), self.parents([a, b]))
-        if kind == "lambda":
-            captures = {name: env[name] for name in free_names(node) if name in env}
-            return Binding(Closure(tuple(d["params"]), d["body"], captures), self.parents(captures.values()))
-        if kind == "builtin":
-            return Binding(Builtin(d["name"]))
-        if kind == "pure_call":
-            args = [sub(a) for a in d["args"]]
-            fn = sub(d["fn"])
-            return self.callback(fn.value, args)
-        if kind == "format":
-            parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
-            return Binding("".join(scalar_text(p.value) for p in parts), self.parents(parts))
         if kind == "pipe":
             return self.eval(d["right"], env, sub(d["left"]))
         if kind == "fallback":
@@ -265,6 +217,11 @@ class Runtime:
                 definition = self.plan.functions[d["symbol"]]
                 params = definition.data["params"]
                 args = self.inject(node, args, next(iter(params), None), piped)
+                unknown = args.value.keys() - params.keys()
+                missing = [k for k, default in params.items() if k not in args.value and default is None]
+                if unknown or missing:
+                    raise Fault("FUNCTION_ARGUMENTS", "함수 인자가 계약과 다릅니다.", node,
+                                details={"unknown": sorted(unknown), "missing": missing})
                 local = {k: Binding(v, args.evidence) for k, v in args.value.items()}
                 for name, default in params.items():
                     if name not in local:
@@ -368,24 +325,14 @@ class Runtime:
             raise Fault("PIPE_COLLISION", "파이프 입력 자리가 없거나 중복입니다.", node)
         return Binding({**args.value, receiver: piped.value}, args.evidence | piped.evidence)
 
-    def callback(self, fn, args):
-        if isinstance(fn, Builtin):
-            self.check()
-            check_arity(fn.name, len(args))
-            if fn.name == "reduce":
-                rows = guard(args[0].value, "List", "reduce 목록")
-                acc = args[1]
-                for row in rows:
-                    self.budget.tick(row=True)
-                    acc = self.callback(args[2].value, [acc, Binding(row, args[0].evidence)])
-                return acc
-            if fn.name == "evidence":
-                return Binding(self.evidence(args[0].evidence), self.parents(args))
-            return Binding(pure_call(fn.name, [a.value for a in args]), self.parents(args))
-        if not isinstance(fn, Closure) or len(args) != len(fn.params):
-            raise Fault("CALLABLE", "콜백 또는 인자 수가 잘못되었습니다.")
-        env = {**fn.env, **dict(zip(fn.params, args))}
-        return self.eval(fn.body, env)
+    def expression_tick(self):
+        # Pure work shares the step/time/cancellation budget. The row budget
+        # remains the count of each/repeat work, not comparison internals.
+        self.check()
+
+    def expression_row(self):
+        self.check()
+        self.budget.tick(row=True)
 
     def each(self, node, env, args, piped):
         args = self.inject(node, args, "items", piped)
@@ -570,7 +517,7 @@ class Runtime:
                             "contract": contract,
                             "dependency": node.data.get("dependency_snapshot"),
                             "semantics": {k: self.plan.dependencies[k]
-                                          for k in ("core", "edition", "semantics")}})
+                                          for k in ("core", "edition", "semantics", "expressions")}})
         eid = self.event(node, "invoke", args.evidence, action=key,
                          effects=contract["effects"], request_hash=request_hash)
         tool_evidence = {}

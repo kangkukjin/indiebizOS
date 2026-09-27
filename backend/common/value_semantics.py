@@ -251,6 +251,23 @@ def values_equal(left: Any, right: Any) -> bool:
     return structural_equal(left, right, _conditional_scalar_equal)
 
 
+def equality_bucket(value):
+    """Candidate index only: equality still requires values_equal.
+
+    All dates share a bucket because calendar-date/aware-time matching is not
+    an equivalence relation. Do not canonicalize them into a native Set key.
+    Equal values must share a bucket; unequal values may also share one.
+    """
+    def scalar(item):
+        observed = classify_value(item)
+        if observed.kind is ValueKind.NUMBER:
+            return "number", observed.number
+        if observed.kind in (ValueKind.TEXT, ValueKind.BOOL):
+            return "text", observed.text
+        return observed.kind.value,
+    return freeze_structure(value, scalar)
+
+
 def _partial_text_form(value: Any) -> str | None:
     """부분일치 연산자(contains/startswith/endswith/in)의 텍스트 관점.
 

@@ -24,9 +24,14 @@ def query_notes(args):
             continue
         match = re.match(r"^\s*(site\d*\.[a-z0-9.-]+)(?=\s|$)", query, re.I)
         if match:
-            notes.append({"code": "POSSIBLE_SITE_OPERATOR_TYPO", "query": query,
-                          "token": match[1],
-                          "hint": "이 표기는 site: 도메인 제한 연산자가 아닙니다. 도메인 제한을 의도했다면 실제 주소를 확인해 site:example.org 검색어로 고치세요. 일반 검색어라면 결과를 그대로 사용하세요. 자동 수정하지 않았습니다."})
+            note = {"code": "POSSIBLE_SITE_OPERATOR_TYPO", "query": query,
+                    "token": match[1],
+                    "hint": "이 표기는 site: 도메인 제한 연산자가 아닙니다. 도메인 제한을 의도했다면 실제 주소를 확인해 site:example.org 검색어로 고치세요. 일반 검색어라면 결과를 그대로 사용하세요. 자동 수정하지 않았습니다."}
+            if match[1].lower().startswith('site.'):
+                note['suggested_query'] = (query[:match.start(1)] + 'site:' +
+                                           match[1][5:] + query[match.end(1):])
+                note['suggestion_condition'] = 'site. 뒤의 문자열이 의도한 실제 도메인일 때만 사용'
+            notes.append(note)
     return notes
 
 

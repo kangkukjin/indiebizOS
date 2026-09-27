@@ -536,7 +536,8 @@ def read_guide_schema():
     """One provider-neutral schema; conditional reads never assume retained context."""
     return {"name": "read_guide", "description":
             "가이드 파일명으로 엽니다. 이미 읽은 본문이 현재 문맥에 있으면 재독하지 마세요. "
-            "변경 확인은 if_hash, 특정 절 재확인은 section을 사용합니다. 문맥에서 사라졌으면 본문을 다시 읽습니다.",
+            "변경 확인은 if_hash, 특정 절 재확인은 반환된 sections의 정확한 제목을 section에 사용합니다. "
+            "절 제목을 모르면 section을 생략합니다. 문맥에서 사라졌으면 본문을 다시 읽습니다.",
             "input_schema": {"type": "object", "properties": {
                 "query": {"type": "string", "description": "가이드 파일명 또는 검색어"},
                 "read": {"type": "boolean", "description": "기본 true, false면 목록만"},
@@ -548,6 +549,7 @@ def read_guide_schema():
 def guide_read_view(result, params):
     """Explicit version/section requests only; ordinary reads always return full text."""
     from hashlib import sha256
+    from common.value_semantics import text_match
     import re
     key = 'content' if 'content' in result else 'guide_content'
     content = result.get(key)
@@ -563,7 +565,20 @@ def guide_read_view(result, params):
         hits = [i for i, m in enumerate(headings) if m[2] == section]
         if len(hits) != 1:
             out.pop(key, None)
+            out['success'] = False
+            out['code'] = 'GUIDE_SECTION_AMBIGUOUS' if hits else 'GUIDE_SECTION_NOT_FOUND'
             out['error'] = '절 제목이 없거나 중복입니다. sections에서 유일한 제목을 선택하거나 전문을 읽으세요.'
+            # 추측한 절로 이동하지 않는다. 조회 가능한 제목과 완전한 복구 인자를 준다.
+            titles = out['sections']
+            unique = [title for title in titles if titles.count(title) == 1]
+            candidates = [title for title in unique if text_match('contains', title, section)]
+            candidates = candidates or unique
+            query = out.get('file') or params.get('query')
+            if query:
+                out['read_args'] = {'query': query, 'read': True}
+                out['section_reads'] = [{'query': query, 'read': True, 'section': title}
+                                        for title in candidates[:8]]
+                out['section_reads_omitted'] = max(0, len(candidates) - 8)
             return out
         i = hits[0]; start = headings[i]
         end = next((m.start() for m in headings[i+1:] if len(m[1]) <= len(start[1])), len(content))

@@ -384,7 +384,15 @@ class Compiler:
         if kind == "pipe":
             left = sub(d["left"])
             if d["right"].kind != "call":
-                self.issue(node, "PIPE_TARGET", "파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.")
+                details = {}
+                if d["right"].kind == "parallel":
+                    details = {"actual": "parallel", "hint":
+                               "&가 >>보다 먼저 묶입니다. A >> B & C >> D는 "
+                               "(A >> (B & C)) >> D로 해석됩니다. 독립된 파이프를 "
+                               "병렬 실행하려면 (A >> B) & (C >> D)처럼 각 가지를 "
+                               "괄호로 묶으세요. 병렬 결과를 넘기려면 (A & B) >> C입니다."}
+                self.issue(node, "PIPE_TARGET", "파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.",
+                           **details)
                 return UNKNOWN
             return self.visit(d["right"], env, names, readonly, final, piped=left)
         if kind == "parallel":

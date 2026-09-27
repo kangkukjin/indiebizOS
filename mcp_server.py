@@ -425,7 +425,7 @@ async def execute_ibl(code: str, project_path: str = "",
 
 @mcp.tool()
 async def read_guide(query: str, read: bool = True, ctx: Context = None,
-                     if_hash: str = None, section: str = None) -> str:
+                     if_hash: str = None, section: str = None):
     """작업 가이드(워크플로우·레시피)를 가이드 DB에서 검색해 읽습니다.
 
     복잡한 정기 작업(동향 보고서·작업계획서·출판·배포 등) 전에 관련 가이드를 먼저 확인하세요.
@@ -435,17 +435,24 @@ async def read_guide(query: str, read: bool = True, ctx: Context = None,
         query: 검색 키워드 (예: "AI 동향 보고서", "법률", "통계").
         read: True(기본)면 가장 잘 맞는 가이드 본문까지, False면 목록만 반환.
         if_hash: 현재 문맥에 보유한 content_hash. 같으면 본문을 재전송하지 않음.
-        section: 필요한 절 제목. 본문을 잃었으면 둘 다 생략해 전문을 읽음.
+        section: 반환된 sections의 정확한 절 제목. 제목을 모르면 생략. 본문을 잃었으면 둘 다 생략해 전문을 읽음.
 
     ※ in-process 프로바이더(Gemini 등)는 이 도구를 자기 프로세스에서 직접 갖는다.
       이 MCP 노출은 아웃오브프로세스인 Claude Code 가 같은 능력을 갖게 하는 통로다.
     """
     header_agent, _, header_task, _ = _http_identity(ctx)
     agent_id, task_id = header_agent or DEFAULT_AGENT_ID, header_task or DEFAULT_TASK_ID
-    return await anyio.to_thread.run_sync(
+    raw = await anyio.to_thread.run_sync(
         lambda: _post_backend("/ibl/read_guide", {"query": query, "read": read, "if_hash": if_hash, "section": section,
                                                "agent_id": agent_id, "task_id": task_id}, 30)
     )
+    # execute_ibl·직결 공급자와 같은 판정 소유자를 쓴다. 본문 안 error만으로는
+    # MCP 성공으로 취급돼 모델과 감독의 실패 집계에서 가이드 오류가 빠진다.
+    from ibl_result_transport import tool_result_is_error
+    if tool_result_is_error(raw):
+        from mcp.types import CallToolResult, TextContent
+        return CallToolResult(isError=True, content=[TextContent(type="text", text=raw)])
+    return raw
 
 
 @mcp.tool()

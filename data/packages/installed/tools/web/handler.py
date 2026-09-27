@@ -1073,6 +1073,13 @@ def execute(tool_input: dict, context):
         if notes:
             value = json.loads(result) if isinstance(result, str) else result
             if isinstance(value, dict):
-                value = {**value, "query_notes": notes}
+                # 긴 검색 결과 뒤에 묻히지 않게 짧은 경고·수정 후보부터 표시한다.
+                # 경고는 검색 실패가 아니며 원 질의·결과·기존 원천 경고를 보존한다.
+                warning = (f"검색어 {len(notes)}개에 site:가 아닌 표기가 있습니다. "
+                           "도메인 제한을 의도했다면 query_notes의 수정 후보와 실제 주소를 확인하세요.")
+                if value.get('warning'):
+                    warning += ' ' + str(value['warning'])
+                value = {"warning": warning, "query_notes": notes,
+                         **{k: v for k, v in value.items() if k not in {'warning', 'query_notes'}}}
                 return format_json(value) if isinstance(result, str) else value
     return result

@@ -232,6 +232,9 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
     재귀·상호 호출은 깊이 MAX_FN_DEPTH 에서 끊는다(무한 재귀 방지, 반복은 [repeat:]/[table:each] 로)."""
     import copy as _c
     from ibl_traceback import push_frame
+    from ibl_function_result import (
+        compact_execution, failure_origin, record_idiom_outcome, annotate_failure,
+    )
     name = tool_input.get("action") or ""
     _p = tool_input.get("params") or {}
     caller = {k: v for k, v in _p.items() if not str(k).startswith("_")}     # 배관 키(_raw·_prev_result)는 인자가 아니다
@@ -261,7 +264,7 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
                 res["fn"] = name
                 res["fn_source"] = "workflow"
                 res["_fn_result"] = True
-            return res
+            return compact_execution(res)
         row = None
         try:
             from ibl_usage_db import IBLUsageDB
@@ -285,7 +288,17 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             # 통화를 둘 이상 받는 관용구를 저장은 되고 부를 수는 없었다.
             body_steps = _parse_body(row["ibl_code"])
         except Exception as e:
-            return {"success": False, "fn": name, "error": f"[fn:{name}] 관용구 골격 파싱 실패: {e}"}
+            from ibl_parser import IBLSyntaxError
+            origin = {"kind": "definition" if isinstance(e, IBLSyntaxError) else "unknown",
+                      "definition_failure": isinstance(e, IBLSyntaxError)}
+            failed = annotate_failure(
+                {"success": False, "fn": name, "error": f"[fn:{name}] 관용구 골격 파싱 실패: {e}"},
+                name, origin, row["ibl_code"])
+            try:
+                record_idiom_outcome(row["ibl_code"], failed, None, origin)
+            except Exception:
+                pass
+            return failed
         from workflow_contract import _free_vars
         fdef = {"name": name, "params": _free_vars(body_steps), "todo": False, "body": body_steps, "_idiom_code": row["ibl_code"]}
     if fdef.get("todo"):
@@ -334,25 +347,19 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
         out["fn_source"] = "idiom" if fdef.get("_idiom_code") else "def"
         out["_fn_result"] = True
         if fdef.get("_idiom_code"):
-            # 이름으로 부른 관용구는 쓰인 것 — 해마의 성공/실패 귀속(상시 블록 순위·재학습의 회상 귀속)
+            origin = None
+            if not out.get("success", True):
+                origin = failure_origin(out, fdef.get("body") or [], required)
+                annotate_failure(out, name, origin, fdef["_idiom_code"])
+            # 실행 실패와 정의 결함은 다르다. 입력/원천/미확정 실패는 사건으로만 보존한다.
             try:
-                from ibl_usage_db import IBLUsageDB
                 ok = bool(out.get("success", True))
                 elapsed = max(1, round((_time.monotonic() - started) * 1000)) if ok else None
-                IBLUsageDB().update_success_by_code(fdef["_idiom_code"], ok, elapsed_ms=elapsed)
-                print(f"[해마피드백:관용구] [fn:{name}] 몸 {'성공' if ok else '실패'} 기록(실행 자리)")
+                attributed = record_idiom_outcome(fdef["_idiom_code"], out, elapsed, origin)
+                status = '성공' if ok else '정의 실패' if attributed else '실패 귀속 보류'
+                print(f"[해마피드백:관용구] [fn:{name}] {status} 기록(실행 자리)")
             except Exception:
                 pass
-            if not out.get("success", True):
-                # 몸이 죽었으면 고칠 정의를 같은 봉투에(2026-09-07) — 실행자가 본문을 새로 조립하지 않고 [def:] 로 고쳐 부른다
-                try:
-                    from hippo_tree import phrase_def_block
-                    out["def"] = phrase_def_block(name, fdef["_idiom_code"])
-                    out.setdefault("hint", f"[fn:{name}] 의 몸이 실패했습니다 — 위 def 의 죽은 문장만 고쳐 "
-                                           f"[def: {name}]{{…}} 를 프로그램에 붙이고 [fn:{name}]{{…}} 으로 다시 부르세요"
-                                           "(본문을 새로 조립하지 말 것).")
-                except Exception:
-                    pass
         if required:
             out["params_required"] = required
         if inject_meta:
@@ -369,7 +376,7 @@ def _execute_fn(tool_input: dict, project_path: str, agent_id: str) -> Any:
             elif isinstance(fr, list):                      # `$return = $t` 의 값이 행 목록 그대로일 때
                 out["items"] = fr
                 out.setdefault("count", len(fr))
-    return out
+    return compact_execution(out)
 
 
 

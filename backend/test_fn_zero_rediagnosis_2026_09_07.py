@@ -164,7 +164,7 @@ def test_expand_카드는_호출이_먼저이고_실행_0을_말한다():
     assert "실행 0" in listing
 
 
-def test_관용구_호출_실패_봉투에_정의가_실린다(monkeypatch, tmp_path):
+def test_원인_미확정_관용구_실패는_정의_수정을_강요하지_않는다(monkeypatch, tmp_path):
     import ibl_control_blocks as cb
 
     class _DB:
@@ -182,7 +182,8 @@ def test_관용구_호출_실패_봉투에_정의가_실린다(monkeypatch, tmp_
                         lambda *a, **k: {"success": False, "error": "Step 1 에러: 파일 없음"})
     out = cb._execute_fn({"_node": "fn", "action": "읽고세기", "params": {"경로": "/없음"}}, str(tmp_path), "t")
     assert out["success"] is False and out["fn_source"] == "idiom"
-    assert out["def"].startswith("[def: 읽고세기]{") and "본문을 새로 조립하지 말 것" in out["hint"]
+    assert "def" not in out and "미확정" in out["hint"]
+    assert out["failure_origin"]["definition_failure"] is False
 
 
 if __name__ == "__main__":

@@ -25,6 +25,12 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: blanket-idiom-body-blame
+    retired: 2026-09-28
+    reason: 입력 형태 오류와 원인 미확정 실패까지 관용구 정의 결함으로 안내하고 실패 점수에 귀속했다.
+    instead: 입력 출처와 구조 진단으로 확인 범위를 전달하고 미확정 귀속은 보류한다. 정의 수정은 확인된 정의 오류에만 안내한다.
+    phrases:
+      - '의 몸이 실패했습니다 — 위 def 의 죽은 문장만 고쳐'
   - id: direct-python-vocabulary
     retired: 2026-09-27
     reason: 사용자는 새 어휘 추가를 의도하지 않았으며 기존 등록 Script 경로 사용을 요청했다.

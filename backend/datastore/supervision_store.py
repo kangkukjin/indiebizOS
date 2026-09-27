@@ -12,6 +12,25 @@ EVENT_PAGE_LIMIT = 12000
 RESPONSE_PAGE_LIMIT = 13000
 
 
+def current_evidence_store():
+    from supervision_bus import current
+    controller = current()
+    if controller:
+        return controller.store
+    from runtime_utils import get_base_path
+    from thread_context import execution_key
+    # 턴 밖 직접 호출도 다른 사용자의 증거와 섞이지 않는 독립 네임스페이스다.
+    agent, task = execution_key()
+    from member_runtime import is_member, private_path
+    root = private_path("tool_evidence") if is_member() else get_base_path() / "data" / "spill" / "tool_evidence"
+    # 구분자를 포함한 신원도 충돌하지 않는다. 구분이 명백한 기존 작업의 참조는 유지한다.
+    legacy = root / hashlib.sha256(f"{agent or None}:{task or None}".encode()).hexdigest()
+    if ":" not in agent and ":" not in task and legacy.is_dir():
+        return TurnStore(legacy)
+    key = hashlib.sha256(json.dumps([agent, task], ensure_ascii=False).encode()).hexdigest()
+    return TurnStore(root / key)
+
+
 def response_parts(text):
     """Preserve bytes and paragraph boundaries; bound unusually long paragraphs too."""
     parts = []

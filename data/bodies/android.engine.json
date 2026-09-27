@@ -222,6 +222,7 @@
     "ibl/ibl_exec_output",
     "ibl/ibl_exec_sense",
     "ibl/ibl_executors",
+    "ibl/ibl_function_result",
     "ibl/ibl_honesty",
     "ibl/ibl_member_library",
     "ibl/ibl_ops",
@@ -492,8 +493,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 417,
-    "engine": 391,
+    "total": 418,
+    "engine": 392,
     "blocklist": 26
   }
 }

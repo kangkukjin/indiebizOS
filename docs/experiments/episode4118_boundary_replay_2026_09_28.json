@@ -1,0 +1,12 @@
+{
+  "episode": 4118,
+  "scope": "offline replay of three legacy success envelopes in the recorded partial failure; not an end-to-end model rerun",
+  "recorded_failure_chars": 446838,
+  "partial_before_chars": 444514,
+  "partial_after_chars": 34619,
+  "reduction_percent": 92.21,
+  "final_values_preserved": true,
+  "original_envelopes_readback_equal_after_existing_secret_masking": true,
+  "token_savings": null,
+  "latency_savings": null
+}

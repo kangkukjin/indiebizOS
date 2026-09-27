@@ -134,6 +134,7 @@ def decode_envelope(raw, adapter, input_values=None):
                     details={key: raw[key] for key in (
                         "error_type", "errno", "path", "base_path", "hint", "stage",
                         "usage", "supported_channels", "available_actions", "error_code", "recovery",
+                        "input_contract", "failure_origin", "execution_ref", "def",
                     ) if key in raw})
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value

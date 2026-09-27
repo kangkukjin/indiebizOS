@@ -101,6 +101,8 @@ AI 팁 보고서는 한 관용구 호출로 주제 준비 → 최근 영상 선�
 모델 결과의 `result_ref.input_args`는 다음 프로그램의 명시 입력으로, `continuation.reuse_args`는
 기존 읽기를 이어 쓰는 수정 실행으로 연결한다. 실행 추적의 task 종료와 기록된 목표 평가는 별도로 표시한다.
 운영 평가·후속 수리·반복 점검의 범위는 [구조 수렴 설계 §6.2](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md#62-운영-평가와-다음-연결-수리-2026-09-27)에 기록한다.
+브라우저의 네이티브 펼침 요소도 snapshot의 참조로 조작하며 이름·선택자·유일성을 확인한다.
+[브라우저 참조 수리 §6.10](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md#610-에피소드-4112--브라우저-펼침-요소의-참조클릭-연결-2026-09-27).
 실행 결과의 최상위 `success`는 API·MCP 경계에서 그대로 전달한다. 업무 값의 오류 문자열이나
 자료 불완전성을 실행 실패로 다시 판정하지 않으며, MCP의 `isError`는 Codex·Claude Code가 함께 소비한다.
 전송 실패·취소는 별도로 보존한다. [구조 수렴 설계 1단계](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md).

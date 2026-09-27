@@ -208,6 +208,7 @@ def _extract_elements(ax_nodes: list, session, selectors: dict = None) -> list:
         "menuitemcheckbox", "menuitemradio", "treeitem",
         "gridcell", "row", "columnheader", "rowheader",
         "progressbar", "scrollbar", "meter",
+        "disclosuretriangle",
         # JS 폴백에서 들어올 수 있는 태그명
         "a", "button", "input", "select", "textarea",
     }

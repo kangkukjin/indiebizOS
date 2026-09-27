@@ -626,7 +626,7 @@ async def _find_locator_once(page, element_info: dict, input_mode: bool = False)
     xpath = element_info.get("xpath", "")
     candidates = []
     # 이름/역할을 알면 CSS 후보도 같은 접근성 신원으로 교차 검증한다.
-    named = page.get_by_role(role, name=name, exact=True) if role and name else None
+    named = _identity_locator(page, role, name) if role and name else None
     if selector:
         loc = page.locator(selector)
         candidates.append(loc.and_(named) if named is not None else loc)
@@ -642,7 +642,7 @@ async def _find_locator_once(page, element_info: dict, input_mode: bool = False)
                            page.get_by_placeholder(name, exact=True)])
     # 원래 이름도 selector도 없던 요소에만 역할 자체가 신원이다.
     if role and not (name or selector or xpath):
-        candidates.append(page.get_by_role(role))
+        candidates.append(_identity_locator(page, role, name))
     for locator in candidates:
         try:
             if await locator.count() != 1:
@@ -652,6 +652,26 @@ async def _find_locator_once(page, element_info: dict, input_mode: bool = False)
         except Exception:
             continue
     return None
+
+
+def _identity_locator(page, role: str, name: str):
+    """CDP 역할을 같은 신원의 Playwright locator로 연결한다.
+
+    Chromium의 DisclosureTriangle은 ARIA button이 아니다. 네이티브 summary만
+    후보로 삼고, 명시 접근성 이름과 본문 이름을 구별한다. 선택자 교차 검증과
+    유일성 검사는 호출자가 일반 요소와 동일하게 적용한다.
+    """
+    if role != "disclosuretriangle":
+        return page.get_by_role(role, name=name, exact=True) if name else page.get_by_role(role)
+    summaries = page.locator('details > summary:first-of-type:not([role])')
+    if not name:
+        return summaries
+    labelled = summaries.and_(page.get_by_label(name, exact=True))
+    # aria-label/labelledby가 있으면 보이는 글자가 예전 이름과 같아도 대체하지 않는다.
+    unlabelled = page.locator(
+        'details > summary:first-of-type:not([role]):not([aria-label]):not([aria-labelledby])'
+    ).filter(has_text=re.compile(r"^\s*" + r"\s+".join(map(re.escape, name.split())) + r"\s*$"))
+    return labelled.or_(unlabelled)
 
 
 async def find_by_selector(page, selector: str, timeout: int = LOCATOR_TIMEOUT):

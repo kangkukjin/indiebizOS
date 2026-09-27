@@ -58,6 +58,8 @@ def read_result(request):
     # 조회자가 고른 페이지를 MCP/프로바이더의 액션당 16K 한도로 다시 접지 않는다.
     # 문서와 같은 표시 계약을 사용해 JSON escaping·다음 조회 인자까지 함께 전달한다.
     page["_display"] = {"max_chars": limit}
+    # 읽은 페이지를 재작성하지 않고 선택한 전체 값을 다음 프로그램에 연결한다.
+    page["input_args"] = {"입력": {"$ref": request.get("id"), "path": path if path is not None else []}}
     from episode_logger import record_trajectory_event
     record_trajectory_event("context.result_read", {
         "evidence_id": request.get("id"), "offset": offset, "chars": len(page["text"]),
@@ -97,6 +99,11 @@ def resolve_input_refs(inputs):
     실패는 ValueError 로 — 호출자가 실행 전 거절 봉투로 돌려준다."""
     if not isinstance(inputs, dict):
         return inputs, []
+    if "$ref" in inputs:
+        example = {"inputs": {"입력": {k: inputs[k] for k in ("$ref", "path") if k in inputs}},
+                   "code": "return $입력"}
+        raise ValueError("$ref는 inputs 자체가 아니라 이름의 값 자리에 둡니다. "
+                         "입력 이름은 코드에서 사용하는 변수에 맞추세요: " + json.dumps(example, ensure_ascii=False))
     from common.spill import is_ref, resolve_ref
     out, notes = {}, []
     for name, value in inputs.items():
@@ -170,8 +177,9 @@ def input_ref_evidence(stored):
 
 def _read_reference(ref, result):
     """표시 사본이 아닌 원 봉투에서 조회 가능한 큰 필드를 찾는다(최대 6개)."""
-    prefix = ["final_result"] if "final_result" in result else []
-    value = _decode_json(result["final_result"] if prefix else result)
+    typed_value = result.get("edition") == 2 and "value" in result
+    prefix = ["value"] if typed_value else ["final_result"] if "final_result" in result else []
+    value = _decode_json(result[prefix[0]] if prefix else result)
     paths = []
     if isinstance(value, dict):
         for key, item in value.items():
@@ -181,14 +189,20 @@ def _read_reference(ref, result):
                     paths.append({"path": prefix + [key], "chars": chars})
     paths.sort(key=lambda entry: entry["chars"], reverse=True)
     paths = paths[:6]
-    return {
+    out = {
         **{k: ref[k] for k in ("id", "chars")},
         "max_limit": MAX_LIMIT,
         "paths": paths,
         "read_args": {"id": ref["id"], "offset": 0, "limit": DEFAULT_LIMIT,
-                      "path": paths[0]["path"] if paths else prefix},
+                      "path": prefix if typed_value else paths[0]["path"] if paths else prefix},
         "read": 'execute_ibl(code="", read_result=result_ref.read_args); 다음 페이지는 next_read 그대로. 원래 code를 재실행하지 마세요',
     }
+    if typed_value:
+        wire = result.get("value_wire")
+        value_path = {} if isinstance(wire, dict) and "data" in wire else {"path": ["value"]}
+        out["input_args"] = {"입력": {"$ref": ref["id"], **value_path}}
+        out["input_hint"] = "다음 execute_ibl의 inputs에 input_args를 넣고 $입력으로 사용하세요. 이름 변경·path 선택 가능. 표시 본문을 복사하지 않습니다."
+    return out
 
 
 def _compact_currency(value, metadata_chars):
@@ -285,7 +299,9 @@ def project_v2_result(result):
         out["_preview"] = True
     out["result_ref"] = _read_reference(ref, result)
     out["_hint"] = ("판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. "
-                    "전체 값·소스맵·실행 증거는 result_ref.read_args로 조회하세요. 다음 호출 입력은 inputs에 명시합니다.")
+                    + ("다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. "
+                       if "input_args" in out["result_ref"] else "진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. ")
+                    + "success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.")
     return out
 
 

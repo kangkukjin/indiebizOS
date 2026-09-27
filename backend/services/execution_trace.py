@@ -62,6 +62,25 @@ def observed_time(value):
         return None
 
 
+def evaluation_observation(kind, data):
+    """기록된 평가만 해석한다. 작업 종료·도구 성공·응답 산문은 달성 판정이 아니다."""
+    if kind == "cognition.evaluation":
+        return {"status": "not_evaluated" if data.get("path") == "none" else "unknown",
+                "source": kind}
+    if kind == "validation.completed" and data.get("validator") == "goal_eval":
+        status = {"ACHIEVED": "achieved", "NOT_ACHIEVED": "not_achieved"}.get(data.get("status"), "unknown")
+        return {"status": status, "source": kind}
+    if kind == "supervision.evaluation.finished":
+        decision = data.get("decision")
+        if isinstance(decision, dict):
+            status = {"APPROVED": "achieved", "REWORK": "not_achieved"}.get(decision.get("status"), "unknown")
+            version, response_hash = decision.get("response_version"), decision.get("response_hash")
+            return {"status": status, "source": kind,
+                    "response_version": version if type(version) is int else None,
+                    "response_hash": response_hash if isinstance(response_hash, str) and len(response_hash) <= 128 else None}
+    return None
+
+
 class ExecutionTrace:
     def __init__(self, root, *, system_db=None, runtime_probe=observe_runtime):
         self.resolver = ScopeResolver(root, system_db)
@@ -91,6 +110,7 @@ class ExecutionTrace:
             stores = dict(previous.get("stores", {}))
             usage = previous.get("usage") or {"measured": {}, "unattributed_records": 0,
                                               "records": 0, "partial_reasons": []}
+            evaluations = dict(previous.get("evaluations", {}))
             sources, events, evidence = [], [], []
             sources.append({k: v for k, v in task_source.items() if k != "rows"})
             sources.append({"source": "scope", "status": resolved["scope_status"], "observed_at": stamp()})
@@ -156,6 +176,9 @@ class ExecutionTrace:
                 data = row["data"]
                 record = f"pulse:{row['run_id']}:{row['event_seq']}"
                 ev = event("trajectory", record, row["kind"], data, row["ts"], diagnostic=row.get("_diagnostic"))
+                observed = evaluation_observation(row["kind"], data)
+                if observed is not None:
+                    evaluations[str(row["episode_id"])] = {**observed, "source_ref": ev["source_ref"]}
                 if row["kind"] == "model.usage" and data.get("accounting") == "billable_usage":
                     usage["records"] += 1
                     if not data.get("call_id"):
@@ -264,6 +287,11 @@ class ExecutionTrace:
             if conflict:
                 diagnostics.append("task_runtime_conflict")
             state = {"task": task_state, "runtime": runtime, "episodes": resolved["episodes"],
+                     "task_status_scope": "lifecycle_only; completed does not imply goal achieved",
+                     "goal_evaluations": [{"episode_id": ep["id"], **evaluations.get(str(ep["id"]),
+                                           {"status": "unknown", "source": "no_record_observed"})}
+                                          for ep in resolved["episodes"]],
+                     "evaluation_scope": "last recorded goal evaluation per episode through this page; not current artifact verification",
                      "assessment": "conflict" if conflict else "unconfirmed" if runtime["status"] == "unknown" else "observed",
                      "last_event": next((e["source_record_id"] for e in reversed(events) if e["source"] == "trajectory"), previous.get("last_event")),
                      "observed_at": stamp()}
@@ -292,7 +320,7 @@ class ExecutionTrace:
             usage["coverage"] = "recorded_billable_events_only; best_effort_observation_cannot_prove_full_billing"
             expired = any(s.get("reason") == "cursor_expired" for s in sources)
             next_cursor = seal({"purpose": "cursor", "scope": scope, "metadata": metadata,
-                                "positions": positions, "stores": stores, "usage": usage,
+                                "positions": positions, "stores": stores, "usage": usage, "evaluations": evaluations,
                                 "last_event": state["last_event"], "diagnostics": sorted(set(diagnostics))}) if more and not expired else None
             if next_cursor and len(next_cursor) > MAX_TOKEN:
                 next_cursor = None

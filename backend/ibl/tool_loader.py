@@ -194,7 +194,7 @@ def build_execute_ibl_tool(allowed_nodes: Optional[List[str]] = None) -> Optiona
             "properties": {
                 "edition": {"type": "integer", "enum": [1, 2], "default": 2,
                             "description": "새 작성 기본값=2. 저장된 기존 원문의 재실행에만 1을 명시. 문법 오류로 자동 전환하지 않음."},
-                "inputs": {"type": "object", "description": "명시 외부 이름→값. 이전 턴 변수는 자동 주입하지 않음. 값 자리에 {\"$ref\": result_ref.id, \"path\": [...]}를 주면 저장된 결과를 복사 없이 전달(path 생략=최종 값)."},
+                "inputs": {"type": "object", "description": "명시 이름→값. result_ref.input_args를 그대로 사용 가능. 예: {입력:{\"$ref\":\"결과 id\"}}와 code의 $입력. $ref는 inputs 자체가 아닌 이름의 값 자리. path 생략=최종 값, path 지정=원 봉투의 키·인덱스. 이전 턴 변수 자동 주입 없음."},
                 "check": {"type": "boolean", "description": "실행 없이 같은 컴파일러로 검사."},
                 "code": {
                     "type": "string",

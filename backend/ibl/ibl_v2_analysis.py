@@ -7,6 +7,7 @@ from ibl_v2_expr import number
 
 
 HINTS = {
+    "INPUTS": 'inputs는 {입력:값}이며 코드는 $입력을 사용합니다. 결과 참조는 inputs:{입력:{"$ref":"결과 id"}}처럼 이름의 값 자리에 둡니다.',
     "UNBOUND": "이 위치 전에 값을 정의하거나 함수의 명시 인자로 전달하세요.",
     "MISSING_FIELD": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요.",
     "FIELD_TYPE": "List 반환은 값 자체가 목록입니다. .items를 붙이지 말고 표 연산에 직접 전달하세요. Record의 필드는 반환 계약을 확인하세요.",

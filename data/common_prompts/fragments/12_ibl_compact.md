@@ -57,7 +57,7 @@ result_ref.read_args를 code="",read_result=...로 보내 저장된 원문을 �
 원문의 실제 경로를 사용하고 상세 열람을 위해 실행을 반복하지 않는다. 이미지 블록은 호스트 이미지 출력으로 전달한다.
 느린 작업은 반환된 ID·티켓으로 status/recover와 유한 wait를 사용한다. 이미 시작한 작업을 중복 시작하지 않는다.
 재개는 반환된 resume:{run_id}와 동일 code·inputs로 요청한다. 완료 호출은 영수증으로 복원한다.
-고친 프로그램은 reuse:{run_id}로 같은 읽기 호출의 영수증을 재사용한다. 앞 결과는 inputs에 {"$ref": result_ref.id, "path": [...]}로 넘긴다.
+고친 프로그램에서 이전 읽기를 이어 쓸 때는 continuation.reuse_args를 요청에 합친다. 최신 조회는 새로 실행한다. 앞 결과는 inputs:result_ref.input_args와 $입력으로 연결한다(직접 쓰면 inputs:{입력:{"$ref":"결과 id"}}). $ref를 inputs 자체에 넣지 않는다.
 결과 불명·구현 변경·취소 후 외부 정리는 재개하지 않는다. 외부 쓰기는 멱등 키·상태·영수증을 확인한다. 최종 검증 행·출처·본문·건수는 함께 유지한다.
 계획 전제가 깨지면 reframe으로 근거와 진행 상태를 보낸다. 요구 품질·모델·음성을 임의로 낮추지 않는다.
 <!-- MEMBER_GRAMMAR:END -->

@@ -64,6 +64,7 @@ class Runtime:
         # 편집한 프로그램이 앞 실행(reuse_run)의 읽기 영수증을 액션·인자·구현 지문으로 재사용한다.
         # 프로그램 지문은 키에 없다 — 함수 하나를 고쳐도 검증된 수집 결과가 살아남는 통로(2026-09-26).
         self.reusable, self.reuse_run, self.reused_calls = dict(reusable or {}), reuse_run, 0
+        self.read_receipts = set()
         self.plan = plan
         self.inputs = copy.deepcopy(inputs or {})
         self.input_evidence = copy.deepcopy(input_evidence or {})
@@ -659,6 +660,9 @@ class Runtime:
                 raise exc
         if tool_evidence:
             eid = self.event(node, "tool_evidence", [eid], **tool_evidence)
+        if external and read_only:
+            with self.lock:
+                self.read_receipts.add(call_id)
         return Binding(value, frozenset({eid}))
 
     def run(self):
@@ -702,4 +706,11 @@ class Runtime:
             out["resume"] = {"run_id": self.journal.run_id}
             out["resumed"] = self.journal.resuming
             out["run_status"] = self.journal.complete(out)
+            if self.read_receipts and out["run_status"] not in {"blocked", "uncertain"}:
+                out["continuation"] = {
+                    "reuse_args": {"reuse": {"run_id": self.journal.run_id}},
+                    "read_calls": len(self.read_receipts),
+                    "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. "
+                            "현재 자료를 새로 조회해야 하면 쓰지 마세요. 계약·인자·권한 검사는 유지하며 쓰기·모델 호출은 재사용하지 않습니다. "
+                            "동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."}
         return out

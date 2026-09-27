@@ -349,11 +349,47 @@ return $목차
 
 ## 중단 뒤 이어가기와 문서 읽기
 
+결과를 다음 계산에 넘길 때는 반환된 `result_ref.input_args`를 다음 호출의 `inputs`로 넣고
+코드에서 `$입력`을 사용한다. 예: `{"code":"return len($입력)","inputs":{"입력":{"$ref":"앞 결과 id"}}}`.
+이름은 코드에 맞춰 바꿀 수 있다. 일부 필드만 필요하면 값 자리 참조에 `path:["value","rows"]`처럼
+원 봉투의 경로를 더한다. `inputs:{"$ref":...}`는 입력 이름이 없으므로 잘못된 형태다.
+모델이 원문을 판단해야 할 때만 `read_result`로 읽는다. 그 응답의 `input_args`는 표시 페이지가 아닌
+선택 경로의 전체 값을 가리키므로 다음 변환을 위해 긴 본문을 다시 입력할 필요가 없다.
+
 실행 응답의 `resume:{run_id}`와 동일 `code`·`inputs`를 다음 execute_ibl 호출에 보낸다.
 완료한 도구 호출은 저장된 값으로 복원한다. 반복의 같은 인자도 서로 다른 호출로 기록한다.
 코드·입력·도구 구현이 달라지거나 외부 작업의 완료를 확인하지 못하면 재개하지 않는다.
 취소 후 finally가 외부 정리를 수행한 경우도 새 작업 계획이 필요하다. 확인된 실패를 몰래 재시도하지 않는다.
 회원 기록은 사적 세션의 수명을 따르고, 주인 기록은 백엔드 재기동 후에도 남는다.
+코드를 고쳤고 이전 읽기를 이어 쓸 의도라면 `continuation.reuse_args`를 요청에 합친다.
+쓰기·모델 호출은 재사용하지 않으며 계약·인자·의존성 변경과 실행 중 상태 변경은 기존 규칙으로 판정한다.
+최신 외부 상태가 필요하면 새로 조회한다. 같은 코드의 `resume`은 확인된 실패도 복원하므로 실패 재시도와 다르다.
+
+### 읽기·판정·반환을 한 프로그램에서 연결하기
+
+본문 전체가 아니라 다음 결정에 필요한 검사 결과를 반환한다. 도구 오류는 빈 문서로 바꾸지 않는다.
+아래 `complete`는 프로그램이 명시한 두 문서의 존재·비어 있지 않음 조건이며 내용의 정확성 검수는 아니다.
+저장 성공을 검사할 때도 먼저 저장 결과의 경로로 다시 읽고 요청한 값과 비교한 뒤 완료를 보고한다.
+
+<!-- example:document_completion -->
+```ibl
+#!ibl edition=2
+[def:문서확인]($경로) {
+  [try] {
+    $문서 = [self:read]{path:$경로}
+    return {path:$경로,confirmed:len($문서.text)>0,chars:len($문서.text)}
+  } [catch] {
+    return {path:$경로,confirmed:false,error:$error.message}
+  }
+}
+$대상 = ["outputs/source-a.txt","outputs/source-b.txt"]
+$확인 = $대상 >> [table:each] { [fn:문서확인]{경로:$it} }
+$미완료 = $확인 >> [table:filter]{where:($행)=>not $행.confirmed}
+return {complete:len($미완료)==0,checked:len($확인),missing:$미완료,checks:$확인}
+```
+
+실행 봉투의 `success:true`와 이 프로그램의 `value.complete:false`는 동시에 성립할 수 있다.
+앞은 검사 프로그램의 실행, 뒤는 명시 조건의 달성 여부다. 실행 종료·응답 생성만으로 사용자 목표 달성을 주장하지 않는다.
 
 `self:read`는 확장자로 텍스트·PDF·Office를 구분하며 `.text`, `.blocks`, `.data`를 반환한다.
 PDF의 `pages`·`tables`, XLSX의 `sheet`·`max_rows`를 현재 문법에서 지정한다.

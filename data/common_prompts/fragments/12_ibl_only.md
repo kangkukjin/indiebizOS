@@ -95,7 +95,7 @@ return $결과
 레코드와 목록은 불변이고 변수만 재바인딩한다. 외부 입력은 `inputs`로 명시하며 이전 턴 변수는 자동 주입하지 않는다.
 큰 본문은 `[self:read]{path:...}`의 `.text`를 전달한다. 일반 외부 값은 `inputs`로 받는다.
 `files`, `files_from`는 기존 저장 프로그램의 호환 인자다. 현재 실행은 반환된 `resume:{run_id}`와 동일한 code·inputs로 이어간다.
-고친 프로그램은 `reuse:{run_id}`로 이전 실행의 같은 읽기 호출(같은 액션·인자) 영수증을 재사용한다. 앞 실행의 결과는 inputs 값 자리에 `{"$ref": result_ref.id, "path": [...]}`로 넘기고 본문을 복사하지 않는다.
+고친 프로그램에서 이전 읽기를 이어 쓸 때는 `continuation.reuse_args`를 요청에 합친다. 최신 상태가 필요하면 새로 조회한다. 다음 계산은 `inputs:result_ref.input_args`와 `$입력`으로 연결한다. 직접 쓸 때는 `inputs:{입력:{"$ref":"결과 id"}}`이며 선택 경로는 그 값 안에 `path`로 넣는다. 본문을 재입력하지 않는다.
 
 일반 문자열은 문자 그대로다. `f"${row.id}: ${1+2}"`만 보간하며 한 번만 해석한다.
 보간은 Text·Number·Bool 및 이들로만 구성된 조건부 값을 받는다. 구조는 `json($x)`, 결측은 `has($r,"key")`와

@@ -14,8 +14,8 @@
   · 미달 → **재시도 1회**(판정 사유를 instruction 에 얹어 재실행 — ai_call 액션이
     instruction 을 선언한 경우만. JSON 재시도 1회·others:ask 1회 자가교정과 같은 규약)
     → 재판정 → 그래도 미달이면 error_type="quality" 실패(트레이스백이 그 step 을 가리킴).
-  · 통과는 criteria_verdict 로, 재시도 후 통과는 _criteria_retried(정직 표지 — 출처가
-    재시도본)로 신고. 판정 불능(판정자 미가용·응답 파싱 실패)은 **통과 + 신고**
+  · 판정은 criteria_verdict 로, 재시도본의 출처는 _criteria_retried 로 신고한다.
+    판정 불능(판정자 미가용·응답 파싱 실패)은 **실행 계속 + unjudged 신고**
     (parse_eval_verdict 선례 — 잘못된 미달 판정은 재실행 낭비를 부른다. 침묵은 없다).
   · criteria 없으면 판정자 호출 0 (옵트인, 기존 문장 무변경). 실행 자체가 실패한
     step 은 판정하지 않는다 — 실행 실패가 우선이고 트레이스백이 이미 위치를 나른다.
@@ -162,7 +162,7 @@ def _call_judge(prompt: str) -> Optional[str]:
     "경량 판정자"를 단언했는데, 그건 기어의 평가-축 의도를 우회하는 티어 하드코딩의
     변형이었다). 구현(인지층 oneshot)은 능력 테이블로 주입받는다(_cap — 라우팅층은
     인지층을 모른다, 의존 역전). 미등록(부팅 배선 밖 스크립트)이면 예외 → 호출자가
-    '판정 불능=통과+신고' 로 처리한다."""
+    '판정 불능=실행 계속+미판정 신고' 로 처리한다."""
     from ibl_routing import _cap
     return _cap("oneshot_ai_call")(prompt=prompt, system_prompt=_JUDGE_SYSTEM,
                                    role="evaluate")
@@ -268,7 +268,7 @@ def apply_criteria(criteria: str, result: Any, tool_input: dict, node: str, acti
     v = _judge(criteria, result, node, action, params)
 
     if v.get("unjudgeable"):
-        note = f"criteria 판정 불능 — 통과 처리: {v['reason']}"
+        note = f"criteria 미판정 — 실행 계속: {v['reason']}"
         tool_input["_quality_meta"] = {"criteria_verdict": "unjudged", "criteria_note": note}
         return _mark(result, {"criteria_verdict": "unjudged", "criteria_note": note})
 
@@ -300,10 +300,11 @@ def apply_criteria(criteria: str, result: Any, tool_input: dict, node: str, acti
         if not is_error_result(result2):
             v2 = _judge(criteria, result2, node, action, p2)
             if v2.get("unjudgeable") or v2.get("pass"):
-                meta = {"criteria_verdict": "pass_after_retry", "criteria_feedback": reason1,
+                meta = {"criteria_verdict": "unjudged" if v2.get("unjudgeable") else "pass_after_retry",
+                        "criteria_feedback": reason1,
                         "_criteria_retried": True}
                 if v2.get("unjudgeable"):
-                    meta["criteria_note"] = f"재판정 불능 — 통과 처리: {v2['reason']}"
+                    meta["criteria_note"] = f"재판정 불능 — 미판정으로 실행 계속: {v2['reason']}"
                 tool_input["_quality_meta"] = dict(meta)
                 return _mark(result2, meta)
             reason1 = v2.get("reason") or reason1

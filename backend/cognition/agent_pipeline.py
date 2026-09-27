@@ -53,47 +53,42 @@ def _extract_map_tag_texts(text: str) -> List[str]:
 
 
 def _quality_of_result(rt: Any) -> tuple:
-    """도구 결과 봉투에서 criteria 재시도-통과 표지를 캔다 → (quality, feedback).
+    """명시된 품질 상태와 첫 미달 사유를 증류로 전달한다.
 
-    미달(fail)은 봉투 success:false 라 성공 판정이 이미 거르므로 여기서는
-    pass_after_retry 만 찾는다 — 첫 지시가 기준 미달이었다는 사실과 그 사유
-    (criteria_feedback)를 증류의 반성 프롬프트로 나르기 위함이다
-    (docs/IBL_QUALITY_CONTRACT_HANDOFF.md). 표지는 마킹된 결과 dict(단독 실행)
-    또는 파이프 봉투의 results[] step 기록(_quality_meta 승격)에 산다.
-    실패는 조용히 (None, None) — 여기서 턴을 깨지 않는다.
+    실행 성공은 품질 통과와 별개다. 미판정 단계가 있으면 호출 전체를 재시도
+    통과로 요약하지 않는다. _criteria_retried 는 출처이며 판정 근거가 아니다.
+    사용자 items 내용은 훑지 않고 기존 결과 봉투만 읽는다.
     """
     try:
         s = rt if isinstance(rt, str) else json.dumps(rt, ensure_ascii=False, default=str)
-        if "pass_after_retry" not in s:
+        if "pass_after_retry" not in s and "unjudged" not in s:
             return None, None
 
-        def _probe(obj):
+        def _probe(obj, key="criteria_verdict"):
             if not isinstance(obj, dict):
                 return None
-            if obj.get("criteria_verdict") == "pass_after_retry" or obj.get("_criteria_retried"):
-                return obj.get("criteria_feedback") or ""
+            if obj.get(key) in {"unjudged", "pass_after_retry"}:
+                return obj[key], obj.get("criteria_feedback") or None
             return None
 
         obj = json.loads(s) if isinstance(rt, str) else rt
         if not isinstance(obj, dict):
             return None, None
-        fb = _probe(obj)
-        if fb is None:
-            for r in (obj.get("results") or []):
-                fb = _probe(r)
-                if fb is not None:
-                    break
-        if fb is None:
-            fr = obj.get("final_result")
-            if isinstance(fr, str) and fr.lstrip().startswith("{"):
-                try:
-                    fr = json.loads(fr)
-                except Exception:
-                    fr = None
-            fb = _probe(fr)
-        if fb is None:
-            return None, None
-        return "pass_after_retry", (fb or None)
+        found = [_probe(obj), *(_probe(r) for r in (obj.get("results") or []))]
+        fr = obj.get("final_result")
+        if isinstance(fr, str):
+            try:
+                fr = json.loads(fr)
+            except ValueError:
+                fr = None
+        found.append(_probe(fr))
+        found.extend(_probe(r, "verdict") for r in (obj.get("criteria_steps") or []))
+        for verdict in ("unjudged", "pass_after_retry"):
+            matches = [r for r in found if r and r[0] == verdict]
+            if matches:
+                feedback = list(dict.fromkeys(r[1] for r in matches if r[1]))
+                return verdict, " / ".join(feedback) or None
+        return None, None
     except Exception:
         return None, None
 
@@ -670,7 +665,7 @@ class CognitivePipelineMixin:
                         if _t0 is not None:
                             tool_calls_log[_idx]["elapsed_ms"] = \
                                 int((_time.monotonic() - _t0) * 1000)
-                        # criteria 재시도-통과 표지를 증류로 나른다(품질 계약 셋째 신호).
+                        # criteria 미판정·재시도 통과를 구분해 증류로 나른다.
                         # 미달(fail)은 봉투 success:false → 위 판정이 이미 거른다. 재시도
                         # 통과는 success 지만 첫 지시가 약했다는 사실 — 증류가 이걸 모르면
                         # 약한 지시가 그대로 코퍼스에 들어간다(복리 출혈의 품질판).

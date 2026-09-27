@@ -115,7 +115,8 @@ def outcome_evidence(calls, outcome):
         raw = result if isinstance(result, str) else json.dumps(result, ensure_ascii=False, default=str)
         excerpt = _result_evidence(raw) if result is not None else ''
         records.append({'tool_call_index': index, 'result_available': result is not None,
-                        'excerpt': excerpt[:400], 'excerpt_truncated': len(excerpt) > 400})
+                        'excerpt': excerpt[:400], 'excerpt_truncated': len(excerpt) > 400,
+                        **({k: tc[k] for k in ('quality', 'quality_feedback') if k in tc})})
     return json.dumps({'goal_evaluation': outcome, 'call_results': records}, ensure_ascii=False)
 
 

@@ -56,8 +56,9 @@ IBL 문장은 중간에 원샷 AI 단계(`ai_call: true` — `table:ai`·`table:
    `criteria_feedback`(첫 미달 사유) + **`_criteria_retried`**(정직 표지, ibl_honesty
    HONESTY_FLAG_KEYS — repeat·병렬 경계를 자동으로 넘는다). 스칼라 결과는
    `_quality_meta` side-channel 로 step 기록에 신고(F19-1 규약).
-5. **판정 불능 = 통과 + 신고**(`criteria_verdict: "unjudged"` + note) —
-   parse_eval_verdict 선례: 잘못된 미달 판정은 재실행 낭비가 더 비싸다. 침묵은 없다.
+5. **판정 불능 = 실행 계속 + 미판정 신고**(`criteria_verdict: "unjudged"` + note).
+   최초 판정·재판정 모두 같다. 재판정 불능은 첫 미달 사유 `criteria_feedback`과
+   `_criteria_retried`도 보존한다. 출처가 재시도본이라는 사실은 품질 통과를 뜻하지 않는다.
 6. 실행 자체가 실패한 step 은 판정하지 않는다(실행 실패 우선, 트레이스백이 이미 위치를
    나른다). criteria 없으면 판정자 호출 0 — 옵트인, 기존 문장 무변경.
 
@@ -105,6 +106,9 @@ filter/take/스키마 가드가 먼저"를 가르친다. 0층(구조 가드)은 
   병기 → `distill_experience` 가 반성 프롬프트에 "첫 미달 사유 + instruction 을 재발
   않게 다듬어라(criteria 는 보존)" 로 먹인다 — 약한 지시 대신 **개선된 지시**가
   증류된다. 학습 회로의 닫힘점.
+- **미판정(unjudged) 신호**: 결과·단계에 미판정이 있으면 호출을 재시도 통과로 요약하지 않는다.
+  quality/quality_feedback을 증류의 결과 증거에 별도로 전달해 긴 본문의 발췌 때문에 잃지 않는다.
+  실행 성공은 유지하되 확인된 품질 통과로 학습하지 않는다(2026-09-27 F1 수리).
 - goal NOT_ACHIEVED 게이트(기존 `goal_eval_outcome`)와 3층 대칭: 실행 실패(구조) ·
   품질 미달(criteria) · 목표 미달성(goal).
 

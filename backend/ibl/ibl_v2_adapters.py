@@ -133,7 +133,7 @@ def decode_envelope(raw, adapter, input_values=None):
         raise Fault("TOOL", str(raw.get("error") or raw.get("message") or "도구 실행 실패"), kind=kind,
                     details={key: raw[key] for key in (
                         "error_type", "errno", "path", "base_path", "hint", "stage",
-                        "usage", "supported_channels", "available_actions",
+                        "usage", "supported_channels", "available_actions", "error_code", "recovery",
                     ) if key in raw})
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value

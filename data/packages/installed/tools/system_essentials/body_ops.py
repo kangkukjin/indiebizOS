@@ -142,6 +142,12 @@ def _scope_of(tool_input, root):
     return raw.rstrip("/"), None
 
 
+def _selection_scope(total, kept):
+    """요청 limit으로 고른 표본. 원천 수집 실패와 구별한다."""
+    return {"truncations": [{"scope": "selection", "reason": "limit",
+                             "total": total, "kept": kept}]} if total > kept else {}
+
+
 def op_changes(tool_input):
     """최근 파일 단위 변화 — 커밋된 것 + 미커밋 작업분."""
     root, err = _guard_root()
@@ -187,7 +193,8 @@ def op_changes(tool_input):
         text += f" — {limit}건만 표시 (limit 로 조절)"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,
+            **_selection_scope(total, len(rows)), "text": text}
 
 
 def op_log(tool_input):
@@ -224,7 +231,8 @@ def op_log(tool_input):
     text = f"최근 {days}일 커밋 {total}건" + (f" — {limit}건만 표시 (limit 로 조절, 최대 {_MAX_LIMIT})" if truncated else "")
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,
+            **_selection_scope(total, len(rows)), "text": text}
 
 
 def _join_episode_requests(root, rows):
@@ -318,7 +326,8 @@ def op_writes(tool_input):
         text += f" · {limit}건만 표시"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,
+            **_selection_scope(total, len(rows)), "text": text}
 
 
 def op_trajectory(tool_input):
@@ -401,7 +410,8 @@ def op_trajectory(tool_input):
     if notes:
         text += " · " + ", ".join(notes)
     return {"success": True, "items": events, "total": total,
-            "truncated": truncated, "run_id": run_id, "episode_id": episode_id,
+            "truncated": truncated, **_selection_scope(total, len(events)),
+            "run_id": run_id, "episode_id": episode_id,
             "task_id": task_id, "text": text}
 
 
@@ -443,7 +453,8 @@ def op_file(tool_input):
         text += f" — {limit}건만 표시"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated, "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,
+            **_selection_scope(total, len(rows)), "text": text}
 
 
 _DEFAULT_DIFF_LINES = 200   # 파일당 본문 줄 상한(기본) — 넘치면 자르고 신고
@@ -520,7 +531,8 @@ def op_diff(tool_input):
         text += " (바뀐 줄 없음)"
     if notes:
         text += " · " + ", ".join(notes)
-    return {"success": True, "items": rows, "total": total, "truncated": truncated, "range": label, "text": text}
+    return {"success": True, "items": rows, "total": total, "truncated": truncated,
+            **_selection_scope(total, len(rows)), "range": label, "text": text}
 
 
 # ── 각인 (2026-08-27 신설) ──────────────────────────────────────────────────

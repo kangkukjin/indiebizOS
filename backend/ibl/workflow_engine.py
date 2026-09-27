@@ -782,7 +782,7 @@ def execute_pipeline(steps: list, project_path: str = ".",
         if _nq:
             _cs = ", ".join(f"step {c['step']}({c['verdict']})" for c in _nq)
             _warns.append(f"[criteria] 무조건 통과가 아니었습니다: {_cs} — "
-                          "unjudged=판정 불능 통과, pass_after_retry=재시도로 통과"
+                          "unjudged=미판정(실행 계속), pass_after_retry=재시도로 통과"
                           "(첫 출력은 기준 미달이었음).")
     # ★F48-7 (48회차 상상훈련, 수리 2026-08-27): **표지의 승격 규칙을 한 벌로.**
     #   종전엔 파이프 표지(_fallback_used·skipped_steps·halted…)만 최상위로 오르고,

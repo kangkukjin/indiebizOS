@@ -105,6 +105,8 @@ AI 팁 보고서는 한 관용구 호출로 주제 준비 → 최근 영상 선�
 [브라우저 참조 수리 §6.10](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md#610-에피소드-4112--브라우저-펼침-요소의-참조클릭-연결-2026-09-27).
 구현 이력과 구별한 현재 잔여·다음 개발 순서·완료 조건은
 [일반 능력 재평가와 다음 수리 계획](../../docs/IBL_GENERAL_CAPABILITY_REPAIR_PLAN_2026_09_27.md)이 소유한다.
+criteria의 판정 불능은 재시도 뒤에도 미판정으로 남는다. body의 limit 표본은 selection으로,
+도구가 제공한 복구 코드·안내는 오류 details로 전달해 다음 호출이 상태를 추측하지 않게 한다.
 실행 결과의 최상위 `success`는 API·MCP 경계에서 그대로 전달한다. 업무 값의 오류 문자열이나
 자료 불완전성을 실행 실패로 다시 판정하지 않으며, MCP의 `isError`는 Codex·Claude Code가 함께 소비한다.
 전송 실패·취소는 별도로 보존한다. [구조 수렴 설계 1단계](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md).

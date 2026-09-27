@@ -381,6 +381,11 @@ def describe_actions(names, allowed_nodes, edition=None):
     from ibl_registry import self_can_run
     if not isinstance(names, list) or not 1 <= len(names) <= 6:
         raise ValueError("describe는 node:action 또는 fn:이름 1~6개 배열입니다")
+    if any(not isinstance(name, str) or name.count(":") != 1
+           or any(not part.strip() for part in name.split(":")) for name in names):
+        raise ValueError('describe는 ["node:action"] 또는 ["fn:함수이름"] 형식입니다. 함수 이름 앞에 fn:을 붙이세요.')
+    if edition is None:
+        edition = 2  # 모델의 새 작성·계약 조회 기본 판본과 일치한다.
     allowed = resolve_allowed_nodes(allowed_nodes)
     nodes = load_nodes_raw().get("nodes", {})
     answer = []
@@ -390,6 +395,9 @@ def describe_actions(names, allowed_nodes, edition=None):
         if node == "fn" and edition == 2:
             from ibl_v2_store import describe
             definition = describe(action, allowed)
+            if definition.get("error"):
+                answer.append({"action": name, **definition})
+                continue
             observed = observed_returns_of_alias(action)
             if observed:
                 definition = {**definition, "observed_returns": observed,

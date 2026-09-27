@@ -99,9 +99,10 @@ def _region_matches(keyword, address):
     시·군·구·도의 약칭은 허용하되 동·읍·면·리는 정확한 이름으로 맞춘다.
     지명 목록을 코드에 넣지 않고 API가 준 주소만 대조한다.
     """
-    parts = str(address or "").split()
+    # API는 같은 주소를 공백 또는 쉼표로 구분해 반환한다.
+    parts = [part for part in re.split(r"[\s,]+", str(address or "")) if part]
     suffixes = ("특별자치도", "특별자치시", "특별시", "광역시", "시", "군", "구", "도")
-    terms = keyword.split()
+    terms = [part for part in re.split(r"[\s,]+", keyword) if part]
     if len(terms) == 1 and keyword == "".join(parts):
         return True
     for term in terms:

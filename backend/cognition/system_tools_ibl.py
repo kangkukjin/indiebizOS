@@ -533,8 +533,14 @@ def _execute_ibl_unified_impl(tool_input: dict, project_path: str, agent_id: str
             return json.dumps({"success": False, "executed": False,
                                "error": "read_result는 code·pipeline·describe와 함께 사용할 수 없습니다"}, ensure_ascii=False)
         try:
-            value = (describe_actions(tool_input["describe"], allowed, edition=tool_input.get("edition")) if tool_input.get("describe") is not None
-                     else read_result(tool_input["read_result"]))
+            if tool_input.get("describe") is not None:
+                from ibl_edition import authoring_request, source_edition
+                described_edition = source_edition(
+                    tool_input.get("code") or tool_input.get("pipeline") or "",
+                    authoring_request(tool_input).get("edition"))
+                value = describe_actions(tool_input["describe"], allowed, edition=described_edition)
+            else:
+                value = read_result(tool_input["read_result"])
         except (ValueError, KeyError, TypeError, OSError) as exc:
             return json.dumps({"success": False, "executed": False, "error": str(exc)}, ensure_ascii=False)
         if not has_code:

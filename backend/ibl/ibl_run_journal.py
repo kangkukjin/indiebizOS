@@ -164,10 +164,13 @@ def identity(plan, inputs, project_path, agent_id, *, input_evidence=None):
     import member_runtime
     from thread_context import get_allowed_nodes
     p, state = principal.current(), member_runtime.current() or {}
+    allowed = get_allowed_nodes()
+    # 권한은 순서 없는 내부 메타데이터다. None(무제한)과 빈 집합은 구분한다.
+    allowed = None if allowed is None else sorted(set(allowed))
     return digest({"protocol": "ibl-resume/1", "plan": plan.fingerprint, "inputs": pack(inputs),
                    **({"input_evidence": input_evidence} if input_evidence else {}),
                    "project": str(Path(project_path).resolve()), "agent": agent_id,
-                   "principal": [p.key(), p.device_id, p.level], "allowed": get_allowed_nodes(),
+                   "principal": [p.key(), p.device_id, p.level], "allowed": allowed,
                    "member_task": state.get("local_task_id"), "member_policy": state.get("policy")})
 
 

@@ -40,6 +40,11 @@ class Parser:
         self.source = source
         raw = [Token(m[0], m.start() + offset, m.end() + offset, m.lastgroup)
                for m in TOKEN.finditer(source) if m.lastgroup not in ("space", "comment")]
+        for token in raw:
+            if (token.kind == "string" and not token.text.startswith("f")
+                    and ("\n" in token.text or "\r" in token.text)):
+                raise Fault("STRING_LITERAL", "문자열 안의 실제 줄바꿈은 지원하지 않습니다.",
+                            Node("token", token.start, token.end), kind="compile")
         self.tokens = []
         for idx, tok in enumerate(raw):
             if tok.text == "\n":

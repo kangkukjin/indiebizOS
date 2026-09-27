@@ -28,7 +28,10 @@ def test_missing_file_is_tool_failure_with_original_cause(tmp_path):
     assert not result["success"]
     fault = result["diagnostic"]
     assert (fault["code"], fault["kind"]) == ("TOOL", "runtime")
-    assert fault["details"] == {"error_type": "not_found", "errno": errno.ENOENT}
+    assert fault["details"]["error_type"] == "not_found"
+    assert fault["details"]["errno"] == errno.ENOENT
+    assert fault["details"]["base_path"] == str(tmp_path)
+    assert fault["details"]["path"] == str(tmp_path / "missing.txt")
 
 
 def test_parallel_missing_read_preserves_other_branch(tmp_path):

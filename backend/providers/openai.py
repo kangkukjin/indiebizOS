@@ -256,7 +256,8 @@ class OpenAIProvider(BaseProvider):
         accumulated_text: str = "",
         zero_output_retries: int = 0,
         force_thinking_off: bool = False,
-        cancel_check: Callable = None
+        cancel_check: Callable = None,
+        truncated_tool_retries: int = 0
     ) -> Generator[Dict[str, Any], None, None]:
         """
         OpenAI 공식 에이전틱 루프 패턴
@@ -316,7 +317,7 @@ class OpenAIProvider(BaseProvider):
             # 파라미터는 프로바이더별(_thinking_off_params 오버라이드) — 기본은 no-op.
             # force_thinking_off: 추론이 max_tokens를 전부 태워 본문 0자가 났을 때의
             # 재시도 전용 — 이번 호출 한 번만 추론을 끄고 본문을 받아낸다.
-            if self.disable_thinking or force_thinking_off or self.reasoning_mode == "off":
+            if self.disable_thinking or force_thinking_off or truncated_tool_retries or self.reasoning_mode == "off":
                 _off = self._thinking_off_params()
                 if _off:
                     create_params.setdefault("extra_body", {}).update(_off)
@@ -336,6 +337,9 @@ class OpenAIProvider(BaseProvider):
                 return
 
             for chunk in stream:
+                # 사용량 전용 마지막 청크는 choices가 비어 있다.
+                if getattr(chunk, "usage", None):
+                    usage_info = chunk.usage
                 if not chunk.choices:
                     continue
 
@@ -381,10 +385,6 @@ class OpenAIProvider(BaseProvider):
                             if current_tool_id and current_tool_id in tool_calls:
                                 tool_calls[current_tool_id]["arguments"] += tc.function.arguments
 
-                # 토큰 사용량 (스트리밍 마지막 청크에 포함)
-                if hasattr(chunk, 'usage') and chunk.usage:
-                    usage_info = chunk.usage
-
             # 토큰 사용량 추적
             latency_ms = (time.time() - start_time) * 1000
             # 추론 토큰 가시화 — "출력=4096인데 텍스트 0자" 부류(ep889)를 로그에서 즉시 판별
@@ -407,7 +407,8 @@ class OpenAIProvider(BaseProvider):
                         auto_continues=auto_continues, accumulated_text=accumulated_text,
                         zero_output_retries=zero_output_retries + 1,
                         force_thinking_off=True,
-                        cancel_check=cancel_check
+                        cancel_check=cancel_check,
+                        truncated_tool_retries=truncated_tool_retries
                     )
                 else:
                     print(f"[OpenAI] 출력 0자 length 재발 — 포기(누적 텍스트만 반환)")
@@ -426,26 +427,34 @@ class OpenAIProvider(BaseProvider):
                     empty_response_retries + 1,
                     auto_continues=auto_continues, accumulated_text=accumulated_text,
                     force_thinking_off=force_thinking_off,
-                    cancel_check=cancel_check
+                    cancel_check=cancel_check,
+                    truncated_tool_retries=truncated_tool_retries
                 )
                 return
 
             # finish_reason에 따른 처리 (OpenAI 공식 패턴 + Auto-Continue)
             if finish_reason == "length":
                 if tool_calls:
-                    # 도구 호출 JSON이 잘린 경우 → 기존 방식: max_tokens 늘려 재시도
-                    yield {"type": "thinking", "content": "도구 호출이 잘려서 다시 시도 중..."}
-                    new_max_tokens = min(max_tokens * 2, 16384)
-                    if new_max_tokens > max_tokens:
+                    # 불완전한 인자는 실행·대화 이력에 넣지 않는다. 원 요청에서
+                    # 한 번만 다시 생성하고, 재실패는 정상 완료로 위장하지 않는다.
+                    if truncated_tool_retries < 1 and not getattr(self, "distill_single_decision", False):
+                        yield {"type": "thinking", "content": "도구 호출이 잘려 실행하지 않았습니다. 짧은 호출로 한 번 복구합니다."}
+                        retry_messages = messages + [{"role": "user", "content":
+                            "방금 생성한 도구 호출은 출력 한도로 잘렸으며 실행되지 않았습니다. "
+                            "기존 결과·변수·파일 참조를 사용하고, 긴 본문이나 여러 작업은 나누어 "
+                            "완전한 인자를 가진 짧은 도구 호출부터 생성하세요."}]
                         yield from self._agentic_loop(
-                            messages, openai_tools, execute_tool, depth, new_max_tokens,
+                            retry_messages, openai_tools, execute_tool, depth, max(max_tokens, 16384),
+                            empty_response_retries=empty_response_retries,
                             auto_continues=auto_continues, accumulated_text=accumulated_text,
-                            force_thinking_off=force_thinking_off,
-                            cancel_check=cancel_check
+                            zero_output_retries=zero_output_retries,
+                            force_thinking_off=force_thinking_off, cancel_check=cancel_check,
+                            truncated_tool_retries=truncated_tool_retries + 1
                         )
                     else:
-                        final = accumulated_text + collected_text + "\n\n(응답이 잘렸습니다)"
-                        yield {"type": "final", "content": final}
+                        yield {"type": "error", "code": "tool_call_truncated", "content":
+                               "도구 호출이 출력 한도로 다시 잘려 작업을 완료하지 못했습니다. "
+                               "불완전한 호출은 실행하지 않았으며 이전 실행 결과는 유지됩니다."}
                     return
 
                 # 텍스트만 잘린 경우 → Auto-Continue: 이어쓰기
@@ -468,7 +477,8 @@ class OpenAIProvider(BaseProvider):
                         auto_continues=auto_continues + 1,
                         accumulated_text=new_accumulated,
                         force_thinking_off=force_thinking_off,
-                        cancel_check=cancel_check
+                        cancel_check=cancel_check,
+                        truncated_tool_retries=truncated_tool_retries
                     )
                 else:
                     # Auto-Continue 한도 초과 → 현재까지 누적 텍스트 반환

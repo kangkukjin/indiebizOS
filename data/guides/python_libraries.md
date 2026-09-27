@@ -1,20 +1,20 @@
-# Python 라이브러리 직접 호출
+# 등록 Script로 Python 라이브러리 호출
 
-현재 IBL의 `[self:python]`은 설치된 Python 함수·클래스·메서드를 이름으로 직접 호출한다.
-함수마다 스크립트를 작성·등록할 필요가 없다. Python Libraries 묶음이 활성화되고
-`local_python` 정책이 허용한 제한 없는 주인 실행에서 사용할 수 있다.
-회원·이웃·포털·제한 에이전트에는 제공하지 않는다. 별도 워커는 보안 샌드박스가 아니다.
+기존 `[self:script]{id:"python_libraries",args:{...}}`로 설치된 Python 함수·클래스·메서드를 호출한다.
+이름은 등록 Script ID이며 새 IBL 어휘가 아니다. 함수별 래퍼 등록은 필요 없다.
+제한 없는 주인의 로컬 실행 전용이며 회원·이웃·포털·제한 에이전트에는 제공하지 않는다.
+워커는 보안 샌드박스가 아니다. Script 목록에서 등록 상태와 설명을 확인할 수 있다.
 
 ```ibl
-$평균=[self:python]{op:"call",target:"statistics:mean",args:[[2,4,6]]}
-$배열=[self:python]{op:"call",target:"numpy:array",args:[[2,4,6]]}
-$목록=$배열 >> [self:python]{op:"call",name:"tolist"}
+$평균=[self:script]{id:"python_libraries",args:{op:"call",target:"statistics:mean",args:[[2,4,6]]}}
+$배열=[self:script]{id:"python_libraries",args:{op:"call",target:"numpy:array",args:[[2,4,6]]}}
+$목록=[self:script]{id:"python_libraries",args:{receiver:$배열,op:"call",name:"tolist"}}
 return {평균:$평균,목록:$목록}
 ```
 
 - `target`은 `모듈:qualified.name`이다. `args`는 위치 인자 목록, `kwargs`는 키워드 인자다.
   목록 하나를 첫 인자로 줄 때 `args:[[1,2]]`처럼 쓴다. 생략한 기본값은 Python이 적용한다.
-- 객체 메서드는 `receiver:$객체,name:"메서드"`로 호출한다. 파이프 입력은 receiver다.
+- 객체 메서드는 `receiver:$객체,name:"메서드"`로 호출한다. Script 파이프 입력은 전체 args Record다. 객체는 args.receiver로 명시한다.
   callable 객체 자체는 name 없이 호출한다. 속성은 `op:"getattr"`; 항목은 `operator:getitem`을 호출한다.
 - `result:"auto"`가 기본이다. 기본 값은 IBL 값으로, 배열·DataFrame·tuple·이터레이터 등은
   객체 참조로 반환한다. `ref`는 객체 보존을 강제하고, `value`는 값 변환을 요구한다.
@@ -25,15 +25,15 @@ return {평균:$평균,목록:$목록}
   바꾸지 않는다. IBL lambda를 Python 콜백으로 넘길 수는 없고, Python callable 참조는 가능하다.
 
 ```ibl
-$표=[self:python]{op:"call",target:"pandas:DataFrame",args:[{분류:["A","A","B"],금액:[3,5,2]}]}
-$묶음=$표 >> [self:python]{op:"call",name:"groupby",args:["분류"],kwargs:{as_index:false}}
-$합계=$묶음 >> [self:python]{op:"call",name:"sum",kwargs:{numeric_only:true}}
-$행=$합계 >> [self:python]{op:"call",name:"to_dict",kwargs:{orient:"records"}}
+$표=[self:script]{id:"python_libraries",args:{op:"call",target:"pandas:DataFrame",args:[{분류:["A","A","B"],금액:[3,5,2]}]}}
+$묶음=[self:script]{id:"python_libraries",args:{receiver:$표,op:"call",name:"groupby",args:["분류"],kwargs:{as_index:false}}}
+$합계=[self:script]{id:"python_libraries",args:{receiver:$묶음,op:"call",name:"sum",kwargs:{numeric_only:true}}}
+$행=[self:script]{id:"python_libraries",args:{receiver:$합계,op:"call",name:"to_dict",kwargs:{orient:"records"}}}
 return $행 >> [table:filter]{where:($r)=>$r.금액>4}
 ```
 
-이름을 모르면 `modules{query:"numpy",offset:0,limit:50}`로 설치 후보와 버전을 확인하고,
-`describe{target:"statistics:mean"}`으로 서명·문서를 읽는다. 후보는 import 성공 보증이 아니다.
+이름을 모르면 Script args를 `{op:"modules",query:"numpy",offset:0,limit:50}`로 주어 설치 후보와 버전을 확인하고,
+`{op:"describe",target:"statistics:mean"}`으로 서명·문서를 읽는다. 후보는 import 성공 보증이 아니다.
 서명을 모르는 함수도 직접 호출할 수 있다. check는 라이브러리를 import/실행하지 않는다.
 
 export 형식은 `list`(기본 컨테이너·ndarray), `records`(DataFrame→items+schema),
@@ -45,9 +45,9 @@ catch에서 `$error.partial` 참조를 받아 메서드/export로 회수한다.
 
 ```ibl
 $r=null
-[try]{$r=[self:python]{op:"call",target:"builtins:tuple",args:[[1,2]],result:"value"}}
+[try]{$r=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:tuple",args:[[1,2]],result:"value"}}}
 [catch]{$r=$error.partial}
-return $r >> [self:python]{op:"export",format:"list"}
+return [self:script]{id:"python_libraries",args:{receiver:$r,op:"export",format:"list"}}
 ```
 
 호출 기본 시간은 60초이며 `timeout`으로 0.01~3600초를 지정한다. 실행 전체 예산·취소가 우선한다.
@@ -59,3 +59,6 @@ return $r >> [self:python]{op:"export",format:"list"}
 효과는 unknown이며 자동 retry/reuse하지 않는다. 새 워커로 영수증을 재생해 객체 상태를
 복원하지 않는다. 다음 실행은 명시 export한 값을 inputs로 받아 구성한다.
 설치/환경 변경은 다음 새 실행에 반영하며 call 안에서 pip를 자동 실행하지 않는다.
+
+세션은 등록 계약 `ibl-script-session/1`로 선택한다. 실행 안에서 같은 ID는 같은 워커를 쓴다.
+기존 일반 Script는 그대로 실행한다. 이 세션 계약은 background·args_file·원격 실행을 지원하지 않는다.

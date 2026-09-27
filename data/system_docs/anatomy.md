@@ -63,7 +63,7 @@ see_also: [vision.md, harness_haerye.md, architecture.md, ibl.md, memory.md, pac
 ```
 
 <!-- IBL_STATS:START -->
-- **6개 노드 169 액션** = 에이전트가 세계와 맺는 관계: `sense`(지각, 43) · `self`(내 자원, 53) · `limbs`(장치·신체, 14) · `others`(소통, 17) · `engines`(생성, 19) · `table`(통화 변환 문법, 23)
+- **6개 노드 168 액션** = 에이전트가 세계와 맺는 관계: `sense`(지각, 43) · `self`(내 자원, 52) · `limbs`(장치·신체, 14) · `others`(소통, 17) · `engines`(생성, 19) · `table`(통화 변환 문법, 23)
 <!-- IBL_STATS:END -->
   (위 수치는 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 - API든 크롤링이든 안드로이드든 DB든 같은 문법으로 요청 — 프로토콜 차이는 드라이버가 감춘다.
@@ -138,8 +138,8 @@ until과 고정 양수 반복의 변수 검사를 실행 순서에 맞췄다. [2
 파일 읽기 예외는 원인·권한을 보존하고, 선택 파일은 목록에서 존재를 확인한 뒤 읽는다.
 계약 조회를 곁들인 실행은 한 번만 수행하며 실행 권한·수명 관문을 유지한다.
 [4064 경계 수리](../../docs/EPISODE_4064_REPAIRS_2026_09_26.md).
-설치된 Python 라이브러리는 함수별 등록 없이 직접 호출하고, 같은 실행 안에서 객체·메서드를 조합한다.
-[Python 호출 가이드](../guides/python_libraries.md) · [구조 수렴 §6.8](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md#68-python-라이브러리-직접-호출--계약과-구현-2026-09-27).
+설치된 Python 라이브러리는 등록 Script `python_libraries`로 호출하고, 같은 실행 안에서 객체·메서드를 조합한다.
+[Python 호출 가이드](../guides/python_libraries.md) · [구조 수렴 §6.8](../../docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md).
 → 명세·설계 철학: [ibl.md](ibl.md)
 
 **업무 확정 기반 v1(2026-09-20)**: 선택 패키지 `record-ops`의 `[self:record]`는 선언된 명령에

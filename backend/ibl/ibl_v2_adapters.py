@@ -21,6 +21,7 @@ class Adapter:
     # args → bool: 이 호출의 영수증을 고친 프로그램이 재사용해도 되는가. 선언 effects 가 미상(legacy)인
     # 어휘는 부작용 해소 규칙(ibl_ops.op_side_effect — 안전 분류·dry-run·건강검진과 같은 한 벌)로 op 단위 판정.
     reusable: object = None
+    stateful: object = None
 
 
 @dataclass(frozen=True)
@@ -54,8 +55,12 @@ def validate_contract(contract):
     if (not isinstance(envelopes, list)
             or any(not isinstance(key, str) or key not in contract["params"] for key in envelopes)):
         raise ValueError("input_envelopes는 선언된 입력 인자 이름 목록입니다.")
-    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1", "python-call/1"}:
+    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1", "ibl-script-session/1"}:
         raise ValueError("지원하지 않는 어댑터 프로토콜입니다.")
+    if adapter.get('protocol') == 'ibl-script-session/1' and (
+            effects != ['unknown'] or adapter.get('stateful') is not True
+            or adapter.get('local_code') is not True):
+        raise ValueError('세션 스크립트는 unknown 효과·stateful·local_code를 명시해야 합니다.')
     from ibl_callable_contract import validate_extensions
     validate_extensions(contract)
     return contract
@@ -257,9 +262,11 @@ def load_registry(project_path=".", agent_id=None):
                     if gate(node, action, ac):
                         raise Fault("MEMBER_ACCESS", "회원의 어휘 권한이 없습니다.", kind="permission")
                     return table_operation(c["adapter"]["operation"], runtime, args)
-                if protocol == "python-call/1":
-                    from ibl_foreign_adapter import invoke_foreign
-                    return invoke_foreign(runtime, args, ac, project_path, agent_id, node, action)
+                if protocol == "ibl-script/2":
+                    from ibl_script_session import registration, invoke
+                    session_registration = registration(args)
+                    if session_registration:
+                        return invoke(runtime, args, session_registration, project_path, agent_id, ac, node, action)
                 params = {**plain_arguments(args), **c["adapter"].get("fixed_params", {})}
                 if protocol == "ibl-script/2":
                     params.setdefault("op", "run" if params.get("id") else "list")
@@ -278,18 +285,16 @@ def load_registry(project_path=".", agent_id=None):
             from ibl_dependencies import script_snapshot
             def reusable(args, ac=action_config):
                 # 조이는 건 자동, 푸는 건 명시(ibl_ops 규칙 그대로): 부작용 없음 + 내부 모델 호출 없음 + 스크립트 아님.
-                if ac.get("ai_call") is True or (ac.get("callable_contract") or {}).get("adapter", {}).get("protocol") in {"ibl-script/2", "python-call/1"}:
+                if ac.get("ai_call") is True or (ac.get("callable_contract") or {}).get("adapter", {}).get("protocol") == "ibl-script/2":
                     return False
                 from ibl_ops import op_side_effect, resolve_op
                 return not op_side_effect(ac, resolve_op(ac, args if isinstance(args, dict) else {}))
             dependency = script_snapshot if adapter['protocol'] == 'ibl-script/2' else None
-            if adapter['protocol'] == 'python-call/1':
-                from functools import partial
-                from ibl_foreign_adapter import provider_snapshot
-                dependency = partial(provider_snapshot, implementation)
+            from ibl_script_session import is_stateful
             result[key] = Adapter(contract, run, authorize,
                                   dependency,
-                                  None if contract["effects"] != ["unknown"] else reusable)
+                                  None if contract["effects"] != ["unknown"] else reusable,
+                                  is_stateful if adapter['protocol'] == 'ibl-script/2' else None)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

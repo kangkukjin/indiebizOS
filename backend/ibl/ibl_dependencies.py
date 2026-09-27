@@ -66,8 +66,13 @@ def script_snapshot(args, root=None):
     if dynamic:
         files.update({str(p): digest(p.read_bytes().hex()) for p in sorted(root.rglob('*'))
                       if p.is_file() and p.suffix in {'.py', '.sh', '.js'} and '__pycache__' not in p.parts})
-    return {'scope': 'script-namespace' if dynamic else 'script-closure',
-            'registry': digest(registry if dynamic else {sid: entry}), 'files': files}
+    snapshot = {'scope': 'script-namespace' if dynamic else 'script-closure',
+                'registry': digest(registry if dynamic else {sid: entry}), 'files': files}
+    if (entry or {}).get('callable_contract', {}).get('adapter', {}).get('protocol') == 'ibl-script-session/1':
+        from python_environment_lock import fingerprint
+        from runtime_utils import get_python_cmd
+        snapshot.update(environment=fingerprint(import_root), interpreter=get_python_cmd())
+    return snapshot
 
 
 def legacy_snapshot(name, assets):

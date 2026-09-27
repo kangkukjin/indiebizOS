@@ -144,11 +144,18 @@ class Worker:
         try:
             if fingerprint() != self.environment or self.module_state():
                 raise Fault('PY_ENV_CHANGED', '실행 도중 Python 환경이 변경되었습니다.', kind='protocol')
+            params = unpack(req['params'])
             with contextlib.redirect_stdout(capture), contextlib.redirect_stderr(capture):
-                value, evidence = self.dispatch(unpack(req['params']))
+                value, evidence = self.dispatch(params)
             if fingerprint() != self.environment or self.module_state():
                 raise Fault('PY_ENV_CHANGED', '호출 중 환경 변경: 결과 일관성을 보장할 수 없습니다.', kind='protocol')
+            evidence['python'] = {'target': params.get('target'), 'operation': params.get('op', 'modules'),
+                                  'member': params.get('name'),
+                                  'receiver_type': getattr(params.get('receiver'), 'type_name', None)}
             result = {'ok': True, 'value': pack(value), 'evidence': evidence}
+            if params.get('op') == 'export' and params.get('format') == 'bytes':
+                result['artifact'] = {**value, 'path': params.get('options', {}).get('path')}
+                result['value'] = pack(UNIT)
         except BaseException as exc:
             fault = exc if isinstance(exc, Fault) else Fault('PY_EXCEPTION', str(exc), details={'exception_type': type(exc).__name__})
             chain, current = [], exc
@@ -177,8 +184,12 @@ def main():
             time.sleep(.25)
         os._exit(70)
     threading.Thread(target=watch_parent, daemon=True).start()  # cc-ok: 독립 워커 안의 부모 생존 감시; 워커 종료와 함께 끝남
-    worker = Worker(json.loads(sys.stdin.readline()))
-    transport.write(json.dumps({'ready': True, 'environment': worker.environment}) + '\n')
+    request = json.loads(sys.stdin.readline())
+    if request.get('protocol') != 'ibl-script-session/1':
+        raise ValueError('등록 세션 스크립트 프로토콜이 필요합니다.')
+    worker = Worker(request)
+    transport.write(json.dumps({'protocol': 'ibl-script-session/1', 'ready': True,
+                                'environment': worker.environment}) + '\n')
     for line in sys.stdin:
         req = json.loads(line)
         transport.write(json.dumps(worker.request(req), ensure_ascii=False) + '\n')

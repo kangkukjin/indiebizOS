@@ -693,7 +693,8 @@ class Compiler:
 
 def compile_program(source, registry=None, inputs=None, definitions=None):
     from ibl_v2_adapters import Adapter
-    registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency, getattr(v, "reusable", None))
+    registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency,
+                          getattr(v, "reusable", None), getattr(v, "stateful", None))
                 for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
     compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))
@@ -714,7 +715,7 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                     "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
                     "expressions": digest({p.name: digest(p.read_text()) for p in sorted(set((Path(__file__).parents[1] / "common").glob("expression_*.py")) | {Path(__file__).parents[1] / "common/foreign_ref.py"})}),
                     "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
-                              {Path(__file__).parent / name for name in ("ibl_foreign_adapter.py", "ibl_document_value.py", "ibl_member_library.py",
+                              {Path(__file__).parent / name for name in ("ibl_script_session.py", "ibl_document_value.py", "ibl_member_library.py",
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}
     finish_diagnostics(compiler)
     for entry in compiler.warnings:

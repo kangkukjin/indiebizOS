@@ -293,7 +293,7 @@ def _tracked_script_files():
     if r.returncode != 0:
         return None
     # -z = 따옴표 없는 날 경로(한글 파일명이 \353.. 로 인용되는 것을 피한다)
-    return {part.split("/")[-1] for part in r.stdout.split("\0") if part}
+    return {part.removeprefix("data/scripts/") for part in r.stdout.split("\0") if part}
 
 
 def _check_script_registry(flags: List[Dict], unchecked: List[str]) -> None:

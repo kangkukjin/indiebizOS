@@ -382,7 +382,8 @@ def _entry_item(sid, e, state):
             "registered_at": e.get("registered_at", ""),
             "last_status": ("ok" if lr.get("ok") else "error") if lr else "none",
             "last_run": str(lr.get("at", "")) if lr else "",
-            "runnable": not problems}
+            "runnable": not problems,
+            **({'callable_contract': e['callable_contract']} if e.get('callable_contract') else {})}
 
 
 def op_list(tool_input):
@@ -494,6 +495,9 @@ def op_run(tool_input):
                          f"등록: {', '.join(sorted(registry)) or '없음'}"}
     v2 = tool_input.get("_ibl_edition") == 2
     wire_v2 = bool(entry.get("callable_contract"))
+    if (entry.get('callable_contract') or {}).get('adapter', {}).get('protocol') == 'ibl-script-session/1':
+        return {'success': False, 'error_type': 'capability',
+                'error': '이 등록 스크립트는 현재 로컬 IBL 실행의 세션 계약으로 호출하세요.'}
     if wire_v2 and not v2:
         return {"success": False, "error": "이 스크립트는 현재 IBL의 명시 값 호출 계약을 사용합니다."}
     if v2 and wire_v2 and tool_input.get("background"):

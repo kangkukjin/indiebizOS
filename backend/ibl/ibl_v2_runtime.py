@@ -487,7 +487,7 @@ class Runtime(ExpressionEvaluator):
 
     def invoke(self, node, args, piped):
         spec = self.plan.registry[f"{node.data['node']}:{node.data['action']}"]
-        if spec.contract.get('adapter', {}).get('stateful'):
+        if spec.stateful and spec.stateful(args.value):
             # Serialize invocation AND receipt/evidence, so another branch cannot
             # observe the object mutation before its evidence has been committed.
             with self.foreign_lock:
@@ -534,7 +534,7 @@ class Runtime(ExpressionEvaluator):
                             "dependency": node.data.get("dependency_snapshot"),
                             "semantics": {k: self.plan.dependencies[k]
                                           for k in ("core", "edition", "semantics", "expressions")}})
-        stateful = contract.get("adapter", {}).get("stateful", False)
+        stateful = bool(spec.stateful and spec.stateful(args.value))
         parents = args.evidence | (self.foreign_evidence if stateful else frozenset())
         eid = self.event(node, "invoke", parents, action=key,
                          effects=contract["effects"], request_hash=request_hash)
@@ -581,7 +581,7 @@ class Runtime(ExpressionEvaluator):
             if hit is not None and "value" in hit:
                 receipt, source = hit, "reuse"
         if receipt is not None:
-            if contract.get("adapter", {}).get("stateful"):
+            if stateful:
                 raise failed(Fault("PY_STATE_EXPIRED", "외부 실행 상태는 새 워커에 복원되지 않습니다. export한 값을 새 입력으로 사용하세요.", node, kind="protocol"))
             if spec.authorize:
                 spec.authorize()

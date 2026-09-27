@@ -128,7 +128,7 @@ nodes:
         lands_on: body
         limb_op: {op: read, path: $path}
         member_transform: member_documents:read_document
-        path_audited: {at: '2026-09-27', impl: "e9049e82ec9e296c"}
+        path_audited: {at: '2026-09-27', impl: "97ae1bdb57dde7a0"}
         target_key: path
         # start/end 흡수(2026-07-18): 모델이 ~30% 확률로 start/end 를 써 조용히 무시되고
         # 통파일이 오던 것(file_size_modularization 측정). start=offset 은 1:1 별칭,
@@ -140,7 +140,7 @@ nodes:
         lands_on: body
         limb_op: {op: document_fill, path: $path}
         member_transform: member_documents:fill_document
-        path_audited: {at: '2026-09-27', impl: "e9049e82ec9e296c"}
+        path_audited: {at: '2026-09-27', impl: "97ae1bdb57dde7a0"}
         # data 없이 부르는 introspection 모드가 필드 목록을 items 로 이미 내고 있었다
         # (office_ops._fill_pdf/_fill_docx) — 라벨만 effect 로 뒤처져 설명과 어긋났다.
         returns: items
@@ -825,7 +825,7 @@ nodes:
             value_path: /value
           nondeterministic: true
         member_transform: script_ops:member_script
-        path_audited: {at: '2026-09-27', impl: "e9049e82ec9e296c"}
+        path_audited: {at: '2026-09-27', impl: "97ae1bdb57dde7a0"}
         pipe_in: true
         lands_on: body
         limb_op: {op: script, action: $op, id: $id, path: $path, interpreter: $interpreter, args: $args, resources: $resources, dependencies: $dependencies}
@@ -874,6 +874,7 @@ nodes:
         - 정기 실행
         guides:
         - script.md
+        - python_libraries.md
       ledger:
         returns: items
         columns_from: data   # 반환 열은 액션이 아니라 읽는 데이터(파일·원장·시트)가 정한다 — 정적 검사기는 fixture 열을 이 액션의 열로 쓰지 않는다(2026-09-05)

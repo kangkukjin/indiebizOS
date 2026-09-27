@@ -468,6 +468,6 @@ legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_descripti
 
 ## 설치된 Python 라이브러리
 
-함수·생성자·객체 메서드는 `[self:python]`으로 직접 호출한다. 함수별 등록이 필요 없으며
+함수·생성자·객체 메서드는 `[self:script]{id:"python_libraries",args:{...}}`로 호출한다. 함수별 등록이 필요 없으며
 객체는 같은 최상위 실행 안에서 전달하고 종료 전에 값/파일로 변환한다.
 [직접 호출과 오류 복구 예제](python_libraries.md)를 따른다.

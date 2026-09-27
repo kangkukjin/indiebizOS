@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: direct-python-vocabulary
+    retired: 2026-09-27
+    reason: 사용자는 새 어휘 추가를 의도하지 않았으며 기존 등록 Script 경로 사용을 요청했다.
+    instead: '[self:script]{id:"python_libraries",args:{...}} 및 등록 세션 스크립트 계약'
+    phrases: ['[self:python]', 'python-call/1']
   - id: fixed-v2-preview-prefix
     retired: 2026-09-27
     reason: 고정 앞부분 표시가 예산에 들어가는 후보와 후반 필드까지 가려 검토 누락과 되읽기를 유발했다.

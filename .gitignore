@@ -467,6 +467,5 @@ data/ibl_runs/
 # Shared lease for managed Python installs and direct-library workers.
 data/runtime/python-environment.lock
 
-# Shipped direct-Python policy and executable teaching examples
-!data/packages/installed/tools/python-runtime/policy.json
-!data/packages/installed/tools/python-runtime/examples.json
+# Registered library script teaching examples
+!data/scripts/python_library/examples.json

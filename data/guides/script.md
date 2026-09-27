@@ -199,3 +199,22 @@ stdout은 `{protocol:"ibl-script/2", ok:true, value:{n:6}}` 또는
 새 wire의 background·회원 args_file·직접 연결 불가 기기의 푸시 큐 전송은 지원하지 않는다.
 원격 응답이 끊기면 결과 불명으로 남기며 같은 실행을 자동 재전송하지 않는다. 등록 계약을 모르는 script는 순수 캐시 대상으로 간주하지 않는다.
 자세한 언어 계약은 [주 IBL 교재](ibl_composition.md)를 읽는다.
+
+
+## 실행 안에서 객체를 이어 쓰는 등록 스크립트
+
+`python_libraries`는 설치 라이브러리의 함수·생성자·메서드·속성을 이름으로 호출하는 등록 ID다.
+`[self:script]{id:"python_libraries",args:{op:"call",target:"statistics:mean",args:[[2,4,6]]}}`
+처럼 사용한다. 객체를 이용한 조합과 export는 [호출 가이드](python_libraries.md)를 따른다.
+새 어휘나 함수별 등록은 필요 없다. 목록의 callable_contract로 등록 입력 계약을 확인한다.
+
+등록의 `callable_contract.adapter.protocol: ibl-script-session/1`은 같은 최상위 IBL 실행에서
+동일 ID의 자식 프로세스를 유지하는 선택적 계약이다. args는 IBL 값 wire로 전달하며 참조 수명은
+해당 실행으로 제한한다. 효과는 unknown, adapter.stateful/local_code는 true여야 한다.
+Python 역할 인터프리터와 data/scripts 안의 실존 진입 파일을 요구한다. 현재는 제한 없는 주인의
+로컬 동기 실행만 허용하며 background·args_file·원격 전달을 거절한다. 일반 등록 Script의
+기존 JSON/ibl-script/2 계약과 영수증 재생은 바꾸지 않는다. 세션 상태의 영수증 재생은 거절한다.
+
+세션 stdin 첫 줄은 protocol/owner/generation 초기화이며 준비 응답에는 protocol/ready/environment가
+필요하다. 이후 각 줄은 invocation id와 pack된 params, 응답은 ok와 pack된 value 또는 error/partial이다.
+실행 종료에 프로세스를 정리한다. 이 계약을 구현하지 않은 일반 스크립트에 세션 선언만 붙이면 안 된다.

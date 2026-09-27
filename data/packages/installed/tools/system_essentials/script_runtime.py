@@ -38,8 +38,8 @@ def parse_output(stdout):
 def validate_v2_contract(contract):
     from ibl_v2_adapters import validate_contract
     validate_contract(contract)
-    if contract["adapter"]["protocol"] != "ibl-script/2":
-        raise ValueError("등록 script의 새 프로토콜은 ibl-script/2입니다.")
+    if contract["adapter"]["protocol"] not in {"ibl-script/2", "ibl-script-session/1"}:
+        raise ValueError("등록 script 프로토콜은 ibl-script/2 또는 ibl-script-session/1입니다.")
     return contract
 
 
@@ -64,6 +64,8 @@ def _v2_json_safe(value):
 def v2_input(entry, args, context=None):
     from ibl_v2_types import guard
     contract = validate_v2_contract(entry.get("callable_contract"))
+    if contract['adapter']['protocol'] != 'ibl-script/2':
+        raise ValueError('세션 스크립트는 로컬 IBL 실행 소유 세션으로 호출해야 합니다.')
     if not isinstance(args, dict):
         raise ValueError("script args는 Record입니다.")
     params = contract["params"]

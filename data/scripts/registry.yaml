@@ -258,3 +258,91 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
+python_libraries:
+  callable_contract:
+    adapter:
+      local_code: true
+      protocol: ibl-script-session/1
+      stateful: true
+    effects:
+    - unknown
+    enums:
+      format:
+      - list
+      - records
+      - bytes
+      op:
+      - modules
+      - describe
+      - call
+      - getattr
+      - export
+      - release
+      result:
+      - auto
+      - value
+      - ref
+    exclusive:
+    - - target
+      - receiver
+    integers:
+    - offset
+    - limit
+    maximum:
+      limit: 200
+      timeout: 3600
+    minimum:
+      limit: 1
+      offset: 0
+      timeout: 0.01
+    nondeterministic: true
+    params:
+      args: List
+      format: Text
+      kwargs: Record
+      limit: Number
+      name: Text
+      offset: Number
+      op: Text
+      options: Record
+      query: Text
+      receiver: ForeignRef
+      result: Text
+      target: Text
+      timeout: Number
+    pipe_input: receiver
+    required: []
+    result: Unknown
+    variants:
+    - required_any:
+      - - target
+        - receiver
+      when:
+        op: call
+    - required_any:
+      - - target
+        - receiver
+      when:
+        op: getattr
+    - required_any:
+      - - target
+        - receiver
+      when:
+        op: describe
+    - required:
+      - receiver
+      - format
+      when:
+        op: export
+    - required:
+      - receiver
+      when:
+        op: release
+    version: 1
+  description: '설치 Python 라이브러리를 직접 호출하는 등록 스크립트. args.op: modules/describe/call/getattr/export/release;
+    target=모듈:함수 또는 receiver와 name, args/kwargs, result:auto/value/ref. 객체는 같은 IBL
+    실행에서만 유효. 가이드 python_libraries.md. 제한 없는 주인의 로컬 실행 전용.'
+  file: python_library/python_bridge_worker.py
+  interpreter: python
+  registered_at: '2026-09-27T18:26:29'
+  timeout: 60

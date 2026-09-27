@@ -1,4 +1,4 @@
-"""Direct foreign calls compose with real IBL, without registered scripts."""
+"""Registered library scripts compose with IBL without adding vocabulary."""
 import json
 import re
 from pathlib import Path
@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 @pytest.fixture(scope='module')
 def registry():
-    return load_registry()
+    return load_registry(str(ROOT))
 
 
 def run(code, registry, inputs=None, **kwargs):
@@ -25,7 +25,8 @@ def run(code, registry, inputs=None, **kwargs):
 
 
 def call(target, args=None, **kwargs):
-    return '[self:python]' + json.dumps({'op': 'call', 'target': target, 'args': args or [], **kwargs})
+    return '[self:script]' + json.dumps({'id': 'python_libraries', 'args': {
+        'op': 'call', 'target': target, 'args': args or [], **kwargs}})
 
 
 def test_design_examples_run_real_numpy_pandas(registry):
@@ -47,12 +48,12 @@ def test_unregistered_calls_and_plain_values(registry, target, args, expected):
 
 
 def test_mutation_alias_and_release(registry):
-    out = run('''$a=[self:python]{op:"call",target:"builtins:list",result:"ref"}
+    out = run('''$a=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:list",result:"ref"}}
 $b=$a
-$n=$a >> [self:python]{op:"call",name:"append",args:[7]}
-$v=$b >> [self:python]{op:"export",format:"list"}
-[self:python]{op:"release",receiver:$a}
-[self:python]{op:"release",receiver:$b}
+$n=[self:script]{id:"python_libraries",args:{receiver:$a,op:"call",name:"append",args:[7]}}
+$v=[self:script]{id:"python_libraries",args:{receiver:$b,op:"export",format:"list"}}
+[self:script]{id:"python_libraries",args:{op:"release",receiver:$a}}
+[self:script]{id:"python_libraries",args:{op:"release",receiver:$b}}
 return {value:$v,n:$n,same:$a==$b}''', registry)
     assert out['success'], out
     assert out['value'] == {'value': [7], 'n': None, 'same': True}
@@ -61,9 +62,9 @@ return {value:$v,n:$n,same:$a==$b}''', registry)
 
 def test_conversion_failure_keeps_result_and_does_not_repeat(registry):
     out = run('''$r=null
-[try]{$r=[self:python]{op:"call",target:"builtins:tuple",args:[[1,2]],result:"value"}}
+[try]{$r=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:tuple",args:[[1,2]],result:"value"}}}
 [catch]{$r=$error.partial}
-return $r >> [self:python]{op:"export",format:"list"}''', registry)
+return [self:script]{id:"python_libraries",args:{receiver:$r,op:"export",format:"list"}}''', registry)
     assert out['success'], out
     assert out['value'] == [1, 2]
     assert len([e for e in out['evidence'] if e['kind'] == 'invoke']) == 2
@@ -76,18 +77,20 @@ def test_foreign_output_wire_and_expired_scope(registry):
     ref = unpack(out['value_wire']['data'])
     assert isinstance(ref, ForeignRef)
     assert unpack(pack({'ref': ref})) == {'ref': ref}
-    expired = run('[self:python]{op:"export",receiver:$ref,format:"list"}', registry, {'ref': ref})
+    expired = run('[self:script]{id:"python_libraries",args:{op:"export",receiver:$ref,format:"list"}}', registry, {'ref': ref})
     assert expired['diagnostic']['kind'] == 'permission'
-    plain = compile_program('[self:python]{op:"release",receiver:$ref}', registry, {'ref': ref.fields()})
-    assert plain.issues
+    plain = compile_program('[self:script]{id:"python_libraries",args:{op:"release",receiver:$ref}}', registry, {'ref': ref.fields()})
+    assert not Runtime(plain, {'ref': ref.fields()}).run()['success']
 
 
 @pytest.mark.parametrize('code', [
-    '[self:python]{op:"call"}', '[self:python]{op:"call",target:"math:sqrt",args:1}',
-    '[self:python]{op:"release"}', '[self:python]{op:"modules",limit:0}',
+    '[self:script]{id:"python_libraries",args:{op:"call"}}', '[self:script]{id:"python_libraries",args:{op:"call",target:"math:sqrt",args:1}}',
+    '[self:script]{id:"python_libraries",args:{op:"release"}}', '[self:script]{id:"python_libraries",args:{op:"modules",limit:0}}',
 ])
 def test_invalid_contract_before_provider(registry, code):
-    assert compile_program(code, registry).issues
+    runtime = Runtime(compile_program(code, registry))
+    assert not runtime.run()['success']
+    assert not runtime.foreign_sessions
 
 
 @pytest.mark.parametrize('principal_kind', ['member', 'body', 'portal', 'anonymous'])
@@ -104,7 +107,7 @@ def test_restricted_owner_denied_even_self_node(registry):
     try:
         set_allowed_nodes({'self', 'others', 'table'})
         out = run(call('builtins:print', ['MUST NOT RUN']), registry)
-        assert out['diagnostic']['code'] == 'LOCAL_PYTHON_PERMISSION'
+        assert out['diagnostic']['code'] == 'LOCAL_CODE_PERMISSION'
     finally:
         set_allowed_nodes(old)
 
@@ -121,7 +124,7 @@ def test_error_stage_and_no_effect_call(registry):
 def test_stdout_is_diagnostic_not_value(registry):
     out = run(call('builtins:print', ['hello']), registry)
     assert out['success'] and out['value'] is None
-    assert any('hello' in e.get('python', {}).get('diagnostics', '') for e in out['evidence'])
+    assert any('hello' in e.get('script', {}).get('diagnostics', '') for e in out['evidence'])
 
 
 def test_timeout_closes_worker(registry):
@@ -140,16 +143,16 @@ def test_replay_does_not_recreate_python_state(registry):
 
 
 def test_objects_compose_through_local_functions(registry):
-    out = run('''[def:make]($x){return [self:python]{op:"call",target:"builtins:tuple",args:[$x]}}
+    out = run('''[def:make]($x){return [self:script]{id:"python_libraries",args:{op:"call",target:"builtins:tuple",args:[$x]}}}
 $a=[fn:make]{x:[1,2]}
-return [self:python]{op:"call",target:"operator:getitem",args:[$a,1]}''', registry)
+return [self:script]{id:"python_libraries",args:{op:"call",target:"operator:getitem",args:[$a,1]}}''', registry)
     assert out['value'] == 2
 
 
 def test_modules_describe_and_decimal(registry):
-    out = run('''$m=[self:python]{op:"modules",query:"numpy",limit:2}
-$d=[self:python]{op:"describe",target:"statistics:mean"}
-$x=[self:python]{op:"call",target:"decimal:Decimal",args:["1.234567890123456789"]}
+    out = run('''$m=[self:script]{id:"python_libraries",args:{op:"modules",query:"numpy",limit:2}}
+$d=[self:script]{id:"python_libraries",args:{op:"describe",target:"statistics:mean"}}
+$x=[self:script]{id:"python_libraries",args:{op:"call",target:"decimal:Decimal",args:["1.234567890123456789"]}}
 return {modules:$m,description:$d,number:$x}''', registry)
     assert out['success'], out
     assert out['value']['modules']['items']
@@ -158,19 +161,19 @@ return {modules:$m,description:$d,number:$x}''', registry)
 
 
 def test_callable_and_async_results(registry):
-    out = run('''$pow=[self:python]{op:"getattr",target:"builtins:pow",result:"ref"}
-$f=[self:python]{op:"call",target:"functools:partial",args:[$pow,2]}
-$x=[self:python]{op:"call",receiver:$f,args:[5]}
-$n=[self:python]{op:"call",target:"asyncio:sleep",args:[0]}
+    out = run('''$pow=[self:script]{id:"python_libraries",args:{op:"getattr",target:"builtins:pow",result:"ref"}}
+$f=[self:script]{id:"python_libraries",args:{op:"call",target:"functools:partial",args:[$pow,2]}}
+$x=[self:script]{id:"python_libraries",args:{op:"call",receiver:$f,args:[5]}}
+$n=[self:script]{id:"python_libraries",args:{op:"call",target:"asyncio:sleep",args:[0]}}
 return {x:$x,n:$n}''', registry)
     assert out['value'] == {'x': 32, 'n': None}, out
 
 
 def test_dataframe_export_and_attribute(registry):
-    out = run('''$df=[self:python]{op:"call",target:"pandas:DataFrame",args:[{a:[1,2]}]}
-$shape=$df >> [self:python]{op:"getattr",name:"shape"}
-$s=$shape >> [self:python]{op:"export",format:"list"}
-$r=$df >> [self:python]{op:"export",format:"records"}
+    out = run('''$df=[self:script]{id:"python_libraries",args:{op:"call",target:"pandas:DataFrame",args:[{a:[1,2]}]}}
+$shape=[self:script]{id:"python_libraries",args:{receiver:$df,op:"getattr",name:"shape"}}
+$s=[self:script]{id:"python_libraries",args:{receiver:$shape,op:"export",format:"list"}}
+$r=[self:script]{id:"python_libraries",args:{receiver:$df,op:"export",format:"records"}}
 return {shape:$s,rows:$r.items,schema:$r.schema}''', registry)
     assert out['success'], out
     assert out['value']['shape'] == [2, 1]
@@ -200,7 +203,7 @@ def test_partial_ref_honors_old_consumer_protocol(registry):
 
 
 def test_negative_timeout_rejected_before_worker(registry):
-    rt = Runtime(compile_program('[self:python]{op:"call",target:"math:sqrt",timeout:-1}', registry))
+    rt = Runtime(compile_program('[self:script]{id:"python_libraries",args:{op:"call",target:"math:sqrt",timeout:-1}}', registry))
     out = rt.run()
     assert out['diagnostic']['code'] == 'ARGUMENT_CONTRACT'
     assert not rt.foreign_sessions
@@ -208,18 +211,17 @@ def test_negative_timeout_rejected_before_worker(registry):
 
 def test_export_bytes_uses_output_gate(tmp_path):
     registry = load_registry(str(tmp_path))
-    out = run('''$b=[self:python]{op:"call",target:"builtins:bytes",args:[[0,1,255]]}
-return $b >> [self:python]{op:"export",format:"bytes",options:{path:"sample.bin"}}''', registry)
+    out = run('''$b=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:bytes",args:[[0,1,255]]}}
+return [self:script]{id:"python_libraries",args:{receiver:$b,op:"export",format:"bytes",options:{path:"sample.bin"}}}''', registry)
     assert out['success'], out
     assert Path(out['value']['path']).read_bytes() == b'\x00\x01\xff'
     assert Path(out['value']['path']).parent == tmp_path / 'outputs'
 
 
 def test_environment_change_between_check_and_call_is_refused(registry, monkeypatch):
-    from tool_loader import load_tool_handler
-    handler = load_tool_handler('python_op')
+    import python_environment_lock
     plan = compile_program(call('statistics:mean', [[1, 2]]), registry)
-    monkeypatch.setattr(handler, 'dependency', lambda _: {'environment': 'changed'})
+    monkeypatch.setattr(python_environment_lock, 'fingerprint', lambda _: 'changed')
     out = Runtime(plan).run()
     assert out['diagnostic']['code'] == 'DEFINITION_CHANGED'
 
@@ -235,9 +237,9 @@ def test_model_projection_keeps_foreign_expiration(registry, tmp_path, monkeypat
 
 
 def test_mutation_evidence_reaches_export_without_expanding_every_prior_event(registry):
-    out = run('''$a=[self:python]{op:"call",target:"builtins:list",result:"ref"}
-$a >> [self:python]{op:"call",name:"append",args:[7]}
-$v=$a >> [self:python]{op:"export",format:"list"}
+    out = run('''$a=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:list",result:"ref"}}
+[self:script]{id:"python_libraries",args:{receiver:$a,op:"call",name:"append",args:[7]}}
+$v=[self:script]{id:"python_libraries",args:{receiver:$a,op:"export",format:"list"}}
 return evidence($v)''', registry)
     assert out['success'], out
     calls = [e['python'] for e in out['value']['events'] if e.get('python')]
@@ -261,16 +263,73 @@ def test_mcp_and_http_preserve_value_protocol_negotiation(monkeypatch):
 
 
 def test_describe_is_passive_but_get_marks_failing_property_invoked(registry):
-    out = run('''$getter=[self:python]{op:"getattr",target:"builtins:len"}
-$property=[self:python]{op:"call",target:"builtins:property",args:[$getter]}
-$bases=[self:python]{op:"call",target:"builtins:tuple"}
-$class=[self:python]{op:"call",target:"builtins:type",args:["Probe",$bases,{p:$property}]}
-$obj=[self:python]{op:"call",receiver:$class}
-$description=$obj >> [self:python]{op:"describe",name:"p"}
-return $obj >> [self:python]{op:"getattr",name:"p"}''', registry)
+    out = run('''$getter=[self:script]{id:"python_libraries",args:{op:"getattr",target:"builtins:len"}}
+$property=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:property",args:[$getter]}}
+$bases=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:tuple"}}
+$class=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:type",args:["Probe",$bases,{p:$property}]}}
+$obj=[self:script]{id:"python_libraries",args:{op:"call",receiver:$class}}
+$description=[self:script]{id:"python_libraries",args:{receiver:$obj,op:"describe",name:"p"}}
+return [self:script]{id:"python_libraries",args:{receiver:$obj,op:"getattr",name:"p"}}''', registry)
     assert out['diagnostic']['details']['stage'] == 'invoke'
     assert out['diagnostic']['details']['invoked'] is True
     assert len(out['recordings']) == 7  # describe completed without running len
+
+
+def test_script_discovery_and_retired_vocabulary(registry):
+    assert 'self:python' not in registry
+    assert compile_program('[self:python]{op:"modules"}', registry).issues
+    out = run('[self:script]{op:"list"}', registry)
+    row = next(x for x in out['value']['items'] if x['id'] == 'python_libraries')
+    assert row['runnable']
+    assert row['callable_contract']['adapter']['protocol'] == 'ibl-script-session/1'
+
+
+def test_script_args_pipe_keeps_reference(registry):
+    out = run('''$a=[self:script]{id:"python_libraries",args:{op:"call",target:"builtins:tuple",args:[[4,5]]}}
+return {op:"export",receiver:$a,format:"list"} >> [self:script]{id:"python_libraries"}''', registry)
+    assert out['value'] == [4, 5]
+
+
+@pytest.mark.parametrize('extra', ['background:true', 'args_file:"unused.json"', 'timeout:-1'])
+def test_session_incompatible_modes_fail_before_worker(registry, extra):
+    rt = Runtime(compile_program('[self:script]{id:"python_libraries",' + extra + '}', registry))
+    assert not rt.run()['success']
+    assert not rt.foreign_sessions
+
+
+def test_ordinary_script_receipts_still_replay(registry):
+    from ibl_v2_adapters import Adapter
+    actual = registry['self:script']
+    calls = []
+    def body(runtime, args):
+        calls.append(args)
+        return 42
+    isolated = {'self:script': Adapter(actual.contract, body, stateful=actual.stateful)}
+    code = '[self:script]{id:"ordinary_receipt_fixture"}'
+    first = run(code, isolated)
+    second = run(code, isolated, recordings=first['recordings'], replay=True)
+    assert second['value'] == 42 and len(calls) == 1
+
+
+def test_session_requires_local_action_capability(registry, monkeypatch):
+    import device_registry
+    monkeypatch.setattr(device_registry, 'local_capabilities', lambda: [])
+    rt = Runtime(compile_program(call('statistics:mean', [[1, 2]]), registry))
+    assert rt.run()['diagnostic']['code'] == 'SCRIPT_CAPABILITY'
+    assert not rt.foreign_sessions
+
+
+@pytest.mark.parametrize('field,value', [('effects', ['pure']), ('stateful', False), ('local_code', False)])
+def test_session_contract_cannot_hide_effects_or_local_code(field, value):
+    import yaml
+    from ibl_v2_adapters import validate_contract
+    contract = yaml.safe_load((ROOT / 'data/scripts/registry.yaml').read_text())['python_libraries']['callable_contract']
+    if field == 'effects':
+        contract[field] = value
+    else:
+        contract['adapter'][field] = value
+    with pytest.raises(ValueError, match='unknown'):
+        validate_contract(contract)
 
 
 if __name__ == '__main__':

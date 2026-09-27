@@ -49,6 +49,6 @@ JSON 도구 경계의 Decimal은 십진 표기가 JSON 숫자 왕복 후 동일�
 
 원천별 제한은 `variants.when`과 `minimum`/`maximum`/`integers`/`nonempty`로 선언한다. 알려진 리터럴·목록은 실행 전에, 동적 값은 호출 직전에 같은 계약으로 검사한다. 예: source=zigbang의 limit 최대 50. 상한 초과를 조용히 자르지 않는다.
 
-`python-call/1`은 공급자 워커에 네이티브 값을 전달하며 JSON 도구 인자 투영을 거치지 않는다.
+등록 Script의 `ibl-script-session/1`은 실행 소유 워커에 네이티브 값을 전달하며 JSON 도구 인자 투영을 거치지 않는다.
 ForeignRef는 공통 타입/wire이고 공급자가 실행 소유권을 검사한다. stateful 어댑터의 영수증은
-새 실행에 재생하지 않는다. Python Libraries는 제한 없는 주인의 local_python 권한을 별도 검사한다.
+새 실행에 재생하지 않는다. 세션 스크립트는 제한 없는 주인의 로컬 코드 실행 권한을 별도 검사한다.

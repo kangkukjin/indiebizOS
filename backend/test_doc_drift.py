@@ -224,6 +224,17 @@ def test_t6_real_repo_clean():
     assert not r["unchecked"], r["unchecked"]
 
 
+def test_tracked_scripts_keep_relative_paths(monkeypatch):
+    import doc_drift
+    from types import SimpleNamespace
+    monkeypatch.setattr(doc_drift.subprocess, 'run', lambda *a, **k: SimpleNamespace(
+        returncode=0, stdout='data/scripts/plain.py\0data/scripts/library/worker.py\0'))
+    tracked = doc_drift._tracked_script_files()
+    assert tracked == {'plain.py', 'library/worker.py'}
+    assert not _untracked_script_flags([('nested', 'library/worker.py')], tracked)
+    assert _untracked_script_flags([('wrong', 'other/worker.py')], tracked)
+
+
 def main():
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

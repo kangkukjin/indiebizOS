@@ -693,239 +693,98 @@ JavaScript 괄호 오류 1건이다. 입력 참조 5회와 읽기 영수증 2건
   전체 회귀·실행 서버 반영 결과는 changelog에 기록한다. 실제 사용자 작업의 시간·토큰 개선과
   브라우저의 전체 제목 재조회는 이 계약 검증으로 대신 주장하지 않는다.
 
-### 6.8. Python 라이브러리 직접 호출 — 계약과 구현 (2026-09-27)
+### 6.8. Python 라이브러리 호출 — 등록 Script 계약 (2026-09-27)
 
-**구현: 설치된 Python 라이브러리를 이름으로 찾아 직접 호출하는 외부 언어 연결을 제공한다.**
-4108의 질문에서 발견한 공백은 Python 코드를 보관하는 방법이 아니라, 기존 라이브러리의
-능력을 새로운 IBL 프로그램에서 바로 조합하는 방법이다. `self:script`는 특정 코드의 결정화이며
-이 설계의 기반·대안·우회로로 사용하지 않는다. 함수별 Python 파일 작성·래퍼 등록·새 액션 생성 없이
-함수, 클래스 생성자, 객체 메서드, 속성 읽기를 지원한다. 객체 지원을 다음 과제로 미루면
-배열·표·모델을 쓰는 작업이 다시 별도 코드 작성으로 돌아가므로 **첫 구현에 함께 포함한다.**
+**현재 결정: 새 IBL 어휘를 추가하지 않고 기존 `[self:script]`로 호출한다.** 사용자는 라이브러리
+연결을 요청했지만 새 어휘가 생기는 것은 의도하지 않았다고 명확히 했다. 이에 앞선 직접 호출
+어휘와 전용 도구 패키지를 제거하고 `python_libraries`라는 등록 스크립트로 옮겼다.
+실행 파일은 `data/scripts/python_library/python_bridge_worker.py`, 정의는 기존
+`data/scripts/registry.yaml`에 있다. 이 ID는 코드 분기나 새로운 문법이 아니라 등록 데이터다.
 
-아래 계약은 `python-runtime` 패키지와 공통 외부 참조 경계로 구현했다. 예제 두 개는 실제
-NumPy·pandas로 실행했다. 기능 구현과 실제 모델 작업의 시간·토큰 개선은 별개다.
-검증 결과와 배포 상태는 절 끝의 구현 기록 및 changelog를 따른다.
+함수마다 Python 래퍼를 등록하지 않는다. 한 번 등록된 범용 스크립트가 설치 라이브러리의
+이름을 해소한다. `[self:script]{id:"python_libraries",args:{...}}`의 바깥 op는 기존 Script 관리/실행,
+안쪽 `args.op`는 이 스크립트의 업무 입력이다. 동일한 라이브러리 조합 능력을 유지하면서
+6노드·어휘 목록·기능어 코어에는 새 이름을 추가하지 않는다.
 
-#### 호출 표면: 하나의 액션, 라이브러리 이름은 데이터
+#### 호출과 조합
 
-`[self:python]` 하나를 Python 실행 패키지의 사전 항목으로 추가한다. `always_on:false`로 두고
-Python 능력 탐색 때 활성 사전에서 발견한다. 6노드와 `STANDARD_CORE_NODES`는 유지한다.
-모듈명·함수명·클래스명·코덱명은 패키지 데이터이며 파서나 코어의 이름별 분기에 넣지 않는다.
-값 타입에 외부 참조를 추가하는 부분은 언어 경계 개정이므로 명세·wire·검사·교재를 함께 고친다.
-
-| op | 입력과 의미 | 결과 |
-| --- | --- | --- |
-| modules | `query` 선택. 실행 환경의 설치 배포판·모듈 후보를 조회한다. 전부 import하지 않는다. | 환경 ID·지문, 설치 버전, 후보 목록과 탐색 범위 |
-| describe | `target` 또는 `receiver`와 `name` 선택. 함수·클래스·객체의 서명과 문서를 한정 조회한다. | 출처·서명·알 수 없는 항목·반환 힌트·효과 계약 |
-| call | `target:"모듈:qualified.name"` 또는 `receiver:$객체,name:"메서드"`; `args:List`, `kwargs:Record` 선택 | 기본은 IBL 값, 변환할 수 없는 결과는 외부 참조 |
-| getattr | `target` 또는 `receiver,name`. 상수·속성을 한 번 읽는다. 메서드를 자동 호출하지 않는다. | 값 또는 외부 참조 |
-| export | `receiver`, `format`과 형식별 `options` 선택. 객체를 선언된 코덱으로 명시 변환한다. | IBL 값 또는 기존 파일 영수증 |
-| release | `receiver`. 참조 소유권을 반납한다. | Unit |
-
-`target`과 `receiver`는 배타적이다. target은 콜론으로 import할 모듈과 그 안의 속성 경로를
-명확히 나눈다. `eval`·`exec`·Python 원문 인자는 없다. 위치 인자는 `args` 순서, 키워드 인자는
-`kwargs`의 문자열 키를 그대로 따른다. 생략한 기본값은 라이브러리가 결정하며 누락을 null로
-채우지 않는다. `args`의 목록 하나와 여러 위치 인자를 구분한다. 파이프 자리는 `receiver`다.
-module 함수를 파이프로 호출할 때 인자 위치를 추측하지 않고 지역 변수와 `args`로 명시한다.
+| args.op | 입력과 결과 |
+| --- | --- |
+| modules | query/offset/limit으로 설치 배포판·import 후보 조회. 후보 라이브러리를 일괄 import하지 않음 |
+| describe | target 또는 receiver/name의 서명·문서. 정적 속성 조회로 property를 실행하지 않음 |
+| call | target:"모듈:qualified.name" 또는 receiver/name, 위치 args와 kwargs. 값 또는 객체 참조 |
+| getattr | 상수·속성을 한 번 읽음. property 실행 실패도 실제 호출 여부를 기록 |
+| export | receiver와 format:list/records/bytes. 명시 변환 및 기존 파일 출력 관문 |
+| release | receiver의 참조 소유권 반납. 파일/연결 close는 따로 명시 호출 |
 
 ```ibl
-$평균 = [self:python]{op:"call",target:"statistics:mean",args:[[2,4,6]]}
-$배열 = [self:python]{op:"call",target:"numpy:array",args:[[2,4,6]],result:"ref"}
-$목록 = $배열 >> [self:python]{op:"call",name:"tolist",result:"value"}
+$평균 = [self:script]{id:"python_libraries",args:{op:"call",target:"statistics:mean",args:[[2,4,6]]}}
+$배열 = [self:script]{id:"python_libraries",args:{op:"call",target:"numpy:array",args:[[2,4,6]],result:"ref"}}
+$목록 = [self:script]{id:"python_libraries",args:{receiver:$배열,op:"call",name:"tolist",result:"value"}}
 return {평균:$평균,목록:$목록}
 ```
 
 ```ibl
-$표 = [self:python]{op:"call",target:"pandas:DataFrame",
-  args:[[{분류:"A",금액:3},{분류:"A",금액:5},{분류:"B",금액:2}]],result:"ref"}
-$묶음 = $표 >> [self:python]{op:"call",name:"groupby",args:["분류"],kwargs:{as_index:false}}
-$합계 = $묶음 >> [self:python]{op:"call",name:"sum",kwargs:{numeric_only:true}}
-$행 = $합계 >> [self:python]{op:"call",name:"to_dict",kwargs:{orient:"records"},result:"value"}
+$표 = [self:script]{id:"python_libraries",args:{op:"call",target:"pandas:DataFrame",
+  args:[[{분류:"A",금액:3},{분류:"A",금액:5},{분류:"B",금액:2}]],result:"ref"}}
+$묶음 = [self:script]{id:"python_libraries",args:{receiver:$표,op:"call",name:"groupby",args:["분류"],kwargs:{as_index:false}}}
+$합계 = [self:script]{id:"python_libraries",args:{receiver:$묶음,op:"call",name:"sum",kwargs:{numeric_only:true}}}
+$행 = [self:script]{id:"python_libraries",args:{receiver:$합계,op:"call",name:"to_dict",kwargs:{orient:"records"},result:"value"}}
 return $행 >> [table:filter]{where:($r)=>$r.금액>4}
 ```
 
-두 예제 모두 함수별 등록이 없다. 별도 Python 소스·라이브러리별 IBL 어휘·중간 스크립트를
-생성하지 않는다. IBL 지역 함수와 저장 관용구에서도 동일한 호출을 사용한다.
+Script의 파이프 입력 자리는 기존과 같이 **전체 args Record**다. 객체 하나를 파이프로 넘기면
+receiver로 추측하지 않는다. 위 예제처럼 args.receiver를 명시하거나
+`{op:"call",receiver:$객체,name:"메서드"} >> [self:script]{id:"python_libraries"}`로 쓴다.
 
-#### 값과 객체: 손실 없는 기본 변환, 명시적인 자료 추출
+#### 값·객체·프로세스 수명
 
-- `result:"auto"`가 기본이다. 정확히 대응하는 Python 기본값(None, bool, int, 유한 float,
-  str, list, 문자열 키 dict)과 Decimal은 공통 값 규칙으로 변환한다. 하위 클래스는 임의 변환
-  메서드를 실행하지 않고 객체로 남긴다. float는 관측된 십진 표현을 보존하며 원래 계산의
-  정밀도를 개선했다고 하지 않는다. IBL Decimal의 Python 입력도 Decimal 그대로 전달한다.
-  float를 요구하는 함수에는 `builtins:float` 등 명시 변환을 쓴다. 기존 JSON 경계의 묵시적
-  Decimal→float 규칙을 이 네이티브 경계에 복제하지 않는다.
-- tuple, set, bytes, 복소수, 비유한 수, 문자열 아닌 dict 키, 순환 객체, ndarray, DataFrame,
-  모델·파일·이터레이터는 기본적으로 객체 참조다. 컨테이너의 일부가 표현 불가능하면 그
-  컨테이너 전체를 보존한다. tuple→List, set→List, NaN→null, 객체→str 같은 손실 변환은 없다.
-- `result:"ref"`는 기본값도 Python 객체로 보존한다. `result:"value"`는 값 변환을 요구한다.
-  변환 실패는 실제 함수 실행 뒤의 실패이며 `PY_VALUE_CONVERSION`과 보존된 결과 참조를 준다.
-  사용자는 그 참조를 export하거나 메서드로 변환한다. 변환 실패를 이유로 원함수를 재호출하지 않는다.
-  실패 partial에 보존한 참조도 정상 참조와 같은 소유권·수명을 갖는다.
-- 깊이·원소 수·전송 크기를 넘으면 auto는 참조로 보존하고 value는 구조화 실패로 반환한다.
-  일부만 잘라 완전한 값으로 반환하지 않는다. 기존 모델 미리보기·result_ref는 변환 후 값의
-  표시·재전달을 맡는다. Python 객체 참조와 영속 결과 참조는 다른 종류다.
-- export의 코덱 등록은 **자료형→표현**을 연결한다. 함수마다 래퍼를 등록하는 체계가 아니다.
-  최초에는 기본 컨테이너의 명시 목록 변환, bytes→파일, ndarray→목록, DataFrame→행 레코드와
-  스키마를 지원한다. dtype·인덱스·시간대 등 사라지는 의미와 변환 정책을 결과 근거에 기록한다.
-  지원하지 않는 자료형은 객체로 계속 호출할 수 있다. 임의 `repr`·`tolist`·이터레이터 소비를
-  변환기의 탐색 과정에서 자동 실행하지 않는다. 파일 출력은 기존 쓰기 관문과 작업대를 거친다.
+등록 계약의 선택적 `ibl-script-session/1` 프로토콜이 한 최상위 IBL 실행 동안 동일한 스크립트
+프로세스를 유지한다. 일반 등록 스크립트의 JSON stdin/stdout 및 `ibl-script/2`는 그대로다.
+세션은 등록된 파일·Python 인터프리터·unknown 효과·stateful/local_code 명시를 요구한다.
+실행기는 스크립트 ID나 라이브러리 이름을 하드코딩하지 않는다. 등록 조회·삭제·재등록·소스 지문과
+마지막 실행 상태도 기존 Script 원장을 소비한다. 현재 세션 프로토콜은 로컬 동기 실행만 지원한다.
+background·args_file·원격 요청은 실행 전에 명확히 거절한다.
 
-언어에는 불투명 `ForeignRef` 타입을 추가하고 Python 공급자가 이를 발급한다. 내부 값은
-공급자·작업 소유자·실행 환경·워커 세대·객체 ID를 결합한다. 평문 Record를 만들거나 토큰을
-복사한 것만으로 참조가 성립하지 않는다. 중첩 입력에서 복원할 때도 소유권을 다시 검사한다.
-일반 값 연산은 타입·동일 참조 여부만 판정하며 Python의 `__eq__`, `__bool__`, `__repr__`를
-몰래 실행하지 않는다. 속성은 `getattr`, 항목 접근은 `operator:getitem` 직접 호출로 표현한다.
-참조가 나타내는 객체의 공개 메서드는 call로, callable 객체 자체는 name 없는 receiver call로
-호출한다. Python callable 참조를 다른 함수에 인자로 줄 수 있어 라이브러리 내부 콜백도 연결된다.
-call 결과가 awaitable이면 워커의 같은 이벤트 루프에서 호출 예산 안에 기다려 최종 값을 반환한다.
-generator는 자동 소비하지 않고 참조로 남긴다. `builtins:next`의 종료 예외도 실제 호출 실패로
-전달하며, 호출자가 종료를 정상 분기로 다룰 수 있다. 특별한 반복 문법은 추가하지 않는다.
-IBL lambda→Python 콜백, IBL에서 Python 클래스 본문 정의, Python 소스 실행은 이 계약에 포함하지 않는다.
+Python 기본값은 손실 없는 IBL 값으로 전달하고, tuple·set·bytes·배열·표·모델·순환 객체는
+ForeignRef로 보존한다. result:auto/value/ref와 명시 export를 사용한다. Decimal과 큰 정수는
+네이티브 값 그대로 전달한다. 임의 repr·이터레이터 소비·NaN→null 치환은 없다. 변환 실패의
+partial에는 실제 결과 참조가 남으며 원함수를 다시 호출하지 않는다. callable 인자·awaitable과
+지역 함수 조합을 지원한다. IBL lambda를 Python 함수로 바꾸거나 Python 소스를 인자로 받지 않는다.
 
-새 참조 태그는 `ibl-value/2`로 협상한다(`value_protocols`, 생략=/1·/2 지원). 기존 값만 있는 응답은 `ibl-value/1`을 유지한다.
-미지원 소비자에게 참조를 일반 Record로 위장하지 않고 명확한 프로토콜 오류·표시용 요약을 준다.
-API·MCP·참조 입력·변수 바인딩·영수증이 같은 코덱을 소비해야 한다.
+참조는 실행 소유자·환경·세대·객체 ID로 검증한다. 최상위 실행이 끝나면 워커와 참조를 정리하며
+다른 실행에 넘기지 않는다. 여러 모델 턴에 필요한 결과는 값/파일로 export한다. Python 호출·영수증은
+직렬화하고 이전 객체 변경·실패의 근거를 후속 값까지 보존한다. 타임아웃·취소·워커 소실은 효과를
+불명으로 기록한다. 자동 retry/reuse 및 새 워커에서 이전 영수증을 재생하는 상태 복원을 금지한다.
+이 상태 규칙은 세션 등록에만 적용하며 일반 Script의 기존 영수증 동작을 바꾸지 않는다.
 
-#### 객체 수명·동시성·실행 환경
+ForeignRef의 `ibl-value/2` 협상은 HTTP·MCP·모델 표시가 공유한다. 기존 값 응답은 /1을 유지하고,
+/2 미지원 소비자에게는 성공값과 실패 partial 모두 미지원 wire를 보내지 않고 표시용 요약을 준다.
+기본 호출 60초, 워커 1GiB, 객체 4096개, 값 변환 10만 항목·깊이 64·8MiB 한도를 유지한다.
 
-워커는 **최상위 IBL 실행 하나**에 귀속된 별도 Python 프로세스다. 기본 호출 시간 60초(명시 0.01~3600초), 메모리 1GiB, 객체 4096개로 제한한다. 같은 프로그램의 지역 함수,
-관용구와 반복은 같은 워커·모듈 상태·객체 저장소를 사용한다. 다른 실행·프로젝트·에이전트와
-객체를 공유하지 않는다. 병렬 가지에서 동일 워커로 보낸 Python 호출은 직렬화하며, Python 호출
-외의 IBL 가지는 기존대로 병렬 실행한다. 라이브러리 내부 병렬 실행까지 직렬이라고 주장하지 않는다.
-효과가 불명인 Python 호출을 포함한 쓰기 충돌 가능 조합은 기존 보수적 효과 검사도 통과해야 한다.
+#### 권한·환경·소유 위치
 
-프로그램 종료·취소·시간 초과·워커 종료는 해당 참조를 모두 만료시킨다. 함수 반환으로 바깥 지역에
-객체를 전달할 수 있지만 최상위 반환 객체는 수명 종료 표시만 남고 다음 실행에서 호출할 수 없다.
-여러 모델 턴이나 영속 재개에 필요한 결과는 종료 전에 값/파일로 내보낸다. 모델 결과에는 타입·
-수명·환경과 export 안내를 함께 표시한다. `release`는 idempotent이며 실제 자원 종료를 보장하지 않는다.
-파일·연결의 `close`나 컨텍스트 관리자의 진입·종료는 IBL try/finally에서 명시 호출한다.
-참조 개수·변환 크기·작업 시간 예산은 호출 전에 검사하고, 프로세스 메모리 감시도 둔다.
-강제 종료 시 Python finally·외부 자원 정리가 실행됐다고 기록하지 않는다.
-[Python 프로세스 종료 문서](https://docs.python.org/3/library/multiprocessing.html#multiprocessing.Process.terminate).
+세션 실행은 기존 Script 접근 검사에 더해 제한 없는 주인 신원을 요구한다. 회원·포털·제한
+에이전트의 로컬 임의 코드 실행을 열지 않는다. 워커는 보안 샌드박스가 아니다. 라이브러리 내부의
+파일·네트워크 접근은 OS 권한을 따르며, 명시 bytes export는 기존 출력·수리·감독 작업대를 사용한다.
+관리되는 Python 설치는 실행 워커와 환경 잠금을 공유하고, 각 호출 전후에 설치 메타데이터 및
+로드한 파일 변경을 검사한다. call 안에서 자동 pip 설치나 업그레이드를 하지 않는다.
 
-첫 환경은 현재 몸의 패키지 런타임과 기존 pylibs 경로이며 호출 인자로 임의 interpreter 경로를 받지 않는다.
-Python 버전·배포판 버전·설치 manifest·편집 가능 패키지 소스 지문·브리지 구현을 환경 지문에
-포함한다. 프로그램 중 환경 변경을 감지하면 재바인딩하지 않고 `PY_ENV_CHANGED`로 중단한다.
-관리되는 환경 쓰기는 실행 중인 워커와 잠금을 공유한다. 외부 pip·수동 파일 변경까지 그 잠금이
-막지는 못하므로 각 dispatch 전후에도 지문을 확인하고, 실행 중 변경이면 결과의 환경 일관성을
-보장하지 못한 실패로 남긴다. import 가능 여부는 실제 워커에서 확인한다.
-배포판 이름과 import 이름은 별개이며 modules가 후보와 확인 여부를 구분한다.
-없는 모듈은 `PY_MODULE_MISSING`, 바이너리/하위 의존성 import 실패는 `PY_IMPORT_FAILED`다.
-call 도중 자동 pip 설치·업그레이드·다른 몸 위임은 없다. 설치는 기존 패키지 관리 경로가 맡고
-설치 완료 후 새 실행에서 바로 호출할 수 있다. 라이브러리별 IBL 등록을 추가로 요구하지 않는다.
-Python 실행 환경이 없는 몸은 `PY_RUNTIME_UNAVAILABLE`을 반환한다.
+- Python 해소·객체·자료 코덱: `data/scripts/python_library/`의 등록 스크립트 본문.
+- 등록 계약 연결: 기존 Script 어댑터와 `ibl_script_session`.
+- 프로세스·IPC·출력·마지막 상태: system_essentials의 `script_session`과 기존 `script_ops`.
+- 값·wire·근거·자원 정리: 기존 공통 타입/Runtime. Python 전용 어휘 어댑터는 제거.
 
-#### 발견·계약·권한
+#### 이행과 검증
 
-modules → describe → call은 탐색 경로이지 필수 왕복 순서가 아니다. 이름과 입력을 알면 바로
-call한다. describe는 `inspect.signature`와 정적 속성 조회로 서명·문서·관측 가능 타입을 얻는다.
-서명을 얻지 못하는 확장 함수는 `signature:unknown`으로 두고 실행 직전 Python 인자 검증을 쓴다.
-타입 힌트를 평가하거나 default/annotation 객체를 임의 실행하지 않는다. 속성 탐색 중 descriptor를
-호출하지 않으며, 실제 getattr의 property 실행은 별도 호출 사건이다. import도 코드를 실행하므로
-describe를 무조건 순수 조회라고 간주하지 않는다.
-[Python inspect 문서](https://docs.python.org/3/library/inspect.html).
-
-확인된 함수별 메타데이터는 환경 지문에 묶인 사전 데이터로 축적할 수 있다. 이는 입력·결과·
-효과의 정확도를 높이는 선택 사항이며 호출 자격 조건이 아니다. 선언 출처와 추론·관측을 구분한다.
-컴파일은 액션의 op별 인자·값 타입과 환경 지문을 검사하며 Python 함수 서명은 워커에서
-실행 직전에 해소한다. 서명 없는 함수의 정적 정확성을 주장하지 않는다. 정적·동적 target은 같은 resolver를 쓴다. check는 새 import나 함수를 실행하지 않는다. 미확정 항목은 오류 대신 미확정 경계로
-보고하고, 타입·중복 인자·권한 등 확정 위반만 사전에 차단한다. 서명 획득이 가능하면
-`Signature.bind`로 위치 전용·키워드 전용·가변 인자·중복 전달을 호출 전에 검사한다.
-
-일반 라이브러리 호출은 로컬 코드 실행 권한이다. 노드 self 접근이나 함수 효과 메타데이터가
-이 권한을 부여하지 않는다. 최초 공급자는 기존 신원·패키지 접근 검사에 더해 명시된
-`local_python` 능력 권한을 검사하고, 임의 코드 실행이 금지된 회원·외부 요청·제한 에이전트에는
-허용하지 않는다. 워커는 충돌·수명 격리이며 보안 샌드박스라고 주장하지 않는다. 라이브러리 내부
-파일/네트워크 쓰기는 기존 IBL 쓰기 관문을 자동 경유하지 않는다. 따라서 해당 관문으로 모든
-접근을 강제해야 하는 실행 문맥에는 이 공급자를 열지 않는다. OS 격리가 없는 상태에서 함수명
-차단 목록으로 보장한 것처럼 꾸미지 않는다. 주인의 승인된 로컬 실행에는 호출마다 새 확인을 요구하지 않는다.
-
-#### 오류·근거·재개
-
-모든 호출은 기존 실행 원장에 target/객체 타입, 환경·계약 지문, 호출 위치, 경과 시간, 값/참조
-여부를 남긴다. stdout/stderr는 제한·마스킹한 진단이며 업무 반환값으로 파싱하지 않는다.
-실패는 resolve/import/bind/invoke/convert/export 단계, Python 예외 타입·메시지·원인 연쇄와
-`invoked`, `effect_status`를 기존 Fault.details로 전달한다. Python의 정상 오류 문자열은 성공 값이다.
-발견·변환을 포함한 Python 코드 실행의 효과는 기본 `unknown`이며 이름/타입 힌트로 순수성을
-추측하지 않는다. 권한·취소·예산 실패의 기존 fallback 제한을 보존한다.
-
-- 초기 공급자의 Python 호출은 **자동 retry·수정 프로그램의 reuse 대상에서 제외**한다.
-  순수성 메타데이터가 있더라도 첫 구현에서 임의 import·모듈 상태를 무시한 재사용은 하지 않는다.
-  기존 읽기 결과의 재사용 무효화도 unknown 효과를 그대로 따른다.
-- 동일 실행 영수증 재생과 수정 실행 reuse는 별개다. Python 호출의 완료 영수증은 실행 증거로
-  읽을 수 있지만, 새 워커에는 해당 호출의 모듈·객체 상태가 없다. Python 실행 구간을 건너뛴 뒤
-  후속 Python 호출로 이어지는 자동 resume를 금지하고 `PY_STATE_EXPIRED`로 설명한다.
-  명시 export한 값·파일을 새 프로그램 입력으로 쓰는 것은 허용한다.
-- 함수가 실행됐으나 값 변환이 실패하면 원실행 효과는 유지하고 보존 참조만 복구 대상으로 삼는다.
-  워커는 기존 invocation ID의 완료 결과를 보존해 중복 접수를 차단한다. 전송 경로는 응답 유실 시
-  호출을 다시 보내지 않고 효과 불명 실패로 종료한다. 별도 상태 조회 API는 추가하지 않았다.
-  타임아웃·프로세스 충돌·응답 유실은 외부 효과 완료 여부를 `unknown`으로 남긴다. 호출하지 않은
-  상태로 되돌리거나 성공으로 표시하지 않는다. 워커 세대가 사라지면 그 참조로 재개하지 않는다.
-- 객체를 경유한 결과 근거는 워커에서 실제 실행한 이전 호출들의 보수적 누적 의존성을 포함한다.
-  alias·제자리 변경을 특정 행의 독립 결과처럼 표시하지 않는다. export 뒤에도 원천 누락·실패
-  근거를 보존한다. 로그·미리보기에 객체 전체를 repr하여 노출하지 않는다.
-
-#### 구현 소유 위치와 완료 조건
-
-| 순서 | 변경 소유자 | 이번 범위의 완료 조건 |
-| --- | --- | --- |
-| 1. 경계와 타입 | `common` 값/wire, `ibl_v2_types`, `ibl_v2_adapters`의 새 `python-call/1` 프로토콜 | ForeignRef·소유권·wire 협상·동적 계약을 검사와 실행이 공유. 어휘 이름 분기 없이 연결 |
-| 2. 직접 실행 | 새 Python 도구 패키지의 resolver·워커·자료 코덱, `ibl_actions.yaml` | 미등록 함수·생성자·메서드·속성·객체 인자·export가 동일 실행 안에서 동작. 패키지 코드가 Python 세부를 소유 |
-| 3. 기존 책임 연결 | 실행기의 Adapter 권한/의존성, `ibl_dependencies`, `ibl_run_journal`, 모델 결과 표시 | unknown 효과, 상태 만료, timeout, 참조 입력, 오류 partial, 근거가 API·MCP까지 동일하게 전달 |
-| 4. 작성·배포 마감 | `ibl.md`, 조합 가이드, 패키지 도움말, 사전 빌더·몸 번들 | 설치/지원 여부를 발견하고 실제 호출. 문서의 미구현 표시는 실제 종단 검증 후 변경 |
-
-새 backend 모듈은 기존 층에 배정하고 1500줄 제한을 따른다. 공통 코어에는 외부 참조·계약
-프로토콜과 실행 자원 정리만 두며 Python import·객체 저장소·NumPy/pandas 코덱은 공급자 패키지에 둔다.
-기존 script 실행기·등록 DB를 복사하거나 새 범용 워크플로 관리자·독립 평가 AI를 만들지 않는다.
-일반 외부 라이브러리 호출 안내는 직접 호출 가이드와 패키지 교재로 연결했으며,
-특정 코드 결정화의 기존 계약과 과거 설계 기록은 유지한다.
-
-필수 검증은 다음과 같다. 특정 업무의 성능 측정 결과를 기다려 구현을 유예하지 않는다.
-
-1. 표준 라이브러리 함수와 사전 미등록 설치 함수 직접 호출. kwargs·기본값·위치 전용·동적 target,
-   서명 없는 함수·정상 빈 반환·None·오류 문자열을 검사와 실행에서 구분한다.
-2. NumPy 배열 → 메서드 → IBL 값, pandas 생성 → groupby → 집계 → 행 → table 조합.
-   호출 가능한 객체·속성·중첩 객체 인자·제자리 변경·alias·명시 release도 검증한다.
-3. Decimal·큰 정수·비유한 수·tuple·비문자열 키·순환/대형 자료에서 무손실 값 또는 참조를
-   반환한다. 값 변환 실패 후 원함수 호출 횟수는 1회이며 partial 참조로 결과를 회수한다.
-4. 위조/타 소유자/만료 참조, 제한 신원, 미설치 모듈, import 부작용·실패, descriptor 조회,
-   timeout·워커 충돌·환경 변경·중복 전송에서 실행 여부와 불명 효과를 보존한다.
-5. 지역/저장 함수·병렬·catch/finally·최상위 종료·resume/reuse와 결합해 객체 상태를 가짜 복원하지
-   않는다. 실행된 쓰기는 재시도하지 않고 값으로 export한 결과만 새 입력으로 연결한다.
-6. HTTP·MCP·모델 표시가 같은 성공/실패·참조 수명·근거를 전달한다. 새 기능의 문법만 통과하는
-   시험으로 끝내지 않고 실제 설치 라이브러리 실행을 포함한다. 기존 전체 회귀·층·파생물·번들 관문을 통과한다.
-
-이 설계의 이득은 새로운 작업에서 기존 전문 라이브러리를 바로 조합할 수 있다는 것이다.
-실제 시간·전체 토큰 개선은 최초 탐색/import 비용, 값 복사, 객체 export와 후속 복구 비용까지
-포함해 관측한다. 연결한 라이브러리 수나 IBL 문장 길이를 성능 개선의 증거로 삼지 않는다.
-
-#### 구현·배포 기록 (2026-09-27)
-
-`getattr`는 Python 속성 읽기를 나타낸다. 상세 조회의 정본 `detail`과 의미가 달라 이 이름으로
-확정했다. `python-runtime` 패키지의 여섯 op와 `python-call/1` 어댑터를 설치·활성화했다. 함수별 등록 없이
-모듈 함수, 클래스, 메서드, 속성, callable 인자, awaitable을 실행하고 객체는 최상위 실행 소유
-워커에 보존한다. `ForeignRef`를 공통 값/타입/wire 경계에 연결하고 HTTP·MCP의 `value_protocols`
-협상을 추가했다. 구형 소비자에게는 성공 결과와 오류 partial 모두 미지원 wire를 보내지 않는다.
-같은 워커 호출은 영수증 기록까지 직렬화하고, 앞선 제자리 변경·실패의 근거를 후속 결과에 잇는다.
-새 실행에서 Python 영수증을 재생해 상태를 복원하지 않으며 자동 retry/reuse도 하지 않는다.
-
-권한은 패키지의 `local_python.owner_unrestricted` 정책과 기존 주인 신원·에이전트 제한을 함께
-검사한다. 설치 잠금은 기존 Python 의존성 설치 경로와 공유한다(POSIX 공유/배타 잠금, Windows는
-배타 잠금). bytes export는 기존 출력 경로·수리·감독 작업대를 경유한다. 워커 종료는 취소/시간
-한도/실행 종료에 연결하고 백엔드 사망도 워커에서 감시한다. 프로세스 목록 열람이 거부된 환경에서도
-자신이 시작한 워커는 직접 종료한다. 제한 없는 로컬 Python의 파일·네트워크 권한은 OS 권한이며
-워커를 보안 샌드박스로 취급하지 않는다.
-
-가이드·명세·카탈로그·배포 필터·Android 번들을 갱신했다. 실제 실행을 통과한 용례 10건을
-`add_examples_batch`로 시딩하고 학습 파일과 검토 원장을 동기화했다. 활성 사전 및 사용 DB/학습
-파일의 변경 전 백업은 `data/_backups/2026-09-27_python_direct/`에 보존했다.
-
-검증: 실제 맥 전체 backend **7087 passed·1 skipped·실패 0**(651.40초). 전체 검사 시작 뒤
-근거 직렬화·정리 보강·partial wire 협상·속성 실패 표시 변경 및 getattr 어휘 확정은 관련 **146건** 재검증을 통과했다.
-실행 중인 HTTP 백엔드에서 pandas 생성→groupby→sum→행→IBL filter 결과 `[{분류:"A",금액:8}]`,
-객체 수명 표시, 구형 소비자 partial wire 거절을 확인했다. 상세 회귀 수와 관문 결과는 changelog에
-기록한다. 실제 모델 업무의 시간·전체 토큰 개선률 및 Windows 실기 동작은 이번에 측정하지 않았다.
+앞선 전용 패키지를 잠재운 뒤 제거하고 어휘·배포 파생물을 재생성했다. 용례 10건은 실제
+실행을 확인한 뒤 등록 Script 호출로 이행하고 학습 자료도 동기화했다. 이전 본문·실적은
+`data/_backups/2026-09-27_python_script/`에 보존했다. 기존 registry의 다른 미커밋 변경은 보존했다.
+Script 목록 발견·실행·객체 조합·권한·수명·실패·재개·일반 스크립트 호환 관련 167건이
+통과했다. 실제 HTTP에서 등록 계약 발견, pandas 객체 생성→집계→행 변환, 은퇴 어휘의
+실행 전 거절을 확인했다. 전체 회귀는 7095 passed·1 skipped·2 failed였고, 감사의 하위 폴더
+경로 손실과 시험의 프로젝트 경로 누락을 수리한 뒤 관련 19건이 통과했다. 상세는 changelog에 기록했다.
+실제 모델 시간/전체 토큰 개선 및 Windows 실기는 별도 관측 대상이다.
 
 ## 7. 변경을 다시 땜질로 만들지 않는 최소 규율
 

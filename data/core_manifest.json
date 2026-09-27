@@ -42,7 +42,6 @@
         "public-files",
         "publishing",
         "python-exec",
-        "python-runtime",
         "radio",
         "real-estate",
         "record-ops",
@@ -78,9 +77,13 @@
       "ai_tips_storage.py",
       "arch_render_cli.py",
       "arxiv최신피드.py",
+      "examples.json",
       "github저장소메타.py",
       "judgment_idioms.py",
       "nest_tip_rows.py",
+      "python_bridge_environment.py",
+      "python_bridge_values.py",
+      "python_bridge_worker.py",
       "targeted_code_read.py",
       "test_ai_tips_report.py",
       "test_judgment_idioms.py",
@@ -118,7 +121,9 @@
     ]
   },
   "retired": {
-    "packages.tools": [],
+    "packages.tools": [
+      "python-runtime"
+    ],
     "packages.extensions": [],
     "instruments": [
       "audio_briefing",

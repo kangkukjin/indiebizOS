@@ -173,6 +173,7 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | self:grep | pattern, path, output_mode → items/total/truncated Record. content/count/files_with_matches에 따라 행 필드 계약을 해소한다. |
 | sense:search | query 또는 queries, source; gnews/hn은 headlines 가능 → items Record. source·curate에 따른 요구 입력·모델 효과를 검사한다. |
 | sense:crawl | url, op(content/links/metadata) → 원문 봉투 Record. content는 text/title/url/items가 있으며 원천 누락은 실패와 partial로 보존한다. |
+| self:python | Python Libraries 패키지의 직접 함수·생성자·객체 호출. target 또는 receiver, args/kwargs → 값 또는 실행 한정 ForeignRef. [호출 가이드](../guides/python_libraries.md). |
 | self:script | id, args(Record; 파이프 자리) → 등록 계약의 값. 기존 등록은 JSON stdin/stdout을 값으로 연결하며, 새 wire 계약도 지원한다. |
 
 계약은 aliases·required_any·requires(인자 동반)·exclusive(동시 입력 금지)·enums·integers·minimum·maximum·nonempty와 리터럴 조건 variants를 선언할 수 있다.
@@ -189,7 +190,7 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 ## 실행 증거와 값 전송
 
 `value`는 사람이 읽는 값, `value_wire:{protocol:"ibl-value/1",data:...}`는 모든 컨테이너를 태그한 손실 없는 값이다.
-Unit·Result·Decimal은 일반 JSON 레코드로 위장하지 않는다. 타입을 보존할 소비자는 wire를 읽는다.
+ForeignRef를 포함한 값은 `ibl-value/2`로 전송한다. 외부 참조는 공급자·소유자·환경·실행 세대에 묶이며 최상위 실행 종료 때 만료된다. `value_protocols`로 지원 프로토콜을 지정할 수 있다(생략하면 /1·/2). Unit·Result·Decimal·ForeignRef는 일반 JSON 레코드로 위장하지 않는다. 타입을 보존할 소비자는 wire를 읽는다.
 `success`와 `source_complete`는 각각 실행 성공과 관측된 원천 완전성이다. 작업 품질의 자동 판정은 아니다.
 `evidence($x)`는 값 및 분기 조건의 보수적 의존 DAG를 읽는다. 정확한 행별 출처 추적은 아니다.
 빈 합산·조기 반환·실패 복구·finally와 병렬 실패에서도 실제 평가한 근거를 보존한다.
@@ -236,9 +237,10 @@ API를 직접 사용하는 새 프로그램은 `#!ibl edition=2` 헤더를 넣�
 1. **문법**: 이 문서 앞부분의 값·식·명시 인자 함수·분기·반복·조합 계약이다. 문법 개정은 컴파일러·실행기·검사·주 교재를 함께 갱신한다.
    객체·목록의 호출 허용도 이 문법의 개정이며 특정 사전 이름에 의존하지 않는다. 기능어 코어 노드 집합은 유지한다.
 2. **기능어 코어**: `self`·`others`·`table` 중 `always_on: true`로 선언된 어휘다. `STANDARD_CORE_NODES`와 사전 원천이 같은 경계를 나타낸다.
+   외부 실행 공급자의 불투명 ForeignRef는 공통 값 경계다. Python 이름·객체 해소·자료 코덱은 사전 공급자가 소유하며 파서에 넣지 않는다.
 3. **개인 사전**: 내용어는 데이터로 추가·제거한다. 어휘 이름을 파서·엔진의 문법 분기에 넣지 않는다. 어댑터 계약이 값·효과·권한·결과 경계를 선언한다.
 
-기존 도구의 `{items:[...]}`는 그 도구의 반환 계약이다. 언어 전체의 값은 List·Record·Text·Number·Bool·null·Unit·Result이며, 모든 결과를 items 봉투로 강제하지 않는다. 파이프는 선언된 입력 자리에 값을 전달한다. 외부 실행 증거는 값과 함께 보존한다.
+기존 도구의 `{items:[...]}`는 그 도구의 반환 계약이다. 언어 전체의 값은 List·Record·Text·Number·Bool·null·Unit·Result·ForeignRef이며, 모든 결과를 items 봉투로 강제하지 않는다. 파이프는 선언된 입력 자리에 값을 전달한다. 외부 실행 증거는 값과 함께 보존한다.
 
 이전 문법 개정 이력과 저장 원문의 치환·통화 규칙은 [호환성 명세](../../docs/compatibility/ibl_legacy_system.md)에 보존한다. 새 프로그램의 작성 규칙은 앞의 본문이다.
 
@@ -537,7 +539,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 - **지표어(indexical) 감각** (2026-07-22): `sense:here`(현재위치)·`sense:see`(카메라)·`sense:listen`(마이크)는 phone_only 를 벗었다 — 뜻은 몸 독립이고("지금 나 어디?") *어떻게 답하나*만 몸마다 다르다(폰=GPS/카메라, 데스크톱=`desktop_av` 프로브). 하드웨어가 없으면 거짓말 대신 `no_hardware` 로 정직하게 통화를 돌려준다. `sense:phone`(알림 피드)은 폰이 보내는 입력이라 별개.
 - **파일 듣기** (2026-09-10): `[sense:listen]{path}`는 파일 전사, `{path, question}`은 소리 내용 분석, `{path, op:"inspect"}`는 원본 신호 검사다. path 생략 시 기존 마이크 동작. 파일에 마이크는 불필요하며 실행·감독은 같은 구간 분석 증거를 재사용한다. [오디오 듣기 가이드](../guides/audio_listen.md).
 <!-- RUNS_ON:START -->
-- 현 분포: `anywhere` 119 · `pc_only` 48 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
+- 현 분포: `anywhere` 119 · `pc_only` 49 · `phone_only` 1. (빌드 파생 — 손 수정 금지)
 <!-- RUNS_ON:END -->
 
 **분산 IBL — 액션이 실행 단위(폰↔맥 연합)**: 폰 프로파일에서 엔진(`ibl_engine.execute_ibl`)은 폰서 못 도는 액션을 거부하지 않고 **맥에 단건 위임**(`_forward_to_mac` ↔ 맥→폰 `forward_to_phone` 대칭). 이 chokepoint를 합성 code(`&`/`>>`/`??`)의 각 leaf가 거치므로 **혼합 code도 액션별로 쪼개져** 일부는 폰·일부는 맥서 실행되고 결과가 한 봉투로 결합된다(예: `[sense:weather] & [sense:world_bank]` → weather=폰·world_bank=맥). 맥 도달=`INDIEBIZ_MAC_URL`+`INDIEBIZ_MAC_PASSWORD`(원격 런처 세션), 미설정이면 graceful 에러. **맥→폰 도달(2026-06-17 라이브)**=`INDIEBIZ_PHONE_URL`+`INDIEBIZ_PHONE_TOKEN`: 폰 `phone_api` 미들웨어가 비localhost 요청에 `X-Phone-Token`을 검증(hmac.compare_digest, localhost=WebView 자기접속은 통과), 맥 `forward_to_phone`가 그 토큰을 자동 동봉. 폰 백엔드는 **앱 UI 없이 상주**(`AgentForegroundService`가 `App.ensureBackend()` 기동·START_STICKY·부팅 재기동)하고 **토큰이 있을 때만 `0.0.0.0`(LAN) 바인드**(노출과 인증을 한 묶음 — 토큰 없으면 `127.0.0.1` 전용). 빌린 산출 파일은 `_pull_remote_artifacts`로 양방향 회수(맥←phone_only·폰←mac_only). 보안: 양방향 게이트(맥→폰=토큰/폰→맥=HTTPS 터널+런처 비번), 인터넷 비노출(폰=LAN 한정), caveat=맥→폰 LAN 평문 HTTP(가정 WPA2 저위험·공용 WiFi 금지). 폰=몸(센서·신원·렌더) 자급·머리(연산)는 맥 연합 — 클라이언트-서버 아니라 주권 피어들의 협력(미래 피어=같은 뼈대+허가 층).
@@ -554,7 +556,7 @@ Cloudflare 50개를 어휘화하면 50개 설명이 *영원히 매 프롬프트*
 ### 핵심 노드 분류
 
 <!-- IBL_STATS:START -->
-총 **168 액션** — sense 43 · self 52 · limbs 14 · others 17 · engines 19 · table 23
+총 **169 액션** — sense 43 · self 53 · limbs 14 · others 17 · engines 19 · table 23
 <!-- IBL_STATS:END -->
 (위 줄은 빌드가 레지스트리에서 재생성 — 손 수정 금지)
 

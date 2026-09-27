@@ -5168,6 +5168,132 @@ nodes:
               title: '{title}'
               lines:
               - '{meta}'
+      python:
+        description: 설치된 Python 라이브러리의 함수·생성자·메서드를 직접 호출하고 객체를 조합한다. 함수별 등록 불필요.
+        target_description: 'modules(query,offset,limit): 설치 후보. describe(target 또는 receiver,name): 서명. call(target:"모듈:함수",args:[],kwargs:{} 또는 receiver,name): 직접 호출. getattr: 속성. export(receiver,format:list/records/bytes,options): 값/파일 변환. release(receiver): 참조 해제. result:auto/value/ref. 파이프는 receiver. 객체는 같은 IBL 실행에서만 유효하므로 종료 전에 값/파일로 변환. Python 효과는 unknown이며 자동 retry/reuse 없음. 제한 없는 주인만 사용. 현재 IBL(edition:2) 전용.'
+        returns: scalar
+        side_effect: true
+        always_on: false
+        runs_on: pc_only
+        group: system
+        router: handler
+        tool: python_op
+        target_key: op
+        scope: workspace
+        exempt: 현재 IBL 실행·주인 권한·실행별 객체 수명 필요 — 전용 종단 회귀로 검증
+        keywords:
+        - Python
+        - 파이선
+        - 파이썬
+        - 라이브러리
+        - numpy
+        - pandas
+        - 배열
+        - 데이터프레임
+        - 직접 호출
+        guides:
+        - python_libraries.md
+        params:
+          target: string
+          receiver: object
+          name: string
+          args: array
+          kwargs: object
+          result: string
+          format: string
+          options: object
+          query: string
+          offset: integer
+          limit: integer
+          timeout: number
+        ops:
+          default: modules
+          values:
+            modules: 설치 배포판과 import 후보 탐색
+            describe: 함수·클래스·객체 계약 조회
+            call: 함수·생성자·메서드 직접 호출
+            getattr: 속성·상수 읽기
+            export: 객체를 값·파일로 변환
+            release: 객체 참조 반납
+        callable_contract:
+          version: 1
+          params:
+            op: Text
+            target: Text
+            receiver: ForeignRef
+            name: Text
+            args: List
+            kwargs: Record
+            result: Text
+            format: Text
+            options: Record
+            query: Text
+            offset: Number
+            limit: Number
+            timeout: Number
+          required: []
+          pipe_input: receiver
+          exclusive:
+          - - target
+            - receiver
+          enums:
+            op:
+            - modules
+            - describe
+            - call
+            - getattr
+            - export
+            - release
+            result:
+            - auto
+            - value
+            - ref
+            format:
+            - list
+            - records
+            - bytes
+          integers:
+          - offset
+          - limit
+          minimum:
+            offset: 0
+            limit: 1
+            timeout: 0.01
+          maximum:
+            limit: 200
+            timeout: 3600
+          variants:
+          - when:
+              op: call
+            required_any:
+            - - target
+              - receiver
+          - when:
+              op: getattr
+            required_any:
+            - - target
+              - receiver
+          - when:
+              op: describe
+            required_any:
+            - - target
+              - receiver
+          - when:
+              op: export
+            required:
+            - receiver
+            - format
+          - when:
+              op: release
+            required:
+            - receiver
+          result: Unknown
+          effects:
+          - unknown
+          nondeterministic: true
+          adapter:
+            protocol: python-call/1
+            stateful: true
       record:
         returns: items
         exempt: 인증된 주체와 발행한 업무 공간 필요 — 무인 자가점검에서 소유자 폴백 금지
@@ -5182,12 +5308,12 @@ nodes:
           dependencies:
             backend/common/expression_eval.py: 4dca647ac0a911db6190f689b069c653a6861ca6537d53fd404fd0c1b6d1f42b
             backend/common/expression_functions.py: 0c697c527c1030c721bc1aa4ddd0d0e08fbf94042a90795fd4f71151638c7c30
-            backend/common/expression_ir.py: 4e035d7367c4ed66fa16af9d71e1bd45c0be86e75731fdc59fa854bb3777fb08
+            backend/common/expression_ir.py: 382f1049edd56c0e478a2934765767789818353d5a871f679c9d10ffb4a74505
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
             backend/common/expression_ops.py: 1b1345bd137754ee1284620b63e1d35ed7337cbf91f7a2644bf57cbe876f7e04
             backend/common/expression_parser.py: c18ddf56d19579920365bb8b2938923a6c3a7c35d1ac116ce06b8fe011da5318
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
-            backend/base/runtime_utils.py: 8d715e80bb644fef0691bd95fd61cf1c3c06d01e8e7af59de1bb1d8c60c7b8a9
+            backend/base/runtime_utils.py: c88284dd65ee5140f2dbc3654367724422970384959ee52d0974a25c1256b5f5
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
             backend/common/ibl_vars.py: c34c6be2bd233867b0a2cd9e675249d0a5f49459831cd2abcdb4ef1ea6b9944e
             backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5

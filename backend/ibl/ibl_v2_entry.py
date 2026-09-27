@@ -13,6 +13,10 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
         incompatible = [k for k in ("files", "files_from") if request.get(k) is not None]
         if incompatible:
             raise Fault("EDITION_ARGUMENT", "판본 2는 명시 inputs를 사용합니다. 지원하지 않는 인자: " + ", ".join(incompatible), kind="compile")
+        protocols = request.get('value_protocols')
+        if protocols is not None and (not isinstance(protocols, list) or not protocols
+                or any(p not in ('ibl-value/1', 'ibl-value/2') for p in protocols)):
+            raise Fault('VALUE_PROTOCOL', 'value_protocols는 지원하는 값 프로토콜 목록입니다.', kind='protocol')
         inputs = {} if request.get("inputs") is None else request["inputs"]
         if not isinstance(inputs, dict) or any(not isinstance(k, str) or not k.isidentifier() or k in {"it", "i", "error"} for k in inputs):
             raise Fault("INPUTS", "inputs는 예약 이름을 제외한 이름→값 Record입니다.", kind="compile")
@@ -42,7 +46,7 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
             with source_context(2):
                 result = Runtime(plan, inputs, cancel_check=cancel_check, journal=journal,
                                  reusable=reusable, reuse_run=reuse["run_id"] if reuse else None,
-                                 input_evidence=input_evidence).run()
+                                 input_evidence=input_evidence, value_protocols=protocols).run()
         try:
             from ibl_v2_learning import record_functions
             record_functions(plan, result)
@@ -59,6 +63,6 @@ def handle_request(request, project_path=".", agent_id=None, cancel_check=None, 
 
 
 def capabilities():
-    return {"editions": [1, 2], "default_edition": 1, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1"],
+    return {"editions": [1, 2], "default_edition": 1, "model_authoring_edition": 2, "value_protocols": ["ibl-value/1", "ibl-value/2"],
             "v2_resume": True, "resume_protocols": ["ibl-resume/1"], "v2_remote_script": True, "call_protocols": ["ibl-script-call/1"],
             "v2_budget": {"steps": 100000, "rows": 10000, "seconds": None, "depth": 64}}

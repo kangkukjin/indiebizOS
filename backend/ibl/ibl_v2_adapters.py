@@ -54,7 +54,7 @@ def validate_contract(contract):
     if (not isinstance(envelopes, list)
             or any(not isinstance(key, str) or key not in contract["params"] for key in envelopes)):
         raise ValueError("input_envelopes는 선언된 입력 인자 이름 목록입니다.")
-    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1"}:
+    if adapter.get("protocol") not in {"core-table/2", "legacy-envelope", "ibl-script/2", "document-value/1", "python-call/1"}:
         raise ValueError("지원하지 않는 어댑터 프로토콜입니다.")
     from ibl_callable_contract import validate_extensions
     validate_extensions(contract)
@@ -257,6 +257,9 @@ def load_registry(project_path=".", agent_id=None):
                     if gate(node, action, ac):
                         raise Fault("MEMBER_ACCESS", "회원의 어휘 권한이 없습니다.", kind="permission")
                     return table_operation(c["adapter"]["operation"], runtime, args)
+                if protocol == "python-call/1":
+                    from ibl_foreign_adapter import invoke_foreign
+                    return invoke_foreign(runtime, args, ac, project_path, agent_id, node, action)
                 params = {**plain_arguments(args), **c["adapter"].get("fixed_params", {})}
                 if protocol == "ibl-script/2":
                     params.setdefault("op", "run" if params.get("id") else "list")
@@ -275,12 +278,17 @@ def load_registry(project_path=".", agent_id=None):
             from ibl_dependencies import script_snapshot
             def reusable(args, ac=action_config):
                 # 조이는 건 자동, 푸는 건 명시(ibl_ops 규칙 그대로): 부작용 없음 + 내부 모델 호출 없음 + 스크립트 아님.
-                if ac.get("ai_call") is True or (ac.get("callable_contract") or {}).get("adapter", {}).get("protocol") == "ibl-script/2":
+                if ac.get("ai_call") is True or (ac.get("callable_contract") or {}).get("adapter", {}).get("protocol") in {"ibl-script/2", "python-call/1"}:
                     return False
                 from ibl_ops import op_side_effect, resolve_op
                 return not op_side_effect(ac, resolve_op(ac, args if isinstance(args, dict) else {}))
+            dependency = script_snapshot if adapter['protocol'] == 'ibl-script/2' else None
+            if adapter['protocol'] == 'python-call/1':
+                from functools import partial
+                from ibl_foreign_adapter import provider_snapshot
+                dependency = partial(provider_snapshot, implementation)
             result[key] = Adapter(contract, run, authorize,
-                                  script_snapshot if adapter['protocol'] == 'ibl-script/2' else None,
+                                  dependency,
                                   None if contract["effects"] != ["unknown"] else reusable)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))

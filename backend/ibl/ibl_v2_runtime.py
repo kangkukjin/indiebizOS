@@ -3,6 +3,8 @@
 One shared budget, explicit Outcome boundaries and evidence sidecars. No source
 is reparsed while mapping rows. External calls use only the plan's adapters.
 """
+from contextlib import ExitStack
+from common.foreign_ref import wire_protocol
 from dataclasses import dataclass, field
 import copy
 import threading
@@ -56,7 +58,12 @@ def returned_shape(value):
 class Runtime(ExpressionEvaluator):
     def __init__(self, plan, inputs=None, *, cancel_check=None, budget=None,
                  recordings=None, replay=False, journal=None, reusable=None, reuse_run=None,
-                 input_evidence=None):
+                 input_evidence=None, value_protocols=None):
+        self.value_protocols = set(value_protocols or ("ibl-value/1", "ibl-value/2"))
+        self.resources = ExitStack()
+        self.foreign_sessions = {}
+        self.foreign_evidence = frozenset()
+        self.foreign_lock = threading.RLock()
         self.journal = journal
         # 편집한 프로그램이 앞 실행(reuse_run)의 읽기 영수증을 액션·인자·구현 지문으로 재사용한다.
         # 프로그램 지문은 키에 없다 — 함수 하나를 고쳐도 검증된 수집 결과가 살아남는 통로(2026-09-26).
@@ -479,6 +486,15 @@ class Runtime(ExpressionEvaluator):
         return value
 
     def invoke(self, node, args, piped):
+        spec = self.plan.registry[f"{node.data['node']}:{node.data['action']}"]
+        if spec.contract.get('adapter', {}).get('stateful'):
+            # Serialize invocation AND receipt/evidence, so another branch cannot
+            # observe the object mutation before its evidence has been committed.
+            with self.foreign_lock:
+                return self._invoke(node, args, piped)
+        return self._invoke(node, args, piped)
+
+    def _invoke(self, node, args, piped):
         key = f"{node.data['node']}:{node.data['action']}"
         spec = self.plan.registry[key]
         from ibl_callable_contract import normalize, selected, problems
@@ -518,7 +534,9 @@ class Runtime(ExpressionEvaluator):
                             "dependency": node.data.get("dependency_snapshot"),
                             "semantics": {k: self.plan.dependencies[k]
                                           for k in ("core", "edition", "semantics", "expressions")}})
-        eid = self.event(node, "invoke", args.evidence, action=key,
+        stateful = contract.get("adapter", {}).get("stateful", False)
+        parents = args.evidence | (self.foreign_evidence if stateful else frozenset())
+        eid = self.event(node, "invoke", parents, action=key,
                          effects=contract["effects"], request_hash=request_hash)
         tool_evidence = {}
         external = contract["effects"] != ["pure"]
@@ -540,6 +558,8 @@ class Runtime(ExpressionEvaluator):
                                  action=key, code=exc.code, failure_kind=exc.kind,
                                  incomplete=external or exc.kind == "partial")
             exc.evidence = [failure]
+            if stateful:
+                self.foreign_evidence = frozenset({failure})
             return exc
 
         call_id = digest([getattr(self.local, "route", ()), node.id, self.ordinal(node.id)])
@@ -561,6 +581,8 @@ class Runtime(ExpressionEvaluator):
             if hit is not None and "value" in hit:
                 receipt, source = hit, "reuse"
         if receipt is not None:
+            if contract.get("adapter", {}).get("stateful"):
+                raise failed(Fault("PY_STATE_EXPIRED", "외부 실행 상태는 새 워커에 복원되지 않습니다. export한 값을 새 입력으로 사용하세요.", node, kind="protocol"))
             if spec.authorize:
                 spec.authorize()
             from ibl_v2_ir import unpack
@@ -584,6 +606,7 @@ class Runtime(ExpressionEvaluator):
             tool_evidence = receipt.get("evidence", {})
         else:
             try:
+                self.local.invocation_id = call_id
                 value = spec.run(self, copy.deepcopy(args.value))
                 from ibl_v2_adapters import Adapted
                 if isinstance(value, Adapted):
@@ -607,12 +630,18 @@ class Runtime(ExpressionEvaluator):
                 raise exc
         if tool_evidence:
             eid = self.event(node, "tool_evidence", [eid], **tool_evidence)
+        if stateful:
+            self.foreign_evidence = frozenset({eid})
         if external and read_only:
             with self.lock:
                 self.read_receipts.add(call_id)
         return Binding(value, frozenset({eid}))
 
     def run(self):
+        with self.resources:
+            return self._run()
+
+    def _run(self):
         if self.plan.issues:
             return {**self.plan.report(), "success": False, "error": "실행 전 검사에서 거절했습니다."}
         if set(self.inputs) != set(self.plan.input_types):
@@ -633,13 +662,21 @@ class Runtime(ExpressionEvaluator):
                     roots = frozenset({eid})
                 env[key] = Binding(value, roots)
             result = self.frame(self.plan.root, env)
+            if wire_protocol(result.value) not in self.value_protocols:
+                raise Fault('VALUE_PROTOCOL_UNSUPPORTED', '소비자가 외부 참조 wire를 지원하지 않습니다. 실행 안에서 값/파일로 변환하세요.', kind='protocol', details={'value_preview': projection(result.value)})
             wire = pack(result.value)
             out = {"success": True, "value": projection(result.value),
-                   "value_wire": {"protocol": "ibl-value/1", "data": wire}}
+                   "value_wire": {"protocol": wire_protocol(result.value), "data": wire}}
         except Fault as exc:
             out = {"success": False, "error": str(exc), "diagnostic": projection(exc.view(self.plan.source))}
             if exc.partial is not UNIT:
-                out["partial_wire"] = {"protocol": "ibl-value/1", "data": pack(exc.partial)}
+                protocol = wire_protocol(exc.partial)
+                if protocol in self.value_protocols:
+                    out["partial_wire"] = {"protocol": protocol, "data": pack(exc.partial)}
+                else:
+                    out["partial_wire_error"] = {
+                        "code": "VALUE_PROTOCOL_UNSUPPORTED", "required_protocol": protocol,
+                        "value_preview": projection(exc.partial)}
         out.update({"edition": 2, "executed": True, "plan_hash": self.plan.fingerprint,
                     "source_complete": not any(e.get("incomplete") for e in self.trace),
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,

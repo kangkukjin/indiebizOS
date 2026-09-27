@@ -1,0 +1,79 @@
+{
+  "_generated": "build_ibl_nodes.py가 ibl_actions.yaml의 tool_json 블록에서 파생 — 직접 편집 금지. op-bearing 도구의 op enum/default는 actions의 ops가 단일 소스.",
+  "id": "python-runtime",
+  "name": "Python Libraries",
+  "description": "Python 함수와 객체를 IBL에서 직접 호출하는 실행 공급자",
+  "version": "1.0.0",
+  "tools": [
+    {
+      "name": "python_op",
+      "description": "현재 IBL의 직접 Python 호출. modules/describe/call/getattr/export/release.",
+      "input_schema": {
+        "type": "object",
+        "properties": {
+          "op": {
+            "type": "string",
+            "enum": [
+              "modules",
+              "describe",
+              "call",
+              "getattr",
+              "export",
+              "release"
+            ],
+            "default": "modules"
+          },
+          "target": {
+            "type": "string",
+            "description": "self:python 파라미터"
+          },
+          "receiver": {
+            "type": "object",
+            "description": "self:python 파라미터"
+          },
+          "name": {
+            "type": "string",
+            "description": "self:python 파라미터"
+          },
+          "args": {
+            "type": "array",
+            "description": "self:python 파라미터"
+          },
+          "kwargs": {
+            "type": "object",
+            "description": "self:python 파라미터"
+          },
+          "result": {
+            "type": "string",
+            "description": "self:python 파라미터"
+          },
+          "format": {
+            "type": "string",
+            "description": "self:python 파라미터"
+          },
+          "options": {
+            "type": "object",
+            "description": "self:python 파라미터"
+          },
+          "query": {
+            "type": "string",
+            "description": "self:python 파라미터"
+          },
+          "offset": {
+            "type": "integer",
+            "description": "self:python 파라미터"
+          },
+          "limit": {
+            "type": "integer",
+            "description": "self:python 파라미터"
+          },
+          "timeout": {
+            "type": "number",
+            "description": "self:python 파라미터"
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  ]
+}

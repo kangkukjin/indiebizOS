@@ -99,6 +99,8 @@ def _is_dormant_package_path(root: Path, rel_path: str) -> bool:
 # 주의력이 아니라 실패하는 빌드로 막는다 — IBL --check 삼각검증과 같은 철학).
 # 패키지 핸들러는 이음매-아래(이미 OS 터치 전제)라 이 가드 범위 밖 — docs/OS_PORTABILITY_SEAM.md 가 tier-2 추적.
 OS_SEAM_ALLOWLIST = {
+    "backend/base/python_environment_lock.py",  # POSIX 공유 설치 잠금과 Windows 배타 잠금
+
     "backend/base/restart_protocol.py",  # 재기동 제어 파일의 fsync/flock/Windows 잠금
     "backend/base/restart_process.py",  # 프로세스 출생 신원과 OS별 spawn/종료
 

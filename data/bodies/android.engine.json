@@ -31,6 +31,7 @@
     "base/model_resolver",
     "base/phone_jobs",
     "base/principal",
+    "base/python_environment_lock",
     "base/quantity_checks",
     "base/quiescent_reload",
     "base/r2_client",
@@ -221,6 +222,7 @@
     "ibl/ibl_exec_output",
     "ibl/ibl_exec_sense",
     "ibl/ibl_executors",
+    "ibl/ibl_foreign_adapter",
     "ibl/ibl_honesty",
     "ibl/ibl_member_library",
     "ibl/ibl_ops",
@@ -490,8 +492,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 415,
-    "engine": 389,
+    "total": 417,
+    "engine": 391,
     "blocklist": 26
   }
 }

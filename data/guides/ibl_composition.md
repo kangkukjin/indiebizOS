@@ -465,3 +465,9 @@ assert는 작성한 조건을 실제 결과에 대해 검사하며 조건 자체
 액션의 인자가 불명확하면 `describe`의 `callable_contract`와 `target_description`을 함께 본다.
 legacy-envelope 액션의 구판 전용 설명에는 소스의 `target_description_edition: 1`을 표시해 새 판본 조회에서 제외한다.
 실패의 `diagnostic.details`에 사용 예시·허용 값·hint가 있으면 소스 탐색 전에 이를 확인한다.
+
+## 설치된 Python 라이브러리
+
+함수·생성자·객체 메서드는 `[self:python]`으로 직접 호출한다. 함수별 등록이 필요 없으며
+객체는 같은 최상위 실행 안에서 전달하고 종료 전에 값/파일로 변환한다.
+[직접 호출과 오류 복구 예제](python_libraries.md)를 따른다.

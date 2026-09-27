@@ -463,3 +463,10 @@ data/recall_index/
 data/ibl_runs/
 
 !data/idioms/homepage_seeds.json
+
+# Shared lease for managed Python installs and direct-library workers.
+data/runtime/python-environment.lock
+
+# Shipped direct-Python policy and executable teaching examples
+!data/packages/installed/tools/python-runtime/policy.json
+!data/packages/installed/tools/python-runtime/examples.json

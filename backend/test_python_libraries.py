@@ -1,0 +1,277 @@
+"""Direct foreign calls compose with real IBL, without registered scripts."""
+import json
+import re
+from pathlib import Path
+
+import boot_paths  # noqa: F401
+import pytest
+from common.expression_ir import ForeignRef, pack, unpack
+from ibl_v2_adapters import load_registry
+from ibl_v2_compile import compile_program
+from ibl_v2_runtime import Runtime, Budget
+
+ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(scope='module')
+def registry():
+    return load_registry()
+
+
+def run(code, registry, inputs=None, **kwargs):
+    plan = compile_program(code, registry, inputs)
+    assert not plan.issues, plan.report()
+    return Runtime(plan, inputs, **kwargs).run()
+
+
+def call(target, args=None, **kwargs):
+    return '[self:python]' + json.dumps({'op': 'call', 'target': target, 'args': args or [], **kwargs})
+
+
+def test_design_examples_run_real_numpy_pandas(registry):
+    section = (ROOT / 'docs/IBL_SYSTEM_CONSOLIDATION_DESIGN.md').read_text().split('### 6.8.')[1]
+    samples = re.findall(r'```ibl\n(.*?)\n```', section, re.S)
+    assert run(samples[0], registry)['value'] == {'평균': 4, '목록': [2, 4, 6]}
+    assert run(samples[1], registry)['value'] == [{'분류': 'A', '금액': 8}]
+
+
+@pytest.mark.parametrize('target,args,expected', [
+    ('statistics:mean', [[2, 4, 6]], 4), ('builtins:str', ['error: failed traceback'], 'error: failed traceback'),
+    ('builtins:list', [], []), ('builtins:sum', [[1, 2, 3]], 6),
+    ('builtins:int', ['9007199254740993'], {'$ibl': 'integer', 'text': '9007199254740993'}),
+])
+def test_unregistered_calls_and_plain_values(registry, target, args, expected):
+    out = run(call(target, args), registry)
+    assert out['success'], out
+    assert out['value'] == expected
+
+
+def test_mutation_alias_and_release(registry):
+    out = run('''$a=[self:python]{op:"call",target:"builtins:list",result:"ref"}
+$b=$a
+$n=$a >> [self:python]{op:"call",name:"append",args:[7]}
+$v=$b >> [self:python]{op:"export",format:"list"}
+[self:python]{op:"release",receiver:$a}
+[self:python]{op:"release",receiver:$b}
+return {value:$v,n:$n,same:$a==$b}''', registry)
+    assert out['success'], out
+    assert out['value'] == {'value': [7], 'n': None, 'same': True}
+    assert any(e['kind'] == 'tool_evidence' and e.get('python') for e in out['evidence'])
+
+
+def test_conversion_failure_keeps_result_and_does_not_repeat(registry):
+    out = run('''$r=null
+[try]{$r=[self:python]{op:"call",target:"builtins:tuple",args:[[1,2]],result:"value"}}
+[catch]{$r=$error.partial}
+return $r >> [self:python]{op:"export",format:"list"}''', registry)
+    assert out['success'], out
+    assert out['value'] == [1, 2]
+    assert len([e for e in out['evidence'] if e['kind'] == 'invoke']) == 2
+    assert out['source_complete'] is False  # recovered failure evidence is not erased
+
+
+def test_foreign_output_wire_and_expired_scope(registry):
+    out = run(call('builtins:tuple', [[1, 2]]), registry)
+    assert out['value_wire']['protocol'] == 'ibl-value/2'
+    ref = unpack(out['value_wire']['data'])
+    assert isinstance(ref, ForeignRef)
+    assert unpack(pack({'ref': ref})) == {'ref': ref}
+    expired = run('[self:python]{op:"export",receiver:$ref,format:"list"}', registry, {'ref': ref})
+    assert expired['diagnostic']['kind'] == 'permission'
+    plain = compile_program('[self:python]{op:"release",receiver:$ref}', registry, {'ref': ref.fields()})
+    assert plain.issues
+
+
+@pytest.mark.parametrize('code', [
+    '[self:python]{op:"call"}', '[self:python]{op:"call",target:"math:sqrt",args:1}',
+    '[self:python]{op:"release"}', '[self:python]{op:"modules",limit:0}',
+])
+def test_invalid_contract_before_provider(registry, code):
+    assert compile_program(code, registry).issues
+
+
+@pytest.mark.parametrize('principal_kind', ['member', 'body', 'portal', 'anonymous'])
+def test_nonowner_denied(registry, principal_kind):
+    import principal
+    with principal.narrow(principal.Principal(kind=principal_kind, id='foreign'), 'test'):
+        out = run(call('builtins:print', ['MUST NOT RUN']), registry)
+    assert not out['success'] and out['diagnostic']['kind'] == 'permission'
+
+
+def test_restricted_owner_denied_even_self_node(registry):
+    from thread_context import set_allowed_nodes, get_allowed_nodes
+    old = get_allowed_nodes()
+    try:
+        set_allowed_nodes({'self', 'others', 'table'})
+        out = run(call('builtins:print', ['MUST NOT RUN']), registry)
+        assert out['diagnostic']['code'] == 'LOCAL_PYTHON_PERMISSION'
+    finally:
+        set_allowed_nodes(old)
+
+
+def test_error_stage_and_no_effect_call(registry):
+    out = run(call('math:sqrt', [], kwargs={'x': 4}), registry)
+    assert not out['success']
+    assert out['diagnostic']['details']['stage'] == 'bind'
+    assert out['diagnostic']['details']['invoked'] is False
+    missing = run(call('no_such_installed_python_package:fn'), registry)
+    assert missing['diagnostic']['code'] == 'PY_MODULE_MISSING'
+
+
+def test_stdout_is_diagnostic_not_value(registry):
+    out = run(call('builtins:print', ['hello']), registry)
+    assert out['success'] and out['value'] is None
+    assert any('hello' in e.get('python', {}).get('diagnostics', '') for e in out['evidence'])
+
+
+def test_timeout_closes_worker(registry):
+    plan = compile_program(call('time:sleep', [2], timeout=.1), registry)
+    runtime = Runtime(plan)
+    out = runtime.run()
+    assert out['diagnostic']['code'] == 'PY_TIMEOUT'
+    assert all(s.closed and s.proc.poll() is not None for s in runtime.foreign_sessions.values())
+
+
+def test_replay_does_not_recreate_python_state(registry):
+    code = call('statistics:mean', [[2, 4]])
+    original = run(code, registry)
+    replay = run(code, registry, recordings=original['recordings'], replay=True)
+    assert replay['diagnostic']['code'] == 'PY_STATE_EXPIRED'
+
+
+def test_objects_compose_through_local_functions(registry):
+    out = run('''[def:make]($x){return [self:python]{op:"call",target:"builtins:tuple",args:[$x]}}
+$a=[fn:make]{x:[1,2]}
+return [self:python]{op:"call",target:"operator:getitem",args:[$a,1]}''', registry)
+    assert out['value'] == 2
+
+
+def test_modules_describe_and_decimal(registry):
+    out = run('''$m=[self:python]{op:"modules",query:"numpy",limit:2}
+$d=[self:python]{op:"describe",target:"statistics:mean"}
+$x=[self:python]{op:"call",target:"decimal:Decimal",args:["1.234567890123456789"]}
+return {modules:$m,description:$d,number:$x}''', registry)
+    assert out['success'], out
+    assert out['value']['modules']['items']
+    assert out['value']['description']['signature'][0]['name'] == 'data'
+    assert out['value']['number']['text'] == '1.234567890123456789'
+
+
+def test_callable_and_async_results(registry):
+    out = run('''$pow=[self:python]{op:"getattr",target:"builtins:pow",result:"ref"}
+$f=[self:python]{op:"call",target:"functools:partial",args:[$pow,2]}
+$x=[self:python]{op:"call",receiver:$f,args:[5]}
+$n=[self:python]{op:"call",target:"asyncio:sleep",args:[0]}
+return {x:$x,n:$n}''', registry)
+    assert out['value'] == {'x': 32, 'n': None}, out
+
+
+def test_dataframe_export_and_attribute(registry):
+    out = run('''$df=[self:python]{op:"call",target:"pandas:DataFrame",args:[{a:[1,2]}]}
+$shape=$df >> [self:python]{op:"getattr",name:"shape"}
+$s=$shape >> [self:python]{op:"export",format:"list"}
+$r=$df >> [self:python]{op:"export",format:"records"}
+return {shape:$s,rows:$r.items,schema:$r.schema}''', registry)
+    assert out['success'], out
+    assert out['value']['shape'] == [2, 1]
+    assert out['value']['rows'] == [{'a': 1}, {'a': 2}]
+    assert out['value']['schema']['index'] == 'omitted'
+
+
+def test_explicit_old_wire_consumer_gets_protocol_error(registry):
+    out = run(call('builtins:tuple', [[1]]), registry, value_protocols=['ibl-value/1'])
+    assert out['diagnostic']['code'] == 'VALUE_PROTOCOL_UNSUPPORTED'
+    assert out['diagnostic']['details']['value_preview']['$ibl'] == 'foreign_ref'
+
+
+def test_crash_is_uncertain_not_retried(registry):
+    out = run(call('os:_exit', [7]), registry)
+    assert out['diagnostic']['code'] == 'PY_WORKER_LOST'
+    assert out['diagnostic']['details']['effect_status'] == 'unknown'
+    assert len(out['recordings']) == 1
+
+
+def test_partial_ref_honors_old_consumer_protocol(registry):
+    out = run(call('builtins:tuple', [[1]], result='value'), registry,
+              value_protocols=['ibl-value/1'])
+    assert out['diagnostic']['code'] == 'PY_VALUE_CONVERSION'
+    assert 'partial_wire' not in out
+    assert out['partial_wire_error']['code'] == 'VALUE_PROTOCOL_UNSUPPORTED'
+
+
+def test_negative_timeout_rejected_before_worker(registry):
+    rt = Runtime(compile_program('[self:python]{op:"call",target:"math:sqrt",timeout:-1}', registry))
+    out = rt.run()
+    assert out['diagnostic']['code'] == 'ARGUMENT_CONTRACT'
+    assert not rt.foreign_sessions
+
+
+def test_export_bytes_uses_output_gate(tmp_path):
+    registry = load_registry(str(tmp_path))
+    out = run('''$b=[self:python]{op:"call",target:"builtins:bytes",args:[[0,1,255]]}
+return $b >> [self:python]{op:"export",format:"bytes",options:{path:"sample.bin"}}''', registry)
+    assert out['success'], out
+    assert Path(out['value']['path']).read_bytes() == b'\x00\x01\xff'
+    assert Path(out['value']['path']).parent == tmp_path / 'outputs'
+
+
+def test_environment_change_between_check_and_call_is_refused(registry, monkeypatch):
+    from tool_loader import load_tool_handler
+    handler = load_tool_handler('python_op')
+    plan = compile_program(call('statistics:mean', [[1, 2]]), registry)
+    monkeypatch.setattr(handler, 'dependency', lambda _: {'environment': 'changed'})
+    out = Runtime(plan).run()
+    assert out['diagnostic']['code'] == 'DEFINITION_CHANGED'
+
+
+def test_model_projection_keeps_foreign_expiration(registry, tmp_path, monkeypatch):
+    import model_result_view
+    from supervision_store import TurnStore
+    monkeypatch.setattr(model_result_view, 'evidence_store', lambda: TurnStore(tmp_path))
+    out = run(call('builtins:tuple', [[1]]), registry)
+    shown = model_result_view.project_result(out)
+    assert shown['success']
+    assert shown['value']['lifetime'] == 'execution_only'
+
+
+def test_mutation_evidence_reaches_export_without_expanding_every_prior_event(registry):
+    out = run('''$a=[self:python]{op:"call",target:"builtins:list",result:"ref"}
+$a >> [self:python]{op:"call",name:"append",args:[7]}
+$v=$a >> [self:python]{op:"export",format:"list"}
+return evidence($v)''', registry)
+    assert out['success'], out
+    calls = [e['python'] for e in out['value']['events'] if e.get('python')]
+    assert any(e['member'] == 'append' for e in calls)
+    assert any(e['operation'] == 'export' for e in calls)
+
+
+def test_mcp_and_http_preserve_value_protocol_negotiation(monkeypatch):
+    import anyio
+    import mcp_server
+    from api_ibl import IBLRequest
+    seen = []
+    def post(path, payload, timeout):
+        seen.append(IBLRequest(**payload))
+        return {'success': True, 'value': 1}
+    monkeypatch.setattr(mcp_server, '_post_backend', post)
+    async def invoke():
+        return await mcp_server.execute_ibl('return 1', value_protocols=['ibl-value/1'])
+    anyio.run(invoke)
+    assert seen[0].value_protocols == ['ibl-value/1']
+
+
+def test_describe_is_passive_but_get_marks_failing_property_invoked(registry):
+    out = run('''$getter=[self:python]{op:"getattr",target:"builtins:len"}
+$property=[self:python]{op:"call",target:"builtins:property",args:[$getter]}
+$bases=[self:python]{op:"call",target:"builtins:tuple"}
+$class=[self:python]{op:"call",target:"builtins:type",args:["Probe",$bases,{p:$property}]}
+$obj=[self:python]{op:"call",receiver:$class}
+$description=$obj >> [self:python]{op:"describe",name:"p"}
+return $obj >> [self:python]{op:"getattr",name:"p"}''', registry)
+    assert out['diagnostic']['details']['stage'] == 'invoke'
+    assert out['diagnostic']['details']['invoked'] is True
+    assert len(out['recordings']) == 7  # describe completed without running len
+
+
+if __name__ == '__main__':
+    raise SystemExit(pytest.main([__file__, '-q']))

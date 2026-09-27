@@ -23,9 +23,9 @@ def _atomic(path, content):
         temp.unlink(missing_ok=True)
 
 
-def stage_artifact(target, content, public_root):
+def stage_artifact(target, content, public_root, *, directory=None):
     """협력하는 등록 스크립트의 공개 출력 계약. 감독 문맥 밖에서는 기존 쓰기를 유지한다."""
-    directory = os.environ.get(STAGING_ENV)
+    directory = directory or os.environ.get(STAGING_ENV)
     if not directory:
         return None
     target, root = Path(target).resolve(), Path(public_root).resolve()

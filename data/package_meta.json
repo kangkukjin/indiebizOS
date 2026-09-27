@@ -239,6 +239,11 @@
       "weight": "light",
       "locale": "universal"
     },
+    "python-runtime": {
+      "needs_key": [],
+      "weight": "light",
+      "locale": "universal"
+    },
     "radio": {
       "needs_key": [],
       "weight": "light",
@@ -394,6 +399,7 @@
     "self:patch": "system_essentials",
     "self:phone_sync": "business",
     "self:photo": "photo-manager",
+    "self:python": "python-runtime",
     "self:read": "system_essentials",
     "self:record": "record-ops",
     "self:script": "system_essentials",

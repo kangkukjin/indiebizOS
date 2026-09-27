@@ -8,6 +8,7 @@ from decimal import Decimal
 import hashlib
 import json
 import math
+from common.foreign_ref import ForeignRef
 
 
 @dataclass(frozen=True)
@@ -109,6 +110,8 @@ def digest(value):
 
 
 def pack(value):
+    if isinstance(value, ForeignRef):
+        return ["foreign", value.fields()]
     if isinstance(value, Unit):
         return ["unit"]
     if isinstance(value, ResultValue):
@@ -133,6 +136,10 @@ def pack(value):
 def unpack(value):
     try:
         tag = value[0]
+        if tag == "foreign" and len(value) == 2 and isinstance(value[1], dict):
+            fields = value[1]
+            if set(fields) == set(ForeignRef.__dataclass_fields__) and all(type(v) is str and len(v) <= 512 for v in fields.values()):
+                return ForeignRef(**fields)
         if tag == "unit" and len(value) == 1:
             return UNIT
         if tag == "scalar" and len(value) == 2:
@@ -165,6 +172,8 @@ def unpack(value):
 
 def projection(value):
     """Human-readable view. `value_wire` is the authoritative typed value."""
+    if isinstance(value, ForeignRef):
+        return value.view()
     if isinstance(value, Unit):
         return {"$ibl": "unit"}
     if isinstance(value, ResultValue):

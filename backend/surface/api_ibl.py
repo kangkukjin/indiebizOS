@@ -16,6 +16,7 @@ class IBLRequest(BaseModel):
     code: str
     edition: Optional[int] = None
     inputs: Optional[dict] = None
+    value_protocols: Optional[List[str]] = None
     describe: Optional[List[str]] = None
     read_result: Optional[dict] = None
     check: bool = False                # 정적 통화 검사만(실행 없음) — ibl_typecheck (2026-09-05)
@@ -231,6 +232,8 @@ async def execute_ibl_code(req: IBLRequest):
                     _ti = {"code": req.code}
                     if req.edition is not None:
                         _ti["edition"] = req.edition
+                    if req.value_protocols is not None:
+                        _ti["value_protocols"] = req.value_protocols
                     if req.inputs is not None:
                         _ti["inputs"] = req.inputs
                     if req.describe is not None:

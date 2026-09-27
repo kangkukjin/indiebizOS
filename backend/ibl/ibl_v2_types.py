@@ -1,4 +1,5 @@
 """Structural types shared by edition 2 preflight and boundary guards."""
+from common.foreign_ref import ForeignRef
 from dataclasses import dataclass
 from decimal import Decimal
 from ibl_v2_ir import Unit, ResultValue, Fault
@@ -77,6 +78,8 @@ def concat_lists(left, right):
 
 
 def infer(value):
+    if isinstance(value, ForeignRef):
+        return Type("ForeignRef")
     if isinstance(value, Unit):
         return UNIT_T
     if value is None:
@@ -116,7 +119,7 @@ def declared(spec):
         for value in values[1:]:
             result = join(result, value)
         return result
-    if spec not in {"Unknown", "Unit", "Bool", "Number", "Text", "Null", "List", "Record", "Callable", "Result"}:
+    if spec not in {"Unknown", "Unit", "Bool", "Number", "Text", "Null", "List", "Record", "Callable", "Result", "ForeignRef"}:
         raise ValueError(f"알 수 없는 타입: {spec}")
     return Type(spec, item=UNKNOWN if spec == "List" else None)
 

@@ -712,9 +712,9 @@ def compile_program(source, registry=None, inputs=None, definitions=None):
                     "source_map": compiler.source_map, "contracts": digest({k: registry[k].contract for k in sorted(compiler.used_actions)}),
                     "edition": digest((Path(__file__).parents[1] / "base/ibl_edition.py").read_text()),
                     "semantics": digest((Path(__file__).parents[1] / "common/value_semantics.py").read_text()),
-                    "expressions": digest({p.name: digest(p.read_text()) for p in sorted((Path(__file__).parents[1] / "common").glob("expression_*.py"))}),
+                    "expressions": digest({p.name: digest(p.read_text()) for p in sorted(set((Path(__file__).parents[1] / "common").glob("expression_*.py")) | {Path(__file__).parents[1] / "common/foreign_ref.py"})}),
                     "core": digest({p.name: digest(p.read_text()) for p in sorted(set(Path(__file__).parent.glob("ibl_v2_*.py")) |
-                              {Path(__file__).parent / name for name in ("ibl_document_value.py", "ibl_member_library.py",
+                              {Path(__file__).parent / name for name in ("ibl_foreign_adapter.py", "ibl_document_value.py", "ibl_member_library.py",
                                                                         "ibl_remote_call.py", "ibl_run_journal.py", "ibl_callable_contract.py", "ibl_dependencies.py")})})}
     finish_diagnostics(compiler)
     for entry in compiler.warnings:

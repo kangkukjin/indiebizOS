@@ -348,6 +348,15 @@ def get_node_cmd() -> str:
 
 
 def install_python_dependency(package: str, timeout: int = 300) -> dict:
+    from python_environment_lock import environment_lease
+    try:
+        with environment_lease(write=True, timeout=timeout):
+            return _install_python_dependency(package, timeout)
+    except TimeoutError as exc:
+        return {"success": False, "message": str(exc)}
+
+
+def _install_python_dependency(package: str, timeout: int = 300) -> dict:
     """런타임에 파이썬 라이브러리를 쓰기가능한 userData(pylibs)에 설치한다.
 
     도구 의존성 누락([sense:search]의 ddgs 등)을 사용자 승낙 후 그 자리에서 채우기 위함.

@@ -222,6 +222,7 @@
     "self:notebook#remove": "source_id 필요 + 부작용",
     "self:notebook#search": "노트북 name+검색어 필요 — 고정 fixture 부적합",
     "self:notebook#sources": "노트북 name 필요 — 고정 fixture 부적합",
+    "self:python": "현재 IBL 실행·주인 권한·실행별 객체 수명 필요 — 전용 종단 회귀로 검증",
     "self:read": "파일 경로 인자 필요(고정 fixture 부적합)",
     "self:record": "인증된 주체와 발행한 업무 공간 필요 — 무인 자가점검에서 소유자 폴백 금지",
     "self:record#describe": "인증된 업무 주체·공간 설정에 의존 — 독립 자가점검에서 소유자 폴백 금지",

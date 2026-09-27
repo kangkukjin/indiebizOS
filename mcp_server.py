@@ -270,6 +270,7 @@ async def execute_ibl(code: str, project_path: str = "",
                       describe: Optional[List[str]] = None,
                       read_result: Optional[ResultRead] = None,
                       edition: Optional[int] = None,
+                      value_protocols: Optional[List[str]] = None,
                       inputs: Optional[dict] = None,
                       ctx: Context = None):
     # ★반환 타입 주석 없음이 의도: str 로 못박으면 FastMCP 구조화 출력 검증이
@@ -316,6 +317,8 @@ async def execute_ibl(code: str, project_path: str = "",
     if runtime_parent:
         payload["_runtime_parent"] = runtime_parent
     from ibl_edition import authoring_request
+    if value_protocols is not None:
+        payload["value_protocols"] = value_protocols
     if edition is not None:
         payload["edition"] = edition
     payload = authoring_request(payload)

@@ -102,12 +102,16 @@ def extract(html, url):
                 for key, value in reversed(list(obj.items())):
                     if isinstance(value, (dict, list)):
                         pending.append((value, f"{path}.{key}"))
+    from common.pkg_utils import load_sibling
+    body = load_sibling(__file__, "webcrawl_body").selection(html)
     return {"links": links, "metadata": metadata, "errors": errors,
+            "content_selections": [{**body, "url": url}],
             "documents": [{"html": html, "url": url}]}
 
 
 def combine(parts, errors=()):
-    return {"documents": [r for p in parts for r in p.get("documents", [])],
+    return {"content_selections": [r for p in parts for r in p.get("content_selections", [])],
+            "documents": [r for p in parts for r in p.get("documents", [])],
             "links": [r for p in parts for r in p["links"]],
             "metadata": [r for p in parts for r in p["metadata"]],
             "errors": [r for p in parts for r in p.get("errors", [])] + list(errors)}
@@ -119,6 +123,8 @@ def project(result, op):
     structure = out.pop("_page_structure", None)
     out.pop("_structure_only", None)
     if not out.get("success") or op == "content":
+        if structure and structure.get("content_selections"):
+            out["content_selection"] = structure["content_selections"]
         return out
     if structure is None:
         return {"success": False, "items": [], "url": out.get("url"),

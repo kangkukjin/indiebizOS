@@ -104,6 +104,7 @@
     "cognition/memory_consolidation",
     "cognition/memory_evidence",
     "cognition/model_result_view",
+    "cognition/model_value_preview",
     "cognition/prompt_builder",
     "cognition/prompt_composition",
     "cognition/pursuit_bind",
@@ -489,8 +490,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 414,
-    "engine": 388,
+    "total": 415,
+    "engine": 389,
     "blocklist": 26
   }
 }

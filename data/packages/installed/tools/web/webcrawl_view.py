@@ -69,9 +69,12 @@ def project(result, *, selector, include_images, image_offset, image_limit, pars
         base_tag = soup.find("base", href=True)
         base = helpers.http_url(base_tag["href"], document["url"]) if base_tag else document["url"]
         try:
-            nodes = soup.select(selector) if selector else [
-                soup.find("article") or soup.find("main") or soup.find(attrs={"role": "main"})
-                or soup.find("body") or soup]
+            if selector:
+                nodes = soup.select(selector)
+            else:
+                body = load_sibling(__file__, "webcrawl_body")
+                body.clean(soup)
+                nodes, _ = body.regions(soup)
         except Exception as exc:
             return {"success": False, "items": [], "error": f"CSS 선택자 오류: {exc}"}
         chosen = {id(node) for node in nodes}

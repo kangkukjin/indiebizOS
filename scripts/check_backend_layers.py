@@ -93,7 +93,7 @@ LAYERS = {
         "member_runner", "member_session", "client_workflows",
         "agent_cognitive", "agent_communication", "agent_goals", "fn_recognizer",
         "weekly_audits",
-        "agent_pipeline", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view",
+        "agent_pipeline", "agent_runner", "ai_agent", "conscious_supervisor", "supervisor_runtime", "supervisor_handoff", "model_result_view", "model_value_preview",
         "body_ask", "cognitive_consciousness", "cognitive_distill",
         "cognitive_eval", "final_evaluator", "cognitive_recall", "cognitive_trace", "history_checkpoint",
         "consciousness_agent", "data_ownership", "derived_freshness", "distill_queue", "doc_drift", "fixture_sweeps", "forage_consolidation", "goal_evaluator", "guide_audit", "guide_feedback",

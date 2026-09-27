@@ -146,25 +146,8 @@ def _parse_html(html: str, url: str) -> tuple[str, str]:
     soup = BeautifulSoup(html, 'html.parser')
     title = soup.title.string.strip() if soup.title and soup.title.string else ""
 
-    # 문서 본문에 속한 머리말·그림 설명은 보존한다. UI/실행 요소만 제거.
-    for el in soup(['script', 'style', 'nav', 'footer', 'aside', 'noscript',
-                    'iframe', 'form', 'button', 'svg']):
-        el.decompose()
-
-    # 부분 문자열이 아닌 명시적인 UI 클래스/ID만 제거한다.
-    # shareholder-letter, recommendations 등 본문 이름을 share/recommend로 오인하지 않는다.
-    noise = {'advert', 'advertisement', 'ads', 'sidebar', 'social-share',
-             'share-buttons', 'sharing-buttons', 'cookie-banner', 'cookie-consent',
-             'newsletter-signup', 'related-posts', 'related-articles', 'comments',
-             'comment-list', 'comment-form'}
-    for el in list(soup.find_all(True)):
-        if el.attrs is None:
-            continue
-        labels = [*el.get('class', []), el.get('id', '')]
-        if any(str(label).lower() in noise for label in labels):  # vj-ok: HTML UI class/id 식별자 규칙, 통화 값 비교 아님
-            el.decompose()
-
-    container = soup.find('article') or soup.find('main') or soup.find('body') or soup
+    # Text and optional image reading use the same declared body regions.
+    container = load_sibling(__file__, "webcrawl_body").reading_container(soup)
     block_tags = {'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'blockquote',
                   'pre', 'td', 'th', 'dt', 'dd', 'div', 'section', 'article',
                   'main', 'ul', 'ol', 'dl', 'table', 'tr', 'figure', 'figcaption',

@@ -291,19 +291,16 @@ def project_v2_result(result):
         out = json.loads(cleaned)
     if len(json.dumps(out, ensure_ascii=False)) > policy["min_chars"]:
         out.pop("value_wire", None)
+        out.pop("partial_wire", None)
+        from model_value_preview import preview_value
         if "value" in out:
-            def preview(value, depth=0):
-                if depth >= 5 and isinstance(value, (dict, list)):
-                    return "…(result_ref 참조)"
-                if isinstance(value, list):
-                    return [preview(v, depth + 1) for v in value[:6]]
-                if isinstance(value, dict):
-                    return {k: preview(v, depth + 1) for k, v in list(value.items())[:12]}
-                if isinstance(value, str) and len(value) > 500:
-                    return value[:500] + "…(result_ref 참조)"
-                return value
-            out["value"] = preview(out["value"])
-        out["_preview"] = True
+            out["value"], preview = preview_value(out["value"], policy["prose_chars"], ref["id"])
+            if preview:
+                out["_preview"] = preview
+            # Only bounded value views opt out of the transport's default cut.
+            # Large diagnostics without a value retain their existing safeguards.
+            if len(json.dumps(out, ensure_ascii=False)) <= 2 * policy["prose_chars"]:
+                out["_display"] = {"max_chars": policy["prose_chars"]}
     out["result_ref"] = _read_reference(ref, result)
     out["_hint"] = ("판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. "
                     + ("다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. "

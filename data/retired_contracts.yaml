@@ -25,6 +25,13 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: fixed-v2-preview-prefix
+    retired: 2026-09-27
+    reason: 고정 앞부분 표시가 예산에 들어가는 후보와 후반 필드까지 가려 검토 누락과 되읽기를 유발했다.
+    instead: 글자 예산을 형제 값에 나누고 생략 위치·수량·조회 인자를 표시한다. 전체 값은 원문 참조에 남긴다.
+    phrases:
+      - '목록은 항상 처음 6개만 보여준다'
+      - '원본 HTML·이미지 자체가 아니다'
   - id: blanket-decimal-tool-rejection
     retired: 2026-09-27
     reason: 정상 소수 좌표도 해석기 타입이라는 이유로 거절해 도구 호출 전 왕복을 강제했다.

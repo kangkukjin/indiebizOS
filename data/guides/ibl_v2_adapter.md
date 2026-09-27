@@ -42,3 +42,7 @@ JSON 도구 경계의 Decimal은 십진 표기가 JSON 숫자 왕복 후 동일�
 필요한 명시 문자열화는 text()로 한다. 투영은 사본이고 IBL 값·지문은 원래 타입을 유지한다.
 표시 예산으로 고른 브라우저 요소와 요청 limit을 충족한 검색 표본은 scope:selection을
 선언한다. 실제 수집 누락/실패는 source 또는 실패로 보존하며 selection으로 덮지 않는다.
+
+모델 표시의 `_preview.scope:display`는 실행·원천 완전성을 바꾸지 않는다. 원문 값과
+타입 전송은 저장소에 유지하고, 표시에서 잘린 목록·필드·문자열은 경로별 read_args로
+읽는다. 생산자의 content_selection은 HTML 본문 영역 선택이며 문서 전체 검토의 증명이 아니다.

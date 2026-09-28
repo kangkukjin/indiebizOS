@@ -143,12 +143,13 @@ def _image_blocks(rows: list, src_field: str = None, caption_field: str = None, 
         info["src_field"] = None
         return []
     for r in dicts:
-        src = r.get(sf)
+        from common.field_path import walk_path
+        src = walk_path(r, sf)
         if not isinstance(src, str) or not src.strip():
             skipped += 1
             continue
         b = {"type": "image", "src": src.strip()}
-        cap = r.get(cf) if cf else None
+        cap = walk_path(r, cf) if cf else None
         if isinstance(cap, str) and cap.strip():
             b["caption"] = cap.strip()
         blocks.append(b)
@@ -713,9 +714,9 @@ def _render_document(tool_input, output_base=".", context=None):
         try:
             out_path = _place(f".{fmt}")
             if fmt == "docx":
-                _doc_blocks_to_docx(blocks, title, out_path)
+                _doc_blocks_to_docx(blocks, title, out_path, meta)
             else:
-                _doc_blocks_to_pptx(blocks, title, out_path)
+                _doc_blocks_to_pptx(blocks, title, out_path, meta)
             return _json.dumps({"success": True, "path": out_path, "file": out_path,
                                 "title": title, "format": fmt, "blocks": len(blocks), **_extra,
                                 "message": f"문서 {len(blocks)}블록을 {fmt.upper()}로 렌더했습니다."},
@@ -724,7 +725,23 @@ def _render_document(tool_input, output_base=".", context=None):
             note = f" ({fmt} 렌더 실패 → HTML 폴백: {e})"
             fmt = "html"
 
-    body = _doc_blocks_to_html(blocks)
+    # about:blank cannot load local paths. Embed local bytes in every browser
+    # emitter, including saved HTML, so moving the report preserves its images.
+    import copy, base64, mimetypes
+    html_blocks = copy.deepcopy(blocks)
+    for block in html_blocks:
+        targets = [(block, "src" if block.get("src") else "path")] if block.get("type") == "image" else []
+        if block.get("type") == "cards":
+            targets += [(item, "image") for item in block.get("items", []) if item.get("image")]
+        for item, field in targets:
+            src = str(item.get(field) or "")
+            if src and not src.startswith(("http://", "https://", "data:")):
+                stream = _fmt._resolve_image_bytes(src)
+                if stream is None:
+                    return _json.dumps({"success": False, "error": f"그림을 읽을 수 없습니다: {src}", "images_failed": 1}, ensure_ascii=False)
+                mime = mimetypes.guess_type(src)[0] or "image/png"
+                item[field] = f"data:{mime};base64," + base64.b64encode(stream.read()).decode("ascii")
+    body = _doc_blocks_to_html(html_blocks)
     title_h = f"<h1>{_html.escape(str(title))}</h1>" if title else ""
     meta_h = f'<div class="doc-meta">{_html.escape(str(meta))}</div>' if meta else ""
     doc = f"""<!DOCTYPE html><html lang="ko"><head><meta charset="utf-8">
@@ -746,6 +763,10 @@ def _render_document(tool_input, output_base=".", context=None):
                 pg = br.new_page(viewport={"width": 900, "height": 1200})
                 pg.set_content(doc, wait_until="networkidle")
                 pg.wait_for_timeout(300)
+                failed_images = pg.evaluate("Array.from(document.images).filter(i => !i.complete || !i.naturalWidth).length")
+                if failed_images:
+                    br.close()
+                    return _json.dumps({"success": False, "error": "문서 그림 로드 실패", "images_failed": failed_images}, ensure_ascii=False)
                 if fmt == "pdf":
                     pg.pdf(path=out_path, format="A4", print_background=True,
                            margin={"top": "20mm", "bottom": "20mm", "left": "16mm", "right": "16mm"})

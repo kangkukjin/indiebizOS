@@ -158,7 +158,10 @@
 ```
 1. [sense:realty]{region:"강남구", type:"apt", deal:"trade"}   # 매매(실거래가)
 2. [sense:realty]{region:"강남구", type:"apt", deal:"rent"}    # 전세(실거래가)
-3. 전세가율 = (전세가 / 매매가) × 100
+3. 임대 행은 deal_type="전세"만 고른다(월세의 보증금과 섞지 않는다).
+4. [아파트명, 법정동] 복합 키 + 같은 평형 띠(area_m2) + 같은 기간으로 각각 평균을 낸다.
+5. 전세가율 = (전세 평균 deposit_won / 매매 평균 price) × 100 — 둘 다 원 단위.
+   이름만 같은 다른 단지·다른 면적을 조인하면 비율이 왜곡된다.
 ```
 
 ---
@@ -240,3 +243,5 @@
 **`[sense:commercial]`(상권)** — 반경 1.5km 결과는 스필될 수 있고 1만 행에서 잘린다(`truncated`). 밀도 높은 곳은 1.5km가 타임아웃 → 1.0km. 업종 집계는 `[table:groupby]{by: "업종"}`(단순 행수는 `agg` 생략 — `agg: "count"`·리스트 형은 거절) → **반드시 `sort{by:"count"}` 뒤에 `take`**. 중심 좌표·주소 확인·생활 업종 규칙은 부동산 가이드 §3-1b. `category` 파라미터는 없다(업종은 `indsLclsCd`).
 
 **기타** — `[sense:kosis]`의 `region`은 무시되어 전국 전량이 온다(지역 인구는 미확인으로 남기는 편이 낫다). 법령 원문은 `[sense:legal]` → `[sense:crawl]{그 url}` 두 걸음. `articleView.html?idxno`가 빈 채로 해소되는 지역 신문(제주일보·동양일보)은 crawl 불가 — 제목만 인용, 미확인 명시. 지역 뉴스는 naver news 0건이어도 gnews로 재시도. `보고서HTML`의 `drop_lines`는 **리스트** — 문자열을 주면 글자 단위로 쪼개져 66줄이 지워진 사고(08-29); 실행 후 `links` 검산. `[self:edit]`로 구역 헤더를 재생성했으면 그 자리에서 `[self:grep]`으로 앵커 생존 확인.
+
+원본 칸은 유지한다. molit/네이버/직방의 공통 가격 `price`·`deposit_won`·`rent_won`은 원(KRW), `area_m2`는 제곱미터, `deal_type`은 매매/전세/월세다. 원본의 거래금액·보증금·직방 deposit/rent는 여전히 만원이다.

@@ -665,6 +665,13 @@ _file_views = _fs_find.file_views
 
 
 def execute(tool_input: dict, context) -> str:
+    result = _execute(tool_input, context)
+    if context.tool_name in ("copy_path", "move_path", "delete_path") and isinstance(result, str) and result.startswith("Error:"):
+        return json.dumps({"success": False, "error": result.removeprefix("Error:").strip()}, ensure_ascii=False)
+    return result
+
+
+def _execute(tool_input: dict, context) -> str:
     """ToolContext 기반 신규 시그니처."""
     tool_name = context.tool_name
     project_path = context.project_path
@@ -771,6 +778,11 @@ def execute(tool_input: dict, context) -> str:
             file_size = os.path.getsize(path)
             content, total, start, end, ranged, truncated = _file_io.read_text_window(
                 path, tool_input, _text_read_bounds)
+            if tool_input.get("blocks") and (str(path).lower().endswith(".json") or tool_input.get("format") == "json") and not ranged and not truncated and content.strip():
+                parsed = json.loads(content)
+                return json.dumps({"success": True, "text": content, "blocks": [],
+                                   "structured_data": parsed, "path": path}, ensure_ascii=False,
+                                  default=str)
             if tool_input.get("blocks"):
                 from doc_ir import markdown_to_blocks
                 parts = markdown_to_blocks(content)
@@ -822,7 +834,8 @@ def execute(tool_input: dict, context) -> str:
 
         elif tool_name == "list_directory":
             dir_path = os.path.join(project_path, expand_body_path(tool_input.get("dir_path") or tool_input.get("path") or tool_input.get("target") or "."))
-            items = os.listdir(dir_path)
+            import unicodedata
+            items = sorted(os.listdir(dir_path), key=lambda n: (unicodedata.normalize("NFC", n), n))
             # 선언(ibl_actions.yaml 의 list.params.pattern)이 약속한 glob 을 실제로 건다.
             # ★2026-09-03 #repair: 선언만 있고 여기서 읽는 곳이 없어 pattern 이 **조용히**
             #   무시됐다 — [self:list]{path:"/tmp", pattern:"ait_*.json"} 이 /tmp 전체를
@@ -860,8 +873,8 @@ def execute(tool_input: dict, context) -> str:
             return mod.run(tool_input, project_path)
 
         elif tool_name == "get_current_time":
-            fmt = tool_input.get("format", "%Y-%m-%d %H:%M:%S")
-            return text_result(datetime.now().strftime(fmt))
+            fmt = tool_input.get("format", "%Y-%m-%d %H:%M:%S %Z%z")
+            return text_result(datetime.now().astimezone().strftime(fmt))
 
         elif tool_name == "ai_ask":
             # 시스템 AI 원샷 호출 — 도구·다단계 없이 경량 LLM 으로 즉답. [self:ask]
@@ -1128,12 +1141,13 @@ def execute(tool_input: dict, context) -> str:
                 return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
             src = os.path.join(project_path, expand_body_path(_src))
             dst = os.path.join(project_path, expand_body_path(_dst))
+            _load_sibling("copy_ops").check_overlap(src, dst)
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err
 
             if not os.path.exists(src):
-                return f"Error: 원본이 존재하지 않습니다: {src}"
+                raise FileNotFoundError(2, "원본이 존재하지 않습니다", src)
 
             # RED 안전판 — 디렉토리 단위 RED 복사는 그랜트가 있어도 금지(파급 과대)
             if _red_is_live_path(dst):
@@ -1163,23 +1177,10 @@ def execute(tool_input: dict, context) -> str:
                 if _red_err:
                     return _red_err
 
-            # 대상 상위 디렉토리 생성
-            os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
-
-            if os.path.isdir(src):
-                # 폴더 복사 (대상이 이미 있으면 삭제 후 복사)
-                if os.path.exists(dst):
-                    shutil.rmtree(dst)
-                shutil.copytree(src, dst)
-                count = sum(len(files) for _, _, files in os.walk(dst))
-                return text_result(f"폴더를 복사했습니다: {os.path.abspath(dst)} ({count}개 파일)")
-            else:
-                # 파일 복사
-                shutil.copy2(src, dst)
-                _red_write_finalize(dst)
-                _vg = _vocab_enforce(dst)   # 어휘 빌드 입력이면 파생물 재생성(09-01)
-                return text_result(f"파일을 복사했습니다: {os.path.abspath(dst)}"
-                                   + (_vocab_gate_mod().note(_vg) if _vg else ""))
+            result = _load_sibling("copy_ops").transfer_path(src, dst)
+            _red_write_finalize(result["path"])
+            _vocab_enforce(result["path"])
+            return json.dumps(result, ensure_ascii=False)
 
         elif tool_name == "move_path":
             _src = tool_input.get("src") or tool_input.get("source")  # src 우선(코퍼스/자연어), source 별칭
@@ -1188,12 +1189,13 @@ def execute(tool_input: dict, context) -> str:
                 return "Error: src(원본)와 dest(대상) 경로가 필요합니다."
             src = os.path.join(project_path, expand_body_path(_src))
             dst = os.path.join(project_path, expand_body_path(_dst))
+            _load_sibling("copy_ops").check_overlap(src, dst)
             scope_err = _validate_path_in_scope(dst, project_path)
             if scope_err:
                 return scope_err
 
             if not os.path.exists(src):
-                return f"Error: 원본이 존재하지 않습니다: {src}"
+                raise FileNotFoundError(2, "원본이 존재하지 않습니다", src)
 
             # RED 안전판 — RED 를 향하거나 RED 에서 빠져나가는 이동은 파일 단위만 + 백업
             if _red_is_live_path(dst) or _red_is_live_path(src):
@@ -1236,19 +1238,9 @@ def execute(tool_input: dict, context) -> str:
                     if _red_err:
                         return _red_err
 
-            # 대상 상위 디렉토리 생성
-            os.makedirs(os.path.dirname(os.path.abspath(dst)), exist_ok=True)
-
-            # 대상이 이미 있으면 삭제
-            if os.path.exists(dst):
-                if os.path.isdir(dst):
-                    shutil.rmtree(dst)
-                else:
-                    os.remove(dst)
-
-            shutil.move(src, dst)
-            _red_write_finalize(dst)
-            return text_result(f"이동 완료: {os.path.abspath(dst)}")
+            result = _load_sibling("copy_ops").transfer_path(src, dst, move=True)
+            _red_write_finalize(result["path"])
+            return json.dumps(result, ensure_ascii=False)
 
         elif tool_name == "delete_path":
             target = os.path.join(project_path, expand_body_path(tool_input["path"]))
@@ -1261,7 +1253,7 @@ def execute(tool_input: dict, context) -> str:
                 # 멱등하게 돌아야 하는 곳에서, 첫 실행이 에러로 파이프를 끊지 않게 한다.
                 if tool_input.get("missing_ok"):
                     return text_result(f"이미 없습니다: {os.path.abspath(target)}")
-                return f"Error: 경로가 존재하지 않습니다: {target}"
+                raise FileNotFoundError(2, "경로가 존재하지 않습니다", target)
 
             abs_target = os.path.abspath(target)
 
@@ -1434,7 +1426,7 @@ def execute(tool_input: dict, context) -> str:
             return json.dumps({"success": False, "error": f"Unknown tool: {tool_name}"}, ensure_ascii=False)
 
     except Exception as e:
-        if tool_name.startswith("read_") or tool_name == "list_directory":
+        if tool_name.startswith("read_") or tool_name in {"list_directory", "copy_path", "move_path", "delete_path"}:
             # 읽기 실패도 성공과 같은 JSON 경계를 사용한다. 평문 Error는
             # document 어댑터에서 파일 부재를 봉투 파손으로 오진하게 한다.
             error_type = ("not_found" if isinstance(e, FileNotFoundError) else

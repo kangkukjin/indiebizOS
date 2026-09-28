@@ -18,13 +18,9 @@ def value_copy(value, seen=None, budget=None, depth=0):
     budget[1] -= 8
     if depth > 64 or budget[0] < 0 or budget[1] < 0:
         raise ValueError('값 변환 한도 초과')
+    from common.value_semantics import native_numeric_scalar
+    value = native_numeric_scalar(value)
     typ = type(value)
-    if typ.__module__ == 'numpy':
-        import numpy as np
-        if isinstance(value, (np.integer, np.floating)):
-            native = value.item()
-            if type(native) in (int, float):
-                return value_copy(native, seen, budget, depth)
     if value is None or typ in (bool, int):
         if typ is int:
             budget[1] -= len(str(value))

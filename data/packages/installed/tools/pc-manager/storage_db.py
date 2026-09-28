@@ -331,8 +331,9 @@ def _scan_directory(path: str, scan_name: Optional[str] = None, progress_callbac
     batch = []
     conn = _get_connection(scan_id)
 
+    errors = []
     def walk_error(exc):
-        raise exc
+        errors.append({"path": getattr(exc, "filename", None), "error": str(exc)})
 
     try:
         # 삭제·배치 적재 전체가 한 트랜잭션. 독자는 직전 완성본을 본다.
@@ -345,7 +346,11 @@ def _scan_directory(path: str, scan_name: Optional[str] = None, progress_callbac
                     if filename in EXCLUDE_FILES or filename.startswith('.'):
                         continue
                     filepath = os.path.join(root, filename)
-                    stat = os.stat(filepath)
+                    try:
+                        stat = os.stat(filepath)
+                    except OSError as exc:
+                        walk_error(exc)
+                        continue
                     batch.append({
                         'path': filepath, 'filename': filename,
                         'extension': os.path.splitext(filename)[1].lower().lstrip('.'),
@@ -366,9 +371,15 @@ def _scan_directory(path: str, scan_name: Optional[str] = None, progress_callbac
     finally:
         conn.close()
     update_scan_stats(scan_id, file_count, total_size)
+    scans = _load_scans_json()
+    for scan in scans:
+        if scan["id"] == scan_id:
+            scan["source_complete"] = not errors
+            scan["scan_errors"] = errors
+    _save_scans_json(scans)
     return {"success": True, "scan_id": scan_id, "name": result.get('name'),
             "file_count": file_count, "total_size_mb": round(total_size / (1024 * 1024), 2),
-            "error_count": 0}
+            "error_count": len(errors), "errors": errors, "source_complete": not errors}
 
 
 def get_summary_all() -> Dict:
@@ -396,6 +407,8 @@ def get_summary_all() -> Dict:
 
     return {
         "success": True,
+        "source_complete": all(s.get("source_complete", True) for s in scans),
+        "errors": [e for s in scans for e in s.get("scan_errors", [])],
         "volume_count": len(scans),
         "total_file_count": total_files,
         "total_size_mb": round(total_size / (1024 * 1024), 2),
@@ -407,95 +420,71 @@ def get_summary_all() -> Dict:
     }
 
 
-def get_summary(root_path: str) -> Dict:
-    """스캔 요약 정보"""
-    root_path = _normalize_path(os.path.abspath(expand_body_path(root_path)))
-
-    # 스캔 찾기
+def _resolve_scan(root_path):
+    """Resolve a name, path token, or subtree to the most specific scan."""
     scans = _load_scans_json()
-    scan = None
-    for s in scans:
-        if _normalize_path(s.get('root_path', '')) == root_path:
-            scan = s
-            break
+    named = [x for x in scans if x['name'] == root_path]
+    if len(named) > 1:
+        raise ValueError("같은 이름의 스캔이 여러 개입니다. root_path를 지정하세요.")
+    path = named[0]['root_path'] if named else _normalize_path(os.path.abspath(expand_body_path(root_path)))
+    enclosing = [x for x in scans if os.path.commonpath([x['root_path'], path]) == x['root_path']]
+    return (max(enclosing, key=lambda x: len(x['root_path'])) if enclosing else None), path
 
+
+def get_summary(root_path: str) -> Dict:
+    """Complete extension and immediate-folder totals, including subtree queries."""
+    scan, path = _resolve_scan(root_path)
     if not scan:
-        # 오류문 행동지시화 (2026-08-16 8회차 · 11회차 F14: folder_note 문구가 summary 호출자에게
-        # 이식돼 있던 것을 문맥 중립으로 교정 — get_summary 는 일반 요약 조회다).
-        return {"success": False,
-                "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 "
-                         "상위 폴더를 스캔한 뒤 다시 조회하세요."}
-
-    scan_id = scan['id']
-    db_path = _get_db_path(scan_id)
-
-    if not os.path.exists(db_path):
-        return {"success": False, "error": "DB 파일이 없습니다."}
-
-    conn = _get_connection(scan_id)
-    cursor = conn.cursor()
-
-    # 확장자별 통계
-    cursor.execute("""
-        SELECT extension, COUNT(*) as count, SUM(size) as total_size
-        FROM files
-        GROUP BY extension ORDER BY total_size DESC LIMIT 20
-    """)
-    ext_stats = []
-    for row in cursor.fetchall():
-        ext_stats.append({
-            "extension": row['extension'] or '(없음)',
-            "count": row['count'],
-            "total_size_mb": round((row['total_size'] or 0) / (1024 * 1024), 2)
-        })
-
-    conn.close()
-
-    return {
-        "success": True,
-        "scan_id": scan['id'],
-        "name": scan['name'],
-        "root_path": scan['root_path'],
-        "last_scan": scan.get('last_scan'),
-        "file_count": scan.get('file_count', 0),
-        "total_size_mb": round(scan.get('total_size', 0) / (1024 * 1024), 2),
-        "top_extensions": ext_stats,
-        "items": ext_stats,
-        "count": len(ext_stats)
-    }
+        return {"success": False, "error": "이 경로를 품은 스캔이 없습니다. 먼저 상위 폴더를 스캔하세요."}
+    conn = _get_connection(scan['id'])
+    try:
+        # Prefix matching in Python avoids SQL LIKE metacharacter surprises.
+        rows = [dict(row) for row in conn.execute('SELECT path, extension, size FROM files')
+                if os.path.commonpath([row['path'], path]) == path]
+    finally:
+        conn.close()
+    extensions, folders = {}, {}
+    for row in rows:
+        ext = row['extension'] or '(없음)'
+        relative = os.path.relpath(row['path'], path)
+        folder = relative.split(os.sep)[0] if os.sep in relative else '.'
+        for groups, key in ((extensions, ext), (folders, folder)):
+            item = groups.setdefault(key, {'count': 0, 'total_size': 0})
+            item['count'] += 1
+            item['total_size'] += row['size']
+    def totals(groups, field):
+        return [{field: k, **v, 'total_size_mb': round(v['total_size'] / 1048576, 2)}
+                for k, v in sorted(groups.items(), key=lambda kv: (-kv[1]['total_size'], kv[0]))]
+    ext_stats, folder_stats = totals(extensions, 'extension'), totals(folders, 'folder')
+    return {'success': True, 'scan_id': scan['id'], 'name': scan['name'], 'root_path': path,
+            'last_scan': scan.get('last_scan'), 'file_count': len(rows),
+            'total_size_mb': round(sum(x['size'] for x in rows) / 1048576, 2),
+            'top_extensions': ext_stats, 'folders': folder_stats, 'items': ext_stats,
+            'count': len(ext_stats), 'truncated': False,  # truncation-scope: selection — 실제 반환 행 수와 전체 수 비교; 상한이 없으면 전량
+            'source_complete': scan.get('source_complete', True), 'errors': scan.get('scan_errors', [])}
 
 
 def add_annotation(root_path: str, folder_path: str, note: str) -> Dict:
-    """폴더에 주석 추가"""
-    root_path = _normalize_path(os.path.abspath(expand_body_path(root_path)))
-
-    # 스캔 찾기
-    scans = _load_scans_json()
-    scan = None
-    for s in scans:
-        if _normalize_path(s.get('root_path', '')) == root_path:
-            scan = s
-            break
-
-    if not scan:
-        # 오류문 행동지시화 (2026-08-16 8회차): folder_note 는 스캔된 볼륨 안 경로에만
-        # 붙는다 — 전제를 안 밝히면 "고장"으로 오독된다.
-        return {"success": False,
-                "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 "
-                         "상위 폴더를 스캔한 뒤 folder_note 를 쓰세요."}
-
-    conn = _get_connection(scan['id'])
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        INSERT INTO annotations (folder_path, note)
-        VALUES (?, ?)
-    """, (folder_path, note))
-
-    conn.commit()
-    conn.close()
-
-    return {"success": True, "folder_path": folder_path, "note": note}
+    """Set one current note per existing folder, inside the selected scan."""
+    with _scans_lock:
+        scan, _ = _resolve_scan(root_path)
+        folder_path = _normalize_path(os.path.abspath(expand_body_path(folder_path)))
+        if not scan or os.path.commonpath([scan['root_path'], folder_path]) != scan['root_path']:
+            return {'success': False, 'error': '주석 폴더는 선택한 스캔 안에 있어야 합니다.'}
+        if not os.path.isdir(folder_path):
+            return {'success': False, 'error': f'존재하는 폴더가 아닙니다: {folder_path}'}
+        conn = _get_connection(scan['id'])
+        try:
+            with conn:
+                # Also consolidate historical duplicates after path normalization.
+                for row in conn.execute('SELECT id, folder_path FROM annotations').fetchall():
+                    old = _normalize_path(os.path.abspath(expand_body_path(row['folder_path'])))
+                    if old == folder_path:
+                        conn.execute('DELETE FROM annotations WHERE id = ?', (row['id'],))
+                conn.execute('INSERT INTO annotations (folder_path, note) VALUES (?, ?)', (folder_path, note))
+        finally:
+            conn.close()
+    return {'success': True, 'folder_path': folder_path, 'note': note}
 
 
 def get_annotations_all() -> Dict:
@@ -525,20 +514,12 @@ def get_annotations_all() -> Dict:
         except Exception:
             continue
 
-    return {"success": True, "annotations": annotations}
+    return {"success": True, "annotations": annotations, "items": annotations, "count": len(annotations)}
 
 
 def get_annotations(root_path: str) -> Dict:
     """폴더 주석 조회"""
-    root_path = _normalize_path(os.path.abspath(expand_body_path(root_path)))
-
-    # 스캔 찾기
-    scans = _load_scans_json()
-    scan = None
-    for s in scans:
-        if _normalize_path(s.get('root_path', '')) == root_path:
-            scan = s
-            break
+    scan, root_path = _resolve_scan(root_path)
 
     if not scan:
         return {"success": False, "error": "스캔 데이터가 없습니다.", "annotations": []}
@@ -560,7 +541,7 @@ def get_annotations(root_path: str) -> Dict:
         })
 
     conn.close()
-    return {"success": True, "annotations": annotations}
+    return {"success": True, "annotations": annotations, "items": annotations, "count": len(annotations)}
 
 
 # 하위 호환성을 위한 별칭

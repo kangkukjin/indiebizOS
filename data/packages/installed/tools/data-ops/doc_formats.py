@@ -205,6 +205,8 @@ def _resolve_image_bytes(src: str):
             import urllib.request
             with urllib.request.urlopen(s, timeout=15) as r:
                 return io.BytesIO(r.read())
+        from runtime_utils import expand_body_path
+        s = expand_body_path(s)
         if os.path.isfile(s):
             with open(s, "rb") as f:
                 return io.BytesIO(f.read())
@@ -335,7 +337,7 @@ def _add_hyperlink(paragraph, url: str, text: str):
         paragraph.add_run(f"{text}: {url}" if text else url)
 
 
-def _doc_blocks_to_docx(blocks: list, title: str, out_path: str):
+def _doc_blocks_to_docx(blocks: list, title: str, out_path: str, meta: str = ""):
     """문서 IR → .docx (python-docx). html emitter와 같은 IR을 소비.
     table 블록 = 데이터 통화 {columns,rows} 그대로 재사용."""
     from docx import Document
@@ -346,6 +348,8 @@ def _doc_blocks_to_docx(blocks: list, title: str, out_path: str):
     doc = Document()
     if title:
         doc.add_heading(str(title), level=0)
+    if meta:
+        doc.add_paragraph(str(meta), style="Subtitle")
 
     for b in blocks:
         if not isinstance(b, dict):
@@ -452,7 +456,7 @@ def _doc_blocks_to_docx(blocks: list, title: str, out_path: str):
     doc.save(out_path)
 
 
-def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
+def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str, meta: str = ""):
     """문서 IR → .pptx (python-pptx). ★종류 경계 주의: 슬라이드 IR이 아니라 *문서 IR을 슬라이드로 투영*.
     문서 IR이 정본, pptx는 emitter일 뿐 — heading(level≤2)이 새 슬라이드, 그 아래 내용이 글머리표.
     슬라이드 전용 시각 레이아웃이 필요하면 self:slide{op:create} 를 써야지 이걸 쓰면 안 됨."""
@@ -468,6 +472,8 @@ def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
     if title:
         s = prs.slides.add_slide(title_layout)
         s.shapes.title.text = str(title)
+        if meta:
+            s.placeholders[1].text = str(meta)
 
     state = {"slide": None, "body": None}
 
@@ -484,6 +490,12 @@ def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
             body_tf.clear()
             body_tf.word_wrap = True
         state["slide"], state["body"] = s, body_tf
+
+    def media_slide():
+        heading = state["slide"].shapes.title.text if state["slide"] is not None else ""
+        if state["slide"] is None or (state["body"] is not None and state["body"].text.strip()):
+            new_content_slide(heading)
+        return state["slide"]
 
     def add_bullet(text, level=0, italic=False, mono=False):
         if state["body"] is None:
@@ -537,9 +549,9 @@ def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
         elif t == "image":
             stream = _resolve_image_bytes(b.get("src") or b.get("path") or "")
             if stream is not None:
-                s = prs.slides.add_slide(blank)
+                s = media_slide()
                 try:
-                    s.shapes.add_picture(stream, Inches(0.6), Inches(0.6), width=SW - Inches(1.2))
+                    s.shapes.add_picture(stream, Inches(0.6), Inches(1.5), width=SW - Inches(1.2))
                 except Exception:
                     pass
                 cap = b.get("caption")
@@ -553,8 +565,8 @@ def _doc_blocks_to_pptx(blocks: list, title: str, out_path: str):
             ncol = max([len(cols)] + [len(r) for r in rows] or [0])
             nrow = len(rows) + (1 if cols else 0)
             if ncol and nrow:
-                s = prs.slides.add_slide(blank)
-                gt = s.shapes.add_table(nrow, ncol, Inches(0.5), Inches(0.6),
+                s = media_slide()
+                gt = s.shapes.add_table(nrow, ncol, Inches(0.5), Inches(1.5),
                                         SW - Inches(1.0), Inches(0.4) * nrow).table
                 ri = 0
                 if cols:

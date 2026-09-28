@@ -153,6 +153,11 @@ def _trade_types(deal, lease):
     """
     deal = (deal or "").strip()
     lease = (lease or "").strip()
+    deal = (deal or "rent").strip()
+    if deal == "lease":
+        lease, deal = lease or "jeonse", "rent"
+    if deal not in ("trade", "rent", "전세", "jeonse", "월세", "wolse", "monthly") or lease not in ("", "전세", "jeonse", "월세", "wolse", "monthly"):
+        raise ValueError("deal은 trade/rent/lease(전세), lease는 전세/월세입니다.")
     if not lease and deal in ("전세", "jeonse", "월세", "wolse", "monthly"):
         lease, deal = deal, "rent"  # deal 에 잘못 실린 임대유형을 lease 로 이관
     if lease in ("전세", "jeonse"):
@@ -219,10 +224,17 @@ def _article_to_item(a):
         "_deposit_man": deposit_man,
         "_rent_man": rent_man,
         "_trade": a.get("tradeTypeName"),
+        "deal_type": a.get("tradeTypeName"),
+        "area_m2": float(a["area2"]) if a.get("area2") not in (None, "") else None,
+        "floor": a.get("floorInfo"),
+        "currency": "KRW",
     }
     if deposit_man is not None:
         out["price"] = deposit_man * 10000  # 칸 규약 2: 원 단위 정수 (매매가·보증금)
+        if a.get("tradeTypeName") != "매매":
+            out["deposit_won"] = out["price"]
     if rent_man is not None:
+        out["rent_won"] = rent_man * 10000
         out["rent"] = rent_man * 10000      # 월세 (원 단위)
     return out
 

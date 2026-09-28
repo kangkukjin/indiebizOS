@@ -142,13 +142,21 @@ _MERCHANT_PATTERNS = (
 
 def _clean_merchant(s: str) -> str:
     s = re.sub(r"^(하나카드|하나페이|청주페이|결제\s*완료|승인|사용|알림|안내)\s*", "", s.strip())
-    s = s.strip(" -·[]()")
+    s = re.split(r"(?:시\s*)?인센티브|\(2\)\s*총\s*보유|\s*/\s*(?:신용|체크|\()", s)[0]
+    s = s.strip(" -·[]")
+    if re.fullmatch(r"(?:이|가)?\s*(?:입니다|출금되었습니다|결제되었습니다)[.!]?", s):
+        return ""
     return s if 2 <= len(s) <= 30 else ""
 
 
 def _merchant_from(text: str) -> str:
     if not text:
         return ""
+    # Card approval body: merchant / credit-or-debit(...) / timestamp / accumulated spend.
+    # Parse this structure before amount-based patterns mistake the cumulative sum.
+    first = re.match(r"^(.+?)\s*/\s*(?:신용|체크)\(", text.strip())
+    if first:
+        return _clean_merchant(first.group(1))
     for pat in _MERCHANT_PATTERNS:
         mm = re.search(pat, text)
         if mm:
@@ -178,6 +186,11 @@ _RE_PAYMENT_EVENT = re.compile(
 def _parse_payment(title: str, body: str) -> dict:
     text = " ".join(x for x in (title, body) if x)
     out = {"amount": 0, "merchant": "", "type": "approve"}
+    if re.search(r"(?:카드\s*대금|결제\s*대금|청구\s*금액|이용대금).*(?:출금|납부|결제)|(?:출금|납부).*카드\s*대금", text):
+        out["type"] = "transfer"
+        amount = _RE_AMOUNT.search(text)
+        out["amount"] = int(amount.group(1).replace(",", "")) if amount else 0
+        return out
     # 결제 알림에 붙은 인센티브 안내는 별도 수령 거래로 바꾸지 않는다.
     receipt = _RE_REWARD_RECEIPT.search(body or title)
     if not _RE_PAYMENT_EVENT.search(text):

@@ -109,6 +109,9 @@ def catalog_entry(node: str, action: str, params: Dict[str, Any], *,
         if isinstance(op, str) and not _dynamic(op):
             return shapes.get(f"{q}#{op}")
         return None
+    # A baseline observation is valid only for its declared shape coordinates.
+    changed_axes = {k for k, default in ad.get("shape_axes", {}).items()
+                    if k in params and params[k] != default}
     # 변이 축(F20-1): param 리터럴이 변이 키와 맞으면 그 열이 정본
     for k, v in shapes.items():
         if not k.startswith(q + "@"):
@@ -119,7 +122,10 @@ def catalog_entry(node: str, action: str, params: Dict[str, Any], *,
             continue
         val = params.get(p)
         if val is not None and not _dynamic(val) and str(val) == want:
-            return v
+            if not changed_axes - {p}:
+                return v
+    if changed_axes:
+        return None
     if isinstance(op, str) and not _dynamic(op):
         ent = shapes.get(f"{q}#{op}")
         if ent:

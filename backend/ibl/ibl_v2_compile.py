@@ -102,7 +102,8 @@ class Compiler:
             if item not in self.guards:
                 self.guards.append(item)
         elif not compatible(actual, expected):
-            self.issue(node, "TYPE", f"{expected}가 필요하지만 {actual}입니다.",
+            hint = " 레코드 봉투의 행 목록은 .items로 꺼내 전달하세요." if expected.kind == "List" and actual.kind == "Record" else ""
+            self.issue(node, "TYPE", f"{expected}가 필요하지만 {actual}입니다.{hint}",
                        expected=str(expected), actual=str(actual))
 
     def pure(self, node):
@@ -276,6 +277,9 @@ class Compiler:
             return self.sequence(node, env, names, readonly, final)
         if kind == "literal":
             if type(d["value"]) is str:
+                import re
+                if re.search(r"\$[\w]+\.[\w]", d["value"]):
+                    self.warn(node, "LITERAL_DOLLAR", "이 문자열의 $변수.필드는 판본 2에서 문자 그대로입니다. 값 참조나 f 문자열의 ${표현식}을 사용하세요.")
                 return Type("Text", literal=d["value"])
             return infer(d["value"])
         if kind == "ref":
@@ -515,7 +519,8 @@ class Compiler:
                 d['dependency_args'], d['dependency_snapshot'] = selectors, snapshot
                 self.call_dependencies[node.id] = snapshot
             contract = selected(spec.contract, values)
-            for problem in ([] if arg_type.open else problems(contract, values)):
+            from ibl_value_checks import value_problems
+            for problem in ([] if arg_type.open else problems(contract, values)) + value_problems(contract, values, self.registry, self.definitions):
                 self.issue(node, 'ARGUMENT_CONTRACT', problem)
             if any(values.get(k) is UNRESOLVED for variant in spec.contract.get('variants', []) for k in variant['when']):
                 self.guards.append({'source_span': span(self.source, node), 'expected': '동적 인자에 따른 도구 계약은 실행 직전에 확인합니다.'})
@@ -673,7 +678,10 @@ class Compiler:
             elif name not in args and default is None:
                 self.issue(node, "MISSING_ARGUMENT", f"필수 인자 누락: {name}")
         for name in args.keys() - params.keys():
-            self.issue(node, "UNKNOWN_ARGUMENT", f"알 수 없는 인자: {name}")
+            from difflib import get_close_matches
+            candidates = get_close_matches(name, params, n=3, cutoff=0.45)
+            hint = f" 비슷한 인자: {', '.join(candidates)}." if candidates else ""
+            self.issue(node, "UNKNOWN_ARGUMENT", f"알 수 없는 인자: {name}.{hint} 사용 가능한 인자: {', '.join(sorted(params))}")
 
     def each(self, node, args, env, names, piped):
         self.arguments(node, args, {"items": None, "mode": UNIT, "on_error": UNIT, "parallel": UNIT}, "items", piped)

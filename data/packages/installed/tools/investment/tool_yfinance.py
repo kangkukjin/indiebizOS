@@ -118,15 +118,22 @@ def get_crypto_price(coin_id: str = "bitcoin", days: int = 0, max_points: int = 
                     raw = chart_resp.json().get("prices", [])
                     pts = [
                         {"date": datetime.fromtimestamp(ts / 1000).strftime("%Y-%m-%d"),
-                         "close": round(price, 6)}
+                         "close": round(price, 6), "currency": "USD"}
                         for ts, price in raw
                     ]
-                    if max_points and len(pts) > max_points:
-                        step = max(1, len(pts) // max_points)
-                        pts = pts[::step]
-                    result["data"]["prices"] = pts
-            except Exception:
-                pass  # 이력 실패해도 현재가는 정상 반환
+                    total = len(pts)
+                    pts = downsample_prices(pts, max_points) if max_points else pts
+                    result["data"].update(prices=pts, prices_currency="USD", total=total,
+                                          truncated=len(pts) < total)  # truncation-scope: selection — 실제 반환 행 수와 전체 수 비교; 상한이 없으면 전량
+                    # days requests a series, so items must represent that series.
+                    result.update(items=pts, count=len(pts), total=total, truncated=len(pts) < total)  # truncation-scope: selection — 실제 반환 행 수와 전체 수 비교; 상한이 없으면 전량
+                    if len(pts) < total:
+                        result["truncations"] = [{"scope": "selection", "reason": "max_points",
+                                                   "limit": max_points, "retained": len(pts)}]
+                else:
+                    result.update(source_complete=False, warning=f"코인 이력 조회 HTTP {chart_resp.status_code}")
+            except Exception as exc:
+                result.update(source_complete=False, warning=f"코인 이력 조회 실패: {exc}")
 
         return result
 

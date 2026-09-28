@@ -15,6 +15,7 @@
     "base/episode_logger",
     "base/episode_orphans",
     "base/episode_trace_reader",
+    "base/execution_commit",
     "base/execution_workers",
     "base/history_excerpt",
     "base/ibl_code_corpus",
@@ -141,6 +142,7 @@
     "datastore/boot_status",
     "datastore/business_manager",
     "datastore/calendar_manager",
+    "datastore/calendar_rules",
     "datastore/conversation_db",
     "datastore/decision_ledger",
     "datastore/distill_ledger",
@@ -263,6 +265,7 @@
     "ibl/ibl_v2_runtime",
     "ibl/ibl_v2_store",
     "ibl/ibl_v2_types",
+    "ibl/ibl_value_checks",
     "ibl/ibl_value_types",
     "ibl/member_bridge",
     "ibl/member_files",
@@ -493,8 +496,8 @@
     "test_*"
   ],
   "counts": {
-    "total": 418,
-    "engine": 392,
+    "total": 421,
+    "engine": 395,
     "blocklist": 26
   }
 }

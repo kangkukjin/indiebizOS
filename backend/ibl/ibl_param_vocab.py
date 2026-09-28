@@ -173,6 +173,8 @@ def allowed_param_keys(node: str, action: str,
     if action_config.get("open_params"):
         return None
     if action_config.get("router") != "handler":
+        if action_config.get("open_params") is False and isinstance(action_config.get("params"), dict):
+            return set(action_config["params"]) | _alias_keys(action_config) | UNIVERSAL_PARAM_KEYS | RUNTIME_META_KEYS
         return None
     tool_name = action_config.get("tool")
     if not tool_name:

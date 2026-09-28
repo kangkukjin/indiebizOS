@@ -100,6 +100,11 @@ def _geocode(region):
 def _sales_types(deal, lease):
     """deal/lease → 직방 salesTypes 목록. deal=trade→매매, rent→전세+월세. lease가 있으면 그걸로 좁힘."""
     lease = (lease or "").strip()
+    deal = (deal or "rent").strip()
+    if deal == "lease":
+        lease, deal = lease or "jeonse", "rent"
+    if deal not in ("trade", "rent", "전세", "jeonse", "월세", "wolse", "monthly") or lease not in ("", "전세", "jeonse", "월세", "wolse", "monthly"):
+        raise ValueError("deal은 trade/rent/lease(전세), lease는 전세/월세입니다.")
     if lease in ("전세", "jeonse"):
         return ["전세"]
     if lease in ("월세", "wolse", "monthly"):
@@ -315,6 +320,17 @@ def get_zigbang_listings(tool_input: dict):
     # deposit/rent는 API 원단위인 만원(네이버의 price/rent는 원)이다.
     # map_data 봉투는 지도 위젯용으로 별도 유지(center 포함, items에서 유도 불가한 줌 기준점).
     items_out = [dict(r) for r in rows]
+    for row in items_out:
+        row.update(currency="KRW", deal_type=row.get("salesType"))
+        for original, canonical in (("deposit", "deposit_won"), ("rent", "rent_won")):
+            raw = row.get(original)
+            if raw is not None:
+                try:
+                    row[canonical] = int(float(str(raw).replace(",", "")) * 10000)
+                except (ValueError, TypeError):
+                    pass
+        if "deposit_won" in row:
+            row["price"] = row["deposit_won"]
     lease_label = "/".join(sales_types)
     message = f"직방 '{matched or region}' 반경 {radius}m · {cat} {lease_label} — {len(rows)}건 (상세는 items)"
     return {

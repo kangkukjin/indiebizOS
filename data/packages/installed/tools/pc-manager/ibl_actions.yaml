@@ -201,6 +201,10 @@ nodes:
             detail: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
+        params:
+          note: string
+          path: string
+          folder_path: string
         aliases:
           query: [q]
         returns: scalar

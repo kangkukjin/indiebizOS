@@ -43,10 +43,20 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 from runtime_utils import get_base_path
+from calendar_rules import normalized_event
+from functools import wraps
 
 BASE_PATH = get_base_path()
 # 설정 저장 잠금 — 동시 발화 스레드들의 _save_config 경주 봉쇄(B54-4). 프로세스 전역 한 개.
 _SAVE_LOCK = threading.RLock()
+def _locked(fn):
+    @wraps(fn)
+    def wrapped(*args, **kwargs):
+        with _SAVE_LOCK:
+            return fn(*args, **kwargs)
+    return wrapped
+
+
 DATA_PATH = BASE_PATH / "data"
 OUTPUTS_PATH = BASE_PATH / "outputs"
 CALENDAR_CONFIG_PATH = DATA_PATH / "calendar_events.json"
@@ -227,13 +237,14 @@ class CalendarManagerBase:
 
         return result
 
+    @_locked
     def add_event(self, title: str, event_date: str = None, event_type: str = "other",
                   repeat: str = "none", description: str = "", event_time: str = None,
                   action: str = None, action_params: dict = None,
                   enabled: bool = True, weekdays: List[int] = None,
                   month: int = None, day: int = None,
                   interval_hours: int = None,
-                  owner_project_id: str = None, owner_agent_id: str = None) -> dict:
+                  owner_project_id: str = None, owner_agent_id: str = None, execute_at: str = None) -> dict:
         """이벤트 추가 (캘린더 이벤트 + 실행 가능 이벤트 모두)"""
         event_id = f"evt_{uuid.uuid4().hex[:12]}"
         event = {
@@ -269,6 +280,9 @@ class CalendarManagerBase:
         if repeat == "interval" and interval_hours:
             event["interval_hours"] = interval_hours
 
+        if execute_at:
+            event["execute_at"] = execute_at
+        event = normalized_event(event)
         self.config.setdefault("events", []).append(event)
         self._save_config()
 
@@ -276,6 +290,7 @@ class CalendarManagerBase:
             self._log(f"실행 이벤트 추가: {title} ({repeat}, {event_time or ''})")
         return event
 
+    @_locked
     def update_event(self, event_id: str, **kwargs) -> bool:
         """이벤트 수정"""
         valid_keys = ("title", "date", "type", "repeat", "description", "time",
@@ -285,7 +300,8 @@ class CalendarManagerBase:
         events = self.config.get("events", [])
         for evt in events:
             if evt["id"] == event_id:
-                for key, value in kwargs.items():
+                candidate = normalized_event({**evt, **{k: v for k, v in kwargs.items() if k in valid_keys}}, kwargs)
+                for key, value in candidate.items():
                     if key in valid_keys:
                         if key == "action_params" and isinstance(value, dict) and isinstance(value.get("pipeline"), str):
                             from ibl_edition import pin_source
@@ -372,6 +388,7 @@ class CalendarManagerBase:
             return True
         return False
 
+    @_locked
     def delete_event(self, event_id: str) -> bool:
         """이벤트 삭제"""
         events = self.config.get("events", [])
@@ -424,6 +441,7 @@ class CalendarManagerBase:
         """스케줄러 호환 - delete_event 래퍼"""
         return self.delete_event(task_id)
 
+    @_locked
     def toggle_task(self, task_id: str) -> Optional[bool]:
         """작업 활성화/비활성화 토글"""
         events = self.config.get("events", [])
@@ -476,7 +494,7 @@ class CalendarManagerBase:
                 if self._should_run_task(evt, now):
                     threading.Thread(
                         target=self._execute_task,
-                        args=(evt,),
+                        args=(evt,), kwargs={"due_only": True},
                         daemon=True
                     ).start()
 
@@ -527,6 +545,15 @@ class CalendarManagerBase:
         """작업 실행 여부 판단"""
         if not task.get("enabled", True):
             return False
+        try:
+            task = normalized_event(task)
+        except ValueError:
+            return False  # Invalid stored records never become an everyday job.
+        if task.get("execute_at"):
+            try:
+                return not task.get("last_run") and now >= datetime.fromisoformat(task["execute_at"])
+            except (TypeError, ValueError):
+                return False
 
         current_time = now.strftime("%H:%M")
         repeat = task.get("repeat", "daily")
@@ -607,14 +634,8 @@ class CalendarManagerBase:
             return True
 
         elif repeat == "monthly":
-            evt_date_str = task.get("date", "")
-            if evt_date_str:
-                try:
-                    evt_day = datetime.strptime(evt_date_str, "%Y-%m-%d").day
-                    if now.day != evt_day:
-                        return False
-                except ValueError:
-                    return False
+            if now.day != task.get("day"):
+                return False
             if last_run:
                 try:
                     last_run_date = datetime.fromisoformat(last_run).date()
@@ -644,7 +665,7 @@ class CalendarManagerBase:
         return False
 
     @runtime_work.tracked("schedule", defer=True)
-    def _execute_task(self, task: dict):
+    def _execute_task(self, task: dict, due_only=False):
         """작업 실행"""
         action_name = task.get("action")
         action_func = self.actions.get(action_name)
@@ -656,8 +677,16 @@ class CalendarManagerBase:
         # last_run 은 발화 *시작* 시점에 찍는다 — 완료 시점에 찍으면 긴 작업(건강검사 ~5분)
         # 도중 60초 틱이 계속 due 로 보고 재발화해 같은 작업이 하루 3~8회 겹쳤다(실측).
         # 시작 기준이라 interval 기준점이 소요시간만큼 매일 밀리는 드리프트(+4분/일)도 함께 소멸.
-        task["last_run"] = datetime.now().isoformat()
-        self._save_config()
+        with _SAVE_LOCK:
+            current = next((e for e in self.config.get("events", []) if e["id"] == task["id"]), None)
+            if current is None or (due_only and not self._should_run_task(current, datetime.now())):
+                return None
+            task = current
+            action_func = self.actions.get(task.get("action"))
+            if action_func is None:
+                return None
+            task["last_run"] = datetime.now().isoformat()
+            self._save_config()
 
         self._log(f"작업 시작: {task.get('title', task.get('name', 'unknown'))}")
 

@@ -134,6 +134,11 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
     if not pipeline:
         return json.dumps({"success": False, "error": "pipeline은 필수입니다. 실행할 IBL 코드를 지정하세요."}, ensure_ascii=False)
 
+    from workflow_engine import preflight_sentence
+    checked = preflight_sentence(pipeline, inputs=params.get('inputs'))
+    if not checked.get('runnable'):
+        return json.dumps({'success': False, 'error': f"등록할 문장 오류: {checked.get('problem')}"}, ensure_ascii=False)
+
     # 'at' 통합 파라미터: "2026-03-10 09:00" 또는 "09:00" 또는 "2026-03-10T09:00:00"
     # date/time을 각각 지정하지 않아도 at 하나로 처리
     at_param = params.get("at", "")
@@ -152,7 +157,9 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
 
     minutes = params.get("minutes", 0)
     seconds = params.get("seconds", 0)
-    repeat = params.get("repeat", "none")
+    repeat = str(params.get("repeat", "none")).strip().lower()
+    if repeat == "once":
+        repeat = "none"
     title = params.get("title", pipeline[:40])
     cm = get_calendar_manager()
 
@@ -236,6 +243,7 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
                 event_type="schedule",
                 repeat="none",
                 event_time=execute_time_hm,
+                execute_at=execute_at.isoformat(),
                 action="run_pipeline",
                 action_params={"pipeline": pipeline, "inputs": params.get("inputs", {})},
                 owner_project_id=project_id,
@@ -243,62 +251,11 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
             )
             event_id = event.get("id")
         except Exception as e:
-            print(f"[Schedule] 캘린더 등록 실패: {e}")
-
-        # 타이머 시작 (정밀 실행) — owner 컨텍스트에서 실행
-        # 크로스 위임 시: 호출자(A)의 path가 아니라 target(B)의 path를 써야 함
-        # project_id로 resolve하도록 "."로 설정 → _delayed_run에서 ProjectManager로 해결
-        _is_cross = bool(target_project_id or target_agent_id)
-        _timer_project_path = "." if _is_cross else (project_path or ".")
-        _timer_project_id = project_id
-        # 표면 등록(진짜 에이전트 없음)은 행위자도 비운다 — 옛 판은 기본값 "system_ai" 가 새어
-        # 알림 라벨·실행 신원이 "컨텐츠/system_ai" 로 찍혔다(B54-2 잔재).
-        _timer_agent_id = owner_agent or ("system_ai" if project_id == "__system_ai__" else "")
+            return json.dumps({"success": False, "error": f"캘린더 등록 실패: {e}"}, ensure_ascii=False)
 
         def _delayed_run():
-            try:
-                from ibl_parser import parse as ibl_parse
-                from workflow_engine import execute_pipeline
-
-                if event_id:
-                    try:
-                        get_calendar_manager().update_event(event_id, enabled=False)
-                    except Exception:
-                        pass
-
-                # owner의 project_path에서 실행
-                run_path = _timer_project_path
-                if run_path == "." and _timer_project_id and _timer_project_id != "__system_ai__":
-                    try:
-                        from project_manager import ProjectManager
-                        pm = ProjectManager()
-                        resolved = pm.get_project_path(_timer_project_id)
-                        if resolved and resolved.exists():
-                            run_path = str(resolved)
-                    except Exception:
-                        pass
-
-                print(f"[Schedule] ⏰ 타이머 만료, 실행: {pipeline[:80]}... (context: {_timer_project_id}/{_timer_agent_id})")
-                if pipeline:
-                    from ibl_scheduled import execute_scheduled
-                    result = execute_scheduled(
-                        pipeline, run_path, _timer_agent_id, inputs=params.get("inputs"))
-                    print(f"[Schedule] 완료: success={result.get('success')}")
-
-                    # 결과를 소유자에게 전달 — 성공·실패 모두 (B54-3: 옛 판은 성공만, 그것도
-                    # 없는 메서드를 불러 삼켰다 → 지연 실행의 실패가 아무에게도 안 닿았다).
-                    try:
-                        task_for_delivery = {
-                            "title": title,
-                            "owner_project_id": _timer_project_id,
-                            "owner_agent_id": _timer_agent_id,
-                            "action_params": {"pipeline": pipeline},
-                        }
-                        cm._deliver_result_to_chat(task_for_delivery, _timer_agent_id, pipeline, result)
-                    except Exception as e:
-                        print(f"[Schedule] 결과 전달 실패: {e}")
-            except Exception as e:
-                print(f"[Schedule] 실행 실패: {e}")
+            # The persisted event owns execution. The timer only wakes its executor.
+            cm._execute_task(event, due_only=True)
 
         timer = threading.Timer(total_seconds, _delayed_run)
         timer.daemon = True
@@ -392,6 +349,8 @@ def _execute_schedule(params: dict, agent_id: str = None, project_path: str = No
                 owner_project_id=project_id,
                 owner_agent_id=owner_agent or ("system_ai" if project_id == "__system_ai__" else ""),
                 weekdays=params.get("weekdays"),
+                month=params.get("month"),
+                day=params.get("day"),
                 interval_hours=params.get("interval_hours"),
             )
             event_id = event.get("id")

@@ -179,18 +179,19 @@ def merge_synced_rows(rows: list, owner: str = None) -> list:
     new_rows = []
     with get_db_connection() as conn:
         oid = owner_id_of(conn, owner)
+        conn.execute("CREATE TABLE IF NOT EXISTS notification_evidence (ext_id TEXT PRIMARY KEY, owner_id INTEGER, raw TEXT NOT NULL)")
         for r in rows:
-            if r.get('type') == 'charge':
+            conn.execute("INSERT OR IGNORE INTO notification_evidence VALUES (?,?,?)",
+                         (r['ext_id'], oid, json.dumps(r, ensure_ascii=False)))
+            if r.get('type') in ('charge', 'transfer'):
                 continue
             tx_type = 'income' if r.get('type') == 'income' else 'expense'
             sign = -1 if r.get('type') == 'cancel' else 1
             note_bits = []
             if r.get('type') == 'cancel':
                 note_bits.append('취소·환불')
-            if tx_type == 'income':
-                note_bits.append(r.get('body') or r.get('title') or '')
-            elif not r.get('parsed'):
-                note_bits.append((r.get('body') or r.get('title') or '')[:200])
+            # Successful parses need evidence too; retain title and full original body.
+            note_bits.append('\n'.join(x for x in (r.get('title'), r.get('body')) if x))
             occurred = datetime.fromtimestamp((r.get('ts') or 0) / 1000).strftime('%Y-%m-%d') \
                 if r.get('ts') else datetime.now().strftime('%Y-%m-%d')
             # OR IGNORE = ext_id 부분 유니크 인덱스 위반 시 조용히 건너뜀
@@ -221,12 +222,14 @@ def last_sync_label() -> str:
 
 def _owner_clause(conn, owner):
     """owner 지정 시 해당 주체만, 미지정=기본 주체 (건강 person 축과 동일 의미)."""
-    return owner_id_of(conn, owner)
+    row = conn.execute("SELECT id FROM owners WHERE name=?",
+                       (DEFAULT_OWNER if not owner or owner == "나" else owner,)).fetchone()
+    return row["id"] if row else None
 
 
 def get_transactions(owner: str = None, month: str = None, days: int = None,
                      tx_type: str = None, keyword: str = None, source: str = None,
-                     limit: int = 200) -> List[Dict]:
+                     limit: int = None, category: str = None) -> List[Dict]:
     with get_db_connection() as conn:
         oid = _owner_clause(conn, owner)
         q = "SELECT * FROM transactions WHERE owner_id = ? AND deleted_at IS NULL"
@@ -234,7 +237,7 @@ def get_transactions(owner: str = None, month: str = None, days: int = None,
         if month:
             q += " AND occurred_at LIKE ?"
             args.append(f"{month}%")
-        elif days:
+        if days:
             since = (datetime.now() - timedelta(days=int(days))).strftime('%Y-%m-%d')
             q += " AND occurred_at >= ?"
             args.append(since)
@@ -244,11 +247,16 @@ def get_transactions(owner: str = None, month: str = None, days: int = None,
         if source:
             q += " AND source = ?"
             args.append(source)
+        if category is not None:
+            q += " AND category = ?"
+            args.append(category)
         if keyword:
             q += " AND (category LIKE ? OR counterparty LIKE ? OR note LIKE ?)"
             args += [f"%{keyword}%"] * 3
-        q += " ORDER BY occurred_at DESC, id DESC LIMIT ?"
-        args.append(int(limit))
+        q += " ORDER BY occurred_at DESC, id DESC"
+        if limit is not None:
+            q += " LIMIT ?"
+            args.append(int(limit))
         return [dict(r) for r in conn.execute(q, args).fetchall()]
 
 
@@ -283,9 +291,9 @@ def holding_history(owner: str = None, name: str = None) -> List[Dict]:
         return [dict(r) for r in rows]
 
 
-def get_summary(owner: str = None, month: str = None) -> Dict[str, Any]:
+def get_summary(owner: str = None, month: str = None, **filters) -> Dict[str, Any]:
     month = month or datetime.now().strftime('%Y-%m')
-    txs = get_transactions(owner=owner, month=month, limit=1000)
+    txs = get_transactions(owner=owner, month=month, **filters)
     expense = sum(t['amount'] for t in txs if t['tx_type'] == 'expense')
     income = sum(t['amount'] for t in txs if t['tx_type'] == 'income')
     by_cat: Dict[str, float] = {}
@@ -301,8 +309,8 @@ def get_summary(owner: str = None, month: str = None) -> Dict[str, Any]:
                 m = merchants.setdefault(key, {'merchant': key, 'count': 0, 'amount': 0})
                 m['count'] += 1
                 m['amount'] += t['amount']
-    top_cats = sorted(by_cat.items(), key=lambda x: -x[1])[:5]
-    top_merchants = sorted(merchants.values(), key=lambda x: -x['amount'])[:15]
+    top_cats = sorted(by_cat.items(), key=lambda x: -x[1])
+    top_merchants = sorted(merchants.values(), key=lambda x: -x['amount'])
     holds = get_holdings(owner=owner, latest_only=True)
     asset_total = sum(h['value'] or 0 for h in holds if h['kind'] == 'asset')
     liab_total = sum(h['value'] or 0 for h in holds if h['kind'] == 'liability')
@@ -317,19 +325,16 @@ def get_summary(owner: str = None, month: str = None) -> Dict[str, Any]:
     }
 
 
-def search_records(keyword: str, owner: str = None) -> Dict[str, List[Dict]]:
+def search_records(keyword: str, owner: str = None, **filters) -> Dict[str, List[Dict]]:
     with get_db_connection() as conn:
         oid = _owner_clause(conn, owner)
         like = f"%{keyword}%"
-        txs = conn.execute(
-            "SELECT * FROM transactions WHERE owner_id=? AND deleted_at IS NULL AND "
-            "(category LIKE ? OR counterparty LIKE ? OR note LIKE ?) "
-            "ORDER BY occurred_at DESC LIMIT 30", (oid, like, like, like)).fetchall()
+        txs = get_transactions(owner=owner, keyword=keyword, **filters)
         holds = conn.execute(
             "SELECT * FROM holdings WHERE owner_id=? AND deleted_at IS NULL AND "
             "(name LIKE ? OR asset_type LIKE ? OR note LIKE ?) "
-            "ORDER BY as_of DESC LIMIT 30", (oid, like, like, like)).fetchall()
-        return {'transactions': [dict(r) for r in txs], 'holdings': [dict(r) for r in holds]}
+            "ORDER BY as_of DESC", (oid, like, like, like)).fetchall()
+        return {'transactions': txs, 'holdings': [] if any(filters.values()) else [dict(r) for r in holds]}
 
 
 def soft_delete_record(record_type: str, record_id: int, owner: str = None) -> bool:

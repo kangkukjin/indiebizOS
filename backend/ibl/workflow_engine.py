@@ -94,6 +94,10 @@ def _propagate_project_id(steps: list, pid: str):
             p["project_id"] = pid
 
 
+from execution_commit import committed_program
+
+
+@committed_program
 def execute_pipeline(steps: list, project_path: str = ".",
                      context: dict = None, agent_id: str = None) -> dict:
     """

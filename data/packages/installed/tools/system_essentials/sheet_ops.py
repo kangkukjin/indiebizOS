@@ -24,7 +24,8 @@ def _resolve(tool_input):
     raw = tool_input.get("path") or tool_input.get("file_path") or ""
     if not raw:
         return None, {"success": False, "error": "path 가 필요합니다 — 대상 xlsx/xlsm 파일 경로."}
-    p = Path(str(raw))
+    from runtime_utils import expand_body_path
+    p = Path(expand_body_path(str(raw)))
     if not p.is_absolute():
         p = Path(tool_input.get("_project_path") or ".") / p
     if not p.exists():

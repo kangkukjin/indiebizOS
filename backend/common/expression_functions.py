@@ -123,7 +123,7 @@ def call(name, args, tick, callback=None):
             elif callback is not None:
                 k = callback(key, row)
             else:
-                raise Fault('CALLABLE', 'sorted의 key는 Text, Callable 또는 null입니다.')
+                raise Fault('CALLABLE', 'sorted의 key는 Text, Callable 또는 null입니다. 다중 키는 (행) => [행.a, 행.b] 콜백이나 table:sort의 by 목록을 사용하세요.')
             decorated.append((k, row))
         def compare(a, b):
             tick()

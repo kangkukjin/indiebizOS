@@ -411,13 +411,13 @@
     "implementation": "9e5757ce3867",
     "returns": "9a5e13f69efc",
     "target_key": "0cacf69ab63c",
-    "aliases": "db1119355d9a",
+    "aliases": "32f001d1001b",
     "ops": "c0daecd42513",
     "runs_on": "26271047115a",
     "router": "ebbb1532efbc",
     "tool": "632d0dc34bc5"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 0
   },
   "limbs:radio": {
@@ -567,9 +567,10 @@
     "implementation": "f51e242d35b8",
     "returns": "9a5e13f69efc",
     "target_key": "7c66509c7f76",
+    "params": "8a287543b617",
     "router": "d1a4b431b2c1"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 13
   },
   "others:delegate": {
@@ -915,18 +916,18 @@
   "self:finance": {
    "fields": {
     "description": "07e9c40fd369",
-    "target_description": "b07b2e42ec08",
+    "target_description": "d4f65e0808b5",
     "implementation": "81d310c43b29",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "0b6c4b18e6c3",
-    "aliases": "5e93e34d298a",
-    "ops": "6d8a21ee48d8",
+    "params": "478c44f54531",
+    "aliases": "2617526eaebe",
+    "ops": "444602d87578",
     "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "cb1b1d2f3ccf"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 33
   },
   "self:folder_note": {
@@ -952,13 +953,14 @@
     "implementation": "0ec8e657ab50",
     "returns": "1cf2462dbf78",
     "target_key": "0cacf69ab63c",
+    "params": "f53312a2a7c7",
     "aliases": "96cc7b816c74",
     "ops": "a57f30d25e1f",
     "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "19acb74ca01c"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 4
   },
   "self:goal": {
@@ -997,14 +999,14 @@
     "implementation": "30cbea2b1a77",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "b4119b026ca0",
+    "params": "3c7c0f307208",
     "aliases": "3f399e157530",
     "ops": "2784fa9f17b3",
     "side_effect": "b5bea41b6c62",
     "router": "ebbb1532efbc",
     "tool": "428ae48a200c"
    },
-   "reviewed": "2026-09-24",
+   "reviewed": "2026-09-29",
    "examples": 63
   },
   "self:install_lib": {
@@ -1057,6 +1059,7 @@
     "implementation": "7d822e4d3499",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "9e50a448acae",
     "aliases": "399fa2f32490",
     "ops": "343bab6ee5d2",
     "side_effect": "b5bea41b6c62",
@@ -1064,7 +1067,7 @@
     "router": "ebbb1532efbc",
     "tool": "2e81dde1acfc"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 7
   },
   "self:list": {
@@ -1088,13 +1091,14 @@
     "implementation": "9ce0cfe586ea",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "ac2010ff2e00",
     "aliases": "2b43c454a807",
     "ops": "8e460c989a0c",
     "side_effect": "b5bea41b6c62",
     "runs_on": "54d3f8d78a8b",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 33
   },
   "self:material": {
@@ -1199,9 +1203,10 @@
     "implementation": "bd0a8cc616b3",
     "returns": "9a5e13f69efc",
     "target_key": "fd3830a0864d",
+    "params": "d77fb7a6a2ce",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 72
   },
   "self:output": {
@@ -1279,7 +1284,7 @@
   "self:read": {
    "fields": {
     "description": "81bf640209e9",
-    "target_description": "2c505d4e7eef",
+    "target_description": "d3759fa7a277",
     "implementation": "5adeccd74a33",
     "returns": "1cf2462dbf78",
     "returns_variants": "fefe30ac0f4e",
@@ -1289,8 +1294,8 @@
     "router": "ebbb1532efbc",
     "tool": "533e886121eb"
    },
-   "reviewed": "2026-09-26",
-   "examples": 131
+   "reviewed": "2026-09-29",
+   "examples": 134
   },
   "self:recent_chats": {
    "fields": {
@@ -1326,10 +1331,11 @@
     "target_description": "8444003a7508",
     "implementation": "3bf8cda78cd4",
     "returns": "9a5e13f69efc",
+    "params": "6efd9e6afb57",
     "aliases": "5aa354fab2b5",
     "router": "0dc8cd0a9228"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 37
   },
   "self:script": {
@@ -1430,14 +1436,14 @@
   },
   "self:time": {
    "fields": {
-    "description": "1cc6dd629543",
-    "target_description": "a94e9e7c1cb3",
+    "description": "6bb3dca9035c",
+    "target_description": "dc81b9510165",
     "implementation": "446887d0ed2f",
     "returns": "1cf2462dbf78",
     "router": "ebbb1532efbc",
     "tool": "781387d348d2"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 21
   },
   "self:trigger": {
@@ -1447,12 +1453,13 @@
     "implementation": "56d2b5d477bb",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "ee7a146a11ac",
     "aliases": "ffd790f5eaef",
     "ops": "2393474f6b46",
     "side_effect": "b5bea41b6c62",
     "router": "d91f2ba75bf6"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 57
   },
   "self:webapp": {
@@ -1847,12 +1854,13 @@
     "implementation": "bd8587378c99",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
+    "params": "3d3feb4f7f4f",
     "ops": "1fed7adfd7f1",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "da6e4fc8481c"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 5
   },
   "sense:place": {
@@ -1879,13 +1887,13 @@
     "implementation": "4c073eedf008",
     "returns": "3c22349f8d0b",
     "target_key": "0cacf69ab63c",
-    "params": "df6812cb0311",
+    "params": "198aa4f09017",
     "ops": "23706605ec2a",
     "side_effect": "fcbcf165908d",
     "router": "ebbb1532efbc",
     "tool": "423c32b59da2"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 19
   },
   "sense:realty": {
@@ -2183,17 +2191,17 @@
   "table:chart": {
    "fields": {
     "description": "9c97c23a96a1",
-    "target_description": "86530af482e6",
+    "target_description": "b860366ac5a4",
     "implementation": "2d31e6305125",
     "returns": "9a5e13f69efc",
     "target_key": "87dfbbd263f1",
-    "params": "9f3b204104bb",
+    "params": "ff7ca4b2dc34",
     "aliases": "dd74ca1b5b68",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "016744cf3756"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 60
   },
   "table:chunk": {
@@ -2317,7 +2325,7 @@
   "table:join": {
    "fields": {
     "description": "b2802eb1fe6f",
-    "target_description": "d9930d321dd3",
+    "target_description": "17db45d72c10",
     "implementation": "682a227b316a",
     "returns": "5450ffb2cf8a",
     "target_key": "990c23868b96",
@@ -2326,7 +2334,7 @@
     "router": "ebbb1532efbc",
     "tool": "2773a81d8139"
    },
-   "reviewed": "2026-09-27",
+   "reviewed": "2026-09-29",
    "examples": 7
   },
   "table:judge": {
@@ -2439,11 +2447,12 @@
     "implementation": "ba405408355c",
     "returns": "9a5e13f69efc",
     "target_key": "d070c7ecb482",
+    "params": "0aaf20e2fef3",
     "runs_on": "54d3f8d78a8b",
     "router": "ebbb1532efbc",
     "tool": "c0fcf03f6227"
    },
-   "reviewed": "2026-09-18",
+   "reviewed": "2026-09-29",
    "examples": 32
   },
   "table:structure": {

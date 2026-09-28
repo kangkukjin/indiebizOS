@@ -456,7 +456,9 @@ def _attach_quote_items(result):
             # union 행이 반쪽이 된다(crypto=krw/24h vs stock=current_price/change_percent 실측).
             # 원명 보존 + canonical 추가(제거 아님·병기).
             if row.get("current_price") is None:
-                _cp = row.get("current_price_krw") or row.get("current_price_usd")
+                use_krw = row.get("current_price_krw") is not None
+                _cp = row.get("current_price_krw") if use_krw else row.get("current_price_usd")
+                row["currency"] = "KRW" if use_krw else "USD"
                 if _cp is not None:
                     row["current_price"] = _cp
             if row.get("change_percent") is None and row.get("change_24h_percent") is not None:

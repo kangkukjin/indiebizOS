@@ -15,6 +15,27 @@
         - 대화이력
         - 이전
       manage_events:
+        open_params: false
+        params:
+          op: string
+          title: string
+          date: string
+          time: string
+          event_action: string
+          action_params: object
+          repeat: string
+          start_time: string
+          type: string
+          description: string
+          enabled: boolean
+          weekdays: array
+          month: integer
+          day: integer
+          interval_hours: integer
+          event_id: string
+          year: integer
+        value_validator: calendar
+        code_params: [event_action, do]
         aliases:
           op: [action]   # 구 어휘 action= 호환 (2026-07-21 op 정규화 — 옛 코퍼스·해마 용례·저장 파이프라인)
           # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 event_action 유지.
@@ -103,6 +124,28 @@
         - 스위치 목록
         - 스위치 실행
       schedule:
+        open_params: false
+        params:
+          pipeline: string
+          code: string
+          inputs: object
+          edition: integer
+          minutes: number
+          seconds: number
+          at: string
+          start_time: string
+          date: string
+          time: string
+          repeat: string
+          title: string
+          weekdays: array
+          month: integer
+          day: integer
+          interval_hours: integer
+          target_project_id: string
+          target_agent_id: string
+        value_validator: schedule
+        code_params: [pipeline, do, code]
         aliases:
           # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 pipeline 유지.
           pipeline: [do]
@@ -167,6 +210,12 @@
         - 시도 이력
         - 진행상황
       notify_user:
+        open_params: false
+        params:
+          message: string
+          title: string
+          type: string
+        pipe_text: message
         returns: effect
         description: 사용자에게 데스크탑 알림 전송. 중요 이벤트 통지용.
         target_description: 알림 메시지. title·type 옵션 (info/warning/error). title 을 생략하면 message 첫 줄이 제목이 된다(관문 파생 — 굳이 message 를 title 에 옮겨 적지 말 것).
@@ -224,6 +273,22 @@
         - 워크플로우 삭제
         - 파이프라인 저장
       trigger:
+        open_params: false
+        params:
+          op: string
+          name: string
+          type: string
+          config: object
+          pipeline: string
+          inputs: object
+          edition: integer
+          enabled: boolean
+          trigger_id: string
+          cron: string
+          limit: integer
+          project_id: string
+        value_validator: trigger
+        code_params: [pipeline, do]
         aliases:
           trigger_id: [id]
           # do = 문장 자리의 정본 이름(2026-08-15 고차 문장 M1). 핸들러 읽기키는 pipeline 유지.

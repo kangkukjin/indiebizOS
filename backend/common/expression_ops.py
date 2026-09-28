@@ -162,6 +162,8 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
         numbers = []
         for value in values:
             tick()
+            if isinstance(value, str):
+                raise Fault("NUMBER_REQUIRED", f"{name}은 Number 전용입니다. Text 목록은 sorted(목록)[0] 또는 sorted(목록)[-1]로 비교하세요.")
             numbers.append(number(value))
         numbers = arithmetic_numbers(numbers)
         return {"min": min, "max": max, "sum": sum}[name](numbers)

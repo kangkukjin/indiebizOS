@@ -48,8 +48,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-09-28",
-        "impl": "a880bea82447daae"
+        "at": "2026-09-29",
+        "impl": "eafd05c84123840f"
       }
     },
     "self:list": {
@@ -90,8 +90,8 @@
         "path": "$path"
       },
       "path_audited": {
-        "at": "2026-09-28",
-        "impl": "a880bea82447daae"
+        "at": "2026-09-29",
+        "impl": "eafd05c84123840f"
       }
     },
     "self:record": {
@@ -103,11 +103,11 @@
         "impl": "3c31b0566918933b",
         "dependencies": {
           "backend/common/expression_eval.py": "efdcd90e266bd3ac4bd50138dd8c5272f9c3099c71fe56454c37b4b873b73283",
-          "backend/common/expression_functions.py": "42b4a286a3761ee40202217a27d9c41461fd912a9b5de2dbfd2a1f3ad9a9e2a6",
-          "backend/common/expression_ir.py": "86574233f0463af007cc3203d66dd05cd91ced85c83b959e44114ef2715e279e",
+          "backend/common/expression_functions.py": "2bb5513d5b7d82887213c3f14b40ad962cd1df0795d80f846bdfb33a458f805e",
+          "backend/common/expression_ir.py": "a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f",
           "backend/common/expression_legacy.py": "4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9",
-          "backend/common/expression_ops.py": "f3cc0eb44c921f2c456d14fec0124fcda18a495dd68f6d13165272f61951ad5c",
-          "backend/common/expression_parser.py": "874eb313e41695466a16080145e3e82476d0935f4739ad503cb770fd464dafec",
+          "backend/common/expression_ops.py": "e215c90db04dfa6e8a37dfefc214a82f8aee27f35bc0d231a86d671aba7ef96f",
+          "backend/common/expression_parser.py": "97d8ea1bae258c2da471eae3682349d139dbb38033079a6110dc7ab52a366ad8",
           "backend/base/principal.py": "ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779",
           "backend/base/runtime_utils.py": "ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff",
           "backend/common/field_path.py": "b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df",
@@ -115,7 +115,7 @@
           "backend/common/record_contract.py": "ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5",
           "backend/common/row_conditions.py": "154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce",
           "backend/common/safe_expr.py": "393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360",
-          "backend/common/value_semantics.py": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+          "backend/common/value_semantics.py": "9de267f61961ea21933b60e3f8f3a74cbecf388a9e9c64638f4e1879e8005446",
           "backend/datastore/record_admin.py": "26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab",
           "backend/datastore/record_assets.py": "a9119891401cab4d11d80091d07d7bf545abb1c34fdabf79cd96bb95016df267",
           "backend/datastore/record_commands.py": "e58a57308b625a7e485b4cf85357ae9d07464293229f7ef3b795dfcb786aaffb",
@@ -149,8 +149,8 @@
         "dependencies": "$dependencies"
       },
       "path_audited": {
-        "at": "2026-09-28",
-        "impl": "a880bea82447daae"
+        "at": "2026-09-29",
+        "impl": "eafd05c84123840f"
       }
     },
     "self:write": {

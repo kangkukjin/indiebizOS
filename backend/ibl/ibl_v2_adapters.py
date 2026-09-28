@@ -188,6 +188,8 @@ def decode_envelope(raw, adapter, input_values=None):
     if incomplete or any(t.get("scope") != "selection" for t in truncation.get("truncations", [])) or any(b.get("rows_dropped") for b in boundaries):
         raise Fault("PARTIAL_SOURCE", "도구의 원천 결과가 불완전합니다.", kind="partial", partial=value,
                     details={"completion": incomplete, "truncation": truncation, "markers": markers})
+    from ibl_v2_ir import pack, unpack
+    value = unpack(pack(value))
     return value, {"markers": markers, "attachments": {k: raw[k] for k in adapter.get("attachments", []) if k in raw}}
 
 
@@ -296,6 +298,10 @@ def load_registry(project_path=".", agent_id=None):
                 if protocol == "ibl-script/2":
                     params.setdefault("op", "run" if params.get("id") else "list")
                     params["_ibl_edition"] = 2
+                pipe_key = c["adapter"].get("legacy_pipe_input")
+                if pipe_key and pipe_key in params:
+                    previous = params[pipe_key]
+                    params["_prev_result"] = {"items": previous} if isinstance(previous, list) else previous
                 raw = execute_ibl({"_node": node, "action": action, "params": params}, project_path, agent_id=agent_id)
                 boundary = c["adapter"]
                 if protocol == "ibl-script/2" and params["op"] != "run":

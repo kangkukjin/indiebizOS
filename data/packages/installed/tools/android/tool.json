@@ -111,6 +111,10 @@
           "pkg": {
             "type": "string",
             "description": "특정 앱 패키지만 필터, 예: com.kakao.talk"
+          },
+          "package_name": {
+            "type": "string",
+            "description": "sense:phone 파라미터"
           }
         }
       }

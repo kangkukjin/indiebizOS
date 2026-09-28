@@ -177,9 +177,28 @@ def _realty_price(tool_input):
     if isinstance(result, dict) and isinstance(result.get("data"), list):
         for it in result["data"]:
             if isinstance(it, dict):
+                def numeric(raw):
+                    try:
+                        return float(str(raw).replace(",", "").strip())
+                    except (ValueError, TypeError):
+                        return None
+                amount = numeric(it.get("거래금액") if deal == "trade" else it.get("보증금"))
+                if amount is not None:
+                    it["price"] = int(amount * 10000)
+                    it["currency"] = "KRW"
+                    if deal == "rent":
+                        it["deposit_won"] = it["price"]
+                if deal == "rent":
+                    rent = numeric(it.get("월세") or 0)
+                    if rent is not None:
+                        it["rent_won"] = int(rent * 10000)
+                it["deal_type"] = "매매" if deal == "trade" else it.get("계약유형")
                 it.setdefault("명칭", it.get("아파트명") or it.get("건물명") or it.get("주택유형") or "")
                 it.setdefault("면적", it.get("전용면적") or it.get("계약면적")
                               or it.get("연면적") or it.get("대지면적") or it.get("대지권면적") or "")
+                area = numeric(it.get("면적"))
+                if area is not None:
+                    it["area_m2"] = area
     # dong: 법정동 이름으로 결과 좁히기 (실거래가는 시군구 단위라, 읍·면·동만 보려면 후필터)
     dong = tool_input.get("dong")
     if dong and isinstance(result, dict) and isinstance(result.get("data"), list):

@@ -118,8 +118,8 @@
 
 **시세 조회 → 차트**
 ```
-[sense:stock]{op: "history", ticker: "AAPL", start_date: "2026-03-01"}
-  >> [table:chart]{title: "AAPL", chart_type: "line"}
+[sense:stock]{op: "history", ticker: "AAPL", start_date: "2026-03-01", max_points: 400}
+  >> [table:chart]{title: "AAPL", chart_type: "line", x:"date", y:"close"}
 ```
 주가/재무 데이터가 클 때 `file_path`+`sample`이 반환된다. 차트는 `data_file`에 file_path를 넘기거나, `prices` 배열을 `data`로 변환(`[{"x": p["date"], "y": p["close"]}]`)해 넘긴다.
 
@@ -135,3 +135,5 @@
 | 현대차 | 005380 | | Amazon | AMZN |
 
 **심볼 형식(Yahoo quote/info)**: 미국 `AAPL`, 한국 `005930.KS`(자동 부착), ETF `SPY`/`QQQ`/`GLD`, 원자재 선물 `GC=F`(금)/`CL=F`(원유), 환율 `USDKRW=X`.
+
+가격의 `currency`를 확인한 뒤 자산군을 합친다. 코인 현재가는 KRW 우선이며 USD 폴백 시 단위도 USD다. 코인 `days` 조회는 이력 행을 `items`와 `data.prices`로 반환하며 이력 단위는 USD다. `max_points`를 지정하면 최대 그 수만큼의 시점(양끝 포함)을 고른다. `truncated`는 실제 생략 여부이며, 요청 상한이 전체보다 크면 false다.

@@ -127,10 +127,13 @@ def downsample_prices(prices: list, max_points: int = 10) -> list:
     if not prices:
         return []
     total = len(prices)
-    step = max(1, total // max(1, max_points))
-    sampled = list(prices[::step])
-    if sampled[-1] != prices[-1]:
-        sampled.append(prices[-1])
+    count = max(1, int(max_points))
+    if count >= total:
+        sampled = prices
+    elif count == 1:
+        sampled = prices[-1:]
+    else:
+        sampled = [prices[i * (total - 1) // (count - 1)] for i in range(count)]
     return [dict(p) for p in sampled]
 
 
@@ -143,7 +146,8 @@ def compact_price_series(prices: list, max_points: int = 10, threshold: int = 50
     total = len(prices or [])
     if total <= threshold:
         return [dict(p) for p in (prices or [])], False
-    return downsample_prices(prices, max_points), True
+    compact = downsample_prices(prices, max_points)
+    return compact, len(compact) < total
 
 
 def is_error(response: Any) -> bool:

@@ -117,7 +117,7 @@ def _table_block(grid: list) -> dict | None:
 def _save_images(path: Path, entries: list[tuple[str, bytes]]) -> tuple[list, Path | None]:
     if not entries:
         return [], None
-    images_dir = path.parent / f"{path.stem}_images"
+    images_dir = Path(__import__("tempfile").mkdtemp(prefix="indiebiz-read-images-"))
     images_dir.mkdir(exist_ok=True)
     info = []
     for name, data in entries:
@@ -265,7 +265,7 @@ def read_hwp(tool_input: dict, project_path: str) -> str:
                 partial = True
 
         images_info: list = []
-        if tool_input.get("extract_images", True):
+        if tool_input.get("extract_images", False):
             entries = []
             for e in ole.listdir():
                 if len(e) == 2 and e[0] == "BinData":
@@ -377,7 +377,7 @@ def read_hwpx(tool_input: dict, project_path: str) -> str:
                 root = ET.fromstring(zf.read(n))
                 _hwpx_walk(root, blocks)
             images_info: list = []
-            if tool_input.get("extract_images", True):
+            if tool_input.get("extract_images", False):
                 entries = [(n, zf.read(n)) for n in names if n.startswith("BinData/") and not n.endswith("/")]
                 images_info, _ = _save_images(path, entries)
     except ET.ParseError as e:
@@ -460,7 +460,7 @@ def read_pptx(tool_input: dict, project_path: str) -> str:
             if notes:
                 blocks.append({"type": "paragraph", "text": "[노트] " + notes})
     images_info: list = []
-    if tool_input.get("extract_images", True) and img_entries:
+    if tool_input.get("extract_images", False) and img_entries:
         images_info, _ = _save_images(path, img_entries)
     meta = {
         "format": "pptx",

@@ -38,6 +38,7 @@ def since_conn():
         " stream TEXT NOT NULL, k TEXT NOT NULL, watched TEXT,"
         " first_seen TEXT NOT NULL, last_seen TEXT NOT NULL,"
         " PRIMARY KEY (stream, k))")
+    conn.execute("CREATE TABLE IF NOT EXISTS since_streams (stream TEXT PRIMARY KEY)")
     return conn
 
 
@@ -98,7 +99,8 @@ def op_since(prev, params, get_items, emit_items,
     peek = bool(params.get("peek"))
 
     from datetime import datetime
-    now = datetime.now().isoformat(timespec="seconds")
+    from execution_commit import observation_timestamp
+    now = observation_timestamp() or datetime.now().isoformat()
     conn = since_conn()
     trimmed = 0
     try:
@@ -107,7 +109,16 @@ def op_since(prev, params, get_items, emit_items,
         # 오보하지 않는다 (Codex 흡수, 2026-08-26).
         seen, legacy_seen = value_semantics.persisted_seen(conn.execute(
             "SELECT k, watched FROM since_seen WHERE stream=?", (key,)))
-        first_run = not seen
+        conn.execute("CREATE TABLE IF NOT EXISTS since_streams (stream TEXT PRIMARY KEY)")
+        from execution_commit import current_scope
+        scope = current_scope()
+        db = conn.execute("PRAGMA database_list").fetchone()[2]
+        state_key = ("since", db, key)
+        observed = bool(seen) or bool(conn.execute("SELECT 1 FROM since_streams WHERE stream=?", (key,)).fetchone())
+        if scope is not None and state_key in scope.state:
+            seen, observed = scope.state[state_key]
+            seen = dict(seen)
+        first_run = not observed
         out, n_new, n_changed = [], 0, 0
         _missing = object()
         for r in rows:
@@ -132,27 +143,44 @@ def op_since(prev, params, get_items, emit_items,
                     out.append({**r, "_since": "changed", "_since_prev": prev_wv})
                     n_changed += 1
         if not peek:
+            updates = []
             for r in rows:
                 rk, legacy_rk = value_semantics.persistent_keys(_row_key_value(r))
-                wjson = (json.dumps({w: r.get(w) for w in watch},
-                                    ensure_ascii=False, sort_keys=True)
-                         if watch else None)
-                conn.execute(
-                    "INSERT INTO since_seen (stream,k,watched,first_seen,last_seen)"
-                    " VALUES (?,?,?,?,?) ON CONFLICT(stream,k) DO UPDATE SET"
-                    " watched=excluded.watched, last_seen=excluded.last_seen",
-                    (key, rk, wjson, now, now))
-                value_semantics.migrate_since_keys(conn, key, rk, legacy_rk, legacy_seen)
-            total = conn.execute(
-                "SELECT COUNT(*) FROM since_seen WHERE stream=?", (key,)).fetchone()[0]
-            if total > _SINCE_CAP:
-                trimmed = total - _SINCE_CAP
-                conn.execute(
-                    "DELETE FROM since_seen WHERE rowid IN (SELECT rowid FROM since_seen"
-                    " WHERE stream=? ORDER BY last_seen ASC LIMIT ?)", (key, trimmed))
-            conn.commit()
-        baseline = conn.execute(
-            "SELECT COUNT(*) FROM since_seen WHERE stream=?", (key,)).fetchone()[0]
+                wjson = json.dumps({w: r.get(w) for w in watch}, ensure_ascii=False, sort_keys=True) if watch else None
+                updates.append((rk, legacy_rk, wjson))
+                seen[rk] = wjson
+
+            def persist():
+                with since_conn() as target:
+                    target.execute("CREATE TABLE IF NOT EXISTS since_streams (stream TEXT PRIMARY KEY)")
+                    target.execute("INSERT OR IGNORE INTO since_streams VALUES (?)", (key,))
+                    for rk, legacy_rk, wjson in updates:
+                        target.execute(
+                            "INSERT INTO since_seen (stream,k,watched,first_seen,last_seen) VALUES (?,?,?,?,?) "
+                            "ON CONFLICT(stream,k) DO UPDATE SET watched=excluded.watched, last_seen=excluded.last_seen "
+                            "WHERE excluded.last_seen >= since_seen.last_seen",
+                            (key, rk, wjson, now, now))
+                        value_semantics.migrate_since_keys(target, key, rk, legacy_rk, legacy_seen)
+                    target.execute(
+                        "DELETE FROM since_seen WHERE stream=? AND k NOT IN "
+                        "(SELECT k FROM since_seen WHERE stream=? ORDER BY last_seen DESC LIMIT ?)",
+                        (key, key, _SINCE_CAP))
+                target.close()
+
+            if scope is None:
+                conn.commit()
+                persist()
+            else:
+                with scope.lock:
+                    prior = scope.actions.get(state_key)
+                    def commit(previous=prior, apply=persist):
+                        if previous:
+                            previous()
+                        apply()
+                    scope.actions[state_key] = commit
+                    scope.state[state_key] = (dict(seen), True)
+            trimmed = max(0, len(seen) - _SINCE_CAP)
+        baseline = min(len(seen), _SINCE_CAP)
     finally:
         conn.close()
 

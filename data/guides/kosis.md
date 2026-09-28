@@ -94,9 +94,11 @@ KOSIS가 큐레이션한 거시지표 빠른 조회. **지표 목록부터 보�
 ```
 
 ### 3) 시각화로 연결
+
+조회 결과의 `기간`을 x로 쓰고, 값 열은 통계표·분류마다 다르므로 반환된 행에서 확인한다. 아래 꺾쇠 자리는 확인한 열 이름으로 바꾼다.
 ```
 [sense:kosis]{org_id:"101", tbl_id:"...", prd_se:"M", start_prd_de:"202101"}
-  >> [table:chart]{chart_type:"line", x:"period", y:"value"}
+  >> [table:chart]{chart_type:"line", x:"기간", y:"<반환 행에서 확인한 값 열>"}
 ```
 
 ### 4) 정책/창업 분석용 추세

@@ -107,7 +107,10 @@ def test_hwpx_blocks_order_and_table(dre, tmp_path):
     assert [b["type"] for b in r["blocks"]] == ["paragraph", "table", "paragraph", "paragraph"]
     assert r["blocks"][1] == {"type": "table", "columns": ["서류", "부수"], "rows": [["신청서", "1"]]}
     assert r["blocks"][3]["text"] == "마감 9월 30일"
-    assert r["metadata"]["total_images"] == 1 and (tmp_path / "공문_images/image1.png").exists()
+    assert not (tmp_path / "공문_images").exists()
+    extracted = json.loads(dre.read_hwpx({"path": str(p), "extract_images": True}, str(tmp_path)))
+    assert extracted["metadata"]["total_images"] == 1
+    assert not (tmp_path / "공문_images").exists()
     assert "제출 서류 안내" in r["text"] and "신청서\t1" in r["text"]
 
 

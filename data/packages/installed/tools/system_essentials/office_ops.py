@@ -186,7 +186,7 @@ def fill_op(tool_input: dict, project_path: str) -> str:
 
 def read_pdf(tool_input: dict, project_path: str) -> str:
     import fitz  # PyMuPDF
-    file_path = tool_input.get("file_path") or tool_input.get("path")  # path 별칭 수용(read 일관성)
+    file_path = _get_path(tool_input)  # path 별칭 수용(read 일관성)
     pages = tool_input.get("pages")
 
     if not file_path:
@@ -275,8 +275,8 @@ def read_docx(tool_input: dict, project_path: str) -> str:
     from docx.opc.constants import RELATIONSHIP_TYPE as RT
     import zipfile
 
-    file_path = tool_input.get("file_path") or tool_input.get("path")
-    extract_images = tool_input.get("extract_images", True)
+    file_path = _get_path(tool_input)
+    extract_images = tool_input.get("extract_images", False)
 
     # 부분 읽기 파라미터 — 큰 docx의 컨텍스트 잠식 방지
     # 블록 = 문단(p) 또는 표(tbl) 하나
@@ -315,7 +315,7 @@ def read_docx(tool_input: dict, project_path: str) -> str:
             with zipfile.ZipFile(str(path), 'r') as zf:
                 media_files = [n for n in zf.namelist() if n.startswith("word/media/")]
                 if media_files:
-                    images_dir = path.parent / f"{path.stem}_images"
+                    images_dir = Path(__import__("tempfile").mkdtemp(prefix="indiebiz-read-images-"))
                     images_dir.mkdir(exist_ok=True)
                     for mf in media_files:
                         img_name = os.path.basename(mf)
@@ -717,7 +717,7 @@ def _items_to_table(rows_src) -> dict | None:
                       x.get("summary", ""), x.get("url", "")] for x in _it],
         }
     # 임의/풍부 items(world_bank 연도/지표, file_find size 등) → 키 순서=열 generic 재구성
-    _cols = list(_it[0].keys())
+    _cols = list(dict.fromkeys(k for row in _it for k in row))
     return {"columns": _cols, "rows": [[x.get(c) for c in _cols] for x in _it]}
 
 
@@ -863,10 +863,18 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope, con
         # openpyxl이 받는 타입(str/int/float/bool/None)으로 강제
         if cell is None or isinstance(cell, (str, int, float, bool)):
             return cell
-        return str(cell)
+        return json.dumps(cell, ensure_ascii=False) if isinstance(cell, (dict, list)) else str(cell)
 
-    def _fill(ws, rows):
-        for r in (rows or []):
+    def _fill(ws, rows, headers=None):
+        rows = rows or []
+        if any(isinstance(r, dict) for r in rows):
+            if not all(isinstance(r, dict) for r in rows):
+                raise ValueError("레코드 행과 배열 행을 섞을 수 없습니다.")
+            columns = headers or list(dict.fromkeys(k for r in rows for k in r))
+            if not headers:
+                ws.append(columns)
+            rows = [[r.get(c) for c in columns] for r in rows]
+        for r in rows:
             if isinstance(r, (list, tuple)):
                 ws.append([_coerce(c) for c in r])
             else:
@@ -891,7 +899,7 @@ def spreadsheet(tool_input: dict, project_path: str, validate_path_in_scope, con
             headers = tool_input.get("headers")
             if headers:
                 ws.append([_coerce(c) for c in headers])
-            _fill(ws, tool_input.get("rows"))
+            _fill(ws, tool_input.get("rows"), headers)
             sheet_summary = [ws.title]
 
         os.makedirs(os.path.dirname(path), exist_ok=True)

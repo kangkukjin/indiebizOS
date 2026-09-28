@@ -69,7 +69,8 @@ def copy_piped_items(tool_input: dict, dest: str, project_path: str, path_guard)
     if not items:
         # ★0행은 고장이 아니라 정당한 빈손 — 감시자·필터 문형의 정상 결과다(F20-3 계약).
         # "Error:" 로 시작하지 않아야 파이프가 성공으로 읽는다(is_error_result 규약).
-        return "입력 0행 — 복사할 파일이 없습니다 (0개 저장, 빈손). 앞 단계가 0행을 냈습니다."
+        return json.dumps({"success": True, "items": [], "count": 0,
+                           "message": "입력 0행 — 복사할 파일이 없습니다."}, ensure_ascii=False)
 
     dst_dir = os.path.join(project_path, expand_body_path(dest))
     scope_err = path_guard(dst_dir, project_path)
@@ -88,4 +89,83 @@ def copy_piped_items(tool_input: dict, dest: str, project_path: str, path_guard)
         msg += "\n  " + ", ".join(saved[:5]) + (f" 외 {len(saved) - 5}개" if len(saved) > 5 else "")
     if failed:
         msg += f"\n실패 {len(failed)}개: " + "; ".join(failed[:3])
-    return msg
+    return json.dumps({"success": not failed, "message": msg, "items": saved, "count": len(saved),
+                       **({"error": msg} if failed else {})}, ensure_ascii=False)
+
+
+def check_overlap(src, dest):
+    """Reject overlapping trees before creating, replacing or removing anything."""
+    import unicodedata
+    a, b = (unicodedata.normalize("NFC", os.path.realpath(p)) for p in (src, dest))
+    if os.path.commonpath([a, b]) in (a, b):
+        raise ValueError("원본과 대상 경로가 같거나 서로 포함합니다. 별도 경로를 사용하세요.")
+
+
+def transfer_path(src, dest, *, move=False):
+    """Merge directories; reserve new file names exclusively, never erase a destination.
+
+    A partial copy failure leaves the original and every existing backup intact.
+    A move removes each source only after its destination has been fully copied.
+    """
+    import shutil
+    from pathlib import Path
+    check_overlap(src, dest)
+    source, target = Path(src), Path(dest)
+    if not source.exists():
+        raise FileNotFoundError(2, "원본이 존재하지 않습니다", str(source))
+    saved, renamed = [], []
+
+    def copy_file(a, b):
+        b.parent.mkdir(parents=True, exist_ok=True)
+        requested = b
+        index = 1
+        while True:
+            try:
+                # 'xb' also refuses dangling symlinks and closes the name race.
+                out = b.open("xb")
+                break
+            except FileExistsError:
+                index += 1
+                b = requested.with_name(f"{requested.stem} ({index}){requested.suffix}")
+        try:
+            with out, a.open("rb") as inp:
+                shutil.copyfileobj(inp, out)
+            shutil.copystat(a, b)
+        except BaseException:
+            b.unlink(missing_ok=True)  # only our exclusively-created partial file
+            raise
+        saved.append(str(b.absolute()))
+        if b != requested:
+            renamed.append({"requested": str(requested), "path": str(b)})
+        if move:
+            a.unlink()
+        return b
+
+    def copy_dir(a, b):
+        if b.is_symlink():
+            raise ValueError(f"대상 폴더가 심볼릭 링크입니다: {b}")
+        if b.exists() and not b.is_dir():
+            raise ValueError(f"폴더 대상에 파일이 있습니다: {b}")
+        b.mkdir(parents=True, exist_ok=True)
+        for child in sorted(a.iterdir()):
+            # Do not recurse into links that may point back to either tree.
+            if child.is_symlink():
+                raise ValueError(f"폴더 복사의 심볼릭 링크는 명시 경로로 복사하세요: {child}")
+            if child.is_dir():
+                copy_dir(child, b / child.name)
+            else:
+                copy_file(child, b / child.name)
+        if move:
+            a.rmdir()
+
+    if source.is_dir():
+        # Validate all symlinks before a move removes any source files.
+        for base, dirs, files in os.walk(source):
+            if any((Path(base) / name).is_symlink() for name in [*dirs, *files]):
+                raise ValueError("폴더 복사·이동에 심볼릭 링크가 있습니다. 링크 대상을 별도로 지정하세요.")
+        copy_dir(source, target)
+    else:
+        target = copy_file(source, target / source.name if target.is_dir() else target)
+    return {"success": True, "path": str(target.absolute()), "items": [{"path": p} for p in saved],
+            "count": len(saved), "renamed": renamed,
+            "message": f"{'이동' if move else '복사'} 완료: {target} ({len(saved)}개 파일)"}

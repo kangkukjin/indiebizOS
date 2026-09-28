@@ -2,7 +2,7 @@
 import json, os
 from pathlib import Path
 
-root = Path(__file__).resolve().parents[1]  # outputs/
+root = Path(__file__).resolve().parents[2] / "outputs"
 items = []
 for p in sorted(root.iterdir()):
     if not p.is_dir():

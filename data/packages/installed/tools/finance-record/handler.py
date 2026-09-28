@@ -284,14 +284,18 @@ def _summary_to_blocks(s: dict) -> list:
 
 
 def get_finance_context(input_data: dict) -> str:
-    query_type = str(input_data.get('query_type') or input_data.get('category') or 'summary').strip()
+    category = input_data.get('category')
+    legacy_query = category if category in (_VALID_QUERY_TYPES | set(_KO_QUERY_TYPE_MAP)) else None
+    query_type = str(input_data.get('query_type') or legacy_query or ('transactions' if category else 'summary')).strip()
+    if not input_data.get('query_type') and legacy_query:
+        category = None
     owner = input_data.get('owner') or input_data.get('person')
-    keyword = input_data.get('keyword')
+    keyword = input_data.get('query') or input_data.get('keyword')
     month = input_data.get('month')
     days = input_data.get('days')
     who = f"[{owner}] " if owner and owner != "나" else ""
 
-    tx_filter = None
+    tx_filter = _KO_TX_MAP.get(input_data.get("tx_type"), input_data.get("tx_type"))
     if query_type in ('지출', '소비'):
         tx_filter = 'expense'
     elif query_type in ('수입', '소득'):
@@ -308,6 +312,10 @@ def get_finance_context(input_data: dict) -> str:
             query_type = 'search'
 
     try:
+        if query_type != 'owners' and owner and owner != '나':
+            owners = storage.list_owners()
+            if owner not in [o['name'] for o in owners]:
+                return _ok(f"등록되지 않은 주체: {owner} (등록된 주체: {', '.join(o['name'] for o in owners)})", items=[])
         if query_type == 'owners':
             owners = storage.list_owners()
             if not owners:
@@ -319,7 +327,7 @@ def get_finance_context(input_data: dict) -> str:
             return json.dumps({"text": "\n".join(lines), "items": records}, ensure_ascii=False)
 
         elif query_type == 'summary':
-            s = storage.get_summary(owner=owner, month=month)
+            s = storage.get_summary(owner=owner, month=month, days=days, category=category, keyword=keyword, source=finance_sync.norm_source(str(input_data.get('source') or '')) or None)
             lines = [f"💰 {who}재무 요약 ({s['month']})", "",
                      f"  지출 {_won(s['expense'])} · 수입 {_won(s['income'])} · 순액 {_won(s['net'])} ({s['tx_count']}건)"]
             if s['top_categories']:
@@ -329,7 +337,7 @@ def get_finance_context(input_data: dict) -> str:
             if s['tx_count'] == 0 and not s['holdings']:
                 lines = [f"{who}기록된 재무 정보가 없습니다."]
             top = [{"merchant": m['merchant'], "count": m['count'],
-                    "amount_label": _won(m['amount'])} for m in s.get('top_merchants', [])]
+                    "amount": m['amount'], "currency": "KRW", "amount_label": _won(m['amount'])} for m in s.get('top_merchants', [])]
             return json.dumps({"text": "\n".join(lines), "blocks": _summary_to_blocks(s),
                                "expense_label": _won(s['expense']), "income_label": _won(s['income']),
                                "net_label": _won(s['net']),
@@ -339,7 +347,8 @@ def get_finance_context(input_data: dict) -> str:
                                "hana_label": _won(s.get('by_source', {}).get('하나카드', 0)),
                                "cjpay_label": _won(s.get('by_source', {}).get('청주페이', 0)),
                                "last_sync": s.get('last_sync', ''),
-                               "items": top,
+                               "items": top, "expense": s["expense"], "income": s["income"], "net": s["net"],
+                               "top_categories": [{"category": c, "amount": v, "currency": "KRW"} for c, v in s["top_categories"]],
                                "month": s['month']}, ensure_ascii=False)
 
         elif query_type == 'transactions':
@@ -348,12 +357,20 @@ def get_finance_context(input_data: dict) -> str:
                                            tx_type=tx_filter or input_data.get('tx_type'),
                                            keyword=keyword,
                                            source=finance_sync.norm_source(str(input_data.get('source') or '')) or None,
-                                           limit=int(input_data.get('limit') or 200))
+                                           category=category)
+            population = len(txs)
+            population_total = sum(t['amount'] for t in txs if tx_filter == 'income' or t['tx_type'] == 'expense')
+            limit = input_data.get('limit')
+            if limit is not None:
+                if isinstance(limit, bool) or int(limit) <= 0:
+                    return _err("limit은 양의 정수여야 합니다.")
+                txs = txs[:int(limit)]
             last_sync = storage.last_sync_label()
             sync_prompt = [{"hint": "폰을 USB 로 연결한 뒤 누르세요. 수거 후엔 폰 알림을 지워도 됩니다."}]
             if not txs:
                 empty = _ok(f"{who}거래 기록이 없습니다. 카드 결제는 폰을 USB 로 연결하고 수거하세요.", items=[])
                 e = json.loads(empty)
+                e.update(total=0, total_count=0, returned_total=0, currency="KRW", truncated=False)  # truncation-scope: selection — 실제 반환 행 수와 전체 수 비교; 상한이 없으면 전량
                 e.update({"last_sync": last_sync, "total_label": "0원", "count": 0,
                           "sync_prompt": sync_prompt})
                 return json.dumps(e, ensure_ascii=False)
@@ -366,8 +383,13 @@ def get_finance_context(input_data: dict) -> str:
                 for t in txs[:20]]
             table = _tx_to_table(txs)
             payload = {"text": "\n".join(lines), "count": len(txs), "items": _tx_items(txs),
-                       "total": total, "total_label": _won(total),
+                       "total": population_total, "total_label": _won(population_total),
+                       "total_count": population, "returned_total": total, "currency": "KRW",
+                       "truncated": len(txs) < population,  # truncation-scope: selection — 실제 반환 행 수와 전체 수 비교; 상한이 없으면 전량
                        "last_sync": last_sync, "sync_prompt": sync_prompt}
+            if len(txs) < population:
+                from common.currency import bounded_selection
+                payload.update(bounded_selection(limit, int(limit), len(txs), True))
             if table:
                 payload["table"] = table
                 payload["blocks"] = [{"type": "table", "columns": table["columns"], "rows": table["rows"]}]
@@ -392,7 +414,7 @@ def get_finance_context(input_data: dict) -> str:
         elif query_type == 'search':
             if not keyword:
                 return _err("검색 키워드를 입력해주세요.")
-            res = storage.search_records(keyword, owner=owner)
+            res = storage.search_records(keyword, owner=owner, month=month, days=days, category=category, source=finance_sync.norm_source(str(input_data.get('source') or '')) or None)
             items = _tx_items(res['transactions']) + _hold_items(res['holdings'])
             total = len(items)
             if not total:
@@ -441,6 +463,12 @@ def ingest_finance_info(input_data: dict) -> str:
     """다형 입력(텍스트/이미지·영수증/PDF/엑셀 가계부)을 AI로 구조화해 일괄 저장."""
     file_path = (input_data.get('file') or input_data.get('path') or '').strip()
     free_text = (input_data.get('text') or input_data.get('content') or '').strip()
+    if not free_text and not file_path and input_data.get('items') is not None:
+        from common.currency import coerce_items_payload
+        rows = coerce_items_payload(input_data.get('items'))
+        if rows is None:
+            return _err('items는 행 목록 또는 items 봉투여야 합니다.')
+        free_text = json.dumps(rows, ensure_ascii=False, default=str)
     owner = input_data.get('owner') or input_data.get('person')
 
     try:

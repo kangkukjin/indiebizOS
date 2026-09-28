@@ -284,6 +284,8 @@ class Parser:
             begin, cursor, depth, quote = cursor + 2, cursor + 2, 1, None
             while cursor < len(raw) and depth:
                 char = raw[cursor]
+                if not quote and char == "\\" and cursor + 1 < len(raw) and raw[cursor + 1] in "\"'":
+                    self.fail("보간식 안의 이스케이프 따옴표는 해석할 수 없습니다. 바깥과 다른 따옴표 또는 삼중 따옴표를 사용하세요.")
                 if quote:
                     if char == "\\":
                         cursor += 2

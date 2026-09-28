@@ -14,6 +14,11 @@ def validate_v2_contracts(data):
         for action, entry in (node.get("actions") or {}).items():
             if not isinstance(entry, dict):
                 continue
+            if entry.get("pipe_in"):
+                from ibl_v2_contracts import handler_contract
+                contract = entry.get("callable_contract") or handler_contract(name, action, entry, set((entry.get("params") or {})))
+                if not contract.get("pipe_input"):
+                    issues.append(f"{name}:{action}: pipe_in 소비자에는 파이프 입력 계약이 필요합니다")
             # Multi-source consumers already declare their input topology. An
             # opaque JSON fallback cannot carry that topology into current IBL.
             flow = entry.get('flow') or {}

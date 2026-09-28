@@ -573,7 +573,7 @@ def resolve_region_code(name: str):
         "success": False,
         "error": (f"'{raw}'에 해당하는 시군구를 찾지 못했습니다. 실거래가는 시군구 단위입니다 "
                   f"(예: 강남구, 청주시흥덕구). 시군구 이름으로 다시 시도하세요. "
-                  f"district_codes로 목록을 확인할 수 있습니다.")
+                  f"[sense:realty]{{op:\"codes\"}}로 목록을 확인할 수 있습니다.")
     }
 
 

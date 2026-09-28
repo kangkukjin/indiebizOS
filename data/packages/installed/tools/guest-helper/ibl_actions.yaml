@@ -64,6 +64,8 @@ nodes:
   self:
     actions:
       limb:
+        params:
+          key: string
         aliases:   # ★정본(check_param_canon) — 관습어는 별칭으로 수용
           target: [device_id]
         # list op 가 목록을 낸다 — self:switch·self:trigger·self:package 와 같은 부류.

@@ -79,6 +79,9 @@ class Runtime(ExpressionEvaluator):
         self.replay, self.recorded = replay, list(recordings or [])
         self.lock = threading.RLock()
         self.local = threading.local()
+        from execution_commit import current_scope, CommitScope
+        self.commit_scope = current_scope() or CommitScope()
+        self.owns_commit_scope = current_scope() is None
 
     def event(self, node, kind, parents=(), **extra):
         with self.lock:
@@ -502,7 +505,8 @@ class Runtime(ExpressionEvaluator):
         if spec.dependency and spec.dependency(node.data['dependency_args']) != node.data['dependency_snapshot']:
             raise Fault('DEFINITION_CHANGED', '참조한 실행 자산이 검사 이후 변경되었습니다.', node, kind='protocol')
         contract = selected(spec.contract, args.value)
-        failures = problems(contract, args.value)
+        from ibl_value_checks import value_problems
+        failures = problems(contract, args.value) + value_problems(contract, args.value, self.plan.registry)
         failures += [f"필수 인자 누락: {k}" for k in contract.get("required", contract["params"]) if k not in args.value]
         if failures:
             raise Fault('ARGUMENT_CONTRACT', '; '.join(failures), node)
@@ -581,6 +585,18 @@ class Runtime(ExpressionEvaluator):
             hit = self.reusable.get(reuse_key)
             if hit is not None and "value" in hit:
                 receipt, source = hit, "reuse"
+        if (receipt is not None and "value" in receipt and source == "journal"
+                and contract.get("deferred_observation") and not self.replay):
+            # Restore the staged local checkpoint, but preserve the original
+            # observed result for downstream receipt identities. The adapter's
+            # commit is monotonic at this original timestamp, so an old resume
+            # cannot roll back a newer successful observation.
+            if spec.authorize:
+                spec.authorize()
+            from execution_commit import bind_scope
+            self.local.invocation_id = call_id
+            with bind_scope(self.commit_scope, receipt.get("observed_at")):
+                spec.run(self, copy.deepcopy(args.value))
         if receipt is not None:
             if stateful:
                 raise failed(Fault("PY_STATE_EXPIRED", "외부 실행 상태는 새 워커에 복원되지 않습니다. export한 값을 새 입력으로 사용하세요.", node, kind="protocol"))
@@ -608,7 +624,11 @@ class Runtime(ExpressionEvaluator):
         else:
             try:
                 self.local.invocation_id = call_id
-                value = spec.run(self, copy.deepcopy(args.value))
+                from execution_commit import bind_scope
+                from datetime import datetime
+                observed_at = datetime.now().isoformat()
+                with bind_scope(self.commit_scope, observed_at):
+                    value = spec.run(self, copy.deepcopy(args.value))
                 from ibl_v2_adapters import Adapted
                 if isinstance(value, Adapted):
                     tool_evidence, value = value.evidence, value.value
@@ -616,6 +636,8 @@ class Runtime(ExpressionEvaluator):
                 if external:
                     receipt = {"request_hash": request_hash, "value": pack(value), "evidence": tool_evidence,
                                "action": key, "reuse_key": reuse_key}
+                    if contract.get("deferred_observation"):
+                        receipt["observed_at"] = observed_at
                     if self.journal:
                         self.journal.finish(call_id, receipt)
                     with self.lock:
@@ -682,6 +704,11 @@ class Runtime(ExpressionEvaluator):
                     "evidence": self.trace, "source_map": self.source_map, "recordings": self.recordings,
                     "usage": {"steps": self.budget.used_steps, "rows": self.budget.used_rows,
                               "elapsed_ms": round((time.monotonic() - self.budget.started) * 1000)}})
+        if self.owns_commit_scope and out.get("success") and out.get("source_complete"):
+            try:
+                self.commit_scope.commit()
+            except Exception as exc:
+                out.update(success=False, error=f"관측 원장 확정 실패: {exc}")
         if self.plan.preflight.get('warnings'):
             out['precheck_warnings'] = self.plan.preflight['warnings']
         if self.reuse_run:

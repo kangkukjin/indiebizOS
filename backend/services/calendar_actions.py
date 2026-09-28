@@ -15,6 +15,23 @@ BASE_PATH = get_base_path()
 class CalendarActionsMixin:
     """캘린더 액션 실행 메서드를 모아놓은 Mixin 클래스."""
 
+    @staticmethod
+    def _should_notify_result(task, result, now=None):
+        """Notify a changed failure immediately; summarize unchanged failures daily."""
+        import time
+        now = time.time() if now is None else now
+        if result.get("success"):
+            task.pop("failure_notice", None)
+            return True
+        message = str(result.get("error") or "알 수 없는 오류")
+        previous = task.get("failure_notice") or {}
+        same = previous.get("error") == message
+        repeated = previous.get("repeated", 0) + 1 if same else 1
+        notify = not same or now - previous.get("notified_at", 0) >= 86400
+        task["failure_notice"] = {"error": message, "repeated": repeated,
+                                  "notified_at": now if notify else previous["notified_at"]}
+        return notify
+
     # =========================================================================
     # 액션 함수 (기존 scheduler.py에서 이전)
     # =========================================================================
@@ -54,12 +71,13 @@ class CalendarActionsMixin:
                 from notification_manager import get_notification_manager
                 nm = get_notification_manager()
                 if result.get("success"):
+                    self._should_notify_result(task, result)
                     nm.success(
                         title="스케줄 실행 완료",
                         message=f"'{switch.get('name')}' 스위치가 성공적으로 실행되었습니다.",
                         source="scheduler"
                     )
-                else:
+                elif self._should_notify_result(task, result):
                     nm.warning(
                         title="스케줄 실행 실패",
                         message=f"'{switch.get('name')}' 스위치 실행 중 오류: {result.get('message', '알 수 없는 오류')}",
@@ -113,12 +131,13 @@ class CalendarActionsMixin:
                 from notification_manager import get_notification_manager
                 nm = get_notification_manager()
                 if result.get("success"):
+                    self._should_notify_result(task, result)
                     nm.success(
                         title="워크플로우 실행 완료",
                         message=f"'{workflow_id}' 워크플로우가 성공적으로 실행되었습니다. ({result.get('steps_completed', 0)}/{result.get('steps_total', 0)} steps)",
                         source="scheduler"
                     )
-                else:
+                elif self._should_notify_result(task, result):
                     nm.warning(
                         title="워크플로우 실행 실패",
                         message=f"'{workflow_id}' 워크플로우 실행 중 오류: {result.get('error', '알 수 없는 오류')}",
@@ -220,16 +239,17 @@ class CalendarActionsMixin:
                 nm = get_notification_manager()
                 owner_label = f"{owner_project_id}/{owner_agent_id}" if owner_project_id else ""
                 if result.get("success"):
+                    self._should_notify_result(task, result)
                     nm.success(
                         title=("스케줄 위임 접수" if result.get("queued") else "스케줄 실행 완료")
                               + (f" — {owner_label}" if owner_label else ""),
                         message=f"'{task.get('title')}'",
                         source="scheduler"
                     )
-                else:
+                elif self._should_notify_result(task, result):
                     nm.warning(
                         title=f"스케줄 실행 실패{' — ' + owner_label if owner_label else ''}",
-                        message=f"'{task.get('title')}': {result.get('error', '알 수 없는 오류')}",
+                        message=f"'{task.get('title')}': {result.get('error', '알 수 없는 오류')} (동일 실패 {task.get('failure_notice', {}).get('repeated', 1)}회)",
                         source="scheduler"
                     )
             except Exception:

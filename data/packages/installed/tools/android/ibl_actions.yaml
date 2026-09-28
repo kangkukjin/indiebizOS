@@ -2,6 +2,9 @@ nodes:
   sense:
     actions:
       phone:
+        params:
+          package_name: string
+          pkg: string
         returns: items
         side_effect: false    # 전 op 읽기 전용
         fixture: '[sense:phone]{}'
@@ -158,6 +161,7 @@ nodes:
         - 탭
       phone:
         aliases:   # ★정본(check_param_canon) — 핸들러의 이중 읽기를 데이터화 (2026-08-29 구현-읽기 감사)
+          package_name: [pkg]
           to: [number]
           filename: [name]
           mime: [mime_type]

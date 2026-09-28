@@ -110,6 +110,8 @@ def digest(value):
 
 
 def pack(value):
+    from common.value_semantics import native_numeric_scalar
+    value = native_numeric_scalar(value)
     if isinstance(value, ForeignRef):
         return ["foreign", value.fields()]
     if isinstance(value, Unit):
@@ -172,6 +174,8 @@ def unpack(value):
 
 def projection(value):
     """Human-readable view. `value_wire` is the authoritative typed value."""
+    from common.value_semantics import native_numeric_scalar
+    value = native_numeric_scalar(value)
     if isinstance(value, ForeignRef):
         return value.view()
     if isinstance(value, Unit):

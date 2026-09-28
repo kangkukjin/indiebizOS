@@ -387,25 +387,9 @@ def _looks_like_ibl(text) -> bool:
 
 
 def _split_date_time(event_date, event_time):
-    """`date:"2026-09-03 14:00"`·`"2026-09-03T14:00"` 같은 합쳐 쓴 값을 date/time 으로 가른다 (F54-3).
-
-    옛 판은 원문을 그대로 저장해 실행 판정(`strptime("%Y-%m-%d")`)이 못 읽고 **침묵 미발화**했다.
-    `_execute_schedule` 이 같은 입력을 가르던 규칙을 한 벌로.
-    """
-    d = str(event_date).strip() if event_date else None
-    t = str(event_time).strip() if event_time else None
-    if d and (" " in d or "T" in d):
-        try:
-            from datetime import datetime as _dt
-            parsed = _dt.fromisoformat(d.replace(" ", "T"))
-            d = parsed.strftime("%Y-%m-%d")
-            if not t:
-                t = parsed.strftime("%H:%M")
-        except (ValueError, TypeError):
-            pass
-    if t and len(t) == 8 and t.count(":") == 2:
-        t = t[:5]
-    return d, t
+    """Compatibility entry point for the shared calendar normalizer (F54-3)."""
+    from calendar_rules import split_date_time
+    return split_date_time(event_date, event_time)
 
 
 def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
@@ -447,7 +431,13 @@ def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
             #   IBL 이면 run_pipeline + action_params.pipeline 로 정규화하고 등록 프로젝트를 싣는다.
             if event_action and _looks_like_ibl(event_action):
                 action_params = dict(action_params or {})
-                action_params["pipeline"] = str(event_action)
+                from ibl_edition import pin_source
+                from workflow_engine import preflight_sentence
+                source = pin_source(str(event_action))
+                checked = preflight_sentence(source, inputs=action_params.get("inputs"))
+                if not checked.get("runnable"):
+                    return json.dumps({"success": False, "error": f"등록할 문장 오류: {checked.get('problem')}"}, ensure_ascii=False)
+                action_params["pipeline"] = source
                 event_action = "run_pipeline"
                 from trigger_engine import project_id_of_path as _pid_of
                 owner_project_id = _pid_of(project_path) or None
@@ -512,7 +502,13 @@ def _execute_manage_events(tool_input: dict, project_path: str = None) -> str:
                 _ea = tool_input["event_action"]
                 if _ea and _looks_like_ibl(_ea):
                     _ap = dict(updates.get("action_params") or {})
-                    _ap["pipeline"] = str(_ea)
+                    from ibl_edition import pin_source
+                    from workflow_engine import preflight_sentence
+                    source = pin_source(str(_ea))
+                    checked = preflight_sentence(source, inputs=_ap.get("inputs"))
+                    if not checked.get("runnable"):
+                        return json.dumps({"success": False, "error": f"등록할 문장 오류: {checked.get('problem')}"}, ensure_ascii=False)
+                    _ap["pipeline"] = source
                     updates["action_params"] = _ap
                     updates["action"] = "run_pipeline"
                 elif _ea and _ea not in cm.actions:

@@ -70,6 +70,8 @@ def _scan_storage(tool_input: dict) -> str:
             "file_count": result.get('file_count'),
             "total_size_mb": result.get('total_size_mb'),
             "error_count": result.get('error_count'),
+            "errors": result.get("errors", []),
+            "source_complete": result.get("source_complete", True),
         }, ensure_ascii=False)
     else:
         return json.dumps(result, ensure_ascii=False)

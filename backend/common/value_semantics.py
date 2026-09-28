@@ -131,6 +131,21 @@ def numeric_value(value: Any, *, preserve_decimal: bool = False):
         return None
 
 
+def native_numeric_scalar(value):
+    """Normalize supported foreign numeric scalars without narrowing Decimal or bool.
+
+    Extended-precision floats, arrays, complex and numpy bool are not numbers in
+    the value protocol; leave them for the boundary's normal rejection.
+    """
+    if type(value).__module__ == "numpy":
+        import numpy as np
+        if isinstance(value, (np.integer, np.floating)):
+            native = value.item()
+            if type(native) in (int, float):
+                return native
+    return value
+
+
 def decimal_json_number(value: Decimal) -> float:
     """십진 표기가 왕복 가능한 유한 JSON/Python 수만 경계 밖으로 보낸다."""
     if value.is_finite():

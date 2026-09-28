@@ -81,6 +81,9 @@ nodes:
         - 셀프체크
         - self-check
       phone:
+        params:
+          package_name: string
+          pkg: string
         returns: items
         side_effect: false
         fixture: '[sense:phone]{}'
@@ -1290,6 +1293,10 @@ nodes:
         implementation: CoinGecko 무료 API로 암호화폐 시세 조회 (requests HTTP)
         target_key: coin
       kosis:
+        shape_axes:
+          info: false
+          tbl_id: null
+          indicator: null
         params:
           indicator: string
         aliases:
@@ -1929,6 +1936,7 @@ nodes:
           at: '2026-09-15'
           impl: 5e75393fac9cd838
         params:
+          name: string
           query: string
         returns: items
         side_effect: false
@@ -2179,6 +2187,10 @@ nodes:
         returns: items
         side_effect: false
         fixture: '[sense:realty]{op: "query", region: "강남구"}'
+        shape_axes:
+          source: molit
+          deal: trade
+          type: apt
         shape_variants:
           source=naver: '[sense:realty]{op: "query", source: "naver", region: "평택 비전동", limit: 5}'
           source=zigbang: '[sense:realty]{op: "query", source: "zigbang", region: "평택 죽백동", limit: 5}'
@@ -3088,6 +3100,29 @@ nodes:
         - 대화이력
         - 이전
       manage_events:
+        open_params: false
+        params:
+          op: string
+          title: string
+          date: string
+          time: string
+          event_action: string
+          action_params: object
+          repeat: string
+          start_time: string
+          type: string
+          description: string
+          enabled: boolean
+          weekdays: array
+          month: integer
+          day: integer
+          interval_hours: integer
+          event_id: string
+          year: integer
+        value_validator: calendar
+        code_params:
+        - event_action
+        - do
         aliases:
           op:
           - action
@@ -3191,6 +3226,31 @@ nodes:
         - 스위치 목록
         - 스위치 실행
       schedule:
+        open_params: false
+        params:
+          pipeline: string
+          code: string
+          inputs: object
+          edition: integer
+          minutes: number
+          seconds: number
+          at: string
+          start_time: string
+          date: string
+          time: string
+          repeat: string
+          title: string
+          weekdays: array
+          month: integer
+          day: integer
+          interval_hours: integer
+          target_project_id: string
+          target_agent_id: string
+        value_validator: schedule
+        code_params:
+        - pipeline
+        - do
+        - code
         aliases:
           pipeline:
           - do
@@ -3248,6 +3308,12 @@ nodes:
         - 시도 이력
         - 진행상황
       notify_user:
+        open_params: false
+        params:
+          message: string
+          title: string
+          type: string
+        pipe_text: message
         returns: effect
         description: 사용자에게 데스크탑 알림 전송. 중요 이벤트 통지용.
         target_description: 알림 메시지. title·type 옵션 (info/warning/error). title 을 생략하면 message 첫 줄이 제목이 된다(관문 파생 — 굳이 message 를 title 에 옮겨 적지 말 것).
@@ -3302,6 +3368,24 @@ nodes:
         - 워크플로우 삭제
         - 파이프라인 저장
       trigger:
+        open_params: false
+        params:
+          op: string
+          name: string
+          type: string
+          config: object
+          pipeline: string
+          inputs: object
+          edition: integer
+          enabled: boolean
+          trigger_id: string
+          cron: string
+          limit: integer
+          project_id: string
+        value_validator: trigger
+        code_params:
+        - pipeline
+        - do
         aliases:
           trigger_id:
           - id
@@ -3868,12 +3952,24 @@ nodes:
         - CCTV 갱신
       finance:
         params:
+          counterparty: string
+          date: string
+          note: string
+          text: string
+          items:
+          - array
+          - object
+          - string
+          limit: integer
+          tx_type: string
+          query: string
+          record_type: string
+          record_id: integer
           amount: number
           asset_type: string
           category: string
           days: integer
           file: string
-          items: array
           kind: string
           month: string
           name: string
@@ -3890,14 +3986,28 @@ nodes:
           query_type=거래: '[self:finance]{op: "query", query_type: "거래", days: 90}'
         description: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
         group: finance
-        target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 결제 앱(하나카드·청주페이) 알림 수거→거래 병합(결제=지출, 인센티브 지급 완료=수입). 맥에서는 폰 USB 연결이 필요하고, 폰에서 실행하면 자기 포획소를 직접 읽어 USB 없이 수거한다(같은 ext_id 라 두 몸이 같은 결제를 두 번 적지 않는다). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
+        target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/query/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로), text 또는 items(행 목록/봉투)를 AI가 구조화해 일괄 저장. sync — 결제 앱(하나카드·청주페이) 알림 수거→거래 병합(결제=지출, 인센티브 지급 완료=수입). 맥에서는 폰 USB 연결이 필요하고, 폰에서 실행하면 자기 포획소를 직접 읽어 USB 없이 수거한다(같은 ext_id 라 두 몸이 같은 결제를 두 번 적지 않는다). 전 op 공통 owner(주체 — 미지정=기본, 쓰기(save/ingest/sync)에서만 처음 쓴 이름 자동 등록; query는 주체를 만들지 않음).'
         target_key: op
         router: handler
         tool: finance_op
         aliases:
-          keyword:
-          - query
+          query:
+          - keyword
           - q
+          kind:
+          - info_type
+          owner:
+          - person
+          date:
+          - occurred_at
+          counterparty:
+          - merchant
+          record_id:
+          - id
+          file:
+          - path
+          text:
+          - content
         ops:
           returns:
             save: effect
@@ -3909,7 +4019,7 @@ nodes:
             query: false
           values:
             save: 재무 정보 저장 (kind + 금액/이름 평탄형)
-            query: 조회 (query_type + month/days/keyword/source/owner)
+            query: 조회 (query_type + month/days/query/source/owner)
             delete: 기록 삭제 (record_type + record_id)
             ingest: 다형 입력 일괄 적재 — 영수증 사진·PDF·엑셀 가계부·텍스트를 AI가 구조화해 저장 (file/text + owner)
             sync: 폰(USB) 결제 알림 수거 → 거래 병합(결제=지출, 인센티브 지급 완료=수입) (하나카드·청주페이, 지우기 전에 수거)
@@ -4117,6 +4227,8 @@ nodes:
                 - '{meta}'
                 - '{summary}'
       limb:
+        params:
+          key: string
         aliases:
           target:
           - device_id
@@ -4154,6 +4266,9 @@ nodes:
         - 헬퍼만들기
       health:
         params:
+          id: integer
+          path: string
+          content: string
           category: string
           file: string
           info_type: string
@@ -5047,6 +5162,10 @@ nodes:
             detail: 저장된 폴더 주석 조회 (볼륨 생략 시 전체 통합, 기본)
         implementation: annotate_folder/get_folder_annotations op 분기 (pc-manager)
       forage:
+        params:
+          note: string
+          path: string
+          folder_path: string
         aliases:
           query:
           - q
@@ -5181,11 +5300,11 @@ nodes:
           impl: 3c31b0566918933b
           dependencies:
             backend/common/expression_eval.py: efdcd90e266bd3ac4bd50138dd8c5272f9c3099c71fe56454c37b4b873b73283
-            backend/common/expression_functions.py: 42b4a286a3761ee40202217a27d9c41461fd912a9b5de2dbfd2a1f3ad9a9e2a6
-            backend/common/expression_ir.py: 86574233f0463af007cc3203d66dd05cd91ced85c83b959e44114ef2715e279e
+            backend/common/expression_functions.py: 2bb5513d5b7d82887213c3f14b40ad962cd1df0795d80f846bdfb33a458f805e
+            backend/common/expression_ir.py: a141e7dba46b4f7ea69e571c5267725602b134405b6365fa1cbb7feeba61e91f
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-            backend/common/expression_ops.py: f3cc0eb44c921f2c456d14fec0124fcda18a495dd68f6d13165272f61951ad5c
-            backend/common/expression_parser.py: 874eb313e41695466a16080145e3e82476d0935f4739ad503cb770fd464dafec
+            backend/common/expression_ops.py: e215c90db04dfa6e8a37dfefc214a82f8aee27f35bc0d231a86d671aba7ef96f
+            backend/common/expression_parser.py: 97d8ea1bae258c2da471eae3682349d139dbb38033079a6110dc7ab52a366ad8
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: ee8f08ebd8889224e85458645b3f60386fcdb1c732772c4657d2d173fee8e0ff
             backend/common/field_path.py: b9126e62791f69d4a24bdb928dbbe582d795745a21951378a91cd43ed21449df
@@ -5193,7 +5312,7 @@ nodes:
             backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
             backend/common/row_conditions.py: 154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce
             backend/common/safe_expr.py: 393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360
-            backend/common/value_semantics.py: 1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe
+            backend/common/value_semantics.py: 9de267f61961ea21933b60e3f8f3a74cbecf388a9e9c64638f4e1879e8005446
             backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
             backend/datastore/record_assets.py: a9119891401cab4d11d80091d07d7bf545abb1c34fdabf79cd96bb95016df267
             backend/datastore/record_commands.py: e58a57308b625a7e485b4cf85357ae9d07464293229f7ef3b795dfcb786aaffb
@@ -5301,9 +5420,9 @@ nodes:
             value_path: /message
         returns: scalar
         fixture: '[self:time]{}'
-        description: 현재 시간 조회 (로컬 시스템 시계, KST). 날짜·요일·시:분:초 반환.
+        description: 현재 시간 조회 (로컬 시스템 시계). 기본 출력에 날짜·시:분:초·시간대 이름·UTC 오프셋 포함.
         group: system
-        target_description: format 으로 출력 포맷 지정 (생략 시 %Y-%m-%d %H:%M:%S).
+        target_description: format 으로 출력 포맷 지정 (생략 시 %Y-%m-%d %H:%M:%S %Z%z).
         router: handler
         tool: get_current_time
         implementation: Python datetime으로 현재 시간 조회 (로컬 시스템 시계)
@@ -5418,7 +5537,7 @@ nodes:
         exempt: 파일 경로 인자 필요(고정 fixture 부적합)
         description: 파일 읽기 — 텍스트/PDF/DOCX/XLSX 통합. 확장자로 자동 인식(format 명시도 가능).
         group: file
-        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용; offset은 0 이상, limit은 0 이상 정수이며 0은 빈 본문, 생략은 전체 읽기) 또는 start_line/end_line(1-기반 양끝 포함, 역전·비정수·충돌 범위는 오류) 또는 tail(끝에서 N줄, 1 이상 정수; offset/start/start_line/end/end_line/limit와 동시 지정은 오류). blocks=true는 선택한 범위를 문단 items로 변환하며 같은 물리 줄번호를 사용한다. 빈 문단 범위의 start_line/end_line은 null이다. pdf — pages는 1-기반 양끝 포함 범위(예 '2', '1-5,8'; 잘못된 범위는 오류), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). hwp(v5)/hwpx — 문단·표를 docx 와 같은 text+blocks 로(offset/limit/max_blocks, extract_images); 암호·배포용 hwp 는 정직 거절. pptx — 슬라이드마다 heading+본문·표·[노트], pages 로 슬라이드 범위(그림만 있는 슬라이드는 본문 없음 — 이미지는 extract_images). epub — 챕터(spine) 순 heading+문단, pages 로 챕터 범위. JSON 배열을 변수에 받으면 변수 자체가 목록($목록)이며 .items 필드가 있는 봉투가 아니다. 스캔 PDF는 별도 OCR 필요.
+        target_description: 읽을 파일 경로 (생략 시 직전 파이프 step 결과의 파일 경로 자동 사용 — file_find | take:1 >> read). format 옵션 (text/pdf/docx/xlsx/xls/hwp/hwpx/pptx/epub) — 생략 시 확장자 자동. text — offset/limit (라인, start/end 별칭 허용; offset은 0 이상, limit은 0 이상 정수이며 0은 빈 본문, 생략은 전체 읽기) 또는 start_line/end_line(1-기반 양끝 포함, 역전·비정수·충돌 범위는 오류) 또는 tail(끝에서 N줄, 1 이상 정수; offset/start/start_line/end/end_line/limit와 동시 지정은 오류). blocks=true는 선택한 범위를 문단 items로 변환하며 같은 물리 줄번호를 사용한다. 빈 문단 범위의 start_line/end_line은 null이다. pdf — pages는 1-기반 양끝 포함 범위(예 '2', '1-5,8'; 잘못된 범위는 오류), tables:true 면 표를 table{columns,rows} 통화로 추출(>> spreadsheet/filter 로 흐름 — 실선 표 기준). docx — offset/limit/max_blocks (블록 단위). xlsx/xls — sheet(특정 시트명)/max_rows 옵션 — 첫 행을 헤더로 items(행 dict)+table 통화, text 는 TSV 병기(>> filter/reduce/sheet append 로 흐름; 셀 "92,000" 은 숫자로 정규화 — [self:sheet] find 와 같은 눈). hwp(v5)/hwpx — 문단·표를 docx 와 같은 text+blocks 로(offset/limit/max_blocks, extract_images); 암호·배포용 hwp 는 정직 거절. pptx — 슬라이드마다 heading+본문·표·[노트], pages 로 슬라이드 범위(그림만 있는 슬라이드는 본문 없음 — 이미지는 extract_images). epub — 챕터(spine) 순 heading+문단, pages 로 챕터 범위. 판본 2 JSON 전체 읽기는 Document.data에 구조를 보존한다(객체=$문서.data, 배열=$문서.data.items). 빈 파일은 빈 text이며 절단·범위 읽기는 텍스트로 남는다. 그림 추출은 extract_images:true로 요청하며 원본 폴더 대신 임시 캐시에 저장한다. 스캔 PDF는 별도 OCR 필요.
         router: handler
         tool: read_op
         implementation: handler.py가 format 또는 확장자로 분기 — read_file/read_pdf/read_docx/read_xlsx(office_ops)·read_hwp/hwpx/pptx/epub(doc_read_extra)에 위임. 읽기 예외는 JSON 실패 봉투로 반환하며 파일 부재(not_found)·권한(permission)·I/O(io)의 error_type과 errno를 보존한다. 선택 파일은 self:list의 빈 목록으로 부재를 먼저 확인하고 필수 파일의 실패는 전파한다.
@@ -5428,8 +5547,8 @@ nodes:
           path: $path
         member_transform: member_documents:read_document
         path_audited:
-          at: '2026-09-28'
-          impl: a880bea82447daae
+          at: '2026-09-29'
+          impl: eafd05c84123840f
         target_key: path
         aliases:
           offset:
@@ -5441,8 +5560,8 @@ nodes:
           path: $path
         member_transform: member_documents:fill_document
         path_audited:
-          at: '2026-09-28'
-          impl: a880bea82447daae
+          at: '2026-09-29'
+          impl: eafd05c84123840f
         returns: items
         side_effect: true
         exempt: 템플릿 문서 경로 인자 필요(고정 fixture 부적합)
@@ -6202,8 +6321,8 @@ nodes:
           nondeterministic: true
         member_transform: script_ops:member_script
         path_audited:
-          at: '2026-09-28'
-          impl: a880bea82447daae
+          at: '2026-09-29'
+          impl: eafd05c84123840f
         pipe_in: true
         lands_on: body
         limb_op:
@@ -6427,6 +6546,8 @@ nodes:
         - 탭
       phone:
         aliases:
+          package_name:
+          - pkg
           to:
           - number
           filename:
@@ -6974,6 +7095,16 @@ nodes:
         - 에이전트정보
         - 상세
       channel_send:
+        open_params: false
+        params:
+          channel_type: string
+          account: string
+          to: string
+          subject: string
+          body: string
+          attachment_path: string
+          confirmed: boolean
+        pipe_text: body
         returns: effect
         description: 메시지 발송 (Gmail/Nostr). 수신자는 주소록/주인 확정 원천으로만 해소(임의 주소 금지). 발신자는 자기 계정 자동 설정(없으면 차단).
         target_description: 채널 타입 (email/nostr — gmail은 email의 옛 별칭). to=수신자는 이웃 이름 또는 "나"(주인 본인, .env 확정 원천)로 넘겨라 — 시스템이 주소록에서 주소를 해소한다. raw 이메일/npub을 직접 넣으면 주소록에 등록된 경우만 발송되고, 미등록이면 needs_confirmation으로 막힌다(사용자에게 확인 후 주소록 등록 또는 confirmed:true 로 재실행). subject/body로 내용 구성. 발신자는 호출 주체의 자기 계정(미설정 시 발신 차단).
@@ -9483,6 +9614,7 @@ nodes:
         - 고유
       since:
         callable_contract:
+          deferred_observation: true
           version: 1
           params:
             by: Unknown
@@ -9657,7 +9789,7 @@ nodes:
         runs_on: anywhere
         scope: workspace
         description: 통화 변환자(이항) — 두 입력을 공통 키(on)로 결합(how=inner/left/right/full/semi/anti). 서로 다른 소스를 한 키로 묶어 분석. & 병렬로 공급.
-        target_description: 'how(inner 기본, left=왼쪽 보존, right=오른쪽 보존, full=양쪽 보존, semi=키 기준 교집합(일치하는 왼쪽 행), anti=키 기준 차집합(불일치 왼쪽 행)). semi/anti는 오른쪽 중복으로 왼쪽 행을 복제하지 않는다. defaults({결과열:기본값})는 left/right/full에서 짝이 없는 쪽의 열에만 적용; 실제 null은 바꾸지 않는다. 빈 items에는 defaults로 빈 쪽 열을 선언할 수 있다. on(조인 키 이름, 양쪽에 존재, 필수 — 목록이면 복합키 조인이고 키 일부가 빈 행은 불일치 행으로 처리). 표형 table 입력=열 기준, items=필드 기준. null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과=좌측 전체+우측(키 제외, 동명은 _2부터 빈 접미사). 충돌 이름은 입력 전체 열에서 한 번 정해 희소 행마다 달라지지 않는다. 표의 생략된 후행 셀은 null로 채워 열 위치를 보존한다. 예: [sense:stock]{op: history} & [sense:world_bank]{...} >> [table:join]{on: "연도"}. 두 입력은 & 병렬로 공급 — 가지에 파이프가 필요하면(rename 등) 변수에 담아 left/right 로: $a = [A] >> [table:rename]{...} 후 [table:join]{left: "$a", right: "$b", on: ...}. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.'
+        target_description: 'how(inner 기본, left=왼쪽 보존, right=오른쪽 보존, full=양쪽 보존, semi=키 기준 교집합(일치하는 왼쪽 행), anti=키 기준 차집합(불일치 왼쪽 행)). semi/anti는 오른쪽 중복으로 왼쪽 행을 복제하지 않는다. defaults({결과열:기본값})는 left/right/full에서 짝이 없는 쪽의 열에만 적용; 실제 null은 바꾸지 않는다. 빈 items에는 defaults로 빈 쪽 열을 선언할 수 있다. on(조인 키 이름, 양쪽에 존재, 필수 — 목록이면 복합키 조인이고 키 일부가 빈 행은 불일치 행으로 처리). 표형 table 입력=열 기준, items=필드 기준. null·필드 부재·빈/공백 문자열은 키 없음으로 제외(0·False는 유효 키). 결과=좌측 전체+우측(키 제외, 동명은 _2부터 빈 접미사). 충돌 이름은 입력 전체 열에서 한 번 정해 희소 행마다 달라지지 않는다. 표의 생략된 후행 셀은 null로 채워 열 위치를 보존한다. 주가의 date와 연도 자료를 바로 조인하지 말고, 연도 열을 만들고 연간 집계한 뒤 공통 키로 결합한다. 두 입력은 & 병렬로 공급 — 가지에 파이프가 필요하면(rename 등) 변수에 담아 left/right 로: $a = [A] >> [table:rename]{...} 후 [table:join]{left: "$a", right: "$b", on: ...}. ★1:N 조인은 왼쪽 값이 N행에 복제된다 — 조인 뒤 sum/avg 는 중복 합산이 되기 쉬우니 집계(groupby)는 조인 전에 하고 결과를 조인할 것.'
         group: transform
         router: handler
         params:
@@ -9907,6 +10039,8 @@ nodes:
         - 리포트
         - 페이지
       spreadsheet:
+        params:
+          items: array
         returns: effect
         pipe_in: true
         runs_on: pc_only
@@ -9926,8 +10060,13 @@ nodes:
         - 장부
       chart:
         params:
+          items:
+          - array
+          - object
           x: string
-          y: string
+          y:
+          - string
+          - array
           spec: object
           horizontal: boolean
           stacked: boolean
@@ -9954,19 +10093,19 @@ nodes:
 
           표형 table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} 파라미터도 수용 — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 입력 형태). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
 
-          - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+          - line: x/y 리스트, 다중 시리즈는 table의 여러 값 열 또는 series_names 배열. 시계열에 적합.
 
           - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
 
           - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
 
-          - pie: labels·values 리스트. hole 옵션으로 도넛.
+          - pie: labels·values 리스트. donut 옵션으로 도넛.
 
-          - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
+          - scatter: x/y 좌표 리스트. show_trendline 옵션으로 추세선.
 
           - heatmap: z(매트릭스)·x_labels·y_labels.
 
-          - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
+          - candlestick: open/high/low/close/volume 시계열 + ma_periods 옵션(이동평균).
 
           - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
 

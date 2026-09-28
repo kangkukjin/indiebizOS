@@ -173,59 +173,7 @@ def _parse_cron_dow(dow: str):
     return sorted({_CRON_DOW[d] for d in out})
 
 
-def normalize_schedule_config(config) -> dict:
-    """트리거 `config` 직접 지정의 정규화·검증 한 벌 (B54-8, 54회차).
-
-    옛 가이드가 가르친 형태(요일을 이름으로, 1회를 once 로)가 검증 없이 저장돼
-    **영원히 안 도는 트리거가 성공으로 등록**됐다(캘린더는 요일을 정수 0=월 로만 비교하고
-    `once` 라는 repeat 은 없다). 반환: {"config": …} 또는 {"error": …}.
-    """
-    if not isinstance(config, dict):
-        return {"error": "config 는 객체여야 합니다(예: {repeat:\"daily\", time:\"09:00\"}). cron 문자열이 더 간단합니다."}
-    cfg = dict(config)
-    repeat = str(cfg.get("repeat", "daily") or "daily").strip().lower()
-    if repeat == "once":
-        repeat = "none"
-    if repeat not in _REPEATS:
-        return {"error": f"repeat '{cfg.get('repeat')}' 는 지원하지 않습니다. 가능: {', '.join(_REPEATS)} (1회는 none)."}
-    cfg["repeat"] = repeat
-    t = cfg.get("time")
-    if t is not None:
-        t = str(t).strip()
-        m = re.match(r"^(\d{1,2}):(\d{2})(?::\d{2})?$", t)
-        if not m or not (0 <= int(m.group(1)) <= 23 and 0 <= int(m.group(2)) <= 59):
-            return {"error": f"time 은 HH:MM 이어야 합니다: '{t}'"}
-        cfg["time"] = f"{int(m.group(1)):02d}:{int(m.group(2)):02d}"
-    if repeat == "weekly":
-        raw = cfg.get("weekdays")
-        if not isinstance(raw, list) or not raw:
-            return {"error": "weekly 는 weekdays 목록이 필요합니다(0=월..6=일 또는 mon..sun)."}
-        days = []
-        for d in raw:
-            if isinstance(d, int) and 0 <= d <= 6:
-                days.append(d)
-            elif isinstance(d, str) and d.strip().lower()[:3] in _WEEKDAY_NAMES:
-                days.append(_WEEKDAY_NAMES[d.strip().lower()[:3]])
-            elif isinstance(d, str) and d.strip() in _WEEKDAY_NAMES:
-                days.append(_WEEKDAY_NAMES[d.strip()])
-            elif isinstance(d, str) and d.strip().isdigit() and 0 <= int(d) <= 6:
-                days.append(int(d))
-            else:
-                return {"error": f"weekdays 값을 읽을 수 없습니다: {d!r} (0=월..6=일 또는 mon..sun)"}
-        cfg["weekdays"] = sorted(set(days))
-    if repeat == "interval":
-        try:
-            ih = int(cfg.get("interval_hours") or 0)
-        except (TypeError, ValueError):
-            ih = 0
-        if ih <= 0:
-            return {"error": "interval 은 interval_hours(1 이상 정수)가 필요합니다."}
-        cfg["interval_hours"] = ih
-    if repeat == "none" and not cfg.get("date"):
-        return {"error": "1회(none) 는 date(YYYY-MM-DD)가 필요합니다."}
-    if repeat == "yearly" and (cfg.get("month") is None or cfg.get("day") is None):
-        return {"error": "yearly 는 month·day 가 필요합니다."}
-    return {"config": cfg}
+from calendar_rules import normalize_schedule_config
 
 
 def cron_to_config(cron: str) -> dict:
@@ -368,12 +316,18 @@ def add_history(trigger_id: str, trigger_name: str, success: bool,
         if shape:
             row["shape"] = shape
         history.append(row)
-        # 최근 200개만 유지
-        data["history"] = history[-200:]
+        kept, counts = [], {}
+        for item in reversed(history):
+            key = item.get("trigger_id")
+            counts[key] = counts.get(key, 0) + 1
+            if counts[key] <= 200:
+                kept.append(item)
+        data["history"] = list(reversed(kept))
         for t in data.get("triggers", []):
             if t.get("id") == trigger_id:
                 t["run_count"] = int(t.get("run_count") or 0) + 1
                 t["last_run"] = now
+                t["consecutive_failures"] = 0 if success else int(t.get("consecutive_failures") or 0) + 1
                 t["last_success"] = bool(success)
                 break
         _save_triggers(data)
@@ -487,6 +441,11 @@ def _create_trigger(target: str, params: dict, project_path: str = None) -> dict
         return {"error": cfg["error"]}
     config = cfg["config"]
 
+    from workflow_engine import preflight_sentence
+    checked = preflight_sentence(pipeline, inputs=params.get("inputs"))
+    if not checked.get("runnable"):
+        return {"error": f"등록할 문장 오류: {checked.get('problem')}"}
+
     trigger_id = f"trg_{uuid.uuid4().hex[:12]}"
     trigger = {
         "id": trigger_id,
@@ -548,6 +507,10 @@ def _update_trigger_locked(target: str, params: dict) -> dict:
                 updated["pipeline"] = pin_source(params["pipeline"], params.get("edition"))
             if "inputs" in params:
                 updated["inputs"] = params["inputs"]
+            from workflow_engine import preflight_sentence
+            checked = preflight_sentence(updated["pipeline"], inputs=updated.get("inputs"))
+            if not checked.get("runnable"):
+                return {"error": f"등록할 문장 오류: {checked.get('problem')}"}
             updated["config"] = cfg["config"]
             t.update(updated)
             _save_triggers(data)

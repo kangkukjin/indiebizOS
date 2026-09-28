@@ -809,24 +809,24 @@ def test_p22_copy_empty_hands_vs_no_currency():
     # ① 0행 = 빈손 성공 (감시자·필터 문형의 정상 결과)
     for zero in (json.dumps({"items": []}), {"items": []}, []):
         r = copy_with(zero)
-        assert "0행" in r and not r.startswith("Error:"), (zero, r)
+        assert "0행" in r and not (json.loads(r).get("success") is False), (zero, r)
         assert wf.is_error_result(r) is False, r        # 파이프가 성공으로 읽는가
         assert "복사할 항목이 없습니다" not in r, r       # 옛 문장으로 되돌아가지 않았는가
 
     # ② 통화 없음 = 여전히 거절 + 받은 봉투 진단(무엇이 왔는지)
     r = copy_with("그냥 평문 결과입니다")
-    assert r.startswith("Error:") and "통화가 없습니다" in r, r
+    assert (json.loads(r).get("success") is False) and "통화가 없습니다" in r, r
     assert wf.is_error_result(r) is True, r
     r2 = copy_with(json.dumps({"success": True, "message": "완료"}))
-    assert r2.startswith("Error:") and "message" in r2, r2   # 봉투 키를 보여준다
+    assert (json.loads(r2).get("success") is False) and "message" in r2, r2   # 봉투 키를 보여준다
     r3 = copy_with(json.dumps({"items": "목록이 아님"}))
-    assert r3.startswith("Error:") and "목록이 아니라" in r3, r3
+    assert (json.loads(r3).get("success") is False) and "목록이 아니라" in r3, r3
     r4 = copy_with(None)                                   # 파이프도 src 도 없음
-    assert r4.startswith("Error:") and "src" in r4, r4     # 옛 안내 보존
+    assert (json.loads(r4).get("success") is False) and "src" in r4, r4     # 옛 안내 보존
 
     # ③ 행은 있으나 레코드가 아님 = 0행과 다른 사실이라 다른 문장
     r5 = copy_with(json.dumps({"items": ["a.jpg", "b.jpg"]}))
-    assert r5.startswith("Error:") and "2행" in r5 and "레코드" in r5, r5
+    assert (json.loads(r5).get("success") is False) and "2행" in r5 and "레코드" in r5, r5
 
     # ④ 옛 records 봉투 관용은 보존(생산자 0이지만 잔존 데이터)
     assert _copyops.piped_items(json.dumps({"records": [{"path": "/x"}]})) == [{"path": "/x"}]

@@ -5,8 +5,9 @@ actions:
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
+      items: [array, object]
       x: string
-      y: string
+      y: [string, array]
       # 2026-08-29 구현-읽기 감사 상환 — chart_type 별 옵션 knob 전체를 선언(전부 handler 렌더러가 읽음).
       spec: object            # Plotly figure JSON {data, layout} 그대로 렌더 — chart_type knob 밖 롱테일용.
       horizontal: boolean     # bar 전용 — 가로 막대(기본 false).
@@ -36,19 +37,19 @@ actions:
 
       표형 table={columns:[x,s1,s2...], rows:[[x,v1,v2...],...]} 파라미터도 수용 — 첫 열=x축, 나머지=시리즈. 데이터 소스 출력을 손질 없이 차트로(table:spreadsheet와 같은 입력 형태). ※테이블은 table 키로(data 키에 {columns,rows}를 넣어도 인식은 하나 table 권장).
 
-      - line: x/y 리스트, 다중 시리즈는 series 배열. 시계열에 적합.
+      - line: x/y 리스트, 다중 시리즈는 table의 여러 값 열 또는 series_names 배열. 시계열에 적합.
 
       - 구간 강조·이벤트 표시를 IBL로 직접 그릴 수 있다(Python 불필요, line/scatter/bar 공통): bands=[{from, to, label?, color?}] 로 시기 음영(정권·국면 등), annotations=[{x, text}] 로 특정 시점 점선+라벨. line/scatter는 x가 전부 숫자(연도 등)면 숫자축 자동 변환, bar는 x 라벨 기준. (bar는 세로 막대에만 적용)
 
       - bar: x(범주)·y(값) 리스트. horizontal/stacked 옵션. 시간축은 line.
 
-      - pie: labels·values 리스트. hole 옵션으로 도넛.
+      - pie: labels·values 리스트. donut 옵션으로 도넛.
 
-      - scatter: x/y 좌표 리스트. trendline 옵션으로 추세선.
+      - scatter: x/y 좌표 리스트. show_trendline 옵션으로 추세선.
 
       - heatmap: z(매트릭스)·x_labels·y_labels.
 
-      - candlestick: open/high/low/close/volume 시계열 + ma 옵션(이동평균).
+      - candlestick: open/high/low/close/volume 시계열 + ma_periods 옵션(이동평균).
 
       - multi: charts 배열에 개별 차트 정의(각각 chart_type+데이터). subplots 자동 배치.
 

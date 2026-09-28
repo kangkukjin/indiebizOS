@@ -155,7 +155,10 @@ def test_public_boundaries_cannot_reintroduce_per_surface_json_policy():
     local_aggregate = (_ROOT / "data/packages/installed/tools/data-ops/dataops_value_semantics.py").read_text(
         encoding="utf-8")
     assert "aggregate_numbers" in local_aggregate
-    assert "Decimal" not in local_aggregate and "localcontext" not in local_aggregate
+    # Decimal is a legitimate persisted key type. Conversion still belongs to
+    # the shared semantic helper; a type check is not a competing JSON policy.
+    assert "decimal_json_number(value)" in local_aggregate
+    assert "localcontext" not in local_aggregate and ".quantize(" not in local_aggregate
     assert "public_result" in inspect.getsource(ibl_engine.execute_ibl)
 
 

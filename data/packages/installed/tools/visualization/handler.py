@@ -53,6 +53,8 @@ def _extract_table_from_prev(prev):
             obj = json.loads(prev)
         except Exception:
             return None
+    if isinstance(obj, list):
+        obj = {"items": obj}
     if isinstance(obj, dict):
         t = obj.get("table")
         if isinstance(t, dict) and t.get("rows"):
@@ -161,7 +163,7 @@ def _table_to_chart_data(table: dict, chart_type: str) -> dict:
         if len(cols) > 1:
             out["x_labels"] = [str(c) for c in cols[1:]]
         return out
-    if chart_type in ("pie", "bar"):
+    if chart_type == "pie" or (chart_type == "bar" and len(cols) == 2):
         # 첫 열=라벨, 두번째 열=값 (단일 시리즈)
         out["data"] = [{"label": str(r[0]), "value": r[1]} for r in rows if len(r) > 1]
         if len(cols) > 1:
@@ -293,6 +295,19 @@ _RENDERERS = {
 
 
 def execute(tool_input: dict, context):
+    result = _execute(tool_input, context)
+    was_text = isinstance(result, str)
+    if was_text:
+        try:
+            result = json.loads(result)
+        except ValueError:
+            return result
+    if isinstance(result, dict) and isinstance(result.get("data"), dict) and result["data"].get("path"):
+        result.update(path=result["data"]["path"], file=result["data"]["path"])
+    return json.dumps(result, ensure_ascii=False) if was_text else result
+
+
+def _execute(tool_input: dict, context):
     """도구 실행 진입점 (ToolContext 기반 신규 시그니처)."""
     tool_name = context.tool_name
     tool_input = dict(tool_input)
@@ -344,6 +359,20 @@ def execute(tool_input: dict, context):
             _maybe = tool_input.get("data")
             if isinstance(_maybe, dict) and _maybe.get("rows") and _maybe.get("columns"):
                 tool_input["table"] = _maybe
+                tool_input["data"] = None
+            if tool_input.get("x") is not None or tool_input.get("y") is not None:
+                from common.currency import coerce_items_payload
+                rows = coerce_items_payload(tool_input.get("data") if tool_input.get("data") is not None else tool_input.get("items", tool_input.get("_prev_result")))
+                table = tool_input.get("table")
+                if rows is None and isinstance(table, dict):
+                    rows = [dict(zip(table.get("columns", []), r)) for r in table.get("rows", [])]
+                ys = tool_input.get("y")
+                ys = ys if isinstance(ys, list) else [ys]
+                x = tool_input.get("x")
+                fields = [x, *ys]
+                if not rows or not all(fields) or any(not isinstance(r, dict) or any(k not in r for k in fields) for r in rows):
+                    raise ValueError(f"차트 x/y 열을 입력 행에서 찾을 수 없습니다: {fields}")
+                tool_input["table"] = {"columns": fields, "rows": [[r[k] for k in fields] for r in rows]}
                 tool_input["data"] = None
             # 캔들스틱: table 통화(종가만)로 불가 → _prev_result에서 OHLC 리스트 제네릭 수용
             # (stock history prices 등 open/high/low/close 보유 리스트). 통화 필드 안 늘림.

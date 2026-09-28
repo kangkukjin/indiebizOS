@@ -86,12 +86,22 @@
               "type": "object"
             }
           },
+          "items": {
+            "type": [
+              "array",
+              "object"
+            ],
+            "description": "table:chart 파라미터"
+          },
           "x": {
             "type": "string",
             "description": "table:chart 파라미터"
           },
           "y": {
-            "type": "string",
+            "type": [
+              "string",
+              "array"
+            ],
             "description": "table:chart 파라미터"
           },
           "spec": {

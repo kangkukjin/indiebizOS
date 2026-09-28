@@ -140,6 +140,12 @@ def _create_with_plotly(data, title, x_label, y_label, series_names,
     common.apply_bands_plotly(fig, bands, annotations, x_numeric)
 
     # 저장
+    import re
+    if x_values and all(isinstance(v, str) and re.fullmatch(r"\d{4}-\d{2}", v) for v in x_values):
+        fig.update_xaxes(type="category", tickmode="array", tickvals=x_values, ticktext=x_values)
+    elif x_values and all(isinstance(v, str) and re.match(r"\d{4}-\d{2}-\d{2}", v) for v in x_values):
+        fig.update_xaxes(tickformat="%Y-%m-%d")
+
     result = common.save_plotly_figure(fig, output_path, output_format)
 
     image_tag = result.get("image_tag", "")

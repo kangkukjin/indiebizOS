@@ -151,6 +151,7 @@ actions:
     # `>> [table:compute]{set: {"평단가": "보증금 / 전용면적"}}` 을 쓰면 없는 필드로 죽었다.
     # 열 이름 정규화는 기각(세계의 명사=관측 데이터 — 몸이 이름을 붙이면 API 가 바뀔 때
     # 몸이 거짓말한다. 게다가 앱 view 템플릿 {명칭}·{법정동} 까지 파괴). 대신 변이별 실측.
+    shape_axes: {source: molit, deal: trade, type: apt}
     shape_variants:
       source=naver: '[sense:realty]{op: "query", source: "naver", region: "평택 비전동", limit: 5}'
       source=zigbang: '[sense:realty]{op: "query", source: "zigbang", region: "평택 죽백동", limit: 5}'

@@ -5,12 +5,21 @@ actions:
     #   target_key 는 액션의 주 param 하나뿐이라 op 어휘의 나머지 자리를 못 덮었다.
     #   빌드가 이 블록을 input_schema.properties 로 주입한다(어긋남이 존재 불가).
     params:
+      counterparty: string
+      date: string
+      note: string
+      text: string
+      items: [array, object, string]
+      limit: integer
+      tx_type: string
+      query: string
+      record_type: string
+      record_id: integer
       amount: number
       asset_type: string
       category: string
       days: integer
       file: string
-      items: array
       kind: string
       month: string
       name: string
@@ -33,12 +42,19 @@ actions:
     # INDIEBIZ_PROFILE=phone 분기) 재무 원장은 health-record 와 같은 자격으로 폰에서 돈다.
     description: 재무 기록 관리 (op 분기). 소비(지출·수입 거래)와 소유(자산·부채)를 한 원장에 — 주체(owner) 축으로 개인/회사 분리. 카드 지출은 폰 결제 알림 수거(sync)로 자동 적재(구 spend 흡수).
     group: finance
-    target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/keyword/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 결제 앱(하나카드·청주페이) 알림 수거→거래 병합(결제=지출, 인센티브 지급 완료=수입). 맥에서는 폰 USB 연결이 필요하고, 폰에서 실행하면 자기 포획소를 직접 읽어 USB 없이 수거한다(같은 ext_id 라 두 몸이 같은 결제를 두 번 적지 않는다). 전 op 공통 owner(주체 — 미지정=기본, 이름 처음 쓰면 자동 등록).'
+    target_description: 'save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type. query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month "YYYY-MM"/days/query/source(하나카드·청주페이). 거래 조회의 items 행 = record_id·record_type·kind·date·category·counterparty·amount(숫자)·source + 카드 필드(title/meta/summary) — >> reduce{acc + amount}·filter·each{delete record_id: "$it.record_id"} 로 흐른다. 자산/부채 행 = record_id·record_type·kind·name·value(숫자)·asset_type·as_of. delete — record_type(transaction/holding) + record_id(items 의 record_id, 조회 text 의 #번호와 같다). ingest — file(영수증 사진/PDF/엑셀 가계부/텍스트 경로), text 또는 items(행 목록/봉투)를 AI가 구조화해 일괄 저장. sync — 결제 앱(하나카드·청주페이) 알림 수거→거래 병합(결제=지출, 인센티브 지급 완료=수입). 맥에서는 폰 USB 연결이 필요하고, 폰에서 실행하면 자기 포획소를 직접 읽어 USB 없이 수거한다(같은 ext_id 라 두 몸이 같은 결제를 두 번 적지 않는다). 전 op 공통 owner(주체 — 미지정=기본, 쓰기(save/ingest/sync)에서만 처음 쓴 이름 자동 등록; query는 주체를 만들지 않음).'
     target_key: op
     router: handler
     tool: finance_op
     aliases:
-      keyword: [query, q]
+      query: [keyword, q]
+      kind: [info_type]
+      owner: [person]
+      date: [occurred_at]
+      counterparty: [merchant]
+      record_id: [id]
+      file: [path]
+      text: [content]
     ops:
       returns:
         save: effect
@@ -50,7 +66,7 @@ actions:
         query: false
       values:
         save: 재무 정보 저장 (kind + 금액/이름 평탄형)
-        query: 조회 (query_type + month/days/keyword/source/owner)
+        query: 조회 (query_type + month/days/query/source/owner)
         delete: 기록 삭제 (record_type + record_id)
         ingest: 다형 입력 일괄 적재 — 영수증 사진·PDF·엑셀 가계부·텍스트를 AI가 구조화해 저장 (file/text + owner)
         sync: 폰(USB) 결제 알림 수거 → 거래 병합(결제=지출, 인센티브 지급 완료=수입) (하나카드·청주페이, 지우기 전에 수거)
@@ -246,7 +262,7 @@ tool_json:
 
 
       파라미터: op: save | query | delete | ingest | sync. save — kind(지출/수입/자산/부채) 평탄형: 거래=amount(원)+category+counterparty+date, 소유=name+value+asset_type.
-      query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month/days/keyword/source(하나카드·청주페이). delete — record_type(transaction/holding) + record_id(조회
+      query — query_type(summary/거래/지출/수입/자산/부채/검색/주체목록) + month/days/query/source(하나카드·청주페이). delete — record_type(transaction/holding) + record_id(조회
       출력의 #번호, soft-delete). ingest — file(영수증/PDF/엑셀/텍스트 경로) 또는 text 를 AI가 구조화해 일괄 저장. sync — 폰(USB) 결제 알림 수거→거래 병합(결제=지출, 인센티브 지급 완료=수입)(알림을 지우기 전에 수거).
       전 op 공통 owner(주체 — 미지정=기본).'
     input_schema:

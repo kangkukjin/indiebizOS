@@ -187,6 +187,10 @@
           "approved": {
             "type": "boolean",
             "description": "승인 여부 (op=approve, 기본 true — false면 승인취소)"
+          },
+          "key": {
+            "type": "string",
+            "description": "self:limb 파라미터"
           }
         }
       }

@@ -670,3 +670,14 @@ retired:
     phrases:
       - '대기 마감은 공통 840초, MCP 클라이언트 벽은 900초다.'
       - '멈춰 있으면 멈춘 것입니다.'
+
+  - id: realty-district-codes-guide
+    retired: 2026-06-03
+    reason: 지역코드 조회는 realty의 codes op에 통합됨
+    instead: '[sense:realty]{op:"codes"}'
+    phrases: ['district_codes로 목록을 확인']
+  - id: chart-fictional-options
+    retired: 2026-09-29
+    reason: 교재의 옵션 이름과 실행 서명이 달랐음
+    instead: 'series_names, donut, show_trendline, ma_periods'
+    phrases: ['다중 시리즈는 series 배열', 'hole 옵션', 'ma 옵션(이동평균)']

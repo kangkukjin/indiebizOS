@@ -107,6 +107,11 @@ def _diagnose(status: int, final_url: str, requested_url: str, text: str,
     text = text or ''
     low = text[:4000].lower()
     title_low = (title or '').lower()
+    # 제목이 일반 사이트명이어도 본문 자체가 짧은 사람 확인 화면이면 차단이다.
+    if (len(text) < _SUSPICIOUS_CONTENT_LENGTH
+            and low.strip().startswith('prove your humanity')
+            and 'complete the challenge' in low and 'real person' in low):
+        return "bot_blocked"
     # HTTP 200으로 오는 클라이언트 챌린지. 주제를 설명하는 정상 기사는 제외한다.
     if (title_low.strip() == 'client challenge'
             and (not text.strip() or (len(text) < _SUSPICIOUS_CONTENT_LENGTH

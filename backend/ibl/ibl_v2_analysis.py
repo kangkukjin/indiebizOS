@@ -7,6 +7,7 @@ from ibl_v2_expr import number
 
 
 HINTS = {
+    "RECORD_LENGTH": "len(Record)는 필드 수입니다. items 목록의 행 수는 len(값.items), 목록 자체는 len(값)을 쓰세요. 내부 목록 필드는 반환 계약으로 확인하세요. 필드 수를 의도했다면 현재 결과가 맞습니다.",
     "INPUTS": 'inputs는 {입력:값}이며 코드는 $입력을 사용합니다. 결과 참조는 inputs:{입력:{"$ref":"결과 id"}}처럼 이름의 값 자리에 둡니다.',
     "UNBOUND": "이 위치 전에 값을 정의하거나 함수의 명시 인자로 전달하세요.",
     "MISSING_FIELD": "입력·반환 필드를 확인하세요. 선택 필드는 has/get으로 처리하세요.",
@@ -180,6 +181,9 @@ def builtin_type(compiler, node, name, types):
             compiler.need(nodes[i], types[i], typ)
     if name == 'len':
         need(0, join(join(TEXT, Type('List', item=UNKNOWN)), Type('Record')))
+        if types and any(t.kind == 'Record' for t in alternatives(types[0])):
+            compiler.warn(node, 'RECORD_LENGTH',
+                          'Record에 적용한 len은 내부 목록의 행 수가 아니라 필드 수를 셉니다.')
         return NUMBER
     if name in ('has', 'get'):
         need(0, Type('Record'))

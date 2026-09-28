@@ -40,8 +40,8 @@ def fetch_once(url, fetch, *, refresh=False, project_path=None, op="content"):
     """
     from common.spill import spill_dir, spill_write
     ttl = max(0, int(_policy()["reuse_seconds"]))
-    # 이전 판정으로 성공 캐시된 Client Challenge를 정상 본문으로 재사용하지 않는다.
-    key = hashlib.sha256(f"v6|{_scope(project_path)}|{url}".encode()).hexdigest()
+    # 이전 판정으로 성공 캐시된 사람 확인 화면을 정상 본문으로 재사용하지 않는다.
+    key = hashlib.sha256(f"v7|{_scope(project_path)}|{url}".encode()).hexdigest()
     index = os.path.join(spill_dir(), f"crawl_cache_{key}.json")
     with _LOCKS[int(key[:8], 16) % len(_LOCKS)]:
         now = time.time()

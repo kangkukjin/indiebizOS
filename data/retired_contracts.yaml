@@ -25,6 +25,14 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: daily-research-search-quota
+    retired: 2026-09-28
+    reason: 일일 보고서의 고정 검색 횟수가 조사 목적과 추가 근거의 가치를 대신했다.
+    instead: 중요한 분야와 미확인 조건에 따라 질의·언어·추가 탐색을 결정한다.
+    phrases:
+      - '투자·기술 각 3회 이상, 전체 영어 검색 2회 이상'
+      - '투자·기술 각 3회+, 영어 2회+'
+      - '§2의 최소 조사량을 채운다'
   - id: research-counterargument-quota
     retired: 2026-09-28
     reason: 조사 횟수와 반론 개수를 채우는 규칙이 논증 이해와 근거의 가치를 대체했다.

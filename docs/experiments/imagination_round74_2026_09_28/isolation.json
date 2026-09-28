@@ -1,0 +1,1191 @@
+{
+ "rows": [
+  {
+   "case": "I1 copy src==dest",
+   "code": "return [self:copy]{src:\"~workspace/outputs/IT74_x/앨범\", dest:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범\"}",
+   "before": [
+    "IT74_x/앨범",
+    "IT74_x/앨범/2026",
+    "IT74_x/앨범/2026/b.jpg",
+    "IT74_x/앨범/a.jpg"
+   ],
+   "success": false,
+   "value": null,
+   "error": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범'",
+   "code_diag": "ADAPTER_SHAPE",
+   "after": []
+  },
+  {
+   "case": "I2 copy dest=ancestor",
+   "code": "return [self:copy]{src:\"~workspace/outputs/IT74_x/앨범/2026\", dest:\"~workspace/outputs/IT74_x/앨범\"}",
+   "before": [
+    "IT74_x/앨범",
+    "IT74_x/앨범/2026",
+    "IT74_x/앨범/2026/b.jpg",
+    "IT74_x/앨범/a.jpg"
+   ],
+   "success": false,
+   "value": null,
+   "error": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범/2026'",
+   "code_diag": "ADAPTER_SHAPE",
+   "after": []
+  },
+  {
+   "case": "I3 move dest=ancestor",
+   "code": "return [self:move]{src:\"~workspace/outputs/IT74_x/앨범/2026\", dest:\"~workspace/outputs/IT74_x/앨범\"}",
+   "before": [
+    "IT74_x/앨범",
+    "IT74_x/앨범/2026",
+    "IT74_x/앨범/2026/b.jpg",
+    "IT74_x/앨범/a.jpg"
+   ],
+   "success": false,
+   "value": null,
+   "error": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범/2026'",
+   "code_diag": "ADAPTER_SHAPE",
+   "after": []
+  },
+  {
+   "case": "I4 copy file into existing dir",
+   "code": "return [self:copy]{src:\"~workspace/outputs/IT74_x/c.txt\", dest:\"~workspace/outputs/IT74_x/bk\"}",
+   "before": [
+    "IT74_x/bk",
+    "IT74_x/bk/c.txt",
+    "IT74_x/c.txt",
+    "IT74_x/앨범",
+    "IT74_x/앨범/2026",
+    "IT74_x/앨범/2026/b.jpg",
+    "IT74_x/앨범/a.jpg"
+   ],
+   "success": true,
+   "value": {
+    "success": true,
+    "message": "파일을 복사했습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/bk"
+   },
+   "error": null,
+   "code_diag": null,
+   "after": [
+    "IT74_x/bk",
+    "IT74_x/bk/c.txt",
+    "IT74_x/c.txt",
+    "IT74_x/앨범",
+    "IT74_x/앨범/2026",
+    "IT74_x/앨범/2026/b.jpg",
+    "IT74_x/앨범/a.jpg"
+   ],
+   "bk_c_txt": "NEW"
+  },
+  {
+   "case": "I5 delete missing error code",
+   "code": "[try] { $x = [self:delete]{path:\"~workspace/outputs/IT74_x/없는.zip\"} } [catch] { $x = $error.code }\nreturn $x",
+   "before": [
+    "IT74_x/bk",
+    "IT74_x/bk/c.txt",
+    "IT74_x/c.txt",
+    "IT74_x/앨범",
+    "IT74_x/앨범/2026",
+    "IT74_x/앨범/2026/b.jpg",
+    "IT74_x/앨범/a.jpg"
+   ],
+   "success": true,
+   "value": "ADAPTER_SHAPE",
+   "error": null,
+   "code_diag": null,
+   "after": [
+    "IT74_x/bk",
+    "IT74_x/bk/c.txt",
+    "IT74_x/c.txt",
+    "IT74_x/앨범",
+    "IT74_x/앨범/2026",
+    "IT74_x/앨범/2026/b.jpg",
+    "IT74_x/앨범/a.jpg"
+   ]
+  },
+  {
+   "case": "I6 scan with locked subfolder",
+   "code": "return [self:storage]{op:\"scan\", path:\"~workspace/outputs/IT74_y\"}",
+   "before": [
+    "locked=000"
+   ],
+   "success": false,
+   "value": null,
+   "error": "스캔 실패 — 이전 색인·주석 보존: [Errno 13] Permission denied: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_y/locked'",
+   "code_diag": "TOOL",
+   "after": [
+    "IT74_y/locked",
+    "IT74_y/ok",
+    "IT74_y/ok/a.txt"
+   ]
+  },
+  {
+   "case": "I7 scan with broken symlink",
+   "code": "return [self:storage]{op:\"scan\", path:\"~workspace/outputs/IT74_y\"}",
+   "before": [
+    "broken_link"
+   ],
+   "success": false,
+   "value": null,
+   "error": "스캔 실패 — 이전 색인·주석 보존: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_y/ok/broken_link'",
+   "code_diag": "TOOL",
+   "after": [
+    "IT74_y/locked",
+    "IT74_y/locked/b.txt",
+    "IT74_y/ok",
+    "IT74_y/ok/a.txt",
+    "IT74_y/ok/broken_link"
+   ]
+  },
+  {
+   "case": "I8 scan clean",
+   "code": "return [self:storage]{op:\"scan\", path:\"~workspace/outputs/IT74_y\"}",
+   "before": [],
+   "success": true,
+   "value": {
+    "success": true,
+    "message": "스캔 완료: IT74_y",
+    "file_count": 2,
+    "total_size_mb": 0.0,
+    "error_count": 0
+   },
+   "error": null,
+   "code_diag": null,
+   "after": [
+    "IT74_y/locked",
+    "IT74_y/locked/b.txt",
+    "IT74_y/ok",
+    "IT74_y/ok/a.txt"
+   ]
+  },
+  {
+   "case": "I9 folder_note corpus form on subfolder",
+   "code": "return [self:folder_note]{op:\"set\", path:\"~workspace/outputs/IT74_y/ok\", note:\"IT74 코퍼스형\"}",
+   "before": [],
+   "success": false,
+   "value": null,
+   "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 folder_note 를 쓰세요.",
+   "code_diag": "TOOL",
+   "after": [
+    "IT74_y/locked",
+    "IT74_y/locked/b.txt",
+    "IT74_y/ok",
+    "IT74_y/ok/a.txt"
+   ]
+  },
+  {
+   "case": "I10 summary on subfolder of scanned root",
+   "code": "return [self:storage]{op:\"summary\", root_path:\"~workspace/outputs/IT74_y/ok\"}",
+   "before": [],
+   "success": false,
+   "value": null,
+   "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 다시 조회하세요.",
+   "code_diag": "TOOL",
+   "after": [
+    "IT74_y/locked",
+    "IT74_y/locked/b.txt",
+    "IT74_y/ok",
+    "IT74_y/ok/a.txt"
+   ]
+  },
+  {
+   "case": "I11 summary ~/Downloads under scanned /",
+   "code": "return [self:storage]{op:\"summary\", root_path:\"~/Downloads\"}",
+   "before": [],
+   "success": false,
+   "value": null,
+   "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 다시 조회하세요.",
+   "code_diag": "TOOL",
+   "after": [
+    "IT74_y/locked",
+    "IT74_y/locked/b.txt",
+    "IT74_y/ok",
+    "IT74_y/ok/a.txt"
+   ]
+  },
+  {
+   "case": "I12 script 폴더용량",
+   "code": "$s = [self:script]{id:\"폴더용량\"}\nreturn $s.items >> [table:take]{n:4}",
+   "before": [],
+   "success": true,
+   "value": [
+    {
+     "title": "showcase_stage",
+     "mb": 31682.6
+    },
+    {
+     "title": "_backups",
+     "mb": 8080.1
+    },
+    {
+     "title": "spill",
+     "mb": 3908.6
+    },
+    {
+     "title": "models",
+     "mb": 2113.7
+    }
+   ],
+   "error": null,
+   "code_diag": null,
+   "after": [
+    "IT74_y/locked",
+    "IT74_y/locked/b.txt",
+    "IT74_y/ok",
+    "IT74_y/ok/a.txt"
+   ]
+  }
+ ],
+ "dropped_scans": [
+  {
+   "success": true,
+   "deleted_id": 3,
+   "name": "IT74_y"
+  }
+ ],
+ "log": [
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:copy]{src:\"~workspace/outputs/IT74_x/앨범\", dest:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범'",
+    "diagnostic": {
+     "code": "ADAPTER_SHAPE",
+     "kind": "runtime",
+     "message": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범'",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "5f6d5d95f8b825c27a8356f5555dda1ac71cca75649bf1319a75e1e788cccf64",
+      "start": 23,
+      "end": 136,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "d05ab87c295e1ad1fc0382186d7abca7aa52d0a282fad494e457e6c1a97fb340",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 32
+    },
+    "resume": {
+     "run_id": "8114db66df7d4a60a982e718ce5e1a0d"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "self:copy",
+       "code": "ADAPTER_SHAPE",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "34724c4ecc0acda4f35252d307926e6aff3a28ed3259e0a07253f3da44a6887f",
+     "chars": 3797,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "34724c4ecc0acda4f35252d307926e6aff3a28ed3259e0a07253f3da44a6887f",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:copy]{src:\"~workspace/outputs/IT74_x/앨범/2026\", dest:\"~workspace/outputs/IT74_x/앨범\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범/2026'",
+    "diagnostic": {
+     "code": "ADAPTER_SHAPE",
+     "kind": "runtime",
+     "message": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범/2026'",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "30b3d0456ce7afcfe3fa70503ccb35ce3509ebad0cef6f8d755bb03fdc73d463",
+      "start": 23,
+      "end": 112,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "e0bac6c081e55eaff253793e5ed185816fed22185f1a3e80e79203d945e348cb",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 63
+    },
+    "resume": {
+     "run_id": "148883e7c2104cf6bef8c8cbe56ed9cb"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "self:copy",
+       "code": "ADAPTER_SHAPE",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "333e76ca0c5de2633746fe297a446d697fc4ce487917598bb08312245fe01374",
+     "chars": 3812,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "333e76ca0c5de2633746fe297a446d697fc4ce487917598bb08312245fe01374",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:move]{src:\"~workspace/outputs/IT74_x/앨범/2026\", dest:\"~workspace/outputs/IT74_x/앨범\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범/2026'",
+    "diagnostic": {
+     "code": "ADAPTER_SHAPE",
+     "kind": "runtime",
+     "message": "선언된 JSON 실행 봉투가 아닙니다: Error: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/앨범/2026'",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "222c713383fac7e9a9b8380d0b2ee979f77e86ea4b6049bfe1240a18818b9680",
+      "start": 23,
+      "end": 112,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "570cec7adada79983dcb68718a11cdba2a609c5ef0f7b07c5af79757490a6afe",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 32
+    },
+    "resume": {
+     "run_id": "dbd974317bc94d9894271a9e2382f7e7"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "self:move",
+       "code": "ADAPTER_SHAPE",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "e1aebfed8a2e001fb7ef0606109d732c57106fbdbab42f75e76f4c8d71486cc9",
+     "chars": 3812,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "e1aebfed8a2e001fb7ef0606109d732c57106fbdbab42f75e76f4c8d71486cc9",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:copy]{src:\"~workspace/outputs/IT74_x/c.txt\", dest:\"~workspace/outputs/IT74_x/bk\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "message": "파일을 복사했습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_x/bk"
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "c0453a6ddd2fafd00ec4a7e57dbbf3e15216af55c113bc0620ed9f3813ab3b1e",
+    "source_complete": true,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 33
+    },
+    "resume": {
+     "run_id": "8d2ebccced344813ba8a8ad2e9be5712"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 6,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "96b58fbc4f2b5d7adc306c77795e540f646eefb967d2d34fce453692fd744697",
+     "chars": 2649,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "96b58fbc4f2b5d7adc306c77795e540f646eefb967d2d34fce453692fd744697",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "96b58fbc4f2b5d7adc306c77795e540f646eefb967d2d34fce453692fd744697"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[try] { $x = [self:delete]{path:\"~workspace/outputs/IT74_x/없는.zip\"} } [catch] { $x = $error.code }\nreturn $x",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": true,
+    "value": "ADAPTER_SHAPE",
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "c7a09563b2d94ab3582adabcf0b418a253e51495e242e6786257cde2c20bab06",
+    "source_complete": false,
+    "usage": {
+     "steps": 13,
+     "rows": 0,
+     "elapsed_ms": 37
+    },
+    "resume": {
+     "run_id": "baa15d97160b430bb4594edb813c42b7"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 14,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 4,
+       "action": "self:delete",
+       "code": "ADAPTER_SHAPE",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "3ea40ca80fca7353cdec4f250f89f967032ef50e51fedc8a1eda254d07f373c2",
+     "chars": 4644,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "3ea40ca80fca7353cdec4f250f89f967032ef50e51fedc8a1eda254d07f373c2",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "3ea40ca80fca7353cdec4f250f89f967032ef50e51fedc8a1eda254d07f373c2"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:storage]{op:\"scan\", path:\"~workspace/outputs/IT74_y\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "스캔 실패 — 이전 색인·주석 보존: [Errno 13] Permission denied: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_y/locked'",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "스캔 실패 — 이전 색인·주석 보존: [Errno 13] Permission denied: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_y/locked'",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "cc1e126c3f4c1ceeb5f0eab0942bef4d1fa041ac42ad20a88975b8473b19d698",
+      "start": 23,
+      "end": 82,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "0624f72105e5c27e3460b11bf9dbea33bb853526f176821ca536a6ad7f89ceda",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 32
+    },
+    "resume": {
+     "run_id": "ac02bd6b80974b26837230a2c6142fa3"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "self:storage",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "6dd35d131e0086ca7176fa3bb07705764866c07aee370da841826f1b1e0ade5d",
+     "chars": 3701,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "6dd35d131e0086ca7176fa3bb07705764866c07aee370da841826f1b1e0ade5d",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:storage]{op:\"scan\", path:\"~workspace/outputs/IT74_y\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "스캔 실패 — 이전 색인·주석 보존: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_y/ok/broken_link'",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "스캔 실패 — 이전 색인·주석 보존: [Errno 2] No such file or directory: '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT74_y/ok/broken_link'",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "cc1e126c3f4c1ceeb5f0eab0942bef4d1fa041ac42ad20a88975b8473b19d698",
+      "start": 23,
+      "end": 82,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "0624f72105e5c27e3460b11bf9dbea33bb853526f176821ca536a6ad7f89ceda",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 52
+    },
+    "resume": {
+     "run_id": "d69cff0a2c2b4f76ba0389184a83955e"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "self:storage",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "8a8ec2b666a2209664f7ef527aae5aa4b5e4fdd683473e062bf94434699d90fc",
+     "chars": 3746,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "8a8ec2b666a2209664f7ef527aae5aa4b5e4fdd683473e062bf94434699d90fc",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:storage]{op:\"scan\", path:\"~workspace/outputs/IT74_y\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "message": "스캔 완료: IT74_y",
+     "file_count": 2,
+     "total_size_mb": 0.0,
+     "error_count": 0
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "0624f72105e5c27e3460b11bf9dbea33bb853526f176821ca536a6ad7f89ceda",
+    "source_complete": true,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 32
+    },
+    "resume": {
+     "run_id": "fecbdc3a13c1490f916e31d8c08d0907"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 6,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "19297f63bb2bdb56826d0e5b777204751eb14afa4baa91ac2632124090077994",
+     "chars": 2731,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "19297f63bb2bdb56826d0e5b777204751eb14afa4baa91ac2632124090077994",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "19297f63bb2bdb56826d0e5b777204751eb14afa4baa91ac2632124090077994"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:folder_note]{op:\"set\", path:\"~workspace/outputs/IT74_y/ok\", note:\"IT74 코퍼스형\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 folder_note 를 쓰세요.",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 folder_note 를 쓰세요.",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      9
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "f817865907ef3947cf0102186702c9377b0175732ee2fea31702e8de73298e26",
+      "start": 23,
+      "end": 106,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "9cbce3467199050e1d90d6176bfdbb280e21f19153f0b1fded569c4286e8d05a",
+    "source_complete": false,
+    "usage": {
+     "steps": 7,
+     "rows": 0,
+     "elapsed_ms": 61
+    },
+    "resume": {
+     "run_id": "627ef393da2a4091ab9e673daa25ea83"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 9,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 6,
+       "action": "self:folder_note",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "cd4bc7d85d6889de7caa214ead3369437a04c6e106f40d898efb9fd198fcad63",
+     "chars": 3942,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "cd4bc7d85d6889de7caa214ead3369437a04c6e106f40d898efb9fd198fcad63",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:storage]{op:\"summary\", root_path:\"~workspace/outputs/IT74_y/ok\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 다시 조회하세요.",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 다시 조회하세요.",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "ba1b6109698910ca2276260af9c135e0eb54df56a0cb3a0651a9a2995f390b8c",
+      "start": 23,
+      "end": 93,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "c43a3cbe9b00eaa5e817626334e05da3a88e411a74994a111dc5b3e909c73c2e",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 35
+    },
+    "resume": {
+     "run_id": "9887554c378242ff80ee6e8225f12f74"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "self:storage",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "59cde98dc185d00cb97a90cf44a572d17a0e4b4d0024a12fb7a1eb715b260ff4",
+     "chars": 3378,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "59cde98dc185d00cb97a90cf44a572d17a0e4b4d0024a12fb7a1eb715b260ff4",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:storage]{op:\"summary\", root_path:\"~/Downloads\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": false,
+    "error": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 다시 조회하세요.",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "이 경로를 품은 스캔 볼륨이 없습니다. 먼저 [self:storage]{op: \"scan\", path: \"...\"} 로 상위 폴더를 스캔한 뒤 다시 조회하세요.",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "b4b53209bf5e0eda00d3838c11f9708a50e5fab1a8c677f28fa25bc9967ae8ed",
+      "start": 23,
+      "end": 76,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "b911b1e75e3d86652097d440549265f9b83faaf5c96e850ea084d4691d18a5d0",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 30
+    },
+    "resume": {
+     "run_id": "4dc0aa053de44cb7bfd686a024d6dd7b"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "self:storage",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "76ad5e301e69f371473bc67d5bd4c04114334b9a78bc426ffe5b794a1592f3f0",
+     "chars": 3378,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "76ad5e301e69f371473bc67d5bd4c04114334b9a78bc426ffe5b794a1592f3f0",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$s = [self:script]{id:\"폴더용량\"}\nreturn $s.items >> [table:take]{n:4}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT74_probe",
+    "task_id": "IT74_task"
+   },
+   "response": {
+    "success": true,
+    "value": [
+     {
+      "title": "showcase_stage",
+      "mb": 31682.6
+     },
+     {
+      "title": "_backups",
+      "mb": 8080.1
+     },
+     {
+      "title": "spill",
+      "mb": 3908.6
+     },
+     {
+      "title": "models",
+      "mb": 2113.7
+     }
+    ],
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "b30ff9587dc30f516561af403d22db242d9f70c22ce4f9bcf6d05a35cc5173bf",
+    "source_complete": true,
+    "usage": {
+     "steps": 12,
+     "rows": 0,
+     "elapsed_ms": 2351
+    },
+    "resume": {
+     "run_id": "1b50be588ef444838bb8270bcafb4ebf"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 13,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "ba7166df8f775221d35a76e71442724cf28c90b31d8d1c83fc5c27ec0352ee16",
+     "chars": 8360,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "ba7166df8f775221d35a76e71442724cf28c90b31d8d1c83fc5c27ec0352ee16",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "ba7166df8f775221d35a76e71442724cf28c90b31d8d1c83fc5c27ec0352ee16"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  }
+ ]
+}

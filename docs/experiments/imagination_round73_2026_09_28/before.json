@@ -1,0 +1,5131 @@
+{
+ "passed": 14,
+ "total": 24,
+ "rows": [
+  {
+   "task": "t01",
+   "intent": "9월 결제수단별 지출을 막대그래프로 — 교재·코퍼스(4789·4110)의 파이프 형태 `… >> [table:chart]`.",
+   "ok": false,
+   "detail": "status=invalid issues=[{\"code\": \"PIPE_COLLISION\", \"message\": \"파이프 입력 자리가 없거나 명시 인자와 충돌합니다.\", \"hint\": \"파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요.\"}]"
+  },
+  {
+   "task": "t02",
+   "intent": "같은 막대그래프를 표형 table 인자로 — 값·라벨이 원장 합계와 같아야 한다(그림은 훈련자가 직접 확인).",
+   "ok": true,
+   "detail": "path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t02.png rows={'하나카드': 790027, '청주페이': 321500} db={'청주페이': 321500.0, '하나카드': 790027.0}"
+  },
+  {
+   "task": "t03",
+   "intent": "최근 석 달 월별 지출·수입을 두 선으로 — 한 차트에 두 시리즈·범례(그림 확인).",
+   "ok": true,
+   "detail": "rows=[['2026-07', 0, 0], ['2026-08', 696101, 0], ['2026-09', 1111527, 42131]] summary='라인 차트 생성 완료 (3개 데이터 포인트, 2개 시리즈)\\n\\n[IMAGE:/Users/kangkukjin/D' error=None"
+  },
+  {
+   "task": "t04",
+   "intent": "가맹점별 금액 막대 — 선언된 x·y 인자로 어느 열을 쓸지 지정한다(원 행 그대로).",
+   "ok": false,
+   "detail": "summary='막대 차트 생성 완료 (29개 항목, 11개 시리즈)\\n\\n[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/ou'"
+  },
+  {
+   "task": "t05",
+   "intent": "9월 가계부 월간 보고서(HTML) — 합계 문장·큰 지출 5건 표·메모 목록.",
+   "ok": true,
+   "detail": "path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t05.html rows_tr=6 total_in=True meta_in=True"
+  },
+  {
+   "task": "t06",
+   "intent": "보고서를 PDF로 — 막대그래프를 그림으로 넣고, 만든 PDF 를 되읽어 제목·그림을 확인.",
+   "ok": false,
+   "detail": "path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t06_report.pdf pdf={'pages': 1, 'images': [[14, 16]], 'text': '9월 가계부 보고서\\n결제수단별 지출은 아래와 같다.\\n그림 1. 결제수단별 지출\\n그림 1. 결제수단별 지출\\n'} read_text='\\n--- Page 1 ---\\n9월 가계부 보고서\\n결제수단별 지출은 아래와 같다.\\n그림 1. 결제수단별 지출\\n그림 1. 결제수단별 지출\\n' error=None"
+  },
+  {
+   "task": "t07",
+   "intent": "차트 두 장을 한 문서에 그림으로 — 교재 as:\"images\" 형태(차트 결과 행을 그대로).",
+   "ok": false,
+   "detail": "direct_error=as: images — 2행 중 그림 경로를 가진 행이 없습니다(관습 이름 ['src', 'path', 'image', 'file', 'url'] 중 어느 것도 없음 — src_field 로 지정하세요). | workaround_success=True path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t07w.html"
+  },
+  {
+   "task": "t08",
+   "intent": "5만원 넘는 9월 지출만 엑셀로 — 코퍼스 4790 의 현재 문법판(파이프·items 인자 두 형태, check).",
+   "ok": false,
+   "detail": "pipe=invalid ['PIPE_COLLISION'] | items_arg=invalid ['UNKNOWN_ARGUMENT']"
+  },
+  {
+   "task": "t09",
+   "intent": "8월·9월 지출을 월별 시트로 한 엑셀에 — sheets:{8월:…, 9월:…} 에 조회 행을 그대로.",
+   "ok": false,
+   "detail": "success=True sheets={'8월': [1, \"{'title': '더홀릭영통점 / ( ,2*9*) / / 이용금액 · 6,000원', 'meta': '지출 · 2026-08\"], '9월': [1, \"{'title': '매출 안내] 27일 / - / 구글플레이_TOSS · -159,000원', 'meta': '지출 · 202\"]} value={\"success\": true, \"path\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t09.xlsx\", \"sheets\": [\"8월\", \"9월\"]}"
+  },
+  {
+   "task": "t10",
+   "intent": "강의 성적표 — 총점·등급을 계산해 총점 순 엑셀로 만들고 되읽어 숫자로 남았는지 확인.",
+   "ok": true,
+   "detail": "rows=[['이서연', 92, 95.5, 16, 94.1, 'A'], ['정하늘', 88, 84, 16, 85.6, 'B'], ['김민수', 78.5, 88, 15, 84.2, 'B'], ['박지훈', 65, 70.25, 12, 68.15, 'C']] error=None"
+  },
+  {
+   "task": "t11",
+   "intent": "성적표에서 B등급 학생만 찾기 — 방금 만든 파일을 만든 이름(~workspace/…) 그대로 self:sheet 로.\n\n같은 토큰 경로를 다른 읽기 표면에도 넣어 본다(되읽기 census).",
+   "ok": false,
+   "detail": "token_error=파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~workspace/outputs/IT73_grade.xlsx | abs=['정하늘', '김민수'] | census={'read_xlsx': 'ok', 'read_pdf': 'not_found', 'read_html': 'ok', 'sheet_range': 'ok'}"
+  },
+  {
+   "task": "t12",
+   "intent": "전학생 추가(수식 총점)와 박지훈 출석 정정 — self:sheet append·update 후 되읽기.",
+   "ok": true,
+   "detail": "n=5 park=[{'_row': 5, '이름': '박지훈', '중간': 65, '기말': 70.25, '출석': 13, '총점': 68.15, '등급': 'C'}] last={'_row': 6, '이름': '최유진', '중간': 81, '기말': 79.5, '출석': 14, '총점': '=B6*0.4+C6*0.6', '등급': 'C'} error=None"
+  },
+  {
+   "task": "t13",
+   "intent": "등급 분포 막대그래프 — groupby 결과를 표형으로 넘긴다(그림 확인).",
+   "ok": true,
+   "detail": "rows=[['A', 1], ['B', 2], ['C', 1]] path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t13.png"
+  },
+  {
+   "task": "t14",
+   "intent": "이번 달 차트가 비었을 때 — 지출 없는 달(1월) 차트는 0행이라고 말해야 한다.",
+   "ok": true,
+   "detail": "success=False msg=입력 0행 — 그릴 내용이 없습니다. [table:chart] 는 앞 단계 통화를 받았지만 행이 하나도 없습니다(열: ['날짜', '금액']). 앞 단계의 필터·검침을 보세요."
+  },
+  {
+   "task": "t15",
+   "intent": "출석 요약 워드 문서 — 부제(학기·기준 주차)까지 들어가야 한다. 만든 뒤 self:document 로 되읽기.",
+   "ok": false,
+   "detail": "texts=['AI 개론 출석 요약', '요약', '결석 3회 이상: 박지훈', '이름', '출석'] error=None"
+  },
+  {
+   "task": "t16",
+   "intent": "출석 문서의 문구를 변경 추적으로 고쳐 새 파일에 — 해시 조회 → edit → 새 파일 되읽기.",
+   "ok": true,
+   "detail": "text='AI 개론 출석 요약\\n\\n요약\\n\\n면담 대상(결석 3회 이상): 박지훈\\n\\n[표 시작]\\n이름 | 출석 | 결석\\n김민수 | 15 | 1\\n이서연 | 16 | 0\\n박지훈 | 12 | 4\\n[표 끝]' error=None | token_reads={'read_docx': '파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~w', 'document_inspect': 'ok'}"
+  },
+  {
+   "task": "t17",
+   "intent": "가족신문 10월호 — 기사 카드 3건을 신문 테마 그림(PNG)으로(그림 확인).",
+   "ok": true,
+   "detail": "path=/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t17.png error=None"
+  },
+  {
+   "task": "t18",
+   "intent": "부동산 매물 메모 — 영문 키를 한글 열로 바꿔 문서 표와 엑셀로(단지별 평균 호가 포함).",
+   "ok": true,
+   "detail": "rows=[['가경자이', 45500, 2], ['복대두산위브', 47000, 1]] th_ok=True error=None"
+  },
+  {
+   "task": "t19",
+   "intent": "강의별 수강생 명단(중첩)을 한 줄에 한 명씩 펼쳐 엑셀로.",
+   "ok": true,
+   "detail": "value={'rows': [['AI 개론', '김민수'], ['AI 개론', '이서연'], ['데이터 윤리', '박지훈']], 'x': '/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t19.xlsx', 'dropped': None} error=None"
+  },
+  {
+   "task": "t20",
+   "intent": "강의 메모를 강의 일지 문서로 — structure 로 정리해 HTML 로(교재의 파이프 형태는 check 로 함께).",
+   "ok": true,
+   "detail": "pipe_form=invalid ['PIPE_COLLISION', 'PIPE_COLLISION'] | explicit blocks=8 has_facts=True"
+  },
+  {
+   "task": "t21",
+   "intent": "삼성전자 한 달 주가를 캔들차트로 — 시세 행을 data 로(그림 확인).",
+   "ok": true,
+   "detail": "n=20 first={'date': '2026-08-28', 'open': 262500, 'high': 266000, 'low': 256000, 'close': 257000, 'volume': 15106746, 'change': None, 'change_percent': None} last={'date': '2026-09-28', 'open': 284500, 'high': 285500, 'low': 268500, 'close': 270000, 'volume': 21080365, 'change': -16500, 'change_percent': -5.76} summary='캔들스틱 차트 생성 완료 (20개 데이터), MA[5]\\n\\n[IMAGE:/Users/kangkukjin/Des' error=None"
+  },
+  {
+   "task": "t22",
+   "intent": "투자 보고서를 발표용 pptx 로 — 제목·부제·요점·차트 그림. 슬라이드를 되읽어 확인.",
+   "ok": false,
+   "detail": "slides=[['삼성전자 월간 점검', 0, '삼성전자 월간 점검 | '], ['요점', 0, '요점 | 최고 종가 286500원 (2026-09-23)\\n분할 매수 유지'], ['종가 추이', 0, '종가 추이 | '], [None, 1, '']] error=None"
+  },
+  {
+   "task": "t23",
+   "intent": "보고서를 마크다운으로 받아 블로그 발행·클립보드·화면 표시·슬라이드로(발신·표시·슬라이드는 check).",
+   "ok": true,
+   "detail": "markdown='# 9월 가계부\\n\\n요약\\n' checks={'publish': ['incomplete', []], 'clipboard': ['incomplete', []], 'gui': ['incomplete', []], 'slide': ['incomplete', []], 'deck': ['incomplete', []]}"
+  },
+  {
+   "task": "t24",
+   "intent": "교재대로 쓴 차트 옵션 — 다중 시리즈 series·파이 hole·산점도 trendline(target_description 의 낱말, check).",
+   "ok": false,
+   "detail": "{\"series\": [\"invalid\", [\"UNKNOWN_ARGUMENT\"], [\"현재 판본의 서명에 선언된 인자 이름을 사용하세요.\"]], \"hole\": [\"invalid\", [\"UNKNOWN_ARGUMENT\"], [\"현재 판본의 서명에 선언된 인자 이름을 사용하세요.\"]], \"trendline\": [\"invalid\", [\"UNKNOWN_ARGUMENT\"], [\"현재 판본의 서명에 선언된 인자 이름을 사용하세요.\"]], \"ma\": [\"invalid\", [\"UNKNOWN_ARGUMENT\"], [\"현재 판본의 서명에 선언된 인자 이름을 사용하세요.\"]]}"
+  }
+ ],
+ "log": [
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n$g = $t.items >> [table:groupby]{by:\"source\", agg:{합계:[\"sum\",\"amount\"]}}\nreturn $g.items >> [table:chart]{chart_type:\"bar\", title:\"9월 결제수단별 지출\", path:\"~workspace/outputs/IT73_t01.png\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "PIPE_COLLISION",
+      "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.",
+      "source_span": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 174,
+       "end": 266,
+       "line": 4,
+       "column": 20
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 174,
+       "end": 266,
+       "line": 4,
+       "column": 20,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 4,
+       "end_column": 112,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "PIPE_COLLISION",
+      "severity": "error",
+      "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 21,
+       "end": 81,
+       "line": 2,
+       "column": 6
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "self:finance",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 21,
+       "end": 81,
+       "line": 2,
+       "column": 6,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 66,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 99,
+       "end": 154,
+       "line": 3,
+       "column": 18
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:groupby",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 99,
+       "end": 154,
+       "line": 3,
+       "column": 18,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 73,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 162,
+       "end": 170,
+       "line": 4,
+       "column": 8
+      },
+      "expected": "Unknown",
+      "actual": "Unknown",
+      "call_path": [],
+      "location": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 162,
+       "end": 170,
+       "line": 4,
+       "column": 8,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 4,
+       "end_column": 16,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "Unknown",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 174,
+       "end": 266,
+       "line": 4,
+       "column": 20
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:chart",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+       "start": 174,
+       "end": 266,
+       "line": 4,
+       "column": 20,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 4,
+       "end_column": 112,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 4,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: data·summary⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "10195a3826b9ad6872d4d4eba994960c1a60230bfeacbb13ccd5576c5a790954",
+    "dependencies": {
+     "source": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 266
+      }
+     ],
+     "contracts": "2f12a672d8c8ad8e274f68a20f98e23a92d591afd27e57ec42faf4327ea5e94a",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+        "start": 21,
+        "end": 81,
+        "line": 2,
+        "column": 6,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 66,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+       "location": {
+        "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+        "start": 99,
+        "end": 154,
+        "line": 3,
+        "column": 18,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 73,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+       "location": {
+        "source_hash": "8609827df787c8a4e041df1eecfd523c7417fd2fcad8cefeb1257df853a3d106",
+        "start": 174,
+        "end": 266,
+        "line": 4,
+        "column": 20,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 4,
+        "end_column": 112,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다.",
+    "success": false,
+    "error": "실행 전 검사에서 거절했습니다: 파이프 입력 자리가 없거나 명시 인자와 충돌합니다. (PIPE_COLLISION)",
+    "evidence_summary": {
+     "events": 0,
+     "source_complete": null,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "c75a316179d4b030866dd7c68edf4ced8a17e9f928484a08d12237bd73c55dbb",
+     "chars": 5741,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "c75a316179d4b030866dd7c68edf4ced8a17e9f928484a08d12237bd73c55dbb",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "issues"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n$g = $t.items >> [table:groupby]{by:\"source\", agg:{합계:[\"sum\",\"amount\"]}}\n$rows = $g.items >> [table:each]{ [$it.source, $it.합계] }\n$c = [table:chart]{chart_type:\"bar\", title:\"9월 결제수단별 지출\", table:{columns:[\"결제수단\",\"합계\"], rows:$rows}, path:\"~workspace/outputs/IT73_t02.png\"}\nreturn {chart:$c, rows:$rows}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "chart": {
+      "success": true,
+      "data": {
+       "format": "png",
+       "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t02.png",
+       "image_tag": "[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t02.png]"
+      },
+      "summary": "막대 차트 생성 완료 (2개 항목, 1개 시리즈)\n\n[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t02.png]"
+     },
+     "rows": [
+      [
+       "하나카드",
+       790027
+      ],
+      [
+       "청주페이",
+       321500
+      ]
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "aa5aa257fd06abf25ab3778921276100280e92f6c06c268c7c405c7c8bfd238f",
+    "source_complete": true,
+    "usage": {
+     "steps": 55,
+     "rows": 2,
+     "elapsed_ms": 1227
+    },
+    "resume": {
+     "run_id": "aee3a8615b2d40c3980bd56c244e211e"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 55,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "396be0133280709a192571c576648217c29654c2955546c3b96253d930bc1387",
+     "chars": 39422,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "396be0133280709a192571c576648217c29654c2955546c3b96253d930bc1387",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "396be0133280709a192571c576648217c29654c2955546c3b96253d930bc1387"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$월들 = [\"2026-07\",\"2026-08\",\"2026-09\"]\n$rows = $월들 >> [table:each]{\n  $e = [self:finance]{op:\"query\", query_type:\"지출\", month:$it} >> [table:reduce]{init:0, step:\"acc + amount\"}\n  $n = [self:finance]{op:\"query\", query_type:\"수입\", month:$it} >> [table:reduce]{init:0, step:\"acc + amount\"}\n  [$it, $e.value, $n.value]\n}\n$c = [table:chart]{chart_type:\"line\", title:\"월별 지출·수입\", table:{columns:[\"월\",\"지출\",\"수입\"], rows:$rows}, path:\"~workspace/outputs/IT73_t03.png\"}\nreturn {chart:$c, rows:$rows}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "chart": {
+      "success": true,
+      "data": {
+       "format": "png",
+       "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t03.png",
+       "image_tag": "[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t03.png]"
+      },
+      "summary": "라인 차트 생성 완료 (3개 데이터 포인트, 2개 시리즈)\n\n[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t03.png]"
+     },
+     "rows": [
+      [
+       "2026-07",
+       0,
+       0
+      ],
+      [
+       "2026-08",
+       696101,
+       0
+      ],
+      [
+       "2026-09",
+       1111527,
+       42131
+      ]
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "c2c85aac894a9f75f01c741d9f1708b2292a70261b6efb1c5769f060e81d3d90",
+    "source_complete": true,
+    "usage": {
+     "steps": 120,
+     "rows": 3,
+     "elapsed_ms": 1474
+    },
+    "resume": {
+     "run_id": "14ecb209d7e24542b8aa68b0fa9963c3"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 138,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "38a17fe7143e6d5515ca87d6b12b111f1bd84894ce292f0f9c6c3f2bb5d27443",
+     "chars": 76070,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "38a17fe7143e6d5515ca87d6b12b111f1bd84894ce292f0f9c6c3f2bb5d27443",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "38a17fe7143e6d5515ca87d6b12b111f1bd84894ce292f0f9c6c3f2bb5d27443"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\nreturn [table:chart]{chart_type:\"bar\", title:\"가맹점별 9월 지출\", data:$t.items, x:\"counterparty\", y:\"amount\", path:\"~workspace/outputs/IT73_t04.png\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "data": {
+      "format": "png",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t04.png",
+      "image_tag": "[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t04.png]"
+     },
+     "summary": "막대 차트 생성 완료 (29개 항목, 11개 시리즈)\n\n[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t04.png]"
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "1181979f0c551ff5dd18fb77d56beb087266ea831c5a4309321213200d8ed06e",
+    "source_complete": true,
+    "usage": {
+     "steps": 17,
+     "rows": 0,
+     "elapsed_ms": 1142
+    },
+    "resume": {
+     "run_id": "67a7e7295d8045d880a0015de58cf042"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 19,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "d52cf7d4061dac2c454000883bad56e3ae2397b530dae0a5612215fa84ef9270",
+     "chars": 30843,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "d52cf7d4061dac2c454000883bad56e3ae2397b530dae0a5612215fa84ef9270",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "d52cf7d4061dac2c454000883bad56e3ae2397b530dae0a5612215fa84ef9270"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n$s = $t.items >> [table:reduce]{init:0, step:\"acc + amount\"}\n$top = $t.items >> [table:sort]{by:\"amount\", descending:true} >> [table:take]{n:5}\n$rows = $top >> [table:each]{ [$it.date, $it.counterparty, $it.amount] }\n$blocks = [{type:\"heading\", level:2, text:\"요약\"}, {type:\"paragraph\", text:f\"9월 지출 합계는 ${$s.value}원입니다.\"}, {type:\"heading\", level:2, text:\"큰 지출 5건\"}, {type:\"table\", columns:[\"날짜\",\"가맹점\",\"금액\"], rows:$rows}, {type:\"list\", items:[\"카드 대금 출금 행 확인 필요\", \"분류 미기재 29건\"]}]\nreturn [table:document]{title:\"2026년 9월 가계부\", meta:\"결제 알림 수거분 기준\", blocks:$blocks, filename:\"~workspace/outputs/IT73_t05\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t05.html",
+     "file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t05.html",
+     "title": "2026년 9월 가계부",
+     "format": "html",
+     "blocks": 5,
+     "html": "<3999 chars>",
+     "message": "문서 5블록을 HTML로 렌더했습니다."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "c604a0aee3a5bde85a129b7ba20b499eb06f55e08c337f61d110af1afe5a25b8",
+    "source_complete": true,
+    "usage": {
+     "steps": 116,
+     "rows": 5,
+     "elapsed_ms": 81
+    },
+    "resume": {
+     "run_id": "c198f701da4945fe988c1d0ec789f8b2"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 112,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "02a6bc2f8cfc57fedf5a871ec9a5fcd4f9b32c2c67a570c91dc3fefdaee9e370",
+     "chars": 61667,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "html"
+       ],
+       "chars": 3999
+      }
+     ],
+     "read_args": {
+      "id": "02a6bc2f8cfc57fedf5a871ec9a5fcd4f9b32c2c67a570c91dc3fefdaee9e370",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "02a6bc2f8cfc57fedf5a871ec9a5fcd4f9b32c2c67a570c91dc3fefdaee9e370"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n$g = $t.items >> [table:groupby]{by:\"source\", agg:{합계:[\"sum\",\"amount\"]}}\n$rows = $g.items >> [table:each]{ [$it.source, $it.합계] }\n$c = [table:chart]{chart_type:\"bar\", title:\"결제수단별\", table:{columns:[\"결제수단\",\"합계\"], rows:$rows}, path:\"~workspace/outputs/IT73_t06.png\"}\n$d = [table:document]{title:\"9월 가계부 보고서\", format:\"pdf\", blocks:[{type:\"paragraph\", text:\"결제수단별 지출은 아래와 같다.\"}, {type:\"image\", src:$c.data.path, caption:\"그림 1. 결제수단별 지출\"}], filename:\"~workspace/outputs/IT73_t06_report\"}\n$back = [self:read]{path:$d.path}\nreturn {doc:$d, text:$back.text}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "doc": {
+      "success": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t06_report.pdf",
+      "file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t06_report.pdf",
+      "title": "9월 가계부 보고서",
+      "format": "pdf",
+      "blocks": 2,
+      "message": "문서 2블록을 PDF로 렌더했습니다."
+     },
+     "text": "\n--- Page 1 ---\n9월 가계부 보고서\n결제수단별 지출은 아래와 같다.\n그림 1. 결제수단별 지출\n그림 1. 결제수단별 지출\n"
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "a7d76322c6596542bc741ccb136bf7259b1067d6542fc76510d61cde8d5934d3",
+    "source_complete": true,
+    "usage": {
+     "steps": 77,
+     "rows": 2,
+     "elapsed_ms": 2402
+    },
+    "resume": {
+     "run_id": "1b7c26b8bcaf4234960ccce99dbecb38"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "1b7c26b8bcaf4234960ccce99dbecb38"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 81,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "99ba6bdec062b92a8bf5b030cd0f21d746762f6e095e66fa59aadd4ce305eeac",
+     "chars": 47702,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "99ba6bdec062b92a8bf5b030cd0f21d746762f6e095e66fa59aadd4ce305eeac",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "99ba6bdec062b92a8bf5b030cd0f21d746762f6e095e66fa59aadd4ce305eeac"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n$g = $t.items >> [table:groupby]{by:\"source\", agg:{합계:[\"sum\",\"amount\"]}}\n$rows = $g.items >> [table:each]{ [$it.source, $it.합계] }\n$c1 = [table:chart]{chart_type:\"bar\", title:\"막대\", table:{columns:[\"결제수단\",\"합계\"], rows:$rows}, path:\"~workspace/outputs/IT73_t07a.png\"}\n$c2 = [table:chart]{chart_type:\"pie\", title:\"비율\", table:{columns:[\"결제수단\",\"합계\"], rows:$rows}, path:\"~workspace/outputs/IT73_t07b.png\"}\nreturn [table:document]{title:\"결제수단 차트\", items:[$c1, $c2], as:\"images\", filename:\"~workspace/outputs/IT73_t07\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": false,
+    "error": "as: images — 2행 중 그림 경로를 가진 행이 없습니다(관습 이름 ['src', 'path', 'image', 'file', 'url'] 중 어느 것도 없음 — src_field 로 지정하세요).",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "as: images — 2행 중 그림 경로를 가진 행이 없습니다(관습 이름 ['src', 'path', 'image', 'file', 'url'] 중 어느 것도 없음 — src_field 로 지정하세요).",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      77
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "b8df969109a6a977a0ccf6ce7cdc2a842a107c8f429be56963b2b72ccbf1f6ec",
+      "start": 487,
+      "end": 591,
+      "line": 7,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "49cd0842d00183ab0e4bf9ec083f23a00a79cf60af9c575886f6d06535d022d6",
+    "source_complete": false,
+    "usage": {
+     "steps": 71,
+     "rows": 2,
+     "elapsed_ms": 2296
+    },
+    "resume": {
+     "run_id": "ceda5899cc9f467792439100380e9630"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 77,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 74,
+       "action": "table:document",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "04a1a6a57ca9c7a87c42dc969b51ea0e77ff2304b4150dced338c3a6e56bc3b1",
+     "chars": 45643,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "04a1a6a57ca9c7a87c42dc969b51ea0e77ff2304b4150dced338c3a6e56bc3b1",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n$g = $t.items >> [table:groupby]{by:\"source\", agg:{합계:[\"sum\",\"amount\"]}}\n$rows = $g.items >> [table:each]{ [$it.source, $it.합계] }\n$c1 = [table:chart]{chart_type:\"bar\", title:\"막대\", table:{columns:[\"결제수단\",\"합계\"], rows:$rows}, path:\"~workspace/outputs/IT73_t07a.png\"}\n$c2 = [table:chart]{chart_type:\"pie\", title:\"비율\", table:{columns:[\"결제수단\",\"합계\"], rows:$rows}, path:\"~workspace/outputs/IT73_t07b.png\"}\n$행 = [$c1, $c2] >> [table:compute]{set:($r)=>{path:$r.data.path, caption:$r.summary}}\nreturn [table:document]{title:\"결제수단 차트\", items:$행, as:\"images\", src_field:\"path\", caption_field:\"caption\", filename:\"~workspace/outputs/IT73_t07w\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t07w.html",
+     "file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t07w.html",
+     "title": "결제수단 차트",
+     "format": "html",
+     "blocks": 2,
+     "images": 2,
+     "src_field": "path",
+     "html": "<4035 chars>",
+     "message": "문서 2블록을 HTML로 렌더했습니다."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "3c758cfd9a50f05b3a65a1f365abe64ebcd27138c1f87b6689a607b4587b1d56",
+    "source_complete": true,
+    "usage": {
+     "steps": 91,
+     "rows": 2,
+     "elapsed_ms": 2276
+    },
+    "resume": {
+     "run_id": "e34c4bc26fcd4543a2b50efdfdde4743"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 96,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "4fa96f4c1ab12f649ea1671f880ed01795b7673e4ca5209ed505927ca5102751",
+     "chars": 61970,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "html"
+       ],
+       "chars": 4035
+      }
+     ],
+     "read_args": {
+      "id": "4fa96f4c1ab12f649ea1671f880ed01795b7673e4ca5209ed505927ca5102751",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "4fa96f4c1ab12f649ea1671f880ed01795b7673e4ca5209ed505927ca5102751"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n$t.items >> [table:filter]{where:($r)=>$r.amount > 50000} >> [table:spreadsheet]{path:\"~workspace/outputs/IT73_t08.xlsx\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "PIPE_COLLISION",
+      "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.",
+      "source_span": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 143,
+       "end": 203,
+       "line": 3,
+       "column": 62
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 143,
+       "end": 203,
+       "line": 3,
+       "column": 62,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 122,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "PIPE_COLLISION",
+      "severity": "error",
+      "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 21,
+       "end": 81,
+       "line": 2,
+       "column": 6
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "self:finance",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 21,
+       "end": 81,
+       "line": 2,
+       "column": 6,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 66,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 121,
+       "end": 130,
+       "line": 3,
+       "column": 40
+      },
+      "expected": "Record",
+      "actual": "Unknown",
+      "call_path": [],
+      "location": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 121,
+       "end": 130,
+       "line": 3,
+       "column": 40,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 49,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "Record",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 143,
+       "end": 203,
+       "line": 3,
+       "column": 62
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:spreadsheet",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+       "start": 143,
+       "end": 203,
+       "line": 3,
+       "column": 62,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 122,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 3,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record",
+    "effects": [
+     "pure",
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "0374a5c64da7e8f2fb43daeaded344fbda9cf7858dbb9604beb5b37e5a047ac1",
+    "dependencies": {
+     "source": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 203
+      }
+     ],
+     "contracts": "bd798b5a4ac497e1df0cebf9d3dcf7e645305fded03079f54001aae2b2ac9fe8",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+        "start": 21,
+        "end": 81,
+        "line": 2,
+        "column": 6,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 66,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+       "location": {
+        "source_hash": "7115bc9023f1bbb5b192fea3681a88ddfe44ee50b0f7da91971cec930b9d52ed",
+        "start": 143,
+        "end": 203,
+        "line": 3,
+        "column": 62,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 122,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\n[table:spreadsheet]{path:\"~workspace/outputs/IT73_t08.xlsx\", items:$t.items >> [table:filter]{where:($r)=>$r.amount > 50000}}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "UNKNOWN_ARGUMENT",
+      "message": "알 수 없는 인자: items",
+      "source_span": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 82,
+       "end": 207,
+       "line": 3,
+       "column": 1
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 82,
+       "end": 207,
+       "line": 3,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 126,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "UNKNOWN_ARGUMENT",
+      "severity": "error",
+      "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 21,
+       "end": 81,
+       "line": 2,
+       "column": 6
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "self:finance",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 21,
+       "end": 81,
+       "line": 2,
+       "column": 6,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 66,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 188,
+       "end": 197,
+       "line": 3,
+       "column": 107
+      },
+      "expected": "Record",
+      "actual": "Unknown",
+      "call_path": [],
+      "location": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 188,
+       "end": 197,
+       "line": 3,
+       "column": 107,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 116,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "Record",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 82,
+       "end": 207,
+       "line": 3,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:spreadsheet",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+       "start": 82,
+       "end": 207,
+       "line": 3,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 126,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 3,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record",
+    "effects": [
+     "pure",
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "3b9cdfe0e7479989f8046efe15f8a3b917ecc6a3c289e525df6c5218ac456a72",
+    "dependencies": {
+     "source": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 207
+      }
+     ],
+     "contracts": "bd798b5a4ac497e1df0cebf9d3dcf7e645305fded03079f54001aae2b2ac9fe8",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+        "start": 21,
+        "end": 81,
+        "line": 2,
+        "column": 6,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 66,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+       "location": {
+        "source_hash": "36301a97876c2c3411ea1f5a1141ff1ced24f9a429aa412b107022cca60744e3",
+        "start": 82,
+        "end": 207,
+        "line": 3,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 126,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$a = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-08\"}\n$b = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-09\"}\nreturn [table:spreadsheet]{path:\"~workspace/outputs/IT73_t09.xlsx\", sheets:{\"8월\":$a.items, \"9월\":$b.items}}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t09.xlsx",
+     "sheets": [
+      "8월",
+      "9월"
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "beaa599d9eb2ccf3a3f353ccd225d35dced3702418f329e85072b16518f4032a",
+    "source_complete": true,
+    "usage": {
+     "steps": 22,
+     "rows": 0,
+     "elapsed_ms": 100
+    },
+    "resume": {
+     "run_id": "4d96759b120b44a1b0683ce9e4e7c7b3"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 26,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "34c7e2811dc50b893d1aecc9bfb3c2821fb6cda6b1cea29793c0edb513155e61",
+     "chars": 40944,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "34c7e2811dc50b893d1aecc9bfb3c2821fb6cda6b1cea29793c0edb513155e61",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "34c7e2811dc50b893d1aecc9bfb3c2821fb6cda6b1cea29793c0edb513155e61"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$성적 = [{이름:\"김민수\", 중간:78.5, 기말:88, 출석:15},{이름:\"이서연\", 중간:92, 기말:95.5, 출석:16},{이름:\"박지훈\", 중간:65, 기말:70.25, 출석:12},{이름:\"정하늘\", 중간:88, 기말:84, 출석:16}]\n$점 = $성적 >> [table:compute]{set:($r)=>{총점:$r.중간*0.4 + $r.기말*0.6}}\n$등 = $점 >> [table:each]{\n  [if: $it.총점 >= 90] { return {**$it, 등급:\"A\"} }\n  [if: $it.총점 >= 80] { return {**$it, 등급:\"B\"} }\n  return {**$it, 등급:\"C\"}\n}\n$표 = $등 >> [table:sort]{by:\"총점\", descending:true}\n$rows = $표 >> [table:each]{ [$it.이름, $it.중간, $it.기말, $it.출석, $it.총점, $it.등급] }\n$x = [table:spreadsheet]{path:\"~workspace/outputs/IT73_grade.xlsx\", headers:[\"이름\",\"중간\",\"기말\",\"출석\",\"총점\",\"등급\"], rows:$rows, sheet_name:\"성적\"}\n$back = [self:read]{path:$x.path}\nreturn {x:$x, rows:$back.data.table.rows}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "x": {
+      "success": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx",
+      "sheets": [
+       "성적"
+      ]
+     },
+     "rows": [
+      [
+       "이서연",
+       92,
+       95.5,
+       16,
+       94.1,
+       "A"
+      ],
+      [
+       "정하늘",
+       88,
+       84,
+       16,
+       85.6,
+       "B"
+      ],
+      [
+       "김민수",
+       78.5,
+       88,
+       15,
+       84.2,
+       "B"
+      ],
+      [
+       "박지훈",
+       65,
+       70.25,
+       12,
+       68.15,
+       "C"
+      ]
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "3071f7694e5ff73881222a34c1ae8da8d723877a01d4493dad352e0d245d5f56",
+    "source_complete": true,
+    "usage": {
+     "steps": 261,
+     "rows": 8,
+     "elapsed_ms": 92
+    },
+    "resume": {
+     "run_id": "c5e067f7163f42afa80f188d6d925715"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "c5e067f7163f42afa80f188d6d925715"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 215,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "51bcdf82d02f46fd734d41a5bca7b7a36e77b92d4dcb79a239fb64d1156348f7",
+     "chars": 42557,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "51bcdf82d02f46fd734d41a5bca7b7a36e77b92d4dcb79a239fb64d1156348f7",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "51bcdf82d02f46fd734d41a5bca7b7a36e77b92d4dcb79a239fb64d1156348f7"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:sheet]{op:\"find\", path:\"~workspace/outputs/IT73_grade.xlsx\", where:{등급:\"B\"}}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": false,
+    "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~workspace/outputs/IT73_grade.xlsx",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~workspace/outputs/IT73_grade.xlsx",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      10
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "784e057eab1136508f9a67e78203021b3bd3ec7cdf2f1cc9d3a2cf3588b3b8ae",
+      "start": 23,
+      "end": 105,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "79261d1834dd0ddd59c2bb14e18adc11bfb7caf16f1b9f9d50779466cb868ea8",
+    "source_complete": false,
+    "usage": {
+     "steps": 8,
+     "rows": 0,
+     "elapsed_ms": 32
+    },
+    "resume": {
+     "run_id": "90fce3b73e30470f8f3e1b27f86bb2e4"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 10,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 7,
+       "action": "self:sheet",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "7c57c1944719a3d8b9b748d179604b7e5c92e2025719f5591fa935f21ee0b53a",
+     "chars": 3915,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "7c57c1944719a3d8b9b748d179604b7e5c92e2025719f5591fa935f21ee0b53a",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\nreturn [self:sheet]{op:\"find\", path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx\", where:{등급:\"B\"}}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "sheet": "성적",
+     "columns": [
+      "이름",
+      "중간",
+      "기말",
+      "출석",
+      "총점",
+      "등급"
+     ],
+     "matched": 2,
+     "items": [
+      {
+       "_row": 3,
+       "이름": "정하늘",
+       "중간": 88,
+       "기말": 84,
+       "출석": 16,
+       "총점": 85.6,
+       "등급": "B"
+      },
+      {
+       "_row": 4,
+       "이름": "김민수",
+       "중간": 78.5,
+       "기말": 88,
+       "출석": 15,
+       "총점": 84.2,
+       "등급": "B"
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "9493d251d8e24391fc84e446e6c00cf5d983c0a5e28591d0526cb1830fe59e18",
+    "source_complete": true,
+    "usage": {
+     "steps": 8,
+     "rows": 0,
+     "elapsed_ms": 36
+    },
+    "resume": {
+     "run_id": "8c0109c4f45b4fd6836775406a0d666d"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "8c0109c4f45b4fd6836775406a0d666d"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "775ee9392194738a8013f7304e8705c3e88f0114d0f4634bb0b845fce67dca85",
+     "chars": 4383,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "775ee9392194738a8013f7304e8705c3e88f0114d0f4634bb0b845fce67dca85",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "775ee9392194738a8013f7304e8705c3e88f0114d0f4634bb0b845fce67dca85"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:read]{path:\"~workspace/outputs/IT73_grade.xlsx\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "text": "### 시트: 성적 (5행 × 6열)\n이름\t중간\t기말\t출석\t총점\t등급\n이서연\t92\t95.5\t16\t94.1\tA\n정하늘\t88\t84\t16\t85.6\tB\n김민수\t78.5\t88\t15\t84.2\tB\n박지훈\t65\t70.25\t12\t68.15\tC",
+     "blocks": [],
+     "data": {
+      "success": true,
+      "sheet_count": 1,
+      "sheets": [
+       "성적"
+      ],
+      "text": "### 시트: 성적 (5행 × 6열)\n이름\t중간\t기말\t출석\t총점\t등급\n이서연\t92\t95.5\t16\t94.1\tA\n정하늘\t88\t84\t16\t85.6\tB\n김민수\t78.5\t88\t15\t84.2\tB\n박지훈\t65\t70.25\t12\t68.15\tC",
+      "table": {
+       "columns": [
+        "이름",
+        "중간",
+        "기말",
+        "출석",
+        "총점",
+        "등급"
+       ],
+       "rows": [
+        [
+         "이서연",
+         92,
+         95.5,
+         16,
+         94.1,
+         "A"
+        ],
+        [
+         "정하늘",
+         88,
+         84,
+         16,
+         85.6,
+         "B"
+        ],
+        [
+         "김민수",
+         78.5,
+         88,
+         15,
+         84.2,
+         "B"
+        ],
+        [
+         "박지훈",
+         65,
+         70.25,
+         12,
+         68.15,
+         "C"
+        ]
+       ]
+      }
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "9882245f46c708c905ce8f0654650d5cb7c44be9ac512611707b49287f8798e6",
+    "source_complete": true,
+    "usage": {
+     "steps": 4,
+     "rows": 0,
+     "elapsed_ms": 35
+    },
+    "resume": {
+     "run_id": "e256ab4090654013a9f130ee03b02672"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "e256ab4090654013a9f130ee03b02672"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 6,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "2a0ef29b81d6b122246372bd9a3deb9159189af5b9af3938335a4ce7e1df269e",
+     "chars": 5305,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "data"
+       ],
+       "chars": 755
+      }
+     ],
+     "read_args": {
+      "id": "2a0ef29b81d6b122246372bd9a3deb9159189af5b9af3938335a4ce7e1df269e",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "2a0ef29b81d6b122246372bd9a3deb9159189af5b9af3938335a4ce7e1df269e"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:read]{path:\"~workspace/outputs/IT73_t06_report.pdf\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": false,
+    "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~workspace/outputs/IT73_t06_report.pdf",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~workspace/outputs/IT73_t06_report.pdf",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      6
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "c187437a2b14249f0f48916176d85e053cb30e41e8f4e8f1c0328204a93f970a",
+      "start": 16,
+      "end": 74,
+      "line": 2,
+      "column": 1
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "5171d6fbdc9ca37a0376e91680db141b632bab2f5019376a4b231ef1928d40f8",
+    "source_complete": false,
+    "usage": {
+     "steps": 4,
+     "rows": 0,
+     "elapsed_ms": 32
+    },
+    "resume": {
+     "run_id": "88f4cc80ca7b49fba4074434a06a837f"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 6,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 4,
+       "action": "self:read",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "0cf3033d1b53c2c1ae5f65834d83cf50f3dfde7b657e4be2621d49a83dd4f793",
+     "chars": 2861,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "0cf3033d1b53c2c1ae5f65834d83cf50f3dfde7b657e4be2621d49a83dd4f793",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:read]{path:\"~workspace/outputs/IT73_t05.html\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "text": "<!DOCTYPE html><html lang=\"ko\"><head><meta charset=\"utf-8\">\n<title>2026년 9월 가계부</title><style>\n:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2330;--dim:#6b7683;--line:#e2e6ec;--accent:#2f5fd0;--code:#eef1f6}\n@media(prefers-color-scheme:dark){:root{--bg:#12151a;--card:#191d24;--ink:#e4e8ee;--dim:#98a3b0;--line:#2a313b;--accent:#7aa2f7;--code:#212831}}\n*{box-sizing:border-box}\nbody{margin:0;background:var(--bg);color:var(--ink);line-height:1.75;-webkit-text-size-adjust:100%;\n  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}\n.docwrap{max-width:820px;margin:32px auto;background:var(--card);border:1px solid var(--line);\n  border-radius:14px;padding:34px 38px 46px}\n@media(max-width:680px){.docwrap{margin:0;border:0;border-radius:0;padding:22px 16px 40px}}\n.docwrap>h1:first-child{margin-top:0}\nh1,h2,h3,h4{line-height:1.32;font-weight:700}\nh1{font-size:clamp(1.5rem,4.5vw,2.05rem);margin:0 0 .5em;padding-bottom:.34em;border-bottom:2px solid var(--line);letter-spacing:-.01em}\nh2{font-size:1.24rem;margin:1.9em 0 .6em;padding-left:11px;border-left:5px solid var(--accent)}\nh3{font-size:1.06rem;margin:1.5em 0 .45em;color:var(--dim)}\np{margin:.75em 0;word-break:break-word}\n.doc-meta{color:var(--dim);font-size:.9rem;margin:-.2em 0 1.6em}\nul,ol{margin:.7em 0 1em;padding-left:1.35em} li{margin:.34em 0}\n.li-note{color:var(--dim)}\na{color:var(--accent);text-decoration:none;word-break:break-word} a:hover{text-decoration:underline}\nimg{max-width:100%;border-radius:8px} figure{margin:1.5em 0}\nfigcaption{color:var(--dim);font-size:.88rem;text-align:center;margin-top:.5em}\ntable{border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.93rem;display:block;overflow-x:auto}\nth,td{border:1px solid var(--line);padding:8px 11px;text-align:left} th{background:var(--code)}\nblockquote{margin:1.2em 0;padding:.6em 15px;border-left:4px solid var(--line);background:var(--code);\n  color:var(--dim);border-radius:0 8px 8px 0}\nblockquote cite{display:block;margin-top:.5em;font-size:.9em;font-style:normal}\ncode{background:var(--code);border-radius:5px;padding:.1em .38em;font-size:.9em;\n  font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace}\npre{background:var(--code);padding:1em;border-radius:10px;overflow:auto} pre code{background:none;padding:0}\nhr{border:0;border-top:1px solid var(--line);margin:2em 0}\n@media print{\n  body{background:#fff} \n  .docwrap{margin:0;max-width:none;border:0;border-radius:0;padding:0}\n  a{color:inherit;text-decoration:underline}\n}\n\n.cards{display:grid;grid-template-columns:repeat(var(--cols,2),1fr);gap:18px;margin:1.2em 0}\n@media(max-width:680px){.cards{grid-template-columns:1fr}}\n.card{border:1px solid var(--line,#e1e4e8);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;background:var(--card,#fff)}\n.card img.card-img{width:100%;max-height:200px;object-fit:contain;border-radius:6px;margin-bottom:10px;background:#f5f5f5}\n.card h3{margin:0 0 8px;font-size:1.08em;line-height:1.4;color:var(--ink,#22223b)}\n.card .card-meta{color:#888;font-size:0.82em;margin:0 0 8px}\n.card .card-sum{color:var(--ink,#444);font-size:0.92em;margin:0 0 10px;flex:1}\n.card a{margin-top:auto;color:#3d5a80;font-weight:bold;font-size:0.9em;text-decoration:none}\n.card a:hover{text-decoration:underline}\n.li-note{color:var(--dim,#4a5563)}\n</style></head><body>\n<div class=\"docwrap\">\n<h1>2026년 9월 가계부</h1>\n<div class=\"doc-meta\">결제 알림 수거분 기준</div>\n<h2 id=\"요약\">요약</h2>\n<p>9월 지출 합계는 1111527원입니다.</p>\n<h2 id=\"큰 지출 5건\">큰 지출 5건</h2>\n<table><thead><tr><th>날짜</th><th>가맹점</th><th>금액</th></tr></thead><tbody><tr><td>2026-09-11</td><td>입니다.</td><td>545408</td></tr><tr><td>2026-09-08</td><td></td><td>160919</td></tr><tr><td>2026-09-24</td><td></td><td>159000</td></tr><tr><td>2026-09-22</td><td>팔자좋은해녀 오송본점 시 인센티브 (2) 총 보유</td><td>59000</td></tr><tr><td>2026-09-23</td><td>백세장수촌오송점 시 인센티브 (2) 총 보유</td><td>50000</td></tr></tbody></ta…",
+     "blocks": [
+      {
+       "type": "paragraph",
+       "text": "<!DOCTYPE html><html lang=\"ko\"><head><meta charset=\"utf-8\">\n<title>2026년 9월 가계부</title><style>\n:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2330;--dim:#6b7683;--line:#e2e6ec;--accent:#2f5fd0;--code:#eef1f6}\n@media(prefers-color-scheme:dark){:root{--bg:#12151a;--card:#191d24;--ink:#e4e8ee;--dim:#98a3b0;--line:#2a313b;--accent:#7aa2f7;--code:#212831}}\n*{box-sizing:border-box}\nbody{margin:0;background:var(--bg);color:var(--ink);line-height:1.75;-webkit-text-size-adjust:100%;\n  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}\n.docwrap{max-width:820px;margin:32px auto;background:var(--card);border:1px solid var(--line);\n  border-radius:14px;padding:34px 38px 46px}\n@media(max-width:680px){.docwrap{margin:0;border:0;border-radius:0;padding:22px 16px 40px}}\n.docwrap>h1:first-child{margin-top:0}\nh1,h2,h3,h4{line-height:1.32;font-weight:700}\nh1{font-size:clamp(1.5rem,4.5vw,2.05rem);margin:0 0 .5em;padding-bottom:.34em;border-bottom:2px solid var(--line);letter-spacing:-.01em}\nh2{font-size:1.24rem;margin:1.9em 0 .6em;padding-left:11px;border-left:5px solid var(--accent)}\nh3{font-size:1.06rem;margin:1.5em 0 .45em;color:var(--dim)}\np{margin:.75em 0;word-break:break-word}\n.doc-meta{color:var(--dim);font-size:.9rem;margin:-.2em 0 1.6em}\nul,ol{margin:.7em 0 1em;padding-left:1.35em} li{margin:.34em 0}\n.li-note{color:var(--dim)}\na{color:var(--accent);text-decoration:none;word-break:break-word} a:hover{text-decoration:underline}\nimg{max-width:100%;border-radius:8px} figure{margin:1.5em 0}\nfigcaption{color:var(--dim);font-size:.88rem;text-align:center;margin-top:.5em}\ntable{border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.93rem;display:block;overflow-x:auto}\nth,td{border:1px solid var(--line);padding:8px 11px;text-align:left} th{background:var(--code)}\nblockquote{margin:1.2em 0;padding:.6em 15px;border-left:4px solid var(--line);background:var(--code);\n  color:var(--dim);border-radius:0 8px 8px 0}\nblockquote cite{display:block;margin-top:.5em;font-size:.9em;font-style:normal}\ncode{background:var(--code);border-radius:5px;padding:.1em .38em;font-size:.9em;\n  font-family:'SF Mono',ui-monospace,Menlo,Consolas,monospace}\npre{background:var(--code);padding:1em;border-radius:10px;overflow:auto} pre code{background:none;padding:0}\nhr{border:0;border-top:1px solid var(--line);margin:2em 0}\n@media pr…"
+      },
+      {
+       "type": "paragraph",
+       "text": ".cards{display:grid;grid-template-columns:repeat(var(--cols,2),1fr);gap:18px;margin:1.2em 0}\n@media(max-width:680px){.cards{grid-template-columns:1fr}}\n.card{border:1px solid var(--line,#e1e4e8);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;background:var(--card,#fff)}\n.card img.card-img{width:100%;max-height:200px;object-fit:contain;border-radius:6px;margin-bottom:10px;background:#f5f5f5}\n.card h3{margin:0 0 8px;font-size:1.08em;line-height:1.4;color:var(--ink,#22223b)}\n.card .card-meta{color:#888;font-size:0.82em;margin:0 0 8px}\n.card .card-sum{color:var(--ink,#444);font-size:0.92em;margin:0 0 10px;flex:1}\n.card a{margin-top:auto;color:#3d5a80;font-weight:bold;font-size:0.9em;text-decoration:none}\n.card a:hover{text-decoration:underline}\n.li-note{color:var(--dim,#4a5563)}\n</style></head><body>\n<div class=\"docwrap\">\n<h1>2026년 9월 가계부</h1>\n<div class=\"doc-meta\">결제 알림 수거분 기준</div>\n<h2 id=\"요약\">요약</h2>\n<p>9월 지출 합계는 1111527원입니다.</p>\n<h2 id=\"큰 지출 5건\">큰 지출 5건</h2>\n<table><thead><tr><th>날짜</th><th>가맹점</th><th>금액</th></tr></thead><tbody><tr><td>2026-09-11</td><td>입니다.</td><td>545408</td></tr><tr><td>2026-09-08</td><td></td><td>160919</td></tr><tr><td>2026-09-24</td><td></td><td>159000</td></tr><tr><td>2026-09-22</td><td>팔자좋은해녀 오송본점 시 인센티브 (2) 총 보유</td><td>59000</td></tr><tr><td>2026-09-23</td><td>백세장수촌오송점 시 인센티브 (2) 총 보유</td><td>50000</td></tr></tbody></table>\n<ul><li>카드 대금 출금 행 확인 필요</li><li>분류 미기재 29건</li></ul>\n</div>\n</body></html>"
+      }
+     ],
+     "data": {
+      "success": true,
+      "items": [
+       {
+        "type": "paragraph",
+        "text": "<!DOCTYPE html><html lang=\"ko\"><head><meta charset=\"utf-8\">\n<title>2026년 9월 가계부</title><style>\n:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2330;--dim:#6b7683;--line:#e2e6ec;--accent:#2f5fd0;--code:#eef1f6}\n@media(prefers-color-scheme:dark){:root{--bg:#12151a;--card:#191d24;--ink:#e4e8ee;--dim:#98a3b0;--line:#2a313b;--accent:#7aa2f7;--code:#212831}}\n*{box-sizing:border-box}\nbody{margin:0;background:var(--bg);color:var(--ink);line-height:1.75;-webkit-text-size-adjust:100%;\n  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}\n.docwrap{max-width:820px;margin:32px auto;background:var(--card);border:1px solid var(--line);\n  border-radius:14px;padding:34px 38px 46px}\n@media(max-width:680px){.docwrap{margin:0;border:0;border-radius:0;padding:22px 16px 40px}}\n.docwrap>h1:first-child{margin-top:0}\nh1,h2,h3,h4{line-height:1.32;font-weight:700}\nh1{font-size:cla…"
+       },
+       {
+        "type": "paragraph",
+        "text": ".cards{display:grid;grid-template-columns:repeat(var(--cols,2),1fr);gap:18px;margin:1.2em 0}\n@media(max-width:680px){.cards{grid-template-columns:1fr}}\n.card{border:1px solid var(--line,#e1e4e8);border-radius:10px;padding:16px 18px;display:flex;flex-direction:column;background:var(--card,#fff)}\n.card img.card-img{width:100%;max-height:200px;object-fit:contain;border-radius:6px;margin-bottom:10px;background:#f5f5f5}\n.card h3{margin:0 0 8px;font-size:1.08em;line-height:1.4;color:var(--ink,#22223b)}\n.card .card-meta{color:#888;font-size:0.82em;margin:0 0 8px}\n.card .card-sum{color:var(--ink,#444);font-size:0.92em;margin:0 0 10px;flex:1}\n.card a{margin-top:auto;color:#3d5a80;font-weight:bold;font-size:0.9em;text-decoration:none}\n.card a:hover{text-decoration:underline}\n.li-note{color:var(--dim,#4a5563)}\n</style></head><body>\n<div class=\"docwrap\">\n<h1>2026년 9월 가계부</h1>\n<div class=\"doc-meta\">결제 알림 수거분 …"
+       }
+      ],
+      "message": "<!DOCTYPE html><html lang=\"ko\"><head><meta charset=\"utf-8\">\n<title>2026년 9월 가계부</title><style>\n:root{--bg:#f6f7f9;--card:#fff;--ink:#1b2330;--dim:#6b7683;--line:#e2e6ec;--accent:#2f5fd0;--code:#eef1f6}\n@media(prefers-color-scheme:dark){:root{--bg:#12151a;--card:#191d24;--ink:#e4e8ee;--dim:#98a3b0;--line:#2a313b;--accent:#7aa2f7;--code:#212831}}\n*{box-sizing:border-box}\nbody{margin:0;background:var(--bg);color:var(--ink);line-height:1.75;-webkit-text-size-adjust:100%;\n  font-family:'Pretendard',-apple-system,'Apple SD Gothic Neo','Noto Sans KR','Malgun Gothic',sans-serif}\n.docwrap{max-width:820px;margin:32px auto;background:var(--card);border:1px solid var(--line);\n  border-radius:14px;padding:34px 38px 46px}\n@media(max-width:680px){.docwrap{margin:0;border:0;border-radius:0;padding:22px 16px 40px}}\n.docwrap>h1:first-child{margin-top:0}\nh1,h2,h3,h4{line-height:1.32;font-weight:700}\nh1{font-size:clamp(1.5rem,4.5vw,2.05rem);margin:0 0 .5em;padding-bottom:.34em;border-bottom:2px solid var(--line);letter-spacing:-.01em}\nh2{font-size:1.24rem;margin:1.9em 0 .6em;padding-left:11px;border-left:5px solid var(--accent)}\nh3{font-size:1.06rem;margin:1.5em 0 .45em;color:var(--dim)}\np{margin:.75em 0;word-break:break-word}\n.doc-meta{color:var(--dim);font-size:.9rem;margin:-.2em 0 1.6em}\nul,ol{margin:.7em 0 1em;padding-left:1.35em} li{margin:.34em 0}\n.li-note{color:var(--dim)}\na{color:var(--accent);text-decoration:none;word-break:break-word} a:hover{text-decoration:underline}\nimg{max-width:100%;border-radius:8px} figure{margin:1.5em 0}\nfigcaption{color:var(--dim);font-size:.88rem;text-align:center;margin-top:.5em}\ntable{border-collapse:collapse;width:100%;margin:1.4em 0;font-size:.93rem;display:block;overflow-x:auto}\nth,td{border:1px solid var(--line);padding:8px 11px;text-align:left} th{background:var(--code)}\nblockquote{margin:1.2em 0;padding:.6em 15px;border-left:4px solid var(--l…",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t05.html",
+      "count": 2
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "8081222941bc7d811c75640614a5d255d529f115f8ac88ea041d1e04ee7f039f",
+    "source_complete": true,
+    "usage": {
+     "steps": 4,
+     "rows": 0,
+     "elapsed_ms": 32
+    },
+    "resume": {
+     "run_id": "8e958f7d1ba14272ac768a4ff9d2f5d0"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "8e958f7d1ba14272ac768a4ff9d2f5d0"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 6,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "_preview": {
+     "scope": "display",
+     "value_chars": 16566,
+     "shown_chars": 11984,
+     "changes": [
+      {
+       "path": [
+        "value",
+        "text"
+       ],
+       "kind": "text",
+       "shown": 3919,
+       "total": 3999,
+       "read_args": {
+        "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+        "path": [
+         "value",
+         "text"
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "value",
+        "blocks",
+        0,
+        "text"
+       ],
+       "kind": "text",
+       "shown": 2375,
+       "total": 2522,
+       "read_args": {
+        "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+        "path": [
+         "value",
+         "blocks",
+         0,
+         "text"
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "value",
+        "data",
+        "items",
+        0,
+        "text"
+       ],
+       "kind": "text",
+       "shown": 910,
+       "total": 2522,
+       "read_args": {
+        "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+        "path": [
+         "value",
+         "data",
+         "items",
+         0,
+         "text"
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "value",
+        "data",
+        "items",
+        1,
+        "text"
+       ],
+       "kind": "text",
+       "shown": 909,
+       "total": 1475,
+       "read_args": {
+        "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+        "path": [
+         "value",
+         "data",
+         "items",
+         1,
+         "text"
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "value",
+        "data",
+        "message"
+       ],
+       "kind": "text",
+       "shown": 1899,
+       "total": 3999,
+       "read_args": {
+        "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+        "path": [
+         "value",
+         "data",
+         "message"
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      }
+     ],
+     "changes_total": 5,
+     "changes_omitted": 0,
+     "read_args": {
+      "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+      "path": [
+       "value"
+      ],
+      "offset": 0,
+      "limit": 60000
+     },
+     "note": "표시용 사본입니다. 생략된 후보·필드는 미검토입니다. 조건 적용은 원문 inputs 참조로, 추가 읽기는 각 read_args로 수행하세요."
+    },
+    "result_ref": {
+     "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+     "chars": 52736,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "data"
+       ],
+       "chars": 8390
+      },
+      {
+       "path": [
+        "value",
+        "blocks"
+       ],
+       "chars": 4164
+      },
+      {
+       "path": [
+        "value",
+        "text"
+       ],
+       "chars": 3999
+      }
+     ],
+     "read_args": {
+      "id": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "f8cda50659b94bb8e692aaed7cdb495e069e9a2d97211d621075f51ae20f9a5e"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:sheet]{op:\"range\", path:\"~workspace/outputs/IT73_grade.xlsx\", range:\"A1:B2\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx",
+     "sha256": "ad66fb51fa0fde466255fcac1da2428c33343e1b0af5c799f71d1270f4e57c9a",
+     "sheet": "성적",
+     "items": [
+      {
+       "cell": "A1",
+       "value": "이름",
+       "formula": null,
+       "formula_type": null,
+       "style_id": "0"
+      },
+      {
+       "cell": "B1",
+       "value": "중간",
+       "formula": null,
+       "formula_type": null,
+       "style_id": "0"
+      },
+      {
+       "cell": "A2",
+       "value": "이서연",
+       "formula": null,
+       "formula_type": null,
+       "style_id": "0"
+      },
+      {
+       "cell": "B2",
+       "value": 92,
+       "formula": null,
+       "formula_type": null,
+       "style_id": "0"
+      }
+     ],
+     "note": "value는 저장된 계산 캐시입니다. 최신 계산은 calculate로 확인하세요."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "4fd2bb8976bb9ce5cf43417f164f37f7ee9dfc4b4be21454b67d640e1ff050c6",
+    "source_complete": true,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 53
+    },
+    "resume": {
+     "run_id": "64607453f86c48bfa0ba7d3777872090"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "64607453f86c48bfa0ba7d3777872090"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "5f77b37158807d75ebf26de776009dfe4e9ab7b79c95bf70c2e5c0c47c35dffe",
+     "chars": 5470,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "items"
+       ],
+       "chars": 453
+      }
+     ],
+     "read_args": {
+      "id": "5f77b37158807d75ebf26de776009dfe4e9ab7b79c95bf70c2e5c0c47c35dffe",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "5f77b37158807d75ebf26de776009dfe4e9ab7b79c95bf70c2e5c0c47c35dffe"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$ap = [self:sheet]{op:\"append\", path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx\", items:[{이름:\"최유진\", 중간:81, 기말:79.5, 출석:14, 총점:\"=B6*0.4+C6*0.6\", 등급:\"C\"}]}\n$up = [self:sheet]{op:\"update\", path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx\", where:{이름:\"박지훈\"}, set:{출석:13}}\n$all = [self:sheet]{op:\"find\", path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx\"}\nreturn {ap:$ap, up:$up, all:$all.items}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "ap": {
+      "success": true,
+      "sheet": "성적",
+      "appended": 1,
+      "rows": "6~6",
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx"
+     },
+     "up": {
+      "success": true,
+      "sheet": "성적",
+      "matched": 1,
+      "updated_rows": [
+       5
+      ],
+      "set": {
+       "출석": 13
+      },
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_grade.xlsx"
+     },
+     "all": [
+      {
+       "_row": 2,
+       "이름": "이서연",
+       "중간": 92,
+       "기말": 95.5,
+       "출석": 16,
+       "총점": 94.1,
+       "등급": "A"
+      },
+      {
+       "_row": 3,
+       "이름": "정하늘",
+       "중간": 88,
+       "기말": 84,
+       "출석": 16,
+       "총점": 85.6,
+       "등급": "B"
+      },
+      {
+       "_row": 4,
+       "이름": "김민수",
+       "중간": 78.5,
+       "기말": 88,
+       "출석": 15,
+       "총점": 84.2,
+       "등급": "B"
+      },
+      {
+       "_row": 5,
+       "이름": "박지훈",
+       "중간": 65,
+       "기말": 70.25,
+       "출석": 13,
+       "총점": 68.15,
+       "등급": "C"
+      },
+      {
+       "_row": 6,
+       "이름": "최유진",
+       "중간": 81,
+       "기말": 79.5,
+       "출석": 14,
+       "총점": "=B6*0.4+C6*0.6",
+       "등급": "C"
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "99faab3243dda8392b8563326158ac7932758a468a7de11af555cbf6fcf78070",
+    "source_complete": true,
+    "usage": {
+     "steps": 34,
+     "rows": 0,
+     "elapsed_ms": 107
+    },
+    "resume": {
+     "run_id": "3fb4252342ec4da1a6b3bbb7bdeea573"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "3fb4252342ec4da1a6b3bbb7bdeea573"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 38,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "0b4522b87bcc0c86056e1f598d53bd830370ac82565f66a8b6158c4259c76254",
+     "chars": 14585,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "all"
+       ],
+       "chars": 589
+      }
+     ],
+     "read_args": {
+      "id": "0b4522b87bcc0c86056e1f598d53bd830370ac82565f66a8b6158c4259c76254",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "0b4522b87bcc0c86056e1f598d53bd830370ac82565f66a8b6158c4259c76254"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$성적 = [{이름:\"김민수\", 중간:78.5, 기말:88, 출석:15},{이름:\"이서연\", 중간:92, 기말:95.5, 출석:16},{이름:\"박지훈\", 중간:65, 기말:70.25, 출석:12},{이름:\"정하늘\", 중간:88, 기말:84, 출석:16}]\n$점 = $성적 >> [table:compute]{set:($r)=>{총점:$r.중간*0.4 + $r.기말*0.6}}\n$등 = $점 >> [table:each]{\n  [if: $it.총점 >= 90] { return {**$it, 등급:\"A\"} }\n  [if: $it.총점 >= 80] { return {**$it, 등급:\"B\"} }\n  return {**$it, 등급:\"C\"}\n}\n$표 = $등 >> [table:sort]{by:\"총점\", descending:true}\n$g = $표 >> [table:groupby]{by:\"등급\", agg:{인원:[\"count\"]}}\n$rows = $g.items >> [table:sort]{by:\"등급\"} >> [table:each]{ [$it.등급, $it.인원] }\n$c = [table:chart]{chart_type:\"bar\", title:\"AI 개론 등급 분포\", table:{columns:[\"등급\",\"인원\"], rows:$rows}, path:\"~workspace/outputs/IT73_t13.png\"}\nreturn {c:$c, rows:$rows}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "c": {
+      "success": true,
+      "data": {
+       "format": "png",
+       "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t13.png",
+       "image_tag": "[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t13.png]"
+      },
+      "summary": "막대 차트 생성 완료 (3개 항목, 1개 시리즈)\n\n[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t13.png]"
+     },
+     "rows": [
+      [
+       "A",
+       1
+      ],
+      [
+       "B",
+       2
+      ],
+      [
+       "C",
+       1
+      ]
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "4a1190d11d6905f6e1d8df1a8614f2d82293e1dc68404dfac59b51e9e92e3175",
+    "source_complete": true,
+    "usage": {
+     "steps": 225,
+     "rows": 7,
+     "elapsed_ms": 1165
+    },
+    "resume": {
+     "run_id": "effe884c417743c099eedb67336da848"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 182,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "5e36536d7f894a57bc50f37ebf4643f82ccbd00f1d860c2c84374c15f1ff6d8a",
+     "chars": 38002,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "5e36536d7f894a57bc50f37ebf4643f82ccbd00f1d860c2c84374c15f1ff6d8a",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "5e36536d7f894a57bc50f37ebf4643f82ccbd00f1d860c2c84374c15f1ff6d8a"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$t = [self:finance]{op:\"query\", query_type:\"지출\", month:\"2026-01\"}\n$rows = $t.items >> [table:each]{ [$it.date, $it.amount] }\nreturn [table:chart]{chart_type:\"line\", title:\"1월 지출\", table:{columns:[\"날짜\",\"금액\"], rows:$rows}, path:\"~workspace/outputs/IT73_t14.png\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": false,
+    "error": "입력 0행 — 그릴 내용이 없습니다. [table:chart] 는 앞 단계 통화를 받았지만 행이 하나도 없습니다(열: ['날짜', '금액']). 앞 단계의 필터·검침을 보세요.",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "입력 0행 — 그릴 내용이 없습니다. [table:chart] 는 앞 단계 통화를 받았지만 행이 하나도 없습니다(열: ['날짜', '금액']). 앞 단계의 필터·검침을 보세요.",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      28
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "896eb3b8dfb6c7b96545d33da4f8c8e418dd2ee8612cabcc151daa52e45adfcd",
+      "start": 148,
+      "end": 276,
+      "line": 4,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "e8739f0c31483d6550232b821e54d5a1a771a958eb2c8334cf91dcbeacf52314",
+    "source_complete": false,
+    "usage": {
+     "steps": 24,
+     "rows": 0,
+     "elapsed_ms": 63
+    },
+    "resume": {
+     "run_id": "c3031f350a354e448cbb8649ed522ad2"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 28,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 25,
+       "action": "table:chart",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "2ddc9a6fb41faceeec7f6dd5944a85bff31d768725b19735eb074bb273ad18a9",
+     "chars": 9104,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "2ddc9a6fb41faceeec7f6dd5944a85bff31d768725b19735eb074bb273ad18a9",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$출석 = [{이름:\"김민수\", 출석:15, 결석:1},{이름:\"이서연\", 출석:16, 결석:0},{이름:\"박지훈\", 출석:12, 결석:4}]\n$rows = $출석 >> [table:each]{ [$it.이름, $it.출석, $it.결석] }\n$위험 = $출석 >> [table:filter]{where:($r)=>$r.결석 >= 3} >> [table:each]{ $it.이름 }\n$d = [table:document]{title:\"AI 개론 출석 요약\", meta:\"2026년 2학기 · 16주차 기준\", format:\"docx\", filename:\"~workspace/outputs/IT73_t15\", blocks:[{type:\"heading\", level:2, text:\"요약\"}, {type:\"paragraph\", text:f'결석 3회 이상: ${join(\", \", $위험)}'}, {type:\"table\", columns:[\"이름\",\"출석\",\"결석\"], rows:$rows}]}\n$insp = [self:document]{op:\"inspect\", path:$d.path}\nreturn $insp.items >> [table:each]{ $it.text }",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": [
+     "AI 개론 출석 요약",
+     "요약",
+     "결석 3회 이상: 박지훈",
+     "이름",
+     "출석",
+     "결석",
+     "김민수",
+     "15",
+     "1",
+     "이서연",
+     "16",
+     "0",
+     "박지훈",
+     "12",
+     "4"
+    ],
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "c562ba3a557eea96c3df63a5a9b81f08569329654a79cf62f0dc3a797df87ab7",
+    "source_complete": true,
+    "usage": {
+     "steps": 191,
+     "rows": 19,
+     "elapsed_ms": 102
+    },
+    "resume": {
+     "run_id": "3e40d6c7783943848ba3c94ebe9ac02d"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "3e40d6c7783943848ba3c94ebe9ac02d"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 154,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "6b55dca88e14b613e118a4dcf8bdaa92e4b5526966704abf150780bb019dcdb1",
+     "chars": 33795,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "6b55dca88e14b613e118a4dcf8bdaa92e4b5526966704abf150780bb019dcdb1",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "6b55dca88e14b613e118a4dcf8bdaa92e4b5526966704abf150780bb019dcdb1"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$insp = [self:document]{op:\"inspect\", path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t15.docx\"}\n$p = $insp.items >> [table:filter]{where:($r)=>contains($r.text, \"결석 3회\")} >> [table:take]{n:1}\n$e = [self:document]{op:\"edit\", path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t15.docx\", expected_sha256:$insp.sha256, output:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t16.docx\", edits:[{block_id:$p[0].block_id, old_string:\"결석 3회 이상\", new_string:\"면담 대상(결석 3회 이상)\", comment:\"면담 일정 추가\"}]}\n$back = [self:read]{path:\"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t16.docx\"}\nreturn {e:$e, text:$back.text}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "e": {
+      "success": true,
+      "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t16.docx",
+      "source_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t15.docx",
+      "source_sha256": "45a48aa2d2a1b96f3d5971326adfe62cff6ed92473bdf038f87ba5e4305da38d",
+      "items": [
+       {
+        "block_id": "word/document.xml#p2",
+        "before": "결석 3회 이상",
+        "after": "면담 대상(결석 3회 이상)",
+        "tracked": true,
+        "comment": "면담 일정 추가"
+       }
+      ],
+      "changed_count": 1,
+      "track_changes": true,
+      "note": "새 텍스트는 교체 범위 첫 run의 글자 서식을 사용합니다. 원본은 보존했습니다."
+     },
+     "text": "AI 개론 출석 요약\n\n요약\n\n면담 대상(결석 3회 이상): 박지훈\n\n[표 시작]\n이름 | 출석 | 결석\n김민수 | 15 | 1\n이서연 | 16 | 0\n박지훈 | 12 | 4\n[표 끝]"
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "8e33676216b0ce8089def81f287a3f9752c33e96fa9eb268879bd0c97d946b79",
+    "source_complete": true,
+    "usage": {
+     "steps": 133,
+     "rows": 0,
+     "elapsed_ms": 138
+    },
+    "resume": {
+     "run_id": "ff5cedc826454278bc7834312e915574"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "ff5cedc826454278bc7834312e915574"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 124,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "ded9114b3d84ba67581229b062f12b5a8e95fbc2cc171983d6632432eea5f028",
+     "chars": 29127,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "e"
+       ],
+       "chars": 556
+      }
+     ],
+     "read_args": {
+      "id": "ded9114b3d84ba67581229b062f12b5a8e95fbc2cc171983d6632432eea5f028",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "ded9114b3d84ba67581229b062f12b5a8e95fbc2cc171983d6632432eea5f028"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:read]{path:\"~workspace/outputs/IT73_t16.docx\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": false,
+    "error": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~workspace/outputs/IT73_t16.docx",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "파일을 찾을 수 없습니다: /Users/kangkukjin/Desktop/AI/indiebizOS/projects/컨텐츠/~workspace/outputs/IT73_t16.docx",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      6
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "d12554acc8e75aba51b945588ccd6c54f54d646c67df162ff0c2782c4728b830",
+      "start": 16,
+      "end": 68,
+      "line": 2,
+      "column": 1
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "1509749c36f0146fc6148acd46454de23f882ec1205ebc967aea895ff5d15d18",
+    "source_complete": false,
+    "usage": {
+     "steps": 4,
+     "rows": 0,
+     "elapsed_ms": 37
+    },
+    "resume": {
+     "run_id": "c6f0b7332906470ab80cb93c3340580e"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 6,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 4,
+       "action": "self:read",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "25c55b31856d9f2e79cb206163479b6d796d4676e7bfefc602d1ec823cb1d520",
+     "chars": 2843,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "25c55b31856d9f2e79cb206163479b6d796d4676e7bfefc602d1ec823cb1d520",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:document]{op:\"inspect\", path:\"~workspace/outputs/IT73_t16.docx\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t16.docx",
+     "sha256": "5d06c03fa75d9489b68f24109a23fc9bf5e0f858bfe2577971a72592e37a79ff",
+     "items": [
+      {
+       "block_id": "word/document.xml#p0",
+       "part": "word/document.xml",
+       "text": "AI 개론 출석 요약",
+       "in_table": false,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p1",
+       "part": "word/document.xml",
+       "text": "요약",
+       "in_table": false,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p2",
+       "part": "word/document.xml",
+       "text": "면담 대상(결석 3회 이상): 박지훈",
+       "in_table": false,
+       "editable": false
+      },
+      {
+       "block_id": "word/document.xml#p3",
+       "part": "word/document.xml",
+       "text": "이름",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p4",
+       "part": "word/document.xml",
+       "text": "출석",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p5",
+       "part": "word/document.xml",
+       "text": "결석",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p6",
+       "part": "word/document.xml",
+       "text": "김민수",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p7",
+       "part": "word/document.xml",
+       "text": "15",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p8",
+       "part": "word/document.xml",
+       "text": "1",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p9",
+       "part": "word/document.xml",
+       "text": "이서연",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p10",
+       "part": "word/document.xml",
+       "text": "16",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p11",
+       "part": "word/document.xml",
+       "text": "0",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p12",
+       "part": "word/document.xml",
+       "text": "박지훈",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p13",
+       "part": "word/document.xml",
+       "text": "12",
+       "in_table": true,
+       "editable": true
+      },
+      {
+       "block_id": "word/document.xml#p14",
+       "part": "word/document.xml",
+       "text": "4",
+       "in_table": true,
+       "editable": true
+      }
+     ],
+     "total": 15,
+     "truncated": false,
+     "offset": 0,
+     "note": "editable=false는 필드·링크·기존 변경/주석·복합 요소가 있어 선택 교체를 지원하지 않는 문단입니다."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "036edc1cc49f3eba310171032ae2aa85fabab2cb2c2577348fb239635c385c59",
+    "source_complete": true,
+    "usage": {
+     "steps": 5,
+     "rows": 0,
+     "elapsed_ms": 65
+    },
+    "resume": {
+     "run_id": "f118e21a92af42f98d29073203f9e90d"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "f118e21a92af42f98d29073203f9e90d"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 7,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "522c5d86d050f575ffb73fc64e6f3c8ee3f7876a3e1f309c8f5725f5fcca330f",
+     "chars": 11559,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "items"
+       ],
+       "chars": 2183
+      }
+     ],
+     "read_args": {
+      "id": "522c5d86d050f575ffb73fc64e6f3c8ee3f7876a3e1f309c8f5725f5fcca330f",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "522c5d86d050f575ffb73fc64e6f3c8ee3f7876a3e1f309c8f5725f5fcca330f"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$기사 = [{title:\"할머니 칠순 잔치\", meta:\"가족 행사 · 10월 3일\", summary:\"오송 한정식집에서 온 가족이 모였다.\"},{title:\"막내 첫 걸음마\", meta:\"육아 · 9월 20일\", summary:\"거실에서 다섯 걸음을 걸었다.\"},{title:\"가을 캠핑 계획\", meta:\"여행 · 10월\", summary:\"속리산 자연휴양림 예약 완료.\"}]\nreturn [table:document]{title:\"우리집 신문 10월호\", meta:\"2026년 10월 · 제12호\", theme:\"newspaper\", items:$기사, format:\"png\", filename:\"~workspace/outputs/IT73_t17\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t17.png",
+     "file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t17.png",
+     "title": "우리집 신문 10월호",
+     "format": "png",
+     "blocks": 1,
+     "message": "문서 1블록을 PNG로 렌더했습니다."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "a5745fda15409ce1dffb10a9ddc29b990ff32cebd8982372051e8b2bb4f1486f",
+    "source_complete": true,
+    "usage": {
+     "steps": 24,
+     "rows": 0,
+     "elapsed_ms": 1159
+    },
+    "resume": {
+     "run_id": "07974f501ec840e8bca76cf8f2175464"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 24,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "0f09de6482ec0d576c0b7f5c0f16ba0161ceaf8a4e2dd294d7fa6f34f1b07b70",
+     "chars": 7787,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "0f09de6482ec0d576c0b7f5c0f16ba0161ceaf8a4e2dd294d7fa6f34f1b07b70",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "0f09de6482ec0d576c0b7f5c0f16ba0161ceaf8a4e2dd294d7fa6f34f1b07b70"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$매물 = [{apt:\"가경자이\", area:84, price:52000, floor:12},{apt:\"가경자이\", area:59, price:39000, floor:5},{apt:\"복대두산위브\", area:84, price:47000, floor:20}]\n$한 = $매물 >> [table:rename]{map:{apt:\"단지\", area:\"전용면적\", price:\"호가_만원\", floor:\"층\"}}\n$평균 = $한.items >> [table:groupby]{by:\"단지\", agg:{평균호가:[\"avg\",\"호가_만원\"], 건수:[\"count\"]}}\n$평균2 = $평균 >> [table:rename]{map:{평균호가:\"평균호가_만원\"}}\n$d = [table:document]{title:\"청주 흥덕 매물 메모\", items:$한.items, filename:\"~workspace/outputs/IT73_t18\"}\n$rows = $평균2.items >> [table:each]{ [$it.단지, $it.평균호가_만원, $it.건수] }\n$x = [table:spreadsheet]{path:\"~workspace/outputs/IT73_t18.xlsx\", headers:[\"단지\",\"평균호가_만원\",\"건수\"], rows:$rows}\nreturn {d:$d.path, x:$x.path, rows:$rows}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "d": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t18.html",
+     "x": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t18.xlsx",
+     "rows": [
+      [
+       "가경자이",
+       45500,
+       2
+      ],
+      [
+       "복대두산위브",
+       47000,
+       1
+      ]
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "03a08ee1345ba57bebeb1974b7fc64cf07c915b05b2be9d27fcf8d958eed2cb2",
+    "source_complete": true,
+    "usage": {
+     "steps": 97,
+     "rows": 2,
+     "elapsed_ms": 186
+    },
+    "resume": {
+     "run_id": "dcf4196279d444d3aa238d9d0b12a2ba"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 101,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "a91fab091259716ceed7d18cc01771a39130277d5a641672209c84b2e47a01b4",
+     "chars": 31140,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "a91fab091259716ceed7d18cc01771a39130277d5a641672209c84b2e47a01b4",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "a91fab091259716ceed7d18cc01771a39130277d5a641672209c84b2e47a01b4"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$반 = [{강의:\"AI 개론\", 학생:[{이름:\"김민수\"},{이름:\"이서연\"}]},{강의:\"데이터 윤리\", 학생:[{이름:\"박지훈\"}]},{강의:\"특강\", 학생:[]}]\n$펼 = $반 >> [table:flatten]{field:\"학생\", keep:[\"강의\"]}\n$rows = $펼.items >> [table:each]{ [$it.강의, $it.이름] }\n$x = [table:spreadsheet]{path:\"~workspace/outputs/IT73_t19.xlsx\", headers:[\"강의\",\"이름\"], rows:$rows}\nreturn {rows:$rows, x:$x.path, dropped:get($펼,\"rows_dropped\",null)}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "rows": [
+      [
+       "AI 개론",
+       "김민수"
+      ],
+      [
+       "AI 개론",
+       "이서연"
+      ],
+      [
+       "데이터 윤리",
+       "박지훈"
+      ]
+     ],
+     "x": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t19.xlsx",
+     "dropped": null
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "ea4673e2d8a27c76337c396f1a0e42a62c386bf88e7687c2d8517eacad723f98",
+    "source_complete": true,
+    "usage": {
+     "steps": 75,
+     "rows": 3,
+     "elapsed_ms": 64
+    },
+    "resume": {
+     "run_id": "6ef106866ceb462d93d666bae8f9a0c2"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 70,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "e103946e1033270e8b993fc4f9921a58a36aadf43e599f088bd3b90e0fd0b8ca",
+     "chars": 17411,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "e103946e1033270e8b993fc4f9921a58a36aadf43e599f088bd3b90e0fd0b8ca",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "e103946e1033270e8b993fc4f9921a58a36aadf43e599f088bd3b90e0fd0b8ca"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n\"오늘 AI 개론 7주차. 주제는 트랜스포머의 어텐션. 출석 28명 중 25명. 질문이 많았던 부분: 멀티헤드가 왜 필요한가, 위치 인코딩. 다음 주 중간고사 범위는 1~7주차. 과제 2는 10월 10일 마감. 박지훈 학생 3회 결석이라 면담 필요.\" >> [table:structure]{instruction:\"강의 일지\"} >> [table:document]{format:\"html\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "PIPE_COLLISION",
+      "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.",
+      "source_span": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 160,
+       "end": 198,
+       "line": 2,
+       "column": 145
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 160,
+       "end": 198,
+       "line": 2,
+       "column": 145,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 183,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "PIPE_COLLISION",
+      "severity": "error",
+      "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."
+     },
+     {
+      "code": "PIPE_COLLISION",
+      "message": "파이프 입력 자리가 없거나 명시 인자와 충돌합니다.",
+      "source_span": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 202,
+       "end": 233,
+       "line": 2,
+       "column": 187
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 202,
+       "end": 233,
+       "line": 2,
+       "column": 187,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 218,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "PIPE_COLLISION",
+      "severity": "error",
+      "hint": "파이프 입력 자리와 같은 명시 인자를 함께 주지 마세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 160,
+       "end": 198,
+       "line": 2,
+       "column": 145
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:structure",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 160,
+       "end": 198,
+       "line": 2,
+       "column": 145,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 183,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 202,
+       "end": 233,
+       "line": 2,
+       "column": 187
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:document",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+       "start": 202,
+       "end": 233,
+       "line": 2,
+       "column": 187,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 218,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 2,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: path·file·title·format·blocks·html·message⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "4f1f85c01af712ce1669bd811441da0e5ed34b61f1e9eac77f8a8c5848d76109",
+    "dependencies": {
+     "source": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 233
+      }
+     ],
+     "contracts": "8a19b61f9bc35481ef9d049e1c6169b2aa70ad2d1472caed8d1d3f9c6b4c0adf",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "fd9466666c0281e99eca81c1cd8d6371a9f830e6a27b7c26b7fd886b19fd949f",
+        "start": 202,
+        "end": 233,
+        "line": 2,
+        "column": 187,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 218,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$s = [table:structure]{content:\"오늘 AI 개론 7주차. 주제는 트랜스포머의 어텐션. 출석 28명 중 25명. 질문이 많았던 부분: 멀티헤드가 왜 필요한가, 위치 인코딩. 다음 주 중간고사 범위는 1~7주차. 과제 2는 10월 10일 마감. 박지훈 학생 3회 결석이라 면담 필요.\", instruction:\"강의 일지: 요약·출석·다음 할 일 3섹션\"}\nreturn [table:document]{title:$s.title, blocks:$s.blocks, filename:\"~workspace/outputs/IT73_t20\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t20.html",
+     "file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t20.html",
+     "title": "AI 개론 7주차: 트랜스포머의 어텐션 강의 일지",
+     "format": "html",
+     "blocks": 8,
+     "html": "<3878 chars>",
+     "message": "문서 8블록을 HTML로 렌더했습니다."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "b6cfbe66b335d46df456bc962ac0766757c17566a98bd236b626f433293f8095",
+    "source_complete": true,
+    "usage": {
+     "steps": 14,
+     "rows": 0,
+     "elapsed_ms": 1544
+    },
+    "resume": {
+     "run_id": "f105372194c5420e861ff2eec8ba7288"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 16,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "a11c442ce76d1f45dabd86bd6f21c7049080862b13dc9b99a030e216fa200f4f",
+     "chars": 19119,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "html"
+       ],
+       "chars": 3878
+      }
+     ],
+     "read_args": {
+      "id": "a11c442ce76d1f45dabd86bd6f21c7049080862b13dc9b99a030e216fa200f4f",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "a11c442ce76d1f45dabd86bd6f21c7049080862b13dc9b99a030e216fa200f4f"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$h = [sense:stock]{op:\"history\", ticker:\"삼성전자\", period:\"1mo\"}\n$c = [table:chart]{chart_type:\"candlestick\", title:\"삼성전자 최근 1개월\", data:$h.items, ma_periods:[5], path:\"~workspace/outputs/IT73_t21.png\"}\nreturn {c:$c, n:len($h.items), first:$h.items[0], last:$h.items[-1]}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "c": {
+      "success": true,
+      "data": {
+       "format": "png",
+       "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t21.png",
+       "image_tag": "[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t21.png]"
+      },
+      "summary": "캔들스틱 차트 생성 완료 (20개 데이터), MA[5]\n\n[IMAGE:/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t21.png]"
+     },
+     "n": 20,
+     "first": {
+      "date": "2026-08-28",
+      "open": 262500,
+      "high": 266000,
+      "low": 256000,
+      "close": 257000,
+      "volume": 15106746,
+      "change": null,
+      "change_percent": null
+     },
+     "last": {
+      "date": "2026-09-28",
+      "open": 284500,
+      "high": 285500,
+      "low": 268500,
+      "close": 270000,
+      "volume": 21080365,
+      "change": -16500,
+      "change_percent": -5.76
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "53a9489bc6132f7ff9d8a35b31222f22089eb0e18b6831f12ae4715559242594",
+    "source_complete": true,
+    "usage": {
+     "steps": 34,
+     "rows": 0,
+     "elapsed_ms": 1308
+    },
+    "resume": {
+     "run_id": "6ae812fb4abb44f282429238bfc571d6"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 35,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "36aef0308430bc47962d01615566767ecc77a11fd60a5778a64b8652250009ca",
+     "chars": 24622,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "36aef0308430bc47962d01615566767ecc77a11fd60a5778a64b8652250009ca",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "36aef0308430bc47962d01615566767ecc77a11fd60a5778a64b8652250009ca"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$h = [sense:stock]{op:\"history\", ticker:\"삼성전자\", period:\"1mo\"}\n$rows = $h.items >> [table:each]{ [$it.date, $it.close] }\n$c = [table:chart]{chart_type:\"line\", title:\"종가 추이\", table:{columns:[\"날짜\",\"종가\"], rows:$rows}, path:\"~workspace/outputs/IT73_t22.png\"}\n$hi = $h.items >> [table:sort]{by:\"close\", descending:true} >> [table:take]{n:1}\nreturn [table:document]{title:\"삼성전자 월간 점검\", meta:\"2026년 9월 · 개인 투자 메모\", format:\"pptx\", filename:\"~workspace/outputs/IT73_t22\", blocks:[{type:\"heading\", level:2, text:\"요점\"}, {type:\"list\", items:[f\"최고 종가 ${$hi[0].close}원 (${$hi[0].date})\", \"분할 매수 유지\"]}, {type:\"heading\", level:2, text:\"종가 추이\"}, {type:\"image\", src:$c.data.path}]}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "success": true,
+     "path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t22.pptx",
+     "file": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/IT73_t22.pptx",
+     "title": "삼성전자 월간 점검",
+     "format": "pptx",
+     "blocks": 4,
+     "message": "문서 4블록을 PPTX로 렌더했습니다."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "97837d4dec6f2c342423027961b451407481f6ddc49523553e7da3045470e9f9",
+    "source_complete": true,
+    "usage": {
+     "steps": 230,
+     "rows": 20,
+     "elapsed_ms": 1355
+    },
+    "resume": {
+     "run_id": "53ace79752134673b841fcda69fd40a9"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 196,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "62207201e9a5ef5ab640cb3914fb2eed7612740bf30c4bd6e7ff7048f74c90f2",
+     "chars": 47167,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "62207201e9a5ef5ab640cb3914fb2eed7612740bf30c4bd6e7ff7048f74c90f2",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "62207201e9a5ef5ab640cb3914fb2eed7612740bf30c4bd6e7ff7048f74c90f2"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$m = [table:document]{title:\"9월 가계부\", format:\"markdown\", filename:\"~workspace/outputs/IT73_t23\", blocks:[{type:\"paragraph\", text:\"요약\"}]}\nreturn $m.markdown",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task"
+   },
+   "response": {
+    "success": true,
+    "value": "# 9월 가계부\n\n요약\n",
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "ccddebbd99315ea2bb6bf2392ae8916820aba24db2642fc6eab65fa01edd2d4c",
+    "source_complete": true,
+    "usage": {
+     "steps": 14,
+     "rows": 0,
+     "elapsed_ms": 59
+    },
+    "precheck_warnings": [
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: markdown. 관측 필드: path, file, title, format, blocks, html, message",
+      "source_span": {
+       "source_hash": "054c12f3e5e546e7da117601dfc9217abca289b82f218446283f17398f9124e8",
+       "start": 160,
+       "end": 171,
+       "line": 3,
+       "column": 8
+      },
+      "call_path": [],
+      "facts": {
+       "field": "markdown",
+       "observed": [
+        "path",
+        "file",
+        "title",
+        "format",
+        "blocks",
+        "html",
+        "message"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "054c12f3e5e546e7da117601dfc9217abca289b82f218446283f17398f9124e8",
+       "start": 160,
+       "end": 171,
+       "line": 3,
+       "column": 8,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 19,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "resume": {
+     "run_id": "5b2f499dae7f4034a234874f912eab2c"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 14,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "2a44d8f8548f7430c096ed63efde39a4f3f765b5f1135173ad8cfa210266ef81",
+     "chars": 5547,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "2a44d8f8548f7430c096ed63efde39a4f3f765b5f1135173ad8cfa210266ef81",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "2a44d8f8548f7430c096ed63efde39a4f3f765b5f1135173ad8cfa210266ef81"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n$m = [table:document]{title:\"t\", format:\"markdown\", blocks:[{type:\"paragraph\", text:\"x\"}]}\n[others:publish]{content:$m.markdown, title:\"9월 가계부\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 21,
+       "end": 106,
+       "line": 2,
+       "column": 6
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:document",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 21,
+       "end": 106,
+       "line": 2,
+       "column": 6,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 91,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 132,
+       "end": 143,
+       "line": 3,
+       "column": 26
+      },
+      "expected": "Unknown",
+      "actual": "Unknown",
+      "call_path": [],
+      "location": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 132,
+       "end": 143,
+       "line": 3,
+       "column": 26,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 37,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "Unknown",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 107,
+       "end": 160,
+       "line": 3,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "others:publish",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 107,
+       "end": 160,
+       "line": 3,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 54,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 3,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "5a7d62612192c5eb5ec68fc0173a22a7d44e16b93cc52c5708aeb2512eabf203",
+    "dependencies": {
+     "source": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 160
+      }
+     ],
+     "contracts": "965135f3baa1ae6234928f663e4a368ed907bedc1207a908c8597f8a061a5217",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+        "start": 21,
+        "end": 106,
+        "line": 2,
+        "column": 6,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 91,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+       "location": {
+        "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+        "start": 107,
+        "end": 160,
+        "line": 3,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 54,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [
+      {
+       "code": "UNOBSERVED_FIELD",
+       "rule": "UNOBSERVED_FIELD",
+       "severity": "warning",
+       "message": "관측된 반환 필드에 없는 이름입니다: markdown. 관측 필드: path, file, title, format, blocks, html, message",
+       "source_span": {
+        "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+        "start": 132,
+        "end": 143,
+        "line": 3,
+        "column": 26
+       },
+       "call_path": [],
+       "facts": {
+        "field": "markdown",
+        "observed": [
+         "path",
+         "file",
+         "title",
+         "format",
+         "blocks",
+         "html",
+         "message"
+        ]
+       },
+       "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+       "location": {
+        "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+        "start": 132,
+        "end": 143,
+        "line": 3,
+        "column": 26,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 37,
+        "offset_encoding": "unicode-codepoints"
+       }
+      }
+     ],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: markdown. 관측 필드: path, file, title, format, blocks, html, message",
+      "source_span": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 132,
+       "end": 143,
+       "line": 3,
+       "column": 26
+      },
+      "call_path": [],
+      "facts": {
+       "field": "markdown",
+       "observed": [
+        "path",
+        "file",
+        "title",
+        "format",
+        "blocks",
+        "html",
+        "message"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "d795e60a9a0ed320e92df2c178463a0bf7b50f04f6137c886a46c7167045d525",
+       "start": 132,
+       "end": 143,
+       "line": 3,
+       "column": 26,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 37,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:output]{op:\"clipboard\", content:\"9월 지출 1,111,527원\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "594e0e67e670a5d283053d86ae2ef8e91e088282df08a808054111cb265c4d5d",
+       "start": 16,
+       "end": 73,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "self:output",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "594e0e67e670a5d283053d86ae2ef8e91e088282df08a808054111cb265c4d5d",
+       "start": 16,
+       "end": 73,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 58,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: ok·output⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "73bbb2795f5cc495026c806f771c545fb76d6156974b978b8cf6b767cea9af44",
+    "dependencies": {
+     "source": "594e0e67e670a5d283053d86ae2ef8e91e088282df08a808054111cb265c4d5d",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 73
+      }
+     ],
+     "contracts": "16ac593e3f4cd33d629b5cf8ae73f6a98f79fe16c6e486d64d7cd80eca831241",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "594e0e67e670a5d283053d86ae2ef8e91e088282df08a808054111cb265c4d5d",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "594e0e67e670a5d283053d86ae2ef8e91e088282df08a808054111cb265c4d5d",
+        "start": 16,
+        "end": 73,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 58,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:output]{op:\"gui\", content:\"<b>9월</b>\", format:\"html\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "57078343ff5913e3ad4dd007e746dc5011d391791741baa357a9d6f1148e6b09",
+       "start": 16,
+       "end": 75,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "self:output",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "57078343ff5913e3ad4dd007e746dc5011d391791741baa357a9d6f1148e6b09",
+       "start": 16,
+       "end": 75,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 60,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: ok·output⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "0b86f1f44306fa9faa30921b4ef37c45f8640e617cc3e2adb517aa9c432c8029",
+    "dependencies": {
+     "source": "57078343ff5913e3ad4dd007e746dc5011d391791741baa357a9d6f1148e6b09",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 75
+      }
+     ],
+     "contracts": "16ac593e3f4cd33d629b5cf8ae73f6a98f79fe16c6e486d64d7cd80eca831241",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "57078343ff5913e3ad4dd007e746dc5011d391791741baa357a9d6f1148e6b09",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "57078343ff5913e3ad4dd007e746dc5011d391791741baa357a9d6f1148e6b09",
+        "start": 16,
+        "end": 75,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 60,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:slide]{op:\"create\", instruction:\"9월 가계부 요약 한 장\", render:\"html\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "7cbaabf9944c8e33e27e0d0622918eca32b176143106894c5ae7911deee3dbb5",
+       "start": 16,
+       "end": 85,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "self:slide",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "7cbaabf9944c8e33e27e0d0622918eca32b176143106894c5ae7911deee3dbb5",
+       "start": 16,
+       "end": 85,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 70,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: slide_id·slide·png_file·spec_file·png_path·reasoning·device·verify·mode⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "8abe6a4ea20c6c8cfb2d472e888323e6ec5e7c37726ec0c6d82e09f98463ccd8",
+    "dependencies": {
+     "source": "7cbaabf9944c8e33e27e0d0622918eca32b176143106894c5ae7911deee3dbb5",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 85
+      }
+     ],
+     "contracts": "a51025528de47fab177a1abcb0433cecc39c7f3addd0d65688553558f744818c",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "7cbaabf9944c8e33e27e0d0622918eca32b176143106894c5ae7911deee3dbb5",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "7cbaabf9944c8e33e27e0d0622918eca32b176143106894c5ae7911deee3dbb5",
+        "start": 16,
+        "end": 85,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 70,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[self:deck]{op:\"export\", lecture_id:\"IT73_none\", format:\"pdf\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "9428339e6fb7158c6493f98ffbfc00c63f9d73c2f8412bd687a57e5c8c2f0126",
+       "start": 16,
+       "end": 78,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "self:deck",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "9428339e6fb7158c6493f98ffbfc00c63f9d73c2f8412bd687a57e5c8c2f0126",
+       "start": 16,
+       "end": 78,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 63,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: output·slides·narrated·preset_narration·missing_notes·skipped·captions·caption_file·caption_burned⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "71e9dc512a99b22fb1fb2ef134358a9660ef21003a55db13c1a0d0b127d2952b",
+    "dependencies": {
+     "source": "9428339e6fb7158c6493f98ffbfc00c63f9d73c2f8412bd687a57e5c8c2f0126",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 78
+      }
+     ],
+     "contracts": "6afabd5d709436cf554060514e272e23e0a90bb7228a6f8eeb8dd0571ba6b93c",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "9428339e6fb7158c6493f98ffbfc00c63f9d73c2f8412bd687a57e5c8c2f0126",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "9428339e6fb7158c6493f98ffbfc00c63f9d73c2f8412bd687a57e5c8c2f0126",
+        "start": 16,
+        "end": 78,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 63,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[table:chart]{chart_type:\"line\", title:\"t\", series:[{name:\"a\", data:[{x:1,y:2}]}]}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "UNKNOWN_ARGUMENT",
+      "message": "알 수 없는 인자: series",
+      "source_span": {
+       "source_hash": "190751d32a3a5762c9d53ad2f405874fbd150b503e3fc858cdc0297ebad9f07d",
+       "start": 16,
+       "end": 98,
+       "line": 2,
+       "column": 1
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "190751d32a3a5762c9d53ad2f405874fbd150b503e3fc858cdc0297ebad9f07d",
+       "start": 16,
+       "end": 98,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 83,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "UNKNOWN_ARGUMENT",
+      "severity": "error",
+      "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "190751d32a3a5762c9d53ad2f405874fbd150b503e3fc858cdc0297ebad9f07d",
+       "start": 16,
+       "end": 98,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:chart",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "190751d32a3a5762c9d53ad2f405874fbd150b503e3fc858cdc0297ebad9f07d",
+       "start": 16,
+       "end": 98,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 83,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: data·summary⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "1ad7b8805c70b4df9c2940ae3cd5375e044a2d979ee65225aae365e376e8fc85",
+    "dependencies": {
+     "source": "190751d32a3a5762c9d53ad2f405874fbd150b503e3fc858cdc0297ebad9f07d",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 98
+      }
+     ],
+     "contracts": "09f957405e7c220c93f8e579d5b11555a05aed379148b5a765ca9ded1b6d5ff7",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "190751d32a3a5762c9d53ad2f405874fbd150b503e3fc858cdc0297ebad9f07d",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "190751d32a3a5762c9d53ad2f405874fbd150b503e3fc858cdc0297ebad9f07d",
+        "start": 16,
+        "end": 98,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 83,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[table:chart]{chart_type:\"pie\", title:\"t\", hole:0.4, data:[{label:\"a\",value:1}]}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "UNKNOWN_ARGUMENT",
+      "message": "알 수 없는 인자: hole",
+      "source_span": {
+       "source_hash": "09915cd665c92acb11bf523aa1474b48f524c378df6872800d8ba22ba66ad928",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "09915cd665c92acb11bf523aa1474b48f524c378df6872800d8ba22ba66ad928",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 81,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "UNKNOWN_ARGUMENT",
+      "severity": "error",
+      "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "09915cd665c92acb11bf523aa1474b48f524c378df6872800d8ba22ba66ad928",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:chart",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "09915cd665c92acb11bf523aa1474b48f524c378df6872800d8ba22ba66ad928",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 81,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: data·summary⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "82e09aab00e4ccca7a70843e82996045d59a2e92fe992bc8c9e7ccaf904a3211",
+    "dependencies": {
+     "source": "09915cd665c92acb11bf523aa1474b48f524c378df6872800d8ba22ba66ad928",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 96
+      }
+     ],
+     "contracts": "09f957405e7c220c93f8e579d5b11555a05aed379148b5a765ca9ded1b6d5ff7",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "09915cd665c92acb11bf523aa1474b48f524c378df6872800d8ba22ba66ad928",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "09915cd665c92acb11bf523aa1474b48f524c378df6872800d8ba22ba66ad928",
+        "start": 16,
+        "end": 96,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 81,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[table:chart]{chart_type:\"scatter\", title:\"t\", trendline:true, data:[{x:1,y:2}]}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "UNKNOWN_ARGUMENT",
+      "message": "알 수 없는 인자: trendline",
+      "source_span": {
+       "source_hash": "7fe068f4b9f58acfbfbd6057a118b1f6dc66e5d9091e30014908ed33ce779c96",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "7fe068f4b9f58acfbfbd6057a118b1f6dc66e5d9091e30014908ed33ce779c96",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 81,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "UNKNOWN_ARGUMENT",
+      "severity": "error",
+      "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "7fe068f4b9f58acfbfbd6057a118b1f6dc66e5d9091e30014908ed33ce779c96",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:chart",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "7fe068f4b9f58acfbfbd6057a118b1f6dc66e5d9091e30014908ed33ce779c96",
+       "start": 16,
+       "end": 96,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 81,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: data·summary⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "e1993ffe0c72be535892236996612a50af40ab998c1910839098986410570992",
+    "dependencies": {
+     "source": "7fe068f4b9f58acfbfbd6057a118b1f6dc66e5d9091e30014908ed33ce779c96",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 96
+      }
+     ],
+     "contracts": "09f957405e7c220c93f8e579d5b11555a05aed379148b5a765ca9ded1b6d5ff7",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "7fe068f4b9f58acfbfbd6057a118b1f6dc66e5d9091e30014908ed33ce779c96",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "7fe068f4b9f58acfbfbd6057a118b1f6dc66e5d9091e30014908ed33ce779c96",
+        "start": 16,
+        "end": 96,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 81,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "request": {
+    "code": "#!ibl edition=2\n[table:chart]{chart_type:\"candlestick\", title:\"t\", ma:[5], data:[]}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT73_probe",
+    "task_id": "IT73_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "UNKNOWN_ARGUMENT",
+      "message": "알 수 없는 인자: ma",
+      "source_span": {
+       "source_hash": "df84e6fa1208607ff4e4aeeddb8ece622a0edc3ac445b32e17f5c66436556c34",
+       "start": 16,
+       "end": 83,
+       "line": 2,
+       "column": 1
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "df84e6fa1208607ff4e4aeeddb8ece622a0edc3ac445b32e17f5c66436556c34",
+       "start": 16,
+       "end": 83,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 68,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "UNKNOWN_ARGUMENT",
+      "severity": "error",
+      "hint": "현재 판본의 서명에 선언된 인자 이름을 사용하세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "df84e6fa1208607ff4e4aeeddb8ece622a0edc3ac445b32e17f5c66436556c34",
+       "start": 16,
+       "end": 83,
+       "line": 2,
+       "column": 1
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:chart",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "df84e6fa1208607ff4e4aeeddb8ece622a0edc3ac445b32e17f5c66436556c34",
+       "start": 16,
+       "end": 83,
+       "line": 2,
+       "column": 1,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 68,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record⟨관측: data·summary⟩",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "0de0a60c5f7a878326c9dea4c6c2d3ea575249c02d760686b5c20658a7c63c4f",
+    "dependencies": {
+     "source": "df84e6fa1208607ff4e4aeeddb8ece622a0edc3ac445b32e17f5c66436556c34",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 83
+      }
+     ],
+     "contracts": "09f957405e7c220c93f8e579d5b11555a05aed379148b5a765ca9ded1b6d5ff7",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "df84e6fa1208607ff4e4aeeddb8ece622a0edc3ac445b32e17f5c66436556c34",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "df84e6fa1208607ff4e4aeeddb8ece622a0edc3ac445b32e17f5c66436556c34",
+        "start": 16,
+        "end": 83,
+        "line": 2,
+        "column": 1,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 68,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  }
+ ]
+}

@@ -1,0 +1,183 @@
+[
+{
+"pkg": "health-record",
+"tool": "health_op",
+"actions": [
+"self:health"
+],
+"op": "delete",
+"missing": [
+"id"
+]
+},
+{
+"pkg": "health-record",
+"tool": "health_op",
+"actions": [
+"self:health"
+],
+"op": "ingest",
+"missing": [
+"content",
+"path"
+]
+},
+{
+"pkg": "radio",
+"tool": "radio_op",
+"actions": [
+"limbs:radio"
+],
+"op": "play",
+"missing": [
+"name"
+]
+},
+{
+"pkg": "android",
+"tool": "phone_op",
+"actions": [
+"sense:phone"
+],
+"op": "notifications",
+"missing": [
+"package_name"
+]
+},
+{
+"pkg": "android",
+"tool": "phone_act",
+"actions": [
+"limbs:phone"
+],
+"op": "open_app",
+"missing": [
+"pkg"
+]
+},
+{
+"pkg": "finance-record",
+"tool": "finance_op",
+"actions": [
+"self:finance"
+],
+"op": "save",
+"missing": [
+"counterparty",
+"date",
+"info_type",
+"merchant",
+"note",
+"occurred_at",
+"person"
+]
+},
+{
+"pkg": "finance-record",
+"tool": "finance_op",
+"actions": [
+"self:finance"
+],
+"op": "query",
+"missing": [
+"limit",
+"person",
+"tx_type"
+]
+},
+{
+"pkg": "finance-record",
+"tool": "finance_op",
+"actions": [
+"self:finance"
+],
+"op": "delete",
+"missing": [
+"id",
+"person"
+]
+},
+{
+"pkg": "finance-record",
+"tool": "finance_op",
+"actions": [
+"self:finance"
+],
+"op": "ingest",
+"missing": [
+"content",
+"path",
+"person",
+"text"
+]
+},
+{
+"pkg": "finance-record",
+"tool": "finance_op",
+"actions": [
+"self:finance"
+],
+"op": "sync",
+"missing": [
+"person"
+]
+},
+{
+"pkg": "guest-helper",
+"tool": "limb_op",
+"actions": [
+"self:limb"
+],
+"op": "revoke",
+"missing": [
+"key"
+]
+},
+{
+"pkg": "pc-manager",
+"tool": "forage_op",
+"actions": [
+"self:forage"
+],
+"op": "recall",
+"missing": [
+"folder_path",
+"path"
+]
+},
+{
+"pkg": "pc-manager",
+"tool": "forage_op",
+"actions": [
+"self:forage"
+],
+"op": "note",
+"missing": [
+"folder_path",
+"note"
+]
+},
+{
+"pkg": "pc-manager",
+"tool": "forage_op",
+"actions": [
+"self:forage"
+],
+"op": "sync",
+"missing": [
+"folder_path",
+"path"
+]
+},
+{
+"pkg": "pc-manager",
+"tool": "forage_op",
+"actions": [
+"self:forage"
+],
+"op": "reconcile",
+"missing": [
+"path"
+]
+}
+]

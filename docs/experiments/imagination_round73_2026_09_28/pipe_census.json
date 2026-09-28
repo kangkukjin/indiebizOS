@@ -1,0 +1,97 @@
+{
+ "declared_pipe_in": 18,
+ "described": 18,
+ "missing_pipe_input": 15,
+ "missing": [
+  {
+   "action": "engines:image_read",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "engines:render",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "limbs:android",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "limbs:os_open",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "others:delegate",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "others:publish",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "self:ask",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "self:copy",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "self:output",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "self:sheet",
+   "pipe_input": null,
+   "has_items_param": true,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "self:struct",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "table:chart",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "table:document",
+   "pipe_input": null,
+   "has_items_param": true,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "table:spreadsheet",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  },
+  {
+   "action": "table:structure",
+   "pipe_input": null,
+   "has_items_param": false,
+   "compat": "legacy-envelope/1"
+  }
+ ]
+}

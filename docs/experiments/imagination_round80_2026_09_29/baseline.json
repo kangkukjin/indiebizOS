@@ -1,0 +1,205 @@
+{
+ "baseline": {
+  "at": "2026-09-29T03:02:50",
+  "notifications": [
+   {
+    "id": "a16c7a37-7888-4863-9f1c-c26ed352fbb2",
+    "type": "warning",
+    "created_at": "2026-09-29T02:15:05.911865"
+   },
+   {
+    "id": "f78df271-540f-49a7-87bf-78619a3ea8d0",
+    "type": "warning",
+    "created_at": "2026-09-29T01:15:05.492055"
+   }
+  ],
+  "action_health_max_id": 244679,
+  "notify_log_max_id": 6260,
+  "stores": {
+   "portal_state": {
+    "size": 3330,
+    "mtime": 1790555798.9728076,
+    "h": "130919506b"
+   },
+   "showcase_state": {
+    "size": 1686,
+    "mtime": 1788400760.0321712,
+    "h": "2c884a7f67"
+   },
+   "bulletin_state": {
+    "size": 448,
+    "mtime": 1786890887.328492,
+    "h": "9fc8adeec0"
+   },
+   "webapps_manual": {
+    "size": 1746,
+    "mtime": 1787280379.4811466,
+    "h": "16ac47b978"
+   },
+   "indienet_settings": {
+    "size": 327,
+    "mtime": 1784455647.0369024,
+    "h": "1154663883"
+   },
+   "indienet_identity": {
+    "size": 401,
+    "mtime": 1767119606.4386125,
+    "h": "0f991f8b99"
+   },
+   "bulletin_tree": {
+    "files": 8,
+    "h": "065b90ec45"
+   },
+   "family_news_tree": {
+    "files": 168,
+    "h": "fbcf52e18d"
+   },
+   "biz": {
+    "messages": [
+     2960,
+     2967
+    ],
+    "neighbors": [
+     49,
+     53
+    ],
+    "contacts": [
+     53,
+     57
+    ]
+   },
+   "posts_db": [
+    134,
+    1788156806
+   ],
+   "dms_db": [
+    39
+   ],
+   "tasks": {
+    "conversation.db": 0,
+    "conversations.db": 0,
+    "system_ai_memory.db": 105
+   },
+   "sysai_conversations": [
+    3564,
+    4128
+   ],
+   "blog_posts": 4036,
+   "ibl_examples": [
+    3735,
+    4911
+   ],
+   "episode_log_max": 4142,
+   "scratch_IT80": []
+  }
+ },
+ "after": {
+  "snapshot": {
+   "at": "2026-09-29T03:13:55",
+   "action_health_max_id": 244739,
+   "notify_log_max_id": 6260
+  },
+  "diff": {
+   "notifications_added": [],
+   "action_health_by_source": [
+    [
+     "training",
+     "agent",
+     60
+    ]
+   ],
+   "action_health_training_by_action": [
+    [
+     "self:blog",
+     12,
+     12
+    ],
+    [
+     "others:feed",
+     10,
+     10
+    ],
+    [
+     "sense:feed",
+     5,
+     5
+    ],
+    [
+     "self:webapp",
+     5,
+     5
+    ],
+    [
+     "others:family_news",
+     5,
+     5
+    ],
+    [
+     "others:channel_read",
+     4,
+     0
+    ],
+    [
+     "others:bulletin",
+     4,
+     4
+    ],
+    [
+     "others:portal",
+     3,
+     3
+    ],
+    [
+     "table:join",
+     2,
+     2
+    ],
+    [
+     "others:showcase",
+     2,
+     2
+    ],
+    [
+     "others:nostr",
+     2,
+     2
+    ],
+    [
+     "others:neighbor",
+     2,
+     2
+    ],
+    [
+     "others:messages",
+     2,
+     2
+    ],
+    [
+     "others:follow",
+     1,
+     1
+    ],
+    [
+     "others:agents",
+     1,
+     1
+    ]
+   ],
+   "notify_log_new": [],
+   "stores_changed": {
+    "portal_state": [
+     {
+      "size": 3330,
+      "mtime": 1790555798.9728076,
+      "h": "130919506b"
+     },
+     {
+      "size": 3330,
+      "mtime": 1790618717.9312341,
+      "h": "130919506b"
+     }
+    ]
+   }
+  }
+ }
+}

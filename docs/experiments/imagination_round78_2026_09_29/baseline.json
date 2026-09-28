@@ -1,0 +1,458 @@
+{
+ "baseline": {
+  "at": "2026-09-29T01:46:44",
+  "notifications": [
+   {
+    "id": "f78df271-540f-49a7-87bf-78619a3ea8d0",
+    "type": "warning",
+    "created_at": "2026-09-29T01:15:05.492055"
+   }
+  ],
+  "action_health_max_id": 244452,
+  "notify_log_max_id": 6259,
+  "since_streams": [
+   1,
+   25
+  ],
+  "stores": {
+   "system_ai_memory": {
+    "mtime": 1790550256.4629064,
+    "conversations": [
+     3564,
+     4128
+    ],
+    "messages": [
+     0,
+     0
+    ],
+    "memories": [
+     0,
+     0
+    ],
+    "history_checkpoints": [
+     1,
+     1
+    ]
+   },
+   "contents_conversations": {
+    "mtime": 1790608056.367314,
+    "messages": [
+     639,
+     639
+    ],
+    "history_checkpoints": [
+     2,
+     2
+    ]
+   },
+   "deep_memory_system_ai": {
+    "mtime": 1790555752.6070635,
+    "memories": [
+     90,
+     535
+    ],
+    "distill_receipts": [
+     3,
+     3
+    ]
+   },
+   "deep_memory_contents_agent": {
+    "mtime": 1790555754.0806909,
+    "memories": [
+     15,
+     47
+    ],
+    "distill_receipts": [
+     1,
+     1
+    ]
+   },
+   "deep_memory_contents_sys": {
+    "mtime": 1790555754.08227,
+    "memories": [
+     0,
+     0
+    ]
+   },
+   "forage_memory": {
+    "mtime": 1790555787.9312904,
+    "forage_map": [
+     727,
+     2390
+    ],
+    "survey": [
+     1,
+     1
+    ]
+   },
+   "health": {
+    "mtime": 1790238235.8482733,
+    "persons": [
+     6,
+     7
+    ],
+    "measurements": [
+     41,
+     82
+    ],
+    "symptoms": [
+     5,
+     5
+    ],
+    "medications": [
+     10,
+     10
+    ],
+    "documents": [
+     12,
+     14
+    ]
+   },
+   "ibl_usage": {
+    "mtime": 1790612105.2735083,
+    "ibl_examples": [
+     3735,
+     4911
+    ]
+   },
+   "forage_surveys": {
+    "files": 150,
+    "max_mtime": 1790555787.9304667
+   },
+   "memory_tree_system_ai": {
+    "files": 25,
+    "max_mtime": 1790388413.9825928
+   },
+   "recall_index": {
+    "files": 374,
+    "max_mtime": 1790610624.1689808
+   },
+   "record_spaces": null,
+   "storage_scans": {
+    "files": 3,
+    "max_mtime": 1790602521.4205294
+   },
+   "episode_log_max": 4142
+  }
+ },
+ "after": {
+  "snapshot": {
+   "at": "2026-09-29T02:09:37",
+   "action_health_max_id": 244551,
+   "notify_log_max_id": 6259
+  },
+  "diff": {
+   "notifications_added": [],
+   "action_health_by_source": [
+    [
+     "training",
+     "agent",
+     99
+    ]
+   ],
+   "action_health_training_by_action": [
+    [
+     "self:forage",
+     28,
+     28
+    ],
+    [
+     "self:memory",
+     21,
+     21
+    ],
+    [
+     "self:recent_chats",
+     10,
+     10
+    ],
+    [
+     "self:body",
+     10,
+     10
+    ],
+    [
+     "table:groupby",
+     7,
+     7
+    ],
+    [
+     "self:ledger",
+     7,
+     7
+    ],
+    [
+     "sense:book",
+     5,
+     5
+    ],
+    [
+     "self:health",
+     5,
+     5
+    ],
+    [
+     "self:folder_note",
+     3,
+     3
+    ],
+    [
+     "self:notebook",
+     2,
+     2
+    ],
+    [
+     "table:chart",
+     1,
+     1
+    ]
+   ],
+   "notify_log_new": [],
+   "since_streams": [
+    1,
+    25
+   ],
+   "stores_before": {
+    "system_ai_memory": {
+     "mtime": 1790550256.4629064,
+     "conversations": [
+      3564,
+      4128
+     ],
+     "messages": [
+      0,
+      0
+     ],
+     "memories": [
+      0,
+      0
+     ],
+     "history_checkpoints": [
+      1,
+      1
+     ]
+    },
+    "contents_conversations": {
+     "mtime": 1790608056.367314,
+     "messages": [
+      639,
+      639
+     ],
+     "history_checkpoints": [
+      2,
+      2
+     ]
+    },
+    "deep_memory_system_ai": {
+     "mtime": 1790555752.6070635,
+     "memories": [
+      90,
+      535
+     ],
+     "distill_receipts": [
+      3,
+      3
+     ]
+    },
+    "deep_memory_contents_agent": {
+     "mtime": 1790555754.0806909,
+     "memories": [
+      15,
+      47
+     ],
+     "distill_receipts": [
+      1,
+      1
+     ]
+    },
+    "deep_memory_contents_sys": {
+     "mtime": 1790555754.08227,
+     "memories": [
+      0,
+      0
+     ]
+    },
+    "forage_memory": {
+     "mtime": 1790555787.9312904,
+     "forage_map": [
+      727,
+      2390
+     ],
+     "survey": [
+      1,
+      1
+     ]
+    },
+    "health": {
+     "mtime": 1790238235.8482733,
+     "persons": [
+      6,
+      7
+     ],
+     "measurements": [
+      41,
+      82
+     ],
+     "symptoms": [
+      5,
+      5
+     ],
+     "medications": [
+      10,
+      10
+     ],
+     "documents": [
+      12,
+      14
+     ]
+    },
+    "ibl_usage": {
+     "mtime": 1790612105.2735083,
+     "ibl_examples": [
+      3735,
+      4911
+     ]
+    },
+    "forage_surveys": {
+     "files": 150,
+     "max_mtime": 1790555787.9304667
+    },
+    "memory_tree_system_ai": {
+     "files": 25,
+     "max_mtime": 1790388413.9825928
+    },
+    "recall_index": {
+     "files": 374,
+     "max_mtime": 1790610624.1689808
+    },
+    "record_spaces": null,
+    "storage_scans": {
+     "files": 3,
+     "max_mtime": 1790602521.4205294
+    },
+    "episode_log_max": 4142
+   },
+   "stores_after": {
+    "system_ai_memory": {
+     "mtime": 1790550256.4629064,
+     "conversations": [
+      3564,
+      4128
+     ],
+     "messages": [
+      0,
+      0
+     ],
+     "memories": [
+      0,
+      0
+     ],
+     "history_checkpoints": [
+      1,
+      1
+     ]
+    },
+    "contents_conversations": {
+     "mtime": 1790608056.367314,
+     "messages": [
+      639,
+      639
+     ],
+     "history_checkpoints": [
+      2,
+      2
+     ]
+    },
+    "deep_memory_system_ai": {
+     "mtime": 1790555752.6070635,
+     "memories": [
+      90,
+      535
+     ],
+     "distill_receipts": [
+      3,
+      3
+     ]
+    },
+    "deep_memory_contents_agent": {
+     "mtime": 1790555754.0806909,
+     "memories": [
+      15,
+      47
+     ],
+     "distill_receipts": [
+      1,
+      1
+     ]
+    },
+    "deep_memory_contents_sys": {
+     "mtime": 1790555754.08227,
+     "memories": [
+      0,
+      0
+     ]
+    },
+    "forage_memory": {
+     "mtime": 1790555787.9312904,
+     "forage_map": [
+      727,
+      2390
+     ],
+     "survey": [
+      1,
+      1
+     ]
+    },
+    "health": {
+     "mtime": 1790238235.8482733,
+     "persons": [
+      6,
+      7
+     ],
+     "measurements": [
+      41,
+      82
+     ],
+     "symptoms": [
+      5,
+      5
+     ],
+     "medications": [
+      10,
+      10
+     ],
+     "documents": [
+      12,
+      14
+     ]
+    },
+    "ibl_usage": {
+     "mtime": 1790612105.2735083,
+     "ibl_examples": [
+      3735,
+      4911
+     ]
+    },
+    "forage_surveys": {
+     "files": 150,
+     "max_mtime": 1790555787.9304667
+    },
+    "memory_tree_system_ai": {
+     "files": 25,
+     "max_mtime": 1790388413.9825928
+    },
+    "recall_index": {
+     "files": 374,
+     "max_mtime": 1790610624.1689808
+    },
+    "record_spaces": null,
+    "storage_scans": {
+     "files": 3,
+     "max_mtime": 1790602521.4205294
+    },
+    "episode_log_max": 4142
+   },
+   "stores_changed": {}
+  }
+ }
+}

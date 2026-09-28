@@ -1,0 +1,5692 @@
+{
+ "rows": [
+  {
+   "task": "t01",
+   "intent": "[부동산] 오송(흥덕구) 아파트 최근 두 달 매매 실거래를 단지별 평균가·건수로, 3건 이상 단지 중 비싼 순 5개.",
+   "ok": true,
+   "detail": "{\"total\": 456, \"truncated\": false, \"조회지역\": null, \"groups\": 110, \"top\": [{\"아파트명\": \"신영지웰시티1차\", \"평균가\": 1201666666.6666667, \"건수\": 6}, {\"아파트명\": \"두산위브지웰시티2차\", \"평균가\": 955000000, \"건수\": 4}, {\"아파트명\": \"청주가경아이파크3단지\", \"평균가\": 865000000, \"건수\": 3}, {\"아파트명\": \"청주가경아이파크2단지\", \"평균가\": 709600000, \"건수\": 5}, {\"아파트명\": \"가경아이파크5단지\", \"평균가\": 664666666.6666666, \"건수\": 6}]}",
+   "at": "2026-09-28T23:24:25"
+  },
+  {
+   "task": "t02",
+   "intent": "[부동산] 오송 아파트 전세 실거래(전월세 중 전세만) 단지별 평균 보증금.",
+   "ok": true,
+   "detail": "{\"rows\": 606, \"jeonse\": 282, \"groups\": 86, \"sample_row\": {\"아파트명\": \"청원쌍용예가1단지\", \"법정동\": \"강내면 월곡리\", \"지번\": \"428\", \"계약유형\": \"전세\", \"보증금\": \"18,000\", \"월세\": \"\", \"전용면적\": \"84.97\", \"층\": \"10\", \"건축년도\": \"2007\", \"거래년도\": \"2026\", \"거래월\": \"8\", \"거래일\": \"10\", \"조회년월\": \"202608\", \"명칭\": \"청원쌍용예가1단지\", \"면적\": \"84.97\"}, \"top\": [{\"아파트명\": \"청주SKVIEW자이\", \"평균보증금\": 32873.333333333336, \"건수\": 15}, {\"아파트명\": \"오송역파라곤센트럴시티\", \"평균보증금\": 28585.714285714286, \"건수\": 14}, {\"아파트명\": \"오송역대광로제비앙그랜드센텀\", \"평균보증금\": 25500, \"건수\": 12}]}",
+   "at": "2026-09-28T23:24:25"
+  },
+  {
+   "task": "t03",
+   "intent": "[부동산] 오송 단지별 전세가율(국평 59~85㎡, 전세 평균 ÷ 매매 평균) 높은 순 — 깡통전세 위험 단지.",
+   "ok": true,
+   "detail": "{\"matched\": 51, \"over80\": 19, \"rows\": [{\"아파트명\": \"효성아파트\", \"법정동\": \"비하동\", \"매매평균원\": 117825000, \"건수\": 4, \"전세평균만원\": 12000, \"건수_2\": 4, \"전세가율\": 101.8}, {\"아파트명\": \"가경주공8단지\", \"법정동\": \"가경동\", \"매매평균원\": 263083333.33333334, \"건수\": 6, \"전세평균만원\": 25500, \"건수_2\": 1, \"전세가율\": 96.9}, {\"아파트명\": \"송곡그린\", \"법정동\": \"비하동\", \"매매평균원\": 133000000, \"건수\": 1, \"전세평균만원\": 12633.333333333334, \"건수_2\": 3, \"전세가율\": 95.0}, {\"아파트명\": \"세원2차\", \"법정동\": \"가경동\", \"매매평균원\": 127000000, \"건수\": 1, \"전세평균만원\": 12000, \"건수_2\": 1, \"전세가율\": 94.5}, {\"아파트명\": \"2단지주공\", \"법정동\": \"가경동\", \"매매평균원\": 190300000, \"건수\": 5, \"전세평균만원\": 17500, \"건수_2\": 1, \"전세가율\": 92.0}]} | (첫 시도 — 훈련자 문장 잘못) join on:\"아파트명\" 단일 키 → '효성' 전세가율 328.6%.",
+   "at": "2026-09-28T23:28:52"
+  },
+  {
+   "task": "t04",
+   "intent": "[부동산] 오송 단지별 매매 평균가 전월(8월) 대비 9월 변화율 — 오른 단지 상위 3.",
+   "ok": true,
+   "detail": "{\"both\": 58, \"up\": 28, \"top\": [{\"아파트명\": \"형석(992)\", \"8월\": 90000000, \"9월\": 145000000, \"변화율\": 61.1}, {\"아파트명\": \"가경푸르지오\", \"8월\": 365000000, \"9월\": 440000000, \"변화율\": 20.5}, {\"아파트명\": \"더샵청주센트럴\", \"8월\": 394777777.7777778, \"9월\": 473142857.14285713, \"변화율\": 19.9}]}",
+   "at": "2026-09-28T23:28:54"
+  },
+  {
+   "task": "t05",
+   "intent": "[부동산] 거래 없는 달(아직 안 온 2026-12)·없는 단지 — 빈 결과가 정직하게 0으로 흐르나(groupby·join·compute).",
+   "ok": true,
+   "detail": "{\"n\": 0, \"total\": 0, \"truncated\": false, \"msg\": null, \"summary\": {\"조회기간\": \"202612 ~ 202612\", \"조회월수\": 1, \"총거래건수\": 0, \"전체건수\": 0, \"잘림\": false}, \"groups\": 0, \"joined\": 0, \"none\": 0}",
+   "at": "2026-09-28T23:28:25"
+  },
+  {
+   "task": "t06",
+   "intent": "[부동산] 오송 아파트 네이버 매물 호가 vs 최근 두 달 실거래 — 단지별 호가 거품(갭%). 전 평형 혼합판과 국평(59~85㎡) 맞춤판.",
+   "ok": true,
+   "detail": "{\"asks\": 30, \"ask_names\": 7, \"matched\": 6, \"ask_keys\": [\"title\", \"name\", \"meta\", \"summary\", \"url\", \"image\", \"lat\", \"lng\", \"price\"], \"sample_meta\": \"매매 4억 9,900 · 110/84㎡ · 19/25층 · 남향 · 확인 20260928 · 오송부자마을부동산중개 · 동일매물 13건\", \"rows\": [{\"name\": \"오송상록롯데캐슬\", \"호가평균\": 385000000, \"매물\": 1, \"실거래평균\": 359166666.6666667, \"건수\": 6, \"갭\": 7.2}, {\"name\": \"오송역동아라이크텐\", \"호가평균\": 483428571.4285714, \"매물\": 7, \"실거래평균\": 455600000, \"건수\": 5, \"갭\": 6.1}, {\"name\": \"오송힐데스하임\", \"호가평균\": 712500000, \"매물\": 2, \"실거래평균\": 680000000, \"건수\": 1, \"갭\": 4.8}, {\"name\": \"오송역파라곤센트럴시티\", \"호가평균\": 411470588.2352941, \"매물\": 17, \"실거래평균\": 404020833.3333333, \"건수\": 24, \"갭\": 1.8}, {\"name\": \"오송경남아너스빌\", \"호가평균\": 315000000, \"매물\": 1, \"실거래평균\": 327500000, \"건수\": 2, \"갭\": -3.8}], \"unmatched\": {\"items\": [{\"name\": \"삼부청솔\", \"호가평균\": 60000000, \"매물\": 1}], \"count\": 1, \"success\": true}} || 국평맞춤(meta 쪼개기)={\"asks_59_85\": 26, \"matched\": 5, \"rows\": [{\"name\": \"오송역동아라이크텐\", \"호가평균\": 490571428.5714286, \"매물\": 7, \"실거래평균\": 455600000, \"건수\": 5, \"갭\": 7.7}, {\"name\": \"오송상록롯데캐슬\", \"호가평균\": 385000000, \"매물\": 1, \"실거래평균\": 359166666.6666667, \"건수\": 6, \"갭\": 7.2}, {\"name\": \"오송역파라곤센트럴시티\", \"호가평균\": 414687500, \"매물\": 16, \"실거래평균\": 404020833.3333333, \"건수\": 24, \"갭\": 2.6}, {\"name\": \"오송경남아너스빌\", \"호가평균\": 315000000, \"매물\": 1, \"실거래평균\": 327500000, \"건수\": 2, \"갭\": -3.8}, {\"name\": \"오송호반베르디움\", \"호가평균\": 360000000, \"매물\": 1, \"실거래평균\": 395000000, \"건수\": 4, \"갭\": -8.9}]}",
+   "at": "2026-09-28T23:38:40"
+  },
+  {
+   "task": "t07",
+   "intent": "[부동산] 오송 아파트 전세 매물 — 코퍼스 형태 deal:\"lease\"(4097·4116·4129)와 교재 형태 deal:\"rent\", lease:\"전세\" 비교.",
+   "ok": false,
+   "detail": "{\"lease_form\": {\"n\": 30, \"msg\": \"네이버부동산 '충청북도 청주시 흥덕구 오송읍' · apt 전세/월세 — 30건 (동일매물 묶음, 상세는 items)\", \"kinds\": {\"전세\": 15, \"월세\": 15}, \"ignored\": null}, \"rent_jeonse\": {\"n\": 30, \"msg\": \"네이버부동산 '충청북도 청주시 흥덕구 오송읍' · apt 전세 — 30건 (동일매물 묶음, 상세는 items)\", \"kinds\": {\"전세\": 30, \"월세\": 0}}}",
+   "at": "2026-09-28T23:29:20"
+  },
+  {
+   "task": "t08",
+   "intent": "[부동산] 오송 빌라 전세 직방 매물 — ㎡당 보증금 싼 순 5개.",
+   "ok": true,
+   "detail": "{\"n\": 1, \"usable\": 1, \"msg\": \"직방 '충청북도 청주시 흥덕구 오송읍' 반경 3000m · villa 전세 — 1건 (상세는 items)\", \"rows\": [{\"title\": \"아주 넓은 주인세대 전세입니다.\", \"deposit\": 23000, \"area_m2\": 117.18, \"floor\": \"4\", \"만원_m2\": 196.3}]}",
+   "at": "2026-09-28T23:29:21"
+  },
+  {
+   "task": "t09",
+   "intent": "[투자] 관심 종목 셋 현재가·평가손익·수익률 표 + 한 줄 요약(보간).",
+   "ok": true,
+   "detail": "{\"rows\": [{\"name\": \"삼성전자\", \"현재가\": 270000.0, \"수익률\": 28.57, \"평가손익\": 600000.0, \"as_of\": \"2026-09-28\"}, {\"name\": \"SK하이닉스\", \"현재가\": 1761000.0, \"수익률\": -2.17, \"평가손익\": -78000.0, \"as_of\": \"2026-09-28\"}, {\"name\": \"NAVER\", \"현재가\": 196300.0, \"수익률\": -14.65, \"평가손익\": -168500.0, \"as_of\": \"2026-09-28\"}], \"합계손익\": 353500.0, \"line\": \"삼성전자 270000.0원(28.57%), SK하이닉스 1761000.0원(-2.17%), NAVER 196300.0원(-14.65%)\", \"line_round\": \"삼성전자 270000원, SK하이닉스 1761000원, NAVER 196300원\"}",
+   "at": "2026-09-28T23:30:17"
+  },
+  {
+   "task": "t10",
+   "intent": "[투자] 관심 종목 중 하나가 없는 코드(ZZZZ99)·상장폐지형(999999) — 되는 것만 표로, 실패는 이유와 함께.",
+   "ok": true,
+   "detail": "{\"ok\": [{\"name\": \"삼성전자\", \"현재가\": 270000.0}], \"bad\": [{\"code\": \"TOOL\", \"msg\": \"'ZZZZ99' 종목을 찾을 수 없거나 데이터가 없습니다.\"}, {\"code\": \"TOOL\", \"msg\": \"'999999.KS' 종목을 찾을 수 없거나 데이터가 없습니다.\"}]}",
+   "at": "2026-09-28T23:30:18"
+  },
+  {
+   "task": "t11",
+   "intent": "[투자] 삼성전자 DART 2025 재무(당기순이익·EPS)와 현재가를 합쳐 PER — 시총 경로(info)와 EPS 경로 둘 다.",
+   "ok": true,
+   "detail": "info(시총)=FAIL 전송할 수 없는 값: float64 || eps_path={\"read_data_keys\": [\"success\", \"items\", \"message\", \"path\", \"count\"], \"read_items0\": [\"type\", \"text\"], \"spill\": \"/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/investment/financial_00126380_20260928_233327.json\", \"당기순이익\": 45206805000000, \"EPS\": 6605, \"현재가\": 270000.0, \"PER\": 40.9}",
+   "at": "2026-09-28T23:33:26"
+  },
+  {
+   "task": "t12",
+   "intent": "[투자] 원달러 환율·금 선물·비트코인을 한 표로 — 금 1온스·BTC 1개 원화 환산.",
+   "ok": false,
+   "detail": "{\"n\": 3, \"rows\": [{\"symbol\": \"USDKRW=X\", \"가격\": 1358.9, \"통화\": \"KRW\", \"원화\": 1358.9}, {\"symbol\": \"GC=F\", \"가격\": 4170.2, \"통화\": \"USD\", \"원화\": 5666885}, {\"symbol\": \"BTC\", \"가격\": 113457457, \"통화\": \"USD\", \"원화\": 154177338317}], \"btc_krw_field\": 113457457, \"btc_usd_field\": 83475, \"btc_has_currency\": false}",
+   "at": "2026-09-28T23:39:00"
+  },
+  {
+   "task": "t13",
+   "intent": "[투자] 비트코인 30일 가격 이력 — 30일 전 대비 변화율·최고/최저.",
+   "ok": true,
+   "detail": "{\"n\": 31, \"first\": {\"date\": \"2026-08-30\", \"close\": 78225.139508}, \"last\": {\"date\": \"2026-09-28\", \"close\": 83334.126395}, \"변화율\": 6.53, \"최고\": 86596.740042, \"최저\": 75590.24472, \"now_usd\": 83475, \"now_krw\": 113457457}",
+   "at": "2026-09-28T23:30:23"
+  },
+  {
+   "task": "t14",
+   "intent": "[부동산·통계] 흥덕구 월별 주민등록인구(KOSIS)와 월별 아파트 매매 건수를 나란히 — 검색→메타→데이터→join.",
+   "ok": true,
+   "detail": "{\"search_n\": 10, \"code\": [{\"id\": \"43113\", \"name\": \"흥덕구\"}], \"pop_n\": 1, \"pop_keys\": [\"기간\", \"총인구수 · 흥덕구 (명)\", \"남자인구수 · 흥덕구 (명)\", \"여자인구수 · 흥덕구 (명)\"], \"pop0\": {\"기간\": \"202608\", \"총인구수 · 흥덕구 (명)\": 294300.0, \"남자인구수 · 흥덕구 (명)\": 150323.0, \"여자인구수 · 흥덕구 (명)\": 143977.0}, \"joined\": [{\"기간\": \"202608\", \"총인구수 · 흥덕구 (명)\": 294300.0, \"남자인구수 · 흥덕구 (명)\": 150323.0, \"여자인구수 · 흥덕구 (명)\": 143977.0, \"매매건수\": 275}]}",
+   "at": "2026-09-28T23:36:24"
+  },
+  {
+   "task": "t15",
+   "intent": "[투자·통계] 한국 GDP(세계은행)와 삼성전자 연도별 평균 주가 결합 — join 설명문 예문 그대로·max_points 전량(1500)·표본(100).",
+   "ok": true,
+   "detail": "literal=도구의 원천 결과가 불완전합니다. truncations=null || max_points1500=도구의 원천 결과가 불완전합니다. truncations=[{\"scope\": \"source\", \"reason\": \"max_points\", \"limit\": 1500, \"retained\": 1223}] || max_points100={\"h_n\": 103, \"h_trunc\": [{\"scope\": \"selection\", \"reason\": \"max_points\", \"limit\": 100, \"retained\": 103}], \"w_n\": 50, \"joined\": [{\"연도\": \"2021\", \"평균종가\": 74233.33333333333, \"GDP (current US$)\": 1942313560965.9}, {\"연도\": \"2022\", \"평균종가\": 63940, \"GDP (current US$)\": 1799363116866.52}, {\"연도\": \"2023\", \"평균종가\": 67119.04761904762, \"GDP (current US$)\": 1844800934391.54}, {\"연도\": \"2024\", \"평균종가\": 71100, \"GDP (current US$)\": 1875388209406.8}, {\"연도\": \"2025\", \"평균종가\": 70235, \"GDP (current US$)\": 1872374961553.15}]}",
+   "at": "2026-09-28T23:35:25"
+  },
+  {
+   "task": "t16",
+   "intent": "[부동산] 이번 주말 오송 임장 — 청주 사흘 예보에 비(5mm 이상) 오는 날이 있으면 연기.",
+   "ok": true,
+   "detail": "{\"판정\": \"임장 OK\", \"예보\": [{\"date\": \"2026-09-28\", \"max_temp\": 25.0, \"min_temp\": 16.2, \"condition\": \"흐림\", \"precipitation_mm\": 0.0}, {\"date\": \"2026-09-29\", \"max_temp\": 25.1, \"min_temp\": 12.1, \"condition\": \"구름 조금\", \"precipitation_mm\": 0.0}, {\"date\": \"2026-09-30\", \"max_temp\": 24.7, \"min_temp\": 14.1, \"condition\": \"가벼운 이슬비\", \"precipitation_mm\": 0.1}]}",
+   "at": "2026-09-28T23:33:36"
+  },
+  {
+   "task": "t17",
+   "intent": "[부동산] 오송역 반경 1km 상권 — 업종 대분류 상위 5.",
+   "ok": true,
+   "detail": "{\"n\": 914, \"truncated\": false, \"조회지역\": \"오송역 6번 출구, 오송읍, 흥덕구, 청주시, 충청북도, 28166, 대한민국\", \"top\": [{\"category\": \"한식\", \"count\": 191}, {\"category\": \"부동산 서비스\", \"count\": 131}, {\"category\": \"기타 간이\", \"count\": 69}, {\"category\": \"이용·미용\", \"count\": 65}, {\"category\": \"비알코올 \", \"count\": 44}]}",
+   "at": "2026-09-28T23:33:38"
+  },
+  {
+   "task": "t18",
+   "intent": "[부동산·법률] 주택임대차보호법 법령과 전세보증금 반환 판례 최근 3건씩.",
+   "ok": true,
+   "detail": "{\"law\": [{\"title\": \"주택임대차보호법\", \"date\": \"2026-01-02\", \"url\": \"https://www.law.go.kr/DRF/lawService.do?OC=kkukjin&target=law&MST=276291&type=HTML&mobileYn=&efYd=20260102\"}, {\"title\": \"주택임대차보호법 시행령\", \"date\": \"2026-07-01\", \"url\": \"https://www.law.go.kr/DRF/lawService.do?OC=kkukjin&target=law&MST=287183&type=HTML&mobileYn=&efYd=20260701\"}], \"prec\": [{\"title\": \"기타(금전)[원고가 전세보증금반환보증계약에 기하여 주택도시보증공사를 상대로 보증채무 이행금에 대한 지연손해금의 지급을 구하는 사건]\", \"date\": \"2026-05-29\"}, {\"title\": \"구상금[주택임대차보호법 제3조의2 제7항에서 정한 금융기관이 임차인으로부터 보증금반환채권을 양수한 후 그에 기해 경매절차에서 배당요구를 하여 보증금 일부를 배당받고, 경매절차에서 임차주택을 매수한 피고들을 상대로 전세보증금 잔액에 대해 양수금 또는 구상금 지급을 구한 사안]\", \"date\": \"2023-02-02\"}, {\"title\": \"공유하던 토지를 공동임대하고 불가분채무인 전세보증금을 반환할 채무를 부담하고 있어 그 채무액은 소극재산 봄이 타당.\", \"date\": \"2013-07-18\"}]}",
+   "at": "2026-09-28T23:33:39"
+  },
+  {
+   "task": "t19",
+   "intent": "[부동산] 이 집 등기부(근저당) 떼 줘 — 어휘가 있나. 없는 op 를 realty 에 주면 어떻게 되나(check·실행).",
+   "ok": false,
+   "detail": "check=incomplete [] | exec={\"n\": 825, \"type\": \"아파트 매매 (기간조회)\", \"period\": \"202607 ~ 202609\", \"param_warning\": \"op 'registry' 은(는) 이 액션의 선언된 op 가 아닙니다 — 선언된 op 로 고치세요. 사용 가능: ['codes', 'query']\", \"keys\": [\"param_warning\", \"success\", \"type\", \"region_code\", \"period\", \"total\", \"truncated\", \"truncations\", \"errors\", \"summary\", \"조회지역\", \"items\"]}",
+   "at": "2026-09-28T23:37:02"
+  },
+  {
+   "task": "t20",
+   "intent": "[부동산] 네이버가 못 찾으면 직방으로, 둘 다 안 되면 이유 — 없는 동네·없는 시군구 폴백.",
+   "ok": true,
+   "detail": "naver??zigbang=FAIL '없는동네가나다' 위치를 찾지 못했습니다. 더 구체적인 동·지역명으로 시도하세요. || molit_try={\"code\": \"TOOL\", \"kind\": \"runtime\", \"msg\": \"'없는시가나다'에 해당하는 시군구를 찾지 못했습니다. 실거래가는 시군구 단위입니다 (예: 강남구, 청주시흥덕구). 시군구 이름으로 다시 시도하세요. district_codes로 목록을 확인할 수 있습니다.\"}",
+   "at": "2026-09-28T23:36:32"
+  },
+  {
+   "task": "t21",
+   "intent": "[부동산] 국토부 API·네이버부동산이 살아 있나 먼저 보고 조회 경로 고르기 (http head 두 개 → 표).",
+   "ok": true,
+   "detail": "{\"rows\": [{\"url\": \"https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade\", \"status\": 405, \"ok\": false, \"elapsed_ms\": 46}, {\"url\": \"https://m.land.naver.com/\", \"status\": 200, \"ok\": true, \"elapsed_ms\": 55}], \"route\": \"molit\"}",
+   "at": "2026-09-28T23:37:03"
+  },
+  {
+   "task": "t22",
+   "intent": "[부동산] 오송 아파트 매매 매물 설명에 급매·가격조정 언급이 있는 것만 (judge 5행).",
+   "ok": true,
+   "detail": "{\"n\": 5, \"rows\": [{\"title\": \"오송역파라곤센트럴시티 210동\", \"summary\": \"방2개 A타입 풀옵션 에3 양창구조 채광.조망우수 · 4년이내 대단지 방두개 화장실두개\", \"급매_result_value\": false, \"급매_result_status\": \"decided\"}, {\"title\": \"오송역동아라이크텐 104동\", \"summary\": \"바로입주가능.입주청소완료 생활하기 편리한 로얄동,에4대포함. 단지내부자 · 10년이내 방세개 화장실두개 고층\", \"급매_result_value\": false, \"급매_result_status\": \"decided\"}, {\"title\": \"오송호반베르디움 602동\", \"summary\": \"인기동 호수초근접 작은방 호수뷰 멋진세대  27년1월 협의입주가능 · 25년이내 방세개 화장실두개 고층\", \"급매_result_value\": false, \"급매_result_status\": \"decided\"}, {\"title\": \"오송상록롯데캐슬 306동\", \"summary\": \"즉시입주가능 인기A타입 상가 가까운 로얄동 · 25년이내 방세개 화장실두개 중층\", \"급매_result_value\": false, \"급매_result_status\": \"decided\"}, {\"title\": \"오송역파라곤센트럴시티 216동\", \"summary\": \"C타입 풀옵션  남향 채광우수 전세안고매매가능 · 4년이내 대단지 방세개 화장실두개\", \"급매_result_value\": false, \"급매_result_status\": \"decided\"}]}",
+   "at": "2026-09-28T23:37:24"
+  },
+  {
+   "task": "t23",
+   "intent": "[부동산] 복대동 빌라 전세를(첫 시도 오송읍은 naver 0·zigbang 1건이라 표본이 없어 복대동으로) 네이버·직방에서 모아 한 표로 — 보증금 단위를 맞춰 싼 순.",
+   "ok": true,
+   "detail": "{\"naver\": 0, \"zigbang\": 5, \"merged\": 5, \"rows\": [{\"title\": \".권리안전한 투룸전세\", \"보증금만원\": 6500, \"출처\": \"zigbang\"}, {\"title\": \".비하동매물. 귀한 신축전세 투룸  큰방이쁜인테리어위치최고\", \"보증금만원\": 10000, \"출처\": \"zigbang\"}, {\"title\": \"권리관계  안전한  주인세대 전세\", \"보증금만원\": 15000, \"출처\": \"zigbang\"}, {\"title\": \"엘베가 있고 옥상도 단독 사용 에어컨 3개로 저렴히 가능\", \"보증금만원\": 16000, \"출처\": \"zigbang\"}, {\"title\": \"복대동, 주인세대 NEW FACE\", \"보증금만원\": 27000, \"출처\": \"zigbang\"}]}",
+   "at": "2026-09-28T23:37:59"
+  },
+  {
+   "task": "t24",
+   "intent": "[부동산] 코퍼스 4097(전세 감시)·4112 형태를 판본 2 check 로 — count($m)·'$m.items.0.title'·deal:'lease'·[if]{파이프}.",
+   "ok": true,
+   "detail": "4097=invalid [{\"code\": \"BUILTIN\", \"message\": \"알 수 없는 내장 함수: count\"}] | str_path=incomplete [] | 4112=invalid [{\"code\": \"PIPE_TARGET\", \"message\": \"파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.\"}]",
+   "at": "2026-09-28T23:37:26"
+  }
+ ],
+ "log": [
+  {
+   "task": "t01",
+   "request": {
+    "code": "#!ibl edition=2\n\n$t = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"trade\", start_month:\"202608\", end_month:\"202609\"}\n$g = $t.items >> [table:groupby]{by:\"아파트명\", agg:{평균가:[\"avg\",\"price\"], 건수:[\"count\"]}}\n$top = $g.items >> [table:filter]{where:($r)=> $r.건수 >= 3} >> [table:sort]{by:\"평균가\", descending:true} >> [table:take]{n:5}\nreturn {total:len($t.items), truncated:get($t,\"truncated\",null), 조회지역:get($t,\"조회지역\",null), groups:len($g.items), top:$top}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "total": 456,
+     "truncated": false,
+     "조회지역": null,
+     "groups": 110,
+     "top": [
+      {
+       "아파트명": "신영지웰시티1차",
+       "평균가": 1201666666.6666667,
+       "건수": 6
+      },
+      {
+       "아파트명": "두산위브지웰시티2차",
+       "평균가": 955000000,
+       "건수": 4
+      },
+      {
+       "아파트명": "청주가경아이파크3단지",
+       "평균가": 865000000,
+       "건수": 3
+      },
+      {
+       "아파트명": "청주가경아이파크2단지",
+       "평균가": 709600000,
+       "건수": 5
+      },
+      {
+       "아파트명": "가경아이파크5단지",
+       "평균가": 664666666.6666666,
+       "건수": 6
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "a00102566af5401dbc47e0e33b85e4bfc993953f34c3e8a64b23231f668f2ec0",
+    "source_complete": true,
+    "usage": {
+     "steps": 504,
+     "rows": 0,
+     "elapsed_ms": 268
+    },
+    "resume": {
+     "run_id": "fab81a8356c14ef798ef081f40750567"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "fab81a8356c14ef798ef081f40750567"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 505,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "dcab9100eea1de215414e16d8589b3fd9df69dadcd2a1cfd2e5706fa2ecf7d0c",
+     "chars": 258810,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "dcab9100eea1de215414e16d8589b3fd9df69dadcd2a1cfd2e5706fa2ecf7d0c",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "dcab9100eea1de215414e16d8589b3fd9df69dadcd2a1cfd2e5706fa2ecf7d0c"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t02",
+   "request": {
+    "code": "#!ibl edition=2\n\n$r = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"rent\", start_month:\"202608\", end_month:\"202609\"}\n$j = $r.items >> [table:filter]{where:($x)=> $x.계약유형 == \"전세\"}\n$g = $j >> [table:groupby]{by:\"아파트명\", agg:{평균보증금:[\"avg\",\"보증금\"], 건수:[\"count\"]}}\nreturn {rows:len($r.items), jeonse:len($j), groups:len($g.items), sample_row:$r.items[0], top:($g.items >> [table:sort]{by:\"건수\", descending:true} >> [table:take]{n:3})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "rows": 606,
+     "jeonse": 282,
+     "groups": 86,
+     "sample_row": {
+      "아파트명": "청원쌍용예가1단지",
+      "법정동": "강내면 월곡리",
+      "지번": "428",
+      "계약유형": "전세",
+      "보증금": "18,000",
+      "월세": "",
+      "전용면적": "84.97",
+      "층": "10",
+      "건축년도": "2007",
+      "거래년도": "2026",
+      "거래월": "8",
+      "거래일": "10",
+      "조회년월": "202608",
+      "명칭": "청원쌍용예가1단지",
+      "면적": "84.97"
+     },
+     "top": [
+      {
+       "아파트명": "청주SKVIEW자이",
+       "평균보증금": 32873.333333333336,
+       "건수": 15
+      },
+      {
+       "아파트명": "오송역파라곤센트럴시티",
+       "평균보증금": 28585.714285714286,
+       "건수": 14
+      },
+      {
+       "아파트명": "오송역대광로제비앙그랜드센텀",
+       "평균보증금": 25500,
+       "건수": 12
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "6d63fc364dc091a11316f23aef9dab664ea34564159469fa5ebdf3bd1de2ef15",
+    "source_complete": true,
+    "usage": {
+     "steps": 2484,
+     "rows": 0,
+     "elapsed_ms": 570
+    },
+    "precheck_warnings": [
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: 계약유형. 관측 필드: 아파트명, 법정동, 거래금액, 전용면적, 층, 건축년도, 거래년도, 거래월, 거래일, 조회년월, price, 명칭, 면적",
+      "source_span": {
+       "source_hash": "616a7594235deeff58cf46066955aeedffbaeb0547d488614dd3ef6e00f90ca5",
+       "start": 186,
+       "end": 193,
+       "line": 4,
+       "column": 46
+      },
+      "call_path": [],
+      "facts": {
+       "field": "계약유형",
+       "observed": [
+        "아파트명",
+        "법정동",
+        "거래금액",
+        "전용면적",
+        "층",
+        "건축년도",
+        "거래년도",
+        "거래월",
+        "거래일",
+        "조회년월",
+        "price",
+        "명칭",
+        "면적"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "616a7594235deeff58cf46066955aeedffbaeb0547d488614dd3ef6e00f90ca5",
+       "start": 186,
+       "end": 193,
+       "line": 4,
+       "column": 46,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 4,
+       "end_column": 53,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "resume": {
+     "run_id": "4a3413a5790a424f84f576518c873f33"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "4a3413a5790a424f84f576518c873f33"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 2486,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "26d87a2fe3e8fce53a6c215f789d13a9e3cd5a8f1ff747b4763d1b5c2c51f77f",
+     "chars": 547089,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "26d87a2fe3e8fce53a6c215f789d13a9e3cd5a8f1ff747b4763d1b5c2c51f77f",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "26d87a2fe3e8fce53a6c215f789d13a9e3cd5a8f1ff747b4763d1b5c2c51f77f"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t05",
+   "request": {
+    "code": "#!ibl edition=2\n\n$t = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"trade\", start_month:\"202612\", end_month:\"202612\"}\n$g = $t.items >> [table:groupby]{by:\"아파트명\", agg:{평균가:[\"avg\",\"price\"]}}\n$none = $t.items >> [table:filter]{where:($x)=> $x.아파트명 == \"없는단지\"}\n$j = [table:join]{left:$g.items, right:[{아파트명:\"x\", 전세:1}], on:\"아파트명\"}\n$c = $j.items >> [table:compute]{set:($x)=> {비율: $x.전세 / $x.평균가}}\nreturn {n:len($t.items), total:get($t,\"total\",null), truncated:get($t,\"truncated\",null), msg:get($t,\"message\",null), summary:get($t,\"summary\",null), groups:len($g.items), joined:len($c), none:len($none)}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "n": 0,
+     "total": 0,
+     "truncated": false,
+     "msg": null,
+     "summary": {
+      "조회기간": "202612 ~ 202612",
+      "조회월수": 1,
+      "총거래건수": 0,
+      "전체건수": 0,
+      "잘림": false
+     },
+     "groups": 0,
+     "joined": 0,
+     "none": 0
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "78a095daf5675a44c6f73169598829d63edc108277f6147975e33c3f4306d124",
+    "source_complete": true,
+    "usage": {
+     "steps": 89,
+     "rows": 0,
+     "elapsed_ms": 162
+    },
+    "resume": {
+     "run_id": "91ad5ff1c4234aada2251fbe7eaf96e2"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "91ad5ff1c4234aada2251fbe7eaf96e2"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 87,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "9aea3607d0eefc0d9f7fef900547c9ff3797fc7a6e95c2a94e4b4c5c7f785dba",
+     "chars": 23817,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "9aea3607d0eefc0d9f7fef900547c9ff3797fc7a6e95c2a94e4b4c5c7f785dba",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "9aea3607d0eefc0d9f7fef900547c9ff3797fc7a6e95c2a94e4b4c5c7f785dba"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t03",
+   "request": {
+    "code": "#!ibl edition=2\n\n[def:국평]($rows) {\n  return $rows >> [table:filter]{where:($x)=> number($x.전용면적) >= 59 and number($x.전용면적) <= 85}\n}\n[def:단지평균]($rows, $값열, $이름) {\n  $g = $rows >> [table:groupby]{by:[\"아파트명\",\"법정동\"], agg:{평균:[\"avg\", $값열], 건수:[\"count\"]}}\n  return $g.items >> [table:rename]{map:{평균:$이름}}\n}\n$t = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"trade\", start_month:\"202608\", end_month:\"202609\"}\n$r = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"rent\", start_month:\"202608\", end_month:\"202609\"}\n$jeonse = $r.items >> [table:filter]{where:($x)=> $x.계약유형 == \"전세\"}\n$매매 = [fn:단지평균]{rows:[fn:국평]{rows:$t.items}, 값열:\"price\", 이름:\"매매평균원\"}\n$전세 = [fn:단지평균]{rows:[fn:국평]{rows:$jeonse}, 값열:\"보증금\", 이름:\"전세평균만원\"}\n$j = [table:join]{left:$매매, right:$전세, on:[\"아파트명\",\"법정동\"]}\n$rate = $j.items >> [table:compute]{set:($x)=> {전세가율: round($x.전세평균만원 * 10000 / $x.매매평균원 * 100, 1)}}\n$over = $rate >> [table:filter]{where:($x)=> $x.전세가율 >= 80}\nreturn {matched:len($j.items), over80:len($over), rows:($rate >> [table:sort]{by:\"전세가율\", descending:true} >> [table:take]{n:5})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "matched": 51,
+     "over80": 19,
+     "rows": [
+      {
+       "아파트명": "효성아파트",
+       "법정동": "비하동",
+       "매매평균원": 117825000,
+       "건수": 4,
+       "전세평균만원": 12000,
+       "건수_2": 4,
+       "전세가율": 101.8
+      },
+      {
+       "아파트명": "가경주공8단지",
+       "법정동": "가경동",
+       "매매평균원": 263083333.33333334,
+       "건수": 6,
+       "전세평균만원": 25500,
+       "건수_2": 1,
+       "전세가율": 96.9
+      },
+      {
+       "아파트명": "송곡그린",
+       "법정동": "비하동",
+       "매매평균원": 133000000,
+       "건수": 1,
+       "전세평균만원": 12633.333333333334,
+       "건수_2": 3,
+       "전세가율": 95.0
+      },
+      {
+       "아파트명": "세원2차",
+       "법정동": "가경동",
+       "매매평균원": 127000000,
+       "건수": 1,
+       "전세평균만원": 12000,
+       "건수_2": 1,
+       "전세가율": 94.5
+      },
+      {
+       "아파트명": "2단지주공",
+       "법정동": "가경동",
+       "매매평균원": 190300000,
+       "건수": 5,
+       "전세평균만원": 17500,
+       "건수_2": 1,
+       "전세가율": 92.0
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "96ee1afe580b5b9cd7a543019a12f101dd18986324e5b93f984dac48c83770f4",
+    "source_complete": true,
+    "usage": {
+     "steps": 13866,
+     "rows": 0,
+     "elapsed_ms": 962
+    },
+    "precheck_warnings": [
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: 계약유형. 관측 필드: 아파트명, 법정동, 거래금액, 전용면적, 층, 건축년도, 거래년도, 거래월, 거래일, 조회년월, price, 명칭, 면적",
+      "source_span": {
+       "source_hash": "74c5be4bba5cc666c7a814e4ffa5697dbf40148a5881479b3262ded2326d3a46",
+       "start": 601,
+       "end": 608,
+       "line": 12,
+       "column": 51
+      },
+      "call_path": [],
+      "facts": {
+       "field": "계약유형",
+       "observed": [
+        "아파트명",
+        "법정동",
+        "거래금액",
+        "전용면적",
+        "층",
+        "건축년도",
+        "거래년도",
+        "거래월",
+        "거래일",
+        "조회년월",
+        "price",
+        "명칭",
+        "면적"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "74c5be4bba5cc666c7a814e4ffa5697dbf40148a5881479b3262ded2326d3a46",
+       "start": 601,
+       "end": 608,
+       "line": 12,
+       "column": 51,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 12,
+       "end_column": 58,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "resume": {
+     "run_id": "d9a267cf68c54bd6bc351c21405740c8"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "d9a267cf68c54bd6bc351c21405740c8"
+      }
+     },
+     "read_calls": 6,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 12451,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "6ca033ee641662968d47b483ab920a80320d9c767db3955b92133ae34983f41d",
+     "chars": 1816581,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "rows"
+       ],
+       "chars": 715
+      }
+     ],
+     "read_args": {
+      "id": "6ca033ee641662968d47b483ab920a80320d9c767db3955b92133ae34983f41d",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "6ca033ee641662968d47b483ab920a80320d9c767db3955b92133ae34983f41d"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t04",
+   "request": {
+    "code": "#!ibl edition=2\n\n$t = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"trade\", start_month:\"202608\", end_month:\"202609\"}\n[def:월평균]($rows, $월, $이름) {\n  $m = $rows >> [table:filter]{where:($x)=> $x.거래월 == $월}\n  $g = $m >> [table:groupby]{by:\"아파트명\", agg:{평균:[\"avg\",\"price\"]}}\n  return $g.items >> [table:rename]{map:{평균:$이름}}\n}\n$a = [fn:월평균]{rows:$t.items, 월:\"8\", 이름:\"8월\"}\n$b = [fn:월평균]{rows:$t.items, 월:\"9\", 이름:\"9월\"}\n$j = [table:join]{left:$a, right:$b, on:\"아파트명\"}\n$d = $j.items >> [table:compute]{set:($x)=> {변화율: round((get($x,\"9월\",null) - get($x,\"8월\",null)) / get($x,\"8월\",null) * 100, 1)}}\n$up = $d >> [table:filter]{where:($x)=> $x.변화율 > 0}\nreturn {both:len($j.items), up:len($up), top:($d >> [table:sort]{by:\"변화율\", descending:true} >> [table:take]{n:3})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "both": 58,
+     "up": 28,
+     "top": [
+      {
+       "아파트명": "형석(992)",
+       "8월": 90000000,
+       "9월": 145000000,
+       "변화율": 61.1
+      },
+      {
+       "아파트명": "가경푸르지오",
+       "8월": 365000000,
+       "9월": 440000000,
+       "변화율": 20.5
+      },
+      {
+       "아파트명": "더샵청주센트럴",
+       "8월": 394777777.7777778,
+       "9월": 473142857.14285713,
+       "변화율": 19.9
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "48d2d884de9210311e6b1f9f67f74d22a5a9771f5a2c9994c0a5e898b9b3c5ee",
+    "source_complete": true,
+    "usage": {
+     "steps": 5561,
+     "rows": 0,
+     "elapsed_ms": 836
+    },
+    "resume": {
+     "run_id": "f434e1a0a87240188018c130c60f1293"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "f434e1a0a87240188018c130c60f1293"
+      }
+     },
+     "read_calls": 5,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 5341,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "e8f561f0a2957ab64bc78593a6fc94b41b3ab2197e0f4a99d7f7cd8ae77fa143",
+     "chars": 778131,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "e8f561f0a2957ab64bc78593a6fc94b41b3ab2197e0f4a99d7f7cd8ae77fa143",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "e8f561f0a2957ab64bc78593a6fc94b41b3ab2197e0f4a99d7f7cd8ae77fa143"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t07",
+   "request": {
+    "code": "#!ibl edition=2\n\n$a = [sense:realty]{source:\"naver\", region:\"청주 오송읍\", type:\"apt\", deal:\"lease\", limit:30}\n$b = [sense:realty]{source:\"naver\", region:\"청주 오송읍\", type:\"apt\", deal:\"rent\", lease:\"전세\", limit:30}\n[def:유형수]($rows) {\n  $j = $rows >> [table:filter]{where:($x)=> contains($x.meta, \"전세 \")}\n  $w = $rows >> [table:filter]{where:($x)=> contains($x.meta, \"월세 \")}\n  return {전세:len($j), 월세:len($w)}\n}\nreturn {lease_form:{n:len($a.items), msg:$a.message, kinds:[fn:유형수]{rows:$a.items}, ignored:get($a,\"무시된_파라미터\",null)}, rent_jeonse:{n:len($b.items), msg:$b.message, kinds:[fn:유형수]{rows:$b.items}}}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "lease_form": {
+      "n": 30,
+      "msg": "네이버부동산 '충청북도 청주시 흥덕구 오송읍' · apt 전세/월세 — 30건 (동일매물 묶음, 상세는 items)",
+      "kinds": {
+       "전세": 15,
+       "월세": 15
+      },
+      "ignored": null
+     },
+     "rent_jeonse": {
+      "n": 30,
+      "msg": "네이버부동산 '충청북도 청주시 흥덕구 오송읍' · apt 전세 — 30건 (동일매물 묶음, 상세는 items)",
+      "kinds": {
+       "전세": 30,
+       "월세": 0
+      }
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "da3d9727ea4db4171cf12387d480a6d0beed044cc6a40dc38a551e00799230bf",
+    "source_complete": true,
+    "usage": {
+     "steps": 817,
+     "rows": 0,
+     "elapsed_ms": 892
+    },
+    "resume": {
+     "run_id": "3e74c6dca6314256bc14ed4f0689dbef"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "3e74c6dca6314256bc14ed4f0689dbef"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 694,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "3042c724279ee7d07955ae3d49195d75fc70e4027657a19ad145ebc4db43d9d7",
+     "chars": 134986,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "3042c724279ee7d07955ae3d49195d75fc70e4027657a19ad145ebc4db43d9d7",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "3042c724279ee7d07955ae3d49195d75fc70e4027657a19ad145ebc4db43d9d7"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t08",
+   "request": {
+    "code": "#!ibl edition=2\n\n$z = [sense:realty]{source:\"zigbang\", region:\"청주 오송읍\", type:\"villa\", deal:\"rent\", lease:\"전세\", limit:30}\n$u = $z.items >> [table:filter]{where:($x)=> get($x,\"area_m2\",null) != null and get($x,\"deposit\",null) != null}\n$c = $u >> [table:compute]{set:($x)=> {만원_m2: round($x.deposit / $x.area_m2, 1)}}\nreturn {n:len($z.items), usable:len($u), msg:$z.message, rows:($c >> [table:sort]{by:\"만원_m2\"} >> [table:take]{n:5} >> [table:select]{columns:[\"title\",\"deposit\",\"area_m2\",\"floor\",\"만원_m2\"]})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "n": 1,
+     "usable": 1,
+     "msg": "직방 '충청북도 청주시 흥덕구 오송읍' 반경 3000m · villa 전세 — 1건 (상세는 items)",
+     "rows": [
+      {
+       "title": "아주 넓은 주인세대 전세입니다.",
+       "deposit": 23000,
+       "area_m2": 117.18,
+       "floor": "4",
+       "만원_m2": 196.3
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "95e6b9397a3007382ed48a66e6a09c0d0cfa9aa55bbe7ca7df6e3215fafb7b2d",
+    "source_complete": true,
+    "usage": {
+     "steps": 81,
+     "rows": 0,
+     "elapsed_ms": 402
+    },
+    "resume": {
+     "run_id": "5175de615a6d409d933d3fcb51dd16ca"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "5175de615a6d409d933d3fcb51dd16ca"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 81,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "14ad39b67de63c7b4b8d2cd20b8ad75cab1d68b668d0bbb2f71617080c40ab90",
+     "chars": 23271,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "14ad39b67de63c7b4b8d2cd20b8ad75cab1d68b668d0bbb2f71617080c40ab90",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "14ad39b67de63c7b4b8d2cd20b8ad75cab1d68b668d0bbb2f71617080c40ab90"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t09",
+   "request": {
+    "code": "#!ibl edition=2\n\n$h = [{ticker:\"005930\", name:\"삼성전자\", 매수가:210000, 수량:10}, {ticker:\"000660\", name:\"SK하이닉스\", 매수가:1800000, 수량:2}, {ticker:\"035420\", name:\"NAVER\", 매수가:230000, 수량:5}]\n$rows = $h >> [table:each] {\n  $q = [sense:stock]{op:\"quote\", ticker:$it.ticker}\n  $p = $q.items[0].current_price\n  return {name:$it.name, 현재가:$p, 수익률:round(($p - $it.매수가) / $it.매수가 * 100, 2), 평가손익:($p - $it.매수가) * $it.수량, as_of:get($q.items[0],\"as_of\",null)}\n}\n$parts = $rows >> [table:each] { return f\"${$it.name} ${$it.현재가}원(${$it.수익률}%)\" }\n$parts2 = $rows >> [table:each] { return f\"${$it.name} ${round($it.현재가)}원\" }\n$pl = $rows >> [table:each] { return $it.평가손익 }\nreturn {rows:$rows, 합계손익:sum($pl), line:join(\", \", $parts), line_round:join(\", \", $parts2)}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "rows": [
+      {
+       "name": "삼성전자",
+       "현재가": 270000.0,
+       "수익률": 28.57,
+       "평가손익": 600000.0,
+       "as_of": "2026-09-28"
+      },
+      {
+       "name": "SK하이닉스",
+       "현재가": 1761000.0,
+       "수익률": -2.17,
+       "평가손익": -78000.0,
+       "as_of": "2026-09-28"
+      },
+      {
+       "name": "NAVER",
+       "현재가": 196300.0,
+       "수익률": -14.65,
+       "평가손익": -168500.0,
+       "as_of": "2026-09-28"
+      }
+     ],
+     "합계손익": 353500.0,
+     "line": "삼성전자 270000.0원(28.57%), SK하이닉스 1761000.0원(-2.17%), NAVER 196300.0원(-14.65%)",
+     "line_round": "삼성전자 270000원, SK하이닉스 1761000원, NAVER 196300원"
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "fca5680a9bbaccc4be9cc0a357410e25cfbdc793b8214f599db10ffd228dc0a1",
+    "source_complete": true,
+    "usage": {
+     "steps": 298,
+     "rows": 12,
+     "elapsed_ms": 1116
+    },
+    "resume": {
+     "run_id": "8bfde25ff67845eb82133cc3defd373d"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "8bfde25ff67845eb82133cc3defd373d"
+      }
+     },
+     "read_calls": 3,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 233,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "ccc2421a2b462cbf561a6cb71cf3b2f073fcc9f8f4d23597f94d619bf2175542",
+     "chars": 51517,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "ccc2421a2b462cbf561a6cb71cf3b2f073fcc9f8f4d23597f94d619bf2175542",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "ccc2421a2b462cbf561a6cb71cf3b2f073fcc9f8f4d23597f94d619bf2175542"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t10",
+   "request": {
+    "code": "#!ibl edition=2\n\n$h = [{ticker:\"005930\", name:\"삼성전자\"}, {ticker:\"ZZZZ99\", name:\"오타종목\"}, {ticker:\"999999\", name:\"없는코드\"}]\n$res = $h >> [table:each]{on_error:\"collect\"} {\n  $q = [sense:stock]{op:\"quote\", ticker:$it.ticker}\n  return {name:$it.name, 현재가:$q.items[0].current_price}\n}\n$ok = $res >> [table:each]{mode:\"flat_map\"} { [if: is_ok($it)] { return [unwrap($it)] } [else] { return [] } }\n$bad = $res >> [table:each]{mode:\"flat_map\"} { [if: is_ok($it)] { return [] } [else] { $e = error_of($it); return [{code:$e.code, msg:$e.message}] } }\nreturn {ok:$ok, bad:$bad}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "ok": [
+      {
+       "name": "삼성전자",
+       "현재가": 270000.0
+      }
+     ],
+     "bad": [
+      {
+       "code": "TOOL",
+       "msg": "'ZZZZ99' 종목을 찾을 수 없거나 데이터가 없습니다."
+      },
+      {
+       "code": "TOOL",
+       "msg": "'999999.KS' 종목을 찾을 수 없거나 데이터가 없습니다."
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "41a28a2df3149e7f1bb3c037d914c5bbe609242d932adfaa10ac2a4757ba2179",
+    "source_complete": false,
+    "usage": {
+     "steps": 160,
+     "rows": 9,
+     "elapsed_ms": 1483
+    },
+    "resume": {
+     "run_id": "5c0fd42965234fbdb9f7bdc20d04cce8"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "5c0fd42965234fbdb9f7bdc20d04cce8"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 113,
+     "source_complete": false,
+     "tool_failures": 2,
+     "source_failures": 2,
+     "failures": [
+      {
+       "id": 36,
+       "action": "sense:stock",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      },
+      {
+       "id": 46,
+       "action": "sense:stock",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "d8bbe7125175f15922ace4377036590d75bc573659c7be0948e45c1e61efdbdc",
+     "chars": 27864,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "d8bbe7125175f15922ace4377036590d75bc573659c7be0948e45c1e61efdbdc",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "d8bbe7125175f15922ace4377036590d75bc573659c7be0948e45c1e61efdbdc"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t13",
+   "request": {
+    "code": "#!ibl edition=2\n\n$c = [sense:crypto]{coin:\"BTC\", days:30}\n$p = $c.data.prices\n$closes = $p >> [table:each] { return $it.close }\nreturn {n:len($p), first:$p[0], last:$p[-1], 변화율:round(($p[-1].close - $p[0].close) / $p[0].close * 100, 2), 최고:max($closes), 최저:min($closes), now_usd:$c.items[0].current_price_usd, now_krw:$c.items[0].current_price_krw}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "n": 31,
+     "first": {
+      "date": "2026-08-30",
+      "close": 78225.139508
+     },
+     "last": {
+      "date": "2026-09-28",
+      "close": 83334.126395
+     },
+     "변화율": 6.53,
+     "최고": 86596.740042,
+     "최저": 75590.24472,
+     "now_usd": 83475,
+     "now_krw": 113457457
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "4c345f9429dfbc314970731f36e6ec2eafdd685c4719b343d435a863432ef615",
+    "source_complete": true,
+    "usage": {
+     "steps": 315,
+     "rows": 31,
+     "elapsed_ms": 422
+    },
+    "resume": {
+     "run_id": "b7e4c9f6052e431ab4504f977a823225"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "b7e4c9f6052e431ab4504f977a823225"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 125,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "05ce0b8e78b8ae5c9347f0eb0e2e151d14ff8336687010d277e6b247a86baa04",
+     "chars": 27592,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "05ce0b8e78b8ae5c9347f0eb0e2e151d14ff8336687010d277e6b247a86baa04",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "05ce0b8e78b8ae5c9347f0eb0e2e151d14ff8336687010d277e6b247a86baa04"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t11",
+   "request": {
+    "code": "#!ibl edition=2\nreturn [sense:stock]{op:\"info\", ticker:\"005930\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": false,
+    "error": "전송할 수 없는 값: float64",
+    "diagnostic": {
+     "code": "VALUE_PROTOCOL",
+     "kind": "protocol",
+     "message": "전송할 수 없는 값: float64",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      8
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "7391906789ccea78c6b30dbf6bc7a9bffd0a16f732c63b70306eaf3e52f51771",
+      "start": 23,
+      "end": 64,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "377b90cdc65f7a5deab9a2769f2ce1334f7a1d64ba4ec32b794ad97b5d5a1e07",
+    "source_complete": false,
+    "usage": {
+     "steps": 6,
+     "rows": 0,
+     "elapsed_ms": 478
+    },
+    "resume": {
+     "run_id": "2311f78bd7c44969894f6e1797e16154"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 8,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 5,
+       "action": "sense:stock",
+       "code": "VALUE_PROTOCOL",
+       "failure_kind": "protocol",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "a6111ec26b471185197eb8e705d72f0e7535f29ff30fa3a949f6488f404a681e",
+     "chars": 3220,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "a6111ec26b471185197eb8e705d72f0e7535f29ff30fa3a949f6488f404a681e",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "task": "t11",
+   "request": {
+    "code": "#!ibl edition=2\n\n$f = [sense:company]{op:\"financials\", ticker:\"삼성전자\", year:\"2025\"}\n$q = [sense:stock]{op:\"quote\", ticker:\"005930\"}\n$doc = [self:read]{path:$f.data.file_path}\n$sel = [self:ledger]{op:\"select\", path:$f.data.file_path, target:\"income_statement\"}\n$eps = $sel.items >> [table:filter]{where:($x)=> $x.account_name == \"기본주당이익\"}\n$ni = $sel.items >> [table:filter]{where:($x)=> $x.account_name == \"당기순이익\"}\n$p = $q.items[0].current_price\n$e = number($eps[0].current_amount)\nreturn {read_data_keys:keys($doc.data), read_items0:keys($doc.data.items[0]), spill:$f.data.file_path, 당기순이익:number($ni[0].current_amount), EPS:$e, 현재가:$p, PER:round($p / $e, 1)}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "read_data_keys": [
+      "success",
+      "items",
+      "message",
+      "path",
+      "count"
+     ],
+     "read_items0": [
+      "type",
+      "text"
+     ],
+     "spill": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/investment/financial_00126380_20260928_233327.json",
+     "당기순이익": 45206805000000,
+     "EPS": 6605,
+     "현재가": 270000.0,
+     "PER": 40.9
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "8f12d6b7976f5422eec036cdcd966a7de5a68b31598d4ff57eecf394ed80cf2c",
+    "source_complete": true,
+    "usage": {
+     "steps": 231,
+     "rows": 0,
+     "elapsed_ms": 779
+    },
+    "precheck_warnings": [
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: account_name. 관측 필드: id",
+      "source_span": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 308,
+       "end": 323,
+       "line": 7,
+       "column": 50
+      },
+      "call_path": [],
+      "facts": {
+       "field": "account_name",
+       "observed": [
+        "id"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 308,
+       "end": 323,
+       "line": 7,
+       "column": 50,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 7,
+       "end_column": 65,
+       "offset_encoding": "unicode-codepoints"
+      }
+     },
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: account_name. 관측 필드: id",
+      "source_span": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 385,
+       "end": 400,
+       "line": 8,
+       "column": 49
+      },
+      "call_path": [],
+      "facts": {
+       "field": "account_name",
+       "observed": [
+        "id"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 385,
+       "end": 400,
+       "line": 8,
+       "column": 49,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 8,
+       "end_column": 64,
+       "offset_encoding": "unicode-codepoints"
+      }
+     },
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: current_amount. 관측 필드: id",
+      "source_span": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 456,
+       "end": 478,
+       "line": 10,
+       "column": 13
+      },
+      "call_path": [],
+      "facts": {
+       "field": "current_amount",
+       "observed": [
+        "id"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 456,
+       "end": 478,
+       "line": 10,
+       "column": 13,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 10,
+       "end_column": 35,
+       "offset_encoding": "unicode-codepoints"
+      }
+     },
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: current_amount. 관측 필드: id",
+      "source_span": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 596,
+       "end": 617,
+       "line": 11,
+       "column": 117
+      },
+      "call_path": [],
+      "facts": {
+       "field": "current_amount",
+       "observed": [
+        "id"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "3eb61b4b7703d04101e0fd1098a18915c7278dc48dc447ddbe02043af91b529e",
+       "start": 596,
+       "end": 617,
+       "line": 11,
+       "column": 117,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 11,
+       "end_column": 138,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "resume": {
+     "run_id": "170c13e86f0342a8a8725dca8a617d5c"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "170c13e86f0342a8a8725dca8a617d5c"
+      }
+     },
+     "read_calls": 4,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 227,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "2e2500ac4b848607352de67b1f81068c900ff86138aa873cc2b5f618e03e8389",
+     "chars": 142521,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "2e2500ac4b848607352de67b1f81068c900ff86138aa873cc2b5f618e03e8389",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "2e2500ac4b848607352de67b1f81068c900ff86138aa873cc2b5f618e03e8389"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t16",
+   "request": {
+    "code": "#!ibl edition=2\n\n$w = [sense:weather]{city:\"청주\", days:3}\n$rain = $w.items >> [table:filter]{where:($x)=> get($x,\"precipitation_mm\",0) >= 5}\n[if: len($rain) > 0] { return {판정:\"임장 연기\", 비오는날:$rain} } [else] { return {판정:\"임장 OK\", 예보:$w.items} }\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "판정": "임장 OK",
+     "예보": [
+      {
+       "date": "2026-09-28",
+       "max_temp": 25.0,
+       "min_temp": 16.2,
+       "condition": "흐림",
+       "precipitation_mm": 0.0
+      },
+      {
+       "date": "2026-09-29",
+       "max_temp": 25.1,
+       "min_temp": 12.1,
+       "condition": "구름 조금",
+       "precipitation_mm": 0.0
+      },
+      {
+       "date": "2026-09-30",
+       "max_temp": 24.7,
+       "min_temp": 14.1,
+       "condition": "가벼운 이슬비",
+       "precipitation_mm": 0.1
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "433bd7e8218480b49ef40e87a48d3846b49b572837e3fa326705807b25e7df8a",
+    "source_complete": true,
+    "usage": {
+     "steps": 50,
+     "rows": 0,
+     "elapsed_ms": 1572
+    },
+    "resume": {
+     "run_id": "0e7c2675c7e3484eb50c48a0ac5635e3"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "0e7c2675c7e3484eb50c48a0ac5635e3"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 45,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "61dccbbb82992778c52191b4b09ceedebe854fc36739c7447202c2b52204743b",
+     "chars": 11879,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "예보"
+       ],
+       "chars": 400
+      }
+     ],
+     "read_args": {
+      "id": "61dccbbb82992778c52191b4b09ceedebe854fc36739c7447202c2b52204743b",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "61dccbbb82992778c52191b4b09ceedebe854fc36739c7447202c2b52204743b"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t17",
+   "request": {
+    "code": "#!ibl edition=2\n\n$c = [sense:commercial]{query:\"오송역\", radius:1000}\n$g = $c.items >> [table:groupby]{by:\"category\"}\nreturn {n:len($c.items), truncated:get($c,\"truncated\",null), 조회지역:get($c,\"조회지역\",null), top:($g.items >> [table:sort]{by:\"count\", descending:true} >> [table:take]{n:5})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "n": 914,
+     "truncated": false,
+     "조회지역": "오송역 6번 출구, 오송읍, 흥덕구, 청주시, 충청북도, 28166, 대한민국",
+     "top": [
+      {
+       "category": "한식",
+       "count": 191
+      },
+      {
+       "category": "부동산 서비스",
+       "count": 131
+      },
+      {
+       "category": "기타 간이",
+       "count": 69
+      },
+      {
+       "category": "이용·미용",
+       "count": 65
+      },
+      {
+       "category": "비알코올 ",
+       "count": 44
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "c7b67fb1da6cc1fad8c2ed88fba999cea858d584e27b512c60abb563bea38a61",
+    "source_complete": true,
+    "usage": {
+     "steps": 43,
+     "rows": 0,
+     "elapsed_ms": 918
+    },
+    "resume": {
+     "run_id": "a69dd079d309414ea6053c97cf32dfec"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "a69dd079d309414ea6053c97cf32dfec"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 44,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "326f854c81917212cedb97a3140dbc03103ea6a7f5b42e1fbf94ce26b610a026",
+     "chars": 307766,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "326f854c81917212cedb97a3140dbc03103ea6a7f5b42e1fbf94ce26b610a026",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "326f854c81917212cedb97a3140dbc03103ea6a7f5b42e1fbf94ce26b610a026"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t18",
+   "request": {
+    "code": "#!ibl edition=2\n\n$law = [sense:legal]{query:\"주택임대차보호법\"}\n$prec = [sense:legal]{query:\"전세보증금 반환\", target:\"prec\"}\nreturn {law:($law.items >> [table:take]{n:3} >> [table:select]{columns:[\"title\",\"date\",\"url\"]}), prec:($prec.items >> [table:sort]{by:\"date\", descending:true} >> [table:take]{n:3} >> [table:select]{columns:[\"title\",\"date\"]})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "law": [
+      {
+       "title": "주택임대차보호법",
+       "date": "2026-01-02",
+       "url": "https://www.law.go.kr/DRF/lawService.do?OC=kkukjin&target=law&MST=276291&type=HTML&mobileYn=&efYd=20260102"
+      },
+      {
+       "title": "주택임대차보호법 시행령",
+       "date": "2026-07-01",
+       "url": "https://www.law.go.kr/DRF/lawService.do?OC=kkukjin&target=law&MST=287183&type=HTML&mobileYn=&efYd=20260701"
+      }
+     ],
+     "prec": [
+      {
+       "title": "기타(금전)[원고가 전세보증금반환보증계약에 기하여 주택도시보증공사를 상대로 보증채무 이행금에 대한 지연손해금의 지급을 구하는 사건]",
+       "date": "2026-05-29"
+      },
+      {
+       "title": "구상금[주택임대차보호법 제3조의2 제7항에서 정한 금융기관이 임차인으로부터 보증금반환채권을 양수한 후 그에 기해 경매절차에서 배당요구를 하여 보증금 일부를 배당받고, 경매절차에서 임차주택을 매수한 피고들을 상대로 전세보증금 잔액에 대해 양수금 또는 구상금 지급을 구한 사안]",
+       "date": "2023-02-02"
+      },
+      {
+       "title": "공유하던 토지를 공동임대하고 불가분채무인 전세보증금을 반환할 채무를 부담하고 있어 그 채무액은 소극재산 봄이 타당.",
+       "date": "2013-07-18"
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "f1a2481c2c922784a07be9d074b397ed58331a12436f28280a40f4f05c8d9063",
+    "source_complete": true,
+    "usage": {
+     "steps": 42,
+     "rows": 0,
+     "elapsed_ms": 605
+    },
+    "resume": {
+     "run_id": "d2d67635dcca4ffcb43ccbe026b52b48"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "d2d67635dcca4ffcb43ccbe026b52b48"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 49,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "843ba3b364c62d9c90a99b97e147282dc70b1c3c38a95d7fbc62ba0d020774f0",
+     "chars": 33860,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "prec"
+       ],
+       "chars": 445
+      }
+     ],
+     "read_args": {
+      "id": "843ba3b364c62d9c90a99b97e147282dc70b1c3c38a95d7fbc62ba0d020774f0",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "843ba3b364c62d9c90a99b97e147282dc70b1c3c38a95d7fbc62ba0d020774f0"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t15",
+   "request": {
+    "code": "#!ibl edition=2\nreturn [sense:stock]{op:\"history\", ticker:\"005930\", period:\"5y\"} & [sense:world_bank]{indicator:\"GDP\", country:\"한국\"} >> [table:join]{on:\"연도\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": false,
+    "error": "도구의 원천 결과가 불완전합니다.",
+    "diagnostic": {
+     "code": "PARTIAL_SOURCE",
+     "kind": "partial",
+     "message": "도구의 원천 결과가 불완전합니다.",
+     "frames": [],
+     "has_partial": true,
+     "partial": [
+      {
+       "success": true,
+       "indicator": "GDP (current US$)",
+       "country": "Korea, Rep.",
+       "items": [
+        {
+         "연도": "1976",
+         "GDP (current US$)": 30371074380.1653
+        },
+        {
+         "연도": "1977",
+         "GDP (current US$)": 39064462809.9174
+        },
+        {
+         "연도": "1978",
+         "GDP (current US$)": 52824793388.4297
+        },
+        {
+         "연도": "1979",
+         "GDP (current US$)": 68083884297.5207
+        },
+        {
+         "연도": "1980",
+         "GDP (current US$)": 66547970350.6151
+        },
+        {
+         "연도": "1981",
+         "GDP (current US$)": 74287368087.3467
+        },
+        {
+         "연도": "1982",
+         "GDP (current US$)": 79921300446.6517
+        },
+        {
+         "연도": "1983",
+         "GDP (current US$)": 89621208322.3386
+        },
+        {
+         "연도": "1984",
+         "GDP (current US$)": 99749645088.5994
+        },
+        {
+         "연도": "1985",
+         "GDP (current US$)": 103764281280.89
+        },
+        {
+         "연도": "1986",
+         "GDP (current US$)": 119965960795.24
+        },
+        {
+         "연도": "1987",
+         "GDP (current US$)": 152240393645.506
+        },
+        {
+         "연도": "1988",
+         "GDP (current US$)": 205477530605.222
+        },
+        {
+         "연도": "1989",
+         "GDP (current US$)": 254236243100.439
+        },
+        {
+         "연도": "1990",
+         "GDP (current US$)": 292064221388.988
+        },
+        {
+         "연도": "1991",
+         "GDP (current US$)": 340851946803.812
+        },
+        {
+         "연도": "1992",
+         "GDP (current US$)": 366921291824.719
+        },
+        {
+         "연도": "1993",
+         "GDP (current US$)": 405705302846.447
+        },
+        {
+         "연도": "1994",
+         "GDP (current US$)": 479181794216.859
+        },
+        {
+         "연도": "1995",
+         "GDP (current US$)": 586286469400.665
+        },
+        {
+         "연도": "1996",
+         "GDP (current US$)": 631196863758.281
+        },
+        {
+         "연도": "1997",
+         "GDP (current US$)": 589202526424.141
+        },
+        {
+         "연도": "1998",
+         "GDP (current US$)": 397297216492.19
+        },
+        {
+         "연도": "1999",
+         "GDP (current US$)": 515697079289.011
+        },
+        {
+         "연도": "2000",
+         "GDP (current US$)": 597487173479.109
+        },
+        {
+         "연도": "2001",
+         "GDP (current US$)": 567564806235.441
+        },
+        {
+         "연도": "2002",
+         "GDP (current US$)": 650014391470.21
+        },
+        {
+         "연도": "2003",
+         "GDP (current US$)": 728516494684.269
+        },
+        {
+         "연도": "2004",
+         "GDP (current US$)": 823251107638.814
+        },
+        {
+         "연도": "2005",
+         "GDP (current US$)": 971740329983.878
+        },
+        {
+         "연도": "2006",
+         "GDP (current US$)": 1095175538508.19
+        },
+        {
+         "연도": "2007",
+         "GDP (current US$)": 1220911904593.06
+        },
+        {
+         "연도": "2008",
+         "GDP (current US$)": 1091580692542.34
+        },
+        {
+         "연도": "2009",
+         "GDP (current US$)": 983065242417.36
+        },
+        {
+         "연도": "2010",
+         "GDP (current US$)": 1192830015737.68
+        },
+        {
+         "연도": "2011",
+         "GDP (current US$)": 1307103477219.1
+        },
+        {
+         "연도": "2012",
+         "GDP (current US$)": 1335343586437.67
+        },
+        {
+         "연도": "2013",
+         "GDP (current US$)": 1434669686501.84
+        },
+        {
+         "연도": "2014",
+         "GDP (current US$)": 1556252422020.44
+        },
+        {
+         "연도": "2015",
+         "GDP (current US$)": 1539212301135.55
+        },
+        {
+         "연도": "2016",
+         "GDP (current US$)": 1579150518945.44
+        },
+        {
+         "연도": "2017",
+         "GDP (current US$)": 1710196756713.17
+        },
+        {
+         "연도": "2018",
+         "GDP (current US$)": 1824251454306.83
+        },
+        {
+         "연도": "2019",
+         "GDP (current US$)": 1751045752054.63
+        },
+        {
+         "연도": "2020",
+         "GDP (current US$)": 1744070276373.34
+        },
+        {
+         "연도": "2021",
+         "GDP (current US$)": 1942313560965.9
+        },
+        {
+         "연도": "2022",
+         "GDP (current US$)": 1799363116866.52
+        },
+        {
+         "연도": "2023",
+         "GDP (current US$)": 1844800934391.54
+        },
+        {
+         "연도": "2024",
+         "GDP (current US$)": 1875388209406.8
+        },
+        {
+         "연도": "2025",
+         "GDP (current US$)": 1872374961553.15
+        }
+       ],
+       "summary": "### World Bank 데이터: GDP (current US$) (Korea, Rep.)\n\n- 2025: 1,872,374,961,553.15\n- 2024: 1,875,388,209,406.8\n- 2023: 1,844,800,934,391.54\n- 2022: 1,799,363,116,866.52\n- 2021: 1,942,313,560,965.9\n- 2020: 1,744,070,276,373.34\n- 2019: 1,751,045,752,054.63\n- 2018: 1,824,251,454,306.83\n- 2017: 1,710,196,756,713.17\n- 2016: 1,579,150,518,945.44\n- 2015: 1,539,212,301,135.55\n- 2014: 1,556,252,422,020.44\n- 2013: 1,434,669,686,501.84\n- 2012: 1,335,343,586,437.67\n- 2011: 1,307,103,477,219.1\n- 2010: 1,192,830,015,737.68\n- 2009: 983,065,242,417.36\n- 2008: 1,091,580,692,542.34\n- 2007: 1,220,911,904,593.06\n- 2006: 1,095,175,538,508.19\n- 2005: 971,740,329,983.88\n- 2004: 823,251,107,638.81\n- 2003: 728,516,494,684.27\n- 2002: 650,014,391,470.21\n- 2001: 567,564,806,235.44\n- 2000: 597,487,173,479.11\n- 1999: 515,697,079,289.01\n- 1998: 397,297,216,492.19\n- 1997: 589,202,526,424.14\n- 1996: 631,196,863,758.28\n- 1995: 586,286,469,400.67\n- 1994: 479,181,794,216.86\n- 1993: 405,705,302,846.45\n- 1992: 366,921,291,824.72\n- 1991: 340,851,946,803.81\n- 1990: 292,064,221,388.99\n- 1989: 254,236,243,100.44\n- 1988: 205,477,530,605.22\n- 1987: 152,240,393,645.51\n- 1986: 119,965,960,795.24\n- 1985: 103,764,281,280.89\n- 1984: 99,749,645,088.6\n- 1983: 89,621,208,322.34\n- 1982: 79,921,300,446.65\n- 1981: 74,287,368,087.35\n- 1980: 66,547,970,350.62\n- 1979: 68,083,884,297.52\n- 1978: 52,824,793,388.43\n- 1977: 39,064,462,809.92\n- 1976: 30,371,074,380.17"
+      }
+     ],
+     "evidence": [
+      18
+     ],
+     "details": {
+      "coverage": [
+       "failed",
+       "ok"
+      ],
+      "successful_indices": [
+       1
+      ],
+      "errors": {
+       "0": {
+        "code": "PARTIAL_SOURCE",
+        "kind": "partial",
+        "message": "도구의 원천 결과가 불완전합니다.",
+        "frames": [],
+        "has_partial": true,
+        "partial": {
+         "success": true,
+         "data": {
+          "symbol": "005930",
+          "name": "삼성전자",
+          "start_date": "2021-09-28",
+          "end_date": "2026-09-28",
+          "total_days": 1223,
+          "latest": {
+           "date": "2026-09-28",
+           "open": 284500,
+           "high": 285500,
+           "low": 268500,
+           "close": 270000,
+           "volume": 21080365,
+           "change": -16500,
+           "change_percent": -5.76
+          },
+          "prices": [
+           {
+            "date": "2021-09-28",
+            "open": 77700,
+            "high": 77800,
+            "low": 76200,
+            "close": 76300,
+            "volume": 15406382,
+            "change": null,
+            "change_percent": null
+           },
+           {
+            "date": "2022-03-29",
+            "open": 70000,
+            "high": 70300,
+            "low": 69800,
+            "close": 70200,
+            "volume": 13686208,
+            "change": 500,
+            "change_percent": 0.72
+           },
+           {
+            "date": "2022-09-23",
+            "open": 54400,
+            "high": 54900,
+            "low": 54200,
+            "close": 54500,
+            "volume": 10555964,
+            "change": 100,
+            "change_percent": 0.18
+           },
+           {
+            "date": "2023-03-22",
+            "open": 61000,
+            "high": 61200,
+            "low": 60500,
+            "close": 61100,
+            "volume": 8978591,
+            "change": 800,
+            "change_percent": 1.33
+           },
+           {
+            "date": "2023-09-15",
+            "open": 71700,
+            "high": 72300,
+            "low": 71400,
+            "close": 72000,
+            "volume": 17823512,
+            "change": 300,
+            "change_percent": 0.42
+           },
+           {
+            "date": "2024-03-20",
+            "open": 73700,
+            "high": 77200,
+            "low": 73400,
+            "close": 76900,
+            "volume": 50106297,
+            "change": 4100,
+            "change_percent": 5.63
+           },
+           {
+            "date": "2024-09-19",
+            "open": 64000,
+            "high": 64400,
+            "low": 62200,
+            "close": 63100,
+            "volume": 49402713,
+            "change": -1300,
+            "change_percent": -2.02
+           },
+           {
+            "date": "2025-03-25",
+            "open": 60900,
+            "high": 61100,
+            "low": 59500,
+            "close": 59800,
+            "volume": 17259455,
+            "change": -700,
+            "change_percent": -1.16
+           },
+           {
+            "date": "2025-09-19",
+            "open": 81100,
+            "high": 81200,
+            "low": 79600,
+            "close": 79700,
+            "volume": 20898386,
+            "change": -800,
+            "change_percent": -0.99
+           },
+           {
+            "date": "2026-03-26",
+            "open": 185500,
+            "high": 185900,
+            "low": 178900,
+            "close": 180100,
+            "volume": 32074131,
+            "change": -8900,
+            "change_percent": -4.71
+           },
+           {
+            "date": "2026-09-22",
+            "open": 283000,
+            "high": 283500,
+            "low": 271500,
+            "close": 277500,
+            "volume": 18157410,
+            "change": 2500,
+            "change_percent": 0.91
+           },
+           {
+            "date": "2026-09-28",
+            "open": 284500,
+            "high": 285500,
+            "low": 268500,
+            "close": 270000,
+            "volume": 21080365,
+            "change": -16500,
+            "change_percent": -5.76
+           }
+          ],
+          "truncated": true,
+          "file_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/investment/kr_prices_005930_20260928_233525.json",
+          "sample": [
+           {
+            "date": "2021-09-28",
+            "open": 77700,
+            "high": 77800,
+            "low": 76200,
+            "close": 76300,
+            "volume": 15406382,
+            "change": null,
+            "change_percent": null
+           },
+           {
+            "date": "2022-03-29",
+            "open": 70000,
+            "high": 70300,
+            "low": 69800,
+            "close": 70200,
+            "volume": 13686208,
+            "change": 500,
+            "change_percent": 0.72
+           },
+           {
+            "date": "2022-09-23",
+            "open": 54400,
+            "high": 54900,
+            "low": 54200,
+            "close": 54500,
+            "volume": 10555964,
+            "change": 100,
+            "change_percent": 0.18
+           },
+           {
+            "date": "2023-03-22",
+            "open": 61000,
+            "high": 61200,
+            "low": 60500,
+            "close": 61100,
+            "volume": 8978591,
+            "change": 800,
+            "change_percent": 1.33
+           },
+           {
+            "date": "2023-09-15",
+            "open": 71700,
+            "high": 72300,
+            "low": 71400,
+            "close": 72000,
+            "volume": 17823512,
+            "change": 300,
+            "change_percent": 0.42
+           },
+           {
+            "date": "2024-03-20",
+            "open": 73700,
+            "high": 77200,
+            "low": 73400,
+            "close": 76900,
+            "volume": 50106297,
+            "change": 4100,
+            "change_percent": 5.63
+           },
+           {
+            "date": "2024-09-19",
+            "open": 64000,
+            "high": 64400,
+            "low": 62200,
+            "close": 63100,
+            "volume": 49402713,
+            "change": -1300,
+            "change_percent": -2.02
+           },
+           {
+            "date": "2025-03-25",
+            "open": 60900,
+            "high": 61100,
+            "low": 59500,
+            "close": 59800,
+            "volume": 17259455,
+            "change": -700,
+            "change_percent": -1.16
+           },
+           {
+            "date": "2025-09-19",
+            "open": 81100,
+            "high": 81200,
+            "low": 79600,
+            "close": 79700,
+            "volume": 20898386,
+            "change": -800,
+            "change_percent": -0.99
+           },
+           {
+            "date": "2026-03-26",
+            "open": 185500,
+            "high": 185900,
+            "low": 178900,
+            "close": 180100,
+            "volume": 32074131,
+            "change": -8900,
+            "change_percent": -4.71
+           },
+           {
+            "date": "2026-09-22",
+            "open": 283000,
+            "high": 283500,
+            "low": 271500,
+            "close": 277500,
+            "volume": 18157410,
+            "change": 2500,
+            "change_percent": 0.91
+           },
+           {
+            "date": "2026-09-28",
+            "open": 284500,
+            "high": 285500,
+            "low": 268500,
+            "close": 270000,
+            "volume": 21080365,
+            "change": -16500,
+            "change_percent": -5.76
+           }
+          ]
+         },
+         "summary": "삼성전자(005930) 현재가: 270,000원, 기간: 2021-09-28 ~ 2026-09-28, 총 1223거래일. 전체 데이터: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/investment/kr_prices_005930_20260928_233525.json",
+         "table": {
+          "columns": [
+           "날짜",
+           "종가"
+          ],
+          "rows": [
+           [
+            "2021-09-28",
+            76300
+           ],
+           [
+            "2022-03-29",
+            70200
+           ],
+           [
+            "2022-09-23",
+            54500
+           ],
+           [
+            "2023-03-22",
+            61100
+           ],
+           [
+            "2023-09-15",
+            72000
+           ],
+           [
+            "2024-03-20",
+            76900
+           ],
+           [
+            "2024-09-19",
+            63100
+           ],
+           [
+            "2025-03-25",
+            59800
+           ],
+           [
+            "2025-09-19",
+            79700
+           ],
+           [
+            "2026-03-26",
+            180100
+           ],
+           [
+            "2026-09-22",
+            277500
+           ],
+           [
+            "2026-09-28",
+            270000
+           ]
+          ]
+         },
+         "items": [
+          {
+           "date": "2021-09-28",
+           "open": 77700,
+           "high": 77800,
+           "low": 76200,
+           "close": 76300,
+           "volume": 15406382,
+           "change": null,
+           "change_percent": null
+          },
+          {
+           "date": "2022-03-29",
+           "open": 70000,
+           "high": 70300,
+           "low": 69800,
+           "close": 70200,
+           "volume": 13686208,
+           "change": 500,
+           "change_percent": 0.72
+          },
+          {
+           "date": "2022-09-23",
+           "open": 54400,
+           "high": 54900,
+           "low": 54200,
+           "close": 54500,
+           "volume": 10555964,
+           "change": 100,
+           "change_percent": 0.18
+          },
+          {
+           "date": "2023-03-22",
+           "open": 61000,
+           "high": 61200,
+           "low": 60500,
+           "close": 61100,
+           "volume": 8978591,
+           "change": 800,
+           "change_percent": 1.33
+          },
+          {
+           "date": "2023-09-15",
+           "open": 71700,
+           "high": 72300,
+           "low": 71400,
+           "close": 72000,
+           "volume": 17823512,
+           "change": 300,
+           "change_percent": 0.42
+          },
+          {
+           "date": "2024-03-20",
+           "open": 73700,
+           "high": 77200,
+           "low": 73400,
+           "close": 76900,
+           "volume": 50106297,
+           "change": 4100,
+           "change_percent": 5.63
+          },
+          {
+           "date": "2024-09-19",
+           "open": 64000,
+           "high": 64400,
+           "low": 62200,
+           "close": 63100,
+           "volume": 49402713,
+           "change": -1300,
+           "change_percent": -2.02
+          },
+          {
+           "date": "2025-03-25",
+           "open": 60900,
+           "high": 61100,
+           "low": 59500,
+           "close": 59800,
+           "volume": 17259455,
+           "change": -700,
+           "change_percent": -1.16
+          },
+          {
+           "date": "2025-09-19",
+           "open": 81100,
+           "high": 81200,
+           "low": 79600,
+           "close": 79700,
+           "volume": 20898386,
+           "change": -800,
+           "change_percent": -0.99
+          },
+          {
+           "date": "2026-03-26",
+           "open": 185500,
+           "high": 185900,
+           "low": 178900,
+           "close": 180100,
+           "volume": 32074131,
+           "change": -8900,
+           "change_percent": -4.71
+          },
+          {
+           "date": "2026-09-22",
+           "open": 283000,
+           "high": 283500,
+           "low": 271500,
+           "close": 277500,
+           "volume": 18157410,
+           "change": 2500,
+           "change_percent": 0.91
+          },
+          {
+           "date": "2026-09-28",
+           "open": 284500,
+           "high": 285500,
+           "low": 268500,
+           "close": 270000,
+           "volume": 21080365,
+           "change": -16500,
+           "change_percent": -5.76
+          }
+         ],
+         "truncated": true,
+         "total": 1223,
+         "truncations": [
+          {
+           "scope": "source",
+           "reason": "max_points",
+           "limit": 10,
+           "retained": 12
+          }
+         ]
+        },
+        "evidence": [
+         13
+        ],
+        "details": {
+         "completion": [],
+         "truncation": {
+          "truncations": [
+           {
+            "scope": "source",
+            "reason": "max_points",
+            "limit": 10,
+            "retained": 12
+           }
+          ]
+         },
+         "markers": {
+          "truncations": [
+           {
+            "scope": "source",
+            "reason": "max_points",
+            "limit": 10,
+            "retained": 12
+           }
+          ],
+          "truncated": true
+         }
+        },
+        "source_span": {
+         "source_hash": "c94157f58282f78a4282bd9c378ea57eb991c351a65d4970bfbe86f267bf5245",
+         "start": 23,
+         "end": 80,
+         "line": 2,
+         "column": 8
+        }
+       }
+      }
+     },
+     "source_span": {
+      "source_hash": "c94157f58282f78a4282bd9c378ea57eb991c351a65d4970bfbe86f267bf5245",
+      "start": 23,
+      "end": 80,
+      "line": 2,
+      "column": 8
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "5e615ab47ceda3ff7788b8a98a4e7e42d420735204d7dd07f462686a2bb119ab",
+    "source_complete": false,
+    "usage": {
+     "steps": 15,
+     "rows": 0,
+     "elapsed_ms": 203
+    },
+    "resume": {
+     "run_id": "4b341575681c44959ce40ebf2c2a4087"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "4b341575681c44959ce40ebf2c2a4087"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 18,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 12,
+       "action": "sense:stock",
+       "code": "PARTIAL_SOURCE",
+       "failure_kind": "partial",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "fc031068fbee00b86b7d64e654c1df6f3a2073652210dd24bb596df6e5939613",
+     "chars": 48660,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "diagnostic",
+        "details"
+       ],
+       "chars": 13251
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial"
+       ],
+       "chars": 5859
+      }
+     ],
+     "read_args": {
+      "id": "fc031068fbee00b86b7d64e654c1df6f3a2073652210dd24bb596df6e5939613",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "partial_reads": [
+      {
+       "branch_index": 1,
+       "partial_index": 0,
+       "read_args": {
+        "id": "fc031068fbee00b86b7d64e654c1df6f3a2073652210dd24bb596df6e5939613",
+        "path": [
+         "diagnostic",
+         "partial",
+         0
+        ],
+        "offset": 0,
+        "limit": 60000
+       },
+       "input_args": {
+        "입력": {
+         "$ref": "fc031068fbee00b86b7d64e654c1df6f3a2073652210dd24bb596df6e5939613",
+         "path": [
+          "diagnostic",
+          "partial",
+          0
+         ]
+        }
+       }
+      }
+     ],
+     "partial_reads_omitted": 0,
+     "partial_mapping_read_args": {
+      "id": "fc031068fbee00b86b7d64e654c1df6f3a2073652210dd24bb596df6e5939613",
+      "path": [
+       "diagnostic",
+       "details"
+      ],
+      "offset": 0,
+      "limit": 60000
+     }
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t15",
+   "request": {
+    "code": "#!ibl edition=2\n\n$h = [sense:stock]{op:\"history\", ticker:\"005930\", period:\"5y\", max_points:1500}\n$w = [sense:world_bank]{indicator:\"GDP\", country:\"한국\"}\n$y = $h.items >> [table:compute]{set:($x)=> {연도: $x.date[0:4]}}\n$ya = $y >> [table:groupby]{by:\"연도\", agg:{평균종가:[\"avg\",\"close\"]}}\n$j = [table:join]{left:$ya.items, right:$w.items, on:\"연도\"}\nreturn {h_n:len($h.items), h_trunc:get($h,\"truncations\",null), w_n:len($w.items), joined:$j.items}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": false,
+    "error": "도구의 원천 결과가 불완전합니다.",
+    "diagnostic": {
+     "code": "PARTIAL_SOURCE",
+     "kind": "partial",
+     "message": "도구의 원천 결과가 불완전합니다.",
+     "frames": [],
+     "has_partial": true,
+     "partial": {
+      "success": true,
+      "data": {
+       "symbol": "005930",
+       "name": "삼성전자",
+       "start_date": "2021-09-28",
+       "end_date": "2026-09-28",
+       "total_days": 1223,
+       "latest": {
+        "date": "2026-09-28",
+        "open": 284500,
+        "high": 285500,
+        "low": 268500,
+        "close": 270000,
+        "volume": 21080365,
+        "change": -16500,
+        "change_percent": -5.76
+       },
+       "prices": [
+        {
+         "date": "2021-09-28",
+         "open": 77700,
+         "high": 77800,
+         "low": 76200,
+         "close": 76300
+        },
+        {
+         "date": "2021-09-29",
+         "open": 74800,
+         "high": 75300,
+         "low": 73800,
+         "close": 74100
+        },
+        {
+         "date": "2021-09-30",
+         "open": 74300,
+         "high": 74800,
+         "low": 73700,
+         "close": 74100
+        },
+        {
+         "date": "2021-10-01",
+         "open": 73900,
+         "high": 74000,
+         "low": 72900,
+         "close": 73200
+        },
+        {
+         "date": "2021-10-05",
+         "open": 73000,
+         "high": 73000,
+         "low": 71400,
+         "close": 72200
+        },
+        {
+         "date": "2021-10-06",
+         "open": 72600,
+         "high": 72800,
+         "low": 71200,
+         "close": 71300
+        },
+        {
+         "date": "2021-10-07",
+         "open": 71600,
+         "high": 72100,
+         "low": 71300,
+         "close": 71600
+        },
+        {
+         "date": "2021-10-08",
+         "open": 72300,
+         "high": 72400,
+         "low": 71500,
+         "close": 71500
+        },
+        {
+         "date": "2021-10-12",
+         "open": 70700,
+         "high": 70900,
+         "low": 68700,
+         "close": 69000
+        },
+        {
+         "date": "2021-10-13",
+         "open": 68700,
+         "high": 69600,
+         "low": 68300,
+         "close": 68800
+        },
+        {
+         "date": "2021-10-14",
+         "open": 69000,
+         "high": 69800,
+         "low": 68800,
+         "close": 69400
+        },
+        {
+         "date": "2021-10-15",
+         "open": 70200,
+         "high": 71000,
+         "low": 70000,
+         "close": 70100
+        },
+        {
+         "date": "2021-10-18",
+         "open": 70200,
+         "high": 70300,
+         "low": 69200,
+         "close": 70200
+        },
+        {
+         "date": "2021-10-19",
+         "open": 70800,
+         "high": 71000,
+         "low": 70400,
+         "close": 70600
+        },
+        {
+         "date": "2021-10-20",
+         "open": 70700,
+         "high": 71000,
+         "low": 70200,
+         "close": 70300
+        },
+        {
+         "date": "2021-10-21",
+         "open": 70300,
+         "high": 70600,
+         "low": 70000,
+         "close": 70200
+        },
+        {
+         "date": "2021-10-22",
+         "open": 70000,
+         "high": 70700,
+         "low": 70000,
+         "close": 70400
+        }
+       ],
+       "truncated": true,
+       "file_path": "/Users/kangkukjin/Desktop/AI/indiebizOS/outputs/investment/kr_prices_005930_20260928_233526.json",
+       "sample": [
+        {
+         "date": "2021-09-28",
+         "open": 77700,
+         "high": 77800,
+         "low": 76200,
+         "close": 76300
+        },
+        {
+         "date": "2021-09-29",
+         "open": 74800,
+         "high": 75300,
+         "low": 73800,
+         "close": 74100
+        },
+        {
+         "date": "2021-09-30",
+         "open": 74300,
+         "high": 74800,
+         "low": 73700,
+         "close": 74100
+        },
+        {
+         "date": "2021-10-01",
+         "open": 73900,
+         "high": 74000,
+         "low": 72900,
+         "close": 73200
+        },
+        {
+         "date": "2021-10-05",
+         "open": 73000,
+         "high": 73000,
+         "low": 71400,
+         "close": 72200
+        },
+        {
+         "date": "2021-10-06",
+         "open": 72600,
+         "high": 72800,
+         "low": 71200,
+         "close": 71300
+        },
+        {
+         "date": "2021-10-07",
+         "open": 71600,
+         "high": 72100,
+         "low": 71300,
+         "close": 71600
+        },
+        {
+         "date": "2021-10-08",
+         "open": 72300,
+         "high": 72400,
+         "low": 71500,
+         "close": 71500
+        },
+        {
+         "date": "2021-10-12",
+         "open": 70700,
+         "high": 70900,
+         "low": 68700,
+         "close": 69000
+        },
+        {
+         "date": "2021-10-13",
+         "open": 68700,
+         "high": 69600,
+         "low": 68300,
+         "close": 68800
+        },
+        {
+         "date": "2021-10-14",
+         "open": 69000,
+         "high": 69800,
+         "low": 68800,
+         "close": 69400
+        },
+        {
+         "date": "2021-10-15",
+         "open": 70200,
+         "high": 71000,
+         "low": 70000,
+         "close": 70100
+        },
+        {
+         "date": "2021-10-18",
+         "open": 70200,
+         "high": 70300,
+         "low": 69200,
+         "close": 70200
+        },
+        {
+         "date": "2021-10-19",
+         "open": 70800,
+         "high": 71000,
+         "low": 70400,
+         "close": 70600
+        },
+        {
+         "date": "2021-10-20",
+         "open": 70700,
+         "high": 71000,
+         "low": 70200,
+         "close": 70300
+        },
+        {
+         "date": "2021-10-21",
+         "open": 70300,
+         "high": 70600,
+         "low": 70000,
+         "close": 70200
+        },
+        {
+         "date": "2021-10-22",
+         "open": 70000,
+         "high": 70700,
+         "low": 70000,
+         "close": 70400
+        }
+       ]
+      },
+      "summary": "삼성전자(005930) 현재가: 270,000원, 기간: 2021-09-28 ~ 2026-09-28, 총 1223거래일. 전체 데이터: /Users/kangkukjin/Desktop/AI/indiebizOS/outputs/investment/kr_prices_005930_20260928_233526.json",
+      "table": {
+       "columns": [
+        "날짜",
+        "종가"
+       ],
+       "rows": [
+        [
+         "2021-09-28",
+         76300
+        ],
+        [
+         "2021-09-29",
+         74100
+        ],
+        [
+         "2021-09-30",
+         74100
+        ],
+        [
+         "2021-10-01",
+         73200
+        ],
+        [
+         "2021-10-05",
+         72200
+        ],
+        [
+         "2021-10-06",
+         71300
+        ],
+        [
+         "2021-10-07",
+         71600
+        ],
+        [
+         "2021-10-08",
+         71500
+        ],
+        [
+         "2021-10-12",
+         69000
+        ],
+        [
+         "2021-10-13",
+         68800
+        ],
+        [
+         "2021-10-14",
+         69400
+        ],
+        [
+         "2021-10-15",
+         70100
+        ],
+        [
+         "2021-10-18",
+         70200
+        ],
+        [
+         "2021-10-19",
+         70600
+        ],
+        [
+         "2021-10-20",
+         70300
+        ],
+        [
+         "2021-10-21",
+         70200
+        ],
+        [
+         "2021-10-22",
+         70400
+        ],
+        [
+         "2021-10-25",
+         70200
+        ],
+        [
+         "2021-10-26",
+         71100
+        ],
+        [
+         "2021-10-27",
+         70100
+        ],
+        [
+         "2021-10-28",
+         70700
+        ],
+        [
+         "2021-10-29",
+         69800
+        ],
+        [
+         "2021-11-01",
+         69900
+        ],
+        [
+         "2021-11-02",
+         71500
+        ],
+        [
+         "2021-11-03",
+         70400
+        ],
+        [
+         "2021-11-04",
+         70600
+        ],
+        [
+         "2021-11-05",
+         70200
+        ],
+        [
+         "2021-11-08",
+         70600
+        ],
+        [
+         "2021-11-09",
+         70500
+        ],
+        [
+         "2021-11-10",
+         70200
+        ],
+        [
+         "2021-11-11",
+         69900
+        ],
+        [
+         "2021-11-12",
+         70600
+        ],
+        [
+         "2021-11-15",
+         71400
+        ],
+        [
+         "2021-11-16",
+         71300
+        ],
+        [
+         "2021-11-17",
+         70700
+        ],
+        [
+         "2021-11-18",
+         70200
+        ],
+        [
+         "2021-11-19",
+         71200
+        ],
+        [
+         "2021-11-22",
+         74900
+        ],
+        [
+         "2021-11-23",
+         75300
+        ],
+        [
+         "2021-11-24",
+         74800
+        ]
+       ]
+      },
+      "items": [
+       {
+        "date": "2021-09-28",
+        "open": 77700,
+        "high": 77800,
+        "low": 76200,
+        "close": 76300
+       },
+       {
+        "date": "2021-09-29",
+        "open": 74800,
+        "high": 75300,
+        "low": 73800,
+        "close": 74100
+       },
+       {
+        "date": "2021-09-30",
+        "open": 74300,
+        "high": 74800,
+        "low": 73700,
+        "close": 74100
+       },
+       {
+        "date": "2021-10-01",
+        "open": 73900,
+        "high": 74000,
+        "low": 72900,
+        "close": 73200
+       },
+       {
+        "date": "2021-10-05",
+        "open": 73000,
+        "high": 73000,
+        "low": 71400,
+        "close": 72200
+       },
+       {
+        "date": "2021-10-06",
+        "open": 72600,
+        "high": 72800,
+        "low": 71200,
+        "close": 71300
+       },
+       {
+        "date": "2021-10-07",
+        "open": 71600,
+        "high": 72100,
+        "low": 71300,
+        "close": 71600
+       },
+       {
+        "date": "2021-10-08",
+        "open": 72300,
+        "high": 72400,
+        "low": 71500,
+        "close": 71500
+       },
+       {
+        "date": "2021-10-12",
+        "open": 70700,
+        "high": 70900,
+        "low": 68700,
+        "close": 69000
+       },
+       {
+        "date": "2021-10-13",
+        "open": 68700,
+        "high": 69600,
+        "low": 68300,
+        "close": 68800
+       },
+       {
+        "date": "2021-10-14",
+        "open": 69000,
+        "high": 69800,
+        "low": 68800,
+        "close": 69400
+       },
+       {
+        "date": "2021-10-15",
+        "open": 70200,
+        "high": 71000,
+        "low": 70000,
+        "close": 70100
+       },
+       {
+        "date": "2021-10-18",
+        "open": 70200,
+        "high": 70300,
+        "low": 69200,
+        "close": 70200
+       },
+       {
+        "date": "2021-10-19",
+        "open": 70800,
+        "high": 71000,
+        "low": 70400,
+        "close": 70600
+       },
+       {
+        "date": "2021-10-20",
+        "open": 70700,
+        "high": 71000,
+        "low": 70200,
+        "close": 70300
+       },
+       {
+        "date": "2021-10-21",
+        "open": 70300,
+        "high": 70600,
+        "low": 70000,
+        "close": 70200
+       },
+       {
+        "date": "2021-10-22",
+        "open": 70000,
+        "high": 70700,
+        "low": 70000,
+        "close": 70400
+       },
+       {
+        "date": "2021-10-25",
+        "open": 69900,
+        "high": 70600,
+        "low": 69500,
+        "close": 70200
+       },
+       {
+        "date": "2021-10-26",
+        "open": 70600,
+        "high": 71500,
+        "low": 70400,
+        "close": 71100
+       },
+       {
+        "date": "2021-10-27",
+        "open": 71000,
+        "high": 71000,
+        "low": 70000,
+        "close": 70100
+       },
+       {
+        "date": "2021-10-28",
+        "open": 69500,
+        "high": 72200,
+        "low": 69500,
+        "close": 70700
+       },
+       {
+        "date": "2021-10-29",
+        "open": 71200,
+        "high": 71600,
+        "low": 69700,
+        "close": 69800
+       },
+       {
+        "date": "2021-11-01",
+        "open": 70200,
+        "high": 70600,
+        "low": 69900,
+        "close": 69900
+       },
+       {
+        "date": "2021-11-02",
+        "open": 70800,
+        "high": 72200,
+        "low": 70700,
+        "close": 71500
+       },
+       {
+        "date": "2021-11-03",
+        "open": 71700,
+        "high": 71700,
+        "low": 70100,
+        "close": 70400
+       },
+       {
+        "date": "2021-11-04",
+        "open": 71200,
+        "high": 71600,
+        "low": 70500,
+        "close": 70600
+       },
+       {
+        "date": "2021-11-05",
+        "open": 71600,
+        "high": 71600,
+        "low": 70200,
+        "close": 70200
+       },
+       {
+        "date": "2021-11-08",
+        "open": 70400,
+        "high": 70600,
+        "low": 69800,
+        "close": 70600
+       },
+       {
+        "date": "2021-11-09",
+        "open": 70300,
+        "high": 71000,
+        "low": 70100,
+        "close": 70500
+       },
+       {
+        "date": "2021-11-10",
+        "open": 70300,
+        "high": 70900,
+        "low": 70200,
+        "close": 70200
+       },
+       {
+        "date": "2021-11-11",
+        "open": 69900,
+        "high": 70000,
+        "low": 69600,
+        "close": 69900
+       },
+       {
+        "date": "2021-11-12",
+        "open": 70200,
+        "high": 70900,
+        "low": 69900,
+        "close": 70600
+       },
+       {
+        "date": "2021-11-15",
+        "open": 71700,
+        "high": 71900,
+        "low": 70900,
+        "close": 71400
+       },
+       {
+        "date": "2021-11-16",
+        "open": 71500,
+        "high": 72000,
+        "low": 71300,
+        "close": 71300
+       },
+       {
+        "date": "2021-11-17",
+        "open": 71300,
+        "high": 71600,
+        "low": 70600,
+        "close": 70700
+       },
+       {
+        "date": "2021-11-18",
+        "open": 70700,
+        "high": 71000,
+        "low": 70200,
+        "close": 70200
+       },
+       {
+        "date": "2021-11-19",
+        "open": 70400,
+        "high": 71400,
+        "low": 70100,
+        "close": 71200
+       },
+       {
+        "date": "2021-11-22",
+        "open": 73300,
+        "high": 75200,
+        "low": 73000,
+        "close": 74900
+       },
+       {
+        "date": "2021-11-23",
+        "open": 76000,
+        "high": 76000,
+        "low": 74500,
+        "close": 75300
+       },
+       {
+        "date": "2021-11-24",
+        "open": 76000,
+        "high": 76200,
+        "low": 74100,
+        "close": 74800
+       }
+      ],
+      "truncated": true,
+      "total": 1223,
+      "truncations": [
+       {
+        "scope": "source",
+        "reason": "max_points",
+        "limit": 1500,
+        "retained": 1223
+       }
+      ]
+     },
+     "evidence": [
+      10
+     ],
+     "details": {
+      "completion": [],
+      "truncation": {
+       "truncations": [
+        {
+         "scope": "source",
+         "reason": "max_points",
+         "limit": 1500,
+         "retained": 1223
+        }
+       ]
+      },
+      "markers": {
+       "truncations": [
+        {
+         "scope": "source",
+         "reason": "max_points",
+         "limit": 1500,
+         "retained": 1223
+        }
+       ],
+       "truncated": true
+      }
+     },
+     "source_span": {
+      "source_hash": "cbf2e2f9dcf78a0ba377b2d27418dcb20cc6539bf34fc693989bc0bb8bd3e39f",
+      "start": 22,
+      "end": 96,
+      "line": 3,
+      "column": 6
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "18abc4097dcbe26148ace492e85feb029d8d6d550da4759eb506b137e2c8d461",
+    "source_complete": false,
+    "usage": {
+     "steps": 8,
+     "rows": 0,
+     "elapsed_ms": 259
+    },
+    "resume": {
+     "run_id": "36b4b355751b48d985ba66a5291c9b57"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 10,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 7,
+       "action": "sense:stock",
+       "code": "PARTIAL_SOURCE",
+       "failure_kind": "partial",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "partial_preview": {
+     "scope": "display",
+     "value_chars": 560629,
+     "shown_chars": 7963,
+     "changes": [
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices"
+       ],
+       "kind": "list",
+       "shown": 17,
+       "total": 1223,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices"
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        0
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         0
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        1
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         1
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        2
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         2
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        3
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         3
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        4
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         4
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        5
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         5
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        6
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         6
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        7
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         7
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        8
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         8
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        9
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         9
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        10
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         10
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        11
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         11
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        12
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         12
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        13
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         13
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      },
+      {
+       "path": [
+        "diagnostic",
+        "partial",
+        "data",
+        "prices",
+        14
+       ],
+       "kind": "record",
+       "shown": 5,
+       "total": 8,
+       "read_args": {
+        "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+        "path": [
+         "diagnostic",
+         "partial",
+         "data",
+         "prices",
+         14
+        ],
+        "offset": 0,
+        "limit": 60000
+       }
+      }
+     ],
+     "changes_total": 78,
+     "changes_omitted": 62,
+     "read_args": {
+      "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+      "path": [
+       "diagnostic",
+       "partial"
+      ],
+      "offset": 0,
+      "limit": 60000
+     },
+     "note": "표시용 사본입니다. 생략된 후보·필드는 미검토입니다. 조건 적용은 원문 inputs 참조로, 추가 읽기는 각 read_args로 수행하세요."
+    },
+    "result_ref": {
+     "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+     "chars": 3240809,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "diagnostic",
+        "partial"
+       ],
+       "chars": 859247
+      }
+     ],
+     "read_args": {
+      "id": "0bab0cdfecf69c5e02024d3efa9140530ab4447b6ad9660afdbf40427aa40a13",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t15",
+   "request": {
+    "code": "#!ibl edition=2\n\n$h = [sense:stock]{op:\"history\", ticker:\"005930\", period:\"5y\", max_points:100}\n$w = [sense:world_bank]{indicator:\"GDP\", country:\"한국\"}\n$y = $h.items >> [table:compute]{set:($x)=> {연도: $x.date[0:4]}}\n$ya = $y >> [table:groupby]{by:\"연도\", agg:{평균종가:[\"avg\",\"close\"]}}\n$j = [table:join]{left:$ya.items, right:$w.items, on:\"연도\"}\nreturn {h_n:len($h.items), h_trunc:get($h,\"truncations\",null), w_n:len($w.items), joined:$j.items}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "h_n": 103,
+     "h_trunc": [
+      {
+       "scope": "selection",
+       "reason": "max_points",
+       "limit": 100,
+       "retained": 103
+      }
+     ],
+     "w_n": 50,
+     "joined": [
+      {
+       "연도": "2021",
+       "평균종가": 74233.33333333333,
+       "GDP (current US$)": 1942313560965.9
+      },
+      {
+       "연도": "2022",
+       "평균종가": 63940,
+       "GDP (current US$)": 1799363116866.52
+      },
+      {
+       "연도": "2023",
+       "평균종가": 67119.04761904762,
+       "GDP (current US$)": 1844800934391.54
+      },
+      {
+       "연도": "2024",
+       "평균종가": 71100,
+       "GDP (current US$)": 1875388209406.8
+      },
+      {
+       "연도": "2025",
+       "평균종가": 70235,
+       "GDP (current US$)": 1872374961553.15
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "f0b58ba628b6854af4d4f73fc8ead798d9504f00a05e75e9b7acb6c5da605bc9",
+    "source_complete": true,
+    "usage": {
+     "steps": 1088,
+     "rows": 0,
+     "elapsed_ms": 405
+    },
+    "resume": {
+     "run_id": "024cf2d93a064387b9c17310186eb647"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "024cf2d93a064387b9c17310186eb647"
+      }
+     },
+     "read_calls": 3,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 680,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "6608a68a2d5313bad7c12a62aafa494e5de83b792818af80206c2816e38b5808",
+     "chars": 177889,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "joined"
+       ],
+       "chars": 464
+      }
+     ],
+     "read_args": {
+      "id": "6608a68a2d5313bad7c12a62aafa494e5de83b792818af80206c2816e38b5808",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "6608a68a2d5313bad7c12a62aafa494e5de83b792818af80206c2816e38b5808"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t14",
+   "request": {
+    "code": "#!ibl edition=2\n\n$s = [sense:kosis]{query:\"시군구별 주민등록인구\"}\n$m = [sense:kosis]{org_id:\"101\", tbl_id:\"DT_1B040A3\", info:true}\n$hd = $m.items[0].codes >> [table:filter]{where:($x)=> contains($x.name, \"흥덕\")}\n$pop = [sense:kosis]{org_id:\"101\", tbl_id:\"DT_1B040A3\", obj_l1:$hd[0].id, prd_se:\"M\", start_prd_de:\"202608\", end_prd_de:\"202609\"}\n$t = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"trade\", start_month:\"202608\", end_month:\"202609\"}\n$cnt = $t.items >> [table:groupby]{by:\"조회년월\", agg:{매매건수:[\"count\"]}}\n$cn = $cnt.items >> [table:rename]{map:{조회년월:\"기간\"}}\n$j = [table:join]{left:$pop.items, right:$cn, on:\"기간\"}\nreturn {search_n:len($s.items), code:$hd, pop_n:len($pop.items), pop_keys:keys($pop.items[0]), pop0:$pop.items[0], joined:$j.items}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "reuse": {
+     "run_id": "76356b4f381f474487566303271af040"
+    }
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "search_n": 10,
+     "code": [
+      {
+       "id": "43113",
+       "name": "흥덕구"
+      }
+     ],
+     "pop_n": 1,
+     "pop_keys": [
+      "기간",
+      "총인구수 · 흥덕구 (명)",
+      "남자인구수 · 흥덕구 (명)",
+      "여자인구수 · 흥덕구 (명)"
+     ],
+     "pop0": {
+      "기간": "202608",
+      "총인구수 · 흥덕구 (명)": 294300.0,
+      "남자인구수 · 흥덕구 (명)": 150323.0,
+      "여자인구수 · 흥덕구 (명)": 143977.0
+     },
+     "joined": [
+      {
+       "기간": "202608",
+       "총인구수 · 흥덕구 (명)": 294300.0,
+       "남자인구수 · 흥덕구 (명)": 150323.0,
+       "여자인구수 · 흥덕구 (명)": 143977.0,
+       "매매건수": 275
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "565cf1b8a4f579353aaadc0f98799b288f9e07ce74b1b65c9ea1e0501963b1cc",
+    "source_complete": true,
+    "usage": {
+     "steps": 2605,
+     "rows": 0,
+     "elapsed_ms": 308
+    },
+    "precheck_warnings": [
+     {
+      "code": "UNOBSERVED_FIELD",
+      "rule": "UNOBSERVED_FIELD",
+      "severity": "warning",
+      "message": "관측된 반환 필드에 없는 이름입니다: codes. 관측 필드: type, org_id, org_name, tbl_id, tbl_name, stat_name, description, title, meta, summary, url",
+      "source_span": {
+       "source_hash": "821d1a5cfb7d3a8ed2ba295293eafe38283d0e616b60ba73c901c5a9f6aafa2a",
+       "start": 128,
+       "end": 145,
+       "line": 5,
+       "column": 7
+      },
+      "call_path": [],
+      "facts": {
+       "field": "codes",
+       "observed": [
+        "type",
+        "org_id",
+        "org_name",
+        "tbl_id",
+        "tbl_name",
+        "stat_name",
+        "description",
+        "title",
+        "meta",
+        "summary",
+        "url"
+       ]
+      },
+      "hint": "describe로 계약을 조회하거나 작은 입력으로 한 번 실행해 실제 필드 이름을 확인하세요. 선택 필드는 has/get을 쓰세요.",
+      "location": {
+       "source_hash": "821d1a5cfb7d3a8ed2ba295293eafe38283d0e616b60ba73c901c5a9f6aafa2a",
+       "start": 128,
+       "end": 145,
+       "line": 5,
+       "column": 7,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 5,
+       "end_column": 24,
+       "offset_encoding": "unicode-codepoints"
+      }
+     }
+    ],
+    "reuse": {
+     "run_id": "76356b4f381f474487566303271af040",
+     "reused_calls": 5,
+     "candidates": 6
+    },
+    "resume": {
+     "run_id": "35b5438f9d6043cb86353306a1c041b0"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "35b5438f9d6043cb86353306a1c041b0"
+      }
+     },
+     "read_calls": 6,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 2198,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "d56c28341fec0cefb4912e4eb7a61a14f084ca737f8566e99d18c434f419f2b3",
+     "chars": 504072,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "d56c28341fec0cefb4912e4eb7a61a14f084ca737f8566e99d18c434f419f2b3",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "d56c28341fec0cefb4912e4eb7a61a14f084ca737f8566e99d18c434f419f2b3"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t20",
+   "request": {
+    "code": "#!ibl edition=2\n\n$m = [sense:realty]{source:\"naver\", region:\"없는동네가나다\"} ?? [sense:realty]{source:\"zigbang\", region:\"없는동네가나다\"}\nreturn {n:len($m.items), msg:get($m,\"message\",null)}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": false,
+    "error": "'없는동네가나다' 위치를 찾지 못했습니다. 더 구체적인 동·지역명으로 시도하세요.",
+    "diagnostic": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "message": "'없는동네가나다' 위치를 찾지 못했습니다. 더 구체적인 동·지역명으로 시도하세요.",
+     "frames": [],
+     "has_partial": false,
+     "partial": null,
+     "evidence": [
+      16
+     ],
+     "details": {},
+     "source_span": {
+      "source_hash": "7c0fa39403078f14c9a4c2cf00b9b972ac3f786406722fd42c3833cd6c9b0637",
+      "start": 74,
+      "end": 124,
+      "line": 3,
+      "column": 58
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "594ed71e75d3b05a313b6364007e9f50716e528b6504304b3077561b9b969307",
+    "source_complete": false,
+    "usage": {
+     "steps": 11,
+     "rows": 0,
+     "elapsed_ms": 1253
+    },
+    "resume": {
+     "run_id": "43cdf1973f7543b8be09a5b1075fa79b"
+    },
+    "resumed": false,
+    "run_status": "interrupted",
+    "evidence_summary": {
+     "events": 16,
+     "source_complete": false,
+     "tool_failures": 2,
+     "source_failures": 2,
+     "failures": [
+      {
+       "id": 5,
+       "action": "sense:realty",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      },
+      {
+       "id": 12,
+       "action": "sense:realty",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "fbc01e0260570ff00b896caa493d53b4ea42d404d30c8b17c97226983c935797",
+     "chars": 5940,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "fbc01e0260570ff00b896caa493d53b4ea42d404d30c8b17c97226983c935797",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "diagnostic"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요"
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 진단을 확인하고 완료된 읽기가 있으면 continuation으로 부분 수리를 이어가세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다."
+   }
+  },
+  {
+   "task": "t20",
+   "request": {
+    "code": "#!ibl edition=2\n\n[try] { $x = [sense:realty]{source:\"molit\", region:\"없는시가나다\", type:\"apt\", deal:\"trade\"}; $out = {n:len($x.items)} }\n[catch] { $out = {code:$error.code, kind:get($error,\"kind\",null), msg:$error.message} }\nreturn $out\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "code": "TOOL",
+     "kind": "runtime",
+     "msg": "'없는시가나다'에 해당하는 시군구를 찾지 못했습니다. 실거래가는 시군구 단위입니다 (예: 강남구, 청주시흥덕구). 시군구 이름으로 다시 시도하세요. district_codes로 목록을 확인할 수 있습니다."
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "dedfaff8a5cd7f210283baa3502924780257e606d07e45e68606bea971ee11ab",
+    "source_complete": false,
+    "usage": {
+     "steps": 25,
+     "rows": 0,
+     "elapsed_ms": 158
+    },
+    "resume": {
+     "run_id": "e5167128accc47f995fe16dc6a1860db"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "evidence_summary": {
+     "events": 25,
+     "source_complete": false,
+     "tool_failures": 1,
+     "source_failures": 1,
+     "failures": [
+      {
+       "id": 7,
+       "action": "sense:realty",
+       "code": "TOOL",
+       "failure_kind": "runtime",
+       "incomplete": true
+      }
+     ],
+     "failures_omitted": 0
+    },
+    "result_ref": {
+     "id": "81dd284d5cc927d21377e998f361f2750b7e4d759ad7e17749e44d99fb5f4169",
+     "chars": 7499,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "81dd284d5cc927d21377e998f361f2750b7e4d759ad7e17749e44d99fb5f4169",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "81dd284d5cc927d21377e998f361f2750b7e4d759ad7e17749e44d99fb5f4169"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t19",
+   "request": {
+    "code": "#!ibl edition=2\nreturn [sense:realty]{op:\"registry\", region:\"청주시 흥덕구\", query:\"오송역파라곤센트럴시티 101동\"}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "1847bc3257fe1b8c1d932b0ddfa59438594f4eb85f257e37d7dfcce76bf495a4",
+       "start": 23,
+       "end": 96,
+       "line": 2,
+       "column": 8
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "sense:realty",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "1847bc3257fe1b8c1d932b0ddfa59438594f4eb85f257e37d7dfcce76bf495a4",
+       "start": 23,
+       "end": 96,
+       "line": 2,
+       "column": 8,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 2,
+       "end_column": 81,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Record",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "44e10f7656542843ec7eb73a7b84a81b2631f9c6d808ca11ffb6aa911df1301f",
+    "dependencies": {
+     "source": "1847bc3257fe1b8c1d932b0ddfa59438594f4eb85f257e37d7dfcce76bf495a4",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 96
+      }
+     ],
+     "contracts": "bb30ea670611b10f33d3446e884fff958e4de61dc2e1b5d54f16e46372a2870b",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "1847bc3257fe1b8c1d932b0ddfa59438594f4eb85f257e37d7dfcce76bf495a4",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "1847bc3257fe1b8c1d932b0ddfa59438594f4eb85f257e37d7dfcce76bf495a4",
+        "start": 23,
+        "end": 96,
+        "line": 2,
+        "column": 8,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 2,
+        "end_column": 81,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "task": "t19",
+   "request": {
+    "code": "#!ibl edition=2\n$x = [sense:realty]{op:\"registry\", region:\"청주시 흥덕구\"}\nreturn {n:len(get($x,\"items\",[])), type:get($x,\"type\",null), period:get($x,\"period\",null), param_warning:get($x,\"param_warning\",null), keys:keys($x)}",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "reuse": {
+     "run_id": "1859ee509a7d400080512293c4858e21"
+    }
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "n": 825,
+     "type": "아파트 매매 (기간조회)",
+     "period": "202607 ~ 202609",
+     "param_warning": "op 'registry' 은(는) 이 액션의 선언된 op 가 아닙니다 — 선언된 op 로 고치세요. 사용 가능: ['codes', 'query']",
+     "keys": [
+      "param_warning",
+      "success",
+      "type",
+      "region_code",
+      "period",
+      "total",
+      "truncated",
+      "truncations",
+      "errors",
+      "summary",
+      "조회지역",
+      "items"
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "0b9572484a865b07a942ce900c5f67312b546bc5394de7eea1bba3859e46a315",
+    "source_complete": true,
+    "usage": {
+     "steps": 51,
+     "rows": 0,
+     "elapsed_ms": 9
+    },
+    "reuse": {
+     "run_id": "1859ee509a7d400080512293c4858e21",
+     "reused_calls": 1,
+     "candidates": 1
+    },
+    "resume": {
+     "run_id": "8dea914d8ebe45b9aede16549b0ef14c"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "8dea914d8ebe45b9aede16549b0ef14c"
+      }
+     },
+     "read_calls": 1,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 34,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "d0e0d08be09c11f8dc7e3ab5f64a275120f847760856515e6ae42c14a869980f",
+     "chars": 344338,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "d0e0d08be09c11f8dc7e3ab5f64a275120f847760856515e6ae42c14a869980f",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "d0e0d08be09c11f8dc7e3ab5f64a275120f847760856515e6ae42c14a869980f"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t21",
+   "request": {
+    "code": "#!ibl edition=2\n\n$a = [sense:http]{url:\"https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade\"}\n$b = [sense:http]{url:\"https://m.land.naver.com/\"}\n$u = [table:union]{inputs:[$a, $b]}\n$s = $u.items >> [table:select]{columns:[\"url\",\"status\",\"ok\",\"elapsed_ms\"]}\n$up = $s >> [table:filter]{where:($x)=> contains($x.url, \"data.go.kr\") and $x.status < 500}\n[if: len($up) > 0] { $route = \"molit\" } [else] { $route = \"naver\" }\nreturn {rows:$s, route:$route}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "rows": [
+      {
+       "url": "https://apis.data.go.kr/1613000/RTMSDataSvcAptTrade/getRTMSDataSvcAptTrade",
+       "status": 405,
+       "ok": false,
+       "elapsed_ms": 46
+      },
+      {
+       "url": "https://m.land.naver.com/",
+       "status": 200,
+       "ok": true,
+       "elapsed_ms": 55
+      }
+     ],
+     "route": "molit"
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "55a1c2941b9efcde0d4ffaa485f4e60ca972ce3f9ff83255c757fe71f0d0b0f0",
+    "source_complete": true,
+    "usage": {
+     "steps": 64,
+     "rows": 0,
+     "elapsed_ms": 209
+    },
+    "resume": {
+     "run_id": "a44f1457a0fc43d59f480fd8b03e7bc4"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "a44f1457a0fc43d59f480fd8b03e7bc4"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 67,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "658e25468b37155aeb66f8a3956debbc68a9191b9956bd7ea1d02b73046e4c57",
+     "chars": 20186,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "658e25468b37155aeb66f8a3956debbc68a9191b9956bd7ea1d02b73046e4c57",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "658e25468b37155aeb66f8a3956debbc68a9191b9956bd7ea1d02b73046e4c57"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t22",
+   "request": {
+    "code": "#!ibl edition=2\n\n$ask = [sense:realty]{source:\"naver\", region:\"청주 오송읍\", type:\"apt\", deal:\"trade\", limit:30}\n$five = $ask.items >> [table:filter]{where:($x)=> len($x.summary) > 0} >> [table:take]{n:5} >> [table:select]{columns:[\"title\",\"summary\",\"price\"]}\n$j = $five >> [table:judge]{instruction:\"매물 설명이 급매이거나 가격 조정 가능을 언급하는가\", as:\"급매\"}\nreturn {n:len($five), rows:($j.items >> [table:select]{columns:[\"title\",\"summary\",\"급매_result_value\",\"급매_result_status\"]})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "n": 5,
+     "rows": [
+      {
+       "title": "오송역파라곤센트럴시티 210동",
+       "summary": "방2개 A타입 풀옵션 에3 양창구조 채광.조망우수 · 4년이내 대단지 방두개 화장실두개",
+       "급매_result_value": false,
+       "급매_result_status": "decided"
+      },
+      {
+       "title": "오송역동아라이크텐 104동",
+       "summary": "바로입주가능.입주청소완료 생활하기 편리한 로얄동,에4대포함. 단지내부자 · 10년이내 방세개 화장실두개 고층",
+       "급매_result_value": false,
+       "급매_result_status": "decided"
+      },
+      {
+       "title": "오송호반베르디움 602동",
+       "summary": "인기동 호수초근접 작은방 호수뷰 멋진세대  27년1월 협의입주가능 · 25년이내 방세개 화장실두개 고층",
+       "급매_result_value": false,
+       "급매_result_status": "decided"
+      },
+      {
+       "title": "오송상록롯데캐슬 306동",
+       "summary": "즉시입주가능 인기A타입 상가 가까운 로얄동 · 25년이내 방세개 화장실두개 중층",
+       "급매_result_value": false,
+       "급매_result_status": "decided"
+      },
+      {
+       "title": "오송역파라곤센트럴시티 216동",
+       "summary": "C타입 풀옵션  남향 채광우수 전세안고매매가능 · 4년이내 대단지 방세개 화장실두개",
+       "급매_result_value": false,
+       "급매_result_status": "decided"
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "f3326db87114b4fb3809e624ef593b531ba9d1cd174ae749861efb803c28a55d",
+    "source_complete": true,
+    "usage": {
+     "steps": 260,
+     "rows": 0,
+     "elapsed_ms": 737
+    },
+    "resume": {
+     "run_id": "11f0fd00ab4f4a018b74b1469ce6b483"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "read_calls": 0,
+     "state_change_possible": true,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 235,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "1a6e5a75e6d0e93419d463d5800a0c4b05c9b4ba5de822af9de7afc7202d7dc7",
+     "chars": 62616,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "rows"
+       ],
+       "chars": 874
+      }
+     ],
+     "read_args": {
+      "id": "1a6e5a75e6d0e93419d463d5800a0c4b05c9b4ba5de822af9de7afc7202d7dc7",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "1a6e5a75e6d0e93419d463d5800a0c4b05c9b4ba5de822af9de7afc7202d7dc7"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t24",
+   "request": {
+    "code": "#!ibl edition=2\n\n$m = [sense:realty]{source:\"naver\", region:\"죽백동\", deal:\"lease\"} >> [table:since]{key:\"IT76_x\"}\n[if: count($m) > 0] { return \"보냄\" } [else] { return \"없음\" }\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "BUILTIN",
+      "message": "알 수 없는 내장 함수: count",
+      "source_span": {
+       "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+       "start": 117,
+       "end": 122,
+       "line": 4,
+       "column": 6
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+       "start": 117,
+       "end": 122,
+       "line": 4,
+       "column": 6,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 4,
+       "end_column": 11,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "BUILTIN",
+      "severity": "error",
+      "hint": "문법 전문의 내장 함수 이름을 쓰세요. 지역·저장 함수는 값으로 넘기지 않고 [fn:이름]{인자:값}으로 부르며, 목록의 원소마다 부를 때는 [table:each]{ [fn:이름]{인자:$it} }입니다."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+       "start": 22,
+       "end": 80,
+       "line": 3,
+       "column": 6
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "sense:realty",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+       "start": 22,
+       "end": 80,
+       "line": 3,
+       "column": 6,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 64,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     },
+     {
+      "source_span": {
+       "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+       "start": 84,
+       "end": 111,
+       "line": 3,
+       "column": 68
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "table:since",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+       "start": 84,
+       "end": 111,
+       "line": 3,
+       "column": 68,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 95,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 2,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Text",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "fe2bf00d6a06e3ed04119397ba3d46148243e96c2509b7c2a00c58e141ba8038",
+    "dependencies": {
+     "source": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 171
+      }
+     ],
+     "contracts": "1f6103e220046a9e5b69c252d8ffd8995eb0b7c9895a373fef5f8f354ed96501",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+        "start": 22,
+        "end": 80,
+        "line": 3,
+        "column": 6,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 64,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      },
+      {
+       "location": {
+        "source_hash": "a305054f99900a33778a5319bbc534afa0fa0c08d54d690f121d0f943366fdda",
+        "start": 84,
+        "end": 111,
+        "line": 3,
+        "column": 68,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 95,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "task": "t24",
+   "request": {
+    "code": "#!ibl edition=2\n\n$m = [sense:realty]{source:\"naver\", region:\"죽백동\", deal:\"lease\"}\nreturn {body:'$m.items.0.title'}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": true,
+    "status": "incomplete",
+    "issues": [],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "35aabd84d7d7e06cef09c0a0b8ca8a29d64e06a76f3d07e913f8cc76b14e1deb",
+       "start": 22,
+       "end": 80,
+       "line": 3,
+       "column": 6
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "sense:realty",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "35aabd84d7d7e06cef09c0a0b8ca8a29d64e06a76f3d07e913f8cc76b14e1deb",
+       "start": 22,
+       "end": 80,
+       "line": 3,
+       "column": 6,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 64,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "{body: Text}",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "be0ab2b3a69d47b55df72733619108ca27b91a04eb39caf054726ce2463fba0a",
+    "dependencies": {
+     "source": "35aabd84d7d7e06cef09c0a0b8ca8a29d64e06a76f3d07e913f8cc76b14e1deb",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 114
+      }
+     ],
+     "contracts": "bb30ea670611b10f33d3446e884fff958e4de61dc2e1b5d54f16e46372a2870b",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "35aabd84d7d7e06cef09c0a0b8ca8a29d64e06a76f3d07e913f8cc76b14e1deb",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "35aabd84d7d7e06cef09c0a0b8ca8a29d64e06a76f3d07e913f8cc76b14e1deb",
+        "start": 22,
+        "end": 80,
+        "line": 3,
+        "column": 6,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 64,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "task": "t24",
+   "request": {
+    "code": "#!ibl edition=2\n\nreturn [sense:realty]{source:\"naver\", region:\"죽백동\", deal:\"rent\", lease:\"전세\"} >> [if: count($items) > 10]{[table:take]{n:10}} [else]{[table:sort]{by:\"price\"}}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "check": true
+   },
+   "response": {
+    "edition": 2,
+    "mode": "check",
+    "executed": false,
+    "ok": false,
+    "status": "invalid",
+    "issues": [
+     {
+      "code": "PIPE_TARGET",
+      "message": "파이프 오른쪽은 명시 입력이 있는 호출이어야 합니다.",
+      "source_span": {
+       "source_hash": "3e5902a8a61005641b2fc2fbb769a4dd04ac5cbd3c0c3f5d5d8be953ba041bb6",
+       "start": 24,
+       "end": 174,
+       "line": 3,
+       "column": 8
+      },
+      "call_path": [],
+      "location": {
+       "source_hash": "3e5902a8a61005641b2fc2fbb769a4dd04ac5cbd3c0c3f5d5d8be953ba041bb6",
+       "start": 24,
+       "end": 174,
+       "line": 3,
+       "column": 8,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 158,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "rule": "PIPE_TARGET",
+      "severity": "error",
+      "hint": "파이프 오른쪽에는 앞 값을 첫 입력으로 받는 호출 하나를 둡니다. 식으로 가공하려면 앞 값을 $이름에 받은 뒤 쓰세요."
+     }
+    ],
+    "guards": [
+     {
+      "source_span": {
+       "source_hash": "3e5902a8a61005641b2fc2fbb769a4dd04ac5cbd3c0c3f5d5d8be953ba041bb6",
+       "start": 24,
+       "end": 93,
+       "line": 3,
+       "column": 8
+      },
+      "boundary": "legacy-envelope/1",
+      "action": "sense:realty",
+      "expected": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "location": {
+       "source_hash": "3e5902a8a61005641b2fc2fbb769a4dd04ac5cbd3c0c3f5d5d8be953ba041bb6",
+       "start": 24,
+       "end": 93,
+       "line": 3,
+       "column": 8,
+       "source": "<program>",
+       "uri": "ibl://program",
+       "end_line": 3,
+       "end_column": 77,
+       "offset_encoding": "unicode-codepoints"
+      },
+      "code": "RUNTIME_GUARD",
+      "rule": "RUNTIME_GUARD",
+      "severity": "information",
+      "message": "기존 JSON 봉투 Record; 인자·효과는 기존 실행기에서 확인",
+      "hint": "해당 위치의 계약과 호출 인자를 확인하세요."
+     }
+    ],
+    "guards_total": 1,
+    "guards_inner": 0,
+    "guards_omitted": 0,
+    "result_type": "Unknown",
+    "effects": [
+     "unknown"
+    ],
+    "functions": {},
+    "plan_hash": "5ef77956c20db67ede0c45e839329529a42e79877d8f5ffe1ad202436b9a03af",
+    "dependencies": {
+     "source": "3e5902a8a61005641b2fc2fbb769a4dd04ac5cbd3c0c3f5d5d8be953ba041bb6",
+     "libraries": "4043c55f37d3d45cc7f66b0739ed4dd08f77af9fc95b116c1ec133460f0228f7",
+     "calls": {},
+     "input_types": {},
+     "source_map": [
+      {
+       "name": "<program>",
+       "start": 0,
+       "end": 175
+      }
+     ],
+     "contracts": "bb30ea670611b10f33d3446e884fff958e4de61dc2e1b5d54f16e46372a2870b",
+     "edition": "90ad6fcf82ef68bf935486b8d0011d189d2124363e86b5c66c396131226c8078",
+     "semantics": "1905d009e0ba31955b03e5683a1f44659a62e8c5bf5cfe28b4e254c73fddbefe",
+     "expressions": "c8d5d7fcc5f97b9cf49ed81bf75b71449f2ec06d57cfdff50235888e9cc2f6c8",
+     "core": "1f695d594c349ae2487fc4261babe860d89f11097e12d486d2f94afaa38e887a"
+    },
+    "source_hash": "3e5902a8a61005641b2fc2fbb769a4dd04ac5cbd3c0c3f5d5d8be953ba041bb6",
+    "capabilities": [
+     "ibl-edition/2",
+     "ibl-value/1"
+    ],
+    "preflight": {
+     "status": "partial",
+     "declared_ai_visits_upper_bound": null,
+     "unknowns": [
+      {
+       "location": {
+        "source_hash": "3e5902a8a61005641b2fc2fbb769a4dd04ac5cbd3c0c3f5d5d8be953ba041bb6",
+        "start": 24,
+        "end": 93,
+        "line": 3,
+        "column": 8,
+        "source": "<program>",
+        "uri": "ibl://program",
+        "end_line": 3,
+        "end_column": 77,
+        "offset_encoding": "unicode-codepoints"
+       },
+       "reason": "호환·스크립트 경계 내부의 모델 호출은 미상"
+      }
+     ],
+     "warnings": [],
+     "warnings_omitted": 0,
+     "note": "선언된 AI 호출 방문 상한입니다. 도구 내부 호출·토큰·실행 시간·업무 품질의 보증이 아닙니다."
+    },
+    "warnings": [],
+    "note": "incomplete는 미확정 타입의 실행 시 검사를 포함합니다. 업무 품질·전건 완료의 보증이 아닙니다."
+   }
+  },
+  {
+   "task": "t23",
+   "request": {
+    "code": "#!ibl edition=2\n\n$n = [sense:realty]{source:\"naver\", region:\"청주 복대동\", type:\"villa\", deal:\"rent\", lease:\"전세\", limit:30}\n$z = [sense:realty]{source:\"zigbang\", region:\"청주 복대동\", type:\"villa\", deal:\"rent\", lease:\"전세\", limit:30}\n$nn = $n.items >> [table:compute]{set:($x)=> {보증금만원: $x.price / 10000, 출처:\"naver\"}}\n$zz = $z.items >> [table:compute]{set:($x)=> {보증금만원: $x.deposit, 출처:\"zigbang\"}}\n$m = [table:merge]{inputs:[$nn, $zz], by:\"url\"}\nreturn {naver:len($n.items), zigbang:len($z.items), merged:len($m.items), rows:($m.items >> [table:sort]{by:\"보증금만원\"} >> [table:take]{n:5} >> [table:select]{columns:[\"title\",\"보증금만원\",\"출처\"]})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "naver": 0,
+     "zigbang": 5,
+     "merged": 5,
+     "rows": [
+      {
+       "title": ".권리안전한 투룸전세",
+       "보증금만원": 6500,
+       "출처": "zigbang"
+      },
+      {
+       "title": ".비하동매물. 귀한 신축전세 투룸  큰방이쁜인테리어위치최고",
+       "보증금만원": 10000,
+       "출처": "zigbang"
+      },
+      {
+       "title": "권리관계  안전한  주인세대 전세",
+       "보증금만원": 15000,
+       "출처": "zigbang"
+      },
+      {
+       "title": "엘베가 있고 옥상도 단독 사용 에어컨 3개로 저렴히 가능",
+       "보증금만원": 16000,
+       "출처": "zigbang"
+      },
+      {
+       "title": "복대동, 주인세대 NEW FACE",
+       "보증금만원": 27000,
+       "출처": "zigbang"
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "42b9ac8ae63d030530e2fe5ebd839165ca3733d3486eee3f3cbc18515a4d89bf",
+    "source_complete": true,
+    "usage": {
+     "steps": 94,
+     "rows": 0,
+     "elapsed_ms": 1204
+    },
+    "resume": {
+     "run_id": "e7f139afa47b465ab8134882378e6cc6"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "e7f139afa47b465ab8134882378e6cc6"
+      }
+     },
+     "read_calls": 2,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 100,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "26460486367d1fa11ec7fef5c1d7d62c0a777d367eba045bd24586e9bbe863ea",
+     "chars": 30864,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "rows"
+       ],
+       "chars": 441
+      }
+     ],
+     "read_args": {
+      "id": "26460486367d1fa11ec7fef5c1d7d62c0a777d367eba045bd24586e9bbe863ea",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "26460486367d1fa11ec7fef5c1d7d62c0a777d367eba045bd24586e9bbe863ea"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t06",
+   "request": {
+    "code": "#!ibl edition=2\n\n$ask = [sense:realty]{source:\"naver\", region:\"청주 오송읍\", type:\"apt\", deal:\"trade\", limit:30}\n$t = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"trade\", start_month:\"202608\", end_month:\"202609\"}\n$deal = $t.items >> [table:groupby]{by:\"아파트명\", agg:{실거래평균:[\"avg\",\"price\"], 건수:[\"count\"]}}\n$dealn = $deal.items >> [table:rename]{map:{아파트명:\"name\"}}\n$askg = $ask.items >> [table:groupby]{by:\"name\", agg:{호가평균:[\"avg\",\"price\"], 매물:[\"count\"]}}\n$j = [table:join]{left:$askg.items, right:$dealn, on:\"name\"}\n$gap = $j.items >> [table:compute]{set:($x)=> {갭: round(($x.호가평균 - $x.실거래평균) / $x.실거래평균 * 100, 1)}}\nreturn {asks:len($ask.items), ask_names:len($askg.items), matched:len($j.items), ask_keys:keys($ask.items[0]), sample_meta:$ask.items[0].meta, rows:($gap >> [table:sort]{by:\"갭\", descending:true} >> [table:take]{n:5}), unmatched:[table:join]{how:\"anti\", left:$askg.items, right:$dealn, on:\"name\"}}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task"
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "asks": 30,
+     "ask_names": 7,
+     "matched": 6,
+     "ask_keys": [
+      "title",
+      "name",
+      "meta",
+      "summary",
+      "url",
+      "image",
+      "lat",
+      "lng",
+      "price"
+     ],
+     "sample_meta": "매매 4억 9,900 · 110/84㎡ · 19/25층 · 남향 · 확인 20260928 · 오송부자마을부동산중개 · 동일매물 13건",
+     "rows": [
+      {
+       "name": "오송상록롯데캐슬",
+       "호가평균": 385000000,
+       "매물": 1,
+       "실거래평균": 359166666.6666667,
+       "건수": 6,
+       "갭": 7.2
+      },
+      {
+       "name": "오송역동아라이크텐",
+       "호가평균": 483428571.4285714,
+       "매물": 7,
+       "실거래평균": 455600000,
+       "건수": 5,
+       "갭": 6.1
+      },
+      {
+       "name": "오송힐데스하임",
+       "호가평균": 712500000,
+       "매물": 2,
+       "실거래평균": 680000000,
+       "건수": 1,
+       "갭": 4.8
+      },
+      {
+       "name": "오송역파라곤센트럴시티",
+       "호가평균": 411470588.2352941,
+       "매물": 17,
+       "실거래평균": 404020833.3333333,
+       "건수": 24,
+       "갭": 1.8
+      },
+      {
+       "name": "오송경남아너스빌",
+       "호가평균": 315000000,
+       "매물": 1,
+       "실거래평균": 327500000,
+       "건수": 2,
+       "갭": -3.8
+      }
+     ],
+     "unmatched": {
+      "items": [
+       {
+        "name": "삼부청솔",
+        "호가평균": 60000000,
+        "매물": 1
+       }
+      ],
+      "count": 1,
+      "success": true
+     }
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "f5bc99c0725d48e0b356a0626bd77af5abfcfa0875a149cdb4354ad0a6f258a5",
+    "source_complete": true,
+    "usage": {
+     "steps": 211,
+     "rows": 0,
+     "elapsed_ms": 850
+    },
+    "resume": {
+     "run_id": "ef3e2e78ba8749568adca8d51f2b1810"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "ef3e2e78ba8749568adca8d51f2b1810"
+      }
+     },
+     "read_calls": 5,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 207,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "79f2a5b6aee03daf3371e9acc714d0e1cbe850ab35242549a24d24b5eb91fd26",
+     "chars": 278827,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "rows"
+       ],
+       "chars": 635
+      }
+     ],
+     "read_args": {
+      "id": "79f2a5b6aee03daf3371e9acc714d0e1cbe850ab35242549a24d24b5eb91fd26",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "79f2a5b6aee03daf3371e9acc714d0e1cbe850ab35242549a24d24b5eb91fd26"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t06",
+   "request": {
+    "code": "#!ibl edition=2\n\n$ask = [sense:realty]{source:\"naver\", region:\"청주 오송읍\", type:\"apt\", deal:\"trade\", limit:30}\n$t = [sense:realty]{source:\"molit\", region_code:\"43113\", type:\"apt\", deal:\"trade\", start_month:\"202608\", end_month:\"202609\"}\n# naver 행에는 면적 칸이 없다 — meta \"매매 3억 8,500 · 85/59㎡ · …\" 의 둘째 칸을 쪼개 전용면적을 꺼낸다\n$a2 = $ask.items >> [table:compute]{set:($x)=> {전용: number(replace(split(split($x.meta, \" · \")[1], \"/\")[1], \"㎡\", \"\"))}}\n$a59 = $a2 >> [table:filter]{where:($x)=> $x.전용 >= 59 and $x.전용 <= 85}\n$t59 = $t.items >> [table:filter]{where:($x)=> number($x.전용면적) >= 59 and number($x.전용면적) <= 85}\n$ag = $a59 >> [table:groupby]{by:\"name\", agg:{호가평균:[\"avg\",\"price\"], 매물:[\"count\"]}}\n$tg = $t59 >> [table:groupby]{by:\"아파트명\", agg:{실거래평균:[\"avg\",\"price\"], 건수:[\"count\"]}}\n$tn = $tg.items >> [table:rename]{map:{아파트명:\"name\"}}\n$j = [table:join]{left:$ag.items, right:$tn, on:\"name\"}\n$gap = $j.items >> [table:compute]{set:($x)=> {갭: round(($x.호가평균 - $x.실거래평균) / $x.실거래평균 * 100, 1)}}\nreturn {asks_59_85:len($a59), matched:len($j.items), rows:($gap >> [table:sort]{by:\"갭\", descending:true})}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "reuse": {
+     "run_id": "206af466c72041f5864857e5d6b4d979"
+    }
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "asks_59_85": 26,
+     "matched": 5,
+     "rows": [
+      {
+       "name": "오송역동아라이크텐",
+       "호가평균": 490571428.5714286,
+       "매물": 7,
+       "실거래평균": 455600000,
+       "건수": 5,
+       "갭": 7.7
+      },
+      {
+       "name": "오송상록롯데캐슬",
+       "호가평균": 385000000,
+       "매물": 1,
+       "실거래평균": 359166666.6666667,
+       "건수": 6,
+       "갭": 7.2
+      },
+      {
+       "name": "오송역파라곤센트럴시티",
+       "호가평균": 414687500,
+       "매물": 16,
+       "실거래평균": 404020833.3333333,
+       "건수": 24,
+       "갭": 2.6
+      },
+      {
+       "name": "오송경남아너스빌",
+       "호가평균": 315000000,
+       "매물": 1,
+       "실거래평균": 327500000,
+       "건수": 2,
+       "갭": -3.8
+      },
+      {
+       "name": "오송호반베르디움",
+       "호가평균": 360000000,
+       "매물": 1,
+       "실거래평균": 395000000,
+       "건수": 4,
+       "갭": -8.9
+      }
+     ]
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "555f69aa1847bb0057e10945a32a7dd3a97b79e64bee104cd4af9522e29f5023",
+    "source_complete": true,
+    "usage": {
+     "steps": 7796,
+     "rows": 0,
+     "elapsed_ms": 418
+    },
+    "reuse": {
+     "run_id": "206af466c72041f5864857e5d6b4d979",
+     "reused_calls": 2,
+     "candidates": 5
+    },
+    "resume": {
+     "run_id": "fab81086b9fe441490406277889de34d"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "fab81086b9fe441490406277889de34d"
+      }
+     },
+     "read_calls": 5,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 6568,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "210fe89421220d438c14d07dc0aeeccac9f561ea4e046f27d2c18b45d54910cb",
+     "chars": 938154,
+     "max_limit": 60000,
+     "paths": [
+      {
+       "path": [
+        "value",
+        "rows"
+       ],
+       "chars": 629
+      }
+     ],
+     "read_args": {
+      "id": "210fe89421220d438c14d07dc0aeeccac9f561ea4e046f27d2c18b45d54910cb",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "210fe89421220d438c14d07dc0aeeccac9f561ea4e046f27d2c18b45d54910cb"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  },
+  {
+   "task": "t12",
+   "request": {
+    "code": "#!ibl edition=2\n\n$fx = [sense:stock]{op:\"quote\", ticker:\"USDKRW=X\"}\n$gold = [sense:stock]{op:\"quote\", ticker:\"GC=F\"}\n$btc = [sense:crypto]{coin:\"BTC\"}\n$u = [table:union]{inputs:[$fx, $gold, $btc]}\n$rate = $fx.items[0].current_price\n$rows = $u.items >> [table:each] {\n  $cur = get($it, \"currency\", \"USD\")\n  [if: $cur == \"KRW\"] { $won = $it.current_price } [else] { $won = round($it.current_price * $rate) }\n  return {symbol:get($it,\"symbol\",null), 가격:$it.current_price, 통화:$cur, 원화:$won}\n}\nreturn {n:len($u.items), rows:$rows, btc_krw_field:$btc.items[0].current_price_krw, btc_usd_field:$btc.items[0].current_price_usd, btc_has_currency:has($btc.items[0], \"currency\")}\n",
+    "edition": 2,
+    "project_id": "컨텐츠",
+    "origin": "training",
+    "agent_id": "IT76_probe",
+    "task_id": "IT76_task",
+    "reuse": {
+     "run_id": "0e3659ca31f04f989b368e083aae8b5c"
+    }
+   },
+   "response": {
+    "success": true,
+    "value": {
+     "n": 3,
+     "rows": [
+      {
+       "symbol": "USDKRW=X",
+       "가격": 1358.9,
+       "통화": "KRW",
+       "원화": 1358.9
+      },
+      {
+       "symbol": "GC=F",
+       "가격": 4170.2,
+       "통화": "USD",
+       "원화": 5666885
+      },
+      {
+       "symbol": "BTC",
+       "가격": 113457457,
+       "통화": "USD",
+       "원화": 154177338317
+      }
+     ],
+     "btc_krw_field": 113457457,
+     "btc_usd_field": 83475,
+     "btc_has_currency": false
+    },
+    "edition": 2,
+    "executed": true,
+    "plan_hash": "3b0c40017c7247af778ba2742ba78de4cc3dca713a6ec6e22aea10916a08cd4e",
+    "source_complete": true,
+    "usage": {
+     "steps": 160,
+     "rows": 3,
+     "elapsed_ms": 38
+    },
+    "reuse": {
+     "run_id": "0e3659ca31f04f989b368e083aae8b5c",
+     "reused_calls": 3,
+     "candidates": 3
+    },
+    "resume": {
+     "run_id": "0815bca23f614bc8ab4d1c24d02f5784"
+    },
+    "resumed": false,
+    "run_status": "completed",
+    "continuation": {
+     "reuse_args": {
+      "reuse": {
+       "run_id": "0815bca23f614bc8ab4d1c24d02f5784"
+      }
+     },
+     "read_calls": 3,
+     "state_change_possible": false,
+     "hint": "프로그램 수정 뒤 이전 읽기를 이어 쓸 때 reuse_args를 요청에 합치세요. 현재 자료를 새로 조회해야 하면 쓰지 마세요. 상태 변경 이전·도중의 읽기와 실행 시점 값은 후보에서 제외합니다. 쓰기·모델 호출은 재사용하지 않습니다. 동일 코드·inputs의 기록 재개는 resume입니다. 확인된 실패도 그대로 복원합니다."
+    },
+    "evidence_summary": {
+     "events": 147,
+     "source_complete": true,
+     "tool_failures": 0,
+     "source_failures": 0
+    },
+    "result_ref": {
+     "id": "28c83e72be2966ce674d1ee4e86ed8db7fb54455fc2312a15475247d4775a185",
+     "chars": 37565,
+     "max_limit": 60000,
+     "paths": [],
+     "read_args": {
+      "id": "28c83e72be2966ce674d1ee4e86ed8db7fb54455fc2312a15475247d4775a185",
+      "offset": 0,
+      "limit": 60000,
+      "path": [
+       "value"
+      ]
+     },
+     "read": "execute_ibl(code=\"\", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요",
+     "input_args": {
+      "입력": {
+       "$ref": "28c83e72be2966ce674d1ee4e86ed8db7fb54455fc2312a15475247d4775a185"
+      }
+     },
+     "input_hint": "다음 execute_ibl의 inputs에 input_args를 넣으면 $입력은 이미 업무 값입니다(.value를 다시 붙이지 않습니다). 이름 변경·path 선택 가능. 가공은 참조로 하고 판단에 필요한 경로만 read_result로 읽으세요."
+    },
+    "_hint": "판본 2의 업무 값은 value, 손실 없는 타입 전송은 value_wire입니다. 다음 계산은 inputs:result_ref.input_args로 연결하고, 판단에 필요한 본문만 read_args로 읽으세요. success는 실행 상태이며 업무 완료·자료 완전성을 대신 판정하지 않습니다.",
+    "_display": {
+     "max_chars": 12000
+    }
+   }
+  }
+ ],
+ "passed": 21,
+ "total": 24
+}

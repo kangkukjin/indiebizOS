@@ -1,0 +1,145 @@
+{
+ "baseline": {
+  "at": "2026-09-28T23:24:25",
+  "notifications": [
+   {
+    "id": "68239476-facb-424f-875a-b31d8cb5efa5",
+    "type": "warning",
+    "title": "스케줄 실행 실패 — 홍보/",
+    "created_at": "2026-09-28T23:13:48.702220"
+   },
+   {
+    "id": "3dcee2a9-8fa4-4018-a2fa-251273a8e204",
+    "type": "warning",
+    "title": "스케줄 실행 실패 — 홍보/",
+    "created_at": "2026-09-28T22:13:48.326645"
+   },
+   {
+    "id": "08036491-73d6-4eb4-a421-ac6e07e2b6b6",
+    "type": "warning",
+    "title": "스케줄 실행 실패 — 홍보/",
+    "created_at": "2026-09-28T21:13:48.184017"
+   }
+  ],
+  "action_health_max_id": 242475,
+  "notify_log_max_id": 6243,
+  "since_streams": [
+   1,
+   25
+  ]
+ },
+ "after": {
+  "snapshot": {
+   "at": "2026-09-28T23:39:38",
+   "action_health_max_id": 242609,
+   "notify_log_max_id": 6243
+  },
+  "diff": {
+   "notifications_added": [],
+   "action_health_by_source": [
+    [
+     "training",
+     "agent",
+     134
+    ]
+   ],
+   "action_health_training_by_action": [
+    [
+     "sense:realty",
+     29,
+     26
+    ],
+    [
+     "sense:stock",
+     24,
+     22
+    ],
+    [
+     "table:groupby",
+     18,
+     18
+    ],
+    [
+     "table:join",
+     12,
+     11
+    ],
+    [
+     "table:rename",
+     11,
+     11
+    ],
+    [
+     "self:read",
+     10,
+     10
+    ],
+    [
+     "sense:kosis",
+     5,
+     5
+    ],
+    [
+     "sense:company",
+     5,
+     5
+    ],
+    [
+     "sense:world_bank",
+     4,
+     4
+    ],
+    [
+     "table:union",
+     3,
+     3
+    ],
+    [
+     "sense:crypto",
+     3,
+     3
+    ],
+    [
+     "table:merge",
+     2,
+     2
+    ],
+    [
+     "sense:legal",
+     2,
+     2
+    ],
+    [
+     "sense:http",
+     2,
+     2
+    ],
+    [
+     "table:judge",
+     1,
+     1
+    ],
+    [
+     "sense:weather",
+     1,
+     1
+    ],
+    [
+     "sense:commercial",
+     1,
+     1
+    ],
+    [
+     "self:ledger",
+     1,
+     1
+    ]
+   ],
+   "notify_log_new": [],
+   "since_streams": [
+    1,
+    25
+   ]
+  }
+ }
+}

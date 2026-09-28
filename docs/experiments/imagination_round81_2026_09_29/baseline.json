@@ -1,0 +1,260 @@
+{
+ "baseline": {
+  "at": "2026-09-29T03:29:48",
+  "notifications": [
+   {
+    "id": "77abbe6c-d3b7-4f07-aaef-5e87770b8240",
+    "type": "warning",
+    "created_at": "2026-09-29T03:15:06.260787"
+   },
+   {
+    "id": "a16c7a37-7888-4863-9f1c-c26ed352fbb2",
+    "type": "warning",
+    "created_at": "2026-09-29T02:15:05.911865"
+   },
+   {
+    "id": "f78df271-540f-49a7-87bf-78619a3ea8d0",
+    "type": "warning",
+    "created_at": "2026-09-29T01:15:05.492055"
+   }
+  ],
+  "action_health_max_id": 244743,
+  "notify_log_max_id": 6261,
+  "stores": {
+   "playlists": {
+    "size": 235,
+    "mtime": 1788433392.4745023,
+    "h": "b44750bf1b"
+   },
+   "music_sources": {
+    "size": 318,
+    "mtime": 1788433163.0471232,
+    "h": "7fa753ac98"
+   },
+   "music_scan_state": {
+    "size": 189,
+    "mtime": 1789215345.8880167,
+    "h": "fdcf584bd9"
+   },
+   "radio_favorites": {
+    "size": 1578,
+    "mtime": 1787182284.550917,
+    "h": "e6f1baf8ef"
+   },
+   "web_sites": {
+    "size": 2742,
+    "mtime": 1789452894.4737713,
+    "h": "76b101bf9a"
+   },
+   "voices": {
+    "size": 3797,
+    "mtime": 1788355914.3241644,
+    "h": "0764132d07"
+   },
+   "out_top": {
+    "entries": 122,
+    "h": "2ae12a0cf8"
+   },
+   "out_names": {
+    "count": 122,
+    "h": "c0a11d4c75"
+   },
+   "root_out_top": {
+    "entries": 281,
+    "h": "96cfd51765"
+   },
+   "root_out_names": {
+    "count": 281,
+    "h": "426b6458f9"
+   },
+   "lectures_tree": {
+    "entries": 827,
+    "h": "7472e0b0ec"
+   },
+   "music_library": 8087,
+   "usb_media_cache": null,
+   "ibl_examples": [
+    3735,
+    4911
+   ],
+   "episode_log_max": 4142,
+   "scratch_IT81": []
+  }
+ },
+ "after": {
+  "snapshot": {
+   "at": "2026-09-29T03:52:02",
+   "action_health_max_id": 244957,
+   "notify_log_max_id": 6264
+  },
+  "diff": {
+   "notifications_added": [
+    {
+     "id": "6bbb4bee-32b2-43f9-995f-af28c58b32a9",
+     "type": "success",
+     "created_at": "2026-09-29T03:30:09.040672"
+    },
+    {
+     "id": "c0944ad7-11cf-45a4-a484-e5482da28a41",
+     "type": "success",
+     "created_at": "2026-09-29T03:30:08.667860"
+    },
+    {
+     "id": "83b85564-0313-4719-aa33-9e4931c2fb95",
+     "type": "success",
+     "created_at": "2026-09-29T03:30:07.904974"
+    }
+   ],
+   "action_health_by_source": [
+    [
+     "training",
+     "agent",
+     181
+    ],
+    [
+     "usage",
+     "agent",
+     30
+    ],
+    [
+     "usage",
+     "scheduler",
+     3
+    ]
+   ],
+   "action_health_training_by_action": [
+    [
+     "self:photo",
+     44,
+     44
+    ],
+    [
+     "table:groupby",
+     25,
+     25
+    ],
+    [
+     "self:lecture",
+     22,
+     22
+    ],
+    [
+     "engines:render",
+     18,
+     18
+    ],
+    [
+     "self:music",
+     14,
+     12
+    ],
+    [
+     "table:join",
+     10,
+     10
+    ],
+    [
+     "self:list",
+     9,
+     9
+    ],
+    [
+     "engines:tts",
+     5,
+     1
+    ],
+    [
+     "table:document",
+     4,
+     4
+    ],
+    [
+     "limbs:radio_favorite",
+     4,
+     4
+    ],
+    [
+     "engines:web_site",
+     4,
+     4
+    ],
+    [
+     "engines:web_component",
+     4,
+     4
+    ],
+    [
+     "sense:radio",
+     3,
+     3
+    ],
+    [
+     "limbs:radio",
+     3,
+     3
+    ],
+    [
+     "engines:web",
+     3,
+     3
+    ],
+    [
+     "engines:image_read",
+     3,
+     3
+    ],
+    [
+     "self:write",
+     2,
+     2
+    ],
+    [
+     "self:read",
+     2,
+     2
+    ],
+    [
+     "self:blog",
+     2,
+     2
+    ]
+   ],
+   "notify_log_new": [
+    [
+     6262,
+     "scheduler",
+     "usage"
+    ],
+    [
+     6263,
+     "scheduler",
+     "usage"
+    ],
+    [
+     6264,
+     "scheduler",
+     "usage"
+    ]
+   ],
+   "stores_changed": {
+    "playlists": [
+     {
+      "size": 235,
+      "mtime": 1788433392.4745023,
+      "h": "b44750bf1b"
+     },
+     {
+      "size": 235,
+      "mtime": 1790621224.6855247,
+      "h": "b44750bf1b"
+     }
+    ],
+    "episode_log_max": [
+     4142,
+     4145
+    ]
+   }
+  }
+ },
+ "note": "out_names·root_out_names 는 개수+해시로 축약(파일명 비공개). 회차 후 스크래치 삭제 뒤 두 목록 모두 기준선과 동일(stores_changed 에 없음)."
+}

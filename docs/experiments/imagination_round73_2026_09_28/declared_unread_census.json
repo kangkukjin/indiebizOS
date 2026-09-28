@@ -1,0 +1,97 @@
+{
+ "actions_with_unread_declared": 9,
+ "rows": [
+  {
+   "action": "table:filter",
+   "params": [
+    "value"
+   ],
+   "package": "data-ops"
+  },
+  {
+   "action": "table:join",
+   "params": [
+    "table1",
+    "table2",
+    "a",
+    "b"
+   ],
+   "package": "data-ops"
+  },
+  {
+   "action": "table:union",
+   "params": [
+    "table1",
+    "table2",
+    "a",
+    "b"
+   ],
+   "package": "data-ops"
+  },
+  {
+   "action": "table:merge",
+   "params": [
+    "table1",
+    "table2",
+    "a",
+    "b"
+   ],
+   "package": "data-ops"
+  },
+  {
+   "action": "self:finance",
+   "params": [
+    "items"
+   ],
+   "package": "finance-record"
+  },
+  {
+   "action": "sense:company",
+   "params": [
+    "company",
+    "corp_name",
+    "query",
+    "type"
+   ],
+   "package": "investment"
+  },
+  {
+   "action": "self:memory",
+   "params": [
+    "keywords"
+   ],
+   "package": "memory"
+  },
+  {
+   "action": "self:record",
+   "params": [
+    "space",
+    "collection",
+    "id",
+    "where",
+    "fields",
+    "order",
+    "cursor",
+    "limit",
+    "command",
+    "definition_revision",
+    "input",
+    "expected",
+    "request_id",
+    "reason",
+    "confirmation",
+    "state"
+   ],
+   "package": "record-ops"
+  },
+  {
+   "action": "table:chart",
+   "params": [
+    "x",
+    "y"
+   ],
+   "package": "visualization"
+  }
+ ],
+ "passthrough_packages_skipped": []
+}

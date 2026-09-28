@@ -8,11 +8,15 @@
 한다 — check_win_portability(유닉스 stdlib)·build --check(어휘 삼각)와 같은 부류의
 정적 그물을 의존성 축에 세운 것.
 
-원리: AST 로 대상 트리의 모든 import 이름(중첩 포함 — lazy import 도 런타임에 터지는
+원리: AST 로 대상 트리의 실행 코드 import 이름(중첩 포함 — lazy import 도 런타임에 터지는
 건 같다)을 모으고, 로컬 모듈·stdlib 을 거른 뒤, **.venv 인터프리터**가 repo 밖 cwd 에서
 하나씩 실제 import 해 본다. 실패 = 그 이름을 제공하는 배포판이 .venv 에 없거나(선언
 누락) 깨져 있음(greenlet ABI 부류 — 이래서 선언 대조가 아니라 실제 import 로 검사한다.
 pip 이름↔import 이름 사상표도 불필요해진다).
+
+기본 감사는 pytest 수집 파일·지원 코드를 제외한다. CI는 core/tools만 설치한 상태에서
+실행용 감사를 먼저 통과시킨 뒤, requirements-dev.txt를 설치하고 --include-tests로
+테스트까지 감사한다. 개발 의존성이 실행용 선언 누락을 가릴 수 없게 순서를 유지한다.
 
 fresh CI venv 에서 돌리면 "import 가능 ⇔ requirements 에 선언됨" 이 성립하므로
 (선언 안 된 건 애초에 설치가 안 됐으니까) 같은 검사가 선언 감사를 겸한다.
@@ -132,7 +136,14 @@ def local_module_names() -> set:
     return names
 
 
-def collect_imports():
+def is_test_file(path: Path) -> bool:
+    """pytest 수집 파일·지원 코드는 실행용 설치가 아니라 개발 의존성을 쓴다."""
+    rel = path.relative_to(ROOT)
+    return (path.name == "conftest.py" or path.name.startswith("test_")
+            or path.name.endswith("_test.py") or "tests" in rel.parts)
+
+
+def collect_imports(include_tests: bool = False):
     """{최상위 import 이름: [\"상대경로:줄\", …]} — 중첩(함수/try 안) 포함 전수.
 
     lazy import 도 그 코드가 도는 순간 터지는 건 같으므로 전부 시험한다. 선택적
@@ -141,6 +152,8 @@ def collect_imports():
     """
     found = {}
     for path in iter_py_files():
+        if not include_tests and is_test_file(path):
+            continue
         try:
             tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
         except (SyntaxError, UnicodeDecodeError) as e:
@@ -229,6 +242,8 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="의존성 선언 커버리지 감사 (.venv 실 import 시험)")
     ap.add_argument("--allow-ml-missing", action="store_true",
                     help="requirements-ml.txt 티어(torch 등 ~2GB) 부재를 허용 — CI 용")
+    ap.add_argument("--include-tests", action="store_true",
+                    help="테스트 코드도 감사 (requirements-dev.txt 설치 후 사용)")
     ap.add_argument("--venv", default=None, help=".venv 파이썬 경로 재지정 (기본: repo/.venv)")
     ap.add_argument("--timeout", type=int, default=420, help="시험 전체 제한 초 (기본 420)")
     args = ap.parse_args()
@@ -240,7 +255,7 @@ def main() -> int:
             {"ok": False, "error": "venv 없음", "failures": [], "warnings": []}))
         return 2
 
-    found = collect_imports()
+    found = collect_imports(include_tests=args.include_tests)
     locals_ = local_module_names()
     skipped = {}
     candidates = {}
@@ -303,7 +318,7 @@ def main() -> int:
             print(f"  ✗ {f['name']} — {f['error'][:180]}")
             for site in f["files"]:
                 print(f"      {site}")
-        print("\n처방: backend/requirements-{core,tools,ml}.txt 에 선언 후 "
+        print("\n처방: backend/requirements-{core,tools,ml,dev}.txt 의 해당 티어에 선언 후 "
               "`.venv/bin/python3 -m pip install -r …` (또는 scripts/bootstrap.py 재실행). "
               "폰/타OS 전용이 확실하면 이 스크립트의 허용목록에 사유와 함께 등재.")
     else:

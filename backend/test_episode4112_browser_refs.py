@@ -7,7 +7,6 @@ from types import SimpleNamespace
 
 import boot_paths  # noqa: F401
 import pytest
-from playwright.async_api import async_playwright
 
 
 class Refs:
@@ -29,13 +28,17 @@ class Refs:
 
 
 def test_real_snapshot_disclosure_click_and_identity_guards(monkeypatch):
+    playwright = pytest.importorskip(
+        'playwright.async_api', reason='실 브라우저 검증은 portability의 playwright-render에서 실행')
+    from runtime_utils import setup_playwright_browsers_path
+    setup_playwright_browsers_path()
     folder = Path(__file__).resolve().parents[1] / 'data/packages/installed/tools/browser-action'
     monkeypatch.syspath_prepend(str(folder))
     snapshot = importlib.import_module('browser_snapshot')
     interact = importlib.import_module('browser_interact')
 
     async def run():
-        async with async_playwright() as pw:
+        async with playwright.async_playwright() as pw:
             browser = await pw.chromium.launch()
             try:
                 page = await browser.new_page()

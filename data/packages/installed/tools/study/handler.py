@@ -24,16 +24,29 @@ _CONTACT = os.environ.get("INDIEBIZ_CONTACT_EMAIL", "").strip()
 _ARXIV_UA = "indiebizOS/1.0 (personal research agent" + (f"; mailto:{_CONTACT}" if _CONTACT else "") + ")"
 
 
-def _arxiv_get(url: str, timeout: int = 20, tries: int = 3):
-    """arXiv 요청 — 설명형 UA + 503/429 백오프 재시도(3s·6s). 마지막 응답을 그대로 돌려준다."""
+def _polite_get(url: str, params: Optional[dict] = None, timeout: int = 20, tries: int = 3,
+                max_wait: float = 10.0):
+    """공개 학술 API 요청 — 설명형 UA + 429/5xx 백오프 재시도. 마지막 응답을 그대로 돌려준다.
+    대기 = Retry-After(초) 가 있으면 그것, 없으면 3s·6s·9s…, 어느 쪽이든 max_wait 상한
+    (호출자 타임아웃 안에 끝나야 한다 — 골든 파이프 1호 45s)."""
     last = None
     for attempt in range(tries):
-        last = requests.get(url, headers={"User-Agent": _ARXIV_UA}, timeout=timeout)
-        if last.status_code not in (429, 500, 502, 503, 504):
+        last = requests.get(url, params=params, headers={"User-Agent": _ARXIV_UA}, timeout=timeout)
+        if getattr(last, "status_code", 200) not in (429, 500, 502, 503, 504):
             return last
         if attempt < tries - 1:
-            time.sleep(3 * (attempt + 1))
+            wait = 3.0 * (attempt + 1)
+            try:
+                wait = float(last.headers.get("Retry-After", wait))
+            except (TypeError, ValueError, AttributeError):
+                pass
+            time.sleep(max(0.0, min(wait, max_wait)))
     return last
+
+
+def _arxiv_get(url: str, timeout: int = 20, tries: int = 3):
+    """arXiv 요청 — _polite_get 그대로(3s·6s)."""
+    return _polite_get(url, timeout=timeout, tries=tries)
 
 
 def _search_arxiv(tool_input: dict) -> str:
@@ -775,8 +788,20 @@ def _search_openalex(tool_input: dict) -> str:
     if filters:
         params["filter"] = ",".join(filters)
 
+    if _CONTACT:
+        params["mailto"] = _CONTACT  # OpenAlex 공손 풀 규약
+
     try:
-        response = requests.get(url, params=params, timeout=30)
+        # OpenAlex 는 아침(00:00 UTC 한도 리셋 직후) 에 수십 초짜리 429 폭주를 상습적으로 낸다
+        # (2026-09-22~28 골든 파이프 paper>>take>>document 거짓 FAIL, 09:34 KST 전후) — 단발
+        # 호출이면 그 창 안의 호가 통째로 죽는다. arXiv 와 같은 백오프로 창을 넘긴다(대기 합 ≤19s).
+        response = _polite_get(url, params=params, timeout=30, tries=4)
+        if getattr(response, "status_code", 200) == 429:
+            body = (getattr(response, "text", "") or "").strip().replace("\n", " ")[:200]
+            return {"success": False, "items": [],
+                    "error": ("OpenAlex 요청 한도 초과(429, 외부 일시 제한 — 4회 백오프 후에도 거절). "
+                              f"Retry-After={response.headers.get('Retry-After', '-')} 본문: {body} "
+                              "— 잠시 후 재시도하거나 source: arxiv 를 쓰세요.")}
         response.raise_for_status()
         data = response.json()
 

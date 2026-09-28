@@ -177,6 +177,20 @@ def test_paper_openalex_error_is_not_empty(monkeypatch):
     assert mod._search_openalex({'query': 'test'})['success'] is False
 
 
+
+def test_paper_openalex_backs_off_on_429(monkeypatch):
+    mod = load('study')
+    ok = {'meta': {'count': 1}, 'results': [{'title': 'T', 'authorships': [], 'publication_year': 2024}]}
+    replies = [SimpleNamespace(status_code=429, headers={'Retry-After': '99'}, text=''),
+               SimpleNamespace(status_code=429, headers={}, text=''),
+               SimpleNamespace(status_code=200, headers={}, raise_for_status=lambda: None, json=lambda: ok)]
+    waits = []
+    monkeypatch.setattr(mod.requests, 'get', lambda *a, **kw: replies.pop(0))
+    monkeypatch.setattr(mod.time, 'sleep', waits.append)
+    r = mod._search_openalex({'query': 'test'})
+    assert r['success'] is True and r['items'][0]['title'] == 'T'
+    assert waits == [10.0, 6.0]  # Retry-After 는 상한(10s)으로 깎이고, 없으면 3s·6s… 계단
+
 @pytest.mark.parametrize('routes, success', [
     ([{'result_code': 104, 'result_msg': 'No route'}], False),
     ([{'result_code': 0, 'summary': {'distance': 1000, 'duration': 60}}], True),

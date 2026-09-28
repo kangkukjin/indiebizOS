@@ -28,5 +28,5 @@ def read_result_schema():
                      "description": "result_ref.paths의 실제 키/인덱스 경로. 중첩 JSON을 해제한 값의 문자 페이지. 생략=원 봉투."},
         },
         "required": ["id"],
-        "description": "code를 비우고 result_ref.read_args로 원문 조회. 다음 페이지는 next_read 그대로. 재실행 없음.",
+        "description": "code를 비우고 result_ref.read_args로 원문 조회. 필요한 path만 선택하고 다음 페이지는 next_read 그대로. read_scope.complete=true는 선택 경로 전체가 이 응답에 있음을 뜻함. 문맥에 남은 본문은 재독하지 않음. 재실행 없음.",
     }

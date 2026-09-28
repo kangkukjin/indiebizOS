@@ -39,6 +39,14 @@ def read_result(request):
     page["next_read"] = ({"id": request.get("id"), "offset": page["next_offset"],
                           "limit": limit, **({"path": path} if path is not None else {})}
                          if page["next_offset"] is not None else None)
+    # 끝 페이지와 전체 읽기는 다르다. 현재 응답이 전달한 범위만 표시한다.
+    complete = offset == 0 and page["next_offset"] is None
+    page["read_scope"] = {"path": path if path is not None else [],
+                          "start": offset, "end": offset + len(page["text"]),
+                          "total_chars": page["chars"], "complete": complete}
+    if complete:
+        page["read_hint"] = ("선택 경로 전체(하위 내용 포함)를 전달했습니다. 현재 문맥에 이 본문이 "
+                             "남아 있으면 하위 경로를 다시 읽지 말고 사용하세요. 가공은 input_args로 연결하세요.")
     # 조회자가 고른 페이지를 MCP/프로바이더의 액션당 16K 한도로 다시 접지 않는다.
     # 문서와 같은 표시 계약을 사용해 JSON escaping·다음 조회 인자까지 함께 전달한다.
     page["_display"] = {"max_chars": limit}
@@ -48,6 +56,7 @@ def read_result(request):
     record_trajectory_event("context.result_read", {
         "evidence_id": request.get("id"), "offset": offset, "chars": len(page["text"]),
         "selected_path": path is not None, "has_more": page["next_offset"] is not None,
+        "path": path if path is not None else [], "complete": complete,
     })
     return page
 
@@ -185,15 +194,34 @@ def _read_reference(ref, result):
                 chars = len(json.dumps(_decode_json(item), ensure_ascii=False, indent=2, default=str))
                 if chars >= 400:
                     paths.append({"path": prefix + [key], "chars": chars})
-    paths.sort(key=lambda entry: entry["chars"], reverse=True)
+        paths.sort(key=lambda entry: entry["chars"], reverse=True)
+    elif isinstance(value, list):
+        # 병렬 조회/each 결과에도 실제 본문 경로를 제공한다. 전체 묶음을 읽거나
+        # 표시 사본의 잘린 문자열 길이로 원문의 offset을 추측할 필요가 없다.
+        for index, item in enumerate(value):
+            item = _decode_json(item)
+            candidates = []
+            fields = item.items() if isinstance(item, dict) else [(None, item)]
+            for key, field in fields:
+                if isinstance(field, (str, list, dict)):
+                    chars = len(json.dumps(_decode_json(field), ensure_ascii=False, indent=2, default=str))
+                    if chars >= 400:
+                        candidates.append({"path": prefix + [index] + ([] if key is None else [key]),
+                                           "chars": chars})
+            candidates.sort(key=lambda entry: entry["chars"], reverse=True)
+            if candidates:
+                paths.append(candidates[0])
+            if len(paths) == 6:
+                break
     paths = paths[:6]
     out = {
         **{k: ref[k] for k in ("id", "chars")},
         "max_limit": MAX_LIMIT,
         "paths": paths,
         "read_args": {"id": ref["id"], "offset": 0, "limit": DEFAULT_LIMIT,
-                      "path": prefix if result.get('edition') == 2 else paths[0]["path"] if paths else prefix},
-        "read": 'execute_ibl(code="", read_result=result_ref.read_args); 다음 페이지는 next_read 그대로. 원래 code를 재실행하지 마세요',
+                      "path": prefix if result.get('edition') == 2 or isinstance(value, list)
+                      else paths[0]["path"] if paths else prefix},
+        "read": 'execute_ibl(code="", read_result=result_ref.read_args); 일부만 필요하면 paths에서 path를 선택. 다음 페이지는 next_read 그대로. read_scope.complete=true인 본문이 문맥에 있으면 재독하지 마세요. 원래 code를 재실행하지 마세요',
     }
     if typed_value:
         wire = result.get("value_wire")

@@ -5,7 +5,7 @@
 - `source:"zigbang"` — 직방 **현재 매물**(지금 나온 호가·사진·클릭 링크). 빌라/원룸/오피스텔. ↓ "source=zigbang" 절.
 - `source:"naver"` — 네이버부동산 **현재 매물**(전국 최다 풀, 아파트·단지 강함, 단지명 직조회). ↓ "source=naver" 절.
 
-> 매물 검색 전반(당근·다가구 주인세대 등 희소 매물)은 `real_estate.md` 가이드 참조.
+> 희소 매물은 포털 광고가 있어도 조건을 충족하는 후보가 부족하면 중개사 블로그·지역 카페까지 검색한다. 기존 `[sense:search]`·`[sense:crawl]`을 쓰며, 순서와 검증은 `real_estate.md` §6 참조.
 
 ---
 
@@ -31,7 +31,7 @@
 [sense:realty]{source:"zigbang", region:"평택 죽백동", type:"villa", deal:"rent", lease:"전세"}
 ```
 - `region`(동·지명·건물명) 또는 `lat`/`lng`. `type`=villa/oneroom/officetel. `deal`=trade/rent + `lease`=전세|월세(좁힘).
-- `deposit_max`·`rent_max`(만원), `radius`(m, 기본 3000), `limit`(기본 30).
+- `deposit_max`·`rent_max`(만원), `radius`(m, 기본 3000), `limit`(1~50, 기본 30). 네이버의 최대 60을 직방에 적용하지 않는다.
 - 반환 records `{title, meta, summary, url, image}` — url=직방 매물 페이지, image=썸네일.
 - **아파트·단독/다가구는 직방 약함** → `source:"naver"` 또는 real_estate.md §5·§6(당근·현지 부동산).
 

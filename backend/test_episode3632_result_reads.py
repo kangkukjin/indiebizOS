@@ -83,6 +83,60 @@ def test_root_pagination_and_limits(result_view):
             result_view.read_result({"id": ref["id"], **args})
 
 
+def test_complete_parent_read_covers_children_without_blocking_reread(result_view):
+    raw = {"edition": 2, "success": True, "value": [
+        {"title": "첫 글", "content": "원문🍀\n" * 200},
+        {"title": "다른 글", "content": "다른 근거" * 200},
+    ]}
+    ref = result_view.project_result(raw)["result_ref"]
+    page = result_view.read_result({"id": ref["id"], "path": ["value"]})
+    assert json.loads(page["text"]) == raw["value"]
+    assert page["read_scope"] == {"path": ["value"], "start": 0,
+                                  "end": len(page["text"]),
+                                  "total_chars": len(page["text"]), "complete": True}
+    assert page["next_read"] is None and page["read_hint"]
+    # 문맥 소실/재검토 때 같은 원문을 회수할 권한은 그대로 남는다.
+    child = result_view.read_result({"id": ref["id"], "path": ["value", 0, "content"]})
+    assert json.loads(child["text"]) == raw["value"][0]["content"]
+    assert child["input_args"]["입력"]["path"] == ["value", 0, "content"]
+
+
+@pytest.mark.parametrize("path", [None, ["text"]])
+def test_last_page_does_not_claim_the_whole_value_was_delivered(result_view, path):
+    raw = {"text": "한글🍀\n" * 2000}
+    ref = result_view.project_result(raw)["result_ref"]
+    args = {"id": ref["id"], **({"path": path} if path is not None else {})}
+    first = result_view.read_result({**args, "limit": 400})
+    assert not first["read_scope"]["complete"] and first["next_read"]
+    tail = result_view.read_result({**args, "offset": 400})
+    assert tail["next_read"] is None and not tail["read_scope"]["complete"]
+    assert tail["read_scope"]["start"] == 400
+    assert tail["read_scope"]["end"] == tail["read_scope"]["total_chars"]
+    assert "read_hint" not in tail
+    assert json.loads(first["text"] + tail["text"]) == (raw["text"] if path else raw)
+
+
+@pytest.mark.parametrize("edition", [1, 2])
+def test_list_body_paths_keep_original_indices_and_restore_selected_text(result_view, edition):
+    rows = [{"title": "짧은 결과"}] + [
+        {"title": f"자료 {i}", "content": f"근거 {i}🍀\n" * 200} for i in range(8)]
+    raw = ({"edition": 2, "success": True, "value": rows} if edition == 2 else
+           {"final_result": json.dumps(rows, ensure_ascii=False)})
+    before = json.dumps(raw)
+    ref = result_view.project_result(raw)["result_ref"]
+    prefix = ["value"] if edition == 2 else ["final_result"]
+    assert ref["read_args"]["path"] == prefix
+    assert [p["path"] for p in ref["paths"]] == [prefix + [i, "content"] for i in range(1, 7)]
+    for entry in ref["paths"]:
+        page = result_view.read_result({**ref["read_args"], "path": entry["path"]})
+        assert page["read_scope"]["complete"]
+        assert json.loads(page["text"]) == rows[entry["path"][1]]["content"]
+    # 안내에 싣지 않은 행도 원래 인덱스로 조회할 수 있다.
+    last = result_view.read_result({"id": ref["id"], "path": prefix + [8, "content"]})
+    assert json.loads(last["text"]) == rows[8]["content"]
+    assert json.dumps(raw) == before
+
+
 def test_mcp_and_native_advertise_the_same_read_contract():
     import mcp_server
     from tool_loader import build_execute_ibl_tool

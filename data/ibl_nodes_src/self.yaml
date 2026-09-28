@@ -189,8 +189,8 @@
         returns: scalar
         side_effect: true     # 파괴적 op 보유 — 통화(returns)와 안전은 다른 축
         fixture: '[self:workflow]{op: "list"}'
-        description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/get/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
-        target_description: '현재 함수 저장은 code:"[def:이름]($인자){return ...}". 명시 인자·기본값·값 반환을 사용하며 code로 저장하면 현재 문법으로 검사한다. run은 workflow_id/name + params Record로 호출하고 저장본의 판본을 자동 해소한다. 새 조합은 [fn:이름]{인자:값}으로 부른다. 현재 작성법은 workflow.md. 기존 do/steps 및 무표기 저장본은 원래 실행 의미를 보존하는 호환 경로다.'
+        description: 워크플로우 CRUD + 실행 (op 분기). 이름 붙은 문장의 원장 — list/detail/save/delete/run. run은 저장본(workflow_id) 또는 즉석 do(저장 안 함).
+        target_description: '현재 함수 저장은 code:"[def:이름]($인자){return ...}". 명시 인자·기본값·값 반환을 사용하며 code로 저장하면 현재 문법으로 검사한다. run은 workflow_id/name + params Record로 호출하고 저장본의 판본을 자동 해소한다. 함수 이름은 저장 정의·관용구 전체에서 하나이며, 저장 호출자를 깨뜨리는 개정·삭제는 거절된다(새 이름 저장→호출자 전환→옛 정의 삭제). 새 조합은 [fn:이름]{인자:값}으로 부른다. 현재 작성법은 workflow.md. 기존 do/steps 및 무표기 저장본은 원래 실행 의미를 보존하는 호환 경로다.'
         group: workflow
         target_key: op
         router: workflow_engine

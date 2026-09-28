@@ -108,14 +108,17 @@ def test_content_approval_binds_read_sources_and_current_bytes(supervisor, tmp_p
     art = supervisor.content_artifacts[0]
     source = supervisor.store.evidence("원문: 투자 증가율 79%, 38%, 16% 전망")
     record = {"path":str(path),"hash":art["hash"],
-        "meaning":{"status":"passed","reason":"수준 아닌 증가율임을 보존", "evidence":[{"id":art["hash"],"quote":"투자 증가율"}]},
+        "meaning":{"status":"passed","reason":"수준 아닌 증가율임을 보존", "evidence":[{"id":art["evidence_id"],"quote":"투자 증가율"}]},
         "sources":{"status":"passed","reason":"원문 대조", "evidence":[{"id":source["id"],"quote":"증가율 79%, 38%, 16% 전망"}]},
         "counts":{"status":"not_applicable","reason":"항목 계수 없음"}}
     decision = {"status":"APPROVED", "content_checks":[record]}
     assert validate(supervisor, decision)
-    supervisor.store.read_evidence(art["hash"], mark=True)
+    supervisor.store.read_evidence(art["evidence_id"], mark=True)
     supervisor.store.read_evidence(source["id"], mark=True)
     assert validate(supervisor, decision) is None
+    record["sources"]["evidence"] = [{"id":art["evidence_id"],"quote":"투자 증가율"}]
+    assert validate(supervisor, decision)  # A report cannot certify its own sources.
+    record["sources"]["evidence"] = [{"id":source["id"],"quote":"증가율 79%, 38%, 16% 전망"}]
     record["sources"]["evidence"][0]["quote"] = "투자가 감소한다"
     assert validate(supervisor, decision)
     path.write_text("투자가 감소한다.")

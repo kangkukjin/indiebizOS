@@ -1101,7 +1101,15 @@ def execute_workflow_action(action: str, params: dict,
     elif action in ("delete", "delete_workflow"):
         if not workflow_id:
             return {"error": "workflow_id가 필요합니다."}
-        ok = delete_workflow(workflow_id)
+        # 저장 정의를 부르는 다른 저장 정의가 있으면 지우지 않는다 — workflow.md 가 약속한
+        # "호출자의 계약 확인"의 삭제 쪽 (71회차 B71-2). 판본 2 저장본에만 해당한다.
+        from ibl_v2_store import delete_blockers
+        from workflow_store import workflow_transaction
+        with workflow_transaction():
+            blocked = delete_blockers(workflow_id, project_path)
+            if blocked:
+                return {"success": False, "error": blocked}
+            ok = delete_workflow(workflow_id)
         if ok:
             return {"success": True, "message": f"워크플로우 '{workflow_id}' 삭제 완료"}
         return {"error": f"워크플로우를 찾을 수 없습니다: {workflow_id}"}

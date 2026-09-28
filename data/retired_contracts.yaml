@@ -25,6 +25,11 @@
 # 관문: scripts/check_retired_contracts.py (pre-commit)
 
 retired:
+  - id: workflow-get-op
+    retired: 2026-09-28
+    reason: 교재 표면이 선언에 없는 op:"get"을 가르쳐 호출마다 거짓 경고가 붙었다(71회차 F71-3).
+    instead: 저장 원문 조회는 선언된 op:"detail"이다.
+    phrases: ['op:"get",workflow_id', 'list/get/save/delete/run']
   - id: blanket-list-field-type-hint
     retired: 2026-09-28
     reason: FIELD_TYPE가 Record 봉투에도 List 전용 처방을 내어 올바른 items 접근을 막았다.

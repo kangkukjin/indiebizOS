@@ -9,8 +9,19 @@ since 원장의 저장 키 형식과 옛 str(dict) 키 호환. (Codex 흡수, 20
 import ast
 import json
 import math
+from decimal import Decimal
 
-from common.value_semantics import aggregate_numbers, group_identity, numeric_value
+from common.value_semantics import aggregate_numbers, decimal_json_number, group_identity, numeric_value
+
+
+def _persistent_scalar(value):
+    """Keep the existing JSON spelling of float group keys after exact comparison."""
+    if isinstance(value, Decimal):
+        try:
+            return decimal_json_number(value)
+        except ValueError:
+            pass
+    return str(value)
 
 
 def persistent_keys(value):
@@ -24,7 +35,7 @@ def persistent_keys(value):
         return legacy, legacy
     identity = group_identity(value)
     canonical = "\x1ejson:" + json.dumps(
-        identity, ensure_ascii=False, separators=(",", ":"), default=str)
+        identity, ensure_ascii=False, separators=(",", ":"), default=_persistent_scalar)
     return canonical, legacy
 
 

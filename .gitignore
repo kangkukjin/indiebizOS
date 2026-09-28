@@ -467,5 +467,8 @@ data/ibl_runs/
 # Shared lease for managed Python installs and direct-library workers.
 data/runtime/python-environment.lock
 
+# Workflow namespace mutation lock (kept on disk to preserve the shared inode).
+data/workflows/.mutation.lock
+
 # Registered library script teaching examples
 !data/scripts/python_library/examples.json

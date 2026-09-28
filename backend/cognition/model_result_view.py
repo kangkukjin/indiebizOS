@@ -33,7 +33,8 @@ def read_result(request):
             raise ValueError("path는 객체 키·0 이상 배열 인덱스의 배열입니다(최대 16단계)")
         page = evidence_store().read_evidence(request.get("id"), 0, None)
         stored = json.loads(page["text"])
-        value = _walk(stored, path)
+        value = (_walk_typed(stored, path, path) if isinstance(stored, dict) and stored.get("edition") == 2
+                 else _walk(stored, path))
         # 문자열 값은 원문 글자로 페이지한다 — 미리보기의 total·offset과 같은 좌표(69회차 F69-2).
         text = value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, indent=2)
         page.update(source_chars=page["chars"], chars=len(text), path=path,
@@ -127,7 +128,7 @@ def _masked_selection(masked, source):
     return any(_overlaps(p, source) for p in masked)
 
 
-_MASKED_INPUT = ("저장 사본에서 비밀 후보로 가린 자리(****)가 이 값에 있습니다. 원래 값은 영속 저장하지 않으므로 "
+_MASKED_INPUT = ("저장 사본의 원형 보존을 확인할 수 없거나 비밀 후보로 가린 자리(****)가 이 값에 있습니다. 원래 값은 영속 저장하지 않으므로 "
                  "참조로 넘기면 가려진 문자열이 업무 값이 됩니다. 이 값이 필요한 계산은 원천을 읽는 같은 프로그램 안에서 하세요.")
 
 
@@ -283,9 +284,9 @@ def input_ref_evidence(stored):
     return out
 
 
-def _selection_chars(item):
+def _selection_chars(item, *, typed=False):
     """read_result 가 그 경로에서 돌려줄 글자 수 — 문자열은 원문 글자, 구조는 JSON 페이지(F69-2와 같은 좌표)."""
-    item = _decode_json(item)
+    item = item if typed else _decode_json(item)
     return len(item) if isinstance(item, str) else len(json.dumps(item, ensure_ascii=False, indent=2, default=str))
 
 
@@ -296,12 +297,14 @@ def _read_reference(ref, result):
     # Failure recovery opens the diagnostic, never megabytes of provenance by default.
     if not prefix and result.get('edition') == 2:
         prefix = next(([k] for k in ('diagnostic', 'issues', 'error') if result.get(k)), [])
-    value = _decode_json(result[prefix[0]] if prefix else result)
+    native = result.get('edition') == 2
+    value = result[prefix[0]] if prefix else result
+    value = value if native else _decode_json(value)
     paths = []
     if isinstance(value, dict):
         for key, item in value.items():
             if isinstance(item, (str, list, dict)):
-                chars = _selection_chars(item)
+                chars = _selection_chars(item, typed=native)
                 if chars >= 400:
                     paths.append({"path": prefix + [key], "chars": chars})
         paths.sort(key=lambda entry: entry["chars"], reverse=True)
@@ -309,12 +312,12 @@ def _read_reference(ref, result):
         # 병렬 조회/each 결과에도 실제 본문 경로를 제공한다. 전체 묶음을 읽거나
         # 표시 사본의 잘린 문자열 길이로 원문의 offset을 추측할 필요가 없다.
         for index, item in enumerate(value):
-            item = _decode_json(item)
+            item = item if native else _decode_json(item)
             candidates = []
             fields = item.items() if isinstance(item, dict) else [(None, item)]
             for key, field in fields:
                 if isinstance(field, (str, list, dict)):
-                    chars = _selection_chars(field)
+                    chars = _selection_chars(field, typed=native)
                     if chars >= 400:
                         candidates.append({"path": prefix + [index] + ([] if key is None else [key]),
                                            "chars": chars})

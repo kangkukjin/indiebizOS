@@ -641,7 +641,9 @@ class Runtime(ExpressionEvaluator):
 
     def _run(self):
         if self.plan.issues:
-            return {**self.plan.report(), "success": False, "error": "실행 전 검사에서 거절했습니다."}
+            from ibl_v2_analysis import rejection_message
+            return {**self.plan.report(), "success": False,
+                    "error": rejection_message("실행 전 검사에서 거절했습니다", self.plan.issues)}
         if set(self.inputs) != set(self.plan.input_types):
             return {"edition": 2, "success": False, "error": "컴파일 시 입력 서명과 실행 입력이 다릅니다.", "executed": False}
         try:

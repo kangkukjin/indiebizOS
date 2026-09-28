@@ -78,6 +78,7 @@ class Compiler:
         self.call_dependencies = {}
         # 방문 중 만난 선언 쓰기 자원 — 병렬 가지·each 병렬 본문이 괄호로 묶어 충돌을 본다(70회차 B70-2).
         self.write_log = set()
+        self.reachable = True
         self.default_scope = frozenset()  # 기본값 식을 검사하는 동안의 인자 이름들
         self.unit_warned = set()
 
@@ -166,13 +167,21 @@ class Compiler:
                 # Still diagnose invalid dead source, but it cannot supply a
                 # frame result or add return types to the reachable paths.
                 old_returns, self.returns = self.returns, []
-                self.visit(statement, dead_env, names, readonly, final)
+                self.visit_unreachable(statement, dead_env, names, readonly, final)
                 self.returns = old_returns
             else:
                 result = self.visit(statement, env, names, readonly, final)
                 if self.returns_unconditionally(statement):
                     terminated, dead_env = True, env.copy()
         return result
+
+    def visit_unreachable(self, node, env, names, readonly=frozenset(), final=False):
+        """Still type-check dead source, but do not invent executable writes."""
+        previous, self.reachable = self.reachable, False
+        try:
+            return self.visit(node, env, names, readonly, final)
+        finally:
+            self.reachable = previous
 
     def resolve_function(self, name, names):
         if name in names:
@@ -359,7 +368,13 @@ class Compiler:
             if op in ("==", "!=", "<", ">", "<=", ">=", "in"):
                 return BOOL
             if op == "+" and len(values) == 2 and values[0].kind == values[1].kind and values[0].kind in ("List", "Text"):
-                return concat_lists(*values) if values[0].kind == "List" else TEXT
+                if values[0].kind == "List":
+                    return concat_lists(*values)
+                texts = [static_text(t) for t in values]
+                if all(t is not None for t in texts):
+                    from common.value_semantics import normalized_text
+                    return Type("Text", literal=normalized_text("".join(texts)))
+                return TEXT
             if op == "+" and any(t.kind in ("Unknown", "Union") for t in values):
                 # An unknown accumulator/callback operand may concatenate.
                 # Do not select numeric addition until both shapes are known.
@@ -461,6 +476,12 @@ class Compiler:
                     receiver = next(iter(params), None)
                     self.arguments(node, args, params, receiver, piped)
                     return self.function(sid, args, node)
+                conflict = getattr(self.definitions, "conflicts", {}).get(d["action"])
+                if conflict:
+                    # 겹친 저장 이름은 부르는 자리만 거절한다 — 무관한 프로그램은 돈다 (71회차 B71-1).
+                    self.issue(node, "DUPLICATE_LIBRARY",
+                               f"같은 이름의 저장 정의가 여럿이라 고를 수 없습니다: {d['action']} ({', '.join(conflict)})")
+                    return UNKNOWN
                 if key not in self.registry:
                     self.issue(node, "FUNCTION", f"등록된 함수가 없습니다: {d['action']}")
                     return UNKNOWN
@@ -515,8 +536,9 @@ class Compiler:
             # 자원 정체 = 타입 검사가 아는 컴파일 시 값(리터럴·변수·기본값·특수화 인자·정적 보간). 같은 값이면 같은 자원이다.
             for realm, param in spec.contract.get("write_resources", {}).items():
                 known = static_text(args.get(param))
-                if known is not None:
-                    self.write_log.add((realm, known))
+                if known is not None and self.reachable:
+                    identity = spec.resource_identity(realm, known) if spec.resource_identity else known
+                    self.write_log.add((realm, identity))
             result_type = declared(contract["result"])
             from ibl_v2_adapters import observed_result
             result_type = observed_result(key, spec.contract,
@@ -572,7 +594,10 @@ class Compiler:
                 local.update(dict.fromkeys(mutated, UNKNOWN))
             if d["mode"] == "while":
                 self.need(node, sub(d["value"], local), BOOL)
-            sub(d["body"], local)
+            if count == 0:
+                self.visit_unreachable(d["body"], local, names, readonly, final)
+            else:
+                sub(d["body"], local)
             if d["mode"] == "until":
                 # Post-test conditions may use values definitely assigned by
                 # the body, including new bindings. Conditional ones still fail.
@@ -672,7 +697,8 @@ class Compiler:
         old_returns, self.returns = self.returns, []
         outer_writes, self.write_log = self.write_log, set()
         local = {**env, "it": items.item or UNKNOWN, "i": NUMBER}
-        result = self.visit(node.data["body"], local, names, frozenset(env) | RESERVED)
+        visit = self.visit_unreachable if items.positions == () else self.visit
+        result = visit(node.data["body"], local, names, frozenset(env) | RESERVED)
         for t in self.returns:
             result = t if result == UNIT_T else join(result, t)
         self.returns = old_returns
@@ -711,7 +737,8 @@ class Compiler:
 def compile_program(source, registry=None, inputs=None, definitions=None):
     from ibl_v2_adapters import Adapter
     registry = {k: Adapter(copy.deepcopy(v.contract), v.run, v.authorize, v.dependency,
-                          getattr(v, "reusable", None), getattr(v, "stateful", None))
+                          getattr(v, "reusable", None), getattr(v, "stateful", None),
+                          getattr(v, "resource_identity", None))
                 for k, v in (registry or {}).items()}
     inputs = copy.deepcopy(inputs or {})
     compiler = Compiler(source, registry, inputs, copy.deepcopy(definitions or {}))

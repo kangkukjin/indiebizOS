@@ -7,6 +7,7 @@ from pathlib import Path
 import stat
 import tempfile
 import uuid
+from runtime_utils import file_resource_identity
 
 
 @contextmanager
@@ -16,7 +17,7 @@ def file_lock(path):
     잠금 파일은 삭제하지 않는다. 대기자가 잡은 inode와 새 호출의 inode가 갈라지지 않게 한다.
     도구 밖 편집기는 이 협력 잠금에 참여하지 않는다.
     """
-    key = os.path.normcase(os.path.realpath(path))
+    key = file_resource_identity(path)
     owner = str(os.getuid()) if hasattr(os, 'getuid') else os.environ.get('USERNAME', 'user')
     folder = Path(tempfile.gettempdir()) / ('indiebiz-file-locks-' + owner)
     folder.mkdir(mode=0o700, exist_ok=True)

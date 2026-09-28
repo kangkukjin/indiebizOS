@@ -127,7 +127,8 @@ def validate(controller, decision):
                 if not isinstance(ref, dict):
                     return "내용 검수 발췌 형식 오류"
                 key, quote = ref.get("id"), ref.get("quote")
-                if facet == "sources" and key in {artifact["hash"], controller.store.manifest()["hash"]}:
+                if facet == "sources" and key in {artifact["hash"], artifact["evidence_id"],
+                                                  controller.store.manifest()["hash"]}:
                     return "출처 검수는 산출물 자신의 재인용으로 통과할 수 없습니다"
                 if not controller.store.evidence_quote_read(key, quote):
                     return ContentIssue(

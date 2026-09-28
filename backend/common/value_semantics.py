@@ -140,6 +140,21 @@ def decimal_json_number(value: Decimal) -> float:
     raise ValueError("유한 JSON 숫자로 전달하면 정밀도를 잃습니다. text() 또는 Decimal 객체 참조를 사용하세요.")
 
 
+def comparison_number(value):
+    """Exact numeric identity for comparison, ordering and relation keys.
+
+    Keep the accepted numeric spelling policy; a float means its decimal
+    spelling, as in mixed Decimal arithmetic. Never round a Decimal to float
+    before deciding equality (which could discard a distinct row).
+    """
+    number = numeric_value(value, preserve_decimal=True)
+    if number is None:
+        return None
+    if isinstance(value, str):
+        return Decimal(value.strip().rstrip("%").strip().replace(",", ""))
+    return Decimal(str(number)) if isinstance(number, float) else number
+
+
 def arithmetic_numbers(values):
     """IBL 산술은 십진 입력을 유지하고 혼합 float를 그 십진 표기로 맞춘다."""
     numbers = [numeric_value(value, preserve_decimal=True) for value in values]
@@ -238,7 +253,7 @@ def classify_value(value: Any) -> ClassifiedValue:
                                text=str(value).casefold())
     if isinstance(value, (dict, *_SEQUENCES)):
         return ClassifiedValue(ValueKind.STRUCTURE, value)
-    number = numeric_value(value)
+    number = comparison_number(value)
     if number is not None:
         return ClassifiedValue(ValueKind.NUMBER, value, number=number)
     moment = datetime_value(value)
@@ -423,15 +438,16 @@ def numeric_observations(values):
 
 
 def _group_scalar_identity(value):
-    """groupby는 JSON 타입을 보존하고 native int/float만 number로 합친다."""
+    """groupby는 JSON 타입을 보존하고 int/float/Decimal을 정확한 number로 합친다."""
     if value is None:
         return "null", None
     if isinstance(value, bool):
         return "bool", value
-    if isinstance(value, (int, float)):
-        if isinstance(value, float) and not math.isfinite(value):
+    if isinstance(value, (int, float, Decimal)):
+        if ((isinstance(value, float) and not math.isfinite(value))
+                or (isinstance(value, Decimal) and not value.is_finite())):
             return "number", str(value).casefold()
-        return "number", value
+        return "number", comparison_number(value)
     if isinstance(value, datetime):
         return "datetime", _canonical_moment_text(value)
     if isinstance(value, str):
@@ -465,11 +481,11 @@ def _relation_scalar_identity(value):
     # 숫자로 읽히는 표기는 수치 정규형이 키다(B46-7) — 1 과 1.0, "1,000" 과 1000,
     # "02" 와 2 는 조건 eq 가 같다고 판정하는 같은 실체다(43·44회차 숫자 계약).
     # 관계 키만 텍스트 표기로 갈라 두면 join/dedup 이 filter 와 다른 선고를 낸다.
-    number = numeric_value(value)
+    number = comparison_number(value)
     if number is not None:
-        if isinstance(number, float) and number.is_integer():
-            number = int(number)
-        return str(number)
+        # Numeric objects have exact cross-type equality/hashing; str() would
+        # split Decimal('1.0'), int(1), and exponent spellings into different keys.
+        return ("number", number)
     # 선언 표기의 날짜도 같은 순간이면 같은 실체다(ISO 8601 판정, 2026-08-27) —
     # "2026-08-25T01:00Z" 와 "+00:00", 날짜만과 그날 00:00 이 join/dedup 에서 만난다.
     moment = datetime_value(value)
@@ -616,7 +632,8 @@ def aggregate_numbers(op: str, numbers: list):
     if op not in ("sum", "avg"):
         raise ValueError(f"알 수 없는 수치 집계: {op}")
 
-    decimals = [Decimal(number) if isinstance(number, int) else Decimal.from_float(number)
+    decimals = [number if isinstance(number, Decimal) else
+                Decimal(number) if isinstance(number, int) else Decimal.from_float(number)
                 for number in numbers]
     max_digits = max(len(number.as_tuple().digits) for number in decimals)
     with localcontext() as context:
@@ -624,6 +641,9 @@ def aggregate_numbers(op: str, numbers: list):
         result = sum(decimals, Decimal(0))
         if op == "avg":
             result /= Decimal(len(decimals))
+
+    if any(isinstance(number, Decimal) for number in numbers):
+        return result, None
 
     integral = result == result.to_integral_value()
     has_float = any(isinstance(number, float) for number in numbers)
@@ -640,7 +660,7 @@ def aggregate_numbers(op: str, numbers: list):
     return None, "집계 결과가 JSON 유한 수로 표현 가능한 범위를 벗어났습니다"
 
 
-def value_sort_key(field: str, number_parser=numeric_value):
+def value_sort_key(field: str, number_parser=comparison_number):
     """숫자(0)→날짜(1)→문자열(2)→결측(3) 버킷의 행 정렬 키.
 
     날짜 버킷은 파싱 순간으로 정렬한다(ISO 8601 판정, 2026-08-27) — 표기·시간대가
@@ -668,7 +688,7 @@ def value_sort_key(field: str, number_parser=numeric_value):
 
 
 def sort_records(records, field: str, descending: bool = False,
-                 number_parser=numeric_value):
+                 number_parser=comparison_number):
     """버킷 순서는 고정하고 숫자·날짜·문자열 버킷 안에서만 방향을 적용한다."""
     key = value_sort_key(field, number_parser)
     buckets = {0: [], 1: [], 2: [], 3: []}

@@ -10,6 +10,9 @@ import os
 import re
 import yaml
 import tempfile
+from contextlib import contextmanager
+from functools import lru_cache, wraps
+from filelock import FileLock
 from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
@@ -27,12 +30,35 @@ def _get_workflows_path() -> Path:
     return wf_path
 
 
+@lru_cache(maxsize=64)
+def _mutation_lock(directory):
+    # Same instance makes nested store operations reentrant in this thread;
+    # FileLock also serializes other threads, processes and backend reloads.
+    return FileLock(str(Path(directory) / ".mutation.lock"), timeout=10)
+
+
+@contextmanager
+def workflow_transaction():
+    """Serialize workflow mutations across their snapshot/check/commit boundary."""
+    with _mutation_lock(str(_get_workflows_path().resolve())):
+        yield
+
+
+def serialized_mutation(function):
+    @wraps(function)
+    def wrapped(*args, **kwargs):
+        with workflow_transaction():
+            return function(*args, **kwargs)
+    return wrapped
+
+
 def list_workflows() -> List[Dict]:
     """저장된 워크플로우 목록 (문장 pre-flight 동반 — preflight_sentence 참조)"""
     from workflow_engine import preflight_sentence
     from workflow_contract import _signature_of
     wf_path = _get_workflows_path()
     workflows = []
+    conflicts = None
     for f in sorted(wf_path.glob("*.yaml")):
         try:
             if f.is_symlink():
@@ -49,11 +75,17 @@ def list_workflows() -> List[Dict]:
             })
             continue
         if data.get("edition") == 2:
-            from ibl_v2_store import definition_name
+            from ibl_v2_store import definition_name, definitions
             try:
                 definition_name(data.get("code", ""))
                 from ibl_v2_learning import check_source
                 problem = check_source(data.get("code", ""), function_body=True)
+                # 제 정의만 보면 검사는 통과하지만 이름이 겹치면 아무도 부를 수 없다 (71회차 B71-1).
+                if conflicts is None:
+                    conflicts = definitions().conflicts
+                if data.get("name") in conflicts:
+                    problem = (f"같은 이름의 저장 정의가 여럿입니다: {', '.join(conflicts[data.get('name')])} — "
+                               f"하나를 새 이름으로 다시 저장하거나 지우세요.")
             except Exception as exc:
                 problem = str(exc)
             workflows.append({"id": f.stem, "name": data.get("name", f.stem),
@@ -208,6 +240,7 @@ def _validate_sentence(raw) -> Optional[str]:
     return None
 
 
+@serialized_mutation
 def save_workflow(workflow: dict) -> str:
     """
     워크플로우 저장
@@ -220,6 +253,9 @@ def save_workflow(workflow: dict) -> str:
     """
     wf_id = workflow.get("id") or _slugify(workflow.get("name", "workflow"))
     wf_path = _workflow_path(wf_id)
+    previous = get_workflow(wf_id)
+    if previous and previous.get("edition") == 2 and workflow.get("edition") != 2:
+        raise ValueError("판본 2 함수는 옛 워크플로우로 덮어쓸 수 없습니다. 새 ID로 저장하세요.")
 
     # id 필드는 YAML에 저장하지 않음 (파일명이 ID)
     save_data = {k: v for k, v in workflow.items() if k != "id"}
@@ -241,6 +277,7 @@ def save_workflow(workflow: dict) -> str:
     return wf_id
 
 
+@serialized_mutation
 def delete_workflow(workflow_id: str) -> bool:
     """워크플로우 삭제"""
     try:

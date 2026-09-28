@@ -96,10 +96,12 @@ def test_round38_matrix_preserves_key_meaning_across_six_paths(
 
 
 def test_falsey_scalars_are_not_erased_by_normalization(data_ops):
-    assert data_ops._norm(0) == "0"
+    assert data_ops._norm(0) == data_ops._norm("0")
+    assert data_ops._norm(0) != data_ops._norm(None)
     assert data_ops._norm(False) == "false"
     assert data_ops._norm(None) == ""
-    assert data_ops._join_key(0) == "0"
+    assert data_ops._join_key(0) == data_ops._join_key("0")
+    assert data_ops._join_key(0) != data_ops._join_key(False)
     assert data_ops._join_key(False) == "false"
 
 

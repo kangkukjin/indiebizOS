@@ -36,6 +36,7 @@ HINTS = {
     "ARITY": "내장 함수의 인자 개수를 확인하세요. 선택 인자는 뒤에서부터 생략합니다.",
     "BUILTIN": "문법 전문의 내장 함수 이름을 쓰세요. 지역·저장 함수는 값으로 넘기지 않고 [fn:이름]{인자:값}으로 부르며, 목록의 원소마다 부를 때는 [table:each]{ [fn:이름]{인자:$it} }입니다.",
     "CONCURRENCY": "each의 parallel은 1~8 사이의 정수 리터럴입니다.",
+    "DUPLICATE_LIBRARY": "저장 정의·관용구 가운데 이 이름이 둘 이상입니다. [self:workflow]{op:\"list\"}로 같은 이름의 저장본을 찾아 하나를 새 이름으로 다시 저장하거나 지우세요. 겹친 이름만 부를 수 없고 다른 함수는 영향이 없습니다.",
     "DUPLICATE_FUNCTION": "같은 범위의 정의 이름은 하나만 둡니다. 역할이 다르면 이름을 바꾸고, 고친 정의라면 옛 정의를 지우세요.",
     "EACH_COLLECT": "on_error:\"collect\"는 기본 map 모드에서만 씁니다. flat_map·effect에서 실패를 모으려면 본문을 [try]로 감싸세요.",
     "EACH_MODE": "each mode는 map·flat_map·effect, on_error는 stop·collect 중 하나의 리터럴입니다.",
@@ -89,6 +90,16 @@ def location(source, source_map, node):
             'end_line': text.count('\n', 0, end) + 1,
             'end_column': end - text.rfind('\n', 0, end),
             'offset_encoding': 'unicode-codepoints'}
+
+
+def rejection_message(prefix, issues):
+    """거절 봉투의 error 는 스스로 설명한다 — 문자열만 읽는 소비자(알림·이력·예약 결과·
+    중첩 실행의 바깥)가 많다 (71회차 B71-3). 첫 진단과 남은 수."""
+    if not issues:
+        return prefix
+    first = issues[0]
+    more = f" 외 {len(issues) - 1}건" if len(issues) > 1 else ""
+    return f"{prefix}: {first.get('message', '')} ({first.get('code', '')}){more}"
 
 
 def finish_diagnostics(compiler):

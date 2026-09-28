@@ -1,7 +1,9 @@
 """응답 후보·증거 원문 한 벌. 부분 읽기, 검수 범위, CAS 패치와 채택 지문을 소유한다."""
 import hashlib
 import json
+import os
 import re
+import tempfile
 import threading
 from collections import Counter
 from pathlib import Path
@@ -73,6 +75,23 @@ def digest(text):
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
+def evidence_integrity(directory, key, text):
+    """Read-only certification, shared by input references and trace inspection."""
+    try:
+        certificate = Path(directory) / (key + ".evidence.json")
+        if certificate.is_symlink():
+            return "unknown", [[]]
+        encoded = certificate.read_text(encoding="utf-8")
+        record = json.loads(encoded)
+        paths = record["masked_paths"]
+        if (digest(encoded) == key and record["version"] == 1 and record["text"] == text
+                and isinstance(paths, list) and all(isinstance(p, list) for p in paths)):
+            return "verified", paths
+    except (OSError, ValueError, KeyError, TypeError):
+        pass
+    return "unknown", [[]]
+
+
 def patch_text(text, patch):
     modes = sum(k in patch for k in ("text", "old_string", "replacements"))
     if modes != 1:
@@ -114,35 +133,44 @@ class TurnStore:
     def evidence(self, value):
         masked = mask_secrets(value) if isinstance(value, str) else mask_secret_data(value)
         text = masked if isinstance(masked, str) else json.dumps(masked, ensure_ascii=False, default=str)
-        key = digest(text)
-        path = self.directory / (key + ".txt")
-        if not path.exists():
-            path.write_text(text, encoding="utf-8")
-        out = {"id": key, "chars": len(text), "excerpt": text[:1000]}
-        # 저장본은 표시·인용 사본이다. 가린 자리를 알려 값 통로(inputs 참조)가 **** 를
-        # 업무 값으로 삼지 않게 한다 — 원문은 남기지 않는다(69회차 B69-5).
         altered = masked_paths(value, masked) if masked != value else []
-        if altered:
-            out["masked_paths"] = self._record_masked(key, altered)
-        return out
+        # Identity includes the transformation facts: a literal '****' and a
+        # redacted secret must never certify one another merely by sharing text.
+        record = {"version": 1, "text": text, "masked_paths": altered}
+        encoded = json.dumps(record, ensure_ascii=False, sort_keys=True)
+        key = digest(encoded)
+        # .txt is the existing display/trace surface. The atomic record is its
+        # integrity certificate, published last. An absent/invalid certificate
+        # permits display only; a crash can never turn 'unknown' into 'unaltered'.
+        self._publish_evidence(key + ".txt", text)
+        self._publish_evidence(key + ".evidence.json", encoded)
+        return {"id": key, "chars": len(text), "excerpt": text[:1000],
+                "integrity": "verified", **({"masked_paths": altered} if altered else {})}
 
-    def _record_masked(self, key, paths):
-        sidecar = self.directory / (key + ".masked.json")
-        known = self.masked_paths(key)
-        merged = known + [p for p in paths if p not in known]
-        if len(merged) > MASKED_PATHS_CAP:
-            merged = [[]]
-        if merged != known:
-            sidecar.write_text(json.dumps(merged, ensure_ascii=False), encoding="utf-8")
-        return merged
+    def _publish_evidence(self, name, text):
+        temp = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=self.directory,
+                                             prefix=".evidence-", delete=False) as stream:
+                temp = Path(stream.name)
+                stream.write(text)
+                stream.flush()
+                os.fsync(stream.fileno())
+            os.replace(temp, self.directory / name)
+        finally:
+            if temp is not None:
+                temp.unlink(missing_ok=True)
+
+    def _evidence_integrity(self, key, text):
+        return evidence_integrity(self.directory, key, text)
 
     def masked_paths(self, key):
-        """저장 시 비밀 후보로 가린 자리의 경로들. [[]] 는 전체(위치 불명)."""
-        sidecar = self.directory / (key + ".masked.json")
+        """Verified transformations, or [[]] for unverified historical/corrupt data."""
         try:
-            return json.loads(sidecar.read_text(encoding="utf-8"))
-        except (OSError, ValueError):
-            return []
+            text = (self.directory / (key + ".txt")).read_text(encoding="utf-8")
+        except OSError:
+            return [[]]
+        return self._evidence_integrity(key, text)[1]
 
     def read_evidence(self, key, offset=0, limit=12000, *, mark=False):
         if not re.fullmatch(r"[0-9a-f]{64}", key or ""):
@@ -158,7 +186,7 @@ class TurnStore:
         if mark:
             self.evidence_coverage.setdefault(key, []).append((offset, min(end or len(text), len(text))))
         page = {"id": key, "offset": offset, "chars": len(text), "text": text[offset:end]}
-        masked = self.masked_paths(key)
+        page["integrity"], masked = self._evidence_integrity(key, text)
         if masked:
             page["masked_paths"] = masked
         return page
@@ -419,7 +447,7 @@ def read_trace_document(root, store_id, name, offset=0, limit=12000, expected=No
             if (review.get("status") != "ACHIEVED" or response.get("hash") != actual_hash
                     or name != f"response-v{response.get('version')}.txt"):
                 raise ReadFault("forbidden", "response_not_approved")
-        elif actual_hash != name[:-4]:
+        elif actual_hash != name[:-4] and evidence_integrity(directory, name[:-4], text)[0] != "verified":
             raise ReadFault("malformed", "evidence_hash_mismatch")
         water = fingerprint([st.st_dev, st.st_ino, st.st_mtime_ns, st.st_size, actual_hash])
         if expected and water != expected:

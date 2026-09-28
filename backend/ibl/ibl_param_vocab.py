@@ -280,7 +280,8 @@ def unknown_op_message(action_config: Any, params: Any) -> Optional[str]:
         return None
     if not names or op.strip() in names:
         return None
-    return f"op '{op.strip()}' 은(는) 이 액션에 없습니다 — 실행 시 거절됩니다. 사용 가능: {sorted(names)}"
+    # 예언하지 않는다 — 호환 경로로 받는 핸들러도 있어 "실행 시 거절"은 거짓일 수 있다 (71회차 F71-3).
+    return f"op '{op.strip()}' 은(는) 이 액션의 선언된 op 가 아닙니다 — 선언된 op 로 고치세요. 사용 가능: {sorted(names)}"
 
 
 def check_params(node: str, action: str, params: Any,

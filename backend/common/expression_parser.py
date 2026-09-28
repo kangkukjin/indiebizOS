@@ -91,6 +91,10 @@ class Parser:
             if self.t.text == "<eof>":
                 self.fail(f"닫는 {close}가 없습니다.")
             statements.append(self.statement())
+            if self.t.text in ("else", "elif", "catch", "finally"):
+                # 다른 언어의 맨 낱말 가지는 예측 가능한 실수다 — 고치는 형태를 말한다 (71회차 T13).
+                fix = "[else] { [if:조건] {...} }" if self.t.text == "elif" else f"[{self.t.text}] {{ ... }}"
+                self.fail(f"'{self.t.text}' 가지는 대괄호 표지로 씁니다: {fix}")
             if self.t.text not in ("\n", ";", close):
                 self.fail("문장 사이에는 줄바꿈 또는 ;이 필요합니다.")
             while self.t.text in ("\n", ";"):

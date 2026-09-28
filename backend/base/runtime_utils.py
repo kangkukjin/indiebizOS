@@ -60,6 +60,11 @@ def get_base_path() -> Path:
     return Path(__file__).parent.parent.parent
 
 
+def file_resource_identity(path, base=".") -> str:
+    """Same physical path identity for file locks and declared write conflicts."""
+    return os.path.normcase(os.path.realpath(os.path.join(str(base), expand_body_path(path))))
+
+
 def get_data_path() -> Path:
     """데이터 경로 반환 (base_path/data)"""
     p = get_base_path() / "data"

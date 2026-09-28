@@ -70,6 +70,7 @@ def fetch_month_paged(base_url: str, service_key: str, region_code: str, year_mo
     except (TypeError, ValueError):
         limit = HARD_CAP_PER_MONTH
     limit = max(1, limit)
+    page_size = min(PAGE_SIZE, limit)
     rows, total, page, error = [], 0, 1, None
     try:
         while True:
@@ -78,20 +79,24 @@ def fetch_month_paged(base_url: str, service_key: str, region_code: str, year_mo
                 'LAWD_CD': region_code,
                 'DEAL_YMD': year_month,
                 'pageNo': str(page),
-                'numOfRows': str(min(PAGE_SIZE, limit - len(rows))),
+                # pageNo is relative to numOfRows: shrinking the last page
+                # moves its starting offset backwards and duplicates records.
+                'numOfRows': str(page_size),
             }
             root = ET.fromstring(_get(base_url + '?' + urllib.parse.urlencode(params)))
             result_code = root.find('.//resultCode')
             if result_code is None or result_code.text != '000':
                 msg = get_text(root, './/resultMsg')
-                if page == 1 and not (result_code is not None and 'NODATA' in (msg or '').upper()):
+                if not (page == 1 and result_code is not None and 'NODATA' in (msg or '').upper()):
                     error = f"resultCode={getattr(result_code, 'text', None)} {msg}".strip()
                 break
             tc = root.find('.//totalCount')
             if tc is not None and tc.text and tc.text.strip().isdigit():
                 total = int(tc.text.strip())
             items = root.findall('.//item')
-            for item in items:
+            if not items and len(rows) < total:
+                error = "원천이 totalCount 이전에 빈 페이지를 반환했습니다."
+            for item in items[:limit - len(rows)]:
                 rows.append(parse_item(item, year_month))
             if (not items) or len(rows) >= limit or (total and len(rows) >= total) or page >= MAX_PAGES:
                 break

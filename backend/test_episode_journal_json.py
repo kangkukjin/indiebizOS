@@ -113,7 +113,9 @@ def test_supervisor_evidence_masks_secret_before_hash_and_excerpt(tmp_path):
     ref = store.evidence(original)
     text = store.read_evidence(ref['id'])['text']
     assert secret not in text and secret not in ref['excerpt']
-    assert ref['id'] == digest(text)
+    certificate = (tmp_path / (ref['id'] + '.evidence.json')).read_text()
+    assert secret not in certificate and ref['id'] == digest(certificate)
+    assert store.read_evidence(ref['id'])['integrity'] == 'verified'
     event = store.log('tool.started', input=original)
     assert secret not in json.dumps(event)
     assert secret not in (tmp_path / 'events.jsonl').read_text()

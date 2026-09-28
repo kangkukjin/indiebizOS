@@ -22,6 +22,7 @@ class Adapter:
     # 어휘는 부작용 해소 규칙(ibl_ops.op_side_effect — 안전 분류·dry-run·건강검진과 같은 한 벌)로 op 단위 판정.
     reusable: object = None
     stateful: object = None
+    resource_identity: object = None
 
 
 @dataclass(frozen=True)
@@ -113,6 +114,25 @@ def pointer(value, path):
     return value
 
 
+def inner_diagnostics(raw, limit=5):
+    """판본 2 안쪽 실행·저장(`[self:workflow]{op:"run"|"save"}` 등)의 진단을 경계 너머로 (71회차 B71-3).
+
+    안쪽 봉투는 판본 2 자신의 형식(issues·diagnostic)인데 옛 도구 봉투의 허용 목록으로만 읽어
+    코드·위치가 사라졌다. 크기 제한: 진단 5개·메시지 500자, 코드·안내·줄·칸만."""
+    if raw.get("edition") != 2:
+        return []
+    items = [i for i in (raw.get("issues") or []) if isinstance(i, dict)]
+    if isinstance(raw.get("diagnostic"), dict):
+        items.append(raw["diagnostic"])
+    out = []
+    for item in items[:limit]:
+        where = item.get("location") or item.get("source_span") or {}
+        row = {key: str(item[key])[:500] for key in ("code", "message", "hint") if item.get(key)}
+        row.update({key: where[key] for key in ("line", "column", "source") if where.get(key) is not None})
+        out.append(row)
+    return out
+
+
 def decode_envelope(raw, adapter, input_values=None):
     from ibl_honesty import completion_evidence, truncation_evidence, markers_of
     if isinstance(raw, str):
@@ -138,7 +158,7 @@ def decode_envelope(raw, adapter, input_values=None):
                         "error_type", "errno", "path", "base_path", "hint", "stage",
                         "usage", "supported_channels", "available_actions", "error_code", "recovery",
                         "input_contract", "failure_origin", "execution_ref", "def",
-                    ) if key in raw})
+                    ) if key in raw} | ({"inner_diagnostics": inner} if (inner := inner_diagnostics(raw)) else {}))
     if adapter.get("protocol") == "document-value/1":
         from ibl_document_value import document_value
         raw = {**raw, "value": document_value(raw)}
@@ -295,11 +315,15 @@ def load_registry(project_path=".", agent_id=None):
                 from ibl_ops import op_side_effect, resolve_op
                 return not op_side_effect(ac, resolve_op(ac, args if isinstance(args, dict) else {}))
             dependency = script_snapshot if adapter['protocol'] == 'ibl-script/2' else None
+            def resource_identity(realm, value, base=project_path):
+                from runtime_utils import file_resource_identity
+                return file_resource_identity(value, base) if realm == 'file' else value
             from ibl_script_session import is_stateful
             result[key] = Adapter(contract, run, authorize,
                                   dependency,
                                   None if contract["effects"] != ["unknown"] else reusable,
-                                  is_stateful if adapter['protocol'] == 'ibl-script/2' else None)
+                                  is_stateful if adapter['protocol'] == 'ibl-script/2' else None,
+                                  resource_identity)
     from ibl_v2_compat import function_adapters
     result.update(function_adapters(project_path, agent_id))
     return result

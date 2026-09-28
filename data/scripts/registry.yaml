@@ -1,9 +1,3 @@
-코드조사범위:
-  description: '대상별좁혀읽기의 결정론적 값 처리. args.op(prepare|plan|finish)로 단계를 고른다. prepare: targets[{name,pattern}], before(2), after(29), limit(20)를 검증한다. plan: config·searches로 겹친 읽기 범위를 병합한다. finish: plan·reads로 대상별 상태와 중복 없는 발췌를 반환한다. 파일 접근·AI 호출 없이 값만 처리하며 all_targets_read와 각 대상 reason을 확인한다.'
-  file: targeted_code_read.py
-  interpreter: python
-  registered_at: '2026-09-26T15:52:02'
-  timeout: 30
 AI시대뉴스동기화:
   description: '완료된 AI 동향 보고서의 공개 출처 준비·제목 번역용 메타 정규화·뉴스 전송 — args: op(prepare 기본값|normalize|publish|retry|status)·data(normalize/publish에서
     필수인 행 목록 또는 items 봉투)·keys(retry에서 필수인 후보 키 목록). prepare는 미처리 출처를 반환하고, normalize는
@@ -57,6 +51,94 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-25T12:31:26'
   timeout: 180
+python_libraries:
+  callable_contract:
+    adapter:
+      local_code: true
+      protocol: ibl-script-session/1
+      stateful: true
+    effects:
+    - unknown
+    enums:
+      format:
+      - list
+      - records
+      - bytes
+      op:
+      - modules
+      - describe
+      - call
+      - getattr
+      - export
+      - release
+      result:
+      - auto
+      - value
+      - ref
+    exclusive:
+    - - target
+      - receiver
+    integers:
+    - offset
+    - limit
+    maximum:
+      limit: 200
+      timeout: 3600
+    minimum:
+      limit: 1
+      offset: 0
+      timeout: 0.01
+    nondeterministic: true
+    params:
+      args: List
+      format: Text
+      kwargs: Record
+      limit: Number
+      name: Text
+      offset: Number
+      op: Text
+      options: Record
+      query: Text
+      receiver: ForeignRef
+      result: Text
+      target: Text
+      timeout: Number
+    pipe_input: receiver
+    required: []
+    result: Unknown
+    variants:
+    - required_any:
+      - - target
+        - receiver
+      when:
+        op: call
+    - required_any:
+      - - target
+        - receiver
+      when:
+        op: getattr
+    - required_any:
+      - - target
+        - receiver
+      when:
+        op: describe
+    - required:
+      - receiver
+      - format
+      when:
+        op: export
+    - required:
+      - receiver
+      when:
+        op: release
+    version: 1
+  description: '설치 Python 라이브러리를 직접 호출하는 등록 스크립트. args.op: modules/describe/call/getattr/export/release;
+    target=모듈:함수 또는 receiver와 name, args/kwargs, result:auto/value/ref. 객체는 같은 IBL
+    실행에서만 유효. 가이드 python_libraries.md. 제한 없는 주인의 로컬 실행 전용.'
+  file: python_library/python_bridge_worker.py
+  interpreter: python
+  registered_at: '2026-09-27T18:26:29'
+  timeout: 60
 나레이션생성:
   description: '등록된 목소리로 나레이션 생성 (Qwen3-TTS 복제, 콜랩 GPU) — args: lecture_id 또는 texts
     또는 texts_file(이름→원고 객체를 담은 JSON 경로), voice(키·이름·별칭, 기본=원장 voices.json의 default),
@@ -221,6 +303,15 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-15T14:02:43'
   timeout: 300
+코드조사범위:
+  description: '대상별좁혀읽기의 결정론적 값 처리. args.op(prepare|plan|finish)로 단계를 고른다. prepare:
+    targets[{name,pattern}], before(2), after(29), limit(20)를 검증한다. plan: config·searches로
+    겹친 읽기 범위를 병합한다. finish: plan·reads로 대상별 상태와 중복 없는 발췌를 반환한다. 파일 접근·AI 호출 없이 값만
+    처리하며 all_targets_read와 각 대상 reason을 확인한다.'
+  file: targeted_code_read.py
+  interpreter: python
+  registered_at: '2026-09-26T15:52:02'
+  timeout: 30
 팁중첩변환:
   description: '유튜브 AI 팁 보고서: 평탄 팁 행을 tips.json 스키마(source 중첩)로 변환 — IBL compute 가
     dict 를 못 만드는 한 단계만 담당'
@@ -238,16 +329,16 @@ github저장소메타:
   registered_at: '2026-09-08T06:17:58'
   timeout: 300
 판정관용구:
-  description: '수집·Jev 관용구의 결정론적 URL 선택·입력 분할·원문 복원. 판정 호출은 IBL table:judge가 소유한다. 보통 주소마다읽기·관련자료골라읽기·의미로본문찾기로
-    호출한다. args: op(urls|prepare|select|finish), mode(search|body), source(items 봉투 또는 행
-    목록), origin(prepare 선택: 중복 제거 전 원천 봉투), question(prepare: 관련성 질문), limit(prepare/select:
-    0 이상 선별 상한), context(prepare/select: 앞뒤 문맥 행수, 기본 0), prepared(select: prepare의
-    plan), judged(select: 판정 items와 error_count 봉투), selection(finish: select의 selection),
-    result(finish: 크롤 items와 오류·잘림 봉투). urls는 정상 URL 문자열의 정확한 중복만 제거하고 실패 행을 보존한다.
-    urls에 limit을 주면 앞 개수개 정상 후보와 collection을 반환하며 실패 행은 finish에서 복원한다.
-    prepare는 배치·plan, select는 선별 items·selection·판정
-    내역, finish는 최종 items를 반환한다. 실패 행과 error_count·partial·truncated를 보존한다. 0개면 외부
-    호출 없이 실패 증거만 남긴다. 의도한 선별은 truncations.scope=selection으로 원천 절단과 구별한다.'
+  description: '수집·Jev 관용구의 결정론적 URL 선택·입력 분할·원문 복원. 판정 호출은 IBL table:judge가 소유한다.
+    보통 주소마다읽기·관련자료골라읽기·의미로본문찾기로 호출한다. args: op(urls|prepare|select|finish), mode(search|body),
+    source(items 봉투 또는 행 목록), origin(prepare 선택: 중복 제거 전 원천 봉투), question(prepare:
+    관련성 질문), limit(prepare/select: 0 이상 선별 상한), context(prepare/select: 앞뒤 문맥 행수,
+    기본 0), prepared(select: prepare의 plan), judged(select: 판정 items와 error_count 봉투),
+    selection(finish: select의 selection), result(finish: 크롤 items와 오류·잘림 봉투). urls는
+    정상 URL 문자열의 정확한 중복만 제거하고 실패 행을 보존한다. urls에 limit을 주면 앞 개수개 정상 후보와 collection을
+    반환하며 실패 행은 finish에서 복원한다. prepare는 배치·plan, select는 선별 items·selection·판정 내역,
+    finish는 최종 items를 반환한다. 실패 행과 error_count·partial·truncated를 보존한다. 0개면 외부 호출 없이
+    실패 증거만 남긴다. 의도한 선별은 truncations.scope=selection으로 원천 절단과 구별한다.'
   file: judgment_idioms.py
   interpreter: python
   registered_at: '2026-09-21T21:58:24'
@@ -258,91 +349,3 @@ github저장소메타:
   interpreter: python
   registered_at: '2026-08-22T03:03:55'
   timeout: 300
-python_libraries:
-  callable_contract:
-    adapter:
-      local_code: true
-      protocol: ibl-script-session/1
-      stateful: true
-    effects:
-    - unknown
-    enums:
-      format:
-      - list
-      - records
-      - bytes
-      op:
-      - modules
-      - describe
-      - call
-      - getattr
-      - export
-      - release
-      result:
-      - auto
-      - value
-      - ref
-    exclusive:
-    - - target
-      - receiver
-    integers:
-    - offset
-    - limit
-    maximum:
-      limit: 200
-      timeout: 3600
-    minimum:
-      limit: 1
-      offset: 0
-      timeout: 0.01
-    nondeterministic: true
-    params:
-      args: List
-      format: Text
-      kwargs: Record
-      limit: Number
-      name: Text
-      offset: Number
-      op: Text
-      options: Record
-      query: Text
-      receiver: ForeignRef
-      result: Text
-      target: Text
-      timeout: Number
-    pipe_input: receiver
-    required: []
-    result: Unknown
-    variants:
-    - required_any:
-      - - target
-        - receiver
-      when:
-        op: call
-    - required_any:
-      - - target
-        - receiver
-      when:
-        op: getattr
-    - required_any:
-      - - target
-        - receiver
-      when:
-        op: describe
-    - required:
-      - receiver
-      - format
-      when:
-        op: export
-    - required:
-      - receiver
-      when:
-        op: release
-    version: 1
-  description: '설치 Python 라이브러리를 직접 호출하는 등록 스크립트. args.op: modules/describe/call/getattr/export/release;
-    target=모듈:함수 또는 receiver와 name, args/kwargs, result:auto/value/ref. 객체는 같은 IBL
-    실행에서만 유효. 가이드 python_libraries.md. 제한 없는 주인의 로컬 실행 전용.'
-  file: python_library/python_bridge_worker.py
-  interpreter: python
-  registered_at: '2026-09-27T18:26:29'
-  timeout: 60

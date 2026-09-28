@@ -1346,3 +1346,13 @@ outputs·chart 동일·RED 거절·since 사유 승격).
 - 24과제·24검수·20실행, 동일 원문 41/44 → 44/44 기대값 통과. [보고서](experiments/imagination_round66_2026_09_26/report.md).
 - B66-1 수리: 현재 문법의 정렬 어댑터에서 전체 입력에 없는 기준 필드를 MISSING_FIELD로 거절. 잘못된 상위 추천·catch 미실행·병렬 거짓 성공을 공통 경계에서 차단.
 - 희소 필드·명시 null·빈 목록·동점 순서·입력 불변성은 유지. 필드 소비 경계 점검과 새 회귀 20개로 고정. 발신·저장·예약·알림은 검수만. 발견 한 원인 미수리 0.
+
+
+### 67회차 — 2배 훈련·새 공통 값 연산과 Python 호출의 경계 (2026-09-28, 훈련 턴 · 무수정)
+
+- 24과제·24검수·21실행(발신·쓰기·예약 check만), 45검사 37통과·8실패. 축=09-27 공통 값 연산·Python 라이브러리 호출·줄머리 이음. [보고서](experiments/imagination_round67_2026_09_28/report.md).
+- **B67-1** `json()`이 소수 리터럴(Decimal)을 담은 값에서 공개 결과 위반 봉투를 문자열화해 **성공 값으로 반환** — `content:json($r)` 쓰기가 오류 봉투를 파일에 저장하고 success(실측). 09-23부터 잠복. 수리성.
+- **B67-2** 리터럴 Decimal이 Python에 그대로 넘어가 pandas 열이 object dtype → `mean(numeric_only)` `{}` 거짓 성공. 수리성.
+- **B67-3** numpy.float64/int64를 "손실 없이 표현 불가"로 거짓 진단(정확 타입 비교). 수리성.
+- **B67-4** NFD 한글(사용자 `projects/` 97건)에서 `==`/contains는 NFC 비교, replace/strip/len/슬라이스는 원시 코드포인트 — replace 조용한 무변경·자모 조각. 수리성.
+- F67-1 리터럴 Decimal→산술 float(19.9×3=59.699…)·F67-2 sorted/table:sort 희소 필드 계약 불일치·F67-3 take.n 정수값 실수 check 통과·실행 거절·G67-1 순수 식 원소별 변환 부재. **판정 요청 2건**(F67-1 산술 Decimal 유지, G67-1 새 내장 함수). B67-1/2·F67-1은 같은 뿌리 → Decimal 경계 census 이관 권고. **미수리 4부류.**

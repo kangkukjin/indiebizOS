@@ -13,19 +13,19 @@ def plain_arguments(value):
     Interpreter-only values and numbers losing precision still require an explicit
     conversion. This returns a new tree; receipts retain the original typed args.
     """
-    import math
     from decimal import Decimal
+    from common.value_semantics import decimal_json_number
     from ibl_v2_ir import pack
 
     pack(value)  # Validate keys, nonfinite numbers and supported value shapes first.
 
     def convert(item, path):
         if isinstance(item, Decimal):
-            number = float(item)  # vj-ok: JSON numeric transport, not value comparison
-            if item.is_finite() and math.isfinite(number) and Decimal(str(number)) == item:
-                return number
-            raise Fault("LEGACY_VALUE", f"{path}: JSON 숫자로 전달하면 정밀도를 잃습니다. text()로 명시적으로 변환하세요.",
-                        kind="protocol", details={"path": path, "reason": "numeric_precision"})
+            try:
+                return decimal_json_number(item)
+            except ValueError as error:
+                raise Fault("LEGACY_VALUE", f"{path}: {error}", kind="protocol",
+                            details={"path": path, "reason": "numeric_precision"}) from error
         if isinstance(item, dict):
             return {key: convert(child, f"{path}.{key}") for key, child in item.items()}
         if isinstance(item, (list, tuple)):

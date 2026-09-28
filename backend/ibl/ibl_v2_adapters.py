@@ -68,7 +68,7 @@ def validate_contract(contract):
 
 def table_operation(operation, runtime, args):
     from ibl_v2_runtime import Binding
-    from common.value_semantics import sort_records
+    from common.value_semantics import sort_records, integer_value
     rows = args["items"]
     if operation == "filter":
         return [row for row in rows if boolean(runtime.callback(args["where"], [Binding(row)]).value)]
@@ -81,9 +81,10 @@ def table_operation(operation, runtime, args):
             return [{k: row[k] for k in columns} for row in rows]
         return [guard(runtime.callback(columns, [Binding(row)]).value, "Record", "select 콜백") for row in rows]
     if operation == "take":
-        if type(args["n"]) is not int or args["n"] < 0:
+        count = integer_value(args["n"])
+        if count is None or count < 0:
             raise Fault("TAKE_COUNT", "take.n은 0 이상의 정수입니다.")
-        return rows[:args["n"]]
+        return rows[:count]
     if operation == "sort":
         # The shared ordering primitive tolerates missing cells. The adapter
         # must distinguish those from an entirely absent ranking criterion;

@@ -98,10 +98,21 @@ Callable은 실행 내부 값이며 일반 JSON이나 외부 결과 값으로 �
 | unique / union / intersection / difference | `unique(list)`, `union(a,b,...)`, `intersection(a,b)`, `difference(a,b)` → List |
 | zip / enumerate | `zip(a,b,...)`은 가장 짧은 입력 길이의 행 목록, `enumerate(list,start=0)`은 `[번호,값]` 목록 |
 | any / all | List<Bool> → Bool. 빈 목록은 각각 false/true. 입력 전체의 Bool 타입을 검사 |
-| sorted | `sorted(list,key=null,reverse=false)` → 안정 정렬 목록. key는 필드 이름 또는 단일 인자 콜백, null이면 값 자체. 비교 불가능한 키는 실패 |
+| sorted | `sorted(list,key=null,reverse=false)` → 안정 정렬 목록. 필드 이름 key는 table:sort와 같은 숫자·날짜·텍스트·결측 순서이며 결측은 양방향 모두 뒤로. 비어 있지 않은 전체 행에 필드가 없으면 실패. 콜백 또는 null(값 자체) key는 비교 불가능하면 실패 |
 | keys / values / entries | Record의 키·값·`[키,값]` 목록. 레코드의 필드 순서 보존 |
 
 위 표의 `=`는 기본값 설명이다. 호출은 위치 인자로 쓴다: `sorted($행,"점수",true)`.
+텍스트 변환·len·인덱스·슬라이스·보간은 NFC 관점으로 동작한다. 원문 값·레코드 키는
+바꾸지 않으며 파일을 다시 열 때는 표시 이름을 재조립하지 않고 원래 path 필드를 쓴다.
+NFC는 한글 음절을 합치지만 모든 이모지의 시각적 글자 수를 세는 grapheme 규칙은 아니다.
+소수 리터럴의 산술·abs·round·min/max/sum은 Decimal을 유지한다(기본 십진 정밀도 28자리).
+Decimal과 float를 섞으면 float의 십진 표기로 맞춘다. Decimal이 없는 기존 float 연산은 유지한다.
+round의 정확한 중간값은 짝수 쪽으로 반올림한다. `round(12.345,2)`는 12.34다.
+`19.9*3`은 59.7, `sum([0.1,0.2])`는 0.3, `round(2.675,2)`는 2.68이다.
+`json()`과 공개 JSON 경계는 십진 표기가 float 왕복 뒤 같은 유한 소수를 숫자로 보낸다.
+정밀도 손실·비유한 수·Unit/Callable 등은 실패하며 json()이 오류 봉투를 성공 문자열로 만들지 않는다.
+사람용 value도 왕복 가능한 소수를 숫자로 표시하고 그 밖의 소수는 태그로 보존한다.
+value_wire의 Decimal 타입·원문은 항상 보존한다.
 목록 집합 연산은 `values_equal`로 비교하며 처음 나온 대표 값과 순서를 보존한다.
 숫자 표기·텍스트·날짜 관측도 기존 동등 계약을 따른다. 날짜와 시간의 관측 비교는
 엄격한 수학적 동치 관계가 아닐 수 있으므로 결과는 입력 순서의 대표 선택이다.
@@ -162,7 +173,7 @@ each는 바깥 값을 읽을 수 있지만 재바인딩하지 못한다. `$it`, 
 | table:select | items와 columns(열 목록 또는 Record 반환 콜백) → List<Record> |
 | table:compute | items와 `set:($r)=>Record` → 새 필드를 합친 List<Record> |
 | table:sort | items, by(Text), descending(Bool, 선택) → List<Record> |
-| table:take | items, n(0 이상 정수) → List |
+| table:take | items, n(0 이상 정수값 Number; 2.0·4/2도 허용) → List |
 | table:join | left/right 또는 inputs(파이프 자리), on → items Record. 두 출처의 목록·봉투를 그대로 받는다. |
 | table:merge / table:union | left/right 또는 inputs(파이프 자리) → items Record. 두 개 이상 출처·빈 목록·부분 실패를 보존한다. merge의 by는 중복 키다. |
 | self:time | format 선택 → Text. JSON처럼 생긴 포맷도 원문 문자열로 반환한다. |

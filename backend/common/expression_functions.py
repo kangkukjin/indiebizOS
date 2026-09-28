@@ -5,7 +5,8 @@ budget; stable list set operations retain the first representative value.
 """
 from functools import cmp_to_key
 from common.expression_ir import Fault
-from common.value_semantics import values_equal, compare_order, text_match, equality_bucket
+from common.value_semantics import (values_equal, compare_order, text_match,
+                                    equality_bucket, normalized_text, sort_records)
 
 # name -> (minimum arity, maximum arity, positional types, result type)
 CONTRACTS = {
@@ -34,7 +35,7 @@ CONTRACTS = {
 def text(value):
     if not isinstance(value, str):
         raise Fault('TEXT_REQUIRED', '문자열 연산에는 Text가 필요합니다. 변환은 text()/json()으로 명시하세요.')
-    return value
+    return normalized_text(value)
 
 
 def integer(value):
@@ -61,18 +62,18 @@ def call(name, args, tick, callback=None):
                 tick()
             return result
         if name == 'replace':
-            return s.replace(text(args[1]), text(args[2]), -1 if len(args) < 4 else integer(args[3]))
+            return normalized_text(s.replace(text(args[1]), text(args[2]), -1 if len(args) < 4 else integer(args[3])))
         if name == 'strip':
             return s.strip(None if len(args) < 2 or args[1] is None else text(args[1]))
         if name in ('upper', 'lower'):
-            return getattr(s, name)()
+            return normalized_text(getattr(s, name)())
         if name == 'contains':
             return text_match('contains', s, text(args[1]))
         parts = listing(args[1])
         for part in parts:
             tick()
             text(part)
-        return s.join(parts)
+        return normalized_text(s.join(text(part) for part in parts))
     if name in ('keys', 'values', 'entries'):
         if not isinstance(first, dict):
             raise Fault('RECORD_REQUIRED', 'Record가 필요합니다.')
@@ -106,15 +107,19 @@ def call(name, args, tick, callback=None):
         reverse = args[2] if len(args) > 2 else False
         if type(reverse) is not bool:
             raise Fault('BOOL_REQUIRED', 'sorted의 reverse는 Bool입니다.')
+        if isinstance(key, str):
+            if any(not isinstance(row, dict) for row in rows):
+                raise Fault('RECORD_REQUIRED', '필드 정렬에는 List<Record>가 필요합니다.')
+            for _ in rows:
+                tick()
+            if rows and not any(key in row for row in rows):
+                raise Fault('MISSING_FIELD', f'sorted 키가 입력 행에 없습니다: {key}')
+            return sort_records(rows, key, descending=reverse)
         decorated = []
         for row in rows:
             tick()
             if key is None:
                 k = row
-            elif isinstance(key, str):
-                if not isinstance(row, dict) or key not in row:
-                    raise Fault('MISSING_FIELD', f'sorted 키가 없습니다: {key}')
-                k = row[key]
             elif callback is not None:
                 k = callback(key, row)
             else:

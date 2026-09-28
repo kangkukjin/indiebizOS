@@ -1,0 +1,301 @@
+........................................................................ [  0%]
+........................................................................ [  1%]
+........................................................................ [  2%]
+........................................................................ [  3%]
+........................................................................ [  4%]
+........................................................................ [  5%]
+........................................................................ [  6%]
+........................................................................ [  7%]
+........................................................................ [  8%]
+........................................................................ [  9%]
+........................................................................ [ 10%]
+........................................................................ [ 11%]
+........................................................................ [ 12%]
+........................................................................ [ 13%]
+........................................................................ [ 14%]
+........................................................................ [ 15%]
+........................................................................ [ 16%]
+........................................................................ [ 17%]
+........................................................................ [ 18%]
+........................................................................ [ 19%]
+........................................................................ [ 20%]
+........................................................................ [ 21%]
+........................................................................ [ 22%]
+........................................................................ [ 23%]
+........................................................................ [ 24%]
+........................................................................ [ 25%]
+........................................................................ [ 26%]
+........................................................................ [ 27%]
+........................................................................ [ 28%]
+........................................................................ [ 29%]
+........................................................................ [ 30%]
+........................................................................ [ 31%]
+........................................................................ [ 32%]
+........................................................................ [ 33%]
+........................................................................ [ 34%]
+........................................................................ [ 35%]
+........................................................................ [ 36%]
+........................................................................ [ 37%]
+........................................................................ [ 38%]
+........................................................................ [ 39%]
+...................................F.................................... [ 40%]
+........................................................................ [ 41%]
+........................................................................ [ 42%]
+........................................................................ [ 43%]
+........................................................................ [ 44%]
+........................................................................ [ 45%]
+........................................................................ [ 46%]
+........................................................................ [ 47%]
+........................................................................ [ 48%]
+........................................................................ [ 49%]
+........................................................................ [ 50%]
+........................................................................ [ 51%]
+........................................................................ [ 52%]
+........................................................................ [ 53%]
+........................................................................ [ 54%]
+........................................................................ [ 55%]
+........................................................................ [ 56%]
+........................................................................ [ 57%]
+........................................................................ [ 58%]
+........................................................................ [ 59%]
+........................................................................ [ 60%]
+........................................................................ [ 61%]
+........................................................................ [ 62%]
+........................................................................ [ 63%]
+.....................................................F.................. [ 64%]
+................F..................................F.................... [ 65%]
+..............F......................................................... [ 66%]
+........................................................................ [ 67%]
+........................................................................ [ 68%]
+........................................................................ [ 69%]
+........................................................................ [ 70%]
+........................................................................ [ 71%]
+........................................................................ [ 72%]
+........................................................................ [ 73%]
+........................................................................ [ 74%]
+........................................................................ [ 75%]
+........................................................................ [ 76%]
+........................................................................ [ 77%]
+........................................................................ [ 78%]
+........................................................................ [ 79%]
+........................................................................ [ 80%]
+........................................................................ [ 81%]
+........................................................................ [ 82%]
+........................................................................ [ 83%]
+........................................................................ [ 84%]
+........................................................................ [ 85%]
+........................................................................ [ 86%]
+........................................................................ [ 87%]
+........................................................................ [ 88%]
+................F....................................................... [ 89%]
+........................................................................ [ 90%]
+........................................................................ [ 91%]
+........................................................................ [ 92%]
+........................................................................ [ 93%]
+........................................................................ [ 94%]
+........................................................................ [ 95%]
+........................................................................ [ 96%]
+........................................................................ [ 97%]
+........................................................................ [ 98%]
+........................................................................ [ 99%]
+...................................................                      [100%]
+=================================== FAILURES ===================================
+___________ test_guide_is_reachable_from_actual_prompt_and_old_links ___________
+
+    def test_guide_is_reachable_from_actual_prompt_and_old_links():
+        from ibl_access import build_environment
+        from ibl_routing import _search_guide
+        for query in ('ibl_composition.md', 'ibl_v2.md', 'ibl_v2'):
+            guide = _search_guide(query, {'read': True})
+            assert guide['match'] == 'filename' and guide['content'] == GUIDE.read_text()
+        assert 'ibl_v2' not in [g['id'] for g in _search_guide('', {})['guides']]
+        for compact in (True, False):
+            prompt = build_environment(allowed_set={'table', 'self'},
+                                       expose_idioms=False, compact=compact)
+            assert 'read_guide(query="ibl_composition.md")' in prompt
+        assert set(EXAMPLES) == {'pipeline', 'container_record', 'compose', 'empty', 'catch', 'retry', 'chunk', 'join_time', 'unary_group', 'loop_accumulate', 'builtin_callable', 'optional_file', 'local_decomposition', 'document_completion', 'value_revision'}
+>       assert len(re.findall(r'```ibl\n', GUIDE.read_text())) == len(EXAMPLES)
+E       assert 16 == 15
+E        +  where 16 = len(['```ibl\n', '```ibl\n', '```ibl\n', '```ibl\n', '```ibl\n', '```ibl\n', ...])
+E        +    where ['```ibl\n', '```ibl\n', '```ibl\n', '```ibl\n', '```ibl\n', '```ibl\n', ...] = <function findall at 0x107e06480>('```ibl\\n', '# IBL 조합 — 값·함수로 큰 작업 만들기\n\n이 문서는 현재 IBL의 주 작성 교재다. 도구마다 AI가 다음 호출을 다시 작성하기보다,\n정할 수 있는 데이터 흐름을 하나의 프로그램으로 표현한다. 필요한......}}`로 호출한다. 함수별 등록이 필요 없으며\n객체는 같은 최상위 실행 안에서 전달하고 종료 전에 값/파일로 변환한다.\n[직접 호출과 오류 복구 예제](python_libraries.md)를 따른다.\n')
+E        +      where <function findall at 0x107e06480> = re.findall
+E        +      and   '# IBL 조합 — 값·함수로 큰 작업 만들기\n\n이 문서는 현재 IBL의 주 작성 교재다. 도구마다 AI가 다음 호출을 다시 작성하기보다,\n정할 수 있는 데이터 흐름을 하나의 프로그램으로 표현한다. 필요한......}}`로 호출한다. 함수별 등록이 필요 없으며\n객체는 같은 최상위 실행 안에서 전달하고 종료 전에 값/파일로 변환한다.\n[직접 호출과 오류 복구 예제](python_libraries.md)를 따른다.\n' = read_text()
+E        +        where read_text = PosixPath('/Users/kangkukjin/Desktop/AI/indiebizOS/data/guides/ibl_composition.md').read_text
+E        +  and   15 = len({'local_decomposition': '#!ibl edition=2\n[def:금액계산]($행) {\n  return {id:$행.id,금액:$행.수량 * $행.단가}\n}\n[def:내역작성]($목록) {...s:[{id:"c",score:5}],n:1}\n$합 = $출처별 >> [table:each]{mode:"flat_map"} { return $it }\n[fn:통과점수]{목록:$합,최소:5,배수:2}', ...})
+
+backend/test_ibl_composition_teaching.py:185: AssertionError
+___ test_every_builtin_can_be_passed_as_an_existing_callable[variable-round] ___
+
+name = 'round', placement = 'variable'
+
+    @pytest.mark.parametrize('name', EXAMPLES)
+    @pytest.mark.parametrize('placement', ['variable', 'argument', 'default', 'container'])
+    def test_every_builtin_can_be_passed_as_an_existing_callable(name, placement):
+        args, expected = EXAMPLES[name]
+        setup = '$results=[2,0] >> [table:each]{on_error:"collect"}{return 10/$it}; '
+        # Functions take the result inputs explicitly; they never capture callers.
+        forms = {
+            'variable': f'$f={name}; return $f({args})',
+            'argument': f'[def:apply]($f,$results){{return $f({args})}}; [fn:apply]{{f:{name},results:$results}}',
+            'default': f'[def:apply]($results,$f={name}){{return $f({args})}}; [fn:apply]{{results:$results}}',
+            'container': f'$ops={{functions:[{name}]}}; $f=$ops.functions[0]; return $f({args})',
+        }
+        result = run(setup + forms[placement])
+        assert result['success'], result
+        if name == 'evidence':
+            assert result['value']['events']
+            assert result['value']['fingerprint']
+        elif name == 'error_of':
+            assert result['value']['code'] == 'VALUE'
+        else:
+>           assert result['value'] == expected, result
+E           AssertionError: {'success': True, 'value': 12.34, 'value_wire': {'protocol': 'ibl-value/1', 'data': ['decimal', '12.34']}, 'edition': 2, ...}
+E           assert 12.34 == 12.35
+
+backend/test_imagination_round62_repairs.py:83: AssertionError
+___ test_every_builtin_can_be_passed_as_an_existing_callable[argument-round] ___
+
+name = 'round', placement = 'argument'
+
+    @pytest.mark.parametrize('name', EXAMPLES)
+    @pytest.mark.parametrize('placement', ['variable', 'argument', 'default', 'container'])
+    def test_every_builtin_can_be_passed_as_an_existing_callable(name, placement):
+        args, expected = EXAMPLES[name]
+        setup = '$results=[2,0] >> [table:each]{on_error:"collect"}{return 10/$it}; '
+        # Functions take the result inputs explicitly; they never capture callers.
+        forms = {
+            'variable': f'$f={name}; return $f({args})',
+            'argument': f'[def:apply]($f,$results){{return $f({args})}}; [fn:apply]{{f:{name},results:$results}}',
+            'default': f'[def:apply]($results,$f={name}){{return $f({args})}}; [fn:apply]{{results:$results}}',
+            'container': f'$ops={{functions:[{name}]}}; $f=$ops.functions[0]; return $f({args})',
+        }
+        result = run(setup + forms[placement])
+        assert result['success'], result
+        if name == 'evidence':
+            assert result['value']['events']
+            assert result['value']['fingerprint']
+        elif name == 'error_of':
+            assert result['value']['code'] == 'VALUE'
+        else:
+>           assert result['value'] == expected, result
+E           AssertionError: {'success': True, 'value': 12.34, 'value_wire': {'protocol': 'ibl-value/1', 'data': ['decimal', '12.34']}, 'edition': 2, ...}
+E           assert 12.34 == 12.35
+
+backend/test_imagination_round62_repairs.py:83: AssertionError
+___ test_every_builtin_can_be_passed_as_an_existing_callable[default-round] ____
+
+name = 'round', placement = 'default'
+
+    @pytest.mark.parametrize('name', EXAMPLES)
+    @pytest.mark.parametrize('placement', ['variable', 'argument', 'default', 'container'])
+    def test_every_builtin_can_be_passed_as_an_existing_callable(name, placement):
+        args, expected = EXAMPLES[name]
+        setup = '$results=[2,0] >> [table:each]{on_error:"collect"}{return 10/$it}; '
+        # Functions take the result inputs explicitly; they never capture callers.
+        forms = {
+            'variable': f'$f={name}; return $f({args})',
+            'argument': f'[def:apply]($f,$results){{return $f({args})}}; [fn:apply]{{f:{name},results:$results}}',
+            'default': f'[def:apply]($results,$f={name}){{return $f({args})}}; [fn:apply]{{results:$results}}',
+            'container': f'$ops={{functions:[{name}]}}; $f=$ops.functions[0]; return $f({args})',
+        }
+        result = run(setup + forms[placement])
+        assert result['success'], result
+        if name == 'evidence':
+            assert result['value']['events']
+            assert result['value']['fingerprint']
+        elif name == 'error_of':
+            assert result['value']['code'] == 'VALUE'
+        else:
+>           assert result['value'] == expected, result
+E           AssertionError: {'success': True, 'value': 12.34, 'value_wire': {'protocol': 'ibl-value/1', 'data': ['decimal', '12.34']}, 'edition': 2, ...}
+E           assert 12.34 == 12.35
+
+backend/test_imagination_round62_repairs.py:83: AssertionError
+__ test_every_builtin_can_be_passed_as_an_existing_callable[container-round] ___
+
+name = 'round', placement = 'container'
+
+    @pytest.mark.parametrize('name', EXAMPLES)
+    @pytest.mark.parametrize('placement', ['variable', 'argument', 'default', 'container'])
+    def test_every_builtin_can_be_passed_as_an_existing_callable(name, placement):
+        args, expected = EXAMPLES[name]
+        setup = '$results=[2,0] >> [table:each]{on_error:"collect"}{return 10/$it}; '
+        # Functions take the result inputs explicitly; they never capture callers.
+        forms = {
+            'variable': f'$f={name}; return $f({args})',
+            'argument': f'[def:apply]($f,$results){{return $f({args})}}; [fn:apply]{{f:{name},results:$results}}',
+            'default': f'[def:apply]($results,$f={name}){{return $f({args})}}; [fn:apply]{{results:$results}}',
+            'container': f'$ops={{functions:[{name}]}}; $f=$ops.functions[0]; return $f({args})',
+        }
+        result = run(setup + forms[placement])
+        assert result['success'], result
+        if name == 'evidence':
+            assert result['value']['events']
+            assert result['value']['fingerprint']
+        elif name == 'error_of':
+            assert result['value']['code'] == 'VALUE'
+        else:
+>           assert result['value'] == expected, result
+E           AssertionError: {'success': True, 'value': 12.34, 'value_wire': {'protocol': 'ibl-value/1', 'data': ['decimal', '12.34']}, 'edition': 2, ...}
+E           assert 12.34 == 12.35
+
+backend/test_imagination_round62_repairs.py:83: AssertionError
+____________________ test_r2_direct_run_delegates_to_pytest ____________________
+
+    def test_r2_direct_run_delegates_to_pytest():
+        """직접 실행이 시험을 조용히 건너뛰지 못하게 — `__main__` 은 pytest 로 위임한다."""
+        bad = []
+        for name in _battery_files():
+            src = _read(name)
+            if _OPT_OUT_MARK in src:
+                continue                      # 직접 실행 전용이라고 스스로 밝힌 것
+            if not _test_funcs(src):
+                continue                      # R1 이 잡는다
+            if _SCRIPT_BATTERY_MARK in src:
+                # 선언한 이상 계약을 지키는지도 본다 — 다리 없이 표식만 달면 그게 새 침묵이다.
+                assert "subprocess" in src and "__file__" in src, \
+                    f"{name}: script-battery 를 선언했는데 다리 시험(별도 프로세스 실행)이 없다"
+                continue
+            block = _main_block(src)
+            if block is None:
+                bad.append((name, "__main__ 없음 — 직접 실행이 0건 통과(종료코드 0)"))
+            elif not re.search(r"\bpytest\.main\(|_pytest\.main\(", block):
+                bad.append((name, "__main__ 이 pytest 로 위임하지 않는다 — 두 번째 러너는 드리프트한다"))
+>       assert not bad, "거짓 초록 위험:\n" + "\n".join("  %s — %s" % b for b in bad)
+E       AssertionError: 거짓 초록 위험:
+E           test_imagination_round67_repairs.py — __main__ 없음 — 직접 실행이 0건 통과(종료코드 0)
+E       assert not [('test_imagination_round67_repairs.py', '__main__ 없음 — 직접 실행이 0건 통과(종료코드 0)')]
+
+backend/test_single_runner.py:116: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47
+  /Users/kangkukjin/Desktop/AI/indiebizOS/.venv/lib/python3.13/site-packages/pydantic_settings/sources/utils.py:47: IncompleteFieldDefinitionWarning: Field 'lifespan' has an incomplete definition: its annotation contains an unresolved forward reference, so settings sources may fail to correctly resolve its value. Call `model_rebuild()` on the model where the field is defined, once all the referenced types are defined.
+    warnings.warn(
+
+backend/test_core8_reliability_2026_09_15.py::test_pdf_pages_through_ibl
+backend/test_core8_reliability_2026_09_15.py::test_pdf_pages_through_ibl
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+backend/test_core8_reliability_2026_09_15.py::test_pdf_pages_through_ibl
+backend/test_core8_reliability_2026_09_15.py::test_pdf_pages_through_ibl
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+backend/test_core8_reliability_2026_09_15.py::test_pdf_pages_through_ibl
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type swigvarlink has no __module__ attribute
+
+backend/test_fn_zero_rediagnosis_2026_09_07.py: 3 warnings
+backend/test_idiom_tier.py: 64 warnings
+backend/test_names_first_recall_2026_09_05.py: 32 warnings
+backend/test_stale_idiom_overwrite_2026_09_07.py: 11 warnings
+  /Users/kangkukjin/Desktop/AI/indiebizOS/backend/datastore/hippo_tree.py:427: DeprecationWarning: 'maxsplit' is passed as positional argument
+    base = re.split(r"[.\[]", k, 1)[0]
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED backend/test_ibl_composition_teaching.py::test_guide_is_reachable_from_actual_prompt_and_old_links
+FAILED backend/test_imagination_round62_repairs.py::test_every_builtin_can_be_passed_as_an_existing_callable[variable-round]
+FAILED backend/test_imagination_round62_repairs.py::test_every_builtin_can_be_passed_as_an_existing_callable[argument-round]
+FAILED backend/test_imagination_round62_repairs.py::test_every_builtin_can_be_passed_as_an_existing_callable[default-round]
+FAILED backend/test_imagination_round62_repairs.py::test_every_builtin_can_be_passed_as_an_existing_callable[container-round]
+FAILED backend/test_single_runner.py::test_r2_direct_run_delegates_to_pytest
+<sys>:0: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

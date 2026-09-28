@@ -31,7 +31,8 @@ _SHAPES = [
     ("key_collision", lambda: {1: "number", "1": "text"}, "pairs"),
     ("bytes", lambda: {"v": b"abc"}, "error"),
     ("datetime", lambda: {"v": datetime.datetime(2026, 8, 26, 1, 2, 3)}, "error"),
-    ("decimal", lambda: {"v": decimal.Decimal("0.1")}, "error"),
+    ("decimal", lambda: {"v": decimal.Decimal("0.1")}, "decimal"),
+    ("precise_decimal", lambda: {"v": decimal.Decimal("0.10000000000000001")}, "error"),
     ("set", lambda: {"v": {1, 2}}, "error"),
     ("cycle", _cycle_value, "error"),
 ]
@@ -80,6 +81,8 @@ def test_round43_matrix_has_one_json_contract_across_six_boundaries(
         assert all(result == {"v": [1, "x", None]} for result in results), name
     elif expected == "tuple":
         assert all(result == {"v": [1, 2]} for result in results), name
+    elif expected == "decimal":
+        assert all(result == {"v": 0.1} for result in results), name
     elif expected == "pairs":
         assert all(result == {"$object_pairs": [[1, "number"], ["1", "text"]]}
                    for result in results), name

@@ -1,0 +1,1 @@
+{"success": false, "error_code": "NON_JSON_RESULT", "error": "공개 결과 계약 위반: 공개 결과 $[0].p의 Decimal 값은 JSON으로 표현할 수 없습니다"}

@@ -21,7 +21,13 @@ return {평균:$평균,목록:$목록}
 - 객체 참조는 같은 최상위 프로그램 안에서만 유효하다. 함수·반복·관용구로 넘길 수 있지만
   프로그램 종료 뒤 다음 모델 호출에서는 만료된다. 종료 전에 메서드나 export로 값을 얻는다.
   `release`는 참조만 반납한다. 파일/연결의 close는 명시 호출하고 필요하면 finally에 둔다.
-- Decimal·큰 정수는 그대로 보존한다. tuple/set/NaN/복소수/바이너리를 임의로 목록·null·문자열로
+- IBL 소수 인자는 십진 표기가 왕복 가능한 유한 Python float로 전달한다(중첩 목록·레코드도 동일).
+  왕복 때 정밀도를 잃으면 호출 전에 `PY_INPUT`으로 실패한다. Decimal 객체가 필요하면
+  `target:"decimal:Decimal",args:["0.1"],result:"ref"`로 명시 생성해 참조를 전달한다.
+  Python에서 반환한 Decimal·큰 정수의 typed wire는 그대로 보존한다.
+- NumPy 정수·유한 실수 스칼라는 `item()`이 기본 int/float를 반환할 때 자동으로 값이 된다.
+  고정밀 스칼라·NumPy bool·복소수·비유한 수는 자동 변환하지 않는다.
+  tuple/set/NaN/복소수/바이너리를 임의로 목록·null·문자열로
   바꾸지 않는다. IBL lambda를 Python 콜백으로 넘길 수는 없고, Python callable 참조는 가능하다.
 
 ```ibl

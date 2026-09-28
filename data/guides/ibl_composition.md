@@ -453,6 +453,22 @@ return {목록:$결과,앞쪽:$결과[:1],표시:join(", ",$결과)}
 `unique/union/intersection/difference`는 순서 보존 목록 연산이며 집합 타입을 만들지 않는다.
 `zip/enumerate`의 각 행도 목록이다. `any/all`은 Bool 목록을 받으며,
 `sorted($행,"점수",true)` 또는 `sorted($행,($r)=>$r.점수)`로 키를 지정한다.
+필드 이름 정렬은 `table:sort`와 같아서 일부 결측/null 행은 마지막에 두고,
+전체 행에 기준 필드가 없으면 실패한다. 콜백의 누락 필드 접근은 오류다.
+문자열 변환·길이·슬라이싱은 NFC를 사용해 맥의 NFD 한글도 음절 단위로 다룬다.
+파일 접근에는 목록이 반환한 원래 `path`를 사용한다.
+
+순수 콜백 안의 목록별 변환은 기존 `reduce`로 표현할 수 있다.
+<!-- example:pure_list_transform -->
+```ibl
+[{t:" 강의 , 음악 "}] >> [table:compute]{set:($r)=>{
+  tags:reduce(split($r.t,","),[],($acc,$tag)=>$acc+[strip($tag)])
+}}
+```
+소수 리터럴은 산술에서도 십진수로 유지된다. `19.9*3`은 59.7이며
+`json([{면적:72.5}])`는 실제 숫자가 담긴 JSON을 만든다.
+JSON 숫자로 바꾸면서 정밀도가 줄어드는 값은 오류로 멈춘다. 정확한 숫자 원문을
+문자열로 저장하려는 경우에만 `text()`를 명시한다.
 `table:filter`는 레코드 행을 받는다. 문자열·목록 원소를 그대로 거르려면
 `table:each`의 `mode:"flat_map"`에서 조건에 따라 `[$it]` 또는 `[]`를 반환한다.
 예: `enumerate(["첫 줄","찾을 줄"]) >> [table:each]{mode:"flat_map"}{[if:contains($it[1],"찾을")]{return [$it]}; return []}`.

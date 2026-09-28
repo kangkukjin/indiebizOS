@@ -25,7 +25,7 @@ EXAMPLES = {
     'number': ('"12"', 12),
     'text': ('true', 'true'),
     'abs': ('-7', 7),
-    'round': ('12.345,2', 12.35),
+    'round': ('12.345,2', 12.34),  # Decimal tie-to-even; no binary float artifact.
     'min': ('[7,2,4]', 2),
     'max': ('7,2,4', 7),
     'sum': ('[7,2,4]', 13),

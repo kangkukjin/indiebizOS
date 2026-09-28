@@ -1,0 +1,57 @@
+{
+  "full": {
+    "tests": 7252,
+    "failures": 6,
+    "errors": 0,
+    "skipped": 1,
+    "passed": 7245,
+    "seconds": 700.269,
+    "failed_cases": [
+      "backend.test_ibl_composition_teaching.test_guide_is_reachable_from_actual_prompt_and_old_links",
+      "backend.test_imagination_round62_repairs.test_every_builtin_can_be_passed_as_an_existing_callable[variable-round]",
+      "backend.test_imagination_round62_repairs.test_every_builtin_can_be_passed_as_an_existing_callable[argument-round]",
+      "backend.test_imagination_round62_repairs.test_every_builtin_can_be_passed_as_an_existing_callable[default-round]",
+      "backend.test_imagination_round62_repairs.test_every_builtin_can_be_passed_as_an_existing_callable[container-round]",
+      "backend.test_single_runner.test_r2_direct_run_delegates_to_pytest"
+    ]
+  },
+  "followup": {
+    "tests": 296,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 296,
+    "seconds": 20.369,
+    "failed_cases": []
+  },
+  "records": {
+    "tests": 29,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 29,
+    "seconds": 2.363,
+    "failed_cases": []
+  },
+  "teaching": {
+    "tests": 44,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": 44,
+    "seconds": 10.592,
+    "failed_cases": []
+  },
+  "targeted_initial_passed": 263,
+  "report_probe": {
+    "before_passed": 37,
+    "after_passed": 45,
+    "total": 45
+  },
+  "supplemental_http": {
+    "passed": 4,
+    "total": 4
+  },
+  "unresolved_failures": [],
+  "full_rerun_after_test_repairs": false
+}

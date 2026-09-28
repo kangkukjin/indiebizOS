@@ -1,0 +1,1147 @@
+[
+  {
+    "name": "decimal_math",
+    "request": {
+      "code": "return {sum:sum([0.1,0.2]),equal:0.1+0.2==0.3,rounded:round(2.675,2)}",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "expected": {
+      "sum": 0.3,
+      "equal": true,
+      "rounded": 2.68
+    },
+    "response": {
+      "success": true,
+      "value": {
+        "sum": 0.3,
+        "equal": true,
+        "rounded": 2.68
+      },
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "record",
+          [
+            [
+              "sum",
+              [
+                "decimal",
+                "0.3"
+              ]
+            ],
+            [
+              "equal",
+              [
+                "scalar",
+                true
+              ]
+            ],
+            [
+              "rounded",
+              [
+                "decimal",
+                "2.68"
+              ]
+            ]
+          ]
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "0d86addac5074fe001b5652170e183b19c242aca165167068d7d8a31c494b346",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:17:20",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "literal:21:24",
+          "invocation_id": 2,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 3,
+          "node_id": "list:16:25",
+          "invocation_id": 3,
+          "kind": "list",
+          "parents": [
+            1,
+            2
+          ]
+        },
+        {
+          "id": 4,
+          "node_id": "builtin:12:15",
+          "invocation_id": 4,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 5,
+          "node_id": "pure_call:12:26",
+          "invocation_id": 5,
+          "kind": "pure_call",
+          "parents": [
+            3,
+            4
+          ]
+        },
+        {
+          "id": 6,
+          "node_id": "literal:33:36",
+          "invocation_id": 6,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 7,
+          "node_id": "literal:37:40",
+          "invocation_id": 7,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 8,
+          "node_id": "binary:33:40",
+          "invocation_id": 8,
+          "kind": "binary",
+          "parents": [
+            6,
+            7
+          ]
+        },
+        {
+          "id": 9,
+          "node_id": "literal:42:45",
+          "invocation_id": 9,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 10,
+          "node_id": "binary:33:45",
+          "invocation_id": 10,
+          "kind": "binary",
+          "parents": [
+            8,
+            9
+          ]
+        },
+        {
+          "id": 11,
+          "node_id": "literal:60:65",
+          "invocation_id": 11,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 12,
+          "node_id": "literal:66:67",
+          "invocation_id": 12,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 13,
+          "node_id": "builtin:54:59",
+          "invocation_id": 13,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 14,
+          "node_id": "pure_call:54:68",
+          "invocation_id": 14,
+          "kind": "pure_call",
+          "parents": [
+            11,
+            12,
+            13
+          ]
+        },
+        {
+          "id": 15,
+          "node_id": "record:7:69",
+          "invocation_id": 15,
+          "kind": "record",
+          "parents": [
+            5,
+            10,
+            14
+          ]
+        }
+      ],
+      "source_map": {
+        "literal:17:20": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 17,
+          "end": 20,
+          "line": 1,
+          "column": 18
+        },
+        "literal:21:24": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 21,
+          "end": 24,
+          "line": 1,
+          "column": 22
+        },
+        "list:16:25": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 16,
+          "end": 25,
+          "line": 1,
+          "column": 17
+        },
+        "builtin:12:15": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 12,
+          "end": 15,
+          "line": 1,
+          "column": 13
+        },
+        "pure_call:12:26": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 12,
+          "end": 26,
+          "line": 1,
+          "column": 13
+        },
+        "literal:33:36": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 33,
+          "end": 36,
+          "line": 1,
+          "column": 34
+        },
+        "literal:37:40": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 37,
+          "end": 40,
+          "line": 1,
+          "column": 38
+        },
+        "binary:33:40": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 33,
+          "end": 40,
+          "line": 1,
+          "column": 34
+        },
+        "literal:42:45": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 42,
+          "end": 45,
+          "line": 1,
+          "column": 43
+        },
+        "binary:33:45": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 33,
+          "end": 45,
+          "line": 1,
+          "column": 34
+        },
+        "literal:60:65": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 60,
+          "end": 65,
+          "line": 1,
+          "column": 61
+        },
+        "literal:66:67": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 66,
+          "end": 67,
+          "line": 1,
+          "column": 67
+        },
+        "builtin:54:59": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 54,
+          "end": 59,
+          "line": 1,
+          "column": 55
+        },
+        "pure_call:54:68": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 54,
+          "end": 68,
+          "line": 1,
+          "column": 55
+        },
+        "record:7:69": {
+          "source_hash": "850b25be24880758aa493a30c3c78d06d93a3b56ba327039352ae4085878531e",
+          "start": 7,
+          "end": 69,
+          "line": 1,
+          "column": 8
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 21,
+        "rows": 0,
+        "elapsed_ms": 0
+      },
+      "resume": {
+        "run_id": "53fd3ddaa22c480095a72e85791c2eb8"
+      },
+      "resumed": false,
+      "run_status": "completed"
+    },
+    "passed": true
+  },
+  {
+    "name": "sparse_sort_take",
+    "request": {
+      "code": "$r=sorted([{p:3},{id:\"x\"},{p:1}],\"p\"); return $r >> [table:take]{n:4/2}",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "expected": [
+      {
+        "p": 1
+      },
+      {
+        "p": 3
+      }
+    ],
+    "response": {
+      "success": true,
+      "value": [
+        {
+          "p": 1
+        },
+        {
+          "p": 3
+        }
+      ],
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "list",
+          [
+            [
+              "record",
+              [
+                [
+                  "p",
+                  [
+                    "scalar",
+                    1
+                  ]
+                ]
+              ]
+            ],
+            [
+              "record",
+              [
+                [
+                  "p",
+                  [
+                    "scalar",
+                    3
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "994db7d5a6339625713423683021c03a2f6f53b6c199a524b52f029899339c45",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:14:15",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "record:11:16",
+          "invocation_id": 2,
+          "kind": "record",
+          "parents": [
+            1
+          ]
+        },
+        {
+          "id": 3,
+          "node_id": "literal:21:24",
+          "invocation_id": 3,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 4,
+          "node_id": "record:17:25",
+          "invocation_id": 4,
+          "kind": "record",
+          "parents": [
+            3
+          ]
+        },
+        {
+          "id": 5,
+          "node_id": "literal:29:30",
+          "invocation_id": 5,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 6,
+          "node_id": "record:26:31",
+          "invocation_id": 6,
+          "kind": "record",
+          "parents": [
+            5
+          ]
+        },
+        {
+          "id": 7,
+          "node_id": "list:10:32",
+          "invocation_id": 7,
+          "kind": "list",
+          "parents": [
+            2,
+            4,
+            6
+          ]
+        },
+        {
+          "id": 8,
+          "node_id": "literal:33:36",
+          "invocation_id": 8,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 9,
+          "node_id": "builtin:3:9",
+          "invocation_id": 9,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 10,
+          "node_id": "pure_call:3:37",
+          "invocation_id": 10,
+          "kind": "pure_call",
+          "parents": [
+            7,
+            8,
+            9
+          ]
+        },
+        {
+          "id": 11,
+          "node_id": "bind:0:37",
+          "invocation_id": 11,
+          "kind": "bind",
+          "parents": [
+            10
+          ]
+        },
+        {
+          "id": 12,
+          "node_id": "ref:46:48",
+          "invocation_id": 12,
+          "kind": "ref",
+          "parents": [
+            10
+          ]
+        },
+        {
+          "id": 13,
+          "node_id": "literal:67:68",
+          "invocation_id": 13,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 14,
+          "node_id": "literal:69:70",
+          "invocation_id": 14,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 15,
+          "node_id": "binary:67:70",
+          "invocation_id": 15,
+          "kind": "binary",
+          "parents": [
+            13,
+            14
+          ]
+        },
+        {
+          "id": 16,
+          "node_id": "record:64:71",
+          "invocation_id": 16,
+          "kind": "record",
+          "parents": [
+            15
+          ]
+        },
+        {
+          "id": 17,
+          "node_id": "call:52:71",
+          "invocation_id": 17,
+          "kind": "invoke",
+          "parents": [
+            12,
+            16
+          ],
+          "action": "table:take",
+          "effects": [
+            "pure"
+          ],
+          "request_hash": "f252f1f223d9f7be9e971cbf08fd44f27c35225ef810ec6ec1183da9d7a79ccd"
+        },
+        {
+          "id": 18,
+          "node_id": "call:52:71",
+          "invocation_id": 18,
+          "kind": "call",
+          "parents": [
+            16,
+            17
+          ]
+        },
+        {
+          "id": 19,
+          "node_id": "pipe:46:71",
+          "invocation_id": 19,
+          "kind": "pipe",
+          "parents": [
+            12,
+            18
+          ]
+        }
+      ],
+      "source_map": {
+        "literal:14:15": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 14,
+          "end": 15,
+          "line": 1,
+          "column": 15
+        },
+        "record:11:16": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 11,
+          "end": 16,
+          "line": 1,
+          "column": 12
+        },
+        "literal:21:24": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 21,
+          "end": 24,
+          "line": 1,
+          "column": 22
+        },
+        "record:17:25": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 17,
+          "end": 25,
+          "line": 1,
+          "column": 18
+        },
+        "literal:29:30": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 29,
+          "end": 30,
+          "line": 1,
+          "column": 30
+        },
+        "record:26:31": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 26,
+          "end": 31,
+          "line": 1,
+          "column": 27
+        },
+        "list:10:32": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 10,
+          "end": 32,
+          "line": 1,
+          "column": 11
+        },
+        "literal:33:36": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 33,
+          "end": 36,
+          "line": 1,
+          "column": 34
+        },
+        "builtin:3:9": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 3,
+          "end": 9,
+          "line": 1,
+          "column": 4
+        },
+        "pure_call:3:37": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 3,
+          "end": 37,
+          "line": 1,
+          "column": 4
+        },
+        "bind:0:37": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 0,
+          "end": 37,
+          "line": 1,
+          "column": 1
+        },
+        "ref:46:48": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 46,
+          "end": 48,
+          "line": 1,
+          "column": 47
+        },
+        "literal:67:68": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 67,
+          "end": 68,
+          "line": 1,
+          "column": 68
+        },
+        "literal:69:70": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 69,
+          "end": 70,
+          "line": 1,
+          "column": 70
+        },
+        "binary:67:70": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 67,
+          "end": 70,
+          "line": 1,
+          "column": 68
+        },
+        "record:64:71": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 64,
+          "end": 71,
+          "line": 1,
+          "column": 65
+        },
+        "call:52:71": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 52,
+          "end": 71,
+          "line": 1,
+          "column": 53
+        },
+        "pipe:46:71": {
+          "source_hash": "20fedcf873aed761d34c46be49648e523205856b39fdbad9a5ef9677c6f4f3a4",
+          "start": 46,
+          "end": 71,
+          "line": 1,
+          "column": 47
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 24,
+        "rows": 0,
+        "elapsed_ms": 1
+      },
+      "resume": {
+        "run_id": "a758a4069713434aa29b3c9a77ab4581"
+      },
+      "resumed": false,
+      "run_status": "completed"
+    },
+    "passed": true
+  },
+  {
+    "name": "pure_reduce",
+    "request": {
+      "code": "return reduce(split(\" 강의 , 음악 \",\",\"),[],($a,$t)=>$a+[strip($t)])",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "expected": [
+      "강의",
+      "음악"
+    ],
+    "response": {
+      "success": true,
+      "value": [
+        "강의",
+        "음악"
+      ],
+      "value_wire": {
+        "protocol": "ibl-value/1",
+        "data": [
+          "list",
+          [
+            [
+              "scalar",
+              "강의"
+            ],
+            [
+              "scalar",
+              "음악"
+            ]
+          ]
+        ]
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "383705c71b8b6c44ee40b7bd2b57a5cdd9f8a0d0c653f33ba68b4a2c62598639",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:20:31",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "literal:32:35",
+          "invocation_id": 2,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 3,
+          "node_id": "builtin:14:19",
+          "invocation_id": 3,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 4,
+          "node_id": "pure_call:14:36",
+          "invocation_id": 4,
+          "kind": "pure_call",
+          "parents": [
+            1,
+            2,
+            3
+          ]
+        },
+        {
+          "id": 5,
+          "node_id": "list:37:39",
+          "invocation_id": 5,
+          "kind": "list",
+          "parents": []
+        },
+        {
+          "id": 6,
+          "node_id": "lambda:40:63",
+          "invocation_id": 6,
+          "kind": "lambda",
+          "parents": []
+        },
+        {
+          "id": 7,
+          "node_id": "builtin:7:13",
+          "invocation_id": 7,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 8,
+          "node_id": "ref:49:51",
+          "invocation_id": 8,
+          "kind": "ref",
+          "parents": [
+            5
+          ]
+        },
+        {
+          "id": 9,
+          "node_id": "ref:59:61",
+          "invocation_id": 9,
+          "kind": "ref",
+          "parents": [
+            4
+          ]
+        },
+        {
+          "id": 10,
+          "node_id": "builtin:53:58",
+          "invocation_id": 10,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 11,
+          "node_id": "pure_call:53:62",
+          "invocation_id": 11,
+          "kind": "pure_call",
+          "parents": [
+            9,
+            10
+          ]
+        },
+        {
+          "id": 12,
+          "node_id": "list:52:63",
+          "invocation_id": 12,
+          "kind": "list",
+          "parents": [
+            11
+          ]
+        },
+        {
+          "id": 13,
+          "node_id": "binary:49:63",
+          "invocation_id": 13,
+          "kind": "binary",
+          "parents": [
+            8,
+            12
+          ]
+        },
+        {
+          "id": 14,
+          "node_id": "ref:49:51",
+          "invocation_id": 14,
+          "kind": "ref",
+          "parents": [
+            13
+          ]
+        },
+        {
+          "id": 15,
+          "node_id": "ref:59:61",
+          "invocation_id": 15,
+          "kind": "ref",
+          "parents": [
+            4
+          ]
+        },
+        {
+          "id": 16,
+          "node_id": "builtin:53:58",
+          "invocation_id": 16,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 17,
+          "node_id": "pure_call:53:62",
+          "invocation_id": 17,
+          "kind": "pure_call",
+          "parents": [
+            15,
+            16
+          ]
+        },
+        {
+          "id": 18,
+          "node_id": "list:52:63",
+          "invocation_id": 18,
+          "kind": "list",
+          "parents": [
+            17
+          ]
+        },
+        {
+          "id": 19,
+          "node_id": "binary:49:63",
+          "invocation_id": 19,
+          "kind": "binary",
+          "parents": [
+            14,
+            18
+          ]
+        },
+        {
+          "id": 20,
+          "node_id": "pure_call:7:64",
+          "invocation_id": 20,
+          "kind": "pure_call",
+          "parents": [
+            4,
+            5,
+            6,
+            7,
+            13,
+            19
+          ]
+        }
+      ],
+      "source_map": {
+        "literal:20:31": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 20,
+          "end": 31,
+          "line": 1,
+          "column": 21
+        },
+        "literal:32:35": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 32,
+          "end": 35,
+          "line": 1,
+          "column": 33
+        },
+        "builtin:14:19": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 14,
+          "end": 19,
+          "line": 1,
+          "column": 15
+        },
+        "pure_call:14:36": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 14,
+          "end": 36,
+          "line": 1,
+          "column": 15
+        },
+        "list:37:39": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 37,
+          "end": 39,
+          "line": 1,
+          "column": 38
+        },
+        "lambda:40:63": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 40,
+          "end": 63,
+          "line": 1,
+          "column": 41
+        },
+        "builtin:7:13": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 7,
+          "end": 13,
+          "line": 1,
+          "column": 8
+        },
+        "ref:49:51": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 49,
+          "end": 51,
+          "line": 1,
+          "column": 50
+        },
+        "ref:59:61": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 59,
+          "end": 61,
+          "line": 1,
+          "column": 60
+        },
+        "builtin:53:58": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 53,
+          "end": 58,
+          "line": 1,
+          "column": 54
+        },
+        "pure_call:53:62": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 53,
+          "end": 62,
+          "line": 1,
+          "column": 54
+        },
+        "list:52:63": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 52,
+          "end": 63,
+          "line": 1,
+          "column": 53
+        },
+        "binary:49:63": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 49,
+          "end": 63,
+          "line": 1,
+          "column": 50
+        },
+        "pure_call:7:64": {
+          "source_hash": "3fe0e220e8326a71331b754ceccf05af41d93f7a250c64db752114a7d8285f26",
+          "start": 7,
+          "end": 64,
+          "line": 1,
+          "column": 8
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 32,
+        "rows": 2,
+        "elapsed_ms": 0
+      },
+      "resume": {
+        "run_id": "af888824f29a4c7ab5cac8c8880e4f5e"
+      },
+      "resumed": false,
+      "run_status": "completed"
+    },
+    "passed": true
+  },
+  {
+    "name": "precision_failure",
+    "request": {
+      "code": "return json(0.10000000000000001)",
+      "edition": 2,
+      "project_id": "컨텐츠",
+      "origin": "training"
+    },
+    "expected": "NON_JSON_RESULT",
+    "response": {
+      "success": false,
+      "error": "공개 결과 $: 유한 JSON 숫자로 전달하면 정밀도를 잃습니다. text() 또는 Decimal 객체 참조를 사용하세요.",
+      "diagnostic": {
+        "code": "NON_JSON_RESULT",
+        "kind": "runtime",
+        "message": "공개 결과 $: 유한 JSON 숫자로 전달하면 정밀도를 잃습니다. text() 또는 Decimal 객체 참조를 사용하세요.",
+        "frames": [],
+        "has_partial": false,
+        "partial": null,
+        "evidence": [
+          5
+        ],
+        "details": {},
+        "source_span": {
+          "source_hash": "fd17c0a15c5cadb79699b37b06b9c36007f8cc6f739cfd9d19097171438e829b",
+          "start": 7,
+          "end": 32,
+          "line": 1,
+          "column": 8
+        }
+      },
+      "edition": 2,
+      "executed": true,
+      "plan_hash": "4efa5907b9df0324642f666f1b085ddd97b3386a779c9af3ed70ac024744bdbe",
+      "source_complete": true,
+      "evidence": [
+        {
+          "id": 1,
+          "node_id": "literal:12:31",
+          "invocation_id": 1,
+          "kind": "literal",
+          "parents": []
+        },
+        {
+          "id": 2,
+          "node_id": "builtin:7:11",
+          "invocation_id": 2,
+          "kind": "builtin",
+          "parents": []
+        },
+        {
+          "id": 3,
+          "node_id": "pure_call:7:32",
+          "invocation_id": 3,
+          "kind": "failure",
+          "parents": [
+            1,
+            2
+          ],
+          "code": "NON_JSON_RESULT",
+          "failure_kind": "runtime",
+          "incomplete": false
+        },
+        {
+          "id": 4,
+          "node_id": "return:0:32",
+          "invocation_id": 4,
+          "kind": "failure",
+          "parents": [
+            3
+          ],
+          "code": "NON_JSON_RESULT",
+          "failure_kind": "runtime",
+          "incomplete": false
+        },
+        {
+          "id": 5,
+          "node_id": "sequence:0:32",
+          "invocation_id": 5,
+          "kind": "failure",
+          "parents": [
+            4
+          ],
+          "code": "NON_JSON_RESULT",
+          "failure_kind": "runtime",
+          "incomplete": false
+        }
+      ],
+      "source_map": {
+        "literal:12:31": {
+          "source_hash": "fd17c0a15c5cadb79699b37b06b9c36007f8cc6f739cfd9d19097171438e829b",
+          "start": 12,
+          "end": 31,
+          "line": 1,
+          "column": 13
+        },
+        "builtin:7:11": {
+          "source_hash": "fd17c0a15c5cadb79699b37b06b9c36007f8cc6f739cfd9d19097171438e829b",
+          "start": 7,
+          "end": 11,
+          "line": 1,
+          "column": 8
+        },
+        "pure_call:7:32": {
+          "source_hash": "fd17c0a15c5cadb79699b37b06b9c36007f8cc6f739cfd9d19097171438e829b",
+          "start": 7,
+          "end": 32,
+          "line": 1,
+          "column": 8
+        },
+        "return:0:32": {
+          "source_hash": "fd17c0a15c5cadb79699b37b06b9c36007f8cc6f739cfd9d19097171438e829b",
+          "start": 0,
+          "end": 32,
+          "line": 1,
+          "column": 1
+        },
+        "sequence:0:32": {
+          "source_hash": "fd17c0a15c5cadb79699b37b06b9c36007f8cc6f739cfd9d19097171438e829b",
+          "start": 0,
+          "end": 32,
+          "line": 1,
+          "column": 1
+        }
+      },
+      "recordings": [],
+      "usage": {
+        "steps": 6,
+        "rows": 0,
+        "elapsed_ms": 0
+      },
+      "resume": {
+        "run_id": "14de6a82469944a19afecb27953dee84"
+      },
+      "resumed": false,
+      "run_status": "interrupted"
+    },
+    "passed": true
+  }
+]

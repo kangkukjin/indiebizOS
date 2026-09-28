@@ -101,7 +101,7 @@ def structural_equal(left: Any, right: Any,
     return scalar_equal(left, right)
 
 
-def numeric_value(value: Any):
+def numeric_value(value: Any, *, preserve_decimal: bool = False):
     """유한 숫자를 읽되 정수 정밀도는 보존한다.
 
     JSON 통화에 유한 숫자로 실을 수 없는 NaN/Infinity와 실수 오버플로는 숫자 관측이
@@ -110,6 +110,8 @@ def numeric_value(value: Any):
     """
     if isinstance(value, bool):
         return None
+    if preserve_decimal and isinstance(value, Decimal):
+        return value if value.is_finite() else None
     if isinstance(value, int):
         return value
     if isinstance(value, float):
@@ -127,6 +129,43 @@ def numeric_value(value: Any):
         return number if math.isfinite(number) else None
     except (TypeError, ValueError, OverflowError):
         return None
+
+
+def decimal_json_number(value: Decimal) -> float:
+    """십진 표기가 왕복 가능한 유한 JSON/Python 수만 경계 밖으로 보낸다."""
+    if value.is_finite():
+        number = float(value)
+        if math.isfinite(number) and Decimal(str(number)) == value:
+            return number
+    raise ValueError("유한 JSON 숫자로 전달하면 정밀도를 잃습니다. text() 또는 Decimal 객체 참조를 사용하세요.")
+
+
+def arithmetic_numbers(values):
+    """IBL 산술은 십진 입력을 유지하고 혼합 float를 그 십진 표기로 맞춘다."""
+    numbers = [numeric_value(value, preserve_decimal=True) for value in values]
+    if any(number is None for number in numbers):
+        raise ValueError("산술에는 관측 가능한 유한 숫자가 필요합니다.")
+    if any(isinstance(number, Decimal) for number in numbers):
+        numbers = [Decimal(str(number)) if isinstance(number, float) else number
+                   for number in numbers]
+    return numbers
+
+
+def integer_value(value: Any):
+    """Number의 정수값 관점. Bool·문자열·비유한 수·소수 부분은 거절한다."""
+    if isinstance(value, bool) or not isinstance(value, (int, float, Decimal)):
+        return None
+    if isinstance(value, Decimal):
+        if not value.is_finite() or value != value.to_integral_value():
+            return None
+    elif isinstance(value, float) and (not math.isfinite(value) or not value.is_integer()):
+        return None
+    return int(value)
+
+
+def normalized_text(value: str) -> str:
+    """텍스트 연산의 NFC 관점. 저장 원문·경로·레코드 키는 바꾸지 않는다."""
+    return unicodedata.normalize("NFC", value)
 
 
 def datetime_value(value: Any):
@@ -483,6 +522,12 @@ def _json_object(pairs):
 
 def _normalize_public_value(value: Any, *, path: str = "$", active=None) -> Any:
     """공개 JSON 값을 재귀 정규화한다. 손실 없는 변환만 하고 나머지는 거절한다."""
+    if isinstance(value, Decimal):
+        try:
+            return decimal_json_number(value)
+        except ValueError as error:
+            code = _NON_JSON_RESULT if value.is_finite() else _NONFINITE_RESULT
+            raise _PublicResultViolation(code, f"공개 결과 {path}: {error}") from error
     if isinstance(value, str) and value.lstrip().startswith(("{", "[")):
         try:
             nested = json.loads(value, object_pairs_hook=_json_object)
@@ -526,7 +571,7 @@ def _normalize_public_value(value: Any, *, path: str = "$", active=None) -> Any:
         active.remove(marker)
 
 
-def public_result(value: Any, *, producer: str = "") -> Any:
+def public_result(value: Any, *, producer: str = "", strict: bool = False) -> Any:
     """공개 결과의 유한 JSON 수 계약을 적용하고 위반을 정직한 오류 봉투로 바꾼다.
 
     JSON 컨테이너 문자열도 검사한다. 평문 ``"NaN"`` 은 텍스트일 수 있으므로 문자열은
@@ -535,6 +580,8 @@ def public_result(value: Any, *, producer: str = "") -> Any:
     try:
         return _normalize_public_value(value)
     except _PublicResultViolation as error:
+        if strict:
+            raise
         envelope = {
             "success": False,
             "error_code": error.code,

@@ -5177,14 +5177,14 @@ nodes:
         lands_on: hub
         resource_scope: app_shared
         path_audited:
-          at: '2026-09-27'
+          at: '2026-09-28'
           impl: 3c31b0566918933b
           dependencies:
-            backend/common/expression_eval.py: 4dca647ac0a911db6190f689b069c653a6861ca6537d53fd404fd0c1b6d1f42b
-            backend/common/expression_functions.py: 0c697c527c1030c721bc1aa4ddd0d0e08fbf94042a90795fd4f71151638c7c30
-            backend/common/expression_ir.py: 382f1049edd56c0e478a2934765767789818353d5a871f679c9d10ffb4a74505
+            backend/common/expression_eval.py: efdcd90e266bd3ac4bd50138dd8c5272f9c3099c71fe56454c37b4b873b73283
+            backend/common/expression_functions.py: 42b4a286a3761ee40202217a27d9c41461fd912a9b5de2dbfd2a1f3ad9a9e2a6
+            backend/common/expression_ir.py: 86574233f0463af007cc3203d66dd05cd91ced85c83b959e44114ef2715e279e
             backend/common/expression_legacy.py: 4391fb9ad5b4ec2d606478fe3648644a12edbd4e4c0b6124aeec61625874eab9
-            backend/common/expression_ops.py: 1b1345bd137754ee1284620b63e1d35ed7337cbf91f7a2644bf57cbe876f7e04
+            backend/common/expression_ops.py: f3cc0eb44c921f2c456d14fec0124fcda18a495dd68f6d13165272f61951ad5c
             backend/common/expression_parser.py: c18ddf56d19579920365bb8b2938923a6c3a7c35d1ac116ce06b8fe011da5318
             backend/base/principal.py: ddc98b4b9975d02398cd80bc6e55b895ae8e1901063c7ac7f870bf05b118b779
             backend/base/runtime_utils.py: c88284dd65ee5140f2dbc3654367724422970384959ee52d0974a25c1256b5f5
@@ -5193,7 +5193,7 @@ nodes:
             backend/common/record_contract.py: ae4ef8cd12cc2d659a1604a896fdf3884a9643042df96ad323f7ae8392fc3fe5
             backend/common/row_conditions.py: 154e8ad5edd447ac46996d174a7cb94e6bb1cfa7f4472cf1b6389d227ae9b9ce
             backend/common/safe_expr.py: 393baf8c10b1d7d25fe5ecbf40f5b44b8a1e9e12149e1be6bcda36db8c2cc360
-            backend/common/value_semantics.py: 1cd1283a08a77933f7148730c17cdab001c35b53ddaf40e399a5f4d45ef32a0e
+            backend/common/value_semantics.py: 35529e743ca1d0a971a2527583186b7175e491549eeb4bbaf09ad124f32af717
             backend/datastore/record_admin.py: 26d13e5e73c42d56a8d6ed2119a81e0a7738c897c535ca3281311f05fcaa9dab
             backend/datastore/record_assets.py: a9119891401cab4d11d80091d07d7bf545abb1c34fdabf79cd96bb95016df267
             backend/datastore/record_commands.py: e58a57308b625a7e485b4cf85357ae9d07464293229f7ef3b795dfcb786aaffb

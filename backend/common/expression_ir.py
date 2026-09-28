@@ -180,7 +180,11 @@ def projection(value):
         return {"$ibl": "result", "ok": value.ok, "value": projection(value.value),
                 "error": projection(value.error)}
     if isinstance(value, Decimal):
-        return {"$ibl": "decimal", "text": str(value)}
+        from common.value_semantics import decimal_json_number
+        try:
+            return decimal_json_number(value)
+        except ValueError:
+            return {"$ibl": "decimal", "text": str(value)}
     if type(value) is int and abs(value) > 2**53 - 1:
         return {"$ibl": "integer", "text": str(value)}
     if isinstance(value, (list, tuple)):

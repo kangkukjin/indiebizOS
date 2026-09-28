@@ -4,7 +4,8 @@ from decimal import Decimal
 import json
 import operator
 from common.value_semantics import (numeric_value, values_equal, compare_order,
-                                    order_matches, list_membership, public_result)
+                                    order_matches, list_membership, public_result,
+                                    normalized_text, arithmetic_numbers)
 from common.expression_functions import CONTRACTS, call as value_call
 from common.expression_ir import Fault, Node, ResultValue, Unit, projection
 
@@ -73,7 +74,7 @@ def boolean(value):
 
 
 def number(value):
-    result = numeric_value(value)
+    result = numeric_value(value, preserve_decimal=True)
     if result is None:
         raise Fault("NUMBER_REQUIRED", "산술에는 관측 가능한 유한 숫자가 필요합니다.")
     return result
@@ -83,7 +84,7 @@ def scalar_text(value):
     if isinstance(value, bool):
         return "true" if value else "false"
     if isinstance(value, (str, int, float, Decimal)):
-        return str(value)
+        return normalized_text(str(value))
     raise Fault("TEXT_REQUIRED", "Text·Number·Bool만 문자열로 바꿀 수 있습니다. 구조에는 json()을 쓰세요.")
 
 
@@ -101,7 +102,7 @@ def binary(op, left, right, *, legacy=False):
             raise Fault("LIST_REQUIRED", "in의 오른쪽은 List입니다. 문자열 부분 검색에는 contains(text, part)를 쓰세요.")
         return list_membership(left, right)
     if op == "+" and isinstance(left, str) and isinstance(right, str):
-        return left + right
+        return normalized_text(left + right)
     if op == "+" and isinstance(left, list) and isinstance(right, list):
         return left + right
     operation = {"+": operator.add, "-": operator.sub, "*": operator.mul,
@@ -110,15 +111,19 @@ def binary(op, left, right, *, legacy=False):
         if op == "**" and isinstance(right, (int, float, Decimal)) and abs(right) > 10000:
             raise Fault("ARITHMETIC_BUDGET", "거듭제곱 지수 예산을 초과했습니다.", kind="budget")
         return operation(left, right)
-    a, b = number(left), number(right)
+    try:
+        a, b = arithmetic_numbers([left, right])
+    except ValueError as error:
+        raise Fault("NUMBER_REQUIRED", str(error)) from error
     if op == "**" and abs(b) > 10000:
         raise Fault("ARITHMETIC_BUDGET", "거듭제곱 지수 예산을 초과했습니다.", kind="budget")
-    # Decimal/int preserve exact observations; mixing a float observation is
-    # normalized through the shared number parser, never a private text parser.
-    if isinstance(a, Decimal) and isinstance(b, float):
-        b = Decimal(str(b))
-    if isinstance(b, Decimal) and isinstance(a, float):
-        a = Decimal(str(a))
+    # Keep floor division/remainder's existing sign convention for Decimal.
+    if op in ("//", "%") and any(isinstance(n, Decimal) for n in (a, b)):
+        quotient, remainder = divmod(a, b)
+        if remainder and (a < 0) != (b < 0):
+            quotient -= 1
+            remainder += b
+        return quotient if op == "//" else remainder
     return operation(a, b)
 
 
@@ -131,14 +136,17 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
     if name == "len":
         if not isinstance(first, (str, list, dict)):
             raise Fault("SIZED_REQUIRED", "len에는 Text, List, Record가 필요합니다.")
-        return len(first)
+        return len(normalized_text(first) if isinstance(first, str) else first)
     if name in ("has", "get"):
         if not isinstance(first, dict) or not isinstance(args[1], str):
             raise Fault("RECORD_REQUIRED", "has/get은 Record와 Text 키를 받습니다.")
         return args[1] in first if name == "has" else first.get(args[1], args[2])
     if name == "json":
         # Unit/Result/Callable are not silently serialized as business JSON.
-        return json.dumps(public_result(first), ensure_ascii=False, allow_nan=False)
+        try:
+            return json.dumps(public_result(first, strict=True), ensure_ascii=False, allow_nan=False)
+        except ValueError as error:
+            raise Fault(getattr(error, "code", "NON_JSON_RESULT"), str(error)) from error
     if name == "number":
         return number(first)
     if name == "text":
@@ -155,6 +163,7 @@ def pure_call(name, args, *, tick=lambda: None, callback=None):
         for value in values:
             tick()
             numbers.append(number(value))
+        numbers = arithmetic_numbers(numbers)
         return {"min": min, "max": max, "sum": sum}[name](numbers)
     if name in ("is_ok", "unwrap", "error_of"):
         if not isinstance(first, ResultValue):

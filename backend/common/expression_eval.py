@@ -2,6 +2,7 @@
 from dataclasses import dataclass
 import copy
 from common.expression_ir import Fault, UNIT
+from common.value_semantics import normalized_text
 from common.expression_ops import (Builtin, Closure, binary, boolean, number,
                                    scalar_text, pure_call, check_arity, free_names)
 
@@ -96,12 +97,15 @@ class ExpressionEvaluator:
                 raise Fault("INTEGER_REQUIRED", "슬라이스 경계는 정수 또는 null입니다.", node)
             if bounds[2].value == 0:
                 raise Fault("SLICE_STEP", "슬라이스 간격은 0일 수 없습니다.", node)
-            result = base.value[slice(*(b.value for b in bounds))]
+            source = normalized_text(base.value) if isinstance(base.value, str) else base.value
+            result = source[slice(*(b.value for b in bounds))]
             for _ in result:
                 self.expression_tick()
             return Binding(result, self.parents([base, *bounds]))
         if kind in ("field", "index"):
             base = sub(d["base"])
+            if isinstance(base.value, str):
+                base = Binding(normalized_text(base.value), base.evidence)
             key = Binding(d["key"]) if kind == "field" else sub(d["key"])
             if isinstance(base.value, dict) and isinstance(key.value, str):
                 if key.value not in base.value:
@@ -148,7 +152,7 @@ class ExpressionEvaluator:
             return self.callback(fn.value, args)
         if kind == "format":
             parts = [sub(p) if not isinstance(p, str) else Binding(p) for p in d["parts"]]
-            return Binding("".join(scalar_text(p.value) for p in parts), self.parents(parts))
+            return Binding(normalized_text("".join(scalar_text(p.value) for p in parts)), self.parents(parts))
         return NotImplemented
 
     def callback(self, fn, args):

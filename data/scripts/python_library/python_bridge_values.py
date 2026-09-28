@@ -1,6 +1,7 @@
 """Lossless value conversion and explicit, type-specific exports."""
 from decimal import Decimal
 import math
+import sys
 import uuid
 from common.expression_ir import Fault, UNIT, pack
 from common.foreign_ref import ForeignRef
@@ -125,7 +126,10 @@ def export_value(value, fmt, options):
         return list(value), {'conversion': {'format': fmt, 'ordering': 'unspecified' if typ is set else 'preserved'}}
     if fmt == 'list' and typ.__module__ == 'numpy' and typ.__name__ == 'ndarray':
         return value.tolist(), {'conversion': {'format': fmt, 'dtype': str(value.dtype), 'shape': list(value.shape)}}
-    if fmt == 'records' and typ.__module__ == 'pandas.core.frame' and typ.__name__ == 'DataFrame':
+    # pandas 3는 공개 클래스의 __module__을 'pandas'로 노출한다. 내부 경로가
+    # 아니라 공개 타입의 신원을 검사하며, 선택 라이브러리를 새로 import하지 않는다.
+    pandas = sys.modules.get('pandas')
+    if fmt == 'records' and typ is getattr(pandas, 'DataFrame', None):
         if not value.columns.is_unique or any(type(c) is not str for c in value.columns):
             raise Fault('PY_EXPORT_SCHEMA', 'records는 중복 없는 문자열 열 이름이 필요합니다.')
         return {'items': value.to_dict(orient='records'),

@@ -181,6 +181,25 @@ return {shape:$s,rows:$r.items,schema:$r.schema}''', registry)
     assert out['value']['schema']['index'] == 'omitted'
 
 
+@pytest.mark.parametrize('module_name', ['pandas', 'pandas.core.frame'])
+def test_dataframe_export_uses_public_type_identity(module_name, monkeypatch):
+    pandas = pytest.importorskip('pandas')
+    monkeypatch.syspath_prepend(str(ROOT / 'data/scripts/python_library'))
+    from python_bridge_values import export_value
+    from common.expression_ir import Fault
+    monkeypatch.setattr(pandas.DataFrame, '__module__', module_name)
+    frame = pandas.DataFrame({'a': [1, 2]})
+    result, evidence = export_value(frame, 'records', {})
+    assert result['items'] == [{'a': 1}, {'a': 2}]
+    assert result['schema']['index'] == evidence['conversion']['index'] == 'omitted'
+    with pytest.raises(Fault, match='문자열 열 이름'):
+        export_value(pandas.DataFrame([[1, 2]], columns=['a', 'a']), 'records', {})
+    # 클래스 이름·모듈 문자열만 같은 임의 객체를 DataFrame으로 승인하지 않는다.
+    impostor = type('DataFrame', (), {'__module__': module_name})()
+    with pytest.raises(Fault, match='지원하지 않는 자료형'):
+        export_value(impostor, 'records', {})
+
+
 def test_explicit_old_wire_consumer_gets_protocol_error(registry):
     out = run(call('builtins:tuple', [[1]]), registry, value_protocols=['ibl-value/1'])
     assert out['diagnostic']['code'] == 'VALUE_PROTOCOL_UNSUPPORTED'

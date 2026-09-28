@@ -200,8 +200,10 @@ jobs:
             -p no:cacheprovider -rs --no-header \
             -k "real_browser_transport_idle_and_process_receipt" | tee /tmp/pw-runtime.log
           grep -q "1 passed" /tmp/pw-runtime.log || { echo "✗ 실 브라우저 수명 검증이 실행되지 않았다"; exit 1; }
-      - name: 브라우저 snapshot 참조와 클릭 신원 (스킵 시 실패)
+      - name: 브라우저 클릭 신원·보고서 표 줄바꿈 (스킵 시 실패)
         run: |
-          .venv/bin/python3 -m pytest backend/test_episode4112_browser_refs.py \
+          .venv/bin/python3 -m pytest \
+            backend/test_episode4112_browser_refs.py::test_real_snapshot_disclosure_click_and_identity_guards \
+            backend/test_episode4104_4105_repairs.py::test_report_tables_wrap_on_desktop_and_mobile \
             -p no:cacheprovider -rs --no-header | tee /tmp/pw-refs.log
-          grep -q "1 passed" /tmp/pw-refs.log || { echo "✗ 실 브라우저 참조 검증이 실행되지 않았다"; exit 1; }
+          grep -q "2 passed" /tmp/pw-refs.log || { echo "✗ 실 브라우저 참조·줄바꿈 검증이 모두 실행되지 않았다"; exit 1; }

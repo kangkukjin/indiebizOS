@@ -144,13 +144,14 @@ def test_long_image_tiles_preserve_last_pixel_and_reject_silent_truncation():
 
 
 def test_report_tables_wrap_on_desktop_and_mobile(tmp_path):
-    from playwright.sync_api import sync_playwright
+    playwright = pytest.importorskip(
+        'playwright.sync_api', reason='실 브라우저 검증은 portability의 playwright-render에서 실행')
     from runtime_utils import setup_playwright_browsers_path
     setup_playwright_browsers_path()
     html = load('data/scripts/보고서HTML.py', 'repair_html')
     text = '긴 설명이 끊기지 않고 끝까지 읽혀야 합니다. ' * 20
     source = '<style>'+html._CSS % {'acc': '#111', 'acc_d': '#fff'}+'</style><main><table><tr><th>항목</th><th>설명</th></tr><tr><td>검사</td><td>'+text+'</td></tr></table></main>'
-    with sync_playwright() as pw:
+    with playwright.sync_playwright() as pw:
         browser = pw.chromium.launch()
         for width in (390, 1280):
             page = browser.new_page(viewport={'width': width, 'height': 900})
